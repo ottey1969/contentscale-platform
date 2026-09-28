@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v367';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v368';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -360,7 +360,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'fast-prospect-reset-v366',
   'reset-stage-errors-v366',
   'idempotent-report-reset-v367',
-  'cross-panel-reset-refresh-v367'
+  'cross-panel-reset-refresh-v367',
+  'collapsed-prospect-delete-visible-v368'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -621,7 +622,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v367',
+  build: 'CS-2026-09-29-CANONICAL-v368',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -17708,7 +17709,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-29-CANONICAL-v367');
+console.log('[ContentScale] CS-2026-09-29-CANONICAL-v368');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22544,7 +22545,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v367');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v368');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22645,10 +22646,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v367 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v368 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v367'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v368'});
     try{res.end();}catch(_){}
   }
 });
@@ -23814,7 +23815,9 @@ function _pqsAdminProspectPresentationV364(){return `<style>
 .pqsTypeStatus>div{padding:15px 16px!important}.pqsCeoStatus{border:2px solid #3b82f6!important;background:linear-gradient(135deg,#071d3b,#0a1526)!important}.pqsQuickStatus{border:2px solid #f59e0b!important;background:linear-gradient(135deg,#271704,#101722)!important}
 .pqsCeoStatus>b,.pqsQuickStatus>b{display:block;font-size:13px;letter-spacing:.08em;margin-bottom:8px}.pqsCeoStatus>b{color:#93c5fd}.pqsQuickStatus>b{color:#fcd34d}
 .pqsCeoStatus .btn,.pqsQuickStatus .btn,.pqsQuickStatus>a{display:inline-block;margin:7px 7px 3px 0!important;vertical-align:middle}.pqsTypeNote{padding:8px 2px!important;background:transparent!important}
-#list>.card.pqsCollapsed>:not(.pqsCardHead){display:none!important}#list>.card.pqsCollapsed>.pqsCardHead>:not(.pqsIdentity):not(.pqsSelect):not(.pqsSourceBadge):not(.pqsToggle){display:none!important}
+#list>.card.pqsCollapsed>:not(.pqsCardHead){display:none!important}#list>.card.pqsCollapsed>.pqsCardHead>:not(.pqsIdentity):not(.pqsSelect):not(.pqsSourceBadge):not(.pqsToggle):not(.pqsDeleteReset){display:none!important}
+#list>.card.pqsCollapsed .pqsDeleteReset{display:inline-flex!important;align-items:center;justify-content:center;white-space:nowrap;margin-left:0!important;order:90}
+#list>.card.pqsCollapsed .pqsToggle{order:91}
 #list>.card:not(.pqsCollapsed)>.pqsCardHead>a,#list>.card:not(.pqsCollapsed)>.pqsCardHead>.btn,#list>.card:not(.pqsCollapsed)>.pqsCardHead>select{margin:4px 0!important}
 @media(max-width:700px){#list .pqsIdentity{flex:1 1 calc(100% - 35px)}#list .pqsSourceBadge{margin-left:25px}.pqsCeoStatus .btn,.pqsQuickStatus .btn,.pqsQuickStatus>a{width:100%;text-align:center;margin-right:0!important}}
 </style><script>(function(){
