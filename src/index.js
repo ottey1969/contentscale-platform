@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v347';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v348';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -282,7 +282,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'lead-brief-renderer-repair-v340',
   'persistent-action-wait-feedback-v341',
   'already-scanned-published-html-check-live-v342',
-  'scan-brief-check-three-step-state-v347'
+  'scan-brief-check-three-step-state-v348'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -510,7 +510,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v347',
+  build: 'CS-2026-09-28-CANONICAL-v348',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -3744,6 +3744,83 @@ app.post('/api/tracker-client/:token/pages/:pageId/brief-action/resolve', async 
     });
   }catch(e){
     console.error('[brief-action-resolve]',e);
+    res.status(500).json({success:false,error:e.message});
+  }
+});
+
+// v348 — reverse an accidental Reject / N/A without rebuilding or rescanning.
+// The original resolution remains in history as REJECTION_REVERSED, while its
+// complete action snapshot is returned to the current Brief's open-action list.
+app.post('/api/tracker-client/:token/pages/:pageId/brief-action/restore', async (req,res)=>{
+  try{
+    const cr=await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);
+    if(!cr.rows.length)return res.status(404).json({success:false,error:'Not found'});
+    const own=await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+    if(!own.rows.length)return res.status(403).json({success:false,error:'Not your page'});
+    const page=own.rows[0];
+
+    let brief={};
+    try{brief=typeof page.brief_content==='string'?JSON.parse(page.brief_content||'{}'):(page.brief_content||{});}catch(_e){brief={};}
+    if(!brief||typeof brief!=='object')brief={};
+    const resolutionIndex=Number(req.body&&req.body.resolution_index);
+    const expectedAction=String(req.body&&req.body.expected_action||'');
+    const expectedCycle=String(req.body&&req.body.expected_cycle||'');
+    const resolutions=Array.isArray(brief.manual_resolutions)?brief.manual_resolutions:[];
+    if(!Number.isInteger(resolutionIndex)||resolutionIndex<0)return res.status(400).json({success:false,error:'Invalid rejected-action index'});
+    const rejected=resolutions[resolutionIndex];
+    if(!rejected)return res.status(404).json({success:false,error:'Rejected action no longer exists. Refresh the page.'});
+    if(String(rejected.decision||'')!=='REJECTED_NOT_APPLICABLE')return res.status(409).json({success:false,error:'This action is not currently rejected.'});
+    if(!rejected.action||!['items','gsc_brief'].includes(String(rejected.bucket||'')))return res.status(409).json({success:false,error:'This older history item has no restorable action snapshot.'});
+    if(!expectedAction||expectedAction!==JSON.stringify(rejected.action)||expectedCycle!==String(brief.cycle_id||'')||String(rejected.cycle_id||'')!==String(brief.cycle_id||'')){
+      return res.status(409).json({success:false,error:'The Brief changed since the rejected action was opened. Refresh before restoring it.'});
+    }
+
+    const bucket=String(rejected.bucket);
+    const arr=Array.isArray(brief[bucket])?brief[bucket]:[];
+    const snapshot=JSON.parse(JSON.stringify(rejected.action));
+    if(arr.some(x=>JSON.stringify(x)===JSON.stringify(snapshot)))return res.status(409).json({success:false,error:'This action is already open.'});
+    arr.push(snapshot);
+    brief[bucket]=arr;
+    resolutions[resolutionIndex]={
+      ...rejected,
+      previous_decision:'REJECTED_NOT_APPLICABLE',
+      decision:'REJECTION_REVERSED',
+      restored_at:new Date().toISOString(),
+      restore_reason:'Accidental rejection reversed; action returned to the current Brief.'
+    };
+    brief.manual_resolutions=resolutions;
+
+    const openItems=(Array.isArray(brief.items)?brief.items:[]).filter(x=>x&&!_trackerBriefFrameOnly(x));
+    const openGsc=(Array.isArray(brief.gsc_brief)?brief.gsc_brief:[]).filter(Boolean);
+    const remaining=openItems.length+openGsc.length;
+    brief.outstanding_actions=remaining;
+    brief.implementation_complete=false;
+    delete brief.completed_cycle;
+    brief.growth_loop={
+      current_cycle_complete:false,
+      page_perfect:false,
+      state:'OPEN_ACTIONS_RESTORED',
+      next_focus:'Resolve the restored actions individually; no new scan is required.',
+      recycle_completed_actions:false
+    };
+
+    await pool.query(`UPDATE tracker_pages SET
+      brief_content=$1,
+      implementation_status='live_changed_delta_remaining'
+      WHERE id=$2`,[JSON.stringify(brief),page.id]);
+
+    await _caseStudyEventForPage(cr.rows[0].id,page.id,'brief_action_rejection_reversed',{
+      bucket,
+      title:String(rejected.title||snapshot.title||''),
+      previous_reason:String(rejected.reason||''),
+      remaining_actions:remaining,
+      brief_cycle_id:String(brief.cycle_id||''),
+      full_scan_suppressed:true
+    },page.last_page_hash||null).catch(()=>{});
+
+    return res.json({success:true,remaining_actions:remaining,restored_title:String(rejected.title||snapshot.title||'Action')});
+  }catch(e){
+    console.error('[brief-action-restore]',e);
     res.status(500).json({success:false,error:e.message});
   }
 });
@@ -17172,7 +17249,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v347');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v348');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21836,7 +21913,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v347');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v348');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21930,10 +22007,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v347 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v348 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v347'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v348'});
     try{res.end();}catch(_){}
   }
 });
@@ -43810,6 +43887,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   var claimsFactsAt=p.claims_facts_updated_at?new Date(p.claims_facts_updated_at).getTime():0;
   var briefSafetyText='';try{briefSafetyText=JSON.stringify(brief||{});}catch(_bst){briefSafetyText='';}
   var personalSafetyStale=/contentscale\.site/i.test(String(p.url||''))&&/(?:verify and add direct-answer block|submit (?:the )?url to bing index|copilot[^.]{0,100}relies entirely on bing|verify and add author bio|3[.,]7\s*[x×]|based on analy[sz]ing (?:over )?200\+? websites|in my experience analy[sz]ing (?:over )?200\+? websites)/i.test(briefSafetyText);
+  var currentRejected=(Array.isArray(brief.manual_resolutions)?brief.manual_resolutions:[]).filter(function(x){
+    return x&&String(x.decision||'')==='REJECTED_NOT_APPLICABLE'&&(!briefCycleId||String(x.cycle_id||'')===briefCycleId);
+  }).length;
 
   // v284: a NEW DELTA may only be declared from a Brief that was evaluated by an ACTUAL scan.
   // Old Brief contents are historical context only. We never infer "new work" from them before a fresh scan.
@@ -43830,6 +43910,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     var gate=String(p.monitoring_gate_label||'');
     var waitMsg=gate.indexOf('case_day_')===0?'Fresh evidence is still required before this checkpoint can be closed.':'Required evidence is still missing. Complete the requested input before scanning again.';
     return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
+  }
+  if(implStatus==='manual_resolution_complete'&&currentRejected>0){
+    return {code:'REVIEW_REJECTED',label:'CYCLE CLOSED · '+currentRejected+' REJECTED ACTION'+(currentRejected===1?'':'S'),detail:'Rejected actions remain recoverable. Review them here and restore only accidental rejections; no new scan or full Brief is needed.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Review rejected actions',buttonAction:'openRemainingActions('+p.id+')'};
   }
   if(personalSafetyStale){
     return {code:'REFRESH_CONTRACT',label:'BRIEF SAFETY RULES UPDATED · REBUILD ONCE',detail:'This saved Brief still contains a prohibited or already-completed personal-profile recommendation from an older build. Rebuild it once; the live HTML and proof history remain protected.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild corrected Brief',buttonAction:'checkPage('+p.id+')'};
@@ -46283,6 +46366,11 @@ function openRemainingActions(pageId){
   var rows=[];
   (Array.isArray(b.items)?b.items:[]).forEach(function(x,i){if(x&&!_trackerClientFrameOnly(x))rows.push({bucket:'items',index:i,item:x});});
   (Array.isArray(b.gsc_brief)?b.gsc_brief:[]).forEach(function(x,i){if(x)rows.push({bucket:'gsc_brief',index:i,item:x});});
+  var cycleId=String(b.cycle_id||'');
+  var rejectedRows=[];
+  (Array.isArray(b.manual_resolutions)?b.manual_resolutions:[]).forEach(function(x,i){
+    if(x&&String(x.decision||'')==='REJECTED_NOT_APPLICABLE'&&(!cycleId||String(x.cycle_id||'')===cycleId))rejectedRows.push({resolutionIndex:i,resolution:x});
+  });
 
   var old=document.getElementById('remainingActionsOverlay');if(old)old.remove();
   var ov=document.createElement('div');ov.id='remainingActionsOverlay';
@@ -46303,10 +46391,43 @@ function openRemainingActions(pageId){
         +'<button onclick="resolveRemainingAction('+pageId+',&quot;'+r.bucket+'&quot;,'+r.index+',&quot;reject&quot;,this)" style="background:#2a0a0a;border:1px solid #ef4444;color:#fca5a5;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">Reject / N/A</button>'
         +'</div></div>';
     }).join(''):'<div style="color:#86efac;">No remaining actions.</div>')
+    +(rejectedRows.length?'<div style="margin-top:18px;padding-top:14px;border-top:1px solid #7f1d1d;">'
+      +'<div style="font-size:11px;font-weight:950;color:#fca5a5;letter-spacing:.05em;">REJECTED / N/A · RECOVERABLE</div>'
+      +'<div style="font-size:11px;color:#94a3b8;margin:5px 0 10px;">Restore only an action that was rejected by mistake. It returns to the open list; no scan is started.</div>'
+      +rejectedRows.map(function(r){var x=r.resolution||{},a=x.action||{};return '<div style="padding:11px;margin:8px 0;background:#180b0b;border:1px solid #7f1d1d;border-radius:8px;">'
+        +'<div style="font-size:11px;font-weight:900;color:#fecaca;">'+esc(x.title||a.title||'Rejected action')+'</div>'
+        +'<div style="font-size:10px;line-height:1.5;color:#fca5a5;margin-top:4px;">Reason: '+esc(x.reason||'No reason recorded')+'</div>'
+        +'<button onclick="restoreRejectedAction('+pageId+','+r.resolutionIndex+',this)" style="margin-top:8px;background:#172554;border:1px solid #60a5fa;color:#dbeafe;border-radius:6px;padding:5px 9px;font-size:10px;font-weight:900;cursor:pointer;">↶ Restore action</button>'
+        +'</div>';}).join('')+'</div>':'')
     +'<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button id="remainingCloseBtn" style="background:#111827;border:1px solid #475569;color:#cbd5e1;border-radius:7px;padding:7px 12px;cursor:pointer;">Close</button></div>';
 
   ov.appendChild(box);document.body.appendChild(ov);
   box.querySelector('#remainingCloseBtn').onclick=function(){ov.remove();};
+}
+
+async function restoreRejectedAction(pageId,resolutionIndex,btn){
+  var currentPage=(_pages||[]).find(function(x){return x.id==pageId;})||{};
+  var currentBrief={};try{currentBrief=typeof currentPage.brief_content==='string'?JSON.parse(currentPage.brief_content||'{}'):(currentPage.brief_content||{});}catch(e){}
+  var resolution=(Array.isArray(currentBrief.manual_resolutions)?currentBrief.manual_resolutions:[])[resolutionIndex];
+  if(!resolution||String(resolution.decision||'')!=='REJECTED_NOT_APPLICABLE'){toast('Rejected action changed. Refresh the page.','#f87171');return;}
+  if(!confirm('Restore “'+String(resolution.title||(resolution.action&&resolution.action.title)||'this action')+'” to the open action list?\n\nNo scan will run.'))return;
+  var oldText=btn&&btn.textContent;
+  if(btn){btn.disabled=true;btn.textContent='Restoring…';}
+  try{
+    var r=await fetch('/api/tracker-client/'+TOKEN+'/pages/'+pageId+'/brief-action/restore',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({resolution_index:resolutionIndex,expected_action:JSON.stringify(resolution.action||{}),expected_cycle:String(currentBrief.cycle_id||'')})
+    });
+    var d=await r.json();
+    if(!r.ok||!d.success)throw new Error(d.error||'Could not restore action');
+    var ov=document.getElementById('remainingActionsOverlay');if(ov)ov.remove();
+    toast('Action restored — '+d.remaining_actions+' open. No scan was run.','#60a5fa');
+    await loadPages();
+    setTimeout(function(){openRemainingActions(pageId);},250);
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent=oldText||'↶ Restore action';}
+    alert(e.message||e);
+  }
 }
 
 async function resolveRemainingAction(pageId,bucket,index,decision,btn){
@@ -46356,6 +46477,7 @@ async function resolveRemainingAction(pageId,bucket,index,decision,btn){
 }
 window.openRemainingActions=openRemainingActions;
 window.resolveRemainingAction=resolveRemainingAction;
+window.restoreRejectedAction=restoreRejectedAction;
 
 async function verifyCurrentBriefLive(pageId,btn){
   var waitKey='verify-live-'+pageId;
@@ -58525,7 +58647,7 @@ MERGE RULES:
         brief2.gsc_brief=(brief2.gsc_brief||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
         brief2.source_suggestions=(brief2.source_suggestions||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
         brief2._verified_identity_contract_applied=!!_finalIdentityContract.personal_portfolio;
-        if(_finalIdentityContract.personal_portfolio)brief2._verified_identity_contract_version='verified-personal-final-v347';
+        if(_finalIdentityContract.personal_portfolio)brief2._verified_identity_contract_version='verified-personal-final-v348';
 
         // v288 FINAL DELTA GUARD: final merged Brief must not re-add work already present in live HTML.
         var _finalLiveHtml=String(effectiveHtml||page.html_content||'');
