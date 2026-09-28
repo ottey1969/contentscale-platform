@@ -82,6 +82,9 @@ function buildOpportunityReport(audit, options = {}) {
   const technical = d.technical || {};
   const multi = d.multilingual || {};
   const starter = d.starter_intelligence || {};
+  // A one-page prospect scan cannot prove orphan status: zero inbound links inside a
+  // one-page sample is absence of crawl evidence, not proof that the live site has no links.
+  const hasBroadLinkEvidence = selected.length > 1 && String(d.mode || options.audit_mode || '').toLowerCase() !== 'test';
 
   const allRecs = [];
   arr(d.top_recommendations).forEach(r => allRecs.push(r));
@@ -119,16 +122,27 @@ function buildOpportunityReport(audit, options = {}) {
   const observed = [];
   selected.slice(0, 15).forEach(p => {
     if (!p || !p.url) return;
+    const _components=[num(p.graaf,null),num(p.craft,null),num(p.technical,null)];
+    const _contentScore=num(p.score,_components.every(function(x){return x!=null;})?_components.reduce(function(a,b){return a+b;},0):null);
+    const _path=clean(p.url).toLowerCase();
+    const _pageType=(/\/product(?:[-_/]|$)/.test(_path)||/\bproduct\b/i.test(clean(p.h1)))?'product':(p.pageType||'unknown');
     observed.push({
       url: p.url,
       title: p.title || '',
-      page_type: p.pageType || 'unknown',
-      graaf: num(p.graaf, num(p.score, 0)),
-      craft: num(p.craft, 0),
-      technical: num(p.technical, 0),
-      word_count: num(p.wordCount, 0),
+      page_type: _pageType,
+      content_score: _contentScore,
+      graaf: num(p.graaf, null),
+      craft: num(p.craft, null),
+      technical: num(p.technical, null),
+      word_count: num(p.wordCount, null),
+      h1: clean(p.h1),
+      h1_count: num(p.h1Count, null),
+      images: num(p.images, null),
+      internal_links: num(p.internalLinks, null),
+      has_faq_content: p.hasFAQ === true,
+      has_canonical: p.canonical ? true : null,
       schema: !!p.hasSchema,
-      orphan: !!p.orphan,
+      orphan: hasBroadLinkEvidence && typeof p.orphan === 'boolean' ? p.orphan : null,
       status: 'observed'
     });
   });
@@ -212,11 +226,19 @@ function buildOpportunityReport(audit, options = {}) {
       // Preserve every deterministic GRAAF recommendation exactly as generated.
       // The report renderer may format these fields, but must not summarise or rewrite them.
       page_recommendations: selected.map(function(p){
+        const _hasFaqProof=p&&p.hasFAQ===true;
+        const _recs=arr(p && p.recommendations).filter(function(rec){
+          // Never show a FAQ-schema claim unless the saved page evidence explicitly
+          // confirms visible FAQ content. Asset/class-name matches are not evidence.
+          return !/faq structured data|visible faq content/i.test(clean(rec&&rec.title)+' '+clean(rec&&rec.description)) || _hasFaqProof;
+        });
         return {
           url: clean(p && p.url),
           title: clean(p && p.title),
           content_score: num(p && p.score, null),
-          recommendations: arr(p && p.recommendations).map(function(rec){
+          component_scores:{graaf:num(p&&p.graaf,null),craft:num(p&&p.craft,null),technical:num(p&&p.technical,null)},
+          content_stats:{wordCount:num(p&&p.wordCount,null),h1Count:num(p&&p.h1Count,null),h1Text:clean(p&&p.h1),images:num(p&&p.images,null),internalLinks:num(p&&p.internalLinks,null),hasSchema:p&&typeof p.hasSchema==='boolean'?p.hasSchema:null,hasCanonical:p&&p.canonical?true:null,hasFAQContent:_hasFaqProof},
+          recommendations: _recs.map(function(rec){
             if (!rec || typeof rec !== 'object') return { title: clean(rec) };
             return Object.assign({}, rec);
           })
@@ -266,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v353';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v354';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -285,7 +307,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'scan-brief-check-three-step-state-v350',
   'case-study-fresh-start-cycle-v351',
   'split-homepage-and-routed-impression-opportunities-v352',
-  'tracker-impression-opportunities-in-brief-v353'
+  'tracker-impression-opportunities-in-brief-v353',
+  'opportunity-report-evidence-mapping-and-faq-proof-v354'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -513,7 +536,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v353',
+  build: 'CS-2026-09-28-CANONICAL-v354',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -12902,7 +12925,7 @@ app.post('/api/scan/paste', async (req, res) => {
     const h1Count = h1Matches.length;
     const h1Text = h1Matches[0] ? stripTags(h1Matches[0][1]) : '';
     const h1Length = h1Text.length;
-    const h1IsGeneric = h1Text.length > 0 && ['welcome','home','hello','untitled','page','index','main','default'].includes(h1Text.toLowerCase().trim());
+    const h1IsGeneric = h1Text.length > 0 && ['welcome','home','hello','untitled','page','index','main','default','product','products','service','services'].includes(h1Text.toLowerCase().trim());
     const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
     const h1IsTooLong = h1Text.length > 70;
 
@@ -12992,11 +13015,12 @@ app.post('/api/scan/paste', async (req, res) => {
       return count;
     })();
     const _faqHeadingCluster = _faqQuestionCount >= 3;
-    const hasFAQContent = _faqPhrase.test(rawHtml)
+    const _faqStructuralMarker = /id=["'][^"']*faq[^"']*["']/i.test(rawHtml)
+      || /class=["'][^"']*(faq|accordion|toggle)[^"']*["']/i.test(rawHtml);
+    const hasFAQContent = _faqPhrase.test(cleanText)
       || hasFAQPageSchema
-      || /id=["'][^"']*faq[^"']*["']/i.test(rawHtml)
-      || /class=["'][^"']*(faq|accordion|toggle)[^"']*["']/i.test(rawHtml)
-      || _faqHeadingCluster;
+      || _faqHeadingCluster
+      || (_faqStructuralMarker && _faqQuestionCount >= 2);
     const hasTOC = /table of contents|on this page|jump to section|contents|tabla de contenidos|en esta página|inhoudsopgave|inhaltsverzeichnis|table des matières|sommario|índice|جدول المحتويات/i.test(rawHtml);
     // Author bio — language-agnostic. Structural signals first (work for ANY language, incl. Arabic/RTL):
     //  a Person/author node in JSON-LD, or an author/bio/vcard class/id. Then multilingual phrases as a
@@ -13415,6 +13439,9 @@ if ((analysis.csNavCount||0) > 1) add({ title: '⚠️ Duplicate Navigation in C
 if ((analysis.csBadgeCount||0) > 1) add({ title: '⚠️ Duplicate Scan Badge', description: `Found ${analysis.csBadgeCount} scan badges.`, priority: 'low', action: 'Remove any copied badge when the template or loader already injects it.', learning: 'Duplicate UI elements add redundant markup without improving page meaning.', target: 'One intended badge' });
 
 // Content depth/evidence.
+if ((analysis.wordCount||0) < 120 && (/\bproducts?\b/i.test(String(analysis.h1Text||'')) || /\/products?(?:[-_\/]|$)/i.test(String(scanUrl||'')))) {
+  add({ title: '🚨 Decide Whether This Product Page Should Exist', description: 'The product page contains almost no substantive product information.', priority: 'high', action: 'If products are offered, turn this into a real product/category page with a descriptive H1, product names or categories, useful details and a clear next step. If no product offer exists, remove it from navigation and consolidate or redirect the URL only after confirming the intended destination.', learning: 'An essentially empty commercial URL creates a dead end for visitors and gives search systems no clear product intent to understand.', target: 'A useful, intentional product page — or a deliberate consolidation/removal decision' });
+}
 if ((analysis.wordCount||0) < 120) {
   add({ title: '🚨 Very Limited Main Content', description: `Only ${analysis.wordCount||0} words were detected in the main content.`, priority: 'high', action: 'Check that the scanner reached the real main content. If the count is accurate, add the information users need to understand, evaluate, or act on this page — without padding for word count.', learning: 'A page with very little substantive content may not explain its purpose or topic sufficiently for users, search systems, or AI systems.', target: 'Enough relevant main content to satisfy the page intent; no universal word-count target' });
 } else if ((analysis.wordCount||0) < 700) {
@@ -13423,7 +13450,7 @@ if ((analysis.wordCount||0) < 120) {
 if (analysis.hiddenWordCount && analysis.hiddenWordPct >= 20) {
   add({ title: '👁️ Review Important Content Hidden by Default', description: `${analysis.hiddenWordCount} words (${analysis.hiddenWordPct}% of detected text) are hidden or collapsed by default.`, priority: 'medium', action: 'Confirm that important information remains accessible and understandable when collapsed. Do not hide essential context merely to simplify the visual layout.', learning: 'Collapsed content can still be accessible to search systems, but important information should remain easy for users to discover and interact with.', target: 'Important content remains accessible, understandable, and intentionally collapsed only where useful' });
 }
-if ((analysis.statsFound||0) === 0) {
+if ((analysis.statsFound||0) === 0 && (analysis.wordCount||0) >= 120) {
   add({ title: '📈 Strengthen Evidence Where Claims Need Support', description: 'No measurable first-party facts, figures, or statistics were detected in the main content.', priority: 'high', scoreImpact: Math.round((9 / gMax) * 50), action: 'Where the page makes factual, financial, performance, market, or comparative claims, support them with relevant verifiable first-party data or authoritative sources. Do not add statistics just to meet a quota.', learning: 'Specific, attributable evidence strengthens the Accuracy pillar of GRAAF and makes important claims easier to verify.', target: 'Support material factual claims with relevant, attributable evidence' });
 } else if ((analysis.statsFound||0) < 3) {
   add({ title: '📈 Review Evidence Coverage', description: `${analysis.statsFound} measurable data point(s) were detected in the main content.`, priority: 'low', action: 'Check whether other material factual claims would benefit from a source, date, product fact, fee, metric, or other verifiable evidence.', learning: 'Evidence is valuable when it substantiates an important claim; the appropriate amount depends on the page and topic.', target: 'Evidence aligned with the claims being made; no fixed statistic quota' });
@@ -13431,7 +13458,7 @@ if ((analysis.statsFound||0) === 0) {
 if ((analysis.expertQuoteCount||0) === 0 && (analysis.externalLinks||0) === 0 && _graafIsLongForm) {
   add({ title: '💬 Add Authoritative Support Where Appropriate', description: 'No attributed expert/source signals or external supporting links were detected.', priority: 'medium', action: 'For claims that depend on external authority, cite a relevant primary source, regulator, study, standard, or recognized industry authority. Quotes are optional and should be used only when they add value.', learning: 'Clear attribution helps readers and machines distinguish supported claims from unsupported assertions.', target: 'Relevant authoritative support for claims that require it; no quote quota' });
 }
-if ((analysis.caseStudyCount||0) === 0) {
+if ((analysis.caseStudyCount||0) === 0 && (analysis.wordCount||0) >= 120) {
   const _proofRawGap = (_graafIsHomepage && analysis.hasOrganizationSchema) ? 5 : 8;
   add({ title: _graafIsHomepage ? '📊 Strengthen First-Party Proof / Trust Evidence' : '📊 Strengthen Real-World Proof', description: 'No measurable case-study or real-world outcome evidence was detected.', priority: _graafIsHomepage ? 'high' : 'medium', scoreImpact: Math.round((_proofRawGap / gMax) * 50), action: _graafIsHomepage ? 'Where appropriate, add verifiable trust evidence such as regulatory credentials, platform capabilities, product facts, customer evidence, or documented outcomes.' : 'If the page makes claims about outcomes or experience, support them with a relevant real example, documented result, or other first-party evidence.', learning: 'Specific first-party evidence can demonstrate experience and substantiate claims when it is relevant and verifiable.', target: 'Genuine proof appropriate to the page type; never invent metrics or force a case-study format' });
 }
@@ -13651,7 +13678,7 @@ return result;
                const hiddenWordPct = totalWordCount > 0 ? Math.round((hiddenWordCount / totalWordCount) * 100) : 0;
                const h1Els = document.querySelectorAll('h1'); const h1Count = h1Els.length; let h1Text = ''; let h1IsHidden = false; let h1VisibleCount = 0;
                h1Els.forEach(el => { const s = window.getComputedStyle(el); const hidden = s.display==='none'||s.visibility==='hidden'||s.opacity==='0'||el.hasAttribute('hidden'); if(!hidden){h1VisibleCount++;if(!h1Text)h1Text=el.textContent.trim();}else{h1IsHidden=true;} });
-               const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
+               const h1Length=h1Text.length; const GENERIC=['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon','product','products','service','services'];
                const h1IsGeneric=h1Text.length>0&&GENERIC.some(g=>h1Text.toLowerCase().trim()===g); const h1IsTooShort=h1Text.length>0&&h1Text.length<10; const h1IsTooLong=h1Text.length>70;
                const h2Count=document.querySelectorAll('h2').length; const h3Count=document.querySelectorAll('h3').length; const listItemCount=document.querySelectorAll('li').length;
                const paragraphs=Array.from(document.querySelectorAll('p')); const avgParagraphLength=paragraphs.length>0?paragraphs.map(p=>p.textContent.trim().split(/\s+/).length).reduce((a,b)=>a+b,0)/paragraphs.length:0;
@@ -13686,16 +13713,15 @@ return result;
                  || /written by|about the author|about the founder|meet the author|sobre el autor|sobre el consultor|sobre el fundador|acerca del autor|over de auteur|over de schrijver|über den autor|à propos de l'auteur|sull'autore|sobre o autor|عن الكاتب|عن المؤلف|نبذة عن/i.test(rawHtml.toLowerCase());
                const hasFAQContent=(()=>{
                  // language-agnostic phrase match
-                 if(/frequently asked|faq|common questions|preguntas frecuentes|preguntas que|veelgestelde vragen|häufige fragen|questions fréquentes|foire aux questions|domande frequenti|perguntas frequentes|الأسئلة الشائعة|أسئلة شائعة/i.test(rawHtml)) return true;
-                 if(/id=["'][^"']*faq[^"']*["']/i.test(rawHtml)) return true;
-                 if(/class=["'][^"']*(faq|accordion|toggle)[^"']*["']/i.test(rawHtml)) return true;
+                 if(/frequently asked|faq|common questions|preguntas frecuentes|preguntas que|veelgestelde vragen|häufige fragen|questions fréquentes|foire aux questions|domande frequenti|perguntas frequentes|الأسئلة الشائعة|أسئلة شائعة/i.test(cleanText)) return true;
                  if(hasFAQPageSchema) return true;
                  // structural: 3+ question-bearing elements (headings, summary/dt, or clickable/accordion
                  // containers) whose label contains a question mark — even followed by a toggle symbol (+/−).
                  const _isQ=t=>{t=(t||'').replace(/\s+/g,' ').trim();return t.length<170&&/[?？؟]/.test(t);};
                  let q=Array.from(document.querySelectorAll('h2,h3,h4,summary,dt')).filter(el=>_isQ(el.textContent)).length;
                  q+=Array.from(document.querySelectorAll('[onclick],[role="button"],[class*="toggle"],[class*="accordion"],[class*="faq"],[class*="question"],[class*="collaps"],[class*="acc-"],[class*="panel-title"],[class*="elementor-tab-title"],[class*="elementor-accordion"]')).filter(el=>_isQ(el.textContent)).length;
-                 return q>=3;
+                 const marker=/id=["'][^"']*faq[^"']*["']/i.test(rawHtml)||/class=["'][^"']*(faq|accordion|toggle)[^"']*["']/i.test(rawHtml);
+                 return q>=3||(marker&&q>=2);
                })();
                const images=document.querySelectorAll('img').length; const imagesWithAlt=Array.from(document.querySelectorAll('img')).filter(img=>img.hasAttribute('alt')&&img.getAttribute('alt').trim().length>5).length; // identiek aan single scan
                let host=''; try{host=new URL(su).hostname;}catch(e){}
@@ -14134,7 +14160,7 @@ return result;
                else { h1IsHidden = true; }
                });
                const h1Length = h1Text.length;
-               const GENERIC_H1 = ['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon'];
+               const GENERIC_H1 = ['welcome','home','hello','untitled','page','index','main','default','test','new page','coming soon','product','products','service','services'];
                const h1IsGeneric = h1Text.length > 0 && GENERIC_H1.some(g => h1Text.toLowerCase().trim() === g);
                const h1IsTooShort = h1Text.length > 0 && h1Text.length < 10;
                const h1IsTooLong  = h1Text.length > 70;
@@ -14164,15 +14190,14 @@ return result;
                  const _faqWords=['faq','frequently asked','common question','preguntas frecuentes','preguntas que','veelgestelde vragen','häufige fragen','questions fréquentes','foire aux questions','domande frequenti','perguntas frequentes','الأسئلة الشائعة','أسئلة شائعة'];
                  const _hasW=s=>_faqWords.some(w=>(s||'').toLowerCase().includes(w));
                  if(Array.from(_contentRoot.querySelectorAll('h2,h3,h4,summary,dt')).filter(_isContentEl).some(h=>_hasW(h.textContent))) return true;
-                 if(Array.from(document.querySelectorAll('[id]')).some(el=>el.id.toLowerCase().includes('faq'))) return true;
-                 if(Array.from(document.querySelectorAll('[class]')).some(el=>{const cn=el.className;const cns=typeof cn==='string'?cn:cn.baseVal||'';return /faq|accordion|toggle/.test(cns.toLowerCase());})) return true;
                  if(_hasW(cleanText)) return true;
                  // structural: 3+ question-bearing elements — headings, summary/dt, OR clickable/accordion
                  // containers (incl. Elementor), whose label has a question mark even before a +/− toggle symbol.
                  const _isQ=t=>{t=(t||'').replace(/\s+/g,' ').trim();return t.length<170&&/[?？؟]/.test(t);};
                  let q=Array.from(document.querySelectorAll('h2,h3,h4,summary,dt')).filter(el=>_isQ(el.textContent)).length;
                  q+=Array.from(_contentRoot.querySelectorAll('[onclick],[role="button"],[class*="toggle"],[class*="accordion"],[class*="faq"],[class*="question"],[class*="collaps"],[class*="acc-"],[class*="panel-title"],[class*="elementor-tab-title"],[class*="elementor-accordion"],[class*="e-n-accordion"]')).filter(_isContentEl).filter(el=>_isQ(el.textContent)).length;
-                 return q>=3;
+                 const marker=Array.from(_contentRoot.querySelectorAll('[id],[class]')).filter(_isContentEl).some(el=>{const id=String(el.id||'').toLowerCase();const cn=el.className;const cns=(typeof cn==='string'?cn:(cn&&cn.baseVal)||'').toLowerCase();return id.indexOf('faq')>=0||/(faq|accordion|toggle)/.test(cns);});
+                 return q>=3||(marker&&q>=2);
                })();
                const _imgRoot = _contentRoot;
                const _junkImg = /wp-content\/plugins|cookie|consent|gravatar|emoji|wp-smiley|spinner|loader|tracking|pixel|1x1|spacer|sprite|favicon|\blogo|badge|\bicon|thumb|screenshot|\bflag|placeholder|avatar|tawk|adabundle|widget|data:image/i;
@@ -15284,6 +15309,13 @@ return result;
                    revoked_at TIMESTAMPTZ
                  )`).catch(()=>{});
                  await pool.query('ALTER TABLE opportunity_reports ADD COLUMN IF NOT EXISTS hidden_at TIMESTAMPTZ').catch(()=>{});
+                 await pool.query('ALTER TABLE opportunity_reports ADD COLUMN IF NOT EXISTS refreshed_at TIMESTAMPTZ').catch(()=>{});
+                 await pool.query(`CREATE TABLE IF NOT EXISTS opportunity_report_revisions (
+                   id BIGSERIAL PRIMARY KEY,
+                   report_token VARCHAR(96) NOT NULL,
+                   report_data JSONB NOT NULL,
+                   archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                 )`).catch(()=>{});
                  await pool.query(`CREATE INDEX IF NOT EXISTS idx_opportunity_reports_domain_created ON opportunity_reports(domain,created_at DESC)`).catch(()=>{});
                  return true;
                }
@@ -15298,42 +15330,67 @@ return result;
                  const r=report||{},s=r.summary||{},e=r.executive_summary||{},external=r.analysis_mode==='external-evidence';
                  const esc=_opportunityHtmlEscape;
                  const badge=function(v){return '<span class="badge">'+esc(v||'Observed')+'</span>';};
-                 const prioritySource=(r.opportunities||[]).filter(function(x){return !(x&&x.source==='automatic-html-graaf');});
-                 const opp=prioritySource.slice(0,8).map(function(x){return '<div class="opp"><div><b>'+esc(x.title)+'</b>'+badge(x.status)+'</div><span>'+esc(x.action||x.why||'')+'</span>'+(x.why?'<small>Why: '+esc(x.why)+'</small>':'')+'</div>';}).join('') || ((r.graaf&&Array.isArray(r.graaf.page_recommendations)&&r.graaf.page_recommendations.length)?'<p class="muted">The page-level priorities are shown once, in the Original GRAAF ContentScore Scan below.</p>':'<p class="muted">No separate evidence-backed priority opportunity was generated yet.</p>');
-                 const pages=(r.page_analysis||[]).slice(0,15).map(function(x){var orphanLabel=x.orphan==null?'N/A — broader link analysis required':(x.orphan?'Yes':'No');return '<tr><td>'+esc(x.title||x.url)+'</td><td>'+esc(x.page_type)+'</td><td><b>'+esc(x.content_score==null?'N/A':x.content_score+'/100')+'</b></td><td>'+esc(x.graaf==null?'N/A':x.graaf+'/50')+'</td><td>'+esc(x.craft==null?'N/A':x.craft+'/30')+'</td><td>'+esc(x.technical==null?'N/A':x.technical+'/20')+'</td><td>'+esc(orphanLabel)+'</td></tr>';}).join('');
+                 const graafPages=(r.graaf&&Array.isArray(r.graaf.page_recommendations))?r.graaf.page_recommendations:[];
+                 const weakPages=(r.graaf&&Array.isArray(r.graaf.weakest_pages))?r.graaf.weakest_pages:[];
+                 const selectedPage=r.page_selection&&r.page_selection.selected?r.page_selection.selected:null;
+                 const _sameUrl=function(a,b){return String(a||'').replace(/\/$/,'').toLowerCase()===String(b||'').replace(/\/$/,'').toLowerCase();};
+                 const _pa=function(u){return (r.page_analysis||[]).find(function(x){return _sameUrl(x&&x.url,u);})||{};};
+                 const _wp=function(u){return weakPages.find(function(x){return _sameUrl(x&&x.url,u);})||{};};
+                 const _gp=function(u){return graafPages.find(function(x){return _sameUrl(x&&x.url,u);})||{};};
+                 const _words=function(u){var a=_pa(u),w=_wp(u),g=_gp(u),st=g.content_stats||{};var v=st.wordCount!=null?st.wordCount:(a.word_count!=null?a.word_count:(w.word_count!=null?w.word_count:(selectedPage&&_sameUrl(selectedPage.url,u)?selectedPage.words:null)));return v==null?null:Number(v);};
+                 const _faqProven=function(u){var a=_pa(u),g=_gp(u),st=g.content_stats||{};return st.hasFAQContent===true||a.has_faq_content===true;};
+                 const _invalidForEvidence=function(x){var t=String((x&&x.title)||'')+' '+String((x&&x.action)||'')+' '+String((x&&x.description)||'');var u=x&&x.url;var wc=_words(u);if(/faq structured data|visible faq content/i.test(t)&&!_faqProven(u))return true;if(wc!=null&&wc<120&&/strengthen evidence where claims need support|strengthen real-world proof/i.test(t))return true;return false;};
+                 const _reportRecs=function(p){return (p&&Array.isArray(p.recommendations)?p.recommendations:[]).filter(function(x){return !_invalidForEvidence(Object.assign({url:p&&p.url},x));});};
+                 const _genericH1=function(v){return /^(welcome|home|hello|untitled|page|index|main|default|test|new page|coming soon|product|products|service|services)$/i.test(String(v||'').trim());};
+                 const _extras=[];
+                 weakPages.slice(0,3).forEach(function(w){
+                   if(_genericH1(w&&w.h1))_extras.push({title:'⚠️ Make the H1 More Descriptive',action:'The observed H1 is “'+String(w.h1)+'”. Replace it with a specific heading that explains the real product offer or purpose of this page.',status:'observed',url:w.url});
+                   if(_words(w&&w.url)<120&&(/\/products?(?:[-_\/]|$)/i.test(String(w&&w.url||''))||/^products?$/i.test(String(w&&w.h1||''))))_extras.push({title:'🚨 Decide Whether This Product Page Should Exist',action:'This URL contains almost no substantive product information. Build a real product/category page, or remove it from navigation and consolidate/redirect it after confirming the intended destination.',status:'observed',url:w.url});
+                 });
+                 const prioritySource=_extras.concat((r.opportunities||[]).filter(function(x){return !(x&&x.source==='automatic-html-graaf')&&!_invalidForEvidence(x);}));
+                 const opp=prioritySource.slice(0,8).map(function(x){return '<div class="opp"><div><b>'+esc(x.title)+'</b>'+badge(x.status)+'</div><span>'+esc(x.action||x.why||'')+'</span>'+(x.why?'<small>Why: '+esc(x.why)+'</small>':'')+'</div>';}).join('') || (graafPages.length?'<p class="muted">The page-level priorities are shown once, in the validated GRAAF ContentScore Scan below.</p>':'<p class="muted">No separate evidence-backed priority opportunity was generated yet.</p>');
+                 const pages=(r.page_analysis||[]).slice(0,15).map(function(x){var gp=_gp(x.url),wp=_wp(x.url),sum=[x.graaf,x.craft,x.technical].every(function(v){return v!=null&&!isNaN(Number(v));})?(Number(x.graaf)+Number(x.craft)+Number(x.technical)):null;var cs=x.content_score!=null?x.content_score:(gp.content_score!=null?gp.content_score:(wp.score!=null?wp.score:sum));var onePage=Number(s.pages_analyzed||0)<=1;var orphanLabel=onePage||x.orphan==null?'N/A — broader link analysis required':(x.orphan?'Yes':'No');var pt=(selectedPage&&_sameUrl(selectedPage.url,x.url)&&selectedPage.type)?selectedPage.type:x.page_type;return '<tr><td>'+esc(x.title||x.url)+'</td><td>'+esc(pt||'unknown')+'</td><td><b>'+esc(cs==null?'N/A':cs+'/100')+'</b></td><td>'+esc(x.graaf==null?'N/A':x.graaf+'/50')+'</td><td>'+esc(x.craft==null?'N/A':x.craft+'/30')+'</td><td>'+esc(x.technical==null?'N/A':x.technical+'/20')+'</td><td>'+esc(orphanLabel)+'</td></tr>';}).join('');
                  const aiSource=(r.ai_visibility&&Array.isArray(r.ai_visibility.engines)&&r.ai_visibility.engines.length)
                    ? r.ai_visibility.engines
                    : FIVE_ENGINES.map(function(pair){return {engine:pair[0],label:pair[1],checked:false,recommended:null,domain_cited:null,exact_page_cited:null,verification_status:'Manual follow-up'};});
                  const ai=aiSource.map(function(x){return '<tr><td>'+esc(x.label)+'</td><td>'+esc(x.checked?'Yes':'No')+'</td><td>'+esc(x.recommended==null?'—':x.recommended?'Yes':'No')+'</td><td>'+esc(x.domain_cited==null?'—':x.domain_cited?'Yes':'No')+'</td><td>'+esc(x.exact_page_cited==null?'—':x.exact_page_cited?'Yes':'No')+'</td><td>'+esc(x.checked?x.verification_status:'Manual follow-up')+'</td></tr>';}).join('');
                  const access=(r.access_requirements||[]).map(function(x){return '<li><b>'+esc(x.item)+'</b> — '+esc(x.reason||('Missing: '+(x.missing||1)))+'</li>';}).join('') || '<li>No additional access requirement detected.</li>';
-                 const road=(r.roadmap||[]).map(function(x){return '<div class="phase"><b>'+esc(x.phase)+'</b><ul>'+((x.actions||[]).slice(0,8).map(function(a){return '<li>'+esc(a)+'</li>';}).join('')||'<li>No verified action available from this evidence.</li>')+'</ul></div>';}).join('');
+                 const roadmapUrl=(selectedPage&&selectedPage.url)||(weakPages[0]&&weakPages[0].url)||'';
+                 const roadmapWords=_words(roadmapUrl),roadmapIsShort=roadmapWords!=null&&roadmapWords<120;
+                 const road=(r.roadmap||[]).map(function(x){
+                   var actions=(x.actions||[]).filter(function(a){return !(roadmapIsShort&&/measurable first-party facts|measurable case-study|statistics|case stud/i.test(String(a||'')));});
+                   if(roadmapIsShort&&/days?\s*1|week\s*1/i.test(String(x.phase||''))){
+                     if(!actions.some(function(a){return /h1/i.test(String(a||''));}))actions.unshift('Replace the generic H1 with a descriptive heading that identifies the actual product or offer.');
+                     if(!actions.some(function(a){return /should exist|consolidat|redirect|substantive product/i.test(String(a||''));}))actions.unshift('Decide whether this product URL should become a substantive product/category page or be consolidated and redirected.');
+                   }
+                   return '<div class="phase"><b>'+esc(x.phase)+'</b><ul>'+((actions.slice(0,8).map(function(a){return '<li>'+esc(a)+'</li>';}).join(''))||'<li>No verified action available from this evidence.</li>')+'</ul></div>';
+                 }).join('');
                  const ev=r.external_evidence||{}, searchResults=ev.search_results||[], competitors=ev.competitor_results||[], own=ev.own_results||[], topics=ev.topic_signals||[];
                  const evidenceRows=searchResults.slice(0,18).map(function(x){return '<tr><td>'+esc(x.query||'')+'</td><td><b>'+esc(x.title)+'</b><br><span class="muted">'+esc(x.snippet)+'</span></td><td><a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.domain||x.url)+'</a></td></tr>';}).join('');
                  const compRows=competitors.slice(0,10).map(function(x){return '<tr><td><b>'+esc(x.domain||x.title)+'</b></td><td>'+esc(x.title)+'</td><td>'+esc(x.query||'')+'</td><td>'+esc(x.position||'—')+'</td></tr>';}).join('');
                  const ownRows=own.slice(0,10).map(function(x){return '<tr><td><b>'+esc(x.title)+'</b><br><span class="muted">'+esc(x.snippet)+'</span></td><td><a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.url)+'</a></td></tr>';}).join('');
                  const topicHtml=topics.slice(0,10).map(function(x){return '<div class="signal"><b>'+esc(x.topic)+'</b><span>'+esc(x.reason)+'</span>'+badge(x.status||'possible-opportunity')+'</div>';}).join('');
-                 const graafPages=(r.graaf&&r.graaf.page_recommendations)||[];
-                 const graafRecCount=graafPages.reduce(function(n,p){return n+((p.recommendations||[]).length);},0);
+                 const graafRecCount=graafPages.reduce(function(n,p){return n+_reportRecs(p).length;},0);
                  function graafPriority(rec){var p=String(rec&&rec.priority||'').toLowerCase();if(p==='high')return 'HIGH PRIORITY';if(p==='medium')return 'MEDIUM PRIORITY';if(p==='low')return 'QUICK WIN';return p?String(rec.priority).toUpperCase():'';}
                  function graafRecHtml(rec,i){var why=rec&&((rec.learning!=null&&rec.learning!=='')?rec.learning:rec.why);return '<div class="graaf-rec"><div class="graaf-rec-title"><b>'+esc((i+1)+'. '+(rec.title||rec.name||'GRAAF recommendation'))+'</b>'+(graafPriority(rec)?'<span class="graaf-priority">'+esc(graafPriority(rec))+'</span>':'')+'</div>'+(rec.description?'<p>'+esc(rec.description)+'</p>':'')+(rec.action?'<div class="graaf-detail"><strong>ACTION:</strong> '+esc(rec.action)+'</div>':'')+(why?'<div class="graaf-detail"><strong>WHY:</strong> '+esc(why)+'</div>':'')+(rec.target?'<div class="graaf-detail"><strong>TARGET:</strong> '+esc(rec.target)+'</div>':'')+'</div>';}
                  function graafOriginalScanHtml(p){
-                   var c=p.component_scores||{},st=p.content_stats||{},score=p.content_score==null?'—':p.content_score;
+                   var a=_pa(p.url),w=_wp(p.url),c=Object.assign({},(r.graaf&&r.graaf.component_scores)||{}, {graaf:a.graaf,craft:a.craft,technical:a.technical},p.component_scores||{}),st=Object.assign({wordCount:a.word_count!=null?a.word_count:w.word_count,h1Count:a.h1_count,h1Text:a.h1||w.h1,images:a.images,internalLinks:a.internal_links!=null?a.internal_links:w.outbound_internal,hasSchema:a.schema,hasCanonical:a.has_canonical,hasFAQContent:a.has_faq_content},p.content_stats||{}),score=p.content_score==null?(w.score==null?'—':w.score):p.content_score,recs=_reportRecs(p);
                    var cards='<div class="graaf-components">'
                      +'<div class="graaf-component"><b>GRAAF</b><strong>'+esc(c.graaf==null?'—':c.graaf)+'</strong><small>/ 50</small></div>'
                      +'<div class="graaf-component craft"><b>CRAFT</b><strong>'+esc(c.craft==null?'—':c.craft)+'</strong><small>/ 30</small></div>'
                      +'<div class="graaf-component technical"><b>TECHNICAL</b><strong>'+esc(c.technical==null?'—':c.technical)+'</strong><small>/ 20</small></div></div>';
                    var signals='<div class="graaf-signals">'
                      +'<span><b>'+esc(st.wordCount==null?'—':st.wordCount)+'</b> words</span>'
-                     +'<span><b>'+esc(st.h1Count==null?'—':st.h1Count)+'</b> H1</span>'
+                     +'<span><b>'+esc(st.h1Count==null?(st.h1Text||'—'):st.h1Count)+'</b> H1</span>'
                      +'<span><b>'+esc(st.h2Count==null?'—':st.h2Count)+'</b> H2 headings</span>'
                      +'<span><b>'+esc(st.images==null?'—':st.images)+'</b> images</span>'
                      +'<span><b>'+esc(st.internalLinks==null?'—':st.internalLinks)+'</b> internal links</span>'
                      +'<span><b>'+(st.hasSchema===true?'✓':(st.hasSchema===false?'✕':'—'))+'</b> schema</span>'
                      +'<span><b>'+(st.hasCanonical===true?'✓':(st.hasCanonical===false?'✕':'—'))+'</b> canonical</span></div>';
-                   var inner=(p.recommendations||[]).map(graafRecHtml).join('');
-                   return '<details class="graaf-page" open><summary><span><b>'+esc(p.title||p.url)+'</b><small>'+esc(p.url)+'</small></span><strong class="graaf-score">'+esc(score)+'/100</strong><span class="graaf-count">'+esc((p.recommendations||[]).length)+' recommendations</span></summary><div class="graaf-page-body"><div class="graaf-total"><strong>'+esc(score)+'</strong><span>ContentScore / 100</span></div>'+cards+'<p class="muted" style="margin:8px 0 12px">Total = GRAAF /50 + CRAFT /30 + Technical /20. These components are scored separately and then added.</p>'+signals+'<h3 class="graaf-rec-heading">Exact GRAAF ContentScore recommendations</h3>'+inner+'</div></details>';
+                   var inner=recs.map(graafRecHtml).join('');
+                   return '<details class="graaf-page" open><summary><span><b>'+esc(p.title||p.url)+'</b><small>'+esc(p.url)+'</small></span><strong class="graaf-score">'+esc(score)+'/100</strong><span class="graaf-count">'+esc(recs.length)+' validated recommendations</span></summary><div class="graaf-page-body"><div class="graaf-total"><strong>'+esc(score)+'</strong><span>ContentScore / 100</span></div>'+cards+'<p class="muted" style="margin:8px 0 12px">Total = GRAAF /50 + CRAFT /30 + Technical /20. These components are scored separately and then added.</p>'+signals+'<h3 class="graaf-rec-heading">Validated GRAAF ContentScore recommendations</h3>'+inner+'</div></details>';
                  }
-                 const graafFullHtml=graafPages.length?'<section class="box graaf-full"><h2>Original GRAAF ContentScore Scan</h2><p class="muted">This section comes directly from the existing ContentScale scan engine. GRAAF, CRAFT and Technical are kept as separate score components. All '+esc(graafRecCount)+' original recommendations are shown without summarising or rewriting.</p>'+graafPages.map(graafOriginalScanHtml).join('')+'</section>':'';
+                 const graafFullHtml=graafPages.length?'<section class="box graaf-full"><h2>Validated GRAAF ContentScore Scan</h2><p class="muted">GRAAF, CRAFT and Technical remain separate score components. '+esc(graafRecCount)+' evidence-backed recommendations are shown. Generic recommendations that are not supported by saved page evidence are suppressed.</p>'+graafPages.map(graafOriginalScanHtml).join('')+'</section>':'';
                  const metricVal=function(v){return v==null||v===''?'N/A':v;};
                  const discoveredCount=(s.pages_discovered==null||s.pages_discovered==='')?null:Number(s.pages_discovered);
                  const analyzedCount=(s.pages_analyzed==null||s.pages_analyzed==='')?null:Number(s.pages_analyzed);
@@ -15343,7 +15400,12 @@ return result;
                  const improvementLabel=improvementCount===1?'Priority Opportunity':'Priority Opportunities';
                  const metricHtml=external?'<div class="grid"><div class="metric"><b>'+esc(ev.queries_run||0)+'</b>Search queries researched</div><div class="metric"><b>'+esc(ev.own_domain_results||0)+'</b>Own-domain results observed</div><div class="metric"><b>'+esc(ev.other_domain_results||0)+'</b>External results observed</div><div class="metric"><b>'+esc(competitors.length)+'</b>Competitive domains observed</div></div>':'<div class="grid"><div class="metric"><b>'+esc(metricVal(s.pages_discovered))+'</b>'+discoveredLabel+'</div><div class="metric"><b>'+esc(metricVal(s.pages_analyzed))+'</b>'+analyzedLabel+'</div><div class="metric"><b>'+esc(metricVal(s.average_graaf))+(s.average_graaf==null?'':'/100')+'</b>Average ContentScore</div><div class="metric"><b>'+esc(improvementCount)+'</b>'+improvementLabel+'</div><div class="metric"><b>'+esc(s.pages_analyzed===1?'N/A':metricVal(s.orphan_pages))+'</b>'+(s.pages_analyzed===1?'Orphan status · broader link analysis required':'Orphan pages')+'</div><div class="metric"><b>'+esc(s.ai_engines_verified==null?'0/5':s.ai_engines_verified+'/5')+'</b>AI manually verified</div></div>';
                  const ps=r.page_selection&&r.page_selection.selected?r.page_selection.selected:null;
-                 const selectionHtml=(!external&&ps)?'<section class="box"><h2>Why This Page Was Selected</h2><p><b>Commercially relevant with visible improvement potential.</b> ContentScale selected this page as a useful CEO opportunity example — not because it has the most content, but because it appears to have a real business purpose and meaningful weaknesses that can be improved.</p>'+(ps.thin_content_signal?'<div class="signal"><b>Thin / limited content detected</b><span>This commercial page contains approximately '+esc(ps.words)+' words. For a service or commercial topic, limited coverage can mean there is not enough depth to clearly explain relevance, expertise, customer questions and the subject itself to visitors, search engines and AI systems. More words alone do not improve rankings; the opportunity is to add useful topical depth, proof and intent-matching content.</span></div>':'')+'<div class="signal"><b>Why it matters</b><span>A commercially important page with limited or incomplete coverage may provide fewer clear signals about when and for which searches the page is relevant. The exact GRAAF recommendations below show the observed issues that can be acted on.</span></div><p class="muted">Selection evidence: '+esc(ps.reason||'commercial relevance and actionable improvement signals')+'. Selected for highest improvement opportunity within the discovered scope. This report does not claim this is the worst page on the entire website; it is the strongest opportunity identified in the discovery scope.</p></section>':'';
+                 const selectedWords=ps?(_words(ps.url)!=null?_words(ps.url):ps.words):null;
+                 const selectedProduct=!!(ps&&((ps.type==='product')||/\/products?(?:[-_\/]|$)/i.test(String(ps.url||''))||/^products?$/i.test(String((_pa(ps.url).h1)||(_wp(ps.url).h1)||''))));
+                 const selectedThin=ps&&selectedWords!=null&&Number(selectedWords)<120;
+                 const thinSignal=selectedThin?(selectedProduct?'<div class="signal"><b>Almost no substantive product content detected</b><span>The scan counted '+esc(selectedWords)+' words across the document, including headings and site chrome, but found no meaningful product descriptions, categories or offer details. Navigation and footer text do not make this a complete product page.</span></div>':'<div class="signal"><b>Thin / limited content detected</b><span>This commercial page contains approximately '+esc(selectedWords)+' words. More words alone do not improve rankings; the opportunity is to add useful topical depth, proof and intent-matching content.</span></div>'):'';
+                 const selectionEvidence=selectedThin?(selectedProduct?'commercial product intent · almost no substantive product content · '+selectedWords+' document words including site chrome · generic or incomplete page signals':'commercial relevance · '+selectedWords+' detected words · visible improvement signals'):(ps&&ps.reason||'commercial relevance and actionable improvement signals');
+                 const selectionHtml=(!external&&ps)?'<section class="box"><h2>Why This Page Was Selected</h2><p><b>Commercially relevant with visible improvement potential.</b> ContentScale selected this page as a useful CEO opportunity example — not because it has the most content, but because it appears to have a real business purpose and meaningful weaknesses that can be improved.</p>'+thinSignal+'<div class="signal"><b>Why it matters</b><span>A commercially important page with limited or incomplete coverage may provide fewer clear signals about when and for which searches the page is relevant. The exact GRAAF recommendations below show the observed issues that can be acted on.</span></div><p class="muted">Selection evidence: '+esc(selectionEvidence)+'. Selected for highest improvement opportunity within the discovered scope. This report does not claim this is the worst page on the entire website; it is the strongest opportunity identified in the discovery scope.</p></section>':'';
                  const externalSections=external?'<section class="box"><h2>Current Search Presence</h2><p class="muted">Public search-index evidence observed for this company. This is not a substitute for a page-level audit.</p>'+(ownRows?'<table><thead><tr><th>Observed result</th><th>URL</th></tr></thead><tbody>'+ownRows+'</tbody></table>':'<p>No own-domain organic result was returned by the research queries.</p>')+'</section><section class="box"><h2>Competitive Visibility</h2><p class="muted">Domains below appeared in the researched search results. Appearance is evidence of visibility for that query, not proof that the company is a direct business competitor.</p>'+(compRows?'<table><thead><tr><th>Domain</th><th>Result</th><th>Query</th><th>Position</th></tr></thead><tbody>'+compRows+'</tbody></table>':'<p>No external competitive domains were observed in the returned results.</p>')+'</section><section class="box"><h2>Content & Search Opportunities</h2>'+(topicHtml||'<p class="muted">No safe topic signal could be extracted from the available public evidence.</p>')+'</section><section class="box"><h2>Research Evidence</h2>'+(evidenceRows?'<table><thead><tr><th>Research query</th><th>Observed result</th><th>Source domain</th></tr></thead><tbody>'+evidenceRows+'</tbody></table>':'<p>No organic results were returned. Direct audit remains pending.</p>')+'</section>':'';
                  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.company&&r.company.name||'ContentScale Opportunity Report')+'</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e6eef8;font:14px/1.55 Inter,system-ui,sans-serif}.wrap{max-width:1120px;margin:auto;padding:28px}.hero,.box{background:#0d1b2d;border:1px solid #263d55;border-radius:14px;padding:22px;margin-bottom:16px}.hero{background:linear-gradient(135deg,#0d1b2d,#102b42)}h1{margin:0 0 5px;font-size:28px}h2{font-size:17px;margin:0 0 12px;color:#76d7ff}.muted{color:#9fb1c5}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.metric{background:#102238;border:1px solid #29435d;border-radius:10px;padding:15px}.metric b{display:block;font-size:25px}.opp,.signal{border:1px solid #29435d;border-radius:10px;padding:14px;margin:8px 0;background:#102238}.opp span,.opp small,.signal span{display:block;color:#aebfd1}.opp small{margin-top:5px;font-size:11px}.badge{display:inline-block!important;margin-left:8px;padding:2px 7px;border:1px solid #3b82f6;border-radius:999px;color:#93c5fd!important;font-size:10px;text-transform:uppercase}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:8px;border-bottom:1px solid #263d55;text-align:left;vertical-align:top}th{color:#76d7ff}a{color:#7dd3fc}pre{white-space:pre-wrap;overflow:auto;background:#081321;padding:14px;border-radius:10px;font-size:11px}.phase{padding:12px 0;border-bottom:1px solid #263d55}.graaf-page{border:1px solid #29435d;border-radius:12px;margin:12px 0;background:#0a1727;overflow:hidden}.graaf-page>summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:14px;align-items:center;cursor:pointer;padding:16px;list-style:none}.graaf-page>summary::-webkit-details-marker{display:none}.graaf-page>summary small{display:block;color:#9fb1c5;font-weight:400;margin-top:3px;overflow-wrap:anywhere}.graaf-score{font-size:20px;color:#76d7ff}.graaf-count{color:#9fb1c5;font-size:12px}.graaf-page-body{padding:0 16px 16px}.graaf-rec{border-top:1px solid #263d55;padding:16px 0}.graaf-rec:first-child{border-top:0}.graaf-rec-title{display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap}.graaf-priority{font-size:10px;padding:2px 7px;border:1px solid #52677e;border-radius:999px;color:#c8d5e3}.graaf-rec p{margin:7px 0;color:#dbe7f4}.graaf-detail{margin-top:7px;color:#aebfd1}.graaf-detail strong{color:#e6eef8}@media(max-width:700px){.graaf-page>summary{grid-template-columns:1fr auto}.graaf-count{grid-column:1/-1}.wrap{padding:12px}table{display:block;overflow:auto}}@media print{body{background:#fff;color:#111}.hero,.box{background:#fff;border-color:#ddd}.muted,.opp span,.opp small,.signal span{color:#444}}</style></head><body><main class="wrap"><section class="hero"><div class="muted">ContentScale · '+(external?'Digital Search Opportunity Report':esc(r.report_type))+'</div><h1>'+esc(r.company&&r.company.name||'Opportunity Report')+'</h1><div class="muted">'+esc(r.company&&r.company.url||'')+' · Generated '+esc(r.generated_at)+'</div><p>'+esc(e.report_scope||'')+'</p></section><section class="box"><h2>Executive Opportunity Summary</h2>'+metricHtml+'</section>'+selectionHtml+externalSections+(!external?'<section class="box"><h2>Page Analysis</h2><p class="muted">Page-level evidence from the scan. “N/A” means the item cannot be determined from this scan scope; for example, orphan status requires a broader site/link inventory.</p><table><thead><tr><th>Page</th><th>Type</th><th>ContentScore</th><th>GRAAF</th><th>CRAFT</th><th>Technical</th><th>Orphan</th></tr></thead><tbody>'+pages+'</tbody></table><p class="muted"><b>How the score is built:</b> ContentScore /100 = GRAAF content &amp; evidence /50 + CRAFT /30 + Technical /20. A very thin page can therefore have a very low GRAAF component while still earning CRAFT and Technical points.</p></section>':'')+'<section class="box"><h2>Priority Opportunities</h2>'+opp+'</section>'+graafFullHtml+(!external?'<section class="box"><h2>AI Search Visibility — Verification Required</h2><p class="muted">Your visibility in ChatGPT, Google AI Overviews / Gemini, Perplexity, Claude and Microsoft Copilot has not yet been verified. This is checked separately to determine whether your company is mentioned, recommended, your domain is cited, or an exact page is cited. Until an engine is manually checked, recommendation and citation fields remain unverified.</p><table><thead><tr><th>Engine</th><th>Checked</th><th>Recommended</th><th>Domain cited</th><th>Exact page</th><th>Status</th></tr></thead><tbody>'+ai+'</tbody></table></section>':'')+'<section class="box"><h2>90-Day Opportunity Plan</h2>'+road+'</section>'+((!external&&r.quick_scan_token&&String(r.origin||'').indexOf('ceo_')===0)?'<section class="box" id="nextStep"><h2>Choose another important page to check</h2><p><b>You choose the next page.</b> Select one different service, product or commercial page on the same website. The page already analyzed in this CEO Prospect Report cannot be used again.</p><p class="muted">On the next screen, enter the exact page URL you want ContentScale to scan. We will score that page separately and keep it as Page B for the two-page comparison.</p><a href="/quick-scan/'+encodeURIComponent(String(r.quick_scan_token))+'" style="display:inline-block;border:0;border-radius:9px;padding:13px 18px;background:#2563eb;color:#fff;font-weight:800;text-decoration:none">Choose my next page →</a></section>':'')+'<section class="box"><h2>Evidence & Limitations</h2><p>'+esc(e.access_note||'Evidence is labelled according to verification level.')+'</p><ul>'+access+'</ul><details><summary>Technical evidence record (admin/debug)</summary><pre>'+esc(_opportunityJson(r))+'</pre></details></section></main></body></html>';
                }
@@ -15540,7 +15602,7 @@ return result;
                      report.origin=body.origin||'standalone';
                      if(body.quick_scan_token)report.quick_scan_token=String(body.quick_scan_token);
                      let share=null,save_warning=null;
-                     if(pool){
+                     if(pool && body._skip_persist!==true){
                        try{
                          await _ensureOpportunityReportTable();
                          const token=crypto.randomBytes(32).toString('hex');
@@ -15564,7 +15626,7 @@ return result;
                  report.origin=body.origin||'standalone';
                  if(body.quick_scan_token)report.quick_scan_token=String(body.quick_scan_token);
                  let share=null;
-                 if(pool){
+                 if(pool && body._skip_persist!==true){
                    await _ensureOpportunityReportTable();
                    const token=crypto.randomBytes(32).toString('hex');
                    const domain=String(report.company.domain||'').replace(/^https?:\/\//i,'').split('/')[0].toLowerCase();
@@ -15588,6 +15650,56 @@ return result;
                    if(!out.debug_stage)out.debug_stage='audit-opportunity-report';
                    res.status(e&&e.status||500).json(out);
                  }
+               });
+
+               // Re-run one existing prospect report with the current scanner while preserving
+               // its public token/URL. The previous JSON is archived first, so refresh is reversible.
+               app.post('/api/opportunity-reports/:token/refresh',requireAdmin,async(req,res)=>{
+                 try{
+                   if(!pool)return res.status(503).json({success:false,error:'Database unavailable'});
+                   await _ensureOpportunityReportTable();
+                   const token=String(req.params.token||'').trim().toLowerCase();
+                   if(!/^[a-f0-9]{64}$/.test(token))return res.status(404).json({success:false,error:'Report not found'});
+                   const q=await pool.query('SELECT token,source_url,report_mode,report_data FROM opportunity_reports WHERE token=$1 AND revoked_at IS NULL LIMIT 1',[token]);
+                   if(!q.rows.length)return res.status(404).json({success:false,error:'Report not found'});
+                   const row=q.rows[0],old=typeof row.report_data==='string'?JSON.parse(row.report_data):row.report_data||{};
+                   const input={
+                     url:String(row.source_url||(old.company&&old.company.url)||'').trim(),
+                     business_name:String((old.company&&old.company.name)||'').trim(),
+                     report_mode:String(row.report_mode||old.report_mode||'prospect'),
+                     origin:String(old.origin||'standalone'),
+                     quick_scan_token:old.quick_scan_token||undefined,
+                     ceo_single_page:/^ceo_/i.test(String(old.origin||'')),
+                     forceFresh:true,
+                     _skip_persist:true
+                   };
+                   if(!input.url)return res.status(400).json({success:false,error:'This report has no source URL to refresh'});
+                   const generated=await _generateProspectOpportunityReport(req,input);
+                   const fresh=generated&&generated.report;
+                   if(!fresh)return res.status(500).json({success:false,error:'Refresh completed without report data'});
+                   // Preserve selection context for the same public report, but replace its pre-screen
+                   // word count with the authoritative full ContentScore scan value.
+                   if(old.page_selection){
+                     fresh.page_selection=JSON.parse(JSON.stringify(old.page_selection));
+                     const selectedUrl=fresh.page_selection.selected&&fresh.page_selection.selected.url;
+                     const pa=(fresh.page_analysis||[]).find(function(x){return String(x&&x.url||'').replace(/\/$/,'').toLowerCase()===String(selectedUrl||'').replace(/\/$/,'').toLowerCase();})||(fresh.page_analysis||[])[0]||{};
+                     if(fresh.page_selection.selected&&pa.word_count!=null){
+                       fresh.page_selection.selected.words=Number(pa.word_count);
+                       fresh.page_selection.selected.reason='commercially relevant · almost no substantive content ('+Number(pa.word_count)+' detected words before boilerplate review) · visible improvement signals · specific landing page';
+                     }
+                   }
+                   fresh.refreshed_at=new Date().toISOString();
+                   fresh.refreshed_with_build=CONTENTSCALE_BUILD_ID;
+                   const client=await pool.connect();
+                   try{
+                     await client.query('BEGIN');
+                     await client.query('INSERT INTO opportunity_report_revisions(report_token,report_data) VALUES($1,$2::jsonb)',[token,JSON.stringify(old)]);
+                     await client.query('UPDATE opportunity_reports SET report_data=$2::jsonb,source_url=$3,refreshed_at=NOW(),hidden_at=NULL WHERE token=$1',[token,JSON.stringify(fresh),input.url]);
+                     await client.query('COMMIT');
+                   }catch(dbErr){await client.query('ROLLBACK').catch(()=>{});throw dbErr;}finally{client.release();}
+                   const recCount=fresh.graaf&&Array.isArray(fresh.graaf.page_recommendations)?fresh.graaf.page_recommendations.reduce(function(n,p){return n+(Array.isArray(p.recommendations)?p.recommendations.length:0);},0):0;
+                   res.json({success:true,token:token,url:req.protocol+'://'+req.get('host')+'/opportunity-report/'+token,score:fresh.summary&&fresh.summary.average_graaf,recommendation_count:recCount,build:CONTENTSCALE_BUILD_ID,refreshed_at:fresh.refreshed_at});
+                 }catch(e){console.error('[opportunity-report] refresh failed:',e&&e.stack||e);res.status(e&&e.status||500).json({success:false,error:String(e&&e.message||e||'Could not refresh report')});}
                });
 
                app.post('/api/opportunity-reports/list',requireAdmin,async(req,res)=>{
@@ -17341,7 +17453,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v353');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v354');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22005,7 +22117,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v353');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v354');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22099,10 +22211,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v353 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v354 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v353'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v354'});
     try{res.end();}catch(_){}
   }
 });
@@ -23008,7 +23120,24 @@ function reportApi(path,opt){opt=opt||{};opt.headers=Object.assign({'Content-Typ
 function ensurePanel(){var app=document.getElementById('app');if(!app||document.getElementById('pqsReportPanel'))return;var p=document.createElement('div');p.className='p';p.id='pqsReportPanel';p.innerHTML='<h2>CEO Prospect Report — no Quick Scan required</h2><p class="meta">Use this for cold CEO outreach. Enter any company website and ContentScale runs the existing broader 20-page intelligence layer. Five manual AI checks and GSC are not required; unverified evidence stays Observed / Possible / Needs access.</p><div class="row"><input id="pqsReportName" placeholder="Business name"><input id="pqsReportUrl" style="min-width:320px" placeholder="https://company.com"><button class="btn pqsReportBtn" id="pqsReportGenerate">Generate CEO Prospect Report</button><button class="btn" id="pqsReportRefresh">Refresh reports</button></div><details style="margin-top:10px"><summary class="meta" style="cursor:pointer">Blocked site? Paste HTML manually for GRAAF (optional)</summary><textarea id="pqsReportManualHtml" placeholder="Only use this when the automatic scan remains GRAAF Pending. Paste page HTML here; ContentScale will run the existing GRAAF engine automatically." style="width:100%;min-height:110px;margin-top:8px"></textarea></details><div id="pqsReportStatus" class="meta" style="margin-top:8px"></div><div class="pqsReportTools"><input type="checkbox" id="pqsReportSelectAll" class="pqsReportCheck" aria-label="Select all reports"><label for="pqsReportSelectAll" class="meta pqsReportSelectLabel">Select all reports</label><div class="pqsReportDeleteWrap"><button class="btn pqsDeleteBtn" id="pqsReportDeleteSelected" disabled>Delete selected</button><span class="meta" id="pqsReportSelectedCount"></span></div></div><div id="pqsReportHistory" class="pqsReportHistory"></div>';var first=app.firstElementChild;app.insertBefore(p,first?first.nextSibling:null);p.querySelector('#pqsReportGenerate').onclick=generateStandalone;p.querySelector('#pqsReportRefresh').onclick=loadHistory;p.querySelector('#pqsReportSelectAll').onchange=function(){boxSelectAll(this.checked)};p.querySelector('#pqsReportDeleteSelected').onclick=deleteSelectedReports;loadHistory()}
 async function generateStandalone(){var b=document.getElementById('pqsReportGenerate'),u=document.getElementById('pqsReportUrl'),n=document.getElementById('pqsReportName'),st=document.getElementById('pqsReportStatus');if(!u||!u.value.trim())return st.textContent='Enter a website URL.';b.disabled=true;b.textContent='Running broader analysis…';st.innerHTML='<span class="pqsAnalyzing">Analysing up to 20 commercially relevant pages and researching search visibility<span class="pqsDots"></span></span> <span>This can take a while.</span>';try{var d=await reportApi('/api/audit-opportunity-report',{method:'POST',body:JSON.stringify({code:window.KEY||localStorage.getItem('pqs_admin_code')||'',url:u.value.trim(),business_name:n.value.trim(),manual_html:(document.getElementById('pqsReportManualHtml')||{}).value||'',report_mode:'prospect',origin:'ceo_outreach'})});st.innerHTML=d.share?'<span class="good">Report ready.</span> <a class="link" target="_blank" href="'+E(d.share.url)+'">Open report</a>':'Report generated.';loadHistory()}catch(e){st.innerHTML='<span class="warn">'+E(e.message)+'</span>'}finally{b.disabled=false;b.textContent='Generate CEO Prospect Report'}}
 async function generateFromQuick(token,b){b.disabled=true;var old=b.textContent;b.textContent='Building report…';try{var d=await reportApi('/api/prospect-quick-scan/admin/'+token+'/prospect-report',{method:'POST',body:'{}'});if(d.share){b.textContent='Report ready ✓';window.open(d.share.url,'_blank','noopener');loadHistory()}else b.textContent='Generated ✓'}catch(e){b.disabled=false;b.textContent=old;alert(e.message)}}
-async function loadHistory(){var box=document.getElementById('pqsReportHistory');if(!box)return;try{var d=await reportApi('/api/opportunity-reports/list',{method:'POST',body:'{}'});box.innerHTML=(d.reports||[]).map(function(x){var score=(x.graaf_score==null||x.graaf_score==='')?null:Number(x.graaf_score),badge=score!=null?'<span class="pqsReportBadge pqsGraafBadge">GRAAF '+E(score)+'/100 · '+E(x.recommendation_count||0)+' recommendations</span>':(x.html_required?'<span class="pqsReportBadge pqsHtmlRequiredBadge">⚠ GRAAF HTML REQUIRED</span>':(x.analysis_mode==='external-evidence'?'<span class="pqsReportBadge pqsExternalBadge">External evidence · GRAAF pending</span>':'')),htmlBtn=x.html_required?'<button class="btn pqsAddHtmlBtn" data-add-html="'+E(x.token)+'">Add HTML</button>':'';return '<div class="pqsReportRow" data-report-row="'+E(x.token)+'"><input type="checkbox" class="pqsReportCheck" data-report-token="'+E(x.token)+'" aria-label="Select '+E(x.business_name||x.domain)+'"><div class="pqsReportMain"><b>'+E(x.business_name||x.domain)+'</b>'+badge+'<div class="meta">'+E(x.origin)+' · '+E(x.report_mode)+' · '+new Date(x.created_at).toLocaleString()+' · '+x.view_count+' view'+(x.view_count===1?'':'s')+'</div>'+(x.html_required?'<div class="meta" style="color:#fcd34d;margin-top:4px">Automatic website access was blocked. Paste first-party page HTML to complete GRAAF.'+(x.html_required_reason?' '+E(x.html_required_reason):'')+'</div>':'')+'</div><div class="pqsReportActions">'+htmlBtn+'<a class="link" target="_blank" href="'+E(x.url)+'">Open report</a><button class="btn" style="padding:4px 8px" data-copy="'+E(x.url)+'">Copy link</button></div></div>'}).join('')||'<div class="meta">No Prospect Reports yet.</div>';box.querySelectorAll('[data-copy]').forEach(function(x){x.onclick=function(){navigator.clipboard.writeText(x.dataset.copy)}});box.querySelectorAll('[data-add-html]').forEach(function(x){x.onclick=function(){openReportHtmlEditor(x.dataset.addHtml)}});box.querySelectorAll('[data-report-token]').forEach(function(x){x.onchange=updateReportSelection});var all=document.getElementById('pqsReportSelectAll');if(all)all.checked=false;updateReportSelection()}catch(e){box.innerHTML='<span class="warn">'+E(e.message)+'</span>'}}
+async function refreshOpportunityReport(token,b){if(!confirm('Re-scan this prospect report with the current ContentScale build? The public link stays the same and the previous report is archived.'))return;var st=document.getElementById('pqsReportStatus'),old=b.textContent;b.disabled=true;b.textContent='Refreshing…';if(st)st.innerHTML='<span class="pqsAnalyzing">Re-scanning the website and rebuilding this report<span class="pqsDots"></span></span> <span>The public link stays the same.</span>';try{var d=await reportApi('/api/opportunity-reports/'+token+'/refresh',{method:'POST',body:'{}'});b.textContent='✓ Refreshed';if(st)st.innerHTML='<span class="good">Report refreshed with '+E(d.build||'the current build')+'. ContentScore '+E(d.score==null?'N/A':d.score+'/100')+' · '+E(d.recommendation_count||0)+' validated recommendations. The shared URL is unchanged.</span>';setTimeout(loadHistory,1200)}catch(e){b.disabled=false;b.textContent='✕ Retry';if(st)st.innerHTML='<span class="warn">Refresh failed: '+E(e.message)+'</span>';setTimeout(function(){b.textContent=old},3500)}}
+async function loadHistory(){
+ var box=document.getElementById('pqsReportHistory');if(!box)return;
+ try{
+  var d=await reportApi('/api/opportunity-reports/list',{method:'POST',body:'{}'});
+  box.innerHTML=(d.reports||[]).map(function(x){
+   var score=(x.graaf_score==null||x.graaf_score==='')?null:Number(x.graaf_score);
+   var badge=score!=null?'<span class="pqsReportBadge pqsGraafBadge">GRAAF '+E(score)+'/100 · '+E(x.recommendation_count||0)+' recommendations</span>':(x.html_required?'<span class="pqsReportBadge pqsHtmlRequiredBadge">⚠ GRAAF HTML REQUIRED</span>':(x.analysis_mode==='external-evidence'?'<span class="pqsReportBadge pqsExternalBadge">External evidence · GRAAF pending</span>':''));
+   var htmlBtn=x.html_required?'<button class="btn pqsAddHtmlBtn" data-add-html="'+E(x.token)+'">Add HTML</button>':'';
+   return '<div class="pqsReportRow" data-report-row="'+E(x.token)+'"><input type="checkbox" class="pqsReportCheck" data-report-token="'+E(x.token)+'" aria-label="Select '+E(x.business_name||x.domain)+'"><div class="pqsReportMain"><b>'+E(x.business_name||x.domain)+'</b>'+badge+'<div class="meta">'+E(x.origin)+' · '+E(x.report_mode)+' · '+new Date(x.created_at).toLocaleString()+' · '+x.view_count+' view'+(x.view_count===1?'':'s')+'</div>'+(x.html_required?'<div class="meta" style="color:#fcd34d;margin-top:4px">Automatic website access was blocked. Paste first-party page HTML to complete GRAAF.'+(x.html_required_reason?' '+E(x.html_required_reason):'')+'</div>':'')+'</div><div class="pqsReportActions">'+htmlBtn+'<button class="btn" style="padding:4px 8px" data-refresh-report="'+E(x.token)+'">Refresh report</button><a class="link" target="_blank" href="'+E(x.url)+'">Open report</a><button class="btn" style="padding:4px 8px" data-copy="'+E(x.url)+'">Copy link</button></div></div>';
+  }).join('')||'<div class="meta">No Prospect Reports yet.</div>';
+  box.querySelectorAll('[data-copy]').forEach(function(x){x.onclick=function(){navigator.clipboard.writeText(x.dataset.copy)}});
+  box.querySelectorAll('[data-add-html]').forEach(function(x){x.onclick=function(){openReportHtmlEditor(x.dataset.addHtml)}});
+  box.querySelectorAll('[data-refresh-report]').forEach(function(x){x.onclick=function(){refreshOpportunityReport(x.dataset.refreshReport,x)}});
+  box.querySelectorAll('[data-report-token]').forEach(function(x){x.onchange=updateReportSelection});
+  var all=document.getElementById('pqsReportSelectAll');if(all)all.checked=false;updateReportSelection();
+ }catch(e){box.innerHTML='<span class="warn">'+E(e.message)+'</span>'}
+}
 function openReportHtmlEditor(token){var row=document.querySelector('[data-report-row="'+token+'"]');if(!row)return;var old=row.querySelector('.pqsHtmlEditor');if(old){old.remove();return}var d=document.createElement('div');d.className='pqsHtmlEditor';d.innerHTML='<b>Complete GRAAF with page HTML</b><div class="meta">Paste the HTML for this company page. ContentScale will use the existing GRAAF pasted-HTML engine and update this same report.</div><textarea placeholder="Paste full page HTML here..."></textarea><div class="pqsHtmlEditorActions"><button class="btn pqsReportBtn" data-run-html>Run GRAAF & update report</button><button class="btn" data-cancel-html>Cancel</button><span class="meta" data-html-status></span></div>';row.appendChild(d);d.querySelector('[data-cancel-html]').onclick=function(){d.remove()};d.querySelector('[data-run-html]').onclick=async function(){var b=this,html=d.querySelector('textarea').value,st=d.querySelector('[data-html-status]');if(!html.trim()){st.innerHTML='<span class="warn">Paste HTML first.</span>';return}b.disabled=true;b.textContent='Running GRAAF…';st.textContent='Analysing pasted HTML with the existing GRAAF engine…';try{var r=await reportApi('/api/opportunity-reports/'+token+'/add-html',{method:'POST',body:JSON.stringify({html:html})});st.innerHTML='<span class="good">GRAAF '+E(r.score)+'/100 · '+E(r.recommendation_count)+' recommendations. Report updated.</span>';setTimeout(loadHistory,900)}catch(e){st.innerHTML='<span class="warn">'+E(e.message)+'</span>';b.disabled=false;b.textContent='Run GRAAF & update report'}}}
 function selectedReportTokens(){return Array.prototype.slice.call(document.querySelectorAll('#pqsReportHistory [data-report-token]:checked')).map(function(x){return x.dataset.reportToken}).filter(Boolean)}
 function updateReportSelection(){var checks=Array.prototype.slice.call(document.querySelectorAll('#pqsReportHistory [data-report-token]')),selected=checks.filter(function(x){return x.checked}),all=document.getElementById('pqsReportSelectAll'),btn=document.getElementById('pqsReportDeleteSelected'),count=document.getElementById('pqsReportSelectedCount');checks.forEach(function(x){var row=x.closest('.pqsReportRow');if(row)row.classList.toggle('isSelected',x.checked)});if(all){all.checked=checks.length>0&&selected.length===checks.length;all.indeterminate=selected.length>0&&selected.length<checks.length}if(btn)btn.disabled=!selected.length;if(count)count.textContent=selected.length?(selected.length+' selected'):''}
