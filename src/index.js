@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v352';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v353';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -284,7 +284,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'already-scanned-published-html-check-live-v342',
   'scan-brief-check-three-step-state-v350',
   'case-study-fresh-start-cycle-v351',
-  'split-homepage-and-routed-impression-opportunities-v352'
+  'split-homepage-and-routed-impression-opportunities-v352',
+  'tracker-impression-opportunities-in-brief-v353'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -512,7 +513,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v352',
+  build: 'CS-2026-09-28-CANONICAL-v353',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -17340,7 +17341,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v352');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v353');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22004,7 +22005,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v352');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v353');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22098,10 +22099,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v352 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v353 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v352'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v353'});
     try{res.end();}catch(_){}
   }
 });
@@ -45135,7 +45136,49 @@ async function copyBrief(pageId) {
     toast(_copyFreshErr.message || 'Latest brief could not be loaded', '#f87171');
     return;
   }
+  // v353: the copied Brief must contain the same current GSC opportunity work shown
+  // on the tracker card. Refresh query evidence at the clipboard boundary so the Brief
+  // never depends on an older render or on the user opening the Impression Gap panel first.
+  try {
+    var _briefGsc = await api('/gsc-queries', 'GET');
+    _gapQueries = (_briefGsc && _briefGsc.queries) || [];
+    _sitemapSlugs = (_briefGsc && _briefGsc.sitemap_slugs) || [];
+    _gapAnalysis = (_briefGsc && _briefGsc.gap_analysis) || null;
+    _gapDone = (_briefGsc && _briefGsc.gap_done) || [];
+    _computePushables();
+  } catch(_briefGscErr) {
+    console.error('[copyBrief] current GSC impression opportunities unavailable:', _briefGscErr.message);
+  }
   _copyBriefAuthoritative(pageId);
+}
+
+// Deterministic Tracker -> Brief handoff. These lines use imported GSC evidence and
+// the same routing calculation as the page card; no AI-generated keyword guess is added.
+function _appendTrackerImpressionOpportunityLines(lines, pageId) {
+  lines.push('', '=== TRACKER GSC IMPRESSION OPPORTUNITIES ===');
+  var list = (_pushByPage && _pushByPage[pageId]) ? _pushByPage[pageId] : [];
+  if (!list.length) {
+    if (!_gapQueries || !_gapQueries.length) lines.push('(GSC Queries data is not available — import or fetch it before using this section.)');
+    else lines.push('(no eligible non-branded queries at position 11-25 with at least 30 impressions in the imported GSC date range)');
+    return;
+  }
+  var own = list.filter(function(q){ return !q.routeTo; });
+  var routed = list.filter(function(q){ return !!q.routeTo; });
+  lines.push('These are evidence-backed opportunities from the Tracker, not guessed keywords. Impressions refer to the imported GSC date range.');
+  lines.push('');
+  lines.push('Queries this page can win:');
+  if (!own.length) lines.push('- None in the current qualifying set.');
+  own.slice(0,10).forEach(function(q, i){
+    lines.push((i+1) + '. "' + q.query + '" — position ' + Number(q.pos).toFixed(1) + ' · ' + Number(q.impr||0).toLocaleString() + ' impressions' + (q.exact ? ' · EXACT PAGE DATA' : ' · AUTOMATIC INTENT MATCH'));
+    lines.push('   ACTION ON THIS PAGE: If the live HTML does not already answer this intent, add or improve one concise, directly relevant section. Do not repeat the keyword unnaturally.');
+  });
+  lines.push('');
+  lines.push('Queries better handled by another page:');
+  if (!routed.length) lines.push('- None.');
+  routed.slice(0,10).forEach(function(q, i){
+    lines.push((i+1) + '. "' + q.query + '" — position ' + Number(q.pos).toFixed(1) + ' · ' + Number(q.impr||0).toLocaleString() + ' impressions → ' + q.routeTo);
+    lines.push('   ACTION ON DESTINATION PAGE: Strengthen ' + q.routeTo + ' with the direct answer and supporting detail. On the current page, add at most one natural internal link when useful. DO NOT add the same full answer to both pages; open a separate Tracker Brief for the destination page before editing it.');
+  });
 }
 
 function _copyBriefAuthoritative(pageId) {
@@ -45320,6 +45363,10 @@ function _copyBriefAuthoritative(pageId) {
     if (why) lines.push('   WHY: ' + why);
     lines.push('');
   }); } else { lines.push('(no GSC ranking actions)'); }
+
+  // The visual tracker opportunity calculation is part of the exported working Brief.
+  // Keep it separate from AI/GSC generated actions so evidence, routing and ownership remain clear.
+  _appendTrackerImpressionOpportunityLines(lines, pageId);
 
   lines.push('=== SOURCE BRIEF (claims to verify) ===');
   if (_src3.length) { _src3.forEach(function(s2, i) {
@@ -47306,6 +47353,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
             if (g.expected_impact) lines.push('   Impact: ' + g.expected_impact);
           });
         } else { lines.push('(no GSC ranking actions)'); }
+
+        _appendTrackerImpressionOpportunityLines(lines, data.page_id);
 
         if (_entItem) {
       lines.push('', '=== MISSING ENTITIES ===');
