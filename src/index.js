@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v368';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v369';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -361,7 +361,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'reset-stage-errors-v366',
   'idempotent-report-reset-v367',
   'cross-panel-reset-refresh-v367',
-  'collapsed-prospect-delete-visible-v368'
+  'collapsed-prospect-delete-visible-v368',
+  'prospect-tawk-chat-all-pages-v369',
+  'localized-chat-cta-v369'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -622,7 +624,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v368',
+  build: 'CS-2026-09-29-CANONICAL-v369',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -1479,22 +1481,27 @@ app.use(function(req, res, next) {
 app.use((req, res, next) => {
 const origSend = res.send.bind(res);
 res.send = function(body) {
-// Prospect Quick Scan uses the same ContentScale consent UI. The inline Tawk loader in the
-// standalone HTML is removed here and replaced by a functional-consent gate. The scan itself,
-// personal token and server-side status remain Necessary and work when non-essential is rejected.
-if (typeof body === 'string' && /^\/quick-scan(?:\/|$)/.test(req.path||'') && res.getHeader('Content-Type')?.includes('text/html')) {
-  body = body.replace(/<script>\(function\(w,d\)\{w\.Tawk_API[\s\S]*?<\/script>/i, '');
-  const consentGate = `<script>(function(){
+// Every prospect-facing CEO Report and Quick Scan uses one consent-aware Tawk
+// chat. Analysis, private links and status polling remain Necessary and work
+// even when Functional cookies are rejected; only live chat stays disabled.
+const prospectChatPath=/^\/(?:quick-scan(?:\/|$)|scan\/|opportunity-report\/|report\/|(?:nl-|es-)?(?:(?:linkedin|facebook|email)-)?ceo\/?$)/i.test(req.path||'');
+if (typeof body === 'string' && prospectChatPath && res.getHeader('Content-Type')?.includes('text/html')) {
+  // Remove page-specific loaders so one page can never create two widgets.
+  body = body.replace(/<script\b[^>]*>[\s\S]*?embed\.tawk\.to[\s\S]*?<\/script>/gi, '');
+  const consentGate = `<script data-cs-prospect-chat="1">(function(){
+    var pendingOpen=false;
     function prefs(){try{return JSON.parse(localStorage.getItem('cs_cookie_consent_v1')||'null')}catch(e){return null}}
     function functional(){var p=prefs();return !!(p&&p.functional)}
-    function loadTawk(){if(!functional()||window.__pqsTawkLoading)return;window.__pqsTawkLoading=true;window.Tawk_API=window.Tawk_API||{};window.Tawk_LoadStart=new Date();var s=document.createElement('script');s.async=true;s.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';s.charset='UTF-8';s.crossOrigin='anonymous';document.head.appendChild(s)}
+    function maximize(){var tries=0;(function go(){tries++;if(window.Tawk_API&&typeof window.Tawk_API.maximize==='function'){pendingOpen=false;return window.Tawk_API.maximize()}if(pendingOpen&&tries<40)setTimeout(go,200)})()}
+    function loadTawk(){if(!functional())return;if(window.__pqsTawkLoading){if(pendingOpen)maximize();return}window.__pqsTawkLoading=true;window.Tawk_API=window.Tawk_API||{};window.Tawk_LoadStart=new Date();var s=document.createElement('script');s.async=true;s.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';s.charset='UTF-8';s.crossOrigin='anonymous';s.setAttribute('data-cs-tawk','1');s.onload=function(){if(pendingOpen)maximize()};s.onerror=function(){window.__pqsTawkLoading=false};document.head.appendChild(s)}
     var originalBeep=window.beep;window.beep=function(){if(functional()&&typeof originalBeep==='function')return originalBeep()};
-    window.openChat=function(){if(!functional()){if(window.csConsent&&window.csConsent.open)window.csConsent.open();return}loadTawk();var tries=0;(function go(){tries++;if(window.Tawk_API&&typeof window.Tawk_API.maximize==='function')return window.Tawk_API.maximize();if(tries<25)setTimeout(go,200)})()};
-    document.addEventListener('cs:consent',function(e){if(e.detail&&e.detail.functional)loadTawk()});
+    window.openChat=function(){pendingOpen=true;if(!functional()){if(window.csConsent&&window.csConsent.open)window.csConsent.open();return}loadTawk();maximize()};
+    window.openOttmarChat=window.openChat;
+    document.addEventListener('cs:consent',function(e){if(e.detail&&e.detail.functional){loadTawk();if(pendingOpen)maximize()}});
     setTimeout(loadTawk,0);
   })();<\/script><script src="https://app.contentscale.site/consent-widget.js?v=3"><\/script>`;
   const pqsLastBody = body.lastIndexOf('</body>');
-  if (pqsLastBody !== -1 && !body.includes('cs_cookie_consent_v1')) body = body.slice(0,pqsLastBody)+consentGate+body.slice(pqsLastBody);
+  if (pqsLastBody !== -1 && !body.includes('data-cs-prospect-chat')) body = body.slice(0,pqsLastBody)+consentGate+body.slice(pqsLastBody);
 }
 if (typeof body === 'string' && body.includes('</body>') &&
 res.getHeader('Content-Type')?.includes('text/html') &&
@@ -15467,16 +15474,16 @@ return result;
                function _prospectFooterMarkup(language){
                  const raw=String(language||'en').toLowerCase(),lang=raw.indexOf('nl')===0?'nl':(raw.indexOf('es')===0?'es':'en');
                  const c={
-                   en:{title:'Prefer to speak with a specialist?',text:'Talk directly with Ottmar Francisca for a transparent conversation about your website, the evidence in this report and the most sensible next step.',button:'Book a call with Ottmar',ai:'ContentScale uses AI to analyze public website information and prepare this report. Details submitted by the prospect are used to create and deliver the private report.',privacy:'Read how your data is handled in the Privacy Policy.'},
-                   nl:{title:'Praat je liever met een specialist?',text:'Spreek rechtstreeks met Ottmar Francisca voor een open gesprek over je website, het bewijs in dit rapport en de verstandigste volgende stap.',button:'Plan een gesprek met Ottmar',ai:'ContentScale gebruikt AI om openbare website-informatie te analyseren en dit rapport te maken. Gegevens die de prospect invult, worden gebruikt om het persoonlijke rapport te maken en te bezorgen.',privacy:'Lees in het privacybeleid hoe je gegevens worden verwerkt.'},
-                   es:{title:'¿Prefieres hablar con un especialista?',text:'Habla directamente con Ottmar Francisca sobre tu sitio web, las pruebas de este informe y el siguiente paso más sensato.',button:'Reserva una llamada con Ottmar',ai:'ContentScale utiliza IA para analizar información pública del sitio web y preparar este informe. Los datos enviados se usan para crear y entregar el informe privado.',privacy:'Consulta cómo se tratan tus datos en la Política de privacidad.'}
+                   en:{title:'Prefer to speak with a specialist?',text:'Talk directly with Ottmar Francisca for a transparent conversation about your website, the evidence in this report and the most sensible next step.',button:'Book a call with Ottmar',chat:'Chat with Ottmar',ai:'ContentScale uses AI to analyze public website information and prepare this report. Details submitted by the prospect are used to create and deliver the private report.',privacy:'Read how your data is handled in the Privacy Policy.'},
+                   nl:{title:'Praat je liever met een specialist?',text:'Spreek rechtstreeks met Ottmar Francisca voor een open gesprek over je website, het bewijs in dit rapport en de verstandigste volgende stap.',button:'Plan een gesprek met Ottmar',chat:'Chat met Ottmar',ai:'ContentScale gebruikt AI om openbare website-informatie te analyseren en dit rapport te maken. Gegevens die de prospect invult, worden gebruikt om het persoonlijke rapport te maken en te bezorgen.',privacy:'Lees in het privacybeleid hoe je gegevens worden verwerkt.'},
+                   es:{title:'¿Prefieres hablar con un especialista?',text:'Habla directamente con Ottmar Francisca sobre tu sitio web, las pruebas de este informe y el siguiente paso más sensato.',button:'Reserva una llamada con Ottmar',chat:'Chatea con Ottmar',ai:'ContentScale utiliza IA para analizar información pública del sitio web y preparar este informe. Los datos enviados se usan para crear y entregar el informe privado.',privacy:'Consulta cómo se tratan tus datos en la Política de privacidad.'}
                  }[lang];
-                 return '<footer data-cs-prospect-footer="1" class="cs-prospect-footer"><section class="cs-prospect-specialist"><h2>'+c.title+'</h2><p>'+c.text+'</p><a href="https://calendly.com/aioeditors" target="_blank" rel="noopener noreferrer">'+c.button+'</a></section><section class="cs-prospect-privacy"><p>'+c.ai+'</p><p><a href="https://contentscale.site/privacy-policy/" target="_blank" rel="noopener noreferrer">'+c.privacy+'</a></p></section></footer>';
+                 return '<footer data-cs-prospect-footer="1" class="cs-prospect-footer"><section class="cs-prospect-specialist"><h2>'+c.title+'</h2><p>'+c.text+'</p><div class="cs-prospect-contact"><button type="button" onclick="openChat()">'+c.chat+'</button><a href="https://calendly.com/aioeditors" target="_blank" rel="noopener noreferrer">'+c.button+'</a></div></section><section class="cs-prospect-privacy"><p>'+c.ai+'</p><p><a href="https://contentscale.site/privacy-policy/" target="_blank" rel="noopener noreferrer">'+c.privacy+'</a></p></section></footer>';
                }
                function _injectProspectFooter(html,language){
                  let out=String(html||'');
                  if(!out||out.includes('data-cs-prospect-footer'))return out;
-                 const css='<style data-cs-prospect-footer-style>.cs-prospect-footer{max-width:1120px;margin:18px auto 28px;padding:0 24px;color:#e6eef8;font:14px/1.6 Inter,Segoe UI,Arial,sans-serif}.cs-prospect-specialist,.cs-prospect-privacy{background:#0b1728;border:1px solid #334155;border-radius:14px;padding:20px;margin-top:14px}.cs-prospect-specialist h2{margin:0 0 6px;font-size:20px;color:#f8fafc}.cs-prospect-specialist p,.cs-prospect-privacy p{margin:0 0 12px;color:#cbd5e1}.cs-prospect-specialist a{display:inline-block;border:1px solid #67e8f9;border-radius:9px;padding:10px 15px;color:#67e8f9;font-weight:800;text-decoration:none}.cs-prospect-privacy a{color:#67e8f9}.cs-prospect-privacy p:last-child{margin-bottom:0}@media(max-width:700px){.cs-prospect-footer{padding:0 12px}}</style>';
+                 const css='<style data-cs-prospect-footer-style>.cs-prospect-footer{max-width:1120px;margin:18px auto 28px;padding:0 24px;color:#e6eef8;font:14px/1.6 Inter,Segoe UI,Arial,sans-serif}.cs-prospect-specialist,.cs-prospect-privacy{background:#0b1728;border:1px solid #334155;border-radius:14px;padding:20px;margin-top:14px}.cs-prospect-specialist h2{margin:0 0 6px;font-size:20px;color:#f8fafc}.cs-prospect-specialist p,.cs-prospect-privacy p{margin:0 0 12px;color:#cbd5e1}.cs-prospect-contact{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.cs-prospect-specialist a,.cs-prospect-specialist button{display:inline-block;border:1px solid #67e8f9;border-radius:9px;padding:10px 15px;color:#67e8f9;background:transparent;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.cs-prospect-specialist button{background:linear-gradient(90deg,#7c3aed,#2563eb);border-color:#8b5cf6;color:#fff}.cs-prospect-privacy a{color:#67e8f9}.cs-prospect-privacy p:last-child{margin-bottom:0}@media(max-width:700px){.cs-prospect-footer{padding:0 12px}.cs-prospect-contact>*{width:100%;text-align:center}}</style>';
                  if(/<\/head>/i.test(out))out=out.replace(/<\/head>/i,css+'</head>');else out=css+out;
                  const footer=_prospectFooterMarkup(language);
                  return /<\/body>/i.test(out)?out.replace(/<\/body>/i,footer+'</body>'):out+footer;
@@ -17709,7 +17716,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-29-CANONICAL-v368');
+console.log('[ContentScale] CS-2026-09-29-CANONICAL-v369');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22545,7 +22552,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v368');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v369');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22646,10 +22653,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v368 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v369 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v368'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v369'});
     try{res.end();}catch(_){}
   }
 });
