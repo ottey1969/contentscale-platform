@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v351';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v352';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -283,7 +283,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'persistent-action-wait-feedback-v341',
   'already-scanned-published-html-check-live-v342',
   'scan-brief-check-three-step-state-v350',
-  'case-study-fresh-start-cycle-v351'
+  'case-study-fresh-start-cycle-v351',
+  'split-homepage-and-routed-impression-opportunities-v352'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -511,7 +512,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v351',
+  build: 'CS-2026-09-28-CANONICAL-v352',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -17339,7 +17340,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v351');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v352');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22003,7 +22004,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v351');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v352');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22097,10 +22098,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v351 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v352 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v351'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v352'});
     try{res.end();}catch(_){}
   }
 });
@@ -44609,19 +44610,38 @@ function renderPages() {
     var _pushHtml = '';
     var _pushList = _pushByPage[p.id];
     if (_pushList && _pushList.length) {
-      var _pRows = _pushList.slice(0, 5).map(function(q){
+      var _pushRow = function(q){
         return '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;min-width:0;">'
           + (q.exact ? '<span style="font-size:9px;color:#4ade80;flex-shrink:0;" title="Exact: from this page’s own Queries CSV export — no matching guesswork">✓</span>' : '')
           + '<span style="font-size:11px;color:#e5e7eb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;">' + String(q.query).replace(/</g,'&lt;') + '</span>'
           + '<span style="font-size:10px;color:#facc15;flex-shrink:0;white-space:nowrap;">pos ' + q.pos.toFixed(1) + '</span>'
           + '<span style="font-size:10px;color:#6b7280;flex-shrink:0;white-space:nowrap;">' + q.impr.toLocaleString() + ' impr</span>'
-          + (q.routeTo ? '<span style="font-size:9px;font-weight:800;color:#fb923c;border:1px solid #9a341255;border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap;" title="Generic commercial query \\u2014 belongs on this service page, not the homepage. Add the answering section + internal link there.">\\u2192 ' + q.routeTo + '</span>' : '')
+          + (q.routeTo ? '<span style="font-size:9px;font-weight:800;color:#fb923c;border:1px solid #9a341255;border-radius:4px;padding:1px 6px;flex-shrink:0;white-space:nowrap;" title="This query is a stronger intent match for the destination page. Improve that page and avoid duplicating the same answer on the homepage.">\\u2192 ' + q.routeTo + '</span>' : '')
           + '</div>';
-      }).join('');
+      };
+      var _homeWins = _pushList.filter(function(q){ return !q.routeTo; });
+      var _routedWins = _pushList.filter(function(q){ return !!q.routeTo; });
+      var _homeRows = _homeWins.slice(0, 5).map(_pushRow).join('');
+      var _routedRows = _routedWins.slice(0, 5).map(_pushRow).join('');
+      var _pushShown = Math.min(5,_homeWins.length) + Math.min(5,_routedWins.length);
+      var _homeSection = _homeRows
+        ? '<div style="margin-top:6px;padding:7px 9px;background:rgba(74,222,128,.04);border:1px solid #14532d;border-radius:5px;">'
+          + '<div style="font-size:10px;font-weight:900;color:#4ade80;margin-bottom:3px;">Queries this homepage can win</div>'
+          + '<div style="font-size:9px;color:#86efac;line-height:1.45;margin-bottom:3px;">To gain impressions: answer the matching intent clearly on the homepage with one concise section or question-form heading. Add only content that belongs on the homepage.</div>'
+          + _homeRows + '</div>'
+        : '';
+      var _routedSection = _routedRows
+        ? '<div style="margin-top:6px;padding:7px 9px;background:rgba(251,146,60,.04);border:1px solid #7c2d12;border-radius:5px;">'
+          + '<div style="font-size:10px;font-weight:900;color:#fb923c;margin-bottom:3px;">Queries better handled by another page</div>'
+          + '<div style="font-size:9px;color:#fdba74;line-height:1.45;margin-bottom:3px;">To gain impressions: strengthen the orange destination page with the direct answer, supporting detail and a relevant internal link. Do not publish the same full answer on both pages.</div>'
+          + _routedRows + '</div>'
+        : '';
       _pushHtml = '<div style="background:#0a0e14;border:1px solid #1f2937;border-left:3px solid #facc15;border-radius:6px;padding:8px 12px;margin:8px 0;">'
-        + '<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:#facc15;text-transform:uppercase;margin-bottom:4px;" title="Each row is ONE search query where this page sits at position 11-25 (page 2). The page itself may already rank #1 for its main keyword \\u2014 these are OTHER searches it almost ranks for. Add a question-form H2 answering the query (+ internal link) and this page\\u2019s existing authority pushes it onto page 1. Non-branded, \\u226530 impressions, from your Queries CSV; \\u2713 = exact per-page data.">\\u2b06 Pushable queries \\u2014 extra searches this page can win</div>'
-        + _pRows
-        + (_pushList.length > 5 ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - 5) + ' more in your Queries CSV</div>' : '')
+        + '<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:#facc15;text-transform:uppercase;margin-bottom:4px;" title="Non-branded GSC queries at average position 11-25 with at least 30 impressions in the imported date range. A green check means exact page-level ownership; orange routing is an automatic intent-match recommendation.">\\u2b06 GSC impression opportunities</div>'
+        + '<div style="font-size:9px;color:#9ca3af;line-height:1.45;">More impressions come from making the correct page eligible for more relevant searches — not from repeating every keyword across the site.</div>'
+        + _homeSection
+        + _routedSection
+        + (_pushList.length > _pushShown ? '<div style="font-size:9px;color:#4b5563;margin-top:3px;">+ ' + (_pushList.length - _pushShown) + ' more in your Queries CSV</div>' : '')
         + '</div>';
     }
     return _sectionPrefix + '<div id="page-' + p.id + '" class="cs-page-card' + (muteCompletedCard ? ' done' : '') + '" data-page-id="' + p.id + '" data-tour="page-card" style="position:relative;background:#0d1117;border:1px solid #1f2937;' + (_mdOn ? 'border-left:4px solid #16a34a;' : 'border-left:4px solid #374151;') + 'border-radius:10px;margin-bottom:12px;overflow:hidden;">'
