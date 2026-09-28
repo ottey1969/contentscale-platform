@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v343';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v344';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -282,7 +282,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'lead-brief-renderer-repair-v340',
   'persistent-action-wait-feedback-v341',
   'already-scanned-published-html-check-live-v342',
-  'scan-brief-check-three-step-state-v343'
+  'scan-brief-check-three-step-state-v344'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -510,7 +510,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v343',
+  build: 'CS-2026-09-28-CANONICAL-v344',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -2318,6 +2318,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
 // GET /api/tracker-client/:token — get client data + pages
 app.get('/api/tracker-client/:token', async (req, res) => {
   try {
+    await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, disabled: true, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
@@ -2395,6 +2396,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     const _evStem=String(client.domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' ');
     const _evAliases=[client.name,client.domain,_evStem];
     pagesR.rows.forEach(function(_p){
+      _p.claims_facts_updated_at=client.claims_facts_updated_at||null;
       _p.ai_manual_evidence=_trackerReparseManualEvidenceMap(_p.ai_manual_evidence||{},_p.url,_evAliases,_p.revision_cycle);
       const _aiN=['google_aio','chatgpt','perplexity','claude','copilot'].filter(k=>{const x=_p.ai_manual_evidence&&_p.ai_manual_evidence[k];return x&&!(x.is_cleared===true||x.is_cleared==='true'||x.is_cleared===1||x.is_cleared==='1');}).length;
       const _hasGsc=[_p.gsc_clicks,_p.gsc_impressions,_p.gsc_position].some(v=>v!==null&&v!==undefined);
@@ -2587,6 +2589,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
         brand_context: client.brand_context || '',
         brand_headshot: client.brand_headshot || '',
         brand_hub: client.brand_hub || '',
+        claims_facts_updated_at: client.claims_facts_updated_at || null,
         brief_language: client.brief_language || 'auto',
         sitemap_url: client.sitemap_url || '',
         sitemap_urls: (function(){ try { return JSON.parse(client.sitemap_urls || '[]'); } catch(e){ return []; } })()
@@ -3253,6 +3256,9 @@ function _trackerNormalScanGate(page){
   const b=v=>v===true||v===1||v==='1'||v==='true'||v==='t';
   if(!page)return {allowed:false,reason:'Page not found'};
   if(b(page.monitoring_waiting_input))return {allowed:false,reason:'Waiting for fresh evidence'};
+  const factsAt=page.claims_facts_updated_at?new Date(page.claims_facts_updated_at).getTime():0;
+  const briefAt=page.brief_evaluated_at?new Date(page.brief_evaluated_at).getTime():0;
+  if(factsAt&&(!briefAt||factsAt>briefAt))return {allowed:true,reason:'VERIFIED Claims & Facts changed after the current Brief; rebuild the Brief with the current evidence'};
   const impl=String(page.implementation_status||'').toLowerCase();
   if(['verifying','live_changed_delta_remaining','live_same_checkpoint_delta_remaining','live_same_checkpoint_actions_verified'].includes(impl)){
     return {allowed:false,reason:'Use the current live verification/correction action instead of a new scan'};
@@ -3288,7 +3294,8 @@ function _trackerNormalScanGate(page){
 app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
   try {
     await _ensureMonitoringGateSchema();
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 OR lead_token=$1', [req.params.token]);
+    await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
+    const cr = await pool.query('SELECT id,claims_facts_updated_at FROM tracker_clients WHERE token=$1 OR lead_token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const unscannedOnly = req.body && req.body.unscanned_only === true;
     const prioritiesOnly = req.body && req.body.priorities_only === true;
@@ -3332,6 +3339,7 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
       pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(case_study_active,FALSE) AND COALESCE(manual_done,FALSE)) ORDER BY created_at ASC", [cr.rows[0].id]);
     }
 
+    pages.rows.forEach(p=>{p.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;});
     const blocked=pages.rows.filter(p=>!_trackerNormalScanGate(p).allowed);
     pages.rows=pages.rows.filter(p=>_trackerNormalScanGate(p).allowed);
     res.json({ success: true, queued: pages.rows.length, blocked:blocked.length, blocked_pages:blocked.slice(0,25).map(p=>({id:p.id,url:p.url,reason:_trackerNormalScanGate(p).reason})), message: 'Scanning ' + pages.rows.length + ' ' + (prioritiesOnly ? 'priority ' : (unscannedOnly ? 'unscanned ' : '')) + 'pages one by one; '+blocked.length+' workflow-locked page(s) skipped (~' + Math.ceil(pages.rows.length * 3 / 60) + ' min)' });
@@ -3356,7 +3364,8 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
 app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
   try {
     await _ensureMonitoringGateSchema();
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 OR lead_token=$1', [req.params.token]);
+    await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
+    const cr = await pool.query('SELECT id,claims_facts_updated_at FROM tracker_clients WHERE token=$1 OR lead_token=$1', [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const ids = (req.body && Array.isArray(req.body.page_ids)) ? req.body.page_ids.map(Number).filter(Boolean) : [];
     if (!ids.length) return res.status(400).json({ success: false, error: 'No pages selected' });
@@ -3366,6 +3375,7 @@ app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
       [cr.rows[0].id, ids]
     );
     if (!pages.rows.length) return res.status(400).json({ success: false, error: 'No matching pages' });
+    pages.rows.forEach(p=>{p.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;});
     const blocked=pages.rows.filter(p=>!_trackerNormalScanGate(p).allowed);
     pages.rows=pages.rows.filter(p=>_trackerNormalScanGate(p).allowed);
     if(!pages.rows.length)return res.status(409).json({success:false,scan_locked:true,error:'The selected pages are workflow-locked. Follow each page\'s NEXT ACTION instead.',blocked_pages:blocked.map(p=>({id:p.id,url:p.url,reason:_trackerNormalScanGate(p).reason}))});
@@ -5589,6 +5599,32 @@ setTimeout(()=>{ _syncAllContentScaleVerifiedFactsToLocalizedTrackers({force:fal
 // ── Claims & Facts gate — CANONICAL CUSTOMER TRACKER ROUTES ─────────────────
 // Every client-specific factual claim starts UNVERIFIED. Only VERIFIED is safe for content.
 // AI/competitor observations remain useful intelligence, but can never silently become client facts.
+// CONTENTSCALE-VERIFIED-IDENTITY-CONTRACT-V344=true
+// Future AI/devs: VERIFIED is not merely a display status. It changes the content contract,
+// invalidates older Brief evidence, and must override stale wording found on the live page.
+function _trackerIdentityContract(verifiedClaims, brandContext, domain){
+  const claims=(verifiedClaims||[]).map(x=>String(x&&x.claim_text!=null?x.claim_text:x||'')).filter(Boolean);
+  const corpus=(claims.join('\n')+'\n'+String(brandContext||'')+'\n'+String(domain||'')).toLowerCase();
+  const personalPortfolio=/contentscale\s+is\s+(?:my|ottmar(?:'s|’s))\s+professional\s+portfolio|portfolio,?\s+not\s+(?:a\s+)?company|pages?\s+are\s+about\s+me|creator\s+of\s+contentscale|always\s+["']?i["']?\s*\/\s*["']?my/i.test(corpus);
+  if(!personalPortfolio)return {personal_portfolio:false,prompt:'',verified_claims:claims};
+  const prompt=`\n\nVERIFIED OWNER IDENTITY & VOICE CONTRACT — HIGHEST PRIORITY:\n- These pages are about Ottmar J.G. Francisca, an independent SEO consultant; they are not corporate software-company pages.\n- ContentScale is Ottmar's professional portfolio of tools, methodologies and research. Say “created by Ottmar Francisca” or “creator of ContentScale”; never “Founder”, “company”, “agency”, “platform team” or “our team”.\n- Write owner passages, author copy and CTAs in first person: I / me / my. Never we / us / our. General editorial sentences may still refer to a reader's own team.\n- Use only the VERIFIED facts supplied in Claims & Facts. Preserve their exact meaning: “SEO experience across 200+ websites” is not “200+ recovered businesses”; “SEO professionals from 47 countries use ContentScale” is not a client count; “documented case studies showing recovery within 90 days” is not a success-rate guarantee.\n- Never write “78% success rate”. Never add a price list to editorial content. Send work enquiries to https://contentscale.site/services/.\n- Internal links should use the homepage hub plus relevant AI Overview, GEO, GRAAF Framework and Free AI Citations Tracker spokes when those exact URLs exist in the sitemap.\n- For ContentScale-owned WordPress page HTML, use a .cs-article wrapper, include body:has(.cs-article){background:#fff}, retain existing images, and keep every section mobile-friendly.\n- This VERIFIED contract supersedes stale live-page wording, generic templates and model defaults.\n`;
+  return {personal_portfolio:true,prompt,verified_claims:claims};
+}
+function _trackerApplyIdentityContract(value,contract){
+  if(!contract||!contract.personal_portfolio)return value;
+  if(typeof value==='string')return value
+    .replace(/founder\s+of\s+ContentScale/gi,'creator of ContentScale')
+    .replace(/ContentScale\s*(?:—|-|,)\s*an?\s+SEO\s+content\s+agency(?:\s+(?:based|in)\s+Amsterdam)?/gi,"ContentScale, Ottmar Francisca's professional portfolio of SEO tools, methodologies and research")
+    .replace(/(?:the\s+)?ContentScale\s+team/gi,'Ottmar Francisca')
+    .replace(/our\s+team/gi,'Ottmar');
+  if(Array.isArray(value))return value.map(v=>_trackerApplyIdentityContract(v,contract));
+  if(value&&typeof value==='object')Object.keys(value).forEach(k=>{value[k]=_trackerApplyIdentityContract(value[k],contract);});
+  return value;
+}
+async function _trackerTouchClaimsFacts(clientId){
+  await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
+  await pool.query('UPDATE tracker_clients SET claims_facts_updated_at=NOW() WHERE id=$1',[clientId]).catch(()=>{});
+}
 async function _trackerClaimsPage(req,res){
   const cr=await pool.query('SELECT id FROM tracker_clients WHERE (token=$1 OR lead_token=$1) AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);
   if(!cr.rows.length){res.status(404).json({success:false,error:'Not found'});return null;}
@@ -5619,6 +5655,7 @@ app.post('/api/tracker-client/:token/claims-facts',async(req,res)=>{try{
   if(['ai_intelligence','competitive_intelligence','competitor','ai_source'].includes(sourceType.toLowerCase()))return res.status(403).json({success:false,error:'AI and competitor observations belong in read-only Intelligence, not in the client Claims & Facts ledger. Add only a client-owned fact with business evidence.'});
   const rr=await pool.query(`INSERT INTO tracker_claims_facts(page_id,tracker_client_id,claim_text,source_type,source_engine,source_context,status,notes)
     VALUES(NULL,$1,$2,$3,$4,$5,'UNVERIFIED',$6) RETURNING *,FALSE AS safe_to_use`,[own.clientId,claim,sourceType,engine,ctx,notes]);
+  await _trackerTouchClaimsFacts(own.clientId);
   await _caseStudyEventForClient(own.clientId,'claim_created',{claim:rr.rows[0]}).catch(()=>{});
   res.json({success:true,claim:rr.rows[0],message:'Saved as UNVERIFIED — blocked from content until explicitly verified.'});
 }catch(e){console.error('[client-claims-facts-add]',e.message);res.status(500).json({success:false,error:e.message});}});
@@ -5629,12 +5666,14 @@ app.patch('/api/tracker-client/:token/claims-facts/:claimId',async(req,res)=>{tr
   const notes=String(req.body?.notes||'').trim();
   const rr=await pool.query(`UPDATE tracker_claims_facts SET status=$1::varchar,notes=CASE WHEN $2::text<>'' THEN $2::text ELSE notes END,verified_at=CASE WHEN $1::text='VERIFIED' THEN NOW() ELSE NULL END,updated_at=NOW()
     WHERE id=$3 AND tracker_client_id=$4 AND page_id IS NULL RETURNING *,(status='VERIFIED') AS safe_to_use`,[st,notes,req.params.claimId,own.clientId]);
-  if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});await _caseStudyEventForClient(own.clientId,'claim_status_changed',{before:before.rows[0]||null,after:rr.rows[0]}).catch(()=>{});res.json({success:true,claim:rr.rows[0]});
+  if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});
+  await _trackerTouchClaimsFacts(own.clientId);
+  await _caseStudyEventForClient(own.clientId,'claim_status_changed',{before:before.rows[0]||null,after:rr.rows[0]}).catch(()=>{});res.json({success:true,claim:rr.rows[0],brief_refresh_required:true,message:'Claim status saved. Existing Briefs are now marked stale and must be rebuilt with the current VERIFIED facts.'});
 }catch(e){console.error('[client-claims-facts-update]',{message:e.message,code:e.code,detail:e.detail,constraint:e.constraint,claimId:req.params.claimId});res.status(500).json({success:false,error:'Claims & Facts update failed',code:e.code||'',detail:e.detail||e.message});}});
 app.delete('/api/tracker-client/:token/claims-facts/:claimId',async(req,res)=>{try{
   const own=await _trackerClaimsClient(req,res);if(!own)return;
   const rr=await pool.query('DELETE FROM tracker_claims_facts WHERE id=$1 AND tracker_client_id=$2 AND page_id IS NULL RETURNING *',[req.params.claimId,own.clientId]);
-  if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});await _caseStudyEventForClient(own.clientId,'claim_deleted',{deleted_claim:rr.rows[0]}).catch(()=>{});res.json({success:true,deleted:true,history_preserved:true});
+  if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});await _trackerTouchClaimsFacts(own.clientId);await _caseStudyEventForClient(own.clientId,'claim_deleted',{deleted_claim:rr.rows[0]}).catch(()=>{});res.json({success:true,deleted:true,history_preserved:true,brief_refresh_required:true});
 }catch(e){console.error('[client-claims-facts-delete]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // LEGACY PAGE-SCOPED CLAIM ROUTES — do not use for new Tracker UI.
@@ -5653,7 +5692,8 @@ app.post('/api/tracker-client/:token/page/:pageId/claims-facts',async(req,res)=>
   // Deliberately force NEW claims to UNVERIFIED. Verification must be an explicit second action.
   const rr=await pool.query(`INSERT INTO tracker_claims_facts(page_id,tracker_client_id,claim_text,source_type,source_engine,source_context,status,notes)
     VALUES($1,$2,$3,$4,$5,$6,'UNVERIFIED',$7) RETURNING *,FALSE AS safe_to_use`,[own.pageId,own.clientId,claim,sourceType,engine,ctx,notes]);
-  res.json({success:true,claim:rr.rows[0],message:'Saved as UNVERIFIED — blocked from content until explicitly verified.'});
+  await _trackerTouchClaimsFacts(own.clientId);
+  res.json({success:true,claim:rr.rows[0],brief_refresh_required:true,message:'Saved as UNVERIFIED — blocked from content until explicitly verified. Existing Briefs are marked stale.'});
 }catch(e){console.error('[claims-facts-add]',e.message);res.status(500).json({success:false,error:e.message});}});
 app.patch('/api/tracker-client/:token/page/:pageId/claims-facts/:claimId',async(req,res)=>{try{
   const own=await _trackerClaimsPage(req,res);if(!own)return;
@@ -5661,12 +5701,12 @@ app.patch('/api/tracker-client/:token/page/:pageId/claims-facts/:claimId',async(
   const notes=String(req.body?.notes||'').trim();
   const rr=await pool.query(`UPDATE tracker_claims_facts SET status=$1::varchar,notes=CASE WHEN $2::text<>'' THEN $2::text ELSE notes END,verified_at=CASE WHEN $1::text='VERIFIED' THEN NOW() ELSE NULL END,updated_at=NOW()
     WHERE id=$3 AND page_id=$4 RETURNING *, (status='VERIFIED') AS safe_to_use`,[st,notes,req.params.claimId,own.pageId]);
-  if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});res.json({success:true,claim:rr.rows[0]});
+  if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});await _trackerTouchClaimsFacts(own.clientId);res.json({success:true,claim:rr.rows[0],brief_refresh_required:true});
 }catch(e){console.error('[claims-facts-update]',e.message);res.status(500).json({success:false,error:e.message});}});
 app.delete('/api/tracker-client/:token/page/:pageId/claims-facts/:claimId',async(req,res)=>{try{
   const own=await _trackerClaimsPage(req,res);if(!own)return;
   const rr=await pool.query('DELETE FROM tracker_claims_facts WHERE id=$1 AND page_id=$2 RETURNING id',[req.params.claimId,own.pageId]);
-  if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});res.json({success:true,deleted:true});
+  if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});await _trackerTouchClaimsFacts(own.clientId);res.json({success:true,deleted:true,brief_refresh_required:true});
 }catch(e){console.error('[claims-facts-delete]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 
@@ -7580,11 +7620,13 @@ app.post('/api/tracker-client/:token/pages/:pageId/evidence-checkpoint/complete'
 app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
   try {
     await _ensureMonitoringGateSchema();
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
+    const cr = await pool.query('SELECT id,claims_facts_updated_at FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
+    page.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;
     const normalScanGate=_trackerNormalScanGate(page);
     if(!normalScanGate.allowed&&!page.monitoring_waiting_input){
       return res.status(409).json({success:false,scan_locked:true,error:normalScanGate.reason,next_action_required:true});
@@ -7592,7 +7634,8 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     // A completed case-study page follows the protected proof/verification loop.
     // A GSC refresh or a missing legacy brief_evaluated_at is not permission to
     // run a normal scan and regenerate the Brief.
-    if(page.case_study_active&&page.manual_done&&!page.monitoring_waiting_input){
+    const _claimsFactsNewerThanBrief=!!(page.claims_facts_updated_at&&(!page.brief_evaluated_at||new Date(page.claims_facts_updated_at).getTime()>new Date(page.brief_evaluated_at).getTime()));
+    if(page.case_study_active&&page.manual_done&&!page.monitoring_waiting_input&&!_claimsFactsNewerThanBrief){
       return res.status(409).json({success:false,scan_not_needed:true,error:'No normal scan is needed for this completed case-study page. Use the current live verification or the next evidence checkpoint.'});
     }
     if(page.monitoring_waiting_input){
@@ -10298,6 +10341,10 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
     updated_at TIMESTAMPTZ DEFAULT NOW()
   )`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS max_pages INTEGER DEFAULT 1`).catch(()=>{});
+  // v344 — one client-level timestamp invalidates every older Brief after a
+  // Claims & Facts change. This makes VERIFIED facts operational, not merely
+  // descriptive text stored beside an already-generated Brief.
+  await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ALTER COLUMN max_pages SET DEFAULT 1`).catch(()=>{});
   await client.query(`UPDATE tracker_clients SET max_pages=1 WHERE max_pages IS NULL`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS registered_ip VARCHAR(45)`).catch(()=>{});
@@ -10549,6 +10596,19 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE tracker_claims_facts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW()`).catch(e=>console.warn('[migrate] claims_facts created_at',e.message));
   await client.query(`ALTER TABLE tracker_claims_facts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW()`).catch(e=>console.warn('[migrate] claims_facts updated_at',e.message));
   await client.query(`CREATE INDEX IF NOT EXISTS tracker_claims_facts_client_idx ON tracker_claims_facts(tracker_client_id)`).catch(e=>console.warn('[migrate] claims_facts client index',e.message));
+  // Backfill the new client freshness clock from Claims & Facts that were saved before v344.
+  // This is what makes yesterday's already-VERIFIED personal profile invalidate an older Brief
+  // immediately after deployment, without asking the owner to toggle every fact again.
+  await client.query(`UPDATE tracker_clients c
+    SET claims_facts_updated_at=f.newest_fact_at
+    FROM (
+      SELECT tracker_client_id,MAX(COALESCE(updated_at,verified_at,created_at)) AS newest_fact_at
+      FROM tracker_claims_facts
+      GROUP BY tracker_client_id
+    ) f
+    WHERE c.id=f.tracker_client_id
+      AND f.newest_fact_at IS NOT NULL
+      AND (c.claims_facts_updated_at IS NULL OR c.claims_facts_updated_at<f.newest_fact_at)`).catch(e=>console.warn('[migrate] claims_facts freshness backfill',e.message));
   // Remove legacy rows that were copied from AI/competitor Intelligence into the client fact
   // ledger. Preserve anything the owner explicitly VERIFIED; all other intelligence remains
   // available in the read-only Intelligence panel and should not masquerade as a business fact.
@@ -15871,7 +15931,7 @@ return result;
                  const items=copy.items.map(x=>`<li>${x}</li>`).join('');
                  res.set('Cache-Control','public, max-age=300');
                  res.type('html').send(`<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>${copy.title}</title><style>*{box-sizing:border-box}body{margin:0;background:#05070d;color:#eef2ff;font:15px/1.65 Inter,Segoe UI,system-ui,sans-serif}.wrap{max-width:1060px;margin:auto;padding:28px 20px 48px}.hero{padding:34px;border:1px solid #263148;border-radius:24px;background:radial-gradient(circle at 92% 0,#263a65 0,transparent 32%),linear-gradient(145deg,#0b1220,#070b12);box-shadow:0 25px 70px #0008}.top{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}.brand{display:flex;gap:14px;align-items:center}.logo{width:48px;height:48px;border-radius:14px;background:#73baff;color:#07111f;display:grid;place-items:center;font-size:22px;font-weight:900}.eyebrow{font-size:11px;color:#7dd3fc;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.langs a{color:#bae6fd;text-decoration:none;border:1px solid #334155;padding:7px 10px;border-radius:9px;margin-left:5px}.langs a.on{background:#2563eb;color:#fff}.hero h1{font-size:clamp(26px,5vw,42px);line-height:1.1;margin:0}.sub{color:#b8c4d8;margin:5px 0 0}.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:28px}article,.panel{background:#0b1623;border:1px solid #1e3043;border-radius:16px;padding:18px}article .n{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#7dd3fc;color:#082032}article h2{font-size:15px;margin:12px 0 5px}article p,.panel p{color:#c6d1df;font-size:13px;margin:0}.answer{font-size:18px;max-width:820px;margin:26px 0 0}.cols{display:grid;grid-template-columns:1.15fr .85fr;gap:16px;margin-top:16px}.panel h2{font-size:19px;margin:0 0 8px}.panel h3{font-size:15px;color:#7dd3fc;margin:18px 0 6px}.evidence{background:#2b240c;border-color:#655315}.evidence h2{color:#fde68a}ul{margin:8px 0 0;padding-left:20px;color:#dbeafe}.cta{margin-top:16px;background:linear-gradient(135deg,#1d4ed8,#6d28d9);border:0}.cta h2{font-size:23px}.foot{font-size:11px;color:#64748b;margin-top:18px;text-align:center}@media(max-width:800px){.grid{grid-template-columns:repeat(2,1fr)}.cols{grid-template-columns:1fr}}@media(max-width:480px){.wrap{padding:12px}.hero{padding:20px}.grid{grid-template-columns:1fr}.langs a{display:inline-block;margin:4px 0 0 4px}}</style></head><body><main class="wrap"><section class="hero"><div class="top"><div class="brand"><div class="logo">CS</div><div><div class="eyebrow">${copy.badge}</div><h1>${copy.title}</h1><p class="sub">${copy.sub}</p></div></div><nav class="langs"><a class="${lang==='nl'?'on':''}" href="/audit-process/nl">NL</a><a class="${lang==='en-gb'?'on':''}" href="/audit-process/en-gb">EN-UK</a><a class="${lang==='en-us'?'on':''}" href="/audit-process/en-us">EN-US</a><a class="${lang==='es'?'on':''}" href="/audit-process/es">ES</a></nav></div><div class="grid">${cards}</div><p class="answer">${copy.direct}</p></section><section class="cols"><div class="panel"><h2>1 → 20</h2><h3>1</h3><p>${copy.one}</p><h3>20</h3><p>${copy.twenty}</p><h3>${copy.cycle}</h3><p>${copy.cycleText}</p></div><div><section class="panel evidence"><h2>${copy.boundary}</h2><p>${copy.boundaryText}</p></section><section class="panel" style="margin-top:16px"><h2>${copy.deliver}</h2><ul>${items}</ul></section></div></section><section class="panel" style="margin-top:16px;border-color:#155e75;background:linear-gradient(135deg,#082f49,#0b1623)"><div class="eyebrow">GSC</div><h2>${gscCopy.title}</h2><p>${gscCopy.text}</p></section><section class="panel cta"><h2>${copy.cta}</h2><p>${copy.ctaText}</p><button type="button" onclick="if(window.Tawk_API&&Tawk_API.maximize)Tawk_API.maximize();" style="margin-top:14px;padding:11px 15px;border:0;border-radius:10px;background:#fff;color:#4c1d95;font-weight:850;cursor:pointer">${chatLabel}</button></section><div class="foot">ContentScale · ${copy.badge}</div></main>
-<div style="position:fixed;bottom:90px;right:20px;z-index:9997"><img alt="Ottmar Francisca — Founder ContentScale and GRAAF Framework creator" src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg" width="52" height="52" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #7e22ce;box-shadow:0 4px 16px rgba(0,0,0,.5)" onerror="this.style.display='none'"></div>
+<div style="position:fixed;bottom:90px;right:20px;z-index:9997"><img alt="Ottmar J.G. Francisca — independent SEO consultant and GRAAF Framework creator" src="https://raw.githubusercontent.com/ottey1969/contentscale-platform/main/public/blog/images/ottmar-francisca.jpg" width="52" height="52" style="width:52px;height:52px;border-radius:50%;object-fit:cover;border:2px solid #7e22ce;box-shadow:0 4px 16px rgba(0,0,0,.5)" onerror="this.style.display='none'"></div>
 <script type="text/javascript">(function(w,d){if(w.__csTawkLoading||d.querySelector('script[data-cs-tawk]'))return;w.__csTawkLoading=true;w.Tawk_API=w.Tawk_API&&typeof w.Tawk_API==='object'?w.Tawk_API:{};w.Tawk_LoadStart=new Date();var s=d.createElement('script');s.async=true;s.src='https://embed.tawk.to/68cac7f84318b419244f3308/default';s.charset='UTF-8';s.crossOrigin='anonymous';s.setAttribute('data-cs-tawk','1');s.onerror=function(){w.__csTawkLoading=false;s.remove();};(d.head||d.documentElement).appendChild(s);})(window,document);</script>
 <script src="https://app.contentscale.site/badge-loader.js?v=5"></script><script src="https://app.contentscale.site/consent-widget.js?v=1"></script></body></html>`);
                });
@@ -17107,7 +17167,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v343');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v344');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21771,7 +21831,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v343');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v344');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21865,10 +21925,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v343 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v344 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v343'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v344'});
     try{res.end();}catch(_){}
   }
 });
@@ -23533,7 +23593,7 @@ app.post('/api/cs-agent/call', async (req, res) => {
       provider: 'openai',
       model: 'gpt-4o',
       temperature: 0.6,
-      systemPrompt: `You are a professional AI assistant calling on behalf of Ottmar Francisca, founder of ContentScale — an SEO content agency based in Amsterdam.
+      systemPrompt: `You are a professional AI assistant calling on behalf of Ottmar J.G. Francisca, an independent SEO consultant based in Amsterdam and creator of ContentScale, his professional portfolio.
 
 ━━━ IDENTITY & DISCLOSURE ━━━
 ALWAYS open with AI disclosure. Never pretend to be human.
@@ -23573,7 +23633,7 @@ If it's a receptionist/gatekeeper → "Could I speak with [decision maker based 
 
 ━━━ IF DECISION MAKER IS NOT AVAILABLE ━━━
 → "No problem — when is the best time to reach you? Morning or afternoon?"
-→ Get specific day + time + timezone → confirm back → close: "Perfect. Ottmar, founder of ContentScale, will call you at [day] [time] [timezone]. You'll get a WhatsApp message from +31 6 2807 3996 first so you know it's him. Have a great day!"
+→ Get specific day + time + timezone → confirm back → close: "Perfect. Ottmar Francisca will call you at [day] [time] [timezone]. You'll get a WhatsApp message from +31 6 2807 3996 first so you know it's him. Have a great day!"
 
 ━━━ IF THEY ASK TO CALL BACK LATER (no specific time) ━━━
 → "Of course — roughly what works better, morning or afternoon?"
@@ -23595,12 +23655,12 @@ STEP 4 — OFFER FREE AUDIT:
 → GET EMAIL. Spell it back letter by letter to confirm.
 
 STEP 5 — BOOK CALLBACK (Ottmar calls THEM — they never call Ottmar):
-"Ottmar, founder of ContentScale, will call you personally to walk you through it. First — what city or timezone are you in?"
+"Ottmar Francisca will call you personally to walk you through it. First — what city or timezone are you in?"
 → Infer timezone from city if needed (New York=Eastern, Chicago=Central, Denver=Mountain, LA=Pacific, London=GMT, Amsterdam=CET, Manila=PST+8).
 → Confirm: "So that's [timezone] — correct?"
 → "What day works best?"
 → "And what time? Afternoons tend to work well — 2pm or 3pm [their timezone]?"
-→ Confirm full slot: "Perfect — [day], [time] [their timezone], which is [Amsterdam time]. Ottmar, founder of ContentScale, will call you then."
+→ Confirm full slot: "Perfect — [day], [time] [their timezone], which is [Amsterdam time]. Ottmar Francisca will call you then."
 → "And just so you recognise the call — you'll get a WhatsApp message from +31 6 2807 3996 before he calls. Do you have WhatsApp on this number?"
 → If yes: "Perfect." If no: "No problem, he'll just call directly."
 
@@ -23609,13 +23669,13 @@ STEP 6 — CONFIRM BEST NUMBER:
 → Confirm or update.
 
 STEP 7 — CLOSE:
-"Great! The free audit goes to [email] and Ottmar, founder of ContentScale, will call you on [day] at [time] [timezone]. Have a wonderful day!"
+"Great! The free audit goes to [email] and Ottmar Francisca will call you on [day] at [time] [timezone]. Have a wonderful day!"
 End call.
 
 ━━━ RULES ━━━
 - Keep it under 3 minutes
 - Warm, human, never robotic or salesy
-- Always say "Ottmar, founder of ContentScale" — never just "Ottmar"
+- Describe Ottmar as an independent SEO consultant and creator of ContentScale; never call him Founder and never describe ContentScale as a company, agency or team
 - Collect: email ✓ | day + time + timezone ✓ | WhatsApp yes/no ✓ | best phone number ✓
 - Ottmar CALLS THEM — never ask them to call Ottmar back
 - If voicemail: use voicemailMessage only — never improvise`,
@@ -23625,7 +23685,7 @@ End call.
       voiceId: 'shimmer', // OpenAI shimmer — warm, professional, clear. No extra cost.
     },
     endCallMessage: 'Thanks for your time, have a great day!',
-    voicemailMessage: `Hi, this is an AI assistant calling for Ottmar Francisca, founder of ContentScale. I scanned ${domain} and found specific ways to help ${name} get more clients from Google. Ottmar will follow up via WhatsApp at +31 6 2807 3996 — or visit contentscale.site. Have a great day!`,
+    voicemailMessage: `Hi, this is an AI assistant calling for Ottmar J.G. Francisca, an independent SEO consultant and creator of ContentScale. I scanned ${domain} and found specific ways to help ${name} get more clients from Google. Ottmar will follow up via WhatsApp at +31 6 2807 3996 — or visit contentscale.site. Have a great day!`,
     maxDurationSeconds: 240,
     backchannelingEnabled: true,
     endCallFunctionEnabled: true,
@@ -23676,8 +23736,8 @@ app.get('/api/cs-agent/test', async (req, res) => {
       provider: 'openai',
       model: 'gpt-4o',
       temperature: 0.6,
-      systemPrompt: `This is a TEST CALL for Ottmar Francisca, founder of ContentScale. Run through the full lead script as if calling a real prospect. Use this context:
-- Business: ContentScale (SEO agency)
+      systemPrompt: `This is a TEST CALL for Ottmar J.G. Francisca, an independent SEO consultant and creator of ContentScale. Run through the full lead script as if calling a real prospect. Use this context:
+- Portfolio: ContentScale (Ottmar's tools, methodologies and research)
 - Website: contentscale.site (~42 pages)
 - City: Amsterdam
 - Pitch: ${pitch}
@@ -27580,7 +27640,7 @@ app.post('/api/campaigns/:id/call', async (req, res) => {
       : `We work in ${lead.city||'your area'}${freeOffer} and wanted to reach out.`);
 
     const systemPrompt = isCS
-      ? `You are an AI assistant calling on behalf of Ottmar Francisca, founder of ContentScale — an SEO content agency in Amsterdam.
+      ? `You are an AI assistant calling on behalf of Ottmar J.G. Francisca, an independent SEO consultant based in Amsterdam and creator of ContentScale, his professional portfolio.
 
 ALWAYS start with AI disclosure. Never pretend to be human.
 If asked "are you real?" → "I'm an AI, yes — Ottmar is a real person and will follow up personally."
@@ -27590,15 +27650,15 @@ LEAD: ${lead.name||'the business'} | ${lead.domain||''} | ${lead.city||''} | ~${
 PITCH: ${pitch}
 
 CALL FLOW:
-1. "Hi, just to be transparent — I'm an AI calling on behalf of Ottmar Francisca, founder of ContentScale. Am I speaking with someone from ${lead.name||'the business'}?"
+1. "Hi, just to be transparent — I'm an AI calling on behalf of Ottmar J.G. Francisca, an independent SEO consultant. Am I speaking with someone from ${lead.name||'the business'}?"
 2. If yes: "${pitch} Do you have 60 seconds?"
 3. ONE discovery question: "Are you currently getting leads from Google or mostly referrals?"
 4. Offer: "I'd love to send a free one-page SEO audit for your site. What's the best email?"
    → GET EMAIL — repeat letter by letter to confirm.
-5. Book call: "Ottmar, founder of ContentScale, would love to walk you through it. What day works? And what time — afternoons work well, like 2 or 3pm? And your timezone?"
+5. Book call: "Ottmar Francisca would be glad to walk you through it. What day works? And what time — afternoons work well, like 2 or 3pm? And your timezone?"
    → Confirm: "[day], [time], [timezone] — that's [time] Amsterdam time."
 6. Best phone: "Is this the best number or is there a better one?"
-7. Close: "Perfect! You'll get the audit by email and Ottmar, founder of ContentScale, will confirm your slot. Have a great day!"
+7. Close: "Perfect! You'll get the audit by email and Ottmar Francisca will confirm your slot. Have a great day!"
 
 Collect: email ✓ | day + time + timezone ✓ | best phone ✓
 Keep it under 3 minutes. Warm, never robotic.`
@@ -27630,13 +27690,13 @@ Keep it under 3 minutes. Warm and conversational.`;
     const voice = cl.voice || 'nova';
     const assistant = {
       firstMessage: isCS
-        ? `Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar Francisca, founder of ContentScale. Am I speaking with someone from ${lead.name||'the business'}?`
+        ? `Hi, just to be transparent — I'm an AI assistant calling on behalf of Ottmar J.G. Francisca, an independent SEO consultant. Am I speaking with someone from ${lead.name||'the business'}?`
         : `Hi, just to be transparent — I'm an AI assistant calling on behalf of ${disclosedAs}. Is this ${lead.name||'the right person'}?`,
       model: { provider: 'openai', model: 'gpt-4o', temperature: 0.6, systemPrompt },
       voice: { provider: 'openai', voiceId: voice },
       endCallMessage: 'Thanks for your time. Have a wonderful day!',
       voicemailMessage: isCS
-        ? `Hi, this is an AI assistant for Ottmar Francisca, founder of ContentScale. I scanned ${lead.domain||'your website'} and have a free SEO audit ready for you. Email info@contentscale.site or visit contentscale.site. Have a great day!`
+        ? `Hi, this is an AI assistant for Ottmar J.G. Francisca, an independent SEO consultant and creator of ContentScale. I scanned ${lead.domain||'your website'} and have a free SEO audit ready for you. Email info@contentscale.site or visit contentscale.site. Have a great day!`
         : `Hi, this is an AI assistant for ${disclosedAs}. We wanted to reach out about ${cmp.service||'our services'}. Please call ${contactPerson} back at your convenience. Thank you!`,
       maxDurationSeconds: 240,
       backchannelingEnabled: true,
@@ -32801,8 +32861,8 @@ IMPORTANT: Even if the ContentScore is 95-100, ALWAYS provide at least 3-5 speci
 ═══════════════════════════════════════
 Check the original HTML for these 11 critical SEO points. Report ONLY failures:
 
-1. META TITLE: Must be 55-60 characters. Focus keyword MUST be in the FIRST 3 words. Must contain a NUMBER. Must contain a POWER WORD (e.g., Ultimate, Complete, Essential, Proven, Exclusive, Official). Must have positive or negative sentiment. Report EXACT character count and each missing element.
-2. META DESCRIPTION: Must be 155-160 characters. Must include focus keyword + price/number + CTA with phone. Report EXACT character count and missing elements.
+1. META TITLE: Aim for a clear, natural title that fits the search intent and is normally no longer than 60 characters. Put the focus keyword near the front when natural. Do NOT require a number, power word or emotional adjective. Report the exact character count and only material problems.
+2. META DESCRIPTION: Aim for a useful, natural description no longer than 155 characters. Include the focus keyword when natural and a relevant next step. Do NOT require a price, number or phone number unless VERIFIED facts and the page intent justify them.
 3. CANONICAL TAG: Must have <link rel="canonical" href="...">. Report if missing.
 4. H1: Exactly ONE <h1> on the page, focus keyword must be present. Report if 0, multiple, or keyword missing.
 5. H2 COUNT: Minimum 8 <h2> headings with keyword variations. Report actual count if < 8.
@@ -32811,7 +32871,7 @@ Check the original HTML for these 11 critical SEO points. Report ONLY failures:
 8. IMAGES: All images must have descriptive alt text with keyword AND loading="lazy". Report count of images missing alt or lazy.
 9. INTERNAL LINKS: Minimum 3 internal links with descriptive anchor text (not "click here"). Report actual count if < 3.
 10. EXTERNAL LINKS: Minimum 3 external authority links (.gov/.edu/industry) with rel="noopener noreferrer nofollow" target="_blank". Report actual count if < 3.
-11. BOFU CTAs: Phone number visible above the fold, minimum 5 CTAs per page. Report if phone not in first screen or CTAs < 5.
+11. CTA: Require one clear, context-appropriate next step. Do NOT require a phone number above the fold or five repeated CTAs. For a personal portfolio, direct genuine work enquiries to the verified services URL without a price list.
 12. TITLE SENTIMENT: Check if title has clarity signal (a number, the year, a question word, or a specific outcome) rather than superlatives. Flag hype words (Best, Ultimate, Guaranteed, Exclusive) as things to AVOID, not add (negative framing like Avoid, Stop, Mistakes, Worst). Report which sentiment is used.
 13. TITLE CLARITY: Verify the title leads with a clear benefit or answer — a number, the year, or a question word. If it relies on hype (Best/Ultimate/Guaranteed), suggest a clearer, factual alternative instead.
 14. FOCUS KEYWORD POSITION: Confirm focus keyword is within the FIRST 3 words of the SEO title. If not, this is a CRITICAL FAIL.
@@ -33164,12 +33224,12 @@ const statsCtxRW = analysis.stats_context ? `\nSTATISTICS TO CITE:\n${String(ana
       jobTitle: 'Content Strategist',
       url: profBi.domain || ''
     };
-    const author = analysis.author || (profBi.author_name ? profileAuthorFallback : rewriterHelpers.DEFAULT_AUTHOR);
+    let author = analysis.author || (profBi.author_name ? profileAuthorFallback : rewriterHelpers.DEFAULT_AUTHOR);
     const layoutSkeleton = analysis.layout_skeleton || null;
     const competitorsManual = Array.isArray(analysis.competitors_manual) ? analysis.competitors_manual : [];
 
     const biRW = safeParse(profBi.business_info, {}) || {};
-    const verifiedFactsRW = [
+    let verifiedFactsRW = [
       biRW.phone         ? `- Telefoon: ${biRW.phone}` : null,
       biRW.email         ? `- Email: ${biRW.email}` : null,
       biRW.address       ? `- Adres: ${biRW.address}${biRW.city?', '+biRW.city:''}` : null,
@@ -33177,6 +33237,29 @@ const statsCtxRW = analysis.stats_context ? `\nSTATISTICS TO CITE:\n${String(ana
       biRW.opening_hours ? `- Openingstijden: ${biRW.opening_hours}` : null,
       (Array.isArray(biRW.unique_selling_points)&&biRW.unique_selling_points.length) ? `- USPs: ${biRW.unique_selling_points.slice(0,4).join(' | ')}` : null,
     ].filter(Boolean).join('\n');
+    let _rwIdentityContract={personal_portfolio:false,prompt:'',verified_claims:[]};
+    try{
+      const _rwDomain=String(profBi.domain||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'').trim();
+      if(_rwDomain){
+        const _rwClient=await pool.query(`SELECT id,domain,brand_context FROM tracker_clients WHERE regexp_replace(regexp_replace(lower(domain),'^https?://',''),'^www\\.','') LIKE $1 ORDER BY id ASC LIMIT 1`,[_rwDomain+'%']);
+        if(_rwClient.rows.length){
+          const _rwCf=await pool.query(`SELECT claim_text,status FROM tracker_claims_facts WHERE tracker_client_id=$1 AND page_id IS NULL AND status='VERIFIED' ORDER BY updated_at DESC,id DESC LIMIT 300`,[_rwClient.rows[0].id]);
+          _rwIdentityContract=_trackerIdentityContract(_rwCf.rows||[],_rwClient.rows[0].brand_context||'',_rwClient.rows[0].domain||_rwDomain);
+          const _rwClaims=(_rwCf.rows||[]).map(x=>String(x.claim_text||'').trim()).filter(Boolean);
+          if(_rwClaims.length)verifiedFactsRW+=(verifiedFactsRW?'\n':'')+_rwClaims.map(x=>'- '+x).join('\n');
+        }
+      }
+    }catch(_rwIdentityErr){console.warn('[execute-rewrite] verified identity lookup skipped:',_rwIdentityErr.message);}
+    if(_rwIdentityContract.personal_portfolio){
+      author={
+        name:'Ottmar J.G. Francisca',
+        bio:'Independent SEO consultant based in Amsterdam, specialising in Technical SEO, AI Search Optimization (GEO/AEO) and Local SEO. Creator of the GRAAF Framework and ContentScale.',
+        location:'Amsterdam',
+        organization:'',
+        jobTitle:'Independent SEO consultant',
+        url:'https://www.linkedin.com/in/ottmar-joseph-gregory-francisca/'
+      };
+    }
     const antiFacts = verifiedFactsRW
       ? `Gebruik ALLEEN deze gegevens. Verzin NOOIT contactgegevens die niet hierboven staan.`
       : `Geen bedrijfsgegevens beschikbaar. Verzin GEEN telefoonnummers, adressen of e-mails. Gebruik [CONTACT].`;
@@ -33187,7 +33270,7 @@ CONTENT KWALITEIT — STRIKTE REGELS
 ═══════════════════════════════════════
 📊 STATISTIEKEN — ECHT OF WEGLATEN:
 - Alleen verifieerbare statistieken van .gov/.edu/grote brancheorganisaties met werkende URLs
-- Elke statistiek MOET bron+jaar hebben: "3.7× traffic lift (ContentScale, 2026)"
+- Elke statistiek MOET een echte, controleerbare bron en het juiste jaar hebben; gebruik geen voorbeeldcijfer als feit
 - NOOIT labels zoals "[UNVERIFIED]", "[bron nodig]"
 - Bronnen uit 2024-2026
 
@@ -33225,10 +33308,14 @@ CONTENT KWALITEIT — STRIKTE REGELS
 
     const schemaObjRW = {
       '@context':'https://schema.org',
-      '@type':biRW.schema_type||'LocalBusiness',
-      'name':biRW.business_name||rw.profile_name,
+      '@type':_rwIdentityContract.personal_portfolio?'Person':(biRW.schema_type||'LocalBusiness'),
+      'name':_rwIdentityContract.personal_portfolio?'Ottmar J.G. Francisca':(biRW.business_name||rw.profile_name),
       'url':profBi.domain?(profBi.domain.startsWith('http')?profBi.domain:'https://'+profBi.domain):undefined
     };
+    if(_rwIdentityContract.personal_portfolio){
+      schemaObjRW['jobTitle']='Independent SEO consultant';
+      schemaObjRW['sameAs']=['https://www.linkedin.com/in/ottmar-joseph-gregory-francisca/'];
+    }
     if (biRW.phone)   schemaObjRW['telephone'] = biRW.phone;
     if (biRW.email)   schemaObjRW['email'] = biRW.email;
     if (biRW.address) schemaObjRW['address'] = {'@type':'PostalAddress','streetAddress':biRW.address,'addressLocality':biRW.city,'addressCountry':biRW.country};
@@ -33293,6 +33380,7 @@ DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 
 GEVERIFIEERDE BEDRIJFSGEGEVENS:
 ${verifiedFactsRW || 'Geen gegevens.'}
+${_rwIdentityContract.prompt}
 ${gscBlockRW}
 ${statsCtxRW}
 ${competitorBeatBlock}
@@ -33376,6 +33464,7 @@ Splits lange uitleg op in meerdere korte alinea's.
 Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen.'}
+${_rwIdentityContract.prompt}
 ${gscBlockRW}
 ${statsCtxRW}
 ${competitorBeatBlock}
@@ -33414,6 +33503,7 @@ Splits lange uitleg op in meerdere korte alinea's.
 Lezers scannen — korte alinea's maken content leesbaar.
 BEDRIJF: ${rw.profile_name} — ${rw.niche} | DOELGROEP: ${rw.target_audience} | DOEL: ${rw.primary_goal}
 GEVERIFIEERDE GEGEVENS: ${verifiedFactsRW || 'Geen — gebruik [CONTACT] als placeholder.'}
+${_rwIdentityContract.prompt}
 ${antiFacts}
 ${gscBlockRW}
 ${statsCtxRW}
@@ -33434,16 +33524,16 @@ VERPLICHTE ELEMENTEN (alle verplicht):
 ✅ TL;DR box (paars, 5-7 bullets, max 12 woorden elk)
 ✅ Table of Contents (anchor links naar elke H2)
 ✅ Key Takeaways box (samenvatting voor skimmers, voor FAQ)
-✅ Auteur bio (E-E-A-T: foto, "Oprichter", certificaten, LinkedIn)
+✅ Auteur bio (E-E-A-T: foto, correcte rol, alleen VERIFIED ervaring/credentials, LinkedIn)
 ✅ "Bijgewerkt: [datum]" freshness badge in auteur bio
-✅ Minimum 5 CTAs verspreid door de pagina
+✅ ${_rwIdentityContract.personal_portfolio?'Eén rustige, relevante CTA naar https://contentscale.site/services/; geen prijslijst en geen herhaalde salesblokken':'Een passend aantal niet-opdringerige CTAs op basis van zoekintentie; herhaal niet mechanisch'}
 ✅ FAQ (10+ vragen) — EXACT synchroon met FAQPage schema (Google vergelijkt!)
 ✅ Datatable indien relevant
 
 TITEL ENGINEERING:
-- Titel tag: Focus keyword in eerste 3 woorden + getal + power word (Bewezen/Ultiem/Expert/Essentieel) + 50-60 tekens
-- H1: zelfde keyword + getal, mag langer zijn dan titel
-- Meta description: 140-155 tekens — keyword + getal/stat + CTA werkwoord aan het einde
+- Titel tag: natuurlijk en feitelijk, maximaal 60 tekens; focus keyword zo vroeg mogelijk zonder geforceerde formulering
+- H1: duidelijke menselijke kop die de zoekvraag beantwoordt; geen verplicht getal of marketingbijvoeglijk naamwoord
+- Meta description: maximaal 155 tekens; keyword indien natuurlijk plus een relevante volgende stap; geen prijs, cijfer of telefoon tenzij VERIFIED en inhoudelijk nodig
 
 GEEN UITVINDINGEN:
 - Verzin NOOIT statistieken, citaten of claims
@@ -33510,6 +33600,18 @@ Geef ALLEEN HTML terug vanaf <article>. Geen markdown. Eindig met <!-- word_coun
           modelUsed = gemResult.modelUsed || 'gemini-2.5-flash';
         }
         rawHtml = rawHtml.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
+        rawHtml = _trackerApplyIdentityContract(rawHtml,_rwIdentityContract);
+        if(_rwIdentityContract.personal_portfolio){
+          if(/<article\b/i.test(rawHtml)&&!/<article\b[^>]*class=["'][^"']*\bcs-article\b/i.test(rawHtml)){
+            rawHtml=rawHtml.replace(/<article\b([^>]*)>/i,function(_m,attrs){
+              if(/\bclass=["']/i.test(attrs))return '<article'+attrs.replace(/\bclass=(["'])([^"']*)\1/i,'class=$1$2 cs-article$1')+'>';
+              return '<article class="cs-article"'+attrs+'>';
+            });
+          }else if(!/\bcs-article\b/i.test(rawHtml)){
+            rawHtml='<article class="cs-article">'+rawHtml+'</article>';
+          }
+          if(!/body:has\(\.cs-article\)/i.test(rawHtml))rawHtml='<style>body:has(.cs-article){background:#fff}.cs-article{max-width:820px;margin:0 auto;padding:8px;background:#fff;color:#222;overflow-wrap:anywhere}.cs-article img{max-width:100%;height:auto}.cs-article table{display:block;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.cs-article [style*="display:flex"],.cs-article [style*="display: flex"]{flex-wrap:wrap}@media(max-width:600px){.cs-article{padding:6px;font-size:16px}.cs-article h1{font-size:clamp(1.75rem,8vw,2.2rem)}.cs-article h2{font-size:1.35rem}}</style>'+rawHtml;
+        }
       } catch(e) {
         console.error('[execute-rewrite] AI call failed (attempt ' + attemptsUsed + '):', e.message);
         if (attempt === max_regen) {
@@ -41270,12 +41372,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </summary>
     <div style="padding:0 16px 16px;">
       <p style="font-size:12px;color:#6b7280;line-height:1.65;margin:0 0 10px;">
-        Anything you put here is treated as fact by the AI when it writes your briefs: brand, real numbers, USPs, and your author bio
-        (name, role, real years/experience, certifications). Leave the author part out if you don't want one — the AI will then never invent author numbers.
+        Use this for context and voice. Put factual claims in Claims &amp; Facts and mark them VERIFIED; VERIFIED facts override stale page copy and are used in the next Brief.
       </p>
       <textarea id="brandCtx" rows="7" maxlength="4000" class="cs-input"
         style="width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;font-size:12px;line-height:1.6;"
-        placeholder="Example:&#10;Brand: ContentScale — free AI SEO content scoring, built in Amsterdam.&#10;Real numbers: 200+ sites, 47 countries, 78% recovery within 90 days.&#10;Author: Ottmar J.G. Francisca, Founder & GRAAF Framework creator, 24+ yrs City of Amsterdam, 8 yrs SEO. Cert: Burger Service 146663743."></textarea>
+        placeholder="Example:&#10;EXPERT: Ottmar J.G. Francisca — independent SEO consultant.&#10;IDENTITY: ContentScale is my professional portfolio, not a separate company.&#10;VOICE: Always I / my; never we / our team.&#10;ROLE: Creator of ContentScale and the GRAAF Framework.&#10;CTA: Send work enquiries to the verified services URL."></textarea>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
         <div>
           <label style="font-size:11px;color:#9ca3af;display:block;margin-bottom:3px;">Author headshot URL <span style="color:#6b7280;">(optional)</span></label>
@@ -43701,6 +43802,7 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   var implStatus=String(p.implementation_status||'').toLowerCase();
   var viewedAt=p.brief_viewed_at?new Date(p.brief_viewed_at).getTime():0;
   var briefReviewed=!!(evaluatedAt&&viewedAt>=evaluatedAt);
+  var claimsFactsAt=p.claims_facts_updated_at?new Date(p.claims_facts_updated_at).getTime():0;
 
   // v284: a NEW DELTA may only be declared from a Brief that was evaluated by an ACTUAL scan.
   // Old Brief contents are historical context only. We never infer "new work" from them before a fresh scan.
@@ -43721,6 +43823,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     var gate=String(p.monitoring_gate_label||'');
     var waitMsg=gate.indexOf('case_day_')===0?'Fresh evidence is still required before this checkpoint can be closed.':'Required evidence is still missing. Complete the requested input before scanning again.';
     return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
+  }
+  if(claimsFactsAt&&(!evaluatedAt||claimsFactsAt>evaluatedAt)){
+    return {code:'REFRESH_FACTS',label:'VERIFIED FACTS UPDATED · REBUILD THE BRIEF',detail:'Claims & Facts changed after this Brief was generated. Rebuild it now so the current VERIFIED owner identity, voice rules and metrics replace stale assumptions. This refresh preserves the protected live HTML and proof history.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild Brief with verified facts',buttonAction:'checkPage('+p.id+')'};
   }
   if(bool(p.case_study_active)&&p.brief_content&&!bool(p.prepublication_checkpoint_saved)&&!bool(p.checkpoint_recovery_available)&&!currentBriefVerified){
     return {code:'SAVE_LIVE_FIRST',label:'ACTION NEEDED · SAVE THE CURRENT LIVE PAGE',detail:'The Tracker has no protected version to compare with the next publication. If the revised HTML is NOT live yet, save the current live page first, then publish the revised HTML and use Check current live. If it is already live, the earlier version cannot be proven retroactively; save the current page as the starting point for the next revision.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'1 · Save current live page',buttonAction:'savePrePublicationCheckpoint('+p.id+')'};
@@ -43826,6 +43931,10 @@ function _trackerImplementationCheckState(p,isDone,nextState){
   var _bid=String(_brief&&_brief.cycle_id||''),_vid=String(p.implementation_verified_brief_cycle_id||'');
   var _sameCycle=!!(_bid&&_vid&&_bid===_vid);
   var currentBriefVerified=status==='verified'&&(_sameCycle||(evaluatedAt>0&&(verifiedAt>=evaluatedAt||publishedAt>=evaluatedAt)));
+
+  if(nextState&&nextState.code==='REFRESH_FACTS'){
+    return {code:'FACTS_STALE',label:'VERIFIED FACTS ARE NEWER THAN THIS BRIEF',detail:'The existing Brief is preserved for history, but it does not yet reflect the current VERIFIED identity and Claims & Facts. Rebuild the Brief before editing the page.',color:'#67e8f9',border:'#0891b2',bg:'#083344'};
+  }
 
   if(nextState&&nextState.code==='SCAN'&&p.case_study_active&&p.prepublication_checkpoint_saved){
     return {code:'AWAITING_BASELINE_SCAN',label:'LIVE VERSION SAVED · SCAN CURRENT PAGE',detail:'Your live page is protected. Scan it now to establish the actions before writing and uploading revised HTML.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49'};
@@ -44273,7 +44382,7 @@ function renderPages() {
     var _nextWorkflowGuard = !!isDone || !!p.case_study_active;
     var _nextLockContentChanges = _nextWorkflowGuard && !_nextAllowsContentChange;
     var _nextNoAction = _nextActionCode==='MONITOR';
-    var _nextScanRequired = _nextActionCode==='SCAN';
+    var _nextScanRequired = (_nextActionCode==='SCAN'||_nextActionCode==='REFRESH_FACTS');
     var _correctionLoop = (_nextActionCode==='REMAINING'||_nextActionCode==='VERIFYING');
     var _awaitingLiveVerification = (_nextActionCode==='VERIFY_LIVE_PENDING'||_nextActionCode==='VERIFY_LIVE');
     var _hideFullBrief = _correctionLoop;
@@ -47949,8 +48058,8 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   function loadClaimsFacts(){var l=document.getElementById('claimsFactsList'),s=document.getElementById('claimsFactsStatus');if(l)l.innerHTML='<div style="color:#6b7280;font-size:11px;padding:10px;">Loading...</div>';fetch('/api/tracker-client/'+TOKEN+'/claims-facts').then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Load failed');renderClaimsFacts(d.claims||[],d.summary||{});_updateClaimsFactsButton(d.summary||{});if(s)s.textContent='';}).catch(function(e){if(s){s.textContent=e.message;s.style.color='#f87171';}});}
   function renderClaimsFacts(rows,sum){var l=document.getElementById('claimsFactsList'),sm=document.getElementById('claimsFactsSummary');if(sm)sm.innerHTML='<b style="color:#4ade80;">'+(sum.verified||0)+' VERIFIED</b> · <b style="color:#f59e0b;">'+(sum.blocked||0)+' BLOCKED</b> · '+(sum.total||0)+' shared business facts';if(!l)return;if(!rows.length){l.innerHTML='<div style="border:1px dashed #374151;border-radius:7px;padding:14px;color:#6b7280;font-size:11px;">No shared business facts yet. Add facts once here; they apply to all tracked URLs for this client.</div>';return;}l.innerHTML=rows.map(function(x){var st=String(x.status||'UNVERIFIED'),safe=st==='VERIFIED',clr=safe?'#4ade80':st==='FALSE'?'#f87171':st==='NOT_APPLICABLE'?'#94a3b8':'#fbbf24',eng=x.source_engine?(' · '+_cfEsc(x.source_engine.replace('_',' '))):'';return '<div style="border:1px solid '+(safe?'#166534':'#374151')+';border-radius:8px;padding:9px 10px;margin-bottom:7px;background:#0b1220;"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div style="min-width:0;"><div style="font-size:12px;font-weight:800;color:#e5e7eb;">'+_cfEsc(x.claim_text)+'</div><div style="font-size:10px;color:#6b7280;margin-top:3px;">'+_cfEsc(x.source_type||'manual')+eng+(x.source_context?' · '+_cfEsc(x.source_context):'')+'</div><div style="font-size:10px;color:'+clr+';font-weight:800;margin-top:4px;">'+st+' · '+(safe?'SAFE TO USE ACROSS ALL URLS':'BLOCKED FROM CONTENT')+'</div></div><div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end;"><button onclick="setClaimFactStatus('+x.id+',\\'VERIFIED\\')" class="cs-btn" style="padding:3px 7px;font-size:9px;border-color:#166534;color:#4ade80;">Verify</button><button onclick="setClaimFactStatus('+x.id+',\\'UNVERIFIED\\')" class="cs-btn" style="padding:3px 7px;font-size:9px;border-color:#92400e;color:#fbbf24;">Unverified</button><button onclick="setClaimFactStatus('+x.id+',\\'FALSE\\')" class="cs-btn" style="padding:3px 7px;font-size:9px;border-color:#991b1b;color:#f87171;">False</button><button onclick="setClaimFactStatus('+x.id+',\\'NOT_APPLICABLE\\')" class="cs-btn" style="padding:3px 7px;font-size:9px;border-color:#475569;color:#94a3b8;">N/A</button><button onclick="deleteClaimFact('+x.id+')" class="cs-btn" style="padding:3px 7px;font-size:9px;border-color:#7f1d1d;color:#f87171;">Delete</button></div></div></div>';}).join('');}
   function addClaimFact(){var claim=(document.getElementById('cfClaimText')||{}).value||'',engine=(document.getElementById('cfSourceEngine')||{}).value||'',type=(document.getElementById('cfSourceType')||{}).value||'manual',ctx=(document.getElementById('cfSourceContext')||{}).value||'',st=document.getElementById('claimsFactsStatus');if(!claim.trim()){if(st){st.textContent='Enter a claim first.';st.style.color='#f87171';}return;}if(st){st.textContent='Saving as UNVERIFIED...';st.style.color='#f59e0b';}fetch('/api/tracker-client/'+TOKEN+'/claims-facts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({claim_text:claim,source_engine:engine,source_type:type,source_context:ctx})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Save failed');document.getElementById('cfClaimText').value='';document.getElementById('cfSourceContext').value='';if(st){st.textContent='Saved UNVERIFIED — blocked until you verify it.';st.style.color='#fbbf24';}loadClaimsFacts();}).catch(function(e){if(st){st.textContent=e.message;st.style.color='#f87171';}});}
-  function setClaimFactStatus(id,status){fetch('/api/tracker-client/'+TOKEN+'/claims-facts/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Update failed');loadClaimsFacts();}).catch(function(e){toast(e.message,'#f87171');});}
-  function deleteClaimFact(id){if(!confirm('Delete this shared business claim/fact?'))return;fetch('/api/tracker-client/'+TOKEN+'/claims-facts/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Delete failed');loadClaimsFacts();}).catch(function(e){toast(e.message,'#f87171');});}
+  function setClaimFactStatus(id,status){var s=document.getElementById('claimsFactsStatus');if(s){s.textContent='Saving '+status+' and updating Brief status...';s.style.color='#38bdf8';}fetch('/api/tracker-client/'+TOKEN+'/claims-facts/'+id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Update failed');if(s){s.textContent=status+' saved. Existing Briefs now show “Rebuild Brief with verified facts”.';s.style.color='#4ade80';}toast(status+' saved · Brief refresh required','#4ade80');loadClaimsFacts();if(typeof loadPages==='function')return loadPages();}).catch(function(e){if(s){s.textContent=e.message;s.style.color='#f87171';}toast(e.message,'#f87171');});}
+  function deleteClaimFact(id){if(!confirm('Delete this shared business claim/fact?'))return;var s=document.getElementById('claimsFactsStatus');if(s){s.textContent='Deleting fact and updating Brief status...';s.style.color='#38bdf8';}fetch('/api/tracker-client/'+TOKEN+'/claims-facts/'+id,{method:'DELETE'}).then(function(r){return r.json();}).then(function(d){if(!d.success)throw new Error(d.error||'Delete failed');toast('Fact deleted · Brief refresh required','#4ade80');loadClaimsFacts();if(typeof loadPages==='function')return loadPages();}).catch(function(e){if(s){s.textContent=e.message;s.style.color='#f87171';}toast(e.message,'#f87171');});}
   window.openClaimsFacts=openClaimsFacts;window.addClaimFact=addClaimFact;window.setClaimFactStatus=setClaimFactStatus;window.deleteClaimFact=deleteClaimFact;
 
   // CONTENTSCALE-COMPETITIVE-INTELLIGENCE-UI-20260909=true
@@ -54358,6 +54467,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     const _pwbVerifyFirst = _pwbClaims.filter(x => String(x.status||'').toUpperCase()==='UNVERIFIED').map(x => x.claim_text).filter(Boolean);
     const _pwbBlocked = _pwbClaims.filter(x => ['FALSE','NOT_APPLICABLE'].includes(String(x.status||'').toUpperCase())).map(x => x.claim_text).filter(Boolean);
     const claimsBlock = `CLAIMS & FACTS — CANONICAL SAFETY LEDGER:\nVERIFIED BUSINESS FACTS — may be used in proposed copy:\n${_pwbVerified.length ? _pwbVerified.map(x=>'- '+x).join('\\n') : '- none verified'}\nVERIFY FIRST — opportunities only; NEVER state these as facts or put them in paste-ready copy:\n${_pwbVerifyFirst.length ? _pwbVerifyFirst.map(x=>'- '+x).join('\\n') : '- none'}\nBLOCKED / FALSE / NOT APPLICABLE — NEVER use:\n${_pwbBlocked.length ? _pwbBlocked.map(x=>'- '+x).join('\\n') : '- none'}\nCompetitor claims are competitor intelligence, never client facts. If a useful claim is not VERIFIED above or explicitly present in owner-provided BRAND & AUTHOR FACTS, label it VERIFY FIRST and do not place it in ready-to-paste passages.`;
+    const _pwbIdentityContract=_trackerIdentityContract(_pwbClaims.filter(x=>String(x.status||'').toUpperCase()==='VERIFIED'),_pwbBrand,client.domain||'');
     const _rc=(recommendationContext&&typeof recommendationContext==='object')?recommendationContext:null;
     const _recSafe=_rc?{
       decision:String(_rc.decision||'REVIEW').slice(0,30),family:String(_rc.family||'').slice(0,160),primary_query:String(_rc.primary_query||keyword).slice(0,200),supporting_queries:(Array.isArray(_rc.supporting_queries)?_rc.supporting_queries:[]).map(x=>String(x).slice(0,200)).slice(0,8),impressions:Math.max(0,Number(_rc.impressions||0)),target:String(_rc.target||'').slice(0,500),suggested_slug:String(_rc.suggested_slug||'').slice(0,160),evidence:String(_rc.evidence||'').slice(0,700),why:String(_rc.why||'').slice(0,500)
@@ -54393,6 +54503,8 @@ ${sitemapBlock}
 ${brandBlock}
 
 ${claimsBlock}
+
+${_pwbIdentityContract.prompt}
 
 ${recommendationBlock}
 
@@ -54442,12 +54554,15 @@ Return ONLY valid JSON, no markdown, no preamble.
     }
     if (!brief) return res.status(502).json({ success: false, error: 'Could not parse brief from AI response' });
 
+    brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
+
     // Server-owned fact safety: the model cannot promote UNVERIFIED research to VERIFIED.
     brief.fact_safety = brief.fact_safety || {};
     brief.fact_safety.verified_business_facts = _pwbVerified;
     brief.fact_safety.verify_first = Array.from(new Set([].concat(brief.fact_safety.verify_first || [], _pwbVerifyFirst)));
     brief.fact_safety.blocked_claims = Array.from(new Set([].concat(brief.fact_safety.blocked_claims || [], _pwbBlocked)));
     brief.fact_safety.rule = 'Only VERIFIED Claims & Facts or owner-provided brand facts may be asserted as client facts. Competitor facts are research only.';
+    brief.fact_safety.identity_contract_applied=!!_pwbIdentityContract.personal_portfolio;
 
     // CONTENTSCALE-VERIFIED-CLAIMS-OUTPUT-FIREWALL-V340=true
     // Prompt instructions are not an enforcement boundary. Inspect every paste-ready field after
@@ -56686,6 +56801,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
       }
       const _verifiedClaims = _claimsFactsRows.filter(r => String(r.status||'').toUpperCase() === 'VERIFIED').map(r => String(r.claim_text||'').trim()).filter(Boolean);
       const _blockedClaims = _claimsFactsRows.filter(r => ['UNVERIFIED','FALSE','NOT_APPLICABLE'].includes(String(r.status||'').toUpperCase())).map(r => ({claim:String(r.claim_text||'').trim(),status:String(r.status||'').toUpperCase()})).filter(r => r.claim);
+      const _identityContract=_trackerIdentityContract(_claimsFactsRows.filter(r=>String(r.status||'').toUpperCase()==='VERIFIED'),_brandContext,pageUrl);
       const _claimsFactsContext = `
 CLIENT CLAIMS & FACTS REGISTER (hard evidence gate):
 VERIFIED — may be used as client facts in ready-to-paste copy:
@@ -56698,6 +56814,7 @@ CANONICAL 5-ENGINE EVIDENCE RULE (hard rule): Manual VERIFIED evidence is author
 CITATION STRATEGY RULE (hard rule): If an engine already cites the exact page, do not recommend "win/get the citation" as if it were absent. Recommend PROTECT/RETAIN the existing citation and EXPAND coverage to adjacent queries or engines. Never state or imply that top-10 organic ranking is required before any AI engine can cite a page.
 
 FACT TRANSFER RULE: A fact observed on a competitor is evidence about THE COMPETITOR, not about this client. Competitor response times, insurance coordination, licenses, certifications, years in business, free estimates/assessments, warranties, financing, service areas, staff/crew attributes, project counts, prices, guarantees, availability, and similar business claims MUST NOT be transferred into client copy merely because they appear in competitor snippets, AIO sources, Perplexity, or a comparison table. If such a competitor pattern is strategically useful but is not verified for the client, describe it only as a VERIFY-FIRST opportunity; do not put the claim into READY-TO-PASTE client prose.
+${_identityContract.prompt}
 `;
 
       const citationPrompt = `You are an AI Citation Strategist. Your job is to create an actionable Citation Brief for a single web page.
@@ -57867,6 +57984,11 @@ If no unanchored claims found, return empty array: []`;
       }
     }catch(_liveClaimErr){console.warn('[live-claim-verification-v340] skipped:',_liveClaimErr&&_liveClaimErr.message);}
 
+    const _ecIdentityContract=_trackerIdentityContract(_ecClaimsRows.filter(function(r){return String(r.status||'').toUpperCase()==='VERIFIED';}),_ecBrandContext,page.url||'');
+    snapshot.recommendations=_trackerApplyIdentityContract(snapshot.recommendations||[],_ecIdentityContract);
+    snapshot.gsc_brief=_trackerApplyIdentityContract(snapshot.gsc_brief||[],_ecIdentityContract);
+    snapshot.source_suggestions=_trackerApplyIdentityContract(snapshot.source_suggestions||[],_ecIdentityContract);
+    snapshot._verified_identity_contract_applied=!!_ecIdentityContract.personal_portfolio;
     snapshot._evidence_claims_enforced = true;
     snapshot._evidence_claims_source = 'verified_claims_required_for_metrics;live_html_is_observation_only';
   } catch(_ecErr) { console.warn('[evidence-claims-enforcement-v2] skipped:', _ecErr && _ecErr.message); }
@@ -60120,11 +60242,11 @@ Tone: ${clientProfile.tone || ''}
 
 == IDENTITY ==
 Background: 24 years operational management for the City of Amsterdam. Every decision had a paper trail. Guesswork had consequences. That same accountability now drives everything in SEO.
-Current role: Founder of ContentScale — SEO Systems Architect specialising in AI-era content intelligence.
+Current role: Independent SEO consultant based in Amsterdam, specialising in Technical SEO, AI Search Optimization (GEO/AEO), and Local SEO. Creator of the GRAAF Framework and ContentScale.
 Disciplines: SEO systems thinking · content scoring · AI Overview optimization · traffic recovery · content strategy · operational accountability applied to marketing.
 Positioning: "Hope is not a strategy." Data-driven, systems-first, outcome-obsessed.
-Reach: 200+ businesses, 47+ countries, Amsterdam-based, international.
-Results: 78% avg traffic recovery, 90-day avg time to result.
+Experience and reach: SEO experience across 200+ websites. SEO professionals from 47 countries use ContentScale.
+Results wording: documented case studies showing recovery within 90 days. Never convert this into a success rate or guarantee.
 
 == TOOLS (add only when natural and relevant — never force — max 1 per output) ==
 1. PULSE + NEXUS (app.contentscale.site/content-engine) — two-engine intelligence system built on GRAAF Framework. PULSE reads your pages, GSC data, competitors in real time. NEXUS decodes what Google and AI Overviews actually reward. Use for: SEO, rankings, content quality, AI search, Google.
@@ -60224,7 +60346,7 @@ app.post('/ai/linkedin-reply', asyncHandler(async (req, res) => {
     challenge:      'Respectfully push back. Be direct but not confrontational.',
   };
 
-  const prompt = `You are Ottmar Francisca, SEO Systems Architect, founder of ContentScale (contentscale.site). GRAAF Framework creator. 200+ clients, 47 countries.
+  const prompt = `You are Ottmar J.G. Francisca, an independent SEO consultant based in Amsterdam and creator of the GRAAF Framework and ContentScale (contentscale.site), your professional portfolio. Write in first person (I/my), never as a company or team. Use the exact fact wording “SEO experience across 200+ websites” and “SEO professionals from 47 countries use ContentScale”; never call these clients, never use a success rate, and never call Ottmar Founder.
 ${userBio ? 'Extra context: ' + userBio : ''}
 
 == THREAD ==
