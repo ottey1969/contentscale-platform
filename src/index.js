@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v346';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v347';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -282,7 +282,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'lead-brief-renderer-repair-v340',
   'persistent-action-wait-feedback-v341',
   'already-scanned-published-html-check-live-v342',
-  'scan-brief-check-three-step-state-v346'
+  'scan-brief-check-three-step-state-v347'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -510,7 +510,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v346',
+  build: 'CS-2026-09-28-CANONICAL-v347',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -17172,7 +17172,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v346');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v347');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21836,7 +21836,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v346');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v347');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21930,10 +21930,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v346 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v347 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v346'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v347'});
     try{res.end();}catch(_){}
   }
 });
@@ -58517,7 +58517,7 @@ MERGE RULES:
           if(!_finalIdentityContract.personal_portfolio||!it)return false;
           var z=(String(it.title||it.claim||'')+' '+String(it.action||it.passage||it.body||it.why||'')).toLowerCase();
           if(/3[.,]7\s*[x×]|78\s*%|founder of contentscale|200\+?\s+(?:clients?|businesses|recover(?:y|ies))/.test(z))return true;
-          if(/(?:based on|in my experience)\s+(?:analysing|analyzing)|(?:analysing|analyzing)\s+(?:over\s+)?200\+?\s+websites/.test(z))return true;
+          if(/(?:based on|in my experience)\s+(?:analysing|analyzing)|(?:analysing|analyzing)[^.!?\n]{0,120}200\+?\s+websites/.test(z))return true;
           if(/copilot\s+(?:relies|depends)\s+(?:entirely|completely)\s+on\s+bing/.test(z))return true;
           return false;
         };
@@ -58525,7 +58525,7 @@ MERGE RULES:
         brief2.gsc_brief=(brief2.gsc_brief||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
         brief2.source_suggestions=(brief2.source_suggestions||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
         brief2._verified_identity_contract_applied=!!_finalIdentityContract.personal_portfolio;
-        if(_finalIdentityContract.personal_portfolio)brief2._verified_identity_contract_version='verified-personal-final-v346';
+        if(_finalIdentityContract.personal_portfolio)brief2._verified_identity_contract_version='verified-personal-final-v347';
 
         // v288 FINAL DELTA GUARD: final merged Brief must not re-add work already present in live HTML.
         var _finalLiveHtml=String(effectiveHtml||page.html_content||'');
