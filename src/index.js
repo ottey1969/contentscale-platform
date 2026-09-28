@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v360';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v361';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -345,7 +345,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'exact-url-ai-evidence-guard-v360',
   'quickscan-invite-preview-before-send-v360',
   'legacy-prescan-ai-evidence-migration-v360',
-  'per-engine-ai-reset-with-counter-recalculation-v360'
+  'per-engine-ai-reset-with-counter-recalculation-v360',
+  'public-ceo-report-ai-bonus-v361',
+  'rendered-admin-script-newline-fix-v361'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -392,6 +394,8 @@ console.log('[ContentScale] TIER_SOURCE=GSC position+impressions+clicks; no GSC 
 // pre-scan ai_evidence is migrated to the teaser field. Quick Scan invitations require a preview
 // followed by a separate explicit Approve & Send action. Reset result removes the complete engine
 // object and recalculates only its own counter; clearing a source URL alone is an edit, not a reset.
+// When teaser evidence exists, the public CEO Report also shows it as a purple BONUS section for
+// its exact target URL. Absence stays silent. It never replaces or completes the later Quick Scan.
 // CONTENTSCALE-INTELLIGENCE-HANDOFF-V38 — Intelligence is the diagnostic/decision layer.
 // It must explain cross-engine evidence, source URLs, changes and Treatment. It must not duplicate
 // paste-ready Citation Brief copy and must never promote competitor statements into client facts.
@@ -604,7 +608,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v360',
+  build: 'CS-2026-09-28-CANONICAL-v361',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -641,6 +645,8 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   quickscan_invite_preview_before_send: true,
   legacy_prescan_ai_migration: true,
   per_engine_ai_reset: true,
+  public_ceo_report_ai_bonus: true,
+  rendered_admin_script_validation: true,
   regression_contract: true,
   tracker_delta_brief: true,
   tracker_prewrite_visible_handoff: true,
@@ -684,6 +690,8 @@ app.get('/api/regression-contract',(req,res)=>{
     invite_preview_before_send:src.includes('quickscan-invite-preview')&&src.includes('Approve & Send invitation'),
     legacy_prescan_ai_migration:src.includes("scan_completed_at IS NULL AND COALESCE(ai_checked,0)>0"),
     per_engine_ai_reset:src.includes("/:token/ai/:engine")&&src.includes("/:token/ai-teaser/:engine")&&src.includes('Reset result'),
+    public_ceo_ai_bonus:src.includes('_opportunityInjectAiTeaser')&&src.includes('BONUS — HANDMATIGE AI-ZICHTBAARHEIDSPREVIEW'),
+    rendered_admin_newlines_safe:src.includes("filters to Lead Crawler?\\\\n\\\\nThis creates")&&src.includes("tested again.\\\\n\\\\nType RESET TEST LINK"),
     tracker_delta_guard:src.includes('V256 generic DELTA guard')&&src.includes('implementation_complete=_briefNow.outstanding_actions===0'),
     verification_stays_outstanding:src.includes('V261: verification is work, not completion'),
     completed_brief_is_growth_not_sleep:src.includes('CURRENT BRIEF COMPLETE')&&src.includes('outperform the current competition'),
@@ -15473,6 +15481,20 @@ return result;
                  if(/<\/head>/i.test(out))out=out.replace(/<\/head>/i,css+'</head>');
                  return out;
                }
+               function _opportunityInjectAiTeaser(html,row,language){
+                 const ai=_pqsNormalizeAiEvidence(row&&row.outreach_ai_teaser),keys=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){return ai[k]&&ai[k].checked;});
+                 if(!keys.length)return String(html||'');
+                 const esc=_opportunityHtmlEscape,raw=String(language||'en').toLowerCase(),lang=raw.indexOf('nl')===0?'nl':(raw.indexOf('es')===0?'es':'en'),names={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
+                 const copy={en:{eyebrow:'BONUS — MANUAL AI VISIBILITY PREVIEW',title:'How this selected page appeared in AI systems',scope:'This bonus belongs only to the exact page shown below. It is separate from the personal Quick Scan and does not count toward its 5/5 completion.',recommended:'Recommended',supported:'Directly supported',maps:'Local / Maps',domain:'Domain cited',exact:'Exact page cited',sources:'Sources'},nl:{eyebrow:'BONUS — HANDMATIGE AI-ZICHTBAARHEIDSPREVIEW',title:'Hoe deze gekozen pagina in AI-systemen verscheen',scope:'Deze bonus hoort alleen bij de exacte pagina hieronder. Hij staat los van de persoonlijke Quick Scan en telt niet mee voor de 5/5-voltooiing.',recommended:'Aanbevolen',supported:'Direct ondersteund',maps:'Lokaal / Maps',domain:'Domein geciteerd',exact:'Exacte pagina geciteerd',sources:'Bronnen'},es:{eyebrow:'BONUS — VISTA PREVIA MANUAL DE VISIBILIDAD EN IA',title:'Cómo apareció esta página en los sistemas de IA',scope:'Este bonus pertenece únicamente a la página exacta que aparece abajo. Está separado del Quick Scan personal y no cuenta para completar sus 5/5 comprobaciones.',recommended:'Recomendado',supported:'Apoyo directo',maps:'Local / Maps',domain:'Dominio citado',exact:'Página exacta citada',sources:'Fuentes'}}[lang];
+                 const target=String(row.outreach_ai_teaser_target_url||(ai[keys[0]]&&ai[keys[0]].target_url)||'');
+                 const mark=function(v){return v?'<span class="csBonusYes">✓</span>':'<span class="csBonusNo">—</span>';};
+                 const rows=keys.map(function(k){const x=ai[k]||{},sources=(x.sources||[]).map(function(u){return '<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(u)+'</a>';}).join('<br>');return '<tr><td><b>'+esc(names[k])+'</b></td><td>'+mark(x.recommended)+'</td><td>'+mark(x.directly_supported)+'</td><td>'+mark(x.local_maps)+'</td><td>'+mark(x.domain_cited)+'</td><td>'+mark(x.exact_page_cited)+'</td><td class="csBonusSources">'+(sources||'—')+'</td></tr>';}).join('');
+                 const card='<section class="box cs-ai-bonus"><div class="csBonusEyebrow">'+copy.eyebrow+' · '+keys.length+'/5</div><h2>'+copy.title+'</h2><p><b><a href="'+esc(target)+'" target="_blank" rel="noopener">'+esc(target)+'</a></b></p><p class="muted">'+copy.scope+'</p><div class="csBonusTable"><table><thead><tr><th>AI system</th><th>'+copy.recommended+'</th><th>'+copy.supported+'</th><th>'+copy.maps+'</th><th>'+copy.domain+'</th><th>'+copy.exact+'</th><th>'+copy.sources+'</th></tr></thead><tbody>'+rows+'</tbody></table></div></section>';
+                 const css='<style>.cs-ai-bonus{border:2px solid #8b5cf6!important;background:linear-gradient(135deg,#24113f,#101b32)!important;box-shadow:0 16px 42px #02061766}.csBonusEyebrow{color:#c4b5fd;font-size:10px;font-weight:950;letter-spacing:.12em;margin-bottom:5px}.cs-ai-bonus h2{color:#ddd6fe}.csBonusTable{overflow:auto}.cs-ai-bonus table{min-width:900px}.cs-ai-bonus th{color:#c4b5fd}.csBonusYes{color:#4ade80;font-weight:950}.csBonusNo{color:#64748b}.csBonusSources a{display:block;max-width:300px;overflow-wrap:anywhere}@media(max-width:700px){.cs-ai-bonus{padding:16px}.csBonusTable{margin:0 -4px}}</style>';
+                 let out=String(html||'');if(/<\/head>/i.test(out))out=out.replace(/<\/head>/i,css+'</head>');
+                 if(/<section class="box cs-ai-next"/i.test(out))return out.replace(/<section class="box cs-ai-next"/i,card+'<section class="box cs-ai-next"');
+                 return out.replace(/<section class="box"><h2>90-Day Opportunity Plan<\/h2>/i,card+'<section class="box"><h2>90-Day Opportunity Plan</h2>');
+               }
                function _renderOpportunityReportHtml(report){
                  const r=report||{},s=r.summary||{},e=r.executive_summary||{},external=r.analysis_mode==='external-evidence';
                  const esc=_opportunityHtmlEscape;
@@ -15941,7 +15963,10 @@ return result;
                    const r=await pool.query('UPDATE opportunity_reports SET last_opened_at=NOW(),view_count=view_count+1 WHERE token=$1 AND revoked_at IS NULL RETURNING report_data',[token]);
                    if(!r.rows.length)return res.status(404).send('Report not found');
                    const report=typeof r.rows[0].report_data==='string'?JSON.parse(r.rows[0].report_data):r.rows[0].report_data;
-                   res.type('html').send(_injectProspectFooter(_opportunityClarifyAiVerification(_renderOpportunityReportHtml(report),report),report.report_language||report.language||'en'));
+                   let linked=null;try{const p=await pool.query(`SELECT outreach_ai_teaser,outreach_ai_teaser_target_url FROM prospect_quick_scans WHERE revoked_at IS NULL AND (ceo_report_token=$1 OR token=$2) ORDER BY CASE WHEN ceo_report_token=$1 THEN 0 ELSE 1 END,updated_at DESC LIMIT 1`,[token,String(report.quick_scan_token||'')]);linked=p.rows[0]||null;}catch(_teaserError){}
+                   const language=report.report_language||report.language||'en';
+                   const page=_opportunityInjectAiTeaser(_opportunityClarifyAiVerification(_renderOpportunityReportHtml(report),report),linked,language);
+                   res.type('html').send(_injectProspectFooter(page,language));
                  }catch(e){res.status(500).send('Report could not be loaded');}
                });
 
@@ -17640,7 +17665,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v360');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v361');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22419,7 +22444,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v360');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v361');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22520,10 +22545,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v360 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v361 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v360'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v361'});
     try{res.end();}catch(_){}
   }
 });
@@ -23407,7 +23432,7 @@ function _pqsAdminContactIntelligenceV156(){return `<style>
   async function showVerified(selectFirst){document.getElementById('ciFilter').value='domain_verified';await list(true);panel.classList.remove('ciCompaniesClosed');var sl=document.getElementById('ciSectionLabel');if(sl)sl.textContent='Hide companies ('+panel.querySelectorAll('#ciList .ciRow').length+')';if(selectFirst){panel.querySelectorAll('[data-ci-id]').forEach(function(x,i){x.checked=i<20});updateSelection()}}
   async function promoteIds(ids,btn){if(!ids.length)return statusText('No verified domains match the current filters.');var old=beginButton(btn,'Adding '+ids.length+' to Lead Crawler…'),ok=false;try{var d=await api('/api/contact-intelligence/promote',{method:'POST',body:JSON.stringify({ids:ids})});statusText('Added to Lead Crawler ✓ '+n(d.created)+' new · '+n(d.existing)+' already existed. Find them under Lead Crawler & Outreach → email approval queue. No scan or email was started.');ok=true;await stats();await list(true);if(window.loadPqsEmailQueue)window.loadPqsEmailQueue()}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ Added to Lead Crawler')}}
   document.getElementById('ciShowVerified').onclick=async function(){var old=beginButton(this,'Loading verified domains…'),ok=false;try{await showVerified(false);statusText('Showing verified domains. Select the companies you want, then use “Add selected verified to Lead Crawler”.');ok=true}catch(e){statusText(e.message)}finally{endButton(this,old,ok,'✓ Verified domains shown')}};
-  document.getElementById('ciPromoteNext20').onclick=async function(){if(!confirm('Add the next 20 verified domains matching the current source, niche, country, language and minimum-score filters to Lead Crawler?\n\nThis creates Lead Crawler prospect records only. It does not start a scan and does not send email.'))return;var b=this;try{await showVerified(true);var ids=selected();await promoteIds(ids,b)}catch(e){statusText(e.message)}};
+  document.getElementById('ciPromoteNext20').onclick=async function(){if(!confirm('Add the next 20 verified domains matching the current source, niche, country, language and minimum-score filters to Lead Crawler?\\n\\nThis creates Lead Crawler prospect records only. It does not start a scan and does not send email.'))return;var b=this;try{await showVerified(true);var ids=selected();await promoteIds(ids,b)}catch(e){statusText(e.message)}};
   document.getElementById('ciPromote').onclick=function(){var checked=Array.from(panel.querySelectorAll('[data-ci-id]:checked')),invalid=checked.filter(function(x){return !x.closest('.ciRow')||x.closest('.ciRow').dataset.status!=='domain_verified'});if(!checked.length)return statusText('Select verified domains first, or use “Add next 20 verified domains to Lead Crawler”.');if(invalid.length)return statusText('Only rows marked domain_verified can be added. Press “Show verified domains” first.');if(!confirm('Add '+checked.length+' selected verified companies to Lead Crawler? No scan or email will start.'))return;promoteIds(checked.map(function(x){return Number(x.dataset.ciId)}),this)};document.getElementById('ciSuppress').onclick=function(){var reason=prompt('Suppression reason:','Not a suitable business prospect');if(reason===null)return;act('/api/contact-intelligence/suppress',500,'Suppress selected contacts and revoke unsent, unscanned records?',{reason:reason},this)};
   document.getElementById('ciExport').onclick=async function(){var btn=this,old=beginButton(btn,'Preparing CSV…'),ok=false,ids=selected(),body=ids.length?{ids:ids}:{filters:filters(),limit:10000};statusText(ids.length?'Preparing selected CSV…':'Preparing filtered CSV (maximum 10,000 rows)…');try{var r=await fetch('/api/contact-intelligence/export',{method:'POST',headers:{'Content-Type':'application/json','x-admin-code':KEY},body:JSON.stringify(body)});if(!r.ok){var e=await r.json();throw Error(e.error||'Export failed')}var blob=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='contentscale-companies-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);statusText('CSV export downloaded.');ok=true}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ CSV downloaded')}};
   document.getElementById('ciNext').onclick=function(){if(!nextAfter)return;history.push(after);after=nextAfter;pageNo++;list(false)};document.getElementById('ciPrev').onclick=function(){if(!history.length)return;after=history.pop();pageNo=Math.max(1,pageNo-1);list(false)};stats();list(true);setInterval(stats,60000);
@@ -23492,7 +23517,7 @@ function ensurePanel(){var app=document.getElementById('app');if(!app||document.
 async function generateStandalone(){var b=document.getElementById('pqsReportGenerate'),u=document.getElementById('pqsReportUrl'),n=document.getElementById('pqsReportName'),st=document.getElementById('pqsReportStatus');if(!u||!u.value.trim())return st.textContent='Enter a website URL.';b.disabled=true;b.textContent='Running broader analysis…';st.innerHTML='<span class="pqsAnalyzing">Analysing up to 20 commercially relevant pages and researching search visibility<span class="pqsDots"></span></span> <span>This can take a while.</span>';try{var d=await reportApi('/api/audit-opportunity-report',{method:'POST',body:JSON.stringify({code:window.KEY||localStorage.getItem('pqs_admin_code')||'',url:u.value.trim(),business_name:n.value.trim(),manual_html:(document.getElementById('pqsReportManualHtml')||{}).value||'',report_mode:'prospect',origin:'ceo_outreach'})});st.innerHTML=d.share?'<span class="good">Report ready.</span> <a class="link" target="_blank" href="'+E(d.share.url)+'">Open report</a>':'Report generated.';loadHistory()}catch(e){st.innerHTML='<span class="warn">'+E(e.message)+'</span>'}finally{b.disabled=false;b.textContent='Generate CEO Prospect Report'}}
 async function generateFromQuick(token,b){b.disabled=true;var old=b.textContent;b.textContent='Building report…';try{var d=await reportApi('/api/prospect-quick-scan/admin/'+token+'/prospect-report',{method:'POST',body:'{}'});if(d.share){b.textContent='Report ready ✓';window.open(d.share.url,'_blank','noopener');loadHistory()}else b.textContent='Generated ✓'}catch(e){b.disabled=false;b.textContent=old;alert(e.message)}}
 async function refreshOpportunityReport(token,b){if(!confirm('Re-scan this prospect report with the current ContentScale build? The public link stays the same and the previous report is archived.'))return;var st=document.getElementById('pqsReportStatus'),old=b.textContent;b.disabled=true;b.textContent='Refreshing…';if(st)st.innerHTML='<span class="pqsAnalyzing">Re-scanning the website and rebuilding this report<span class="pqsDots"></span></span> <span>The public link stays the same.</span>';try{var d=await reportApi('/api/opportunity-reports/'+token+'/refresh',{method:'POST',body:'{}'});b.textContent='✓ Refreshed';if(st)st.innerHTML='<span class="good">Report refreshed with '+E(d.build||'the current build')+'. ContentScore '+E(d.score==null?'N/A':d.score+'/100')+' · '+E(d.recommendation_count||0)+' validated recommendations. The shared URL is unchanged.</span>';setTimeout(loadHistory,1200)}catch(e){b.disabled=false;b.textContent='✕ Retry';if(st)st.innerHTML='<span class="warn">Refresh failed: '+E(e.message)+'</span>';setTimeout(function(){b.textContent=old},3500)}}
-async function resetTestReport(token,b){var typed=prompt('This permanently disables this report link and its linked Quick Scan test token. The same real domain can then be tested again.\n\nType RESET TEST LINK to continue:','');if(typed!=='RESET TEST LINK')return;var st=document.getElementById('pqsReportStatus');b.disabled=true;b.textContent='Resetting…';try{var d=await reportApi('/api/opportunity-reports/'+token+'/reset-test',{method:'POST',body:JSON.stringify({confirmation:typed})});b.textContent='✓ Reset';if(st)st.innerHTML='<span class="good">Test link revoked'+(d.quick_scan_revoked?' together with its linked Quick Scan':'')+'. You can now create a fresh test for '+E(d.domain||'the same URL')+'.</span>';setTimeout(loadHistory,900)}catch(e){b.disabled=false;b.textContent='✕ Retry reset';if(st)st.innerHTML='<span class="warn">Reset failed: '+E(e.message)+'</span>'}}
+async function resetTestReport(token,b){var typed=prompt('This permanently disables this report link and its linked Quick Scan test token. The same real domain can then be tested again.\\n\\nType RESET TEST LINK to continue:','');if(typed!=='RESET TEST LINK')return;var st=document.getElementById('pqsReportStatus');b.disabled=true;b.textContent='Resetting…';try{var d=await reportApi('/api/opportunity-reports/'+token+'/reset-test',{method:'POST',body:JSON.stringify({confirmation:typed})});b.textContent='✓ Reset';if(st)st.innerHTML='<span class="good">Test link revoked'+(d.quick_scan_revoked?' together with its linked Quick Scan':'')+'. You can now create a fresh test for '+E(d.domain||'the same URL')+'.</span>';setTimeout(loadHistory,900)}catch(e){b.disabled=false;b.textContent='✕ Retry reset';if(st)st.innerHTML='<span class="warn">Reset failed: '+E(e.message)+'</span>'}}
 async function loadHistory(){
  var box=document.getElementById('pqsReportHistory');if(!box)return;
  try{
