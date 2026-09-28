@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v358';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v359';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -338,7 +338,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'hidden-prospect-restore-or-permanent-reset-v358',
   'all-prospect-selectors-alphabetic-v358',
   'standalone-auto-language-ceo-link-v358',
-  'optional-five-ai-followup-teaser-v358'
+  'optional-five-ai-followup-teaser-v358',
+  'one-click-verified-to-lead-crawler-v359',
+  'promotion-destination-and-no-send-clarity-v359'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -373,6 +375,11 @@ console.log('[ContentScale] TIER_SOURCE=GSC position+impressions+clicks; no GSC 
 // Never transfer exact-page citation evidence to a different URL: the prospect's later chosen-page
 // Quick Scan receives its own fresh five-system checks. Hidden records must be restorable or fully
 // resettable, and every prospect selector must stay alphabetic.
+// CONTENTSCALE-AI-HANDOFF-V359 — VERIFIED DOMAIN PROMOTION IS AN EXPLICIT HANDOFF.
+// A verified Contact Intelligence domain is not yet a Lead Crawler prospect. The one-click action
+// promotes only the next 20 domain_verified rows matching the current non-status filters. Promotion
+// creates/reuses prospect_quick_scans records; it never scans and never sends email. The destination
+// is Quick Scan Admin → Lead Crawler & Outreach → email approval queue.
 // CONTENTSCALE-INTELLIGENCE-HANDOFF-V38 — Intelligence is the diagnostic/decision layer.
 // It must explain cross-engine evidence, source URLs, changes and Treatment. It must not duplicate
 // paste-ready Citation Brief copy and must never promote competitor statements into client facts.
@@ -585,7 +592,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v358',
+  build: 'CS-2026-09-28-CANONICAL-v359',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -615,6 +622,8 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   all_prospect_selectors_alphabetic: true,
   standalone_ceo_auto_language: true,
   optional_five_ai_followup_teaser: true,
+  one_click_verified_to_lead_crawler: true,
+  promotion_destination_clarity: true,
   regression_contract: true,
   tracker_delta_brief: true,
   tracker_prewrite_visible_handoff: true,
@@ -651,6 +660,8 @@ app.get('/api/regression-contract',(req,res)=>{
     all_prospect_selectors_alphabetic:src.includes("localeCompare(b.name")&&src.includes("localeCompare(b.label"),
     standalone_auto_language:src.includes("req.path==='/ceo'")&&src.includes("shortSources={'/ceo':'standalone'"),
     optional_followup_teaser:src.includes('BONUS — AI visibility preview')&&src.includes('_pqsFollowupAiTeaser'),
+    one_click_verified_promotion:src.includes('Add next 20 verified domains to Lead Crawler')&&src.includes('ciPromoteNext20'),
+    promotion_destination_clarity:src.includes('Lead Crawler & Outreach → email approval queue')&&src.includes('No scan or email was started'),
     tracker_delta_guard:src.includes('V256 generic DELTA guard')&&src.includes('implementation_complete=_briefNow.outstanding_actions===0'),
     verification_stays_outstanding:src.includes('V261: verification is work, not completion'),
     completed_brief_is_growth_not_sleep:src.includes('CURRENT BRIEF COMPLETE')&&src.includes('outperform the current competition'),
@@ -17607,7 +17618,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v358');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v359');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22372,7 +22383,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v358');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v359');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22473,10 +22484,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v358 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v359 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v358'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v359'});
     try{res.end();}catch(_){}
   }
 });
@@ -23289,13 +23300,13 @@ function _pqsAdminContactIntelligenceV156(){return `<style>
   if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(panel,anchor);else(document.getElementById('app')||document.body).appendChild(panel);
   var help=document.createElement('details');help.className='ciHelp';help.open=true;help.innerHTML='<summary>What do the numbers mean?</summary><ul><li><b>Blue score (0–100):</b> an internal business-likelihood score used to prioritise contacts. It is not a GRAAF score or a completed website scan. For example, 45 can be a business-domain email (35) plus follower signals (5 + 5).</li><li><b>Total staged:</b> all unique imported contacts stored here.</li><li><b>Qualified:</b> likely businesses with a website candidate; not verified yet.</li><li><b>Verified:</b> the business website/domain was confirmed.</li><li><b>Needs domain:</b> no safe business website was found automatically.</li><li><b>Likely personal:</b> appears personal or uses a free/personal email.</li><li><b>Promoted:</b> verified companies you deliberately moved to Lead Crawler.</li></ul>';panel.querySelector('.ciFilters').before(help);
   var activity=document.createElement('div');activity.id='ciActivity';activity.className='ciJob';activity.innerHTML='Loading verification and Quick Scan activity…';panel.querySelector('#ciStats').after(activity);
-  panel.querySelector('.ciActions').innerHTML='<div class="ciActionLabel">1. Filter the list (optional)</div><div class="ciActionHelp">These fields decide which companies are shown and which companies a background batch may use.</div><button class="btn" id="ciLoad">Apply filters</button><div class="ciActionLabel">2A. Check companies you choose now</div><div class="ciActionHelp">Select visible rows, then verify no more than 20 websites in one immediate run.</div><button class="btn" id="ciSelect20">Select first 20 shown</button><button class="btn" id="ciClearSelect">Clear selection</button><button class="btn" id="ciVerify">Verify selected (max 20)</button><div class="ciActionLabel">2B. Or check the next matching companies in the background</div><div class="ciActionHelp">This is a total batch size—not per day and never every matching company.</div><select id="ciTotalLimit" title="Total companies in this one background batch"><option value="20">20 companies total</option><option value="100" selected>100 companies total</option><option value="500">500 companies total</option></select><button class="btn" id="ciVerifyFiltered">Queue next matching companies</button><div class="ciActionLabel">3. Use or remove reviewed records</div><button class="btn" id="ciPromote">Send selected verified to Lead Crawler</button><button class="btn" id="ciExport">Export selected or current filter</button><button class="btn" id="ciSuppress" style="background:#7f1d1d;border-color:#ef4444">Exclude selected</button>';
+  panel.querySelector('.ciActions').innerHTML='<div class="ciActionLabel">1. Filter the list (optional)</div><div class="ciActionHelp">These fields decide which companies are shown and which companies a background batch may use.</div><button class="btn" id="ciLoad">Apply filters</button><div class="ciActionLabel">2A. Check companies you choose now</div><div class="ciActionHelp">Select visible rows, then verify no more than 20 websites in one immediate run.</div><button class="btn" id="ciSelect20">Select first 20 shown</button><button class="btn" id="ciClearSelect">Clear selection</button><button class="btn" id="ciVerify">Verify selected (max 20)</button><div class="ciActionLabel">2B. Or check the next matching companies in the background</div><div class="ciActionHelp">This is a total batch size—not per day and never every matching company.</div><select id="ciTotalLimit" title="Total companies in this one background batch"><option value="20">20 companies total</option><option value="100" selected>100 companies total</option><option value="500">500 companies total</option></select><button class="btn" id="ciVerifyFiltered">Queue next matching companies</button><div class="ciActionLabel">3. Add verified companies to Lead Crawler</div><div class="ciActionHelp">Verified domains stay in Contact Intelligence until you move them. Adding creates a Lead Crawler prospect under <b>Lead Crawler & Outreach → email approval queue</b>. No Quick Scan starts and no email is sent.</div><button class="btn" id="ciShowVerified">Show verified domains</button><button class="btn" id="ciPromoteNext20" style="background:#0e7490;border-color:#22d3ee">Add next 20 verified domains to Lead Crawler</button><button class="btn" id="ciPromote">Add selected verified to Lead Crawler</button><button class="btn" id="ciExport">Export selected or current filter</button><button class="btn" id="ciSuppress" style="background:#7f1d1d;border-color:#ef4444">Exclude selected</button>';
   var selectionInfo=document.createElement('div');selectionInfo.id='ciSelectionInfo';selectionInfo.className='ciJob';selectionInfo.innerHTML='<b>Selected for manual verification:</b> 0 / 20';panel.querySelector('#ciUsage').before(selectionInfo);
   var manualResult=document.createElement('div');manualResult.id='ciManualResult';manualResult.className='ciJob';manualResult.innerHTML='<b>Last manual website verification:</b> no manual run saved in this browser.';try{var savedManual=localStorage.getItem('ci_last_manual_result_v168');if(savedManual)manualResult.innerHTML=savedManual}catch(e){}panel.querySelector('#ciUsage').before(manualResult);
   var listHelp=document.createElement('div');listHelp.className='ciHelp';listHelp.innerHTML='<b>Why companies remain visible:</b> this list always shows the records matching the active filter. After a qualified company is verified, it moves to Verified domains or Needs review, and the next still-qualified company takes its place.';panel.querySelector('#ciList').before(listHelp);var sectionToggle=document.createElement('button');sectionToggle.type='button';sectionToggle.className='ciSectionToggle';sectionToggle.innerHTML='<span id="ciSectionLabel">Show companies</span><span class="ciArrow">▼</span>';panel.querySelector('#ciList').before(sectionToggle);panel.classList.add('ciCompaniesClosed');sectionToggle.onclick=function(){panel.classList.toggle('ciCompaniesClosed');var closed=panel.classList.contains('ciCompaniesClosed');sectionToggle.querySelector('#ciSectionLabel').textContent=(closed?'Show':'Hide')+' companies ('+panel.querySelectorAll('#ciList .ciRow').length+')'};
   var after=0,history=[],nextAfter=null,pageNo=1,jobTimer=null,latestStats=null,latestImport=null,latestVerify=null,statsBusy=false;
   function n(v){return Number(v||0).toLocaleString()}function selected(){return Array.from(panel.querySelectorAll('[data-ci-id]:checked')).map(function(x){return Number(x.dataset.ciId)})}
-  function updateSelection(){var count=selected().length,el=document.getElementById('ciSelectionInfo');if(!el)return;el.innerHTML='<b>Selected for manual verification:</b> '+n(count)+' / 20'+(count>20?' · <span style="color:#fca5a5">Clear some selections before verifying.</span>':'')}
+  function updateSelection(){var count=selected().length,verified=Array.from(panel.querySelectorAll('[data-ci-id]:checked')).filter(function(x){return x.closest('.ciRow')&&x.closest('.ciRow').dataset.status==='domain_verified'}).length,el=document.getElementById('ciSelectionInfo');if(!el)return;el.innerHTML='<b>Selected:</b> '+n(count)+' · <b>verified and ready for Lead Crawler:</b> '+n(verified)+(count>20?' · <span style="color:#fca5a5">Manual website verification accepts no more than 20.</span>':'')}
   function filters(){return{status:document.getElementById('ciFilter').value,q:document.getElementById('ciSearch').value.trim(),source:document.getElementById('ciSource').value,niche:document.getElementById('ciNiche').value,country:document.getElementById('ciCountry').value.trim(),language:document.getElementById('ciLanguage').value,min_score:Number(document.getElementById('ciMinScore').value)||0}}
   function fill(id,items,label){var el=document.getElementById(id),keep=el.value,base='<option value="all">All '+label+'</option>';el.innerHTML=base+(items||[]).filter(Boolean).sort().map(function(x){return'<option value="'+esc(x)+'">'+esc(x)+'</option>'}).join('');el.value=Array.from(el.options).some(function(o){return o.value===keep})?keep:'all'}
   function manualSites(){panel.querySelectorAll('.ciRow').forEach(function(row){var status=row.dataset.status;if(row.dataset.manualSite||!(status==='needs_domain'||status==='needs_review'))return;row.dataset.manualSite='1';var box=row.querySelector('[data-ci-id]'),id=box?Number(box.dataset.ciId):0,site=row.querySelector('.ciSite'),old=site&&site.dataset.site||'';if(!site||!id)return;site.textContent='';var input=document.createElement('input');input.type='url';input.placeholder='https://verified-business-domain.com';input.value=old;input.style.width='100%';var save=document.createElement('button');save.className='btn';save.textContent='Save website';save.style.marginTop='6px';save.onclick=async function(){if(!input.value.trim())return;save.disabled=true;try{await api('/api/contact-intelligence/'+id+'/website',{method:'PATCH',body:JSON.stringify({website:input.value.trim()})});statusText('Website candidate saved. Verify it before promotion.');await stats();await list(true)}catch(e){statusText(e.message);save.disabled=false}};site.appendChild(input);site.appendChild(save)})}
@@ -23315,7 +23326,11 @@ function _pqsAdminContactIntelligenceV156(){return `<style>
   panel.addEventListener('change',function(e){if(e.target&&e.target.matches('[data-ci-id]'))updateSelection()});
   document.getElementById('ciLoad').onclick=async function(){var old=beginButton(this,'Applying filters…'),ok=false;try{await list(true);statusText('✓ Filters applied.');ok=true} catch(e){statusText(e.message)}finally{endButton(this,old,ok,'✓ Filters applied')}};document.getElementById('ciRefresh').onclick=async function(){var old=beginButton(this,'Refreshing…'),ok=false;try{await stats();await list(true);statusText('✓ Contact Intelligence refreshed.');ok=true}catch(e){statusText(e.message)}finally{endButton(this,old,ok,'✓ Refreshed')}};document.getElementById('ciSelect20').onclick=function(){var old=beginButton(this,'Selecting…');panel.querySelectorAll('[data-ci-id]').forEach(function(x,i){x.checked=i<20});updateSelection();endButton(this,old,true,'✓ First 20 selected')};document.getElementById('ciClearSelect').onclick=function(){var old=beginButton(this,'Clearing…');panel.querySelectorAll('[data-ci-id]').forEach(function(x){x.checked=false});updateSelection();endButton(this,old,true,'✓ Selection cleared')};document.getElementById('ciVerify').onclick=function(){act('/api/contact-intelligence/verify',20,null,null,this)};
   document.getElementById('ciVerifyFiltered').onclick=async function(){var btn=this,f=filters(),total=Number(document.getElementById('ciTotalLimit').value)||100,parts=['status: '+f.status,'minimum score: '+f.min_score],active=latestVerify&&['queued','processing','paused'].indexOf(latestVerify.status)>=0;if(active){var blockedOld=beginButton(btn,'Checking queue…');statusText('A website verification queue is already '+latestVerify.status+' ('+n(latestVerify.processed)+' / '+n(latestVerify.total_limit||latestVerify.total)+'). Finish or cancel it before starting another batch.');endButton(btn,blockedOld,false,null,'✕ Queue already active');return}if(f.q)parts.push('search: '+f.q);if(f.source!=='all')parts.push('source: '+f.source);if(f.niche!=='all')parts.push('niche: '+f.niche);if(f.country)parts.push('country: '+f.country);if(f.language!=='all')parts.push('language: '+f.language);if(!confirm('Queue the next '+total+' matching companies?\\n\\nFilters: '+parts.join(' · ')+'\\n\\nThe queue stops after '+total+'. This does not send email and does not start a Quick Scan.'))return;var old=beginButton(btn,'Adding '+total+' companies…'),ok=false;try{var d=await api('/api/contact-intelligence/verify-filtered',{method:'POST',body:JSON.stringify({filters:f,total_limit:total})});statusText(d.message);ok=true;await stats()}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ Queue created')}};
-  document.getElementById('ciPromote').onclick=function(){act('/api/contact-intelligence/promote',200,'Add the selected verified companies to Lead Crawler? No scan or email will start.',null,this)};document.getElementById('ciSuppress').onclick=function(){var reason=prompt('Suppression reason:','Not a suitable business prospect');if(reason===null)return;act('/api/contact-intelligence/suppress',500,'Suppress selected contacts and revoke unsent, unscanned records?',{reason:reason},this)};
+  async function showVerified(selectFirst){document.getElementById('ciFilter').value='domain_verified';await list(true);panel.classList.remove('ciCompaniesClosed');var sl=document.getElementById('ciSectionLabel');if(sl)sl.textContent='Hide companies ('+panel.querySelectorAll('#ciList .ciRow').length+')';if(selectFirst){panel.querySelectorAll('[data-ci-id]').forEach(function(x,i){x.checked=i<20});updateSelection()}}
+  async function promoteIds(ids,btn){if(!ids.length)return statusText('No verified domains match the current filters.');var old=beginButton(btn,'Adding '+ids.length+' to Lead Crawler…'),ok=false;try{var d=await api('/api/contact-intelligence/promote',{method:'POST',body:JSON.stringify({ids:ids})});statusText('Added to Lead Crawler ✓ '+n(d.created)+' new · '+n(d.existing)+' already existed. Find them under Lead Crawler & Outreach → email approval queue. No scan or email was started.');ok=true;await stats();await list(true);if(window.loadPqsEmailQueue)window.loadPqsEmailQueue()}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ Added to Lead Crawler')}}
+  document.getElementById('ciShowVerified').onclick=async function(){var old=beginButton(this,'Loading verified domains…'),ok=false;try{await showVerified(false);statusText('Showing verified domains. Select the companies you want, then use “Add selected verified to Lead Crawler”.');ok=true}catch(e){statusText(e.message)}finally{endButton(this,old,ok,'✓ Verified domains shown')}};
+  document.getElementById('ciPromoteNext20').onclick=async function(){if(!confirm('Add the next 20 verified domains matching the current source, niche, country, language and minimum-score filters to Lead Crawler?\n\nThis creates Lead Crawler prospect records only. It does not start a scan and does not send email.'))return;var b=this;try{await showVerified(true);var ids=selected();await promoteIds(ids,b)}catch(e){statusText(e.message)}};
+  document.getElementById('ciPromote').onclick=function(){var checked=Array.from(panel.querySelectorAll('[data-ci-id]:checked')),invalid=checked.filter(function(x){return !x.closest('.ciRow')||x.closest('.ciRow').dataset.status!=='domain_verified'});if(!checked.length)return statusText('Select verified domains first, or use “Add next 20 verified domains to Lead Crawler”.');if(invalid.length)return statusText('Only rows marked domain_verified can be added. Press “Show verified domains” first.');if(!confirm('Add '+checked.length+' selected verified companies to Lead Crawler? No scan or email will start.'))return;promoteIds(checked.map(function(x){return Number(x.dataset.ciId)}),this)};document.getElementById('ciSuppress').onclick=function(){var reason=prompt('Suppression reason:','Not a suitable business prospect');if(reason===null)return;act('/api/contact-intelligence/suppress',500,'Suppress selected contacts and revoke unsent, unscanned records?',{reason:reason},this)};
   document.getElementById('ciExport').onclick=async function(){var btn=this,old=beginButton(btn,'Preparing CSV…'),ok=false,ids=selected(),body=ids.length?{ids:ids}:{filters:filters(),limit:10000};statusText(ids.length?'Preparing selected CSV…':'Preparing filtered CSV (maximum 10,000 rows)…');try{var r=await fetch('/api/contact-intelligence/export',{method:'POST',headers:{'Content-Type':'application/json','x-admin-code':KEY},body:JSON.stringify(body)});if(!r.ok){var e=await r.json();throw Error(e.error||'Export failed')}var blob=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='contentscale-companies-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);statusText('CSV export downloaded.');ok=true}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ CSV downloaded')}};
   document.getElementById('ciNext').onclick=function(){if(!nextAfter)return;history.push(after);after=nextAfter;pageNo++;list(false)};document.getElementById('ciPrev').onclick=function(){if(!history.length)return;after=history.pop();pageNo=Math.max(1,pageNo-1);list(false)};stats();list(true);setInterval(stats,60000);
 })();<\/script>`}
