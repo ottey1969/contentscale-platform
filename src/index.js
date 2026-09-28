@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v370';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v371';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -364,9 +364,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'collapsed-prospect-delete-visible-v368',
   'prospect-tawk-chat-all-pages-v369',
   'localized-chat-cta-v369',
-  'ceo-scanned-page-binding-v370',
-  'two-prompt-active-search-v370',
-  'quickscan-ready-purpose-filter-v370'
+  'ceo-scanned-page-binding-v371',
+  'two-prompt-active-search-v371',
+  'quickscan-ready-purpose-filter-v371'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -627,7 +627,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v370',
+  build: 'CS-2026-09-29-CANONICAL-v371',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -17719,7 +17719,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-29-CANONICAL-v370');
+console.log('[ContentScale] CS-2026-09-29-CANONICAL-v371');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -19554,7 +19554,7 @@ function _ensureProspectQuickScanTable(){
   CREATE INDEX IF NOT EXISTS brevo_outreach_events_event_at_idx ON brevo_outreach_events(event_at DESC);
   CREATE INDEX IF NOT EXISTS brevo_outreach_events_email_idx ON brevo_outreach_events(lower(email));
   CREATE INDEX IF NOT EXISTS brevo_outreach_events_message_id_idx ON brevo_outreach_events(message_id);`).then(async()=>{
-    // v370: restore the exact CEO-scanned page from the saved opportunity
+    // v371: restore the exact CEO-scanned page from the saved opportunity
     // report. Keep this repair isolated because a brand-new database may not
     // have created opportunity_reports yet when Quick Scan initializes.
     await pool.query(`UPDATE prospect_quick_scans p
@@ -22568,7 +22568,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v370');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v371');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22669,10 +22669,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v370 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v371 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v370'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v371'});
     try{res.end();}catch(_){}
   }
 });
@@ -23856,7 +23856,7 @@ function tidy(){scheduled=false;list.querySelectorAll(':scope > .card').forEach(
 function schedule(){if(scheduled)return;scheduled=true;setTimeout(tidy,40)}tidy();new MutationObserver(schedule).observe(list,{childList:true,subtree:true});
 })();<\/script>`}
 
-// v370 — purpose-aware prospect search for the two-prompt workflow.
+// v371 — purpose-aware prospect search for the two-prompt workflow.
 // CEO evidence binds to ceo_report_page_url; completed Quick Scan evidence
 // binds to the separate scanned Quick Scan URL. The full list stays hidden.
 function _pqsAdminCeoPageBindingV370(){return String.raw`<script>(function(){
@@ -23871,14 +23871,14 @@ function words(x,p){return [x.business_name,x.domain,target(x,p),x.ceo_report_ur
 function ensureUi(){var sel=$('tpProspect');if(!sel)return false;var search=$('tpProspectSearch');if(!search){search=document.createElement('input');search.id='tpProspectSearch';search.placeholder='Search active company, domain or scanned page';search.autocomplete='off';search.style.cssText='width:100%;border:2px solid #0891b2;margin:4px 0';sel.insertAdjacentElement('beforebegin',search);var state=document.createElement('div');state.id='tpProspectSearchState';state.className='meta';state.style.cssText='margin:3px 0 7px;color:#67e8f9';sel.insertAdjacentElement('afterend',state);search.addEventListener('input',render)}return true}
 function optionLabel(x,p){var state=p==='quickscan_manual'?'QUICK SCAN READY':'CEO READY',name=clean(x.business_name||x.domain||'Prospect');return state+' · '+name+' · '+target(x,p)}
 function setFields(x,p){if(!x)return;var u=target(x,p),company=$('tpCompany'),url=$('tpUrl'),state=$('tpProspectSearchState');if(company){company.value=clean(x.business_name||x.domain);company.dispatchEvent(new Event('input',{bubbles:true}))}if(url){url.value=u;url.dispatchEvent(new Event('input',{bubbles:true}))}if(state){state.innerHTML='<b>'+(p==='quickscan_manual'?'Quick Scan ready':'CEO Report ready')+'</b> · exact scanned page: <span style="color:#4ade80">'+esc(u)+'</span>'}}
-function render(){if(rendering||!ensureUi())return;rendering=true;try{var sel=$('tpProspect'),search=$('tpProspectSearch'),state=$('tpProspectSearchState'),p=purpose(),q=clean(search&&search.value).toLowerCase(),current=sel.value,all=latestUnique(p),hits=q?all.filter(function(x){return words(x,p).indexOf(q)>=0}):[],opts=['<option data-v370="1" value="">'+(q?'Choose matching '+(p==='quickscan_manual'?'Quick Scan':'CEO Report'):'Search first — the full prospect list stays hidden')+'</option>'];hits.forEach(function(x){opts.push('<option value="'+esc(x.token)+'">'+esc(optionLabel(x,p))+'</option>')});sel.innerHTML=opts.join('');if(hits.some(function(x){return x.token===current}))sel.value=current;else if(hits.length===1){sel.value=hits[0].token;setTimeout(function(){setFields(hits[0],p)},0)}state.textContent=q?(hits.length+' matching active '+(p==='quickscan_manual'?'Quick Scan'+(hits.length===1?'':'s'):'CEO Report'+(hits.length===1?'':'s'))):(all.length+' ready · type a company, domain or page to select one');sel.style.borderColor=sel.value?'#16a34a':'#f59e0b'}finally{rendering=false}}
+function render(){if(rendering||!ensureUi())return;rendering=true;try{var sel=$('tpProspect'),search=$('tpProspectSearch'),state=$('tpProspectSearchState'),p=purpose(),q=clean(search&&search.value).toLowerCase(),current=sel.value,all=latestUnique(p),hits=q?all.filter(function(x){return words(x,p).indexOf(q)>=0}):[],opts=['<option data-v371="1" value="">'+(q?'Choose matching '+(p==='quickscan_manual'?'Quick Scan':'CEO Report'):'Search first — the full prospect list stays hidden')+'</option>'];hits.forEach(function(x){opts.push('<option value="'+esc(x.token)+'">'+esc(optionLabel(x,p))+'</option>')});sel.innerHTML=opts.join('');if(hits.some(function(x){return x.token===current}))sel.value=current;else if(hits.length===1){sel.value=hits[0].token;setTimeout(function(){setFields(hits[0],p)},0)}state.textContent=q?(hits.length+' matching active '+(p==='quickscan_manual'?'Quick Scan'+(hits.length===1?'':'s'):'CEO Report'+(hits.length===1?'':'s'))):(all.length+' ready · type a company, domain or page to select one');sel.style.borderColor=sel.value?'#16a34a':'#f59e0b'}finally{rendering=false}}
 function bindSelected(){var sel=$('tpProspect'),x=sel&&byToken[sel.value],p=purpose();if(x&&eligible(x,p))setFields(x,p)}
 function decorateCards(){document.querySelectorAll('#list .card').forEach(function(card){var s=card.querySelector('select[data-token]'),x=s&&byToken[s.dataset.token],ceo=card.querySelector('.pqsCeoStatus');if(!x||!ceo)return;var old=ceo.querySelector('[data-ceo-scanned-page]');if(old)old.remove();var line=document.createElement('div');line.dataset.ceoScannedPage='1';line.className='meta';line.style.cssText='margin-top:7px;color:#67e8f9;word-break:break-all';line.innerHTML=x.ceo_report_page_url?'<b>CEO scanned page:</b> '+esc(x.ceo_report_page_url):'<b>CEO scanned page:</b> not linked';ceo.appendChild(line)})}
 async function refresh(){if(!KEY||!ensureUi())return;try{var d=await api('/api/prospect-quick-scan/admin/list');records=d.items||[];byToken={};records.forEach(function(x){byToken[x.token]=x});render();decorateCards()}catch(e){var state=$('tpProspectSearchState');if(state)state.textContent='Could not load active prospects: '+e.message}}
-function hook(){if(!ensureUi())return false;var sel=$('tpProspect'),pur=$('tpEvidencePurpose');if(!sel.dataset.v370){sel.dataset.v370='1';sel.addEventListener('change',function(){setTimeout(bindSelected,0)})}if(pur&&!pur.dataset.v370){pur.dataset.v370='1';pur.addEventListener('change',function(){var search=$('tpProspectSearch');if(search)search.value='';render()})}return true}
+function hook(){if(!ensureUi())return false;var sel=$('tpProspect'),pur=$('tpEvidencePurpose');if(!sel.dataset.v371){sel.dataset.v371='1';sel.addEventListener('change',function(){setTimeout(bindSelected,0)})}if(pur&&!pur.dataset.v371){pur.dataset.v371='1';pur.addEventListener('change',function(){var search=$('tpProspectSearch');if(search)search.value='';render()})}return true}
 var tries=0,timer=setInterval(function(){tries++;if(hook()&&KEY&&$('app')&&$('app').style.display!=='none'){clearInterval(timer);refresh()}else if(tries>600)clearInterval(timer)},250);
-var list=$('list');if(list)new MutationObserver(function(){decorateCards();var sel=$('tpProspect');if(sel&&!sel.querySelector('option[data-v370]'))render()}).observe(list,{childList:true,subtree:true});
-})();<\/script>`}
+var list=$('list');if(list)new MutationObserver(function(){decorateCards();var sel=$('tpProspect');if(sel&&!sel.querySelector('option[data-v371]'))render()}).observe(list,{childList:true,subtree:true});
+})();${'</script>'}`}
 
 app.get('/quick-scan/admin',(req,res)=>{const h=_pqsFixRenderedAdminHtml(_pqsAdminHtml());const pre=`<script>(function(){
   var q=new URLSearchParams(location.search),u=q.get('url'),s=q.get('source'),n=q.get('name');
