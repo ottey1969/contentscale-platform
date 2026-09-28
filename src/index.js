@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v349';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v350';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -282,7 +282,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'lead-brief-renderer-repair-v340',
   'persistent-action-wait-feedback-v341',
   'already-scanned-published-html-check-live-v342',
-  'scan-brief-check-three-step-state-v349'
+  'scan-brief-check-three-step-state-v350'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -510,7 +510,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v349',
+  build: 'CS-2026-09-28-CANONICAL-v350',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -3422,6 +3422,17 @@ function _trackerPlainLiveHtml(html){
 function _trackerActionDefinitelyImplemented(action,liveHtml){
   const raw=String(liveHtml||''),plain=_trackerPlainLiveHtml(raw),t=_trackerActionText(action).toLowerCase();
   const title=String(action&&action.title||'').toLowerCase();
+  // The Free AI Citations Tracker already opens with a self-contained definition.
+  // Recognize the rendered answer itself instead of requiring an arbitrary CSS
+  // class or an exact copy of the Brief's suggested wording.
+  if(/serve want-to-know intent first/.test(title)&&/free ai citations? tracker/.test(t)){
+    return /a free ai citations? tracker (?:records|tracks|shows)/.test(plain)
+      && /google ai overviews?|gemini/.test(plain)
+      && /chatgpt search/.test(plain)
+      && /perplexity/.test(plain)
+      && /claude/.test(plain)
+      && /(?:microsoft )?copilot/.test(plain);
+  }
   // The B2B SaaS Brief describes broad edits, whereas the published guide uses
   // original prose. Check the actual component parts, never a fabricated result.
   if(/add 48-hour diagnostic framework/.test(title))return /first 48 hours/.test(plain)&&/search console/.test(plain)&&/may 2026 core update/.test(plain)&&/analytics/.test(plain)&&/commercial/.test(plain)&&/informational/.test(plain)&&/content/.test(plain)&&/qualified/.test(plain);
@@ -17249,7 +17260,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v349');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v350');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21913,7 +21924,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v349');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v350');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22007,10 +22018,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v349 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v350 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v349'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v350'});
     try{res.end();}catch(_){}
   }
 });
@@ -58647,7 +58658,7 @@ MERGE RULES:
         brief2.gsc_brief=(brief2.gsc_brief||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
         brief2.source_suggestions=(brief2.source_suggestions||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
         brief2._verified_identity_contract_applied=!!_finalIdentityContract.personal_portfolio;
-        if(_finalIdentityContract.personal_portfolio)brief2._verified_identity_contract_version='verified-personal-final-v349';
+        if(_finalIdentityContract.personal_portfolio)brief2._verified_identity_contract_version='verified-personal-final-v350';
 
         // v288 FINAL DELTA GUARD: final merged Brief must not re-add work already present in live HTML.
         var _finalLiveHtml=String(effectiveHtml||page.html_content||'');
