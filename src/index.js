@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v344';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v345';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -282,7 +282,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'lead-brief-renderer-repair-v340',
   'persistent-action-wait-feedback-v341',
   'already-scanned-published-html-check-live-v342',
-  'scan-brief-check-three-step-state-v344'
+  'scan-brief-check-three-step-state-v345'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -510,7 +510,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v344',
+  build: 'CS-2026-09-28-CANONICAL-v345',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -17167,7 +17167,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v344');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v345');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21831,7 +21831,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v344');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v345');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21925,10 +21925,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v344 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v345 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v344'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v345'});
     try{res.end();}catch(_){}
   }
 });
@@ -58403,7 +58403,7 @@ MERGE RULES:
             definition: _fwCanonicalHome || !!(_fwSeen.def || _fwSeen.whatIsH2) || /<h2[^>]*>[^<]*what is content at scale/i.test(_fwHtml) || /id=["'](?:direct-answer|voice-what-is)/i.test(_fwHtml),
             workflow: _fwCanonicalHome || !!_fwSeen.scalingWorkflow || /how to implement content scaling/i.test(_fwHtml),
             comparison: _fwCanonicalHome || !!_fwSeen.comparison || (/brandwell/i.test(_fwHtml) && /<table/i.test(_fwHtml) && /(?:scores and fixes|measurement and tracking layer|they solve different problems|independent alternative)/i.test(_fwHtml)),
-            author: _fwCanonicalHome || !!_fwSeen.author || /about the (?:author|creator|founder)|author-card|ottmar-francisca-headshot/i.test(_fwHtml),
+            author: _fwCanonicalHome || !!_fwSeen.author || /about the (?:author|creator|founder)|about me(?:[^<]{0,120})ottmar|author-card|ottmar-francisca-headshot|independent seo consultant|"@type"\s*:\s*"person"/i.test(_fwHtml),
             craft: _fwCanonicalHome || !!_fwSeen.craftLink || /\/craft-framework\/?["'#?]/i.test(_fwHtml),
             score: _fwCanonicalHome || !!_fwSeen.scoreLink || /\/(?:seo-)?contentscore\/?["'#?]/i.test(_fwHtml),
             checker: _fwCanonicalHome || !!_fwSeen.checkerLink || /\/(?:best-ai-content-quality-checkers|ai-content-quality-checker)\/?["'#?]/i.test(_fwHtml)
@@ -58420,6 +58420,16 @@ MERGE RULES:
             if (_fwHas.score && /(?:resolve|differentiate).{0,70}(?:seo )?contentscore(?: conflict| intent| cannibali[sz]ation)?/.test(_txt)) return true;
             if (_fwHas.definition && _fwHas.workflow && /(?:defend|protect|expand).{0,40}(?:content at scale|content scale).{0,30}(?:query|aio citation)|capture content scale intent/.test(_txt)) return true;
             if (_fwHas.author && /(?:strengthen|add).{0,40}(?:e-e-a-t )?(?:bio|author|creator)/.test(_txt)) return true;
+            // This page already covers the three publisher-monetisation recovery systems.
+            // A competitor-gap wrapper must not re-add the same sections merely because it also
+            // contains an unsafe transformed “200 websites” sentence.
+            var _fwPublisherPillars=/adblock/i.test(_fwHtml)&&/consent/i.test(_fwHtml)&&/(?:recurring payment|payment retr(?:y|ies)|failed subscription)/i.test(_fwHtml);
+            if(_fwPublisherPillars&&/adblock/i.test(_txt)&&/consent/i.test(_txt)&&/(?:recurring payment|payment retr(?:y|ies)|failed subscription)/i.test(_txt))return true;
+            // Bing submission can support discovery, but it is an external Webmaster Tools task,
+            // not a live-page implementation action and never proof of a Copilot citation.
+            if(/submit (?:the )?url to bing|bing index|bing webmaster tools/.test(_txt))return true;
+            // Metadata recommendations are only actionable when both complete fields are present.
+            if(/update meta tags?|meta tags?/.test(_title)&&!(/seo title\s*:/i.test(_action)&&/meta description\s*:/i.test(_action)))return true;
             if (_fwHas.comparison && /(?:close|add).{0,60}(?:competitor content gap|comparison)|lacks a (?:clear, )?(?:dedicated |direct )?(?:section|comparison table).{0,50}(?:brandwell|transition)/.test(_txt)) return true;
             if (_fwHas.workflow && /expand adjacent intent impressions/.test(_txt)) return true;
             if (/strengthen internal linking authority/.test(_txt) && !_action.replace(/<[^>]*>/g, '').trim()) return true;
@@ -58479,6 +58489,32 @@ MERGE RULES:
           var sy=String(x&&x.system||'').toLowerCase();
           return sy.indexOf('intent snapshot')>=0||sy.indexOf('missing entities')>=0||sy==='paa';
         };
+
+        // v345 VERIFIED PERSONAL PROFILE — LAST-WRITE CONTRACT.
+        // The optional Gemini merge above is the last model step and can otherwise re-introduce
+        // stale “Founder”, 3.7x or transformed 200-websites claims after the main safety pass.
+        // Rebuild the contract from the canonical ledger immediately before the final save.
+        var _finalIdentityContract={personal_portfolio:false,prompt:'',verified_claims:[]};
+        try{
+          var _ficClient=await pool.query('SELECT brand_context FROM tracker_clients WHERE id=$1',[page.tracker_client_id]);
+          var _ficFacts=await pool.query(`SELECT claim_text,status FROM tracker_claims_facts WHERE tracker_client_id=$1 AND page_id IS NULL ORDER BY updated_at DESC,id DESC LIMIT 300`,[page.tracker_client_id]);
+          _finalIdentityContract=_trackerIdentityContract((_ficFacts.rows||[]).filter(function(r){return String(r.status||'').toUpperCase()==='VERIFIED';}),String((_ficClient.rows[0]&&_ficClient.rows[0].brand_context)||''),pageUrl||page.url||'');
+          brief2.items=_trackerApplyIdentityContract(brief2.items||[],_finalIdentityContract);
+          brief2.gsc_brief=_trackerApplyIdentityContract(brief2.gsc_brief||[],_finalIdentityContract);
+          brief2.source_suggestions=_trackerApplyIdentityContract(brief2.source_suggestions||[],_finalIdentityContract);
+        }catch(_ficErr){console.warn('[tracker] final identity contract skipped:',_ficErr&&_ficErr.message);}
+        var _finalPersonalUnsafe=function(it){
+          if(!_finalIdentityContract.personal_portfolio||!it)return false;
+          var z=(String(it.title||it.claim||'')+' '+String(it.action||it.passage||it.body||it.why||'')).toLowerCase();
+          if(/3[.,]7\s*[x×]|78\s*%|founder of contentscale|200\+?\s+(?:clients?|businesses|recover(?:y|ies))/.test(z))return true;
+          if(/(?:based on|in my experience)\s+(?:analysing|analyzing)|(?:analysing|analyzing)\s+(?:over\s+)?200\+?\s+websites/.test(z))return true;
+          if(/copilot\s+(?:relies|depends)\s+(?:entirely|completely)\s+on\s+bing/.test(z))return true;
+          return false;
+        };
+        brief2.items=(brief2.items||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
+        brief2.gsc_brief=(brief2.gsc_brief||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
+        brief2.source_suggestions=(brief2.source_suggestions||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
+        brief2._verified_identity_contract_applied=!!_finalIdentityContract.personal_portfolio;
 
         // v288 FINAL DELTA GUARD: final merged Brief must not re-add work already present in live HTML.
         var _finalLiveHtml=String(effectiveHtml||page.html_content||'');
