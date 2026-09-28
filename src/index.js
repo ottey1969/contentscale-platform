@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v364';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v365';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -354,7 +354,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'single-two-prompt-ai-workflow-v363',
   'explicit-five-of-five-bonus-release-v364',
   'full-prospect-row-accordion-v364',
-  'contact-intelligence-upstream-resilience-v364'
+  'contact-intelligence-upstream-resilience-v364',
+  'hidden-bulk-controls-compatibility-v365',
+  'observer-loop-guard-v365'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -615,7 +617,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v364',
+  build: 'CS-2026-09-29-CANONICAL-v365',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -17685,7 +17687,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-29-CANONICAL-v364');
+console.log('[ContentScale] CS-2026-09-29-CANONICAL-v365');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22488,7 +22490,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v364');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v365');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22589,10 +22591,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v364 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v365 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v364'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v365'});
     try{res.end();}catch(_){}
   }
 });
@@ -23731,7 +23733,7 @@ function emailLabel(x){if(typeof pqsEmailState==='function')return pqsEmailState
 async function reset(token,engine,teaser,button){if(!confirm('Reset '+names[engine]+'? This removes the saved result and lowers the '+(teaser?'teaser':'Quick Scan')+' counter.'))return;button.disabled=true;button.textContent='Resetting…';try{await api('/api/prospect-quick-scan/admin/'+token+(teaser?'/ai-teaser/':'/ai/')+engine,{method:'DELETE'});button.textContent='Reset ✓';if(typeof load==='function')await load();schedule()}catch(e){button.disabled=false;button.textContent='Retry reset';alert(e.message||e)}}
 function apply(items){var by={};items.forEach(function(x){by[x.token]=x});list.querySelectorAll(':scope > .card').forEach(function(card){var sel=card.querySelector('select[data-token]'),x=sel&&by[sel.dataset.token];if(!x)return;card.querySelectorAll('[data-v360-evidence],[data-v362-status]').forEach(function(n){n.remove()});var row=card.querySelector(':scope > .row'),oldOpen=row&&Array.from(row.querySelectorAll('a')).find(function(a){return /^Open$/.test(a.textContent.trim())});if(oldOpen){oldOpen.textContent='Open Quick Scan';oldOpen.title='Open the separate Quick Scan page. This is not the CEO Report.';var copy=oldOpen.nextElementSibling;if(copy&&copy.tagName==='BUTTON'&&/Copy link/.test(copy.textContent))copy.textContent='Copy Quick Scan link'}var es=emailLabel(x),status=document.createElement('div');status.dataset.v362Status='1';status.className='pqsTypeStatus';status.innerHTML='<div class="pqsCeoStatus"><b>CEO REPORT</b><br>'+(x.ceo_report_url?'<a class="btn pqsReportLink" target="_blank" rel="noopener" href="'+h(x.ceo_report_url)+'">Open existing CEO Report ✓</a>':'<span class="warn">No CEO Report linked</span>')+'<br><span class="meta">CEO/outreach email: <span class="'+h(es.cls)+'">'+h(es.label)+'</span></span></div><div class="pqsQuickStatus"><b>QUICK SCAN — SEPARATE STEP</b><br><span>'+h(quickLabel(x))+'</span><br><span class="meta">Target page: '+h(x.url||'not chosen')+'</span></div><div class="pqsTypeNote">A CEO Report email does not mean that a Quick Scan was sent, scanned or completed.</div>';if(row)row.insertAdjacentElement('afterend',status);else card.prepend(status);var rows=Array.from(card.querySelectorAll('.eng')),first=rows[0],actual=checked(x.ai_evidence),teaser=checked(x.outreach_ai_teaser),head=document.createElement('div');head.dataset.v360Evidence='1';head.className='pqsEvidenceHeader '+(x.scan_completed_at?'pqsQuickEvidence':'pqsQuickWaiting');head.textContent=x.scan_completed_at?'ACTUAL QUICK SCAN · '+x.url+' · '+actual.length+'/5':'QUICK SCAN NOT STARTED · 0/5. CEO/reminder evidence does not count here.';if(first)first.before(head);else card.appendChild(head);rows.forEach(function(airow,i){airow.style.display=x.scan_completed_at?'':'none';var k=Object.keys(names)[i],entry=x.ai_evidence&&x.ai_evidence[k];if(entry&&entry.checked&&!airow.querySelector('[data-reset-ai]')){var b=document.createElement('button');b.type='button';b.className='btn pqsResetAi';b.dataset.resetAi='1';b.textContent='Reset result';b.onclick=function(){reset(x.token,k,false,b)};airow.appendChild(b)}});if(teaser.length){var box=document.createElement('div');box.dataset.v360Evidence='1';box.className='pqsTeaserBox';box.innerHTML='<b>OPTIONAL CEO / REMINDER TEASER · '+teaser.length+'/5</b><div class="meta">Checked page: <a class="link" target="_blank" rel="noopener" href="'+h(x.outreach_ai_teaser_target_url)+'">'+h(x.outreach_ai_teaser_target_url)+'</a><br>Not a Quick Scan and not counted as 5/5.</div>'+teaser.map(function(k){var e=x.outreach_ai_teaser[k]||{};return'<div class="pqsTeaserRow"><b>'+h(names[k])+'</b><span>Recommended '+(e.recommended?'✓':'—')+'</span><span>Domain cited '+(e.domain_cited?'✓':'—')+'</span><span>Exact page '+(e.exact_page_cited?'✓':'—')+'</span><button class="btn pqsResetAi" data-reset-teaser="'+h(k)+'">Reset result</button></div>'}).join('');head.before(box);box.querySelectorAll('[data-reset-teaser]').forEach(function(b){b.onclick=function(){reset(x.token,b.dataset.resetTeaser,true,b)}})}})}
 async function refresh(){if(busy||!KEY)return;busy=true;try{var d=await api('/api/prospect-quick-scan/admin/list');apply(d.items||[])}catch(e){}finally{busy=false}}
-function schedule(){clearTimeout(timer);timer=setTimeout(refresh,180)}new MutationObserver(schedule).observe(list,{childList:true,subtree:true});schedule();
+function schedule(){clearTimeout(timer);timer=setTimeout(refresh,180)}new MutationObserver(schedule).observe(list,{childList:true});schedule();
 })();<\/script>`}
 
 /* CONTENTSCALE-AI-HANDOFF-V363
@@ -23742,8 +23744,11 @@ function schedule(){clearTimeout(timer);timer=setTimeout(refresh,180)}new Mutati
  * classify the same answer through two different interfaces.
  */
 function _pqsAdminSingleAiWorkflowV363(){return `<script>(function(){
-  function removeDuplicate(){var duplicate=document.getElementById('pqsFiveAnswers');if(duplicate)duplicate.remove()}
-  removeDuplicate();var host=document.getElementById('app');if(host)new MutationObserver(removeDuplicate).observe(host,{childList:true,subtree:true});
+  // Keep the legacy controls in the DOM because the outreach queue still uses
+  // its prospect/URL resolver. Hide the duplicate interface instead of
+  // deleting those dependencies; the visible canonical workflow is Two-prompt.
+  function hideDuplicate(){var duplicate=document.getElementById('pqsFiveAnswers');if(duplicate){duplicate.hidden=true;duplicate.style.display='none';duplicate.setAttribute('aria-hidden','true')}}
+  hideDuplicate();var host=document.getElementById('app');if(host)new MutationObserver(hideDuplicate).observe(host,{childList:true});
 })();<\/script>`}
 
 function _pqsAdminProspectPresentationV364(){return `<style>
@@ -23765,7 +23770,7 @@ function tidy(){scheduled=false;list.querySelectorAll(':scope > .card').forEach(
   var ceoLink=ceo.querySelector('a[href*="/opportunity-report/"],a[href*="/report/"]');if(ceoLink){var after=ceoLink.nextElementSibling;if(after&&after.tagName==='BUTTON'&&/popup code/i.test(text(after))){after.textContent='Copy CEO Report link';after.title='Copy the existing CEO Report URL';after.onclick=function(){var b=this;navigator.clipboard.writeText(ceoLink.href).then(function(){b.textContent='CEO Report link copied ✓';setTimeout(function(){b.textContent='Copy CEO Report link'},1400)})}}}
   Array.from(head.children).forEach(function(el){var t=text(el);if(el.tagName==='A'&&/Open Quick Scan/i.test(t))quick.appendChild(el);else if(el.tagName==='BUTTON'&&(/Copy Quick Scan link|Prepare 20-Page Audit/i.test(t)||el.hasAttribute('data-send-other-page')||el.hasAttribute('data-two-page-overview')))quick.appendChild(el)});
   card.querySelectorAll('[data-send-other-page],[data-two-page-overview]').forEach(function(action){if(action.parentElement!==quick)quick.appendChild(action)});
-  var toggle=head.querySelector('.pqsToggle');if(toggle){toggle.textContent=card.classList.contains('pqsCollapsed')?'Open details ▾':'Close details ▴';toggle.title='Open or close this prospect only. Your choice is remembered.'}
+  var toggle=head.querySelector('.pqsToggle');if(toggle){var desired=card.classList.contains('pqsCollapsed')?'Open details ▾':'Close details ▴';if(toggle.textContent!==desired)toggle.textContent=desired;toggle.title='Open or close this prospect only. Your choice is remembered.'}
   var identity=head.querySelector('.pqsIdentity'),meta=identity&&identity.querySelector('.meta');if(meta&&card.dataset.v364Summary!=='1'){card.dataset.v364Summary='1';meta.innerHTML=meta.innerHTML.replace(/^CEO\s*✓/,'CEO REPORT READY ✓').replace(/^CEO\s*—/,'CEO REPORT —')}
 })}
 function schedule(){if(scheduled)return;scheduled=true;setTimeout(tidy,40)}tidy();new MutationObserver(schedule).observe(list,{childList:true,subtree:true});
