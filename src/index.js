@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v366';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v367';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -358,7 +358,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'hidden-bulk-controls-compatibility-v365',
   'observer-loop-guard-v365',
   'fast-prospect-reset-v366',
-  'reset-stage-errors-v366'
+  'reset-stage-errors-v366',
+  'idempotent-report-reset-v367',
+  'cross-panel-reset-refresh-v367'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -619,7 +621,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v366',
+  build: 'CS-2026-09-29-CANONICAL-v367',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -15895,26 +15897,42 @@ return result;
                app.post('/api/opportunity-reports/:token/reset-test',requireAdmin,async(req,res)=>{
                  if(!pool)return res.status(503).json({success:false,error:'Database unavailable'});
                  const token=String(req.params.token||'').trim().toLowerCase();
-                 if(!/^[a-f0-9]{64}$/.test(token))return res.status(404).json({success:false,error:'Report not found'});
+                 if(!/^[a-f0-9]{32,96}$/.test(token))return res.status(400).json({success:false,error:'Invalid report token'});
                  if(String(req.body&&req.body.confirmation||'')!=='RESET TEST LINK')return res.status(400).json({success:false,error:'Type RESET TEST LINK to revoke this test URL'});
-                 await _ensureOpportunityReportTable();await _ensureProspectQuickScanTable();
                  const client=await pool.connect();
                  try{
                    await client.query('BEGIN');
-                   const q=await client.query('SELECT report_data FROM opportunity_reports WHERE token=$1 AND revoked_at IS NULL FOR UPDATE',[token]);
-                   if(!q.rows.length){await client.query('ROLLBACK');return res.status(404).json({success:false,error:'Active report not found'});}
+                   await client.query(`SET LOCAL lock_timeout='4s'`);
+                   await client.query(`SET LOCAL statement_timeout='15s'`);
+                   const q=await client.query('SELECT domain,report_data,revoked_at FROM opportunity_reports WHERE token=$1 FOR UPDATE',[token]);
+                   // Reset is intentionally idempotent. A prospect reset may already have
+                   // removed this report while an older Admin row is still visible.
+                   if(!q.rows.length){
+                     await client.query('COMMIT');
+                     return res.json({success:true,report_revoked:true,already_reset:true,already_removed:true,quick_scan_revoked:false,domain:'',message:'This test link was already removed. You can create a fresh report.'});
+                   }
+                   if(q.rows[0].revoked_at){
+                     await client.query('COMMIT');
+                     return res.json({success:true,report_revoked:true,already_reset:true,quick_scan_revoked:false,domain:q.rows[0].domain||'',message:'This test link was already reset. You can create a fresh report.'});
+                   }
                    const old=typeof q.rows[0].report_data==='string'?JSON.parse(q.rows[0].report_data):q.rows[0].report_data||{};
                    const quickToken=String(old.quick_scan_token||'').trim();
                    await client.query('INSERT INTO opportunity_report_revisions(report_token,report_data) VALUES($1,$2::jsonb)',[token,JSON.stringify(Object.assign({},old,{revoked_for_test_reset_at:new Date().toISOString()}))]);
                    await client.query('UPDATE opportunity_reports SET revoked_at=NOW(),hidden_at=NOW() WHERE token=$1',[token]);
-                   let quickRevoked=0;
-                   if(/^[a-f0-9]{64}$/i.test(quickToken)){
-                     const qr=await client.query('UPDATE prospect_quick_scans SET revoked_at=NOW(),hidden_at=NOW(),updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING token',[quickToken]);
-                     quickRevoked=qr.rowCount||0;
-                   }
+                   // New CEO records link through ceo_report_token; older reports may only
+                   // contain quick_scan_token in JSON. Reset both without guessing.
+                   const qr=await client.query(`UPDATE prospect_quick_scans
+                     SET revoked_at=NOW(),hidden_at=NOW(),updated_at=NOW()
+                     WHERE revoked_at IS NULL AND (ceo_report_token=$1 OR ($2<>'' AND token=$2))
+                     RETURNING token`,[token,/^[a-f0-9]{64}$/i.test(quickToken)?quickToken:'']);
+                   const quickRevoked=qr.rowCount||0;
                    await client.query('COMMIT');
-                   res.json({success:true,report_revoked:true,quick_scan_revoked:quickRevoked>0,domain:old.company&&old.company.domain||'',message:'Test link revoked. You can now create a fresh report for the same real URL.'});
-                 }catch(e){await client.query('ROLLBACK').catch(()=>{});res.status(500).json({success:false,error:e.message||'Could not reset test link'});}finally{client.release();}
+                   res.json({success:true,report_revoked:true,already_reset:false,quick_scan_revoked:quickRevoked>0,domain:q.rows[0].domain||old.company&&old.company.domain||'',message:'Test link revoked. You can now create a fresh report for the same real URL.'});
+                 }catch(e){
+                   await client.query('ROLLBACK').catch(()=>{});
+                   const busy=/lock timeout|statement timeout|canceling statement/i.test(String(e.message||''));
+                   res.status(busy?409:500).json({success:false,error:busy?'Reset is temporarily busy. Wait a few seconds and retry.':(e.message||'Could not reset test link'),retryable:busy,build:CONTENTSCALE_BUILD_ID});
+                 }finally{client.release();}
                });
 
                app.post('/api/opportunity-reports/list',requireAdmin,async(req,res)=>{
@@ -17690,7 +17708,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-29-CANONICAL-v366');
+console.log('[ContentScale] CS-2026-09-29-CANONICAL-v367');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -22526,7 +22544,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v366');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v367');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22627,10 +22645,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v366 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v367 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v366'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v367'});
     try{res.end();}catch(_){}
   }
 });
@@ -23748,7 +23766,7 @@ function _pqsAdminProspectResetV357(){return `<style>
         if(!confirm('Delete and fully reset '+name+'? Private reports and any pending follow-up will be removed.'))return;
         var typed=prompt('Type DELETE AND RESET to confirm.');if(typed!=='DELETE AND RESET')return;
         b.disabled=true;b.textContent='Deleting & resetting…';
-        try{await api('/api/prospect-quick-scan/admin/'+s.dataset.token+'/reset',{method:'DELETE',body:JSON.stringify({confirmation:typed})});b.textContent='Deleted & reset ✓';setTimeout(function(){if(typeof load==='function')load()},450)}
+        try{await api('/api/prospect-quick-scan/admin/'+s.dataset.token+'/reset',{method:'DELETE',body:JSON.stringify({confirmation:typed})});b.textContent='Deleted & reset ✓';setTimeout(function(){if(typeof load==='function')load();if(typeof loadHistory==='function')loadHistory()},450)}
         catch(e){b.disabled=false;b.textContent='Retry delete & reset';alert(e.message||e)}
       };
       s.insertAdjacentElement('afterend',b);
