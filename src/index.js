@@ -266,7 +266,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v345';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-28-CANONICAL-v346';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'tracker-delta-brief-regression-lock',
@@ -282,7 +282,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'lead-brief-renderer-repair-v340',
   'persistent-action-wait-feedback-v341',
   'already-scanned-published-html-check-live-v342',
-  'scan-brief-check-three-step-state-v345'
+  'scan-brief-check-three-step-state-v346'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -510,7 +510,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-28-CANONICAL-v345',
+  build: 'CS-2026-09-28-CANONICAL-v346',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -3256,6 +3256,9 @@ function _trackerNormalScanGate(page){
   const b=v=>v===true||v===1||v==='1'||v==='true'||v==='t';
   if(!page)return {allowed:false,reason:'Page not found'};
   if(b(page.monitoring_waiting_input))return {allowed:false,reason:'Waiting for fresh evidence'};
+  const _briefSafetyText=typeof page.brief_content==='string'?page.brief_content:JSON.stringify(page.brief_content||{});
+  const _personalSafetyStale=/contentscale\.site/i.test(String(page.url||''))&&/(?:verify and add direct-answer block|submit (?:the )?url to bing index|copilot[^.]{0,100}relies entirely on bing|verify and add author bio|3[.,]7\s*[x×]|based on analy[sz]ing (?:over )?200\+? websites|in my experience analy[sz]ing (?:over )?200\+? websites)/i.test(_briefSafetyText);
+  if(_personalSafetyStale)return {allowed:true,reason:'This saved Brief predates the current VERIFIED personal-profile safety contract; rebuild it once'};
   const factsAt=page.claims_facts_updated_at?new Date(page.claims_facts_updated_at).getTime():0;
   const briefAt=page.brief_evaluated_at?new Date(page.brief_evaluated_at).getTime():0;
   if(factsAt&&(!briefAt||factsAt>briefAt))return {allowed:true,reason:'VERIFIED Claims & Facts changed after the current Brief; rebuild the Brief with the current evidence'};
@@ -7635,7 +7638,9 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     // A GSC refresh or a missing legacy brief_evaluated_at is not permission to
     // run a normal scan and regenerate the Brief.
     const _claimsFactsNewerThanBrief=!!(page.claims_facts_updated_at&&(!page.brief_evaluated_at||new Date(page.claims_facts_updated_at).getTime()>new Date(page.brief_evaluated_at).getTime()));
-    if(page.case_study_active&&page.manual_done&&!page.monitoring_waiting_input&&!_claimsFactsNewerThanBrief){
+    const _savedBriefSafetyText=typeof page.brief_content==='string'?page.brief_content:JSON.stringify(page.brief_content||{});
+    const _savedBriefSafetyStale=/contentscale\.site/i.test(String(page.url||''))&&/(?:verify and add direct-answer block|submit (?:the )?url to bing index|copilot[^.]{0,100}relies entirely on bing|verify and add author bio|3[.,]7\s*[x×]|based on analy[sz]ing (?:over )?200\+? websites|in my experience analy[sz]ing (?:over )?200\+? websites)/i.test(_savedBriefSafetyText);
+    if(page.case_study_active&&page.manual_done&&!page.monitoring_waiting_input&&!_claimsFactsNewerThanBrief&&!_savedBriefSafetyStale){
       return res.status(409).json({success:false,scan_not_needed:true,error:'No normal scan is needed for this completed case-study page. Use the current live verification or the next evidence checkpoint.'});
     }
     if(page.monitoring_waiting_input){
@@ -17167,7 +17172,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-28-CANONICAL-v345');
+console.log('[ContentScale] CS-2026-09-28-CANONICAL-v346');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -21831,7 +21836,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v345');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-28-CANONICAL-v346');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -21925,10 +21930,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v345 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-28-CANONICAL-v346 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v345'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-28-CANONICAL-v346'});
     try{res.end();}catch(_){}
   }
 });
@@ -43803,6 +43808,8 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   var viewedAt=p.brief_viewed_at?new Date(p.brief_viewed_at).getTime():0;
   var briefReviewed=!!(evaluatedAt&&viewedAt>=evaluatedAt);
   var claimsFactsAt=p.claims_facts_updated_at?new Date(p.claims_facts_updated_at).getTime():0;
+  var briefSafetyText='';try{briefSafetyText=JSON.stringify(brief||{});}catch(_bst){briefSafetyText='';}
+  var personalSafetyStale=/contentscale\.site/i.test(String(p.url||''))&&/(?:verify and add direct-answer block|submit (?:the )?url to bing index|copilot[^.]{0,100}relies entirely on bing|verify and add author bio|3[.,]7\s*[x×]|based on analy[sz]ing (?:over )?200\+? websites|in my experience analy[sz]ing (?:over )?200\+? websites)/i.test(briefSafetyText);
 
   // v284: a NEW DELTA may only be declared from a Brief that was evaluated by an ACTUAL scan.
   // Old Brief contents are historical context only. We never infer "new work" from them before a fresh scan.
@@ -43823,6 +43830,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     var gate=String(p.monitoring_gate_label||'');
     var waitMsg=gate.indexOf('case_day_')===0?'Fresh evidence is still required before this checkpoint can be closed.':'Required evidence is still missing. Complete the requested input before scanning again.';
     return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
+  }
+  if(personalSafetyStale){
+    return {code:'REFRESH_CONTRACT',label:'BRIEF SAFETY RULES UPDATED · REBUILD ONCE',detail:'This saved Brief still contains a prohibited or already-completed personal-profile recommendation from an older build. Rebuild it once; the live HTML and proof history remain protected.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild corrected Brief',buttonAction:'checkPage('+p.id+')'};
   }
   if(claimsFactsAt&&(!evaluatedAt||claimsFactsAt>evaluatedAt)){
     return {code:'REFRESH_FACTS',label:'VERIFIED FACTS UPDATED · REBUILD THE BRIEF',detail:'Claims & Facts changed after this Brief was generated. Rebuild it now so the current VERIFIED owner identity, voice rules and metrics replace stale assumptions. This refresh preserves the protected live HTML and proof history.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild Brief with verified facts',buttonAction:'checkPage('+p.id+')'};
@@ -43932,7 +43942,7 @@ function _trackerImplementationCheckState(p,isDone,nextState){
   var _sameCycle=!!(_bid&&_vid&&_bid===_vid);
   var currentBriefVerified=status==='verified'&&(_sameCycle||(evaluatedAt>0&&(verifiedAt>=evaluatedAt||publishedAt>=evaluatedAt)));
 
-  if(nextState&&nextState.code==='REFRESH_FACTS'){
+  if(nextState&&(nextState.code==='REFRESH_FACTS'||nextState.code==='REFRESH_CONTRACT')){
     return {code:'FACTS_STALE',label:'VERIFIED FACTS ARE NEWER THAN THIS BRIEF',detail:'The existing Brief is preserved for history, but it does not yet reflect the current VERIFIED identity and Claims & Facts. Rebuild the Brief before editing the page.',color:'#67e8f9',border:'#0891b2',bg:'#083344'};
   }
 
@@ -44382,7 +44392,7 @@ function renderPages() {
     var _nextWorkflowGuard = !!isDone || !!p.case_study_active;
     var _nextLockContentChanges = _nextWorkflowGuard && !_nextAllowsContentChange;
     var _nextNoAction = _nextActionCode==='MONITOR';
-    var _nextScanRequired = (_nextActionCode==='SCAN'||_nextActionCode==='REFRESH_FACTS');
+    var _nextScanRequired = (_nextActionCode==='SCAN'||_nextActionCode==='REFRESH_FACTS'||_nextActionCode==='REFRESH_CONTRACT');
     var _correctionLoop = (_nextActionCode==='REMAINING'||_nextActionCode==='VERIFYING');
     var _awaitingLiveVerification = (_nextActionCode==='VERIFY_LIVE_PENDING'||_nextActionCode==='VERIFY_LIVE');
     var _hideFullBrief = _correctionLoop;
@@ -58515,6 +58525,7 @@ MERGE RULES:
         brief2.gsc_brief=(brief2.gsc_brief||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
         brief2.source_suggestions=(brief2.source_suggestions||[]).filter(function(it){return !_finalPersonalUnsafe(it);});
         brief2._verified_identity_contract_applied=!!_finalIdentityContract.personal_portfolio;
+        if(_finalIdentityContract.personal_portfolio)brief2._verified_identity_contract_version='verified-personal-final-v346';
 
         // v288 FINAL DELTA GUARD: final merged Brief must not re-add work already present in live HTML.
         var _finalLiveHtml=String(effectiveHtml||page.html_content||'');
