@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v365';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v366';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -356,7 +356,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'full-prospect-row-accordion-v364',
   'contact-intelligence-upstream-resilience-v364',
   'hidden-bulk-controls-compatibility-v365',
-  'observer-loop-guard-v365'
+  'observer-loop-guard-v365',
+  'fast-prospect-reset-v366',
+  'reset-stage-errors-v366'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -617,7 +619,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v365',
+  build: 'CS-2026-09-29-CANONICAL-v366',
   built_date: '2026-09-28',
   ceo_private: true,
   ceo_public: true,
@@ -15449,6 +15451,7 @@ return result;
                    archived_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
                  )`).catch(()=>{});
                  await pool.query(`CREATE INDEX IF NOT EXISTS idx_opportunity_reports_domain_created ON opportunity_reports(domain,created_at DESC)`).catch(()=>{});
+                 await pool.query(`CREATE INDEX IF NOT EXISTS idx_opportunity_report_revisions_token ON opportunity_report_revisions(report_token)`).catch(()=>{});
                  return true;
                }
 
@@ -17687,7 +17690,7 @@ async function startServer() {
   }
 
 console.log('────────────────────────────────────────');
-console.log('[ContentScale] CS-2026-09-29-CANONICAL-v365');
+console.log('[ContentScale] CS-2026-09-29-CANONICAL-v366');
 console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
@@ -20261,28 +20264,61 @@ app.delete('/api/prospect-quick-scan/admin/:token/reset',requireAdmin,async(req,
   const token=String(req.params.token||'').trim().toLowerCase();
   if(!/^[a-f0-9]{64}$/.test(token))return res.status(404).json({success:false,error:'Prospect not found'});
   if(String(req.body&&req.body.confirmation||'')!=='DELETE AND RESET')return res.status(400).json({success:false,error:'Type DELETE AND RESET to permanently remove this prospect and reset its test data'});
-  await _ensureProspectQuickScanTable();await _ensureOpportunityReportTable();await _ensureContactIntelligenceTables();
   const client=await pool.connect();
+  let stage='open';
   try{
     await client.query('BEGIN');
+    // This endpoint is an interactive Admin action. Never run the large Contact
+    // Intelligence table-creation/index routine here: on a million-row import it
+    // can exceed the reverse-proxy timeout and surface as a misleading 502.
+    // Short lock/statement limits also keep Reset responsive if another worker
+    // happens to hold this prospect briefly.
+    await client.query(`SET LOCAL lock_timeout='4s'`);
+    await client.query(`SET LOCAL statement_timeout='15s'`);
+    stage='find_prospect';
     const q=await client.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 FOR UPDATE`,[token]);
     if(!q.rows.length){await client.query('ROLLBACK');return res.status(404).json({success:false,error:'Prospect not found'});}
     const row=q.rows[0];
-    const reports=await client.query(`SELECT token FROM opportunity_reports WHERE token=$2 OR report_data->>'quick_scan_token'=$1`,[token,String(row.ceo_report_token||'')]);
-    const reportTokens=Array.from(new Set(reports.rows.map(x=>String(x.token||'')).filter(Boolean)));
+    // The linked CEO token is stored on the prospect. Using that indexed token
+    // avoids scanning every JSON report for report_data.quick_scan_token.
+    let reportTokenFromUrl='';
+    try{
+      const reportPath=new URL(String(row.ceo_report_url||''),'https://app.contentscale.site').pathname.split('/').filter(Boolean);
+      const candidate=String(reportPath[reportPath.length-1]||'').toLowerCase();
+      if(/^[a-f0-9]{64,96}$/.test(candidate))reportTokenFromUrl=candidate;
+    }catch(_e){}
+    const reportTokens=Array.from(new Set([String(row.ceo_report_token||''),reportTokenFromUrl].filter(Boolean)));
     if(reportTokens.length){
+      stage='delete_report_revisions';
       await client.query(`DELETE FROM opportunity_report_revisions WHERE report_token=ANY($1::text[])`,[reportTokens]);
+      stage='delete_reports';
       await client.query(`DELETE FROM opportunity_reports WHERE token=ANY($1::text[])`,[reportTokens]);
     }
+    // Only a promoted Contact Intelligence row has to be returned to Verified.
+    // The previous fallback updated WHERE promoted_token=$1 without an index;
+    // for ordinary prospects with no contact_intelligence_id that scanned the
+    // entire 1M+ table and was the source of the 502 timeout.
     if(row.contact_intelligence_id){
+      stage='reset_contact_intelligence';
       await client.query(`UPDATE contact_intelligence SET status='domain_verified',promoted_token=NULL,updated_at=NOW() WHERE id=$1 AND promoted_token=$2`,[row.contact_intelligence_id,token]);
-    }else{
-      await client.query(`UPDATE contact_intelligence SET status='domain_verified',promoted_token=NULL,updated_at=NOW() WHERE promoted_token=$1`,[token]);
     }
+    stage='delete_prospect';
     await client.query(`DELETE FROM prospect_quick_scans WHERE token=$1`,[token]);
+    stage='commit';
     await client.query('COMMIT');
     return res.json({success:true,deleted:true,reset:true,business_name:row.business_name||row.domain||'',domain:row.domain||'',reports_deleted:reportTokens.length,follow_up_cancelled:!!row.outreach_followup_due_at,message:'Prospect deleted and reset. The company can now be tested or imported again.'});
-  }catch(e){await client.query('ROLLBACK').catch(()=>{});return res.status(500).json({success:false,error:e.message||'Could not delete and reset prospect'});}finally{client.release();}
+  }catch(e){
+    await client.query('ROLLBACK').catch(()=>{});
+    console.error('[prospect-reset] stage='+stage+' token='+token.slice(0,10),e.message);
+    const busy=/lock timeout|statement timeout|canceling statement/i.test(String(e.message||''));
+    return res.status(busy?409:500).json({
+      success:false,
+      error:busy?'Reset is temporarily busy. Wait a few seconds and press Retry.':(e.message||'Could not delete and reset prospect'),
+      stage,
+      retryable:busy,
+      build:CONTENTSCALE_BUILD_ID
+    });
+  }finally{client.release();}
 });
 
 app.patch('/api/prospect-quick-scan/admin/:token/restore',requireAdmin,async(req,res)=>{
@@ -22490,7 +22526,7 @@ function _ceoMainWebsiteUrl(input){
 // action must target this CEO endpoint.
 app.post('/api/ceo-report/start',async(req,res)=>{
   let ceoEntry='unknown',ceoUrl='',lastStage='REQUEST';
-  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v365');
+  console.log('[ceo-report] REQUEST RECEIVED build=CS-2026-09-29-CANONICAL-v366');
   try{
     lastStage='DB_SETUP';
     console.log('[ceo-report] stage=DB_SETUP');
@@ -22591,10 +22627,10 @@ ContentScale`;
     return res.json({success:true,entry_mode:entry,token,selected_page:selected,ceo_report_token:reportToken,ceo_report_url:reportUrl,delivery_email:delivery,updates_opt_in:updatesOptIn});
   }catch(e){
     const msg=String((e&&e.message)||e||'CEO Prospect Report generation failed');
-    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v365 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
+    console.error('[ceo-report] FAILED build=CS-2026-09-29-CANONICAL-v366 stage='+lastStage+' entry='+ceoEntry+' url='+(ceoUrl||'(unknown)'));
     console.error('[ceo-report] ERROR: '+msg);
     if(e&&e.stack)console.error(e.stack);
-    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v365'});
+    if(!res.headersSent)return res.status(500).json({success:false,error:msg,stage:lastStage,build:'CS-2026-09-29-CANONICAL-v366'});
     try{res.end();}catch(_){}
   }
 });
