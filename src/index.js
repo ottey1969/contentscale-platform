@@ -288,13 +288,14 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v390';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v391';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
 // 2. CEO Public and CEO Private use the same smart page selector and report engine.
 // 3. Quick Scan is Page B: it must stay on the same business domain and may not
-//    reuse Page A from the CEO Report. Email + chosen URL are saved before scan.
+//    reuse Page A from the CEO Report. The chosen URL is saved before scan;
+//    email is optional and only enables a completion notification.
 // 4. A 20-page Audit is capped server-side at 20. A failed URL is recorded and
 //    does not abort the remaining pages. Checkpoints are reusable only inside the
 //    same canonical build; a deployment never serves an older-build page score.
@@ -407,7 +408,12 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'gbp-smart-tracked-page-cta-v389',
   'gbp-detailed-image-prompt-v389',
   'quickscan-explicit-dom-control-bindings-v390',
-  'quickscan-live-button-regression-test-v390'
+  'quickscan-live-button-regression-test-v390',
+  'quickscan-server-rendered-primary-action-v391',
+  'quickscan-email-optional-nonblocking-v391',
+  'quickscan-two-url-comparison-v391',
+  'quickscan-audit20-gsc-bridge-v391',
+  'quickscan-three-language-funnel-v391'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -668,7 +674,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v390',
+  build: 'CS-2026-09-29-CANONICAL-v391',
   built_date: '2026-09-29',
   ceo_private: true,
   ceo_public: true,
@@ -730,7 +736,12 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   gbp_service_page_link_plan: true,
   gbp_gsc_opportunity_advice: true,
   gbp_phone_normalized_matching: true,
-  gbp_profile_link_evidence_levels: true
+  gbp_profile_link_evidence_levels: true,
+  quickscan_server_rendered_primary_action: true,
+  quickscan_email_optional_nonblocking: true,
+  quickscan_two_url_comparison: true,
+  quickscan_audit20_gsc_bridge: true,
+  quickscan_three_language_funnel: true
 });
 
 // BUILD IDENTITY — intentionally public and DB-independent.
@@ -19771,10 +19782,10 @@ app.post('/api/prospect-quick-scan/:token/audit20-interest',async(req,res)=>{
   try{
     const token=String(req.params.token||'');
     const note=String((req.body&&req.body.note)||'').trim().slice(0,1500);
-    const q=await pool.query(`SELECT token,status,ceo_report_url,ceo_report_page_url,url FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);
+    const q=await pool.query(`SELECT token,status,scan_completed_at,ceo_report_url,ceo_report_page_url,url FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);
     if(!q.rows.length)return res.status(404).json({success:false,error:'Quick Scan not found'});
     const row=q.rows[0];
-    if(row.status!=='completed')return res.status(409).json({success:false,error:'Complete the Quick Scan first'});
+    if(!row.scan_completed_at&&!['completed','complete','scan_ready'].includes(String(row.status||'')))return res.status(409).json({success:false,error:'Complete the Quick Scan first'});
     await pool.query(`UPDATE prospect_quick_scans
       SET audit20_interested=TRUE,audit20_interested_at=COALESCE(audit20_interested_at,NOW()),
           audit20_interest_note=$1,follow_up_status='audit20_interested',updated_at=NOW()
@@ -19798,7 +19809,7 @@ app.post('/api/prospect-quick-scan/admin/:token/two-page-overview',requireAdmin,
     const q=await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);
     if(!q.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});
     const row=q.rows[0];
-    if(row.status!=='completed')return res.status(409).json({success:false,error:'Quick Scan must be completed first'});
+    if(!row.scan_completed_at&&!['completed','complete','scan_ready'].includes(String(row.status||'')))return res.status(409).json({success:false,error:'Quick Scan must be completed first'});
     if(!row.ceo_report_url)return res.status(409).json({success:false,error:'CEO Prospect Report missing'});
     if(!row.ceo_report_page_url)return res.status(409).json({success:false,error:'CEO report page provenance missing'});
     const overview=_pqsTwoPageOverview(row);
@@ -23487,7 +23498,9 @@ function _pqsSelectablePage(rawUrl){
 app.post('/api/prospect-quick-scan/:token/setup',_pqsPublicLimit,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'Quick Scan unavailable'});
   const email=String((req.body||{}).email||'').trim().toLowerCase();
-  if(!_pqsValidEmail(email))return res.status(400).json({success:false,error:'Enter a valid email address'});
+  // v391: email is an optional completion-notification channel, never a scan gate.
+  // Validate it only when the prospect actually enters one.
+  if(email&&!_pqsValidEmail(email))return res.status(400).json({success:false,error:'Enter a valid email address or leave it blank'});
   try{
     const current=await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[req.params.token]);
     if(!current.rows.length)return res.status(404).json({success:false,error:'Quick Scan link not found'});
@@ -23500,7 +23513,7 @@ app.post('/api/prospect-quick-scan/:token/setup',_pqsPublicLimit,async(req,res)=
     if(row.ceo_report_page_url){const norm=(v)=>{try{const u=new URL(v);return (u.protocol+'//'+u.hostname.toLowerCase()+u.pathname.replace(/\/+$/,'')+(u.search||'')).toLowerCase()}catch(e){return String(v||'').replace(/\/+$/,'').toLowerCase()}};if(norm(page)===norm(row.ceo_report_page_url))return res.status(400).json({success:false,error:'Choose a different page. This page was already analyzed in your CEO Prospect Report.'});}
     const opt=!!(req.body||{}).updates_opt_in;
     const selectionMode=page!==String(row.url||'')?'manual':String(row.page_selection_mode||'auto');
-    const updated=await pool.query(`UPDATE prospect_quick_scans SET url=$1,visitor_email=$2,contact_email=$2,contact_email_origin='prospect_provided',contact_email_source_url=NULL,contact_email_comment='Provided by the prospect for the completed Quick Scan report. Updates require the separate opt-in.',contact_email_updated_at=NOW(),updates_opt_in=$3,updates_opted_in_at=CASE WHEN $3 THEN COALESCE(updates_opted_in_at,NOW()) ELSE NULL END,page_selection_mode=$5,updated_at=NOW() WHERE token=$4 AND revoked_at IS NULL AND scan_started_at IS NULL AND scan_completed_at IS NULL RETURNING *`,[page,email,opt,req.params.token,selectionMode]);
+    const updated=await pool.query(`UPDATE prospect_quick_scans SET url=$1,visitor_email=CASE WHEN $2='' THEN visitor_email ELSE $2 END,contact_email=CASE WHEN $2='' THEN contact_email ELSE $2 END,contact_email_origin=CASE WHEN $2='' THEN contact_email_origin ELSE 'prospect_provided' END,contact_email_source_url=CASE WHEN $2='' THEN contact_email_source_url ELSE NULL END,contact_email_comment=CASE WHEN $2='' THEN contact_email_comment ELSE 'Provided by the prospect for the completed Quick Scan report. Updates require the separate opt-in.' END,contact_email_updated_at=CASE WHEN $2='' THEN contact_email_updated_at ELSE NOW() END,updates_opt_in=$3,updates_opted_in_at=CASE WHEN $3 THEN COALESCE(updates_opted_in_at,NOW()) ELSE NULL END,page_selection_mode=$5,updated_at=NOW() WHERE token=$4 AND revoked_at IS NULL AND scan_started_at IS NULL AND scan_completed_at IS NULL RETURNING *`,[page,email,opt,req.params.token,selectionMode]);
     if(!updated.rows.length)return res.status(409).json({success:false,error:'The page was locked while the scan was starting'});
     res.json({success:true,item:_pqsPublicRow(updated.rows[0])});
   }catch(e){res.status(500).json({success:false,error:e.message});}
@@ -23519,7 +23532,8 @@ app.post('/api/prospect-quick-scan/:token/run',_pqsPublicLimit,async(req,res)=>{
       if(_normPqsUrl(row.url)===_normPqsUrl(row.ceo_report_page_url))return res.status(400).json({success:false,error:'Please choose a different important page. This page was already analyzed in your CEO Prospect Report.'});
     }
     if(row.scan_completed_at&&row.scan_result)return res.json({success:true,item:_pqsPublicRow(row),already_complete:true});
-    if(!_pqsValidEmail(row.visitor_email))return res.status(409).json({success:false,error:'Save the report email and selected page before scanning'});
+    // v391: a visitor may scan without supplying an email. The private link itself
+    // remains the return path; an email only adds a completion notification.
     if(row.status==='scanning')return res.status(409).json({success:false,error:'This page is already being scanned'});
     await pool.query(`UPDATE prospect_quick_scans SET status='scanning',scan_error=NULL,scan_started_at=NOW(),updated_at=NOW() WHERE token=$1`,[row.token]);
     _pqsNotifyOwner(row,'started');
@@ -23576,12 +23590,11 @@ function _pqsEnhancePublicHtmlBase(html){
   return String(html).replace('var rec=Array.isArray(d.recommendations)?d.recommendations:[]','var rec=Array.isArray(d.recommendations)?d.recommendations:(d.recommendations&&Array.isArray(d.recommendations.all)?d.recommendations.all:[]);var seenRec={};rec=rec.filter(function(x){var k=String((x&&x.title)||(x&&x.name)||(x&&x.description)||\'\').toLowerCase().replace(/[^a-z0-9]+/g,\' \').trim();if(!k||seenRec[k])return false;seenRec[k]=1;return true})').replace('</head>',css+'</head>').replace('<section id="result"',''+section+proof+'<section id="result"').replace('</body>',modal+js.replace('rec=Array.isArray(d.recommendations)?d.recommendations:[]','rec=Array.isArray(d.recommendations)?d.recommendations:(d.recommendations&&Array.isArray(d.recommendations.all)?d.recommendations.all:[])')+emailJs+'</body>').replace("document.getElementById('pop').style.display='none';document.getElementById('ai').scrollIntoView({behavior:'smooth'})","document.getElementById('pop').style.display='none';openPqsReport()");
 }
 
-// CONTENTSCALE-AI-HANDOFF-V150 — REQUIRED EMAIL-FIRST QUICK SCAN FLOW
-// Make the two required visitor actions explicit in every public Quick Scan.
-// The existing runScan wrapper remains the enforcement point: it saves and
-// validates the email before the page scan endpoint can run.
+// CONTENTSCALE-AI-HANDOFF-V391 — EMAIL IS OPTIONAL.
+// This legacy enhancement remains for old layouts, but may never turn email
+// into a scan prerequisite. The server-rendered v391 action is authoritative.
 function _pqsEnhancePublicHtmlV150(html){
-  const stepGate=`<script>(function(){function gateQuickScanSteps(){var b=document.getElementById('scanBtn');if(!b||!TOKEN)return;var completed=!!(item&&item.scan_completed_at),hasEmail=!!(item&&item.visitor_email);if(!completed)b.disabled=!hasEmail;b.setAttribute('aria-disabled',String(!completed&&!hasEmail));}setInterval(gateQuickScanSteps,250);gateQuickScanSteps()})();<\/script>`;
+  const stepGate=`<script>(function(){function gateQuickScanSteps(){var b=document.getElementById('scanBtn');if(!b||!TOKEN)return;var completed=!!(item&&item.scan_completed_at);if(!completed)b.disabled=false;b.setAttribute('aria-disabled','false');}setInterval(gateQuickScanSteps,250);gateQuickScanSteps()})();<\/script>`;
   return _pqsEnhancePublicHtmlBase(html)
     .split('Email for the completed report').join('Enter your email for the completed report')
     .split('Save email').join('1. Save email')
@@ -23600,10 +23613,10 @@ function _pqsEnhancePublicHtml(html){
     function language(){var l=String(document.documentElement.lang||'en').toLowerCase().slice(0,2);return words[l]?l:'en'}
     function validEmail(v){return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(v||'').trim())}
     function validPage(v){try{var u=new URL(String(v||'').trim());return /^https?:$/.test(u.protocol)}catch(e){return false}}
-    function boot(){var box=document.getElementById('pqsEmailBox'),button=document.getElementById('pqsSaveEmail'),updates=document.getElementById('pqsUpdates');if(!box||!button||!TOKEN)return;var t=words[language()],wrap=document.getElementById('pqsPageChoice');if(!wrap){wrap=document.createElement('label');wrap.id='pqsPageChoice';wrap.className='pqsPageChoice';wrap.innerHTML='<b></b><small></small><input id="pqsPageUrl" type="url" inputmode="url" autocomplete="url">';box.insertBefore(wrap,updates&&updates.parentNode||button);wrap.querySelector('input').addEventListener('input',function(){window.__pqsPageSelectionReady=!!(item&&this.value.trim()===String(item.url||'').trim())})}wrap.querySelector('b').textContent=t.label;wrap.querySelector('small').textContent=t.hint;var page=document.getElementById('pqsPageUrl'),email=document.getElementById('pqsVisitorEmail'),status=document.getElementById('pqsEmailStatus');if(item&&!page.dataset.initialized){page.value=item.url||'';page.dataset.initialized='1';window.__pqsPageSelectionReady=!!item.visitor_email}var locked=!!(item&&(item.scan_started_at||item.scan_completed_at));page.disabled=locked;if(locked){wrap.querySelector('small').textContent=t.locked;box.classList.remove('pqsPageEditable')}else if(item&&item.visitor_email){box.classList.add('pqsPageEditable')}
-      button.onclick=async function(){t=words[language()];var emailValue=String(email&&email.value||'').trim(),pageValue=String(page.value||'').trim();if(!validEmail(emailValue)){status.textContent=t.badEmail;status.style.color='#f87171';return}if(!validPage(pageValue)){status.textContent=t.badPage;status.style.color='#f87171';return}button.disabled=true;button.textContent=t.saving;try{var r=await fetch('/api/prospect-quick-scan/'+TOKEN+'/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:emailValue,page_url:pageValue,updates_opt_in:!!(updates&&updates.checked)})}),d=await r.json();if(!r.ok)throw new Error(d.error||t.badPage);item=d.item;page.value=item.url;window.__pqsPageSelectionReady=true;box.classList.remove('pqsPageEditable');box.classList.add('pqsEmailDone');box.querySelector('p').textContent=(language()==='nl'?'De gereedmelding wordt verzonden naar ':language()==='es'?'El aviso de finalización se enviará a ':'Completion email will be sent to ')+emailValue+'.';status.textContent=t.saved;status.style.color='#4ade80';if(typeof render==='function')render()}catch(e){status.textContent=e.message;status.style.color='#f87171';button.disabled=false;button.textContent=language()==='nl'?'1. E-mail opslaan':language()==='es'?'1. Guardar correo':'1. Save email'}}
+    function boot(){var box=document.getElementById('pqsEmailBox'),button=document.getElementById('pqsSaveEmail'),updates=document.getElementById('pqsUpdates');if(!box||!button||!TOKEN)return;var t=words[language()],wrap=document.getElementById('pqsPageChoice');if(!wrap){wrap=document.createElement('label');wrap.id='pqsPageChoice';wrap.className='pqsPageChoice';wrap.innerHTML='<b></b><small></small><input id="pqsPageUrl" type="url" inputmode="url" autocomplete="url">';box.insertBefore(wrap,updates&&updates.parentNode||button);wrap.querySelector('input').addEventListener('input',function(){window.__pqsPageSelectionReady=!!(item&&this.value.trim()===String(item.url||'').trim())})}wrap.querySelector('b').textContent=t.label;wrap.querySelector('small').textContent=t.hint;var page=document.getElementById('pqsPageUrl'),email=document.getElementById('pqsVisitorEmail'),status=document.getElementById('pqsEmailStatus');if(item&&!page.dataset.initialized){page.value=item.url||'';page.dataset.initialized='1';window.__pqsPageSelectionReady=true}var locked=!!(item&&(item.scan_started_at||item.scan_completed_at));page.disabled=locked;if(locked){wrap.querySelector('small').textContent=t.locked;box.classList.remove('pqsPageEditable')}else{box.classList.add('pqsPageEditable')}
+      button.onclick=async function(){t=words[language()];var emailValue=String(email&&email.value||'').trim(),pageValue=String(page.value||'').trim();if(emailValue&&!validEmail(emailValue)){status.textContent=t.badEmail;status.style.color='#f87171';return}if(!validPage(pageValue)){status.textContent=t.badPage;status.style.color='#f87171';return}button.disabled=true;button.textContent=t.saving;try{var r=await fetch('/api/prospect-quick-scan/'+TOKEN+'/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:emailValue,page_url:pageValue,updates_opt_in:!!(updates&&updates.checked)})}),d=await r.json();if(!r.ok)throw new Error(d.error||t.badPage);item=d.item;page.value=item.url;window.__pqsPageSelectionReady=true;box.classList.remove('pqsPageEditable');box.classList.add('pqsEmailDone');box.querySelector('p').textContent=emailValue?((language()==='nl'?'De gereedmelding wordt verzonden naar ':language()==='es'?'El aviso de finalización se enviará a ':'Completion email will be sent to ')+emailValue+'.'):(language()==='nl'?'Pagina opgeslagen. Bewaar deze privélink om terug te komen.':language()==='es'?'Página guardada. Conserva este enlace privado para volver.':'Page saved. Keep this private link to return.');status.textContent=t.saved;status.style.color='#4ade80';if(typeof render==='function')render()}catch(e){status.textContent=e.message;status.style.color='#f87171';button.disabled=false;button.textContent=language()==='nl'?'Pagina opslaan':language()==='es'?'Guardar página':'Save page'}}
     }
-    setInterval(function(){boot();var b=document.getElementById('scanBtn'),page=document.getElementById('pqsPageUrl');if(!b||!TOKEN)return;var complete=!!(item&&item.scan_completed_at),ready=!!(item&&item.visitor_email&&window.__pqsPageSelectionReady);if(!complete)b.disabled=!ready;if(page&&item&&page.value.trim()!==String(item.url||'').trim())window.__pqsPageSelectionReady=false},180);boot();
+    setInterval(function(){boot();var b=document.getElementById('scanBtn'),page=document.getElementById('pqsPageUrl');if(!b||!TOKEN)return;var complete=!!(item&&item.scan_completed_at),ready=!!window.__pqsPageSelectionReady;if(!complete)b.disabled=!ready;if(page&&item&&page.value.trim()!==String(item.url||'').trim())window.__pqsPageSelectionReady=false},180);boot();
   })();<\/script>`;
   const reliability=`<script>(function(){
     function message(e){return (e&&e.message)||'The connection was interrupted. Nothing was marked complete. Please try again.'}
@@ -24536,7 +24549,47 @@ app.get(['/quick-scan/start','/ceo','/nl-ceo','/es-ceo','/linkedin-ceo','/nl-lin
     .replace('if(!emailEl.value.trim()||!emailEl.checkValidity())','if((updatesEl.checked&&!emailEl.value.trim())||(emailEl.value.trim()&&!emailEl.checkValidity()))');
   res.type('html').send(localizedMeta.replace('</body>',emailPurpose+'</body>'));
 });
-app.get('/quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');try{const ownerPreview=String(req.query.ownerPreview||'')==='1';const q=ownerPreview?await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[req.params.token]):await pool.query(`UPDATE prospect_quick_scans SET visitor_email=CASE WHEN COALESCE(visitor_email,'')='' AND source IN ('ceo_public','ceo_private') THEN contact_email ELSE visitor_email END,opened_count=opened_count+1,first_opened_at=COALESCE(first_opened_at,NOW()),last_opened_at=NOW(),follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'opened' ELSE follow_up_status END,updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[req.params.token]);if(!q.rows.length)return res.status(404).send('Quick Scan link not found');if(!ownerPreview&&Number(q.rows[0].opened_count||0)===1)_pqsNotifyOwner(q.rows[0],'opened');const row=q.rows[0],language=_pqsResolveLanguage(row.language,row.domain),localized=_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml(req.params.token)),language);res.type('html').send(localized.replace('</body>',_pqsControlRepairScript(language)+_pqsEntryLanguageScript(language)+'</body>'));}catch(e){res.status(500).send('Quick Scan unavailable')}});
+// v391 — Server-render the commercial funnel's primary action. The scan button,
+// Page A/Page B context and optional-email choice must remain visible even if one
+// of the older progressive-enhancement scripts fails in the visitor's browser.
+async function _pqsAttachCeoComparison(row){
+  row._ceo_comparison={score:null,recommendation_count:0};
+  if(!row.ceo_report_token)return row;
+  try{
+    const q=await pool.query(`SELECT report_data FROM opportunity_reports WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[row.ceo_report_token]);
+    if(!q.rows.length)return row;
+    const report=typeof q.rows[0].report_data==='string'?JSON.parse(q.rows[0].report_data):q.rows[0].report_data||{};
+    const norm=v=>{try{const u=new URL(v);return (u.origin+u.pathname.replace(/\/+$/,'')).toLowerCase()}catch(e){return String(v||'').replace(/\/+$/,'').toLowerCase()}};
+    const target=norm(row.ceo_report_page_url),pages=Array.isArray(report.page_analysis)?report.page_analysis:[];
+    const p=pages.find(x=>norm(x&&x.url)===target)||pages[0]||{};
+    const groups=report.graaf&&Array.isArray(report.graaf.page_recommendations)?report.graaf.page_recommendations:[];
+    const g=groups.find(x=>norm(x&&x.url)===target)||groups[0]||{};
+    const raw=p.content_score??g.content_score??null,score=Number(raw);
+    row._ceo_comparison={score:Number.isFinite(score)?score:null,recommendation_count:Array.isArray(g.recommendations)?g.recommendations.length:0};
+  }catch(e){console.warn('[quick-scan comparison]',e.message)}
+  return row;
+}
+function _pqsServerFunnel(row,language){
+  const lang=_pqsLang3(language),done=!!row.scan_completed_at,scan=row.scan_result||{},metrics=scan.metrics||{};
+  const score=scan.score??scan.content_score??scan.total_score??metrics.total??null;
+  const checked=Math.max(0,Math.min(5,Number(row.ai_checked||0)));
+  const pageA=String(row.ceo_report_page_url||'').trim(),pageB=String(row.url||'').trim(),report=String(row.ceo_report_url||'').trim();
+  const copy={
+    en:{eyebrow:'STEP 2 · PAGE-TO-PAGE DIAGNOSIS',h:'Compare two important pages — then decide whether 20 pages are worthwhile',lead:'This Quick Scan is the second-step diagnosis. Choose a commercially important page that differs from the page already used in the CEO Prospect Report. You will receive its ContentScore and recommendations. Ottmar Francisca then manually checks five AI systems so you can see whether that exact page is mentioned, recommended or cited.',a:'Page A · CEO Prospect Report',b:'Page B · Your Quick Scan',pick:'Choose a different important page on the same website',email:'Would you like an email when the report is complete? (optional)',emailHelp:'This is voluntary and only used for the completion notification. Leave it blank and return with this private link.',scan:'Scan Page B now',running:'Scanning Page B… this can take up to 90 seconds.',bad:'Enter a valid Page B URL on the same website.',compare:'Two-page comparison',openA:'Open CEO report',openB:'Open Page B',pending:'Not scanned yet',score:'ContentScore',ai:'Manual five-AI verification for Page B',aiWait:'Ottmar Francisca checks Google AI/Gemini, ChatGPT, Perplexity, Claude and Microsoft Copilot manually. This private page updates as each result is saved.',next:'Continue beyond two pages',nextText:'Two pages provide useful directional evidence, but not a site-wide conclusion. The 20-Page Audit reviews up to 20 relevant pages for content gaps, overlap/cannibalization, internal links, structure and priorities.',gsc:'Optional GSC makes it stronger by adding verified queries, clicks, impressions and positions. The audit still works without GSC.',cta:'I am interested in the 20-Page Audit',sending:'Saving your interest…',sent:'Interest saved ✓ Ottmar will confirm the scope before anything starts.',fail:'The action did not complete. Please try again.'},
+    nl:{eyebrow:'STAP 2 · PAGINA-VERGELIJKING',h:'Vergelijk twee belangrijke pagina’s — en bepaal daarna of 20 pagina’s zinvol zijn',lead:'Deze Quick Scan is de tweede diagnose-stap. Kies een commercieel belangrijke pagina die anders is dan de pagina in het CEO Prospect Report. Je ontvangt de ContentScore en aanbevelingen. Ottmar Francisca controleert daarna handmatig vijf AI-systemen, zodat je ziet of exact deze pagina wordt genoemd, aanbevolen of geciteerd.',a:'Pagina A · CEO Prospect Report',b:'Pagina B · Jouw Quick Scan',pick:'Kies een andere belangrijke pagina op dezelfde website',email:'Wil je een e-mail ontvangen wanneer het rapport klaar is? (vrijwillig)',emailHelp:'Dit is vrijwillig en wordt alleen gebruikt voor de gereedmelding. Laat het veld leeg en keer terug via deze privélink.',scan:'Scan pagina B nu',running:'Pagina B wordt gescand… dit kan tot 90 seconden duren.',bad:'Vul een geldige URL voor pagina B op dezelfde website in.',compare:'Vergelijking van twee pagina’s',openA:'Open CEO-rapport',openB:'Open pagina B',pending:'Nog niet gescand',score:'ContentScore',ai:'Handmatige vijf-AI-controle voor pagina B',aiWait:'Ottmar Francisca controleert Google AI/Gemini, ChatGPT, Perplexity, Claude en Microsoft Copilot handmatig. Deze privépagina wordt bijgewerkt zodra elk resultaat is opgeslagen.',next:'Ga verder dan twee pagina’s',nextText:'Twee pagina’s geven nuttige richting, maar geen conclusie over de hele site. De 20-Page Audit onderzoekt maximaal 20 relevante pagina’s op contentgaten, overlap/cannibalisatie, interne links, structuur en prioriteiten.',gsc:'Optionele GSC-data maakt dit sterker met geverifieerde zoekopdrachten, klikken, vertoningen en posities. De audit werkt ook zonder GSC.',cta:'Ik heb interesse in de 20-Page Audit',sending:'Interesse opslaan…',sent:'Interesse opgeslagen ✓ Ottmar bevestigt eerst de scope; er start niets automatisch.',fail:'De actie is niet voltooid. Probeer het opnieuw.'},
+    es:{eyebrow:'PASO 2 · DIAGNÓSTICO ENTRE PÁGINAS',h:'Compara dos páginas importantes y decide si merece la pena analizar 20',lead:'Este Quick Scan es el segundo paso del diagnóstico. Elige una página comercial importante distinta de la utilizada en el CEO Prospect Report. Recibirás su ContentScore y recomendaciones. Después, Ottmar Francisca comprueba manualmente cinco sistemas de IA para mostrar si esa página exacta aparece mencionada, recomendada o citada.',a:'Página A · CEO Prospect Report',b:'Página B · Tu Quick Scan',pick:'Elige otra página importante del mismo sitio web',email:'¿Quieres recibir un correo cuando el informe esté listo? (opcional)',emailHelp:'Es voluntario y solo se usa para avisarte cuando termine. Puedes dejarlo vacío y volver con este enlace privado.',scan:'Analizar página B ahora',running:'Analizando la página B… puede tardar hasta 90 segundos.',bad:'Introduce una URL válida de página B en el mismo sitio web.',compare:'Comparación de dos páginas',openA:'Abrir informe CEO',openB:'Abrir página B',pending:'Aún no analizada',score:'ContentScore',ai:'Verificación manual en cinco sistemas de IA para la página B',aiWait:'Ottmar Francisca comprueba manualmente Google AI/Gemini, ChatGPT, Perplexity, Claude y Microsoft Copilot. Esta página privada se actualiza al guardar cada resultado.',next:'Continuar más allá de dos páginas',nextText:'Dos páginas aportan evidencia útil, pero no permiten concluir sobre todo el sitio. La Auditoría de 20 páginas revisa hasta 20 páginas relevantes: vacíos de contenido, solapamiento/canibalización, enlaces internos, estructura y prioridades.',gsc:'GSC opcional lo refuerza con consultas, clics, impresiones y posiciones verificadas. La auditoría también funciona sin GSC.',cta:'Me interesa la Auditoría de 20 páginas',sending:'Guardando interés…',sent:'Interés guardado ✓ Ottmar confirmará el alcance antes de iniciar nada.',fail:'La acción no se completó. Inténtalo de nuevo.'}
+  }[lang];
+  const e=_pqsHtml;
+  const ceo=row._ceo_comparison||{},aScore=ceo.score==null?'—':e(ceo.score);
+  const aLink=report?`<a class="pqs391link" href="${e(report)}" target="_blank" rel="noopener">${e(copy.openA)} ↗</a>`:'';
+  const bLink=done?`<a class="pqs391link" href="${e(pageB)}" target="_blank" rel="noopener">${e(copy.openB)} ↗</a>`:'';
+  const comparison=done?`<div class="pqs391compare" id="pqs391Comparison"><h3>${e(copy.compare)}</h3><div class="pqs391grid"><article><span>A</span><b>${e(copy.a)}</b><small>${e(pageA||'—')}</small><strong>${e(copy.score)}: ${aScore}${ceo.score==null?'':'/100'}</strong>${aLink}</article><article><span>B</span><b>${e(copy.b)}</b><small>${e(pageB)}</small><strong>${e(copy.score)}: ${score==null?'—':e(score)}/100</strong>${bLink}</article></div></div>`:'';
+  return `<style>
+  #pqsEmailBox,#scanBtn,#audit20-interest-card,#prospect-gsc-card{display:none!important}.pqs391{border:1px solid #22d3ee!important;background:radial-gradient(circle at 90% 0,#312e8155,transparent 36%),linear-gradient(145deg,#0b1828,#070d17)!important;box-shadow:0 18px 55px #0007}.pqs391 .pqs391eye{color:#67e8f9;font-size:11px;font-weight:950;letter-spacing:.12em}.pqs391 h2{font-size:clamp(23px,4vw,34px);margin:6px 0}.pqs391lead{max-width:820px;color:#cbd5e1}.pqs391grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:17px 0}.pqs391grid article{display:flex;flex-direction:column;gap:7px;padding:16px;border:1px solid #334155;border-radius:14px;background:#07101dcc;min-width:0}.pqs391grid article>span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#2563eb);font-weight:950}.pqs391grid small{color:#94a3b8;word-break:break-all}.pqs391link{color:#67e8f9;font-weight:800}.pqs391form{padding:17px;border:1px solid #475569;border-radius:14px;background:#03071288}.pqs391form label{display:block;text-align:left;font-weight:850;margin:9px 0 5px}.pqs391form input{width:100%;padding:13px;border:1px solid #475569;border-radius:9px;background:#050a12;color:#fff}.pqs391form small{display:block;color:#94a3b8;text-align:left;margin:5px 0 12px}.pqs391primary{width:100%;font-size:16px;min-height:50px;box-shadow:0 0 0 3px #22d3ee25}.pqs391msg{display:none;margin-top:12px;padding:12px;border:1px solid #2563eb;border-radius:9px;color:#bfdbfe}.pqs391msg.on{display:block}.pqs391compare h3{margin-bottom:8px}.pqs391ai{padding:15px;border:1px solid ${checked===5?'#16a34a':'#f59e0b'};border-radius:12px;background:${checked===5?'#052e16':'#2b1907'};margin:14px 0}.pqs391ai b{display:block}.pqs391ai progress{width:100%;height:10px;margin:9px 0;accent-color:${checked===5?'#22c55e':'#f59e0b'}}.pqs391next{margin-top:16px;padding:17px;border:1px solid #7c3aed;border-radius:14px;background:#2e106555}.pqs391next .btn{margin-top:8px}.pqs391next p{color:#cbd5e1}.pqs391next em{display:block;color:#93c5fd;font-style:normal}.pqs391spin{display:inline-block;width:15px;height:15px;border:2px solid #fff5;border-top-color:#fff;border-radius:50%;animation:pqs391spin .8s linear infinite;margin-right:8px;vertical-align:-2px}@keyframes pqs391spin{to{transform:rotate(360deg)}}@media(max-width:720px){.pqs391grid{grid-template-columns:1fr}}
+  </style><section class="panel pqs391" id="pqs391Funnel"><div class="pqs391eye">${e(copy.eyebrow)}</div><h2>${e(copy.h)}</h2><p class="pqs391lead">${e(copy.lead)}</p><div class="pqs391grid"><article><span>A</span><b>${e(copy.a)}</b><small>${e(pageA||'—')}</small><strong>${e(copy.score)}: ${aScore}${ceo.score==null?'':'/100'}</strong>${aLink}</article><article><span>B</span><b>${e(copy.b)}</b><small>${e(pageB||'—')}</small>${done?`<strong>${e(copy.score)}: ${score==null?'—':e(score)}/100</strong>`:`<strong class="pending">${e(copy.pending)}</strong>`}</article></div>${done?'':`<div class="pqs391form"><label for="pqs391Url">${e(copy.pick)}</label><input id="pqs391Url" type="url" inputmode="url" value="${e(pageB)}"><label for="pqs391Email">${e(copy.email)}</label><input id="pqs391Email" type="email" value="${e(row.visitor_email||'')}" placeholder="you@company.com"><small>${e(copy.emailHelp)}</small><button class="btn pqs391primary" id="pqs391Scan" type="button">${e(copy.scan)}</button><div class="pqs391msg" id="pqs391Msg" aria-live="polite"></div></div>`}${comparison}<div class="pqs391ai"><b>${e(copy.ai)} · ${checked}/5</b><progress max="5" value="${checked}"></progress><div>${e(copy.aiWait)}</div></div>${done?`<div class="pqs391next"><h3>${e(copy.next)}</h3><p>${e(copy.nextText)}</p><em>${e(copy.gsc)}</em><button class="btn" id="pqs391Audit" type="button">${e(copy.cta)}</button><div id="pqs391AuditMsg" aria-live="polite"></div></div>`:''}</section><script>(function(){var token=${JSON.stringify(String(row.token||''))},c=${JSON.stringify(copy)};function msg(t,bad){var x=document.getElementById('pqs391Msg');if(!x)return;x.className='pqs391msg on';x.style.borderColor=bad?'#ef4444':'#2563eb';x.style.color=bad?'#fecaca':'#bfdbfe';x.textContent=t}var b=document.getElementById('pqs391Scan');if(b)b.onclick=async function(){var u=document.getElementById('pqs391Url').value.trim(),email=document.getElementById('pqs391Email').value.trim();try{var z=new URL(u);if(!/^https?:$/.test(z.protocol))throw 0}catch(_){return msg(c.bad,true)}var old=b.textContent;b.disabled=true;b.innerHTML='<span class="pqs391spin"></span>'+c.running;msg(c.running,false);try{var setup=await fetch('/api/prospect-quick-scan/'+encodeURIComponent(token)+'/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page_url:u,email:email,updates_opt_in:false})}),sd=await setup.json();if(!setup.ok||!sd.success)throw Error(sd.error||c.fail);var run=await fetch('/api/prospect-quick-scan/'+encodeURIComponent(token)+'/run',{method:'POST'}),rd=await run.json();if(!run.ok||!rd.success)throw Error(rd.error||c.fail);location.reload()}catch(err){b.disabled=false;b.textContent=old;msg((err&&err.message)||c.fail,true)}};var a=document.getElementById('pqs391Audit');if(a)a.onclick=async function(){var m=document.getElementById('pqs391AuditMsg'),old=a.textContent;a.disabled=true;a.innerHTML='<span class="pqs391spin"></span>'+c.sending;try{var r=await fetch('/api/prospect-quick-scan/'+encodeURIComponent(token)+'/audit20-interest',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),d=await r.json();if(!r.ok||!d.success)throw Error(d.error||c.fail);a.textContent=c.sent;m.textContent=c.gsc}catch(err){a.disabled=false;a.textContent=old;m.textContent=(err&&err.message)||c.fail}}})();<\/script>`;
+}
+
+app.get('/quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');try{const ownerPreview=String(req.query.ownerPreview||'')==='1';const q=ownerPreview?await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[req.params.token]):await pool.query(`UPDATE prospect_quick_scans SET visitor_email=CASE WHEN COALESCE(visitor_email,'')='' AND source IN ('ceo_public','ceo_private') THEN contact_email ELSE visitor_email END,opened_count=opened_count+1,first_opened_at=COALESCE(first_opened_at,NOW()),last_opened_at=NOW(),follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'opened' ELSE follow_up_status END,updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[req.params.token]);if(!q.rows.length)return res.status(404).send('Quick Scan link not found');if(!ownerPreview&&Number(q.rows[0].opened_count||0)===1)_pqsNotifyOwner(q.rows[0],'opened');const row=await _pqsAttachCeoComparison(q.rows[0]),language=_pqsResolveLanguage(row.language,row.domain),localized=_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml(req.params.token)),language),withFunnel=localized.replace('<section id="waitStory"',_pqsServerFunnel(row,language)+'<section id="waitStory"');res.type('html').send(withFunnel.replace('</body>',_pqsControlRepairScript(language)+_pqsEntryLanguageScript(language)+'</body>'));}catch(e){console.error('[quick-scan public]',e.message);res.status(500).send('Quick Scan unavailable')}});
 
 // v249 — Admin Lead Crawler custom discovery. One grounded Gemini discovery call,
 // then direct website verification. It does NOT generate CEO Reports or send email.
