@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v391';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v392';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -413,7 +413,10 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'quickscan-email-optional-nonblocking-v391',
   'quickscan-two-url-comparison-v391',
   'quickscan-audit20-gsc-bridge-v391',
-  'quickscan-three-language-funnel-v391'
+  'quickscan-three-language-funnel-v391',
+  'quickscan-early-state-bootstrap-v392',
+  'quickscan-token-item-global-regression-v392',
+  'quickscan-public-no-store-v392'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -674,7 +677,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v391',
+  build: 'CS-2026-09-29-CANONICAL-v392',
   built_date: '2026-09-29',
   ceo_private: true,
   ceo_public: true,
@@ -741,7 +744,9 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   quickscan_email_optional_nonblocking: true,
   quickscan_two_url_comparison: true,
   quickscan_audit20_gsc_bridge: true,
-  quickscan_three_language_funnel: true
+  quickscan_three_language_funnel: true,
+  quickscan_early_state_bootstrap: true,
+  quickscan_token_item_global_regression: true
 });
 
 // BUILD IDENTITY — intentionally public and DB-independent.
@@ -24552,6 +24557,13 @@ app.get(['/quick-scan/start','/ceo','/nl-ceo','/es-ceo','/linkedin-ceo','/nl-lin
 // v391 — Server-render the commercial funnel's primary action. The scan button,
 // Page A/Page B context and optional-email choice must remain visible even if one
 // of the older progressive-enhancement scripts fails in the visitor's browser.
+// v392 — This bootstrap is deliberately the FIRST script after <body>. Several
+// older enhancement modules share TOKEN/item. Defining both before any module
+// starts prevents one missing/late base script from creating endless timer errors.
+function _pqsEarlyStateBootstrap(token){
+  const safe=JSON.stringify(String(token||'')).replace(/</g,'\\u003c');
+  return `<script>var TOKEN=${safe};var item=null;window.TOKEN=TOKEN;window.item=item;window.__pqsState=window.__pqsState||{token:TOKEN,item:null};<\/script>`;
+}
 async function _pqsAttachCeoComparison(row){
   row._ceo_comparison={score:null,recommendation_count:0};
   if(!row.ceo_report_token)return row;
@@ -24589,7 +24601,7 @@ function _pqsServerFunnel(row,language){
   </style><section class="panel pqs391" id="pqs391Funnel"><div class="pqs391eye">${e(copy.eyebrow)}</div><h2>${e(copy.h)}</h2><p class="pqs391lead">${e(copy.lead)}</p><div class="pqs391grid"><article><span>A</span><b>${e(copy.a)}</b><small>${e(pageA||'—')}</small><strong>${e(copy.score)}: ${aScore}${ceo.score==null?'':'/100'}</strong>${aLink}</article><article><span>B</span><b>${e(copy.b)}</b><small>${e(pageB||'—')}</small>${done?`<strong>${e(copy.score)}: ${score==null?'—':e(score)}/100</strong>`:`<strong class="pending">${e(copy.pending)}</strong>`}</article></div>${done?'':`<div class="pqs391form"><label for="pqs391Url">${e(copy.pick)}</label><input id="pqs391Url" type="url" inputmode="url" value="${e(pageB)}"><label for="pqs391Email">${e(copy.email)}</label><input id="pqs391Email" type="email" value="${e(row.visitor_email||'')}" placeholder="you@company.com"><small>${e(copy.emailHelp)}</small><button class="btn pqs391primary" id="pqs391Scan" type="button">${e(copy.scan)}</button><div class="pqs391msg" id="pqs391Msg" aria-live="polite"></div></div>`}${comparison}<div class="pqs391ai"><b>${e(copy.ai)} · ${checked}/5</b><progress max="5" value="${checked}"></progress><div>${e(copy.aiWait)}</div></div>${done?`<div class="pqs391next"><h3>${e(copy.next)}</h3><p>${e(copy.nextText)}</p><em>${e(copy.gsc)}</em><button class="btn" id="pqs391Audit" type="button">${e(copy.cta)}</button><div id="pqs391AuditMsg" aria-live="polite"></div></div>`:''}</section><script>(function(){var token=${JSON.stringify(String(row.token||''))},c=${JSON.stringify(copy)};function msg(t,bad){var x=document.getElementById('pqs391Msg');if(!x)return;x.className='pqs391msg on';x.style.borderColor=bad?'#ef4444':'#2563eb';x.style.color=bad?'#fecaca':'#bfdbfe';x.textContent=t}var b=document.getElementById('pqs391Scan');if(b)b.onclick=async function(){var u=document.getElementById('pqs391Url').value.trim(),email=document.getElementById('pqs391Email').value.trim();try{var z=new URL(u);if(!/^https?:$/.test(z.protocol))throw 0}catch(_){return msg(c.bad,true)}var old=b.textContent;b.disabled=true;b.innerHTML='<span class="pqs391spin"></span>'+c.running;msg(c.running,false);try{var setup=await fetch('/api/prospect-quick-scan/'+encodeURIComponent(token)+'/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page_url:u,email:email,updates_opt_in:false})}),sd=await setup.json();if(!setup.ok||!sd.success)throw Error(sd.error||c.fail);var run=await fetch('/api/prospect-quick-scan/'+encodeURIComponent(token)+'/run',{method:'POST'}),rd=await run.json();if(!run.ok||!rd.success)throw Error(rd.error||c.fail);location.reload()}catch(err){b.disabled=false;b.textContent=old;msg((err&&err.message)||c.fail,true)}};var a=document.getElementById('pqs391Audit');if(a)a.onclick=async function(){var m=document.getElementById('pqs391AuditMsg'),old=a.textContent;a.disabled=true;a.innerHTML='<span class="pqs391spin"></span>'+c.sending;try{var r=await fetch('/api/prospect-quick-scan/'+encodeURIComponent(token)+'/audit20-interest',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}),d=await r.json();if(!r.ok||!d.success)throw Error(d.error||c.fail);a.textContent=c.sent;m.textContent=c.gsc}catch(err){a.disabled=false;a.textContent=old;m.textContent=(err&&err.message)||c.fail}}})();<\/script>`;
 }
 
-app.get('/quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');try{const ownerPreview=String(req.query.ownerPreview||'')==='1';const q=ownerPreview?await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[req.params.token]):await pool.query(`UPDATE prospect_quick_scans SET visitor_email=CASE WHEN COALESCE(visitor_email,'')='' AND source IN ('ceo_public','ceo_private') THEN contact_email ELSE visitor_email END,opened_count=opened_count+1,first_opened_at=COALESCE(first_opened_at,NOW()),last_opened_at=NOW(),follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'opened' ELSE follow_up_status END,updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[req.params.token]);if(!q.rows.length)return res.status(404).send('Quick Scan link not found');if(!ownerPreview&&Number(q.rows[0].opened_count||0)===1)_pqsNotifyOwner(q.rows[0],'opened');const row=await _pqsAttachCeoComparison(q.rows[0]),language=_pqsResolveLanguage(row.language,row.domain),localized=_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml(req.params.token)),language),withFunnel=localized.replace('<section id="waitStory"',_pqsServerFunnel(row,language)+'<section id="waitStory"');res.type('html').send(withFunnel.replace('</body>',_pqsControlRepairScript(language)+_pqsEntryLanguageScript(language)+'</body>'));}catch(e){console.error('[quick-scan public]',e.message);res.status(500).send('Quick Scan unavailable')}});
+app.get('/quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');try{const ownerPreview=String(req.query.ownerPreview||'')==='1';const q=ownerPreview?await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[req.params.token]):await pool.query(`UPDATE prospect_quick_scans SET visitor_email=CASE WHEN COALESCE(visitor_email,'')='' AND source IN ('ceo_public','ceo_private') THEN contact_email ELSE visitor_email END,opened_count=opened_count+1,first_opened_at=COALESCE(first_opened_at,NOW()),last_opened_at=NOW(),follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'opened' ELSE follow_up_status END,updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[req.params.token]);if(!q.rows.length)return res.status(404).send('Quick Scan link not found');if(!ownerPreview&&Number(q.rows[0].opened_count||0)===1)_pqsNotifyOwner(q.rows[0],'opened');const row=await _pqsAttachCeoComparison(q.rows[0]),language=_pqsResolveLanguage(row.language,row.domain),localized=_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml(req.params.token)),language),withFunnel=localized.replace('<section id="waitStory"',_pqsServerFunnel(row,language)+'<section id="waitStory"'),withBootstrap=withFunnel.replace('<body>','<body>'+_pqsEarlyStateBootstrap(req.params.token));res.set('Cache-Control','no-store, no-cache, must-revalidate');res.type('html').send(withBootstrap.replace('</body>',_pqsControlRepairScript(language)+_pqsEntryLanguageScript(language)+'</body>'));}catch(e){console.error('[quick-scan public]',e.message);res.status(500).send('Quick Scan unavailable')}});
 
 // v249 — Admin Lead Crawler custom discovery. One grounded Gemini discovery call,
 // then direct website verification. It does NOT generate CEO Reports or send email.
