@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v389';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-29-CANONICAL-v390';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -405,7 +405,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'gbp-category-source-clarity-v388',
   'gbp-post-text-without-raw-url-v389',
   'gbp-smart-tracked-page-cta-v389',
-  'gbp-detailed-image-prompt-v389'
+  'gbp-detailed-image-prompt-v389',
+  'quickscan-explicit-dom-control-bindings-v390',
+  'quickscan-live-button-regression-test-v390'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -666,7 +668,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-29-CANONICAL-v389',
+  build: 'CS-2026-09-29-CANONICAL-v390',
   built_date: '2026-09-29',
   ceo_private: true,
   ceo_public: true,
@@ -23621,7 +23623,20 @@ function _pqsEnhancePublicHtml(html){
   })();<\/script>`;
   return _pqsEnhancePublicHtmlV150(html).replace('</body>',pageChoice+reliability+manualStatus+'</body>');
 }
-app.get('/quick-scan',(req,res)=>{const language=_pqsResolveLanguage(req.query&&req.query.language||'auto','');res.type('html').send(_injectProspectFooter(_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml('')),language),language));});
+// v390: never rely on legacy browser globals created implicitly from element IDs.
+// Some browsers do not expose #scanBtn/#target as JavaScript variables, which left
+// the explanation visible but hid every real Quick Scan control. This final guard
+// binds the controls explicitly and restarts the saved-state render once.
+function _pqsControlRepairScript(rawLanguage){
+  const language=_pqsResolveLanguage(rawLanguage,''),copy={
+    en:{title:'5 AI systems · manually verified by Ottmar',body:'After the page scan, Ottmar manually checks Google AI / Gemini, ChatGPT Search, Perplexity, Claude and Microsoft Copilot. Each saved result appears in the same five-system evidence panel.'},
+    nl:{title:'5 AI-systemen · handmatig gecontroleerd door Ottmar',body:'Na de paginascan controleert Ottmar handmatig Google AI / Gemini, ChatGPT Search, Perplexity, Claude en Microsoft Copilot. Elk opgeslagen resultaat verschijnt in hetzelfde bewijsblok met vijf AI-systemen.'},
+    es:{title:'5 sistemas de IA · comprobados manualmente por Ottmar',body:'Después del análisis de la página, Ottmar comprueba manualmente Google AI / Gemini, ChatGPT Search, Perplexity, Claude y Microsoft Copilot. Cada resultado guardado aparece en el mismo panel de pruebas de cinco sistemas.'}
+  };
+  const text=copy[language]||copy.en;
+  return `<script>(function(){var ids=['newForm','biz','url','source','target','scanBtn','status','result','scores','scope','actions','ai','aiIntro'];ids.forEach(function(id){window[id]=document.getElementById(id)});var hero=document.querySelector('.hero'),note=document.getElementById('pqsManualPromise');if(hero&&!note){note=document.createElement('div');note.id='pqsManualPromise';note.className='status';note.style.borderColor='#f59e0b';note.style.textAlign='left';note.innerHTML='<b>${String(text.title)}</b><div class="muted" style="margin-top:4px">${String(text.body)}</div>';var anchor=document.getElementById('status');hero.insertBefore(note,anchor)}function restart(){if(TOKEN&&window.target&&!window.target.textContent.trim()&&typeof load==='function'){Promise.resolve(load(true)).catch(function(e){if(typeof stat==='function')stat(esc((e&&e.message)||'Could not load the Quick Scan controls'),'#ef4444')})}else if(!TOKEN&&window.newForm)window.newForm.style.display='flex'}setTimeout(restart,0);setTimeout(restart,900)})();<\/script>`;
+}
+app.get('/quick-scan',(req,res)=>{const language=_pqsResolveLanguage(req.query&&req.query.language||'auto','');const html=_injectProspectFooter(_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml('')),language),language);res.type('html').send(html.replace('</body>',_pqsControlRepairScript(language)+'</body>'));});
 function _pqsFixRenderedAdminHtml(h){
   return String(h)
     .replaceAll(`Email is optional and never blocks generation. If you enter an email, ContentScale sends the finished CEO Report there automatically; otherwise you can copy/share the report link yourself.`,`Email is optional and stored only with its provenance. Creating a CEO Report never sends email. Review the address and use Approve & Send only when you choose to contact the prospect.`)
@@ -24521,7 +24536,7 @@ app.get(['/quick-scan/start','/ceo','/nl-ceo','/es-ceo','/linkedin-ceo','/nl-lin
     .replace('if(!emailEl.value.trim()||!emailEl.checkValidity())','if((updatesEl.checked&&!emailEl.value.trim())||(emailEl.value.trim()&&!emailEl.checkValidity()))');
   res.type('html').send(localizedMeta.replace('</body>',emailPurpose+'</body>'));
 });
-app.get('/quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');try{const ownerPreview=String(req.query.ownerPreview||'')==='1';const q=ownerPreview?await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[req.params.token]):await pool.query(`UPDATE prospect_quick_scans SET visitor_email=CASE WHEN COALESCE(visitor_email,'')='' AND source IN ('ceo_public','ceo_private') THEN contact_email ELSE visitor_email END,opened_count=opened_count+1,first_opened_at=COALESCE(first_opened_at,NOW()),last_opened_at=NOW(),follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'opened' ELSE follow_up_status END,updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[req.params.token]);if(!q.rows.length)return res.status(404).send('Quick Scan link not found');if(!ownerPreview&&Number(q.rows[0].opened_count||0)===1)_pqsNotifyOwner(q.rows[0],'opened');const row=q.rows[0],language=_pqsResolveLanguage(row.language,row.domain),localized=_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml(req.params.token)),language);res.type('html').send(localized.replace('</body>',_pqsEntryLanguageScript(language)+'</body>'));}catch(e){res.status(500).send('Quick Scan unavailable')}});
+app.get('/quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');try{const ownerPreview=String(req.query.ownerPreview||'')==='1';const q=ownerPreview?await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[req.params.token]):await pool.query(`UPDATE prospect_quick_scans SET visitor_email=CASE WHEN COALESCE(visitor_email,'')='' AND source IN ('ceo_public','ceo_private') THEN contact_email ELSE visitor_email END,opened_count=opened_count+1,first_opened_at=COALESCE(first_opened_at,NOW()),last_opened_at=NOW(),follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'opened' ELSE follow_up_status END,updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[req.params.token]);if(!q.rows.length)return res.status(404).send('Quick Scan link not found');if(!ownerPreview&&Number(q.rows[0].opened_count||0)===1)_pqsNotifyOwner(q.rows[0],'opened');const row=q.rows[0],language=_pqsResolveLanguage(row.language,row.domain),localized=_pqsLocalizeQuickScanHtml(_pqsEnhancePublicHtml(_pqsPageHtml(req.params.token)),language);res.type('html').send(localized.replace('</body>',_pqsControlRepairScript(language)+_pqsEntryLanguageScript(language)+'</body>'));}catch(e){res.status(500).send('Quick Scan unavailable')}});
 
 // v249 — Admin Lead Crawler custom discovery. One grounded Gemini discovery call,
 // then direct website verification. It does NOT generate CEO Reports or send email.
