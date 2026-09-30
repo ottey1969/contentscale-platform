@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-30-CANONICAL-v401';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-30-CANONICAL-v402';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -677,7 +677,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-30-CANONICAL-v401',
+  build: 'CS-2026-09-30-CANONICAL-v402',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -8080,6 +8080,12 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
         };
         console.log('[monitoring-gate] page',page.id,'blocked:',missing.join(', '),JSON.stringify(gate_state));
         return res.status(200).json({success:false,waiting_for_data:true,error:'Waiting for data: '+missing.join(', '),missing,ai_checked:aiCount,gate_state});
+      }
+      // Evidence-only case-study milestones are closed explicitly. Even an old
+      // browser tab or direct API call may not turn a completed checkpoint into
+      // a content scan that could rebuild the Brief or change the live workflow.
+      if(String(page.monitoring_gate_label||'').indexOf('case_day_')===0){
+        return res.status(409).json({success:false,evidence_checkpoint_ready:true,scan_locked:true,error:'Evidence is complete. Use Complete evidence checkpoint; no normal scan, HTML change or new Brief is required.'});
       }
       page._completed_monitoring_gate=page.monitoring_gate_label||'monitoring';
       await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[page.id]);
@@ -43688,8 +43694,8 @@ function openCaseStudy(pageId){
       if(type==='brief_action_resolved')return 'Remaining action resolved as '+String(x.decision||'').replace(/_/g,' ')+': '+(x.title||'Untitled action')+'. Reason: '+(x.reason||'—')+'. '+(x.remaining_actions||0)+' action(s) remain.';
       if(type==='implementation_completion_email_sent')return 'Completion email sent after the final remaining Brief action was resolved: '+(x.resolved_actions||0)+' action(s) closed in this cycle.';
       if(type==='brief_cycle_completed')return 'The implemented Brief cycle was closed. Completed actions moved to protected history; operational outstanding actions reset to 0.';
-      if(type==='case_day_7_completed')return 'Day 7 evidence checkpoint completed from fresh GSC plus the required page review/scan.';
-      if(type==='case_day_14_completed')return 'Day 14 evidence checkpoint completed from fresh GSC, all five AI engines and the required page review/scan.';
+      if(type==='case_day_7_completed')return 'Day 7 evidence checkpoint completed from fresh GSC evidence.';
+      if(type==='case_day_14_completed')return 'Day 14 evidence checkpoint completed from fresh GSC and all five AI-engine checks.';
       if(type==='implementation_no_change')return 'No material content difference detected versus the protected pre-publication version.';
       return Object.keys(x).map(function(k){return k+': '+eventValue(x[k]);}).join(' · ');
     }
@@ -45462,21 +45468,11 @@ function renderStats(data) {
       actionBox.innerHTML='<div style="padding:10px 14px;border:1px dashed #334155;border-radius:9px;color:#64748b;font-size:11px;">No monitored or active case-study pages. Turn on Monitoring for the pages that should enter the guided data-request workflow.</div>';
     }else{
       var rows=actionPages.map(function(p){
-        var waiting=b(p.monitoring_waiting_input), isCase=b(p.case_study_active), attention=window._trackerAttention(p);
+        var evidenceGate=_trackerEvidenceGateState(p),waiting=evidenceGate.waiting,isCase=b(p.case_study_active),attention=window._trackerAttention(p);
         var isMonitored=['0','0days','off',''].indexOf(String(p.check_frequency||'0'))<0;
-        var reqMs=Date.parse(p.monitoring_request_at||0)||0, missing=[];
-        if(waiting){
-          if((Date.parse(p.monitoring_gsc_pages_at||0)||0)<reqMs)missing.push('GSC Pages');
-          if((Date.parse(p.monitoring_gsc_queries_at||0)||0)<reqMs)missing.push('GSC Queries');
-          if(p.monitoring_require_ai!==false&&p.monitoring_require_ai!=='f'){
-            var ev=p.ai_manual_evidence;if(typeof ev==='string'){try{ev=JSON.parse(ev);}catch(x){ev={};}}ev=ev||{};
-            var verified=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){var x=ev[k];return x&&_aiEvidenceIsVerified(x)&&(Date.parse(x.updated_at||x.verified_at||0)||0)>=reqMs;}).length;
-            if(verified<5)missing.push('AI engines '+verified+'/5');
-          }
-        }
-        var ready=waiting&&!missing.length;
+        var missing=evidenceGate.missing,ready=evidenceGate.ready;
         var needsCheckpoint=!!p.case_study_active&&!!p.brief_content&&!p.prepublication_checkpoint_saved&&!p.checkpoint_recovery_available&&String(p.implementation_status||'')!=='verified';
-        var status=needsCheckpoint?'⚠️ ACTION NEEDED — save the current live page before publishing, then check the published version. If already published, use this as the next revision baseline.':attention.note?'⚠️ '+attention.note:attention.geoIssue?'⚠️ BRIEF EVIDENCE NEEDS REVIEW — Richmond, VA competitors appear in this NJ page Brief.':ready?'READY — press Scan':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY CYCLE ACTIVE — optional monitoring was locked Off at the baseline':isCase?'CASE STUDY CYCLE ACTIVE — monitoring locked '+String(p.check_frequency||''):'MONITORING '+String(p.check_frequency||'');
+        var status=needsCheckpoint?'⚠️ ACTION NEEDED — save the current live page before publishing, then check the published version. If already published, use this as the next revision baseline.':attention.note?'⚠️ '+attention.note:attention.geoIssue?'⚠️ BRIEF EVIDENCE NEEDS REVIEW — Richmond, VA competitors appear in this NJ page Brief.':evidenceGate.ready_to_complete?'EVIDENCE READY — complete checkpoint':evidenceGate.ready_to_scan?'READY — scan current live page':waiting?'WAITING FOR DATA — '+missing.join(', '):isCase&&!isMonitored?'CASE STUDY CYCLE ACTIVE — optional monitoring was locked Off at the baseline':isCase?'CASE STUDY CYCLE ACTIVE — monitoring locked '+String(p.check_frequency||''):'MONITORING '+String(p.check_frequency||'');
         if(!waiting&&isMonitored&&p.next_check_at){try{status+=' — next '+new Date(p.next_check_at).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});}catch(x){}}
         var color=needsCheckpoint||attention.note||attention.geoIssue?'#fbbf24':ready?'#86efac':waiting?'#fbbf24':isCase?'#7dd3fc':'#c4b5fd';
         var label=_csEscH(p.title||p.keyword||String(p.url||'').replace(/^https?:[/][/]/,'').split('/')[0]||('Page '+p.id));
@@ -45485,7 +45481,7 @@ function renderStats(data) {
           +'<div style="min-width:0;"><strong style="display:block;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+label+'</strong><a href="'+url+'" target="_blank" rel="noopener" style="display:block;color:#60a5fa;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+_csEscH(p.url||'')+'</a>'
           +'<div style="margin-top:5px;color:#94a3b8;font-size:9px;line-height:1.5;">First scan: '+(function(){var d=p.first_scanned_at||(p.case_study&&p.case_study.baseline_at);if(!d)return '—';try{return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+' &nbsp;·&nbsp; Last scan: '+(function(){var d=p.last_checked_at||p.last_checked;if(!d)return '—';try{return new Date(d).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+' &nbsp;·&nbsp; Next scan: '+(function(){if(!isMonitored)return 'Off';if(!p.next_check_at)return waiting?'Waiting for evidence':'Not scheduled';try{return new Date(p.next_check_at).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});}catch(x){return '—';}})()+'</div></div>'
           +'<div style="color:'+color+';font-size:10px;font-weight:800;line-height:1.45;">'+_csEscH(status)+(attention.geoIssue&&attention.note?'<div style="margin-top:4px;color:#fca5a5;">⚠️ Brief evidence needs review: Richmond, VA competitors appear in this NJ page Brief. Do not copy those competitor claims into client content.</div>':'')+'</div>'
-          +'<button type="button" onclick="jumpToTrackerPage('+Number(p.id)+')" style="border:1px solid #3b82f6;background:#10264a;color:#bfdbfe;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap;">Open page</button></div>';
+          +(evidenceGate.ready_to_complete?'<button type="button" onclick="completeEvidenceCheckpoint('+Number(p.id)+',this)" style="border:1px solid #16a34a;background:#052e16;color:#bbf7d0;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:10px;font-weight:900;white-space:nowrap;">Complete checkpoint</button>':'<button type="button" onclick="jumpToTrackerPage('+Number(p.id)+')" style="border:1px solid #3b82f6;background:#10264a;color:#bfdbfe;border-radius:6px;padding:6px 9px;cursor:pointer;font-size:10px;font-weight:800;white-space:nowrap;">Open page</button>')+'</div>';
       }).join('');
       actionBox.innerHTML='<div style="padding:11px 13px;border:1px solid #1d4ed8;border-radius:9px;background:#081426;color:#cbd5e1;font-size:11px;"><div style="font-weight:900;color:#93c5fd;letter-spacing:.06em;">TRACKER ACTION PAGES · '+actionPages.length+'</div>'+rows+'</div>';
     }
@@ -45667,6 +45663,25 @@ function _classifyTrackerPriority(p) {
   return {tier:4,label:'\\ud83d\\udd28 BUILD',color:'#9ca3af',criteria:'Moderate demand or a position outside the faster-win thresholds',action:'Lower active priority. Review after tiers 1-3; use Intelligence + the completed Brief to decide Treatment.'};
 }
 
+// v402 — one evidence-gate state for the action list, page card, NEXT ACTION
+// and control lock. A case-study checkpoint with complete input is ready to
+// CLOSE, not ready to scan. This prevents contradictory customer guidance.
+function _trackerEvidenceGateState(p){
+  function yes(v){return v===true||v===1||v==='1'||v==='true'||v==='t'}
+  var waiting=yes(p&&p.monitoring_waiting_input),gate=String(p&&p.monitoring_gate_label||''),requestAt=Date.parse(p&&p.monitoring_request_at||0)||0,missing=[];
+  if(waiting){
+    if(!requestAt||(Date.parse(p.monitoring_gsc_pages_at||0)||0)<requestAt)missing.push('GSC Pages');
+    if(!requestAt||(Date.parse(p.monitoring_gsc_queries_at||0)||0)<requestAt)missing.push('GSC Queries');
+    if(p.monitoring_require_ai!==false&&p.monitoring_require_ai!=='f'){
+      var ai=p.ai_manual_evidence;if(typeof ai==='string'){try{ai=JSON.parse(ai)}catch(e){ai={}}}ai=ai||{};
+      var n=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){var x=ai[k];return x&&_aiEvidenceIsVerified(x)&&(Date.parse(x.updated_at||x.verified_at||0)||0)>=requestAt}).length;
+      if(n<5)missing.push('AI engines '+n+'/5');
+    }
+  }
+  var checkpoint=gate.indexOf('case_day_')===0;
+  return {waiting:waiting,gate:gate,checkpoint:checkpoint,missing:missing,ready:waiting&&missing.length===0,ready_to_complete:waiting&&checkpoint&&missing.length===0,ready_to_scan:waiting&&!checkpoint&&missing.length===0};
+}
+
 function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   function bool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
   function parse(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(v)}catch(e){return null}}
@@ -45694,7 +45709,7 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   // Old Brief contents are historical context only. We never infer "new work" from them before a fresh scan.
   // Existing pages deployed before v284 therefore show SCAN REQUIRED once; after that scan, the result is deterministic.
   var complete=bool(brief.implementation_complete)||(outstanding===0);
-  var waiting=bool(p.monitoring_waiting_input);
+  var evidenceGate=_trackerEvidenceGateState(p),waiting=evidenceGate.waiting;
   var htmlAt=p.html_pasted_at?new Date(p.html_pasted_at).getTime():0;
   var scanAt=lastCheckedRaw?new Date(lastCheckedRaw).getTime():0;
   var freshHtml=htmlAt>0&&(!scanAt||htmlAt>scanAt);
@@ -45705,9 +45720,11 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   }).length;
   var hasGsc=(p.gsc_clicks!=null||p.gsc_impressions!=null||p.gsc_position!=null||!!p.gsc_keyword);
   var evidence='Latest scan'+(hasGsc?' + GSC':'')+(aiChecked?(' + AI '+aiChecked+'/5'):'')+' reviewed.';
+  if(evidenceGate.ready_to_complete){
+    return {code:'CHECKPOINT_READY',label:'EVIDENCE READY · COMPLETE CHECKPOINT',detail:'All required fresh evidence has been received. Close this evidence checkpoint now. No HTML change, implementation scan or new Brief is required.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'Complete evidence checkpoint',buttonAction:'completeEvidenceCheckpoint('+p.id+',this)'};
+  }
   if(waiting){
-    var gate=String(p.monitoring_gate_label||'');
-    var waitMsg=gate.indexOf('case_day_')===0?'Fresh evidence is still required before this checkpoint can be closed.':'Required evidence is still missing. Complete the requested input before scanning again.';
+    var waitMsg=evidenceGate.checkpoint?'Still needed: '+evidenceGate.missing.join(', ')+'. Add the missing evidence before closing this checkpoint.':'Still needed: '+evidenceGate.missing.join(', ')+'. Complete the requested input before scanning again.';
     return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
   }
   if(implStatus==='manual_resolution_complete'&&currentRejected>0){
@@ -46233,18 +46250,11 @@ function renderPages() {
     var pendingBanner = (notScannedYet && !isDone)
       ? '<div style="display:flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(96,165,250,.06);border-bottom:1px solid rgba(96,165,250,.15);font-size:11px;color:#60a5fa;"><span style="animation:blink 2s infinite;display:inline-block">&#9679;</span> Not scanned yet \u2014 scan this URL, select it for Scan Selected, or use Scan Priorities</div>'
       : '';
-    var waitingForData = p.monitoring_waiting_input === true || p.monitoring_waiting_input === 't' || p.monitoring_waiting_input === 'true';
+    var _pageEvidenceGate = _trackerEvidenceGateState(p);
+    var waitingForData = _pageEvidenceGate.waiting;
     var waitingBanner = '';
     if(waitingForData){
-      var reqMs=Date.parse(p.monitoring_request_at||0)||0;
-      var missingParts=[];
-      if((Date.parse(p.monitoring_gsc_pages_at||0)||0)<reqMs)missingParts.push('GSC Pages');
-      if((Date.parse(p.monitoring_gsc_queries_at||0)||0)<reqMs)missingParts.push('GSC Queries');
-      if(p.monitoring_require_ai!==false&&p.monitoring_require_ai!=='f'){
-        var wa=p.ai_manual_evidence;if(typeof wa==='string'){try{wa=JSON.parse(wa);}catch(e){wa={};}}wa=wa||{};
-        var wn=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){var x=wa[k];return x&&_aiEvidenceIsVerified(x)&&(Date.parse(x.updated_at||x.verified_at||0)||0)>=reqMs;}).length;
-        if(wn<5)missingParts.push('AI engines '+wn+'/5');
-      }
+      var missingParts=_pageEvidenceGate.missing.slice();
       var _waitNeedsGsc=missingParts.indexOf('GSC Pages')>=0||missingParts.indexOf('GSC Queries')>=0;
       var _waitNeedsAi=missingParts.some(function(x){return String(x).indexOf('AI engines ')===0;});
       var _waitActions='<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:7px;">'
@@ -46253,7 +46263,7 @@ function renderPages() {
         +(!missingParts.length&&String(p.monitoring_gate_label||'').indexOf('case_day_')===0?'<button type="button" onclick="event.stopPropagation();completeEvidenceCheckpoint('+p.id+',this)" style="font-size:10px;font-weight:900;padding:5px 10px;border-radius:6px;background:#052e16;border:1px solid #22c55e;color:#bbf7d0;cursor:pointer;">&#x2713; Complete evidence checkpoint</button>':'')
         +(!missingParts.length&&String(p.monitoring_gate_label||'').indexOf('case_day_')!==0?'<button type="button" onclick="event.stopPropagation();checkPage('+p.id+')" style="font-size:10px;font-weight:900;padding:5px 10px;border-radius:6px;background:#052e16;border:1px solid #22c55e;color:#bbf7d0;cursor:pointer;">&#x21bb; Scan current live page</button>':'')
         +'</div>';
-      var _caseEvidenceOnly=String(p.monitoring_gate_label||'').indexOf('case_day_')===0;
+      var _caseEvidenceOnly=_pageEvidenceGate.checkpoint;
       waitingBanner='<div style="padding:9px 14px;background:#2a1f05;border-bottom:1px solid #a16207;color:#fde68a;font-size:11px;font-weight:700;line-height:1.55;"><span style="color:#fbbf24;">'+(_caseEvidenceOnly?'EVIDENCE CHECKPOINT':'WAITING FOR DATA')+'</span> \u2014 '+(missingParts.length?('still needed: '+missingParts.join(', ')):(_caseEvidenceOnly?'input complete; finish this evidence checkpoint — no HTML or implementation scan is required':'input complete; scan the current live page to continue'))+'. '+(_caseEvidenceOnly?'Content revision controls are locked for this checkpoint.':'No scheduled scan runs while this page is waiting.')+_waitActions+'</div>';
     }
 
@@ -61465,10 +61475,10 @@ function startCaseStudyMilestoneScheduler(){
             actionUrl=reportUrl;subject='Your 30-day case-study report is ready — '+(row.tracker_domain||row.domain);body='<h2>Day 30: report only</h2><p>The protected baseline has been compared with the latest evidence already saved in ContentScale.</p><p>No new GSC import, page scan, AI-engine check, HTML change or live verification is requested at this milestone.</p><p><a href="'+reportUrl+'" style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:11px 18px;border-radius:8px;font-weight:800">Open report to print, save as PDF or share</a></p>';
           }else if(day7Done&&!day14Done&&day14Age>=6){
             const phase=day14Age===6?'before':day14Age===7?'due':'after';type='case_day_14_reminder_'+phase;
-            if(!have.has(type)){eventData.gate_label='case_day_14';eventData.require_ai=true;subject=(phase==='before'?'Tomorrow: ':phase==='due'?'Today: ':'Still waiting: ')+'case-study GSC + five-engine review';body='<h2>Case-study evidence checkpoint</h2><p><strong>Page:</strong> '+_caseStudyEmailEsc(row.keyword||row.gsc_keyword||'Tracked page')+'<br><strong>URL:</strong> <a href="'+_caseStudyEmailEsc(row.url)+'">'+_caseStudyEmailEsc(row.url)+'</a><br><strong>Primary keyword:</strong> '+_caseStudyEmailEsc(row.primary_query||row.keyword||row.gsc_keyword||'—')+'</p><p>This is the '+(phase==='before'?'day-before':phase==='due'?'due-day':'day-after')+' reminder. The page remains <strong>Waiting for data</strong> and ContentScale will not scan it.</p><ol><li>Import fresh GSC Pages and Queries.</li><li>Record new evidence for all five AI engines.</li><li>When the Tracker shows the input is complete, manually scan this page.</li><li>Change HTML only if needed, publish, then Verify published live.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';}else type='';
+            if(!have.has(type)){eventData.gate_label='case_day_14';eventData.require_ai=true;subject=(phase==='before'?'Tomorrow: ':phase==='due'?'Today: ':'Still waiting: ')+'case-study GSC + five-engine review';body='<h2>Case-study evidence checkpoint</h2><p><strong>Page:</strong> '+_caseStudyEmailEsc(row.keyword||row.gsc_keyword||'Tracked page')+'<br><strong>URL:</strong> <a href="'+_caseStudyEmailEsc(row.url)+'">'+_caseStudyEmailEsc(row.url)+'</a><br><strong>Primary keyword:</strong> '+_caseStudyEmailEsc(row.primary_query||row.keyword||row.gsc_keyword||'—')+'</p><p>This is the '+(phase==='before'?'day-before':phase==='due'?'due-day':'day-after')+' reminder. The page remains <strong>Waiting for data</strong> until this evidence checkpoint is closed.</p><ol><li>Import fresh GSC Pages and Queries.</li><li>Record new evidence for all five AI engines.</li><li>When the Tracker shows <strong>Evidence ready</strong>, press <strong>Complete evidence checkpoint</strong>.</li><li>No HTML change, implementation scan or new Brief is required for this checkpoint.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';}else type='';
           }else if(!day7Done&&age>=6){
             const phase=age===6?'before':age===7?'due':'after';type='case_day_7_reminder_'+phase;
-            if(!have.has(type)){eventData.gate_label='case_day_7';eventData.require_ai=false;subject=(phase==='before'?'Tomorrow: ':phase==='due'?'Today: ':'Still waiting: ')+'case-study GSC review';body='<h2>Case-study GSC checkpoint</h2><p><strong>Page:</strong> '+_caseStudyEmailEsc(row.keyword||row.gsc_keyword||'Tracked page')+'<br><strong>URL:</strong> <a href="'+_caseStudyEmailEsc(row.url)+'">'+_caseStudyEmailEsc(row.url)+'</a><br><strong>Primary keyword:</strong> '+_caseStudyEmailEsc(row.primary_query||row.keyword||row.gsc_keyword||'—')+'</p><p>This is the '+(phase==='before'?'day-before':phase==='due'?'due-day':'day-after')+' reminder. The page remains <strong>Waiting for data</strong> and ContentScale will not scan it.</p><ol><li>Import fresh GSC Pages and Queries.</li><li>When the Tracker shows both are received, manually scan this page.</li><li>Change HTML only if needed, publish, then Verify published live.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';}else type='';
+            if(!have.has(type)){eventData.gate_label='case_day_7';eventData.require_ai=false;subject=(phase==='before'?'Tomorrow: ':phase==='due'?'Today: ':'Still waiting: ')+'case-study GSC review';body='<h2>Case-study GSC checkpoint</h2><p><strong>Page:</strong> '+_caseStudyEmailEsc(row.keyword||row.gsc_keyword||'Tracked page')+'<br><strong>URL:</strong> <a href="'+_caseStudyEmailEsc(row.url)+'">'+_caseStudyEmailEsc(row.url)+'</a><br><strong>Primary keyword:</strong> '+_caseStudyEmailEsc(row.primary_query||row.keyword||row.gsc_keyword||'—')+'</p><p>This is the '+(phase==='before'?'day-before':phase==='due'?'due-day':'day-after')+' reminder. The page remains <strong>Waiting for data</strong> until this evidence checkpoint is closed.</p><ol><li>Import fresh GSC Pages and Queries.</li><li>When the Tracker shows <strong>Evidence ready</strong>, press <strong>Complete evidence checkpoint</strong>.</li><li>No HTML change, implementation scan or new Brief is required for this checkpoint.</li></ol><p><a href="'+trackerUrl+'">Open Tracker</a></p>';}else type='';
           }
           if(type){
             if(eventData.gate_label){await _ensureMonitoringGateSchema();await pool.query(`UPDATE tracker_pages SET monitoring_waiting_input=TRUE,monitoring_request_at=CASE WHEN monitoring_waiting_input=TRUE AND monitoring_gate_label=$2 THEN monitoring_request_at ELSE NOW() END,monitoring_reminder_sent_at=NOW(),monitoring_require_ai=$3,monitoring_gate_label=$2,next_check_at=NULL WHERE id=$1`,[row.tracker_page_id,eventData.gate_label,eventData.require_ai]);}
