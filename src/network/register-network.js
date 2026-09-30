@@ -1,14 +1,16 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — SAFE ISOLATED MODULE v414
+// CONTENTSCALE NETWORK — QUALITY PACKAGE v417
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
 const dns = require('dns').promises;
 const net = require('net');
 const crypto = require('crypto');
+const multer = require('multer');
+const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 1;
+const NETWORK_SCHEMA_VERSION = 2;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -16,7 +18,8 @@ const NETWORK_TABLES = [
   'network_placements',
   'network_credit_wallets',
   'network_credit_transactions',
-  'network_verification_runs'
+  'network_verification_runs',
+  'network_publication_images'
 ];
 
 function envEnabled() {
@@ -223,6 +226,98 @@ function protectedSnippet(origin, placementId, token) {
   return `<div class="contentscale-network-placement" data-cs-placement="${Number(placementId)}"></div>\n<script async src="${base}/network/embed/${token}.js"></script>`;
 }
 
+function safeHexColor(v, fallback) {
+  const x = String(v || '').trim();
+  return /^#[0-9a-f]{6}$/i.test(x) ? x : fallback;
+}
+
+function getPublicationSettings(snapshot, defaults = {}) {
+  const s = snapshot && typeof snapshot === 'object' ? snapshot : {};
+  const p = s.publication_settings && typeof s.publication_settings === 'object' ? s.publication_settings : {};
+  return {
+    primary_color: safeHexColor(p.primary_color, '#111827'),
+    accent_color: safeHexColor(p.accent_color, '#2563eb'),
+    author_type: ['company','person','publisher'].includes(p.author_type) ? p.author_type : 'company',
+    author_name: cleanText(p.author_name || defaults.author_name || '', 200),
+    author_url: cleanText(p.author_url || defaults.author_url || '', 1000),
+    author_bio: cleanText(p.author_bio || defaults.author_bio || '', 1000),
+    author_job_title: cleanText(p.author_job_title || '', 160),
+    image_mode: ['off','prompt_only','auto_generate'].includes(p.image_mode) ? p.image_mode : 'prompt_only'
+  };
+}
+
+function scorePublication(row, images) {
+  const html = String(row.html || '');
+  const text = htmlText(html);
+  const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+  const h2 = (html.match(/<h2\b/gi) || []).length;
+  const h3 = (html.match(/<h3\b/gi) || []).length;
+  const links = Array.from(html.matchAll(/<a\b[^>]*href=["']([^"']+)["']/gi)).map(m=>m[1]);
+  const sourceLink = row.source_domain ? links.some(u=>String(u).includes(row.source_domain)) : !row.source_link_required;
+  const externalLinks = links.filter(u=>/^https?:\/\//i.test(u));
+  const metaTitleLen = String(row.meta_title || '').trim().length;
+  const metaDescLen = String(row.meta_description || '').trim().length;
+  const schema = row.schema_json && typeof row.schema_json === 'object' ? row.schema_json : {};
+  const imageRows = Array.isArray(images) ? images : [];
+  const uploaded = imageRows.filter(x=>x.status==='uploaded'||x.status==='approved');
+  const featured = uploaded.some(x=>x.image_role==='featured');
+  const altOk = uploaded.length > 0 && uploaded.every(x=>String(x.alt_text||'').trim().length>=8);
+  const settings = getPublicationSettings(row.generation_input_snapshot, {author_name:row.source_brand||row.brand_name||'',author_url:row.source_domain?`https://${row.source_domain}`:''});
+  const authorOk = !!settings.author_name;
+  let score = 0;
+  const parts = {};
+  parts.depth = words >= 900 ? 18 : words >= 650 ? 14 : words >= 400 ? 9 : 4; score += parts.depth;
+  parts.structure = h2 >= 3 ? 12 : h2 >= 2 ? 9 : h2 >= 1 ? 5 : 0; score += parts.structure;
+  parts.meta = (metaTitleLen>=35&&metaTitleLen<=60?7:3) + (metaDescLen>=110&&metaDescLen<=160?7:3); score += parts.meta;
+  parts.schema = (schema && Object.keys(schema).length ? 10 : 0); score += parts.schema;
+  parts.source = sourceLink ? 10 : 0; score += parts.source;
+  parts.links = externalLinks.length >= 2 ? 10 : externalLinks.length >= 1 ? 7 : 2; score += parts.links;
+  parts.images = featured ? (altOk ? 12 : 8) : uploaded.length ? 5 : 0; score += parts.images;
+  parts.author = authorOk ? 8 : 0; score += parts.author;
+  parts.mobile_css = 8; score += parts.mobile_css;
+  score = Math.max(0, Math.min(100, score));
+  return {score, status:score>=80?'passed':score>=65?'needs_review':'failed', words, h2, h3, external_link_count:externalLinks.length, source_link_ok:sourceLink, featured_image:featured, image_count:uploaded.length, author_ok:authorOk, parts};
+}
+
+function buildArticleSchema(row, images, settings) {
+  const uploaded = (images||[]).filter(x=>x.status==='uploaded'||x.status==='approved');
+  const imageUrls = uploaded.map(x=>`https://app.contentscale.site/network/media/${x.id}`);
+  const author = settings.author_type==='person'
+    ? {'@type':'Person',name:settings.author_name || undefined,url:settings.author_url || undefined,jobTitle:settings.author_job_title || undefined}
+    : {'@type':'Organization',name:settings.author_name || row.source_brand || row.brand_name || undefined,url:settings.author_url || (row.source_domain?`https://${row.source_domain}`:undefined)};
+  const base = row.schema_json && typeof row.schema_json === 'object' ? Object.assign({}, row.schema_json) : {};
+  const schema = Object.assign(base, {
+    '@context':'https://schema.org',
+    '@type': base['@type'] || 'Article',
+    headline: row.title || base.headline,
+    description: row.meta_description || base.description,
+    author,
+    publisher: {'@type':'Organization',name: row.publisher_brand || row.publisher_domain || 'Publisher'},
+    image: imageUrls.length ? imageUrls : base.image
+  });
+  Object.keys(schema).forEach(k=>schema[k]===undefined&&delete schema[k]);
+  return schema;
+}
+
+function networkEditionCss(settings) {
+  return `.cs-network-content{--cs-primary:${settings.primary_color};--cs-accent:${settings.accent_color};max-width:840px;margin:0 auto;font-family:inherit;font-size:inherit;line-height:1.72;color:inherit;overflow-wrap:anywhere}.cs-network-content *{box-sizing:border-box}.cs-network-content article{width:100%}.cs-network-content h1,.cs-network-content h2,.cs-network-content h3{color:var(--cs-primary);line-height:1.2;margin:1.45em 0 .55em}.cs-network-content h1{font-size:clamp(1.8rem,5vw,2.65rem);margin-top:.25em}.cs-network-content h2{font-size:clamp(1.35rem,3.5vw,1.85rem)}.cs-network-content h3{font-size:clamp(1.1rem,3vw,1.35rem)}.cs-network-content p,.cs-network-content li{line-height:1.72}.cs-network-content a{color:var(--cs-accent);text-decoration-thickness:.08em;text-underline-offset:.14em}.cs-network-content img{display:block;width:100%;height:auto;max-width:100%;border-radius:10px;margin:18px 0}.cs-network-content figure{margin:24px 0}.cs-network-content figcaption{font-size:.86em;opacity:.72;margin-top:7px}.cs-network-content blockquote{margin:24px 0;padding:12px 16px;border-left:4px solid var(--cs-accent);background:color-mix(in srgb,var(--cs-accent) 7%,transparent)}.cs-network-content ul,.cs-network-content ol{padding-left:1.25rem}.cs-network-author{margin-top:28px;padding:16px;border:1px solid color-mix(in srgb,var(--cs-primary) 20%,transparent);border-radius:12px}.cs-network-author strong{color:var(--cs-primary)}.contentscale-network-credit{margin-top:28px!important}@media(max-width:640px){.cs-network-content{max-width:100%;padding:0 2px}.cs-network-content h1{font-size:1.9rem}.cs-network-content h2{font-size:1.42rem}.cs-network-content p,.cs-network-content li{font-size:1rem}.cs-network-author{padding:13px}}`;
+}
+
+function renderEditionHtml(row, images) {
+  const settings = getPublicationSettings(row.generation_input_snapshot, {author_name:row.source_brand||row.brand_name||'',author_url:row.source_domain?`https://${row.source_domain}`:''});
+  const uploaded = (images||[]).filter(x=>x.status==='uploaded'||x.status==='approved').sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)||a.id-b.id);
+  const featured = uploaded.find(x=>x.image_role==='featured');
+  const supporting = uploaded.filter(x=>x.image_role!=='featured');
+  const fig = x=>`<figure class="cs-network-image"><img src="https://app.contentscale.site/network/media/${Number(x.id)}" alt="${String(x.alt_text||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}" loading="lazy">${x.caption?`<figcaption>${String(x.caption).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</figcaption>`:''}</figure>`;
+  let body = String(row.html||'');
+  if(featured) body = fig(featured) + body;
+  if(supporting.length) body += supporting.map(fig).join('');
+  if(settings.author_name) {
+    body += `<aside class="cs-network-author" data-cs-author="true"><strong>About the author</strong><div>${settings.author_url?`<a href="${settings.author_url}" target="_blank" rel="noopener">${settings.author_name}</a>`:settings.author_name}${settings.author_job_title?` · ${settings.author_job_title}`:''}</div>${settings.author_bio?`<p>${settings.author_bio}</p>`:''}</aside>`;
+  }
+  return {settings, html:`<div class="cs-network-content" data-cs-responsive="true"><style>${networkEditionCss(settings)}</style>${body}</div>`, schema:buildArticleSchema(row,uploaded,settings)};
+}
+
 async function ensureNetworkTables(pool) {
   if (!pool) throw new Error('Database unavailable');
   const client = await pool.connect();
@@ -349,6 +444,28 @@ async function ensureNetworkTables(pool) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_network_credit_transactions_wallet ON network_credit_transactions(wallet_id, created_at DESC)`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS network_publication_images (
+      id BIGSERIAL PRIMARY KEY,
+      publication_version_id BIGINT NOT NULL REFERENCES network_publication_versions(id) ON DELETE RESTRICT,
+      placement_id BIGINT NOT NULL REFERENCES network_placements(id) ON DELETE RESTRICT,
+      image_role TEXT NOT NULL DEFAULT 'supporting' CHECK (image_role IN ('featured','supporting')),
+      image_name TEXT NOT NULL,
+      prompt TEXT,
+      alt_text TEXT,
+      caption TEXT,
+      suggested_filename TEXT,
+      placement_hint TEXT,
+      mime_type TEXT,
+      original_filename TEXT,
+      image_data BYTEA,
+      byte_size INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'prompt_ready' CHECK (status IN ('prompt_ready','uploaded','approved')),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_network_publication_images_version ON network_publication_images(publication_version_id, sort_order, id)`);
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_verification_runs (
       id BIGSERIAL PRIMARY KEY,
@@ -501,11 +618,25 @@ function publishingPage() {
  const esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
  const api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt);const t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(r.status===401){auth.style.display='block';throw Error('Admin session expired');}if(!r.ok)throw Error(d.error||('Request failed: '+r.status));return d};
  function busy(btn,on,label){if(!btn)return;if(on){btn.dataset.old=btn.textContent;btn.disabled=true;btn.classList.add('busy');btn.textContent=label||'Working…'}else{btn.disabled=false;btn.classList.remove('busy');if(btn.dataset.old)btn.textContent=btn.dataset.old}}
- async function load(){const b=document.getElementById('rows');try{const d=await api('/api/network/admin/publishing');const a=d.items||[];if(!a.length){b.innerHTML='<tr><td colspan="6" class="tiny">No publisher commitments ready for publishing yet.</td></tr>';return;}b.innerHTML=a.map(x=>'<tr><td><strong>'+esc(x.title)+'</strong><div class="tiny">'+esc(x.pitch||'')+'</div><div class="tiny">Brand: '+esc(x.brand_name||'—')+'</div></td><td><strong>'+esc(x.publisher_brand||x.publisher_domain)+'</strong><div class="tiny">'+esc(x.publisher_domain)+' · '+esc(x.publisher_status)+'</div></td><td><span class="pill protected">'+esc(x.protection_mode)+'</span><div class="tiny">Required ContentScale attribution</div></td><td><span class="status '+esc(x.status)+'">'+esc(x.status)+'</span></td><td>'+(x.publication_version_id?'<strong>'+esc(x.edition_title||'Publisher Edition')+'</strong><div class="tiny">Generated '+esc(x.generated_at||'')+'<br>'+esc(x.quality_status||'')+'</div>':'<span class="tiny">Not generated yet</span>')+'</td><td><div class="actions">'+(x.status==='accepted'?'<button class="btn good" data-action="generate" data-id="'+x.id+'">Generate Publisher Edition</button>':'')+(x.status==='ready'&&x.delivery_available?'<button class="btn" data-action="copy" data-id="'+x.id+'">Copy protected snippet</button>':'')+(x.status==='generating'?'<button class="btn busy" disabled>Generating…</button>':'')+'</div></td></tr>').join('')}catch(e){b.innerHTML='<tr><td colspan="6" class="tiny">'+esc(e.message)+'</td></tr>'}}
+ async function load(){const b=document.getElementById('rows');try{const d=await api('/api/network/admin/publishing');const a=d.items||[];if(!a.length){b.innerHTML='<tr><td colspan="6" class="tiny">No publisher commitments ready for publishing yet.</td></tr>';return;}b.innerHTML=a.map(x=>'<tr><td><strong>'+esc(x.title)+'</strong><div class="tiny">'+esc(x.pitch||'')+'</div><div class="tiny">Brand: '+esc(x.brand_name||'—')+'</div></td><td><strong>'+esc(x.publisher_brand||x.publisher_domain)+'</strong><div class="tiny">'+esc(x.publisher_domain)+' · '+esc(x.publisher_status)+'</div></td><td><span class="pill protected">'+esc(x.protection_mode)+'</span><div class="tiny">Required ContentScale attribution</div></td><td><span class="status '+esc(x.status)+'">'+esc(x.status)+'</span></td><td>'+(x.publication_version_id?'<strong>'+esc(x.edition_title||'Publisher Edition')+'</strong><div class="tiny">Generated '+esc(x.generated_at||'')+'<br>'+esc(x.quality_status||'')+'</div>':'<span class="tiny">Not generated yet</span>')+'</td><td><div class="actions">'+(x.status==='accepted'?'<button class="btn good" data-action="generate" data-id="'+x.id+'">Generate Publisher Edition</button>':'')+(x.publication_version_id?'<a class="btn secondary" href="/network/publishing/'+x.id+'">Open package</a>':'')+(x.status==='ready'&&x.delivery_available?'<button class="btn" data-action="copy" data-id="'+x.id+'">Copy protected snippet</button>':'')+(x.status==='generating'?'<button class="btn busy" disabled>Generating…</button>':'')+'</div></td></tr>').join('')}catch(e){b.innerHTML='<tr><td colspan="6" class="tiny">'+esc(e.message)+'</td></tr>'}}
  document.getElementById('rows').addEventListener('click',async function(ev){const btn=ev.target.closest('button[data-action]');if(!btn)return;const id=Number(btn.dataset.id||0);if(!id)return;if(btn.dataset.action==='generate'){if(!confirm('Generate one unique Publisher Edition for this approved placement now?'))return;busy(btn,true,'Generating…');try{const d=await api('/api/network/admin/placements/'+id+'/generate',{method:'POST',body:'{}'});btn.textContent='✓ Ready';await load()}catch(e){alert(e.message);await load()}finally{busy(btn,false)}}else if(btn.dataset.action==='copy'){busy(btn,true,'Preparing snippet…');try{const d=await api('/api/network/admin/placements/'+id+'/delivery');await navigator.clipboard.writeText(d.snippet);btn.textContent='✓ Copied';setTimeout(()=>{btn.textContent='Copy protected snippet'},1600)}catch(e){alert(e.message)}finally{btn.disabled=false;btn.classList.remove('busy')}}});
  document.getElementById('refreshBtn').onclick=load;if(key)load();
 })();
 </script></main></body></html>`;
+}
+
+function publishingDetailPage(placementId) {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Publisher Edition Package | ContentScale</title>
+<style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#08101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1180px;margin:auto;padding:28px 18px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:18px;margin-top:16px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.field label{display:block;font-size:11px;color:#96a6c7;text-transform:uppercase;letter-spacing:.07em;margin-bottom:5px}.field input,.field select,.field textarea{width:100%;background:#091327;color:#eef4ff;border:1px solid #31456f;border-radius:10px;padding:10px;font:inherit}.field textarea{min-height:88px;resize:vertical}.btn{border:1px solid #3c5f99;background:#17376c;color:#fff;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700;text-decoration:none;display:inline-flex;align-items:center}.btn.secondary{background:#101b31}.btn.good{background:#14532d;border-color:#22c55e}.btn.bad{background:#5f1e28;border-color:#ef4444}.btn:disabled{opacity:.6;cursor:wait}.btn.busy:before{content:'';display:inline-block;width:12px;height:12px;margin-right:7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.tiny{font-size:12px;color:#91a1c2}.score{font-size:42px;font-weight:900}.ok{color:#8ff0b2}.warn{color:#ffd785}.badText{color:#ff9ca8}.imgrow{border:1px solid #273a61;border-radius:12px;padding:12px;margin-top:10px}.actions{display:flex;gap:8px;flex-wrap:wrap}.preview{background:white;color:#111;border-radius:12px;padding:18px;max-height:640px;overflow:auto}.metaBox{padding:10px;border:1px solid #2d426c;border-radius:10px;background:#091327;overflow-wrap:anywhere}.swatch{width:48px;height:38px;padding:3px!important}@media(max-width:760px){.grid,.grid3{grid-template-columns:1fr}.score{font-size:34px}main{padding:20px 12px 50px}}</style></head><body><main>
+<div class="top"><div><div class="tiny"><a href="/network">Network</a> / <a href="/network/publishing">Publishing</a> / Package</div><h1>Publisher Edition Package</h1></div><a class="btn secondary" href="/network/publishing">← Publishing</a></div>
+<div id="auth" class="card" style="display:none">Open <a href="/admin">/admin</a> and log in first.</div>
+<section class="card"><div class="grid3"><div><div class="tiny">ContentScore</div><div class="score" id="score">—</div><div class="tiny" id="gate"></div></div><div><div class="tiny">Publisher</div><strong id="publisher">—</strong><div class="tiny" id="source">—</div></div><div><div class="tiny">Publication</div><strong id="title">—</strong><div class="tiny" id="status">—</div></div></div></section>
+<section class="card"><h2>SEO package</h2><div class="grid"><div><div class="tiny">Meta title</div><div class="metaBox" id="metaTitle">—</div></div><div><div class="tiny">Meta description</div><div class="metaBox" id="metaDesc">—</div></div><div><div class="tiny">Suggested slug</div><div class="metaBox" id="slug">—</div></div><div><div class="tiny">Schema</div><div class="metaBox">Article JSON-LD is generated automatically from the edition, author and uploaded images.</div></div></div></section>
+<section class="card"><h2>Author & styling</h2><div class="grid3"><div class="field"><label>Author type</label><select id="authorType"><option value="company">Company</option><option value="person">Person</option><option value="publisher">Publisher</option></select></div><div class="field"><label>Author name</label><input id="authorName"></div><div class="field"><label>Job title (person only)</label><input id="authorJob"></div><div class="field"><label>Author URL</label><input id="authorUrl"></div><div class="field"><label>Primary color</label><input class="swatch" type="color" id="primary"></div><div class="field"><label>Accent color</label><input class="swatch" type="color" id="accent"></div><div class="field" style="grid-column:1/-1"><label>Short author bio</label><textarea id="authorBio"></textarea></div></div><div class="actions" style="margin-top:12px"><button class="btn" id="saveSettings">Save author & colors</button></div><div class="tiny" style="margin-top:8px">Responsive CSS is scoped to the ContentScale block. It does not style the publisher's whole website.</div></section>
+<section class="card"><div class="top"><div><h2>Images</h2><div class="tiny">Manual image workflow: give the image a name → ContentScale creates prompt + alt text + caption + filename → you create/upload the image.</div></div></div><div class="grid3"><div class="field"><label>Image name</label><input id="imageName" placeholder="Emergency roof inspection"></div><div class="field"><label>Role</label><select id="imageRole"><option value="featured">Featured</option><option value="supporting">Supporting</option></select></div><div style="display:flex;align-items:end"><button class="btn" id="prepareImage">Generate prompt & metadata</button></div></div><div id="images"></div></section>
+<section class="card"><div class="top"><div><h2>Delivery</h2><div class="tiny">Protected delivery is released only when ContentScore is at least 80.</div></div><button class="btn good" id="copySnippet">Copy protected snippet</button></div></section>
+<section class="card"><h2>Article preview</h2><div id="preview" class="preview">Loading…</div></section>
+<script>(function(){const pid=${Number(placementId)||0},key=localStorage.getItem('admin_id')||'',auth=document.getElementById('auth');if(!key)auth.style.display='block';const esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));const api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt),t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(!r.ok)throw Error(d.error||('Request failed '+r.status));return d};function busy(b,on,label){if(on){b.dataset.old=b.textContent;b.disabled=true;b.classList.add('busy');b.textContent=label}else{b.disabled=false;b.classList.remove('busy');b.textContent=b.dataset.old||b.textContent}}function imgRow(x){return '<div class="imgrow"><div class="top"><div><strong>'+esc(x.image_role)+' · '+esc(x.image_name)+'</strong><div class="tiny">'+esc(x.status)+' · '+esc(x.placement_hint||'')+'</div></div><button class="btn bad" data-del="'+x.id+'">Delete</button></div><div class="grid" style="margin-top:10px"><div><div class="tiny">Prompt</div><div class="metaBox">'+esc(x.prompt||'')+'</div><button class="btn secondary" data-copy="'+x.id+'" style="margin-top:6px">Copy prompt</button></div><div><div class="tiny">Alt text</div><div class="metaBox">'+esc(x.alt_text||'')+'</div><div class="tiny" style="margin-top:8px">Caption</div><div class="metaBox">'+esc(x.caption||'')+'</div><div class="tiny" style="margin-top:8px">Filename: '+esc(x.suggested_filename||'')+'</div></div></div><form data-upload="'+x.id+'" style="margin-top:10px"><input type="file" name="image" accept="image/jpeg,image/png,image/webp" required> <button class="btn">Upload image</button></form></div>'}async function load(){const d=await api('/api/network/admin/publications/'+pid+'/package');const p=d.publication,q=d.quality,s=d.settings;document.getElementById('score').textContent=q.score+'/100';document.getElementById('score').className='score '+(q.score>=80?'ok':q.score>=65?'warn':'badText');document.getElementById('gate').textContent=q.score>=80?'Quality Gate passed ✓':'Needs improvement before delivery';document.getElementById('publisher').textContent=p.publisher_brand||p.publisher_domain;document.getElementById('source').textContent='Source: '+(p.source_brand||p.source_domain||'—');document.getElementById('title').textContent=p.title;document.getElementById('status').textContent=p.quality_status+' · '+p.status;document.getElementById('metaTitle').textContent=p.meta_title||'—';document.getElementById('metaDesc').textContent=p.meta_description||'—';document.getElementById('slug').textContent=p.suggested_slug||'—';document.getElementById('authorType').value=s.author_type;document.getElementById('authorName').value=s.author_name||'';document.getElementById('authorJob').value=s.author_job_title||'';document.getElementById('authorUrl').value=s.author_url||'';document.getElementById('authorBio').value=s.author_bio||'';document.getElementById('primary').value=s.primary_color;document.getElementById('accent').value=s.accent_color;document.getElementById('images').innerHTML=(d.images||[]).map(imgRow).join('')||'<div class="tiny" style="margin-top:10px">No images prepared yet.</div>';document.getElementById('preview').innerHTML=p.html||'<p>No HTML.</p>';document.getElementById('copySnippet').disabled=!d.quality_gate.delivery_ready}document.getElementById('saveSettings').onclick=async function(){const b=this;busy(b,true,'Saving…');try{await api('/api/network/admin/publications/'+pid+'/settings',{method:'PATCH',body:JSON.stringify({author_type:authorType.value,author_name:authorName.value,author_job_title:authorJob.value,author_url:authorUrl.value,author_bio:authorBio.value,primary_color:primary.value,accent_color:accent.value,image_mode:'prompt_only'})});b.textContent='✓ Saved';await load()}catch(e){alert(e.message)}finally{busy(b,false)}};document.getElementById('prepareImage').onclick=async function(){if(!imageName.value.trim())return alert('Enter an image name first.');const b=this;busy(b,true,'Generating metadata…');try{await api('/api/network/admin/publications/'+pid+'/images/prepare',{method:'POST',body:JSON.stringify({image_name:imageName.value,image_role:imageRole.value})});imageName.value='';b.textContent='✓ Ready';await load()}catch(e){alert(e.message)}finally{busy(b,false)}};document.getElementById('images').addEventListener('click',async e=>{const c=e.target.closest('[data-copy]');if(c){const row=c.closest('.imgrow'),box=row.querySelector('.metaBox');await navigator.clipboard.writeText(box.textContent);c.textContent='✓ Copied';setTimeout(()=>c.textContent='Copy prompt',1200);return}const d=e.target.closest('[data-del]');if(d&&confirm('Delete this image slot?')){busy(d,true,'Deleting…');try{await api('/api/network/admin/publications/'+pid+'/images/'+d.dataset.del,{method:'DELETE'});await load()}catch(err){alert(err.message)}finally{busy(d,false)}}});document.getElementById('images').addEventListener('submit',async e=>{const f=e.target.closest('form[data-upload]');if(!f)return;e.preventDefault();const b=f.querySelector('button'),fd=new FormData(f);busy(b,true,'Uploading…');try{const r=await fetch('/api/network/admin/publications/'+pid+'/images/'+f.dataset.upload+'/upload',{method:'POST',headers:{'x-admin-key':key},body:fd}),t=await r.text();let d={};try{d=JSON.parse(t)}catch(_e){}if(!r.ok)throw Error(d.error||'Upload failed');b.textContent='✓ Uploaded';await load()}catch(err){alert(err.message)}finally{busy(b,false)}});document.getElementById('copySnippet').onclick=async function(){const b=this;busy(b,true,'Preparing…');try{const d=await api('/api/network/admin/placements/'+pid+'/delivery');await navigator.clipboard.writeText(d.snippet);b.textContent='✓ Copied'}catch(e){alert(e.message);await load()}finally{busy(b,false)}};if(key)load()})();</script></main></body></html>`;
 }
 
 function placementsPage() {
@@ -719,13 +850,14 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
       const metaTitle=cleanText(d.meta_title||title,60),metaDescription=cleanText(d.meta_description||'',160),slug=slugifyNetwork(d.suggested_slug||title);
       const schema=(d.schema_json&&typeof d.schema_json==='object')?d.schema_json:{};
       const token=crypto.randomBytes(32).toString('hex');
-      const generationSnapshot={network_kind:'publisher_edition',delivery_token:token,protection_mode:x.publisher_status==='trusted'?'monitored_html':'protected_delivery',content_scale_marker_required:true,source_link:ownerUrl,publisher_domain:x.publisher_domain,language,country,generated_by_admin_id:req.admin&&req.admin.id||null};
+      const defaultAuthorName=cleanText(x.owner_brand||x.brand_name||'',200);
+      const generationSnapshot={network_kind:'publisher_edition',delivery_token:token,protection_mode:x.publisher_status==='trusted'?'monitored_html':'protected_delivery',content_scale_marker_required:true,source_link:ownerUrl,publisher_domain:x.publisher_domain,language,country,generated_by_admin_id:req.admin&&req.admin.id||null,publication_settings:{primary_color:'#111827',accent_color:'#2563eb',author_type:'company',author_name:defaultAuthorName,author_url:ownerUrl,author_bio:'',author_job_title:'',image_mode:'prompt_only'}};
       const client=await pool.connect();
       try{
         await client.query('BEGIN');
         const vr=await client.query(`INSERT INTO network_publication_versions (placement_id,content_id,publisher_website_id,version_no,title,html,plain_text,meta_title,meta_description,suggested_slug,schema_json,generation_input_snapshot,generation_model,quality_status,generated_at,created_at,updated_at)
-          VALUES ($1,$2,$3,1,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,'passed',NOW(),NOW(),NOW())
-          ON CONFLICT (placement_id) DO UPDATE SET title=EXCLUDED.title,html=EXCLUDED.html,plain_text=EXCLUDED.plain_text,meta_title=EXCLUDED.meta_title,meta_description=EXCLUDED.meta_description,suggested_slug=EXCLUDED.suggested_slug,schema_json=EXCLUDED.schema_json,generation_input_snapshot=EXCLUDED.generation_input_snapshot,generation_model=EXCLUDED.generation_model,quality_status='passed',generated_at=NOW(),updated_at=NOW()
+          VALUES ($1,$2,$3,1,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,'needs_review',NOW(),NOW(),NOW())
+          ON CONFLICT (placement_id) DO UPDATE SET title=EXCLUDED.title,html=EXCLUDED.html,plain_text=EXCLUDED.plain_text,meta_title=EXCLUDED.meta_title,meta_description=EXCLUDED.meta_description,suggested_slug=EXCLUDED.suggested_slug,schema_json=EXCLUDED.schema_json,generation_input_snapshot=EXCLUDED.generation_input_snapshot,generation_model=EXCLUDED.generation_model,quality_status='needs_review',generated_at=NOW(),updated_at=NOW()
           RETURNING id,title,meta_title,meta_description,suggested_slug,quality_status,generated_at`,[id,x.content_id,x.publisher_website_id,title,html,plain,metaTitle,metaDescription,slug,JSON.stringify(schema),JSON.stringify(generationSnapshot),ai.model]);
         await client.query(`UPDATE network_placements SET status='ready',updated_at=NOW() WHERE id=$1`,[id]);
         await client.query(`UPDATE network_content SET source_snapshot=jsonb_set(COALESCE(source_snapshot,'{}'::jsonb),'{full_article_generated}','true'::jsonb,true),distribution_status='edition_ready',updated_at=NOW() WHERE id=$1`,[x.content_id]);
@@ -739,31 +871,111 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
     }
   }));
 
+  // PUBLICATION PACKAGE — author, style, image prompts/uploads, schema and ContentScore.
+  app.get('/api/network/admin/publications/:placementId/package', verifyAdmin, wrap(async (req,res)=>{
+    const id=Number(req.params.placementId);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+    const r=await pool.query(`SELECT p.id AS placement_id,p.status,p.source_link_required,p.brand_mention_required,
+      c.brand_name,c.title AS opportunity_title,c.primary_niche,c.source_snapshot,
+      w.domain AS publisher_domain,w.brand_name AS publisher_brand,w.status AS publisher_status,
+      ow.domain AS source_domain,ow.brand_name AS source_brand,
+      pv.* FROM network_placements p JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id
+      JOIN network_publication_versions pv ON pv.placement_id=p.id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[id]);
+    const row=r.rows[0];if(!row)return res.status(404).json({success:false,error:'Publisher Edition not found'});
+    const ir=await pool.query(`SELECT id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,sort_order,created_at,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[row.id]);
+    const images=ir.rows;
+    const quality=scorePublication(row,images);
+    const settings=getPublicationSettings(row.generation_input_snapshot,{author_name:row.source_brand||row.brand_name||'',author_url:row.source_domain?`https://${row.source_domain}`:''});
+    await pool.query(`UPDATE network_publication_versions SET quality_status=$2,updated_at=NOW() WHERE id=$1`,[row.id,quality.status]).catch(()=>{});
+    res.json({success:true,publication:{placement_id:id,publication_version_id:row.id,title:row.title,html:row.html,plain_text:row.plain_text,meta_title:row.meta_title,meta_description:row.meta_description,suggested_slug:row.suggested_slug,schema_json:buildArticleSchema(row,images,settings),publisher_domain:row.publisher_domain,publisher_brand:row.publisher_brand,source_domain:row.source_domain,source_brand:row.source_brand,brand_name:row.brand_name,status:row.status,quality_status:quality.status},settings,images,quality,quality_gate:{minimum_score:80,delivery_ready:quality.score>=80},rule:'Manual image upload + image name. ContentScale creates prompt/alt/caption/filename/placement metadata automatically.'});
+  }));
+
+  app.patch('/api/network/admin/publications/:placementId/settings', verifyAdmin, wrap(async (req,res)=>{
+    const id=Number(req.params.placementId);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+    const r=await pool.query(`SELECT pv.id,pv.generation_input_snapshot,c.brand_name,ow.domain AS source_domain,ow.brand_name AS source_brand FROM network_publication_versions pv JOIN network_placements p ON p.id=pv.placement_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE pv.placement_id=$1 LIMIT 1`,[id]);
+    const x=r.rows[0];if(!x)return res.status(404).json({success:false,error:'Publisher Edition not found'});
+    const current=x.generation_input_snapshot&&typeof x.generation_input_snapshot==='object'?x.generation_input_snapshot:{};
+    const old=getPublicationSettings(current,{author_name:x.source_brand||x.brand_name||'',author_url:x.source_domain?`https://${x.source_domain}`:''});
+    const incoming=req.body||{};
+    const settings={
+      primary_color:safeHexColor(incoming.primary_color,old.primary_color),accent_color:safeHexColor(incoming.accent_color,old.accent_color),
+      author_type:['company','person','publisher'].includes(incoming.author_type)?incoming.author_type:old.author_type,
+      author_name:cleanText(incoming.author_name!=null?incoming.author_name:old.author_name,200),author_url:cleanText(incoming.author_url!=null?incoming.author_url:old.author_url,1000),
+      author_bio:cleanText(incoming.author_bio!=null?incoming.author_bio:old.author_bio,1000),author_job_title:cleanText(incoming.author_job_title!=null?incoming.author_job_title:old.author_job_title,160),
+      image_mode:['off','prompt_only','auto_generate'].includes(incoming.image_mode)?incoming.image_mode:old.image_mode
+    };
+    const next=Object.assign({},current,{publication_settings:settings});
+    await pool.query(`UPDATE network_publication_versions SET generation_input_snapshot=$2::jsonb,updated_at=NOW() WHERE id=$1`,[x.id,JSON.stringify(next)]);
+    res.json({success:true,settings});
+  }));
+
+  app.post('/api/network/admin/publications/:placementId/images/prepare', verifyAdmin, wrap(async (req,res)=>{
+    const id=Number(req.params.placementId),name=cleanText(req.body?.image_name,220),role=req.body?.image_role==='featured'?'featured':'supporting';
+    if(!id||!name)return res.status(400).json({success:false,error:'Placement and image name are required'});
+    const r=await pool.query(`SELECT pv.id AS publication_version_id,pv.title,pv.meta_description,c.primary_niche,c.brand_name,c.source_snapshot,w.domain AS publisher_domain FROM network_publication_versions pv JOIN network_placements p ON p.id=pv.placement_id JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id WHERE p.id=$1 LIMIT 1`,[id]);
+    const x=r.rows[0];if(!x)return res.status(404).json({success:false,error:'Publisher Edition not found'});
+    const lang=cleanText(x.source_snapshot?.language||'en-US',30),country=cleanText(x.source_snapshot?.country||'',120);
+    const prompt=`Create metadata for ONE editorial article image. Return JSON only with keys prompt, alt_text, caption, suggested_filename, placement_hint. Image name/topic: ${name}. Role: ${role}. Article: ${x.title}. Brand: ${x.brand_name||''}. Niche: ${x.primary_niche||''}. Publisher: ${x.publisher_domain}. Language: ${lang}. Market: ${country||'not specified'}. The image prompt must be practical, realistic, publication-grade, avoid text/logos/watermarks, and must not invent factual claims. Alt text should describe what is visible, not keyword-stuff. Filename must be lowercase hyphenated with a suitable image extension suggestion. Placement hint must be concise.`;
+    const ai=await callNetworkGemini(prompt),d=ai.parsed||{};
+    const meta={prompt:cleanText(d.prompt,3000),alt_text:cleanText(d.alt_text,500),caption:cleanText(d.caption,700),suggested_filename:cleanText(d.suggested_filename||slugifyNetwork(name)+'.jpg',220),placement_hint:cleanText(d.placement_hint||(role==='featured'?'Before the H1/article introduction':'Near the most relevant section'),300)};
+    const orderR=await pool.query('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM network_publication_images WHERE publication_version_id=$1',[x.publication_version_id]);
+    const ir=await pool.query(`INSERT INTO network_publication_images (publication_version_id,placement_id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,status,sort_order,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'prompt_ready',$10,NOW(),NOW()) RETURNING id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,status,sort_order`,[x.publication_version_id,id,role,name,meta.prompt,meta.alt_text,meta.caption,meta.suggested_filename,meta.placement_hint,Number(orderR.rows[0]?.n||0)]);
+    res.status(201).json({success:true,image:ir.rows[0],model:ai.model});
+  }));
+
+  app.post('/api/network/admin/publications/:placementId/images/:imageId/upload', verifyAdmin, networkImageUpload.single('image'), wrap(async (req,res)=>{
+    const placementId=Number(req.params.placementId),imageId=Number(req.params.imageId);if(!placementId||!imageId)return res.status(400).json({success:false,error:'Invalid image'});
+    if(!req.file)return res.status(400).json({success:false,error:'Choose an image file'});
+    const mime=String(req.file.mimetype||'').toLowerCase();if(!['image/jpeg','image/png','image/webp'].includes(mime))return res.status(415).json({success:false,error:'Only JPG, PNG or WebP images are supported'});
+    const r=await pool.query(`UPDATE network_publication_images SET mime_type=$3,original_filename=$4,image_data=$5,byte_size=$6,status='uploaded',updated_at=NOW() WHERE id=$1 AND placement_id=$2 RETURNING id,image_role,image_name,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status`,[imageId,placementId,mime,cleanText(req.file.originalname,255),req.file.buffer,req.file.size]);
+    if(!r.rows[0])return res.status(404).json({success:false,error:'Image slot not found'});res.json({success:true,image:r.rows[0]});
+  }));
+
+  app.delete('/api/network/admin/publications/:placementId/images/:imageId', verifyAdmin, wrap(async (req,res)=>{
+    const placementId=Number(req.params.placementId),imageId=Number(req.params.imageId);if(!placementId||!imageId)return res.status(400).json({success:false,error:'Invalid image'});
+    const r=await pool.query('DELETE FROM network_publication_images WHERE id=$1 AND placement_id=$2 RETURNING id',[imageId,placementId]);if(!r.rows[0])return res.status(404).json({success:false,error:'Image not found'});res.json({success:true,deleted_id:imageId});
+  }));
+
+  app.get('/network/media/:id', wrap(async (req,res)=>{
+    const id=Number(req.params.id);if(!id)return res.status(404).end();
+    const r=await pool.query(`SELECT mime_type,image_data,suggested_filename,status FROM network_publication_images WHERE id=$1 LIMIT 1`,[id]);const x=r.rows[0];if(!x||!x.image_data||!['uploaded','approved'].includes(x.status))return res.status(404).end();
+    res.set('Cache-Control','public, max-age=86400');res.set('X-Content-Type-Options','nosniff');res.type(x.mime_type||'application/octet-stream');res.send(x.image_data);
+  }));
+
   app.get('/api/network/admin/placements/:id/delivery', verifyAdmin, wrap(async (req,res)=>{
     const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
-    const r=await pool.query(`SELECT p.status,w.status AS publisher_status,pv.id,pv.title,pv.meta_title,pv.meta_description,pv.suggested_slug,pv.generation_input_snapshot,pv.generated_at
-      FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_publication_versions pv ON pv.placement_id=p.id WHERE p.id=$1 LIMIT 1`,[id]);
+    const r=await pool.query(`SELECT p.status,p.source_link_required,w.status AS publisher_status,w.domain AS publisher_domain,w.brand_name AS publisher_brand,c.brand_name,ow.domain AS source_domain,ow.brand_name AS source_brand,pv.*
+      FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id JOIN network_publication_versions pv ON pv.placement_id=p.id WHERE p.id=$1 LIMIT 1`,[id]);
     const x=r.rows[0];if(!x)return res.status(404).json({success:false,error:'Generated Publisher Edition not found'});
     if(!['ready','submitted','verifying','needs_review','verified'].includes(x.status))return res.status(409).json({success:false,error:'This placement is not available for delivery'});
+    const ir=await pool.query(`SELECT id,image_role,image_name,alt_text,caption,suggested_filename,placement_hint,mime_type,byte_size,status,sort_order FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[x.id]);
+    const quality=scorePublication(x,ir.rows);
+    if(quality.score<80)return res.status(409).json({success:false,error:'Quality Gate not passed yet. Complete the publication package before copying the delivery snippet.',content_score:quality.score,minimum_score:80});
     const token=x.generation_input_snapshot&&x.generation_input_snapshot.delivery_token;if(!token)return res.status(409).json({success:false,error:'Protected delivery token missing'});
-    res.json({success:true,placement_id:id,status:x.status,protection_mode:x.publisher_status==='trusted'?'monitored_html':'protected_delivery',snippet:protectedSnippet('https://app.contentscale.site',id,token),publication:{title:x.title,meta_title:x.meta_title,meta_description:x.meta_description,suggested_slug:x.suggested_slug,generated_at:x.generated_at},rule:'Keep the ContentScale snippet intact. Attribution is delivered by ContentScale and remains required.'});
+    res.json({success:true,placement_id:id,status:x.status,content_score:quality.score,protection_mode:x.publisher_status==='trusted'?'monitored_html':'protected_delivery',snippet:protectedSnippet('https://app.contentscale.site',id,token),publication:{title:x.title,meta_title:x.meta_title,meta_description:x.meta_description,suggested_slug:x.suggested_slug,generated_at:x.generated_at},rule:'Keep the ContentScale snippet intact. Attribution is delivered by ContentScale and remains required.'});
   }));
 
   // Public controlled content endpoint. Removing the snippet removes the content; revoked placements stop serving it.
   app.get('/network/embed/:token.js', wrap(async (req,res)=>{
     if(!envEnabled())return res.status(404).type('text/javascript').send('/* ContentScale Network disabled */');
     const token=cleanText(req.params.token,128);if(!/^[a-f0-9]{64}$/i.test(token))return res.status(404).type('text/javascript').send('/* Invalid placement */');
-    const r=await pool.query(`SELECT p.id AS placement_id,p.status,pv.html,pv.title
-      FROM network_publication_versions pv JOIN network_placements p ON p.id=pv.placement_id
+    const r=await pool.query(`SELECT p.id AS placement_id,p.status,p.source_link_required,c.brand_name,w.domain AS publisher_domain,w.brand_name AS publisher_brand,ow.domain AS source_domain,ow.brand_name AS source_brand,pv.*
+      FROM network_publication_versions pv JOIN network_placements p ON p.id=pv.placement_id JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
       WHERE pv.generation_input_snapshot->>'delivery_token'=$1 LIMIT 1`,[token]);
     const x=r.rows[0];
     if(!x||!['ready','submitted','verifying','needs_review','verified'].includes(x.status))return res.status(410).type('text/javascript').send('/* ContentScale placement unavailable */');
-    res.set('Cache-Control','no-store, max-age=0');
-    res.set('X-Content-Type-Options','nosniff');
-    const payload=JSON.stringify(String(x.html||''));
-    const js=`(()=>{const s=document.currentScript;if(!s)return;let c=s.previousElementSibling;if(!c||!c.classList||!c.classList.contains('contentscale-network-placement')){c=document.createElement('div');c.className='contentscale-network-placement';s.parentNode.insertBefore(c,s)}c.setAttribute('data-cs-placement','${Number(x.placement_id)}');c.innerHTML=${payload};})();`;
+    const ir=await pool.query(`SELECT id,image_role,image_name,alt_text,caption,suggested_filename,placement_hint,mime_type,byte_size,status,sort_order FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[x.id]);
+    const quality=scorePublication(x,ir.rows);if(quality.score<80)return res.status(409).type('text/javascript').send(`/* ContentScale Quality Gate ${quality.score}/100 — placement not released */`);
+    const rendered=renderEditionHtml(x,ir.rows);
+    res.set('Cache-Control','no-store, max-age=0');res.set('X-Content-Type-Options','nosniff');
+    const payload=JSON.stringify(String(rendered.html||'')),schemaPayload=JSON.stringify(JSON.stringify(rendered.schema||{}));
+    const js=`(()=>{const s=document.currentScript;if(!s)return;let c=s.previousElementSibling;if(!c||!c.classList||!c.classList.contains('contentscale-network-placement')){c=document.createElement('div');c.className='contentscale-network-placement';s.parentNode.insertBefore(c,s)}c.setAttribute('data-cs-placement','${Number(x.placement_id)}');c.setAttribute('data-cs-score','${Number(quality.score)}');c.innerHTML=${payload};const sid='cs-schema-${Number(x.placement_id)}';if(!document.getElementById(sid)){const j=document.createElement('script');j.type='application/ld+json';j.id=sid;j.text=${schemaPayload};document.head.appendChild(j)}})();`;
     res.type('text/javascript').send(js);
   }));
+
+  app.get('/network/publishing/:placementId', (req,res)=>{
+    if(!envEnabled())return res.status(404).send('Network is not enabled.');
+    res.set('Cache-Control','no-store');res.type('html').send(publishingDetailPage(req.params.placementId));
+  });
 
   app.get('/network/publishing', (req,res)=>{
     if(!envEnabled())return res.status(404).send('Network is not enabled.');
