@@ -6,6 +6,7 @@
 
 const dns = require('dns').promises;
 const net = require('net');
+const crypto = require('crypto');
 
 const NETWORK_SCHEMA_VERSION = 1;
 const NETWORK_TABLES = [
@@ -155,6 +156,71 @@ function analyzeWebsiteHtml({ status, html, finalUrl, contentType }) {
     outcome: !basicPass ? 'rejected' : (needsReview ? 'needs_review' : 'passed'),
     checked_at: new Date().toISOString()
   };
+}
+
+
+
+function slugifyNetwork(v) {
+  return cleanText(v, 180).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,120) || 'publisher-edition';
+}
+
+function stripCodeFence(v) {
+  let s = String(v || '').trim();
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+  return s;
+}
+
+function sanitizePublisherHtml(html) {
+  let out = String(html || '');
+  out = out.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<(?:iframe|object|embed|form|input|button|textarea|select|meta|link)\b[^>]*>[\s\S]*?<\/(?:iframe|object|embed|form|textarea|select)>/gi, '')
+    .replace(/<(?:iframe|object|embed|form|input|button|textarea|select|meta|link)\b[^>]*\/?\s*>/gi, '')
+    .replace(/\son[a-z]+\s*=\s*(["']).*?\1/gi, '')
+    .replace(/\son[a-z]+\s*=\s*[^\s>]+/gi, '')
+    .replace(/(href|src)\s*=\s*(["'])\s*javascript:[\s\S]*?\2/gi, '$1="#"');
+  out = out.replace(/<!doctype[^>]*>/gi,'').replace(/<\/?(?:html|head|body)\b[^>]*>/gi,'').trim();
+  return out;
+}
+
+function ensureContentScaleAttribution(html, placementId) {
+  const clean = sanitizePublisherHtml(html);
+  const marker = `<footer class="contentscale-network-credit" data-contentscale-credit="required" style="margin-top:28px;padding-top:14px;border-top:1px solid rgba(127,127,127,.28);font-size:12px;line-height:1.5;opacity:.82">Created with <a href="https://app.contentscale.site/network" target="_blank" rel="noopener">ContentScale Network &amp; Distribution</a><span data-contentscale-placement="${Number(placementId)}"></span></footer>`;
+  if (/data-contentscale-credit=["']required["']/i.test(clean)) return clean;
+  return clean + marker;
+}
+
+async function callNetworkGemini(prompt) {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('GEMINI_API_KEY is not configured');
+  const model = cleanText(process.env.GEMINI_NETWORK_MODEL || process.env.GEMINI_MODEL || 'gemini-3.5-flash', 100);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 90000);
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{temperature:0.55,topP:0.92,maxOutputTokens:20000,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}
+      })
+    });
+    if (!r.ok) throw new Error(`Gemini API error ${r.status}: ${cleanText(await r.text(), 800)}`);
+    const data = await r.json();
+    const text = data?.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('') || '';
+    if (!text) throw new Error('Gemini returned no publication content');
+    let parsed;
+    try { parsed = JSON.parse(stripCodeFence(text)); }
+    catch (_) { throw new Error('Gemini returned invalid publication JSON'); }
+    return { parsed, model };
+  } finally { clearTimeout(timer); }
+}
+
+function protectedSnippet(origin, placementId, token) {
+  const base = String(origin || 'https://app.contentscale.site').replace(/\/$/,'');
+  return `<div class="contentscale-network-placement" data-cs-placement="${Number(placementId)}"></div>\n<script async src="${base}/network/embed/${token}.js"></script>`;
 }
 
 async function ensureNetworkTables(pool) {
@@ -417,6 +483,31 @@ function opportunitiesPage() {
 }
 
 
+
+function publishingPage() {
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network Publishing | ContentScale</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#08101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1260px;margin:auto;padding:34px 22px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.crumb{font-size:13px;color:#91a1c2}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin-top:18px}.notice{border:1px solid #315c88;background:#0b2238;border-radius:14px;padding:15px;color:#cdeaff;line-height:1.5}.btn{border:1px solid #3c5f99;background:#17376c;color:white;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700}.btn.secondary{background:#101b31}.btn.good{background:#14532d;border-color:#22c55e}.btn:disabled{opacity:.65;cursor:wait}.btn.busy:before{content:'';display:inline-block;width:12px;height:12px;margin-right:7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-2px;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.status{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:11px;border:1px solid #3b4f77;background:#142039}.status.ready,.status.verified{border-color:#2b8f55;color:#8ff0b2}.status.generating{border-color:#a87b20;color:#ffd785}.pill{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:11px;border:1px solid #4d6790;background:#111e34}.pill.protected{border-color:#b47d24;color:#ffd791;background:#2b1d08}.tiny{font-size:12px;color:#91a1c2}.tableWrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1080px}th,td{text-align:left;padding:11px;border-bottom:1px solid #223150;vertical-align:top}th{font-size:11px;color:#8fa2c5;text-transform:uppercase;letter-spacing:.07em}.actions{display:flex;gap:7px;flex-wrap:wrap}.auth{padding:14px;border:1px solid #704b1d;background:#2a1b0b;border-radius:12px;color:#ffd89a;margin-top:16px}
+</style></head><body><main>
+<div class="top"><div><div class="crumb"><a href="/network">Network</a> / Publishing</div><h1>Publisher Editions</h1><div class="tiny">A Publisher Edition is generated only after hard interest and an approved target website.</div></div><a class="btn secondary" href="/network">← Network</a></div>
+<div id="auth" class="auth" style="display:none">No valid admin session found. Open <a href="/admin">/admin</a>, log in, then return here.</div>
+<section class="card"><div class="notice"><strong>Protected delivery first.</strong><br>Approved publishers do not receive loose full HTML. ContentScale creates one edition for one placement and serves it through a placement-specific snippet with required attribution. Trusted publishers remain monitored too.</div></section>
+<section class="card"><div class="top"><h2>Publishing queue</h2><button class="btn secondary" id="refreshBtn">Refresh</button></div><div class="tableWrap"><table><thead><tr><th>Opportunity</th><th>Publisher</th><th>Protection</th><th>Status</th><th>Edition</th><th>Action</th></tr></thead><tbody id="rows"><tr><td colspan="6" class="tiny">Loading…</td></tr></tbody></table></div></section>
+<script>
+(function(){
+ const key=localStorage.getItem('admin_id')||'',auth=document.getElementById('auth');if(!key)auth.style.display='block';
+ const esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+ const api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt);const t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(r.status===401){auth.style.display='block';throw Error('Admin session expired');}if(!r.ok)throw Error(d.error||('Request failed: '+r.status));return d};
+ function busy(btn,on,label){if(!btn)return;if(on){btn.dataset.old=btn.textContent;btn.disabled=true;btn.classList.add('busy');btn.textContent=label||'Working…'}else{btn.disabled=false;btn.classList.remove('busy');if(btn.dataset.old)btn.textContent=btn.dataset.old}}
+ async function load(){const b=document.getElementById('rows');try{const d=await api('/api/network/admin/publishing');const a=d.items||[];if(!a.length){b.innerHTML='<tr><td colspan="6" class="tiny">No publisher commitments ready for publishing yet.</td></tr>';return;}b.innerHTML=a.map(x=>'<tr><td><strong>'+esc(x.title)+'</strong><div class="tiny">'+esc(x.pitch||'')+'</div><div class="tiny">Brand: '+esc(x.brand_name||'—')+'</div></td><td><strong>'+esc(x.publisher_brand||x.publisher_domain)+'</strong><div class="tiny">'+esc(x.publisher_domain)+' · '+esc(x.publisher_status)+'</div></td><td><span class="pill protected">'+esc(x.protection_mode)+'</span><div class="tiny">Required ContentScale attribution</div></td><td><span class="status '+esc(x.status)+'">'+esc(x.status)+'</span></td><td>'+(x.publication_version_id?'<strong>'+esc(x.edition_title||'Publisher Edition')+'</strong><div class="tiny">Generated '+esc(x.generated_at||'')+'<br>'+esc(x.quality_status||'')+'</div>':'<span class="tiny">Not generated yet</span>')+'</td><td><div class="actions">'+(x.status==='accepted'?'<button class="btn good" data-action="generate" data-id="'+x.id+'">Generate Publisher Edition</button>':'')+(x.status==='ready'&&x.delivery_available?'<button class="btn" data-action="copy" data-id="'+x.id+'">Copy protected snippet</button>':'')+(x.status==='generating'?'<button class="btn busy" disabled>Generating…</button>':'')+'</div></td></tr>').join('')}catch(e){b.innerHTML='<tr><td colspan="6" class="tiny">'+esc(e.message)+'</td></tr>'}}
+ document.getElementById('rows').addEventListener('click',async function(ev){const btn=ev.target.closest('button[data-action]');if(!btn)return;const id=Number(btn.dataset.id||0);if(!id)return;if(btn.dataset.action==='generate'){if(!confirm('Generate one unique Publisher Edition for this approved placement now?'))return;busy(btn,true,'Generating…');try{const d=await api('/api/network/admin/placements/'+id+'/generate',{method:'POST',body:'{}'});btn.textContent='✓ Ready';await load()}catch(e){alert(e.message);await load()}finally{busy(btn,false)}}else if(btn.dataset.action==='copy'){busy(btn,true,'Preparing snippet…');try{const d=await api('/api/network/admin/placements/'+id+'/delivery');await navigator.clipboard.writeText(d.snippet);btn.textContent='✓ Copied';setTimeout(()=>{btn.textContent='Copy protected snippet'},1600)}catch(e){alert(e.message)}finally{btn.disabled=false;btn.classList.remove('busy')}}});
+ document.getElementById('refreshBtn').onclick=load;if(key)load();
+})();
+</script></main></body></html>`;
+}
+
 function placementsPage() {
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -532,6 +623,112 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   });
 
 
+
+  // PUBLISHING — generate exactly one Publisher Edition per committed placement.
+  app.get('/api/network/admin/publishing', verifyAdmin, wrap(async (req, res) => {
+    const r=await pool.query(`SELECT p.id,p.content_id,p.publisher_website_id,p.status,p.reward_credits,p.accepted_at,p.updated_at,
+      c.title,c.brand_name,c.primary_niche,c.source_snapshot->>'pitch' AS pitch,
+      w.domain AS publisher_domain,w.brand_name AS publisher_brand,w.status AS publisher_status,
+      pv.id AS publication_version_id,pv.title AS edition_title,pv.quality_status,pv.generated_at,
+      CASE WHEN pv.generation_input_snapshot ? 'delivery_token' THEN TRUE ELSE FALSE END AS delivery_available
+      FROM network_placements p
+      JOIN network_content c ON c.id=p.content_id
+      JOIN network_websites w ON w.id=p.publisher_website_id
+      LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
+      WHERE p.status NOT IN ('cancelled','rejected')
+      ORDER BY p.created_at DESC,p.id DESC LIMIT 1000`);
+    const items=r.rows.map(x=>Object.assign({},x,{protection_mode:x.publisher_status==='trusted'?'monitored_html':'protected_delivery'}));
+    res.json({success:true,items,rule:'No Publisher Edition exists before hard interest + approved website.'});
+  }));
+
+  app.post('/api/network/admin/placements/:id/generate', verifyAdmin, wrap(async (req, res) => {
+    if(!envEnabled())return res.status(409).json({success:false,error:'Network is disabled'});
+    const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+    const q=await pool.query(`SELECT p.*,c.title,c.brand_name,c.primary_niche,c.owner_website_id,c.source_snapshot,
+      w.domain AS publisher_domain,w.brand_name AS publisher_brand,w.status AS publisher_status,w.scan_snapshot AS publisher_scan,
+      ow.domain AS owner_domain,ow.brand_name AS owner_brand
+      FROM network_placements p
+      JOIN network_content c ON c.id=p.content_id
+      JOIN network_websites w ON w.id=p.publisher_website_id
+      LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
+      WHERE p.id=$1 LIMIT 1`,[id]);
+    const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Placement not found'});
+    if(!['approved','trusted'].includes(x.publisher_status))return res.status(409).json({success:false,error:'Publisher website is no longer approved'});
+    if(!(x.publisher_scan&&x.publisher_scan.technical_pass===true))return res.status(409).json({success:false,error:'Publisher website no longer has a passing Network Website Check'});
+    const existing=await pool.query('SELECT * FROM network_publication_versions WHERE placement_id=$1 LIMIT 1',[id]);
+    if(existing.rows[0]&&existing.rows[0].generated_at){
+      return res.json({success:true,already_generated:true,publication_version_id:existing.rows[0].id,status:x.status,rule:'One placement keeps one generated Publisher Edition.'});
+    }
+    if(x.status!=='accepted')return res.status(409).json({success:false,error:'Only an accepted placement can start generation'});
+    if(x.source_link_required===true&&!x.owner_domain)return res.status(409).json({success:false,error:'This placement requires a source link, but the opportunity has no source website. Add/recreate the opportunity with its source website before generation.'});
+
+    const claimed=await pool.query(`UPDATE network_placements SET status='generating',updated_at=NOW() WHERE id=$1 AND status='accepted' RETURNING id`,[id]);
+    if(!claimed.rows[0])return res.status(409).json({success:false,error:'Placement generation was already started by another request'});
+    try{
+      const snap=x.source_snapshot||{};
+      const language=cleanText(snap.language||'en-US',30),country=cleanText(snap.country||'',120),subNiche=cleanText(snap.sub_niche||'',120),pitch=cleanText(snap.pitch||'',1400);
+      const ownerUrl=x.owner_domain?`https://${x.owner_domain}`:'';
+      const prompt=`Create ONE original, publication-grade Publisher Edition for an external website.\n\nSTRICT RULES:\n- Return JSON only with keys: title, html, plain_text, meta_title, meta_description, suggested_slug, schema_json.\n- Language: ${language}. Market/country context: ${country||'not specified'}.\n- Publisher website: ${x.publisher_domain}. Publisher niche: ${x.primary_niche||''}${subNiche?' / '+subNiche:''}.\n- Working H1/topic: ${x.title}.\n- Short opportunity pitch: ${pitch}.\n- Brand/entity to mention naturally: ${x.brand_name||x.owner_brand||''}.\n- Required source/owner link: ${ownerUrl}. Include that link naturally once where useful.\n- Do NOT invent years in business, certifications, prices, ratings, guarantees, locations, service claims, statistics, customer counts or other facts that were not supplied.\n- If a factual detail is unknown, write around it rather than guessing.\n- This must be a genuinely new publication, not a spin or paraphrase of another article.\n- Aim for useful depth, roughly 900-1400 words when the topic supports it.\n- HTML may use article, h1, h2, h3, p, ul, ol, li, strong, em, blockquote and a tags. No script/style/iframe/form.\n- Do not add FAQ unless the article actually contains a useful FAQ section.\n- schema_json should be a valid Article JSON object, not a script tag.\n- meta_title max 60 characters; meta_description max 160 characters.\n- Do not add a ContentScale credit yourself; the delivery layer adds the required controlled attribution.\n- Do not promise rankings, AI citations or outcomes.`;
+      const ai=await callNetworkGemini(prompt),d=ai.parsed||{};
+      const title=cleanText(d.title||x.title,300);
+      const html=ensureContentScaleAttribution(d.html||'',id);
+      const plain=cleanText(d.plain_text||htmlText(html),50000);
+      if(!title||htmlText(html).split(/\s+/).filter(Boolean).length<250)throw new Error('Generated edition failed minimum content quality check');
+      const metaTitle=cleanText(d.meta_title||title,60),metaDescription=cleanText(d.meta_description||'',160),slug=slugifyNetwork(d.suggested_slug||title);
+      const schema=(d.schema_json&&typeof d.schema_json==='object')?d.schema_json:{};
+      const token=crypto.randomBytes(32).toString('hex');
+      const generationSnapshot={network_kind:'publisher_edition',delivery_token:token,protection_mode:x.publisher_status==='trusted'?'monitored_html':'protected_delivery',content_scale_marker_required:true,source_link:ownerUrl,publisher_domain:x.publisher_domain,language,country,generated_by_admin_id:req.admin&&req.admin.id||null};
+      const client=await pool.connect();
+      try{
+        await client.query('BEGIN');
+        const vr=await client.query(`INSERT INTO network_publication_versions (placement_id,content_id,publisher_website_id,version_no,title,html,plain_text,meta_title,meta_description,suggested_slug,schema_json,generation_input_snapshot,generation_model,quality_status,generated_at,created_at,updated_at)
+          VALUES ($1,$2,$3,1,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,'passed',NOW(),NOW(),NOW())
+          ON CONFLICT (placement_id) DO UPDATE SET title=EXCLUDED.title,html=EXCLUDED.html,plain_text=EXCLUDED.plain_text,meta_title=EXCLUDED.meta_title,meta_description=EXCLUDED.meta_description,suggested_slug=EXCLUDED.suggested_slug,schema_json=EXCLUDED.schema_json,generation_input_snapshot=EXCLUDED.generation_input_snapshot,generation_model=EXCLUDED.generation_model,quality_status='passed',generated_at=NOW(),updated_at=NOW()
+          RETURNING id,title,meta_title,meta_description,suggested_slug,quality_status,generated_at`,[id,x.content_id,x.publisher_website_id,title,html,plain,metaTitle,metaDescription,slug,JSON.stringify(schema),JSON.stringify(generationSnapshot),ai.model]);
+        await client.query(`UPDATE network_placements SET status='ready',updated_at=NOW() WHERE id=$1`,[id]);
+        await client.query(`UPDATE network_content SET source_snapshot=jsonb_set(COALESCE(source_snapshot,'{}'::jsonb),'{full_article_generated}','true'::jsonb,true),distribution_status='edition_ready',updated_at=NOW() WHERE id=$1`,[x.content_id]);
+        await client.query('COMMIT');
+        const snippet=protectedSnippet('https://app.contentscale.site',id,token);
+        res.json({success:true,placement_id:id,status:'ready',publication_version:vr.rows[0],protection_mode:generationSnapshot.protection_mode,snippet_available:true,snippet,rule:'Protected publisher delivery created. Loose full HTML is not returned.'});
+      }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
+    }catch(e){
+      await pool.query(`UPDATE network_placements SET status='accepted',updated_at=NOW() WHERE id=$1 AND status='generating'`,[id]).catch(()=>{});
+      throw e;
+    }
+  }));
+
+  app.get('/api/network/admin/placements/:id/delivery', verifyAdmin, wrap(async (req,res)=>{
+    const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+    const r=await pool.query(`SELECT p.status,w.status AS publisher_status,pv.id,pv.title,pv.meta_title,pv.meta_description,pv.suggested_slug,pv.generation_input_snapshot,pv.generated_at
+      FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_publication_versions pv ON pv.placement_id=p.id WHERE p.id=$1 LIMIT 1`,[id]);
+    const x=r.rows[0];if(!x)return res.status(404).json({success:false,error:'Generated Publisher Edition not found'});
+    if(!['ready','submitted','verifying','needs_review','verified'].includes(x.status))return res.status(409).json({success:false,error:'This placement is not available for delivery'});
+    const token=x.generation_input_snapshot&&x.generation_input_snapshot.delivery_token;if(!token)return res.status(409).json({success:false,error:'Protected delivery token missing'});
+    res.json({success:true,placement_id:id,status:x.status,protection_mode:x.publisher_status==='trusted'?'monitored_html':'protected_delivery',snippet:protectedSnippet('https://app.contentscale.site',id,token),publication:{title:x.title,meta_title:x.meta_title,meta_description:x.meta_description,suggested_slug:x.suggested_slug,generated_at:x.generated_at},rule:'Keep the ContentScale snippet intact. Attribution is delivered by ContentScale and remains required.'});
+  }));
+
+  // Public controlled content endpoint. Removing the snippet removes the content; revoked placements stop serving it.
+  app.get('/network/embed/:token.js', wrap(async (req,res)=>{
+    if(!envEnabled())return res.status(404).type('text/javascript').send('/* ContentScale Network disabled */');
+    const token=cleanText(req.params.token,128);if(!/^[a-f0-9]{64}$/i.test(token))return res.status(404).type('text/javascript').send('/* Invalid placement */');
+    const r=await pool.query(`SELECT p.id AS placement_id,p.status,pv.html,pv.title
+      FROM network_publication_versions pv JOIN network_placements p ON p.id=pv.placement_id
+      WHERE pv.generation_input_snapshot->>'delivery_token'=$1 LIMIT 1`,[token]);
+    const x=r.rows[0];
+    if(!x||!['ready','submitted','verifying','needs_review','verified'].includes(x.status))return res.status(410).type('text/javascript').send('/* ContentScale placement unavailable */');
+    res.set('Cache-Control','no-store, max-age=0');
+    res.set('X-Content-Type-Options','nosniff');
+    const payload=JSON.stringify(String(x.html||''));
+    const js=`(()=>{const s=document.currentScript;if(!s)return;let c=s.previousElementSibling;if(!c||!c.classList||!c.classList.contains('contentscale-network-placement')){c=document.createElement('div');c.className='contentscale-network-placement';s.parentNode.insertBefore(c,s)}c.setAttribute('data-cs-placement','${Number(x.placement_id)}');c.innerHTML=${payload};})();`;
+    res.type('text/javascript').send(js);
+  }));
+
+  app.get('/network/publishing', (req,res)=>{
+    if(!envEnabled())return res.status(404).send('Network is not enabled.');
+    res.set('Cache-Control','no-store');
+    res.type('html').send(publishingPage());
+  });
+
   // PLACEMENTS — commitments created only after hard interest + approved site check.
   app.get('/api/network/admin/placements', verifyAdmin, wrap(async (req, res) => {
     const r=await pool.query(`SELECT p.id,p.content_id,p.publisher_website_id,p.status,p.reward_credits,p.brand_mention_required,p.source_link_required,p.published_url,p.accepted_at,p.submitted_at,p.verified_at,p.cancelled_at,p.created_at,p.updated_at,
@@ -626,7 +823,7 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   app.get('/network', (req, res) => {
     if (!envEnabled()) return res.status(404).send('Network is not enabled.');
     res.set('Cache-Control', 'no-store');
-    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Network</title><style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#0b1020;color:#eef2ff}main{max-width:980px;margin:0 auto;padding:56px 24px}.card{background:#121a2f;border:1px solid #263253;border-radius:18px;padding:26px}.badge{display:inline-block;padding:7px 10px;border-radius:999px;background:#18213b;border:1px solid #33436c;font-size:12px}h1{font-size:42px;margin:18px 0 12px}p{color:#b9c4df;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:24px}.mini{display:block;color:#eef2ff;text-decoration:none;padding:18px;border-radius:14px;background:#0f1629;border:1px solid #263253}.mini:hover{border-color:#5a78b8}.muted{font-size:13px;color:#8492b6}</style></head><body><main><div class="card"><span class="badge">Network isolated module</span><h1>ContentScale Network</h1><p>Content & Distribution CRM. External Publisher Editions are generated only after hard interest and an approved target website.</p><div class="grid"><a class="mini" href="/network/websites"><strong>Websites</strong><div class="muted">Registry + hard-interest site check</div></a><a class="mini" href="/network/opportunities"><strong>Opportunities</strong><div class="muted">H1 + pitch → hard interest</div></a><div class="mini"><strong>Publishing</strong><div class="muted">Next: protected Publisher Edition</div></div><a class="mini" href="/network/placements"><strong>Placements</strong><div class="muted">Commitments + protection policy</div></a></div></div></main></body></html>`);
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Network</title><style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#0b1020;color:#eef2ff}main{max-width:980px;margin:0 auto;padding:56px 24px}.card{background:#121a2f;border:1px solid #263253;border-radius:18px;padding:26px}.badge{display:inline-block;padding:7px 10px;border-radius:999px;background:#18213b;border:1px solid #33436c;font-size:12px}h1{font-size:42px;margin:18px 0 12px}p{color:#b9c4df;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:24px}.mini{display:block;color:#eef2ff;text-decoration:none;padding:18px;border-radius:14px;background:#0f1629;border:1px solid #263253}.mini:hover{border-color:#5a78b8}.muted{font-size:13px;color:#8492b6}</style></head><body><main><div class="card"><span class="badge">Network isolated module</span><h1>ContentScale Network</h1><p>Content & Distribution CRM. External Publisher Editions are generated only after hard interest and an approved target website.</p><div class="grid"><a class="mini" href="/network/websites"><strong>Websites</strong><div class="muted">Registry + hard-interest site check</div></a><a class="mini" href="/network/opportunities"><strong>Opportunities</strong><div class="muted">H1 + pitch → hard interest</div></a><a class="mini" href="/network/publishing"><strong>Publishing</strong><div class="muted">Protected Publisher Editions</div></a><a class="mini" href="/network/placements"><strong>Placements</strong><div class="muted">Commitments + protection policy</div></a></div></div></main></body></html>`);
   });
 
   return { registered: true, enabled: envEnabled(), schema_version: NETWORK_SCHEMA_VERSION };
