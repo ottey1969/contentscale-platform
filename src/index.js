@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-30-CANONICAL-v405';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-09-30-CANONICAL-v406-NETWORK-SAFE-SHELL';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -304,6 +304,8 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-safe-shell-v1-isolated-module',
+  'network-no-core-table-mutations-v406',
   'tracker-delta-brief-regression-lock',
   'tracker-internal-external-link-presence-guard',
   'prewrite-expand-existing-handoff',
@@ -670,6 +672,15 @@ const http   = require('http');
 const WebSocket = require('ws');
 const rewriterHelpers = require('./rewriter-helpers');
 
+// CONTENTSCALE NETWORK SAFE SHELL V1
+// Guarded require: a broken/missing Network module must never prevent the core platform from booting.
+let _networkModule = null;
+try {
+  _networkModule = require('./network/register-network');
+} catch (err) {
+  console.error('[NETWORK] Module load failed; core ContentScale continues without Network:', err.message);
+}
+
 const app = express();
 
 // ============================================================
@@ -677,7 +688,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-30-CANONICAL-v405',
+  build: 'CS-2026-09-30-CANONICAL-v406-NETWORK-SAFE-SHELL',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -746,7 +757,9 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   quickscan_audit20_gsc_bridge: true,
   quickscan_three_language_funnel: true,
   quickscan_early_state_bootstrap: true,
-  quickscan_token_item_global_regression: true
+  quickscan_token_item_global_regression: true,
+  network_safe_shell_v1: true,
+  network_core_table_isolation: true
 });
 
 // BUILD IDENTITY — intentionally public and DB-independent.
@@ -760,6 +773,8 @@ app.get('/api/regression-contract',(req,res)=>{
   const src=fs.readFileSync(__filename,'utf8');
   const checks={
     canonical_build:CONTENTSCALE_BUILD_INFO.build===CONTENTSCALE_BUILD_ID,
+    network_safe_shell:src.includes('NETWORK_SAFE_SHELL_V1')&&src.includes("require('./network/register-network')")&&fs.existsSync(path.join(__dirname,'network','register-network.js')),
+    network_guarded_registration:src.includes('core ContentScale continues without Network')&&src.includes("registerNetwork({app,pool,verifyAdmin,asyncHandler})"),
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
     prospect_footer:src.includes('data-cs-prospect-footer')&&src.includes('_injectProspectFooter'),
@@ -9950,6 +9965,19 @@ const verifyEngineAccess = async (req, res, next) => {
    res.status(500).json({ success: false, error: `Auth error: ${msg}` });
    }
    };
+
+// NETWORK_SAFE_SHELL_V1 — register only after verifyAdmin exists.
+// Registration is guarded so Network failure cannot take down existing ContentScale tools.
+try {
+  if (_networkModule && typeof _networkModule.registerNetwork === 'function') {
+    const _networkRegistration = _networkModule.registerNetwork({app,pool,verifyAdmin,asyncHandler});
+    console.log('[NETWORK] Safe shell registered:', _networkRegistration);
+  } else {
+    console.warn('[NETWORK] Safe shell unavailable; core platform continues.');
+  }
+} catch (err) {
+  console.error('[NETWORK] Registration failed; core ContentScale continues without Network:', err.message);
+}
 
 // v280: these routes MUST remain outside and after verifyAdmin initialization.
 // v273: admin routes registered only after verifyAdmin initialization.
