@@ -637,7 +637,7 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   app.post('/api/network/admin/opportunities/delete', verifyAdmin, wrap(async (req, res) => {
     const ids=Array.isArray(req.body?.ids)?Array.from(new Set(req.body.ids.map(Number).filter(n=>Number.isInteger(n)&&n>0))).slice(0,500):[];
     if(!ids.length)return res.status(400).json({success:false,error:'Select at least one opportunity'});
-    const linked=await pool.query(`SELECT DISTINCT content_id FROM network_placements WHERE content_id=ANY($1::bigint[]) LIMIT 20`,[ids]);
+    const linked=await pool.query(`SELECT DISTINCT content_id FROM network_placements WHERE content_id=ANY($1::bigint[]) AND status NOT IN ('cancelled','rejected') LIMIT 20`,[ids]);
     if(linked.rows.length)return res.status(409).json({success:false,error:'One or more selected opportunities already have publisher commitments/placements. Cancel or resolve those placements before deletion.',blocked_ids:linked.rows.map(x=>x.content_id)});
     const r=await pool.query(`DELETE FROM network_content WHERE id=ANY($1::bigint[]) AND source_type='original' AND COALESCE(source_snapshot->>'network_kind','')='distribution_opportunity' RETURNING id`,[ids]);
     res.json({success:true,deleted:r.rowCount,deleted_ids:r.rows.map(x=>x.id)});
