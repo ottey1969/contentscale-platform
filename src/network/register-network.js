@@ -594,6 +594,7 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
       FROM network_content c
       LEFT JOIN network_placements p ON p.content_id=c.id AND p.status NOT IN ('cancelled','rejected')
       WHERE c.source_type='original' AND COALESCE(c.source_snapshot->>'network_kind','')='distribution_opportunity'
+        AND COALESCE(c.distribution_status,'') <> 'deleted'
       GROUP BY c.id ORDER BY c.created_at DESC,c.id DESC LIMIT 1000`);
     res.json({ success:true, opportunities:r.rows });
   }));
@@ -637,10 +638,24 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   app.post('/api/network/admin/opportunities/delete', verifyAdmin, wrap(async (req, res) => {
     const ids=Array.isArray(req.body?.ids)?Array.from(new Set(req.body.ids.map(Number).filter(n=>Number.isInteger(n)&&n>0))).slice(0,500):[];
     if(!ids.length)return res.status(400).json({success:false,error:'Select at least one opportunity'});
+
+    // Active placements block deletion. Cancelled/rejected placements remain as immutable history.
+    // We intentionally soft-delete the opportunity instead of physically deleting network_content,
+    // because network_placements.content_id uses ON DELETE RESTRICT by design.
     const linked=await pool.query(`SELECT DISTINCT content_id FROM network_placements WHERE content_id=ANY($1::bigint[]) AND status NOT IN ('cancelled','rejected') LIMIT 20`,[ids]);
-    if(linked.rows.length)return res.status(409).json({success:false,error:'One or more selected opportunities already have publisher commitments/placements. Cancel or resolve those placements before deletion.',blocked_ids:linked.rows.map(x=>x.content_id)});
-    const r=await pool.query(`DELETE FROM network_content WHERE id=ANY($1::bigint[]) AND source_type='original' AND COALESCE(source_snapshot->>'network_kind','')='distribution_opportunity' RETURNING id`,[ids]);
-    res.json({success:true,deleted:r.rowCount,deleted_ids:r.rows.map(x=>x.id)});
+    if(linked.rows.length)return res.status(409).json({success:false,error:'One or more selected opportunities still have active publisher commitments/placements. Cancel or resolve those placements before deletion.',blocked_ids:linked.rows.map(x=>x.content_id)});
+
+    const r=await pool.query(`UPDATE network_content
+      SET publication_status='rejected',
+          distribution_status='deleted',
+          source_snapshot=jsonb_set(COALESCE(source_snapshot,'{}'::jsonb),'{deleted_at}',to_jsonb(NOW()::text),true),
+          updated_at=NOW()
+      WHERE id=ANY($1::bigint[])
+        AND source_type='original'
+        AND COALESCE(source_snapshot->>'network_kind','')='distribution_opportunity'
+        AND COALESCE(distribution_status,'') <> 'deleted'
+      RETURNING id`,[ids]);
+    res.json({success:true,deleted:r.rowCount,deleted_ids:r.rows.map(x=>x.id),mode:'soft_delete',history_preserved:true});
   }));
 
   app.get('/network/opportunities', (req, res) => {
