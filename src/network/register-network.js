@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — SAFE ISOLATED MODULE
+// CONTENTSCALE NETWORK — SAFE ISOLATED MODULE v414
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -533,6 +533,32 @@ function placementsPage() {
 </script></main></body></html>`;
 }
 
+
+function verificationPage() {
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network Verification | ContentScale</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#08101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1280px;margin:auto;padding:34px 22px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.crumb{font-size:13px;color:#91a1c2}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin-top:18px}.notice{border:1px solid #315c88;background:#0b2238;border-radius:14px;padding:15px;color:#cdeaff;line-height:1.5}.btn{border:1px solid #3c5f99;background:#17376c;color:white;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700}.btn.secondary{background:#101b31}.btn.good{background:#14532d;border-color:#22c55e}.btn:disabled{opacity:.65;cursor:wait}.btn.busy:before{content:'';display:inline-block;width:12px;height:12px;margin-right:7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-2px;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.status{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:11px;border:1px solid #3b4f77;background:#142039}.status.verified{border-color:#2b8f55;color:#8ff0b2}.status.needs_review{border-color:#a87b20;color:#ffd785}.status.submitted,.status.ready{border-color:#4b78bc;color:#acd0ff}.tiny{font-size:12px;color:#91a1c2}.tableWrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1180px}th,td{text-align:left;padding:11px;border-bottom:1px solid #223150;vertical-align:top}th{font-size:11px;color:#8fa2c5;text-transform:uppercase;letter-spacing:.07em}.actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.url{width:300px;max-width:100%;background:#091327;border:1px solid #334a74;color:#eef4ff;border-radius:9px;padding:9px}.auth{padding:14px;border:1px solid #704b1d;background:#2a1b0b;border-radius:12px;color:#ffd89a;margin-top:16px}.ok{color:#8ff0b2}.warn{color:#ffd785}
+</style></head><body><main>
+<div class="top"><div><div class="crumb"><a href="/network">Network</a> / Verification</div><h1>Publish, Verify & Credits</h1><div class="tiny">Credits are earned only after the live placement passes verification.</div></div><a class="btn secondary" href="/network">← Network</a></div>
+<div id="auth" class="auth" style="display:none">No valid admin session found. Open <a href="/admin">/admin</a>, log in, then return here.</div>
+<section class="card"><div class="notice"><strong>Verification rule</strong><br>Submit the exact live article URL. ContentScale checks HTTP status, indexability, canonical, the protected delivery snippet, and the required brand/source evidence. A successful verification awards the placement credits once only.</div></section>
+<section class="card"><div class="top"><h2>Verification queue</h2><button class="btn secondary" id="refreshBtn">Refresh</button></div><div class="tableWrap"><table><thead><tr><th>Opportunity</th><th>Publisher</th><th>Status</th><th>Live URL</th><th>Latest verification</th><th>Credits</th><th>Actions</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="tiny">Loading…</td></tr></tbody></table></div></section>
+<script>
+(function(){
+ const key=localStorage.getItem('admin_id')||'',auth=document.getElementById('auth');if(!key)auth.style.display='block';
+ const esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+ const api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt);const t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(r.status===401){auth.style.display='block';throw Error('Admin session expired');}if(!r.ok)throw Error(d.error||('Request failed: '+r.status));return d};
+ function busy(btn,on,label){if(!btn)return;if(on){btn.dataset.old=btn.textContent;btn.disabled=true;btn.classList.add('busy');btn.textContent=label||'Working…'}else{btn.disabled=false;btn.classList.remove('busy');btn.textContent=btn.dataset.old||btn.textContent}}
+ function checks(x){if(!x.latest_result)return '<span class="tiny">Not checked yet</span>';const d=x.latest_details||{};return '<span class="status '+esc(x.latest_result)+'">'+esc(x.latest_result)+'</span><div class="tiny">HTTP '+esc(x.latest_http_status||'—')+' · indexable '+(x.latest_indexable?'yes':'no')+'<br>snippet '+(d.protected_snippet_present?'✓':'✕')+' · brand '+(x.latest_brand_mention_ok?'✓':'✕')+' · source '+(x.latest_source_link_ok?'✓':'✕')+'</div>'}
+ async function load(){const b=document.getElementById('rows');try{const d=await api('/api/network/admin/verification-queue');const a=d.items||[];if(!a.length){b.innerHTML='<tr><td colspan="7" class="tiny">No generated placements ready for verification yet.</td></tr>';return;}b.innerHTML=a.map(x=>'<tr><td><strong>'+esc(x.title)+'</strong><div class="tiny">'+esc(x.brand_name||'')+'</div></td><td><strong>'+esc(x.publisher_brand||x.publisher_domain)+'</strong><div class="tiny">'+esc(x.publisher_domain)+'</div></td><td><span class="status '+esc(x.status)+'">'+esc(x.status)+'</span></td><td><input class="url" data-url="'+x.id+'" placeholder="https://publisher.com/article" value="'+esc(x.published_url||'')+'"></td><td>'+checks(x)+'</td><td><strong>'+esc(x.reward_credits||0)+'</strong><div class="tiny">'+(x.credit_awarded?'awarded ✓':'not earned yet')+'</div></td><td><div class="actions"><button class="btn" data-action="submit" data-id="'+x.id+'">Save live URL</button><button class="btn good" data-action="verify" data-id="'+x.id+'" '+(!x.published_url?'disabled':'')+'>Verify live</button></div></td></tr>').join('')}catch(e){b.innerHTML='<tr><td colspan="7" class="tiny">'+esc(e.message)+'</td></tr>'}}
+ document.getElementById('rows').addEventListener('click',async function(ev){const btn=ev.target.closest('button[data-action]');if(!btn)return;const id=Number(btn.dataset.id||0);if(!id)return;const input=document.querySelector('input[data-url="'+id+'"]');if(btn.dataset.action==='submit'){const url=(input&&input.value||'').trim();if(!url)return alert('Enter the exact live article URL first.');busy(btn,true,'Saving…');try{await api('/api/network/admin/placements/'+id+'/submit-live',{method:'POST',body:JSON.stringify({published_url:url})});btn.textContent='✓ Saved';await load()}catch(e){alert(e.message)}finally{busy(btn,false)}}else if(btn.dataset.action==='verify'){if(!confirm('Verify this live placement now? Credits are awarded only if all required checks pass.'))return;busy(btn,true,'Verifying…');try{const d=await api('/api/network/admin/placements/'+id+'/verify-live',{method:'POST',body:'{}'});btn.textContent=d.verified?'✓ Verified':'Needs review';if(d.verified&&d.credit_awarded)alert('Placement verified. '+d.credits+' credits awarded.');await load()}catch(e){alert(e.message);await load()}finally{busy(btn,false)}}});
+ document.getElementById('refreshBtn').onclick=function(){const b=this;busy(b,true,'Refreshing…');load().finally(()=>busy(b,false))};if(key)load();
+})();
+</script></main></body></html>`;
+}
+
 function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   if (!app) throw new Error('Network registration requires Express app');
   if (typeof verifyAdmin !== 'function') throw new Error('Network registration requires verifyAdmin');
@@ -764,6 +790,101 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
     res.type('html').send(placementsPage());
   });
 
+
+  // VERIFICATION + CREDIT RELEASE — only after a generated Publisher Edition is live.
+  app.get('/api/network/admin/verification-queue', verifyAdmin, wrap(async (req,res)=>{
+    const r=await pool.query(`SELECT p.id,p.status,p.reward_credits,p.published_url,p.submitted_at,p.verified_at,
+      c.title,c.brand_name,w.domain AS publisher_domain,w.brand_name AS publisher_brand,w.status AS publisher_status,
+      pv.id AS publication_version_id,pv.generated_at,
+      vr.result_status AS latest_result,vr.http_status AS latest_http_status,vr.indexable AS latest_indexable,vr.canonical_ok AS latest_canonical_ok,
+      vr.brand_mention_ok AS latest_brand_mention_ok,vr.source_link_ok AS latest_source_link_ok,vr.content_match_ok AS latest_content_match_ok,vr.details AS latest_details,vr.checked_at AS latest_checked_at,
+      EXISTS(SELECT 1 FROM network_credit_transactions ct JOIN network_credit_wallets cw ON cw.id=ct.wallet_id WHERE ct.placement_id=p.id AND ct.idempotency_key=('placement:'||p.id||':reward:v1')) AS credit_awarded
+      FROM network_placements p
+      JOIN network_content c ON c.id=p.content_id
+      JOIN network_websites w ON w.id=p.publisher_website_id
+      JOIN network_publication_versions pv ON pv.placement_id=p.id
+      LEFT JOIN LATERAL (SELECT * FROM network_verification_runs z WHERE z.placement_id=p.id ORDER BY z.run_no DESC LIMIT 1) vr ON TRUE
+      WHERE p.status IN ('ready','submitted','verifying','needs_review','verified')
+      ORDER BY p.updated_at DESC,p.id DESC LIMIT 1000`);
+    res.json({success:true,items:r.rows,rule:'Credits are awarded once, only after a passing live verification.'});
+  }));
+
+  app.post('/api/network/admin/placements/:id/submit-live', verifyAdmin, wrap(async (req,res)=>{
+    const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+    const raw=cleanText(req.body&&req.body.published_url,2048);if(!raw)return res.status(400).json({success:false,error:'Live article URL is required'});
+    let live;try{live=new URL(/^https?:\/\//i.test(raw)?raw:'https://'+raw)}catch(e){return res.status(400).json({success:false,error:'Enter a valid public live URL'})}
+    if(!['http:','https:'].includes(live.protocol))return res.status(400).json({success:false,error:'Only http/https URLs are allowed'});
+    const q=await pool.query(`SELECT p.status,w.domain AS publisher_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id WHERE p.id=$1 LIMIT 1`,[id]);
+    const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Placement not found'});
+    if(!['ready','submitted','needs_review','verified'].includes(x.status))return res.status(409).json({success:false,error:'Generate the Publisher Edition before submitting a live URL'});
+    const host=live.hostname.toLowerCase().replace(/^www\./,'');
+    const expected=String(x.publisher_domain||'').toLowerCase().replace(/^www\./,'');
+    if(!(host===expected||host.endsWith('.'+expected)))return res.status(409).json({success:false,error:'The live URL must be on the committed publisher website: '+expected});
+    await assertPublicHostname(live.hostname);
+    const r=await pool.query(`UPDATE network_placements SET published_url=$2,status=CASE WHEN status='verified' THEN 'verified' ELSE 'submitted' END,submitted_at=COALESCE(submitted_at,NOW()),updated_at=NOW() WHERE id=$1 RETURNING *`,[id,live.toString()]);
+    res.json({success:true,placement:r.rows[0],rule:'Exact live URL saved. Verification still required before credits are earned.'});
+  }));
+
+  app.post('/api/network/admin/placements/:id/verify-live', verifyAdmin, wrap(async (req,res)=>{
+    const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+    const q=await pool.query(`SELECT p.*,c.brand_name,c.owner_website_id,w.domain AS publisher_domain,w.status AS publisher_status,
+      pv.html AS edition_html,pv.generation_input_snapshot,ow.domain AS owner_domain
+      FROM network_placements p JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id
+      JOIN network_publication_versions pv ON pv.placement_id=p.id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[id]);
+    const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Generated placement not found'});
+    if(!x.published_url)return res.status(409).json({success:false,error:'Save the exact live URL before verification'});
+    if(!['submitted','needs_review','verified'].includes(x.status))return res.status(409).json({success:false,error:'Placement is not ready for live verification'});
+    await pool.query(`UPDATE network_placements SET status='verifying',updated_at=NOW() WHERE id=$1 AND status!='verified'`,[id]);
+    let fetched,analysis,fetchError='';
+    try{fetched=await safeFetchHtml(x.published_url);analysis=analyzeWebsiteHtml({status:fetched.response.status,html:fetched.html,finalUrl:fetched.finalUrl,contentType:fetched.contentType})}catch(e){fetchError=e.message;analysis={http_status:null,indexable:false,canonical:'',technical_pass:false,password_protected:false}}
+    const html=String(fetched&&fetched.html||'');
+    const snap=x.generation_input_snapshot||{};const token=cleanText(snap.delivery_token,128);
+    const snippetPresent=!!token && (html.includes(token)||html.includes('/network/embed/'+token+'.js'));
+    const editionHtml=String(x.edition_html||'');
+    const editionText=htmlText(editionHtml).toLowerCase();
+    const brand=cleanText(x.brand_name,250).toLowerCase();
+    const owner=cleanText(x.owner_domain,300).toLowerCase();
+    const brandOk=!x.brand_mention_required||!brand||editionText.includes(brand);
+    const sourceOk=!x.source_link_required||(!owner?false:editionHtml.toLowerCase().includes(owner));
+    const statusCode=fetched&&fetched.response?fetched.response.status:null;
+    const httpOk=Number(statusCode)>=200&&Number(statusCode)<400;
+    const noindex=/<meta\b[^>]*name=["']robots["'][^>]*content=["'][^"']*noindex/i.test(html)||/<meta\b[^>]*content=["'][^"']*noindex[^"']*["'][^>]*name=["']robots["']/i.test(html);
+    const passwordProtected=Number(statusCode)===401||Number(statusCode)===403||/password protected|enter password|member login/i.test(htmlText(html).slice(0,3000));
+    const canonicalTag=(html.match(/<link\b[^>]*rel=["'][^"']*canonical[^"']*["'][^>]*>/i)||[])[0]||'';
+    const canonical=extractAttr(canonicalTag,'href');
+    let canonicalOk=true;if(canonical){try{const cu=new URL(canonical,x.published_url),lu=new URL(x.published_url);canonicalOk=cu.hostname.replace(/^www\./,'').toLowerCase()===lu.hostname.replace(/^www\./,'').toLowerCase()}catch(e){canonicalOk=false}}
+    const indexable=httpOk&&!noindex&&!passwordProtected;
+    const passed=httpOk&&indexable&&canonicalOk&&snippetPresent&&brandOk&&sourceOk;
+    const result=passed?'passed':'needs_review';
+    const rn=await pool.query('SELECT COALESCE(MAX(run_no),0)+1 AS n FROM network_verification_runs WHERE placement_id=$1',[id]);
+    const runNo=Number(rn.rows[0].n)||1;
+    const details={protected_snippet_present:snippetPresent,delivery_token_expected:!!token,final_url:fetched&&fetched.finalUrl||x.published_url,canonical:canonical||null,noindex,password_protected:passwordProtected,fetch_error:fetchError||null,required_brand:brand||null,required_source_domain:owner||null};
+    await pool.query(`INSERT INTO network_verification_runs (placement_id,run_no,http_status,indexable,canonical_ok,brand_mention_ok,source_link_ok,content_match_ok,password_protected,result_status,details,checked_at)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,NOW())`,[id,runNo,statusCode,indexable,canonicalOk,brandOk,sourceOk,snippetPresent,passwordProtected,result,JSON.stringify(details)]);
+    let creditAwarded=false;
+    if(passed){
+      const client=await pool.connect();try{await client.query('BEGIN');
+        let wr=await client.query('SELECT * FROM network_credit_wallets WHERE website_id=$1 FOR UPDATE',[x.publisher_website_id]);
+        if(!wr.rows[0])wr=await client.query(`INSERT INTO network_credit_wallets (website_id,balance,reserved,created_at,updated_at) VALUES ($1,0,0,NOW(),NOW()) ON CONFLICT (website_id) DO UPDATE SET updated_at=NOW() RETURNING *`,[x.publisher_website_id]);
+        const wallet=wr.rows[0];const key='placement:'+id+':reward:v1';
+        const tr=await client.query(`INSERT INTO network_credit_transactions (wallet_id,placement_id,transaction_type,amount,idempotency_key,note,metadata,created_at)
+          VALUES ($1,$2,'placement_verified',$3,$4,'Credits released after verified live placement',$5::jsonb,NOW()) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id`,[wallet.id,id,x.reward_credits,key,JSON.stringify({verification_run:runNo,published_url:x.published_url})]);
+        if(tr.rows[0]){await client.query('UPDATE network_credit_wallets SET balance=balance+$2,updated_at=NOW() WHERE id=$1',[wallet.id,x.reward_credits]);creditAwarded=true}
+        await client.query(`UPDATE network_placements SET status='verified',verified_at=COALESCE(verified_at,NOW()),updated_at=NOW() WHERE id=$1`,[id]);
+        await client.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status='verified',updated_at=NOW() WHERE id=$1`,[x.content_id]);
+        await client.query('COMMIT');
+      }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
+    }else{
+      await pool.query(`UPDATE network_placements SET status='needs_review',updated_at=NOW() WHERE id=$1`,[id]);
+    }
+    res.json({success:true,verified:passed,result_status:result,credit_awarded:creditAwarded,credits:x.reward_credits,checks:{http_ok:httpOk,indexable,canonical_ok:canonicalOk,protected_snippet_present:snippetPresent,brand_mention_ok:brandOk,source_link_ok:sourceOk,password_protected:passwordProtected},details,rule:passed?'Verified placement; credits may be released once only.':'No credits released. Fix the live placement and recheck.'});
+  }));
+
+  app.get('/network/verification', (req,res)=>{
+    if(!envEnabled())return res.status(404).send('Network is not enabled.');
+    res.set('Cache-Control','no-store');res.type('html').send(verificationPage());
+  });
+
   // WEBSITE REGISTRY — all writes remain inside network_websites.
   app.get('/api/network/admin/websites', verifyAdmin, wrap(async (req, res) => {
     const r = await pool.query(`SELECT id,domain,canonical_url,brand_name,primary_niche,sub_niche,country,language,cms,ownership_type,status,scan_snapshot,approved_at,suspended_at,created_at,updated_at
@@ -828,7 +949,7 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   app.get('/network', (req, res) => {
     if (!envEnabled()) return res.status(404).send('Network is not enabled.');
     res.set('Cache-Control', 'no-store');
-    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Network</title><style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#0b1020;color:#eef2ff}main{max-width:980px;margin:0 auto;padding:56px 24px}.card{background:#121a2f;border:1px solid #263253;border-radius:18px;padding:26px}.badge{display:inline-block;padding:7px 10px;border-radius:999px;background:#18213b;border:1px solid #33436c;font-size:12px}h1{font-size:42px;margin:18px 0 12px}p{color:#b9c4df;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:24px}.mini{display:block;color:#eef2ff;text-decoration:none;padding:18px;border-radius:14px;background:#0f1629;border:1px solid #263253}.mini:hover{border-color:#5a78b8}.muted{font-size:13px;color:#8492b6}</style></head><body><main><div class="card"><span class="badge">Network isolated module</span><h1>ContentScale Network</h1><p>Content & Distribution CRM. External Publisher Editions are generated only after hard interest and an approved target website.</p><div class="grid"><a class="mini" href="/network/websites"><strong>Websites</strong><div class="muted">Registry + hard-interest site check</div></a><a class="mini" href="/network/opportunities"><strong>Opportunities</strong><div class="muted">H1 + pitch → hard interest</div></a><a class="mini" href="/network/publishing"><strong>Publishing</strong><div class="muted">Protected Publisher Editions</div></a><a class="mini" href="/network/placements"><strong>Placements</strong><div class="muted">Commitments + protection policy</div></a></div></div></main></body></html>`);
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Network</title><style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#0b1020;color:#eef2ff}main{max-width:980px;margin:0 auto;padding:56px 24px}.card{background:#121a2f;border:1px solid #263253;border-radius:18px;padding:26px}.badge{display:inline-block;padding:7px 10px;border-radius:999px;background:#18213b;border:1px solid #33436c;font-size:12px}h1{font-size:42px;margin:18px 0 12px}p{color:#b9c4df;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:24px}.mini{display:block;color:#eef2ff;text-decoration:none;padding:18px;border-radius:14px;background:#0f1629;border:1px solid #263253}.mini:hover{border-color:#5a78b8}.muted{font-size:13px;color:#8492b6}</style></head><body><main><div class="card"><span class="badge">Network isolated module</span><h1>ContentScale Network</h1><p>Content & Distribution CRM. External Publisher Editions are generated only after hard interest and an approved target website.</p><div class="grid"><a class="mini" href="/network/websites"><strong>Websites</strong><div class="muted">Registry + hard-interest site check</div></a><a class="mini" href="/network/opportunities"><strong>Opportunities</strong><div class="muted">H1 + pitch → hard interest</div></a><a class="mini" href="/network/publishing"><strong>Publishing</strong><div class="muted">Protected Publisher Editions</div></a><a class="mini" href="/network/placements"><strong>Placements</strong><div class="muted">Commitments + protection policy</div></a><a class="mini" href="/network/verification"><strong>Verification</strong><div class="muted">Live URL → verify → credits</div></a></div></div></main></body></html>`);
   });
 
   return { registered: true, enabled: envEnabled(), schema_version: NETWORK_SCHEMA_VERSION };
