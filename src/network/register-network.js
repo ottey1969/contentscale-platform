@@ -370,6 +370,52 @@ function websitesPage() {
 </script></main></body></html>`;
 }
 
+
+function opportunitiesPage() {
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network Opportunities | ContentScale</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#08101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1240px;margin:auto;padding:34px 22px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.crumb{font-size:13px;color:#91a1c2}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin-top:18px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.field label{display:block;font-size:11px;color:#96a6c7;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}.field input,.field select,.field textarea,select{width:100%;background:#091327;color:#eef4ff;border:1px solid #31456f;border-radius:10px;padding:11px;font:inherit}.field textarea{min-height:96px;resize:vertical}.span2{grid-column:span 2}.span4{grid-column:span 4}.btn{border:1px solid #3c5f99;background:#17376c;color:white;padding:10px 13px;border-radius:10px;cursor:pointer;font-weight:700}.btn.secondary{background:#101b31}.btn.good{background:#14532d;border-color:#22c55e}.btn.bad{background:#5f1e28;border-color:#ef4444}.btn:disabled{opacity:.65;cursor:wait}.btn.busy{position:relative;padding-left:34px}.btn.busy:before{content:'';position:absolute;left:12px;top:50%;width:12px;height:12px;margin-top:-7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:csSpin .7s linear infinite}@keyframes csSpin{to{transform:rotate(360deg)}}.note{color:#9aabd0;line-height:1.5}.status{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:11px;border:1px solid #3b4f77;background:#142039}.status.available{border-color:#2b8f55;color:#8ff0b2}.status.paused,.status.rejected{border-color:#a23b49;color:#ff9ca8}.tableWrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1060px}th,td{text-align:left;padding:11px;border-bottom:1px solid #223150;vertical-align:top}th{font-size:11px;color:#8fa2c5;text-transform:uppercase;letter-spacing:.07em}.tiny{font-size:12px;color:#91a1c2}.actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.actions select{min-width:220px;width:auto}.auth{padding:14px;border:1px solid #704b1d;background:#2a1b0b;border-radius:12px;color:#ffd89a;margin-top:16px}.bulk{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}.pitch{max-width:430px;line-height:1.45}.check{width:18px;height:18px;accent-color:#2563eb}@media(max-width:900px){.grid{grid-template-columns:1fr 1fr}.span4{grid-column:span 2}}@media(max-width:560px){.grid{grid-template-columns:1fr}.span2,.span4{grid-column:span 1}}
+</style></head><body><main>
+<div class="top"><div><div class="crumb"><a href="/network">Network</a> / Opportunities</div><h1>Distribution Opportunities</h1><div class="note">Create only an H1 + short pitch. No external Publisher Edition is written until a publisher shows hard interest and chooses an approved website.</div></div><a class="btn secondary" href="/network">← Network</a></div>
+<div id="auth" class="auth" style="display:none">No valid admin session found. Open <a href="/admin">/admin</a>, log in, then return here.</div>
+<section class="card"><h2>Create opportunity</h2><div class="grid">
+<div class="field span2"><label>H1 / working title</label><input id="title" placeholder="e.g. 7 Emergency Roof Repair Mistakes NJ Homeowners Should Avoid"></div>
+<div class="field"><label>Brand</label><input id="brand" placeholder="Perfect Roofing Team"></div>
+<div class="field"><label>Source website</label><select id="ownerWebsite"><option value="">Optional</option></select></div>
+<div class="field"><label>Main niche</label><input id="niche" placeholder="Roofing"></div>
+<div class="field"><label>Subniche</label><input id="subniche" placeholder="Emergency Roofing"></div>
+<div class="field"><label>Country / market</label><input id="country" placeholder="United States"></div>
+<div class="field"><label>Language</label><input id="language" placeholder="en-US"></div>
+<div class="field"><label>Max placements</label><input id="placements" type="number" min="1" max="100" value="1"></div>
+<div class="field span4"><label>Short publisher pitch</label><textarea id="pitch" placeholder="2–4 sentences explaining what the publication will cover and why it is useful for this niche. Do not write the full article yet."></textarea></div>
+</div><div style="margin-top:14px"><button id="addBtn" class="btn">Create opportunity</button> <span id="formMsg" class="tiny"></span></div></section>
+<section class="card"><div class="top"><h2>Opportunities</h2><button class="btn secondary" id="refreshBtn">Refresh</button></div>
+<div class="bulk"><input type="checkbox" class="check" id="selectAll"><label for="selectAll" class="tiny">Select all</label><button class="btn bad" id="deleteSelected" disabled>Delete selected</button><span class="tiny" id="selectedCount">0 selected</span></div>
+<div class="tableWrap"><table><thead><tr><th></th><th>Opportunity</th><th>Niche</th><th>Market</th><th>Status</th><th>Interest</th><th>Actions</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="tiny">Loading…</td></tr></tbody></table></div></section>
+<script>
+(function(){
+ const key=localStorage.getItem('admin_id')||'',auth=document.getElementById('auth');if(!key)auth.style.display='block';
+ const api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt);const t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(r.status===401){auth.style.display='block';throw Error('Admin session expired');}if(!r.ok)throw Error(d.error||('Request failed: '+r.status));return d};
+ const esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
+ function busy(btn,on,label){if(!btn)return;if(on){btn.dataset.oldText=btn.textContent;btn.disabled=true;btn.classList.add('busy');if(label)btn.textContent=label;}else{btn.disabled=false;btn.classList.remove('busy');if(btn.dataset.oldText)btn.textContent=btn.dataset.oldText;delete btn.dataset.oldText;}}
+ let websites=[];
+ async function loadWebsites(){const d=await api('/api/network/admin/websites');websites=d.websites||[];const owner=document.getElementById('ownerWebsite');owner.innerHTML='<option value="">Optional</option>'+websites.map(w=>'<option value="'+w.id+'">'+esc(w.brand_name||w.domain)+' — '+esc(w.domain)+'</option>').join('')}
+ function approvedOptions(){return websites.filter(w=>(w.status==='approved'||w.status==='trusted')&&w.scan_snapshot&&w.scan_snapshot.technical_pass===true).map(w=>'<option value="'+w.id+'">'+esc(w.brand_name||w.domain)+' — '+esc(w.domain)+'</option>').join('')}
+ function updateBulk(){const boxes=Array.from(document.querySelectorAll('.rowSelect'));const checked=boxes.filter(x=>x.checked);document.getElementById('selectedCount').textContent=checked.length+' selected';document.getElementById('deleteSelected').disabled=!checked.length;document.getElementById('selectAll').checked=boxes.length>0&&checked.length===boxes.length}
+ async function load(){const b=document.getElementById('rows');try{await loadWebsites();const d=await api('/api/network/admin/opportunities');const a=d.opportunities||[];if(!a.length){b.innerHTML='<tr><td colspan="7" class="tiny">No opportunities yet. Create the first H1 + pitch above.</td></tr>';updateBulk();return;}const opts=approvedOptions();b.innerHTML=a.map(x=>'<tr><td><input class="check rowSelect" type="checkbox" value="'+x.id+'"></td><td><strong>'+esc(x.title)+'</strong><div class="pitch tiny">'+esc(x.pitch||'')+'</div><div class="tiny">'+esc(x.brand_name||'')+'</div></td><td>'+esc(x.primary_niche||'—')+'<div class="tiny">'+esc(x.sub_niche||'')+'</div></td><td>'+esc(x.country||'—')+'<div class="tiny">'+esc(x.language||'')+'</div></td><td><span class="status '+esc(x.publication_status)+'">'+esc(x.publication_status)+'</span><div class="tiny">max '+esc(x.desired_placements||1)+' placements</div></td><td><strong>'+esc(x.interest_count||0)+'</strong><div class="tiny">publisher commitments</div></td><td><div class="actions"><select data-site-for="'+x.id+'"><option value="">Choose approved website</option>'+opts+'</select><button class="btn good" data-action="interest" data-id="'+x.id+'">Hard interest</button><button class="btn bad" data-action="delete" data-id="'+x.id+'">Delete</button></div></td></tr>').join('');updateBulk()}catch(e){b.innerHTML='<tr><td colspan="7" class="tiny">'+esc(e.message)+'</td></tr>'}}
+ document.getElementById('rows').addEventListener('change',e=>{if(e.target.classList.contains('rowSelect'))updateBulk()});
+ document.getElementById('selectAll').onchange=function(){document.querySelectorAll('.rowSelect').forEach(x=>x.checked=this.checked);updateBulk()};
+ async function removeIds(ids,btn){if(!ids.length)return;if(!confirm('Delete '+ids.length+' selected opportunity'+(ids.length===1?'':'ies')+'? This is only allowed while no placement/publication is attached.'))return;busy(btn,true,'Deleting…');try{const d=await api('/api/network/admin/opportunities/delete',{method:'POST',body:JSON.stringify({ids})});btn.textContent='✓ Deleted '+d.deleted;await load()}catch(e){alert(e.message)}finally{busy(btn,false)}}
+ document.getElementById('deleteSelected').onclick=function(){const ids=Array.from(document.querySelectorAll('.rowSelect:checked')).map(x=>Number(x.value)).filter(Boolean);removeIds(ids,this)};
+ document.getElementById('rows').addEventListener('click',async function(ev){const btn=ev.target.closest('button[data-action]');if(!btn)return;const id=Number(btn.dataset.id||0);if(!id)return;if(btn.dataset.action==='delete')return removeIds([id],btn);if(btn.dataset.action==='interest'){const sel=document.querySelector('select[data-site-for="'+id+'"]');const websiteId=Number(sel&&sel.value||0);if(!websiteId){alert('Choose an approved website first.');return;}if(!confirm('Confirm HARD publication interest for the selected approved website? No article has been written yet.'))return;busy(btn,true,'Confirming…');try{await api('/api/network/admin/opportunities/'+id+'/interest',{method:'POST',body:JSON.stringify({publisher_website_id:websiteId,hard_interest_confirmed:true})});btn.textContent='✓ Committed';alert('Hard interest recorded. This placement is now eligible for a Publisher Edition in the next generation step.');await load()}catch(e){alert(e.message)}finally{busy(btn,false)}}});
+ document.getElementById('addBtn').onclick=async function(){const btn=this,m=document.getElementById('formMsg');busy(btn,true,'Creating…');m.textContent='Creating H1 + pitch…';try{await api('/api/network/admin/opportunities',{method:'POST',body:JSON.stringify({title:document.getElementById('title').value,pitch:document.getElementById('pitch').value,brand_name:document.getElementById('brand').value,owner_website_id:Number(document.getElementById('ownerWebsite').value||0)||null,primary_niche:document.getElementById('niche').value,sub_niche:document.getElementById('subniche').value,country:document.getElementById('country').value,language:document.getElementById('language').value,desired_placements:Number(document.getElementById('placements').value||1)})});m.textContent='✓ Opportunity created — no full article written.';document.getElementById('title').value='';document.getElementById('pitch').value='';btn.textContent='✓ Created';await load()}catch(e){m.textContent=e.message}finally{busy(btn,false)}};
+ document.getElementById('refreshBtn').onclick=async function(){busy(this,true,'Refreshing…');try{await load()}finally{busy(this,false)}};if(key)load();
+})();
+</script></main></body></html>`;
+}
+
 function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   if (!app) throw new Error('Network registration requires Express app');
   if (typeof verifyAdmin !== 'function') throw new Error('Network registration requires verifyAdmin');
@@ -392,6 +438,72 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
     const schema = await inspectNetworkSchema(pool);
     res.json({ success: true, enabled: envEnabled(), isolated: true, schema });
   }));
+
+
+  // DISTRIBUTION OPPORTUNITIES — H1 + pitch only. No Publisher Edition generation here.
+  app.get('/api/network/admin/opportunities', verifyAdmin, wrap(async (req, res) => {
+    const r = await pool.query(`SELECT c.id,c.owner_website_id,c.title,c.primary_niche,c.brand_name,c.publication_status,c.desired_placements,c.created_at,c.updated_at,
+      COALESCE(c.source_snapshot->>'pitch','') AS pitch,
+      COALESCE(c.source_snapshot->>'sub_niche','') AS sub_niche,
+      COALESCE(c.source_snapshot->>'country','') AS country,
+      COALESCE(c.source_snapshot->>'language','') AS language,
+      COUNT(p.id)::int AS interest_count
+      FROM network_content c
+      LEFT JOIN network_placements p ON p.content_id=c.id AND p.status NOT IN ('cancelled','rejected')
+      WHERE c.source_type='original' AND COALESCE(c.source_snapshot->>'network_kind','')='distribution_opportunity'
+      GROUP BY c.id ORDER BY c.created_at DESC,c.id DESC LIMIT 1000`);
+    res.json({ success:true, opportunities:r.rows });
+  }));
+
+  app.post('/api/network/admin/opportunities', verifyAdmin, wrap(async (req, res) => {
+    if (!envEnabled()) return res.status(409).json({ success:false,error:'Network is disabled' });
+    const title=cleanText(req.body?.title,300),pitch=cleanText(req.body?.pitch,1400);
+    if(!title) return res.status(400).json({success:false,error:'H1 / working title is required'});
+    if(!pitch) return res.status(400).json({success:false,error:'Short publisher pitch is required'});
+    const desired=Math.max(1,Math.min(100,Number(req.body?.desired_placements)||1));
+    const ownerWebsiteId=Number(req.body?.owner_website_id)||null;
+    if(ownerWebsiteId){const ow=await pool.query('SELECT id FROM network_websites WHERE id=$1',[ownerWebsiteId]);if(!ow.rows[0])return res.status(400).json({success:false,error:'Source website not found'});}
+    const snap={network_kind:'distribution_opportunity',pitch,sub_niche:cleanText(req.body?.sub_niche,120),country:cleanText(req.body?.country,120),language:cleanText(req.body?.language,30),full_article_generated:false};
+    const r=await pool.query(`INSERT INTO network_content (owner_website_id,title,source_type,primary_niche,brand_name,source_snapshot,publication_status,distribution_status,desired_placements,verified_placements,created_at,updated_at)
+      VALUES ($1,$2,'original',$3,$4,$5::jsonb,'available','offered',$6,0,NOW(),NOW()) RETURNING *`,[ownerWebsiteId,title,cleanText(req.body?.primary_niche,120)||null,cleanText(req.body?.brand_name,200)||null,JSON.stringify(snap),desired]);
+    res.status(201).json({success:true,opportunity:r.rows[0],rule:'Only H1 + pitch stored. No Publisher Edition generated.'});
+  }));
+
+  app.post('/api/network/admin/opportunities/:id/interest', verifyAdmin, wrap(async (req, res) => {
+    if(req.body?.hard_interest_confirmed!==true)return res.status(409).json({success:false,error:'Hard publication interest must be explicitly confirmed'});
+    const contentId=Number(req.params.id),websiteId=Number(req.body?.publisher_website_id);
+    if(!contentId||!websiteId)return res.status(400).json({success:false,error:'Opportunity and publisher website are required'});
+    const cr=await pool.query(`SELECT * FROM network_content WHERE id=$1 AND source_type='original' AND COALESCE(source_snapshot->>'network_kind','')='distribution_opportunity' LIMIT 1`,[contentId]);
+    if(!cr.rows[0])return res.status(404).json({success:false,error:'Opportunity not found'});
+    const wr=await pool.query('SELECT * FROM network_websites WHERE id=$1 LIMIT 1',[websiteId]);
+    const w=wr.rows[0];if(!w)return res.status(404).json({success:false,error:'Publisher website not found'});
+    if(!['approved','trusted'].includes(w.status))return res.status(409).json({success:false,error:'Publisher website must be approved before hard interest can be committed'});
+    if(!(w.scan_snapshot&&w.scan_snapshot.technical_pass===true))return res.status(409).json({success:false,error:'Publisher website must pass the Network Website Check before content can be written'});
+    const max=Number(cr.rows[0].desired_placements)||1;
+    const count=await pool.query(`SELECT COUNT(*)::int AS n FROM network_placements WHERE content_id=$1 AND status NOT IN ('cancelled','rejected')`,[contentId]);
+    if(Number(count.rows[0].n)>=max)return res.status(409).json({success:false,error:'This opportunity already reached its maximum publisher commitments'});
+    try{
+      const pr=await pool.query(`INSERT INTO network_placements (content_id,publisher_website_id,status,reward_credits,brand_mention_required,source_link_required,accepted_at,created_at,updated_at)
+        VALUES ($1,$2,'accepted',10,TRUE,TRUE,NOW(),NOW(),NOW()) RETURNING *`,[contentId,websiteId]);
+      await pool.query(`UPDATE network_content SET distribution_status='hard_interest',updated_at=NOW() WHERE id=$1`,[contentId]);
+      res.status(201).json({success:true,placement:pr.rows[0],eligible_for_publisher_edition:true,rule:'Website was approved before writing. No Publisher Edition generated by this endpoint.'});
+    }catch(e){if(e&&e.code==='23505')return res.status(409).json({success:false,error:'This publisher website already committed to this opportunity'});throw e;}
+  }));
+
+  app.post('/api/network/admin/opportunities/delete', verifyAdmin, wrap(async (req, res) => {
+    const ids=Array.isArray(req.body?.ids)?Array.from(new Set(req.body.ids.map(Number).filter(n=>Number.isInteger(n)&&n>0))).slice(0,500):[];
+    if(!ids.length)return res.status(400).json({success:false,error:'Select at least one opportunity'});
+    const linked=await pool.query(`SELECT DISTINCT content_id FROM network_placements WHERE content_id=ANY($1::bigint[]) LIMIT 20`,[ids]);
+    if(linked.rows.length)return res.status(409).json({success:false,error:'One or more selected opportunities already have publisher commitments/placements. Cancel or resolve those placements before deletion.',blocked_ids:linked.rows.map(x=>x.content_id)});
+    const r=await pool.query(`DELETE FROM network_content WHERE id=ANY($1::bigint[]) AND source_type='original' AND COALESCE(source_snapshot->>'network_kind','')='distribution_opportunity' RETURNING id`,[ids]);
+    res.json({success:true,deleted:r.rowCount,deleted_ids:r.rows.map(x=>x.id)});
+  }));
+
+  app.get('/network/opportunities', (req, res) => {
+    if (!envEnabled()) return res.status(404).send('Network is not enabled.');
+    res.set('Cache-Control','no-store');
+    res.type('html').send(opportunitiesPage());
+  });
 
   // WEBSITE REGISTRY — all writes remain inside network_websites.
   app.get('/api/network/admin/websites', verifyAdmin, wrap(async (req, res) => {
@@ -457,7 +569,7 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   app.get('/network', (req, res) => {
     if (!envEnabled()) return res.status(404).send('Network is not enabled.');
     res.set('Cache-Control', 'no-store');
-    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Network</title><style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#0b1020;color:#eef2ff}main{max-width:980px;margin:0 auto;padding:56px 24px}.card{background:#121a2f;border:1px solid #263253;border-radius:18px;padding:26px}.badge{display:inline-block;padding:7px 10px;border-radius:999px;background:#18213b;border:1px solid #33436c;font-size:12px}h1{font-size:42px;margin:18px 0 12px}p{color:#b9c4df;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:24px}.mini{display:block;color:#eef2ff;text-decoration:none;padding:18px;border-radius:14px;background:#0f1629;border:1px solid #263253}.mini:hover{border-color:#5a78b8}.muted{font-size:13px;color:#8492b6}</style></head><body><main><div class="card"><span class="badge">Network isolated module</span><h1>ContentScale Network</h1><p>Content & Distribution CRM. External Publisher Editions are generated only after hard interest and an approved target website.</p><div class="grid"><a class="mini" href="/network/websites"><strong>Websites</strong><div class="muted">Registry + hard-interest site check</div></a><div class="mini"><strong>Content Library</strong><div class="muted">Next</div></div><div class="mini"><strong>Publishing</strong><div class="muted">Next</div></div><div class="mini"><strong>Placements</strong><div class="muted">Next</div></div></div></div></main></body></html>`);
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Network</title><style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#0b1020;color:#eef2ff}main{max-width:980px;margin:0 auto;padding:56px 24px}.card{background:#121a2f;border:1px solid #263253;border-radius:18px;padding:26px}.badge{display:inline-block;padding:7px 10px;border-radius:999px;background:#18213b;border:1px solid #33436c;font-size:12px}h1{font-size:42px;margin:18px 0 12px}p{color:#b9c4df;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:24px}.mini{display:block;color:#eef2ff;text-decoration:none;padding:18px;border-radius:14px;background:#0f1629;border:1px solid #263253}.mini:hover{border-color:#5a78b8}.muted{font-size:13px;color:#8492b6}</style></head><body><main><div class="card"><span class="badge">Network isolated module</span><h1>ContentScale Network</h1><p>Content & Distribution CRM. External Publisher Editions are generated only after hard interest and an approved target website.</p><div class="grid"><a class="mini" href="/network/websites"><strong>Websites</strong><div class="muted">Registry + hard-interest site check</div></a><a class="mini" href="/network/opportunities"><strong>Opportunities</strong><div class="muted">H1 + pitch → hard interest</div></a><div class="mini"><strong>Publishing</strong><div class="muted">Next</div></div><div class="mini"><strong>Placements</strong><div class="muted">Next</div></div></div></div></main></body></html>`);
   });
 
   return { registered: true, enabled: envEnabled(), schema_version: NETWORK_SCHEMA_VERSION };
