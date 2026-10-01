@@ -288,7 +288,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-09-30-CANONICAL-v406-NETWORK-SAFE-SHELL';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v407-TRACKER-WORKFLOW-SEMANTIC-SCHEMA';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -688,7 +688,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-09-30-CANONICAL-v406-NETWORK-SAFE-SHELL',
+  build: 'CS-2026-10-01-CANONICAL-v407-TRACKER-WORKFLOW-SEMANTIC-SCHEMA',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -3760,6 +3760,46 @@ function _trackerPlainLiveHtml(html){
     .replace(/[^a-z0-9$%+./: -]+/g,' ')
     .replace(/\s+/g,' ').trim();
 }
+
+// CONTENTSCALE-JSONLD-DEEP-TYPE-V407=true
+// JSON-LD may be an object, an array, a nested @graph, or a graph inside another
+// object. One recursive reader is the source of truth for server-side presence
+// checks so an existing FAQPage is never recommended a second time.
+function _jsonLdCollectTypesDeep(value,out){
+  out=out||new Set();
+  if(Array.isArray(value)){
+    value.forEach(function(item){_jsonLdCollectTypesDeep(item,out);});
+    return out;
+  }
+  if(!value||typeof value!=='object')return out;
+  const own=value['@type'];
+  (Array.isArray(own)?own:[own]).filter(Boolean).forEach(function(type){out.add(String(type));});
+  Object.keys(value).forEach(function(key){
+    if(key!=='@type')_jsonLdCollectTypesDeep(value[key],out);
+  });
+  return out;
+}
+function _jsonLdCollectObjectsDeep(value,out){
+  out=out||[];
+  if(Array.isArray(value)){value.forEach(function(item){_jsonLdCollectObjectsDeep(item,out);});return out;}
+  if(!value||typeof value!=='object')return out;
+  if(value['@type']||value.author)out.push(value);
+  Object.keys(value).forEach(function(key){if(key!=='@type')_jsonLdCollectObjectsDeep(value[key],out);});
+  return out;
+}
+function _jsonLdTypesFromHtml(html){
+  const types=new Set();
+  const raw=String(html||'');
+  const rx=/<script\b[^>]*\btype\s*=\s*["']application\/ld\+json(?:\s*;[^"']*)?["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+  while((match=rx.exec(raw))){
+    try{_jsonLdCollectTypesDeep(JSON.parse(match[1]),types);}catch(_e){/* invalid block is ignored; other blocks still count */}
+  }
+  return types;
+}
+function _htmlHasJsonLdType(html,type){
+  return _jsonLdTypesFromHtml(html).has(String(type));
+}
 function _trackerActionDefinitelyImplemented(action,liveHtml){
   const raw=String(liveHtml||''),plain=_trackerPlainLiveHtml(raw),t=_trackerActionText(action).toLowerCase();
   const title=String(action&&action.title||'').toLowerCase();
@@ -3798,7 +3838,7 @@ function _trackerActionDefinitelyImplemented(action,liveHtml){
     if(frag.length>80&&plain.includes(frag))return true;
   }
   if(/faq|frequently asked|paa|questions? and answers?|q&a/i.test(t)
-     &&(/FAQPage/i.test(raw)||/\bfaq\b|frequently asked questions/i.test(plain)))return true;
+     &&(_htmlHasJsonLdType(raw,'FAQPage')||/\bfaq\b|frequently asked questions/i.test(plain)))return true;
   if(/author|e-e-a-t|authority|years of roofing experience|company experience|manager.*experience/i.test(t)){
     let n=0;
     if(/reviewed by|author:/i.test(plain))n++;
@@ -6875,8 +6915,8 @@ app.post('/api/tracker-client/:token/page/:pageId/brief-viewed', async (req, res
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const pg = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!pg.rows.length) return res.status(404).json({ success: false, error: 'Page not found' });
-    await pool.query('UPDATE tracker_pages SET brief_viewed_at=NOW() WHERE id=$1', [pg.rows[0].id]);
-    res.json({ success: true });
+    const updated=await pool.query('UPDATE tracker_pages SET brief_viewed_at=NOW() WHERE id=$1 RETURNING brief_viewed_at', [pg.rows[0].id]);
+    res.json({ success: true, brief_viewed_at:updated.rows[0]&&updated.rows[0].brief_viewed_at });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -7523,10 +7563,32 @@ function _cannibalRelevance(page, queryNorm) {
   words.forEach(function (w) { if (hay.indexOf(w) >= 0) hits++; });
   return hits / words.length;  // 0..1 share of query words found in slug+keyword
 }
+// Semantic ownership is separate from observed GSC ranking. A purpose-built URL
+// can be the intended owner even when Google currently shows another page. For
+// local queries, remove only the location phrase before comparing the core intent.
+function _cannibalSemanticOwnershipScore(page,queryNorm){
+  const q=_cannibalNorm(queryNorm);
+  let core=q;
+  if(/\bnj\b|\bnew jersey\b/.test(core))core=core.replace(/\bnew jersey\b/g,' ').replace(/\bnj\b/g,' ');
+  core=core.replace(/\s+/g,' ').trim();
+  const words=core.split(' ').filter(w=>w.length>2);
+  if(!words.length)return 0;
+  let path='';try{path=new URL(page.url||'').pathname;}catch(_e){path=String(page.url||'').replace(/^https?:\/\/[^/]+/,'');}
+  const slug=_cannibalNorm(path);
+  const kw=_cannibalNorm(page.keyword||page.gsc_keyword||'');
+  const slugCoverage=words.filter(w=>slug.split(' ').includes(w)).length/words.length;
+  const keywordCoverage=words.filter(w=>kw.split(' ').includes(w)).length/words.length;
+  let score=(slugCoverage*2)+(keywordCoverage*0.75);
+  if(core.length>4&&slug.includes(core))score+=2;
+  if(core.length>4&&kw.includes(core))score+=1;
+  return score;
+}
 // Rank by relevance to the shared query first, then that query's position,
 // clicks and impressions. Page-level totals are only a fallback.
 function _cannibalRankByRelevance(pages, queryNorm) {
   return pages.slice().sort(function (x, y) {
+    const sx=_cannibalSemanticOwnershipScore(x,queryNorm),sy=_cannibalSemanticOwnershipScore(y,queryNorm);
+    if(Math.abs(sy-sx)>0.001)return sy-sx;
     const rx = _cannibalRelevance(x, queryNorm), ry = _cannibalRelevance(y, queryNorm);
     if (Math.abs(ry - rx) > 0.001) return ry - rx;       // best query match first
     const px = Number(x.position || 999), py = Number(y.position || 999);
@@ -7625,14 +7687,28 @@ async function analyzeCannibalization(clientId) {
   // on sites that haven't imported per-URL queries yet.
   const groups = [];
   function pushGroup(basis, shared, pageEntries) {
-    const pages = pageEntries.map(function (entry) {
+    let pages = pageEntries.map(function (entry) {
       const id=entry.page_id||entry.id||entry,p = byId[id]; if (!p) return null;
       return { id:p.id,url:p.url,keyword:p.keyword||p.gsc_keyword||'',
                clicks: entry.clicks==null?Number(p.gsc_clicks||0):Number(entry.clicks||0),
                impressions: entry.impressions==null?Number(p.gsc_impressions||0):Number(entry.impressions||0),
-               position: entry.position==null?(p.gsc_position==null?null:Number(p.gsc_position)):Number(entry.position) };
+               position: entry.position==null?(p.gsc_position==null?null:Number(p.gsc_position)):Number(entry.position),
+               query_observed:basis==='gsc_queries',semantic_candidate:false };
     }).filter(Boolean);
     if (pages.length < 2) return;
+
+    // Add a strongly matching tracked page as an intended-owner candidate even
+    // when it has no row for this query yet. This does not invent a ranking: the
+    // flags explicitly distinguish semantic ownership from observed GSC evidence.
+    if(basis==='gsc_queries'){
+      const present=new Set(pages.map(p=>String(p.id)));
+      pagesR.rows.forEach(function(p){
+        if(present.has(String(p.id)))return;
+        const semanticScore=_cannibalSemanticOwnershipScore(p,shared);
+        if(semanticScore<3.5)return;
+        pages.push({id:p.id,url:p.url,keyword:p.keyword||p.gsc_keyword||'',clicks:0,impressions:0,position:null,query_observed:false,semantic_candidate:true});
+      });
+    }
 
     // Winner = page whose slug/keyword best MATCHES the shared query (relevance),
     // with impressions/position as tie-breakers. This fixes cases like
@@ -7641,6 +7717,7 @@ async function analyzeCannibalization(clientId) {
     const ranked = _cannibalRankByRelevance(pages, shared);
     const keep = ranked[0];
     const losers = ranked.slice(1);
+    const semanticOwner=!keep.query_observed&&keep.semantic_candidate;
 
     // A shared query proves overlap, not that a 301 is safe. Only exact duplicate
     // target keywords become a consolidation candidate. Distinct intents stay
@@ -7655,13 +7732,15 @@ async function analyzeCannibalization(clientId) {
       basis: basis,
       shared: shared,
       pages: ranked,
-      keep: { id: keep.id, url: keep.url },
+      keep: { id: keep.id, url: keep.url, owner_basis:semanticOwner?'semantic_intent':'observed_query' },
       redirect: exactDuplicate&&!anySeparate ? losers.map(function (l) { return { id: l.id, url: l.url }; }) : [],
       recommendation: recommendation,
       evidence_level:basis==='gsc_queries'?'PROVEN_OVERLAP':'LIKELY',
       confidence: exactDuplicate||anySeparate?'high':'medium',
       total_impressions: totalImpressions,
-      reason: anySeparate
+      reason: semanticOwner
+        ? ('Intended semantic owner: '+keep.url+' because its URL/target keyword matches the core query intent most precisely. Google currently surfaces the other URL(s); keep them live, differentiate their purpose and cross-link to the intended owner. This is an ownership recommendation, not a claim that the intended owner already ranks for the query.')
+        : anySeparate
         ? 'Pages target legitimately different intent (e.g. residential vs commercial) — differentiate content and cross-link instead of merging.'
         : exactDuplicate
         ? ('Exact duplicate target keyword. Candidate owner: '+keep.url+' based on query relevance and query-level GSC position. Preview and approve any 301; never execute automatically.')
@@ -13546,7 +13625,8 @@ app.post('/api/scan/paste', async (req, res) => {
     schemaMatches.forEach(m => {
       try { schemaScripts.push(JSON.parse(m[1])); } catch(e) {}
     });
-    const flatSchemas = schemaScripts.flatMap(s => Array.isArray(s) ? s : (s['@graph'] ? s['@graph'] : [s]));
+    const flatSchemas = [];
+    schemaScripts.forEach(s => _jsonLdCollectObjectsDeep(s,flatSchemas));
     const hasArticleSchema = flatSchemas.some(s => ['Article','NewsArticle','BlogPosting','TechArticle'].includes(s?.['@type']));
     const hasFAQPageSchema = flatSchemas.some(s => s?.['@type'] === 'FAQPage');
     const hasOrganizationSchema = flatSchemas.some(s => ['Organization','LocalBusiness','Corporation'].includes(s?.['@type']));
@@ -14257,7 +14337,7 @@ return result;
                const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescription=metaDescEl?metaDescEl.getAttribute('content')||'':''; const metaDescriptionLength=metaDescription.length;
                const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]');
                const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
-               const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]));
+               const flatSchemas=[];const walkSchema=(v)=>{if(Array.isArray(v)){v.forEach(walkSchema);return;}if(!v||typeof v!=='object')return;if(v['@type']||v.author)flatSchemas.push(v);Object.keys(v).forEach(k=>{if(k!=='@type')walkSchema(v[k]);});};schemaScripts.forEach(walkSchema);
                // Recursively check for an @type anywhere in the schema tree — Rank Math/Yoast nest FAQPage
                // deep (inside @graph, mainEntity, or as a child node), so a flat one-level check misses it.
                const _deepHasType=(obj,types,depth)=>{ if(!obj||depth>6)return false; if(Array.isArray(obj))return obj.some(x=>_deepHasType(x,types,depth+1)); if(typeof obj==='object'){ const t=obj['@type']; if(t&&(Array.isArray(t)?t.some(x=>types.includes(x)):types.includes(t)))return true; return Object.keys(obj).some(k=>k!=='@type'&&_deepHasType(obj[k],types,depth+1)); } return false; };
@@ -32046,7 +32126,7 @@ app.post('/api/content/graaf-scan', verifyEngineAccess, async (req, res) => {
       const metaDescEl=document.querySelector('meta[name="description"]'); const metaDescription=metaDescEl?metaDescEl.getAttribute('content')||'':''; const metaDescriptionLength=metaDescription.length;
       const hasCanonical=!!document.querySelector('link[rel="canonical"]'); const hasMetaViewport=!!document.querySelector('meta[name="viewport"]');
       const schemaScripts=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map(s=>{try{return JSON.parse(s.textContent);}catch(e){return null;}}).filter(Boolean);
-      const flatSchemas=schemaScripts.flatMap(s=>Array.isArray(s)?s:(s['@graph']?s['@graph']:[s]));
+      const flatSchemas=[];const walkSchema=(v)=>{if(Array.isArray(v)){v.forEach(walkSchema);return;}if(!v||typeof v!=='object')return;if(v['@type']||v.author)flatSchemas.push(v);Object.keys(v).forEach(k=>{if(k!=='@type')walkSchema(v[k]);});};schemaScripts.forEach(walkSchema);
       const hasArticleSchema=flatSchemas.some(s=>['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
       const hasFAQPageSchema=flatSchemas.some(s=>s['@type']==='FAQPage');
       const hasOpenGraph=!!document.querySelector('meta[property="og:title"]'); const hasTwitterCard=!!document.querySelector('meta[name="twitter:card"]');
@@ -45977,6 +46057,9 @@ function _trackerImplementationCheckState(p,isDone,nextState){
 }
 
 function _trackerImplementationCheckHtml(p,isDone,nextState){
+  // NEXT ACTION already explains these hand-off states and owns their button.
+  // Rendering a second near-identical purple/amber panel made the card look stuck.
+  if(nextState&&['REVIEW_BRIEF','CASE_PUBLISH_VERIFY','VERIFY_LIVE_PENDING'].includes(String(nextState.code||'')))return '';
   var x=_trackerImplementationCheckState(p,isDone,nextState);
   if(!x)return '';
   return '<div data-implementation-check="'+x.code+'" style="margin:8px 14px 4px;padding:9px 12px;border:1px solid '+x.border+';background:'+x.bg+';border-radius:8px;">'
@@ -46198,7 +46281,9 @@ function renderPages() {
     } else if (nextCheckDate && _monitoringOn) {
       nextCheck = 'Next scan: ' + nextCheckDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
     } else {
-      nextCheck = 'Next scan: not scheduled (Monitoring Off)';
+      nextCheck = p.case_study_active
+        ? 'Scheduled page scans: Off · evidence checkpoints stay active'
+        : 'Next scan: not scheduled (Monitoring Off)';
     }
     if (p.case_study_active && _caseStarted && !p.monitoring_waiting_input) {
       var _csBaseDate = new Date(_caseStarted),_ms=p.case_study_milestones||{};
@@ -46264,8 +46349,9 @@ function renderPages() {
       badges += '<span class="cs-cs-badge" style="background:#111827;color:#94a3b8;border:1px dashed #475569;font-weight:700;" title="This page has no usable GSC position or impression evidence. Import or refresh GSC before assigning a priority tier.">UNCLASSIFIED \\u2014 GSC DATA REQUIRED</span> ';
     }
     if (p.case_study_active) badges += '<button type="button" onclick="event.stopPropagation();openCaseStudy(' + p.id + ')" style="cursor:pointer;background:rgba(14,165,233,.12);color:#7dd3fc;border:1px solid #0284c7;border-radius:5px;padding:2px 8px;font-size:9px;font-weight:900;letter-spacing:.05em;" title="Protected baseline and append-only proof history">CASE STUDY ACTIVE</button> ';
-    if (pos) badges += '<span class="cs-badge" title="LIVE Google position for your tracked keyword \\u201c' + (p.keyword||'') + '\\u201d \\u2014 measured at the last scan. Note: the GSC \\u201cpos\\u201d below is different: an average across ALL queries this page appears for (28 days), so it is usually worse than this number." style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">#' + pos + '</span> ';
-    else badges += '<span class="cs-cs-badge grey">Not ranked</span> ';
+    if (pos) badges += '<span class="cs-badge" title="LIVE Google position for your tracked keyword \\u201c' + (p.keyword||'') + '\\u201d \\u2014 measured at the last scan. Note: the GSC \\u201cpos\\u201d below is different: an average across ALL queries this page appears for (28 days), so it is usually worse than this number." style="color:' + posColor + ';background:#0d1117;border:1px solid ' + posColor + '44;">LIVE #' + pos + '</span> ';
+    else if(p.gsc_position!==null&&p.gsc_position!==undefined&&p.gsc_position!==''&&!isNaN(parseFloat(p.gsc_position))) badges += '<span class="cs-cs-badge" style="background:#0d1117;color:#f59e0b;border:1px solid #f59e0b55;" title="Average Google Search Console position across all queries for this page; this is not a live rank check for the tracked keyword.">GSC AVG ' + parseFloat(p.gsc_position).toFixed(1) + '</span> ';
+    else badges += '<span class="cs-cs-badge grey" title="No live rank measurement is available for the tracked keyword. This does not prove that the page is absent from Google.">Live rank not measured</span> ';
     // Legacy AIO / Perplexity / Bing row badges removed. Canonical five-engine manual evidence is the single citation truth; Bing remains supporting Intelligence only.
     if (score) badges += '<span class="cs-cs-badge yellow">' + score + '/100</span> ';
     if (p.fetch_reliable === false) badges += '<span class="cs-cs-badge" style="background:#2d1f00;color:#fbbf24;">! fetch issue</span> ';
@@ -46485,10 +46571,10 @@ function renderPages() {
       + (_hideManualScan ? '' : (_disableManualScan
         ? '<button disabled data-tour="scan" style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:11px;padding:5px 10px;font-weight:700;opacity:.8;" title="Scan is temporarily disabled. The next step is Check current live; no normal scan should run before live verification.">\u21bb Scan</button>'
         : (((_evidenceCheckpointLock||_nextNoAction||_nextActionCode==='WAITING'||(_nextWorkflowGuard&&!_nextScanRequired))
-          ? '<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:11px;padding:5px 10px;font-weight:700;" title="'+(_nextNoAction?'No new action was found. Wait for the next evidence checkpoint before scanning again.':_nextActionCode==='VERIFYING'?'Live verification is already running. A normal scan is not needed.':'Use the action shown under NEXT ACTION; no normal scan is needed now.')+'">\u21bb '+(_nextNoAction?'No scan needed':'Scan locked')+'</button>'
+        ? '<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:11px;padding:5px 10px;font-weight:700;" title="'+(_nextNoAction?'No new action was found. Wait for the next evidence checkpoint before scanning again.':_nextActionCode==='VERIFYING'?'Live verification is already running. A normal scan is not needed.':'Use the action shown under NEXT ACTION; no normal scan is needed now.')+'">\u21bb '+(_nextNoAction?'No scan needed':(_nextActionCode==='REVIEW_BRIEF'||_nextActionCode==='CASE_PUBLISH_VERIFY'?'No rescan needed':'Scan locked'))+'</button>'
           : '<button data-tour="scan" data-check-btn="' + p.id + '" onclick="checkPage(' + p.id + ')" style="background:#0d1117;border:1px solid ' + (_scanDone ? '#22c55e' : '#2dd4bf') + ';border-radius:7px;color:' + (_scanDone ? '#4ade80' : '#5eead4') + ';cursor:pointer;font-size:11px;padding:5px 10px;font-weight:700;" title="' + (_nextScanRequired?'Scan required by NEXT ACTION':(lastChecked ? (_scanDone ? 'Scanned this round \u2014 click to rescan now' : 'Rescan this URL now') : 'Scan this URL now')) + '">' + (lastChecked ? (_scanDone ? '\u21bb \u2713' : '\u21bb Scan') : '\u25b6 Scan') + '</button>'))))
       + (p.case_study_active
-        ? '<button disabled style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;opacity:.9;" title="Locked to the monitoring choice saved with the protected baseline. Case-study day 7, day 14 and day 30 reminders remain active.">Case-study cycle: '+((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)?'active · monitoring locked Off':freqLabel+' · locked')+'</button>'
+        ? '<button disabled style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;opacity:.9;" title="The protected case-study evidence cycle remains active. Scheduled page rescans follow the saved monitoring choice; evidence checkpoints remain available.">Case study: '+((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)?'evidence active · scheduled scans Off':freqLabel+' · locked')+'</button>'
         : ((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)
         ? '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#111827;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="No guided review schedule. Manual scans still work.">Monitoring: Off</button>'
         : '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Guided data review '+freqLabel+'. ContentScale waits for input before the manual scan.">Monitoring: '+freqLabel+'</button>'))
@@ -47192,8 +47278,10 @@ function _copyBriefAuthoritative(pageId) {
       lines.push((i + 1) + '. ' + head);
       // List every page in the group with its GSC strength so the editor can sanity-check the winner.
       (g.pages || []).forEach(function (pg) {
-        var tag = (g.keep && pg.id === g.keep.id) ? ' [PROVISIONAL OWNER]' : (g.recommendation === 'consolidate_candidate' ? ' [301 CANDIDATE -> ' + (g.keep ? g.keep.url : '') + ']' : '');
-        lines.push('   - ' + pg.url + ' (' + (pg.impressions || 0) + ' impr, pos ' + (pg.position != null ? Number(pg.position).toFixed(1) : 'n/a') + ')' + tag);
+        var semanticOwner=g.keep&&g.keep.owner_basis==='semantic_intent'&&pg.id===g.keep.id;
+        var tag = (g.keep && pg.id === g.keep.id) ? (semanticOwner?' [INTENDED SEMANTIC OWNER — NOT YET OBSERVED FOR THIS QUERY]':' [PROVISIONAL OWNER]') : (g.recommendation === 'consolidate_candidate' ? ' [301 CANDIDATE -> ' + (g.keep ? g.keep.url : '') + ']' : '');
+        var observed=pg.query_observed===false?'semantic candidate; no query-level GSC row':'query observed';
+        lines.push('   - ' + pg.url + ' (' + observed + '; ' + (pg.impressions || 0) + ' impr, pos ' + (pg.position != null ? Number(pg.position).toFixed(1) : 'n/a') + ')' + tag);
       });
       lines.push('   Recommendation: ' + String(g.recommendation || 'differentiate').replace(/_/g, ' ').toUpperCase());
       if (g.reason) lines.push('   Why: ' + g.reason);
@@ -47201,7 +47289,7 @@ function _copyBriefAuthoritative(pageId) {
       if (g.recommendation === 'consolidate_candidate' && g.redirect && g.redirect.length) {
         lines.push('   Action for editor: review intent and content first. If the pages are true duplicates and you approve the change, 301 ' + g.redirect.map(function (r) { return r.url; }).join(', ') + '  ->  ' + (g.keep ? g.keep.url : '') + ' ; then repoint internal links and verify the live redirect. Do not execute automatically.');
       } else if (g.recommendation === 'differentiate') {
-        lines.push('   Action for editor: keep both URLs live; remove or rewrite the competing section on the non-owner page, sharpen its distinct intent, and link to the provisional owner. Do not 301 automatically.');
+        lines.push('   Action for editor: keep all URLs live; make the intended owner the strongest page for this exact intent, narrow the competing page(s) to their own purpose, and cross-link clearly. Do not 301 automatically.');
       } else {
         lines.push('   Action for editor: keep both pages; sharpen each page to its own intent and cross-link them (do NOT 301).');
       }
@@ -47834,12 +47922,12 @@ function _computeCannibal() {
   if(_centralCannibal&&Array.isArray(_centralCannibal.groups)){
     _cannibalIssues=_cannibalIssues.filter(function(c){return c.level!=='PROVEN'&&c.level!=='LIKELY';});
     _centralCannibal.groups.forEach(function(g){
-      var proven=g.evidence_level==='PROVEN_OVERLAP',owner=g.keep&&g.keep.url?g.keep.url:'not assigned';
+      var proven=g.evidence_level==='PROVEN_OVERLAP',owner=g.keep&&g.keep.url?g.keep.url:'not assigned',semanticOwner=!!(g.keep&&g.keep.owner_basis==='semantic_intent');
       _cannibalIssues.push({
         level:proven?'PROVEN':'LIKELY',color:proven?'#f87171':'#fb923c',key:(g.intent_family||g.shared)+(g.query_variants>1?' · '+g.query_variants+' query variants':''),
         pages:(g.pages||[]).map(function(p){return{slug:(function(){try{return new URL(p.url).pathname||'/';}catch(e){return p.url;}})(),pos:p.position,impr:p.impressions,clicks:p.clicks,id:p.id};}),
         advice:proven
-          ? 'VERIFIED QUERY OVERLAP — real per-page GSC evidence shows these URLs for the same query family. This proves overlap, not automatically harmful cannibalization. Provisional owner: '+owner+'. Review whether the intent is truly the same; differentiate and cross-link when both pages should remain. Consider consolidation only for verified same-intent duplicates and never automatically.'
+          ? 'VERIFIED QUERY OVERLAP — real per-page GSC evidence shows the observed URLs for the same query family. This proves overlap, not automatically harmful cannibalization. '+(semanticOwner?'Intended semantic owner (not yet observed for this query): ':'Provisional observed owner: ')+owner+'. Review whether the intent is truly the same; differentiate and cross-link when pages should remain. Consider consolidation only for verified same-intent duplicates and never automatically.'
           : 'LIKELY OVERLAP — these pages target near-identical keywords but do not yet share verified per-page GSC evidence. Fetch/import each page’s Queries data before changing content, canonicals or redirects.'
       });
     });
@@ -49328,8 +49416,18 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     // mutate the Brief; it only lets NEXT ACTION stop telling the owner to reopen work already read.
     try{
       fetch('/api/tracker-client/'+TOKEN+'/page/'+pageId+'/brief-viewed',{method:'POST'})
-        .then(function(){var _pg=(_pages||[]).find(function(x){return x.id==pageId;});if(_pg)_pg.brief_viewed_at=new Date().toISOString();})
-        .catch(function(){});
+        .then(function(r){return r.json().then(function(d){if(!r.ok||!d.success)throw new Error(d.error||'Could not save Brief review');return d;});})
+        .then(function(d){
+          var _pg=(_pages||[]).find(function(x){return x.id==pageId;});
+          if(_pg)_pg.brief_viewed_at=d.brief_viewed_at||new Date().toISOString();
+          // The Brief modal stays open, while the card behind it immediately moves
+          // from OPEN BRIEF to PUBLISH / CHECK CURRENT LIVE. No page refresh needed.
+          renderPages();
+        })
+        .catch(function(err){
+          _briefViewed[pageId]=false;
+          toast('Brief opened, but its reviewed status was not saved: '+String(err&&err.message||err),'#ef4444');
+        });
     }catch(_e){}
     var card = document.getElementById('cbCard');
     if (!card) return;
@@ -56970,11 +57068,9 @@ function graafAnalyzeHtml(html, pageUrl) {
   const hasTwitterCard = /<meta[^>]+name=["']twitter:card["'][^>]*>/i.test(rawHtml);
 
   // Schema
-  const schemaBlocks = [...rawHtml.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
-  const schemas = schemaBlocks.map(m => { try { return JSON.parse(m[1]); } catch(e) { return null; } }).filter(Boolean);
-  const flatSchemas = schemas.flatMap(s => Array.isArray(s) ? s : (s['@graph'] ? s['@graph'] : [s]));
-  const hasArticleSchema = flatSchemas.some(s => ['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].includes(s['@type']));
-  const hasFAQPageSchema = flatSchemas.some(s => s['@type'] === 'FAQPage');
+  const schemaTypes = _jsonLdTypesFromHtml(rawHtml);
+  const hasArticleSchema = ['Article','NewsArticle','BlogPosting','TechArticle','WebPage'].some(t => schemaTypes.has(t));
+  const hasFAQPageSchema = schemaTypes.has('FAQPage');
 
   // Content signals
   const hasDirectAnswer = /^.{0,300}[.!?]/s.test(bodyText.substring(0, 300));
@@ -57015,10 +57111,8 @@ function graafAnalyzeHtml(html, pageUrl) {
   const h1Length      = h1Text.length;             // char length of H1
   const h1IsTooLong   = h1Text.length > 70;        // penalised in computeScore
   const h1IsHidden    = false;                     // can't detect CSS server-side
-  const hasOrganizationSchema = flatSchemas.some(s =>
-    ['Organization','LocalBusiness','Corporation','ProfessionalService',
-     'HomeAndConstructionBusiness','MedicalBusiness','LegalService'].includes(s['@type'])
-  );
+  const hasOrganizationSchema = ['Organization','LocalBusiness','Corporation','ProfessionalService',
+    'HomeAndConstructionBusiness','MedicalBusiness','LegalService'].some(t => schemaTypes.has(t));
 
   return { wordCount, h1Text, h1Count, h1VisibleCount, h1Length, h1IsGeneric,
     h1IsTooShort, h1IsTooLong, h1IsHidden, h2Count, h3Count,
@@ -57431,11 +57525,15 @@ async function browserScanHtml(html, pageUrl) {
         if (types.includes('FAQPage')) hasFAQPageSchema = true;
         if (types.some(t => ['Organization','LocalBusiness','Corporation'].includes(t))) hasOrganizationSchema = true;
       };
+      const walkSchema = (value) => {
+        if (Array.isArray(value)) { value.forEach(walkSchema); return; }
+        if (!value || typeof value !== 'object') return;
+        checkSchemaType(value['@type']);
+        Object.keys(value).forEach(key => { if (key !== '@type') walkSchema(value[key]); });
+      };
       schemaScripts.forEach(script => {
         try {
-          const data = JSON.parse(script.textContent);
-          if (Array.isArray(data)) data.forEach(item => checkSchemaType(item['@type']));
-          else { checkSchemaType(data['@type']); if (Array.isArray(data['@graph'])) data['@graph'].forEach(item => checkSchemaType(item['@type'])); }
+          walkSchema(JSON.parse(script.textContent));
         } catch(e) {}
       });
       const hasFAQContent = (() => {
@@ -57463,7 +57561,7 @@ async function browserScanHtml(html, pageUrl) {
         const clusterMatch = qCount >= 3;
         // FAQPage structured data is the strongest language-independent signal.
         let schemaMatch = false;
-        try { schemaMatch = Array.from(document.querySelectorAll('script[type="application/ld+json"]')).some(s => { try { const d = JSON.parse(s.textContent); const arr = Array.isArray(d) ? d : (d['@graph'] ? d['@graph'] : [d]); return arr.some(x => x && x['@type'] === 'FAQPage'); } catch(e){ return false; } }); } catch(e) {}
+        try { schemaMatch = hasFAQPageSchema; } catch(e) {}
         return headingMatch || idMatch || classMatch || textMatch || clusterMatch || schemaMatch;
       })();
       const images = document.querySelectorAll('img');
@@ -58385,7 +58483,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
         def: /id=["']?direct-answer|class=["'][^"']*direct-answer|is (a|the) (leading|strategic|systematic|premier|content)/i.test(rawHtml),
         whatIsH2: /<h2[^>]*>[^<]*what is\b/i.test(rawHtml),
         author: /about the author|about the founder|written by|id=["']?author|class=["'][^"']*author-card/i.test(rawHtml),
-        faq: /"@type"\s*:\s*"FAQPage"/i.test(rawHtml),
+        faq: _htmlHasJsonLdType(rawHtml,'FAQPage'),
         org: /"@type"\s*:\s*"Organization"/i.test(rawHtml),
         article: /"@type"\s*:\s*"Article"/i.test(rawHtml),
         howto: /"@type"\s*:\s*"HowTo"/i.test(rawHtml),
@@ -58670,8 +58768,9 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
                   if(!others.length)return;
                   const variants=(g.shared_queries||[g.shared]).slice(0,5).join('", "');
                   const owner=g.keep&&g.keep.url?g.keep.url:'not assigned';
+                  const ownerLabel=g.keep&&g.keep.owner_basis==='semantic_intent'?'Intended semantic owner (not claimed as currently ranking)':'Provisional observed owner';
                   if(g.evidence_level==='PROVEN_OVERLAP'){
-                    _conf.push('VERIFIED QUERY OVERLAP with '+others.map(function(p){return p.url;}).join(', ')+'. Real page-scoped GSC evidence shows the shared query family "'+variants+'". This proves overlap, not automatically harmful cannibalization. Provisional owner: '+owner+'. Required action: first state whether the pages serve the same intent. If they do, differentiate the non-owner section/title and add a contextual internal link to the owner. If intent is legitimately separate, preserve both pages and clarify that distinction. Never prescribe an automatic redirect.');
+                    _conf.push('VERIFIED QUERY OVERLAP with '+others.map(function(p){return p.url;}).join(', ')+'. Real page-scoped GSC evidence shows the shared query family "'+variants+'". This proves overlap, not automatically harmful cannibalization. '+ownerLabel+': '+owner+'. Required action: first state whether the pages serve the same intent. If they do, differentiate the non-owner section/title and add a contextual internal link to the owner. If intent is legitimately separate, preserve both pages and clarify that distinction. Never prescribe an automatic redirect.');
                   }else{
                     _conf.push('LIKELY KEYWORD OVERLAP with '+others.map(function(p){return p.url;}).join(', ')+'. The target keywords are similar, but verified page-scoped GSC evidence is missing. Do not prescribe content removal, canonical changes or redirects; request/fetch per-page GSC evidence first.');
                   }
@@ -60615,7 +60714,7 @@ MERGE RULES:
           // FAQ/PAA already exists. Check raw HTML BEFORE scripts are stripped (FAQPage schema),
           // visible FAQ headings, and semantic presence of the requested question set.
           if(addLike&&/(faq|frequently asked questions|paa|questions? and answers?|q&a|qa)/i.test(t)){
-            var _hasFaqShell=/FAQPage/i.test(_finalLiveHtml)
+            var _hasFaqShell=_htmlHasJsonLdType(_finalLiveHtml,'FAQPage')
               || /<h[1-6][^>]*>[^<]*(?:faq|frequently asked|questions?)/i.test(_finalLiveHtml)
               || /\bfaq\b|frequently asked questions|common questions/i.test(_finalHtmlText);
             var _paaSignals=0;
