@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — MANUAL VERIFICATION GUIDE + EXAMPLES v442
+// CONTENTSCALE NETWORK — PUBLISHER REVIEW DECISION EMAILS v443
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -190,6 +190,95 @@ async function networkNotifyOwnerAdRequest(adRow) {
   }
   return status;
 }
+
+
+async function networkNotifyPublisherReviewDecision(row, decision, note) {
+  const key = String(process.env.BREVO_API_KEY || '').trim();
+  const toEmail = cleanText(row && row.publisher_email, 320);
+  const fromEmail = cleanText(process.env.FROM_EMAIL || 'info@contentscale.site', 320);
+  const status = {
+    state: key && toEmail ? 'pending' : 'not_configured',
+    attempted_at: new Date().toISOString(),
+    to: toEmail || null,
+    provider: key ? 'brevo' : null,
+    error: null
+  };
+  if (!toEmail) {
+    status.error = 'Publisher email is not available';
+    return status;
+  }
+  if (!key) {
+    status.error = 'BREVO_API_KEY is not configured';
+    return status;
+  }
+
+  const esc = v => String(v == null ? '' : v)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+  const publisher = cleanText(row.publisher_brand || row.publisher_domain || 'Publisher', 220);
+  const article = cleanText(row.edition_title || row.opportunity_title || 'Network publication', 260);
+  const dashboardUrl = row.publisher_dashboard_token
+    ? `https://app.contentscale.site/network/publisher/${row.publisher_dashboard_token}`
+    : 'https://app.contentscale.site/network';
+
+  const copy = decision === 'verified'
+    ? {
+        subject: `ContentScale Network: placement verified — ${article}`,
+        title: 'Your placement has been verified',
+        body: 'Your live publication passed the final manual review.',
+        next: 'The placement is now verified. Any eligible placement credits can now be released through the Network reward flow.'
+      }
+    : decision === 'needs_changes'
+      ? {
+          subject: `ContentScale Network: changes requested — ${article}`,
+          title: 'Changes are required on your placement',
+          body: 'We reviewed the live publication and need a correction before it can be verified.',
+          next: 'Please update the live page, then submit the live URL again from your Publisher Dashboard.'
+        }
+      : {
+          subject: `ContentScale Network: placement rejected — ${article}`,
+          title: 'Your placement was not approved',
+          body: 'The submitted publication did not pass the final manual review.',
+          next: 'Review the reason below. If a new placement becomes available, it will appear in your Publisher Dashboard.'
+        };
+
+  try {
+    const r = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','api-key':key},
+      body: JSON.stringify({
+        to: [{email:toEmail}],
+        sender: {email:fromEmail,name:'ContentScale Network'},
+        subject: copy.subject,
+        htmlContent: `<div style="font-family:Arial,sans-serif;line-height:1.6;color:#111">
+          <h2>${esc(copy.title)}</h2>
+          <p>Hello ${esc(row.publisher_contact_name || publisher)},</p>
+          <p>${esc(copy.body)}</p>
+          <p>
+            <b>Publisher:</b> ${esc(publisher)}<br>
+            <b>Publication:</b> ${esc(article)}<br>
+            <b>Live URL:</b> ${row.published_url ? `<a href="${esc(row.published_url)}">${esc(row.published_url)}</a>` : '—'}<br>
+            <b>Decision:</b> ${esc(decision.replace(/_/g,' '))}
+          </p>
+          ${note ? `<p><b>Review note:</b><br>${esc(note)}</p>` : ''}
+          <p>${esc(copy.next)}</p>
+          <p><a href="${esc(dashboardUrl)}">Open your Publisher Dashboard</a></p>
+        </div>`
+      })
+    });
+    const body = await r.text().catch(()=> '');
+    if (!r.ok) throw new Error(`Brevo ${r.status}: ${body.slice(0,300)}`);
+    status.state = 'sent';
+    status.sent_at = new Date().toISOString();
+    status.error = null;
+  } catch (e) {
+    status.state = 'failed';
+    status.error = cleanText(e && e.message || e, 500);
+  }
+  return status;
+}
+
 
 function normalizeSite(input) {
   let raw = cleanText(input, 2048);
@@ -1826,25 +1915,35 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     const id=Number(req.params.id),decision=cleanText(req.body?.decision,40).toLowerCase(),note=cleanText(req.body?.note,2000);
     if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
     if(!['verified','needs_changes','rejected'].includes(decision))return res.status(400).json({success:false,error:'Choose verified, needs_changes or rejected'});
-    const qr=await pool.query(`SELECT p.*,c.id AS content_id,c.brand_name,
-      w.domain AS publisher_domain,
+    const qr=await pool.query(`SELECT p.*,c.id AS content_id,c.brand_name,c.title AS opportunity_title,
+      w.domain AS publisher_domain,w.brand_name AS publisher_brand,
+      pv.title AS edition_title,
+      pa.email AS publisher_email,pa.contact_name AS publisher_contact_name,pa.access_token AS publisher_dashboard_token,
       vr.result_status AS latest_result,vr.run_no AS latest_run_no
       FROM network_placements p
       JOIN network_content c ON c.id=p.content_id
       JOIN network_websites w ON w.id=p.publisher_website_id
+      LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
+      LEFT JOIN network_publisher_accounts pa ON pa.website_id=p.publisher_website_id AND pa.status='active'
       LEFT JOIN LATERAL (SELECT * FROM network_verification_runs z WHERE z.placement_id=p.id ORDER BY z.run_no DESC LIMIT 1) vr ON TRUE
-      WHERE p.id=$1 LIMIT 1`,[id]);
+      WHERE p.id=$1
+      ORDER BY pa.updated_at DESC NULLS LAST
+      LIMIT 1`,[id]);
     const x=qr.rows[0];if(!x)return res.status(404).json({success:false,error:'Placement not found'});
     if(!x.published_url)return res.status(409).json({success:false,error:'No live article URL has been submitted'});
     const adminId=cleanText(req.admin?.id||req.headers['x-admin-key']||'admin',200);
 
     if(decision==='needs_changes'){
-      await pool.query(`UPDATE network_placements SET status='needs_review',verification_decision='needs_changes',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,note||'Changes requested after manual review',adminId]);
-      return res.json({success:true,status:'needs_review',credits_awarded:false});
+      const reviewNote=note||'Changes requested after manual review';
+      await pool.query(`UPDATE network_placements SET status='needs_review',verification_decision='needs_changes',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
+      const publisherNotification=await networkNotifyPublisherReviewDecision(x,'needs_changes',reviewNote);
+      return res.json({success:true,status:'needs_review',credits_awarded:false,publisher_email:publisherNotification.state});
     }
     if(decision==='rejected'){
-      await pool.query(`UPDATE network_placements SET status='rejected',verification_decision='rejected',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,note||'Rejected after manual review',adminId]);
-      return res.json({success:true,status:'rejected',credits_awarded:false});
+      const reviewNote=note||'Rejected after manual review';
+      await pool.query(`UPDATE network_placements SET status='rejected',verification_decision='rejected',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
+      const publisherNotification=await networkNotifyPublisherReviewDecision(x,'rejected',reviewNote);
+      return res.json({success:true,status:'rejected',credits_awarded:false,publisher_email:publisherNotification.state});
     }
 
     // Human is the final authority. If the automated pre-check did not pass,
@@ -1876,7 +1975,8 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       await client.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status='verified',updated_at=NOW() WHERE id=$1`,[x.content_id]);
       await client.query('COMMIT');
     }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
-    res.json({success:true,status:'verified',credits_awarded:creditAwarded,credits:x.reward_credits,rule:'Verified by manual admin decision. Reward is idempotent and can be awarded only once.'});
+    const publisherNotification=await networkNotifyPublisherReviewDecision(x,'verified',note||'');
+    res.json({success:true,status:'verified',credits_awarded:creditAwarded,credits:x.reward_credits,publisher_email:publisherNotification.state,rule:'Verified by manual admin decision. Reward is idempotent and can be awarded only once.'});
   }));
 
   app.get('/network/verification', (req,res)=>{
@@ -2189,7 +2289,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       const rr=await pool.query(`SELECT id,referred_member_ref,status,reward_credits,created_at,activated_at,rewarded_at FROM network_referrals WHERE referral_code_id=$1 AND status<>'clicked' ORDER BY created_at DESC LIMIT 100`,[a.referral.id]);referrals=rr.rows;
     }
     let placements=[];
-    if(a.website_id){const pr=await pool.query(`SELECT p.id,p.status,p.published_url,p.reward_credits,p.accepted_at,p.submitted_at,p.verified_at,c.title,pv.id AS publication_version_id,pv.title AS edition_title,pv.quality_status,pv.generated_at FROM network_placements p JOIN network_content c ON c.id=p.content_id LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id WHERE p.publisher_website_id=$1 ORDER BY p.created_at DESC LIMIT 100`,[a.website_id]);placements=pr.rows}
+    if(a.website_id){const pr=await pool.query(`SELECT p.id,p.status,p.published_url,p.reward_credits,p.accepted_at,p.submitted_at,p.verified_at,p.verification_note,p.verification_decision,p.reviewed_at,c.title,pv.id AS publication_version_id,pv.title AS edition_title,pv.quality_status,pv.generated_at FROM network_placements p JOIN network_content c ON c.id=p.content_id LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id WHERE p.publisher_website_id=$1 ORDER BY p.created_at DESC LIMIT 100`,[a.website_id]);placements=pr.rows}
     await pool.query('UPDATE network_publisher_accounts SET last_seen_at=NOW() WHERE id=$1',[a.id]).catch(()=>{});
     return{account:a,stats,referrals,placements,share_url:a.referral?('https://app.contentscale.site/network/join?ref='+a.referral.code):null};
   }
@@ -2270,7 +2370,10 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     if(!envEnabled())return res.status(404).send('Network is not enabled.');
     const token=cleanText(req.params.token,128);if(!/^[a-f0-9]{64}$/i.test(token))return res.status(404).send('Publisher dashboard not found.');
     res.set('Cache-Control','no-store');
-    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Publisher Dashboard · ContentScale Network</title><style>body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:1100px;margin:auto;padding:34px 20px}.top{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin:16px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.metric{background:#091329;border:1px solid #26375c;border-radius:12px;padding:16px}.metric strong{font-size:24px;display:block}.note,.tiny{color:#9aabd0;line-height:1.55}.tiny{font-size:12px}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:4px 9px;font-size:12px}.row{border-top:1px solid #26375c;padding:12px 0}.share{display:flex;gap:8px;flex-wrap:wrap}.share input{flex:1;min-width:260px;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.btn{background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer}.btn:disabled{opacity:.6}a{color:#8dd9ff}</style></head><body><main><div class="top"><div><div class="tiny">CONTENTSCALE NETWORK</div><h1 style="margin:5px 0">Publisher Dashboard</h1></div><a href="/network">Public Network →</a></div><div id="app"><div class="card">Loading publisher dashboard…</div></div></main><script>(function(){const token=${JSON.stringify(token)},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/publisher/'+token+'/dashboard',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load dashboard');const a=d.account||{},active=a.status==='active',name=a.brand_name||a.application_brand||a.domain||a.application_domain||'Publisher';root.innerHTML='<div class="card"><h2>'+esc(name)+'</h2><span class="pill">Account: '+esc(a.status)+'</span> <span class="pill">Website: '+esc(a.website_status||'not linked yet')+'</span><p class="note">'+(active?'Your approved publisher account is active. Your referral link is created automatically and belongs to this publisher account.':'Your dashboard is ready. Referral sharing activates automatically after your website is reviewed and approved; no referral link needs to be created manually.')+'</p></div>'+(d.share_url?'<div class="card"><h2>My Referral Link</h2><p class="note">Share this with website owners who may want to become ContentScale Network publishers. Clicks alone never earn a reward; attribution stays linked to you and activation/reward is tracked below.</p><div class="share"><input id="shareUrl" readonly value="'+esc(d.share_url)+'"><button class="btn" id="copyBtn">Copy link</button></div></div>':'<div class="card"><h2>My Referral Link</h2><p class="note">Waiting for website approval. As soon as your publisher website becomes approved/trusted, ContentScale creates the referral link automatically and it will appear here.</p></div>')+'<div class="card"><h2>Referral activity</h2><div class="grid"><div class="metric"><strong>'+Number(d.stats.clicks||0)+'</strong><span>Clicks</span></div><div class="metric"><strong>'+Number(d.stats.applications||0)+'</strong><span>Applications</span></div><div class="metric"><strong>'+Number(d.stats.activated||0)+'</strong><span>Activated</span></div><div class="metric"><strong>'+Number(d.stats.rewarded||0)+'</strong><span>Rewarded</span></div><div class="metric"><strong>'+Number(d.stats.reward_credits||0)+'</strong><span>Referral credits</span></div></div><div>'+((d.referrals||[]).map(x=>'<div class="row"><strong>'+esc(x.referred_member_ref||'Publisher')+'</strong> <span class="pill">'+esc(x.status)+'</span><div class="tiny">'+new Date(x.created_at).toLocaleString()+'</div></div>').join('')||'<p class="note">No referred publisher applications yet.</p>')+'</div></div><div class="card"><h2>My Network Placements</h2><p class="note">When a Publisher Edition is ready, open the package, copy the SEO HTML into your CMS, publish it as a normal indexable page, then submit the exact live URL.</p>'+((d.placements||[]).map(x=>'<div class="row"><strong>'+esc(x.edition_title||x.title||'Publication')+'</strong> <span class="pill">'+esc(x.status)+'</span><div class="tiny">'+(x.publication_version_id?'<a class="btn" style="display:inline-block;margin:8px 8px 4px 0;text-decoration:none" href="/network/publisher/'+token+'/placement/'+x.id+'">Open publication package</a>':'Publisher Edition not generated yet')+(x.published_url?'<br>Live: <a target="_blank" rel="noopener" href="'+esc(x.published_url)+'">'+esc(x.published_url)+'</a>':'<br>Not published yet')+'</div></div>').join('')||'<p class="note">No placements assigned yet.</p>')+'</div>';const b=document.getElementById('copyBtn');if(b)b.onclick=async()=>{b.disabled=true;b.textContent='Copying…';try{await navigator.clipboard.writeText(document.getElementById('shareUrl').value);b.textContent='✓ Copied'}catch(e){b.disabled=false;b.textContent='Copy link'}}}catch(e){root.innerHTML='<div class="card"><h2>Dashboard unavailable</h2><p class="note">'+esc(e.message)+'</p></div>'}}load()})();</script></body></html>`);
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Publisher Dashboard · ContentScale Network</title><style>body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:1100px;margin:auto;padding:34px 20px}.top{display:flex;justify-content:space-between;gap:15px;align-items:center;flex-wrap:wrap}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin:16px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.metric{background:#091329;border:1px solid #26375c;border-radius:12px;padding:16px}.metric strong{font-size:24px;display:block}.note,.tiny{color:#9aabd0;line-height:1.55}.tiny{font-size:12px}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:4px 9px;font-size:12px}.row{border-top:1px solid #26375c;padding:12px 0}.share{display:flex;gap:8px;flex-wrap:wrap}.share input{flex:1;min-width:260px;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.btn{background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer}.btn:disabled{opacity:.6}a{color:#8dd9ff}</style></head><body><main><div class="top"><div><div class="tiny">CONTENTSCALE NETWORK</div><h1 style="margin:5px 0">Publisher Dashboard</h1></div><a href="/network">Public Network →</a></div><div id="app"><div class="card">Loading publisher dashboard…</div></div></main><script>(function(){const token=${JSON.stringify(token)},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/publisher/'+token+'/dashboard',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load dashboard');const a=d.account||{},active=a.status==='active',name=a.brand_name||a.application_brand||a.domain||a.application_domain||'Publisher';root.innerHTML='<div class="card"><h2>'+esc(name)+'</h2><span class="pill">Account: '+esc(a.status)+'</span> <span class="pill">Website: '+esc(a.website_status||'not linked yet')+'</span><p class="note">'+(active?'Your approved publisher account is active. Your referral link is created automatically and belongs to this publisher account.':'Your dashboard is ready. Referral sharing activates automatically after your website is reviewed and approved; no referral link needs to be created manually.')+'</p></div>'+(d.share_url?'<div class="card"><h2>My Referral Link</h2><p class="note">Share this with website owners who may want to become ContentScale Network publishers. Clicks alone never earn a reward; attribution stays linked to you and activation/reward is tracked below.</p><div class="share"><input id="shareUrl" readonly value="'+esc(d.share_url)+'"><button class="btn" id="copyBtn">Copy link</button></div></div>':'<div class="card"><h2>My Referral Link</h2><p class="note">Waiting for website approval. As soon as your publisher website becomes approved/trusted, ContentScale creates the referral link automatically and it will appear here.</p></div>')+'<div class="card"><h2>Referral activity</h2><div class="grid"><div class="metric"><strong>'+Number(d.stats.clicks||0)+'</strong><span>Clicks</span></div><div class="metric"><strong>'+Number(d.stats.applications||0)+'</strong><span>Applications</span></div><div class="metric"><strong>'+Number(d.stats.activated||0)+'</strong><span>Activated</span></div><div class="metric"><strong>'+Number(d.stats.rewarded||0)+'</strong><span>Rewarded</span></div><div class="metric"><strong>'+Number(d.stats.reward_credits||0)+'</strong><span>Referral credits</span></div></div><div>'+((d.referrals||[]).map(x=>'<div class="row"><strong>'+esc(x.referred_member_ref||'Publisher')+'</strong> <span class="pill">'+esc(x.status)+'</span><div class="tiny">'+new Date(x.created_at).toLocaleString()+'</div></div>').join('')||'<p class="note">No referred publisher applications yet.</p>')+'</div></div><div class="card"><h2>My Network Placements</h2><p class="note">When a Publisher Edition is ready, open the package, copy the SEO HTML into your CMS, publish it as a normal indexable page, then submit the exact live URL.</p>'+((d.placements||[]).map(x=>'<div class="row"><strong>'+esc(x.edition_title||x.title||'Publication')+'</strong> <span class="pill">'+esc(x.status)+'</span><div class="tiny">'+(x.publication_version_id?'<a class="btn" style="display:inline-block;margin:8px 8px 4px 0;text-decoration:none" href="/network/publisher/'+token+'/placement/'+x.id+'">Open publication package</a>':'Publisher Edition not generated yet')+(x.published_url?'<br>Live: <a target="_blank" rel="noopener" href="'+esc(x.published_url)+'">'+esc(x.published_url)+'</a>':'<br>Not published yet')+
+(x.verification_decision?'<br><span class="pill">Review: '+esc(String(x.verification_decision).replace(/_/g,' '))+'</span>':'')+
+(x.verification_note?'<div class="tiny" style="margin-top:6px"><strong>Review note:</strong> '+esc(x.verification_note)+'</div>':'')+
+'</div></div>').join('')||'<p class="note">No placements assigned yet.</p>')+'</div>';const b=document.getElementById('copyBtn');if(b)b.onclick=async()=>{b.disabled=true;b.textContent='Copying…';try{await navigator.clipboard.writeText(document.getElementById('shareUrl').value);b.textContent='✓ Copied'}catch(e){b.disabled=false;b.textContent='Copy link'}}}catch(e){root.innerHTML='<div class="card"><h2>Dashboard unavailable</h2><p class="note">'+esc(e.message)+'</p></div>'}}load()})();</script></body></html>`);
   });
 
 
@@ -2281,7 +2384,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     res.set('Cache-Control','no-store');
     res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Publication Package · ContentScale Network</title><style>
 body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:1080px;margin:auto;padding:32px 18px 70px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin:16px 0}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.note,.tiny{color:#9aabd0;line-height:1.55}.tiny{font-size:12px}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:4px 9px;font-size:12px}.ok{color:#86efac}.warn{color:#fcd34d}.btn{background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer;text-decoration:none}.btn.good{background:#166534;border-color:#22c55e}.btn:disabled{opacity:.6;cursor:wait}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.field label{display:block;font-size:11px;color:#9aabd0;margin:0 0 5px}.field input,.field textarea{width:100%;box-sizing:border-box;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.field textarea{min-height:220px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.statusbox{padding:12px;border-radius:10px;border:1px solid #35507a;background:#091329}a{color:#8dd9ff}
-</style></head><body><main><div class="top"><div><div class="tiny">CONTENTSCALE NETWORK · PUBLISHER</div><h1>Publication Package</h1></div><a href="/network/publisher/${token}">← Publisher Dashboard</a></div><div id="app"><div class="card">Loading publication package…</div></div></main><script>(function(){const token=${JSON.stringify(token)},pid=${placementId},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/package',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load package');const p=d.placement||{},pub=d.publication||{},q=d.quality||{},st=d.publication_standard||{},ready=!!d.delivery_ready;root.innerHTML='<div class="card"><h2>'+esc(pub.title||p.title||'Publisher Edition')+'</h2><span class="pill">Placement: '+esc(p.status||'')+'</span> <span class="pill">ContentScore: '+Number(q.score||0)+'/100</span><p class="note">'+esc(d.rule||'')+'</p></div><div class="card"><h2>Publication readiness</h2><div class="grid"><div class="statusbox"><strong class="'+(Number(q.score||0)>=80?'ok':'warn')+'">ContentScore '+Number(q.score||0)+'/100</strong></div><div class="statusbox"><strong class="'+(st.passed?'ok':'warn')+'">Publication Standard '+(st.passed?'passed ✓':'not complete')+'</strong></div><div class="statusbox"><strong class="'+(ready?'ok':'warn')+'">'+(ready?'SEO HTML ready ✓':'Waiting for final package')+'</strong></div></div></div>'+(ready?'<div class="card"><h2>SEO publication HTML</h2><p class="note">Paste this into the publisher CMS as real HTML. Do not use a JavaScript-only embed for the final Network placement.</p><div class="actions"><button class="btn good" id="copyHtml">Copy SEO HTML</button><button class="btn" id="copyMeta">Copy meta</button></div><div class="field" style="margin-top:12px"><label>HTML</label><textarea id="seoHtml" readonly>'+esc(d.seo_html||'')+'</textarea></div><div class="grid" style="margin-top:12px"><div class="field"><label>Meta title</label><input id="metaTitle" readonly value="'+esc(pub.meta_title||'')+'"></div><div class="field"><label>Meta description</label><input id="metaDescription" readonly value="'+esc(pub.meta_description||'')+'"></div><div class="field"><label>Suggested slug</label><input readonly value="'+esc(pub.suggested_slug||'')+'"></div></div></div><div class="card"><h2>After you publish</h2><p class="note">Enter the exact live article URL. ContentScale will place it in the verification queue. Credits are awarded only after the live page passes verification.</p><div class="field"><label>Exact live article URL</label><input id="liveUrl" placeholder="https://'+esc(p.publisher_domain||'publisher.com')+'/article" value="'+esc(p.published_url||'')+'"></div><div class="actions" style="margin-top:10px"><button class="btn good" id="submitLive">Submit live URL</button></div><div id="msg" class="note" style="margin-top:8px"></div></div>':'<div class="card"><h2>Package not ready yet</h2><p class="note">ContentScale has not released the SEO HTML because the quality gate or Publication Standard is not complete. Nothing needs to be published yet.</p></div>');if(ready){document.getElementById('copyHtml').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText(d.seo_html||'');this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy SEO HTML'}};document.getElementById('copyMeta').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText((pub.meta_title||'')+'\\n'+(pub.meta_description||''));this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy meta'}};document.getElementById('submitLive').onclick=async function(){const b=this,m=document.getElementById('msg'),url=document.getElementById('liveUrl').value.trim();if(!url)return m.textContent='Enter the exact live URL first.';b.disabled=true;b.textContent='Submitting…';try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/submit-live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_url:url})}),x=await r.json();if(!r.ok)throw Error(x.error||'Could not submit');m.className='ok';m.textContent='✓ Live URL submitted. Waiting for manual ContentScale verification.';b.textContent='✓ Submitted'}catch(e){m.className='warn';m.textContent='✕ '+e.message;b.disabled=false;b.textContent='Submit live URL'}}}}catch(e){root.innerHTML='<div class="card"><h2>Publication package unavailable</h2><p class="note">'+esc(e.message)+'</p></div>'}}load()})();</script></body></html>`);
+</style></head><body><main><div class="top"><div><div class="tiny">CONTENTSCALE NETWORK · PUBLISHER</div><h1>Publication Package</h1></div><a href="/network/publisher/${token}">← Publisher Dashboard</a></div><div id="app"><div class="card">Loading publication package…</div></div></main><script>(function(){const token=${JSON.stringify(token)},pid=${placementId},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/package',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load package');const p=d.placement||{},pub=d.publication||{},q=d.quality||{},st=d.publication_standard||{},ready=!!d.delivery_ready;root.innerHTML='<div class="card"><h2>'+esc(pub.title||p.title||'Publisher Edition')+'</h2><span class="pill">Placement: '+esc(p.status||'')+'</span> <span class="pill">ContentScore: '+Number(q.score||0)+'/100</span><p class="note">'+esc(d.rule||'')+'</p></div><div class="card"><h2>Publication readiness</h2><div class="grid"><div class="statusbox"><strong class="'+(Number(q.score||0)>=80?'ok':'warn')+'">ContentScore '+Number(q.score||0)+'/100</strong></div><div class="statusbox"><strong class="'+(st.passed?'ok':'warn')+'">Publication Standard '+(st.passed?'passed ✓':'not complete')+'</strong></div><div class="statusbox"><strong class="'+(ready?'ok':'warn')+'">'+(ready?'SEO HTML ready ✓':'Waiting for final package')+'</strong></div></div></div>'+(ready?'<div class="card"><h2>SEO publication HTML</h2><p class="note">Paste this into the publisher CMS as real HTML. Do not use a JavaScript-only embed for the final Network placement.</p><div class="actions"><button class="btn good" id="copyHtml">Copy SEO HTML</button><button class="btn" id="copyMeta">Copy meta</button></div><div class="field" style="margin-top:12px"><label>HTML</label><textarea id="seoHtml" readonly>'+esc(d.seo_html||'')+'</textarea></div><div class="grid" style="margin-top:12px"><div class="field"><label>Meta title</label><input id="metaTitle" readonly value="'+esc(pub.meta_title||'')+'"></div><div class="field"><label>Meta description</label><input id="metaDescription" readonly value="'+esc(pub.meta_description||'')+'"></div><div class="field"><label>Suggested slug</label><input readonly value="'+esc(pub.suggested_slug||'')+'"></div></div></div><div class="card"><h2>After you publish</h2><p class="note">Enter the exact live article URL. ContentScale will place it in the verification queue. Credits are awarded only after a ContentScale admin manually verifies the live page. You will receive an email with the decision.</p><div class="field"><label>Exact live article URL</label><input id="liveUrl" placeholder="https://'+esc(p.publisher_domain||'publisher.com')+'/article" value="'+esc(p.published_url||'')+'"></div><div class="actions" style="margin-top:10px"><button class="btn good" id="submitLive">Submit live URL</button></div><div id="msg" class="note" style="margin-top:8px"></div></div>':'<div class="card"><h2>Package not ready yet</h2><p class="note">ContentScale has not released the SEO HTML because the quality gate or Publication Standard is not complete. Nothing needs to be published yet.</p></div>');if(ready){document.getElementById('copyHtml').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText(d.seo_html||'');this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy SEO HTML'}};document.getElementById('copyMeta').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText((pub.meta_title||'')+'\\n'+(pub.meta_description||''));this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy meta'}};document.getElementById('submitLive').onclick=async function(){const b=this,m=document.getElementById('msg'),url=document.getElementById('liveUrl').value.trim();if(!url)return m.textContent='Enter the exact live URL first.';b.disabled=true;b.textContent='Submitting…';try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/submit-live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_url:url})}),x=await r.json();if(!r.ok)throw Error(x.error||'Could not submit');m.className='ok';m.textContent='✓ Live URL submitted. Waiting for manual ContentScale verification.';b.textContent='✓ Submitted'}catch(e){m.className='warn';m.textContent='✕ '+e.message;b.disabled=false;b.textContent='Submit live URL'}}}}catch(e){root.innerHTML='<div class="card"><h2>Publication package unavailable</h2><p class="note">'+esc(e.message)+'</p></div>'}}load()})();</script></body></html>`);
   });
 
   app.post('/api/network/advertising/apply', wrap(async (req,res)=>{
