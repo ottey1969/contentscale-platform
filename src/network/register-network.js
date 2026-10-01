@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 4;
+const NETWORK_SCHEMA_VERSION = 5;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -21,6 +21,7 @@ const NETWORK_TABLES = [
   'network_verification_runs',
   'network_publication_images',
   'network_image_library',
+  'network_referral_partners',
   'network_referral_codes',
   'network_referrals'
 ];
@@ -272,8 +273,11 @@ function publicationStandardChecks(html) {
   const hasTldr=/class=["'][^"']*cs-tldr/i.test(s);
   const hasToc=/class=["'][^"']*cs-toc/i.test(s) && /href=["']#/i.test(s);
   const hasTable=/<table\b/i.test(s) && /class=["'][^"']*cs-table-wrap/i.test(s);
+  const h1=(s.match(/<h1\b/gi)||[]).length;
   const h2=(s.match(/<h2\b/gi)||[]).length;
-  return {direct_answer:hasDirect,tldr:hasTldr,table_of_contents:hasToc,mobile_friendly_table:hasTable,h2_count:h2,passed:hasDirect&&hasTldr&&hasToc&&hasTable&&h2>=3};
+  const faq=!!buildFaqSchemaFromHtml(s);
+  const statsTable=/class=["'][^"']*cs-table/i.test(s)&&/(statistic|statistics|by the numbers|source)/i.test(htmlText(s));
+  return {h1_count:h1,direct_answer:hasDirect,tldr:hasTldr,table_of_contents:hasToc,mobile_friendly_table:hasTable,statistics_table:statsTable,faq_present:faq,h2_count:h2,passed:h1===1&&hasDirect&&hasTldr&&hasToc&&hasTable&&h2>=3};
 }
 
 function buildFaqSchemaFromHtml(html) {
@@ -285,11 +289,22 @@ function buildFaqSchemaFromHtml(html) {
   return items.length?{'@context':'https://schema.org','@type':'FAQPage',mainEntity:items}:null;
 }
 
+function buildBreadcrumbSchema(row) {
+  const host=normalizeHost(row.publisher_domain||'');
+  const slug=slugifyNetwork(row.suggested_slug||row.title||'article');
+  if(!host||!slug)return null;
+  return {'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:[
+    {'@type':'ListItem',position:1,name:cleanText(row.publisher_brand||host,200)||host,item:'https://'+host+'/'},
+    {'@type':'ListItem',position:2,name:cleanText(row.title||'Article',300)||'Article',item:'https://'+host+'/'+slug+'/'}
+  ]};
+}
+
 function buildSeoPublicationHtml(row, images) {
   const rendered=renderEditionHtml(row,images);
   const faq=buildFaqSchemaFromHtml(row.html);
-  const schemas=[rendered.schema].concat(faq?[faq]:[]).filter(Boolean);
-  const scripts=schemas.map((x,i)=>`<script type="application/ld+json" data-contentscale-schema="${i===0?'article':'faq'}">${JSON.stringify(x).replace(/<\/script/gi,'<\\/script')}</script>`).join('\n');
+  const breadcrumb=buildBreadcrumbSchema(row);
+  const schemas=[rendered.schema].concat(faq?[faq]:[]).concat(breadcrumb?[breadcrumb]:[]).filter(Boolean);
+  const scripts=schemas.map((x,i)=>`<script type="application/ld+json" data-contentscale-schema="${i===0?'article':(x&&x['@type']==='FAQPage'?'faq':'breadcrumb')}">${JSON.stringify(x).replace(/<\/script/gi,'<\\/script')}</script>`).join('\n');
   const marker=`<!-- ContentScale Network indexable placement ${Number(row.placement_id||row.id||0)} -->`;
   return `${marker}\n${rendered.html}\n${scripts}`;
 }
@@ -605,9 +620,23 @@ async function ensureNetworkTables(pool) {
     )`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_network_image_library_filename ON public.network_image_library(LOWER(suggested_filename))`);
 
+    await client.query(`CREATE TABLE IF NOT EXISTS network_referral_partners (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT,
+      label TEXT,
+      status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','paused','blocked')),
+      notes TEXT,
+      created_by_admin_id BIGINT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_network_referral_partners_status ON network_referral_partners(status,created_at DESC)`);
+
     await client.query(`CREATE TABLE IF NOT EXISTS network_referral_codes (
       id BIGSERIAL PRIMARY KEY,
       website_id BIGINT REFERENCES network_websites(id) ON DELETE RESTRICT,
+      partner_id BIGINT REFERENCES network_referral_partners(id) ON DELETE RESTRICT,
       code TEXT NOT NULL UNIQUE,
       label TEXT,
       is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -616,6 +645,14 @@ async function ensureNetworkTables(pool) {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_network_referral_codes_website ON network_referral_codes(website_id,is_active)`);
+
+    await client.query(`ALTER TABLE network_referral_codes ADD COLUMN IF NOT EXISTS partner_id BIGINT`);
+    await client.query(`DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='fk_network_referral_codes_partner') THEN
+        ALTER TABLE network_referral_codes ADD CONSTRAINT fk_network_referral_codes_partner FOREIGN KEY (partner_id) REFERENCES network_referral_partners(id) ON DELETE RESTRICT;
+      END IF;
+    END $$`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_network_referral_codes_partner ON network_referral_codes(partner_id,is_active)`);
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_referrals (
       id BIGSERIAL PRIMARY KEY,
@@ -1581,20 +1618,108 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     res.type('html').send(websitesPage());
   });
 
-  // REFERRAL FOUNDATION — no points for clicks; reward only after a valid activated member.
+  // REFERRALS — publishers/members + independent referral partners (scouts).
+  // A click earns nothing. A scout reward is tied to the publisher application and only becomes rewardable after genuine activation.
   app.get('/api/network/admin/referrals', verifyAdmin, wrap(async (req,res)=>{
-    const r=await pool.query(`SELECT rc.id,rc.code,rc.label,rc.is_active,rc.created_at,w.domain,w.brand_name,
-      COUNT(rf.id)::int AS referrals,COUNT(rf.id) FILTER (WHERE rf.status='rewarded')::int AS rewarded
-      FROM network_referral_codes rc LEFT JOIN network_websites w ON w.id=rc.website_id LEFT JOIN network_referrals rf ON rf.referral_code_id=rc.id
-      GROUP BY rc.id,w.domain,w.brand_name ORDER BY rc.created_at DESC`);
-    res.json({success:true,codes:r.rows,reward_rule:'Referral credits are released only after a valid referred member is activated.'});
+    const codes=await pool.query(`SELECT rc.id,rc.code,rc.label,rc.is_active,rc.created_at,rc.website_id,rc.partner_id,
+      w.domain,w.brand_name,p.name AS partner_name,p.email AS partner_email,p.status AS partner_status,
+      COUNT(rf.id)::int AS events,
+      COUNT(rf.id) FILTER (WHERE rf.status='clicked')::int AS clicks,
+      COUNT(rf.id) FILTER (WHERE rf.status='registered')::int AS registered,
+      COUNT(rf.id) FILTER (WHERE rf.status='activated')::int AS activated,
+      COUNT(rf.id) FILTER (WHERE rf.status='rewarded')::int AS rewarded
+      FROM network_referral_codes rc
+      LEFT JOIN network_websites w ON w.id=rc.website_id
+      LEFT JOIN network_referral_partners p ON p.id=rc.partner_id
+      LEFT JOIN network_referrals rf ON rf.referral_code_id=rc.id
+      GROUP BY rc.id,w.domain,w.brand_name,p.name,p.email,p.status ORDER BY rc.created_at DESC`);
+    const partners=await pool.query(`SELECT p.*,
+      COUNT(DISTINCT rc.id)::int AS codes,
+      COUNT(rf.id) FILTER (WHERE rf.status='registered')::int AS registered_publishers,
+      COUNT(rf.id) FILTER (WHERE rf.status IN ('activated','rewarded'))::int AS activated_publishers,
+      COUNT(rf.id) FILTER (WHERE rf.status='rewarded')::int AS rewarded_publishers
+      FROM network_referral_partners p
+      LEFT JOIN network_referral_codes rc ON rc.partner_id=p.id
+      LEFT JOIN network_referrals rf ON rf.referral_code_id=rc.id
+      GROUP BY p.id ORDER BY p.created_at DESC`);
+    const leads=await pool.query(`SELECT rf.id,rf.status,rf.reward_credits,rf.created_at,rf.updated_at,rf.metadata,
+      rc.code,rc.partner_id,rc.website_id,p.name AS partner_name,w.domain AS referring_website
+      FROM network_referrals rf JOIN network_referral_codes rc ON rc.id=rf.referral_code_id
+      LEFT JOIN network_referral_partners p ON p.id=rc.partner_id
+      LEFT JOIN network_websites w ON w.id=rc.website_id
+      WHERE rf.status<>'clicked' ORDER BY rf.created_at DESC LIMIT 250`);
+    res.json({success:true,codes:codes.rows,partners:partners.rows,leads:leads.rows,reward_rule:'Clicks and empty signups earn nothing. An independent referrer/scout remains linked to the publisher they introduced. Reward only after the referred publisher becomes a genuine active Network participant.'});
   }));
+
+  app.post('/api/network/admin/referral-partners', verifyAdmin, wrap(async (req,res)=>{
+    const name=cleanText(req.body?.name,200),email=cleanText(req.body?.email,240),label=cleanText(req.body?.label,200),notes=cleanText(req.body?.notes,1200);
+    if(!name)return res.status(400).json({success:false,error:'Referrer name is required'});
+    const client=await pool.connect();
+    try{
+      await client.query('BEGIN');
+      const pr=await client.query(`INSERT INTO network_referral_partners (name,email,label,notes,created_by_admin_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,NOW(),NOW()) RETURNING *`,[name,email||null,label||null,notes||null,req.admin&&req.admin.id||null]);
+      const code=crypto.randomBytes(8).toString('hex');
+      const cr=await client.query(`INSERT INTO network_referral_codes (partner_id,code,label,created_by_admin_id,created_at,updated_at) VALUES ($1,$2,$3,$4,NOW(),NOW()) RETURNING *`,[pr.rows[0].id,code,label||('Scout: '+name),req.admin&&req.admin.id||null]);
+      await client.query('COMMIT');
+      res.status(201).json({success:true,partner:pr.rows[0],referral:cr.rows[0],share_url:'https://app.contentscale.site/network/join?ref='+code,rule:'This link stays attributed to this independent referrer. The referred publisher can apply through it.'});
+    }catch(e){try{await client.query('ROLLBACK')}catch(_e){}throw e}finally{client.release()}
+  }));
+
+  app.patch('/api/network/admin/referral-partners/:id/status', verifyAdmin, wrap(async (req,res)=>{
+    const status=cleanText(req.body?.status,30).toLowerCase();
+    if(!['active','paused','blocked'].includes(status))return res.status(400).json({success:false,error:'Invalid partner status'});
+    const r=await pool.query(`UPDATE network_referral_partners SET status=$2,updated_at=NOW() WHERE id=$1 RETURNING *`,[req.params.id,status]);
+    if(!r.rows[0])return res.status(404).json({success:false,error:'Referral partner not found'});
+    res.json({success:true,partner:r.rows[0]});
+  }));
+
   app.post('/api/network/admin/referrals/code', verifyAdmin, wrap(async (req,res)=>{
-    const websiteId=Number(req.body?.website_id)||null;if(websiteId){const w=await pool.query('SELECT id FROM network_websites WHERE id=$1',[websiteId]);if(!w.rows[0])return res.status(400).json({success:false,error:'Website not found'});}
-    const code=crypto.randomBytes(8).toString('hex');const r=await pool.query(`INSERT INTO network_referral_codes (website_id,code,label,created_by_admin_id,created_at,updated_at) VALUES ($1,$2,$3,$4,NOW(),NOW()) RETURNING *`,[websiteId,code,cleanText(req.body?.label,160)||null,req.admin&&req.admin.id||null]);
+    const websiteId=Number(req.body?.website_id)||null,partnerId=Number(req.body?.partner_id)||null;
+    if(websiteId&&partnerId)return res.status(400).json({success:false,error:'A referral code belongs to either a publisher/member website or an independent referrer, not both.'});
+    if(websiteId){const w=await pool.query('SELECT id FROM network_websites WHERE id=$1',[websiteId]);if(!w.rows[0])return res.status(400).json({success:false,error:'Website not found'});}
+    if(partnerId){const p=await pool.query("SELECT id FROM network_referral_partners WHERE id=$1 AND status='active'",[partnerId]);if(!p.rows[0])return res.status(400).json({success:false,error:'Active referral partner not found'});}
+    const code=crypto.randomBytes(8).toString('hex');
+    const r=await pool.query(`INSERT INTO network_referral_codes (website_id,partner_id,code,label,created_by_admin_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,NOW(),NOW()) RETURNING *`,[websiteId,partnerId,code,cleanText(req.body?.label,160)||null,req.admin&&req.admin.id||null]);
     res.status(201).json({success:true,referral:r.rows[0],share_url:'https://app.contentscale.site/network/join?ref='+code});
   }));
-  app.get('/network/referrals',(req,res)=>{if(!envEnabled())return res.status(404).send('Network is not enabled.');res.set('Cache-Control','no-store');res.type('html').send(`<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Referrals</title><style>body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:900px;margin:auto;padding:40px 20px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px}a{color:#8dd9ff}.note{color:#9aabd0;line-height:1.6}</style></head><body><main><p><a href="/network">← Network</a></p><div class="card"><h1>Referrals</h1><p class="note">Foundation ready: unique member share links can be created. A click or signup alone earns nothing. Credits are released only when the referred person becomes a valid active member. The member self-service screen will be connected when member authentication is added.</p></div></main></body></html>`)});
+
+  app.patch('/api/network/admin/referrals/:id/status', verifyAdmin, wrap(async (req,res)=>{
+    const status=cleanText(req.body?.status,30).toLowerCase();
+    if(!['registered','activated','rewarded','rejected'].includes(status))return res.status(400).json({success:false,error:'Invalid referral status'});
+    const r=await pool.query(`UPDATE network_referrals SET status=$2,
+      activated_at=CASE WHEN $2 IN ('activated','rewarded') THEN COALESCE(activated_at,NOW()) ELSE activated_at END,
+      rewarded_at=CASE WHEN $2='rewarded' THEN COALESCE(rewarded_at,NOW()) ELSE rewarded_at END,
+      updated_at=NOW() WHERE id=$1 RETURNING *`,[req.params.id,status]);
+    if(!r.rows[0])return res.status(404).json({success:false,error:'Referral not found'});
+    res.json({success:true,referral:r.rows[0]});
+  }));
+
+  app.post('/api/network/referrals/apply', wrap(async (req,res)=>{
+    if(!envEnabled())return res.status(404).json({success:false,error:'Network is not enabled'});
+    const code=cleanText(req.body?.ref,120),domainInput=cleanText(req.body?.domain,500),contactName=cleanText(req.body?.contact_name,200),email=cleanText(req.body?.email,240),brand=cleanText(req.body?.brand_name,200),niche=cleanText(req.body?.niche,160),message=cleanText(req.body?.message,1200);
+    if(!code||!domainInput||!email)return res.status(400).json({success:false,error:'Referral code, website and email are required'});
+    const cr=await pool.query(`SELECT rc.*,p.status AS partner_status FROM network_referral_codes rc LEFT JOIN network_referral_partners p ON p.id=rc.partner_id WHERE rc.code=$1 AND rc.is_active=TRUE LIMIT 1`,[code]);
+    const rc=cr.rows[0];if(!rc)return res.status(404).json({success:false,error:'Referral link is not valid'});
+    if(rc.partner_id&&rc.partner_status!=='active')return res.status(409).json({success:false,error:'This referrer link is currently inactive'});
+    let site;try{site=normalizeSite(domainInput)}catch(e){return res.status(400).json({success:false,error:'Enter a valid website/domain'})}
+    const meta={publisher_domain:site.domain,publisher_url:site.canonical_url,brand_name:brand||null,contact_name:contactName||null,email,niche:niche||null,message:message||null,source:'public_referral_application'};
+    const r=await pool.query(`INSERT INTO network_referrals (referral_code_id,referred_member_ref,status,reward_credits,metadata,created_at,updated_at) VALUES ($1,$2,'registered',10,$3::jsonb,NOW(),NOW()) RETURNING *`,[rc.id,site.domain,JSON.stringify(meta)]);
+    res.status(201).json({success:true,application_id:r.rows[0].id,status:'registered',message:'Application received. The referral remains linked to the person or publisher who introduced you.'});
+  }));
+
+  app.get('/network/join', wrap(async (req,res)=>{
+    if(!envEnabled())return res.status(404).send('Network is not enabled.');
+    const code=cleanText(req.query?.ref,120);
+    const qr=code?await pool.query(`SELECT rc.id,rc.code,rc.label,rc.partner_id,rc.website_id,rc.is_active,p.name AS partner_name,p.status AS partner_status,w.brand_name,w.domain FROM network_referral_codes rc LEFT JOIN network_referral_partners p ON p.id=rc.partner_id LEFT JOIN network_websites w ON w.id=rc.website_id WHERE rc.code=$1 LIMIT 1`,[code]):{rows:[]};
+    const ref=qr.rows[0];
+    if(!ref||!ref.is_active||(ref.partner_id&&ref.partner_status!=='active'))return res.status(404).type('html').send('<h1>Referral link not available</h1>');
+    await pool.query(`INSERT INTO network_referrals (referral_code_id,status,reward_credits,metadata,created_at,updated_at) VALUES ($1,'clicked',0,$2::jsonb,NOW(),NOW())`,[ref.id,JSON.stringify({source:'join_page'})]);
+    const referredBy=ref.partner_name||ref.brand_name||ref.domain||'a ContentScale Network member';
+    res.set('Cache-Control','no-store');
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Join ContentScale Network</title><style>body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:760px;margin:auto;padding:40px 20px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:24px}label{display:block;font-size:12px;color:#9fb1d6;margin:12px 0 6px}input,textarea{width:100%;box-sizing:border-box;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:11px}button{margin-top:16px;background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:11px 16px;font-weight:700;cursor:pointer}.note{color:#9aabd0;line-height:1.6}.ok{color:#86efac}.bad{color:#fca5a5}</style></head><body><main><div class="card"><h1>Join as a publisher</h1><p class="note">You were invited by <strong>${String(referredBy).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</strong>. Submit your website interest below. Your application stays linked to that referrer so ContentScale can track who introduced the publisher.</p><form id="f"><input type="hidden" name="ref" value="${String(code).replace(/"/g,'&quot;')}"><label>Website/domain *</label><input name="domain" placeholder="example.com" required><label>Business / brand name</label><input name="brand_name"><label>Your name</label><input name="contact_name"><label>Email *</label><input name="email" type="email" required><label>Niche</label><input name="niche" placeholder="Roofing, marketing, accounting…"><label>Message</label><textarea name="message" rows="4"></textarea><button id="b">Send publisher application</button><div id="m" class="note"></div></form></div></main><script>document.getElementById('f').onsubmit=async e=>{e.preventDefault();const b=document.getElementById('b'),m=document.getElementById('m');b.disabled=true;b.textContent='Sending…';m.textContent='';try{const o=Object.fromEntries(new FormData(e.target).entries()),r=await fetch('/api/network/referrals/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not submit');m.className='ok';m.textContent='✓ Application received and linked to your referrer.';b.textContent='✓ Sent'}catch(err){m.className='bad';m.textContent='✕ '+err.message;b.disabled=false;b.textContent='Send publisher application'}};</script></body></html>`);
+  }));
+
+  app.get('/network/referrals',(req,res)=>{if(!envEnabled())return res.status(404).send('Network is not enabled.');res.set('Cache-Control','no-store');res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network Referrals</title><style>body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:1180px;margin:auto;padding:34px 20px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin:16px 0}a{color:#8dd9ff}.note,.tiny{color:#9aabd0;line-height:1.5}.tiny{font-size:12px}label{display:block;font-size:12px;color:#9fb1d6;margin:10px 0 6px}input,textarea,select{width:100%;box-sizing:border-box;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.btn{background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:10px 13px;font-weight:700;cursor:pointer}.btn:disabled{opacity:.6}.row{border-top:1px solid #26375c;padding:12px 0}.stats{display:flex;gap:12px;flex-wrap:wrap}.pill{background:#132443;border:1px solid #35507a;border-radius:999px;padding:4px 8px;font-size:12px}</style></head><body><main><p><a href="/network">← Network</a></p><div class="card"><h1>Referrals & Publisher Scouts</h1><p class="note">Two referral types can coexist: existing Network publishers/members, and independent people who are not publishers but can find interested publishers. Every scout gets a unique link. A referred publisher application remains attributed to that person. No reward is earned for clicks alone.</p></div><div class="card"><h2>Add independent referrer / scout</h2><div class="grid"><div><label>Name *</label><input id="pName"></div><div><label>Email</label><input id="pEmail" type="email"></div><div><label>Label</label><input id="pLabel" placeholder="e.g. Roofing outreach Philippines"></div></div><label>Notes</label><textarea id="pNotes" rows="2"></textarea><button class="btn" id="createPartner" style="margin-top:12px">Create scout + referral link</button><div id="created" class="note" style="margin-top:10px"></div></div><div class="card"><h2>Referral links</h2><div id="codes" class="note">Loading…</div></div><div class="card"><h2>Referred publisher applications</h2><div id="leads" class="note">Loading…</div></div></main><script>(function(){const key=localStorage.getItem('admin_id')||'',esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c)),api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt),d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');return d};async function load(){try{const d=await api('/api/network/admin/referrals');document.getElementById('codes').innerHTML=(d.codes||[]).map(x=>'<div class="row"><strong>'+(x.partner_name?'Scout: '+esc(x.partner_name):'Member/Publisher: '+esc(x.brand_name||x.domain||x.label||'General'))+'</strong><div class="tiny">'+esc(x.label||'')+'</div><div style="margin:6px 0"><input readonly value="https://app.contentscale.site/network/join?ref='+esc(x.code)+'"></div><div class="stats"><span class="pill">Clicks '+x.clicks+'</span><span class="pill">Applications '+x.registered+'</span><span class="pill">Activated '+x.activated+'</span><span class="pill">Rewarded '+x.rewarded+'</span></div></div>').join('')||'No referral links yet.';document.getElementById('leads').innerHTML=(d.leads||[]).map(x=>{const m=x.metadata||{};return '<div class="row"><strong>'+esc(m.brand_name||m.publisher_domain||x.referred_member_ref||'Publisher')+'</strong> · '+esc(x.status)+'<div class="tiny">'+esc(m.publisher_domain||'')+' · '+esc(m.contact_name||'')+' · '+esc(m.email||'')+'<br>Referred by: '+esc(x.partner_name||x.referring_website||'member')+'</div><div style="margin-top:8px"><button class="btn" data-status="activated" data-id="'+x.id+'">Mark activated</button> <button class="btn" data-status="rewarded" data-id="'+x.id+'">Mark rewarded</button> <button class="btn" data-status="rejected" data-id="'+x.id+'">Reject</button></div></div>'}).join('')||'No publisher applications yet.'}catch(e){document.getElementById('codes').textContent=e.message}}document.getElementById('createPartner').onclick=async function(){const b=this;b.disabled=true;b.textContent='Creating…';try{const d=await api('/api/network/admin/referral-partners',{method:'POST',body:JSON.stringify({name:document.getElementById('pName').value,email:document.getElementById('pEmail').value,label:document.getElementById('pLabel').value,notes:document.getElementById('pNotes').value})});document.getElementById('created').innerHTML='✓ Created: <strong>'+esc(d.share_url)+'</strong>';document.getElementById('pName').value='';document.getElementById('pEmail').value='';document.getElementById('pLabel').value='';document.getElementById('pNotes').value='';await load()}catch(e){alert(e.message)}finally{b.disabled=false;b.textContent='Create scout + referral link'}};document.getElementById('leads').onclick=async e=>{const b=e.target.closest('[data-status]');if(!b)return;b.disabled=true;const old=b.textContent;b.textContent='Saving…';try{await api('/api/network/admin/referrals/'+b.dataset.id+'/status',{method:'PATCH',body:JSON.stringify({status:b.dataset.status})});await load()}catch(err){alert(err.message);b.disabled=false;b.textContent=old}};load()})();</script></body></html>`)});
 
   app.get('/network', (req, res) => {
     if (!envEnabled()) return res.status(404).send('Network is not enabled.');
