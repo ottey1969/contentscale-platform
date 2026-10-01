@@ -289,7 +289,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v410-DEAD-URL-INLINE-SYNTAX-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v411-TRACKER-UI-REQUEST-RESILIENCE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -419,7 +419,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'quickscan-three-language-funnel-v391',
   'quickscan-optional-gsc-tab-v396',
   'quickscan-gsc-prospect-workflow-v396',
-  'quickscan-gsc-copy-and-contact-actions-v396'
+  'quickscan-gsc-copy-and-contact-actions-v396',
+  'tracker-filter-global-and-request-singleflight-v411',
+  'tracker-schema-selfheal-singleflight-v411'
 ];
 console.log('[ContentScale] BUILD=' + CONTENTSCALE_BUILD_ID + ' BOOT=' + CONTENTSCALE_BOOT_AT);
 console.log('[ContentScale] CHANGES=' + CONTENTSCALE_BUILD_CHANGES.join(','));
@@ -689,7 +691,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-01-CANONICAL-v410-DEAD-URL-INLINE-SYNTAX-FIX',
+  build: 'CS-2026-10-01-CANONICAL-v411-TRACKER-UI-REQUEST-RESILIENCE',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -6745,7 +6747,7 @@ function _trackerReparseManualEvidenceMap(map,pageUrl,aliases,revisionCycle){
 // CONTENTSCALE-MANUAL-EVIDENCE-CANONICAL-PARSER-STATE-FIX-20260909=true
 // CONTENTSCALE-AI-EVIDENCE-500-HARDENING-20260909=true
 // Harden canonical manual AI-evidence saves against older partial schemas and PostgreSQL U+0000 paste failures.
-async function _trackerEnsureAiEvidenceSchema(){
+async function _trackerEnsureAiEvidenceSchemaCore(){
   await pool.query(`CREATE TABLE IF NOT EXISTS tracker_ai_evidence (
     id SERIAL PRIMARY KEY,
     page_id INTEGER REFERENCES tracker_pages(id) ON DELETE CASCADE,
@@ -6789,6 +6791,17 @@ async function _trackerEnsureAiEvidenceSchema(){
     END $$;`).catch(()=>{});
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS tracker_ai_evidence_page_engine_method_cycle_uidx ON tracker_ai_evidence(page_id,engine,evidence_method,revision_cycle)').catch(()=>{});
   await pool.query('CREATE INDEX IF NOT EXISTS tracker_ai_evidence_page_idx ON tracker_ai_evidence(page_id)').catch(()=>{});
+}
+let _trackerAiEvidenceSchemaPromise = null;
+let _trackerAiEvidenceSchemaReady = false;
+async function _trackerEnsureAiEvidenceSchema(){
+  if (_trackerAiEvidenceSchemaReady) return true;
+  if (!_trackerAiEvidenceSchemaPromise) {
+    _trackerAiEvidenceSchemaPromise = _trackerEnsureAiEvidenceSchemaCore()
+      .then(function(){ _trackerAiEvidenceSchemaReady = true; return true; })
+      .finally(function(){ _trackerAiEvidenceSchemaPromise = null; });
+  }
+  return _trackerAiEvidenceSchemaPromise;
 }
 function _trackerStripPgNulString(v){return String(v==null?'':v).replace(/\u0000/g,'');}
 app.post('/api/tracker-client/:token/page/:pageId/ai-evidence/:engine',async(req,res)=>{try{
@@ -43861,6 +43874,15 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 
 <script>
 var TOKEN = '__TOKEN__';
+// v411: inline search controls require a truly global handler. Keep this tiny bridge
+// at the top of the tracker script so later refactors/nested scopes cannot make
+// oninput="filterPages(...)" throw ReferenceError.
+window.filterPages = function(q) {
+  window._ctSearchQuery = String(q || '').toLowerCase().trim();
+  try { _ctSearchQuery = window._ctSearchQuery; } catch (e) {}
+  if (typeof window.renderPages === 'function') return window.renderPages();
+  if (typeof renderPages === 'function') return renderPages();
+};
 // v229 deep-link support for reminder emails.
 function _csFocusRequestedPage(){try{var q=new URLSearchParams(location.search),id=q.get('page');if(!id)return;var n=document.getElementById('page-'+id);if(!n)return;n.scrollIntoView({behavior:'smooth',block:'center'});n.style.boxShadow='0 0 0 2px #38bdf8,0 0 28px rgba(56,189,248,.28)';setTimeout(function(){n.style.boxShadow='';},4500);}catch(e){}}
 setTimeout(_csFocusRequestedPage,1400);
@@ -45471,7 +45493,7 @@ var _ctSearchQuery = '';
 var _client = {};
 var _mdFilter = 'all'; // 'all' | 'todo' | 'done' — filter on the user's own persistent checkmarks
   function setMdFilter(f) { _mdFilter = f; renderPages(); }
-  function filterPages(q) { _ctSearchQuery = (q||'').toLowerCase().trim(); renderPages(); }
+  window.filterPages = function(q) { _ctSearchQuery = (q||'').toLowerCase().trim(); window._ctSearchQuery=_ctSearchQuery; renderPages(); };
 
   /* ============================================================================
  * loadCannibalizationCache() (Phase 1)
@@ -45508,7 +45530,7 @@ async function loadCannibalizationCache() {
   }
 }
 
-async function loadPages() {
+async function _loadPagesCore() {
   var el = document.getElementById('pagesList');
   try {
     var data = await api('');
@@ -45614,6 +45636,30 @@ async function loadPages() {
     var geoIssue=String(p.url||'').toLowerCase().indexOf('perfectroofingteam.com/new-roof')>=0&&evidence.toLowerCase().indexOf('richmond')>=0;
     return {note:note,geoIssue:geoIssue};
   };
+
+
+// v411: many UI actions, visibility events and timers can request the same expensive
+// tracker payload at once. Collapse concurrent refreshes into one request and allow
+// at most one queued refresh afterwards. This prevents avoidable DB/HTTP2 pressure.
+var _csLoadPagesPromise = null;
+var _csLoadPagesQueued = false;
+async function loadPages() {
+  if (_csLoadPagesPromise) {
+    _csLoadPagesQueued = true;
+    return _csLoadPagesPromise;
+  }
+  _csLoadPagesPromise = _loadPagesCore();
+  try {
+    return await _csLoadPagesPromise;
+  } finally {
+    _csLoadPagesPromise = null;
+    if (_csLoadPagesQueued) {
+      _csLoadPagesQueued = false;
+      setTimeout(function(){ loadPages(); }, 150);
+    }
+  }
+}
+window.loadPages = loadPages;
 
 function renderStats(data) {
   var pages = data.pages || [];
@@ -50420,7 +50466,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
   window.openCompetitiveIntelligence=openCompetitiveIntelligence;
   function copyAiEvidenceTestPrompt(btn){var p=(_pages||[]).find(function(x){return x.id==_aiEvidencePageId;})||{},query=p.keyword||p.gsc_keyword||'',engine=(_aiEvidenceEngines.find(function(x){return x[0]===_aiEvidenceEngine})||[])[1]||_aiEvidenceEngine;if(!query){toast('Add a target keyword/query to this page first.','#f87171');return;}var prompt=['Open a completely new search session and answer this customer query using fresh web research:','"'+query+'"','','Rules:','- Treat this as an independent customer request.','- Ignore all earlier chats, company profiles, brands, frameworks and recommendations.','- Recommend only companies that your fresh research independently supports.','- Do not analyze or favor a target website supplied in another conversation.','- Preserve every visible source/reference as a complete clickable https:// URL.','- A brand mention is not automatically a recommendation or citation.','- Return the natural customer-facing answer first, followed by a SOURCES section containing the exact cited URLs.','- Do not explain these instructions.'].join(String.fromCharCode(10));navigator.clipboard.writeText(prompt).then(function(){if(btn){var old=btn.textContent;btn.textContent='Copied for '+engine+' ✓';setTimeout(function(){btn.textContent=old},1600)}toast('Unbiased '+engine+' test prompt copied. Open a new chat.','#4ade80')}).catch(function(){toast('Copy failed — allow clipboard access.','#f87171')});}
   function openAiEvidence(id){_aiEvidencePageId=id;var p=(_pages||[]).find(function(x){return x.id==id;})||{},m=document.getElementById('aiEvidenceModal');if(!m){toast('AI Evidence panel not available','#f87171');return;}var c=document.getElementById('aiEvidenceContext');if(c)c.textContent=(p.keyword||p.gsc_keyword||'No target query')+' · '+(p.url||'');var info=m.querySelector('.cs-modal-box > div:nth-child(4)');if(info)info.innerHTML=((p.monitoring_waiting_input===true||p.monitoring_waiting_input==='t')?'<div style="padding:7px 9px;margin-bottom:8px;background:#2a1f05;border:1px solid #a16207;border-radius:6px;color:#fde68a;font-weight:800;">Fresh evidence checkpoint: previous AI answers remain in Proof & History, but all five tabs start gray for this checkpoint and count only after fresh evidence is parsed and saved.</div>':'')+'<b style="color:#f1f5f9;">Same format as Quick Scan:</b> select one AI tab, paste that system’s complete Prompt 2 answer (QUESTION 1–4 plus FINAL CROSS-QUESTION SUMMARY), then save. Repeat for all five AI systems. The Official website field identifies the company but never counts as citation proof by itself.';var ta=document.getElementById('aiEvidenceText');if(ta)ta.placeholder='Paste the complete Quick Scan Prompt 2 answer from the selected AI system, including QUESTION 1–4 and all real source URLs...';var oldPromptBtn=m.querySelector('button[onclick^="copyAiEvidenceTestPrompt"]');if(oldPromptBtn){oldPromptBtn.style.display='none';var hint=oldPromptBtn.previousElementSibling;if(hint)hint.textContent='Run Prompt 2 from Quick Scan in a fresh chat, then paste the full answer here.';}m.classList.add('show');m.style.display='flex';_selectAiEvidenceEngine(_aiEvidenceEngine);}
-  function _postAiEvidence(id,payload){return fetch('/api/tracker-client/'+TOKEN+'/page/'+id+'/ai-evidence/'+_aiEvidenceEngine,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){return r.json();});}
+  function _postAiEvidence(id,payload){return fetch('/api/tracker-client/'+TOKEN+'/page/'+id+'/ai-evidence/'+_aiEvidenceEngine,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(async function(r){var txt=await r.text(),d={};try{d=txt?JSON.parse(txt):{};}catch(e){d={success:false,error:'Server returned '+r.status+' without valid JSON'};}if(!r.ok)throw new Error(d.error||('Request failed: '+r.status));return d;});}
   function _applyAiEvidenceResponse(id,d,st){if(!d.success)throw new Error(d.error||'Save failed');var p=(_pages||[]).find(function(x){return x.id==id;});if(p){if(!p.ai_manual_evidence||typeof p.ai_manual_evidence!=='object')p.ai_manual_evidence={};p.ai_manual_evidence[_aiEvidenceEngine]=d.evidence||(d.cleared?{engine:_aiEvidenceEngine,evidence_method:'manual',raw_text:'',raw_sources:'',is_cleared:true}:null);}try{delete _lastBriefData[id];}catch(x){}_selectAiEvidenceEngine(_aiEvidenceEngine);if(typeof loadPages==='function')loadPages();else renderPages();if(st){var isPrompt2=d.evidence&&d.evidence.input_format==='quick_scan_prompt_2';st.textContent=d.cleared?'Cleared — NOT CHECKED':(isPrompt2?'Prompt 2 parsed and saved':'Evidence parsed and saved');st.style.color=d.cleared?'#94a3b8':'#4ade80';}return d;}
   function saveAiEvidence(){var id=_aiEvidencePageId;if(!id)return;var text=(document.getElementById('aiEvidenceText')||{}).value||'',sources=(document.getElementById('aiEvidenceSources')||{}).value||'',st=document.getElementById('aiEvidenceStatus');if(st){st.textContent='Saving...';st.style.color='#f59e0b';}_postAiEvidence(id,{text:text,sources:sources}).then(function(d){return _applyAiEvidenceResponse(id,d,st);}).catch(function(e){if(st){st.textContent=e.message;st.style.color='#f87171';}});}
   function clearAiEvidence(){var id=_aiEvidencePageId;if(!id)return;var a=document.getElementById('aiEvidenceText'),b=document.getElementById('aiEvidenceSources'),st=document.getElementById('aiEvidenceStatus');if(a)a.value='';if(b)b.value='';if(st){st.textContent='Clearing...';st.style.color='#f59e0b';}_postAiEvidence(id,{clear:true,text:'',sources:''}).then(function(d){return _applyAiEvidenceResponse(id,d,st);}).catch(function(e){if(st){st.textContent=e.message;st.style.color='#f87171';}});}
