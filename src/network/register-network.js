@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — PUBLISHER REVIEW DECISION EMAILS v443
+// CONTENTSCALE NETWORK — REVIEW ROUNDS + RESUBMISSION HISTORY v444
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -10,12 +10,13 @@ const crypto = require('crypto');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 11;
+const NETWORK_SCHEMA_VERSION = 12;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
   'network_publication_versions',
   'network_placements',
+  'network_placement_review_events',
   'network_credit_wallets',
   'network_credit_transactions',
   'network_verification_runs',
@@ -792,6 +793,19 @@ async function ensureNetworkTables(pool) {
     await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS reviewed_by_admin_id TEXT`).catch(()=>{});
     await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`).catch(()=>{});
 
+    await client.query(`CREATE TABLE IF NOT EXISTS network_placement_review_events (
+      id BIGSERIAL PRIMARY KEY,
+      placement_id BIGINT NOT NULL REFERENCES network_placements(id) ON DELETE RESTRICT,
+      event_type TEXT NOT NULL CHECK (event_type IN ('submitted','resubmitted','precheck_passed','precheck_needs_review','needs_changes','rejected','verified')),
+      actor_type TEXT NOT NULL DEFAULT 'system' CHECK (actor_type IN ('publisher','admin','system')),
+      actor_ref TEXT,
+      published_url TEXT,
+      note TEXT,
+      metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_network_review_events_placement ON network_placement_review_events(placement_id,created_at DESC,id DESC)`);
+
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_publication_versions (
       id BIGSERIAL PRIMARY KEY,
@@ -1243,7 +1257,7 @@ async function load(){
      const backlink=x.source_link_required?(x.source_domain||'Source domain not set'):'Not required';
      const title=x.edition_title||x.title||'Publisher Edition title unavailable';
      const packageUrl='/network/admin/publication/'+(x.publication_version_id||'');
-     return '<article class="item"><div class="top"><div><h3>'+esc(x.publisher_brand||x.publisher_domain||'Publisher')+'</h3><div class="tiny">'+esc(x.publisher_domain||'')+'</div></div><div><span class="pill">'+esc(x.status)+'</span><span class="pill">Placement #'+esc(x.id)+'</span></div></div>'+
+     return '<article class="item"><div class="top"><div><h3>'+esc(x.publisher_brand||x.publisher_domain||'Publisher')+'</h3><div class="tiny">'+esc(x.publisher_domain||'')+'</div></div><div><span class="pill">'+esc(x.status)+'</span><span class="pill">Placement #'+esc(x.id)+'</span><span class="pill">Review round '+Math.max(1,Number(x.submission_round||1))+'</span></div></div>'+
      '<div class="checks" style="margin-top:12px">'+
        '<div class="check"><b>Placement / Opportunity</b><div class="expected">'+esc(x.title||'—')+'</div><div class="look">Look for: correct topic + correct publisher.</div></div>'+
        '<div class="check"><b>Expected brand mention</b><div class="expected">'+esc(brand)+'</div><div class="look">Look for this exact brand naturally in the live article.</div></div>'+
@@ -1827,6 +1841,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       pv.id AS publication_version_id,pv.title AS edition_title,pv.meta_title,pv.meta_description,pv.suggested_slug,pv.generated_at,pv.quality_status,pv.content_score,
       vr.result_status AS latest_result,vr.http_status AS latest_http_status,vr.indexable AS latest_indexable,vr.canonical_ok AS latest_canonical_ok,
       vr.brand_mention_ok AS latest_brand_mention_ok,vr.source_link_ok AS latest_source_link_ok,vr.content_match_ok AS latest_content_match_ok,vr.details AS latest_details,vr.checked_at AS latest_checked_at,
+      (SELECT COUNT(*)::int FROM network_placement_review_events re WHERE re.placement_id=p.id AND re.event_type IN ('submitted','resubmitted')) AS submission_round,
       EXISTS(SELECT 1 FROM network_credit_transactions ct JOIN network_credit_wallets cw ON cw.id=ct.wallet_id WHERE ct.placement_id=p.id AND ct.idempotency_key=('placement:'||p.id||':reward:v1')) AS credit_awarded
       FROM network_placements p
       JOIN network_content c ON c.id=p.content_id
@@ -1846,13 +1861,18 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     if(!['http:','https:'].includes(live.protocol))return res.status(400).json({success:false,error:'Only http/https URLs are allowed'});
     const q=await pool.query(`SELECT p.status,w.domain AS publisher_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id WHERE p.id=$1 LIMIT 1`,[id]);
     const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Placement not found'});
-    if(!['ready','submitted','needs_review','verified'].includes(x.status))return res.status(409).json({success:false,error:'Generate the Publisher Edition before submitting a live URL'});
+    if(x.status==='verified')return res.status(409).json({success:false,error:'Verified placements are locked. Create a new placement if a different publication is required.'});
+    if(!['ready','submitted','needs_review'].includes(x.status))return res.status(409).json({success:false,error:'Generate the Publisher Edition before submitting a live URL'});
     const host=live.hostname.toLowerCase().replace(/^www\./,'');
     const expected=String(x.publisher_domain||'').toLowerCase().replace(/^www\./,'');
     if(!(host===expected||host.endsWith('.'+expected)))return res.status(409).json({success:false,error:'The live URL must be on the committed publisher website: '+expected});
     await assertPublicHostname(live.hostname);
-    const r=await pool.query(`UPDATE network_placements SET published_url=$2,status=CASE WHEN status='verified' THEN 'verified' ELSE 'submitted' END,submitted_at=COALESCE(submitted_at,NOW()),updated_at=NOW() WHERE id=$1 RETURNING *`,[id,live.toString()]);
-    res.json({success:true,placement:r.rows[0],rule:'Exact live URL saved. Verification still required before credits are earned.'});
+    const prior=await pool.query(`SELECT COUNT(*)::int AS n FROM network_placement_review_events WHERE placement_id=$1 AND event_type IN ('submitted','resubmitted')`,[id]);
+    const eventType=Number(prior.rows[0]?.n||0)>0?'resubmitted':'submitted';
+    const r=await pool.query(`UPDATE network_placements SET published_url=$2,status='submitted',submitted_at=NOW(),verification_decision=NULL,verification_note=NULL,reviewed_by_admin_id=NULL,reviewed_at=NULL,updated_at=NOW() WHERE id=$1 RETURNING *`,[id,live.toString()]);
+    await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+      VALUES ($1,$2,'admin',$3,$4,NULL,$5::jsonb,NOW())`,[id,eventType,cleanText(req.admin?.id||req.headers['x-admin-key']||'admin',200),live.toString(),JSON.stringify({source:'admin_submit_live'})]);
+    res.json({success:true,placement:r.rows[0],event:eventType,rule:'Exact live URL saved as a new review round. Manual verification is still required before credits are earned.'});
   }));
 
   app.post('/api/network/admin/placements/:id/verify-live', verifyAdmin, wrap(async (req,res)=>{
@@ -1896,6 +1916,13 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     await pool.query(`INSERT INTO network_verification_runs (placement_id,run_no,http_status,indexable,canonical_ok,brand_mention_ok,source_link_ok,content_match_ok,password_protected,result_status,details,checked_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,NOW())`,[id,runNo,statusCode,indexable,canonicalOk,brandOk,sourceOk,staticHtmlPresent,passwordProtected,result,JSON.stringify(details)]);
     await pool.query(`UPDATE network_placements SET status=CASE WHEN status='verified' THEN 'verified' ELSE 'needs_review' END,updated_at=NOW() WHERE id=$1`,[id]);
+    await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+      VALUES ($1,$2,'admin',$3,$4,NULL,$5::jsonb,NOW())`,[
+        id,passed?'precheck_passed':'precheck_needs_review',
+        cleanText(req.admin?.id||req.headers['x-admin-key']||'admin',200),
+        x.published_url,
+        JSON.stringify({run_no:runNo,result_status:result,checks:{http_ok:httpOk,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,brand_mention_ok:brandOk,source_link_ok:sourceOk}})
+      ]);
     res.json({
       success:true,
       precheck_passed:passed,
@@ -1936,12 +1963,16 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     if(decision==='needs_changes'){
       const reviewNote=note||'Changes requested after manual review';
       await pool.query(`UPDATE network_placements SET status='needs_review',verification_decision='needs_changes',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
+      await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+        VALUES ($1,'needs_changes','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,reviewNote,JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
       const publisherNotification=await networkNotifyPublisherReviewDecision(x,'needs_changes',reviewNote);
       return res.json({success:true,status:'needs_review',credits_awarded:false,publisher_email:publisherNotification.state});
     }
     if(decision==='rejected'){
       const reviewNote=note||'Rejected after manual review';
       await pool.query(`UPDATE network_placements SET status='rejected',verification_decision='rejected',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
+      await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+        VALUES ($1,'rejected','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,reviewNote,JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
       const publisherNotification=await networkNotifyPublisherReviewDecision(x,'rejected',reviewNote);
       return res.json({success:true,status:'rejected',credits_awarded:false,publisher_email:publisherNotification.state});
     }
@@ -1975,6 +2006,8 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       await client.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status='verified',updated_at=NOW() WHERE id=$1`,[x.content_id]);
       await client.query('COMMIT');
     }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
+    await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+      VALUES ($1,'verified','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,note||null,JSON.stringify({credits_awarded:creditAwarded,credits:x.reward_credits,precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
     const publisherNotification=await networkNotifyPublisherReviewDecision(x,'verified',note||'');
     res.json({success:true,status:'verified',credits_awarded:creditAwarded,credits:x.reward_credits,publisher_email:publisherNotification.state,rule:'Verified by manual admin decision. Reward is idempotent and can be awarded only once.'});
   }));
@@ -2328,9 +2361,11 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       seoHtml=buildSeoPublicationHtml(row,images);
       schema=renderEditionHtml(row,images).schema;
     }
+    const hr=await pool.query(`SELECT id,event_type,actor_type,published_url,note,metadata,created_at FROM network_placement_review_events WHERE placement_id=$1 ORDER BY created_at DESC,id DESC LIMIT 100`,[id]);
     res.set('Cache-Control','no-store');
     res.json({
       success:true,
+      review_history:hr.rows,
       placement:{id:row.placement_id,status:row.status,published_url:row.published_url||null,title:row.title||row.opportunity_title,publisher_domain:row.publisher_domain,source_domain:row.source_domain},
       publication:{title:row.title,meta_title:row.meta_title,meta_description:row.meta_description,suggested_slug:row.suggested_slug,quality_status:row.quality_status,generated_at:row.generated_at,schema_json:schema},
       quality,
@@ -2356,8 +2391,13 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     const ir=await pool.query(`SELECT id,image_role,image_name,alt_text,caption,suggested_filename,placement_hint,mime_type,byte_size,status,sort_order,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[row.id]);
     const quality=scorePublication(row,ir.rows),standard=publicationStandardChecks(row.html||'');
     if(quality.score<80||!standard.passed)return res.status(409).json({success:false,error:'Publication package is not ready for live submission yet',content_score:quality.score,publication_standard:standard});
-    await pool.query(`UPDATE network_placements SET published_url=$2,status=CASE WHEN status='verified' THEN status ELSE 'submitted' END,submitted_at=COALESCE(submitted_at,NOW()),updated_at=NOW() WHERE id=$1`,[id,u.toString()]);
-    res.json({success:true,status:'submitted',published_url:u.toString(),next:'Manual ContentScale review. Credits are awarded only after an admin verifies the live page.'});
+    if(row.status==='verified')return res.status(409).json({success:false,error:'This placement is already verified and locked. Contact ContentScale if a new publication is required.'});
+    const prior=await pool.query(`SELECT COUNT(*)::int AS n FROM network_placement_review_events WHERE placement_id=$1 AND event_type IN ('submitted','resubmitted')`,[id]);
+    const eventType=Number(prior.rows[0]?.n||0)>0?'resubmitted':'submitted';
+    await pool.query(`UPDATE network_placements SET published_url=$2,status='submitted',submitted_at=NOW(),verification_decision=NULL,verification_note=NULL,reviewed_by_admin_id=NULL,reviewed_at=NULL,updated_at=NOW() WHERE id=$1`,[id,u.toString()]);
+    await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+      VALUES ($1,$2,'publisher',$3,$4,NULL,$5::jsonb,NOW())`,[id,eventType,String(access.account.account_id||''),u.toString(),JSON.stringify({source:'publisher_dashboard'})]);
+    res.json({success:true,status:'submitted',event:eventType,published_url:u.toString(),next:'A new manual review round has started. ContentScale will email you after the decision.'});
   }));
 
   app.get('/api/network/publisher/:token/dashboard', wrap(async (req,res)=>{
@@ -2384,7 +2424,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     res.set('Cache-Control','no-store');
     res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Publication Package · ContentScale Network</title><style>
 body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:1080px;margin:auto;padding:32px 18px 70px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin:16px 0}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.note,.tiny{color:#9aabd0;line-height:1.55}.tiny{font-size:12px}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:4px 9px;font-size:12px}.ok{color:#86efac}.warn{color:#fcd34d}.btn{background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer;text-decoration:none}.btn.good{background:#166534;border-color:#22c55e}.btn:disabled{opacity:.6;cursor:wait}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.field label{display:block;font-size:11px;color:#9aabd0;margin:0 0 5px}.field input,.field textarea{width:100%;box-sizing:border-box;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.field textarea{min-height:220px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.statusbox{padding:12px;border-radius:10px;border:1px solid #35507a;background:#091329}a{color:#8dd9ff}
-</style></head><body><main><div class="top"><div><div class="tiny">CONTENTSCALE NETWORK · PUBLISHER</div><h1>Publication Package</h1></div><a href="/network/publisher/${token}">← Publisher Dashboard</a></div><div id="app"><div class="card">Loading publication package…</div></div></main><script>(function(){const token=${JSON.stringify(token)},pid=${placementId},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/package',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load package');const p=d.placement||{},pub=d.publication||{},q=d.quality||{},st=d.publication_standard||{},ready=!!d.delivery_ready;root.innerHTML='<div class="card"><h2>'+esc(pub.title||p.title||'Publisher Edition')+'</h2><span class="pill">Placement: '+esc(p.status||'')+'</span> <span class="pill">ContentScore: '+Number(q.score||0)+'/100</span><p class="note">'+esc(d.rule||'')+'</p></div><div class="card"><h2>Publication readiness</h2><div class="grid"><div class="statusbox"><strong class="'+(Number(q.score||0)>=80?'ok':'warn')+'">ContentScore '+Number(q.score||0)+'/100</strong></div><div class="statusbox"><strong class="'+(st.passed?'ok':'warn')+'">Publication Standard '+(st.passed?'passed ✓':'not complete')+'</strong></div><div class="statusbox"><strong class="'+(ready?'ok':'warn')+'">'+(ready?'SEO HTML ready ✓':'Waiting for final package')+'</strong></div></div></div>'+(ready?'<div class="card"><h2>SEO publication HTML</h2><p class="note">Paste this into the publisher CMS as real HTML. Do not use a JavaScript-only embed for the final Network placement.</p><div class="actions"><button class="btn good" id="copyHtml">Copy SEO HTML</button><button class="btn" id="copyMeta">Copy meta</button></div><div class="field" style="margin-top:12px"><label>HTML</label><textarea id="seoHtml" readonly>'+esc(d.seo_html||'')+'</textarea></div><div class="grid" style="margin-top:12px"><div class="field"><label>Meta title</label><input id="metaTitle" readonly value="'+esc(pub.meta_title||'')+'"></div><div class="field"><label>Meta description</label><input id="metaDescription" readonly value="'+esc(pub.meta_description||'')+'"></div><div class="field"><label>Suggested slug</label><input readonly value="'+esc(pub.suggested_slug||'')+'"></div></div></div><div class="card"><h2>After you publish</h2><p class="note">Enter the exact live article URL. ContentScale will place it in the verification queue. Credits are awarded only after a ContentScale admin manually verifies the live page. You will receive an email with the decision.</p><div class="field"><label>Exact live article URL</label><input id="liveUrl" placeholder="https://'+esc(p.publisher_domain||'publisher.com')+'/article" value="'+esc(p.published_url||'')+'"></div><div class="actions" style="margin-top:10px"><button class="btn good" id="submitLive">Submit live URL</button></div><div id="msg" class="note" style="margin-top:8px"></div></div>':'<div class="card"><h2>Package not ready yet</h2><p class="note">ContentScale has not released the SEO HTML because the quality gate or Publication Standard is not complete. Nothing needs to be published yet.</p></div>');if(ready){document.getElementById('copyHtml').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText(d.seo_html||'');this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy SEO HTML'}};document.getElementById('copyMeta').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText((pub.meta_title||'')+'\\n'+(pub.meta_description||''));this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy meta'}};document.getElementById('submitLive').onclick=async function(){const b=this,m=document.getElementById('msg'),url=document.getElementById('liveUrl').value.trim();if(!url)return m.textContent='Enter the exact live URL first.';b.disabled=true;b.textContent='Submitting…';try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/submit-live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_url:url})}),x=await r.json();if(!r.ok)throw Error(x.error||'Could not submit');m.className='ok';m.textContent='✓ Live URL submitted. Waiting for manual ContentScale verification.';b.textContent='✓ Submitted'}catch(e){m.className='warn';m.textContent='✕ '+e.message;b.disabled=false;b.textContent='Submit live URL'}}}}catch(e){root.innerHTML='<div class="card"><h2>Publication package unavailable</h2><p class="note">'+esc(e.message)+'</p></div>'}}load()})();</script></body></html>`);
+</style></head><body><main><div class="top"><div><div class="tiny">CONTENTSCALE NETWORK · PUBLISHER</div><h1>Publication Package</h1></div><a href="/network/publisher/${token}">← Publisher Dashboard</a></div><div id="app"><div class="card">Loading publication package…</div></div></main><script>(function(){const token=${JSON.stringify(token)},pid=${placementId},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/package',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load package');const p=d.placement||{},pub=d.publication||{},q=d.quality||{},st=d.publication_standard||{},ready=!!d.delivery_ready,h=d.review_history||[];const history='<div class="card"><h2>Review history</h2><p class="note">Every submission, pre-check and manual decision is kept here so previous feedback is never lost.</p>'+(h.length?h.map(function(x){return '<div class="statusbox" style="margin-top:8px"><strong>'+esc(String(x.event_type||'').replace(/_/g,' '))+'</strong> <span class="tiny">· '+esc(new Date(x.created_at).toLocaleString())+'</span>'+(x.published_url?'<div class="tiny"><a target="_blank" rel="noopener" href="'+esc(x.published_url)+'">'+esc(x.published_url)+'</a></div>':'')+(x.note?'<div class="tiny" style="margin-top:5px"><b>Note:</b> '+esc(x.note)+'</div>':'')+'</div>'}).join(''):'<p class="note">No review events yet.</p>')+'</div>';root.innerHTML='<div class="card"><h2>'+esc(pub.title||p.title||'Publisher Edition')+'</h2><span class="pill">Placement: '+esc(p.status||'')+'</span> <span class="pill">ContentScore: '+Number(q.score||0)+'/100</span><p class="note">'+esc(d.rule||'')+'</p></div><div class="card"><h2>Publication readiness</h2><div class="grid"><div class="statusbox"><strong class="'+(Number(q.score||0)>=80?'ok':'warn')+'">ContentScore '+Number(q.score||0)+'/100</strong></div><div class="statusbox"><strong class="'+(st.passed?'ok':'warn')+'">Publication Standard '+(st.passed?'passed ✓':'not complete')+'</strong></div><div class="statusbox"><strong class="'+(ready?'ok':'warn')+'">'+(ready?'SEO HTML ready ✓':'Waiting for final package')+'</strong></div></div></div>'+(ready?'<div class="card"><h2>SEO publication HTML</h2><p class="note">Paste this into the publisher CMS as real HTML. Do not use a JavaScript-only embed for the final Network placement.</p><div class="actions"><button class="btn good" id="copyHtml">Copy SEO HTML</button><button class="btn" id="copyMeta">Copy meta</button></div><div class="field" style="margin-top:12px"><label>HTML</label><textarea id="seoHtml" readonly>'+esc(d.seo_html||'')+'</textarea></div><div class="grid" style="margin-top:12px"><div class="field"><label>Meta title</label><input id="metaTitle" readonly value="'+esc(pub.meta_title||'')+'"></div><div class="field"><label>Meta description</label><input id="metaDescription" readonly value="'+esc(pub.meta_description||'')+'"></div><div class="field"><label>Suggested slug</label><input readonly value="'+esc(pub.suggested_slug||'')+'"></div></div></div><div class="card"><h2>After you publish</h2><p class="note">Enter the exact live article URL. ContentScale will place it in the verification queue. Credits are awarded only after a ContentScale admin manually verifies the live page. You will receive an email with the decision.</p><div class="field"><label>Exact live article URL</label><input id="liveUrl" placeholder="https://'+esc(p.publisher_domain||'publisher.com')+'/article" value="'+esc(p.published_url||'')+'"></div><div class="actions" style="margin-top:10px"><button class="btn good" id="submitLive">Submit live URL</button></div><div id="msg" class="note" style="margin-top:8px"></div></div>':'<div class="card"><h2>Package not ready yet</h2><p class="note">ContentScale has not released the SEO HTML because the quality gate or Publication Standard is not complete. Nothing needs to be published yet.</p></div>')+history;if(ready){document.getElementById('copyHtml').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText(d.seo_html||'');this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy SEO HTML'}};document.getElementById('copyMeta').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText((pub.meta_title||'')+'\\n'+(pub.meta_description||''));this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy meta'}};document.getElementById('submitLive').onclick=async function(){const b=this,m=document.getElementById('msg'),url=document.getElementById('liveUrl').value.trim();if(!url)return m.textContent='Enter the exact live URL first.';b.disabled=true;b.textContent='Submitting…';try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/submit-live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_url:url})}),x=await r.json();if(!r.ok)throw Error(x.error||'Could not submit');m.className='ok';m.textContent='✓ Live URL submitted. Waiting for manual ContentScale verification.';b.textContent='✓ Submitted'}catch(e){m.className='warn';m.textContent='✕ '+e.message;b.disabled=false;b.textContent='Submit live URL'}}}}catch(e){root.innerHTML='<div class="card"><h2>Publication package unavailable</h2><p class="note">'+esc(e.message)+'</p></div>'}}load()})();</script></body></html>`);
   });
 
   app.post('/api/network/advertising/apply', wrap(async (req,res)=>{
