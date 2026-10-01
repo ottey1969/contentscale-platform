@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — PUBLISHER SELF-SERVICE SEO DELIVERY v440
+// CONTENTSCALE NETWORK — MANUAL VERIFICATION GUIDE + EXAMPLES v442
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 10;
+const NETWORK_SCHEMA_VERSION = 11;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -689,11 +689,20 @@ async function ensureNetworkTables(pool) {
       submitted_at TIMESTAMPTZ,
       verified_at TIMESTAMPTZ,
       cancelled_at TIMESTAMPTZ,
+      verification_note TEXT,
+      verification_decision TEXT,
+      reviewed_by_admin_id TEXT,
+      reviewed_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE(content_id, publisher_website_id)
     )`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_network_placements_status ON network_placements(status, created_at DESC)`);
+    await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS verification_note TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS verification_decision TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS reviewed_by_admin_id TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_placements ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`).catch(()=>{});
+
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_publication_versions (
       id BIGSERIAL PRIMARY KEY,
@@ -1109,30 +1118,70 @@ function placementsPage() {
 
 
 function verificationPage() {
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Network Verification | ContentScale</title>
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual Network Verification | ContentScale</title>
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#08101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1280px;margin:auto;padding:34px 22px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.crumb{font-size:13px;color:#91a1c2}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin-top:18px}.notice{border:1px solid #315c88;background:#0b2238;border-radius:14px;padding:15px;color:#cdeaff;line-height:1.5}.btn{border:1px solid #3c5f99;background:#17376c;color:white;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:700}.btn.secondary{background:#101b31}.btn.good{background:#14532d;border-color:#22c55e}.btn:disabled{opacity:.65;cursor:wait}.btn.busy:before{content:'';display:inline-block;width:12px;height:12px;margin-right:7px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-2px;animation:spin .7s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.status{display:inline-flex;border-radius:999px;padding:4px 8px;font-size:11px;border:1px solid #3b4f77;background:#142039}.status.verified{border-color:#2b8f55;color:#8ff0b2}.status.needs_review{border-color:#a87b20;color:#ffd785}.status.submitted,.status.ready{border-color:#4b78bc;color:#acd0ff}.tiny{font-size:12px;color:#91a1c2}.tableWrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1180px}th,td{text-align:left;padding:11px;border-bottom:1px solid #223150;vertical-align:top}th{font-size:11px;color:#8fa2c5;text-transform:uppercase;letter-spacing:.07em}.actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.url{width:300px;max-width:100%;background:#091327;border:1px solid #334a74;color:#eef4ff;border-radius:9px;padding:9px}.auth{padding:14px;border:1px solid #704b1d;background:#2a1b0b;border-radius:12px;color:#ffd89a;margin-top:16px}.ok{color:#8ff0b2}.warn{color:#ffd785}
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#08101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1260px;margin:auto;padding:34px 22px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.crumb{font-size:13px;color:#91a1c2}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin-top:18px}.guide{border-color:#365b92;background:#0a1d34}.guideGrid,.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:10px}.guideItem,.check{background:#091329;border:1px solid #2b4168;border-radius:12px;padding:13px}.guideItem strong,.check b{display:block;color:#bfdbfe;margin-bottom:6px}.example{display:block;margin-top:7px;color:#93c5fd;font-size:12px}.queue{display:grid;gap:14px}.item{border:1px solid #2b4168;background:#0b1427;border-radius:15px;padding:16px}.item h3{margin:0 0 4px}.pill{display:inline-block;border:1px solid #40577e;border-radius:999px;padding:4px 8px;font-size:11px;margin:2px}.tiny{font-size:12px;color:#91a1c2;line-height:1.55}.expected{color:#86efac;font-weight:850;overflow-wrap:anywhere}.look{color:#cbd5e1;margin-top:5px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.btn{border:1px solid #3c5f99;background:#17376c;color:white;padding:9px 12px;border-radius:10px;cursor:pointer;font-weight:800;text-decoration:none}.btn.secondary{background:#101b31}.btn.good{background:#14532d;border-color:#22c55e}.btn.warn{background:#78350f;border-color:#f59e0b}.btn.bad{background:#7f1d1d;border-color:#ef4444}.btn:disabled{opacity:.6;cursor:wait}.field{margin-top:11px}.field label{display:block;font-size:11px;color:#93a4c5;margin-bottom:5px}.field textarea{width:100%;min-height:75px;background:#081224;color:#fff;border:1px solid #385077;border-radius:9px;padding:9px}.pre{margin-top:10px;padding:10px;border:1px solid #31486f;border-radius:10px;background:#081224}.ok{color:#86efac}.warnText{color:#fcd34d}.auth{padding:14px;border:1px solid #704b1d;background:#2a1b0b;border-radius:12px;color:#ffd89a;margin-top:16px}
 </style></head><body><main>
-<div class="top"><div><div class="crumb"><a href="/network">Network</a> / Verification</div><h1>Publish, Verify & Credits</h1><div class="tiny">Credits are earned only after the live placement passes verification.</div></div><a class="btn secondary" href="/network/admin">← Network admin</a></div>
+<div class="top"><div><div class="crumb"><a href="/network/admin">Network Admin</a> / Manual Verification</div><h1>Manual Verification Queue</h1><div class="tiny">The pre-check helps you. You make the final decision.</div></div><button class="btn secondary" id="refreshBtn">Refresh</button></div>
 <div id="auth" class="auth" style="display:none">No valid admin session found. Open <a href="/admin">/admin</a>, log in, then return here.</div>
-<section class="card"><div class="notice"><strong>Verification rule</strong><br>Submit the exact live article URL. ContentScale checks HTTP status, indexability, canonical, that the Publisher Edition exists as real HTML in the raw page source, and the required brand/source evidence. JavaScript-only delivery cannot pass. A successful verification awards the placement credits once only.</div></section>
-<section class="card"><div class="top"><h2>Verification queue</h2><button class="btn secondary" id="refreshBtn">Refresh</button></div><div class="tableWrap"><table><thead><tr><th>Opportunity</th><th>Publisher</th><th>Status</th><th>Live URL</th><th>Latest verification</th><th>Credits</th><th>Actions</th></tr></thead><tbody id="rows"><tr><td colspan="7" class="tiny">Loading…</td></tr></tbody></table></div></section>
-<script>
-(function(){
- const key=localStorage.getItem('admin_id')||'',auth=document.getElementById('auth');if(!key)auth.style.display='block';
- const esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]));
- const api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt);const t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(r.status===401){auth.style.display='block';throw Error('Admin session expired');}if(!r.ok)throw Error(d.error||('Request failed: '+r.status));return d};
- function busy(btn,on,label){if(!btn)return;if(on){btn.dataset.old=btn.textContent;btn.disabled=true;btn.classList.add('busy');btn.textContent=label||'Working…'}else{btn.disabled=false;btn.classList.remove('busy');btn.textContent=btn.dataset.old||btn.textContent}}
- function checks(x){if(!x.latest_result)return '<span class="tiny">Not checked yet</span>';const d=x.latest_details||{};return '<span class="status '+esc(x.latest_result)+'">'+esc(x.latest_result)+'</span><div class="tiny">HTTP '+esc(x.latest_http_status||'—')+' · indexable '+(x.latest_indexable?'yes':'no')+'<br>static HTML '+(d.seo_static_html_present?'✓':'✕')+' · brand '+(x.latest_brand_mention_ok?'✓':'✕')+' · source '+(x.latest_source_link_ok?'✓':'✕')+'</div>'}
- async function load(){const b=document.getElementById('rows');try{const d=await api('/api/network/admin/verification-queue');const a=d.items||[];if(!a.length){b.innerHTML='<tr><td colspan="7" class="tiny">No generated placements ready for verification yet.</td></tr>';return;}b.innerHTML=a.map(x=>'<tr><td><strong>'+esc(x.title)+'</strong><div class="tiny">'+esc(x.brand_name||'')+(x.prewrite_brief_id?' · Prewrite #'+esc(x.prewrite_brief_id):' · No Prewrite')+'</div></td><td><strong>'+esc(x.publisher_brand||x.publisher_domain)+'</strong><div class="tiny">'+esc(x.publisher_domain)+'</div></td><td><span class="status '+esc(x.status)+'">'+esc(x.status)+'</span></td><td><input class="url" data-url="'+x.id+'" placeholder="https://publisher.com/article" value="'+esc(x.published_url||'')+'"></td><td>'+checks(x)+'</td><td><strong>'+esc(x.reward_credits||0)+'</strong><div class="tiny">'+(x.credit_awarded?'awarded ✓':'not earned yet')+'</div></td><td><div class="actions"><button class="btn" data-action="submit" data-id="'+x.id+'">Save live URL</button><button class="btn good" data-action="verify" data-id="'+x.id+'" '+(!x.published_url?'disabled':'')+'>Verify live</button></div></td></tr>').join('')}catch(e){b.innerHTML='<tr><td colspan="7" class="tiny">'+esc(e.message)+'</td></tr>'}}
- document.getElementById('rows').addEventListener('click',async function(ev){const btn=ev.target.closest('button[data-action]');if(!btn)return;const id=Number(btn.dataset.id||0);if(!id)return;const input=document.querySelector('input[data-url="'+id+'"]');if(btn.dataset.action==='submit'){const url=(input&&input.value||'').trim();if(!url)return alert('Enter the exact live article URL first.');busy(btn,true,'Saving…');try{await api('/api/network/admin/placements/'+id+'/submit-live',{method:'POST',body:JSON.stringify({published_url:url})});btn.textContent='✓ Saved';await load()}catch(e){alert(e.message)}finally{busy(btn,false)}}else if(btn.dataset.action==='verify'){if(!confirm('Verify this live placement now? Credits are awarded only if all required checks pass.'))return;busy(btn,true,'Verifying…');try{const d=await api('/api/network/admin/placements/'+id+'/verify-live',{method:'POST',body:'{}'});btn.textContent=d.verified?'✓ Verified':'Needs review';if(d.verified&&d.credit_awarded)alert('Placement verified. '+d.credits+' credits awarded.');await load()}catch(e){alert(e.message);await load()}finally{busy(btn,false)}}});
- document.getElementById('refreshBtn').onclick=function(){const b=this;busy(b,true,'Refreshing…');load().finally(()=>busy(b,false))};if(key)load();
-})();
-</script></main></body></html>`;
-}
 
+<section class="card guide">
+<h2 style="margin-top:0">What should I look at?</h2>
+<div class="guideGrid">
+<div class="guideItem"><strong>1. Placement / Opportunity</strong>Is this the correct assignment on the correct publisher website?<span class="example">Example: “Emergency Roof Repair NJ” was assigned to RoofingPublisher.com.</span></div>
+<div class="guideItem"><strong>2. Expected brand mention</strong>Find the expected company name visibly and naturally in the article.<span class="example">Example: expected = “Perfect Roofing Team”. You should actually see that name in the article body.</span></div>
+<div class="guideItem"><strong>3. Expected backlink</strong>Click the backlink. It must lead to the expected source website/page, not another domain or a broken URL.<span class="example">Example: expected source domain = perfectroofingteam.com.</span></div>
+<div class="guideItem"><strong>4. Expected title</strong>Compare the live article title/H1 with the Publisher Edition title. Small editorial edits are okay; a different topic is not.<span class="example">Example: “24-Hour Emergency Roof Repair in NJ” should not become “10 Home Improvement Ideas”.</span></div>
+<div class="guideItem"><strong>5. Publisher Edition</strong>Open the exact publication package and compare structure, key sections, brand and backlink with what went live.<span class="example">This prevents a publisher from submitting an unrelated/reused article.</span></div>
+<div class="guideItem"><strong>6. SEO / indexability</strong>The article should be public, readable and present as real HTML. No password wall, no noindex, and no JS-only final delivery.<span class="example">Use “Run pre-check” for evidence, but still inspect the live page yourself.</span></div>
+</div></section>
+
+<section class="card"><h2 style="margin-top:0">Waiting for your decision</h2><div id="queue" class="queue"><div class="tiny">Loading…</div></div></section>
+
+<script>(function(){
+const key=localStorage.getItem('admin_id')||'',auth=document.getElementById('auth');if(!key)auth.style.display='block';
+const esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));
+const api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt);const t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(r.status===401){auth.style.display='block';throw Error('Admin session expired');}if(!r.ok)throw Error(d.error||('Request failed: '+r.status));return d};
+function pre(x){const d=x.latest_details||{};if(!x.latest_result)return '<div class="pre tiny">Pre-check: not run yet.</div>';return '<div class="pre"><b>Automated pre-check: <span class="'+(x.latest_result==='passed'?'ok':'warnText')+'">'+esc(x.latest_result)+'</span></b><div class="tiny">HTTP '+esc(x.latest_http_status||'—')+' · indexable '+(x.latest_indexable?'✓':'✕')+' · canonical '+(x.latest_canonical_ok?'✓':'✕')+' · real HTML '+(d.seo_static_html_present?'✓':'✕')+' · brand '+(x.latest_brand_mention_ok?'✓':'✕')+' · backlink '+(x.latest_source_link_ok?'✓':'✕')+' · content match '+(x.latest_content_match_ok?'✓':'✕')+'</div></div>'}
+async function load(){
+ const box=document.getElementById('queue');
+ try{
+   const d=await api('/api/network/admin/verification-queue'),items=(d.items||[]).filter(x=>['submitted','needs_review','verifying'].includes(x.status));
+   if(!items.length){box.innerHTML='<div class="tiny">No publisher placements are waiting for manual review.</div>';return}
+   box.innerHTML=items.map(x=>{
+     const brand=x.brand_mention_required?(x.brand_name||'Brand not set'):'Not required';
+     const backlink=x.source_link_required?(x.source_domain||'Source domain not set'):'Not required';
+     const title=x.edition_title||x.title||'Publisher Edition title unavailable';
+     const packageUrl='/network/admin/publication/'+(x.publication_version_id||'');
+     return '<article class="item"><div class="top"><div><h3>'+esc(x.publisher_brand||x.publisher_domain||'Publisher')+'</h3><div class="tiny">'+esc(x.publisher_domain||'')+'</div></div><div><span class="pill">'+esc(x.status)+'</span><span class="pill">Placement #'+esc(x.id)+'</span></div></div>'+
+     '<div class="checks" style="margin-top:12px">'+
+       '<div class="check"><b>Placement / Opportunity</b><div class="expected">'+esc(x.title||'—')+'</div><div class="look">Look for: correct topic + correct publisher.</div></div>'+
+       '<div class="check"><b>Expected brand mention</b><div class="expected">'+esc(brand)+'</div><div class="look">Look for this exact brand naturally in the live article.</div></div>'+
+       '<div class="check"><b>Expected backlink</b><div class="expected">'+esc(backlink)+'</div><div class="look">Click the live backlink and confirm this destination/source domain.</div></div>'+
+       '<div class="check"><b>Expected title</b><div class="expected">'+esc(title)+'</div><div class="look">Compare with the live H1/article title.</div></div>'+
+       '<div class="check"><b>Publication Package / Publisher Edition</b><div class="expected">Package #'+esc(x.publication_version_id||'—')+'</div><div class="look">'+(x.publication_version_id?'<a target="_blank" rel="noopener" href="'+esc(packageUrl)+'">Open Publisher Edition</a>':'Package unavailable')+'</div></div>'+
+       '<div class="check"><b>Live article</b><div class="expected">'+(x.published_url?'<a target="_blank" rel="noopener" href="'+esc(x.published_url)+'">'+esc(x.published_url)+'</a>':'No live URL')+'</div><div class="look">Open it and inspect the actual article.</div></div>'+
+     '</div>'+pre(x)+
+     '<div class="field"><label>Your review note / required changes</label><textarea data-note="'+x.id+'" placeholder="Example: Brand mention is correct, but backlink points to homepage instead of the required source page.">'+esc(x.verification_note||'')+'</textarea></div>'+
+     '<div class="actions"><a class="btn secondary" target="_blank" rel="noopener" href="'+esc(x.published_url||'#')+'">Open live page</a><button class="btn secondary" data-act="precheck" data-id="'+x.id+'">Run pre-check</button><button class="btn good" data-act="verified" data-id="'+x.id+'">Verify manually</button><button class="btn warn" data-act="needs_changes" data-id="'+x.id+'">Needs changes</button><button class="btn bad" data-act="rejected" data-id="'+x.id+'">Reject</button></div></article>'
+   }).join('')
+ }catch(e){box.innerHTML='<div class="warnText">'+esc(e.message||e)+'</div>'}
+}
+document.getElementById('queue').addEventListener('click',async e=>{
+ const b=e.target.closest('button[data-act]');if(!b)return;const id=Number(b.dataset.id),act=b.dataset.act,n=(document.querySelector('[data-note="'+id+'"]')||{}).value||'',old=b.textContent;b.disabled=true;b.textContent=act==='precheck'?'Checking…':'Saving…';
+ try{
+   if(act==='precheck')await api('/api/network/admin/placements/'+id+'/verify-live',{method:'POST',body:'{}'});
+   else{
+     if(act==='verified'&&!confirm('You are manually verifying this live placement. This can release the placement credits once. Continue?'))return;
+     await api('/api/network/admin/placements/'+id+'/manual-review',{method:'POST',body:JSON.stringify({decision:act,note:n})});
+   }
+   await load();
+ }catch(err){alert(err.message||err)}finally{b.disabled=false;b.textContent=old}
+});
+document.getElementById('refreshBtn').onclick=load;if(key)load();
+})();</script></main></body></html>`;
+}
 function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   if (!app) throw new Error('Network registration requires Express app');
   if (typeof verifyAdmin !== 'function') throw new Error('Network registration requires verifyAdmin');
@@ -1682,19 +1731,23 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
   // VERIFICATION + CREDIT RELEASE — only after a generated Publisher Edition is live.
   app.get('/api/network/admin/verification-queue', verifyAdmin, wrap(async (req,res)=>{
     const r=await pool.query(`SELECT p.id,p.status,p.reward_credits,p.published_url,p.submitted_at,p.verified_at,
-      c.title,c.brand_name,w.domain AS publisher_domain,w.brand_name AS publisher_brand,w.status AS publisher_status,
-      pv.id AS publication_version_id,pv.generated_at,
+      p.brand_mention_required,p.source_link_required,p.verification_note,p.verification_decision,p.reviewed_at,
+      c.title,c.brand_name,c.owner_website_id,
+      w.domain AS publisher_domain,w.brand_name AS publisher_brand,w.status AS publisher_status,
+      ow.domain AS source_domain,ow.brand_name AS source_brand,
+      pv.id AS publication_version_id,pv.title AS edition_title,pv.meta_title,pv.meta_description,pv.suggested_slug,pv.generated_at,pv.quality_status,pv.content_score,
       vr.result_status AS latest_result,vr.http_status AS latest_http_status,vr.indexable AS latest_indexable,vr.canonical_ok AS latest_canonical_ok,
       vr.brand_mention_ok AS latest_brand_mention_ok,vr.source_link_ok AS latest_source_link_ok,vr.content_match_ok AS latest_content_match_ok,vr.details AS latest_details,vr.checked_at AS latest_checked_at,
       EXISTS(SELECT 1 FROM network_credit_transactions ct JOIN network_credit_wallets cw ON cw.id=ct.wallet_id WHERE ct.placement_id=p.id AND ct.idempotency_key=('placement:'||p.id||':reward:v1')) AS credit_awarded
       FROM network_placements p
       JOIN network_content c ON c.id=p.content_id
       JOIN network_websites w ON w.id=p.publisher_website_id
+      LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
       JOIN network_publication_versions pv ON pv.placement_id=p.id
       LEFT JOIN LATERAL (SELECT * FROM network_verification_runs z WHERE z.placement_id=p.id ORDER BY z.run_no DESC LIMIT 1) vr ON TRUE
       WHERE p.status IN ('ready','submitted','verifying','needs_review','verified')
       ORDER BY p.updated_at DESC,p.id DESC LIMIT 1000`);
-    res.json({success:true,items:r.rows,rule:'Credits are awarded once, only after a passing live verification.'});
+    res.json({success:true,items:r.rows,rule:'Automated checks are evidence only. Final verification and credit release require a manual admin decision.'});
   }));
 
   app.post('/api/network/admin/placements/:id/submit-live', verifyAdmin, wrap(async (req,res)=>{
@@ -1753,23 +1806,77 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     const details={seo_static_html_present:staticHtmlPresent,content_text_match:contentMatch,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,final_url:fetched&&fetched.finalUrl||x.published_url,canonical:canonical||null,noindex,password_protected:passwordProtected,fetch_error:fetchError||null,required_brand:brand||null,required_source_domain:owner||null};
     await pool.query(`INSERT INTO network_verification_runs (placement_id,run_no,http_status,indexable,canonical_ok,brand_mention_ok,source_link_ok,content_match_ok,password_protected,result_status,details,checked_at)
       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,NOW())`,[id,runNo,statusCode,indexable,canonicalOk,brandOk,sourceOk,staticHtmlPresent,passwordProtected,result,JSON.stringify(details)]);
-    let creditAwarded=false;
-    if(passed){
-      const client=await pool.connect();try{await client.query('BEGIN');
-        let wr=await client.query('SELECT * FROM network_credit_wallets WHERE website_id=$1 FOR UPDATE',[x.publisher_website_id]);
-        if(!wr.rows[0])wr=await client.query(`INSERT INTO network_credit_wallets (website_id,balance,reserved,created_at,updated_at) VALUES ($1,0,0,NOW(),NOW()) ON CONFLICT (website_id) DO UPDATE SET updated_at=NOW() RETURNING *`,[x.publisher_website_id]);
-        const wallet=wr.rows[0];const key='placement:'+id+':reward:v1';
-        const tr=await client.query(`INSERT INTO network_credit_transactions (wallet_id,placement_id,transaction_type,amount,idempotency_key,note,metadata,created_at)
-          VALUES ($1,$2,'placement_verified',$3,$4,'Credits released after verified live placement',$5::jsonb,NOW()) ON CONFLICT (idempotency_key) DO NOTHING RETURNING id`,[wallet.id,id,x.reward_credits,key,JSON.stringify({verification_run:runNo,published_url:x.published_url})]);
-        if(tr.rows[0]){await client.query('UPDATE network_credit_wallets SET balance=balance+$2,updated_at=NOW() WHERE id=$1',[wallet.id,x.reward_credits]);creditAwarded=true}
-        await client.query(`UPDATE network_placements SET status='verified',verified_at=COALESCE(verified_at,NOW()),updated_at=NOW() WHERE id=$1`,[id]);
-        await client.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status='verified',updated_at=NOW() WHERE id=$1`,[x.content_id]);
-        await client.query('COMMIT');
-      }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
-    }else{
-      await pool.query(`UPDATE network_placements SET status='needs_review',updated_at=NOW() WHERE id=$1`,[id]);
+    await pool.query(`UPDATE network_placements SET status=CASE WHEN status='verified' THEN 'verified' ELSE 'needs_review' END,updated_at=NOW() WHERE id=$1`,[id]);
+    res.json({
+      success:true,
+      precheck_passed:passed,
+      result_status:result,
+      credit_awarded:false,
+      credits:x.reward_credits,
+      checks:{http_ok:httpOk,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,content_match_ok:contentMatch.matched,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,brand_mention_ok:brandOk,source_link_ok:sourceOk,password_protected:passwordProtected},
+      details,
+      rule:passed
+        ? 'Pre-check passed. This does NOT verify the placement and does NOT award credits. Open the live page and make the final manual decision.'
+        : 'Pre-check found issues. No credits released. Review the live page manually and request changes or reject it.'
+    });
+  }));
+
+
+  app.post('/api/network/admin/placements/:id/manual-review', verifyAdmin, wrap(async (req,res)=>{
+    const id=Number(req.params.id),decision=cleanText(req.body?.decision,40).toLowerCase(),note=cleanText(req.body?.note,2000);
+    if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
+    if(!['verified','needs_changes','rejected'].includes(decision))return res.status(400).json({success:false,error:'Choose verified, needs_changes or rejected'});
+    const qr=await pool.query(`SELECT p.*,c.id AS content_id,c.brand_name,
+      w.domain AS publisher_domain,
+      vr.result_status AS latest_result,vr.run_no AS latest_run_no
+      FROM network_placements p
+      JOIN network_content c ON c.id=p.content_id
+      JOIN network_websites w ON w.id=p.publisher_website_id
+      LEFT JOIN LATERAL (SELECT * FROM network_verification_runs z WHERE z.placement_id=p.id ORDER BY z.run_no DESC LIMIT 1) vr ON TRUE
+      WHERE p.id=$1 LIMIT 1`,[id]);
+    const x=qr.rows[0];if(!x)return res.status(404).json({success:false,error:'Placement not found'});
+    if(!x.published_url)return res.status(409).json({success:false,error:'No live article URL has been submitted'});
+    const adminId=cleanText(req.admin?.id||req.headers['x-admin-key']||'admin',200);
+
+    if(decision==='needs_changes'){
+      await pool.query(`UPDATE network_placements SET status='needs_review',verification_decision='needs_changes',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,note||'Changes requested after manual review',adminId]);
+      return res.json({success:true,status:'needs_review',credits_awarded:false});
     }
-    res.json({success:true,verified:passed,result_status:result,credit_awarded:creditAwarded,credits:x.reward_credits,checks:{http_ok:httpOk,indexable,canonical_ok:canonicalOk,seo_static_html_present:staticHtmlPresent,content_match_ok:contentMatch.matched,legacy_js_embed_present:legacyJsEmbed,js_only_delivery:jsOnlyDelivery,brand_mention_ok:brandOk,source_link_ok:sourceOk,password_protected:passwordProtected},details,rule:passed?'Verified SEO placement: the article is present as indexable page-source HTML; credits may be released once only.':'No credits released. Final placement must contain the Publisher Edition as real indexable HTML; a JavaScript-only embed does not qualify.'});
+    if(decision==='rejected'){
+      await pool.query(`UPDATE network_placements SET status='rejected',verification_decision='rejected',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,note||'Rejected after manual review',adminId]);
+      return res.json({success:true,status:'rejected',credits_awarded:false});
+    }
+
+    // Human is the final authority. If the automated pre-check did not pass,
+    // require an explicit note so an override can never happen silently.
+    if(x.latest_result!=='passed' && !note){
+      return res.status(409).json({success:false,error:'The automated pre-check has not passed. You can still verify manually, but enter a review note explaining the override.'});
+    }
+
+    let creditAwarded=false;
+    const client=await pool.connect();
+    try{
+      await client.query('BEGIN');
+      let wr=await client.query('SELECT * FROM network_credit_wallets WHERE website_id=$1 FOR UPDATE',[x.publisher_website_id]);
+      if(!wr.rows[0])wr=await client.query(`INSERT INTO network_credit_wallets (website_id,balance,reserved,created_at,updated_at) VALUES ($1,0,0,NOW(),NOW()) ON CONFLICT (website_id) DO UPDATE SET updated_at=NOW() RETURNING *`,[x.publisher_website_id]);
+      const wallet=wr.rows[0],key='placement:'+id+':reward:v1';
+      const tr=await client.query(`INSERT INTO network_credit_transactions (wallet_id,placement_id,transaction_type,amount,idempotency_key,note,metadata,created_at)
+        VALUES ($1,$2,'placement_verified',$3,$4,'Credits released after MANUAL live placement verification',$5::jsonb,NOW())
+        ON CONFLICT (idempotency_key) DO NOTHING RETURNING id`,[
+          wallet.id,id,x.reward_credits,key,
+          JSON.stringify({manual_review:true,admin_id:adminId,precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null,published_url:x.published_url,review_note:note||null})
+        ]);
+      if(tr.rows[0]){
+        await client.query('UPDATE network_credit_wallets SET balance=balance+$2,updated_at=NOW() WHERE id=$1',[wallet.id,x.reward_credits]);
+        creditAwarded=true;
+      }
+      await client.query(`UPDATE network_placements
+        SET status='verified',verified_at=COALESCE(verified_at,NOW()),verification_decision='verified',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW()
+        WHERE id=$1`,[id,note||null,adminId]);
+      await client.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status='verified',updated_at=NOW() WHERE id=$1`,[x.content_id]);
+      await client.query('COMMIT');
+    }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
+    res.json({success:true,status:'verified',credits_awarded:creditAwarded,credits:x.reward_credits,rule:'Verified by manual admin decision. Reward is idempotent and can be awarded only once.'});
   }));
 
   app.get('/network/verification', (req,res)=>{
@@ -2150,7 +2257,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     const quality=scorePublication(row,ir.rows),standard=publicationStandardChecks(row.html||'');
     if(quality.score<80||!standard.passed)return res.status(409).json({success:false,error:'Publication package is not ready for live submission yet',content_score:quality.score,publication_standard:standard});
     await pool.query(`UPDATE network_placements SET published_url=$2,status=CASE WHEN status='verified' THEN status ELSE 'submitted' END,submitted_at=COALESCE(submitted_at,NOW()),updated_at=NOW() WHERE id=$1`,[id,u.toString()]);
-    res.json({success:true,status:'submitted',published_url:u.toString(),next:'ContentScale verification. Credits are awarded only after the live page passes verification.'});
+    res.json({success:true,status:'submitted',published_url:u.toString(),next:'Manual ContentScale review. Credits are awarded only after an admin verifies the live page.'});
   }));
 
   app.get('/api/network/publisher/:token/dashboard', wrap(async (req,res)=>{
@@ -2174,7 +2281,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     res.set('Cache-Control','no-store');
     res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Publication Package · ContentScale Network</title><style>
 body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:1080px;margin:auto;padding:32px 18px 70px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin:16px 0}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.note,.tiny{color:#9aabd0;line-height:1.55}.tiny{font-size:12px}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:4px 9px;font-size:12px}.ok{color:#86efac}.warn{color:#fcd34d}.btn{background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:10px 13px;font-weight:800;cursor:pointer;text-decoration:none}.btn.good{background:#166534;border-color:#22c55e}.btn:disabled{opacity:.6;cursor:wait}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.field label{display:block;font-size:11px;color:#9aabd0;margin:0 0 5px}.field input,.field textarea{width:100%;box-sizing:border-box;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.field textarea{min-height:220px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.statusbox{padding:12px;border-radius:10px;border:1px solid #35507a;background:#091329}a{color:#8dd9ff}
-</style></head><body><main><div class="top"><div><div class="tiny">CONTENTSCALE NETWORK · PUBLISHER</div><h1>Publication Package</h1></div><a href="/network/publisher/${token}">← Publisher Dashboard</a></div><div id="app"><div class="card">Loading publication package…</div></div></main><script>(function(){const token=${JSON.stringify(token)},pid=${placementId},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/package',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load package');const p=d.placement||{},pub=d.publication||{},q=d.quality||{},st=d.publication_standard||{},ready=!!d.delivery_ready;root.innerHTML='<div class="card"><h2>'+esc(pub.title||p.title||'Publisher Edition')+'</h2><span class="pill">Placement: '+esc(p.status||'')+'</span> <span class="pill">ContentScore: '+Number(q.score||0)+'/100</span><p class="note">'+esc(d.rule||'')+'</p></div><div class="card"><h2>Publication readiness</h2><div class="grid"><div class="statusbox"><strong class="'+(Number(q.score||0)>=80?'ok':'warn')+'">ContentScore '+Number(q.score||0)+'/100</strong></div><div class="statusbox"><strong class="'+(st.passed?'ok':'warn')+'">Publication Standard '+(st.passed?'passed ✓':'not complete')+'</strong></div><div class="statusbox"><strong class="'+(ready?'ok':'warn')+'">'+(ready?'SEO HTML ready ✓':'Waiting for final package')+'</strong></div></div></div>'+(ready?'<div class="card"><h2>SEO publication HTML</h2><p class="note">Paste this into the publisher CMS as real HTML. Do not use a JavaScript-only embed for the final Network placement.</p><div class="actions"><button class="btn good" id="copyHtml">Copy SEO HTML</button><button class="btn" id="copyMeta">Copy meta</button></div><div class="field" style="margin-top:12px"><label>HTML</label><textarea id="seoHtml" readonly>'+esc(d.seo_html||'')+'</textarea></div><div class="grid" style="margin-top:12px"><div class="field"><label>Meta title</label><input id="metaTitle" readonly value="'+esc(pub.meta_title||'')+'"></div><div class="field"><label>Meta description</label><input id="metaDescription" readonly value="'+esc(pub.meta_description||'')+'"></div><div class="field"><label>Suggested slug</label><input readonly value="'+esc(pub.suggested_slug||'')+'"></div></div></div><div class="card"><h2>After you publish</h2><p class="note">Enter the exact live article URL. ContentScale will place it in the verification queue. Credits are awarded only after the live page passes verification.</p><div class="field"><label>Exact live article URL</label><input id="liveUrl" placeholder="https://'+esc(p.publisher_domain||'publisher.com')+'/article" value="'+esc(p.published_url||'')+'"></div><div class="actions" style="margin-top:10px"><button class="btn good" id="submitLive">Submit live URL</button></div><div id="msg" class="note" style="margin-top:8px"></div></div>':'<div class="card"><h2>Package not ready yet</h2><p class="note">ContentScale has not released the SEO HTML because the quality gate or Publication Standard is not complete. Nothing needs to be published yet.</p></div>');if(ready){document.getElementById('copyHtml').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText(d.seo_html||'');this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy SEO HTML'}};document.getElementById('copyMeta').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText((pub.meta_title||'')+'\\n'+(pub.meta_description||''));this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy meta'}};document.getElementById('submitLive').onclick=async function(){const b=this,m=document.getElementById('msg'),url=document.getElementById('liveUrl').value.trim();if(!url)return m.textContent='Enter the exact live URL first.';b.disabled=true;b.textContent='Submitting…';try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/submit-live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_url:url})}),x=await r.json();if(!r.ok)throw Error(x.error||'Could not submit');m.className='ok';m.textContent='✓ Live URL submitted. Waiting for ContentScale verification.';b.textContent='✓ Submitted'}catch(e){m.className='warn';m.textContent='✕ '+e.message;b.disabled=false;b.textContent='Submit live URL'}}}}catch(e){root.innerHTML='<div class="card"><h2>Publication package unavailable</h2><p class="note">'+esc(e.message)+'</p></div>'}}load()})();</script></body></html>`);
+</style></head><body><main><div class="top"><div><div class="tiny">CONTENTSCALE NETWORK · PUBLISHER</div><h1>Publication Package</h1></div><a href="/network/publisher/${token}">← Publisher Dashboard</a></div><div id="app"><div class="card">Loading publication package…</div></div></main><script>(function(){const token=${JSON.stringify(token)},pid=${placementId},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/package',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load package');const p=d.placement||{},pub=d.publication||{},q=d.quality||{},st=d.publication_standard||{},ready=!!d.delivery_ready;root.innerHTML='<div class="card"><h2>'+esc(pub.title||p.title||'Publisher Edition')+'</h2><span class="pill">Placement: '+esc(p.status||'')+'</span> <span class="pill">ContentScore: '+Number(q.score||0)+'/100</span><p class="note">'+esc(d.rule||'')+'</p></div><div class="card"><h2>Publication readiness</h2><div class="grid"><div class="statusbox"><strong class="'+(Number(q.score||0)>=80?'ok':'warn')+'">ContentScore '+Number(q.score||0)+'/100</strong></div><div class="statusbox"><strong class="'+(st.passed?'ok':'warn')+'">Publication Standard '+(st.passed?'passed ✓':'not complete')+'</strong></div><div class="statusbox"><strong class="'+(ready?'ok':'warn')+'">'+(ready?'SEO HTML ready ✓':'Waiting for final package')+'</strong></div></div></div>'+(ready?'<div class="card"><h2>SEO publication HTML</h2><p class="note">Paste this into the publisher CMS as real HTML. Do not use a JavaScript-only embed for the final Network placement.</p><div class="actions"><button class="btn good" id="copyHtml">Copy SEO HTML</button><button class="btn" id="copyMeta">Copy meta</button></div><div class="field" style="margin-top:12px"><label>HTML</label><textarea id="seoHtml" readonly>'+esc(d.seo_html||'')+'</textarea></div><div class="grid" style="margin-top:12px"><div class="field"><label>Meta title</label><input id="metaTitle" readonly value="'+esc(pub.meta_title||'')+'"></div><div class="field"><label>Meta description</label><input id="metaDescription" readonly value="'+esc(pub.meta_description||'')+'"></div><div class="field"><label>Suggested slug</label><input readonly value="'+esc(pub.suggested_slug||'')+'"></div></div></div><div class="card"><h2>After you publish</h2><p class="note">Enter the exact live article URL. ContentScale will place it in the verification queue. Credits are awarded only after the live page passes verification.</p><div class="field"><label>Exact live article URL</label><input id="liveUrl" placeholder="https://'+esc(p.publisher_domain||'publisher.com')+'/article" value="'+esc(p.published_url||'')+'"></div><div class="actions" style="margin-top:10px"><button class="btn good" id="submitLive">Submit live URL</button></div><div id="msg" class="note" style="margin-top:8px"></div></div>':'<div class="card"><h2>Package not ready yet</h2><p class="note">ContentScale has not released the SEO HTML because the quality gate or Publication Standard is not complete. Nothing needs to be published yet.</p></div>');if(ready){document.getElementById('copyHtml').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText(d.seo_html||'');this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy SEO HTML'}};document.getElementById('copyMeta').onclick=async function(){this.disabled=true;this.textContent='Copying…';try{await navigator.clipboard.writeText((pub.meta_title||'')+'\\n'+(pub.meta_description||''));this.textContent='✓ Copied'}catch(e){this.disabled=false;this.textContent='Copy meta'}};document.getElementById('submitLive').onclick=async function(){const b=this,m=document.getElementById('msg'),url=document.getElementById('liveUrl').value.trim();if(!url)return m.textContent='Enter the exact live URL first.';b.disabled=true;b.textContent='Submitting…';try{const r=await fetch('/api/network/publisher/'+token+'/placements/'+pid+'/submit-live',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_url:url})}),x=await r.json();if(!r.ok)throw Error(x.error||'Could not submit');m.className='ok';m.textContent='✓ Live URL submitted. Waiting for manual ContentScale verification.';b.textContent='✓ Submitted'}catch(e){m.className='warn';m.textContent='✕ '+e.message;b.disabled=false;b.textContent='Submit live URL'}}}}catch(e){root.innerHTML='<div class="card"><h2>Publication package unavailable</h2><p class="note">'+esc(e.message)+'</p></div>'}}load()})();</script></body></html>`);
   });
 
   app.post('/api/network/advertising/apply', wrap(async (req,res)=>{
