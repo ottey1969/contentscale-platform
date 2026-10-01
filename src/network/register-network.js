@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 6;
+const NETWORK_SCHEMA_VERSION = 7;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -457,6 +457,21 @@ function renderEditionHtml(row, images) {
   return {settings, html:`<div class="cs-network-content" data-cs-responsive="true" dir="${localeDirection(cleanText(row.source_snapshot?.language||row.generation_input_snapshot?.language||'en-US',30))==='RTL'?'rtl':'ltr'}"><style>${networkEditionCss(settings)}</style>${body}</div>`, schema:buildArticleSchema(row,uploaded,settings)};
 }
 
+async function ensureReferralAdminIdText(pool) {
+  if (!pool) throw new Error('Database unavailable');
+  const r = await pool.query(`SELECT table_name,column_name,data_type
+    FROM information_schema.columns
+    WHERE table_schema='public'
+      AND table_name IN ('network_referral_partners','network_referral_codes')
+      AND column_name='created_by_admin_id'`);
+  for (const row of r.rows) {
+    if (row.data_type !== 'text') {
+      const table = row.table_name === 'network_referral_partners' ? 'network_referral_partners' : 'network_referral_codes';
+      await pool.query(`ALTER TABLE ${table} ALTER COLUMN created_by_admin_id TYPE TEXT USING created_by_admin_id::text`);
+    }
+  }
+}
+
 async function ensureNetworkTables(pool) {
   if (!pool) throw new Error('Database unavailable');
   const client = await pool.connect();
@@ -627,7 +642,7 @@ async function ensureNetworkTables(pool) {
       label TEXT,
       status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active','paused','blocked')),
       notes TEXT,
-      created_by_admin_id BIGINT,
+      created_by_admin_id TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
@@ -645,7 +660,7 @@ async function ensureNetworkTables(pool) {
       code TEXT NOT NULL UNIQUE,
       label TEXT,
       is_active BOOLEAN NOT NULL DEFAULT TRUE,
-      created_by_admin_id BIGINT,
+      created_by_admin_id TEXT,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
@@ -1627,6 +1642,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
   // REFERRALS — publishers/members + independent referral partners (scouts).
   // A click earns nothing. A scout reward is tied to the publisher application and only becomes rewardable after genuine activation.
   app.get('/api/network/admin/referrals', verifyAdmin, wrap(async (req,res)=>{
+    await ensureReferralAdminIdText(pool);
     const codes=await pool.query(`SELECT rc.id,rc.code,rc.label,rc.is_active,rc.created_at,rc.website_id,rc.partner_id,
       w.domain,w.brand_name,p.name AS partner_name,p.email AS partner_email,p.status AS partner_status,
       COUNT(rf.id)::int AS events,
@@ -1658,6 +1674,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
   }));
 
   app.post('/api/network/admin/referral-partners', verifyAdmin, wrap(async (req,res)=>{
+    await ensureReferralAdminIdText(pool);
     const name=cleanText(req.body?.name,200),email=cleanText(req.body?.email,240),label=cleanText(req.body?.label,200),notes=cleanText(req.body?.notes,1200);
     if(!name)return res.status(400).json({success:false,error:'Referrer name is required'});
     const client=await pool.connect();
@@ -1672,6 +1689,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
   }));
 
   app.patch('/api/network/admin/referral-partners/:id/status', verifyAdmin, wrap(async (req,res)=>{
+    await ensureReferralAdminIdText(pool);
     const status=cleanText(req.body?.status,30).toLowerCase();
     if(!['active','paused','blocked','revoked'].includes(status))return res.status(400).json({success:false,error:'Invalid partner status'});
     const client=await pool.connect();
@@ -1686,6 +1704,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
   }));
 
   app.delete('/api/network/admin/referral-partners/:id', verifyAdmin, wrap(async (req,res)=>{
+    await ensureReferralAdminIdText(pool);
     const id=req.params.id;
     const client=await pool.connect();
     try{
