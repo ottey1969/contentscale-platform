@@ -289,7 +289,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v422-INLINE-INTEREST-ACTIONS-SOURCES';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v423-PROSPECT-COCKPIT-HOT-LEAD';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -693,7 +693,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-01-CANONICAL-v422-INLINE-INTEREST-ACTIONS-SOURCES',
+  build: 'CS-2026-10-01-CANONICAL-v423-PROSPECT-COCKPIT-HOT-LEAD',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -20020,7 +20020,7 @@ app.post('/api/prospect-quick-scan/:token/gsc-evidence',async(req,res)=>{
     _pqsSendLocalized(row,'gsc_connected','').catch(()=>{});return res.json({success:true,gsc_status:'connected',backup_saved:true});
   }catch(e){return res.status(500).json({success:false,error:e.message||'Could not save GSC evidence'});}
 });
-app.post('/api/prospect-quick-scan/:token/tracker-interest',async(req,res)=>{try{const token=String(req.params.token||'');const q=await pool.query(`UPDATE prospect_quick_scans SET tracker_interested=TRUE,tracker_interested_at=COALESCE(tracker_interested_at,NOW()),updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING token`,[token]);if(!q.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});return res.json({success:true,status:'tracker_interested'});}catch(e){return res.status(500).json({success:false,error:e.message})}});
+app.post('/api/prospect-quick-scan/:token/tracker-interest',async(req,res)=>{try{const token=String(req.params.token||'');const q=await pool.query(`UPDATE prospect_quick_scans SET tracker_interested=TRUE,tracker_interested_at=COALESCE(tracker_interested_at,NOW()),follow_up_status='tracker_interested',updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[token]);if(!q.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});_pqsNotifyOwner(q.rows[0],'tracker_interest').catch(()=>{});return res.json({success:true,status:'tracker_interested',message:'Interest received. ContentScale can now see that you are interested in the AI Citations Tracker.'});}catch(e){return res.status(500).json({success:false,error:e.message})}});
 app.post('/api/prospect-quick-scan/admin/:token/audit20-ready',requireAdmin,async(req,res)=>{try{const token=String(req.params.token||''),url=String((req.body||{}).report_url||'').trim();if(!/^https:\/\//i.test(url))return res.status(400).json({success:false,error:'Valid HTTPS report URL required'});const q=await pool.query(`UPDATE prospect_quick_scans SET audit20_status='ready',audit20_ready_at=NOW(),audit20_report_url=$1,updated_at=NOW() WHERE token=$2 AND revoked_at IS NULL RETURNING *`,[url,token]);if(!q.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});const mail=await _pqsSendLocalized(q.rows[0],'audit_ready',url);if(mail.sent)await pool.query(`UPDATE prospect_quick_scans SET audit20_ready_email_sent_at=NOW() WHERE token=$1`,[token]);return res.json({success:true,email_sent:mail.sent,report_url:url});}catch(e){return res.status(500).json({success:false,error:e.message})}});
 
 // PROSPECT CTA — explicit interest in the 20-Page Audit.
@@ -23421,7 +23421,7 @@ app.post('/api/prospect-quick-scan/:token/quickscan-interest',async(req,res)=>{
       }
     }
     _pqsNotifyOwner(Object.assign({},row,{follow_up_status:'quickscan_interested'}),'quickscan_interest').catch(()=>{});
-    return res.json({success:true,status:'quickscan_interested',quick_scan_url:quickUrl,email_sent:emailSent});
+    return res.json({success:true,status:'quickscan_interested',quick_scan_url:quickUrl,email_sent:emailSent,message:'Interest received. ContentScale can now see that you want a Quick Scan for another important page.'});
   }catch(e){return res.status(500).json({success:false,error:e.message||'Could not record Quick Scan interest'});}
 });
 
@@ -24649,7 +24649,7 @@ function shell(){
 var nav=document.getElementById('pqsWorkspaceNav');
 if(!nav){
   nav=document.createElement('div');nav.id='pqsWorkspaceNav';
-  nav.innerHTML='<div class="pqsMainTabs"><button class="pqsMainTab active" data-workspace="leads">1 · Lead Crawler & Outreach</button><button class="pqsMainTab" data-workspace="reports">2 · CEO Reports</button><button class="pqsMainTab" data-workspace="quickscan">3 · Quick Scan Reports</button><button class="pqsMainTab" data-workspace="operations">4 · Interested Prospects & Follow-up</button></div><div class="pqsWorkspaceHelp"><span>One workflow: find companies → review/send → create or refresh reports → verify results.</span><span><button class="btn" id="pqsClearBrowserTests">Clear browser test memory</button><span id="pqsMemoryStatus" class="pqsMemoryStatus"></span></span></div>';
+  nav.innerHTML='<div class="pqsMainTabs"><button class="pqsMainTab active" data-workspace="leads">1 · Lead Crawler & Outreach</button><button class="pqsMainTab" data-workspace="reports">2 · CEO Reports</button><button class="pqsMainTab" data-workspace="quickscan">3 · Quick Scan Reports</button><button class="pqsMainTab" data-workspace="operations">4 · Interested Prospects & Follow-up</button></div><div class="pqsWorkspaceHelp"><span>One workflow: find companies → review/send → create or refresh reports → verify results.</span><span><a class="btn" href="/quick-scan/cockpit" style="text-decoration:none;background:#7c2d12;border-color:#fb7185">★ Prospect Cockpit</a> <button class="btn" id="pqsClearBrowserTests">Clear browser test memory</button><span id="pqsMemoryStatus" class="pqsMemoryStatus"></span></span></div>';
   app.insertBefore(nav,app.firstChild);
 }else{
   var tabs=nav.querySelector('.pqsMainTabs');
@@ -25091,6 +25091,149 @@ var base=window.load;if(typeof base==='function'&&!base.ceoAi403){var wrapped=as
 setTimeout(refresh,1000);
 })();${'</script>'}`}
 
+
+// v423 — One-page CEO / Quick Scan / Lead Crawler / Audit cockpit.
+// This is a read/act view over the existing prospect funnel truth. It does not
+// invent new funnel states: CEO opened, Quick Scan opened/started/completed,
+// explicit interests, GSC and outreach all come from prospect_quick_scans.
+app.get('/quick-scan/cockpit',(req,res)=>{
+  res.set('Cache-Control','no-store');
+  res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Prospect Cockpit · ContentScale</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:#8dd9ff}main{max-width:1500px;margin:auto;padding:24px 16px 70px}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.eyebrow{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:#67e8f9;font-weight:950}.top h1{margin:4px 0 6px;font-size:clamp(30px,5vw,50px)}.muted,.meta{color:#94a3b8}.meta{font-size:12px;line-height:1.5}.btn{display:inline-flex;align-items:center;gap:6px;background:#17376c;color:#fff;border:1px solid #3f65a4;border-radius:10px;padding:9px 12px;font-weight:850;text-decoration:none;cursor:pointer}.btn.secondary{background:#101b31;border-color:#33476e}.btn.good{background:#14532d;border-color:#22c55e}.btn.warn{background:#78350f;border-color:#f59e0b}.btn:disabled{opacity:.55}.actions{display:flex;gap:8px;flex-wrap:wrap}.health{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:5px 9px;font-size:11px;background:#101b31}.pill.good{border-color:#22c55e;color:#86efac}.pill.hot{border-color:#f43f5e;color:#fecdd3;background:#3f0714}.hero{background:linear-gradient(135deg,#0c1a31,#101a31);border:1px solid #2b4168;border-radius:20px;padding:18px;margin:14px 0}.hotHero{position:relative;overflow:hidden;border-color:#f43f5e;background:linear-gradient(135deg,#3b0714,#1f1029 55%,#111827);box-shadow:0 0 0 1px rgba(244,63,94,.18),0 18px 55px rgba(244,63,94,.13);animation:hotIn .45s ease-out both}.hotHero:before{content:"";position:absolute;inset:-110% -30%;background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.11) 50%,transparent 58%);animation:sweep 3.2s ease-in-out infinite;pointer-events:none}.hotHead{position:relative;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}.hotTitle{display:flex;gap:11px;align-items:center}.hotIcon{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;background:#fb7185;color:#3b0714;font-size:27px;font-weight:1000;box-shadow:0 0 0 8px rgba(251,113,133,.1);animation:pulse 1.55s ease-in-out infinite}.hotLead{position:relative;border:1px solid #7f1d1d;background:#210b13;border-radius:12px;padding:12px;margin-top:10px}.hotLead strong{font-size:15px}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:14px 0}.kpi{background:#0b1629;border:1px solid #263b62;border-radius:13px;padding:13px}.kpi b{display:block;font-size:27px}.kpi span{font-size:11px;color:#9fb1d6}.flow{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:10px;overflow-x:auto}.step{min-width:200px;background:#0b1629;border:1px solid #2b4168;border-radius:14px;padding:14px}.step h3{margin:0 0 6px}.step p{margin:0 0 8px;color:#9fb1d6;font-size:12px;line-height:1.45}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:15px}.sectionTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.sectionTitle h2{margin:0}.queue{display:grid;gap:9px}.row{border:1px solid #293d60;border-radius:11px;padding:11px;background:#091426}.row.hotrow{border-color:#f43f5e;box-shadow:0 0 0 1px rgba(244,63,94,.12)}.rowHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}.rowActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.source{color:#67e8f9;font-weight:800}.timeline{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.evt{font-size:10px;border:1px solid #334155;border-radius:999px;padding:4px 7px;color:#cbd5e1}.evt.yes{border-color:#22c55e;color:#86efac}.evt.hot{border-color:#f43f5e;color:#fecdd3}.filters{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}.filters button.on{border-color:#22d3ee;background:#083344;color:#cffafe}.empty{padding:14px;border:1px dashed #345071;border-radius:10px;color:#7890b8}.toast{position:fixed;right:18px;bottom:18px;z-index:9999;max-width:390px;background:#3b0714;border:1px solid #fb7185;color:#fff;border-radius:15px;padding:15px;box-shadow:0 20px 60px rgba(0,0,0,.45);animation:hotIn .3s ease-out both}.toast b{color:#fecdd3}.gate{position:fixed;inset:0;z-index:10000;background:#07101f;display:flex;align-items:center;justify-content:center;padding:24px}.gateBox{max-width:450px;width:100%;background:#101a30;border:1px solid #2a3e63;border-radius:18px;padding:26px}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}@keyframes hotIn{from{opacity:0;transform:translateY(-10px) scale(.99)}to{opacity:1;transform:none}}@keyframes sweep{0%,30%{transform:translateX(-55%)}70%,100%{transform:translateX(55%)}}@media(max-width:950px){.grid2{grid-template-columns:1fr}.flow{grid-template-columns:repeat(5,220px)}}@media(max-width:640px){main{padding:16px 9px 50px}.kpis{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<div id="gate" class="gate"><div class="gateBox"><div class="eyebrow">Protected administration</div><h2>Prospect Cockpit</h2><p id="gateText" class="muted">Checking your ContentScale admin session…</p><a id="loginBtn" class="btn" href="/admin" style="display:none">Open Admin Login</a></div></div>
+<main id="main" style="display:none">
+<div class="top"><div><div class="eyebrow">CEO · QUICK SCAN · LEAD CRAWLER · AUDIT</div><h1>Prospect Cockpit</h1><div class="muted">One page showing exactly what each prospect did, where they came from and what you should do next.</div></div><div class="actions"><a class="btn secondary" href="/quick-scan/admin">Full Quick Scan Admin</a><a class="btn secondary" href="/lead-crawler">Lead Crawler</a><button class="btn" id="refresh">Refresh cockpit</button></div></div>
+
+<section id="hotPanel" class="hero hotHero" style="display:none">
+<div class="hotHead"><div class="hotTitle"><div class="hotIcon">★</div><div><div class="eyebrow" style="color:#fecdd3">ACTION REQUIRED · EXPLICIT PROSPECT INTEREST</div><h2 style="margin:3px 0">Hot prospect signal</h2><div class="meta" style="color:#fecdd3">This is not just an open. The prospect explicitly asked for something.</div></div></div><span id="hotCount" class="pill hot"></span></div>
+<div id="hotLeads"></div>
+</section>
+
+<div class="kpis" id="kpis"></div>
+
+<section class="hero"><div class="sectionTitle"><div><div class="eyebrow">FUNNEL LOGIC</div><h2>What happened from lead to action</h2></div></div><div class="flow">
+<div class="step"><h3>1. Lead Crawler</h3><p>Prospect/company was discovered or imported. Source remains visible.</p><a class="btn secondary" href="/lead-crawler">Open Lead Crawler</a></div>
+<div class="step"><h3>2. CEO Report</h3><p>CEO Report created/opened. An open is engagement, not explicit interest.</p><a class="btn secondary" href="/quick-scan/admin">CEO Reports</a></div>
+<div class="step"><h3>3. Quick Scan</h3><p>Private link opened → scan started → scan completed. These are separate events.</p><a class="btn secondary" href="/quick-scan/admin">Quick Scan Reports</a></div>
+<div class="step"><h3>4. Explicit Interest</h3><p>Quick Scan Other Page, 20-Page Audit or AI Citations Tracker. These are HOT actions.</p><button class="btn warn" id="showInterest">Show interested only</button></div>
+<div class="step"><h3>5. Follow-up</h3><p>Email, contact, audit, GSC or sales follow-up. Mark the real outcome.</p><button class="btn good" id="showFollow">Needs follow-up</button></div>
+</div></section>
+
+<div class="filters" id="filters"></div>
+
+<div class="grid2">
+<section class="card"><div class="sectionTitle"><h2>Prospects & actions</h2><span id="shown" class="pill"></span></div><div id="prospects" class="queue"></div></section>
+<section class="card"><div class="sectionTitle"><h2>Latest actions</h2><span class="pill">all Quick Scan prospect actions</span></div><div id="activity" class="queue"></div></section>
+</div>
+</main>
+<script>(function(){
+let KEY='';try{KEY=localStorage.getItem('admin_id')||localStorage.getItem('pqs_admin_code')||''}catch(e){}
+const gate=document.getElementById('gate'),main=document.getElementById('main'),gt=document.getElementById('gateText'),login=document.getElementById('loginBtn');
+const esc=v=>String(v==null?'':v).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));
+const dt=v=>{try{return v?new Date(v).toLocaleString():'—'}catch(e){return '—'}};
+const ms=v=>{try{return v?new Date(v).getTime():0}catch(e){return 0}};
+async function api(path,opt){opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-code':KEY,'x-admin-key':KEY},opt.headers||{});const r=await fetch(path,opt),t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(r.status===401||r.status===403)throw Error('AUTH');if(!r.ok||d.success===false)throw Error(d.error||('Request failed: '+r.status));return d}
+function source(x){
+ const raw=String(x.entry_source||x.source||'standalone').toLowerCase();
+ if(raw.includes('lead_crawler')||raw.includes('crawler'))return 'Lead Crawler';
+ if(raw.includes('public'))return 'CEO Public';
+ if(raw.includes('ceo'))return 'CEO Report';
+ if(raw.includes('contact_form'))return 'Contact Form';
+ if(raw.includes('linkedin'))return 'LinkedIn';
+ if(raw.includes('facebook'))return 'Facebook';
+ if(raw.includes('email'))return 'Email';
+ return raw.replace(/_/g,' ').replace(/\b\w/g,m=>m.toUpperCase())||'Standalone';
+}
+function interests(x){const a=[];if(x.quickscan_interested)a.push({label:'Quick Scan — Other Page',at:x.quickscan_interested_at,key:'quick'});if(x.audit20_interested)a.push({label:'20-Page Audit',at:x.audit20_interested_at,key:'audit'});if(x.tracker_interested)a.push({label:'AI Citations Tracker',at:x.tracker_interested_at,key:'tracker'});return a}
+function latestInterest(x){return Math.max.apply(Math,interests(x).map(i=>ms(i.at)).concat([0]))}
+function prospectEmail(x){if(x.visitor_email)return x.visitor_email;if(x.contact_email)return x.contact_email;return''}
+function events(x){
+ const a=[];
+ if(x.created_at)a.push({label:'Lead created',at:x.created_at,type:'lead'});
+ if(x.ceo_report_created_at)a.push({label:'CEO Report ready',at:x.ceo_report_created_at,type:'ceo'});
+ if(Number(x.ceo_report_view_count||0)>0)a.push({label:'CEO Report opened ×'+Number(x.ceo_report_view_count),at:x.ceo_report_last_opened_at,type:'ceo'});
+ if(Number(x.opened_count||0)>0)a.push({label:'Quick Scan opened ×'+Number(x.opened_count),at:x.last_opened_at,type:'quick'});
+ if(x.scan_started_at)a.push({label:'Quick Scan started',at:x.scan_started_at,type:'quick'});
+ if(x.scan_completed_at)a.push({label:'Quick Scan completed',at:x.scan_completed_at,type:'quick'});
+ if(x.gsc_requested_at)a.push({label:'GSC requested',at:x.gsc_requested_at,type:'gsc'});
+ if(x.gsc_connected_at)a.push({label:'GSC connected',at:x.gsc_connected_at,type:'gsc'});
+ if(x.outreach_sent_at)a.push({label:'Outreach sent',at:x.outreach_sent_at,type:'email'});
+ if(x.outreach_email_opened_at)a.push({label:'Outreach email opened',at:x.outreach_email_opened_at,type:'email'});
+ if(x.outreach_email_clicked_at)a.push({label:'Outreach email clicked',at:x.outreach_email_clicked_at,type:'email'});
+ interests(x).forEach(i=>a.push({label:'INTEREST: '+i.label,at:i.at,type:'hot'}));
+ if(x.audit20_ready_at)a.push({label:'20-Page Audit ready',at:x.audit20_ready_at,type:'audit'});
+ return a.filter(e=>e.at).sort((a,b)=>ms(b.at)-ms(a.at));
+}
+let ITEMS=[],FILTER='all';
+function match(x){
+ if(FILTER==='interest')return interests(x).length>0;
+ if(FILTER==='lead')return source(x)==='Lead Crawler';
+ if(FILTER==='ceo')return !!x.ceo_report_url||Number(x.ceo_report_view_count||0)>0;
+ if(FILTER==='quick')return Number(x.opened_count||0)>0||x.scan_started_at||x.scan_completed_at;
+ if(FILTER==='audit')return x.audit20_interested||x.audit20_status==='ready';
+ if(FILTER==='follow')return interests(x).length>0&&!['contacted','replied','won','closed'].includes(String(x.follow_up_status||''));
+ return true;
+}
+function emailHtml(x){const e=prospectEmail(x);if(!e)return'<span class="meta">No email saved</span>';return'<a href="mailto:'+encodeURIComponent(e)+'">'+esc(e)+'</a> <span class="meta">('+esc(x.contact_email_origin||'source unknown')+')</span>'}
+function interestBadges(x){return interests(x).map(i=>'<span class="pill hot">★ '+esc(i.label)+' · '+esc(dt(i.at))+'</span>').join(' ')}
+function timeline(x){const e=events(x).slice(0,8);return'<div class="timeline">'+e.map(v=>'<span class="evt '+(v.type==='hot'?'hot':'yes')+'">'+esc(v.label)+'</span>').join('')+'</div>'}
+async function status(token,status){await api('/api/prospect-quick-scan/admin/'+token+'/status',{method:'PATCH',body:JSON.stringify({status})});await load()}
+function render(){
+ const interested=ITEMS.filter(x=>interests(x).length),lead=ITEMS.filter(x=>source(x)==='Lead Crawler'),ceoOpened=ITEMS.filter(x=>Number(x.ceo_report_view_count||0)>0),quickOpened=ITEMS.filter(x=>Number(x.opened_count||0)>0),quickDone=ITEMS.filter(x=>!!x.scan_completed_at),audit=ITEMS.filter(x=>x.audit20_interested),tracker=ITEMS.filter(x=>x.tracker_interested);
+ document.getElementById('kpis').innerHTML=
+  '<div class="kpi"><b>'+lead.length+'</b><span>Lead Crawler records</span></div>'+
+  '<div class="kpi"><b>'+ceoOpened.length+'</b><span>CEO Reports opened</span></div>'+
+  '<div class="kpi"><b>'+quickOpened.length+'</b><span>Quick Scans opened</span></div>'+
+  '<div class="kpi"><b>'+quickDone.length+'</b><span>Quick Scans completed</span></div>'+
+  '<div class="kpi"><b>'+interested.length+'</b><span>Explicit interested prospects</span></div>'+
+  '<div class="kpi"><b>'+audit.length+'</b><span>20-Page Audit interest</span></div>'+
+  '<div class="kpi"><b>'+tracker.length+'</b><span>Tracker interest</span></div>';
+
+ const hot=document.getElementById('hotPanel'),hotRows=interested.slice().sort((a,b)=>latestInterest(b)-latestInterest(a));
+ if(hotRows.length){
+   hot.style.display='block';document.getElementById('hotCount').textContent=hotRows.length+' HOT';
+   document.getElementById('hotLeads').innerHTML=hotRows.slice(0,6).map(x=>'<div class="hotLead"><strong>'+esc(x.business_name||x.domain||'Prospect')+'</strong> · <span class="source">Source: '+esc(source(x))+'</span><div class="meta" style="color:#fecdd3">'+interestBadges(x)+'</div><div class="meta">'+emailHtml(x)+' · '+esc(x.domain||'')+'</div><div class="rowActions">'+(x.share_url?'<a class="btn secondary" target="_blank" href="'+esc(x.share_url)+'">Open Quick Scan</a>':'')+(x.ceo_report_url?'<a class="btn secondary" target="_blank" href="'+esc(x.ceo_report_url)+'">Open CEO Report</a>':'')+(prospectEmail(x)?'<a class="btn good" href="mailto:'+encodeURIComponent(prospectEmail(x))+'">Email prospect</a>':'')+'<button class="btn good" data-contact="'+esc(x.token)+'">Mark contacted</button></div></div>').join('');
+ }else hot.style.display='none';
+
+ const visible=ITEMS.filter(match);
+ document.getElementById('shown').textContent=visible.length+' shown';
+ document.getElementById('prospects').innerHTML=visible.map(x=>{
+   const hot=interests(x).length>0;
+   const qs=x.scan_completed_at?'COMPLETED':x.scan_started_at?'STARTED':Number(x.opened_count||0)>0?'OPENED':'NOT OPENED';
+   const ceo=Number(x.ceo_report_view_count||0)>0?'OPENED ×'+Number(x.ceo_report_view_count):x.ceo_report_url?'READY':'—';
+   return'<div class="row '+(hot?'hotrow':'')+'"><div class="rowHead"><div><strong>'+esc(x.business_name||x.domain||'Prospect')+'</strong><div class="meta"><span class="source">Source: '+esc(source(x))+'</span>'+(x.campaign?' · Campaign: '+esc(x.campaign):'')+'<br>'+esc(x.domain||'')+' · '+emailHtml(x)+'</div></div>'+(hot?'<span class="pill hot">★ EXPLICIT INTEREST</span>':'<span class="pill">'+esc(x.follow_up_status||'not contacted')+'</span>')+'</div>'+
+   (hot?'<div style="margin-top:8px">'+interestBadges(x)+'</div>':'')+
+   '<div class="meta" style="margin-top:8px">CEO: '+esc(ceo)+' · Quick Scan: '+esc(qs)+' · AI '+Number(x.ai_checked||0)+'/5 · GSC '+esc(x.gsc_status||'not connected')+' · Audit '+esc(x.audit20_status||'not started')+'</div>'+timeline(x)+
+   '<div class="rowActions">'+(x.share_url?'<a class="btn secondary" target="_blank" href="'+esc(x.share_url)+'">Quick Scan</a>':'')+(x.ceo_report_url?'<a class="btn secondary" target="_blank" href="'+esc(x.ceo_report_url)+'">CEO Report</a>':'')+(x.audit20_report_url?'<a class="btn secondary" target="_blank" href="'+esc(x.audit20_report_url)+'">20-Page Audit</a>':'')+(prospectEmail(x)?'<a class="btn" href="mailto:'+encodeURIComponent(prospectEmail(x))+'">Email</a>':'')+'<button class="btn good" data-contact="'+esc(x.token)+'">Mark contacted</button></div></div>'
+ }).join('')||'<div class="empty">No prospects match this filter.</div>';
+
+ const all=[];ITEMS.forEach(x=>events(x).forEach(e=>all.push({x,e})));all.sort((a,b)=>ms(b.e.at)-ms(a.e.at));
+ document.getElementById('activity').innerHTML=all.slice(0,40).map(z=>'<div class="row '+(z.e.type==='hot'?'hotrow':'')+'"><strong>'+esc(z.x.business_name||z.x.domain||'Prospect')+'</strong> · <span class="source">'+esc(source(z.x))+'</span><div class="meta">'+esc(z.e.label)+'<br>'+esc(dt(z.e.at))+'</div></div>').join('')||'<div class="empty">No prospect activity yet.</div>';
+
+ // Make new explicit interest impossible to miss.
+ const newest=hotRows[0],newestTs=newest?latestInterest(newest):0;let seen=0;try{seen=Number(localStorage.getItem('pqs_cockpit_interest_seen_at')||0)}catch(e){}
+ if(newest&&newestTs>seen){
+   document.title='🔥 NEW INTEREST · '+(newest.business_name||newest.domain||'Prospect');
+   const t=document.createElement('div');t.className='toast';t.innerHTML='<b>★ NEW PROSPECT INTEREST</b><div style="margin-top:5px">'+esc(newest.business_name||newest.domain||'Prospect')+'</div><div class="meta" style="color:#fecdd3">'+interestBadges(newest)+'</div>';document.body.appendChild(t);setTimeout(()=>t.remove(),9000);
+   try{localStorage.setItem('pqs_cockpit_interest_seen_at',String(newestTs))}catch(e){}
+ }else document.title='Prospect Cockpit · ContentScale';
+}
+async function load(){const b=document.getElementById('refresh');b.disabled=true;b.textContent='Refreshing…';try{const d=await api('/api/prospect-quick-scan/admin/list');ITEMS=d.items||[];render()}catch(e){if(e.message==='AUTH'){gate.style.display='flex';main.style.display='none';gt.textContent='Your admin session is not valid. Log in first.';login.style.display='inline-flex'}else alert(e.message||e)}finally{b.disabled=false;b.textContent='Refresh cockpit'}}
+document.getElementById('filters').innerHTML=[['all','All'],['interest','★ Interested'],['lead','Lead Crawler'],['ceo','CEO'],['quick','Quick Scan'],['audit','Audit'],['follow','Needs follow-up']].map(z=>'<button class="btn secondary" data-filter="'+z[0]+'">'+z[1]+'</button>').join('');
+document.getElementById('filters').onclick=e=>{const b=e.target.closest('[data-filter]');if(!b)return;FILTER=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('on',x===b));render()};
+document.getElementById('showInterest').onclick=()=>{FILTER='interest';render()};
+document.getElementById('showFollow').onclick=()=>{FILTER='follow';render()};
+document.body.addEventListener('click',e=>{const b=e.target.closest('[data-contact]');if(b){b.disabled=true;b.textContent='Saving…';status(b.dataset.contact,'contacted').catch(err=>{alert(err.message||err);b.disabled=false;b.textContent='Mark contacted'})}});
+document.getElementById('refresh').onclick=load;
+if(!KEY){gt.textContent='No ContentScale admin session found.';login.style.display='inline-flex';return}
+api('/api/prospect-quick-scan/admin/list').then(d=>{ITEMS=d.items||[];gate.remove();main.style.display='block';render();setInterval(load,30000)}).catch(e=>{gt.textContent='Your admin session is not valid. Log in first.';login.style.display='inline-flex'});
+})();</script></body></html>`);
+});
+
 app.get('/quick-scan/admin',(req,res)=>{const h=_pqsFixRenderedAdminHtml(_pqsAdminHtml());const pre=`<script>(function(){
   var q=new URLSearchParams(location.search),u=q.get('url'),s=q.get('source'),n=q.get('name');
   if(u&&document.getElementById('url'))document.getElementById('url').value=u;
@@ -25489,7 +25632,7 @@ function _injectProspectQuickScanIntoLeadCrawler(html){
         var r=await fetch('/api/prospect-quick-scan/'+encodeURIComponent(token)+'/audit20-interest',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({note:document.getElementById('audit20-interest-note').value||''})});
         var j=await r.json();
         if(!r.ok||!j.success)throw new Error(j.error||'Could not record interest');
-        b.textContent='Interest received ✓';m.textContent='Thank you. We can now prepare the 20-Page Audit and contact you about the next step.';
+        b.textContent='Interest received ✓';b.disabled=true;m.innerHTML='<div style="position:relative;overflow:hidden;margin-top:10px;padding:16px;border:2px solid #22c55e;border-radius:14px;background:linear-gradient(135deg,#052e16,#064e3b);color:#dcfce7;box-shadow:0 16px 45px rgba(34,197,94,.18);animation:pqsInterestPop .45s ease-out"><div style="font-size:12px;font-weight:950;letter-spacing:.11em;color:#86efac">✓ INTEREST RECEIVED</div><div style="font-size:20px;font-weight:950;margin-top:3px">We got it.</div><div style="margin-top:5px">Your 20-Page Audit interest is now visible to ContentScale. We can contact you about the next step.</div></div>';if(!document.getElementById('pqsInterestAnimStyle')){var s=document.createElement('style');s.id='pqsInterestAnimStyle';s.textContent='@keyframes pqsInterestPop{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}';document.head.appendChild(s)};
       }catch(e){b.disabled=false;b.textContent='Yes — I\\'m interested in the 20-Page Audit';m.textContent=e.message||String(e)}
     };
   }
