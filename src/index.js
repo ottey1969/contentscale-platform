@@ -1,4 +1,4 @@
-// v409: safe correction for mistyped/dead tracked URLs; no false destination claim.
+// v410: safe dead-URL correction plus correctly escaped generated browser JavaScript.
 const { buildOpportunityReport, FIVE_ENGINES } = (() => {
 const FIVE_ENGINES = [
   ['google_aio', 'Google AI Overviews / Gemini'],
@@ -289,7 +289,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v408-BRIEF-CONFIRMATION-CLAIM-SAFETY';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v410-DEAD-URL-INLINE-SYNTAX-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -689,7 +689,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-01-CANONICAL-v409-DEAD-URL-CORRECTION',
+  build: 'CS-2026-10-01-CANONICAL-v410-DEAD-URL-INLINE-SYNTAX-FIX',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -48348,7 +48348,7 @@ async function correctDeadPageUrl(pageId,suggestedUrl){
   if(entered===null)return;
   entered=String(entered||'').trim();
   if(!entered){toast('Enter the complete corrected URL.','#f87171');return;}
-  if(!confirm('Verify and replace the mistyped tracked URL with:\n'+entered+'\n\nExisting history stays attached to this page.'))return;
+  if(!confirm('Verify and replace the mistyped tracked URL with:\\n'+entered+'\\n\\nExisting history stays attached to this page.'))return;
   try{
     toast('Checking the corrected URL…','#38bdf8');
     var d=await api('/pages/'+pageId+'/url','PATCH',{url:entered});
