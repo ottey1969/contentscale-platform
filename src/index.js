@@ -289,7 +289,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v419-CEO-REPORTS-MATCH-QUICKSCAN';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v420-QUICKSCAN-COMPLETE-BANNER';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -693,7 +693,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-01-CANONICAL-v419-CEO-REPORTS-MATCH-QUICKSCAN',
+  build: 'CS-2026-10-01-CANONICAL-v420-QUICKSCAN-COMPLETE-BANNER',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -25151,6 +25151,64 @@ function _pqsManualEmailV395(row,language){
   return css+html+script;
 }
 
+
+// v420 — One canonical "Quick Scan complete" signal.
+// A Quick Scan is complete ONLY when Page B has a saved page scan AND all 5 manual
+// AI-engine checks are saved. The same condition is used by the existing completion
+// email sender. This banner is server-rendered so ownerPreview and the prospect see
+// the same truth after refresh.
+function _pqsCompleteBannerV420(row,language){
+  const complete=!!row.scan_completed_at&&Number(row.ai_checked||0)>=5;
+  if(!complete)return '';
+  const lang=_pqsLang3(language),e=_pqsHtml;
+  const prospectEmail=String(row.contact_email_origin||'')==='prospect_provided'?String(row.visitor_email||'').trim():'';
+  const sent=!!row.completion_email_sent_at;
+  const errored=!!String(row.completion_email_error||'').trim();
+  const copy={
+    en:{
+      eye:'QUICK SCAN COMPLETE',
+      title:'Your Quick Scan is ready',
+      text:'Page B has been scanned and all five manual AI checks are complete. Your two-page evidence is ready to review.',
+      sent:'Completion email sent to ',
+      noemail:'No completion email was requested. Keep this private link to return to the finished report.',
+      retry:'The report is complete. The email notification is waiting for delivery retry.'
+    },
+    nl:{
+      eye:'QUICK SCAN KLAAR',
+      title:'Je Quick Scan is volledig afgerond',
+      text:'Pagina B is gescand en alle vijf handmatige AI-controles zijn afgerond. Je bewijs voor beide pagina’s staat klaar.',
+      sent:'Gereedmelding verstuurd naar ',
+      noemail:'Er is geen gereedmelding per e-mail aangevraagd. Bewaar deze privélink om het voltooide rapport terug te zien.',
+      retry:'Het rapport is klaar. De e-mailmelding wacht nog op een nieuwe afleverpoging.'
+    },
+    es:{
+      eye:'QUICK SCAN COMPLETADO',
+      title:'Tu Quick Scan está listo',
+      text:'La página B ha sido analizada y las cinco comprobaciones manuales de IA están completas. La evidencia de las dos páginas está lista.',
+      sent:'Correo de finalización enviado a ',
+      noemail:'No se solicitó aviso por correo. Guarda este enlace privado para volver al informe terminado.',
+      retry:'El informe está completo. El aviso por correo está pendiente de un nuevo intento de entrega.'
+    }
+  }[lang];
+  const mailLine=sent&&prospectEmail
+    ? '<div class="pqs420mail good">✓ '+e(copy.sent)+e(prospectEmail)+'</div>'
+    : errored&&prospectEmail
+      ? '<div class="pqs420mail warn">↻ '+e(copy.retry)+'</div>'
+      : '<div class="pqs420mail neutral">'+e(copy.noemail)+'</div>';
+  return '<style>'+
+    '.pqs420done{position:relative;overflow:hidden;border:1px solid #22c55e!important;background:linear-gradient(115deg,#052e16 0%,#063d22 45%,#052e16 100%)!important;box-shadow:0 0 0 1px rgba(34,197,94,.12),0 18px 55px rgba(22,163,74,.14);animation:pqs420In .55s ease-out both}'+
+    '.pqs420done:before{content:"";position:absolute;inset:-80% -35%;background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.13) 50%,transparent 58%);transform:translateX(-55%);animation:pqs420Sweep 2.7s ease-in-out infinite;pointer-events:none}'+
+    '.pqs420row{position:relative;display:flex;gap:16px;align-items:center;z-index:1}.pqs420icon{width:58px;height:58px;flex:0 0 58px;border-radius:50%;display:grid;place-items:center;background:#22c55e;color:#052e16;font-size:30px;font-weight:1000;box-shadow:0 0 0 8px rgba(34,197,94,.10);animation:pqs420Pulse 1.8s ease-in-out infinite}'+
+    '.pqs420copy{min-width:0}.pqs420eye{font-size:11px;font-weight:950;letter-spacing:.13em;color:#86efac}.pqs420done h2{margin:3px 0 5px;font-size:clamp(21px,4vw,30px);color:#f0fdf4}.pqs420done p{margin:0;color:#d1fae5}.pqs420mail{position:relative;z-index:1;margin-top:14px;border-radius:9px;padding:9px 12px;font-size:12px;font-weight:800}.pqs420mail.good{background:#064e3b;border:1px solid #22c55e;color:#bbf7d0}.pqs420mail.warn{background:#422006;border:1px solid #f59e0b;color:#fde68a}.pqs420mail.neutral{background:#071b13;border:1px solid #166534;color:#a7f3d0}'+
+    '@keyframes pqs420In{from{opacity:0;transform:translateY(-12px) scale(.985)}to{opacity:1;transform:none}}@keyframes pqs420Pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.075)}}@keyframes pqs420Sweep{0%,28%{transform:translateX(-60%)}68%,100%{transform:translateX(60%)}}'+
+    '@media(max-width:620px){.pqs420row{align-items:flex-start}.pqs420icon{width:48px;height:48px;flex-basis:48px;font-size:24px}}'+
+    '</style>'+
+    '<section class="panel pqs420done" role="status" aria-live="polite">'+
+      '<div class="pqs420row"><div class="pqs420icon">✓</div><div class="pqs420copy"><div class="pqs420eye">'+e(copy.eye)+'</div><h2>'+e(copy.title)+'</h2><p>'+e(copy.text)+'</p></div></div>'+
+      mailLine+
+    '</section>';
+}
+
 // v393 — The public token page is one complete server-rendered document.
 // Do not compose it from the legacy base page and enhancement modules: those
 // modules shared global TOKEN/item state and could leave a script-only body.
@@ -25175,7 +25233,7 @@ function _pqsPublicPageV393(row,language){
   const hasProspectEmail=String(row.contact_email_origin||'')==='prospect_provided'&&!!String(row.visitor_email||'').trim();
   const aiHintCopy={en:{yes:'Email notification active: you will receive confirmation when Ottmar has added all five manual results.',no:'No email notification is set. Keep this private link, return later and refresh the page after Ottmar finishes.'},nl:{yes:'E-mailmelding actief: je ontvangt een bevestiging wanneer Ottmar alle vijf handmatige resultaten heeft toegevoegd.',no:'Er is geen e-mailmelding ingesteld. Bewaar deze privélink, kom later terug en vernieuw de pagina nadat Ottmar klaar is.'},es:{yes:'Aviso por correo activo: recibirás una confirmación cuando Ottmar haya añadido los cinco resultados manuales.',no:'No hay aviso por correo configurado. Guarda este enlace privado, vuelve más tarde y actualiza la página cuando Ottmar termine.'}}[lang];
   const aiHint=Number(row.ai_checked||0)<5?'<div class="aiHint '+(hasProspectEmail?'yes':'wait')+'">'+e(hasProspectEmail?aiHintCopy.yes:aiHintCopy.no)+'</div>':'';
-  const funnel=_pqsServerFunnelV394(row,lang),notification=_pqsManualEmailV395(row,lang),footer=_prospectFooterMarkup(lang);
+  const funnel=_pqsServerFunnelV394(row,lang),completeBanner=_pqsCompleteBannerV420(row,lang),notification=_pqsManualEmailV395(row,lang),footer=_prospectFooterMarkup(lang);
   const ownerCopy={
     en:{button:'Owner evidence tools',prompt:'Enter the Admin access code to edit this prospect’s five AI evidence rows.',checking:'Checking access…',bad:'Access denied. Nothing was changed.',opening:'Access confirmed — opening this prospect in Admin…'},
     nl:{button:'Beheer bewijs',prompt:'Vul de Admin-toegangscode in om de vijf AI-bewijsregels van deze prospect te bewerken.',checking:'Toegang controleren…',bad:'Toegang geweigerd. Er is niets gewijzigd.',opening:'Toegang bevestigd — deze prospect wordt in Admin geopend…'},
@@ -25186,7 +25244,7 @@ function _pqsPublicPageV393(row,language){
   // stored only in same-origin localStorage; it is never placed in the URL.
   // Admin receives only the public prospect token and focuses that exact card.
   const ownerTools='<div class="pqsOwnerTools"><button id="pqsOwnerEvidence" type="button">⚙ '+e(ownerCopy.button)+'</button><span id="pqsOwnerEvidenceStatus" role="status" aria-live="polite"></span></div><script>(function(){var b=document.getElementById("pqsOwnerEvidence"),s=document.getElementById("pqsOwnerEvidenceStatus"),token='+JSON.stringify(String(row.token||''))+',copy='+JSON.stringify(ownerCopy)+';if(!b)return;b.addEventListener("click",async function(){var code=window.prompt(copy.prompt);if(!code)return;var old=b.textContent;b.disabled=true;b.textContent=copy.checking;s.textContent="";var popup=window.open("about:blank","_blank");try{var r=await fetch("/api/admin/verify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code:code})}),d=await r.json();if(!r.ok||!d.ok)throw Error(copy.bad);localStorage.setItem("pqs_admin_code",code);s.textContent=copy.opening;var target="/quick-scan/admin?focus="+encodeURIComponent(token)+"&section=ai";if(popup)popup.location=target;else location.href=target}catch(err){if(popup)popup.close();b.disabled=false;b.textContent=old;s.textContent=(err&&err.message)||copy.bad}})})();<\/script>';
-  return '<!doctype html><html lang="'+lang+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="cs-build" content="'+e(CONTENTSCALE_BUILD_ID)+'"><title>'+e(copy.title)+' · '+e(row.business_name||row.domain||'ContentScale')+'</title><style>*{box-sizing:border-box}body{margin:0;background:#050914;color:#e5edf7;font:14px/1.6 Inter,Segoe UI,Arial,sans-serif}.wrap{max-width:1040px;margin:auto;padding:26px 18px 60px}.top{margin-bottom:18px}.brand{color:#67e8f9;font-size:11px;font-weight:950;letter-spacing:.13em}.top h1{font-size:clamp(27px,5vw,44px);line-height:1.08;margin:7px 0}.top p,.muted{color:#9fb0c5}.panel{padding:22px;margin:15px 0;border:1px solid #2b3d55;border-radius:16px;background:#0a1422}.btn{border:0;border-radius:10px;padding:13px 17px;background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff;font-weight:900;cursor:pointer}.btn:disabled{opacity:.58;cursor:wait}.eyebrow{color:#67e8f9;font-size:10px;font-weight:950;letter-spacing:.12em}.scoreLine{display:flex;align-items:end;gap:10px;margin:10px 0 20px}.scoreLine strong{font-size:52px;line-height:1;color:#67e8f9}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metrics div{padding:14px;border:1px solid #334155;border-radius:12px;background:#07101d}.metrics b,.metrics span{display:block}.metrics b{font-size:24px}.metrics span{color:#94a3b8}.recs{display:grid;gap:10px}.rec{display:grid;grid-template-columns:34px 1fr;gap:11px;padding:14px;border:1px solid #334155;border-radius:12px;background:#07101d}.recNo{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#312e81;color:#fff;font-weight:900}.rec h3,.rec p{margin:0 0 5px}.engines{display:grid;gap:9px}.engine{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:13px;border:1px solid #334155;border-radius:12px;background:#07101d}.engine small{display:block;color:#94a3b8}.engine details{grid-column:1/-1}.engine a{color:#67e8f9;overflow-wrap:anywhere}.aiHint{margin:10px 0 14px;padding:11px 13px;border-radius:9px;font-weight:750}.aiHint.yes{border:1px solid #16a34a;background:#052e16;color:#bbf7d0}.aiHint.wait{border:1px solid #f59e0b;background:#2b1907;color:#fde68a}.pill{padding:4px 9px;border-radius:999px;font-size:11px;font-weight:950}.pill.yes{color:#bbf7d0;background:#064e3b;border:1px solid #16a34a}.pill.no{color:#fecaca;background:#4c0519;border:1px solid #e11d48}.pill.wait{color:#fde68a;background:#422006;border:1px solid #f59e0b}.pqsOwnerTools{display:flex;justify-content:flex-end;align-items:center;gap:9px;margin-top:16px;padding-top:12px;border-top:1px dashed #26364d}.pqsOwnerTools button{border:1px solid #334155;border-radius:8px;padding:7px 10px;background:#07101d;color:#94a3b8;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.pqsOwnerTools button:hover{border-color:#67e8f9;color:#67e8f9}.pqsOwnerTools button:disabled{cursor:wait;opacity:.65}.pqsOwnerTools span{color:#fbbf24;font-size:11px}.cs-prospect-footer{max-width:1040px;margin:18px auto 28px;padding:0 18px}.cs-prospect-specialist,.cs-prospect-privacy{background:#0b1728;border:1px solid #334155;border-radius:14px;padding:20px;margin-top:14px}.cs-prospect-contact{display:flex;gap:9px;flex-wrap:wrap}.cs-prospect-specialist a,.cs-prospect-specialist button{border:1px solid #67e8f9;border-radius:9px;padding:10px 15px;color:#67e8f9;background:transparent;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.cs-prospect-specialist button{background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff}.cs-prospect-privacy a{color:#67e8f9}@media(max-width:720px){.metrics{grid-template-columns:1fr}.panel{padding:16px}.wrap{padding-inline:12px}.pqsOwnerTools{align-items:flex-end;flex-direction:column}}</style></head><body><main class="wrap"><header class="top"><div class="brand">'+e(copy.brand)+'</div><h1>'+e(row.business_name||row.domain||copy.title)+'</h1><p>'+e(copy.intro)+'</p></header>'+funnel+notification+result+'<section class="panel" id="pqsAiEvidence"><div class="eyebrow">5 AI SYSTEMS</div><h2>'+e(copy.ai)+'</h2>'+aiHint+'<div class="engines">'+aiRows+'</div>'+ownerTools+'</section></main>'+footer+'<script>(function(){window.openChat=function(){if(window.Tawk_API&&typeof window.Tawk_API.maximize==="function"){window.Tawk_API.maximize();return}window.open("https://contentscale.site/contact/","_blank","noopener")}})();<\/script></body></html>';
+  return '<!doctype html><html lang="'+lang+'"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="cs-build" content="'+e(CONTENTSCALE_BUILD_ID)+'"><title>'+e(copy.title)+' · '+e(row.business_name||row.domain||'ContentScale')+'</title><style>*{box-sizing:border-box}body{margin:0;background:#050914;color:#e5edf7;font:14px/1.6 Inter,Segoe UI,Arial,sans-serif}.wrap{max-width:1040px;margin:auto;padding:26px 18px 60px}.top{margin-bottom:18px}.brand{color:#67e8f9;font-size:11px;font-weight:950;letter-spacing:.13em}.top h1{font-size:clamp(27px,5vw,44px);line-height:1.08;margin:7px 0}.top p,.muted{color:#9fb0c5}.panel{padding:22px;margin:15px 0;border:1px solid #2b3d55;border-radius:16px;background:#0a1422}.btn{border:0;border-radius:10px;padding:13px 17px;background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff;font-weight:900;cursor:pointer}.btn:disabled{opacity:.58;cursor:wait}.eyebrow{color:#67e8f9;font-size:10px;font-weight:950;letter-spacing:.12em}.scoreLine{display:flex;align-items:end;gap:10px;margin:10px 0 20px}.scoreLine strong{font-size:52px;line-height:1;color:#67e8f9}.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.metrics div{padding:14px;border:1px solid #334155;border-radius:12px;background:#07101d}.metrics b,.metrics span{display:block}.metrics b{font-size:24px}.metrics span{color:#94a3b8}.recs{display:grid;gap:10px}.rec{display:grid;grid-template-columns:34px 1fr;gap:11px;padding:14px;border:1px solid #334155;border-radius:12px;background:#07101d}.recNo{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#312e81;color:#fff;font-weight:900}.rec h3,.rec p{margin:0 0 5px}.engines{display:grid;gap:9px}.engine{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:13px;border:1px solid #334155;border-radius:12px;background:#07101d}.engine small{display:block;color:#94a3b8}.engine details{grid-column:1/-1}.engine a{color:#67e8f9;overflow-wrap:anywhere}.aiHint{margin:10px 0 14px;padding:11px 13px;border-radius:9px;font-weight:750}.aiHint.yes{border:1px solid #16a34a;background:#052e16;color:#bbf7d0}.aiHint.wait{border:1px solid #f59e0b;background:#2b1907;color:#fde68a}.pill{padding:4px 9px;border-radius:999px;font-size:11px;font-weight:950}.pill.yes{color:#bbf7d0;background:#064e3b;border:1px solid #16a34a}.pill.no{color:#fecaca;background:#4c0519;border:1px solid #e11d48}.pill.wait{color:#fde68a;background:#422006;border:1px solid #f59e0b}.pqsOwnerTools{display:flex;justify-content:flex-end;align-items:center;gap:9px;margin-top:16px;padding-top:12px;border-top:1px dashed #26364d}.pqsOwnerTools button{border:1px solid #334155;border-radius:8px;padding:7px 10px;background:#07101d;color:#94a3b8;font:inherit;font-size:11px;font-weight:800;cursor:pointer}.pqsOwnerTools button:hover{border-color:#67e8f9;color:#67e8f9}.pqsOwnerTools button:disabled{cursor:wait;opacity:.65}.pqsOwnerTools span{color:#fbbf24;font-size:11px}.cs-prospect-footer{max-width:1040px;margin:18px auto 28px;padding:0 18px}.cs-prospect-specialist,.cs-prospect-privacy{background:#0b1728;border:1px solid #334155;border-radius:14px;padding:20px;margin-top:14px}.cs-prospect-contact{display:flex;gap:9px;flex-wrap:wrap}.cs-prospect-specialist a,.cs-prospect-specialist button{border:1px solid #67e8f9;border-radius:9px;padding:10px 15px;color:#67e8f9;background:transparent;font:inherit;font-weight:800;text-decoration:none;cursor:pointer}.cs-prospect-specialist button{background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff}.cs-prospect-privacy a{color:#67e8f9}@media(max-width:720px){.metrics{grid-template-columns:1fr}.panel{padding:16px}.wrap{padding-inline:12px}.pqsOwnerTools{align-items:flex-end;flex-direction:column}}</style></head><body><main class="wrap"><header class="top"><div class="brand">'+e(copy.brand)+'</div><h1>'+e(row.business_name||row.domain||copy.title)+'</h1><p>'+e(copy.intro)+'</p></header>'+completeBanner+funnel+notification+result+'<section class="panel" id="pqsAiEvidence"><div class="eyebrow">5 AI SYSTEMS</div><h2>'+e(copy.ai)+'</h2>'+aiHint+'<div class="engines">'+aiRows+'</div>'+ownerTools+'</section></main>'+footer+'<script>(function(){window.openChat=function(){if(window.Tawk_API&&typeof window.Tawk_API.maximize==="function"){window.Tawk_API.maximize();return}window.open("https://contentscale.site/contact/","_blank","noopener")}})();<\/script></body></html>';
 }
 
 app.get('/quick-scan/:token',async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).send('Quick Scan unavailable');try{const ownerPreview=String(req.query.ownerPreview||'')==='1';const q=ownerPreview?await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL`,[req.params.token]):await pool.query(`UPDATE prospect_quick_scans SET visitor_email=CASE WHEN COALESCE(visitor_email,'')='' AND source IN ('ceo_public','ceo_private') THEN contact_email ELSE visitor_email END,opened_count=opened_count+1,first_opened_at=COALESCE(first_opened_at,NOW()),last_opened_at=NOW(),follow_up_status=CASE WHEN follow_up_status='not_contacted' THEN 'opened' ELSE follow_up_status END,updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[req.params.token]);if(!q.rows.length)return res.status(404).send('Quick Scan link not found');if(!ownerPreview&&Number(q.rows[0].opened_count||0)===1)_pqsNotifyOwner(q.rows[0],'opened');const row=await _pqsAttachCeoComparison(q.rows[0]),language=_pqsResolveLanguage(row.language,row.domain),html=_pqsPublicPageV393(row,language);res.set('Cache-Control','no-store, no-cache, must-revalidate');res.set('X-ContentScale-Build',CONTENTSCALE_BUILD_ID);res.type('html').send(html);}catch(e){console.error('[quick-scan public]',e.message);res.status(500).send('Quick Scan unavailable')}});
