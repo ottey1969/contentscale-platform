@@ -289,7 +289,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v411-TRACKER-UI-REQUEST-RESILIENCE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v412-GSC-EXACT-PAGE-BASELINE-ZERO-SAFE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -691,7 +691,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-01-CANONICAL-v411-TRACKER-UI-REQUEST-RESILIENCE',
+  build: 'CS-2026-10-01-CANONICAL-v412-GSC-EXACT-PAGE-BASELINE-ZERO-SAFE',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -2550,7 +2550,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   const requiredEngines=['google_aio','chatgpt','perplexity','claude','copilot'];
   const engineKeys=new Set(er.rows.map(x=>String(x.engine||'')));
   const queryEvidence=await pool.query("SELECT query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified' ORDER BY impressions DESC,query LIMIT 500",[client.id,page.id]).catch(()=>({rows:[]}));
-  const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined);
+  const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined)||!!page.gsc_autofetch_checked_at;
   // A successful exact-page GSC API response can legitimately contain no
   // exposed query rows. Preserve that observed absence; never invent queries.
   const verifiedZeroQueries=!queryEvidence.rows.length&&hasGscPage&&!!page.gsc_autofetch_checked_at;
@@ -2589,7 +2589,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
   const client=cr.rows[0];
   const pr=await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,client.id]);
   if(!pr.rows.length)return res.status(403).json({success:false,error:'This page does not belong to this Tracker'});
-  const page=pr.rows[0];
+  let page=pr.rows[0];
   // Protect any existing baseline: if a case study for this URL already exists, its baseline is locked.
   const existing=await pool.query("SELECT id,status,baseline_locked FROM tracker_case_studies WHERE tracker_client_id=$1 AND canonical_url=$2 ORDER BY id DESC LIMIT 1",[client.id,_caseStudyNormUrl(page.url)]).catch(()=>({rows:[]}));
   if(existing.rows.length&&(existing.rows[0].status==='active'||existing.rows[0].baseline_locked))
@@ -2608,6 +2608,9 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
       const fetchedResult=await _gscFetchVerifiedPageQueries(client.id,page.id,page.url);
       fetched=!!fetchedResult.property_found;fetchNote=fetchedResult.reason||null;
       scoped=await pool.query("SELECT query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified'",[client.id,page.id]).catch(()=>({rows:[]}));
+      // V412: refresh the page row because the exact-page fetch also writes page-level GSC metrics.
+      const refreshedPage=await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[page.id,client.id]).catch(()=>({rows:[]}));
+      if(refreshedPage.rows&&refreshedPage.rows[0])page=refreshedPage.rows[0];
     }catch(e){fetchNote=String(e.message||e).slice(0,300);}
   }
   const coupled=scoped.rows.length;
@@ -2617,7 +2620,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
   const ageDays=newest?Math.floor((Date.now()-newest.getTime())/86400000):null;
   const gsc_fresh=ageDays!=null&&ageDays<=7;
   // Readiness recompute (mirrors GET /:token and case-study/start requirements).
-  const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined);
+  const hasGscPage=[page.gsc_clicks,page.gsc_impressions,page.gsc_position].some(v=>v!==null&&v!==undefined)||!!page.gsc_autofetch_checked_at;
   const verifiedZeroQueries=coupled===0&&hasGscPage&&(fetched||!!page.gsc_autofetch_checked_at);
   const hasQueries=coupled>0||verifiedZeroQueries;
   const eng=await pool.query("SELECT DISTINCT engine FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_method='manual' AND COALESCE(is_cleared,FALSE)=FALSE",[client.id,page.id]).catch(()=>({rows:[]}));
@@ -4747,13 +4750,24 @@ app.get('/api/tracker-client/:token/gsc-autofetch-status', async (req, res) => {
  * Both baseline preparation and the Tracker button must reuse this helper.
  */
 async function _gscFetchVerifiedPageQueries(clientId,pageId,pageUrl){
-  if(!_gscServiceAccount)return{available:false,reason:'not_configured',saved:0,total:0};
+  if(!_gscServiceAccount)return{available:false,reason:'not_configured',saved:0,total:0,page_checked:false};
   const accessToken=await _gscGetAccessToken();
   const siteFmt=await _gscFindSiteFormat(accessToken,pageUrl);
-  if(!siteFmt)return{available:true,property_found:false,reason:'property_not_found',saved:0,total:0};
+  if(!siteFmt)return{available:true,property_found:false,reason:'property_not_found',saved:0,total:0,page_checked:false};
   const endDate=new Date().toISOString().split('T')[0];
   const startDate=new Date(Date.now()-90*24*60*60*1000).toISOString().split('T')[0];
+
+  // V412: one exact-URL request for page metrics plus one for its query breakdown.
+  // A successful page request with zero rows is still verified evidence that this URL
+  // had no exposed GSC page metrics in the selected 90-day window. Never turn zero into NULL.
+  const pageRows=await _gscQueryRows(accessToken,siteFmt,pageUrl,['page'],startDate,endDate,10);
   const rows=await _gscQueryRows(accessToken,siteFmt,pageUrl,['query'],startDate,endDate,500);
+  const pageMetric=pageRows&&pageRows.length?pageRows[0]:null;
+  const pageClicks=pageMetric&&pageMetric.clicks!=null?Number(pageMetric.clicks):0;
+  const pageImpressions=pageMetric&&pageMetric.impressions!=null?Number(pageMetric.impressions):0;
+  const pagePosition=pageMetric&&pageMetric.position!=null?Number(pageMetric.position):null;
+  const pageCtr=pageMetric&&pageMetric.ctr!=null?Number(pageMetric.ctr):0;
+
   const db=await pool.connect();let saved=0,failed=0;
   try{
     await db.query('BEGIN');
@@ -4768,11 +4782,15 @@ async function _gscFetchVerifiedPageQueries(clientId,pageId,pageUrl){
         saved++;
       }catch(e){failed++;}
     }
+    await db.query(`UPDATE tracker_pages SET
+      gsc_clicks=$1,gsc_impressions=$2,gsc_position=$3,gsc_ctr=$4,
+      gsc_autofetch_checked_at=NOW(),monitoring_gsc_pages_at=NOW(),monitoring_gsc_queries_at=NOW()
+      WHERE id=$5 AND tracker_client_id=$6`,
+      [pageClicks,pageImpressions,pagePosition,pageCtr,pageId,clientId]);
     await db.query('COMMIT');
   }catch(e){await db.query('ROLLBACK').catch(()=>{});throw e;}finally{db.release();}
   await _ensureMonitoringGateSchema();
-  await pool.query('UPDATE tracker_pages SET gsc_autofetch_checked_at=NOW(),monitoring_gsc_pages_at=NOW(),monitoring_gsc_queries_at=NOW() WHERE id=$1 AND tracker_client_id=$2',[pageId,clientId]).catch(()=>{});
-  return{available:true,property_found:true,saved,failed,total:rows.length,page_url:pageUrl,site_format:siteFmt};
+  return{available:true,property_found:true,saved,failed,total:rows.length,page_checked:true,page_rows:pageRows.length,page_metrics:{clicks:pageClicks,impressions:pageImpressions,position:pagePosition,ctr:pageCtr},page_url:pageUrl,site_format:siteFmt};
 }
 
 // POST /api/tracker-client/:token/gsc-autofetch-page — pulls the FULL query breakdown for ONE
@@ -30841,10 +30859,10 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
              VALUES ($1,$2,$3,$4,$5,$6,NOW(),$7,$8,$9,$10,$11,TRUE)
              RETURNING id`,
             [codeId, profile_id, url, slug, null, '3days',
-             parseInt(gsc.impressions) || null,
-             parseInt(gsc.clicks) || null,
-             parseFloat(gsc.position) || null,
-             parseFloat(gsc.ctr) || null,
+             gsc.impressions==null?null:parseInt(gsc.impressions),
+             gsc.clicks==null?null:parseInt(gsc.clicks),
+             gsc.position==null?null:parseFloat(gsc.position),
+             gsc.ctr==null?null:parseFloat(gsc.ctr),
              batchId]
           );
         } catch(insertErr) {
@@ -30866,10 +30884,10 @@ app.post('/api/gsc/confirm-import', verifyEngineAccess, async (req, res) => {
                  AND url = $9
                RETURNING id`,
               [profile_id,
-               parseInt(gsc.impressions) || null,
-               parseInt(gsc.clicks) || null,
-               parseFloat(gsc.position) || null,
-               parseFloat(gsc.ctr) || null,
+               gsc.impressions==null?null:parseInt(gsc.impressions),
+               gsc.clicks==null?null:parseInt(gsc.clicks),
+               gsc.position==null?null:parseFloat(gsc.position),
+               gsc.ctr==null?null:parseFloat(gsc.ctr),
                batchId,
                slug,
                codeId,
@@ -55435,7 +55453,7 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
         `INSERT INTO tracker_pages (engine_code_id, profile_id, url, slug, title, keyword, html_content, check_frequency, next_check_at, gsc_impressions, gsc_clicks, gsc_position, gsc_ctr, gsc_queries, gsc_pages, gsc_keyword, html_source, html_pasted_at)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8, NOW(), $9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
         [codeId, profile_id||null, cleanUrl, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
-         parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
+         gsc_impressions==null?null:parseInt(gsc_impressions), gsc_clicks==null?null:parseInt(gsc_clicks), gsc_position==null?null:parseFloat(gsc_position), gsc_ctr==null?null:parseFloat(gsc_ctr),
          gsc_queries ? JSON.stringify(gsc_queries) : null,
          gsc_pages ? JSON.stringify(gsc_pages) : null,
          gsc_keyword || null,
@@ -55468,7 +55486,7 @@ app.post('/api/tracker/pages', verifyEngineAccess, async (req, res) => {
              AND url = $15
            RETURNING *`,
           [profile_id||null, derivedSlug, title||null, keyword||null, html_content||null, check_frequency,
-           parseInt(gsc_impressions) || null, parseInt(gsc_clicks) || null, parseFloat(gsc_position) || null, parseFloat(gsc_ctr) || null,
+           gsc_impressions==null?null:parseInt(gsc_impressions), gsc_clicks==null?null:parseInt(gsc_clicks), gsc_position==null?null:parseFloat(gsc_position), gsc_ctr==null?null:parseFloat(gsc_ctr),
            gsc_queries ? JSON.stringify(gsc_queries) : null,
            gsc_pages ? JSON.stringify(gsc_pages) : null,
            gsc_keyword || null,
@@ -55543,7 +55561,7 @@ app.put('/api/tracker/pages/:id/gsc', verifyEngineAccess, asyncHandler(async (re
   }
 
   const fields = ['gsc_impressions=$1', 'gsc_clicks=$2', 'gsc_position=$3', 'gsc_ctr=$4'];
-  const vals = [gsc_impressions || null, gsc_clicks || null, gsc_position || null, gsc_ctr || null];
+  const vals = [gsc_impressions==null?null:gsc_impressions, gsc_clicks==null?null:gsc_clicks, gsc_position==null?null:gsc_position, gsc_ctr==null?null:gsc_ctr];
   if (keyword !== undefined && hasGscKeyword) {
     fields.push('gsc_keyword=$' + (fields.length + 1));
     vals.push(keyword || null);
