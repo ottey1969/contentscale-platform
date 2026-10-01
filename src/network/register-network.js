@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — REVIEW ROUNDS + RESUBMISSION HISTORY v444
+// CONTENTSCALE NETWORK — ONE-PAGE ADMIN COCKPIT v445
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -2480,10 +2480,224 @@ body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{
   // The HTML shell contains no privileged data. It validates the existing ContentScale
   // admin session against the protected Network API before revealing navigation.
   // All Network admin APIs remain server-side protected by verifyAdmin.
+
+  // v445 — One-page Network cockpit.
+  // Read-only aggregation for the dashboard; mutations continue to use the existing
+  // protected workflow endpoints so the cockpit cannot bypass existing invariants.
+  app.get('/api/network/admin/cockpit', verifyAdmin, wrap(async (req,res)=>{
+    const [
+      schema,
+      websiteCounts,
+      contentCounts,
+      placementCounts,
+      publisherCounts,
+      accountCounts,
+      adCounts,
+      referralCounts,
+      creditSummary,
+      pendingPublishers,
+      pendingAds,
+      pendingWebsites,
+      reviewQueue,
+      recentEvents
+    ] = await Promise.all([
+      inspectNetworkSchema(pool).catch(e=>({schema_ready:false,schema_version:0,expected_schema_version:NETWORK_SCHEMA_VERSION,error:e.message})),
+      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_websites GROUP BY status`).then(r=>r.rows),
+      pool.query(`SELECT publication_status,COUNT(*)::int AS n FROM network_content GROUP BY publication_status`).then(r=>r.rows),
+      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_placements GROUP BY status`).then(r=>r.rows),
+      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_publisher_applications GROUP BY status`).then(r=>r.rows),
+      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_publisher_accounts GROUP BY status`).then(r=>r.rows),
+      pool.query(`SELECT status,COUNT(*)::int AS n,COALESCE(SUM(impressions),0)::bigint AS impressions,COALESCE(SUM(clicks),0)::bigint AS clicks FROM network_ads GROUP BY status`).then(r=>r.rows),
+      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_referrals GROUP BY status`).then(r=>r.rows),
+      pool.query(`SELECT COALESCE(SUM(balance),0)::int AS wallet_balance,COALESCE(SUM(reserved),0)::int AS reserved,
+        (SELECT COALESCE(SUM(amount),0)::int FROM network_credit_transactions WHERE transaction_type='placement_verified') AS verified_rewards`).then(r=>r.rows[0]),
+      pool.query(`SELECT pa.*,a.access_token,a.website_id,
+        COALESCE(a.status,'pending') AS account_status
+        FROM network_publisher_applications pa
+        LEFT JOIN network_publisher_accounts a ON a.application_id=pa.id
+        WHERE pa.status='pending'
+        ORDER BY pa.created_at ASC LIMIT 20`).then(r=>r.rows),
+      pool.query(`SELECT * FROM network_ads WHERE status='pending' ORDER BY created_at ASC LIMIT 20`).then(r=>r.rows),
+      pool.query(`SELECT id,domain,brand_name,primary_niche,country,language,status,created_at
+        FROM network_websites WHERE status='pending' ORDER BY created_at ASC LIMIT 20`).then(r=>r.rows),
+      pool.query(`SELECT p.id,p.status,p.published_url,p.submitted_at,p.verification_note,
+        c.title AS opportunity_title,c.brand_name,
+        w.domain AS publisher_domain,w.brand_name AS publisher_brand,
+        pv.id AS publication_version_id,pv.title AS edition_title,
+        (SELECT COUNT(*)::int FROM network_placement_review_events re
+          WHERE re.placement_id=p.id AND re.event_type IN ('submitted','resubmitted')) AS review_round
+        FROM network_placements p
+        JOIN network_content c ON c.id=p.content_id
+        JOIN network_websites w ON w.id=p.publisher_website_id
+        LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
+        WHERE p.status IN ('submitted','needs_review','verifying')
+        ORDER BY COALESCE(p.submitted_at,p.updated_at) ASC LIMIT 25`).then(r=>r.rows),
+      pool.query(`SELECT re.id,re.placement_id,re.event_type,re.actor_type,re.published_url,re.note,re.created_at,
+        w.domain AS publisher_domain,c.title AS opportunity_title
+        FROM network_placement_review_events re
+        JOIN network_placements p ON p.id=re.placement_id
+        JOIN network_websites w ON w.id=p.publisher_website_id
+        JOIN network_content c ON c.id=p.content_id
+        ORDER BY re.created_at DESC,re.id DESC LIMIT 20`).then(r=>r.rows)
+    ]);
+
+    const toMap=(rows,key)=>Object.fromEntries((rows||[]).map(x=>[x[key],Number(x.n||0)]));
+    const websites=toMap(websiteCounts,'status');
+    const content=toMap(contentCounts,'publication_status');
+    const placements=toMap(placementCounts,'status');
+    const publishers=toMap(publisherCounts,'status');
+    const accounts=toMap(accountCounts,'status');
+    const referrals=toMap(referralCounts,'status');
+    const ads=Object.fromEntries((adCounts||[]).map(x=>[x.status,{count:Number(x.n||0),impressions:Number(x.impressions||0),clicks:Number(x.clicks||0)}]));
+
+    const attentionCount =
+      Number(publishers.pending||0) +
+      Number(websites.pending||0) +
+      Number(ads.pending?.count||0) +
+      Number(placements.submitted||0) +
+      Number(placements.needs_review||0) +
+      Number(placements.verifying||0) +
+      Number(referrals.registered||0);
+
+    res.set('Cache-Control','no-store');
+    res.json({
+      success:true,
+      schema,
+      attention_count:attentionCount,
+      counts:{websites,content,placements,publishers,accounts,ads,referrals,credits:creditSummary},
+      queues:{
+        pending_publishers:pendingPublishers,
+        pending_ads:pendingAds,
+        pending_websites:pendingWebsites,
+        review:reviewQueue,
+        recent_events:recentEvents
+      },
+      logic:[
+        {step:1,key:'publishers',title:'Publisher intake',what:'New publishers apply or arrive through referrals.',next:'Review the application and approve only a real website.',href:'/network/advertising'},
+        {step:2,key:'websites',title:'Website approval',what:'Check the publisher website, niche, language and quality.',next:'Approve/trust the site before assigning opportunities.',href:'/network/websites'},
+        {step:3,key:'opportunities',title:'Opportunity',what:'Create/select content that should earn third-party distribution.',next:'Match it to a suitable approved publisher.',href:'/network/opportunities'},
+        {step:4,key:'publishing',title:'Publisher Edition',what:'Generate one original edition for that specific publisher.',next:'Pass ContentScore + Publication Standard, then release package.',href:'/network/publishing'},
+        {step:5,key:'placements',title:'Publisher publishes',what:'Publisher copies real SEO HTML into their CMS and submits the live URL.',next:'Submitted URLs enter your manual review queue.',href:'/network/placements'},
+        {step:6,key:'verification',title:'Manual verification',what:'Compare live page, brand mention, backlink, title and Publisher Edition.',next:'Verify, request changes or reject. No automatic final approval.',href:'/network/verification'},
+        {step:7,key:'credits',title:'Credits + history',what:'Only manual Verify can release placement credits once.',next:'Keep review history and referral attribution intact.',href:'/network/verification'}
+      ]
+    });
+  }));
+
   app.get('/network/admin', (req, res) => {
     if (!envEnabled()) return res.status(404).send('Network is not enabled.');
-    res.set('Cache-Control', 'no-store');
-    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Network Admin</title><style>body{font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;margin:0;background:#0b1020;color:#eef2ff}main{max-width:1040px;margin:0 auto;padding:48px 24px}.card{background:#121a2f;border:1px solid #263253;border-radius:18px;padding:26px}.badge{display:inline-block;padding:7px 10px;border-radius:999px;background:#18213b;border:1px solid #33436c;font-size:12px}h1{font-size:40px;margin:18px 0 12px}p{color:#b9c4df;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin-top:24px}.mini{display:block;color:#eef2ff;text-decoration:none;padding:18px;border-radius:14px;background:#0f1629;border:1px solid #263253}.mini:hover{border-color:#5a78b8}.muted{font-size:13px;color:#8492b6}.top{display:flex;justify-content:space-between;gap:12px;align-items:center}.top a{color:#8dd9ff}</style></head><body><div id="csNetworkAdminGate" style="position:fixed;inset:0;z-index:99999;background:#0b1020;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#eef2ff"><div style="max-width:460px;width:100%;background:#121a2f;border:1px solid #263253;border-radius:18px;padding:28px"><div style="font-size:12px;color:#8492b6;text-transform:uppercase;letter-spacing:.08em;font-weight:800">Protected administration</div><h2 style="margin:10px 0 8px">Admin login required</h2><p id="csNetworkGateText" style="color:#b9c4df;line-height:1.55">Checking your existing ContentScale admin session…</p><button id="csNetworkLoginBtn" type="button" style="display:none;background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:10px 14px;font-weight:800;cursor:pointer">Open ContentScale Admin Login</button></div></div><main id="csNetworkAdminMain" style="display:none"><div class="top"><a href="/network" target="_blank">View public Network →</a><span class="badge">Isolated network_* module</span></div><div class="card"><h1>ContentScale Network Admin</h1><p>Manage publisher websites, opportunities, indexable Publisher Editions, verified placements, scouts and sponsored homepage visibility.</p><div class="grid"><a class="mini" href="/network/websites"><strong>Websites</strong><div class="muted">Registry + site approval</div></a><a class="mini" href="/network/opportunities"><strong>Opportunities</strong><div class="muted">H1 + pitch → hard interest</div></a><a class="mini" href="/network/publishing"><strong>Publishing</strong><div class="muted">SEO-indexable Publisher Editions</div></a><a class="mini" href="/network/placements"><strong>Placements</strong><div class="muted">Commitments + protection policy</div></a><a class="mini" href="/network/verification"><strong>Verification</strong><div class="muted">Live URL → verify → credits</div></a><a class="mini" href="/network/referrals"><strong>Publisher Scouts</strong><div class="muted">External referrers who recruit publishers</div></a><a class="mini" href="/network/advertising"><strong>Homepage Advertising</strong><div class="muted">Sponsored requests, approval, clicks + impressions</div></a></div></div></main><script>(function(){var gate=document.getElementById('csNetworkAdminGate'),main=document.getElementById('csNetworkAdminMain'),txt=document.getElementById('csNetworkGateText'),btn=document.getElementById('csNetworkLoginBtn');function login(){var next=encodeURIComponent('/network/admin');location.href='/admin?next='+next;}if(btn)btn.onclick=login;var key='';try{key=localStorage.getItem('admin_id')||'';}catch(e){}if(!key){if(txt)txt.textContent='Enter your ContentScale admin username and password first.';if(btn)btn.style.display='inline-block';return;}fetch('/api/network/admin/status',{headers:{'x-admin-key':key,'Accept':'application/json'},cache:'no-store'}).then(function(r){if(r.status===401||r.status===403)throw new Error('AUTH');if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}).then(function(d){if(!d||d.success===false)throw new Error('AUTH');if(gate)gate.remove();if(main)main.style.display='block';}).catch(function(e){if(String(e&&e.message)==='AUTH'){try{localStorage.removeItem('admin_id');}catch(x){}if(txt)txt.textContent='Your admin session is not valid. Log in with your ContentScale admin password.';}else{if(txt)txt.textContent='Could not verify the admin session right now. Retry from the ContentScale admin login.';}if(btn)btn.style.display='inline-block';});})();</script></body></html>`);
+    res.set('Cache-Control','no-store');
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ContentScale Network Cockpit</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:#8dd9ff}main{max-width:1500px;margin:auto;padding:26px 18px 70px}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;font-weight:900}.top h1{font-size:clamp(30px,5vw,52px);margin:5px 0 7px}.muted,.tiny{color:#96a7ca;line-height:1.5}.tiny{font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;gap:6px;background:#17376c;color:#fff;border:1px solid #3f65a4;border-radius:10px;padding:9px 12px;font-weight:850;text-decoration:none;cursor:pointer}.btn.good{background:#14532d;border-color:#22c55e}.btn.warn{background:#78350f;border-color:#f59e0b}.btn.bad{background:#7f1d1d;border-color:#ef4444}.btn.secondary{background:#101b31;border-color:#33476e}.btn:disabled{opacity:.55;cursor:wait}.health{display:flex;gap:7px;flex-wrap:wrap;margin:13px 0}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:5px 9px;font-size:11px;background:#101b31}.pill.ok{border-color:#22c55e;color:#86efac}.pill.warn{border-color:#f59e0b;color:#fde68a}.pill.bad{border-color:#ef4444;color:#fecaca}.hero{background:linear-gradient(135deg,#0c1a31,#101a31);border:1px solid #2b4168;border-radius:20px;padding:20px;margin:14px 0}.attention{border-color:#7c3aed;background:linear-gradient(135deg,#17102b,#10182d)}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:14px 0}.kpi{background:#0b1629;border:1px solid #263b62;border-radius:13px;padding:13px}.kpi b{display:block;font-size:27px}.kpi span{font-size:11px;color:#9fb1d6}.flow{display:grid;grid-template-columns:repeat(7,minmax(185px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}.step{min-width:185px;background:#0b1629;border:1px solid #2b4168;border-radius:14px;padding:14px;position:relative}.step .num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#2459a9;font-weight:950;margin-bottom:8px}.step h3{margin:0 0 6px;font-size:15px}.step p{margin:0 0 9px;color:#9fb1d6;font-size:12px;line-height:1.45}.step .next{color:#dbeafe;font-size:11px;min-height:47px}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:16px;min-width:0}.card h2{margin:0 0 8px;font-size:18px}.queue{display:grid;gap:9px}.row{border:1px solid #293d60;border-radius:11px;padding:11px;background:#091426}.rowHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}.row strong{overflow-wrap:anywhere}.meta{font-size:12px;color:#9badcf;line-height:1.55;overflow-wrap:anywhere}.rowActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.empty{padding:14px;border:1px dashed #345071;border-radius:10px;color:#7890b8}.event{padding:9px 0;border-top:1px solid #243653}.event:first-child{border-top:0}.gate{position:fixed;inset:0;z-index:99999;background:#07101f;display:flex;align-items:center;justify-content:center;padding:24px}.gateBox{max-width:470px;width:100%;background:#101a30;border:1px solid #2a3e63;border-radius:18px;padding:26px}.sectionTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}.sectionTitle h2{margin:0}.urgent{box-shadow:0 0 0 1px rgba(124,58,237,.2),0 14px 40px rgba(76,29,149,.12)}
+@media(max-width:980px){.grid2{grid-template-columns:1fr}.flow{grid-template-columns:repeat(7,210px)}}@media(max-width:640px){main{padding:18px 10px 50px}.kpis{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<div id="gate" class="gate"><div class="gateBox"><div class="eyebrow">Protected administration</div><h2>Network Cockpit</h2><p id="gateText" class="muted">Checking your existing ContentScale admin session…</p><button id="loginBtn" class="btn" style="display:none">Open ContentScale Admin Login</button></div></div>
+<main id="main" style="display:none">
+<div class="top"><div><div class="eyebrow">CONTENTSCALE NETWORK · CONTROL CENTER</div><h1>Network Cockpit</h1><div class="muted">One page: intake → website approval → opportunity → Publisher Edition → publish → manual verification → credits.</div></div><div class="actions"><a class="btn secondary" target="_blank" href="/network">Public Network ↗</a><button class="btn secondary" id="initBtn">Run Network init</button><button class="btn" id="refreshBtn">Refresh cockpit</button></div></div>
+<div class="health" id="health"></div>
+
+<section class="hero attention urgent">
+<div class="sectionTitle"><div><div class="eyebrow">DO THIS FIRST</div><h2>Needs your attention</h2></div><span class="pill warn" id="attentionBadge">Loading…</span></div>
+<div class="kpis" id="actionKpis"></div>
+</section>
+
+<section class="hero"><div class="sectionTitle"><div><div class="eyebrow">THE WHOLE LOGIC</div><h2>Network workflow</h2></div></div><div class="flow" id="flow"></div></section>
+
+<div class="kpis" id="overviewKpis"></div>
+
+<div class="grid2">
+<section class="card"><div class="sectionTitle"><h2>1. Publisher applications</h2><a href="/network/advertising">Open all →</a></div><p class="tiny">New supply. Approve only real publishers you want inside the Network.</p><div id="publishers" class="queue"></div></section>
+<section class="card"><div class="sectionTitle"><h2>2. Websites waiting for review</h2><a href="/network/websites">Open websites →</a></div><p class="tiny">Check niche, language and site quality before the site can receive opportunities.</p><div id="websites" class="queue"></div></section>
+<section class="card"><div class="sectionTitle"><h2>3. Manual verification queue</h2><a href="/network/verification">Open verification →</a></div><p class="tiny">These publishers submitted live URLs. You make the final decision.</p><div id="verification" class="queue"></div></section>
+<section class="card"><div class="sectionTitle"><h2>4. Advertising requests</h2><a href="/network/advertising">Open advertising →</a></div><p class="tiny">Sponsored visibility remains separate from organic publisher matching.</p><div id="ads" class="queue"></div></section>
+</div>
+
+<section class="card" style="margin-top:12px"><div class="sectionTitle"><h2>Recent Network activity</h2><a href="/network/verification">Review history →</a></div><div id="events"></div></section>
+
+<section class="hero" style="margin-top:14px"><div class="sectionTitle"><div><div class="eyebrow">ALL MODULES</div><h2>Direct controls</h2></div></div><div class="actions">
+<a class="btn" href="/network/websites">Websites</a>
+<a class="btn" href="/network/opportunities">Opportunities</a>
+<a class="btn" href="/network/publishing">Publishing</a>
+<a class="btn" href="/network/placements">Placements</a>
+<a class="btn good" href="/network/verification">Manual Verification</a>
+<a class="btn" href="/network/referrals">Publisher Scouts</a>
+<a class="btn" href="/network/advertising">Advertising + Applications</a>
+</div></section>
+</main>
+<script>(function(){
+const gate=document.getElementById('gate'),main=document.getElementById('main'),gt=document.getElementById('gateText'),login=document.getElementById('loginBtn');
+let key='';try{key=localStorage.getItem('admin_id')||''}catch(e){}
+const esc=v=>String(v==null?'':v).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));
+const dt=v=>{try{return v?new Date(v).toLocaleString():'—'}catch(e){return '—'}};
+function goLogin(){location.href='/admin?next='+encodeURIComponent('/network/admin')}login.onclick=goLogin;
+async function api(path,opt){opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key,'Accept':'application/json'},opt.headers||{});const r=await fetch(path,opt),t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(r.status===401||r.status===403){try{localStorage.removeItem('admin_id')}catch(e){}throw Error('AUTH')}if(!r.ok||d.success===false)throw Error(d.error||('Request failed: '+r.status));return d}
+function count(obj,k){return Number((obj||{})[k]||0)}
+function adCount(obj,k){return Number(((obj||{})[k]||{}).count||0)}
+function kpi(n,label,href){return '<a class="kpi" href="'+href+'" style="text-decoration:none;color:inherit"><b>'+n+'</b><span>'+esc(label)+'</span></a>'}
+function flowCard(x){return '<div class="step"><div class="num">'+x.step+'</div><h3>'+esc(x.title)+'</h3><p>'+esc(x.what)+'</p><div class="next"><b>Next:</b> '+esc(x.next)+'</div><a class="btn secondary" href="'+esc(x.href)+'" style="margin-top:10px">Open</a></div>'}
+async function load(){
+ const rb=document.getElementById('refreshBtn');rb.disabled=true;rb.textContent='Refreshing…';
+ try{
+  const d=await api('/api/network/admin/cockpit'),c=d.counts||{},q=d.queues||{},s=d.schema||{};
+  document.getElementById('health').innerHTML=
+   '<span class="pill '+(s.schema_ready?'ok':'bad')+'">Schema '+esc(s.schema_version)+' / '+esc(s.expected_schema_version)+'</span>'+
+   '<span class="pill '+(s.schema_ready?'ok':'bad')+'">'+(s.schema_ready?'Schema ready ✓':'Schema needs init')+'</span>'+
+   '<span class="pill ok">Network enabled</span>'+
+   '<span class="pill">Core tables untouched</span>';
+  document.getElementById('attentionBadge').textContent=Number(d.attention_count||0)+' action item'+(Number(d.attention_count||0)===1?'':'s');
+  document.getElementById('actionKpis').innerHTML=
+   kpi(count(c.publishers,'pending'),'Publisher applications','/network/advertising')+
+   kpi(count(c.websites,'pending'),'Websites pending','/network/websites')+
+   kpi(count(c.placements,'submitted')+count(c.placements,'needs_review')+count(c.placements,'verifying'),'Manual reviews','/network/verification')+
+   kpi(adCount(c.ads,'pending'),'Advertising requests','/network/advertising')+
+   kpi(count(c.referrals,'registered'),'Referral activations','/network/referrals');
+  document.getElementById('flow').innerHTML=(d.logic||[]).map(flowCard).join('');
+  document.getElementById('overviewKpis').innerHTML=
+   kpi(count(c.accounts,'active'),'Active publishers','/network/advertising')+
+   kpi(count(c.websites,'approved')+count(c.websites,'trusted'),'Approved / trusted websites','/network/websites')+
+   kpi(count(c.content,'available'),'Open opportunities','/network/opportunities')+
+   kpi(count(c.placements,'ready'),'Publisher Editions ready','/network/publishing')+
+   kpi(count(c.placements,'verified'),'Verified placements','/network/verification')+
+   kpi(Number(c.credits?.wallet_balance||0),'Credits in wallets','/network/verification');
+
+  document.getElementById('publishers').innerHTML=(q.pending_publishers||[]).map(x=>{
+    const m=x.metadata||{},n=m.owner_notification||{},mail=n.state||'unknown';
+    return '<div class="row"><div class="rowHead"><div><strong>'+esc(x.brand_name||x.domain)+'</strong><div class="meta">'+esc(x.domain)+' · '+esc(x.contact_name||'')+' · '+esc(x.email||'')+'<br>Niche: '+esc(x.niche||'—')+' · Source: '+esc(m.source||'network_landing')+'<br>Owner email: '+esc(mail)+' · Applied: '+esc(dt(x.created_at))+'</div></div><span class="pill warn">pending</span></div><div class="rowActions"><button class="btn good" data-pub="approved" data-id="'+x.id+'">Approve + link website</button><button class="btn bad" data-pub="rejected" data-id="'+x.id+'">Reject</button></div></div>'
+  }).join('')||'<div class="empty">No publisher applications waiting.</div>';
+
+  document.getElementById('websites').innerHTML=(q.pending_websites||[]).map(x=>
+    '<div class="row"><div class="rowHead"><div><strong>'+esc(x.brand_name||x.domain)+'</strong><div class="meta">'+esc(x.domain)+'<br>'+esc(x.primary_niche||'No niche')+' · '+esc(x.country||'No country')+' · '+esc(x.language||'No language')+'<br>Added: '+esc(dt(x.created_at))+'</div></div><span class="pill warn">pending</span></div><div class="rowActions"><a class="btn" href="/network/websites">Review website</a></div></div>'
+  ).join('')||'<div class="empty">No websites waiting for review.</div>';
+
+  document.getElementById('verification').innerHTML=(q.review||[]).map(x=>
+    '<div class="row"><div class="rowHead"><div><strong>'+esc(x.publisher_brand||x.publisher_domain)+'</strong><div class="meta">'+esc(x.publisher_domain)+'<br>Opportunity: '+esc(x.edition_title||x.opportunity_title||'—')+'<br>Review round '+Math.max(1,Number(x.review_round||1))+' · Submitted: '+esc(dt(x.submitted_at))+'</div></div><span class="pill warn">'+esc(x.status)+'</span></div><div class="rowActions">'+(x.published_url?'<a class="btn secondary" target="_blank" rel="noopener" href="'+esc(x.published_url)+'">Open live page ↗</a>':'')+'<a class="btn good" href="/network/verification">Review manually</a></div></div>'
+  ).join('')||'<div class="empty">Nothing is waiting for manual verification.</div>';
+
+  document.getElementById('ads').innerHTML=(q.pending_ads||[]).map(x=>
+    '<div class="row"><div class="rowHead"><div><strong>'+esc(x.company_name)+'</strong><div class="meta">'+esc(x.contact_name||'')+' · '+esc(x.contact_email||'')+'<br>'+esc(x.headline||'')+'<br>'+esc(x.target_url||'')+' · '+esc(x.niche||'—')+'<br>Requested: '+esc(dt(x.created_at))+'</div></div><span class="pill warn">pending</span></div><div class="rowActions"><a class="btn" href="/network/advertising">Review advertising</a></div></div>'
+  ).join('')||'<div class="empty">No advertising requests waiting.</div>';
+
+  document.getElementById('events').innerHTML=(q.recent_events||[]).map(x=>
+    '<div class="event"><strong>'+esc(String(x.event_type||'').replace(/_/g,' '))+'</strong> · '+esc(x.publisher_domain||'')+'<div class="meta">'+esc(x.opportunity_title||'')+' · '+esc(dt(x.created_at))+(x.note?'<br>Note: '+esc(x.note):'')+'</div></div>'
+  ).join('')||'<div class="empty">No review history yet.</div>';
+ }catch(e){
+   if(e.message==='AUTH'){gate.style.display='flex';main.style.display='none';gt.textContent='Your ContentScale admin session is not valid. Log in first.';login.style.display='inline-flex';}
+   else alert(e.message||e);
+ }finally{rb.disabled=false;rb.textContent='Refresh cockpit'}
+}
+document.getElementById('publishers').onclick=async e=>{
+ const b=e.target.closest('[data-pub]');if(!b)return;const status=b.dataset.pub,id=b.dataset.id;
+ if(status==='rejected'&&!confirm('Reject this publisher application?'))return;
+ b.disabled=true;const old=b.textContent;b.textContent=status==='approved'?'Approving…':'Rejecting…';
+ try{const d=await api('/api/network/admin/publisher-applications/'+id+'/review',{method:'POST',body:JSON.stringify({status})});if(d.dashboard_url&&status==='approved')alert('Publisher approved.\\n\\nPrivate dashboard: '+location.origin+d.dashboard_url);await load()}catch(err){alert(err.message||err);b.disabled=false;b.textContent=old}
+};
+document.getElementById('initBtn').onclick=async function(){const b=this;if(!confirm('Run Network schema init? This only creates/verifies network_* tables.'))return;b.disabled=true;b.textContent='Initializing…';try{const d=await api('/api/network/admin/init',{method:'POST',body:'{}'});alert('Network init complete. Schema version '+d.schema_version+'.');await load()}catch(e){alert(e.message||e)}finally{b.disabled=false;b.textContent='Run Network init'}};
+document.getElementById('refreshBtn').onclick=load;
+if(!key){gt.textContent='Enter your ContentScale admin username and password first.';login.style.display='inline-flex';return}
+api('/api/network/admin/status').then(()=>{gate.remove();main.style.display='block';load()}).catch(e=>{gt.textContent=e.message==='AUTH'?'Your admin session is not valid. Log in with ContentScale Admin.':'Could not verify the Network admin session.';login.style.display='inline-flex'});
+})();</script></body></html>`);
   });
 
   return { registered: true, enabled: envEnabled(), schema_version: NETWORK_SCHEMA_VERSION };
