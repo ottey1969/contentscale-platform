@@ -289,7 +289,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v412-GSC-EXACT-PAGE-BASELINE-ZERO-SAFE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-01-CANONICAL-v415-GLOBAL-FACTS-REBUILD-SUPPRESSION';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -420,6 +420,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'quickscan-optional-gsc-tab-v396',
   'quickscan-gsc-prospect-workflow-v396',
   'quickscan-gsc-copy-and-contact-actions-v396',
+  'facts-wait-for-real-scan-opportunity-v415',
   'tracker-filter-global-and-request-singleflight-v411',
   'tracker-schema-selfheal-singleflight-v411'
 ];
@@ -691,7 +692,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-01-CANONICAL-v412-GSC-EXACT-PAGE-BASELINE-ZERO-SAFE',
+  build: 'CS-2026-10-01-CANONICAL-v415-GLOBAL-FACTS-REBUILD-SUPPRESSION',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -3658,7 +3659,7 @@ function _trackerNormalScanGate(page){
   if(_personalSafetyStale)return {allowed:true,reason:'This saved Brief predates the current VERIFIED personal-profile safety contract; rebuild it once'};
   const factsAt=page.claims_facts_updated_at?new Date(page.claims_facts_updated_at).getTime():0;
   const briefAt=page.brief_evaluated_at?new Date(page.brief_evaluated_at).getTime():0;
-  if(factsAt&&(!briefAt||factsAt>briefAt))return {allowed:true,reason:'VERIFIED Claims & Facts changed after the current Brief; rebuild the Brief with the current evidence'};
+  if(factsAt&&(!briefAt||factsAt>briefAt))return {allowed:false,reason:'VERIFIED Claims & Facts are newer than the historical Brief. Do not run a normal/manual scan just because facts changed; wait for the next real scan opportunity.'};
   const impl=String(page.implementation_status||'').toLowerCase();
   if(['verifying','live_changed_delta_remaining','live_same_checkpoint_delta_remaining','live_same_checkpoint_actions_verified'].includes(impl)){
     return {allowed:false,reason:'Use the current live verification/correction action instead of a new scan'};
@@ -6241,7 +6242,7 @@ app.patch('/api/tracker-client/:token/claims-facts/:claimId',async(req,res)=>{tr
     WHERE id=$3 AND tracker_client_id=$4 AND page_id IS NULL RETURNING *,(status='VERIFIED') AS safe_to_use`,[st,notes,req.params.claimId,own.clientId]);
   if(!rr.rows.length)return res.status(404).json({success:false,error:'Claim not found'});
   await _trackerTouchClaimsFacts(own.clientId);
-  await _caseStudyEventForClient(own.clientId,'claim_status_changed',{before:before.rows[0]||null,after:rr.rows[0]}).catch(()=>{});res.json({success:true,claim:rr.rows[0],brief_refresh_required:true,message:'Claim status saved. Existing Briefs are now marked stale and must be rebuilt with the current VERIFIED facts.'});
+  await _caseStudyEventForClient(own.clientId,'claim_status_changed',{before:before.rows[0]||null,after:rr.rows[0]}).catch(()=>{});res.json({success:true,claim:rr.rows[0],brief_refresh_required:true,message:'Claim status saved. Existing Briefs are marked stale for history and will use the current VERIFIED facts at the next valid scan opportunity.'});
 }catch(e){console.error('[client-claims-facts-update]',{message:e.message,code:e.code,detail:e.detail,constraint:e.constraint,claimId:req.params.claimId});res.status(500).json({success:false,error:'Claims & Facts update failed',code:e.code||'',detail:e.detail||e.message});}});
 app.delete('/api/tracker-client/:token/claims-facts/:claimId',async(req,res)=>{try{
   const own=await _trackerClaimsClient(req,res);if(!own)return;
@@ -43463,7 +43464,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button class="cs-btn" onclick="loadPages()" style="margin-left:4px;border-color:#38bdf8;color:#7dd3fc;font-weight:700;" title="Reload the list and re-rank priorities from current GSC data">&#x21bb; Refresh list</button>
     <button id="tourBtn" class="cs-btn" onclick="startTour(true)" style="border-color:#7c3aed;color:#c4b5fd;animation:tourPulse 2s ease-in-out infinite;font-weight:700;" title="Open the complete ContentScale workflow tour">&#10024; Guided Tour</button>
     <style>@keyframes tourPulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.55);}50%{box-shadow:0 0 0 7px rgba(124,58,237,0);}}@keyframes scanPulse{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.55);}50%{box-shadow:0 0 0 7px rgba(74,222,128,0);}}</style>
-    <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan only the current GSC-ranked Active Priorities, one by one. Checked and deferred pages are skipped.">&#x26a1; Scan Priorities</button>
+    <button id="scanAllBtn" class="cs-btn" onclick="scanAllPages()" style="border-color:#4ade80;color:#4ade80;font-weight:700;" title="Scan only the current GSC-ranked Active Priorities, one by one. Checked and deferred pages are skipped.">&#x26a1; Scan Opportunities</button>
     <button id="scanSelectedBtn" class="cs-btn" onclick="scanSelectedPages()" style="border-color:#60a5fa;color:#60a5fa;font-weight:700;" title="Tick the checkboxes on the pages you want, then scan only those">&#x2611; Scan Selected</button>
     <button id="bulkDeleteBtn" class="cs-btn" style="border-color:#ef4444;color:#ef4444;display:none;" onclick="bulkDeleteSelected()">&#x1f5d1; Delete selected</button>
     <button id="monitorSelectedBtn" class="cs-btn" style="border-color:#22c55e;color:#86efac;display:none;" onclick="configureSelectedMonitoring(true)">Monitor selected</button>
@@ -44328,11 +44329,11 @@ function scanAllPages() {
       _scanAllTotal = d.queued || 0;
       if (!_scanAllTotal) {
         _scanAllActive = false;
-        _setScanAllBtn('\u26a1 Scan Priorities', false, false);
+        _setScanAllBtn('\u26a1 Scan Opportunities', false, false);
         toast(d.blocked ? ('No scan started: '+d.blocked+' priority page'+(d.blocked===1?' is':'s are')+' locked by NEXT ACTION.') : 'No Active Priorities to scan. Refresh GSC or select URLs manually with Scan Selected.', '#f59e0b');
         return;
       }
-      toast('Scanning ' + _scanAllTotal + ' priority page' + (_scanAllTotal===1?'':'s') + (d.blocked?(' · '+d.blocked+' NEXT ACTION-locked skipped'):'') + ' \u2014 checked/deferred URLs are not included.', '#4ade80');
+      toast('Scanning ' + _scanAllTotal + ' eligible opportunity page' + (_scanAllTotal===1?'':'s') + (d.blocked?(' · '+d.blocked+' NEXT ACTION-locked skipped'):'') + ' \u2014 checked/deferred URLs are not included.', '#4ade80');
       _setScanAllBtn('<i class=\"fas fa-circle-notch fa-spin\"></i> Priority 0/' + _scanAllTotal + '\u2026', true, true);
       // Safety fallback: if SSE misses events, stop the spinner after a generous timeout
       clearTimeout(window._scanAllFallback);
@@ -44341,10 +44342,10 @@ function scanAllPages() {
       var iv = setInterval(function(){ n++; loadPages(); if (n >= 18 || !_scanAllActive) clearInterval(iv); }, 10000);
     } else {
       _scanAllActive = false;
-      _setScanAllBtn('\u26a1 Scan Priorities', false, false);
+      _setScanAllBtn('\u26a1 Scan Opportunities', false, false);
       toast((d && d.error) || 'Scan failed to start', '#f87171');
     }
-  }).catch(function(e){ _scanAllActive = false; _setScanAllBtn('\u26a1 Scan Priorities', false, false); toast('Scan failed: ' + e.message, '#f87171'); });
+  }).catch(function(e){ _scanAllActive = false; _setScanAllBtn('\u26a1 Scan Opportunities', false, false); toast('Scan failed: ' + e.message, '#f87171'); });
 }
 function _scanAllProgress(){
   if (!_scanAllActive) return;
@@ -45998,6 +45999,9 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   // Existing pages deployed before v284 therefore show SCAN REQUIRED once; after that scan, the result is deterministic.
   var complete=bool(brief.implementation_complete)||(outstanding===0);
   var evidenceGate=_trackerEvidenceGateState(p),waiting=evidenceGate.waiting;
+  // v415 invariant: Claims & Facts never pre-empt baseline/evidence workflow.
+  // A stale Brief is history until a real scan opportunity exists.
+  var caseStudyWaitingBaseline=bool(p.case_study_active)&&!bool(p.case_study_baseline_locked)&&!bool(p.baseline_locked);
   var htmlAt=p.html_pasted_at?new Date(p.html_pasted_at).getTime():0;
   var scanAt=lastCheckedRaw?new Date(lastCheckedRaw).getTime():0;
   var freshHtml=htmlAt>0&&(!scanAt||htmlAt>scanAt);
@@ -46011,8 +46015,13 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   if(evidenceGate.ready_to_complete){
     return {code:'CHECKPOINT_READY',label:'EVIDENCE READY · COMPLETE CHECKPOINT',detail:'All required fresh evidence has been received. Close this evidence checkpoint now. No HTML change, implementation scan or new Brief is required.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'Complete evidence checkpoint',buttonAction:'completeEvidenceCheckpoint('+p.id+',this)'};
   }
+  // A regular guided-monitoring gate becomes the ONLY real scan opportunity after all
+  // requested fresh evidence is present. Facts changing by themselves never create one.
+  if(evidenceGate.ready_to_scan){
+    return {code:'SCAN_OPPORTUNITY',label:'SCAN OPPORTUNITY READY · FRESH EVIDENCE COMPLETE',detail:'Fresh GSC Pages, GSC Queries and required AI evidence are complete for this cycle. This is the valid moment to scan the current live page and build the next Brief with the latest VERIFIED facts.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'Scan current live page',buttonAction:'checkPage('+p.id+')'};
+  }
   if(waiting){
-    var waitMsg=evidenceGate.checkpoint?'Still needed: '+evidenceGate.missing.join(', ')+'. Add the missing evidence before closing this checkpoint.':'Still needed: '+evidenceGate.missing.join(', ')+'. Complete the requested input before scanning again.';
+    var waitMsg=evidenceGate.checkpoint?'Still needed: '+evidenceGate.missing.join(', ')+'. Add the missing evidence before closing this checkpoint.':'Still needed: '+evidenceGate.missing.join(', ')+'. Complete the requested input. The scanner stays locked until this becomes a real scan opportunity.';
     return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
   }
   if(implStatus==='manual_resolution_complete'&&currentRejected>0){
@@ -46022,12 +46031,7 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     return {code:'REFRESH_CONTRACT',label:'BRIEF SAFETY RULES UPDATED · REBUILD ONCE',detail:'This saved Brief still contains a prohibited or already-completed personal-profile recommendation from an older build. Rebuild it once; the live HTML and proof history remain protected.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild corrected Brief',buttonAction:'checkPage('+p.id+')'};
   }
   if(claimsFactsAt&&(!evaluatedAt||claimsFactsAt>evaluatedAt)){
-    var _freq=String(p.check_frequency||'').toLowerCase();
-    var _guidedMonitoring=!!_freq&&!['0','0days','off'].includes(_freq);
-    if(bool(p.case_study_active)||_guidedMonitoring){
-      return {code:'FACTS_WAIT_SCAN',label:'VERIFIED FACTS UPDATED · WAITING FOR NEXT SCAN OPPORTUNITY',detail:'Claims & Facts are newer than the historical Brief. Do not rebuild or run a manual scan now. The current Brief stays preserved for history; the next valid scan/evidence cycle will use the latest VERIFIED facts when it creates the next Brief.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'',buttonAction:''};
-    }
-    return {code:'REFRESH_FACTS',label:'VERIFIED FACTS UPDATED · REBUILD THE BRIEF',detail:'Claims & Facts changed after this Brief was generated. This page is not in a guided monitoring/case-study wait state, so you may rebuild it now with the current VERIFIED owner identity, voice rules and metrics.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild Brief with verified facts',buttonAction:'checkPage('+p.id+')'};
+    return {code:'FACTS_WAIT_SCAN',label:'VERIFIED FACTS UPDATED · WAITING FOR NEXT SCAN OPPORTUNITY',detail:(caseStudyWaitingBaseline?'The case-study baseline is not complete yet. ':'')+'Claims & Facts are newer than the historical Brief, but facts alone never trigger a scan or rebuild. The old Brief remains history. ContentScale will apply the latest VERIFIED facts only after the required baseline/evidence workflow opens a real scan opportunity.',color:'#7dd3fc',border:'#0284c7',bg:'#082f49',button:'',buttonAction:''};
   }
   if(bool(p.case_study_active)&&p.brief_content&&!bool(p.prepublication_checkpoint_saved)&&!bool(p.checkpoint_recovery_available)&&!currentBriefVerified){
     return {code:'SAVE_LIVE_FIRST',label:'ACTION NEEDED · SAVE THE CURRENT LIVE PAGE',detail:'The Tracker has no protected version to compare with the next publication. If the revised HTML is NOT live yet, save the current live page first, then publish the revised HTML and use Check current live. If it is already live, the earlier version cannot be proven retroactively; save the current page as the starting point for the next revision.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'1 · Save current live page',buttonAction:'savePrePublicationCheckpoint('+p.id+')'};
@@ -46138,8 +46142,14 @@ function _trackerImplementationCheckState(p,isDone,nextState){
   var _sameCycle=!!(_bid&&_vid&&_bid===_vid);
   var currentBriefVerified=status==='verified'&&(_sameCycle||(evaluatedAt>0&&(verifiedAt>=evaluatedAt||publishedAt>=evaluatedAt)));
 
-  if(nextState&&(nextState.code==='REFRESH_FACTS'||nextState.code==='REFRESH_CONTRACT')){
-    return {code:'FACTS_STALE',label:'VERIFIED FACTS ARE NEWER THAN THIS BRIEF',detail:'The existing Brief is preserved for history, but it does not yet reflect the current VERIFIED identity and Claims & Facts. Rebuild the Brief before editing the page.',color:'#67e8f9',border:'#0891b2',bg:'#083344'};
+  if(nextState&&nextState.code==='FACTS_WAIT_SCAN'){
+    return {code:'FACTS_STALE_WAIT',label:'VERIFIED FACTS SAVED · WAITING FOR NEXT SCAN OPPORTUNITY',detail:'The historical Brief is preserved unchanged. The current VERIFIED identity and Claims & Facts will be applied only when the normal evidence workflow opens the next valid scan opportunity. No rebuild or manual scan is needed now.',color:'#67e8f9',border:'#0891b2',bg:'#083344'};
+  }
+  if(nextState&&nextState.code==='REFRESH_FACTS'){
+    return {code:'FACTS_STALE_WAIT',label:'VERIFIED FACTS SAVED · WAITING FOR NEXT SCAN OPPORTUNITY',detail:'This legacy refresh state is intentionally suppressed. Facts alone do not create a scan or Brief rebuild. Wait for the next valid scan opportunity.',color:'#67e8f9',border:'#0891b2',bg:'#083344'};
+  }
+  if(nextState&&nextState.code==='REFRESH_CONTRACT'){
+    return {code:'SAFETY_REFRESH',label:'BRIEF SAFETY RULES UPDATED',detail:'This is a safety-contract correction, not a Claims & Facts refresh. Follow the single NEXT ACTION shown for this page.',color:'#67e8f9',border:'#0891b2',bg:'#083344'};
   }
 
   if(nextState&&nextState.code==='SCAN'&&p.case_study_active&&p.prepublication_checkpoint_saved){
@@ -46588,7 +46598,7 @@ function renderPages() {
     var _nextLockContentChanges = _nextWorkflowGuard && !_nextAllowsContentChange;
     var _nextNoAction = _nextActionCode==='MONITOR';
     var _nextWaitScanOpportunity = _nextActionCode==='FACTS_WAIT_SCAN';
-    var _nextScanRequired = (_nextActionCode==='SCAN'||_nextActionCode==='REFRESH_FACTS'||_nextActionCode==='REFRESH_CONTRACT');
+    var _nextScanRequired = (_nextActionCode==='SCAN'||_nextActionCode==='SCAN_OPPORTUNITY'||_nextActionCode==='REFRESH_CONTRACT');
     var _correctionLoop = (_nextActionCode==='REMAINING'||_nextActionCode==='VERIFYING');
     var _awaitingLiveVerification = (_nextActionCode==='VERIFY_LIVE_PENDING'||_nextActionCode==='VERIFY_LIVE');
     var _hideFullBrief = _correctionLoop;
@@ -46762,7 +46772,7 @@ function renderPages() {
       + (p.case_study_active
         ? '<button disabled style="background:#082f49;border:1px solid #0ea5e9;border-radius:7px;color:#7dd3fc;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;opacity:.9;" title="The protected case-study evidence cycle remains active. Scheduled page rescans follow the saved monitoring choice; evidence checkpoints remain available.">Case study: '+((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)?'evidence active · scheduled scans Off':freqLabel+' · locked')+'</button>'
         : ((p.check_frequency==='0'||p.check_frequency==='0days'||p.check_frequency==='off'||!p.check_frequency)
-        ? '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#111827;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="No guided review schedule. Manual scans still work.">Monitoring: Off</button>'
+        ? '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#111827;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="No guided review schedule. Manual scans are available only when NEXT ACTION exposes a valid scan opportunity.">Monitoring: Off</button>'
         : '<button onclick="event.stopPropagation();configurePageMonitoring('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Guided data review '+freqLabel+'. ContentScale waits for input before the manual scan.">Monitoring: '+freqLabel+'</button>'))
       + ((!_hideFullBrief&&(hasBrief || _lastBriefData[p.id])) ? (_disableFullBrief
         ? '<button disabled data-tour="view-brief" style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:11px;padding:5px 12px;font-weight:600;opacity:.8;" title="Brief is already reviewed. The next step is Check current live.">\ud83d\udcc4 View Brief</button>'
@@ -48346,7 +48356,7 @@ var _tourSteps = [
   {sel:'#impressionGap',phase:'OPPORTUNITY',title:'Run Gap Analysis before writing',text:'Impression Gap groups real GSC demand and assigns KEEP, OPTIMIZE, EXPAND, ASSIGN or CREATE SPOKE. Only CREATE SPOKE continues to Prewrite; existing-page decisions continue through Scan and Tracker Brief.'},
   {sel:'#trackerWorkSearch',phase:'WORKSPACE',title:'Search where the work lives',text:'Filter tracked pages by URL or keyword here, directly above Active Priorities and the page cards. The counter shows how many pages match; Clear restores the full worklist.'},
   {sel:'#leadQueuePanel',phase:'PRIORITY',title:'Work in the right order',text:'Active Priorities tells you where to investigate first. Priority is not Treatment: always inspect Intelligence and the Citation Brief before choosing what to change.'},
-  {sel:'#scanAllBtn',phase:'EXECUTION',title:'Scan current priorities',text:'Scan Priorities processes only current GSC-ranked active opportunities. During every one-page or multi-page run, use the visible Waiting, Scanning, Completed and Failed states; completion is never inferred from an older brief.'},
+  {sel:'#scanAllBtn',phase:'EXECUTION',title:'Scan real opportunities',text:'Scan Opportunities processes only pages whose workflow currently permits a real scan. During every one-page or multi-page run, use the visible Waiting, Scanning, Completed and Failed states; completion is never inferred from an older brief.'},
   {sel:'#scanSelectedBtn',phase:'EXECUTION',title:'Control the scan scope',text:'Select exact page cards, including shift-click ranges, and scan only those pages when you are working surgically.'},
   {sel:'[data-tour="page-card"]',phase:'EXISTING PAGE',title:'One card, one decision cycle',text:'For a selected URL: complete its evidence, open Intelligence, scan it, review the Tracker Brief, choose Treatment, implement, verify live and preserve Proof & History.'},
   {sel:'[data-tour="ai-evidence"]',phase:'EVIDENCE',title:'Verify five AI engines',text:'AI Checked opens the manual evidence workspace for Google AIO, ChatGPT, Perplexity, Claude and Copilot. Checked, cited and exact-page cited are separate states.'},
