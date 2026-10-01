@@ -532,7 +532,7 @@ async function ensureNetworkTables(pool) {
     )`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_network_publication_images_version ON network_publication_images(publication_version_id, sort_order, id)`);
 
-    await client.query(`CREATE TABLE IF NOT EXISTS network_image_library (
+    await client.query(`CREATE TABLE IF NOT EXISTS public.network_image_library (
       id BIGSERIAL PRIMARY KEY,
       normalized_key TEXT NOT NULL UNIQUE,
       image_name TEXT NOT NULL,
@@ -544,7 +544,7 @@ async function ensureNetworkTables(pool) {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_network_image_library_filename ON network_image_library(LOWER(suggested_filename))`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_network_image_library_filename ON public.network_image_library(LOWER(suggested_filename))`);
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_referral_codes (
       id BIGSERIAL PRIMARY KEY,
@@ -597,6 +597,23 @@ async function ensureNetworkTables(pool) {
   } finally {
     client.release();
   }
+}
+
+async function ensureNetworkImageLibrary(pool) {
+  if (!pool) throw new Error('DB unavailable');
+  await pool.query(`CREATE TABLE IF NOT EXISTS public.network_image_library (
+    id BIGSERIAL PRIMARY KEY,
+    normalized_key TEXT NOT NULL UNIQUE,
+    image_name TEXT NOT NULL,
+    suggested_filename TEXT,
+    alt_text TEXT,
+    caption TEXT,
+    prompt TEXT,
+    source_image_id BIGINT REFERENCES public.network_publication_images(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_network_image_library_filename ON public.network_image_library(LOWER(suggested_filename))`);
 }
 
 async function inspectNetworkSchema(pool) {
@@ -1042,15 +1059,16 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   }));
 
   app.get('/api/network/admin/images/library/lookup', verifyAdmin, wrap(async (req,res)=>{
+    await ensureNetworkImageLibrary(pool);
     const raw=cleanText(req.query?.name||'',255),key=normalizeImageKey(raw);if(!key)return res.json({success:true,found:false});
-    let r=await pool.query(`SELECT id,normalized_key,image_name,suggested_filename,alt_text,caption,prompt,updated_at FROM network_image_library WHERE normalized_key=$1 OR LOWER(REGEXP_REPLACE(COALESCE(suggested_filename,''),'\.(jpe?g|png|webp)$','','i'))=$1 ORDER BY updated_at DESC LIMIT 1`,[key]);
+    let r=await pool.query(`SELECT id,normalized_key,image_name,suggested_filename,alt_text,caption,prompt,updated_at FROM public.network_image_library WHERE normalized_key=$1 OR LOWER(REGEXP_REPLACE(COALESCE(suggested_filename,''),'\.(jpe?g|png|webp)$','','i'))=$1 ORDER BY updated_at DESC LIMIT 1`,[key]);
     let source='library';
     if(!r.rows[0]){
       const hist=await pool.query(`SELECT id AS source_image_id,image_name,suggested_filename,alt_text,caption,prompt,updated_at FROM network_publication_images WHERE (LOWER(REGEXP_REPLACE(REGEXP_REPLACE(COALESCE(suggested_filename,''),'\.(jpe?g|png|webp)$','','i'),'[^a-z0-9]+','-','g'))=$1 OR LOWER(REGEXP_REPLACE(REGEXP_REPLACE(COALESCE(original_filename,''),'\.(jpe?g|png|webp)$','','i'),'[^a-z0-9]+','-','g'))=$1 OR LOWER(REGEXP_REPLACE(COALESCE(image_name,''),'[^a-z0-9]+','-','g'))=$1) AND COALESCE(alt_text,'')<>'' AND COALESCE(caption,'')<>'' ORDER BY updated_at DESC LIMIT 1`,[key]);
       const h=hist.rows[0];
       if(h){
-        await pool.query(`INSERT INTO network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=CASE WHEN COALESCE(EXCLUDED.prompt,'')<>'' THEN EXCLUDED.prompt ELSE network_image_library.prompt END,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[key,cleanText(h.image_name||raw,220),cleanText(h.suggested_filename||raw,220),cleanText(h.alt_text,500),cleanText(h.caption,700),cleanText(h.prompt||'',3000),h.source_image_id]);
-        r=await pool.query(`SELECT id,normalized_key,image_name,suggested_filename,alt_text,caption,prompt,updated_at FROM network_image_library WHERE normalized_key=$1 LIMIT 1`,[key]);
+        await pool.query(`INSERT INTO public.network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=CASE WHEN COALESCE(EXCLUDED.prompt,'')<>'' THEN EXCLUDED.prompt ELSE public.network_image_library.prompt END,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[key,cleanText(h.image_name||raw,220),cleanText(h.suggested_filename||raw,220),cleanText(h.alt_text,500),cleanText(h.caption,700),cleanText(h.prompt||'',3000),h.source_image_id]);
+        r=await pool.query(`SELECT id,normalized_key,image_name,suggested_filename,alt_text,caption,prompt,updated_at FROM public.network_image_library WHERE normalized_key=$1 LIMIT 1`,[key]);
         source='publication_history';
       }
     }
@@ -1058,17 +1076,18 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
   }));
 
   app.post('/api/network/admin/publications/:placementId/images/existing-upload', verifyAdmin, networkImageUpload.single('image'), wrap(async (req,res)=>{
+    await ensureNetworkImageLibrary(pool);
     const placementId=Number(req.params.placementId);if(!placementId)return res.status(400).json({success:false,error:'Invalid placement'});if(!req.file)return res.status(400).json({success:false,error:'Choose an image file'});
     const mime=String(req.file.mimetype||'').toLowerCase();if(!['image/jpeg','image/png','image/webp'].includes(mime))return res.status(415).json({success:false,error:'Only JPG, PNG or WebP images are supported'});
     const pr=await pool.query(`SELECT pv.id AS publication_version_id FROM network_publication_versions pv WHERE pv.placement_id=$1 LIMIT 1`,[placementId]);const pv=pr.rows[0];if(!pv)return res.status(404).json({success:false,error:'Publisher Edition not found'});
     const suppliedName=cleanText(req.body?.image_name,220),original=cleanText(req.file.originalname,255),key=normalizeImageKey(suppliedName||original);if(!key)return res.status(400).json({success:false,error:'Image name is required'});
-    let lib=await pool.query(`SELECT image_name,suggested_filename,alt_text,caption,prompt FROM network_image_library WHERE normalized_key=$1 ORDER BY updated_at DESC LIMIT 1`,[key]);
+    let lib=await pool.query(`SELECT image_name,suggested_filename,alt_text,caption,prompt FROM public.network_image_library WHERE normalized_key=$1 ORDER BY updated_at DESC LIMIT 1`,[key]);
     if(!lib.rows[0]){
       const hist=await pool.query(`SELECT id AS source_image_id,image_name,suggested_filename,alt_text,caption,prompt FROM network_publication_images WHERE (LOWER(REGEXP_REPLACE(REGEXP_REPLACE(COALESCE(suggested_filename,''),'\.(jpe?g|png|webp)$','','i'),'[^a-z0-9]+','-','g'))=$1 OR LOWER(REGEXP_REPLACE(REGEXP_REPLACE(COALESCE(original_filename,''),'\.(jpe?g|png|webp)$','','i'),'[^a-z0-9]+','-','g'))=$1 OR LOWER(REGEXP_REPLACE(COALESCE(image_name,''),'[^a-z0-9]+','-','g'))=$1) AND COALESCE(alt_text,'')<>'' AND COALESCE(caption,'')<>'' ORDER BY updated_at DESC LIMIT 1`,[key]);
       const h=hist.rows[0];
       if(h){
-        await pool.query(`INSERT INTO network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=CASE WHEN COALESCE(EXCLUDED.prompt,'')<>'' THEN EXCLUDED.prompt ELSE network_image_library.prompt END,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[key,cleanText(h.image_name||suppliedName||original,220),cleanText(h.suggested_filename||original,220),cleanText(h.alt_text,500),cleanText(h.caption,700),cleanText(h.prompt||'',3000),h.source_image_id]);
-        lib=await pool.query(`SELECT image_name,suggested_filename,alt_text,caption,prompt FROM network_image_library WHERE normalized_key=$1 LIMIT 1`,[key]);
+        await pool.query(`INSERT INTO public.network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=CASE WHEN COALESCE(EXCLUDED.prompt,'')<>'' THEN EXCLUDED.prompt ELSE public.network_image_library.prompt END,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[key,cleanText(h.image_name||suppliedName||original,220),cleanText(h.suggested_filename||original,220),cleanText(h.alt_text,500),cleanText(h.caption,700),cleanText(h.prompt||'',3000),h.source_image_id]);
+        lib=await pool.query(`SELECT image_name,suggested_filename,alt_text,caption,prompt FROM public.network_image_library WHERE normalized_key=$1 LIMIT 1`,[key]);
       }
     }
     const remembered=lib.rows[0]||null;
@@ -1078,11 +1097,12 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
     if(role==='featured')await pool.query(`UPDATE network_publication_images SET image_role='supporting',updated_at=NOW() WHERE placement_id=$1 AND image_role='featured'`,[placementId]);
     const orderR=await pool.query('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM network_publication_images WHERE publication_version_id=$1',[pv.publication_version_id]);
     const ir=await pool.query(`INSERT INTO network_publication_images (publication_version_id,placement_id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,image_data,byte_size,status,sort_order,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'uploaded',$14,NOW(),NOW()) RETURNING id,image_role,image_name,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,updated_at`,[pv.publication_version_id,placementId,role,imageName,cleanText(remembered?.prompt||'',3000),alt,caption,filename,hint,mime,original,req.file.buffer,req.file.size,Number(orderR.rows[0]?.n||0)]);
-    const img=ir.rows[0];await pool.query(`INSERT INTO network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=CASE WHEN EXCLUDED.prompt<>'' THEN EXCLUDED.prompt ELSE network_image_library.prompt END,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[key,imageName,filename,alt,caption,cleanText(remembered?.prompt||'',3000),img.id]);
+    const img=ir.rows[0];await pool.query(`INSERT INTO public.network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=CASE WHEN EXCLUDED.prompt<>'' THEN EXCLUDED.prompt ELSE public.network_image_library.prompt END,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[key,imageName,filename,alt,caption,cleanText(remembered?.prompt||'',3000),img.id]);
     res.status(201).json({success:true,image:img,reused_metadata:!!remembered,library_key:key});
   }));
 
   app.post('/api/network/admin/publications/:placementId/images/prepare', verifyAdmin, wrap(async (req,res)=>{
+    await ensureNetworkImageLibrary(pool);
     const id=Number(req.params.placementId),name=cleanText(req.body?.image_name,220),role=req.body?.image_role==='featured'?'featured':'supporting',h2Target=firstThreeWords(req.body?.h2_target||''),h2Number=Math.max(0,Number(req.body?.h2_number)||0);
     if(!id||!name)return res.status(400).json({success:false,error:'Placement and image name are required'});
     const r=await pool.query(`SELECT pv.id AS publication_version_id,pv.title,pv.meta_description,c.primary_niche,c.brand_name,c.source_snapshot,w.domain AS publisher_domain FROM network_publication_versions pv JOIN network_placements p ON p.id=pv.placement_id JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id WHERE p.id=$1 LIMIT 1`,[id]);
@@ -1102,11 +1122,12 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
       const orderR=await pool.query('SELECT COALESCE(MAX(sort_order),-1)+1 AS n FROM network_publication_images WHERE publication_version_id=$1',[x.publication_version_id]);
       ir=await pool.query(`INSERT INTO network_publication_images (publication_version_id,placement_id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,status,sort_order,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'prompt_ready',$10,NOW(),NOW()) RETURNING id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,status,sort_order`,[x.publication_version_id,id,role,name,meta.prompt,meta.alt_text,meta.caption,meta.suggested_filename,meta.placement_hint,Number(orderR.rows[0]?.n||0)]);
     }
-    const saved=ir.rows[0],libKey=normalizeImageKey(saved.suggested_filename||saved.image_name);if(libKey)await pool.query(`INSERT INTO network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=EXCLUDED.prompt,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[libKey,saved.image_name,saved.suggested_filename,saved.alt_text,saved.caption,saved.prompt,saved.id]);
+    const saved=ir.rows[0],libKey=normalizeImageKey(saved.suggested_filename||saved.image_name);if(libKey)await pool.query(`INSERT INTO public.network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=EXCLUDED.prompt,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[libKey,saved.image_name,saved.suggested_filename,saved.alt_text,saved.caption,saved.prompt,saved.id]);
     res.status(201).json({success:true,image:saved,model:ai.model,reused_featured:role==='featured'});
   }));
 
   app.patch('/api/network/admin/publications/:placementId/images/:imageId/metadata', verifyAdmin, wrap(async (req,res)=>{
+    await ensureNetworkImageLibrary(pool);
     const placementId=Number(req.params.placementId),imageId=Number(req.params.imageId),name=cleanText(req.body?.image_name,220);
     if(!placementId||!imageId||!name)return res.status(400).json({success:false,error:'Placement, image and image name are required'});
     const r=await pool.query(`SELECT i.id,i.image_role,i.placement_hint,pv.title,c.primary_niche,c.brand_name,c.source_snapshot,w.domain AS publisher_domain FROM network_publication_images i JOIN network_publication_versions pv ON pv.id=i.publication_version_id JOIN network_placements p ON p.id=i.placement_id JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id WHERE i.id=$1 AND i.placement_id=$2 LIMIT 1`,[imageId,placementId]);
@@ -1115,19 +1136,21 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
     const prompt=`Create metadata for ONE editorial article image. Return JSON only with keys prompt, alt_text, caption, suggested_filename. Image name/topic: ${name}. Role: ${x.image_role}. Article: ${x.title}. Brand: ${x.brand_name||''}. Niche: ${x.primary_niche||''}. Publisher: ${x.publisher_domain}. Language: ${lang}. Market: ${country||'not specified'}. The prompt must describe the named image subject, be realistic and publication-grade, avoid text/logos/watermarks, and not invent factual claims. Alt text must describe what is visible and match the named image subject. Caption must match the actual subject. Filename must be lowercase hyphenated with a suitable extension.`;
     const ai=await callNetworkGemini(prompt),d=ai.parsed||{};
     const u=await pool.query(`UPDATE network_publication_images SET image_name=$3,prompt=$4,alt_text=$5,caption=$6,suggested_filename=$7,updated_at=NOW() WHERE id=$1 AND placement_id=$2 RETURNING id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,status,updated_at`,[imageId,placementId,name,cleanText(d.prompt,3000),cleanText(d.alt_text,500),cleanText(d.caption,700),cleanText(d.suggested_filename||slugifyNetwork(name)+'.jpg',220)]);
-    const saved=u.rows[0],libKey=normalizeImageKey(saved.suggested_filename||saved.image_name);if(libKey)await pool.query(`INSERT INTO network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=EXCLUDED.prompt,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[libKey,saved.image_name,saved.suggested_filename,saved.alt_text,saved.caption,saved.prompt,saved.id]);
+    const saved=u.rows[0],libKey=normalizeImageKey(saved.suggested_filename||saved.image_name);if(libKey)await pool.query(`INSERT INTO public.network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,prompt,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,prompt=EXCLUDED.prompt,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[libKey,saved.image_name,saved.suggested_filename,saved.alt_text,saved.caption,saved.prompt,saved.id]);
     res.json({success:true,image:saved,model:ai.model,note:'Image file and placement were preserved; metadata only was regenerated and remembered.'});
   }));
 
   app.post('/api/network/admin/publications/:placementId/images/:imageId/upload', verifyAdmin, networkImageUpload.single('image'), wrap(async (req,res)=>{
+    await ensureNetworkImageLibrary(pool);
     const placementId=Number(req.params.placementId),imageId=Number(req.params.imageId);if(!placementId||!imageId)return res.status(400).json({success:false,error:'Invalid image'});
     if(!req.file)return res.status(400).json({success:false,error:'Choose an image file'});
     const mime=String(req.file.mimetype||'').toLowerCase();if(!['image/jpeg','image/png','image/webp'].includes(mime))return res.status(415).json({success:false,error:'Only JPG, PNG or WebP images are supported'});
     const r=await pool.query(`UPDATE network_publication_images SET mime_type=$3,original_filename=$4,image_data=$5,byte_size=$6,status='uploaded',updated_at=NOW() WHERE id=$1 AND placement_id=$2 RETURNING id,image_role,image_name,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status`,[imageId,placementId,mime,cleanText(req.file.originalname,255),req.file.buffer,req.file.size]);
-    if(!r.rows[0])return res.status(404).json({success:false,error:'Image slot not found'});const saved=r.rows[0],libKey=normalizeImageKey(saved.suggested_filename||saved.image_name||req.file.originalname);if(libKey)await pool.query(`INSERT INTO network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[libKey,saved.image_name,saved.suggested_filename,saved.alt_text,saved.caption,saved.id]);res.json({success:true,image:saved,library_key:libKey});
+    if(!r.rows[0])return res.status(404).json({success:false,error:'Image slot not found'});const saved=r.rows[0],libKey=normalizeImageKey(saved.suggested_filename||saved.image_name||req.file.originalname);if(libKey)await pool.query(`INSERT INTO public.network_image_library (normalized_key,image_name,suggested_filename,alt_text,caption,source_image_id,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,NOW(),NOW()) ON CONFLICT (normalized_key) DO UPDATE SET image_name=EXCLUDED.image_name,suggested_filename=EXCLUDED.suggested_filename,alt_text=EXCLUDED.alt_text,caption=EXCLUDED.caption,source_image_id=EXCLUDED.source_image_id,updated_at=NOW()`,[libKey,saved.image_name,saved.suggested_filename,saved.alt_text,saved.caption,saved.id]);res.json({success:true,image:saved,library_key:libKey});
   }));
 
   app.patch('/api/network/admin/publications/:placementId/images/:imageId/placement', verifyAdmin, wrap(async (req,res)=>{
+    await ensureNetworkImageLibrary(pool);
     const placementId=Number(req.params.placementId),imageId=Number(req.params.imageId);if(!placementId||!imageId)return res.status(400).json({success:false,error:'Invalid image'});
     const role=req.body?.image_role==='featured'?'featured':'supporting';const h2=firstThreeWords(req.body?.h2_target||'');const h2Number=Math.max(0,Number(req.body?.h2_number)||0);
     const hint=role==='featured'?'Before article':(h2Number?'before-h2-num:'+h2Number:(h2?'before-h2:'+h2:''));
