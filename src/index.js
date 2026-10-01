@@ -1,3 +1,4 @@
+// v409: safe correction for mistyped/dead tracked URLs; no false destination claim.
 const { buildOpportunityReport, FIVE_ENGINES } = (() => {
 const FIVE_ENGINES = [
   ['google_aio', 'Google AI Overviews / Gemini'],
@@ -688,7 +689,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-01-CANONICAL-v408-BRIEF-CONFIRMATION-CLAIM-SAFETY',
+  build: 'CS-2026-10-01-CANONICAL-v409-DEAD-URL-CORRECTION',
   built_date: '2026-09-30',
   ceo_private: true,
   ceo_public: true,
@@ -3492,6 +3493,47 @@ app.delete('/api/tracker-client/:token/pages/:pageId', async (req, res) => {
     await pool.query('UPDATE tracker_pages SET is_active=FALSE WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     res.json({ success: true, archived: true, case_study_history_preserved: true });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+// PATCH /api/tracker-client/:token/pages/:pageId/url
+// Correct a mistyped tracked URL without discarding the page's evidence history.
+// The replacement must be same-domain, publicly reachable HTML. If the corrected
+// URL is already tracked, only the bad duplicate is archived.
+app.patch('/api/tracker-client/:token/pages/:pageId/url', async (req, res) => {
+  try {
+    const cr=await pool.query("SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status<>'deleted')",[req.params.token]);
+    if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+    const pr=await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+    if(!pr.rows.length)return res.status(404).json({success:false,error:'Tracked page not found'});
+    const page=pr.rows[0];
+    const requested=String(req.body&&req.body.url||'').trim();
+    let oldUrl,newUrl;
+    try{oldUrl=new URL(page.url);newUrl=new URL(/^https?:\/\//i.test(requested)?requested:'https://'+requested);}catch(_e){return res.status(400).json({success:false,error:'Enter a complete valid URL.'});}
+    if(!/^https?:$/.test(newUrl.protocol))return res.status(400).json({success:false,error:'Only http or https URLs are allowed.'});
+    const host=v=>String(v||'').toLowerCase().replace(/^www\./,'');
+    if(host(newUrl.hostname)!==host(oldUrl.hostname))return res.status(400).json({success:false,error:'The corrected URL must remain on '+oldUrl.hostname+'.'});
+    const activeCs=await pool.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' LIMIT 1",[cr.rows[0].id,page.id]).catch(()=>({rows:[]}));
+    if(activeCs.rows.length)return res.status(409).json({success:false,error:'This page has an active protected case study. Close or review that case study before changing its canonical URL.'});
+
+    let live;
+    try{live=await fetch(newUrl.toString(),{redirect:'follow',headers:{'User-Agent':'Mozilla/5.0 (compatible; ContentScale/1.0)','Accept':'text/html,application/xhtml+xml'},signal:AbortSignal.timeout(15000)});}catch(e){return res.status(502).json({success:false,error:'Could not reach the corrected URL: '+e.message});}
+    const contentType=String(live.headers.get('content-type')||'').toLowerCase();
+    if(!live.ok)return res.status(409).json({success:false,error:'The corrected URL is not live: HTTP '+live.status+'. Nothing was changed.'});
+    if(contentType&&!contentType.includes('text/html')&&!contentType.includes('application/xhtml+xml'))return res.status(409).json({success:false,error:'The corrected URL did not return an HTML page. Nothing was changed.'});
+    const finalUrl=new URL(live.url||newUrl.toString()).toString();
+    if(host(new URL(finalUrl).hostname)!==host(oldUrl.hostname))return res.status(409).json({success:false,error:'The corrected URL redirects to another domain. Nothing was changed.'});
+    const norm=v=>{try{const u=new URL(v);return (host(u.hostname)+u.pathname.replace(/\/+$/,'')).toLowerCase();}catch(_e){return String(v||'').replace(/\/+$/,'').toLowerCase();}};
+    const all=await pool.query('SELECT id,url FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 AND (is_active=TRUE OR is_active IS NULL)',[cr.rows[0].id,page.id]);
+    const duplicate=all.rows.find(x=>norm(x.url)===norm(finalUrl));
+    if(duplicate){
+      await _caseStudyEventForPage(cr.rows[0].id,page.id,'page_archived_url_typo',{old_url:page.url,corrected_url:finalUrl,existing_tracker_page_id:duplicate.id,history_preserved:true}).catch(()=>{});
+      await pool.query("UPDATE tracker_pages SET is_active=FALSE,redirects_to=$1,redirect_checked_at=NOW() WHERE id=$2 AND tracker_client_id=$3",['(corrected duplicate → '+finalUrl+')',page.id,cr.rows[0].id]);
+      return res.json({success:true,archived_duplicate:true,existing_page_id:duplicate.id,url:finalUrl,history_preserved:true,message:'The mistyped duplicate was archived. The correct URL was already tracked.'});
+    }
+    await _caseStudyEventForPage(cr.rows[0].id,page.id,'tracked_url_corrected',{old_url:page.url,new_url:finalUrl,reason:'owner_corrected_dead_or_mistyped_url',history_preserved:true}).catch(()=>{});
+    await pool.query('UPDATE tracker_pages SET url=$1,redirects_to=NULL,redirect_checked_at=NOW(),is_active=TRUE WHERE id=$2 AND tracker_client_id=$3',[finalUrl,page.id,cr.rows[0].id]);
+    return res.json({success:true,url:finalUrl,history_preserved:true,message:'Tracked URL corrected and verified live. Existing page history was preserved.'});
+  }catch(e){console.error('[tracker-url-correct]',e.message);return res.status(500).json({success:false,error:e.message});}
 });
 
 // POST /api/tracker-client/:token/pages/bulk-delete — delete multiple pages
@@ -46583,8 +46625,18 @@ function renderPages() {
           var isDead404 = String(p.redirects_to).indexOf('(dead') === 0;
           var isCanon = String(p.redirects_to).indexOf('(canonical') === 0;
           var canonUrl = ''; if (isCanon) { var _cmm = String(p.redirects_to).match(/canonical \u2192 ([^)]+)/); canonUrl = _cmm ? _cmm[1].trim() : ''; }
-          var destPath = ''; try { destPath = new URL(isCanon ? canonUrl : p.redirects_to).pathname.replace(/\\/+$/,''); } catch(e) {}
-          var destTracked = isDead404 ? true : (_pages||[]).some(function(o){ if (o.id === p.id || !o.url) return false; try { return new URL(o.url).pathname.replace(/\\/+$/,'') === destPath; } catch(e) { return false; } });
+          var _normTrackedUrl=function(v){try{var u=new URL(v);return {host:u.hostname.toLowerCase().replace(/^www\\./,''),path:u.pathname.replace(/\\/+$/,'').toLowerCase()};}catch(e){return {host:'',path:''};}};
+          var _pageNorm=_normTrackedUrl(p.url),destPath=''; try { destPath = new URL(isCanon ? canonUrl : p.redirects_to).pathname.replace(/\\/+$/,''); } catch(e) {}
+          var _oneEditApart=function(a,b){
+            if(a===b)return false;if(Math.abs(a.length-b.length)>1)return false;
+            var i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue;}if(++d>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++;}}
+            return d+(i<a.length||j<b.length?1:0)<=1;
+          };
+          var deadSuggestion=null;
+          if(isDead404){
+            deadSuggestion=(_pages||[]).find(function(o){if(o.id===p.id||!o.url||o.redirects_to)return false;var n=_normTrackedUrl(o.url);return n.host&&n.host===_pageNorm.host&&_oneEditApart(n.path,_pageNorm.path);})||null;
+          }
+          var destTracked=!isDead404&&!!destPath&&(_pages||[]).some(function(o){ if (o.id === p.id || !o.url) return false; try { return new URL(o.url).pathname.replace(/\\/+$/,'') === destPath; } catch(e) { return false; } });
           var _head = isDead404
             ? '\\u274c <b>This URL no longer exists</b> ' + String(p.redirects_to).replace(/</g,"&lt;")
             : isCanon
@@ -46593,11 +46645,18 @@ function renderPages() {
           var _bg = isCanon ? 'rgba(96,165,250,.1)' : 'rgba(248,113,113,.1)';
           var _bd = isCanon ? '#1e3a8a' : '#7f1d1d';
           var _fg = isCanon ? '#93c5fd' : '#fca5a5';
-          return '<div style="background:' + _bg + ';border:1px solid ' + _bd + ';border-radius:6px;padding:7px 10px;margin:4px 0;font-size:11px;color:' + _fg + ';line-height:1.5;">' + _head + '<br>'
-            + (destTracked
-                ? 'The destination is <b>already tracked</b> \\u2014 just remove this dead URL. <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Remove this dead page</button>'
-                : 'One click swaps the dead URL for its destination: <button onclick="removeRedirectedPage(' + p.id + ',&quot;' + String(p.redirects_to).replace(/"/g,"&quot;") + '&quot;)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:800;padding:3px 12px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;">\\u2713 Track destination instead</button> <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Just remove</button>')
-            + '</div>';
+          var _action='';
+          if(isDead404){
+            var _suggested=deadSuggestion&&deadSuggestion.url?String(deadSuggestion.url):'';
+            _action=(_suggested?'Likely URL typo. Suggested live Tracker URL: <span style="font-family:monospace;color:#bbf7d0;">'+_suggested.replace(/</g,'&lt;')+'</span><br>':'The URL returned 404. Enter the intended URL and ContentScale will verify it before changing anything.<br>')
+              +'<button onclick="correctDeadPageUrl(' + p.id + ',&quot;' + _suggested.replace(/"/g,'&quot;') + '&quot;)" style="margin-top:5px;cursor:pointer;font-size:10px;font-weight:800;padding:4px 12px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;">\\u2713 Correct tracked URL</button>'
+              +' <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:5px;cursor:pointer;font-size:10px;font-weight:700;padding:4px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Archive dead page</button>';
+          }else if(destTracked){
+            _action='The destination is <b>already tracked</b> \\u2014 archive this duplicate URL. <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Archive duplicate</button>';
+          }else{
+            _action='One click swaps this URL for its verified destination: <button onclick="removeRedirectedPage(' + p.id + ',&quot;' + String(isCanon?canonUrl:p.redirects_to).replace(/"/g,"&quot;") + '&quot;)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:800;padding:3px 12px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;">\\u2713 Track destination instead</button> <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Archive old URL</button>';
+          }
+          return '<div style="background:' + _bg + ';border:1px solid ' + _bd + ';border-radius:6px;padding:7px 10px;margin:4px 0;font-size:11px;color:' + _fg + ';line-height:1.5;">' + _head + '<br>' + _action + '</div>';
         })() : '')
       + _pushHtml
       + gscHtml
@@ -48283,6 +48342,21 @@ function endTour(completed){
 function _tourMaybeAutoStart(){try{if(localStorage.getItem('cs_tour_done'))return;}catch(e){}setTimeout(function(){if(_tourIdx===-1)startTour(false);},1400);}
 document.addEventListener('keydown',function(e){if(_tourIdx<0)return;if(e.key==='Escape')endTour(false);else if(e.key==='ArrowRight'){e.preventDefault();tourNav(1);}else if(e.key==='ArrowLeft'&&_tourIdx>0){e.preventDefault();tourNav(-1);}});
 window.addEventListener('resize',function(){if(_tourIdx>=0)_tourPlace();});
+
+async function correctDeadPageUrl(pageId,suggestedUrl){
+  var entered=prompt('Correct live URL for this tracked page:',suggestedUrl||'');
+  if(entered===null)return;
+  entered=String(entered||'').trim();
+  if(!entered){toast('Enter the complete corrected URL.','#f87171');return;}
+  if(!confirm('Verify and replace the mistyped tracked URL with:\n'+entered+'\n\nExisting history stays attached to this page.'))return;
+  try{
+    toast('Checking the corrected URL…','#38bdf8');
+    var d=await api('/pages/'+pageId+'/url','PATCH',{url:entered});
+    if(!d.success)throw new Error(d.error||'Could not correct URL');
+    toast(d.archived_duplicate?'Typo archived — the correct URL was already tracked.':'URL corrected — page history preserved.','#4ade80');
+    loadPages();
+  }catch(e){toast(e.message||'Could not correct URL','#f87171');}
+}
 
 async function removeRedirectedPage(pageId, addUrl) {
   var msg = addUrl ? 'Swap this dead URL for its destination (' + addUrl + ')?' : 'Remove this redirected (dead) URL from the tracker?';
