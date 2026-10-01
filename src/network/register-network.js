@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — ONE-PAGE ADMIN COCKPIT v445
+// CONTENTSCALE NETWORK — COCKPIT 500 FIX + RESILIENT DATA v446
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -1838,7 +1838,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       c.title,c.brand_name,c.owner_website_id,
       w.domain AS publisher_domain,w.brand_name AS publisher_brand,w.status AS publisher_status,
       ow.domain AS source_domain,ow.brand_name AS source_brand,
-      pv.id AS publication_version_id,pv.title AS edition_title,pv.meta_title,pv.meta_description,pv.suggested_slug,pv.generated_at,pv.quality_status,pv.content_score,
+      pv.id AS publication_version_id,pv.title AS edition_title,pv.meta_title,pv.meta_description,pv.suggested_slug,pv.generated_at,pv.quality_status,
       vr.result_status AS latest_result,vr.http_status AS latest_http_status,vr.indexable AS latest_indexable,vr.canonical_ok AS latest_canonical_ok,
       vr.brand_mention_ok AS latest_brand_mention_ok,vr.source_link_ok AS latest_source_link_ok,vr.content_match_ok AS latest_content_match_ok,vr.details AS latest_details,vr.checked_at AS latest_checked_at,
       (SELECT COUNT(*)::int FROM network_placement_review_events re WHERE re.placement_id=p.id AND re.event_type IN ('submitted','resubmitted')) AS submission_round,
@@ -2485,8 +2485,22 @@ body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{
   // Read-only aggregation for the dashboard; mutations continue to use the existing
   // protected workflow endpoints so the cockpit cannot bypass existing invariants.
   app.get('/api/network/admin/cockpit', verifyAdmin, wrap(async (req,res)=>{
+    const errors=[];
+    async function rows(name,sql,params=[]){
+      try{return (await pool.query(sql,params)).rows}
+      catch(e){errors.push({section:name,error:cleanText(e && e.message || e,500)});return[]}
+    }
+    async function one(name,sql,params=[]){
+      const r=await rows(name,sql,params);return r[0]||{}
+    }
+    let schema;
+    try{schema=await inspectNetworkSchema(pool)}
+    catch(e){
+      schema={schema_ready:false,schema_version:null,expected_schema_version:NETWORK_SCHEMA_VERSION,error:cleanText(e&&e.message||e,500)};
+      errors.push({section:'schema',error:schema.error});
+    }
+
     const [
-      schema,
       websiteCounts,
       contentCounts,
       placementCounts,
@@ -2501,67 +2515,73 @@ body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{
       reviewQueue,
       recentEvents
     ] = await Promise.all([
-      inspectNetworkSchema(pool).catch(e=>({schema_ready:false,schema_version:0,expected_schema_version:NETWORK_SCHEMA_VERSION,error:e.message})),
-      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_websites GROUP BY status`).then(r=>r.rows),
-      pool.query(`SELECT publication_status,COUNT(*)::int AS n FROM network_content GROUP BY publication_status`).then(r=>r.rows),
-      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_placements GROUP BY status`).then(r=>r.rows),
-      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_publisher_applications GROUP BY status`).then(r=>r.rows),
-      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_publisher_accounts GROUP BY status`).then(r=>r.rows),
-      pool.query(`SELECT status,COUNT(*)::int AS n,COALESCE(SUM(impressions),0)::bigint AS impressions,COALESCE(SUM(clicks),0)::bigint AS clicks FROM network_ads GROUP BY status`).then(r=>r.rows),
-      pool.query(`SELECT status,COUNT(*)::int AS n FROM network_referrals GROUP BY status`).then(r=>r.rows),
-      pool.query(`SELECT COALESCE(SUM(balance),0)::int AS wallet_balance,COALESCE(SUM(reserved),0)::int AS reserved,
-        (SELECT COALESCE(SUM(amount),0)::int FROM network_credit_transactions WHERE transaction_type='placement_verified') AS verified_rewards`).then(r=>r.rows[0]),
-      pool.query(`SELECT pa.*,a.access_token,a.website_id,
-        COALESCE(a.status,'pending') AS account_status
+      rows('website_counts',`SELECT status,COUNT(*)::int AS n FROM network_websites GROUP BY status`),
+      rows('content_counts',`SELECT publication_status,COUNT(*)::int AS n FROM network_content GROUP BY publication_status`),
+      rows('placement_counts',`SELECT status,COUNT(*)::int AS n FROM network_placements GROUP BY status`),
+      rows('publisher_counts',`SELECT status,COUNT(*)::int AS n FROM network_publisher_applications GROUP BY status`),
+      rows('account_counts',`SELECT status,COUNT(*)::int AS n FROM network_publisher_accounts GROUP BY status`),
+      rows('ad_counts',`SELECT status,COUNT(*)::int AS n,COALESCE(SUM(impressions),0)::bigint AS impressions,COALESCE(SUM(clicks),0)::bigint AS clicks FROM network_ads GROUP BY status`),
+      rows('referral_counts',`SELECT status,COUNT(*)::int AS n FROM network_referrals GROUP BY status`),
+      one('credit_summary',`SELECT
+        COALESCE((SELECT SUM(balance) FROM network_credit_wallets),0)::int AS wallet_balance,
+        COALESCE((SELECT SUM(reserved) FROM network_credit_wallets),0)::int AS reserved,
+        COALESCE((SELECT SUM(amount) FROM network_credit_transactions WHERE transaction_type='placement_verified'),0)::int AS verified_rewards`),
+      rows('pending_publishers',`SELECT pa.*,a.access_token,a.website_id,COALESCE(a.status,'pending') AS account_status
         FROM network_publisher_applications pa
         LEFT JOIN network_publisher_accounts a ON a.application_id=pa.id
         WHERE pa.status='pending'
-        ORDER BY pa.created_at ASC LIMIT 20`).then(r=>r.rows),
-      pool.query(`SELECT * FROM network_ads WHERE status='pending' ORDER BY created_at ASC LIMIT 20`).then(r=>r.rows),
-      pool.query(`SELECT id,domain,brand_name,primary_niche,country,language,status,created_at
-        FROM network_websites WHERE status='pending' ORDER BY created_at ASC LIMIT 20`).then(r=>r.rows),
-      pool.query(`SELECT p.id,p.status,p.published_url,p.submitted_at,p.verification_note,
+        ORDER BY pa.created_at ASC LIMIT 20`),
+      rows('pending_ads',`SELECT * FROM network_ads WHERE status='pending' ORDER BY created_at ASC LIMIT 20`),
+      rows('pending_websites',`SELECT id,domain,brand_name,primary_niche,country,language,status,created_at
+        FROM network_websites WHERE status='pending' ORDER BY created_at ASC LIMIT 20`),
+      rows('review_queue',`SELECT p.id,p.status,p.published_url,p.submitted_at,p.verification_note,
         c.title AS opportunity_title,c.brand_name,
         w.domain AS publisher_domain,w.brand_name AS publisher_brand,
         pv.id AS publication_version_id,pv.title AS edition_title,
-        (SELECT COUNT(*)::int FROM network_placement_review_events re
-          WHERE re.placement_id=p.id AND re.event_type IN ('submitted','resubmitted')) AS review_round
+        COALESCE((SELECT COUNT(*)::int FROM network_placement_review_events re
+          WHERE re.placement_id=p.id AND re.event_type IN ('submitted','resubmitted')),0) AS review_round
         FROM network_placements p
         JOIN network_content c ON c.id=p.content_id
         JOIN network_websites w ON w.id=p.publisher_website_id
         LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
         WHERE p.status IN ('submitted','needs_review','verifying')
-        ORDER BY COALESCE(p.submitted_at,p.updated_at) ASC LIMIT 25`).then(r=>r.rows),
-      pool.query(`SELECT re.id,re.placement_id,re.event_type,re.actor_type,re.published_url,re.note,re.created_at,
+        ORDER BY COALESCE(p.submitted_at,p.updated_at) ASC LIMIT 25`),
+      rows('recent_events',`SELECT re.id,re.placement_id,re.event_type,re.actor_type,re.published_url,re.note,re.created_at,
         w.domain AS publisher_domain,c.title AS opportunity_title
         FROM network_placement_review_events re
         JOIN network_placements p ON p.id=re.placement_id
         JOIN network_websites w ON w.id=p.publisher_website_id
         JOIN network_content c ON c.id=p.content_id
-        ORDER BY re.created_at DESC,re.id DESC LIMIT 20`).then(r=>r.rows)
+        ORDER BY re.created_at DESC,re.id DESC LIMIT 20`)
     ]);
 
-    const toMap=(rows,key)=>Object.fromEntries((rows||[]).map(x=>[x[key],Number(x.n||0)]));
+    const toMap=(r,key)=>Object.fromEntries((r||[]).map(x=>[x[key],Number(x.n||0)]));
     const websites=toMap(websiteCounts,'status');
     const content=toMap(contentCounts,'publication_status');
     const placements=toMap(placementCounts,'status');
     const publishers=toMap(publisherCounts,'status');
     const accounts=toMap(accountCounts,'status');
     const referrals=toMap(referralCounts,'status');
-    const ads=Object.fromEntries((adCounts||[]).map(x=>[x.status,{count:Number(x.n||0),impressions:Number(x.impressions||0),clicks:Number(x.clicks||0)}]));
+    const ads=Object.fromEntries((adCounts||[]).map(x=>[x.status,{
+      count:Number(x.n||0),
+      impressions:Number(x.impressions||0),
+      clicks:Number(x.clicks||0)
+    }]));
 
     const attentionCount =
-      Number(publishers.pending||0) +
-      Number(websites.pending||0) +
-      Number(ads.pending?.count||0) +
-      Number(placements.submitted||0) +
-      Number(placements.needs_review||0) +
-      Number(placements.verifying||0) +
+      Number(publishers.pending||0)+
+      Number(websites.pending||0)+
+      Number(ads.pending?.count||0)+
+      Number(placements.submitted||0)+
+      Number(placements.needs_review||0)+
+      Number(placements.verifying||0)+
       Number(referrals.registered||0);
 
     res.set('Cache-Control','no-store');
     res.json({
       success:true,
+      degraded:errors.length>0,
+      errors,
       schema,
       attention_count:attentionCount,
       counts:{websites,content,placements,publishers,accounts,ads,referrals,credits:creditSummary},
@@ -2645,7 +2665,8 @@ async function load(){
    '<span class="pill '+(s.schema_ready?'ok':'bad')+'">Schema '+esc(s.schema_version)+' / '+esc(s.expected_schema_version)+'</span>'+
    '<span class="pill '+(s.schema_ready?'ok':'bad')+'">'+(s.schema_ready?'Schema ready ✓':'Schema needs init')+'</span>'+
    '<span class="pill ok">Network enabled</span>'+
-   '<span class="pill">Core tables untouched</span>';
+   '<span class="pill">Core tables untouched</span>'+
+   (d.degraded?'<span class="pill warn">Cockpit partial · '+Number((d.errors||[]).length)+' data warning(s)</span>':'<span class="pill ok">Cockpit data healthy ✓</span>');
   document.getElementById('attentionBadge').textContent=Number(d.attention_count||0)+' action item'+(Number(d.attention_count||0)===1?'':'s');
   document.getElementById('actionKpis').innerHTML=
    kpi(count(c.publishers,'pending'),'Publisher applications','/network/advertising')+
@@ -2679,9 +2700,11 @@ async function load(){
     '<div class="row"><div class="rowHead"><div><strong>'+esc(x.company_name)+'</strong><div class="meta">'+esc(x.contact_name||'')+' · '+esc(x.contact_email||'')+'<br>'+esc(x.headline||'')+'<br>'+esc(x.target_url||'')+' · '+esc(x.niche||'—')+'<br>Requested: '+esc(dt(x.created_at))+'</div></div><span class="pill warn">pending</span></div><div class="rowActions"><a class="btn" href="/network/advertising">Review advertising</a></div></div>'
   ).join('')||'<div class="empty">No advertising requests waiting.</div>';
 
-  document.getElementById('events').innerHTML=(q.recent_events||[]).map(x=>
+  document.getElementById('events').innerHTML=
+   ((d.errors||[]).length?'<div class="row" style="border-color:#f59e0b"><strong>Data warnings</strong><div class="meta">'+(d.errors||[]).map(e=>esc(e.section)+': '+esc(e.error)).join('<br>')+'</div></div>':'')+
+   ((q.recent_events||[]).map(x=>
     '<div class="event"><strong>'+esc(String(x.event_type||'').replace(/_/g,' '))+'</strong> · '+esc(x.publisher_domain||'')+'<div class="meta">'+esc(x.opportunity_title||'')+' · '+esc(dt(x.created_at))+(x.note?'<br>Note: '+esc(x.note):'')+'</div></div>'
-  ).join('')||'<div class="empty">No review history yet.</div>';
+  ).join('')||'<div class="empty">No review history yet.</div>');
  }catch(e){
    if(e.message==='AUTH'){gate.style.display='flex';main.style.display='none';gt.textContent='Your ContentScale admin session is not valid. Log in first.';login.style.display='inline-flex';}
    else alert(e.message||e);
