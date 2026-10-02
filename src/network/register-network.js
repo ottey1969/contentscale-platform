@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — VISIBLE ACTION STATES + VERIFIED RESET v458
+// CONTENTSCALE NETWORK — RESET HANDLER SCOPE FIX v460
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -1386,60 +1386,6 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
  window.setStatus=async(id,status)=>{try{await api('/api/network/admin/websites/'+id+'/status',{method:'PATCH',body:JSON.stringify({status})});load()}catch(e){alert(e.message)}};
  document.getElementById('rows').addEventListener('click',function(ev){const btn=ev.target.closest('button[data-action]');if(!btn)return;const id=Number(btn.dataset.id||0);if(!id)return;if(btn.dataset.action==='check')return window.siteCheck(id);if(btn.dataset.action==='status')return window.setStatus(id,btn.dataset.status||'');});
  document.getElementById('addBtn').onclick=async()=>{const m=document.getElementById('formMsg');m.textContent='Saving…';try{const d=await api('/api/network/admin/websites',{method:'POST',body:JSON.stringify({domain:document.getElementById('domain').value,brand_name:document.getElementById('brand').value,primary_niche:document.getElementById('niche').value,sub_niche:document.getElementById('subniche').value,country:document.getElementById('country').value,language:document.getElementById('language').value,cms:document.getElementById('cms').value,ownership_type:document.getElementById('ownership').value})});m.textContent='Saved: '+d.website.domain;document.getElementById('domain').value='';load()}catch(e){m.textContent=e.message}};
- const resetBtn=document.getElementById('resetNetworkBtn'),resetConfirm=document.getElementById('resetConfirmBtn'),resetCancel=document.getElementById('resetCancelBtn'),resetState=document.getElementById('resetState'),resetMsg=document.getElementById('resetNetworkMsg'),resetBadge=document.getElementById('resetCountBadge');
-function setResetState(kind,title,detail){
- resetState.className='actionState '+kind;
- const icon=kind==='success'?'✓':kind==='error'?'✕':kind==='confirm'?'!':'●';
- resetState.innerHTML='<span class="stateIcon">'+icon+'</span><div><strong>'+esc(title)+'</strong><div class="tiny">'+esc(detail||'')+'</div></div>';
-}
-async function refreshResetStatus(){
- try{
-   const d=await api('/api/network/admin/reset-status');
-   resetBadge.className='pill '+(d.empty?'ok':'warn');
-   resetBadge.textContent=d.empty?'Network empty ✓':Number(d.total||0)+' Network test record(s)';
-   if(d.empty && !resetConfirm.offsetParent)setResetState('success','Network is empty','There are 0 operational Network records. You can start the clean test.');
-   return d;
- }catch(e){
-   resetBadge.className='pill bad';resetBadge.textContent='Could not count data';
-   if(String(e.message)!=='AUTH')setResetState('error','Could not check Network data',e.message||e);
-   throw e;
- }
-}
-resetBtn.onclick=async function(){
- resetBtn.style.display='none';
- resetConfirm.style.display='inline-flex';
- resetCancel.style.display='inline-flex';
- setResetState('confirm','Confirm full test reset','This will permanently delete ALL current Network test data. Core ContentScale stays untouched.');
- resetMsg.textContent='Second click required: press “Confirm delete now”.';
-};
-resetCancel.onclick=function(){
- resetBtn.style.display='inline-flex';resetConfirm.style.display='none';resetCancel.style.display='none';
- resetMsg.textContent='';setResetState('idle','Ready','Reset cancelled. No data was changed.');
-};
-resetConfirm.onclick=async function(){
- resetConfirm.disabled=true;resetCancel.disabled=true;
- resetConfirm.textContent='Deleting…';
- setResetState('loading','Deleting ALL Network test data','Please wait. The server is emptying every operational network_* table and then verifying the result.');
- resetMsg.style.color='#bfdbfe';resetMsg.textContent='Working… do not close this page.';
- try{
-   const d=await api('/api/network/admin/reset-network-data',{method:'POST',body:JSON.stringify({confirm:'RESET ALL NETWORK TEST DATA'})});
-   const status=await api('/api/network/admin/reset-status');
-   if(Number(d.remaining_total||0)!==0 || Number(status.total||0)!==0)throw Error('Reset finished but Network data is still present.');
-   setResetState('success','Network completely empty ✓','All operational Network tables were verified at 0 records. Core ContentScale was untouched.');
-   resetMsg.style.color='#86efac';
-   resetMsg.textContent='✓ Deleted '+Number(d.deleted_total||0)+' record(s) across '+Number((d.tables_reset||[]).length)+' Network table(s). Remaining: 0.';
-   resetBadge.className='pill ok';resetBadge.textContent='Network empty ✓';
-   resetConfirm.textContent='✓ Deleted';
-   resetConfirm.style.display='none';resetCancel.style.display='none';resetBtn.style.display='inline-flex';
-   resetBtn.textContent='Reset again';
-   await load();
- }catch(e){
-   setResetState('error','Reset failed ✕',e.message||e);
-   resetMsg.style.color='#fca5a5';resetMsg.textContent='✕ '+(e.message||e);
-   resetConfirm.disabled=false;resetCancel.disabled=false;resetConfirm.textContent='Try delete again';
- }
-};
-refreshResetStatus().catch(()=>{});
 document.getElementById('refreshBtn').onclick=load; if(key)load();
 })();
 </script></main></body></html>`;
@@ -3697,7 +3643,7 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
 
 <section class="card" style="margin-top:12px"><div class="sectionTitle"><h2>Recent Network activity</h2><a href="/network/verification">Review history →</a></div><div id="events"></div></section>
 
-<section class="card resetCard" id="resetCard" style="margin-top:14px;border-color:#7f1d1d"><div class="sectionTitle"><div><div class="eyebrow" style="color:#fca5a5">TEST MODE · RESET TOOLS</div><h2>Everything in Network is test data until launch</h2></div><span class="pill" id="resetCountBadge">Checking test data…</span></div><p class="muted">During this test phase, every Network record is disposable test data. This reset empties every operational <code>network_*</code> table — including businesses, users, publisher accounts, websites, opportunities/posts, Publisher Editions, placements, verification history, credits, referrals, ads and images. Core ContentScale is not touched.</p><div id="resetState" class="actionState idle"><span class="stateIcon">●</span><div><strong>Ready</strong><div class="tiny">Nothing happens silently. Every action below shows loading, success ✓ or failure ✕.</div></div></div><div class="actions" style="margin-top:12px"><button class="btn bad" id="resetNetworkBtn">Delete ALL Network test data</button><button class="btn bad" id="resetConfirmBtn" style="display:none">Confirm delete now</button><button class="btn secondary" id="resetCancelBtn" style="display:none">Cancel</button></div><div id="resetNetworkMsg" class="tiny" style="margin-top:9px"></div></section>
+<section class="card resetCard" id="resetCard" style="margin-top:14px;border-color:#31527f"><div class="sectionTitle"><div><div class="eyebrow" style="color:#8dd9ff">TEST MODE · RESET TOOLS</div><h2>Everything in Network is test data until launch</h2></div><span class="pill" id="resetCountBadge">Checking test data…</span></div><p class="muted">During this test phase, every Network record is disposable test data. This reset empties every operational <code>network_*</code> table — including businesses, users, publisher accounts, websites, opportunities/posts, Publisher Editions, placements, verification history, credits, referrals, ads and images. Core ContentScale is not touched.</p><div id="resetState" class="actionState idle"><span class="stateIcon">●</span><div><strong>Ready</strong><div class="tiny">Nothing happens silently. Every action below shows loading, success ✓ or failure ✕.</div></div></div><div class="actions" style="margin-top:12px"><button class="btn" id="resetNetworkBtn">Delete ALL Network test data</button><button class="btn" id="resetConfirmBtn" style="display:none">Confirm delete now</button><button class="btn secondary" id="resetCancelBtn" style="display:none">Cancel</button></div><div id="resetNetworkMsg" class="tiny" style="margin-top:9px"></div></section>
 <section class="hero" style="margin-top:14px"><div class="sectionTitle"><div><div class="eyebrow">ALL MODULES</div><h2>Direct controls</h2></div></div><div class="actions">
 <a class="btn good" href="/network/directory/admin">Business Verification</a>
 <a class="btn" href="/network/websites">Publisher Websites</a>
@@ -3782,6 +3728,64 @@ document.getElementById('publishers').onclick=async e=>{
  try{const d=await api('/api/network/admin/publisher-applications/'+id+'/review',{method:'POST',body:JSON.stringify({status})});if(d.dashboard_url&&status==='approved')alert('Publisher approved.\\n\\nPrivate dashboard: '+location.origin+d.dashboard_url);await load()}catch(err){alert(err.message||err);b.disabled=false;b.textContent=old}
 };
 document.getElementById('initBtn').onclick=async function(){const b=this;if(!confirm('Run Network schema init? This only creates/verifies network_* tables.'))return;b.disabled=true;b.textContent='Initializing…';try{const d=await api('/api/network/admin/init',{method:'POST',body:'{}'});alert('Network init complete. Schema version '+d.schema_version+'.');await load()}catch(e){alert(e.message||e)}finally{b.disabled=false;b.textContent='Run Network init'}};
+ const resetBtn=document.getElementById('resetNetworkBtn'),resetConfirm=document.getElementById('resetConfirmBtn'),resetCancel=document.getElementById('resetCancelBtn'),resetState=document.getElementById('resetState'),resetMsg=document.getElementById('resetNetworkMsg'),resetBadge=document.getElementById('resetCountBadge');
+ if(!resetBtn||!resetConfirm||!resetCancel||!resetState||!resetMsg||!resetBadge){
+   console.error('ContentScale Network reset controls are missing from /network/admin');
+ } else {
+function setResetState(kind,title,detail){
+ resetState.className='actionState '+kind;
+ const icon=kind==='success'?'✓':kind==='error'?'✕':kind==='confirm'?'!':'●';
+ resetState.innerHTML='<span class="stateIcon">'+icon+'</span><div><strong>'+esc(title)+'</strong><div class="tiny">'+esc(detail||'')+'</div></div>';
+}
+async function refreshResetStatus(){
+ try{
+   const d=await api('/api/network/admin/reset-status');
+   resetBadge.className='pill '+(d.empty?'ok':'warn');
+   resetBadge.textContent=d.empty?'Network empty ✓':Number(d.total||0)+' Network test record(s)';
+   if(d.empty && !resetConfirm.offsetParent)setResetState('success','Network is empty','There are 0 operational Network records. You can start the clean test.');
+   return d;
+ }catch(e){
+   resetBadge.className='pill bad';resetBadge.textContent='Could not count data';
+   if(String(e.message)!=='AUTH')setResetState('error','Could not check Network data',e.message||e);
+   throw e;
+ }
+}
+resetBtn.onclick=async function(){
+ resetBtn.style.display='none';
+ resetConfirm.style.display='inline-flex';
+ resetCancel.style.display='inline-flex';
+ setResetState('confirm','Confirm full test reset','This will permanently delete ALL current Network test data. Core ContentScale stays untouched.');
+ resetMsg.textContent='Second click required: press “Confirm delete now”.';
+};
+resetCancel.onclick=function(){
+ resetBtn.style.display='inline-flex';resetConfirm.style.display='none';resetCancel.style.display='none';
+ resetMsg.textContent='';setResetState('idle','Ready','Reset cancelled. No data was changed.');
+};
+resetConfirm.onclick=async function(){
+ resetConfirm.disabled=true;resetCancel.disabled=true;
+ resetConfirm.textContent='Deleting…';
+ setResetState('loading','Deleting ALL Network test data','Please wait. The server is emptying every operational network_* table and then verifying the result.');
+ resetMsg.style.color='#bfdbfe';resetMsg.textContent='Working… do not close this page.';
+ try{
+   const d=await api('/api/network/admin/reset-network-data',{method:'POST',body:JSON.stringify({confirm:'RESET ALL NETWORK TEST DATA'})});
+   const status=await api('/api/network/admin/reset-status');
+   if(Number(d.remaining_total||0)!==0 || Number(status.total||0)!==0)throw Error('Reset finished but Network data is still present.');
+   setResetState('success','Network completely empty ✓','All operational Network tables were verified at 0 records. Core ContentScale was untouched.');
+   resetMsg.style.color='#86efac';
+   resetMsg.textContent='✓ Deleted '+Number(d.deleted_total||0)+' record(s) across '+Number((d.tables_reset||[]).length)+' Network table(s). Remaining: 0.';
+   resetBadge.className='pill ok';resetBadge.textContent='Network empty ✓';
+   resetConfirm.textContent='✓ Deleted';
+   resetConfirm.style.display='none';resetCancel.style.display='none';resetBtn.style.display='inline-flex';
+   resetBtn.textContent='Reset again';
+   await load();
+ }catch(e){
+   setResetState('error','Reset failed ✕',e.message||e);
+   resetMsg.style.color='#fca5a5';resetMsg.textContent='✕ '+(e.message||e);
+   resetConfirm.disabled=false;resetCancel.disabled=false;resetConfirm.textContent='Try delete again';
+ }
+};
+refreshResetStatus().catch(()=>{});
+ }
 document.getElementById('refreshBtn').onclick=load;
 let cockpitLastLoad=Date.now();window.addEventListener('focus',()=>{if(Date.now()-cockpitLastLoad>30000){cockpitLastLoad=Date.now();load()}});
 if(!key){gt.textContent='Enter your ContentScale admin username and password first.';login.style.display='inline-flex';return}
