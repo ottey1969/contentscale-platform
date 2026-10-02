@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — PUBLISHER ACCOUNT LEGACY CONSTRAINT RECOVERY v450
+// CONTENTSCALE NETWORK — PUBLISHER APPLY POOL-SCOPE FIX v451
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -122,7 +122,7 @@ function cleanText(v, max = 500) {
 
 
 
-async function ensurePublisherApplySchema() {
+async function ensurePublisherApplySchema(pool) {
   // Public publisher signup must survive an old or partially initialized Network.
   // If the publisher tables do not exist yet, initialize ONLY the network_* schema.
   const exists=await pool.query(`SELECT
@@ -165,7 +165,7 @@ async function ensurePublisherApplySchema() {
   await pool.query(`ALTER TABLE network_websites ADD COLUMN IF NOT EXISTS topic_tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
 }
 
-async function networkNotifyOwnerPublisherApplication(appRow, extra = {}) {
+async function networkNotifyOwnerPublisherApplication(pool, appRow, extra = {}) {
   const row = appRow || {};
   const key = String(process.env.BREVO_API_KEY || '').trim();
   const toEmail = cleanText(process.env.NETWORK_NOTIFY_EMAIL || process.env.QUICK_SCAN_NOTIFY_EMAIL || 'info@contentscale.site', 320);
@@ -247,7 +247,7 @@ async function networkNotifyOwnerPublisherApplication(appRow, extra = {}) {
 }
 
 
-async function networkNotifyOwnerAdRequest(adRow) {
+async function networkNotifyOwnerAdRequest(pool, adRow) {
   const row = adRow || {};
   const key = String(process.env.BREVO_API_KEY || '').trim();
   const toEmail = cleanText(process.env.NETWORK_NOTIFY_EMAIL || process.env.QUICK_SCAN_NOTIFY_EMAIL || 'info@contentscale.site', 320);
@@ -302,7 +302,7 @@ async function networkNotifyOwnerAdRequest(adRow) {
 }
 
 
-async function networkNotifyPublisherReviewDecision(row, decision, note) {
+async function networkNotifyPublisherReviewDecision(pool, row, decision, note) {
   const key = String(process.env.BREVO_API_KEY || '').trim();
   const toEmail = cleanText(row && row.publisher_email, 320);
   const fromEmail = cleanText(process.env.FROM_EMAIL || 'info@contentscale.site', 320);
@@ -2116,7 +2116,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       await pool.query(`UPDATE network_placements SET status='needs_review',verification_decision='needs_changes',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
       await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
         VALUES ($1,'needs_changes','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,reviewNote,JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
-      const publisherNotification=await networkNotifyPublisherReviewDecision(x,'needs_changes',reviewNote);
+      const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'needs_changes',reviewNote);
       return res.json({success:true,status:'needs_review',credits_awarded:false,publisher_email:publisherNotification.state});
     }
     if(decision==='rejected'){
@@ -2124,7 +2124,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       await pool.query(`UPDATE network_placements SET status='rejected',verification_decision='rejected',verification_note=$2,reviewed_by_admin_id=$3,reviewed_at=NOW(),updated_at=NOW() WHERE id=$1`,[id,reviewNote,adminId]);
       await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
         VALUES ($1,'rejected','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,reviewNote,JSON.stringify({precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
-      const publisherNotification=await networkNotifyPublisherReviewDecision(x,'rejected',reviewNote);
+      const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'rejected',reviewNote);
       return res.json({success:true,status:'rejected',credits_awarded:false,publisher_email:publisherNotification.state});
     }
 
@@ -2159,7 +2159,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     }catch(e){try{await client.query('ROLLBACK')}catch(_){}throw e}finally{client.release()}
     await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
       VALUES ($1,'verified','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url,note||null,JSON.stringify({credits_awarded:creditAwarded,credits:x.reward_credits,precheck_result:x.latest_result||null,verification_run:x.latest_run_no||null})]);
-    const publisherNotification=await networkNotifyPublisherReviewDecision(x,'verified',note||'');
+    const publisherNotification=await networkNotifyPublisherReviewDecision(pool,x,'verified',note||'');
     res.json({success:true,status:'verified',credits_awarded:creditAwarded,credits:x.reward_credits,publisher_email:publisherNotification.state,rule:'Verified by manual admin decision. Reward is idempotent and can be awarded only once.'});
   }));
 
@@ -2347,7 +2347,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     const rc=cr.rows[0];if(!rc)return res.status(404).json({success:false,error:'Referral link is not valid'});
     if(rc.partner_id&&rc.partner_status!=='active')return res.status(409).json({success:false,error:'This referrer link is currently inactive'});
     let site;try{site=normalizeSite(domainInput)}catch(e){return res.status(400).json({success:false,error:'Enter a valid website/domain'})}
-    await ensurePublisherApplySchema();
+    await ensurePublisherApplySchema(pool);
     const token=crypto.randomBytes(32).toString('hex');
     const client=await pool.connect();
     try{
@@ -2360,7 +2360,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       const refLabel=rc.partner_id
         ? ((await pool.query('SELECT name FROM network_referral_partners WHERE id=$1',[rc.partner_id]).catch(()=>({rows:[]}))).rows[0]?.name || 'Independent scout')
         : ((await pool.query('SELECT brand_name,domain FROM network_websites WHERE id=$1',[rc.website_id]).catch(()=>({rows:[]}))).rows[0]?.brand_name || 'Publisher referral');
-      const ownerNotification=await networkNotifyOwnerPublisherApplication(ar.rows[0],{source:'Referral publisher application',referred_by:refLabel});
+      const ownerNotification=await networkNotifyOwnerPublisherApplication(pool,ar.rows[0],{source:'Referral publisher application',referred_by:refLabel});
       res.status(201).json({success:true,application_id:ar.rows[0].id,referral_application_id:rr.rows[0].id,status:'registered',dashboard_url:'/network/publisher/'+token,owner_notification:ownerNotification.state,message:'Application received. The referral remains linked to the person or publisher who introduced you.'});
     }catch(e){try{await client.query('ROLLBACK')}catch(_e){}throw e}finally{client.release()}
   }));
@@ -2434,8 +2434,21 @@ document.getElementById('f').onsubmit=async e=>{e.preventDefault();const b=docum
       return res.status(400).json({success:false,error:'Enter a valid email address'});
     }
 
-    // Self-heal legacy v9-v12 Network publisher tables before using newer fields.
-    await ensurePublisherApplySchema();
+    // Self-heal Network publisher tables before using current fields.
+    // This helper is module-level, so the registerNetwork pool must be passed explicitly.
+    try{
+      await ensurePublisherApplySchema(pool);
+    }catch(e){
+      const incident='PUB-SCHEMA-'+Date.now().toString(36).toUpperCase();
+      console.error('[network publisher apply schema] incident='+incident,e);
+      return res.status(500).json({
+        success:false,
+        error:'Publisher signup database preparation failed.',
+        error_id:incident,
+        db_code:cleanText(e && e.code || '',30)||undefined,
+        constraint:cleanText(e && e.constraint || '',160)||undefined
+      });
+    }
 
     const brand=cleanText(req.body?.brand_name,200)||null;
     const contact=cleanText(req.body?.contact_name,180)||null;
@@ -2528,7 +2541,7 @@ document.getElementById('f').onsubmit=async e=>{e.preventDefault();const b=docum
       // Notification failure must never turn a successful application into HTTP 500.
       let ownerNotification={state:'not_attempted'};
       try{
-        ownerNotification=await networkNotifyOwnerPublisherApplication(appRow,{
+        ownerNotification=await networkNotifyOwnerPublisherApplication(pool,appRow,{
           source:resumed?'Network landing · existing application resumed':'Network landing'
         });
       }catch(notifyErr){
@@ -2747,7 +2760,7 @@ body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{
     let target; try{target=normalizeSite(req.body?.target_url).canonical_url}catch(err){return res.status(400).json({success:false,error:'Enter a valid advertiser website URL'})}
     let logo=null;if(cleanText(req.body?.logo_url,2048)){try{logo=new URL(cleanText(req.body.logo_url,2048));if(!['http:','https:'].includes(logo.protocol))throw Error();logo=logo.toString()}catch(_){return res.status(400).json({success:false,error:'Logo URL must be a valid http/https URL'})}}
     const r=await pool.query(`INSERT INTO network_ads (company_name,contact_name,contact_email,headline,description,target_url,logo_url,niche,locale,placement,status,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'homepage','pending',NOW(),NOW()) RETURNING *`,[company,cleanText(req.body?.contact_name,180)||null,email,headline,cleanText(req.body?.description,900)||null,target,logo,cleanText(req.body?.niche,160)||null,cleanText(req.body?.locale,30)||'en-US']);
-    const ownerNotification=await networkNotifyOwnerAdRequest(r.rows[0]);
+    const ownerNotification=await networkNotifyOwnerAdRequest(pool,r.rows[0]);
     await pool.query(`UPDATE network_ads SET owner_email_status=$2,owner_email_error=$3,owner_email_sent_at=$4,updated_at=NOW() WHERE id=$1`,[
       r.rows[0].id,
       ownerNotification.state,
