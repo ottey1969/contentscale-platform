@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — ADVERTISING SCRIPT SYNTAX FIX v447
+// CONTENTSCALE NETWORK — PUBLISHER APPLY LEGACY-SCHEMA SELF-HEAL v448
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 12;
+const NETWORK_SCHEMA_VERSION = 13;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -55,6 +55,32 @@ function cleanText(v, max = 500) {
   return String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+
+
+async function ensurePublisherApplySchema() {
+  // Keep this intentionally limited to Network-owned publisher tables.
+  // It makes the public apply endpoint resilient to legacy Network schemas.
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS brand_name TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS contact_name TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS email TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS message TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS referral_code TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS application_id BIGINT REFERENCES network_publisher_applications(id) ON DELETE SET NULL`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS website_id BIGINT REFERENCES network_websites(id) ON DELETE RESTRICT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS email TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS contact_name TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS access_token TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+}
 
 async function networkNotifyOwnerPublisherApplication(appRow, extra = {}) {
   const row = appRow || {};
@@ -956,6 +982,20 @@ async function ensureNetworkTables(pool) {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_network_publisher_applications_status ON network_publisher_applications(status,created_at DESC)`);
+    // v448: legacy installations may already have these tables from an older
+    // Network build. CREATE TABLE IF NOT EXISTS does not add newer columns,
+    // so explicitly self-heal every column used by the current apply flow.
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS brand_name TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS contact_name TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS email TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS message TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS referral_code TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_publisher_accounts (
       id BIGSERIAL PRIMARY KEY,
@@ -970,6 +1010,18 @@ async function ensureNetworkTables(pool) {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_network_publisher_accounts_email ON network_publisher_accounts(LOWER(email),status)`);
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS application_id BIGINT REFERENCES network_publisher_applications(id) ON DELETE SET NULL`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS website_id BIGINT REFERENCES network_websites(id) ON DELETE RESTRICT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS email TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS contact_name TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS access_token TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_network_publisher_accounts_application_id ON network_publisher_accounts(application_id) WHERE application_id IS NOT NULL`).catch(()=>{});
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_network_publisher_accounts_access_token ON network_publisher_accounts(access_token) WHERE access_token IS NOT NULL`).catch(()=>{});
+
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_ads (
       id BIGSERIAL PRIMARY KEY,
@@ -2256,18 +2308,143 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
 
   app.post('/api/network/publishers/apply', wrap(async (req,res)=>{
     if(!envEnabled()) return res.status(409).json({success:false,error:'Network is disabled'});
-    let site; try{site=normalizeSite(req.body?.domain)}catch(err){return res.status(400).json({success:false,error:err.message})}
-    const email=cleanText(req.body?.email,320); if(!email||!email.includes('@')) return res.status(400).json({success:false,error:'A valid email is required'});
-    const token=crypto.randomBytes(32).toString('hex');
+
+    let site;
+    try{site=normalizeSite(req.body?.domain)}
+    catch(err){return res.status(400).json({success:false,error:err.message||'Enter a valid public website/domain'})}
+
+    const email=cleanText(req.body?.email,320).toLowerCase();
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+      return res.status(400).json({success:false,error:'Enter a valid email address'});
+    }
+
+    // Self-heal legacy v9-v12 Network publisher tables before using newer fields.
+    await ensurePublisherApplySchema();
+
+    const brand=cleanText(req.body?.brand_name,200)||null;
+    const contact=cleanText(req.body?.contact_name,180)||null;
+    const niche=cleanText(req.body?.niche,160)||null;
+    const message=cleanText(req.body?.message,2000)||null;
     const client=await pool.connect();
+
     try{
       await client.query('BEGIN');
-      const r=await client.query(`INSERT INTO network_publisher_applications (domain,brand_name,contact_name,email,niche,message,metadata,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,NOW(),NOW()) RETURNING *`,[site.domain,cleanText(req.body?.brand_name,200)||null,cleanText(req.body?.contact_name,180)||null,email,cleanText(req.body?.niche,160)||null,cleanText(req.body?.message,2000)||null,JSON.stringify({source:'network_landing',canonical_url:site.canonical_url})]);
-      const a=await client.query(`INSERT INTO network_publisher_accounts (application_id,email,contact_name,access_token,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'pending',NOW(),NOW()) RETURNING id,status`,[r.rows[0].id,email,cleanText(req.body?.contact_name,180)||null,token]);
+
+      // Do not create endless duplicate pending applications for the same
+      // domain/email. Resume the existing pending/approved application instead.
+      const existing=await client.query(`
+        SELECT pa.*,a.id AS account_id,a.access_token,a.status AS account_status
+        FROM network_publisher_applications pa
+        LEFT JOIN network_publisher_accounts a ON a.application_id=pa.id
+        WHERE LOWER(pa.domain)=LOWER($1) AND LOWER(pa.email)=LOWER($2)
+          AND pa.status IN ('pending','approved','activated')
+        ORDER BY pa.id DESC
+        LIMIT 1
+        FOR UPDATE OF pa
+      `,[site.domain,email]);
+
+      let appRow, accountRow, token, resumed=false;
+
+      if(existing.rows[0]){
+        resumed=true;
+        appRow=existing.rows[0];
+        token=appRow.access_token || crypto.randomBytes(32).toString('hex');
+
+        await client.query(`
+          UPDATE network_publisher_applications
+          SET brand_name=COALESCE($2,brand_name),
+              contact_name=COALESCE($3,contact_name),
+              niche=COALESCE($4,niche),
+              message=COALESCE($5,message),
+              metadata=COALESCE(metadata,'{}'::jsonb) || $6::jsonb,
+              updated_at=NOW()
+          WHERE id=$1
+        `,[appRow.id,brand,contact,niche,message,JSON.stringify({source:'network_landing',canonical_url:site.canonical_url,last_resubmitted_at:new Date().toISOString()})]);
+
+        if(appRow.account_id){
+          const ar=await client.query(`
+            UPDATE network_publisher_accounts
+            SET email=$2,contact_name=COALESCE($3,contact_name),
+                access_token=COALESCE(NULLIF(access_token,''),$4),updated_at=NOW()
+            WHERE id=$1
+            RETURNING id,status,access_token
+          `,[appRow.account_id,email,contact,token]);
+          accountRow=ar.rows[0];
+          token=accountRow.access_token;
+        }else{
+          const ar=await client.query(`
+            INSERT INTO network_publisher_accounts
+              (application_id,email,contact_name,access_token,status,created_at,updated_at)
+            VALUES ($1,$2,$3,$4,'pending',NOW(),NOW())
+            RETURNING id,status,access_token
+          `,[appRow.id,email,contact,token]);
+          accountRow=ar.rows[0];
+        }
+
+        const rr=await client.query(`SELECT * FROM network_publisher_applications WHERE id=$1`,[appRow.id]);
+        appRow=rr.rows[0];
+      }else{
+        token=crypto.randomBytes(32).toString('hex');
+        const r=await client.query(`
+          INSERT INTO network_publisher_applications
+            (domain,brand_name,contact_name,email,niche,message,metadata,created_at,updated_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,NOW(),NOW())
+          RETURNING *
+        `,[site.domain,brand,contact,email,niche,message,JSON.stringify({source:'network_landing',canonical_url:site.canonical_url})]);
+        appRow=r.rows[0];
+
+        const a=await client.query(`
+          INSERT INTO network_publisher_accounts
+            (application_id,email,contact_name,access_token,status,created_at,updated_at)
+          VALUES ($1,$2,$3,$4,'pending',NOW(),NOW())
+          RETURNING id,status,access_token
+        `,[appRow.id,email,contact,token]);
+        accountRow=a.rows[0];
+      }
+
       await client.query('COMMIT');
-      const ownerNotification=await networkNotifyOwnerPublisherApplication(r.rows[0],{source:'Network landing'});
-      res.status(201).json({success:true,application:r.rows[0],account:a.rows[0],dashboard_url:'/network/publisher/'+token,owner_notification:ownerNotification.state,note:'Keep this private dashboard link. Referral features appear automatically after the publisher website is approved.'});
-    }catch(e){try{await client.query('ROLLBACK')}catch(_e){}throw e}finally{client.release()}
+
+      // Notification failure must never turn a successful application into HTTP 500.
+      let ownerNotification={state:'not_attempted'};
+      try{
+        ownerNotification=await networkNotifyOwnerPublisherApplication(appRow,{
+          source:resumed?'Network landing · existing application resumed':'Network landing'
+        });
+      }catch(notifyErr){
+        console.warn('[network publisher apply] owner notification failed:',notifyErr && notifyErr.message || notifyErr);
+        ownerNotification={state:'failed',error:cleanText(notifyErr && notifyErr.message || notifyErr,500)};
+      }
+
+      return res.status(resumed?200:201).json({
+        success:true,
+        resumed,
+        application_id:appRow.id,
+        application_status:appRow.status,
+        account:accountRow,
+        dashboard_url:'/network/publisher/'+token,
+        owner_notification:ownerNotification.state,
+        note:resumed
+          ? 'Your existing publisher application was found and your private dashboard link has been restored.'
+          : 'Publisher application received. Keep this private dashboard link. Referral features appear automatically after the publisher website is approved.'
+      });
+    }catch(e){
+      try{await client.query('ROLLBACK')}catch(_e){}
+      console.error('[network publisher apply]',e);
+      const code=String(e && e.code || '');
+      if(code==='23505'){
+        return res.status(409).json({success:false,error:'This publisher application already exists. Refresh the page and try again to restore the existing dashboard.'});
+      }
+      if(code==='23502' || code==='23514'){
+        return res.status(400).json({success:false,error:'Publisher application data did not pass validation. Check the domain and email and try again.'});
+      }
+      return res.status(500).json({
+        success:false,
+        error:'Could not save the publisher application. The Network database schema may need initialization.',
+        diagnostic:process.env.NODE_ENV==='production'?undefined:cleanText(e && e.message || e,500)
+      });
+    }finally{
+      client.release();
+    }
   }));
 
   // Publisher applications become dashboard accounts first; referral links are created automatically only after website approval.
