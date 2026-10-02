@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — DUPLICATE PUBLISHER DOMAIN GUARD v456
+// CONTENTSCALE NETWORK — VISIBLE ACTION STATES + VERIFIED RESET v458
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -1386,20 +1386,60 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
  window.setStatus=async(id,status)=>{try{await api('/api/network/admin/websites/'+id+'/status',{method:'PATCH',body:JSON.stringify({status})});load()}catch(e){alert(e.message)}};
  document.getElementById('rows').addEventListener('click',function(ev){const btn=ev.target.closest('button[data-action]');if(!btn)return;const id=Number(btn.dataset.id||0);if(!id)return;if(btn.dataset.action==='check')return window.siteCheck(id);if(btn.dataset.action==='status')return window.setStatus(id,btn.dataset.status||'');});
  document.getElementById('addBtn').onclick=async()=>{const m=document.getElementById('formMsg');m.textContent='Saving…';try{const d=await api('/api/network/admin/websites',{method:'POST',body:JSON.stringify({domain:document.getElementById('domain').value,brand_name:document.getElementById('brand').value,primary_niche:document.getElementById('niche').value,sub_niche:document.getElementById('subniche').value,country:document.getElementById('country').value,language:document.getElementById('language').value,cms:document.getElementById('cms').value,ownership_type:document.getElementById('ownership').value})});m.textContent='Saved: '+d.website.domain;document.getElementById('domain').value='';load()}catch(e){m.textContent=e.message}};
- document.getElementById('resetNetworkBtn').onclick=async function(){
- const typed=prompt('This removes ALL ContentScale Network operational data, including all publishers and businesses.\n\nCore ContentScale data is NOT touched.\n\nType RESET NETWORK DATA to continue:');
- if(typed!=='RESET NETWORK DATA')return;
- if(!confirm('Final confirmation: remove all Network users, businesses, placements, credits, referrals and advertising data?'))return;
- const b=this,m=document.getElementById('resetNetworkMsg');b.disabled=true;b.textContent='Resetting Network…';m.textContent='';
+ const resetBtn=document.getElementById('resetNetworkBtn'),resetConfirm=document.getElementById('resetConfirmBtn'),resetCancel=document.getElementById('resetCancelBtn'),resetState=document.getElementById('resetState'),resetMsg=document.getElementById('resetNetworkMsg'),resetBadge=document.getElementById('resetCountBadge');
+function setResetState(kind,title,detail){
+ resetState.className='actionState '+kind;
+ const icon=kind==='success'?'✓':kind==='error'?'✕':kind==='confirm'?'!':'●';
+ resetState.innerHTML='<span class="stateIcon">'+icon+'</span><div><strong>'+esc(title)+'</strong><div class="tiny">'+esc(detail||'')+'</div></div>';
+}
+async function refreshResetStatus(){
  try{
-   const d=await api('/api/network/admin/reset-network-data',{method:'POST',body:JSON.stringify({confirm:'RESET NETWORK DATA'})});
-   const total=Object.values(d.deleted_counts||{}).reduce((a,n)=>a+Number(n||0),0);
-   m.style.color='#86efac';m.textContent='✓ Clean slate ready. '+total+' Network record(s) removed. Core ContentScale untouched.';
-   alert('Network reset complete.\n\nAll Network operational data was removed.\nCore ContentScale was untouched.\n\nNext: start the guided test with Business Verification.');
-   await load();
- }catch(e){m.style.color='#fca5a5';m.textContent=e.message||e;alert(e.message||e)}
- finally{b.disabled=false;b.textContent='Delete ALL Network data'}
+   const d=await api('/api/network/admin/reset-status');
+   resetBadge.className='pill '+(d.empty?'ok':'warn');
+   resetBadge.textContent=d.empty?'Network empty ✓':Number(d.total||0)+' Network test record(s)';
+   if(d.empty && !resetConfirm.offsetParent)setResetState('success','Network is empty','There are 0 operational Network records. You can start the clean test.');
+   return d;
+ }catch(e){
+   resetBadge.className='pill bad';resetBadge.textContent='Could not count data';
+   if(String(e.message)!=='AUTH')setResetState('error','Could not check Network data',e.message||e);
+   throw e;
+ }
+}
+resetBtn.onclick=async function(){
+ resetBtn.style.display='none';
+ resetConfirm.style.display='inline-flex';
+ resetCancel.style.display='inline-flex';
+ setResetState('confirm','Confirm full test reset','This will permanently delete ALL current Network test data. Core ContentScale stays untouched.');
+ resetMsg.textContent='Second click required: press “Confirm delete now”.';
 };
+resetCancel.onclick=function(){
+ resetBtn.style.display='inline-flex';resetConfirm.style.display='none';resetCancel.style.display='none';
+ resetMsg.textContent='';setResetState('idle','Ready','Reset cancelled. No data was changed.');
+};
+resetConfirm.onclick=async function(){
+ resetConfirm.disabled=true;resetCancel.disabled=true;
+ resetConfirm.textContent='Deleting…';
+ setResetState('loading','Deleting ALL Network test data','Please wait. The server is emptying every operational network_* table and then verifying the result.');
+ resetMsg.style.color='#bfdbfe';resetMsg.textContent='Working… do not close this page.';
+ try{
+   const d=await api('/api/network/admin/reset-network-data',{method:'POST',body:JSON.stringify({confirm:'RESET ALL NETWORK TEST DATA'})});
+   const status=await api('/api/network/admin/reset-status');
+   if(Number(d.remaining_total||0)!==0 || Number(status.total||0)!==0)throw Error('Reset finished but Network data is still present.');
+   setResetState('success','Network completely empty ✓','All operational Network tables were verified at 0 records. Core ContentScale was untouched.');
+   resetMsg.style.color='#86efac';
+   resetMsg.textContent='✓ Deleted '+Number(d.deleted_total||0)+' record(s) across '+Number((d.tables_reset||[]).length)+' Network table(s). Remaining: 0.';
+   resetBadge.className='pill ok';resetBadge.textContent='Network empty ✓';
+   resetConfirm.textContent='✓ Deleted';
+   resetConfirm.style.display='none';resetCancel.style.display='none';resetBtn.style.display='inline-flex';
+   resetBtn.textContent='Reset again';
+   await load();
+ }catch(e){
+   setResetState('error','Reset failed ✕',e.message||e);
+   resetMsg.style.color='#fca5a5';resetMsg.textContent='✕ '+(e.message||e);
+   resetConfirm.disabled=false;resetCancel.disabled=false;resetConfirm.textContent='Try delete again';
+ }
+};
+refreshResetStatus().catch(()=>{});
 document.getElementById('refreshBtn').onclick=load; if(key)load();
 })();
 </script></main></body></html>`;
@@ -3382,62 +3422,102 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
   // Read-only aggregation for the dashboard; mutations continue to use the existing
   // protected workflow endpoints so the cockpit cannot bypass existing invariants.
 
-  // CLEAN-SLATE RESET — Network-only. Never touches core ContentScale tables.
-  app.post('/api/network/admin/reset-network-data', verifyAdmin, wrap(async (req,res)=>{
-    if(cleanText(req.body?.confirm,80)!=='RESET NETWORK DATA'){
-      return res.status(400).json({success:false,error:'Type RESET NETWORK DATA exactly to confirm'});
+  app.get('/api/network/admin/reset-status', verifyAdmin, wrap(async (req,res)=>{
+    const discovered=await pool.query(`
+      SELECT tablename
+      FROM pg_tables
+      WHERE schemaname='public'
+        AND tablename LIKE 'network\\_%' ESCAPE '\\'
+        AND tablename <> 'network_schema_meta'
+      ORDER BY tablename
+    `);
+    const tables=discovered.rows.map(x=>String(x.tablename||'')).filter(t=>/^network_[a-z0-9_]+$/.test(t));
+    const counts={};let total=0;
+    for(const t of tables){
+      const r=await pool.query(`SELECT COUNT(*)::bigint AS n FROM "${t}"`);
+      const n=Number(r.rows[0]?.n||0);counts[t]=n;total+=n;
     }
+    res.json({success:true,total,tables:counts,table_count:tables.length,empty:total===0});
+  }));
+
+  // FULL TEST RESET — wipe every operational network_* table, preserve schema meta only.
+  app.post('/api/network/admin/reset-network-data', verifyAdmin, wrap(async (req,res)=>{
+    if(cleanText(req.body?.confirm,100)!=='RESET ALL NETWORK TEST DATA'){
+      return res.status(400).json({success:false,error:'Type RESET ALL NETWORK TEST DATA exactly to confirm'});
+    }
+
     const client=await pool.connect();
-    const dataTables=[
-      'network_publication_images',
-      'network_verification_runs',
-      'network_credit_transactions',
-      'network_credit_wallets',
-      'network_publication_versions',
-      'network_placement_review_events',
-      'network_placements',
-      'network_content',
-      'network_referrals',
-      'network_referral_codes',
-      'network_referral_partners',
-      'network_publisher_accounts',
-      'network_publisher_applications',
-      'network_ads',
-      'network_directory_businesses',
-      'network_image_library',
-      'network_websites'
-    ];
     try{
       await client.query('BEGIN');
-      const existing=await client.query(`SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename=ANY($1::text[])`,[dataTables]);
-      const present=new Set(existing.rows.map(x=>x.tablename));
+
+      const discovered=await client.query(`
+        SELECT tablename
+        FROM pg_tables
+        WHERE schemaname='public'
+          AND tablename LIKE 'network\\_%' ESCAPE '\\'
+          AND tablename <> 'network_schema_meta'
+        ORDER BY tablename
+      `);
+
+      const tables=discovered.rows
+        .map(x=>String(x.tablename||''))
+        .filter(t=>/^network_[a-z0-9_]+$/.test(t));
+
       const counts={};
-      for(const t of dataTables){
-        if(!present.has(t)){counts[t]=0;continue}
-        const r=await client.query(`SELECT COUNT(*)::int AS n FROM ${t}`);
+      for(const t of tables){
+        const r=await client.query(`SELECT COUNT(*)::bigint AS n FROM "${t}"`);
         counts[t]=Number(r.rows[0]?.n||0);
       }
-      const tables=dataTables.filter(t=>present.has(t));
+
       if(tables.length){
-        // All FK-related Network data tables are truncated together.
-        // No cascading delete is used. Unexpected outside references block the reset.
-        await client.query(`TRUNCATE TABLE ${tables.join(',')} RESTART IDENTITY`);
+        const identifiers=tables.map(t=>`"${t}"`).join(',');
+        // All Network tables are truncated together. Unexpected outside
+        // foreign-key references will make PostgreSQL block the reset.
+        await client.query(`TRUNCATE TABLE ${identifiers} RESTART IDENTITY`);
       }
+
+      await client.query(`INSERT INTO network_schema_meta (singleton,schema_version,updated_at)
+        VALUES (TRUE,$1,NOW())
+        ON CONFLICT (singleton)
+        DO UPDATE SET schema_version=$1,updated_at=NOW()`,[NETWORK_SCHEMA_VERSION]);
+
+      const remaining={};
+      let remainingTotal=0;
+      for(const t of tables){
+        const r=await client.query(`SELECT COUNT(*)::bigint AS n FROM "${t}"`);
+        const n=Number(r.rows[0]?.n||0);
+        remaining[t]=n;
+        remainingTotal+=n;
+      }
+      if(remainingTotal!==0){
+        throw new Error('Network reset verification failed: one or more Network tables still contain data');
+      }
+
       await client.query('COMMIT');
+
+      const deletedTotal=Object.values(counts).reduce((a,n)=>a+Number(n||0),0);
       res.json({
         success:true,
-        scope:'network_only',
+        scope:'all_network_operational_tables',
+        test_mode:true,
         core_tables_touched:false,
         schema_preserved:true,
         schema_version:NETWORK_SCHEMA_VERSION,
+        tables_reset:tables,
         deleted_counts:counts,
-        message:'All ContentScale Network operational data was removed. Network schema and core ContentScale data were preserved.'
+        deleted_total:deletedTotal,
+        remaining_counts:remaining,
+        remaining_total:0,
+        message:'All ContentScale Network test data was removed. Every operational network_* table is empty. Only network_schema_meta was preserved.'
       });
     }catch(e){
       try{await client.query('ROLLBACK')}catch(_){}
       throw e;
-    }finally{client.release()}
+    }finally{
+      client.release();
+    }
   }));
+
 
   app.get('/api/network/admin/cockpit', verifyAdmin, wrap(async (req,res)=>{
     await ensureNetworkDirectorySchema(pool);
@@ -3574,6 +3654,16 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
 <title>ContentScale Network Cockpit</title>
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:#8dd9ff}main{max-width:1500px;margin:auto;padding:26px 18px 70px}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;font-weight:900}.top h1{font-size:clamp(30px,5vw,52px);margin:5px 0 7px}.muted,.tiny{color:#96a7ca;line-height:1.5}.tiny{font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;gap:6px;background:#17376c;color:#fff;border:1px solid #3f65a4;border-radius:10px;padding:9px 12px;font-weight:850;text-decoration:none;cursor:pointer}.btn.good{background:#14532d;border-color:#22c55e}.btn.warn{background:#78350f;border-color:#f59e0b}.btn.bad{background:#7f1d1d;border-color:#ef4444}.btn.secondary{background:#101b31;border-color:#33476e}.btn:disabled{opacity:.55;cursor:wait}.health{display:flex;gap:7px;flex-wrap:wrap;margin:13px 0}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:5px 9px;font-size:11px;background:#101b31}.pill.ok{border-color:#22c55e;color:#86efac}.pill.warn{border-color:#f59e0b;color:#fde68a}.pill.bad{border-color:#ef4444;color:#fecaca}.hero{background:linear-gradient(135deg,#0c1a31,#101a31);border:1px solid #2b4168;border-radius:20px;padding:20px;margin:14px 0}.attention{border-color:#7c3aed;background:linear-gradient(135deg,#17102b,#10182d)}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:14px 0}.kpi{background:#0b1629;border:1px solid #263b62;border-radius:13px;padding:13px}.kpi b{display:block;font-size:27px}.kpi span{font-size:11px;color:#9fb1d6}.flow{display:grid;grid-template-columns:repeat(7,minmax(185px,1fr));gap:10px;overflow-x:auto;padding-bottom:4px}.step{min-width:185px;background:#0b1629;border:1px solid #2b4168;border-radius:14px;padding:14px;position:relative}.step .num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#2459a9;font-weight:950;margin-bottom:8px}.step h3{margin:0 0 6px;font-size:15px}.step p{margin:0 0 9px;color:#9fb1d6;font-size:12px;line-height:1.45}.step .next{color:#dbeafe;font-size:11px;min-height:47px}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:16px;min-width:0}.card h2{margin:0 0 8px;font-size:18px}.queue{display:grid;gap:9px}.row{border:1px solid #293d60;border-radius:11px;padding:11px;background:#091426}.rowHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}.row strong{overflow-wrap:anywhere}.meta{font-size:12px;color:#9badcf;line-height:1.55;overflow-wrap:anywhere}.rowActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.empty{padding:14px;border:1px dashed #345071;border-radius:10px;color:#7890b8}.event{padding:9px 0;border-top:1px solid #243653}.event:first-child{border-top:0}.gate{position:fixed;inset:0;z-index:99999;background:#07101f;display:flex;align-items:center;justify-content:center;padding:24px}.gateBox{max-width:470px;width:100%;background:#101a30;border:1px solid #2a3e63;border-radius:18px;padding:26px}.sectionTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}.sectionTitle h2{margin:0}.urgent{box-shadow:0 0 0 1px rgba(124,58,237,.2),0 14px 40px rgba(76,29,149,.12)}
+
+.actionState{display:flex;align-items:center;gap:11px;margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid #33476e;background:#0a1528}
+.actionState .stateIcon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:950;background:#15233d;color:#9fb1d6;flex:0 0 28px}
+.actionState.loading{border-color:#3b82f6;background:#0b1b35}.actionState.loading .stateIcon{color:#bfdbfe}.actionState.loading .stateIcon:before{content:"";width:13px;height:13px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:csSpinState .7s linear infinite}
+.actionState.loading .stateIcon{font-size:0}
+.actionState.success{border-color:#22c55e;background:#092619}.actionState.success .stateIcon{background:#14532d;color:#86efac}
+.actionState.error{border-color:#ef4444;background:#2a0d14}.actionState.error .stateIcon{background:#7f1d1d;color:#fecaca}
+.actionState.confirm{border-color:#f59e0b;background:#2a1d08}.actionState.confirm .stateIcon{background:#78350f;color:#fde68a}
+@keyframes csSpinState{to{transform:rotate(360deg)}}
+.resetCard code{color:#bfdbfe}
 @media(max-width:980px){.grid2{grid-template-columns:1fr}.flow{grid-template-columns:repeat(7,210px)}}@media(max-width:640px){main{padding:18px 10px 50px}.kpis{grid-template-columns:1fr 1fr}}
 
 button,.btn{transition:transform .16s ease,box-shadow .16s ease,filter .16s ease,opacity .16s ease}
@@ -3586,8 +3676,8 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
 </style></head><body>
 <div id="gate" class="gate"><div class="gateBox"><div class="eyebrow">Protected administration</div><h2>Network Cockpit</h2><p id="gateText" class="muted">Checking your existing ContentScale admin session…</p><button id="loginBtn" class="btn" style="display:none">Open ContentScale Admin Login</button></div></div>
 <main id="main" style="display:none">
-<div class="top"><div><div class="eyebrow">CONTENTSCALE NETWORK · CONTROL CENTER</div><h1>Network Cockpit</h1><div class="muted">Guided handoff flow: Business/Publisher acts first → Admin takes over for approval → user continues → Admin verifies the final result.</div></div><div class="actions"><a class="btn secondary" target="_blank" href="/network">Public Network ↗</a><a class="btn good" href="/network/directory/admin">Business Verification</a><button class="btn secondary" id="initBtn">Run Network init</button><button class="btn" id="refreshBtn">Refresh cockpit</button></div></div>
-<div class="health" id="health"></div>
+<div class="top"><div><div class="eyebrow">CONTENTSCALE NETWORK · CONTROL CENTER</div><h1>Network Cockpit</h1><div class="muted">TEST MODE · Guided handoff: Business/Publisher acts → Admin takes over for approval → user continues → Admin verifies. Reset everything again before launch.</div></div><div class="actions"><a class="btn secondary" target="_blank" href="/network">Public Network ↗</a><a class="btn good" href="/network/directory/admin">Business Verification</a><button class="btn secondary" id="initBtn">Run Network init</button><button class="btn" id="refreshBtn">Refresh cockpit</button></div></div>
+<div class="health" id="health"></div><section class="card" style="border-color:#f59e0b;background:#23190b"><strong style="color:#fde68a">TEST MODE</strong><div class="tiny" style="margin-top:5px">Everything created in ContentScale Network is test data until you finish the complete role-by-role test. Before launch, use <b>Delete ALL Network test data</b> one final time so production starts empty.</div></section>
 
 <section class="hero"><div class="sectionTitle"><div><div class="eyebrow">ADMIN TOUR</div><h2>What you do, in order</h2></div><a class="btn good" href="/network/directory/admin">Open Step 1 · Business Verification</a></div><div class="flow"><div class="step"><div class="num">1</div><h3>Verify business</h3><p>Import or review a claim. Check the real website, niche and market.</p><div class="next"><b>Press:</b> Check website → Verify business.</div></div><div class="step"><div class="num">2</div><h3>Publisher opt-in</h3><p>A verified business may choose publishing. Do not enroll it automatically.</p><div class="next"><b>Press:</b> Approve + link website, then review the website.</div></div><div class="step"><div class="num">3</div><h3>Starter exchange</h3><p>New publishers begin with 1 give + 1 receive. Capture H1/topic + short pitch first.</p><div class="next"><b>Go to:</b> Opportunities after real intent.</div></div><div class="step"><div class="num">4</div><h3>Generate after match</h3><p>Once an approved website commits, generate that publisher's unique edition.</p><div class="next"><b>Go to:</b> Publishing.</div></div><div class="step"><div class="num">5</div><h3>Verify live page</h3><p>Publisher submits the live URL. You manually verify before credits.</p><div class="next"><b>Go to:</b> Manual Verification.</div></div><div class="step"><div class="num">6</div><h3>Marketplace</h3><p>After starter exchange, continue through normal opportunities, referrals and credits.</p><div class="next"><b>Watch:</b> placements and history.</div></div></div></section><section class="hero attention urgent">
 <div class="sectionTitle"><div><div class="eyebrow">DO THIS FIRST</div><h2>Needs your attention</h2></div><span class="pill warn" id="attentionBadge">Loading…</span></div>
@@ -3607,7 +3697,7 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
 
 <section class="card" style="margin-top:12px"><div class="sectionTitle"><h2>Recent Network activity</h2><a href="/network/verification">Review history →</a></div><div id="events"></div></section>
 
-<section class="card" style="margin-top:14px;border-color:#7f1d1d"><div class="sectionTitle"><div><div class="eyebrow" style="color:#fca5a5">TEST / RESET TOOLS</div><h2>Start with an empty Network</h2></div></div><p class="muted">This deletes all Network businesses, publisher applications/accounts, publisher websites, opportunities, placements, publication versions, verification history, credits, referrals, ads and Network image-library data. It preserves the Network schema and does not touch core ContentScale tables.</p><button class="btn bad" id="resetNetworkBtn">Delete ALL Network data</button><span id="resetNetworkMsg" class="tiny"></span></section>
+<section class="card resetCard" id="resetCard" style="margin-top:14px;border-color:#7f1d1d"><div class="sectionTitle"><div><div class="eyebrow" style="color:#fca5a5">TEST MODE · RESET TOOLS</div><h2>Everything in Network is test data until launch</h2></div><span class="pill" id="resetCountBadge">Checking test data…</span></div><p class="muted">During this test phase, every Network record is disposable test data. This reset empties every operational <code>network_*</code> table — including businesses, users, publisher accounts, websites, opportunities/posts, Publisher Editions, placements, verification history, credits, referrals, ads and images. Core ContentScale is not touched.</p><div id="resetState" class="actionState idle"><span class="stateIcon">●</span><div><strong>Ready</strong><div class="tiny">Nothing happens silently. Every action below shows loading, success ✓ or failure ✕.</div></div></div><div class="actions" style="margin-top:12px"><button class="btn bad" id="resetNetworkBtn">Delete ALL Network test data</button><button class="btn bad" id="resetConfirmBtn" style="display:none">Confirm delete now</button><button class="btn secondary" id="resetCancelBtn" style="display:none">Cancel</button></div><div id="resetNetworkMsg" class="tiny" style="margin-top:9px"></div></section>
 <section class="hero" style="margin-top:14px"><div class="sectionTitle"><div><div class="eyebrow">ALL MODULES</div><h2>Direct controls</h2></div></div><div class="actions">
 <a class="btn good" href="/network/directory/admin">Business Verification</a>
 <a class="btn" href="/network/websites">Publisher Websites</a>
