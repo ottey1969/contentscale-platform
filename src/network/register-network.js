@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — DIRECTORY POLISH + SOCIAL VALUE v454
+// CONTENTSCALE NETWORK — CLEAN-SLATE RESET + GUIDED TEST v455
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -1386,7 +1386,21 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
  window.setStatus=async(id,status)=>{try{await api('/api/network/admin/websites/'+id+'/status',{method:'PATCH',body:JSON.stringify({status})});load()}catch(e){alert(e.message)}};
  document.getElementById('rows').addEventListener('click',function(ev){const btn=ev.target.closest('button[data-action]');if(!btn)return;const id=Number(btn.dataset.id||0);if(!id)return;if(btn.dataset.action==='check')return window.siteCheck(id);if(btn.dataset.action==='status')return window.setStatus(id,btn.dataset.status||'');});
  document.getElementById('addBtn').onclick=async()=>{const m=document.getElementById('formMsg');m.textContent='Saving…';try{const d=await api('/api/network/admin/websites',{method:'POST',body:JSON.stringify({domain:document.getElementById('domain').value,brand_name:document.getElementById('brand').value,primary_niche:document.getElementById('niche').value,sub_niche:document.getElementById('subniche').value,country:document.getElementById('country').value,language:document.getElementById('language').value,cms:document.getElementById('cms').value,ownership_type:document.getElementById('ownership').value})});m.textContent='Saved: '+d.website.domain;document.getElementById('domain').value='';load()}catch(e){m.textContent=e.message}};
- document.getElementById('refreshBtn').onclick=load; if(key)load();
+ document.getElementById('resetNetworkBtn').onclick=async function(){
+ const typed=prompt('This removes ALL ContentScale Network operational data, including all publishers and businesses.\n\nCore ContentScale data is NOT touched.\n\nType RESET NETWORK DATA to continue:');
+ if(typed!=='RESET NETWORK DATA')return;
+ if(!confirm('Final confirmation: remove all Network users, businesses, placements, credits, referrals and advertising data?'))return;
+ const b=this,m=document.getElementById('resetNetworkMsg');b.disabled=true;b.textContent='Resetting Network…';m.textContent='';
+ try{
+   const d=await api('/api/network/admin/reset-network-data',{method:'POST',body:JSON.stringify({confirm:'RESET NETWORK DATA'})});
+   const total=Object.values(d.deleted_counts||{}).reduce((a,n)=>a+Number(n||0),0);
+   m.style.color='#86efac';m.textContent='✓ Clean slate ready. '+total+' Network record(s) removed. Core ContentScale untouched.';
+   alert('Network reset complete.\n\nAll Network operational data was removed.\nCore ContentScale was untouched.\n\nNext: start the guided test with Business Verification.');
+   await load();
+ }catch(e){m.style.color='#fca5a5';m.textContent=e.message||e;alert(e.message||e)}
+ finally{b.disabled=false;b.textContent='Delete ALL Network data'}
+};
+document.getElementById('refreshBtn').onclick=load; if(key)load();
 })();
 </script></main></body></html>`;
 }
@@ -3301,6 +3315,64 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
   // v445 — One-page Network cockpit.
   // Read-only aggregation for the dashboard; mutations continue to use the existing
   // protected workflow endpoints so the cockpit cannot bypass existing invariants.
+
+  // CLEAN-SLATE RESET — Network-only. Never touches core ContentScale tables.
+  app.post('/api/network/admin/reset-network-data', verifyAdmin, wrap(async (req,res)=>{
+    if(cleanText(req.body?.confirm,80)!=='RESET NETWORK DATA'){
+      return res.status(400).json({success:false,error:'Type RESET NETWORK DATA exactly to confirm'});
+    }
+    const client=await pool.connect();
+    const dataTables=[
+      'network_publication_images',
+      'network_verification_runs',
+      'network_credit_transactions',
+      'network_credit_wallets',
+      'network_publication_versions',
+      'network_placement_review_events',
+      'network_placements',
+      'network_content',
+      'network_referrals',
+      'network_referral_codes',
+      'network_referral_partners',
+      'network_publisher_accounts',
+      'network_publisher_applications',
+      'network_ads',
+      'network_directory_businesses',
+      'network_image_library',
+      'network_websites'
+    ];
+    try{
+      await client.query('BEGIN');
+      const existing=await client.query(`SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename=ANY($1::text[])`,[dataTables]);
+      const present=new Set(existing.rows.map(x=>x.tablename));
+      const counts={};
+      for(const t of dataTables){
+        if(!present.has(t)){counts[t]=0;continue}
+        const r=await client.query(`SELECT COUNT(*)::int AS n FROM ${t}`);
+        counts[t]=Number(r.rows[0]?.n||0);
+      }
+      const tables=dataTables.filter(t=>present.has(t));
+      if(tables.length){
+        // All FK-related Network data tables are truncated together.
+        // No cascading delete is used. Unexpected outside references block the reset.
+        await client.query(`TRUNCATE TABLE ${tables.join(',')} RESTART IDENTITY`);
+      }
+      await client.query('COMMIT');
+      res.json({
+        success:true,
+        scope:'network_only',
+        core_tables_touched:false,
+        schema_preserved:true,
+        schema_version:NETWORK_SCHEMA_VERSION,
+        deleted_counts:counts,
+        message:'All ContentScale Network operational data was removed. Network schema and core ContentScale data were preserved.'
+      });
+    }catch(e){
+      try{await client.query('ROLLBACK')}catch(_){}
+      throw e;
+    }finally{client.release()}
+  }));
+
   app.get('/api/network/admin/cockpit', verifyAdmin, wrap(async (req,res)=>{
     await ensureNetworkDirectorySchema(pool);
     const errors=[];
@@ -3448,7 +3520,7 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
 </style></head><body>
 <div id="gate" class="gate"><div class="gateBox"><div class="eyebrow">Protected administration</div><h2>Network Cockpit</h2><p id="gateText" class="muted">Checking your existing ContentScale admin session…</p><button id="loginBtn" class="btn" style="display:none">Open ContentScale Admin Login</button></div></div>
 <main id="main" style="display:none">
-<div class="top"><div><div class="eyebrow">CONTENTSCALE NETWORK · CONTROL CENTER</div><h1>Network Cockpit</h1><div class="muted">Two-part control center: 1) verify businesses, 2) run the publishing network from application to verified placement.</div></div><div class="actions"><a class="btn secondary" target="_blank" href="/network">Public Network ↗</a><a class="btn good" href="/network/directory/admin">Business Verification</a><button class="btn secondary" id="initBtn">Run Network init</button><button class="btn" id="refreshBtn">Refresh cockpit</button></div></div>
+<div class="top"><div><div class="eyebrow">CONTENTSCALE NETWORK · CONTROL CENTER</div><h1>Network Cockpit</h1><div class="muted">Guided handoff flow: Business/Publisher acts first → Admin takes over for approval → user continues → Admin verifies the final result.</div></div><div class="actions"><a class="btn secondary" target="_blank" href="/network">Public Network ↗</a><a class="btn good" href="/network/directory/admin">Business Verification</a><button class="btn secondary" id="initBtn">Run Network init</button><button class="btn" id="refreshBtn">Refresh cockpit</button></div></div>
 <div class="health" id="health"></div>
 
 <section class="hero"><div class="sectionTitle"><div><div class="eyebrow">ADMIN TOUR</div><h2>What you do, in order</h2></div><a class="btn good" href="/network/directory/admin">Open Step 1 · Business Verification</a></div><div class="flow"><div class="step"><div class="num">1</div><h3>Verify business</h3><p>Import or review a claim. Check the real website, niche and market.</p><div class="next"><b>Press:</b> Check website → Verify business.</div></div><div class="step"><div class="num">2</div><h3>Publisher opt-in</h3><p>A verified business may choose publishing. Do not enroll it automatically.</p><div class="next"><b>Press:</b> Approve + link website, then review the website.</div></div><div class="step"><div class="num">3</div><h3>Starter exchange</h3><p>New publishers begin with 1 give + 1 receive. Capture H1/topic + short pitch first.</p><div class="next"><b>Go to:</b> Opportunities after real intent.</div></div><div class="step"><div class="num">4</div><h3>Generate after match</h3><p>Once an approved website commits, generate that publisher's unique edition.</p><div class="next"><b>Go to:</b> Publishing.</div></div><div class="step"><div class="num">5</div><h3>Verify live page</h3><p>Publisher submits the live URL. You manually verify before credits.</p><div class="next"><b>Go to:</b> Manual Verification.</div></div><div class="step"><div class="num">6</div><h3>Marketplace</h3><p>After starter exchange, continue through normal opportunities, referrals and credits.</p><div class="next"><b>Watch:</b> placements and history.</div></div></div></section><section class="hero attention urgent">
@@ -3469,6 +3541,7 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
 
 <section class="card" style="margin-top:12px"><div class="sectionTitle"><h2>Recent Network activity</h2><a href="/network/verification">Review history →</a></div><div id="events"></div></section>
 
+<section class="card" style="margin-top:14px;border-color:#7f1d1d"><div class="sectionTitle"><div><div class="eyebrow" style="color:#fca5a5">TEST / RESET TOOLS</div><h2>Start with an empty Network</h2></div></div><p class="muted">This deletes all Network businesses, publisher applications/accounts, publisher websites, opportunities, placements, publication versions, verification history, credits, referrals, ads and Network image-library data. It preserves the Network schema and does not touch core ContentScale tables.</p><button class="btn bad" id="resetNetworkBtn">Delete ALL Network data</button><span id="resetNetworkMsg" class="tiny"></span></section>
 <section class="hero" style="margin-top:14px"><div class="sectionTitle"><div><div class="eyebrow">ALL MODULES</div><h2>Direct controls</h2></div></div><div class="actions">
 <a class="btn good" href="/network/directory/admin">Business Verification</a>
 <a class="btn" href="/network/websites">Publisher Websites</a>
