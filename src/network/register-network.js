@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — PUBLISHER APPLY LEGACY-SCHEMA SELF-HEAL v448
+// CONTENTSCALE NETWORK — AUTO NICHE CLASSIFICATION + APPLY RECOVERY v449
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 13;
+const NETWORK_SCHEMA_VERSION = 14;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -44,6 +44,71 @@ const NETWORK_LOCALES = [
 ];
 function localeDirection(code){const x=NETWORK_LOCALES.find(r=>r[0]===code);return x?x[3]:'LTR'}
 function safeJsonObject(v){return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}
+
+const NETWORK_NICHE_RULES = [
+  {main:'Marketing',sub:'SEO',terms:['seo','search engine optimization','search optimisation','ai seo','ai search','google ai overview','google ai overviews','aio seo','organic search'],topics:['AI SEO','AI Search Visibility','Google AI Overviews','Organic Search']},
+  {main:'Marketing',sub:'Content Marketing',terms:['content marketing','content strategy','copywriting','blogging','editorial content'],topics:['Content Strategy','Content Creation']},
+  {main:'Marketing',sub:'Paid Advertising',terms:['ppc','paid ads','google ads','facebook ads','meta ads','paid advertising'],topics:['PPC','Paid Media']},
+  {main:'Marketing',sub:'Social Media',terms:['social media','instagram marketing','linkedin marketing','tiktok marketing'],topics:['Social Media Marketing']},
+  {main:'Marketing',sub:'Email Marketing',terms:['email marketing','newsletter marketing','email automation'],topics:['Email Marketing']},
+  {main:'Marketing',sub:'Branding & PR',terms:['branding','brand strategy','public relations','pr agency','digital pr'],topics:['Branding','Public Relations']},
+  {main:'Home Services',sub:'Roofing',terms:['roofing','roofer','roof repair','roof replacement','shingle','flat roof'],topics:['Roof Repair','Roof Replacement']},
+  {main:'Home Services',sub:'Plumbing',terms:['plumbing','plumber','drain cleaning','pipe repair'],topics:['Plumbing']},
+  {main:'Home Services',sub:'HVAC',terms:['hvac','air conditioning','heating','furnace','heat pump'],topics:['HVAC']},
+  {main:'Home Services',sub:'Electrical',terms:['electrician','electrical contractor','electrical repair'],topics:['Electrical']},
+  {main:'Home Services',sub:'Landscaping',terms:['landscaping','landscape','lawn care','garden maintenance'],topics:['Landscaping']},
+  {main:'Finance & Business Services',sub:'Accounting',terms:['accounting','accountant','bookkeeping','tax preparation','cpa'],topics:['Accounting','Tax']},
+  {main:'Finance & Business Services',sub:'Financial Services',terms:['financial services','investment','wealth management','financial advisor','trading platform','broker'],topics:['Finance','Investing']},
+  {main:'Finance & Business Services',sub:'Insurance',terms:['insurance','insurance broker','insurance agency'],topics:['Insurance']},
+  {main:'Finance & Business Services',sub:'Consulting',terms:['consulting','business consultant','management consulting'],topics:['Business Consulting']},
+  {main:'Legal',sub:'Legal Services',terms:['law firm','lawyer','attorney','legal services'],topics:['Legal']},
+  {main:'Real Estate',sub:'Real Estate Services',terms:['real estate','realtor','property management','real estate agent'],topics:['Real Estate']},
+  {main:'Healthcare',sub:'Healthcare Services',terms:['healthcare','medical clinic','doctor','dentist','dental','physician','hospital'],topics:['Healthcare']},
+  {main:'Beauty & Wellness',sub:'Beauty & Wellness',terms:['beauty','salon','spa','wellness','skincare','hair salon','nail salon'],topics:['Beauty','Wellness']},
+  {main:'Technology',sub:'Software & SaaS',terms:['software','saas','software as a service','app development','web app'],topics:['Software','SaaS']},
+  {main:'Technology',sub:'AI & Automation',terms:['artificial intelligence',' ai ','machine learning','automation','ai tools','ai platform'],topics:['Artificial Intelligence','Automation']},
+  {main:'Technology',sub:'Cybersecurity',terms:['cybersecurity','cyber security','information security','infosec'],topics:['Cybersecurity']},
+  {main:'Ecommerce & Retail',sub:'Ecommerce',terms:['ecommerce','e-commerce','online store','shopify','woocommerce'],topics:['Ecommerce']},
+  {main:'Automotive',sub:'Automotive Services',terms:['automotive','auto repair','car repair','garage','mechanic'],topics:['Automotive']},
+  {main:'Education',sub:'Education & Training',terms:['education','training','online course','school','academy','tutoring'],topics:['Education']},
+  {main:'Travel & Hospitality',sub:'Travel & Hospitality',terms:['travel','hotel','resort','tourism','vacation rental'],topics:['Travel','Hospitality']},
+  {main:'Food & Hospitality',sub:'Restaurants & Food',terms:['restaurant','catering','food service','bakery','cafe','coffee shop'],topics:['Food','Restaurants']}
+];
+
+function classifyNetworkNiche(input){
+  const raw=cleanText(input,240);
+  const q=(' '+raw.toLowerCase().replace(/[^a-z0-9+#&]+/g,' ')+' ').replace(/\s+/g,' ');
+  let best=null,bestScore=0;
+  for(const rule of NETWORK_NICHE_RULES){
+    let score=0;
+    for(const term of rule.terms){
+      const t=term.toLowerCase();
+      if(q.includes(' '+t+' ')) score+=100+t.length;
+      else if(q.includes(t)) score+=35+t.length;
+    }
+    if(score>bestScore){best=rule;bestScore=score}
+  }
+  if(!raw) return {input:'',main_niche:null,sub_niche:null,topics:[],confidence:'none',needs_confirmation:true};
+  if(best){
+    return {
+      input:raw,
+      main_niche:best.main,
+      sub_niche:best.sub,
+      topics:Array.from(new Set(best.topics||[])),
+      confidence:bestScore>=100?'high':'medium',
+      needs_confirmation:bestScore<100
+    };
+  }
+  return {
+    input:raw,
+    main_niche:'Other',
+    sub_niche:raw,
+    topics:[],
+    confidence:'low',
+    needs_confirmation:true
+  };
+}
+
 function firstThreeWords(v){return cleanText(v,300).split(/\s+/).filter(Boolean).slice(0,3).join(' ')}
 function normalizeImageKey(v){return cleanText(v,255).toLowerCase().replace(/\.(jpe?g|png|webp)$/i,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,220)}
 
@@ -58,28 +123,43 @@ function cleanText(v, max = 500) {
 
 
 async function ensurePublisherApplySchema() {
-  // Keep this intentionally limited to Network-owned publisher tables.
-  // It makes the public apply endpoint resilient to legacy Network schemas.
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS brand_name TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS contact_name TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS email TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS message TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS referral_code TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+  // Public publisher signup must survive an old or partially initialized Network.
+  // If the publisher tables do not exist yet, initialize ONLY the network_* schema.
+  const exists=await pool.query(`SELECT
+    to_regclass('public.network_publisher_applications') AS applications,
+    to_regclass('public.network_publisher_accounts') AS accounts,
+    to_regclass('public.network_websites') AS websites`);
+  if(!exists.rows[0]?.applications || !exists.rows[0]?.accounts || !exists.rows[0]?.websites){
+    await ensureNetworkTables(pool);
+  }
 
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS application_id BIGINT REFERENCES network_publisher_applications(id) ON DELETE SET NULL`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS website_id BIGINT REFERENCES network_websites(id) ON DELETE RESTRICT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS email TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS contact_name TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS access_token TEXT`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
-  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS brand_name TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS contact_name TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS email TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche_main TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche_sub TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche_topics JSONB NOT NULL DEFAULT '[]'::jsonb`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche_confidence TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS message TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS referral_code TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS metadata JSONB NOT NULL DEFAULT '{}'::jsonb`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+  await pool.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS application_id BIGINT REFERENCES network_publisher_applications(id) ON DELETE SET NULL`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS website_id BIGINT REFERENCES network_websites(id) ON DELETE RESTRICT`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS email TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS contact_name TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS access_token TEXT`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+
+  await pool.query(`ALTER TABLE network_websites ADD COLUMN IF NOT EXISTS sub_niche TEXT`);
+  await pool.query(`ALTER TABLE network_websites ADD COLUMN IF NOT EXISTS topic_tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
 }
 
 async function networkNotifyOwnerPublisherApplication(appRow, extra = {}) {
@@ -753,6 +833,7 @@ async function ensureNetworkTables(pool) {
       brand_name TEXT,
       primary_niche TEXT,
       sub_niche TEXT,
+      topic_tags JSONB NOT NULL DEFAULT '[]'::jsonb,
       country TEXT,
       language TEXT,
       cms TEXT,
@@ -766,6 +847,9 @@ async function ensureNetworkTables(pool) {
     )`);
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_network_websites_domain_lower ON network_websites ((LOWER(domain)))`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_network_websites_status_niche ON network_websites(status, primary_niche)`);
+    await client.query(`ALTER TABLE network_websites ADD COLUMN IF NOT EXISTS sub_niche TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_websites ADD COLUMN IF NOT EXISTS topic_tags JSONB NOT NULL DEFAULT '[]'::jsonb`).catch(()=>{});
+
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_content (
       id BIGSERIAL PRIMARY KEY,
@@ -974,6 +1058,10 @@ async function ensureNetworkTables(pool) {
       contact_name TEXT,
       email TEXT NOT NULL,
       niche TEXT,
+      niche_main TEXT,
+      niche_sub TEXT,
+      niche_topics JSONB NOT NULL DEFAULT '[]'::jsonb,
+      niche_confidence TEXT,
       message TEXT,
       referral_code TEXT,
       status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','approved','rejected','activated')),
@@ -989,6 +1077,10 @@ async function ensureNetworkTables(pool) {
     await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS contact_name TEXT`).catch(()=>{});
     await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS email TEXT`).catch(()=>{});
     await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche_main TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche_sub TEXT`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche_topics JSONB NOT NULL DEFAULT '[]'::jsonb`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS niche_confidence TEXT`).catch(()=>{});
     await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS message TEXT`).catch(()=>{});
     await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS referral_code TEXT`).catch(()=>{});
     await client.query(`ALTER TABLE network_publisher_applications ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'pending'`).catch(()=>{});
@@ -2241,19 +2333,21 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
 
   app.post('/api/network/referrals/apply', wrap(async (req,res)=>{
     if(!envEnabled())return res.status(404).json({success:false,error:'Network is not enabled'});
-    const code=cleanText(req.body?.ref,120),domainInput=cleanText(req.body?.domain,500),contactName=cleanText(req.body?.contact_name,200),email=cleanText(req.body?.email,240),brand=cleanText(req.body?.brand_name,200),niche=cleanText(req.body?.niche,160),message=cleanText(req.body?.message,1200);
+    const code=cleanText(req.body?.ref,120),domainInput=cleanText(req.body?.domain,500),contactName=cleanText(req.body?.contact_name,200),email=cleanText(req.body?.email,240),brand=cleanText(req.body?.brand_name,200),niche=cleanText(req.body?.niche,240),message=cleanText(req.body?.message,1200);
+    const nicheClass=classifyNetworkNiche(niche||'');
     if(!code||!domainInput||!email)return res.status(400).json({success:false,error:'Referral code, website and email are required'});
     const cr=await pool.query(`SELECT rc.*,p.status AS partner_status FROM network_referral_codes rc LEFT JOIN network_referral_partners p ON p.id=rc.partner_id WHERE rc.code=$1 AND rc.is_active=TRUE LIMIT 1`,[code]);
     const rc=cr.rows[0];if(!rc)return res.status(404).json({success:false,error:'Referral link is not valid'});
     if(rc.partner_id&&rc.partner_status!=='active')return res.status(409).json({success:false,error:'This referrer link is currently inactive'});
     let site;try{site=normalizeSite(domainInput)}catch(e){return res.status(400).json({success:false,error:'Enter a valid website/domain'})}
+    await ensurePublisherApplySchema();
     const token=crypto.randomBytes(32).toString('hex');
     const client=await pool.connect();
     try{
       await client.query('BEGIN');
-      const ar=await client.query(`INSERT INTO network_publisher_applications (domain,brand_name,contact_name,email,niche,message,referral_code,metadata,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,NOW(),NOW()) RETURNING *`,[site.domain,brand||null,contactName||null,email,niche||null,message||null,code,JSON.stringify({source:'public_referral_application',canonical_url:site.canonical_url})]);
+      const ar=await client.query(`INSERT INTO network_publisher_applications (domain,brand_name,contact_name,email,niche,niche_main,niche_sub,niche_topics,niche_confidence,message,referral_code,metadata,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11,$12::jsonb,NOW(),NOW()) RETURNING *`,[site.domain,brand||null,contactName||null,email,niche||null,nicheClass.main_niche,nicheClass.sub_niche,JSON.stringify(nicheClass.topics),nicheClass.confidence,message||null,code,JSON.stringify({source:'public_referral_application',canonical_url:site.canonical_url,niche_classification:nicheClass})]);
       const acc=await client.query(`INSERT INTO network_publisher_accounts (application_id,email,contact_name,access_token,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'pending',NOW(),NOW()) RETURNING id,status`,[ar.rows[0].id,email,contactName||null,token]);
-      const meta={publisher_domain:site.domain,publisher_url:site.canonical_url,brand_name:brand||null,contact_name:contactName||null,email,niche:niche||null,message:message||null,source:'public_referral_application',publisher_application_id:ar.rows[0].id,publisher_account_id:acc.rows[0].id};
+      const meta={publisher_domain:site.domain,publisher_url:site.canonical_url,brand_name:brand||null,contact_name:contactName||null,email,niche:niche||null,niche_main:nicheClass.main_niche,niche_sub:nicheClass.sub_niche,niche_topics:nicheClass.topics,message:message||null,source:'public_referral_application',publisher_application_id:ar.rows[0].id,publisher_account_id:acc.rows[0].id};
       const rr=await client.query(`INSERT INTO network_referrals (referral_code_id,referred_member_ref,status,reward_credits,metadata,created_at,updated_at) VALUES ($1,$2,'registered',10,$3::jsonb,NOW(),NOW()) RETURNING *`,[rc.id,site.domain,JSON.stringify(meta)]);
       await client.query('COMMIT');
       const refLabel=rc.partner_id
@@ -2273,7 +2367,11 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     await pool.query(`INSERT INTO network_referrals (referral_code_id,status,reward_credits,metadata,created_at,updated_at) VALUES ($1,'clicked',0,$2::jsonb,NOW(),NOW())`,[ref.id,JSON.stringify({source:'join_page'})]);
     const referredBy=ref.partner_name||ref.brand_name||ref.domain||'a ContentScale Network member';
     res.set('Cache-Control','no-store');
-    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Join ContentScale Network</title><style>body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:760px;margin:auto;padding:40px 20px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:24px}label{display:block;font-size:12px;color:#9fb1d6;margin:12px 0 6px}input,textarea{width:100%;box-sizing:border-box;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:11px}button{margin-top:16px;background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:11px 16px;font-weight:700;cursor:pointer}.note{color:#9aabd0;line-height:1.6}.ok{color:#86efac}.bad{color:#fca5a5}</style></head><body><main><div class="card"><h1>Join as a publisher</h1><p class="note">You were invited by <strong>${String(referredBy).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</strong>. Submit your website interest below. Your application stays linked to that referrer so ContentScale can track who introduced the publisher.</p><form id="f"><input type="hidden" name="ref" value="${String(code).replace(/"/g,'&quot;')}"><label>Website/domain *</label><input name="domain" placeholder="example.com" required><label>Business / brand name</label><input name="brand_name"><label>Your name</label><input name="contact_name"><label>Email *</label><input name="email" type="email" required><label>Niche</label><input name="niche" placeholder="Roofing, marketing, accounting…"><label>Message</label><textarea name="message" rows="4"></textarea><button id="b">Send publisher application</button><div id="m" class="note"></div></form></div></main><script>document.getElementById('f').onsubmit=async e=>{e.preventDefault();const b=document.getElementById('b'),m=document.getElementById('m');b.disabled=true;b.textContent='Sending…';m.textContent='';try{const o=Object.fromEntries(new FormData(e.target).entries()),r=await fetch('/api/network/referrals/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not submit');m.className='ok';m.innerHTML='✓ Application received and linked to your referrer.'+(d.dashboard_url?' <a style="color:#8dd9ff;font-weight:800" href="'+d.dashboard_url+'">Open your private publisher dashboard →</a>':'');b.textContent='✓ Sent'}catch(err){m.className='bad';m.textContent='✕ '+err.message;b.disabled=false;b.textContent='Send publisher application'}};</script></body></html>`);
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Join ContentScale Network</title><style>body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:760px;margin:auto;padding:40px 20px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:24px}label{display:block;font-size:12px;color:#9fb1d6;margin:12px 0 6px}input,textarea{width:100%;box-sizing:border-box;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:11px}button{margin-top:16px;background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:11px 16px;font-weight:700;cursor:pointer}.note{color:#9aabd0;line-height:1.6}.ok{color:#86efac}.bad{color:#fca5a5}</style></head><body><main><div class="card"><h1>Join as a publisher</h1><p class="note">You were invited by <strong>${String(referredBy).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}</strong>. Submit your website interest below. Your application stays linked to that referrer so ContentScale can track who introduced the publisher.</p><form id="f"><input type="hidden" name="ref" value="${String(code).replace(/"/g,'&quot;')}"><label>Website/domain *</label><input name="domain" placeholder="example.com" required><label>Business / brand name</label><input name="brand_name"><label>Your name</label><input name="contact_name"><label>Email *</label><input name="email" type="email" required><label>What does your website mainly cover?</label><input id="publisherNiche" name="niche" placeholder="For example: SEO, roofing, accounting, AI marketing…" autocomplete="off"><div class="niche-help">You do not need to know the main niche, sub-niche or topic. ContentScale classifies it for you.</div><div id="publisherNichePreview" class="niche-preview"></div><label>Message</label><textarea name="message" rows="4"></textarea><button id="b">Send publisher application</button><div id="m" class="note"></div></form></div></main><script>
+const ni=document.getElementById('niche'),np=document.getElementById('nichePreview');let nt;
+async function classifyNiche(){const v=ni.value.trim();if(!v){np.textContent='';return}try{const r=await fetch('/api/network/niches/classify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({niche:v})}),d=await r.json(),c=d.classification||{};np.textContent='ContentScale: '+(c.main_niche||'Other')+' → '+(c.sub_niche||v)+(c.topics&&c.topics.length?' · '+c.topics.join(' · '):'')}catch(e){np.textContent='ContentScale will classify this during review.'}}
+if(ni){ni.oninput=()=>{clearTimeout(nt);nt=setTimeout(classifyNiche,350)};ni.onblur=classifyNiche}
+document.getElementById('f').onsubmit=async e=>{e.preventDefault();const b=document.getElementById('b'),m=document.getElementById('m');b.disabled=true;b.textContent='Sending…';m.textContent='';try{const o=Object.fromEntries(new FormData(e.target).entries()),r=await fetch('/api/network/referrals/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(o)}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not submit');m.className='ok';m.innerHTML='✓ Application received and linked to your referrer.'+(d.dashboard_url?' <a style="color:#8dd9ff;font-weight:800" href="'+d.dashboard_url+'">Open your private publisher dashboard →</a>':'');b.textContent='✓ Sent'}catch(err){m.className='bad';m.textContent='✕ '+err.message;b.disabled=false;b.textContent='Send publisher application'}};</script></body></html>`);
   }));
 
   app.get('/network/referrals',(req,res)=>{if(!envEnabled())return res.status(404).send('Network is not enabled.');res.set('Cache-Control','no-store');res.type('html').send(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Publisher Scouts</title><style>body{font-family:Inter,system-ui;background:#08101f;color:#eef4ff;margin:0}main{max-width:1180px;margin:auto;padding:34px 20px}.card{background:#0f1930;border:1px solid #26375c;border-radius:18px;padding:20px;margin:16px 0}a{color:#8dd9ff}.note,.tiny{color:#9aabd0;line-height:1.5}.tiny{font-size:12px}label{display:block;font-size:12px;color:#9fb1d6;margin:10px 0 6px}input,textarea,select{width:100%;box-sizing:border-box;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.btn{background:#2459a9;color:#fff;border:1px solid #4b78be;border-radius:9px;padding:10px 13px;font-weight:700;cursor:pointer}.btn:disabled{opacity:.6}.btn.warn{background:#7c2d12;border-color:#c2410c}.btn.danger{background:#7f1d1d;border-color:#dc2626}.btn.secondary{background:#172554;border-color:#35507a}.row{border-top:1px solid #26375c;padding:12px 0}.stats{display:flex;gap:12px;flex-wrap:wrap}.pill{background:#132443;border:1px solid #35507a;border-radius:999px;padding:4px 8px;font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}</style></head><body><main><p><a href="/network/admin">← Network admin</a></p><div class="card"><h1>Publisher Scouts</h1><p class="note">Independent scouts do not need to be publishers. Their unique link permanently attributes a referred publisher application to them. Revoke disables all of a scout's referral links while preserving history. Delete is only allowed when there is no real publisher/application history.</p></div><div class="card"><h2>Add independent referrer / scout</h2><div class="grid"><div><label>Name *</label><input id="pName"></div><div><label>Email</label><input id="pEmail" type="email"></div><div><label>Label</label><input id="pLabel" placeholder="e.g. Roofing outreach Philippines"></div></div><label>Notes</label><textarea id="pNotes" rows="2"></textarea><button class="btn" id="createPartner" style="margin-top:12px">Create scout + referral link</button><div id="created" class="note" style="margin-top:10px"></div></div><div class="card"><h2>Scout links</h2><div id="codes" class="note">Loading…</div></div><div class="card"><h2>Referred publisher applications</h2><div id="leads" class="note">Loading…</div></div></main><script>(function(){const key=localStorage.getItem('admin_id')||'',esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]||c)),api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt),d=await r.json();if(!r.ok){const e=Error(d.error||'Request failed');e.payload=d;e.status=r.status;throw e}return d};async function load(){try{const d=await api('/api/network/admin/referrals');document.getElementById('codes').innerHTML=(d.codes||[]).map(x=>'<div class="row"><strong>'+(x.partner_name?'Scout: '+esc(x.partner_name):'Member/Publisher: '+esc(x.brand_name||x.domain||x.label||'General'))+'</strong> <span class="pill">'+esc(x.partner_status|| (x.is_active?'active':'inactive'))+'</span><div class="tiny">'+esc(x.label||'')+'</div><div style="margin:6px 0"><input readonly value="https://app.contentscale.site/network/join?ref='+esc(x.code)+'"></div><div class="stats"><span class="pill">Clicks '+x.clicks+'</span><span class="pill">Applications '+x.registered+'</span><span class="pill">Activated '+x.activated+'</span><span class="pill">Rewarded '+x.rewarded+'</span></div>'+(x.partner_id?'<div class="actions"><button class="btn secondary" data-partner-status="active" data-partner="'+x.partner_id+'">Activate</button><button class="btn warn" data-partner-status="revoked" data-partner="'+x.partner_id+'">Revoke</button><button class="btn danger" data-delete-partner="'+x.partner_id+'">Delete person</button></div>':'')+'</div>').join('')||'No referral links yet.';document.getElementById('leads').innerHTML=(d.leads||[]).map(x=>{const m=x.metadata||{};return '<div class="row"><strong>'+esc(m.brand_name||m.publisher_domain||x.referred_member_ref||'Publisher')+'</strong> · '+esc(x.status)+'<div class="tiny">'+esc(m.publisher_domain||'')+' · '+esc(m.contact_name||'')+' · '+esc(m.email||'')+'<br>Referred by: '+esc(x.partner_name||x.referring_website||'member')+'</div><div style="margin-top:8px"><button class="btn" data-status="activated" data-id="'+x.id+'">Mark activated</button> <button class="btn" data-status="rewarded" data-id="'+x.id+'">Mark rewarded</button> <button class="btn" data-status="rejected" data-id="'+x.id+'">Reject</button></div></div>'}).join('')||'No publisher applications yet.'}catch(e){document.getElementById('codes').textContent=e.message}}document.getElementById('createPartner').onclick=async function(){const b=this;b.disabled=true;b.textContent='Creating…';try{const d=await api('/api/network/admin/referral-partners',{method:'POST',body:JSON.stringify({name:document.getElementById('pName').value,email:document.getElementById('pEmail').value,label:document.getElementById('pLabel').value,notes:document.getElementById('pNotes').value})});document.getElementById('created').innerHTML='✓ Created: <strong>'+esc(d.share_url)+'</strong>';document.getElementById('pName').value='';document.getElementById('pEmail').value='';document.getElementById('pLabel').value='';document.getElementById('pNotes').value='';await load()}catch(e){alert(e.message)}finally{b.disabled=false;b.textContent='Create scout + referral link'}};document.getElementById('codes').onclick=async e=>{const sb=e.target.closest('[data-partner-status]');if(sb){sb.disabled=true;const old=sb.textContent;sb.textContent='Saving…';try{await api('/api/network/admin/referral-partners/'+sb.dataset.partner+'/status',{method:'PATCH',body:JSON.stringify({status:sb.dataset.partnerStatus})});await load()}catch(err){alert(err.message);sb.disabled=false;sb.textContent=old}return}const db=e.target.closest('[data-delete-partner]');if(!db)return;if(!confirm('Delete this referrer? If publisher/application history exists, ContentScale will revoke the person instead to preserve attribution.'))return;db.disabled=true;db.textContent='Deleting…';try{await api('/api/network/admin/referral-partners/'+db.dataset.deletePartner,{method:'DELETE'});await load()}catch(err){if(err.payload&&err.payload.revoked){alert(err.message);await load()}else{alert(err.message);db.disabled=false;db.textContent='Delete person'}}};document.getElementById('leads').onclick=async e=>{const b=e.target.closest('[data-status]');if(!b)return;b.disabled=true;const old=b.textContent;b.textContent='Saving…';try{await api('/api/network/admin/referrals/'+b.dataset.id+'/status',{method:'PATCH',body:JSON.stringify({status:b.dataset.status})});await load()}catch(err){alert(err.message);b.disabled=false;b.textContent=old}};load()})();</script></body></html>`) });
@@ -2298,12 +2396,23 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
     const adCards=ads.map(a=>`<article class="sponsor-card"><div class="sponsor-label">Sponsored</div>${a.logo_url?`<img class="sponsor-logo" src="${e(a.logo_url)}" alt="${e(a.company_name)} logo" loading="lazy">`:''}<h3>${e(a.headline||a.company_name)}</h3><p>${e(a.description||'')}</p>${a.niche?`<div class="sponsor-niche">${e(a.niche)}</div>`:''}<a class="text-link" rel="sponsored noopener" href="/network/ad/${Number(a.id)}/click">Visit ${e(a.company_name)} →</a></article>`).join('');
     res.set('Cache-Control','public, max-age=120');
     res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Network — Get Backlinks. Get Cited. Get Discovered.</title><meta name="description" content="Join the ContentScale Network to earn real third-party placements, backlinks and brand mentions through relevant publishers."><meta name="robots" content="index,follow"><link rel="canonical" href="https://app.contentscale.site/network"><meta property="og:title" content="ContentScale Network — Get Backlinks. Get Cited."><meta property="og:description" content="Real publisher placements, backlinks, brand mentions and verified distribution."><style>
-    :root{--bg:#07111f;--panel:#0e1b30;--panel2:#11233d;--line:#263f65;--text:#f3f7ff;--muted:#a8b7cf;--brand:#7c3aed;--brand2:#38bdf8;--good:#86efac;--max:1180px}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:linear-gradient(180deg,#06101d,#0a1324 55%,#07111f);color:var(--text)}a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}.nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}.brand{display:flex;align-items:center;gap:11px;font-weight:900;text-decoration:none}.logo{width:42px;height:42px}.navlinks{display:flex;gap:18px;align-items:center}.navlinks a{font-size:14px;color:#d8e4f6;text-decoration:none}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:12px 17px;font-weight:800;text-decoration:none;border:1px solid #6d4bd1;background:var(--brand);color:#fff}.btn.secondary{background:#10213b;border-color:#355680}.hero{padding:74px 0 46px;text-align:center}.eyebrow{display:inline-block;border:1px solid #365376;background:#0d1b30;border-radius:999px;padding:7px 11px;font-size:12px;color:#b9c9df}.hero h1{font-size:clamp(40px,7vw,76px);line-height:1.02;max-width:980px;margin:20px auto 18px;letter-spacing:-.035em}.gradient{background:linear-gradient(90deg,#a78bfa,#38bdf8);-webkit-background-clip:text;color:transparent}.hero p{max-width:790px;margin:0 auto;color:var(--muted);font-size:19px;line-height:1.65}.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:38px auto 0;max-width:900px}.metric{border:1px solid var(--line);background:#0b182b;border-radius:14px;padding:16px}.metric strong{display:block;font-size:23px}.metric span{font-size:12px;color:var(--muted)}section{padding:48px 0}.section-title{font-size:32px;margin:0 0 10px}.section-copy{color:var(--muted);max-width:760px;line-height:1.65}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}.card,.sponsor-card{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:22px}.card h3,.sponsor-card h3{margin:0 0 9px}.card p,.sponsor-card p{color:var(--muted);line-height:1.55}.step{font-size:12px;color:#93c5fd;font-weight:900;letter-spacing:.08em}.sponsored{background:#09182a;border-block:1px solid #17304f}.sponsor-label{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;border:1px solid #52657b;color:#c9d5e4;padding:4px 7px;border-radius:5px;margin-bottom:12px}.sponsor-logo{max-width:120px;max-height:44px;object-fit:contain;display:block;margin-bottom:12px;background:white;border-radius:7px;padding:4px}.sponsor-niche{font-size:12px;color:#9fb1cb;margin:10px 0}.text-link{color:#8dd9ff;text-decoration:none;font-weight:800}.forms{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.form{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}label{display:block;font-size:12px;color:#aebed5;margin:11px 0 6px}input,textarea{width:100%;background:#081529;color:#fff;border:1px solid #35547b;border-radius:9px;padding:11px;font:inherit}.form button{margin-top:14px}.status{font-size:13px;margin-top:10px;color:#9fb1cb}.small{font-size:12px;color:#8294ae}.footer{padding:38px 0;border-top:1px solid #19304f;color:#8ea0b9}.mobile-only{display:none}@media(max-width:820px){.cards{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.forms{grid-template-columns:1fr}.navlinks a:not(.btn){display:none}.hero{padding-top:48px}.hero p{font-size:17px}}@media(max-width:480px){.metrics{grid-template-columns:1fr}.hero-actions .btn{width:100%}}
-    </style></head><body><div class="wrap"><nav class="nav"><a class="brand" href="/network"><svg class="logo" viewBox="0 0 64 64" aria-label="ContentScale Network logo"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="#111d33" stroke="#38547a"/><circle cx="20" cy="22" r="6" fill="url(#g)"/><circle cx="44" cy="20" r="5" fill="url(#g)"/><circle cx="42" cy="44" r="7" fill="url(#g)"/><circle cx="19" cy="45" r="4" fill="url(#g)"/><path d="M25 22l14-2M23 27l15 13M23 43l12 1M44 25l-1 12" stroke="#b9d9ff" stroke-width="3" stroke-linecap="round"/></svg><span>ContentScale <span style="color:#8dd9ff">Network</span></span></a><div class="navlinks"><a href="#how">How it works</a><a href="#sponsored">Sponsored</a><a href="#join">Publishers</a><a class="btn secondary" href="/network/admin">Admin</a></div></nav></div><main><section class="hero"><div class="wrap"><span class="eyebrow">Publisher distribution for the AI-search era</span><h1>Get Backlinks. <span class="gradient">Get Cited.</span> Get Discovered.</h1><p>Publish original, relevant content on real third-party websites. Build backlinks, brand mentions and external evidence — then verify every placement inside ContentScale.</p><div class="hero-actions"><a class="btn" href="#join">Join as Publisher</a><a class="btn secondary" href="#advertise">Advertise on Homepage</a><a class="btn secondary" href="#how">How the Network Works</a></div><div class="metrics"><div class="metric"><strong>Real sites</strong><span>Approved publisher websites</span></div><div class="metric"><strong>Unique content</strong><span>Publisher-specific editions</span></div><div class="metric"><strong>Verified</strong><span>Live URL and SEO checks</span></div><div class="metric"><strong>Trackable</strong><span>Placements, referrals and results</span></div></div></div></section><section id="how"><div class="wrap"><h2 class="section-title">Built for real publisher placements</h2><p class="section-copy">The Network is designed around relevant third-party publication, not mass link drops. Each placement can be matched to niche, language and market, then verified after publication.</p><div class="cards"><article class="card"><div class="step">01 · MATCH</div><h3>Find relevant publishers</h3><p>Opportunities are matched to approved websites by niche, market and language.</p></article><article class="card"><div class="step">02 · PUBLISH</div><h3>Unique Publisher Edition</h3><p>Each publisher receives an original edition instead of a duplicate or lightly spun article.</p></article><article class="card"><div class="step">03 · VERIFY</div><h3>Backlink + citation evidence</h3><p>ContentScale verifies the live page, indexability, required links and placement evidence.</p></article></div></div></section>${ads.length?`<section id="sponsored" class="sponsored"><div class="wrap"><h2 class="section-title">Featured companies</h2><p class="section-copy">Paid homepage visibility. Sponsored placements are labeled and kept separate from organic publisher matching.</p><div class="cards">${adCards}</div></div></section>`:''}<section id="join"><div class="wrap"><div class="forms"><div class="form"><h2 class="section-title">Join as a publisher</h2><p class="section-copy">Have a real website and want relevant publication opportunities? Apply here. Approval is based on website quality, indexability, niche and language fit.</p><form id="publisherForm"><label>Website / domain *</label><input name="domain" placeholder="example.com" required><label>Business / brand</label><input name="brand_name"><label>Your name</label><input name="contact_name"><label>Email *</label><input name="email" type="email" required><label>Niche</label><input name="niche" placeholder="Roofing, marketing, accounting…"><label>Message</label><textarea name="message" rows="3"></textarea><button class="btn" id="publisherButton">Submit publisher application</button><div class="status" id="publisherStatus"></div></form></div><div class="form" id="advertise"><h2 class="section-title">Advertise on the homepage</h2><p class="section-copy">Companies can request clearly labeled sponsored visibility on the ContentScale Network homepage. Every request is manually reviewed before it can go live.</p><form id="adForm"><label>Company *</label><input name="company_name" required><label>Contact name</label><input name="contact_name"><label>Contact email *</label><input name="contact_email" type="email" required><label>Headline *</label><input name="headline" placeholder="What should visitors see?" required><label>Website URL *</label><input name="target_url" type="url" placeholder="https://example.com" required><label>Logo URL</label><input name="logo_url" type="url" placeholder="https://example.com/logo.png"><label>Niche</label><input name="niche"><label>Short description</label><textarea name="description" rows="3"></textarea><button class="btn" id="adButton">Request sponsored placement</button><div class="status" id="adStatus"></div></form></div></div><p class="small" style="margin-top:16px">Sponsored visibility does not buy organic recommendations, Network verification results or editorial preference.</p></div></section></main><footer class="footer"><div class="wrap"><strong>ContentScale Network</strong> · Get Backlinks. Get Cited. Get Discovered.<br><span class="small">Publisher placements remain subject to approval and verification. Visibility or AI citation is never guaranteed.</span></div></footer><script>
-    async function submitForm(form,statusEl,button,path,success){form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;const old=button.textContent;button.textContent='Sending…';statusEl.textContent='';try{const body=Object.fromEntries(new FormData(form).entries()),r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await r.json();if(!r.ok)throw Error(d.error||'Request failed');statusEl.style.color='#86efac';statusEl.innerHTML='✓ '+success+(d.dashboard_url?' <a style="color:#8dd9ff;font-weight:800" href="'+d.dashboard_url+'">Open your private publisher dashboard →</a>':'');button.textContent='✓ Sent';form.reset()}catch(err){statusEl.style.color='#fca5a5';statusEl.textContent='✕ '+err.message;button.disabled=false;button.textContent=old}})}
+    :root{--bg:#07111f;--panel:#0e1b30;--panel2:#11233d;--line:#263f65;--text:#f3f7ff;--muted:#a8b7cf;--brand:#7c3aed;--brand2:#38bdf8;--good:#86efac;--max:1180px}*{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;background:linear-gradient(180deg,#06101d,#0a1324 55%,#07111f);color:var(--text)}a{color:inherit}.wrap{max-width:var(--max);margin:auto;padding:0 22px}.nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}.brand{display:flex;align-items:center;gap:11px;font-weight:900;text-decoration:none}.logo{width:42px;height:42px}.navlinks{display:flex;gap:18px;align-items:center}.navlinks a{font-size:14px;color:#d8e4f6;text-decoration:none}.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:10px;padding:12px 17px;font-weight:800;text-decoration:none;border:1px solid #6d4bd1;background:var(--brand);color:#fff}.btn.secondary{background:#10213b;border-color:#355680}.hero{padding:74px 0 46px;text-align:center}.eyebrow{display:inline-block;border:1px solid #365376;background:#0d1b30;border-radius:999px;padding:7px 11px;font-size:12px;color:#b9c9df}.hero h1{font-size:clamp(40px,7vw,76px);line-height:1.02;max-width:980px;margin:20px auto 18px;letter-spacing:-.035em}.gradient{background:linear-gradient(90deg,#a78bfa,#38bdf8);-webkit-background-clip:text;color:transparent}.hero p{max-width:790px;margin:0 auto;color:var(--muted);font-size:19px;line-height:1.65}.hero-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px}.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:38px auto 0;max-width:940px;align-items:stretch}.metric{border:1px solid var(--line);background:#0b182b;border-radius:14px;padding:15px 14px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.metric strong{display:block;font-size:23px;line-height:1.15}.metric span{font-size:12px;color:var(--muted);line-height:1.35;margin-top:5px;max-width:190px}section{padding:48px 0}.section-title{font-size:32px;margin:0 0 10px}.section-copy{color:var(--muted);max-width:760px;line-height:1.65}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:22px}.card,.sponsor-card{background:var(--panel);border:1px solid var(--line);border-radius:17px;padding:22px}.card h3,.sponsor-card h3{margin:0 0 9px}.card p,.sponsor-card p{color:var(--muted);line-height:1.55}.step{font-size:12px;color:#93c5fd;font-weight:900;letter-spacing:.08em}.sponsored{background:#09182a;border-block:1px solid #17304f}.sponsor-label{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;border:1px solid #52657b;color:#c9d5e4;padding:4px 7px;border-radius:5px;margin-bottom:12px}.sponsor-logo{max-width:120px;max-height:44px;object-fit:contain;display:block;margin-bottom:12px;background:white;border-radius:7px;padding:4px}.sponsor-niche{font-size:12px;color:#9fb1cb;margin:10px 0}.text-link{color:#8dd9ff;text-decoration:none;font-weight:800}.forms{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}.form{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px}label{display:block;font-size:12px;color:#aebed5;margin:11px 0 6px}input,textarea{width:100%;background:#081529;color:#fff;border:1px solid #35547b;border-radius:9px;padding:11px;font:inherit}.form button{margin-top:14px}.status{font-size:13px;margin-top:10px;color:#9fb1cb}.niche-help{font-size:12px;color:#93a4c5;line-height:1.5;margin-top:5px}.niche-preview{display:none;margin-top:9px;border:1px solid #31527f;background:#09182b;border-radius:10px;padding:10px}.niche-preview.show{display:block}.niche-path{font-weight:900;color:#bfdbfe}.niche-topics{font-size:11px;color:#9fb1cb;margin-top:5px}.small{font-size:12px;color:#8294ae}.footer{padding:38px 0;border-top:1px solid #19304f;color:#8ea0b9}.mobile-only{display:none}@media(max-width:820px){.cards{grid-template-columns:1fr}.metrics{grid-template-columns:1fr 1fr}.forms{grid-template-columns:1fr}.navlinks a:not(.btn){display:none}.hero{padding-top:48px}.hero p{font-size:17px}}@media(max-width:480px){.metrics{grid-template-columns:1fr}.hero-actions .btn{width:100%}}
+    </style></head><body><div class="wrap"><nav class="nav"><a class="brand" href="/network"><svg class="logo" viewBox="0 0 64 64" aria-label="ContentScale Network logo"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#8b5cf6"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="#111d33" stroke="#38547a"/><circle cx="20" cy="22" r="6" fill="url(#g)"/><circle cx="44" cy="20" r="5" fill="url(#g)"/><circle cx="42" cy="44" r="7" fill="url(#g)"/><circle cx="19" cy="45" r="4" fill="url(#g)"/><path d="M25 22l14-2M23 27l15 13M23 43l12 1M44 25l-1 12" stroke="#b9d9ff" stroke-width="3" stroke-linecap="round"/></svg><span>ContentScale <span style="color:#8dd9ff">Network</span></span></a><div class="navlinks"><a href="#how">How it works</a><a href="#sponsored">Sponsored</a><a href="#join">Publishers</a><a class="btn secondary" href="/network/admin">Admin</a></div></nav></div><main><section class="hero"><div class="wrap"><span class="eyebrow">Publisher distribution for the AI-search era</span><h1>Get Backlinks. <span class="gradient">Get Cited.</span> Get Discovered.</h1><p>Publish original, relevant content on real third-party websites. Build backlinks, brand mentions and external evidence — then verify every placement inside ContentScale.</p><div class="hero-actions"><a class="btn" href="#join">Join as Publisher</a><a class="btn secondary" href="#advertise">Advertise on Homepage</a><a class="btn secondary" href="#how">How the Network Works</a></div><div class="metrics"><div class="metric"><strong>Real sites</strong><span>Checked + approved publisher websites</span></div><div class="metric"><strong>Unique content</strong><span>Publisher-specific editions</span></div><div class="metric"><strong>Verified</strong><span>Live URL and SEO checks</span></div><div class="metric"><strong>Trackable</strong><span>Placements, referrals and results</span></div></div></div></section><section id="how"><div class="wrap"><h2 class="section-title">Built for real publisher placements</h2><p class="section-copy">The Network is designed around relevant third-party publication, not mass link drops. Each placement can be matched to niche, language and market, then verified after publication.</p><div class="cards"><article class="card"><div class="step">01 · MATCH</div><h3>Find relevant publishers</h3><p>Opportunities are matched to approved websites by niche, market and language.</p></article><article class="card"><div class="step">02 · PUBLISH</div><h3>Unique Publisher Edition</h3><p>Each publisher receives an original edition instead of a duplicate or lightly spun article.</p></article><article class="card"><div class="step">03 · VERIFY</div><h3>Backlink + citation evidence</h3><p>ContentScale verifies the live page, indexability, required links and placement evidence.</p></article></div></div></section>${ads.length?`<section id="sponsored" class="sponsored"><div class="wrap"><h2 class="section-title">Featured companies</h2><p class="section-copy">Paid homepage visibility. Sponsored placements are labeled and kept separate from organic publisher matching.</p><div class="cards">${adCards}</div></div></section>`:''}<section id="join"><div class="wrap"><div class="forms"><div class="form"><h2 class="section-title">Join as a publisher</h2><p class="section-copy">Have a real website and want relevant publication opportunities? Apply here. Approval is based on website quality, indexability, niche and language fit.</p><form id="publisherForm"><label>Website / domain *</label><input name="domain" placeholder="example.com" required><label>Business / brand</label><input name="brand_name"><label>Your name</label><input name="contact_name"><label>Email *</label><input name="email" type="email" required><label>What does your website mainly cover?</label><input id="niche" name="niche" placeholder="For example: SEO, roofing, accounting, AI marketing…"><div id="nichePreview" class="note" style="margin-top:6px"></div><label>Message</label><textarea name="message" rows="3"></textarea><button class="btn" id="publisherButton">Submit publisher application</button><div class="status" id="publisherStatus"></div></form></div><div class="form" id="advertise"><h2 class="section-title">Advertise on the homepage</h2><p class="section-copy">Companies can request clearly labeled sponsored visibility on the ContentScale Network homepage. Every request is manually reviewed before it can go live.</p><form id="adForm"><label>Company *</label><input name="company_name" required><label>Contact name</label><input name="contact_name"><label>Contact email *</label><input name="contact_email" type="email" required><label>Headline *</label><input name="headline" placeholder="What should visitors see?" required><label>Website URL *</label><input name="target_url" type="url" placeholder="https://example.com" required><label>Logo URL</label><input name="logo_url" type="url" placeholder="https://example.com/logo.png"><label>Niche</label><input name="niche"><label>Short description</label><textarea name="description" rows="3"></textarea><button class="btn" id="adButton">Request sponsored placement</button><div class="status" id="adStatus"></div></form></div></div><p class="small" style="margin-top:16px">Sponsored visibility does not buy organic recommendations, Network verification results or editorial preference.</p></div></section></main><footer class="footer"><div class="wrap"><strong>ContentScale Network</strong> · Get Backlinks. Get Cited. Get Discovered.<br><span class="small">Publisher placements remain subject to approval and verification. Visibility or AI citation is never guaranteed.</span></div></footer><script>
+    const nh=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));
+    async function readJsonSafe(r){const t=await r.text();try{return t?JSON.parse(t):{}}catch(e){return{error:r.ok?'Unexpected server response':'Server error ('+r.status+'). Please try again or contact ContentScale.'}}}
+    async function classifyPublisherNiche(){const input=document.getElementById('publisherNiche'),box=document.getElementById('publisherNichePreview');if(!input||!box)return;const v=input.value.trim();if(!v){box.className='niche-preview';box.innerHTML='';return}try{const r=await fetch('/api/network/niches/classify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({niche:v})}),d=await readJsonSafe(r);if(!r.ok||!d.success)throw Error(d.error||'Could not classify');const c=d.classification||{};box.className='niche-preview show';box.innerHTML='<div class="small">ContentScale classification</div><div class="niche-path">'+nh(c.main_niche||'Other')+' → '+nh(c.sub_niche||v)+'</div>'+(c.topics&&c.topics.length?'<div class="niche-topics">Topics: '+c.topics.map(nh).join(' · ')+'</div>':'')+'<div class="niche-topics">Confidence: '+nh(c.confidence||'low')+(c.needs_confirmation?' · checked again during website approval':'')+'</div>'}catch(e){box.className='niche-preview show';box.innerHTML='<div class="niche-topics">We will classify this during review. You can still submit your application.</div>'}}
+    let nicheTimer;const nicheInput=document.getElementById('publisherNiche');if(nicheInput){nicheInput.addEventListener('input',()=>{clearTimeout(nicheTimer);nicheTimer=setTimeout(classifyPublisherNiche,350)});nicheInput.addEventListener('blur',classifyPublisherNiche)}
+    async function submitForm(form,statusEl,button,path,success){form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;const old=button.textContent;button.textContent='Sending…';statusEl.textContent='';try{const body=Object.fromEntries(new FormData(form).entries()),r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await readJsonSafe(r);if(!r.ok)throw Error(d.error||('Request failed ('+r.status+')'));statusEl.style.color='#86efac';const nc=d.niche_classification;statusEl.innerHTML='✓ '+success+(nc?'<br><span style="color:#bfdbfe">Classified: '+nh(nc.main_niche)+' → '+nh(nc.sub_niche)+'</span>':'')+(d.dashboard_url?' <br><a style="color:#8dd9ff;font-weight:800" href="'+d.dashboard_url+'">Open your private publisher dashboard →</a>':'');button.textContent='✓ Sent';form.reset();const np=document.getElementById('publisherNichePreview');if(np){np.className='niche-preview';np.innerHTML=''}}catch(err){statusEl.style.color='#fca5a5';statusEl.textContent='✕ '+err.message;button.disabled=false;button.textContent=old}})}
     submitForm(document.getElementById('publisherForm'),document.getElementById('publisherStatus'),document.getElementById('publisherButton'),'/api/network/publishers/apply','Publisher application received.');
     submitForm(document.getElementById('adForm'),document.getElementById('adStatus'),document.getElementById('adButton'),'/api/network/advertising/apply','Sponsored placement request received for review.');
     </script></body></html>`);
+  }));
+
+
+  app.post('/api/network/niches/classify', wrap(async (req,res)=>{
+    if(!envEnabled())return res.status(409).json({success:false,error:'Network is disabled'});
+    const classification=classifyNetworkNiche(req.body?.niche || req.body?.q || '');
+    return res.json({success:true,classification});
   }));
 
   app.post('/api/network/publishers/apply', wrap(async (req,res)=>{
@@ -2323,7 +2432,8 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
 
     const brand=cleanText(req.body?.brand_name,200)||null;
     const contact=cleanText(req.body?.contact_name,180)||null;
-    const niche=cleanText(req.body?.niche,160)||null;
+    const niche=cleanText(req.body?.niche,240)||null;
+    const nicheClass=classifyNetworkNiche(niche||'');
     const message=cleanText(req.body?.message,2000)||null;
     const client=await pool.connect();
 
@@ -2355,11 +2465,15 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
           SET brand_name=COALESCE($2,brand_name),
               contact_name=COALESCE($3,contact_name),
               niche=COALESCE($4,niche),
-              message=COALESCE($5,message),
-              metadata=COALESCE(metadata,'{}'::jsonb) || $6::jsonb,
+              niche_main=$5,
+              niche_sub=$6,
+              niche_topics=$7::jsonb,
+              niche_confidence=$8,
+              message=COALESCE($9,message),
+              metadata=COALESCE(metadata,'{}'::jsonb) || $10::jsonb,
               updated_at=NOW()
           WHERE id=$1
-        `,[appRow.id,brand,contact,niche,message,JSON.stringify({source:'network_landing',canonical_url:site.canonical_url,last_resubmitted_at:new Date().toISOString()})]);
+        `,[appRow.id,brand,contact,niche,nicheClass.main_niche,nicheClass.sub_niche,JSON.stringify(nicheClass.topics),nicheClass.confidence,message,JSON.stringify({source:'network_landing',canonical_url:site.canonical_url,last_resubmitted_at:new Date().toISOString(),niche_classification:nicheClass})]);
 
         if(appRow.account_id){
           const ar=await client.query(`
@@ -2387,10 +2501,10 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
         token=crypto.randomBytes(32).toString('hex');
         const r=await client.query(`
           INSERT INTO network_publisher_applications
-            (domain,brand_name,contact_name,email,niche,message,metadata,created_at,updated_at)
-          VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,NOW(),NOW())
+            (domain,brand_name,contact_name,email,niche,niche_main,niche_sub,niche_topics,niche_confidence,message,metadata,created_at,updated_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10,$11::jsonb,NOW(),NOW())
           RETURNING *
-        `,[site.domain,brand,contact,email,niche,message,JSON.stringify({source:'network_landing',canonical_url:site.canonical_url})]);
+        `,[site.domain,brand,contact,email,niche,nicheClass.main_niche,nicheClass.sub_niche,JSON.stringify(nicheClass.topics),nicheClass.confidence,message,JSON.stringify({source:'network_landing',canonical_url:site.canonical_url,niche_classification:nicheClass})]);
         appRow=r.rows[0];
 
         const a=await client.query(`
@@ -2423,6 +2537,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
         account:accountRow,
         dashboard_url:'/network/publisher/'+token,
         owner_notification:ownerNotification.state,
+        niche_classification:nicheClass,
         note:resumed
           ? 'Your existing publisher application was found and your private dashboard link has been restored.'
           : 'Publisher application received. Keep this private dashboard link. Referral features appear automatically after the publisher website is approved.'
@@ -2463,8 +2578,17 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       }
       const site=normalizeSite(appRow.domain);
       let wr=await client.query('SELECT * FROM network_websites WHERE LOWER(domain)=LOWER($1) LIMIT 1',[site.domain]);
-      if(!wr.rows[0])wr=await client.query(`INSERT INTO network_websites (domain,canonical_url,brand_name,primary_niche,ownership_type,status,created_at,updated_at) VALUES ($1,$2,$3,$4,'external','pending',NOW(),NOW()) RETURNING *`,[site.domain,site.canonical_url,appRow.brand_name||site.domain,appRow.niche||null]);
-      const website=wr.rows[0];
+      if(!wr.rows[0])wr=await client.query(`INSERT INTO network_websites (domain,canonical_url,brand_name,primary_niche,sub_niche,topic_tags,ownership_type,status,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6::jsonb,'external','pending',NOW(),NOW()) RETURNING *`,[site.domain,site.canonical_url,appRow.brand_name||site.domain,appRow.niche_main||appRow.niche||null,appRow.niche_sub||null,JSON.stringify(Array.isArray(appRow.niche_topics)?appRow.niche_topics:[])]);
+      let website=wr.rows[0];
+      if(website){
+        const uw=await client.query(`UPDATE network_websites SET
+          primary_niche=COALESCE(primary_niche,$2),
+          sub_niche=COALESCE(sub_niche,$3),
+          topic_tags=CASE WHEN COALESCE(jsonb_array_length(topic_tags),0)=0 THEN $4::jsonb ELSE topic_tags END,
+          updated_at=NOW()
+          WHERE id=$1 RETURNING *`,[website.id,appRow.niche_main||appRow.niche||null,appRow.niche_sub||null,JSON.stringify(Array.isArray(appRow.niche_topics)?appRow.niche_topics:[])]);
+        website=uw.rows[0]||website;
+      }
       let acc=await client.query('SELECT * FROM network_publisher_accounts WHERE application_id=$1 LIMIT 1',[id]);
       if(!acc.rows[0])acc=await client.query(`INSERT INTO network_publisher_accounts (application_id,website_id,email,contact_name,access_token,status,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,'pending',NOW(),NOW()) RETURNING *`,[id,website.id,appRow.email,appRow.contact_name||null,crypto.randomBytes(32).toString('hex')]);
       else acc=await client.query(`UPDATE network_publisher_accounts SET website_id=$2,email=$3,contact_name=$4,status=CASE WHEN status='revoked' THEN 'pending' ELSE status END,updated_at=NOW() WHERE id=$1 RETURNING *`,[acc.rows[0].id,website.id,appRow.email,appRow.contact_name||null]);
@@ -2862,7 +2986,7 @@ async function load(){
 
   document.getElementById('publishers').innerHTML=(q.pending_publishers||[]).map(x=>{
     const m=x.metadata||{},n=m.owner_notification||{},mail=n.state||'unknown';
-    return '<div class="row"><div class="rowHead"><div><strong>'+esc(x.brand_name||x.domain)+'</strong><div class="meta">'+esc(x.domain)+' · '+esc(x.contact_name||'')+' · '+esc(x.email||'')+'<br>Niche: '+esc(x.niche||'—')+' · Source: '+esc(m.source||'network_landing')+'<br>Owner email: '+esc(mail)+' · Applied: '+esc(dt(x.created_at))+'</div></div><span class="pill warn">pending</span></div><div class="rowActions"><button class="btn good" data-pub="approved" data-id="'+x.id+'">Approve + link website</button><button class="btn bad" data-pub="rejected" data-id="'+x.id+'">Reject</button></div></div>'
+    return '<div class="row"><div class="rowHead"><div><strong>'+esc(x.brand_name||x.domain)+'</strong><div class="meta">'+esc(x.domain)+' · '+esc(x.contact_name||'')+' · '+esc(x.email||'')+'<br>Declared: '+esc(x.niche||'—')+'<br>Classification: '+esc(x.niche_main||'Other')+' → '+esc(x.niche_sub||x.niche||'—')+(Array.isArray(x.niche_topics)&&x.niche_topics.length?'<br>Topics: '+x.niche_topics.map(esc).join(' · '):'')+' · Source: '+esc(m.source||'network_landing')+'<br>Owner email: '+esc(mail)+' · Applied: '+esc(dt(x.created_at))+'</div></div><span class="pill warn">pending</span></div><div class="rowActions"><button class="btn good" data-pub="approved" data-id="'+x.id+'">Approve + link website</button><button class="btn bad" data-pub="rejected" data-id="'+x.id+'">Reject</button></div></div>'
   }).join('')||'<div class="empty">No publisher applications waiting.</div>';
 
   document.getElementById('websites').innerHTML=(q.pending_websites||[]).map(x=>
