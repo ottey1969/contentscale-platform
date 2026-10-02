@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — AUTO NICHE CLASSIFICATION + APPLY RECOVERY v449
+// CONTENTSCALE NETWORK — PUBLISHER ACCOUNT LEGACY CONSTRAINT RECOVERY v450
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 14;
+const NETWORK_SCHEMA_VERSION = 15;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -157,6 +157,9 @@ async function ensurePublisherApplySchema() {
   await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`);
   await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
   await pool.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`);
+  // Same repair on the public apply path, so signup does not depend on an Admin init click.
+  await pool.query(`ALTER TABLE network_publisher_accounts ALTER COLUMN website_id DROP NOT NULL`);
+  await pool.query(`ALTER TABLE network_publisher_accounts ALTER COLUMN application_id DROP NOT NULL`);
 
   await pool.query(`ALTER TABLE network_websites ADD COLUMN IF NOT EXISTS sub_niche TEXT`);
   await pool.query(`ALTER TABLE network_websites ADD COLUMN IF NOT EXISTS topic_tags JSONB NOT NULL DEFAULT '[]'::jsonb`);
@@ -1111,6 +1114,10 @@ async function ensureNetworkTables(pool) {
     await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ`).catch(()=>{});
     await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
     await client.query(`ALTER TABLE network_publisher_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`).catch(()=>{});
+    // v450 legacy repair: a publisher account is deliberately created before a website is approved/linked.
+    // Older Network schemas may still require website_id/application_id. Remove those obsolete NOT NULL constraints.
+    await client.query(`ALTER TABLE network_publisher_accounts ALTER COLUMN website_id DROP NOT NULL`).catch(()=>{});
+    await client.query(`ALTER TABLE network_publisher_accounts ALTER COLUMN application_id DROP NOT NULL`).catch(()=>{});
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_network_publisher_accounts_application_id ON network_publisher_accounts(application_id) WHERE application_id IS NOT NULL`).catch(()=>{});
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_network_publisher_accounts_access_token ON network_publisher_accounts(access_token) WHERE access_token IS NOT NULL`).catch(()=>{});
 
@@ -2402,7 +2409,7 @@ document.getElementById('f').onsubmit=async e=>{e.preventDefault();const b=docum
     async function readJsonSafe(r){const t=await r.text();try{return t?JSON.parse(t):{}}catch(e){return{error:r.ok?'Unexpected server response':'Server error ('+r.status+'). Please try again or contact ContentScale.'}}}
     async function classifyPublisherNiche(){const input=document.getElementById('publisherNiche'),box=document.getElementById('publisherNichePreview');if(!input||!box)return;const v=input.value.trim();if(!v){box.className='niche-preview';box.innerHTML='';return}try{const r=await fetch('/api/network/niches/classify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({niche:v})}),d=await readJsonSafe(r);if(!r.ok||!d.success)throw Error(d.error||'Could not classify');const c=d.classification||{};box.className='niche-preview show';box.innerHTML='<div class="small">ContentScale classification</div><div class="niche-path">'+nh(c.main_niche||'Other')+' → '+nh(c.sub_niche||v)+'</div>'+(c.topics&&c.topics.length?'<div class="niche-topics">Topics: '+c.topics.map(nh).join(' · ')+'</div>':'')+'<div class="niche-topics">Confidence: '+nh(c.confidence||'low')+(c.needs_confirmation?' · checked again during website approval':'')+'</div>'}catch(e){box.className='niche-preview show';box.innerHTML='<div class="niche-topics">We will classify this during review. You can still submit your application.</div>'}}
     let nicheTimer;const nicheInput=document.getElementById('publisherNiche');if(nicheInput){nicheInput.addEventListener('input',()=>{clearTimeout(nicheTimer);nicheTimer=setTimeout(classifyPublisherNiche,350)});nicheInput.addEventListener('blur',classifyPublisherNiche)}
-    async function submitForm(form,statusEl,button,path,success){form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;const old=button.textContent;button.textContent='Sending…';statusEl.textContent='';try{const body=Object.fromEntries(new FormData(form).entries()),r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await readJsonSafe(r);if(!r.ok)throw Error(d.error||('Request failed ('+r.status+')'));statusEl.style.color='#86efac';const nc=d.niche_classification;statusEl.innerHTML='✓ '+success+(nc?'<br><span style="color:#bfdbfe">Classified: '+nh(nc.main_niche)+' → '+nh(nc.sub_niche)+'</span>':'')+(d.dashboard_url?' <br><a style="color:#8dd9ff;font-weight:800" href="'+d.dashboard_url+'">Open your private publisher dashboard →</a>':'');button.textContent='✓ Sent';form.reset();const np=document.getElementById('publisherNichePreview');if(np){np.className='niche-preview';np.innerHTML=''}}catch(err){statusEl.style.color='#fca5a5';statusEl.textContent='✕ '+err.message;button.disabled=false;button.textContent=old}})}
+    async function submitForm(form,statusEl,button,path,success){form.addEventListener('submit',async e=>{e.preventDefault();button.disabled=true;const old=button.textContent;button.textContent='Sending…';statusEl.textContent='';try{const body=Object.fromEntries(new FormData(form).entries()),r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}),d=await readJsonSafe(r);if(!r.ok){const extra=d.error_id?' Error ID: '+d.error_id+(d.db_code?' · '+d.db_code:''):'';throw Error((d.error||('Request failed ('+r.status+')'))+extra)}statusEl.style.color='#86efac';const nc=d.niche_classification;statusEl.innerHTML='✓ '+success+(nc?'<br><span style="color:#bfdbfe">Classified: '+nh(nc.main_niche)+' → '+nh(nc.sub_niche)+'</span>':'')+(d.dashboard_url?' <br><a style="color:#8dd9ff;font-weight:800" href="'+d.dashboard_url+'">Open your private publisher dashboard →</a>':'');button.textContent='✓ Sent';form.reset();const np=document.getElementById('publisherNichePreview');if(np){np.className='niche-preview';np.innerHTML=''}}catch(err){statusEl.style.color='#fca5a5';statusEl.textContent='✕ '+err.message;button.disabled=false;button.textContent=old}})}
     submitForm(document.getElementById('publisherForm'),document.getElementById('publisherStatus'),document.getElementById('publisherButton'),'/api/network/publishers/apply','Publisher application received.');
     submitForm(document.getElementById('adForm'),document.getElementById('adStatus'),document.getElementById('adButton'),'/api/network/advertising/apply','Sponsored placement request received for review.');
     </script></body></html>`);
@@ -2552,10 +2559,15 @@ document.getElementById('f').onsubmit=async e=>{e.preventDefault();const b=docum
       if(code==='23502' || code==='23514'){
         return res.status(400).json({success:false,error:'Publisher application data did not pass validation. Check the domain and email and try again.'});
       }
+      const incident='PUB-'+Date.now().toString(36).toUpperCase();
+      console.error('[network publisher apply] incident='+incident+' code='+(e&&e.code||'')+' constraint='+(e&&e.constraint||''));
       return res.status(500).json({
         success:false,
-        error:'Could not save the publisher application. The Network database schema may need initialization.',
-        diagnostic:process.env.NODE_ENV==='production'?undefined:cleanText(e && e.message || e,500)
+        error:'Could not save the publisher application.',
+        error_id:incident,
+        db_code:cleanText(e && e.code || '',30)||undefined,
+        constraint:cleanText(e && e.constraint || '',160)||undefined,
+        next:'Your application was not confirmed. Please retry once. If it fails again, send ContentScale the error ID shown here.'
       });
     }finally{
       client.release();
