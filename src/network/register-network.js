@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — CLEAN-SLATE RESET + GUIDED TEST v455
+// CONTENTSCALE NETWORK — DUPLICATE PUBLISHER DOMAIN GUARD v456
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -2467,7 +2467,18 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       const cr=await client.query(`INSERT INTO network_referral_codes (partner_id,code,label,created_by_admin_id,created_at,updated_at) VALUES ($1,$2,$3,$4,NOW(),NOW()) RETURNING *`,[pr.rows[0].id,code,label||('Scout: '+name),req.admin&&req.admin.id||null]);
       await client.query('COMMIT');
       res.status(201).json({success:true,partner:pr.rows[0],referral:cr.rows[0],share_url:'https://app.contentscale.site/network/join?ref='+code,rule:'This link stays attributed to this independent referrer. The referred publisher can apply through it.'});
-    }catch(e){try{await client.query('ROLLBACK')}catch(_e){}throw e}finally{client.release()}
+    }catch(e){
+      try{await client.query('ROLLBACK')}catch(_e){}
+      if(String(e&&e.code||'')==='23505'){
+        return res.status(409).json({
+          success:false,
+          error:'This publisher application conflicts with an existing publisher account or website. A domain can only have one publisher identity.',
+          code:'PUBLISHER_DUPLICATE_CONFLICT',
+          constraint:cleanText(e&&e.constraint||'',160)||undefined
+        });
+      }
+      throw e
+    }finally{client.release()}
   }));
 
   app.patch('/api/network/admin/referral-partners/:id/status', verifyAdmin, wrap(async (req,res)=>{
@@ -2937,6 +2948,30 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
     try{
       await client.query('BEGIN');
 
+      // A website/domain may have only ONE live publisher identity.
+      // Same domain + same email can resume; same domain + different email is
+      // blocked so we never expose or create a second publisher dashboard.
+      const domainOwner=await client.query(`
+        SELECT pa.id,pa.email,pa.status,a.id AS account_id,a.status AS account_status,
+               a.website_id,w.status AS website_status
+        FROM network_publisher_applications pa
+        LEFT JOIN network_publisher_accounts a ON a.application_id=pa.id
+        LEFT JOIN network_websites w ON w.id=a.website_id
+        WHERE LOWER(pa.domain)=LOWER($1)
+          AND pa.status IN ('pending','approved','activated')
+        ORDER BY CASE pa.status WHEN 'activated' THEN 0 WHEN 'approved' THEN 1 ELSE 2 END,pa.id DESC
+        LIMIT 1
+        FOR UPDATE OF pa
+      `,[site.domain]);
+      if(domainOwner.rows[0] && String(domainOwner.rows[0].email||'').toLowerCase()!==email){
+        await client.query('ROLLBACK');
+        return res.status(409).json({
+          success:false,
+          error:'This website is already registered in the ContentScale Network under another publisher application. Do not create a second publisher account for the same domain. Ask the Network admin to review the existing publisher record.',
+          code:'PUBLISHER_DOMAIN_ALREADY_REGISTERED'
+        });
+      }
+
       // Do not create endless duplicate pending applications for the same
       // domain/email. Resume the existing pending/approved application instead.
       const existing=await client.query(`
@@ -3095,6 +3130,30 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
           WHERE id=$1 RETURNING *`,[website.id,appRow.niche_main||appRow.niche||null,appRow.niche_sub||null,JSON.stringify(Array.isArray(appRow.niche_topics)?appRow.niche_topics:[]),appRow.market||null,appRow.language||null]);
         website=uw.rows[0]||website;
       }
+
+      // One publisher account per website/domain is an invariant.
+      // If another application already owns this website, fail clearly instead
+      // of hitting the UNIQUE(network_publisher_accounts.website_id) constraint.
+      const ownerAcc=await client.query(`
+        SELECT a.id,a.application_id,a.status,a.access_token,pa.email,pa.brand_name
+        FROM network_publisher_accounts a
+        LEFT JOIN network_publisher_applications pa ON pa.id=a.application_id
+        WHERE a.website_id=$1 AND a.application_id IS DISTINCT FROM $2
+        LIMIT 1
+        FOR UPDATE OF a
+      `,[website.id,id]);
+      if(ownerAcc.rows[0]){
+        await client.query('ROLLBACK');
+        return res.status(409).json({
+          success:false,
+          error:'This website is already linked to another publisher account. A domain can only have one publisher account. Review or remove the existing publisher record before approving this application.',
+          code:'PUBLISHER_WEBSITE_ALREADY_LINKED',
+          existing_account_id:ownerAcc.rows[0].id,
+          existing_application_id:ownerAcc.rows[0].application_id,
+          existing_status:ownerAcc.rows[0].status
+        });
+      }
+
       let acc=await client.query('SELECT * FROM network_publisher_accounts WHERE application_id=$1 LIMIT 1',[id]);
       if(!acc.rows[0])acc=await client.query(`INSERT INTO network_publisher_accounts (application_id,website_id,email,contact_name,access_token,status,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,'pending',NOW(),NOW()) RETURNING *`,[id,website.id,appRow.email,appRow.contact_name||null,crypto.randomBytes(32).toString('hex')]);
       else acc=await client.query(`UPDATE network_publisher_accounts SET website_id=$2,email=$3,contact_name=$4,status=CASE WHEN status='revoked' THEN 'pending' ELSE status END,updated_at=NOW() WHERE id=$1 RETURNING *`,[acc.rows[0].id,website.id,appRow.email,appRow.contact_name||null]);
@@ -3305,7 +3364,14 @@ button:disabled,.btn.busy{cursor:wait!important;position:relative;opacity:.72!im
 button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11px;height:11px;margin-left:8px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;vertical-align:-1px;animation:csButtonSpin .65s linear infinite}
 @keyframes csButtonSpin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){button,.btn{transition:none!important}button:not(:disabled):hover,.btn:hover,button:not(:disabled):active,.btn:active{transform:none!important}button:disabled::after,.btn.busy::after{animation:none!important}}
-</style></head><body><main><p><a href="/network/admin">← Network admin</a> · <a href="/network" target="_blank">View public landing</a></p><div class="card"><h1>Homepage Advertising</h1><p class="note">Sponsored companies are clearly labeled on the public Network homepage and remain separate from organic publisher matching. Activate only after review.</p></div><div class="card"><h2>Advertising requests</h2><div id="ads">Loading…</div></div><div class="card"><h2>Publisher applications</h2><p class="note">Every new publisher signup is listed here. Owner email status shows whether ContentScale sent you the signup notification.</p><div id="apps">Loading…</div></div></main><script>(function(){const key=localStorage.getItem('admin_id')||'',esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c)),api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt),d=await r.json();if(r.status===401||r.status===403){location.href='/admin?next='+encodeURIComponent('/network/advertising');throw Error('Admin session required')}if(!r.ok)throw Error(d.error||'Request failed');return d};async function load(){try{const d=await api('/api/network/admin/advertising');document.getElementById('ads').innerHTML=(d.ads||[]).map(x=>{const mail=x.owner_email_status||'unknown',ctr=Number(x.impressions||0)>0?((Number(x.clicks||0)/Number(x.impressions||1))*100).toFixed(1)+'%':'—';const live=x.status==='active'&&(!x.starts_at||new Date(x.starts_at)<=new Date())&&(!x.ends_at||new Date(x.ends_at)>=new Date());return '<div class="row"><strong>'+esc(x.company_name)+'</strong> · '+esc(x.headline)+' <span class="pill">'+esc(x.status)+'</span> '+(live?'<span class="pill" style="border-color:#22c55e;color:#86efac">LIVE</span>':'')+'<div class="tiny">'+esc(x.contact_name||'')+' · '+esc(x.contact_email||'')+'<br>'+esc(x.target_url||'')+' · '+esc(x.niche||'')+'<br>Owner email: '+esc(mail)+(x.owner_email_error?' · '+esc(x.owner_email_error):'')+'</div><div class="stats"><span class="pill">Impressions '+Number(x.impressions||0)+'</span><span class="pill">Clicks '+Number(x.clicks||0)+'</span><span class="pill">CTR '+ctr+'</span><span class="pill">Placement '+esc(x.placement||'homepage')+'</span></div><div class="grid"><select data-placement="'+x.id+'"><option value="homepage" '+(x.placement==='homepage'?'selected':'')+'>Homepage</option><option value="homepage_featured" '+(x.placement==='homepage_featured'?'selected':'')+'>Homepage featured</option><option value="niche" '+(x.placement==='niche'?'selected':'')+'>Niche</option></select><input data-start="'+x.id+'" type="datetime-local"><input data-end="'+x.id+'" type="datetime-local"><select data-status="'+x.id+'"><option>pending</option><option>active</option><option>paused</option><option>rejected</option><option>expired</option></select><button class="btn" data-save="'+x.id+'">Save</button><button class="btn danger" data-delete="'+x.id+'">Delete</button></div><div class="tiny" style="margin-top:8px">Start: '+esc(x.starts_at||'immediately when active')+' · End: '+esc(x.ends_at||'no end date')+'</div></div>'}).join('')||'No advertising requests yet.';document.querySelectorAll('[data-status]').forEach(n=>{const id=n.dataset.status,x=(d.ads||[]).find(a=>String(a.id)===String(id));if(x)n.value=x.status});document.getElementById('apps').innerHTML=(d.publisher_applications||[]).map(x=>{const m=x.metadata||{},n=m.owner_notification||{},source=m.source||'network_landing';const mail=n.state||'unknown';const mailLabel=mail==='sent'?'Owner email: sent ✓':mail==='failed'?'Owner email: failed':mail==='not_configured'?'Owner email: not configured':'Owner email: unknown';return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span class="pill">'+esc(x.status)+'</span><div class="tiny">'+esc(x.domain)+' · '+esc(x.contact_name||'')+' · '+esc(x.email)+' · '+esc(x.niche||'')+'<br>Source: '+esc(source)+(x.referral_code?' · Referral: '+esc(x.referral_code):'')+'<br>'+esc(mailLabel)+(n.error?' · '+esc(n.error):'')+'</div><div class="stats"><button class="btn" data-pub-review="approved" data-pub-id="'+x.id+'">Approve + link website</button><button class="btn danger" data-pub-review="rejected" data-pub-id="'+x.id+'">Reject</button>'+(x.access_token?'<a class="btn" target="_blank" href="/network/publisher/'+esc(x.access_token)+'">Open dashboard</a>':'')+'</div></div>'}).join('')||'No publisher applications yet.'}catch(e){document.getElementById('ads').textContent=e.message}}document.getElementById('ads').onclick=async e=>{const save=e.target.closest('[data-save]');if(save){const id=save.dataset.save;save.disabled=true;save.textContent='Saving…';try{await api('/api/network/admin/advertising/'+id,{method:'PATCH',body:JSON.stringify({status:document.querySelector('[data-status="'+id+'"]')?.value,placement:document.querySelector('[data-placement="'+id+'"]')?.value,starts_at:document.querySelector('[data-start="'+id+'"]')?.value||null,ends_at:document.querySelector('[data-end="'+id+'"]')?.value||null})});save.textContent='✓ Saved';await load()}catch(err){alert(err.message);save.disabled=false;save.textContent='Save'}return}const del=e.target.closest('[data-delete]');if(del){if(!confirm('Delete this pending/rejected ad request?'))return;del.disabled=true;try{await api('/api/network/admin/advertising/'+del.dataset.delete,{method:'DELETE'});await load()}catch(err){alert(err.message);del.disabled=false}}};document.getElementById('apps').onclick=async e=>{const b=e.target.closest('[data-pub-review]');if(!b)return;const id=b.dataset.pubId,status=b.dataset.pubReview;if(status==='rejected'&&!confirm('Reject this publisher application?'))return;b.disabled=true;const old=b.textContent;b.textContent=status==='approved'?'Approving…':'Rejecting…';try{const d=await api('/api/network/admin/publisher-applications/'+id+'/review',{method:'POST',body:JSON.stringify({status})});if(d.dashboard_url)alert((d.note||'Publisher reviewed.')+String.fromCharCode(10,10)+'Private dashboard: '+location.origin+d.dashboard_url);await load()}catch(err){alert(err.message);b.disabled=false;b.textContent=old}};load()})();</script></body></html>`)});
+</style></head><body><main><p><a href="/network/admin">← Network admin</a> · <a href="/network" target="_blank">View public landing</a></p><div class="card"><h1>Homepage Advertising</h1><p class="note">Sponsored companies are clearly labeled on the public Network homepage and remain separate from organic publisher matching. Activate only after review.</p></div><div class="card"><h2>Advertising requests</h2><div id="ads">Loading…</div></div><div class="card"><h2>Publisher applications</h2><p class="note">Every new publisher signup is listed here. Owner email status shows whether ContentScale sent you the signup notification.</p><div id="apps">Loading…</div></div></main><script>(function(){const key=localStorage.getItem('admin_id')||'',esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c)),api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'Content-Type':'application/json','x-admin-key':key},opt.headers||{});const r=await fetch(path,opt),d=await r.json();if(r.status===401||r.status===403){location.href='/admin?next='+encodeURIComponent('/network/advertising');throw Error('Admin session required')}if(!r.ok)throw Error(d.error||'Request failed');return d};async function load(){try{const d=await api('/api/network/admin/advertising');document.getElementById('ads').innerHTML=(d.ads||[]).map(x=>{const mail=x.owner_email_status||'unknown',ctr=Number(x.impressions||0)>0?((Number(x.clicks||0)/Number(x.impressions||1))*100).toFixed(1)+'%':'—';const live=x.status==='active'&&(!x.starts_at||new Date(x.starts_at)<=new Date())&&(!x.ends_at||new Date(x.ends_at)>=new Date());return '<div class="row"><strong>'+esc(x.company_name)+'</strong> · '+esc(x.headline)+' <span class="pill">'+esc(x.status)+'</span> '+(live?'<span class="pill" style="border-color:#22c55e;color:#86efac">LIVE</span>':'')+'<div class="tiny">'+esc(x.contact_name||'')+' · '+esc(x.contact_email||'')+'<br>'+esc(x.target_url||'')+' · '+esc(x.niche||'')+'<br>Owner email: '+esc(mail)+(x.owner_email_error?' · '+esc(x.owner_email_error):'')+'</div><div class="stats"><span class="pill">Impressions '+Number(x.impressions||0)+'</span><span class="pill">Clicks '+Number(x.clicks||0)+'</span><span class="pill">CTR '+ctr+'</span><span class="pill">Placement '+esc(x.placement||'homepage')+'</span></div><div class="grid"><select data-placement="'+x.id+'"><option value="homepage" '+(x.placement==='homepage'?'selected':'')+'>Homepage</option><option value="homepage_featured" '+(x.placement==='homepage_featured'?'selected':'')+'>Homepage featured</option><option value="niche" '+(x.placement==='niche'?'selected':'')+'>Niche</option></select><input data-start="'+x.id+'" type="datetime-local"><input data-end="'+x.id+'" type="datetime-local"><select data-status="'+x.id+'"><option>pending</option><option>active</option><option>paused</option><option>rejected</option><option>expired</option></select><button class="btn" data-save="'+x.id+'">Save</button><button class="btn danger" data-delete="'+x.id+'">Delete</button></div><div class="tiny" style="margin-top:8px">Start: '+esc(x.starts_at||'immediately when active')+' · End: '+esc(x.ends_at||'no end date')+'</div></div>'}).join('')||'No advertising requests yet.';document.querySelectorAll('[data-status]').forEach(n=>{const id=n.dataset.status,x=(d.ads||[]).find(a=>String(a.id)===String(id));if(x)n.value=x.status});document.getElementById('apps').innerHTML=(d.publisher_applications||[]).map(x=>{const m=x.metadata||{},n=m.owner_notification||{},source=m.source||'network_landing';const mail=n.state||'unknown';const mailLabel=mail==='sent'?'Owner email: sent ✓':mail==='failed'?'Owner email: failed':mail==='not_configured'?'Owner email: not configured':'Owner email: unknown';const next=x.status==='pending'
+  ? '<button class="btn" data-pub-review="approved" data-pub-id="'+x.id+'">Approve + link website</button><button class="btn danger" data-pub-review="rejected" data-pub-id="'+x.id+'">Reject</button>'
+  : x.status==='approved'
+    ? '<a class="btn" href="/network/websites">Next: review website →</a>'
+    : x.status==='activated'
+      ? '<span class="pill" style="border-color:#22c55e;color:#86efac">Publisher active ✓</span>'
+      : '<span class="pill" style="border-color:#ef4444;color:#fecaca">No further action</span>';
+return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span class="pill">'+esc(x.status)+'</span><div class="tiny">'+esc(x.domain)+' · '+esc(x.contact_name||'')+' · '+esc(x.email)+' · '+esc(x.niche||'')+'<br>Source: '+esc(source)+(x.referral_code?' · Referral: '+esc(x.referral_code):'')+'<br>'+esc(mailLabel)+(n.error?' · '+esc(n.error):'')+'</div><div class="stats">'+next+(x.access_token&&x.status!=='rejected'?'<a class="btn" target="_blank" href="/network/publisher/'+esc(x.access_token)+'">Open dashboard</a>':'')+'</div></div>'}).join('')||'No publisher applications yet.'}catch(e){document.getElementById('ads').textContent=e.message}}document.getElementById('ads').onclick=async e=>{const save=e.target.closest('[data-save]');if(save){const id=save.dataset.save;save.disabled=true;save.textContent='Saving…';try{await api('/api/network/admin/advertising/'+id,{method:'PATCH',body:JSON.stringify({status:document.querySelector('[data-status="'+id+'"]')?.value,placement:document.querySelector('[data-placement="'+id+'"]')?.value,starts_at:document.querySelector('[data-start="'+id+'"]')?.value||null,ends_at:document.querySelector('[data-end="'+id+'"]')?.value||null})});save.textContent='✓ Saved';await load()}catch(err){alert(err.message);save.disabled=false;save.textContent='Save'}return}const del=e.target.closest('[data-delete]');if(del){if(!confirm('Delete this pending/rejected ad request?'))return;del.disabled=true;try{await api('/api/network/admin/advertising/'+del.dataset.delete,{method:'DELETE'});await load()}catch(err){alert(err.message);del.disabled=false}}};document.getElementById('apps').onclick=async e=>{const b=e.target.closest('[data-pub-review]');if(!b)return;const id=b.dataset.pubId,status=b.dataset.pubReview;if(status==='rejected'&&!confirm('Reject this publisher application?'))return;b.disabled=true;const old=b.textContent;b.textContent=status==='approved'?'Approving…':'Rejecting…';try{const d=await api('/api/network/admin/publisher-applications/'+id+'/review',{method:'POST',body:JSON.stringify({status})});if(d.dashboard_url)alert((d.note||'Publisher reviewed.')+String.fromCharCode(10,10)+'Private dashboard: '+location.origin+d.dashboard_url);await load()}catch(err){alert(err.message);b.disabled=false;b.textContent=old}};load()})();</script></body></html>`)});
 
   // Admin-only navigation hub. Public visitors use /network.
   // The HTML shell contains no privileged data. It validates the existing ContentScale
