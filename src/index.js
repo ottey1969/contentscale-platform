@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v438-DIRECT-QUERY-AIO-ANSWER-ONLY';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v440-NETWORK-PREWRITE-LIVE-EVIDENCE-REFRESH';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -2649,6 +2649,65 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, disabled: true, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
     const client = cr.rows[0];
+
+    // v439 — authorized Network Prewrite embeds only need the Prewrite workspace.
+    // Do not run the normal Tracker GET's case-study, monitoring and page-lifecycle
+    // self-heal stack for a synthetic Network workspace. That stack is unrelated to
+    // Network Prewrite and can fail on historical schema/state that the iframe does not use.
+    // Authorization is verified against the actual placement before taking this fast path.
+    let _networkPrewriteApiAuthorized = false;
+    try {
+      const _placementId = Number(req.query && req.query.networkPlacement || 0);
+      const _wantsEmbed = String(req.query && req.query.networkEmbed || '') === '1';
+      if (_wantsEmbed && Number.isSafeInteger(_placementId) && _placementId > 0) {
+        const _nq = await pool.query(`
+          SELECT p.id,
+                 c.prewrite_brief_id,
+                 pb.client_id AS prewrite_client_id
+          FROM network_placements p
+          JOIN network_content c ON c.id=p.content_id
+          LEFT JOIN prewrite_briefs pb ON pb.id=c.prewrite_brief_id
+          WHERE p.id=$1
+          LIMIT 1
+        `,[_placementId]);
+        const _nr = _nq.rows[0] || null;
+        if (_nr) {
+          const _syntheticDomain = ('network-placement-' + _placementId + '.internal.contentscale.site').toLowerCase();
+          const _isSyntheticTracker = String(client.domain || '').trim().toLowerCase() === _syntheticDomain;
+          const _ownsLinkedPrewrite = Number(_nr.prewrite_client_id || 0) === Number(client.id || 0);
+          _networkPrewriteApiAuthorized = _isSyntheticTracker || _ownsLinkedPrewrite;
+        }
+      }
+    } catch (_networkApiAuthError) {
+      console.warn('[network prewrite api auth]', _networkApiAuthError.message);
+      _networkPrewriteApiAuthorized = false;
+    }
+
+    if (_networkPrewriteApiAuthorized) {
+      return res.json({
+        success: true,
+        network_prewrite_embed: true,
+        client: {
+          domain: client.domain,
+          name: client.name,
+          max_pages: client.max_pages || 1,
+          created_at: client.created_at,
+          report_cadence: client.report_cadence || 'monthly',
+          telegram_linked: false,
+          live_wall_enabled: false,
+          brand_context: client.brand_context || '',
+          brand_headshot: client.brand_headshot || '',
+          brand_hub: client.brand_hub || '',
+          claims_facts_updated_at: client.claims_facts_updated_at || null,
+          brief_language: client.brief_language || 'auto',
+          sitemap_url: '',
+          sitemap_urls: []
+        },
+        pages: [],
+        page_count: 0,
+        case_study_count: 0
+      });
+    }
 
     // CONTENTSCALE-TRACKER-MAIN-GET-SCHEMA-SELF-HEAL-20260909=true
     // The canonical tracker GET selects lifecycle fields added by later patches.
@@ -45389,7 +45448,7 @@ function showPrewriteBriefModal() {
   _pwbUpdateAiFiveCount();
   loadRecentPrewriteBriefs();
 }
-(function(){try{var q=new URLSearchParams(window.location.search);if(q.get('networkPlacement')){try{var w=document.getElementById('wlOverlay');if(w)w.style.display='none'}catch(e){}setTimeout(function(){try{showPrewriteBriefModal()}catch(e){}},350)}}catch(e){}})();
+(function(){try{var q=new URLSearchParams(window.location.search),np=q.get('networkPlacement'),nb=Number(q.get('networkBrief')||0);if(np){try{var w=document.getElementById('wlOverlay');if(w)w.style.display='none'}catch(e){}setTimeout(function(){try{showPrewriteBriefModal();if(nb>0)setTimeout(function(){try{reopenPrewriteBrief(nb)}catch(_e){}},220)}catch(e){}},350)}}catch(e){}})();
 var _pwbRecommendationContext = null;
 function openSpokePrewrite(index) {
   var d=window._currentIntelData||{},r=(d.spoke_recommendations||[])[Number(index)];
@@ -46109,7 +46168,16 @@ async function api(path, method, body) {
     ? '' : 'https://app.contentscale.site';
   var opts = { method: method||'GET', headers: { 'Content-Type': 'application/json' } };
   if (body) opts.body = JSON.stringify(body);
-  var r = await fetch(base + '/api/tracker-client/' + TOKEN + path, opts);
+  var apiPath = base + '/api/tracker-client/' + TOKEN + path;
+  try {
+    var _nq = new URLSearchParams(window.location.search || '');
+    var _np = String(_nq.get('networkPlacement') || '').trim();
+    var _ne = String(_nq.get('networkEmbed') || '').trim();
+    if (_np && _ne === '1') {
+      apiPath += (apiPath.indexOf('?') >= 0 ? '&' : '?') + 'networkPlacement=' + encodeURIComponent(_np) + '&networkEmbed=1';
+    }
+  } catch (_networkQueryError) {}
+  var r = await fetch(apiPath, opts);
   if (!r.ok) {
     var err = await r.json().catch(function(){ return { error: 'HTTP ' + r.status }; });
     var _e = new Error(err.error || 'HTTP ' + r.status);
