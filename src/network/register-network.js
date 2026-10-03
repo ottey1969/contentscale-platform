@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — AI ANSWER TO PREWRITE LIVE SYNC v475
+// CONTENTSCALE NETWORK — CURRENT PREWRITE KEYWORD LINK FIX v476
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -2167,7 +2167,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
   app.get('/api/network/admin/publications/:placementId/package', verifyAdmin, wrap(async (req,res)=>{
     const id=Number(req.params.placementId);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
     const r=await pool.query(`SELECT p.id AS placement_id,p.status,p.source_link_required,p.brand_mention_required,
-      c.brand_name,c.title AS opportunity_title,c.primary_niche,c.source_snapshot,
+      c.brand_name,c.title AS opportunity_title,c.primary_niche,c.source_snapshot,c.prewrite_brief_id AS current_prewrite_brief_id,
       w.domain AS publisher_domain,w.brand_name AS publisher_brand,w.status AS publisher_status,
       ow.domain AS source_domain,ow.brand_name AS source_brand,
       pv.* FROM network_placements p JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id
@@ -2194,8 +2194,8 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       recommendations:Array.isArray(internalScan.recommendations)?internalScan.recommendations:[]
     }:null;
     let prewriteBrief=null;
-    const prewriteId=Number(row.generation_input_snapshot&&row.generation_input_snapshot.prewrite_brief_id||0);
-    if(prewriteId){const pr=await pool.query('SELECT id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 LIMIT 1',[prewriteId]);prewriteBrief=pr.rows[0]||null;}const prewriteEvidence=prewriteBrief?{id:prewriteBrief.id,keyword:prewriteBrief.keyword,working_title:prewriteBrief.working_title,language:prewriteBrief.language,region:prewriteBrief.region,competitors_scraped:prewriteBrief.competitors_scraped,created_at:prewriteBrief.created_at,hash:crypto.createHash('sha256').update(JSON.stringify(prewriteBrief.brief_json||{})).digest('hex'),generation_hash:cleanText(row.generation_input_snapshot&&row.generation_input_snapshot.prewrite_hash||'',128),generation_match:cleanText(row.generation_input_snapshot&&row.generation_input_snapshot.prewrite_hash||'',128)===crypto.createHash('sha256').update(JSON.stringify(prewriteBrief.brief_json||{})).digest('hex')}:null;
+    const prewriteId=Number(row.current_prewrite_brief_id||row.generation_input_snapshot&&row.generation_input_snapshot.prewrite_brief_id||0);
+    if(prewriteId){const pr=await pool.query('SELECT id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 LIMIT 1',[prewriteId]);prewriteBrief=pr.rows[0]||null;}const prewriteEvidence=prewriteBrief?{id:prewriteBrief.id,keyword:prewriteBrief.keyword,working_title:prewriteBrief.working_title,language:prewriteBrief.language,region:prewriteBrief.region,competitors_scraped:prewriteBrief.competitors_scraped,created_at:prewriteBrief.created_at,link_source:row.current_prewrite_brief_id?'network_content':'generation_snapshot',hash:crypto.createHash('sha256').update(JSON.stringify(prewriteBrief.brief_json||{})).digest('hex'),generation_hash:cleanText(row.generation_input_snapshot&&row.generation_input_snapshot.prewrite_hash||'',128),generation_match:cleanText(row.generation_input_snapshot&&row.generation_input_snapshot.prewrite_hash||'',128)===crypto.createHash('sha256').update(JSON.stringify(prewriteBrief.brief_json||{})).digest('hex')}:null;
     const headings=extractH2Headings(row.html);
     const linkIntel=linkIntelligenceFromSources(row,prewriteBrief);
     const savedIntel=(row.generation_input_snapshot&&row.generation_input_snapshot.link_intelligence)||{};
