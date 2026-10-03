@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v428-AUTO-LEGACY-REPAIR';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v429-LEADCRAWLER-COMPANY-REUSE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -20738,7 +20738,53 @@ app.post('/api/contact-intelligence/export',requireAdmin,asyncHandler(async(req,
   await _ensureContactIntelligenceTables();const ids=Array.from(new Set((Array.isArray(req.body&&req.body.ids)?req.body.ids:[]).map(Number).filter(Number.isSafeInteger))).slice(0,10000),limit=Math.max(1,Math.min(10000,Number((req.body||{}).limit)||10000));let where,params;if(ids.length){where=['id=ANY($1::bigint[])'];params=[ids]}else{const f=_ciBuildFilter((req.body||{}).filters||{status:'domain_verified'},{defaultStatus:'domain_verified'});where=f.where;params=f.params}params.push(limit);const q=await pool.query(`SELECT id,source,company_name,contact_name,username,email,website_url,website_candidate,linkedin_url,source_url,job_title,industry,niche,country,city,location,language,employee_count,follower_count,business_score,status,source_consent,suppression_reason,suppression_source,suppressed_at,created_at FROM contact_intelligence WHERE ${where.join(' AND ')} ORDER BY id DESC LIMIT $${params.length}`,params),columns=['id','source','company_name','contact_name','username','email','website_url','website_candidate','linkedin_url','source_url','job_title','industry','niche','country','city','location','language','employee_count','follower_count','business_score','status','source_consent','suppression_reason','suppression_source','suppressed_at','created_at'],lines=[columns.join(',')];q.rows.forEach(row=>lines.push(columns.map(k=>_ciCsvCell(row[k])).join(',')));res.setHeader('Content-Type','text/csv; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename="contentscale-verified-companies-'+new Date().toISOString().slice(0,10)+'.csv"');res.send('\uFEFF'+lines.join('\r\n'))
 }));
 app.post('/api/contact-intelligence/promote',requireAdmin,asyncHandler(async(req,res)=>{
-  await _ensureContactIntelligenceTables();await _ensureProspectQuickScanTable();const ids=Array.from(new Set((Array.isArray(req.body&&req.body.ids)?req.body.ids:[]).map(Number).filter(Number.isSafeInteger))).slice(0,200);if(!ids.length)return res.status(400).json({success:false,error:'Select verified contacts'});const q=await pool.query(`SELECT * FROM contact_intelligence WHERE id=ANY($1::bigint[]) AND status='domain_verified' AND website_url IS NOT NULL`,[ids]);let created=0,existing=0;const client=await pool.connect();try{await client.query('BEGIN');for(const row of q.rows){const domain=new URL(row.website_url).hostname.toLowerCase().replace(/^www\./,''),found=await client.query(`SELECT token FROM prospect_quick_scans WHERE lower(domain)=lower($1) AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`,[domain]);let token;if(found.rows.length){token=found.rows[0].token;await client.query(`UPDATE prospect_quick_scans SET contact_email=CASE WHEN COALESCE(contact_email,'')='' THEN $1 ELSE contact_email END,contact_email_origin=CASE WHEN COALESCE(contact_email,'')='' AND COALESCE($1,'')<>'' THEN 'crawler_import' ELSE contact_email_origin END,contact_email_source_url=CASE WHEN COALESCE(contact_email,'')='' AND COALESCE($1,'')<>'' THEN NULLIF($4,'') ELSE contact_email_source_url END,contact_email_comment=CASE WHEN COALESCE(contact_email,'')='' AND COALESCE($1,'')<>'' THEN 'Imported from Contact Intelligence. No opt-in.' ELSE contact_email_comment END,contact_email_updated_at=CASE WHEN COALESCE(contact_email,'')='' AND COALESCE($1,'')<>'' THEN NOW() ELSE contact_email_updated_at END,contact_intelligence_id=COALESCE(contact_intelligence_id,$2),updated_at=NOW() WHERE token=$3`,[row.email,row.id,token,row.source_url||row.linkedin_url||'']);existing++}else{token=crypto.randomBytes(32).toString('hex');const lang=/^(nl|en|es)$/.test(String(row.language||''))?row.language:'auto';await client.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,status,contact_intelligence_id,contact_email_origin,contact_email_source_url,contact_email_comment,contact_email_updated_at) VALUES($1,$2,$3,$4,'lead_crawler',$5,$6,$7,'created',$8,CASE WHEN COALESCE($6,'')<>'' THEN 'crawler_import' ELSE NULL END,NULLIF($9,''),CASE WHEN COALESCE($6,'')<>'' THEN 'Imported from Contact Intelligence. No opt-in.' ELSE NULL END,CASE WHEN COALESCE($6,'')<>'' THEN NOW() ELSE NULL END)`,[token,row.company_name||row.username,row.website_url,domain,'Contact Intelligence · '+(row.source||'unknown')+' #'+row.id,row.email,lang,row.id,row.source_url||row.linkedin_url||'']);created++}await client.query(`UPDATE contact_intelligence SET status='promoted',promoted_token=$1,updated_at=NOW() WHERE id=$2`,[token,row.id])}await client.query('COMMIT')}catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}res.json({success:true,selected:ids.length,eligible:q.rows.length,created,existing,message:'Verified companies added to Lead Crawler. No scan or email was started.'})
+  await _ensureContactIntelligenceTables();await _ensureProspectQuickScanTable();
+  const ids=Array.from(new Set((Array.isArray(req.body&&req.body.ids)?req.body.ids:[]).map(Number).filter(Number.isSafeInteger))).slice(0,200);
+  if(!ids.length)return res.status(400).json({success:false,error:'Select verified contacts'});
+  const q=await pool.query(`SELECT * FROM contact_intelligence WHERE id=ANY($1::bigint[]) AND status='domain_verified' AND website_url IS NOT NULL`,[ids]);
+  let created=0,existing=0,blocked_revoked=0;const client=await pool.connect();
+  try{
+    await client.query('BEGIN');
+    for(const row of q.rows){
+      const domain=new URL(row.website_url).hostname.toLowerCase().replace(/^www\./,'');
+      // One canonical Lead Crawler company per domain. The advisory lock also blocks
+      // two simultaneous imports from creating the same company twice.
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext(lower($1)))`,[domain]);
+      const found=await client.query(`SELECT token,revoked_at FROM prospect_quick_scans WHERE lower(domain)=lower($1) ORDER BY (revoked_at IS NULL) DESC,created_at ASC LIMIT 1`,[domain]);
+      let token;
+      if(found.rows.length&&found.rows[0].revoked_at){
+        blocked_revoked++;
+        token=found.rows[0].token;
+        await client.query(`UPDATE contact_intelligence SET promoted_token=$1,reason=concat_ws('; ',NULLIF(reason,''),'Lead Crawler company already exists but is revoked; duplicate not created'),updated_at=NOW() WHERE id=$2`,[token,row.id]);
+        continue;
+      }
+      if(found.rows.length){
+        token=found.rows[0].token;
+        await client.query(`UPDATE prospect_quick_scans SET
+          business_name=CASE WHEN COALESCE(business_name,'')='' THEN $1 ELSE business_name END,
+          contact_email=CASE WHEN COALESCE(contact_email,'')='' THEN $2 ELSE contact_email END,
+          contact_email_origin=CASE WHEN COALESCE(contact_email,'')='' AND COALESCE($2,'')<>'' THEN 'crawler_import' ELSE contact_email_origin END,
+          contact_email_source_url=CASE WHEN COALESCE(contact_email,'')='' AND COALESCE($2,'')<>'' THEN NULLIF($5,'') ELSE contact_email_source_url END,
+          contact_email_comment=CASE WHEN COALESCE(contact_email,'')='' AND COALESCE($2,'')<>'' THEN 'Imported from Contact Intelligence. No opt-in.' ELSE contact_email_comment END,
+          contact_email_updated_at=CASE WHEN COALESCE(contact_email,'')='' AND COALESCE($2,'')<>'' THEN NOW() ELSE contact_email_updated_at END,
+          contact_intelligence_id=COALESCE(contact_intelligence_id,$3),
+          updated_at=NOW()
+          WHERE token=$4`,[row.company_name||row.username,row.email,row.id,token,row.source_url||row.linkedin_url||'']);
+        existing++;
+      }else{
+        token=crypto.randomBytes(32).toString('hex');
+        const lang=/^(nl|en|es)$/.test(String(row.language||''))?row.language:'auto';
+        await client.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,status,contact_intelligence_id,contact_email_origin,contact_email_source_url,contact_email_comment,contact_email_updated_at)
+          VALUES($1,$2,$3,$4,'lead_crawler',$5,$6,$7,'created',$8,CASE WHEN COALESCE($6,'')<>'' THEN 'crawler_import' ELSE NULL END,NULLIF($9,''),CASE WHEN COALESCE($6,'')<>'' THEN 'Imported from Contact Intelligence. No opt-in.' ELSE NULL END,CASE WHEN COALESCE($6,'')<>'' THEN NOW() ELSE NULL END)`,
+          [token,row.company_name||row.username,row.website_url,domain,'Contact Intelligence · '+(row.source||'unknown')+' #'+row.id,row.email,lang,row.id,row.source_url||row.linkedin_url||'']);
+        created++;
+      }
+      await client.query(`UPDATE contact_intelligence SET status='promoted',promoted_token=$1,updated_at=NOW() WHERE id=$2`,[token,row.id]);
+    }
+    await client.query('COMMIT');
+  }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}
+  finally{client.release()}
+  res.json({success:true,selected:ids.length,eligible:q.rows.length,created,existing,blocked_revoked,message:'Lead Crawler uses one company per domain. Existing companies were reused; duplicates were not created.'})
 }));
 app.post('/api/contact-intelligence/suppress',requireAdmin,asyncHandler(async(req,res)=>{
   await _ensureContactIntelligenceTables();const ids=Array.from(new Set((Array.isArray(req.body&&req.body.ids)?req.body.ids:[]).map(Number).filter(Number.isSafeInteger))).slice(0,500),reason=_ciPlain((req.body||{}).reason||'Excluded by admin review',500);if(!ids.length)return res.status(400).json({success:false,error:'Select contacts to suppress'});const client=await pool.connect();try{await client.query('BEGIN');await client.query(`INSERT INTO contact_intelligence_suppressions(contact_id,email,source,reason,actor) SELECT id,email,source,$2,'admin' FROM contact_intelligence WHERE id=ANY($1::bigint[])`,[ids,reason]);await client.query(`UPDATE contact_intelligence SET status='suppressed',suppressed_at=NOW(),suppression_reason=$2,suppression_source='admin',updated_at=NOW() WHERE id=ANY($1::bigint[])`,[ids,reason]);await client.query(`UPDATE prospect_quick_scans SET revoked_at=NOW(),updated_at=NOW() WHERE contact_intelligence_id=ANY($1::bigint[]) AND revoked_at IS NULL AND scan_completed_at IS NULL AND outreach_sent_at IS NULL`,[ids]);await client.query('COMMIT')}catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}res.json({success:true,suppressed:ids.length,reason})
@@ -20790,8 +20836,38 @@ app.post('/api/prospect-quick-scan/create',_pqsPublicLimit,async(req,res)=>{
 app.post('/api/prospect-quick-scan/admin/create',requireAdmin,async(req,res)=>{
   if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'DB unavailable'});
   const url=_pqsLeadHomepage((req.body||{}).url);if(!url)return res.status(400).json({success:false,error:'Valid URL required'});
-  const u=new URL(url),token=require('crypto').randomBytes(32).toString('hex'),source=['lead_crawler','linkedin','facebook','contact_form','email','standalone'].includes(String(req.body.source))?String(req.body.source):'standalone';
-  try{const autoName=String(req.body.business_name||'').trim()||_pqsNameFromUrl(url),email=String(req.body.contact_email||'').trim().slice(0,254);await pool.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,contact_email_origin,contact_email_comment,contact_email_updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,CASE WHEN $7<>'' THEN 'admin_entered' ELSE NULL END,CASE WHEN $7<>'' THEN 'Entered by Admin while creating the prospect.' ELSE NULL END,CASE WHEN $7<>'' THEN NOW() ELSE NULL END)`,[token,autoName.slice(0,200),url,u.hostname.replace(/^www\./,''),source,String(req.body.campaign||'').slice(0,200),email,_pqsLanguage(req.body.language)]);res.json({success:true,token,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',token),business_name:autoName,url});}catch(e){res.status(500).json({success:false,error:e.message});}
+  const u=new URL(url),domain=u.hostname.toLowerCase().replace(/^www\./,''),source=['lead_crawler','linkedin','facebook','contact_form','email','standalone'].includes(String(req.body.source))?String(req.body.source):'standalone';
+  const autoName=String(req.body.business_name||'').trim()||_pqsNameFromUrl(url),email=String(req.body.contact_email||'').trim().slice(0,254);
+  const client=await pool.connect();
+  try{
+    await client.query('BEGIN');
+    if(source==='lead_crawler'){
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext(lower($1)))`,[domain]);
+      const found=await client.query(`SELECT * FROM prospect_quick_scans WHERE lower(domain)=lower($1) ORDER BY (revoked_at IS NULL) DESC,created_at ASC LIMIT 1`,[domain]);
+      if(found.rows.length){
+        const old=found.rows[0];
+        if(old.revoked_at){
+          await client.query('ROLLBACK');
+          return res.status(409).json({success:false,error:'This company already exists in Lead Crawler history but is revoked. Duplicate creation is blocked.',existing_token:old.token,domain,already_exists:true,revoked:true});
+        }
+        await client.query(`UPDATE prospect_quick_scans SET
+          business_name=CASE WHEN COALESCE(business_name,'')='' THEN $1 ELSE business_name END,
+          contact_email=CASE WHEN COALESCE(contact_email,'')='' THEN $2 ELSE contact_email END,
+          campaign=CASE WHEN COALESCE(campaign,'')='' THEN $3 ELSE campaign END,
+          updated_at=NOW()
+          WHERE token=$4`,[autoName.slice(0,200),email,String(req.body.campaign||'').slice(0,200),old.token]);
+        await client.query('COMMIT');
+        return res.json({success:true,token:old.token,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token),business_name:old.business_name||autoName,url:old.url||url,existing:true,reused:true,message:'Existing Lead Crawler company reused. No duplicate was created.'});
+      }
+    }
+    const token=require('crypto').randomBytes(32).toString('hex');
+    await client.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,contact_email_origin,contact_email_comment,contact_email_updated_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,CASE WHEN $7<>'' THEN 'admin_entered' ELSE NULL END,CASE WHEN $7<>'' THEN 'Entered by Admin while creating the prospect.' ELSE NULL END,CASE WHEN $7<>'' THEN NOW() ELSE NULL END)`,
+      [token,autoName.slice(0,200),url,domain,source,String(req.body.campaign||'').slice(0,200),email,_pqsLanguage(req.body.language)]);
+    await client.query('COMMIT');
+    res.json({success:true,token,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',token),business_name:autoName,url,existing:false});
+  }catch(e){await client.query('ROLLBACK').catch(()=>{});res.status(500).json({success:false,error:e.message});}
+  finally{client.release()}
 });
 
 // Bulk-create private Lead Crawler records and personal links. This intentionally
@@ -20810,11 +20886,15 @@ app.post('/api/prospect-quick-scan/admin/import',requireAdmin,async(req,res)=>{
       const row=companies[i]||{},leadUrl=_pqsLeadHomepage(row.url||row.website||row.domain||row.business_url),url=leadUrl?(()=>{const home=new URL(leadUrl);home.pathname='/';home.search='';home.hash='';return home.toString()})():null;
       if(!url){invalid++;if(errors.length<10)errors.push({row:i+1,error:'Valid website missing'});continue;}
       const domain=new URL(url).hostname.toLowerCase().replace(/^www\./,''),name=String(row.business_name||row.company_name||row.company||row.name||_pqsNameFromUrl(url)||domain).trim().slice(0,200),email=String(row.contact_email||row.email||'').trim().slice(0,254),campaign=String(row.campaign||defaultCampaign).trim().slice(0,200),language=_pqsLanguage(row.language||defaultLanguage);
-      const found=await client.query(`SELECT token,business_name,url,domain,status FROM prospect_quick_scans WHERE lower(domain)=lower($1) AND revoked_at IS NULL ORDER BY created_at DESC LIMIT 1`,[domain]);
+      await client.query(`SELECT pg_advisory_xact_lock(hashtext(lower($1)))`,[domain]);
+      const found=await client.query(`SELECT token,business_name,url,domain,status,revoked_at FROM prospect_quick_scans WHERE lower(domain)=lower($1) ORDER BY (revoked_at IS NULL) DESC,created_at ASC LIMIT 1`,[domain]);
       if(found.rows.length){
         const old=found.rows[0];
+        if(old.revoked_at){
+          existing++;items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:'revoked_existing',created:false,reused:false,blocked_duplicate:true,message:'Company already exists in Lead Crawler history and is revoked; duplicate not created.'});continue;
+        }
         await client.query(`UPDATE prospect_quick_scans SET business_name=CASE WHEN COALESCE(business_name,'')='' THEN $1 ELSE business_name END,contact_email=CASE WHEN COALESCE(contact_email,'')='' THEN $2 ELSE contact_email END,contact_email_origin=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN 'crawler_import' ELSE contact_email_origin END,contact_email_comment=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN 'Imported with the Lead Crawler record. No opt-in.' ELSE contact_email_comment END,contact_email_updated_at=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN NOW() ELSE contact_email_updated_at END,campaign=CASE WHEN COALESCE(campaign,'')='' THEN $3 ELSE campaign END,updated_at=NOW() WHERE token=$4`,[name,email,campaign,old.token]);
-        existing++;items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:old.status,created:false,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token)});continue;
+        existing++;items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:old.status,created:false,reused:true,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token)});continue;
       }
       const token=require('crypto').randomBytes(32).toString('hex');
       await client.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,status,contact_email_origin,contact_email_comment,contact_email_updated_at) VALUES($1,$2,$3,$4,'lead_crawler',$5,$6,$7,'created',CASE WHEN $6<>'' THEN 'crawler_import' ELSE NULL END,CASE WHEN $6<>'' THEN 'Imported with the Lead Crawler record. No opt-in.' ELSE NULL END,CASE WHEN $6<>'' THEN NOW() ELSE NULL END)`,[token,name,url,domain,campaign,email,language]);
@@ -24384,7 +24464,7 @@ function _pqsAdminContactIntelligenceV156(){return `<style>
   document.getElementById('ciLoad').onclick=async function(){var old=beginButton(this,'Applying filters…'),ok=false;try{await list(true);statusText('✓ Filters applied.');ok=true} catch(e){statusText(e.message)}finally{endButton(this,old,ok,'✓ Filters applied')}};document.getElementById('ciRefresh').onclick=async function(){var old=beginButton(this,'Refreshing…'),ok=false;try{await stats();await list(true);statusText('✓ Contact Intelligence refreshed.');ok=true}catch(e){statusText(e.message)}finally{endButton(this,old,ok,'✓ Refreshed')}};document.getElementById('ciSelect20').onclick=function(){var old=beginButton(this,'Selecting…');panel.querySelectorAll('[data-ci-id]').forEach(function(x,i){x.checked=i<20});updateSelection();endButton(this,old,true,'✓ First 20 selected')};document.getElementById('ciClearSelect').onclick=function(){var old=beginButton(this,'Clearing…');panel.querySelectorAll('[data-ci-id]').forEach(function(x){x.checked=false});updateSelection();endButton(this,old,true,'✓ Selection cleared')};document.getElementById('ciVerify').onclick=function(){act('/api/contact-intelligence/verify',20,null,null,this)};
   document.getElementById('ciVerifyFiltered').onclick=async function(){var btn=this,f=filters(),total=Number(document.getElementById('ciTotalLimit').value)||100,parts=['status: '+f.status,'minimum score: '+f.min_score],active=latestVerify&&['queued','processing','paused'].indexOf(latestVerify.status)>=0;if(active){var blockedOld=beginButton(btn,'Checking queue…');statusText('A website verification queue is already '+latestVerify.status+' ('+n(latestVerify.processed)+' / '+n(latestVerify.total_limit||latestVerify.total)+'). Finish or cancel it before starting another batch.');endButton(btn,blockedOld,false,null,'✕ Queue already active');return}if(f.q)parts.push('search: '+f.q);if(f.source!=='all')parts.push('source: '+f.source);if(f.niche!=='all')parts.push('niche: '+f.niche);if(f.country)parts.push('country: '+f.country);if(f.language!=='all')parts.push('language: '+f.language);if(!confirm('Queue the next '+total+' matching companies?\\n\\nFilters: '+parts.join(' · ')+'\\n\\nThe queue stops after '+total+'. This does not send email and does not start a Quick Scan.'))return;var old=beginButton(btn,'Adding '+total+' companies…'),ok=false;try{var d=await api('/api/contact-intelligence/verify-filtered',{method:'POST',body:JSON.stringify({filters:f,total_limit:total})});statusText(d.message);ok=true;await stats()}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ Queue created')}};
   async function showVerified(selectFirst){document.getElementById('ciFilter').value='domain_verified';await list(true);panel.classList.remove('ciCompaniesClosed');var sl=document.getElementById('ciSectionLabel');if(sl)sl.textContent='Hide companies ('+panel.querySelectorAll('#ciList .ciRow').length+')';if(selectFirst){panel.querySelectorAll('[data-ci-id]').forEach(function(x,i){x.checked=i<20});updateSelection()}}
-  async function promoteIds(ids,btn){if(!ids.length)return statusText('No verified domains match the current filters.');var old=beginButton(btn,'Adding '+ids.length+' to Lead Crawler…'),ok=false;try{var d=await api('/api/contact-intelligence/promote',{method:'POST',body:JSON.stringify({ids:ids})});statusText('Added to Lead Crawler ✓ '+n(d.created)+' new · '+n(d.existing)+' already existed. Find them under Lead Crawler & Outreach → email approval queue. No scan or email was started.');ok=true;await stats();await list(true);if(window.loadPqsEmailQueue)window.loadPqsEmailQueue()}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ Added to Lead Crawler')}}
+  async function promoteIds(ids,btn){if(!ids.length)return statusText('No verified domains match the current filters.');var old=beginButton(btn,'Adding '+ids.length+' to Lead Crawler…'),ok=false;try{var d=await api('/api/contact-intelligence/promote',{method:'POST',body:JSON.stringify({ids:ids})});statusText('Added to Lead Crawler ✓ '+n(d.created)+' new · '+n(d.existing)+' existing company records reused · '+n(d.blocked_revoked||0)+' revoked duplicates blocked. Lead Crawler keeps one company per domain.');ok=true;await stats();await list(true);if(window.loadPqsEmailQueue)window.loadPqsEmailQueue()}catch(e){statusText(e.message)}finally{endButton(btn,old,ok,'✓ Added to Lead Crawler')}}
   document.getElementById('ciShowVerified').onclick=async function(){var old=beginButton(this,'Loading verified domains…'),ok=false;try{await showVerified(false);statusText('Showing verified domains. Select the companies you want, then use “Add selected verified to Lead Crawler”.');ok=true}catch(e){statusText(e.message)}finally{endButton(this,old,ok,'✓ Verified domains shown')}};
   document.getElementById('ciPromoteNext20').onclick=async function(){if(!confirm('Add the next 20 verified domains matching the current source, niche, country, language and minimum-score filters to Lead Crawler?\\n\\nThis creates Lead Crawler prospect records only. It does not start a scan and does not send email.'))return;var b=this;try{await showVerified(true);var ids=selected();await promoteIds(ids,b)}catch(e){statusText(e.message)}};
   document.getElementById('ciPromote').onclick=function(){var checked=Array.from(panel.querySelectorAll('[data-ci-id]:checked')),invalid=checked.filter(function(x){return !x.closest('.ciRow')||x.closest('.ciRow').dataset.status!=='domain_verified'});if(!checked.length)return statusText('Select verified domains first, or use “Add next 20 verified domains to Lead Crawler”.');if(invalid.length)return statusText('Only rows marked domain_verified can be added. Press “Show verified domains” first.');if(!confirm('Add '+checked.length+' selected verified companies to Lead Crawler? No scan or email will start.'))return;promoteIds(checked.map(function(x){return Number(x.dataset.ciId)}),this)};document.getElementById('ciSuppress').onclick=function(){var reason=prompt('Suppression reason:','Not a suitable business prospect');if(reason===null)return;act('/api/contact-intelligence/suppress',500,'Suppress selected contacts and revoke unsent, unscanned records?',{reason:reason},this)};
