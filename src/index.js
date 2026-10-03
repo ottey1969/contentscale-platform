@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v433-NETWORK-PREWRITE-BRAND-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v434-PREWRITE-UNIFORM-5AI-TOP10';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -44343,15 +44343,6 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         </div>
       </div>
     </div>
-    <div style="margin-bottom:16px;">
-      <label style="font-size:11px;color:#f59e0b;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em;">&#x1F50D; Google AI Overview <span style="color:#cbd5e1;font-weight:400;text-transform:none;">(optional)</span></label>
-      <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:8px;flex-wrap:wrap;">
-        <input id="pwbAioUrl" type="text" class="cs-input" style="flex:2;min-width:180px;" placeholder="Your URL to check for citation (optional)">
-        <button type="button" class="cs-btn" id="pwbAioFetchBtn" onclick="prewriteAioFetch()" style="flex:1;min-width:130px;border-color:#a855f7;color:#c084fc;white-space:nowrap;"><i class="fas fa-bolt"></i> Auto-fetch AIO</button>
-      </div>
-      <div id="pwbAioFetchStatus" style="font-size:11px;color:#9ca3af;margin-bottom:6px;display:none;"></div>
-      <textarea id="pwbAioText" class="cs-input pwbAiEvidence" style="min-height:70px;resize:vertical;font-family:inherit;" placeholder="Paste the AI Overview text from Google here — or use Auto-fetch above (paid). Leave empty if there's no AIO or you didn't check."></textarea>
-    </div>
     <div style="margin-bottom:16px;background:#0b1220;border:1px solid #26364d;border-radius:10px;padding:12px 13px;">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
         <div><div style="font-size:11px;color:#c4b5fd;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">5 AI systems evidence</div><div id="pwbNetworkAuthBadge" style="display:none;margin-top:6px;font-size:10px;color:#86efac;font-weight:800;">✓ Network Prewrite authorized · GSC is not required for this research workspace</div>
@@ -44359,11 +44350,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <div id="pwbAiFiveCount" style="font-size:11px;color:#94a3b8;font-weight:800;">0 / 5 added</div>
       </div>
       <div class="pwb-ai-five-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;">
-        <div style="border:1px solid #1f2937;border-radius:8px;padding:9px;"><div style="font-size:10px;color:#38bdf8;font-weight:800;text-transform:uppercase;">Google AIO / Gemini</div><div style="font-size:10px;color:#64748b;margin-top:4px;">Uses the Google AI Overview field above.</div></div>
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">ChatGPT Search</label><textarea id="pwbChatgptText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste real ChatGPT Search answer / citation evidence."></textarea></div>
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Perplexity</label><textarea id="pwbPerplexityText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Optional manual Perplexity evidence. Automatic Perplexity research still runs when configured."></textarea></div>
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Claude</label><textarea id="pwbClaudeText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste real Claude answer / citation evidence."></textarea></div>
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Microsoft Copilot</label><textarea id="pwbCopilotText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste real Copilot answer / citation evidence."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Google AIO / Gemini</label><textarea id="pwbAioText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real Google AIO / Gemini answer and citation evidence."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">ChatGPT Search</label><textarea id="pwbChatgptText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real ChatGPT Search answer and citation evidence."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Perplexity</label><textarea id="pwbPerplexityText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real Perplexity answer and citation evidence."></textarea><div style="font-size:9.5px;color:#64748b;margin-top:4px;">Manual evidence is primary. Automatic Perplexity is fallback only when this field is empty.</div></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Claude</label><textarea id="pwbClaudeText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real Claude answer and citation evidence."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Microsoft Copilot</label><textarea id="pwbCopilotText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real Microsoft Copilot answer and citation evidence."></textarea></div>
       </div>
     </div>
     <div style="display:flex;gap:8px;">
@@ -45560,39 +45551,6 @@ document.addEventListener('mousedown', function(e) {
 });
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && _csComboOpenId) csComboClose(_csComboOpenId); });
 
-async function prewriteAioFetch() {
-  var kw = document.getElementById('pwbKeyword').value.trim();
-  if (!kw) { toast('Type your keyword first, then auto-fetch', '#f87171'); return; }
-  var regionRaw = document.getElementById('pwbRegion').value.trim();
-  var region = (regionRaw.toLowerCase().match(/[a-z]{2}/) || ['us'])[0];
-  var url = document.getElementById('pwbAioUrl').value.trim();
-  var btn = document.getElementById('pwbAioFetchBtn');
-  var stat = document.getElementById('pwbAioFetchStatus');
-  var _label = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching…';
-  stat.style.display = 'block'; stat.style.color = '#9ca3af'; stat.textContent = 'Asking Google for the AI Overview…';
-  try {
-    var data = await api('/prewrite-aio-fetch', 'POST', { query: kw, country: (region||'US').toUpperCase(), url: url });
-    if (data.success && data.triggered && data.aioText) {
-      document.getElementById('pwbAioText').value = data.aioText;
-      stat.style.color = '#4ade80';
-      stat.textContent = data.message || 'AI Overview fetched and filled in below.';
-    } else if (data.success && !data.triggered) {
-      stat.style.color = '#fbbf24';
-      stat.textContent = data.message || 'No AI Overview showed for that keyword/region — paste manually if you have one.';
-    } else {
-      stat.style.color = '#fbbf24';
-      stat.textContent = data.error || 'Could not auto-fetch — paste the AI Overview manually below.';
-    }
-  } catch(e) {
-    // api() throws on non-2xx; the server sends a friendly manual-fallback message we surface here.
-    stat.style.color = '#fbbf24';
-    stat.textContent = (e && e.message) ? e.message : 'Could not auto-fetch — paste the AI Overview manually below.';
-  } finally {
-    btn.disabled = false; btn.innerHTML = _label;
-  }
-}
-
 async function generatePrewriteBrief() {
   var kw = document.getElementById('pwbKeyword').value.trim();
   var title = document.getElementById('pwbTitle').value.trim();
@@ -45932,9 +45890,10 @@ function renderPrewriteBrief(b) {
   if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
     html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">' + _PLH.compTableH + '</div>';
     html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
-    html += '<tr style="border-bottom:1px solid #1f2937;"><th style="text-align:left;padding:4px 6px;color:#6b7280;">#</th><th style="text-align:left;padding:4px 6px;color:#6b7280;">' + _PLH.domain + '</th><th style="text-align:left;padding:4px 6px;color:#34d399;">Has</th><th style="text-align:left;padding:4px 6px;color:#f87171;">Gap</th><th style="text-align:left;padding:4px 6px;color:#60a5fa;">Add</th></tr>';
+    html += '<tr style="border-bottom:1px solid #1f2937;"><th style="text-align:left;padding:4px 6px;color:#6b7280;">#</th><th style="text-align:left;padding:4px 6px;color:#6b7280;">Competitor / exact URL</th><th style="text-align:left;padding:4px 6px;color:#34d399;">Has</th><th style="text-align:left;padding:4px 6px;color:#f87171;">Gap</th><th style="text-align:left;padding:4px 6px;color:#60a5fa;">Add</th></tr>';
     b.competitor_table.forEach(function(c){
-      html += '<tr style="border-bottom:1px solid #1a2332;"><td style="padding:5px 6px;color:#9ca3af;">' + esc(c.rank) + '</td><td style="padding:5px 6px;font-weight:700;">' + esc(c.domain) + '</td><td style="padding:5px 6px;color:#a7f3d0;">' + esc(c.what_they_have) + '</td><td style="padding:5px 6px;color:#fca5a5;">' + esc(c.the_gap) + '</td><td style="padding:5px 6px;color:#93c5fd;">' + esc(c.what_to_add) + '</td></tr>';
+      var _cu=String(c.exact_url||'');var _safeCu=/^https:\/\//i.test(_cu)?_cu:'';var _ct=esc(c.page_title||c.domain||'');
+      html += '<tr style="border-bottom:1px solid #1a2332;"><td style="padding:5px 6px;color:#9ca3af;">' + esc(c.rank) + '</td><td style="padding:5px 6px;font-weight:700;max-width:300px;">' + _ct + (_safeCu?'<div style="margin-top:3px;font-weight:400;"><a href="'+esc(_safeCu)+'" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;word-break:break-all;">'+esc(_safeCu)+'</a></div>':'<div style="margin-top:3px;color:#6b7280;font-weight:400;">'+esc(c.domain||'')+'</div>') + '</td><td style="padding:5px 6px;color:#a7f3d0;">' + esc(c.what_they_have) + '</td><td style="padding:5px 6px;color:#fca5a5;">' + esc(c.the_gap) + '</td><td style="padding:5px 6px;color:#93c5fd;">' + esc(c.what_to_add) + '</td></tr>';
     });
     html += '</table></div>';
   }
@@ -57507,21 +57466,21 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       } catch (e) { console.warn('[prewrite-brief] Perplexity check failed:', e.message); }
     }
 
-    const top5 = serpUrls
+    const top10 = serpUrls
       .filter(r => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\.|quora\.com|instagram\.com|tiktok\.com/i.test(r.url))
-      .slice(0, 5);
-    const compScrapes = await Promise.all(top5.map(e => scrapeBodyText(e.url, 6000)));
+      .slice(0, 10);
+    const compScrapes = await Promise.all(top10.map(e => scrapeBodyText(e.url, 6000)));
     const _detectSchema = h => Array.from(new Set(((h || '').match(/"@type"\s*:\s*"([^"]+)"/g) || []).map(x => x.replace(/.*"([^"]+)"$/, '$1')))).slice(0, 6);
-    const compSummary = top5.map((e, i) => {
+    const compSummary = top10.map((e, i) => {
       const sc = compScrapes[i] || {};
       const schema = _detectSchema(sc.fullHtml);
       const body = (sc.text || '').slice(0, 1500);
-      return `RANK ${e.rank}: ${e.domain}\n  Title: "${e.title || ''}"\n  Snippet: "${(e.snippet || '')}"\n  Word count: ${sc.wordCount || '?'}\n  Schema detected: ${schema.length ? schema.join(', ') : 'none'}\n  Body excerpt: ${body || '(not captured)'}`;
+      return `RANK ${e.rank}: ${e.domain}\n  Exact URL: ${e.url}\n  Title: "${e.title || ''}"\n  Snippet: "${(e.snippet || '')}"\n  Word count: ${sc.wordCount || '?'}\n  Schema detected: ${schema.length ? schema.join(', ') : 'none'}\n  Body excerpt: ${body || '(not captured)'}`;
     }).join('\n\n');
 
     // ── Search intent: detect from the real SERP, allow an owner override (CLAUDE-FIX-2608-intentEngine) ──
     const _aioForIntent = aioManualText ? { answer: aioManualText } : null;
-    const _autoIntent = detectSearchIntent(keyword, serpUrls, peopleAlsoAsk, _aioForIntent, top5);
+    const _autoIntent = detectSearchIntent(keyword, serpUrls, peopleAlsoAsk, _aioForIntent, top10);
     const _validIntents = ['informational','commercial','transactional','navigational'];
     const _chosenIntent = (intentOverride && _validIntents.includes(String(intentOverride).toLowerCase()))
       ? String(intentOverride).toLowerCase() : _autoIntent.primary;
@@ -57551,6 +57510,35 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     }
     const recommendationBlock=_recSafe?'TRACKER CONTENT RECOMMENDATION — treat this as a proposal to VERIFY, not permission to publish:\n'+JSON.stringify(_recSafe)+_targetPageBlock+'\nUse its GSC evidence. Required mode: '+(_recSafe.decision==='OPTIMIZE'?'OPTIMIZE_EXISTING_PAGE: preserve proven passages and structure; specify surgical before/after changes only.':_recSafe.decision==='EXPAND_EXISTING'?'EXPAND_EXISTING_PAGE: preserve the existing page and add only justified substantial sections.':'CREATE_NEW_PAGE: re-run the cannibalization gate; if overlap exists, change to EXPAND_EXISTING_PAGE.')+' If a spoke is cleared, include a bidirectional hub_spoke_plan.':'';
 
+    const _perplexityEvidenceText = _manualAi.perplexity
+      ? _manualAi.perplexity
+      : (perplexity.checked ? (perplexity.answer_excerpt || '') : '');
+    const _perplexityEvidenceSource = _manualAi.perplexity ? 'manual' : (perplexity.checked ? 'automatic fallback' : 'not checked');
+    const aiSystemsBlock = `5 AI SYSTEMS EVIDENCE — MANUAL INPUT IS PRIMARY. NEVER SIMULATE ANOTHER AI SYSTEM.
+Google AIO / Gemini [${_manualAi.google_aio ? 'manual' : 'NOT CHECKED'}]:
+${_manualAi.google_aio || 'NOT CHECKED'}
+
+ChatGPT Search [${_manualAi.chatgpt ? 'manual' : 'NOT CHECKED'}]:
+${_manualAi.chatgpt || 'NOT CHECKED'}
+
+Perplexity [${_perplexityEvidenceSource}]:
+${_perplexityEvidenceText || 'NOT CHECKED'}
+${(!_manualAi.perplexity && perplexity.checked && perplexity.cited_domains.length) ? 'Automatic fallback cited domains: ' + perplexity.cited_domains.join(', ') : ''}
+
+Claude [${_manualAi.claude ? 'manual' : 'NOT CHECKED'}]:
+${_manualAi.claude || 'NOT CHECKED'}
+
+Microsoft Copilot [${_manualAi.copilot ? 'manual' : 'NOT CHECKED'}]:
+${_manualAi.copilot || 'NOT CHECKED'}
+
+RULES:
+- Manual evidence always overrides automatic fallback.
+- Only Perplexity currently has an automatic fallback.
+- Empty manual Google/ChatGPT/Claude/Copilot means NOT CHECKED.
+- Never infer recommendation, mention, domain citation or exact-page citation without evidence.
+- Preserve exact HTTPS URLs present in the evidence.
+- This evidence is research input, never a ContentScore.
+`;
     const prompt = `You are an elite SEO and AEO strategist. A strategist requested a possible NEW page for this keyword. FIRST decide whether a new URL should actually be created or whether an existing client URL should be expanded instead. Do not create a new page when the sitemap shows a materially overlapping existing URL and doing so would create cannibalization. If CREATE is justified, specify what the brand-new page must contain to outrank and out-cite current results from the first draft. Every claim must be traceable to the inputs below; never invent a domain, URL, snippet, statistic, schema type or business fact.
 
 KEYWORD: "${keyword}"
@@ -57559,10 +57547,9 @@ ${workingTitle ? 'WORKING TITLE / ANGLE SUPPLIED: "' + workingTitle + '"' : 'No 
 LIVE SERP — CURRENT TOP RESULTS:
 ${compSummary}
 
-PERPLEXITY — LIVE CHECK:
-${perplexity.checked ? (perplexity.answer_excerpt ? 'Answer excerpt: "' + perplexity.answer_excerpt + '"\nCurrently cites: ' + (perplexity.cited_domains.join(', ') || 'no domains returned') : 'Checked — no answer excerpt captured for this query.') : 'Not checked — PERPLEXITY_API_KEY not configured.'}
+${aiSystemsBlock}
 
-GOOGLE DIRECT-ANSWER BLOCK: ${aioManualText ? ('manually captured by the user — full text below:\n"' + aioManualText.slice(0, 3000) + '"') : (aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev does not reliably capture AI Overview content — this does not mean Google shows none, only that our check could not confirm it)')}
+GOOGLE SEARCH DIRECT-ANSWER SIGNAL: ${aioDetected ? 'A direct-answer/knowledge signal was returned by the Google search data source. This is NOT proof of a Google AI Overview unless manual Google AIO / Gemini evidence above was supplied.' : 'No direct-answer/knowledge signal was returned by the Google search data source. This is NOT proof that Google shows no AI Overview.'}
 
 GOOGLE "PEOPLE ALSO ASK" — REAL QUESTIONS FOR THIS QUERY (${glParam}):
 ${peopleAlsoAsk.length ? peopleAlsoAsk.map(function(q){ return '- ' + q.question; }).join('\n') : 'None returned by our data source for this query — infer the most likely PAA questions from search intent instead.'}
@@ -57587,7 +57574,7 @@ STEP 0 — TREATMENT / CANNIBALIZATION GATE: choose exactly OPTIMIZE_EXISTING_PA
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
 STEP 2 — INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered.
 STEP 3 — GAP ACROSS THE WHOLE TOP 10: what does NONE of the current top 10 cover well — the opening this new page can own?
-STEP 4 — For EACH of the top 5 competitors, state ONE concrete thing they do well and ONE concrete gap — grounded only in their scraped content above.
+STEP 4 — For EACH of the top 10 competitors supplied above, state ONE concrete thing they do well and ONE concrete gap — grounded only in that competitor's scraped content. If a scrape failed, say insufficient_data for its content analysis but still preserve its exact SERP URL.
 STEP 5 — Specify the exact structure, entities, and schema the new page needs to beat rank 1 on day one.
 STEP 6 — BUILD THE IMPLEMENTATION: for OPTIMIZE, return preserve_sections plus surgical_changes, each with exact current location, change, why and complete_when; do not propose a full rewrite or unnecessary new H2s. For EXPAND, return preserve_sections plus only the justified new sections. For CREATE, build the complete new page. In every mode produce meta_package, opening_passage, page_blueprint, exactly 5 PAA answers where relevant, real sitemap-only internal links, evidence requirements, schema and CTA. For a cleared spoke specify both hub-to-spoke and spoke-to-hub links with anchors and placement. Never invent a URL, fact or section merely to make the brief look complete.
 
@@ -57598,7 +57585,7 @@ STEP 8 — FACT SAFETY: return fact_safety with verified_business_facts_used (on
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output "insufficient_data" instead of inventing one.
 
 Return ONLY valid JSON, no markdown, no preamble.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise the Perplexity live check and Google direct-answer block above into one sentence — what it means for this new page's citation chances>","competitor_table":[{"rank":1,"domain":"<real domain from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content>","the_gap":"<one concrete thing missing or weak in their content>","what_to_add":"<what the new page should do instead/better>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<a URL copied verbatim from the CLIENT SITEMAP list; empty array if no sitemap was provided — never invent a path>","why":"<the topical-authority or user-journey purpose>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise the Perplexity live check and Google direct-answer block above into one sentence — what it means for this new page's citation chances>","competitor_table":[{"rank":1,"domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content>","the_gap":"<one concrete thing missing or weak in their content>","what_to_add":"<what the new page should do instead/better>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<a URL copied verbatim from the CLIENT SITEMAP list; empty array if no sitemap was provided — never invent a path>","why":"<the topical-authority or user-journey purpose>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
     const finalPrompt = prompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.';
     const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 45000);
@@ -57754,11 +57741,11 @@ Return ONLY valid JSON, no markdown, no preamble.
     const _pwbNow = new Date();
     brief.freshness = { last_updated: _pwbNow.toISOString().slice(0, 10), year: _pwbNow.getFullYear() };
     brief.ai_system_evidence={checked_at:checkedAt,
-      google_aio:{checked:!!_manualAi.google_aio,manual:true,text:_manualAi.google_aio},
-      chatgpt:{checked:!!_manualAi.chatgpt,manual:true,text:_manualAi.chatgpt},
-      perplexity:{checked:!!(_manualAi.perplexity||perplexity.checked),manual:!!_manualAi.perplexity,text:_manualAi.perplexity,automatic_checked:!!perplexity.checked,automatic_answer_excerpt:perplexity.answer_excerpt||'',automatic_cited_domains:Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[]},
-      claude:{checked:!!_manualAi.claude,manual:true,text:_manualAi.claude},
-      copilot:{checked:!!_manualAi.copilot,manual:true,text:_manualAi.copilot}};
+      google_aio:{checked:!!_manualAi.google_aio,source:_manualAi.google_aio?'manual':'not_checked',manual:!!_manualAi.google_aio,text:_manualAi.google_aio},
+      chatgpt:{checked:!!_manualAi.chatgpt,source:_manualAi.chatgpt?'manual':'not_checked',manual:!!_manualAi.chatgpt,text:_manualAi.chatgpt},
+      perplexity:{checked:!!(_manualAi.perplexity||perplexity.checked),source:_manualAi.perplexity?'manual':(perplexity.checked?'automatic_fallback':'not_checked'),manual:!!_manualAi.perplexity,text:_manualAi.perplexity||perplexity.answer_excerpt||'',automatic_checked:!!perplexity.checked,automatic_answer_excerpt:perplexity.answer_excerpt||'',automatic_cited_domains:Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[]},
+      claude:{checked:!!_manualAi.claude,source:_manualAi.claude?'manual':'not_checked',manual:!!_manualAi.claude,text:_manualAi.claude},
+      copilot:{checked:!!_manualAi.copilot,source:_manualAi.copilot?'manual':'not_checked',manual:!!_manualAi.copilot,text:_manualAi.copilot}};
     brief.ai_system_evidence.checked_count=['google_aio','chatgpt','perplexity','claude','copilot'].filter(k=>brief.ai_system_evidence[k]&&brief.ai_system_evidence[k].checked).length;
 
     // ── AI readiness: computed from what the brief ACTUALLY contains ────────────
@@ -57776,13 +57763,13 @@ Return ONLY valid JSON, no markdown, no preamble.
     try {
       const saved = await pool.query(
         'INSERT INTO prewrite_briefs (client_id, keyword, working_title, language, region, brief_json, competitors_scraped) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',
-        [client.id, keyword, workingTitle || '', language || '', glParam, JSON.stringify(brief), top5.length]
+        [client.id, keyword, workingTitle || '', language || '', glParam, JSON.stringify(brief), top10.length]
       );
       savedBriefId = saved.rows[0]?.id || null;
     } catch (e) { console.warn('[prewrite-brief] Could not save brief for recall:', e.message); }
 
     console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${briefsUsed + 1}/${briefsAllowed}`);
-    res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top5.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed, search_intent: brief.search_intent });
+    res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top10.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed, search_intent: brief.search_intent });
   } catch (e) {
     console.error('[prewrite-brief] error:', e.message);
     res.status(502).json({ success: false, error: e.message });
