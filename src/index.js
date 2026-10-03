@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v430-NETWORK-PREWRITE-5AI';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v431-NETWORK-PREWRITE-AUTH';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -44320,7 +44320,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </div>
     <div style="margin-bottom:16px;background:#0b1220;border:1px solid #26364d;border-radius:10px;padding:12px 13px;">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-        <div><div style="font-size:11px;color:#c4b5fd;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">5 AI systems evidence</div>
+        <div><div style="font-size:11px;color:#c4b5fd;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">5 AI systems evidence</div><div id="pwbNetworkAuthBadge" style="display:none;margin-top:6px;font-size:10px;color:#86efac;font-weight:800;">✓ Network Prewrite authorized · GSC is not required for this research workspace</div>
         <div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:4px;">Add real evidence for the same keyword. Empty means not checked. This is research evidence — not ContentScore.</div></div>
         <div id="pwbAiFiveCount" style="font-size:11px;color:#94a3b8;font-weight:800;">0 / 5 added</div>
       </div>
@@ -44672,6 +44672,25 @@ function _csChart(s){
   return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="background:#0a0f1c;border:1px solid #1f2937;border-radius:10px">'+grid+t10+line+dots+xl+'</svg>';
 }
 var DOMAIN = '__DOMAIN__';
+
+// Network Publisher Edition Prewrite authorization.
+// This bypass is intentionally narrow:
+// - only the synthetic Tracker created for a Network placement
+// - networkEmbed=1 must be present
+// - networkPlacement must exactly match the placement id encoded in DOMAIN
+// Normal Tracker clients still require GSC.
+function _isAuthorizedNetworkPrewriteEmbed(){
+  try{
+    var q=new URLSearchParams(window.location.search);
+    if(q.get('networkEmbed')!=='1')return false;
+    var placement=String(q.get('networkPlacement')||'').trim();
+    if(!/^\d+$/.test(placement))return false;
+    var expected=('network-placement-'+placement+'.internal.contentscale.site').toLowerCase();
+    return String(DOMAIN||'').trim().toLowerCase()===expected;
+  }catch(e){return false}
+}
+var _NETWORK_PREWRITE_AUTHORIZED=_isAuthorizedNetworkPrewriteEmbed();
+
 var GSC_ENABLED = __GSC_ENABLED__;
 var DEMO_RO = __DEMO_RO__;
 // Neon compute saver for EVERYONE (owner included): a tab that is not visible stops polling completely.
@@ -45351,6 +45370,7 @@ function showPrewriteBriefModal() {
   document.getElementById('pwbResult').innerHTML = '';
   document.getElementById('pwbStatus').textContent = '';
   document.getElementById('prewriteBriefModal').classList.add('show');
+  var _nab=document.getElementById('pwbNetworkAuthBadge');if(_nab)_nab.style.display=_NETWORK_PREWRITE_AUTHORIZED?'block':'none';
   _pwbUpdateAiFiveCount();
   loadRecentPrewriteBriefs();
 }
@@ -49589,6 +49609,7 @@ if (_gscAutoFetchAvailable) {
 }
 function _renderGscRequiredGate(d) {
   var old=document.getElementById('csGscRequiredGate'); if(old) old.remove();
+  if(_NETWORK_PREWRITE_AUTHORIZED) return;
   if(d && d.connected) return;
   var gate=document.createElement('div'); gate.id='csGscRequiredGate';
   gate.style.cssText='position:fixed;inset:0;background:rgba(3,7,18,.94);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;';
@@ -49604,6 +49625,7 @@ function _renderGscRequiredGate(d) {
 function _renderGscSetupBanner() {
   var host = document.getElementById('gscSetupBanner');
   if (!host) return;
+  if(_NETWORK_PREWRITE_AUTHORIZED){host.style.display='none';host.innerHTML='';return;}
   var _step1 = _gscServiceAccountEmail
     ? ('<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 Connect one-click GSC data (skips manual CSV exports):</b> add this address as a Search Console user on your property (Settings \u2192 Users and permissions \u2192 Add user, \u201cRestricted\u201d is enough):<br>'
         + '<code style="background:#0d1117;padding:3px 8px;border-radius:4px;color:#93c5fd;font-family:monospace;display:inline-block;margin:4px 0;">' + _gscServiceAccountEmail.replace(/</g,'&lt;') + '</code> '
