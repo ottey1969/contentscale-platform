@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v431-NETWORK-PREWRITE-AUTH';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v432-NETWORK-PREWRITE-AUTH-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -9920,6 +9920,39 @@ app.get('/track/:token', async (req, res) => {
       return res.status(404).send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Tracker</title></head><body style="background:#0a0a0f;color:#f1f5f9;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;padding:20px;box-sizing:border-box;"><div style="text-align:center;max-width:400px;"><div style="font-size:3rem;margin-bottom:16px;">🔒</div><h1 style="font-size:20px;font-weight:800;color:#f1f5f9;margin-bottom:8px;">Tracker link not found</h1><p style="font-size:14px;color:#6b7280;line-height:1.7;margin-bottom:28px;">This link has expired or is incorrect. Contact Ottmar to get your personal tracker link — usually within a few minutes.</p><div style="display:flex;flex-direction:column;gap:10px;"><a href="https://wa.me/31628073996?text=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link" style="display:block;background:#25d366;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:700;">💬 WhatsApp Ottmar — get my link</a><a href="mailto:info@contentscale.site?subject=My%20tracker%20link&body=Hi%20Ottmar%2C%20I%20need%20my%20ContentScale%20tracker%20link." style="display:block;background:#0d1117;border:1px solid #374151;color:#9ca3af;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;">✉️ Email info@contentscale.site</a></div><p style="font-size:11px;color:#374151;margin-top:20px;">ContentScale · contentscale.site</p></div></body></html>`);
     }
     const client = cr.rows[0];
+
+    // v432 — server-authorized Network Prewrite embed.
+    // Do not infer authorization from the Tracker domain. A Network placement may
+    // already be linked to a Prewrite owned by a normal Tracker client, so the
+    // client domain can legitimately be a real website.
+    let networkPrewriteAuthorized = false;
+    try {
+      const placementId = Number(req.query && req.query.networkPlacement || 0);
+      const wantsNetworkEmbed = String(req.query && req.query.networkEmbed || '') === '1';
+      if (wantsNetworkEmbed && Number.isSafeInteger(placementId) && placementId > 0) {
+        const nq = await pool.query(`
+          SELECT p.id,
+                 c.prewrite_brief_id,
+                 pb.client_id AS prewrite_client_id
+          FROM network_placements p
+          JOIN network_content c ON c.id=p.content_id
+          LEFT JOIN prewrite_briefs pb ON pb.id=c.prewrite_brief_id
+          WHERE p.id=$1
+          LIMIT 1
+        `,[placementId]);
+        const nr=nq.rows[0]||null;
+        if (nr) {
+          const syntheticDomain=('network-placement-'+placementId+'.internal.contentscale.site').toLowerCase();
+          const isSyntheticTracker=String(client.domain||'').trim().toLowerCase()===syntheticDomain;
+          const ownsLinkedPrewrite=Number(nr.prewrite_client_id||0)===Number(client.id||0);
+          networkPrewriteAuthorized = isSyntheticTracker || ownsLinkedPrewrite;
+        }
+      }
+    } catch (e) {
+      console.warn('[network prewrite auth]', e.message);
+      networkPrewriteAuthorized = false;
+    }
+
     if (client.status === 'paused' || client.status === 'disabled') return res.send('<html><body style="background:#0a0a0f;color:#fbbf24;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;"><div><div style="font-size:2rem;margin-bottom:12px;">⏸️</div><div>Your tracker is ' + (client.status === 'disabled' ? 'disabled' : 'paused') + '</div><div style="font-size:12px;color:#6b7280;margin-top:8px;">Contact Ottmar to reactivate: <a href="https://wa.me/31628073996" style="color:#7c3aed;">wa.me/31628073996</a></div></div></body></html>');
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -9936,6 +9969,7 @@ app.get('/track/:token', async (req, res) => {
       .replace(/__MAX_PAGES__/g, String(client.max_pages || 1))
       .replace(/__CLIENT_NAME__/g, (client.name || client.domain || '').replace(/[`'\\]/g, ''))
       .replace(/__GSC_ENABLED__/g, client.gsc_enabled ? 'true' : 'false')
+      .replace(/__NETWORK_PREWRITE_AUTH__/g, networkPrewriteAuthorized ? 'true' : 'false')
       .replace(/__GSC_AUTOFETCH__/g, _gscServiceAccount ? 'true' : 'false')
       .replace(/__DEMO_RO__/g, (function(){
         const isRO = client.demo_readonly || (client.readonly_token && client.readonly_token === req.params.token);
@@ -44674,22 +44708,10 @@ function _csChart(s){
 var DOMAIN = '__DOMAIN__';
 
 // Network Publisher Edition Prewrite authorization.
-// This bypass is intentionally narrow:
-// - only the synthetic Tracker created for a Network placement
-// - networkEmbed=1 must be present
-// - networkPlacement must exactly match the placement id encoded in DOMAIN
-// Normal Tracker clients still require GSC.
-function _isAuthorizedNetworkPrewriteEmbed(){
-  try{
-    var q=new URLSearchParams(window.location.search);
-    if(q.get('networkEmbed')!=='1')return false;
-    var placement=String(q.get('networkPlacement')||'').trim();
-    if(!/^\d+$/.test(placement))return false;
-    var expected=('network-placement-'+placement+'.internal.contentscale.site').toLowerCase();
-    return String(DOMAIN||'').trim().toLowerCase()===expected;
-  }catch(e){return false}
-}
-var _NETWORK_PREWRITE_AUTHORIZED=_isAuthorizedNetworkPrewriteEmbed();
+// Authorization is decided SERVER-SIDE against the actual Network placement +
+// Tracker client/Prewrite relationship, then injected into this page.
+// Normal Tracker clients remain GSC-gated.
+var _NETWORK_PREWRITE_AUTHORIZED = __NETWORK_PREWRITE_AUTH__;
 
 var GSC_ENABLED = __GSC_ENABLED__;
 var DEMO_RO = __DEMO_RO__;
