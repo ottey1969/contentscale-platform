@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v429-LEADCRAWLER-COMPANY-REUSE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v430-NETWORK-PREWRITE-5AI';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -44273,6 +44273,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   </div>
 </div>
 
+<style>@media(max-width:760px){.pwb-ai-five-grid{grid-template-columns:1fr!important}}</style>
 <!-- Pre-Write Brief modal — keyword-only, no page yet -->
 <div class="cs-modal" id="prewriteBriefModal">
   <div class="cs-modal-box" onclick="event.stopPropagation()" style="max-width:880px;width:94vw;">
@@ -44315,7 +44316,21 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <button type="button" class="cs-btn" id="pwbAioFetchBtn" onclick="prewriteAioFetch()" style="flex:1;min-width:130px;border-color:#a855f7;color:#c084fc;white-space:nowrap;"><i class="fas fa-bolt"></i> Auto-fetch AIO</button>
       </div>
       <div id="pwbAioFetchStatus" style="font-size:11px;color:#9ca3af;margin-bottom:6px;display:none;"></div>
-      <textarea id="pwbAioText" class="cs-input" style="min-height:70px;resize:vertical;font-family:inherit;" placeholder="Paste the AI Overview text from Google here — or use Auto-fetch above (paid). Leave empty if there's no AIO or you didn't check."></textarea>
+      <textarea id="pwbAioText" class="cs-input pwbAiEvidence" style="min-height:70px;resize:vertical;font-family:inherit;" placeholder="Paste the AI Overview text from Google here — or use Auto-fetch above (paid). Leave empty if there's no AIO or you didn't check."></textarea>
+    </div>
+    <div style="margin-bottom:16px;background:#0b1220;border:1px solid #26364d;border-radius:10px;padding:12px 13px;">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+        <div><div style="font-size:11px;color:#c4b5fd;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">5 AI systems evidence</div>
+        <div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:4px;">Add real evidence for the same keyword. Empty means not checked. This is research evidence — not ContentScore.</div></div>
+        <div id="pwbAiFiveCount" style="font-size:11px;color:#94a3b8;font-weight:800;">0 / 5 added</div>
+      </div>
+      <div class="pwb-ai-five-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;">
+        <div style="border:1px solid #1f2937;border-radius:8px;padding:9px;"><div style="font-size:10px;color:#38bdf8;font-weight:800;text-transform:uppercase;">Google AIO / Gemini</div><div style="font-size:10px;color:#64748b;margin-top:4px;">Uses the Google AI Overview field above.</div></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">ChatGPT Search</label><textarea id="pwbChatgptText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste real ChatGPT Search answer / citation evidence."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Perplexity</label><textarea id="pwbPerplexityText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Optional manual Perplexity evidence. Automatic Perplexity research still runs when configured."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Claude</label><textarea id="pwbClaudeText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste real Claude answer / citation evidence."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Microsoft Copilot</label><textarea id="pwbCopilotText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste real Copilot answer / citation evidence."></textarea></div>
+      </div>
     </div>
     <div style="display:flex;gap:8px;">
       <button class="cs-btn primary" onclick="generatePrewriteBrief()" id="pwbGenerateBtn" style="flex:1;">Analyse &amp; create Pre-Write Brief</button>
@@ -45326,12 +45341,20 @@ function maybeShowWelcome() {
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
 
 function openPrewriteFromHeader() { showPrewriteBriefModal(); }
+function _pwbUpdateAiFiveCount(){
+  var ids=['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'];
+  var n=ids.filter(function(id){var e=document.getElementById(id);return e&&String(e.value||'').trim();}).length;
+  var b=document.getElementById('pwbAiFiveCount');if(b)b.textContent=n+' / 5 added';
+}
+document.addEventListener('input',function(e){if(e.target&&['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0)_pwbUpdateAiFiveCount();});
 function showPrewriteBriefModal() {
   document.getElementById('pwbResult').innerHTML = '';
   document.getElementById('pwbStatus').textContent = '';
   document.getElementById('prewriteBriefModal').classList.add('show');
+  _pwbUpdateAiFiveCount();
   loadRecentPrewriteBriefs();
 }
+(function(){try{var q=new URLSearchParams(window.location.search);if(q.get('networkPlacement')){try{var w=document.getElementById('wlOverlay');if(w)w.style.display='none'}catch(e){}setTimeout(function(){try{showPrewriteBriefModal()}catch(e){}},350)}}catch(e){}})();
 var _pwbRecommendationContext = null;
 function openSpokePrewrite(index) {
   var d=window._currentIntelData||{},r=(d.spoke_recommendations||[])[Number(index)];
@@ -45400,6 +45423,7 @@ async function reopenPrewriteBrief(id) {
     }
     document.getElementById('pwbKeyword').value = data.keyword || '';
     document.getElementById('pwbTitle').value = data.working_title || '';
+    try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbUpdateAiFiveCount()}catch(e){}
     var d = new Date(data.created_at);
     stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString();
     result.innerHTML = renderPrewriteBrief(data.brief);
@@ -45546,7 +45570,8 @@ async function generatePrewriteBrief() {
   result.innerHTML = '';
 
   try {
-    var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext };
+    var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext,
+      manualAiEvidence:{google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()} };
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
     btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
@@ -45554,10 +45579,11 @@ async function generatePrewriteBrief() {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
       return;
     }
-    _lastPwbInput = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText };
+    _lastPwbInput = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, manualAiEvidence:_pwbBody.manualAiEvidence };
     _pwbRecommendationContext = null;
     stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
     result.innerHTML = _renderIntentBar(data.search_intent) + renderPrewriteBrief(data.brief);
+    try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Publisher Edition';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
     loadRecentPrewriteBriefs();
   } catch (e) {
     btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
@@ -57293,7 +57319,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
     const client = cr.rows[0];
 
-    const { keyword, workingTitle, language, region, manualAioText, intentOverride, recommendationContext } = req.body || {};
+    const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -57363,6 +57389,9 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     let aioDetected = false;
     let peopleAlsoAsk = [];
     let aioManualText = String(manualAioText || '').trim();
+    const _manualAiRaw=(manualAiEvidence&&typeof manualAiEvidence==='object')?manualAiEvidence:{};
+    const _clipAi=v=>String(v||'').trim().slice(0,12000);
+    const _manualAi={google_aio:_clipAi(_manualAiRaw.google_aio||aioManualText),chatgpt:_clipAi(_manualAiRaw.chatgpt),perplexity:_clipAi(_manualAiRaw.perplexity),claude:_clipAi(_manualAiRaw.claude),copilot:_clipAi(_manualAiRaw.copilot)};
     if (aioManualText) {
       aioDetected = true;
       console.log('[prewrite-brief] Using manual AIO text for:', keyword, '(' + aioManualText.length + ' chars)');
@@ -57678,6 +57707,13 @@ Return ONLY valid JSON, no markdown, no preamble.
     // today's real date on the page, so it is injected here instead of generated.
     const _pwbNow = new Date();
     brief.freshness = { last_updated: _pwbNow.toISOString().slice(0, 10), year: _pwbNow.getFullYear() };
+    brief.ai_system_evidence={checked_at:checkedAt,
+      google_aio:{checked:!!_manualAi.google_aio,manual:true,text:_manualAi.google_aio},
+      chatgpt:{checked:!!_manualAi.chatgpt,manual:true,text:_manualAi.chatgpt},
+      perplexity:{checked:!!(_manualAi.perplexity||perplexity.checked),manual:!!_manualAi.perplexity,text:_manualAi.perplexity,automatic_checked:!!perplexity.checked,automatic_answer_excerpt:perplexity.answer_excerpt||'',automatic_cited_domains:Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[]},
+      claude:{checked:!!_manualAi.claude,manual:true,text:_manualAi.claude},
+      copilot:{checked:!!_manualAi.copilot,manual:true,text:_manualAi.copilot}};
+    brief.ai_system_evidence.checked_count=['google_aio','chatgpt','perplexity','claude','copilot'].filter(k=>brief.ai_system_evidence[k]&&brief.ai_system_evidence[k].checked).length;
 
     // ── AI readiness: computed from what the brief ACTUALLY contains ────────────
     // Deliberately not asked of the model: a self-scored checklist just echoes the
