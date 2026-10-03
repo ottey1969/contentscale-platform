@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v441-NETWORK-PREWRITE-LIVE-BRIDGE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v442-AUTO-INTERNAL-EXTERNAL-LINK-RESEARCH';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -45855,6 +45855,11 @@ function renderPrewriteBrief(b) {
     b.internal_link_targets.forEach(function(lk){ if (lk && lk.anchor_text) lines.push('- ' + lk.anchor_text + (lk.link_to ? ' → ' + lk.link_to : '')); });
     lines.push('');
   }
+  if (Array.isArray(b.external_link_targets) && b.external_link_targets.length) {
+    lines.push('EXTERNAL SOURCE TARGETS');
+    b.external_link_targets.forEach(function(lk){ if (lk && lk.exact_url) lines.push('- ' + (lk.anchor_text||lk.source_name||'Source') + ' → ' + lk.exact_url + (lk.supports_claim ? ' | supports: ' + lk.supports_claim : '')); });
+    lines.push('');
+  }
   if (b.top10_gap) lines.push(_PL.top10, b.top10_gap, '');
   if (b.ai_overview_status) lines.push(_PL.aio, b.ai_overview_status, '');
   if (b.ai_systems_analysis && typeof b.ai_systems_analysis === 'object') {
@@ -46071,6 +46076,28 @@ function renderPrewriteBrief(b) {
         + '<span style="color:#93c5fd;font-weight:600;">' + _at + '</span>'
         + (_to ? '<span style="color:#6b7280;"> \\u2192 ' + _to + '</span>' : '')
         + (_why ? '<div style="color:#9ca3af;font-size:10.5px;margin-top:1px;">' + _why + '</div>' : '')
+        + '</div>';
+    });
+    html += '</div>';
+  }
+  if (b.link_research) {
+    var _lr=b.link_research, _li=_lr.internal||{}, _le=_lr.external||{};
+    html += '<div style="margin-bottom:12px;background:#081521;border:1px solid #164e63;border-radius:8px;padding:10px 12px;">'
+      + '<div style="color:#67e8f9;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:800;">Automatic link research</div>'
+      + '<div style="font-size:11px;color:#cbd5e1;">Internal: <strong style="color:'+(Number(_li.urls_found||0)>0?'#86efac':'#fbbf24')+';">'+esc(_li.sitemap_status||'not_found')+'</strong> · '+esc(_li.urls_found||0)+' sitemap URLs · '+esc(_li.targets_selected||0)+' selected</div>'
+      + '<div style="font-size:11px;color:#cbd5e1;margin-top:3px;">External: <strong style="color:'+(Number(_le.candidates_found||0)>0?'#86efac':'#fbbf24')+';">automatic</strong> · '+esc(_le.candidates_found||0)+' verified source candidates · '+esc(_le.targets_selected||0)+' selected</div>'
+      + (_li.sitemap_url?'<div style="font-size:10px;color:#64748b;margin-top:4px;word-break:break-all;">Sitemap: '+esc(_li.sitemap_url)+'</div>':'')
+      + '</div>';
+  }
+  if (Array.isArray(b.external_link_targets) && b.external_link_targets.length) {
+    html += '<div style="margin-bottom:12px;background:#0f1e14;border:1px solid #166534;border-radius:8px;padding:10px 12px;">'
+      + '<div style="color:#86efac;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:800;">External source targets — exact verified URLs</div>';
+    b.external_link_targets.forEach(function(lk){
+      if(!lk||!lk.exact_url)return;
+      html += '<div style="border-top:1px solid #14532d55;padding:6px 0;">'
+        + '<div style="font-size:11px;font-weight:700;color:#dcfce7;">'+esc(lk.anchor_text||lk.source_name||'Source')+'</div>'
+        + '<a href="'+esc(lk.exact_url)+'" target="_blank" rel="noopener noreferrer" style="font-size:10.5px;color:#60a5fa;word-break:break-all;">'+esc(lk.exact_url)+'</a>'
+        + (lk.supports_claim?'<div style="font-size:10.5px;color:#94a3b8;margin-top:3px;">Supports: '+esc(lk.supports_claim)+'</div>':'')
         + '</div>';
     });
     html += '</div>';
@@ -57311,7 +57338,7 @@ STEP 3 - ENTITY VERIFICATION: for every ENTITY GAP term, search the CLIENT PAGE 
 STEP 4 - Analyse the SERP: ranking pattern, outlier, traits missing versus competitors.
 STEP 4B - DEPTH CHECK: for the top 3 topics shared between the client page and rank-1, judge how deeply rank-1 treats each versus the client page (surface/moderate/deep - word count, examples, numbers, step-by-step detail) - this is what usually separates #2 from #1, not just entity presence.
 STEP 4C - INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered (not just the main topic). For each, note whether the client page answers it and whether rank-1 answers it. Where the client page is silent and rank-1 is not, that is a genuine #1 gap.
-STEP 5 - BUILD THE PAGE (this is what makes the brief usable, not just diagnostic): using everything above, produce (a) a meta_package - a rank-ready title tag (<=60 chars, keyword near front), meta description (<=155 chars), on-page H1, and url slug; (b) an opening_passage - the literal first 40-60 words of the page, written as a self-contained quotable direct answer to the primary intent that Google AI Overview and Perplexity can lift verbatim; (c) a page_blueprint - the full H2 outline IN READING ORDER from intro to conclusion, each H2 with its purpose, a target word count, the exact sub-questions/entities it must cover, and a one-sentence citation_hook where that section can earn an AI citation; (d) internal_link_targets - real internal links using natural anchor text pointing only to topics/pages that plausibly exist on the client's own site (never invented URLs). The page_blueprint must collectively answer every sub-question from STEP 4C and place every high-priority entity gap. Ground all of it in the live data - if a section cannot be justified from intent or competitor analysis, do not pad the outline with it.
+STEP 5 - BUILD THE PAGE (this is what makes the brief usable, not just diagnostic): using everything above, produce (a) a meta_package - a rank-ready title tag (<=60 chars, keyword near front), meta description (<=155 chars), on-page H1, and url slug; (b) an opening_passage - the literal first 40-60 words of the page, written as a self-contained quotable direct answer to the primary intent that Google AI Overview and Perplexity can lift verbatim; (c) a page_blueprint - the full H2 outline IN READING ORDER from intro to conclusion, each H2 with its purpose, a target word count, the exact sub-questions/entities it must cover, and a one-sentence citation_hook where that section can earn an AI citation; (d) internal_link_targets - 3-8 real internal links using natural anchor text, each link_to copied verbatim from AUTO INTERNAL LINK RESEARCH only; if no sitemap URLs exist, return []; (e) external_link_targets - 2-6 authoritative/relevant external sources, each exact_url copied verbatim from AUTO EXTERNAL SOURCE RESEARCH only, with anchor_text, source_name, why and supports_claim; if no verified candidates exist, return []. The page_blueprint must collectively answer every sub-question from STEP 4C and place every high-priority entity gap. Ground all of it in the live data - if a section cannot be justified from intent or competitor analysis, do not pad the outline with it.
 
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output the JSON string "insufficient_data" for that field instead of inventing a plausible-but-unfounded one - especially for ai_overview_blueprint, step3_outlier and entity_gaps_priority. Never invent a domain, URL, snippet, statistic, schema type or competitor trait that is not in the input above; use "insufficient_data" or an empty array instead.
 
@@ -57455,6 +57482,8 @@ function _pwbReadiness(b) {
     entity_relationships: !!(b.entity_strategy && _a(b.entity_strategy.relationships)),
     evidence: !!(b.evidence && (_a(b.evidence.trust_signals) || _s(b.evidence.experience_to_include))),
     official_sources: !!(b.evidence && _a(b.evidence.official_sources)),
+    internal_links: !!(b.link_research && b.link_research.internal && (Number(b.link_research.internal.urls_found||0)===0 || _a(b.internal_link_targets))),
+    external_links: !!(b.link_research && b.link_research.external && (Number(b.link_research.external.candidates_found||0)===0 || _a(b.external_link_targets))),
     balance: !!(b.balance && (_a(b.balance.limitations) || _a(b.balance.comparisons))),
     use_cases: _a(b.use_cases),
     conclusion: !!(b.conclusion && _s(b.conclusion.recap))
@@ -57491,42 +57520,65 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     const serperKey = process.env.SERPAPI_KEY;
     const glParam = (String(region || 'us').toLowerCase().match(/[a-z]{2}/) || ['us'])[0];
 
-    // ── Client sitemap → real internal-link candidates (CLAUDE-FIX-0808-prewriteSitemapInternalLinks) ──
-    // The regular tracker already fetches and stores the client's sitemap on tracker_clients.sitemap_urls
-    // (see /fetch-sitemap). Feed a sample of those REAL URLs to the model so internal_link_targets point
-    // at pages that actually exist, instead of the model inventing plausible-looking slugs.
+    // ── AUTO INTERNAL LINK RESEARCH — sitemap discovery/import ─────────────
     let clientSitemapUrls = [];
+    let _pwbSitemapUrl = String(client.sitemap_url || '').trim();
+    let _pwbSitemapStatus = 'not_found';
+    let _pwbSitemapDiscoveredBy = '';
     try {
       const _su = client.sitemap_urls;
       const _arr = Array.isArray(_su) ? _su : JSON.parse(_su || '[]');
       if (Array.isArray(_arr)) clientSitemapUrls = _arr.filter(u => typeof u === 'string' && /^https?:\/\//.test(u));
+      if (clientSitemapUrls.length) {
+        _pwbSitemapStatus = 'stored';
+        _pwbSitemapDiscoveredBy = 'tracker_clients.sitemap_urls';
+      }
     } catch (e) { clientSitemapUrls = []; }
-    // Pre-Write is often the FIRST thing a new client runs — before the tracker ever
-    // imported a sitemap. In that case resolve it on demand from the client's domain so
-    // internal_link_targets still point at real pages. Best-effort: any failure leaves the
-    // list empty and the prompt then forbids inventing links. (CLAUDE-FIX-0808B)
+
     if (!clientSitemapUrls.length && client.domain) {
       try {
-        const _root = String(client.domain).replace(/^https?:\/\//, '').replace(/\/.*$/, '').trim();
+        const _root = String(client.domain).replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\/+$/, '').trim();
         if (_root) {
-          const _smUrl = 'https://' + _root + '/sitemap.xml';
-          const _resolved = await _resolveSitemapUrls(_smUrl, { timeoutMs: 8000, maxUrls: 300, maxSubmaps: 20 });
-          if (_resolved.length) {
-            clientSitemapUrls = _resolved;
-            // Persist so the next brief (and the tracker) reuses it instead of re-fetching.
-            try { await pool.query('UPDATE tracker_clients SET sitemap_url=COALESCE(sitemap_url,$1), sitemap_urls=$2 WHERE id=$3', [_smUrl, JSON.stringify(_resolved.slice(0, 2000)), client.id]); } catch(e){}
-            console.log('[prewrite-brief] resolved sitemap on demand for', _root, '\u2014', _resolved.length, 'URLs');
-          } else {
-            console.log('[prewrite-brief] no sitemap found at', _smUrl, '\u2014 internal links will be empty');
+          const _origin = 'https://' + _root;
+          const _candidates = [];
+          const _addSm = u => {
+            u=String(u||'').trim();
+            if (/^https?:\/\//i.test(u) && !_candidates.includes(u)) _candidates.push(u);
+          };
+          if (_pwbSitemapUrl) _addSm(_pwbSitemapUrl);
+          try {
+            const _rc = new AbortController(); const _rt=setTimeout(()=>_rc.abort(),5000);
+            const _rr = await fetch(_origin + '/robots.txt',{headers:{'User-Agent':'ContentScale-Bot/1.0'},signal:_rc.signal});
+            clearTimeout(_rt);
+            if (_rr.ok) {
+              const _robots = await _rr.text();
+              (_robots.match(/^sitemap:\s*(https?:\/\/\S+)/gim)||[]).forEach(line => _addSm(line.replace(/^sitemap:\s*/i,'').trim()));
+            }
+          } catch(_robotsErr) {}
+          [_origin+'/sitemap.xml',_origin+'/sitemap_index.xml',_origin+'/wp-sitemap.xml',_origin+'/sitemap-index.xml'].forEach(_addSm);
+          for (const _smUrl of _candidates) {
+            try {
+              const _resolved = await _resolveSitemapUrls(_smUrl,{timeoutMs:8000,maxUrls:1200,maxSubmaps:50});
+              if (_resolved.length) {
+                clientSitemapUrls = Array.from(new Set(_resolved.filter(u=>/^https?:\/\//i.test(u))));
+                _pwbSitemapUrl = _smUrl;
+                _pwbSitemapStatus = 'auto_detected';
+                _pwbSitemapDiscoveredBy = _smUrl;
+                try {
+                  await pool.query('UPDATE tracker_clients SET sitemap_url=$1, sitemap_urls=$2 WHERE id=$3',[_smUrl,JSON.stringify(clientSitemapUrls.slice(0,2000)),client.id]);
+                } catch(_persistSmErr) {}
+                console.log('[prewrite-brief] automatic sitemap detected',_smUrl,'—',clientSitemapUrls.length,'URLs');
+                break;
+              }
+            } catch(_oneSmErr) {}
           }
         }
-      } catch (e) { console.warn('[prewrite-brief] on-demand sitemap fetch failed:', e.message); }
+      } catch (e) { console.warn('[prewrite-brief] automatic sitemap discovery failed:', e.message); }
     }
-    // Cap the list so it never blows the prompt budget; 60 URLs is plenty for link selection.
-    const _sitemapSample = clientSitemapUrls.slice(0, 60);
+    const _sitemapSample = clientSitemapUrls.slice(0,100);
     const sitemapBlock = _sitemapSample.length
-      ? 'CLIENT SITEMAP \u2014 REAL PAGES THAT EXIST ON THE CLIENT SITE (' + clientSitemapUrls.length + ' total, showing ' + _sitemapSample.length + '):\n' + _sitemapSample.join('\n') + '\nIn STEP 6, internal_link_targets MUST link_to URLs chosen ONLY from this list \u2014 copy the URL verbatim. Never invent a path not in this list.'
-      : 'CLIENT SITEMAP: not available for this tracker. Therefore output internal_link_targets as an EMPTY array [] \u2014 do NOT invent internal URLs or guess paths.';
+      ? 'AUTO INTERNAL LINK RESEARCH — VERIFIED CLIENT SITEMAP (' + clientSitemapUrls.length + ' URLs found; showing ' + _sitemapSample.length + '):\n' + _sitemapSample.join('\n') + '\nChoose 3-8 contextually relevant internal_link_targets ONLY from these exact URLs. Copy each link_to verbatim. Never invent, reconstruct or guess an internal URL.'
+      : 'AUTO INTERNAL LINK RESEARCH: no usable sitemap could be discovered. Return internal_link_targets as [] and never invent internal URLs.';
 
     // ── Owner-provided brand & author facts (CLAUDE-FIX-0808C) ──────────────
     // Same field the regular brief already respects (tracker_clients.brand_context,
@@ -57583,6 +57635,45 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     } else {
       console.warn('[prewrite-brief] SERPAPI_KEY not set — cannot fetch SERP results');
     }
+    // ── AUTO EXTERNAL LINK RESEARCH — exact verified source pages ─────────
+    let _pwbExternalCandidates = [];
+    const _pwbClientHost = String(client.domain||'').replace(/^https?:\/\//i,'').replace(/^www\./i,'').split('/')[0].toLowerCase();
+    const _pwbExtSeen = new Set();
+    const _pwbAddExternal = (u,meta={}) => {
+      u=String(u||'').trim().replace(/[)\]>,.;]+$/,'');
+      if (!/^https:\/\//i.test(u)) return;
+      try {
+        const x=new URL(u),h=x.hostname.replace(/^www\./,'').toLowerCase();
+        if (!h || h===_pwbClientHost || _pwbExtSeen.has(x.href)) return;
+        _pwbExtSeen.add(x.href);
+        _pwbExternalCandidates.push({exact_url:x.href,domain:h,title:String(meta.title||'').trim(),snippet:String(meta.snippet||'').trim().slice(0,500),source_type:String(meta.source_type||'research')});
+      } catch(e) {}
+    };
+    serpUrls.forEach(r=>_pwbAddExternal(r.url,{title:r.title,snippet:r.snippet,source_type:'serp'}));
+    Object.keys(_manualAi).forEach(k=>{
+      const urls=(String(_manualAi[k]||'').match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]);
+      urls.forEach(u=>_pwbAddExternal(u,{source_type:'ai_'+k}));
+    });
+    if (serperKey) {
+      try {
+        const _ec=new AbortController(); setTimeout(()=>_ec.abort(),12000);
+        const _er=await fetch('https://google.serper.dev/search',{
+          method:'POST',
+          headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},
+          body:JSON.stringify({q:keyword+' official source research guide statistics',num:10,hl:glParam,gl:glParam}),
+          signal:_ec.signal
+        });
+        if (_er.ok) {
+          const _ed=await _er.json();
+          (_ed.organic||[]).forEach(r=>_pwbAddExternal(r.link,{title:r.title||'',snippet:r.snippet||'',source_type:'authority_search'}));
+        }
+      } catch(_extErr) { console.warn('[prewrite-brief] external source search failed:',_extErr.message); }
+    }
+    _pwbExternalCandidates=_pwbExternalCandidates.filter(x=>!/(reddit\.com|facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|pinterest\.|quora\.com|google\.com\/search)/i.test(x.exact_url)).slice(0,40);
+    const _externalSourceBlock = _pwbExternalCandidates.length
+      ? 'AUTO EXTERNAL SOURCE RESEARCH — VERIFIED EXACT HTTPS PAGES. Choose 2-6 external_link_targets ONLY from this whitelist. Prefer primary/official, government, academic, standards, recognized industry or directly evidentiary pages. Do not add a URL not listed here.\n' + _pwbExternalCandidates.map((x,i)=>(i+1)+'. '+x.exact_url+' | '+(x.title||x.domain)+' | '+x.source_type+(x.snippet?' | '+x.snippet:'')).join('\n')
+      : 'AUTO EXTERNAL SOURCE RESEARCH: no verified exact external pages were found. Return external_link_targets as [] rather than inventing URLs.';
+
     if (!serpUrls.length) return res.status(502).json({ success: false, error: 'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment' });
 
     // Real Perplexity check — same call the tracker's own citation-checker makes.
@@ -57720,6 +57811,8 @@ When you build paa_questions in STEP 6, PREFER these real questions verbatim (tr
 
 ${sitemapBlock}
 
+${_externalSourceBlock}
+
 ${brandBlock}
 
 ${claimsBlock}
@@ -57769,7 +57862,7 @@ STEP 8 — FACT SAFETY: return fact_safety with verified_business_facts_used (on
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output "insufficient_data" instead of inventing one.
 
 Return ONLY valid JSON, no markdown, no preamble.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise only verified Google/manual evidence and the Google search direct-answer signal; do not treat other systems as Google AIO proof>","ai_systems_analysis":{"google_aio":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[{"source_name":"<visible source name>","page_title":"<visible page title>","exact_url":"<exact https:// URL or insufficient_data>"}]},"chatgpt":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"perplexity":{"checked":false,"evidence_source":"manual|automatic_fallback|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"claude":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"copilot":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]}},"competitor_table":[{"rank":1,"company_or_publisher":"<company or publisher only if supported by the supplied title/domain/page; otherwise use the domain>","domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data, or insufficient_data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content; insufficient_data if scrape failed>","the_gap":"<one concrete thing missing or weak in their content; insufficient_data if scrape failed>","what_to_add":"<what the new page should do instead/better; insufficient_data if scrape failed>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<a URL copied verbatim from the CLIENT SITEMAP list; empty array if no sitemap was provided — never invent a path>","why":"<the topical-authority or user-journey purpose>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise only verified Google/manual evidence and the Google search direct-answer signal; do not treat other systems as Google AIO proof>","ai_systems_analysis":{"google_aio":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[{"source_name":"<visible source name>","page_title":"<visible page title>","exact_url":"<exact https:// URL or insufficient_data>"}]},"chatgpt":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"perplexity":{"checked":false,"evidence_source":"manual|automatic_fallback|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"claude":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"copilot":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]}},"competitor_table":[{"rank":1,"company_or_publisher":"<company or publisher only if supported by the supplied title/domain/page; otherwise use the domain>","domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data, or insufficient_data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content; insufficient_data if scrape failed>","the_gap":"<one concrete thing missing or weak in their content; insufficient_data if scrape failed>","what_to_add":"<what the new page should do instead/better; insufficient_data if scrape failed>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<exact URL copied verbatim from AUTO INTERNAL LINK RESEARCH; [] if none>","why":"<topical-authority or user-journey purpose>"}],"external_link_targets":[{"anchor_text":"<natural descriptive anchor>","source_name":"<real source/page name>","exact_url":"<exact https:// URL copied verbatim from AUTO EXTERNAL SOURCE RESEARCH>","why":"<why this source is useful/authoritative>","supports_claim":"<the specific fact, definition, statistic or section this source can support>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
     const finalPrompt = prompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.'
       + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
@@ -57781,6 +57874,9 @@ Return ONLY valid JSON, no markdown, no preamble.
       + '\n- exact_page_citations may contain only exact page URLs visibly present in that AI system evidence.'
       + '\n- If only a domain is visible, put it under domain_citations and set exact page URL to insufficient_data.'
       + '\n- All manually provided AI evidence must override any fallback.'
+      + '\n- Every internal_link_targets.link_to must be copied verbatim from AUTO INTERNAL LINK RESEARCH.'
+      + '\n- Every external_link_targets.exact_url must be copied verbatim from AUTO EXTERNAL SOURCE RESEARCH.'
+      + '\n- Never invent an internal or external URL.'
       + '\n- Do not output Markdown; return valid JSON only.';
     const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 45000);
     const geminiKey = process.env.GEMINI_API_KEY;
@@ -57806,6 +57902,32 @@ Return ONLY valid JSON, no markdown, no preamble.
     if (!brief) return res.status(502).json({ success: false, error: 'Could not parse brief from AI response' });
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
+
+    // ── SERVER-ENFORCED LINK WHITELISTS ─────────────────────────────────
+    const _pwbNormExactUrl = u => { try { return new URL(String(u||'').trim()).href; } catch(e) { return ''; } };
+    const _internalAllowed = new Set(clientSitemapUrls.map(_pwbNormExactUrl).filter(Boolean));
+    brief.internal_link_targets = (Array.isArray(brief.internal_link_targets)?brief.internal_link_targets:[])
+      .map(x=>x&&typeof x==='object'?x:null).filter(Boolean)
+      .map(x=>Object.assign({},x,{link_to:_pwbNormExactUrl(x.link_to)}))
+      .filter(x=>x.link_to && _internalAllowed.has(x.link_to)).slice(0,8);
+
+    const _externalByUrl = new Map(_pwbExternalCandidates.map(x=>[_pwbNormExactUrl(x.exact_url),x]).filter(x=>x[0]));
+    brief.external_link_targets = (Array.isArray(brief.external_link_targets)?brief.external_link_targets:[])
+      .map(x=>x&&typeof x==='object'?x:null).filter(Boolean)
+      .map(x=>{
+        const u=_pwbNormExactUrl(x.exact_url),src=_externalByUrl.get(u);
+        if(!src)return null;
+        return {anchor_text:String(x.anchor_text||src.title||src.domain).trim().slice(0,180),source_name:String(x.source_name||src.title||src.domain).trim().slice(0,220),exact_url:u,why:String(x.why||'').trim().slice(0,500),supports_claim:String(x.supports_claim||'').trim().slice(0,500),source_type:src.source_type};
+      }).filter(Boolean).slice(0,6);
+
+    if(!brief.external_link_targets.length && _pwbExternalCandidates.length){
+      brief.external_link_targets=_pwbExternalCandidates.slice(0,3).map(src=>({anchor_text:src.title||src.domain,source_name:src.title||src.domain,exact_url:_pwbNormExactUrl(src.exact_url),why:'Verified exact source page discovered automatically during Prewrite research.',supports_claim:'Use only where the source actually supports the statement being cited.',source_type:src.source_type})).filter(x=>x.exact_url);
+    }
+
+    brief.link_research = {
+      internal:{automatic:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length},
+      external:{automatic:true,candidates_found:_pwbExternalCandidates.length,targets_selected:brief.external_link_targets.length,rule:'Every external exact_url is server-validated against URLs discovered during current Prewrite research.'}
+    };
 
     // Server-owned fact safety: the model cannot promote UNVERIFIED research to VERIFIED.
     brief.fact_safety = brief.fact_safety || {};
@@ -57905,7 +58027,9 @@ Return ONLY valid JSON, no markdown, no preamble.
       perplexity_excerpt: perplexity.answer_excerpt || '',
       perplexity_currently_cites: perplexity.cited_domains,
       competitors_analysed: top5.length,
-      people_also_ask: peopleAlsoAsk
+      people_also_ask: peopleAlsoAsk,
+      internal_links: brief.link_research && brief.link_research.internal ? brief.link_research.internal : null,
+      external_links: brief.link_research && brief.link_research.external ? brief.link_research.external : null
     };
     // Also surface the real Google PAA at the top level of the brief so the UI can
     // render a distinct "People Also Ask" block (separate from AI-authored FAQ).
