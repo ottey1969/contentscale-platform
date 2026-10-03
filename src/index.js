@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v426-CEO-QUICKSCAN-UNIFIED';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v428-AUTO-LEGACY-REPAIR';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -20997,6 +20997,66 @@ app.get('/api/prospect-quick-scan/admin/deliverability',requireAdmin,async(req,r
   }catch(e){res.status(500).json({success:false,error:e.message});}
 });
 
+
+app.post('/api/prospect-quick-scan/admin/repair-legacy-entry-statuses',requireAdmin,async(req,res)=>{
+  if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false,error:'Quick Scan unavailable'});
+  try{
+    // v428: repair every legacy direct-open state that can be repaired safely.
+    // The owner does not care who previously opened an old Quick Scan link.
+    // Therefore open counters/timestamps are reset whenever there is no CEO Report.
+    // Stronger evidence (completed scan, visitor identity, opt-in, explicit interest, provider click)
+    // is preserved; we only remove the misleading "Quick Scan opened first" state.
+    const q=await pool.query(`
+      UPDATE prospect_quick_scans
+      SET opened_count=0,
+          first_opened_at=NULL,
+          last_opened_at=NULL,
+          follow_up_status=CASE
+            WHEN COALESCE(quickscan_interested,FALSE)
+              OR COALESCE(audit20_interested,FALSE)
+              OR COALESCE(tracker_interested,FALSE)
+            THEN follow_up_status
+            WHEN scan_completed_at IS NOT NULL THEN follow_up_status
+            WHEN scan_started_at IS NOT NULL THEN follow_up_status
+            WHEN follow_up_status IN ('opened','waiting_for_scan') THEN 'not_contacted'
+            ELSE follow_up_status
+          END,
+          status=CASE
+            WHEN scan_completed_at IS NOT NULL THEN status
+            WHEN scan_started_at IS NOT NULL THEN status
+            WHEN status IN ('opened','waiting_for_scan') THEN 'created'
+            ELSE status
+          END,
+          updated_at=NOW()
+      WHERE revoked_at IS NULL
+        AND hidden_at IS NULL
+        AND COALESCE(ceo_report_url,'')=''
+        AND COALESCE(ceo_report_token,'')=''
+        AND (
+          COALESCE(opened_count,0)>0
+          OR first_opened_at IS NOT NULL
+          OR last_opened_at IS NOT NULL
+          OR follow_up_status IN ('opened','waiting_for_scan')
+          OR status IN ('opened','waiting_for_scan')
+        )
+      RETURNING token,business_name,domain,scan_started_at,scan_completed_at,
+        visitor_email,updates_opt_in,quickscan_interested,audit20_interested,tracker_interested
+    `);
+    const preserved=q.rows.filter(r=>r.scan_started_at||r.scan_completed_at||r.visitor_email||r.updates_opt_in||r.quickscan_interested||r.audit20_interested||r.tracker_interested).length;
+    res.json({
+      success:true,
+      repaired_count:q.rowCount,
+      preserved_stronger_evidence:preserved,
+      repaired:q.rows,
+      rule:'All repairable legacy Quick Scan open states without a CEO Report were reset. Stronger scan/identity/interest evidence was preserved.'
+    });
+  }catch(e){
+    console.error('[quick-scan repair legacy opens]',e.message);
+    res.status(500).json({success:false,error:e.message});
+  }
+});
+
+
 app.get('/api/prospect-quick-scan/admin/list',requireAdmin,async(req,res)=>{if(!await _ensureProspectQuickScanTable())return res.status(503).json({success:false});try{await _ensureOpportunityReportTable();const q=await pool.query(`SELECT p.*,COALESCE(o.view_count,0)::int AS ceo_report_view_count,o.last_opened_at AS ceo_report_last_opened_at FROM prospect_quick_scans p LEFT JOIN opportunity_reports o ON o.token=p.ceo_report_token AND o.revoked_at IS NULL WHERE p.revoked_at IS NULL AND p.hidden_at IS NULL ORDER BY CASE WHEN COALESCE(p.opened_count,0)>0 OR COALESCE(o.view_count,0)>0 THEN 0 ELSE 1 END,COALESCE(p.last_opened_at,o.last_opened_at,p.updated_at,p.created_at) DESC,p.created_at DESC LIMIT 1000`),outreachSchedule=await _pqsOutreachTiming();res.json({success:true,outreach_schedule:outreachSchedule,items:q.rows.map(r=>({..._pqsPublicRow(r),contact_email:r.contact_email||'',campaign:r.campaign||'',opened_count:Number(r.opened_count||0),first_opened_at:r.first_opened_at,last_opened_at:r.last_opened_at,ceo_report_view_count:Number(r.ceo_report_view_count||0),ceo_report_last_opened_at:r.ceo_report_last_opened_at||null,follow_up_status:r.follow_up_status||'not_contacted',outreach_email_status:r.outreach_email_status||'draft',outreach_subject:r.outreach_subject||'',outreach_body:r.outreach_body||'',outreach_approved_at:r.outreach_approved_at,outreach_sent_at:r.outreach_sent_at,outreach_error:r.outreach_error||'',outreach_delivery_status:r.outreach_delivery_status||'unknown',outreach_delivery_event_at:r.outreach_delivery_event_at||null,outreach_delivery_reason:r.outreach_delivery_reason||'',outreach_email_opened_at:r.outreach_email_opened_at||null,outreach_email_clicked_at:r.outreach_email_clicked_at||null,outreach_attempts:Number(r.outreach_attempts||0),outreach_copy_variant:r.outreach_copy_variant?Number(r.outreach_copy_variant):null,outreach_copy_language:r.outreach_copy_language||'',
 generated_outreach_copy:(r.source==='lead_crawler'?_pqsLeadCrawlerCopy(r):null),
 email_lookup_status:r.email_lookup_status||'',email_lookup_checked_at:r.email_lookup_checked_at||null,email_lookup_source:r.email_lookup_source||'',contact_email_origin:r.contact_email_origin||'',contact_email_source_url:r.contact_email_source_url||'',contact_email_comment:r.contact_email_comment||'',contact_email_updated_at:r.contact_email_updated_at||null,updates_opted_in_at:r.updates_opted_in_at||null,ceo_report_url:r.ceo_report_url||'',ceo_report_token:r.ceo_report_token||'',ceo_report_page_url:r.ceo_report_page_url||'',two_page_overview:r.two_page_overview||null,two_page_overview_created_at:r.two_page_overview_created_at||null,quickscan_interested:!!r.quickscan_interested,quickscan_interested_at:r.quickscan_interested_at||null,audit20_interested:!!r.audit20_interested,audit20_interested_at:r.audit20_interested_at||null,audit20_interest_note:r.audit20_interest_note||'',gsc_status:r.gsc_status||'not_connected',gsc_requested_at:r.gsc_requested_at||null,gsc_connected_at:r.gsc_connected_at||null,audit20_status:r.audit20_status||'not_started',audit20_ready_at:r.audit20_ready_at||null,audit20_report_url:r.audit20_report_url||'',tracker_interested:!!r.tracker_interested,tracker_interested_at:r.tracker_interested_at||null,ceo_delivery_email_sent_at:r.ceo_delivery_email_sent_at||null,ceo_delivery_email_error:r.ceo_delivery_email_error||'',updates_opt_in:!!r.updates_opt_in,outreach_followup_due_at:r.outreach_followup_due_at||null,outreach_followup_sent_at:r.outreach_followup_sent_at||null,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',r.token)}))});}catch(e){res.status(500).json({success:false,error:e.message});}});
@@ -24873,7 +24933,7 @@ function _pqsAdminReportStatusV416(){return String.raw`<style>
 var app=document.getElementById('app');if(!app||document.getElementById('pqsUnifiedReportBoard'))return;
 var reportsHost=document.getElementById('pqsWorkspace-reports')||app;
 var panel=document.createElement('section');panel.className='p';panel.id='pqsUnifiedReportBoard';
-panel.innerHTML='<h2>CEO + Quick Scan Reports <span style="font-size:10px;color:#67e8f9">v426</span></h2><p class="meta">One prospect overview. CEO Report is always step 1. Quick Scan is step 2 and only becomes a valid public step after the CEO Report exists. <b>OPENED</b> and <b>SCANNED</b> are separate events.</p><div class="pqs426Stats" id="pqs426Stats"></div><div class="pqs426Tools"><button class="btn on" data-pqs426-filter="all">All</button><button class="btn" data-pqs426-filter="ceo_ready">CEO ready</button><button class="btn" data-pqs426-filter="ceo_opened">CEO opened</button><button class="btn" data-pqs426-filter="quick_opened">Quick Scan opened</button><button class="btn" data-pqs426-filter="quick_scanned">Quick Scan scanned</button><button class="btn" data-pqs426-filter="issues">Entry issues</button><button class="btn" data-pqs426-filter="interested">Interested</button><button class="btn" id="pqs426Refresh">Refresh</button></div><div class="pqs426Note"><b>Correct funnel:</b> CEO Report → prospect opens CEO Report → Quick Scan Other Page → scan Page B → optional 20-page Audit / Tracker. A Quick Scan with activity but no CEO Report is flagged as an entry issue.</div><div id="pqs426Issues"></div><div id="pqs426Rows" class="pqs426Rows"><div class="pqs426Empty">Loading reports…</div></div>';
+panel.innerHTML='<h2>CEO + Quick Scan Reports <span style="font-size:10px;color:#67e8f9">v426</span></h2><p class="meta">One prospect overview. CEO Report is always step 1. Quick Scan is step 2 and only becomes a valid public step after the CEO Report exists. <b>OPENED</b> and <b>SCANNED</b> are separate events.</p><div class="pqs426Stats" id="pqs426Stats"></div><div class="pqs426Tools"><button class="btn on" data-pqs426-filter="all">All</button><button class="btn" data-pqs426-filter="ceo_ready">CEO ready</button><button class="btn" data-pqs426-filter="ceo_opened">CEO opened</button><button class="btn" data-pqs426-filter="quick_opened">Quick Scan opened</button><button class="btn" data-pqs426-filter="quick_scanned">Quick Scan scanned</button><button class="btn" data-pqs426-filter="issues">Entry issues</button><button class="btn" data-pqs426-filter="interested">Interested</button><button class="btn" id="pqs426Refresh">Refresh</button></div><div class="pqs426Note"><b>Correct funnel:</b> CEO Report → prospect opens CEO Report → Quick Scan Other Page → scan Page B → optional 20-page Audit / Tracker. A Quick Scan with activity but no CEO Report is flagged as an entry issue.</div><div id="pqs426RepairResult"></div><div id="pqs426Issues"></div><div id="pqs426Rows" class="pqs426Rows"><div class="pqs426Empty">Loading reports…</div></div>';
 var intro=reportsHost.querySelector('.pqsWorkspaceIntro');if(intro)intro.insertAdjacentElement('afterend',panel);else reportsHost.prepend(panel);
 
 // Remove duplicate old history boards; creation controls stay available below.
@@ -24894,20 +24954,29 @@ function quickScanned(x){return !!x.scan_completed_at}
 function entryIssue(x){return !ceoReady(x)&&(quickOpened(x)||quickScanned(x)||String(x.status||'')==='completed')}
 function shown(x){if(filter==='ceo_ready')return ceoReady(x);if(filter==='ceo_opened')return ceoOpened(x);if(filter==='quick_opened')return quickOpened(x);if(filter==='quick_scanned')return quickScanned(x);if(filter==='issues')return entryIssue(x);if(filter==='interested')return interests(x).length>0;return true}
 function ceoStage(x){var ready=ceoReady(x),opened=ceoOpened(x),views=Number(x.ceo_report_view_count||0);return '<div class="pqs426Stage"><span>STEP 1 · CEO REPORT</span><div class="pqs426Badges">'+badge(ready?'READY':'NOT READY',ready?'good':'')+badge(opened?'OPENED '+views+'×':'NOT OPENED',opened?'open':'')+'</div><small class="meta">'+(ready?(x.ceo_report_page_url?'Page A: '+esc(x.ceo_report_page_url):'CEO Report generated'):'CEO Report must be created first.')+(opened?'<br>Last opened: '+esc(dt(x.ceo_report_last_opened_at)):'')+'</small></div>'}
-function quickStage(x){var opened=quickOpened(x),done=quickScanned(x),issue=entryIssue(x),opens=Number(x.opened_count||0);return '<div class="pqs426Stage '+(issue?'pqs426Issue':'')+'"><span>STEP 2 · QUICK SCAN</span><div class="pqs426Badges">'+(issue?badge('ENTRY ISSUE','bad'):'')+badge(done?'SCANNED':'NOT SCANNED',done?'good':'')+badge(opened?'OPENED '+opens+'×':'NOT OPENED',opened?'open':'')+'</div><small class="meta">'+(issue?'Quick Scan activity exists without a CEO Report. This was possible through the old standalone entry and is now blocked.':done?'Completed: '+esc(dt(x.scan_completed_at)):opened?'Opened, waiting for Page B scan.':ceoReady(x)?'Available only as the next step after CEO.':'Locked until CEO Report exists.')+'</small></div>'}
+function quickStage(x){var opened=quickOpened(x),done=quickScanned(x),issue=entryIssue(x),opens=Number(x.opened_count||0);return '<div class="pqs426Stage '+(issue?'pqs426Issue':'')+'"><span>STEP 2 · QUICK SCAN</span><div class="pqs426Badges">'+(issue?badge('ENTRY ISSUE','bad'):'')+badge(done?'SCANNED':'NOT SCANNED',done?'good':'')+badge(opened?'OPENED '+opens+'×':'NOT OPENED',opened?'open':'')+'</div><small class="meta">'+(issue?'Quick Scan activity exists without a CEO Report. Refresh removes weak false/orphan legacy OPEN states; if this remains, stronger activity evidence exists and is preserved for review.':done?'Completed: '+esc(dt(x.scan_completed_at)):opened?'Opened, waiting for Page B scan.':ceoReady(x)?'Available only as the next step after CEO.':'Locked until CEO Report exists.')+'</small></div>'}
 function funnelStage(x){var its=interests(x),issue=entryIssue(x),label=issue?'FIX FUNNEL':quickScanned(x)?'QUICK SCAN COMPLETE':quickOpened(x)?'WAITING FOR SCAN':ceoOpened(x)?'CEO OPENED · NEXT = QUICK SCAN':ceoReady(x)?'CEO READY · WAITING FOR OPEN':'CREATE CEO REPORT';return '<div class="pqs426Stage '+(its.length?'pqs426Interest':'')+'"><span>STATUS / NEXT ACTION</span><div class="pqs426Badges">'+badge(label,issue?'bad':quickScanned(x)?'good':quickOpened(x)||ceoOpened(x)?'open':'')+(its.length?its.map(function(v){return badge('★ '+v,'interest')}).join(''):'')+'</div><small class="meta">'+(its.length?'Explicit interest: '+esc(its.join(' + ')):'No explicit interest recorded.')+'<br>Last activity: '+esc(dt(x.updated_at||x.last_opened_at||x.created_at))+'</small></div>'}
 function actions(x){var a=[];if(x.ceo_report_url)a.push('<a target="_blank" rel="noopener" href="'+esc(x.ceo_report_url)+'">Open CEO Report</a>');if(ceoReady(x))a.push('<a target="_blank" rel="noopener" href="/quick-scan/'+encodeURIComponent(x.token)+'?ownerPreview=1">Preview Quick Scan</a>');if(x.ceo_report_url)a.push('<button type="button" data-copy="'+esc(x.ceo_report_url)+'">Copy CEO link</button>');if(ceoReady(x))a.push('<button type="button" data-copy="/quick-scan/'+esc(x.token)+'">Copy Quick Scan link</button>');return '<div class="pqs426Actions">'+(a.join('')||'<span class="meta">Create CEO Report first</span>')+'</div>'}
 function render(){
  var visible=rows.filter(shown),issues=rows.filter(entryIssue),ceoR=rows.filter(ceoReady).length,ceoO=rows.filter(ceoOpened).length,qO=rows.filter(quickOpened).length,qS=rows.filter(quickScanned).length,intN=rows.filter(function(x){return interests(x).length>0}).length;
  stats.innerHTML='<div class="pqs426Stat"><span>Prospects</span><b>'+rows.length+'</b></div><div class="pqs426Stat"><span>CEO ready</span><b>'+ceoR+'</b></div><div class="pqs426Stat"><span>CEO opened</span><b>'+ceoO+'</b></div><div class="pqs426Stat"><span>Quick opened</span><b>'+qO+'</b></div><div class="pqs426Stat"><span>Quick scanned</span><b>'+qS+'</b></div><div class="pqs426Stat"><span>Entry issues</span><b>'+issues.length+'</b></div><div class="pqs426Stat"><span>Interested</span><b>'+intN+'</b></div>';
- document.getElementById('pqs426Issues').innerHTML=issues.length?'<div class="pqs426Alert">⚠ <b>'+issues.length+' legacy/direct Quick Scan entr'+(issues.length===1?'y':'ies')+' detected.</b> These records have Quick Scan activity without a CEO Report. New direct entry is blocked in v426. Use the CEO Report first for future prospects.</div>':'';
+ document.getElementById('pqs426Issues').innerHTML=issues.length?'<div class="pqs426Alert">⚠ <b>'+issues.length+' legacy/direct Quick Scan entr'+(issues.length===1?'y':'ies')+' detected.</b> These records still have Quick Scan activity without a CEO Report. Use Refresh to clear weak legacy false opens. Records with stronger evidence stay visible for manual review. New direct entry is blocked.</div>':'';
  host.innerHTML=visible.map(function(x){return '<article class="pqs426Row"><div class="pqs426Name"><b>'+esc(x.business_name||x.domain||'Prospect')+'</b><small>'+esc(x.domain||x.url||'')+'</small><span class="pqs426Source">SOURCE: '+esc(sourceLabel(x))+(x.campaign?' · '+esc(x.campaign):'')+'</span></div>'+ceoStage(x)+quickStage(x)+funnelStage(x)+actions(x)+'</article>'}).join('')||'<div class="pqs426Empty">No report records match this filter.</div>';
  host.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){var v=b.getAttribute('data-copy')||'';if(v&&v[0]==='/')v=location.origin+v;navigator.clipboard.writeText(v).then(function(){var old=b.textContent;b.textContent='Copied ✓';setTimeout(function(){b.textContent=old},1200)})}})
 }
-async function load(){var rb=document.getElementById('pqs426Refresh');if(rb){rb.disabled=true;rb.textContent='Refreshing…'}try{var r=await fetch('/api/prospect-quick-scan/admin/list',{headers:{'x-admin-code':window.KEY||localStorage.getItem('pqs_admin_code')||''}}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load report overview');rows=d.items||[];render()}catch(e){host.innerHTML='<div class="pqs426Empty" style="color:#fca5a5">'+esc(e.message)+'</div>'}finally{if(rb){rb.disabled=false;rb.textContent='Refresh'}}}
+async function load(){var rb=document.getElementById('pqs426Refresh'),repairBox=document.getElementById('pqs426RepairResult');if(rb){rb.disabled=true;rb.textContent='Refreshing…'}try{
+ var rr=await fetch('/api/prospect-quick-scan/admin/repair-legacy-entry-statuses',{method:'POST',headers:{'Content-Type':'application/json','x-admin-code':window.KEY||localStorage.getItem('pqs_admin_code')||''},body:'{}'}),rd=await rr.json();
+ if(!rr.ok)throw Error(rd.error||'Could not repair legacy statuses');
+ if(rd.repaired_count){
+   repairBox.innerHTML='<div class="pqs426Note" style="border-color:#166534;background:#092219;color:#bbf7d0">✓ <b>'+rd.repaired_count+' legacy Quick Scan open state'+(rd.repaired_count===1?'':'s')+' repaired automatically.</b> Previous OPEN counts were cleared where no CEO Report existed. Stronger scan/interest evidence was kept.</div>';
+ }else{
+   repairBox.innerHTML='';
+ }
+ var r=await fetch('/api/prospect-quick-scan/admin/list',{headers:{'x-admin-code':window.KEY||localStorage.getItem('pqs_admin_code')||''}}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load report overview');rows=d.items||[];render()
+}catch(e){host.innerHTML='<div class="pqs426Empty" style="color:#fca5a5">'+esc(e.message)+'</div>'}finally{if(rb){rb.disabled=false;rb.textContent='Refresh'}}}
 panel.querySelectorAll('[data-pqs426-filter]').forEach(function(b){b.onclick=function(){filter=b.dataset.pqs426Filter;panel.querySelectorAll('[data-pqs426-filter]').forEach(function(x){x.classList.toggle('on',x===b)});render()}});
 document.getElementById('pqs426Refresh').onclick=load;
-setTimeout(load,500);setInterval(load,60000);
+setTimeout(load,500);
 })();${'</script>'}`}
 
 function _pqsAdminCeoReportBoardV419(){return String.raw`<style>
