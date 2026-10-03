@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v434-PREWRITE-UNIFORM-5AI-TOP10';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v435-PREWRITE-URL-EVIDENCE-ENFORCED';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -45745,6 +45745,32 @@ function renderPrewriteBrief(b) {
   }
   if (b.top10_gap) lines.push(_PL.top10, b.top10_gap, '');
   if (b.ai_overview_status) lines.push(_PL.aio, b.ai_overview_status, '');
+  if (b.ai_systems_analysis && typeof b.ai_systems_analysis === 'object') {
+    var _ais=b.ai_systems_analysis;
+    var _aiNames={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
+    html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid #26364d;border-radius:8px;padding:10px 12px;">'
+      + '<div style="color:#c4b5fd;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700;">5 AI Systems Evidence</div>';
+    ['google_aio','chatgpt','perplexity','claude','copilot'].forEach(function(k){
+      var x=_ais[k]||{}, checked=!!x.checked, src=esc(x.evidence_source||'not_checked');
+      html += '<div style="border-top:1px solid #1f2937;padding:8px 0;">'
+        + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;"><strong style="color:#e5e7eb;">'+esc(_aiNames[k])+'</strong><span style="font-size:10px;color:'+(checked?'#86efac':'#9ca3af')+';">'+(checked?'✓ Checked':'○ Not checked')+' · '+src+'</span></div>';
+      if(x.answer_summary) html += '<div style="margin-top:4px;color:#cbd5e1;font-size:11px;">'+esc(x.answer_summary)+'</div>';
+      var _sources=Array.isArray(x.citation_sources)?x.citation_sources:[];
+      if(_sources.length){
+        html += '<div style="margin-top:6px;font-size:10.5px;color:#9ca3af;">Citation sources:</div>';
+        _sources.forEach(function(s){
+          var u=String((s&&s.exact_url)||''), valid=/^https:\/\//i.test(u);
+          html += '<div style="margin-top:3px;font-size:10.5px;">'
+            + esc((s&&s.source_name)||'Source')
+            + ((s&&s.page_title)?' · '+esc(s.page_title):'')
+            + (valid?' · <a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;word-break:break-all;">'+esc(u)+'</a>':' · <span style="color:#6b7280;">'+esc(u||'insufficient_data')+'</span>')
+            + '</div>';
+        });
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
   if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
     lines.push(_PL.compTable);
     b.competitor_table.forEach(function(c){
@@ -57536,8 +57562,24 @@ RULES:
 - Only Perplexity currently has an automatic fallback.
 - Empty manual Google/ChatGPT/Claude/Copilot means NOT CHECKED.
 - Never infer recommendation, mention, domain citation or exact-page citation without evidence.
-- Preserve exact HTTPS URLs present in the evidence.
+- Preserve EVERY exact HTTPS URL present in the evidence.
+- Never reduce an exact page URL to only the root domain when the exact page URL is visible.
+- Never invent, reconstruct, normalize, guess or "repair" a URL.
+- If a citation/source is mentioned but its exact URL is not present in the evidence, mark exact_url as "insufficient_data".
 - This evidence is research input, never a ContentScore.
+
+For EACH AI system, extract and retain:
+- checked
+- evidence_source: manual | automatic_fallback | not_checked
+- answer_summary
+- recommended_companies
+- mentioned_companies
+- domain_citations
+- exact_page_citations
+- citation_sources
+
+Every citation/source item should be represented as:
+{"source_name":"<name if visible>","page_title":"<title if visible>","exact_url":"<exact https:// URL copied from the evidence or insufficient_data>"}
 `;
     const prompt = `You are an elite SEO and AEO strategist. A strategist requested a possible NEW page for this keyword. FIRST decide whether a new URL should actually be created or whether an existing client URL should be expanded instead. Do not create a new page when the sitemap shows a materially overlapping existing URL and doing so would create cannibalization. If CREATE is justified, specify what the brand-new page must contain to outrank and out-cite current results from the first draft. Every claim must be traceable to the inputs below; never invent a domain, URL, snippet, statistic, schema type or business fact.
 
@@ -57565,6 +57607,27 @@ ${_pwbIdentityContract.prompt}
 
 ${recommendationBlock}
 
+COMPETITOR ANALYSIS CONTRACT — TOP 10:
+- Analyse ALL supplied competitors, not only the first 5.
+- For every competitor return: rank, company_or_publisher, page_title, exact_url, domain, what_they_have, the_gap, what_to_add.
+- exact_url is mandatory.
+- exact_url MUST be copied verbatim from the supplied SERP data.
+- exact_url MUST begin with https://, unless the supplied data itself is missing; then return "insufficient_data".
+- Never replace an article/page URL with a homepage or root domain.
+- Never invent or reconstruct a URL.
+- If the page scrape failed, preserve rank, page_title, domain and exact_url from the SERP, and set content-analysis fields to "insufficient_data".
+- Keep the competitor order aligned to the SERP rank.
+
+5 AI SYSTEMS EVIDENCE CONTRACT:
+- Treat each system independently.
+- Manual evidence is primary.
+- Perplexity automatic evidence is fallback only when the manual Perplexity field is empty.
+- Never simulate ChatGPT Search, Claude, Microsoft Copilot, Google AIO/Gemini, or Perplexity.
+- For every system, preserve exact HTTPS citation/source URLs when present.
+- Distinguish: recommended company, mentioned company, domain cited, exact page cited, citation source.
+- Do not mark "exact page cited" unless the exact URL is visibly present in that system's evidence.
+- If the evidence does not contain an exact URL, use "insufficient_data".
+
 MANDATORY PROCESSING ORDER:
 DETECTED SEARCH INTENT (from the live SERP — follow this, do not re-guess it): ${_chosenIntent}${_autoIntent.secondary ? ' (secondary: '+_autoIntent.secondary+')' : ''} [confidence: ${_autoIntent.confidence}${_intentWasOverridden ? '; manually set by strategist' : ''}].${_autoIntent.conflict ? ' NOTE: '+_autoIntent.conflict : ''}
 Write for this intent: content type = ${_intentDir.contentType}; structure = ${_intentDir.structure}; CTA style = ${_intentDir.cta}; citation approach = ${_intentDir.citeable}. A page that misreads intent will not rank however well written.
@@ -57585,9 +57648,19 @@ STEP 8 — FACT SAFETY: return fact_safety with verified_business_facts_used (on
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output "insufficient_data" instead of inventing one.
 
 Return ONLY valid JSON, no markdown, no preamble.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise the Perplexity live check and Google direct-answer block above into one sentence — what it means for this new page's citation chances>","competitor_table":[{"rank":1,"domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content>","the_gap":"<one concrete thing missing or weak in their content>","what_to_add":"<what the new page should do instead/better>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<a URL copied verbatim from the CLIENT SITEMAP list; empty array if no sitemap was provided — never invent a path>","why":"<the topical-authority or user-journey purpose>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise only verified Google/manual evidence and the Google search direct-answer signal; do not treat other systems as Google AIO proof>","ai_systems_analysis":{"google_aio":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[{"source_name":"<visible source name>","page_title":"<visible page title>","exact_url":"<exact https:// URL or insufficient_data>"}]},"chatgpt":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"perplexity":{"checked":false,"evidence_source":"manual|automatic_fallback|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"claude":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"copilot":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]}},"competitor_table":[{"rank":1,"company_or_publisher":"<company or publisher only if supported by the supplied title/domain/page; otherwise use the domain>","domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data, or insufficient_data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content; insufficient_data if scrape failed>","the_gap":"<one concrete thing missing or weak in their content; insufficient_data if scrape failed>","what_to_add":"<what the new page should do instead/better; insufficient_data if scrape failed>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<a URL copied verbatim from the CLIENT SITEMAP list; empty array if no sitemap was provided — never invent a path>","why":"<the topical-authority or user-journey purpose>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
-    const finalPrompt = prompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.';
+    const finalPrompt = prompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.'
+      + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
+      + '\n- Every supplied competitor must be represented in competitor_table.'
+      + '\n- Every competitor exact_url must be the exact https:// URL copied from the supplied SERP data, or "insufficient_data".'
+      + '\n- Never replace an exact page URL with a root domain.'
+      + '\n- Never invent, reconstruct, normalize, guess or repair URLs.'
+      + '\n- Every AI citation source must include exact_url when visible in the provided evidence.'
+      + '\n- exact_page_citations may contain only exact page URLs visibly present in that AI system evidence.'
+      + '\n- If only a domain is visible, put it under domain_citations and set exact page URL to insufficient_data.'
+      + '\n- All manually provided AI evidence must override any fallback.'
+      + '\n- Do not output Markdown; return valid JSON only.';
     const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 45000);
     const geminiKey = process.env.GEMINI_API_KEY;
     const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
