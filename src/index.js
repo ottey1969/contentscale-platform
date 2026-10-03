@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v432-NETWORK-PREWRITE-AUTH-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v433-NETWORK-PREWRITE-BRAND-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -46482,7 +46482,9 @@ function renderStats(data) {
     var _mismatch = _nm && _dm && _dm.length >= 4 && _nm.indexOf(_dm) < 0 && _dm.indexOf(_nm) < 0;
     var _host = document.getElementById('pagesList');
     var _existing = document.getElementById('csBrandWarn');
-    if (_mismatch && _host && !window._csBrandWarnDismissed) {
+    if (_NETWORK_PREWRITE_AUTHORIZED) {
+      if (_existing) _existing.remove();
+    } else if (_mismatch && _host && !window._csBrandWarnDismissed) {
       if (!_existing) {
         _existing = document.createElement('div');
         _existing.id = 'csBrandWarn';
