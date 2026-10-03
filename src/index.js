@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v440-NETWORK-PREWRITE-LIVE-EVIDENCE-REFRESH';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v441-NETWORK-PREWRITE-LIVE-BRIDGE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -45434,6 +45434,55 @@ function maybeShowWelcome() {
 function showAddModal() { document.getElementById('addModal').classList.add('show'); }
 
 function openPrewriteFromHeader() { showPrewriteBriefModal(); }
+
+function _networkPrewritePlacementId(){
+  try{
+    var q=new URLSearchParams(window.location.search||'');
+    var p=Number(q.get('networkPlacement')||0);
+    return Number.isSafeInteger(p)&&p>0?p:0;
+  }catch(e){return 0}
+}
+function _networkPrewriteBriefId(){
+  try{
+    var q=new URLSearchParams(window.location.search||'');
+    var b=Number(q.get('networkBrief')||0);
+    return Number.isSafeInteger(b)&&b>0?b:0;
+  }catch(e){return 0}
+}
+function _networkPrewriteEmitState(){
+  var placementId=_networkPrewritePlacementId();
+  if(!placementId||window.parent===window)return;
+  var k=document.getElementById('pwbKeyword');
+  var t=document.getElementById('pwbTitle');
+  try{
+    window.parent.postMessage({
+      type:'network-prewrite-state',
+      placement_id:placementId,
+      brief_id:_networkPrewriteBriefId(),
+      keyword:k?String(k.value||'').trim():'',
+      working_title:t?String(t.value||'').trim():''
+    },window.location.origin);
+  }catch(e){}
+}
+function _networkPrewriteApplyEvidence(engine,evidence){
+  var ids={google_aio:'pwbAioText',chatgpt:'pwbChatgptText',perplexity:'pwbPerplexityText',claude:'pwbClaudeText',copilot:'pwbCopilotText'};
+  var el=document.getElementById(ids[String(engine||'').toLowerCase()]);
+  if(!el)return false;
+  el.value=String(evidence||'');
+  try{el.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
+  _pwbUpdateAiFiveCount();
+  return true;
+}
+window.addEventListener('message',function(e){
+  if(e.origin!==window.location.origin||!e.data)return;
+  if(e.data.type==='network-ai-evidence'&&Number(e.data.placement_id)===_networkPrewritePlacementId()){
+    _networkPrewriteApplyEvidence(e.data.engine,e.data.evidence);
+  }
+});
+document.addEventListener('input',function(e){
+  if(e.target&&e.target.id==='pwbKeyword')_networkPrewriteEmitState();
+});
+
 function _pwbUpdateAiFiveCount(){
   var ids=['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'];
   var n=ids.filter(function(id){var e=document.getElementById(id);return e&&String(e.value||'').trim();}).length;
@@ -45447,6 +45496,7 @@ function showPrewriteBriefModal() {
   var _nab=document.getElementById('pwbNetworkAuthBadge');if(_nab)_nab.style.display=_NETWORK_PREWRITE_AUTHORIZED?'block':'none';
   _pwbUpdateAiFiveCount();
   loadRecentPrewriteBriefs();
+  setTimeout(_networkPrewriteEmitState,0);
 }
 (function(){try{var q=new URLSearchParams(window.location.search),np=q.get('networkPlacement'),nb=Number(q.get('networkBrief')||0);if(np){try{var w=document.getElementById('wlOverlay');if(w)w.style.display='none'}catch(e){}setTimeout(function(){try{showPrewriteBriefModal();if(nb>0)setTimeout(function(){try{reopenPrewriteBrief(nb)}catch(_e){}},220)}catch(e){}},350)}}catch(e){}})();
 var _pwbRecommendationContext = null;
@@ -45522,6 +45572,7 @@ async function reopenPrewriteBrief(id) {
     stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString();
     result.innerHTML = renderPrewriteBrief(data.brief);
     result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    _networkPrewriteEmitState();
   } catch (e) {
     stat.textContent = '\u274c ' + e.message;
   }
