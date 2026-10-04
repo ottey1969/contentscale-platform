@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v463-NETWORK-PREWRITE-TOP10-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v464-NETWORK-PREWRITE-NULL-GUARD';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58220,9 +58220,15 @@ async function _handlePrewriteBriefGeneration(req, res) {
     }
     const recommendationBlock=_recSafe?'TRACKER CONTENT RECOMMENDATION — treat this as a proposal to VERIFY, not permission to publish:\n'+JSON.stringify(_recSafe)+_targetPageBlock+'\nUse its GSC evidence. Required mode: '+(_recSafe.decision==='OPTIMIZE'?'OPTIMIZE_EXISTING_PAGE: preserve proven passages and structure; specify surgical before/after changes only.':_recSafe.decision==='EXPAND_EXISTING'?'EXPAND_EXISTING_PAGE: preserve the existing page and add only justified substantial sections.':'CREATE_NEW_PAGE: re-run the cannibalization gate; if overlap exists, change to EXPAND_EXISTING_PAGE.')+' If a spoke is cleared, include a bidirectional hub_spoke_plan.':'';
 
+    // v464 — normalize optional provider fields before any .length / .join use.
+    // Provider responses are not trusted to preserve optional array keys.
+    if(!perplexity || typeof perplexity!=='object') perplexity={};
+    perplexity.checked=!!perplexity.checked;
+    perplexity.answer_excerpt=String(perplexity.answer_excerpt||'');
+    perplexity.cited_domains=Array.isArray(perplexity.cited_domains)?perplexity.cited_domains.filter(Boolean):[];
     const _perplexityEvidenceText = _manualAi.perplexity
       ? _manualAi.perplexity
-      : (perplexity.checked ? (perplexity.answer_excerpt || '') : '');
+      : (perplexity.checked ? perplexity.answer_excerpt : '');
     const _perplexityEvidenceSource = _manualAi.perplexity ? 'manual' : (perplexity.checked ? 'automatic fallback' : 'not checked');
     const aiSystemsBlock = `5 AI SYSTEMS EVIDENCE — MANUAL INPUT IS PRIMARY. NEVER SIMULATE ANOTHER AI SYSTEM.
 Google AIO / Gemini [${_manualAi.google_aio ? 'manual' : 'NOT CHECKED'}]:
@@ -58233,7 +58239,7 @@ ${_manualAi.chatgpt || 'NOT CHECKED'}
 
 Perplexity [${_perplexityEvidenceSource}]:
 ${_perplexityEvidenceText || 'NOT CHECKED'}
-${(!_manualAi.perplexity && perplexity.checked && perplexity.cited_domains.length) ? 'Automatic fallback cited domains: ' + perplexity.cited_domains.join(', ') : ''}
+${(!_manualAi.perplexity && perplexity.checked && Array.isArray(perplexity.cited_domains) && perplexity.cited_domains.length) ? 'Automatic fallback cited domains: ' + perplexity.cited_domains.join(', ') : ''}
 
 Claude [${_manualAi.claude ? 'manual' : 'NOT CHECKED'}]:
 ${_manualAi.claude || 'NOT CHECKED'}
@@ -58487,6 +58493,7 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
       }
     }
     if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:true,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,split_generation:!!_pwbNetworkFastLane}});
+    _pwbStage='gemini_parse';
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
     const m2 = rawText.match(/\{[\s\S]*\}/);
@@ -58508,7 +58515,19 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
     });
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
+    if(!brief || typeof brief!=='object') return res.status(502).json({success:false,stage:'gemini_parse',retryable:true,error:'Generated Prewrite Brief was not a valid object.'});
+    // Normalize every optional model-owned collection before downstream processing.
+    ['internal_link_targets','external_link_targets','quick_facts','paa_questions','citation_targets','page_blueprint','faq_questions','must_cover_entities','use_cases','action_plan','preserve_sections','surgical_changes','beat_number1_instructions'].forEach(function(k){ if(!Array.isArray(brief[k])) brief[k]=[]; });
+    if(!brief.fact_safety || typeof brief.fact_safety!=='object') brief.fact_safety={};
+    ['verified_business_facts_used','verify_first','blocked_claims'].forEach(function(k){ if(!Array.isArray(brief.fact_safety[k])) brief.fact_safety[k]=[]; });
+    if(!brief.entity_strategy || typeof brief.entity_strategy!=='object') brief.entity_strategy={primary:[],secondary:[],supporting:[],relationships:[]};
+    ['primary','secondary','supporting','relationships'].forEach(function(k){ if(!Array.isArray(brief.entity_strategy[k])) brief.entity_strategy[k]=[]; });
+    if(!brief.evidence || typeof brief.evidence!=='object') brief.evidence={official_sources:[],statistics:[],experience_to_include:'',trust_signals:[]};
+    ['official_sources','statistics','trust_signals'].forEach(function(k){ if(!Array.isArray(brief.evidence[k])) brief.evidence[k]=[]; });
+    if(!brief.balance || typeof brief.balance!=='object') brief.balance={limitations:[],who_should_not_use_it:[],comparisons:[]};
+    ['limitations','who_should_not_use_it','comparisons'].forEach(function(k){ if(!Array.isArray(brief.balance[k])) brief.balance[k]=[]; });
 
+    _pwbStage='link_validation';
     // ── SERVER-ENFORCED LINK WHITELISTS ─────────────────────────────────
     const _pwbNormExactUrl = u => { try { return new URL(String(u||'').trim()).href; } catch(e) { return ''; } };
     const _internalAllowed = new Set(clientSitemapUrls.map(_pwbNormExactUrl).filter(Boolean));
@@ -58535,6 +58554,7 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
       external:{automatic:true,candidates_found:_pwbExternalCandidates.length,targets_selected:brief.external_link_targets.length,rule:'Every external exact_url is server-validated against URLs discovered during current Prewrite research.'}
     };
 
+    _pwbStage='fact_safety';
     // Server-owned fact safety: the model cannot promote UNVERIFIED research to VERIFIED.
     brief.fact_safety = brief.fact_safety || {};
     brief.fact_safety.verified_business_facts = _pwbVerified;
@@ -58619,6 +58639,7 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
       if(!Array.isArray(brief.surgical_changes)||!brief.surgical_changes.length)brief.surgical_changes=[{where:(_recSafe&&_recSafe.target)||brief.content_decision.closest_existing_url||'Existing target page',change:(_recSafe&&_recSafe.action)||'Apply only the focused evidence-backed optimization from Intelligence.',why:(_recSafe&&_recSafe.evidence)||brief.content_decision.reason,complete_when:'The focused change is published, live-verified and recorded in the next page scan.'}];
     }
 
+    _pwbStage='finalize';
     // What We Actually Checked — built from REAL, verified data fetched above,
     // never from the LLM's own claims. Matches the transparency block already
     // used on the regular Citation Brief.
@@ -58631,7 +58652,7 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
         ? (perplexity.answer_excerpt ? 'checked — answer captured' : 'checked — no answer excerpt captured for this query')
         : 'not checked — Perplexity key not configured',
       perplexity_excerpt: perplexity.answer_excerpt || '',
-      perplexity_currently_cites: perplexity.cited_domains,
+      perplexity_currently_cites: Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[],
       competitors_analysed: top10.length,
       people_also_ask: peopleAlsoAsk,
       internal_links: brief.link_research && brief.link_research.internal ? brief.link_research.internal : null,
