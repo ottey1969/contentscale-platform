@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v450-NETWORK-PREWRITE-SYNTHETIC-SITEMAP-GUARD';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v451-NETWORK-PREWRITE-GATEWAY-BUDGET';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -308,6 +308,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 const CONTENTSCALE_BUILD_CHANGES = [
   'network-safe-shell-v1-isolated-module',
   'network-prewrite-synthetic-sitemap-guard-v450',
+  'network-prewrite-gateway-budget-fast-lane-v451',
   'network-no-core-table-mutations-v406',
   'tracker-delta-brief-regression-lock',
   'tracker-internal-external-link-presence-guard',
@@ -57722,6 +57723,10 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       _pwbSyntheticNetworkTracker = false;
     }
     const _pwbSkipSyntheticSitemap = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
+    // v451 — Authorized Network embeds run inside a browser request behind the app gateway.
+    // Keep the SAME evidence sources, but cap duplicated/optional upstream work so the request
+    // cannot stack multiple 10–30s retries and die as a gateway 502 before our JSON error arrives.
+    const _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
     const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
@@ -57835,10 +57840,10 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     }
     _pwbStage='serp';
     if (serperKey) {
-      for(let _attempt=1;_attempt<=2&&!serpUrls.length;_attempt++){
+      for(let _attempt=1;_attempt<=(_pwbNetworkFastLane?1:2)&&!serpUrls.length;_attempt++){
         _pwbSerperAttempts=_attempt;
         try {
-          const ctrl1 = new AbortController(); const _t1=setTimeout(() => ctrl1.abort(), 15000);
+          const ctrl1 = new AbortController(); const _t1=setTimeout(() => ctrl1.abort(), _pwbNetworkFastLane?8000:15000);
           const r1 = await fetch('https://google.serper.dev/search', {
             method: 'POST',
             headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
@@ -57870,7 +57875,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
           _pwbSerperError=String(e&&e.message||e).slice(0,500);
           console.warn('[prewrite-brief] Serper.dev attempt',_attempt,'failed:', _pwbSerperError);
         }
-        if(!serpUrls.length&&_attempt===1)await new Promise(r=>setTimeout(r,450));
+        if(!serpUrls.length&&_attempt===1&&!_pwbNetworkFastLane)await new Promise(r=>setTimeout(r,450));
       }
     } else {
       _pwbSerperError='SERPAPI_KEY not set';
@@ -57895,7 +57900,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       const urls=(String(_manualAi[k]||'').match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]);
       urls.forEach(u=>_pwbAddExternal(u,{source_type:'ai_'+k}));
     });
-    if (serperKey) {
+    if (serperKey && !_pwbNetworkFastLane) {
       try {
         const _ec=new AbortController(); setTimeout(()=>_ec.abort(),12000);
         const _er=await fetch('https://google.serper.dev/search',{
@@ -57930,7 +57935,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     let perplexity = { checked: false, answer_excerpt: '', cited_domains: [] };
     const pxKey = process.env.PERPLEXITY_API_KEY;
     // Manual Perplexity evidence is authoritative; do not spend time on fallback.
-    if (pxKey && !_manualAi.perplexity) {
+    if (pxKey && !_manualAi.perplexity && !_pwbNetworkFastLane) {
       try {
         const ctrlP = new AbortController(); const _pwbPxTimer=setTimeout(() => ctrlP.abort(), 12000);
         const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -57956,7 +57961,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     _pwbStage='competitor_scrape';
     const top10 = serpUrls
       .filter(r => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\.|quora\.com|instagram\.com|tiktok\.com/i.test(r.url))
-      .slice(0, 10);
+      .slice(0, _pwbNetworkFastLane ? 5 : 10);
     const compScrapes = await Promise.all(top10.map(e => scrapeBodyText(e.url, 6000)));
     const _detectSchema = h => Array.from(new Set(((h || '').match(/"@type"\s*:\s*"([^"]+)"/g) || []).map(x => x.replace(/.*"([^"]+)"$/, '$1')))).slice(0, 6);
     const compSummary = top10.map((e, i) => {
@@ -58131,13 +58136,13 @@ Return ONLY valid JSON, no markdown, no preamble.
     _pwbStage='gemini';
     const geminiKey = process.env.GEMINI_API_KEY;
     let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0,_pwbGeminiNetworkFailure=false;
-    for(let _ga=1;_ga<=2&&!d2;_ga++){
+    for(let _ga=1;_ga<=(_pwbNetworkFastLane?1:2)&&!d2;_ga++){
       _pwbGeminiAttempts=_ga;
       try{
-        const ctrl2 = new AbortController(); const _t2=setTimeout(() => ctrl2.abort(), 32000);
+        const ctrl2 = new AbortController(); const _t2=setTimeout(() => ctrl2.abort(), _pwbNetworkFastLane?24000:32000);
         const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + finalPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 16384, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
+          body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + finalPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: _pwbNetworkFastLane?10000:16384, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
           signal: ctrl2.signal
         });
         clearTimeout(_t2);
@@ -58156,7 +58161,7 @@ Return ONLY valid JSON, no markdown, no preamble.
       }
       if(_ga===1)await new Promise(r=>setTimeout(r,350));
     }
-    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:_pwbGeminiStatus===429||_pwbGeminiStatus>=500||!_pwbGeminiStatus,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response'}});
+    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:_pwbGeminiStatus===429||_pwbGeminiStatus>=500||!_pwbGeminiStatus,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane}});
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
     const m2 = rawText.match(/\{[\s\S]*\}/);
@@ -58174,7 +58179,7 @@ Return ONLY valid JSON, no markdown, no preamble.
       stage:'gemini_parse',
       retryable:true,
       error:'Gemini answered, but the Prewrite JSON could not be parsed safely.',
-      diagnostic:{model:GEMINI_MODEL,response_chars:rawText.length,finish_reason:d2&&d2.candidates&&d2.candidates[0]&&d2.candidates[0].finishReason||null}
+      diagnostic:{model:GEMINI_MODEL,response_chars:rawText.length,finish_reason:d2&&d2.candidates&&d2.candidates[0]&&d2.candidates[0].finishReason||null,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane}
     });
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
@@ -58367,7 +58372,7 @@ Return ONLY valid JSON, no markdown, no preamble.
     res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top10.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed, search_intent: brief.search_intent });
   } catch (e) {
     console.error('[prewrite-brief] error at stage',_pwbStage+':', e.message,'elapsed='+(Date.now()-_pwbStartedAt)+'ms');
-    res.status(502).json({ success:false,stage:_pwbStage||'unknown',retryable:true,error:e.message||'Prewrite failed',diagnostic:{name:e&&e.name||'Error',elapsed_ms:Date.now()-_pwbStartedAt,network_placement:_pwbNetworkPlacementId||null,network_authorized:!!_pwbNetworkAuthorized,synthetic_network_tracker:!!_pwbSyntheticNetworkTracker} });
+    res.status(502).json({ success:false,stage:_pwbStage||'unknown',retryable:true,error:e.message||'Prewrite failed',diagnostic:{name:e&&e.name||'Error',elapsed_ms:Date.now()-_pwbStartedAt,network_placement:_pwbNetworkPlacementId||null,network_authorized:!!_pwbNetworkAuthorized,synthetic_network_tracker:!!_pwbSyntheticNetworkTracker,network_fast_lane:!!_pwbNetworkFastLane} });
   }
 });
 
