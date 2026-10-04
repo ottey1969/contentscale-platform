@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v468-NETWORK-PREWRITE-CLIENT-REGEX-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v469-NETWORK-PREWRITE-GROUPED-QUALITY-COMPLETION';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58562,32 +58562,64 @@ Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}
           if(_realPaaQs.length){const ans=Array.isArray(b.paa_questions)?b.paa_questions.filter(x=>x&&_usable(x.q)&&_usable(x.a)):[];if(ans.length<_realPaaQs.length)m.push('paa_questions');}
           return Array.from(new Set(m));
         };
-        for(let _cg=1;_cg<=2;_cg++){
-          const _missing=_collectMissing(_merged);
-          if(!_missing.length)break;
-          const _completePrompt=`QUALITY COMPLETION PASS ${_cg}/2. This is NEW content and must be publication-ready, trustworthy, citeable and structurally complete before it can be approved. Repair ONLY these missing/incomplete top-level keys: ${_missing.join(', ')}. Return JSON ONLY with exactly those keys. Never invent URLs, statistics, client claims, credentials or PAA questions. Use the verified SERP, exact source whitelist and facts below. Prefer precise explanations over generic filler. For page_blueprint provide at least 5 useful H2 sections in reading order. For entity_strategy provide primary entities and at least 2 explicit relationships. For evidence provide at least 2 real source names/URLs already present in the research, first-hand experience instructions and trust signals. For balance include limitations and a meaningful comparison. Answer every REAL PAA exactly as supplied. Action plan must contain at least 3 concrete publishing actions.
+        const _completionGroups=[
+          {name:'core',keys:['recommended_title_h1','top10_gap','recommended_structure','meta_package','opening_passage','page_blueprint','ai_answer']},
+          {name:'trust',keys:['quick_facts','entity_strategy','evidence','balance','use_cases','conclusion']},
+          {name:'faq_actions',keys:['paa_questions','action_plan']}
+        ];
+        for(let _cg=0;_cg<_completionGroups.length && _merged;_cg++){
+          const _allMissing=_collectMissing(_merged);
+          const _group=_completionGroups[_cg];
+          const _missing=_group.keys.filter(function(k){return _allMissing.includes(k);});
+          if(!_missing.length)continue;
+          const _briefContext={keyword:_merged.keyword||keyword,search_intent:_merged.search_intent||_chosenIntent,content_decision:_merged.content_decision||{},recommended_title_h1:_merged.recommended_title_h1||'',top10_gap:_merged.top10_gap||'',must_cover_entities:_merged.must_cover_entities||[],meta_package:_merged.meta_package||{},recommended_structure:_merged.recommended_structure||{},opening_passage:_merged.opening_passage||{},ai_answer:_merged.ai_answer||{},fact_safety:_merged.fact_safety||{}};
+          const _completePrompt=`QUALITY COMPLETION — ${_group.name.toUpperCase()}. This is NEW content. Repair ONLY these top-level keys: ${_missing.join(', ')}. Return JSON ONLY with exactly those keys. Every returned field must be complete enough to publish from; do not return placeholders, insufficient_data, empty arrays or generic filler when the verified research below can support a useful answer. Never invent URLs, statistics, client claims, credentials or PAA questions.
 
-CURRENT BRIEF:
-${JSON.stringify(_merged).slice(0,20000)}
+FIELD RULES:
+- recommended_structure: format + at least 5 specific must_have_h2s + suitable schema.
+- meta_package: complete seo_title, meta_description, h1, url_slug.
+- opening_passage: direct 40-60 word answer + why_it_wins.
+- page_blueprint: at least 5 sections, each h2 + purpose + target_words + cover + citation_hook.
+- ai_answer: primary_question, 4-7 secondary_questions, 40-60 word direct_answer, why_it_matters, who_is_it_for, 3-5 key_takeaways.
+- quick_facts: 4-8 facts grounded in supplied research.
+- entity_strategy: at least 2 primary entities and 2 explicit relationships.
+- evidence: at least 2 real sources from the whitelist, experience_to_include, and at least 2 trust_signals.
+- balance: at least 2 limitations and at least 1 meaningful comparison.
+- use_cases: at least 2 concrete audience/scenario/benefit objects.
+- conclusion: useful recap + recommendation + outlook.
+- paa_questions: answer EVERY REAL PAA below exactly; do not invent extra PAA.
+- action_plan: at least 3 concrete actions.
+
+CURRENT CORE CONTEXT:
+${JSON.stringify(_briefContext).slice(0,9000)}
 
 REAL PAA:
 ${_realPaaQs.map(q=>'- '+q).join('\n')||'none'}
 
 VERIFIED EXTERNAL SOURCE WHITELIST:
-${_externalSourceBlock.slice(0,9000)}
+${_externalSourceBlock.slice(0,7000)}
 
 TOP RESULTS:
-${compSummary.slice(0,7000)}
+${compSummary.slice(0,6000)}
 
 FACT SAFETY:
-${claimsBlock.slice(0,3500)}`;
-          const _completion=await _compactCall('quality_completion_'+_cg,_completePrompt,6200,_missing);
+${claimsBlock.slice(0,2800)}`;
+          const _completion=await _compactCall('quality_'+_group.name,_completePrompt,_group.name==='core'?5600:(_group.name==='trust'?5000:3000),_missing);
           _pwbGeminiAttempts+=(_completion.attempts||0);
-          if(!_completion.ok){_pwbGeminiNetworkFailure=true;_pwbGeminiStatus=Number(_completion.status||0);_pwbGeminiError=('quality_completion_'+_cg+': '+(_completion.error||'failed')).slice(0,900);_merged=null;break;}
+          if(!_completion.ok){_pwbGeminiNetworkFailure=true;_pwbGeminiStatus=Number(_completion.status||0);_pwbGeminiError=('quality_'+_group.name+': '+(_completion.error||'failed')).slice(0,900);_merged=null;break;}
           _missing.forEach(function(k){if(Object.prototype.hasOwnProperty.call(_completion.obj,k))_merged[k]=_completion.obj[k];});
-          console.log('[prewrite-brief] quality completion pass '+_cg+' repaired: '+_missing.join(','));
+          console.log('[prewrite-brief] quality '+_group.name+' repaired: '+_missing.join(','));
         }
-        if(_merged){const _stillMissing=_collectMissing(_merged);if(_stillMissing.length){_pwbGeminiNetworkFailure=true;_pwbGeminiStatus=422;_pwbGeminiError='quality gate still incomplete: '+_stillMissing.join(',');_merged=null;}}
+        if(_merged){
+          const _stillMissing=_collectMissing(_merged);
+          if(_stillMissing.length){
+            _pwbStage='quality_gate';
+            _pwbGeminiNetworkFailure=true;
+            _pwbGeminiStatus=422;
+            _pwbGeminiError='quality gate still incomplete: '+_stillMissing.join(',');
+            _merged=null;
+          }
+        }
         if(_merged)d2={candidates:[{content:{parts:[{text:JSON.stringify(_merged)}]},finishReason:'STOP'}]};
         if(_merged)console.log('[prewrite-brief] network 3-part synthesis complete | p1='+_part1.model+' p2='+_part2.model+' p3='+_part3.model+' | '+(Date.now()-_pwbGeminiNetworkStartedAt)+'ms');
       }else{
