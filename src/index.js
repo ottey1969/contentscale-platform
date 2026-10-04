@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v477-NETWORK-PREWRITE-CANONICAL-FINAL-REPAIR';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v478-NETWORK-PREWRITE-COMPACT-SCOPE-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58482,6 +58482,9 @@ Return ONLY valid JSON, no markdown, no preamble.
 
     // v458 — Network Prewrite synthesis is split into THREE small, validated JSON jobs.
     // A provider HTTP 200 is not enough: every part must parse as complete JSON before merge.
+    // v478: keep a reference to the compact-call helper outside the fast-lane block so
+    // post-normalization quality repair can use the exact same provider/retry machinery.
+    let _pwbCompactCall=null;
     if (_pwbNetworkFastLane) {
       const _compactModels = Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL, 'gemini-2.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))).slice(0,3);
       const _extractCompactJson = function(raw) {
@@ -58525,6 +58528,7 @@ ${raw.slice(0,16000)}`;
         if(!_hasRequired(obj)){ const finish=String(cand.finishReason||'').trim(); const missing=Array.isArray(requiredKeys)?requiredKeys.filter(function(k){return !obj||!Object.prototype.hasOwnProperty.call(obj,k);}):[]; const err=label+' returned HTTP 200 but incomplete/invalid JSON'+(finish?' (finishReason '+finish+')':'')+'; missing='+missing.join(',')+'; chars='+raw.length; console.warn('[prewrite-brief] '+err); return {ok:false,error:err,status:Number(rr.status||200),attempts:attempts,model:modelUsed,timed_out:false,finish_reason:finish,chars:raw.length,elapsed_ms:Date.now()-started}; }
         return {ok:true,obj:obj,status:Number(rr.status||200),attempts:attempts,model:modelUsed,chars:raw.length,finish_reason:String(cand.finishReason||''),elapsed_ms:Date.now()-started};
       };
+      _pwbCompactCall=_compactCall;
 
       const _decisionPrompt = `PART 1 OF 3 — DECISION & STRATEGY. Return ONLY compact valid JSON, no markdown.
 KEYWORD: ${keyword}
@@ -58877,7 +58881,7 @@ ${claimsBlock.slice(0,2400)}`;
     if(!brief.ai_answer||!_pwbCanonicalGood(brief.ai_answer.direct_answer)||!Array.isArray(brief.ai_answer.key_takeaways)||brief.ai_answer.key_takeaways.filter(_pwbCanonicalGood).length<3)_pwbCanonicalNeeds.push('ai_answer');
     if(!Array.isArray(brief.quick_facts)||brief.quick_facts.filter(function(x){return x&&_pwbCanonicalGood(x.label)&&_pwbCanonicalGood(x.value);}).length<3)_pwbCanonicalNeeds.push('quick_facts');
     if(!Array.isArray(brief.use_cases)||brief.use_cases.filter(function(x){return x&&_pwbCanonicalGood(x.audience)&&_pwbCanonicalGood(x.scenario)&&_pwbCanonicalGood(x.benefit);}).length<2)_pwbCanonicalNeeds.push('use_cases');
-    if(_pwbCanonicalNeeds.length){
+    if(_pwbCanonicalNeeds.length && typeof _pwbCompactCall==='function'){
       _pwbStage='quality_gate';
       const _pwbCanonicalRules={
         ai_answer:'Return exactly {"ai_answer":{"primary_question":"...","secondary_questions":["...","...","...","..."],"direct_answer":"40-60 words","why_it_matters":"...","who_is_it_for":"...","key_takeaways":["...","...","..."]}}. Use a concise definitional answer supported by the supplied research. No unsupported metrics, guarantees or result claims.',
@@ -58901,7 +58905,7 @@ ${compSummary.slice(0,5000)}
 
 FACT SAFETY:
 ${claimsBlock.slice(0,2400)}`;
-        const _r=await _compactCall('quality_canonical_'+_key,_prompt,_key==='ai_answer'?2800:2400,[_key]);
+        const _r=await _pwbCompactCall('quality_canonical_'+_key,_prompt,_key==='ai_answer'?2800:2400,[_key]);
         _pwbGeminiAttempts+=(_r.attempts||0);
         if(_r.ok&&_r.obj&&Object.prototype.hasOwnProperty.call(_r.obj,_key)){
           if(_key==='ai_answer')brief.ai_answer=_pwbNormAiAnswer(_r.obj.ai_answer);
@@ -58912,6 +58916,10 @@ ${claimsBlock.slice(0,2400)}`;
           console.warn('[prewrite-brief] canonical quality repair failed: '+_key+' | '+String(_r.error||'unknown').slice(0,260));
         }
       }
+    } else if(_pwbCanonicalNeeds.length) {
+      // Non-fast-lane requests do not expose the compact repair helper. Keep the Brief
+      // intact and let the authoritative final readiness gate report the exact fields.
+      console.warn('[prewrite-brief] canonical repair skipped: compact helper unavailable | '+_pwbCanonicalNeeds.join(','));
     }
 
     _pwbStage='link_validation';
