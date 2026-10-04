@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v472-NETWORK-PREWRITE-STALE-REOPEN-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v473-NETWORK-PREWRITE-STALE-SOURCE-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -45687,7 +45687,23 @@ function showPrewriteBriefModal() {
   loadRecentPrewriteBriefs();
   setTimeout(_networkPrewriteEmitState,0);
 }
-(function(){try{var q=new URLSearchParams(window.location.search),np=q.get('networkPlacement'),nb=Number(q.get('networkBrief')||0);if(np){try{var w=document.getElementById('wlOverlay');if(w)w.style.display='none'}catch(e){}setTimeout(function(){try{showPrewriteBriefModal();if(nb>0)setTimeout(function(){try{reopenPrewriteBrief(nb)}catch(_e){}},220)}catch(e){}},350)}}catch(e){}})();
+async function _networkSafeAutoloadBrief(nb){
+  if(!(Number.isSafeInteger(nb)&&nb>0))return;
+  try{
+    var data=await api('/prewrite-briefs','GET');
+    var rows=(data&&Array.isArray(data.briefs))?data.briefs:[];
+    var exists=rows.some(function(b){return Number(b&&b.id)===Number(nb)});
+    if(exists){await reopenPrewriteBrief(nb);return;}
+    var _u=new URL(window.location.href);
+    _u.searchParams.delete('networkBrief');
+    window.history.replaceState({},'',_u.pathname+(_u.search?_u.search:'')+(_u.hash||''));
+    var _st=document.getElementById('pwbStatus');
+    if(_st)_st.textContent='The previously linked Brief is no longer available. Create or choose a current Brief.';
+  }catch(_e){
+    try{var _u2=new URL(window.location.href);_u2.searchParams.delete('networkBrief');window.history.replaceState({},'',_u2.pathname+(_u2.search?_u2.search:'')+(_u2.hash||''));}catch(_urlErr){}
+  }
+}
+(function(){try{var q=new URLSearchParams(window.location.search),np=q.get('networkPlacement'),nb=Number(q.get('networkBrief')||0);if(np){try{var w=document.getElementById('wlOverlay');if(w)w.style.display='none'}catch(e){}setTimeout(function(){try{showPrewriteBriefModal();if(nb>0)setTimeout(function(){_networkSafeAutoloadBrief(nb)},220)}catch(e){}},350)}}catch(e){}})();
 var _pwbRecommendationContext = null;
 function openSpokePrewrite(index) {
   var d=window._currentIntelData||{},r=(d.spoke_recommendations||[])[Number(index)];
