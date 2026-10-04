@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v469-NETWORK-PREWRITE-GROUPED-QUALITY-COMPLETION';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v470-NETWORK-PREWRITE-REOPEN-CONTEXT-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58913,12 +58913,43 @@ app.get('/api/tracker-client/:token/prewrite-briefs', async (req, res) => {
 // ── GET /api/tracker-client/:token/prewrite-briefs/:id — reopen one brief ───
 app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT id,domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found.' });
-    const r = await pool.query(
+    const trackerClient = cr.rows[0];
+    let r = await pool.query(
       'SELECT id, keyword, working_title, language, region, brief_json, competitors_scraped, created_at FROM prewrite_briefs WHERE id=$1 AND client_id=$2',
-      [req.params.id, cr.rows[0].id]
+      [req.params.id, trackerClient.id]
     );
+
+    // v470 — Network embeds can remain open with the placement's synthetic tracker token
+    // even after a brief owned by another tracker client is linked to the Network content.
+    // In that case the normal client_id ownership lookup above correctly returns no row.
+    // Permit ONE narrowly-scoped fallback only when the requested brief is the exact brief
+    // linked server-side to this placement, and the current tracker is either that brief's
+    // owner or this placement's synthetic tracker. Never allow arbitrary cross-client recall.
+    if (!r.rows.length) {
+      const placementId = Number(req.query && req.query.networkPlacement || 0);
+      const wantsNetworkEmbed = String(req.query && req.query.networkEmbed || '') === '1';
+      if (wantsNetworkEmbed && Number.isSafeInteger(placementId) && placementId > 0) {
+        const nr = await pool.query(`
+          SELECT c.prewrite_brief_id,
+                 pb.client_id AS prewrite_client_id,
+                 pb.id, pb.keyword, pb.working_title, pb.language, pb.region,
+                 pb.brief_json, pb.competitors_scraped, pb.created_at
+          FROM network_placements p
+          JOIN network_content c ON c.id=p.content_id
+          JOIN prewrite_briefs pb ON pb.id=c.prewrite_brief_id
+          WHERE p.id=$1 AND pb.id=$2
+          LIMIT 1
+        `,[placementId, req.params.id]);
+        const networkRow = nr.rows[0] || null;
+        const syntheticDomain = ('network-placement-' + placementId + '.internal.contentscale.site').toLowerCase();
+        const currentDomain = String(trackerClient.domain || '').trim().toLowerCase();
+        const authorized = !!networkRow && (Number(networkRow.prewrite_client_id||0)===Number(trackerClient.id||0) || currentDomain===syntheticDomain);
+        if (authorized) r = { rows: [networkRow] };
+      }
+    }
+
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
     const row = r.rows[0];
     // Ensure the recalled brief carries its language so client-side labels render correctly,
