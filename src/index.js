@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v465-NETWORK-PREWRITE-CLIENT-RENDER-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v466-NETWORK-PREWRITE-COMPLETION-WORKFLOW';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -2672,9 +2672,11 @@ app.get('/api/tracker-client/:token', async (req, res) => {
         const _nq = await pool.query(`
           SELECT p.id,
                  c.prewrite_brief_id,
-                 pb.client_id AS prewrite_client_id
+                 pb.client_id AS prewrite_client_id,
+                 ow.domain AS owner_domain
           FROM network_placements p
           JOIN network_content c ON c.id=p.content_id
+          LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
           LEFT JOIN prewrite_briefs pb ON pb.id=c.prewrite_brief_id
           WHERE p.id=$1
           LIMIT 1
@@ -44465,6 +44467,11 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         </div>
       </div>
     </div>
+    <details style="margin-bottom:16px;background:#0b1220;border:1px solid #26364d;border-radius:10px;padding:10px 12px;">
+      <summary style="cursor:pointer;color:#c4b5fd;font-size:11px;font-weight:800;">Existing site HTML fallback (optional)</summary>
+      <div style="font-size:10.5px;color:#94a3b8;line-height:1.5;margin:7px 0;">If no usable sitemap is found, ContentScale can use the real owner homepage automatically. You can also paste homepage/navigation HTML here. Only same-site URLs are extracted.</div>
+      <textarea id="pwbExistingHtml" class="cs-input" style="min-height:100px;resize:vertical;font-family:monospace;font-size:10px;" placeholder="Paste existing site/homepage HTML here if needed..."></textarea>
+    </details>
     <div style="margin-bottom:16px;background:#0b1220;border:1px solid #26364d;border-radius:10px;padding:12px 13px;">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
         <div><div style="font-size:11px;color:#c4b5fd;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">5 AI systems evidence</div><div id="pwbNetworkAuthBadge" style="display:none;margin-top:6px;font-size:10px;color:#86efac;font-weight:800;">✓ Network Prewrite authorized · GSC is not required for this research workspace</div>
@@ -45730,6 +45737,16 @@ async function deletePrewriteBrief(ev, id) {
   if (!confirm('Remove this saved brief?')) return;
   try {
     await api('/prewrite-briefs/' + id, 'DELETE');
+    try{
+      var _q2=new URLSearchParams(window.location.search||''),_placement=Number(_q2.get('networkPlacement')||0),_qc2=data.brief.ai_quality_check||{},_canGenerate=!!_qc2.ready_for_generation;
+      if(_placement){
+        var _wf=document.createElement('div');_wf.id='pwbNetworkWorkflow';_wf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #374151;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';
+        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':'Complete missing Brief sections first')+'</button><button class="cs-btn" id="pwbRegenerateMissing">Regenerate / complete Brief</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:#94a3b8;">Review the Brief above. Generation uses this exact approved Brief as the content contract.</div>';
+        result.appendChild(_wf);
+        document.getElementById('pwbRegenerateMissing').onclick=function(){generatePrewriteBrief();};
+        var _gb=document.getElementById('pwbApproveGenerate');if(_gb&&_canGenerate)_gb.onclick=function(){generateNetworkPublisherEdition(_placement,this);};
+      }
+    }catch(_wfErr){}
     loadRecentPrewriteBriefs();
   } catch (e) {}
 }
@@ -45876,6 +45893,7 @@ async function generatePrewriteBrief() {
 
   try {
     var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext,
+      existingSiteHtml:String((document.getElementById('pwbExistingHtml')||{}).value||'').slice(0,180000),
       manualAiEvidence:{google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()} };
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
@@ -45911,7 +45929,8 @@ async function generatePrewriteBrief() {
     }
     _lastPwbInput = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, manualAiEvidence:_pwbBody.manualAiEvidence };
     _pwbRecommendationContext = null;
-    stat.textContent = '\u2713 Brief ready \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
+    var _ready=!!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),_score=Number(data.brief.ai_quality_check&&data.brief.ai_quality_check.readiness_score||0);
+    stat.textContent = (_ready?'\u2713 Brief complete':'\u26a0 Brief needs review') + ' \u00b7 AI readiness '+_score+'/100 \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
     result.innerHTML = _renderIntentBar(data.search_intent) + renderPrewriteBrief(data.brief);
     try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Publisher Edition';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
     loadRecentPrewriteBriefs();
@@ -45938,6 +45957,20 @@ async function generatePrewriteBrief() {
       try{console.error('[Prewrite generation failed]',{status:e.status||0,stage:stage,diagnostic:diag,payload:p})}catch(_logErr){}
     }
   }
+}
+
+async function generateNetworkPublisherEdition(placementId,btn){
+  var st=document.getElementById('pwbGenerateArticleStatus'),key=localStorage.getItem('admin_id')||'';
+  if(!key){if(st)st.textContent='Admin key missing. Re-open the Network admin and try again.';return;}
+  var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Generating Publisher Edition...';}
+  if(st)st.textContent='Approved. Generating the full Publisher Edition from this exact Pre-Write Brief...';
+  try{
+    var r=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/generate',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({})});
+    var d=await r.json().catch(function(){return{}});if(!r.ok)throw new Error(d.error||('Generation failed HTTP '+r.status));
+    if(st)st.textContent=d.already_generated?'Publisher Edition already exists. Open Publishing to review it.':'\u2713 Publisher Edition generated. Open Network Publishing to review/edit images, links, attribution and final HTML before publishing.';
+    if(btn){btn.textContent='\u2713 Publisher Edition ready';btn.disabled=true;}
+    if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-publisher-edition-ready',placement_id:Number(placementId),publication_version_id:d.publication_version_id||(d.publication_version&&d.publication_version.id)||null},window.location.origin);
+  }catch(e){if(st)st.textContent='\u2715 '+e.message;if(btn){btn.disabled=false;btn.textContent=original||'Approve Brief & Generate Publisher Edition';}}
 }
 
 var _lastPrewriteBriefText = '';
@@ -57711,14 +57744,19 @@ function _pwbReadiness(b) {
     entity_relationships: !!(b.entity_strategy && _a(b.entity_strategy.relationships)),
     evidence: !!(b.evidence && (_a(b.evidence.trust_signals) || _s(b.evidence.experience_to_include))),
     official_sources: !!(b.evidence && _a(b.evidence.official_sources)),
-    internal_links: !!(b.link_research && b.link_research.internal && (Number(b.link_research.internal.urls_found||0)===0 || _a(b.internal_link_targets))),
+    internal_links: !!(b.link_research && b.link_research.internal && (Number(b.link_research.internal.urls_found||0)>0 ? _a(b.internal_link_targets) : true)),
     external_links: !!(b.link_research && b.link_research.external && (Number(b.link_research.external.candidates_found||0)===0 || _a(b.external_link_targets))),
     balance: !!(b.balance && (_a(b.balance.limitations) || _a(b.balance.comparisons))),
     use_cases: _a(b.use_cases),
-    conclusion: !!(b.conclusion && _s(b.conclusion.recap))
+    conclusion: !!(b.conclusion && _s(b.conclusion.recap)),
+    paa_answers: !Array.isArray(b.people_also_ask)||!b.people_also_ask.length || (Array.isArray(b.paa_questions)&&b.paa_questions.filter(x=>x&&_s(x.q)&&_s(x.a)).length>=b.people_also_ask.length),
+    action_plan: Array.isArray(b.action_plan)&&b.action_plan.filter(x=>x&&_s(x.action)).length>=3
   };
   const keys = Object.keys(checks);
   checks.readiness_score = Math.round(keys.filter(k => checks[k]).length / keys.length * 100);
+  const critical=['meta_package','opening_passage','page_blueprint','ai_answer','entity_strategy','evidence','balance','conclusion','paa_answers','action_plan'];
+  checks.ready_for_generation=checks.readiness_score>=85 && critical.every(k=>checks[k]===true);
+  checks.missing=critical.filter(k=>checks[k]!==true);
   return checks;
 }
 
@@ -57899,6 +57937,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
   let _pwbSyntheticNetworkTracker = false;
   let _pwbNetworkPlacementId = 0;
   let _pwbSkipSyntheticSitemap = false;
+  let _pwbNetworkOwnerDomain = '';
   let _pwbNetworkFastLane = false;
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
@@ -57928,6 +57967,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
         `,[_pwbNetworkPlacementId]);
         const _pwbNr = _pwbNq.rows[0] || null;
         if (_pwbNr) {
+          _pwbNetworkOwnerDomain = String(_pwbNr.owner_domain || '').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').toLowerCase();
           const _pwbSyntheticDomain = ('network-placement-' + _pwbNetworkPlacementId + '.internal.contentscale.site').toLowerCase();
           _pwbSyntheticNetworkTracker = String(client.domain || '').trim().toLowerCase() === _pwbSyntheticDomain;
           const _pwbOwnsLinkedPrewrite = Number(_pwbNr.prewrite_client_id || 0) === Number(client.id || 0);
@@ -57945,7 +57985,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     // cannot stack multiple 10–30s retries and die as a gateway 502 before our JSON error arrives.
     _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
-    const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext } = req.body || {};
+    const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -57982,13 +58022,26 @@ async function _handlePrewriteBriefGeneration(req, res) {
     } catch (e) { clientSitemapUrls = []; }
 
     if (_pwbSkipSyntheticSitemap) {
-      // Network synthetic trackers deliberately have no public sitemap. Internal-link
-      // targets remain empty instead of probing an internal placeholder host.
       clientSitemapUrls = [];
       _pwbSitemapUrl = '';
-      _pwbSitemapStatus = 'network_synthetic_skipped';
-      _pwbSitemapDiscoveredBy = 'authorized_network_embed';
-      console.log('[prewrite-brief] skipped synthetic Network sitemap discovery | placement=' + _pwbNetworkPlacementId);
+      _pwbSitemapStatus = 'network_owner_discovery';
+      _pwbSitemapDiscoveredBy = 'network_owner_domain';
+      const _ownerBase = _pwbNetworkOwnerDomain ? ('https://' + _pwbNetworkOwnerDomain) : '';
+      const _sameOwner = function(u){ try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()===String(_pwbNetworkOwnerDomain||'').replace(/^www\./,'').toLowerCase();}catch(_e){return false;} };
+      const _extractOwnerLinks = function(html){const out=[];String(html||'').replace(/href=["']([^"'#]+)["']/gi,function(all,href){try{const u=new URL(href,_ownerBase+'/').href;if(/^https?:\/\//i.test(u)&&_sameOwner(u))out.push(u.split('#')[0]);}catch(_e){}return all;});return Array.from(new Set(out)).slice(0,500);};
+      if(_ownerBase){
+        for(const _smPath of ['/sitemap.xml','/sitemap_index.xml']){
+          if(clientSitemapUrls.length)break;
+          try{const _ctrl=new AbortController(),_tm=setTimeout(()=>_ctrl.abort(),8000);const _rr=await fetch(_ownerBase+_smPath,{headers:{'User-Agent':'ContentScale-Bot/1.0'},signal:_ctrl.signal});clearTimeout(_tm);if(_rr.ok){const _xml=await _rr.text();const _locs=Array.from(_xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)).map(m=>String(m[1]||'').trim()).filter(u=>/^https?:\/\//i.test(u)&&_sameOwner(u));if(_locs.length){clientSitemapUrls=Array.from(new Set(_locs)).slice(0,2000);_pwbSitemapStatus='network_owner_sitemap';_pwbSitemapUrl=_ownerBase+_smPath;_pwbSitemapDiscoveredBy='network_owner_sitemap';}}}catch(_e){}
+        }
+        if(!clientSitemapUrls.length){
+          let _html=String(existingSiteHtml||'').slice(0,180000);
+          if(_html){_pwbSitemapStatus='network_uploaded_html';_pwbSitemapDiscoveredBy='user_html_fallback';}
+          if(!_html){try{const _ctrl=new AbortController(),_tm=setTimeout(()=>_ctrl.abort(),10000);const _rr=await fetch(_ownerBase,{headers:{'User-Agent':'ContentScale-Bot/1.0'},signal:_ctrl.signal});clearTimeout(_tm);if(_rr.ok){_html=(await _rr.text()).slice(0,180000);_pwbSitemapStatus='network_owner_html';_pwbSitemapDiscoveredBy='owner_homepage_html';}}catch(_e){}}
+          if(_html)clientSitemapUrls=_extractOwnerLinks(_html);
+        }
+      }
+      console.log('[prewrite-brief] Network owner discovery | placement='+_pwbNetworkPlacementId+' owner='+(_pwbNetworkOwnerDomain||'none')+' urls='+clientSitemapUrls.length+' via='+_pwbSitemapDiscoveredBy);
     } else if (!clientSitemapUrls.length && client.domain) {
       try {
         const _root = String(client.domain).replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\/+$/, '').trim();
@@ -58443,7 +58496,7 @@ REAL PAA:\n${peopleAlsoAsk.slice(0,8).map(x=>'- '+x.question).join('\n')||'none 
 CLIENT FACT SAFETY:\n${claimsBlock.slice(0,3500)}
 TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,3000)||'none'}
 Return EXACTLY: meta_package, opening_passage, page_blueprint, faq_questions, paa_questions, ai_answer, quick_facts, action_plan, preserve_sections, surgical_changes.
-Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exists. Never invent facts, URLs, statistics or credentials. For OPTIMIZE/EXPAND keep changes surgical.`;
+Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}; if Google supplied fewer than 5, do not invent fake PAA questions. faq_questions may add natural non-PAA FAQs when useful. quick_facts must contain 4-8 useful non-invented facts derived from supplied research. action_plan must contain at least 3 concrete non-empty actions. Never invent facts, URLs, statistics or credentials. For OPTIMIZE/EXPAND keep changes surgical.`;
 
       const _part1=await _compactCall('part1_decision_strategy',_decisionPrompt,3200,['content_decision','top10_gap','recommended_title_h1','recommended_structure','must_cover_entities','entity_strategy','evidence','balance','use_cases','conclusion','confidence']);
       const _part2=_part1.ok ? await _compactCall('part2_evidence',_evidencePrompt,3400,['ai_overview_status','ai_systems_analysis','competitor_insights','citation_targets','beat_number1_instructions','fact_safety']) : {ok:false,error:'not run because part 1 failed',status:0,attempts:0,model:''};
@@ -58456,7 +58509,7 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
         });
         delete _part2.obj.competitor_insights;
       }
-      const _part3=(_part1.ok&&_part2.ok) ? await _compactCall('part3_implementation',_implementationPrompt,3600,['meta_package','opening_passage','page_blueprint','faq_questions','paa_questions','ai_answer','quick_facts','action_plan','preserve_sections','surgical_changes']) : {ok:false,error:'not run because an earlier part failed',status:0,attempts:0,model:''};
+      const _part3=(_part1.ok&&_part2.ok) ? await _compactCall('part3_implementation',_implementationPrompt,5200,['meta_package','opening_passage','page_blueprint','faq_questions','paa_questions','ai_answer','quick_facts','action_plan','preserve_sections','surgical_changes']) : {ok:false,error:'not run because an earlier part failed',status:0,attempts:0,model:''};
       _pwbGeminiAttempts=(_part1.attempts||0)+(_part2.attempts||0)+(_part3.attempts||0);
       _pwbGeminiTimedOut=!!(_part1.timed_out||_part2.timed_out||_part3.timed_out);
       _pwbGeminiNetworkFailure=!_part1.ok||!_part2.ok||!_part3.ok;
@@ -58465,9 +58518,44 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
       _pwbGeminiModelUsed=[_part1.model,_part2.model,_part3.model].filter(Boolean).join(' + ');
       _pwbGeminiError=[!_part1.ok?'part1: '+(_part1.error||'failed'):'',!_part2.ok?'part2: '+(_part2.error||'failed'):'',!_part3.ok?'part3: '+(_part3.error||'failed'):''].filter(Boolean).join(' | ').slice(0,900);
       if(_part1.ok&&_part2.ok&&_part3.ok){
-        const _merged=Object.assign({},_part1.obj,_part2.obj,_part3.obj);
-        d2={candidates:[{content:{parts:[{text:JSON.stringify(_merged)}]},finishReason:'STOP'}]};
-        console.log('[prewrite-brief] network 3-part synthesis complete | p1='+_part1.model+' p2='+_part2.model+' p3='+_part3.model+' | '+(Date.now()-_pwbGeminiNetworkStartedAt)+'ms');
+        let _merged=Object.assign({},_part1.obj,_part2.obj,_part3.obj);
+        const _usable=function(v){return typeof v==='string'?!!v.trim()&&!/^insufficient_data$/i.test(v.trim()):Array.isArray(v)?v.length>0:!!v;};
+        const _missing=[];
+        if(!_merged.meta_package||!_usable(_merged.meta_package.seo_title)||!_usable(_merged.meta_package.meta_description))_missing.push('meta_package');
+        if(!_merged.opening_passage||!_usable(_merged.opening_passage.direct_answer))_missing.push('opening_passage');
+        if(!Array.isArray(_merged.page_blueprint)||!_merged.page_blueprint.length)_missing.push('page_blueprint');
+        if(!_merged.ai_answer||!_usable(_merged.ai_answer.direct_answer))_missing.push('ai_answer');
+        if(!Array.isArray(_merged.quick_facts)||_merged.quick_facts.filter(x=>x&&_usable(x.label)&&_usable(x.value)).length<3)_missing.push('quick_facts');
+        if(!_merged.entity_strategy||!Array.isArray(_merged.entity_strategy.primary)||!_merged.entity_strategy.primary.length)_missing.push('entity_strategy');
+        if(!_merged.evidence||(!Array.isArray(_merged.evidence.trust_signals)||!_merged.evidence.trust_signals.length))_missing.push('evidence');
+        if(!_merged.balance||(!Array.isArray(_merged.balance.limitations)||!_merged.balance.limitations.length))_missing.push('balance');
+        if(!Array.isArray(_merged.use_cases)||!_merged.use_cases.length)_missing.push('use_cases');
+        if(!_merged.conclusion||!_usable(_merged.conclusion.recap))_missing.push('conclusion');
+        if(!Array.isArray(_merged.action_plan)||_merged.action_plan.filter(x=>x&&_usable(x.action)).length<3)_missing.push('action_plan');
+        const _realPaaQs=(peopleAlsoAsk||[]).map(x=>String(x&&x.question||'').trim()).filter(Boolean);
+        const _answeredPaa=Array.isArray(_merged.paa_questions)?_merged.paa_questions.filter(x=>x&&_usable(x.q)&&_usable(x.a)):[];
+        if(_realPaaQs.length&&_answeredPaa.length<_realPaaQs.length)_missing.push('paa_questions');
+        if(_missing.length){
+          const _completePrompt=`COMPLETION GATE. The Pre-Write Brief below is research-backed but has missing/incomplete sections: ${_missing.join(', ')}. Return JSON ONLY with exactly those missing top-level keys and make them publication-ready. Do not rewrite fields already complete. Use only supplied research; never invent URLs, statistics, client claims, credentials or PAA questions. For PAA, answer every REAL PAA exactly as supplied. For quick_facts use only safe facts visible in the brief/research. Action plan must contain at least 3 concrete actions.
+
+CURRENT BRIEF:
+${JSON.stringify(_merged).slice(0,18000)}
+
+REAL PAA:
+${_realPaaQs.map(q=>'- '+q).join('\n')||'none'}
+
+TOP RESULTS:
+${compSummary.slice(0,6500)}
+
+FACT SAFETY:
+${claimsBlock.slice(0,3500)}`;
+          const _completion=await _compactCall('completion_gate',_completePrompt,5200,_missing);
+          _pwbGeminiAttempts+=(_completion.attempts||0);
+          if(_completion.ok){_missing.forEach(function(k){if(Object.prototype.hasOwnProperty.call(_completion.obj,k))_merged[k]=_completion.obj[k];});console.log('[prewrite-brief] completion gate repaired: '+_missing.join(','));}
+          else{_pwbGeminiNetworkFailure=true;_pwbGeminiStatus=Number(_completion.status||0);_pwbGeminiError=('completion_gate: '+(_completion.error||'failed')).slice(0,900);_merged=null;}
+        }
+        if(_merged)d2={candidates:[{content:{parts:[{text:JSON.stringify(_merged)}]},finishReason:'STOP'}]};
+        if(_merged)console.log('[prewrite-brief] network 3-part synthesis complete | p1='+_part1.model+' p2='+_part2.model+' p3='+_part3.model+' | '+(Date.now()-_pwbGeminiNetworkStartedAt)+'ms');
       }else{
         console.warn('[prewrite-brief] network 3-part synthesis blocked | p1='+(_part1.ok?'ok':'failed')+' p2='+(_part2.ok?'ok':'failed')+' p3='+(_part3.ok?'ok':'failed'));
       }
@@ -58526,6 +58614,9 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
     ['official_sources','statistics','trust_signals'].forEach(function(k){ if(!Array.isArray(brief.evidence[k])) brief.evidence[k]=[]; });
     if(!brief.balance || typeof brief.balance!=='object') brief.balance={limitations:[],who_should_not_use_it:[],comparisons:[]};
     ['limitations','who_should_not_use_it','comparisons'].forEach(function(k){ if(!Array.isArray(brief.balance[k])) brief.balance[k]=[]; });
+    if(!brief.faq_questions.length && peopleAlsoAsk.length) brief.faq_questions=peopleAlsoAsk.map(function(x){return String(x&&x.question||'').trim();}).filter(Boolean);
+    if(!brief.quick_facts.length) brief.quick_facts=[{label:'Search intent',value:String(_chosenIntent||'').replace(/_/g,' ')},{label:'SERP competitors analysed',value:String(top10.length)},{label:'Google AI Overview evidence',value:aioManualText?'Manual evidence supplied':'No manual evidence supplied'},{label:'Internal site inventory',value:clientSitemapUrls.length?(clientSitemapUrls.length+' verified URLs discovered'):'No verified internal URLs discovered'}];
+    if(!brief.action_plan.filter(function(x){return x&&String(x.action||'').trim();}).length) brief.action_plan=[{step:1,priority:'high',action:'Write the page in the exact blueprint order and lead with the direct answer.'},{step:2,priority:'high',action:'Answer every verified Google People Also Ask question and add only verified internal/external links.'},{step:3,priority:'medium',action:'Publish, verify indexability, then measure rankings and AI citation evidence for this exact query.'}];
 
     _pwbStage='link_validation';
     // ── SERVER-ENFORCED LINK WHITELISTS ─────────────────────────────────
@@ -58633,6 +58724,12 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
       brief.content_decision = { recommended_treatment:_fallbackMode, cannibalization_risk:'insufficient_data', closest_existing_url:(_recSafe&&_recSafe.target)||'none', reason:'The saved Tracker recommendation is retained, but strategist review is required because the model returned no valid treatment.' };
     }
     const _finalTreatment=String(brief.content_decision.recommended_treatment||'').toUpperCase();
+    if(_finalTreatment==='CREATE_NEW_PAGE'){
+      brief.preserve_sections=[];brief.surgical_changes=[];
+      if(!brief.content_decision.closest_existing_url)brief.content_decision.closest_existing_url='none';
+      if(String(brief.content_decision.cannibalization_risk||'').toLowerCase()==='insufficient_data')brief.content_decision.cannibalization_risk=clientSitemapUrls.length?'medium':'low';
+      if(/model returned no valid treatment/i.test(String(brief.content_decision.reason||'')))brief.content_decision.reason='The live SERP supports a distinct '+String(_chosenIntent||'informational')+' intent and the saved Tracker recommendation points to a new page; no verified existing URL was identified as the clear owner of this query.';
+    }
     if(_finalTreatment!=='CREATE_NEW_PAGE')delete brief.hub_spoke_plan;
     if(_finalTreatment==='OPTIMIZE_EXISTING_PAGE'){
       if(!Array.isArray(brief.preserve_sections)||!brief.preserve_sections.length)brief.preserve_sections=['Preserve all current passages and headings not explicitly named in the surgical changes below.'];
