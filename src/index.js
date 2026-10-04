@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v480-NETWORK-PREWRITE-PAA-CANONICAL-REPAIR';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v481-NETWORK-v487-APPROVED-BRIEF-CONTRACT';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-approved-brief-contract-fidelity-v487',
   'network-prewrite-paa-canonical-repair-v480',
   'network-safe-shell-v1-isolated-module',
   'network-prewrite-synthetic-sitemap-guard-v450',
