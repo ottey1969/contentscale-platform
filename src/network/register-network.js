@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — AI CHECK PER-KEYWORD PERSISTENCE v485
+// CONTENTSCALE NETWORK — AI CHECK PER-KEYWORD PERSISTENCE v486
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
