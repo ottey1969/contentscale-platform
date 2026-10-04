@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v445-CEO-QUICKSCAN-ESCAPED-URL-PARITY';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v446-PREWRITE-502-RESILIENCE-DIAGNOSTICS';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -57546,6 +57546,7 @@ function _pwbReadiness(b) {
 }
 
 app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
+  let _pwbStage='start';
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
@@ -57644,6 +57645,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     let serpUrls = [];
     let aioDetected = false;
     let peopleAlsoAsk = [];
+    let _pwbSerperStatus=0,_pwbSerperError='',_pwbSerperAttempts=0;
     let aioManualText = String(manualAioText || '').trim();
     const _manualAiRaw=(manualAiEvidence&&typeof manualAiEvidence==='object')?manualAiEvidence:{};
     const _clipAi=v=>String(v||'').trim().slice(0,12000);
@@ -57652,39 +57654,47 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       aioDetected = true;
       console.log('[prewrite-brief] Using manual AIO text for:', keyword, '(' + aioManualText.length + ' chars)');
     }
+    _pwbStage='serp';
     if (serperKey) {
-      try {
-        const ctrl1 = new AbortController(); setTimeout(() => ctrl1.abort(), 15000);
-        const r1 = await fetch('https://google.serper.dev/search', {
-          method: 'POST',
-          headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ q: keyword, num: 10, hl: glParam, gl: glParam }),
-          signal: ctrl1.signal
-        });
-        if (r1.ok) {
-          const d1 = await r1.json();
-          const organic = d1.organic || [];
-          serpUrls = organic.map((r, i) => ({
-            rank: r.position || (i + 1),
-            url: r.link || '',
-            domain: (r.link || '').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''),
-            title: r.title || '',
-            snippet: r.snippet || ''
-          })).filter(r => r.url);
-          // Capture real Google "People Also Ask" questions for this query, in the
-          // page's own language/region — these become a distinct PAA block in the brief.
-          peopleAlsoAsk = (d1.peopleAlsoAsk || []).slice(0, 8).map(function(q){ return { question: q.question || '', snippet: q.snippet || '' }; }).filter(function(q){ return q.question; });
-          // Serper surfaces a direct-answer block (answerBox) when Google shows one for
-          // this exact query — the closest signal available for AI Overview presence
-          // without a dedicated AIO endpoint. Honest phrasing either way in the output.
-          aioDetected = aioManualText ? true : !!(d1.answerBox || d1.knowledgeGraph);
-          console.log('[prewrite-brief] Serper.dev returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam, '| answerBox=' + !!d1.answerBox);
-        } else {
-          const err = await r1.text().catch(() => '');
-          console.warn('[prewrite-brief] Serper.dev error:', r1.status, err.substring(0, 200));
+      for(let _attempt=1;_attempt<=2&&!serpUrls.length;_attempt++){
+        _pwbSerperAttempts=_attempt;
+        try {
+          const ctrl1 = new AbortController(); const _t1=setTimeout(() => ctrl1.abort(), 15000);
+          const r1 = await fetch('https://google.serper.dev/search', {
+            method: 'POST',
+            headers: { 'X-API-KEY': serperKey, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ q: keyword, num: 10, hl: glParam, gl: glParam }),
+            signal: ctrl1.signal
+          });
+          clearTimeout(_t1);
+          _pwbSerperStatus=r1.status;
+          if (r1.ok) {
+            const d1 = await r1.json();
+            const organic = d1.organic || [];
+            serpUrls = organic.map((r, i) => ({
+              rank: r.position || (i + 1),
+              url: r.link || '',
+              domain: (r.link || '').replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''),
+              title: r.title || '',
+              snippet: r.snippet || ''
+            })).filter(r => r.url);
+            peopleAlsoAsk = (d1.peopleAlsoAsk || []).slice(0, 8).map(function(q){ return { question: q.question || '', snippet: q.snippet || '' }; }).filter(function(q){ return q.question; });
+            aioDetected = aioManualText ? true : !!(d1.answerBox || d1.knowledgeGraph);
+            console.log('[prewrite-brief] Serper.dev attempt',_attempt,'returned', serpUrls.length, 'results for:', keyword, '| gl=' + glParam, '| answerBox=' + !!d1.answerBox);
+            if(!serpUrls.length)_pwbSerperError='Serper returned HTTP 200 but no organic results';
+          } else {
+            const err = await r1.text().catch(() => '');
+            _pwbSerperError=('HTTP '+r1.status+' '+err).slice(0,500);
+            console.warn('[prewrite-brief] Serper.dev attempt',_attempt,'error:', r1.status, err.substring(0, 200));
+          }
+        } catch (e) {
+          _pwbSerperError=String(e&&e.message||e).slice(0,500);
+          console.warn('[prewrite-brief] Serper.dev attempt',_attempt,'failed:', _pwbSerperError);
         }
-      } catch (e) { console.warn('[prewrite-brief] Serper.dev failed:', e.message); }
+        if(!serpUrls.length&&_attempt===1)await new Promise(r=>setTimeout(r,450));
+      }
     } else {
+      _pwbSerperError='SERPAPI_KEY not set';
       console.warn('[prewrite-brief] SERPAPI_KEY not set — cannot fetch SERP results');
     }
     // ── AUTO EXTERNAL LINK RESEARCH — exact verified source pages ─────────
@@ -57726,7 +57736,13 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       ? 'AUTO EXTERNAL SOURCE RESEARCH — VERIFIED EXACT HTTPS PAGES. Choose 2-6 external_link_targets ONLY from this whitelist. Prefer primary/official, government, academic, standards, recognized industry or directly evidentiary pages. Do not add a URL not listed here.\n' + _pwbExternalCandidates.map((x,i)=>(i+1)+'. '+x.exact_url+' | '+(x.title||x.domain)+' | '+x.source_type+(x.snippet?' | '+x.snippet:'')).join('\n')
       : 'AUTO EXTERNAL SOURCE RESEARCH: no verified exact external pages were found. Return external_link_targets as [] rather than inventing URLs.';
 
-    if (!serpUrls.length) return res.status(502).json({ success: false, error: 'Could not fetch SERP results — check SERPAPI_KEY is set in Railway environment' });
+    if (!serpUrls.length) return res.status(502).json({
+      success:false,
+      stage:'serp',
+      retryable:true,
+      error:'Prewrite stopped because live SERP research returned no usable results.',
+      diagnostic:{serper_key_present:!!serperKey,http_status:_pwbSerperStatus||null,attempts:_pwbSerperAttempts,error:_pwbSerperError||'no organic results',keyword:String(keyword),region:glParam}
+    });
 
     // Real Perplexity check — same call the tracker's own citation-checker makes.
     // This is verified evidence, not an LLM guess, matching the "no promises without
@@ -57756,6 +57772,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       } catch (e) { console.warn('[prewrite-brief] Perplexity check failed:', e.message); }
     }
 
+    _pwbStage='competitor_scrape';
     const top10 = serpUrls
       .filter(r => !/youtube\.com|reddit\.com|facebook\.com|linkedin\.com|twitter\.com|x\.com|pinterest\.|quora\.com|instagram\.com|tiktok\.com/i.test(r.url))
       .slice(0, 10);
@@ -57930,15 +57947,33 @@ Return ONLY valid JSON, no markdown, no preamble.
       + '\n- Every external_link_targets.exact_url must be copied verbatim from AUTO EXTERNAL SOURCE RESEARCH.'
       + '\n- Never invent an internal or external URL.'
       + '\n- Do not output Markdown; return valid JSON only.';
-    const ctrl2 = new AbortController(); setTimeout(() => ctrl2.abort(), 45000);
+    _pwbStage='gemini';
     const geminiKey = process.env.GEMINI_API_KEY;
-    const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + finalPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 16384, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
-      signal: ctrl2.signal
-    });
-    const d2 = await r2.json().catch(() => ({}));
-    if (!r2.ok) throw new Error((d2.error && d2.error.message) || 'Gemini ' + r2.status);
+    let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0;
+    for(let _ga=1;_ga<=2&&!d2;_ga++){
+      _pwbGeminiAttempts=_ga;
+      try{
+        const ctrl2 = new AbortController(); const _t2=setTimeout(() => ctrl2.abort(), 45000);
+        const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + finalPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 16384, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
+          signal: ctrl2.signal
+        });
+        clearTimeout(_t2);
+        _pwbGeminiStatus=r2.status;
+        const _txt=await r2.text();
+        let _json={};try{_json=_txt?JSON.parse(_txt):{}}catch(_je){}
+        if(r2.ok){d2=_json;break}
+        _pwbGeminiError=((_json.error&&_json.error.message)||_txt||('Gemini '+r2.status)).slice(0,700);
+        console.warn('[prewrite-brief] Gemini attempt',_ga,'failed:',r2.status,_pwbGeminiError.slice(0,220));
+        if(!(r2.status===429||r2.status>=500))break;
+      }catch(_ge){
+        _pwbGeminiError=String(_ge&&_ge.message||_ge).slice(0,700);
+        console.warn('[prewrite-brief] Gemini attempt',_ga,'network failure:',_pwbGeminiError);
+      }
+      if(_ga===1)await new Promise(r=>setTimeout(r,650));
+    }
+    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:_pwbGeminiStatus===429||_pwbGeminiStatus>=500||!_pwbGeminiStatus,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response'}});
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
     const m2 = rawText.match(/\{[\s\S]*\}/);
@@ -57951,7 +57986,13 @@ Return ONLY valid JSON, no markdown, no preamble.
         try { brief = JSON.parse(_repairJsonG(m2[0])); console.log('[prewrite-brief] JSON repaired'); } catch (e2) {}
       }
     }
-    if (!brief) return res.status(502).json({ success: false, error: 'Could not parse brief from AI response' });
+    if (!brief) return res.status(502).json({
+      success:false,
+      stage:'gemini_parse',
+      retryable:true,
+      error:'Gemini answered, but the Prewrite JSON could not be parsed safely.',
+      diagnostic:{model:GEMINI_MODEL,response_chars:rawText.length,finish_reason:d2&&d2.candidates&&d2.candidates[0]&&d2.candidates[0].finishReason||null}
+    });
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
 
@@ -58138,11 +58179,12 @@ Return ONLY valid JSON, no markdown, no preamble.
       savedBriefId = saved.rows[0]?.id || null;
     } catch (e) { console.warn('[prewrite-brief] Could not save brief for recall:', e.message); }
 
+    _pwbStage='complete';
     console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${briefsUsed + 1}/${briefsAllowed}`);
     res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top10.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed, search_intent: brief.search_intent });
   } catch (e) {
-    console.error('[prewrite-brief] error:', e.message);
-    res.status(502).json({ success: false, error: e.message });
+    console.error('[prewrite-brief] error at stage',_pwbStage+':', e.message);
+    res.status(502).json({ success:false,stage:_pwbStage||'unknown',retryable:true,error:e.message||'Prewrite failed',diagnostic:{name:e&&e.name||'Error'} });
   }
 });
 
