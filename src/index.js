@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v483-NETWORK-v488-DEFINITIVE-OUTLINE-CONTRACT';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v484-NETWORK-v489-H2-DRIVEN-IMAGES-SAFE-RECENTS';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,8 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-h2-driven-image-subjects-v489',
+  'prewrite-safe-recent-briefs-v484',
   'network-approved-brief-contract-fidelity-v487',
   'network-prewrite-paa-canonical-repair-v480',
   'network-safe-shell-v1-isolated-module',
@@ -44497,7 +44499,13 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </div>
     <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
     <div id="pwbRecentWrap" style="margin-top:12px;display:none;">
-      <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">&#x1F553; Recent briefs — click a keyword to reopen</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+        <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">&#x1F553; Recent briefs — latest per keyword · × hides only</div>
+        <div style="display:flex;gap:6px;">
+          <button id="pwbRecentVersionsBtn" type="button" onclick="toggleRecentPrewriteVersions()" style="display:none;background:none;border:0;color:#64748b;font-size:10px;cursor:pointer;padding:2px 4px;">Show versions</button>
+          <button id="pwbRecentRestoreBtn" type="button" onclick="restoreHiddenPrewriteBriefs()" style="display:none;background:none;border:0;color:#64748b;font-size:10px;cursor:pointer;padding:2px 4px;">Restore hidden</button>
+        </div>
+      </div>
       <div id="pwbRecentList" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
     </div>
     <div id="pwbResult" style="margin-top:14px;max-height:68vh;overflow-y:auto;-webkit-overflow-scrolling:touch;"></div>
@@ -45728,39 +45736,46 @@ function openSpokePrewrite(index) {
 }
 window.openSpokePrewrite=openSpokePrewrite;
 
+var _pwbShowAllRecentVersions = false;
+var _pwbHiddenRecentKey = 'cs_pwb_hidden_recent_v2';
+function _pwbHiddenRecentIds(){try{var a=JSON.parse(localStorage.getItem(_pwbHiddenRecentKey)||'[]');return Array.isArray(a)?a.map(Number).filter(function(n){return Number.isSafeInteger(n)&&n>0;}):[]}catch(_e){return []}}
+function toggleRecentPrewriteVersions(){_pwbShowAllRecentVersions=!_pwbShowAllRecentVersions;loadRecentPrewriteBriefs();}
+function restoreHiddenPrewriteBriefs(){localStorage.removeItem(_pwbHiddenRecentKey);loadRecentPrewriteBriefs();}
+function hideRecentPrewriteBrief(ev,id){if(ev)ev.stopPropagation();var a=_pwbHiddenRecentIds();id=Number(id);if(id>0&&a.indexOf(id)<0)a.push(id);localStorage.setItem(_pwbHiddenRecentKey,JSON.stringify(a));loadRecentPrewriteBriefs();}
 async function loadRecentPrewriteBriefs() {
   var wrap = document.getElementById('pwbRecentWrap');
   var list = document.getElementById('pwbRecentList');
   try {
     var data = await api('/prewrite-briefs', 'GET');
-    if (!data || !data.success || !Array.isArray(data.briefs) || !data.briefs.length) {
-      wrap.style.display = 'none';
-      return;
-    }
-    list.innerHTML = data.briefs.map(function(b) {
+    var all=(data&&data.success&&Array.isArray(data.briefs))?data.briefs.slice():[];
+    if (!all.length) { wrap.style.display = 'none'; return; }
+    all.sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);});
+    var hidden=_pwbHiddenRecentIds(),hiddenSet=new Set(hidden.map(String));
+    var visible=all.filter(function(b){return !hiddenSet.has(String(b.id));});
+    var unique=[],seen={};
+    visible.forEach(function(b){var k=String(b.keyword||'').trim().toLowerCase().replace(/\s+/g,' ');if(!seen[k]){seen[k]=1;unique.push(b);}});
+    var rows=_pwbShowAllRecentVersions?visible:unique;
+    var versionsBtn=document.getElementById('pwbRecentVersionsBtn'),restoreBtn=document.getElementById('pwbRecentRestoreBtn');
+    if(versionsBtn){versionsBtn.style.display=visible.length>unique.length?'inline-block':'none';versionsBtn.textContent=_pwbShowAllRecentVersions?'Latest only':'Show versions';}
+    if(restoreBtn)restoreBtn.style.display=hidden.length?'inline-block':'none';
+    if(!rows.length){list.innerHTML='<span style="font-size:10px;color:#64748b;">All recent Briefs are hidden. Use Restore hidden.</span>';wrap.style.display='block';return;}
+    list.innerHTML = rows.map(function(b) {
       var d = new Date(b.created_at);
       var dLabel = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); };
+      var kw=String(b.keyword||'Untitled brief');
       return '<span style="display:inline-flex;align-items:center;background:#1f2937;border:1px solid #374151;border-radius:20px;overflow:hidden;">'
-        + '<button onclick="reopenPrewriteBrief(' + b.id + ')" style="background:none;border:none;color:#e5e7eb;font-size:11px;padding:5px 4px 5px 12px;cursor:pointer;" title="' + esc(b.keyword) + ' \u00b7 ' + dLabel + '">'
-        + esc(b.keyword.length > 28 ? b.keyword.slice(0, 28) + '\u2026' : b.keyword) + ' <span style="color:#6b7280;">\u00b7 ' + dLabel + '</span></button>'
-        + '<button onclick="deletePrewriteBrief(event, ' + b.id + ')" title="Remove" style="background:none;border:none;color:#6b7280;font-size:13px;padding:5px 10px 5px 4px;cursor:pointer;line-height:1;">\u2715</button>'
+        + '<button onclick="reopenPrewriteBrief(' + b.id + ')" style="background:none;border:none;color:#e5e7eb;font-size:11px;padding:5px 4px 5px 12px;cursor:pointer;" title="' + esc(kw) + ' · ' + dLabel + '">'
+        + esc(kw.length > 28 ? kw.slice(0, 28) + '…' : kw) + ' <span style="color:#6b7280;">· ' + dLabel + '</span></button>'
+        + '<button onclick="hideRecentPrewriteBrief(event, ' + b.id + ')" title="Hide from Recent briefs — the saved Brief is not deleted" style="background:none;border:none;color:#6b7280;font-size:13px;padding:5px 10px 5px 4px;cursor:pointer;line-height:1;">✕</button>'
         + '</span>';
     }).join('');
     wrap.style.display = 'block';
-  } catch (e) {
-    wrap.style.display = 'none';
-  }
+  } catch (e) { wrap.style.display = 'none'; }
 }
 
-async function deletePrewriteBrief(ev, id) {
-  ev.stopPropagation();
-  if (!confirm('Remove this saved brief?')) return;
-  try {
-    await api('/prewrite-briefs/' + id, 'DELETE');
-    loadRecentPrewriteBriefs();
-  } catch (e) {}
-}
+// Backward-compatible safety: old cached onclick handlers must never delete a saved Brief.
+async function deletePrewriteBrief(ev, id) { hideRecentPrewriteBrief(ev,id); }
 
 async function reopenPrewriteBrief(id) {
   _pwbDraftSave();
