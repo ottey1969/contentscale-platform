@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v478-NETWORK-PREWRITE-COMPACT-SCOPE-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v479-NETWORK-PREWRITE-BLUEPRINT-CANONICAL-REPAIR';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-prewrite-page-blueprint-canonical-repair-v479',
   'network-safe-shell-v1-isolated-module',
   'network-prewrite-synthetic-sitemap-guard-v450',
   'network-prewrite-gateway-budget-fast-lane-v451',
@@ -57796,7 +57797,7 @@ function _pwbReadiness(b) {
   const checks = {
     meta_package: !!(b.meta_package && _s(b.meta_package.seo_title) && _s(b.meta_package.meta_description)),
     opening_passage: !!(b.opening_passage && _s(b.opening_passage.direct_answer)),
-    page_blueprint: _a(b.page_blueprint),
+    page_blueprint: !!(Array.isArray(b.page_blueprint) && b.page_blueprint.filter(x=>x&&_s(x.h2)&&_s(x.purpose)).length>=5),
     ai_answer: !!(b.ai_answer && _s(b.ai_answer.direct_answer) && Array.isArray(b.ai_answer.key_takeaways) && b.ai_answer.key_takeaways.filter(_s).length>=3),
     quick_facts: !!(Array.isArray(b.quick_facts) && b.quick_facts.filter(x=>x&&_s(x.label)&&_s(x.value)).length>=3),
     entity_strategy: !!(b.entity_strategy && Array.isArray(b.entity_strategy.primary) && b.entity_strategy.primary.filter(_s).length>=2),
@@ -58679,6 +58680,7 @@ ${claimsBlock.slice(0,2800)}`;
           // a top-level key with an under-filled object. Repair only the fields that still
           // fail the publication-quality validator instead of regenerating the whole Brief.
           const _fieldRepairRules={
+            page_blueprint:`Return exactly {"page_blueprint":[{"h2":"...","purpose":"...","target_words":250,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":250,"cover":["...","..."],"citation_hook":"..."}]}. Return at least 5 distinct sections in writing order. Every section MUST have a specific h2 and purpose. cover must contain concrete subtopics. citation_hook must say what kind of supplied evidence/source should support the section; never invent a source or URL. Do not include unsupported performance metrics or fabricated experience.`,
             ai_answer:`Return exactly {"ai_answer":{"primary_question":"...","secondary_questions":["...","...","...","..."],"direct_answer":"40-60 words","why_it_matters":"...","who_is_it_for":"...","key_takeaways":["...","...","..."]}}. The answer must be self-contained, factual and quotable. Do not use unsupported numbers, guarantees, rankings, traffic/result claims or invented credentials.`,
             quick_facts:`Return exactly {"quick_facts":[{"label":"...","value":"..."},{"label":"...","value":"..."},{"label":"...","value":"..."},{"label":"...","value":"..."}]}. Facts must teach the reader something about THIS topic and be grounded in supplied research. Do not use process metadata such as number of competitors analysed, search intent, or whether AI Overview evidence was supplied.`,
             use_cases:`Return exactly {"use_cases":[{"audience":"...","scenario":"...","benefit":"..."},{"audience":"...","scenario":"...","benefit":"..."}]}. Each use case must be concrete, distinct and useful for this topic; do not invent client results or credentials.`,
@@ -58705,7 +58707,7 @@ ${compSummary.slice(0,5000)}
 
 FACT SAFETY:
 ${claimsBlock.slice(0,2400)}`;
-            const _fieldCompletion=await _compactCall('quality_field_'+_key,_fieldPrompt,_key==='evidence'||_key==='ai_answer'?2600:(_key==='quick_facts'||_key==='use_cases'?2400:2200),[_key]);
+            const _fieldCompletion=await _compactCall('quality_field_'+_key,_fieldPrompt,_key==='page_blueprint'?3400:(_key==='evidence'||_key==='ai_answer'?2600:(_key==='quick_facts'||_key==='use_cases'?2400:2200)),[_key]);
             _pwbGeminiAttempts+=(_fieldCompletion.attempts||0);
             if(_fieldCompletion.ok && _fieldCompletion.obj && Object.prototype.hasOwnProperty.call(_fieldCompletion.obj,_key)){
               _merged[_key]=_fieldCompletion.obj[_key];
@@ -58802,7 +58804,7 @@ ${claimsBlock.slice(0,2400)}`;
       });
     }
     // Normalize every optional model-owned collection before downstream processing.
-    ['internal_link_targets','external_link_targets','quick_facts','paa_questions','citation_targets','page_blueprint','faq_questions','must_cover_entities','use_cases','action_plan','preserve_sections','surgical_changes','beat_number1_instructions'].forEach(function(k){ if(!Array.isArray(brief[k])) brief[k]=[]; });
+    ['internal_link_targets','external_link_targets','quick_facts','paa_questions','citation_targets','faq_questions','must_cover_entities','use_cases','action_plan','preserve_sections','surgical_changes','beat_number1_instructions'].forEach(function(k){ if(!Array.isArray(brief[k])) brief[k]=[]; });
     // Canonicalise flexible model shapes before readiness/rendering. A non-empty object with
     // the wrong keys must never count as a completed section.
     brief.faq_questions=brief.faq_questions.map(function(q){return typeof q==='string'?q.trim():String(q&&(q.q||q.question||q.title||q.text)||'').trim();}).filter(Boolean);
@@ -58836,6 +58838,21 @@ ${claimsBlock.slice(0,2400)}`;
       const benefit=String(u.benefit||u.outcome||u.why||u.result||u.value||u.goal||'').trim();
       return audience&&scenario&&benefit?{audience:audience,scenario:scenario,benefit:benefit}:null;
     }).filter(Boolean).slice(0,8);};
+    const _pwbNormBlueprint=function(v){
+      if(v&&typeof v==='object'&&!Array.isArray(v))v=v.sections||v.items||v.blueprint||v.page_blueprint||[];
+      return (Array.isArray(v)?v:[]).map(function(sec){
+        if(!sec||typeof sec!=='object'||Array.isArray(sec))return null;
+        const h2=String(sec.h2||sec.heading||sec.title||sec.section||sec.name||'').trim();
+        const purpose=String(sec.purpose||sec.goal||sec.intent||sec.why||sec.description||sec.summary||'').trim();
+        let targetWords=Number(sec.target_words||sec.targetWords||sec.word_count||sec.words||0);
+        if(!Number.isFinite(targetWords)||targetWords<0)targetWords=0;
+        const cover=_pwbNormStringList(sec.cover||sec.must_cover||sec.points||sec.subtopics||sec.topics).slice(0,8);
+        const citationHook=String(sec.citation_hook||sec.citationHook||sec.evidence_hook||sec.source_hook||sec.support_with||'').trim();
+        if(!h2&&!purpose)return null;
+        return {h2:h2,purpose:purpose,target_words:targetWords||null,cover:cover,citation_hook:citationHook};
+      }).filter(Boolean).slice(0,14);
+    };
+    brief.page_blueprint=_pwbNormBlueprint(brief.page_blueprint);
     brief.ai_answer=_pwbNormAiAnswer(brief.ai_answer);
     brief.quick_facts=_pwbNormQuickFacts(brief.quick_facts);
     brief.use_cases=_pwbNormUseCases(brief.use_cases);
@@ -58872,18 +58889,20 @@ ${claimsBlock.slice(0,2400)}`;
       brief.recommended_structure.recommended_schema=brief.recommended_structure.recommended_schema.filter(function(x){return !/^table$/i.test(String(x||'').trim());});
     }
 
-    // v477: FINAL CANONICAL REPAIR. Earlier repairs operate on raw model JSON. A response can
+    // v479: FINAL CANONICAL REPAIR. Earlier repairs operate on raw model JSON. A response can
     // look complete there but normalize to an empty/under-filled canonical field. Repair only
-    // the three AI-first fields that are still invalid AFTER normalization, then normalize the
+    // the AI-first fields plus the page blueprint that are still invalid AFTER normalization, then normalize the
     // repair again. The fact-safety firewall below remains authoritative and can still reject it.
     const _pwbCanonicalGood=function(v){return typeof v==='string'&&!!v.trim()&&!/^insufficient_data$/i.test(v.trim())&&!/^\[object Object\]$/i.test(v.trim());};
     const _pwbCanonicalNeeds=[];
+    if(!Array.isArray(brief.page_blueprint)||brief.page_blueprint.filter(function(x){return x&&_pwbCanonicalGood(x.h2)&&_pwbCanonicalGood(x.purpose);}).length<5)_pwbCanonicalNeeds.push('page_blueprint');
     if(!brief.ai_answer||!_pwbCanonicalGood(brief.ai_answer.direct_answer)||!Array.isArray(brief.ai_answer.key_takeaways)||brief.ai_answer.key_takeaways.filter(_pwbCanonicalGood).length<3)_pwbCanonicalNeeds.push('ai_answer');
     if(!Array.isArray(brief.quick_facts)||brief.quick_facts.filter(function(x){return x&&_pwbCanonicalGood(x.label)&&_pwbCanonicalGood(x.value);}).length<3)_pwbCanonicalNeeds.push('quick_facts');
     if(!Array.isArray(brief.use_cases)||brief.use_cases.filter(function(x){return x&&_pwbCanonicalGood(x.audience)&&_pwbCanonicalGood(x.scenario)&&_pwbCanonicalGood(x.benefit);}).length<2)_pwbCanonicalNeeds.push('use_cases');
     if(_pwbCanonicalNeeds.length && typeof _pwbCompactCall==='function'){
       _pwbStage='quality_gate';
       const _pwbCanonicalRules={
+        page_blueprint:'Return exactly {"page_blueprint":[{"h2":"...","purpose":"...","target_words":250,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":250,"cover":["...","..."],"citation_hook":"..."}]}. At least 5 distinct sections, in writing order. Every section needs h2 + purpose. Use the supplied research for subtopics and citation hooks. Do not invent URLs, statistics, client outcomes or experience.',
         ai_answer:'Return exactly {"ai_answer":{"primary_question":"...","secondary_questions":["...","...","...","..."],"direct_answer":"40-60 words","why_it_matters":"...","who_is_it_for":"...","key_takeaways":["...","...","..."]}}. Use a concise definitional answer supported by the supplied research. No unsupported metrics, guarantees or result claims.',
         quick_facts:'Return exactly {"quick_facts":[{"label":"...","value":"..."},{"label":"...","value":"..."},{"label":"...","value":"..."},{"label":"...","value":"..."}]}. Use 4 useful, topic-specific, non-numeric facts or definitions that are directly supported by the supplied research. Do not describe our research process.',
         use_cases:'Return exactly {"use_cases":[{"audience":"...","scenario":"...","benefit":"..."},{"audience":"...","scenario":"...","benefit":"..."}]}. Use distinct reader situations and practical benefits. These are use scenarios, not client case studies; do not invent achieved results.'
@@ -58905,9 +58924,10 @@ ${compSummary.slice(0,5000)}
 
 FACT SAFETY:
 ${claimsBlock.slice(0,2400)}`;
-        const _r=await _pwbCompactCall('quality_canonical_'+_key,_prompt,_key==='ai_answer'?2800:2400,[_key]);
+        const _r=await _pwbCompactCall('quality_canonical_'+_key,_prompt,_key==='page_blueprint'?3600:(_key==='ai_answer'?2800:2400),[_key]);
         _pwbGeminiAttempts+=(_r.attempts||0);
         if(_r.ok&&_r.obj&&Object.prototype.hasOwnProperty.call(_r.obj,_key)){
+          if(_key==='page_blueprint')brief.page_blueprint=_pwbNormBlueprint(_r.obj.page_blueprint);
           if(_key==='ai_answer')brief.ai_answer=_pwbNormAiAnswer(_r.obj.ai_answer);
           if(_key==='quick_facts')brief.quick_facts=_pwbNormQuickFacts(_r.obj.quick_facts);
           if(_key==='use_cases')brief.use_cases=_pwbNormUseCases(_r.obj.use_cases);
