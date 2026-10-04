@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v446-PREWRITE-502-RESILIENCE-DIAGNOSTICS';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v447-PREWRITE-PERSISTENT-KEYWORD-DRAFTS';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -44459,7 +44459,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <div style="margin-bottom:16px;background:#0b1220;border:1px solid #26364d;border-radius:10px;padding:12px 13px;">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
         <div><div style="font-size:11px;color:#c4b5fd;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">5 AI systems evidence</div><div id="pwbNetworkAuthBadge" style="display:none;margin-top:6px;font-size:10px;color:#86efac;font-weight:800;">✓ Network Prewrite authorized · GSC is not required for this research workspace</div>
-        <div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:4px;">Add real evidence for the same keyword. Empty means not checked. This is research evidence — not ContentScore.</div></div>
+        <div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:4px;">Add real evidence for the same keyword. Empty means not checked. This is research evidence — not ContentScore.</div><div style="font-size:10px;color:#86efac;margin-top:5px;">✓ Auto-saved per keyword · refresh-safe · switching keywords keeps each set separately</div></div>
         <div id="pwbAiFiveCount" style="font-size:11px;color:#94a3b8;font-weight:800;">0 / 5 added</div>
       </div>
       <div class="pwb-ai-five-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;">
@@ -45487,6 +45487,112 @@ function showAddModal() { document.getElementById('addModal').classList.add('sho
 
 function openPrewriteFromHeader() { showPrewriteBriefModal(); }
 
+
+// ── PREWRITE PERSISTENT DRAFTS v447 ──────────────────────────────────────
+// Preserve the complete working form across refreshes and keep AI evidence
+// isolated per keyword so changing a query never overwrites another query's work.
+var _pwbDraftActiveKey='';
+var _pwbDraftSwitching=false;
+function _pwbDraftScope(){
+  try{
+    var p=_networkPrewritePlacementId();
+    var token=(location.pathname.match(/\/tracker-client\/([^/?#]+)/)||[])[1]||'tracker';
+    return 'cs_pwb_drafts_v447_'+token+(p?('_placement_'+p):'');
+  }catch(e){return 'cs_pwb_drafts_v447_tracker'}
+}
+function _pwbDraftNorm(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ').slice(0,240)}
+function _pwbDraftReadStore(){
+  try{
+    var x=JSON.parse(localStorage.getItem(_pwbDraftScope())||'null');
+    if(x&&typeof x==='object'&&x.drafts&&typeof x.drafts==='object')return x;
+  }catch(e){}
+  return {active_key:'',drafts:{}};
+}
+function _pwbDraftWriteStore(x){
+  try{localStorage.setItem(_pwbDraftScope(),JSON.stringify(x))}catch(e){}
+}
+function _pwbDraftSnapshot(){
+  var g=function(id){var e=document.getElementById(id);return e?String(e.value||''):''};
+  return {
+    keyword:g('pwbKeyword'),
+    title:g('pwbTitle'),
+    language:g('pwbLanguage'),
+    region:g('pwbRegion'),
+    google_aio:g('pwbAioText'),
+    chatgpt:g('pwbChatgptText'),
+    perplexity:g('pwbPerplexityText'),
+    claude:g('pwbClaudeText'),
+    copilot:g('pwbCopilotText'),
+    saved_at:new Date().toISOString()
+  };
+}
+function _pwbDraftSave(keyOverride){
+  if(_pwbDraftSwitching)return;
+  var snap=_pwbDraftSnapshot(),key=_pwbDraftNorm(keyOverride||_pwbDraftActiveKey||snap.keyword);
+  if(!key)return;
+  var st=_pwbDraftReadStore();
+  st.drafts[key]=snap;
+  st.active_key=key;
+  // Keep a bounded history per tracker/placement.
+  var entries=Object.keys(st.drafts).map(function(k){return [k,Date.parse(st.drafts[k].saved_at||0)||0]}).sort(function(a,b){return b[1]-a[1]});
+  entries.slice(20).forEach(function(x){delete st.drafts[x[0]]});
+  _pwbDraftWriteStore(st);
+  _pwbDraftActiveKey=key;
+}
+function _pwbDraftApply(d){
+  if(!d)return false;
+  _pwbDraftSwitching=true;
+  try{
+    var set=function(id,v){var e=document.getElementById(id);if(e)e.value=v==null?'':String(v)};
+    set('pwbKeyword',d.keyword||'');
+    set('pwbTitle',d.title||'');
+    set('pwbLanguage',d.language||'');
+    set('pwbRegion',d.region||'');
+    set('pwbAioText',d.google_aio||'');
+    set('pwbChatgptText',d.chatgpt||'');
+    set('pwbPerplexityText',d.perplexity||'');
+    set('pwbClaudeText',d.claude||'');
+    set('pwbCopilotText',d.copilot||'');
+  }finally{_pwbDraftSwitching=false}
+  _pwbUpdateAiFiveCount();
+  _networkPrewriteEmitState();
+  return true;
+}
+function _pwbDraftRestoreActive(){
+  var st=_pwbDraftReadStore(),key=st.active_key||'';
+  if(key&&st.drafts[key]){
+    _pwbDraftActiveKey=key;
+    return _pwbDraftApply(st.drafts[key]);
+  }
+  return false;
+}
+function _pwbDraftSwitchKeyword(nextKeyword){
+  var next=_pwbDraftNorm(nextKeyword);
+  if(!next)return;
+  // Save the old draft BEFORE switching to the new keyword bucket.
+  if(_pwbDraftActiveKey&&_pwbDraftActiveKey!==next)_pwbDraftSave(_pwbDraftActiveKey);
+  var st=_pwbDraftReadStore();
+  _pwbDraftActiveKey=next;
+  if(st.drafts[next]){
+    _pwbDraftApply(st.drafts[next]);
+  }else{
+    _pwbDraftSwitching=true;
+    try{
+      ['pwbTitle','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=''});
+      var k=document.getElementById('pwbKeyword');if(k)k.value=nextKeyword;
+    }finally{_pwbDraftSwitching=false}
+    _pwbUpdateAiFiveCount();
+    var fresh=_pwbDraftSnapshot(),s=_pwbDraftReadStore();s.drafts[next]=fresh;s.active_key=next;_pwbDraftWriteStore(s);
+  }
+  _networkPrewriteEmitState();
+}
+function _pwbDraftRemoveKeyword(keyword){
+  var k=_pwbDraftNorm(keyword),st=_pwbDraftReadStore();
+  if(k&&st.drafts[k])delete st.drafts[k];
+  if(st.active_key===k)st.active_key='';
+  _pwbDraftWriteStore(st);
+}
+
 function _networkPrewritePlacementId(){
   try{
     var q=new URLSearchParams(window.location.search||'');
@@ -45523,6 +45629,7 @@ function _networkPrewriteApplyEvidence(engine,evidence){
   el.value=String(evidence||'');
   try{el.dispatchEvent(new Event('input',{bubbles:true}))}catch(e){}
   _pwbUpdateAiFiveCount();
+  _pwbDraftSave();
   return true;
 }
 window.addEventListener('message',function(e){
@@ -45532,7 +45639,12 @@ window.addEventListener('message',function(e){
   }
 });
 document.addEventListener('input',function(e){
-  if(e.target&&e.target.id==='pwbKeyword')_networkPrewriteEmitState();
+  if(!e.target)return;
+  if(e.target.id==='pwbKeyword'){_networkPrewriteEmitState();return}
+  if(['pwbTitle','pwbLanguage','pwbRegion','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0)_pwbDraftSave();
+});
+document.addEventListener('change',function(e){
+  if(e.target&&e.target.id==='pwbKeyword')_pwbDraftSwitchKeyword(e.target.value);
 });
 
 function _pwbUpdateAiFiveCount(){
@@ -45540,12 +45652,14 @@ function _pwbUpdateAiFiveCount(){
   var n=ids.filter(function(id){var e=document.getElementById(id);return e&&String(e.value||'').trim();}).length;
   var b=document.getElementById('pwbAiFiveCount');if(b)b.textContent=n+' / 5 added';
 }
-document.addEventListener('input',function(e){if(e.target&&['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0)_pwbUpdateAiFiveCount();});
+document.addEventListener('input',function(e){if(e.target&&['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0){_pwbUpdateAiFiveCount();_pwbDraftSave();}});
 function showPrewriteBriefModal() {
   document.getElementById('pwbResult').innerHTML = '';
   document.getElementById('pwbStatus').textContent = '';
   document.getElementById('prewriteBriefModal').classList.add('show');
   var _nab=document.getElementById('pwbNetworkAuthBadge');if(_nab)_nab.style.display=_NETWORK_PREWRITE_AUTHORIZED?'block':'none';
+  var _kw=document.getElementById('pwbKeyword');
+  if(!_kw||!String(_kw.value||'').trim())_pwbDraftRestoreActive();else{_pwbDraftActiveKey=_pwbDraftNorm(_kw.value);_pwbDraftSave()}
   _pwbUpdateAiFiveCount();
   loadRecentPrewriteBriefs();
   setTimeout(_networkPrewriteEmitState,0);
@@ -45565,8 +45679,9 @@ function openSpokePrewrite(index) {
   // with the real Intelligence recommendation so the existing page can be updated coherently.
   _pwbRecommendationContext=r;
   showPrewriteBriefModal();
-  document.getElementById('pwbKeyword').value=r.primary_query||'';
+  _pwbDraftSwitchKeyword(r.primary_query||'');
   document.getElementById('pwbTitle').value=r.working_title||'';
+  _pwbDraftSave();
   var st=document.getElementById('pwbStatus');
   if(st)st.textContent=(r.decision||'Content')+' recommendation loaded — review it, then generate the full Prewrite Brief. No credit is used until you click Generate.';
 }
@@ -45607,6 +45722,7 @@ async function deletePrewriteBrief(ev, id) {
 }
 
 async function reopenPrewriteBrief(id) {
+  _pwbDraftSave();
   var stat = document.getElementById('pwbStatus');
   var result = document.getElementById('pwbResult');
   stat.textContent = 'Loading saved brief\u2026';
@@ -45619,7 +45735,7 @@ async function reopenPrewriteBrief(id) {
     }
     document.getElementById('pwbKeyword').value = data.keyword || '';
     document.getElementById('pwbTitle').value = data.working_title || '';
-    try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbUpdateAiFiveCount()}catch(e){}
+    try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbDraftActiveKey=_pwbDraftNorm(data.keyword||'');_pwbUpdateAiFiveCount();_pwbDraftSave()}catch(e){}
     var d = new Date(data.created_at);
     stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString();
     result.innerHTML = renderPrewriteBrief(data.brief);
@@ -45716,6 +45832,7 @@ document.addEventListener('mousedown', function(e) {
 document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && _csComboOpenId) csComboClose(_csComboOpenId); });
 
 async function generatePrewriteBrief() {
+  _pwbDraftSave();
   var kw = document.getElementById('pwbKeyword').value.trim();
   var title = document.getElementById('pwbTitle').value.trim();
   var lang = document.getElementById('pwbLanguage').value.trim();
