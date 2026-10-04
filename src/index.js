@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v462-NETWORK-PREWRITE-SCOPE-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v463-NETWORK-PREWRITE-TOP10-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58632,7 +58632,7 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
         : 'not checked — Perplexity key not configured',
       perplexity_excerpt: perplexity.answer_excerpt || '',
       perplexity_currently_cites: perplexity.cited_domains,
-      competitors_analysed: top5.length,
+      competitors_analysed: top10.length,
       people_also_ask: peopleAlsoAsk,
       internal_links: brief.link_research && brief.link_research.internal ? brief.link_research.internal : null,
       external_links: brief.link_research && brief.link_research.external ? brief.link_research.external : null
