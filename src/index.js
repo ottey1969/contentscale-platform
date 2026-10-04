@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v461-NETWORK-INPROCESS-PREWRITE-WORKER';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v462-NETWORK-PREWRITE-SCOPE-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -57898,6 +57898,8 @@ async function _handlePrewriteBriefGeneration(req, res) {
   let _pwbNetworkAuthorized = false;
   let _pwbSyntheticNetworkTracker = false;
   let _pwbNetworkPlacementId = 0;
+  let _pwbSkipSyntheticSitemap = false;
+  let _pwbNetworkFastLane = false;
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
@@ -57937,11 +57939,11 @@ async function _handlePrewriteBriefGeneration(req, res) {
       _pwbNetworkAuthorized = false;
       _pwbSyntheticNetworkTracker = false;
     }
-    const _pwbSkipSyntheticSitemap = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
+    _pwbSkipSyntheticSitemap = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
     // v451 — Authorized Network embeds run inside a browser request behind the app gateway.
     // Keep the SAME evidence sources, but cap duplicated/optional upstream work so the request
     // cannot stack multiple 10–30s retries and die as a gateway 502 before our JSON error arrives.
-    const _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
+    _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
     const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
