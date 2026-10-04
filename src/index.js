@@ -57806,22 +57806,29 @@ async function _runPwbAsyncJob(jobId){
   try{
     const token=String(job.token||'');
     const placement=Number(job.network_placement_id||0);
-    const base='http://127.0.0.1:'+(process.env.PORT||3000);
-    const url=base+'/api/tracker-client/'+encodeURIComponent(token)+'/prewrite-brief?networkPlacement='+encodeURIComponent(String(placement))+'&networkEmbed=1&_pwbBackground=1';
-    // Internal localhost request is deliberately not bound to the public gateway timeout.
-    const rr=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-contentscale-internal-prewrite':'1'},body:JSON.stringify(job.request_json||{})});
-    const txt=await rr.text();
-    let payload={};
-    try{payload=txt?JSON.parse(txt):{}}catch(_e){payload={success:false,error:txt||('HTTP '+rr.status),stage:'response_parse'};}
-    if(rr.ok && payload && payload.success && payload.brief){
+    let _statusCode=200, _payload=null;
+    const _req={
+      params:{token:token},
+      query:{networkPlacement:String(placement),networkEmbed:'1',_pwbBackground:'1'},
+      body:job.request_json||{}
+    };
+    const _res={
+      status:function(code){_statusCode=Number(code)||500;return this;},
+      json:function(obj){_payload=obj||{};return this;}
+    };
+    // v460: invoke the exact same generator directly in-process. No localhost/self-fetch,
+    // no socket/DNS/loopback dependency, and no second HTTP gateway layer.
+    await _handlePrewriteBriefGeneration(_req,_res);
+    const payload=_payload||{success:false,error:'Prewrite generator returned no payload.',stage:'generator_no_payload'};
+    if(_statusCode>=200 && _statusCode<300 && payload && payload.success && payload.brief){
       await pool.query(`UPDATE prewrite_async_jobs SET status='completed',stage='complete',result_json=$2::jsonb,error_json=NULL,updated_at=NOW(),completed_at=NOW() WHERE id=$1`,[jobId,JSON.stringify(payload)]);
       if(boot){boot.status='completed';boot.stage='complete';boot.result=payload;boot.updated_at=new Date().toISOString();}
-      console.log('[prewrite-async] completed job='+jobId+' placement='+placement);
+      console.log('[prewrite-async] completed job='+jobId+' placement='+placement+' in-process');
     }else{
-      const failure=Object.assign({success:false,http_status:rr.status,stage:(payload&&payload.stage)||'generator'},payload||{});
+      const failure=Object.assign({success:false,http_status:_statusCode,stage:(payload&&payload.stage)||'generator'},payload||{});
       await pool.query(`UPDATE prewrite_async_jobs SET status='failed',stage=$2,error_json=$3::jsonb,updated_at=NOW(),completed_at=NOW() WHERE id=$1`,[jobId,String(failure.stage||'generator'),JSON.stringify(failure)]);
       if(boot){boot.status='failed';boot.stage=String(failure.stage||'generator');boot.error=failure;boot.updated_at=new Date().toISOString();}
-      console.warn('[prewrite-async] failed job='+jobId+' stage='+String(failure.stage||'generator')+' status='+rr.status+' error='+String(failure.error||'').slice(0,220));
+      console.warn('[prewrite-async] failed job='+jobId+' stage='+String(failure.stage||'generator')+' status='+_statusCode+' error='+String(failure.error||'').slice(0,220));
     }
   }catch(e){
     const failure={success:false,stage:'async_worker',error:e&&e.message||'Async Prewrite worker failed',diagnostic:{name:e&&e.name||'Error'}};
@@ -57885,7 +57892,7 @@ app.get('/api/tracker-client/:token/prewrite-brief-job/:jobId', async (req,res)=
   }
 });
 
-app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
+async function _handlePrewriteBriefGeneration(req, res) {
   let _pwbStage='start';
   const _pwbStartedAt=Date.now();
   let _pwbNetworkAuthorized = false;
@@ -58690,7 +58697,9 @@ Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exis
     console.error('[prewrite-brief] error at stage',_pwbStage+':', e.message,'elapsed='+(Date.now()-_pwbStartedAt)+'ms');
     res.status(502).json({ success:false,stage:_pwbStage||'unknown',retryable:true,error:e.message||'Prewrite failed',diagnostic:{name:e&&e.name||'Error',elapsed_ms:Date.now()-_pwbStartedAt,network_placement:_pwbNetworkPlacementId||null,network_authorized:!!_pwbNetworkAuthorized,synthetic_network_tracker:!!_pwbSyntheticNetworkTracker,network_fast_lane:!!_pwbNetworkFastLane} });
   }
-});
+}
+
+app.post('/api/tracker-client/:token/prewrite-brief', _handlePrewriteBriefGeneration);
 
 // ── GET /api/tracker-client/:token/prewrite-briefs — list past briefs ───────
 // Lightweight list (no full brief_json) for the "Recent Briefs" recall UI.
