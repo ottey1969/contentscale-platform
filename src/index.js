@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v473-NETWORK-PREWRITE-STALE-SOURCE-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v474-NETWORK-PREWRITE-FIELD-QUALITY-REPAIR';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58638,10 +58638,56 @@ ${claimsBlock.slice(0,2800)}`;
           console.log('[prewrite-brief] quality '+_group.name+' repaired: '+_missing.join(','));
         }
         if(_merged){
+          // Final field-level repair. Group completion is efficient, but a model can return
+          // a top-level key with an under-filled object. Repair only the fields that still
+          // fail the publication-quality validator instead of regenerating the whole Brief.
+          const _fieldRepairRules={
+            entity_strategy:`Return exactly {"entity_strategy":{"primary":["...","..."],"secondary":["..."],"supporting":["..."],"relationships":[{"subject":"...","relation":"...","object":"..."},{"subject":"...","relation":"...","object":"..."}]}}. Use only entities and relationships supported by the supplied SERP/research.`,
+            evidence:`Return exactly {"evidence":{"official_sources":["source name + exact verified https URL","source name + exact verified https URL"],"statistics":[],"experience_to_include":"specific writer instruction","trust_signals":["specific trust signal","specific trust signal"]}}. Every source must come from VERIFIED EXTERNAL SOURCE WHITELIST. Do not invent statistics; an empty statistics array is valid.`,
+            balance:`Return exactly {"balance":{"limitations":["specific caveat","specific caveat"],"who_should_not_use_it":["specific reader/situation if applicable"],"comparisons":[{"a":"...","b":"...","why_it_matters":"..."}]}}. Keep caveats factual and grounded in the topic/research.`,
+            action_plan:`Return exactly {"action_plan":[{"step":1,"priority":"high","action":"concrete action"},{"step":2,"priority":"high","action":"concrete action"},{"step":3,"priority":"medium","action":"concrete action"}]}. Actions must tell the writer/editor exactly what to do next from this Brief.`
+          };
+          let _fieldMissing=_collectMissing(_merged).filter(function(k){return Object.prototype.hasOwnProperty.call(_fieldRepairRules,k);});
+          for(let _fr=0;_fr<_fieldMissing.length;_fr++){
+            const _key=_fieldMissing[_fr];
+            const _fieldPrompt=`FINAL FIELD REPAIR — ${_key}. This Brief is for NEW content and must be publication-ready. Repair ONLY this one top-level key. JSON ONLY. No markdown, commentary, placeholders or insufficient_data. Never invent URLs, client claims, credentials, statistics or PAA questions.
+
+${_fieldRepairRules[_key]}
+
+CURRENT BRIEF CONTEXT:
+${JSON.stringify({keyword:_merged.keyword||keyword,search_intent:_merged.search_intent||_chosenIntent,content_decision:_merged.content_decision||{},recommended_title_h1:_merged.recommended_title_h1||'',recommended_structure:_merged.recommended_structure||{},must_cover_entities:_merged.must_cover_entities||[],ai_answer:_merged.ai_answer||{},quick_facts:_merged.quick_facts||[],current_value:_merged[_key]||null}).slice(0,9000)}
+
+VERIFIED EXTERNAL SOURCE WHITELIST:
+${_externalSourceBlock.slice(0,7000)}
+
+TOP RESULTS:
+${compSummary.slice(0,5000)}
+
+FACT SAFETY:
+${claimsBlock.slice(0,2400)}`;
+            const _fieldCompletion=await _compactCall('quality_field_'+_key,_fieldPrompt,_key==='evidence'?2600:2200,[_key]);
+            _pwbGeminiAttempts+=(_fieldCompletion.attempts||0);
+            if(_fieldCompletion.ok && _fieldCompletion.obj && Object.prototype.hasOwnProperty.call(_fieldCompletion.obj,_key)){
+              _merged[_key]=_fieldCompletion.obj[_key];
+              console.log('[prewrite-brief] quality field repaired: '+_key);
+            }else{
+              console.warn('[prewrite-brief] quality field repair failed: '+_key+' | '+String(_fieldCompletion.error||'unknown').slice(0,260));
+            }
+          }
+          // action_plan is an operational instruction set, not a factual claim. If the model
+          // still under-fills it, create a safe research-grounded plan server-side so a good
+          // Brief never fails merely because three workflow instructions were omitted.
+          if(_collectMissing(_merged).includes('action_plan')){
+            _merged.action_plan=[
+              {step:1,priority:'high',action:'Write the new page in the approved blueprint order, opening with the 40-60 word direct answer and covering every required entity and section.'},
+              {step:2,priority:'high',action:'Answer every verified Google People Also Ask question and support factual claims only with the verified external sources and allowed internal links in this Brief.'},
+              {step:3,priority:'medium',action:'Run the finished page through fact, schema, metadata and link QA before publishing; after publication verify indexability and track this exact query for ranking and AI-citation evidence.'}
+            ];
+          }
           const _stillMissing=_collectMissing(_merged);
           if(_stillMissing.length){
             _pwbStage='quality_gate';
-            _pwbGeminiNetworkFailure=true;
+            _pwbGeminiNetworkFailure=false;
             _pwbGeminiStatus=422;
             _pwbGeminiError='quality gate still incomplete: '+_stillMissing.join(',');
             _merged=null;
@@ -58673,7 +58719,11 @@ ${claimsBlock.slice(0,2800)}`;
         if(_gi===0)await new Promise(r=>setTimeout(r,350));
       }
     }
-    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:true,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,split_generation:!!_pwbNetworkFastLane}});
+    if(!d2){
+      const _failStage=_pwbStage==='quality_gate'?'quality_gate':'gemini';
+      const _failError=_failStage==='quality_gate'?'Prewrite research completed, but the Brief did not pass the publication-quality gate.':'Prewrite research completed, but Gemini could not generate the Brief.';
+      return res.status(_failStage==='quality_gate'?422:502).json({success:false,stage:_failStage,retryable:true,error:_failError,diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,split_generation:!!_pwbNetworkFastLane}});
+    }
     _pwbStage='gemini_parse';
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
