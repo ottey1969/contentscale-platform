@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-03-CANONICAL-v442-AUTO-INTERNAL-EXTERNAL-LINK-RESEARCH';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v443-AI-EVIDENCE-NATURAL-ANSWER-PARSER';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -6776,6 +6776,26 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const _linkedUrls=[];
  const _linkedSeen=new Set();
  const _pushLinked=u=>{if(!u||_noiseUrl(u))return;const z=_trackerEvNorm(u);if(z&&!_linkedSeen.has(z)){_linkedSeen.add(z);_linkedUrls.push(u);}};
+ // Natural AI answers frequently return prose followed by RESOURCES/SOURCES/REFERENCES
+ // rather than the canonical audit headings. Treat URLs inside that explicit source
+ // block as citation evidence, including multiple Markdown links on ONE line.
+ const _naturalSourceUrls=[];
+ const _naturalSourceSeen=new Set();
+ const _pushNaturalSource=u=>{
+   if(!u||_noiseUrl(u)||_isMapsUrl(u))return;
+   const z=_trackerEvNorm(u);
+   if(z&&!_naturalSourceSeen.has(z)){_naturalSourceSeen.add(z);_naturalSourceUrls.push(u);}
+ };
+ const _sourceHeadingRe=/(?:^|\n)\s*(?:#{1,6}\s*)?(?:RESOURCES?|SOURCES?|REFERENCES?|CITATIONS?)\s*:\s*/ig;
+ let _shm,_sourceStart=-1;
+ while((_shm=_sourceHeadingRe.exec(all)))_sourceStart=_shm.index+_shm[0].length;
+ if(_sourceStart>=0){
+   let _sourceTail=all.slice(_sourceStart);
+   // Stop only at a later strong all-caps section heading; ordinary answer prose is retained.
+   const _nextHeading=_sourceTail.match(/\n\s*(?:#{1,6}\s*)?[A-Z][A-Z0-9 /&_-]{3,40}\s*:\s*(?:\n|$)/);
+   if(_nextHeading&&_nextHeading.index>0)_sourceTail=_sourceTail.slice(0,_nextHeading.index);
+   _extractUrls(_sourceTail).forEach(_pushNaturalSource);
+ }
  let _lm;
  const _mdLinkRe=/\[[^\]]+\]\((https?:\/\/[^\s)]+)\)/gi;
  while((_lm=_mdLinkRe.exec(all)))_pushLinked(_lm[1]);
@@ -6790,6 +6810,10 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const _sectionUrls=_extractUrls(citationText);
  const _sectionNorm=new Set(_sectionUrls.map(_trackerEvNorm));
  const urls=_sectionUrls.slice();
+ // An explicit RESOURCES/SOURCES block is citation proof even when the same URL also
+ // appeared earlier beside a recommendation. This fixes natural Copilot/ChatGPT-style
+ // answers where "[exact-url](exact-url)" follows RESOURCES: on the same line.
+ _naturalSourceUrls.forEach(u=>{const z=_trackerEvNorm(u);if(z&&!_sectionNorm.has(z)){_sectionNorm.add(z);urls.push(u);}});
  _linkedUrls.forEach(u=>{const z=_trackerEvNorm(u);if(_quickOfficialNorm.has(z)&&!_quickCitationNorm.has(z))return;if(!_sectionNorm.has(z)&&!_mentionedUrlNorm.has(z)&&!_recommendedUrlNorm.has(z)){_sectionNorm.add(z);urls.push(u);}});
  const root=_trackerEvRoot(_trackerEvHost(pageUrl)),pn=_trackerEvNorm(pageUrl),own=urls.filter(u=>_trackerEvRoot(_trackerEvHost(u))===root), names=a=>a.map(x=>{
    let n=String(x||'').split('|')[0].trim().replace(/^\d+[.)]\s*/,'').replace(/^\*+|\*+$/g,'').split(/\s+[—–]\s+/)[0].trim();
@@ -6807,6 +6831,23 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const mapsUrls=[];localLines.forEach(x=>{const re=/https?:\/\/[^\s)\]}>\":'<,]+/gi;let m;while((m=re.exec(x)))if(_isMapsUrl(m[0]))mapsUrls.push(m[0]);});
  _quickBlocks.forEach(b=>b.mapsUrls.forEach(u=>mapsUrls.push(u)));
  const brandRecommended=sec.recommended.some(companyMatch);
+ // Natural-answer fallback. Many engines answer the user normally instead of emitting
+ // RECOMMENDED COMPANIES. Recognize the tracked brand only when it appears in provider /
+ // recommendation context; a plain brand mention by itself is still NOT a recommendation.
+ const _targetMentionedInRaw=(()=>{
+   const compact=brandNorm(all);
+   return aa.some(a=>a&&compact.includes(a));
+ })();
+ const _naturalRecommendation=(()=>{
+   const lines=all.split(/\r?\n/).map(x=>String(x||'').trim()).filter(Boolean);
+   for(let i=0;i<lines.length;i++){
+     const line=lines[i];
+     if(!companyMatch(line)&&!aa.some(a=>a&&brandNorm(line).includes(a)))continue;
+     const ctx=((i>0?lines[i-1]+' ':'')+line).toLowerCase();
+     if(/\b(?:recommend(?:ed|s|ing)?|provider(?:s)?|contractor(?:s)?|specialist(?:s)?|company|companies|including|offer(?:s|ing)?|provide(?:s|d|ing)?|available|serves?|serving)\b/.test(ctx))return true;
+   }
+   return false;
+ })();
  // Explicit field verdicts are authoritative. This supports pasted audit summaries such as
  // "Website domain cited: No" even when the explanatory paragraph contains a clickable URL.
  const _explicitBool=labels=>{for(const label of labels){const re=new RegExp('(?:^|\\n)\\s*[-*•]*\\s*(?:\\*\\*)?'+label+'(?:\\*\\*)?\\s*[:=-]\\s*(?:\\*\\*)?\\s*(yes|no|ja|nee|true|false)(?:\\*\\*)?','i');const m=all.match(re);if(m)return /^(yes|ja|true)$/i.test(m[1]);}return null;};
@@ -6817,7 +6858,9 @@ function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
  const _xExact=_explicitBool(['exact\\s+page\\s+cited','exacte\\s+pagina\\s+geciteerd']);
  const _exactOwn=own.filter(u=>_trackerEvNorm(u)===pn),_otherOwn=own.filter(u=>_trackerEvNorm(u)!==pn);
  const _exactVerdict=_xExact===null?_exactOwn.length>0:_xExact;
- return {brand_recommended:_xRec===null?(brandRecommended||_quickTarget.some(b=>b.recommended)):_xRec,brand_local_result:_xLocal===null?(localLines.some(companyMatch)||_quickTarget.some(b=>b.mapsUrls.length>0)):_xLocal,brand_direct_supported:_xSupported===null?(verifiedDirect.some(companyMatch)||_quickTarget.some(b=>b.citationUrls.length>0)):_xSupported,domain_cited:_xDomain===null?own.length>0:_xDomain,exact_page_cited:_exactVerdict,other_page_cited:!_exactVerdict&&_otherOwn.length>0,own_cited_urls:own,exact_cited_urls:_exactOwn,other_own_cited_urls:_otherOwn,citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:_uniqueNames(names(sec.recommended).concat(_quickRecommendedNames)),local_result_companies:_uniqueNames(names(localLines).concat(_quickBlocks.filter(b=>b.mapsUrls.length>0).map(b=>b.company))),directly_cited_companies:_uniqueNames(names(verifiedDirect).concat(_quickDirectNames)),mentioned_companies:_uniqueNames(names(sec.mentioned).concat(_quickMentionedNames)),sections:{...sec,local:localLines,direct:verifiedDirect,quick_scan_prompt_2:_quickBlocks.map(b=>({company:b.company,is_target:companyMatch(b.company),recommended:b.recommended,why_recommended:b.whyRecommended,official_urls:b.officialUrls,reported_exact_cited_urls:b.exactCitedUrls,supporting_urls:b.supportingUrls,citation_urls:b.citationUrls,maps_urls:b.mapsUrls}))},citation_reasoning:{tracked_page:pn,own_domain:root,own_urls:own,exact_url_matches:_exactOwn,other_own_page_urls:_otherOwn,official_website_alone_is_proof:false},input_format:_quickBlocks.length?'quick_scan_prompt_2':'canonical_sections'};
+ const _naturalOwnSource=own.some(u=>_naturalSourceSeen.has(_trackerEvNorm(u)));
+ const _naturalDirectSupport=_targetMentionedInRaw&&_naturalOwnSource;
+ return {brand_recommended:_xRec===null?(brandRecommended||_quickTarget.some(b=>b.recommended)||_naturalRecommendation):_xRec,brand_local_result:_xLocal===null?(localLines.some(companyMatch)||_quickTarget.some(b=>b.mapsUrls.length>0)):_xLocal,brand_direct_supported:_xSupported===null?(verifiedDirect.some(companyMatch)||_quickTarget.some(b=>b.citationUrls.length>0)||_naturalDirectSupport):_xSupported,domain_cited:_xDomain===null?own.length>0:_xDomain,exact_page_cited:_exactVerdict,other_page_cited:!_exactVerdict&&_otherOwn.length>0,own_cited_urls:own,exact_cited_urls:_exactOwn,other_own_cited_urls:_otherOwn,citation_urls:urls,local_result_urls:[...new Set(mapsUrls)],recommended_companies:_uniqueNames(names(sec.recommended).concat(_quickRecommendedNames)),local_result_companies:_uniqueNames(names(localLines).concat(_quickBlocks.filter(b=>b.mapsUrls.length>0).map(b=>b.company))),directly_cited_companies:_uniqueNames(names(verifiedDirect).concat(_quickDirectNames)),mentioned_companies:_uniqueNames(names(sec.mentioned).concat(_quickMentionedNames)),sections:{...sec,local:localLines,direct:verifiedDirect,quick_scan_prompt_2:_quickBlocks.map(b=>({company:b.company,is_target:companyMatch(b.company),recommended:b.recommended,why_recommended:b.whyRecommended,official_urls:b.officialUrls,reported_exact_cited_urls:b.exactCitedUrls,supporting_urls:b.supportingUrls,citation_urls:b.citationUrls,maps_urls:b.mapsUrls}))},citation_reasoning:{tracked_page:pn,own_domain:root,own_urls:own,exact_url_matches:_exactOwn,other_own_page_urls:_otherOwn,natural_source_block_urls:_naturalSourceUrls,natural_target_mentioned:_targetMentionedInRaw,natural_recommendation_context:_naturalRecommendation,natural_direct_support:_naturalDirectSupport,official_website_alone_is_proof:false},input_format:_quickBlocks.length?'quick_scan_prompt_2':(_naturalSourceUrls.length?'natural_answer_with_sources':'canonical_sections')};
 }
 function _trackerReparseManualEvidenceMap(map,pageUrl,aliases,revisionCycle){
  const out={}; if(!map||typeof map!=='object')return out;
