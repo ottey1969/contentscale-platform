@@ -45857,15 +45857,17 @@ async function generatePrewriteBrief() {
   var result = document.getElementById('pwbResult');
   btn.disabled = true;
   var _pwbProgressSteps = [
-    {btn:'Analysing SERP\u2026', stat:'Reading the live search results and search intent\u2026'},
-    {btn:'Comparing ranking pages\u2026', stat:'Fetching the strongest ranking pages and extracting content gaps\u2026'},
-    {btn:'Checking AI evidence\u2026', stat:'Reviewing AI citations, entities, questions and source evidence\u2026'},
-    {btn:'Generating Pre-Write Brief\u2026', stat:'Turning the research into the final SEO/AEO brief\u2026'}
+    {btnBase:'Analysing SERP', statBase:'Reading the live search results and search intent'},
+    {btnBase:'Comparing ranking pages', statBase:'Fetching the strongest ranking pages and extracting content gaps'},
+    {btnBase:'Checking AI evidence', statBase:'Reviewing AI citations, entities, questions and source evidence'},
+    {btnBase:'Generating Pre-Write Brief', statBase:'Turning the research into the final SEO/AEO brief'}
   ];
-  var _pwbProgressIx = 0;
-  var _pwbShowProgress = function(){ var st=_pwbProgressSteps[Math.min(_pwbProgressIx,_pwbProgressSteps.length-1)]; btn.textContent=st.btn; stat.textContent=st.stat; };
+  var _pwbProgressIx = 0, _pwbDotsIx = 0;
+  var _pwbDots = function(){ return ['.','..','...'][_pwbDotsIx % 3]; };
+  var _pwbShowProgress = function(){ var st=_pwbProgressSteps[Math.min(_pwbProgressIx,_pwbProgressSteps.length-1)]; btn.textContent=st.btnBase + _pwbDots(); stat.textContent=st.statBase + _pwbDots(); };
   _pwbShowProgress();
-  var _pwbProgressTimer = setInterval(function(){ if(_pwbProgressIx < _pwbProgressSteps.length-1){ _pwbProgressIx++; _pwbShowProgress(); } }, 7000);
+  var _pwbStepTimer = setInterval(function(){ if(_pwbProgressIx < _pwbProgressSteps.length-1){ _pwbProgressIx++; _pwbShowProgress(); } }, 7000);
+  var _pwbDotsTimer = setInterval(function(){ _pwbDotsIx++; _pwbShowProgress(); }, 450);
   result.innerHTML = '';
 
   try {
@@ -45873,7 +45875,7 @@ async function generatePrewriteBrief() {
       manualAiEvidence:{google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()} };
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
-    clearInterval(_pwbProgressTimer);
+    clearInterval(_pwbStepTimer); clearInterval(_pwbDotsTimer);
     btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
     if (!data || !data.success || !data.brief) {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
@@ -45886,7 +45888,7 @@ async function generatePrewriteBrief() {
     try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Publisher Edition';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
     loadRecentPrewriteBriefs();
   } catch (e) {
-    clearInterval(_pwbProgressTimer);
+    clearInterval(_pwbStepTimer); clearInterval(_pwbDotsTimer);
     btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
     if (/separate service/i.test(e.message)) {
       stat.textContent = '';
@@ -58230,29 +58232,71 @@ Rules: competitor_table must represent every supplied ranking result and copy ex
       _pwbGeminiModelUsed=[_partA.model,_partB.model].filter(Boolean).join(' + ');
       _pwbGeminiError=[!_partA.ok?'strategy: '+(_partA.error||'failed'):'',!_partB.ok?'evidence: '+(_partB.error||'failed'):''].filter(Boolean).join(' | ').slice(0,700);
 
-      // If strategy succeeded, a failed evidence half must not throw away all completed
-      // research. Build a conservative evidence fallback from the exact server-owned data.
-      // Nothing is fabricated: unknown fields are explicitly insufficient_data/not_checked.
-      let _merged = _partA.ok ? Object.assign({},_partA.obj) : null;
-      if (_merged) {
-        const _ev = _partB.ok ? _partB.obj : {};
-        Object.assign(_merged,_ev);
-        if(!_merged.competitor_table){
-          _merged.competitor_table=top10.map((e,i)=>({rank:e.rank,company_or_publisher:e.domain,domain:e.domain,exact_url:e.url,page_title:e.title||'',what_they_have:(compScrapes[i]&&compScrapes[i].text)?'Ranking page successfully fetched for analysis.':'insufficient_data',the_gap:'insufficient_data',what_to_add:'insufficient_data'}));
-        }
-        if(!_merged.ai_systems_analysis){
-          _merged.ai_systems_analysis={
-            google_aio:{checked:!!_manualAi.google_aio,evidence_source:_manualAi.google_aio?'manual':'not_checked',answer_summary:_manualAi.google_aio||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
-            chatgpt:{checked:!!_manualAi.chatgpt,evidence_source:_manualAi.chatgpt?'manual':'not_checked',answer_summary:_manualAi.chatgpt||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
-            perplexity:{checked:!!(_manualAi.perplexity||perplexity.checked),evidence_source:_manualAi.perplexity?'manual':(perplexity.checked?'automatic_fallback':'not_checked'),answer_summary:_perplexityEvidenceText||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[],exact_page_citations:[],citation_sources:[]},
-            claude:{checked:!!_manualAi.claude,evidence_source:_manualAi.claude?'manual':'not_checked',answer_summary:_manualAi.claude||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
-            copilot:{checked:!!_manualAi.copilot,evidence_source:_manualAi.copilot?'manual':'not_checked',answer_summary:_manualAi.copilot||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]}
-          };
-        }
-        if(!_merged.fact_safety)_merged.fact_safety={verified_business_facts_used:[],verify_first:_pwbVerifyFirst.slice(0,20),blocked_claims:_pwbBlocked.slice(0,20),rule:'Only VERIFIED or owner-provided facts may be asserted as client facts.'};
-        d2={candidates:[{content:{parts:[{text:JSON.stringify(_merged)}]},finishReason:'STOP'}]};
-        console.log('[prewrite-brief] network compact Gemini merged | strategy='+(_partA.ok?'ok':'fail')+' evidence='+(_partB.ok?'ok':'fallback')+' | '+(Date.now()-_pwbGeminiNetworkStartedAt)+'ms');
+      // If either half succeeds, merge it. If both halves fail, build a conservative
+      // deterministic fallback from server-owned research so Network Prewrite never dies at
+      // the Gemini stage. Unknown fields stay insufficient_data / not_checked.
+      const _fallbackTreatment = (_recSafe&&_recSafe.decision==='OPTIMIZE') ? 'OPTIMIZE_EXISTING_PAGE' : ((_recSafe&&_recSafe.decision==='EXPAND_EXISTING') ? 'EXPAND_EXISTING_PAGE' : 'CREATE_NEW_PAGE');
+      const _fallbackClosest = (_recSafe&&_recSafe.target) || 'none';
+      const _fallbackSlug = String((workingTitle||keyword||'page')).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80) || 'page';
+      const _fallbackPaa = (peopleAlsoAsk||[]).slice(0,5).map(function(x){ var q = String((x&&x.question)||x||'').trim(); return {q:q||'insufficient_data',a:'insufficient_data'}; });
+      while(_fallbackPaa.length<5) _fallbackPaa.push({q:'insufficient_data',a:'insufficient_data'});
+      const _fallbackCompetitorTable = top10.map(function(e,i){ return {rank:e.rank||i+1,company_or_publisher:e.domain||'insufficient_data',domain:e.domain||'insufficient_data',exact_url:e.url||'insufficient_data',page_title:e.title||'',what_they_have:(compScrapes[i]&&compScrapes[i].text)?'Ranking page successfully fetched for analysis.':'insufficient_data',the_gap:'insufficient_data',what_to_add:'insufficient_data'}; });
+      const _fallbackAiSystems = {
+        google_aio:{checked:!!_manualAi.google_aio,evidence_source:_manualAi.google_aio?'manual':'not_checked',answer_summary:_manualAi.google_aio||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
+        chatgpt:{checked:!!_manualAi.chatgpt,evidence_source:_manualAi.chatgpt?'manual':'not_checked',answer_summary:_manualAi.chatgpt||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
+        perplexity:{checked:!!(_manualAi.perplexity||perplexity.checked),evidence_source:_manualAi.perplexity?'manual':(perplexity.checked?'automatic_fallback':'not_checked'),answer_summary:_perplexityEvidenceText||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[],exact_page_citations:[],citation_sources:[]},
+        claude:{checked:!!_manualAi.claude,evidence_source:_manualAi.claude?'manual':'not_checked',answer_summary:_manualAi.claude||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
+        copilot:{checked:!!_manualAi.copilot,evidence_source:_manualAi.copilot?'manual':'not_checked',answer_summary:_manualAi.copilot||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]}
+      };
+      const _fallbackBriefBase = {
+        keyword: keyword,
+        search_intent: _chosenIntent,
+        content_decision: {recommended_treatment:_fallbackTreatment,cannibalization_risk:'insufficient_data',closest_existing_url:_fallbackClosest,reason:'Gemini strategy generation timed out. This conservative fallback brief was built from live SERP research, exact ranking URLs, tracker recommendation and verified claims only.'},
+        fact_safety: {verified_business_facts_used:[],verify_first:_pwbVerifyFirst.slice(0,20),blocked_claims:_pwbBlocked.slice(0,20),rule:'Only VERIFIED or owner-provided facts may be asserted as client facts.'},
+        top10_gap:'insufficient_data',
+        ai_overview_status:_manualAi.google_aio?'Manual Google AIO evidence supplied by the strategist.':'insufficient_data',
+        ai_systems_analysis:_fallbackAiSystems,
+        competitor_table:_fallbackCompetitorTable,
+        recommended_title_h1:workingTitle||keyword,
+        meta_package:{seo_title:String((workingTitle||keyword||'')).slice(0,60),meta_description:String((keyword||'') + ' — evidence-based pre-write brief built from live SERP research.').slice(0,155),h1:workingTitle||keyword,url_slug:_fallbackSlug},
+        opening_passage:{direct_answer:'insufficient_data',why_it_wins:'Complete this opening with a concise direct answer grounded only in verified facts and the live SERP evidence.'},
+        recommended_structure:{format:'content_page',recommended_word_count:2200,must_have_h2s:(peopleAlsoAsk||[]).slice(0,5).map(function(x){return String((x&&x.question)||x||'').trim();}).filter(Boolean),recommended_schema:['FAQPage','Article']},
+        page_blueprint:(peopleAlsoAsk||[]).slice(0,5).map(function(x,i){ var q=String((x&&x.question)||x||'').trim()||('Section '+(i+1)); return {h2:q,purpose:'Answer this searcher question clearly and directly.',target_words:220,cover:[q],citation_hook:''}; }),
+        must_cover_entities:[],
+        faq_questions:(peopleAlsoAsk||[]).slice(0,5).map(function(x){ return String((x&&x.question)||x||'').trim(); }).filter(Boolean),
+        paa_questions:_fallbackPaa,
+        internal_link_targets:[],
+        external_link_targets:[],
+        citation_targets:top10.slice(0,3).map(function(){ return {query_variant:keyword,passage_to_write:'Write a short direct answer that cites the key fact pattern shown across the ranking pages for '+keyword+'.'}; }),
+        ai_answer:{primary_question:keyword,secondary_questions:(peopleAlsoAsk||[]).slice(0,5).map(function(x){ return String((x&&x.question)||x||'').trim(); }).filter(Boolean),direct_answer:'insufficient_data',why_it_matters:'Use the verified facts and the live search evidence to answer the main question directly.',who_is_it_for:'Readers searching for '+keyword+'.',key_takeaways:['Use verified client facts only.','Match the search intent before drafting.','Use exact source URLs when citing external evidence.']},
+        quick_facts:[],
+        entity_strategy:{primary:[],secondary:[],supporting:[],relationships:[]},
+        evidence:{official_sources:[],statistics:[],experience_to_include:'Add only first-hand experience that the owner can genuinely confirm.',trust_signals:['Use exact ranking URLs and verified facts only.']},
+        balance:{limitations:['Gemini synthesis timed out, so this fallback brief needs strategist review before publication.'],who_should_not_use_it:['Anyone who needs unsupported claims or fabricated evidence.'],comparisons:[]},
+        use_cases:[{audience:'Primary searcher',scenario:'They searched for '+keyword+'.',benefit:'This brief preserves the live SERP evidence and exact URLs so the page can be written safely.'}],
+        conclusion:{recap:'This fallback brief preserves the live search evidence and exact URLs.',recommendation:'Complete the missing synthesis with strategist review before publication.',outlook:'Regenerate later if deeper model synthesis becomes available.'},
+        beat_number1_instructions:top10.slice(0,5).map(function(e,i){ return {topic:e.title||('Competitor '+(i+1)),rank1_treats_it_as:'insufficient_data',to_beat_write:'Cover the topic directly, add verified evidence, and improve clarity without inventing claims.'}; }),
+        action_plan:[{step:1,priority:'high',action:'Review the conservative fallback brief and complete the missing synthesis using verified facts only.'}],
+        confidence:'low'
+      };
+      let _merged = _partA.ok ? Object.assign({}, _fallbackBriefBase, _partA.obj) : Object.assign({}, _fallbackBriefBase);
+      const _ev = _partB.ok ? _partB.obj : {};
+      Object.assign(_merged,_ev);
+      if(!_merged.competitor_table || !Array.isArray(_merged.competitor_table) || !_merged.competitor_table.length){
+        _merged.competitor_table=_fallbackCompetitorTable;
       }
+      if(!_merged.ai_systems_analysis){
+        _merged.ai_systems_analysis=_fallbackAiSystems;
+      }
+      if(!_merged.fact_safety)_merged.fact_safety={verified_business_facts_used:[],verify_first:_pwbVerifyFirst.slice(0,20),blocked_claims:_pwbBlocked.slice(0,20),rule:'Only VERIFIED or owner-provided facts may be asserted as client facts.'};
+      if(!_merged.page_blueprint || !Array.isArray(_merged.page_blueprint) || !_merged.page_blueprint.length){
+        _merged.page_blueprint=_fallbackBriefBase.page_blueprint;
+      }
+      if(!_merged.paa_questions || !Array.isArray(_merged.paa_questions) || !_merged.paa_questions.length){
+        _merged.paa_questions=_fallbackPaa;
+      }
+      d2={candidates:[{content:{parts:[{text:JSON.stringify(_merged)}]},finishReason:'STOP'}]};
+      console.log('[prewrite-brief] network compact Gemini merged | strategy='+(_partA.ok?'ok':'fallback')+' evidence='+(_partB.ok?'ok':'fallback')+' | '+(Date.now()-_pwbGeminiNetworkStartedAt)+'ms');
     } else {
       const _pwbGeminiModelLadder=[GEMINI_MODEL,GEMINI_MODEL];
       for(let _gi=0;_gi<_pwbGeminiModelLadder.length && !d2;_gi++){
