@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v475-NETWORK-PREWRITE-STRICT-CONTENT-QUALITY';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v476-NETWORK-PREWRITE-QUALITY-GATE-TRANSPARENCY';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -45949,7 +45949,10 @@ async function generatePrewriteBrief() {
         if(_job && _job.status==='completed' && _job.brief){ data=_job; break; }
         if(_job && _job.status==='failed'){
           var _jobErr=new Error(_job.error||'Pre-Write Brief generation failed.');
-          _jobErr.status=502; _jobErr.payload=_job.payload||{stage:_job.stage||'async_worker',diagnostic:_job.diagnostic||{},job_id:_pwbJobId}; throw _jobErr;
+          var _jobPayload=_job.payload||{stage:_job.stage||'async_worker',diagnostic:_job.diagnostic||{},job_id:_pwbJobId};
+          var _realStatus=Number((_jobPayload&&_jobPayload.http_status)||(_job.diagnostic&&_job.diagnostic.http_status)||0);
+          if(!_realStatus)_realStatus=String(_job.stage||_jobPayload.stage||'')==='quality_gate'?422:502;
+          _jobErr.status=_realStatus; _jobErr.payload=_jobPayload; throw _jobErr;
         }
       }
     }
@@ -45994,6 +45997,9 @@ async function generatePrewriteBrief() {
       if(diag.http_status)detail.push('HTTP '+diag.http_status);
       if(diag.model)detail.push('model: '+diag.model);
       if(diag.attempts)detail.push('attempts: '+diag.attempts);
+      if(diag.readiness_score!=null)detail.push('readiness: '+diag.readiness_score+'/100');
+      if(Array.isArray(diag.missing)&&diag.missing.length)detail.push('missing: '+diag.missing.join(', '));
+      if(Array.isArray(diag.pre_normalization_missing)&&diag.pre_normalization_missing.length)detail.push('pre-normalization: '+diag.pre_normalization_missing.join(', '));
       if(diag.error)detail.push('upstream: '+String(diag.error).slice(0,260));
       stat.textContent = '\u274c ' + e.message + (detail.length?' · '+detail.join(' · '):'');
       try{console.error('[Prewrite generation failed]',{status:e.status||0,stage:stage,diagnostic:diag,payload:p})}catch(_logErr){}
@@ -57986,6 +57992,7 @@ app.get('/api/tracker-client/:token/prewrite-brief-job/:jobId', async (req,res)=
 async function _handlePrewriteBriefGeneration(req, res) {
   let _pwbStage='start';
   const _pwbStartedAt=Date.now();
+  let _pwbPreNormalizationMissing=[];
   let _pwbNetworkAuthorized = false;
   let _pwbSyntheticNetworkTracker = false;
   let _pwbNetworkPlacementId = 0;
@@ -58651,7 +58658,15 @@ FACT SAFETY:
 ${claimsBlock.slice(0,2800)}`;
           const _completion=await _compactCall('quality_'+_group.name,_completePrompt,_group.name==='core'?5600:(_group.name==='trust'?5000:(_group.name==='competitors'?4200:3000)),_missing);
           _pwbGeminiAttempts+=(_completion.attempts||0);
-          if(!_completion.ok){_pwbGeminiNetworkFailure=true;_pwbGeminiStatus=Number(_completion.status||0);_pwbGeminiError=('quality_'+_group.name+': '+(_completion.error||'failed')).slice(0,900);_merged=null;break;}
+          if(!_completion.ok){
+            // A repair call is best-effort. Do not throw away an otherwise usable Brief
+            // because one repair request failed; the authoritative final readiness gate
+            // after normalization decides whether the Brief is actually publishable.
+            _pwbGeminiStatus=Number(_completion.status||_pwbGeminiStatus||0);
+            _pwbGeminiError=('quality_'+_group.name+': '+(_completion.error||'failed')).slice(0,900);
+            console.warn('[prewrite-brief] quality '+_group.name+' repair unavailable: '+String(_completion.error||'failed').slice(0,260));
+            continue;
+          }
           _missing.forEach(function(k){if(Object.prototype.hasOwnProperty.call(_completion.obj,k))_merged[k]=_completion.obj[k];});
           console.log('[prewrite-brief] quality '+_group.name+' repaired: '+_missing.join(','));
         }
@@ -58706,11 +58721,15 @@ ${claimsBlock.slice(0,2400)}`;
           }
           const _stillMissing=_collectMissing(_merged);
           if(_stillMissing.length){
-            _pwbStage='quality_gate';
-            _pwbGeminiNetworkFailure=false;
-            _pwbGeminiStatus=422;
-            _pwbGeminiError='quality gate still incomplete: '+_stillMissing.join(',');
-            _merged=null;
+            // v476: this is a PRE-NORMALIZATION completeness signal, not the final
+            // publication gate. Flexible model shapes can become valid during canonical
+            // normalization below (for example source objects -> verified source strings).
+            // Keep the merged Brief alive and let the single authoritative server-side
+            // readiness gate after normalization/fact-safety decide whether it may be saved.
+            _pwbPreNormalizationMissing=_stillMissing.slice();
+            console.warn('[prewrite-brief] pre-normalization fields still incomplete: '+_stillMissing.join(','));
+          } else {
+            _pwbPreNormalizationMissing=[];
           }
         }
         if(_merged)d2={candidates:[{content:{parts:[{text:JSON.stringify(_merged)}]},finishReason:'STOP'}]};
@@ -58810,15 +58829,15 @@ ${claimsBlock.slice(0,2400)}`;
     // the author/client actually achieved a result. Rewrite suspicious implied case-study claims
     // into an explicit verify-first instruction rather than letting the model manufacture experience.
     const _exp=String(brief.evidence.experience_to_include||'').trim();
-    if(_exp && /(improved|increased|reduced|grew|boosted|recovered|achieved|resulted|without sacrificing|managing enterprise|our clients?|we (?:saw|found|achieved)|case stud(?:y|ies))/i.test(_exp)){
+    if(_exp && /\b(improved|increased|reduced|grew|boosted|recovered|achieved|resulted|without sacrificing|managing enterprise|our clients?|we (?:saw|found|achieved)|case stud(?:y|ies))\b/i.test(_exp)){
       brief.evidence.experience_to_include='Add a first-hand example only if the author or client can verify it. Describe the starting situation, the exact change made, the observable evidence afterward, and any limitations. If no verified example exists, omit the experience claim rather than inventing one.';
-    } else if(_exp && !/^(add|include|describe|document|show|use|explain|provide|cite|incorporate)/i.test(_exp)){
+    } else if(_exp && !/^(add|include|describe|document|show|use|explain|provide|cite|incorporate)\b/i.test(_exp)){
       brief.evidence.experience_to_include='Writer instruction: '+_exp;
     }
     if(!brief.balance || typeof brief.balance!=='object') brief.balance={limitations:[],who_should_not_use_it:[],comparisons:[]};
     ['limitations','who_should_not_use_it','comparisons'].forEach(function(k){ if(!Array.isArray(brief.balance[k])) brief.balance[k]=[]; });
     if(!brief.faq_questions.length && peopleAlsoAsk.length) brief.faq_questions=peopleAlsoAsk.map(function(x){return String(x&&x.question||'').trim();}).filter(Boolean);
-    if(!brief.action_plan.filter(function(x){return x&&String(x.action||'').trim();}).length) brief.action_plan=[{step:1,priority:'high',action:'Write the page in the exact blueprint order and lead with the direct answer.'},{step:2,priority:'high',action:'Answer every verified Google People Also Ask question and add only verified internal/external links.'},{step:3,priority:'medium',action:'Publish, verify indexability, then measure rankings and AI citation evidence for this exact query.'}];
+    if(brief.action_plan.filter(function(x){return x&&String(x.action||'').trim();}).length<3) brief.action_plan=[{step:1,priority:'high',action:'Write the page in the exact blueprint order and lead with the direct answer.'},{step:2,priority:'high',action:'Answer every verified Google People Also Ask question and add only verified internal/external links.'},{step:3,priority:'medium',action:'Publish, verify indexability, then measure rankings and AI citation evidence for this exact query.'}];
     brief.action_plan=brief.action_plan.map(function(a){
       if(!a||typeof a!=='object')return a;
       const action=String(a.action||'').replace(/\b(?:using|with)\s+Table\s+schema\b/gi,'using an accessible HTML comparison table').replace(/\bTable\s+schema\b/gi,'HTML comparison table');
@@ -59008,7 +59027,8 @@ ${claimsBlock.slice(0,2400)}`;
     // booleans that were in the schema. This one can only be true if the field is filled.
     brief.ai_quality_check = _pwbReadiness(brief);
     if(!brief.ai_quality_check.ready_for_generation){
-      return res.status(422).json({success:false,stage:'quality_gate',retryable:true,error:'Research completed, but the Brief did not pass the publication-quality gate. Nothing was saved or counted.',diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:brief.ai_quality_check.missing}});
+      const _missingFinal=Array.isArray(brief.ai_quality_check.missing)?brief.ai_quality_check.missing:[];
+      return res.status(422).json({success:false,stage:'quality_gate',retryable:true,error:'Research completed, but the Brief did not pass the publication-quality gate. Nothing was saved or counted.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':''),diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check}});
     }
 
     // Only count against the free/paid allowance on a SUCCESSFUL generation —
