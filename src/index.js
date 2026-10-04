@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v443-AI-EVIDENCE-NATURAL-ANSWER-PARSER';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v444-AI-EVIDENCE-ESCAPED-MARKDOWN-URL-PARSER';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -6652,8 +6652,16 @@ function _trackerEvHost(raw){try{return new URL(String(raw||'').trim().replace(/
 function _trackerEvRoot(h){h=String(h||'').toLowerCase().replace(/^www\./,'');const a=h.split('.').filter(Boolean);if(a.length<=2)return h;const multi=['co.uk','org.uk','gov.uk','ac.uk','com.au','net.au','org.au','co.nz','com.br','com.mx','com.sg','com.ph','com.sa','com.ar','co.za','co.in'];const t=a.slice(-2).join('.');return multi.includes(t)?a.slice(-3).join('.'):t;}
 // CONTENTSCALE-MANUAL-AI-EVIDENCE-REGEX-GI-RUNTIME-FIX-20260909=true
 // CONTENTSCALE-AIO-FLATTENED-CLIPBOARD-PARSER-FIX-20260909=true
+// CONTENTSCALE-AI-EVIDENCE-ESCAPED-MARKDOWN-NORMALIZER-20261004=true
 function _trackerParseManualEvidence(rawText,rawSources,pageUrl,aliases){
- const text=String(rawText||'').split('https\://').join('https://').split('\.').join('.'), sources=String(rawSources||'').split('https\://').join('https://').split('\.').join('.'), all=text+'\n'+sources;
+ // Some AI UIs / clipboard paths escape Markdown punctuation, e.g.
+ //   https\://example\.com/page
+ //   \*\*Company:\*\*
+ //   \### FINAL CROSS-QUESTION SUMMARY
+ // Normalize only backslash-escaped Markdown/URL punctuation before parsing.
+ // This is syntax cleanup, not URL guessing or repair.
+ const _unescapeAiPaste=v=>String(v||'').replace(/\\([\\`*_{}\[\]()#+\-.!>:|/])/g,'$1');
+ const text=_unescapeAiPaste(rawText),sources=_unescapeAiPaste(rawSources),all=text+'\n'+sources;
  const sec={recommended:[],local:[],direct:[],domain:[],exact:[],mentioned:[],sources:[]};
  const _heading=t=>String(t||'').toUpperCase().replace(/[^A-Z0-9 ]+/g,' ').replace(/\s+/g,' ').trim();
  const _splitSectionItems=chunk=>{
