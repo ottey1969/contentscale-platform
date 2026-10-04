@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v447-PREWRITE-PERSISTENT-KEYWORD-DRAFTS';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v448-PREWRITE-DRAFT-BROWSER-SYNTAX-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -45496,11 +45496,15 @@ var _pwbDraftSwitching=false;
 function _pwbDraftScope(){
   try{
     var p=_networkPrewritePlacementId();
-    var token=(location.pathname.match(/\/tracker-client\/([^/?#]+)/)||[])[1]||'tracker';
-    return 'cs_pwb_drafts_v447_'+token+(p?('_placement_'+p):'');
-  }catch(e){return 'cs_pwb_drafts_v447_tracker'}
+    var parts=String(location.pathname||'').split('/').filter(function(x){return x});
+    var ti=parts.indexOf('tracker-client');
+    var token=(ti>=0&&parts[ti+1])?parts[ti+1]:'tracker';
+    return 'cs_pwb_drafts_v448_'+token+(p?('_placement_'+p):'');
+  }catch(e){return 'cs_pwb_drafts_v448_tracker'}
 }
-function _pwbDraftNorm(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ').slice(0,240)}
+function _pwbDraftNorm(v){
+  return String(v||'').trim().toLowerCase().split(' ').filter(function(x){return x}).join(' ').slice(0,240);
+}
 function _pwbDraftReadStore(){
   try{
     var x=JSON.parse(localStorage.getItem(_pwbDraftScope())||'null');
