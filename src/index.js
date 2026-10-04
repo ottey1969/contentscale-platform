@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v453-NETWORK-PREWRITE-GEMINI-TIME-BUDGET';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v454-NETWORK-PREWRITE-SPLIT-GEMINI-PROGRESS';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -309,6 +309,9 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'network-safe-shell-v1-isolated-module',
   'network-prewrite-synthetic-sitemap-guard-v450',
   'network-prewrite-gateway-budget-fast-lane-v451',
+  'network-prewrite-gemini-model-ladder-v452',
+  'network-prewrite-gemini-time-budget-v453',
+  'network-prewrite-split-gemini-progress-v454',
   'network-no-core-table-mutations-v406',
   'tracker-delta-brief-regression-lock',
   'tracker-internal-external-link-presence-guard',
@@ -45852,8 +45855,17 @@ async function generatePrewriteBrief() {
   var btn = document.getElementById('pwbGenerateBtn');
   var stat = document.getElementById('pwbStatus');
   var result = document.getElementById('pwbResult');
-  btn.disabled = true; btn.textContent = 'Analysing SERP\u2026';
-  stat.textContent = 'Fetching live competitors and building your brief \u2014 20\u201340 seconds\u2026';
+  btn.disabled = true;
+  var _pwbProgressSteps = [
+    {btn:'Analysing SERP\u2026', stat:'Reading the live search results and search intent\u2026'},
+    {btn:'Comparing ranking pages\u2026', stat:'Fetching the strongest ranking pages and extracting content gaps\u2026'},
+    {btn:'Checking AI evidence\u2026', stat:'Reviewing AI citations, entities, questions and source evidence\u2026'},
+    {btn:'Generating Pre-Write Brief\u2026', stat:'Turning the research into the final SEO/AEO brief\u2026'}
+  ];
+  var _pwbProgressIx = 0;
+  var _pwbShowProgress = function(){ var st=_pwbProgressSteps[Math.min(_pwbProgressIx,_pwbProgressSteps.length-1)]; btn.textContent=st.btn; stat.textContent=st.stat; };
+  _pwbShowProgress();
+  var _pwbProgressTimer = setInterval(function(){ if(_pwbProgressIx < _pwbProgressSteps.length-1){ _pwbProgressIx++; _pwbShowProgress(); } }, 7000);
   result.innerHTML = '';
 
   try {
@@ -45861,6 +45873,7 @@ async function generatePrewriteBrief() {
       manualAiEvidence:{google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()} };
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
+    clearInterval(_pwbProgressTimer);
     btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
     if (!data || !data.success || !data.brief) {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
@@ -45873,6 +45886,7 @@ async function generatePrewriteBrief() {
     try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Publisher Edition';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
     loadRecentPrewriteBriefs();
   } catch (e) {
+    clearInterval(_pwbProgressTimer);
     btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
     if (/separate service/i.test(e.message)) {
       stat.textContent = '';
@@ -57579,6 +57593,7 @@ Return ONLY valid JSON, no markdown, no preamble. Replace every <...> with your 
   }
 });
 
+// v454 network-prewrite-split-gemini-progress
 // ── POST /api/tracker-client/:token/prewrite-brief ───────────────────────────
 // Keyword-only brief — no existing page required. Reuses the same SERP-fetch
 // + competitor-scrape pipeline as /api/tracker/serp-spy, but with its own
@@ -58136,60 +58151,130 @@ Return ONLY valid JSON, no markdown, no preamble.
     _pwbStage='gemini';
     const geminiKey = process.env.GEMINI_API_KEY;
     let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0,_pwbGeminiNetworkFailure=false,_pwbGeminiModelUsed='';
-
-    // v452 — Network embedded Prewrite must not die just because the globally selected
-    // Gemini model/config is unavailable on this key. v451 used one model only and stopped
-    // on hard 4xx responses, so an INVALID_ARGUMENT / model mismatch surfaced as our own 502.
-    // For an authorized synthetic Network tracker only, try a short ordered model ladder.
-    // The fast-lane request deliberately omits thinkingConfig because support differs by model.
-    // Normal Tracker Prewrite keeps the prior model/retry behavior unchanged.
-    const _pwbGeminiModelLadder = _pwbNetworkFastLane
-      ? Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL, 'gemini-2.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))).slice(0,3)
-      : [GEMINI_MODEL, GEMINI_MODEL];
-
-    // v453 — v452 proved that 12s was too short for this large JSON brief: all valid
-    // models were aborted by our own timer before Google returned. Give the primary Network
-    // model one realistic generation window instead of burning the same short timeout three
-    // times. Only fall through to another model after an immediate HTTP/config/network failure;
-    // an actual AbortError stops the ladder because repeating a large prompt would only consume
-    // the remaining gateway budget. Normal Tracker behavior remains unchanged.
     let _pwbGeminiTimedOut=false;
     const _pwbGeminiNetworkStartedAt=Date.now();
-    for(let _gi=0;_gi<_pwbGeminiModelLadder.length && !d2;_gi++){
-      const _model=_pwbGeminiModelLadder[_gi];
-      _pwbGeminiAttempts=_gi+1;
-      _pwbGeminiModelUsed=_model;
-      try{
-        const ctrl2 = new AbortController();
-        const _timeoutMs = _pwbNetworkFastLane ? (_gi===0?35000:12000) : 32000;
-        const _t2=setTimeout(() => ctrl2.abort(), _timeoutMs);
-        const _generationConfig={temperature:0.4,maxOutputTokens:_pwbNetworkFastLane?9000:16384,responseMimeType:'application/json'};
-        if(!_pwbNetworkFastLane)_generationConfig.thinkingConfig={thinkingBudget:0};
-        const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + finalPrompt }] }], generationConfig: _generationConfig }),
-          signal: ctrl2.signal
-        });
-        clearTimeout(_t2);
-        _pwbGeminiStatus=r2.status;
-        const _txt=await r2.text();
-        let _json={};try{_json=_txt?JSON.parse(_txt):{}}catch(_je){}
-        if(r2.ok){d2=_json;break}
-        _pwbGeminiError=((_json.error&&_json.error.message)||_txt||('Gemini '+r2.status)).slice(0,700);
-        console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'failed:',r2.status,_pwbGeminiError.slice(0,220));
-        if(!_pwbNetworkFastLane && !(r2.status===429||r2.status>=500))break;
-      }catch(_ge){
-        _pwbGeminiNetworkFailure=true;
-        _pwbGeminiStatus=0;
-        _pwbGeminiTimedOut=!!(_ge&&_ge.name==='AbortError');
-        _pwbGeminiError=String(_pwbGeminiTimedOut?'Gemini request timed out after '+(_pwbNetworkFastLane&&_gi===0?'35s':'12s'):(_ge&&_ge.message||_ge)).slice(0,700);
-        console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'network failure:',_pwbGeminiError);
-        if(!_pwbNetworkFastLane || _pwbGeminiTimedOut)break;
+
+    // v454 — the Network embed no longer asks one Gemini request to emit the entire
+    // very large Prewrite JSON. That monolithic generation repeatedly exceeded our own
+    // safe gateway budget even after 35 seconds. For an authorised synthetic Network
+    // tracker only, split the job into two compact prompts and run them IN PARALLEL:
+    // A = content/SEO/AEO strategy, B = competitor + AI-citation evidence. The server
+    // then merges both JSON objects and continues through the same validation/saving path.
+    // Normal Tracker Prewrite keeps the original monolithic behaviour unchanged.
+    if (_pwbNetworkFastLane) {
+      const _compactModelsA = Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL, 'gemini-2.5-flash-lite'].filter(Boolean))).slice(0,2);
+      const _compactModelsB = Array.from(new Set(['gemini-2.5-flash-lite', GEMINI_MODEL_BRIEF, GEMINI_MODEL].filter(Boolean))).slice(0,2);
+      const _compactCall = async function(label, compactPrompt, maxTokens, models) {
+        let lastErr='', lastStatus=0, attempts=0, timedOut=false, modelUsed='';
+        for (let i=0;i<models.length;i++) {
+          const model=models[i]; attempts=i+1; modelUsed=model;
+          try {
+            const ctrl=new AbortController();
+            const timer=setTimeout(()=>ctrl.abort(),26000);
+            const rr=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,{
+              method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+compactPrompt}]}],generationConfig:{temperature:0.35,maxOutputTokens:maxTokens,responseMimeType:'application/json'}}),
+              signal:ctrl.signal
+            });
+            clearTimeout(timer); lastStatus=rr.status;
+            const txt=await rr.text(); let jj={}; try{jj=txt?JSON.parse(txt):{}}catch(_e){}
+            if(rr.ok){
+              const raw=(jj.candidates&&jj.candidates[0]&&jj.candidates[0].content&&jj.candidates[0].content.parts&&jj.candidates[0].content.parts[0]&&jj.candidates[0].content.parts[0].text)||'';
+              const mm=raw.match(/\{[\s\S]*\}/); let obj=null;
+              if(mm){try{obj=JSON.parse(mm[0])}catch(_e1){try{obj=JSON.parse(_repairJsonG(mm[0]))}catch(_e2){}}}
+              if(obj) return {ok:true,obj:obj,status:rr.status,attempts:attempts,model:model,chars:raw.length};
+              lastErr=label+' returned JSON that could not be parsed safely';
+            } else {
+              lastErr=((jj.error&&jj.error.message)||txt||('Gemini '+rr.status)).slice(0,700);
+              console.warn('[prewrite-brief] compact '+label+' model',model,'failed:',rr.status,lastErr.slice(0,220));
+              // Retry only an immediate HTTP/model failure. Do not repeat a slow timeout.
+              if(!(rr.status===400||rr.status===403||rr.status===404||rr.status===429||rr.status>=500)) break;
+            }
+          } catch(err) {
+            timedOut=!!(err&&err.name==='AbortError');
+            lastStatus=0; lastErr=timedOut?'Gemini compact '+label+' timed out after 26s':String(err&&err.message||err).slice(0,700);
+            console.warn('[prewrite-brief] compact '+label+' model',model,'network failure:',lastErr);
+            if(timedOut) break;
+          }
+        }
+        return {ok:false,error:lastErr,status:lastStatus,attempts:attempts,model:modelUsed,timed_out:timedOut};
+      };
+
+      const _strategyPrompt = `Build the CONTENT STRATEGY half of a Pre-Write Brief for this exact keyword. Use only supplied evidence. Return JSON only and keep every field concise but specific.
+KEYWORD: ${keyword}
+WORKING TITLE: ${workingTitle||'none'}
+SEARCH INTENT: ${_chosenIntent}
+TOP RANKING EVIDENCE:\n${compSummary.slice(0,9000)}
+REAL PAA:\n${peopleAlsoAsk.slice(0,8).map(x=>'- '+x.question).join('\n')||'none returned'}
+CLIENT/BRAND FACT SAFETY:\n${claimsBlock.slice(0,6000)}
+TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,5000)||'none'}
+Return exactly these top-level keys: content_decision, top10_gap, recommended_title_h1, meta_package, opening_passage, recommended_structure, page_blueprint, must_cover_entities, faq_questions, paa_questions, ai_answer, quick_facts, entity_strategy, evidence, balance, use_cases, conclusion, action_plan, confidence.
+Rules: content_decision.recommended_treatment is OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. opening_passage.direct_answer and ai_answer.direct_answer must each be 40-60 words. paa_questions must contain exactly 5 {q,a} objects when enough evidence/questions exist. Never invent client facts, statistics, URLs or credentials. Use insufficient_data when unsupported.`;
+
+      const _evidencePrompt = `Build the EVIDENCE half of a Pre-Write Brief for this exact keyword. Use only supplied evidence. Return JSON only.
+KEYWORD: ${keyword}
+LIVE TOP RESULTS:\n${compSummary.slice(0,10000)}
+AI SYSTEM EVIDENCE:\n${aiSystemsBlock.slice(0,14000)}
+FACT SAFETY:\n${claimsBlock.slice(0,5000)}
+Return exactly these top-level keys: ai_overview_status, ai_systems_analysis, competitor_table, citation_targets, beat_number1_instructions, fact_safety.
+Rules: competitor_table must represent every supplied ranking result and copy exact_url exactly from LIVE TOP RESULTS. Never invent or repair a URL. AI systems marked NOT CHECKED must remain not checked. Manual AI evidence overrides fallback. exact_page_citations may contain only exact page URLs visibly supplied. competitor claims are never client facts. Use insufficient_data where evidence is missing.`;
+
+      const [_partA,_partB] = await Promise.all([
+        _compactCall('strategy',_strategyPrompt,5200,_compactModelsA),
+        _compactCall('evidence',_evidencePrompt,4600,_compactModelsB)
+      ]);
+      _pwbGeminiAttempts=(_partA.attempts||0)+(_partB.attempts||0);
+      _pwbGeminiTimedOut=!!(_partA.timed_out||_partB.timed_out);
+      _pwbGeminiNetworkFailure=!_partA.ok||!_partB.ok;
+      _pwbGeminiStatus=_partA.ok?(_partB.ok?200:(_partB.status||0)):(_partA.status||0);
+      _pwbGeminiModelUsed=[_partA.model,_partB.model].filter(Boolean).join(' + ');
+      _pwbGeminiError=[!_partA.ok?'strategy: '+(_partA.error||'failed'):'',!_partB.ok?'evidence: '+(_partB.error||'failed'):''].filter(Boolean).join(' | ').slice(0,700);
+
+      // If strategy succeeded, a failed evidence half must not throw away all completed
+      // research. Build a conservative evidence fallback from the exact server-owned data.
+      // Nothing is fabricated: unknown fields are explicitly insufficient_data/not_checked.
+      let _merged = _partA.ok ? Object.assign({},_partA.obj) : null;
+      if (_merged) {
+        const _ev = _partB.ok ? _partB.obj : {};
+        Object.assign(_merged,_ev);
+        if(!_merged.competitor_table){
+          _merged.competitor_table=top10.map((e,i)=>({rank:e.rank,company_or_publisher:e.domain,domain:e.domain,exact_url:e.url,page_title:e.title||'',what_they_have:(compScrapes[i]&&compScrapes[i].text)?'Ranking page successfully fetched for analysis.':'insufficient_data',the_gap:'insufficient_data',what_to_add:'insufficient_data'}));
+        }
+        if(!_merged.ai_systems_analysis){
+          _merged.ai_systems_analysis={
+            google_aio:{checked:!!_manualAi.google_aio,evidence_source:_manualAi.google_aio?'manual':'not_checked',answer_summary:_manualAi.google_aio||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
+            chatgpt:{checked:!!_manualAi.chatgpt,evidence_source:_manualAi.chatgpt?'manual':'not_checked',answer_summary:_manualAi.chatgpt||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
+            perplexity:{checked:!!(_manualAi.perplexity||perplexity.checked),evidence_source:_manualAi.perplexity?'manual':(perplexity.checked?'automatic_fallback':'not_checked'),answer_summary:_perplexityEvidenceText||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[],exact_page_citations:[],citation_sources:[]},
+            claude:{checked:!!_manualAi.claude,evidence_source:_manualAi.claude?'manual':'not_checked',answer_summary:_manualAi.claude||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]},
+            copilot:{checked:!!_manualAi.copilot,evidence_source:_manualAi.copilot?'manual':'not_checked',answer_summary:_manualAi.copilot||'NOT CHECKED',recommended_companies:[],mentioned_companies:[],domain_citations:[],exact_page_citations:[],citation_sources:[]}
+          };
+        }
+        if(!_merged.fact_safety)_merged.fact_safety={verified_business_facts_used:[],verify_first:_pwbVerifyFirst.slice(0,20),blocked_claims:_pwbBlocked.slice(0,20),rule:'Only VERIFIED or owner-provided facts may be asserted as client facts.'};
+        d2={candidates:[{content:{parts:[{text:JSON.stringify(_merged)}]},finishReason:'STOP'}]};
+        console.log('[prewrite-brief] network compact Gemini merged | strategy='+(_partA.ok?'ok':'fail')+' evidence='+(_partB.ok?'ok':'fallback')+' | '+(Date.now()-_pwbGeminiNetworkStartedAt)+'ms');
       }
-      if(_pwbNetworkFastLane && Date.now()-_pwbGeminiNetworkStartedAt>43000)break;
-      if(!_pwbNetworkFastLane && _gi===0)await new Promise(r=>setTimeout(r,350));
+    } else {
+      const _pwbGeminiModelLadder=[GEMINI_MODEL,GEMINI_MODEL];
+      for(let _gi=0;_gi<_pwbGeminiModelLadder.length && !d2;_gi++){
+        const _model=_pwbGeminiModelLadder[_gi];
+        _pwbGeminiAttempts=_gi+1; _pwbGeminiModelUsed=_model;
+        try{
+          const ctrl2=new AbortController(); const _t2=setTimeout(()=>ctrl2.abort(),32000);
+          const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
+          clearTimeout(_t2); _pwbGeminiStatus=r2.status; const _txt=await r2.text(); let _json={}; try{_json=_txt?JSON.parse(_txt):{}}catch(_je){}
+          if(r2.ok){d2=_json;break}
+          _pwbGeminiError=((_json.error&&_json.error.message)||_txt||('Gemini '+r2.status)).slice(0,700);
+          console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'failed:',r2.status,_pwbGeminiError.slice(0,220));
+          if(!(r2.status===429||r2.status>=500))break;
+        }catch(_ge){
+          _pwbGeminiNetworkFailure=true; _pwbGeminiStatus=0; _pwbGeminiTimedOut=!!(_ge&&_ge.name==='AbortError');
+          _pwbGeminiError=String(_pwbGeminiTimedOut?'Gemini request timed out after 32s':(_ge&&_ge.message||_ge)).slice(0,700);
+          console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'network failure:',_pwbGeminiError); break;
+        }
+        if(_gi===0)await new Promise(r=>setTimeout(r,350));
+      }
     }
-    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:true,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,model_ladder:_pwbNetworkFastLane?_pwbGeminiModelLadder:undefined,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane}});
+    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:true,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,split_generation:!!_pwbNetworkFastLane}});
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
     const m2 = rawText.match(/\{[\s\S]*\}/);
