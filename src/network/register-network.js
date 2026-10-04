@@ -1,6 +1,6 @@
 'use strict';
 
-// CONTENTSCALE NETWORK — APPROVED BRIEF CONTRACT + FIDELITY GATE v487
+// CONTENTSCALE NETWORK — DEFINITIVE OUTLINE + APPROVED BRIEF CONTRACT v488
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
@@ -910,12 +910,45 @@ function _briefSimilar(a,b){
 }
 function _briefUrlKey(v){try{const u=new URL(String(v));u.hash='';return (u.origin+u.pathname).replace(/\/$/,'').toLowerCase()}catch(e){return ''}}
 
+function _outlineHeadingSame(a,b){
+  const na=_briefNorm(a),nb=_briefNorm(b);if(!na||!nb)return false;
+  if(na===nb)return true;
+  const shorter=na.length<=nb.length?na:nb,longer=na.length>nb.length?na:nb;
+  if(longer.includes(shorter)&&shorter.length>=18&&shorter.length/longer.length>=0.72)return true;
+  const aa=Array.from(new Set(_briefTokens(a))),bb=Array.from(new Set(_briefTokens(b)));if(!aa.length||!bb.length)return false;
+  const bs=new Set(bb),hits=aa.filter(x=>bs.has(x)).length,union=new Set(aa.concat(bb)).size;
+  return union>0&&hits/union>=0.72;
+}
+
+function buildCanonicalApprovedOutline(briefJson){
+  const b=safeJsonObject(briefJson),structure=safeJsonObject(b.recommended_structure);
+  const definitive=_briefArray(b.definitive_outline);
+  const rawBlueprint=_briefArray(b.page_blueprint,b.blueprint,b.h2_structure,b.outline,structure.h2s,structure.sections);
+  const normalizeSection=item=>{
+    if(typeof item==='string')return {h2:cleanText(item,300),purpose:'',target_words:null,cover:[],citation_hook:''};
+    if(!item||typeof item!=='object')return null;
+    return {h2:_briefItemText(item,['h2','heading','title','name']),purpose:cleanText(item.purpose||item.goal||item.intent||item.description||item.summary||'',1200),target_words:Number(item.target_words||item.targetWords||item.word_count||item.words||0)||null,cover:_briefArray(item.cover,item.must_cover,item.points,item.subtopics,item.topics).map(x=>_briefItemText(x,['text','title','name'])).filter(Boolean).slice(0,8),citation_hook:cleanText(item.citation_hook||item.citationHook||item.evidence_hook||item.source_hook||item.support_with||'',1800)};
+  };
+  if(definitive.length){
+    return definitive.map(normalizeSection).filter(x=>x&&x.h2).slice(0,16);
+  }
+  const pool=rawBlueprint.map(normalizeSection).filter(x=>x&&x.h2);
+  const headings=[];const add=h=>{h=cleanText(h,300);if(h&&!headings.some(x=>_outlineHeadingSame(x,h)))headings.push(h)};
+  _briefArray(structure.must_have_h2s).forEach(x=>add(_briefItemText(x,['h2','heading','title','name'])));
+  _briefArray(structure.h2s,structure.sections).forEach(x=>add(_briefItemText(x,['h2','heading','title','name'])));
+  pool.forEach(x=>add(x.h2));
+  return headings.slice(0,16).map(h=>{
+    const sec=pool.find(x=>_outlineHeadingSame(h,x.h2))||{};
+    return {h2:h,purpose:sec.purpose||'',target_words:sec.target_words||null,cover:Array.isArray(sec.cover)?sec.cover:[],citation_hook:sec.citation_hook||''};
+  });
+}
+
 function buildApprovedBriefContract(briefJson){
   const b=safeJsonObject(briefJson),structure=safeJsonObject(b.recommended_structure),entities=safeJsonObject(b.entity_strategy),evidence=safeJsonObject(b.evidence),balance=safeJsonObject(b.balance);
-  const blueprint=_briefArray(b.page_blueprint,b.blueprint,b.h2_structure,b.outline,structure.h2s,structure.sections);
+  const blueprint=buildCanonicalApprovedOutline(b);
   const plannedH2s=[];const citationUrls=[];
   for(const item of blueprint){
-    const heading=_briefItemText(item,['h2','heading','title','name']);if(heading&&!plannedH2s.some(x=>_briefSimilar(x,heading)))plannedH2s.push(heading);
+    const heading=_briefItemText(item,['h2','heading','title','name']);if(heading&&!plannedH2s.some(x=>_outlineHeadingSame(x,heading)))plannedH2s.push(heading);
     if(item&&typeof item==='object') citationUrls.push(...extractUrlsDeep(item.citation_hook||item.citations||item.sources||item.source||''));
   }
   const paa=_briefArray(b.paa_questions,b.people_also_ask,b.paa,b.questions).map(x=>_briefItemText(x,['q','question','query','title'])).filter(Boolean);
@@ -926,12 +959,14 @@ function buildApprovedBriefContract(briefJson){
   const useCases=_briefArray(b.use_cases,b.practical_use_cases).map(x=>_briefItemText(x,['audience','title','name'])).filter(Boolean);
   const externalTargets=extractUrlsDeep([b.external_source_targets,b.citation_targets,evidence.official_sources,evidence.sources,b.official_sources,b.external_sources]);
   const requiredEvidenceUrls=Array.from(new Set((citationUrls.length?citationUrls:externalTargets).map(_briefUrlKey).filter(Boolean))).slice(0,12);
-  return {planned_h2s:Array.from(new Set(plannedH2s)).slice(0,16),paa_questions:Array.from(new Set(paa)).slice(0,12),faq_questions:Array.from(new Set(faq)).slice(0,12),entities:Array.from(new Set(entityList)).slice(0,30),quick_facts:Array.from(new Set(quickFacts)).slice(0,12),limitations:Array.from(new Set(limitations)).slice(0,10),use_cases:Array.from(new Set(useCases)).slice(0,10),required_evidence_urls:requiredEvidenceUrls};
+  return {definitive_outline:blueprint.slice(0,16),planned_h2s:Array.from(new Set(plannedH2s)).slice(0,16),paa_questions:Array.from(new Set(paa)).slice(0,12),faq_questions:Array.from(new Set(faq)).slice(0,12),entities:Array.from(new Set(entityList)).slice(0,30),quick_facts:Array.from(new Set(quickFacts)).slice(0,12),limitations:Array.from(new Set(limitations)).slice(0,10),use_cases:Array.from(new Set(useCases)).slice(0,10),required_evidence_urls:requiredEvidenceUrls,structure_rule:'planned_h2s / definitive_outline are authoritative. Use every H2 exactly once and in this order.'};
 }
 
 function checkApprovedBriefFidelity(html, briefJson, opts={}){
   const contract=buildApprovedBriefContract(briefJson),articleText=htmlText(html),articleNorm=_briefNorm(articleText),h2s=extractH2Headings(html).map(x=>x.text),links=Array.from(String(html||'').matchAll(/<a\b[^>]*href=["']([^"']+)["']/gi)).map(m=>m[1]),linkKeys=new Set(links.map(_briefUrlKey).filter(Boolean));
-  const missingH2s=contract.planned_h2s.filter(x=>!h2s.some(y=>_briefSimilar(x,y)));
+  const matchedH2Indexes=contract.planned_h2s.map(x=>h2s.findIndex(y=>_outlineHeadingSame(x,y)));
+  const missingH2s=contract.planned_h2s.filter((x,i)=>matchedH2Indexes[i]<0);
+  const outlineOrderBroken=!missingH2s.length&&matchedH2Indexes.some((idx,i)=>i>0&&idx<=matchedH2Indexes[i-1]);
   const questionMissing=q=>{const nq=_briefNorm(q);return nq&&!articleNorm.includes(nq)};
   const missingPaa=contract.paa_questions.filter(questionMissing),missingFaq=contract.faq_questions.filter(questionMissing);
   const missingEntities=contract.entities.filter(x=>{const n=_briefNorm(x);return n&&!articleNorm.includes(n)});
@@ -943,7 +978,7 @@ function checkApprovedBriefFidelity(html, briefJson, opts={}){
   const publisherHost=normalizeHost(opts.publisher_domain||'');
   const internalLinks=links.filter(u=>{const h=normalizeHost(u);return publisherHost&&h&&(h===publisherHost||h.endsWith('.'+publisherHost))});
   const missingInternal=(internalCandidates.length>0&&internalLinks.length===0)?internalCandidates.slice(0,5):[];
-  const groups={page_blueprint:missingH2s,paa_answers:missingPaa,faq_questions:missingFaq,entities:missingEntities,quick_facts:missingQuickFacts,limitations:missingLimitations,use_cases:missingUseCases,evidence_links:missingEvidence,internal_links:missingInternal};
+  const groups={definitive_outline:missingH2s,outline_order:outlineOrderBroken?contract.planned_h2s:[],paa_answers:missingPaa,faq_questions:missingFaq,entities:missingEntities,quick_facts:missingQuickFacts,limitations:missingLimitations,use_cases:missingUseCases,evidence_links:missingEvidence,internal_links:missingInternal};
   const missing=Object.entries(groups).filter(([,v])=>Array.isArray(v)&&v.length).map(([k])=>k);
   return {passed:missing.length===0,missing,groups,contract,counts:{planned_h2s:contract.planned_h2s.length,paa:contract.paa_questions.length,faq:contract.faq_questions.length,entities:contract.entities.length,evidence_urls:contract.required_evidence_urls.length,internal_candidates:internalCandidates.length,internal_links:internalLinks.length}};
 }
@@ -2175,6 +2210,7 @@ ${manual||'No manual notes supplied.'}`;
 
 APPROVED PREWRITE BRIEF = CONTENT CONTRACT:
 - The linked approved Prewrite is not optional inspiration. Execute its planned H2 coverage, real PAA/FAQ questions, entity coverage, evidence/citation hooks, limitations and practical use cases when present.
+- planned_h2s / definitive_outline in the approved contract are the authoritative article structure. Use every planned H2 exactly once, in exactly that order. You may use H3s inside a planned H2, but do not rename, merge, omit, split or reorder the planned H2s.
 - Do not silently omit a planned Brief item. If evidence is insufficient for a claim, keep the section but state the limitation without inventing facts.
 - Use the exact evidence/source URLs supplied by the Brief where the Brief asks for a citation. Do not replace them with invented URLs.
 - Internal links are internal only when they point to the PUBLISHER domain (${x.publisher_domain}). Owner/source-domain links are external evidence from the publisher's perspective.
@@ -2242,6 +2278,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
 
 STRICT RULES:
 - The approved Brief is a content contract. Every missing contract item listed below must be resolved in the article unless the Brief itself says evidence is unavailable.
+- If definitive_outline or outline_order is missing, rebuild the H2 structure to match FULL APPROVED CONTRACT.planned_h2s exactly once and in exact order; preserve useful existing content under the correct canonical H2 instead of dropping it.
 - Preserve factual accuracy. Never invent statistics, URLs, case studies, quotes, outcomes or first-hand experience.
 - Preserve one H1, direct answer, TL;DR, linked TOC, useful table and semantic HTML.
 - Answer the exact real PAA/FAQ questions from the Brief when they are missing.
@@ -2334,7 +2371,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:d.meta_title||'',meta_d
     const _numFirst=(...xs)=>{for(const x of xs){const n=Number(x);if(Number.isFinite(n)&&n>0)return n}return null};
     const contentRequirements=prewriteBrief?{
       target_words:_numFirst(_briefJson.target_word_count,_briefJson.recommended_word_count,_briefJson.content_requirements&&_briefJson.content_requirements.target_words,_briefJson.content_requirements&&_briefJson.content_requirements.word_count),
-      planned_h2s:_arrCount(_briefJson.page_blueprint,_briefJson.blueprint,_briefJson.h2_structure,_briefJson.outline,_briefJson.recommended_structure&&_briefJson.recommended_structure.h2s,_briefJson.content_requirements&&_briefJson.content_requirements.h2s),
+      planned_h2s:_arrCount(_briefJson.definitive_outline,_briefJson.page_blueprint,_briefJson.blueprint,_briefJson.h2_structure,_briefJson.outline,_briefJson.recommended_structure&&_briefJson.recommended_structure.h2s,_briefJson.content_requirements&&_briefJson.content_requirements.h2s),
       paa_count:_arrCount(_briefJson.paa_questions,_briefJson.people_also_ask,_briefJson.questions),
       faq_count:_arrCount(_briefJson.faq_questions,_briefJson.faqs,_briefJson.content_requirements&&_briefJson.content_requirements.faqs),
       stats_count:_arrCount(_briefJson.original_statistics,_briefJson.statistics,_briefJson.stats),
