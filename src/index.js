@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v451-NETWORK-PREWRITE-GATEWAY-BUDGET';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v452-NETWORK-PREWRITE-GEMINI-FALLBACK';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58135,14 +58135,31 @@ Return ONLY valid JSON, no markdown, no preamble.
       + '\n- Do not output Markdown; return valid JSON only.';
     _pwbStage='gemini';
     const geminiKey = process.env.GEMINI_API_KEY;
-    let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0,_pwbGeminiNetworkFailure=false;
-    for(let _ga=1;_ga<=(_pwbNetworkFastLane?1:2)&&!d2;_ga++){
-      _pwbGeminiAttempts=_ga;
+    let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0,_pwbGeminiNetworkFailure=false,_pwbGeminiModelUsed='';
+
+    // v452 — Network embedded Prewrite must not die just because the globally selected
+    // Gemini model/config is unavailable on this key. v451 used one model only and stopped
+    // on hard 4xx responses, so an INVALID_ARGUMENT / model mismatch surfaced as our own 502.
+    // For an authorized synthetic Network tracker only, try a short ordered model ladder.
+    // The fast-lane request deliberately omits thinkingConfig because support differs by model.
+    // Normal Tracker Prewrite keeps the prior model/retry behavior unchanged.
+    const _pwbGeminiModelLadder = _pwbNetworkFastLane
+      ? Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL, 'gemini-2.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))).slice(0,3)
+      : [GEMINI_MODEL, GEMINI_MODEL];
+
+    for(let _gi=0;_gi<_pwbGeminiModelLadder.length && !d2;_gi++){
+      const _model=_pwbGeminiModelLadder[_gi];
+      _pwbGeminiAttempts=_gi+1;
+      _pwbGeminiModelUsed=_model;
       try{
-        const ctrl2 = new AbortController(); const _t2=setTimeout(() => ctrl2.abort(), _pwbNetworkFastLane?24000:32000);
-        const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
+        const ctrl2 = new AbortController();
+        const _timeoutMs = _pwbNetworkFastLane ? 12000 : 32000;
+        const _t2=setTimeout(() => ctrl2.abort(), _timeoutMs);
+        const _generationConfig={temperature:0.4,maxOutputTokens:_pwbNetworkFastLane?10000:16384,responseMimeType:'application/json'};
+        if(!_pwbNetworkFastLane)_generationConfig.thinkingConfig={thinkingBudget:0};
+        const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + finalPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: _pwbNetworkFastLane?10000:16384, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
+          body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + finalPrompt }] }], generationConfig: _generationConfig }),
           signal: ctrl2.signal
         });
         clearTimeout(_t2);
@@ -58151,17 +58168,20 @@ Return ONLY valid JSON, no markdown, no preamble.
         let _json={};try{_json=_txt?JSON.parse(_txt):{}}catch(_je){}
         if(r2.ok){d2=_json;break}
         _pwbGeminiError=((_json.error&&_json.error.message)||_txt||('Gemini '+r2.status)).slice(0,700);
-        console.warn('[prewrite-brief] Gemini attempt',_ga,'failed:',r2.status,_pwbGeminiError.slice(0,220));
-        if(!(r2.status===429||r2.status>=500))break;
+        console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'failed:',r2.status,_pwbGeminiError.slice(0,220));
+        // Normal Tracker preserves the old hard-error stop. Network embed is allowed to
+        // continue to the next known-compatible model even for 400/403/404 model/config errors.
+        if(!_pwbNetworkFastLane && !(r2.status===429||r2.status>=500))break;
       }catch(_ge){
         _pwbGeminiNetworkFailure=true;
-        _pwbGeminiError=String(_ge&&_ge.message||_ge).slice(0,700);
-        console.warn('[prewrite-brief] Gemini attempt',_ga,'network failure:',_pwbGeminiError);
-        break;
+        _pwbGeminiStatus=0;
+        _pwbGeminiError=String(_ge&&_ge.name==='AbortError'?'Gemini request timed out':(_ge&&_ge.message||_ge)).slice(0,700);
+        console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'network failure:',_pwbGeminiError);
+        if(!_pwbNetworkFastLane)break;
       }
-      if(_ga===1)await new Promise(r=>setTimeout(r,350));
+      if(!_pwbNetworkFastLane && _gi===0)await new Promise(r=>setTimeout(r,350));
     }
-    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:_pwbGeminiStatus===429||_pwbGeminiStatus>=500||!_pwbGeminiStatus,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane}});
+    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:true,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,model_ladder:_pwbNetworkFastLane?_pwbGeminiModelLadder:undefined,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane}});
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
     const m2 = rawText.match(/\{[\s\S]*\}/);
