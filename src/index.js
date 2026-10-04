@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v471-NETWORK-PREWRITE-PART3-QUALITY-HANDOFF-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v472-NETWORK-PREWRITE-STALE-REOPEN-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -45765,6 +45765,17 @@ async function reopenPrewriteBrief(id) {
     result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     _networkPrewriteEmitState();
   } catch (e) {
+    var _stale = !!(e && e.status === 404 && e.payload && e.payload.stale_network_brief);
+    if (_stale) {
+      stat.textContent = 'Saved brief is no longer linked here. Create or choose a current brief.';
+      try {
+        var _u = new URL(window.location.href);
+        _u.searchParams.delete('networkBrief');
+        window.history.replaceState({}, '', _u.pathname + (_u.search ? _u.search : '') + (_u.hash || ''));
+      } catch (_urlErr) {}
+      loadRecentPrewriteBriefs();
+      return;
+    }
     stat.textContent = '\u274c ' + e.message;
   }
 }
@@ -58950,7 +58961,27 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
       }
     }
 
-    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
+    // v472 — historical Network brief recall. A stale networkBrief URL may point to a
+    // brief that is no longer the currently linked brief. Allow recall only when the
+    // brief was created by the synthetic tracker belonging to this exact placement.
+    if (!r.rows.length) {
+      const placementId = Number(req.query && req.query.networkPlacement || 0);
+      const wantsNetworkEmbed = String(req.query && req.query.networkEmbed || '') === '1';
+      if (wantsNetworkEmbed && Number.isSafeInteger(placementId) && placementId > 0) {
+        const syntheticDomain = ('network-placement-' + placementId + '.internal.contentscale.site').toLowerCase();
+        const hr = await pool.query(`
+          SELECT pb.id, pb.keyword, pb.working_title, pb.language, pb.region,
+                 pb.brief_json, pb.competitors_scraped, pb.created_at
+          FROM prewrite_briefs pb
+          JOIN tracker_clients tc ON tc.id=pb.client_id
+          WHERE pb.id=$1 AND LOWER(COALESCE(tc.domain,''))=$2
+          LIMIT 1
+        `,[req.params.id, syntheticDomain]);
+        if (hr.rows.length) r = hr;
+      }
+    }
+
+    if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.', stale_network_brief: true });
     const row = r.rows[0];
     // Ensure the recalled brief carries its language so client-side labels render correctly,
     // even for older briefs saved before brief.language was embedded (lek 2 — Pre-Write).
