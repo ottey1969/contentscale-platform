@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v467-NETWORK-PREWRITE-QUALITY-COMPLETE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v468-NETWORK-PREWRITE-CLIENT-REGEX-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -45858,7 +45858,8 @@ function pwbLoadHtmlFallbackFile(inp){
   try{
     var f=inp&&inp.files&&inp.files[0],st=document.getElementById('pwbExistingHtmlFileStatus'),ta=document.getElementById('pwbExistingHtml');
     if(!f)return;
-    if(!/\.html?$/i.test(f.name||'')&&!/text\/html/i.test(f.type||'')){if(st)st.textContent='Choose an .html or .htm file.';inp.value='';return;}
+    var _fn=String(f.name||'').toLowerCase(),_ft=String(f.type||'').toLowerCase();
+    if(!(_fn.endsWith('.html')||_fn.endsWith('.htm')||_ft==='text/html')){if(st)st.textContent='Choose an .html or .htm file.';inp.value='';return;}
     if(f.size>2*1024*1024){if(st)st.textContent='HTML file is too large (max 2 MB).';inp.value='';return;}
     if(st)st.textContent='Reading '+f.name+'...';
     var r=new FileReader();r.onload=function(){if(ta)ta.value=String(r.result||'').slice(0,180000);if(st)st.textContent='Loaded '+f.name+' · optional fallback ready';};r.onerror=function(){if(st)st.textContent='Could not read this HTML file.';};r.readAsText(f);
