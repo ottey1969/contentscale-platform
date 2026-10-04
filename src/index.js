@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v482-NETWORK-v487-OPENING-PASSAGE-CANONICAL-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v483-NETWORK-v488-DEFINITIVE-OUTLINE-CONTRACT';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -46111,6 +46111,7 @@ function renderPrewriteBrief(b) {
     it: { metaPkgH:'Pacchetto meta \u2014 pronto da incollare', openingH:'Passaggio di apertura \u2014 prime 40-60 parole, citabile', blueprintH:'Blueprint della pagina \u2014 scrivi in questo ordine', iltH:'Obiettivi di link interni', compTableH:'Tabella concorrenti', domain:'Dominio', mustH2H:'H2 obbligatori', entitiesH:'Entit\u00e0 da coprire', structureH:'Struttura', metaDescH:'Meta descrizione' }
   };
   var _PLH = _PLH_ALL[(b && b.language ? String(b.language).slice(0,2).toLowerCase() : 'en')] || _PLH_ALL.en;
+  var _outlineForRender = (b && Array.isArray(b.definitive_outline) && b.definitive_outline.length) ? b.definitive_outline : ((b && Array.isArray(b.page_blueprint)) ? b.page_blueprint : []);
   // Labels for the AI-first blocks (ai_answer, quick_facts, entity_strategy, evidence,
   // balance, use_cases, conclusion, readiness). Same 7 languages as above, English fallback.
   var _PLX_ALL = {
@@ -46148,9 +46149,9 @@ function renderPrewriteBrief(b) {
   if (b.opening_passage && b.opening_passage.direct_answer) {
     lines.push(_PL.opening, b.opening_passage.direct_answer, '');
   }
-  if (Array.isArray(b.page_blueprint) && b.page_blueprint.length) {
-    lines.push(_PL.blueprint);
-    b.page_blueprint.forEach(function(sec, i){
+  if (Array.isArray(_outlineForRender) && _outlineForRender.length) {
+    lines.push(_PL.blueprint + (Array.isArray(b.definitive_outline)&&b.definitive_outline.length ? ' — CANONICAL / APPROVED' : ''));
+    _outlineForRender.forEach(function(sec, i){
       if (!sec || !sec.h2) return;
       lines.push('H2 ' + (i+1) + '. ' + sec.h2 + (sec.target_words ? ' (~' + sec.target_words + ' ' + _PL.words + ')' : ''));
       if (sec.purpose) lines.push('   ' + _PL.purpose + ': ' + sec.purpose);
@@ -46210,7 +46211,7 @@ function renderPrewriteBrief(b) {
   if (b.recommended_structure) {
     var s = b.recommended_structure;
     lines.push(_PL.structure, (s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' ' + _PL.words : ''), '');
-    if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
+    if ((!Array.isArray(b.definitive_outline)||!b.definitive_outline.length) && Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
       lines.push(_PL.mustH2);
       s.must_have_h2s.forEach(function(h){ lines.push('- ' + h); });
       lines.push('');
@@ -46362,13 +46363,13 @@ function renderPrewriteBrief(b) {
   if (b.recommended_structure) {
     var s = b.recommended_structure;
     html += '<div style="margin-bottom:10px;"><span style="color:#34d399;font-weight:700;">' + _PLH.structureH + ':</span> ' + esc(s.format||'') + (s.recommended_word_count ? ' \\u00b7 ~' + s.recommended_word_count + ' words' : '') + '</div>';
-    if (Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
+    if ((!Array.isArray(b.definitive_outline)||!b.definitive_outline.length) && Array.isArray(s.must_have_h2s) && s.must_have_h2s.length) {
       html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">' + _PLH.mustH2H + '</div><ul style="margin:0;padding-left:18px;">' + s.must_have_h2s.map(function(h){return '<li>'+esc(h)+'</li>';}).join('') + '</ul></div>';
     }
   }
-  if (Array.isArray(b.page_blueprint) && b.page_blueprint.length) {
-    html += '<div style="margin-bottom:12px;"><div style="color:#a78bfa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700;">' + _PLH.blueprintH + '</div>';
-    b.page_blueprint.forEach(function(sec, i){
+  if (Array.isArray(_outlineForRender) && _outlineForRender.length) {
+    html += '<div style="margin-bottom:12px;"><div style="color:#a78bfa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700;">' + _PLH.blueprintH + (Array.isArray(b.definitive_outline)&&b.definitive_outline.length?' · CANONICAL / APPROVED':'') + '</div>';
+    _outlineForRender.forEach(function(sec, i){
       var _h2 = esc(sec && sec.h2 || '');
       if (!_h2) return;
       var _purpose = esc(sec && sec.purpose || '');
@@ -46512,7 +46513,7 @@ function renderPrewriteBrief(b) {
   }
   if (b.ai_quality_check) {
     var _qc = b.ai_quality_check;
-    var _qcLab = { meta_package:_PLH.metaPkgH, opening_passage:_PLH.openingH, page_blueprint:_PLH.blueprintH, ai_answer:_PLX.aiAnswerH, quick_facts:_PLX.quickFactsH, entity_strategy:_PLX.entityH, entity_relationships:_PLX.relH, evidence:_PLX.evidenceH, official_sources:_PLX.srcH, balance:_PLX.balanceH, use_cases:_PLX.useCasesH, conclusion:_PLX.conclusionH };
+    var _qcLab = { meta_package:_PLH.metaPkgH, opening_passage:_PLH.openingH, definitive_outline:'Definitive outline', page_blueprint:_PLH.blueprintH, ai_answer:_PLX.aiAnswerH, quick_facts:_PLX.quickFactsH, entity_strategy:_PLX.entityH, entity_relationships:_PLX.relH, evidence:_PLX.evidenceH, official_sources:_PLX.srcH, balance:_PLX.balanceH, use_cases:_PLX.useCasesH, conclusion:_PLX.conclusionH };
     var _sc = typeof _qc.readiness_score === 'number' ? _qc.readiness_score : null;
     var _scCol = _sc == null ? '#9ca3af' : (_sc >= 80 ? '#4ade80' : (_sc >= 55 ? '#fbbf24' : '#f87171'));
     html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">'
@@ -57798,10 +57799,13 @@ function _pwbReadiness(b) {
   const _paaKey = v => String(v||'').toLowerCase().replace(/[?!.:,;\"'()\[\]{}]/g,' ').replace(/\s+/g,' ').trim();
   const _realPaa = (Array.isArray(b.people_also_ask)?b.people_also_ask:[]).map(x=>typeof x==='string'?x:(x&&x.question)||'').map(x=>String(x||'').trim()).filter(Boolean);
   const _paaAnswerMap = new Map((Array.isArray(b.paa_questions)?b.paa_questions:[]).map(x=>[ _paaKey(x&&x.q), x&&x.a ]).filter(x=>x[0]));
+  const _outline = (Array.isArray(b.definitive_outline)&&b.definitive_outline.length)?b.definitive_outline:(Array.isArray(b.page_blueprint)?b.page_blueprint:[]);
+  const _mustH2s = b.recommended_structure&&Array.isArray(b.recommended_structure.must_have_h2s)?b.recommended_structure.must_have_h2s.filter(_s):[];
+  const _outlineSynced = _outline.length>=5 && (!_mustH2s.length || (_outline.length===_mustH2s.length && _outline.every((x,i)=>x&&_s(x.h2)&&_s(x.purpose)&&String(x.h2).trim()===String(_mustH2s[i]||'').trim())));
   const checks = {
     meta_package: !!(b.meta_package && _s(b.meta_package.seo_title) && _s(b.meta_package.meta_description)),
     opening_passage: !!(b.opening_passage && _s(b.opening_passage.direct_answer)),
-    page_blueprint: !!(Array.isArray(b.page_blueprint) && b.page_blueprint.filter(x=>x&&_s(x.h2)&&_s(x.purpose)).length>=5),
+    definitive_outline: !!_outlineSynced,
     ai_answer: !!(b.ai_answer && _s(b.ai_answer.direct_answer) && Array.isArray(b.ai_answer.key_takeaways) && b.ai_answer.key_takeaways.filter(_s).length>=3),
     quick_facts: !!(Array.isArray(b.quick_facts) && b.quick_facts.filter(x=>x&&_s(x.label)&&_s(x.value)).length>=3),
     entity_strategy: !!(b.entity_strategy && Array.isArray(b.entity_strategy.primary) && b.entity_strategy.primary.filter(_s).length>=2),
@@ -57818,7 +57822,7 @@ function _pwbReadiness(b) {
   };
   const keys = Object.keys(checks);
   checks.readiness_score = Math.round(keys.filter(k => checks[k]).length / keys.length * 100);
-  const critical=['meta_package','opening_passage','page_blueprint','ai_answer','quick_facts','entity_strategy','entity_relationships','evidence','official_sources','balance','use_cases','conclusion','paa_answers','action_plan'];
+  const critical=['meta_package','opening_passage','definitive_outline','ai_answer','quick_facts','entity_strategy','entity_relationships','evidence','official_sources','balance','use_cases','conclusion','paa_answers','action_plan'];
   checks.ready_for_generation=checks.readiness_score>=90 && critical.every(k=>checks[k]===true);
   checks.missing=critical.filter(k=>checks[k]!==true);
   return checks;
@@ -58883,8 +58887,50 @@ ${claimsBlock.slice(0,2400)}`;
         return {h2:h2,purpose:purpose,target_words:targetWords||null,cover:cover,citation_hook:citationHook};
       }).filter(Boolean).slice(0,14);
     };
+    // v483 — one authoritative structure contract. recommended_structure.must_have_h2s
+    // and page_blueprint used to drift apart (for example 9 required H2s vs 5 blueprint H2s).
+    // Build one deterministic heading order first, then align all detailed section data to it.
+    const _pwbHeadingNorm=function(v){return String(v||'').toLowerCase().replace(/&/g,' and ').replace(/[^\p{L}\p{N}]+/gu,' ').replace(/\s+/g,' ').trim();};
+    const _pwbHeadingTokens=function(v){return _pwbHeadingNorm(v).split(' ').filter(function(x){return x.length>2&&!['the','and','for','with','from','that','this','what','when','your','into','how','why','are','vs','via','een','het','van','voor','met','wat','hoe','waarom','und','der','die','das','con','para','que'].includes(x);});};
+    const _pwbHeadingSimilar=function(a,b){
+      const na=_pwbHeadingNorm(a),nb=_pwbHeadingNorm(b);if(!na||!nb)return false;
+      if(na===nb)return true;
+      const shorter=na.length<=nb.length?na:nb,longer=na.length>nb.length?na:nb;
+      if(longer.includes(shorter)&&shorter.length>=18&&shorter.length/longer.length>=0.72)return true;
+      const aa=Array.from(new Set(_pwbHeadingTokens(a))),bb=Array.from(new Set(_pwbHeadingTokens(b)));if(!aa.length||!bb.length)return false;
+      const bs=new Set(bb),hits=aa.filter(function(x){return bs.has(x);}).length,union=new Set(aa.concat(bb)).size;
+      return union>0&&hits/union>=0.72;
+    };
+    const _pwbCanonicalHeadingList=function(b){
+      const out=[];const add=function(v){const h=String(v||'').trim();if(h&&!out.some(function(x){return _pwbHeadingSimilar(x,h);}))out.push(h);};
+      const rs=(b&&b.recommended_structure&&typeof b.recommended_structure==='object')?b.recommended_structure:{};
+      const must=Array.isArray(rs.must_have_h2s)?rs.must_have_h2s:[];
+      must.forEach(function(x){add(typeof x==='string'?x:(x&&(x.h2||x.heading||x.title||x.name)||''));});
+      const rsSections=Array.isArray(rs.h2s)?rs.h2s:(Array.isArray(rs.sections)?rs.sections:[]);
+      rsSections.forEach(function(x){add(typeof x==='string'?x:(x&&(x.h2||x.heading||x.title||x.name)||''));});
+      (Array.isArray(b&&b.page_blueprint)?b.page_blueprint:[]).forEach(function(x){add(x&&x.h2);});
+      return out.slice(0,14);
+    };
+    const _pwbAlignOutlineToHeadings=function(headings,candidate){
+      const pool=_pwbNormBlueprint(candidate);return (headings||[]).map(function(h){
+        const sec=pool.find(function(x){return x&&_pwbHeadingSimilar(h,x.h2);})||{};
+        return {h2:String(h||'').trim(),purpose:String(sec.purpose||'').trim(),target_words:sec.target_words||null,cover:Array.isArray(sec.cover)?sec.cover.slice(0,8):[],citation_hook:String(sec.citation_hook||'').trim()};
+      }).filter(function(x){return x.h2;}).slice(0,14);
+    };
+    const _pwbSyncDefinitiveOutline=function(candidate){
+      const headings=_pwbCanonicalHeadingList(brief);
+      const outline=_pwbAlignOutlineToHeadings(headings,candidate||brief.page_blueprint||[]);
+      brief.definitive_outline=outline;
+      brief.page_blueprint=outline.map(function(x){return Object.assign({},x,{cover:Array.isArray(x.cover)?x.cover.slice():[]});});
+      if(!brief.recommended_structure||typeof brief.recommended_structure!=='object'||Array.isArray(brief.recommended_structure))brief.recommended_structure={};
+      brief.recommended_structure.must_have_h2s=outline.map(function(x){return x.h2;});
+      brief.recommended_structure.h2s=outline.map(function(x){return x.h2;});
+      brief.structure_contract={version:1,authoritative_field:'definitive_outline',h2_count:outline.length,rule:'definitive_outline is the only approved H2 order. page_blueprint and recommended_structure.must_have_h2s are synchronized mirrors.'};
+      return outline;
+    };
     brief.opening_passage=_pwbNormOpeningPassage(brief.opening_passage);
     brief.page_blueprint=_pwbNormBlueprint(brief.page_blueprint);
+    _pwbSyncDefinitiveOutline(brief.page_blueprint);
     brief.ai_answer=_pwbNormAiAnswer(brief.ai_answer);
     // opening_passage and ai_answer serve the same answer-first intent. If Gemini returned a
     // valid canonical AI direct answer but omitted/misshaped the opening object, reuse that
@@ -58935,7 +58981,9 @@ ${claimsBlock.slice(0,2400)}`;
     const _pwbCanonicalGood=function(v){return typeof v==='string'&&!!v.trim()&&!/^insufficient_data$/i.test(v.trim())&&!/^\[object Object\]$/i.test(v.trim());};
     const _pwbCanonicalNeeds=[];
     if(!brief.opening_passage||!_pwbCanonicalGood(brief.opening_passage.direct_answer))_pwbCanonicalNeeds.push('opening_passage');
-    if(!Array.isArray(brief.page_blueprint)||brief.page_blueprint.filter(function(x){return x&&_pwbCanonicalGood(x.h2)&&_pwbCanonicalGood(x.purpose);}).length<5)_pwbCanonicalNeeds.push('page_blueprint');
+    const _pwbRequiredOutlineHeadings=_pwbCanonicalHeadingList(brief);
+    const _pwbOutlineComplete=Array.isArray(brief.definitive_outline)&&brief.definitive_outline.length>=5&&brief.definitive_outline.length===_pwbRequiredOutlineHeadings.length&&brief.definitive_outline.every(function(x,i){return x&&_pwbCanonicalGood(x.h2)&&_pwbCanonicalGood(x.purpose)&&_pwbHeadingSimilar(x.h2,_pwbRequiredOutlineHeadings[i]);});
+    if(!_pwbOutlineComplete)_pwbCanonicalNeeds.push('definitive_outline');
     if(!brief.ai_answer||!_pwbCanonicalGood(brief.ai_answer.direct_answer)||!Array.isArray(brief.ai_answer.key_takeaways)||brief.ai_answer.key_takeaways.filter(_pwbCanonicalGood).length<3)_pwbCanonicalNeeds.push('ai_answer');
     if(!Array.isArray(brief.quick_facts)||brief.quick_facts.filter(function(x){return x&&_pwbCanonicalGood(x.label)&&_pwbCanonicalGood(x.value);}).length<3)_pwbCanonicalNeeds.push('quick_facts');
     if(!Array.isArray(brief.use_cases)||brief.use_cases.filter(function(x){return x&&_pwbCanonicalGood(x.audience)&&_pwbCanonicalGood(x.scenario)&&_pwbCanonicalGood(x.benefit);}).length<2)_pwbCanonicalNeeds.push('use_cases');
@@ -58948,6 +58996,7 @@ ${claimsBlock.slice(0,2400)}`;
       const _pwbCanonicalRules={
         opening_passage:'Return exactly {"opening_passage":{"direct_answer":"40-60 word self-contained answer","why_it_wins":"one sentence explaining why this passage is clear and extractable"}}. Lead immediately with the answer to the target query. Use only supplied research and conservative definitions. Do not invent URLs, statistics, client outcomes, rankings, guarantees, credentials or experience.',
         page_blueprint:'Return exactly {"page_blueprint":[{"h2":"...","purpose":"...","target_words":250,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":300,"cover":["...","..."],"citation_hook":"..."},{"h2":"...","purpose":"...","target_words":250,"cover":["...","..."],"citation_hook":"..."}]}. At least 5 distinct sections, in writing order. Every section needs h2 + purpose. Use the supplied research for subtopics and citation hooks. Do not invent URLs, statistics, client outcomes or experience.',
+        definitive_outline:`Return exactly {"definitive_outline":[{"h2":"EXACT REQUIRED H2","purpose":"specific purpose","target_words":300,"cover":["specific subtopic","specific subtopic"],"citation_hook":"what supplied evidence should support this section"}]}. You MUST return every required H2 below exactly once, in exactly this order, with no extra H2s. Do not rename, merge, omit or reorder headings. Fill purpose, target_words, cover and citation_hook for each. Never invent URLs, statistics, client outcomes or experience. REQUIRED H2 ORDER:\n${_pwbRequiredOutlineHeadings.map(function(h,i){return (i+1)+'. '+h;}).join('\n')}`,
         ai_answer:'Return exactly {"ai_answer":{"primary_question":"...","secondary_questions":["...","...","...","..."],"direct_answer":"40-60 words","why_it_matters":"...","who_is_it_for":"...","key_takeaways":["...","...","..."]}}. Use a concise definitional answer supported by the supplied research. No unsupported metrics, guarantees or result claims.',
         quick_facts:'Return exactly {"quick_facts":[{"label":"...","value":"..."},{"label":"...","value":"..."},{"label":"...","value":"..."},{"label":"...","value":"..."}]}. Use 4 useful, topic-specific, non-numeric facts or definitions that are directly supported by the supplied research. Do not describe our research process.',
         use_cases:'Return exactly {"use_cases":[{"audience":"...","scenario":"...","benefit":"..."},{"audience":"...","scenario":"...","benefit":"..."}]}. Use distinct reader situations and practical benefits. These are use scenarios, not client case studies; do not invent achieved results.',
@@ -58973,11 +59022,12 @@ ${compSummary.slice(0,5000)}
 
 FACT SAFETY:
 ${claimsBlock.slice(0,2400)}`;
-        const _r=await _pwbCompactCall('quality_canonical_'+_key,_prompt,_key==='page_blueprint'?3600:(_key==='paa_questions'?3400:(_key==='ai_answer'?2800:(_key==='opening_passage'?2200:2400))),[_key]);
+        const _r=await _pwbCompactCall('quality_canonical_'+_key,_prompt,_key==='definitive_outline'?5600:(_key==='page_blueprint'?3600:(_key==='paa_questions'?3400:(_key==='ai_answer'?2800:(_key==='opening_passage'?2200:2400)))),[_key]);
         _pwbGeminiAttempts+=(_r.attempts||0);
         if(_r.ok&&_r.obj&&Object.prototype.hasOwnProperty.call(_r.obj,_key)){
           if(_key==='opening_passage')brief.opening_passage=_pwbNormOpeningPassage(_r.obj.opening_passage);
-          if(_key==='page_blueprint')brief.page_blueprint=_pwbNormBlueprint(_r.obj.page_blueprint);
+          if(_key==='page_blueprint'){brief.page_blueprint=_pwbNormBlueprint(_r.obj.page_blueprint);_pwbSyncDefinitiveOutline(brief.page_blueprint);}
+          if(_key==='definitive_outline')_pwbSyncDefinitiveOutline(_r.obj.definitive_outline);
           if(_key==='ai_answer')brief.ai_answer=_pwbNormAiAnswer(_r.obj.ai_answer);
           if(_key==='quick_facts')brief.quick_facts=_pwbNormQuickFacts(_r.obj.quick_facts);
           if(_key==='use_cases')brief.use_cases=_pwbNormUseCases(_r.obj.use_cases);
@@ -59071,8 +59121,9 @@ ${claimsBlock.slice(0,2400)}`;
       ['meta_package',brief.meta_package],['opening_passage',brief.opening_passage],
       ['ai_answer',brief.ai_answer],['quick_facts',brief.quick_facts],['use_cases',brief.use_cases],
       ['paa_questions',brief.paa_questions],['citation_targets',brief.citation_targets],
-      ['page_blueprint',brief.page_blueprint],['conclusion',brief.conclusion]
+      ['definitive_outline',brief.definitive_outline],['page_blueprint',brief.page_blueprint],['conclusion',brief.conclusion]
     ].forEach(function(pair){if(pair[1]!=null)brief[pair[0]]=_pwbWalk(pair[1],pair[0]);});
+    if(Array.isArray(brief.definitive_outline)&&brief.definitive_outline.length)_pwbSyncDefinitiveOutline(brief.definitive_outline);
     if(_pwbRemoved.length){
       const removedClaims=Array.from(new Set(_pwbRemoved.map(function(x){return x.claim;}).filter(Boolean)));
       brief.fact_safety.verify_first=Array.from(new Set(brief.fact_safety.verify_first.concat(removedClaims)));
@@ -59082,7 +59133,7 @@ ${claimsBlock.slice(0,2400)}`;
     }
     // Do not trust the model's own `verified_business_facts_used` declaration. Rebuild it from
     // the final scrubbed paste-ready payload and the canonical VERIFIED ledger.
-    const _pwbPasteCorpus=_pwbFactNorm(JSON.stringify({meta_package:brief.meta_package,opening_passage:brief.opening_passage,ai_answer:brief.ai_answer,quick_facts:brief.quick_facts,paa_questions:brief.paa_questions,citation_targets:brief.citation_targets,page_blueprint:brief.page_blueprint,conclusion:brief.conclusion}));
+    const _pwbPasteCorpus=_pwbFactNorm(JSON.stringify({meta_package:brief.meta_package,opening_passage:brief.opening_passage,ai_answer:brief.ai_answer,quick_facts:brief.quick_facts,paa_questions:brief.paa_questions,citation_targets:brief.citation_targets,definitive_outline:brief.definitive_outline,page_blueprint:brief.page_blueprint,conclusion:brief.conclusion}));
     brief.fact_safety.verified_business_facts_used=_pwbVerified.filter(function(claim){
       const n=_pwbFactNorm(claim); if(!n)return false;
       if(_pwbPasteCorpus.indexOf(n)>=0)return true;
