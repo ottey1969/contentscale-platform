@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v474-NETWORK-PREWRITE-FIELD-QUALITY-REPAIR';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v475-NETWORK-PREWRITE-STRICT-CONTENT-QUALITY';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -46213,7 +46213,7 @@ function renderPrewriteBrief(b) {
   }
   if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
     lines.push(_PL.faq);
-    b.faq_questions.forEach(function(q){ lines.push('- ' + q); });
+    b.faq_questions.forEach(function(q){ var _fq=typeof q==='string'?q:(q&&(q.q||q.question||q.title||q.text)||''); if(_fq) lines.push('- ' + _fq); });
     lines.push('');
   }
   if (b.ai_answer && (b.ai_answer.direct_answer || (Array.isArray(b.ai_answer.key_takeaways) && b.ai_answer.key_takeaways.length))) {
@@ -46236,8 +46236,18 @@ function renderPrewriteBrief(b) {
     b.entity_strategy.relationships.forEach(function(r){ if (r && r.subject) lines.push('- ' + r.subject + ' \\u2192 ' + (r.relation||'') + ' \\u2192 ' + (r.object||'')); });
     lines.push('');
   }
-  if (b.evidence && b.evidence.experience_to_include) {
-    lines.push(_PLX.expH.toUpperCase(), b.evidence.experience_to_include, '');
+  if (b.evidence) {
+    if (Array.isArray(b.evidence.official_sources) && b.evidence.official_sources.length) {
+      lines.push(_PLX.srcH.toUpperCase());
+      b.evidence.official_sources.forEach(function(x){ if(x) lines.push('- ' + (typeof x==='string'?x:(x.name||x.url||x.value||''))); });
+      lines.push('');
+    }
+    if (b.evidence.experience_to_include) lines.push(_PLX.expH.toUpperCase(), b.evidence.experience_to_include, '');
+    if (Array.isArray(b.evidence.trust_signals) && b.evidence.trust_signals.length) {
+      lines.push(_PLX.trustH.toUpperCase());
+      b.evidence.trust_signals.forEach(function(x){ if(x) lines.push('- ' + (typeof x==='string'?x:(x.name||x.value||''))); });
+      lines.push('');
+    }
   }
   if (b.balance && Array.isArray(b.balance.limitations) && b.balance.limitations.length) {
     lines.push(_PLX.limH.toUpperCase());
@@ -57782,16 +57792,16 @@ function _pwbReadiness(b) {
     opening_passage: !!(b.opening_passage && _s(b.opening_passage.direct_answer)),
     page_blueprint: _a(b.page_blueprint),
     ai_answer: !!(b.ai_answer && _s(b.ai_answer.direct_answer)),
-    quick_facts: _a(b.quick_facts),
-    entity_strategy: !!(b.entity_strategy && _a(b.entity_strategy.primary)),
-    entity_relationships: !!(b.entity_strategy && _a(b.entity_strategy.relationships)),
-    evidence: !!(b.evidence && (_a(b.evidence.trust_signals) || _s(b.evidence.experience_to_include))),
-    official_sources: !!(b.evidence && _a(b.evidence.official_sources)),
+    quick_facts: !!(Array.isArray(b.quick_facts) && b.quick_facts.filter(x=>x&&_s(x.label)&&_s(x.value)).length>=3),
+    entity_strategy: !!(b.entity_strategy && Array.isArray(b.entity_strategy.primary) && b.entity_strategy.primary.filter(_s).length>=2),
+    entity_relationships: !!(b.entity_strategy && Array.isArray(b.entity_strategy.relationships) && b.entity_strategy.relationships.filter(x=>x&&_s(x.subject)&&_s(x.relation)&&_s(x.object)).length>=2),
+    evidence: !!(b.evidence && Array.isArray(b.evidence.trust_signals) && b.evidence.trust_signals.filter(_s).length>=2 && _s(b.evidence.experience_to_include)),
+    official_sources: !!(b.evidence && Array.isArray(b.evidence.official_sources) && b.evidence.official_sources.filter(x=>typeof x==='string'?_s(x):!!(x&&(_s(x.url)||_s(x.value)||_s(x.name)))).length>=2),
     internal_links: !!(b.link_research && b.link_research.internal && (Number(b.link_research.internal.urls_found||0)>0 ? _a(b.internal_link_targets) : true)),
     external_links: !!(b.link_research && b.link_research.external && (Number(b.link_research.external.candidates_found||0)===0 || _a(b.external_link_targets))),
     balance: !!(b.balance && (_a(b.balance.limitations) || _a(b.balance.comparisons))),
-    use_cases: _a(b.use_cases),
-    conclusion: !!(b.conclusion && _s(b.conclusion.recap)),
+    use_cases: !!(Array.isArray(b.use_cases) && b.use_cases.filter(x=>x&&_s(x.audience)&&_s(x.scenario)&&_s(x.benefit)).length>=2),
+    conclusion: !!(b.conclusion && _s(b.conclusion.recap) && _s(b.conclusion.recommendation)),
     paa_answers: !Array.isArray(b.people_also_ask)||!b.people_also_ask.length || (Array.isArray(b.paa_questions)&&b.paa_questions.filter(x=>x&&_s(x.q)&&_s(x.a)).length>=b.people_also_ask.length),
     action_plan: Array.isArray(b.action_plan)&&b.action_plan.filter(x=>x&&_s(x.action)).length>=3
   };
@@ -58574,6 +58584,11 @@ Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}
           const m=[];
           if(!_usable(b.recommended_title_h1))m.push('recommended_title_h1');
           if(!_usable(b.top10_gap))m.push('top10_gap');
+          const _scrapedCompCount=(compScrapes||[]).filter(function(sc){return sc&&typeof sc.text==='string'&&sc.text.trim().length>=250;}).length;
+          if(_scrapedCompCount>=2){
+            const _need=Math.min(3,_scrapedCompCount), _good=Array.isArray(b.competitor_table)?b.competitor_table.filter(function(c){return c&&_usable(c.what_they_have)&&_usable(c.the_gap)&&_usable(c.what_to_add);}).length:0;
+            if(_good<_need)m.push('competitor_table');
+          }
           if(!b.recommended_structure||!_usable(b.recommended_structure.format)||!Array.isArray(b.recommended_structure.must_have_h2s)||b.recommended_structure.must_have_h2s.filter(_usable).length<4)m.push('recommended_structure');
           if(!b.meta_package||!_usable(b.meta_package.seo_title)||!_usable(b.meta_package.meta_description)||!_usable(b.meta_package.h1)||!_usable(b.meta_package.url_slug))m.push('meta_package');
           if(!b.opening_passage||!_usable(b.opening_passage.direct_answer))m.push('opening_passage');
@@ -58590,6 +58605,7 @@ Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}
           return Array.from(new Set(m));
         };
         const _completionGroups=[
+          {name:'competitors',keys:['competitor_table']},
           {name:'core',keys:['recommended_title_h1','top10_gap','recommended_structure','meta_package','opening_passage','page_blueprint','ai_answer']},
           {name:'trust',keys:['quick_facts','entity_strategy','evidence','balance','use_cases','conclusion']},
           {name:'faq_actions',keys:['paa_questions','action_plan']}
@@ -58603,6 +58619,7 @@ Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}
           const _completePrompt=`QUALITY COMPLETION — ${_group.name.toUpperCase()}. This is NEW content. Repair ONLY these top-level keys: ${_missing.join(', ')}. Return JSON ONLY with exactly those keys. Every returned field must be complete enough to publish from; do not return placeholders, insufficient_data, empty arrays or generic filler when the verified research below can support a useful answer. Never invent URLs, statistics, client claims, credentials or PAA questions.
 
 FIELD RULES:
+- competitor_table: return rows only for the supplied TOP RESULTS, preserving each rank. For every competitor whose Body excerpt is available, give one specific what_they_have, one specific the_gap, and one specific what_to_add grounded in that page. If Body excerpt says (not captured), use insufficient_data for those three fields rather than guessing. Never invent or change URLs.
 - recommended_structure: format + at least 5 specific must_have_h2s + suitable schema.
 - meta_package: complete seo_title, meta_description, h1, url_slug.
 - opening_passage: direct 40-60 word answer + why_it_wins.
@@ -58615,7 +58632,8 @@ FIELD RULES:
 - use_cases: at least 2 concrete audience/scenario/benefit objects.
 - conclusion: useful recap + recommendation + outlook.
 - paa_questions: answer EVERY REAL PAA below exactly; do not invent extra PAA.
-- action_plan: at least 3 concrete actions.
+- action_plan: at least 3 concrete actions. Do not recommend a generic "Table schema"; an HTML comparison table is presentation, not a schema.org type. Recommend structured data only when it matches the actual page content/type.
+- Across all copy, SEO/AEO/GEO may improve eligibility, extractability or citation likelihood but never guarantee ranking, featured snippets or AI citations.
 
 CURRENT CORE CONTEXT:
 ${JSON.stringify(_briefContext).slice(0,9000)}
@@ -58631,7 +58649,7 @@ ${compSummary.slice(0,6000)}
 
 FACT SAFETY:
 ${claimsBlock.slice(0,2800)}`;
-          const _completion=await _compactCall('quality_'+_group.name,_completePrompt,_group.name==='core'?5600:(_group.name==='trust'?5000:3000),_missing);
+          const _completion=await _compactCall('quality_'+_group.name,_completePrompt,_group.name==='core'?5600:(_group.name==='trust'?5000:(_group.name==='competitors'?4200:3000)),_missing);
           _pwbGeminiAttempts+=(_completion.attempts||0);
           if(!_completion.ok){_pwbGeminiNetworkFailure=true;_pwbGeminiStatus=Number(_completion.status||0);_pwbGeminiError=('quality_'+_group.name+': '+(_completion.error||'failed')).slice(0,900);_merged=null;break;}
           _missing.forEach(function(k){if(Object.prototype.hasOwnProperty.call(_completion.obj,k))_merged[k]=_completion.obj[k];});
@@ -58642,6 +58660,8 @@ ${claimsBlock.slice(0,2800)}`;
           // a top-level key with an under-filled object. Repair only the fields that still
           // fail the publication-quality validator instead of regenerating the whole Brief.
           const _fieldRepairRules={
+            quick_facts:`Return exactly {"quick_facts":[{"label":"...","value":"..."},{"label":"...","value":"..."},{"label":"...","value":"..."},{"label":"...","value":"..."}]}. Facts must teach the reader something about THIS topic and be grounded in supplied research. Do not use process metadata such as number of competitors analysed, search intent, or whether AI Overview evidence was supplied.`,
+            use_cases:`Return exactly {"use_cases":[{"audience":"...","scenario":"...","benefit":"..."},{"audience":"...","scenario":"...","benefit":"..."}]}. Each use case must be concrete, distinct and useful for this topic; do not invent client results or credentials.`,
             entity_strategy:`Return exactly {"entity_strategy":{"primary":["...","..."],"secondary":["..."],"supporting":["..."],"relationships":[{"subject":"...","relation":"...","object":"..."},{"subject":"...","relation":"...","object":"..."}]}}. Use only entities and relationships supported by the supplied SERP/research.`,
             evidence:`Return exactly {"evidence":{"official_sources":["source name + exact verified https URL","source name + exact verified https URL"],"statistics":[],"experience_to_include":"specific writer instruction","trust_signals":["specific trust signal","specific trust signal"]}}. Every source must come from VERIFIED EXTERNAL SOURCE WHITELIST. Do not invent statistics; an empty statistics array is valid.`,
             balance:`Return exactly {"balance":{"limitations":["specific caveat","specific caveat"],"who_should_not_use_it":["specific reader/situation if applicable"],"comparisons":[{"a":"...","b":"...","why_it_matters":"..."}]}}. Keep caveats factual and grounded in the topic/research.`,
@@ -58665,7 +58685,7 @@ ${compSummary.slice(0,5000)}
 
 FACT SAFETY:
 ${claimsBlock.slice(0,2400)}`;
-            const _fieldCompletion=await _compactCall('quality_field_'+_key,_fieldPrompt,_key==='evidence'?2600:2200,[_key]);
+            const _fieldCompletion=await _compactCall('quality_field_'+_key,_fieldPrompt,_key==='evidence'?2600:(_key==='quick_facts'||_key==='use_cases'?2400:2200),[_key]);
             _pwbGeminiAttempts+=(_fieldCompletion.attempts||0);
             if(_fieldCompletion.ok && _fieldCompletion.obj && Object.prototype.hasOwnProperty.call(_fieldCompletion.obj,_key)){
               _merged[_key]=_fieldCompletion.obj[_key];
@@ -58751,21 +58771,62 @@ ${claimsBlock.slice(0,2400)}`;
     ['recommended_title_h1','top10_gap','ai_overview_status'].forEach(function(k){brief[k]=_pwbText(brief[k]);});
     if(Array.isArray(brief.competitor_table)){
       const _modelComp=new Map(brief.competitor_table.map(function(x){return [Number(x&&x.rank||0),x||{}];}));
-      brief.competitor_table=top10.map(function(src,i){const rank=Number(src.rank||i+1),m=_modelComp.get(rank)||{};return {rank:rank,company_or_publisher:String(src.domain||''),domain:String(src.domain||''),exact_url:String(src.url||''),page_title:String(src.title||src.domain||''),what_they_have:_pwbText(m.what_they_have)||'insufficient_data',the_gap:_pwbText(m.the_gap)||'insufficient_data',what_to_add:_pwbText(m.what_to_add)||'insufficient_data'};});
+      brief.competitor_table=top10.map(function(src,i){
+        const rank=Number(src.rank||i+1),m=_modelComp.get(rank)||{},sc=compScrapes[i]||{},hasBody=typeof sc.text==='string'&&sc.text.trim().length>=250;
+        const fallback=hasBody?'analysis unavailable after quality pass':'page body could not be verified';
+        return {rank:rank,company_or_publisher:String(src.domain||''),domain:String(src.domain||''),exact_url:String(src.url||''),page_title:String(src.title||src.domain||''),what_they_have:_pwbText(m.what_they_have)||fallback,the_gap:_pwbText(m.the_gap)||fallback,what_to_add:_pwbText(m.what_to_add)||fallback};
+      });
     }
     // Normalize every optional model-owned collection before downstream processing.
     ['internal_link_targets','external_link_targets','quick_facts','paa_questions','citation_targets','page_blueprint','faq_questions','must_cover_entities','use_cases','action_plan','preserve_sections','surgical_changes','beat_number1_instructions'].forEach(function(k){ if(!Array.isArray(brief[k])) brief[k]=[]; });
+    // Canonicalise flexible model shapes before readiness/rendering. A non-empty object with
+    // the wrong keys must never count as a completed section.
+    brief.faq_questions=brief.faq_questions.map(function(q){return typeof q==='string'?q.trim():String(q&&(q.q||q.question||q.title||q.text)||'').trim();}).filter(Boolean);
+    brief.quick_facts=brief.quick_facts.map(function(f){
+      if(!f||typeof f!=='object'||Array.isArray(f))return null;
+      const label=String(f.label||f.name||f.key||f.title||'').trim();
+      const value=String(f.value||f.text||f.answer||f.description||'').trim();
+      return label&&value?{label:label,value:value}:null;
+    }).filter(Boolean).slice(0,10);
+    brief.use_cases=brief.use_cases.map(function(u){
+      if(!u||typeof u!=='object'||Array.isArray(u))return null;
+      const audience=String(u.audience||u.user||u.who||'').trim();
+      const scenario=String(u.scenario||u.situation||u.when||'').trim();
+      const benefit=String(u.benefit||u.outcome||u.why||'').trim();
+      return audience&&scenario&&benefit?{audience:audience,scenario:scenario,benefit:benefit}:null;
+    }).filter(Boolean).slice(0,8);
     if(!brief.fact_safety || typeof brief.fact_safety!=='object') brief.fact_safety={};
     ['verified_business_facts_used','verify_first','blocked_claims'].forEach(function(k){ if(!Array.isArray(brief.fact_safety[k])) brief.fact_safety[k]=[]; });
     if(!brief.entity_strategy || typeof brief.entity_strategy!=='object') brief.entity_strategy={primary:[],secondary:[],supporting:[],relationships:[]};
     ['primary','secondary','supporting','relationships'].forEach(function(k){ if(!Array.isArray(brief.entity_strategy[k])) brief.entity_strategy[k]=[]; });
     if(!brief.evidence || typeof brief.evidence!=='object') brief.evidence={official_sources:[],statistics:[],experience_to_include:'',trust_signals:[]};
     ['official_sources','statistics','trust_signals'].forEach(function(k){ if(!Array.isArray(brief.evidence[k])) brief.evidence[k]=[]; });
+    brief.evidence.official_sources=brief.evidence.official_sources.map(function(x){
+      if(typeof x==='string')return x.trim();
+      if(x&&typeof x==='object'){const n=String(x.name||x.source_name||x.title||'').trim(),u=String(x.url||x.exact_url||x.value||'').trim();return [n,u].filter(Boolean).join(' — ');}
+      return '';
+    }).filter(Boolean);
+    // E-E-A-T safety: "experience_to_include" is an instruction to the writer, never proof that
+    // the author/client actually achieved a result. Rewrite suspicious implied case-study claims
+    // into an explicit verify-first instruction rather than letting the model manufacture experience.
+    const _exp=String(brief.evidence.experience_to_include||'').trim();
+    if(_exp && /(improved|increased|reduced|grew|boosted|recovered|achieved|resulted|without sacrificing|managing enterprise|our clients?|we (?:saw|found|achieved)|case stud(?:y|ies))/i.test(_exp)){
+      brief.evidence.experience_to_include='Add a first-hand example only if the author or client can verify it. Describe the starting situation, the exact change made, the observable evidence afterward, and any limitations. If no verified example exists, omit the experience claim rather than inventing one.';
+    } else if(_exp && !/^(add|include|describe|document|show|use|explain|provide|cite|incorporate)/i.test(_exp)){
+      brief.evidence.experience_to_include='Writer instruction: '+_exp;
+    }
     if(!brief.balance || typeof brief.balance!=='object') brief.balance={limitations:[],who_should_not_use_it:[],comparisons:[]};
     ['limitations','who_should_not_use_it','comparisons'].forEach(function(k){ if(!Array.isArray(brief.balance[k])) brief.balance[k]=[]; });
     if(!brief.faq_questions.length && peopleAlsoAsk.length) brief.faq_questions=peopleAlsoAsk.map(function(x){return String(x&&x.question||'').trim();}).filter(Boolean);
-    if(!brief.quick_facts.length) brief.quick_facts=[{label:'Search intent',value:String(_chosenIntent||'').replace(/_/g,' ')},{label:'SERP competitors analysed',value:String(top10.length)},{label:'Google AI Overview evidence',value:aioManualText?'Manual evidence supplied':'No manual evidence supplied'},{label:'Internal site inventory',value:clientSitemapUrls.length?(clientSitemapUrls.length+' verified URLs discovered'):'No verified internal URLs discovered'}];
     if(!brief.action_plan.filter(function(x){return x&&String(x.action||'').trim();}).length) brief.action_plan=[{step:1,priority:'high',action:'Write the page in the exact blueprint order and lead with the direct answer.'},{step:2,priority:'high',action:'Answer every verified Google People Also Ask question and add only verified internal/external links.'},{step:3,priority:'medium',action:'Publish, verify indexability, then measure rankings and AI citation evidence for this exact query.'}];
+    brief.action_plan=brief.action_plan.map(function(a){
+      if(!a||typeof a!=='object')return a;
+      const action=String(a.action||'').replace(/\b(?:using|with)\s+Table\s+schema\b/gi,'using an accessible HTML comparison table').replace(/\bTable\s+schema\b/gi,'HTML comparison table');
+      return Object.assign({},a,{action:action});
+    });
+    if(brief.recommended_structure&&Array.isArray(brief.recommended_structure.recommended_schema)){
+      brief.recommended_structure.recommended_schema=brief.recommended_structure.recommended_schema.filter(function(x){return !/^table$/i.test(String(x||'').trim());});
+    }
 
     _pwbStage='link_validation';
     // ── SERVER-ENFORCED LINK WHITELISTS ─────────────────────────────────
@@ -58824,7 +58885,10 @@ ${claimsBlock.slice(0,2400)}`;
     };
     const _pwbRemoved=[];
     const _pwbScrubString=function(v,path){
-      const original=String(v||''); if(!_pwbMetricRisk(original)||_pwbMetricSupported(original))return original;
+      const original=String(v||'')
+        .replace(/\b(SEO|AEO|GEO)\s+ensures?\b/gi,'$1 aims to improve the likelihood that')
+        .replace(/\b(SEO|AEO|GEO)\s+guarantees?\b/gi,'$1 aims to improve the likelihood that');
+      if(!_pwbMetricRisk(original)||_pwbMetricSupported(original))return original;
       const pieces=original.split(/(?<=[.!?])\s+|\n+/), kept=[];
       pieces.forEach(function(piece){
         if(_pwbMetricRisk(piece)&&!_pwbMetricSupported(piece))_pwbRemoved.push({path:path,claim:piece.trim()});
