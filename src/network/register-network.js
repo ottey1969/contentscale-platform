@@ -2283,8 +2283,16 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       FROM network_placements p JOIN network_content c ON c.id=p.content_id JOIN network_websites w ON w.id=p.publisher_website_id
       LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[id]);
     const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Placement not found'});
-    let token='',clientId=null;
-    if(x.prewrite_brief_id){const br=await pool.query(`SELECT tc.id,tc.token FROM prewrite_briefs pb JOIN tracker_clients tc ON tc.id=pb.client_id WHERE pb.id=$1 LIMIT 1`,[x.prewrite_brief_id]);if(br.rows[0]){clientId=br.rows[0].id;token=br.rows[0].token}}
+    let token='',clientId=null,linkedPrewriteId=null;
+    if(x.prewrite_brief_id){
+      const br=await pool.query(`SELECT pb.id,tc.id AS tracker_client_id,tc.token FROM prewrite_briefs pb JOIN tracker_clients tc ON tc.id=pb.client_id WHERE pb.id=$1 LIMIT 1`,[x.prewrite_brief_id]);
+      if(br.rows[0]){linkedPrewriteId=Number(br.rows[0].id)||null;clientId=br.rows[0].tracker_client_id;token=br.rows[0].token}
+      else{
+        // v473: never emit a stale networkBrief id. If the referenced Brief no longer
+        // exists, clear that orphaned content pointer before creating the synthetic workspace.
+        await pool.query(`UPDATE network_content SET prewrite_brief_id=NULL,updated_at=NOW() WHERE id=$1 AND prewrite_brief_id=$2`,[x.content_id,x.prewrite_brief_id]).catch(()=>{});
+      }
+    }
     if(!token){
       const domain='network-placement-'+id+'.internal.contentscale.site',ex=await pool.query(`SELECT id,token FROM tracker_clients WHERE domain=$1 AND (status IS NULL OR status<>'deleted') ORDER BY id LIMIT 1`,[domain]);
       if(ex.rows[0]){clientId=ex.rows[0].id;token=ex.rows[0].token}else{token=crypto.randomBytes(32).toString('hex');const ins=await pool.query(`INSERT INTO tracker_clients(token,domain,name,email,status,max_pages,created_at,updated_at) VALUES($1,$2,$3,NULL,'active',1,NOW(),NOW()) RETURNING id`,[token,domain,cleanText(x.brand_name||x.title||('Placement '+id),180)]);clientId=ins.rows[0].id}
@@ -2296,7 +2304,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
         WHERE id=$1`,
         [clientId,cleanText(x.brand_name||x.title||('Placement '+id),180),'Network content owner/brand: '+cleanText(x.brand_name||'',180)+'\nResearch domain: '+cleanText(x.research_domain||'',300)]).catch(()=>{});
     }
-    res.json({success:true,url:'/track/'+encodeURIComponent(token)+'?networkPlacement='+id+'&networkEmbed=1'+(x.prewrite_brief_id?'&networkBrief='+encodeURIComponent(x.prewrite_brief_id):''),linked_prewrite_id:x.prewrite_brief_id||null});
+    res.json({success:true,url:'/track/'+encodeURIComponent(token)+'?networkPlacement='+id+'&networkEmbed=1'+(linkedPrewriteId?'&networkBrief='+encodeURIComponent(linkedPrewriteId):''),linked_prewrite_id:linkedPrewriteId});
   }));
 
   app.post('/api/network/admin/publications/:placementId/ai-evidence', verifyAdmin, wrap(async (req,res)=>{
