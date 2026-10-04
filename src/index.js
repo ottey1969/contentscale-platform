@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v456-NETWORK-PREWRITE-ASYNC-JOBS';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v457-NETWORK-PREWRITE-INSTANT-ACK';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -314,6 +314,7 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'network-prewrite-split-gemini-progress-v454',
   'network-prewrite-animated-dots-v455',
   'network-prewrite-persistent-async-job-v456',
+  'network-prewrite-three-part-json-synthesis-v458',
   'network-prewrite-full-provider-fallback-v456',
   'network-no-core-table-mutations-v406',
   'tracker-delta-brief-regression-lock',
@@ -45890,6 +45891,11 @@ async function generatePrewriteBrief() {
         }
         await new Promise(function(resolve){setTimeout(resolve,1500);});
         var _job=await api('/prewrite-brief-job/'+encodeURIComponent(_pwbJobId),'GET');
+        if(_job && _job.redirected_from && _job.job_id){ _pwbJobId=String(_job.job_id); continue; }
+        if(_job && _job.stage){
+          var _stageLabels={accepted:'Starting Pre-Write job',initializing:'Preparing research job',queued:'Queued for research',research:'Analysing SERP, ranking pages and AI evidence',complete:'Finalising Pre-Write Brief'};
+          if(_stageLabels[_job.stage]) stat.textContent=_stageLabels[_job.stage] + _pwbDots();
+        }
         if(_job && _job.status==='completed' && _job.brief){ data=_job; break; }
         if(_job && _job.status==='failed'){
           var _jobErr=new Error(_job.error||'Pre-Write Brief generation failed.');
@@ -57717,12 +57723,12 @@ function _pwbReadiness(b) {
 }
 
 
-// ── NETWORK PREWRITE ASYNC JOB BRIDGE (v456) ───────────────────────────────
-// Long Network Prewrite generation must never depend on one browser/proxy HTTP
-// request staying open. The public POST returns 202 immediately, then the same
-// authoritative generator runs through localhost (bypassing the external
-// gateway) and its full result is persisted in Neon for polling/recovery.
+// ── NETWORK PREWRITE ASYNC JOB BRIDGE (v457) ───────────────────────────────
+// Root rule: the browser-facing Network POST MUST acknowledge before any DB, DDL,
+// placement, tracker, SERP or provider work. This prevents a gateway 502 even when
+// Neon or an upstream provider is slow. Heavy work starts only after res.end().
 let _pwbAsyncTableReady = false;
+const _pwbBootstrapJobs = new Map();
 async function _ensurePwbAsyncJobsTable(){
   if(_pwbAsyncTableReady) return;
   await pool.query(`
@@ -57745,6 +57751,43 @@ async function _ensurePwbAsyncJobsTable(){
   _pwbAsyncTableReady = true;
 }
 
+async function _bootstrapAndRunPwbJob(jobId){
+  const boot=_pwbBootstrapJobs.get(jobId);
+  if(!boot) return;
+  try{
+    boot.status='initializing'; boot.stage='initializing'; boot.updated_at=new Date().toISOString();
+    await _ensurePwbAsyncJobsTable();
+
+    const cr=await pool.query('SELECT id,status FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2) LIMIT 1',[boot.token,'deleted']);
+    if(!cr.rows.length) throw Object.assign(new Error('Tracker not found. Check your link is correct.'),{stage:'tracker_auth',http_status:404});
+    if(cr.rows[0].status==='disabled'||cr.rows[0].status==='paused') throw Object.assign(new Error('This tracker is '+cr.rows[0].status+'. Contact Ottmar to reactivate.'),{stage:'tracker_auth',http_status:403});
+
+    const pq=await pool.query('SELECT id FROM network_placements WHERE id=$1 LIMIT 1',[boot.placement]);
+    if(!pq.rows.length) throw Object.assign(new Error('Network placement not found.'),{stage:'placement_auth',http_status:404});
+
+    // If an older active job already exists for this placement, fail this duplicate
+    // cleanly instead of running two expensive generations in parallel.
+    const active=await pool.query(`SELECT id,status,stage FROM prewrite_async_jobs WHERE client_id=$1 AND network_placement_id=$2 AND status IN ('queued','processing') AND created_at > NOW()-INTERVAL '20 minutes' ORDER BY created_at DESC LIMIT 1`,[cr.rows[0].id,boot.placement]);
+    if(active.rows.length && String(active.rows[0].id)!==String(jobId)){
+      boot.status='redirected'; boot.stage='existing_job'; boot.redirect_job_id=String(active.rows[0].id); boot.updated_at=new Date().toISOString();
+      return;
+    }
+
+    await pool.query(`INSERT INTO prewrite_async_jobs(id,client_id,network_placement_id,status,stage,request_json) VALUES($1,$2,$3,'queued','queued',$4::jsonb) ON CONFLICT (id) DO NOTHING`,[jobId,cr.rows[0].id,boot.placement,JSON.stringify(boot.body||{})]);
+    boot.persisted=true; boot.status='queued'; boot.stage='queued'; boot.updated_at=new Date().toISOString();
+    await _runPwbAsyncJob(jobId);
+  }catch(e){
+    const failure={success:false,stage:e&&e.stage||'bootstrap',error:e&&e.message||'Could not start Prewrite job',diagnostic:{http_status:e&&e.http_status||0,name:e&&e.name||'Error'}};
+    boot.status='failed'; boot.stage=failure.stage; boot.error=failure; boot.updated_at=new Date().toISOString();
+    try{
+      if(_pwbAsyncTableReady && boot.persisted){
+        await pool.query(`UPDATE prewrite_async_jobs SET status='failed',stage=$2,error_json=$3::jsonb,updated_at=NOW(),completed_at=NOW() WHERE id=$1`,[jobId,failure.stage,JSON.stringify(failure)]);
+      }
+    }catch(_e){}
+    console.error('[prewrite-async] bootstrap error job='+jobId+':',failure.error);
+  }
+}
+
 async function _runPwbAsyncJob(jobId){
   await _ensurePwbAsyncJobsTable();
   const jq=await pool.query(`
@@ -57757,63 +57800,72 @@ async function _runPwbAsyncJob(jobId){
   if(!jq.rows.length) return;
   const job=jq.rows[0];
   if(job.status==='completed') return;
+  const boot=_pwbBootstrapJobs.get(jobId);
+  if(boot){boot.status='processing';boot.stage='research';boot.updated_at=new Date().toISOString();}
   await pool.query(`UPDATE prewrite_async_jobs SET status='processing',stage='research',started_at=COALESCE(started_at,NOW()),updated_at=NOW(),error_json=NULL WHERE id=$1`,[jobId]);
   try{
     const token=String(job.token||'');
     const placement=Number(job.network_placement_id||0);
     const base='http://127.0.0.1:'+(process.env.PORT||3000);
     const url=base+'/api/tracker-client/'+encodeURIComponent(token)+'/prewrite-brief?networkPlacement='+encodeURIComponent(String(placement))+'&networkEmbed=1&_pwbBackground=1';
+    // Internal localhost request is deliberately not bound to the public gateway timeout.
     const rr=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','x-contentscale-internal-prewrite':'1'},body:JSON.stringify(job.request_json||{})});
     const txt=await rr.text();
     let payload={};
     try{payload=txt?JSON.parse(txt):{}}catch(_e){payload={success:false,error:txt||('HTTP '+rr.status),stage:'response_parse'};}
     if(rr.ok && payload && payload.success && payload.brief){
       await pool.query(`UPDATE prewrite_async_jobs SET status='completed',stage='complete',result_json=$2::jsonb,error_json=NULL,updated_at=NOW(),completed_at=NOW() WHERE id=$1`,[jobId,JSON.stringify(payload)]);
+      if(boot){boot.status='completed';boot.stage='complete';boot.result=payload;boot.updated_at=new Date().toISOString();}
       console.log('[prewrite-async] completed job='+jobId+' placement='+placement);
     }else{
       const failure=Object.assign({success:false,http_status:rr.status,stage:(payload&&payload.stage)||'generator'},payload||{});
       await pool.query(`UPDATE prewrite_async_jobs SET status='failed',stage=$2,error_json=$3::jsonb,updated_at=NOW(),completed_at=NOW() WHERE id=$1`,[jobId,String(failure.stage||'generator'),JSON.stringify(failure)]);
+      if(boot){boot.status='failed';boot.stage=String(failure.stage||'generator');boot.error=failure;boot.updated_at=new Date().toISOString();}
       console.warn('[prewrite-async] failed job='+jobId+' stage='+String(failure.stage||'generator')+' status='+rr.status+' error='+String(failure.error||'').slice(0,220));
     }
   }catch(e){
     const failure={success:false,stage:'async_worker',error:e&&e.message||'Async Prewrite worker failed',diagnostic:{name:e&&e.name||'Error'}};
     await pool.query(`UPDATE prewrite_async_jobs SET status='failed',stage='async_worker',error_json=$2::jsonb,updated_at=NOW(),completed_at=NOW() WHERE id=$1`,[jobId,JSON.stringify(failure)]).catch(()=>{});
+    if(boot){boot.status='failed';boot.stage='async_worker';boot.error=failure;boot.updated_at=new Date().toISOString();}
     console.error('[prewrite-async] worker error job='+jobId+':',e&&e.message||e);
   }
 }
 
-// Intercept only the browser-facing Network embed. Internal localhost work uses
-// _pwbBackground=1 and falls through to the existing authoritative generator.
-app.post('/api/tracker-client/:token/prewrite-brief', async (req,res,next)=>{
+// Browser-facing Network POST: ZERO DB work before the acknowledgement.
+// This is the critical v457 change. The response is flushed first, then the
+// bootstrap/authorization/persistence/generation pipeline starts asynchronously.
+app.post('/api/tracker-client/:token/prewrite-brief', (req,res,next)=>{
   const wantsEmbed=String(req.query&&req.query.networkEmbed||'')==='1';
   const placement=Number(req.query&&req.query.networkPlacement||0);
   const background=String(req.query&&req.query._pwbBackground||'')==='1';
   if(!wantsEmbed || background || !Number.isSafeInteger(placement) || placement<=0) return next();
-  try{
-    await _ensurePwbAsyncJobsTable();
-    const cr=await pool.query('SELECT id,status FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2) LIMIT 1',[req.params.token,'deleted']);
-    if(!cr.rows.length) return res.status(404).json({success:false,error:'Tracker not found. Check your link is correct.'});
-    if(cr.rows[0].status==='disabled'||cr.rows[0].status==='paused') return res.status(403).json({success:false,error:'This tracker is '+cr.rows[0].status+'. Contact Ottmar to reactivate.'});
-    // Verify the placement exists before creating work. The authoritative route
-    // repeats the full ownership/synthetic-tracker authorization.
-    const pq=await pool.query('SELECT id FROM network_placements WHERE id=$1 LIMIT 1',[placement]);
-    if(!pq.rows.length) return res.status(404).json({success:false,error:'Network placement not found.'});
 
-    // Reuse an active identical job instead of double-generating/charging on double-click/reload.
-    const active=await pool.query(`SELECT id,status,stage FROM prewrite_async_jobs WHERE client_id=$1 AND network_placement_id=$2 AND status IN ('queued','processing') AND created_at > NOW()-INTERVAL '20 minutes' ORDER BY created_at DESC LIMIT 1`,[cr.rows[0].id,placement]);
-    if(active.rows.length) return res.status(202).json({success:true,async:true,job_id:active.rows[0].id,status:active.rows[0].status,stage:active.rows[0].stage,reused:true});
-
-    const jobId=crypto.randomUUID();
-    await pool.query(`INSERT INTO prewrite_async_jobs(id,client_id,network_placement_id,status,stage,request_json) VALUES($1,$2,$3,'queued','queued',$4::jsonb)`,[jobId,cr.rows[0].id,placement,JSON.stringify(req.body||{})]);
-    res.status(202).json({success:true,async:true,job_id:jobId,status:'queued',stage:'queued'});
-    setImmediate(()=>_runPwbAsyncJob(jobId).catch(e=>console.error('[prewrite-async] unhandled job='+jobId,e&&e.message||e)));
-  }catch(e){
-    console.error('[prewrite-async] enqueue error:',e&&e.message||e);
-    return res.status(500).json({success:false,stage:'enqueue',error:e&&e.message||'Could not queue Prewrite generation'});
-  }
+  const jobId=crypto.randomUUID();
+  _pwbBootstrapJobs.set(jobId,{
+    token:String(req.params.token||''),placement:placement,body:req.body||{},
+    status:'accepted',stage:'accepted',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),persisted:false
+  });
+  res.status(202).json({success:true,async:true,job_id:jobId,status:'accepted',stage:'accepted'});
+  setImmediate(()=>_bootstrapAndRunPwbJob(jobId).catch(e=>console.error('[prewrite-async] unhandled bootstrap job='+jobId,e&&e.message||e)));
 });
 
 app.get('/api/tracker-client/:token/prewrite-brief-job/:jobId', async (req,res)=>{
+  const boot=_pwbBootstrapJobs.get(req.params.jobId);
+  if(boot && String(boot.token)===String(req.params.token)){
+    if(boot.status==='redirected' && boot.redirect_job_id){
+      return res.json({success:true,async:true,job_id:boot.redirect_job_id,status:'processing',stage:'existing_job',redirected_from:req.params.jobId});
+    }
+    if(boot.status==='completed' && boot.result){
+      return res.json(Object.assign({success:true,async:true,job_id:req.params.jobId,status:'completed',stage:'complete'},boot.result));
+    }
+    if(boot.status==='failed'){
+      const er=boot.error||{};
+      return res.json({success:false,async:true,job_id:req.params.jobId,status:'failed',stage:boot.stage||er.stage||'bootstrap',error:er.error||'Prewrite generation failed',diagnostic:er.diagnostic||{},payload:er});
+    }
+    if(!boot.persisted){
+      return res.json({success:true,async:true,job_id:req.params.jobId,status:boot.status||'initializing',stage:boot.stage||'initializing',created_at:boot.created_at,updated_at:boot.updated_at});
+    }
+  }
   try{
     await _ensurePwbAsyncJobsTable();
     const q=await pool.query(`
@@ -58295,80 +58347,77 @@ Return ONLY valid JSON, no markdown, no preamble.
     let _pwbGeminiTimedOut=false;
     const _pwbGeminiNetworkStartedAt=Date.now();
 
-    // v454 — the Network embed no longer asks one Gemini request to emit the entire
-    // very large Prewrite JSON. That monolithic generation repeatedly exceeded our own
-    // safe gateway budget even after 35 seconds. For an authorised synthetic Network
-    // tracker only, split the job into two compact prompts and run them IN PARALLEL:
-    // A = content/SEO/AEO strategy, B = competitor + AI-citation evidence. The server
-    // then merges both JSON objects and continues through the same validation/saving path.
-    // Normal Tracker Prewrite keeps the original monolithic behaviour unchanged.
+    // v458 — Network Prewrite synthesis is split into THREE small, validated JSON jobs.
+    // A provider HTTP 200 is not enough: every part must parse as complete JSON before merge.
     if (_pwbNetworkFastLane) {
-      const _compactModelsA = Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL, 'gemini-2.5-flash-lite'].filter(Boolean))).slice(0,2);
-      const _compactModelsB = Array.from(new Set(['gemini-2.5-flash-lite', GEMINI_MODEL_BRIEF, GEMINI_MODEL].filter(Boolean))).slice(0,2);
-      const _compactCall = async function(label, compactPrompt, maxTokens, models) {
-        const primary=(models&&models[0])||GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash';
-        const fallback=(models&&models[1])||'gemini-2.5-flash';
-        const body={contents:[{parts:[{text:_langPrefix(language)+compactPrompt}]}],generationConfig:{temperature:0.35,maxOutputTokens:maxTokens,responseMimeType:'application/json'}};
+      const _compactModels = Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL, 'gemini-2.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))).slice(0,3);
+      const _extractCompactJson = function(raw) {
+        raw=String(raw||'').trim(); if(!raw)return null;
+        const candidates=[raw];
+        const fenced=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim(); if(fenced!==raw)candidates.push(fenced);
+        const a=raw.indexOf('{'), b=raw.lastIndexOf('}'); if(a>=0&&b>a)candidates.push(raw.slice(a,b+1));
+        for(const txt of candidates){ try{return JSON.parse(txt)}catch(_e1){} try{return JSON.parse(_repairJsonG(txt))}catch(_e2){} }
+        return null;
+      };
+      const _compactCall = async function(label, compactPrompt, maxTokens) {
+        const primary=_compactModels[0]||GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash';
+        const fallback=_compactModels[1]||'gemini-2.5-flash';
+        const body={contents:[{parts:[{text:_langPrefix(language)+compactPrompt}]}],generationConfig:{temperature:0.25,maxOutputTokens:maxTokens,responseMimeType:'application/json'}};
         const started=Date.now();
         const rr=await callGeminiWithFallback(geminiKey,body,primary,fallback,2);
         const modelUsed=rr&&rr.modelUsed||primary;
-        if(!rr||!rr.ok){
-          const err=String(rr&&rr.errorMessage||('Gemini '+String(rr&&rr.status||0))).slice(0,700);
-          console.warn('[prewrite-brief] compact '+label+' exhausted provider fallback | model='+modelUsed+' | '+err.slice(0,220));
-          return {ok:false,error:err,status:Number(rr&&rr.status||0),attempts:2,model:modelUsed,timed_out:/timed out|timeout/i.test(err),elapsed_ms:Date.now()-started};
-        }
-        const jj=rr.data||{};
-        const raw=(jj.candidates&&jj.candidates[0]&&jj.candidates[0].content&&jj.candidates[0].content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
-        const mm=raw.match(/\{[\s\S]*\}/); let obj=null;
-        if(mm){try{obj=JSON.parse(mm[0])}catch(_e1){try{obj=JSON.parse(_repairJsonG(mm[0]))}catch(_e2){}}}
-        if(!obj){
-          const err=label+' provider returned JSON that could not be parsed safely';
-          console.warn('[prewrite-brief] compact '+label+' parse failure | model='+modelUsed+' | chars='+raw.length);
-          return {ok:false,error:err,status:Number(rr.status||200),attempts:2,model:modelUsed,timed_out:false,elapsed_ms:Date.now()-started};
-        }
-        return {ok:true,obj:obj,status:Number(rr.status||200),attempts:2,model:modelUsed,chars:raw.length,elapsed_ms:Date.now()-started};
+        if(!rr||!rr.ok){ const err=String(rr&&rr.errorMessage||('Gemini '+String(rr&&rr.status||0))).slice(0,900); return {ok:false,error:err,status:Number(rr&&rr.status||0),attempts:2,model:modelUsed,timed_out:/timed out|timeout/i.test(err),elapsed_ms:Date.now()-started}; }
+        const jj=rr.data||{}, cand=jj.candidates&&jj.candidates[0]||{};
+        const raw=(cand.content&&cand.content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
+        const obj=_extractCompactJson(raw);
+        if(!obj){ const finish=String(cand.finishReason||'').trim(); const err=label+' returned HTTP 200 but invalid/truncated JSON'+(finish?' (finishReason '+finish+')':'')+'; chars='+raw.length; console.warn('[prewrite-brief] '+err); return {ok:false,error:err,status:Number(rr.status||200),attempts:2,model:modelUsed,timed_out:false,finish_reason:finish,chars:raw.length,elapsed_ms:Date.now()-started}; }
+        return {ok:true,obj:obj,status:Number(rr.status||200),attempts:2,model:modelUsed,chars:raw.length,finish_reason:String(cand.finishReason||''),elapsed_ms:Date.now()-started};
       };
 
-      const _strategyPrompt = `Build the CONTENT STRATEGY half of a Pre-Write Brief for this exact keyword. Use only supplied evidence. Return JSON only and keep every field concise but specific.
+      const _decisionPrompt = `PART 1 OF 3 — DECISION & STRATEGY. Return ONLY compact valid JSON, no markdown.
 KEYWORD: ${keyword}
 WORKING TITLE: ${workingTitle||'none'}
 SEARCH INTENT: ${_chosenIntent}
-TOP RANKING EVIDENCE:\n${compSummary.slice(0,9000)}
+TOP RANKING EVIDENCE:\n${compSummary.slice(0,6500)}
 REAL PAA:\n${peopleAlsoAsk.slice(0,8).map(x=>'- '+x.question).join('\n')||'none returned'}
-CLIENT/BRAND FACT SAFETY:\n${claimsBlock.slice(0,6000)}
-TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,5000)||'none'}
-Return exactly these top-level keys: content_decision, top10_gap, recommended_title_h1, meta_package, opening_passage, recommended_structure, page_blueprint, must_cover_entities, faq_questions, paa_questions, ai_answer, quick_facts, entity_strategy, evidence, balance, use_cases, conclusion, action_plan, confidence.
-Rules: content_decision.recommended_treatment is OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. opening_passage.direct_answer and ai_answer.direct_answer must each be 40-60 words. paa_questions must contain exactly 5 {q,a} objects when enough evidence/questions exist. Never invent client facts, statistics, URLs or credentials. Use insufficient_data when unsupported.`;
-
-      const _evidencePrompt = `Build the EVIDENCE half of a Pre-Write Brief for this exact keyword. Use only supplied evidence. Return JSON only.
+CLIENT FACT SAFETY:\n${claimsBlock.slice(0,4500)}
+TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,3500)||'none'}
+Return EXACTLY: content_decision, top10_gap, recommended_title_h1, recommended_structure, must_cover_entities, entity_strategy, evidence, balance, use_cases, conclusion, confidence.
+Rules: treatment must be OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. Never invent facts, URLs, statistics or credentials. Use insufficient_data when unsupported.`;
+      const _evidencePrompt = `PART 2 OF 3 — EVIDENCE. Return ONLY compact valid JSON, no markdown.
 KEYWORD: ${keyword}
-LIVE TOP RESULTS:\n${compSummary.slice(0,10000)}
-AI SYSTEM EVIDENCE:\n${aiSystemsBlock.slice(0,14000)}
-FACT SAFETY:\n${claimsBlock.slice(0,5000)}
-Return exactly these top-level keys: ai_overview_status, ai_systems_analysis, competitor_table, citation_targets, beat_number1_instructions, fact_safety.
-Rules: competitor_table must represent every supplied ranking result and copy exact_url exactly from LIVE TOP RESULTS. Never invent or repair a URL. AI systems marked NOT CHECKED must remain not checked. Manual AI evidence overrides fallback. exact_page_citations may contain only exact page URLs visibly supplied. competitor claims are never client facts. Use insufficient_data where evidence is missing.`;
+LIVE TOP RESULTS:\n${compSummary.slice(0,8000)}
+AI SYSTEM EVIDENCE:\n${aiSystemsBlock.slice(0,9500)}
+FACT SAFETY:\n${claimsBlock.slice(0,3500)}
+Return EXACTLY: ai_overview_status, ai_systems_analysis, competitor_table, citation_targets, beat_number1_instructions, fact_safety.
+Rules: preserve every supplied exact_url verbatim. Never invent or repair URLs. NOT CHECKED stays not checked. Manual evidence wins.`;
+      const _implementationPrompt = `PART 3 OF 3 — IMPLEMENTATION. Return ONLY compact valid JSON, no markdown.
+KEYWORD: ${keyword}
+WORKING TITLE: ${workingTitle||'none'}
+SEARCH INTENT: ${_chosenIntent}
+TOP RANKING EVIDENCE:\n${compSummary.slice(0,6000)}
+REAL PAA:\n${peopleAlsoAsk.slice(0,8).map(x=>'- '+x.question).join('\n')||'none returned'}
+CLIENT FACT SAFETY:\n${claimsBlock.slice(0,3500)}
+TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,3000)||'none'}
+Return EXACTLY: meta_package, opening_passage, page_blueprint, faq_questions, paa_questions, ai_answer, quick_facts, action_plan, preserve_sections, surgical_changes.
+Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exists. Never invent facts, URLs, statistics or credentials. For OPTIMIZE/EXPAND keep changes surgical.`;
 
-      const [_partA,_partB] = await Promise.all([
-        _compactCall('strategy',_strategyPrompt,5200,_compactModelsA),
-        _compactCall('evidence',_evidencePrompt,4600,_compactModelsB)
-      ]);
-      _pwbGeminiAttempts=(_partA.attempts||0)+(_partB.attempts||0);
-      _pwbGeminiTimedOut=!!(_partA.timed_out||_partB.timed_out);
-      _pwbGeminiNetworkFailure=!_partA.ok||!_partB.ok;
-      _pwbGeminiStatus=_partA.ok?(_partB.ok?200:(_partB.status||0)):(_partA.status||0);
-      _pwbGeminiModelUsed=[_partA.model,_partB.model].filter(Boolean).join(' + ');
-      _pwbGeminiError=[!_partA.ok?'strategy: '+(_partA.error||'failed'):'',!_partB.ok?'evidence: '+(_partB.error||'failed'):''].filter(Boolean).join(' | ').slice(0,700);
-
-      // Network Prewrite is an all-or-nothing deliverable: never label a partial AI
-      // synthesis as a completed Brief. Both compact halves must succeed. Because v456
-      // runs this work outside the external gateway request, the provider fallback can
-      // take the time it needs without producing a browser/proxy 502.
-      if (_partA.ok && _partB.ok) {
-        const _merged = Object.assign({}, _partA.obj, _partB.obj);
+      const _part1=await _compactCall('part1_decision_strategy',_decisionPrompt,3200);
+      const _part2=_part1.ok ? await _compactCall('part2_evidence',_evidencePrompt,3600) : {ok:false,error:'not run because part 1 failed',status:0,attempts:0,model:''};
+      const _part3=(_part1.ok&&_part2.ok) ? await _compactCall('part3_implementation',_implementationPrompt,3600) : {ok:false,error:'not run because an earlier part failed',status:0,attempts:0,model:''};
+      _pwbGeminiAttempts=(_part1.attempts||0)+(_part2.attempts||0)+(_part3.attempts||0);
+      _pwbGeminiTimedOut=!!(_part1.timed_out||_part2.timed_out||_part3.timed_out);
+      _pwbGeminiNetworkFailure=!_part1.ok||!_part2.ok||!_part3.ok;
+      const _failedPart=!_part1.ok?_part1:(!_part2.ok?_part2:(!_part3.ok?_part3:null));
+      _pwbGeminiStatus=_failedPart?Number(_failedPart.status||0):200;
+      _pwbGeminiModelUsed=[_part1.model,_part2.model,_part3.model].filter(Boolean).join(' + ');
+      _pwbGeminiError=[!_part1.ok?'part1: '+(_part1.error||'failed'):'',!_part2.ok?'part2: '+(_part2.error||'failed'):'',!_part3.ok?'part3: '+(_part3.error||'failed'):''].filter(Boolean).join(' | ').slice(0,900);
+      if(_part1.ok&&_part2.ok&&_part3.ok){
+        const _merged=Object.assign({},_part1.obj,_part2.obj,_part3.obj);
         d2={candidates:[{content:{parts:[{text:JSON.stringify(_merged)}]},finishReason:'STOP'}]};
-        console.log('[prewrite-brief] network full Gemini merge complete | strategy='+_partA.model+' evidence='+_partB.model+' | '+(Date.now()-_pwbGeminiNetworkStartedAt)+'ms');
-      } else {
-        console.warn('[prewrite-brief] network full Gemini merge blocked — incomplete generation | strategy='+(_partA.ok?'ok':'failed')+' evidence='+(_partB.ok?'ok':'failed'));
+        console.log('[prewrite-brief] network 3-part synthesis complete | p1='+_part1.model+' p2='+_part2.model+' p3='+_part3.model+' | '+(Date.now()-_pwbGeminiNetworkStartedAt)+'ms');
+      }else{
+        console.warn('[prewrite-brief] network 3-part synthesis blocked | p1='+(_part1.ok?'ok':'failed')+' p2='+(_part2.ok?'ok':'failed')+' p3='+(_part3.ok?'ok':'failed'));
       }
     } else {
       const _pwbGeminiModelLadder=[GEMINI_MODEL,GEMINI_MODEL];
