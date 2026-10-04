@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v448-PREWRITE-DRAFT-BROWSER-SYNTAX-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v450-NETWORK-PREWRITE-SYNTHETIC-SITEMAP-GUARD';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -307,6 +307,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
   'network-safe-shell-v1-isolated-module',
+  'network-prewrite-synthetic-sitemap-guard-v450',
   'network-no-core-table-mutations-v406',
   'tracker-delta-brief-regression-lock',
   'tracker-internal-external-link-presence-guard',
@@ -45882,7 +45883,14 @@ async function generatePrewriteBrief() {
         + '<a href="https://contentscale.site/free-ai-citations-tracker/#dealify" target="_blank" rel="noopener" style="color:#b45309;font-weight:700;">contentscale.site/free-ai-citations-tracker</a>.'
         + '</div>';
     } else {
-      stat.textContent = '\u274c ' + e.message;
+      var p=e&&e.payload||{},stage=p.stage||'',diag=p.diagnostic||{},detail=[];
+      if(stage)detail.push('stage: '+stage);
+      if(diag.http_status)detail.push('HTTP '+diag.http_status);
+      if(diag.model)detail.push('model: '+diag.model);
+      if(diag.attempts)detail.push('attempts: '+diag.attempts);
+      if(diag.error)detail.push('upstream: '+String(diag.error).slice(0,260));
+      stat.textContent = '\u274c ' + e.message + (detail.length?' · '+detail.join(' · '):'');
+      try{console.error('[Prewrite generation failed]',{status:e.status||0,stage:stage,diagnostic:diag,payload:p})}catch(_logErr){}
     }
   }
 }
@@ -46431,7 +46439,9 @@ async function api(path, method, body) {
   var r = await fetch(apiPath, opts);
   if (!r.ok) {
     var err = await r.json().catch(function(){ return { error: 'HTTP ' + r.status }; });
-    var _e = new Error(err.error || 'HTTP ' + r.status);
+    var _msg=err.error || ('HTTP ' + r.status);
+    if(err.stage&&_msg.toLowerCase().indexOf('stage:')<0)_msg += ' [stage: '+err.stage+']';
+    var _e = new Error(_msg);
     _e.status = r.status; _e.payload = err;
     throw _e;
   }
@@ -57379,7 +57389,7 @@ async function scrapeBodyText(url, maxChars) {
   maxChars = maxChars || 6000;
   try {
     const ctrl = new AbortController();
-    setTimeout(() => ctrl.abort(), 12000);
+    setTimeout(() => ctrl.abort(), 8000);
     const r = await fetch(url.startsWith('http') ? url : 'https://' + url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScaleBot/2.0)', 'Accept': 'text/html' },
       signal: ctrl.signal
@@ -57668,11 +57678,50 @@ function _pwbReadiness(b) {
 
 app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
   let _pwbStage='start';
+  const _pwbStartedAt=Date.now();
+  let _pwbNetworkAuthorized = false;
+  let _pwbSyntheticNetworkTracker = false;
+  let _pwbNetworkPlacementId = 0;
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
     const client = cr.rows[0];
+
+    // v450 — Network Prewrite POST parity with the already-protected GET/embed path.
+    // A synthetic Network tracker is not a real public website. Trying robots.txt + four
+    // sitemap candidates against network-placement-*.internal.contentscale.site can burn
+    // tens of seconds before SERP/Gemini work even starts and can push the request into
+    // a gateway 502. Only skip that irrelevant website discovery after the placement is
+    // verified server-side; normal Tracker clients keep the existing research unchanged.
+    try {
+      _pwbNetworkPlacementId = Number(req.query && req.query.networkPlacement || 0);
+      const _pwbWantsNetworkEmbed = String(req.query && req.query.networkEmbed || '') === '1';
+      if (_pwbWantsNetworkEmbed && Number.isSafeInteger(_pwbNetworkPlacementId) && _pwbNetworkPlacementId > 0) {
+        const _pwbNq = await pool.query(`
+          SELECT p.id,
+                 c.prewrite_brief_id,
+                 pb.client_id AS prewrite_client_id
+          FROM network_placements p
+          JOIN network_content c ON c.id=p.content_id
+          LEFT JOIN prewrite_briefs pb ON pb.id=c.prewrite_brief_id
+          WHERE p.id=$1
+          LIMIT 1
+        `,[_pwbNetworkPlacementId]);
+        const _pwbNr = _pwbNq.rows[0] || null;
+        if (_pwbNr) {
+          const _pwbSyntheticDomain = ('network-placement-' + _pwbNetworkPlacementId + '.internal.contentscale.site').toLowerCase();
+          _pwbSyntheticNetworkTracker = String(client.domain || '').trim().toLowerCase() === _pwbSyntheticDomain;
+          const _pwbOwnsLinkedPrewrite = Number(_pwbNr.prewrite_client_id || 0) === Number(client.id || 0);
+          _pwbNetworkAuthorized = _pwbSyntheticNetworkTracker || _pwbOwnsLinkedPrewrite;
+        }
+      }
+    } catch (_pwbNetworkAuthErr) {
+      console.warn('[prewrite-brief] network POST auth check failed:', _pwbNetworkAuthErr.message);
+      _pwbNetworkAuthorized = false;
+      _pwbSyntheticNetworkTracker = false;
+    }
+    const _pwbSkipSyntheticSitemap = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
     const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
@@ -57695,6 +57744,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     const glParam = (String(region || 'us').toLowerCase().match(/[a-z]{2}/) || ['us'])[0];
 
     // ── AUTO INTERNAL LINK RESEARCH — sitemap discovery/import ─────────────
+    _pwbStage='sitemap';
     let clientSitemapUrls = [];
     let _pwbSitemapUrl = String(client.sitemap_url || '').trim();
     let _pwbSitemapStatus = 'not_found';
@@ -57709,7 +57759,15 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
       }
     } catch (e) { clientSitemapUrls = []; }
 
-    if (!clientSitemapUrls.length && client.domain) {
+    if (_pwbSkipSyntheticSitemap) {
+      // Network synthetic trackers deliberately have no public sitemap. Internal-link
+      // targets remain empty instead of probing an internal placeholder host.
+      clientSitemapUrls = [];
+      _pwbSitemapUrl = '';
+      _pwbSitemapStatus = 'network_synthetic_skipped';
+      _pwbSitemapDiscoveredBy = 'authorized_network_embed';
+      console.log('[prewrite-brief] skipped synthetic Network sitemap discovery | placement=' + _pwbNetworkPlacementId);
+    } else if (!clientSitemapUrls.length && client.domain) {
       try {
         const _root = String(client.domain).replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\/+$/, '').trim();
         if (_root) {
@@ -57871,15 +57929,17 @@ app.post('/api/tracker-client/:token/prewrite-brief', async (req, res) => {
     const checkedAt = new Date().toISOString();
     let perplexity = { checked: false, answer_excerpt: '', cited_domains: [] };
     const pxKey = process.env.PERPLEXITY_API_KEY;
-    if (pxKey) {
+    // Manual Perplexity evidence is authoritative; do not spend time on fallback.
+    if (pxKey && !_manualAi.perplexity) {
       try {
-        const ctrlP = new AbortController(); setTimeout(() => ctrlP.abort(), 20000);
+        const ctrlP = new AbortController(); const _pwbPxTimer=setTimeout(() => ctrlP.abort(), 12000);
         const pResp = await fetch('https://api.perplexity.ai/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pxKey },
           body: JSON.stringify({ model: 'sonar', messages: [{ role: 'user', content: keyword }], max_tokens: 400, return_citations: true, return_related_questions: false }),
           signal: ctrlP.signal
         });
+        clearTimeout(_pwbPxTimer);
         if (pResp.ok) {
           const pData = await pResp.json();
           const citations = pData.citations || [];
@@ -58070,11 +58130,11 @@ Return ONLY valid JSON, no markdown, no preamble.
       + '\n- Do not output Markdown; return valid JSON only.';
     _pwbStage='gemini';
     const geminiKey = process.env.GEMINI_API_KEY;
-    let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0;
+    let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0,_pwbGeminiNetworkFailure=false;
     for(let _ga=1;_ga<=2&&!d2;_ga++){
       _pwbGeminiAttempts=_ga;
       try{
-        const ctrl2 = new AbortController(); const _t2=setTimeout(() => ctrl2.abort(), 45000);
+        const ctrl2 = new AbortController(); const _t2=setTimeout(() => ctrl2.abort(), 32000);
         const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ contents: [{ parts: [{ text: _langPrefix(language) + finalPrompt }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 16384, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } }),
@@ -58089,10 +58149,12 @@ Return ONLY valid JSON, no markdown, no preamble.
         console.warn('[prewrite-brief] Gemini attempt',_ga,'failed:',r2.status,_pwbGeminiError.slice(0,220));
         if(!(r2.status===429||r2.status>=500))break;
       }catch(_ge){
+        _pwbGeminiNetworkFailure=true;
         _pwbGeminiError=String(_ge&&_ge.message||_ge).slice(0,700);
         console.warn('[prewrite-brief] Gemini attempt',_ga,'network failure:',_pwbGeminiError);
+        break;
       }
-      if(_ga===1)await new Promise(r=>setTimeout(r,650));
+      if(_ga===1)await new Promise(r=>setTimeout(r,350));
     }
     if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:_pwbGeminiStatus===429||_pwbGeminiStatus>=500||!_pwbGeminiStatus,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response'}});
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
@@ -58301,11 +58363,11 @@ Return ONLY valid JSON, no markdown, no preamble.
     } catch (e) { console.warn('[prewrite-brief] Could not save brief for recall:', e.message); }
 
     _pwbStage='complete';
-    console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${briefsUsed + 1}/${briefsAllowed}`);
+    console.log(`[prewrite-brief] generated for "${keyword}" | client=${client.name || client.id} | gl=${glParam} | lang=${language || 'en'} | brief ${briefsUsed + 1}/${briefsAllowed} | ${Date.now()-_pwbStartedAt}ms`);
     res.json({ success: true, brief, brief_id: savedBriefId, competitors_scraped: top10.length, region: glParam, briefs_used: briefsUsed + 1, briefs_allowed: briefsAllowed, search_intent: brief.search_intent });
   } catch (e) {
-    console.error('[prewrite-brief] error at stage',_pwbStage+':', e.message);
-    res.status(502).json({ success:false,stage:_pwbStage||'unknown',retryable:true,error:e.message||'Prewrite failed',diagnostic:{name:e&&e.name||'Error'} });
+    console.error('[prewrite-brief] error at stage',_pwbStage+':', e.message,'elapsed='+(Date.now()-_pwbStartedAt)+'ms');
+    res.status(502).json({ success:false,stage:_pwbStage||'unknown',retryable:true,error:e.message||'Prewrite failed',diagnostic:{name:e&&e.name||'Error',elapsed_ms:Date.now()-_pwbStartedAt,network_placement:_pwbNetworkPlacementId||null,network_authorized:!!_pwbNetworkAuthorized,synthetic_network_tracker:!!_pwbSyntheticNetworkTracker} });
   }
 });
 
