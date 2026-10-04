@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v457-NETWORK-PREWRITE-INSTANT-ACK';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v461-NETWORK-INPROCESS-PREWRITE-WORKER';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
