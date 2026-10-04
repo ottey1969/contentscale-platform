@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v470-NETWORK-PREWRITE-REOPEN-CONTEXT-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v471-NETWORK-PREWRITE-PART3-QUALITY-HANDOFF-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58516,8 +58516,8 @@ TOP RANKING EVIDENCE:\n${compSummary.slice(0,6000)}
 REAL PAA:\n${peopleAlsoAsk.slice(0,8).map(x=>'- '+x.question).join('\n')||'none returned'}
 CLIENT FACT SAFETY:\n${claimsBlock.slice(0,3500)}
 TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,3000)||'none'}
-Return EXACTLY: meta_package, opening_passage, page_blueprint, faq_questions, paa_questions, ai_answer, quick_facts, action_plan, preserve_sections, surgical_changes.
-Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}; if Google supplied fewer than 5, do not invent fake PAA questions. faq_questions may add natural non-PAA FAQs when useful. quick_facts must contain 4-8 useful non-invented facts derived from supplied research. action_plan must contain at least 3 concrete non-empty actions. Never invent facts, URLs, statistics or credentials. For OPTIMIZE/EXPAND keep changes surgical.`;
+Return these implementation fields when supported: meta_package, opening_passage, page_blueprint, faq_questions, paa_questions, ai_answer, quick_facts, action_plan, preserve_sections, surgical_changes.
+Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}; if Google supplied fewer than 5, do not invent fake PAA questions. faq_questions may add natural non-PAA FAQs when useful. quick_facts should contain 4-8 useful non-invented facts derived from supplied research. action_plan should contain at least 3 concrete non-empty actions. Never invent facts, URLs, statistics or credentials. For OPTIMIZE/EXPAND keep changes surgical. If a field cannot be completed cleanly in this response, omit it rather than inventing filler; the server quality-completion stage will repair missing fields separately.`;
 
       const _part1=await _compactCall('part1_decision_strategy',_decisionPrompt,3200,['content_decision','top10_gap','recommended_title_h1','recommended_structure','must_cover_entities','entity_strategy','evidence','balance','use_cases','conclusion','confidence']);
       const _part2=_part1.ok ? await _compactCall('part2_evidence',_evidencePrompt,3400,['ai_overview_status','ai_systems_analysis','competitor_insights','citation_targets','beat_number1_instructions','fact_safety']) : {ok:false,error:'not run because part 1 failed',status:0,attempts:0,model:''};
@@ -58530,7 +58530,7 @@ Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}
         });
         delete _part2.obj.competitor_insights;
       }
-      const _part3=(_part1.ok&&_part2.ok) ? await _compactCall('part3_implementation',_implementationPrompt,5200,['meta_package','opening_passage','page_blueprint','faq_questions','paa_questions','ai_answer','quick_facts','action_plan','preserve_sections','surgical_changes']) : {ok:false,error:'not run because an earlier part failed',status:0,attempts:0,model:''};
+      const _part3=(_part1.ok&&_part2.ok) ? await _compactCall('part3_implementation',_implementationPrompt,5200,['meta_package','opening_passage','page_blueprint','action_plan']) : {ok:false,error:'not run because an earlier part failed',status:0,attempts:0,model:''};
       _pwbGeminiAttempts=(_part1.attempts||0)+(_part2.attempts||0)+(_part3.attempts||0);
       _pwbGeminiTimedOut=!!(_part1.timed_out||_part2.timed_out||_part3.timed_out);
       _pwbGeminiNetworkFailure=!_part1.ok||!_part2.ok||!_part3.ok;
