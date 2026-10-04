@@ -58359,19 +58359,38 @@ Return ONLY valid JSON, no markdown, no preamble.
         for(const txt of candidates){ try{return JSON.parse(txt)}catch(_e1){} try{return JSON.parse(_repairJsonG(txt))}catch(_e2){} }
         return null;
       };
-      const _compactCall = async function(label, compactPrompt, maxTokens) {
+      const _compactCall = async function(label, compactPrompt, maxTokens, requiredKeys) {
         const primary=_compactModels[0]||GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash';
         const fallback=_compactModels[1]||'gemini-2.5-flash';
-        const body={contents:[{parts:[{text:_langPrefix(language)+compactPrompt}]}],generationConfig:{temperature:0.25,maxOutputTokens:maxTokens,responseMimeType:'application/json'}};
+        const body={contents:[{parts:[{text:_langPrefix(language)+compactPrompt}]}],generationConfig:{temperature:0.18,maxOutputTokens:maxTokens,responseMimeType:'application/json'}};
         const started=Date.now();
+        let attempts=2;
         const rr=await callGeminiWithFallback(geminiKey,body,primary,fallback,2);
         const modelUsed=rr&&rr.modelUsed||primary;
-        if(!rr||!rr.ok){ const err=String(rr&&rr.errorMessage||('Gemini '+String(rr&&rr.status||0))).slice(0,900); return {ok:false,error:err,status:Number(rr&&rr.status||0),attempts:2,model:modelUsed,timed_out:/timed out|timeout/i.test(err),elapsed_ms:Date.now()-started}; }
+        if(!rr||!rr.ok){ const err=String(rr&&rr.errorMessage||('Gemini '+String(rr&&rr.status||0))).slice(0,900); return {ok:false,error:err,status:Number(rr&&rr.status||0),attempts:attempts,model:modelUsed,timed_out:/timed out|timeout/i.test(err),elapsed_ms:Date.now()-started}; }
         const jj=rr.data||{}, cand=jj.candidates&&jj.candidates[0]||{};
         const raw=(cand.content&&cand.content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
-        const obj=_extractCompactJson(raw);
-        if(!obj){ const finish=String(cand.finishReason||'').trim(); const err=label+' returned HTTP 200 but invalid/truncated JSON'+(finish?' (finishReason '+finish+')':'')+'; chars='+raw.length; console.warn('[prewrite-brief] '+err); return {ok:false,error:err,status:Number(rr.status||200),attempts:2,model:modelUsed,timed_out:false,finish_reason:finish,chars:raw.length,elapsed_ms:Date.now()-started}; }
-        return {ok:true,obj:obj,status:Number(rr.status||200),attempts:2,model:modelUsed,chars:raw.length,finish_reason:String(cand.finishReason||''),elapsed_ms:Date.now()-started};
+        let obj=_extractCompactJson(raw);
+        const _hasRequired=function(o){return !!o && (!Array.isArray(requiredKeys)||requiredKeys.every(function(k){return Object.prototype.hasOwnProperty.call(o,k);}));};
+        if(!_hasRequired(obj)){
+          const repairPrompt=`Convert the SOURCE RESPONSE below into ONE complete JSON object. Return JSON only, no markdown, no explanation.
+Required top-level keys: ${(requiredKeys||[]).join(', ')}.
+Use only information already present in SOURCE RESPONSE. If a required value is missing use "insufficient_data", [] or {} as appropriate. Never invent URLs, companies, facts or citations.
+
+SOURCE RESPONSE:
+${raw.slice(0,16000)}`;
+          const repairBody={contents:[{parts:[{text:repairPrompt}]}],generationConfig:{temperature:0,maxOutputTokens:Math.min(maxTokens,4200),responseMimeType:'application/json'}};
+          const repair=await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',fallback,1);
+          attempts+=1;
+          if(repair&&repair.ok){
+            const rj=repair.data||{}, rc=rj.candidates&&rj.candidates[0]||{};
+            const rraw=(rc.content&&rc.content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
+            const repaired=_extractCompactJson(rraw);
+            if(_hasRequired(repaired)){ obj=repaired; console.log('[prewrite-brief] '+label+' JSON normalized by repair pass'); }
+          }
+        }
+        if(!_hasRequired(obj)){ const finish=String(cand.finishReason||'').trim(); const missing=Array.isArray(requiredKeys)?requiredKeys.filter(function(k){return !obj||!Object.prototype.hasOwnProperty.call(obj,k);}):[]; const err=label+' returned HTTP 200 but incomplete/invalid JSON'+(finish?' (finishReason '+finish+')':'')+'; missing='+missing.join(',')+'; chars='+raw.length; console.warn('[prewrite-brief] '+err); return {ok:false,error:err,status:Number(rr.status||200),attempts:attempts,model:modelUsed,timed_out:false,finish_reason:finish,chars:raw.length,elapsed_ms:Date.now()-started}; }
+        return {ok:true,obj:obj,status:Number(rr.status||200),attempts:attempts,model:modelUsed,chars:raw.length,finish_reason:String(cand.finishReason||''),elapsed_ms:Date.now()-started};
       };
 
       const _decisionPrompt = `PART 1 OF 3 — DECISION & STRATEGY. Return ONLY compact valid JSON, no markdown.
@@ -58384,13 +58403,22 @@ CLIENT FACT SAFETY:\n${claimsBlock.slice(0,4500)}
 TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,3500)||'none'}
 Return EXACTLY: content_decision, top10_gap, recommended_title_h1, recommended_structure, must_cover_entities, entity_strategy, evidence, balance, use_cases, conclusion, confidence.
 Rules: treatment must be OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. Never invent facts, URLs, statistics or credentials. Use insufficient_data when unsupported.`;
-      const _evidencePrompt = `PART 2 OF 3 — EVIDENCE. Return ONLY compact valid JSON, no markdown.
+      const _evidencePrompt = `PART 2 OF 3 — EVIDENCE. Return ONLY compact valid JSON, no markdown or prose.
 KEYWORD: ${keyword}
-LIVE TOP RESULTS:\n${compSummary.slice(0,8000)}
-AI SYSTEM EVIDENCE:\n${aiSystemsBlock.slice(0,9500)}
-FACT SAFETY:\n${claimsBlock.slice(0,3500)}
-Return EXACTLY: ai_overview_status, ai_systems_analysis, competitor_table, citation_targets, beat_number1_instructions, fact_safety.
-Rules: preserve every supplied exact_url verbatim. Never invent or repair URLs. NOT CHECKED stays not checked. Manual evidence wins.`;
+LIVE TOP RESULTS:
+${compSummary.slice(0,7200)}
+AI SYSTEM EVIDENCE:
+${aiSystemsBlock.slice(0,7600)}
+FACT SAFETY:
+${claimsBlock.slice(0,2800)}
+Return EXACTLY these top-level keys:
+- ai_overview_status: short string
+- ai_systems_analysis: object keyed google_aio, chatgpt, perplexity, claude, copilot; each has checked, evidence_source, answer_summary, recommended_companies, mentioned_companies, domain_citations, exact_page_citations, citation_sources
+- competitor_insights: array of {rank, what_they_have, the_gap, what_to_add}; one item for every supplied rank; DO NOT repeat URLs/titles/domains
+- citation_targets: array
+- beat_number1_instructions: array
+- fact_safety: object with verified_business_facts_used, verify_first, blocked_claims, rule
+Rules: keep answers concise. Never invent facts/citations. NOT CHECKED stays not checked. Manual evidence wins. Do not output competitor URLs — ContentScale will attach exact server-owned URLs after validation.`;
       const _implementationPrompt = `PART 3 OF 3 — IMPLEMENTATION. Return ONLY compact valid JSON, no markdown.
 KEYWORD: ${keyword}
 WORKING TITLE: ${workingTitle||'none'}
@@ -58402,9 +58430,18 @@ TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,3000)||'none'}
 Return EXACTLY: meta_package, opening_passage, page_blueprint, faq_questions, paa_questions, ai_answer, quick_facts, action_plan, preserve_sections, surgical_changes.
 Rules: direct answers 40-60 words. Exactly 5 PAA {q,a} when enough evidence exists. Never invent facts, URLs, statistics or credentials. For OPTIMIZE/EXPAND keep changes surgical.`;
 
-      const _part1=await _compactCall('part1_decision_strategy',_decisionPrompt,3200);
-      const _part2=_part1.ok ? await _compactCall('part2_evidence',_evidencePrompt,3600) : {ok:false,error:'not run because part 1 failed',status:0,attempts:0,model:''};
-      const _part3=(_part1.ok&&_part2.ok) ? await _compactCall('part3_implementation',_implementationPrompt,3600) : {ok:false,error:'not run because an earlier part failed',status:0,attempts:0,model:''};
+      const _part1=await _compactCall('part1_decision_strategy',_decisionPrompt,3200,['content_decision','top10_gap','recommended_title_h1','recommended_structure','must_cover_entities','entity_strategy','evidence','balance','use_cases','conclusion','confidence']);
+      const _part2=_part1.ok ? await _compactCall('part2_evidence',_evidencePrompt,3400,['ai_overview_status','ai_systems_analysis','competitor_insights','citation_targets','beat_number1_instructions','fact_safety']) : {ok:false,error:'not run because part 1 failed',status:0,attempts:0,model:''};
+      if(_part2.ok){
+        const _ins=Array.isArray(_part2.obj.competitor_insights)?_part2.obj.competitor_insights:[];
+        const _byRank=new Map(_ins.map(function(x){return [Number(x&&x.rank||0),x||{}];}));
+        _part2.obj.competitor_table=top10.map(function(e,i){
+          const rank=Number(e.rank||i+1), ins=_byRank.get(rank)||{};
+          return {rank:rank,company_or_publisher:e.domain||'insufficient_data',domain:e.domain||'insufficient_data',exact_url:e.url||'insufficient_data',page_title:e.title||'',what_they_have:String(ins.what_they_have||'insufficient_data'),the_gap:String(ins.the_gap||'insufficient_data'),what_to_add:String(ins.what_to_add||'insufficient_data')};
+        });
+        delete _part2.obj.competitor_insights;
+      }
+      const _part3=(_part1.ok&&_part2.ok) ? await _compactCall('part3_implementation',_implementationPrompt,3600,['meta_package','opening_passage','page_blueprint','faq_questions','paa_questions','ai_answer','quick_facts','action_plan','preserve_sections','surgical_changes']) : {ok:false,error:'not run because an earlier part failed',status:0,attempts:0,model:''};
       _pwbGeminiAttempts=(_part1.attempts||0)+(_part2.attempts||0)+(_part3.attempts||0);
       _pwbGeminiTimedOut=!!(_part1.timed_out||_part2.timed_out||_part3.timed_out);
       _pwbGeminiNetworkFailure=!_part1.ok||!_part2.ok||!_part3.ok;
