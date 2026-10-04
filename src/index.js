@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v452-NETWORK-PREWRITE-GEMINI-FALLBACK';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-04-CANONICAL-v453-NETWORK-PREWRITE-GEMINI-TIME-BUDGET';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -58147,15 +58147,23 @@ Return ONLY valid JSON, no markdown, no preamble.
       ? Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL, 'gemini-2.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))).slice(0,3)
       : [GEMINI_MODEL, GEMINI_MODEL];
 
+    // v453 — v452 proved that 12s was too short for this large JSON brief: all valid
+    // models were aborted by our own timer before Google returned. Give the primary Network
+    // model one realistic generation window instead of burning the same short timeout three
+    // times. Only fall through to another model after an immediate HTTP/config/network failure;
+    // an actual AbortError stops the ladder because repeating a large prompt would only consume
+    // the remaining gateway budget. Normal Tracker behavior remains unchanged.
+    let _pwbGeminiTimedOut=false;
+    const _pwbGeminiNetworkStartedAt=Date.now();
     for(let _gi=0;_gi<_pwbGeminiModelLadder.length && !d2;_gi++){
       const _model=_pwbGeminiModelLadder[_gi];
       _pwbGeminiAttempts=_gi+1;
       _pwbGeminiModelUsed=_model;
       try{
         const ctrl2 = new AbortController();
-        const _timeoutMs = _pwbNetworkFastLane ? 12000 : 32000;
+        const _timeoutMs = _pwbNetworkFastLane ? (_gi===0?35000:12000) : 32000;
         const _t2=setTimeout(() => ctrl2.abort(), _timeoutMs);
-        const _generationConfig={temperature:0.4,maxOutputTokens:_pwbNetworkFastLane?10000:16384,responseMimeType:'application/json'};
+        const _generationConfig={temperature:0.4,maxOutputTokens:_pwbNetworkFastLane?9000:16384,responseMimeType:'application/json'};
         if(!_pwbNetworkFastLane)_generationConfig.thinkingConfig={thinkingBudget:0};
         const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -58169,19 +58177,19 @@ Return ONLY valid JSON, no markdown, no preamble.
         if(r2.ok){d2=_json;break}
         _pwbGeminiError=((_json.error&&_json.error.message)||_txt||('Gemini '+r2.status)).slice(0,700);
         console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'failed:',r2.status,_pwbGeminiError.slice(0,220));
-        // Normal Tracker preserves the old hard-error stop. Network embed is allowed to
-        // continue to the next known-compatible model even for 400/403/404 model/config errors.
         if(!_pwbNetworkFastLane && !(r2.status===429||r2.status>=500))break;
       }catch(_ge){
         _pwbGeminiNetworkFailure=true;
         _pwbGeminiStatus=0;
-        _pwbGeminiError=String(_ge&&_ge.name==='AbortError'?'Gemini request timed out':(_ge&&_ge.message||_ge)).slice(0,700);
+        _pwbGeminiTimedOut=!!(_ge&&_ge.name==='AbortError');
+        _pwbGeminiError=String(_pwbGeminiTimedOut?'Gemini request timed out after '+(_pwbNetworkFastLane&&_gi===0?'35s':'12s'):(_ge&&_ge.message||_ge)).slice(0,700);
         console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'network failure:',_pwbGeminiError);
-        if(!_pwbNetworkFastLane)break;
+        if(!_pwbNetworkFastLane || _pwbGeminiTimedOut)break;
       }
+      if(_pwbNetworkFastLane && Date.now()-_pwbGeminiNetworkStartedAt>43000)break;
       if(!_pwbNetworkFastLane && _gi===0)await new Promise(r=>setTimeout(r,350));
     }
-    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:true,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,model_ladder:_pwbNetworkFastLane?_pwbGeminiModelLadder:undefined,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane}});
+    if(!d2)return res.status(502).json({success:false,stage:'gemini',retryable:true,error:'Prewrite research completed, but Gemini could not generate the Brief.',diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,model_ladder:_pwbNetworkFastLane?_pwbGeminiModelLadder:undefined,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane}});
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
     const m2 = rawText.match(/\{[\s\S]*\}/);
