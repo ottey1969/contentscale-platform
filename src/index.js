@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v488-NETWORK-v493-INTENT-FUSION';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v489-NETWORK-v494-EVIDENCE-QUALITY-LADDER';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,10 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-evidence-quality-ladder-v489',
+  'prewrite-provenance-resolution-v489',
+  'prewrite-expert-research-depth-v489',
+  'network-evidence-quality-contract-v494',
   'prewrite-two-axis-intent-fusion-v488',
   'prewrite-verified-evidence-enrichment-v487',
   'network-intent-contract-v493',
@@ -46375,12 +46379,17 @@ function renderPrewriteBrief(b) {
     }
     if (Array.isArray(b.evidence.statistics) && b.evidence.statistics.length) {
       lines.push(_PLX.statsH.toUpperCase());
-      b.evidence.statistics.forEach(function(x){ if(x) lines.push('- ' + (typeof x==='string'?x:(x.evidence_text||x.value||x.name||''))); });
+      b.evidence.statistics.forEach(function(x){ if(!x)return; if(typeof x==='string'){lines.push('- '+x);return;} var src=x.best_source_url||x.source_url||''; lines.push('- '+(x.evidence_text||x.value||x.name||'')+' ['+(x.quality_stage||'source_verified')+' · '+(x.authority_class||'ungraded')+']'+(src?' | '+src:'')); });
       lines.push('');
     }
     if (Array.isArray(b.evidence.expert_quotes) && b.evidence.expert_quotes.length) {
       lines.push(_PLX.quoteH.toUpperCase());
-      b.evidence.expert_quotes.forEach(function(x){ if(!x)return; var who=(x.person||'')+(x.role?' — '+x.role:''); lines.push('- “'+(x.quote||'')+'” — '+who+(x.source_url?' | '+x.source_url:'')); });
+      b.evidence.expert_quotes.forEach(function(x){ if(!x)return; var who=(x.person||'')+(x.role?' — '+x.role:''); lines.push('- “'+(x.quote||'')+'” — '+who+' ['+(x.quality_stage||'source_verified')+' · '+(x.authority_class||'ungraded')+']'+(x.source_url?' | '+x.source_url:'')); });
+      lines.push('');
+    }
+    if (Array.isArray(b.evidence.expert_insights) && b.evidence.expert_insights.length) {
+      lines.push('VERIFIED ATTRIBUTED EXPERT INSIGHTS — PARAPHRASE ONLY');
+      b.evidence.expert_insights.forEach(function(x){ if(!x)return; var who=(x.person||'')+(x.role?' — '+x.role:''); lines.push('- '+(x.insight||'')+' — '+who+' [paraphrase_only · '+(x.authority_class||'ungraded')+']'+(x.source_url?' | '+x.source_url:'')); });
       lines.push('');
     }
     if (b.evidence.experience_to_include) lines.push(_PLX.expH.toUpperCase(), b.evidence.experience_to_include, '');
@@ -46393,8 +46402,9 @@ function renderPrewriteBrief(b) {
   if (b.evidence_research) {
     var _erTxt=b.evidence_research||{},_ers=_erTxt.statistics||{},_erq=_erTxt.expert_quotes||{};
     lines.push(_PLX.researchH.toUpperCase());
-    lines.push('Statistics: '+(_ers.status||'unknown')+' · verified '+Number(_ers.verified||0)+' · candidates '+Number(_ers.candidates||0));
-    lines.push('Expert quotes: '+(_erq.status||'unknown')+' · verified '+Number(_erq.verified||0)+' · candidates '+Number(_erq.candidates||0));
+    lines.push('Statistics: '+(_ers.status||'unknown')+' · verified '+Number(_ers.verified||0)+' · primary '+Number(_ers.primary_verified||0)+' · provenance resolved '+Number(_ers.provenance_resolved||0)+' · checked '+Number(_ers.source_pages_checked||0)+'/'+Number(_ers.candidates||0));
+    lines.push('Expert quotes: '+(_erq.status||'unknown')+' · exact '+Number(_erq.verified||0)+' · attributed insights '+Number(_erq.attributed_insights||0)+' · checked '+Number(_erq.source_pages_checked||0)+'/'+Number(_erq.candidates||0)+( _erq.second_pass?' · second pass used':''));
+    if(_erTxt.quality_ladder) lines.push('Evidence ladder: '+(_erTxt.quality_ladder.stages||[]).join(' -> ')+' · approved '+Number(_erTxt.quality_ladder.approved_items||0)+' · primary '+Number(_erTxt.quality_ladder.primary_verified||0));
     if(_erTxt.rule) lines.push(_erTxt.rule);
     lines.push('');
   }
@@ -46633,23 +46643,28 @@ function renderPrewriteBrief(b) {
     var _ev = b.evidence;
     var _statHtml='';
     if(Array.isArray(_ev.statistics)&&_ev.statistics.length){
-      _statHtml='<div style="margin-bottom:8px;">'+_pwxHead(_PLX.statsH)+_ev.statistics.map(function(x){var t=typeof x==='string'?x:(x&&x.evidence_text||x&&x.value||'');return t?'<div style="font-size:11px;color:#dcfce7;padding:3px 0;border-top:1px solid #14532d55;">'+esc(t)+'</div>':'';}).join('')+'</div>';
+      _statHtml='<div style="margin-bottom:8px;">'+_pwxHead(_PLX.statsH)+_ev.statistics.map(function(x){if(!x)return '';if(typeof x==='string')return '<div style="font-size:11px;color:#dcfce7;padding:5px 0;border-top:1px solid #14532d55;">'+esc(x)+'</div>';var t=x.evidence_text||x.value||'',u=x.best_source_url||x.source_url||'',stage=x.quality_stage||'source_verified',cls=x.authority_class||'ungraded',badge=stage==='primary_verified'?'#22c55e':(stage==='provenance_resolved'?'#38bdf8':'#fbbf24');return t?'<div style="font-size:11px;color:#dcfce7;padding:6px 0;border-top:1px solid #14532d55;">'+esc(t)+'<div style="margin-top:3px;font-size:10px;color:#94a3b8;"><span style="display:inline-block;border:1px solid '+badge+';color:'+badge+';border-radius:999px;padding:1px 6px;margin-right:5px;">'+esc(stage)+'</span>'+esc(cls)+(u?' · <a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">best source</a>':'')+'</div></div>':'';}).join('')+'</div>';
     }
     var _quoteHtml='';
     if(Array.isArray(_ev.expert_quotes)&&_ev.expert_quotes.length){
-      _quoteHtml='<div style="margin-bottom:8px;">'+_pwxHead(_PLX.quoteH)+_ev.expert_quotes.map(function(q){if(!q||!q.quote||!q.person)return '';var u=String(q.source_url||''),valid=String(u).toLowerCase().indexOf('https://')===0;return '<blockquote style="margin:6px 0;padding:7px 10px;border-left:3px solid #22c55e;background:#08130d;color:#e5e7eb;font-size:11px;line-height:1.55;">“'+esc(q.quote)+'”<div style="margin-top:4px;color:#86efac;font-size:10.5px;">— '+esc(q.person)+(q.role?' · '+esc(q.role):'')+(valid?' · <a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">source</a>':'')+'</div></blockquote>';}).join('')+'</div>';
+      _quoteHtml='<div style="margin-bottom:8px;">'+_pwxHead(_PLX.quoteH)+_ev.expert_quotes.map(function(q){if(!q||!q.quote||!q.person)return '';var u=String(q.source_url||''),valid=String(u).toLowerCase().indexOf('https://')===0,stage=q.quality_stage||'source_verified';return '<blockquote style="margin:6px 0;padding:7px 10px;border-left:3px solid #22c55e;background:#08130d;color:#e5e7eb;font-size:11px;line-height:1.55;">“'+esc(q.quote)+'”<div style="margin-top:4px;color:#86efac;font-size:10.5px;">— '+esc(q.person)+(q.role?' · '+esc(q.role):'')+' · '+esc(stage)+' · '+esc(q.authority_class||'ungraded')+(valid?' · <a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">source</a>':'')+'</div></blockquote>';}).join('')+'</div>';
     }
-    var _evH = _pwxList(_PLX.srcH, _ev.official_sources) + _statHtml + _quoteHtml + _pwxList(_PLX.trustH, _ev.trust_signals)
+    var _insightHtml='';
+    if(Array.isArray(_ev.expert_insights)&&_ev.expert_insights.length){
+      _insightHtml='<div style="margin-bottom:8px;">'+_pwxHead('Verified attributed expert insights · paraphrase only')+_ev.expert_insights.map(function(q){if(!q||!q.insight||!q.person)return '';var u=String(q.source_url||''),valid=u.toLowerCase().indexOf('https://')===0;return '<div style="margin:5px 0;padding:7px 10px;border-left:3px solid #38bdf8;background:#071521;color:#dbeafe;font-size:11px;line-height:1.55;">'+esc(q.insight)+'<div style="margin-top:4px;color:#93c5fd;font-size:10.5px;">Paraphrase attributed to '+esc(q.person)+(q.role?' · '+esc(q.role):'')+' · '+esc(q.authority_class||'ungraded')+(valid?' · <a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">verified source</a>':'')+'</div></div>';}).join('')+'</div>';
+    }
+    var _evH = _pwxList(_PLX.srcH, _ev.official_sources) + _statHtml + _quoteHtml + _insightHtml + _pwxList(_PLX.trustH, _ev.trust_signals)
       + (_ev.experience_to_include ? '<div style="margin-bottom:4px;">' + _pwxHead(_PLX.expH) + '<div style="font-size:11.5px;color:#cbd5e1;line-height:1.55;">' + esc(_ev.experience_to_include) + '</div></div>' : '');
     if (_evH) html += '<div style="margin-bottom:12px;background:#0f1e14;border:1px solid #14532d;border-radius:8px;padding:10px 12px;">' + _pwxHead(_PLX.evidenceH) + _evH + '</div>';
   }
   if (b.evidence_research) {
-    var _er=b.evidence_research||{},_ers2=_er.statistics||{},_erq2=_er.expert_quotes||{};
+    var _er=b.evidence_research||{},_ers2=_er.statistics||{},_erq2=_er.expert_quotes||{},_eql=_er.quality_ladder||{};
     var _ok=_er.completed===true;
     html += '<div style="margin-bottom:12px;background:#081521;border:1px solid '+(_ok?'#0e7490':'#92400e')+';border-radius:8px;padding:10px 12px;">'
       + _pwxHead(_PLX.researchH)
-      + '<div style="font-size:11px;color:#cbd5e1;">Statistics: <strong style="color:'+(_ers2.status==='verified_results'?'#86efac':'#fbbf24')+';">'+esc(_ers2.status||'unknown')+'</strong> · '+esc(_ers2.verified||0)+' verified / '+esc(_ers2.candidates||0)+' candidates</div>'
-      + '<div style="font-size:11px;color:#cbd5e1;margin-top:3px;">Expert quotes: <strong style="color:'+(_erq2.status==='verified_results'?'#86efac':'#fbbf24')+';">'+esc(_erq2.status||'unknown')+'</strong> · '+esc(_erq2.verified||0)+' verified / '+esc(_erq2.candidates||0)+' candidates</div>'
+      + '<div style="font-size:11px;color:#cbd5e1;">Statistics: <strong style="color:'+(_ers2.status==='verified_results'?'#86efac':'#fbbf24')+';">'+esc(_ers2.status||'unknown')+'</strong> · '+esc(_ers2.verified||0)+' verified · '+esc(_ers2.primary_verified||0)+' primary · '+esc(_ers2.provenance_resolved||0)+' provenance resolved · checked '+esc(_ers2.source_pages_checked||0)+'/'+esc(_ers2.candidates||0)+'</div>'
+      + '<div style="font-size:11px;color:#cbd5e1;margin-top:3px;">Expert evidence: <strong style="color:'+((_erq2.status==='verified_results'||_erq2.status==='verified_attributed_insights')?'#86efac':'#fbbf24')+';">'+esc(_erq2.status||'unknown')+'</strong> · '+esc(_erq2.verified||0)+' exact quotes · '+esc(_erq2.attributed_insights||0)+' attributed insights · checked '+esc(_erq2.source_pages_checked||0)+'/'+esc(_erq2.candidates||0)+(_erq2.second_pass?' · second pass used':'')+'</div>'
+      + (_eql.completed?'<div style="margin-top:7px;padding-top:6px;border-top:1px solid #164e63;font-size:10.5px;color:#a5f3fc;"><strong>Evidence Quality Ladder:</strong> '+esc((_eql.stages||[]).join(' → '))+'<br>Approved: '+esc(_eql.approved_items||0)+' · primary verified: '+esc(_eql.primary_verified||0)+' · source verified: '+esc(_eql.source_verified||0)+'</div>':'')
       + (_er.rule?'<div style="font-size:10px;color:#94a3b8;margin-top:5px;line-height:1.45;">'+esc(_er.rule)+'</div>':'')
       + '</div>';
   }
@@ -46671,7 +46686,7 @@ function renderPrewriteBrief(b) {
   }
   if (b.ai_quality_check) {
     var _qc = b.ai_quality_check;
-    var _qcLab = { meta_package:_PLH.metaPkgH, opening_passage:_PLH.openingH, definitive_outline:'Definitive outline', page_blueprint:_PLH.blueprintH, ai_answer:_PLX.aiAnswerH, quick_facts:_PLX.quickFactsH, entity_strategy:_PLX.entityH, entity_relationships:_PLX.relH, evidence:_PLX.evidenceH, official_sources:_PLX.srcH, evidence_research:_PLX.researchH, balance:_PLX.balanceH, use_cases:_PLX.useCasesH, conclusion:_PLX.conclusionH };
+    var _qcLab = { meta_package:_PLH.metaPkgH, opening_passage:_PLH.openingH, definitive_outline:'Definitive outline', page_blueprint:_PLH.blueprintH, ai_answer:_PLX.aiAnswerH, quick_facts:_PLX.quickFactsH, entity_strategy:_PLX.entityH, entity_relationships:_PLX.relH, evidence:_PLX.evidenceH, official_sources:_PLX.srcH, evidence_research:_PLX.researchH, evidence_quality:'Evidence quality ladder', balance:_PLX.balanceH, use_cases:_PLX.useCasesH, conclusion:_PLX.conclusionH };
     var _sc = typeof _qc.readiness_score === 'number' ? _qc.readiness_score : null;
     var _scCol = _sc == null ? '#9ca3af' : (_sc >= 80 ? '#4ade80' : (_sc >= 55 ? '#fbbf24' : '#f87171'));
     html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">'
@@ -57972,6 +57987,7 @@ function _pwbReadiness(b) {
     evidence: !!(b.evidence && Array.isArray(b.evidence.trust_signals) && b.evidence.trust_signals.filter(_s).length>=2 && _s(b.evidence.experience_to_include)),
     official_sources: !!(b.evidence && Array.isArray(b.evidence.official_sources) && b.evidence.official_sources.filter(x=>typeof x==='string'?_s(x):!!(x&&(_s(x.url)||_s(x.value)||_s(x.name)))).length>=2),
     evidence_research: !!(b.evidence_research && b.evidence_research.completed===true && b.evidence_research.statistics && b.evidence_research.statistics.searched===true && b.evidence_research.expert_quotes && b.evidence_research.expert_quotes.searched===true),
+    evidence_quality: !!(b.evidence_research && b.evidence_research.quality_ladder && b.evidence_research.quality_ladder.completed===true),
     internal_links: !!(b.link_research && b.link_research.internal && (Number(b.link_research.internal.urls_found||0)>0 ? _a(b.internal_link_targets) : true)),
     external_links: !!(b.link_research && b.link_research.external && (Number(b.link_research.external.candidates_found||0)===0 || _a(b.external_link_targets))),
     balance: !!(b.balance && (_a(b.balance.limitations) || _a(b.balance.comparisons))),
@@ -57981,7 +57997,7 @@ function _pwbReadiness(b) {
     action_plan: Array.isArray(b.action_plan)&&b.action_plan.filter(x=>x&&_s(x.action)).length>=3
   };
   const keys = Object.keys(checks);
-  const critical=['meta_package','opening_passage','definitive_outline','ai_answer','quick_facts','entity_strategy','entity_relationships','evidence','official_sources','evidence_research','balance','use_cases','conclusion','paa_answers','action_plan'];
+  const critical=['meta_package','opening_passage','definitive_outline','ai_answer','quick_facts','entity_strategy','entity_relationships','evidence','official_sources','evidence_research','evidence_quality','balance','use_cases','conclusion','paa_answers','action_plan'];
   const researchKeys=['evidence_research','internal_links','external_links'];
   checks.readiness_score = Math.round(critical.filter(k => checks[k]).length / critical.length * 100);
   checks.research_coverage_score = Math.round(researchKeys.filter(k => checks[k]).length / researchKeys.length * 100);
@@ -58469,11 +58485,15 @@ async function _handlePrewriteBriefGeneration(req, res) {
       const _yr=new Date().getFullYear();
       await Promise.all([
         _pwbEvidenceSearchOne('statistics',keyword+' statistics study report data '+_yr,'statistics_search',_pwbStatCandidateUrls),
-        _pwbEvidenceSearchOne('statistics',keyword+' survey research data findings','statistics_search',_pwbStatCandidateUrls),
-        _pwbEvidenceSearchOne('statistics',keyword+' benchmark report percentage trends','statistics_search',_pwbStatCandidateUrls),
+        _pwbEvidenceSearchOne('statistics',keyword+' survey research data findings original study','statistics_search',_pwbStatCandidateUrls),
+        _pwbEvidenceSearchOne('statistics',keyword+' benchmark report percentage trends methodology','statistics_search',_pwbStatCandidateUrls),
+        _pwbEvidenceSearchOne('statistics',keyword+' academic paper dataset empirical findings','statistics_search',_pwbStatCandidateUrls),
         _pwbEvidenceSearchOne('expert_quotes','"'+keyword+'" expert interview quote','expert_quote_search',_pwbQuoteCandidateUrls),
-        _pwbEvidenceSearchOne('expert_quotes',keyword+' expert says interview insights','expert_quote_search',_pwbQuoteCandidateUrls),
-        _pwbEvidenceSearchOne('expert_quotes',keyword+' expert commentary interview','expert_quote_search',_pwbQuoteCandidateUrls)
+        _pwbEvidenceSearchOne('expert_quotes',keyword+' expert interview named researcher commentary','expert_quote_search',_pwbQuoteCandidateUrls),
+        _pwbEvidenceSearchOne('expert_quotes',keyword+' conference talk transcript expert','expert_quote_search',_pwbQuoteCandidateUrls),
+        _pwbEvidenceSearchOne('expert_quotes',keyword+' university researcher interview','expert_quote_search',_pwbQuoteCandidateUrls),
+        _pwbEvidenceSearchOne('expert_quotes',keyword+' named expert perspective article','expert_quote_search',_pwbQuoteCandidateUrls),
+        _pwbEvidenceSearchOne('expert_quotes',keyword+' practitioner interview direct quote','expert_quote_search',_pwbQuoteCandidateUrls)
       ]);
     } else {
       _pwbEvidenceSearch.statistics.error='SERPAPI_KEY not set';
@@ -59271,98 +59291,196 @@ ${claimsBlock.slice(0,2400)}`;
       console.warn('[prewrite-brief] canonical repair skipped: compact helper unavailable | '+_pwbCanonicalNeeds.join(','));
     }
 
-    // ── VERIFIED EVIDENCE ENRICHMENT (v487) ───────────────────────────────
-    // "Do not invent" is not permission to stop at zero. Search first, scrape the exact
-    // pages, extract short evidence candidates, then server-verify every quote/statistic
-    // against the scraped source text before the Brief is allowed to call research complete.
-    _pwbStage='evidence_enrichment';
+    // ── EVIDENCE QUALITY LADDER (v489) ─────────────────────────────────────
+    // Candidate -> fetched -> source_verified -> provenance_resolved -> authority_graded
+    // -> approved_for_writing. "Found on a web page" is not the same as "best available
+    // source". We therefore verify exact evidence first, then attempt to resolve upstream
+    // provenance and grade the source before the writer receives it.
+    _pwbStage='evidence_quality_ladder';
     const _pwbEvidenceNorm=function(v){return String(v||'').toLowerCase().replace(/[“”„‟]/g,'"').replace(/[‘’‚‛]/g,"'").replace(/\s+/g,' ').trim();};
-    const _pwbEvidenceCorpusMap=new Map();
-    const _pwbPriorityUrls=Array.from(new Set([].concat(Array.from(_pwbStatCandidateUrls||[]).slice(0,5),Array.from(_pwbQuoteCandidateUrls||[]).slice(0,5),(_pwbExternalCandidates||[]).map(function(x){return x&&x.exact_url||'';})).filter(Boolean))).slice(0,12);
-    const _pwbTopReuse=new Map((top10||[]).map(function(x,i){try{return [new URL(x.url).href,compScrapes[i]||{}]}catch(_e){return ['',{}]}}).filter(function(x){return x[0];}));
-    const _pwbEvidenceScrapes=await Promise.all(_pwbPriorityUrls.map(async function(u){
-      let sc=_pwbTopReuse.get(u)||null;
-      if(!sc||!String(sc.text||'').trim())sc=await scrapeBodyText(u,9000);
-      const meta=(_pwbExternalCandidates||[]).find(function(x){try{return new URL(x.exact_url).href===u}catch(_e){return false}})||{};
-      return {url:u,title:String(meta.title||'').trim(),snippet:String(meta.snippet||'').trim(),source_type:String(meta.source_type||'research'),text:String(sc&&sc.text||'').trim()};
-    }));
-    _pwbEvidenceScrapes.forEach(function(x){if(x&&x.url&&x.text.length>=220)_pwbEvidenceCorpusMap.set(x.url,x);});
-    const _pwbEvidenceCorpus=Array.from(_pwbEvidenceCorpusMap.values()).slice(0,10);
-    let _pwbEvidenceExtraction={ok:false,obj:{statistics:[],expert_quotes:[]},error:''};
-    if(_pwbEvidenceCorpus.length){
-      const _evidenceCorpusText=_pwbEvidenceCorpus.map(function(x,i){return 'SOURCE '+(i+1)+'\nURL: '+x.url+'\nTITLE: '+(x.title||'')+'\nTEXT:\n'+x.text.slice(0,3600);}).join('\n\n');
-      const _evidencePrompt=`VERIFIED EVIDENCE ENRICHMENT. Return JSON only with exactly {"statistics":[],"expert_quotes":[]}.
+    const _pwbEvidenceTokens=function(v){
+      const stop=new Set(['the','and','for','with','from','that','this','into','than','have','has','had','were','was','are','but','not','only','more','most','their','there','about','your','our','its','per','all','over','under','between','through','using','used','use']);
+      return _pwbEvidenceNorm(v).replace(/[^a-z0-9.%]+/g,' ').split(/\s+/).filter(function(x){return x.length>=3&&!stop.has(x)&&!/^[0-9.]+%?$/.test(x);});
+    };
+    const _pwbActualTitle=function(sc,fallback){
+      const h=String(sc&&sc.fullHtml||''),m=h.match(/<title[^>]*>([\s\S]*?)<\/title>/i);let t=m?String(m[1]||'').replace(/<[^>]+>/g,' ').replace(/&amp;/gi,'&').replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/\s+/g,' ').trim():'';
+      return (t||String(fallback||'').trim()).slice(0,320);
+    };
+    const _pwbCompetitorHosts=new Set((top10||[]).map(function(x){try{return new URL(x.url).hostname.toLowerCase().replace(/^www\./,'')}catch(_e){return ''}}).filter(Boolean));
+    const _pwbAuthorityGrade=function(url,title,text,sourceType){
+      let host='',path='';try{const u=new URL(String(url||''));host=u.hostname.toLowerCase().replace(/^www\./,'');path=u.pathname.toLowerCase();}catch(_e){}
+      const corpus=(String(title||'')+' '+String(text||'').slice(0,2500)).toLowerCase();
+      const competitor=_pwbCompetitorHosts.has(host);
+      const researchSignals=/(original research|research report|survey|study|benchmark|methodology|dataset|data set|white paper|whitepaper|annual report|state of |we surveyed|respondents|participants)/i.test(corpus);
+      const interviewSignals=/(interview|q&a|q and a|transcript|conversation with|speaks with|podcast transcript|webinar transcript)/i.test(corpus);
+      let authority_class='secondary_editorial',authority_score=58,reason='Readable web source; no stronger primary-source signal proven.';
+      if(/\.gov$/i.test(host)||/\.gov\./i.test(host)){authority_class='government_primary';authority_score=100;reason='Government source.';}
+      else if(/(^|\.)(arxiv\.org|doi\.org|pubmed\.ncbi\.nlm\.nih\.gov|ncbi\.nlm\.nih\.gov)$/i.test(host)||/\.edu$/i.test(host)){authority_class='academic_primary';authority_score=98;reason='Academic/research source.';}
+      else if(/(^|\.)(w3\.org|ietf\.org|schema\.org|iso\.org)$/i.test(host)){authority_class='standards_primary';authority_score=97;reason='Standards/specification source.';}
+      else if(researchSignals&&!competitor){authority_class='original_research_report';authority_score=88;reason='Page presents study/report/methodology signals and is not a current SERP competitor.';}
+      else if(/(^|\.)(developers\.google\.com|support\.google\.com|blog\.google|openai\.com|anthropic\.com|microsoft\.com|bing\.com|search\.google)$/i.test(host)){authority_class='official_first_party';authority_score=86;reason='Official first-party platform documentation/source.';}
+      else if(interviewSignals&&!competitor){authority_class='direct_expert_source';authority_score=82;reason='Direct interview/transcript context.';}
+      else if(competitor){authority_class='competitor_secondary';authority_score=44;reason='Current SERP competitor; useful for gap/context, weaker as final authority.';}
+      else if(String(sourceType||'').includes('authority')){authority_class='recognized_industry';authority_score=72;reason='Discovered through authority-source research.';}
+      return {authority_class,authority_score,reason,host,competitor,research_signals:researchSignals,interview_signals:interviewSignals};
+    };
+    const _pwbFetchEvidencePage=async function(u,meta){
+      let sc=null;try{sc=await scrapeBodyText(u,12500)}catch(_e){}
+      const text=String(sc&&sc.text||'').trim();if(text.length<220)return null;
+      const title=_pwbActualTitle(sc,meta&&meta.title||'');
+      const grade=_pwbAuthorityGrade(u,title,text,meta&&meta.source_type||'research');
+      return {url:u,title:title,snippet:String(meta&&meta.snippet||'').trim(),source_type:String(meta&&meta.source_type||'research'),text:text,fullHtml:String(sc&&sc.fullHtml||''),authority:grade};
+    };
+    const _pwbMetaForUrl=function(u){return (_pwbExternalCandidates||[]).find(function(x){try{return new URL(x.exact_url).href===u}catch(_e){return false}})||{};};
+    const _pwbCorpusMap=new Map();
+    const _pwbInitialUrls=Array.from(new Set([].concat(
+      Array.from(_pwbStatCandidateUrls||[]).slice(0,8),
+      Array.from(_pwbQuoteCandidateUrls||[]).slice(0,10),
+      (_pwbExternalCandidates||[]).filter(function(x){return /authority|serp/.test(String(x&&x.source_type||''));}).map(function(x){return x.exact_url;}).slice(0,4)
+    ).filter(Boolean))).slice(0,18);
+    const _pwbInitialPages=await Promise.all(_pwbInitialUrls.map(function(u){return _pwbFetchEvidencePage(u,_pwbMetaForUrl(u));}));
+    _pwbInitialPages.forEach(function(x){if(x)_pwbCorpusMap.set(x.url,x);});
+
+    const _pwbParseJson=function(raw){
+      raw=String(raw||'').trim();const tries=[raw,raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'')];const a=raw.indexOf('{'),b=raw.lastIndexOf('}');if(a>=0&&b>a)tries.push(raw.slice(a,b+1));
+      for(const t of tries){try{return JSON.parse(t)}catch(_e1){try{return JSON.parse(_repairJsonG(t))}catch(_e2){}}}return null;
+    };
+    const _pwbExtractEvidence=async function(corpus,label){
+      if(!corpus.length)return {ok:true,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:''};
+      const sourceText=corpus.slice(0,14).map(function(x,i){return 'SOURCE '+(i+1)+'\nURL: '+x.url+'\nTITLE: '+(x.title||'')+'\nAUTHORITY CLASS: '+x.authority.authority_class+'\nTEXT:\n'+x.text.slice(0,3000);}).join('\n\n');
+      const prompt=`EVIDENCE QUALITY EXTRACTION (${label}). Return JSON only with exactly {"statistics":[],"expert_quotes":[],"expert_insights":[]}.
 TOPIC: ${keyword}
 
-SOURCE PAGES BELOW WERE FETCHED BY CONTENTSCALE. You may use ONLY these exact URLs and ONLY text literally present in SOURCE TEXT.
-STATISTICS: return 0-4 genuinely useful statistics. Each item: {"evidence_text":"EXACT 5-30 word source excerpt containing the number","source_url":"exact supplied URL","source_title":"supplied title","supports":"what article claim/section it can support"}. Do not force a statistic if it is not useful.
-EXPERT QUOTES: return 0-3 useful short quotes from a clearly named person. Each item: {"quote":"EXACT 6-22 word quote copied verbatim from source text","person":"named person visibly present in that source","role":"role/title only if visible, else empty","source_url":"exact supplied URL","source_title":"supplied title","supports":"what article point it supports"}.
-Never invent, paraphrase or repair a quote. Never attribute page prose to an expert unless the person is explicitly named in the source. Do not use anonymous quotes. Do not return a URL not supplied below.
+Use ONLY supplied URLs and source text.
+STATISTICS: 0-5 useful items. {"evidence_text":"EXACT 5-35 word excerpt containing the number","source_url":"exact supplied URL","supports":"claim/section supported"}. Never create or repair a number.
+EXPERT QUOTES: 0-4 exact direct quotes. {"quote":"EXACT 6-25 words","person":"named person visible near quote","role":"only if visibly supported, otherwise empty","source_url":"exact supplied URL","supports":"point supported"}. Never paraphrase inside quotation marks.
+EXPERT INSIGHTS: when a named expert/source contains a useful idea but no safe exact quote, return {"insight":"concise PARAPHRASE, no quotation marks","evidence_excerpt":"EXACT 8-40 word source excerpt that supports the paraphrase","person":"named person visible near excerpt","role":"only if visible, else empty","source_url":"exact supplied URL","supports":"point supported"}. These are paraphrases, never quotes.
+Do not attribute generic page prose to a person. Do not return anonymous claims. Do not return URLs not supplied.
 
-${_evidenceCorpusText}`;
+${sourceText}`;
       if(typeof _pwbCompactCall==='function'){
-        _pwbEvidenceExtraction=await _pwbCompactCall('verified_evidence_enrichment',_evidencePrompt,3600,['statistics','expert_quotes']);
-      }else{
-        try{
-          const _eb={contents:[{parts:[{text:_langPrefix(language)+_evidencePrompt}]}],generationConfig:{temperature:0.05,maxOutputTokens:3600,responseMimeType:'application/json'}};
-          const _er=await callGeminiWithFallback(geminiKey,_eb,GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash','gemini-2.5-flash',1);
-          if(_er&&_er.ok){
-            const _cand=_er.data&&_er.data.candidates&&_er.data.candidates[0]||{},_raw=(_cand.content&&_cand.content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
-            let _obj=null;try{_obj=JSON.parse(_raw)}catch(_e1){try{_obj=JSON.parse(_repairJsonG(_raw))}catch(_e2){}}
-            if(_obj&&Array.isArray(_obj.statistics)&&Array.isArray(_obj.expert_quotes))_pwbEvidenceExtraction={ok:true,obj:_obj,error:''};else _pwbEvidenceExtraction={ok:false,obj:{statistics:[],expert_quotes:[]},error:'invalid evidence JSON'};
-          }else _pwbEvidenceExtraction={ok:false,obj:{statistics:[],expert_quotes:[]},error:String(_er&&_er.errorMessage||'evidence model call failed')};
-        }catch(_ee){_pwbEvidenceExtraction={ok:false,obj:{statistics:[],expert_quotes:[]},error:String(_ee&&_ee.message||_ee)};}
+        const r=await _pwbCompactCall('evidence_quality_'+label,prompt,4600,['statistics','expert_quotes','expert_insights']);
+        return r&&r.ok?{ok:true,obj:r.obj,error:''}:{ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(r&&r.error||'evidence extraction failed')};
       }
-    }else{
-      _pwbEvidenceExtraction={ok:true,obj:{statistics:[],expert_quotes:[]},error:''};
+      try{
+        const body={contents:[{parts:[{text:_langPrefix(language)+prompt}]}],generationConfig:{temperature:0.03,maxOutputTokens:4600,responseMimeType:'application/json'}};
+        const rr=await callGeminiWithFallback(geminiKey,body,GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash','gemini-2.5-flash',1);
+        if(!rr||!rr.ok)return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(rr&&rr.errorMessage||'evidence model call failed')};
+        const c=rr.data&&rr.data.candidates&&rr.data.candidates[0]||{},raw=(c.content&&c.content.parts||[]).map(function(x){return x&&x.text||'';}).join('');const obj=_pwbParseJson(raw);
+        return obj&&Array.isArray(obj.statistics)&&Array.isArray(obj.expert_quotes)&&Array.isArray(obj.expert_insights)?{ok:true,obj:obj,error:''}:{ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:'invalid evidence JSON'};
+      }catch(e){return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(e&&e.message||e)};}
+    };
+    const _pwbVerifiedStats=[],_pwbVerifiedQuotes=[],_pwbVerifiedInsights=[];
+    const _pwbVerifyExtraction=function(extraction){
+      const obj=extraction&&extraction.obj||{};
+      (Array.isArray(obj.statistics)?obj.statistics:[]).forEach(function(st){
+        if(!st||typeof st!=='object')return;let u='';try{u=new URL(String(st.source_url||'')).href}catch(_e){return;}const src=_pwbCorpusMap.get(u);if(!src)return;
+        const evidence=String(st.evidence_text||'').trim(),en=_pwbEvidenceNorm(evidence),body=_pwbEvidenceNorm(src.text),wc=evidence.split(/\s+/).filter(Boolean).length;
+        if(wc<4||wc>38||!/\d/.test(evidence)||!en||body.indexOf(en)<0)return;
+        if(_pwbVerifiedStats.some(function(x){return _pwbEvidenceNorm(x.evidence_text)===en;}))return;
+        _pwbVerifiedStats.push({evidence_text:evidence,source_url:u,source_title:src.title||src.authority.host,supports:String(st.supports||'').trim().slice(0,500),source_verified:true,quality_stage:'source_verified',authority_class:src.authority.authority_class,authority_score:src.authority.authority_score,authority_reason:src.authority.reason,primary_verified:false,provenance_resolved:false,approved_for_writing:true});
+      });
+      (Array.isArray(obj.expert_quotes)?obj.expert_quotes:[]).forEach(function(q){
+        if(!q||typeof q!=='object')return;let u='';try{u=new URL(String(q.source_url||'')).href}catch(_e){return;}const src=_pwbCorpusMap.get(u);if(!src)return;
+        const quote=String(q.quote||'').trim(),person=String(q.person||'').trim(),roleRaw=String(q.role||'').trim().slice(0,180),qn=_pwbEvidenceNorm(quote),pn=_pwbEvidenceNorm(person),rn=_pwbEvidenceNorm(roleRaw),body=_pwbEvidenceNorm(src.text),title=_pwbEvidenceNorm(src.title),wc=quote.split(/\s+/).filter(Boolean).length,qi=body.indexOf(qn);
+        if(wc<6||wc>28||!qn||qi<0||!pn||/^(expert|author|editor|researcher|team|staff)$/i.test(person))return;
+        const near=body.slice(Math.max(0,qi-800),Math.min(body.length,qi+qn.length+800));if(near.indexOf(pn)<0&&title.indexOf(pn)<0)return;
+        const verifiedRole=(rn&&(near.indexOf(rn)>=0||title.indexOf(rn)>=0))?roleRaw:'';if(_pwbVerifiedQuotes.some(function(x){return _pwbEvidenceNorm(x.quote)===qn;}))return;
+        let cls=src.authority.authority_class,score=src.authority.authority_score;if(src.authority.interview_signals){cls='direct_expert_source';score=Math.max(score,90);}
+        _pwbVerifiedQuotes.push({quote:quote,person:person,role:verifiedRole,source_url:u,source_title:src.title||src.authority.host,supports:String(q.supports||'').trim().slice(0,500),source_verified:true,quality_stage:score>=88?'primary_verified':'source_verified',authority_class:cls,authority_score:score,authority_reason:src.authority.reason,primary_verified:score>=88,provenance_resolved:score>=88,approved_for_writing:true,verification:'exact_source_text_named_person_proximate'});
+      });
+      (Array.isArray(obj.expert_insights)?obj.expert_insights:[]).forEach(function(q){
+        if(!q||typeof q!=='object')return;let u='';try{u=new URL(String(q.source_url||'')).href}catch(_e){return;}const src=_pwbCorpusMap.get(u);if(!src)return;
+        const excerpt=String(q.evidence_excerpt||'').trim(),insight=String(q.insight||'').trim(),person=String(q.person||'').trim(),roleRaw=String(q.role||'').trim().slice(0,180),en=_pwbEvidenceNorm(excerpt),pn=_pwbEvidenceNorm(person),rn=_pwbEvidenceNorm(roleRaw),body=_pwbEvidenceNorm(src.text),title=_pwbEvidenceNorm(src.title),wc=excerpt.split(/\s+/).filter(Boolean).length,ei=body.indexOf(en);
+        if(wc<8||wc>45||!insight||!person||ei<0||/^(expert|author|editor|researcher|team|staff)$/i.test(person))return;const near=body.slice(Math.max(0,ei-900),Math.min(body.length,ei+en.length+900));if(near.indexOf(pn)<0&&title.indexOf(pn)<0)return;
+        const eTok=new Set(_pwbEvidenceTokens(excerpt)),iTok=Array.from(new Set(_pwbEvidenceTokens(insight))),semanticHits=iTok.filter(function(t){return eTok.has(t);}).length,semanticOverlap=iTok.length?semanticHits/iTok.length:0;
+        const numsInsight=Array.from(insight.matchAll(/\b\d[\d,.]*(?:%|x|×)?\b/gi)).map(function(m){return m[0].replace(/,/g,'');}),numsExcerpt=new Set(Array.from(excerpt.matchAll(/\b\d[\d,.]*(?:%|x|×)?\b/gi)).map(function(m){return m[0].replace(/,/g,'');}));
+        if(semanticOverlap<0.34||numsInsight.some(function(n){return !numsExcerpt.has(n);}))return;
+        const verifiedRole=(rn&&(near.indexOf(rn)>=0||title.indexOf(rn)>=0))?roleRaw:'';if(_pwbVerifiedInsights.some(function(x){return _pwbEvidenceNorm(x.insight)===_pwbEvidenceNorm(insight);}))return;
+        _pwbVerifiedInsights.push({insight:insight,evidence_excerpt:excerpt,person:person,role:verifiedRole,source_url:u,source_title:src.title||src.authority.host,supports:String(q.supports||'').trim().slice(0,500),source_verified:true,quality_stage:'source_verified',authority_class:src.authority.authority_class,authority_score:src.authority.authority_score,approved_for_writing:true,attribution_mode:'paraphrase_only',verification:'exact_supporting_excerpt_named_person_proximate'});
+      });
+    };
+    let _pwbEvidenceExtraction=await _pwbExtractEvidence(Array.from(_pwbCorpusMap.values()),'pass1');
+    if(_pwbEvidenceExtraction.ok)_pwbVerifyExtraction(_pwbEvidenceExtraction);
+
+    // If direct expert evidence is still thin, do not stop at "0". Search a second,
+    // differently phrased set and verify additional pages. This is deliberately bounded
+    // but materially deeper than the first pass.
+    let _pwbExpertSecondPass=false;
+    if(serperKey&&_pwbVerifiedQuotes.length<1&&_pwbVerifiedInsights.length<2){
+      _pwbExpertSecondPass=true;
+      const queries=[keyword+' interview transcript named expert',keyword+' researcher explains '+keyword,keyword+' practitioner interview '+keyword,keyword+' conference speaker transcript'];
+      const extraUrls=new Set();
+      await Promise.all(queries.map(async function(query){
+        _pwbEvidenceSearch.expert_quotes.attempted=true;_pwbEvidenceSearch.expert_quotes.queries.push(query);
+        try{const c=new AbortController(),tm=setTimeout(()=>c.abort(),10000);const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify({q:query,num:8,hl:glParam,gl:glParam}),signal:c.signal});clearTimeout(tm);if(!rr.ok)return;const dd=await rr.json();_pwbEvidenceSearch.expert_quotes.successful=true;(dd.organic||[]).slice(0,8).forEach(function(r){const u=String(r.link||'').trim();if(!u||/(reddit\.com|facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|pinterest\.|quora\.com|google\.com\/search)/i.test(u))return;try{const h=new URL(u).href;extraUrls.add(h);_pwbQuoteCandidateUrls.add(h);_pwbAddExternal(h,{title:r.title||'',snippet:r.snippet||'',source_type:'expert_quote_second_pass'});}catch(_e){}});}catch(e){_pwbEvidenceSearch.expert_quotes.error=String(e&&e.message||e).slice(0,220);}
+      }));
+      const newUrls=Array.from(extraUrls).filter(function(u){return !_pwbCorpusMap.has(u);}).slice(0,8);const newPages=await Promise.all(newUrls.map(function(u){return _pwbFetchEvidencePage(u,_pwbMetaForUrl(u));}));newPages.forEach(function(x){if(x)_pwbCorpusMap.set(x.url,x);});
+      if(newPages.some(Boolean)){const ext=await _pwbExtractEvidence(newPages.filter(Boolean),'expert_pass2');if(ext.ok){_pwbVerifyExtraction(ext);_pwbEvidenceExtraction={ok:true,obj:{},error:''};}}
     }
-    const _verifiedStats=[],_verifiedQuotes=[];
-    const _pwbCorpusByUrl=_pwbEvidenceCorpusMap;
-    (Array.isArray(_pwbEvidenceExtraction.obj&&_pwbEvidenceExtraction.obj.statistics)?_pwbEvidenceExtraction.obj.statistics:[]).forEach(function(st){
-      if(!st||typeof st!=='object')return;let u='';try{u=new URL(String(st.source_url||'')).href}catch(_e){return;}const src=_pwbCorpusByUrl.get(u);if(!src)return;
-      const evidence=String(st.evidence_text||'').trim(),en=_pwbEvidenceNorm(evidence),body=_pwbEvidenceNorm(src.text);
-      const wc=evidence.split(/\s+/).filter(Boolean).length;if(wc<4||wc>35||!/\d/.test(evidence)||!en||body.indexOf(en)<0)return;
-      if(_verifiedStats.some(function(x){return _pwbEvidenceNorm(x.evidence_text)===en;}))return;
-      _verifiedStats.push({evidence_text:evidence,source_url:u,source_title:String(src.title||new URL(u).hostname).trim(),supports:String(st.supports||'').trim().slice(0,500),verified:true,verification:'exact_source_text'});
-    });
-    (Array.isArray(_pwbEvidenceExtraction.obj&&_pwbEvidenceExtraction.obj.expert_quotes)?_pwbEvidenceExtraction.obj.expert_quotes:[]).forEach(function(q){
-      if(!q||typeof q!=='object')return;let u='';try{u=new URL(String(q.source_url||'')).href}catch(_e){return;}const src=_pwbCorpusByUrl.get(u);if(!src)return;
-      const quote=String(q.quote||'').trim(),person=String(q.person||'').trim(),roleRaw=String(q.role||'').trim().slice(0,180),qn=_pwbEvidenceNorm(quote),pn=_pwbEvidenceNorm(person),rn=_pwbEvidenceNorm(roleRaw),body=_pwbEvidenceNorm(src.text),title=_pwbEvidenceNorm(src.title);
-      const wc=quote.split(/\s+/).filter(Boolean).length,qi=body.indexOf(qn);
-      if(wc<6||wc>25||!qn||qi<0||!pn||/^(expert|author|editor|researcher|team|staff)$/i.test(person))return;
-      const near=body.slice(Math.max(0,qi-700),Math.min(body.length,qi+qn.length+700));
-      if(near.indexOf(pn)<0&&title.indexOf(pn)<0)return;
-      const verifiedRole=(rn&&(near.indexOf(rn)>=0||title.indexOf(rn)>=0))?roleRaw:'';
-      if(_verifiedQuotes.some(function(x){return _pwbEvidenceNorm(x.quote)===qn;}))return;
-      _verifiedQuotes.push({quote:quote,person:person,role:verifiedRole,source_url:u,source_title:String(src.title||new URL(u).hostname).trim(),supports:String(q.supports||'').trim().slice(0,500),verified:true,verification:'exact_source_text_named_person_proximate_role_verified'});
-    });
+
+    const _pwbNumberSig=function(v){return Array.from(String(v||'').matchAll(/\b\d[\d,.]*(?:%|x|×)?\b/gi)).map(function(m){return m[0].toLowerCase().replace(/,/g,'');}).filter(function(x){const n=Number(x.replace(/[^0-9.]/g,''));return !(/^\d{4}$/.test(x)&&n>=1900&&n<=2100);}).slice(0,3);};
+    const _pwbResolveOneStat=async function(st){
+      const src=_pwbCorpusMap.get(st.source_url),srcGrade=src&&src.authority||_pwbAuthorityGrade(st.source_url,st.source_title,'','');
+      st.authority_class=srcGrade.authority_class;st.authority_score=srcGrade.authority_score;st.authority_reason=srcGrade.reason;st.best_source_url=st.source_url;st.best_source_title=st.source_title;
+      if(['government_primary','academic_primary','standards_primary','original_research_report','official_first_party'].includes(srcGrade.authority_class)){st.primary_verified=true;st.provenance_resolved=true;st.quality_stage='primary_verified';st.provenance_match='direct primary/research source';return st;}
+      if(!serperKey)return st;
+      const nums=_pwbNumberSig(st.evidence_text),tokens=Array.from(new Set(_pwbEvidenceTokens(st.evidence_text))).slice(0,7);if(!nums.length)return st;
+      const query=[nums[0],tokens.slice(0,5).join(' '),'original study report source'].filter(Boolean).join(' ');let results=[];
+      try{const c=new AbortController(),tm=setTimeout(()=>c.abort(),10000);const rr=await fetch('https://google.serper.dev/search',{method:'POST',headers:{'X-API-KEY':serperKey,'Content-Type':'application/json'},body:JSON.stringify({q:query,num:6,hl:glParam,gl:glParam}),signal:c.signal});clearTimeout(tm);if(rr.ok){const d=await rr.json();results=(d.organic||[]).slice(0,6);}}catch(_e){}
+      const urls=[];for(const r of results){try{const u=new URL(String(r.link||'')).href;if(!urls.includes(u)&&u!==st.source_url&&!/(reddit|facebook|instagram|linkedin|twitter|x\.com|quora)/i.test(u))urls.push(u);}catch(_e){}}
+      const pages=(await Promise.all(urls.slice(0,3).map(function(u){const r=results.find(function(x){return x.link===u;})||{};return _pwbFetchEvidencePage(u,{title:r.title||'',snippet:r.snippet||'',source_type:'provenance_search'});}))).filter(Boolean);
+      let best=null,bestScore=srcGrade.authority_score;const claimTokens=new Set(_pwbEvidenceTokens(st.evidence_text));
+      for(const pg of pages){const norm=_pwbEvidenceNorm(pg.text),nmatch=nums.filter(function(n){return norm.includes(n);}).length;if(nmatch<Math.min(nums.length,2))continue;const pt=new Set(_pwbEvidenceTokens(pg.text)),hits=Array.from(claimTokens).filter(function(t){return pt.has(t);}).length,overlap=claimTokens.size?hits/claimTokens.size:0;if(overlap<0.42)continue;const linked=!!(src&&src.fullHtml&&src.fullHtml.toLowerCase().includes(pg.authority.host));const score=pg.authority.authority_score+(linked?8:0);if(score>bestScore+5){best={pg:pg,linked:linked,overlap:overlap};bestScore=score;}}
+      if(best){st.best_source_url=best.pg.url;st.best_source_title=best.pg.title||best.pg.authority.host;st.authority_class=best.pg.authority.authority_class;st.authority_score=best.pg.authority.authority_score;st.authority_reason=best.pg.authority.reason;st.provenance_resolved=true;st.provenance_match='same numeric signature + semantic claim match'+(best.linked?' + linked upstream source':'');st.primary_verified=['government_primary','academic_primary','standards_primary','original_research_report','official_first_party'].includes(best.pg.authority.authority_class);st.quality_stage=st.primary_verified?'primary_verified':'provenance_resolved';_pwbAddExternal(best.pg.url,{title:best.pg.title||'',snippet:'Upstream provenance source matched to a verified statistic.',source_type:'provenance_resolved'});}
+      return st;
+    };
+    const _pwbResolvedStats=await Promise.all(_pwbVerifiedStats.slice(0,5).map(_pwbResolveOneStat));
+
     if(!brief.evidence||typeof brief.evidence!=='object'||Array.isArray(brief.evidence))brief.evidence={official_sources:[],statistics:[],experience_to_include:'',trust_signals:[]};
-    // Discard model-owned numeric evidence. Only server-verified researched statistics survive.
-    brief.evidence.statistics=_verifiedStats.map(function(x){return x.evidence_text+' — '+x.source_title+' ('+x.source_url+')';});
-    brief.evidence.expert_quotes=_verifiedQuotes;
-    const _pwbStatsPagesChecked=_pwbEvidenceCorpus.filter(function(x){return _pwbStatCandidateUrls.has(x.url)}).length;
-    const _pwbQuotePagesChecked=_pwbEvidenceCorpus.filter(function(x){return _pwbQuoteCandidateUrls.has(x.url)}).length;
-    const _pwbStatsVerifiable=!!(_pwbEvidenceSearch.statistics.successful&&(_pwbStatCandidateUrls.size===0||_pwbStatsPagesChecked>0));
-    const _pwbQuotesVerifiable=!!(_pwbEvidenceSearch.expert_quotes.successful&&(_pwbQuoteCandidateUrls.size===0||_pwbQuotePagesChecked>0));
-    const _pwbEvidenceExtractionComplete=!!(_pwbEvidenceExtraction.ok||(!_pwbStatCandidateUrls.size&&!_pwbQuoteCandidateUrls.size));
-    const _pwbEvidenceStatus=function(verified,searchMeta,candidateCount,pagesChecked){
-      if(verified>0)return 'verified_results';
-      if(!searchMeta.successful)return searchMeta.attempted?'search_failed':'not_searched';
-      if(candidateCount>0&&pagesChecked===0)return 'source_verification_failed';
-      return 'searched_no_verified_result';
+    brief.evidence.statistics=_pwbResolvedStats;
+    brief.evidence.expert_quotes=_pwbVerifiedQuotes.slice(0,4);
+    brief.evidence.expert_insights=_pwbVerifiedInsights.slice(0,4);
+    brief.evidence.authority_sources=Array.from(new Map([].concat(_pwbResolvedStats,_pwbVerifiedQuotes,_pwbVerifiedInsights).filter(function(x){return x&&x.approved_for_writing;}).map(function(x){const u=x.best_source_url||x.source_url;return [u,{url:u,title:x.best_source_title||x.source_title||'',authority_class:x.authority_class||'',authority_score:x.authority_score||0,quality_stage:x.quality_stage||'source_verified'}];})).values()).slice(0,10);
+
+    const _pwbStatsCandidateCount=_pwbStatCandidateUrls.size,_pwbQuoteCandidateCount=_pwbQuoteCandidateUrls.size;
+    const _pwbStatsPagesChecked=Array.from(_pwbCorpusMap.values()).filter(function(x){return _pwbStatCandidateUrls.has(x.url)}).length;
+    const _pwbQuotePagesChecked=Array.from(_pwbCorpusMap.values()).filter(function(x){return _pwbQuoteCandidateUrls.has(x.url)}).length;
+    const _pwbRequiredCoverage=function(count,kind){return Math.min(count,kind==='quotes'?10:8);};
+    const _pwbEvidenceStatus=function(verified,searchMeta,count,checked,kind,insights){
+      if(verified>0)return 'verified_results';if(kind==='quotes'&&Number(insights||0)>=2)return 'verified_attributed_insights';if(!searchMeta.successful)return searchMeta.attempted?'search_failed':'not_searched';if(count>0&&checked===0)return 'source_verification_failed';if(checked<_pwbRequiredCoverage(count,kind))return 'verification_incomplete';return 'searched_no_verified_result';
     };
+    const _pwbStatStatus=_pwbEvidenceStatus(_pwbResolvedStats.length,_pwbEvidenceSearch.statistics,_pwbStatsCandidateCount,_pwbStatsPagesChecked,'stats',0);
+    const _pwbQuoteStatus=_pwbEvidenceStatus(_pwbVerifiedQuotes.length,_pwbEvidenceSearch.expert_quotes,_pwbQuoteCandidateCount,_pwbQuotePagesChecked,'quotes',_pwbVerifiedInsights.length);
+    const _pwbStatCoverageOk=_pwbResolvedStats.length>0||(_pwbEvidenceSearch.statistics.successful&&_pwbStatsPagesChecked>=_pwbRequiredCoverage(_pwbStatsCandidateCount,'stats'));
+    const _pwbExpertCoverageOk=_pwbVerifiedQuotes.length>0||_pwbVerifiedInsights.length>=2||(_pwbEvidenceSearch.expert_quotes.successful&&_pwbQuotePagesChecked>=_pwbRequiredCoverage(_pwbQuoteCandidateCount,'quotes'));
+    const _pwbPrimaryStats=_pwbResolvedStats.filter(function(x){return x.primary_verified;}).length,_pwbProvenanceStats=_pwbResolvedStats.filter(function(x){return x.provenance_resolved;}).length;
     brief.evidence_research={
-      completed:!!(_pwbStatsVerifiable&&_pwbQuotesVerifiable&&_pwbEvidenceExtractionComplete),
-      statistics:{searched:!!_pwbEvidenceSearch.statistics.attempted,search_success:!!_pwbEvidenceSearch.statistics.successful,queries:_pwbEvidenceSearch.statistics.queries,candidates:_pwbStatCandidateUrls.size,source_pages_checked:_pwbStatsPagesChecked,verified:_verifiedStats.length,status:_pwbEvidenceStatus(_verifiedStats.length,_pwbEvidenceSearch.statistics,_pwbStatCandidateUrls.size,_pwbStatsPagesChecked),error:_pwbEvidenceSearch.statistics.error||''},
-      expert_quotes:{searched:!!_pwbEvidenceSearch.expert_quotes.attempted,search_success:!!_pwbEvidenceSearch.expert_quotes.successful,queries:_pwbEvidenceSearch.expert_quotes.queries,candidates:_pwbQuoteCandidateUrls.size,source_pages_checked:_pwbQuotePagesChecked,verified:_verifiedQuotes.length,status:_pwbEvidenceStatus(_verifiedQuotes.length,_pwbEvidenceSearch.expert_quotes,_pwbQuoteCandidateUrls.size,_pwbQuotePagesChecked),error:_pwbEvidenceSearch.expert_quotes.error||''},
-      extraction:{ran:!!_pwbEvidenceCorpus.length,ok:!!_pwbEvidenceExtraction.ok,source_pages_checked:_pwbEvidenceCorpus.length,error:String(_pwbEvidenceExtraction.error||'').slice(0,300)},
-      rule:'Zero is acceptable only after an actual search AND source verification. Statistics and quotes are kept only when their evidence text is found verbatim in a fetched source page; quotes also require a named person on that page. If candidate sources cannot be fetched, research remains incomplete rather than being reported as zero.'
+      completed:!!(_pwbEvidenceExtraction.ok&&_pwbStatCoverageOk&&_pwbExpertCoverageOk),
+      statistics:{searched:!!_pwbEvidenceSearch.statistics.attempted,search_success:!!_pwbEvidenceSearch.statistics.successful,queries:_pwbEvidenceSearch.statistics.queries,candidates:_pwbStatsCandidateCount,source_pages_checked:_pwbStatsPagesChecked,verified:_pwbResolvedStats.length,primary_verified:_pwbPrimaryStats,provenance_resolved:_pwbProvenanceStats,status:_pwbStatStatus,error:_pwbEvidenceSearch.statistics.error||''},
+      expert_quotes:{searched:!!_pwbEvidenceSearch.expert_quotes.attempted,search_success:!!_pwbEvidenceSearch.expert_quotes.successful,queries:_pwbEvidenceSearch.expert_quotes.queries,candidates:_pwbQuoteCandidateCount,source_pages_checked:_pwbQuotePagesChecked,verified:_pwbVerifiedQuotes.length,attributed_insights:_pwbVerifiedInsights.length,second_pass:_pwbExpertSecondPass,status:_pwbQuoteStatus,error:_pwbEvidenceSearch.expert_quotes.error||''},
+      quality_ladder:{completed:!!(_pwbEvidenceExtraction.ok&&_pwbStatCoverageOk&&_pwbExpertCoverageOk),stages:['candidate','fetched','source_verified','provenance_resolved','authority_graded','approved_for_writing'],approved_items:_pwbResolvedStats.length+_pwbVerifiedQuotes.length+_pwbVerifiedInsights.length,primary_verified:_pwbPrimaryStats+_pwbVerifiedQuotes.filter(function(x){return x.primary_verified;}).length,source_verified:_pwbResolvedStats.filter(function(x){return !x.primary_verified;}).length+_pwbVerifiedQuotes.filter(function(x){return !x.primary_verified;}).length+_pwbVerifiedInsights.length,rule:'Prefer the best available source. Secondary pages can verify that a claim exists, but primary/academic/government/original-research provenance is preferred for final writing.'},
+      extraction:{ran:_pwbCorpusMap.size>0,ok:!!_pwbEvidenceExtraction.ok,source_pages_checked:_pwbCorpusMap.size,error:String(_pwbEvidenceExtraction.error||'').slice(0,300)},
+      rule:'Do not fabricate. Search, fetch, verify, resolve provenance, grade authority, then write. Zero is valid only after sufficient source verification; named expert insights may be paraphrased only when backed by an exact verified excerpt.'
     };
-    // Make researched evidence available to the article generator as contextual source targets.
-    [].concat(_verifiedStats,_verifiedQuotes).forEach(function(ev){
-      if(!ev||!ev.source_url)return;
+
+    // Fact-safety cleanup after research. Never let placeholder relationships or causal
+    // experience claims survive simply because the JSON shape is valid.
+    if(brief.entity_strategy&&Array.isArray(brief.entity_strategy.relationships))brief.entity_strategy.relationships=brief.entity_strategy.relationships.filter(function(r){return r&&r.subject&&r.relation&&r.object&&!/^(?:insufficient_data|unknown|none|n\/a)$/i.test(String(r.subject).trim())&&!/^(?:insufficient_data|unknown|none|n\/a)$/i.test(String(r.relation).trim())&&!/^(?:insufficient_data|unknown|none|n\/a)$/i.test(String(r.object).trim());});
+    const _pwbSoftenOutcome=function(v){return String(v||'').replace(/\bsecures?\s+(citations?|brand mentions?|visibility)\b/gi,'can improve the likelihood of earning $1').replace(/\bachieves?\s+(zero-click visibility|visibility|citations?)\b/gi,'can improve the likelihood of $1').replace(/\bensures?\s+(?:that\s+)?([^.!?]{0,65}\b(?:is|are)\s+cited)\b/gi,'aims to improve the likelihood that $1').replace(/\bguarantees?\b/gi,'can support');};
+    if(Array.isArray(brief.use_cases))brief.use_cases=brief.use_cases.map(function(x){if(!x||typeof x!=='object')return x;return Object.assign({},x,{benefit:_pwbSoftenOutcome(x.benefit)});});
+    if(Array.isArray(brief.quick_facts))brief.quick_facts=brief.quick_facts.map(function(x){return x&&typeof x==='object'?Object.assign({},x,{value:_pwbSoftenOutcome(x.value)}):x;});
+    if(brief.ai_answer){brief.ai_answer.direct_answer=_pwbSoftenOutcome(brief.ai_answer.direct_answer);if(Array.isArray(brief.ai_answer.key_takeaways))brief.ai_answer.key_takeaways=brief.ai_answer.key_takeaways.map(_pwbSoftenOutcome);}
+    if(brief.opening_passage)brief.opening_passage.direct_answer=_pwbSoftenOutcome(brief.opening_passage.direct_answer);
+    if(brief.conclusion){brief.conclusion.recap=_pwbSoftenOutcome(brief.conclusion.recap);brief.conclusion.recommendation=_pwbSoftenOutcome(brief.conclusion.recommendation);}
+    const _pwbExp2=String(brief.evidence.experience_to_include||'');if(/directly\s+(?:influence|increase|improve|raise).*citation|tracking how .*impact citation|demonstrat(?:e|ing).*citation rates?/i.test(_pwbExp2))brief.evidence.experience_to_include='If verified first-party experiment data exists, describe the starting condition, exact change, measurement method, observed result and limitations. Otherwise present a reproducible testing methodology only; do not imply that citation-rate effects were already observed.';
+
+    // Make only approved evidence available to the writer. Statistics prefer a resolved
+    // upstream source when one was found; direct quotes always keep their exact quote source.
+    [].concat(_pwbResolvedStats,_pwbVerifiedQuotes,_pwbVerifiedInsights).forEach(function(ev){
+      if(!ev||!ev.approved_for_writing)return;const u=ev.quote?ev.source_url:(ev.best_source_url||ev.source_url);if(!u)return;
       if(!Array.isArray(brief.external_link_targets))brief.external_link_targets=[];
-      if(!brief.external_link_targets.some(function(x){try{return new URL(String(x&&x.exact_url||'')).href===ev.source_url}catch(_e){return false;}}))brief.external_link_targets.push({anchor_text:ev.person||ev.source_title||'Source',source_name:ev.source_title||ev.person||'Source',exact_url:ev.source_url,why:'Verified evidence discovered during the Prewrite evidence enrichment pass.',supports_claim:ev.supports||ev.evidence_text||ev.quote||'',source_type:ev.person?'expert_quote_research':'statistics_research'});
+      if(!brief.external_link_targets.some(function(x){try{return new URL(String(x&&x.exact_url||'')).href===u}catch(_e){return false;}}))brief.external_link_targets.push({anchor_text:ev.person||ev.best_source_title||ev.source_title||'Source',source_name:ev.best_source_title||ev.source_title||ev.person||'Source',exact_url:u,why:'Approved evidence from the Prewrite Evidence Quality Ladder.',supports_claim:ev.supports||ev.evidence_text||ev.insight||ev.quote||'',source_type:ev.quote?'expert_quote_research':(ev.insight?'expert_insight_research':'evidence_quality_ladder'),quality_stage:ev.quality_stage||'source_verified',authority_class:ev.authority_class||''});
     });
 
     _pwbStage='link_validation';
