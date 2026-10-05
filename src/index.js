@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v506-RESEARCH-INTEGRITY-GATES-NETWORK-v500-INTERNAL-LINK-CONTRACT';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v507-PUBLISHER-FIDELITY-REPAIR-NETWORK-v501-MISSING-ONLY-ARTICLE-REPAIR';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -874,7 +874,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v506-RESEARCH-INTEGRITY-GATES-NETWORK-v500-INTERNAL-LINK-CONTRACT',
+  build: 'CS-2026-10-06-CANONICAL-v507-PUBLISHER-FIDELITY-REPAIR-NETWORK-v501-MISSING-ONLY-ARTICLE-REPAIR',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -971,6 +971,7 @@ app.get('/api/regression-contract',(req,res)=>{
     prewrite_share_link:src.includes('/share/prewrite/:shareToken')&&src.includes('Copy share link')&&src.includes('share_token'),
     prewrite_permanent_share_revoke:src.includes('/share/revoke')&&src.includes('share_revoked_at')&&src.includes('Permanent read-only public link')&&src.includes('expires_at:null'),
     prewrite_public_research_view:src.includes('Research overview')&&src.includes('Five AI systems — saved evidence')&&src.includes('Search & competitor intelligence')&&src.includes('Research execution transparency'),
+    network_targeted_fidelity_repair:src.includes('repair-brief-fidelity')&&src.includes('Repair missing Brief requirements'),
     prewrite_five_ai_hard_gate_v506:src.includes('ai_evidence_5of5')&&src.includes('Research incomplete')&&src.includes('ai_systems_required=5')&&src.includes('_pwbMergeManualAiEvidenceV506'),
     prewrite_ai_recovery_v506:src.includes('v506_recover_existing_work')&&src.includes('prewrite_async_jobs')&&src.includes('ai_evidence_recovered'),
     prewrite_evidence_backed_gap_v506:src.includes('competitor_gap_evidence')&&src.includes('page_specific_grounded')&&src.includes('No reliable cross-competitor gap was proven'),
