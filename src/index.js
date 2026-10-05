@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v496-PREWRITE-NOT-PASSED-USAGE-RESEARCH-COST-GUARD-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v497-PREWRITE-REUSE-RESEARCH-COMPLETE-MISSING-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,8 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-reuse-research-complete-missing-v497',
+  'prewrite-one-targeted-completion-call-v497',
   'prewrite-not-passed-preview-with-usage-v496',
   'prewrite-deterministic-structural-completion-v496',
   'prewrite-failed-run-usage-telemetry-v496',
@@ -827,7 +829,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v496-PREWRITE-NOT-PASSED-USAGE-RESEARCH-COST-GUARD-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  build: 'CS-2026-10-05-CANONICAL-v497-PREWRITE-REUSE-RESEARCH-COMPLETE-MISSING-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -46069,6 +46071,24 @@ function pwbLoadHtmlFallbackFile(inp){
   }catch(e){}
 }
 
+var _pwbLastDiagnosticJobId = '';
+var _pwbLastDiagnosticKeyword = '';
+function _pwbDiagnosticStorageKey(){
+  try{var q=new URLSearchParams(window.location.search||'');return 'cs_pwb_not_passed_job_'+String(q.get('networkPlacement')||'tracker');}catch(_e){return 'cs_pwb_not_passed_job_tracker';}
+}
+function _pwbRememberDiagnosticJob(jobId,keyword){
+  _pwbLastDiagnosticJobId=String(jobId||'');_pwbLastDiagnosticKeyword=String(keyword||'').trim();
+  try{sessionStorage.setItem(_pwbDiagnosticStorageKey(),JSON.stringify({job_id:_pwbLastDiagnosticJobId,keyword:_pwbLastDiagnosticKeyword,at:Date.now()}));}catch(_e){}
+}
+function _pwbClearDiagnosticJob(){
+  _pwbLastDiagnosticJobId='';_pwbLastDiagnosticKeyword='';try{sessionStorage.removeItem(_pwbDiagnosticStorageKey());}catch(_e){}
+}
+function _pwbRestoreDiagnosticJob(keyword){
+  if(_pwbLastDiagnosticJobId&&String(keyword||'').trim()===_pwbLastDiagnosticKeyword)return _pwbLastDiagnosticJobId;
+  try{var x=JSON.parse(sessionStorage.getItem(_pwbDiagnosticStorageKey())||'{}');if(x&&x.job_id&&String(x.keyword||'').trim()===String(keyword||'').trim()){_pwbLastDiagnosticJobId=String(x.job_id);_pwbLastDiagnosticKeyword=String(x.keyword||'').trim();return _pwbLastDiagnosticJobId;}}catch(_e){}
+  return '';
+}
+
 async function generatePrewriteBrief() {
   _pwbDraftSave();
   var kw = document.getElementById('pwbKeyword').value.trim();
@@ -46078,6 +46098,11 @@ async function generatePrewriteBrief() {
   // Accept either a plain code ("ae") or the "code — Label" datalist format.
   var region = (regionRaw.match(/^([a-z]{2})\s*[—-]/i) || [null, regionRaw])[1] || regionRaw;
   var aioText = document.getElementById('pwbAioText').value.trim();
+  var _pwbOpts=(arguments.length&&arguments[0]&&typeof arguments[0]==='object')?arguments[0]:{};
+  var _pwbCompletionMode=!!_pwbOpts.completeMissing;
+  var _pwbCompletionSource=_pwbCompletionMode?String(_pwbOpts.sourceJobId||_pwbRestoreDiagnosticJob(kw)||''):'';
+
+  if(_pwbCompletionMode&&!_pwbCompletionSource){document.getElementById('pwbStatus').textContent='⚠ No NOT PASSED diagnostic job is available to complete. Use Re-analyse & create new Brief.';return;}
 
   if (!kw) { document.getElementById('pwbStatus').textContent = '\u26a0 Enter a keyword first.'; return; }
 
@@ -46085,7 +46110,10 @@ async function generatePrewriteBrief() {
   var stat = document.getElementById('pwbStatus');
   var result = document.getElementById('pwbResult');
   btn.disabled = true;
-  var _pwbProgressSteps = [
+  var _pwbProgressSteps = _pwbCompletionMode ? [
+    {btnBase:'Completing missing only',statBase:'Reusing the existing research snapshot — no new SERP, PAA or evidence research'},
+    {btnBase:'Rechecking quality gate',statBase:'Keeping passed sections frozen and validating only the completed fields'}
+  ] : [
     {btnBase:'Analysing SERP', statBase:'Reading the live search results and search intent'},
     {btnBase:'Comparing ranking pages', statBase:'Fetching the strongest ranking pages and extracting content gaps'},
     {btnBase:'Checking AI evidence', statBase:'Reviewing AI citations, entities, questions and source evidence'},
@@ -46103,13 +46131,14 @@ async function generatePrewriteBrief() {
     var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext,
       existingSiteHtml:String((document.getElementById('pwbExistingHtml')||{}).value||'').slice(0,180000),
       manualAiEvidence:{google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()} };
+    if(_pwbCompletionMode){_pwbBody.completionFromJobId=_pwbCompletionSource;_pwbBody.completionMode='missing_only';}
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
     // v456 — Network embed runs as a persisted async job so the external gateway never
     // has to hold one long Gemini/competitor request open. Poll until the authoritative
     // generator has produced the complete brief or a real staged error.
     if(data && data.async && data.job_id && !data.brief){
-      var _pwbJobId=String(data.job_id), _pwbJobStarted=Date.now(), _pwbJobMaxMs=10*60*1000;
+      var _pwbJobId=String(data.job_id), _pwbJobStarted=Date.now(), _pwbJobMaxMs=10*60*1000; if(_pwbCompletionMode)_pwbRememberDiagnosticJob(_pwbJobId,kw);
       while(true){
         if(Date.now()-_pwbJobStarted>_pwbJobMaxMs){
           var _toErr=new Error('Pre-Write Brief generation is still running after 10 minutes.');
@@ -46117,9 +46146,9 @@ async function generatePrewriteBrief() {
         }
         await new Promise(function(resolve){setTimeout(resolve,1500);});
         var _job=await api('/prewrite-brief-job/'+encodeURIComponent(_pwbJobId),'GET');
-        if(_job && _job.redirected_from && _job.job_id){ _pwbJobId=String(_job.job_id); continue; }
+        if(_job && _job.redirected_from && _job.job_id){ _pwbJobId=String(_job.job_id); if(_pwbCompletionMode)_pwbRememberDiagnosticJob(_pwbJobId,kw); continue; }
         if(_job && _job.stage){
-          var _stageLabels={accepted:'Starting Pre-Write job',initializing:'Preparing research job',queued:'Queued for research',research:'Analysing SERP, ranking pages and AI evidence',complete:'Finalising Pre-Write Brief'};
+          var _stageLabels={accepted:'Starting Pre-Write job',initializing:'Preparing research job',queued:'Queued',research:'Analysing SERP, ranking pages and AI evidence',completion:'Completing missing fields from saved research',complete:'Finalising Pre-Write Brief'};
           if(_stageLabels[_job.stage]) stat.textContent=_stageLabels[_job.stage] + _pwbDots();
         }
         if(_job && _job.status==='completed' && _job.brief){ data=_job; break; }
@@ -46127,7 +46156,7 @@ async function generatePrewriteBrief() {
           var _jobPayload=_job.payload||{stage:_job.stage||'async_worker',diagnostic:_job.diagnostic||{},job_id:_pwbJobId};
           // v496: once research/model tokens were spent, hiding a quality-gate result saves nothing.
           // Show the generated Brief as NOT PASSED, while keeping save/count/generate blocked.
-          if(String(_job.stage||_jobPayload.stage||'')==='quality_gate' && _jobPayload.brief){data=_jobPayload;break;}
+          if(String(_job.stage||_jobPayload.stage||'')==='quality_gate' && _jobPayload.brief){data=_jobPayload;_pwbRememberDiagnosticJob(_pwbJobId,kw);break;}
           var _jobErr=new Error(_job.error||'Pre-Write Brief generation failed.');
           var _realStatus=Number((_jobPayload&&_jobPayload.http_status)||(_job.diagnostic&&_job.diagnostic.http_status)||0);
           if(!_realStatus)_realStatus=String(_job.stage||_jobPayload.stage||'')==='quality_gate'?422:502;
@@ -46136,26 +46165,29 @@ async function generatePrewriteBrief() {
       }
     }
     clearInterval(_pwbStepTimer); clearInterval(_pwbDotsTimer);
-    btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
+    btn.disabled = false;
     var _notPassed=!!(data&&data.brief&&String(data.quality_status||data.stage||'')==='not_passed') || !!(data&&data.brief&&data.stage==='quality_gate'&&data.success===false);
     if (!data || !data.brief) {
+      btn.textContent='Analyse & create Pre-Write Brief';
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
       return;
     }
+    if(_notPassed){if(typeof _pwbJobId!=='undefined'&&_pwbJobId)_pwbRememberDiagnosticJob(_pwbJobId,kw);btn.textContent='Re-analyse & create new Brief';}
+    else{_pwbClearDiagnosticJob();btn.textContent='Analyse & create Pre-Write Brief';}
     _lastPwbInput = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, manualAiEvidence:_pwbBody.manualAiEvidence };
     _pwbRecommendationContext = null;
     var _ready=!!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),_score=Number(data.brief.ai_quality_check&&data.brief.ai_quality_check.readiness_score||0);
-    stat.textContent = (_notPassed?'\u26a0 NOT PASSED · research complete · nothing saved or counted':(_ready?'\u2713 Brief complete':'\u26a0 Brief needs review')) + ' \u00b7 AI readiness '+_score+'/100 \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (!_notPassed&&data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
-    var _npBanner=_notPassed?'<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> Research and Gemini usage are shown because those calls already happened. This Brief was not saved as an approved Brief, was not counted, and cannot generate a Publisher Edition. The diagnostic preview is retained with this job. '+((data.error||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</div>':'';
+    stat.textContent = (_notPassed?'\u26a0 NOT PASSED · research complete · nothing saved or counted':(_ready?'\u2713 Brief complete':'\u26a0 Brief needs review')) + ' \u00b7 AI readiness '+_score+'/100 \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (data.research_reused?' \u00b7 research reused — no re-analysis':'') + (!_notPassed&&data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
+    var _npBanner=_notPassed?'<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> Research and Gemini usage are shown because those calls already happened. This Brief was not saved as an approved Brief, was not counted, and cannot generate a Publisher Edition. The diagnostic preview is retained with this job. <strong>Use Complete missing only to reuse this research; Re-analyse starts a new paid research run.</strong> '+((data.error||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</div>':'';
     result.innerHTML = _npBanner + _renderIntentBar(data.search_intent||data.brief.search_intent) + renderPrewriteBrief(data.brief);
     try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Publisher Edition';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
     try{
       var _q2=new URLSearchParams(window.location.search||''),_placement=Number(_q2.get('networkPlacement')||0),_qc2=data.brief.ai_quality_check||{},_canGenerate=!!_qc2.ready_for_generation;
       if(_placement){
         var _wf=document.createElement('div');_wf.id='pwbNetworkWorkflow';_wf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #374151;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';
-        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':(_notPassed?'NOT PASSED — generation locked':'Complete missing Brief sections first'))+'</button><button class="cs-btn" id="pwbRegenerateMissing">Regenerate / complete Brief</button><button class="cs-btn" id="pwbCopyExternalAi" '+(_notPassed?'disabled':'')+'>'+(_notPassed?'External AI locked until passed':'Copy for external AI')+'</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:'+(_notPassed?'#fbbf24':'#94a3b8')+';">'+(_notPassed?'Research is visible for diagnosis, but this Brief did not pass. It was not saved as approved and was not counted. Fix/regenerate the missing sections before article generation.':'Review the Brief above. Generation uses this exact approved Brief as the content contract.')+'</div>';
+        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':(_notPassed?'NOT PASSED — generation locked':'Complete missing Brief sections first'))+'</button><button class="cs-btn" id="pwbRegenerateMissing">Complete missing only · reuse research</button><button class="cs-btn" id="pwbCopyExternalAi" '+(_notPassed?'disabled':'')+'>'+(_notPassed?'External AI locked until passed':'Copy for external AI')+'</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:'+(_notPassed?'#fbbf24':'#94a3b8')+';">'+(_notPassed?'Research is visible for diagnosis, but this Brief did not pass. It was not saved as approved and was not counted. Complete missing only reuses the existing research snapshot; re-analysis is a separate fresh run.':'Review the Brief above. Generation uses this exact approved Brief as the content contract.')+'</div>';
         result.appendChild(_wf);
-        document.getElementById('pwbRegenerateMissing').onclick=function(){generatePrewriteBrief();};
+        document.getElementById('pwbRegenerateMissing').onclick=function(){generatePrewriteBrief({completeMissing:true,sourceJobId:_pwbRestoreDiagnosticJob(kw)});};
         var _ce=document.getElementById('pwbCopyExternalAi');if(_ce)_ce.onclick=function(){copyPrewriteForExternalAi(this);};
         var _gb=document.getElementById('pwbApproveGenerate');if(_gb&&_canGenerate)_gb.onclick=function(){generateNetworkPublisherEdition(_placement,this);};
       }
@@ -46163,7 +46195,7 @@ async function generatePrewriteBrief() {
     loadRecentPrewriteBriefs();
   } catch (e) {
     clearInterval(_pwbStepTimer); clearInterval(_pwbDotsTimer);
-    btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
+    btn.disabled = false; btn.textContent = _pwbCompletionMode?'Complete missing only · reuse research':'Analyse & create Pre-Write Brief';
     if (/separate service/i.test(e.message)) {
       stat.textContent = '';
       result.innerHTML = '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px 18px;font-size:12.5px;color:#92400e;line-height:1.7;">'
@@ -46179,7 +46211,7 @@ async function generatePrewriteBrief() {
         var _qcp=p.brief.ai_quality_check||{},_qcs=Number(_qcp.readiness_score||diag.readiness_score||0);
         stat.textContent='\u26a0 NOT PASSED · research complete · nothing saved or counted · AI readiness '+_qcs+'/100';
         result.innerHTML='<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> The tokens were already used, so ContentScale shows the research/Brief instead of discarding it. It cannot be approved or generated until the quality gate passes.<br>'+String(p.error||e.message||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>'+_renderIntentBar(p.search_intent||p.brief.search_intent)+renderPrewriteBrief(p.brief);
-        try{var _qp=new URLSearchParams(window.location.search||''),_qpl=Number(_qp.get('networkPlacement')||0);if(_qpl){var _qwf=document.createElement('div');_qwf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #f59e0b;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';_qwf.innerHTML='<button class="cs-btn primary" disabled style="flex:1;min-width:240px;">NOT PASSED — generation locked</button><button class="cs-btn" id="pwbRegenerateMissingFailed">Regenerate / complete Brief</button><div style="width:100%;font-size:10.5px;color:#fbbf24;">Not saved as approved and not counted. Copy Brief above is available for diagnosis; external article generation stays locked.</div>';result.appendChild(_qwf);var _rb=document.getElementById('pwbRegenerateMissingFailed');if(_rb)_rb.onclick=function(){generatePrewriteBrief();};}}catch(_qe){}
+        try{var _qp=new URLSearchParams(window.location.search||''),_qpl=Number(_qp.get('networkPlacement')||0);if(_qpl){var _qwf=document.createElement('div');_qwf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #f59e0b;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';_qwf.innerHTML='<button class="cs-btn primary" disabled style="flex:1;min-width:240px;">NOT PASSED — generation locked</button><button class="cs-btn" id="pwbRegenerateMissingFailed">Complete missing only · reuse research</button><div style="width:100%;font-size:10.5px;color:#fbbf24;">Not saved as approved and not counted. Complete missing only reuses the same research; external article generation stays locked.</div>';result.appendChild(_qwf);var _rb=document.getElementById('pwbRegenerateMissingFailed');if(_rb)_rb.onclick=function(){generatePrewriteBrief({completeMissing:true,sourceJobId:_pwbRestoreDiagnosticJob(kw)});};}}catch(_qe){}
         try{console.warn('[Prewrite NOT PASSED preview]',{status:e.status||422,diagnostic:diag,usage:p.generation_usage||diag.generation_usage||null})}catch(_qlog){}
         return;
       }
@@ -46500,7 +46532,7 @@ function renderPrewriteBrief(b) {
     _usageCopy.push('GEMINI USAGE — THIS PREWRITE');
     _usageCopy.push('Calls: '+_ugcalls.length+' · input '+Number(_ugc.input_tokens||0)+' · visible output '+Number(_ugc.output_tokens||0)+' · thinking '+Number(_ugc.thinking_tokens||0)+' · billable output '+Number(_ugc.billable_output_tokens||0));
     if(Array.isArray(_ugc.models)&&_ugc.models.length)_usageCopy.push('Models: '+_ugc.models.join(', '));
-    if(_ugc.stage_usage){var _us=_ugc.stage_usage,_ur=_us.research_evidence||{},_ub=_us.brief_synthesis||{},_ux=_us.repairs||{};_usageCopy.push('Research/evidence: '+Number(_ur.calls||0)+' calls · input '+Number(_ur.input_tokens||0)+' · output '+Number(_ur.output_tokens||0));_usageCopy.push('Brief synthesis: '+Number(_ub.calls||0)+' calls · input '+Number(_ub.input_tokens||0)+' · output '+Number(_ub.output_tokens||0));_usageCopy.push('Repairs: '+Number(_ux.calls||0)+' calls · input '+Number(_ux.input_tokens||0)+' · output '+Number(_ux.output_tokens||0));}
+    if(_ugc.stage_usage){var _us=_ugc.stage_usage,_ur=_us.research_evidence||{},_ub=_us.brief_synthesis||{},_ux=_us.repairs||{};_usageCopy.push('Research/evidence: '+Number(_ur.calls||0)+' calls · input '+Number(_ur.input_tokens||0)+' · output '+Number(_ur.output_tokens||0));_usageCopy.push('Brief synthesis: '+Number(_ub.calls||0)+' calls · input '+Number(_ub.input_tokens||0)+' · output '+Number(_ub.output_tokens||0));_usageCopy.push('Repairs: '+Number(_ux.calls||0)+' calls · input '+Number(_ux.input_tokens||0)+' · output '+Number(_ux.output_tokens||0));if(_us.completion){var _uc=_us.completion;_usageCopy.push('Missing-only completion: '+Number(_uc.calls||0)+' calls · input '+Number(_uc.input_tokens||0)+' · output '+Number(_uc.output_tokens||0));}}
     _ugcalls.forEach(function(c,i){_usageCopy.push((i+1)+'. '+(c.label||'call')+' | '+(c.model||'unknown')+' | input '+Number(c.input_tokens||0)+' | output '+Number(c.output_tokens||0)+' | thinking '+Number(c.thinking_tokens||0)+' | prompt chars '+Number(c.prompt_chars||0)+' | '+Number(c.elapsed_ms||0)+'ms');});
     if(_ugc.diagnostics){
       var _ugd=_ugc.diagnostics;
@@ -46529,7 +46561,7 @@ function renderPrewriteBrief(b) {
     if(wc2.generation_usage){
       var _gu=wc2.generation_usage||{},_guc=Array.isArray(_gu.calls)?_gu.calls:[],_gud=_gu.diagnostics||{},_gug=_gu.cost_guard||{};
       html += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid #1e3a5f;">Gemini generation: <strong style="color:#e5e7eb;">'+esc(_guc.length)+' calls</strong> · input '+esc(_gu.input_tokens||0)+' · visible output '+esc(_gu.output_tokens||0)+' · thinking '+esc(_gu.thinking_tokens||0)+' · billable output '+esc(_gu.billable_output_tokens||0)+(Array.isArray(_gu.models)&&_gu.models.length?' · models '+_gu.models.map(function(x){return esc(x);}).join(', '):'')+'</div>';
-      if(_gu.stage_usage){var _gsu=_gu.stage_usage,_gr=_gsu.research_evidence||{},_gb=_gsu.brief_synthesis||{},_gx=_gsu.repairs||{};html += '<div style="font-size:10.5px;color:#cbd5e1;margin-top:3px;"><strong>Research/evidence:</strong> '+esc(_gr.calls||0)+' calls · in '+esc(_gr.input_tokens||0)+' · out '+esc(_gr.output_tokens||0)+' &nbsp; | &nbsp; <strong>Brief synthesis:</strong> '+esc(_gb.calls||0)+' calls · in '+esc(_gb.input_tokens||0)+' · out '+esc(_gb.output_tokens||0)+' &nbsp; | &nbsp; <strong>Repairs:</strong> '+esc(_gx.calls||0)+' calls · in '+esc(_gx.input_tokens||0)+' · out '+esc(_gx.output_tokens||0)+'</div>';}
+      if(_gu.stage_usage){var _gsu=_gu.stage_usage,_gr=_gsu.research_evidence||{},_gb=_gsu.brief_synthesis||{},_gx=_gsu.repairs||{};html += '<div style="font-size:10.5px;color:#cbd5e1;margin-top:3px;"><strong>Research/evidence:</strong> '+esc(_gr.calls||0)+' calls · in '+esc(_gr.input_tokens||0)+' · out '+esc(_gr.output_tokens||0)+' &nbsp; | &nbsp; <strong>Brief synthesis:</strong> '+esc(_gb.calls||0)+' calls · in '+esc(_gb.input_tokens||0)+' · out '+esc(_gb.output_tokens||0)+' &nbsp; | &nbsp; <strong>Repairs:</strong> '+esc(_gx.calls||0)+' calls · in '+esc(_gx.input_tokens||0)+' · out '+esc(_gx.output_tokens||0)+( _gsu.completion ? ' &nbsp; | &nbsp; <strong>Missing-only completion:</strong> '+esc(_gsu.completion.calls||0)+' calls · in '+esc(_gsu.completion.input_tokens||0)+' · out '+esc(_gsu.completion.output_tokens||0) : '' )+'</div>';if(_gsu.completion&&Number(_gsu.completion.calls||0)>0)html += '<div style="font-size:10.5px;color:#86efac;margin-top:3px;">✓ Missing-only completion reused the existing research snapshot — no new SERP, PAA or evidence research.</div>'; }
       if(_gud.largest_input_call)html += '<div style="font-size:10.5px;color:#cbd5e1;">Largest input: <strong>'+esc(_gud.largest_input_call.label||'')+'</strong> · '+esc(_gud.largest_input_call.input_tokens||0)+' tokens · '+esc(_gud.largest_input_call.share_pct||0)+'%</div>';
       html += '<div style="font-size:10.5px;color:#94a3b8;">Cost guard: '+esc(_gug.calls_used||_guc.length)+'/'+esc(_gug.max_calls||0)+' calls · '+esc(_gug.input_tokens_used||_gu.input_tokens||0)+'/'+esc(_gug.max_input_tokens||0)+' input · '+esc(_gug.billable_output_tokens_used||_gu.billable_output_tokens||0)+'/'+esc(_gug.max_billable_output_tokens||0)+' billable output'+(Array.isArray(_gug.skipped_calls)&&_gug.skipped_calls.length?' · <span style="color:#fbbf24;font-weight:700;">'+esc(_gug.skipped_calls.length)+' optional call(s) skipped</span>':'')+'</div>';
       if(Array.isArray(_gud.suggestions)&&_gud.suggestions.length)html += '<div style="font-size:10.5px;color:#fbbf24;margin-top:3px;">'+_gud.suggestions.map(function(x){return '• '+esc(x);}).join('<br>')+'</div>';
@@ -58224,8 +58256,10 @@ async function _runPwbAsyncJob(jobId){
   const job=jq.rows[0];
   if(job.status==='completed') return;
   const boot=_pwbBootstrapJobs.get(jobId);
-  if(boot){boot.status='processing';boot.stage='research';boot.updated_at=new Date().toISOString();}
-  await pool.query(`UPDATE prewrite_async_jobs SET status='processing',stage='research',started_at=COALESCE(started_at,NOW()),updated_at=NOW(),error_json=NULL WHERE id=$1`,[jobId]);
+  const _isCompletionJob=!!(job.request_json&&job.request_json.completionFromJobId);
+  const _initialJobStage=_isCompletionJob?'completion':'research';
+  if(boot){boot.status='processing';boot.stage=_initialJobStage;boot.updated_at=new Date().toISOString();}
+  await pool.query(`UPDATE prewrite_async_jobs SET status='processing',stage=$2,started_at=COALESCE(started_at,NOW()),updated_at=NOW(),error_json=NULL WHERE id=$1`,[jobId,_initialJobStage]);
   try{
     const token=String(job.token||'');
     const placement=Number(job.network_placement_id||0);
@@ -58315,6 +58349,143 @@ app.get('/api/tracker-client/:token/prewrite-brief-job/:jobId', async (req,res)=
   }
 });
 
+async function _pwbCompleteMissingFromDiagnostic(opts,res){
+  const started=Date.now(),client=opts.client,jobId=String(opts.jobId||''),placementId=Number(opts.placementId||0),briefsUsed=Number(opts.briefsUsed||0),briefsAllowed=Number(opts.briefsAllowed||0);
+  const norm=function(v){return String(v||'').normalize('NFKC').replace(/[\u200B-\u200D\uFEFF]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');};
+  const q=await pool.query(`SELECT id,client_id,network_placement_id,status,stage,request_json,result_json,error_json FROM prewrite_async_jobs WHERE id=$1 AND client_id=$2 LIMIT 1`,[jobId,client.id]);
+  if(!q.rows.length)return res.status(404).json({success:false,stage:'completion_source',error:'The NOT PASSED diagnostic job could not be found. Run a fresh analysis.'});
+  const row=q.rows[0];
+  if(placementId>0&&Number(row.network_placement_id||0)!==placementId)return res.status(403).json({success:false,stage:'completion_source',error:'This diagnostic belongs to a different Network placement.'});
+  const payload=(row.error_json&&row.error_json.brief)?row.error_json:((row.result_json&&row.result_json.brief)?row.result_json:null);
+  if(!payload||!payload.brief)return res.status(409).json({success:false,stage:'completion_source',error:'This job has no reusable diagnostic Brief. Run a fresh analysis.'});
+  const srcReq=row.request_json||{},srcKeyword=String(srcReq.keyword||payload.brief.keyword||'').trim(),requestedKeyword=String(opts.keyword||'').trim();
+  if(srcKeyword&&requestedKeyword&&norm(srcKeyword)!==norm(requestedKeyword))return res.status(409).json({success:false,stage:'completion_source',error:'The keyword changed. Missing-only completion can reuse research only for the same keyword; run a fresh analysis for a new keyword.'});
+  let brief=JSON.parse(JSON.stringify(payload.brief));
+  const before=_pwbReadiness(brief),missingBefore=Array.isArray(before.missing)?before.missing.slice():[];
+  if(!missingBefore.length&&before.ready_for_generation)return res.status(409).json({success:false,stage:'completion_source',error:'This diagnostic already passes the quality gate. Reopen the approved Brief instead.'});
+
+  // Deterministic/free completion first. These steps only reshape content already present.
+  if(missingBefore.includes('quick_facts')){
+    const tk=brief.ai_answer&&Array.isArray(brief.ai_answer.key_takeaways)?brief.ai_answer.key_takeaways.filter(Boolean):[];
+    if(tk.length>=3)brief.quick_facts=tk.slice(0,4).map(function(x,i){return {label:'Key point '+(i+1),value:String(x)};});
+  }
+  if(missingBefore.includes('action_plan'))brief.action_plan=[
+    {step:1,priority:'high',action:'Write the page in the approved blueprint order and lead with the direct answer.'},
+    {step:2,priority:'high',action:'Answer every verified People Also Ask question and use only the verified source links already present in this Brief.'},
+    {step:3,priority:'medium',action:'Run fact, schema, metadata and link QA before publication, then verify the live page.'}
+  ];
+  if(missingBefore.includes('definitive_outline')&&Array.isArray(brief.definitive_outline)){
+    brief.definitive_outline=brief.definitive_outline.map(function(sec){
+      if(!sec||typeof sec!=='object')return sec;
+      if(String(sec.purpose||'').trim())return sec;
+      const h=String(sec.h2||'this section').trim(),cover=Array.isArray(sec.cover)?sec.cover.filter(Boolean).slice(0,3):[];
+      return Object.assign({},sec,{purpose:'Explain '+h+' clearly'+(cover.length?' and cover '+cover.join(', '):'')+'.'});
+    });
+    brief.page_blueprint=brief.definitive_outline.map(function(x){return Object.assign({},x,{cover:Array.isArray(x&&x.cover)?x.cover.slice():[]});});
+    if(brief.recommended_structure&&typeof brief.recommended_structure==='object'){
+      brief.recommended_structure.must_have_h2s=brief.definitive_outline.map(function(x){return x&&x.h2||'';}).filter(Boolean);
+      brief.recommended_structure.h2s=brief.recommended_structure.must_have_h2s.slice();
+    }
+  }
+  if(missingBefore.includes('entity_strategy')){
+    const ents=(Array.isArray(brief.must_cover_entities)?brief.must_cover_entities:[]).map(String).map(function(x){return x.trim();}).filter(Boolean);
+    if(ents.length>=2){brief.entity_strategy=brief.entity_strategy&&typeof brief.entity_strategy==='object'?brief.entity_strategy:{};brief.entity_strategy.primary=ents.slice(0,Math.min(3,ents.length));brief.entity_strategy.secondary=ents.slice(3,8);brief.entity_strategy.supporting=ents.slice(8,14);if(!Array.isArray(brief.entity_strategy.relationships))brief.entity_strategy.relationships=[];}
+  }
+  // Reuse ONLY exact URLs already present in the diagnostic snapshot; never search again and never invent.
+  const urlSet=new Set();
+  const addUrl=function(u){try{const x=new URL(String(u||'').trim());if(x.protocol==='https:')urlSet.add(x.href);}catch(_e){}};
+  (Array.isArray(brief.external_link_targets)?brief.external_link_targets:[]).forEach(function(x){addUrl(x&&x.exact_url);});
+  (brief.evidence&&Array.isArray(brief.evidence.authority_sources)?brief.evidence.authority_sources:[]).forEach(function(x){addUrl(typeof x==='string'?x:(x&&x.url));});
+  (brief.evidence&&Array.isArray(brief.evidence.statistics)?brief.evidence.statistics:[]).forEach(function(x){addUrl(x&&x.best_source_url);addUrl(x&&x.source_url);});
+  (Array.isArray(brief.citation_targets)?brief.citation_targets:[]).forEach(function(x){if(typeof x==='string')addUrl(x);else{addUrl(x&&x.exact_url);addUrl(x&&x.url);addUrl(x&&x.source_url);}});
+  const aiEv=brief.ai_system_evidence&&typeof brief.ai_system_evidence==='object'?brief.ai_system_evidence:{};
+  Object.keys(aiEv).forEach(function(k){const v=aiEv[k]&&aiEv[k].text;const urls=String(v||'').match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[];urls.forEach(function(u){addUrl(String(u).replace(/[)\]>,.;]+$/,''));});});
+  if(missingBefore.includes('official_sources')&&urlSet.size>=2){if(!brief.evidence||typeof brief.evidence!=='object')brief.evidence={};brief.evidence.official_sources=Array.from(urlSet).slice(0,8);}
+
+  let check=_pwbReadiness(brief),remaining=Array.isArray(check.missing)?check.missing.slice():[];
+  const allowed=new Set(['opening_passage','definitive_outline','ai_answer','quick_facts','entity_strategy','entity_relationships','evidence','official_sources','balance','use_cases','conclusion','paa_answers','action_plan','meta_package']);
+  const ask=remaining.filter(function(k){return allowed.has(k);});
+  let completionUsage=null,completionError='';
+  if(ask.length){
+    const exactUrls=Array.from(urlSet).slice(0,20);
+    const rules={
+      entity_strategy:'Return entity_strategy with primary, secondary, supporting arrays. Use only entities already present in must_cover_entities or the current Brief.',
+      entity_relationships:'Return entity_relationships as at least 2 objects {subject,relation,object}. Use only relationships directly supported by the existing Brief; no invented metrics, outcomes or credentials.',
+      official_sources:'Return official_sources as an array containing ONLY exact HTTPS URLs from exact_source_whitelist. Never create or alter a URL.',
+      use_cases:'Return use_cases as at least 2 objects {audience,scenario,benefit}. They are practical scenarios, not case studies. Use can/help/support language; never claim achieved results.',
+      quick_facts:'Return quick_facts as at least 3 objects {label,value}. Use non-numeric facts already supported by the existing Brief.',
+      definitive_outline:'Return definitive_outline preserving every existing H2 exactly and only fill missing purpose/cover/citation_hook fields. Never rename, add or reorder H2s.',
+      balance:'Return balance with limitations and/or comparisons grounded in the existing Brief.',
+      conclusion:'Return conclusion with recap and recommendation grounded in the existing Brief.',
+      paa_answers:'Return paa_questions with the exact existing People Also Ask questions and concise answers using only the current Brief.',
+      ai_answer:'Return ai_answer with direct_answer and at least 3 key_takeaways grounded in the current Brief.',
+      opening_passage:'Return opening_passage with a concise direct_answer grounded in the current Brief.',
+      evidence:'Return evidence only from evidence already in the current Brief; do not invent sources, statistics, quotes or experience.',
+      action_plan:'Return action_plan with at least 3 concrete actions; no new factual claims.',
+      meta_package:'Return meta_package using the existing topic/title/intent; no new factual claims.'
+    };
+    const context={keyword:srcKeyword||requestedKeyword,search_intent:brief.search_intent||{},recommended_title_h1:brief.recommended_title_h1||'',must_cover_entities:brief.must_cover_entities||[],ai_answer:brief.ai_answer||{},quick_facts:brief.quick_facts||[],definitive_outline:brief.definitive_outline||[],people_also_ask:brief.people_also_ask||[],evidence:{official_sources:brief.evidence&&brief.evidence.official_sources||[],statistics:brief.evidence&&brief.evidence.statistics||[],authority_sources:brief.evidence&&brief.evidence.authority_sources||[]},balance:brief.balance||{},conclusion:brief.conclusion||{},entity_strategy:brief.entity_strategy||{},use_cases:brief.use_cases||[],exact_source_whitelist:exactUrls};
+    const prompt='MISSING-ONLY PREWRITE COMPLETION. REUSE EXISTING RESEARCH. DO NOT RESEARCH AGAIN. Return ONE valid JSON object and ONLY the requested missing keys. Do not rewrite or return fields that already passed.\n\nMISSING KEYS:\n'+ask.map(function(k){return '- '+k+': '+(rules[k]||'Complete safely from the supplied Brief only.');}).join('\n')+'\n\nSTRICT RULES:\n- Use ONLY the supplied existing Brief snapshot.\n- No web search, no new URLs, no invented facts, stats, quotes, credentials, prices, rankings, results or experience.\n- Any source URL must be copied exactly from exact_source_whitelist.\n- Preserve all already-passed content unchanged.\n- Return JSON only.\n\nEXISTING BRIEF SNAPSHOT:\n'+JSON.stringify(context).slice(0,18000);
+    const model='gemini-2.5-flash-lite',body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.08,maxOutputTokens:3000,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
+    const t0=Date.now();
+    const rr=await callGeminiWithFallback(process.env.GEMINI_API_KEY,body,model,model,1,false);
+    if(rr&&rr.ok){
+      const u=rr.data&&rr.data.usageMetadata||{},input=Number(u.promptTokenCount||0),output=Number(u.candidatesTokenCount||0),thinking=Number(u.thoughtsTokenCount||0),total=Number(u.totalTokenCount||0)||(input+output+thinking);
+      completionUsage={label:'completion_missing_only',model:rr.modelUsed||model,input_tokens:input,output_tokens:output,thinking_tokens:thinking,billable_output_tokens:output+thinking,total_tokens:total,cached_input_tokens:Number(u.cachedContentTokenCount||0),prompt_chars:prompt.length,max_output_tokens:3000,elapsed_ms:Date.now()-t0};
+      const raw=((rr.data.candidates||[])[0]&&((rr.data.candidates[0].content||{}).parts||[]).map(function(x){return x&&x.text||'';}).join(''))||'';
+      const obj=extractJsonFromText(raw)||{};
+      const safe=function(v){return String(v||'').replace(/\bguarantees?\b/gi,'can support').replace(/\bensures?\b/gi,'aims to support').trim();};
+      if(ask.includes('entity_strategy')&&obj.entity_strategy&&typeof obj.entity_strategy==='object'){
+        brief.entity_strategy=brief.entity_strategy&&typeof brief.entity_strategy==='object'?brief.entity_strategy:{};
+        ['primary','secondary','supporting'].forEach(function(k){if(Array.isArray(obj.entity_strategy[k]))brief.entity_strategy[k]=obj.entity_strategy[k].map(safe).filter(Boolean).slice(0,12);});
+      }
+      const rels=Array.isArray(obj.entity_relationships)?obj.entity_relationships:(obj.entity_strategy&&Array.isArray(obj.entity_strategy.relationships)?obj.entity_strategy.relationships:null);
+      if(ask.includes('entity_relationships')&&rels){if(!brief.entity_strategy||typeof brief.entity_strategy!=='object')brief.entity_strategy={};brief.entity_strategy.relationships=rels.map(function(x){return x&&typeof x==='object'?{subject:safe(x.subject),relation:safe(x.relation),object:safe(x.object)}:null;}).filter(function(x){return x&&x.subject&&x.relation&&x.object;}).slice(0,10);}
+      if(ask.includes('official_sources')&&Array.isArray(obj.official_sources)){
+        const allow=new Set(exactUrls);if(!brief.evidence||typeof brief.evidence!=='object')brief.evidence={};brief.evidence.official_sources=obj.official_sources.map(function(x){return typeof x==='string'?x:(x&&x.url)||'';}).map(function(x){try{return new URL(String(x)).href}catch(_e){return ''}}).filter(function(x){return allow.has(x);}).slice(0,8);
+      }
+      if(ask.includes('use_cases')&&Array.isArray(obj.use_cases))brief.use_cases=obj.use_cases.map(function(x){return x&&typeof x==='object'?{audience:safe(x.audience),scenario:safe(x.scenario),benefit:safe(x.benefit)}:null;}).filter(function(x){return x&&x.audience&&x.scenario&&x.benefit;}).slice(0,6);
+      if(ask.includes('quick_facts')&&Array.isArray(obj.quick_facts))brief.quick_facts=obj.quick_facts.map(function(x){return x&&typeof x==='object'?{label:safe(x.label),value:safe(x.value)}:null;}).filter(function(x){return x&&x.label&&x.value;}).slice(0,8);
+      if(ask.includes('definitive_outline')&&Array.isArray(obj.definitive_outline)&&Array.isArray(brief.definitive_outline)){
+        brief.definitive_outline=brief.definitive_outline.map(function(cur,i){const got=obj.definitive_outline[i]||{};return Object.assign({},cur,{h2:String(cur&&cur.h2||''),purpose:safe(got.purpose||cur&&cur.purpose),target_words:cur&&cur.target_words||got.target_words||null,cover:Array.isArray(got.cover)?got.cover.map(safe).filter(Boolean).slice(0,8):(Array.isArray(cur&&cur.cover)?cur.cover:[]),citation_hook:safe(got.citation_hook||cur&&cur.citation_hook)});});brief.page_blueprint=brief.definitive_outline.map(function(x){return Object.assign({},x,{cover:Array.isArray(x.cover)?x.cover.slice():[]});});
+      }
+      if(ask.includes('balance')&&obj.balance&&typeof obj.balance==='object')brief.balance=obj.balance;
+      if(ask.includes('conclusion')&&obj.conclusion&&typeof obj.conclusion==='object')brief.conclusion={recap:safe(obj.conclusion.recap),recommendation:safe(obj.conclusion.recommendation),outlook:safe(obj.conclusion.outlook)};
+      if(ask.includes('ai_answer')&&obj.ai_answer&&typeof obj.ai_answer==='object')brief.ai_answer=Object.assign({},brief.ai_answer||{},obj.ai_answer);
+      if(ask.includes('opening_passage')&&obj.opening_passage&&typeof obj.opening_passage==='object')brief.opening_passage=obj.opening_passage;
+      if(ask.includes('action_plan')&&Array.isArray(obj.action_plan))brief.action_plan=obj.action_plan;
+      if(ask.includes('meta_package')&&obj.meta_package&&typeof obj.meta_package==='object')brief.meta_package=obj.meta_package;
+      if(ask.includes('paa_answers')&&Array.isArray(obj.paa_questions)){
+        const qs=(brief.people_also_ask||[]).map(function(x){return typeof x==='string'?x:(x&&x.question)||'';}).filter(Boolean),ans=new Map(obj.paa_questions.map(function(x){return [norm(x&&x.q||x&&x.question),safe(x&&x.a||x&&x.answer)];}));brief.paa_questions=qs.map(function(q){return {q:q,a:ans.get(norm(q))||''};});
+      }
+    }else completionError=String(rr&&rr.errorMessage||rr&&rr.status||'Gemini completion call failed').slice(0,500);
+  }
+
+  const prevUsage=brief.generation_usage&&typeof brief.generation_usage==='object'?brief.generation_usage:{provider:'gemini',calls:[],input_tokens:0,output_tokens:0,thinking_tokens:0,billable_output_tokens:0,total_tokens:0,cached_input_tokens:0,attempted_calls:0,models:[]};
+  if(!Array.isArray(prevUsage.calls))prevUsage.calls=[];
+  if(completionUsage){prevUsage.calls.push(completionUsage);prevUsage.input_tokens=Number(prevUsage.input_tokens||0)+completionUsage.input_tokens;prevUsage.output_tokens=Number(prevUsage.output_tokens||0)+completionUsage.output_tokens;prevUsage.thinking_tokens=Number(prevUsage.thinking_tokens||0)+completionUsage.thinking_tokens;prevUsage.billable_output_tokens=Number(prevUsage.billable_output_tokens||0)+completionUsage.billable_output_tokens;prevUsage.total_tokens=Number(prevUsage.total_tokens||0)+completionUsage.total_tokens;prevUsage.cached_input_tokens=Number(prevUsage.cached_input_tokens||0)+completionUsage.cached_input_tokens;prevUsage.attempted_calls=Number(prevUsage.attempted_calls||prevUsage.calls.length-1)+1;prevUsage.models=Array.from(new Set([].concat(prevUsage.models||[],[completionUsage.model]).filter(Boolean)));}
+  const completionCalls=prevUsage.calls.filter(function(x){return String(x&&x.label||'')==='completion_missing_only';});
+  const sum=function(arr){return {calls:arr.length,input_tokens:arr.reduce(function(a,x){return a+Number(x.input_tokens||0);},0),output_tokens:arr.reduce(function(a,x){return a+Number(x.output_tokens||0);},0),thinking_tokens:arr.reduce(function(a,x){return a+Number(x.thinking_tokens||0);},0),billable_output_tokens:arr.reduce(function(a,x){return a+Number(x.billable_output_tokens||0);},0)};};
+  if(!prevUsage.stage_usage)prevUsage.stage_usage={};prevUsage.stage_usage.completion=sum(completionCalls);
+  if(prevUsage.cost_guard&&typeof prevUsage.cost_guard==='object'){prevUsage.cost_guard.calls_used=prevUsage.calls.length;prevUsage.cost_guard.input_tokens_used=Number(prevUsage.input_tokens||0);prevUsage.cost_guard.billable_output_tokens_used=Number(prevUsage.billable_output_tokens||0);}
+  if(!prevUsage.diagnostics||typeof prevUsage.diagnostics!=='object')prevUsage.diagnostics={};if(!Array.isArray(prevUsage.diagnostics.suggestions))prevUsage.diagnostics.suggestions=[];if(completionUsage&&!prevUsage.diagnostics.suggestions.some(function(x){return /reused the existing research/i.test(String(x));}))prevUsage.diagnostics.suggestions.push('Missing-only completion reused the existing research snapshot and made one targeted Gemini call instead of rerunning SERP, PAA, competitor or evidence research.');
+  const after=_pwbReadiness(brief),missingAfter=Array.isArray(after.missing)?after.missing.slice():[];
+  brief.ai_quality_check=after;brief.generation_usage=prevUsage;
+  if(brief.what_we_checked&&typeof brief.what_we_checked==='object')brief.what_we_checked.generation_usage=prevUsage;
+  brief.completion_history=Array.isArray(brief.completion_history)?brief.completion_history:[];
+  brief.completion_history.push({completed_at:new Date().toISOString(),mode:'missing_only',source_job_id:jobId,research_reused:true,research_rerun:false,missing_before:missingBefore,missing_after:missingAfter,gemini_calls:completionUsage?1:0,usage:completionUsage||null,error:completionError||''});
+
+  if(!after.ready_for_generation){
+    const why=after.details&&after.details.definitive_outline,whyText=missingAfter.includes('definitive_outline')&&why&&Array.isArray(why.issues)&&why.issues.length?' Outline reason: '+why.issues.join(', ')+'.':'';
+    return res.status(422).json({success:false,stage:'quality_gate',quality_status:'not_passed',completion_mode:'missing_only',research_reused:true,research_rerun:false,retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Missing-only completion reused the existing research, but the Brief still did not pass. Nothing was saved or counted.'+(missingAfter.length?' Missing: '+missingAfter.join(', ')+'.':'')+whyText+(completionError?' Completion call: '+completionError+'.':''),brief:brief,generation_usage:prevUsage,search_intent:brief.search_intent||null,region:String(srcReq.region||opts.region||'us'),competitors_scraped:Number(payload.competitors_scraped||0),diagnostic:{readiness_score:after.readiness_score,missing:missingAfter,completion_missing_before:missingBefore,research_reused:true,research_rerun:false,completion_usage:completionUsage||null,completion_error:completionError||'',checks:after,outline:why||null,generation_usage:prevUsage}});
+  }
+
+  const saveKeyword=srcKeyword||requestedKeyword,saveTitle=String(srcReq.workingTitle||opts.workingTitle||''),saveLanguage=String(srcReq.language||opts.language||''),saveRegion=(String(srcReq.region||opts.region||'us').toLowerCase().match(/[a-z]{2}/)||['us'])[0],competitors=Number(payload.competitors_scraped||0);
+  let savedBriefId=null,committedBriefsUsed=briefsUsed;const conn=await pool.connect();
+  try{await conn.query('BEGIN');const quota=await conn.query('UPDATE tracker_clients SET prewrite_briefs_used=COALESCE(prewrite_briefs_used,0)+1 WHERE id=$1 AND COALESCE(prewrite_briefs_used,0) < (1+COALESCE(prewrite_briefs_paid,0)) RETURNING prewrite_briefs_used',[client.id]);if(!quota.rows.length){const e=new Error('Pre-Write Brief allowance was consumed before this completed Brief could be saved. Nothing was counted for this request.');e.status=409;throw e;}committedBriefsUsed=Number(quota.rows[0].prewrite_briefs_used||0);const saved=await conn.query('INSERT INTO prewrite_briefs (client_id, keyword, working_title, language, region, brief_json, competitors_scraped) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',[client.id,saveKeyword,saveTitle,saveLanguage,saveRegion,JSON.stringify(brief),competitors]);savedBriefId=saved.rows[0]&&saved.rows[0].id;if(!savedBriefId)throw new Error('Pre-Write Brief persistence returned no id.');await conn.query('COMMIT');}catch(e){try{await conn.query('ROLLBACK')}catch(_e){}return res.status(e&&e.status===409?409:503).json({success:false,stage:e&&e.status===409?'quota_commit':'persistence',retryable:true,error:e&&e.status===409?e.message:'The completed Brief passed quality checks but could not be saved safely. Nothing was counted.',brief:brief,diagnostic:{message:String(e&&e.message||e),saved:false,counted:false,research_reused:true}});}finally{conn.release();}
+  return res.json({success:true,brief:brief,brief_id:savedBriefId,competitors_scraped:competitors,region:saveRegion,briefs_used:committedBriefsUsed,briefs_allowed:briefsAllowed,search_intent:brief.search_intent||null,completion_mode:'missing_only',research_reused:true,research_rerun:false,source_job_id:jobId});
+}
+
 async function _handlePrewriteBriefGeneration(req, res) {
   let _pwbStage='start';
   const _pwbStartedAt=Date.now();
@@ -58373,7 +58544,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     // cannot stack multiple 10–30s retries and die as a gateway 502 before our JSON error arrives.
     _pwbNetworkFastLane = _pwbNetworkAuthorized && _pwbSyntheticNetworkTracker;
 
-    const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml } = req.body || {};
+    const { keyword, workingTitle, language, region, manualAioText, manualAiEvidence, intentOverride, recommendationContext, existingSiteHtml, completionFromJobId } = req.body || {};
     if (!keyword) return res.status(400).json({ success: false, error: 'keyword required' });
     if (!process.env.GEMINI_API_KEY) return res.status(500).json({ success: false, error: 'GEMINI_API_KEY not set' });
 
@@ -58388,6 +58559,14 @@ async function _handlePrewriteBriefGeneration(req, res) {
         limit_reached: true,
         error: 'Pre-Write Brief is a separate service — you\'ve used your free brief. Contact Ottmar, or check all pricing options on contentscale.site/free-ai-citations-tracker.'
       });
+    }
+
+    // v497 — a NOT PASSED Brief already paid for SERP/evidence research. Completion must not
+    // silently rerun that work. Reuse the exact diagnostic snapshot and make at most ONE targeted
+    // Gemini call for fields that are still missing after deterministic completion.
+    if(String(completionFromJobId||'').trim()){
+      _pwbStage='completion';
+      return await _pwbCompleteMissingFromDiagnostic({client:client,jobId:String(completionFromJobId).trim(),placementId:_pwbNetworkPlacementId,keyword:keyword,workingTitle:workingTitle,language:language,region:region,briefsUsed:briefsUsed,briefsAllowed:briefsAllowed},res);
     }
 
     const serperKey = process.env.SERPAPI_KEY;
