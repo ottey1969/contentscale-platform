@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v501-NETWORK-APPROVE-THEN-GENERATE-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v502-PREWRITE-ACTION-STATE-MACHINE-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,10 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-action-state-machine-v502',
+  'prewrite-final-qa-completed-state-v502',
+  'prewrite-input-dirty-stale-action-lock-v502',
+  'prewrite-publisher-edition-ready-state-v502',
   'network-prewrite-approve-then-generate-v501',
   'network-approved-snapshot-id-handoff-v501',
   'network-generation-409-diagnostic-v501',
@@ -849,7 +853,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v501-NETWORK-APPROVE-THEN-GENERATE-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE',
+  build: 'CS-2026-10-05-CANONICAL-v502-PREWRITE-ACTION-STATE-MACHINE-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -937,6 +941,7 @@ app.get('/api/regression-contract',(req,res)=>{
     network_safe_shell:src.includes('NETWORK_SAFE_SHELL_V1')&&src.includes("require('./network/register-network')")&&fs.existsSync(path.join(__dirname,'network','register-network.js')),
     network_guarded_registration:src.includes('core ContentScale continues without Network')&&src.includes("registerNetwork({app,pool,verifyAdmin,asyncHandler})"),
     network_prewrite_approval_handshake:src.includes('/approve-prewrite')&&src.includes('brief_id:briefId')&&src.includes('approval_id:approvalId')&&src.includes('Approving exact Brief snapshot'),
+    prewrite_action_state_machine:src.includes('Final QA complete · saved')&&src.includes('Complete missing only · not needed')&&src.includes('Publisher Edition ready')&&src.includes('_pwbInputsDirty'),
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
     prospect_footer:src.includes('data-cs-prospect-footer')&&src.includes('_injectProspectFooter'),
@@ -46142,71 +46147,125 @@ function _pwbRestoreDiagnosticJob(keyword){
   return '';
 }
 
-// v500 — one stable action surface. Buttons never appear/disappear based on hidden state;
-// unavailable actions stay visible and disabled so the workflow remains obvious.
+// v502 — explicit Prewrite action state machine.
+// Contract: every workflow action stays visible, but only the NEXT valid actions are enabled.
+// Completed actions become grey/disabled; stale actions are locked when inputs change; successful
+// Publisher Edition generation remains visibly complete on subsequent local state refreshes.
 var _pwbCurrentBriefId=0;
 var _pwbCurrentBrief=null;
 var _pwbCurrentNotPassed=false;
 var _pwbInputsDirty=false;
 var _pwbFinalQaPersisted=false;
+var _pwbPublisherEditionReady=false;
 function _pwbNetworkPlacement(){
   try{var q=new URLSearchParams(window.location.search||'');var n=Number(q.get('networkPlacement')||0);return Number.isSafeInteger(n)&&n>0?n:0;}catch(_e){return 0;}
 }
 function _pwbActionKeyword(){var e=document.getElementById('pwbKeyword');return String(e&&e.value||'').trim();}
 function _pwbApplyActionState(){
   var b=_pwbCurrentBrief||{},qc=b.ai_quality_check||{},pq=b.publication_quality_check||{};
+  var hasBrief=!!_pwbCurrentBrief;
   var passed=qc.ready_for_generation===true&&!_pwbCurrentNotPassed;
   var pubReady=pq.ready_to_write===true;
   var hasSaved=Number(_pwbCurrentBriefId||0)>0;
   var qaPersisted=!!_pwbFinalQaPersisted;
+  var stale=!!_pwbInputsDirty;
   var placement=_pwbNetworkPlacement();
   var diag=_pwbRestoreDiagnosticJob(_pwbActionKeyword());
   var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),state=document.getElementById('pwbActionState'),fresh=document.getElementById('pwbGenerateBtn');
-  if(approve){
-    approve.disabled=!(passed&&pubReady&&qaPersisted&&hasSaved&&placement);
-    approve.textContent=placement?'Approve Brief & Generate Publisher Edition':'Approve & Generate · Network placement required';
-    approve.onclick=(!approve.disabled&&placement)?function(){generateNetworkPublisherEdition(placement,this);}:null;
-  }
-  if(complete){
-    complete.disabled=!(_pwbCurrentNotPassed&&diag);
-    complete.textContent=_pwbCurrentNotPassed?'Complete missing only · reuse research':'Complete missing only · not needed';
-    complete.onclick=!complete.disabled?function(){generatePrewriteBrief({completeMissing:true,sourceJobId:_pwbRestoreDiagnosticJob(_pwbActionKeyword())});}:null;
-  }
-  if(finalQa){
-    finalQa.disabled=!hasSaved;
-    finalQa.textContent='Run final QA · no research · no Gemini';
-    finalQa.onclick=!finalQa.disabled?function(){runPrewriteFinalQa(this);}:null;
-  }
-  if(copy){
-    copy.disabled=!(passed&&pubReady&&qaPersisted);
-    copy.textContent=copy.disabled?'Copy for external AI · locked':'Copy for external AI';
-    copy.onclick=!copy.disabled?function(){copyPrewriteForExternalAi(this);}:null;
-  }
+
+  // 1) Fresh analysis is only actionable when there is no current Brief or the user intentionally
+  // changed an input. It must never compete visually with the next step of an existing workflow.
   if(fresh){
-    if((_pwbCurrentBrief||_pwbCurrentNotPassed)&&!_pwbInputsDirty){
+    if(hasBrief&&!stale){
       fresh.disabled=true;
       fresh.textContent=_pwbCurrentNotPassed?'Fresh re-analysis locked · complete missing first':'Re-analysis not needed · current Brief loaded';
-      fresh.title='Edit the keyword/title/research inputs if you intentionally want a fresh paid research run.';
+      fresh.title='This Brief already has research. Change an input only if you intentionally want a fresh paid research run.';
     }else{
       fresh.disabled=false;
-      fresh.textContent=_pwbCurrentBrief?'Analyse & create new Brief · fresh research':'Analyse & create Pre-Write Brief';
-      fresh.title=_pwbCurrentBrief?'Inputs changed. This starts a new research run and can use paid API calls.':'';
+      fresh.textContent=hasBrief?'Analyse & create new Brief · fresh research':'Analyse & create Pre-Write Brief';
+      fresh.title=hasBrief?'Inputs changed. This starts a NEW research run and may use paid API calls.':'';
     }
   }
+
+  // 2) Missing-only completion is a recovery action exclusively for a NOT PASSED diagnostic.
+  if(complete){
+    var canComplete=hasBrief&&!stale&&_pwbCurrentNotPassed&&!!diag;
+    complete.disabled=!canComplete;
+    if(stale)complete.textContent='Complete missing only · create updated Brief first';
+    else if(_pwbCurrentNotPassed&&!diag)complete.textContent='Complete missing only · diagnostic unavailable';
+    else if(_pwbCurrentNotPassed)complete.textContent='Complete missing only · reuse research';
+    else complete.textContent='Complete missing only · not needed';
+    complete.onclick=canComplete?function(){generatePrewriteBrief({completeMissing:true,sourceJobId:_pwbRestoreDiagnosticJob(_pwbActionKeyword())});}:null;
+    complete.title=complete.disabled?(stale?'Inputs changed; the saved research snapshot no longer matches these inputs.':'Only used when the current Brief is NOT PASSED.'):'Reuse the existing research and complete only the missing fields.';
+  }
+
+  // 3) Final QA is a one-time deterministic persistence step for the current saved Brief version.
+  // Once saved it becomes visibly complete and cannot be clicked again unless a newer Brief version exists.
+  if(finalQa){
+    var canFinalQa=hasSaved&&!stale&&!_pwbCurrentNotPassed&&!qaPersisted;
+    finalQa.disabled=!canFinalQa;
+    if(stale)finalQa.textContent='Final QA · create updated Brief first';
+    else if(_pwbCurrentNotPassed)finalQa.textContent='Final QA · complete missing first';
+    else if(!hasSaved)finalQa.textContent='Final QA · waiting for saved Brief';
+    else if(qaPersisted)finalQa.textContent='✓ Final QA complete · saved';
+    else finalQa.textContent='Run final QA · no research · no Gemini';
+    finalQa.onclick=canFinalQa?function(){runPrewriteFinalQa(this);}:null;
+    finalQa.title=qaPersisted?'Already applied to this exact saved Brief. No rerun is needed.':(canFinalQa?'Apply deterministic writer/SEO QA and save it. Cost: 0 research / 0 Gemini.':'');
+  }
+
+  // 4) Approval/generation is the next primary action only after the exact saved Brief has passed
+  // structural + publication QA and that deterministic QA state is persisted.
+  if(approve){
+    var canApprove=hasBrief&&!stale&&passed&&pubReady&&qaPersisted&&hasSaved&&!!placement&&!_pwbPublisherEditionReady;
+    approve.disabled=!canApprove;
+    if(_pwbPublisherEditionReady)approve.textContent='✓ Publisher Edition ready';
+    else if(stale)approve.textContent='Approve & Generate · inputs changed';
+    else if(!placement)approve.textContent='Approve & Generate · Network placement required';
+    else if(_pwbCurrentNotPassed||!passed)approve.textContent='Approve & Generate · Brief not passed';
+    else if(!hasSaved)approve.textContent='Approve & Generate · waiting for saved Brief';
+    else if(!pubReady)approve.textContent='Approve & Generate · Publication QA blocked';
+    else if(!qaPersisted)approve.textContent='Approve & Generate · run final QA first';
+    else approve.textContent='Approve Brief & Generate Publisher Edition';
+    approve.onclick=canApprove?function(){generateNetworkPublisherEdition(placement,this);}:null;
+    approve.title=_pwbPublisherEditionReady?'This Publisher Edition was already generated in this workflow.':(canApprove?'Approve the exact saved Brief snapshot, then generate the Publisher Edition.':'');
+  }
+
+  // 5) External copy follows the same current-version safety rules. It stays available after a
+  // Publisher Edition has been generated because copying is still a valid optional follow-up.
+  if(copy){
+    var canCopy=hasBrief&&!stale&&passed&&pubReady&&qaPersisted;
+    copy.disabled=!canCopy;
+    if(stale)copy.textContent='Copy for external AI · inputs changed';
+    else if(!passed||!pubReady)copy.textContent='Copy for external AI · Brief not passed';
+    else if(!qaPersisted)copy.textContent='Copy for external AI · final QA first';
+    else copy.textContent='Copy for external AI';
+    copy.onclick=canCopy?function(){copyPrewriteForExternalAi(this);}:null;
+  }
+
   if(state){
-    if(!_pwbCurrentBrief)state.textContent='Generate or reopen a Brief first. All available actions stay visible; unavailable actions remain disabled.';
-    else if(_pwbCurrentNotPassed)state.textContent='NOT PASSED: use Complete missing only. Fresh re-analysis stays locked unless you edit the research inputs.';
-    else if(!pubReady)state.textContent='Structural Brief is complete, but Publication QA has a blocker. Run final QA first; it uses no research and no Gemini.';
-    else if(!qaPersisted)state.textContent='This reopened Brief was refreshed with the new QA rules in view only. Click Run final QA once to save those deterministic changes before Publisher Edition generation. Cost: 0 research / 0 Gemini.';
-    else state.textContent='Brief is structurally complete, Publication QA is ready, and the final QA version is saved. Fresh re-analysis is unnecessary unless inputs change.';
+    if(!hasBrief)state.textContent='Start with Analyse & create Pre-Write Brief. Later workflow buttons stay visible but disabled until their step is valid.';
+    else if(stale)state.textContent='Inputs changed. The loaded Brief is now stale for these inputs. Create a new Brief before completing, QA, approving or copying.';
+    else if(_pwbCurrentNotPassed)state.textContent='NOT PASSED: Complete missing only is the next step. It reuses the existing research; fresh re-analysis is unnecessary.';
+    else if(!pubReady)state.textContent='Structural Brief is complete, but Publication QA has a blocker. Final QA is the next valid step and uses no research/Gemini.';
+    else if(!qaPersisted)state.textContent='Brief is ready. Run final QA once to save the deterministic final version. Cost: 0 research / 0 Gemini.';
+    else if(_pwbPublisherEditionReady)state.textContent='Publisher Edition is ready. Completed workflow actions stay disabled; Copy for external AI remains available as an optional follow-up.';
+    else state.textContent='Brief and Final QA are complete. Approve & Generate is the next primary step; completed/unneeded actions stay disabled.';
   }
 }
 function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted){
-  _pwbCurrentBriefId=Number(id||0)||0;_pwbCurrentBrief=brief||null;_pwbCurrentNotPassed=!!notPassed;_pwbFinalQaPersisted=!!qaPersisted;_pwbInputsDirty=false;_pwbApplyActionState();
+  _pwbCurrentBriefId=Number(id||0)||0;
+  _pwbCurrentBrief=brief||null;
+  _pwbCurrentNotPassed=!!notPassed;
+  _pwbFinalQaPersisted=!!qaPersisted;
+  _pwbInputsDirty=false;
+  _pwbPublisherEditionReady=false;
+  _pwbApplyActionState();
 }
 function _pwbMarkInputsChanged(){
   if(!_pwbCurrentBrief&&!_pwbCurrentNotPassed)return;
-  _pwbInputsDirty=true;_pwbApplyActionState();
+  _pwbInputsDirty=true;
+  _pwbPublisherEditionReady=false;
+  _pwbApplyActionState();
 }
 setTimeout(function(){
   ['pwbKeyword','pwbTitle','pwbLanguage','pwbRegion','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText','pwbExistingHtml'].forEach(function(id){
@@ -46406,10 +46465,11 @@ async function generateNetworkPublisherEdition(placementId,btn){
       if(r.status===409)msg='Generation blocked by Network workflow: '+msg;
       throw new Error(msg);
     }
+    _pwbPublisherEditionReady=true;
+    _pwbApplyActionState();
     if(st)st.textContent=d.already_generated?'✓ This exact approved Brief snapshot already has a Publisher Edition. Open Publishing to review it.':'✓ Publisher Edition generated from approved Brief snapshot #'+approvalId+'. Open Network Publishing to review/edit images, links, attribution and final HTML before publishing.';
-    if(btn){btn.textContent='✓ Publisher Edition ready';btn.disabled=true;}
     if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-publisher-edition-ready',placement_id:Number(placementId),publication_version_id:d.publication_version_id||(d.publication_version&&d.publication_version.id)||null,approved_prewrite_approval_id:approvalId,brief_id:briefId},window.location.origin);
-  }catch(e){if(st)st.textContent='✕ '+e.message;if(btn){btn.disabled=false;btn.textContent=original||'Approve Brief & Generate Publisher Edition';}}
+  }catch(e){_pwbPublisherEditionReady=false;_pwbApplyActionState();if(st)st.textContent='✕ '+e.message;}
 }
 
 var _lastPrewriteBriefText = '';
