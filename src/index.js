@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v498-QUICKSCAN-AI-TAB-TWO-PROMPT-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v499-PREWRITE-FINAL-QA-ENTITY-PLAN-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,9 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-deterministic-final-publication-qa-v499',
+  'prewrite-research-coverage-semantics-v499',
+  'prewrite-entity-usage-plan-v499',
   'quickscan-admin-dedicated-two-prompt-ai-tab-v498',
   'quickscan-admin-ai-destination-shortcuts-v498',
   'prewrite-reuse-research-complete-missing-v497',
@@ -831,7 +834,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v498-QUICKSCAN-AI-TAB-TWO-PROMPT-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  build: 'CS-2026-10-05-CANONICAL-v499-PREWRITE-FINAL-QA-ENTITY-PLAN-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -46463,7 +46466,13 @@ function renderPrewriteBrief(b) {
       lines.push('');
     }
   }
-  if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
+  if (b.entity_strategy && (Array.isArray(b.entity_strategy.primary)||Array.isArray(b.entity_strategy.secondary)||Array.isArray(b.entity_strategy.supporting))) {
+    lines.push('ENTITY PLAN');
+    if(Array.isArray(b.entity_strategy.primary)&&b.entity_strategy.primary.length)lines.push('Core — use explicitly: '+b.entity_strategy.primary.join(', '));
+    if(Array.isArray(b.entity_strategy.secondary)&&b.entity_strategy.secondary.length)lines.push('Secondary — use naturally where relevant: '+b.entity_strategy.secondary.join(', '));
+    if(Array.isArray(b.entity_strategy.supporting)&&b.entity_strategy.supporting.length)lines.push('Supporting — optional context: '+b.entity_strategy.supporting.join(', '));
+    lines.push('Rule: do not force every discovered entity into the article.','');
+  } else if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
     lines.push(_PL.entities, b.must_cover_entities.join(', '), '');
   }
   if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
@@ -46540,6 +46549,13 @@ function renderPrewriteBrief(b) {
   }
   if (b.conclusion && b.conclusion.recap) {
     lines.push(_PLX.conclusionH.toUpperCase(), b.conclusion.recap + (b.conclusion.recommendation ? ' ' + b.conclusion.recommendation : ''), '');
+  }
+  if (b.publication_quality_check) {
+    var _pqt=b.publication_quality_check||{};
+    lines.push('PUBLICATION QA', String(Number(_pqt.score||0))+'/100 · '+(_pqt.ready_to_write?'READY TO WRITE':'BLOCKED'));
+    (Array.isArray(_pqt.blockers)?_pqt.blockers:[]).forEach(function(x){lines.push('BLOCKER: '+(x&&x.message||x&&x.code||''));});
+    (Array.isArray(_pqt.warnings)?_pqt.warnings:[]).forEach(function(x){lines.push('WARNING: '+(x&&x.message||x&&x.code||''));});
+    lines.push('');
   }
   if (Array.isArray(b.action_plan) && b.action_plan.length) {
     lines.push(_PL.plan);
@@ -46722,8 +46738,14 @@ function renderPrewriteBrief(b) {
     });
     html += '</div>';
   }
-  if (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length) {
-    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">' + _PLH.entitiesH + '</div>' + b.must_cover_entities.map(function(e){return '<span style="display:inline-block;background:#1f2937;border:1px solid #374151;border-radius:999px;padding:2px 9px;margin:2px 3px 2px 0;font-size:10.5px;">'+esc(e)+'</span>';}).join('') + '</div>';
+  if ((b.entity_strategy && (Array.isArray(b.entity_strategy.primary)||Array.isArray(b.entity_strategy.secondary)||Array.isArray(b.entity_strategy.supporting))) || (Array.isArray(b.must_cover_entities) && b.must_cover_entities.length)) {
+    var _ep=b.entity_strategy||{},_epri=Array.isArray(_ep.primary)?_ep.primary:[],_esec=Array.isArray(_ep.secondary)?_ep.secondary:[],_esup=Array.isArray(_ep.supporting)?_ep.supporting:[];
+    var _chips=function(arr,border){return arr.map(function(e){return '<span style="display:inline-block;background:#1f2937;border:1px solid '+border+';border-radius:999px;padding:2px 9px;margin:2px 3px 2px 0;font-size:10.5px;">'+esc(e)+'</span>';}).join('');};
+    html += '<div style="margin-bottom:10px;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:10px 12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;">Entity plan</div>'
+      + (_epri.length?'<div style="font-size:10px;color:#86efac;margin-top:4px;">CORE · use explicitly</div>'+_chips(_epri,'#166534'):'')
+      + (_esec.length?'<div style="font-size:10px;color:#93c5fd;margin-top:6px;">SECONDARY · use naturally where relevant</div>'+_chips(_esec,'#1d4ed8'):'')
+      + (_esup.length?'<div style="font-size:10px;color:#c4b5fd;margin-top:6px;">SUPPORTING · optional context</div>'+_chips(_esup,'#6d28d9'):'')
+      + '<div style="font-size:9.8px;color:#64748b;margin-top:6px;">Do not force every discovered entity into the article. Relevance and natural context win over entity stuffing.</div></div>';
   }
   if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
     html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">' + _PL.faq + '</div><ul style="margin:0;padding-left:18px;">' + b.faq_questions.map(function(q){return '<li>'+esc(typeof q==='string'?q:(q&&q.q||''))+'</li>';}).join('') + '</ul></div>';
@@ -46842,12 +46864,21 @@ function renderPrewriteBrief(b) {
     html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">' + _PLX.qcH + '</span>'
       + (_sc == null ? '' : '<span style="margin-left:auto;font-size:12px;font-weight:800;color:' + _scCol + ';">' + _sc + '/100</span>') + '</div>'
-      + (typeof _qc.research_coverage_score==='number'?'<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">Research coverage: '+esc(_qc.research_coverage_score)+'/100'+(Array.isArray(_qc.research_warnings)&&_qc.research_warnings.length?' · warnings: '+esc(_qc.research_warnings.join(', ')):'')+'</div>':'');
+      + (typeof _qc.research_coverage_score==='number'?'<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">Research coverage: '+esc(_qc.research_coverage_score)+'/100'+(Array.isArray(_qc.research_warnings)&&_qc.research_warnings.length?' · warnings: '+esc(_qc.research_warnings.join(', ')):'')+(Array.isArray(_qc.research_notes)&&_qc.research_notes.length?' · '+esc(_qc.research_notes.join(' · ')):'')+'</div>':'');
     Object.keys(_qcLab).forEach(function(k){
       if (typeof _qc[k] !== 'boolean') return;
       html += '<div style="font-size:11px;color:' + (_qc[k] ? '#86efac' : '#fca5a5') + ';padding:1px 0;">' + (_qc[k] ? '\\u2713' : '\\u2717') + ' ' + _qcLab[k] + '</div>';
     });
     html += '</div>';
+  }
+  if (b.publication_quality_check) {
+    var _pq=b.publication_quality_check,_pqs=Number(_pq.score||0),_pqc=_pq.ready_to_write?'#86efac':'#fca5a5';
+    html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:10px 12px;">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Publication QA</span><span style="margin-left:auto;color:'+_pqc+';font-weight:800;font-size:12px;">'+esc(_pqs)+'/100</span></div>'
+      + '<div style="font-size:10.5px;color:'+_pqc+';margin-bottom:4px;">'+(_pq.ready_to_write?'Ready to write · warnings do not block generation':'Blocked · fix writer-facing copy before generation')+'</div>'
+      + (Array.isArray(_pq.blockers)&&_pq.blockers.length?_pq.blockers.map(function(x){return '<div style="font-size:10.5px;color:#fca5a5;">✗ '+esc(x.message||x.code||'blocker')+'</div>';}).join(''):'')
+      + (Array.isArray(_pq.warnings)&&_pq.warnings.length?_pq.warnings.map(function(x){return '<div style="font-size:10.5px;color:#fbbf24;">⚠ '+esc(x.message||x.code||'warning')+'</div>';}).join(''):'<div style="font-size:10.5px;color:#86efac;">✓ No publication warnings detected</div>')
+      + '</div>';
   }
   if (Array.isArray(b.action_plan) && b.action_plan.length) {
     html += '<div><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">Action plan</div><ol style="margin:0;padding-left:18px;">' + b.action_plan.map(function(a){return '<li>'+esc(a.action||'')+'</li>';}).join('') + '</ol></div>';
@@ -58138,6 +58169,146 @@ app.post('/api/tracker-client/:token/prewrite-aio-fetch', async (req, res) => {
 
 // ── Pre-Write Brief readiness check ───────────────────────────────────
 // Presence-based and server-side. Every flag reflects a field that is genuinely
+// v499 — deterministic final publication QA. This never calls an LLM and never
+// fabricates facts. It only repairs structure/order, normalizes risky wording,
+// synchronizes already-verified evidence sources and exposes warnings separately
+// from the authoritative structural quality gate.
+function _pwbFinalPublicationPass(b){
+  if(!b||typeof b!=='object')return b;
+  const _txt=v=>String(v==null?'':v).trim();
+  const _good=v=>!!_txt(v)&&!/^insufficient_data$/i.test(_txt(v));
+  const _dedupe=arr=>Array.from(new Set((Array.isArray(arr)?arr:[]).map(_txt).filter(Boolean)));
+  const _soften=function(v){
+    return _txt(v)
+      .replace(/\bcan\s+help\s+aims?\s+to\s+support\b/gi,'can help support')
+      .replace(/\bcan\s+help\s+support\s+([^.!?]{1,90}?)\s+is\s+considered\b/gi,'can help $1 be considered')
+      .replace(/\bcan\s+help\s+aims?\s+to\b/gi,'can help')
+      .replace(/\bensur(?:e|es|ing)\s+(?:that\s+)?(?:a\s+)?brand\s+(?:is\s+)?cited\s+and\s+trusted\s+by\s+AI\b/gi,'can improve the likelihood of a brand being cited in AI-generated answers')
+      .replace(/\bensur(?:e|es|ing)\s+brand\s+presence\b/gi,'supporting brand visibility')
+      .replace(/\bsecures?\s+direct\s+answers\b/gi,'can improve eligibility for direct-answer experiences')
+      .replace(/\bguarantees?\b/gi,'can support')
+      .replace(/\bensures?\b/gi,'aims to support')
+      .replace(/\bincreasing\s+visibility\b/gi,'which may improve visibility')
+      .replace(/\bdriving\s+more\s+qualified\s+traffic\s+and\s+conversions\b/gi,'which may support qualified traffic and conversions')
+      .replace(/\bbuilding\s+trust\s+and\s+recognition\b/gi,'which may support trust and recognition')
+      .replace(/\s{2,}/g,' ').trim();
+  };
+
+  // Keep every approved H2, but make obvious Introduction/Conclusion headings read in
+  // natural order. This is a pure reorder: no headings or facts are generated.
+  if(Array.isArray(b.definitive_outline)&&b.definitive_outline.length){
+    const arr=b.definitive_outline.slice();
+    const introIdx=arr.findIndex(x=>/^\s*(?:introduction|intro|inleiding|introducci[oó]n|einleitung)\b/i.test(_txt(x&&x.h2)));
+    if(introIdx>0){const x=arr.splice(introIdx,1)[0];arr.unshift(x);}
+    const conclusionIdx=arr.findIndex(x=>/^\s*(?:conclusion|conclusie|conclusi[oó]n|fazit|conclusion:)\b/i.test(_txt(x&&x.h2)));
+    if(conclusionIdx>=0&&conclusionIdx!==arr.length-1){const x=arr.splice(conclusionIdx,1)[0];arr.push(x);}
+    b.definitive_outline=arr;
+    b.page_blueprint=arr.map(x=>Object.assign({},x,{cover:Array.isArray(x&&x.cover)?x.cover.slice():[]}));
+    if(!b.recommended_structure||typeof b.recommended_structure!=='object'||Array.isArray(b.recommended_structure))b.recommended_structure={};
+    b.recommended_structure.must_have_h2s=arr.map(x=>_txt(x&&x.h2)).filter(Boolean);
+    b.recommended_structure.h2s=b.recommended_structure.must_have_h2s.slice();
+  }
+
+  if(Array.isArray(b.use_cases))b.use_cases=b.use_cases.map(function(x){
+    if(!x||typeof x!=='object')return x;
+    return Object.assign({},x,{benefit:_soften(x.benefit),scenario:_soften(x.scenario)});
+  });
+  if(b.conclusion&&typeof b.conclusion==='object'){
+    b.conclusion.recap=_soften(b.conclusion.recap);
+    b.conclusion.recommendation=_soften(b.conclusion.recommendation);
+    b.conclusion.outlook=_soften(b.conclusion.outlook);
+  }
+  if(Array.isArray(b.definitive_outline))b.definitive_outline=b.definitive_outline.map(function(x){
+    if(!x||typeof x!=='object')return x;
+    return Object.assign({},x,{purpose:_soften(x.purpose),citation_hook:_soften(x.citation_hook)});
+  });
+  if(Array.isArray(b.page_blueprint))b.page_blueprint=b.page_blueprint.map(function(x){
+    if(!x||typeof x!=='object')return x;
+    return Object.assign({},x,{purpose:_soften(x.purpose),citation_hook:_soften(x.citation_hook)});
+  });
+  if(b.entity_strategy&&Array.isArray(b.entity_strategy.relationships)){
+    b.entity_strategy.relationships=b.entity_strategy.relationships.map(function(r){
+      return r&&typeof r==='object'?Object.assign({},r,{relation:_soften(r.relation),object:_soften(r.object)}):r;
+    }).filter(function(r){return r&&_good(r.subject)&&_good(r.relation)&&_good(r.object);});
+  }
+
+  // Internal prompt/JSON vocabulary must never leak into writer instructions.
+  if(Array.isArray(b.action_plan)){
+    let n=0;
+    b.action_plan=b.action_plan.map(function(a){
+      if(!a||typeof a!=='object')return a;
+      n+=1;const raw=_txt(a.action);
+      if(/\bcurrent_value\b|\bexisting brief snapshot\b|\bjson\b/i.test(raw)){
+        const repl=n===1?'Write the page in the approved blueprint order and lead with the direct answer.':
+          n===2?'Use the verified research, People Also Ask questions and approved evidence in the relevant sections.':
+          'Run fact, schema, metadata and link QA before publication, then verify the live page.';
+        return Object.assign({},a,{action:repl});
+      }
+      return Object.assign({},a,{action:_soften(raw)});
+    });
+  }
+
+  // Synchronize every already-verified evidence URL into the displayed authority-source pool.
+  // No web lookup and no invented URL occurs here.
+  if(!b.evidence||typeof b.evidence!=='object'||Array.isArray(b.evidence))b.evidence={};
+  const src=[];
+  const add=function(url,title){
+    let u='';try{u=new URL(_txt(url)).href}catch(_e){return}
+    if(!/^https:\/\//i.test(u))return;
+    const label=_txt(title);
+    const row=label?label+' '+u:u;
+    if(!src.some(x=>x.endsWith(u)))src.push(row);
+  };
+  (Array.isArray(b.evidence.official_sources)?b.evidence.official_sources:[]).forEach(function(x){
+    if(typeof x==='string'){const m=x.match(/https:\/\/\S+/);if(m)add(m[0],x.replace(m[0],'').replace(/[—|-]\s*$/,'').trim());}
+    else if(x&&typeof x==='object')add(x.url||x.exact_url||x.value,x.name||x.title||x.source_name);
+  });
+  (Array.isArray(b.evidence.statistics)?b.evidence.statistics:[]).forEach(x=>x&&add(x.best_source_url||x.source_url,x.best_source_title||x.source_title));
+  (Array.isArray(b.evidence.expert_quotes)?b.evidence.expert_quotes:[]).forEach(x=>x&&add(x.source_url,x.source_title||x.person));
+  (Array.isArray(b.evidence.expert_insights)?b.evidence.expert_insights:[]).forEach(x=>x&&add(x.source_url,x.source_title||x.person));
+  if(src.length)b.evidence.official_sources=src.slice(0,12);
+
+  // Entity discovery is a pool, not a keyword-stuffing order. Primary entities are required;
+  // secondary entities should appear where relevant; supporting entities are optional context.
+  const es=b.entity_strategy&&typeof b.entity_strategy==='object'?b.entity_strategy:{};
+  es.primary=_dedupe(es.primary);
+  es.secondary=_dedupe(es.secondary).filter(x=>!es.primary.includes(x));
+  es.supporting=_dedupe(es.supporting).filter(x=>!es.primary.includes(x)&&!es.secondary.includes(x));
+  if(!Array.isArray(es.relationships))es.relationships=[];
+  b.entity_strategy=es;
+  b.entity_usage_policy={
+    rule:'Do not force every discovered entity into the article. Use primary entities explicitly, secondary entities naturally where relevant, and supporting entities only when they add useful context.',
+    primary_required:es.primary.slice(),
+    secondary_natural:es.secondary.slice(),
+    supporting_optional:es.supporting.slice()
+  };
+
+  // Describe competitor coverage honestly; "Top 10" research can return fewer usable pages.
+  const ct=Array.isArray(b.competitor_table)?b.competitor_table:[];
+  const usable=ct.filter(function(c){const s=[c&&c.what_they_have,c&&c.the_gap,c&&c.what_to_add].map(_txt).join(' ');return c&&_good(c.domain)&&!/(analysis unavailable|could not be verified|insufficient_data)/i.test(s);}).length;
+  b.competitor_coverage={results_returned:ct.length,usable_results:usable,serp_positions:ct.map(c=>Number(c&&c.rank||0)).filter(Boolean)};
+
+  b.publication_quality_check=_pwbPublicationQa(b);
+  return b;
+}
+
+function _pwbPublicationQa(b){
+  const warnings=[],blockers=[];let score=100;
+  const mp=b&&b.meta_package||{},title=String(mp.seo_title||''),desc=String(mp.meta_description||'');
+  const penalize=function(points,code,message){score=Math.max(0,score-points);warnings.push({code:code,message:message,points:points});};
+  if(title.length>60)penalize(4,'meta_title_long','SEO title is '+title.length+' characters; target 60 or fewer.');
+  if(desc.length>160)penalize(3,'meta_description_long','Meta description is '+desc.length+' characters; target 160 or fewer.');
+  const corpus=JSON.stringify({outline:b&&b.definitive_outline,use_cases:b&&b.use_cases,conclusion:b&&b.conclusion,action_plan:b&&b.action_plan,entity_strategy:b&&b.entity_strategy});
+  if(/\bcurrent_value\b|\bcan help aims to\b/i.test(corpus)){score=Math.max(0,score-8);blockers.push({code:'internal_or_broken_copy',message:'Internal prompt vocabulary or broken grammar remains in writer-facing copy.'});}
+  if(/\bguarantees?\b|\bsecures?\s+direct\s+answers\b|\bensures?\s+brand\s+(?:is\s+)?cited/i.test(corpus))penalize(6,'overassertive_outcome','At least one outcome claim is still too absolute.');
+  const cov=b&&b.competitor_coverage||{};
+  if(Number(cov.results_returned||0)>0&&Number(cov.usable_results||0)<Number(cov.results_returned||0))penalize(3,'competitor_partial','Competitor analysis has '+Number(cov.usable_results||0)+' usable of '+Number(cov.results_returned||0)+' returned results.');
+  const er=b&&b.evidence_research||{},stats=er.statistics||{},quotes=er.expert_quotes||{};
+  if(Number(stats.verified||0)>0&&Number(stats.primary_verified||0)===0)penalize(3,'no_primary_stat','Statistics are source-verified but no statistic has primary-source verification.');
+  if(Number(quotes.verified||0)===0&&Number(quotes.attributed_insights||0)===0)penalize(3,'no_expert_evidence','No verified expert quote or attributed expert insight was found.');
+  return {score:Math.max(0,score),ready_to_write:blockers.length===0,blockers:blockers,warnings:warnings,checked_at:new Date().toISOString(),rule:'Structural readiness decides whether generation is allowed. Publication QA exposes non-blocking quality warnings separately; blockers are reserved for broken/internal/unsafe writer-facing copy.'};
+}
+
 // filled in the generated brief — never the model's own claim about its output.
 function _pwbReadiness(b) {
   const _s = v => typeof v === 'string' && !!v.trim() && !/^insufficient_data$/i.test(v.trim()) && !/^\[object Object\]$/i.test(v.trim());
@@ -58173,8 +58344,8 @@ function _pwbReadiness(b) {
     official_sources: !!(b.evidence && Array.isArray(b.evidence.official_sources) && b.evidence.official_sources.filter(x=>typeof x==='string'?_s(x):!!(x&&(_s(x.url)||_s(x.value)||_s(x.name)))).length>=2),
     evidence_research: !!(b.evidence_research && b.evidence_research.completed===true && b.evidence_research.statistics && b.evidence_research.statistics.searched===true && b.evidence_research.expert_quotes && b.evidence_research.expert_quotes.searched===true),
     evidence_quality: !!(b.evidence_research && b.evidence_research.quality_ladder && b.evidence_research.quality_ladder.completed===true),
-    internal_links: !!(b.link_research && b.link_research.internal && (Number(b.link_research.internal.urls_found||0)>0 ? _a(b.internal_link_targets) : true)),
-    external_links: !!(b.link_research && b.link_research.external && (Number(b.link_research.external.candidates_found||0)===0 || _a(b.external_link_targets))),
+    internal_links: !!(b.link_research && b.link_research.internal && b.link_research.internal.searched===true && !/failed|error/i.test(String(b.link_research.internal.status||''))),
+    external_links: !!(b.link_research && b.link_research.external && b.link_research.external.searched===true && !/failed|error/i.test(String(b.link_research.external.status||''))),
     balance: !!(b.balance && (_a(b.balance.limitations) || _a(b.balance.comparisons))),
     use_cases: !!(Array.isArray(b.use_cases) && b.use_cases.filter(x=>x&&_s(x.audience)&&_s(x.scenario)&&_s(x.benefit)).length>=2),
     conclusion: !!(b.conclusion && _s(b.conclusion.recap) && _s(b.conclusion.recommendation)),
@@ -58189,6 +58360,10 @@ function _pwbReadiness(b) {
   checks.ready_for_generation=critical.every(k=>checks[k]===true);
   checks.missing=critical.filter(k=>checks[k]!==true);
   checks.research_warnings=researchKeys.filter(k=>checks[k]!==true);
+  checks.research_notes=[];
+  const _il=b.link_research&&b.link_research.internal||{};
+  if(_il.searched===true&&String(_il.status||'')==='searched_no_relevant_target')checks.research_notes.push('internal_links: searched, no sufficiently relevant internal target found');
+  if(_il.searched===true&&String(_il.status||'')==='no_site_urls_verified')checks.research_notes.push('internal_links: research completed, but no site URLs could be verified');
   checks.details={
     definitive_outline:{
       sections:_outline.length,
@@ -58491,6 +58666,7 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
   if(!prevUsage.stage_usage)prevUsage.stage_usage={};prevUsage.stage_usage.completion=sum(completionCalls);
   if(prevUsage.cost_guard&&typeof prevUsage.cost_guard==='object'){prevUsage.cost_guard.calls_used=prevUsage.calls.length;prevUsage.cost_guard.input_tokens_used=Number(prevUsage.input_tokens||0);prevUsage.cost_guard.billable_output_tokens_used=Number(prevUsage.billable_output_tokens||0);}
   if(!prevUsage.diagnostics||typeof prevUsage.diagnostics!=='object')prevUsage.diagnostics={};if(!Array.isArray(prevUsage.diagnostics.suggestions))prevUsage.diagnostics.suggestions=[];if(completionUsage&&!prevUsage.diagnostics.suggestions.some(function(x){return /reused the existing research/i.test(String(x));}))prevUsage.diagnostics.suggestions.push('Missing-only completion reused the existing research snapshot and made one targeted Gemini call instead of rerunning SERP, PAA, competitor or evidence research.');
+  _pwbFinalPublicationPass(brief);
   const after=_pwbReadiness(brief),missingAfter=Array.isArray(after.missing)?after.missing.slice():[];
   brief.ai_quality_check=after;brief.generation_usage=prevUsage;
   if(brief.what_we_checked&&typeof brief.what_we_checked==='object')brief.what_we_checked.generation_usage=prevUsage;
@@ -60173,6 +60349,9 @@ ${sourceText}`;
       claude:{checked:!!_manualAi.claude,source:_manualAi.claude?'manual':'not_checked',manual:!!_manualAi.claude,text:_manualAi.claude},
       copilot:{checked:!!_manualAi.copilot,source:_manualAi.copilot?'manual':'not_checked',manual:!!_manualAi.copilot,text:_manualAi.copilot}};
     brief.ai_system_evidence.checked_count=['google_aio','chatgpt','perplexity','claude','copilot'].filter(k=>brief.ai_system_evidence[k]&&brief.ai_system_evidence[k].checked).length;
+
+    // v499 — free deterministic final publication pass. No extra Gemini call.
+    _pwbFinalPublicationPass(brief);
 
     // ── AI readiness: computed from what the brief ACTUALLY contains ────────────
     // Deliberately not asked of the model: a self-scored checklist just echoes the
