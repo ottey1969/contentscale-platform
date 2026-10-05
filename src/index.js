@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v487-NETWORK-v492-EVIDENCE-ENRICHMENT';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v488-NETWORK-v493-INTENT-FUSION';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,7 +306,9 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-two-axis-intent-fusion-v488',
   'prewrite-verified-evidence-enrichment-v487',
+  'network-intent-contract-v493',
   'network-evidence-contract-v492',
   'network-h2-driven-image-subjects-v489',
   'prewrite-safe-recent-briefs-v485',
@@ -499,53 +501,98 @@ console.log('[ContentScale] TIER_SOURCE=GSC position+impressions+clicks; no GSC 
 // Intent uit de ECHTE SERP afgeleid (Google's eigen oordeel), niet uit
 // losse keyword-woordjes. Stuurt de brief -> betere ranking + AI-citatie.
 function detectSearchIntent(kw, org, paaArr, aiOv, comps) {
-  const kwl = (kw || '').toLowerCase();
-  const serpText = (org || []).map(o => ((o.title||'')+' '+(o.snippet||'')).toLowerCase()).join(' ');
+  const kwl = String(kw || '').toLowerCase();
+  const orgRows = (org || []).map(function(o){
+    if (typeof o === 'string') return { title:o, snippet:'' };
+    return o && typeof o === 'object' ? o : { title:'', snippet:'' };
+  });
+  const serpText = orgRows.map(o => ((o.title||'')+' '+(o.snippet||'')).toLowerCase()).join(' ');
   const score = { informational: 0, commercial: 0, transactional: 0, navigational: 0 };
   const evidence = [];
-  const gW = ['how to','what is','guide','tutorial','meaning','definition','explained','tips','examples','ideas','wat is','hoe ','gids','uitleg','qué es','cómo','guía'];
-  const cW = ['best','top ','review','vs ','versus','compare','comparison','alternatives','cheapest','beste','vergelijk','mejor','mejores','comparativa'];
-  const tW = ['buy','price','pricing','cost','hire','quote','order','for sale','near me','discount','deal','kopen','prijs','inhuren','offerte','comprar','precio','contratar'];
-  const gH = gW.filter(w => serpText.includes(w)).length;
-  const cH = cW.filter(w => serpText.includes(w)).length;
-  const tH = tW.filter(w => serpText.includes(w)).length;
+
+  // Intent and query-shape are separate axes. "X vs Y" is a comparison format,
+  // not automatically a commercial/buying signal (e.g. "AEO vs GEO vs SEO").
+  const infoW = ['how to','what is','guide','tutorial','meaning','definition','explained','tips','examples','ideas','difference between','differences between','wat is','hoe ','gids','uitleg','qué es','cómo','guía'];
+  const commercialW = ['best','top ','review','reviews','alternatives','alternative to','cheapest','buyer guide','buying guide','pricing comparison','compare prices','beste','vergelijk prijzen','mejor','mejores'];
+  const transactionalW = ['buy','price','pricing','cost','hire','quote','order','for sale','near me','discount','deal','book','schedule','contact','kopen','prijs','inhuren','offerte','comprar','precio','contratar'];
+  const comparisonRe = /\b(?:vs\.?|versus)\b|\bcompar(?:e|ison|ative)\b|\bdifferences?\s+between\b|\bverschil(?:len)?\s+tussen\b/i;
+  const howToRe = /\bhow\s+to\b|\bhoe\s+(?:kan|kun|doe|werkt)\b|\bcómo\b/i;
+  const definitionRe = /\bwhat\s+is\b|\bmeaning\b|\bdefinition\b|\bwat\s+is\b|\bqué\s+es\b/i;
+
+  const gH = infoW.filter(w => serpText.includes(w)).length;
+  const cH = commercialW.filter(w => serpText.includes(w)).length;
+  const tH = transactionalW.filter(w => serpText.includes(w)).length;
   if (gH) { score.informational += gH*3; evidence.push(gH+' informational signal(s) in SERP'); }
-  if (cH) { score.commercial += cH*3; evidence.push(cH+' commercial signal(s) in SERP'); }
+  if (cH) { score.commercial += cH*3; evidence.push(cH+' commercial-decision signal(s) in SERP'); }
   if (tH) { score.transactional += tH*3; evidence.push(tH+' transactional signal(s) in SERP'); }
   if (aiOv) { score.informational += 2; evidence.push('AI Overview / answer box present'); }
   if ((paaArr||[]).length >= 3) { score.informational += 2; evidence.push((paaArr.length)+' People Also Ask questions'); }
-  const faqCount = (comps||[]).filter(c => c.has_faq).length;
+  const faqCount = (comps||[]).filter(c => c && c.has_faq).length;
   if (faqCount >= 2) { score.informational += 2; evidence.push(faqCount+' top competitors use FAQ structure'); }
-  if (gW.some(w => kwl.includes(w))) score.informational += 1;
-  if (cW.some(w => kwl.includes(w))) score.commercial += 1;
-  if (tW.some(w => kwl.includes(w))) score.transactional += 1;
 
-  // v294: local service-intent heuristic. Queries that name a service + market/geo are usually
-  // action-oriented even when they do not literally contain "hire", "price" or "near me".
-  // Example: "roof snow removal nj 2026" is a service query, not merely a definition query.
+  // Keyword semantics are supporting evidence, not a substitute for the live SERP.
+  if (infoW.some(w => kwl.includes(w))) score.informational += 1;
+  if (commercialW.some(w => kwl.includes(w))) score.commercial += 1;
+  if (transactionalW.some(w => kwl.includes(w))) score.transactional += 1;
+  if (comparisonRe.test(kwl)) evidence.push('Keyword has comparison format');
+
+  // Local service-intent heuristic. Queries that name a service + market/geo are action-oriented.
   const serviceW = ['repair','removal','roofing','contractor','service','services','emergency','installation','replacement','inspection','cleaning'];
   const geoW = [' nj','new jersey',' near me',' county',' counties',' ny',' pa',' ca',' tx',' fl'];
   const serviceHit = serviceW.some(w => kwl.includes(w));
   const geoHit = geoW.some(w => kwl.includes(w)) || /\b[a-z]{2}\s+20\d{2}\b/.test(kwl);
   if (serviceHit && geoHit) { score.transactional += 5; evidence.push('Local service + geography/year signal'); }
 
-  const fw = (org||[]).slice(0,8).map(o => (o.title||'').toLowerCase().split(/[\s|\u2014-]/)[0]).filter(Boolean);
+  const fw = orgRows.slice(0,8).map(o => (o.title||'').toLowerCase().split(/[\s|\u2014-]/)[0]).filter(Boolean);
   const bc = {}; fw.forEach(w => { bc[w] = (bc[w]||0)+1; });
   const tb = Object.entries(bc).sort((a,b)=>b[1]-a[1])[0];
   if (tb && tb[1] >= 4) { score.navigational += 4; evidence.push('One brand dominates the SERP ("'+tb[0]+'")'); }
+
   const ranked = Object.entries(score).sort((a,b)=>b[1]-a[1]);
   const primary = ranked[0][1] > 0 ? ranked[0][0] : 'informational';
   const secondary = ranked[1][1] > 0 ? ranked[1][0] : null;
-  const total = ranked.reduce((s,[,v])=>s+v,0) || 1;
+  const total = ranked.reduce((sum, pair)=>sum+pair[1],0) || 1;
   const share = ranked[0][1]/total;
   let confidence;
   if (ranked[0][1] === 0) confidence = 'low';
   else if (share >= 0.6 && (ranked[0][1]-ranked[1][1]) >= 3) confidence = 'high';
   else if (share >= 0.45) confidence = 'medium';
   else confidence = 'low';
-  const kwSug = tW.some(w=>kwl.includes(w)) ? 'transactional' : cW.some(w=>kwl.includes(w)) ? 'commercial' : gW.some(w=>kwl.includes(w)) ? 'informational' : null;
-  const conflict = (kwSug && kwSug !== primary) ? ('Keyword suggests '+kwSug+', but the SERP shows '+primary+' \u2014 following the SERP.') : null;
-  return { primary, secondary, confidence, scores: score, evidence, conflict, auto: true };
+
+  // Keyword suggestion deliberately does NOT treat a bare "vs/comparison" as commercial.
+  // A concept comparison is usually informational; buying modifiers make it commercial.
+  let keywordSuggested = null;
+  if (serviceHit && geoHit) keywordSuggested = 'transactional';
+  else if (transactionalW.some(w=>kwl.includes(w))) keywordSuggested = 'transactional';
+  else if (commercialW.some(w=>kwl.includes(w))) keywordSuggested = 'commercial';
+  else if (infoW.some(w=>kwl.includes(w)) || comparisonRe.test(kwl) || howToRe.test(kwl) || definitionRe.test(kwl)) keywordSuggested = 'informational';
+
+  let queryFormat = 'standard';
+  if (comparisonRe.test(kwl)) queryFormat = 'comparison';
+  else if (howToRe.test(kwl)) queryFormat = 'how_to';
+  else if (definitionRe.test(kwl)) queryFormat = 'definition';
+  else if (serviceHit && geoHit) queryFormat = 'local_service';
+
+  const secondaryIntents = [];
+  if (secondary && secondary !== primary) secondaryIntents.push(secondary);
+  if (keywordSuggested && keywordSuggested !== primary && !secondaryIntents.includes(keywordSuggested)) secondaryIntents.push(keywordSuggested);
+
+  let conflict = null;
+  if (keywordSuggested && keywordSuggested !== primary) {
+    conflict = 'Keyword language suggests '+keywordSuggested+', while the live SERP is primarily '+primary+'. Use '+primary+' as the primary page format, but preserve '+keywordSuggested+' as a secondary user need instead of discarding it.';
+  }
+  return {
+    primary,
+    secondary: secondaryIntents[0] || null,
+    secondary_intents: secondaryIntents,
+    keyword_suggested_intent: keywordSuggested,
+    query_format: queryFormat,
+    confidence,
+    scores: score,
+    evidence,
+    conflict,
+    auto: true
+  };
 }
 function intentDirectives(intent) {
   const m = {
@@ -556,6 +603,57 @@ function intentDirectives(intent) {
   };
   return m[intent] || m.informational;
 }
+function intentStrategy(det, chosenIntent) {
+  det = det || {};
+  const primary = chosenIntent || det.primary || 'informational';
+  const base = intentDirectives(primary);
+  const secondary = (Array.isArray(det.secondary_intents) && det.secondary_intents.find(x => x && x !== primary)) || (det.secondary && det.secondary !== primary ? det.secondary : null) || (det.keyword_suggested_intent && det.keyword_suggested_intent !== primary ? det.keyword_suggested_intent : null);
+  const out = Object.assign({}, base, {
+    primary: primary,
+    secondary: secondary || null,
+    query_format: det.query_format || 'standard',
+    strategy_label: primary,
+    bridge: '',
+    secondary_requirement: ''
+  });
+
+  if (primary === 'informational' && secondary === 'commercial') {
+    out.strategy_label = 'informational-first with commercial decision support';
+    out.contentType = (det.query_format === 'comparison' ? 'informational comparison / decision-support guide' : 'in-depth guide with decision-support sections');
+    out.structure = base.structure + ' Preserve the commercial investigation need with neutral comparison criteria, trade-offs, who/what each option fits, and a decision framework only after the core question is answered.';
+    out.cta = 'Soft-to-medium contextual CTA after the informational need is satisfied. Never turn the page into a sales landing page just because the keyword has commercial language.';
+    out.bridge = 'SERP format stays informational; commercial intent survives as comparison criteria, trade-offs, selection guidance and a contextual next step.';
+    out.secondary_requirement = 'Help the reader make a decision without weakening the informational answer that Google currently rewards.';
+  } else if (primary === 'informational' && secondary === 'transactional') {
+    out.strategy_label = 'informational-first with action path';
+    out.contentType = 'informational guide with a verified action path';
+    out.structure = base.structure + ' After answering the question, include verified scope, eligibility/availability, practical next steps and a clear action path where relevant.';
+    out.cta = 'Contextual action CTA only after the page fully resolves the informational intent. Do not lead with the offer.';
+    out.bridge = 'SERP format stays informational; transactional intent survives as verified next-step information and an action path.';
+    out.secondary_requirement = 'Let an action-ready reader proceed without sacrificing the informational page format.';
+  } else if (primary === 'commercial' && secondary === 'informational') {
+    out.strategy_label = 'commercial comparison with educational foundation';
+    out.structure = base.structure + ' Before recommending, explain the category, terminology, how the options differ and the criteria used, so the comparison is useful rather than affiliate-style thin content.';
+    out.bridge = 'Commercial comparison remains primary; informational intent is preserved through definitions, mechanics and transparent criteria.';
+    out.secondary_requirement = 'Teach enough for the recommendation to be independently understandable and trustworthy.';
+  } else if (primary === 'transactional' && secondary === 'informational') {
+    out.strategy_label = 'transactional page with decision-reducing information';
+    out.structure = base.structure + ' Include concise explanatory content that resolves the questions a buyer needs answered before acting: scope, process, fit, limitations and proof.';
+    out.bridge = 'Action remains primary; informational intent is preserved as friction-reducing proof and explanation.';
+    out.secondary_requirement = 'Answer pre-purchase questions without diluting the action path.';
+  } else if (secondary) {
+    out.strategy_label = primary + ' primary + ' + secondary + ' secondary';
+    out.bridge = 'Keep '+primary+' as the dominant page format while explicitly satisfying the secondary '+secondary+' need where it changes the reader\'s next decision.';
+    out.secondary_requirement = 'Do not silently discard the secondary intent.';
+  } else if ((det.query_format || '') === 'comparison') {
+    out.strategy_label = primary + ' comparison';
+    out.contentType = primary === 'informational' ? 'informational comparison / explainer' : out.contentType;
+    out.structure = base.structure + ' Because the query is comparative, include an explicit side-by-side comparison and explain the meaningful differences without assuming the reader is buying something.';
+    out.bridge = 'Comparison is the query format, not automatically a buying signal.';
+  }
+  return out;
+}
+
 // Maps the detected intent to a human "micro-moment" (Google's 4 states of mind).
 // The intent type drives the technique (schema, structure); the moment drives the
 // human framing writers and clients understand. Keyword is dead, the moment is not.
@@ -32499,20 +32597,24 @@ app.post('/api/content/pipeline', verifyEngineAccess, async (req, res) => {
     let brief = null;
     // ── Detect search intent from the real SERP (CLAUDE-FIX-2608-intentEngine) ──
     const intentResult = detectSearchIntent(keyword, organic, paa, aiOverview, competitors);
-    const intentDir = intentDirectives(intentResult.primary);
+    const intentDir = intentStrategy(intentResult, intentResult.primary);
     pipeline.stages.research.search_intent = intentResult;
     console.log(`[pipeline] Search intent: ${intentResult.primary}${intentResult.secondary ? ' (+ '+intentResult.secondary+')' : ''} | confidence: ${intentResult.confidence}${intentResult.conflict ? ' | '+intentResult.conflict : ''}`);
     if (geminiKey) {
       const briefPrompt = `Create a professional content brief for the keyword "${keyword}". Base it on this research data:
 
 SEARCH INTENT (detected from the live SERP — this MUST shape the whole brief):
-- Primary intent: ${intentResult.primary}${intentResult.secondary ? ' | Secondary: '+intentResult.secondary : ''} (confidence: ${intentResult.confidence})
+- Primary intent: ${intentResult.primary}${intentResult.secondary ? ' | Secondary user need: '+intentResult.secondary : ''} (confidence: ${intentResult.confidence})
+- Query format: ${intentResult.query_format || 'standard'}
+- Keyword semantic signal: ${intentResult.keyword_suggested_intent || 'no separate signal'}
+- Intent strategy: ${intentDir.strategy_label}
 - Content type to write: ${intentDir.contentType}
 - Required structure: ${intentDir.structure}
 - CTA style: ${intentDir.cta}
 - Citation approach: ${intentDir.citeable}
+${intentDir.bridge ? '- Intent bridge: '+intentDir.bridge : ''}
 ${intentResult.conflict ? '- NOTE: '+intentResult.conflict : ''}
-Match this intent exactly. A page that misreads intent will not rank no matter how well written.
+The live SERP determines the dominant page format, but never discard a genuine secondary need from the keyword. Comparison language is a format signal, not automatically commercial intent.
 
 COMPETITORS: ${competitors.length} pages analyzed, avg ${avgWords} words
 TOP H2 HEADINGS USED: ${[...new Set(competitors.flatMap(c => c.h2_count ? ['Example H2'] : []))].join(', ')}
@@ -32533,7 +32635,7 @@ Generate JSON:
   "voice_search_answer": "30-50 word natural language answer",
   "internal_linking": ["suggested internal page to link"],
   "cta": "Call-to-action matching a ${intentResult.primary} intent (${intentDir.cta})",
-  "search_intent": {"primary": "${intentResult.primary}", "secondary": ${intentResult.secondary ? '"'+intentResult.secondary+'"' : 'null'}, "confidence": "${intentResult.confidence}"}
+  "search_intent": {"primary": "${intentResult.primary}", "secondary": ${intentResult.secondary ? '"'+intentResult.secondary+'"' : 'null'}, "confidence": "${intentResult.confidence}", "query_format": "${intentResult.query_format || 'standard'}", "keyword_suggested_intent": ${intentResult.keyword_suggested_intent ? '"'+intentResult.keyword_suggested_intent+'"' : 'null'}, "strategy": "${intentDir.strategy_label}"}
 }`;
       try {
         const gemResult = await callGeminiWithFallback(geminiKey, {
@@ -46055,7 +46157,9 @@ function _renderIntentBar(si) {
   var head = '<div style="background:#0f172a;border-radius:10px;padding:12px 14px;margin:0 0 14px;color:#e2e8f0;font-size:12.5px;line-height:1.6;">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">'
     + '<span style="font-weight:700;letter-spacing:.03em;">SEARCH INTENT</span>'
-    + '<span style="background:#1e293b;border-radius:6px;padding:2px 9px;font-weight:700;">' + esc(cap(si.primary)) + '</span>'
+    + '<span style="background:#1e293b;border-radius:6px;padding:2px 9px;font-weight:700;">Primary: ' + esc(cap(si.primary)) + '</span>'
+    + (si.secondary ? '<span style="background:#312e81;border-radius:6px;padding:2px 9px;font-weight:700;font-size:11px;">Secondary: ' + esc(cap(si.secondary)) + '</span>' : '')
+    + (si.query_format && si.query_format !== 'standard' ? '<span style="background:#3f3f46;border-radius:6px;padding:2px 9px;font-weight:700;font-size:11px;">Format: ' + esc(String(si.query_format).replace(/_/g,' ')) + '</span>' : '')
     + (si.moment ? '<span style="background:#0e7490;border-radius:6px;padding:2px 9px;font-weight:700;font-size:11px;" title="The situation beneath the keyword (Google\u2019s micro-moments)">\ud83c\udfaf ' + esc(si.moment) + '</span>' : '')
     + (si.overridden ? '<span style="background:#7c3aed;border-radius:6px;padding:2px 8px;font-size:11px;">set manually</span>' : '<span style="color:#94a3b8;font-size:11px;">auto-detected from the live SERP</span>')
     + '<span style="margin-left:auto;color:' + confColor + ';font-weight:700;font-size:11px;">confidence: ' + esc(si.confidence) + '</span>'
@@ -46067,11 +46171,12 @@ function _renderIntentBar(si) {
       + esc(si.moment_mindset)
       + '</div>';
   }
-  // Always-on explainer: makes clear the feature is built in and how it decides.
+  // Always-on explainer: SERP controls the dominant page format, but keyword semantics are not discarded.
   head += '<div style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b;color:#94a3b8;font-size:11px;line-height:1.6;">'
-    + 'Search intent is detected <strong style="color:#cbd5e1;">automatically from what Google actually ranks</strong> for this keyword \u2014 not guessed from the words in it \u2014 then translated into the <strong style="color:#cbd5e1;">moment</strong> the searcher is in. The brief\u2019s structure, CTA and schema are built to match, so the page serves the situation beneath the keyword, not just the word. '
-    + 'When Google\u2019s results are mixed and the signal is unclear, the confidence drops to <strong style="color:#cbd5e1;">low</strong> and you\u2019ll be asked to pick the intent yourself \u2014 otherwise the SERP-detected intent is used automatically.'
+    + 'ContentScale separates <strong style="color:#cbd5e1;">page intent</strong> from <strong style="color:#cbd5e1;">query format</strong>. The live SERP is the strongest signal for the dominant page format, while genuine secondary needs in the keyword are preserved in the brief. A <strong style="color:#cbd5e1;">vs/comparison</strong> query is not automatically commercial: concept comparisons can be informational, while product/provider comparisons may be commercial. '
+    + 'When signals genuinely conflict, the page follows the SERP for its main shape and explicitly bridges the secondary need rather than throwing it away.'
     + '</div>';
+  if (si.strategy) head += '<div style="margin-top:7px;color:#bae6fd;font-size:11.5px;"><strong>Strategy:</strong> ' + esc(si.strategy) + (si.intent_bridge ? ' \u2014 ' + esc(si.intent_bridge) : '') + '</div>';
   if (si.conflict) head += '<div style="margin-top:6px;color:#fbbf24;font-size:11.5px;">\u26a0 ' + esc(si.conflict) + '</div>';
   // Only when the SERP was genuinely ambiguous do we ask the human to decide.
   if (si.needs_confirmation) {
@@ -58439,7 +58544,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     const _chosenIntent = (intentOverride && _validIntents.includes(String(intentOverride).toLowerCase()))
       ? String(intentOverride).toLowerCase() : _autoIntent.primary;
     const _intentWasOverridden = _chosenIntent !== _autoIntent.primary;
-    const _intentDir = intentDirectives(_chosenIntent);
+    const _intentDir = intentStrategy(_autoIntent, _chosenIntent);
     const _intentMom = intentMoment(_chosenIntent);
     console.log(`[prewrite-brief] intent: auto=${_autoIntent.primary} (conf ${_autoIntent.confidence})${_intentWasOverridden ? ' | OVERRIDDEN to '+_chosenIntent : ''}${_autoIntent.conflict ? ' | '+_autoIntent.conflict : ''}`);
 
@@ -58565,9 +58670,17 @@ COMPETITOR ANALYSIS CONTRACT — TOP 10:
 - If the evidence does not contain an exact URL, use "insufficient_data".
 
 MANDATORY PROCESSING ORDER:
-DETECTED SEARCH INTENT (from the live SERP — follow this, do not re-guess it): ${_chosenIntent}${_autoIntent.secondary ? ' (secondary: '+_autoIntent.secondary+')' : ''} [confidence: ${_autoIntent.confidence}${_intentWasOverridden ? '; manually set by strategist' : ''}].${_autoIntent.conflict ? ' NOTE: '+_autoIntent.conflict : ''}
-Write for this intent: content type = ${_intentDir.contentType}; structure = ${_intentDir.structure}; CTA style = ${_intentDir.cta}; citation approach = ${_intentDir.citeable}. A page that misreads intent will not rank however well written.
-SEARCHER'S MOMENT (the situation beneath the keyword): ${_intentMom.moment} \u2014 ${_intentMom.mindset} Write to serve this moment, not just the keyword.
+DETECTED SEARCH INTENT — TWO-AXIS CONTRACT:
+- PRIMARY PAGE INTENT from the live SERP: ${_chosenIntent} [confidence: ${_autoIntent.confidence}${_intentWasOverridden ? '; manually set by strategist' : ''}]
+- SECONDARY USER NEED: ${_intentDir.secondary || 'none detected'}
+- QUERY FORMAT: ${_autoIntent.query_format || 'standard'}
+- KEYWORD SEMANTIC SIGNAL: ${_autoIntent.keyword_suggested_intent || 'none separate from SERP'}
+- STRATEGY: ${_intentDir.strategy_label}
+${_autoIntent.conflict ? '- INTENT TENSION: '+_autoIntent.conflict : ''}
+${_intentDir.bridge ? '- REQUIRED BRIDGE: '+_intentDir.bridge : ''}
+Write the dominant page format for the live SERP, but do NOT discard a real secondary user need. In particular, a "vs/comparison" query is a FORMAT signal and must not be treated as commercial merely because it contains "vs".
+Content type = ${_intentDir.contentType}; structure = ${_intentDir.structure}; CTA style = ${_intentDir.cta}; citation approach = ${_intentDir.citeable}.
+SEARCHER'S MOMENT (the situation beneath the keyword): ${_intentMom.moment} — ${_intentMom.mindset} ${_intentDir.secondary_requirement || ''}
 
 STEP 0 — TREATMENT / CANNIBALIZATION GATE: choose exactly OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. OPTIMIZE means focused edits while preserving the current structure and proven passages. EXPAND means substantial justified sections on the same URL. CREATE means a distinct intent with no suitable existing owner. Compare against the CLIENT SITEMAP and tracker recommendation. Output content_decision with recommended_treatment, cannibalization_risk, closest_existing_url and evidence-based reason. Never invent an existing URL.
 STEP 1 — Analyse the SERP: what pattern do the top results share (format, depth, schema, freshness)?
@@ -58659,8 +58772,7 @@ ${raw.slice(0,16000)}`;
       const _decisionPrompt = `PART 1 OF 3 — DECISION & STRATEGY. Return ONLY compact valid JSON, no markdown.
 KEYWORD: ${keyword}
 WORKING TITLE: ${workingTitle||'none'}
-SEARCH INTENT: ${_chosenIntent}
-TOP RANKING EVIDENCE:\n${compSummary.slice(0,6500)}
+SEARCH INTENT: primary=${_chosenIntent}; secondary=${_intentDir.secondary||'none'}; query_format=${_autoIntent.query_format||'standard'}; strategy=${_intentDir.strategy_label}\nINTENT BRIDGE: ${_intentDir.bridge||'none'}\nTOP RANKING EVIDENCE:\n${compSummary.slice(0,6500)}
 REAL PAA:\n${peopleAlsoAsk.slice(0,8).map(x=>'- '+x.question).join('\n')||'none returned'}
 CLIENT FACT SAFETY:\n${claimsBlock.slice(0,4500)}
 TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,3500)||'none'}
@@ -58685,8 +58797,7 @@ Rules: keep answers concise. Never invent facts/citations. NOT CHECKED stays not
       const _implementationPrompt = `PART 3 OF 3 — IMPLEMENTATION. Return ONLY compact valid JSON, no markdown.
 KEYWORD: ${keyword}
 WORKING TITLE: ${workingTitle||'none'}
-SEARCH INTENT: ${_chosenIntent}
-TOP RANKING EVIDENCE:\n${compSummary.slice(0,6000)}
+SEARCH INTENT: primary=${_chosenIntent}; secondary=${_intentDir.secondary||'none'}; query_format=${_autoIntent.query_format||'standard'}; strategy=${_intentDir.strategy_label}\nINTENT BRIDGE: ${_intentDir.bridge||'none'}\nTOP RANKING EVIDENCE:\n${compSummary.slice(0,6000)}
 REAL PAA:\n${peopleAlsoAsk.slice(0,8).map(x=>'- '+x.question).join('\n')||'none returned'}
 CLIENT FACT SAFETY:\n${claimsBlock.slice(0,3500)}
 TRACKER RECOMMENDATION:\n${recommendationBlock.slice(0,3000)||'none'}
@@ -59431,7 +59542,13 @@ ${_evidenceCorpusText}`;
     brief.search_intent = {
       primary: _chosenIntent,
       auto_detected: _autoIntent.primary,
-      secondary: _autoIntent.secondary,
+      secondary: _intentDir.secondary || null,
+      secondary_intents: Array.isArray(_autoIntent.secondary_intents) ? _autoIntent.secondary_intents : (_autoIntent.secondary ? [_autoIntent.secondary] : []),
+      keyword_suggested_intent: _autoIntent.keyword_suggested_intent || null,
+      query_format: _autoIntent.query_format || 'standard',
+      strategy: _intentDir.strategy_label || _chosenIntent,
+      intent_bridge: _intentDir.bridge || null,
+      secondary_requirement: _intentDir.secondary_requirement || null,
       confidence: _autoIntent.confidence,
       overridden: _intentWasOverridden,
       conflict: _autoIntent.conflict || null,
