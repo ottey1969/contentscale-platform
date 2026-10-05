@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v493-PREWRITE-COST-CONTROL-MANUAL-AI-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v494-CLIENT-SCRIPT-ESCAPE-FIX-PREWRITE-COST-CONTROL-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-client-script-escape-fix-v494',
   'prewrite-cost-control-manual-ai-v493',
   'prewrite-quality-gate-post-safety-repair-v492',
   'prewrite-persistence-transaction-v492',
@@ -816,7 +817,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v493-PREWRITE-COST-CONTROL-MANUAL-AI-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  build: 'CS-2026-10-05-CANONICAL-v494-CLIENT-SCRIPT-ESCAPE-FIX-PREWRITE-COST-CONTROL-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -46757,7 +46758,7 @@ function copyPrewriteForExternalAi(btn){
     '',
     'APPROVED CONTENTSCALE PRE-WRITE BRIEF:',
     brief
-  ].join('\n');
+  ].join('\\n');
   var finish=function(ok){if(!btn)return;var o='Copy for external AI';btn.textContent=ok?'✓ External AI prompt copied':'⚠ Copy failed';setTimeout(function(){btn.textContent=o;},1800);};
   if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(prompt).then(function(){finish(true);}).catch(function(){finish(false);});return;}
   try{var ta=document.createElement('textarea');ta.value=prompt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();var ok=document.execCommand('copy');document.body.removeChild(ta);finish(ok);}catch(e){finish(false);}
