@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v507-PUBLISHER-FIDELITY-REPAIR-NETWORK-v501-MISSING-ONLY-ARTICLE-REPAIR';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v508-AUTO-INTERNAL-PAGE-REFRESH-ALL-NETWORK-v502-NONBLOCKING-IMAGES';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,9 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+    'prewrite-auto-internal-page-over-homepage-v508',
+    'network-refresh-all-content-contract-v502',
+    'network-images-never-block-v502',
     'prewrite-five-ai-hard-gate-v506',
     'prewrite-ai-evidence-recovery-v506',
     'prewrite-evidence-backed-gap-v506',
@@ -874,7 +877,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v507-PUBLISHER-FIDELITY-REPAIR-NETWORK-v501-MISSING-ONLY-ARTICLE-REPAIR',
+  build: 'CS-2026-10-06-CANONICAL-v508-AUTO-INTERNAL-PAGE-REFRESH-ALL-NETWORK-v502-NONBLOCKING-IMAGES',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -971,7 +974,10 @@ app.get('/api/regression-contract',(req,res)=>{
     prewrite_share_link:src.includes('/share/prewrite/:shareToken')&&src.includes('Copy share link')&&src.includes('share_token'),
     prewrite_permanent_share_revoke:src.includes('/share/revoke')&&src.includes('share_revoked_at')&&src.includes('Permanent read-only public link')&&src.includes('expires_at:null'),
     prewrite_public_research_view:src.includes('Research overview')&&src.includes('Five AI systems — saved evidence')&&src.includes('Search & competitor intelligence')&&src.includes('Research execution transparency'),
-    network_targeted_fidelity_repair:src.includes('repair-brief-fidelity')&&src.includes('Repair missing Brief requirements'),
+    network_targeted_fidelity_repair:networkSrc.includes('repair-brief-fidelity')&&networkSrc.includes('Repair missing content requirements'),
+    prewrite_internal_real_page_first_v508:src.includes('LAST-RESORT fallback')&&src.includes('publisher_verified_page_fallback'),
+    network_refresh_all_v502:networkSrc.includes('Refresh all & verify')&&networkSrc.includes('images_required:false'),
+    network_images_nonblocking_v502:networkSrc.includes('existing draft kept available')&&networkSrc.includes('Images · optional'),
     prewrite_five_ai_hard_gate_v506:src.includes('ai_evidence_5of5')&&src.includes('Research incomplete')&&src.includes('ai_systems_required=5')&&src.includes('_pwbMergeManualAiEvidenceV506'),
     prewrite_ai_recovery_v506:src.includes('v506_recover_existing_work')&&src.includes('prewrite_async_jobs')&&src.includes('ai_evidence_recovered'),
     prewrite_evidence_backed_gap_v506:src.includes('competitor_gap_evidence')&&src.includes('page_specific_grounded')&&src.includes('No reliable cross-competitor gap was proven'),
@@ -58817,14 +58823,47 @@ function _pwbEnsureResearchContractV506(b,opts){
   return b;
 }
 function _pwbEnsureNetworkInternalDestinationV506(b,opts){
-  if(!b||typeof b!=='object')return {selected:false};opts=opts||{};const domain=String(opts.publisher_domain||opts.owner_domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();if(!domain)return {selected:false};
+  // v508: prefer a real verified publisher page over the homepage whenever one exists.
+  // The homepage is now a LAST-RESORT fallback only. Manual choices are never overwritten.
+  if(!b||typeof b!=='object')return {selected:false};opts=opts||{};
+  const domain=String(opts.publisher_domain||opts.owner_domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();
+  if(!domain)return {selected:false};
   _pwbEnsureResearchContractV506(b,{network:true,publisher_domain:domain});
   b.internal_link_targets=Array.isArray(b.internal_link_targets)?b.internal_link_targets:[];
+  b.link_research=b.link_research&&typeof b.link_research==='object'?b.link_research:{};
+  b.link_research.internal=b.link_research.internal&&typeof b.link_research.internal==='object'?b.link_research.internal:{};
+  const lr=b.link_research.internal;
+  const cleanUrl=function(raw){try{const u=new URL(String(raw||'').trim());u.hash='';return u.href;}catch(_e){return '';}};
+  const isRoot=function(raw){try{const u=new URL(String(raw||''));return (u.pathname||'/')==='/'&&!u.search;}catch(_e){return false;}};
+  const manual=b.internal_link_targets.find(function(x){return x&&_pwbIsReaderPageUrlV506(x.link_to,domain)&&/manual/i.test(String(x.selection_source||x.source||''));});
   let valid=b.internal_link_targets.filter(x=>x&&_pwbIsReaderPageUrlV506(x.link_to,domain));
-  let source='existing_verified_target';
-  if(!valid.length){let home='';try{const c=new URL(String(opts.checked_url||''));if(c.hostname.replace(/^www\./,'').toLowerCase()===domain)home=c.origin+'/';}catch(_e){}if(!home)home='https://'+domain+'/';b.internal_link_targets=[{anchor_text:String(opts.anchor_text||'Publisher homepage'),link_to:home,why:'Verified publisher-domain homepage fallback because no more relevant same-domain page was confidently selected.',selection_source:'publisher_homepage_fallback',review_recommended:true}];valid=b.internal_link_targets.slice();source='publisher_homepage_fallback';}
-  b.link_research=b.link_research&&typeof b.link_research==='object'?b.link_research:{};b.link_research.internal=b.link_research.internal&&typeof b.link_research.internal==='object'?b.link_research.internal:{};
-  Object.assign(b.link_research.internal,{automatic:true,searched:true,targets_selected:valid.length,status:source==='publisher_homepage_fallback'?'verified_homepage_fallback':'verified_targets',target_domain:domain,selected_url:valid[0]&&valid[0].link_to||'',selection_source:source,manual_same_domain_allowed:true,required_for_publisher_edition:true,rule:'A Publisher Edition must have at least one reader-facing internal destination on the publisher domain. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only. If no relevant page can be selected confidently, the verified publisher homepage is the fallback and may be manually replaced.'});
+  let source=manual?'publisher_manual':'existing_verified_target';
+  if(manual){valid=[manual];}
+  else{
+    const candidates=Array.from(new Set([].concat(Array.isArray(lr.candidate_urls)?lr.candidate_urls:[],b.internal_link_targets.map(x=>x&&x.link_to||'')).map(cleanUrl).filter(Boolean)))
+      .filter(u=>_pwbIsReaderPageUrlV506(u,domain));
+    const pages=candidates.filter(u=>!isRoot(u));
+    const current=valid[0]||null,currentIsRoot=!!(current&&isRoot(current.link_to));
+    if((!current||currentIsRoot)&&pages.length){
+      const stop=new Set(['the','and','for','with','from','what','how','why','vs','versus','this','that','guide','blog','page','home','index','www','com','site']);
+      const tok=function(v){return String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').split(/\s+/).filter(x=>x.length>=3&&!stop.has(x));};
+      const topic=new Set([].concat(tok(b.keyword),tok(b.recommended_title_h1),(Array.isArray(b.must_cover_entities)?b.must_cover_entities:[]).flatMap(tok),(Array.isArray(b.definitive_outline)?b.definitive_outline:[]).flatMap(x=>tok(x&&x.h2||''))).slice(0,160));
+      const ranked=pages.map(function(u){try{const x=new URL(u),pt=tok(x.pathname),hits=pt.filter(t=>topic.has(t)).length;return {url:u,score:hits*10+Math.min(5,pt.length),hits,path:x.pathname};}catch(_e){return {url:u,score:0,hits:0,path:''};}}).sort(function(a,z){return z.score-a.score||a.path.length-z.path.length;});
+      const best=ranked[0];
+      if(best){
+        const seg=(best.path.split('/').filter(Boolean).pop()||'related page').replace(/[-_]+/g,' ').trim();
+        b.internal_link_targets=[{anchor_text:seg||'related page',link_to:best.url,why:best.hits?'Verified publisher page automatically selected because its URL topic overlaps with this Brief.':'Verified reader-facing publisher page selected automatically because no stronger topical match was available. Homepage avoided because a real page exists.',selection_source:best.hits?'publisher_verified_relevant_page':'publisher_verified_page_fallback',review_recommended:best.hits===0}];
+        valid=b.internal_link_targets.slice();source=b.internal_link_targets[0].selection_source;
+      }
+    }
+  }
+  if(!valid.length){
+    let home='';try{const c=new URL(String(opts.checked_url||''));if(c.hostname.replace(/^www\./,'').toLowerCase()===domain)home=c.origin+'/';}catch(_e){}
+    if(!home)home='https://'+domain+'/';
+    b.internal_link_targets=[{anchor_text:String(opts.anchor_text||'Publisher homepage'),link_to:home,why:'Last-resort verified publisher homepage fallback because no reader-facing same-domain page was available.',selection_source:'publisher_homepage_fallback',review_recommended:true}];
+    valid=b.internal_link_targets.slice();source='publisher_homepage_fallback';
+  }
+  Object.assign(lr,{automatic:true,searched:true,targets_selected:valid.length,status:source==='publisher_homepage_fallback'?'verified_homepage_last_resort':'verified_targets',target_domain:domain,selected_url:valid[0]&&valid[0].link_to||'',selection_source:source,manual_same_domain_allowed:true,required_for_publisher_edition:true,homepage_last_resort:true,rule:'A Publisher Edition must have at least one reader-facing internal destination on the publisher domain. Prefer a verified real page whenever one exists. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only. The homepage is used only when no eligible reader-facing publisher page exists.'});
   return {selected:valid.length>0,url:valid[0]&&valid[0].link_to||'',source,domain};
 }
 
