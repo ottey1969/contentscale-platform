@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v508-AUTO-INTERNAL-PAGE-REFRESH-ALL-NETWORK-v502-NONBLOCKING-IMAGES';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v509-GENERATION-RECOVERY-IMAGE-DIVERSITY-NETWORK-v503-ERROR-VISIBILITY';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,12 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+    'network-generation-conflict-self-heal-v503',
+    'network-generation-error-visibility-v503',
+    'network-refresh-all-auto-regenerate-v503',
+    'network-image-diversity-lock-v503',
+    'network-image-x-hard-delete-v503',
+    'prewrite-generation-error-details-v509',
     'prewrite-auto-internal-page-over-homepage-v508',
     'network-refresh-all-content-contract-v502',
     'network-images-never-block-v502',
@@ -877,7 +883,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v508-AUTO-INTERNAL-PAGE-REFRESH-ALL-NETWORK-v502-NONBLOCKING-IMAGES',
+  build: 'CS-2026-10-06-CANONICAL-v509-GENERATION-RECOVERY-IMAGE-DIVERSITY-NETWORK-v503-ERROR-VISIBILITY',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -978,6 +984,11 @@ app.get('/api/regression-contract',(req,res)=>{
     prewrite_internal_real_page_first_v508:src.includes('LAST-RESORT fallback')&&src.includes('publisher_verified_page_fallback'),
     network_refresh_all_v502:networkSrc.includes('Refresh all & verify')&&networkSrc.includes('images_required:false'),
     network_images_nonblocking_v502:networkSrc.includes('existing draft kept available')&&networkSrc.includes('Images · optional'),
+    network_generation_recovery_v503:networkSrc.includes('_networkGenerationConflictV503')&&networkSrc.includes("'needs_review'")&&networkSrc.includes('placement_state_race'),
+    network_generation_error_visibility_v503:src.includes('_pwbGenerationErrorHtmlV509')&&networkSrc.includes('publisherGenerationError')&&networkSrc.includes('Exact server details'),
+    network_refresh_all_auto_regenerate_v503:networkSrc.includes('Re-locking the current Brief and regenerating the Publisher Edition')&&networkSrc.includes('force_regenerate:true'),
+    network_image_diversity_v503:networkSrc.includes('_networkImageDiversityLockV503')&&networkSrc.includes('VISUAL COMPOSITION LOCK')&&networkSrc.includes('materially different in composition'),
+    network_image_x_delete_v503:networkSrc.includes('data-delete-placed')&&networkSrc.includes('Delete image from this article'),
     prewrite_five_ai_hard_gate_v506:src.includes('ai_evidence_5of5')&&src.includes('Research incomplete')&&src.includes('ai_systems_required=5')&&src.includes('_pwbMergeManualAiEvidenceV506'),
     prewrite_ai_recovery_v506:src.includes('v506_recover_existing_work')&&src.includes('prewrite_async_jobs')&&src.includes('ai_evidence_recovered'),
     prewrite_evidence_backed_gap_v506:src.includes('competitor_gap_evidence')&&src.includes('page_specific_grounded')&&src.includes('No reliable cross-competitor gap was proven'),
@@ -46600,6 +46611,19 @@ async function revokePrewriteShareLink(btn){
   }catch(e){if(st){st.style.display='block';st.textContent='✕ Revoke failed: '+e.message;}if(btn){btn.disabled=false;btn.textContent='Revoke public link';}}
 }
 
+function _pwbGenerationErrorHtmlV509(status,payload,placementId,briefId,approvalId){
+  payload=payload&&typeof payload==='object'?payload:{};
+  var code=String(payload.code||'publisher_generation_error'),msg=String(payload.error||('Generation failed HTTP '+status)),next=String(payload.next_action||''),state=String(payload.placement_status||''),details=payload.details&&typeof payload.details==='object'?payload.details:null;
+  var meta=['HTTP '+status,'code: '+code,'placement #'+Number(payload.placement_id||placementId||0),'Brief #'+Number(payload.brief_id||briefId||0),'approval #'+Number(payload.approval_id||approvalId||0)];
+  if(state)meta.push('state: '+state);
+  var h='<div style="border:1px solid #991b1b;background:#2a0f1433;border-radius:9px;padding:10px 12px;color:#fecaca;"><strong>✕ Publisher Edition generation blocked</strong>'
+    +'<div style="margin-top:5px;color:#fca5a5">'+_pwbEscHtml(msg)+'</div>'
+    +'<div style="margin-top:6px;font-size:10px;color:#cbd5e1">'+_pwbEscHtml(meta.join(' · '))+'</div>';
+  if(next)h+='<div style="margin-top:7px;color:#fde68a"><strong>Next action:</strong> '+_pwbEscHtml(next)+'</div>';
+  if(details)h+='<details style="margin-top:7px"><summary style="cursor:pointer;color:#94a3b8">Exact server details</summary><pre style="white-space:pre-wrap;font-size:10px;color:#cbd5e1">'+_pwbEscHtml(JSON.stringify(details,null,2))+'</pre></details>';
+  h+='</div>';return h;
+}
+
 async function generateNetworkPublisherEdition(placementId,btn){
   var st=document.getElementById('pwbActionState'),key=localStorage.getItem('admin_id')||'';
   if(!key){if(st)st.textContent='Admin key missing. Re-open the Network admin and try again.';return;}
@@ -46608,31 +46632,45 @@ async function generateNetworkPublisherEdition(placementId,btn){
   var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Approving exact Brief snapshot...';}
   if(st)st.textContent='Step 1/2 · Locking the exact reviewed Pre-Write Brief snapshot. No research or Gemini is used for this approval step...';
   try{
-    // Network v498+ requires an immutable approval snapshot. Final QA changes brief_json/hash,
-    // so approval MUST happen after the final deterministic QA and immediately before generation.
-    var ar=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/approve-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({brief_id:briefId})});
-    var ad=await ar.json().catch(function(){return{}});
-    if(!ar.ok){
-      try{console.error('[Publisher Edition approval failed]',{status:ar.status,placement_id:Number(placementId),brief_id:briefId,payload:ad})}catch(_e){}
-      throw new Error((ad&&ad.error)||('Brief approval failed HTTP '+ar.status));
+    async function approveCurrent(){
+      var ar=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/approve-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({brief_id:briefId})});
+      var ad=await ar.json().catch(function(){return{}});
+      if(!ar.ok){
+        try{console.error('[Publisher Edition approval failed]',{status:ar.status,placement_id:Number(placementId),brief_id:briefId,payload:ad})}catch(_e){}
+        var ae=new Error((ad&&ad.error)||('Brief approval failed HTTP '+ar.status));ae.payload=ad;ae.httpStatus=ar.status;throw ae;
+      }
+      var aid=Number(ad&&ad.approval&&ad.approval.id||0);
+      if(!aid)throw new Error('Brief approval succeeded but returned no approval snapshot ID. Generation was not started.');
+      return {approvalId:aid,data:ad};
     }
-    var approvalId=Number(ad&&ad.approval&&ad.approval.id||0);
-    if(!approvalId)throw new Error('Brief approval succeeded but returned no approval snapshot ID. Generation was not started.');
+    async function runGeneration(aid){
+      var r=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/generate',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({approval_id:aid})});
+      var d=await r.json().catch(function(){return{}});
+      return {r:r,d:d,approvalId:aid};
+    }
+    var ap=await approveCurrent(),approvalId=ap.approvalId;
     if(btn)btn.textContent='Generating from approved snapshot...';
     if(st)st.textContent='Step 2/2 · Brief snapshot #'+approvalId+' approved and locked. Generating the Publisher Edition from this exact snapshot...';
-    var r=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/generate',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({approval_id:approvalId})});
-    var d=await r.json().catch(function(){return{}});
+    var out=await runGeneration(approvalId);
+    if(!out.r.ok&&out.r.status===409&&['approval_stale','approval_missing','approval_snapshot_integrity'].includes(String(out.d&&out.d.code||''))){
+      if(st)st.textContent='The Brief changed during the handoff. Re-locking the current snapshot once automatically — no research is rerun...';
+      var ap2=await approveCurrent();approvalId=ap2.approvalId;out=await runGeneration(approvalId);
+    }
+    var r=out.r,d=out.d;
     if(!r.ok){
       try{console.error('[Publisher Edition generation failed]',{status:r.status,placement_id:Number(placementId),brief_id:briefId,approval_id:approvalId,payload:d})}catch(_e){}
-      var msg=(d&&d.error)||('Generation failed HTTP '+r.status);
-      if(r.status===409)msg='Generation blocked by Network workflow: '+msg;
-      throw new Error(msg);
+      var ge=new Error((d&&d.error)||('Generation failed HTTP '+r.status));ge.payload=d;ge.httpStatus=r.status;ge.approvalId=approvalId;throw ge;
     }
     _pwbPublisherEditionReady=true;
     _pwbApplyActionState();
     if(st)st.textContent=d.already_generated?'✓ This exact approved Brief snapshot already has a Publisher Edition. Open Publishing to review it.':'✓ Publisher Edition generated from approved Brief snapshot #'+approvalId+'. Open Network Publishing to review/edit images, links, attribution and final HTML before publishing.';
     if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-publisher-edition-ready',placement_id:Number(placementId),publication_version_id:d.publication_version_id||(d.publication_version&&d.publication_version.id)||null,approved_prewrite_approval_id:approvalId,brief_id:briefId},window.location.origin);
-  }catch(e){_pwbPublisherEditionReady=false;_pwbApplyActionState();if(st)st.textContent='✕ '+e.message;}
+  }catch(e){
+    _pwbPublisherEditionReady=false;_pwbApplyActionState();
+    var p=e&&e.payload||{},hs=Number(e&&e.httpStatus||0)||500,aid=Number(e&&e.approvalId||p.approval_id||0);
+    if(st)st.innerHTML=_pwbGenerationErrorHtmlV509(hs,p,placementId,briefId,aid);
+    if(btn){btn.disabled=false;btn.textContent=original||'Approve Brief & Generate';}
+  }
 }
 
 var _lastPrewriteBriefText = '';
