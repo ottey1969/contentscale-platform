@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v505-PREWRITE-PERMANENT-SHARE-RESEARCH-VIEW-NETWORK-v499-PUBLISHER-QA-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v506-RESEARCH-INTEGRITY-GATES-NETWORK-v500-INTERNAL-LINK-CONTRACT';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,12 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+    'prewrite-five-ai-hard-gate-v506',
+    'prewrite-ai-evidence-recovery-v506',
+    'prewrite-evidence-backed-gap-v506',
+    'prewrite-publisher-internal-destination-v506',
+    'prewrite-homepage-fallback-v506',
+    'network-internal-destination-approval-gate-v500',
     'prewrite-permanent-share-revoke-v505',
     'prewrite-public-research-view-v505',
     'network-publisher-qa-hardening-v499',
@@ -868,8 +874,8 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v505-PREWRITE-PERMANENT-SHARE-RESEARCH-VIEW-NETWORK-v499-PUBLISHER-QA-HARDENING',
-  built_date: '2026-10-05',
+  build: 'CS-2026-10-06-CANONICAL-v506-RESEARCH-INTEGRITY-GATES-NETWORK-v500-INTERNAL-LINK-CONTRACT',
+  built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
   ceo_private_public_same_engine: true,
@@ -953,6 +959,8 @@ app.get('/api/build-info',(req,res)=>{
 
 app.get('/api/regression-contract',(req,res)=>{
   const src=fs.readFileSync(__filename,'utf8');
+  const _networkPath=path.join(__dirname,'network','register-network.js');
+  const networkSrc=fs.existsSync(_networkPath)?fs.readFileSync(_networkPath,'utf8'):'';
   const checks={
     canonical_build:CONTENTSCALE_BUILD_INFO.build===CONTENTSCALE_BUILD_ID,
     network_safe_shell:src.includes('NETWORK_SAFE_SHELL_V1')&&src.includes("require('./network/register-network')")&&fs.existsSync(path.join(__dirname,'network','register-network.js')),
@@ -963,6 +971,12 @@ app.get('/api/regression-contract',(req,res)=>{
     prewrite_share_link:src.includes('/share/prewrite/:shareToken')&&src.includes('Copy share link')&&src.includes('share_token'),
     prewrite_permanent_share_revoke:src.includes('/share/revoke')&&src.includes('share_revoked_at')&&src.includes('Permanent read-only public link')&&src.includes('expires_at:null'),
     prewrite_public_research_view:src.includes('Research overview')&&src.includes('Five AI systems — saved evidence')&&src.includes('Search & competitor intelligence')&&src.includes('Research execution transparency'),
+    prewrite_five_ai_hard_gate_v506:src.includes('ai_evidence_5of5')&&src.includes('Research incomplete')&&src.includes('ai_systems_required=5')&&src.includes('_pwbMergeManualAiEvidenceV506'),
+    prewrite_ai_recovery_v506:src.includes('v506_recover_existing_work')&&src.includes('prewrite_async_jobs')&&src.includes('ai_evidence_recovered'),
+    prewrite_evidence_backed_gap_v506:src.includes('competitor_gap_evidence')&&src.includes('page_specific_grounded')&&src.includes('No reliable cross-competitor gap was proven'),
+    prewrite_internal_destination_v506:src.includes('internal_destination_required')&&src.includes('publisher_homepage_fallback')&&src.includes('Internal destination still required before Network approval'),
+    network_research_integrity_v500:networkSrc.includes('_networkAiEvidenceStateV500')&&networkSrc.includes('ai_system_evidence_5_of_5')&&networkSrc.includes('publisher_internal_destination'),
+    network_internal_link_contract_v500:networkSrc.includes('publisher_homepage_fallback')&&networkSrc.includes('Internal destination · required')&&networkSrc.includes('internal_links is listed as missing'),
     prewrite_action_summary:src.includes('pwbActionState')&&src.includes('Publication QA')&&src.includes('NEXT STEP'),
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
@@ -2851,9 +2865,12 @@ app.get('/api/tracker-client/:token', async (req, res) => {
           SELECT p.id,
                  c.prewrite_brief_id,
                  pb.client_id AS prewrite_client_id,
-                 ow.domain AS owner_domain
+                 ow.domain AS owner_domain,
+                 pw.domain AS publisher_domain,
+                 pw.scan_snapshot AS publisher_scan
           FROM network_placements p
           JOIN network_content c ON c.id=p.content_id
+          JOIN network_websites pw ON pw.id=p.publisher_website_id
           LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
           LEFT JOIN prewrite_briefs pb ON pb.id=c.prewrite_brief_id
           WHERE p.id=$1
@@ -45928,10 +45945,15 @@ document.addEventListener('change',function(e){
   if(e.target&&e.target.id==='pwbKeyword')_pwbDraftSwitchKeyword(e.target.value);
 });
 
+function _pwbAiFiveUiState(){
+  var defs=[['google_aio','Google AIO / Gemini','pwbAioText'],['chatgpt','ChatGPT Search','pwbChatgptText'],['perplexity','Perplexity','pwbPerplexityText'],['claude','Claude','pwbClaudeText'],['copilot','Microsoft Copilot','pwbCopilotText']];
+  var present=[],missing=[];defs.forEach(function(x){var e=document.getElementById(x[2]),ok=!!(e&&String(e.value||'').trim());(ok?present:missing).push({key:x[0],label:x[1],id:x[2]});});
+  var hardMissing=missing.filter(function(x){return x.key!=='perplexity';});
+  return {count:present.length,present:present,missing:missing,hard_missing:hardMissing,manual_ready:hardMissing.length===0,complete:present.length===5};
+}
 function _pwbUpdateAiFiveCount(){
-  var ids=['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'];
-  var n=ids.filter(function(id){var e=document.getElementById(id);return e&&String(e.value||'').trim();}).length;
-  var b=document.getElementById('pwbAiFiveCount');if(b)b.textContent=n+' / 5 added';
+  var st=_pwbAiFiveUiState();
+  var b=document.getElementById('pwbAiFiveCount');if(b){b.textContent=st.count+' / 5 added'+(_NETWORK_PREWRITE_AUTHORIZED?' · required':'');b.style.color=st.complete?'#86efac':(st.manual_ready?'#fbbf24':'#fca5a5');b.title=st.complete?'All five AI-system evidence inputs are present.':(st.manual_ready?'Perplexity may use the automatic fallback; the other four required manual evidence inputs are present.':'Missing required AI evidence: '+st.hard_missing.map(function(x){return x.label;}).join(', '));}
 }
 document.addEventListener('input',function(e){if(e.target&&['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0){_pwbUpdateAiFiveCount();_pwbDraftSave();}});
 function showPrewriteBriefModal() {
@@ -46202,6 +46224,7 @@ function _pwbApplyActionState(){
   var qaPersisted=!!_pwbFinalQaPersisted;
   var stale=!!_pwbInputsDirty;
   var placement=_pwbNetworkPlacement();
+  var aiUi=_pwbAiFiveUiState(),aiInputReady=!_NETWORK_PREWRITE_AUTHORIZED||aiUi.manual_ready;
   var diag=_pwbRestoreDiagnosticJob(_pwbActionKeyword());
   var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),share=document.getElementById('pwbShareBrief'),state=document.getElementById('pwbActionState'),shareStatus=document.getElementById('pwbShareStatus'),fresh=document.getElementById('pwbGenerateBtn');
 
@@ -46213,17 +46236,18 @@ function _pwbApplyActionState(){
       fresh.textContent=_pwbCurrentNotPassed?'Fresh re-analysis locked · complete missing first':'Re-analysis not needed · current Brief loaded';
       fresh.title='This Brief already has research. Change an input only if you intentionally want a fresh paid research run.';
     }else{
-      fresh.disabled=false;
-      fresh.textContent=hasBrief?'Analyse & create new Brief · fresh research':'Analyse & create Pre-Write Brief';
-      fresh.title=hasBrief?'Inputs changed. This starts a NEW research run and may use paid API calls.':'';
+      fresh.disabled=!aiInputReady;
+      fresh.textContent=!aiInputReady?'Add required AI evidence first':(hasBrief?'Analyse & create new Brief · fresh research':'Analyse & create Pre-Write Brief');
+      fresh.title=!aiInputReady?('Missing required AI evidence: '+aiUi.hard_missing.map(function(x){return x.label;}).join(', ')):(hasBrief?'Inputs changed. This starts a NEW research run and may use paid API calls.':'');
     }
   }
 
   // 2) Missing-only completion is a recovery action exclusively for a NOT PASSED diagnostic.
   if(complete){
-    var canComplete=hasBrief&&!stale&&_pwbCurrentNotPassed&&!!diag;
+    var canComplete=hasBrief&&!stale&&_pwbCurrentNotPassed&&!!diag&&aiInputReady;
     complete.disabled=!canComplete;
     if(stale)complete.textContent='Complete missing only · create updated Brief first';
+    else if(!aiInputReady)complete.textContent='Complete missing only · add missing AI evidence';
     else if(_pwbCurrentNotPassed&&!diag)complete.textContent='Complete missing only · diagnostic unavailable';
     else if(_pwbCurrentNotPassed)complete.textContent='Complete missing only · reuse research';
     else complete.textContent='Complete missing only · not needed';
@@ -46311,7 +46335,9 @@ function _pwbApplyActionState(){
     var warningLines=warns.slice(0,3).map(function(w){return '<div style="color:#fbbf24;margin-top:2px;">⚠ '+String(w&&w.message||w&&w.code||'Publication warning').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';}).join('');
     var metaBlocked=blockers.some(function(x){return /^meta_(?:title|description)/.test(String(x&&x.code||''));});
     var msg='';
-    if(!hasBrief)msg='<strong style="color:#93c5fd;">NEXT STEP:</strong> Analyse & create the Pre-Write Brief.';
+    if(!hasBrief&&!aiInputReady)msg='<strong style="color:#fca5a5;">RESEARCH INPUT INCOMPLETE:</strong> Add '+aiUi.hard_missing.map(function(x){return x.label;}).join(', ')+'. ContentScale will not start a Network Brief while promised AI evidence is missing. Perplexity may use its automatic fallback.';
+    else if(!hasBrief)msg='<strong style="color:#93c5fd;">NEXT STEP:</strong> Analyse & create the Pre-Write Brief.';
+    else if(!aiInputReady)msg='<strong style="color:#fca5a5;">RESEARCH INCOMPLETE:</strong> Add '+aiUi.hard_missing.map(function(x){return x.label;}).join(', ')+'. Existing SERP/evidence research stays intact; do not start over.';
     else if(stale)msg='<strong style="color:#fbbf24;">NEXT STEP:</strong> Inputs changed. Create a new Brief before completing, QA, approving, copying or sharing.';
     else if(_pwbCurrentNotPassed)msg='<strong style="color:#fbbf24;">NEXT STEP:</strong> Complete missing only. Existing research is reused; do not start a fresh analysis.';
     else if(!pubReady&&metaBlocked)msg='<strong style="color:#fca5a5;">NEXT STEP:</strong> Edit title & description in the SEO Package. Title max 60; description 140-160 (ideal 150-159). No research or Gemini is needed.';
@@ -46418,6 +46444,8 @@ async function generatePrewriteBrief() {
   if(_pwbCompletionMode&&!_pwbCompletionSource){document.getElementById('pwbStatus').textContent='⚠ No NOT PASSED diagnostic job is available to complete. Use Re-analyse & create new Brief.';return;}
 
   if (!kw) { document.getElementById('pwbStatus').textContent = '\u26a0 Enter a keyword first.'; return; }
+  var _aiUi=_pwbAiFiveUiState();
+  if(_NETWORK_PREWRITE_AUTHORIZED&&!_aiUi.manual_ready){document.getElementById('pwbStatus').textContent='✕ Research incomplete — add '+_aiUi.hard_missing.map(function(x){return x.label;}).join(', ')+'. ContentScale will not silently continue with only part of the promised five-system evidence. Existing research is not discarded.';_pwbUpdateAiFiveCount();return;}
 
   var btn = document.getElementById('pwbGenerateBtn');
   var stat = document.getElementById('pwbStatus');
@@ -46443,7 +46471,8 @@ async function generatePrewriteBrief() {
   try {
     var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext,
       existingSiteHtml:String((document.getElementById('pwbExistingHtml')||{}).value||'').slice(0,180000),
-      manualAiEvidence:{google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()} };
+      manualAiEvidence:{google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()},
+      aiEvidenceExpectedCount:_NETWORK_PREWRITE_AUTHORIZED?5:0 };
     if(_pwbCompletionMode){_pwbBody.completionFromJobId=_pwbCompletionSource;_pwbBody.completionMode='missing_only';}
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
     var data = await api('/prewrite-brief', 'POST', _pwbBody);
@@ -47067,17 +47096,18 @@ function renderPrewriteBrief(b) {
   }
   if (b.link_research) {
     var _lr=b.link_research, _li=_lr.internal||{}, _le=_lr.external||{};
-    var _noAutoInternal=Number(_li.urls_found||0)>0&&Number(_li.targets_selected||0)===0;
-    var _manualEnabled=Number(_pwbCurrentBriefId||0)>0;
+    var _noAutoInternal=Number(_li.targets_selected||0)===0;
+    var _manualEnabled=Number(_pwbCurrentBriefId||0)>0,_selectedInternal=String(_li.selected_url||((Array.isArray(b.internal_link_targets)&&b.internal_link_targets[0]&&b.internal_link_targets[0].link_to)||''));
     html += '<div style="margin-bottom:12px;background:#081521;border:1px solid #164e63;border-radius:8px;padding:10px 12px;">'
       + '<div style="color:#67e8f9;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:800;">Automatic link research</div>'
-      + '<div style="font-size:11px;color:#cbd5e1;">Internal: <strong style="color:'+(Number(_li.urls_found||0)>0?'#86efac':'#fbbf24')+';">'+esc(_li.sitemap_status||'not_found')+'</strong> · '+esc(_li.urls_found||0)+' verified site URLs · '+esc(_li.targets_selected||0)+' selected</div>'
-      + (_noAutoInternal?'<div style="font-size:10px;color:#fbbf24;margin-top:3px;">No homepage was forced. Research ran, but no automatic candidate was relevant enough for this topic.</div>':'')
+      + '<div style="font-size:11px;color:#cbd5e1;">Internal: <strong style="color:'+(_noAutoInternal?'#fca5a5':'#86efac')+';">'+esc(_li.status||_li.sitemap_status||'not_found')+'</strong> · '+esc(_li.urls_found||0)+' verified site URLs · '+esc(_li.targets_selected||0)+' selected</div>'
+      + (_selectedInternal?'<div style="font-size:10.5px;color:#86efac;margin-top:4px;word-break:break-all;"><strong>Selected internal destination:</strong> '+esc(_selectedInternal)+' · '+esc(_li.selection_source||'verified target')+'</div>':'<div style="font-size:10px;color:#fca5a5;margin-top:3px;">Internal destination still required before Network approval. Existing research stays intact.</div>')
+      + '<div style="font-size:10px;color:#94a3b8;margin-top:3px;">Publisher domain: '+esc(_li.target_domain||_li.publisher_domain||_li.owner_domain||'not recorded')+'. Sitemap/XML URLs are discovery only and can never become article links.</div>'
       + '<div style="font-size:11px;color:#cbd5e1;margin-top:3px;">External: <strong style="color:'+(Number(_le.candidates_found||0)>0?'#86efac':'#fbbf24')+';">automatic</strong> · '+esc(_le.candidates_found||0)+' verified source candidates · '+esc(_le.targets_selected||0)+' selected</div>'
-      + (_li.sitemap_url?'<div style="font-size:10px;color:#64748b;margin-top:4px;word-break:break-all;">Sitemap: '+esc(_li.sitemap_url)+'</div>':'')
-      + '<div style="margin-top:8px;padding-top:7px;border-top:1px solid #164e6355;"><div style="font-size:10px;color:#a5f3fc;font-weight:700;margin-bottom:4px;">Publisher-selected internal destination · optional</div>'
-      + '<div style="display:flex;gap:6px;flex-wrap:wrap;"><input id="pwbInternalLinkUrl" class="cs-input" '+(_manualEnabled?'':'disabled')+' style="flex:2;min-width:260px;" placeholder="https://same-publisher-domain.com/relevant-page"><input id="pwbInternalLinkAnchor" class="cs-input" '+(_manualEnabled?'':'disabled')+' style="flex:1;min-width:170px;" placeholder="Anchor text (optional)"><button class="cs-btn" '+(_manualEnabled?'':'disabled')+' onclick="savePrewriteInternalLink(this)">Use this internal page</button></div>'
-      + '<div id="pwbInternalLinkStatus" style="font-size:9.8px;color:#64748b;margin-top:4px;">'+(_manualEnabled?'Only an exact URL on the publisher/owner domain is accepted. ContentScale never invents it and never forces the homepage.':'Save/pass the Brief first; then a publisher can choose a specific same-domain page without re-running research.')+'</div></div>'
+      + (_li.sitemap_url?'<div style="font-size:10px;color:#64748b;margin-top:4px;word-break:break-all;">Discovery sitemap: '+esc(_li.sitemap_url)+'</div>':'')
+      + '<div style="margin-top:8px;padding-top:7px;border-top:1px solid #164e6355;"><div style="font-size:10px;color:#a5f3fc;font-weight:700;margin-bottom:4px;">Change internal destination · no new research</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;"><input id="pwbInternalLinkUrl" class="cs-input" '+(_manualEnabled?'':'disabled')+' style="flex:2;min-width:260px;" placeholder="https://publisher-domain.com/relevant-page"><input id="pwbInternalLinkAnchor" class="cs-input" '+(_manualEnabled?'':'disabled')+' style="flex:1;min-width:170px;" placeholder="Anchor text (optional)"><button class="cs-btn" '+(_manualEnabled?'':'disabled')+' onclick="savePrewriteInternalLink(this)">Use this internal page</button></div>'
+      + '<div id="pwbInternalLinkStatus" style="font-size:9.8px;color:#64748b;margin-top:4px;">'+(_manualEnabled?'Only an exact reader-facing URL on the required publisher domain is accepted. Changing it revalidates and saves this Brief; no SERP, evidence or Gemini research is rerun.':'Save/pass the Brief first; then the exact publisher-domain URL can be changed without re-running research.')+'</div></div>'
       + '</div>';
   }
   if (Array.isArray(b.external_link_targets) && b.external_link_targets.length) {
@@ -58715,6 +58745,88 @@ function _pwbPublicationQa(b){
   return {score:Math.max(0,score),ready_to_write:blockers.length===0,blockers:blockers,warnings:warnings,checked_at:new Date().toISOString(),rule:'Structural readiness decides whether generation is allowed. Publication QA exposes non-blocking quality warnings separately; blockers are reserved for broken/internal/unsafe writer-facing copy.'};
 }
 
+// v506 — research-integrity helpers. The system must never call a Network Brief "ready"
+// when promised five-engine evidence or the required publisher-internal destination is incomplete.
+const _PWB_AI_ENGINES_V506=['google_aio','chatgpt','perplexity','claude','copilot'];
+const _PWB_AI_LABELS_V506={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
+function _pwbAiEvidenceStateV506(b){
+  b=b&&typeof b==='object'?b:{};
+  const c=b.research_contract&&typeof b.research_contract==='object'?b.research_contract:{};
+  const required=Math.max(0,Number(c.ai_systems_required||0));
+  const ae=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
+  const checked=_PWB_AI_ENGINES_V506.filter(k=>ae[k]&&ae[k].checked===true);
+  const missing=_PWB_AI_ENGINES_V506.filter(k=>!checked.includes(k));
+  return {required,checked_count:checked.length,checked,missing,complete:required<=0||checked.length>=required};
+}
+function _pwbIsReaderPageUrlV506(raw,domain){
+  try{const u=new URL(String(raw||'').trim()),h=u.hostname.replace(/^www\./,'').toLowerCase(),d=String(domain||'').replace(/^www\./,'').toLowerCase();if(!/^https?:$/.test(u.protocol)||!h||!d||h!==d)return false;const p=(u.pathname||'/').toLowerCase();if(/(?:^|\/)(?:sitemap(?:[_-]index)?|wp-sitemap|robots)(?:[._\/-]|$)/i.test(p)||/\.xml$/i.test(p)||/\/feed\/?$/i.test(p)||/\/wp-json(?:\/|$)/i.test(p))return false;return true;}catch(_e){return false;}
+}
+function _pwbInternalDestinationStateV506(b){
+  b=b&&typeof b==='object'?b:{};
+  const c=b.research_contract&&typeof b.research_contract==='object'?b.research_contract:{};
+  const required=!!c.internal_destination_required,targetDomain=String(c.internal_destination_domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();
+  const targets=Array.isArray(b.internal_link_targets)?b.internal_link_targets:[];
+  const valid=targets.filter(x=>x&&_pwbIsReaderPageUrlV506(x.link_to,targetDomain));
+  return {required,target_domain:targetDomain,valid_count:valid.length,selected_url:valid[0]&&valid[0].link_to||'',complete:!required||valid.length>0};
+}
+function _pwbExtractHttpsV506(text){
+  return Array.from(new Set((String(text||'').match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]).map(u=>String(u).replace(/[)\]>,.;]+$/,''))));
+}
+function _pwbCanonicalizeAiAnalysisV506(b){
+  if(!b||typeof b!=='object')return b;
+  const ae=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
+  const prior=b.ai_systems_analysis&&typeof b.ai_systems_analysis==='object'?b.ai_systems_analysis:{};
+  const out={};
+  _PWB_AI_ENGINES_V506.forEach(function(k){
+    const ev=ae[k]&&typeof ae[k]==='object'?ae[k]:{},old=prior[k]&&typeof prior[k]==='object'?prior[k]:{},raw=String(ev.text||'').trim(),checked=ev.checked===true;
+    const urls=_pwbExtractHttpsV506(raw);
+    let summary=String(old.answer_summary||'').trim();
+    if(checked&&(!summary||/^not checked$/i.test(summary))&&raw){let a=raw;const at=a.toUpperCase().indexOf('RESOURCES:');if(at>=0)a=a.slice(0,at);summary=a.replace(/^ANSWER:\s*/i,'').trim().slice(0,900);}
+    out[k]={checked:checked,evidence_source:checked?String(ev.source||'manual'):'not_checked',answer_summary:checked?summary:'NOT CHECKED',recommended_companies:checked&&Array.isArray(old.recommended_companies)?old.recommended_companies:[],mentioned_companies:checked&&Array.isArray(old.mentioned_companies)?old.mentioned_companies:[],domain_citations:checked&&Array.isArray(old.domain_citations)?old.domain_citations:[],exact_page_citations:checked&&Array.isArray(old.exact_page_citations)?old.exact_page_citations.filter(u=>urls.includes(String(u))):[],citation_sources:checked?urls.map(function(u){let host='';try{host=new URL(u).hostname.replace(/^www\./,'');}catch(_e){}return {source_name:host||'Source',page_title:'',exact_url:u};}):[],raw_evidence_chars:raw.length};
+  });
+  b.ai_systems_analysis=out;
+  const st=_pwbAiEvidenceStateV506(b);
+  b.what_we_checked=b.what_we_checked&&typeof b.what_we_checked==='object'?b.what_we_checked:{};
+  b.what_we_checked.ai_systems_checked=st.checked_count;
+  b.what_we_checked.ai_systems_status=Object.fromEntries(_PWB_AI_ENGINES_V506.map(k=>[k,!!(ae[k]&&ae[k].checked)]));
+  b.what_we_checked.ai_systems_missing=st.missing.slice();
+  return b;
+}
+function _pwbMergeManualAiEvidenceV506(b,raw){
+  if(!b||typeof b!=='object')return {added:[],checked_count:0,missing:_PWB_AI_ENGINES_V506.slice()};
+  raw=raw&&typeof raw==='object'?raw:{};b.ai_system_evidence=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
+  const added=[],now=new Date().toISOString();
+  _PWB_AI_ENGINES_V506.forEach(function(k){const v=String(raw[k]||'').trim();if(!v)return;const cur=b.ai_system_evidence[k]&&typeof b.ai_system_evidence[k]==='object'?b.ai_system_evidence[k]:{};if(String(cur.text||'').trim()!==v||cur.checked!==true)added.push(k);b.ai_system_evidence[k]=Object.assign({},cur,{checked:true,source:'manual',manual:true,text:v});});
+  b.ai_system_evidence.checked_at=now;b.ai_system_evidence.checked_count=_PWB_AI_ENGINES_V506.filter(k=>b.ai_system_evidence[k]&&b.ai_system_evidence[k].checked===true).length;
+  _pwbCanonicalizeAiAnalysisV506(b);const st=_pwbAiEvidenceStateV506(b);return {added,checked_count:st.checked_count,missing:st.missing};
+}
+function _pwbEvidenceBackedGapV506(b){
+  if(!b||typeof b!=='object')return b;
+  const rows=(Array.isArray(b.competitor_table)?b.competitor_table:[]).filter(function(x){const g=String(x&&x.the_gap||'').trim();return g&&!/^(?:insufficient_data|analysis unavailable after quality pass|page body could not be verified)$/i.test(g);});
+  const support=rows.slice(0,5).map(function(x){return {rank:Number(x&&x.rank||0)||null,domain:String(x&&x.domain||x&&x.company_or_publisher||''),gap:String(x&&x.the_gap||'').trim().slice(0,320),exact_url:String(x&&x.exact_url||'')};});
+  if(String(b.top10_gap||'').trim()&&!String(b.top10_gap_model_draft||'').trim())b.top10_gap_model_draft=String(b.top10_gap).trim();
+  b.competitor_gap_evidence={status:support.length>=2?'page_specific_grounded':'insufficient_cross_page_support',supporting_rows:support,rule:'Page-specific gaps are ContentScale analysis grounded in the captured competitor page evidence. They are not presented as direct competitor claims. A broad market-wide gap is not claimed unless the supporting rows explicitly establish it.'};
+  if(support.length>=2){b.top10_gap='Grounded page-specific opportunities: '+support.map(x=>'#'+(x.rank||'?')+' '+(x.domain||'competitor')+' — '+x.gap).join(' | ')+'. These are ContentScale analysis points grounded in the captured competitor pages; no broader market-wide weakness is claimed beyond those rows.';}
+  else b.top10_gap='No reliable cross-competitor gap was proven from at least two usable competitor pages. Use the individual competitor findings below instead of making a broader claim.';
+  return b;
+}
+function _pwbEnsureResearchContractV506(b,opts){
+  if(!b||typeof b!=='object')return b;opts=opts||{};b.research_contract=b.research_contract&&typeof b.research_contract==='object'?b.research_contract:{};
+  if(opts.network===true){b.research_contract.ai_systems_required=5;b.research_contract.internal_destination_required=true;b.research_contract.internal_destination_domain=String(opts.publisher_domain||opts.owner_domain||b.research_contract.internal_destination_domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();b.research_contract.rule='Network Prewrite requires 5/5 AI-system evidence and at least one reader-facing internal destination on the publisher domain before approval.';}
+  return b;
+}
+function _pwbEnsureNetworkInternalDestinationV506(b,opts){
+  if(!b||typeof b!=='object')return {selected:false};opts=opts||{};const domain=String(opts.publisher_domain||opts.owner_domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();if(!domain)return {selected:false};
+  _pwbEnsureResearchContractV506(b,{network:true,publisher_domain:domain});
+  b.internal_link_targets=Array.isArray(b.internal_link_targets)?b.internal_link_targets:[];
+  let valid=b.internal_link_targets.filter(x=>x&&_pwbIsReaderPageUrlV506(x.link_to,domain));
+  let source='existing_verified_target';
+  if(!valid.length){let home='';try{const c=new URL(String(opts.checked_url||''));if(c.hostname.replace(/^www\./,'').toLowerCase()===domain)home=c.origin+'/';}catch(_e){}if(!home)home='https://'+domain+'/';b.internal_link_targets=[{anchor_text:String(opts.anchor_text||'Publisher homepage'),link_to:home,why:'Verified publisher-domain homepage fallback because no more relevant same-domain page was confidently selected.',selection_source:'publisher_homepage_fallback',review_recommended:true}];valid=b.internal_link_targets.slice();source='publisher_homepage_fallback';}
+  b.link_research=b.link_research&&typeof b.link_research==='object'?b.link_research:{};b.link_research.internal=b.link_research.internal&&typeof b.link_research.internal==='object'?b.link_research.internal:{};
+  Object.assign(b.link_research.internal,{automatic:true,searched:true,targets_selected:valid.length,status:source==='publisher_homepage_fallback'?'verified_homepage_fallback':'verified_targets',target_domain:domain,selected_url:valid[0]&&valid[0].link_to||'',selection_source:source,manual_same_domain_allowed:true,required_for_publisher_edition:true,rule:'A Publisher Edition must have at least one reader-facing internal destination on the publisher domain. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only. If no relevant page can be selected confidently, the verified publisher homepage is the fallback and may be manually replaced.'});
+  return {selected:valid.length>0,url:valid[0]&&valid[0].link_to||'',source,domain};
+}
+
 // filled in the generated brief — never the model's own claim about its output.
 function _pwbReadiness(b) {
   const _s = v => typeof v === 'string' && !!v.trim() && !/^insufficient_data$/i.test(v.trim()) && !/^\[object Object\]$/i.test(v.trim());
@@ -58738,6 +58850,7 @@ function _pwbReadiness(b) {
     });
   }
   const _outlineSynced = _outlineIssues.length===0;
+  const _aiState=_pwbAiEvidenceStateV506(b),_internalState=_pwbInternalDestinationStateV506(b);
   const checks = {
     meta_package: !!(b.meta_package && _s(b.meta_package.seo_title) && _s(b.meta_package.meta_description)),
     opening_passage: !!(b.opening_passage && _s(b.opening_passage.direct_answer)),
@@ -58756,10 +58869,14 @@ function _pwbReadiness(b) {
     use_cases: !!(Array.isArray(b.use_cases) && b.use_cases.filter(x=>x&&_s(x.audience)&&_s(x.scenario)&&_s(x.benefit)).length>=2),
     conclusion: !!(b.conclusion && _s(b.conclusion.recap) && _s(b.conclusion.recommendation)),
     paa_answers: !_realPaa.length || _realPaa.every(q=>_s(_paaAnswerMap.get(_paaKey(q)))),
-    action_plan: Array.isArray(b.action_plan)&&b.action_plan.filter(x=>x&&_s(x.action)).length>=3
+    action_plan: Array.isArray(b.action_plan)&&b.action_plan.filter(x=>x&&_s(x.action)).length>=3,
+    ai_evidence_5of5: _aiState.complete,
+    internal_destination: _internalState.complete
   };
   const keys = Object.keys(checks);
   const critical=['meta_package','opening_passage','definitive_outline','ai_answer','quick_facts','entity_strategy','entity_relationships','evidence','official_sources','evidence_research','evidence_quality','balance','use_cases','conclusion','paa_answers','action_plan'];
+  if(_aiState.required>0)critical.push('ai_evidence_5of5');
+  if(_internalState.required)critical.push('internal_destination');
   const researchKeys=['evidence_research','internal_links','external_links'];
   checks.readiness_score = Math.round(critical.filter(k => checks[k]).length / critical.length * 100);
   checks.research_coverage_score = Math.round(researchKeys.filter(k => checks[k]).length / researchKeys.length * 100);
@@ -58775,7 +58892,9 @@ function _pwbReadiness(b) {
       sections:_outline.length,
       required_h2s:_mustH2s.length,
       issues:_outlineIssues
-    }
+    },
+    ai_evidence:{required:_aiState.required,checked:_aiState.checked_count,missing:_aiState.missing.map(k=>_PWB_AI_LABELS_V506[k]||k)},
+    internal_destination:{required:_internalState.required,target_domain:_internalState.target_domain,selected_url:_internalState.selected_url,valid_count:_internalState.valid_count}
   };
   return checks;
 }
@@ -58964,8 +59083,14 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
   const srcReq=row.request_json||{},srcKeyword=String(srcReq.keyword||payload.brief.keyword||'').trim(),requestedKeyword=String(opts.keyword||'').trim();
   if(srcKeyword&&requestedKeyword&&norm(srcKeyword)!==norm(requestedKeyword))return res.status(409).json({success:false,stage:'completion_source',error:'The keyword changed. Missing-only completion can reuse research only for the same keyword; run a fresh analysis for a new keyword.'});
   let brief=JSON.parse(JSON.stringify(payload.brief));
+  const _beforeMerge=_pwbReadiness(brief);
+  if(placementId>0)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:opts.publisherDomain||''});
+  const _aiMerge=_pwbMergeManualAiEvidenceV506(brief,opts.manualAiEvidence||srcReq.manualAiEvidence||{});
+  if(placementId>0)_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:opts.publisherDomain||'',checked_url:opts.publisherCheckedUrl||''});
+  _pwbEvidenceBackedGapV506(brief);
   const before=_pwbReadiness(brief),missingBefore=Array.isArray(before.missing)?before.missing.slice():[];
-  if(!missingBefore.length&&before.ready_for_generation)return res.status(409).json({success:false,stage:'completion_source',error:'This diagnostic already passes the quality gate. Reopen the approved Brief instead.'});
+  const _aiGateBefore=before.details&&before.details.ai_evidence||{};
+  if(missingBefore.includes('ai_evidence_5of5'))return res.status(422).json({success:false,stage:'ai_evidence_gate',quality_status:'research_incomplete',completion_mode:'missing_only',research_reused:true,research_rerun:false,retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research is incomplete: '+Number(_aiGateBefore.checked||0)+'/5 AI systems are captured. Missing: '+(Array.isArray(_aiGateBefore.missing)?_aiGateBefore.missing.join(', '):'one or more AI systems')+'. Add the missing evidence; ContentScale will reuse the existing SERP, competitor and evidence research.',brief:brief,diagnostic:{ai_evidence:_aiGateBefore,research_reused:true,research_rerun:false}});
 
   // Deterministic/free completion first. These steps only reshape content already present.
   if(missingBefore.includes('quick_facts')){
@@ -59027,7 +59152,7 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
       action_plan:'Return action_plan with at least 3 concrete actions; no new factual claims.',
       meta_package:'Return meta_package using the existing topic/title/intent; no new factual claims.'
     };
-    const context={keyword:srcKeyword||requestedKeyword,search_intent:brief.search_intent||{},recommended_title_h1:brief.recommended_title_h1||'',must_cover_entities:brief.must_cover_entities||[],ai_answer:brief.ai_answer||{},quick_facts:brief.quick_facts||[],definitive_outline:brief.definitive_outline||[],people_also_ask:brief.people_also_ask||[],evidence:{official_sources:brief.evidence&&brief.evidence.official_sources||[],statistics:brief.evidence&&brief.evidence.statistics||[],authority_sources:brief.evidence&&brief.evidence.authority_sources||[]},balance:brief.balance||{},conclusion:brief.conclusion||{},entity_strategy:brief.entity_strategy||{},use_cases:brief.use_cases||[],exact_source_whitelist:exactUrls};
+    const context={keyword:srcKeyword||requestedKeyword,search_intent:brief.search_intent||{},recommended_title_h1:brief.recommended_title_h1||'',must_cover_entities:brief.must_cover_entities||[],ai_answer:brief.ai_answer||{},ai_system_evidence:brief.ai_system_evidence||{},ai_systems_analysis:brief.ai_systems_analysis||{},quick_facts:brief.quick_facts||[],definitive_outline:brief.definitive_outline||[],people_also_ask:brief.people_also_ask||[],evidence:{official_sources:brief.evidence&&brief.evidence.official_sources||[],statistics:brief.evidence&&brief.evidence.statistics||[],authority_sources:brief.evidence&&brief.evidence.authority_sources||[]},balance:brief.balance||{},conclusion:brief.conclusion||{},entity_strategy:brief.entity_strategy||{},use_cases:brief.use_cases||[],exact_source_whitelist:exactUrls};
     const prompt='MISSING-ONLY PREWRITE COMPLETION. REUSE EXISTING RESEARCH. DO NOT RESEARCH AGAIN. Return ONE valid JSON object and ONLY the requested missing keys. Do not rewrite or return fields that already passed.\n\nMISSING KEYS:\n'+ask.map(function(k){return '- '+k+': '+(rules[k]||'Complete safely from the supplied Brief only.');}).join('\n')+'\n\nSTRICT RULES:\n- Use ONLY the supplied existing Brief snapshot.\n- No web search, no new URLs, no invented facts, stats, quotes, credentials, prices, rankings, results or experience.\n- Any source URL must be copied exactly from exact_source_whitelist.\n- Preserve all already-passed content unchanged.\n- Return JSON only.\n\nEXISTING BRIEF SNAPSHOT:\n'+JSON.stringify(context).slice(0,18000);
     const model='gemini-2.5-flash-lite',body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.08,maxOutputTokens:3000,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
     const t0=Date.now();
@@ -59077,7 +59202,7 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
   brief.ai_quality_check=after;brief.generation_usage=prevUsage;
   if(brief.what_we_checked&&typeof brief.what_we_checked==='object')brief.what_we_checked.generation_usage=prevUsage;
   brief.completion_history=Array.isArray(brief.completion_history)?brief.completion_history:[];
-  brief.completion_history.push({completed_at:new Date().toISOString(),mode:'missing_only',source_job_id:jobId,research_reused:true,research_rerun:false,missing_before:missingBefore,missing_after:missingAfter,gemini_calls:completionUsage?1:0,usage:completionUsage||null,error:completionError||''});
+  brief.completion_history.push({completed_at:new Date().toISOString(),mode:'missing_only',source_job_id:jobId,research_reused:true,research_rerun:false,missing_before:missingBefore,missing_after:missingAfter,ai_evidence_recovered:_aiMerge.added||[],ai_systems_checked:_aiMerge.checked_count||0,internal_destination:brief.link_research&&brief.link_research.internal&&brief.link_research.internal.selected_url||'',gemini_calls:completionUsage?1:0,usage:completionUsage||null,error:completionError||''});
 
   if(!after.ready_for_generation){
     const why=after.details&&after.details.definitive_outline,whyText=missingAfter.includes('definitive_outline')&&why&&Array.isArray(why.issues)&&why.issues.length?' Outline reason: '+why.issues.join(', ')+'.':'';
@@ -59099,6 +59224,8 @@ async function _handlePrewriteBriefGeneration(req, res) {
   let _pwbNetworkPlacementId = 0;
   let _pwbSkipSyntheticSitemap = false;
   let _pwbNetworkOwnerDomain = '';
+  let _pwbNetworkPublisherDomain = '';
+  let _pwbNetworkPublisherCheckedUrl = '';
   let _pwbNetworkFastLane = false;
   try {
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
@@ -59131,6 +59258,8 @@ async function _handlePrewriteBriefGeneration(req, res) {
         const _pwbNr = _pwbNq.rows[0] || null;
         if (_pwbNr) {
           _pwbNetworkOwnerDomain = String(_pwbNr.owner_domain || '').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').toLowerCase();
+          _pwbNetworkPublisherDomain = String(_pwbNr.publisher_domain || '').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').toLowerCase();
+          try{_pwbNetworkPublisherCheckedUrl=String(_pwbNr.publisher_scan&&_pwbNr.publisher_scan.checked_url||'').trim();}catch(_e){_pwbNetworkPublisherCheckedUrl='';}
           const _pwbSyntheticDomain = ('network-placement-' + _pwbNetworkPlacementId + '.internal.contentscale.site').toLowerCase();
           _pwbSyntheticNetworkTracker = String(client.domain || '').trim().toLowerCase() === _pwbSyntheticDomain;
           const _pwbOwnsLinkedPrewrite = Number(_pwbNr.prewrite_client_id || 0) === Number(client.id || 0);
@@ -59170,7 +59299,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     // Gemini call for fields that are still missing after deterministic completion.
     if(String(completionFromJobId||'').trim()){
       _pwbStage='completion';
-      return await _pwbCompleteMissingFromDiagnostic({client:client,jobId:String(completionFromJobId).trim(),placementId:_pwbNetworkPlacementId,keyword:keyword,workingTitle:workingTitle,language:language,region:region,briefsUsed:briefsUsed,briefsAllowed:briefsAllowed},res);
+      return await _pwbCompleteMissingFromDiagnostic({client:client,jobId:String(completionFromJobId).trim(),placementId:_pwbNetworkPlacementId,keyword:keyword,workingTitle:workingTitle,language:language,region:region,briefsUsed:briefsUsed,briefsAllowed:briefsAllowed,manualAiEvidence:manualAiEvidence,publisherDomain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain,publisherCheckedUrl:_pwbNetworkPublisherCheckedUrl},res);
     }
 
     const serperKey = process.env.SERPAPI_KEY;
@@ -59195,10 +59324,11 @@ async function _handlePrewriteBriefGeneration(req, res) {
     if (_pwbSkipSyntheticSitemap) {
       clientSitemapUrls = [];
       _pwbSitemapUrl = '';
-      _pwbSitemapStatus = 'network_owner_discovery';
-      _pwbSitemapDiscoveredBy = 'network_owner_domain';
-      const _ownerBase = _pwbNetworkOwnerDomain ? ('https://' + _pwbNetworkOwnerDomain) : '';
-      const _sameOwner = function(u){ try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()===String(_pwbNetworkOwnerDomain||'').replace(/^www\./,'').toLowerCase();}catch(_e){return false;} };
+      _pwbSitemapStatus = 'network_publisher_discovery';
+      _pwbSitemapDiscoveredBy = 'network_publisher_domain';
+      const _networkInternalDomain=_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain;
+      const _ownerBase = _networkInternalDomain ? ('https://' + _networkInternalDomain) : '';
+      const _sameOwner = function(u){ try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()===String(_networkInternalDomain||'').replace(/^www\./,'').toLowerCase();}catch(_e){return false;} };
       const _extractOwnerLinks = function(html){const out=[];String(html||'').replace(/href=["']([^"'#]+)["']/gi,function(all,href){try{const u=new URL(href,_ownerBase+'/').href;if(/^https?:\/\//i.test(u)&&_sameOwner(u))out.push(u.split('#')[0]);}catch(_e){}return all;});return Array.from(new Set(out)).slice(0,500);};
       if(_ownerBase){
         for(const _smPath of ['/sitemap.xml','/sitemap_index.xml','/wp-sitemap.xml','/sitemap-index.xml']){
@@ -59207,7 +59337,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
             const _smUrl=_ownerBase+_smPath;
             const _resolved=await _resolveSitemapUrls(_smUrl,{timeoutMs:8000,maxUrls:2000,maxSubmaps:25});
             const _locs=(Array.isArray(_resolved)?_resolved:[]).filter(function(u){return /^https?:\/\//i.test(u)&&_sameOwner(u);});
-            if(_locs.length){clientSitemapUrls=Array.from(new Set(_locs)).slice(0,2000);_pwbSitemapStatus='network_owner_sitemap';_pwbSitemapUrl=_smUrl;_pwbSitemapDiscoveredBy='network_owner_sitemap_resolved';}
+            if(_locs.length){clientSitemapUrls=Array.from(new Set(_locs)).slice(0,2000);_pwbSitemapStatus='network_publisher_sitemap';_pwbSitemapUrl=_smUrl;_pwbSitemapDiscoveredBy='network_publisher_sitemap_resolved';}
           }catch(_e){}
         }
         if(!clientSitemapUrls.length){
@@ -59219,7 +59349,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
           }
         }
       }
-      console.log('[prewrite-brief] Network owner discovery | placement='+_pwbNetworkPlacementId+' owner='+(_pwbNetworkOwnerDomain||'none')+' urls='+clientSitemapUrls.length+' via='+_pwbSitemapDiscoveredBy);
+      console.log('[prewrite-brief] Network publisher discovery | placement='+_pwbNetworkPlacementId+' publisher='+(_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain||'none')+' urls='+clientSitemapUrls.length+' via='+_pwbSitemapDiscoveredBy);
     } else if (!clientSitemapUrls.length && client.domain) {
       try {
         const _root = String(client.domain).replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\/+$/, '').trim();
@@ -59265,7 +59395,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
     // verified same-domain candidates without inventing URLs.
     if(!clientSitemapUrls.length){
       try{
-        const _fallbackHost=String(_pwbSkipSyntheticSitemap?_pwbNetworkOwnerDomain:(client.domain||'')).replace(/^https?:\/\//i,'').replace(/^www\./i,'').split('/')[0].trim();
+        const _fallbackHost=String(_pwbSkipSyntheticSitemap?(_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain):(client.domain||'')).replace(/^https?:\/\//i,'').replace(/^www\./i,'').split('/')[0].trim();
         if(_fallbackHost){
           const _origin='https://'+_fallbackHost,_ctrl=new AbortController(),_tm=setTimeout(()=>_ctrl.abort(),8000);
           const _rr=await fetch(_origin+'/',{headers:{'User-Agent':'ContentScale-Bot/1.0','Accept':'text/html'},signal:_ctrl.signal});clearTimeout(_tm);
@@ -60539,9 +60669,11 @@ ${sourceText}`;
     }
 
     brief.link_research = {
-      internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),owner_domain:(_pwbNetworkOwnerDomain||String(client.domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'')),candidate_urls:clientSitemapUrls.slice(0,50),manual_same_domain_allowed:true,rule:'Internal targets are exact same-domain URLs discovered by sitemap or bounded homepage-link research. Zero selected means no sufficiently relevant automatic target was found; ContentScale does not force the homepage. A publisher may add a different exact same-domain URL manually.'},
+      internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),owner_domain:(_pwbNetworkOwnerDomain||String(client.domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'')),publisher_domain:(_pwbNetworkPublisherDomain||''),candidate_urls:clientSitemapUrls.slice(0,50),manual_same_domain_allowed:true,rule:'Internal targets are reader-facing same-domain pages. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only.'},
       external:{automatic:true,searched:true,candidates_found:_pwbExternalCandidates.length,targets_selected:brief.external_link_targets.length,rule:'Every external exact_url is server-validated against URLs discovered during current Prewrite research.'}
     };
+    if(_pwbNetworkAuthorized){_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain});_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain,owner_domain:_pwbNetworkOwnerDomain,checked_url:_pwbNetworkPublisherCheckedUrl});}
+    _pwbEvidenceBackedGapV506(brief);
 
     _pwbStage='fact_safety';
     // Server-owned fact safety: the model cannot promote UNVERIFIED research to VERIFIED.
@@ -60760,6 +60892,8 @@ ${sourceText}`;
       claude:{checked:!!_manualAi.claude,source:_manualAi.claude?'manual':'not_checked',manual:!!_manualAi.claude,text:_manualAi.claude},
       copilot:{checked:!!_manualAi.copilot,source:_manualAi.copilot?'manual':'not_checked',manual:!!_manualAi.copilot,text:_manualAi.copilot}};
     brief.ai_system_evidence.checked_count=['google_aio','chatgpt','perplexity','claude','copilot'].filter(k=>brief.ai_system_evidence[k]&&brief.ai_system_evidence[k].checked).length;
+    if(_pwbNetworkAuthorized)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain});
+    _pwbCanonicalizeAiAnalysisV506(brief);
 
     // v499 — free deterministic final publication pass. No extra Gemini call.
     _pwbFinalPublicationPass(brief);
@@ -60772,7 +60906,9 @@ ${sourceText}`;
       const _missingFinal=Array.isArray(brief.ai_quality_check.missing)?brief.ai_quality_check.missing:[];
       const _outlineWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.definitive_outline;
       const _outlineIssueText=_missingFinal.includes('definitive_outline')&&_outlineWhy&&Array.isArray(_outlineWhy.issues)&&_outlineWhy.issues.length?' Outline reason: '+_outlineWhy.issues.join(', ')+'.':'';
-      return res.status(422).json({success:false,stage:'quality_gate',quality_status:'not_passed',retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research completed. The Brief is shown as NOT PASSED because it did not meet the publication-quality gate. It was not saved as an approved Prewrite Brief and was not counted. A diagnostic preview is retained in this job.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':'')+_outlineIssueText,brief:brief,generation_usage:brief.generation_usage||null,search_intent:brief.search_intent||null,region:region||'us',competitors_scraped:(compScrapes||[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim().length>=250;}).length,diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check,outline:_outlineWhy||null,generation_usage:brief.generation_usage||null}});
+      const _aiWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.ai_evidence||{},_intWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.internal_destination||{};
+      const _integrityText=(_missingFinal.includes('ai_evidence_5of5')?' AI research incomplete: '+Number(_aiWhy.checked||0)+'/5 checked; missing '+(Array.isArray(_aiWhy.missing)?_aiWhy.missing.join(', '):'AI evidence')+'.':'')+(_missingFinal.includes('internal_destination')?' Internal destination required for publisher domain '+String(_intWhy.target_domain||'')+'.':'');
+      return res.status(422).json({success:false,stage:_missingFinal.includes('ai_evidence_5of5')?'ai_evidence_gate':'quality_gate',quality_status:'not_passed',retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research completed. The Brief is shown as NOT PASSED because it did not meet the publication-quality gate. It was not saved as an approved Prewrite Brief and was not counted. A diagnostic preview is retained in this job.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':'')+_integrityText+_outlineIssueText,brief:brief,generation_usage:brief.generation_usage||null,search_intent:brief.search_intent||null,region:region||'us',competitors_scraped:(compScrapes||[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim().length>=250;}).length,diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check,ai_evidence:_aiWhy,internal_destination:_intWhy,outline:_outlineWhy||null,generation_usage:brief.generation_usage||null}});
     }
 
     // v492: persistence + allowance consumption are one transaction. A Brief is counted only
@@ -60909,16 +61045,36 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
     let _viewBrief={};
     try{_viewBrief=JSON.parse(JSON.stringify(row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{}));}catch(_e){_viewBrief=row.brief_json||{};}
     try { if (_viewBrief && typeof _viewBrief === 'object' && !_viewBrief.language) _viewBrief.language = (row.language || 'en'); } catch(e) {}
+    // v506 — recover evidence already submitted to this exact Network placement instead of
+    // asking the owner to repeat work. This reads persisted async request snapshots only; it does
+    // not rerun SERP, competitor, evidence research or Gemini.
+    let _integrityMigrated=false,_integrityRecovery={ai_evidence_recovered:[],internal_destination_added:false,publisher_domain:''};
+    const _viewPlacementId=Number(req.query&&req.query.networkPlacement||0),_viewNetwork=String(req.query&&req.query.networkEmbed||'')==='1'&&Number.isSafeInteger(_viewPlacementId)&&_viewPlacementId>0;
+    if(_viewNetwork){
+      try{
+        const _ctx=await pool.query(`SELECT w.domain AS publisher_domain,w.scan_snapshot AS publisher_scan,ow.domain AS owner_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[_viewPlacementId]);
+        const _cx=_ctx.rows[0]||{},_pub=String(_cx.publisher_domain||_cx.owner_domain||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();_integrityRecovery.publisher_domain=_pub;
+        const _beforeIntegrity=JSON.stringify(_viewBrief);
+        _pwbEnsureResearchContractV506(_viewBrief,{network:true,publisher_domain:_pub});
+        let _submitted={};
+        try{const _jobs=await pool.query(`SELECT request_json FROM prewrite_async_jobs WHERE network_placement_id=$1 ORDER BY created_at DESC LIMIT 20`,[_viewPlacementId]);(_jobs.rows||[]).slice().reverse().forEach(function(j){const r=j.request_json&&typeof j.request_json==='object'?j.request_json:{},m=r.manualAiEvidence&&typeof r.manualAiEvidence==='object'?r.manualAiEvidence:{};_PWB_AI_ENGINES_V506.forEach(function(k){if(String(m[k]||'').trim())_submitted[k]=String(m[k]).trim();});});}catch(_jobErr){}
+        const _m=_pwbMergeManualAiEvidenceV506(_viewBrief,_submitted);_integrityRecovery.ai_evidence_recovered=_m.added||[];
+        const _li=_pwbEnsureNetworkInternalDestinationV506(_viewBrief,{publisher_domain:_pub,owner_domain:_cx.owner_domain||'',checked_url:String(_cx.publisher_scan&&_cx.publisher_scan.checked_url||'')});_integrityRecovery.internal_destination_added=!!(_li&&_li.source==='publisher_homepage_fallback');
+        _pwbEvidenceBackedGapV506(_viewBrief);_pwbCanonicalizeAiAnalysisV506(_viewBrief);
+        _integrityMigrated=JSON.stringify(_viewBrief)!==_beforeIntegrity;
+        if(_integrityMigrated){_viewBrief.integrity_history=Array.isArray(_viewBrief.integrity_history)?_viewBrief.integrity_history:[];_viewBrief.integrity_history.push({at:new Date().toISOString(),mode:'v506_recover_existing_work',research_rerun:false,gemini_calls:0,ai_evidence_recovered:_integrityRecovery.ai_evidence_recovered,internal_destination:_viewBrief.link_research&&_viewBrief.link_research.internal&&_viewBrief.link_research.internal.selected_url||'',publisher_domain:_pub});}
+      }catch(_integrityErr){console.warn('[prewrite-v506] integrity migration skipped:',_integrityErr.message);}
+    }
     _pwbFinalPublicationPass(_viewBrief);
     _viewBrief.ai_quality_check=_pwbReadiness(_viewBrief);
     let _finalQaPersisted=_hadPersistedFinalQa,_autoMigrated=false;
     if(_hadAnyPersistedFinalQa&&!_hadPersistedFinalQa){
       _viewBrief.final_qa_history=Array.isArray(_viewBrief.final_qa_history)?_viewBrief.final_qa_history:[];
       _viewBrief.final_qa_history.push({at:new Date().toISOString(),mode:'automatic_policy_migration',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(_viewBrief.publication_quality_check&&_viewBrief.publication_quality_check.score||0)});
-      await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(_viewBrief),row.id]);
       _finalQaPersisted=true;_autoMigrated=true;
     }
-    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_autoMigrated, final_qa_persisted:_finalQaPersisted, share:_shareInfo });
+    if(_integrityMigrated||_autoMigrated)await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(_viewBrief),row.id]);
+    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_autoMigrated, integrity_migrated:_integrityMigrated, integrity_recovery:_integrityRecovery, final_qa_persisted:_finalQaPersisted, share:_shareInfo });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -60932,13 +61088,14 @@ async function _pwbLoadAuthorizedSavedBriefV500(req,briefId){
   if(!cr.rows.length)return {error:'Tracker not found.',status:404};
   const tracker=cr.rows[0];
   let r=await pool.query('SELECT id,client_id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 AND client_id=$2',[briefId,tracker.id]);
-  let row=r.rows[0]||null,ownerDomain=String(tracker.domain||'').trim(),placementId=Number(req.query&&req.query.networkPlacement||0);
+  let row=r.rows[0]||null,ownerDomain=String(tracker.domain||'').trim(),publisherDomain='',publisherCheckedUrl='',placementId=Number(req.query&&req.query.networkPlacement||0);
   const wantsNetwork=String(req.query&&req.query.networkEmbed||'')==='1'&&Number.isSafeInteger(placementId)&&placementId>0;
   if(wantsNetwork){
     const nr=await pool.query(`
-      SELECT p.id,c.prewrite_brief_id,pb.client_id AS prewrite_client_id,ow.domain AS owner_domain
+      SELECT p.id,c.prewrite_brief_id,pb.client_id AS prewrite_client_id,ow.domain AS owner_domain,pw.domain AS publisher_domain,pw.scan_snapshot AS publisher_scan
       FROM network_placements p
       JOIN network_content c ON c.id=p.content_id
+      JOIN network_websites pw ON pw.id=p.publisher_website_id
       LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
       LEFT JOIN prewrite_briefs pb ON pb.id=c.prewrite_brief_id
       WHERE p.id=$1 LIMIT 1
@@ -60946,6 +61103,8 @@ async function _pwbLoadAuthorizedSavedBriefV500(req,briefId){
     const n=nr.rows[0]||null;
     if(n){
       if(n.owner_domain)ownerDomain=String(n.owner_domain).trim();
+      if(n.publisher_domain)publisherDomain=String(n.publisher_domain).trim();
+      try{publisherCheckedUrl=String(n.publisher_scan&&n.publisher_scan.checked_url||'').trim();}catch(_e){publisherCheckedUrl='';}
       const synthetic=('network-placement-'+placementId+'.internal.contentscale.site').toLowerCase();
       const currentDomain=String(tracker.domain||'').trim().toLowerCase();
       const authorized=Number(n.prewrite_client_id||0)===Number(tracker.id||0)||currentDomain===synthetic;
@@ -60966,7 +61125,7 @@ async function _pwbLoadAuthorizedSavedBriefV500(req,briefId){
     }
   }
   if(!row)return {error:'Brief not found or not authorized for this workspace.',status:404};
-  return {tracker,row,ownerDomain,placementId};
+  return {tracker,row,ownerDomain,publisherDomain,publisherCheckedUrl,placementId};
 }
 
 app.post('/api/tracker-client/:token/prewrite-briefs/:id/finalize', async (req,res)=>{
@@ -60974,8 +61133,12 @@ app.post('/api/tracker-client/:token/prewrite-briefs/:id/finalize', async (req,r
     const auth=await _pwbLoadAuthorizedSavedBriefV500(req,Number(req.params.id||0));
     if(auth.error)return res.status(auth.status||404).json({success:false,error:auth.error});
     let brief={};try{brief=JSON.parse(JSON.stringify(auth.row.brief_json||{}));}catch(_e){brief=auth.row.brief_json||{};}
+    if(Number(auth.placementId||0)>0){_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:auth.publisherDomain||auth.ownerDomain||''});_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:auth.publisherDomain||auth.ownerDomain||'',owner_domain:auth.ownerDomain||'',checked_url:auth.publisherCheckedUrl||''});}
+    _pwbEvidenceBackedGapV506(brief);_pwbCanonicalizeAiAnalysisV506(brief);
     _pwbFinalPublicationPass(brief);
     brief.ai_quality_check=_pwbReadiness(brief);
+    const _integrityMissing=Array.isArray(brief.ai_quality_check.missing)?brief.ai_quality_check.missing.filter(k=>k==='ai_evidence_5of5'||k==='internal_destination'):[];
+    if(_integrityMissing.length){await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(brief),auth.row.id]);const d=brief.ai_quality_check.details||{},a=d.ai_evidence||{},i=d.internal_destination||{};return res.status(422).json({success:false,stage:'research_integrity_gate',brief,brief_id:auth.row.id,research_rerun:false,gemini_calls:0,error:'Final QA cannot mark this Network Brief complete yet.'+(_integrityMissing.includes('ai_evidence_5of5')?' AI systems: '+Number(a.checked||0)+'/5; missing '+(Array.isArray(a.missing)?a.missing.join(', '):'evidence')+'.':'')+(_integrityMissing.includes('internal_destination')?' Internal destination required for '+String(i.target_domain||'publisher domain')+'.':''),missing:_integrityMissing,details:d});}
     brief.final_qa_history=Array.isArray(brief.final_qa_history)?brief.final_qa_history:[];
     brief.final_qa_history.push({at:new Date().toISOString(),mode:'deterministic',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(brief.publication_quality_check&&brief.publication_quality_check.score||0)});
     await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(brief),auth.row.id]);
@@ -60996,6 +61159,7 @@ function _pwbRenderReadonlyShare(row){
   const outline=Array.isArray(b.definitive_outline)&&b.definitive_outline.length?b.definitive_outline:(Array.isArray(b.page_blueprint)?b.page_blueprint:[]);
   const opening=typeof b.opening_passage==='string'?b.opening_passage:String(b.opening_passage&&b.opening_passage.direct_answer||'');
   const ai=b.ai_systems_analysis&&typeof b.ai_systems_analysis==='object'?b.ai_systems_analysis:{};
+  const aiEvidence=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
   const evidence=b.evidence&&typeof b.evidence==='object'?b.evidence:{};
   const er=b.evidence_research&&typeof b.evidence_research==='object'?b.evidence_research:{};
   const usage=wc.generation_usage&&typeof wc.generation_usage==='object'?wc.generation_usage:(b.generation_usage||{});
@@ -61012,7 +61176,8 @@ function _pwbRenderReadonlyShare(row){
   let body='';
 
   // 1. Research overview — this is the showcase layer for public sharing.
-  const checkedCount=engines.filter(x=>ai[x[0]]&&ai[x[0]].checked).length;
+  const checkedCount=engines.filter(x=>aiEvidence[x[0]]&&aiEvidence[x[0]].checked===true).length;
+  const missingAi=engines.filter(x=>!(aiEvidence[x[0]]&&aiEvidence[x[0]].checked===true)).map(x=>x[1]);
   const statR=er.statistics||{},quoteR=er.expert_quotes||{};
   const positions=Array.isArray(cov.serp_positions)?cov.serp_positions:comp.map(x=>Number(x&&x.rank||0)).filter(Boolean);
   const metricData=[
@@ -61024,6 +61189,7 @@ function _pwbRenderReadonlyShare(row){
     ['Verified evidence',String((Array.isArray(evidence.statistics)?evidence.statistics.length:0)+(Array.isArray(evidence.expert_quotes)?evidence.expert_quotes.length:0))]
   ];
   let research='<div class="metricgrid">'+metricData.map(x=>'<div class="metric"><b>'+esc(x[0])+'</b><span>'+esc(x[1])+'</span></div>').join('')+'</div>';
+  if(checkedCount<5)research+='<div class="callout" style="border-color:#991b1b;background:#2a0f14"><h3 style="color:#fca5a5">Research incomplete — '+esc(checkedCount)+'/5 AI systems</h3><p>Missing: '+esc(missingAi.join(', '))+'. This Brief must not be presented as complete 5-system research until those systems have saved evidence.</p></div>';
   research+='<div class="researchgrid"><div class="researchbox"><h3>What we actually checked</h3>'+
     '<dl><dt>Checked</dt><dd>'+esc(wc.checked_at||'not recorded')+'</dd><dt>Google direct answer</dt><dd>'+esc(wc.google_direct_answer||'not recorded')+'</dd><dt>Perplexity</dt><dd>'+esc(wc.perplexity||'not recorded')+'</dd>'+
     (Array.isArray(wc.perplexity_currently_cites)&&wc.perplexity_currently_cites.length?'<dt>Perplexity currently cites</dt><dd>'+wc.perplexity_currently_cites.map(x=>pill(x,'source')).join(' ')+'</dd>':'')+
@@ -61033,7 +61199,7 @@ function _pwbRenderReadonlyShare(row){
   body+=section('Research overview',research,'The live research, evidence checks and comparison work behind this exact Brief.','researchSection');
 
   // 2. Five-system evidence — show what was actually supplied/checked, without implying unchecked engines were researched.
-  let aiHtml='<div class="enginegrid">'+engines.map(([k,name])=>{const x=ai[k]||{},checked=!!x.checked,sources=Array.isArray(x.citation_sources)?x.citation_sources:[];return '<article class="engine '+(checked?'checked':'unchecked')+'"><div class="engineTop"><h3>'+esc(name)+'</h3>'+pill(checked?'CHECKED':'NOT CHECKED',checked?'ok':'mutedpill')+'</div><p class="tiny"><b>Evidence:</b> '+esc(x.evidence_source||'not_checked')+'</p>'+(x.answer_summary?'<p>'+esc(x.answer_summary)+'</p>':'<p class="muted">No saved answer summary.</p>')+(sources.length?'<div class="sources"><b>Citation sources</b>'+list(sources,s=>{const u=s&&s.exact_url||'';return '<li>'+esc(s&&s.source_name||s&&s.page_title||u||'Source')+(u?' · '+urlLink(u,u):'')+'</li>';})+'</div>':'')+'</article>';}).join('')+'</div>';
+  let aiHtml='<div class="enginegrid">'+engines.map(([k,name])=>{const x=ai[k]||{},ev=aiEvidence[k]||{},checked=ev.checked===true,sources=Array.isArray(x.citation_sources)?x.citation_sources:[];const raw=String(ev.text||'').trim();return '<article class="engine '+(checked?'checked':'unchecked')+'"><div class="engineTop"><h3>'+esc(name)+'</h3>'+pill(checked?'CHECKED':'NOT CHECKED',checked?'ok':'mutedpill')+'</div><p class="tiny"><b>Evidence:</b> '+esc(checked?(ev.source||x.evidence_source||'saved'):'not_checked')+'</p>'+(checked&&x.answer_summary?'<p>'+esc(x.answer_summary)+'</p>':(checked&&raw?'<p>'+esc(raw.slice(0,900))+(raw.length>900?'…':'')+'</p>':'<p class="muted">No saved evidence.</p>'))+(sources.length?'<div class="sources"><b>Citation sources</b>'+list(sources,s=>{const u=s&&s.exact_url||'';return '<li>'+esc(s&&s.source_name||s&&s.page_title||u||'Source')+(u?' · '+urlLink(u,u):'')+'</li>';})+'</div>':'')+'</article>';}).join('')+'</div>';
   body+=section('Five AI systems — saved evidence',aiHtml,'Checked means evidence was explicitly saved for this Brief; unchecked systems are not presented as researched.');
 
   // 3. Search and competitor intelligence.
@@ -61069,7 +61235,7 @@ function _pwbRenderReadonlyShare(row){
 
   // Link and source research.
   let links='';if(Array.isArray(b.external_link_targets)&&b.external_link_targets.length)links+='<h3>External source targets</h3>'+list(b.external_link_targets,x=>'<li><b>'+esc(x&&x.source_name||x&&x.anchor_text||'Source')+'</b>'+(x&&x.supports_claim?'<div class="tiny">Supports: '+esc(x.supports_claim)+'</div>':'')+(x&&x.exact_url?'<div>'+urlLink(x.exact_url,x.exact_url)+'</div>':'')+'</li>');
-  const lr=b.link_research||{};if(lr.internal||lr.external)links+='<h3>Link research status</h3><div class="grid"><div><b>Internal research</b><p>'+esc(lr.internal&&lr.internal.status||'not recorded')+' · '+esc(lr.internal&&lr.internal.urls_found||0)+' verified site URLs · '+esc(lr.internal&&lr.internal.targets_selected||0)+' selected</p></div><div><b>External research</b><p>'+esc(lr.external&&lr.external.candidates_found||0)+' verified candidates · '+esc(lr.external&&lr.external.targets_selected||0)+' selected</p></div></div>';
+  const lr=b.link_research||{},intTargets=Array.isArray(b.internal_link_targets)?b.internal_link_targets:[];if(lr.internal||lr.external||intTargets.length)links+='<h3>Link research status</h3><div class="grid"><div><b>Internal destination</b><p>'+esc(lr.internal&&lr.internal.status||'not recorded')+' · '+esc(lr.internal&&lr.internal.urls_found||0)+' verified site URLs · '+esc(lr.internal&&lr.internal.targets_selected||intTargets.length||0)+' selected</p>'+(intTargets.length?'<div class="good"><b>Selected:</b> '+urlLink(intTargets[0].link_to,intTargets[0].link_to)+'</div><div class="tiny">'+esc(intTargets[0].why||'')+'</div>':'<div class="bad">No reader-facing internal destination is saved yet.</div>')+'</div><div><b>External research</b><p>'+esc(lr.external&&lr.external.candidates_found||0)+' verified candidates · '+esc(lr.external&&lr.external.targets_selected||0)+' selected</p></div></div>';
   if(links)body+=section('Link intelligence',links,'Sitemap/XML files are discovery inputs, not reader-facing internal-link destinations.');
 
   const sources=Array.isArray(evidence.official_sources)?evidence.official_sources:[],stats=Array.isArray(evidence.statistics)?evidence.statistics:[],quotes=Array.isArray(evidence.expert_quotes)?evidence.expert_quotes:[],insights=Array.isArray(evidence.expert_insights)?evidence.expert_insights:[];
@@ -61156,14 +61322,15 @@ app.post('/api/tracker-client/:token/prewrite-briefs/:id/internal-link', async (
     let u;try{u=new URL(raw);}catch(_e){return res.status(400).json({success:false,error:'Enter a complete https:// URL.'});}
     if(u.protocol!=='https:')return res.status(400).json({success:false,error:'Internal target must use https://.'});
     const normHost=x=>String(x||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();
-    let allowedHost=normHost(auth.ownerDomain);
+    let allowedHost=normHost(auth.publisherDomain||auth.ownerDomain);
     let brief={};try{brief=JSON.parse(JSON.stringify(auth.row.brief_json||{}));}catch(_e){brief=auth.row.brief_json||{};}
     if(!allowedHost){
       const sm=brief&&brief.link_research&&brief.link_research.internal&&brief.link_research.internal.sitemap_url||'';
       try{allowedHost=normHost(new URL(sm).hostname);}catch(_e){}
     }
     const targetHost=normHost(u.hostname);
-    if(!allowedHost||targetHost!==allowedHost)return res.status(400).json({success:false,error:'That URL is not on the publisher/owner domain ('+(allowedHost||'unknown')+'). Only same-domain internal links are allowed.'});
+    if(!allowedHost||targetHost!==allowedHost)return res.status(400).json({success:false,error:'That URL is not on the required publisher domain ('+(allowedHost||'unknown')+'). Only same-domain internal links are allowed.'});
+    if(!_pwbIsReaderPageUrlV506(u.href,allowedHost))return res.status(400).json({success:false,error:'Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only. Choose a real reader-facing page or the publisher homepage.'});
     const cleanUrl=u.href.split('#')[0];
     const slug=(u.pathname.split('/').filter(Boolean).pop()||'homepage').replace(/[-_]+/g,' ').trim();
     const anchor=(anchorRaw||slug||'related page').slice(0,180);
@@ -61175,9 +61342,10 @@ app.post('/api/tracker-client/:token/prewrite-briefs/:id/internal-link', async (
     if(!brief.link_research||typeof brief.link_research!=='object')brief.link_research={};
     if(!brief.link_research.internal||typeof brief.link_research.internal!=='object')brief.link_research.internal={};
     const il=brief.link_research.internal;
-    il.searched=true;il.targets_selected=brief.internal_link_targets.length;il.status='manual_same_domain_target';il.owner_domain=allowedHost;
+    il.searched=true;il.targets_selected=brief.internal_link_targets.length;il.status='manual_same_domain_target';il.owner_domain=allowedHost;il.publisher_domain=allowedHost;il.target_domain=allowedHost;il.selected_url=cleanUrl;il.selection_source='publisher_manual';il.required_for_publisher_edition=Number(auth.placementId||0)>0;
     il.manual_targets=brief.internal_link_targets.filter(x=>x&&x.source==='publisher_manual').map(x=>x.link_to);
-    il.rule='Automatic research chooses relevant same-domain URLs when possible. A publisher may add an exact same-domain destination manually; ContentScale never forces the homepage merely to fill a link slot.';
+    il.rule='A Publisher Edition needs at least one reader-facing internal destination on the publisher domain. Sitemap/XML discovery URLs are never valid destinations. Manual same-domain choices are saved without new research.';
+    if(Number(auth.placementId||0)>0)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:allowedHost});
     _pwbFinalPublicationPass(brief);brief.ai_quality_check=_pwbReadiness(brief);
     await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(brief),auth.row.id]);
     res.set('Cache-Control','no-store');
