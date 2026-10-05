@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v495-PREWRITE-GEMINI-USAGE-GUARD-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v496-PREWRITE-NOT-PASSED-USAGE-RESEARCH-COST-GUARD-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,12 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-not-passed-preview-with-usage-v496',
+  'prewrite-deterministic-structural-completion-v496',
+  'prewrite-failed-run-usage-telemetry-v496',
+  'prewrite-research-vs-generation-usage-breakdown-v496',
+  'content-research-gemini-usage-telemetry-v496',
+  'content-research-cheap-model-lock-v496',
   'prewrite-gemini-per-call-usage-diagnostics-v495',
   'prewrite-gemini-soft-budget-guard-v495',
   'prewrite-gemini-cheapest-model-lock-v495',
@@ -821,7 +827,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v495-PREWRITE-GEMINI-USAGE-GUARD-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  build: 'CS-2026-10-05-CANONICAL-v496-PREWRITE-NOT-PASSED-USAGE-RESEARCH-COST-GUARD-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -1142,7 +1148,7 @@ async function detectBestGeminiModel(apiKey) {
 // Call Gemini with automatic fallback to a secondary model on overload/quota errors.
 // Returns: { ok, status, data, modelUsed, errorMessage }
 // Strategy: Flash-Lite → Flash → Perplexity Sonar → Claude Sonnet (best quality) → Claude Haiku (last resort)
-async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel, maxRetries = 3) {
+async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel, maxRetries = 3, allowCrossProvider = true) {
   const FALLBACK = fallbackModel || 'gemini-2.5-flash';
   const primary = primaryModel || GEMINI_MODEL;
   const shouldRetry = (status, errMsg) => {
@@ -1200,7 +1206,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   // PHASE 3: Cross-provider fallback to Perplexity Sonar — for research/analysis
   const perplexityKey = process.env.PERPLEXITY_API_KEY;
   const userPrompt = body?.contents?.[0]?.parts?.[0]?.text || '';
-  if (process.env.ALLOW_PERPLEXITY_FALLBACK === '1' && perplexityKey && userPrompt.length > 50) {
+  if (allowCrossProvider && process.env.ALLOW_PERPLEXITY_FALLBACK === '1' && perplexityKey && userPrompt.length > 50) {
     console.warn(`🔄 Cross-provider fallback: trying Perplexity Sonar...`);
     try {
       const pxRes = await fetch('https://api.perplexity.ai/chat/completions', {
@@ -1235,7 +1241,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
 
   // PHASE 4: Claude Sonnet — best quality Claude fallback with web search
   const claudeKey = process.env.ANTHROPIC_API_KEY;
-  if (process.env.ALLOW_CLAUDE_FALLBACK === '1' && claudeKey && userPrompt.length > 50) {
+  if (allowCrossProvider && process.env.ALLOW_CLAUDE_FALLBACK === '1' && claudeKey && userPrompt.length > 50) {
     console.warn(`🔄 Phase 4: Claude Sonnet with web search...`);
     try {
       claudeGuard.gate();
@@ -1263,7 +1269,7 @@ async function callGeminiWithFallback(apiKey, body, primaryModel, fallbackModel,
   }
 
   // PHASE 5: Last resort — Claude Haiku with web search
-  if (process.env.ALLOW_CLAUDE_FALLBACK === '1' && claudeKey && userPrompt.length > 50) {
+  if (allowCrossProvider && process.env.ALLOW_CLAUDE_FALLBACK === '1' && claudeKey && userPrompt.length > 50) {
     console.warn(`🔄 Phase 5 fallback: Claude Sonnet with web search...`);
     try {
       claudeGuard.gate();
@@ -33769,29 +33775,33 @@ app.get('/api/content/research/:jobId', verifyEngineAccess, async (req, res) => 
       }
     }
 
+    const _jobKeywordData = job.keyword_data && typeof job.keyword_data==='object' ? job.keyword_data : {};
+    const _jobResearchUsage = (inMemory && inMemory.usage) || _jobKeywordData.research_usage || null;
     if (job.status === 'completed') {
-      return res.json({ success: true, status: 'completed', job: job, research: job.keyword_data });
+      return res.json({ success: true, status: 'completed', job: job, research: job.keyword_data, usage:_jobResearchUsage });
     }
     if (job.status === 'error' || (inMemory && inMemory.status === 'error')) {
-      return res.json({ success: false, status: 'error', error: job.error_message || (inMemory && inMemory.error) || 'Unknown error' });
+      return res.json({ success: false, status: 'error', error: job.error_message || (inMemory && inMemory.error) || 'Unknown error', usage:_jobResearchUsage });
     }
-    // Still researching — include step + message for progress display
+    // Still researching — include step + message + any provider usage already known.
     res.json({ success: true, status: 'researching', 
       step: inMemory?.step || 'researching',
-      message: inMemory?.message || 'Researching...',
+      message: inMemory?.message || 'Researching...', usage:_jobResearchUsage,
       job: { id: job.id, status: 'researching', seed_keyword: job.seed_keyword } });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
 async function _runResearchJob(jobId, profile_id, seed_keyword) {
   console.log(`[research job ${jobId}] starting for "${seed_keyword}"`);
-  _researchJobs.set(jobId, { status: 'researching', step: 'init', message: 'Starting research...' });
+  const _researchStartedAt = Date.now();
+  let _researchUsage = null;
+  _researchJobs.set(jobId, { status: 'researching', step: 'init', message: 'Starting research...', usage: null });
 
   // Safety timeout — 2.5 minutes max for entire job
   const safetyTimeout = setTimeout(async () => {
     console.error(`[research job ${jobId}] SAFETY TIMEOUT after 2.5 min`);
-    _researchJobs.set(jobId, { status: 'error', error: 'Timed out', step: 'timeout' });
-    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, ['Research timed out', jobId]).catch(()=>{});
+    _researchJobs.set(jobId, { status: 'error', error: 'Timed out', step: 'timeout', usage:_researchUsage });
+    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1, keyword_data=CASE WHEN $2::jsonb IS NULL THEN keyword_data ELSE $2::jsonb END WHERE id=$3`, ['Research timed out', _researchUsage?JSON.stringify({research_usage:_researchUsage}):null, jobId]).catch(()=>{});
   }, 150000);
 
   try {
@@ -33847,12 +33857,12 @@ async function _runResearchJob(jobId, profile_id, seed_keyword) {
 REAL WEB SEARCH RESULTS:
 ${webContext}
 
-Your task: Extract 8-12 REAL statistics from the search results above. For each stat, use the EXACT source URL provided. If the web results don't have enough stats, supplement with your knowledge but ONLY use real, verifiable data.
+Your task: Extract up to 8 REAL statistics that are actually supported by the search results above. For each stat, use the EXACT source URL provided. If the supplied results do not contain enough verified statistics, return fewer statistics. Do NOT supplement from training memory and never invent or reconstruct a URL.
 
 CRITICAL: Every statistic MUST have:
 - A specific number (not vague ranges like "many" or "some")
 - A real source name and year
-- A real URL (from the search results above, or a well-known .gov/.edu/trade site)
+- The exact URL from the supplied search results above. Never invent, guess or reconstruct a source URL.
 
 Return ONLY this JSON (fill every field with real, sourced content):
 {
@@ -33885,27 +33895,53 @@ Return ONLY this JSON (fill every field with real, sourced content):
 }`;
 
     console.log(`[research job ${jobId}] calling Gemini with ${webResults.length} web results...`);
+    // v496: Research is also locked to the cheapest model by default. The owner can explicitly
+    // allow an upgrade, but an old/global GEMINI_MODEL value can no longer silently make research expensive.
+    const _researchAllowModelUpgrade = process.env.RESEARCH_ALLOW_MODEL_UPGRADE === '1';
+    const _researchPrimary = _researchAllowModelUpgrade ? (process.env.GEMINI_MODEL_RESEARCH || 'gemini-2.5-flash-lite') : 'gemini-2.5-flash-lite';
+    const _researchFallback = _researchAllowModelUpgrade ? (process.env.GEMINI_MODEL_RESEARCH_FALLBACK || _researchPrimary) : 'gemini-2.5-flash-lite';
+    const _researchGeminiStarted = Date.now();
     const gemResult = await callGeminiWithFallback(
       geminiKey,
-      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4096 } }
+      { contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 4096, responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } },
+      _researchPrimary,
+      _researchFallback,
+      2,
+      false
     );
-    console.log(`[research job ${jobId}] Gemini: ok=${gemResult.ok} status=${gemResult.status}`);
-    if (!gemResult.ok) throw new Error('Gemini failed: ' + (gemResult.errorMessage || gemResult.status));
+    const _ru = gemResult && gemResult.data && gemResult.data.usageMetadata || {};
+    const _rInput = Number(_ru.promptTokenCount||0), _rOutput = Number(_ru.candidatesTokenCount||0), _rThinking = Number(_ru.thoughtsTokenCount||0), _rCached = Number(_ru.cachedContentTokenCount||0);
+    _researchUsage = {
+      provider:'gemini', model:String(gemResult&&gemResult.modelUsed||_researchPrimary), ok:!!(gemResult&&gemResult.ok), http_status:Number(gemResult&&gemResult.status||0),
+      input_tokens:_rInput, output_tokens:_rOutput, thinking_tokens:_rThinking, billable_output_tokens:_rOutput+_rThinking,
+      total_tokens:Number(_ru.totalTokenCount||0)||(_rInput+_rOutput+_rThinking), cached_input_tokens:_rCached,
+      prompt_chars:prompt.length, max_output_tokens:4096, elapsed_ms:Date.now()-_researchGeminiStarted,
+      job_elapsed_ms:Date.now()-_researchStartedAt, web_queries:searchQueries.length, web_results:webResults.length,
+      sources_sent_to_model:Math.min(15,webResults.length), model_upgrade_allowed:_researchAllowModelUpgrade,
+      note:'Provider-reported Gemini usage for this Research job. Web search/source counts are shown separately. Billing console remains authoritative.'
+    };
+    _researchJobs.set(jobId, { status: 'researching', step: 'ai_analysis', message: `Analyzing ${webResults.length} sources with AI...`, usage: _researchUsage });
+    console.log(`[research job ${jobId}] Gemini: ok=${gemResult.ok} status=${gemResult.status} model=${_researchUsage.model} input=${_researchUsage.input_tokens} output=${_researchUsage.output_tokens} thinking=${_researchUsage.thinking_tokens}`);
+    if (!gemResult.ok) { const _ge = new Error('Gemini failed: ' + (gemResult.errorMessage || gemResult.status)); _ge.researchUsage=_researchUsage; throw _ge; }
 
     const rawText = gemResult.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!rawText) throw new Error('Empty response');
+    if (!rawText) { const _ee=new Error('Empty response'); _ee.researchUsage=_researchUsage; throw _ee; }
 
     let keywordData = extractJsonFromText(rawText);
     if (!keywordData) {
-      console.warn('[extractJsonFromText] null result — Keyword research: AI returned truncated or invalid JSON — try again.');
-      return res.status(502).json({ success: false, error: 'Keyword research: AI returned truncated or invalid JSON — try again.' });
+      const _parseError='Keyword research: AI returned truncated or invalid JSON — try again.';
+      console.warn('[extractJsonFromText] null result — '+_parseError);
+      await pool.query(`UPDATE content_jobs SET status='error', error_message=$1, keyword_data=$2 WHERE id=$3`, [_parseError, JSON.stringify({research_usage:_researchUsage}), jobId]).catch(()=>{});
+      _researchJobs.set(jobId, { status:'error', error:_parseError, step:'parse', message:_parseError, usage:_researchUsage });
+      clearTimeout(safetyTimeout);
+      return;
     }
+    keywordData.research_usage = _researchUsage;
     console.log(`[research job ${jobId}] parsed: pk=${keywordData.primary_keyword||'N/A'}`);
 
     // Track cost
     if (codeId) {
-      const usage = gemResult.data?.usageMetadata || {};
-      await trackApiCost(codeId, 'research', gemResult.modelUsed||GEMINI_MODEL, usage.promptTokenCount||0, usage.candidatesTokenCount||Math.round(rawText.length/4), `Research: ${seed_keyword}`);
+      await trackApiCost(codeId, 'research', _researchUsage.model, _researchUsage.input_tokens, _researchUsage.output_tokens, `Research: ${seed_keyword}`);
     }
 
     // Save as COMPLETED immediately
@@ -33914,15 +33950,16 @@ Return ONLY this JSON (fill every field with real, sourced content):
       `UPDATE content_jobs SET status='completed', completed_at=NOW(), keyword_data=$1 WHERE id=$2`,
       [JSON.stringify(keywordData), jobId]
     );
-    _researchJobs.set(jobId, { status: 'completed', result: keywordData, step: 'done', message: 'Research complete!' });
+    _researchJobs.set(jobId, { status: 'completed', result: keywordData, step: 'done', message: 'Research complete!', usage: _researchUsage });
     clearTimeout(safetyTimeout);
-    console.log(`[research job ${jobId}] DONE`);
+    console.log(`[research job ${jobId}] DONE usage=`+JSON.stringify(_researchUsage||{}));
 
   } catch(e) {
     console.error(`[research job ${jobId}] ERROR:`, e.message);
     clearTimeout(safetyTimeout);
-    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1 WHERE id=$2`, [e.message, jobId]).catch(()=>{});
-    _researchJobs.set(jobId, { status: 'error', error: e.message, step: 'error', message: 'Error: ' + e.message });
+    const _failedUsage = e&&e.researchUsage || _researchUsage || null;
+    await pool.query(`UPDATE content_jobs SET status='error', error_message=$1, keyword_data=CASE WHEN $2::jsonb IS NULL THEN keyword_data ELSE $2::jsonb END WHERE id=$3`, [e.message, _failedUsage?JSON.stringify({research_usage:_failedUsage}):null, jobId]).catch(()=>{});
+    _researchJobs.set(jobId, { status: 'error', error: e.message, step: 'error', message: 'Error: ' + e.message, usage:_failedUsage });
   }
 }
 
@@ -46087,8 +46124,11 @@ async function generatePrewriteBrief() {
         }
         if(_job && _job.status==='completed' && _job.brief){ data=_job; break; }
         if(_job && _job.status==='failed'){
-          var _jobErr=new Error(_job.error||'Pre-Write Brief generation failed.');
           var _jobPayload=_job.payload||{stage:_job.stage||'async_worker',diagnostic:_job.diagnostic||{},job_id:_pwbJobId};
+          // v496: once research/model tokens were spent, hiding a quality-gate result saves nothing.
+          // Show the generated Brief as NOT PASSED, while keeping save/count/generate blocked.
+          if(String(_job.stage||_jobPayload.stage||'')==='quality_gate' && _jobPayload.brief){data=_jobPayload;break;}
+          var _jobErr=new Error(_job.error||'Pre-Write Brief generation failed.');
           var _realStatus=Number((_jobPayload&&_jobPayload.http_status)||(_job.diagnostic&&_job.diagnostic.http_status)||0);
           if(!_realStatus)_realStatus=String(_job.stage||_jobPayload.stage||'')==='quality_gate'?422:502;
           _jobErr.status=_realStatus; _jobErr.payload=_jobPayload; throw _jobErr;
@@ -46097,21 +46137,23 @@ async function generatePrewriteBrief() {
     }
     clearInterval(_pwbStepTimer); clearInterval(_pwbDotsTimer);
     btn.disabled = false; btn.textContent = 'Analyse & create Pre-Write Brief';
-    if (!data || !data.success || !data.brief) {
+    var _notPassed=!!(data&&data.brief&&String(data.quality_status||data.stage||'')==='not_passed') || !!(data&&data.brief&&data.stage==='quality_gate'&&data.success===false);
+    if (!data || !data.brief) {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
       return;
     }
     _lastPwbInput = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, manualAiEvidence:_pwbBody.manualAiEvidence };
     _pwbRecommendationContext = null;
     var _ready=!!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),_score=Number(data.brief.ai_quality_check&&data.brief.ai_quality_check.readiness_score||0);
-    stat.textContent = (_ready?'\u2713 Brief complete':'\u26a0 Brief needs review') + ' \u00b7 AI readiness '+_score+'/100 \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
-    result.innerHTML = _renderIntentBar(data.search_intent) + renderPrewriteBrief(data.brief);
+    stat.textContent = (_notPassed?'\u26a0 NOT PASSED · research complete · nothing saved or counted':(_ready?'\u2713 Brief complete':'\u26a0 Brief needs review')) + ' \u00b7 AI readiness '+_score+'/100 \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (!_notPassed&&data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
+    var _npBanner=_notPassed?'<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> Research and Gemini usage are shown because those calls already happened. This Brief was not saved as an approved Brief, was not counted, and cannot generate a Publisher Edition. The diagnostic preview is retained with this job. '+((data.error||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</div>':'';
+    result.innerHTML = _npBanner + _renderIntentBar(data.search_intent||data.brief.search_intent) + renderPrewriteBrief(data.brief);
     try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Publisher Edition';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
     try{
       var _q2=new URLSearchParams(window.location.search||''),_placement=Number(_q2.get('networkPlacement')||0),_qc2=data.brief.ai_quality_check||{},_canGenerate=!!_qc2.ready_for_generation;
       if(_placement){
         var _wf=document.createElement('div');_wf.id='pwbNetworkWorkflow';_wf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #374151;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';
-        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':'Complete missing Brief sections first')+'</button><button class="cs-btn" id="pwbRegenerateMissing">Regenerate / complete Brief</button><button class="cs-btn" id="pwbCopyExternalAi">Copy for external AI</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:#94a3b8;">Review the Brief above. Generation uses this exact approved Brief as the content contract.</div>';
+        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':(_notPassed?'NOT PASSED — generation locked':'Complete missing Brief sections first'))+'</button><button class="cs-btn" id="pwbRegenerateMissing">Regenerate / complete Brief</button><button class="cs-btn" id="pwbCopyExternalAi" '+(_notPassed?'disabled':'')+'>'+(_notPassed?'External AI locked until passed':'Copy for external AI')+'</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:'+(_notPassed?'#fbbf24':'#94a3b8')+';">'+(_notPassed?'Research is visible for diagnosis, but this Brief did not pass. It was not saved as approved and was not counted. Fix/regenerate the missing sections before article generation.':'Review the Brief above. Generation uses this exact approved Brief as the content contract.')+'</div>';
         result.appendChild(_wf);
         document.getElementById('pwbRegenerateMissing').onclick=function(){generatePrewriteBrief();};
         var _ce=document.getElementById('pwbCopyExternalAi');if(_ce)_ce.onclick=function(){copyPrewriteForExternalAi(this);};
@@ -46133,6 +46175,14 @@ async function generatePrewriteBrief() {
         + '</div>';
     } else {
       var p=e&&e.payload||{},stage=p.stage||'',diag=p.diagnostic||{},detail=[];
+      if(stage==='quality_gate'&&p.brief){
+        var _qcp=p.brief.ai_quality_check||{},_qcs=Number(_qcp.readiness_score||diag.readiness_score||0);
+        stat.textContent='\u26a0 NOT PASSED · research complete · nothing saved or counted · AI readiness '+_qcs+'/100';
+        result.innerHTML='<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> The tokens were already used, so ContentScale shows the research/Brief instead of discarding it. It cannot be approved or generated until the quality gate passes.<br>'+String(p.error||e.message||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>'+_renderIntentBar(p.search_intent||p.brief.search_intent)+renderPrewriteBrief(p.brief);
+        try{var _qp=new URLSearchParams(window.location.search||''),_qpl=Number(_qp.get('networkPlacement')||0);if(_qpl){var _qwf=document.createElement('div');_qwf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #f59e0b;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';_qwf.innerHTML='<button class="cs-btn primary" disabled style="flex:1;min-width:240px;">NOT PASSED — generation locked</button><button class="cs-btn" id="pwbRegenerateMissingFailed">Regenerate / complete Brief</button><div style="width:100%;font-size:10.5px;color:#fbbf24;">Not saved as approved and not counted. Copy Brief above is available for diagnosis; external article generation stays locked.</div>';result.appendChild(_qwf);var _rb=document.getElementById('pwbRegenerateMissingFailed');if(_rb)_rb.onclick=function(){generatePrewriteBrief();};}}catch(_qe){}
+        try{console.warn('[Prewrite NOT PASSED preview]',{status:e.status||422,diagnostic:diag,usage:p.generation_usage||diag.generation_usage||null})}catch(_qlog){}
+        return;
+      }
       if(stage)detail.push('stage: '+stage);
       if(diag.http_status)detail.push('HTTP '+diag.http_status);
       if(diag.model)detail.push('model: '+diag.model);
@@ -46450,6 +46500,7 @@ function renderPrewriteBrief(b) {
     _usageCopy.push('GEMINI USAGE — THIS PREWRITE');
     _usageCopy.push('Calls: '+_ugcalls.length+' · input '+Number(_ugc.input_tokens||0)+' · visible output '+Number(_ugc.output_tokens||0)+' · thinking '+Number(_ugc.thinking_tokens||0)+' · billable output '+Number(_ugc.billable_output_tokens||0));
     if(Array.isArray(_ugc.models)&&_ugc.models.length)_usageCopy.push('Models: '+_ugc.models.join(', '));
+    if(_ugc.stage_usage){var _us=_ugc.stage_usage,_ur=_us.research_evidence||{},_ub=_us.brief_synthesis||{},_ux=_us.repairs||{};_usageCopy.push('Research/evidence: '+Number(_ur.calls||0)+' calls · input '+Number(_ur.input_tokens||0)+' · output '+Number(_ur.output_tokens||0));_usageCopy.push('Brief synthesis: '+Number(_ub.calls||0)+' calls · input '+Number(_ub.input_tokens||0)+' · output '+Number(_ub.output_tokens||0));_usageCopy.push('Repairs: '+Number(_ux.calls||0)+' calls · input '+Number(_ux.input_tokens||0)+' · output '+Number(_ux.output_tokens||0));}
     _ugcalls.forEach(function(c,i){_usageCopy.push((i+1)+'. '+(c.label||'call')+' | '+(c.model||'unknown')+' | input '+Number(c.input_tokens||0)+' | output '+Number(c.output_tokens||0)+' | thinking '+Number(c.thinking_tokens||0)+' | prompt chars '+Number(c.prompt_chars||0)+' | '+Number(c.elapsed_ms||0)+'ms');});
     if(_ugc.diagnostics){
       var _ugd=_ugc.diagnostics;
@@ -46478,6 +46529,7 @@ function renderPrewriteBrief(b) {
     if(wc2.generation_usage){
       var _gu=wc2.generation_usage||{},_guc=Array.isArray(_gu.calls)?_gu.calls:[],_gud=_gu.diagnostics||{},_gug=_gu.cost_guard||{};
       html += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid #1e3a5f;">Gemini generation: <strong style="color:#e5e7eb;">'+esc(_guc.length)+' calls</strong> · input '+esc(_gu.input_tokens||0)+' · visible output '+esc(_gu.output_tokens||0)+' · thinking '+esc(_gu.thinking_tokens||0)+' · billable output '+esc(_gu.billable_output_tokens||0)+(Array.isArray(_gu.models)&&_gu.models.length?' · models '+_gu.models.map(function(x){return esc(x);}).join(', '):'')+'</div>';
+      if(_gu.stage_usage){var _gsu=_gu.stage_usage,_gr=_gsu.research_evidence||{},_gb=_gsu.brief_synthesis||{},_gx=_gsu.repairs||{};html += '<div style="font-size:10.5px;color:#cbd5e1;margin-top:3px;"><strong>Research/evidence:</strong> '+esc(_gr.calls||0)+' calls · in '+esc(_gr.input_tokens||0)+' · out '+esc(_gr.output_tokens||0)+' &nbsp; | &nbsp; <strong>Brief synthesis:</strong> '+esc(_gb.calls||0)+' calls · in '+esc(_gb.input_tokens||0)+' · out '+esc(_gb.output_tokens||0)+' &nbsp; | &nbsp; <strong>Repairs:</strong> '+esc(_gx.calls||0)+' calls · in '+esc(_gx.input_tokens||0)+' · out '+esc(_gx.output_tokens||0)+'</div>';}
       if(_gud.largest_input_call)html += '<div style="font-size:10.5px;color:#cbd5e1;">Largest input: <strong>'+esc(_gud.largest_input_call.label||'')+'</strong> · '+esc(_gud.largest_input_call.input_tokens||0)+' tokens · '+esc(_gud.largest_input_call.share_pct||0)+'%</div>';
       html += '<div style="font-size:10.5px;color:#94a3b8;">Cost guard: '+esc(_gug.calls_used||_guc.length)+'/'+esc(_gug.max_calls||0)+' calls · '+esc(_gug.input_tokens_used||_gu.input_tokens||0)+'/'+esc(_gug.max_input_tokens||0)+' input · '+esc(_gug.billable_output_tokens_used||_gu.billable_output_tokens||0)+'/'+esc(_gug.max_billable_output_tokens||0)+' billable output'+(Array.isArray(_gug.skipped_calls)&&_gug.skipped_calls.length?' · <span style="color:#fbbf24;font-weight:700;">'+esc(_gug.skipped_calls.length)+' optional call(s) skipped</span>':'')+'</div>';
       if(Array.isArray(_gud.suggestions)&&_gud.suggestions.length)html += '<div style="font-size:10.5px;color:#fbbf24;margin-top:3px;">'+_gud.suggestions.map(function(x){return '• '+esc(x);}).join('<br>')+'</div>';
@@ -58838,6 +58890,7 @@ Return ONLY valid JSON, no markdown, no preamble.
       skipped_calls:[]
     };
     const _pwbUsage={calls:[],input_tokens:0,output_tokens:0,thinking_tokens:0,billable_output_tokens:0,total_tokens:0,cached_input_tokens:0,attempted_calls:0};
+    const _pwbUsageSnapshot=function(){return {provider:'gemini',calls:_pwbUsage.calls.slice(),input_tokens:_pwbUsage.input_tokens,output_tokens:_pwbUsage.output_tokens,thinking_tokens:_pwbUsage.thinking_tokens,billable_output_tokens:_pwbUsage.billable_output_tokens,total_tokens:_pwbUsage.total_tokens,cached_input_tokens:_pwbUsage.cached_input_tokens,attempted_calls:_pwbUsage.attempted_calls,cost_guard:{max_calls:_pwbBudget.max_calls,max_input_tokens:_pwbBudget.max_input_tokens,max_billable_output_tokens:_pwbBudget.max_billable_output_tokens,skipped_calls:_pwbBudget.skipped_calls.slice()},note:'Partial provider usage captured before this Prewrite stopped.'};};
     const _pwbRecordUsage=function(label,model,data,meta){
       try{
         const u=data&&data.usageMetadata||{},m=meta&&typeof meta==='object'?meta:{};
@@ -58892,7 +58945,7 @@ Return ONLY valid JSON, no markdown, no preamble.
         const body={contents:[{parts:[{text:_fullPrompt}]}],generationConfig:{temperature:0.18,maxOutputTokens:maxTokens,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
         const started=Date.now();
         let attempts=2;_pwbUsage.attempted_calls+=1;
-        const rr=await callGeminiWithFallback(geminiKey,body,primary,fallback,2);
+        const rr=await callGeminiWithFallback(geminiKey,body,primary,fallback,2,false);
         const modelUsed=rr&&rr.modelUsed||primary;
         if(rr&&rr.ok)_pwbRecordUsage(label,modelUsed,rr.data,{prompt_chars:_fullPrompt.length,max_output_tokens:maxTokens,elapsed_ms:Date.now()-started});
         if(!rr||!rr.ok){ const err=String(rr&&rr.errorMessage||('Gemini '+String(rr&&rr.status||0))).slice(0,900); return {ok:false,error:err,status:Number(rr&&rr.status||0),attempts:attempts,model:modelUsed,timed_out:/timed out|timeout/i.test(err),elapsed_ms:Date.now()-started}; }
@@ -58910,7 +58963,7 @@ ${raw.slice(0,16000)}`;
           const repairBody={contents:[{parts:[{text:repairPrompt}]}],generationConfig:{temperature:0,maxOutputTokens:Math.min(maxTokens,4200),responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
           const _repairLabel=label+'_json_repair',_repairSkip=_pwbSkipForBudget(_repairLabel);
           const _repairStarted=Date.now();
-          const repair=_repairSkip?null:await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',GEMINI_MODEL_BRIEF_FALLBACK||fallback,1);
+          const repair=_repairSkip?null:await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',GEMINI_MODEL_BRIEF_FALLBACK||fallback,1,false);
           if(!_repairSkip)_pwbUsage.attempted_calls+=1;
           attempts+=_repairSkip?0:1;
           if(repair&&repair.ok){_pwbRecordUsage(_repairLabel,repair.modelUsed||'gemini-2.5-flash-lite',repair.data,{prompt_chars:repairPrompt.length,max_output_tokens:Math.min(maxTokens,4200),elapsed_ms:Date.now()-_repairStarted});
@@ -59161,7 +59214,7 @@ ${claimsBlock.slice(0,2400)}`;
     if(!d2){
       const _failStage=_pwbStage==='quality_gate'?'quality_gate':'gemini';
       const _failError=_failStage==='quality_gate'?'Prewrite research completed, but the Brief did not pass the publication-quality gate.':'Prewrite research completed, but Gemini could not generate the Brief.';
-      return res.status(_failStage==='quality_gate'?422:502).json({success:false,stage:_failStage,retryable:true,error:_failError,diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,split_generation:!!_pwbNetworkFastLane}});
+      return res.status(_failStage==='quality_gate'?422:502).json({success:false,stage:_failStage,retryable:true,error:_failError,generation_usage:_pwbUsageSnapshot(),diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,http_status:_pwbGeminiStatus||null,attempts:_pwbGeminiAttempts,error:_pwbGeminiError||'empty upstream response',network_failure:!!_pwbGeminiNetworkFailure,timed_out:!!_pwbGeminiTimedOut,gemini_elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,split_generation:!!_pwbNetworkFastLane,generation_usage:_pwbUsageSnapshot()}});
     }
     _pwbStage='gemini_parse';
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
@@ -59181,7 +59234,8 @@ ${claimsBlock.slice(0,2400)}`;
       stage:'gemini_parse',
       retryable:true,
       error:'Gemini answered, but the Prewrite JSON could not be parsed safely.',
-      diagnostic:{model:GEMINI_MODEL,response_chars:rawText.length,finish_reason:d2&&d2.candidates&&d2.candidates[0]&&d2.candidates[0].finishReason||null,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane}
+      generation_usage:_pwbUsageSnapshot(),
+      diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,response_chars:rawText.length,finish_reason:d2&&d2.candidates&&d2.candidates[0]&&d2.candidates[0].finishReason||null,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,generation_usage:_pwbUsageSnapshot()}
     });
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
@@ -59315,6 +59369,24 @@ ${claimsBlock.slice(0,2400)}`;
     brief.opening_passage=_pwbNormOpeningPassage(brief.opening_passage);
     brief.page_blueprint=_pwbNormBlueprint(brief.page_blueprint);
     _pwbSyncDefinitiveOutline(brief.page_blueprint);
+    // v496: structure metadata is not a reason to spend another model call when it can be
+    // reconstructed safely from already-generated headings/subtopics. This does NOT invent article facts.
+    const _pwbDetText=function(v){return typeof v==='string'&&!!v.trim()&&!/^insufficient_data$/i.test(v.trim())&&!/^\[object Object\]$/i.test(v.trim());};
+    const _pwbRepairOutlinePurposesDeterministically=function(){
+      const hs=_pwbCanonicalHeadingList(brief); if(hs.length<5)return false;
+      const pool=_pwbNormBlueprint(brief.definitive_outline||brief.page_blueprint||[]);
+      const repaired=hs.map(function(h,i){
+        const sec=pool.find(function(x){return x&&_pwbHeadingSimilar(h,x.h2);})||pool[i]||{};
+        const cover=(Array.isArray(sec.cover)?sec.cover:[]).filter(_pwbDetText).slice(0,3);
+        let purpose=String(sec.purpose||'').trim();
+        if(!_pwbDetText(purpose))purpose=cover.length
+          ? ('Explain '+String(h).trim()+' clearly and cover '+cover.join(', ')+'.')
+          : ('Explain '+String(h).trim()+' clearly and give the reader the practical context needed for this section.');
+        return {h2:String(h).trim(),purpose:purpose,target_words:sec.target_words||null,cover:cover,citation_hook:String(sec.citation_hook||'').trim()};
+      });
+      _pwbSyncDefinitiveOutline(repaired); return true;
+    };
+    _pwbRepairOutlinePurposesDeterministically();
     brief.ai_answer=_pwbNormAiAnswer(brief.ai_answer);
     // opening_passage and ai_answer serve the same answer-first intent. If Gemini returned a
     // valid canonical AI direct answer but omitted/misshaped the opening object, reuse that
@@ -59323,6 +59395,17 @@ ${claimsBlock.slice(0,2400)}`;
       brief.opening_passage={direct_answer:String(brief.ai_answer.direct_answer).trim(),why_it_wins:'A concise, self-contained answer placed first makes the page easier for readers and answer systems to extract and understand.'};
     }
     brief.quick_facts=_pwbNormQuickFacts(brief.quick_facts);
+    // v496: Quick Facts may reuse already-generated, later fact-scrubbed key takeaways instead of
+    // paying Gemini to restate the same information. No new factual claim is introduced here.
+    const _pwbFillQuickFactsDeterministically=function(){
+      const current=_pwbNormQuickFacts(brief.quick_facts).filter(function(x){return x&&_pwbDetText(x.label)&&_pwbDetText(x.value);});
+      if(current.length>=3){brief.quick_facts=current.slice(0,8);return true;}
+      const seen=new Set(current.map(function(x){return String(x.value||'').toLowerCase().trim();}));
+      const takeaways=(brief.ai_answer&&Array.isArray(brief.ai_answer.key_takeaways)?brief.ai_answer.key_takeaways:[]).filter(_pwbDetText);
+      takeaways.forEach(function(v){if(current.length>=4)return;const k=String(v).toLowerCase().trim();if(seen.has(k))return;seen.add(k);current.push({label:'Key point '+(current.length+1),value:String(v).trim()});});
+      brief.quick_facts=current.slice(0,8);return current.length>=3;
+    };
+    _pwbFillQuickFactsDeterministically();
     brief.use_cases=_pwbNormUseCases(brief.use_cases);
     brief.paa_questions=_pwbAlignPaaQuestions(brief.paa_questions);
     if(!brief.fact_safety || typeof brief.fact_safety!=='object') brief.fact_safety={};
@@ -59504,7 +59587,7 @@ ${sourceText}`;
         const _evidencePrompt=_langPrefix(language)+prompt,_evidenceStarted=Date.now();
         const body={contents:[{parts:[{text:_evidencePrompt}]}],generationConfig:{temperature:0.03,maxOutputTokens:4600,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
         _pwbUsage.attempted_calls+=1;
-        const rr=await callGeminiWithFallback(geminiKey,body,_pwbBriefPrimary,_pwbBriefFallback,1);
+        const rr=await callGeminiWithFallback(geminiKey,body,_pwbBriefPrimary,_pwbBriefFallback,1,false);
         if(!rr||!rr.ok)return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(rr&&rr.errorMessage||'evidence model call failed')};
         _pwbRecordUsage(_evidenceLabel,rr.modelUsed||_pwbBriefPrimary,rr.data,{prompt_chars:_evidencePrompt.length,max_output_tokens:4600,elapsed_ms:Date.now()-_evidenceStarted});
         const c=rr.data&&rr.data.candidates&&rr.data.candidates[0]||{},raw=(c.content&&c.content.parts||[]).map(function(x){return x&&x.text||'';}).join('');const obj=_pwbParseJson(raw);
@@ -59726,6 +59809,11 @@ ${sourceText}`;
       ['definitive_outline',brief.definitive_outline],['page_blueprint',brief.page_blueprint],['conclusion',brief.conclusion]
     ].forEach(function(pair){if(pair[1]!=null)brief[pair[0]]=_pwbWalk(pair[1],pair[0]);});
     if(Array.isArray(brief.definitive_outline)&&brief.definitive_outline.length)_pwbSyncDefinitiveOutline(brief.definitive_outline);
+    // v496: fact-safety may blank a purpose or quick fact. First repair only the STRUCTURAL wrapper
+    // from surviving safe text. Paid Gemini repair is a last resort, not the first response.
+    _pwbRepairOutlinePurposesDeterministically();
+    _pwbFillQuickFactsDeterministically();
+    brief.quick_facts=_pwbWalk(brief.quick_facts,'quick_facts');
 
     // v492: fact-safety can legitimately remove an unsupported claim from an outline purpose.
     // That must NOT silently weaken the publication gate, but it also should not leave a 94/100
@@ -59807,6 +59895,9 @@ ${sourceText}`;
     const _pwbManualPerplexityUrls=(String(_manualAi.perplexity||'').match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]).map(function(u){return String(u).replace(/[)\]>,.;]+$/,'');});
     const _pwbManualPerplexityDomains=Array.from(new Set(_pwbManualPerplexityUrls.map(function(u){try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase();}catch(_e){return ''}}).filter(Boolean)));
     const _pwbRepairCalls=_pwbUsage.calls.filter(function(x){return /(?:_json_repair$|^quality_)/.test(String(x.label||''));});
+    const _pwbResearchCalls=_pwbUsage.calls.filter(function(x){return /^(?:part2_evidence|evidence_quality_)/.test(String(x.label||''));});
+    const _pwbBriefCalls=_pwbUsage.calls.filter(function(x){return !/(?:_json_repair$|^quality_|^(?:part2_evidence|evidence_quality_))/.test(String(x.label||''));});
+    const _pwbUsageTotals=function(arr){return {calls:arr.length,input_tokens:arr.reduce(function(a,x){return a+Number(x.input_tokens||0);},0),output_tokens:arr.reduce(function(a,x){return a+Number(x.output_tokens||0);},0),thinking_tokens:arr.reduce(function(a,x){return a+Number(x.thinking_tokens||0);},0),billable_output_tokens:arr.reduce(function(a,x){return a+Number(x.billable_output_tokens||0);},0)};};
     const _pwbRepairInput=_pwbRepairCalls.reduce(function(a,x){return a+Number(x.input_tokens||0);},0);
     const _pwbLargestInput=_pwbUsage.calls.slice().sort(function(a,b){return Number(b.input_tokens||0)-Number(a.input_tokens||0);})[0]||null;
     const _pwbModels=Array.from(new Set(_pwbUsage.calls.map(function(x){return x.model;}).filter(Boolean)));
@@ -59817,7 +59908,7 @@ ${sourceText}`;
     if(_pwbModels.some(function(m){return !/2\.5-flash-lite/i.test(String(m));}))_pwbCostSuggestions.push('A model other than gemini-2.5-flash-lite was used. Prewrite is locked to Flash-Lite by default; check explicit Railway overrides before accepting the higher-cost model.');
     if(_pwbUsage.calls.length>7)_pwbCostSuggestions.push('This Brief needed more than 7 successful Gemini calls. Review the per-call list before changing providers; repeated repair/evidence passes are the first optimization target.');
     if(!_pwbCostSuggestions.length)_pwbCostSuggestions.push('Usage stayed inside the low-cost path. Keep Gemini and compare future Briefs against this per-call baseline before making model changes.');
-    brief.generation_usage={provider:'gemini',calls:_pwbUsage.calls,input_tokens:_pwbUsage.input_tokens,output_tokens:_pwbUsage.output_tokens,thinking_tokens:_pwbUsage.thinking_tokens,billable_output_tokens:_pwbUsage.billable_output_tokens,total_tokens:_pwbUsage.total_tokens,cached_input_tokens:_pwbUsage.cached_input_tokens,attempted_calls:_pwbUsage.attempted_calls,models:_pwbModels,cost_guard:{max_calls:_pwbBudget.max_calls,max_input_tokens:_pwbBudget.max_input_tokens,max_billable_output_tokens:_pwbBudget.max_billable_output_tokens,calls_used:_pwbUsage.calls.length,input_tokens_used:_pwbUsage.input_tokens,billable_output_tokens_used:_pwbUsage.billable_output_tokens,skipped_calls:_pwbBudget.skipped_calls,allow_model_upgrade:process.env.PREWRITE_ALLOW_MODEL_UPGRADE==='1'},diagnostics:{largest_input_call:_pwbLargestInput?{label:_pwbLargestInput.label,input_tokens:_pwbLargestInput.input_tokens,share_pct:_pwbUsage.input_tokens?Math.round(Number(_pwbLargestInput.input_tokens||0)*100/_pwbUsage.input_tokens):0}:null,repair_calls:_pwbRepairCalls.length,repair_input_tokens:_pwbRepairInput,repair_input_share_pct:_pwbUsage.input_tokens?Math.round(_pwbRepairInput*100/_pwbUsage.input_tokens):0,suggestions:_pwbCostSuggestions},note:'Provider-reported token telemetry for this Prewrite generation only. Optional repair passes stop at the configured soft budget. Billing console remains authoritative.'};
+    brief.generation_usage={provider:'gemini',calls:_pwbUsage.calls,input_tokens:_pwbUsage.input_tokens,output_tokens:_pwbUsage.output_tokens,thinking_tokens:_pwbUsage.thinking_tokens,billable_output_tokens:_pwbUsage.billable_output_tokens,total_tokens:_pwbUsage.total_tokens,cached_input_tokens:_pwbUsage.cached_input_tokens,attempted_calls:_pwbUsage.attempted_calls,models:_pwbModels,stage_usage:{research_evidence:_pwbUsageTotals(_pwbResearchCalls),brief_synthesis:_pwbUsageTotals(_pwbBriefCalls),repairs:_pwbUsageTotals(_pwbRepairCalls)},cost_guard:{max_calls:_pwbBudget.max_calls,max_input_tokens:_pwbBudget.max_input_tokens,max_billable_output_tokens:_pwbBudget.max_billable_output_tokens,calls_used:_pwbUsage.calls.length,input_tokens_used:_pwbUsage.input_tokens,billable_output_tokens_used:_pwbUsage.billable_output_tokens,skipped_calls:_pwbBudget.skipped_calls,allow_model_upgrade:process.env.PREWRITE_ALLOW_MODEL_UPGRADE==='1'},diagnostics:{largest_input_call:_pwbLargestInput?{label:_pwbLargestInput.label,input_tokens:_pwbLargestInput.input_tokens,share_pct:_pwbUsage.input_tokens?Math.round(Number(_pwbLargestInput.input_tokens||0)*100/_pwbUsage.input_tokens):0}:null,repair_calls:_pwbRepairCalls.length,repair_input_tokens:_pwbRepairInput,repair_input_share_pct:_pwbUsage.input_tokens?Math.round(_pwbRepairInput*100/_pwbUsage.input_tokens):0,suggestions:_pwbCostSuggestions},note:'Provider-reported token telemetry for this Prewrite generation, including research/evidence, synthesis and repair stages. Optional repair passes stop at the configured soft budget. Billing console remains authoritative.'};
     console.log('[prewrite-brief] usage',JSON.stringify({calls:_pwbUsage.calls.length,attempted_calls:_pwbUsage.attempted_calls,input:_pwbUsage.input_tokens,output:_pwbUsage.output_tokens,thinking:_pwbUsage.thinking_tokens,billable_output:_pwbUsage.billable_output_tokens,total:_pwbUsage.total_tokens,models:brief.generation_usage.models,repair_calls:_pwbRepairCalls.length,skipped:_pwbBudget.skipped_calls.length}));
     // What We Actually Checked — built from REAL, verified data fetched above,
     // never from the LLM's own claims. Matches the transparency block already
@@ -59890,7 +59981,7 @@ ${sourceText}`;
       const _missingFinal=Array.isArray(brief.ai_quality_check.missing)?brief.ai_quality_check.missing:[];
       const _outlineWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.definitive_outline;
       const _outlineIssueText=_missingFinal.includes('definitive_outline')&&_outlineWhy&&Array.isArray(_outlineWhy.issues)&&_outlineWhy.issues.length?' Outline reason: '+_outlineWhy.issues.join(', ')+'.':'';
-      return res.status(422).json({success:false,stage:'quality_gate',retryable:true,error:'Research completed, but the Brief did not pass the publication-quality gate. Nothing was saved or counted.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':'')+_outlineIssueText,diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check,outline:_outlineWhy||null}});
+      return res.status(422).json({success:false,stage:'quality_gate',quality_status:'not_passed',retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research completed. The Brief is shown as NOT PASSED because it did not meet the publication-quality gate. It was not saved as an approved Prewrite Brief and was not counted. A diagnostic preview is retained in this job.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':'')+_outlineIssueText,brief:brief,generation_usage:brief.generation_usage||null,search_intent:brief.search_intent||null,region:region||'us',competitors_scraped:(compScrapes||[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim().length>=250;}).length,diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check,outline:_outlineWhy||null,generation_usage:brief.generation_usage||null}});
     }
 
     // v492: persistence + allowance consumption are one transaction. A Brief is counted only
