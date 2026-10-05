@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v484-NETWORK-v489-H2-DRIVEN-IMAGES-SAFE-RECENTS';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v485-NETWORK-v490-SERVER-LOCKED-H2-IMAGES-DEPTH-GATE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -307,7 +307,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
   'network-h2-driven-image-subjects-v489',
-  'prewrite-safe-recent-briefs-v484',
+  'prewrite-safe-recent-briefs-v485',
   'network-approved-brief-contract-fidelity-v487',
   'network-prewrite-paa-canonical-repair-v480',
   'network-safe-shell-v1-isolated-module',
@@ -45700,7 +45700,7 @@ function showPrewriteBriefModal() {
 async function _networkSafeAutoloadBrief(nb){
   if(!(Number.isSafeInteger(nb)&&nb>0))return;
   try{
-    var data=await api('/prewrite-briefs','GET');
+    var data=await api('/prewrite-briefs?latest_only=0','GET');
     var rows=(data&&Array.isArray(data.briefs))?data.briefs:[];
     var exists=rows.some(function(b){return Number(b&&b.id)===Number(nb)});
     if(exists){await reopenPrewriteBrief(nb);return;}
@@ -45746,7 +45746,7 @@ async function loadRecentPrewriteBriefs() {
   var wrap = document.getElementById('pwbRecentWrap');
   var list = document.getElementById('pwbRecentList');
   try {
-    var data = await api('/prewrite-briefs', 'GET');
+    var data = await api('/prewrite-briefs?latest_only=' + (_pwbShowAllRecentVersions?'0':'1'), 'GET');
     var all=(data&&data.success&&Array.isArray(data.briefs))?data.briefs.slice():[];
     if (!all.length) { wrap.style.display = 'none'; return; }
     all.sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);});
@@ -45756,7 +45756,7 @@ async function loadRecentPrewriteBriefs() {
     visible.forEach(function(b){var k=String(b.keyword||'').trim().toLowerCase().replace(/\s+/g,' ');if(!seen[k]){seen[k]=1;unique.push(b);}});
     var rows=_pwbShowAllRecentVersions?visible:unique;
     var versionsBtn=document.getElementById('pwbRecentVersionsBtn'),restoreBtn=document.getElementById('pwbRecentRestoreBtn');
-    if(versionsBtn){versionsBtn.style.display=visible.length>unique.length?'inline-block':'none';versionsBtn.textContent=_pwbShowAllRecentVersions?'Latest only':'Show versions';}
+    if(versionsBtn){versionsBtn.style.display=((data&&data.has_versions)||visible.length>unique.length)?'inline-block':'none';versionsBtn.textContent=_pwbShowAllRecentVersions?'Latest only':'Show versions';}
     if(restoreBtn)restoreBtn.style.display=hidden.length?'inline-block':'none';
     if(!rows.length){list.innerHTML='<span style="font-size:10px;color:#64748b;">All recent Briefs are hidden. Use Restore hidden.</span>';wrap.style.display='block';return;}
     list.innerHTML = rows.map(function(b) {
@@ -59279,7 +59279,11 @@ app.get('/api/tracker-client/:token/prewrite-briefs', async (req, res) => {
       'SELECT id, keyword, working_title, language, region, competitors_scraped, created_at FROM prewrite_briefs WHERE client_id=$1 ORDER BY created_at DESC LIMIT 50',
       [cr.rows[0].id]
     );
-    res.json({ success: true, briefs: r.rows });
+    const allRows=r.rows||[],latestOnly=String(req.query&&req.query.latest_only||'0')==='1';
+    const seen=new Set(),latest=[];
+    for(const row of allRows){const k=String(row.keyword||'').trim().toLowerCase().replace(/\s+/g,' ');if(!seen.has(k)){seen.add(k);latest.push(row)}}
+    res.set('Cache-Control','no-store');
+    res.json({ success: true, briefs: latestOnly?latest:allRows, has_versions:allRows.length>latest.length, total_versions:allRows.length, unique_keywords:latest.length });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
