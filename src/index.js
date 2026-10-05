@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v500-PREWRITE-WORKFLOW-SEO-LINK-PAA-QA-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v501-NETWORK-APPROVE-THEN-GENERATE-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,10 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-prewrite-approve-then-generate-v501',
+  'network-approved-snapshot-id-handoff-v501',
+  'network-generation-409-diagnostic-v501',
+  'network-approval-handshake-regression-lock-v501',
   'prewrite-stable-action-bar-v500',
   'prewrite-final-qa-persist-before-generation-v500',
   'network-owner-sitemap-index-resolution-v500',
@@ -845,7 +849,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v500-PREWRITE-WORKFLOW-SEO-LINK-PAA-QA-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  build: 'CS-2026-10-05-CANONICAL-v501-NETWORK-APPROVE-THEN-GENERATE-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -932,6 +936,7 @@ app.get('/api/regression-contract',(req,res)=>{
     canonical_build:CONTENTSCALE_BUILD_INFO.build===CONTENTSCALE_BUILD_ID,
     network_safe_shell:src.includes('NETWORK_SAFE_SHELL_V1')&&src.includes("require('./network/register-network')")&&fs.existsSync(path.join(__dirname,'network','register-network.js')),
     network_guarded_registration:src.includes('core ContentScale continues without Network')&&src.includes("registerNetwork({app,pool,verifyAdmin,asyncHandler})"),
+    network_prewrite_approval_handshake:src.includes('/approve-prewrite')&&src.includes('brief_id:briefId')&&src.includes('approval_id:approvalId')&&src.includes('Approving exact Brief snapshot'),
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
     prospect_footer:src.includes('data-cs-prospect-footer')&&src.includes('_injectProspectFooter'),
@@ -46158,7 +46163,7 @@ function _pwbApplyActionState(){
   var diag=_pwbRestoreDiagnosticJob(_pwbActionKeyword());
   var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),state=document.getElementById('pwbActionState'),fresh=document.getElementById('pwbGenerateBtn');
   if(approve){
-    approve.disabled=!(passed&&pubReady&&qaPersisted&&placement);
+    approve.disabled=!(passed&&pubReady&&qaPersisted&&hasSaved&&placement);
     approve.textContent=placement?'Approve Brief & Generate Publisher Edition':'Approve & Generate · Network placement required';
     approve.onclick=(!approve.disabled&&placement)?function(){generateNetworkPublisherEdition(placement,this);}:null;
   }
@@ -46376,15 +46381,35 @@ async function generatePrewriteBrief() {
 async function generateNetworkPublisherEdition(placementId,btn){
   var st=document.getElementById('pwbActionState'),key=localStorage.getItem('admin_id')||'';
   if(!key){if(st)st.textContent='Admin key missing. Re-open the Network admin and try again.';return;}
-  var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Generating Publisher Edition...';}
-  if(st)st.textContent='Approved. Generating the full Publisher Edition from this exact Pre-Write Brief...';
+  var briefId=Number(_pwbCurrentBriefId||0);
+  if(!briefId){if(st)st.textContent='No saved Pre-Write Brief is loaded. Run Final QA on the saved Brief before generation.';return;}
+  var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Approving exact Brief snapshot...';}
+  if(st)st.textContent='Step 1/2 · Locking the exact reviewed Pre-Write Brief snapshot. No research or Gemini is used for this approval step...';
   try{
-    var r=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/generate',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({})});
-    var d=await r.json().catch(function(){return{}});if(!r.ok)throw new Error(d.error||('Generation failed HTTP '+r.status));
-    if(st)st.textContent=d.already_generated?'Publisher Edition already exists. Open Publishing to review it.':'\u2713 Publisher Edition generated. Open Network Publishing to review/edit images, links, attribution and final HTML before publishing.';
-    if(btn){btn.textContent='\u2713 Publisher Edition ready';btn.disabled=true;}
-    if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-publisher-edition-ready',placement_id:Number(placementId),publication_version_id:d.publication_version_id||(d.publication_version&&d.publication_version.id)||null},window.location.origin);
-  }catch(e){if(st)st.textContent='\u2715 '+e.message;if(btn){btn.disabled=false;btn.textContent=original||'Approve Brief & Generate Publisher Edition';}}
+    // Network v498+ requires an immutable approval snapshot. Final QA changes brief_json/hash,
+    // so approval MUST happen after the final deterministic QA and immediately before generation.
+    var ar=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/approve-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({brief_id:briefId})});
+    var ad=await ar.json().catch(function(){return{}});
+    if(!ar.ok){
+      try{console.error('[Publisher Edition approval failed]',{status:ar.status,placement_id:Number(placementId),brief_id:briefId,payload:ad})}catch(_e){}
+      throw new Error((ad&&ad.error)||('Brief approval failed HTTP '+ar.status));
+    }
+    var approvalId=Number(ad&&ad.approval&&ad.approval.id||0);
+    if(!approvalId)throw new Error('Brief approval succeeded but returned no approval snapshot ID. Generation was not started.');
+    if(btn)btn.textContent='Generating from approved snapshot...';
+    if(st)st.textContent='Step 2/2 · Brief snapshot #'+approvalId+' approved and locked. Generating the Publisher Edition from this exact snapshot...';
+    var r=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/generate',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({approval_id:approvalId})});
+    var d=await r.json().catch(function(){return{}});
+    if(!r.ok){
+      try{console.error('[Publisher Edition generation failed]',{status:r.status,placement_id:Number(placementId),brief_id:briefId,approval_id:approvalId,payload:d})}catch(_e){}
+      var msg=(d&&d.error)||('Generation failed HTTP '+r.status);
+      if(r.status===409)msg='Generation blocked by Network workflow: '+msg;
+      throw new Error(msg);
+    }
+    if(st)st.textContent=d.already_generated?'✓ This exact approved Brief snapshot already has a Publisher Edition. Open Publishing to review it.':'✓ Publisher Edition generated from approved Brief snapshot #'+approvalId+'. Open Network Publishing to review/edit images, links, attribution and final HTML before publishing.';
+    if(btn){btn.textContent='✓ Publisher Edition ready';btn.disabled=true;}
+    if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-publisher-edition-ready',placement_id:Number(placementId),publication_version_id:d.publication_version_id||(d.publication_version&&d.publication_version.id)||null,approved_prewrite_approval_id:approvalId,brief_id:briefId},window.location.origin);
+  }catch(e){if(st)st.textContent='✕ '+e.message;if(btn){btn.disabled=false;btn.textContent=original||'Approve Brief & Generate Publisher Edition';}}
 }
 
 var _lastPrewriteBriefText = '';
