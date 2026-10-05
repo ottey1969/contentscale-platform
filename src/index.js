@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v499-PREWRITE-FINAL-QA-ENTITY-PLAN-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v500-PREWRITE-WORKFLOW-SEO-LINK-PAA-QA-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,17 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-stable-action-bar-v500',
+  'prewrite-final-qa-persist-before-generation-v500',
+  'network-owner-sitemap-index-resolution-v500',
+  'prewrite-reanalysis-safety-lock-v500',
+  'prewrite-final-qa-rehydrate-v500',
+  'prewrite-research-checks-clarity-v500',
+  'prewrite-seo-package-contract-v500',
+  'prewrite-manual-same-domain-internal-link-v500',
+  'prewrite-competitor-coverage-honesty-v500',
+  'prewrite-paa-faq-dedup-v500',
+  'prewrite-comparison-angle-not-spoke-v500',
   'prewrite-deterministic-final-publication-qa-v499',
   'prewrite-research-coverage-semantics-v499',
   'prewrite-entity-usage-plan-v499',
@@ -834,7 +845,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v499-PREWRITE-FINAL-QA-ENTITY-PLAN-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  build: 'CS-2026-10-05-CANONICAL-v500-PREWRITE-WORKFLOW-SEO-LINK-PAA-QA-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -43906,6 +43917,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-btn:hover { border-color:#7c3aed; color:#a78bfa; }
 .cs-btn.primary { background:#7c3aed; border-color:#7c3aed; color:#ffffff; }
 .cs-btn.primary:hover { background:#6d28d9; }
+.cs-btn:disabled { opacity:.42; cursor:not-allowed; filter:grayscale(.65); border-color:#374151!important; color:#6b7280!important; box-shadow:none!important; }
+.cs-btn.primary:disabled { background:#1f2937!important; border-color:#374151!important; color:#6b7280!important; }
+.cs-btn:disabled:hover { background:#111827!important; border-color:#374151!important; color:#6b7280!important; }
 
 /* Live feed */
 .cs-live { background:#0f172a; border-radius:10px; margin-bottom:20px; overflow:hidden; max-height:200px; }
@@ -44684,6 +44698,13 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn" onclick="hideModal('prewriteBriefModal')">Cancel</button>
     </div>
     <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
+    <div id="pwbActionBar" style="margin-top:10px;padding:10px;background:#0b1220;border:1px solid #26364d;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="cs-btn primary" id="pwbApproveGenerate" disabled style="flex:1;min-width:220px;">Approve Brief &amp; Generate Publisher Edition</button>
+      <button class="cs-btn" id="pwbRegenerateMissing" disabled>Complete missing only · reuse research</button>
+      <button class="cs-btn" id="pwbRunFinalQa" disabled>Run final QA · no research · no Gemini</button>
+      <button class="cs-btn" id="pwbCopyExternalAi" disabled>Copy for external AI</button>
+      <div id="pwbActionState" style="width:100%;font-size:10.5px;color:#64748b;">Generate or reopen a Brief first. All available actions stay visible; unavailable actions remain disabled.</div>
+    </div>
     <div id="pwbRecentWrap" style="margin-top:12px;display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
         <div style="font-size:10px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">&#x1F553; Recent briefs — latest per keyword · × hides only</div>
@@ -45979,8 +46000,10 @@ async function reopenPrewriteBrief(id) {
     document.getElementById('pwbTitle').value = data.working_title || '';
     try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbDraftActiveKey=_pwbDraftNorm(data.keyword||'');_pwbUpdateAiFiveCount();_pwbDraftSave()}catch(e){}
     var d = new Date(data.created_at);
-    stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString();
-    result.innerHTML = renderPrewriteBrief(data.brief);
+    stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString() + ' · deterministic QA refreshed';
+    _pwbSetCurrentBrief(id,data.brief,!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),data.final_qa_persisted===true);
+    result.innerHTML = _renderIntentBar(data.brief.search_intent) + renderPrewriteBrief(data.brief);
+    _pwbApplyActionState();
     result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     _networkPrewriteEmitState();
   } catch (e) {
@@ -46114,6 +46137,110 @@ function _pwbRestoreDiagnosticJob(keyword){
   return '';
 }
 
+// v500 — one stable action surface. Buttons never appear/disappear based on hidden state;
+// unavailable actions stay visible and disabled so the workflow remains obvious.
+var _pwbCurrentBriefId=0;
+var _pwbCurrentBrief=null;
+var _pwbCurrentNotPassed=false;
+var _pwbInputsDirty=false;
+var _pwbFinalQaPersisted=false;
+function _pwbNetworkPlacement(){
+  try{var q=new URLSearchParams(window.location.search||'');var n=Number(q.get('networkPlacement')||0);return Number.isSafeInteger(n)&&n>0?n:0;}catch(_e){return 0;}
+}
+function _pwbActionKeyword(){var e=document.getElementById('pwbKeyword');return String(e&&e.value||'').trim();}
+function _pwbApplyActionState(){
+  var b=_pwbCurrentBrief||{},qc=b.ai_quality_check||{},pq=b.publication_quality_check||{};
+  var passed=qc.ready_for_generation===true&&!_pwbCurrentNotPassed;
+  var pubReady=pq.ready_to_write===true;
+  var hasSaved=Number(_pwbCurrentBriefId||0)>0;
+  var qaPersisted=!!_pwbFinalQaPersisted;
+  var placement=_pwbNetworkPlacement();
+  var diag=_pwbRestoreDiagnosticJob(_pwbActionKeyword());
+  var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),state=document.getElementById('pwbActionState'),fresh=document.getElementById('pwbGenerateBtn');
+  if(approve){
+    approve.disabled=!(passed&&pubReady&&qaPersisted&&placement);
+    approve.textContent=placement?'Approve Brief & Generate Publisher Edition':'Approve & Generate · Network placement required';
+    approve.onclick=(!approve.disabled&&placement)?function(){generateNetworkPublisherEdition(placement,this);}:null;
+  }
+  if(complete){
+    complete.disabled=!(_pwbCurrentNotPassed&&diag);
+    complete.textContent=_pwbCurrentNotPassed?'Complete missing only · reuse research':'Complete missing only · not needed';
+    complete.onclick=!complete.disabled?function(){generatePrewriteBrief({completeMissing:true,sourceJobId:_pwbRestoreDiagnosticJob(_pwbActionKeyword())});}:null;
+  }
+  if(finalQa){
+    finalQa.disabled=!hasSaved;
+    finalQa.textContent='Run final QA · no research · no Gemini';
+    finalQa.onclick=!finalQa.disabled?function(){runPrewriteFinalQa(this);}:null;
+  }
+  if(copy){
+    copy.disabled=!(passed&&pubReady&&qaPersisted);
+    copy.textContent=copy.disabled?'Copy for external AI · locked':'Copy for external AI';
+    copy.onclick=!copy.disabled?function(){copyPrewriteForExternalAi(this);}:null;
+  }
+  if(fresh){
+    if((_pwbCurrentBrief||_pwbCurrentNotPassed)&&!_pwbInputsDirty){
+      fresh.disabled=true;
+      fresh.textContent=_pwbCurrentNotPassed?'Fresh re-analysis locked · complete missing first':'Re-analysis not needed · current Brief loaded';
+      fresh.title='Edit the keyword/title/research inputs if you intentionally want a fresh paid research run.';
+    }else{
+      fresh.disabled=false;
+      fresh.textContent=_pwbCurrentBrief?'Analyse & create new Brief · fresh research':'Analyse & create Pre-Write Brief';
+      fresh.title=_pwbCurrentBrief?'Inputs changed. This starts a new research run and can use paid API calls.':'';
+    }
+  }
+  if(state){
+    if(!_pwbCurrentBrief)state.textContent='Generate or reopen a Brief first. All available actions stay visible; unavailable actions remain disabled.';
+    else if(_pwbCurrentNotPassed)state.textContent='NOT PASSED: use Complete missing only. Fresh re-analysis stays locked unless you edit the research inputs.';
+    else if(!pubReady)state.textContent='Structural Brief is complete, but Publication QA has a blocker. Run final QA first; it uses no research and no Gemini.';
+    else if(!qaPersisted)state.textContent='This reopened Brief was refreshed with the new QA rules in view only. Click Run final QA once to save those deterministic changes before Publisher Edition generation. Cost: 0 research / 0 Gemini.';
+    else state.textContent='Brief is structurally complete, Publication QA is ready, and the final QA version is saved. Fresh re-analysis is unnecessary unless inputs change.';
+  }
+}
+function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted){
+  _pwbCurrentBriefId=Number(id||0)||0;_pwbCurrentBrief=brief||null;_pwbCurrentNotPassed=!!notPassed;_pwbFinalQaPersisted=!!qaPersisted;_pwbInputsDirty=false;_pwbApplyActionState();
+}
+function _pwbMarkInputsChanged(){
+  if(!_pwbCurrentBrief&&!_pwbCurrentNotPassed)return;
+  _pwbInputsDirty=true;_pwbApplyActionState();
+}
+setTimeout(function(){
+  ['pwbKeyword','pwbTitle','pwbLanguage','pwbRegion','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText','pwbExistingHtml'].forEach(function(id){
+    var el=document.getElementById(id);if(!el||el.dataset.pwbFreshHook)return;el.dataset.pwbFreshHook='1';el.addEventListener('input',_pwbMarkInputsChanged);el.addEventListener('change',_pwbMarkInputsChanged);
+  });
+  _pwbApplyActionState();
+},0);
+
+async function runPrewriteFinalQa(btn){
+  if(!_pwbCurrentBriefId)return;
+  var result=document.getElementById('pwbResult'),stat=document.getElementById('pwbStatus'),orig=btn&&btn.textContent;
+  if(btn){btn.disabled=true;btn.textContent='Running final QA...';}
+  if(stat)stat.textContent='Running deterministic final QA — no research and no Gemini...';
+  try{
+    var d=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/finalize','POST',{});
+    if(!d||!d.brief)throw new Error('Final QA returned no Brief.');
+    _pwbCurrentBrief=d.brief;_pwbCurrentNotPassed=!(d.brief.ai_quality_check&&d.brief.ai_quality_check.ready_for_generation);_pwbFinalQaPersisted=true;_pwbInputsDirty=false;
+    if(result)result.innerHTML=_renderIntentBar(d.brief.search_intent)+renderPrewriteBrief(d.brief);
+    if(stat)stat.textContent='✓ Final QA complete · no research · no Gemini · saved to this Brief';
+    _pwbApplyActionState();
+  }catch(e){if(stat)stat.textContent='✕ Final QA failed: '+e.message;if(btn){btn.disabled=false;btn.textContent=orig||'Run final QA · no research · no Gemini';}}
+}
+
+async function savePrewriteInternalLink(btn){
+  if(!_pwbCurrentBriefId)return;
+  var urlEl=document.getElementById('pwbInternalLinkUrl'),anchorEl=document.getElementById('pwbInternalLinkAnchor'),st=document.getElementById('pwbInternalLinkStatus'),result=document.getElementById('pwbResult');
+  var url=String(urlEl&&urlEl.value||'').trim(),anchor=String(anchorEl&&anchorEl.value||'').trim();
+  if(!url){if(st)st.textContent='Enter the exact same-domain URL first.';return;}
+  var orig=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Validating...';}
+  try{
+    var d=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/internal-link','POST',{url:url,anchor_text:anchor});
+    if(!d||!d.brief)throw new Error('Internal-link update returned no Brief.');
+    _pwbCurrentBrief=d.brief;_pwbCurrentNotPassed=!(d.brief.ai_quality_check&&d.brief.ai_quality_check.ready_for_generation);_pwbFinalQaPersisted=true;
+    if(result)result.innerHTML=_renderIntentBar(d.brief.search_intent)+renderPrewriteBrief(d.brief);
+    if(document.getElementById('pwbInternalLinkStatus'))document.getElementById('pwbInternalLinkStatus').textContent='✓ Same-domain internal target saved to this Brief.';
+    _pwbApplyActionState();
+  }catch(e){if(st)st.textContent='✕ '+e.message;if(btn){btn.disabled=false;btn.textContent=orig||'Use this internal page';}}
+}
+
 async function generatePrewriteBrief() {
   _pwbDraftSave();
   var kw = document.getElementById('pwbKeyword').value.trim();
@@ -46197,26 +46324,17 @@ async function generatePrewriteBrief() {
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
       return;
     }
-    if(_notPassed){if(typeof _pwbJobId!=='undefined'&&_pwbJobId)_pwbRememberDiagnosticJob(_pwbJobId,kw);btn.textContent='Re-analyse & create new Brief';}
-    else{_pwbClearDiagnosticJob();btn.textContent='Analyse & create Pre-Write Brief';}
+    if(_notPassed){if(typeof _pwbJobId!=='undefined'&&_pwbJobId)_pwbRememberDiagnosticJob(_pwbJobId,kw);}
+    else{_pwbClearDiagnosticJob();}
     _lastPwbInput = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, manualAiEvidence:_pwbBody.manualAiEvidence };
     _pwbRecommendationContext = null;
     var _ready=!!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),_score=Number(data.brief.ai_quality_check&&data.brief.ai_quality_check.readiness_score||0);
     stat.textContent = (_notPassed?'\u26a0 NOT PASSED · research complete · nothing saved or counted':(_ready?'\u2713 Brief complete':'\u26a0 Brief needs review')) + ' \u00b7 AI readiness '+_score+'/100 \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (data.research_reused?' \u00b7 research reused — no re-analysis':'') + (!_notPassed&&data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
-    var _npBanner=_notPassed?'<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> Research and Gemini usage are shown because those calls already happened. This Brief was not saved as an approved Brief, was not counted, and cannot generate a Publisher Edition. The diagnostic preview is retained with this job. <strong>Use Complete missing only to reuse this research; Re-analyse starts a new paid research run.</strong> '+((data.error||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</div>':'';
+    _pwbSetCurrentBrief(data.brief_id||0,data.brief,_notPassed,!!data.brief_id&&!_notPassed);
+    var _npBanner=_notPassed?'<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> Research and Gemini usage are shown because those calls already happened. This Brief was not saved as an approved Brief, was not counted, and cannot generate a Publisher Edition. The diagnostic preview is retained with this job. <strong>Use Complete missing only to reuse this research. Fresh re-analysis stays locked until you intentionally edit the research inputs.</strong> '+((data.error||'').replace(/</g,'&lt;').replace(/>/g,'&gt;'))+'</div>':'';
     result.innerHTML = _npBanner + _renderIntentBar(data.search_intent||data.brief.search_intent) + renderPrewriteBrief(data.brief);
     try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Publisher Edition';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
-    try{
-      var _q2=new URLSearchParams(window.location.search||''),_placement=Number(_q2.get('networkPlacement')||0),_qc2=data.brief.ai_quality_check||{},_canGenerate=!!_qc2.ready_for_generation;
-      if(_placement){
-        var _wf=document.createElement('div');_wf.id='pwbNetworkWorkflow';_wf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #374151;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';
-        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':(_notPassed?'NOT PASSED — generation locked':'Complete missing Brief sections first'))+'</button><button class="cs-btn" id="pwbRegenerateMissing">Complete missing only · reuse research</button><button class="cs-btn" id="pwbCopyExternalAi" '+(_notPassed?'disabled':'')+'>'+(_notPassed?'External AI locked until passed':'Copy for external AI')+'</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:'+(_notPassed?'#fbbf24':'#94a3b8')+';">'+(_notPassed?'Research is visible for diagnosis, but this Brief did not pass. It was not saved as approved and was not counted. Complete missing only reuses the existing research snapshot; re-analysis is a separate fresh run.':'Review the Brief above. Generation uses this exact approved Brief as the content contract.')+'</div>';
-        result.appendChild(_wf);
-        document.getElementById('pwbRegenerateMissing').onclick=function(){generatePrewriteBrief({completeMissing:true,sourceJobId:_pwbRestoreDiagnosticJob(kw)});};
-        var _ce=document.getElementById('pwbCopyExternalAi');if(_ce)_ce.onclick=function(){copyPrewriteForExternalAi(this);};
-        var _gb=document.getElementById('pwbApproveGenerate');if(_gb&&_canGenerate)_gb.onclick=function(){generateNetworkPublisherEdition(_placement,this);};
-      }
-    }catch(_wfErr){}
+    _pwbApplyActionState();
     loadRecentPrewriteBriefs();
   } catch (e) {
     clearInterval(_pwbStepTimer); clearInterval(_pwbDotsTimer);
@@ -46235,8 +46353,9 @@ async function generatePrewriteBrief() {
       if(stage==='quality_gate'&&p.brief){
         var _qcp=p.brief.ai_quality_check||{},_qcs=Number(_qcp.readiness_score||diag.readiness_score||0);
         stat.textContent='\u26a0 NOT PASSED · research complete · nothing saved or counted · AI readiness '+_qcs+'/100';
-        result.innerHTML='<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> The tokens were already used, so ContentScale shows the research/Brief instead of discarding it. It cannot be approved or generated until the quality gate passes.<br>'+String(p.error||e.message||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>'+_renderIntentBar(p.search_intent||p.brief.search_intent)+renderPrewriteBrief(p.brief);
-        try{var _qp=new URLSearchParams(window.location.search||''),_qpl=Number(_qp.get('networkPlacement')||0);if(_qpl){var _qwf=document.createElement('div');_qwf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #f59e0b;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';_qwf.innerHTML='<button class="cs-btn primary" disabled style="flex:1;min-width:240px;">NOT PASSED — generation locked</button><button class="cs-btn" id="pwbRegenerateMissingFailed">Complete missing only · reuse research</button><div style="width:100%;font-size:10.5px;color:#fbbf24;">Not saved as approved and not counted. Complete missing only reuses the same research; external article generation stays locked.</div>';result.appendChild(_qwf);var _rb=document.getElementById('pwbRegenerateMissingFailed');if(_rb)_rb.onclick=function(){generatePrewriteBrief({completeMissing:true,sourceJobId:_pwbRestoreDiagnosticJob(kw)});};}}catch(_qe){}
+        _pwbSetCurrentBrief(0,p.brief,true,false);
+        result.innerHTML='<div style="background:#2a1604;border:1px solid #f59e0b;border-radius:10px;padding:12px 14px;margin-bottom:12px;color:#fde68a;font-size:12px;line-height:1.55;"><strong>NOT PASSED — diagnostic preview only.</strong> The tokens were already used, so ContentScale shows the research/Brief instead of discarding it. It cannot be approved or generated until the quality gate passes. Use <strong>Complete missing only</strong>; fresh re-analysis stays locked unless you intentionally change the research inputs.<br>'+String(p.error||e.message||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>'+_renderIntentBar(p.search_intent||p.brief.search_intent)+renderPrewriteBrief(p.brief);
+        _pwbApplyActionState();
         try{console.warn('[Prewrite NOT PASSED preview]',{status:e.status||422,diagnostic:diag,usage:p.generation_usage||diag.generation_usage||null})}catch(_qlog){}
         return;
       }
@@ -46255,7 +46374,7 @@ async function generatePrewriteBrief() {
 }
 
 async function generateNetworkPublisherEdition(placementId,btn){
-  var st=document.getElementById('pwbGenerateArticleStatus'),key=localStorage.getItem('admin_id')||'';
+  var st=document.getElementById('pwbActionState'),key=localStorage.getItem('admin_id')||'';
   if(!key){if(st)st.textContent='Admin key missing. Re-open the Network admin and try again.';return;}
   var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Generating Publisher Edition...';}
   if(st)st.textContent='Approved. Generating the full Publisher Edition from this exact Pre-Write Brief...';
@@ -46340,24 +46459,24 @@ function renderPrewriteBrief(b) {
   var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   // ── Pre-Write section labels per language (lek 2 — Pre-Write). Falls back to English. ──
   var _PL_ALL = {
-    en: { checked:'WHAT WE ACTUALLY CHECKED', qtested:'Query tested', checkedAt:'Checked', gAnswer:'Google direct answer', perp:'Perplexity', perpEx:'Perplexity excerpt', perpCites:'Perplexity currently cites', metaPkg:'META PACKAGE', seoTitle:'SEO title', metaDesc:'Meta desc', h1:'H1', slug:'Slug', opening:'OPENING PASSAGE (first 40-60 words)', blueprint:'PAGE BLUEPRINT (write in this order)', purpose:'Purpose', cover:'Cover', hook:'Citation hook', words:'words', ilt:'INTERNAL LINK TARGETS', top10:'TOP 10 GAP', aio:'AI OVERVIEW', compTable:'COMPETITOR TABLE', has:'Has', gap:'Gap', add:'Add', structure:'STRUCTURE', mustH2:'MUST-HAVE H2s', entities:'ENTITIES TO COVER', faq:'FAQ QUESTIONS', plan:'ACTION PLAN' },
-    nl: { checked:'WAT WE ECHT HEBBEN GECONTROLEERD', qtested:'Geteste zoekterm', checkedAt:'Gecontroleerd', gAnswer:'Google direct antwoord', perp:'Perplexity', perpEx:'Perplexity-fragment', perpCites:'Perplexity citeert nu', metaPkg:'META-PAKKET', seoTitle:'SEO-titel', metaDesc:'Meta-omschrijving', h1:'H1', slug:'Slug', opening:'OPENINGSPASSAGE (eerste 40-60 woorden)', blueprint:'PAGINA-BLUEPRINT (schrijf in deze volgorde)', purpose:'Doel', cover:'Behandel', hook:'Citatie-haak', words:'woorden', ilt:'INTERNE LINK-DOELEN', top10:'TOP 10-GAT', aio:'AI OVERVIEW', compTable:'CONCURRENTEN-TABEL', has:'Heeft', gap:'Gat', add:'Toevoegen', structure:'STRUCTUUR', mustH2:'VERPLICHTE H2\\'s', entities:'ENTITEITEN OM TE DEKKEN', faq:'FAQ-VRAGEN', plan:'ACTIEPLAN' },
-    es: { checked:'LO QUE REALMENTE COMPROBAMOS', qtested:'Consulta probada', checkedAt:'Comprobado', gAnswer:'Respuesta directa de Google', perp:'Perplexity', perpEx:'Extracto de Perplexity', perpCites:'Perplexity cita actualmente', metaPkg:'PAQUETE META', seoTitle:'Título SEO', metaDesc:'Meta descripción', h1:'H1', slug:'Slug', opening:'PASAJE DE APERTURA (primeras 40-60 palabras)', blueprint:'PLANO DE PÁGINA (escribe en este orden)', purpose:'Propósito', cover:'Cubrir', hook:'Gancho de citación', words:'palabras', ilt:'OBJETIVOS DE ENLACE INTERNO', top10:'BRECHA TOP 10', aio:'AI OVERVIEW', compTable:'TABLA DE COMPETIDORES', has:'Tiene', gap:'Brecha', add:'Añadir', structure:'ESTRUCTURA', mustH2:'H2 IMPRESCINDIBLES', entities:'ENTIDADES A CUBRIR', faq:'PREGUNTAS FAQ', plan:'PLAN DE ACCIÓN' },
-    de: { checked:'WAS WIR TATSÄCHLICH GEPRÜFT HABEN', qtested:'Getestete Suchanfrage', checkedAt:'Geprüft', gAnswer:'Google-Direktantwort', perp:'Perplexity', perpEx:'Perplexity-Auszug', perpCites:'Perplexity zitiert derzeit', metaPkg:'META-PAKET', seoTitle:'SEO-Titel', metaDesc:'Meta-Beschreibung', h1:'H1', slug:'Slug', opening:'ERÖFFNUNGSABSATZ (erste 40-60 Wörter)', blueprint:'SEITEN-BLUEPRINT (in dieser Reihenfolge schreiben)', purpose:'Zweck', cover:'Abdecken', hook:'Zitier-Haken', words:'Wörter', ilt:'INTERNE LINKZIELE', top10:'TOP-10-LÜCKE', aio:'AI OVERVIEW', compTable:'KONKURRENZ-TABELLE', has:'Hat', gap:'Lücke', add:'Hinzufügen', structure:'STRUKTUR', mustH2:'PFLICHT-H2s', entities:'ABZUDECKENDE ENTITÄTEN', faq:'FAQ-FRAGEN', plan:'AKTIONSPLAN' },
-    fr: { checked:'CE QUE NOUS AVONS RÉELLEMENT VÉRIFIÉ', qtested:'Requête testée', checkedAt:'Vérifié', gAnswer:'Réponse directe Google', perp:'Perplexity', perpEx:'Extrait Perplexity', perpCites:'Perplexity cite actuellement', metaPkg:'PACK META', seoTitle:'Titre SEO', metaDesc:'Méta-description', h1:'H1', slug:'Slug', opening:'PASSAGE D\\'OUVERTURE (40-60 premiers mots)', blueprint:'PLAN DE PAGE (écrire dans cet ordre)', purpose:'Objectif', cover:'Couvrir', hook:'Accroche de citation', words:'mots', ilt:'CIBLES DE LIENS INTERNES', top10:'ÉCART TOP 10', aio:'AI OVERVIEW', compTable:'TABLEAU DES CONCURRENTS', has:'A', gap:'Écart', add:'Ajouter', structure:'STRUCTURE', mustH2:'H2 INDISPENSABLES', entities:'ENTITÉS À COUVRIR', faq:'QUESTIONS FAQ', plan:'PLAN D\\'ACTION' },
-    pt: { checked:'O QUE REALMENTE VERIFICAMOS', qtested:'Consulta testada', checkedAt:'Verificado', gAnswer:'Resposta direta do Google', perp:'Perplexity', perpEx:'Trecho do Perplexity', perpCites:'Perplexity cita atualmente', metaPkg:'PACOTE META', seoTitle:'Título SEO', metaDesc:'Meta descrição', h1:'H1', slug:'Slug', opening:'PASSAGEM DE ABERTURA (primeiras 40-60 palavras)', blueprint:'PLANO DA PÁGINA (escreva nesta ordem)', purpose:'Objetivo', cover:'Cobrir', hook:'Gancho de citação', words:'palavras', ilt:'ALVOS DE LINK INTERNO', top10:'LACUNA TOP 10', aio:'AI OVERVIEW', compTable:'TABELA DE CONCORRENTES', has:'Tem', gap:'Lacuna', add:'Adicionar', structure:'ESTRUTURA', mustH2:'H2 OBRIGATÓRIOS', entities:'ENTIDADES A COBRIR', faq:'PERGUNTAS FAQ', plan:'PLANO DE AÇÃO' },
-    it: { checked:'COSA ABBIAMO EFFETTIVAMENTE CONTROLLATO', qtested:'Query testata', checkedAt:'Controllato', gAnswer:'Risposta diretta di Google', perp:'Perplexity', perpEx:'Estratto di Perplexity', perpCites:'Perplexity cita attualmente', metaPkg:'PACCHETTO META', seoTitle:'Titolo SEO', metaDesc:'Meta descrizione', h1:'H1', slug:'Slug', opening:'PASSAGGIO DI APERTURA (prime 40-60 parole)', blueprint:'BLUEPRINT DELLA PAGINA (scrivi in questo ordine)', purpose:'Scopo', cover:'Copri', hook:'Gancio di citazione', words:'parole', ilt:'OBIETTIVI DI LINK INTERNI', top10:'GAP TOP 10', aio:'AI OVERVIEW', compTable:'TABELLA CONCORRENTI', has:'Ha', gap:'Gap', add:'Aggiungi', structure:'STRUTTURA', mustH2:'H2 OBBLIGATORI', entities:'ENTITÀ DA COPRIRE', faq:'DOMANDE FAQ', plan:'PIANO D\\'AZIONE' }
+    en: { checked:'WHAT WE ACTUALLY CHECKED', qtested:'Query tested', checkedAt:'Checked', gAnswer:'Google direct answer', perp:'Perplexity', perpEx:'Perplexity excerpt', perpCites:'Perplexity currently cites', metaPkg:'SEO PACKAGE', seoTitle:'SEO title', metaDesc:'Meta desc', h1:'H1', slug:'Slug', opening:'OPENING PASSAGE (first 40-60 words)', blueprint:'PAGE BLUEPRINT (write in this order)', purpose:'Purpose', cover:'Cover', hook:'Citation hook', words:'words', ilt:'INTERNAL LINK TARGETS', top10:'SEARCH / COMPETITOR GAP', aio:'AI OVERVIEW', compTable:'COMPETITOR TABLE', has:'Has', gap:'Gap', add:'Add', structure:'STRUCTURE', mustH2:'MUST-HAVE H2s', entities:'ENTITIES TO COVER', faq:'ADDITIONAL FAQ IDEAS', plan:'ACTION PLAN' },
+    nl: { checked:'WAT WE ECHT HEBBEN GECONTROLEERD', qtested:'Geteste zoekterm', checkedAt:'Gecontroleerd', gAnswer:'Google direct antwoord', perp:'Perplexity', perpEx:'Perplexity-fragment', perpCites:'Perplexity citeert nu', metaPkg:'SEO-PAKKET', seoTitle:'SEO-titel', metaDesc:'Meta-omschrijving', h1:'H1', slug:'Slug', opening:'OPENINGSPASSAGE (eerste 40-60 woorden)', blueprint:'PAGINA-BLUEPRINT (schrijf in deze volgorde)', purpose:'Doel', cover:'Behandel', hook:'Citatie-haak', words:'woorden', ilt:'INTERNE LINK-DOELEN', top10:'ZOEK- / CONCURRENTIEGAT', aio:'AI OVERVIEW', compTable:'CONCURRENTEN-TABEL', has:'Heeft', gap:'Gat', add:'Toevoegen', structure:'STRUCTUUR', mustH2:'VERPLICHTE H2\\'s', entities:'ENTITEITEN OM TE DEKKEN', faq:'AANVULLENDE FAQ-IDEEËN', plan:'ACTIEPLAN' },
+    es: { checked:'LO QUE REALMENTE COMPROBAMOS', qtested:'Consulta probada', checkedAt:'Comprobado', gAnswer:'Respuesta directa de Google', perp:'Perplexity', perpEx:'Extracto de Perplexity', perpCites:'Perplexity cita actualmente', metaPkg:'PAQUETE SEO', seoTitle:'Título SEO', metaDesc:'Meta descripción', h1:'H1', slug:'Slug', opening:'PASAJE DE APERTURA (primeras 40-60 palabras)', blueprint:'PLANO DE PÁGINA (escribe en este orden)', purpose:'Propósito', cover:'Cubrir', hook:'Gancho de citación', words:'palabras', ilt:'OBJETIVOS DE ENLACE INTERNO', top10:'BRECHA DE BÚSQUEDA / COMPETENCIA', aio:'AI OVERVIEW', compTable:'TABLA DE COMPETIDORES', has:'Tiene', gap:'Brecha', add:'Añadir', structure:'ESTRUCTURA', mustH2:'H2 IMPRESCINDIBLES', entities:'ENTIDADES A CUBRIR', faq:'IDEAS FAQ ADICIONALES', plan:'PLAN DE ACCIÓN' },
+    de: { checked:'WAS WIR TATSÄCHLICH GEPRÜFT HABEN', qtested:'Getestete Suchanfrage', checkedAt:'Geprüft', gAnswer:'Google-Direktantwort', perp:'Perplexity', perpEx:'Perplexity-Auszug', perpCites:'Perplexity zitiert derzeit', metaPkg:'SEO-PAKET', seoTitle:'SEO-Titel', metaDesc:'Meta-Beschreibung', h1:'H1', slug:'Slug', opening:'ERÖFFNUNGSABSATZ (erste 40-60 Wörter)', blueprint:'SEITEN-BLUEPRINT (in dieser Reihenfolge schreiben)', purpose:'Zweck', cover:'Abdecken', hook:'Zitier-Haken', words:'Wörter', ilt:'INTERNE LINKZIELE', top10:'SUCH- / WETTBEWERBSLÜCKE', aio:'AI OVERVIEW', compTable:'KONKURRENZ-TABELLE', has:'Hat', gap:'Lücke', add:'Hinzufügen', structure:'STRUKTUR', mustH2:'PFLICHT-H2s', entities:'ABZUDECKENDE ENTITÄTEN', faq:'ZUSÄTZLICHE FAQ-IDEEN', plan:'AKTIONSPLAN' },
+    fr: { checked:'CE QUE NOUS AVONS RÉELLEMENT VÉRIFIÉ', qtested:'Requête testée', checkedAt:'Vérifié', gAnswer:'Réponse directe Google', perp:'Perplexity', perpEx:'Extrait Perplexity', perpCites:'Perplexity cite actuellement', metaPkg:'PACK SEO', seoTitle:'Titre SEO', metaDesc:'Méta-description', h1:'H1', slug:'Slug', opening:'PASSAGE D\\'OUVERTURE (40-60 premiers mots)', blueprint:'PLAN DE PAGE (écrire dans cet ordre)', purpose:'Objectif', cover:'Couvrir', hook:'Accroche de citation', words:'mots', ilt:'CIBLES DE LIENS INTERNES', top10:'ÉCART RECHERCHE / CONCURRENCE', aio:'AI OVERVIEW', compTable:'TABLEAU DES CONCURRENTS', has:'A', gap:'Écart', add:'Ajouter', structure:'STRUCTURE', mustH2:'H2 INDISPENSABLES', entities:'ENTITÉS À COUVRIR', faq:'IDÉES FAQ SUPPLÉMENTAIRES', plan:'PLAN D\\'ACTION' },
+    pt: { checked:'O QUE REALMENTE VERIFICAMOS', qtested:'Consulta testada', checkedAt:'Verificado', gAnswer:'Resposta direta do Google', perp:'Perplexity', perpEx:'Trecho do Perplexity', perpCites:'Perplexity cita atualmente', metaPkg:'PACOTE SEO', seoTitle:'Título SEO', metaDesc:'Meta descrição', h1:'H1', slug:'Slug', opening:'PASSAGEM DE ABERTURA (primeiras 40-60 palavras)', blueprint:'PLANO DA PÁGINA (escreva nesta ordem)', purpose:'Objetivo', cover:'Cobrir', hook:'Gancho de citação', words:'palavras', ilt:'ALVOS DE LINK INTERNO', top10:'LACUNA DE BUSCA / CONCORRÊNCIA', aio:'AI OVERVIEW', compTable:'TABELA DE CONCORRENTES', has:'Tem', gap:'Lacuna', add:'Adicionar', structure:'ESTRUTURA', mustH2:'H2 OBRIGATÓRIOS', entities:'ENTIDADES A COBRIR', faq:'IDEIAS DE FAQ ADICIONAIS', plan:'PLANO DE AÇÃO' },
+    it: { checked:'COSA ABBIAMO EFFETTIVAMENTE CONTROLLATO', qtested:'Query testata', checkedAt:'Controllato', gAnswer:'Risposta diretta di Google', perp:'Perplexity', perpEx:'Estratto di Perplexity', perpCites:'Perplexity cita attualmente', metaPkg:'PACCHETTO SEO', seoTitle:'Titolo SEO', metaDesc:'Meta descrizione', h1:'H1', slug:'Slug', opening:'PASSAGGIO DI APERTURA (prime 40-60 parole)', blueprint:'BLUEPRINT DELLA PAGINA (scrivi in questo ordine)', purpose:'Scopo', cover:'Copri', hook:'Gancio di citazione', words:'parole', ilt:'OBIETTIVI DI LINK INTERNI', top10:'GAP RICERCA / CONCORRENZA', aio:'AI OVERVIEW', compTable:'TABELLA CONCORRENTI', has:'Ha', gap:'Gap', add:'Aggiungi', structure:'STRUTTURA', mustH2:'H2 OBBLIGATORI', entities:'ENTITÀ DA COPRIRE', faq:'IDEE FAQ AGGIUNTIVE', plan:'PIANO D\\'AZIONE' }
   };
   var _PL = _PL_ALL[(b && b.language ? String(b.language).slice(0,2).toLowerCase() : 'en')] || _PL_ALL.en;
   // Richer HTML-side headings (with descriptive suffixes) per language.
   var _PLH_ALL = {
-    en: { metaPkgH:'Meta package \u2014 paste-ready', openingH:'Opening passage \u2014 first 40-60 words, citeable', blueprintH:'Page blueprint \u2014 write in this order', iltH:'Internal link targets', compTableH:'Competitor Table', domain:'Domain', mustH2H:'Must-have H2s', entitiesH:'Entities to cover', structureH:'Structure', metaDescH:'Meta desc' },
-    nl: { metaPkgH:'Meta-pakket \u2014 kant-en-klaar', openingH:'Openingspassage \u2014 eerste 40-60 woorden, citeerbaar', blueprintH:'Pagina-blueprint \u2014 schrijf in deze volgorde', iltH:'Interne link-doelen', compTableH:'Concurrenten-tabel', domain:'Domein', mustH2H:'Verplichte H2\\'s', entitiesH:'Entiteiten om te dekken', structureH:'Structuur', metaDescH:'Meta-omschrijving' },
-    es: { metaPkgH:'Paquete meta \u2014 listo para pegar', openingH:'Pasaje de apertura \u2014 primeras 40-60 palabras, citable', blueprintH:'Plano de p\u00e1gina \u2014 escribe en este orden', iltH:'Objetivos de enlace interno', compTableH:'Tabla de competidores', domain:'Dominio', mustH2H:'H2 imprescindibles', entitiesH:'Entidades a cubrir', structureH:'Estructura', metaDescH:'Meta descripci\u00f3n' },
-    de: { metaPkgH:'Meta-Paket \u2014 einf\u00fcgefertig', openingH:'Er\u00f6ffnungsabsatz \u2014 erste 40-60 W\u00f6rter, zitierf\u00e4hig', blueprintH:'Seiten-Blueprint \u2014 in dieser Reihenfolge schreiben', iltH:'Interne Linkziele', compTableH:'Konkurrenz-Tabelle', domain:'Domain', mustH2H:'Pflicht-H2s', entitiesH:'Abzudeckende Entit\u00e4ten', structureH:'Struktur', metaDescH:'Meta-Beschreibung' },
-    fr: { metaPkgH:'Pack m\u00e9ta \u2014 pr\u00eat \u00e0 coller', openingH:'Passage d\\'ouverture \u2014 40-60 premiers mots, citable', blueprintH:'Plan de page \u2014 \u00e9crire dans cet ordre', iltH:'Cibles de liens internes', compTableH:'Tableau des concurrents', domain:'Domaine', mustH2H:'H2 indispensables', entitiesH:'Entit\u00e9s \u00e0 couvrir', structureH:'Structure', metaDescH:'M\u00e9ta-description' },
-    pt: { metaPkgH:'Pacote meta \u2014 pronto para colar', openingH:'Passagem de abertura \u2014 primeiras 40-60 palavras, cit\u00e1vel', blueprintH:'Plano da p\u00e1gina \u2014 escreva nesta ordem', iltH:'Alvos de link interno', compTableH:'Tabela de concorrentes', domain:'Dom\u00ednio', mustH2H:'H2 obrigat\u00f3rios', entitiesH:'Entidades a cobrir', structureH:'Estrutura', metaDescH:'Meta descri\u00e7\u00e3o' },
-    it: { metaPkgH:'Pacchetto meta \u2014 pronto da incollare', openingH:'Passaggio di apertura \u2014 prime 40-60 parole, citabile', blueprintH:'Blueprint della pagina \u2014 scrivi in questo ordine', iltH:'Obiettivi di link interni', compTableH:'Tabella concorrenti', domain:'Dominio', mustH2H:'H2 obbligatori', entitiesH:'Entit\u00e0 da coprire', structureH:'Struttura', metaDescH:'Meta descrizione' }
+    en: { metaPkgH:'SEO package \u2014 paste-ready', openingH:'Opening passage \u2014 first 40-60 words, citeable', blueprintH:'Page blueprint \u2014 write in this order', iltH:'Internal link targets', compTableH:'Competitor Table', domain:'Domain', mustH2H:'Must-have H2s', entitiesH:'Entities to cover', structureH:'Structure', metaDescH:'Meta desc' },
+    nl: { metaPkgH:'SEO-pakket \u2014 kant-en-klaar', openingH:'Openingspassage \u2014 eerste 40-60 woorden, citeerbaar', blueprintH:'Pagina-blueprint \u2014 schrijf in deze volgorde', iltH:'Interne link-doelen', compTableH:'Concurrenten-tabel', domain:'Domein', mustH2H:'Verplichte H2\\'s', entitiesH:'Entiteiten om te dekken', structureH:'Structuur', metaDescH:'Meta-omschrijving' },
+    es: { metaPkgH:'Paquete SEO \u2014 listo para pegar', openingH:'Pasaje de apertura \u2014 primeras 40-60 palabras, citable', blueprintH:'Plano de p\u00e1gina \u2014 escribe en este orden', iltH:'Objetivos de enlace interno', compTableH:'Tabla de competidores', domain:'Dominio', mustH2H:'H2 imprescindibles', entitiesH:'Entidades a cubrir', structureH:'Estructura', metaDescH:'Meta descripci\u00f3n' },
+    de: { metaPkgH:'SEO-Paket \u2014 einf\u00fcgefertig', openingH:'Er\u00f6ffnungsabsatz \u2014 erste 40-60 W\u00f6rter, zitierf\u00e4hig', blueprintH:'Seiten-Blueprint \u2014 in dieser Reihenfolge schreiben', iltH:'Interne Linkziele', compTableH:'Konkurrenz-Tabelle', domain:'Domain', mustH2H:'Pflicht-H2s', entitiesH:'Abzudeckende Entit\u00e4ten', structureH:'Struktur', metaDescH:'Meta-Beschreibung' },
+    fr: { metaPkgH:'Pack SEO \u2014 pr\u00eat \u00e0 coller', openingH:'Passage d\\'ouverture \u2014 40-60 premiers mots, citable', blueprintH:'Plan de page \u2014 \u00e9crire dans cet ordre', iltH:'Cibles de liens internes', compTableH:'Tableau des concurrents', domain:'Domaine', mustH2H:'H2 indispensables', entitiesH:'Entit\u00e9s \u00e0 couvrir', structureH:'Structure', metaDescH:'M\u00e9ta-description' },
+    pt: { metaPkgH:'Pacote SEO \u2014 pronto para colar', openingH:'Passagem de abertura \u2014 primeiras 40-60 palavras, cit\u00e1vel', blueprintH:'Plano da p\u00e1gina \u2014 escreva nesta ordem', iltH:'Alvos de link interno', compTableH:'Tabela de concorrentes', domain:'Dom\u00ednio', mustH2H:'H2 obrigat\u00f3rios', entitiesH:'Entidades a cobrir', structureH:'Estrutura', metaDescH:'Meta descri\u00e7\u00e3o' },
+    it: { metaPkgH:'Pacchetto SEO \u2014 pronto da incollare', openingH:'Passaggio di apertura \u2014 prime 40-60 parole, citabile', blueprintH:'Blueprint della pagina \u2014 scrivi in questo ordine', iltH:'Obiettivi di link interni', compTableH:'Tabella concorrenti', domain:'Dominio', mustH2H:'H2 obbligatori', entitiesH:'Entit\u00e0 da coprire', structureH:'Struttura', metaDescH:'Meta descrizione' }
   };
   var _PLH = _PLH_ALL[(b && b.language ? String(b.language).slice(0,2).toLowerCase() : 'en')] || _PLH_ALL.en;
   var _outlineForRender = (b && Array.isArray(b.definitive_outline) && b.definitive_outline.length) ? b.definitive_outline : ((b && Array.isArray(b.page_blueprint)) ? b.page_blueprint : []);
@@ -46647,13 +46766,16 @@ function renderPrewriteBrief(b) {
   }
   if (b.recommended_title_h1) html += '<div style="font-weight:800;color:#f1f5f9;margin-bottom:10px;font-size:13px;">' + esc(b.recommended_title_h1) + '</div>';
   if (b.meta_package && (b.meta_package.seo_title || b.meta_package.h1)) {
-    var mp = b.meta_package;
+    var mp = b.meta_package, _seoContract=b.seo_package_contract||{}, _schemaPlan=Array.isArray(_seoContract.schema_candidates)?_seoContract.schema_candidates:((b.recommended_structure&&Array.isArray(b.recommended_structure.recommended_schema))?b.recommended_structure.recommended_schema:[]);
+    var _titleLen=String(mp.seo_title||'').length,_descLen=String(mp.meta_description||'').length;
     html += '<div style="background:#0a1020;border:1px solid #1e3a5f;border-radius:8px;padding:11px 13px;margin-bottom:12px;">'
       + '<div style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:700;">' + _PLH.metaPkgH + '</div>';
-    if (mp.seo_title) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PL.seoTitle + ':</span> <span style="color:#e5e7eb;font-weight:600;">' + esc(mp.seo_title) + '</span> <span style="color:#6b7280;font-size:10px;">(' + String(mp.seo_title).length + ' chars)</span></div>';
-    if (mp.meta_description) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PLH.metaDescH + ':</span> <span style="color:#e5e7eb;">' + esc(mp.meta_description) + '</span> <span style="color:#6b7280;font-size:10px;">(' + String(mp.meta_description).length + ' chars)</span></div>';
+    if (mp.seo_title) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PL.seoTitle + ':</span> <span style="color:#e5e7eb;font-weight:600;">' + esc(mp.seo_title) + '</span> <span style="color:'+(_titleLen>60?'#fbbf24':'#6b7280')+';font-size:10px;">(' + _titleLen + ' chars'+(_titleLen>60?' · QA warning':'')+')</span></div>';
+    if (mp.meta_description) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PLH.metaDescH + ':</span> <span style="color:#e5e7eb;">' + esc(mp.meta_description) + '</span> <span style="color:'+(_descLen>160?'#fbbf24':'#6b7280')+';font-size:10px;">(' + _descLen + ' chars'+(_descLen>160?' · QA warning':'')+')</span></div>';
     if (mp.h1) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">H1:</span> <span style="color:#e5e7eb;">' + esc(mp.h1) + '</span></div>';
     if (mp.url_slug) html += '<div><span style="color:#9ca3af;">Slug:</span> <code style="background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:1px 5px;font-size:11px;color:#a5b4fc;">/' + esc(String(mp.url_slug).replace(/^[/]+/,'')) + '</code></div>';
+    if(_schemaPlan.length)html += '<div style="margin-top:6px;"><span style="color:#9ca3af;">Schema candidates:</span> <span style="color:#c4b5fd;">'+_schemaPlan.map(function(x){return esc(x);}).join(', ')+'</span></div>';
+    html += '<div style="font-size:9.8px;color:#64748b;margin-top:7px;">Linked contract: these title/meta/H1/slug values feed the Publisher Edition SEO Package. Schema is finalized only against the visible article and the publisher host to avoid duplicate/conflicting markup.</div>';
     html += '</div>';
   }
   if (b.opening_passage && b.opening_passage.direct_answer) {
@@ -46664,10 +46786,16 @@ function renderPrewriteBrief(b) {
     if (op.why_it_wins) html += '<div style="color:#86efac;font-size:11px;">\\u2192 ' + esc(op.why_it_wins) + '</div>';
     html += '</div>';
   }
-  if (b.top10_gap) html += '<div style="margin-bottom:10px;"><span style="color:#fbbf24;font-weight:700;">' + _PL.top10 + ':</span> ' + esc(b.top10_gap) + '</div>';
+  if (b.top10_gap) {
+    var _cg=b.competitor_coverage||{},_cpos=Array.isArray(_cg.serp_positions)?_cg.serp_positions:[];
+    html += '<div style="margin-bottom:10px;"><span style="color:#fbbf24;font-weight:700;">' + _PL.top10 + ':</span> ' + esc(b.top10_gap)
+      + (_cpos.length?'<div style="font-size:9.8px;color:#64748b;margin-top:3px;">Gap is based on the actually returned SERP positions: '+esc(_cpos.join(', '))+'. ContentScale does not pretend missing ranks were analyzed.</div>':'') + '</div>';
+  }
   if (b.ai_overview_status) html += '<div style="margin-bottom:10px;"><span style="color:#a78bfa;font-weight:700;">' + _PL.aio + ':</span> ' + esc(b.ai_overview_status) + '</div>';
   if (Array.isArray(b.competitor_table) && b.competitor_table.length) {
-    html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">' + _PLH.compTableH + '</div>';
+    var _ccov=b.competitor_coverage||{},_cReturned=Number(_ccov.results_returned||b.competitor_table.length),_cUsable=Number(_ccov.usable_results||0),_cPositions=Array.isArray(_ccov.serp_positions)?_ccov.serp_positions:b.competitor_table.map(function(c){return Number(c&&c.rank||0);}).filter(Boolean);
+    html += '<div style="margin-bottom:12px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px;">' + _PLH.compTableH + '</div>'
+      + '<div style="font-size:9.8px;color:#64748b;margin-bottom:6px;">Coverage: '+esc(_cReturned)+' returned · '+esc(_cUsable)+' usable for comparison · SERP positions '+esc(_cPositions.join(', '))+'. Three or more usable competitors are enough to write a grounded comparison; ten are not forced.</div>';
     html += '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
     html += '<tr style="border-bottom:1px solid #1f2937;"><th style="text-align:left;padding:4px 6px;color:#6b7280;">#</th><th style="text-align:left;padding:4px 6px;color:#6b7280;">Competitor / exact URL</th><th style="text-align:left;padding:4px 6px;color:#34d399;">Has</th><th style="text-align:left;padding:4px 6px;color:#f87171;">Gap</th><th style="text-align:left;padding:4px 6px;color:#60a5fa;">Add</th></tr>';
     b.competitor_table.forEach(function(c){
@@ -46718,11 +46846,17 @@ function renderPrewriteBrief(b) {
   }
   if (b.link_research) {
     var _lr=b.link_research, _li=_lr.internal||{}, _le=_lr.external||{};
+    var _noAutoInternal=Number(_li.urls_found||0)>0&&Number(_li.targets_selected||0)===0;
+    var _manualEnabled=Number(_pwbCurrentBriefId||0)>0;
     html += '<div style="margin-bottom:12px;background:#081521;border:1px solid #164e63;border-radius:8px;padding:10px 12px;">'
       + '<div style="color:#67e8f9;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:800;">Automatic link research</div>'
-      + '<div style="font-size:11px;color:#cbd5e1;">Internal: <strong style="color:'+(Number(_li.urls_found||0)>0?'#86efac':'#fbbf24')+';">'+esc(_li.sitemap_status||'not_found')+'</strong> · '+esc(_li.urls_found||0)+' sitemap URLs · '+esc(_li.targets_selected||0)+' selected</div>'
+      + '<div style="font-size:11px;color:#cbd5e1;">Internal: <strong style="color:'+(Number(_li.urls_found||0)>0?'#86efac':'#fbbf24')+';">'+esc(_li.sitemap_status||'not_found')+'</strong> · '+esc(_li.urls_found||0)+' verified site URLs · '+esc(_li.targets_selected||0)+' selected</div>'
+      + (_noAutoInternal?'<div style="font-size:10px;color:#fbbf24;margin-top:3px;">No homepage was forced. Research ran, but no automatic candidate was relevant enough for this topic.</div>':'')
       + '<div style="font-size:11px;color:#cbd5e1;margin-top:3px;">External: <strong style="color:'+(Number(_le.candidates_found||0)>0?'#86efac':'#fbbf24')+';">automatic</strong> · '+esc(_le.candidates_found||0)+' verified source candidates · '+esc(_le.targets_selected||0)+' selected</div>'
       + (_li.sitemap_url?'<div style="font-size:10px;color:#64748b;margin-top:4px;word-break:break-all;">Sitemap: '+esc(_li.sitemap_url)+'</div>':'')
+      + '<div style="margin-top:8px;padding-top:7px;border-top:1px solid #164e6355;"><div style="font-size:10px;color:#a5f3fc;font-weight:700;margin-bottom:4px;">Publisher-selected internal destination · optional</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;"><input id="pwbInternalLinkUrl" class="cs-input" '+(_manualEnabled?'':'disabled')+' style="flex:2;min-width:260px;" placeholder="https://same-publisher-domain.com/relevant-page"><input id="pwbInternalLinkAnchor" class="cs-input" '+(_manualEnabled?'':'disabled')+' style="flex:1;min-width:170px;" placeholder="Anchor text (optional)"><button class="cs-btn" '+(_manualEnabled?'':'disabled')+' onclick="savePrewriteInternalLink(this)">Use this internal page</button></div>'
+      + '<div id="pwbInternalLinkStatus" style="font-size:9.8px;color:#64748b;margin-top:4px;">'+(_manualEnabled?'Only an exact URL on the publisher/owner domain is accepted. ContentScale never invents it and never forces the homepage.':'Save/pass the Brief first; then a publisher can choose a specific same-domain page without re-running research.')+'</div></div>'
       + '</div>';
   }
   if (Array.isArray(b.external_link_targets) && b.external_link_targets.length) {
@@ -46747,24 +46881,14 @@ function renderPrewriteBrief(b) {
       + (_esup.length?'<div style="font-size:10px;color:#c4b5fd;margin-top:6px;">SUPPORTING · optional context</div>'+_chips(_esup,'#6d28d9'):'')
       + '<div style="font-size:9.8px;color:#64748b;margin-top:6px;">Do not force every discovered entity into the article. Relevance and natural context win over entity stuffing.</div></div>';
   }
-  if (Array.isArray(b.faq_questions) && b.faq_questions.length) {
-    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">' + _PL.faq + '</div><ul style="margin:0;padding-left:18px;">' + b.faq_questions.map(function(q){return '<li>'+esc(typeof q==='string'?q:(q&&q.q||''))+'</li>';}).join('') + '</ul></div>';
+  var _pwbFaqNorm=function(v){return String(v||'').toLowerCase().replace(/[?!.:,;\"'()\\[\\]{}]/g,' ').replace(/\\s+/g,' ').trim();};
+  var _pwbPaaKeys=new Set((Array.isArray(b.paa_questions)?b.paa_questions:[]).map(function(q){return _pwbFaqNorm(typeof q==='string'?q:(q&&q.q||''));}).filter(Boolean));
+  var _pwbFaqExtras=(Array.isArray(b.faq_questions)?b.faq_questions:[]).map(function(q){return typeof q==='string'?q:(q&&q.q||'');}).filter(function(q){var k=_pwbFaqNorm(q);return k&&!_pwbPaaKeys.has(k);});
+  if (_pwbFaqExtras.length) {
+    html += '<div style="margin-bottom:10px;"><div style="color:#9ca3af;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;">' + _PL.faq + '</div><ul style="margin:0;padding-left:18px;">' + _pwbFaqExtras.map(function(q){return '<li>'+esc(q)+'</li>';}).join('') + '</ul><div style="font-size:9.8px;color:#64748b;margin-top:4px;">Only FAQ ideas that are not already covered by the verified People Also Ask answers are shown here.</div></div>';
   }
-  if (Array.isArray(b.people_also_ask) && b.people_also_ask.length) {
-    html += '<div style="margin-bottom:10px;background:#0a1220;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">'
-      + '<div style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:700;">\\ud83d\\udd0d Real Google \\u201cPeople also ask\\u201d \\u2014 verified for this query</div>';
-    b.people_also_ask.slice(0,8).forEach(function(qa, i){
-      var _q = esc(qa && qa.question || '');
-      var _s = esc(qa && qa.snippet || '');
-      if (!_q) return;
-      html += '<div style="border-top:1px solid #1e3a5f55;padding:6px 0;">'
-        + '<div style="font-size:11.5px;font-weight:700;color:#bfdbfe;"><span style="color:#60a5fa;">' + (i+1) + '.</span> ' + _q + '</div>'
-        + (_s ? '<div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:3px;padding-left:14px;">' + _s + '</div>' : '')
-        + '</div>';
-    });
-    html += '<div style="font-size:10px;color:#64748b;margin-top:6px;">These are the actual questions Google shows for this keyword \\u2014 answer them on the page to win PAA and AI citations.</div>';
-    html += '</div>';
-  }
+  // v500 — raw Google PAA discovery is retained in the research payload but not rendered
+  // as a second blue block. The answered orange/yellow PAA block below is the single writer-facing source.
   if (Array.isArray(b.paa_questions) && b.paa_questions.length) {
     html += '<div style="margin-bottom:10px;background:#1a1408;border:1px solid #78350f;border-radius:8px;padding:10px 12px;">'
       + '<div style="color:#fbbf24;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;font-weight:700;">\\u2753 People also ask \\u2014 paste as FAQs</div>';
@@ -46844,7 +46968,7 @@ function renderPrewriteBrief(b) {
     var _bal = b.balance;
     var _cmp = (Array.isArray(_bal.comparisons)?_bal.comparisons:[]).filter(function(c){ return c && (c.a || c.b); });
     var _balH = _pwxList(_PLX.limH, _bal.limitations) + _pwxList(_PLX.notForH, _bal.who_should_not_use_it)
-      + (_cmp.length ? '<div style="margin-bottom:4px;">' + _pwxHead(_PLX.compH) + _cmp.map(function(c){ return '<div style="font-size:11px;color:#cbd5e1;padding:2px 0;"><strong>' + esc(c.a||'') + '</strong> vs <strong>' + esc(c.b||'') + '</strong>' + (c.why_it_matters ? ' \\u2014 <span style="color:#9ca3af;">' + esc(c.why_it_matters) + '</span>' : '') + '</div>'; }).join('') + '</div>' : '');
+      + (_cmp.length ? '<div style="margin-bottom:4px;">' + _pwxHead(_PLX.compH) + _cmp.map(function(c){ return '<div style="font-size:11px;color:#cbd5e1;padding:2px 0;"><strong>' + esc(c.a||'') + '</strong> vs <strong>' + esc(c.b||'') + '</strong>' + (c.why_it_matters ? ' \\u2014 <span style="color:#9ca3af;">' + esc(c.why_it_matters) + '</span>' : '') + '</div>'; }).join('') + '<div style="font-size:9.8px;color:#64748b;margin-top:5px;">These are comparison angles inside this page, not automatic spokes. Promote one to a separate spoke only when separate search demand/intent is proven and cannibalization has been checked.</div></div>' : '');
     if (_balH) html += '<div style="margin-bottom:12px;background:#1a1008;border:1px solid #78350f;border-radius:8px;padding:10px 12px;">' + _pwxHead(_PLX.balanceH) + _balH + '</div>';
   }
   if (Array.isArray(b.use_cases) && b.use_cases.length) {
@@ -46864,7 +46988,7 @@ function renderPrewriteBrief(b) {
     html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid #1e3a5f;border-radius:8px;padding:10px 12px;">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">' + _PLX.qcH + '</span>'
       + (_sc == null ? '' : '<span style="margin-left:auto;font-size:12px;font-weight:800;color:' + _scCol + ';">' + _sc + '/100</span>') + '</div>'
-      + (typeof _qc.research_coverage_score==='number'?'<div style="font-size:10px;color:#94a3b8;margin-bottom:4px;">Research coverage: '+esc(_qc.research_coverage_score)+'/100'+(Array.isArray(_qc.research_warnings)&&_qc.research_warnings.length?' · warnings: '+esc(_qc.research_warnings.join(', ')):'')+(Array.isArray(_qc.research_notes)&&_qc.research_notes.length?' · '+esc(_qc.research_notes.join(' · ')):'')+'</div>':'');
+      + (typeof _qc.research_coverage_score==='number'?(function(){var _rks=['evidence_research','internal_links','external_links'],_rdone=_rks.filter(function(k){return _qc[k]===true;}).length;return '<div style="font-size:10px;color:#94a3b8;margin-bottom:5px;"><strong style="color:#a5b4fc;">Research checks: '+_rdone+'/3 complete</strong>'+(Array.isArray(_qc.research_warnings)&&_qc.research_warnings.length?' · <span style="color:#fbbf24;">warnings: '+esc(_qc.research_warnings.join(', '))+'</span>':'')+(Array.isArray(_qc.research_notes)&&_qc.research_notes.length?' · '+esc(_qc.research_notes.join(' · ')):'')+'<div style="color:#64748b;margin-top:2px;">Research checks measure whether evidence/link research ran. This is separate from Publication QA, which scores writer-facing quality.</div></div>';}):'');
     Object.keys(_qcLab).forEach(function(k){
       if (typeof _qc[k] !== 'boolean') return;
       html += '<div style="font-size:11px;color:' + (_qc[k] ? '#86efac' : '#fca5a5') + ';padding:1px 0;">' + (_qc[k] ? '\\u2713' : '\\u2717') + ' ' + _qcLab[k] + '</div>';
@@ -46874,8 +46998,8 @@ function renderPrewriteBrief(b) {
   if (b.publication_quality_check) {
     var _pq=b.publication_quality_check,_pqs=Number(_pq.score||0),_pqc=_pq.ready_to_write?'#86efac':'#fca5a5';
     html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid #334155;border-radius:8px;padding:10px 12px;">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Publication QA</span><span style="margin-left:auto;color:'+_pqc+';font-weight:800;font-size:12px;">'+esc(_pqs)+'/100</span></div>'
-      + '<div style="font-size:10.5px;color:'+_pqc+';margin-bottom:4px;">'+(_pq.ready_to_write?'Ready to write · warnings do not block generation':'Blocked · fix writer-facing copy before generation')+'</div>'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;"><span style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">Publication QA · writer quality</span><span style="margin-left:auto;color:'+_pqc+';font-weight:800;font-size:12px;">'+esc(_pqs)+'/100</span></div>'
+      + '<div style="font-size:10.5px;color:'+_pqc+';margin-bottom:4px;">'+(_pq.ready_to_write?'Ready to write · warnings are visible but do not block generation · separate from Research checks':'Blocked · fix writer-facing copy before generation · separate from Research checks')+'</div>'
       + (Array.isArray(_pq.blockers)&&_pq.blockers.length?_pq.blockers.map(function(x){return '<div style="font-size:10.5px;color:#fca5a5;">✗ '+esc(x.message||x.code||'blocker')+'</div>';}).join(''):'')
       + (Array.isArray(_pq.warnings)&&_pq.warnings.length?_pq.warnings.map(function(x){return '<div style="font-size:10.5px;color:#fbbf24;">⚠ '+esc(x.message||x.code||'warning')+'</div>';}).join(''):'<div style="font-size:10.5px;color:#86efac;">✓ No publication warnings detected</div>')
       + '</div>';
@@ -58283,10 +58407,33 @@ function _pwbFinalPublicationPass(b){
     supporting_optional:es.supporting.slice()
   };
 
+  // SEO Package contract: the approved Prewrite is the source of truth for title/meta/H1/slug.
+  // Schema remains a candidate list until the final Publisher page/host is verified.
+  const mp=b.meta_package&&typeof b.meta_package==='object'?b.meta_package:{};
+  const schemaCandidates=_dedupe(b.recommended_structure&&b.recommended_structure.recommended_schema);
+  b.seo_package_contract={
+    source:'approved_prewrite',
+    seo_title:_txt(mp.seo_title),
+    meta_description:_txt(mp.meta_description),
+    h1:_txt(mp.h1),
+    url_slug:_txt(mp.url_slug),
+    schema_candidates:schemaCandidates,
+    rule:'Publisher Edition SEO Package starts from these approved title/meta/H1/slug values. Structured data is finalized only when it matches the visible article and the publisher host does not already provide conflicting schema.'
+  };
+
+  // PAA already has its own paste-ready answer block. Keep only FAQ ideas that are genuinely
+  // additional so the UI/article contract never repeats the same questions twice.
+  const _qkey=v=>_txt(v).toLowerCase().replace(/[?!.:,;"'()\[\]{}]/g,' ').replace(/\s+/g,' ').trim();
+  const paaKeys=new Set((Array.isArray(b.paa_questions)?b.paa_questions:[]).map(x=>_qkey(typeof x==='string'?x:(x&&x.q||x&&x.question||''))).filter(Boolean));
+  if(Array.isArray(b.faq_questions)){
+    b.faq_questions=b.faq_questions.map(x=>typeof x==='string'?_txt(x):_txt(x&&x.q||x&&x.question||x&&x.title||x&&x.text)).filter(function(q){return q&&!paaKeys.has(_qkey(q));});
+    b.faq_questions=Array.from(new Map(b.faq_questions.map(q=>[_qkey(q),q])).values()).slice(0,8);
+  }
+
   // Describe competitor coverage honestly; "Top 10" research can return fewer usable pages.
   const ct=Array.isArray(b.competitor_table)?b.competitor_table:[];
   const usable=ct.filter(function(c){const s=[c&&c.what_they_have,c&&c.the_gap,c&&c.what_to_add].map(_txt).join(' ');return c&&_good(c.domain)&&!/(analysis unavailable|could not be verified|insufficient_data)/i.test(s);}).length;
-  b.competitor_coverage={results_returned:ct.length,usable_results:usable,serp_positions:ct.map(c=>Number(c&&c.rank||0)).filter(Boolean)};
+  b.competitor_coverage={requested_window:10,results_returned:ct.length,usable_results:usable,serp_positions:ct.map(c=>Number(c&&c.rank||0)).filter(Boolean),sufficient_for_comparison:usable>=3,rule:'Do not force ten results. Three or more usable competitors are enough for a grounded comparison; always show the actual returned positions.'};
 
   b.publication_quality_check=_pwbPublicationQa(b);
   return b;
@@ -58301,8 +58448,8 @@ function _pwbPublicationQa(b){
   const corpus=JSON.stringify({outline:b&&b.definitive_outline,use_cases:b&&b.use_cases,conclusion:b&&b.conclusion,action_plan:b&&b.action_plan,entity_strategy:b&&b.entity_strategy});
   if(/\bcurrent_value\b|\bcan help aims to\b/i.test(corpus)){score=Math.max(0,score-8);blockers.push({code:'internal_or_broken_copy',message:'Internal prompt vocabulary or broken grammar remains in writer-facing copy.'});}
   if(/\bguarantees?\b|\bsecures?\s+direct\s+answers\b|\bensures?\s+brand\s+(?:is\s+)?cited/i.test(corpus))penalize(6,'overassertive_outcome','At least one outcome claim is still too absolute.');
-  const cov=b&&b.competitor_coverage||{};
-  if(Number(cov.results_returned||0)>0&&Number(cov.usable_results||0)<Number(cov.results_returned||0))penalize(3,'competitor_partial','Competitor analysis has '+Number(cov.usable_results||0)+' usable of '+Number(cov.results_returned||0)+' returned results.');
+  const cov=b&&b.competitor_coverage||{},usableCompetitors=Number(cov.usable_results||0);
+  if(Number(cov.results_returned||0)>0&&usableCompetitors<3)penalize(5,'competitor_thin','Competitor comparison has only '+usableCompetitors+' usable result'+(usableCompetitors===1?'':'s')+'. Aim for at least 3 usable competitors; ten is not required.');
   const er=b&&b.evidence_research||{},stats=er.statistics||{},quotes=er.expert_quotes||{};
   if(Number(stats.verified||0)>0&&Number(stats.primary_verified||0)===0)penalize(3,'no_primary_stat','Statistics are source-verified but no statistic has primary-source verification.');
   if(Number(quotes.verified||0)===0&&Number(quotes.attributed_insights||0)===0)penalize(3,'no_expert_evidence','No verified expert quote or attributed expert insight was found.');
@@ -58795,9 +58942,14 @@ async function _handlePrewriteBriefGeneration(req, res) {
       const _sameOwner = function(u){ try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()===String(_pwbNetworkOwnerDomain||'').replace(/^www\./,'').toLowerCase();}catch(_e){return false;} };
       const _extractOwnerLinks = function(html){const out=[];String(html||'').replace(/href=["']([^"'#]+)["']/gi,function(all,href){try{const u=new URL(href,_ownerBase+'/').href;if(/^https?:\/\//i.test(u)&&_sameOwner(u))out.push(u.split('#')[0]);}catch(_e){}return all;});return Array.from(new Set(out)).slice(0,500);};
       if(_ownerBase){
-        for(const _smPath of ['/sitemap.xml','/sitemap_index.xml']){
+        for(const _smPath of ['/sitemap.xml','/sitemap_index.xml','/wp-sitemap.xml','/sitemap-index.xml']){
           if(clientSitemapUrls.length)break;
-          try{const _ctrl=new AbortController(),_tm=setTimeout(()=>_ctrl.abort(),8000);const _rr=await fetch(_ownerBase+_smPath,{headers:{'User-Agent':'ContentScale-Bot/1.0'},signal:_ctrl.signal});clearTimeout(_tm);if(_rr.ok){const _xml=await _rr.text();const _locs=Array.from(_xml.matchAll(/<loc>\s*([^<]+)\s*<\/loc>/gi)).map(m=>String(m[1]||'').trim()).filter(u=>/^https?:\/\//i.test(u)&&_sameOwner(u));if(_locs.length){clientSitemapUrls=Array.from(new Set(_locs)).slice(0,2000);_pwbSitemapStatus='network_owner_sitemap';_pwbSitemapUrl=_ownerBase+_smPath;_pwbSitemapDiscoveredBy='network_owner_sitemap';}}}catch(_e){}
+          try{
+            const _smUrl=_ownerBase+_smPath;
+            const _resolved=await _resolveSitemapUrls(_smUrl,{timeoutMs:8000,maxUrls:2000,maxSubmaps:25});
+            const _locs=(Array.isArray(_resolved)?_resolved:[]).filter(function(u){return /^https?:\/\//i.test(u)&&_sameOwner(u);});
+            if(_locs.length){clientSitemapUrls=Array.from(new Set(_locs)).slice(0,2000);_pwbSitemapStatus='network_owner_sitemap';_pwbSitemapUrl=_smUrl;_pwbSitemapDiscoveredBy='network_owner_sitemap_resolved';}
+          }catch(_e){}
         }
         if(!clientSitemapUrls.length){
           const _html=String(existingSiteHtml||'').slice(0,180000);
@@ -60128,7 +60280,7 @@ ${sourceText}`;
     }
 
     brief.link_research = {
-      internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),rule:'Internal targets are exact same-domain URLs discovered by sitemap or bounded homepage-link research; zero means no sufficiently relevant verified target was found.'},
+      internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),owner_domain:(_pwbNetworkOwnerDomain||String(client.domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'')),candidate_urls:clientSitemapUrls.slice(0,50),manual_same_domain_allowed:true,rule:'Internal targets are exact same-domain URLs discovered by sitemap or bounded homepage-link research. Zero selected means no sufficiently relevant automatic target was found; ContentScale does not force the homepage. A publisher may add a different exact same-domain URL manually.'},
       external:{automatic:true,searched:true,candidates_found:_pwbExternalCandidates.length,targets_selected:brief.external_link_targets.length,rule:'Every external exact_url is server-validated against URLs discovered during current Prewrite research.'}
     };
 
@@ -60486,11 +60638,116 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
 
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.', stale_network_brief: true });
     const row = r.rows[0];
-    // Ensure the recalled brief carries its language so client-side labels render correctly,
-    // even for older briefs saved before brief.language was embedded (lek 2 — Pre-Write).
-    try { if (row.brief_json && typeof row.brief_json === 'object' && !row.brief_json.language) row.brief_json.language = (row.language || 'en'); } catch(e) {}
-    res.json({ success: true, brief: row.brief_json, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at });
+    const _hadPersistedFinalQa=!!(row.brief_json&&row.brief_json.publication_quality_check);
+    // v500 — recalled Briefs get the current deterministic QA semantics without spending
+    // research/API tokens. This fixes stale saved readiness fields (for example old 67/100
+    // internal-link coverage) and makes Publication QA visible on historical Briefs too.
+    let _viewBrief={};
+    try{_viewBrief=JSON.parse(JSON.stringify(row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{}));}catch(_e){_viewBrief=row.brief_json||{};}
+    try { if (_viewBrief && typeof _viewBrief === 'object' && !_viewBrief.language) _viewBrief.language = (row.language || 'en'); } catch(e) {}
+    _pwbFinalPublicationPass(_viewBrief);
+    _viewBrief.ai_quality_check=_pwbReadiness(_viewBrief);
+    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, final_qa_persisted:_hadPersistedFinalQa });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
+});
+
+
+// v500 — shared authorization for zero-cost saved-Brief maintenance actions.
+// It mirrors the Network recall guard: normal tracker owners may edit their own Brief;
+// a Network synthetic tracker may edit only the exact Brief linked to / created for
+// that placement. No arbitrary cross-client access is introduced.
+async function _pwbLoadAuthorizedSavedBriefV500(req,briefId){
+  const cr=await pool.query('SELECT id,domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)',[req.params.token,'deleted']);
+  if(!cr.rows.length)return {error:'Tracker not found.',status:404};
+  const tracker=cr.rows[0];
+  let r=await pool.query('SELECT id,client_id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 AND client_id=$2',[briefId,tracker.id]);
+  let row=r.rows[0]||null,ownerDomain=String(tracker.domain||'').trim(),placementId=Number(req.query&&req.query.networkPlacement||0);
+  const wantsNetwork=String(req.query&&req.query.networkEmbed||'')==='1'&&Number.isSafeInteger(placementId)&&placementId>0;
+  if(wantsNetwork){
+    const nr=await pool.query(`
+      SELECT p.id,c.prewrite_brief_id,pb.client_id AS prewrite_client_id,ow.domain AS owner_domain
+      FROM network_placements p
+      JOIN network_content c ON c.id=p.content_id
+      LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
+      LEFT JOIN prewrite_briefs pb ON pb.id=c.prewrite_brief_id
+      WHERE p.id=$1 LIMIT 1
+    `,[placementId]);
+    const n=nr.rows[0]||null;
+    if(n){
+      if(n.owner_domain)ownerDomain=String(n.owner_domain).trim();
+      const synthetic=('network-placement-'+placementId+'.internal.contentscale.site').toLowerCase();
+      const currentDomain=String(tracker.domain||'').trim().toLowerCase();
+      const authorized=Number(n.prewrite_client_id||0)===Number(tracker.id||0)||currentDomain===synthetic;
+      if(!row&&authorized&&Number(n.prewrite_brief_id||0)===Number(briefId||0)){
+        const br=await pool.query('SELECT id,client_id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 LIMIT 1',[briefId]);
+        row=br.rows[0]||null;
+      }
+      // Historical synthetic Briefs are allowed only when they belong to this exact placement's
+      // synthetic tracker domain, matching the existing recall behavior.
+      if(!row&&currentDomain===synthetic){
+        const hr=await pool.query(`
+          SELECT pb.id,pb.client_id,pb.keyword,pb.working_title,pb.language,pb.region,pb.brief_json,pb.competitors_scraped,pb.created_at
+          FROM prewrite_briefs pb JOIN tracker_clients tc ON tc.id=pb.client_id
+          WHERE pb.id=$1 AND LOWER(COALESCE(tc.domain,''))=$2 LIMIT 1
+        `,[briefId,synthetic]);
+        row=hr.rows[0]||null;
+      }
+    }
+  }
+  if(!row)return {error:'Brief not found or not authorized for this workspace.',status:404};
+  return {tracker,row,ownerDomain,placementId};
+}
+
+app.post('/api/tracker-client/:token/prewrite-briefs/:id/finalize', async (req,res)=>{
+  try{
+    const auth=await _pwbLoadAuthorizedSavedBriefV500(req,Number(req.params.id||0));
+    if(auth.error)return res.status(auth.status||404).json({success:false,error:auth.error});
+    let brief={};try{brief=JSON.parse(JSON.stringify(auth.row.brief_json||{}));}catch(_e){brief=auth.row.brief_json||{};}
+    _pwbFinalPublicationPass(brief);
+    brief.ai_quality_check=_pwbReadiness(brief);
+    brief.final_qa_history=Array.isArray(brief.final_qa_history)?brief.final_qa_history:[];
+    brief.final_qa_history.push({at:new Date().toISOString(),mode:'deterministic',research_rerun:false,gemini_calls:0,publication_score:Number(brief.publication_quality_check&&brief.publication_quality_check.score||0)});
+    await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(brief),auth.row.id]);
+    res.set('Cache-Control','no-store');
+    res.json({success:true,brief,brief_id:auth.row.id,research_rerun:false,gemini_calls:0,message:'Final QA applied and saved. No research or Gemini call was used.'});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
+});
+
+app.post('/api/tracker-client/:token/prewrite-briefs/:id/internal-link', async (req,res)=>{
+  try{
+    const auth=await _pwbLoadAuthorizedSavedBriefV500(req,Number(req.params.id||0));
+    if(auth.error)return res.status(auth.status||404).json({success:false,error:auth.error});
+    const raw=String(req.body&&req.body.url||'').trim(),anchorRaw=String(req.body&&req.body.anchor_text||'').trim();
+    let u;try{u=new URL(raw);}catch(_e){return res.status(400).json({success:false,error:'Enter a complete https:// URL.'});}
+    if(u.protocol!=='https:')return res.status(400).json({success:false,error:'Internal target must use https://.'});
+    const normHost=x=>String(x||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();
+    let allowedHost=normHost(auth.ownerDomain);
+    let brief={};try{brief=JSON.parse(JSON.stringify(auth.row.brief_json||{}));}catch(_e){brief=auth.row.brief_json||{};}
+    if(!allowedHost){
+      const sm=brief&&brief.link_research&&brief.link_research.internal&&brief.link_research.internal.sitemap_url||'';
+      try{allowedHost=normHost(new URL(sm).hostname);}catch(_e){}
+    }
+    const targetHost=normHost(u.hostname);
+    if(!allowedHost||targetHost!==allowedHost)return res.status(400).json({success:false,error:'That URL is not on the publisher/owner domain ('+(allowedHost||'unknown')+'). Only same-domain internal links are allowed.'});
+    const cleanUrl=u.href.split('#')[0];
+    const slug=(u.pathname.split('/').filter(Boolean).pop()||'homepage').replace(/[-_]+/g,' ').trim();
+    const anchor=(anchorRaw||slug||'related page').slice(0,180);
+    if(!Array.isArray(brief.internal_link_targets))brief.internal_link_targets=[];
+    const existing=brief.internal_link_targets.find(function(x){try{return new URL(String(x&&x.link_to||'')).href.split('#')[0]===cleanUrl;}catch(_e){return false;}});
+    if(existing){existing.anchor_text=anchor;existing.why='Publisher-selected same-domain internal destination. Exact URL supplied by the publisher; verify the live destination before publication.';existing.source='publisher_manual';}
+    else brief.internal_link_targets.push({anchor_text:anchor,link_to:cleanUrl,why:'Publisher-selected same-domain internal destination. Exact URL supplied by the publisher; verify the live destination before publication.',source:'publisher_manual'});
+    brief.internal_link_targets=brief.internal_link_targets.slice(0,8);
+    if(!brief.link_research||typeof brief.link_research!=='object')brief.link_research={};
+    if(!brief.link_research.internal||typeof brief.link_research.internal!=='object')brief.link_research.internal={};
+    const il=brief.link_research.internal;
+    il.searched=true;il.targets_selected=brief.internal_link_targets.length;il.status='manual_same_domain_target';il.owner_domain=allowedHost;
+    il.manual_targets=brief.internal_link_targets.filter(x=>x&&x.source==='publisher_manual').map(x=>x.link_to);
+    il.rule='Automatic research chooses relevant same-domain URLs when possible. A publisher may add an exact same-domain destination manually; ContentScale never forces the homepage merely to fill a link slot.';
+    _pwbFinalPublicationPass(brief);brief.ai_quality_check=_pwbReadiness(brief);
+    await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(brief),auth.row.id]);
+    res.set('Cache-Control','no-store');
+    res.json({success:true,brief,brief_id:auth.row.id,internal_link:cleanUrl,message:'Same-domain internal target saved.'});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
 });
 
 // ── DELETE /api/tracker-client/:token/prewrite-briefs/:id — remove one brief ─
