@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v502-PREWRITE-ACTION-STATE-MACHINE-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v504-PREWRITE-META-LENGTH-POLICY-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,17 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-meta-length-policy-v504',
+  'prewrite-meta-auto-trim-v504',
+  'prewrite-meta-inline-editor-v504',
+  'prewrite-meta-character-counters-v504',
+  'prewrite-final-qa-version-lock-v504',
+  'prewrite-final-qa-auto-migration-v504',
+  'prewrite-share-schema-parity-v504',
+  'prewrite-action-summary-blocker-details-v504',
+  'prewrite-readonly-share-link-v503',
+  'prewrite-share-token-guard-v503',
+  'prewrite-action-summary-visible-v503',
   'prewrite-action-state-machine-v502',
   'prewrite-final-qa-completed-state-v502',
   'prewrite-input-dirty-stale-action-lock-v502',
@@ -853,7 +864,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v502-PREWRITE-ACTION-STATE-MACHINE-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE',
+  build: 'CS-2026-10-05-CANONICAL-v504-PREWRITE-META-LENGTH-POLICY-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -924,7 +935,9 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   quickscan_early_state_bootstrap: true,
   quickscan_token_item_global_regression: true,
   network_safe_shell_v1: true,
-  network_core_table_isolation: true
+  network_core_table_isolation: true,
+  prewrite_readonly_share_link: true,
+  prewrite_action_summary_visible: true
 });
 
 // BUILD IDENTITY — intentionally public and DB-independent.
@@ -942,6 +955,9 @@ app.get('/api/regression-contract',(req,res)=>{
     network_guarded_registration:src.includes('core ContentScale continues without Network')&&src.includes("registerNetwork({app,pool,verifyAdmin,asyncHandler})"),
     network_prewrite_approval_handshake:src.includes('/approve-prewrite')&&src.includes('brief_id:briefId')&&src.includes('approval_id:approvalId')&&src.includes('Approving exact Brief snapshot'),
     prewrite_action_state_machine:src.includes('Final QA complete · saved')&&src.includes('Complete missing only · not needed')&&src.includes('Publisher Edition ready')&&src.includes('_pwbInputsDirty'),
+    prewrite_meta_length_policy:src.includes('prewrite-meta-length-policy-v504')&&src.includes('/meta-package')&&src.includes('final_qa_version')&&src.includes('150-159'),
+    prewrite_share_link:src.includes('/share/prewrite/:shareToken')&&src.includes('Copy share link')&&src.includes('share_token'),
+    prewrite_action_summary:src.includes('pwbActionState')&&src.includes('Publication QA')&&src.includes('NEXT STEP'),
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
     prospect_footer:src.includes('data-cs-prospect-footer')&&src.includes('_injectProspectFooter'),
@@ -11686,6 +11702,10 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS published_url TEXT`).catch(()=>{});
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS tracker_page_id INTEGER`).catch(()=>{});
+  // v503 — persistent, revocable-by-rotation read-only share credential for one saved Brief.
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS share_token VARCHAR(64)`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS share_created_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_prewrite_briefs_share_token ON prewrite_briefs(share_token) WHERE share_token IS NOT NULL`).catch(()=>{});
   // Brief merge system
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ`).catch(()=>{});
@@ -29358,7 +29378,7 @@ async function quickAudit(enc,impr,ctr,pos) {
   const queryCtx=pageQueries.length?\`\\nTop queries: \${pageQueries.map(q=>\`"\${q.query}" pos:\${Math.round(q.position)} impr:\${q.impressions}\`).join(' | ')}\`:'';
   const prompts={
     q0:\`You are an elite SEO strategist.\\n\${ctx}\${queryCtx}\\n\\nList EXACTLY 5 priority actions for this page. Each must be:\\n- Specific and actionable (not generic advice)\\n- Achievable in under 1 hour\\n- Include expected metric change\\n\\nFormat each as:\\n🔥 **[Action title]**\\nDo: [exact what to do]\\nExpect: [specific metric improvement]\\n\\nStart with the highest-impact action first.\`,
-    q1:\`You are an elite SEO strategist.\\n\${ctx}\${queryCtx}\\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\\n\\n**New Title**: [text]\\n**New Meta Description**: [text]\\n**Why**: [specific 2026 SERP psychology rationale]\`,
+    q1:\`You are an elite SEO strategist.\\n\${ctx}\${queryCtx}\\nWrite a new title (≤60 chars) and meta description (140-160 chars; aim for 150-159) for this page to maximize CTR.\\n\\n**New Title**: [text]\\n**New Meta Description**: [text]\\n**Why**: [specific 2026 SERP psychology rationale]\`,
     q2:\`You are an elite SEO strategist.\\n\${ctx}\${queryCtx}\\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.\`,
   };
   for (let i=0;i<QSTEPS.length;i++) {
@@ -29457,7 +29477,7 @@ TOP QUERIES: \${inp.queries||'not provided'}
 
     d1:\`\${base}\\n\\nSTEP 1 — INTENT DECODING:\\nClassify primary intent precisely. Is this page AI Overview eligible? What is the zero-click risk? What are the top 5 results likely covering that this page is not? Answer each concisely (no truncation):\\n1. Primary intent: [label] - 1 sentence why\\n2. AI Overview eligible: [Yes/Partial/No] - reason + format change\\n3. Zero-click risk: [High/Medium/Low] - what Google surfaces instead\\n4. Top 3 page-1 gaps (1 line each)\\n5. Mismatch Fix - Current H1: [quote from page] | Problem: [1 sentence] | New H1: [write full corrected H1] | New intro: [rewrite 2 sentences]\`,
 
-    d2:\`\${base}\\n\\nSTEP 2 — CTR SURGERY:\\nCURRENT TITLE: "\${extractTitle(inp.html)}"\\nCURRENT META: "\${extractMeta(inp.html)}"\\n\\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\\n\\n**Current Title** (\${extractTitle(inp.html).length} chars): \${extractTitle(inp.html)}\\n**Current Meta** (\${extractMeta(inp.html).length} chars): \${extractMeta(inp.html)}\\n**New Title**: [your version]\\n**New Meta Description**: [your version]\\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]\`,
+    d2:\`\${base}\\n\\nSTEP 2 — CTR SURGERY:\\nCURRENT TITLE: "\${extractTitle(inp.html)}"\\nCURRENT META: "\${extractMeta(inp.html)}"\\n\\nRewrite both specifically. New title ≤60 chars, meta 140-160 chars; aim for 150-159.\\n\\n**Current Title** (\${extractTitle(inp.html).length} chars): \${extractTitle(inp.html)}\\n**Current Meta** (\${extractMeta(inp.html).length} chars): \${extractMeta(inp.html)}\\n**New Title**: [your version]\\n**New Meta Description**: [your version]\\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]\`,
 
     d3:\`\${base}\${compContext}\\n\\nSTEP 3 — COMPETITOR DIFF:\\nCreate a comparison table between your page and the two competitors. Columns: Feature | Your Page | Competitor 1 (Surfer SEO) | Competitor 2 (MarketMuse) | Winner\\nRows: Word count · H2 count · FAQ section · Schema types · Images with alt · CTA clarity · Data/stats count · Unique angle · Internal links\\n\\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each: For each write all three:\\n- Gap: [specific element or content type]\\n- Evidence: [exactly where competitor uses it]\\n- How to implement: [copy-paste instruction for this page]\`,
 
@@ -39514,7 +39534,7 @@ async function quickAudit(enc,impr,ctr,pos) {
   const queryCx=pageQueries.length?\`\\nTop queries: \${pageQueries.map(q=>\`"\${q.query}" pos:\${Math.round(q.position)}\`).join(' | ')}\` : '';
   const prompts={
     q0:\`You are an elite SEO strategist.\\n\${ctx}\${queryCx}\\n\\nList EXACTLY 5 priority actions for this page. Each must be:\\n- Specific and actionable (not generic advice)\\n- Achievable in under 1 hour\\n- Include expected metric change\\n\\nFormat each as:\\n🎯 **[#]. [Short action title]**\\nDo: [exact what to do]\\nExpect: [specific metric improvement]\\n\\nStart with the highest-impact action first.\`,
-    q1:\`You are an elite SEO strategist.\\n\${ctx}\${queryCx}\\nWrite a new title (≤60 chars) and meta description (≤155 chars) for this page to maximize CTR.\\n\\n**New Title**: [text]\\n**New Meta Description**: [text]\\n**Why**: [specific 2026 SERP psychology rationale]\`,
+    q1:\`You are an elite SEO strategist.\\n\${ctx}\${queryCx}\\nWrite a new title (≤60 chars) and meta description (140-160 chars; aim for 150-159) for this page to maximize CTR.\\n\\n**New Title**: [text]\\n**New Meta Description**: [text]\\n**Why**: [specific 2026 SERP psychology rationale]\`,
     q2:\`You are an elite SEO strategist.\\n\${ctx}\${queryCx}\\nIdentify the 3 queries where this page ranks position 11-20 — fastest wins to page 1.\\nFor each: **Query** | Current pos | ONE specific change needed | Expected result.\`,
   };
   for (let i=0;i<QSTEPS.length;i++) {
@@ -39613,7 +39633,7 @@ TOP QUERIES: \${inp.queries||'not provided'}\${voiceCtx}
 
     d1:\`\${base}\\n\\nSTEP 1 — INTENT DECODING:\\nClassify primary intent precisely. Is this page AI Overview eligible? What is the zero-click risk? What are the top 5 results likely covering that this page is not? State any mismatch clearly with specific fix.\`,
 
-    d2:\`\${base}\\n\\nSTEP 2 — CTR SURGERY:\\nCURRENT TITLE: "\${extractTitle(inp.html)}"\\nCURRENT META: "\${extractMeta(inp.html)}"\\n\\nRewrite both specifically. New title ≤60 chars, meta ≤155 chars.\\n\\n| Field | Current | New | Chars | Why |\\n|-------|---------|-----|-------|-----|\\n| Title | \${extractTitle(inp.html).slice(0,40)} | [your version] | [n] | [rationale] |\\n| Meta | \${extractMeta(inp.html).slice(0,40)}... | [your version] | [n] | [rationale] |\\n\\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]\`,
+    d2:\`\${base}\\n\\nSTEP 2 — CTR SURGERY:\\nCURRENT TITLE: "\${extractTitle(inp.html)}"\\nCURRENT META: "\${extractMeta(inp.html)}"\\n\\nRewrite both specifically. New title ≤60 chars, meta 140-160 chars; aim for 150-159.\\n\\n| Field | Current | New | Chars | Why |\\n|-------|---------|-----|-------|-----|\\n| Title | \${extractTitle(inp.html).slice(0,40)} | [your version] | [n] | [rationale] |\\n| Meta | \${extractMeta(inp.html).slice(0,40)}... | [your version] | [n] | [rationale] |\\n\\n**Uplift rationale**: [specific CTR psychology — numbers, power words, emotional triggers used]\`,
 
     d3:\`\${base}\${compContext}\\n\\nSTEP 3 — COMPETITOR DIFF:\\nCreate a real comparison table between your page and the competitors.\\n\\n| Feature | Your Page | Competitor 1 | Competitor 2 | Winner |\\n|---------|-----------|--------------|--------------|--------|\\n| Word count | [n] | [n] | [n] | |\\n| H2 count | [n] | [n] | [n] | |\\n| FAQ section | Yes/No | Yes/No | Yes/No | |\\n| Schema types | [list] | [list] | [list] | |\\n| Images with alt | [n]/[total] | [n]/[total] | [n]/[total] | |\\n| CTA clarity | [1-5] | [1-5] | [1-5] | |\\n| Data/stats count | [n] | [n] | [n] | |\\n| Internal links | [n] | [n] | [n] | |\\n| Unique angle | [describe] | [describe] | [describe] | |\\n\\nThen: List the 5 SPECIFIC things competitors do that your page does not. For each: exact implementation instruction.\`,
 
@@ -42496,7 +42516,7 @@ function getActionSteps(p, rec){
     {sev:'high',title:'Rewrite title tag',time:'15 min',
      desc:'CTR is '+ctr.toFixed(1)+'% at position '+Math.round(pos)+'. Open PULSE+NEXUS → Step 2 (CTR Surgery). New title ≤60 chars, include primary keyword, add a number or power word. Copy the AI-generated version directly.'},
     {sev:'high',title:'Rewrite meta description',time:'10 min',
-     desc:'150-155 chars with an urgency trigger + specific benefit. Add a CTA phrase ("Get a free quote", "Available 24/7"). Open PULSE+NEXUS → Step 2 for the AI-written version.'},
+     desc:'150-159 chars ideal (hard range 140-160) with an urgency trigger + specific benefit. Add a CTA phrase ("Get a free quote", "Available 24/7"). Open PULSE+NEXUS → Step 2 for the AI-written version.'},
     {sev:'med',title:'Add FAQ schema to &lt;head&gt;',time:'30 min',
      desc:'FAQPage JSON-LD with 4 Q&As based on your top queries. Open PULSE+NEXUS → Step 6 (NEXUS Signals) for a ready-to-paste schema block. This can trigger rich results in Google.'},
     {sev:'med',title:'Check keyword in first 100 words',time:'10 min',
@@ -44713,7 +44733,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn" id="pwbRegenerateMissing" disabled>Complete missing only · reuse research</button>
       <button class="cs-btn" id="pwbRunFinalQa" disabled>Run final QA · no research · no Gemini</button>
       <button class="cs-btn" id="pwbCopyExternalAi" disabled>Copy for external AI</button>
-      <div id="pwbActionState" style="width:100%;font-size:10.5px;color:#64748b;">Generate or reopen a Brief first. All available actions stay visible; unavailable actions remain disabled.</div>
+      <button class="cs-btn" id="pwbShareBrief" disabled>Copy share link</button>
+      <div id="pwbActionState" style="width:100%;font-size:12px;line-height:1.55;color:#e2e8f0;background:#111827;border:1px solid #334155;border-radius:8px;padding:9px 11px;margin-top:2px;"><strong style="color:#93c5fd;">NEXT STEP:</strong> Generate or reopen a Brief first. Unavailable actions remain visible but disabled.</div>
+      <div id="pwbShareStatus" style="display:none;width:100%;font-size:10.5px;color:#86efac;"></div>
     </div>
     <div id="pwbRecentWrap" style="margin-top:12px;display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
@@ -46171,7 +46193,7 @@ function _pwbApplyActionState(){
   var stale=!!_pwbInputsDirty;
   var placement=_pwbNetworkPlacement();
   var diag=_pwbRestoreDiagnosticJob(_pwbActionKeyword());
-  var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),state=document.getElementById('pwbActionState'),fresh=document.getElementById('pwbGenerateBtn');
+  var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),share=document.getElementById('pwbShareBrief'),state=document.getElementById('pwbActionState'),shareStatus=document.getElementById('pwbShareStatus'),fresh=document.getElementById('pwbGenerateBtn');
 
   // 1) Fresh analysis is only actionable when there is no current Brief or the user intentionally
   // changed an input. It must never compete visually with the next step of an existing workflow.
@@ -46242,14 +46264,38 @@ function _pwbApplyActionState(){
     copy.onclick=canCopy?function(){copyPrewriteForExternalAi(this);}:null;
   }
 
+  // 6) A read-only share link is useful as soon as the exact saved Brief exists. It never
+  // exposes the private tracker token or admin controls, and is locked when inputs are stale.
+  if(share){
+    var canShare=hasBrief&&hasSaved&&!stale;
+    share.disabled=!canShare;
+    if(stale)share.textContent='Share Brief · inputs changed';
+    else if(!hasSaved)share.textContent='Share Brief · waiting for saved Brief';
+    else share.textContent='Copy share link';
+    share.onclick=canShare?function(){copyPrewriteShareLink(this);}:null;
+    share.title=canShare?'Create or reuse a private read-only URL for this exact saved Brief. The public view contains the Brief, not your tracker/admin credentials.':'';
+  }
+
   if(state){
-    if(!hasBrief)state.textContent='Start with Analyse & create Pre-Write Brief. Later workflow buttons stay visible but disabled until their step is valid.';
-    else if(stale)state.textContent='Inputs changed. The loaded Brief is now stale for these inputs. Create a new Brief before completing, QA, approving or copying.';
-    else if(_pwbCurrentNotPassed)state.textContent='NOT PASSED: Complete missing only is the next step. It reuses the existing research; fresh re-analysis is unnecessary.';
-    else if(!pubReady)state.textContent='Structural Brief is complete, but Publication QA has a blocker. Final QA is the next valid step and uses no research/Gemini.';
-    else if(!qaPersisted)state.textContent='Brief is ready. Run final QA once to save the deterministic final version. Cost: 0 research / 0 Gemini.';
-    else if(_pwbPublisherEditionReady)state.textContent='Publisher Edition is ready. Completed workflow actions stay disabled; Copy for external AI remains available as an optional follow-up.';
-    else state.textContent='Brief and Final QA are complete. Approve & Generate is the next primary step; completed/unneeded actions stay disabled.';
+    var aiScore=typeof qc.readiness_score==='number'?qc.readiness_score:null;
+    var pubScore=typeof pq.score==='number'?Number(pq.score):null;
+    var warns=Array.isArray(pq.warnings)?pq.warnings:[];
+    var blockers=Array.isArray(pq.blockers)?pq.blockers:[];
+    var quality='<div style="margin-top:4px;color:#cbd5e1;">'+(aiScore==null?'':'AI readiness: <strong>'+aiScore+'/100</strong> · ')+(pubScore==null?'':'Publication QA: <strong>'+pubScore+'/100</strong> · ')+(blockers.length?'<span style="color:#fca5a5;">'+blockers.length+' blocker'+(blockers.length===1?'':'s')+'</span>':(warns.length?'<span style="color:#fbbf24;">'+warns.length+' warning'+(warns.length===1?'':'s')+'</span>':'<span style="color:#86efac;">no publication warnings</span>'))+'</div>';
+    var blockerLines=blockers.slice(0,3).map(function(w){return '<div style="color:#fca5a5;margin-top:2px;">✕ '+String(w&&w.message||w&&w.code||'Publication blocker').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';}).join('');
+    var warningLines=warns.slice(0,3).map(function(w){return '<div style="color:#fbbf24;margin-top:2px;">⚠ '+String(w&&w.message||w&&w.code||'Publication warning').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';}).join('');
+    var metaBlocked=blockers.some(function(x){return /^meta_(?:title|description)/.test(String(x&&x.code||''));});
+    var msg='';
+    if(!hasBrief)msg='<strong style="color:#93c5fd;">NEXT STEP:</strong> Analyse & create the Pre-Write Brief.';
+    else if(stale)msg='<strong style="color:#fbbf24;">NEXT STEP:</strong> Inputs changed. Create a new Brief before completing, QA, approving, copying or sharing.';
+    else if(_pwbCurrentNotPassed)msg='<strong style="color:#fbbf24;">NEXT STEP:</strong> Complete missing only. Existing research is reused; do not start a fresh analysis.';
+    else if(!pubReady&&metaBlocked)msg='<strong style="color:#fca5a5;">NEXT STEP:</strong> Edit title & description in the SEO Package. Title max 60; description 140-160 (ideal 150-159). No research or Gemini is needed.';
+    else if(!pubReady&&!qaPersisted)msg='<strong style="color:#fca5a5;">NEXT STEP:</strong> Publication QA has a blocker. Run Final QA; it uses 0 research and 0 Gemini.';
+    else if(!pubReady)msg='<strong style="color:#fca5a5;">NEXT STEP:</strong> A Publication QA blocker remains. Fix the visible blocker below before approval; do not re-analyse.';
+    else if(!qaPersisted)msg='<strong style="color:#93c5fd;">NEXT STEP:</strong> Run Final QA once to save the final deterministic version. Cost: 0 research / 0 Gemini.';
+    else if(_pwbPublisherEditionReady)msg='<strong style="color:#86efac;">DONE:</strong> Publisher Edition is ready. Share/Copy remain optional follow-ups.';
+    else msg='<strong style="color:#86efac;">NEXT STEP:</strong> Approve Brief & Generate Publisher Edition. Final QA is already saved; no re-analysis is needed.';
+    state.innerHTML=msg+quality+blockerLines+warningLines;
   }
 }
 function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted){
@@ -46287,6 +46333,31 @@ async function runPrewriteFinalQa(btn){
     if(stat)stat.textContent='✓ Final QA complete · no research · no Gemini · saved to this Brief';
     _pwbApplyActionState();
   }catch(e){if(stat)stat.textContent='✕ Final QA failed: '+e.message;if(btn){btn.disabled=false;btn.textContent=orig||'Run final QA · no research · no Gemini';}}
+}
+
+function _pwbUpdateMetaCounters(){
+  var t=document.getElementById('pwbMetaTitleEdit'),d=document.getElementById('pwbMetaDescEdit'),tc=document.getElementById('pwbMetaTitleCount'),dc=document.getElementById('pwbMetaDescCount');
+  var tl=t?String(t.value||'').length:0,dl=d?String(d.value||'').length:0;
+  if(tc){tc.textContent=tl+'/60 '+(tl>0&&tl<=60?'✓':'· fix required');tc.style.color=tl>0&&tl<=60?'#86efac':'#fca5a5';}
+  if(dc){var ideal=dl>=150&&dl<=159,valid=dl>=140&&dl<=160;dc.textContent=dl+' chars · '+(ideal?'ideal 150-159 ✓':(valid?'valid 140-160':'fix required · 140-160'));dc.style.color=ideal?'#86efac':(valid?'#fbbf24':'#fca5a5');}
+}
+function togglePrewriteMetaEditor(){var x=document.getElementById('pwbMetaEditor');if(!x)return;x.style.display=x.style.display==='none'||!x.style.display?'block':'none';_pwbUpdateMetaCounters();}
+async function savePrewriteMetaPackage(btn){
+  if(!_pwbCurrentBriefId)return;
+  var t=document.getElementById('pwbMetaTitleEdit'),d=document.getElementById('pwbMetaDescEdit'),st=document.getElementById('pwbMetaEditStatus'),result=document.getElementById('pwbResult');
+  var title=String(t&&t.value||'').trim(),desc=String(d&&d.value||'').trim();
+  if(!title||title.length>60){if(st){st.style.color='#fca5a5';st.textContent='SEO title must be 1-60 characters.';}return;}
+  if(desc.length<140||desc.length>160){if(st){st.style.color='#fca5a5';st.textContent='Meta description must be 140-160 characters. Ideal: 150-159.';}return;}
+  var orig=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Saving meta...';}
+  if(st){st.style.color='#94a3b8';st.textContent='Saving to this exact Brief...';}
+  try{
+    var x=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/meta-package','POST',{seo_title:title,meta_description:desc});
+    if(!x||!x.brief)throw new Error('Meta save returned no Brief.');
+    _pwbCurrentBrief=x.brief;_pwbCurrentNotPassed=!(x.brief.ai_quality_check&&x.brief.ai_quality_check.ready_for_generation);_pwbFinalQaPersisted=x.final_qa_persisted===true;_pwbInputsDirty=false;
+    if(result)result.innerHTML=_renderIntentBar(x.brief.search_intent)+renderPrewriteBrief(x.brief);
+    _pwbApplyActionState();
+    if(document.getElementById('pwbStatus'))document.getElementById('pwbStatus').textContent='✓ SEO meta saved · no research · no Gemini';
+  }catch(e){if(st){st.style.color='#fca5a5';st.textContent='✕ '+e.message;}if(btn){btn.disabled=false;btn.textContent=orig||'Save SEO meta · no research / no Gemini';}}
 }
 
 async function savePrewriteInternalLink(btn){
@@ -46435,6 +46506,20 @@ async function generatePrewriteBrief() {
       try{console.error('[Prewrite generation failed]',{status:e.status||0,stage:stage,diagnostic:diag,payload:p})}catch(_logErr){}
     }
   }
+}
+
+async function copyPrewriteShareLink(btn){
+  var st=document.getElementById('pwbShareStatus');
+  if(!_pwbCurrentBriefId){if(st){st.style.display='block';st.textContent='No saved Brief is loaded yet.';}return;}
+  var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Creating share link...';}
+  try{
+    var q='';try{var np=_pwbNetworkPlacement();if(np)q='?networkPlacement='+encodeURIComponent(np)+'&networkEmbed=1';}catch(_e){}
+    var d=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/share'+q,'POST',{});
+    if(!d||!d.share_url)throw new Error('Share endpoint returned no URL.');
+    try{await navigator.clipboard.writeText(d.share_url);}catch(_clip){var ta=document.createElement('textarea');ta.value=d.share_url;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+    if(st){st.style.display='block';st.innerHTML='✓ Read-only share link copied. <a href="'+String(d.share_url).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" target="_blank" rel="noopener" style="color:#93c5fd;">Open shared Brief ↗</a>';}
+    if(btn){btn.textContent='✓ Share link copied';setTimeout(function(){if(btn){btn.textContent='Copy share link';_pwbApplyActionState();}},1600);}
+  }catch(e){if(st){st.style.display='block';st.textContent='✕ Share link failed: '+e.message;}if(btn){btn.disabled=false;btn.textContent=original||'Copy share link';}}
 }
 
 async function generateNetworkPublisherEdition(placementId,btn){
@@ -46855,11 +46940,20 @@ function renderPrewriteBrief(b) {
     var _titleLen=String(mp.seo_title||'').length,_descLen=String(mp.meta_description||'').length;
     html += '<div style="background:#0a1020;border:1px solid #1e3a5f;border-radius:8px;padding:11px 13px;margin-bottom:12px;">'
       + '<div style="color:#60a5fa;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:700;">' + _PLH.metaPkgH + '</div>';
-    if (mp.seo_title) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PL.seoTitle + ':</span> <span style="color:#e5e7eb;font-weight:600;">' + esc(mp.seo_title) + '</span> <span style="color:'+(_titleLen>60?'#fbbf24':'#6b7280')+';font-size:10px;">(' + _titleLen + ' chars'+(_titleLen>60?' · QA warning':'')+')</span></div>';
-    if (mp.meta_description) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PLH.metaDescH + ':</span> <span style="color:#e5e7eb;">' + esc(mp.meta_description) + '</span> <span style="color:'+(_descLen>160?'#fbbf24':'#6b7280')+';font-size:10px;">(' + _descLen + ' chars'+(_descLen>160?' · QA warning':'')+')</span></div>';
+    var _titleOk=_titleLen>0&&_titleLen<=60,_descOk=_descLen>=140&&_descLen<=160,_descIdeal=_descLen>=150&&_descLen<=159;
+    if (mp.seo_title) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PL.seoTitle + ':</span> <span style="color:#e5e7eb;font-weight:600;">' + esc(mp.seo_title) + '</span> <span style="color:'+(_titleOk?'#86efac':'#fca5a5')+';font-size:10px;">(' + _titleLen + '/60 '+(_titleOk?'✓':'· fix required')+')</span></div>';
+    if (mp.meta_description) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">' + _PLH.metaDescH + ':</span> <span style="color:#e5e7eb;">' + esc(mp.meta_description) + '</span> <span style="color:'+(_descIdeal?'#86efac':(_descOk?'#fbbf24':'#fca5a5'))+';font-size:10px;">(' + _descLen + ' chars · '+(_descIdeal?'ideal 150-159 ✓':(_descOk?'valid 140-160':'fix required · 140-160'))+')</span></div>';
     if (mp.h1) html += '<div style="margin-bottom:5px;"><span style="color:#9ca3af;">H1:</span> <span style="color:#e5e7eb;">' + esc(mp.h1) + '</span></div>';
     if (mp.url_slug) html += '<div><span style="color:#9ca3af;">Slug:</span> <code style="background:#0a0a12;border:1px solid #1f2937;border-radius:3px;padding:1px 5px;font-size:11px;color:#a5b4fc;">/' + esc(String(mp.url_slug).replace(/^[/]+/,'')) + '</code></div>';
     if(_schemaPlan.length)html += '<div style="margin-top:6px;"><span style="color:#9ca3af;">Schema candidates:</span> <span style="color:#c4b5fd;">'+_schemaPlan.map(function(x){return esc(x);}).join(', ')+'</span></div>';
+    html += '<div style="font-size:9.8px;color:#64748b;margin-top:7px;">Length policy: SEO title max 60. Meta description 140-160; 150-159 ideal. Overlength text is safely shortened during Final QA; short descriptions are never padded with invented claims.</div>';
+    html += '<div style="margin-top:8px;"><button class="cs-btn" type="button" onclick="togglePrewriteMetaEditor()" '+(!_pwbCurrentBriefId?'disabled':'')+'>Edit title &amp; description</button></div>'
+      + '<div id="pwbMetaEditor" style="display:none;margin-top:9px;padding:9px;background:#07111f;border:1px solid #26364d;border-radius:8px;">'
+      + '<label style="display:block;font-size:10px;color:#9ca3af;margin-bottom:3px;">SEO title · hard max 60</label><input id="pwbMetaTitleEdit" class="cs-input" maxlength="60" value="'+esc(String(mp.seo_title||'')).replace(/"/g,'&quot;')+'" oninput="_pwbUpdateMetaCounters()">'
+      + '<div id="pwbMetaTitleCount" style="font-size:10px;margin:3px 0 8px;color:#94a3b8;">'+_titleLen+'/60</div>'
+      + '<label style="display:block;font-size:10px;color:#9ca3af;margin-bottom:3px;">Meta description · 140-160 · ideal 150-159</label><textarea id="pwbMetaDescEdit" class="cs-input" maxlength="160" rows="4" oninput="_pwbUpdateMetaCounters()">'+esc(String(mp.meta_description||''))+'</textarea>'
+      + '<div id="pwbMetaDescCount" style="font-size:10px;margin:3px 0 8px;color:#94a3b8;">'+_descLen+' chars</div>'
+      + '<button class="cs-btn primary" type="button" onclick="savePrewriteMetaPackage(this)">Save SEO meta · no research / no Gemini</button> <span id="pwbMetaEditStatus" style="font-size:10px;color:#94a3b8;"></span></div>';
     html += '<div style="font-size:9.8px;color:#64748b;margin-top:7px;">Linked contract: these title/meta/H1/slug values feed the Publisher Edition SEO Package. Schema is finalized only against the visible article and the publisher host to avoid duplicate/conflicting markup.</div>';
     html += '</div>';
   }
@@ -58247,14 +58341,14 @@ STEP 3 - ENTITY VERIFICATION: for every ENTITY GAP term, search the CLIENT PAGE 
 STEP 4 - Analyse the SERP: ranking pattern, outlier, traits missing versus competitors.
 STEP 4B - DEPTH CHECK: for the top 3 topics shared between the client page and rank-1, judge how deeply rank-1 treats each versus the client page (surface/moderate/deep - word count, examples, numbers, step-by-step detail) - this is what usually separates #2 from #1, not just entity presence.
 STEP 4C - INTENT DECOMPOSITION: list the 5-7 real sub-questions a searcher typing "${keyword}" actually wants answered (not just the main topic). For each, note whether the client page answers it and whether rank-1 answers it. Where the client page is silent and rank-1 is not, that is a genuine #1 gap.
-STEP 5 - BUILD THE PAGE (this is what makes the brief usable, not just diagnostic): using everything above, produce (a) a meta_package - a rank-ready title tag (<=60 chars, keyword near front), meta description (<=155 chars), on-page H1, and url slug; (b) an opening_passage - the literal first 40-60 words of the page, written as a self-contained quotable direct answer to the primary intent that Google AI Overview and Perplexity can lift verbatim; (c) a page_blueprint - the full H2 outline IN READING ORDER from intro to conclusion, each H2 with its purpose, a target word count, the exact sub-questions/entities it must cover, and a one-sentence citation_hook where that section can earn an AI citation; (d) internal_link_targets - 3-8 real internal links using natural anchor text, each link_to copied verbatim from AUTO INTERNAL LINK RESEARCH only; if no sitemap URLs exist, return []; (e) external_link_targets - 2-6 authoritative/relevant external sources, each exact_url copied verbatim from AUTO EXTERNAL SOURCE RESEARCH only, with anchor_text, source_name, why and supports_claim; if no verified candidates exist, return []. The page_blueprint must collectively answer every sub-question from STEP 4C and place every high-priority entity gap. Ground all of it in the live data - if a section cannot be justified from intent or competitor analysis, do not pad the outline with it.
+STEP 5 - BUILD THE PAGE (this is what makes the brief usable, not just diagnostic): using everything above, produce (a) a meta_package - a rank-ready title tag (<=60 chars, keyword near front), meta description (140-160 chars; aim for 150-159), on-page H1, and url slug; (b) an opening_passage - the literal first 40-60 words of the page, written as a self-contained quotable direct answer to the primary intent that Google AI Overview and Perplexity can lift verbatim; (c) a page_blueprint - the full H2 outline IN READING ORDER from intro to conclusion, each H2 with its purpose, a target word count, the exact sub-questions/entities it must cover, and a one-sentence citation_hook where that section can earn an AI citation; (d) internal_link_targets - 3-8 real internal links using natural anchor text, each link_to copied verbatim from AUTO INTERNAL LINK RESEARCH only; if no sitemap URLs exist, return []; (e) external_link_targets - 2-6 authoritative/relevant external sources, each exact_url copied verbatim from AUTO EXTERNAL SOURCE RESEARCH only, with anchor_text, source_name, why and supports_claim; if no verified candidates exist, return []. The page_blueprint must collectively answer every sub-question from STEP 4C and place every high-priority entity gap. Ground all of it in the live data - if a section cannot be justified from intent or competitor analysis, do not pad the outline with it.
 
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output the JSON string "insufficient_data" for that field instead of inventing a plausible-but-unfounded one - especially for ai_overview_blueprint, step3_outlier and entity_gaps_priority. Never invent a domain, URL, snippet, statistic, schema type or competitor trait that is not in the input above; use "insufficient_data" or an empty array instead.
 
 FINAL CHECK before output: re-read entity_gaps_priority and must_have_h2s against the CLIENT PAGE text and remove or downgrade anything already present; confirm recommended_format does not contradict page_type_classification.
 
 Return ONLY valid JSON, no markdown, no preamble. Replace every <...> with your real analysis or "insufficient_data" - never leave angle brackets, placeholder words, or invented examples in the output.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","page_type_classification":{"type":"content_page|functional_tool_page","evidence":"<1 sentence: what you observed on the client page that supports this>"},"ai_overview_blueprint":"<3-5 specific concrete actions THIS page must take to get cited, grounded in competitor snippets, entities and the AI-citation data above - or 'insufficient_data' if the live data does not support specific claims>","step1_catalog":[{"rank":1,"domain":"<real domain>","url":"<real URL>","title":"<real page title>","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["<real SERP features; empty array if none>"],"schema_types":["<real schema types; empty array if unknown>"],"freshness":"<real date signal or 'not visible'>","ai_overview_eligible":true,"snippet_text":"<real snippet text>"}],"step2_pattern":{"the_ranking_formula":"<one sentence grounded in the live snippets, or 'insufficient_data'>","dominant_content_format":"<from the data, or 'insufficient_data'>","dominant_schema":"<from the data, or 'insufficient_data'>","dominant_word_count_range":"<from the data, or 'insufficient_data'>","top3_shared_traits":["<concrete traits from the data>"],"bottom_missing_traits":["<concrete traits from the data>"],"freshness_pattern":"<from the data, or 'insufficient_data'>","depth_per_topic":[{"topic":"<a topic shared between the client page and rank-1>","rank1_treatment":"surface|moderate|deep","client_treatment":"surface|moderate|deep","gap":"<what specifically rank-1 covers that the client page doesn't - examples, numbers, steps>"}]},"step3_outlier":{"domain":"<real domain, or 'insufficient_data' if no outlier exists>","rank":4,"why_breaks_pattern":"<grounded in data>","why_it_ranks_anyway":"<grounded in data, or 'insufficient_data'>","signal_type":"warning|opportunity","what_to_learn":"<concrete lesson, or 'insufficient_data'>"},"step4_missing":[{"gap":"<real concept the client page is missing, verified absent in STEP 1>","gap_type":"warning|opportunity","how_to_exploit":"<concrete action>"}],"intent_decomposition":[{"sub_question":"<a real sub-question searchers of this keyword want answered>","client_page_answers_it":true,"rank1_answers_it":true,"gap_note":"<if client page is silent and rank-1 answers it, say so; else 'no gap'>"}],"entity_gaps_priority":[{"entity":"<real ENTITY GAP term, VERIFIED ABSENT from the client page in STEP 3>","priority":"high|medium|low","where_to_add":"<an exact section that actually exists on the client page>"}],"content_brief":{"recommended_format":"<must align with page_type_classification - never a full blog rewrite if functional_tool_page>","recommended_word_count":2200,"recommended_schema":["<schema types not already present on the client page>"],"must_have_h2s":["<empty array if functional_tool_page and existing H2s suffice; otherwise specific headings>"],"must_cover_entities":["<real entities, verified absent or weak in STEP 3>"],"faq_questions":["<real FAQ questions, checked against any existing FAQPage schema on the client page>"],"beat_number1_instructions":[{"topic":"<a shared topic from depth_per_topic>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction: exactly what to add, what kind of evidence to use, how deep to go - not generic advice>"}]},"meta_package":{"seo_title":"<a rank-ready <title>, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<a click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human would read>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the exact first 40-60 words of the page: a self-contained, quotable definition/answer to the primary intent that Google AI Overview and Perplexity can lift verbatim. Must lead with the keyword's answer, no throat-clearing>","why_it_wins":"<one sentence: why this opening earns the citation - what makes it extractable>"},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section must accomplish for the reader and for ranking/citation>","target_words":300,"cover":["<the specific sub-questions from intent_decomposition and entities from must_cover_entities this section must answer/include>"],"citation_hook":"<if this section can earn an AI citation, the one quotable sentence to write here; else empty string>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<the topic or existing page on the client's own site this should link to - only real sections/pages, never invented URLs>","why":"<what topical-authority or user-journey purpose this internal link serves>"}]},"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read - length, direct-answer format, source attribution>"}],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action grounded in the analysis>","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"<specific do-today action, targeting a section that actually exists on the client page>","reason":"<why it helps rank or get cited>","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap vs the rank-1 page, entity by entity':'insufficient_data'}","confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","page_type_classification":{"type":"content_page|functional_tool_page","evidence":"<1 sentence: what you observed on the client page that supports this>"},"ai_overview_blueprint":"<3-5 specific concrete actions THIS page must take to get cited, grounded in competitor snippets, entities and the AI-citation data above - or 'insufficient_data' if the live data does not support specific claims>","step1_catalog":[{"rank":1,"domain":"<real domain>","url":"<real URL>","title":"<real page title>","content_type":"service page|guide|landing page|blog","estimated_word_count":2000,"serp_features":["<real SERP features; empty array if none>"],"schema_types":["<real schema types; empty array if unknown>"],"freshness":"<real date signal or 'not visible'>","ai_overview_eligible":true,"snippet_text":"<real snippet text>"}],"step2_pattern":{"the_ranking_formula":"<one sentence grounded in the live snippets, or 'insufficient_data'>","dominant_content_format":"<from the data, or 'insufficient_data'>","dominant_schema":"<from the data, or 'insufficient_data'>","dominant_word_count_range":"<from the data, or 'insufficient_data'>","top3_shared_traits":["<concrete traits from the data>"],"bottom_missing_traits":["<concrete traits from the data>"],"freshness_pattern":"<from the data, or 'insufficient_data'>","depth_per_topic":[{"topic":"<a topic shared between the client page and rank-1>","rank1_treatment":"surface|moderate|deep","client_treatment":"surface|moderate|deep","gap":"<what specifically rank-1 covers that the client page doesn't - examples, numbers, steps>"}]},"step3_outlier":{"domain":"<real domain, or 'insufficient_data' if no outlier exists>","rank":4,"why_breaks_pattern":"<grounded in data>","why_it_ranks_anyway":"<grounded in data, or 'insufficient_data'>","signal_type":"warning|opportunity","what_to_learn":"<concrete lesson, or 'insufficient_data'>"},"step4_missing":[{"gap":"<real concept the client page is missing, verified absent in STEP 1>","gap_type":"warning|opportunity","how_to_exploit":"<concrete action>"}],"intent_decomposition":[{"sub_question":"<a real sub-question searchers of this keyword want answered>","client_page_answers_it":true,"rank1_answers_it":true,"gap_note":"<if client page is silent and rank-1 answers it, say so; else 'no gap'>"}],"entity_gaps_priority":[{"entity":"<real ENTITY GAP term, VERIFIED ABSENT from the client page in STEP 3>","priority":"high|medium|low","where_to_add":"<an exact section that actually exists on the client page>"}],"content_brief":{"recommended_format":"<must align with page_type_classification - never a full blog rewrite if functional_tool_page>","recommended_word_count":2200,"recommended_schema":["<schema types not already present on the client page>"],"must_have_h2s":["<empty array if functional_tool_page and existing H2s suffice; otherwise specific headings>"],"must_cover_entities":["<real entities, verified absent or weak in STEP 3>"],"faq_questions":["<real FAQ questions, checked against any existing FAQPage schema on the client page>"],"beat_number1_instructions":[{"topic":"<a shared topic from depth_per_topic>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction: exactly what to add, what kind of evidence to use, how deep to go - not generic advice>"}]},"meta_package":{"seo_title":"<a rank-ready <title>, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<a click-worthy meta description, 140-160 chars, aim for 150-159, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human would read>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the exact first 40-60 words of the page: a self-contained, quotable definition/answer to the primary intent that Google AI Overview and Perplexity can lift verbatim. Must lead with the keyword's answer, no throat-clearing>","why_it_wins":"<one sentence: why this opening earns the citation - what makes it extractable>"},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section must accomplish for the reader and for ranking/citation>","target_words":300,"cover":["<the specific sub-questions from intent_decomposition and entities from must_cover_entities this section must answer/include>"],"citation_hook":"<if this section can earn an AI citation, the one quotable sentence to write here; else empty string>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<the topic or existing page on the client's own site this should link to - only real sections/pages, never invented URLs>","why":"<what topical-authority or user-journey purpose this internal link serves>"}]},"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read - length, direct-answer format, source attribution>"}],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action grounded in the analysis>","effort":"low|medium|high","time_to_impact":"days|weeks"}],"quick_wins":[{"win":"<specific do-today action, targeting a section that actually exists on the client page>","reason":"<why it helps rank or get cited>","effort_minutes":20}],"client_vs_best":"${myUrl?'specific gap vs the rank-1 page, entity by entity':'insufficient_data'}","confidence":"high|medium|low"}`;
   try {
     const ctrl2=new AbortController();setTimeout(()=>ctrl2.abort(),45000);
     const geminiKey=process.env.GEMINI_API_KEY; if(!geminiKey) throw new Error('GEMINI_API_KEY required for SERP brief');
@@ -58392,6 +58486,9 @@ function _pwbFinalPublicationPass(b){
       .replace(/\bcan\s+help\s+aims?\s+to\s+support\b/gi,'can help support')
       .replace(/\bcan\s+help\s+support\s+([^.!?]{1,90}?)\s+is\s+considered\b/gi,'can help $1 be considered')
       .replace(/\bcan\s+help\s+aims?\s+to\b/gi,'can help')
+      .replace(/\bto\s+aims?\s+to\s+support\b/gi,'to support')
+      .replace(/\baims?\s+to\s+support\s+the\s+content\s+aligns?\b/gi,'ensure the content aligns')
+      .replace(/\bpotentially\s+which\s+may\s+support\b/gi,'which may support')
       .replace(/\bensur(?:e|es|ing)\s+(?:that\s+)?(?:a\s+)?brand\s+(?:is\s+)?cited\s+and\s+trusted\s+by\s+AI\b/gi,'can improve the likelihood of a brand being cited in AI-generated answers')
       .replace(/\bensur(?:e|es|ing)\s+brand\s+presence\b/gi,'supporting brand visibility')
       .replace(/\bsecures?\s+direct\s+answers\b/gi,'can improve eligibility for direct-answer experiences')
@@ -58400,6 +58497,9 @@ function _pwbFinalPublicationPass(b){
       .replace(/\bincreasing\s+visibility\b/gi,'which may improve visibility')
       .replace(/\bdriving\s+more\s+qualified\s+traffic\s+and\s+conversions\b/gi,'which may support qualified traffic and conversions')
       .replace(/\bbuilding\s+trust\s+and\s+recognition\b/gi,'which may support trust and recognition')
+      .replace(/\baims?\s+to\s+support\s+the\s+content\s+aligns?\b/gi,'ensure the content aligns')
+      .replace(/\bto\s+aims?\s+to\s+support\b/gi,'to support')
+      .replace(/\bpotentially\s+which\s+may\s+support\b/gi,'which may support')
       .replace(/\s{2,}/g,' ').trim();
   };
 
@@ -58437,7 +58537,10 @@ function _pwbFinalPublicationPass(b){
   });
   if(b.entity_strategy&&Array.isArray(b.entity_strategy.relationships)){
     b.entity_strategy.relationships=b.entity_strategy.relationships.map(function(r){
-      return r&&typeof r==='object'?Object.assign({},r,{relation:_soften(r.relation),object:_soften(r.object)}):r;
+      if(!r||typeof r!=='object')return r;
+      let relation=_soften(r.relation),object=_soften(r.object);
+      if(/^(?:aims? to support|can support)$/i.test(relation)&&/^brand is cited and trusted by ai$/i.test(object)){relation='can improve the likelihood of';object='brand citation in AI-generated answers';}
+      return Object.assign({},r,{relation:relation,object:object});
     }).filter(function(r){return r&&_good(r.subject)&&_good(r.relation)&&_good(r.object);});
   }
 
@@ -58492,9 +58595,29 @@ function _pwbFinalPublicationPass(b){
     supporting_optional:es.supporting.slice()
   };
 
-  // SEO Package contract: the approved Prewrite is the source of truth for title/meta/H1/slug.
-  // Schema remains a candidate list until the final Publisher page/host is verified.
+  // v504 SEO Package contract + deterministic length policy.
+  // Hard limits: SEO title <=60 chars. Meta description 140-160 chars, with 150-159 ideal.
+  // Safe shortening is deterministic and free. We never invent facts merely to make a short meta longer.
   const mp=b.meta_package&&typeof b.meta_package==='object'?b.meta_package:{};
+  const _metaTrim=function(v,max,prefer){
+    let s=_txt(v).replace(/\s+/g,' ');
+    if(s.length<=max)return s;
+    let cut=s.slice(0,Math.min(max,prefer||max));
+    const floor=Math.max(24,Math.floor(max*0.62)),sp=cut.lastIndexOf(' ');
+    if(sp>=floor)cut=cut.slice(0,sp);
+    cut=cut.replace(/[\s,;:|\-–—]+$/g,'').trim();
+    return cut.slice(0,max).trim();
+  };
+  const _metaAdjustments=[];
+  const _titleBefore=_txt(mp.seo_title),_descBefore=_txt(mp.meta_description);
+  if(_titleBefore.length>60){mp.seo_title=_metaTrim(_titleBefore,60,60);_metaAdjustments.push({field:'seo_title',from:_titleBefore.length,to:mp.seo_title.length,reason:'hard_max_60'});}
+  if(_descBefore.length>160){
+    let d=_metaTrim(_descBefore,159,159);
+    if(d&&d.length<160&&!/[.!?]$/.test(d)&&d.length<=158)d+='.';
+    mp.meta_description=d;_metaAdjustments.push({field:'meta_description',from:_descBefore.length,to:d.length,reason:'hard_max_160_target_150_159'});
+  }
+  b.meta_package=mp;
+  b.meta_length_policy={seo_title_max:60,meta_description_min:140,meta_description_max:160,meta_description_ideal_min:150,meta_description_ideal_max:159,automatic_shortening:true,automatic_expansion:false,manual_edit:true,adjustments:_metaAdjustments};
   const schemaCandidates=_dedupe(b.recommended_structure&&b.recommended_structure.recommended_schema);
   b.seo_package_contract={
     source:'approved_prewrite',
@@ -58502,8 +58625,10 @@ function _pwbFinalPublicationPass(b){
     meta_description:_txt(mp.meta_description),
     h1:_txt(mp.h1),
     url_slug:_txt(mp.url_slug),
+    title_length:_txt(mp.seo_title).length,
+    meta_description_length:_txt(mp.meta_description).length,
     schema_candidates:schemaCandidates,
-    rule:'Publisher Edition SEO Package starts from these approved title/meta/H1/slug values. Structured data is finalized only when it matches the visible article and the publisher host does not already provide conflicting schema.'
+    rule:'SEO title must be 60 characters or fewer. Meta description must be 140-160 characters; 150-159 is ideal. Safe overlength trimming is automatic. Short descriptions are not padded with invented claims and must be corrected before approval. Publisher Edition starts from these approved values.'
   };
 
   // PAA already has its own paste-ready answer block. Keep only FAQ ideas that are genuinely
@@ -58521,6 +58646,7 @@ function _pwbFinalPublicationPass(b){
   b.competitor_coverage={requested_window:10,results_returned:ct.length,usable_results:usable,serp_positions:ct.map(c=>Number(c&&c.rank||0)).filter(Boolean),sufficient_for_comparison:usable>=3,rule:'Do not force ten results. Three or more usable competitors are enough for a grounded comparison; always show the actual returned positions.'};
 
   b.publication_quality_check=_pwbPublicationQa(b);
+  b.final_qa_version='v504-meta-policy';
   return b;
 }
 
@@ -58528,10 +58654,16 @@ function _pwbPublicationQa(b){
   const warnings=[],blockers=[];let score=100;
   const mp=b&&b.meta_package||{},title=String(mp.seo_title||''),desc=String(mp.meta_description||'');
   const penalize=function(points,code,message){score=Math.max(0,score-points);warnings.push({code:code,message:message,points:points});};
-  if(title.length>60)penalize(4,'meta_title_long','SEO title is '+title.length+' characters; target 60 or fewer.');
-  if(desc.length>160)penalize(3,'meta_description_long','Meta description is '+desc.length+' characters; target 160 or fewer.');
+  const block=function(points,code,message){score=Math.max(0,score-points);blockers.push({code:code,message:message,points:points});};
+  if(!title.trim())block(10,'meta_title_missing','SEO title is missing.');
+  else if(title.length>60)block(8,'meta_title_long','SEO title is '+title.length+' characters; hard maximum is 60. Edit it before approval.');
+  if(!desc.trim())block(10,'meta_description_missing','Meta description is missing.');
+  else if(desc.length<140)block(7,'meta_description_short','Meta description is '+desc.length+' characters; minimum is 140. Target 150-159.');
+  else if(desc.length>160)block(7,'meta_description_long','Meta description is '+desc.length+' characters; hard maximum is 160. Target 150-159.');
+  else if(desc.length<150)penalize(1,'meta_description_valid_but_short','Meta description is '+desc.length+' characters; valid range is 140-160, but 150-159 is ideal.');
+  else if(desc.length===160)penalize(1,'meta_description_upper_edge','Meta description is 160 characters; valid, but 150-159 is the preferred range.');
   const corpus=JSON.stringify({outline:b&&b.definitive_outline,use_cases:b&&b.use_cases,conclusion:b&&b.conclusion,action_plan:b&&b.action_plan,entity_strategy:b&&b.entity_strategy});
-  if(/\bcurrent_value\b|\bcan help aims to\b/i.test(corpus)){score=Math.max(0,score-8);blockers.push({code:'internal_or_broken_copy',message:'Internal prompt vocabulary or broken grammar remains in writer-facing copy.'});}
+  if(/\bcurrent_value\b|\bcan help aims to\b|\bto aims? to\b|\bpotentially which\b|\baims? to support the content aligns?\b/i.test(corpus)){score=Math.max(0,score-8);blockers.push({code:'internal_or_broken_copy',message:'Internal prompt vocabulary or broken grammar remains in writer-facing copy.'});}
   if(/\bguarantees?\b|\bsecures?\s+direct\s+answers\b|\bensures?\s+brand\s+(?:is\s+)?cited/i.test(corpus))penalize(6,'overassertive_outcome','At least one outcome claim is still too absolute.');
   const cov=b&&b.competitor_coverage||{},usableCompetitors=Number(cov.usable_results||0);
   if(Number(cov.results_returned||0)>0&&usableCompetitors<3)penalize(5,'competitor_thin','Competitor comparison has only '+usableCompetitors+' usable result'+(usableCompetitors===1?'':'s')+'. Aim for at least 3 usable competitors; ten is not required.');
@@ -59469,7 +59601,7 @@ STEP 8 — FACT SAFETY: return fact_safety with verified_business_facts_used (on
 PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident, specific answer for a field, output "insufficient_data" instead of inventing one.
 
 Return ONLY valid JSON, no markdown, no preamble.
-{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise only verified Google/manual evidence and the Google search direct-answer signal; do not treat other systems as Google AIO proof>","ai_systems_analysis":{"google_aio":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[{"source_name":"<visible source name>","page_title":"<visible page title>","exact_url":"<exact https:// URL or insufficient_data>"}]},"chatgpt":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"perplexity":{"checked":false,"evidence_source":"manual|automatic_fallback|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"claude":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"copilot":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]}},"competitor_table":[{"rank":1,"company_or_publisher":"<company or publisher only if supported by the supplied title/domain/page; otherwise use the domain>","domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data, or insufficient_data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content; insufficient_data if scrape failed>","the_gap":"<one concrete thing missing or weak in their content; insufficient_data if scrape failed>","what_to_add":"<what the new page should do instead/better; insufficient_data if scrape failed>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, max 155 chars, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<exact URL copied verbatim from AUTO INTERNAL LINK RESEARCH; [] if none>","why":"<topical-authority or user-journey purpose>"}],"external_link_targets":[{"anchor_text":"<natural descriptive anchor>","source_name":"<real source/page name>","exact_url":"<exact https:// URL copied verbatim from AUTO EXTERNAL SOURCE RESEARCH>","why":"<why this source is useful/authoritative>","supports_claim":"<the specific fact, definition, statistic or section this source can support>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
+{"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise only verified Google/manual evidence and the Google search direct-answer signal; do not treat other systems as Google AIO proof>","ai_systems_analysis":{"google_aio":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[{"source_name":"<visible source name>","page_title":"<visible page title>","exact_url":"<exact https:// URL or insufficient_data>"}]},"chatgpt":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"perplexity":{"checked":false,"evidence_source":"manual|automatic_fallback|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"claude":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"copilot":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]}},"competitor_table":[{"rank":1,"company_or_publisher":"<company or publisher only if supported by the supplied title/domain/page; otherwise use the domain>","domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data, or insufficient_data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content; insufficient_data if scrape failed>","the_gap":"<one concrete thing missing or weak in their content; insufficient_data if scrape failed>","what_to_add":"<what the new page should do instead/better; insufficient_data if scrape failed>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, 140-160 chars, aim for 150-159, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<exact URL copied verbatim from AUTO INTERNAL LINK RESEARCH; [] if none>","why":"<topical-authority or user-journey purpose>"}],"external_link_targets":[{"anchor_text":"<natural descriptive anchor>","source_name":"<real source/page name>","exact_url":"<exact https:// URL copied verbatim from AUTO EXTERNAL SOURCE RESEARCH>","why":"<why this source is useful/authoritative>","supports_claim":"<the specific fact, definition, statistic or section this source can support>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
     const finalPrompt = prompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.'
       + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
@@ -60723,16 +60855,24 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
 
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.', stale_network_brief: true });
     const row = r.rows[0];
-    const _hadPersistedFinalQa=!!(row.brief_json&&row.brief_json.publication_quality_check);
-    // v500 — recalled Briefs get the current deterministic QA semantics without spending
-    // research/API tokens. This fixes stale saved readiness fields (for example old 67/100
-    // internal-link coverage) and makes Publication QA visible on historical Briefs too.
+    const _hadAnyPersistedFinalQa=!!(row.brief_json&&row.brief_json.publication_quality_check);
+    const _hadPersistedFinalQa=!!(_hadAnyPersistedFinalQa&&row.brief_json.final_qa_version==='v504-meta-policy');
+    // v504 — recalled finalized Briefs automatically migrate to the current deterministic meta/QA policy.
+    // This costs 0 research / 0 Gemini and prevents the owner from having to repeat a completed Final QA
+    // merely because ContentScale tightened its own deterministic rules in a later build.
     let _viewBrief={};
     try{_viewBrief=JSON.parse(JSON.stringify(row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{}));}catch(_e){_viewBrief=row.brief_json||{};}
     try { if (_viewBrief && typeof _viewBrief === 'object' && !_viewBrief.language) _viewBrief.language = (row.language || 'en'); } catch(e) {}
     _pwbFinalPublicationPass(_viewBrief);
     _viewBrief.ai_quality_check=_pwbReadiness(_viewBrief);
-    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, final_qa_persisted:_hadPersistedFinalQa });
+    let _finalQaPersisted=_hadPersistedFinalQa,_autoMigrated=false;
+    if(_hadAnyPersistedFinalQa&&!_hadPersistedFinalQa){
+      _viewBrief.final_qa_history=Array.isArray(_viewBrief.final_qa_history)?_viewBrief.final_qa_history:[];
+      _viewBrief.final_qa_history.push({at:new Date().toISOString(),mode:'automatic_policy_migration',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(_viewBrief.publication_quality_check&&_viewBrief.publication_quality_check.score||0)});
+      await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(_viewBrief),row.id]);
+      _finalQaPersisted=true;_autoMigrated=true;
+    }
+    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_autoMigrated, final_qa_persisted:_finalQaPersisted });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -60791,10 +60931,99 @@ app.post('/api/tracker-client/:token/prewrite-briefs/:id/finalize', async (req,r
     _pwbFinalPublicationPass(brief);
     brief.ai_quality_check=_pwbReadiness(brief);
     brief.final_qa_history=Array.isArray(brief.final_qa_history)?brief.final_qa_history:[];
-    brief.final_qa_history.push({at:new Date().toISOString(),mode:'deterministic',research_rerun:false,gemini_calls:0,publication_score:Number(brief.publication_quality_check&&brief.publication_quality_check.score||0)});
+    brief.final_qa_history.push({at:new Date().toISOString(),mode:'deterministic',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(brief.publication_quality_check&&brief.publication_quality_check.score||0)});
     await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(brief),auth.row.id]);
     res.set('Cache-Control','no-store');
     res.json({success:true,brief,brief_id:auth.row.id,research_rerun:false,gemini_calls:0,message:'Final QA applied and saved. No research or Gemini call was used.'});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
+});
+
+// v503 — share one saved Pre-Write Brief through an unguessable read-only URL.
+// The share page intentionally excludes Gemini usage/cost diagnostics, tracker credentials and admin actions.
+function _pwbShareEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function _pwbShareHttps(raw){try{const u=new URL(String(raw||''));return u.protocol==='https:'?u.href:'';}catch(_e){return '';}}
+function _pwbShareList(items,render){return Array.isArray(items)&&items.length?'<ul>'+items.map(render).join('')+'</ul>':'<p class="muted">None recorded.</p>';}
+function _pwbRenderReadonlyShare(row){
+  const b=row&&row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{};
+  const title=String(b&&b.meta_package&&b.meta_package.h1||b&&b.meta&&b.meta.h1||b&&b.seo_package&&b.seo_package.h1||row.working_title||row.keyword||'Pre-Write Brief');
+  const pq=b.publication_quality_check||{},qc=b.ai_quality_check||{},outline=Array.isArray(b.definitive_outline)?b.definitive_outline:(Array.isArray(b.page_blueprint)?b.page_blueprint:[]);
+  const meta=b.meta||b.meta_package||b.seo_package||{};
+  const opening=typeof b.opening_passage==='string'?b.opening_passage:String(b.opening_passage&&b.opening_passage.direct_answer||b.opening||'');
+  const entities=b.entity_strategy||b.entity_plan||{};
+  const quick=Array.isArray(b.quick_facts)?b.quick_facts:[];
+  const useCases=Array.isArray(b.use_cases)?b.use_cases:[];
+  const limitations=Array.isArray(b.limitations)?b.limitations:(b.balance&&Array.isArray(b.balance.limitations)?b.balance.limitations:[]);
+  const actionPlan=Array.isArray(b.action_plan)?b.action_plan:[];
+  const sources=Array.isArray(b.evidence_authority_sources)?b.evidence_authority_sources:(Array.isArray(b.authority_sources)?b.authority_sources:(b.evidence&&Array.isArray(b.evidence.official_sources)?b.evidence.official_sources:[]));
+  const finalAt=Array.isArray(b.final_qa_history)&&b.final_qa_history.length?b.final_qa_history[b.final_qa_history.length-1].at:null;
+  const esc=_pwbShareEsc;
+  const section=(h,body)=>'<section><h2>'+esc(h)+'</h2>'+body+'</section>';
+  const pill=(x,cls)=>'<span class="pill '+(cls||'')+'">'+esc(x)+'</span>';
+  let body='';
+  const _shareTitle=String(meta.title||meta.seo_title||''),_shareDesc=String(meta.description||meta.meta_description||''); body+=section('SEO package','<div class="grid"><div><b>SEO title</b><p>'+esc(_shareTitle)+'</p><div class="muted">'+_shareTitle.length+'/60</div></div><div><b>Meta description</b><p>'+esc(_shareDesc)+'</p><div class="muted">'+_shareDesc.length+' chars · required 140-160 · ideal 150-159</div></div><div><b>H1</b><p>'+esc(meta.h1||title)+'</p></div><div><b>Slug</b><p>'+esc(meta.slug||meta.url_slug||'')+'</p></div></div>');
+  if(opening)body+=section('Opening passage','<p>'+esc(opening)+'</p>');
+  if(outline.length)body+=section('Page blueprint',outline.map(function(x,i){return '<article class="outline"><h3>H2 '+(i+1)+'. '+esc(x&&x.h2||'')+'</h3>'+(x&&x.purpose?'<p><b>Purpose:</b> '+esc(x.purpose)+'</p>':'')+(x&&x.citation_hook?'<p><b>Citation hook:</b> '+esc(x.citation_hook)+'</p>':'')+'</article>';}).join(''));
+  const core=Array.isArray(entities.core)?entities.core:(Array.isArray(entities.primary)?entities.primary:(Array.isArray(b.entities)?b.entities.slice(0,3):[])),secondary=Array.isArray(entities.secondary)?entities.secondary:[],supporting=Array.isArray(entities.supporting)?entities.supporting:[];
+  if(core.length||secondary.length||supporting.length)body+=section('Entity plan','<p><b>Core:</b> '+core.map(x=>pill(typeof x==='string'?x:(x&&x.name||''),'core')).join(' ')+'</p><p><b>Secondary:</b> '+secondary.map(x=>pill(typeof x==='string'?x:(x&&x.name||''),'secondary')).join(' ')+'</p><p><b>Supporting:</b> '+supporting.map(x=>pill(typeof x==='string'?x:(x&&x.name||''),'supporting')).join(' ')+'</p><p class="muted">Use entities naturally. Do not force every discovered entity into the article.</p>');
+  if(b.ai_answer){const aa=typeof b.ai_answer==='string'?b.ai_answer:(b.ai_answer.direct_answer||b.ai_answer.answer||b.ai_answer.primary_answer||'');body+=section('AI answer','<p>'+esc(aa)+'</p>');}
+  if(quick.length)body+=section('Quick facts',_pwbShareList(quick,function(x){return '<li>'+esc(typeof x==='string'?x:((x&&x.label?x.label+': ':'')+(x&&x.value||x&&x.fact||'')))+'</li>';}));
+  if(limitations.length)body+=section('Limitations',_pwbShareList(limitations,function(x){return '<li>'+esc(typeof x==='string'?x:(x&&x.text||x&&x.value||''))+'</li>';}));
+  if(useCases.length)body+=section('Practical use cases',_pwbShareList(useCases,function(x){return '<li>'+esc(typeof x==='string'?x:(x&&x.text||x&&x.use_case||x&&x.scenario||JSON.stringify(x)))+'</li>';}));
+  if(sources.length)body+=section('Evidence & authority sources',_pwbShareList(sources,function(x){const label=typeof x==='string'?x:(x&&x.title||x&&x.name||x&&x.source||'Source'),url=_pwbShareHttps(typeof x==='string'?(String(x).match(/https:\/\/\S+/)||[''])[0]:(x&&x.url||x&&x.source_url||''));return '<li>'+esc(label)+(url?' · <a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(url)+'</a>':'')+'</li>';}));
+  if(b.conclusion){const c=typeof b.conclusion==='string'?b.conclusion:(b.conclusion.recap||b.conclusion.recommendation||'');if(c)body+=section('Conclusion','<p>'+esc(c)+'</p>');}
+  if(actionPlan.length)body+=section('Action plan',_pwbShareList(actionPlan,function(x){return '<li>'+esc(typeof x==='string'?x:(x&&x.text||x&&x.action||JSON.stringify(x)))+'</li>';}));
+  const warn=Array.isArray(pq.warnings)?pq.warnings:[],block=Array.isArray(pq.blockers)?pq.blockers:[];
+  body+=section('Quality status','<div class="quality"><div>'+pill('AI readiness '+(typeof qc.readiness_score==='number'?qc.readiness_score:'—')+'/100','core')+' '+pill('Publication QA '+(typeof pq.score==='number'?pq.score:'—')+'/100',pq.ready_to_write?'core':'warn')+'</div>'+(block.length?'<p class="bad">'+block.map(x=>'✕ '+esc(x&&x.message||x&&x.code||'blocker')).join('<br>')+'</p>':'')+(warn.length?'<p class="warntext">'+warn.map(x=>'⚠ '+esc(x&&x.message||x&&x.code||'warning')).join('<br>')+'</p>':'<p class="good">✓ No publication warnings recorded.</p>')+'</div>');
+  const when=finalAt||row.created_at||'';
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+esc(title)+' · ContentScale Pre-Write Brief</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e5eef9;font:15px/1.62 Inter,Segoe UI,Arial,sans-serif}.wrap{max-width:980px;margin:auto;padding:28px 18px 60px}.hero,section{background:#0b1929;border:1px solid #263b55;border-radius:14px;padding:20px;margin-bottom:14px}.hero{background:linear-gradient(135deg,#0b2440,#312e81)}h1{margin:4px 0 6px;font-size:29px;line-height:1.2}h2{font-size:17px;margin:0 0 12px;color:#93c5fd}h3{font-size:15px;margin:0 0 6px;color:#fff}p{margin:6px 0;color:#d6deea}.muted{color:#94a3b8;font-size:13px}.outline{border-top:1px solid #22344a;padding:12px 0}.outline:first-child{border-top:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid>div{background:#08131f;border:1px solid #22344a;border-radius:9px;padding:11px}.pill{display:inline-block;border:1px solid #334155;border-radius:999px;padding:3px 9px;margin:2px;font-size:12px}.pill.core{border-color:#16a34a;color:#86efac}.pill.secondary{border-color:#2563eb;color:#93c5fd}.pill.supporting{border-color:#7c3aed;color:#d8b4fe}.pill.warn{border-color:#d97706;color:#fbbf24}a{color:#7dd3fc;word-break:break-word}li{margin:5px 0}.warntext{color:#fbbf24}.bad{color:#fca5a5}.good{color:#86efac}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.actions button{border:0;border-radius:8px;padding:9px 14px;background:#e2e8f0;color:#0f172a;font-weight:800;cursor:pointer}@media(max-width:700px){.grid{grid-template-columns:1fr}h1{font-size:24px}}</style></head><body><main class="wrap"><header class="hero"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#c4b5fd;font-weight:800;">ContentScale · read-only shared Pre-Write Brief</div><h1>'+esc(title)+'</h1><div class="muted">Keyword: '+esc(row.keyword||'')+(when?' · Final/current version: '+esc(String(when)):'')+'</div><div class="actions"><button onclick="navigator.clipboard.writeText(location.href).then(()=>{this.textContent=\'✓ Link copied\'})">Copy share link</button></div></header>'+body+'<p class="muted" style="text-align:center;margin-top:22px;">Read-only share view. Tracker credentials, admin controls and Gemini cost diagnostics are intentionally excluded.</p></main></body></html>';
+}
+
+app.post('/api/tracker-client/:token/prewrite-briefs/:id/share', async (req,res)=>{
+  try{
+    const auth=await _pwbLoadAuthorizedSavedBriefV500(req,Number(req.params.id||0));
+    if(auth.error)return res.status(auth.status||404).json({success:false,error:auth.error});
+    const qr=await pool.query('SELECT share_token FROM prewrite_briefs WHERE id=$1 LIMIT 1',[auth.row.id]);
+    let shareToken=String(qr.rows[0]&&qr.rows[0].share_token||'');
+    if(!/^[a-f0-9]{48}$/.test(shareToken)){
+      shareToken=require('crypto').randomBytes(24).toString('hex');
+      await pool.query('UPDATE prewrite_briefs SET share_token=$1,share_created_at=NOW() WHERE id=$2',[shareToken,auth.row.id]);
+    }
+    const base=String(process.env.APP_URL||'https://app.contentscale.site').replace(/\/$/,'');
+    res.set('Cache-Control','no-store');
+    res.json({success:true,share_url:base+'/share/prewrite/'+shareToken,brief_id:auth.row.id,read_only:true});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
+});
+
+app.get('/share/prewrite/:shareToken', async (req,res)=>{
+  try{
+    const shareToken=String(req.params.shareToken||'').toLowerCase();
+    if(!/^[a-f0-9]{48}$/.test(shareToken))return res.status(404).send('Brief not found.');
+    const rr=await pool.query('SELECT id,keyword,working_title,brief_json,created_at FROM prewrite_briefs WHERE share_token=$1 LIMIT 1',[shareToken]);
+    if(!rr.rows.length)return res.status(404).send('Brief not found.');
+    res.set('Cache-Control','no-store, no-cache, must-revalidate');
+    res.set('X-Robots-Tag','noindex, nofollow');
+    res.type('html').send(_pwbRenderReadonlyShare(rr.rows[0]));
+  }catch(e){console.error('[prewrite-share]',e.message);res.status(500).send('Shared Brief could not be loaded.');}
+});
+
+// v504 — manual correction of the saved SEO title/meta description.
+// This is a zero-cost maintenance action: no SERP research, no Gemini/LLM call.
+app.post('/api/tracker-client/:token/prewrite-briefs/:id/meta-package', async (req,res)=>{
+  try{
+    const auth=await _pwbLoadAuthorizedSavedBriefV500(req,Number(req.params.id||0));
+    if(auth.error)return res.status(auth.status||404).json({success:false,error:auth.error});
+    const title=String(req.body&&req.body.seo_title||'').trim(),desc=String(req.body&&req.body.meta_description||'').trim();
+    if(!title||title.length>60)return res.status(400).json({success:false,error:'SEO title must be between 1 and 60 characters.'});
+    if(desc.length<140||desc.length>160)return res.status(400).json({success:false,error:'Meta description must be 140-160 characters. Ideal range: 150-159.'});
+    let brief={};try{brief=JSON.parse(JSON.stringify(auth.row.brief_json||{}));}catch(_e){brief=auth.row.brief_json||{};}
+    if(!brief.meta_package||typeof brief.meta_package!=='object'||Array.isArray(brief.meta_package))brief.meta_package={};
+    brief.meta_package.seo_title=title;brief.meta_package.meta_description=desc;
+    _pwbFinalPublicationPass(brief);brief.ai_quality_check=_pwbReadiness(brief);
+    brief.final_qa_history=Array.isArray(brief.final_qa_history)?brief.final_qa_history:[];
+    brief.final_qa_history.push({at:new Date().toISOString(),mode:'manual_meta_edit',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(brief.publication_quality_check&&brief.publication_quality_check.score||0)});
+    await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(brief),auth.row.id]);
+    res.set('Cache-Control','no-store');
+    res.json({success:true,brief,brief_id:auth.row.id,final_qa_persisted:true,research_rerun:false,gemini_calls:0,message:'SEO title and meta description saved. No research or Gemini call was used.'});
   }catch(e){res.status(500).json({success:false,error:e.message});}
 });
 
@@ -60880,7 +61109,7 @@ ${serpTitles || 'Not available'}
 
 Rules:
 - Title: 50-60 chars, keyword in first 3 words, include unique differentiator
-- Description: 145-155 chars, include keyword, clear CTA, specific benefit
+- Description: hard range 140-160 chars; aim for 150-159, include keyword, clear CTA, specific benefit
 - H1: Matches search intent, includes keyword, compelling, unique angle vs competitors
 
 Return ONLY valid JSON:
