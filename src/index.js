@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v491-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v492-PREWRITE-QUALITY-GATE-FIX-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,9 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-quality-gate-post-safety-repair-v492',
+  'prewrite-persistence-transaction-v492',
+  'canonical-build-identity-sync-v492',
   'prewrite-evidence-quality-ladder-v489',
   'prewrite-provenance-resolution-v489',
   'prewrite-expert-research-depth-v489',
@@ -812,8 +815,8 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-02-CANONICAL-v424-CEO-CONTACT-NAME',
-  built_date: '2026-09-30',
+  build: 'CS-2026-10-05-CANONICAL-v492-PREWRITE-QUALITY-GATE-FIX-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
   ceo_private_public_same_engine: true,
