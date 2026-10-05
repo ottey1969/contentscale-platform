@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v491-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v493-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -310,6 +310,8 @@ const CONTENTSCALE_BUILD_CHANGES = [
   'prewrite-provenance-resolution-v489',
   'prewrite-expert-research-depth-v489',
   'network-evidence-quality-contract-v494',
+  'network-approved-brief-snapshot-gate-v498',
+  'network-h2-selection-sync-invariants-v497',
   'network-h2-image-relevance-hardening-v496',
   'prewrite-two-axis-intent-fusion-v488',
   'prewrite-verified-evidence-enrichment-v487',
@@ -45886,6 +45888,20 @@ async function loadRecentPrewriteBriefs() {
 // Backward-compatible safety: old cached onclick handlers must never delete a saved Brief.
 async function deletePrewriteBrief(ev, id) { hideRecentPrewriteBrief(ev,id); }
 
+function _renderNetworkPrewriteApprovalWorkflow(briefId,briefObj){
+  try{
+    var q=new URLSearchParams(window.location.search||''),placement=Number(q.get('networkPlacement')||0),result=document.getElementById('pwbResult');
+    if(!placement||!result||!briefId)return;
+    var old=document.getElementById('pwbNetworkWorkflow');if(old)old.remove();
+    var qc=(briefObj&&briefObj.ai_quality_check)||{},canGenerate=!!qc.ready_for_generation;
+    var wf=document.createElement('div');wf.id='pwbNetworkWorkflow';wf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #374151;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';
+    wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(canGenerate?'Approve this exact Brief & Generate Publisher Edition':'Complete missing Brief sections first')+'</button><button class="cs-btn" id="pwbRegenerateMissing">'+(canGenerate?'Redo Brief research':'Regenerate / complete Brief')+'</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:#94a3b8;">Nothing is written yet. Review the Brief first. Approval locks this exact Brief snapshot; only then does article generation start.</div>';
+    result.appendChild(wf);
+    document.getElementById('pwbRegenerateMissing').onclick=function(){if(canGenerate&&!confirm('This Brief already passed the readiness gate. Redoing it runs research/Gemini again and may use additional credits. Continue only if you actually want a new Brief.'))return;generatePrewriteBrief();};
+    var gb=document.getElementById('pwbApproveGenerate');if(gb&&canGenerate)gb.onclick=function(){generateNetworkPublisherEdition(placement,Number(briefId),this);};
+  }catch(_e){}
+}
+
 async function reopenPrewriteBrief(id) {
   _pwbDraftSave();
   var stat = document.getElementById('pwbStatus');
@@ -45904,6 +45920,7 @@ async function reopenPrewriteBrief(id) {
     var d = new Date(data.created_at);
     stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString();
     result.innerHTML = renderPrewriteBrief(data.brief);
+    _renderNetworkPrewriteApprovalWorkflow(Number(id),data.brief);
     result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     _networkPrewriteEmitState();
   } catch (e) {
@@ -46093,17 +46110,8 @@ async function generatePrewriteBrief() {
     var _ready=!!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),_score=Number(data.brief.ai_quality_check&&data.brief.ai_quality_check.readiness_score||0);
     stat.textContent = (_ready?'\u2713 Brief complete':'\u26a0 Brief needs review') + ' \u00b7 AI readiness '+_score+'/100 \u00b7 ' + (data.competitors_scraped || 0) + ' competitors analyzed \u00b7 region: ' + (data.region || 'us') + (data.briefs_allowed ? ' \u00b7 ' + data.briefs_used + '/' + data.briefs_allowed + ' briefs used' : '');
     result.innerHTML = _renderIntentBar(data.search_intent) + renderPrewriteBrief(data.brief);
-    try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Publisher Edition';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
-    try{
-      var _q2=new URLSearchParams(window.location.search||''),_placement=Number(_q2.get('networkPlacement')||0),_qc2=data.brief.ai_quality_check||{},_canGenerate=!!_qc2.ready_for_generation;
-      if(_placement){
-        var _wf=document.createElement('div');_wf.id='pwbNetworkWorkflow';_wf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #374151;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';
-        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':'Complete missing Brief sections first')+'</button><button class="cs-btn" id="pwbRegenerateMissing">Regenerate / complete Brief</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:#94a3b8;">Review the Brief above. Generation uses this exact approved Brief as the content contract.</div>';
-        result.appendChild(_wf);
-        document.getElementById('pwbRegenerateMissing').onclick=function(){generatePrewriteBrief();};
-        var _gb=document.getElementById('pwbApproveGenerate');if(_gb&&_canGenerate)_gb.onclick=function(){generateNetworkPublisherEdition(_placement,this);};
-      }
-    }catch(_wfErr){}
+    try{var _nq=new URLSearchParams(window.location.search),_np=Number(_nq.get('networkPlacement')||0);if(_np&&data.brief_id){var _ak=localStorage.getItem('admin_id')||'',_lr=await fetch('/api/network/admin/publications/'+_np+'/link-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':_ak},body:JSON.stringify({brief_id:Number(data.brief_id)})}),_ld=await _lr.json().catch(function(){return{}});if(_lr.ok&&_ld.success){stat.textContent+=' · linked to Network placement';if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-prewrite-linked',placement_id:_np,brief_id:Number(data.brief_id)},window.location.origin)}else stat.textContent+=' · Network link failed: '+((_ld&&_ld.error)||('HTTP '+_lr.status))}}catch(_ne){}
+    _renderNetworkPrewriteApprovalWorkflow(Number(data.brief_id||0),data.brief);
     loadRecentPrewriteBriefs();
   } catch (e) {
     clearInterval(_pwbStepTimer); clearInterval(_pwbDotsTimer);
@@ -46133,18 +46141,24 @@ async function generatePrewriteBrief() {
   }
 }
 
-async function generateNetworkPublisherEdition(placementId,btn){
+async function generateNetworkPublisherEdition(placementId,briefId,btn){
   var st=document.getElementById('pwbGenerateArticleStatus'),key=localStorage.getItem('admin_id')||'';
   if(!key){if(st)st.textContent='Admin key missing. Re-open the Network admin and try again.';return;}
-  var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Generating Publisher Edition...';}
-  if(st)st.textContent='Approved. Generating the full Publisher Edition from this exact Pre-Write Brief...';
+  if(!briefId){if(st)st.textContent='No saved Brief ID found. Save/reopen the Brief first.';return;}
+  var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Approving exact Brief snapshot...';}
+  if(st)st.textContent='Locking this exact reviewed Brief before any article-writing call starts...';
   try{
-    var r=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/generate',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({})});
+    var ar=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/approve-prewrite',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({brief_id:Number(briefId)})});
+    var a=await ar.json().catch(function(){return{}});if(!ar.ok)throw new Error(a.error||('Brief approval failed HTTP '+ar.status));
+    if(a.already_generated_from_this_approval){if(st)st.textContent='✓ This exact approved Brief already generated the current Publisher Edition.';if(btn)btn.textContent='✓ Already generated';return;}
+    if(btn)btn.textContent='Generating from approved snapshot...';
+    if(st)st.textContent='✓ Brief locked · hash '+String(a.brief_hash||'').slice(0,12)+'… · now generating the Publisher Edition from that immutable snapshot.';
+    var r=await fetch('/api/network/admin/placements/'+encodeURIComponent(placementId)+'/generate',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':key},body:JSON.stringify({approval_id:Number(a.approval&&a.approval.id||0)})});
     var d=await r.json().catch(function(){return{}});if(!r.ok)throw new Error(d.error||('Generation failed HTTP '+r.status));
-    if(st)st.textContent=d.already_generated?'Publisher Edition already exists. Open Publishing to review it.':'\u2713 Publisher Edition generated. Open Network Publishing to review/edit images, links, attribution and final HTML before publishing.';
-    if(btn){btn.textContent='\u2713 Publisher Edition ready';btn.disabled=true;}
-    if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-publisher-edition-ready',placement_id:Number(placementId),publication_version_id:d.publication_version_id||(d.publication_version&&d.publication_version.id)||null},window.location.origin);
-  }catch(e){if(st)st.textContent='\u2715 '+e.message;if(btn){btn.disabled=false;btn.textContent=original||'Approve Brief & Generate Publisher Edition';}}
+    if(st)st.textContent=d.already_generated?'✓ This exact approved Brief already generated the current Publisher Edition.':'✓ Publisher Edition generated from the locked approved Brief snapshot. Open Publishing to review article, images, links, attribution and final HTML.';
+    if(btn)btn.textContent=d.already_generated?'✓ Already generated':'✓ Approved + generated';
+    if(window.parent&&window.parent!==window)window.parent.postMessage({type:'network-publisher-edition-ready',placement_id:Number(placementId),publication_version_id:d.publication_version_id||(d.publication_version&&d.publication_version.id)||null,approval_id:Number(a.approval&&a.approval.id||0)},window.location.origin);
+  }catch(e){if(st)st.textContent='✕ '+e.message;if(btn){btn.disabled=false;btn.textContent=original||'Approve Brief & Generate Publisher Edition';}return;}
 }
 
 var _lastPrewriteBriefText = '';
@@ -59819,6 +59833,11 @@ app.delete('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) =>
   try {
     const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found.' });
+    const net=await pool.query(`SELECT to_regclass('public.network_content') AS network_content`).catch(()=>({rows:[{}]}));
+    if(net.rows[0]&&net.rows[0].network_content){
+      const linked=await pool.query(`SELECT id FROM network_content WHERE prewrite_brief_id=$1 AND COALESCE(distribution_status,'')<>'deleted' LIMIT 1`,[req.params.id]);
+      if(linked.rows.length)return res.status(409).json({success:false,error:'This Brief is linked to active Network content and cannot be deleted. Hide it from Recent Briefs instead, or unlink/replace it in Network first.'});
+    }
     const r = await pool.query('DELETE FROM prewrite_briefs WHERE id=$1 AND client_id=$2 RETURNING id', [req.params.id, cr.rows[0].id]);
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.' });
     res.json({ success: true });
