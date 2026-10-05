@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v492-PREWRITE-QUALITY-GATE-FIX-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v493-PREWRITE-COST-CONTROL-MANUAL-AI-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-cost-control-manual-ai-v493',
   'prewrite-quality-gate-post-safety-repair-v492',
   'prewrite-persistence-transaction-v492',
   'canonical-build-identity-sync-v492',
@@ -815,7 +816,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v492-PREWRITE-QUALITY-GATE-FIX-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  build: 'CS-2026-10-05-CANONICAL-v493-PREWRITE-COST-CONTROL-MANUAL-AI-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -1095,6 +1096,10 @@ let GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite'; // prima
 // here never affects the Content Engine, SEO Audit, or any other feature. Falls back to GEMINI_MODEL
 // automatically per-call if a gemini-2.5-pro request ever 404s (not available on this API key/tier).
 let GEMINI_MODEL_BRIEF = process.env.GEMINI_MODEL_BRIEF || 'gemini-2.5-flash-lite';
+// v493: Prewrite fallback is cost-isolated from the platform-wide auto-selected model.
+// Never let a temporary 2.5 Flash-Lite failure silently jump the Network Brief to an expensive
+// general Gemini Flash model unless the owner explicitly overrides this environment variable.
+let GEMINI_MODEL_BRIEF_FALLBACK = process.env.GEMINI_MODEL_BRIEF_FALLBACK || 'gemini-3.5-flash-lite';
 
 async function detectBestGeminiModel(apiKey) {
   if (!apiKey) return;
@@ -46101,9 +46106,10 @@ async function generatePrewriteBrief() {
       var _q2=new URLSearchParams(window.location.search||''),_placement=Number(_q2.get('networkPlacement')||0),_qc2=data.brief.ai_quality_check||{},_canGenerate=!!_qc2.ready_for_generation;
       if(_placement){
         var _wf=document.createElement('div');_wf.id='pwbNetworkWorkflow';_wf.style.cssText='position:sticky;bottom:0;margin-top:14px;padding:12px;background:#0b1220;border:1px solid #374151;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:4';
-        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':'Complete missing Brief sections first')+'</button><button class="cs-btn" id="pwbRegenerateMissing">Regenerate / complete Brief</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:#94a3b8;">Review the Brief above. Generation uses this exact approved Brief as the content contract.</div>';
+        _wf.innerHTML='<button class="cs-btn primary" id="pwbApproveGenerate" '+(_canGenerate?'':'disabled')+' style="flex:1;min-width:240px;">'+(_canGenerate?'Approve Brief & Generate Publisher Edition':'Complete missing Brief sections first')+'</button><button class="cs-btn" id="pwbRegenerateMissing">Regenerate / complete Brief</button><button class="cs-btn" id="pwbCopyExternalAi">Copy for external AI</button><div id="pwbGenerateArticleStatus" style="width:100%;font-size:10.5px;color:#94a3b8;">Review the Brief above. Generation uses this exact approved Brief as the content contract.</div>';
         result.appendChild(_wf);
         document.getElementById('pwbRegenerateMissing').onclick=function(){generatePrewriteBrief();};
+        var _ce=document.getElementById('pwbCopyExternalAi');if(_ce)_ce.onclick=function(){copyPrewriteForExternalAi(this);};
         var _gb=document.getElementById('pwbApproveGenerate');if(_gb&&_canGenerate)_gb.onclick=function(){generateNetworkPublisherEdition(_placement,this);};
       }
     }catch(_wfErr){}
@@ -46442,7 +46448,9 @@ function renderPrewriteBrief(b) {
     html += '<div>' + _PL.qtested + ': <span style="color:#e5e7eb;">"' + esc(wc2.query_tested) + '"</span></div>';
     html += '<div>Checked: ' + esc(wc2.checked_at) + '</div>';
     html += '<div>Google AI Overview: ' + esc(wc2.google_direct_answer) + '</div>';
+    if(typeof wc2.ai_systems_manual_checked==='number') html += '<div>Manual AI evidence: <span style="color:'+(wc2.ai_systems_manual_checked===5?'#86efac':'#fbbf24')+';font-weight:800;">'+esc(wc2.ai_systems_manual_checked)+'/5 supplied</span></div>';
     html += '<div>Perplexity: ' + esc(wc2.perplexity) + '</div>';
+    if(wc2.generation_usage){var _gu=wc2.generation_usage||{};html += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid #1e3a5f;">Gemini generation: <strong style="color:#e5e7eb;">'+esc((_gu.calls||[]).length)+' calls</strong> · input '+esc(_gu.input_tokens||0)+' · visible output '+esc(_gu.output_tokens||0)+' · thinking '+esc(_gu.thinking_tokens||0)+' · billable output '+esc(_gu.billable_output_tokens||0)+(Array.isArray(_gu.models)&&_gu.models.length?' · models '+_gu.models.map(function(x){return esc(x);}).join(', '):'')+'</div>';}
     if (wc2.perplexity_excerpt) html += '<div style="margin-top:4px;font-style:italic;color:#cbd5e1;">"' + esc(wc2.perplexity_excerpt) + '"</div>';
     if (Array.isArray(wc2.perplexity_currently_cites) && wc2.perplexity_currently_cites.length) {
       html += '<div style="margin-top:4px;">' + _PL.perpCites + ': ' + wc2.perplexity_currently_cites.map(function(d){return esc(d);}).join(', ') + '</div>';
@@ -46730,6 +46738,29 @@ function copyPrewriteBrief(btn) {
       done(ok);
     } catch(e) { done(false); }
   }
+}
+function copyPrewriteForExternalAi(btn){
+  var brief=_lastPrewriteBriefText||'';
+  if(!brief){if(btn){btn.textContent='No Brief to copy';setTimeout(function(){btn.textContent='Copy for external AI';},1600);}return;}
+  var prompt=[
+    'Write the complete Publisher Edition from the APPROVED ContentScale Pre-Write Brief below.',
+    '',
+    'NON-NEGOTIABLE RULES:',
+    '- Treat the canonical/approved page blueprint as the content contract and follow its H2 order exactly.',
+    '- Write the full article, not another brief or outline. Cover every required section and practical question.',
+    '- Use only facts, statistics, quotes, URLs and business claims supported by the Brief. Never invent proof, rankings, guarantees, results, credentials, prices, dates or experience.',
+    '- Preserve verified source URLs exactly. Do not create replacement URLs.',
+    '- Where the Brief says verify first / insufficient data, do not turn it into a factual claim.',
+    '- Keep direct answers concise and extractable while making the full article natural, useful and non-repetitive.',
+    '- Use structured data only when it genuinely matches the visible content and page type.',
+    '- Return the complete publication-ready article body. Do not explain the instructions.',
+    '',
+    'APPROVED CONTENTSCALE PRE-WRITE BRIEF:',
+    brief
+  ].join('\n');
+  var finish=function(ok){if(!btn)return;var o='Copy for external AI';btn.textContent=ok?'✓ External AI prompt copied':'⚠ Copy failed';setTimeout(function(){btn.textContent=o;},1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(prompt).then(function(){finish(true);}).catch(function(){finish(false);});return;}
+  try{var ta=document.createElement('textarea');ta.value=prompt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.focus();ta.select();var ok=document.execCommand('copy');document.body.removeChild(ta);finish(ok);}catch(e){finish(false);}
 }
 function showImportModal(mode) { var _im = document.getElementById('importModal'); _im.classList.add('show'); _im.style.display = 'flex'; setImportMode(mode || 'paste'); if (mode === 'sitemap') { var si = document.getElementById('sitemapUrl'); if (si && !si.value) si.value = 'https://' + DOMAIN + '/sitemap.xml'; } }
 function hideModal(id) {
@@ -58761,6 +58792,19 @@ Return ONLY valid JSON, no markdown, no preamble.
     let d2=null,_pwbGeminiStatus=0,_pwbGeminiError='',_pwbGeminiAttempts=0,_pwbGeminiNetworkFailure=false,_pwbGeminiModelUsed='';
     let _pwbGeminiTimedOut=false;
     const _pwbGeminiNetworkStartedAt=Date.now();
+    // v493 — request-scoped provider usage telemetry. This records the usage metadata returned
+    // by Gemini for every successful Prewrite model call, including JSON repair/quality passes.
+    // It lets us diagnose a real billing spike instead of guessing from the visible Brief length.
+    const _pwbUsage={calls:[],input_tokens:0,output_tokens:0,thinking_tokens:0,billable_output_tokens:0,total_tokens:0,cached_input_tokens:0};
+    const _pwbRecordUsage=function(label,model,data){
+      try{
+        const u=data&&data.usageMetadata||{};
+        const input=Number(u.promptTokenCount||0),output=Number(u.candidatesTokenCount||0),thinking=Number(u.thoughtsTokenCount||0),cached=Number(u.cachedContentTokenCount||0);
+        const total=Number(u.totalTokenCount||0)||(input+output+thinking);
+        const row={label:String(label||'call'),model:String(model||'unknown'),input_tokens:input,output_tokens:output,thinking_tokens:thinking,billable_output_tokens:output+thinking,total_tokens:total,cached_input_tokens:cached};
+        _pwbUsage.calls.push(row);_pwbUsage.input_tokens+=input;_pwbUsage.output_tokens+=output;_pwbUsage.thinking_tokens+=thinking;_pwbUsage.billable_output_tokens+=(output+thinking);_pwbUsage.total_tokens+=total;_pwbUsage.cached_input_tokens+=cached;
+      }catch(_usageErr){}
+    };
 
     // v458 — Network Prewrite synthesis is split into THREE small, validated JSON jobs.
     // A provider HTTP 200 is not enough: every part must parse as complete JSON before merge.
@@ -58768,7 +58812,7 @@ Return ONLY valid JSON, no markdown, no preamble.
     // post-normalization quality repair can use the exact same provider/retry machinery.
     let _pwbCompactCall=null;
     if (_pwbNetworkFastLane) {
-      const _compactModels = Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL, 'gemini-2.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))).slice(0,3);
+      const _compactModels = Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL_BRIEF_FALLBACK, 'gemini-2.5-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))).slice(0,3);
       const _extractCompactJson = function(raw) {
         raw=String(raw||'').trim(); if(!raw)return null;
         const candidates=[raw];
@@ -58780,11 +58824,12 @@ Return ONLY valid JSON, no markdown, no preamble.
       const _compactCall = async function(label, compactPrompt, maxTokens, requiredKeys) {
         const primary=_compactModels[0]||GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash';
         const fallback=_compactModels[1]||'gemini-2.5-flash';
-        const body={contents:[{parts:[{text:_langPrefix(language)+compactPrompt}]}],generationConfig:{temperature:0.18,maxOutputTokens:maxTokens,responseMimeType:'application/json'}};
+        const body={contents:[{parts:[{text:_langPrefix(language)+compactPrompt}]}],generationConfig:{temperature:0.18,maxOutputTokens:maxTokens,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
         const started=Date.now();
         let attempts=2;
         const rr=await callGeminiWithFallback(geminiKey,body,primary,fallback,2);
         const modelUsed=rr&&rr.modelUsed||primary;
+        if(rr&&rr.ok)_pwbRecordUsage(label,modelUsed,rr.data);
         if(!rr||!rr.ok){ const err=String(rr&&rr.errorMessage||('Gemini '+String(rr&&rr.status||0))).slice(0,900); return {ok:false,error:err,status:Number(rr&&rr.status||0),attempts:attempts,model:modelUsed,timed_out:/timed out|timeout/i.test(err),elapsed_ms:Date.now()-started}; }
         const jj=rr.data||{}, cand=jj.candidates&&jj.candidates[0]||{};
         const raw=(cand.content&&cand.content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
@@ -58797,10 +58842,10 @@ Use only information already present in SOURCE RESPONSE. If a required value is 
 
 SOURCE RESPONSE:
 ${raw.slice(0,16000)}`;
-          const repairBody={contents:[{parts:[{text:repairPrompt}]}],generationConfig:{temperature:0,maxOutputTokens:Math.min(maxTokens,4200),responseMimeType:'application/json'}};
-          const repair=await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',fallback,1);
+          const repairBody={contents:[{parts:[{text:repairPrompt}]}],generationConfig:{temperature:0,maxOutputTokens:Math.min(maxTokens,4200),responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
+          const repair=await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',GEMINI_MODEL_BRIEF_FALLBACK||fallback,1);
           attempts+=1;
-          if(repair&&repair.ok){
+          if(repair&&repair.ok){_pwbRecordUsage(label+'_json_repair',repair.modelUsed||'gemini-2.5-flash-lite',repair.data);
             const rj=repair.data||{}, rc=rj.candidates&&rj.candidates[0]||{};
             const rraw=(rc.content&&rc.content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
             const repaired=_extractCompactJson(rraw);
@@ -59033,7 +59078,7 @@ ${claimsBlock.slice(0,2400)}`;
           const ctrl2=new AbortController(); const _t2=setTimeout(()=>ctrl2.abort(),32000);
           const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
           clearTimeout(_t2); _pwbGeminiStatus=r2.status; const _txt=await r2.text(); let _json={}; try{_json=_txt?JSON.parse(_txt):{}}catch(_je){}
-          if(r2.ok){d2=_json;break}
+          if(r2.ok){_pwbRecordUsage('full_brief',_model,_json);d2=_json;break}
           _pwbGeminiError=((_json.error&&_json.error.message)||_txt||('Gemini '+r2.status)).slice(0,700);
           console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'failed:',r2.status,_pwbGeminiError.slice(0,220));
           if(!(r2.status===429||r2.status>=500))break;
@@ -59389,6 +59434,7 @@ ${sourceText}`;
         const body={contents:[{parts:[{text:_langPrefix(language)+prompt}]}],generationConfig:{temperature:0.03,maxOutputTokens:4600,responseMimeType:'application/json'}};
         const rr=await callGeminiWithFallback(geminiKey,body,GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash','gemini-2.5-flash',1);
         if(!rr||!rr.ok)return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(rr&&rr.errorMessage||'evidence model call failed')};
+        _pwbRecordUsage('evidence_quality_'+label,rr.modelUsed||GEMINI_MODEL_BRIEF||GEMINI_MODEL,rr.data);
         const c=rr.data&&rr.data.candidates&&rr.data.candidates[0]||{},raw=(c.content&&c.content.parts||[]).map(function(x){return x&&x.text||'';}).join('');const obj=_pwbParseJson(raw);
         return obj&&Array.isArray(obj.statistics)&&Array.isArray(obj.expert_quotes)&&Array.isArray(obj.expert_insights)?{ok:true,obj:obj,error:''}:{ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:'invalid evidence JSON'};
       }catch(e){return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(e&&e.message||e)};}
@@ -59682,6 +59728,14 @@ ${sourceText}`;
     }
 
     _pwbStage='finalize';
+    const _pwbManualAiStatus={
+      google_aio:!!_manualAi.google_aio,chatgpt:!!_manualAi.chatgpt,perplexity:!!_manualAi.perplexity,claude:!!_manualAi.claude,copilot:!!_manualAi.copilot
+    };
+    const _pwbManualAiCheckedCount=Object.keys(_pwbManualAiStatus).filter(function(k){return _pwbManualAiStatus[k];}).length;
+    const _pwbManualPerplexityUrls=(String(_manualAi.perplexity||'').match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]).map(function(u){return String(u).replace(/[)\]>,.;]+$/,'');});
+    const _pwbManualPerplexityDomains=Array.from(new Set(_pwbManualPerplexityUrls.map(function(u){try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase();}catch(_e){return ''}}).filter(Boolean)));
+    brief.generation_usage={provider:'gemini',calls:_pwbUsage.calls,input_tokens:_pwbUsage.input_tokens,output_tokens:_pwbUsage.output_tokens,thinking_tokens:_pwbUsage.thinking_tokens,billable_output_tokens:_pwbUsage.billable_output_tokens,total_tokens:_pwbUsage.total_tokens,cached_input_tokens:_pwbUsage.cached_input_tokens,models:Array.from(new Set(_pwbUsage.calls.map(function(x){return x.model;}).filter(Boolean))),note:'Provider-reported token telemetry for this Prewrite generation only. Billing console remains authoritative.'};
+    console.log('[prewrite-brief] usage',JSON.stringify({calls:_pwbUsage.calls.length,input:_pwbUsage.input_tokens,output:_pwbUsage.output_tokens,thinking:_pwbUsage.thinking_tokens,billable_output:_pwbUsage.billable_output_tokens,total:_pwbUsage.total_tokens,models:brief.generation_usage.models}));
     // What We Actually Checked — built from REAL, verified data fetched above,
     // never from the LLM's own claims. Matches the transparency block already
     // used on the regular Citation Brief.
@@ -59690,11 +59744,14 @@ ${sourceText}`;
       checked_at: checkedAt,
       google_direct_answer: aioManualText ? 'manually captured by user (' + aioManualText.length + ' chars)' : (aioDetected ? 'detected for this exact query' : 'not detected via our data source (Serper.dev limitation — does not confirm absence, only that our check could not detect it)'),
       google_direct_answer_manual_text: aioManualText || '',
-      perplexity: perplexity.checked
-        ? (perplexity.answer_excerpt ? 'checked — answer captured' : 'checked — no answer excerpt captured for this query')
-        : 'not checked — Perplexity key not configured',
-      perplexity_excerpt: perplexity.answer_excerpt || '',
-      perplexity_currently_cites: Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[],
+      ai_systems_manual_checked: _pwbManualAiCheckedCount,
+      ai_systems_manual_status: _pwbManualAiStatus,
+      perplexity: _manualAi.perplexity
+        ? 'checked — manually supplied by user (' + _manualAi.perplexity.length + ' chars)'
+        : (perplexity.checked ? (perplexity.answer_excerpt ? 'checked automatically — answer captured' : 'checked automatically — no answer excerpt captured for this query') : 'not checked — no manual evidence and Perplexity key not configured'),
+      perplexity_excerpt: _manualAi.perplexity ? '' : (perplexity.answer_excerpt || ''),
+      perplexity_currently_cites: _manualAi.perplexity ? _pwbManualPerplexityDomains : (Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[]),
+      generation_usage: brief.generation_usage,
       competitors_analysed: top10.length,
       people_also_ask: peopleAlsoAsk,
       evidence_research: brief.evidence_research || null,
