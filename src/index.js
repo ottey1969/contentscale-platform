@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v504-PREWRITE-META-LENGTH-POLICY-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v505-PREWRITE-PERMANENT-SHARE-RESEARCH-VIEW-NETWORK-v499-PUBLISHER-QA-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,10 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+    'prewrite-permanent-share-revoke-v505',
+    'prewrite-public-research-view-v505',
+    'network-publisher-qa-hardening-v499',
+    'network-manual-internal-target-v499',
   'prewrite-meta-length-policy-v504',
   'prewrite-meta-auto-trim-v504',
   'prewrite-meta-inline-editor-v504',
@@ -864,7 +868,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v504-PREWRITE-META-LENGTH-POLICY-NETWORK-v498-APPROVED-BRIEF-SNAPSHOT-GATE',
+  build: 'CS-2026-10-06-CANONICAL-v505-PREWRITE-PERMANENT-SHARE-RESEARCH-VIEW-NETWORK-v499-PUBLISHER-QA-HARDENING',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -957,6 +961,8 @@ app.get('/api/regression-contract',(req,res)=>{
     prewrite_action_state_machine:src.includes('Final QA complete · saved')&&src.includes('Complete missing only · not needed')&&src.includes('Publisher Edition ready')&&src.includes('_pwbInputsDirty'),
     prewrite_meta_length_policy:src.includes('prewrite-meta-length-policy-v504')&&src.includes('/meta-package')&&src.includes('final_qa_version')&&src.includes('150-159'),
     prewrite_share_link:src.includes('/share/prewrite/:shareToken')&&src.includes('Copy share link')&&src.includes('share_token'),
+    prewrite_permanent_share_revoke:src.includes('/share/revoke')&&src.includes('share_revoked_at')&&src.includes('Permanent read-only public link')&&src.includes('expires_at:null'),
+    prewrite_public_research_view:src.includes('Research overview')&&src.includes('Five AI systems — saved evidence')&&src.includes('Search & competitor intelligence')&&src.includes('Research execution transparency'),
     prewrite_action_summary:src.includes('pwbActionState')&&src.includes('Publication QA')&&src.includes('NEXT STEP'),
     ceo_first:CONTENTSCALE_BUILD_INFO.ceo_private&&CONTENTSCALE_BUILD_INFO.ceo_public&&CONTENTSCALE_BUILD_INFO.quickscan_other_page_only,
     audit20_discovery:!!CONTENTSCALE_BUILD_INFO.audit20_discovery,
@@ -11705,6 +11711,7 @@ app.patch('/api/admin/tracker-clients/:id', verifyAdmin, async (req, res) => {
   // v503 — persistent, revocable-by-rotation read-only share credential for one saved Brief.
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS share_token VARCHAR(64)`).catch(()=>{});
   await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS share_created_at TIMESTAMPTZ`).catch(()=>{});
+  await client.query(`ALTER TABLE prewrite_briefs ADD COLUMN IF NOT EXISTS share_revoked_at TIMESTAMPTZ`).catch(()=>{});
   await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_prewrite_briefs_share_token ON prewrite_briefs(share_token) WHERE share_token IS NOT NULL`).catch(()=>{});
   // Brief merge system
   await client.query(`ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB`).catch(()=>{});
@@ -14645,7 +14652,7 @@ if ((analysis.images||0) > 0 && (analysis.imagesWithAlt||0) < (analysis.images||
   add({ title: '🖼️ Review Image Alternative Text', description: `${analysis.images} content image(s) were detected and ${analysis.imagesWithAlt||0} have non-empty alt text.`, priority: 'medium', action: 'Add descriptive alt text to informative images. Leave alt empty for purely decorative images so assistive technologies can ignore them.', learning: 'Alternative text primarily supports accessibility and can also help systems understand informative images.', target: 'Meaningful alt text for informative images; empty alt for decorative images' });
 }
 if ((analysis.internalLinks||0) < 2 && (analysis.wordCount||0) >= 250) {
-  add({ title: '🔗 Strengthen Contextual Internal Linking', description: `Only ${analysis.internalLinks||0} contextual internal link(s) were found in the main content.`, priority: 'medium', action: 'Link naturally to relevant supporting, product, policy, guide, or authority pages when those links help the reader continue the topic.', learning: 'Contextual links expose topical relationships and help users and crawlers discover closely related pages beyond sitewide navigation.', target: 'Relevant contextual links with descriptive anchor text; no fixed link-count target' });
+  add({ title: '🔗 Optional Contextual Internal Link Opportunity', description: `Only ${analysis.internalLinks||0} contextual internal link(s) were found in the main content.`, priority: 'low', action: 'Add a contextual internal link only when a genuinely relevant same-site destination helps the reader continue the topic. Zero is acceptable when no useful destination exists.', learning: 'Internal links are useful when they connect genuinely related pages; forcing a homepage or irrelevant page merely to satisfy a count weakens the user journey.', target: 'Relevant contextual links when useful; zero is valid when no relevant destination exists' });
 } else if ((analysis.internalLinks||0) >= 2 && (analysis.internalLinks||0) < 5 && (analysis.wordCount||0) >= 700) {
   add({ title: '🔗 Review Contextual Internal Linking', description: `${analysis.internalLinks} contextual internal links were found in the main content.`, priority: 'low', action: 'Review whether important related pages are missing from naturally relevant passages. Add links only where they improve navigation or topical connection.', learning: 'The useful number of internal links depends on the page and content; relevance is more important than a quota.', target: 'Contextual links that help users continue relevant journeys' });
 }
@@ -44734,6 +44741,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       <button class="cs-btn" id="pwbRunFinalQa" disabled>Run final QA · no research · no Gemini</button>
       <button class="cs-btn" id="pwbCopyExternalAi" disabled>Copy for external AI</button>
       <button class="cs-btn" id="pwbShareBrief" disabled>Copy share link</button>
+      <button class="cs-btn" id="pwbOpenShareBrief" disabled>Open shared Brief ↗</button>
+      <button class="cs-btn" id="pwbRevokeShareBrief" disabled>Revoke public link</button>
       <div id="pwbActionState" style="width:100%;font-size:12px;line-height:1.55;color:#e2e8f0;background:#111827;border:1px solid #334155;border-radius:8px;padding:9px 11px;margin-top:2px;"><strong style="color:#93c5fd;">NEXT STEP:</strong> Generate or reopen a Brief first. Unavailable actions remain visible but disabled.</div>
       <div id="pwbShareStatus" style="display:none;width:100%;font-size:10.5px;color:#86efac;"></div>
     </div>
@@ -46033,7 +46042,7 @@ async function reopenPrewriteBrief(id) {
     try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbDraftActiveKey=_pwbDraftNorm(data.keyword||'');_pwbUpdateAiFiveCount();_pwbDraftSave()}catch(e){}
     var d = new Date(data.created_at);
     stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString() + ' · deterministic QA refreshed';
-    _pwbSetCurrentBrief(id,data.brief,!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),data.final_qa_persisted===true);
+    _pwbSetCurrentBrief(id,data.brief,!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),data.final_qa_persisted===true,data.share&&data.share.active?data.share.url:'');
     result.innerHTML = _renderIntentBar(data.brief.search_intent) + renderPrewriteBrief(data.brief);
     _pwbApplyActionState();
     result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -46179,6 +46188,7 @@ var _pwbCurrentNotPassed=false;
 var _pwbInputsDirty=false;
 var _pwbFinalQaPersisted=false;
 var _pwbPublisherEditionReady=false;
+var _pwbCurrentShareUrl='';
 function _pwbNetworkPlacement(){
   try{var q=new URLSearchParams(window.location.search||'');var n=Number(q.get('networkPlacement')||0);return Number.isSafeInteger(n)&&n>0?n:0;}catch(_e){return 0;}
 }
@@ -46264,16 +46274,31 @@ function _pwbApplyActionState(){
     copy.onclick=canCopy?function(){copyPrewriteForExternalAi(this);}:null;
   }
 
-  // 6) A read-only share link is useful as soon as the exact saved Brief exists. It never
-  // exposes the private tracker token or admin controls, and is locked when inputs are stale.
+  // 6) Permanent read-only share URL. It has no automatic expiry. The owner can revoke it
+  // without deleting the Brief; deleting the Brief also removes public access.
+  var openShare=document.getElementById('pwbOpenShareBrief'),revokeShare=document.getElementById('pwbRevokeShareBrief');
   if(share){
     var canShare=hasBrief&&hasSaved&&!stale;
     share.disabled=!canShare;
     if(stale)share.textContent='Share Brief · inputs changed';
     else if(!hasSaved)share.textContent='Share Brief · waiting for saved Brief';
-    else share.textContent='Copy share link';
+    else share.textContent=_pwbCurrentShareUrl?'Copy permanent link':'Create permanent share link';
     share.onclick=canShare?function(){copyPrewriteShareLink(this);}:null;
-    share.title=canShare?'Create or reuse a private read-only URL for this exact saved Brief. The public view contains the Brief, not your tracker/admin credentials.':'';
+    share.title=canShare?'Create or reuse one permanent read-only URL for this exact saved Brief. No automatic expiry.':'';
+  }
+  if(openShare){
+    openShare.disabled=!(hasBrief&&hasSaved&&!stale&&_pwbCurrentShareUrl);
+    openShare.onclick=!openShare.disabled?function(){window.open(_pwbCurrentShareUrl,'_blank','noopener');}:null;
+  }
+  if(revokeShare){
+    revokeShare.disabled=!(hasBrief&&hasSaved&&!stale&&_pwbCurrentShareUrl);
+    revokeShare.onclick=!revokeShare.disabled?function(){revokePrewriteShareLink(this);}:null;
+    revokeShare.title='Revoke the public URL only. The saved Brief stays intact.';
+  }
+  if(shareStatus){
+    if(_pwbCurrentShareUrl){shareStatus.style.display='block';shareStatus.innerHTML='<strong>Permanent public link · no expiry</strong><br><span style="color:#cbd5e1;word-break:break-all">'+_pwbEscHtml(_pwbCurrentShareUrl)+'</span>';}
+    else if(hasSaved&&!stale){shareStatus.style.display='block';shareStatus.innerHTML='<span style="color:#94a3b8">Public sharing is off. Create a permanent link when you want to share this Brief.</span>';}
+    else shareStatus.style.display='none';
   }
 
   if(state){
@@ -46298,13 +46323,14 @@ function _pwbApplyActionState(){
     state.innerHTML=msg+quality+blockerLines+warningLines;
   }
 }
-function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted){
+function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted,shareUrl){
   _pwbCurrentBriefId=Number(id||0)||0;
   _pwbCurrentBrief=brief||null;
   _pwbCurrentNotPassed=!!notPassed;
   _pwbFinalQaPersisted=!!qaPersisted;
   _pwbInputsDirty=false;
   _pwbPublisherEditionReady=false;
+  _pwbCurrentShareUrl=String(shareUrl||'');
   _pwbApplyActionState();
 }
 function _pwbMarkInputsChanged(){
@@ -46508,18 +46534,34 @@ async function generatePrewriteBrief() {
   }
 }
 
+function _pwbEscHtml(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;');}
+
 async function copyPrewriteShareLink(btn){
   var st=document.getElementById('pwbShareStatus');
   if(!_pwbCurrentBriefId){if(st){st.style.display='block';st.textContent='No saved Brief is loaded yet.';}return;}
-  var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent='Creating share link...';}
+  var original=btn&&btn.textContent;if(btn){btn.disabled=true;btn.textContent=_pwbCurrentShareUrl?'Copying permanent link...':'Creating permanent link...';}
   try{
     var q='';try{var np=_pwbNetworkPlacement();if(np)q='?networkPlacement='+encodeURIComponent(np)+'&networkEmbed=1';}catch(_e){}
     var d=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/share'+q,'POST',{});
     if(!d||!d.share_url)throw new Error('Share endpoint returned no URL.');
-    try{await navigator.clipboard.writeText(d.share_url);}catch(_clip){var ta=document.createElement('textarea');ta.value=d.share_url;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
-    if(st){st.style.display='block';st.innerHTML='✓ Read-only share link copied. <a href="'+String(d.share_url).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" target="_blank" rel="noopener" style="color:#93c5fd;">Open shared Brief ↗</a>';}
-    if(btn){btn.textContent='✓ Share link copied';setTimeout(function(){if(btn){btn.textContent='Copy share link';_pwbApplyActionState();}},1600);}
-  }catch(e){if(st){st.style.display='block';st.textContent='✕ Share link failed: '+e.message;}if(btn){btn.disabled=false;btn.textContent=original||'Copy share link';}}
+    _pwbCurrentShareUrl=String(d.share_url||'');
+    try{await navigator.clipboard.writeText(_pwbCurrentShareUrl);}catch(_clip){var ta=document.createElement('textarea');ta.value=_pwbCurrentShareUrl;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+    if(st){st.style.display='block';st.innerHTML='<strong>✓ Permanent public link copied · no expiry</strong><br><span style="color:#cbd5e1;word-break:break-all">'+_pwbEscHtml(_pwbCurrentShareUrl)+'</span>';}
+    if(btn){btn.textContent='✓ Permanent link copied';setTimeout(function(){if(btn)_pwbApplyActionState();},1200);}
+    _pwbApplyActionState();
+  }catch(e){if(st){st.style.display='block';st.textContent='✕ Share link failed: '+e.message;}if(btn){btn.disabled=false;btn.textContent=original||'Copy permanent link';}}
+}
+async function revokePrewriteShareLink(btn){
+  if(!_pwbCurrentBriefId||!_pwbCurrentShareUrl)return;
+  if(!confirm('Revoke this public Brief link?\\n\\nThe saved Brief stays intact, but the current public URL will stop working immediately.'))return;
+  var st=document.getElementById('pwbShareStatus');busyLabel='Revoking...';if(btn){btn.disabled=true;btn.textContent=busyLabel;}
+  try{
+    var q='';try{var np=_pwbNetworkPlacement();if(np)q='?networkPlacement='+encodeURIComponent(np)+'&networkEmbed=1';}catch(_e){}
+    await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/share/revoke'+q,'POST',{});
+    _pwbCurrentShareUrl='';
+    if(st){st.style.display='block';st.innerHTML='<span style="color:#86efac">✓ Public link revoked. The saved Brief is unchanged.</span>';}
+    _pwbApplyActionState();
+  }catch(e){if(st){st.style.display='block';st.textContent='✕ Revoke failed: '+e.message;}if(btn){btn.disabled=false;btn.textContent='Revoke public link';}}
 }
 
 async function generateNetworkPublisherEdition(placementId,btn){
@@ -60855,6 +60897,10 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
 
     if (!r.rows.length) return res.status(404).json({ success: false, error: 'Brief not found.', stale_network_brief: true });
     const row = r.rows[0];
+    const _shareQr=await pool.query('SELECT share_token,share_created_at FROM prewrite_briefs WHERE id=$1 LIMIT 1',[row.id]);
+    const _shareToken=String(_shareQr.rows[0]&&_shareQr.rows[0].share_token||'');
+    const _shareBase=String(process.env.APP_URL||'https://app.contentscale.site').replace(/\/$/,'');
+    const _shareInfo=/^[a-f0-9]{48}$/.test(_shareToken)?{active:true,url:_shareBase+'/share/prewrite/'+_shareToken,created_at:_shareQr.rows[0].share_created_at||null,expires_at:null,permanent:true}:{active:false,url:'',created_at:null,expires_at:null,permanent:true};
     const _hadAnyPersistedFinalQa=!!(row.brief_json&&row.brief_json.publication_quality_check);
     const _hadPersistedFinalQa=!!(_hadAnyPersistedFinalQa&&row.brief_json.final_qa_version==='v504-meta-policy');
     // v504 — recalled finalized Briefs automatically migrate to the current deterministic meta/QA policy.
@@ -60872,7 +60918,7 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
       await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(_viewBrief),row.id]);
       _finalQaPersisted=true;_autoMigrated=true;
     }
-    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_autoMigrated, final_qa_persisted:_finalQaPersisted });
+    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_autoMigrated, final_qa_persisted:_finalQaPersisted, share:_shareInfo });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -60938,44 +60984,109 @@ app.post('/api/tracker-client/:token/prewrite-briefs/:id/finalize', async (req,r
   }catch(e){res.status(500).json({success:false,error:e.message});}
 });
 
-// v503 — share one saved Pre-Write Brief through an unguessable read-only URL.
-// The share page intentionally excludes Gemini usage/cost diagnostics, tracker credentials and admin actions.
+// v505 — permanent, revocable read-only sharing for one saved Pre-Write Brief.
+// The public view deliberately includes research/evidence and Gemini workload transparency for showcase use, while excluding tracker/admin credentials and controls.
 function _pwbShareEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function _pwbShareHttps(raw){try{const u=new URL(String(raw||''));return u.protocol==='https:'?u.href:'';}catch(_e){return '';}}
 function _pwbShareList(items,render){return Array.isArray(items)&&items.length?'<ul>'+items.map(render).join('')+'</ul>':'<p class="muted">None recorded.</p>';}
 function _pwbRenderReadonlyShare(row){
   const b=row&&row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{};
-  const title=String(b&&b.meta_package&&b.meta_package.h1||b&&b.meta&&b.meta.h1||b&&b.seo_package&&b.seo_package.h1||row.working_title||row.keyword||'Pre-Write Brief');
-  const pq=b.publication_quality_check||{},qc=b.ai_quality_check||{},outline=Array.isArray(b.definitive_outline)?b.definitive_outline:(Array.isArray(b.page_blueprint)?b.page_blueprint:[]);
-  const meta=b.meta||b.meta_package||b.seo_package||{};
-  const opening=typeof b.opening_passage==='string'?b.opening_passage:String(b.opening_passage&&b.opening_passage.direct_answer||b.opening||'');
-  const entities=b.entity_strategy||b.entity_plan||{};
-  const quick=Array.isArray(b.quick_facts)?b.quick_facts:[];
-  const useCases=Array.isArray(b.use_cases)?b.use_cases:[];
-  const limitations=Array.isArray(b.limitations)?b.limitations:(b.balance&&Array.isArray(b.balance.limitations)?b.balance.limitations:[]);
-  const actionPlan=Array.isArray(b.action_plan)?b.action_plan:[];
-  const sources=Array.isArray(b.evidence_authority_sources)?b.evidence_authority_sources:(Array.isArray(b.authority_sources)?b.authority_sources:(b.evidence&&Array.isArray(b.evidence.official_sources)?b.evidence.official_sources:[]));
-  const finalAt=Array.isArray(b.final_qa_history)&&b.final_qa_history.length?b.final_qa_history[b.final_qa_history.length-1].at:null;
-  const esc=_pwbShareEsc;
-  const section=(h,body)=>'<section><h2>'+esc(h)+'</h2>'+body+'</section>';
+  const esc=_pwbShareEsc,title=String(b&&b.meta_package&&b.meta_package.h1||row.working_title||row.keyword||'Pre-Write Brief');
+  const meta=b.meta_package||{},pq=b.publication_quality_check||{},qc=b.ai_quality_check||{},wc=b.what_we_checked&&typeof b.what_we_checked==='object'?b.what_we_checked:{};
+  const outline=Array.isArray(b.definitive_outline)&&b.definitive_outline.length?b.definitive_outline:(Array.isArray(b.page_blueprint)?b.page_blueprint:[]);
+  const opening=typeof b.opening_passage==='string'?b.opening_passage:String(b.opening_passage&&b.opening_passage.direct_answer||'');
+  const ai=b.ai_systems_analysis&&typeof b.ai_systems_analysis==='object'?b.ai_systems_analysis:{};
+  const evidence=b.evidence&&typeof b.evidence==='object'?b.evidence:{};
+  const er=b.evidence_research&&typeof b.evidence_research==='object'?b.evidence_research:{};
+  const usage=wc.generation_usage&&typeof wc.generation_usage==='object'?wc.generation_usage:(b.generation_usage||{});
+  const comp=Array.isArray(b.competitor_table)?b.competitor_table:[];
+  const cov=b.competitor_coverage&&typeof b.competitor_coverage==='object'?b.competitor_coverage:{};
+  const paa=Array.isArray(b.paa_questions)&&b.paa_questions.length?b.paa_questions:(Array.isArray(b.people_also_ask)?b.people_also_ask:[]);
+  const engines=[['google_aio','Google AIO / Gemini'],['chatgpt','ChatGPT'],['perplexity','Perplexity'],['claude','Claude'],['copilot','Copilot']];
+  const section=(h,body,sub,cls)=>'<section'+(cls?' class="'+cls+'"':'')+'><div class="sectionhead"><div><h2>'+esc(h)+'</h2>'+(sub?'<p class="sub">'+esc(sub)+'</p>':'')+'</div></div>'+body+'</section>';
   const pill=(x,cls)=>'<span class="pill '+(cls||'')+'">'+esc(x)+'</span>';
+  const list=(arr,fn)=>Array.isArray(arr)&&arr.length?'<ul>'+arr.map(fn).join('')+'</ul>':'<p class="muted">None recorded.</p>';
+  const urlLink=(u,label)=>{u=_pwbShareHttps(u);return u?'<a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer">'+esc(label||u)+'</a>':'';};
+  const text=(v)=>String(v==null?'':v);
+  const labelEngine=(k)=>{const hit=engines.find(x=>x[0]===k);return hit?hit[1]:k;};
   let body='';
-  const _shareTitle=String(meta.title||meta.seo_title||''),_shareDesc=String(meta.description||meta.meta_description||''); body+=section('SEO package','<div class="grid"><div><b>SEO title</b><p>'+esc(_shareTitle)+'</p><div class="muted">'+_shareTitle.length+'/60</div></div><div><b>Meta description</b><p>'+esc(_shareDesc)+'</p><div class="muted">'+_shareDesc.length+' chars · required 140-160 · ideal 150-159</div></div><div><b>H1</b><p>'+esc(meta.h1||title)+'</p></div><div><b>Slug</b><p>'+esc(meta.slug||meta.url_slug||'')+'</p></div></div>');
-  if(opening)body+=section('Opening passage','<p>'+esc(opening)+'</p>');
-  if(outline.length)body+=section('Page blueprint',outline.map(function(x,i){return '<article class="outline"><h3>H2 '+(i+1)+'. '+esc(x&&x.h2||'')+'</h3>'+(x&&x.purpose?'<p><b>Purpose:</b> '+esc(x.purpose)+'</p>':'')+(x&&x.citation_hook?'<p><b>Citation hook:</b> '+esc(x.citation_hook)+'</p>':'')+'</article>';}).join(''));
-  const core=Array.isArray(entities.core)?entities.core:(Array.isArray(entities.primary)?entities.primary:(Array.isArray(b.entities)?b.entities.slice(0,3):[])),secondary=Array.isArray(entities.secondary)?entities.secondary:[],supporting=Array.isArray(entities.supporting)?entities.supporting:[];
-  if(core.length||secondary.length||supporting.length)body+=section('Entity plan','<p><b>Core:</b> '+core.map(x=>pill(typeof x==='string'?x:(x&&x.name||''),'core')).join(' ')+'</p><p><b>Secondary:</b> '+secondary.map(x=>pill(typeof x==='string'?x:(x&&x.name||''),'secondary')).join(' ')+'</p><p><b>Supporting:</b> '+supporting.map(x=>pill(typeof x==='string'?x:(x&&x.name||''),'supporting')).join(' ')+'</p><p class="muted">Use entities naturally. Do not force every discovered entity into the article.</p>');
-  if(b.ai_answer){const aa=typeof b.ai_answer==='string'?b.ai_answer:(b.ai_answer.direct_answer||b.ai_answer.answer||b.ai_answer.primary_answer||'');body+=section('AI answer','<p>'+esc(aa)+'</p>');}
-  if(quick.length)body+=section('Quick facts',_pwbShareList(quick,function(x){return '<li>'+esc(typeof x==='string'?x:((x&&x.label?x.label+': ':'')+(x&&x.value||x&&x.fact||'')))+'</li>';}));
-  if(limitations.length)body+=section('Limitations',_pwbShareList(limitations,function(x){return '<li>'+esc(typeof x==='string'?x:(x&&x.text||x&&x.value||''))+'</li>';}));
-  if(useCases.length)body+=section('Practical use cases',_pwbShareList(useCases,function(x){return '<li>'+esc(typeof x==='string'?x:(x&&x.text||x&&x.use_case||x&&x.scenario||JSON.stringify(x)))+'</li>';}));
-  if(sources.length)body+=section('Evidence & authority sources',_pwbShareList(sources,function(x){const label=typeof x==='string'?x:(x&&x.title||x&&x.name||x&&x.source||'Source'),url=_pwbShareHttps(typeof x==='string'?(String(x).match(/https:\/\/\S+/)||[''])[0]:(x&&x.url||x&&x.source_url||''));return '<li>'+esc(label)+(url?' · <a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(url)+'</a>':'')+'</li>';}));
-  if(b.conclusion){const c=typeof b.conclusion==='string'?b.conclusion:(b.conclusion.recap||b.conclusion.recommendation||'');if(c)body+=section('Conclusion','<p>'+esc(c)+'</p>');}
-  if(actionPlan.length)body+=section('Action plan',_pwbShareList(actionPlan,function(x){return '<li>'+esc(typeof x==='string'?x:(x&&x.text||x&&x.action||JSON.stringify(x)))+'</li>';}));
-  const warn=Array.isArray(pq.warnings)?pq.warnings:[],block=Array.isArray(pq.blockers)?pq.blockers:[];
-  body+=section('Quality status','<div class="quality"><div>'+pill('AI readiness '+(typeof qc.readiness_score==='number'?qc.readiness_score:'—')+'/100','core')+' '+pill('Publication QA '+(typeof pq.score==='number'?pq.score:'—')+'/100',pq.ready_to_write?'core':'warn')+'</div>'+(block.length?'<p class="bad">'+block.map(x=>'✕ '+esc(x&&x.message||x&&x.code||'blocker')).join('<br>')+'</p>':'')+(warn.length?'<p class="warntext">'+warn.map(x=>'⚠ '+esc(x&&x.message||x&&x.code||'warning')).join('<br>')+'</p>':'<p class="good">✓ No publication warnings recorded.</p>')+'</div>');
-  const when=finalAt||row.created_at||'';
-  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+esc(title)+' · ContentScale Pre-Write Brief</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e5eef9;font:15px/1.62 Inter,Segoe UI,Arial,sans-serif}.wrap{max-width:980px;margin:auto;padding:28px 18px 60px}.hero,section{background:#0b1929;border:1px solid #263b55;border-radius:14px;padding:20px;margin-bottom:14px}.hero{background:linear-gradient(135deg,#0b2440,#312e81)}h1{margin:4px 0 6px;font-size:29px;line-height:1.2}h2{font-size:17px;margin:0 0 12px;color:#93c5fd}h3{font-size:15px;margin:0 0 6px;color:#fff}p{margin:6px 0;color:#d6deea}.muted{color:#94a3b8;font-size:13px}.outline{border-top:1px solid #22344a;padding:12px 0}.outline:first-child{border-top:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid>div{background:#08131f;border:1px solid #22344a;border-radius:9px;padding:11px}.pill{display:inline-block;border:1px solid #334155;border-radius:999px;padding:3px 9px;margin:2px;font-size:12px}.pill.core{border-color:#16a34a;color:#86efac}.pill.secondary{border-color:#2563eb;color:#93c5fd}.pill.supporting{border-color:#7c3aed;color:#d8b4fe}.pill.warn{border-color:#d97706;color:#fbbf24}a{color:#7dd3fc;word-break:break-word}li{margin:5px 0}.warntext{color:#fbbf24}.bad{color:#fca5a5}.good{color:#86efac}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.actions button{border:0;border-radius:8px;padding:9px 14px;background:#e2e8f0;color:#0f172a;font-weight:800;cursor:pointer}@media(max-width:700px){.grid{grid-template-columns:1fr}h1{font-size:24px}}</style></head><body><main class="wrap"><header class="hero"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#c4b5fd;font-weight:800;">ContentScale · read-only shared Pre-Write Brief</div><h1>'+esc(title)+'</h1><div class="muted">Keyword: '+esc(row.keyword||'')+(when?' · Final/current version: '+esc(String(when)):'')+'</div><div class="actions"><button onclick="navigator.clipboard.writeText(location.href).then(()=>{this.textContent=\'✓ Link copied\'})">Copy share link</button></div></header>'+body+'<p class="muted" style="text-align:center;margin-top:22px;">Read-only share view. Tracker credentials, admin controls and Gemini cost diagnostics are intentionally excluded.</p></main></body></html>';
+
+  // 1. Research overview — this is the showcase layer for public sharing.
+  const checkedCount=engines.filter(x=>ai[x[0]]&&ai[x[0]].checked).length;
+  const statR=er.statistics||{},quoteR=er.expert_quotes||{};
+  const positions=Array.isArray(cov.serp_positions)?cov.serp_positions:comp.map(x=>Number(x&&x.rank||0)).filter(Boolean);
+  const metricData=[
+    ['Query tested',wc.query_tested||row.keyword||'—'],
+    ['Competitors analysed',String(wc.competitors_analysed!=null?wc.competitors_analysed:(cov.results_returned||comp.length||0))],
+    ['Usable competitor pages',String(cov.usable_results!=null?cov.usable_results:comp.filter(x=>x&&x.what_they_have&&x.what_they_have!=='insufficient_data').length)],
+    ['AI systems checked',checkedCount+'/5'],
+    ['PAA questions',String(paa.length)],
+    ['Verified evidence',String((Array.isArray(evidence.statistics)?evidence.statistics.length:0)+(Array.isArray(evidence.expert_quotes)?evidence.expert_quotes.length:0))]
+  ];
+  let research='<div class="metricgrid">'+metricData.map(x=>'<div class="metric"><b>'+esc(x[0])+'</b><span>'+esc(x[1])+'</span></div>').join('')+'</div>';
+  research+='<div class="researchgrid"><div class="researchbox"><h3>What we actually checked</h3>'+
+    '<dl><dt>Checked</dt><dd>'+esc(wc.checked_at||'not recorded')+'</dd><dt>Google direct answer</dt><dd>'+esc(wc.google_direct_answer||'not recorded')+'</dd><dt>Perplexity</dt><dd>'+esc(wc.perplexity||'not recorded')+'</dd>'+
+    (Array.isArray(wc.perplexity_currently_cites)&&wc.perplexity_currently_cites.length?'<dt>Perplexity currently cites</dt><dd>'+wc.perplexity_currently_cites.map(x=>pill(x,'source')).join(' ')+'</dd>':'')+
+    '</dl></div>'+
+    '<div class="researchbox"><h3>Evidence research depth</h3><dl><dt>Statistics</dt><dd>'+esc(statR.status||'not recorded')+' · verified '+esc(statR.verified||0)+' · primary '+esc(statR.primary_verified||0)+' · provenance '+esc(statR.provenance_resolved||0)+'</dd><dt>Statistic pages checked</dt><dd>'+esc(statR.source_pages_checked||0)+' / '+esc(statR.candidates||0)+'</dd><dt>Expert quotes</dt><dd>'+esc(quoteR.status||'not recorded')+' · exact '+esc(quoteR.verified||0)+' · attributed '+esc(quoteR.attributed_insights||0)+'</dd><dt>Quote pages checked</dt><dd>'+esc(quoteR.source_pages_checked||0)+' / '+esc(quoteR.candidates||0)+'</dd></dl></div></div>';
+  if(er.quality_ladder){const ql=er.quality_ladder;research+='<div class="ladder"><b>Evidence ladder</b><div>'+esc((ql.stages||[]).join(' → '))+'</div><span>Approved '+esc(ql.approved_items||0)+' · primary '+esc(ql.primary_verified||0)+' · source verified '+esc(ql.source_verified||0)+'</span></div>';}
+  body+=section('Research overview',research,'The live research, evidence checks and comparison work behind this exact Brief.','researchSection');
+
+  // 2. Five-system evidence — show what was actually supplied/checked, without implying unchecked engines were researched.
+  let aiHtml='<div class="enginegrid">'+engines.map(([k,name])=>{const x=ai[k]||{},checked=!!x.checked,sources=Array.isArray(x.citation_sources)?x.citation_sources:[];return '<article class="engine '+(checked?'checked':'unchecked')+'"><div class="engineTop"><h3>'+esc(name)+'</h3>'+pill(checked?'CHECKED':'NOT CHECKED',checked?'ok':'mutedpill')+'</div><p class="tiny"><b>Evidence:</b> '+esc(x.evidence_source||'not_checked')+'</p>'+(x.answer_summary?'<p>'+esc(x.answer_summary)+'</p>':'<p class="muted">No saved answer summary.</p>')+(sources.length?'<div class="sources"><b>Citation sources</b>'+list(sources,s=>{const u=s&&s.exact_url||'';return '<li>'+esc(s&&s.source_name||s&&s.page_title||u||'Source')+(u?' · '+urlLink(u,u):'')+'</li>';})+'</div>':'')+'</article>';}).join('')+'</div>';
+  body+=section('Five AI systems — saved evidence',aiHtml,'Checked means evidence was explicitly saved for this Brief; unchecked systems are not presented as researched.');
+
+  // 3. Search and competitor intelligence.
+  let gap='<div class="callout"><h3>Search / competitor gap</h3><p>'+esc(b.top10_gap||'No gap summary recorded.')+'</p></div>';
+  if(b.ai_overview_status)gap+='<div class="callout"><h3>AI Overview finding</h3><p>'+esc(b.ai_overview_status)+'</p></div>';
+  if(comp.length){gap+='<div class="coverage">Competitor coverage: <b>'+esc(cov.results_returned!=null?cov.results_returned:comp.length)+' returned</b> · <b>'+esc(cov.usable_results!=null?cov.usable_results:comp.length)+' usable</b>'+(positions.length?' · SERP positions '+esc(positions.join(', ')):'')+'. Ten results are not required; only actually returned positions are shown.</div><div class="tablewrap"><table><thead><tr><th>Rank</th><th>Competitor</th><th>What they have</th><th>Gap</th><th>ContentScale move</th></tr></thead><tbody>'+comp.map(c=>'<tr><td>#'+esc(c&&c.rank||'—')+'</td><td><b>'+esc(c&&c.domain||c&&c.company_or_publisher||'')+'</b>'+(c&&c.page_title?'<div class="tiny">'+esc(c.page_title)+'</div>':'')+(c&&c.exact_url?'<div class="tiny">'+urlLink(c.exact_url,'Open source ↗')+'</div>':'')+'</td><td>'+esc(c&&c.what_they_have||'insufficient_data')+'</td><td>'+esc(c&&c.the_gap||'insufficient_data')+'</td><td>'+esc(c&&c.what_to_add||'insufficient_data')+'</td></tr>').join('')+'</tbody></table></div>';}
+  body+=section('Search & competitor intelligence',gap,'Comparison against the actual SERP results available during this research run.');
+
+  // 4. Transparent workload — public because the owner explicitly uses this view to show research depth.
+  const calls=Array.isArray(usage.calls)?usage.calls:[],stages=usage.stage_usage||{},guard=usage.cost_guard||{},diag=usage.diagnostics||{};
+  if(calls.length||usage.input_tokens){let work='<div class="metricgrid workload"><div class="metric"><b>Gemini calls</b><span>'+esc(calls.length)+'</span></div><div class="metric"><b>Input tokens</b><span>'+esc(usage.input_tokens||0)+'</span></div><div class="metric"><b>Visible output</b><span>'+esc(usage.output_tokens||0)+'</span></div><div class="metric"><b>Billable output</b><span>'+esc(usage.billable_output_tokens||0)+'</span></div><div class="metric"><b>Thinking tokens</b><span>'+esc(usage.thinking_tokens||0)+'</span></div><div class="metric"><b>Model</b><span class="model">'+esc(Array.isArray(usage.models)?usage.models.join(', '):'')+'</span></div></div>';
+    const stageRows=[['Research / evidence',stages.research_evidence],['Brief synthesis',stages.brief_synthesis],['Repairs',stages.repairs],['Missing-only completion',stages.completion]].filter(x=>x[1]);
+    if(stageRows.length)work+='<div class="stagegrid">'+stageRows.map(x=>'<div><b>'+esc(x[0])+'</b><span>'+esc(x[1].calls||0)+' calls · in '+esc(x[1].input_tokens||0)+' · out '+esc(x[1].output_tokens||0)+'</span></div>').join('')+'</div>';
+    if(diag.largest_input_call||typeof diag.repair_calls==='number')work+='<div class="callout compact">'+(diag.largest_input_call?'<p><b>Largest input:</b> '+esc(diag.largest_input_call.label||'')+' · '+esc(diag.largest_input_call.input_tokens||0)+' tokens · '+esc(diag.largest_input_call.share_pct||0)+'% of input</p>':'')+(typeof diag.repair_calls==='number'?'<p><b>Repair/completion work:</b> '+esc(diag.repair_calls)+' calls · '+esc(diag.repair_input_tokens||0)+' input tokens</p>':'')+(guard.max_calls!=null?'<p><b>Cost guard:</b> '+esc(guard.calls_used||calls.length)+'/'+esc(guard.max_calls)+' calls · '+esc(guard.input_tokens_used||usage.input_tokens||0)+'/'+esc(guard.max_input_tokens||0)+' input · '+esc(guard.billable_output_tokens_used||usage.billable_output_tokens||0)+'/'+esc(guard.max_billable_output_tokens||0)+' billable output'+(Array.isArray(guard.skipped_calls)&&guard.skipped_calls.length?' · skipped '+esc(guard.skipped_calls.length):'')+'</p>':'')+'</div>';
+    if(Array.isArray(diag.suggestions)&&diag.suggestions.length)work+='<div class="notes">'+diag.suggestions.map(x=>'<p>Cost note: '+esc(x)+'</p>').join('')+'</div>';
+    if(calls.length)work+='<details><summary>Show all '+calls.length+' Gemini calls</summary><div class="tablewrap"><table class="calls"><thead><tr><th>#</th><th>Stage</th><th>Model</th><th>Input</th><th>Output</th><th>Think</th><th>Prompt chars</th><th>Time</th></tr></thead><tbody>'+calls.map((c,i)=>'<tr><td>'+(i+1)+'</td><td>'+esc(c.label||'call')+'</td><td>'+esc(c.model||'')+'</td><td>'+esc(c.input_tokens||0)+'</td><td>'+esc(c.output_tokens||0)+'</td><td>'+esc(c.thinking_tokens||0)+'</td><td>'+esc(c.prompt_chars||0)+'</td><td>'+esc(c.elapsed_ms||0)+'ms</td></tr>').join('')+'</tbody></table></div></details>';
+    body+=section('Research execution transparency',work,'Provider telemetry from this exact Pre-Write run. It demonstrates workload; it is not itself a quality score.');
+  }
+
+  // 5. Approved writer-facing contract.
+  const st=text(meta.seo_title),sd=text(meta.meta_description);
+  body+=section('SEO package','<div class="grid"><div><b>SEO title</b><p>'+esc(st)+'</p><div class="counter '+(st.length<=60?'good':'bad')+'">'+st.length+' / 60</div></div><div><b>Meta description</b><p>'+esc(sd)+'</p><div class="counter '+(sd.length>=140&&sd.length<=160?'good':'bad')+'">'+sd.length+' / 160'+(sd.length>=150&&sd.length<=159?' · ideal':' · target 140–160')+'</div></div><div><b>H1</b><p>'+esc(meta.h1||title)+'</p></div><div><b>Slug</b><p>'+esc(meta.url_slug||'')+'</p></div></div>');
+  if(opening)body+=section('Opening passage','<p class="lead">'+esc(opening)+'</p>','First 40–60 words — written to be extractable as a direct answer.');
+  if(outline.length)body+=section('Page blueprint',outline.map((x,i)=>'<article class="outline"><h3>H2 '+(i+1)+'. '+esc(x&&x.h2||'')+'</h3>'+(x&&x.purpose?'<p><b>Purpose:</b> '+esc(x.purpose)+'</p>':'')+(x&&x.target_words?'<p class="tiny">Target depth: '+esc(x.target_words)+' words</p>':'')+(Array.isArray(x&&x.cover)&&x.cover.length?'<p><b>Cover:</b> '+esc(x.cover.join(' · '))+'</p>':'')+(x&&x.citation_hook?'<p><b>Citation hook:</b> '+esc(x.citation_hook)+'</p>':'')+'</article>').join(''),'Canonical / approved writing order.');
+
+  const entities=b.entity_strategy||{},core=Array.isArray(entities.primary)?entities.primary:[],secondary=Array.isArray(entities.secondary)?entities.secondary:[],supporting=Array.isArray(entities.supporting)?entities.supporting:[];
+  if(core.length||secondary.length||supporting.length){let ent='<p><b>Core — use explicitly:</b> '+core.map(x=>pill(typeof x==='string'?x:(x.name||x.entity||''),'core')).join(' ')+'</p><p><b>Secondary — use naturally:</b> '+secondary.map(x=>pill(typeof x==='string'?x:(x.name||x.entity||''),'secondary')).join(' ')+'</p><p><b>Supporting — optional:</b> '+supporting.map(x=>pill(typeof x==='string'?x:(x.name||x.entity||''),'supporting')).join(' ')+'</p><p class="muted">Rule: do not force every discovered entity into the article.</p>';
+    if(Array.isArray(entities.relationships)&&entities.relationships.length)ent+='<h3>Entity relationships</h3>'+list(entities.relationships,r=>'<li>'+esc(r&&r.subject||'')+' → '+esc(r&&r.relation||'')+' → '+esc(r&&r.object||'')+'</li>');body+=section('Entity plan',ent);}
+
+  if(b.ai_answer){const aa=b.ai_answer;let h='<div class="callout direct"><h3>'+esc(aa.primary_question||'Primary answer')+'</h3><p>'+esc(aa.direct_answer||'')+'</p></div>';if(Array.isArray(aa.key_takeaways)&&aa.key_takeaways.length)h+='<h3>Key takeaways</h3>'+list(aa.key_takeaways,x=>'<li>'+esc(x)+'</li>');body+=section('AI answer — the passage AI systems can lift',h);}
+  if(Array.isArray(b.quick_facts)&&b.quick_facts.length)body+=section('Quick facts','<div class="factgrid">'+b.quick_facts.map(f=>'<div><b>'+esc(f&&f.label||'')+'</b><span>'+esc(f&&f.value||'')+'</span></div>').join('')+'</div>');
+  if(paa.length)body+=section('People Also Ask / FAQ research',list(paa,x=>'<li><b>'+esc(typeof x==='string'?x:(x.q||x.question||''))+'</b>'+(x&&typeof x==='object'&&x.a?'<p>'+esc(x.a)+'</p>':'')+'</li>'));
+
+  // Link and source research.
+  let links='';if(Array.isArray(b.external_link_targets)&&b.external_link_targets.length)links+='<h3>External source targets</h3>'+list(b.external_link_targets,x=>'<li><b>'+esc(x&&x.source_name||x&&x.anchor_text||'Source')+'</b>'+(x&&x.supports_claim?'<div class="tiny">Supports: '+esc(x.supports_claim)+'</div>':'')+(x&&x.exact_url?'<div>'+urlLink(x.exact_url,x.exact_url)+'</div>':'')+'</li>');
+  const lr=b.link_research||{};if(lr.internal||lr.external)links+='<h3>Link research status</h3><div class="grid"><div><b>Internal research</b><p>'+esc(lr.internal&&lr.internal.status||'not recorded')+' · '+esc(lr.internal&&lr.internal.urls_found||0)+' verified site URLs · '+esc(lr.internal&&lr.internal.targets_selected||0)+' selected</p></div><div><b>External research</b><p>'+esc(lr.external&&lr.external.candidates_found||0)+' verified candidates · '+esc(lr.external&&lr.external.targets_selected||0)+' selected</p></div></div>';
+  if(links)body+=section('Link intelligence',links,'Sitemap/XML files are discovery inputs, not reader-facing internal-link destinations.');
+
+  const sources=Array.isArray(evidence.official_sources)?evidence.official_sources:[],stats=Array.isArray(evidence.statistics)?evidence.statistics:[],quotes=Array.isArray(evidence.expert_quotes)?evidence.expert_quotes:[],insights=Array.isArray(evidence.expert_insights)?evidence.expert_insights:[];
+  if(sources.length||stats.length||quotes.length||insights.length||evidence.experience_to_include||Array.isArray(evidence.trust_signals)){let ev='';if(sources.length)ev+='<h3>Evidence & authority sources</h3>'+list(sources,x=>{if(typeof x==='string'){const m=x.match(/https:\/\/\S+/);return '<li>'+esc(x)+(m?' · '+urlLink(m[0],m[0]):'')+'</li>';}const u=x&&x.url||x&&x.source_url||'';return '<li>'+esc(x&&x.name||x&&x.title||u||'Source')+(u?' · '+urlLink(u,u):'')+'</li>';});if(stats.length)ev+='<h3>Verified statistics</h3>'+list(stats,x=>'<li>'+esc(typeof x==='string'?x:(x.evidence_text||x.value||''))+(x&&typeof x==='object'&&x.quality_stage?' <span class="tiny">['+esc(x.quality_stage)+' · '+esc(x.authority_class||'ungraded')+']</span>':'')+(x&&typeof x==='object'&&(x.best_source_url||x.source_url)?'<div>'+urlLink(x.best_source_url||x.source_url,x.best_source_url||x.source_url)+'</div>':'')+'</li>');if(quotes.length)ev+='<h3>Verified expert quotes</h3>'+list(quotes,x=>'<li>“'+esc(x&&x.quote||x&&x.text||'')+'” — '+esc(x&&x.person||x&&x.expert||x&&x.author||'')+(x&&x.role?' · '+esc(x.role):'')+(x&&x.source_url?'<div>'+urlLink(x.source_url,x.source_url)+'</div>':'')+'</li>');if(insights.length)ev+='<h3>Attributed expert insights — paraphrase only</h3>'+list(insights,x=>'<li>'+esc(x&&x.insight||'')+' — '+esc(x&&x.person||'')+(x&&x.source_url?'<div>'+urlLink(x.source_url,x.source_url)+'</div>':'')+'</li>');if(evidence.experience_to_include)ev+='<h3>Experience to include</h3><p>'+esc(evidence.experience_to_include)+'</p>';if(Array.isArray(evidence.trust_signals)&&evidence.trust_signals.length)ev+='<h3>Trust signals</h3>'+list(evidence.trust_signals,x=>'<li>'+esc(typeof x==='string'?x:(x.name||x.value||''))+'</li>');body+=section('Evidence & authority',ev);}
+
+  const limitations=b.balance&&Array.isArray(b.balance.limitations)?b.balance.limitations:[],useCases=Array.isArray(b.use_cases)?b.use_cases:[];
+  if(limitations.length)body+=section('Limitations',list(limitations,x=>'<li>'+esc(x)+'</li>'));
+  if(useCases.length)body+=section('Practical use cases',list(useCases,x=>'<li><b>'+esc(x&&x.audience||'')+'</b>: '+esc(x&&x.scenario||'')+(x&&x.benefit?'<div class="good">→ '+esc(x.benefit)+'</div>':'')+'</li>'));
+  if(b.conclusion&&(b.conclusion.recap||b.conclusion.recommendation))body+=section('Conclusion','<p>'+esc(b.conclusion.recap||'')+(b.conclusion.recommendation?' <span class="good">'+esc(b.conclusion.recommendation)+'</span>':'')+(b.conclusion.outlook?' <span class="muted">'+esc(b.conclusion.outlook)+'</span>':'')+'</p>');
+  if(Array.isArray(b.action_plan)&&b.action_plan.length)body+=section('Action plan','<ol>'+b.action_plan.map(x=>'<li>'+esc(x&&x.action||x&&x.text||'')+'</li>').join('')+'</ol>');
+
+  const warnings=Array.isArray(pq.warnings)?pq.warnings:[],blockers=Array.isArray(pq.blockers)?pq.blockers:[];
+  body+=section('Quality status','<div class="quality"><div>'+pill('AI readiness '+(typeof qc.readiness_score==='number'?qc.readiness_score:'—')+'/100','core')+' '+pill('Publication QA '+(typeof pq.score==='number'?pq.score:'—')+'/100',pq.ready_to_write?'core':'warn')+'</div>'+(blockers.length?'<p class="bad">'+blockers.map(x=>'✕ '+esc(x&&x.message||x&&x.code||'blocker')).join('<br>')+'</p>':'')+(warnings.length?'<p class="warntext">'+warnings.map(x=>'⚠ '+esc(x&&x.message||x&&x.code||'warning')).join('<br>')+'</p>':'<p class="good">✓ No publication warnings recorded.</p>')+'</div>');
+
+  const finalAt=Array.isArray(b.final_qa_history)&&b.final_qa_history.length?b.final_qa_history[b.final_qa_history.length-1].at:row.created_at||'';
+  const shareDesc='Research-backed ContentScale Pre-Write Brief for '+String(row.keyword||title)+': live search, competitor, AI-system and evidence research behind the approved writing plan.';
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta property="og:site_name" content="ContentScale"><meta property="og:type" content="article"><meta property="og:title" content="'+esc(title)+' · ContentScale Research Brief"><meta property="og:description" content="'+esc(shareDesc)+'"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="'+esc(title)+' · ContentScale Research Brief"><meta name="twitter:description" content="'+esc(shareDesc)+'"><title>'+esc(title)+' · ContentScale Pre-Write Brief</title><style>*{box-sizing:border-box}body{margin:0;background:#07111f;color:#e5eef9;font:15px/1.62 Inter,Segoe UI,Arial,sans-serif}.wrap{max-width:1120px;margin:auto;padding:28px 18px 60px}.hero,section{background:#0b1929;border:1px solid #263b55;border-radius:14px;padding:20px;margin-bottom:14px}.hero{background:linear-gradient(135deg,#0b2440,#312e81)}h1{margin:4px 0 6px;font-size:30px;line-height:1.2}h2{font-size:18px;margin:0;color:#93c5fd}.sectionhead{display:flex;justify-content:space-between;gap:10px;margin-bottom:13px}.sub,.muted,.tiny{color:#94a3b8}.sub{font-size:13px;margin:4px 0 0}.tiny{font-size:11px}.lead{font-size:17px;line-height:1.7;color:#f8fafc}.grid,.metricgrid,.researchgrid,.enginegrid,.factgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metricgrid{grid-template-columns:repeat(3,minmax(0,1fr));margin:4px 0 12px}.metric,.researchbox,.engine,.grid>div,.factgrid>div,.callout,.ladder,.stagegrid>div{background:#08131f;border:1px solid #22344a;border-radius:10px;padding:12px}.metric b{display:block;color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:.04em}.metric span{display:block;font-size:20px;font-weight:850;margin-top:4px}.metric span.model{font-size:13px;line-height:1.4}.researchbox h3,.engine h3,.callout h3{margin:0 0 6px;font-size:14px}.researchbox dl{display:grid;grid-template-columns:150px 1fr;gap:6px 9px;margin:0}.researchbox dt{color:#94a3b8}.researchbox dd{margin:0}.enginegrid{grid-template-columns:repeat(2,minmax(0,1fr))}.engineTop{display:flex;justify-content:space-between;gap:8px}.engine.checked{border-color:#166534}.engine.unchecked{opacity:.78}.sources{margin-top:8px;border-top:1px solid #22344a;padding-top:7px}.ladder{margin-top:10px;border-color:#155e75}.ladder div{color:#a5f3fc;margin:4px 0}.ladder span{font-size:11px;color:#94a3b8}.coverage{font-size:12px;color:#cbd5e1;margin:10px 0}.tablewrap{overflow:auto;border:1px solid #22344a;border-radius:10px}table{width:100%;border-collapse:collapse;min-width:820px}th,td{padding:9px 10px;border-bottom:1px solid #22344a;text-align:left;vertical-align:top;font-size:12px}th{background:#111c2d;color:#93c5fd;font-size:10px;text-transform:uppercase}.stagegrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}.stagegrid b,.stagegrid span{display:block}.stagegrid span{color:#94a3b8;font-size:11px;margin-top:3px}.notes{color:#fbbf24;font-size:11px}.outline{border-top:1px solid #22344a;padding:12px 0}.outline:first-child{border-top:0}.outline h3{margin:0 0 5px}.factgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.factgrid b,.factgrid span{display:block}.factgrid span{color:#dbeafe;margin-top:3px}.pill{display:inline-block;border:1px solid #334155;border-radius:999px;padding:3px 9px;margin:2px;font-size:11px}.pill.core,.pill.ok{border-color:#16a34a;color:#86efac}.pill.secondary{border-color:#2563eb;color:#93c5fd}.pill.supporting{border-color:#7c3aed;color:#d8b4fe}.pill.source{border-color:#0e7490;color:#a5f3fc}.pill.mutedpill{color:#94a3b8}.pill.warn{border-color:#d97706;color:#fbbf24}.counter{font-weight:800;font-size:12px}.good{color:#86efac}.bad{color:#fca5a5}.warntext{color:#fbbf24}a{color:#7dd3fc;word-break:break-word}li{margin:6px 0}details{margin-top:10px}summary{cursor:pointer;color:#93c5fd;font-weight:750}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.actions button{border:0;border-radius:8px;padding:9px 14px;background:#e2e8f0;color:#0f172a;font-weight:800;cursor:pointer}.permanent{margin-top:11px;padding:8px 10px;background:#052e164d;border:1px solid #166534;border-radius:8px;color:#86efac;font-size:12px}@media(max-width:760px){.grid,.metricgrid,.researchgrid,.enginegrid,.factgrid,.stagegrid{grid-template-columns:1fr}.researchbox dl{grid-template-columns:1fr}.researchbox dt{margin-top:5px}h1{font-size:24px}}</style></head><body><main class="wrap"><header class="hero"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#c4b5fd;font-weight:800">ContentScale · Research-backed Pre-Write Brief</div><h1>'+esc(title)+'</h1><div class="muted">Keyword: '+esc(row.keyword||'')+(finalAt?' · Final/current version: '+esc(String(finalAt)):'')+'</div><div class="permanent">Permanent read-only public link · no automatic expiry · the ContentScale owner can revoke public access without deleting the saved Brief.</div><div class="actions"><button onclick="navigator.clipboard.writeText(location.href).then(()=>{this.textContent=\'✓ Link copied\'})">Copy permanent link</button></div></header>'+body+'<p class="muted" style="text-align:center;margin-top:22px">This public view shows the saved research, evidence and approved writing plan behind the Brief. Tracker credentials and admin controls are intentionally excluded.</p></main></body></html>';
 }
 
 app.post('/api/tracker-client/:token/prewrite-briefs/:id/share', async (req,res)=>{
@@ -60990,11 +61101,21 @@ app.post('/api/tracker-client/:token/prewrite-briefs/:id/share', async (req,res)
     }
     const base=String(process.env.APP_URL||'https://app.contentscale.site').replace(/\/$/,'');
     res.set('Cache-Control','no-store');
-    res.json({success:true,share_url:base+'/share/prewrite/'+shareToken,brief_id:auth.row.id,read_only:true});
+    res.json({success:true,share_url:base+'/share/prewrite/'+shareToken,brief_id:auth.row.id,read_only:true,permanent:true,expires_at:null});
+  }catch(e){res.status(500).json({success:false,error:e.message});}
+ });
+
+app.post('/api/tracker-client/:token/prewrite-briefs/:id/share/revoke', async (req,res)=>{
+  try{
+    const auth=await _pwbLoadAuthorizedSavedBriefV500(req,Number(req.params.id||0));
+    if(auth.error)return res.status(auth.status||404).json({success:false,error:auth.error});
+    await pool.query('UPDATE prewrite_briefs SET share_token=NULL,share_created_at=NULL,share_revoked_at=NOW() WHERE id=$1',[auth.row.id]);
+    res.set('Cache-Control','no-store');
+    res.json({success:true,brief_id:auth.row.id,sharing_active:false,brief_deleted:false,message:'Public share link revoked. Saved Brief retained.'});
   }catch(e){res.status(500).json({success:false,error:e.message});}
 });
 
-app.get('/share/prewrite/:shareToken', async (req,res)=>{
+app.get('/share/prewrite/:shareToken' , async (req,res)=>{
   try{
     const shareToken=String(req.params.shareToken||'').toLowerCase();
     if(!/^[a-f0-9]{48}$/.test(shareToken))return res.status(404).send('Brief not found.');
