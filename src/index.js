@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v494-CLIENT-SCRIPT-ESCAPE-FIX-PREWRITE-COST-CONTROL-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-05-CANONICAL-v495-PREWRITE-GEMINI-USAGE-GUARD-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,10 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'prewrite-gemini-per-call-usage-diagnostics-v495',
+  'prewrite-gemini-soft-budget-guard-v495',
+  'prewrite-gemini-cheapest-model-lock-v495',
+  'prewrite-no-llm-action-plan-fallback-v495',
   'prewrite-client-script-escape-fix-v494',
   'prewrite-cost-control-manual-ai-v493',
   'prewrite-quality-gate-post-safety-repair-v492',
@@ -817,7 +821,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-05-CANONICAL-v494-CLIENT-SCRIPT-ESCAPE-FIX-PREWRITE-COST-CONTROL-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
+  build: 'CS-2026-10-05-CANONICAL-v495-PREWRITE-GEMINI-USAGE-GUARD-NETWORK-v496-H2-IMAGE-RELEVANCE-HARDENING',
   built_date: '2026-10-05',
   ceo_private: true,
   ceo_public: true,
@@ -1097,10 +1101,10 @@ let GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite'; // prima
 // here never affects the Content Engine, SEO Audit, or any other feature. Falls back to GEMINI_MODEL
 // automatically per-call if a gemini-2.5-pro request ever 404s (not available on this API key/tier).
 let GEMINI_MODEL_BRIEF = process.env.GEMINI_MODEL_BRIEF || 'gemini-2.5-flash-lite';
-// v493: Prewrite fallback is cost-isolated from the platform-wide auto-selected model.
-// Never let a temporary 2.5 Flash-Lite failure silently jump the Network Brief to an expensive
-// general Gemini Flash model unless the owner explicitly overrides this environment variable.
-let GEMINI_MODEL_BRIEF_FALLBACK = process.env.GEMINI_MODEL_BRIEF_FALLBACK || 'gemini-3.5-flash-lite';
+// v495: Prewrite cost isolation is strict by default. A temporary Flash-Lite issue must not
+// silently upgrade a Brief to a more expensive model. Set GEMINI_MODEL_BRIEF_FALLBACK explicitly
+// (and PREWRITE_ALLOW_MODEL_UPGRADE=1) only when the owner intentionally wants that trade-off.
+let GEMINI_MODEL_BRIEF_FALLBACK = process.env.GEMINI_MODEL_BRIEF_FALLBACK || 'gemini-2.5-flash-lite';
 
 async function detectBestGeminiModel(apiKey) {
   if (!apiKey) return;
@@ -46158,6 +46162,7 @@ async function generateNetworkPublisherEdition(placementId,btn){
 }
 
 var _lastPrewriteBriefText = '';
+var _lastPrewriteBriefExternalText = '';
 var _lastPwbInput = null;
 // ── Intent bar (CLAUDE-FIX-2608-intentEngine) ──────────────────────────────
 // Always shows which intent the brief was written for. When the SERP was
@@ -46436,7 +46441,26 @@ function renderPrewriteBrief(b) {
     lines.push(_PL.plan);
     b.action_plan.forEach(function(a, i){ lines.push((i+1) + '. ' + (a.action||'')); });
   }
-  _lastPrewriteBriefText = lines.join('\\n');
+  // v495: keep provider telemetry in the owner's Copy Brief export, but do NOT send it to
+  // external writing AIs. Token telemetry is operational metadata, not part of the content contract.
+  _lastPrewriteBriefExternalText = lines.join('\\n');
+  var _usageCopy=[];
+  if(b.what_we_checked && b.what_we_checked.generation_usage){
+    var _ugc=b.what_we_checked.generation_usage||{}, _ugcalls=Array.isArray(_ugc.calls)?_ugc.calls:[];
+    _usageCopy.push('GEMINI USAGE — THIS PREWRITE');
+    _usageCopy.push('Calls: '+_ugcalls.length+' · input '+Number(_ugc.input_tokens||0)+' · visible output '+Number(_ugc.output_tokens||0)+' · thinking '+Number(_ugc.thinking_tokens||0)+' · billable output '+Number(_ugc.billable_output_tokens||0));
+    if(Array.isArray(_ugc.models)&&_ugc.models.length)_usageCopy.push('Models: '+_ugc.models.join(', '));
+    _ugcalls.forEach(function(c,i){_usageCopy.push((i+1)+'. '+(c.label||'call')+' | '+(c.model||'unknown')+' | input '+Number(c.input_tokens||0)+' | output '+Number(c.output_tokens||0)+' | thinking '+Number(c.thinking_tokens||0)+' | prompt chars '+Number(c.prompt_chars||0)+' | '+Number(c.elapsed_ms||0)+'ms');});
+    if(_ugc.diagnostics){
+      var _ugd=_ugc.diagnostics;
+      if(_ugd.largest_input_call)_usageCopy.push('Largest input call: '+(_ugd.largest_input_call.label||'')+' · '+Number(_ugd.largest_input_call.input_tokens||0)+' tokens · '+Number(_ugd.largest_input_call.share_pct||0)+'% of input');
+      if(typeof _ugd.repair_calls==='number')_usageCopy.push('Repair/completion calls: '+_ugd.repair_calls+' · input '+Number(_ugd.repair_input_tokens||0));
+      if(Array.isArray(_ugd.suggestions)&&_ugd.suggestions.length)_ugd.suggestions.forEach(function(x){_usageCopy.push('Cost note: '+x);});
+    }
+    if(_ugc.cost_guard){var _gg=_ugc.cost_guard;_usageCopy.push('Cost guard: '+Number(_gg.calls_used||0)+'/'+Number(_gg.max_calls||0)+' calls · '+Number(_gg.input_tokens_used||0)+'/'+Number(_gg.max_input_tokens||0)+' input · '+Number(_gg.billable_output_tokens_used||0)+'/'+Number(_gg.max_billable_output_tokens||0)+' billable output'+(Array.isArray(_gg.skipped_calls)&&_gg.skipped_calls.length?' · skipped '+_gg.skipped_calls.length:'')+'.');}
+    _usageCopy.push('');
+  }
+  _lastPrewriteBriefText = (_usageCopy.length?_usageCopy.join('\\n')+'\\n':'') + _lastPrewriteBriefExternalText;
 
   var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
     + '<button onclick="copyPrewriteBrief(this)" style="background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;">\\uD83D\\uDCCB Copy Brief</button>'
@@ -46451,7 +46475,14 @@ function renderPrewriteBrief(b) {
     html += '<div>Google AI Overview: ' + esc(wc2.google_direct_answer) + '</div>';
     if(typeof wc2.ai_systems_manual_checked==='number') html += '<div>Manual AI evidence: <span style="color:'+(wc2.ai_systems_manual_checked===5?'#86efac':'#fbbf24')+';font-weight:800;">'+esc(wc2.ai_systems_manual_checked)+'/5 supplied</span></div>';
     html += '<div>Perplexity: ' + esc(wc2.perplexity) + '</div>';
-    if(wc2.generation_usage){var _gu=wc2.generation_usage||{};html += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid #1e3a5f;">Gemini generation: <strong style="color:#e5e7eb;">'+esc((_gu.calls||[]).length)+' calls</strong> · input '+esc(_gu.input_tokens||0)+' · visible output '+esc(_gu.output_tokens||0)+' · thinking '+esc(_gu.thinking_tokens||0)+' · billable output '+esc(_gu.billable_output_tokens||0)+(Array.isArray(_gu.models)&&_gu.models.length?' · models '+_gu.models.map(function(x){return esc(x);}).join(', '):'')+'</div>';}
+    if(wc2.generation_usage){
+      var _gu=wc2.generation_usage||{},_guc=Array.isArray(_gu.calls)?_gu.calls:[],_gud=_gu.diagnostics||{},_gug=_gu.cost_guard||{};
+      html += '<div style="margin-top:5px;padding-top:5px;border-top:1px solid #1e3a5f;">Gemini generation: <strong style="color:#e5e7eb;">'+esc(_guc.length)+' calls</strong> · input '+esc(_gu.input_tokens||0)+' · visible output '+esc(_gu.output_tokens||0)+' · thinking '+esc(_gu.thinking_tokens||0)+' · billable output '+esc(_gu.billable_output_tokens||0)+(Array.isArray(_gu.models)&&_gu.models.length?' · models '+_gu.models.map(function(x){return esc(x);}).join(', '):'')+'</div>';
+      if(_gud.largest_input_call)html += '<div style="font-size:10.5px;color:#cbd5e1;">Largest input: <strong>'+esc(_gud.largest_input_call.label||'')+'</strong> · '+esc(_gud.largest_input_call.input_tokens||0)+' tokens · '+esc(_gud.largest_input_call.share_pct||0)+'%</div>';
+      html += '<div style="font-size:10.5px;color:#94a3b8;">Cost guard: '+esc(_gug.calls_used||_guc.length)+'/'+esc(_gug.max_calls||0)+' calls · '+esc(_gug.input_tokens_used||_gu.input_tokens||0)+'/'+esc(_gug.max_input_tokens||0)+' input · '+esc(_gug.billable_output_tokens_used||_gu.billable_output_tokens||0)+'/'+esc(_gug.max_billable_output_tokens||0)+' billable output'+(Array.isArray(_gug.skipped_calls)&&_gug.skipped_calls.length?' · <span style="color:#fbbf24;font-weight:700;">'+esc(_gug.skipped_calls.length)+' optional call(s) skipped</span>':'')+'</div>';
+      if(Array.isArray(_gud.suggestions)&&_gud.suggestions.length)html += '<div style="font-size:10.5px;color:#fbbf24;margin-top:3px;">'+_gud.suggestions.map(function(x){return '• '+esc(x);}).join('<br>')+'</div>';
+      if(_guc.length){html += '<details style="margin-top:5px;"><summary style="cursor:pointer;color:#93c5fd;font-size:10.5px;font-weight:700;">Per-call Gemini usage</summary><div style="margin-top:4px;font-size:10px;color:#94a3b8;">'+_guc.map(function(c,i){return '<div style="padding:2px 0;border-top:1px solid #172033;">'+esc(i+1)+'. <strong style="color:#cbd5e1;">'+esc(c.label||'call')+'</strong> · '+esc(c.model||'unknown')+' · in '+esc(c.input_tokens||0)+' · out '+esc(c.output_tokens||0)+' · think '+esc(c.thinking_tokens||0)+' · prompt '+esc(c.prompt_chars||0)+' chars · '+esc(c.elapsed_ms||0)+'ms</div>';}).join('')+'</div></details>';}
+    }
     if (wc2.perplexity_excerpt) html += '<div style="margin-top:4px;font-style:italic;color:#cbd5e1;">"' + esc(wc2.perplexity_excerpt) + '"</div>';
     if (Array.isArray(wc2.perplexity_currently_cites) && wc2.perplexity_currently_cites.length) {
       html += '<div style="margin-top:4px;">' + _PL.perpCites + ': ' + wc2.perplexity_currently_cites.map(function(d){return esc(d);}).join(', ') + '</div>';
@@ -46741,7 +46772,7 @@ function copyPrewriteBrief(btn) {
   }
 }
 function copyPrewriteForExternalAi(btn){
-  var brief=_lastPrewriteBriefText||'';
+  var brief=_lastPrewriteBriefExternalText||_lastPrewriteBriefText||'';
   if(!brief){if(btn){btn.textContent='No Brief to copy';setTimeout(function(){btn.textContent='Copy for external AI';},1600);}return;}
   var prompt=[
     'Write the complete Publisher Edition from the APPROVED ContentScale Pre-Write Brief below.',
@@ -58796,15 +58827,40 @@ Return ONLY valid JSON, no markdown, no preamble.
     // v493 — request-scoped provider usage telemetry. This records the usage metadata returned
     // by Gemini for every successful Prewrite model call, including JSON repair/quality passes.
     // It lets us diagnose a real billing spike instead of guessing from the visible Brief length.
-    const _pwbUsage={calls:[],input_tokens:0,output_tokens:0,thinking_tokens:0,billable_output_tokens:0,total_tokens:0,cached_input_tokens:0};
-    const _pwbRecordUsage=function(label,model,data){
+    // v495: provider-reported usage + a soft budget for OPTIONAL repair/completion calls.
+    // Core synthesis is never silently skipped. Once the soft budget is reached, ContentScale
+    // stops buying extra repair passes and lets the existing quality gate decide whether the
+    // Brief is good enough. This protects quality AND prevents an open-ended retry bill.
+    const _pwbBudget={
+      max_calls:Math.max(5,Number(process.env.PREWRITE_GEMINI_MAX_CALLS||10)),
+      max_input_tokens:Math.max(30000,Number(process.env.PREWRITE_GEMINI_MAX_INPUT_TOKENS||120000)),
+      max_billable_output_tokens:Math.max(8000,Number(process.env.PREWRITE_GEMINI_MAX_BILLABLE_OUTPUT_TOKENS||30000)),
+      skipped_calls:[]
+    };
+    const _pwbUsage={calls:[],input_tokens:0,output_tokens:0,thinking_tokens:0,billable_output_tokens:0,total_tokens:0,cached_input_tokens:0,attempted_calls:0};
+    const _pwbRecordUsage=function(label,model,data,meta){
       try{
-        const u=data&&data.usageMetadata||{};
+        const u=data&&data.usageMetadata||{},m=meta&&typeof meta==='object'?meta:{};
         const input=Number(u.promptTokenCount||0),output=Number(u.candidatesTokenCount||0),thinking=Number(u.thoughtsTokenCount||0),cached=Number(u.cachedContentTokenCount||0);
         const total=Number(u.totalTokenCount||0)||(input+output+thinking);
-        const row={label:String(label||'call'),model:String(model||'unknown'),input_tokens:input,output_tokens:output,thinking_tokens:thinking,billable_output_tokens:output+thinking,total_tokens:total,cached_input_tokens:cached};
+        const row={label:String(label||'call'),model:String(model||'unknown'),input_tokens:input,output_tokens:output,thinking_tokens:thinking,billable_output_tokens:output+thinking,total_tokens:total,cached_input_tokens:cached,prompt_chars:Number(m.prompt_chars||0),max_output_tokens:Number(m.max_output_tokens||0),elapsed_ms:Number(m.elapsed_ms||0)};
         _pwbUsage.calls.push(row);_pwbUsage.input_tokens+=input;_pwbUsage.output_tokens+=output;_pwbUsage.thinking_tokens+=thinking;_pwbUsage.billable_output_tokens+=(output+thinking);_pwbUsage.total_tokens+=total;_pwbUsage.cached_input_tokens+=cached;
       }catch(_usageErr){}
+    };
+    const _pwbOptionalGeminiCall=function(label){return /(?:_json_repair$|^quality_|^evidence_quality_expert_pass2$)/.test(String(label||''));};
+    const _pwbBudgetReason=function(label){
+      if(!_pwbOptionalGeminiCall(label))return '';
+      if(_pwbUsage.calls.length>=_pwbBudget.max_calls)return 'max_calls';
+      if(_pwbUsage.input_tokens>=_pwbBudget.max_input_tokens)return 'max_input_tokens';
+      if(_pwbUsage.billable_output_tokens>=_pwbBudget.max_billable_output_tokens)return 'max_billable_output_tokens';
+      return '';
+    };
+    const _pwbSkipForBudget=function(label){
+      const reason=_pwbBudgetReason(label);
+      if(!reason)return '';
+      _pwbBudget.skipped_calls.push({label:String(label||'call'),reason:reason,after_calls:_pwbUsage.calls.length,input_tokens:_pwbUsage.input_tokens,billable_output_tokens:_pwbUsage.billable_output_tokens});
+      console.warn('[prewrite-brief] optional Gemini call skipped by cost guard:',label,reason);
+      return reason;
     };
 
     // v458 — Network Prewrite synthesis is split into THREE small, validated JSON jobs.
@@ -58812,8 +58868,13 @@ Return ONLY valid JSON, no markdown, no preamble.
     // v478: keep a reference to the compact-call helper outside the fast-lane block so
     // post-normalization quality repair can use the exact same provider/retry machinery.
     let _pwbCompactCall=null;
+    const _pwbAllowModelUpgrade=process.env.PREWRITE_ALLOW_MODEL_UPGRADE==='1';
+    // Cheap-model lock: old Railway GEMINI_MODEL/GEMINI_MODEL_BRIEF values cannot silently make
+    // Prewrite expensive. A stronger model is used only when PREWRITE_ALLOW_MODEL_UPGRADE=1.
+    const _pwbBriefPrimary=_pwbAllowModelUpgrade?(GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite'):'gemini-2.5-flash-lite';
+    const _pwbBriefFallback=_pwbAllowModelUpgrade?(GEMINI_MODEL_BRIEF_FALLBACK||_pwbBriefPrimary):'gemini-2.5-flash-lite';
     if (_pwbNetworkFastLane) {
-      const _compactModels = Array.from(new Set([GEMINI_MODEL_BRIEF, GEMINI_MODEL_BRIEF_FALLBACK, 'gemini-2.5-flash-lite', 'gemini-3.5-flash-lite', 'gemini-2.5-flash'].filter(Boolean))).slice(0,3);
+      const _compactModels = Array.from(new Set([_pwbBriefPrimary,_pwbBriefFallback].concat(_pwbAllowModelUpgrade?['gemini-3.5-flash-lite','gemini-2.5-flash']:[]).filter(Boolean))).slice(0,3);
       const _extractCompactJson = function(raw) {
         raw=String(raw||'').trim(); if(!raw)return null;
         const candidates=[raw];
@@ -58823,14 +58884,17 @@ Return ONLY valid JSON, no markdown, no preamble.
         return null;
       };
       const _compactCall = async function(label, compactPrompt, maxTokens, requiredKeys) {
-        const primary=_compactModels[0]||GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash';
-        const fallback=_compactModels[1]||'gemini-2.5-flash';
-        const body={contents:[{parts:[{text:_langPrefix(language)+compactPrompt}]}],generationConfig:{temperature:0.18,maxOutputTokens:maxTokens,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
+        const _budgetSkip=_pwbSkipForBudget(label);
+        if(_budgetSkip)return {ok:false,error:'optional call skipped by Prewrite cost guard ('+_budgetSkip+')',status:0,attempts:0,model:'',timed_out:false,budget_skipped:true};
+        const primary=_compactModels[0]||GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite';
+        const fallback=_compactModels[1]||primary;
+        const _fullPrompt=_langPrefix(language)+compactPrompt;
+        const body={contents:[{parts:[{text:_fullPrompt}]}],generationConfig:{temperature:0.18,maxOutputTokens:maxTokens,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
         const started=Date.now();
-        let attempts=2;
+        let attempts=2;_pwbUsage.attempted_calls+=1;
         const rr=await callGeminiWithFallback(geminiKey,body,primary,fallback,2);
         const modelUsed=rr&&rr.modelUsed||primary;
-        if(rr&&rr.ok)_pwbRecordUsage(label,modelUsed,rr.data);
+        if(rr&&rr.ok)_pwbRecordUsage(label,modelUsed,rr.data,{prompt_chars:_fullPrompt.length,max_output_tokens:maxTokens,elapsed_ms:Date.now()-started});
         if(!rr||!rr.ok){ const err=String(rr&&rr.errorMessage||('Gemini '+String(rr&&rr.status||0))).slice(0,900); return {ok:false,error:err,status:Number(rr&&rr.status||0),attempts:attempts,model:modelUsed,timed_out:/timed out|timeout/i.test(err),elapsed_ms:Date.now()-started}; }
         const jj=rr.data||{}, cand=jj.candidates&&jj.candidates[0]||{};
         const raw=(cand.content&&cand.content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
@@ -58844,9 +58908,12 @@ Use only information already present in SOURCE RESPONSE. If a required value is 
 SOURCE RESPONSE:
 ${raw.slice(0,16000)}`;
           const repairBody={contents:[{parts:[{text:repairPrompt}]}],generationConfig:{temperature:0,maxOutputTokens:Math.min(maxTokens,4200),responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
-          const repair=await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',GEMINI_MODEL_BRIEF_FALLBACK||fallback,1);
-          attempts+=1;
-          if(repair&&repair.ok){_pwbRecordUsage(label+'_json_repair',repair.modelUsed||'gemini-2.5-flash-lite',repair.data);
+          const _repairLabel=label+'_json_repair',_repairSkip=_pwbSkipForBudget(_repairLabel);
+          const _repairStarted=Date.now();
+          const repair=_repairSkip?null:await callGeminiWithFallback(geminiKey,repairBody,'gemini-2.5-flash-lite',GEMINI_MODEL_BRIEF_FALLBACK||fallback,1);
+          if(!_repairSkip)_pwbUsage.attempted_calls+=1;
+          attempts+=_repairSkip?0:1;
+          if(repair&&repair.ok){_pwbRecordUsage(_repairLabel,repair.modelUsed||'gemini-2.5-flash-lite',repair.data,{prompt_chars:repairPrompt.length,max_output_tokens:Math.min(maxTokens,4200),elapsed_ms:Date.now()-_repairStarted});
             const rj=repair.data||{}, rc=rj.candidates&&rj.candidates[0]||{};
             const rraw=(rc.content&&rc.content.parts||[]).map(function(x){return x&&x.text||'';}).join('').trim();
             const repaired=_extractCompactJson(rraw);
@@ -58945,7 +59012,7 @@ Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}
           {name:'competitors',keys:['competitor_table']},
           {name:'core',keys:['recommended_title_h1','top10_gap','recommended_structure','meta_package','opening_passage','page_blueprint','ai_answer']},
           {name:'trust',keys:['quick_facts','entity_strategy','evidence','balance','use_cases','conclusion']},
-          {name:'faq_actions',keys:['paa_questions','action_plan']}
+          {name:'faq_actions',keys:['paa_questions']}
         ];
         for(let _cg=0;_cg<_completionGroups.length && _merged;_cg++){
           const _allMissing=_collectMissing(_merged);
@@ -59071,7 +59138,7 @@ ${claimsBlock.slice(0,2400)}`;
         console.warn('[prewrite-brief] network 3-part synthesis blocked | p1='+(_part1.ok?'ok':'failed')+' p2='+(_part2.ok?'ok':'failed')+' p3='+(_part3.ok?'ok':'failed'));
       }
     } else {
-      const _pwbGeminiModelLadder=[GEMINI_MODEL,GEMINI_MODEL];
+      const _pwbGeminiModelLadder=Array.from(new Set([_pwbBriefPrimary,_pwbBriefFallback]));
       for(let _gi=0;_gi<_pwbGeminiModelLadder.length && !d2;_gi++){
         const _model=_pwbGeminiModelLadder[_gi];
         _pwbGeminiAttempts=_gi+1; _pwbGeminiModelUsed=_model;
@@ -59079,7 +59146,7 @@ ${claimsBlock.slice(0,2400)}`;
           const ctrl2=new AbortController(); const _t2=setTimeout(()=>ctrl2.abort(),32000);
           const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
           clearTimeout(_t2); _pwbGeminiStatus=r2.status; const _txt=await r2.text(); let _json={}; try{_json=_txt?JSON.parse(_txt):{}}catch(_je){}
-          if(r2.ok){_pwbRecordUsage('full_brief',_model,_json);d2=_json;break}
+          if(r2.ok){_pwbRecordUsage('full_brief',_model,_json,{prompt_chars:(_langPrefix(language)+finalPrompt).length,max_output_tokens:16384,elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt});d2=_json;break}
           _pwbGeminiError=((_json.error&&_json.error.message)||_txt||('Gemini '+r2.status)).slice(0,700);
           console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'failed:',r2.status,_pwbGeminiError.slice(0,220));
           if(!(r2.status===429||r2.status>=500))break;
@@ -59432,10 +59499,14 @@ ${sourceText}`;
         return r&&r.ok?{ok:true,obj:r.obj,error:''}:{ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(r&&r.error||'evidence extraction failed')};
       }
       try{
-        const body={contents:[{parts:[{text:_langPrefix(language)+prompt}]}],generationConfig:{temperature:0.03,maxOutputTokens:4600,responseMimeType:'application/json'}};
-        const rr=await callGeminiWithFallback(geminiKey,body,GEMINI_MODEL_BRIEF||GEMINI_MODEL||'gemini-2.5-flash','gemini-2.5-flash',1);
+        const _evidenceLabel='evidence_quality_'+label,_evidenceSkip=_pwbSkipForBudget(_evidenceLabel);
+        if(_evidenceSkip)return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:'optional evidence call skipped by Prewrite cost guard ('+_evidenceSkip+')'};
+        const _evidencePrompt=_langPrefix(language)+prompt,_evidenceStarted=Date.now();
+        const body={contents:[{parts:[{text:_evidencePrompt}]}],generationConfig:{temperature:0.03,maxOutputTokens:4600,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
+        _pwbUsage.attempted_calls+=1;
+        const rr=await callGeminiWithFallback(geminiKey,body,_pwbBriefPrimary,_pwbBriefFallback,1);
         if(!rr||!rr.ok)return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(rr&&rr.errorMessage||'evidence model call failed')};
-        _pwbRecordUsage('evidence_quality_'+label,rr.modelUsed||GEMINI_MODEL_BRIEF||GEMINI_MODEL,rr.data);
+        _pwbRecordUsage(_evidenceLabel,rr.modelUsed||_pwbBriefPrimary,rr.data,{prompt_chars:_evidencePrompt.length,max_output_tokens:4600,elapsed_ms:Date.now()-_evidenceStarted});
         const c=rr.data&&rr.data.candidates&&rr.data.candidates[0]||{},raw=(c.content&&c.content.parts||[]).map(function(x){return x&&x.text||'';}).join('');const obj=_pwbParseJson(raw);
         return obj&&Array.isArray(obj.statistics)&&Array.isArray(obj.expert_quotes)&&Array.isArray(obj.expert_insights)?{ok:true,obj:obj,error:''}:{ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:'invalid evidence JSON'};
       }catch(e){return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(e&&e.message||e)};}
@@ -59735,8 +59806,19 @@ ${sourceText}`;
     const _pwbManualAiCheckedCount=Object.keys(_pwbManualAiStatus).filter(function(k){return _pwbManualAiStatus[k];}).length;
     const _pwbManualPerplexityUrls=(String(_manualAi.perplexity||'').match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]).map(function(u){return String(u).replace(/[)\]>,.;]+$/,'');});
     const _pwbManualPerplexityDomains=Array.from(new Set(_pwbManualPerplexityUrls.map(function(u){try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase();}catch(_e){return ''}}).filter(Boolean)));
-    brief.generation_usage={provider:'gemini',calls:_pwbUsage.calls,input_tokens:_pwbUsage.input_tokens,output_tokens:_pwbUsage.output_tokens,thinking_tokens:_pwbUsage.thinking_tokens,billable_output_tokens:_pwbUsage.billable_output_tokens,total_tokens:_pwbUsage.total_tokens,cached_input_tokens:_pwbUsage.cached_input_tokens,models:Array.from(new Set(_pwbUsage.calls.map(function(x){return x.model;}).filter(Boolean))),note:'Provider-reported token telemetry for this Prewrite generation only. Billing console remains authoritative.'};
-    console.log('[prewrite-brief] usage',JSON.stringify({calls:_pwbUsage.calls.length,input:_pwbUsage.input_tokens,output:_pwbUsage.output_tokens,thinking:_pwbUsage.thinking_tokens,billable_output:_pwbUsage.billable_output_tokens,total:_pwbUsage.total_tokens,models:brief.generation_usage.models}));
+    const _pwbRepairCalls=_pwbUsage.calls.filter(function(x){return /(?:_json_repair$|^quality_)/.test(String(x.label||''));});
+    const _pwbRepairInput=_pwbRepairCalls.reduce(function(a,x){return a+Number(x.input_tokens||0);},0);
+    const _pwbLargestInput=_pwbUsage.calls.slice().sort(function(a,b){return Number(b.input_tokens||0)-Number(a.input_tokens||0);})[0]||null;
+    const _pwbModels=Array.from(new Set(_pwbUsage.calls.map(function(x){return x.model;}).filter(Boolean)));
+    const _pwbCostSuggestions=[];
+    if(_pwbLargestInput&&_pwbUsage.input_tokens>0&&Number(_pwbLargestInput.input_tokens||0)/_pwbUsage.input_tokens>=0.35)_pwbCostSuggestions.push('Largest input consumer is '+_pwbLargestInput.label+' ('+Math.round(Number(_pwbLargestInput.input_tokens||0)*100/_pwbUsage.input_tokens)+'% of all Gemini input). Optimize that context first; do not weaken every stage.');
+    if(_pwbRepairCalls.length>=2)_pwbCostSuggestions.push(_pwbRepairCalls.length+' repair/completion calls were needed. Improving first-pass JSON/schema compliance can remove these calls without reducing research depth.');
+    if(_pwbUsage.thinking_tokens>0)_pwbCostSuggestions.push('Thinking tokens were billed even though Prewrite requests are configured with thinkingBudget=0; inspect the exact model/call before increasing usage.');
+    if(_pwbModels.some(function(m){return !/2\.5-flash-lite/i.test(String(m));}))_pwbCostSuggestions.push('A model other than gemini-2.5-flash-lite was used. Prewrite is locked to Flash-Lite by default; check explicit Railway overrides before accepting the higher-cost model.');
+    if(_pwbUsage.calls.length>7)_pwbCostSuggestions.push('This Brief needed more than 7 successful Gemini calls. Review the per-call list before changing providers; repeated repair/evidence passes are the first optimization target.');
+    if(!_pwbCostSuggestions.length)_pwbCostSuggestions.push('Usage stayed inside the low-cost path. Keep Gemini and compare future Briefs against this per-call baseline before making model changes.');
+    brief.generation_usage={provider:'gemini',calls:_pwbUsage.calls,input_tokens:_pwbUsage.input_tokens,output_tokens:_pwbUsage.output_tokens,thinking_tokens:_pwbUsage.thinking_tokens,billable_output_tokens:_pwbUsage.billable_output_tokens,total_tokens:_pwbUsage.total_tokens,cached_input_tokens:_pwbUsage.cached_input_tokens,attempted_calls:_pwbUsage.attempted_calls,models:_pwbModels,cost_guard:{max_calls:_pwbBudget.max_calls,max_input_tokens:_pwbBudget.max_input_tokens,max_billable_output_tokens:_pwbBudget.max_billable_output_tokens,calls_used:_pwbUsage.calls.length,input_tokens_used:_pwbUsage.input_tokens,billable_output_tokens_used:_pwbUsage.billable_output_tokens,skipped_calls:_pwbBudget.skipped_calls,allow_model_upgrade:process.env.PREWRITE_ALLOW_MODEL_UPGRADE==='1'},diagnostics:{largest_input_call:_pwbLargestInput?{label:_pwbLargestInput.label,input_tokens:_pwbLargestInput.input_tokens,share_pct:_pwbUsage.input_tokens?Math.round(Number(_pwbLargestInput.input_tokens||0)*100/_pwbUsage.input_tokens):0}:null,repair_calls:_pwbRepairCalls.length,repair_input_tokens:_pwbRepairInput,repair_input_share_pct:_pwbUsage.input_tokens?Math.round(_pwbRepairInput*100/_pwbUsage.input_tokens):0,suggestions:_pwbCostSuggestions},note:'Provider-reported token telemetry for this Prewrite generation only. Optional repair passes stop at the configured soft budget. Billing console remains authoritative.'};
+    console.log('[prewrite-brief] usage',JSON.stringify({calls:_pwbUsage.calls.length,attempted_calls:_pwbUsage.attempted_calls,input:_pwbUsage.input_tokens,output:_pwbUsage.output_tokens,thinking:_pwbUsage.thinking_tokens,billable_output:_pwbUsage.billable_output_tokens,total:_pwbUsage.total_tokens,models:brief.generation_usage.models,repair_calls:_pwbRepairCalls.length,skipped:_pwbBudget.skipped_calls.length}));
     // What We Actually Checked — built from REAL, verified data fetched above,
     // never from the LLM's own claims. Matches the transparency block already
     // used on the regular Citation Brief.
