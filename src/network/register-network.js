@@ -2938,18 +2938,34 @@ ${html.slice(0,52000)}`;
 
   app.post('/api/network/admin/placements/:id/reopen-editing', verifyAdmin, wrap(async (req,res)=>{
     const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid placement'});
-    const q=await pool.query(`SELECT p.id,p.status,p.content_id,p.published_url,p.verified_at,p.verification_decision,p.verification_note,p.reviewed_at,p.reward_credits,
-      w.domain AS publisher_domain
-      FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id WHERE p.id=$1 LIMIT 1`,[id]);
-    const x=q.rows[0];if(!x)return res.status(404).json({success:false,error:'Placement not found'});
-    if(!['submitted','verifying','verified'].includes(String(x.status||'')))return res.status(409).json({success:false,error:'This placement is not in a live-verification state that needs reopening.',code:'reopen_state_not_required',placement_status:x.status,next_action:x.status==='needs_review'||x.status==='ready'?'Continue editing and use Refresh all & verify.':'Refresh the Publisher Edition state before retrying.'});
-    const adminId=cleanText(req.admin?.id||req.headers['x-admin-key']||'admin',200);
-    const previous={status:x.status,published_url:x.published_url||null,verified_at:x.verified_at||null,verification_decision:x.verification_decision||null,verification_note:x.verification_note||null,reviewed_at:x.reviewed_at||null};
-    const r=await pool.query(`UPDATE network_placements SET status='accepted',verified_at=NULL,verification_decision=NULL,verification_note=NULL,reviewed_by_admin_id=NULL,reviewed_at=NULL,updated_at=NOW() WHERE id=$1 RETURNING *`,[id]);
-    await pool.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
-      VALUES ($1,'reopened_for_editing','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,x.published_url||null,'Explicitly reopened live Publisher Edition for editing before regeneration.',JSON.stringify({source:'admin_reopen_editing',previous_status:previous.status,previous_url:previous.published_url,previous_verified_at:previous.verified_at,previous_verification_decision:previous.verification_decision,credits_preserved:true,reward_credits:Number(x.reward_credits||0)})]);
-    if(x.content_id)await pool.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status=CASE WHEN EXISTS(SELECT 1 FROM network_placements WHERE content_id=$1 AND status='verified') THEN 'verified' ELSE 'hard_interest' END,updated_at=NOW() WHERE id=$1`,[x.content_id]);
-    res.json({success:true,placement:r.rows[0],previous_url:previous.published_url,previous_status:previous.status,previous_verified_at:previous.verified_at,credits_preserved:true,rule:'The live placement was explicitly reopened for editing. Previous verification remains in review history; existing credit transactions are preserved and remain idempotent. Updated content must be republished and verified again.'});
+    const client=await pool.connect();
+    try{
+      await client.query('BEGIN');
+      const q=await client.query(`SELECT p.id,p.status,p.content_id,p.published_url,p.verified_at,p.verification_decision,p.verification_note,p.reviewed_at,p.reward_credits,
+        w.domain AS publisher_domain
+        FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id WHERE p.id=$1 LIMIT 1 FOR UPDATE OF p`,[id]);
+      const x=q.rows[0];if(!x){await client.query('ROLLBACK');return res.status(404).json({success:false,error:'Placement not found'})}
+      const adminId=cleanText(req.admin?.id||req.headers['x-admin-key']||'admin',200);
+      const state=String(x.status||'');
+      const priorReopen=await client.query(`SELECT id,created_at,metadata FROM network_placement_review_events WHERE placement_id=$1 AND metadata->>'source'='admin_reopen_editing' ORDER BY id DESC LIMIT 1`,[id]);
+      const priorVerified=await client.query(`SELECT id,created_at,published_url,note,metadata FROM network_placement_review_events WHERE placement_id=$1 AND event_type='verified' ORDER BY id DESC LIMIT 1`,[id]);
+      const partialV537Recovery=!priorReopen.rows[0]&&['accepted','ready','needs_review'].includes(state)&&!!x.published_url&&!!priorVerified.rows[0]&&!x.verified_at&&!x.verification_decision;
+      if(!['submitted','verifying','verified'].includes(state)&&!partialV537Recovery){
+        await client.query('ROLLBACK');
+        if(priorReopen.rows[0]&&['accepted','ready','needs_review'].includes(state))return res.json({success:true,already_reopened:true,placement:x,previous_url:x.published_url||null,previous_status:state,credits_preserved:true,rule:'This Publisher Edition was already reopened for editing. Continue with Refresh all & verify.'});
+        return res.status(409).json({success:false,error:'This placement is not in a live-verification state that needs reopening.',code:'reopen_state_not_required',placement_status:state,next_action:['needs_review','ready','accepted'].includes(state)?'Continue editing and use Refresh all & verify.':'Refresh the Publisher Edition state before retrying.'});
+      }
+      const inferredVerified=priorVerified.rows[0]||null;
+      const previous={status:partialV537Recovery?'verified':state,published_url:x.published_url||inferredVerified?.published_url||null,verified_at:x.verified_at||inferredVerified?.created_at||null,verification_decision:x.verification_decision||(inferredVerified?'verified':null),verification_note:x.verification_note||inferredVerified?.note||null,reviewed_at:x.reviewed_at||inferredVerified?.created_at||null};
+      const r=partialV537Recovery
+        ? await client.query(`UPDATE network_placements SET status='accepted',updated_at=NOW() WHERE id=$1 RETURNING *`,[id])
+        : await client.query(`UPDATE network_placements SET status='accepted',verified_at=NULL,verification_decision=NULL,verification_note=NULL,reviewed_by_admin_id=NULL,reviewed_at=NULL,updated_at=NOW() WHERE id=$1 RETURNING *`,[id]);
+      if(!priorReopen.rows[0])await client.query(`INSERT INTO network_placement_review_events (placement_id,event_type,actor_type,actor_ref,published_url,note,metadata,created_at)
+        VALUES ($1,'needs_changes','admin',$2,$3,$4,$5::jsonb,NOW())`,[id,adminId,previous.published_url||null,'Publisher Edition explicitly reopened for editing before regeneration.',JSON.stringify({source:'admin_reopen_editing',reopen_reason:'content_or_policy_changed_after_live_verification',recovered_partial_v537:partialV537Recovery,previous_status:previous.status,previous_url:previous.published_url,previous_verified_at:previous.verified_at,previous_verification_decision:previous.verification_decision,credits_preserved:true,reward_credits:Number(x.reward_credits||0)})]);
+      if(x.content_id)await client.query(`UPDATE network_content SET verified_placements=(SELECT COUNT(*)::int FROM network_placements WHERE content_id=$1 AND status='verified'),distribution_status=CASE WHEN EXISTS(SELECT 1 FROM network_placements WHERE content_id=$1 AND status='verified') THEN 'verified' ELSE 'hard_interest' END,updated_at=NOW() WHERE id=$1`,[x.content_id]);
+      await client.query('COMMIT');
+      res.json({success:true,placement:r.rows[0],previous_url:previous.published_url,previous_status:previous.status,previous_verified_at:previous.verified_at,credits_preserved:true,recovered_partial_reopen:partialV537Recovery,rule:'The live placement was explicitly reopened for editing. Previous verification remains in review history; existing credit transactions are preserved and remain idempotent. Updated content must be republished and verified again.'});
+    }catch(e){try{await client.query('ROLLBACK')}catch(_e){}throw e}finally{client.release()}
   }));
 
   app.post('/api/network/admin/placements/:id/generate', verifyAdmin, wrap(async (req, res) => {
