@@ -1,4 +1,4 @@
-// ContentScale Network v530 — Network Test Lab; v529 unified Action/Attention Engine + v528 readiness-state reconciliation preserved
+// ContentScale Network v531 — Persistent E2E Test Fixtures; v530 Network Test Lab + v529 unified Action/Attention Engine preserved
 'use strict';
 
 // CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v509
@@ -11,7 +11,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
-const NETWORK_SCHEMA_VERSION = 17;
+const NETWORK_SCHEMA_VERSION = 18;
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -30,7 +30,8 @@ const NETWORK_TABLES = [
   'network_publisher_applications',
   'network_publisher_accounts',
   'network_ads',
-  'network_directory_businesses'
+  'network_directory_businesses',
+  'network_test_lab_fixtures'
 ];
 
 
@@ -2162,6 +2163,20 @@ async function ensureNetworkTables(pool) {
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_network_publisher_accounts_application_id ON network_publisher_accounts(application_id) WHERE application_id IS NOT NULL`).catch(()=>{});
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_network_publisher_accounts_access_token ON network_publisher_accounts(access_token) WHERE access_token IS NOT NULL`).catch(()=>{});
 
+
+    // v531 — isolated persistent Test Lab fixtures.
+    // These rows never enter production Network workflows. They persist only synthetic
+    // role/readiness state so database transactions, reloads and recovery can be tested safely.
+    await client.query(`CREATE TABLE IF NOT EXISTS network_test_lab_fixtures (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      state JSONB NOT NULL DEFAULT '{}'::jsonb,
+      history JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_by_admin_id TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_network_test_lab_fixtures_updated ON network_test_lab_fixtures(updated_at DESC,id DESC)`);
 
     await client.query(`CREATE TABLE IF NOT EXISTS network_ads (
       id BIGSERIAL PRIMARY KEY,
@@ -5699,9 +5714,10 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
     priorityInput.sort((a,b)=>(Number(a.priority||100)-Number(b.priority||100))||String(a.label||'').localeCompare(String(b.label||'')));
     const priority=[{domain:'admin_action_center',key:'highest_priority_first',expected:'manual_verify',actual:priorityInput[0]&&priorityInput[0].key,pass:!!priorityInput[0]&&priorityInput[0].key==='manual_verify',ordered_keys:priorityInput.map(x=>x.key)}];
 
-    const results=[...publication,...publisher,...normalized,...priority];
+    const fixtureE2e=_networkFixtureSuiteV531();
+    const results=[...publication,...publisher,...normalized,...priority,...fixtureE2e];
     const failed=results.filter(x=>!x.pass);
-    return {engine:'network-test-lab-v530',safe_simulation:true,total:results.length,passed:results.length-failed.length,failed:failed.length,all_passed:failed.length===0,results};
+    return {engine:'network-test-lab-v531',safe_simulation:true,persistent_fixture_engine:'network-test-fixture-v531',total:results.length,passed:results.length-failed.length,failed:failed.length,all_passed:failed.length===0,results};
   }
 
   async function _networkTestLabInspectPlacementV530(id){
@@ -5963,16 +5979,217 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
     });
   }));
 
+
+  let _networkFixtureTableEnsuredV531=false;
+  async function _ensureNetworkFixtureTableV531(){
+    if(_networkFixtureTableEnsuredV531)return;
+    await pool.query(`CREATE TABLE IF NOT EXISTS network_test_lab_fixtures (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      state JSONB NOT NULL DEFAULT '{}'::jsonb,
+      history JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_by_admin_id TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_network_test_lab_fixtures_updated ON network_test_lab_fixtures(updated_at DESC,id DESC)`);
+    await pool.query(`INSERT INTO network_schema_meta (singleton,schema_version,updated_at) VALUES (TRUE,$1,NOW()) ON CONFLICT (singleton) DO UPDATE SET schema_version=GREATEST(network_schema_meta.schema_version,EXCLUDED.schema_version),updated_at=NOW()`,[NETWORK_SCHEMA_VERSION]).catch(()=>{});
+    _networkFixtureTableEnsuredV531=true;
+  }
+
+  // v531 — Persistent E2E Fixture Engine.
+  // Fixtures persist in their own table and deliberately cannot send email, call Gemini,
+  // rerun research, mutate credits, or fetch a public URL. They use the SAME Readiness and
+  // role-action functions as production so state ordering can be tested across real DB reloads.
+  function _networkFixtureBaseV531(){
+    return {
+      fixture_version:1,
+      test_mode:true,
+      business:{status:'claim_pending'},
+      publisher:{application_status:'pending',website_status:'pending',account_status:'pending'},
+      scout:{partner_status:'active',referral_status:'clicked',rewarded:false},
+      opportunity:{created:false,hard_interest:false},
+      publication:{
+        placement_status:'accepted',prewrite_linked:false,ai_complete:false,internal_destination_ready:false,generation_current:true,
+        internal_candidate_count:0,external_candidate_count:0,internal_used_count:0,external_used_count:0,link_policy_ready:false,
+        brief_fidelity_ready:false,publication_standard_ready:false,meta_policy_ready:false,seed_keyword_ready:false,
+        internal_preview_current:false,official_scan_current:false,official_contentscore:0,seo_copied_current:false,seo_copied_at:null,live_verification:null
+      },
+      simulated:{published_url:'https://fixture.invalid/article',credit_would_award:false},
+      side_effects:{emails_sent:0,gemini_calls:0,research_runs:0,credit_mutations:0,external_fetches:0},
+      meta:{last_transition:'created',updated_at:new Date().toISOString()}
+    };
+  }
+
+  function _networkFixtureCloneV531(v){return JSON.parse(JSON.stringify(v||{}))}
+  function _networkFixtureVerificationV531(passed){
+    return passed
+      ? {run_no:1,http_status:200,indexable:true,canonical_ok:true,brand_mention_ok:true,source_link_ok:true,content_match_ok:true,password_protected:false,result_status:'passed',details:{fixture:true},checked_at:new Date().toISOString()}
+      : {run_no:1,http_status:200,indexable:true,canonical_ok:false,brand_mention_ok:true,source_link_ok:true,content_match_ok:true,password_protected:false,result_status:'failed',details:{fixture:true,reason:'synthetic canonical failure'},checked_at:new Date().toISOString()};
+  }
+
+  function _networkFixtureApplyTransitionV531(input,transition){
+    const s=Object.assign(_networkFixtureBaseV531(),_networkFixtureCloneV531(input||{}));
+    s.business=Object.assign({},_networkFixtureBaseV531().business,s.business||{});
+    s.publisher=Object.assign({},_networkFixtureBaseV531().publisher,s.publisher||{});
+    s.scout=Object.assign({},_networkFixtureBaseV531().scout,s.scout||{});
+    s.opportunity=Object.assign({},_networkFixtureBaseV531().opportunity,s.opportunity||{});
+    s.publication=Object.assign({},_networkFixtureBaseV531().publication,s.publication||{});
+    s.side_effects=Object.assign({},_networkFixtureBaseV531().side_effects,s.side_effects||{});
+    s.simulated=Object.assign({},_networkFixtureBaseV531().simulated,s.simulated||{});
+    const p=s.publication,t=String(transition||'').trim();
+    if(t==='reset')return _networkFixtureBaseV531();
+    if(t==='verify_business')s.business.status='verified';
+    else if(t==='approve_publisher'){s.publisher.application_status='approved';s.publisher.website_status='pending';s.publisher.account_status='pending';}
+    else if(t==='approve_website'){s.publisher.website_status='approved';s.publisher.account_status='active';}
+    else if(t==='activate_referral')s.scout.referral_status='activated';
+    else if(t==='reward_referral'){s.scout.referral_status='rewarded';s.scout.rewarded=true;}
+    else if(t==='create_opportunity'){s.opportunity.created=true;s.opportunity.hard_interest=true;}
+    else if(t==='prewrite_ready'){p.prewrite_linked=true;p.ai_complete=true;p.internal_destination_ready=true;p.generation_current=true;}
+    else if(t==='discover_internal'){p.internal_candidate_count=5;}
+    else if(t==='discover_external'){p.external_candidate_count=5;}
+    else if(t==='apply_links'){p.internal_candidate_count=Math.max(5,Number(p.internal_candidate_count||0));p.external_candidate_count=Math.max(5,Number(p.external_candidate_count||0));p.internal_used_count=3;p.external_used_count=3;p.link_policy_ready=true;p.brief_fidelity_ready=true;p.publication_standard_ready=true;p.meta_policy_ready=true;p.seed_keyword_ready=true;p.generation_current=true;}
+    else if(t==='refresh_ready'){p.internal_preview_current=true;p.official_scan_current=true;p.official_contentscore=92;p.seo_copied_current=false;p.seo_copied_at=null;p.live_verification=null;p.placement_status='ready';}
+    else if(t==='copy_html'){p.seo_copied_current=true;p.seo_copied_at=new Date().toISOString();}
+    else if(t==='submit_live'){p.placement_status='submitted';p.live_verification=null;}
+    else if(t==='precheck_fail'){p.placement_status='submitted';p.live_verification=_networkFixtureVerificationV531(false);}
+    else if(t==='mark_needs_changes'){p.placement_status='needs_review';p.live_verification=null;}
+    else if(t==='resubmit'){p.placement_status='submitted';p.live_verification=null;}
+    else if(t==='precheck_pass'){p.placement_status='submitted';p.live_verification=_networkFixtureVerificationV531(true);}
+    else if(t==='verify_live'){p.placement_status='verified';p.live_verification=_networkFixtureVerificationV531(true);s.simulated.credit_would_award=true;}
+    else if(t==='break_internal_url'){p.internal_candidate_count=2;p.internal_used_count=2;p.link_policy_ready=false;}
+    else if(t==='break_external_url'){p.external_candidate_count=2;p.external_used_count=2;p.link_policy_ready=false;}
+    else if(t==='reopen_editing'){p.placement_status='accepted';p.live_verification=null;p.seo_copied_current=false;p.seo_copied_at=null;p.internal_preview_current=false;p.official_scan_current=false;p.official_contentscore=0;s.simulated.credit_would_award=false;}
+    else throw new Error('Unsupported fixture transition: '+t);
+    s.meta=Object.assign({},s.meta||{},{last_transition:t,updated_at:new Date().toISOString()});
+    return s;
+  }
+
+  function _networkFixtureComputedV531(row){
+    const state=Object.assign(_networkFixtureBaseV531(),_networkFixtureCloneV531(row&&row.state||{}));
+    state.business=Object.assign({},_networkFixtureBaseV531().business,state.business||{});
+    state.publisher=Object.assign({},_networkFixtureBaseV531().publisher,state.publisher||{});
+    state.scout=Object.assign({},_networkFixtureBaseV531().scout,state.scout||{});
+    state.opportunity=Object.assign({},_networkFixtureBaseV531().opportunity,state.opportunity||{});
+    state.publication=Object.assign({},_networkFixtureBaseV531().publication,state.publication||{});
+    state.side_effects=Object.assign({},_networkFixtureBaseV531().side_effects,state.side_effects||{});
+    const readiness=_networkPublicationReadinessV527(state.publication);
+    const publisherAction=_networkPublisherRoleActionV529(readiness,{id:0,status:state.publication.placement_status});
+    const businessAction=state.business.status==='verified'
+      ? _networkGuidedActionV529({role:'business',kind:'done',key:'verified',label:'Business verified'})
+      : _networkGuidedActionV529({role:'admin',kind:'action',key:'verify_business_claim',label:'Verify business claim',priority:12});
+    let publisherOnboarding;
+    if(state.publisher.application_status==='pending')publisherOnboarding=_networkGuidedActionV529({role:'admin',kind:'action',key:'review_publisher_application',label:'Approve publisher application',priority:15});
+    else if(state.publisher.website_status!=='approved'||state.publisher.account_status!=='active')publisherOnboarding=_networkGuidedActionV529({role:'admin',kind:'action',key:'review_publisher_website',label:'Approve publisher website',priority:18});
+    else publisherOnboarding=_networkGuidedActionV529({role:'publisher',kind:'done',key:'publisher_active',label:'Publisher active'});
+    let scoutAction;
+    if(state.scout.referral_status==='clicked')scoutAction=_networkGuidedActionV529({role:'scout',kind:'action',key:'share_referral',label:'Activate a referred publisher',priority:20});
+    else if(state.scout.referral_status==='activated')scoutAction=_networkGuidedActionV529({role:'admin',kind:'action',key:'reward_referral',label:'Confirm referral reward',priority:45});
+    else scoutAction=_networkGuidedActionV529({role:'scout',kind:'done',key:'rewarded',label:'Referral rewarded'});
+
+    let transition=null,label='Fixture complete',actor='none';
+    if(state.business.status!=='verified'){transition='verify_business';label='Verify business';actor='admin';}
+    else if(state.publisher.application_status==='pending'){transition='approve_publisher';label='Approve publisher';actor='admin';}
+    else if(state.publisher.website_status!=='approved'||state.publisher.account_status!=='active'){transition='approve_website';label='Approve publisher website';actor='admin';}
+    else if(state.scout.referral_status==='clicked'){transition='activate_referral';label='Activate referral';actor='scout/admin';}
+    else if(!state.opportunity.created){transition='create_opportunity';label='Create hard-interest opportunity';actor='admin';}
+    else{
+      const k=String(readiness.next_action&&readiness.next_action.key||'');
+      if(state.publication.placement_status==='needs_review'){transition='resubmit';label='Resubmit fixture';actor='publisher';}
+      else if(k==='prewrite'){transition='prewrite_ready';label='Complete Prewrite';actor='admin';}
+      else if(k==='discover_internal'){transition='discover_internal';label='Discover 3+ internal URLs';actor='admin';}
+      else if(k==='suggest_external'){transition='discover_external';label='Verify 3+ external URLs';actor='admin';}
+      else if(k==='refresh_all'){
+        if(Number(state.publication.internal_used_count||0)<3||Number(state.publication.external_used_count||0)<3||!state.publication.link_policy_ready){transition='apply_links';label='Apply 3×3 link policy';actor='admin';}
+        else{transition='refresh_ready';label='Refresh preview + ContentScore';actor='admin';}
+      }
+      else if(k==='copy_seo_html'){transition='copy_html';label='Copy SEO HTML';actor='publisher';}
+      else if(k==='publish_precheck'){
+        if(state.publication.placement_status==='submitted'){transition='precheck_pass';label='Run passing live pre-check';actor='admin';}
+        else{transition='submit_live';label='Submit live URL';actor='publisher';}
+      }
+      else if(k==='manual_verify'){transition='verify_live';label='Manual verify';actor='admin';}
+      else if(k==='needs_changes'){transition='mark_needs_changes';label='Mark needs changes';actor='admin';}
+      else if(k==='retry_live_precheck'){transition='precheck_pass';label='Retry passing pre-check';actor='admin';}
+      else if(k==='reopen_editing'){transition='reopen_editing';label='Reopen for editing';actor='admin';}
+    }
+    const side=state.side_effects||{},safe=Number(side.emails_sent||0)===0&&Number(side.gemini_calls||0)===0&&Number(side.research_runs||0)===0&&Number(side.credit_mutations||0)===0&&Number(side.external_fetches||0)===0;
+    const invariants=[
+      {key:'fixture_isolation',pass:state.test_mode===true,detail:'Fixture state is isolated from production workflow rows.'},
+      {key:'no_external_side_effects',pass:safe,detail:'No email, Gemini, research, credit mutation or external fetch recorded.'},
+      {key:'verified_only_done',pass:!(readiness.next_action&&readiness.next_action.done)||state.publication.placement_status==='verified',detail:'done='+!!(readiness.next_action&&readiness.next_action.done)+' · placement='+state.publication.placement_status},
+      {key:'3x3_before_ready',pass:!readiness.final_ready||(Number(state.publication.internal_used_count||0)>=3&&Number(state.publication.external_used_count||0)>=3),detail:'internal '+Number(state.publication.internal_used_count||0)+' · external '+Number(state.publication.external_used_count||0)},
+      {key:'single_recommended_transition',pass:readiness.next_action&&readiness.next_action.done?!transition:!!transition,detail:transition||'complete'}
+    ];
+    return {fixture:{id:row&&row.id||null,name:row&&row.name||'Fixture',created_at:row&&row.created_at||null,updated_at:row&&row.updated_at||null},state,readiness,publisher_action:publisherAction,business_action:businessAction,publisher_onboarding:publisherOnboarding,scout_action:scoutAction,recommended_transition:transition?{key:transition,label,actor}:null,invariants,all_invariants_pass:invariants.every(x=>x.pass),safe_fixture:true};
+  }
+
+  function _networkFixtureSuiteV531(){
+    let s=_networkFixtureBaseV531(),ok=true,checks=[];
+    const step=(t,expect)=>{s=_networkFixtureApplyTransitionV531(s,t);const c=_networkFixtureComputedV531({state:s}),actual=String(c.readiness.next_action&&c.readiness.next_action.key||'');const pass=!expect||actual===expect;checks.push({domain:'fixture_e2e',key:t,expected:expect||'state update',actual,pass});if(!pass)ok=false;return c;};
+    step('verify_business','prewrite');step('approve_publisher','prewrite');step('approve_website','prewrite');step('activate_referral','prewrite');step('create_opportunity','prewrite');
+    step('prewrite_ready','discover_internal');step('discover_internal','suggest_external');step('discover_external','refresh_all');step('apply_links','refresh_all');step('refresh_ready','copy_seo_html');step('copy_html','publish_precheck');step('submit_live','publish_precheck');step('precheck_pass','manual_verify');const verified=step('verify_live','done');
+    const side=verified.state.side_effects||{};checks.push({domain:'fixture_e2e',key:'zero_side_effects',expected:'0/0/0/0/0',actual:[side.emails_sent,side.gemini_calls,side.research_runs,side.credit_mutations,side.external_fetches].join('/'),pass:Object.values(side).every(v=>Number(v||0)===0)});
+    s=_networkFixtureApplyTransitionV531(s,'break_internal_url');let broken=_networkFixtureComputedV531({state:s});checks.push({domain:'fixture_e2e',key:'verified_internal_url_break',expected:'discover_internal',actual:String(broken.readiness.next_action&&broken.readiness.next_action.key||''),pass:String(broken.readiness.next_action&&broken.readiness.next_action.key||'')==='discover_internal'});
+    s=_networkFixtureApplyTransitionV531(s,'discover_internal');let rediscovered=_networkFixtureComputedV531({state:s});checks.push({domain:'fixture_e2e',key:'rediscovered_requires_reopen',expected:'reopen_editing',actual:String(rediscovered.readiness.next_action&&rediscovered.readiness.next_action.key||''),pass:String(rediscovered.readiness.next_action&&rediscovered.readiness.next_action.key||'')==='reopen_editing'});
+    return checks;
+  }
+
+  app.get('/api/network/admin/test-lab/fixtures', verifyAdmin, wrap(async (req,res)=>{
+    await _ensureNetworkFixtureTableV531();
+    const r=await pool.query(`SELECT id,name,state,history,created_by_admin_id,created_at,updated_at FROM network_test_lab_fixtures ORDER BY updated_at DESC,id DESC LIMIT 100`);
+    res.set('Cache-Control','no-store');res.json({success:true,items:r.rows.map(x=>_networkFixtureComputedV531(x))});
+  }));
+
+  app.post('/api/network/admin/test-lab/fixtures', verifyAdmin, wrap(async (req,res)=>{
+    await _ensureNetworkFixtureTableV531();
+    const name=cleanText(req.body&&req.body.name||'Network E2E Fixture',120)||'Network E2E Fixture',admin=cleanText(req.admin&&req.admin.id||req.headers['x-admin-key']||'admin',200),state=_networkFixtureBaseV531();
+    const r=await pool.query(`INSERT INTO network_test_lab_fixtures (name,state,history,created_by_admin_id,created_at,updated_at) VALUES ($1,$2::jsonb,$3::jsonb,$4,NOW(),NOW()) RETURNING *`,[name,JSON.stringify(state),JSON.stringify([{at:new Date().toISOString(),transition:'created',actor:'admin'}]),admin]);
+    res.status(201).json({success:true,..._networkFixtureComputedV531(r.rows[0])});
+  }));
+
+  app.get('/api/network/admin/test-lab/fixtures/:id', verifyAdmin, wrap(async (req,res)=>{
+    await _ensureNetworkFixtureTableV531();
+    const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid fixture ID'});
+    const r=await pool.query(`SELECT * FROM network_test_lab_fixtures WHERE id=$1 LIMIT 1`,[id]);if(!r.rows[0])return res.status(404).json({success:false,error:'Fixture not found'});
+    res.set('Cache-Control','no-store');res.json({success:true,..._networkFixtureComputedV531(r.rows[0]),history:Array.isArray(r.rows[0].history)?r.rows[0].history:[]});
+  }));
+
+  app.post('/api/network/admin/test-lab/fixtures/:id/transition', verifyAdmin, wrap(async (req,res)=>{
+    await _ensureNetworkFixtureTableV531();
+    const id=Number(req.params.id),transition=cleanText(req.body&&req.body.transition||'',80);if(!id||!transition)return res.status(400).json({success:false,error:'Fixture ID and transition are required'});
+    const client=await pool.connect();try{
+      await client.query('BEGIN');
+      const q=await client.query(`SELECT * FROM network_test_lab_fixtures WHERE id=$1 FOR UPDATE`,[id]),row=q.rows[0];if(!row){await client.query('ROLLBACK');return res.status(404).json({success:false,error:'Fixture not found'})}
+      const before=_networkFixtureComputedV531(row),next=_networkFixtureApplyTransitionV531(row.state,transition),after=_networkFixtureComputedV531({...row,state:next});
+      const history=Array.isArray(row.history)?row.history.slice(-99):[];history.push({at:new Date().toISOString(),transition,actor:cleanText(req.admin&&req.admin.id||req.headers['x-admin-key']||'admin',200),before_action:before.readiness&&before.readiness.next_action&&before.readiness.next_action.key||null,after_action:after.readiness&&after.readiness.next_action&&after.readiness.next_action.key||null});
+      const u=await client.query(`UPDATE network_test_lab_fixtures SET state=$2::jsonb,history=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *`,[id,JSON.stringify(next),JSON.stringify(history)]);
+      await client.query('COMMIT');res.json({success:true,..._networkFixtureComputedV531(u.rows[0]),history});
+    }catch(e){try{await client.query('ROLLBACK')}catch(_e){}throw e}finally{client.release()}
+  }));
+
+  app.post('/api/network/admin/test-lab/fixtures/:id/reset', verifyAdmin, wrap(async (req,res)=>{
+    await _ensureNetworkFixtureTableV531();
+    const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid fixture ID'});const state=_networkFixtureBaseV531(),history=[{at:new Date().toISOString(),transition:'reset',actor:cleanText(req.admin&&req.admin.id||req.headers['x-admin-key']||'admin',200)}];
+    const r=await pool.query(`UPDATE network_test_lab_fixtures SET state=$2::jsonb,history=$3::jsonb,updated_at=NOW() WHERE id=$1 RETURNING *`,[id,JSON.stringify(state),JSON.stringify(history)]);if(!r.rows[0])return res.status(404).json({success:false,error:'Fixture not found'});res.json({success:true,..._networkFixtureComputedV531(r.rows[0]),history});
+  }));
+
+  app.delete('/api/network/admin/test-lab/fixtures/:id', verifyAdmin, wrap(async (req,res)=>{
+    await _ensureNetworkFixtureTableV531();
+    const id=Number(req.params.id);if(!id)return res.status(400).json({success:false,error:'Invalid fixture ID'});const r=await pool.query(`DELETE FROM network_test_lab_fixtures WHERE id=$1 RETURNING id,name`,[id]);if(!r.rows[0])return res.status(404).json({success:false,error:'Fixture not found'});res.json({success:true,deleted:r.rows[0]});
+  }));
+
   app.get('/network/admin/test-lab', (req,res)=>{
     if(!envEnabled())return res.status(404).send('Network is not enabled.');
     res.set('Cache-Control','no-store');
     res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Network Test Lab · ContentScale</title><style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1350px;margin:auto;padding:28px 18px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:18px;margin:14px 0}.safe{border-color:#22c55e;background:#0b2119}.warn{border-color:#f59e0b;background:#241b0b}.tiny{font-size:12px;color:#9fb1d6;line-height:1.5}.muted{color:#9fb1d6}.btn{display:inline-flex;align-items:center;border:1px solid #3f65a4;border-radius:10px;padding:10px 13px;font-weight:900;text-decoration:none;background:#101b31;color:#fff;cursor:pointer}.btn.next{background:#1d4ed8;border-color:#60a5fa}.btn.secondary{background:#172033}.btn:disabled{opacity:.6;cursor:wait}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.metric{background:#091426;border:1px solid #293d60;border-radius:12px;padding:13px}.metric strong{display:block;font-size:25px}.row{border-top:1px solid #26375c;padding:11px 0}.pass{color:#86efac}.fail{color:#fca5a5}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:4px 9px;font-size:12px}.pill.pass{border-color:#22c55e}.pill.fail{border-color:#ef4444}.suite{max-height:610px;overflow:auto}.scenario{display:grid;grid-template-columns:minmax(170px,1fr) minmax(150px,1fr) minmax(150px,1fr) 90px;gap:10px;align-items:center;border-top:1px solid #253858;padding:9px 0}.route{border:1px solid #2d446d;border-radius:13px;padding:13px;background:#091426}.route h3{margin:0 0 6px}.inspector input{width:170px;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.json{white-space:pre-wrap;word-break:break-word;background:#07101b;border:1px solid #26375c;border-radius:12px;padding:13px;max-height:520px;overflow:auto;font-size:11px;color:#cbd5e1}.inv{padding:8px 0;border-top:1px solid #26375c}@media(max-width:720px){.scenario{grid-template-columns:1fr}.top{display:block}}</style></head><body><main>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1350px;margin:auto;padding:28px 18px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:18px;margin:14px 0}.safe{border-color:#22c55e;background:#0b2119}.warn{border-color:#f59e0b;background:#241b0b}.tiny{font-size:12px;color:#9fb1d6;line-height:1.5}.muted{color:#9fb1d6}.btn{display:inline-flex;align-items:center;border:1px solid #3f65a4;border-radius:10px;padding:10px 13px;font-weight:900;text-decoration:none;background:#101b31;color:#fff;cursor:pointer}.btn.next{background:#1d4ed8;border-color:#60a5fa}.btn.secondary{background:#172033}.btn:disabled{opacity:.6;cursor:wait}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.metric{background:#091426;border:1px solid #293d60;border-radius:12px;padding:13px}.metric strong{display:block;font-size:25px}.row{border-top:1px solid #26375c;padding:11px 0}.pass{color:#86efac}.fail{color:#fca5a5}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:4px 9px;font-size:12px}.pill.pass{border-color:#22c55e}.pill.fail{border-color:#ef4444}.suite{max-height:610px;overflow:auto}.scenario{display:grid;grid-template-columns:minmax(170px,1fr) minmax(150px,1fr) minmax(150px,1fr) 90px;gap:10px;align-items:center;border-top:1px solid #253858;padding:9px 0}.route{border:1px solid #2d446d;border-radius:13px;padding:13px;background:#091426}.route h3{margin:0 0 6px}.inspector input{width:170px;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.fixtureCtl{background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px;min-width:220px}.fixtureActions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.danger{background:#7f1d1d!important;border-color:#ef4444!important}.fixtureHistory{max-height:240px;overflow:auto}.fixtureHistory .row{font-size:12px}.json{white-space:pre-wrap;word-break:break-word;background:#07101b;border:1px solid #26375c;border-radius:12px;padding:13px;max-height:520px;overflow:auto;font-size:11px;color:#cbd5e1}.inv{padding:8px 0;border-top:1px solid #26375c}@media(max-width:720px){.scenario{grid-template-columns:1fr}.top{display:block}}</style></head><body><main>
 <div class="top"><div><div class="tiny">CONTENTSCALE NETWORK · ADMIN ONLY</div><h1 style="margin:4px 0">Network Test Lab</h1><div class="muted">Test the state machines before relying on real role-by-role data.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn secondary" href="/network/admin">← Network Cockpit</a><a class="btn secondary" href="/network/publishing">Publishing</a><a class="btn secondary" href="/network/verification">Verification</a></div></div>
-<div class="card safe"><strong>Safe simulation</strong><div class="tiny" style="margin-top:5px">The automatic suite does not write database state, send email, call Gemini, rerun research, award credits or fetch external live pages. The placement inspector is read-only.</div></div>
+<div class="card safe"><strong>Safe test environment</strong><div class="tiny" style="margin-top:5px">The automatic suite is memory-only. Persistent E2E fixtures write only to the isolated <code>network_test_lab_fixtures</code> table and use the real Readiness/Action engines. They never send email, call Gemini, rerun research, mutate credits or fetch external live pages. The real-placement inspector remains read-only.</div></div>
 <div class="card"><div class="top"><div><h2 style="margin:0">Automated state regression suite</h2><div class="tiny">Publication Readiness + Publisher role + shared role contract + admin priority.</div></div><button class="btn next" id="runSuite">Run all tests</button></div><div id="suiteSummary" class="grid" style="margin-top:12px"></div><div id="suiteRows" class="suite" style="margin-top:10px"></div></div>
+<div class="card" id="fixtureLab"><div class="top"><div><h2 style="margin:0">Persistent E2E fixture</h2><div class="tiny">Real database persistence + reloads + transactional transitions, isolated from production workflow rows and external side effects.</div></div><button class="btn secondary" id="createFixture">Create clean fixture</button></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><select id="fixtureSelect" class="fixtureCtl"><option value="">No fixture yet</option></select><button class="btn secondary" id="loadFixture">Load fixture</button></div><div id="fixtureSummary" style="margin-top:12px"><div class="tiny">Create a clean fixture to start the full Business → Publisher → Scout → Publication → Verification lifecycle.</div></div><div id="fixtureControls" class="fixtureActions"></div><div id="fixtureHistory" class="fixtureHistory" style="margin-top:10px"></div><pre id="fixtureJson" class="json" style="display:none"></pre></div>
 <div class="card inspector"><h2>Inspect a real placement</h2><div class="tiny">Reads the exact persisted placement and calculates current authoritative readiness without changing it.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><input id="placementId" type="number" min="1" value="1" placeholder="Placement ID"><button class="btn next" id="inspectBtn">Inspect placement</button><a class="btn secondary" id="openWorkflow" href="/network/publishing/1?guided=1">Open workflow</a></div><div id="inspectSummary" style="margin-top:12px"></div><pre id="inspectJson" class="json" style="display:none"></pre></div>
-<div class="card"><h2>Manual end-to-end test map</h2><div class="tiny">Use this after the synthetic suite passes. These links use the real Network flows, so data you create here is test data until final reset.</div><div class="grid" style="margin-top:12px">
+<div class="card"><h2>Manual production-path test map</h2><div class="tiny">Optional after the isolated persistent fixture passes. These links use the real Network flows and can create normal Network records, so use them only for the final launch rehearsal.</div><div class="grid" style="margin-top:12px">
 <div class="route"><h3>1 · Business</h3><div class="tiny">Create/claim → admin verifies → business dashboard → public verified profile.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/directory">Start business claim</a> <a class="btn secondary" target="_blank" href="/network/directory/admin">Admin review</a></div></div>
 <div class="route"><h3>2 · Publisher</h3><div class="tiny">Apply → admin approves → website check → publisher dashboard activates.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network#join">Publisher join</a> <a class="btn secondary" target="_blank" href="/network/publisher-applications">Applications</a> <a class="btn secondary" target="_blank" href="/network/websites">Website check</a></div></div>
 <div class="route"><h3>3 · Scout / referral</h3><div class="tiny">Create scout → share referral → publisher applies → activation/reward states.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/referrals">Referral admin</a></div></div>
@@ -5980,12 +6197,22 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
 <div class="route"><h3>5 · Publication readiness</h3><div class="tiny">3 internal + 3 external → repair → internal preview → ContentScore → Copy SEO HTML.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/publishing">Open Publishing</a></div></div>
 <div class="route"><h3>6 · Live verification</h3><div class="tiny">Submit exact URL → pre-check → manual verify / needs changes → credits idempotent.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/verification">Verification queue</a></div></div>
 </div></div>
-<div class="card warn"><strong>Final clean launch test</strong><div class="tiny" style="margin-top:5px">After the full role-by-role test passes, return to Network Cockpit and use the existing “Delete ALL Network test data” control once. Do not use the reset while you still need the test records.</div></div>
-<script>(function(){const key=localStorage.getItem('admin_id')||'',esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c)),api=async(path)=>{const r=await fetch(path,{headers:{'x-admin-key':key},cache:'no-store'}),t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(!r.ok)throw Error(d.error||('HTTP '+r.status));return d};
+<div class="card warn"><strong>Test-data boundary</strong><div class="tiny" style="margin-top:5px">Persistent E2E fixtures are isolated and can be reset/deleted here without touching production Network data. Only the optional production-path links above create normal Network records; use the Network Cockpit full reset only for those deliberate launch-rehearsal records.</div></div>
+<script>(function(){const key=localStorage.getItem('admin_id')||'',esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c)),api=async(path,opt)=>{opt=opt||{};opt.headers=Object.assign({'x-admin-key':key},opt.headers||{});if(opt.body&&!opt.headers['Content-Type'])opt.headers['Content-Type']='application/json';opt.cache='no-store';const r=await fetch(path,opt),t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(!r.ok){const er=Error(d.error||('HTTP '+r.status));er.payload=d;er.status=r.status;throw er}return d};
 function summaryMetric(n,label,cls){return '<div class="metric"><strong class="'+(cls||'')+'">'+esc(n)+'</strong><span>'+esc(label)+'</span></div>'}
 async function runSuite(){const b=document.getElementById('runSuite');b.disabled=true;b.textContent='Running…';try{const d=await api('/api/network/admin/test-lab/run');document.getElementById('suiteSummary').innerHTML=summaryMetric(d.total,'Scenarios')+summaryMetric(d.passed,'Passed','pass')+summaryMetric(d.failed,'Failed',d.failed?'fail':'pass')+summaryMetric(d.all_passed?'PASS':'FAIL','Suite',d.all_passed?'pass':'fail');document.getElementById('suiteRows').innerHTML=(d.results||[]).map(x=>'<div class="scenario"><div><span class="pill">'+esc(x.domain)+'</span> <strong>'+esc(x.key)+'</strong></div><div class="tiny">Expected: <b>'+esc(x.expected)+'</b></div><div class="tiny">Actual: <b>'+esc(x.actual)+'</b></div><div class="'+(x.pass?'pass':'fail')+'"><b>'+(x.pass?'✓ PASS':'✕ FAIL')+'</b></div></div>').join('');}catch(e){document.getElementById('suiteRows').innerHTML='<div class="fail">✕ '+esc(e.message)+'</div>'}finally{b.disabled=false;b.textContent='Run all tests'}}
+let currentFixtureId=0;
+function fixtureMetric(v,label,cls){return summaryMetric(v,label,cls)}
+async function listFixtures(prefer){try{const d=await api('/api/network/admin/test-lab/fixtures'),sel=document.getElementById('fixtureSelect'),items=d.items||[];sel.innerHTML='<option value="">Choose fixture</option>'+items.map(x=>'<option value="'+esc(x.fixture.id)+'">#'+esc(x.fixture.id)+' · '+esc(x.fixture.name)+' · '+esc(x.state&&x.state.meta&&x.state.meta.last_transition||'created')+'</option>').join('');const pick=Number(prefer||currentFixtureId||items[0]&&items[0].fixture.id||0);if(pick){sel.value=String(pick);await loadFixtureById(pick)}}catch(e){document.getElementById('fixtureSummary').innerHTML='<div class="fail">✕ '+esc(e.message)+'</div>'}}
+async function createFixture(){const b=document.getElementById('createFixture');b.disabled=true;b.textContent='Creating…';try{const d=await api('/api/network/admin/test-lab/fixtures',{method:'POST',body:JSON.stringify({name:'Network E2E '+new Date().toLocaleString()})});currentFixtureId=Number(d.fixture&&d.fixture.id||0);await listFixtures(currentFixtureId)}catch(e){alert(e.message)}finally{b.disabled=false;b.textContent='Create clean fixture'}}
+async function loadFixtureById(id){id=Number(id||0);if(!id)return;currentFixtureId=id;const d=await api('/api/network/admin/test-lab/fixtures/'+id);renderFixture(d)}
+function renderFixture(d){const st=d.state||{},p=st.publication||{},r=d.readiness||{},na=r.next_action||{},rec=d.recommended_transition||{},inv=d.invariants||[],sum=document.getElementById('fixtureSummary'),ctrl=document.getElementById('fixtureControls'),hist=document.getElementById('fixtureHistory'),pre=document.getElementById('fixtureJson');sum.innerHTML='<div class="grid">'+fixtureMetric('#'+esc(d.fixture&&d.fixture.id||'—'),'Fixture')+fixtureMetric(p.placement_status||'—','Placement')+fixtureMetric(na.key||'—','Readiness next')+fixtureMetric(d.all_invariants_pass?'PASS':'CHECK','Invariants',d.all_invariants_pass?'pass':'fail')+'</div><div class="grid" style="margin-top:10px"><div class="route"><b>Business</b><div class="tiny">'+esc(st.business&&st.business.status||'—')+' · '+esc(d.business_action&&d.business_action.label||'')+'</div></div><div class="route"><b>Publisher</b><div class="tiny">'+esc(st.publisher&&st.publisher.application_status||'—')+' / '+esc(st.publisher&&st.publisher.website_status||'—')+' / '+esc(st.publisher&&st.publisher.account_status||'—')+'</div></div><div class="route"><b>Scout</b><div class="tiny">'+esc(st.scout&&st.scout.referral_status||'—')+' · '+esc(d.scout_action&&d.scout_action.label||'')+'</div></div><div class="route"><b>Publication</b><div class="tiny">'+esc(r.final_ready?'Ready':'Not Ready')+' · internal '+esc(p.internal_used_count||0)+'/3 · external '+esc(p.external_used_count||0)+'/3 · score '+esc(p.official_contentscore||0)+'</div></div></div><div style="margin-top:10px">'+inv.map(x=>'<div class="inv '+(x.pass?'pass':'fail')+'"><b>'+(x.pass?'✓':'✕')+' '+esc(x.key)+'</b><div class="tiny">'+esc(x.detail||'')+'</div></div>').join('')+'</div>';
+let buttons='';if(rec.key)buttons+='<button class="btn next" data-fixture-transition="'+esc(rec.key)+'">Next · '+esc(rec.label)+' <span style="opacity:.75">('+esc(rec.actor||'')+')</span></button>';if(p.placement_status==='submitted'){buttons+='<button class="btn secondary" data-fixture-transition="precheck_fail">Simulate failed pre-check</button><button class="btn secondary" data-fixture-transition="precheck_pass">Simulate passed pre-check</button>'}if(p.placement_status==='verified'){buttons+='<button class="btn secondary" data-fixture-transition="break_internal_url">Break one internal URL</button><button class="btn secondary" data-fixture-transition="break_external_url">Break one external URL</button>'}if(st.scout&&st.scout.referral_status==='activated')buttons+='<button class="btn secondary" data-fixture-transition="reward_referral">Simulate referral reward state</button>';buttons+='<button class="btn secondary" data-fixture-reset>Reset fixture</button><button class="btn danger" data-fixture-delete>Delete fixture</button>';ctrl.innerHTML=buttons;const h=(d.history||[]).slice().reverse();hist.innerHTML=h.length?'<div class="tiny"><b>Persistent transition history</b></div>'+h.map(x=>'<div class="row"><b>'+esc(x.transition||'event')+'</b> · '+esc(x.at||'')+'<div class="tiny">'+esc(x.before_action||'')+(x.after_action?' → '+esc(x.after_action):'')+'</div></div>').join(''):'<div class="tiny">No transition history yet.</div>';pre.style.display='block';pre.textContent=JSON.stringify(d,null,2)}
+async function fixtureTransition(t){if(!currentFixtureId)return;try{const d=await api('/api/network/admin/test-lab/fixtures/'+currentFixtureId+'/transition',{method:'POST',body:JSON.stringify({transition:t})});renderFixture(d);await listFixtures(currentFixtureId)}catch(e){alert(e.message)}}
+async function resetFixture(){if(!currentFixtureId||!confirm('Reset this isolated fixture to the first Business claim state?'))return;const d=await api('/api/network/admin/test-lab/fixtures/'+currentFixtureId+'/reset',{method:'POST',body:'{}'});renderFixture(d);await listFixtures(currentFixtureId)}
+async function deleteFixture(){if(!currentFixtureId||!confirm('Delete this isolated Test Lab fixture? Production Network data is not touched.'))return;await api('/api/network/admin/test-lab/fixtures/'+currentFixtureId,{method:'DELETE'});currentFixtureId=0;document.getElementById('fixtureSummary').innerHTML='<div class="tiny">Fixture deleted. Production Network data was not touched.</div>';document.getElementById('fixtureControls').innerHTML='';document.getElementById('fixtureHistory').innerHTML='';document.getElementById('fixtureJson').style.display='none';await listFixtures()}
 async function inspect(){const id=Number(document.getElementById('placementId').value||0),b=document.getElementById('inspectBtn'),sum=document.getElementById('inspectSummary'),pre=document.getElementById('inspectJson');if(!id)return;document.getElementById('openWorkflow').href='/network/publishing/'+id+'?guided=1';b.disabled=true;b.textContent='Inspecting…';try{const d=await api('/api/network/admin/test-lab/placement/'+id),r=d.readiness||{},na=r.next_action||{},inv=d.invariants||[];sum.innerHTML='<div class="grid">'+summaryMetric(d.placement&&d.placement.status||'—','Placement state')+summaryMetric(r.final_ready?'YES':'NO','Final ready',r.final_ready?'pass':'')+summaryMetric(na.key||'—','Next action')+summaryMetric(d.all_invariants_pass?'PASS':'CHECK','Invariants',d.all_invariants_pass?'pass':'fail')+'</div><div style="margin-top:10px">'+inv.map(x=>'<div class="inv '+(x.pass?'pass':'fail')+'"><b>'+(x.pass?'✓':'✕')+' '+esc(x.key)+'</b><div class="tiny">'+esc(x.detail||'')+'</div></div>').join('')+'</div>';pre.style.display='block';pre.textContent=JSON.stringify(d,null,2);}catch(e){sum.innerHTML='<div class="fail">✕ '+esc(e.message)+'</div>';pre.style.display='none'}finally{b.disabled=false;b.textContent='Inspect placement'}}
-document.getElementById('runSuite').onclick=runSuite;document.getElementById('inspectBtn').onclick=inspect;document.getElementById('placementId').onchange=function(){document.getElementById('openWorkflow').href='/network/publishing/'+Number(this.value||1)+'?guided=1'};if(!key){document.getElementById('suiteRows').innerHTML='<div class="fail">Log in to ContentScale Admin first.</div>'}else runSuite();})();</script></main></body></html>`);
+document.getElementById('runSuite').onclick=runSuite;document.getElementById('inspectBtn').onclick=inspect;document.getElementById('createFixture').onclick=createFixture;document.getElementById('loadFixture').onclick=function(){loadFixtureById(document.getElementById('fixtureSelect').value)};document.getElementById('fixtureSelect').onchange=function(){if(this.value)loadFixtureById(this.value)};document.getElementById('fixtureControls').onclick=function(e){const t=e.target.closest('[data-fixture-transition]');if(t)return fixtureTransition(t.dataset.fixtureTransition);if(e.target.closest('[data-fixture-reset]'))return resetFixture();if(e.target.closest('[data-fixture-delete]'))return deleteFixture()};document.getElementById('placementId').onchange=function(){document.getElementById('openWorkflow').href='/network/publishing/'+Number(this.value||1)+'?guided=1'};if(!key){document.getElementById('suiteRows').innerHTML='<div class="fail">Log in to ContentScale Admin first.</div>'}else{runSuite();listFixtures()};})();</script></main></body></html>`);
   });
 
   app.get('/network/admin', (req, res) => {
