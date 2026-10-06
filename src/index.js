@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v511-QUICKSCAN-SCRIPT-BOUNDARY-FIX-NETWORK-v503';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v512-QUICKSCAN-WORKSPACE-RESTORE-FIX-NETWORK-v503';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+    'quickscan-workspace-saved-tab-no-synthetic-click-v512',
     'quickscan-interest-inbox-script-boundary-fix-v511',
     'quickscan-manual-reminder-preview-send-v510',
     'ceo-manual-reminder-preview-send-v510',
@@ -888,7 +889,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v511-QUICKSCAN-SCRIPT-BOUNDARY-FIX-NETWORK-v503',
+  build: 'CS-2026-10-06-CANONICAL-v512-QUICKSCAN-WORKSPACE-RESTORE-FIX-NETWORK-v503',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -25305,7 +25306,19 @@ function wire(){
 }
 wire();
 var saved='';try{saved=localStorage.getItem('pqs_admin_workspace_tab')||''}catch(e){}
-if(saved==='quickscan')saved='reports';if(saved&&nav.querySelector('[data-workspace="'+saved+'"]'))nav.querySelector('[data-workspace="'+saved+'"]').click();
+if(saved==='quickscan')saved='reports';
+// v512 — restore the saved workspace exactly once without synthesizing a click.
+// shell() is called repeatedly by organize()/MutationObserver/startup timer; a .click() here
+// retriggered the global pqsAlive click animation every cycle and made the active tab jitter.
+if(!nav.dataset.initialWorkspaceRestored){
+  nav.dataset.initialWorkspaceRestored='1';
+  var savedBtn=saved?nav.querySelector('[data-workspace=\"'+saved+'\"]'):null;
+  if(savedBtn){
+    var savedKey=savedBtn.dataset.workspace;
+    nav.querySelectorAll('[data-workspace]').forEach(function(x){x.classList.toggle('active',x===savedBtn)});
+    document.querySelectorAll('.pqsWorkspacePanel').forEach(function(x){x.classList.toggle('active',x.id==='pqsWorkspace-'+savedKey)});
+  }
+}
 var clear=nav.querySelector('#pqsClearBrowserTests');if(clear)clear.onclick=function(){var keep='pqs_admin_code',removed=0;for(var i=localStorage.length-1;i>=0;i--){var k=localStorage.key(i)||'';if(k!==keep&&/^(pqs_|lead_crawler_|lc_)/i.test(k)){localStorage.removeItem(k);removed++}}for(var j=sessionStorage.length-1;j>=0;j--){var sk=sessionStorage.key(j)||'';if(/^(pqs_|lead_crawler_|lc_)/i.test(sk)){sessionStorage.removeItem(sk);removed++}}var ms=document.getElementById('pqsMemoryStatus');if(ms)ms.textContent='Cleared '+removed+' local test item'+(removed===1?'':'s')+'. Server links were not revoked.'};
 return nav}
 function organize(){if(busy)return;busy=true;try{shell();Array.from(app.querySelectorAll(':scope > .adminFold')).forEach(function(d){var body=d.querySelector(':scope > .adminFoldBody');if(body)while(body.firstChild)app.insertBefore(body.firstChild,d);d.remove()});Array.from(app.children).forEach(function(el){if(!el.classList||!el.classList.contains('p')||el.closest('.pqsWorkspacePanel'))return;var p=document.getElementById('pqsWorkspace-'+bucket(el));if(p)p.appendChild(el)});var lead=document.getElementById('pqsImportVisible');if(lead&&/Import all/.test(lead.textContent))lead.textContent=lead.textContent.replace('✨ Import all','2. Import scanned companies ·');var delivery=Array.from(document.querySelectorAll('#dashboard div')).find(function(x){return /Email Deliverability/.test(x.textContent||'')});if(delivery)delivery.querySelectorAll('span').forEach(function(x){if(x.textContent.trim()==='Opened')x.textContent='Email opened'});}finally{busy=false}}
