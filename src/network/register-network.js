@@ -1,4 +1,4 @@
-// ContentScale Network v527 — authoritative Publication Readiness Engine; v526 deterministic 3x3 link repair + v538 recovery preserved
+// ContentScale Network v528 — authoritative Readiness state reconciliation; v527 readiness engine + v526 3x3 link repair + v538 recovery preserved
 'use strict';
 
 // CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v509
@@ -3737,7 +3737,10 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const saved={score:Number(scan.score),scanned_at:new Date().toISOString(),content_hash:built.hash,canonical_route:'/api/scan',scan_mode:'live_url',recommendation_count:recs.length,recommendations:recs.slice(0,50)};
     const next=Object.assign({},current,{official_contentscore_scan:saved,internal_preview_hash:built.hash,internal_preview_last_built_at:new Date().toISOString()});
     await pool.query(`UPDATE network_publication_versions SET generation_input_snapshot=$2::jsonb,updated_at=NOW() WHERE id=$1`,[row.id,JSON.stringify(next)]);
-    res.json({success:true,url,official_contentscore:saved,canonical_route:'/api/scan'});
+    // v528: Refresh can reopen a verified placement to `accepted`. If this scan completes the authoritative Ready contract,
+    // reconcile that lifecycle state immediately so the next guided action and submit-live endpoint cannot disagree.
+    const readySync=await _networkReconcileReadyStateV528(id).catch(()=>({success:false,promoted:false,status:null,reason:'reconcile_failed'}));
+    res.json({success:true,url,official_contentscore:saved,canonical_route:'/api/scan',placement_status:readySync.status||null,ready_state_reconciled:!!readySync.promoted});
   }));
 
   app.get('/network/internal-content/:token', wrap(async (req,res)=>{
@@ -4180,10 +4183,13 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const _submitImages=await pool.query(`SELECT id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,sort_order,created_at,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[x.id]);
     const _submitResolved=await _networkResolvePublisherReadinessV527(x,_submitImages.rows);
     if(!_submitResolved.readiness.final_ready||!_submitResolved.readiness.seo_copied_current)return res.status(409).json({success:false,error:!_submitResolved.readiness.final_ready?'Publication is not Ready under the authoritative Publication Readiness Engine':'Copy the current SEO publication HTML before starting live verification',readiness:_submitResolved.readiness});
+    // v528 defensive reconciliation: authoritative Ready + current copied HTML is enough to repair a stale accepted lifecycle state.
+    // This is intentionally accepted -> ready only; live/review/verified states are never silently rewritten here.
+    if(String(x.status||'')==='accepted'){const sync=await _networkReconcileReadyStateV528(id,{require_copied:true});if(sync&&sync.promoted)x.status='ready';}
     const verifiedUrlChange=x.status==='verified'&&req.body?.allow_verified_url_change===true;
     if(x.status==='verified'&&!verifiedUrlChange)return res.status(409).json({success:false,error:'This placement is already verified. Use Change live URL to start a controlled new review round.'});
     if(verifiedUrlChange&&String(x.published_url||'').replace(/\/$/,'')===live.toString().replace(/\/$/,''))return res.status(409).json({success:false,error:'Enter a different live URL before starting a new review round.'});
-    if(!['ready','submitted','needs_review','verified'].includes(x.status))return res.status(409).json({success:false,error:'Generate the Publisher Edition before submitting a live URL'});
+    if(!['ready','submitted','needs_review','verified'].includes(x.status))return res.status(409).json({success:false,error:'Placement lifecycle is not eligible for live submission after authoritative readiness reconciliation.',placement_status:x.status,readiness:_submitResolved.readiness});
     const host=live.hostname.toLowerCase().replace(/^www\./,'');
     const expected=String(x.publisher_domain||'').toLowerCase().replace(/^www\./,'');
     if(!(host===expected||host.endsWith('.'+expected)))return res.status(409).json({success:false,error:'The live URL must be on the committed publisher website: '+expected});
@@ -5310,6 +5316,31 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
     const copiedCurrent=!!(snap.seo_publication_copied_hash&&String(snap.seo_publication_copied_hash)===String(internalDoc.hash));
     const readiness=_networkPublicationReadinessV527({placement_status:row.status,prewrite_linked:!!brief,ai_complete:ai.complete,internal_destination_ready:intState.complete,generation_current:generationCurrent,internal_candidate_count:linkPolicy.internal&&linkPolicy.internal.candidate_count,external_candidate_count:linkPolicy.external&&linkPolicy.external.candidate_count,internal_used_count:linkPolicy.internal&&linkPolicy.internal.count,external_used_count:linkPolicy.external&&linkPolicy.external.count,link_policy_ready:linkPolicy.passed,brief_fidelity_ready:fidelity.passed,publication_standard_ready:standard.passed,meta_policy_ready:metaReady,seed_keyword_ready:seed.passed,internal_preview_current:!!(internalUrl&&cleanText(snap.internal_preview_hash||'',128)&&String(snap.internal_preview_hash)===String(internalDoc.hash)),official_scan_current:scanCurrent,official_contentscore:scanCurrent?Number(scan.score||0):0,seo_copied_current:copiedCurrent,seo_copied_at:snap.seo_publication_copied_at||null,live_verification:latest});
     return{readiness,standard,seed,linkPolicy,fidelity,brief,internalDoc,internalUrl,scanCurrent,latest};
+  }
+
+  // v528 — reconcile persisted placement lifecycle with the authoritative readiness engine.
+  // A reopened placement may legitimately remain `accepted` while Refresh rebuilds the exact current package.
+  // Once every pre-live gate is current again, promote only accepted -> ready. Never mutate live/review states here.
+  async function _networkReconcileReadyStateV528(placementId,opts={}){
+    const id=Number(placementId||0);if(!id)return{success:false,promoted:false,reason:'invalid_placement'};
+    const qr=await pool.query(`SELECT p.id AS placement_id,p.status,p.content_id,p.published_url,p.verified_at,p.verification_decision,p.source_link_required,p.brand_mention_required,
+      c.brand_name,c.primary_niche,c.source_snapshot,c.prewrite_brief_id AS current_prewrite_brief_id,
+      w.domain AS publisher_domain,w.brand_name AS publisher_brand,ow.domain AS source_domain,ow.brand_name AS source_brand,pv.*
+      FROM network_placements p
+      JOIN network_content c ON c.id=p.content_id
+      JOIN network_websites w ON w.id=p.publisher_website_id
+      JOIN network_publication_versions pv ON pv.placement_id=p.id
+      LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
+      WHERE p.id=$1 LIMIT 1`,[id]);
+    const row=qr.rows[0];if(!row)return{success:false,promoted:false,reason:'not_found'};
+    const ir=await pool.query(`SELECT id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,sort_order,created_at,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[row.id]);
+    const resolved=await _networkResolvePublisherReadinessV527(row,ir.rows);
+    const requireCopied=opts.require_copied===true;
+    const eligible=!!resolved.readiness.final_ready&&(!requireCopied||!!resolved.readiness.seo_copied_current);
+    if(!eligible)return{success:true,promoted:false,status:row.status,readiness:resolved.readiness,reason:requireCopied&&!resolved.readiness.seo_copied_current?'seo_copy_not_current':'not_final_ready'};
+    if(String(row.status||'')!=='accepted')return{success:true,promoted:false,status:row.status,readiness:resolved.readiness,reason:'state_already_reconciled'};
+    const up=await pool.query(`UPDATE network_placements SET status='ready',updated_at=NOW() WHERE id=$1 AND status='accepted' RETURNING status`,[id]);
+    return{success:true,promoted:!!up.rows[0],status:up.rows[0]?.status||row.status,readiness:resolved.readiness,reason:up.rows[0]?'authoritative_ready_promoted':'state_changed_concurrently'};
   }
 
   app.get('/api/network/publisher/:token/placements/:placementId/package', wrap(async (req,res)=>{
