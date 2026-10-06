@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v523-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v510-GUIDED-NEXT-ACTION';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v524-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v511-ENTITY-FIDELITY-FIX';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -890,7 +890,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v523-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v510-GUIDED-NEXT-ACTION',
+  build: 'CS-2026-10-06-CANONICAL-v524-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v511-ENTITY-FIDELITY-FIX',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
