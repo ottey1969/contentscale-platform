@@ -1,7 +1,7 @@
-// ContentScale Network v503 — generation recovery, visible errors, image diversity and real image delete
+// ContentScale Network v504 — v503 + repair-brief-fidelity internal candidate scope fix
 'use strict';
 
-// CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v503
+// CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v504
 // Rule: a Network failure may break Network only, never the core ContentScale app.
 // This module owns only network_* tables and must not ALTER/DELETE core tables.
 
