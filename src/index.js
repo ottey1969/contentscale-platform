@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v546-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v533-PUBLISHER-ONBOARDING-CLARITY';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v547-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v534-MATCH-PROPOSAL-ACCEPTANCE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -908,7 +908,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-07-CANONICAL-v546-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v533-PUBLISHER-ONBOARDING-CLARITY',
+  build: 'CS-2026-10-07-CANONICAL-v547-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v534-MATCH-PROPOSAL-ACCEPTANCE',
   built_date: '2026-10-07',
   ceo_private: true,
   ceo_public: true,
@@ -986,6 +986,8 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   network_publisher_onboarding_v532: true,
   network_ranked_matching_v532: true,
   network_publisher_onboarding_clarity_v533: true,
+  network_match_proposal_acceptance_v534: true,
+  network_match_proposal_notifications_v534: true,
   prewrite_readonly_share_link: true,
   prewrite_action_summary_visible: true
 });
@@ -1020,9 +1022,9 @@ app.get('/api/regression-contract',(req,res)=>{
     network_fixture_side_effect_guard_v531:networkSrc.includes('emails_sent:0')&&networkSrc.includes('gemini_calls:0')&&networkSrc.includes('credit_mutations:0')&&networkSrc.includes('external_fetches:0'),
     network_fixture_transactional_transitions_v531:networkSrc.includes('SELECT * FROM network_test_lab_fixtures WHERE id=$1 FOR UPDATE')&&networkSrc.includes("UPDATE network_test_lab_fixtures SET state=$2::jsonb"),
     network_publisher_onboarding_v532:networkSrc.includes('_networkPublisherOnboardingStateV532')&&networkSrc.includes('placement_capacity')&&networkSrc.includes('accepting_matches')&&networkSrc.includes("check_mode:'onboarding'"),
-    network_ranked_matching_v532:networkSrc.includes('_networkOpportunityMatchV532')&&networkSrc.includes('/api/network/admin/opportunities/:id/matches')&&networkSrc.includes('publisher-match-v532'),
+    network_ranked_matching_v532:networkSrc.includes('_networkOpportunityMatchV532')&&networkSrc.includes('/api/network/admin/opportunities/:id/matches')&&networkSrc.includes('publisher-match-proposal-v534'),
     network_publisher_onboarding_clarity_v533:networkSrc.includes('PUBLISHER ONBOARDING')&&networkSrc.includes('Website details')&&networkSrc.includes('Website check')&&networkSrc.includes('Approval & matching')&&networkSrc.includes('First match')&&!networkSrc.includes('<section id=\"join\"><div class=\"wrap\"><div class=\"forms\"><div class=\"form\"><div class=\"step\">STEP 2</div>'),
-    network_match_capacity_guard_v532:networkSrc.includes('_networkPublisherEligibilityV532')&&networkSrc.includes('capacity_full')&&networkSrc.includes('Publisher is not currently eligible for a new match.'),
+    network_match_capacity_guard_v532:networkSrc.includes('_networkPublisherEligibilityV532')&&networkSrc.includes('capacity_full')&&networkSrc.includes('Publisher is not currently eligible for a new match proposal.'),
     network_match_profile_future_only_v532:networkSrc.includes('/api/network/admin/websites/:id/match-profile')&&networkSrc.includes('Profile changes affect future matching only. Existing placements remain intact.'),
     network_action_attention_engine_v529:networkSrc.includes('_networkGuidedActionV529')&&networkSrc.includes("engine:'network-action-attention-v529'")&&networkSrc.includes('/api/network/admin/action-center'),
     network_admin_primary_action_v529:networkSrc.includes('adminPrimaryNext')&&networkSrc.includes('top_action:items[0]||null'),
