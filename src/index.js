@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v543-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v530-NETWORK-TEST-LAB';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v544-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v531-PERSISTENT-E2E-TEST-FIXTURES';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -908,7 +908,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v543-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v530-NETWORK-TEST-LAB',
+  build: 'CS-2026-10-06-CANONICAL-v544-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v531-PERSISTENT-E2E-TEST-FIXTURES',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -1013,6 +1013,9 @@ app.get('/api/regression-contract',(req,res)=>{
     network_refresh_all_v502:networkSrc.includes('Refresh all & verify')&&networkSrc.includes('images_required:false'),
     network_test_lab_v530:networkSrc.includes('_networkTestLabSuiteV530')&&networkSrc.includes('/api/network/admin/test-lab/run')&&networkSrc.includes('/network/admin/test-lab'),
     network_test_lab_read_only_inspector_v530:networkSrc.includes('_networkTestLabInspectPlacementV530')&&networkSrc.includes('safe_read_only:true'),
+    network_persistent_test_fixtures_v531:networkSrc.includes('network_test_lab_fixtures')&&networkSrc.includes('_networkFixtureApplyTransitionV531')&&networkSrc.includes('/api/network/admin/test-lab/fixtures'),
+    network_fixture_side_effect_guard_v531:networkSrc.includes('emails_sent:0')&&networkSrc.includes('gemini_calls:0')&&networkSrc.includes('credit_mutations:0')&&networkSrc.includes('external_fetches:0'),
+    network_fixture_transactional_transitions_v531:networkSrc.includes('SELECT * FROM network_test_lab_fixtures WHERE id=$1 FOR UPDATE')&&networkSrc.includes("UPDATE network_test_lab_fixtures SET state=$2::jsonb"),
     network_action_attention_engine_v529:networkSrc.includes('_networkGuidedActionV529')&&networkSrc.includes("engine:'network-action-attention-v529'")&&networkSrc.includes('/api/network/admin/action-center'),
     network_admin_primary_action_v529:networkSrc.includes('adminPrimaryNext')&&networkSrc.includes('top_action:items[0]||null'),
     network_publisher_action_from_readiness_v529:networkSrc.includes('_networkPublisherRoleActionV529')&&networkSrc.includes('resolved.readiness,pp'),
