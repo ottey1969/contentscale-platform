@@ -890,7 +890,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v529-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v516-UNIFIED-GUIDED-ROLES',
+  build: 'CS-2026-10-06-CANONICAL-v531-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v518-VERIFIED-URL-CHANGE',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
