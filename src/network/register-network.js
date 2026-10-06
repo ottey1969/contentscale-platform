@@ -1,4 +1,4 @@
-// ContentScale Network v528 — authoritative Readiness state reconciliation; v527 readiness engine + v526 3x3 link repair + v538 recovery preserved
+// ContentScale Network v529 — unified Action/Attention Engine; v528 readiness-state reconciliation + v527 readiness engine preserved
 'use strict';
 
 // CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v509
@@ -5205,9 +5205,9 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
     const r=await pool.query(`SELECT * FROM network_directory_businesses WHERE metadata->>'claim_access_token'=$1 LIMIT 1`,[token]);
     const b=r.rows[0];if(!b)return res.status(404).json({success:false,error:'Business dashboard not found'});
     const profileUrl='/network/directory/'+encodeURIComponent(b.slug||'');
-    let next={kind:'waiting',label:'Waiting for ContentScale verification',target:'review',href:null};
-    if(b.status==='verified')next={kind:'action',label:'Open verified business profile',target:'profile',href:profileUrl};
-    else if(b.status==='rejected')next={kind:'waiting',label:'Review completed · no action available',target:'review',href:null};
+    let next=_networkGuidedActionV529({role:'business',kind:'waiting',key:'verification_pending',label:'Waiting for ContentScale verification',reason:'No action is required while ContentScale reviews the claim.',entity_type:'business',entity_id:b.id});
+    if(b.status==='verified')next=_networkGuidedActionV529({role:'business',kind:'done',key:'verified',label:'Business verified',reason:'The claim workflow is complete.',href:profileUrl,entity_type:'business',entity_id:b.id});
+    else if(b.status==='rejected')next=_networkGuidedActionV529({role:'business',kind:'done',key:'review_complete',label:'Review completed',reason:'The verification review has finished.',entity_type:'business',entity_id:b.id});
     res.set('Cache-Control','no-store');
     res.json({success:true,business:publicDirectoryBusiness(b),claim:{name:b.claim_name||null,email:b.claim_email||null,submitted_at:b.claim_submitted_at||null},website_check:b.website_check||{},next_action:next,profile_url:profileUrl});
   }));
@@ -5218,7 +5218,7 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
     res.set('Cache-Control','no-store');
     res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Business Dashboard · ContentScale Network</title><style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:980px;margin:auto;padding:30px 18px 70px}a{color:#8dd9ff}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:18px;margin:14px 0}.tiny{font-size:12px;color:#9fb1d6;line-height:1.5}.flow{display:grid;gap:10px}.step{border:1px solid #33476e;border-radius:13px;padding:14px;background:#0a1427}.step.done{border-color:#22c55e;background:#0d271c}.step.active{border-color:#3b82f6;background:#102752;box-shadow:0 0 0 1px rgba(59,130,246,.35)}.step.locked{opacity:.58}.btn{display:inline-flex;align-items:center;border:1px solid #3f65a4;border-radius:10px;padding:10px 13px;font-weight:900;text-decoration:none;background:#101b31;color:#dbeafe}.btn.next{background:#1d4ed8;border-color:#60a5fa;color:#fff;animation:pulse 1.7s ease-in-out infinite}.btn.done{background:#14532d;border-color:#22c55e;color:#dcfce7}.btn.locked{background:#172033;border-color:#334155;color:#94a3b8;pointer-events:none}@keyframes pulse{50%{box-shadow:0 0 0 6px rgba(59,130,246,.13)}}@media(prefers-reduced-motion:reduce){.btn.next{animation:none}}
-</style></head><body><main><div class="tiny">CONTENTSCALE NETWORK · BUSINESS</div><h1>Business Dashboard</h1><div id="app"><div class="card">Loading your next action…</div></div></main><script>(function(){const token=${JSON.stringify(token)},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/business/'+token+'/dashboard',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load business dashboard');const b=d.business||{},verified=b.status==='verified',rejected=b.status==='rejected',active=d.next_action&&d.next_action.kind==='action';root.innerHTML='<div class="card"><h2>'+esc(b.business_name||'Business')+'</h2><div class="tiny">'+esc(b.domain||'')+' · '+esc(b.primary_niche||'')+' · status: '+esc(b.status||'')+'</div></div><div class="card" id="guided"><h2>Follow the blue action</h2><div class="tiny">Blue = do this now · Green = complete · Grey = waiting / not needed.</div><div class="flow" style="margin-top:12px"><div class="step done"><b>1 · Claim submitted ✓</b><div class="tiny">Your business verification request is saved.</div></div><div class="step '+(verified||rejected?'done':'locked')+'" id="review"><b>2 · ContentScale verification '+(verified?'✓':rejected?'completed':'pending')+'</b><div class="tiny">'+(verified?'Your business is verified.':rejected?'The review has finished.':'No action needed from you while ContentScale reviews the business.')+'</div></div><div class="step '+(active?'active':'locked')+'" id="profile"><b>3 · Verified profile</b><div class="tiny">'+(verified?'Open the verified public profile and check the published business facts.':'Available after verification.')+'</div><div style="margin-top:10px">'+(active?'<a class="btn next" id="nextAction" href="'+esc(d.next_action.href)+'">Open verified profile</a>':'<span class="btn locked">Waiting</span>')+'</div></div></div></div>'+(verified?'<div class="card"><h2>Optional next step</h2><p class="tiny">Publishing is optional. If you want to join as a publisher, use the public Network application with this same business website.</p><a class="btn" href="/network#join">Publisher options</a></div>':'');const n=document.getElementById('nextAction');if(n)setTimeout(()=>n.scrollIntoView({behavior:'smooth',block:'center'}),180)}catch(e){root.innerHTML='<div class="card">✕ '+esc(e.message)+'</div>'}}load()})();</script></body></html>`);
+</style></head><body><main><div class="tiny">CONTENTSCALE NETWORK · BUSINESS</div><h1>Business Dashboard</h1><div id="app"><div class="card">Loading your next action…</div></div></main><script>(function(){const token=${JSON.stringify(token)},esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c));async function load(){const root=document.getElementById('app');try{const r=await fetch('/api/network/business/'+token+'/dashboard',{cache:'no-store'}),d=await r.json();if(!r.ok)throw Error(d.error||'Could not load business dashboard');const b=d.business||{},verified=b.status==='verified',rejected=b.status==='rejected',active=d.next_action&&d.next_action.kind==='action';root.innerHTML='<div class="card"><h2>'+esc(b.business_name||'Business')+'</h2><div class="tiny">'+esc(b.domain||'')+' · '+esc(b.primary_niche||'')+' · status: '+esc(b.status||'')+'</div></div><div class="card" id="guided"><h2>'+(active?'Follow the blue action':'Current status')+'</h2><div class="tiny">Blue = do this now · Green = complete · Grey = waiting / not needed.</div><div class="flow" style="margin-top:12px"><div class="step done"><b>1 · Claim submitted ✓</b><div class="tiny">Your business verification request is saved.</div></div><div class="step '+(verified||rejected?'done':'locked')+'" id="review"><b>2 · ContentScale verification '+(verified?'✓':rejected?'completed':'pending')+'</b><div class="tiny">'+(verified?'Your business is verified.':rejected?'The review has finished.':'No action needed from you while ContentScale reviews the business.')+'</div></div><div class="step '+(verified?'done':'locked')+'" id="profile"><b>3 · Verified profile '+(verified?'✓':'')+'</b><div class="tiny">'+(verified?'Your verified public profile is available.':'Available after verification.')+'</div><div style="margin-top:10px">'+(verified?'<a class="btn done" href="'+esc(d.profile_url)+'">Open verified profile</a>':'<span class="btn locked">Waiting</span>')+'</div></div></div></div>'+(verified?'<div class="card"><h2>Optional next step</h2><p class="tiny">Publishing is optional. If you want to join as a publisher, use the public Network application with this same business website.</p><a class="btn" href="/network#join">Publisher options</a></div>':'');const n=document.getElementById('nextAction');if(n)setTimeout(()=>n.scrollIntoView({behavior:'smooth',block:'center'}),180)}catch(e){root.innerHTML='<div class="card">✕ '+esc(e.message)+'</div>'}}load()})();</script></body></html>`);
   });
 
   async function scoutDashboardData(token){
@@ -5229,10 +5229,10 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
     const code=cr.rows[0]||null;let referrals=[],stats={clicks:0,registered:0,activated:0,rewarded:0,reward_credits:0};
     if(code){const rr=await pool.query(`SELECT id,referred_member_ref,status,reward_credits,metadata,created_at,activated_at,rewarded_at FROM network_referrals WHERE referral_code_id=$1 ORDER BY created_at DESC LIMIT 100`,[code.id]);referrals=rr.rows;const sr=await pool.query(`SELECT COUNT(*) FILTER (WHERE status='clicked')::int AS clicks,COUNT(*) FILTER (WHERE status='registered')::int AS registered,COUNT(*) FILTER (WHERE status='activated')::int AS activated,COUNT(*) FILTER (WHERE status='rewarded')::int AS rewarded,COALESCE(SUM(reward_credits) FILTER (WHERE status='rewarded'),0)::int AS reward_credits FROM network_referrals WHERE referral_code_id=$1`,[code.id]);stats=sr.rows[0]||stats;}
     const pending=referrals.find(x=>x.status==='registered'),active=referrals.find(x=>x.status==='activated');
-    let next={kind:'action',label:'Copy your referral link',target:'share'};
-    if(p.status!=='active')next={kind:'waiting',label:'Scout account is '+p.status,target:'status'};
-    else if(pending)next={kind:'waiting',label:'Referred publisher is waiting for ContentScale approval',target:'activity'};
-    else if(active)next={kind:'waiting',label:'Publisher activated · waiting for reward decision',target:'activity'};
+    let next=_networkGuidedActionV529({role:'scout',kind:'action',key:'share_referral',label:'Copy your referral link',reason:'Share the unique link with a real website owner who may want to join.',priority:20,entity_type:'scout',entity_id:p.id});
+    if(p.status!=='active')next=_networkGuidedActionV529({role:'scout',kind:'waiting',key:'scout_inactive',label:'Scout account is '+p.status,reason:'No referral action is available until the scout account is active.',entity_type:'scout',entity_id:p.id});
+    else if(pending)next=_networkGuidedActionV529({role:'scout',kind:'waiting',key:'publisher_pending',label:'Referred publisher is waiting for ContentScale approval',reason:'No action is required from the scout while ContentScale reviews the publisher.',entity_type:'scout',entity_id:p.id});
+    else if(active)next=_networkGuidedActionV529({role:'scout',kind:'waiting',key:'reward_pending',label:'Publisher activated · waiting for reward decision',reason:'The activation is recorded; ContentScale controls the reward decision.',entity_type:'scout',entity_id:p.id});
     return{partner:p,code,referrals,stats,share_url:code?('https://app.contentscale.site/network/join?ref='+code.code):null,next_action:next};
   }
 
@@ -5266,13 +5266,25 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
     let placements=[];
     if(a.website_id){const pr=await pool.query(`SELECT p.id,p.status,p.published_url,p.reward_credits,p.accepted_at,p.submitted_at,p.verified_at,p.verification_note,p.verification_decision,p.reviewed_at,c.title,pv.id AS publication_version_id,pv.title AS edition_title,pv.quality_status,pv.generated_at FROM network_placements p JOIN network_content c ON c.id=p.content_id LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id WHERE p.publisher_website_id=$1 ORDER BY p.created_at DESC LIMIT 100`,[a.website_id]);placements=pr.rows}
     await pool.query('UPDATE network_publisher_accounts SET last_seen_at=NOW() WHERE id=$1',[a.id]).catch(()=>{});
-    const actionablePlacement=placements.find(x=>x.publication_version_id&&x.status!=='verified'&&(!x.published_url||x.status==='needs_review'||x.verification_decision==='needs_changes'));
-    let nextAction={kind:'waiting',label:'Waiting for ContentScale',target:'status',placement_id:null};
-    if(a.application_status==='pending')nextAction={kind:'waiting',label:'Waiting for application approval',target:'status',placement_id:null};
-    else if(!a.website_id||!['approved','trusted'].includes(a.website_status))nextAction={kind:'waiting',label:'Waiting for publisher website approval',target:'status',placement_id:null};
-    else if(actionablePlacement)nextAction={kind:'action',label:actionablePlacement.status==='needs_review'?'Fix and resubmit publication':'Open publication package',target:'placement',placement_id:actionablePlacement.id};
-    else if(placements.some(x=>['submitted','verifying','needs_review'].includes(x.status)))nextAction={kind:'waiting',label:'Waiting for ContentScale manual verification',target:'placements',placement_id:null};
-    else if(placements.length===0)nextAction={kind:'waiting',label:'Publisher active · waiting for a matched placement',target:'placements',placement_id:null};
+    let nextAction=_networkGuidedActionV529({role:'publisher',kind:'waiting',key:'waiting_for_contentscale',label:'Waiting for ContentScale',reason:'There is no publisher action right now.'});
+    if(a.application_status==='pending')nextAction=_networkGuidedActionV529({role:'publisher',kind:'waiting',key:'application_pending',label:'Waiting for application approval',reason:'ContentScale must approve the publisher application first.'});
+    else if(!a.website_id||!['approved','trusted'].includes(a.website_status))nextAction=_networkGuidedActionV529({role:'publisher',kind:'waiting',key:'website_pending',label:'Waiting for publisher website approval',reason:'The Network Website Check must pass before a Publisher Edition can be released.'});
+    else if(placements.length===0)nextAction=_networkGuidedActionV529({role:'publisher',kind:'waiting',key:'waiting_for_match',label:'Publisher active · waiting for a matched placement',reason:'No Publisher Edition has been assigned yet.'});
+    else{
+      let fallback=null;
+      for(const pp of placements){
+        if(pp.status==='verified')continue;
+        if(['submitted','verifying'].includes(String(pp.status||''))){fallback=_networkGuidedActionV529({role:'publisher',kind:'waiting',key:'manual_review',label:'Waiting for ContentScale manual verification',reason:'A submitted live URL is already in review.',placement_id:pp.id,entity_type:'placement',entity_id:pp.id});break;}
+        if(!pp.publication_version_id)continue;
+        const access=await publisherPlacementAccess(token,pp.id);if(!access||!access.placement||!access.placement.id)continue;
+        const imgs=await pool.query(`SELECT id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,sort_order,created_at,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[access.placement.id]);
+        const resolved=await _networkResolvePublisherReadinessV527(access.placement,imgs.rows),candidate=_networkPublisherRoleActionV529(resolved.readiness,pp);
+        if(candidate.href)candidate.href=candidate.href.replace('__TOKEN__',token);
+        if(candidate.kind==='action'){nextAction=candidate;fallback=null;break;}
+        if(!fallback)fallback=candidate;
+      }
+      if(fallback&&nextAction.key==='waiting_for_contentscale')nextAction=fallback;
+    }
     return{account:a,stats,referrals,placements,next_action:nextAction,share_url:a.referral?('https://app.contentscale.site/network/join?ref='+a.referral.code):null};
   }
 
@@ -5540,6 +5552,91 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
   // Read-only aggregation for the dashboard; mutations continue to use the existing
   // protected workflow endpoints so the cockpit cannot bypass existing invariants.
 
+  // v529 — Unified Action/Attention Engine.
+  // One normalized action contract is shared by admin, publisher, business and scout surfaces.
+  // It never mutates workflow state. It reads the authoritative backend states and tells each role
+  // exactly whether to act now, wait, or consider the workflow complete.
+  function _networkGuidedActionV529(ctx={}){
+    const kind=['action','waiting','done','optional'].includes(String(ctx.kind||''))?String(ctx.kind):'waiting';
+    return {
+      engine:'network-action-attention-v529',
+      role:cleanText(ctx.role||'admin',40)||'admin',
+      kind,
+      key:cleanText(ctx.key||'waiting',80)||'waiting',
+      label:cleanText(ctx.label||'Waiting',240)||'Waiting',
+      reason:cleanText(ctx.reason||'',700)||null,
+      href:cleanText(ctx.href||'',1200)||null,
+      control_id:cleanText(ctx.control_id||'',120)||null,
+      step:Number(ctx.step||0)||null,
+      priority:Number.isFinite(Number(ctx.priority))?Number(ctx.priority):100,
+      entity_type:cleanText(ctx.entity_type||'',80)||null,
+      entity_id:ctx.entity_id==null?null:String(ctx.entity_id),
+      placement_id:Number(ctx.placement_id||0)||null,
+      done:kind==='done',
+      waiting:kind==='waiting',
+      actionable:kind==='action'
+    };
+  }
+
+  function _networkPublisherRoleActionV529(readiness,placement){
+    const r=readiness&&typeof readiness==='object'?readiness:{},p=placement||{},status=String(p.status||r.placement_status||'');
+    const href=p.id?('/network/publisher/__TOKEN__/placement/'+Number(p.id)+'?guided=1'):null;
+    if(status==='verified'||(r.next_action&&r.next_action.done))return _networkGuidedActionV529({role:'publisher',kind:'done',key:'verified',label:'Verified live',reason:'This placement is complete.',placement_id:p.id,entity_type:'placement',entity_id:p.id});
+    if(['submitted','verifying'].includes(status))return _networkGuidedActionV529({role:'publisher',kind:'waiting',key:'manual_review',label:'Waiting for ContentScale manual verification',reason:'The live URL is already in the review queue.',placement_id:p.id,entity_type:'placement',entity_id:p.id});
+    if(r.final_ready&&!r.seo_copied_current)return _networkGuidedActionV529({role:'publisher',kind:'action',key:'copy_seo_html',label:'Copy SEO publication HTML',reason:'The current package is Ready. Copy the exact current HTML before publishing.',href,placement_id:p.id,entity_type:'placement',entity_id:p.id,priority:20});
+    if(r.final_ready&&r.seo_copied_current)return _networkGuidedActionV529({role:'publisher',kind:'action',key:status==='needs_review'?'resubmit_live':'submit_live',label:status==='needs_review'?'Fix and resubmit live URL':'Publish and submit live URL',reason:status==='needs_review'?'ContentScale requested changes. Publish the current copied HTML and submit the exact live URL again.':'Publish the copied HTML and submit the exact live URL.',href,placement_id:p.id,entity_type:'placement',entity_id:p.id,priority:25});
+    const na=r.next_action||{};
+    return _networkGuidedActionV529({role:'publisher',kind:'waiting',key:'contentscale_preparing',label:'Waiting for ContentScale',reason:na.label?('ContentScale next: '+na.label):'The Publisher Edition is still being prepared.',placement_id:p.id,entity_type:'placement',entity_id:p.id});
+  }
+
+  async function _networkAdminPublicationActionV529(placementId){
+    const id=Number(placementId||0);if(!id)return null;
+    const qr=await pool.query(`SELECT p.id AS placement_id,p.status,p.content_id,p.published_url,p.verified_at,p.verification_decision,p.source_link_required,p.brand_mention_required,
+      c.brand_name,c.primary_niche,c.source_snapshot,c.prewrite_brief_id AS current_prewrite_brief_id,c.title AS opportunity_title,
+      w.domain AS publisher_domain,w.brand_name AS publisher_brand,ow.domain AS source_domain,ow.brand_name AS source_brand,pv.*
+      FROM network_placements p
+      JOIN network_content c ON c.id=p.content_id
+      JOIN network_websites w ON w.id=p.publisher_website_id
+      JOIN network_publication_versions pv ON pv.placement_id=p.id
+      LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
+      WHERE p.id=$1 LIMIT 1`,[id]);
+    const row=qr.rows[0];if(!row)return null;
+    const ir=await pool.query(`SELECT id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,sort_order,created_at,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[row.id]);
+    const resolved=await _networkResolvePublisherReadinessV527(row,ir.rows),na=resolved.readiness&&resolved.readiness.next_action||{};
+    if(na.done)return null;
+    // Copying/publishing the CMS HTML belongs to the publisher. Do not create an admin attention item
+    // until an exact live URL exists and ContentScale can actually run the pre-check/review.
+    if(['copy_seo_html','copy_after_failed_check'].includes(String(na.key||'')))return null;
+    if(String(na.key||'')==='publish_precheck'&&!row.published_url)return null;
+    const priorityMap={manual_verify:5,needs_changes:6,reopen_editing:8,prewrite:25,discover_internal:27,suggest_external:28,refresh_all:30,retry_live_precheck:35,publish_precheck:36};
+    return _networkGuidedActionV529({
+      role:'admin',kind:'action',key:na.key||'publication',label:(row.publisher_brand||row.publisher_domain||'Publisher')+' · '+(na.label||'Open Publisher Edition'),reason:na.reason||null,
+      href:'/network/publishing/'+id+'?guided=1',control_id:na.control_id||null,step:na.step||null,priority:priorityMap[na.key]||50,
+      entity_type:'placement',entity_id:id,placement_id:id
+    });
+  }
+
+  async function _networkAdminActionCenterV529(){
+    const items=[],errors=[];
+    async function collect(section,fn){try{const out=await fn();if(Array.isArray(out))items.push(...out.filter(Boolean));else if(out)items.push(out)}catch(e){errors.push({section,error:e.message})}}
+    await Promise.all([
+      collect('directory_claims',async()=>{const r=await pool.query(`SELECT id,business_name,domain FROM network_directory_businesses WHERE status='claim_pending' ORDER BY claim_submitted_at ASC NULLS LAST,updated_at ASC LIMIT 50`);return r.rows.map(x=>_networkGuidedActionV529({role:'admin',kind:'action',key:'verify_business_claim',label:'Verify business · '+(x.business_name||x.domain||('#'+x.id)),reason:'A business owner claim is waiting for review.',href:'/network/directory/admin',priority:12,entity_type:'business',entity_id:x.id}))}),
+      collect('publisher_applications',async()=>{const r=await pool.query(`SELECT id,brand_name,domain FROM network_publisher_applications WHERE status='pending' ORDER BY created_at ASC LIMIT 50`);return r.rows.map(x=>_networkGuidedActionV529({role:'admin',kind:'action',key:'review_publisher_application',label:'Review publisher · '+(x.brand_name||x.domain||('#'+x.id)),reason:'A publisher application is waiting for approval or rejection.',href:'/network/publisher-applications',priority:15,entity_type:'publisher_application',entity_id:x.id}))}),
+      collect('publisher_websites',async()=>{const r=await pool.query(`SELECT id,brand_name,domain FROM network_websites WHERE status='pending' ORDER BY created_at ASC LIMIT 50`);return r.rows.map(x=>_networkGuidedActionV529({role:'admin',kind:'action',key:'review_publisher_website',label:'Check publisher website · '+(x.brand_name||x.domain||('#'+x.id)),reason:'The website must pass the Network Website Check before publishing.',href:'/network/websites',priority:18,entity_type:'website',entity_id:x.id}))}),
+      collect('advertising',async()=>{const r=await pool.query(`SELECT id,company_name FROM network_ads WHERE status='pending' ORDER BY created_at ASC LIMIT 50`);return r.rows.map(x=>_networkGuidedActionV529({role:'admin',kind:'action',key:'review_advertising',label:'Review advertising · '+(x.company_name||('#'+x.id)),reason:'A sponsored placement request is waiting for review.',href:'/network/advertising',priority:70,entity_type:'advertising',entity_id:x.id}))})
+    ]);
+    await collect('publisher_editions',async()=>{
+      const r=await pool.query(`SELECT p.id FROM network_placements p JOIN network_publication_versions pv ON pv.placement_id=p.id WHERE p.status IN ('accepted','ready','submitted','verifying','needs_review') OR (p.status='verified' AND pv.updated_at>COALESCE(p.verified_at,'1970-01-01'::timestamptz)) ORDER BY p.updated_at ASC,p.id ASC LIMIT 20`);
+      const out=[];for(const x of r.rows){try{const a=await _networkAdminPublicationActionV529(x.id);if(a)out.push(a)}catch(e){errors.push({section:'publisher_edition_'+x.id,error:e.message})}}return out;
+    });
+    items.sort((a,b)=>(Number(a.priority||100)-Number(b.priority||100))||String(a.label||'').localeCompare(String(b.label||'')));
+    return {engine:'network-action-attention-v529',authoritative:true,total:items.length,top_action:items[0]||null,items,errors};
+  }
+
+  app.get('/api/network/admin/action-center', verifyAdmin, wrap(async (req,res)=>{
+    const center=await _networkAdminActionCenterV529();res.set('Cache-Control','no-store');res.json({success:true,...center});
+  }));
+
   app.get('/api/network/admin/reset-status', verifyAdmin, wrap(async (req,res)=>{
     const discovered=await pool.query(`
       SELECT tablename
@@ -5727,15 +5824,8 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
       clicks:Number(x.clicks||0)
     }]));
 
-    const attentionCount =
-      Number(directory.claim_pending||0)+
-      Number(publishers.pending||0)+
-      Number(websites.pending||0)+
-      Number(ads.pending?.count||0)+
-      Number(placements.submitted||0)+
-      Number(placements.needs_review||0)+
-      Number(placements.verifying||0)+
-      Number(referrals.registered||0);
+    const actionCenter=await _networkAdminActionCenterV529();
+    const attentionCount=Number(actionCenter.total||0);
 
     res.set('Cache-Control','no-store');
     res.json({
@@ -5744,6 +5834,7 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
       errors,
       schema,
       attention_count:attentionCount,
+      action_center:actionCenter,
       counts:{directory,websites,content,placements,publishers,accounts,ads,referrals,credits:creditSummary},
       queues:{
         pending_directory_claims:pendingDirectoryClaims,
@@ -5771,7 +5862,7 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
     res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ContentScale Network Cockpit</title>
 <style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:#8dd9ff}main{max-width:1500px;margin:auto;padding:26px 18px 70px}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;font-weight:900}.top h1{font-size:clamp(30px,5vw,52px);margin:5px 0 7px}.muted,.tiny{color:#96a7ca;line-height:1.5}.tiny{font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;gap:6px;background:#17376c;color:#fff;border:1px solid #3f65a4;border-radius:10px;padding:9px 12px;font-weight:850;text-decoration:none;cursor:pointer}.btn.good{background:#14532d;border-color:#22c55e}.btn.warn{background:#78350f;border-color:#f59e0b}.btn.bad{background:#7f1d1d;border-color:#ef4444}.btn.secondary{background:#101b31;border-color:#33476e}.btn:disabled{opacity:.55;cursor:wait}.health{display:flex;gap:7px;flex-wrap:wrap;margin:13px 0}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:5px 9px;font-size:11px;background:#101b31}.pill.ok{border-color:#22c55e;color:#86efac}.pill.warn{border-color:#f59e0b;color:#fde68a}.pill.bad{border-color:#ef4444;color:#fecaca}.hero{background:linear-gradient(135deg,#0c1a31,#101a31);border:1px solid #2b4168;border-radius:20px;padding:20px;margin:14px 0}.attention{border-color:#7c3aed;background:linear-gradient(135deg,#17102b,#10182d)}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:14px 0}.kpi{background:#0b1629;border:1px solid #263b62;border-radius:13px;padding:13px}.kpi b{display:block;font-size:27px}.kpi span{font-size:11px;color:#9fb1d6}.flow{display:grid;grid-template-columns:repeat(7,minmax(210px,1fr));gap:16px;overflow-x:auto;padding:8px 6px 12px}.step{min-width:210px;background:#0b1629;border:1px solid #2b4168;border-radius:14px;padding:16px;position:relative;display:flex;flex-direction:column;min-height:285px}.step .num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#2459a9;font-weight:950;margin-bottom:8px}.step h3{margin:0 0 6px;font-size:15px}.step p{margin:0 0 9px;color:#9fb1d6;font-size:12px;line-height:1.45}.step .next{color:#dbeafe;font-size:11px;min-height:47px;margin-top:auto}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:16px;min-width:0}.card h2{margin:0 0 8px;font-size:18px}.queue{display:grid;gap:9px}.row{border:1px solid #293d60;border-radius:11px;padding:11px;background:#091426}.rowHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}.row strong{overflow-wrap:anywhere}.meta{font-size:12px;color:#9badcf;line-height:1.55;overflow-wrap:anywhere}.rowActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.empty{padding:14px;border:1px dashed #345071;border-radius:10px;color:#7890b8}.event{padding:9px 0;border-top:1px solid #243653}.event:first-child{border-top:0}.gate{position:fixed;inset:0;z-index:99999;background:#07101f;display:flex;align-items:center;justify-content:center;padding:24px}.gateBox{max-width:470px;width:100%;background:#101a30;border:1px solid #2a3e63;border-radius:18px;padding:26px}.sectionTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}.sectionTitle h2{margin:0}.urgent{box-shadow:0 0 0 1px rgba(124,58,237,.2),0 14px 40px rgba(76,29,149,.12)}
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}a{color:#8dd9ff}main{max-width:1500px;margin:auto;padding:26px 18px 70px}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7dd3fc;font-weight:900}.top h1{font-size:clamp(30px,5vw,52px);margin:5px 0 7px}.muted,.tiny{color:#96a7ca;line-height:1.5}.tiny{font-size:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.btn{display:inline-flex;align-items:center;gap:6px;background:#17376c;color:#fff;border:1px solid #3f65a4;border-radius:10px;padding:9px 12px;font-weight:850;text-decoration:none;cursor:pointer}.btn.next{background:#1d4ed8;border-color:#60a5fa;color:#fff;box-shadow:0 0 0 1px rgba(96,165,250,.25)}.btn.good{background:#14532d;border-color:#22c55e}.btn.warn{background:#78350f;border-color:#f59e0b}.btn.bad{background:#7f1d1d;border-color:#ef4444}.btn.secondary{background:#101b31;border-color:#33476e}.btn:disabled{opacity:.55;cursor:wait}.health{display:flex;gap:7px;flex-wrap:wrap;margin:13px 0}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:5px 9px;font-size:11px;background:#101b31}.pill.ok{border-color:#22c55e;color:#86efac}.pill.warn{border-color:#f59e0b;color:#fde68a}.pill.bad{border-color:#ef4444;color:#fecaca}.hero{background:linear-gradient(135deg,#0c1a31,#101a31);border:1px solid #2b4168;border-radius:20px;padding:20px;margin:14px 0}.attention{border-color:#7c3aed;background:linear-gradient(135deg,#17102b,#10182d)}.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;margin:14px 0}.kpi{background:#0b1629;border:1px solid #263b62;border-radius:13px;padding:13px}.kpi b{display:block;font-size:27px}.kpi span{font-size:11px;color:#9fb1d6}.flow{display:grid;grid-template-columns:repeat(7,minmax(210px,1fr));gap:16px;overflow-x:auto;padding:8px 6px 12px}.step{min-width:210px;background:#0b1629;border:1px solid #2b4168;border-radius:14px;padding:16px;position:relative;display:flex;flex-direction:column;min-height:285px}.step .num{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#2459a9;font-weight:950;margin-bottom:8px}.step h3{margin:0 0 6px;font-size:15px}.step p{margin:0 0 9px;color:#9fb1d6;font-size:12px;line-height:1.45}.step .next{color:#dbeafe;font-size:11px;min-height:47px;margin-top:auto}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:16px;min-width:0}.card h2{margin:0 0 8px;font-size:18px}.queue{display:grid;gap:9px}.row{border:1px solid #293d60;border-radius:11px;padding:11px;background:#091426}.rowHead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap}.row strong{overflow-wrap:anywhere}.meta{font-size:12px;color:#9badcf;line-height:1.55;overflow-wrap:anywhere}.rowActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.empty{padding:14px;border:1px dashed #345071;border-radius:10px;color:#7890b8}.event{padding:9px 0;border-top:1px solid #243653}.event:first-child{border-top:0}.gate{position:fixed;inset:0;z-index:99999;background:#07101f;display:flex;align-items:center;justify-content:center;padding:24px}.gateBox{max-width:470px;width:100%;background:#101a30;border:1px solid #2a3e63;border-radius:18px;padding:26px}.sectionTitle{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}.sectionTitle h2{margin:0}.urgent{box-shadow:0 0 0 1px rgba(124,58,237,.2),0 14px 40px rgba(76,29,149,.12)}
 
 .actionState{display:flex;align-items:center;gap:11px;margin-top:12px;padding:12px 14px;border-radius:12px;border:1px solid #33476e;background:#0a1528}
 .actionState .stateIcon{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:950;background:#15233d;color:#9fb1d6;flex:0 0 28px}
@@ -5799,6 +5890,7 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
 
 <section class="hero"><div class="sectionTitle"><div><div class="eyebrow">ADMIN TOUR</div><h2>What you do, in order</h2></div><a class="btn good" href="/network/directory/admin">Open Step 1 · Business Verification</a></div><div class="flow"><div class="step"><div class="num">1</div><h3>Verify business</h3><p>Import or review a claim. Check the real website, niche and market.</p><div class="next"><b>Press:</b> Check website → Verify business.</div></div><div class="step"><div class="num">2</div><h3>Publisher opt-in</h3><p>A verified business may choose publishing. Do not enroll it automatically.</p><div class="next"><b>Press:</b> Approve + link website, then review the website.</div></div><div class="step"><div class="num">3</div><h3>Starter exchange</h3><p>New publishers begin with 1 give + 1 receive. Capture H1/topic + short pitch first.</p><div class="next"><b>Go to:</b> Opportunities after real intent.</div></div><div class="step"><div class="num">4</div><h3>Generate after match</h3><p>Once an approved website commits, generate that publisher's unique edition.</p><div class="next"><b>Go to:</b> Publishing.</div></div><div class="step"><div class="num">5</div><h3>Verify live page</h3><p>Publisher submits the live URL. You manually verify before credits.</p><div class="next"><b>Go to:</b> Manual Verification.</div></div><div class="step"><div class="num">6</div><h3>Marketplace</h3><p>After starter exchange, continue through normal opportunities, referrals and credits.</p><div class="next"><b>Watch:</b> placements and history.</div></div></div></section><section class="hero attention urgent">
 <div class="sectionTitle"><div><div class="eyebrow">DO THIS FIRST</div><h2>Needs your attention</h2></div><span class="pill warn" id="attentionBadge">Loading…</span></div>
+<div id="primaryAction" class="actionState loading" style="margin-top:12px"><span class="stateIcon"></span><div><strong>Finding your next action…</strong><div class="tiny">ContentScale is reading the current backend state.</div></div></div>
 <div class="kpis" id="actionKpis"></div>
 </section>
 
@@ -5849,6 +5941,8 @@ async function load(){
    '<span class="pill">Core tables untouched</span>'+
    (d.degraded?'<span class="pill warn">Cockpit partial · '+Number((d.errors||[]).length)+' data warning(s)</span>':'<span class="pill ok">Cockpit data healthy ✓</span>');
   document.getElementById('attentionBadge').textContent=Number(d.attention_count||0)+' action item'+(Number(d.attention_count||0)===1?'':'s');
+  const ac=d.action_center||{},topAction=ac.top_action||null,primary=document.getElementById('primaryAction');
+  if(primary){if(topAction){primary.className='actionState';primary.innerHTML='<span class="stateIcon">→</span><div style="flex:1"><strong>'+esc(topAction.label||'Open next action')+'</strong><div class="tiny">'+esc(topAction.reason||'This is the highest-priority current Network action.')+'</div><div style="margin-top:9px"><a class="btn next" id="adminPrimaryNext" href="'+esc(topAction.href||'/network/admin')+'">Do this now</a></div></div>';}else{primary.className='actionState success';primary.innerHTML='<span class="stateIcon">✓</span><div><strong>No admin action required</strong><div class="tiny">Current Network workflows are either complete or waiting on another role.</div></div>';}}
   document.getElementById('actionKpis').innerHTML=
    kpi(count(c.directory,'claim_pending'),'Business claims','/network/directory/admin')+
    kpi(count(c.publishers,'pending'),'Publisher applications','/network/publisher-applications')+
