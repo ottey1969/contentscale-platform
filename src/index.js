@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v522-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v509-SINGLE-NEXT-ACTION';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v523-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v510-GUIDED-NEXT-ACTION';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -890,7 +890,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v522-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v509-SINGLE-NEXT-ACTION',
+  build: 'CS-2026-10-06-CANONICAL-v523-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v510-GUIDED-NEXT-ACTION',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -44208,6 +44208,9 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 .cs-btn.primary:hover { background:#6d28d9; }
 .cs-btn:disabled { opacity:.42; cursor:not-allowed; filter:grayscale(.65); border-color:#374151!important; color:#6b7280!important; box-shadow:none!important; }
 .cs-btn.primary:disabled { background:#1f2937!important; border-color:#374151!important; color:#6b7280!important; }
+.cs-btn.pwbNextAction{background:#1d4ed8!important;border-color:#60a5fa!important;color:#fff!important;box-shadow:0 0 0 3px rgba(59,130,246,.20)!important;}
+.cs-btn.pwbDoneAction{background:#14532d!important;border-color:#22c55e!important;color:#dcfce7!important;opacity:.92!important;}
+
 .cs-btn:disabled:hover { background:#111827!important; border-color:#374151!important; color:#6b7280!important; }
 
 /* Live feed */
@@ -44983,7 +44986,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
       </div>
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="cs-btn primary" onclick="generatePrewriteBrief()" id="pwbGenerateBtn" style="flex:1;">Analyse &amp; create Pre-Write Brief</button>
+      <button class="cs-btn" onclick="generatePrewriteBrief()" id="pwbGenerateBtn" style="flex:1;">Analyse &amp; create Pre-Write Brief</button>
       <button class="cs-btn" onclick="hideModal('prewriteBriefModal')">Cancel</button>
     </div>
     <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
@@ -46462,7 +46465,7 @@ function _pwbApplyActionState(){
   var aiUi=_pwbAiFiveUiState(),aiInputReady=!_NETWORK_PREWRITE_AUTHORIZED||aiUi.manual_ready;
   var diag=_pwbRestoreDiagnosticJob(_pwbActionKeyword());
   var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),share=document.getElementById('pwbShareBrief'),state=document.getElementById('pwbActionState'),shareStatus=document.getElementById('pwbShareStatus'),fresh=document.getElementById('pwbGenerateBtn');
-  [fresh,complete,finalQa,approve].forEach(function(x){if(x)x.classList.remove('primary');});
+  [fresh,complete,finalQa,approve].forEach(function(x){if(x){x.classList.remove('primary','pwbNextAction','pwbDoneAction');}});
 
   // 1) Fresh analysis is only actionable when there is no current Brief or the user intentionally
   // changed an input. It must never compete visually with the next step of an existing workflow.
@@ -46566,7 +46569,10 @@ function _pwbApplyActionState(){
   else if(complete&&!complete.disabled)nextPrimary=complete;
   else if(finalQa&&!finalQa.disabled)nextPrimary=finalQa;
   else if(approve&&!approve.disabled)nextPrimary=approve;
-  if(nextPrimary)nextPrimary.classList.add('primary');
+  if(finalQa&&qaPersisted)finalQa.classList.add('pwbDoneAction');
+  if(approve&&_pwbPublisherEditionReady)approve.classList.add('pwbDoneAction');
+  if(nextPrimary)nextPrimary.classList.add('pwbNextAction');
+  window.__PWB_NEXT_ACTION__=nextPrimary||null;
 
   if(state){
     var aiScore=typeof qc.readiness_score==='number'?qc.readiness_score:null;
@@ -46592,6 +46598,11 @@ function _pwbApplyActionState(){
     state.innerHTML=msg+quality+blockerLines+warningLines;
   }
 }
+function _pwbScrollToNextAction(){
+  var b=window.__PWB_NEXT_ACTION__;
+  if(!b||b.disabled)return;
+  setTimeout(function(){try{b.scrollIntoView({behavior:'smooth',block:'center'});b.focus({preventScroll:true});}catch(_e){}},140);
+}
 function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted,shareUrl){
   _pwbCurrentBriefId=Number(id||0)||0;
   _pwbCurrentBrief=brief||null;
@@ -46601,18 +46612,21 @@ function _pwbSetCurrentBrief(id,brief,notPassed,qaPersisted,shareUrl){
   _pwbPublisherEditionReady=false;
   _pwbCurrentShareUrl=String(shareUrl||'');
   _pwbApplyActionState();
+  _pwbScrollToNextAction();
 }
 function _pwbMarkInputsChanged(){
   if(!_pwbCurrentBrief&&!_pwbCurrentNotPassed)return;
   _pwbInputsDirty=true;
   _pwbPublisherEditionReady=false;
   _pwbApplyActionState();
+  _pwbScrollToNextAction();
 }
 setTimeout(function(){
   ['pwbKeyword','pwbTitle','pwbLanguage','pwbRegion','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText','pwbExistingHtml'].forEach(function(id){
     var el=document.getElementById(id);if(!el||el.dataset.pwbFreshHook)return;el.dataset.pwbFreshHook='1';el.addEventListener('input',_pwbMarkInputsChanged);el.addEventListener('change',_pwbMarkInputsChanged);
   });
   _pwbApplyActionState();
+  _pwbScrollToNextAction();
 },0);
 
 async function runPrewriteFinalQa(btn){
@@ -46627,6 +46641,7 @@ async function runPrewriteFinalQa(btn){
     if(result)result.innerHTML=_renderIntentBar(d.brief.search_intent)+renderPrewriteBrief(d.brief);
     if(stat)stat.textContent='✓ Final QA complete · no research · no Gemini · saved to this Brief';
     _pwbApplyActionState();
+    _pwbScrollToNextAction();
   }catch(e){if(stat)stat.textContent='✕ Final QA failed: '+e.message;if(btn){btn.disabled=false;btn.textContent=orig||'Run final QA · no research · no Gemini';}}
 }
 
@@ -46651,6 +46666,7 @@ async function savePrewriteMetaPackage(btn){
     _pwbCurrentBrief=x.brief;_pwbCurrentNotPassed=!(x.brief.ai_quality_check&&x.brief.ai_quality_check.ready_for_generation);_pwbFinalQaPersisted=x.final_qa_persisted===true;_pwbInputsDirty=false;
     if(result)result.innerHTML=_renderIntentBar(x.brief.search_intent)+renderPrewriteBrief(x.brief);
     _pwbApplyActionState();
+    _pwbScrollToNextAction();
     if(document.getElementById('pwbStatus'))document.getElementById('pwbStatus').textContent='✓ SEO meta saved · no research · no Gemini';
   }catch(e){if(st){st.style.color='#fca5a5';st.textContent='✕ '+e.message;}if(btn){btn.disabled=false;btn.textContent=orig||'Save SEO meta · no research / no Gemini';}}
 }
@@ -46668,6 +46684,7 @@ async function savePrewriteInternalLink(btn){
     if(result)result.innerHTML=_renderIntentBar(d.brief.search_intent)+renderPrewriteBrief(d.brief);
     if(document.getElementById('pwbInternalLinkStatus'))document.getElementById('pwbInternalLinkStatus').textContent='✓ Same-domain internal target saved to this Brief.';
     _pwbApplyActionState();
+    _pwbScrollToNextAction();
   }catch(e){if(st)st.textContent='✕ '+e.message;if(btn){btn.disabled=false;btn.textContent=orig||'Use this internal page';}}
 }
 
