@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v540-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v527-AUTHORITATIVE-PUBLICATION-READINESS';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v541-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v528-READINESS-STATE-RECONCILIATION';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,9 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-readiness-state-reconciliation-v528',
+  'network-accepted-to-ready-authoritative-promotion-v528',
+  'network-submit-live-stale-state-self-heal-v528',
   'network-authoritative-publication-readiness-v527',
   'network-server-guided-next-action-v527',
   'network-persisted-publisher-copy-state-v527',
@@ -897,7 +900,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v540-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v527-AUTHORITATIVE-PUBLICATION-READINESS',
+  build: 'CS-2026-10-06-CANONICAL-v541-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v528-READINESS-STATE-RECONCILIATION',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -1001,6 +1004,8 @@ app.get('/api/regression-contract',(req,res)=>{
     prewrite_internal_real_page_first_v508:src.includes('LAST-RESORT fallback')&&src.includes('publisher_verified_page_fallback'),
     network_refresh_all_v502:networkSrc.includes('Refresh all & verify')&&networkSrc.includes('images_required:false'),
     network_authoritative_readiness_v527:networkSrc.includes('_networkPublicationReadinessV527')&&networkSrc.includes("engine:'network-publication-readiness-v527'")&&networkSrc.includes('readiness:resolved.readiness'),
+    network_readiness_state_reconcile_v528:networkSrc.includes('_networkReconcileReadyStateV528')&&networkSrc.includes("status='ready'")&&networkSrc.includes('authoritative_ready_promoted'),
+    network_submit_live_self_heal_v528:networkSrc.includes("require_copied:true")&&networkSrc.includes('Placement lifecycle is not eligible for live submission after authoritative readiness reconciliation.'),
     network_readiness_guided_action_v527:networkSrc.includes('const r=d&&d.readiness||{}')&&networkSrc.includes('action.control_id')&&networkSrc.includes('renderAuthoritativeReadiness'),
     network_readiness_copy_persistence_v527:networkSrc.includes('/mark-seo-copied')&&networkSrc.includes('Publisher copy state is now persisted server-side'),
     network_readiness_enforced_release_v527:networkSrc.includes('SEO publication HTML is locked until the authoritative Publication Readiness Engine is Ready')&&networkSrc.includes('Manual verification is blocked because the current publication no longer satisfies the authoritative Ready contract'),
