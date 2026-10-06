@@ -1,4 +1,4 @@
-// ContentScale Network v529 — unified Action/Attention Engine; v528 readiness-state reconciliation + v527 readiness engine preserved
+// ContentScale Network v530 — Network Test Lab; v529 unified Action/Attention Engine + v528 readiness-state reconciliation preserved
 'use strict';
 
 // CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v509
@@ -5637,6 +5637,113 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
     const center=await _networkAdminActionCenterV529();res.set('Cache-Control','no-store');res.json({success:true,...center});
   }));
 
+  // v530 — Network Test Lab.
+  // Safe by design: synthetic scenarios + read-only inspection only.
+  // It never writes workflow state, sends email, calls Gemini, performs SERP research,
+  // awards credits, or fetches external live pages.
+  function _networkTestLabSuiteV530(){
+    const base={
+      placement_status:'ready',prewrite_linked:true,ai_complete:true,internal_destination_ready:true,generation_current:true,
+      internal_candidate_count:5,external_candidate_count:5,internal_used_count:3,external_used_count:3,link_policy_ready:true,
+      brief_fidelity_ready:true,publication_standard_ready:true,meta_policy_ready:true,seed_keyword_ready:true,
+      internal_preview_current:true,official_scan_current:true,official_contentscore:92,seo_copied_current:false,seo_copied_at:null,live_verification:null
+    };
+    const at=(over={})=>Object.assign({},base,over);
+    const live=(over={})=>Object.assign({run_no:1,http_status:200,indexable:true,canonical_ok:true,brand_mention_ok:true,source_link_ok:true,content_match_ok:true,password_protected:false,result_status:'passed',details:{},checked_at:'2026-10-06T10:00:00.000Z'},over);
+    const pubCases=[
+      ['prewrite_missing',at({prewrite_linked:false}),'prewrite'],
+      ['ai_missing',at({ai_complete:false}),'prewrite'],
+      ['internal_destination_missing',at({internal_destination_ready:false}),'prewrite'],
+      ['internal_candidates_2',at({internal_candidate_count:2,internal_used_count:2,link_policy_ready:false}),'discover_internal'],
+      ['external_candidates_2',at({external_candidate_count:2,external_used_count:2,link_policy_ready:false}),'suggest_external'],
+      ['links_need_insertion',at({internal_used_count:1,external_used_count:2,link_policy_ready:false}),'refresh_all'],
+      ['generation_stale',at({generation_current:false}),'refresh_all'],
+      ['brief_fidelity_missing',at({brief_fidelity_ready:false}),'refresh_all'],
+      ['preview_stale',at({internal_preview_current:false}),'refresh_all'],
+      ['contentscore_stale',at({official_scan_current:false,official_contentscore:0}),'refresh_all'],
+      ['contentscore_low',at({official_contentscore:71}),'refresh_all'],
+      ['ready_not_copied',at({seo_copied_current:false}),'copy_seo_html'],
+      ['ready_copied',at({seo_copied_current:true,seo_copied_at:'2026-10-06T10:05:00.000Z'}),'publish_precheck'],
+      ['submitted_precheck_passed',at({placement_status:'submitted',seo_copied_current:true,seo_copied_at:'2026-10-06T09:59:00.000Z',live_verification:live()}),'manual_verify'],
+      ['submitted_fetch_failed_before_copy',at({placement_status:'submitted',seo_copied_current:false,live_verification:live({http_status:0,result_status:'failed',details:{fetch_error:'timeout'}})}),'copy_after_failed_check'],
+      ['submitted_fetch_failed_after_copy',at({placement_status:'submitted',seo_copied_current:true,seo_copied_at:'2026-10-06T10:05:00.000Z',live_verification:live({http_status:0,result_status:'failed',details:{fetch_error:'timeout'}})}),'retry_live_precheck'],
+      ['submitted_reachable_failed',at({placement_status:'submitted',seo_copied_current:true,live_verification:live({result_status:'failed',canonical_ok:false,details:{}})}),'needs_changes'],
+      ['verified_current',at({placement_status:'verified',seo_copied_current:true,live_verification:live()}),'done'],
+      ['verified_became_stale',at({placement_status:'verified',internal_preview_current:false,seo_copied_current:true,live_verification:live()}),'reopen_editing']
+    ];
+    const publication=pubCases.map(([key,ctx,expected])=>{const result=_networkPublicationReadinessV527(ctx),actual=String(result.next_action&&result.next_action.key||'');return{domain:'publication',key,expected,actual,pass:actual===expected,final_ready:!!result.final_ready,blocking_missing:result.blocking_missing||[],next_action:result.next_action||null}});
+
+    const publisherCases=[
+      ['publisher_ready_copy',at({seo_copied_current:false}),'copy_seo_html'],
+      ['publisher_ready_submit',at({seo_copied_current:true,seo_copied_at:'2026-10-06T10:05:00.000Z'}),'submit_live'],
+      ['publisher_submitted_wait',at({placement_status:'submitted',seo_copied_current:true,live_verification:null}),'manual_review'],
+      ['publisher_verified_done',at({placement_status:'verified',seo_copied_current:true,live_verification:live()}),'verified'],
+      ['publisher_needs_review_resubmit',at({placement_status:'needs_review',seo_copied_current:true,seo_copied_at:'2026-10-06T10:05:00.000Z',live_verification:null}),'resubmit_live'],
+      ['publisher_not_ready_wait',at({internal_used_count:1,link_policy_ready:false}),'contentscale_preparing']
+    ];
+    const publisher=publisherCases.map(([key,ctx,expected])=>{const readiness=_networkPublicationReadinessV527(ctx),placement={id:999,status:ctx.placement_status};const action=_networkPublisherRoleActionV529(readiness,placement),actual=String(action&&action.key||'');return{domain:'publisher',key,expected,actual,pass:actual===expected,kind:action.kind,label:action.label}});
+
+    const normalized=[
+      _networkGuidedActionV529({role:'business',kind:'waiting',key:'verification_pending',label:'Waiting for ContentScale verification'}),
+      _networkGuidedActionV529({role:'business',kind:'done',key:'verified',label:'Business verified'}),
+      _networkGuidedActionV529({role:'scout',kind:'action',key:'share_referral',label:'Copy your referral link',priority:20}),
+      _networkGuidedActionV529({role:'scout',kind:'waiting',key:'reward_pending',label:'Publisher activated · waiting for reward decision'})
+    ].map((a,i)=>({domain:'role_contract',key:['business_waiting','business_done','scout_action','scout_waiting'][i],expected:['waiting','done','action','waiting'][i],actual:a.kind,pass:a.kind===['waiting','done','action','waiting'][i],action:a}));
+
+    const priorityInput=[
+      _networkGuidedActionV529({role:'admin',kind:'action',key:'advertising',label:'Advertising',priority:70}),
+      _networkGuidedActionV529({role:'admin',kind:'action',key:'publisher',label:'Publisher',priority:15}),
+      _networkGuidedActionV529({role:'admin',kind:'action',key:'manual_verify',label:'Manual verify',priority:5}),
+      _networkGuidedActionV529({role:'admin',kind:'action',key:'business',label:'Business claim',priority:12})
+    ];
+    priorityInput.sort((a,b)=>(Number(a.priority||100)-Number(b.priority||100))||String(a.label||'').localeCompare(String(b.label||'')));
+    const priority=[{domain:'admin_action_center',key:'highest_priority_first',expected:'manual_verify',actual:priorityInput[0]&&priorityInput[0].key,pass:!!priorityInput[0]&&priorityInput[0].key==='manual_verify',ordered_keys:priorityInput.map(x=>x.key)}];
+
+    const results=[...publication,...publisher,...normalized,...priority];
+    const failed=results.filter(x=>!x.pass);
+    return {engine:'network-test-lab-v530',safe_simulation:true,total:results.length,passed:results.length-failed.length,failed:failed.length,all_passed:failed.length===0,results};
+  }
+
+  async function _networkTestLabInspectPlacementV530(id){
+    id=Number(id||0);if(!id){const e=new Error('Enter a valid placement ID');e.status=400;throw e;}
+    const qr=await pool.query(`SELECT p.id AS placement_id,p.status,p.content_id,p.published_url,p.verified_at,p.verification_decision,p.source_link_required,p.brand_mention_required,p.updated_at AS placement_updated_at,
+      c.brand_name,c.primary_niche,c.source_snapshot,c.prewrite_brief_id AS current_prewrite_brief_id,c.title AS opportunity_title,
+      w.domain AS publisher_domain,w.brand_name AS publisher_brand,ow.domain AS source_domain,ow.brand_name AS source_brand,pv.*
+      FROM network_placements p
+      JOIN network_content c ON c.id=p.content_id
+      JOIN network_websites w ON w.id=p.publisher_website_id
+      LEFT JOIN network_publication_versions pv ON pv.placement_id=p.id
+      LEFT JOIN network_websites ow ON ow.id=c.owner_website_id
+      WHERE p.id=$1 LIMIT 1`,[id]);
+    const row=qr.rows[0];if(!row){const e=new Error('Placement not found');e.status=404;throw e;}
+    if(!row.id)return{placement:{id,status:row.status,published_url:row.published_url||null,publisher_domain:row.publisher_domain},publication_exists:false,readiness:null,admin_action:null,invariants:[{key:'publication_exists',pass:false,detail:'Publisher Edition has not been generated yet.'}]};
+    const ir=await pool.query(`SELECT id,image_role,image_name,prompt,alt_text,caption,suggested_filename,placement_hint,mime_type,original_filename,byte_size,status,sort_order,created_at,updated_at FROM network_publication_images WHERE publication_version_id=$1 ORDER BY sort_order,id`,[row.id]);
+    const resolved=await _networkResolvePublisherReadinessV527(row,ir.rows),r=resolved.readiness||{},na=r.next_action||{},adminAction=await _networkAdminPublicationActionV529(id);
+    const invariants=[];
+    invariants.push({key:'single_next_action',pass:!!na.key,detail:na.key?('Next: '+na.key):'No next action key returned.'});
+    invariants.push({key:'done_only_when_verified',pass:!(na.done&&String(row.status||'')!=='verified'),detail:'done='+!!na.done+' · placement='+String(row.status||'')});
+    invariants.push({key:'verified_stale_reopens',pass:!(String(row.status||'')==='verified'&&!r.final_ready&&String(na.key||'')!=='reopen_editing'),detail:'verified='+String(row.status||'')+' · final_ready='+!!r.final_ready+' · next='+String(na.key||'')});
+    invariants.push({key:'ready_requires_final_ready',pass:!(String(row.status||'')==='ready'&&!r.final_ready),detail:'placement='+String(row.status||'')+' · final_ready='+!!r.final_ready});
+    invariants.push({key:'link_policy_3x3',pass:!r.blocking_missing||(!r.blocking_missing.includes('internal_3')&&!r.blocking_missing.includes('external_3')),detail:(r.blocking_missing||[]).filter(x=>x==='internal_3'||x==='external_3').join(', ')||'3×3 link gates satisfied'});
+    invariants.push({key:'blue_control_for_action',pass:!!(na.done||na.control_id),detail:na.done?'Workflow done':('control_id='+String(na.control_id||''))});
+    return{
+      placement:{id,status:row.status,published_url:row.published_url||null,publisher_domain:row.publisher_domain,publisher_brand:row.publisher_brand,verified_at:row.verified_at||null,updated_at:row.placement_updated_at||null},
+      publication_exists:true,
+      publication:{id:row.id,title:row.title,quality_status:row.quality_status,generated_at:row.generated_at,updated_at:row.updated_at},
+      readiness:r,link_policy:resolved.linkPolicy,publication_standard:resolved.standard,seed_keyword_policy:resolved.seed,brief_fidelity:resolved.fidelity,
+      admin_action:adminAction,invariants,all_invariants_pass:invariants.every(x=>x.pass),
+      safe_read_only:true
+    };
+  }
+
+  app.get('/api/network/admin/test-lab/run', verifyAdmin, wrap(async (req,res)=>{
+    const suite=_networkTestLabSuiteV530();res.set('Cache-Control','no-store');res.json({success:true,...suite,rule:'Synthetic read-only regression suite. No database writes, email, Gemini, research, credits or external fetches occur.'});
+  }));
+
+  app.get('/api/network/admin/test-lab/placement/:id', verifyAdmin, wrap(async (req,res)=>{
+    const out=await _networkTestLabInspectPlacementV530(req.params.id);res.set('Cache-Control','no-store');res.json({success:true,...out,rule:'Read-only inspection of the current persisted placement/package. No state is changed.'});
+  }));
+
   app.get('/api/network/admin/reset-status', verifyAdmin, wrap(async (req,res)=>{
     const discovered=await pool.query(`
       SELECT tablename
@@ -5856,6 +5963,31 @@ return '<div class="row"><strong>'+esc(x.brand_name||x.domain)+'</strong> <span 
     });
   }));
 
+  app.get('/network/admin/test-lab', (req,res)=>{
+    if(!envEnabled())return res.status(404).send('Network is not enabled.');
+    res.set('Cache-Control','no-store');
+    res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Network Test Lab · ContentScale</title><style>
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#07101f;color:#eef4ff;font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1350px;margin:auto;padding:28px 18px 70px}a{color:#8dd9ff}.top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}.card{background:#0d172b;border:1px solid #2a3e63;border-radius:16px;padding:18px;margin:14px 0}.safe{border-color:#22c55e;background:#0b2119}.warn{border-color:#f59e0b;background:#241b0b}.tiny{font-size:12px;color:#9fb1d6;line-height:1.5}.muted{color:#9fb1d6}.btn{display:inline-flex;align-items:center;border:1px solid #3f65a4;border-radius:10px;padding:10px 13px;font-weight:900;text-decoration:none;background:#101b31;color:#fff;cursor:pointer}.btn.next{background:#1d4ed8;border-color:#60a5fa}.btn.secondary{background:#172033}.btn:disabled{opacity:.6;cursor:wait}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.metric{background:#091426;border:1px solid #293d60;border-radius:12px;padding:13px}.metric strong{display:block;font-size:25px}.row{border-top:1px solid #26375c;padding:11px 0}.pass{color:#86efac}.fail{color:#fca5a5}.pill{display:inline-block;border:1px solid #35507a;border-radius:999px;padding:4px 9px;font-size:12px}.pill.pass{border-color:#22c55e}.pill.fail{border-color:#ef4444}.suite{max-height:610px;overflow:auto}.scenario{display:grid;grid-template-columns:minmax(170px,1fr) minmax(150px,1fr) minmax(150px,1fr) 90px;gap:10px;align-items:center;border-top:1px solid #253858;padding:9px 0}.route{border:1px solid #2d446d;border-radius:13px;padding:13px;background:#091426}.route h3{margin:0 0 6px}.inspector input{width:170px;background:#091329;color:#fff;border:1px solid #35507a;border-radius:9px;padding:10px}.json{white-space:pre-wrap;word-break:break-word;background:#07101b;border:1px solid #26375c;border-radius:12px;padding:13px;max-height:520px;overflow:auto;font-size:11px;color:#cbd5e1}.inv{padding:8px 0;border-top:1px solid #26375c}@media(max-width:720px){.scenario{grid-template-columns:1fr}.top{display:block}}</style></head><body><main>
+<div class="top"><div><div class="tiny">CONTENTSCALE NETWORK · ADMIN ONLY</div><h1 style="margin:4px 0">Network Test Lab</h1><div class="muted">Test the state machines before relying on real role-by-role data.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><a class="btn secondary" href="/network/admin">← Network Cockpit</a><a class="btn secondary" href="/network/publishing">Publishing</a><a class="btn secondary" href="/network/verification">Verification</a></div></div>
+<div class="card safe"><strong>Safe simulation</strong><div class="tiny" style="margin-top:5px">The automatic suite does not write database state, send email, call Gemini, rerun research, award credits or fetch external live pages. The placement inspector is read-only.</div></div>
+<div class="card"><div class="top"><div><h2 style="margin:0">Automated state regression suite</h2><div class="tiny">Publication Readiness + Publisher role + shared role contract + admin priority.</div></div><button class="btn next" id="runSuite">Run all tests</button></div><div id="suiteSummary" class="grid" style="margin-top:12px"></div><div id="suiteRows" class="suite" style="margin-top:10px"></div></div>
+<div class="card inspector"><h2>Inspect a real placement</h2><div class="tiny">Reads the exact persisted placement and calculates current authoritative readiness without changing it.</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><input id="placementId" type="number" min="1" value="1" placeholder="Placement ID"><button class="btn next" id="inspectBtn">Inspect placement</button><a class="btn secondary" id="openWorkflow" href="/network/publishing/1?guided=1">Open workflow</a></div><div id="inspectSummary" style="margin-top:12px"></div><pre id="inspectJson" class="json" style="display:none"></pre></div>
+<div class="card"><h2>Manual end-to-end test map</h2><div class="tiny">Use this after the synthetic suite passes. These links use the real Network flows, so data you create here is test data until final reset.</div><div class="grid" style="margin-top:12px">
+<div class="route"><h3>1 · Business</h3><div class="tiny">Create/claim → admin verifies → business dashboard → public verified profile.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/directory">Start business claim</a> <a class="btn secondary" target="_blank" href="/network/directory/admin">Admin review</a></div></div>
+<div class="route"><h3>2 · Publisher</h3><div class="tiny">Apply → admin approves → website check → publisher dashboard activates.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network#join">Publisher join</a> <a class="btn secondary" target="_blank" href="/network/publisher-applications">Applications</a> <a class="btn secondary" target="_blank" href="/network/websites">Website check</a></div></div>
+<div class="route"><h3>3 · Scout / referral</h3><div class="tiny">Create scout → share referral → publisher applies → activation/reward states.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/referrals">Referral admin</a></div></div>
+<div class="route"><h3>4 · Opportunity + placement</h3><div class="tiny">Opportunity → hard interest → Prewrite → unique Publisher Edition.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/opportunities">Opportunities</a> <a class="btn secondary" target="_blank" href="/network/publishing">Publishing</a></div></div>
+<div class="route"><h3>5 · Publication readiness</h3><div class="tiny">3 internal + 3 external → repair → internal preview → ContentScore → Copy SEO HTML.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/publishing">Open Publishing</a></div></div>
+<div class="route"><h3>6 · Live verification</h3><div class="tiny">Submit exact URL → pre-check → manual verify / needs changes → credits idempotent.</div><div style="margin-top:9px"><a class="btn secondary" target="_blank" href="/network/verification">Verification queue</a></div></div>
+</div></div>
+<div class="card warn"><strong>Final clean launch test</strong><div class="tiny" style="margin-top:5px">After the full role-by-role test passes, return to Network Cockpit and use the existing “Delete ALL Network test data” control once. Do not use the reset while you still need the test records.</div></div>
+<script>(function(){const key=localStorage.getItem('admin_id')||'',esc=s=>String(s==null?'':s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]||c)),api=async(path)=>{const r=await fetch(path,{headers:{'x-admin-key':key},cache:'no-store'}),t=await r.text();let d={};try{d=t?JSON.parse(t):{}}catch(e){}if(!r.ok)throw Error(d.error||('HTTP '+r.status));return d};
+function summaryMetric(n,label,cls){return '<div class="metric"><strong class="'+(cls||'')+'">'+esc(n)+'</strong><span>'+esc(label)+'</span></div>'}
+async function runSuite(){const b=document.getElementById('runSuite');b.disabled=true;b.textContent='Running…';try{const d=await api('/api/network/admin/test-lab/run');document.getElementById('suiteSummary').innerHTML=summaryMetric(d.total,'Scenarios')+summaryMetric(d.passed,'Passed','pass')+summaryMetric(d.failed,'Failed',d.failed?'fail':'pass')+summaryMetric(d.all_passed?'PASS':'FAIL','Suite',d.all_passed?'pass':'fail');document.getElementById('suiteRows').innerHTML=(d.results||[]).map(x=>'<div class="scenario"><div><span class="pill">'+esc(x.domain)+'</span> <strong>'+esc(x.key)+'</strong></div><div class="tiny">Expected: <b>'+esc(x.expected)+'</b></div><div class="tiny">Actual: <b>'+esc(x.actual)+'</b></div><div class="'+(x.pass?'pass':'fail')+'"><b>'+(x.pass?'✓ PASS':'✕ FAIL')+'</b></div></div>').join('');}catch(e){document.getElementById('suiteRows').innerHTML='<div class="fail">✕ '+esc(e.message)+'</div>'}finally{b.disabled=false;b.textContent='Run all tests'}}
+async function inspect(){const id=Number(document.getElementById('placementId').value||0),b=document.getElementById('inspectBtn'),sum=document.getElementById('inspectSummary'),pre=document.getElementById('inspectJson');if(!id)return;document.getElementById('openWorkflow').href='/network/publishing/'+id+'?guided=1';b.disabled=true;b.textContent='Inspecting…';try{const d=await api('/api/network/admin/test-lab/placement/'+id),r=d.readiness||{},na=r.next_action||{},inv=d.invariants||[];sum.innerHTML='<div class="grid">'+summaryMetric(d.placement&&d.placement.status||'—','Placement state')+summaryMetric(r.final_ready?'YES':'NO','Final ready',r.final_ready?'pass':'')+summaryMetric(na.key||'—','Next action')+summaryMetric(d.all_invariants_pass?'PASS':'CHECK','Invariants',d.all_invariants_pass?'pass':'fail')+'</div><div style="margin-top:10px">'+inv.map(x=>'<div class="inv '+(x.pass?'pass':'fail')+'"><b>'+(x.pass?'✓':'✕')+' '+esc(x.key)+'</b><div class="tiny">'+esc(x.detail||'')+'</div></div>').join('')+'</div>';pre.style.display='block';pre.textContent=JSON.stringify(d,null,2);}catch(e){sum.innerHTML='<div class="fail">✕ '+esc(e.message)+'</div>';pre.style.display='none'}finally{b.disabled=false;b.textContent='Inspect placement'}}
+document.getElementById('runSuite').onclick=runSuite;document.getElementById('inspectBtn').onclick=inspect;document.getElementById('placementId').onchange=function(){document.getElementById('openWorkflow').href='/network/publishing/'+Number(this.value||1)+'?guided=1'};if(!key){document.getElementById('suiteRows').innerHTML='<div class="fail">Log in to ContentScale Admin first.</div>'}else runSuite();})();</script></main></body></html>`);
+  });
+
   app.get('/network/admin', (req, res) => {
     if (!envEnabled()) return res.status(404).send('Network is not enabled.');
     res.set('Cache-Control','no-store');
@@ -5885,7 +6017,7 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
 </style></head><body>
 <div id="gate" class="gate"><div class="gateBox"><div class="eyebrow">Protected administration</div><h2>Network Cockpit</h2><p id="gateText" class="muted">Checking your existing ContentScale admin session…</p><button id="loginBtn" class="btn" style="display:none">Open ContentScale Admin Login</button></div></div>
 <main id="main" style="display:none">
-<div class="top"><div><div class="eyebrow">CONTENTSCALE NETWORK · CONTROL CENTER</div><h1>Network Cockpit</h1><div class="muted">TEST MODE · Guided handoff: Business/Publisher acts → Admin takes over for approval → user continues → Admin verifies. Reset everything again before launch.</div></div><div class="actions"><a class="btn secondary" target="_blank" href="/network">Public Network ↗</a><a class="btn good" href="/network/directory/admin">Business Verification</a><button class="btn secondary" id="initBtn">Run Network init</button><button class="btn" id="refreshBtn">Refresh cockpit</button></div></div>
+<div class="top"><div><div class="eyebrow">CONTENTSCALE NETWORK · CONTROL CENTER</div><h1>Network Cockpit</h1><div class="muted">TEST MODE · Guided handoff: Business/Publisher acts → Admin takes over for approval → user continues → Admin verifies. Reset everything again before launch.</div></div><div class="actions"><a class="btn next" href="/network/admin/test-lab">Network Test Lab</a><a class="btn secondary" target="_blank" href="/network">Public Network ↗</a><a class="btn good" href="/network/directory/admin">Business Verification</a><button class="btn secondary" id="initBtn">Run Network init</button><button class="btn" id="refreshBtn">Refresh cockpit</button></div></div>
 <div class="health" id="health"></div><section class="card" style="border-color:#f59e0b;background:#23190b"><strong style="color:#fde68a">TEST MODE</strong><div class="tiny" style="margin-top:5px">Everything created in ContentScale Network is test data until you finish the complete role-by-role test. Before launch, use <b>Delete ALL Network test data</b> one final time so production starts empty.</div></section>
 
 <section class="hero"><div class="sectionTitle"><div><div class="eyebrow">ADMIN TOUR</div><h2>What you do, in order</h2></div><a class="btn good" href="/network/directory/admin">Open Step 1 · Business Verification</a></div><div class="flow"><div class="step"><div class="num">1</div><h3>Verify business</h3><p>Import or review a claim. Check the real website, niche and market.</p><div class="next"><b>Press:</b> Check website → Verify business.</div></div><div class="step"><div class="num">2</div><h3>Publisher opt-in</h3><p>A verified business may choose publishing. Do not enroll it automatically.</p><div class="next"><b>Press:</b> Approve + link website, then review the website.</div></div><div class="step"><div class="num">3</div><h3>Starter exchange</h3><p>New publishers begin with 1 give + 1 receive. Capture H1/topic + short pitch first.</p><div class="next"><b>Go to:</b> Opportunities after real intent.</div></div><div class="step"><div class="num">4</div><h3>Generate after match</h3><p>Once an approved website commits, generate that publisher's unique edition.</p><div class="next"><b>Go to:</b> Publishing.</div></div><div class="step"><div class="num">5</div><h3>Verify live page</h3><p>Publisher submits the live URL. You manually verify before credits.</p><div class="next"><b>Go to:</b> Manual Verification.</div></div><div class="step"><div class="num">6</div><h3>Marketplace</h3><p>After starter exchange, continue through normal opportunities, referrals and credits.</p><div class="next"><b>Watch:</b> placements and history.</div></div></div></section><section class="hero attention urgent">
