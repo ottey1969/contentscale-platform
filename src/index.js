@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v521-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v508-SCOPE-FIX';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v522-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v509-SINGLE-NEXT-ACTION';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -890,7 +890,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v521-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v508-SCOPE-FIX',
+  build: 'CS-2026-10-06-CANONICAL-v522-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v509-SINGLE-NEXT-ACTION',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -44988,7 +44988,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </div>
     <div id="pwbStatus" style="font-size:11px;color:#9ca3af;margin-top:10px;"></div>
     <div id="pwbActionBar" style="margin-top:10px;padding:10px;background:#0b1220;border:1px solid #26364d;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="cs-btn primary" id="pwbApproveGenerate" disabled style="flex:1;min-width:220px;">Approve Brief &amp; Generate Publisher Edition</button>
+      <button class="cs-btn" id="pwbApproveGenerate" disabled style="flex:1;min-width:220px;">Approve Brief &amp; Generate Publisher Edition</button>
       <button class="cs-btn" id="pwbRegenerateMissing" disabled>Complete missing only · reuse research</button>
       <button class="cs-btn" id="pwbRunFinalQa" disabled>Run final QA · no research · no Gemini</button>
       <button class="cs-btn" id="pwbCopyExternalAi" disabled>Copy for external AI</button>
@@ -46462,6 +46462,7 @@ function _pwbApplyActionState(){
   var aiUi=_pwbAiFiveUiState(),aiInputReady=!_NETWORK_PREWRITE_AUTHORIZED||aiUi.manual_ready;
   var diag=_pwbRestoreDiagnosticJob(_pwbActionKeyword());
   var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),share=document.getElementById('pwbShareBrief'),state=document.getElementById('pwbActionState'),shareStatus=document.getElementById('pwbShareStatus'),fresh=document.getElementById('pwbGenerateBtn');
+  [fresh,complete,finalQa,approve].forEach(function(x){if(x)x.classList.remove('primary');});
 
   // 1) Fresh analysis is only actionable when there is no current Brief or the user intentionally
   // changed an input. It must never compete visually with the next step of an existing workflow.
@@ -46509,7 +46510,7 @@ function _pwbApplyActionState(){
   if(approve){
     var canApprove=hasBrief&&!stale&&passed&&pubReady&&qaPersisted&&hasSaved&&!!placement&&!_pwbPublisherEditionReady;
     approve.disabled=!canApprove;
-    if(_pwbPublisherEditionReady)approve.textContent='✓ Publisher Edition ready';
+    if(_pwbPublisherEditionReady)approve.textContent='✓ Publisher Edition generated';
     else if(stale)approve.textContent='Approve & Generate · inputs changed';
     else if(!placement)approve.textContent='Approve & Generate · Network placement required';
     else if(_pwbCurrentNotPassed||!passed)approve.textContent='Approve & Generate · Brief not passed';
@@ -46559,6 +46560,13 @@ function _pwbApplyActionState(){
     else if(hasSaved&&!stale){shareStatus.style.display='block';shareStatus.innerHTML='<span style="color:#94a3b8">Public sharing is off. Create a permanent link when you want to share this Brief.</span>';}
     else shareStatus.style.display='none';
   }
+  // v509: exactly one primary workflow action is highlighted at a time.
+  var nextPrimary=null;
+  if(fresh&&!fresh.disabled)nextPrimary=fresh;
+  else if(complete&&!complete.disabled)nextPrimary=complete;
+  else if(finalQa&&!finalQa.disabled)nextPrimary=finalQa;
+  else if(approve&&!approve.disabled)nextPrimary=approve;
+  if(nextPrimary)nextPrimary.classList.add('primary');
 
   if(state){
     var aiScore=typeof qc.readiness_score==='number'?qc.readiness_score:null;
