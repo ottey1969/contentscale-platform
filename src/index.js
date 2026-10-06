@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v539-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v526-DETERMINISTIC-3X3-LINK-REPAIR';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v540-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v527-AUTHORITATIVE-PUBLICATION-READINESS';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,10 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-authoritative-publication-readiness-v527',
+  'network-server-guided-next-action-v527',
+  'network-persisted-publisher-copy-state-v527',
+  'network-readiness-enforced-seo-submit-review-v527',
   'network-deterministic-3x3-link-repair-v526',
   'network-link-only-refresh-no-regeneration-v526',
   'network-publication-link-policy-v522',
@@ -893,7 +897,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v539-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v526-DETERMINISTIC-3X3-LINK-REPAIR',
+  build: 'CS-2026-10-06-CANONICAL-v540-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v527-AUTHORITATIVE-PUBLICATION-READINESS',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -996,10 +1000,14 @@ app.get('/api/regression-contract',(req,res)=>{
     network_targeted_fidelity_repair:networkSrc.includes('repair-brief-fidelity')&&networkSrc.includes('Repair missing content requirements'),
     prewrite_internal_real_page_first_v508:src.includes('LAST-RESORT fallback')&&src.includes('publisher_verified_page_fallback'),
     network_refresh_all_v502:networkSrc.includes('Refresh all & verify')&&networkSrc.includes('images_required:false'),
+    network_authoritative_readiness_v527:networkSrc.includes('_networkPublicationReadinessV527')&&networkSrc.includes("engine:'network-publication-readiness-v527'")&&networkSrc.includes('readiness:resolved.readiness'),
+    network_readiness_guided_action_v527:networkSrc.includes('const r=d&&d.readiness||{}')&&networkSrc.includes('action.control_id')&&networkSrc.includes('renderAuthoritativeReadiness'),
+    network_readiness_copy_persistence_v527:networkSrc.includes('/mark-seo-copied')&&networkSrc.includes('Publisher copy state is now persisted server-side'),
+    network_readiness_enforced_release_v527:networkSrc.includes('SEO publication HTML is locked until the authoritative Publication Readiness Engine is Ready')&&networkSrc.includes('Manual verification is blocked because the current publication no longer satisfies the authoritative Ready contract'),
     network_images_nonblocking_v502:networkSrc.includes('existing draft kept available')&&networkSrc.includes('Images · optional'),
     network_generation_recovery_v503:networkSrc.includes('_networkGenerationConflictV503')&&networkSrc.includes("'needs_review'")&&networkSrc.includes('placement_state_race'),
     network_generation_error_visibility_v503:src.includes('_pwbGenerationErrorHtmlV509')&&networkSrc.includes('publisherGenerationError')&&networkSrc.includes('Exact server details'),
-    network_refresh_all_auto_regenerate_v503:networkSrc.includes('Re-locking the current Brief and regenerating the Publisher Edition')&&networkSrc.includes('force_regenerate:true'),
+    network_refresh_all_surgical_repair_v526:networkSrc.includes('Re-locking the current Brief for surgical repair')&&networkSrc.includes('No full article regeneration')&&networkSrc.includes('deterministic_link_repair'),
     network_image_diversity_v503:networkSrc.includes('_networkImageDiversityLockV503')&&networkSrc.includes('VISUAL COMPOSITION LOCK')&&networkSrc.includes('materially different in composition'),
     network_image_x_delete_v503:networkSrc.includes('data-delete-placed')&&networkSrc.includes('Delete image from this article'),
     prewrite_five_ai_hard_gate_v506:src.includes('ai_evidence_5of5')&&src.includes('Research incomplete')&&src.includes('ai_systems_required=5')&&src.includes('_pwbMergeManualAiEvidenceV506'),
