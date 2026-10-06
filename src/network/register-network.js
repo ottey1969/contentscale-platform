@@ -1,4 +1,4 @@
-// ContentScale Network v510 — guided single-next-action + automatic next-step scroll
+// ContentScale Network v511 — entity fidelity hardening + guided single-next-action
 'use strict';
 
 // CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v509
@@ -947,6 +947,15 @@ function _briefItemText(v, keys=[]){
 
 function _briefNorm(v){return normalizeComparableText(String(v||''));}
 function _briefTokens(v){return _briefNorm(v).split(' ').filter(x=>x.length>2&&!['the','and','for','with','from','that','this','what','when','your','into','how','why','are','vs','via','een','het','van','voor','met','wat','hoe','waarom','und','der','die','das','con','para','que'].includes(x));}
+function _briefEntityCovered(entity,articleNorm){
+  const raw=cleanText(entity,500),norm=_briefNorm(raw);if(!norm)return true;if(articleNorm.includes(norm))return true;
+  const acronym=(raw.match(/\(([A-Z][A-Z0-9-]{1,12})\)/)||[])[1]||'';if(acronym&&new RegExp('(?:^|\\s|[^a-z0-9])'+acronym.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'(?:$|\\s|[^a-z0-9])','i').test(articleNorm))return true;
+  const variants=raw.split(/\s*(?:\/|\||;|\u2014|\u2013|\s-\s)\s*/).map(_briefNorm).filter(x=>x.length>=3);if(variants.some(v=>articleNorm.includes(v)))return true;
+  const toks=Array.from(new Set(_briefTokens(raw)));if(!toks.length)return true;const hits=toks.filter(t=>articleNorm.includes(t)).length;
+  if(toks.length===1)return hits===1;
+  if(toks.length===2)return hits===2;
+  return hits>=2&&(hits/toks.length)>=0.75;
+}
 function _briefSimilar(a,b){
   const na=_briefNorm(a),nb=_briefNorm(b);if(!na||!nb)return false;
   if(na.includes(nb)||nb.includes(na))return true;
@@ -1258,7 +1267,7 @@ function checkApprovedBriefFidelity(html, briefJson, opts={}){
   const outlineOrderBroken=!missingH2s.length&&matchedH2Indexes.some((idx,i)=>i>0&&idx<=matchedH2Indexes[i-1]);
   const questionMissing=q=>{const nq=_briefNorm(q);return nq&&!articleNorm.includes(nq)};
   const missingPaa=contract.paa_questions.filter(questionMissing),missingFaq=contract.faq_questions.filter(questionMissing);
-  const missingEntities=contract.entities.filter(x=>{const n=_briefNorm(x);return n&&!articleNorm.includes(n)});
+  const missingEntities=contract.entities.filter(x=>!_briefEntityCovered(x,articleNorm));
   const missingQuickFacts=contract.quick_facts.filter(x=>{const toks=_briefTokens(x);return toks.length&&toks.filter(t=>articleNorm.includes(t)).length/Math.max(1,toks.length)<0.6});
   const missingLimitations=contract.limitations.filter(x=>{const toks=_briefTokens(x);return toks.length>=3&&toks.filter(t=>articleNorm.includes(t)).length/Math.max(1,toks.length)<0.45});
   const missingUseCases=contract.use_cases.filter(x=>{const n=_briefNorm(x);return n&&!articleNorm.includes(n)});
@@ -2800,7 +2809,7 @@ ${JSON.stringify(googleManual||{}).slice(0,4000)}`;
       let html=ensureContentScaleAttribution(d.html||'',id);
       let plain=cleanText(d.plain_text||htmlText(html),50000);
       if(!title||htmlText(html).split(/\s+/).filter(Boolean).length<250)throw new Error('Generated edition failed minimum content quality check');
-      let briefFidelity=prewriteIntel?checkApprovedBriefFidelity(html,prewriteIntel.brief_json||{},{publisher_domain:x.publisher_domain,internal_candidates:generationLinkIntel.internal||[],required_internal_url:_requiredInternalUrl}):{passed:true,missing:[],groups:{},contract:null,counts:{}};
+      let briefFidelity=prewriteIntel?checkApprovedBriefFidelity(html,prewriteIntel.brief_json||{},{publisher_domain:x.publisher_domain,internal_candidates:generationLinkIntel.internal||[],required_internal_url:_requiredInternalUrl,approved_contract:approvedBriefContract}):{passed:true,missing:[],groups:{},contract:null,counts:{}};
       let repairUsed=false;
       if(prewriteIntel&&!briefFidelity.passed){
         repairUsed=true;
@@ -2814,6 +2823,7 @@ STRICT RULES:
 - If depth is listed as missing, expand the useful planned sections until FULL APPROVED CONTRACT.minimum_useful_words is met, aiming toward target_words. Do not add filler or unsupported facts.
 - Answer the exact real PAA/FAQ questions from the Brief when they are missing.
 - Include planned H2 topics from the Brief; wording may be natural but the topic may not disappear.
+- If entities is listed as missing, explicitly include every item in MISSING CONTRACT GROUPS.entities in natural factual prose. Preserve the recognizable entity name; do not replace it with a vague synonym. Do not invent claims about the entity.
 - Include the Brief's required evidence URLs as contextual links supporting the claims they belong to.
 - If statistics is listed as missing, incorporate the approved statistic from FULL APPROVED CONTRACT.statistics; cite best_source_url when available, otherwise source_url. Do not add unverified numbers.
 - If expert_quotes is listed as missing, incorporate a verified direct quote from FULL APPROVED CONTRACT.expert_quotes as a real <blockquote> with named attribution and source_url.
@@ -2838,10 +2848,11 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:d.meta_title||'',meta_d
         title=cleanText(d.title||title||x.title,300);
         html=ensureContentScaleAttribution(d.html||html,id);
         plain=cleanText(d.plain_text||htmlText(html),50000);
-        briefFidelity=checkApprovedBriefFidelity(html,prewriteIntel.brief_json||{},{publisher_domain:x.publisher_domain,internal_candidates:generationLinkIntel.internal||[],required_internal_url:_requiredInternalUrl});
+        briefFidelity=checkApprovedBriefFidelity(html,prewriteIntel.brief_json||{},{publisher_domain:x.publisher_domain,internal_candidates:generationLinkIntel.internal||[],required_internal_url:_requiredInternalUrl,approved_contract:approvedBriefContract});
       }
       if(prewriteIntel&&!briefFidelity.passed){
-        throw new Error('Publisher Edition did not honor the approved Prewrite Brief. Missing: '+briefFidelity.missing.join(', '));
+        await pool.query(`UPDATE network_placements SET status=$2,updated_at=NOW() WHERE id=$1 AND status='generating'`,[id,isRegeneration?'ready':'accepted']).catch(()=>{});
+        return res.status(422).json({success:false,error:'Publisher Edition still misses approved Brief requirements after targeted repair: '+briefFidelity.missing.join(', ')+'. Existing Publisher Edition was left unchanged.',missing:briefFidelity.missing,details:briefFidelity.groups||{},counts:briefFidelity.counts||{},research_rerun:false,saved:false});
       }
       const _approvedMeta=safeJsonObject(approvalCtx.brief_snapshot&&approvalCtx.brief_snapshot.meta_package),_approvedMetaTitle=cleanText(_approvedMeta.seo_title||'',60),_approvedMetaDesc=cleanText(_approvedMeta.meta_description||'',160);const metaTitle=_approvedMetaTitle||cleanText(d.meta_title||title,60),metaDescription=(_approvedMetaDesc.length>=140&&_approvedMetaDesc.length<=160)?_approvedMetaDesc:cleanText(d.meta_description||'',160);if(!metaTitle||metaTitle.length>60||metaDescription.length<140||metaDescription.length>160)throw new Error('SEO meta policy failed after generation: title must be 1-60 characters and meta description 140-160 characters. Edit/finalize the Prewrite SEO Package before approval.');const slug=slugifyNetwork(d.suggested_slug||title);
       const schema=(d.schema_json&&typeof d.schema_json==='object')?d.schema_json:{};
