@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v525-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v512-GUIDED-PUBLISH-RECOVERY';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v527-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v514-WHITE-READING-SURFACE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -890,7 +890,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v525-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v512-GUIDED-PUBLISH-RECOVERY',
+  build: 'CS-2026-10-06-CANONICAL-v527-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v514-WHITE-READING-SURFACE',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -53484,6 +53484,14 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
         .modal.active { display: flex; }
         .modal-content { background: white; border: 2px solid #a855f7; border-radius: 1rem; padding: 2rem; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
         .modal-content h2, .modal-content label, .modal-content p { color: #111827 !important; }
+        .network-attention-wrap { max-width:80rem; margin:12px auto 0; padding:0 24px; }
+        .network-attention { display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:#0b1b35;border:2px solid #3b82f6;border-radius:14px;padding:13px 15px;box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+        .network-attention.hidden { display:none; }
+        .network-attention-title { font-weight:900;font-size:15px; }
+        .network-attention-meta { font-size:12px;color:#bfdbfe!important; }
+        .network-attention-btn { background:#1d4ed8!important;border:1px solid #60a5fa!important;color:white!important;animation:networkAttentionPulse 1.6s ease-in-out infinite; }
+        @keyframes networkAttentionPulse { 0%,100%{box-shadow:0 0 0 0 rgba(96,165,250,.18)} 50%{box-shadow:0 0 0 7px rgba(96,165,250,.13)} }
+        @media(prefers-reduced-motion:reduce){.network-attention-btn{animation:none!important}}
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -53517,6 +53525,13 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
                 <button onclick="logout()" class="btn btn-danger"><i class="fas fa-sign-out-alt mr-2"></i> Logout</button>
             </div>
         </nav>
+
+        <div class="network-attention-wrap">
+            <div id="network-attention" class="network-attention hidden">
+                <div><div class="network-attention-title">⚠ Network action required</div><div id="network-attention-meta" class="network-attention-meta">Loading current Network action…</div></div>
+                <button id="network-attention-btn" class="btn network-attention-btn" type="button">Open next action</button>
+            </div>
+        </div>
 
         <!-- ── Timezone Business Hours Bar ─────────────────────────────── -->
         <div id="tz-bar" style="background:#0a0f1a;border-bottom:1px solid #1f2937;padding:6px 24px;display:flex;align-items:center;gap:6px;overflow-x:auto;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:11px;">
@@ -54215,7 +54230,30 @@ const _ADMIN_DASHBOARD_HTML = `<!DOCTYPE html>
             if (tab==='giveaccess') loadGiveAccess();
         }
 
-        function loadAllData() { loadLeaderboard(); loadFreelancers(); }
+        let networkAttentionTimer = null;
+        async function loadNetworkAttention() {
+            const bar=document.getElementById('network-attention'),meta=document.getElementById('network-attention-meta'),btn=document.getElementById('network-attention-btn');
+            if(!bar||!meta||!btn||!currentAdminId)return;
+            try {
+                const r=await fetch('/api/network/admin/attention',{headers:{'x-admin-key':currentAdminId,'Accept':'application/json'},cache:'no-store'});
+                if(r.status===401||r.status===403)return;
+                const d=await r.json();
+                const items=Array.isArray(d.items)?d.items:[];
+                if(!r.ok||!d.success||!items.length){bar.classList.add('hidden');return;}
+                const x=items[0];
+                bar.classList.remove('hidden');
+                meta.textContent=(items.length>1?items.length+' Network actions waiting · ':'')+(x.next_action||'Continue Network workflow')+' · '+(x.publisher_domain||x.brand_name||('Placement #'+x.placement_id));
+                btn.textContent=items.length>1?'Open next action ('+items.length+')':'Open next action';
+                btn.onclick=function(){location.href=x.url||('/network/publishing/'+x.placement_id+'?guided=1')};
+            } catch(e) { /* Network reminder must never break the core admin dashboard. */ }
+        }
+        function startNetworkAttentionWatcher(){
+            loadNetworkAttention();
+            if(networkAttentionTimer)clearInterval(networkAttentionTimer);
+            networkAttentionTimer=setInterval(loadNetworkAttention,30000);
+        }
+
+        function loadAllData() { loadLeaderboard(); loadFreelancers(); startNetworkAttentionWatcher(); }
 
         function getFlag(code) {
             if (!code) return '🌐';
