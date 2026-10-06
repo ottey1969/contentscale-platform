@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v510-CEO-QUICKSCAN-MANUAL-REMINDERS-NETWORK-v503';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v511-QUICKSCAN-SCRIPT-BOUNDARY-FIX-NETWORK-v503';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+    'quickscan-interest-inbox-script-boundary-fix-v511',
     'quickscan-manual-reminder-preview-send-v510',
     'ceo-manual-reminder-preview-send-v510',
     'prospect-reminder-visible-status-v510',
@@ -887,7 +888,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v510-CEO-QUICKSCAN-MANUAL-REMINDERS-NETWORK-v503',
+  build: 'CS-2026-10-06-CANONICAL-v511-QUICKSCAN-SCRIPT-BOUNDARY-FIX-NETWORK-v503',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -25279,7 +25280,7 @@ async function load(){
   finally{busy=false;if(btn){btn.disabled=false;btn.textContent='Refresh interests'}}
 }
 ensure();setTimeout(load,700);setInterval(load,30000);
-})();<\/script>`}
+})();${'</script>'}`}
 
 function _pqsAdminWorkspaceV355(){return `<style>
 #pqsWorkspaceNav{position:sticky;top:0;z-index:90;margin:0 0 14px;padding:12px;border:1px solid #334155;border-radius:14px;background:#050b13ee;backdrop-filter:blur(10px)}
