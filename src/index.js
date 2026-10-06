@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v542-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v529-UNIFIED-ACTION-ATTENTION-ENGINE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v543-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v530-NETWORK-TEST-LAB';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,10 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-test-lab-v530',
+  'network-safe-synthetic-regression-suite-v530',
+  'network-read-only-placement-inspector-v530',
+  'network-manual-e2e-test-map-v530',
   'network-unified-action-attention-engine-v529',
   'network-admin-single-primary-next-action-v529',
   'network-role-action-contract-v529',
@@ -904,7 +908,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v542-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v529-UNIFIED-ACTION-ATTENTION-ENGINE',
+  build: 'CS-2026-10-06-CANONICAL-v543-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v530-NETWORK-TEST-LAB',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
@@ -1007,6 +1011,8 @@ app.get('/api/regression-contract',(req,res)=>{
     network_targeted_fidelity_repair:networkSrc.includes('repair-brief-fidelity')&&networkSrc.includes('Repair missing content requirements'),
     prewrite_internal_real_page_first_v508:src.includes('LAST-RESORT fallback')&&src.includes('publisher_verified_page_fallback'),
     network_refresh_all_v502:networkSrc.includes('Refresh all & verify')&&networkSrc.includes('images_required:false'),
+    network_test_lab_v530:networkSrc.includes('_networkTestLabSuiteV530')&&networkSrc.includes('/api/network/admin/test-lab/run')&&networkSrc.includes('/network/admin/test-lab'),
+    network_test_lab_read_only_inspector_v530:networkSrc.includes('_networkTestLabInspectPlacementV530')&&networkSrc.includes('safe_read_only:true'),
     network_action_attention_engine_v529:networkSrc.includes('_networkGuidedActionV529')&&networkSrc.includes("engine:'network-action-attention-v529'")&&networkSrc.includes('/api/network/admin/action-center'),
     network_admin_primary_action_v529:networkSrc.includes('adminPrimaryNext')&&networkSrc.includes('top_action:items[0]||null'),
     network_publisher_action_from_readiness_v529:networkSrc.includes('_networkPublisherRoleActionV529')&&networkSrc.includes('resolved.readiness,pp'),
