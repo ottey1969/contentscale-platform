@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v530-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v517-CLEAN-EXTERNAL-SOURCES';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-06-CANONICAL-v535-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v522-PUBLICATION-LINK-POLICY';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-publication-link-policy-v522',
     'quickscan-simple-send-v514',
     'quickscan-workspace-saved-tab-no-synthetic-click-v512',
     'quickscan-interest-inbox-script-boundary-fix-v511',
@@ -890,7 +891,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-06-CANONICAL-v534-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v521-URL-REGEX-ESCAPE-FIX',
+  build: 'CS-2026-10-06-CANONICAL-v535-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v522-PUBLICATION-LINK-POLICY',
   built_date: '2026-10-06',
   ceo_private: true,
   ceo_public: true,
