@@ -1,4 +1,4 @@
-// ContentScale Network v519 — guided action visual state is authoritative; no stale green downstream actions
+// ContentScale Network v520 — safe guided colors; v531 workflow preserved
 'use strict';
 
 // CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v509
@@ -2304,7 +2304,7 @@ function applySingleNextAction(d){
   const regen=document.getElementById('regenerateArticle');if(pe&&pe.generation_match&&!pe.requires_regeneration&&regen){regen.classList.add('completedAction');regen.classList.remove('nextAction')}
   const scan=document.getElementById('runOfficialScan');if(ic&&ic.official_scan&&!ic.official_scan.stale&&scan){scan.classList.add('completedAction');scan.classList.remove('nextAction')}
   const live=document.getElementById('createInternalUrl');if(ic&&ic.url&&live){live.classList.add('completedAction');live.classList.remove('nextAction')}
-  const copy=document.getElementById('copySeoHtml');if(finalReady&&copiedCurrent&&copy&&nextId!=='copySeoHtml'){copy.classList.add('completedAction');copy.classList.remove('nextAction');copy.disabled=true;copy.classList.add('locked');copy.textContent='✓ SEO publication HTML copied'}else if(copy&&nextId==='copySeoHtml'){copy.textContent='Copy SEO publication HTML'}else if(copy&&!finalReady){copy.classList.remove('completedAction','nextAction');copy.classList.add('locked');copy.disabled=true;copy.textContent='Copy SEO publication HTML'}
+  const copy=document.getElementById('copySeoHtml');if(copiedCurrent&&copy&&nextId!=='copySeoHtml'){copy.classList.add('completedAction');copy.classList.remove('nextAction');copy.disabled=true;copy.classList.add('locked');copy.textContent='✓ SEO publication HTML copied'}else if(copy&&nextId==='copySeoHtml'){copy.textContent='Copy SEO publication HTML'}
   const precheck=document.getElementById('publishPrecheck');if(precheck&&nextId==='publishPrecheck'&&fetchFailed)precheck.textContent='I published it · retry live pre-check';
   setDummyStep(step,msg);
   const info={step:step,nextId:nextId,msg:msg,mode:mode};guideToActualNextAction(info);return info;
