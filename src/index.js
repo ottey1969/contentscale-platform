@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v552-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v539-UNIFIED-CROSS-ROLE-WORKFLOW';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v553-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v540-CANONICAL-BUSINESS-MARKETPLACE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -908,7 +908,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-07-CANONICAL-v552-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v539-UNIFIED-CROSS-ROLE-WORKFLOW',
+  build: 'CS-2026-10-07-CANONICAL-v553-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v540-CANONICAL-BUSINESS-MARKETPLACE',
   built_date: '2026-10-07',
   ceo_private: true,
   ceo_public: true,
@@ -1001,7 +1001,14 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   network_publisher_cockpit_identity_counts_v539: true,
   network_closed_publisher_identity_guard_v539: true,
   network_admin_core_journey_v539: true,
-  network_expected_module_version: 'v539',
+  network_canonical_business_entity_v540: true,
+  network_lead_crawler_entity_sync_v540: true,
+  network_publisher_business_link_v540: true,
+  network_marketplace_projection_v540: true,
+  network_marketplace_public_privacy_v540: true,
+  network_business_source_precedence_v540: true,
+  network_suppression_propagation_v540: true,
+  network_expected_module_version: 'v540',
   network_guided_workflow_v535: true,
   network_disabled_state_semantics_v535: true,
   prewrite_readonly_share_link: true,
@@ -1053,7 +1060,7 @@ app.get('/api/regression-contract',(req,res)=>{
     network_compatibility_before_availability_v538:networkSrc.includes('if(!compat.compatible)return')&&networkSrc.includes("!m.reasons.includes('matching_paused')"),
     network_active_publisher_only_v538:networkSrc.includes('JOIN LATERAL (')&&networkSrc.includes('FROM network_publisher_accounts a')&&networkSrc.includes("reasons:['publisher_account_inactive']")&&networkSrc.includes('publisher_linked:false'),
     network_no_self_publisher_v538:networkSrc.includes("reasons:['self_publisher']")&&networkSrc.includes('source_website_cannot_publish_to_itself'),
-    network_module_identity_v539:networkSrc.includes("const NETWORK_MODULE_VERSION = 'v539'")&&networkSrc.includes('NETWORK_MODULE_VERSION, NETWORK_TABLES'),
+    network_module_identity_v540:networkSrc.includes("const NETWORK_MODULE_VERSION = 'v540'")&&networkSrc.includes('const NETWORK_SCHEMA_VERSION = 21')&&networkSrc.includes('NETWORK_MODULE_VERSION, NETWORK_TABLES'),
     network_publisher_contract_v539:networkSrc.includes('_networkPublisherContractV539')&&networkSrc.includes('_networkPublisherPrimaryReasonV539')&&networkSrc.includes("acc!=='active'")&&networkSrc.includes('publisher_application_pending'),
     network_source_publisher_isolation_v539:networkSrc.includes("record_role:'source'")&&networkSrc.includes('NOT_PUBLISHER_WEBSITE')&&networkSrc.includes('publisher_account_required'),
     network_manual_publisher_linkage_v539:networkSrc.includes('reused_source_website')&&networkSrc.includes('One canonical website row is reused')&&networkSrc.includes("INSERT INTO network_publisher_accounts (application_id,website_id,email"),
@@ -1062,6 +1069,13 @@ app.get('/api/regression-contract',(req,res)=>{
     network_publisher_cockpit_identity_counts_v539:networkSrc.includes('publisher_website_counts')&&networkSrc.includes('publisher_websites:publisherWebsites')&&networkSrc.includes('Publisher websites pending'),
     network_closed_publisher_identity_guard_v539:networkSrc.includes('PUBLISHER_IDENTITY_CLOSED')&&networkSrc.includes('website approval cannot reactivate a revoked publisher by itself')&&networkSrc.includes("a.application_status!=='rejected'"),
     network_admin_core_journey_v539:networkSrc.includes('ADMIN TOUR · ONE CONNECTED JOURNEY')&&networkSrc.includes('parallel_logic')&&networkSrc.includes('Publisher accepts hard interest'),
+    network_canonical_business_entity_v540:networkSrc.includes('canonical-business-v540')&&networkSrc.includes('upsertCanonicalNetworkBusinessV540')&&networkSrc.includes('reconcileCanonicalNetworkBusinessesV540')&&networkSrc.includes('business_id BIGINT REFERENCES network_directory_businesses'),
+    network_business_source_precedence_v540:networkSrc.includes('NETWORK_BUSINESS_SOURCE_PRIORITY_V540')&&networkSrc.includes('owner_verified:500')&&networkSrc.includes('admin_verified:400')&&networkSrc.includes('private_lead_provenance'),
+    network_marketplace_projection_v540:networkSrc.includes("'/api/network/marketplace'")&&networkSrc.includes("'/network/marketplace'")&&networkSrc.includes('_networkMarketplaceRoleV540')&&!networkSrc.includes('CREATE TABLE IF NOT EXISTS network_marketplace_businesses'),
+    network_marketplace_privacy_v540:networkSrc.includes('Public company facts only. Lead/contact intelligence stays private.')&&networkSrc.includes('function publicDirectoryBusiness(row)')&&networkSrc.includes('private_lead'),
+    network_lead_crawler_entity_sync_v540:src.includes('syncLeadCrawlerBusinessesV540')&&src.includes('suppressLeadCrawlerBusinessesV540')&&networkSrc.includes('syncLeadCrawlerBusinessesV540')&&networkSrc.includes('suppressLeadCrawlerBusinessesV540'),
+    network_publisher_business_link_v540:networkSrc.includes('COALESCE(a.business_id,w.business_id,pa.business_id) AS canonical_business_id')&&networkSrc.includes('One company · all Network roles'),
+    network_canonical_logic_audit_v540:networkSrc.includes('_networkCanonicalLogicSuiteV540')&&networkSrc.includes('crawler_cannot_overwrite_owner_verified_name')&&networkSrc.includes('capacity_full_publisher_not_open'),
     network_unified_cross_role_workflow_v539:networkSrc.includes('_networkUnifiedJourneyV539')&&networkSrc.includes("engine:'network-unified-cross-role-v539'")&&networkSrc.includes('optional_tracks_do_not_block_core')&&networkSrc.includes('hard_interest_before_publication'),
     network_action_attention_engine_v529:networkSrc.includes('_networkGuidedActionV529')&&networkSrc.includes("engine:'network-action-attention-v529'")&&networkSrc.includes('/api/network/admin/action-center'),
     network_admin_primary_action_v529:networkSrc.includes('adminPrimaryNext')&&networkSrc.includes('top_action:items[0]||null'),
@@ -21218,7 +21232,7 @@ app.post('/api/contact-intelligence/promote',requireAdmin,asyncHandler(async(req
   const ids=Array.from(new Set((Array.isArray(req.body&&req.body.ids)?req.body.ids:[]).map(Number).filter(Number.isSafeInteger))).slice(0,200);
   if(!ids.length)return res.status(400).json({success:false,error:'Select verified contacts'});
   const q=await pool.query(`SELECT * FROM contact_intelligence WHERE id=ANY($1::bigint[]) AND status='domain_verified' AND website_url IS NOT NULL`,[ids]);
-  let created=0,existing=0,blocked_revoked=0;const client=await pool.connect();
+  let created=0,existing=0,blocked_revoked=0;const networkSync=[];const client=await pool.connect();
   try{
     await client.query('BEGIN');
     for(const row of q.rows){
@@ -21256,14 +21270,19 @@ app.post('/api/contact-intelligence/promote',requireAdmin,asyncHandler(async(req
         created++;
       }
       await client.query(`UPDATE contact_intelligence SET status='promoted',promoted_token=$1,updated_at=NOW() WHERE id=$2`,[token,row.id]);
+      networkSync.push({business_name:row.company_name||row.username,company_name:row.company_name,username:row.username,website_url:row.website_url,domain,token,lead_crawler_token:token,contact_intelligence_id:row.id,id:row.id,email:row.email,phone:row.phone,contact_name:row.contact_name,niche:row.niche,industry:row.industry,country:row.country,city:row.city,location:row.location,language:row.language,employee_count:row.employee_count,source:row.source,source_url:row.source_url,linkedin_url:row.linkedin_url,source_consent:row.source_consent,bio:row.bio});
     }
     await client.query('COMMIT');
   }catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}
   finally{client.release()}
-  res.json({success:true,selected:ids.length,eligible:q.rows.length,created,existing,blocked_revoked,message:'Lead Crawler uses one company per domain. Existing companies were reused; duplicates were not created.'})
+  let network_entity_sync={synced:0,failed:0};
+  if(networkSync.length&&_networkModule&&typeof _networkModule.syncLeadCrawlerBusinessesV540==='function'){
+    try{network_entity_sync=await _networkModule.syncLeadCrawlerBusinessesV540(pool,networkSync)}catch(e){console.warn('[contact-intelligence] Network entity sync failed:',e&&e.message||e);network_entity_sync={synced:0,failed:networkSync.length,error:String(e&&e.message||e).slice(0,300)}}
+  }
+  res.json({success:true,selected:ids.length,eligible:q.rows.length,created,existing,blocked_revoked,network_entity_sync,message:'Lead Crawler uses one company per domain. The same company identity is also synchronized into the Network business flow; private contact data is not exposed publicly.'})
 }));
 app.post('/api/contact-intelligence/suppress',requireAdmin,asyncHandler(async(req,res)=>{
-  await _ensureContactIntelligenceTables();const ids=Array.from(new Set((Array.isArray(req.body&&req.body.ids)?req.body.ids:[]).map(Number).filter(Number.isSafeInteger))).slice(0,500),reason=_ciPlain((req.body||{}).reason||'Excluded by admin review',500);if(!ids.length)return res.status(400).json({success:false,error:'Select contacts to suppress'});const client=await pool.connect();try{await client.query('BEGIN');await client.query(`INSERT INTO contact_intelligence_suppressions(contact_id,email,source,reason,actor) SELECT id,email,source,$2,'admin' FROM contact_intelligence WHERE id=ANY($1::bigint[])`,[ids,reason]);await client.query(`UPDATE contact_intelligence SET status='suppressed',suppressed_at=NOW(),suppression_reason=$2,suppression_source='admin',updated_at=NOW() WHERE id=ANY($1::bigint[])`,[ids,reason]);await client.query(`UPDATE prospect_quick_scans SET revoked_at=NOW(),updated_at=NOW() WHERE contact_intelligence_id=ANY($1::bigint[]) AND revoked_at IS NULL AND scan_completed_at IS NULL AND outreach_sent_at IS NULL`,[ids]);await client.query('COMMIT')}catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}res.json({success:true,suppressed:ids.length,reason})
+  await _ensureContactIntelligenceTables();const ids=Array.from(new Set((Array.isArray(req.body&&req.body.ids)?req.body.ids:[]).map(Number).filter(Number.isSafeInteger))).slice(0,500),reason=_ciPlain((req.body||{}).reason||'Excluded by admin review',500);if(!ids.length)return res.status(400).json({success:false,error:'Select contacts to suppress'});const client=await pool.connect();try{await client.query('BEGIN');await client.query(`INSERT INTO contact_intelligence_suppressions(contact_id,email,source,reason,actor) SELECT id,email,source,$2,'admin' FROM contact_intelligence WHERE id=ANY($1::bigint[])`,[ids,reason]);await client.query(`UPDATE contact_intelligence SET status='suppressed',suppressed_at=NOW(),suppression_reason=$2,suppression_source='admin',updated_at=NOW() WHERE id=ANY($1::bigint[])`,[ids,reason]);await client.query(`UPDATE prospect_quick_scans SET revoked_at=NOW(),updated_at=NOW() WHERE contact_intelligence_id=ANY($1::bigint[]) AND revoked_at IS NULL AND scan_completed_at IS NULL AND outreach_sent_at IS NULL`,[ids]);await client.query('COMMIT')}catch(e){await client.query('ROLLBACK').catch(()=>{});throw e}finally{client.release()}let network_visibility={updated:0,failed:0};if(_networkModule&&typeof _networkModule.suppressLeadCrawlerBusinessesV540==='function'){try{network_visibility=await _networkModule.suppressLeadCrawlerBusinessesV540(pool,ids.map(id=>({contact_intelligence_id:id,reason})))}catch(e){console.warn('[contact-intelligence] Network suppression sync failed:',e&&e.message||e);network_visibility={updated:0,failed:ids.length,error:String(e&&e.message||e).slice(0,300)}}}res.json({success:true,suppressed:ids.length,reason,network_visibility})
 }));
 app.post('/api/lead-crawler/contact-discovery',requireAdmin,async(req,res)=>{
   const websites=Array.from(new Set((Array.isArray(req.body&&req.body.websites)?req.body.websites:[]).map(v=>String(v||'').trim()).filter(Boolean))).slice(0,20);
@@ -21333,7 +21352,8 @@ app.post('/api/prospect-quick-scan/admin/create',requireAdmin,async(req,res)=>{
           updated_at=NOW()
           WHERE token=$4`,[autoName.slice(0,200),email,String(req.body.campaign||'').slice(0,200),old.token]);
         await client.query('COMMIT');
-        return res.json({success:true,token:old.token,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token),business_name:old.business_name||autoName,url:old.url||url,existing:true,reused:true,message:'Existing Lead Crawler company reused. No duplicate was created.'});
+        let network_entity_sync={synced:0,failed:0};if(_networkModule&&typeof _networkModule.syncLeadCrawlerBusinessesV540==='function'){try{network_entity_sync=await _networkModule.syncLeadCrawlerBusinessesV540(pool,[{business_name:old.business_name||autoName,website_url:old.url||url,domain,token:old.token,lead_crawler_token:old.token,email,language:_pqsLanguage(req.body.language),source:'lead_crawler'}])}catch(e){console.warn('[lead-crawler] Network entity reuse sync:',e&&e.message||e)}}
+        return res.json({success:true,token:old.token,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token),business_name:old.business_name||autoName,url:old.url||url,existing:true,reused:true,network_entity_sync,message:'Existing Lead Crawler company reused. The same company identity is reused by the Network.'});
       }
     }
     const token=require('crypto').randomBytes(32).toString('hex');
@@ -21341,7 +21361,8 @@ app.post('/api/prospect-quick-scan/admin/create',requireAdmin,async(req,res)=>{
       VALUES($1,$2,$3,$4,$5,$6,$7,$8,CASE WHEN $7<>'' THEN 'admin_entered' ELSE NULL END,CASE WHEN $7<>'' THEN 'Entered by Admin while creating the prospect.' ELSE NULL END,CASE WHEN $7<>'' THEN NOW() ELSE NULL END)`,
       [token,autoName.slice(0,200),url,domain,source,String(req.body.campaign||'').slice(0,200),email,_pqsLanguage(req.body.language)]);
     await client.query('COMMIT');
-    res.json({success:true,token,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',token),business_name:autoName,url,existing:false});
+    let network_entity_sync={synced:0,failed:0};if(source==='lead_crawler'&&_networkModule&&typeof _networkModule.syncLeadCrawlerBusinessesV540==='function'){try{network_entity_sync=await _networkModule.syncLeadCrawlerBusinessesV540(pool,[{business_name:autoName,website_url:url,domain,token,lead_crawler_token:token,email,language:_pqsLanguage(req.body.language),source:'lead_crawler'}])}catch(e){console.warn('[lead-crawler] Network entity create sync:',e&&e.message||e)}}
+    res.json({success:true,token,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',token),business_name:autoName,url,existing:false,network_entity_sync});
   }catch(e){await client.query('ROLLBACK').catch(()=>{});res.status(500).json({success:false,error:e.message});}
   finally{client.release()}
 });
@@ -21355,7 +21376,7 @@ app.post('/api/prospect-quick-scan/admin/import',requireAdmin,async(req,res)=>{
   if(companies.length>1000)return res.status(400).json({success:false,error:'Maximum 1,000 companies per import'});
   const defaultCampaign=String((req.body&&req.body.campaign)||('Lead Crawler import '+new Date().toISOString().slice(0,10))).trim().slice(0,200);
   const defaultLanguage=_pqsLanguage((req.body&&req.body.language)||'auto');
-  const client=await pool.connect();let inserted=0,existing=0,invalid=0;const items=[],errors=[];
+  const client=await pool.connect();let inserted=0,existing=0,invalid=0;const items=[],errors=[],networkSync=[];
   try{
     await client.query('BEGIN');
     for(let i=0;i<companies.length;i++){
@@ -21370,14 +21391,15 @@ app.post('/api/prospect-quick-scan/admin/import',requireAdmin,async(req,res)=>{
           existing++;items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:'revoked_existing',created:false,reused:false,blocked_duplicate:true,message:'Company already exists in Lead Crawler history and is revoked; duplicate not created.'});continue;
         }
         await client.query(`UPDATE prospect_quick_scans SET business_name=CASE WHEN COALESCE(business_name,'')='' THEN $1 ELSE business_name END,contact_email=CASE WHEN COALESCE(contact_email,'')='' THEN $2 ELSE contact_email END,contact_email_origin=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN 'crawler_import' ELSE contact_email_origin END,contact_email_comment=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN 'Imported with the Lead Crawler record. No opt-in.' ELSE contact_email_comment END,contact_email_updated_at=CASE WHEN COALESCE(contact_email,'')='' AND $2<>'' THEN NOW() ELSE contact_email_updated_at END,campaign=CASE WHEN COALESCE(campaign,'')='' THEN $3 ELSE campaign END,updated_at=NOW() WHERE token=$4`,[name,email,campaign,old.token]);
-        existing++;items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:old.status,created:false,reused:true,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token)});continue;
+        existing++;networkSync.push({business_name:old.business_name||name,website_url:old.url||url,domain:old.domain||domain,token:old.token,lead_crawler_token:old.token,email,language,niche:row.niche||row.industry||'',country:row.country||null,city:row.city||null,service_area:row.service_area||row.location||null,source:'lead_crawler'});items.push({row:i+1,token:old.token,business_name:old.business_name||name,domain:old.domain||domain,status:old.status,created:false,reused:true,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',old.token)});continue;
       }
       const token=require('crypto').randomBytes(32).toString('hex');
       await client.query(`INSERT INTO prospect_quick_scans(token,business_name,url,domain,source,campaign,contact_email,language,status,contact_email_origin,contact_email_comment,contact_email_updated_at) VALUES($1,$2,$3,$4,'lead_crawler',$5,$6,$7,'created',CASE WHEN $6<>'' THEN 'crawler_import' ELSE NULL END,CASE WHEN $6<>'' THEN 'Imported with the Lead Crawler record. No opt-in.' ELSE NULL END,CASE WHEN $6<>'' THEN NOW() ELSE NULL END)`,[token,name,url,domain,campaign,email,language]);
-      inserted++;items.push({row:i+1,token,business_name:name,domain,status:'created',created:true,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',token)});
+      inserted++;networkSync.push({business_name:name,website_url:url,domain,token,lead_crawler_token:token,email,language,niche:row.niche||row.industry||'',country:row.country||null,city:row.city||null,service_area:row.service_area||row.location||null,source:'lead_crawler'});items.push({row:i+1,token,business_name:name,domain,status:'created',created:true,share_url:req.protocol+'://'+req.get('host')+_pqsShortPrivatePath('scan',token)});
     }
     await client.query('COMMIT');
-    res.json({success:true,received:companies.length,inserted,existing,invalid,scans_started:0,notifications_sent:0,campaign:defaultCampaign,items,errors});
+    let network_entity_sync={synced:0,failed:0};if(networkSync.length&&_networkModule&&typeof _networkModule.syncLeadCrawlerBusinessesV540==='function'){try{network_entity_sync=await _networkModule.syncLeadCrawlerBusinessesV540(pool,networkSync)}catch(e){console.warn('[lead-crawler import] Network entity sync:',e&&e.message||e);network_entity_sync={synced:0,failed:networkSync.length,error:String(e&&e.message||e).slice(0,300)}}}
+    res.json({success:true,received:companies.length,inserted,existing,invalid,scans_started:0,notifications_sent:0,campaign:defaultCampaign,items,errors,network_entity_sync});
   }catch(e){await client.query('ROLLBACK').catch(()=>{});res.status(500).json({success:false,error:e.message});}
   finally{client.release();}
 });
