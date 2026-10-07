@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v560-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v547-INVITATION-FIRST-NO-VERIFY';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v561-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v548-UNIFIED-COMPANY-GROWTH-JOURNEY';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,10 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'network-unified-company-growth-journey-v548',
+  'network-featured-partner-entitlement-v548',
+  'network-complimentary-client-visibility-v548',
+  'network-promotion-organic-isolation-v548',
   'network-vertical-graph-editorial-matching-v546',
   'network-direct-local-competitor-guard-v546',
   'lead-crawler-network-fit-v559',
@@ -916,7 +920,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-07-CANONICAL-v560-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v547-INVITATION-FIRST-NO-VERIFY',
+  build: 'CS-2026-10-07-CANONICAL-v561-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v548-UNIFIED-COMPANY-GROWTH-JOURNEY',
   built_date: '2026-10-07',
   ceo_private: true,
   ceo_public: true,
@@ -1050,7 +1054,11 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   network_invitation_first_acquisition_v547: true,
   network_business_response_without_verification_v547: true,
   network_no_content_before_publisher_acceptance_v547: true,
-  network_expected_module_version: 'v547',
+  network_unified_company_growth_journey_v548: true,
+  network_featured_partner_entitlement_v548: true,
+  network_complimentary_client_visibility_v548: true,
+  network_promotion_organic_isolation_v548: true,
+  network_expected_module_version: 'v548',
   network_guided_workflow_v535: true,
   network_disabled_state_semantics_v535: true,
   prewrite_readonly_share_link: true,
@@ -1102,7 +1110,7 @@ app.get('/api/regression-contract',(req,res)=>{
     network_compatibility_before_availability_v538:networkSrc.includes('if(!compat.compatible)return')&&networkSrc.includes("!m.reasons.includes('matching_paused')"),
     network_active_publisher_only_v541:networkSrc.includes('JOIN LATERAL (')&&networkSrc.includes('FROM network_publisher_accounts a')&&networkSrc.includes('publisher_account_inactive')&&networkSrc.includes('publisher_linked:false')&&networkSrc.includes('publisher_account_required'),
     network_no_self_publisher_v538:networkSrc.includes("reasons:['self_publisher']")&&networkSrc.includes('source_website_cannot_publish_to_itself'),
-    network_module_identity_v547:networkSrc.includes("const NETWORK_MODULE_VERSION = 'v547'")&&networkSrc.includes('const NETWORK_SCHEMA_VERSION = 23')&&networkSrc.includes('NETWORK_MODULE_VERSION, NETWORK_TABLES'),
+    network_module_identity_v548:networkSrc.includes("const NETWORK_MODULE_VERSION = 'v548'")&&networkSrc.includes('const NETWORK_SCHEMA_VERSION = 24')&&networkSrc.includes('NETWORK_MODULE_VERSION, NETWORK_TABLES'),
     network_publisher_contract_v541:networkSrc.includes('_networkPublisherContractV541')&&networkSrc.includes('_networkPublisherPrimaryReasonV541')&&networkSrc.includes("acc!=='active'")&&networkSrc.includes('publisher_application_pending'),
     network_source_publisher_isolation_v539:networkSrc.includes("record_role:'source'")&&networkSrc.includes('NOT_PUBLISHER_WEBSITE')&&networkSrc.includes('publisher_account_required'),
     network_manual_publisher_linkage_v539:networkSrc.includes('reused_source_website')&&networkSrc.includes('One canonical website row is reused')&&networkSrc.includes("INSERT INTO network_publisher_accounts (application_id,website_id,email"),
@@ -1128,19 +1136,19 @@ app.get('/api/regression-contract',(req,res)=>{
     network_marketplace_no_parallel_tables_v541:!networkSrc.includes('CREATE TABLE IF NOT EXISTS network_marketplace_')&&networkSrc.includes('There is no separate Marketplace deal list')&&networkSrc.includes('same Opportunities and Proposals'),
     network_marketplace_logic_audit_v541:networkSrc.includes('_networkMarketplaceLogicSuiteV541')&&networkSrc.includes('business_id_self_match_without_owner_website')&&networkSrc.includes('publisher_interest_is_pre_proposal')&&networkSrc.includes('business_request_starts_as_normal_proposal')&&networkSrc.includes('admin_proposal_blocks_second_marketplace_proposal')&&networkSrc.includes('verified_placement_allows_future_collaboration'),
     network_unified_cross_role_workflow_v541:networkSrc.includes('_networkUnifiedJourneyV541')&&networkSrc.includes("engine:'network-unified-cross-role-v541'")&&networkSrc.includes('marketplace_business_verified_before_action')&&networkSrc.includes('marketplace_interest_not_hard_interest')&&networkSrc.includes('hard_interest_before_publication'),
-    network_discovery_journey_v542:networkSrc.includes('_networkDiscoveryJourneyV542')&&networkSrc.includes('_networkDiscoveryLogicSuiteV542')&&networkSrc.includes("engine:'canonical-business-discovery-v542'")&&networkSrc.includes("engine:'network-test-lab-v547'"),
+    network_discovery_journey_v542:networkSrc.includes('_networkDiscoveryJourneyV542')&&networkSrc.includes('_networkDiscoveryLogicSuiteV542')&&networkSrc.includes("engine:'canonical-business-discovery-v542'")&&networkSrc.includes("engine:'network-test-lab-v548'"),
     network_multisite_business_v543:networkSrc.includes('_networkPublisherAggregatesV543')&&networkSrc.includes('_networkBusinessSitesMapV543')&&networkSrc.includes("contract:'canonical-business-multisite-v543'")&&networkSrc.includes("'/api/network/business/:token/websites'")&&networkSrc.includes("'/api/network/business/:token/websites/:websiteId/primary'")&&networkSrc.includes('publisher_website_id:chosenPublisher.websiteId'),
     network_canonical_company_pair_lock_v543:networkSrc.includes('_networkBusinessPublisherPairKeyV543')&&networkSrc.includes('canonical Business ↔ Publisher company pair')&&networkSrc.includes('pair_lock_is_company_level_not_website_level'),
     network_public_projection_v543:networkSrc.includes('_networkPublicNicheMembershipsV543')&&networkSrc.includes("'/api/network/public/v1/hub'")&&networkSrc.includes("'/api/network/public/v1/niches/:slug'")&&networkSrc.includes("'/api/network/public/v1/businesses/:slug'")&&networkSrc.includes("contract:'public-network-v1-v544'")&&networkSrc.includes('public_projection_can_belong_to_multiple_niche_hubs'),
     network_public_projection_privacy_v543:networkSrc.includes('_networkPublicProjectionV543')&&networkSrc.includes('unapproved_related_site_stays_private')&&networkSrc.includes('No claim email, Lead Crawler contact data, dashboard token, notes or non-public related websites are exposed.'),
     network_public_directory_v544:networkSrc.includes('_networkPublicDirectoryPageV544')&&networkSrc.includes("'/api/network/public/v1/directory'")&&networkSrc.includes("contract:'public-network-v1-v544'")&&networkSrc.includes('directory_contract_contains_no_private_contact_fields'),
     network_public_sitemap_v544:networkSrc.includes('_networkPublicSitemapEntriesV544')&&networkSrc.includes("'/api/network/public/v1/sitemap'")&&networkSrc.includes('sitemap_has_no_duplicate_urls'),
-    network_public_renderer_logic_v544:networkSrc.includes('_networkPublicRendererLogicSuiteV544')&&networkSrc.includes("engine:'public-network-renderer-v544'")&&networkSrc.includes("engine:'network-test-lab-v547'"),
+    network_public_renderer_logic_v544:networkSrc.includes('_networkPublicRendererLogicSuiteV544')&&networkSrc.includes("engine:'public-network-renderer-v544'")&&networkSrc.includes("engine:'network-test-lab-v548'"),
     network_app_public_seo_separation_v544:networkSrc.includes('<meta name="robots" content="noindex,follow"><link rel="canonical" href="https://contentscale.site/network/">')&&networkSrc.includes('View public company ↗'),
     network_canonical_advertising_v545:networkSrc.includes('business_id BIGINT REFERENCES network_directory_businesses')&&networkSrc.includes("source:'advertising_request'")&&networkSrc.includes('canonical_business'),
     network_public_sponsored_projection_v545:networkSrc.includes('_networkPublicAdsV545')&&networkSrc.includes('_networkPublicAdProjectionV545')&&networkSrc.includes('/network/ad/:id/impression.gif')&&networkSrc.includes('public_ad_never_exposes_private_contact_fields'),
     network_dummy_proof_public_onboarding_v545:networkSrc.includes('Step 1 of 4 · Add your website')&&networkSrc.includes('there is nothing else to do yet')&&networkSrc.includes('Step 1 of 3 · Send your request')&&networkSrc.includes('Organic matching stays separate'),
-    network_vertical_graph_v546:networkSrc.includes('NETWORK_VERTICAL_GRAPH_V546')&&networkSrc.includes('_networkVerticalRelationV546')&&networkSrc.includes('networkVerticalProfileV546')&&networkSrc.includes("engine:'network-test-lab-v547'"),
+    network_vertical_graph_v546:networkSrc.includes('NETWORK_VERTICAL_GRAPH_V546')&&networkSrc.includes('_networkVerticalRelationV546')&&networkSrc.includes('networkVerticalProfileV546')&&networkSrc.includes("engine:'network-test-lab-v548'"),
     network_editorial_adjacent_matching_v546:networkSrc.includes('adjacent_vertical_fit')&&networkSrc.includes('vertical_relation')&&networkSrc.includes('Property Management')&&networkSrc.includes('Home Inspection'),
     network_direct_local_competitor_guard_v546:networkSrc.includes('direct_competitor_risk')&&networkSrc.includes('_networkLocalOverlapV546')&&networkSrc.includes("const priority=['self_publisher','already_committed','direct_competitor_risk'"),
     lead_crawler_network_fit_v559:src.includes('_networkFitFromPublicPageV559')&&src.includes('network_fit_score')&&src.includes('network_publisher_candidate')&&src.includes('same-domain content links')&&src.includes('Network Publisher prospect ✓'),
@@ -1149,6 +1157,9 @@ app.get('/api/regression-contract',(req,res)=>{
     network_invitation_first_v547:networkSrc.includes('_networkInvitationLogicSuiteV547')&&networkSrc.includes('business_invitation_token')&&networkSrc.includes('/network/invitation/:token')&&networkSrc.includes('No business verification is required to respond'),
     network_business_response_without_verification_v547:networkSrc.includes('_networkInvitationCanBusinessRespondV547')&&networkSrc.includes('business_verification_required:false')&&networkSrc.includes('invitation-first-no-verify-v547'),
     network_no_content_before_publisher_acceptance_v547:networkSrc.includes('No article has been written yet')&&networkSrc.includes('No placement, article or Publisher Edition exists until the publisher explicitly accepts.'),
+    network_company_growth_journey_v548:networkSrc.includes('/network/company/:id/admin')&&networkSrc.includes('unified-company-growth-journey-v548')&&networkSrc.includes('Company journey →'),
+    network_featured_partner_v548:networkSrc.includes('Featured Partner')&&networkSrc.includes('complimentary_client')&&networkSrc.includes('complimentary_launch_partner'),
+    network_promotion_organic_isolation_v548:networkSrc.includes('organic_influence=FALSE')&&networkSrc.includes('promotion_changes_organic_matching:false'),
     network_contact_intelligence_verified_sync_v542:src.includes('_ciSyncVerifiedToNetworkV542')&&src.includes('canonical Network')&&src.includes('network_entity_sync'),
     network_lead_crawler_network_status_v542:src.includes('_attachCanonicalNetworkJourneysV542')&&src.includes("contract:'canonical-business-discovery-v542'")&&networkSrc.includes('resolveCanonicalBusinessJourneysV542'),
     network_marketplace_activity_v542:networkSrc.includes('network_activity:{verified_mentions')&&networkSrc.includes('niche_counts')&&networkSrc.includes('VERIFIED NETWORK ACTIVITY'),
