@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v550-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v537-TARGETED-MATCHING-RECOVERY';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v552-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v539-UNIFIED-CROSS-ROLE-WORKFLOW';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -908,7 +908,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-07-CANONICAL-v550-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v537-TARGETED-MATCHING-RECOVERY',
+  build: 'CS-2026-10-07-CANONICAL-v552-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v539-UNIFIED-CROSS-ROLE-WORKFLOW',
   built_date: '2026-10-07',
   ceo_private: true,
   ceo_public: true,
@@ -988,7 +988,20 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   network_publisher_onboarding_clarity_v533: true,
   network_match_proposal_acceptance_v534: true,
   network_match_proposal_notifications_v534: true,
-  network_expected_module_version: 'v537',
+  network_matching_logic_audit_v538: true,
+  network_compatibility_before_availability_v538: true,
+  network_active_publisher_only_v538: true,
+  network_no_self_publisher_v538: true,
+  network_unified_cross_role_workflow_v539: true,
+  network_publisher_contract_v539: true,
+  network_source_publisher_isolation_v539: true,
+  network_manual_publisher_linkage_v539: true,
+  network_proposal_revalidation_v539: true,
+  network_proposal_dashboard_contract_v539: true,
+  network_publisher_cockpit_identity_counts_v539: true,
+  network_closed_publisher_identity_guard_v539: true,
+  network_admin_core_journey_v539: true,
+  network_expected_module_version: 'v539',
   network_guided_workflow_v535: true,
   network_disabled_state_semantics_v535: true,
   prewrite_readonly_share_link: true,
@@ -1027,16 +1040,29 @@ app.get('/api/regression-contract',(req,res)=>{
     network_fixture_side_effect_guard_v531:networkSrc.includes('emails_sent:0')&&networkSrc.includes('gemini_calls:0')&&networkSrc.includes('credit_mutations:0')&&networkSrc.includes('external_fetches:0'),
     network_fixture_transactional_transitions_v531:networkSrc.includes('SELECT * FROM network_test_lab_fixtures WHERE id=$1 FOR UPDATE')&&networkSrc.includes("UPDATE network_test_lab_fixtures SET state=$2::jsonb"),
     network_publisher_onboarding_v532:networkSrc.includes('_networkPublisherOnboardingStateV532')&&networkSrc.includes('placement_capacity')&&networkSrc.includes('accepting_matches')&&networkSrc.includes("check_mode:'onboarding'"),
-    network_ranked_matching_v532:networkSrc.includes('_networkOpportunityMatchV532')&&networkSrc.includes('/api/network/admin/opportunities/:id/matches')&&networkSrc.includes('publisher-match-proposal-v537'),
+    network_ranked_matching_v532:networkSrc.includes('_networkOpportunityMatchV532')&&networkSrc.includes('/api/network/admin/opportunities/:id/matches')&&networkSrc.includes('_networkPublisherContractV539'),
     network_publisher_onboarding_clarity_v533:networkSrc.includes('PUBLISHER ONBOARDING')&&networkSrc.includes('Website details')&&networkSrc.includes('Website check')&&networkSrc.includes('Approval & matching')&&networkSrc.includes('First match')&&!networkSrc.includes('<section id=\"join\"><div class=\"wrap\"><div class=\"forms\"><div class=\"form\"><div class=\"step\">STEP 2</div>'),
-    network_match_capacity_guard_v532:networkSrc.includes('_networkPublisherEligibilityV532')&&networkSrc.includes('capacity_full')&&networkSrc.includes('Publisher is not currently eligible for a new match proposal.'),
+    network_match_capacity_guard_v532:networkSrc.includes('_networkPublisherEligibilityV532')&&networkSrc.includes('capacity_full')&&networkSrc.includes('publisher-unified-contract-v539'),
     network_match_profile_future_only_v532:networkSrc.includes('/api/network/admin/websites/:id/match-profile')&&networkSrc.includes('Profile changes affect future matching only. Existing placements remain intact.'),
     network_guided_workflow_v535:networkSrc.includes('networkGuidedCssV535')&&networkSrc.includes('networkGuidedLegendV535')&&networkSrc.includes('Blue = do this now')&&networkSrc.includes('Green = complete/currently valid')&&networkSrc.includes('Yellow = waiting on someone else')&&networkSrc.includes('Only one blue action is active per page.'),
     network_disabled_state_semantics_v535:networkSrc.includes('button:disabled:not(.busy)::after')&&networkSrc.includes('.btn.cs-locked')&&networkSrc.includes('.btn.cs-waiting')&&networkSrc.includes('.btn.cs-done'),
     network_single_primary_queue_v535:networkSrc.includes('let guideTaken=false')&&networkSrc.includes('Queued: finish the blue')&&networkSrc.includes("queued?'queued':'active'"),
     network_matching_blocker_guidance_v536:networkSrc.includes('_networkMatchDiagnosticsV537')&&networkSrc.includes('No eligible match')&&networkSrc.includes('Proposal unavailable'),
     network_targeted_matching_recovery_v537:networkSrc.includes('_networkMatchDiagnosticsV537')&&networkSrc.includes('blocker_details')&&networkSrc.includes('You do not need to add a new website')&&networkSrc.includes('Return to opportunity and run Find matches'),
-    network_module_identity_v537:networkSrc.includes("const NETWORK_MODULE_VERSION = 'v537'")&&networkSrc.includes('NETWORK_MODULE_VERSION, NETWORK_TABLES'),
+    network_matching_logic_audit_v538:networkSrc.includes('_networkOpportunityCompatibilityV538')&&networkSrc.includes('publisher-unified-logic-matrix-v539')&&networkSrc.includes('recovery_details')&&networkSrc.includes('incompatible_details'),
+    network_compatibility_before_availability_v538:networkSrc.includes('if(!compat.compatible)return')&&networkSrc.includes("!m.reasons.includes('matching_paused')"),
+    network_active_publisher_only_v538:networkSrc.includes('JOIN LATERAL (')&&networkSrc.includes('FROM network_publisher_accounts a')&&networkSrc.includes("reasons:['publisher_account_inactive']")&&networkSrc.includes('publisher_linked:false'),
+    network_no_self_publisher_v538:networkSrc.includes("reasons:['self_publisher']")&&networkSrc.includes('source_website_cannot_publish_to_itself'),
+    network_module_identity_v539:networkSrc.includes("const NETWORK_MODULE_VERSION = 'v539'")&&networkSrc.includes('NETWORK_MODULE_VERSION, NETWORK_TABLES'),
+    network_publisher_contract_v539:networkSrc.includes('_networkPublisherContractV539')&&networkSrc.includes('_networkPublisherPrimaryReasonV539')&&networkSrc.includes("acc!=='active'")&&networkSrc.includes('publisher_application_pending'),
+    network_source_publisher_isolation_v539:networkSrc.includes("record_role:'source'")&&networkSrc.includes('NOT_PUBLISHER_WEBSITE')&&networkSrc.includes('publisher_account_required'),
+    network_manual_publisher_linkage_v539:networkSrc.includes('reused_source_website')&&networkSrc.includes('One canonical website row is reused')&&networkSrc.includes("INSERT INTO network_publisher_accounts (application_id,website_id,email"),
+    network_proposal_revalidation_v539:networkSrc.includes('c.owner_website_id')&&networkSrc.includes('This match can no longer be accepted under the unified publisher matching contract.'),
+    network_proposal_dashboard_contract_v539:networkSrc.includes('every offered proposal is re-evaluated through the same cross-role contract')&&networkSrc.includes('acceptance:{eligible:!!acceptance.eligible')&&networkSrc.includes('proposal_acceptance_contract'),
+    network_publisher_cockpit_identity_counts_v539:networkSrc.includes('publisher_website_counts')&&networkSrc.includes('publisher_websites:publisherWebsites')&&networkSrc.includes('Publisher websites pending'),
+    network_closed_publisher_identity_guard_v539:networkSrc.includes('PUBLISHER_IDENTITY_CLOSED')&&networkSrc.includes('website approval cannot reactivate a revoked publisher by itself')&&networkSrc.includes("a.application_status!=='rejected'"),
+    network_admin_core_journey_v539:networkSrc.includes('ADMIN TOUR · ONE CONNECTED JOURNEY')&&networkSrc.includes('parallel_logic')&&networkSrc.includes('Publisher accepts hard interest'),
+    network_unified_cross_role_workflow_v539:networkSrc.includes('_networkUnifiedJourneyV539')&&networkSrc.includes("engine:'network-unified-cross-role-v539'")&&networkSrc.includes('optional_tracks_do_not_block_core')&&networkSrc.includes('hard_interest_before_publication'),
     network_action_attention_engine_v529:networkSrc.includes('_networkGuidedActionV529')&&networkSrc.includes("engine:'network-action-attention-v529'")&&networkSrc.includes('/api/network/admin/action-center'),
     network_admin_primary_action_v529:networkSrc.includes('adminPrimaryNext')&&networkSrc.includes('top_action:items[0]||null'),
     network_publisher_action_from_readiness_v529:networkSrc.includes('_networkPublisherRoleActionV529')&&networkSrc.includes('resolved.readiness,pp'),
