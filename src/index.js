@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v547-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v534-MATCH-PROPOSAL-ACCEPTANCE';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v548-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v535-GUIDED-WORKFLOW-COMPLETION';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -908,7 +908,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-07-CANONICAL-v547-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v534-MATCH-PROPOSAL-ACCEPTANCE',
+  build: 'CS-2026-10-07-CANONICAL-v548-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v535-GUIDED-WORKFLOW-COMPLETION',
   built_date: '2026-10-07',
   ceo_private: true,
   ceo_public: true,
@@ -988,6 +988,9 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   network_publisher_onboarding_clarity_v533: true,
   network_match_proposal_acceptance_v534: true,
   network_match_proposal_notifications_v534: true,
+  network_expected_module_version: 'v535',
+  network_guided_workflow_v535: true,
+  network_disabled_state_semantics_v535: true,
   prewrite_readonly_share_link: true,
   prewrite_action_summary_visible: true
 });
@@ -996,7 +999,9 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
 // Use https://app.contentscale.site/api/build-info after every Railway deploy.
 app.get('/api/build-info',(req,res)=>{
   res.set('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.json({success:true,...CONTENTSCALE_BUILD_INFO,server_time:new Date().toISOString()});
+  const loadedNetworkModuleVersion=_networkModule&&_networkModule.NETWORK_MODULE_VERSION||null;
+  const loadedNetworkExpectedSchema=_networkModule&&_networkModule.NETWORK_SCHEMA_VERSION||null;
+  res.json({success:true,...CONTENTSCALE_BUILD_INFO,network_module_loaded:!!(_networkModule&&typeof _networkModule.registerNetwork==='function'),network_module_version:loadedNetworkModuleVersion,network_expected_schema_version:loadedNetworkExpectedSchema,network_module_match:loadedNetworkModuleVersion===CONTENTSCALE_BUILD_INFO.network_expected_module_version,server_time:new Date().toISOString()});
 });
 
 app.get('/api/regression-contract',(req,res)=>{
@@ -1026,6 +1031,10 @@ app.get('/api/regression-contract',(req,res)=>{
     network_publisher_onboarding_clarity_v533:networkSrc.includes('PUBLISHER ONBOARDING')&&networkSrc.includes('Website details')&&networkSrc.includes('Website check')&&networkSrc.includes('Approval & matching')&&networkSrc.includes('First match')&&!networkSrc.includes('<section id=\"join\"><div class=\"wrap\"><div class=\"forms\"><div class=\"form\"><div class=\"step\">STEP 2</div>'),
     network_match_capacity_guard_v532:networkSrc.includes('_networkPublisherEligibilityV532')&&networkSrc.includes('capacity_full')&&networkSrc.includes('Publisher is not currently eligible for a new match proposal.'),
     network_match_profile_future_only_v532:networkSrc.includes('/api/network/admin/websites/:id/match-profile')&&networkSrc.includes('Profile changes affect future matching only. Existing placements remain intact.'),
+    network_guided_workflow_v535:networkSrc.includes('networkGuidedCssV535')&&networkSrc.includes('networkGuidedLegendV535')&&networkSrc.includes('Blue = do this now')&&networkSrc.includes('Green = complete/currently valid')&&networkSrc.includes('Yellow = waiting on someone else')&&networkSrc.includes('Only one blue action is active per page.'),
+    network_disabled_state_semantics_v535:networkSrc.includes('button:disabled:not(.busy)::after')&&networkSrc.includes('.btn.cs-locked')&&networkSrc.includes('.btn.cs-waiting')&&networkSrc.includes('.btn.cs-done'),
+    network_single_primary_queue_v535:networkSrc.includes('let guideTaken=false')&&networkSrc.includes('Queued: finish the blue')&&networkSrc.includes("queued?'queued':'active'"),
+    network_module_identity_v535:networkSrc.includes("const NETWORK_MODULE_VERSION = 'v535'")&&networkSrc.includes('NETWORK_MODULE_VERSION, NETWORK_TABLES'),
     network_action_attention_engine_v529:networkSrc.includes('_networkGuidedActionV529')&&networkSrc.includes("engine:'network-action-attention-v529'")&&networkSrc.includes('/api/network/admin/action-center'),
     network_admin_primary_action_v529:networkSrc.includes('adminPrimaryNext')&&networkSrc.includes('top_action:items[0]||null'),
     network_publisher_action_from_readiness_v529:networkSrc.includes('_networkPublisherRoleActionV529')&&networkSrc.includes('resolved.readiness,pp'),
