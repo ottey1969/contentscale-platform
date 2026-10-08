@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v563-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v550-PRIVATE-DASHBOARD-PRIVACY-FLOW';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v564-APP-ADMIN-ENGLISH-UNIVERSAL-FOOTER-NETWORK-v550';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -920,12 +920,63 @@ try {
 
 const app = express();
 
+
+// ============================================================
+// APP / ADMIN UNIVERSAL FOOTER — ENGLISH ONLY (v564)
+// Same approved footer across internal ContentScale tool surfaces.
+// Never inject into prospect reports, tracker/client pages, public shares,
+// unsubscribe pages, blog pages, emails, APIs or Network (Network owns its UI).
+// ============================================================
+const _CS_UNIVERSAL_FOOTER_HTML = '<style data-cs-universal-footer-style>\n.cs-footer{background:linear-gradient(135deg,#111827,#1f2937);border-top:2px solid #374151;padding:52px 28px 24px;width:100%;box-sizing:border-box;color:#d1d5db}\n.cs-footer *,.cs-footer *::before,.cs-footer *::after{box-sizing:border-box}.cs-footer-inner{max-width:1080px;margin:0 auto}.cs-footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:32px;margin-bottom:36px}.cs-footer-col h4{font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#d1d5db;margin:0 0 14px;font-weight:700}.cs-footer-col a:not(.cs-footer-brand){display:block;font-family:\'JetBrains Mono\',monospace;font-size:11px;text-decoration:none;margin-bottom:10px;line-height:1.6;transition:color .15s}.cs-footer-col a:hover{color:#f9fafb!important;text-decoration:underline}.cs-footer-brand{font-family:\'Playfair Display\',serif;font-size:20px;font-weight:700;background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:#a78bfa;text-decoration:none;display:inline-block;margin-bottom:10px}.cs-footer-description{font-size:12.5px;color:#9ca3af;line-height:1.7;max-width:270px;font-family:Verdana,sans-serif;margin:0 0 14px}.cs-footer-col a.cs-footer-whatsapp{display:inline-flex;align-items:center;gap:6px;font-family:\'JetBrains Mono\',monospace;font-size:10px;letter-spacing:.04em;color:#4ade80;font-weight:700;text-decoration:none;margin-top:4px}.cs-footer-ai{padding:18px 0;border-top:1px solid #374151;display:flex;align-items:center;gap:12px;margin-top:4px}.cs-footer-ai .ai-badge{flex-shrink:0;background:linear-gradient(90deg,#a78bfa,#60a5fa);color:#0a0a0b;font-family:\'JetBrains Mono\',monospace;font-weight:700;font-size:10px;letter-spacing:.1em;padding:5px 11px;border-radius:6px;text-transform:uppercase}.cs-footer-ai p{margin:0;color:#d1d5db;font-size:12.5px;line-height:1.6;font-family:Verdana,sans-serif}.cs-footer-bottom{padding-top:20px;border-top:1px solid #374151;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}.cs-footer-copy{font-family:\'JetBrains Mono\',monospace;font-size:10px;color:#9ca3af;letter-spacing:.05em;line-height:1.6}.cs-footer-badges{display:flex;gap:8px;flex-wrap:wrap}.cs-footer-badge{background:#1f2937;border:1px solid #374151;border-radius:6px;padding:3px 10px;font-size:10px;font-family:\'JetBrains Mono\',monospace;color:#9ca3af}.cs-footer-network{color:#a78bfa!important;font-weight:700}@media(max-width:768px){.cs-footer-grid{grid-template-columns:1fr 1fr;gap:24px}}@media(max-width:480px){.cs-footer{padding:36px 20px 20px}.cs-footer-grid{grid-template-columns:1fr;gap:20px}.cs-footer-bottom{flex-direction:column;align-items:flex-start}.cs-footer-ai{flex-direction:column;align-items:flex-start;gap:8px}}\n</style>\n<footer class="cs-footer" id="cs-universal-footer" data-cs-app-footer="english-v3"><div class="cs-footer-inner"><div class="cs-footer-grid"><div class="cs-footer-col"><a class="cs-footer-brand" href="https://contentscale.site/">ContentScale</a><p class="cs-footer-description">AI content intelligence platform. GRAAF Framework · Lead Crawler · Otto AI Assistant. Built in Amsterdam by Ottmar J.G. Francisca.</p><a class="cs-footer-whatsapp" href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20have%20a%20question%20about%20ContentScale." target="_blank" rel="noopener noreferrer">💬 WhatsApp Ottmar</a></div><div class="cs-footer-col"><h4>Platform</h4><a href="https://app.contentscale.site" style="color:#f97316">Free Content Scanner</a><a href="https://app.contentscale.site/content-engine" style="color:#a78bfa">Content Engine</a><a href="https://app.contentscale.site/lead-crawler" style="color:#eab308">Lead Crawler Pro</a><a href="https://contentscale.site/free-ai-citations-tracker/" style="color:#34d399">Free AI Citations Tracker</a><a class="cs-footer-network" href="https://app.contentscale.site/network">ContentScale Network</a><a href="https://app.contentscale.site/#leaderboard" style="color:#f9fafb;font-weight:700">Leaderboard</a></div><div class="cs-footer-col"><h4>Company</h4><a href="https://contentscale.site/about" style="color:#9ca3af">About</a><a href="https://contentscale.site/services" style="color:#9ca3af">Services</a><a href="https://contentscale.site/blog/" style="color:#9ca3af">Blog</a><a href="https://contentscale.site/resources/" style="color:#9ca3af">Resources</a><a href="https://contentscale.site/contact/" style="color:#9ca3af">Contact</a></div><div class="cs-footer-col"><h4>Legal</h4><a href="https://contentscale.site/privacy-policy/" style="color:#9ca3af">Privacy Policy</a><a href="https://contentscale.site/terms/" style="color:#9ca3af">Terms of Service</a><a href="https://contentscale.site/privacy-policy/#data-requests" style="color:#9ca3af">Data Requests</a><a href="mailto:info@contentscale.site" style="color:#9ca3af">info@contentscale.site</a></div></div><div class="cs-footer-ai"><span class="ai-badge">AI Notice</span><p>Some illustrations on this site were generated with the help of AI. Figures and results are based on available measurement data; sources and measurement periods are identified where applicable.</p></div><div class="cs-footer-bottom"><div class="cs-footer-copy">ContentScale © 2026 · Governed by Dutch Law · Amsterdam · NL</div><div class="cs-footer-badges"><span class="cs-footer-badge">Dutch Law</span><span class="cs-footer-badge">EU AI Act</span><span class="cs-footer-badge">GDPR</span></div></div></div></footer>';
+const _CS_UNIVERSAL_FOOTER_PATHS = new Set([
+  '/admin',
+  '/lead-crawler',
+  '/quick-scan/cockpit',
+  '/quick-scan/admin',
+  '/seo-audit',
+  '/audit-intake',
+  '/audit-workflow',
+  '/audit-recommendations',
+  '/handleiding',
+  '/otto/sessions',
+  '/campaigns',
+  '/tools',
+  '/engine-login',
+  '/content-engine'
+]);
+function _csShouldUseUniversalFooter(req){
+  const p=String(req&&req.path||'').replace(/\/$/,'')||'/';
+  return _CS_UNIVERSAL_FOOTER_PATHS.has(p);
+}
+function _csInjectUniversalFooter(html){
+  if(html==null)return html;
+  const wasBuffer=Buffer.isBuffer(html),source=wasBuffer?html.toString('utf8'):String(html);
+  if(!/<html[\s>]/i.test(source)||!/<\/body>/i.test(source))return html;
+  if(source.includes('id="cs-universal-footer"')||source.includes('data-cs-app-footer='))return html;
+  const out=source.replace(/<\/body>/i,_CS_UNIVERSAL_FOOTER_HTML+'</body>');
+  return wasBuffer?Buffer.from(out,'utf8'):out;
+}
+function _csSendHtmlFileWithFooter(res,filePath){
+  const html=fs.readFileSync(filePath,'utf8');
+  res.setHeader('Content-Type','text/html; charset=utf-8');
+  return res.send(_csInjectUniversalFooter(html));
+}
+app.use((req,res,next)=>{
+  if(!_csShouldUseUniversalFooter(req))return next();
+  const originalSend=res.send.bind(res);
+  res.send=function(body){
+    try{body=_csInjectUniversalFooter(body)}catch(e){console.error('[footer] injection skipped:',e.message)}
+    return originalSend(body);
+  };
+  next();
+});
+
 // ============================================================
 // DEPLOYMENT IDENTITY — keep this visible for Railway/admin checks.
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-07-CANONICAL-v563-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v550-PRIVATE-DASHBOARD-PRIVACY-FLOW',
+  build: 'CS-2026-10-08-CANONICAL-v564-APP-ADMIN-ENGLISH-UNIVERSAL-FOOTER-NETWORK-v550',
   built_date: '2026-10-07',
   ceo_private: true,
   ceo_public: true,
@@ -1068,6 +1119,7 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   network_profile_required_before_open_matching_v549: true,
   network_private_publisher_dashboard_email_v550: true,
   network_app_privacy_footer_v550: true,
+  app_admin_english_universal_footer_v564: true,
   network_expected_module_version: 'v550',
   network_guided_workflow_v535: true,
   network_disabled_state_semantics_v535: true,
@@ -1175,6 +1227,7 @@ app.get('/api/regression-contract',(req,res)=>{
     network_dummy_proof_matching_profile_v549:networkSrc.includes('1 · Tell us what fits')&&networkSrc.includes('2 · Capacity')&&networkSrc.includes('3 · Matching status')&&networkSrc.includes('Nothing is accepted, written or published automatically.'),
     network_private_publisher_dashboard_email_v550:networkSrc.includes('networkNotifyPublisherApplicantV550')&&networkSrc.includes('Open my private Publisher Dashboard')&&networkSrc.includes('does not require a ContentScale Admin login'),
     network_app_privacy_footer_v550:networkSrc.includes('networkPrivacyFooterV550')&&networkSrc.includes('data-cs-network-footer')&&networkSrc.includes('https://contentscale.site/privacy-policy/'),
+    app_admin_english_universal_footer_v564:src.includes('_CS_UNIVERSAL_FOOTER_HTML')&&src.includes('data-cs-app-footer=\"english-v3\"')&&src.includes('Privacy Policy')&&src.includes('ContentScale Network'),
     network_contact_intelligence_verified_sync_v542:src.includes('_ciSyncVerifiedToNetworkV542')&&src.includes('canonical Network')&&src.includes('network_entity_sync'),
     network_lead_crawler_network_status_v542:src.includes('_attachCanonicalNetworkJourneysV542')&&src.includes("contract:'canonical-business-discovery-v542'")&&networkSrc.includes('resolveCanonicalBusinessJourneysV542'),
     network_marketplace_activity_v542:networkSrc.includes('network_activity:{verified_mentions')&&networkSrc.includes('niche_counts')&&networkSrc.includes('VERIFIED NETWORK ACTIVITY'),
@@ -27474,6 +27527,7 @@ function servePublic(filename) {
     if (!found) return res.status(404).send(`<html><body style="font-family:system-ui;background:#030712;color:#e5e7eb;padding:40px;"><h2 style="color:#fbbf24;">${filename} not found</h2><p style="color:#6b7280;">Place file in <code>public/${filename}</code></p></body></html>`);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-cache');
+    if (_csShouldUseUniversalFooter(req)) return _csSendHtmlFileWithFooter(res, found);
     res.sendFile(found);
   };
 }
@@ -35769,7 +35823,8 @@ app.post('/api/content/service-areas/:jobId/publish', verifyEngineAccess, async 
 
 // ── Content Engine Page ──────────────────────────────────────
 app.get('/engine-login', (req, res) => {
-  res.sendFile(require('path').join(__dirname, 'engine-login.html'));
+  const filePath=require('path').join(__dirname, 'engine-login.html');
+  return _csSendHtmlFileWithFooter(res,filePath);
 });
 
 app.get('/content-engine', (req, res) => {
