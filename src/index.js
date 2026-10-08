@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v571-LEAD-CRAWLER-GROUNDING-FIRST-NETWORK-v557';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v572-LEAD-CRAWLER-ROUTE-ORDER-NETWORK-v557';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -989,7 +989,7 @@ app.use((req,res,next)=>{
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-08-CANONICAL-v571-LEAD-CRAWLER-GROUNDING-FIRST-NETWORK-v557',
+  build: 'CS-2026-10-08-CANONICAL-v572-LEAD-CRAWLER-ROUTE-ORDER-NETWORK-v557',
   built_date: '2026-10-08',
   ceo_private: true,
   ceo_public: true,
@@ -1133,7 +1133,7 @@ const CONTENTSCALE_BUILD_INFO = Object.freeze({
   network_private_publisher_dashboard_email_v550: true,
   network_app_privacy_footer_v550: true,
   app_wide_english_universal_footer_v567: true,
-  network_expected_module_version: 'v553',
+  network_expected_module_version: 'v557',
   network_guided_workflow_v535: true,
   network_disabled_state_semantics_v535: true,
   prewrite_readonly_share_link: true,
@@ -10631,6 +10631,58 @@ app.get('/admin', (req, res) => {
 });
 
 
+// v572 — Canonical Lead Crawler route MUST precede generic public-HTML interceptors.
+// Otherwise /lead-crawler resolves public/lead-crawler.html directly and skips its runtime shim.
+// Reads lead-crawler.html from disk on every request, so future edits to that
+// file go live immediately after deploy — no more re-encoding a base64 snapshot
+// into this route. Tries a few common locations so it works whether the file
+// sits next to index.js, in /public, or in /views.
+const LEAD_CRAWLER_CANDIDATES = [
+  // next to index.js (e.g. /app/src/)
+  path.join(__dirname, 'lead-crawler.html'),
+  path.join(__dirname, 'public', 'lead-crawler.html'),
+  path.join(__dirname, 'views', 'lead-crawler.html'),
+  path.join(__dirname, 'static', 'lead-crawler.html'),
+  // one level up — repo root (e.g. /app/), where public/ usually lives
+  path.join(__dirname, '..', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'public', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'views', 'lead-crawler.html'),
+  path.join(__dirname, '..', 'static', 'lead-crawler.html'),
+  // process working directory fallbacks
+  path.join(process.cwd(), 'lead-crawler.html'),
+  path.join(process.cwd(), 'public', 'lead-crawler.html'),
+];
+
+// Alias: /leadcrawler (no hyphen) → same page, so either URL works when shared.
+app.get('/leadcrawler', (req, res) => res.redirect(301, '/lead-crawler'));
+
+app.get('/lead-crawler', (req, res) => {
+  const found = LEAD_CRAWLER_CANDIDATES.find(p => {
+    try { return fs.existsSync(p); } catch (e) { return false; }
+  });
+
+  if (!found) {
+    console.error('[lead-crawler] lead-crawler.html not found. Looked in:', LEAD_CRAWLER_CANDIDATES);
+    return res.status(500).type('text/plain').send(
+      'lead-crawler.html not found on the server.\n\n' +
+      'Commit lead-crawler.html to your repo (next to index.js is easiest), then redeploy.\n\n' +
+      'Looked in:\n  ' + LEAD_CRAWLER_CANDIDATES.join('\n  ')
+    );
+  }
+
+  fs.readFile(found, 'utf8', (err, html) => {
+    if (err) {
+      console.error('[lead-crawler] Failed to read', found, err.message);
+      return res.status(500).type('text/plain').send('Could not read lead-crawler.html: ' + err.message);
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('X-ContentScale-LeadCrawler-Route', 'canonical-v572');
+    const leadCrawlerHtml=_injectProspectQuickScanIntoLeadCrawler(html);
+    res.send(leadCrawlerHtml);
+  });
+});
+
 // ── HTML EXTENSION REDIRECT — must be BEFORE express.static ──────────────
 app.use((req, res, next) => {
   if (req.path.endsWith('.html')) {
@@ -18271,55 +18323,7 @@ window.csAuditClientLoaded=function(){
                });
 
 
-// Reads lead-crawler.html from disk on every request, so future edits to that
-// file go live immediately after deploy — no more re-encoding a base64 snapshot
-// into this route. Tries a few common locations so it works whether the file
-// sits next to index.js, in /public, or in /views.
-const LEAD_CRAWLER_CANDIDATES = [
-  // next to index.js (e.g. /app/src/)
-  path.join(__dirname, 'lead-crawler.html'),
-  path.join(__dirname, 'public', 'lead-crawler.html'),
-  path.join(__dirname, 'views', 'lead-crawler.html'),
-  path.join(__dirname, 'static', 'lead-crawler.html'),
-  // one level up — repo root (e.g. /app/), where public/ usually lives
-  path.join(__dirname, '..', 'lead-crawler.html'),
-  path.join(__dirname, '..', 'public', 'lead-crawler.html'),
-  path.join(__dirname, '..', 'views', 'lead-crawler.html'),
-  path.join(__dirname, '..', 'static', 'lead-crawler.html'),
-  // process working directory fallbacks
-  path.join(process.cwd(), 'lead-crawler.html'),
-  path.join(process.cwd(), 'public', 'lead-crawler.html'),
-];
-
-// Alias: /leadcrawler (no hyphen) → same page, so either URL works when shared.
-app.get('/leadcrawler', (req, res) => res.redirect(301, '/lead-crawler'));
-
-app.get('/lead-crawler', (req, res) => {
-  const found = LEAD_CRAWLER_CANDIDATES.find(p => {
-    try { return fs.existsSync(p); } catch (e) { return false; }
-  });
-
-  if (!found) {
-    console.error('[lead-crawler] lead-crawler.html not found. Looked in:', LEAD_CRAWLER_CANDIDATES);
-    return res.status(500).type('text/plain').send(
-      'lead-crawler.html not found on the server.\n\n' +
-      'Commit lead-crawler.html to your repo (next to index.js is easiest), then redeploy.\n\n' +
-      'Looked in:\n  ' + LEAD_CRAWLER_CANDIDATES.join('\n  ')
-    );
-  }
-
-  fs.readFile(found, 'utf8', (err, html) => {
-    if (err) {
-      console.error('[lead-crawler] Failed to read', found, err.message);
-      return res.status(500).type('text/plain').send('Could not read lead-crawler.html: ' + err.message);
-    }
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'no-store');
-    const leadCrawlerHtml=_injectProspectQuickScanIntoLeadCrawler(html);
-    res.send(leadCrawlerHtml);
-  });
-});
-               // ── Apify proxy routes ──────────────────────────────────────────────────────
+// ── Apify proxy routes ──────────────────────────────────────────────────────
                const APIFY_BASE = 'https://api.apify.com/v2';
                app.post('/api/apify/start-run', async (req, res) => {
                const token = req.headers['x-apify-token'];
