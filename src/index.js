@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v565-CEO-QUICKSCAN-LANG-EN-NL-ES';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v566-LEADCRAWLER-WARMUP-CYCLE-ADVANCE';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -927,7 +927,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-08-CANONICAL-v565-CEO-QUICKSCAN-LANG-EN-NL-ES',
+  build: 'CS-2026-10-08-CANONICAL-v566-LEADCRAWLER-WARMUP-CYCLE-ADVANCE',
   built_date: '2026-10-08',
   ceo_private: true,
   ceo_public: true,
@@ -21608,7 +21608,7 @@ async function _pqsOutreachTiming(){
   // A reboot, deploy, quiet day, or an old first-send date must never move the counter forward or backward.
   // Stray/test sends do not advance a day unless that Manila calendar day reaches the active daily target.
   const daily=await pool.query(`SELECT
-      (outreach_sent_at AT TIME ZONE 'Asia/Manila')::date AS send_date,
+      TO_CHAR((outreach_sent_at AT TIME ZONE 'Asia/Manila')::date,'YYYY-MM-DD') AS send_date,
       COUNT(*)::int AS sent
     FROM prospect_quick_scans
     WHERE outreach_sent_at IS NOT NULL
@@ -21628,15 +21628,19 @@ async function _pqsOutreachTiming(){
   // Reconstruct only COMPLETED warm-up days from actual successful-send history.
   // Day 1-7 require 20 successful sends on that Manila date, 8-14 require 30, etc.
   let earnedDays=0;
+  let lastCompletedDate=null;
   for(const r of daily.rows||[]){
     const nextDay=earnedDays+1;
     const need=calcWarmupCap(nextDay);
     if(need==null){earnedDays=42;break;}
-    if(Number(r.sent||0)>=Number(need))earnedDays++;
+    if(Number(r.sent||0)>=Number(need)){earnedDays++;lastCompletedDate=String(r.send_date||'').slice(0,10);}
   }
-  // Current display day is the last earned day (minimum 1). This matches 80 successful
-  // sends across four full 20-send days => DAY 4/7. Extra stray/test sends do not make DAY 5.
-  const earnedDisplayDay=Math.max(1,earnedDays);
+  // Advance on the NEXT Manila calendar date after the last completed target.
+  // Never unlock the next cycle on the same day as the final target send.
+  const manilaParts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+  const manilaToday=manilaParts.year+'-'+manilaParts.month+'-'+manilaParts.day;
+  const lastTargetIsToday=lastCompletedDate===manilaToday;
+  const earnedDisplayDay=Math.max(1,earnedDays+(lastTargetIsToday?0:1));
 
   await pool.query(`INSERT INTO warmup_config(user_id,warmup_start_date,is_active,progress_day,progress_updated_at)
     VALUES($1,(NOW() AT TIME ZONE 'Asia/Manila')::date,TRUE,$2,NOW())
