@@ -1,4 +1,4 @@
-// ContentScale Network v555 — Universal English Footer Everywhere + Launch Gate Hardening
+// ContentScale Network v556 — Universal English Footer Everywhere + Launch Gate Hardening
 'use strict';
 
 // CONTENTSCALE NETWORK — GENERATION RECOVERY + IMAGE CONTROL v509
@@ -12,7 +12,7 @@ const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
 const NETWORK_SCHEMA_VERSION = 24;
-const NETWORK_MODULE_VERSION = 'v555';
+const NETWORK_MODULE_VERSION = 'v556';
 const NETWORK_TABLES = [
   'network_websites',
   'network_content',
@@ -3826,8 +3826,13 @@ function networkPrivacyFooterV550(){
 <footer class="cs-footer" id="cs-universal-footer" data-cs-app-footer="english-v6"><div class="cs-footer-inner"><div class="cs-footer-grid"><div class="cs-footer-col"><a class="cs-footer-brand" href="https://contentscale.site/">ContentScale</a><p class="cs-footer-description">AI content intelligence platform. GRAAF Framework · Lead Crawler · Otto AI Assistant. Built in Amsterdam by Ottmar J.G. Francisca.</p><a class="cs-footer-whatsapp" href="https://wa.me/31628073996?text=Hi%20Ottmar!%20I%20have%20a%20question%20about%20ContentScale." target="_blank" rel="noopener noreferrer">💬 WhatsApp Ottmar</a></div><div class="cs-footer-col"><h4>Platform</h4><a href="https://app.contentscale.site" style="color:#f97316">Free Content Scanner</a><a href="https://app.contentscale.site/content-engine" style="color:#a78bfa">Content Engine</a><a href="https://app.contentscale.site/lead-crawler" style="color:#eab308">Lead Crawler Pro</a><a href="https://contentscale.site/free-ai-citations-tracker/" style="color:#34d399">Free AI Citations Tracker</a><a class="cs-footer-network" href="https://app.contentscale.site/network">ContentScale Network</a><a href="https://app.contentscale.site/#leaderboard" style="color:#f9fafb;font-weight:700">Leaderboard</a></div><div class="cs-footer-col"><h4>Company</h4><a href="https://contentscale.site/about" style="color:#9ca3af">About</a><a href="https://contentscale.site/services" style="color:#9ca3af">Services</a><a href="https://contentscale.site/blog/" style="color:#9ca3af">Blog</a><a href="https://contentscale.site/resources/" style="color:#9ca3af">Resources</a><a href="https://contentscale.site/contact/" style="color:#9ca3af">Contact</a></div><div class="cs-footer-col"><h4>Legal</h4><a href="https://contentscale.site/privacy-policy/" style="color:#9ca3af">Privacy Policy</a><a href="https://contentscale.site/terms/" style="color:#9ca3af">Terms of Service</a><a href="https://contentscale.site/privacy-policy/#data-requests" style="color:#9ca3af">Data Requests</a><a href="mailto:info@contentscale.site" style="color:#9ca3af">info@contentscale.site</a></div></div><div class="cs-footer-ai"><span class="ai-badge">AI Notice</span><p>Some illustrations on this site were generated with the help of AI. Figures and results are based on available measurement data; sources and measurement periods are identified where applicable.</p></div><div class="cs-footer-bottom"><div class="cs-footer-copy">ContentScale © 2026 · Governed by Dutch Law · Amsterdam · NL</div><div class="cs-footer-badges"><span class="cs-footer-badge">Dutch Law</span><span class="cs-footer-badge">EU AI Act</span><span class="cs-footer-badge">GDPR</span></div></div></div></footer><script data-cs-footer-normalizer>(function(){function normalize(){var u=document.getElementById("cs-universal-footer");if(!u)return;document.querySelectorAll("footer").forEach(function(f){if(f!==u)f.remove()});if(u.parentNode!==document.body)document.body.appendChild(u);else document.body.appendChild(u)}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",normalize,{once:true});else normalize()})();<\/script>`;
 }
 
+function _networkInsertBeforeLastBodyV556(source,fragment){
+  const s=String(source==null?'':source),lower=s.toLowerCase(),idx=lower.lastIndexOf('</body>');
+  return idx>=0?s.slice(0,idx)+String(fragment||'')+s.slice(idx):s+String(fragment||'');
+}
+
 function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
-  // v555 — one universal English footer across every human-visible Network HTML journey.
+  // v556 — one universal English footer; inject only before the final document </body>.
   // Exact internal publication HTML is excluded because it is measurement/publishing content.
   app.use('/network',(req,res,next)=>{
     if(String(req.path||'').startsWith('/internal-content/'))return next();
@@ -3839,7 +3844,7 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
           body=body.replace(/<style\s+data-cs-universal-footer-style[^>]*>[\s\S]*?<\/style>/gi,'');
           body=body.replace(/<footer\b[^>]*(?:id=["']cs-universal-footer["']|data-cs-app-footer=["'][^"']+["'])[^>]*>[\s\S]*?<\/footer>/gi,'');
           body=body.replace(/<script\s+data-cs-footer-normalizer[^>]*>[\s\S]*?<\/script>/gi,'');
-          body=body.replace(/<\/body>/i,networkPrivacyFooterV550()+'</body>');
+          body=_networkInsertBeforeLastBodyV556(body,networkPrivacyFooterV550());
         }
       }catch(_e){}
       return originalSend(body);
