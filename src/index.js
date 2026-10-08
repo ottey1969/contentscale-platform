@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v573-LEAD-CRAWLER-INLINE-SCRIPT-SYNTAX-NETWORK-v557';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v574-TRACKER-MY-CHECK-EVIDENCE-GATE-NETWORK-v557';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -989,7 +989,7 @@ app.use((req,res,next)=>{
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-08-CANONICAL-v573-LEAD-CRAWLER-INLINE-SCRIPT-SYNTAX-NETWORK-v557',
+  build: 'CS-2026-10-08-CANONICAL-v574-TRACKER-MY-CHECK-EVIDENCE-GATE-NETWORK-v557',
   built_date: '2026-10-08',
   ceo_private: true,
   ceo_public: true,
@@ -48636,6 +48636,18 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
     var waitMsg=evidenceGate.checkpoint?'Still needed: '+evidenceGate.missing.join(', ')+'. Add the missing evidence before closing this checkpoint.':'Still needed: '+evidenceGate.missing.join(', ')+'. Complete the requested input. The scanner stays locked until this becomes a real scan opportunity.';
     return {code:'WAITING',label:'WAITING FOR EVIDENCE',detail:waitMsg,color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
   }
+  // v574 — canonical MY CHECK / case study handoff.
+  // MY CHECK is persisted as manual_done, separately from is_done. A page already
+  // in Completed / Monitoring must not be sent back to an older Brief merely
+  // because its saved brief_content still lists actions. Importing GSC never
+  // creates a new implementation cycle. Active live-verification/correction
+  // states remain authoritative and are handled by their existing branches.
+  if(bool(p.case_study_active)&&bool(p.manual_done)
+     && !['verifying','live_changed_delta_remaining','live_same_checkpoint_delta_remaining','no_change'].includes(implStatus)){
+    return {code:'MONITOR',label:'MY CHECK SAVED · WAIT FOR NEXT EVIDENCE',
+      detail:'This page is in Completed / Monitoring. Refreshing GSC does not reopen its saved Brief or authorize a new scan. Review the protected record in Proof & History. '+(nextEvidence||'Wait for the next scheduled evidence checkpoint.') ,
+      color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
+  }
   if(implStatus==='manual_resolution_complete'&&currentRejected>0){
     return {code:'REVIEW_REJECTED',label:'CYCLE CLOSED · '+currentRejected+' REJECTED ACTION'+(currentRejected===1?'':'S'),detail:'Rejected actions remain recoverable. Review them here and restore only accidental rejections; no new scan or full Brief is needed.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Review rejected actions',buttonAction:'openRemainingActions('+p.id+')'};
   }
@@ -49213,7 +49225,12 @@ function renderPages() {
     var _nextScanRequired = (_nextActionCode==='SCAN'||_nextActionCode==='SCAN_OPPORTUNITY'||_nextActionCode==='REFRESH_CONTRACT');
     var _correctionLoop = (_nextActionCode==='REMAINING'||_nextActionCode==='VERIFYING');
     var _awaitingLiveVerification = (_nextActionCode==='VERIFY_LIVE_PENDING'||_nextActionCode==='VERIFY_LIVE');
-    var _hideFullBrief = _correctionLoop;
+    // A saved MY CHECK marks case-study monitoring; the historical Brief
+    // belongs in Proof & History, not as a competing edit/implementation CTA.
+    var _caseMyCheckMonitoring=!!p.case_study_active
+      && (p.manual_done===true||p.manual_done==='t'||p.manual_done==='true'||p.manual_done===1)
+      && _nextActionCode==='MONITOR';
+    var _hideFullBrief = _correctionLoop || _caseMyCheckMonitoring;
     var _hideManualScan = _correctionLoop;
     var _disableFullBrief = _awaitingLiveVerification;
     var _disableManualScan = _awaitingLiveVerification;
@@ -49367,7 +49384,7 @@ function renderPages() {
       + '<option value=""' + (!p.treatment?' selected':'') + '>'+(hasBrief?'Brief decision pending':'Waiting for Brief')+'</option>'
       + ['KEEP','OPTIMIZE','EXPAND','REWRITE','MERGE','REDIRECT','REMOVE_NOINDEX','MONITOR'].map(function(t){return '<option value="'+t+'"'+(String(p.treatment||'').toUpperCase()===t?' selected':'')+'>'+t.replace('_',' / ')+'</option>';}).join('')
       + '</select>'
-      + (p.treatment ? '<span style="font-size:9px;font-weight:800;color:'+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'#fbbf24':'#4ade80')+';">'+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'MANUAL OVERRIDE':'AUTO FROM BRIEF')+'</span>' : '')
+      + (p.treatment ? '<span style="font-size:9px;font-weight:800;color:'+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'#fbbf24':'#4ade80')+';">'+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'MANUAL OVERRIDE':(_caseMyCheckMonitoring?'SAVED BRIEF · MONITORING':'AUTO FROM BRIEF'))+'</span>' : '')
       + (String(p.treatment_source||'').toUpperCase()==='MANUAL' ? '<button onclick="event.stopPropagation();resetPageTreatmentAuto('+p.id+')" style="font-size:9px;background:none;border:1px solid #374151;border-radius:4px;color:#94a3b8;cursor:pointer;padding:2px 6px;" title="Discard the manual override and use the current Brief recommendation again">↺ Use Brief</button>' : '')
       + (p.treatment_target_url ? '<span style="font-size:9px;color:#fbbf24;">→ '+String(p.treatment_target_url).replace(/</g,'&lt;')+'</span>' : '')
       + (function(){try{var b=typeof p.brief_content==='string'?JSON.parse(p.brief_content):(p.brief_content||{});var r=b.treatment_reason||'',n=b.treatment_next_step||'';if(!r&&!n)return '';return '<div style="flex-basis:100%;font-size:10px;line-height:1.45;color:#94a3b8;padding:5px 8px;background:#0a0e14;border-left:2px solid '+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'#f59e0b':'#16a34a')+';border-radius:4px;"><b style="color:#cbd5e1;">'+(String(p.treatment_source||'').toUpperCase()==='MANUAL'?'Brief recommended '+String(b.recommended_treatment||'—')+', but you changed it to '+String(p.treatment||'—'):'Why '+String(p.treatment||b.recommended_treatment||'—'))+':</b> '+String(r).replace(/</g,'&lt;')+(n?' <b>Next:</b> '+String(n).replace(/</g,'&lt;'):'')+'</div>';}catch(e){return '';}})()
