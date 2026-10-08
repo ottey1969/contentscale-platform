@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v572-LEAD-CRAWLER-ROUTE-ORDER-NETWORK-v557';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v573-LEAD-CRAWLER-INLINE-SCRIPT-SYNTAX-NETWORK-v557';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -989,7 +989,7 @@ app.use((req,res,next)=>{
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-08-CANONICAL-v572-LEAD-CRAWLER-ROUTE-ORDER-NETWORK-v557',
+  build: 'CS-2026-10-08-CANONICAL-v573-LEAD-CRAWLER-INLINE-SCRIPT-SYNTAX-NETWORK-v557',
   built_date: '2026-10-08',
   ceo_private: true,
   ceo_public: true,
@@ -10677,7 +10677,7 @@ app.get('/lead-crawler', (req, res) => {
     }
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.setHeader('X-ContentScale-LeadCrawler-Route', 'canonical-v572');
+    res.setHeader('X-ContentScale-LeadCrawler-Route', 'canonical-v573');
     const leadCrawlerHtml=_injectProspectQuickScanIntoLeadCrawler(html);
     res.send(leadCrawlerHtml);
   });
@@ -26857,7 +26857,7 @@ var loadGroundingUsage=window.loadGroundingUsage=async function(){
       '<p><strong>Showing interest does not start the audit and does not create a payment.</strong> It tells us you would like to discuss or prepare the next step.</p>'+
       '<label style="display:block;margin:16px 0 6px;font-weight:600">Optional message</label>'+
       '<textarea id="audit20-interest-note" maxlength="1500" placeholder="Anything you want us to know before we contact you?" style="width:100%;min-height:80px;padding:10px"></textarea>'+
-      '<div style="margin-top:14px"><button id="audit20-interest-btn" type="button" class="btn">Yes — I\\'m interested in the 20-Page Audit</button></div>'+
+      '<div style="margin-top:14px"><button id="audit20-interest-btn" type="button" class="btn">Yes — I’m interested in the 20-Page Audit</button></div>'+
       '<div id="audit20-interest-msg" style="margin-top:10px"></div>';
     var target=document.querySelector('main')||document.querySelector('.container')||document.body;
     target.appendChild(card);
@@ -26870,7 +26870,7 @@ var loadGroundingUsage=window.loadGroundingUsage=async function(){
         var j=await r.json();
         if(!r.ok||!j.success)throw new Error(j.error||'Could not record interest');
         b.textContent='Interest received ✓';b.disabled=true;m.innerHTML='<div style="position:relative;overflow:hidden;margin-top:10px;padding:16px;border:2px solid #22c55e;border-radius:14px;background:linear-gradient(135deg,#052e16,#064e3b);color:#dcfce7;box-shadow:0 16px 45px rgba(34,197,94,.18);animation:pqsInterestPop .45s ease-out"><div style="font-size:12px;font-weight:950;letter-spacing:.11em;color:#86efac">✓ INTEREST RECEIVED</div><div style="font-size:20px;font-weight:950;margin-top:3px">We got it.</div><div style="margin-top:5px">Your 20-Page Audit interest is now visible to ContentScale. We can contact you about the next step.</div></div>';if(!document.getElementById('pqsInterestAnimStyle')){var s=document.createElement('style');s.id='pqsInterestAnimStyle';s.textContent='@keyframes pqsInterestPop{from{opacity:0;transform:translateY(-8px) scale(.98)}to{opacity:1;transform:none}}';document.head.appendChild(s)};
-      }catch(e){b.disabled=false;b.textContent='Yes — I\\'m interested in the 20-Page Audit';m.textContent=e.message||String(e)}
+      }catch(e){b.disabled=false;b.textContent='Yes — I’m interested in the 20-Page Audit';m.textContent=e.message||String(e)}
     };
   }
   // v397: Lead Crawler is an admin discovery surface, not a prospect Quick
