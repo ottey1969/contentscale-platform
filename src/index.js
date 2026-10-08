@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-07-CANONICAL-v563-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v550-PRIVATE-DASHBOARD-PRIVACY-FLOW';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v564-CEO-EXPLICIT-LANG-EN-NL-ES';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -306,6 +306,7 @@ const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // 6. Test reset revokes public tokens; clearing browser memory does not.
 // 7. Every public prospect report carries the Ottmar specialist/privacy footer.
 const CONTENTSCALE_BUILD_CHANGES = [
+  'ceo-explicit-query-lang-priority-en-nl-es-v564',
   'network-unified-matching-profile-journey-v549',
   'network-private-publisher-dashboard-email-v550',
   'network-app-privacy-footer-v550',
@@ -925,7 +926,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-07-CANONICAL-v563-QUICKSCAN-VISIBLE-EMAIL-COMPOSER-NETWORK-v550-PRIVATE-DASHBOARD-PRIVACY-FLOW',
+  build: 'CS-2026-10-08-CANONICAL-v564-CEO-EXPLICIT-LANG-EN-NL-ES',
   built_date: '2026-10-07',
   ceo_private: true,
   ceo_public: true,
@@ -24839,7 +24840,7 @@ function _pqsControlRepairScript(rawLanguage){
   const text=copy[language]||copy.en;
   return `<script>(function(){var ids=['newForm','biz','url','source','target','scanBtn','status','result','scores','scope','actions','ai','aiIntro'];ids.forEach(function(id){window[id]=document.getElementById(id)});var hero=document.querySelector('.hero'),note=document.getElementById('pqsManualPromise');if(hero&&!note){note=document.createElement('div');note.id='pqsManualPromise';note.className='status';note.style.borderColor='#f59e0b';note.style.textAlign='left';note.innerHTML='<b>${String(text.title)}</b><div class="muted" style="margin-top:4px">${String(text.body)}</div>';var anchor=document.getElementById('status');hero.insertBefore(note,anchor)}function restart(){if(TOKEN&&window.target&&!window.target.textContent.trim()&&typeof load==='function'){Promise.resolve(load(true)).catch(function(e){if(typeof stat==='function')stat(esc((e&&e.message)||'Could not load the Quick Scan controls'),'#ef4444')})}else if(!TOKEN&&window.newForm)window.newForm.style.display='flex'}setTimeout(restart,0);setTimeout(restart,900)})();<\/script>`;
 }
-app.get('/quick-scan',(req,res)=>{const language=_pqsResolveLanguage(req.query&&req.query.language||'auto','');const qs=new URLSearchParams();if(language&&language!=='auto')qs.set('language',language);qs.set('from','quick-scan');qs.set('reason','ceo-first');res.redirect(302,'/quick-scan/start?'+qs.toString());});
+app.get('/quick-scan',(req,res)=>{const language=_pqsResolveLanguage((req.query&&(req.query.lang||req.query.language))||'auto','');const qs=new URLSearchParams();if(language&&language!=='auto')qs.set('language',language);qs.set('from','quick-scan');qs.set('reason','ceo-first');res.redirect(302,'/quick-scan/start?'+qs.toString());});
 function _pqsFixRenderedAdminHtml(h){
   return String(h)
     .replaceAll(`Email is optional and never blocks generation. If you enter an email, ContentScale sends the finished CEO Report there automatically; otherwise you can copy/share the report link yourself.`,`Email is optional and stored only with its provenance. Creating a CEO Report never sends email. Review the address and use Approve & Send only when you choose to contact the prospect.`)
@@ -26324,6 +26325,9 @@ app.get(['/quick-scan/start','/ceo','/nl-ceo','/es-ceo','/linkedin-ceo','/nl-lin
   const shortSources={'/ceo':'standalone','/nl-ceo':'standalone','/es-ceo':'standalone','/linkedin-ceo':'linkedin','/nl-linkedin-ceo':'linkedin','/es-linkedin-ceo':'linkedin','/facebook-ceo':'facebook','/nl-facebook-ceo':'facebook','/es-facebook-ceo':'facebook','/email-ceo':'email','/nl-email-ceo':'email','/es-email-ceo':'email'};
   const accepted=String(req.headers['accept-language']||'').toLowerCase(),autoLanguage=accepted.split(',').map(x=>x.trim().split(';')[0]).find(x=>/^(nl|es)(-|$)/.test(x))||'en';
   const shortLanguage=req.path==='/ceo'?(autoLanguage.indexOf('nl')===0?'nl':(autoLanguage.indexOf('es')===0?'es':'en')):(req.path.indexOf('/nl-')===0||req.path==='/nl-ceo'?'nl':(req.path.indexOf('/es-')===0||req.path==='/es-ceo'?'es':'en')),shortSource=shortSources[req.path]||'',shortLink=!!shortSource;
+  // v564: Explicit ?lang=es/nl/en wins over browser language and saved preferences.
+  const explicitCeoLanguage=String(req.query.lang||req.query.language||'').trim().toLowerCase().split('-')[0];
+  const ceoLanguageOverride=['en','nl','es'].includes(explicitCeoLanguage)?explicitCeoLanguage:null;
   // CEO REPORT — PUBLIC. Language follows the outreach link and remains attached
   // to the prospect record for downstream Quick Scan / follow-up localization.
   const source=['linkedin','facebook','contact_form','email','standalone','lead-crawler'].includes(String(req.query.source||shortSource))?String(req.query.source||shortSource):'standalone';
@@ -26332,9 +26336,9 @@ app.get(['/quick-scan/start','/ceo','/nl-ceo','/es-ceo','/linkedin-ceo','/nl-lin
   // never disables this route or an already-shared URL.
   _pqsEnsureCampaignLinks().then(()=>pool.query(`INSERT INTO prospect_public_campaign_links(source,language,campaign,open_count,last_opened_at)
     VALUES($1,$2,$3,1,NOW()) ON CONFLICT(source,language,campaign)
-    DO UPDATE SET open_count=prospect_public_campaign_links.open_count+1,last_opened_at=NOW()`,[source,String(req.query.language||(shortLink?shortLanguage:'auto')),campaign]))
+    DO UPDATE SET open_count=prospect_public_campaign_links.open_count+1,last_opened_at=NOW()`,[source,String(ceoLanguageOverride||(shortLink?shortLanguage:'auto')),campaign]))
     .catch(e=>console.warn('[public-campaign-open]',e.message));
-  const requestedLanguage=_pqsResolveLanguage(req.query.language||(shortLink?shortLanguage:'auto'),'');
+  const requestedLanguage=ceoLanguageOverride||_pqsResolveLanguage(shortLink?shortLanguage:'auto','');
   const redirectedFromQuick=String(req.query.reason||'')==='ceo-first';
   const C={
     en:{html:'en',title:'Get Your FREE CEO Report · ContentScale',h1:'You\'re Invisible Online in the Moment that Matters Most: See What\'s Wrong',sub:'See what your content is doing well, what may be holding it back, and where to improve next. Enter your company and website to create your private Content Effectiveness Overview (CEO) Report.',s1:'1. Your website',s1d:'We discover relevant first-party pages to choose the right page; they are not all scanned.',s2:'2. Smart page selection',s2d:'ContentScale selects a commercially meaningful page.',s3:'3. CEO Report',s3d:'Your private report opens immediately. Quick Scan comes later.',biz:'Business name',name:'Your name — optional',domain:'Website domain, e.g. contentscale.site',help:'Enter your main website domain. ContentScale will automatically explore your website and select an important commercial page for the CEO Prospect Report.',email:'Email address — optional',emailHelp:'Not required: the report opens immediately. If supplied, it is saved for personal follow-up; nothing is automatically sent. Updates require the separate optional checkbox.',updates:'Keep me updated about this analysis and next steps.',optional:'Optional and separate from creating the report.',aiNotice:'ContentScale uses AI to analyze your website and prepare this report. We use the details you submit to create your private report.',privacyText:'Read how we handle your data in our',privacyLink:'Privacy Policy',specialistTitle:'Prefer to speak with a specialist?',specialistText:'Talk directly with Ottmar Francisca, the specialist in the video, for a transparent conversation about your website.',specialistButton:'Book a call with Ottmar',button:'Get my FREE CEO Report',foot:'This is the first step. If you want to continue after the CEO Report, the next diagnostic is Quick Scan — Other Page.',missing:'Enter your website domain.',badmail:'Enter a valid email address or leave the optional field blank.',building:'Building your CEO Report…',msgs:['Analyzing your website…','Finding the strongest commercial page…','Checking search visibility and opportunities…','Building your CEO opportunity report…'],keep:'Keep this page open while ContentScale prepares your report.',failed:'CEO Report failed'},
@@ -26617,7 +26621,7 @@ app.get('/quick-scan/:token',async(req,res)=>{
     const language=_pqsResolveLanguage(row.language,row.domain),html=_pqsPublicPageV393(row,language);
     res.set('Cache-Control','no-store, no-cache, must-revalidate');
     res.set('X-ContentScale-Build',CONTENTSCALE_BUILD_ID);
-    const finalHtml=redirectedFromQuick?html.replace('<div class="steps">','<div style="margin:0 0 16px;padding:12px 14px;border:1px solid #f59e0b;border-radius:10px;background:#2a1704;color:#fde68a"><b>CEO Report comes first.</b><br>You reached an old/direct Quick Scan entry. Start here with the CEO Report; Quick Scan becomes step 2 after the CEO Report exists.</div><div class="steps">'):html;
+    const finalHtml=html; // Personal Quick Scan already follows the saved CEO prospect language.
   res.type('html').send(finalHtml);
   }catch(e){console.error('[quick-scan public]',e.message);res.status(500).send('Quick Scan unavailable')}
 });
