@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v567-UNIFORM-FOOTER-REPLACEMENT-NETWORK-v555';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v568-SAFE-LAST-BODY-FOOTER-NETWORK-v556';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -922,7 +922,7 @@ const app = express();
 
 
 // ============================================================
-// APP-WIDE UNIVERSAL FOOTER — ENGLISH ONLY (v567)
+// APP-WIDE UNIVERSAL FOOTER — ENGLISH ONLY (v568 safe-last-body)
 // Applies to normal full HTML pages across app.contentscale.site, including
 // root, admin/tools, public app pages and Network. APIs/assets and exact
 // publication-preview HTML are excluded. Pages with a dedicated prospect footer keep it, and the universal legal/platform footer is appended after it.
@@ -940,6 +940,10 @@ function _csShouldUseUniversalFooter(req){
   if(/\.(?:js|mjs|css|json|xml|txt|csv|pdf|zip|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|map)$/i.test(p))return false;
   return true;
 }
+function _csInsertBeforeLastBody(source,fragment){
+  const s=String(source==null?'':source),lower=s.toLowerCase(),idx=lower.lastIndexOf('</body>');
+  return idx>=0?s.slice(0,idx)+String(fragment||'')+s.slice(idx):s+String(fragment||'');
+}
 function _csInjectUniversalFooter(html,req){
   if(html==null)return html;
   const wasBuffer=Buffer.isBuffer(html),source0=wasBuffer?html.toString('utf8'):String(html);
@@ -949,7 +953,7 @@ function _csInjectUniversalFooter(html,req){
   source=source.replace(/<style\s+data-cs-universal-footer-style[^>]*>[\s\S]*?<\/style>/gi,'');
   source=source.replace(/<footer\b[^>]*(?:id=["']cs-universal-footer["']|data-cs-app-footer=["'][^"']+["'])[^>]*>[\s\S]*?<\/footer>/gi,'');
   source=source.replace(/<script\s+data-cs-footer-normalizer[^>]*>[\s\S]*?<\/script>/gi,'');
-  const out=source.replace(/<\/body>/i,_CS_UNIVERSAL_FOOTER_HTML+'</body>');
+  const out=_csInsertBeforeLastBody(source,_CS_UNIVERSAL_FOOTER_HTML);
   return wasBuffer?Buffer.from(out,'utf8'):out;
 }
 function _csSendHtmlFileWithFooter(req,res,filePath){
@@ -985,7 +989,7 @@ app.use((req,res,next)=>{
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-08-CANONICAL-v567-UNIFORM-FOOTER-REPLACEMENT-NETWORK-v555',
+  build: 'CS-2026-10-08-CANONICAL-v568-SAFE-LAST-BODY-FOOTER-NETWORK-v556',
   built_date: '2026-10-08',
   ceo_private: true,
   ceo_public: true,
@@ -26767,7 +26771,7 @@ function _pqsAdminHtml(){return String.raw`<!doctype html><html><head><meta char
 /* v239: outer section title is the only open/close control; legacy inner Show/Hide buttons removed. */
 ;</script></body></html>`}
 function _injectProspectQuickScanIntoLeadCrawler(html){
-  if(!html||html.includes('data-pqs-injected'))return html;
+  if(!html)return html;
   const guard=String.raw`<script data-grounding-usage-guard>(function(){window.__csLeadCrawlerPayloads=window.__csLeadCrawlerPayloads||[];if(!window.__csLeadCrawlerFetchCaptured&&typeof window.fetch==='function'){window.__csLeadCrawlerFetchCaptured=true;var nativeFetch=window.fetch;window.fetch=function(){var args=arguments;return nativeFetch.apply(this,args).then(function(r){try{var requestUrl=String(args[0]&&args[0].url||args[0]||'');if(!/grounding-usage/i.test(requestUrl))r.clone().json().then(function(data){window.__csLeadCrawlerPayloads.push(data);if(window.__csLeadCrawlerPayloads.length>30)window.__csLeadCrawlerPayloads.shift()}).catch(function(){})}catch(e){}return r})}}if(typeof window.loadGroundingUsage!=='function')window.loadGroundingUsage=async function(){try{var model=(document.getElementById('geminiModel')||document.getElementById('modelSelect')||{}).value||'gemini-2.5-flash-lite';var r=await fetch('/api/gemini-proxy/grounding-usage?model='+encodeURIComponent(model),{cache:'no-store'}),d=await r.json();if(!r.ok)throw new Error(d.error||'Grounding usage unavailable');var text=d.groundedRequestsUsed+' / '+d.freeLimit+' '+d.limitUnit+' used · '+d.freeRemaining+' remaining';['groundingUsage','groundingUsageText','grounding-status','groundingStatus'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=text});var bar=document.getElementById('groundingUsageBar')||document.getElementById('groundingBar');if(bar)bar.style.width=Math.max(0,Math.min(100,Number(d.pctUsed||0)))+'%';return d}catch(e){console.warn('[lead-crawler] grounding usage:',e.message);return null}}})();</script>`;
   const js=String.raw`<script data-pqs-injected>(function(){
     var bridgeKey='pqs_leadcrawler_detected_import_v129',memory={};
@@ -26844,8 +26848,15 @@ function _injectProspectQuickScanIntoLeadCrawler(html){
 </script>
 `;
   let out=String(html);
-  if(!out.includes('data-grounding-usage-guard'))out=/<head[^>]*>/i.test(out)?out.replace(/<head[^>]*>/i,function(m){return m+guard}):guard+out;
-  return /<\/body>/i.test(out)?out.replace(/<\/body>/i,js+'</body>'):out+js;
+  if(!out.includes('data-grounding-usage-guard')){
+    out=/<head[^>]*>/i.test(out)
+      ? out.replace(/<head[^>]*>/i,function(m){return m+guard})
+      : guard+out;
+  }
+  if(!out.includes('data-pqs-injected')){
+    out=_csInsertBeforeLastBody(out,js);
+  }
+  return out;
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -27106,15 +27117,22 @@ app.post('/api/elevenlabs/outbound-call', requireAuth, async (req, res) => {
 
 // GET /api/voice-clients/outbound-ready — list only clients configured for outbound,
 // used by the Lead Crawler to populate its "Call as:" dropdown.
-app.get('/api/voice-clients/outbound-ready', requireAuth, async (req, res) => {
+app.get('/api/voice-clients/outbound-ready', async (req, res) => {
   try {
-    const { rows } = req.role === 'admin'
+    const suppliedCode = req.headers['x-admin-code'] || req.headers['x-admin-key'] || '';
+    const auth = await resolveRole(suppliedCode);
+    const role = auth && auth.role;
+    const clientId = auth && auth.clientId;
+
+    if (!role) return res.json([]);
+
+    const { rows } = role === 'admin'
       ? await pool.query(
           `SELECT id, name, biz_name FROM voice_clients WHERE mode IN ('outbound','both') AND agent_id != '' ORDER BY name`
         )
       : await pool.query(
           `SELECT id, name, biz_name FROM voice_clients WHERE id = $1 AND mode IN ('outbound','both') AND agent_id != ''`,
-          [req.clientId]
+          [clientId]
         );
     res.json(rows);
   } catch (err) {
