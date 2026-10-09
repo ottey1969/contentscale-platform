@@ -20,3 +20,5 @@ jobs:
         run: node tests/staging-tracker-handler-audit.cjs
       - name: Run isolated canonical Tracker handler regression tests
         run: node --test tests/staging-tracker-canonical-handlers.test.cjs
+      - name: Examine narrow canonical manual-done handlers
+        run: node tests/staging-tracker-manual-handler-source-audit.cjs
