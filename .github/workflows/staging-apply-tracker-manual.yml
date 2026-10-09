@@ -1,0 +1,51 @@
+name: Apply reviewed Tracker checkbox patch to staging
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-apply-tracker-manual.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  apply-verified-patch:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify branch and checkout
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+      - name: Prepare patch without modifying checked-out source
+        run: |
+          node tests/staging-tracker-surgical-patch.cjs src/index.js /tmp/contentscale-staging-tracker-patched.js
+          node --check /tmp/contentscale-staging-tracker-patched.js
+      - name: Validate candidate corrected behavior
+        run: |
+          node --test tests/staging-tracker-patched-handlers.test.cjs
+          node --test tests/staging-tracker-readonly.test.cjs tests/staging-tracker-synthetic-readiness.test.cjs
+      - name: Apply only to canonical staging source
+        run: |
+          cp /tmp/contentscale-staging-tracker-patched.js src/index.js
+          git diff --check
+          node --check src/index.js
+          test "$(git diff --name-only)" = "src/index.js"
+      - name: Validate canonical source after patch
+        run: |
+          node --test tests/staging-tracker-canonical-handlers.test.cjs
+          PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
+      - name: Push reviewed change only to tracker-staging
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js
+          git commit -m "staging: stabilize canonical Tracker manual-done actions"
+          git push origin HEAD:refs/heads/tracker-staging
