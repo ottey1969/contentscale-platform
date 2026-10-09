@@ -18,3 +18,5 @@ jobs:
         run: node tests/staging-tracker-route-audit.cjs
       - name: Examine canonical Tracker handler risk markers
         run: node tests/staging-tracker-handler-audit.cjs
+      - name: Run isolated canonical Tracker handler regression tests
+        run: node --test tests/staging-tracker-canonical-handlers.test.cjs
