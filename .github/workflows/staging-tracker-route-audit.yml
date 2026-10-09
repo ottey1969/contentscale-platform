@@ -26,3 +26,8 @@ jobs:
         run: node --test tests/staging-tracker-patched-handlers.test.cjs
       - name: Examine narrow canonical manual-done handlers
         run: node tests/staging-tracker-manual-handler-source-audit.cjs
+      - name: Verify staging canonical handlers already patched
+        run: |
+          grep -Fq 'manual_done IS DISTINCT FROM $1' src/index.js
+          grep -Fq "status NOT IN ('deleted','paused','disabled')" src/index.js
+          PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
