@@ -16,3 +16,5 @@ jobs:
           node-version: '22'
       - name: Read-only canonical route inventory
         run: node tests/staging-tracker-route-audit.cjs
+      - name: Examine canonical Tracker handler risk markers
+        run: node tests/staging-tracker-handler-audit.cjs
