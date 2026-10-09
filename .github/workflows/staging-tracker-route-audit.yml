@@ -24,6 +24,8 @@ jobs:
         run: node tests/staging-tracker-surgical-patch.cjs src/index.js /tmp/contentscale-staging-tracker-patched.js && node --check /tmp/contentscale-staging-tracker-patched.js
       - name: Validate patched canonical Tracker handlers
         run: node --test tests/staging-tracker-patched-handlers.test.cjs
+      - name: Inventory Tracker GET side effects without executing route
+        run: node tests/staging-tracker-get-sideeffects-audit.cjs
       - name: Examine narrow canonical manual-done handlers
         run: node tests/staging-tracker-manual-handler-source-audit.cjs
       - name: Verify staging canonical handlers already patched
