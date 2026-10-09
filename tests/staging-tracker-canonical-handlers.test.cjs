@@ -40,7 +40,7 @@ class FakePool {
   }
   async query(sql,args=[]) {
     if(/^SELECT id FROM tracker_clients WHERE token=\$1/.test(sql)) {
-      const c=this.clients.find(c=>c.token===args[0]&&c.status!=='deleted');
+      const c=this.clients.find(c=>c.token===args[0]&&c.status!=='deleted'&&(!sql.includes("NOT IN")||!['paused','disabled'].includes(c.status)));
       return {rows:c?[{id:c.id}]:[]};
     }
     if(/^SELECT id FROM tracker_pages WHERE id=\$1 AND tracker_client_id=\$2/.test(sql)) {
@@ -49,11 +49,12 @@ class FakePool {
     }
     if(/^UPDATE tracker_pages SET manual_done=\$1, manual_done_at=/.test(sql)){
       const bulk=sql.includes('WHERE tracker_client_id=$2');
-      const match=bulk?
+      const match=(bulk?
         this.pages.filter(p=>p.tracker_client_id===args[1]&&p.is_active===true):
-        this.pages.filter(p=>String(p.id)===String(args[1]));
+        this.pages.filter(p=>String(p.id)===String(args[1])&&(!sql.includes('AND tracker_client_id=$3')||p.tracker_client_id===args[2])))
+        .filter(p=>!sql.includes('manual_done IS DISTINCT FROM $1')||p.manual_done!==args[0]);
       for(const p of match){p.manual_done=args[0];p.manual_done_at=args[0]?'test-timestamp-'+(this.writes.length+1):null;}
-      this.writes.push({bulk,affected:match.map(p=>p.id)});
+      if(match.length)this.writes.push({bulk,affected:match.map(p=>p.id)});
       return {rowCount:match.length,rows:[]};
     }
     throw new Error('Unexpected query in isolated canonical handler: '+sql.slice(0,100));
@@ -82,15 +83,20 @@ test('canonical handler refuses unknown or deleted client tokens',async()=>{
  for(const token of ['bad','removed']) assert.equal((await call(handler,{token})).statusCode,404);
  assert.equal(pool.writes.length,0);
 });
-test('identical repeated clicks remain boolean-complete but currently write twice',async()=>{
+test('repeated clicks preserve timestamp once the canonical idempotency guard is deployed',async()=>{
  const pool=new FakePool(),handler=route(single,pool);
  await call(handler);
  const old=pool.pages[0].manual_done_at;
  await call(handler);
  assert.equal(pool.pages[0].manual_done,true);
- assert.equal(pool.writes.length,2);
- assert.notEqual(pool.pages[0].manual_done_at,old);
- // This is an observed deficiency. It is not timestamp-idempotent.
+ if(source.includes('manual_done IS DISTINCT FROM $1')){
+   assert.equal(pool.writes.length,1);
+   assert.equal(pool.pages[0].manual_done_at,old);
+ }else{
+   // Before staging deployment: retain detection, never mistake this for desired behavior.
+   assert.equal(pool.writes.length,2);
+   assert.notEqual(pool.pages[0].manual_done_at,old);
+ }
 });
 test('bulk checkbox only changes active pages owned by requesting Tracker client',async()=>{
  const pool=new FakePool(),handler=route(bulk,pool);
