@@ -5371,11 +5371,11 @@ app.post('/api/tracker-client/:token/gap-family-done', async (req, res) => {
 // Same rule as single toggle: only the user's explicit action reaches this, nothing automated.
 app.patch('/api/tracker-client/:token/pages/manual-done-all', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status NOT IN ('deleted','paused','disabled'))", [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const on = !!req.body.manual_done;
     const r = await pool.query(
-      'UPDATE tracker_pages SET manual_done=$1, manual_done_at=' + (on ? 'NOW()' : 'NULL') + ' WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL)',
+      'UPDATE tracker_pages SET manual_done=$1, manual_done_at=CASE WHEN $1 THEN COALESCE(manual_done_at,NOW()) ELSE NULL END WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL) AND manual_done IS DISTINCT FROM $1',
       [on, cr.rows[0].id]
     );
     res.json({ success: true, manual_done: on, updated: r.rowCount });
@@ -5387,12 +5387,15 @@ app.patch('/api/tracker-client/:token/pages/manual-done-all', async (req, res) =
 // may change manual_done. Scans, HTML paste, brief generation, runTrackerCheck never touch it.
 app.patch('/api/tracker-client/:token/pages/:pageId/manual-done', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status NOT IN ('deleted','paused','disabled'))", [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const on = !!req.body.manual_done;
-    await pool.query('UPDATE tracker_pages SET manual_done=$1, manual_done_at=' + (on ? 'NOW()' : 'NULL') + ' WHERE id=$2', [on, req.params.pageId]);
+    await pool.query(
+      'UPDATE tracker_pages SET manual_done=$1, manual_done_at=CASE WHEN $1 THEN COALESCE(manual_done_at,NOW()) ELSE NULL END WHERE id=$2 AND tracker_client_id=$3 AND manual_done IS DISTINCT FROM $1',
+      [on, req.params.pageId, cr.rows[0].id]
+    );
     res.json({ success: true, manual_done: on });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
