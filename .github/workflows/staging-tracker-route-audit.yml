@@ -22,5 +22,7 @@ jobs:
         run: node --test tests/staging-tracker-canonical-handlers.test.cjs
       - name: Generate surgical Tracker patch candidate without modifying repository
         run: node tests/staging-tracker-surgical-patch.cjs src/index.js /tmp/contentscale-staging-tracker-patched.js && node --check /tmp/contentscale-staging-tracker-patched.js
+      - name: Validate patched canonical Tracker handlers
+        run: node --test tests/staging-tracker-patched-handlers.test.cjs
       - name: Examine narrow canonical manual-done handlers
         run: node tests/staging-tracker-manual-handler-source-audit.cjs
