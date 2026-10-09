@@ -2,6 +2,7 @@
 // First staging deployment ONLY. Does not import src/index.js or Network or any scanner.
 const http = require('node:http');
 const { assertPreflightEnvironment } = require('./safety-gate.cjs');
+const { TRACKER_TABLES, readOnlyTrackerCheck } = require('./tracker-readonly.cjs');
 const EXPECTED = Object.freeze({ tables: 24, columns: 496, foreign_keys: 23, indexes: 53 });
 async function readOnlyDatabaseCheck(pool) {
   const client = await pool.connect();
@@ -16,7 +17,7 @@ async function readOnlyDatabaseCheck(pool) {
     if (got.database_name !== 'neondb' || Object.keys(EXPECTED).some(k => Number(got[k]) !== EXPECTED[k])) {
       throw new Error('STAGING BLOCKED: schema mismatch (expected 24/496/23/53)');
     }
-    for (const n of ['tracker_clients', 'tracker_pages', 'tracker_snapshots', 'tracker_case_studies', 'tracker_workflow_events', 'tracker_workflow_client_events', 'tracker_workflow_sitemap_events']) {
+    for (const n of TRACKER_TABLES) {
       const exists = await client.query('SELECT to_regclass($1) AS table_name', ['public.' + n]);
       if (!exists.rows[0].table_name) throw new Error('STAGING BLOCKED: missing required table ' + n);
     }
@@ -41,24 +42,29 @@ async function main(env = process.env, deps = {}) {
   // Do not connect unless static environment checks succeeded.
   const Pool = deps.Pool || require('pg').Pool;
   const pool = new Pool({ connectionString: env.DATABASE_URL, max: 1, connectionTimeoutMillis: 10000, idleTimeoutMillis: 1000 });
-  let verified;
-  try { verified = await readOnlyDatabaseCheck(pool); } finally { await pool.end(); }
+  let verified, tracker;
+  try {
+    verified = await readOnlyDatabaseCheck(pool);
+    tracker = await readOnlyTrackerCheck(pool);
+  } finally { await pool.end(); }
   const server = http.createServer((req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    if (req.method !== 'GET' || req.url !== '/__staging/health') {
+    if (req.method !== 'GET' || (req.url !== '/__staging/health' && req.url !== '/__staging/tracker/readiness')) {
       res.writeHead(404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({error: 'staging preflight only'}));
       return;
     }
     res.writeHead(200, {'Content-Type': 'application/json'});
-    res.end(JSON.stringify({success: true, environment: 'staging', ...verified}));
+    res.end(JSON.stringify(req.url === '/__staging/tracker/readiness'
+      ? { success: true, environment: 'staging', ...tracker }
+      : { success: true, environment: 'staging', ...verified }));
   });
   const p = Number(env.PORT || 3000);
   if (!Number.isInteger(p) || p < 1 || p > 65535) throw new Error('Invalid port');
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(p, '0.0.0.0', resolve); });
   console.log('[STAGING-PREFLIGHT] Schema validated; existing app NOT started; no email, AI, Network, scans, webhooks, or migrations.');
-  return { server, checked: verified };
+  return { server, checked: verified, tracker };
 }
 if (require.main === module) {
   main().catch(err => {
