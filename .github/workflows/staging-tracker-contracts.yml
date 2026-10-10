@@ -17,5 +17,7 @@ jobs:
           STARTUP_QUARANTINE_CANDIDATE=src/index.js node --test tests/staging-tracker-startup-quarantine.test.cjs
           STARTUP_WAVE2_CANDIDATE=src/index.js node --test tests/staging-tracker-boot-quarantine-wave2.test.cjs
           node --test tests/staging-tracker-legacy-v1-get.test.cjs tests/staging-tracker-entrypoints.test.cjs
+      - name: Prove false staging project connection cannot be accepted from database name alone
+        run: node --test tests/staging-tracker-project-isolation.test.cjs
       - name: Tracker staging isolated unit tests
         run: node --test tests/staging-tracker-readonly.test.cjs tests/staging-tracker-synthetic-readiness.test.cjs tests/staging-tracker-get-readiness.test.cjs tests/staging-tracker-historical-integrity.test.cjs tests/staging-tracker-release-decision.test.cjs tests/staging-tracker-readonly-coverage.test.cjs tests/staging-tracker-boot-fence.test.cjs
