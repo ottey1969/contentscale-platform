@@ -1,0 +1,29 @@
+name: Staging Case Study next-action candidate
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - 'tests/staging-tracker-case-study-guidance-candidate.cjs'
+      - 'tests/staging-tracker-case-study-guidance.test.cjs'
+      - '.github/workflows/staging-case-study-guidance.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  candidate:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify isolated source-only candidate, without starting application
+        run: |
+          test -z "${DATABASE_URL:-}"
+          node tests/staging-tracker-case-study-guidance-candidate.cjs src/index.js /tmp/contentscale-case-study-guidance.js
+          node --check /tmp/contentscale-case-study-guidance.js
+          node --test tests/staging-tracker-case-study-guidance.test.cjs
+      - name: Confirm branch working tree stayed unchanged
+        run: test -z "$(git status --porcelain)"
