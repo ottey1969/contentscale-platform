@@ -17,13 +17,19 @@ test('first Case Study scan uses real PostgreSQL evidence and publication state'
    "CREATE TEMP TABLE tracker_case_studies(id int primary key,tracker_client_id int,tracker_page_id int,status text,baseline_locked boolean,baseline_at timestamptz) ON COMMIT DROP",
    "CREATE TEMP TABLE tracker_case_study_events(case_study_id int,event_type text) ON COMMIT DROP",
    "CREATE TEMP TABLE tracker_snapshots(page_id int,checked_at timestamptz) ON COMMIT DROP",
-   "CREATE TEMP TABLE tracker_case_study_content_versions(case_study_id int,version_type text,captured_at timestamptz) ON COMMIT DROP"
+   "CREATE TEMP TABLE tracker_case_study_content_versions(case_study_id int,version_type text,captured_at timestamptz) ON COMMIT DROP",
+   "CREATE TEMP TABLE tracker_ai_evidence(page_id int,tracker_client_id int,engine text,verified_at timestamptz) ON COMMIT DROP"
   ];for(const sql of ddl)await db.query(sql);
   await db.query("INSERT INTO tracker_clients(id,token,status) VALUES(3,'fixture-owner','active')");
   await db.query("INSERT INTO tracker_pages(id,tracker_client_id,url,manual_done,brief_content,brief_evaluated_at,check_frequency,monitoring_waiting_input,revision_cycle) VALUES(17,3,'https://fixture.invalid/page',true,'{\"outstanding_actions\":2}','2026-08-18','0',false,4)");
   await db.query("INSERT INTO tracker_case_studies VALUES(21,3,17,'active',true,'2026-10-10T12:00:00Z')");
   await db.query("INSERT INTO tracker_case_study_events VALUES(21,'case_study_fresh_cycle_initialized')");
   await db.query("INSERT INTO tracker_snapshots VALUES(17,'2026-08-18T00:00:00Z')");
+  // Configured AI engines are not the same as completed AI evidence checks.
+  await db.query("INSERT INTO tracker_ai_evidence(page_id,tracker_client_id,engine) SELECT 17,3,unnest(ARRAY['google_aio','chatgpt','perplexity','claude','copilot'])");
+  const engineState=await db.query("SELECT COUNT(DISTINCT engine)::int AS configured,COUNT(verified_at)::int AS checked FROM tracker_ai_evidence WHERE page_id=17");
+  assert.equal(engineState.rows[0].configured,5);
+  assert.equal(engineState.rows[0].checked,0);
   const src=fs.readFileSync(path.resolve(__dirname,'../src/index.js'),'utf8');
   const g0=src.indexOf('function _trackerNormalScanGate('),g1=src.indexOf('\n// POST /api/tracker-client/:token/scan-all',g0);
   const r0=src.indexOf("app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {"),r1=src.indexOf('\n// Exact client-side scan status',r0);
