@@ -1,0 +1,48 @@
+name: Install fail-closed staging application boot guard
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-apply-boot-fence.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fence-entrypoints:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm staging only
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+      - name: Install two immediate fail-closed fences
+        run: |
+          node tests/staging-tracker-boot-fence.cjs
+          node --check src/index.js
+          node --check index.js
+          git diff --check
+          test "$(git diff --name-only | wc -l)" -eq 2
+          git diff --name-only | grep -Fx 'src/index.js'
+          git diff --name-only | grep -Fx 'index.js'
+      - name: Prove both entrypoints refuse boot before any app import
+        run: |
+          if node src/index.js > /tmp/src-boot.out 2>&1; then echo 'Unexpected staging app boot'; exit 1; fi
+          grep -E 'STAGING BLOCKED|RELEASE BLOCKED' /tmp/src-boot.out
+          if node index.js > /tmp/root-boot.out 2>&1; then echo 'Unexpected legacy app boot'; exit 1; fi
+          grep -E 'STAGING BLOCKED|RELEASE BLOCKED' /tmp/root-boot.out
+      - name: Commit guards exclusively to staging branch
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js index.js
+          git commit -m "staging: block accidental full app boot in both canonical entrypoints"
+          git push origin HEAD:refs/heads/tracker-staging
