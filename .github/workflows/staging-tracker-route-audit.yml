@@ -27,6 +27,8 @@ jobs:
         run: node tests/staging-tracker-sitemap-source-audit.cjs
       - name: Inspect app entrypoint ordering without running app
         run: node tests/staging-tracker-boot-top-audit.cjs
+      - name: Trace legacy case-study mutations without app boot
+        run: node tests/staging-tracker-historical-writer-audit.cjs
       - name: Read-only canonical route inventory
         run: node tests/staging-tracker-route-audit.cjs
       - name: Examine canonical Tracker handler risk markers
