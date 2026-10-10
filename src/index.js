@@ -2897,6 +2897,8 @@ async function _caseStudyOpenFreshStartCycle(clientId,page,cs,liveHtml,htmlSourc
   let priorBrief={};try{priorBrief=typeof page.brief_content==='string'?JSON.parse(page.brief_content||'{}'):(page.brief_content||{});}catch(e){priorBrief={};}
   const historicalState={
     previous_revision_cycle:previousCycle,
+    previous_check_frequency:page.check_frequency||'0',
+    previous_next_check_at:page.next_check_at||null,
     previous_is_done:!!page.is_done,
     previous_manual_done:!!page.manual_done,
     previous_implementation_status:page.implementation_status||null,
@@ -2906,8 +2908,30 @@ async function _caseStudyOpenFreshStartCycle(clientId,page,cs,liveHtml,htmlSourc
     previous_brief_cycle_id:priorBrief&&priorBrief.cycle_id||null,
     history_preserved:true
   };
+  // Archive complete pre-existing Brief state BEFORE the destructive new-cycle reset.
+  // Existing canonical Case Study event storage is the history source; no new table.
+  const _priorBriefPresent=page.brief_content!==null&&page.brief_content!==undefined;
+  const _priorRankingPresent=page.ranking_brief!==null&&page.ranking_brief!==undefined;
+  if(_priorBriefPresent||_priorRankingPresent){
+    const _oldBriefArchive=Object.assign({},historicalState,{
+      previous_brief_content:page.brief_content==null?null:page.brief_content,
+      previous_ranking_brief:page.ranking_brief==null?null:page.ranking_brief,
+      previous_brief_status:page.brief_status||null,
+      previous_brief_started_at:page.brief_started_at||null,
+      previous_brief_done_at:page.brief_done_at||null,
+      captured_before_reset_at:new Date().toISOString()
+    });
+    // If archival fails, fail closed: never clear the only remaining Brief copy.
+    await pool.query(`INSERT INTO tracker_case_study_events
+      (case_study_id,tracker_page_id,event_type,source,event_data,content_hash)
+      SELECT $1,$2,'case_study_prior_brief_archived','tracker_case_study_start',$3::jsonb,NULL
+      WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events
+        WHERE case_study_id=$1 AND event_type='case_study_prior_brief_archived')`,
+      [cs.id,page.id,JSON.stringify(_oldBriefArchive)]);
+  }
   await pool.query(`UPDATE tracker_pages SET
       revision_cycle=$1,
+      check_frequency='0',next_check_at=NULL,
       is_done=FALSE,manual_done=FALSE,manual_done_at=NULL,
       implementation_status='case_study_baseline_locked',implementation_at=NULL,
       implementation_verified_at=NULL,implementation_verified_brief_cycle_id=NULL,
@@ -2959,7 +2983,28 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
     if(existing.rows[0].status==='active'){
       const _baseAt=Date.parse(existing.rows[0].baseline_at||existing.rows[0].started_at||0)||0;
       const _verifiedAt=Date.parse(page.implementation_verified_at||0)||0;
-      const _fresh=(_baseAt&&_verifiedAt&&_verifiedAt<_baseAt)?await _caseStudyOpenFreshStartCycle(client.id,page,existing.rows[0],'','case_study_baseline_copy','active_case_study_pre_v351_repair'):null;
+      // Inspect canonical DB evidence; no legacy inferred case_study_active column.
+      const _legacy=await pool.query(`SELECT
+        EXISTS(SELECT 1 FROM tracker_case_study_events ev WHERE ev.case_study_id=$1 AND ev.event_type='case_study_fresh_cycle_initialized') AS fresh_cycle_initialized,
+        (SELECT MAX(sn.checked_at) FROM tracker_snapshots sn WHERE sn.page_id=$2) AS latest_snapshot_at,
+        (SELECT MAX(v.captured_at) FROM tracker_case_study_content_versions v WHERE v.case_study_id=$1 AND v.version_type LIKE 'published_implementation%') AS latest_published_at,
+        EXISTS(SELECT 1 FROM tracker_case_study_content_versions v WHERE v.case_study_id=$1 AND v.version_type='baseline_html' AND LENGTH(v.html_content)>=500) AS baseline_html_ready`,
+        [existing.rows[0].id,page.id]);
+      const _prior=_legacy.rows[0]||{};
+      const _lastAt=Date.parse(_prior.latest_snapshot_at||0)||0;
+      const _publishedAt=Math.max(Date.parse(_prior.latest_published_at||0)||0,Date.parse(page.brief_published_at||0)||0,Date.parse(page.brief_published_confirmed_at||0)||0);
+      const _needsCycleRepair=!_prior.fresh_cycle_initialized;
+      const _repairReasons=[];
+      if(_needsCycleRepair){
+        if(!existing.rows[0].baseline_locked||!_baseAt)_repairReasons.push('baseline not locked');
+        if(!_prior.baseline_html_ready)_repairReasons.push('protected baseline HTML missing');
+        if(page.monitoring_waiting_input)_repairReasons.push('evidence checkpoint pending');
+        if(_lastAt>_baseAt)_repairReasons.push('a scan already occurred after the baseline');
+        if(_verifiedAt>_baseAt)_repairReasons.push('implementation verified after baseline');
+        if(_publishedAt>_baseAt)_repairReasons.push('revision published after baseline');
+      }
+      if(_repairReasons.length)return res.status(409).json({success:false,case_cycle_review_required:true,baseline_locked:true,error:'This active Case Study requires review before preparing its first manual scan: '+_repairReasons.join('; '),missing:_repairReasons});
+      const _fresh=_needsCycleRepair?await _caseStudyOpenFreshStartCycle(client.id,page,existing.rows[0],'','case_study_baseline_copy','active_legacy_case_first_manual_scan_repair'):null;
       return res.json({success:true,already_active:true,case_study:existing.rows[0],fresh_cycle_repaired:!!(_fresh&&!_fresh.already_initialized),revision_cycle:_fresh&&_fresh.revision_cycle||Number(page.revision_cycle||1),message:_fresh&&!_fresh.already_initialized?'The case study was already active, but its older implementation status predated the baseline. That status is now history only. A fresh case-study revision has started; scan the current live page next.':'This case study is already active and its baseline remains protected.'});
     }
     return res.status(409).json({success:false,protected_history:true,error:'This page already has protected case-study history. Its original baseline cannot be replaced. Continue that history or start a new revision cycle.'});
@@ -4178,12 +4223,12 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
         LEFT JOIN tracker_snapshots s ON s.page_id = p.id
         WHERE p.tracker_client_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL)
         AND COALESCE(p.monitoring_waiting_input,FALSE)=FALSE
-        AND NOT (COALESCE(p.manual_done,FALSE) AND EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.tracker_client_id=p.tracker_client_id AND cs.status='active'))
+        AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.tracker_client_id=p.tracker_client_id AND cs.status='active')
         AND s.id IS NULL
         ORDER BY p.created_at ASC
       `, [cr.rows[0].id]);
     } else {
-      pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(tracker_pages.manual_done,FALSE) AND EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status=\'active\')) ORDER BY created_at ASC", [cr.rows[0].id]);
+      pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status=\'active\') ORDER BY created_at ASC", [cr.rows[0].id]);
     }
 
     pages.rows.forEach(p=>{p.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;});
@@ -4218,7 +4263,7 @@ app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
     if (!ids.length) return res.status(400).json({ success: false, error: 'No pages selected' });
     // Only pages that belong to THIS client (security: don't scan another client's pages)
     const pages = await pool.query(
-      'SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND id = ANY($2::int[]) AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(tracker_pages.manual_done,FALSE) AND EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status=\'active\')) ORDER BY created_at ASC',
+      'SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND id = ANY($2::int[]) AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status=\'active\') ORDER BY created_at ASC',
       [cr.rows[0].id, ids]
     );
     if (!pages.rows.length) return res.status(400).json({ success: false, error: 'No matching pages' });
@@ -45526,6 +45571,14 @@ function _csNum(p){ return (Math.round(p*10)/10); }
 function _csDateH(t){ try{ var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }catch(e){ return ''; } }
 function startCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
+  if(pg.case_study_active&&!pg.case_study_fresh_cycle_initialized){
+    if(!confirm('This Case Study is already active. Prepare its first manual scan now? The original baseline and historical Brief remain protected; no scan starts automatically.'))return;
+    api('/pages/'+pageId+'/case-study/start','POST',{monitoring_enabled:false,check_frequency:'0'})
+      .then(function(d){alert((d&&d.message)||'Case Study ready for the first manual scan.');if(typeof loadPages==='function')loadPages();})
+      .catch(function(e){alert(e.message||'Could not safely prepare the existing Case Study');});
+    return;
+  }
+
   var q=prompt('Primary query for this case study:',pg.keyword||pg.gsc_keyword||'');if(q===null)return;q=String(q||'').trim();
   if(!q){alert('Add the primary query first.');return;}
   if(!confirm('Start the protected case study now?\\n\\nTODAY becomes the immutable baseline. Earlier scans, Briefs, implementations and verifications remain visible in Proof & History, but they do not count as results of this case study.\\n\\nContentScale first verifies that this exact URL is still live and is not redirecting. A dead/redirected URL is stopped before the baseline is created.\\n\\nRequired baseline: completed page scan, captured HTML, GSC Pages + Queries, all 5 AI engines and the existing Tracker client email. Missing evidence blocks the start instead of being guessed.\\n\\nAfter starting: scan the current live page, open the new Brief, publish the new HTML, check current live, then measure later evidence against this baseline.\\n\\nDay 7 and Day 14: evidence review. Day 30: baseline-vs-current report.'))return;
@@ -48522,6 +48575,13 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   }
   // First manual scan of newly initialized Case Study, independent of scheduler.
   var _caseBaselineAt=p.case_study&&p.case_study.baseline_locked&&p.case_study.baseline_at?new Date(p.case_study.baseline_at).getTime():0;
+  if(bool(p.case_study_active)&&!bool(p.case_study_fresh_cycle_initialized)&&_caseBaselineAt>0&&
+      !bool(p.monitoring_waiting_input)&&(!scanAt||scanAt<=_caseBaselineAt)&&
+      !(publishedAt>_caseBaselineAt)&&!(verifiedAt>_caseBaselineAt)){
+    return {code:'PREPARE_CASE',label:'CASE STUDY ACTIVE · PREPARE FIRST MANUAL SCAN',
+      detail:'This protected Case Study started before the new scan workflow. Prepare its current revision once; the old baseline and Brief will be archived. Then you can manually scan. Automatic scans stay off.',
+      color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'Prepare first manual scan',buttonAction:'startCaseStudy('+p.id+')'};
+  }
   if(bool(p.case_study_active)&&bool(p.case_study_fresh_cycle_initialized)&&_caseBaselineAt>0&&
       (!scanAt||scanAt<=_caseBaselineAt)&&!bool(p.monitoring_waiting_input)&&
       !(publishedAt>_caseBaselineAt)&&!(verifiedAt>_caseBaselineAt)){
