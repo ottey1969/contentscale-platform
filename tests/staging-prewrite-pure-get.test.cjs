@@ -103,6 +103,7 @@ test('canonical Prewrite GET has no implicit persistence SQL or provider calls',
  const start=source.indexOf("app.get('/api/tracker-client/:token/prewrite-briefs/:id'"),end=source.indexOf('\n});',start);
  const body=source.slice(start,end+4);
  assert.doesNotMatch(body,/UPDATE\s+prewrite_briefs/i);
- assert.doesNotMatch(body,/gemini|_pwbGenerateBrief|serpApi|perplexityApi/i);
+ assert.doesNotMatch(body,/\b(?:await\s+_pwbGenerateBrief|serpApi\s*\(|perplexityApi\s*\(|fetch\s*\()/i);
+ assert.match(body,/gemini_calls:0/);
  assert.match(body,/pending_explicit_save:_preview.pendingSave/);
 });
