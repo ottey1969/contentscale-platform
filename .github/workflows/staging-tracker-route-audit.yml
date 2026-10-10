@@ -47,6 +47,8 @@ jobs:
         run: node tests/staging-prewrite-exact-source.cjs
       - name: Map existing explicit Prewrite maintenance route and owner scopes
         run: node tests/staging-prewrite-existing-maintenance-map.cjs
+      - name: Check saved Brief API wrapper forwarding context
+        run: node tests/staging-prewrite-ui-api-context.cjs
       - name: Verify saved Brief Finalize placement parameters
         run: node tests/staging-prewrite-ui-params-audit.cjs
       - name: Locate existing saved Brief Finalize UI without modifying it
