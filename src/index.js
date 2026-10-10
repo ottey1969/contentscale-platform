@@ -4178,12 +4178,12 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
         LEFT JOIN tracker_snapshots s ON s.page_id = p.id
         WHERE p.tracker_client_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL)
         AND COALESCE(p.monitoring_waiting_input,FALSE)=FALSE
-        AND NOT (COALESCE(p.case_study_active,FALSE) AND COALESCE(p.manual_done,FALSE))
+        AND NOT (COALESCE(p.manual_done,FALSE) AND EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.status='active'))
         AND s.id IS NULL
         ORDER BY p.created_at ASC
       `, [cr.rows[0].id]);
     } else {
-      pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(case_study_active,FALSE) AND COALESCE(manual_done,FALSE)) ORDER BY created_at ASC", [cr.rows[0].id]);
+      pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(tracker_pages.manual_done,FALSE) AND EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.status='active')) ORDER BY created_at ASC", [cr.rows[0].id]);
     }
 
     pages.rows.forEach(p=>{p.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;});
