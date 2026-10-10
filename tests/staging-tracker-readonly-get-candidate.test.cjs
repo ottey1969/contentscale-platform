@@ -10,7 +10,7 @@ const end=body.indexOf('];',begin);
 assert(begin>=0&&end>begin);
 const cols=[...body.slice(begin,end).matchAll(/\['([^']+)','[^']+'\]/g)].map(m=>m[1]);
 assert(cols.length>=20,'schema fields not found');
-function fakePool({missingColumn=false,missingTable=false,clientFound=true}={}){
+function fakePool({missingColumn=false,missingTable=false,clientFound=true,onePage=false}={}){
  const calls=[];
  return {calls,async query(sql,args=[]){
   calls.push(sql);
@@ -18,13 +18,14 @@ function fakePool({missingColumn=false,missingTable=false,clientFound=true}={}){
   if(sql.includes("SELECT * FROM tracker_clients WHERE token="))return {rows:clientFound?[{id:1,domain:'example.test',name:'Example',status:'active',max_pages:3,email:'test@example.test'}]:[]};
   if(sql.includes('information_schema.columns'))return {rows:cols.slice(missingColumn?1:0).map(column_name=>({column_name}))};
   if(sql.includes('information_schema.tables'))return {rows:(missingTable?args[0].slice(1):args[0]).map(table_name=>({table_name}))};
+  if(onePage&&sql.includes('FROM tracker_pages p')&&sql.includes('LEFT JOIN LATERAL'))return {rows:[{id:10,url:'https://example.test/page',keyword:'example',manual_done:true,manual_done_at:'2026-10-01T12:00:00Z',is_done:false,revision_cycle:1,ai_manual_evidence:{},brief_content:{items:[],outstanding_actions:0},implementation_status:'pending',treatment_source:'MANUAL',created_at:'2026-10-01T12:00:00Z'}]};
   return {rows:[]};
  }};
 }
 function makeHandler(pool){
  let handler;
  const app={get(_p,fn){assert.equal(_p,'/api/tracker-client/:token');handler=fn;}};
- const context={app,pool,console:{warn(){},log(){}},setTimeout(){},clearTimeout(){},URL,Buffer,Date,Map,Set,Math,Number,JSON};
+ const context={app,pool,console:{warn(){},log(){}},setTimeout(){},clearTimeout(){},URL,Buffer,Date,Map,Set,Math,Number,JSON, _trackerNormalizeBriefQueues:(v)=>({changed:false,brief:v}),_trackerReparseManualEvidenceMap:(v)=>v};
  vm.runInNewContext(body,context,{timeout:2500});
  return handler;
 }
@@ -61,6 +62,14 @@ test('GET read-only candidate contains no implicit mutating helper invocation',(
 
 test('canonical GET candidate returns successful empty Tracker response without writes',async()=>{
  const pool=fakePool();
+ const result=await call(makeHandler(pool));
+ assert.equal(result.statusCode,200,JSON.stringify(result.data));
+ assert.equal(result.data.success,true);
+ assert(pool.calls.every(sql=>/^\s*SELECT\b/i.test(sql)));
+});
+
+test('canonical GET candidate displays persisted page state without writes',async()=>{
+ const pool=fakePool({onePage:true});
  const result=await call(makeHandler(pool));
  assert.equal(result.statusCode,200,JSON.stringify(result.data));
  assert.equal(result.data.success,true);
