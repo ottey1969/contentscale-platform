@@ -7,6 +7,7 @@ on:
       - 'scripts/prepare-production-case-first-scan.cjs'
       - 'tests/staging-case-first-scan-postgres.test.cjs'
       - 'tests/staging-case-study-ui-next-action.test.cjs'
+      - 'tests/staging-case-study-start-cycle-postgres.test.cjs'
   workflow_dispatch:
 permissions:
   contents: write
@@ -60,11 +61,17 @@ jobs:
           TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
           TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
         run: node --test tests/staging-case-first-scan-postgres.test.cjs
+      - name: Verify Case Study fresh revision on disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
+        run: node --test tests/staging-case-study-start-cycle-postgres.test.cjs
       - name: Record validated full source on release candidate only
         run: |
           git diff --check
           test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
-          printf "Review-only v568 candidate, UI and disposable PostgreSQL verified for source %s; production main NOT changed\n" "$(git hash-object src/index.js)" > tests/case-study-v568-production-candidate.verified
+          printf "Review-only v568, start cycle + scan + NEXT ACTION verified: source %s; start %s; production main NOT changed\n" "$(git hash-object src/index.js)" "$(git hash-object tests/staging-case-study-start-cycle-postgres.test.cjs)" > tests/case-study-v568-production-candidate.verified
           git add -- src/index.js tests/case-study-v568-production-candidate.verified
           if ! git diff --cached --quiet; then
             git config user.name "contentscale-release-candidate-ci"
