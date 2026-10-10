@@ -59,11 +59,12 @@ const next=[
 "  }",
 ""
 ].join('\n');
-let ui=s.slice(s.indexOf('function _trackerNextActionState('),s.indexOf('\nfunction _trackerImplementationCheckState(',s.indexOf('function _trackerNextActionState(')));
+const uiA=s.indexOf('function _trackerNextActionState('),uiB=s.indexOf('\nfunction _trackerImplementationCheckState(',uiA);
+let ui=s.slice(uiA,uiB);
 if(!ui.includes("CASE STUDY ACTIVE · PREPARE FIRST MANUAL SCAN")){
  if(ui.split(marker).length!==2)throw Error('STOP: NEXT ACTION first-scan marker changed');
  ui=ui.replace(marker,next+marker);
- s=s.slice(0,uiStart)+ui+s.slice(uiEnd);
+ s=s.slice(0,uiA)+ui+s.slice(uiB);
 }
 const actionMarker="function startCaseStudy(pageId){\n  var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};";
 const recovery=[
