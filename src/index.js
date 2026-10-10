@@ -3794,10 +3794,24 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/pre-publication',a
 }catch(e){console.error('[case-study-pre-publication]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // Read-only case-study proof/history. There is intentionally no delete or baseline-edit route.
+async function _trackerCaseStudyReadonlySchema(spec={}) {
+ const tables=[...new Set(spec.tables||[])];
+ const rr=await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=ANY($1::text[])",[tables]);
+ const found=new Set(rr.rows.map(r=>r.table_name));
+ const missingTables=tables.filter(t=>!found.has(t));
+ const missingColumns=[];
+ for(const [table,columns] of [['tracker_pages',spec.pageColumns||[]],['tracker_case_studies',spec.caseColumns||[]]]) {
+  if(!columns.length)continue;
+  const cc=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 AND column_name=ANY($2::text[])",[table,columns]);
+  const existing=new Set(cc.rows.map(r=>r.column_name));
+  for(const col of columns)if(!existing.has(col))missingColumns.push(table+'.'+col);
+ }
+ return {ready:missingTables.length===0&&missingColumns.length===0,missing_tables:missingTables,missing_columns:missingColumns};
+}
 app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
-  await _ensureCaseStudySchema();
+  const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_case_studies','tracker_case_study_events','tracker_case_study_content_versions']});if(!_schema.ready)return res.status(503).json({success:false,schema_ready:false,error:'Controlled case-study schema migration required',missing_tables:_schema.missing_tables});
   const csR=await pool.query(`SELECT * FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1`,[cr.rows[0].id,req.params.pageId]);
   if(!csR.rows.length)return res.status(404).json({success:false,error:'No active case study for this page'});
   const cs=csR.rows[0];
@@ -3814,7 +3828,7 @@ app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{t
 
 // Passwordless, read-only milestone report. The random token is the share credential.
 app.get('/case-study-report/:reportToken',async(req,res)=>{try{
-  await _ensureCaseStudySchema();const token=String(req.params.reportToken||'');if(!/^[a-f0-9]{48}$/.test(token))return res.status(404).send('Report not found');
+  const token=String(req.params.reportToken||'');if(!/^[a-f0-9]{48}$/.test(token))return res.status(404).send('Report not found');const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_case_studies','tracker_case_study_events'],caseColumns:['report_token']});if(!_schema.ready)return res.status(503).send('Report temporarily unavailable: schema migration required');
   const rr=await pool.query(`SELECT cs.client_name,cs.domain,cs.canonical_url,cs.primary_query,cs.baseline_at,e.event_at,e.event_data FROM tracker_case_studies cs JOIN LATERAL(SELECT event_at,event_data FROM tracker_case_study_events WHERE case_study_id=cs.id AND event_type='cycle_day_30_report' ORDER BY event_at DESC,id DESC LIMIT 1)e ON TRUE WHERE cs.report_token=$1`,[token]);if(!rr.rows.length)return res.status(404).send('Report not found');
   const x=rr.rows[0],d=typeof x.event_data==='string'?JSON.parse(x.event_data):x.event_data||{},b=d.baseline||{},c=d.current||{};
   const esc=v=>String(v==null?'—':v).replace(/[<>&"']/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[m]));
@@ -10759,7 +10773,7 @@ app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
 // Admin monitoring detail: observe and safely edit the client's per-page choices.
 app.get('/api/admin/tracker-clients/:id/monitoring', verifyAdmin, async (req, res) => {
   try {
-    await _ensureMonitoringGateSchema();
+    const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_clients','tracker_pages'],pageColumns:['monitoring_waiting_input','monitoring_gate_label','check_frequency','next_check_at']});if(!_schema.ready)return res.status(503).json({success:false,schema_ready:false,error:'Controlled monitoring schema migration required',missing_columns:_schema.missing_columns});
     const cr = await pool.query("SELECT id,name,domain FROM tracker_clients WHERE id=$1 AND status!='deleted'", [req.params.id]);
     if (!cr.rows.length) return res.status(404).json({ success:false, error:'Tracker client not found' });
     const pr = await pool.query("SELECT id,url,title,check_frequency,next_check_at,last_checked_at,monitoring_waiting_input,monitoring_gate_label FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY CASE WHEN COALESCE(check_frequency,'0') IN ('0','0days','off','') THEN 1 ELSE 0 END,url", [req.params.id]);
@@ -10770,7 +10784,7 @@ app.get('/api/admin/tracker-clients/:id/monitoring', verifyAdmin, async (req, re
 // Admin readiness proof: verifies the durable workflow state without exposing secrets.
 app.get('/api/admin/tracker-readiness', verifyAdmin, async (req,res)=>{
   try{
-    await _ensureCaseStudySchema();await _ensureMonitoringGateSchema();await _trackerEnsureAiEvidenceSchema();
+    const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_case_studies','tracker_case_study_events','tracker_case_study_content_versions','tracker_ai_evidence','tracker_clients','tracker_pages'],pageColumns:['monitoring_waiting_input','monitoring_request_at','monitoring_require_ai','monitoring_gate_label','monitoring_gsc_pages_at','monitoring_gsc_queries_at','check_frequency','next_check_at']});if(!_schema.ready)return res.status(503).json({success:false,ready:false,schema_ready:false,error:'Controlled Tracker schema migration required',missing_tables:_schema.missing_tables,missing_columns:_schema.missing_columns});
     const required=['monitoring_waiting_input','monitoring_request_at','monitoring_require_ai','monitoring_gate_label','monitoring_gsc_pages_at','monitoring_gsc_queries_at','check_frequency','next_check_at'];
     const cols=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='tracker_pages' AND column_name=ANY($1::text[])",[required]);
     const present=new Set(cols.rows.map(x=>x.column_name)),missingColumns=required.filter(x=>!present.has(x));
