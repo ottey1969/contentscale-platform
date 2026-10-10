@@ -1,0 +1,92 @@
+name: Archive Case Study historical Brief before reset (no deploy)
+on:
+  push:
+    branches: [case-study-legacy-brief-archive]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  disposable-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d testdb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build complete canonical index with archival guard only
+        run: |
+          node --check scripts/prepare-case-study-legacy-brief-archive.cjs
+          node scripts/prepare-case-study-legacy-brief-archive.cjs src/index.js
+          node --check src/index.js
+          git diff --check
+      - name: Test fail-closed Brief archive and protected manual Case Study routes
+        run: |
+          node --test tests/staging-case-study-legacy-brief-archive.test.cjs tests/staging-case-bulk-scan-sql.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs tests/staging-case-study-next-action.test.cjs
+      - name: Install runtime dependencies without install hooks
+        run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
+      - name: Verify complete historical Brief preservation against disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: pg
+        run: node --test tests/staging-case-study-start-cycle-postgres.test.cjs tests/staging-case-first-scan-postgres.test.cjs
+      - name: Verify quarantined full app boots with no external egress
+        env:
+          NODE_ENV: test
+          CS_DEPLOYMENT_TIER: staging
+          CS_STAGING_SCAN_EXECUTION_ENABLED: '0'
+          CS_STAGING_ISOLATED_DB_CONFIRMED: '0'
+          CS_STAGING_SIDE_EFFECTS_DISABLED: '0'
+          ENABLE_TRACKER_SCHEDULER: '0'
+          ENABLE_BULK_WORKER: '0'
+          APP_URL: http://127.0.0.1:18765
+          DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          PORT: '18765'
+        run: |
+          node tests/prepare-staging-boot-smoke.cjs
+          node --check src/__ci_staging_boot_smoke__.js
+          node --require ./tests/staging-boot-no-egress.cjs src/__ci_staging_boot_smoke__.js >/tmp/bulk-isolation-smoke.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          reached=0
+          for i in $(seq 1 35); do
+            if curl --silent --max-time 2 --fail http://127.0.0.1:18765/api/build-info > /tmp/bulk-isolation-build.json 2>/dev/null; then
+              reached=1; break
+            fi
+            if ! kill -0 $app_pid 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$reached" -ne 1 ]; then
+            tail -n 60 /tmp/bulk-isolation-smoke.log
+            exit 1
+          fi
+          echo "Full app boot passed only in disposable CI; Railway stays read-only"
+      - name: Persist verified archive changes only to isolated branch
+        run: |
+          test "$GITHUB_REF_NAME" = "case-study-legacy-brief-archive"
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-bulk-ci
+            git config user.email contentscale-bulk-ci@users.noreply.github.com
+            git commit -m "candidate: verified full historical Brief archival in PostgreSQL"
+            git push origin HEAD:refs/heads/case-study-legacy-brief-archive
+          fi
