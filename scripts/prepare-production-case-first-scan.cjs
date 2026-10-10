@@ -32,7 +32,7 @@ function transform(a,b,fun,label){
  if(i<0||j<=i)throw Error('STOP: cannot find '+label+' boundaries');
  let body=s.slice(i,j);
  const replace=(x,y,why)=>{if(body.split(x).length!==2)throw Error('STOP: '+label+' '+why+' no longer unique');body=body.replace(x,y)};
- body=fun(body,replace);
+ fun(body,replace);
  s=s.slice(0,i)+body+s.slice(j);
 }
 transform('function _trackerNextActionState(','\nfunction _trackerImplementationCheckState(',(_body,replace)=>{
