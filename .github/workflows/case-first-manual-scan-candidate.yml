@@ -31,7 +31,9 @@ jobs:
         with:
           node-version: '22'
       - name: Regenerate full index inside CI runner only
-        run: node scripts/prepare-case-first-manual-candidate.cjs src/index.js
+        run: |
+          node scripts/prepare-case-first-manual-candidate.cjs src/index.js
+          node scripts/prepare-case-bulk-scan-queries.cjs src/index.js
       - name: Confirm candidate and startup JavaScript parse
         run: |
           node --check src/index.js
@@ -39,7 +41,7 @@ jobs:
           node --check src/staging/safety-gate.cjs
       - name: Run all isolated candidate regression tests
         run: |
-          node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-case-first-scan-db-fixture.test.cjs tests/staging-case-first-scan-existing-gate.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs tests/staging-case-study-next-action.test.cjs
+          node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-case-first-scan-db-fixture.test.cjs tests/staging-case-first-scan-existing-gate.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs tests/staging-case-study-next-action.test.cjs tests/staging-case-bulk-scan-sql.test.cjs
       - name: Install isolated PostgreSQL test driver
         run: |
           mkdir -p /tmp/contentscale-case-pg
