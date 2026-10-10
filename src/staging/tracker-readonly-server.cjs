@@ -7,8 +7,9 @@
 const http = require('node:http');
 const { verifyTrackerContracts } = require('./tracker-contracts.cjs');
 const { inspectSyntheticTestPrerequisites } = require('./tracker-synthetic-prerequisites.cjs');
+const { inspectTrackerGetReadiness } = require('./tracker-get-readiness.cjs');
 
-function makeHandler(schema, contracts, syntheticPrerequisites = { status: 'not_checked', writes_performed: false }) {
+function makeHandler(schema, contracts, syntheticPrerequisites = { status: 'not_checked', writes_performed: false }, getReadiness = { status: 'not_checked', schema_ready: false }) {
   const health = Object.freeze({
     success: true,
     environment: 'staging',
@@ -33,6 +34,7 @@ function makeHandler(schema, contracts, syntheticPrerequisites = { status: 'not_
     status: 'query_contracts_verified_no_workflows_executed'
   });
   const syntheticSummary = Object.freeze({ success: true, environment: 'staging', ...syntheticPrerequisites });
+  const getSummary = Object.freeze({ success: true, environment: 'staging', ...getReadiness });
   return (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -41,6 +43,9 @@ function makeHandler(schema, contracts, syntheticPrerequisites = { status: 'not_
     if (req.method === 'GET' && path === '/__staging/health') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(health));
+    } else if (req.method === 'GET' && path === '/__staging/tracker/get-readiness') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(getSummary));
     } else if (req.method === 'GET' && path === '/__staging/tracker/synthetic-readiness') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(syntheticSummary));
@@ -67,23 +72,24 @@ async function main(env = process.env, deps = {}) {
     connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 1000
   });
-  let schema, contracts, syntheticPrerequisites;
+  let schema, contracts, syntheticPrerequisites, getReadiness;
   try {
     schema = await readOnlyDatabaseCheck(pool);
     contracts = await verifyTrackerContracts(pool);
     syntheticPrerequisites = await inspectSyntheticTestPrerequisites(pool);
+    getReadiness = await inspectTrackerGetReadiness(pool);
   } finally {
     await pool.end();
   }
   const port = Number(env.PORT || 3000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid port');
-  const server = http.createServer(makeHandler(schema, contracts, syntheticPrerequisites));
+  const server = http.createServer(makeHandler(schema, contracts, syntheticPrerequisites, getReadiness));
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(port, '0.0.0.0', resolve);
   });
   console.log('[STAGING-TRACKER-READONLY] Query contracts verified; no app boot, migration, providers, scans, email, or network actions.');
-  return { server, schema, contracts, syntheticPrerequisites };
+  return { server, schema, contracts, syntheticPrerequisites, getReadiness };
 }
 if (require.main === module) {
   main().catch(err => {
