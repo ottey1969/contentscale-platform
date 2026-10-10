@@ -50,3 +50,4 @@ jobs:
           git add -- src/index.js
           git commit -m "staging: make Tracker sitemap GET read-only and persist snapshot via POST"
           git push origin HEAD:refs/heads/tracker-staging
+# Re-run after canonical sitemap-event assertion update.
