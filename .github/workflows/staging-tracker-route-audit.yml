@@ -53,6 +53,7 @@ jobs:
         run: |
           node tests/staging-prewrite-placement-guard.cjs src/index.js /tmp/contentscale-prewrite-placement.js
           node --check /tmp/contentscale-prewrite-placement.js
+          node --test tests/staging-prewrite-placement-guard.test.cjs
       - name: Verify saved Brief Finalize placement parameters
         run: node tests/staging-prewrite-ui-params-audit.cjs
       - name: Locate existing saved Brief Finalize UI without modifying it
