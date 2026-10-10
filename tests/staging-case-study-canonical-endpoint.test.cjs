@@ -10,7 +10,7 @@ assert(g0>0&&g1>g0&&r0>0&&r1>r0&&r1-r0<22000,'Canonical route markers changed: m
 function scenario(options={}){
  const page={id:17,tracker_client_id:3,url:'https://example.test/page',manual_done:options.done!==false,brief_content:{outstanding_actions:2},brief_evaluated_at:'2026-08-18T00:00:00Z',check_frequency:'0',monitoring_waiting_input:false,brief_published_confirmed_at:options.confirmedNew?'2026-10-10T13:00:00Z':null,revision_cycle:4};
  // Intentional: canonical tracker_pages table has NO case_study_active column.
- const state={baseline_at:'2026-10-10T12:00:00Z',latest_snapshot_at:options.newSnapshot?'2026-10-10T13:00:00Z':'2026-08-18T00:00:00Z',fresh_cycle_initialized:options.fresh!==false,current_revision_published_at:options.publishedNew?'2026-10-10T13:00:00Z':null};
+ const state={baseline_at:'2026-10-10T12:00:00Z',latest_snapshot_at:options.noSnapshot?null:(options.newSnapshot?'2026-10-10T13:00:00Z':'2026-08-18T00:00:00Z'),fresh_cycle_initialized:options.fresh!==false,current_revision_published_at:options.publishedNew?'2026-10-10T13:00:00Z':null};
  let handler=null,unexpected=[],writes=0,scheduled=[],scanCalls=0;
  const pool={async query(sql){
   if(/^(UPDATE |INSERT |DELETE )/i.test(sql))writes++;
@@ -64,4 +64,22 @@ test('saved publication version after baseline prevents unapproved first scan',a
 test('explicit publication confirmation after baseline prevents first scan',async()=>{
  const x=scenario({confirmedNew:true}),r=await x.call();
  assert.equal(r.statusCode,409);assert.equal(x.scheduled,0);
+});
+
+test('new Case Study with no prior Tracker snapshot and AI CHECKED 0/5 may start manually',async()=>{
+ const x=scenario({noSnapshot:true});x.page.ai_checked=0;
+ const r=await x.call();
+ assert.equal(r.statusCode,200);
+ assert.equal(r.payload.message,'Check started');
+ assert.equal(x.page.check_frequency,'0');
+ assert.equal(x.scheduled,1);
+ assert.equal(x.scanCalls,0);
+ assert.equal(x.writes,0);
+ assert.deepEqual(x.unexpected,[]);
+});
+test('new Case Study with no historical snapshot never schedules itself merely from route evaluation',async()=>{
+ const x=scenario({noSnapshot:true});
+ assert.equal(x.scheduled,0);
+ assert.equal(x.scanCalls,0);
+ assert.equal(x.page.check_frequency,'0');
 });
