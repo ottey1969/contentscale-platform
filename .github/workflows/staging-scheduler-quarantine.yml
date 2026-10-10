@@ -1,0 +1,41 @@
+name: Staging scheduler quarantine (safe read-only deploy)
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - scripts/staging-guard-case-study-schedulers.cjs
+      - .github/workflows/staging-scheduler-quarantine.yml
+permissions:
+  contents: write
+jobs:
+  protect-schedulers:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Disable staging startup scheduling only
+        run: node scripts/staging-guard-case-study-schedulers.cjs
+      - name: Check JS and both quarantine guards
+        run: |
+          node --check src/index.js
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const s=fs.readFileSync('src/index.js','utf8');
+          assert(s.startsWith("require('./staging/safety-gate.cjs').assertAppBootEnvironment(process.env);"));
+          assert(s.includes('if (!_csStagingStartupQuarantine) startCaseStudyMilestoneScheduler();'));
+          assert(s.includes('if (!_csStagingStartupQuarantine) setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);'));
+          assert(!/(?:^|\n)startCaseStudyMilestoneScheduler\(\);/.test(s));
+          NODE
+      - name: Do not alter release fence or staging readonly service
+        run: test -z "$(git diff --name-only -- src/staging/safety-gate.cjs src/staging/tracker-readonly-server.cjs)"
+      - name: Save verified staging-only source
+        run: |
+          git config user.name "contentscale-staging-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Staging: quarantine Case Study and Tracker scheduler startup calls"
+          git push origin HEAD:tracker-staging
