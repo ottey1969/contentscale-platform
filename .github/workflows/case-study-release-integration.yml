@@ -4,7 +4,7 @@ on:
     branches: [case-study-release-integration]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   statuses: write
 jobs:
   case-study-integration:
@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -127,6 +127,21 @@ jobs:
             scripts/prepare-case-study-manual-only.cjs
             scripts/prepare-case-study-legacy-active-recovery.cjs
           retention-days: 7
+      - name: Persist the exact tested canonical source to isolated integration branch
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "case-study-release-integration"
+          git diff --check
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/index.js" || test -z "$changed"
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-integration-ci
+            git config user.email contentscale-integration-ci@users.noreply.github.com
+            git commit -m 'integration: CI verified full Case Study source [skip ci]'
+            git push origin HEAD:refs/heads/case-study-release-integration
+          fi
       - name: Record isolated test result on this integration commit
         if: ${{ always() }}
         env:
@@ -143,4 +158,4 @@ jobs:
             -H "X-GitHub-Api-Version: 2022-11-28" \
             -H "Content-Type: application/json" \
             --data "$payload" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" >/dev/null
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" >/dev/null
