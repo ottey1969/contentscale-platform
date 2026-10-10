@@ -1,0 +1,48 @@
+name: Tracker canonical DB end-to-end (disposable)
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - 'tests/staging-tracker-db-e2e.cjs'
+      - '.github/workflows/staging-tracker-db-e2e.yml'
+      - 'src/index.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  canonical-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated test DB driver
+        run: |
+          mkdir -p /tmp/contentscale-e2e
+          npm install --prefix /tmp/contentscale-e2e --no-save --no-package-lock --ignore-scripts pg@8
+      - name: Verify tests run only against disposable DB
+        run: |
+          node --check tests/staging-tracker-db-e2e.cjs
+          test -z "${DATABASE_URL:-}"
+      - name: Run canonical extracted route handlers against PostgreSQL with rollback
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-e2e/node_modules/pg
+        run: node tests/staging-tracker-db-e2e.cjs
