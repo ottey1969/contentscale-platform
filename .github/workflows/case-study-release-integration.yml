@@ -38,6 +38,7 @@ jobs:
           node scripts/prepare-case-first-manual-candidate.cjs src/index.js
           node scripts/prepare-case-bulk-scan-queries.cjs src/index.js
           node scripts/prepare-case-study-brief-archive.cjs src/index.js
+          node scripts/prepare-case-study-manual-only.cjs src/index.js
           node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
           node --check src/index.js
           node --check index.cjs
@@ -51,6 +52,7 @@ jobs:
           node scripts/prepare-case-first-manual-candidate.cjs src/index.js
           node scripts/prepare-case-bulk-scan-queries.cjs src/index.js
           node scripts/prepare-case-study-brief-archive.cjs src/index.js
+          node scripts/prepare-case-study-manual-only.cjs src/index.js
           node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
           test "$before" = "$(sha256sum src/index.js | cut -d' ' -f1)"
       - name: Test first manual scan, archived Brief, legacy recovery and bulk isolation
@@ -122,6 +124,7 @@ jobs:
             scripts/prepare-case-first-manual-candidate.cjs
             scripts/prepare-case-bulk-scan-queries.cjs
             scripts/prepare-case-study-brief-archive.cjs
+            scripts/prepare-case-study-manual-only.cjs
             scripts/prepare-case-study-legacy-active-recovery.cjs
           retention-days: 7
       - name: Record isolated test result on this integration commit
