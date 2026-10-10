@@ -5284,10 +5284,10 @@ app.patch('/api/tracker-client/:token/pages/manual-done-all', async (req, res) =
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const on = !!req.body.manual_done;
     const r = await pool.query(
-      'UPDATE tracker_pages SET manual_done=$1, manual_done_at=CASE WHEN $1 THEN COALESCE(manual_done_at,NOW()) ELSE NULL END WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL) AND manual_done IS DISTINCT FROM $1',
+      `WITH changed AS ( UPDATE tracker_pages SET manual_done=$1, manual_done_at=CASE WHEN $1 THEN COALESCE(manual_done_at,NOW()) ELSE NULL END WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL) AND manual_done IS DISTINCT FROM $1 RETURNING id,tracker_client_id,manual_done,manual_done_at ), page_logged AS ( INSERT INTO tracker_workflow_events (tracker_client_id,tracker_page_id,event_type,idempotency_key,event_data) SELECT tracker_client_id,id,'manual_done_changed', ('manual_done:'||id::text||':'||gen_random_uuid()::text)::varchar(128), jsonb_build_object('manual_done',manual_done,'manual_done_at',manual_done_at,'source','tracker_bulk_ui') FROM changed ON CONFLICT (tracker_client_id,tracker_page_id,idempotency_key) DO NOTHING RETURNING tracker_client_id,tracker_page_id ), client_logged AS ( INSERT INTO tracker_workflow_client_events (tracker_client_id,event_type,idempotency_key,event_data) SELECT $2,'manual_done_bulk_changed', ('manual_done_bulk:'||gen_random_uuid()::text)::varchar(128), jsonb_build_object('manual_done',$1,'changed_page_count',(SELECT COUNT(*) FROM page_logged),'source','tracker_bulk_ui') WHERE EXISTS (SELECT 1 FROM page_logged) ON CONFLICT (tracker_client_id,idempotency_key) DO NOTHING RETURNING tracker_client_id ) SELECT COUNT(*)::int AS changed_count FROM page_logged`,
       [on, cr.rows[0].id]
     );
-    res.json({ success: true, manual_done: on, updated: r.rowCount });
+    res.json({ success: true, manual_done: on, updated: Number(r.rows[0]?.changed_count||0) });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -5302,7 +5302,7 @@ app.patch('/api/tracker-client/:token/pages/:pageId/manual-done', async (req, re
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const on = !!req.body.manual_done;
     await pool.query(
-      'UPDATE tracker_pages SET manual_done=$1, manual_done_at=CASE WHEN $1 THEN COALESCE(manual_done_at,NOW()) ELSE NULL END WHERE id=$2 AND tracker_client_id=$3 AND manual_done IS DISTINCT FROM $1',
+      `WITH changed AS ( UPDATE tracker_pages SET manual_done=$1, manual_done_at=CASE WHEN $1 THEN COALESCE(manual_done_at,NOW()) ELSE NULL END WHERE id=$2 AND tracker_client_id=$3 AND manual_done IS DISTINCT FROM $1 RETURNING id,tracker_client_id,manual_done,manual_done_at ) INSERT INTO tracker_workflow_events (tracker_client_id,tracker_page_id,event_type,idempotency_key,event_data) SELECT tracker_client_id,id,'manual_done_changed', ('manual_done:'||id::text||':'||gen_random_uuid()::text)::varchar(128), jsonb_build_object('manual_done',manual_done,'manual_done_at',manual_done_at,'source','tracker_ui') FROM changed ON CONFLICT (tracker_client_id,tracker_page_id,idempotency_key) DO NOTHING RETURNING tracker_page_id`,
       [on, req.params.pageId, cr.rows[0].id]
     );
     res.json({ success: true, manual_done: on });
