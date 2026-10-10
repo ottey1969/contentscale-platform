@@ -11,13 +11,14 @@ test('starting Case Study preserves historical proof and opens a fresh manual sc
  await db.connect();
  try{
   await db.query('BEGIN');
-  await db.query("CREATE TEMP TABLE tracker_pages(id integer primary key,tracker_client_id integer,url text,revision_cycle integer,is_done boolean,manual_done boolean,manual_done_at timestamptz,implementation_status text,implementation_at timestamptz,implementation_verified_at timestamptz,implementation_verified_brief_cycle_id text,implementation_before_graaf float,needs_html boolean,html_pasted_at timestamptz,brief_content jsonb,ranking_brief jsonb,brief_started_at timestamptz,brief_evaluated_at timestamptz,brief_viewed_at timestamptz,brief_check_count integer,brief_done_at timestamptz,brief_status text,treatment text,treatment_target_url text,treatment_updated_at timestamptz,treatment_source text,check_frequency text,gsc_impressions integer,gsc_clicks integer,gsc_position double precision,gsc_queries jsonb,gsc_pages jsonb,last_checked_at timestamptz,last_page_hash text) ON COMMIT DROP");
+  await db.query("CREATE TEMP TABLE tracker_pages(id integer primary key,tracker_client_id integer,url text,revision_cycle integer,is_done boolean,manual_done boolean,manual_done_at timestamptz,implementation_status text,implementation_at timestamptz,implementation_verified_at timestamptz,implementation_verified_brief_cycle_id text,implementation_before_graaf float,needs_html boolean,html_pasted_at timestamptz,brief_content jsonb,ranking_brief jsonb,brief_started_at timestamptz,brief_evaluated_at timestamptz,brief_viewed_at timestamptz,brief_check_count integer,brief_done_at timestamptz,brief_status text,treatment text,treatment_target_url text,treatment_updated_at timestamptz,treatment_source text,check_frequency text,next_check_at timestamptz,gsc_impressions integer,gsc_clicks integer,gsc_position double precision,gsc_queries jsonb,gsc_pages jsonb,last_checked_at timestamptz,last_page_hash text) ON COMMIT DROP");
   await db.query("CREATE TEMP TABLE tracker_case_study_events(id serial,case_study_id integer,tracker_page_id integer,event_type text,source text,event_at timestamptz default now(),event_data jsonb,content_hash text) ON COMMIT DROP");
   await db.query("CREATE TEMP TABLE tracker_case_study_content_versions(case_study_id integer,version_type text,captured_at timestamptz,content_hash text) ON COMMIT DROP");
   await db.query("CREATE TEMP TABLE tracker_snapshots(page_id integer,checked_at timestamptz) ON COMMIT DROP");
-  await db.query("INSERT INTO tracker_pages(id,tracker_client_id,url,revision_cycle,is_done,manual_done,implementation_verified_at,brief_content,brief_evaluated_at,check_frequency) VALUES(17,3,'https://fixture.invalid/legacy',3,true,true,'2026-08-18T12:00:00Z','{\"outstanding_actions\":2,\"cycle_id\":\"historical\"}','2026-08-18T00:00:00Z','0')");
+  await db.query("INSERT INTO tracker_pages(id,tracker_client_id,url,revision_cycle,is_done,manual_done,implementation_verified_at,brief_content,brief_evaluated_at,check_frequency) VALUES(17,3,'https://fixture.invalid/legacy',3,true,true,'2026-08-18T12:00:00Z','{\"outstanding_actions\":2,\"cycle_id\":\"historical\"}','2026-08-18T00:00:00Z','7days')");
   await db.query("UPDATE tracker_pages SET ranking_brief=$1::jsonb WHERE id=17", [JSON.stringify({seed_keyword:'historical-geo',verified_claims:['legacy claim']})]);
   await db.query("INSERT INTO tracker_snapshots VALUES(17,'2026-08-18T00:00:00Z')");
+  await db.query("UPDATE tracker_pages SET next_check_at='2026-10-20T12:00:00Z' WHERE id=17");
   // Historical measurement sources remain canonical; a new cycle must not reset GSC or scan history.
   await db.query("UPDATE tracker_pages SET gsc_impressions=321,gsc_clicks=27,gsc_position=8.5,gsc_queries=$1::jsonb,gsc_pages=$2::jsonb,last_checked_at='2026-08-18T12:00:00Z',last_page_hash='historical-sha' WHERE id=17",[
     JSON.stringify([{query:'consultor geo',impressions:200}]),
@@ -43,6 +44,7 @@ test('starting Case Study preserves historical proof and opens a fresh manual sc
   const updated=(await db.query('SELECT * FROM tracker_pages WHERE id=17')).rows[0];
   assert.equal(updated.revision_cycle,4);assert.equal(updated.manual_done,false);assert.equal(updated.is_done,false);
   assert.equal(updated.brief_content,null);assert.equal(updated.check_frequency,'0');
+  assert.equal(updated.next_check_at,null,'A pending automatic scan must be cancelled');
   assert.equal(updated.gsc_impressions,321);
   assert.equal(updated.gsc_clicks,27);
   assert.equal(updated.gsc_position,8.5);
@@ -53,6 +55,8 @@ test('starting Case Study preserves historical proof and opens a fresh manual sc
   const event=(await db.query("SELECT event_data FROM tracker_case_study_events WHERE case_study_id=21 AND event_type='case_study_fresh_cycle_initialized'")).rows[0];
   assert(event,'fresh-cycle event missing');
   assert.equal(event.event_data.previous_manual_done,true);
+  assert.equal(event.event_data.previous_check_frequency,'7days');
+  assert.equal(new Date(event.event_data.previous_next_check_at).toISOString(),'2026-10-20T12:00:00.000Z');
   assert.equal(event.event_data.previous_revision_cycle,3);
   assert.equal(event.event_data.history_preserved,true);
   const archive=(await db.query("SELECT event_data FROM tracker_case_study_events WHERE case_study_id=21 AND event_type='case_study_prior_brief_archived'")).rows;
