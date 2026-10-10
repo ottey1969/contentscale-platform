@@ -6,6 +6,7 @@ on:
       - '.github/workflows/staging-case-publication-guard.yml'
       - 'scripts/apply-staging-case-publication-guard.cjs'
       - 'tests/staging-case-first-scan-postgres.test.cjs'
+      - 'tests/staging-case-study-ui-next-action.test.cjs'
   workflow_dispatch:
 permissions:
   contents: write
@@ -49,6 +50,10 @@ jobs:
         run: |
           mkdir -p /tmp/contentscale-case-pg
           npm install --prefix /tmp/contentscale-case-pg --no-save --no-package-lock --ignore-scripts pg@8
+      - name: Verify actual Tracker dashboard NEXT ACTION rules
+        env:
+          CS_CASE_TEST_INDEX_FILE: /tmp/case-guard-index.js
+        run: node --test tests/staging-case-study-ui-next-action.test.cjs
       - name: Run canonical endpoint using disposable PostgreSQL
         env:
           CI: 'true'
@@ -61,7 +66,7 @@ jobs:
           cp /tmp/case-guard-index.js src/index.js
           git diff --check
           test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
-          printf "First manual scan, synthetic completion, repeat scan, publication and evidence lock verified for source %s and test %s\n" "$(git hash-object src/index.js)" "$(git hash-object tests/staging-case-first-scan-postgres.test.cjs)" > tests/staging-case-first-scan-postgres.verified
+          printf "PostgreSQL scan lifecycle + NEXT ACTION UI verified for source %s, db test %s, ui test %s\n" "$(git hash-object src/index.js)" "$(git hash-object tests/staging-case-first-scan-postgres.test.cjs)" "$(git hash-object tests/staging-case-study-ui-next-action.test.cjs)" > tests/staging-case-first-scan-postgres.verified
           git add -- src/index.js tests/staging-case-first-scan-postgres.verified
           if ! git diff --cached --quiet; then
             git config user.name "contentscale-staging-ci"
