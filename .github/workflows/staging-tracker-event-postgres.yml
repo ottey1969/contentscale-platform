@@ -4,6 +4,7 @@ on:
     branches: [tracker-staging]
     paths:
       - 'tests/staging-tracker-event-*'
+      - 'src/index.js'
       - '.github/workflows/staging-tracker-event-postgres.yml'
   workflow_dispatch:
 permissions:
