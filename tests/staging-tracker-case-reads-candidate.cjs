@@ -4,6 +4,19 @@ const sourcePath=process.argv[2]||'src/index.js',output=process.argv[3]||'/tmp/c
 let s=fs.readFileSync(sourcePath,'utf8');
 const caseGet="app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{try{";
 assert(s.split(caseGet).length===2,'Unexpected case-study GET');
+if(s.includes('async function _trackerCaseStudyReadonlySchema(')){
+ for(const marker of [caseGet,"app.get('/case-study-report/:reportToken'","app.get('/api/admin/tracker-clients/:id/monitoring'","app.get('/api/admin/tracker-readiness'"]){
+  const at=s.indexOf(marker),end=s.indexOf('\napp.',at+marker.length);
+  assert(at>=0,'Missing canonical GET route');
+  const body=s.slice(at,end>at?end:at+5500);
+  assert(body.includes('_trackerCaseStudyReadonlySchema'),'Missing migrated guard');
+  assert(!/await _ensureCaseStudySchema\(\)|await _ensureMonitoringGateSchema\(\)|await _trackerEnsureAiEvidenceSchema\(\)/.test(body),'A GET route still performs migration');
+ }
+ fs.writeFileSync(output,s);
+ console.log(JSON.stringify({result:'already_patched',read_only_get_routes:4}));
+ process.exit(0);
+}
+
 const helper=[
 "async function _trackerCaseStudyReadonlySchema(spec={}) {",
 " const tables=[...new Set(spec.tables||[])];",
