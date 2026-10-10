@@ -4165,6 +4165,7 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
           AND (p.is_active=TRUE OR p.is_active IS NULL)
           AND COALESCE(p.monitoring_waiting_input,FALSE)=FALSE
           AND COALESCE(p.manual_done,FALSE)=FALSE
+          AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.tracker_client_id=p.tracker_client_id AND cs.status='active')
           AND (p.gsc_impressions IS NOT NULL OR p.gsc_position IS NOT NULL OR p.gsc_clicks IS NOT NULL)
           AND NOT (p.gsc_position IS NOT NULL AND p.gsc_position <= 10 AND COALESCE(p.gsc_impressions,0) > 0 AND COALESCE(p.gsc_impressions,0) < 50)
         ORDER BY priority_tier ASC,
@@ -4178,12 +4179,12 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
         LEFT JOIN tracker_snapshots s ON s.page_id = p.id
         WHERE p.tracker_client_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL)
         AND COALESCE(p.monitoring_waiting_input,FALSE)=FALSE
-        AND NOT (COALESCE(p.manual_done,FALSE) AND EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.status='active'))
+        AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.tracker_client_id=p.tracker_client_id AND cs.status='active')
         AND s.id IS NULL
         ORDER BY p.created_at ASC
       `, [cr.rows[0].id]);
     } else {
-      pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(tracker_pages.manual_done,FALSE) AND EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.status='active')) ORDER BY created_at ASC", [cr.rows[0].id]);
+      pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status='active') ORDER BY created_at ASC", [cr.rows[0].id]);
     }
 
     pages.rows.forEach(p=>{p.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;});
@@ -4218,7 +4219,7 @@ app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
     if (!ids.length) return res.status(400).json({ success: false, error: 'No pages selected' });
     // Only pages that belong to THIS client (security: don't scan another client's pages)
     const pages = await pool.query(
-      'SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND id = ANY($2::int[]) AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(tracker_pages.manual_done,FALSE) AND EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status=\'active\')) ORDER BY created_at ASC',
+      'SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND id = ANY($2::int[]) AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status=\'active\') ORDER BY created_at ASC',
       [cr.rows[0].id, ids]
     );
     if (!pages.rows.length) return res.status(400).json({ success: false, error: 'No matching pages' });
