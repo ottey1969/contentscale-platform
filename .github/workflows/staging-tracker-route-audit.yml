@@ -16,6 +16,10 @@ jobs:
           node-version: '22'
       - name: Read narrow sitemap handler for safe GET POST split
         run: node tests/staging-tracker-sitemap-get-full-audit.cjs
+      - name: Build sitemap GET POST single-handler candidate
+        run: |
+          node tests/staging-tracker-sitemap-candidate.cjs src/index.js /tmp/contentscale-sitemap-candidate.js
+          node --check /tmp/contentscale-sitemap-candidate.js
       - name: Audit sitemap source and event side-effect paths
         run: node tests/staging-tracker-sitemap-source-audit.cjs
       - name: Inspect app entrypoint ordering without running app
