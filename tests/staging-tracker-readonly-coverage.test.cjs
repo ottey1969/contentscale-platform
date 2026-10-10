@@ -16,7 +16,7 @@ test('Prewrite GET write hazard is independently detected from canonical route c
  const start=original.indexOf(marker),end=original.indexOf('\napp.',start+marker.length);
  assert(start>=0 && end>start);
  const body=original.slice(start,end);
- const hasImplicitWrite=/UPDATE\s+prewrite_briefs\s+SET\s+brief_json/i.test(body);
+ const hasImplicitWrite=/\b(?:UPDATE\s+(?:ONLY\s+)?(?:public\.)?prewrite_briefs\b|INSERT\s+INTO\s+(?:public\.)?prewrite_briefs\b|DELETE\s+FROM\s+(?:public\.)?prewrite_briefs\b|ALTER\s+TABLE\s+(?:public\.)?prewrite_briefs\b|TRUNCATE\s+(?:TABLE\s+)?(?:public\.)?prewrite_briefs\b)/i.test(body);
  const r=assessCanonicalReadRoutes(original);
  assert.equal(r.prewrite_get_implicit_write_review,hasImplicitWrite);
  if(!hasImplicitWrite)assert.match(body,/pending_explicit_save:_preview.pendingSave/);
@@ -39,4 +39,13 @@ test('a reintroduced migration call fails the coverage check',()=>{
 test('a reintroduced automatic hard-coded baseline attachment fails coverage',()=>{
  const r=assessCanonicalReadRoutes(original+"\nawait _ensurePerfectRoofingCaseStudy(client,page);");
  assert.equal(r.historical_PRT_auto_attach_dormant,false);
+});
+
+test('Prewrite GET rejects alternate SQL mutations without booting the app',()=>{
+ const marker="app.get('/api/tracker-client/:token/prewrite-briefs/:id'";
+ const pos=original.indexOf(marker);assert(pos>=0);
+ for(const sql of ["UPDATE prewrite_briefs SET keyword='x'", "INSERT INTO prewrite_briefs(id) VALUES(1)","DELETE FROM prewrite_briefs WHERE id=1", "ALTER TABLE public.prewrite_briefs ADD COLUMN x int", "TRUNCATE TABLE prewrite_briefs"]){
+  const mutated=original.slice(0,pos+marker.length)+'\n'+sql+';'+original.slice(pos+marker.length);
+  assert.equal(assessCanonicalReadRoutes(mutated).prewrite_get_implicit_write_review,true,sql);
+ }
 });
