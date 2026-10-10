@@ -9,6 +9,7 @@ const { verifyTrackerContracts } = require('./tracker-contracts.cjs');
 const { inspectSyntheticTestPrerequisites } = require('./tracker-synthetic-prerequisites.cjs');
 const { inspectTrackerGetReadiness } = require('./tracker-get-readiness.cjs');
 const { inspectHistoricalIntegrity } = require('./tracker-historical-integrity.cjs');
+const { buildTrackerReleaseDecision } = require('./tracker-release-decision.cjs');
 
 function makeHandler(schema, contracts, syntheticPrerequisites = { status: 'not_checked', writes_performed: false }, getReadiness = { status: 'not_checked', schema_ready: false }, historicalIntegrity = { review_status: 'not_checked', requires_review_before_full_app_boot: true }) {
   const health = Object.freeze({
@@ -37,6 +38,7 @@ function makeHandler(schema, contracts, syntheticPrerequisites = { status: 'not_
   const syntheticSummary = Object.freeze({ success: true, environment: 'staging', ...syntheticPrerequisites });
   const getSummary = Object.freeze({ success: true, environment: 'staging', ...getReadiness });
   const historicalSummary = Object.freeze({ success: true, environment: 'staging', ...historicalIntegrity });
+  const releaseDecision = Object.freeze({ success: true, ...buildTrackerReleaseDecision(schema, contracts, getReadiness, historicalIntegrity) });
   return (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -45,6 +47,9 @@ function makeHandler(schema, contracts, syntheticPrerequisites = { status: 'not_
     if (req.method === 'GET' && path === '/__staging/health') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(health));
+    } else if (req.method === 'GET' && path === '/__staging/tracker/release-decision') {
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify(releaseDecision));
     } else if (req.method === 'GET' && path === '/__staging/tracker/historical-integrity') {
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
       res.end(JSON.stringify(historicalSummary));
