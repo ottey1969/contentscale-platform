@@ -38,6 +38,8 @@ jobs:
           node --test tests/staging-tracker-case-reads.test.cjs
       - name: Inspect case study GET handlers and schema helpers
         run: node tests/staging-case-study-get-source.cjs
+      - name: Review implicit Prewrite brief writes before deciding migration
+        run: node tests/staging-prewrite-get-review.cjs
       - name: Discover remaining tracker GET write sources
         run: node tests/staging-tracker-remaining-get-audit.cjs
       - name: Read-only canonical route inventory
