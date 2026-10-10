@@ -1,0 +1,53 @@
+name: Apply atomic Tracker event transitions to staging
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-apply-tracker-events.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  promote-events:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check staging branch lease
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+      - name: Build atomic event candidate from canonical source
+        run: |
+          node tests/staging-tracker-event-candidate.cjs src/index.js /tmp/contentscale-event-candidate.js
+          node --check /tmp/contentscale-event-candidate.js
+      - name: Validate all event transition regressions before replacement
+        run: |
+          node --test tests/staging-tracker-event-candidate.test.cjs
+          node --test tests/staging-tracker-readonly.test.cjs tests/staging-tracker-synthetic-readiness.test.cjs
+      - name: Update only canonical staging entrypoint
+        run: |
+          cp /tmp/contentscale-event-candidate.js src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js"
+      - name: Post-replacement isolated canonical regressions
+        run: |
+          node --test tests/staging-tracker-canonical-handlers.test.cjs
+          EVENT_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-event-candidate.test.cjs
+          PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
+          PATCHED_GET=src/index.js node --test tests/staging-tracker-readonly-get-candidate.test.cjs
+      - name: Commit exclusively to tracker-staging
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js
+          git commit -m "staging: record atomic canonical Tracker status transitions"
+          git push origin HEAD:refs/heads/tracker-staging
