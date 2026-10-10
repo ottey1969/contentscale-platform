@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Read narrow sitemap handler for safe GET POST split
+        run: node tests/staging-tracker-sitemap-get-full-audit.cjs
       - name: Audit sitemap source and event side-effect paths
         run: node tests/staging-tracker-sitemap-source-audit.cjs
       - name: Inspect app entrypoint ordering without running app
