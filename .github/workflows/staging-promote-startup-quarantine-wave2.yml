@@ -1,0 +1,54 @@
+name: Promote second-wave staging startup quarantine
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-promote-startup-quarantine-wave2.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fail closed if branch or repository checkout is unsafe
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+          test -z "${DATABASE_URL:-}"
+      - name: Build tested candidate without importing application
+        run: |
+          node tests/staging-tracker-boot-quarantine-wave2.cjs src/index.js /tmp/contentscale-staging-boot-wave2.js
+          node --check /tmp/contentscale-staging-boot-wave2.js
+          node --test tests/staging-tracker-boot-quarantine-wave2.test.cjs
+      - name: Replace only the canonical staging source
+        run: |
+          cp /tmp/contentscale-staging-boot-wave2.js src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js"
+          head -n 1 src/index.js | grep -Fx "require('./staging/safety-gate.cjs').assertAppBootEnvironment(process.env);"
+      - name: Re-run canonical staging, historical and side-effect regression suite
+        run: |
+          STARTUP_WAVE2_CANDIDATE=src/index.js node --test tests/staging-tracker-boot-quarantine-wave2.test.cjs
+          STARTUP_QUARANTINE_CANDIDATE=src/index.js node --test tests/staging-tracker-startup-quarantine.test.cjs
+          node --test tests/staging-tracker-legacy-v1-get.test.cjs tests/staging-tracker-entrypoints.test.cjs tests/staging-tracker-boot-fence.test.cjs
+          node --test tests/staging-tracker-readonly-coverage.test.cjs tests/staging-tracker-release-decision.test.cjs
+          node --test tests/staging-tracker-canonical-handlers.test.cjs
+          node --check index.js
+      - name: Commit only the verified staging-only source change
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js
+          git commit -m "staging: quarantine auto migration, model probe, job recovery and background workers"
+          git push origin HEAD:refs/heads/tracker-staging
