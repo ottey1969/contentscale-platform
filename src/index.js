@@ -2906,6 +2906,27 @@ async function _caseStudyOpenFreshStartCycle(clientId,page,cs,liveHtml,htmlSourc
     previous_brief_cycle_id:priorBrief&&priorBrief.cycle_id||null,
     history_preserved:true
   };
+  // Archive complete pre-existing Brief state BEFORE the destructive new-cycle reset.
+  // Existing canonical Case Study event storage is the history source; no new table.
+  const _priorBriefPresent=page.brief_content!==null&&page.brief_content!==undefined;
+  const _priorRankingPresent=page.ranking_brief!==null&&page.ranking_brief!==undefined;
+  if(_priorBriefPresent||_priorRankingPresent){
+    const _oldBriefArchive=Object.assign({},historicalState,{
+      previous_brief_content:page.brief_content==null?null:page.brief_content,
+      previous_ranking_brief:page.ranking_brief==null?null:page.ranking_brief,
+      previous_brief_status:page.brief_status||null,
+      previous_brief_started_at:page.brief_started_at||null,
+      previous_brief_done_at:page.brief_done_at||null,
+      captured_before_reset_at:new Date().toISOString()
+    });
+    // If archival fails, fail closed: never clear the only remaining Brief copy.
+    await pool.query(`INSERT INTO tracker_case_study_events
+      (case_study_id,tracker_page_id,event_type,source,event_data,content_hash)
+      SELECT $1,$2,'case_study_prior_brief_archived','tracker_case_study_start',$3::jsonb,NULL
+      WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events
+        WHERE case_study_id=$1 AND event_type='case_study_prior_brief_archived')`,
+      [cs.id,page.id,JSON.stringify(_oldBriefArchive)]);
+  }
   await pool.query(`UPDATE tracker_pages SET
       revision_cycle=$1,
       is_done=FALSE,manual_done=FALSE,manual_done_at=NULL,
