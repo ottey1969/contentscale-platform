@@ -126,7 +126,14 @@ test('canonical GET is NOT yet pure/read-only and new event tables have no direc
    assert.match(fragment,/ALTER TABLE tracker_clients/);
    assert.match(fragment,/ALTER TABLE tracker_pages/);
  }
- for(const name of ['tracker_workflow_events','tracker_workflow_client_events','tracker_workflow_sitemap_events']){
-   assert.equal(source.includes(name),false,'Re-evaluate event wiring and these tests: '+name);
+ const pageAndClientEvents=source.includes('INSERT INTO tracker_workflow_events');
+ if(pageAndClientEvents){
+   assert.match(source,/INSERT INTO tracker_workflow_client_events/);
+   // Sitemap events belong to the canonical sitemap workflow, not manual-done toggles.
+   assert.equal(source.includes('tracker_workflow_sitemap_events'),false);
+ }else{
+   for(const name of ['tracker_workflow_events','tracker_workflow_client_events','tracker_workflow_sitemap_events']){
+     assert.equal(source.includes(name),false,'Unexpected partial event integration: '+name);
+   }
  }
 });
