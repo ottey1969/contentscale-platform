@@ -88,7 +88,7 @@ async function main(){
   }
   assert.equal((await sm(false)).body.persisted,false);
   assert.equal(await count('tracker_workflow_sitemap_events'),0);
-  assert.equal((await sm(true)).body.persisted,true);
+  const firstPost=await sm(true); assert.equal(firstPost.body?.persisted,true,JSON.stringify(firstPost));
   assert.equal((await sm(true)).body.persisted,false);
   assert.equal(await count('tracker_workflow_sitemap_events'),1);
   assert.equal((await sm(true,'https://outside.test/sitemap.xml')).code,400);
