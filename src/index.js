@@ -290,7 +290,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH-PACING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-10-CANONICAL-v568-CASE-STUDY-FIRST-MANUAL-SCAN';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -927,7 +927,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH-PACING',
+  build: 'CS-2026-10-10-CANONICAL-v568-CASE-STUDY-FIRST-MANUAL-SCAN',
   built_date: '2026-10-08',
   ceo_private: true,
   ceo_public: true,
@@ -3299,7 +3299,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       WHERE case_study_id=ANY($1::int[])
         AND event_type=ANY($2::text[])
       ORDER BY case_study_id,event_type,event_at DESC,id DESC`,[
-        _csIds,['case_day_7_completed','case_day_14_completed','cycle_day_30_report']
+        _csIds,['case_day_7_completed','case_day_14_completed','cycle_day_30_report','case_study_fresh_cycle_initialized']
       ]):{rows:[]};
     const _csmByCase=new Map();
     _csmr.rows.forEach(function(x){
@@ -3312,6 +3312,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       const _cs=_csByUrl.get(_caseStudyNormUrl(_p.url));
       _p.case_study_active=!!_cs;
       _p.case_study=_cs||null;
+      _p.case_study_fresh_cycle_initialized=!!(_cs&&_csmByCase.get(_cs.id)&&_csmByCase.get(_cs.id).case_study_fresh_cycle_initialized);
       _p.case_study_versions=_cs?(_csvByCase.get(_cs.id)||{}):{};
       _p.case_study_milestones=_cs?(_csmByCase.get(_cs.id)||{}):{};
       const _cycle=Number(_p.revision_cycle||1),_preKey=_cycle>1?'pre_publication_r'+_cycle:'pre_publication';
@@ -8824,8 +8825,33 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
     page.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;
+    // Case Study start opens a protected new revision. Historical scans and Briefs
+    // do not block the first deliberate scan in this measured cycle.
+    let _caseFirstManualScan=false;
+    let _caseIsActive=false;
+    if(!page.monitoring_waiting_input){
+      const _publishedVersionType=Number(page.revision_cycle||1)>1?'published_implementation_r'+Number(page.revision_cycle):'published_implementation';
+      const _first=await pool.query(`SELECT cs.baseline_at,
+        (SELECT MAX(s.checked_at) FROM tracker_snapshots s WHERE s.page_id=$2) AS latest_snapshot_at,
+        (SELECT MAX(v.captured_at) FROM tracker_case_study_content_versions v
+          WHERE v.case_study_id=cs.id AND v.version_type=$3) AS current_revision_published_at,
+        EXISTS(SELECT 1 FROM tracker_case_study_events ev WHERE ev.case_study_id=cs.id
+          AND ev.event_type='case_study_fresh_cycle_initialized') AS fresh_cycle_initialized
+        FROM tracker_case_studies cs WHERE cs.tracker_client_id=$1 AND cs.tracker_page_id=$2
+        AND cs.status='active' AND cs.baseline_locked=TRUE ORDER BY cs.id DESC LIMIT 1`,
+        [cr.rows[0].id,page.id,_publishedVersionType]);
+      const _row=_first.rows[0]||{};
+      _caseIsActive=!!_row.baseline_at;
+      const _base=Date.parse(_row.baseline_at||'')||0;
+      const _last=Date.parse(_row.latest_snapshot_at||'')||0;
+      const _impl=Date.parse(page.implementation_verified_at||'')||0;
+      const _publicationTimes=[page.brief_published_at,page.brief_published_confirmed_at,_row.current_revision_published_at];
+      const _publishedAfterBaseline=_publicationTimes.some(t=>(Date.parse(t||'')||0)>_base);
+      _caseFirstManualScan=!!(_base&&(!_last||_last<=_base)&&_row.fresh_cycle_initialized&&
+        !(_impl>_base)&&!_publishedAfterBaseline);
+    }
     const normalScanGate=_trackerNormalScanGate(page);
-    if(!normalScanGate.allowed&&!page.monitoring_waiting_input){
+    if(!normalScanGate.allowed&&!page.monitoring_waiting_input&&!_caseFirstManualScan){
       return res.status(409).json({success:false,scan_locked:true,error:normalScanGate.reason,next_action_required:true});
     }
     // A completed case-study page follows the protected proof/verification loop.
@@ -8834,7 +8860,7 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     const _claimsFactsNewerThanBrief=!!(page.claims_facts_updated_at&&(!page.brief_evaluated_at||new Date(page.claims_facts_updated_at).getTime()>new Date(page.brief_evaluated_at).getTime()));
     const _savedBriefSafetyText=typeof page.brief_content==='string'?page.brief_content:JSON.stringify(page.brief_content||{});
     const _savedBriefSafetyStale=/contentscale\.site/i.test(String(page.url||''))&&/(?:verify and add direct-answer block|submit (?:the )?url to bing index|copilot[^.]{0,100}relies entirely on bing|verify and add author bio|3[.,]7\s*[x×]|based on analy[sz]ing (?:over )?200\+? websites|in my experience analy[sz]ing (?:over )?200\+? websites)/i.test(_savedBriefSafetyText);
-    if(page.case_study_active&&page.manual_done&&!page.monitoring_waiting_input&&!_claimsFactsNewerThanBrief&&!_savedBriefSafetyStale){
+    if(_caseIsActive&&page.manual_done&&!page.monitoring_waiting_input&&!_claimsFactsNewerThanBrief&&!_savedBriefSafetyStale&&!_caseFirstManualScan){
       return res.status(409).json({success:false,scan_not_needed:true,error:'No normal scan is needed for this completed case-study page. Use the current live verification or the next evidence checkpoint.'});
     }
     if(page.monitoring_waiting_input){
@@ -48537,6 +48563,13 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   }
   if(implStatus==='manual_resolution_complete'&&currentRejected>0){
     return {code:'REVIEW_REJECTED',label:'CYCLE CLOSED · '+currentRejected+' REJECTED ACTION'+(currentRejected===1?'':'S'),detail:'Rejected actions remain recoverable. Review them here and restore only accidental rejections; no new scan or full Brief is needed.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Review rejected actions',buttonAction:'openRemainingActions('+p.id+')'};
+  }
+  // First MANUAL scan of a freshly initialized Case Study, independent of scheduler.
+  var _caseBaselineAt=p.case_study&&p.case_study.baseline_locked&&p.case_study.baseline_at?new Date(p.case_study.baseline_at).getTime():0;
+  if(bool(p.case_study_active)&&bool(p.case_study_fresh_cycle_initialized)&&_caseBaselineAt>0&&
+      (!scanAt||scanAt<=_caseBaselineAt)&&!bool(p.monitoring_waiting_input)&&
+      !(publishedAt>_caseBaselineAt)&&!(verifiedAt>_caseBaselineAt)){
+    return {code:'SCAN',label:'CASE STUDY ACTIVE · FIRST MANUAL SCAN',detail:'The protected baseline is saved. Scan the live page once for this new revision. Automatic scans remain off.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'Scan current live page',buttonAction:'checkPage('+p.id+')'};
   }
   if(personalSafetyStale){
     return {code:'REFRESH_CONTRACT',label:'BRIEF SAFETY RULES UPDATED · REBUILD ONCE',detail:'This saved Brief still contains a prohibited or already-completed personal-profile recommendation from an older build. Rebuild it once; the live HTML and proof history remain protected.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild corrected Brief',buttonAction:'checkPage('+p.id+')'};
