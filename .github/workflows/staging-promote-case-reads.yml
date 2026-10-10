@@ -1,0 +1,54 @@
+name: Promote read-only case-study GETs to staging
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-promote-case-reads.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify staging branch and clean checkout
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+          test -z "${DATABASE_URL:-}"
+      - name: Build surgical read-only case study GET patch candidate
+        run: |
+          node tests/staging-tracker-case-reads-candidate.cjs src/index.js /tmp/contentscale-case-reads.js
+          node --check /tmp/contentscale-case-reads.js
+          node --test tests/staging-tracker-case-reads.test.cjs
+      - name: Apply only canonical staging source
+        run: |
+          cp /tmp/contentscale-case-reads.js src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js"
+      - name: Re-run canonical code and isolated route tests after replacement
+        run: |
+          CASE_CANDIDATE=src/index.js node --test tests/staging-tracker-case-reads.test.cjs
+          node --test tests/staging-tracker-canonical-handlers.test.cjs
+          PATCHED_GET=src/index.js node --test tests/staging-tracker-readonly-get-candidate.test.cjs
+          PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
+          EVENT_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-event-candidate.test.cjs
+          SITEMAP_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-sitemap-candidate.test.cjs
+          node --test tests/staging-tracker-get-readiness.test.cjs tests/staging-tracker-historical-integrity.test.cjs tests/staging-tracker-release-decision.test.cjs
+      - name: Commit only verified change to tracker-staging
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js
+          git commit -m "staging: remove case-study and monitoring schema writes from GET"
+          git push origin HEAD:refs/heads/tracker-staging
