@@ -61,3 +61,12 @@ test('paused or disabled Tracker clients may not mutate sitemap cache',async()=>
   assert.equal(f.db.events.size,0);
  }
 });
+
+test('Tracker UI uses same-origin explicit POST, never the production hostname',()=>{
+ const fs=require('node:fs');
+ const publicUi=fs.readFileSync('public/client-tracker','utf8');
+ assert.match(publicUi,/api\('\/fetch-sitemap', 'POST'/);
+ assert.doesNotMatch(publicUi,/\/fetch-sitemap\?url=/);
+ assert.doesNotMatch(source,/https:\/\/app\.contentscale\.site\/api\/tracker-client\/' \+ TOKEN \+ '\/fetch-sitemap/);
+ assert.match(source,/method:'POST',headers:\{'Content-Type':'application\/json'\}/);
+});
