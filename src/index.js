@@ -62899,7 +62899,7 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
       }
     }
     // Fallback: derive client from page URL domain if no tracker_client_id
-    if (!_clientToken && page.url) {
+    if (!_clientToken && page.url && !page.tracker_client_id) {
       const pageDomain = page.url.replace(/^https?:\/\//, '').split('/')[0];
       const _ctr2 = await pool.query('SELECT token FROM tracker_clients WHERE domain=$1 OR $2 LIKE \'%\' || domain || \'%\' ORDER BY created_at DESC LIMIT 1', [pageDomain, page.url]);
       if (_ctr2.rows.length) _clientToken = _ctr2.rows[0].token;
