@@ -1,0 +1,70 @@
+name: Staging Case Study publication guard (disposable DB)
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-case-publication-guard.yml'
+      - 'scripts/apply-staging-case-publication-guard.cjs'
+      - 'tests/staging-case-first-scan-postgres.test.cjs'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  staging-only:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify protected staging branch
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test -z "${DATABASE_URL:-}"
+          test -z "$(git status --porcelain)"
+      - name: Prepare patch without starting app
+        run: |
+          node scripts/apply-staging-case-publication-guard.cjs src/index.js /tmp/case-guard-index.js
+          node --check /tmp/case-guard-index.js
+          node --check src/staging/tracker-readonly-server.cjs
+      - name: Install disposable PostgreSQL driver
+        run: |
+          mkdir -p /tmp/contentscale-case-pg
+          npm install --prefix /tmp/contentscale-case-pg --no-save --no-package-lock --ignore-scripts pg@8
+      - name: Run canonical endpoint using disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
+          CS_CASE_TEST_INDEX_FILE: /tmp/case-guard-index.js
+        run: node --test tests/staging-case-first-scan-postgres.test.cjs
+      - name: Publish ONLY verified index to staging
+        run: |
+          cp /tmp/case-guard-index.js src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+          if ! git diff --quiet -- src/index.js; then
+            git config user.name "contentscale-staging-ci"
+            git config user.email "contentscale-staging-ci@users.noreply.github.com"
+            git add -- src/index.js
+            git commit -m "staging: guard first Case Study scan after current revision publication"
+            git push origin HEAD:refs/heads/tracker-staging
+          fi
