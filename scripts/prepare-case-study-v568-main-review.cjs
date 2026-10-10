@@ -5,9 +5,15 @@ const fs=require('node:fs'),path=require('node:path');
 const source=path.resolve(__dirname,'../src/index.js');
 const destination=process.argv[2]||path.resolve(__dirname,'../case-first-manual-index.candidate.js');
 let s=fs.readFileSync(source,'utf8');
+const WALL_OLD='    if (!_clientToken && page.url) {';
+const WALL_NEW='    if (!_clientToken && page.url && !page.tracker_client_id) {';
 if(s.includes("const CONTENTSCALE_BUILD_ID = 'CS-2026-10-10-REVIEW-v568-CASE-FIRST-MANUAL-SCAN';")){
   if(!s.includes('let _caseIsActive=false;')||!s.includes('case_study_fresh_cycle_initialized')){
     throw Error('STOP: candidate is only partially patched');
+  }
+  if(!s.includes(WALL_NEW)){
+    if(s.split(WALL_OLD).length!==2)throw Error('STOP: live-wall fallback anchor drift');
+    s=s.replace(WALL_OLD,WALL_NEW);
   }
   if(path.resolve(destination)!==source)fs.writeFileSync(destination,s);
   console.log('Complete candidate already generated; safe idempotent verification');
@@ -63,7 +69,8 @@ once("const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH
  "const CONTENTSCALE_BUILD_ID = 'CS-2026-10-10-REVIEW-v568-CASE-FIRST-MANUAL-SCAN';",'build ID');
 once("  build: 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH-PACING',",
  "  build: 'CS-2026-10-10-REVIEW-v568-CASE-FIRST-MANUAL-SCAN',",'build info');
-if(applied!==7||Buffer.byteLength(s)<6000000||s.startsWith("require('./staging/safety-gate.cjs')"))throw Error('STOP: source invariant failed');
+once(WALL_OLD,WALL_NEW,'bound-client live-wall safety');
+if(applied!==8||Buffer.byteLength(s)<6000000||s.startsWith("require('./staging/safety-gate.cjs')"))throw Error('STOP: source invariant failed');
 // Review branch only, never deploy or merge without validation.
 fs.writeFileSync(destination,s);
 console.log('Candidate prepared; anchors='+applied+' bytes='+Buffer.byteLength(s)+' output='+destination);
