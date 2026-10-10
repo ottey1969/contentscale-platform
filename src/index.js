@@ -46913,7 +46913,7 @@ async function runPrewriteFinalQa(btn){
   if(btn){btn.disabled=true;btn.textContent='Running final QA...';}
   if(stat)stat.textContent='Running deterministic final QA — no research and no Gemini...';
   try{
-    var d=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/finalize','POST',{});
+    var d=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/finalize'+(function(){var p=new URLSearchParams(window.location.search).get('networkPlacement');return p&&/^[0-9]+$/.test(p)&&Number.isSafeInteger(Number(p))&&Number(p)>0?'?networkEmbed=1&networkPlacement='+encodeURIComponent(p):'';})(),'POST',{});
     if(!d||!d.brief)throw new Error('Final QA returned no Brief.');
     _pwbCurrentBrief=d.brief;_pwbCurrentNotPassed=!(d.brief.ai_quality_check&&d.brief.ai_quality_check.ready_for_generation);_pwbFinalQaPersisted=true;_pwbInputsDirty=false;
     if(result)result.innerHTML=_renderIntentBar(d.brief.search_intent)+renderPrewriteBrief(d.brief);
@@ -61622,7 +61622,7 @@ async function _pwbPrepareSavedBriefV506(row,options={}){
     const _viewPlacementId=Number(options.networkPlacement||0),_viewNetwork=String(options.networkEmbed||'')==='1'&&Number.isSafeInteger(_viewPlacementId)&&_viewPlacementId>0;
     if(_viewNetwork){
       try{
-        const _ctx=await pool.query(`SELECT w.domain AS publisher_domain,w.scan_snapshot AS publisher_scan,ow.domain AS owner_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[_viewPlacementId]);
+        const _ctx=await pool.query(`SELECT w.domain AS publisher_domain,w.scan_snapshot AS publisher_scan,ow.domain AS owner_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 AND c.prewrite_brief_id=$2 LIMIT 1`,[_viewPlacementId,row.id]);if(!_ctx.rows.length)throw new Error('Network placement is not linked to this saved Brief');
         const _cx=_ctx.rows[0]||{},_pub=String(_cx.publisher_domain||_cx.owner_domain||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();_integrityRecovery.publisher_domain=_pub;
         const _beforeIntegrity=JSON.stringify(_viewBrief);
         _pwbEnsureResearchContractV506(_viewBrief,{network:true,publisher_domain:_pub});
