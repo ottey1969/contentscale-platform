@@ -25,7 +25,10 @@ test('even healthy historical relations require distinct boot and external-effec
  assert.equal(r.historical_records_reviewed,true);
  assert.equal(r.release_ready,false);
  assert.equal(r.blockers.includes('historical_customer_records_not_exercised_in_empty_staging'),false);
- assert(r.blockers.includes('remaining_case_study_GET_schema_mutations'));
+ assert.equal(r.case_study_get_routes_read_only,true);
+ assert.equal(r.case_study_get_routes_verified,4);
+ assert.equal(r.blockers.includes('remaining_case_study_GET_schema_mutations'),false);
+ assert(r.blockers.includes('prewrite_GET_implicit_brief_persistence_requires_review'));
 });
 test('contract or schema failure is explicitly represented',()=>{
  const r=buildTrackerReleaseDecision({empty:false},[],{schema_ready:false},{review_status:'not_checked',case_studies:0});
@@ -34,4 +37,13 @@ test('contract or schema failure is explicitly represented',()=>{
  assert(r.blockers.includes('tracker_get_schema_missing_requirements'));
  assert(r.blockers.includes('tracker_read_query_contracts_not_verified'));
  assert(r.blockers.includes('historical_integrity_audit_missing'));
+});
+
+test('route coverage can never hide an unpatched GET or activated legacy auto-attach',()=>{
+ const coverage={case_study_get_routes_read_only:false,verified_case_study_get_routes:3,
+  prewrite_get_implicit_write_review:true,historical_PRT_auto_attach_dormant:false};
+ const r=buildTrackerReleaseDecision(schema,contracts,get,{review_status:'historical_data_not_exercised',case_studies:0},coverage);
+ assert.equal(r.case_study_get_routes_read_only,false);
+ assert(r.blockers.includes('remaining_case_study_GET_schema_mutations'));
+ assert(r.blockers.includes('historical_PRT_auto_attach_risk'));
 });
