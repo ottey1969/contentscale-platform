@@ -8,5 +8,8 @@ test('requires five configured engines',()=>{const x=valid();x.selectedEngines=[
 test('rejects repeated scan after new baseline',()=>{const x=valid();x.latestSnapshotAt='2026-10-10T11:00:00Z';assert.equal(evaluateFirstManualCaseScan(x).reason,'already_scanned_this_case_cycle');});
 test('preserves evidence checkpoint',()=>{const x=valid();x.page.monitoring_waiting_input=true;assert.equal(evaluateFirstManualCaseScan(x).reason,'evidence_checkpoint_pending');});
 test('requires baseline lock',()=>{const x=valid();x.caseStudy.baseline_locked=false;assert.equal(evaluateFirstManualCaseScan(x).reason,'baseline_not_locked');});
-test('cannot bypass published revision',()=>{const x=valid();x.page.current_revision_published_at='2026-10-10T11:00:00Z';assert.equal(evaluateFirstManualCaseScan(x).reason,'live_revision_after_baseline');});
+test('cannot bypass published revision',()=>{const x=valid();x.page.brief_published_at='2026-10-10T11:00:00Z';assert.equal(evaluateFirstManualCaseScan(x).reason,'live_revision_after_baseline');});
 test('case must be active',()=>{const x=valid();x.page.case_study_active=false;assert.equal(evaluateFirstManualCaseScan(x).reason,'case_not_active');});
+
+test('historical finished page with new Case Study starts unlocked',()=>{const x=valid();x.page.manual_done=true;x.page.revision_cycle=2;assert.equal(evaluateFirstManualCaseScan(x).allowed,true);});
+test('unfinished page with new Case Study starts unlocked',()=>{const x=valid();x.page.manual_done=false;x.page.revision_cycle=2;assert.equal(evaluateFirstManualCaseScan(x).allowed,true);});
