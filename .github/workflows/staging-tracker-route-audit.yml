@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Audit sitemap source and event side-effect paths
+        run: node tests/staging-tracker-sitemap-source-audit.cjs
       - name: Read-only canonical route inventory
         run: node tests/staging-tracker-route-audit.cjs
       - name: Examine canonical Tracker handler risk markers
