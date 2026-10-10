@@ -14,7 +14,7 @@ function evaluateFirstManualCaseScan({page,caseStudy,latestSnapshotAt,selectedEn
  if(!Number.isFinite(baseline))return fail('baseline_timestamp_missing');
  const latest=ts(latestSnapshotAt);
  if(Number.isFinite(latest)&&latest>baseline)return fail('already_scanned_this_case_cycle');
- const verified=ts(page.implementation_verified_at),published=ts(page.current_revision_published_at);
+ const verified=ts(page.implementation_verified_at),published=ts(page.brief_published_at);
  if((Number.isFinite(verified)&&verified>baseline)||(Number.isFinite(published)&&published>baseline))return fail('live_revision_after_baseline');
  return {allowed:true,reason:'first_manual_case_study_scan'};
 }
