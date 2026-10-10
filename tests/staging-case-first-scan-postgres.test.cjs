@@ -67,17 +67,21 @@ test('first Case Study scan uses real PostgreSQL evidence and publication state'
   await db.query("UPDATE tracker_pages SET brief_published_confirmed_at=NULL WHERE id=17");
   await db.query("DELETE FROM tracker_case_study_events");
   const missingMarker=await call();assert.equal(missingMarker.code,409);assert.equal(missingMarker.scheduled,0);
-  // Bulk scan must not silently schedule completed active Case Studies.
+  // All active Case Studies are per-page manual-only, including unfinished fresh cycles.
   const eligibleSql=`SELECT p.id FROM tracker_pages p WHERE
-    NOT (COALESCE(p.manual_done,FALSE) AND EXISTS (
+    NOT EXISTS (
       SELECT 1 FROM tracker_case_studies cs
       WHERE cs.tracker_page_id=p.id AND cs.tracker_client_id=p.tracker_client_id AND cs.status='active'
-    )) ORDER BY p.id`;
+    ) ORDER BY p.id`;
   const excluded=await db.query(eligibleSql);
   assert.equal(excluded.rows.some(row=>row.id===17),false,'Completed active case leaked into bulk scan');
   await db.query('UPDATE tracker_pages SET manual_done=FALSE WHERE id=17');
+  const excludedFresh=await db.query(eligibleSql);
+  assert.equal(excludedFresh.rows.some(row=>row.id===17),false,'Unfinished active Case Study leaked into bulk scan');
+  await db.query("UPDATE tracker_case_studies SET status='completed' WHERE id=21");
   const eligible=await db.query(eligibleSql);
-  assert.equal(eligible.rows.some(row=>row.id===17),true,'Unfinished page unexpectedly excluded');
+  assert.equal(eligible.rows.some(row=>row.id===17),true,'Unfinished ordinary Tracker page unexpectedly excluded');
+  await db.query("UPDATE tracker_case_studies SET status='active' WHERE id=21");
   await db.query('UPDATE tracker_pages SET manual_done=TRUE WHERE id=17');
   const before=await db.query("SELECT check_frequency,manual_done FROM tracker_pages WHERE id=17");
   assert.equal(before.rows[0].check_frequency,'0');assert.equal(before.rows[0].manual_done,true);
