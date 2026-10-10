@@ -61729,6 +61729,7 @@ async function _pwbLoadAuthorizedSavedBriefV500(req,briefId){
   let r=await pool.query('SELECT id,client_id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 AND client_id=$2',[briefId,tracker.id]);
   let row=r.rows[0]||null,ownerDomain=String(tracker.domain||'').trim(),publisherDomain='',publisherCheckedUrl='',placementId=Number(req.query&&req.query.networkPlacement||0);
   const wantsNetwork=String(req.query&&req.query.networkEmbed||'')==='1'&&Number.isSafeInteger(placementId)&&placementId>0;
+  if(!wantsNetwork)placementId=0;
   if(wantsNetwork){
     const nr=await pool.query(`
       SELECT p.id,c.prewrite_brief_id,pb.client_id AS prewrite_client_id,ow.domain AS owner_domain,pw.domain AS publisher_domain,pw.scan_snapshot AS publisher_scan
@@ -61740,7 +61741,14 @@ async function _pwbLoadAuthorizedSavedBriefV500(req,briefId){
       WHERE p.id=$1 LIMIT 1
     `,[placementId]);
     const n=nr.rows[0]||null;
+    if(!n)placementId=0;
     if(n){
+      const _placementLinkedToBrief=Number(n.prewrite_brief_id||0)===Number(briefId||0);
+      const _syntheticIdentity=('network-placement-'+placementId+'.internal.contentscale.site').toLowerCase();
+      const _legacySyntheticOwner=String(tracker.domain||'').trim().toLowerCase()===_syntheticIdentity;
+      if(!_placementLinkedToBrief&&!_legacySyntheticOwner)placementId=0;
+    }
+    if(n&&placementId>0){
       if(n.owner_domain)ownerDomain=String(n.owner_domain).trim();
       if(n.publisher_domain)publisherDomain=String(n.publisher_domain).trim();
       try{publisherCheckedUrl=String(n.publisher_scan&&n.publisher_scan.checked_url||'').trim();}catch(_e){publisherCheckedUrl='';}
