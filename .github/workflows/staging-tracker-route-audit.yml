@@ -66,6 +66,8 @@ jobs:
         run: node tests/staging-prewrite-get-review.cjs
       - name: Discover remaining tracker GET write sources
         run: node tests/staging-tracker-remaining-get-audit.cjs
+      - name: Identify exact Tracker Action Pages dashboard filtering logic
+        run: node tests/staging-tracker-action-pages-audit.cjs
       - name: Read-only canonical route inventory
         run: node tests/staging-tracker-route-audit.cjs
       - name: Examine canonical Tracker handler risk markers
