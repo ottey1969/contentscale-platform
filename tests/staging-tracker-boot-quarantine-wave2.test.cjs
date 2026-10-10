@@ -25,7 +25,9 @@ test('Gemini call skipped in staging without changing nonstaging behavior',async
 });
 test('resumed batch jobs, expired sessions and bulk job updates are all quarantined',()=>{
  assert.equal(occurrences('// On server restart: resume any interrupted jobs\nif (!'+g+') setTimeout(async () => {'),1);
- assert.equal(occurrences("if (!"+g+") (async () => {\nif (!pool) { console.log('[otto]"),1);
+ const otto=s.indexOf("console.log('[otto] Skipping session migrations");
+ assert(otto>=0 && s.slice(Math.max(0,otto-300),otto).includes('if (!'+g+') (async () => {'),
+   'Otto automatic migrations must remain staging-quarantined');
  assert.equal(occurrences('if (!'+g+') (async () => { try { if (pool)'),1);
  assert.equal(occurrences("if (!"+g+" && process.env.ENABLE_BULK_WORKER === '1') {\nsetInterval(bulkWorkerTick"),1);
 });
