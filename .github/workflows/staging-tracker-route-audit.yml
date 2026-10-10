@@ -28,6 +28,7 @@ jobs:
         run: |
           node tests/staging-tracker-readonly-get-candidate.cjs src/index.js /tmp/contentscale-readonly-get-candidate.js
           node --check /tmp/contentscale-readonly-get-candidate.js
+          node --test tests/staging-tracker-readonly-get-candidate.test.cjs
       - name: Inspect read route helper call graph
         run: node tests/staging-tracker-get-calls.cjs
       - name: Inspect critical canonical Tracker GET ranges
