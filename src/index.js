@@ -18928,8 +18928,8 @@ async function migrateTrackerPageProfiles() {
 }
 
 async function startServer() {
-  // Auto-create boost_settings table if missing
-  if (pool) {
+  // Auto-create boost_settings table only outside isolated staging.
+  if (pool && !_csStagingStartupQuarantine) {
     try {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS boost_settings (
