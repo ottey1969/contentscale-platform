@@ -1,0 +1,52 @@
+name: Apply canonical Tracker sitemap snapshot flow to staging
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-apply-sitemap.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  promote-sitemap:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify staging source and no uncommitted files
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+      - name: Build one shared GET read and POST snapshot handler
+        run: |
+          node tests/staging-tracker-sitemap-candidate.cjs src/index.js /tmp/contentscale-sitemap-candidate.js
+          node --check /tmp/contentscale-sitemap-candidate.js
+          node --test tests/staging-tracker-sitemap-candidate.test.cjs
+      - name: Promote only tested source to staging
+        run: |
+          cp /tmp/contentscale-sitemap-candidate.js src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js"
+      - name: Re-run canonical GET and event contracts
+        run: |
+          SITEMAP_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-sitemap-candidate.test.cjs
+          PATCHED_GET=src/index.js node --test tests/staging-tracker-readonly-get-candidate.test.cjs
+          EVENT_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-event-candidate.test.cjs
+          PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
+          node --test tests/staging-tracker-canonical-handlers.test.cjs
+          grep -Fq "api('/fetch-sitemap', 'POST'" public/client-tracker
+      - name: Commit exclusively to staging branch
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js
+          git commit -m "staging: make Tracker sitemap GET read-only and persist snapshot via POST"
+          git push origin HEAD:refs/heads/tracker-staging
