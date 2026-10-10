@@ -47,7 +47,7 @@ async function main(){
   loadFunction('async function _pwbPrepareSavedBriefV506(', "\napp.get('/api/tracker-client/:token/prewrite-briefs/:id'",'prepare');
   loadFunction('async function _pwbLoadAuthorizedSavedBriefV500(', "\napp.post('/api/tracker-client/:token/prewrite-briefs/:id/finalize'",'authorize');
   function handler(method,route){
-   const marker="app."+method+"('"+route+"', async (req, res) => {";
+   const marker=method==='post'?"app.post('"+route+"', async (req,res)=>{":"app.get('"+route+"', async (req, res) => {";
    const at=source.indexOf(marker),end=source.indexOf('\n});',at);assert(at>0&&end>at&&end-at<16500,'Unsafe '+route);
    let fn;vm.runInNewContext(source.slice(at,end+4),{...ctx,_pwbPrepareSavedBriefV506:ctx.prepare,_pwbLoadAuthorizedSavedBriefV500:ctx.authorize,app:{[method](p,h){assert.equal(p,route);fn=h;}}},{timeout:2200});
    return fn;
