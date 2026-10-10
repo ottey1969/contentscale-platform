@@ -42,6 +42,7 @@ jobs:
         run: |
           node tests/staging-prewrite-pure-get-candidate.cjs src/index.js /tmp/contentscale-prewrite-pure-get.js
           node --check /tmp/contentscale-prewrite-pure-get.js
+          node --test tests/staging-prewrite-pure-get.test.cjs
       - name: Inspect precise Prewrite getter and finalize code
         run: node tests/staging-prewrite-exact-source.cjs
       - name: Map existing explicit Prewrite maintenance route and owner scopes
