@@ -5,6 +5,7 @@ on:
     paths:
       - scripts/prepare-case-first-manual-candidate.cjs
       - .github/workflows/case-first-manual-scan-candidate.yml
+      - tests/staging-case-study-canonical-endpoint.test.cjs
 permissions:
   contents: write
 jobs:
@@ -23,7 +24,7 @@ jobs:
       - name: Confirm JavaScript parses
         run: node --check src/index.js
       - name: Run policy and boot selector tests
-        run: node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs
+        run: node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs
       - name: Commit generated complete index to candidate branch
         run: |
           git config user.name "contentscale-candidate-bot"
