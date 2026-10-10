@@ -1,6 +1,7 @@
 require('./staging/safety-gate.cjs').assertAppBootEnvironment(process.env);
 // Defense in depth only. The first-statement full-app boot fence remains absolute.
 const _csStagingStartupQuarantine = process.env.CS_DEPLOYMENT_TIER === 'staging';
+// CONTENTSCALE-STAGING-STARTUP-QUARANTINE-WAVE2: automatic jobs, migrations, and provider calls.
 // v425: tracker client-action confirmation email after a previously emailed case-study checkpoint is completed.
 // v410: safe dead-URL correction plus correctly escaped generated browser JavaScript.
 const { buildOpportunityReport, FIVE_ENGINES } = (() => {
@@ -18833,7 +18834,7 @@ httpServer.on('upgrade', (req, socket, head) => {
 
 // ── Auto-assign profile_id to tracker pages missing it ──────────────────────
 // Ensure meta_intel columns exist on startup
-(async function ensureMetaIntelColumns() {
+if (!_csStagingStartupQuarantine) (async function ensureMetaIntelColumns() {
   try {
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS meta_intel JSONB, ADD COLUMN IF NOT EXISTS meta_intel_at TIMESTAMPTZ');
     console.log('[startup] meta_intel columns ready');
@@ -18926,16 +18927,16 @@ console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
   // Run migration after a short delay to ensure tables are fully created
-  setTimeout(function() { migrateTrackerPageProfiles(); }, 5000);
+  if (!_csStagingStartupQuarantine) setTimeout(function() { migrateTrackerPageProfiles(); }, 5000);
 const dbConnected = await waitForDatabase();
   if (!dbConnected) {
     console.log('⚠️  Database NOT connected at startup — starting auto-reconnect timer');
     startDbReconnect();
   }
   // Auto-detect best Gemini model at startup
-  await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
+  if (!_csStagingStartupQuarantine) await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
   // Recover any jobs stuck in 'researching' from previous server session
-  if (pool && dbConnected) {
+  if (pool && dbConnected && !_csStagingStartupQuarantine) {
     try {
       const stuckR = await pool.query(`UPDATE content_jobs SET status='error', error_message='Server restarted during research — please try again' WHERE status='researching' RETURNING id, seed_keyword`);
       if (stuckR.rows.length) {
@@ -19222,7 +19223,7 @@ activeJobs.delete(jobId);
 }
 }
 // On server restart: resume any interrupted jobs
-setTimeout(async () => {
+if (!_csStagingStartupQuarantine) setTimeout(async () => {
 if (!pool) return;
 try {
 const r = await pool.query(`SELECT id FROM batch_jobs WHERE status='running' OR status='queued'`);
@@ -21265,6 +21266,7 @@ function _ciScheduleVerification(delay){
   if(_ciVerifyTimer.unref)_ciVerifyTimer.unref()
 }
 function _ciStartWorkers(){
+if(_csStagingStartupQuarantine)return;
   if(_ciWorkersStarted)return;_ciWorkersStarted=true;
   setImmediate(async()=>{try{const pending=await pool.query(`SELECT * FROM contact_intelligence_imports WHERE status IN ('uploaded','processing') AND file_path IS NOT NULL ORDER BY created_at`);for(const j of pending.rows){if(fs.existsSync(j.file_path))_ciImportQueue=_ciImportQueue.then(()=>_ciProcessImport(j.id,j.file_path,true));else await pool.query(`UPDATE contact_intelligence_imports SET status='failed',file_path=NULL,error='Temporary source file unavailable after restart; upload CSV again',completed_at=NOW(),updated_at=NOW() WHERE id=$1`,[j.id])}await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='queued',updated_at=NOW() WHERE status='processing' AND updated_at<NOW()-INTERVAL '15 minutes'`);const active=await pool.query(`SELECT 1 FROM contact_intelligence_verification_jobs WHERE status IN ('queued','processing') LIMIT 1`);if(active.rows.length)_ciScheduleVerification(0)}catch(e){console.warn('[contact-intelligence] worker recovery:',e.message,'— retry in 30s');setTimeout(()=>{_ciWorkersStarted=false;_ciStartWorkers()},30000)}});
 }
@@ -28581,7 +28583,7 @@ async function cleanupExpiredSessions() {
     if (r.rowCount > 0) console.log('[otto] cleanup: deleted', r.rowCount, 'expired sessions');
   } catch(e) { console.warn('[otto] cleanup error:', e.message); }
 }
-(async () => {
+if (!_csStagingStartupQuarantine) (async () => {
   if (!pool) { console.log('[otto] Skipping session migrations — DB down'); return; }
   await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_b64 TEXT`).catch(()=>{});
   await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_chunks JSONB DEFAULT '[]'`).catch(()=>{});
@@ -38447,8 +38449,8 @@ function kickBulkWorker() {
 
 // Start the recurring worker
 // SAFETY: on boot, fail any bulk jobs stuck mid-run so they cannot resume a runaway loop
-(async () => { try { if (pool) { const rr = await pool.query("UPDATE content_bulk_jobs SET status='failed' WHERE status IN ('analysing','executing') RETURNING id"); if (rr.rowCount) console.warn('[bulk] Failed', rr.rowCount, 'stuck job(s) on boot'); } } catch(e) { console.warn('[bulk] boot cleanup:', e.message); } })();
-if (process.env.ENABLE_BULK_WORKER === '1') {
+if (!_csStagingStartupQuarantine) (async () => { try { if (pool) { const rr = await pool.query("UPDATE content_bulk_jobs SET status='failed' WHERE status IN ('analysing','executing') RETURNING id"); if (rr.rowCount) console.warn('[bulk] Failed', rr.rowCount, 'stuck job(s) on boot'); } } catch(e) { console.warn('[bulk] boot cleanup:', e.message); } })();
+if (!_csStagingStartupQuarantine && process.env.ENABLE_BULK_WORKER === '1') {
   setInterval(bulkWorkerTick, BULK_WORKER_INTERVAL_MS);
   console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms) — NOTE: this polls the DB every 5s and keeps Neon awake 24/7 (~6-9 CU-hrs/day). Disable ENABLE_BULK_WORKER when not actively using bulk jobs.`);
 } else {
@@ -66791,6 +66793,7 @@ async function _requestDueClientMonitoringInput(){
   }
 }
 function startTrackerScheduler() {
+if(_csStagingStartupQuarantine)return;
   if(_trackerSchedulerTimer) return;
   _trackerSchedulerTimer = setInterval(async () => {
     // Safe by default because pages themselves are explicit opt-in. Set the environment value
@@ -67485,8 +67488,10 @@ async function autoCloseSessions() {
 }
 
 // Run every 30 minutes
+if (!_csStagingStartupQuarantine) {
 setInterval(autoCloseSessions, 30 * 60 * 1000);
-setTimeout(autoCloseSessions, 5000); // run once on startup
+setTimeout(autoCloseSessions, 5000);
+} // run once on startup
 
 
 // ═══════════════════════════════════════════════════════════════════════════
