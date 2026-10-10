@@ -1,0 +1,166 @@
+name: Case Study scanner safety (isolated full scanner)
+on:
+  push:
+    branches: [case-study-scanner-safety-candidate]
+  workflow_dispatch:
+permissions:
+  contents: write
+  statuses: write
+jobs:
+  case-study-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.ref == 'refs/heads/case-study-scanner-safety-candidate'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d testdb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build exactly one complete canonical candidate
+        run: |
+          set -euo pipefail
+          node --check scripts/prepare-case-study-scanner-no-ddl.cjs
+          node scripts/prepare-case-first-manual-candidate.cjs src/index.js
+          node scripts/prepare-case-bulk-scan-queries.cjs src/index.js
+          node scripts/prepare-case-study-brief-archive.cjs src/index.js
+          node scripts/prepare-case-study-manual-only.cjs src/index.js
+          node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
+          node scripts/prepare-case-study-scanner-no-ddl.cjs src/index.js
+          node --check src/index.js
+          node --check index.cjs
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+          test "$(wc -c < src/index.js)" -gt 6000000
+      - name: Verify integration transforms are idempotent
+        run: |
+          set -euo pipefail
+          before="$(sha256sum src/index.js | cut -d' ' -f1)"
+          node scripts/prepare-case-first-manual-candidate.cjs src/index.js
+          node scripts/prepare-case-bulk-scan-queries.cjs src/index.js
+          node scripts/prepare-case-study-brief-archive.cjs src/index.js
+          node scripts/prepare-case-study-manual-only.cjs src/index.js
+          node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
+          node scripts/prepare-case-study-scanner-no-ddl.cjs src/index.js
+          test "$before" = "$(sha256sum src/index.js | cut -d' ' -f1)"
+      - name: Test first manual scan, archived Brief, legacy recovery and bulk isolation
+        run: |
+          node --test \
+            tests/staging-case-first-scan-eligibility.test.cjs \
+            tests/staging-case-first-scan-db-fixture.test.cjs \
+            tests/staging-case-first-scan-existing-gate.test.cjs \
+            tests/staging-case-study-canonical-endpoint.test.cjs \
+            tests/staging-case-study-next-action.test.cjs \
+            tests/staging-case-bulk-scan-sql.test.cjs \
+            tests/staging-case-study-legacy-active-recovery.test.cjs \
+            tests/staging-case-study-archive-fail-closed.test.cjs \
+            tests/staging-case-study-production-export.test.cjs \
+            tests/staging-start-selector.test.cjs \
+            tests/staging-safety-isolation.test.cjs \
+            tests/staging-scanner-full-execution.test.cjs
+      - name: Install test dependencies without postinstall side effects
+        run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
+      - name: Exercise real SQL only on disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: pg
+        run: |
+          node --test \
+            tests/staging-case-first-scan-postgres.test.cjs \
+            tests/staging-case-study-start-cycle-postgres.test.cjs
+      - name: Verify isolated full-app boot without provider access
+        env:
+          NODE_ENV: test
+          CS_DEPLOYMENT_TIER: staging
+          CS_STAGING_SCAN_EXECUTION_ENABLED: '0'
+          CS_STAGING_ISOLATED_DB_CONFIRMED: '0'
+          CS_STAGING_SIDE_EFFECTS_DISABLED: '0'
+          ENABLE_TRACKER_SCHEDULER: '0'
+          ENABLE_BULK_WORKER: '0'
+          APP_URL: http://127.0.0.1:18765
+          DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          PORT: '18765'
+        run: |
+          set -euo pipefail
+          node tests/prepare-staging-boot-smoke.cjs
+          node --check src/__ci_staging_boot_smoke__.js
+          node --require ./tests/staging-boot-no-egress.cjs src/__ci_staging_boot_smoke__.js >/tmp/contentscale-integration-boot.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          reached=0
+          for i in $(seq 1 35); do
+            if curl --silent --max-time 2 --fail http://127.0.0.1:18765/api/build-info > /tmp/contentscale-integration-build.json 2>/dev/null; then
+              reached=1; break
+            fi
+            if ! kill -0 $app_pid 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$reached" -ne 1 ]; then
+            tail -n 70 /tmp/contentscale-integration-boot.log
+            echo 'STOP: disposable full-app startup not verified'
+            exit 1
+          fi
+          node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/contentscale-integration-build.json'));if(!JSON.stringify(x).includes('v568'))process.exit(1)"
+          echo 'INTEGRATION FULL APP START PASSED IN DISPOSABLE CI ONLY'
+      - name: Publish review artifact, NEVER deploy to Railway
+        uses: actions/upload-artifact@v4
+        with:
+          name: contentscale-scanner-no-ddl-review-only
+          path: |
+            src/index.js
+            index.cjs
+            scripts/prepare-case-first-manual-candidate.cjs
+            scripts/prepare-case-bulk-scan-queries.cjs
+            scripts/prepare-case-study-brief-archive.cjs
+            scripts/prepare-case-study-manual-only.cjs
+            scripts/prepare-case-study-legacy-active-recovery.cjs
+            scripts/prepare-case-study-scanner-no-ddl.cjs
+          retention-days: 7
+      - name: Persist the exact tested canonical source to isolated integration branch
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "case-study-scanner-safety-candidate"
+          git diff --check
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/index.js" || test -z "$changed"
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-integration-ci
+            git config user.email contentscale-integration-ci@users.noreply.github.com
+            git commit -m 'candidate: CI verified full manual scanner with no DDL [skip ci]'
+            git push origin HEAD:refs/heads/case-study-scanner-safety-candidate
+          fi
+      - name: Record isolated test result on this integration commit
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_JOB_RESULT: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "case-study-scanner-safety-candidate"
+          if [ "$CI_JOB_RESULT" = "success" ]; then ci_state=success; else ci_state=failure; fi
+          payload="$(printf '{\"state\":\"%s\",\"context\":\"contentscale/scanner-safe\",\"description\":\"Disposable tests: %s; Railway unchanged\",\"target_url\":\"https://github.com/%s/actions/runs/%s\"}' "$ci_state" "$CI_JOB_RESULT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          curl --fail --silent --show-error --retry 3 -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            --data "$payload" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" >/dev/null
