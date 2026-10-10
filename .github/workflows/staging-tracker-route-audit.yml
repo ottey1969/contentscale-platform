@@ -14,6 +14,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Inventory sitemap UI/backend usage before applying candidate
+        run: node tests/staging-tracker-sitemap-callsite-audit.cjs
       - name: Read narrow sitemap handler for safe GET POST split
         run: node tests/staging-tracker-sitemap-get-full-audit.cjs
       - name: Build sitemap GET POST single-handler candidate
