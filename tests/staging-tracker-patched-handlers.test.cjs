@@ -22,7 +22,7 @@ function pool(){
    const p=rows.find(p=>String(p.id)===String(args[0])&&p.tracker_client_id===args[1]);
    return {rows:p?[{id:p.id}]:[]};
   }
-  if(sql.startsWith('UPDATE tracker_pages SET manual_done=$1')){
+  if(sql.startsWith('UPDATE tracker_pages SET manual_done=$1')||sql.startsWith('WITH changed AS (')){
    assert.match(sql,/manual_done IS DISTINCT FROM \$1/);
    assert.match(sql,/COALESCE\(manual_done_at,NOW\(\)\)/);
    const bulk=sql.includes('WHERE tracker_client_id=$2');
@@ -30,7 +30,7 @@ function pool(){
    const changed=selected.filter(p=>p.manual_done!==args[0]);
    for(const p of changed){p.manual_done=args[0];p.manual_done_at=args[0]?'T'+(++clock):null;}
    updates+=changed.length;
-   return {rowCount:changed.length,rows:[]};
+   return {rowCount:changed.length,rows:bulk?[{changed_count:changed.length}]:changed.map(p=>({tracker_page_id:p.id}))};
   }
   throw Error('Unexpected SQL: '+sql.slice(0,110));
  }};

@@ -47,15 +47,16 @@ class FakePool {
       const p=this.pages.find(p=>String(p.id)===String(args[0])&&p.tracker_client_id===args[1]);
       return {rows:p?[{id:p.id}]:[]};
     }
-    if(/^UPDATE tracker_pages SET manual_done=\$1, manual_done_at=/.test(sql)){
+    if(/^UPDATE tracker_pages SET manual_done=\$1, manual_done_at=/.test(sql) || sql.startsWith('WITH changed AS (')){
       const bulk=sql.includes('WHERE tracker_client_id=$2');
+      if(sql.startsWith('WITH changed AS ('))assert.match(sql,/INSERT INTO tracker_workflow_events/);
       const match=(bulk?
         this.pages.filter(p=>p.tracker_client_id===args[1]&&p.is_active===true):
         this.pages.filter(p=>String(p.id)===String(args[1])&&(!sql.includes('AND tracker_client_id=$3')||p.tracker_client_id===args[2])))
         .filter(p=>!sql.includes('manual_done IS DISTINCT FROM $1')||p.manual_done!==args[0]);
       for(const p of match){p.manual_done=args[0];p.manual_done_at=args[0]?'test-timestamp-'+(this.writes.length+1):null;}
       if(match.length)this.writes.push({bulk,affected:match.map(p=>p.id)});
-      return {rowCount:match.length,rows:[]};
+      return {rowCount:match.length,rows:bulk?[{changed_count:match.length}]:match.map(p=>({tracker_page_id:p.id}))};
     }
     throw new Error('Unexpected query in isolated canonical handler: '+sql.slice(0,100));
   }

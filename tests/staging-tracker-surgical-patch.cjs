@@ -15,6 +15,10 @@ for(const route of routes){
   const close=s.indexOf('\n});',at);
   assert(close>at&&close-at<2500,'Route boundary changed');
   const old=s.slice(at,close+4);
+  if(old.includes('WITH changed AS (') && old.includes('INSERT INTO tracker_workflow_events')){
+    assert(old.includes('manual_done IS DISTINCT FROM $1'),'Lost idempotency guard');
+    continue;
+  }
   const clientOld="SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)";
   const clientNew="SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status NOT IN ('deleted','paused','disabled'))";
   // Keep same parameterized $2 exclusion; use explicit states through SQL instead of raw interpolation.
