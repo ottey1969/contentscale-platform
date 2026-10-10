@@ -4,6 +4,8 @@ on:
     branches: [case-first-manual-scan-production-candidate]
     paths:
       - scripts/prepare-case-first-manual-production.cjs
+      - scripts/prepare-case-scan-all-sql.cjs
+      - tests/case-scan-all-sql.test.cjs
       - tests/case-first-manual-production-endpoint.test.cjs
       - .github/workflows/case-first-manual-production-candidate.yml
 permissions:
@@ -18,7 +20,9 @@ jobs:
         with:
           node-version: '22'
       - name: Apply surgical patch to authentic production source
-        run: node scripts/prepare-case-first-manual-production.cjs src/index.js
+        run: |
+          node scripts/prepare-case-first-manual-production.cjs src/index.js
+          node scripts/prepare-case-scan-all-sql.cjs src/index.js
       - name: Enforce no staging boot fence and valid JS
         run: |
           node --check src/index.js
@@ -27,7 +31,7 @@ jobs:
             exit 1
           fi
       - name: Test canonical real endpoint in isolation
-        run: node --test tests/case-first-manual-production-endpoint.test.cjs
+        run: node --test tests/case-first-manual-production-endpoint.test.cjs tests/case-scan-all-sql.test.cjs
       - name: Commit candidate index only on isolated branch
         run: |
           git config user.name "contentscale-candidate-bot"
