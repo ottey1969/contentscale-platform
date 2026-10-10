@@ -19,7 +19,11 @@ const ddl=[
 for(const statement of ddl){
  const line="await pool.query('"+statement+"').catch(()=>{});";
  const count=body.split(line).length-1;
- if(count===1)body=body.replace(line,'');
+ if(count===1){
+  const indented=['  '+line+'\n','    '+line+'\n'].find(entry=>body.includes(entry));
+  if(!indented||body.split(indented).length!==2)throw Error('STOP: scanner DDL indentation unexpected: '+statement);
+  body=body.replace(indented,'');
+ }
  else if(count!==0)throw Error('STOP: scanner DDL anchor duplicated: '+statement);
 }
 const marker='  keys = keys || {};';
