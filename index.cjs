@@ -1,6 +1,11 @@
-// index.cjs — entry shim (repo root)
-// package.json runs `node index.cjs`; this file simply boots the real server.
-// Purely additive: if Railway uses a custom start command, this changes nothing;
-// if it falls back to `npm start`, the deploy now works instead of crashing on a
-// missing file. Single source of truth = src/index.js.
-require('./src/index.js');
+'use strict';
+// Keep the production entrypoint unchanged. Isolated staging is preflight-only.
+// The full app is NOT cleared for staging boot, scans, email, AI or migrations.
+if (process.env.CS_DEPLOYMENT_TIER === 'staging') {
+  require('./src/staging/preflight-server.cjs');
+  // preflight-server exports main(); requiring alone does not start the listener.
+  const { main } = require('./src/staging/preflight-server.cjs');
+  main().catch(err => { console.error('[STAGING-PREFLIGHT] REFUSED:', err.message); process.exitCode = 1; });
+} else {
+  require('./src/index.js');
+}
