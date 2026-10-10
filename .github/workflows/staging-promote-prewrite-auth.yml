@@ -1,0 +1,79 @@
+name: Promote strict saved Brief placement authorization (staging)
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-promote-prewrite-auth.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  authorize:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reject production and unexpected branch
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+          test -z "${DATABASE_URL:-}"
+      - name: Generate isolated canonical source candidate
+        run: |
+          node tests/staging-prewrite-auth-guard.cjs src/index.js /tmp/contentscale-prewrite-authorized.js
+          node --check /tmp/contentscale-prewrite-authorized.js
+      - name: Apply only candidate to temporary CI checkout
+        run: |
+          cp /tmp/contentscale-prewrite-authorized.js src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js"
+      - name: Validate canonical source and other Tracker routes
+        run: |
+          PREWRITE_CANDIDATE_FILE=src/index.js node --test tests/staging-prewrite-pure-get.test.cjs
+          PLACEMENT_CANDIDATE=src/index.js node --test tests/staging-prewrite-placement-guard.test.cjs
+          node --test tests/staging-tracker-readonly-coverage.test.cjs tests/staging-tracker-release-decision.test.cjs
+          node --test tests/staging-tracker-canonical-handlers.test.cjs
+          PATCHED_GET=src/index.js node --test tests/staging-tracker-readonly-get-candidate.test.cjs
+          PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
+          EVENT_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-event-candidate.test.cjs
+          SITEMAP_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-sitemap-candidate.test.cjs
+          CASE_CANDIDATE=src/index.js node --test tests/staging-tracker-case-reads.test.cjs
+      - name: Install disposable local PostgreSQL driver
+        run: |
+          mkdir -p /tmp/contentscale-prewrite-driver
+          npm install --prefix /tmp/contentscale-prewrite-driver --no-save --no-package-lock --ignore-scripts pg@8
+      - name: Verify saved Brief isolation, persisted Finalize and rollback on real Postgres
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-prewrite-driver/node_modules/pg
+        run: node tests/staging-prewrite-postgres-e2e.cjs
+      - name: Commit strictly tested staging changes
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js
+          git commit -m "staging: prevent cross-placement saved Brief metadata contamination"
+          git push origin HEAD:refs/heads/tracker-staging
