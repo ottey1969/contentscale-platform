@@ -18,7 +18,13 @@ for(const x of replacements){
  let chunk=x.target==='all'?all:sel;
  const count=chunk.split(x.from).length-1;
  if(count===1)chunk=chunk.replace(x.from,x.to);
- else if(count===0&&chunk.includes(x.to)){}
+ else if(count===0&&(chunk.includes(x.to)||(
+  (x.from.includes('p.case_study_active')
+    ? /COALESCE\(p\.manual_done,FALSE\) AND EXISTS \(SELECT 1 FROM tracker_case_studies cs WHERE cs\.tracker_page_id=p\.id/.test(chunk)
+    : /COALESCE\(tracker_pages\.manual_done,FALSE\) AND EXISTS \(SELECT 1 FROM tracker_case_studies cs WHERE cs\.tracker_page_id=tracker_pages\.id/.test(chunk))
+  &&!chunk.includes('COALESCE(case_study_active,FALSE)')
+  &&!chunk.includes('COALESCE(p.case_study_active,FALSE)')
+ )){}
  else {const near=(chunk.match(/.{0,65}(?:case_study_active|tracker_case_studies|manual_done).{0,95}/g)||[]).slice(0,8);throw Error('STOP: unexpected bulk query anchor: '+x.target+' count='+count+' near='+JSON.stringify(near));}
  if(x.target==='all')all=chunk;else sel=chunk;
 }
