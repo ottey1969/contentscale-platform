@@ -1,0 +1,69 @@
+name: Repair and verify Tracker sitemap SQL types (staging)
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-fix-sitemap-types.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  type-fix:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Assert isolated staging branch
+        run: |
+          test "${GITHUB_REF_NAME}" = 'tracker-staging'
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+          test -z "${DATABASE_URL:-}"
+      - name: Prepare candidate and PostgreSQL driver
+        run: |
+          node tests/staging-tracker-sitemap-typefix.cjs src/index.js /tmp/contentscale-sitemap-fixed.js
+          node --check /tmp/contentscale-sitemap-fixed.js
+          mkdir -p /tmp/contentscale-e2e
+          npm install --prefix /tmp/contentscale-e2e --no-save --no-package-lock --ignore-scripts pg@8
+      - name: Validate proposed fix only in staging checkout
+        run: |
+          cp /tmp/contentscale-sitemap-fixed.js src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js"
+          node --check src/index.js
+          node --test tests/staging-tracker-sitemap-candidate.test.cjs
+          node --test tests/staging-tracker-canonical-handlers.test.cjs
+          PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
+      - name: Execute canonical route E2E on disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-e2e/node_modules/pg
+        run: node tests/staging-tracker-db-e2e.cjs
+      - name: Commit only the verified staging source change
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js
+          git commit -m "staging: type sitemap event SQL parameters for PostgreSQL"
+          git push origin HEAD:refs/heads/tracker-staging
