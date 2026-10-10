@@ -8782,21 +8782,26 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     let _caseFirstManualScan=false;
     let _caseIsActive=false;
     if(!page.monitoring_waiting_input){
+      const _publishedVersionType=Number(page.revision_cycle||1)>1?'published_implementation_r'+Number(page.revision_cycle):'published_implementation';
       const _first=await pool.query(`SELECT cs.baseline_at,
         (SELECT MAX(s.checked_at) FROM tracker_snapshots s WHERE s.page_id=$2) AS latest_snapshot_at,
+        (SELECT MAX(v.captured_at) FROM tracker_case_study_content_versions v
+          WHERE v.case_study_id=cs.id AND v.version_type=$3) AS current_revision_published_at,
         EXISTS(SELECT 1 FROM tracker_case_study_events ev WHERE ev.case_study_id=cs.id
           AND ev.event_type='case_study_fresh_cycle_initialized') AS fresh_cycle_initialized
         FROM tracker_case_studies cs WHERE cs.tracker_client_id=$1 AND cs.tracker_page_id=$2
         AND cs.status='active' AND cs.baseline_locked=TRUE ORDER BY cs.id DESC LIMIT 1`,
-        [cr.rows[0].id,page.id]);
+        [cr.rows[0].id,page.id,_publishedVersionType]);
       const _row=_first.rows[0]||{};
       _caseIsActive=!!_row.baseline_at;
       const _base=Date.parse(_row.baseline_at||'')||0;
       const _last=Date.parse(_row.latest_snapshot_at||'')||0;
       const _impl=Date.parse(page.implementation_verified_at||'')||0;
-      const _published=Date.parse(page.brief_published_at||'')||0;
+      const _publicationTimes=[page.brief_published_at,page.brief_published_confirmed_at,_row.current_revision_published_at];
+      const _publishedAfterBaseline=_publicationTimes.some(t=>(Date.parse(t||'')||0)>_base);
+      // Match canonical publication evidence and never override a published revision.
       _caseFirstManualScan=!!(_base&&(!_last||_last<=_base)&&_row.fresh_cycle_initialized&&
-        !(_impl>_base)&&!(_published>_base));
+        !(_impl>_base)&&!_publishedAfterBaseline);
     }
     const normalScanGate=_trackerNormalScanGate(page);
     if(!normalScanGate.allowed&&!page.monitoring_waiting_input&&!_caseFirstManualScan){
@@ -18928,8 +18933,8 @@ async function migrateTrackerPageProfiles() {
 }
 
 async function startServer() {
-  // Auto-create boost_settings table if missing
-  if (pool) {
+  // Auto-create boost_settings table only outside isolated staging.
+  if (pool && !_csStagingStartupQuarantine) {
     try {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS boost_settings (
