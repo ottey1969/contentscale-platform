@@ -3444,19 +3444,30 @@ async function _resolveSitemapUrls(sitemapUrl, opts) {
 }
 
 // GET /api/tracker-client/:token/fetch-sitemap — fetch URLs from sitemap
-app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
+async function _trackerFetchAndSaveSitemap(req, res, persist) {
   try {
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT domain,status FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const sitemapUrl = req.query.url;
+    if (persist && ['disabled','paused','deleted'].includes(cr.rows[0].status))
+      return res.status(403).json({success:false,error:'Tracker access paused'});
+    const sitemapUrl = String(persist ? (req.body && req.body.url) : req.query.url || '').trim();
+    let _requested;
+    try {_requested=new URL(sitemapUrl);} catch (_) {return res.status(400).json({success:false,error:'Valid sitemap URL required'});}
+    const _siteDomain=String(cr.rows[0].domain||'').replace(/^https?:\/\//i,'').split('/')[0].replace(/^www\./i,'').toLowerCase();
+    const _allowedHost=(host)=>{const h=String(host||'').replace(/^www\./i,'').toLowerCase();return !!_siteDomain && (h===_siteDomain || h.endsWith('.'+_siteDomain));};
+    if(!['https:','http:'].includes(_requested.protocol)||!_allowedHost(_requested.hostname)||_requested.username||_requested.password)
+      return res.status(400).json({success:false,error:'Sitemap URL must be on the tracked business domain'});
     if (!sitemapUrl) return res.status(400).json({ success: false, error: 'URL required' });
     const _zlib = require('zlib');
     // Fetch + decompress a sitemap/​sub-sitemap (handles .xml.gz files and gzip byte streams)
     async function _fetchSmXml(u){
+      let parsed;
+      try {parsed=new URL(u);} catch (_) {return '';}
+      if(!['https:','http:'].includes(parsed.protocol)||!_allowedHost(parsed.hostname)||parsed.username||parsed.password) return '';
       const c = new AbortController();
       const t = setTimeout(() => c.abort(), 12000);
       try {
-        const rr = await fetch(u, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: c.signal });
+        const rr = await fetch(u, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: c.signal, redirect:'error' });
         if (!rr.ok) return '';
         let buf = Buffer.from(await rr.arrayBuffer());
         if (/\.gz(\?|$)/i.test(u) || (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b)) {
@@ -3486,14 +3497,27 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     // Skip non-content archive URLs (WordPress categories, tags, author pages, pagination, feeds, media)
     const _SKIP_ARCHIVE = /\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$|\/wp-(json|admin|content|includes)\//i;
     const _SKIP_FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json)(\?|$)/i;
-    urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
+    urls = urls.filter(u => { try { const x=new URL(u); return ['https:','http:'].includes(x.protocol)&&_allowedHost(x.hostname); } catch (_) { return false; } }).filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
     // Dedup (normalise trailing slash) — complete set, capped only as a hard safety ceiling
     const _seenSm = new Set();
     urls = urls.filter(u => { const k = u.replace(/\/$/, ''); if (_seenSm.has(k)) return false; _seenSm.add(k); return true; }).slice(0, MAX_URLS);
     // Remember the sitemap URL + the full resolved URL list on the client (used by briefs for internal links + cannibalisation; avoids re-fetching per scan)
-    if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1, sitemap_urls=$2 WHERE token=$3', [sitemapUrl, JSON.stringify(urls), req.params.token]); } catch(e){} }
-    res.json({ success: true, urls, count: urls.length, complete: urls.length < MAX_URLS });
+    let persisted=false;
+    if(persist && urls.length){
+      const _canonicalUrlSet=[...urls].sort();
+      const snapshot_hash=require('node:crypto').createHash('sha256').update(sitemapUrl+'\n'+_canonicalUrlSet.join('\n')).digest('hex');
+      const idempotency_key='sitemap:v1:'+snapshot_hash;
+      const _saved=await pool.query(`WITH event AS ( INSERT INTO tracker_workflow_sitemap_events (tracker_client_id,idempotency_key,snapshot_hash,event_payload) SELECT id,$5,$4,jsonb_build_object('source_url',$1,'urls_count',jsonb_array_length($2::jsonb),'source','tracker_sitemap_fetch') FROM tracker_clients WHERE token=$3 ON CONFLICT (tracker_client_id,idempotency_key) DO NOTHING RETURNING tracker_client_id ) UPDATE tracker_clients SET sitemap_url=$1,sitemap_urls=$2 WHERE token=$3 AND EXISTS(SELECT 1 FROM event) RETURNING id`,[sitemapUrl,JSON.stringify(urls),req.params.token,snapshot_hash,idempotency_key]);
+      persisted=(_saved.rowCount||0)>0;
+    }
+    res.json({ success: true, urls, count: urls.length, complete: urls.length < MAX_URLS, persisted });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+}
+app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
+  return _trackerFetchAndSaveSitemap(req, res, false);
+});
+app.post('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
+  return _trackerFetchAndSaveSitemap(req, res, true);
 });
 
 // PATCH /api/tracker-client/:token/pages/:pageId/html — update html_content + keyword
@@ -52321,7 +52345,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var btn = document.querySelector('[onclick="fetchSitemap()"]');
     var _sp = _csSpinner(btn, 'Fetching sitemap');
     try {
-      var r = await fetch('https://app.contentscale.site/api/tracker-client/' + TOKEN + '/fetch-sitemap?url=' + encodeURIComponent(url));
+      var r = await fetch('/api/tracker-client/' + TOKEN + '/fetch-sitemap', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});
       var data = await r.json();
       if (!data.success) { toast(data.error || 'Failed to fetch sitemap', '#f87171'); return; }
       var urls = data.urls || [];
