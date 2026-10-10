@@ -25,6 +25,8 @@ jobs:
           node --test tests/staging-tracker-sitemap-candidate.test.cjs
       - name: Audit sitemap source and event side-effect paths
         run: node tests/staging-tracker-sitemap-source-audit.cjs
+      - name: Guard all boot paths and report inactive Dockerfile release hazard
+        run: node --test tests/staging-tracker-entrypoints.test.cjs
       - name: Inspect app entrypoint ordering without running app
         run: node tests/staging-tracker-boot-top-audit.cjs
       - name: Verify existing case-study start ownership and legacy attach handling
