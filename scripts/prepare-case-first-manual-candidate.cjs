@@ -25,8 +25,9 @@ function hardenPublicationEvidence(full){
   single("        (SELECT MAX(s.checked_at) FROM tracker_snapshots s WHERE s.page_id=$2) AS latest_snapshot_at,",
     "        (SELECT MAX(s.checked_at) FROM tracker_snapshots s WHERE s.page_id=$2) AS latest_snapshot_at,\n        (SELECT MAX(v.captured_at) FROM tracker_case_study_content_versions v\n          WHERE v.case_study_id=cs.id AND v.version_type=$3) AS current_revision_published_at,");
   single("        [cr.rows[0].id,page.id]);","        [cr.rows[0].id,page.id,_publishedVersionType]);");
-  single("      const _published=Date.parse(page.brief_published_at||'')||0;\n      _caseFirstManualScan=!!(_base&&(!_last||_last<=_base)&&_row.fresh_cycle_initialized&&\n        !(_impl>_base)&&!(_published>_base));",
-    "      const _publicationTimes=[page.brief_published_at,page.brief_published_confirmed_at,_row.current_revision_published_at];\n      const _publishedAfterBaseline=_publicationTimes.some(t=>(Date.parse(t||'')||0)>_base);\n      // Match canonical publication evidence and never override a published revision.\n      _caseFirstManualScan=!!(_base&&(!_last||_last<=_base)&&_row.fresh_cycle_initialized&&\n        !(_impl>_base)&&!_publishedAfterBaseline);");
+  single("      const _published=Date.parse(page.brief_published_at||'')||0;",
+    "      const _publicationTimes=[page.brief_published_at,page.brief_published_confirmed_at,_row.current_revision_published_at];\n      const _publishedAfterBaseline=_publicationTimes.some(t=>(Date.parse(t||'')||0)>_base);\n      // Match canonical publication evidence and never override a published revision.");
+  single("!(_impl>_base)&&!(_published>_base));","!(_impl>_base)&&!_publishedAfterBaseline);");
   if(!route.includes('AS current_revision_published_at,')||!route.includes('_publishedAfterBaseline'))throw Error('STOP: publication safety not established');
   return full.slice(0,at)+route+full.slice(end);
 }
