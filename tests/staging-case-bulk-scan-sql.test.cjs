@@ -17,8 +17,10 @@ test('scan-selected uses persisted Case Study ownership and active status',()=>{
  assert.match(selected,/cs\.tracker_client_id=tracker_pages\.tracker_client_id/);
  assert.match(selected,/cs\.status=/);
 });
-test('bulk routes still exclude completed active Case Studies, without enabling scheduler',()=>{
- assert.match(all,/COALESCE\(p\.manual_done,FALSE\) AND EXISTS/);
- assert.match(selected,/COALESCE\(tracker_pages\.manual_done,FALSE\) AND EXISTS/);
+test('bulk routes exclude every active Case Study, including unfinished new cycles',()=>{
+ assert.match(all,/AND NOT EXISTS \(SELECT 1 FROM tracker_case_studies cs WHERE cs\.tracker_page_id=p\.id/);
+ assert.match(all,/AND NOT EXISTS \(SELECT 1 FROM tracker_case_studies cs WHERE cs\.tracker_page_id=tracker_pages\.id/);
+ assert.match(selected,/AND NOT EXISTS \(SELECT 1 FROM tracker_case_studies cs WHERE cs\.tracker_page_id=tracker_pages\.id/);
+ assert.doesNotMatch(all+selected,/COALESCE\((?:p|tracker_pages)\.manual_done,FALSE\) AND EXISTS/);
  assert(!all.includes("ENABLE_TRACKER_SCHEDULER='1'"));
 });
