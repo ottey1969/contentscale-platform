@@ -1,0 +1,10 @@
+'use strict';
+const test=require('node:test'),assert=require('node:assert/strict');
+const {ELIGIBILITY_SQL,decideReadOnly}=require('../src/staging/case-first-scan-db-fixture.cjs');
+const fixture=()=>({status:'active',baseline_locked:true,baseline_at:'2026-10-10T00:00:00Z',latest_snapshot_at:'2026-10-10T01:00:00Z',fresh_cycle_initialized:true,manual_done:true,check_frequency:'0',brief_published_at:null,implementation_verified_at:null});
+test('matches read-only synthetic branch: a later snapshot blocks repeat',()=>assert.equal(decideReadOnly(fixture()),'blocked_already_scanned_after_baseline'));
+test('older historical snapshot and Done allows first manual Case Study scan',()=>{const f=fixture();f.latest_snapshot_at='2026-08-18T00:00:00Z';assert.equal(decideReadOnly(f),'eligible_first_manual_scan');});
+test('no historical snapshots also allows first scan',()=>{const f=fixture();f.latest_snapshot_at=null;assert.equal(decideReadOnly(f),'eligible_first_manual_scan');});
+test('uninitialized cycle cannot bypass old Done gate',()=>{const f=fixture();f.fresh_cycle_initialized=false;assert.equal(decideReadOnly(f),'blocked_uninitialized_cycle');});
+test('newer publication blocks first scan exception',()=>{const f=fixture();f.latest_snapshot_at=null;f.brief_published_at='2026-10-11T00:00:00Z';assert.equal(decideReadOnly(f),'blocked_newer_revision');});
+test('no SQL writes, migrations or providers',()=>{assert.match(ELIGIBILITY_SQL,/^\s*SELECT /);assert.doesNotMatch(ELIGIBILITY_SQL,/\b(INSERT|UPDATE|DELETE|ALTER|DROP|CREATE)\s+/i);});

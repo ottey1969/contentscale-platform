@@ -13,3 +13,8 @@ test('case must be active',()=>{const x=valid();x.page.case_study_active=false;a
 
 test('historical finished page with new Case Study starts unlocked',()=>{const x=valid();x.page.manual_done=true;x.page.revision_cycle=2;assert.equal(evaluateFirstManualCaseScan(x).allowed,true);});
 test('unfinished page with new Case Study starts unlocked',()=>{const x=valid();x.page.manual_done=false;x.page.revision_cycle=2;assert.equal(evaluateFirstManualCaseScan(x).allowed,true);});
+
+test('rejects current revision published after baseline',()=>{const x=valid();x.page.current_revision_published_at='2026-10-10T10:01:00Z';assert.equal(evaluateFirstManualCaseScan(x).reason,'live_revision_after_baseline');});
+test('rejects implementation verified after baseline',()=>{const x=valid();x.page.implementation_verified_at='2026-10-10T10:01:00Z';assert.equal(evaluateFirstManualCaseScan(x).reason,'live_revision_after_baseline');});
+test('rejects old publication alias after baseline',()=>{const x=valid();x.page.brief_published_at='2026-10-10T10:01:00Z';assert.equal(evaluateFirstManualCaseScan(x).reason,'live_revision_after_baseline');});
+test('allows first scan without historical snapshot',()=>{const x=valid();x.latestSnapshotAt=null;assert.equal(evaluateFirstManualCaseScan(x).allowed,true);});
