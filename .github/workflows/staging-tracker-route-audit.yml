@@ -25,6 +25,11 @@ jobs:
           node --test tests/staging-tracker-sitemap-candidate.test.cjs
       - name: Audit sitemap source and event side-effect paths
         run: node tests/staging-tracker-sitemap-source-audit.cjs
+      - name: Build and test isolated startup side-effect quarantine candidate
+        run: |
+          node tests/staging-tracker-startup-quarantine-candidate.cjs src/index.js /tmp/contentscale-staging-startup-quarantine.js
+          node --check /tmp/contentscale-staging-startup-quarantine.js
+          node --test tests/staging-tracker-startup-quarantine.test.cjs
       - name: Inspect conditional guards around startup timers and email without executing them
         run: node tests/staging-tracker-startup-guard-context.cjs
       - name: Inventory potential automatic migrations timers publishing and provider sends without boot
