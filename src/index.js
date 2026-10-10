@@ -61608,6 +61608,45 @@ app.get('/api/tracker-client/:token/prewrite-briefs', async (req, res) => {
 });
 
 // ── GET /api/tracker-client/:token/prewrite-briefs/:id — reopen one brief ───
+// Shared deterministic saved-Brief recovery. GET previews; existing Finalize POST persists.
+async function _pwbPrepareSavedBriefV506(row,options={}){
+    const _hadAnyPersistedFinalQa=!!(row.brief_json&&row.brief_json.publication_quality_check);
+    const _hadPersistedFinalQa=!!(_hadAnyPersistedFinalQa&&row.brief_json.final_qa_version==='v504-meta-policy');
+    let _viewBrief={};
+    try{_viewBrief=JSON.parse(JSON.stringify(row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{}));}catch(_e){_viewBrief=row.brief_json||{};}
+    try { if (_viewBrief && typeof _viewBrief === 'object' && !_viewBrief.language) _viewBrief.language = (row.language || 'en'); } catch(e) {}
+    // v506 — recover evidence already submitted to this exact Network placement instead of
+    // asking the owner to repeat work. This reads persisted async request snapshots only; it does
+    // not rerun SERP, competitor, evidence research or Gemini.
+    let _integrityMigrated=false,_integrityRecovery={ai_evidence_recovered:[],internal_destination_added:false,publisher_domain:''};
+    const _viewPlacementId=Number(options.networkPlacement||0),_viewNetwork=String(options.networkEmbed||'')==='1'&&Number.isSafeInteger(_viewPlacementId)&&_viewPlacementId>0;
+    if(_viewNetwork){
+      try{
+        const _ctx=await pool.query(`SELECT w.domain AS publisher_domain,w.scan_snapshot AS publisher_scan,ow.domain AS owner_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[_viewPlacementId]);
+        const _cx=_ctx.rows[0]||{},_pub=String(_cx.publisher_domain||_cx.owner_domain||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();_integrityRecovery.publisher_domain=_pub;
+        const _beforeIntegrity=JSON.stringify(_viewBrief);
+        _pwbEnsureResearchContractV506(_viewBrief,{network:true,publisher_domain:_pub});
+        let _submitted={};
+        try{const _jobs=await pool.query(`SELECT request_json FROM prewrite_async_jobs WHERE network_placement_id=$1 ORDER BY created_at DESC LIMIT 20`,[_viewPlacementId]);(_jobs.rows||[]).slice().reverse().forEach(function(j){const r=j.request_json&&typeof j.request_json==='object'?j.request_json:{},m=r.manualAiEvidence&&typeof r.manualAiEvidence==='object'?r.manualAiEvidence:{};_PWB_AI_ENGINES_V506.forEach(function(k){if(String(m[k]||'').trim())_submitted[k]=String(m[k]).trim();});});}catch(_jobErr){}
+        const _m=_pwbMergeManualAiEvidenceV506(_viewBrief,_submitted);_integrityRecovery.ai_evidence_recovered=_m.added||[];
+        const _li=_pwbEnsureNetworkInternalDestinationV506(_viewBrief,{publisher_domain:_pub,owner_domain:_cx.owner_domain||'',checked_url:String(_cx.publisher_scan&&_cx.publisher_scan.checked_url||'')});_integrityRecovery.internal_destination_added=!!(_li&&_li.source==='publisher_homepage_fallback');
+        _pwbEvidenceBackedGapV506(_viewBrief);_pwbCanonicalizeAiAnalysisV506(_viewBrief);
+        _integrityMigrated=JSON.stringify(_viewBrief)!==_beforeIntegrity;
+        if(_integrityMigrated){_viewBrief.integrity_history=Array.isArray(_viewBrief.integrity_history)?_viewBrief.integrity_history:[];_viewBrief.integrity_history.push({at:new Date().toISOString(),mode:'v506_recover_existing_work',research_rerun:false,gemini_calls:0,ai_evidence_recovered:_integrityRecovery.ai_evidence_recovered,internal_destination:_viewBrief.link_research&&_viewBrief.link_research.internal&&_viewBrief.link_research.internal.selected_url||'',publisher_domain:_pub});}
+      }catch(_integrityErr){console.warn('[prewrite-v506] integrity migration skipped:',_integrityErr.message);}
+    }
+    _pwbFinalPublicationPass(_viewBrief);
+    _viewBrief.ai_quality_check=_pwbReadiness(_viewBrief);
+    let _autoMigrated=false;
+    if(_hadAnyPersistedFinalQa&&!_hadPersistedFinalQa){
+      _viewBrief.final_qa_history=Array.isArray(_viewBrief.final_qa_history)?_viewBrief.final_qa_history:[];
+      _viewBrief.final_qa_history.push({at:new Date().toISOString(),mode:'automatic_policy_migration',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(_viewBrief.publication_quality_check&&_viewBrief.publication_quality_check.score||0)});
+      _autoMigrated=true;
+    }
+    const _pendingSave=Boolean(_integrityMigrated||_autoMigrated);
+    return {brief:_viewBrief,integrityMigrated:_integrityMigrated,integrityRecovery:_integrityRecovery,autoMigrated:_autoMigrated,finalQaPersisted:_hadPersistedFinalQa,pendingSave:_pendingSave};
+
+}
 app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id,domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
@@ -61673,44 +61712,8 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
     const _shareToken=String(_shareQr.rows[0]&&_shareQr.rows[0].share_token||'');
     const _shareBase=String(process.env.APP_URL||'https://app.contentscale.site').replace(/\/$/,'');
     const _shareInfo=/^[a-f0-9]{48}$/.test(_shareToken)?{active:true,url:_shareBase+'/share/prewrite/'+_shareToken,created_at:_shareQr.rows[0].share_created_at||null,expires_at:null,permanent:true}:{active:false,url:'',created_at:null,expires_at:null,permanent:true};
-    const _hadAnyPersistedFinalQa=!!(row.brief_json&&row.brief_json.publication_quality_check);
-    const _hadPersistedFinalQa=!!(_hadAnyPersistedFinalQa&&row.brief_json.final_qa_version==='v504-meta-policy');
-    // v504 — recalled finalized Briefs automatically migrate to the current deterministic meta/QA policy.
-    // This costs 0 research / 0 Gemini and prevents the owner from having to repeat a completed Final QA
-    // merely because ContentScale tightened its own deterministic rules in a later build.
-    let _viewBrief={};
-    try{_viewBrief=JSON.parse(JSON.stringify(row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{}));}catch(_e){_viewBrief=row.brief_json||{};}
-    try { if (_viewBrief && typeof _viewBrief === 'object' && !_viewBrief.language) _viewBrief.language = (row.language || 'en'); } catch(e) {}
-    // v506 — recover evidence already submitted to this exact Network placement instead of
-    // asking the owner to repeat work. This reads persisted async request snapshots only; it does
-    // not rerun SERP, competitor, evidence research or Gemini.
-    let _integrityMigrated=false,_integrityRecovery={ai_evidence_recovered:[],internal_destination_added:false,publisher_domain:''};
-    const _viewPlacementId=Number(req.query&&req.query.networkPlacement||0),_viewNetwork=String(req.query&&req.query.networkEmbed||'')==='1'&&Number.isSafeInteger(_viewPlacementId)&&_viewPlacementId>0;
-    if(_viewNetwork){
-      try{
-        const _ctx=await pool.query(`SELECT w.domain AS publisher_domain,w.scan_snapshot AS publisher_scan,ow.domain AS owner_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[_viewPlacementId]);
-        const _cx=_ctx.rows[0]||{},_pub=String(_cx.publisher_domain||_cx.owner_domain||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();_integrityRecovery.publisher_domain=_pub;
-        const _beforeIntegrity=JSON.stringify(_viewBrief);
-        _pwbEnsureResearchContractV506(_viewBrief,{network:true,publisher_domain:_pub});
-        let _submitted={};
-        try{const _jobs=await pool.query(`SELECT request_json FROM prewrite_async_jobs WHERE network_placement_id=$1 ORDER BY created_at DESC LIMIT 20`,[_viewPlacementId]);(_jobs.rows||[]).slice().reverse().forEach(function(j){const r=j.request_json&&typeof j.request_json==='object'?j.request_json:{},m=r.manualAiEvidence&&typeof r.manualAiEvidence==='object'?r.manualAiEvidence:{};_PWB_AI_ENGINES_V506.forEach(function(k){if(String(m[k]||'').trim())_submitted[k]=String(m[k]).trim();});});}catch(_jobErr){}
-        const _m=_pwbMergeManualAiEvidenceV506(_viewBrief,_submitted);_integrityRecovery.ai_evidence_recovered=_m.added||[];
-        const _li=_pwbEnsureNetworkInternalDestinationV506(_viewBrief,{publisher_domain:_pub,owner_domain:_cx.owner_domain||'',checked_url:String(_cx.publisher_scan&&_cx.publisher_scan.checked_url||'')});_integrityRecovery.internal_destination_added=!!(_li&&_li.source==='publisher_homepage_fallback');
-        _pwbEvidenceBackedGapV506(_viewBrief);_pwbCanonicalizeAiAnalysisV506(_viewBrief);
-        _integrityMigrated=JSON.stringify(_viewBrief)!==_beforeIntegrity;
-        if(_integrityMigrated){_viewBrief.integrity_history=Array.isArray(_viewBrief.integrity_history)?_viewBrief.integrity_history:[];_viewBrief.integrity_history.push({at:new Date().toISOString(),mode:'v506_recover_existing_work',research_rerun:false,gemini_calls:0,ai_evidence_recovered:_integrityRecovery.ai_evidence_recovered,internal_destination:_viewBrief.link_research&&_viewBrief.link_research.internal&&_viewBrief.link_research.internal.selected_url||'',publisher_domain:_pub});}
-      }catch(_integrityErr){console.warn('[prewrite-v506] integrity migration skipped:',_integrityErr.message);}
-    }
-    _pwbFinalPublicationPass(_viewBrief);
-    _viewBrief.ai_quality_check=_pwbReadiness(_viewBrief);
-    let _finalQaPersisted=_hadPersistedFinalQa,_autoMigrated=false;
-    if(_hadAnyPersistedFinalQa&&!_hadPersistedFinalQa){
-      _viewBrief.final_qa_history=Array.isArray(_viewBrief.final_qa_history)?_viewBrief.final_qa_history:[];
-      _viewBrief.final_qa_history.push({at:new Date().toISOString(),mode:'automatic_policy_migration',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(_viewBrief.publication_quality_check&&_viewBrief.publication_quality_check.score||0)});
-      _finalQaPersisted=true;_autoMigrated=true;
-    }
-    if(_integrityMigrated||_autoMigrated)await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(_viewBrief),row.id]);
-    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_autoMigrated, integrity_migrated:_integrityMigrated, integrity_recovery:_integrityRecovery, final_qa_persisted:_finalQaPersisted, share:_shareInfo });
+    const _preview=await _pwbPrepareSavedBriefV506(row,{networkPlacement:req.query&&req.query.networkPlacement,networkEmbed:req.query&&req.query.networkEmbed});
+    res.json({ success: true, brief: _preview.brief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_preview.autoMigrated, integrity_migrated:_preview.integrityMigrated, integrity_recovery:_preview.integrityRecovery, final_qa_persisted:_preview.finalQaPersisted, pending_explicit_save:_preview.pendingSave,research_rerun:false,gemini_calls:0,share:_shareInfo });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -61768,7 +61771,8 @@ app.post('/api/tracker-client/:token/prewrite-briefs/:id/finalize', async (req,r
   try{
     const auth=await _pwbLoadAuthorizedSavedBriefV500(req,Number(req.params.id||0));
     if(auth.error)return res.status(auth.status||404).json({success:false,error:auth.error});
-    let brief={};try{brief=JSON.parse(JSON.stringify(auth.row.brief_json||{}));}catch(_e){brief=auth.row.brief_json||{};}
+    const _preview=await _pwbPrepareSavedBriefV506(auth.row,{networkPlacement:auth.placementId,networkEmbed:req.query&&req.query.networkEmbed});
+    let brief=_preview.brief;
     if(Number(auth.placementId||0)>0){_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:auth.publisherDomain||auth.ownerDomain||''});_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:auth.publisherDomain||auth.ownerDomain||'',owner_domain:auth.ownerDomain||'',checked_url:auth.publisherCheckedUrl||''});}
     _pwbEvidenceBackedGapV506(brief);_pwbCanonicalizeAiAnalysisV506(brief);
     _pwbFinalPublicationPass(brief);
