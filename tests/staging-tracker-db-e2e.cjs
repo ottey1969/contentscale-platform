@@ -64,7 +64,7 @@ async function main(){
   assert.equal((await pg.query('SELECT manual_done FROM tracker_pages WHERE id=12')).rows[0].manual_done,false);
   assert.equal((await pg.query('SELECT manual_done FROM tracker_pages WHERE id=20')).rows[0].manual_done,false);
   await pg.query('SAVEPOINT reject_event');
-  await pg.query("ALTER TABLE tracker_workflow_events ADD CONSTRAINT reject_page_events CHECK(event_type<>'manual_done_changed')");
+  await pg.query("ALTER TABLE tracker_workflow_events ADD CONSTRAINT reject_page_events CHECK(event_type<>'manual_done_changed') NOT VALID");
   assert.equal((await call(page,'owner',10,false)).code,500);
   await pg.query('ROLLBACK TO SAVEPOINT reject_event');
   assert.equal((await pg.query('SELECT manual_done FROM tracker_pages WHERE id=10')).rows[0].manual_done,true);
