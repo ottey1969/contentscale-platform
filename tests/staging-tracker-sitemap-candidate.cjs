@@ -74,5 +74,9 @@ const wrappers=[
 "});"
 ].join('\n');
 source=source.slice(0,start)+body+'\n'+wrappers+source.slice(end+4);
+const _oldUi = "var r = await fetch('https://app.contentscale.site/api/tracker-client/' + TOKEN + '/fetch-sitemap?url=' + encodeURIComponent(url));";
+const _newUi = "var r = await fetch('/api/tracker-client/' + TOKEN + '/fetch-sitemap', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});";
+assert(source.includes(_oldUi)&&source.split(_oldUi).length===2,'Unexpected source-linked Tracker sitemap UI call');
+source=source.replace(_oldUi,_newUi);
 fs.writeFileSync(out,source);
 console.log(JSON.stringify({result:'sitemap_get_post_candidate',bytes:Buffer.byteLength(source),database_writes_in_get:false,legacy_get_kept:true}));
