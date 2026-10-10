@@ -66,6 +66,8 @@ jobs:
         run: node tests/staging-prewrite-get-review.cjs
       - name: Discover remaining tracker GET write sources
         run: node tests/staging-tracker-remaining-get-audit.cjs
+      - name: Test canonical legacy v1 and v3 case-study GET handlers with zero writes
+        run: node --test tests/staging-tracker-legacy-v1-get.test.cjs
       - name: Inspect legacy v1 case-study reader source without starting app
         run: node tests/staging-tracker-v1-reader-audit.cjs
       - name: Identify exact Tracker Action Pages dashboard filtering logic
