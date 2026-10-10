@@ -31,6 +31,8 @@ jobs:
         run: node tests/staging-tracker-case-study-start-audit.cjs
       - name: Trace legacy case-study mutations without app boot
         run: node tests/staging-tracker-historical-writer-audit.cjs
+      - name: Inspect case study GET handlers and schema helpers
+        run: node tests/staging-case-study-get-source.cjs
       - name: Discover remaining tracker GET write sources
         run: node tests/staging-tracker-remaining-get-audit.cjs
       - name: Read-only canonical route inventory
