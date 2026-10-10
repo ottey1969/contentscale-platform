@@ -1,0 +1,45 @@
+name: Tracker sitemap snapshot atomicity — disposable Postgres
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - 'tests/staging-tracker-sitemap-*'
+      - '.github/workflows/staging-tracker-sitemap-postgres.yml'
+      - 'src/index.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sitemap-transaction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate sitemap candidate and rollback-only database test
+        run: |
+          node tests/staging-tracker-sitemap-candidate.cjs src/index.js /tmp/contentscale-sitemap-candidate.js
+          node tests/staging-tracker-sitemap-postgres-smoke.cjs /tmp/contentscale-sitemap-candidate.js /tmp/contentscale-sitemap-pg-smoke.sql
+          node --check /tmp/contentscale-sitemap-candidate.js
+      - name: Test snapshot changes and idempotency on disposable PostgreSQL
+        run: |
+          CID="$(docker ps -q --filter ancestor=postgres:16-alpine | head -1)"
+          test -n "$CID"
+          docker cp /tmp/contentscale-sitemap-pg-smoke.sql "$CID":/tmp/contentscale-sitemap-pg-smoke.sql
+          docker exec "$CID" psql -v ON_ERROR_STOP=1 -U test -d testdb -f /tmp/contentscale-sitemap-pg-smoke.sql
