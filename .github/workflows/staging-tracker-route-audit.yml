@@ -30,6 +30,8 @@ jobs:
           node tests/staging-tracker-startup-quarantine-candidate.cjs src/index.js /tmp/contentscale-staging-startup-quarantine.js
           node --check /tmp/contentscale-staging-startup-quarantine.js
           node --test tests/staging-tracker-startup-quarantine.test.cjs
+      - name: Separate server-side timer callsites from browser script template strings
+        run: node tests/staging-tracker-server-timer-inventory.cjs
       - name: Inspect conditional guards around startup timers and email without executing them
         run: node tests/staging-tracker-startup-guard-context.cjs
       - name: Inventory potential automatic migrations timers publishing and provider sends without boot
