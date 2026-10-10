@@ -8,8 +8,8 @@ const start=source.indexOf(marker),end=source.indexOf('\n});',start);
 assert(start>=0 && source.indexOf(marker,start+1)===-1 && end>start && end-start<50000,'Unexpected route boundaries');
 let route=source.slice(start,end+4);
 if(route.includes("const _colResults = await pool.query")){
- const prohibited=[/\\bALTER\\s+TABLE\\b/i,/\\bUPDATE\\s+tracker_pages\\b/i,/\\bINSERT\\s+INTO\\b/i,
-  /\\bawait\\s+_ensureCaseStudySchema\\s*\\(/,/\\bawait\\s+_caseStudyEventForPage\\s*\\(/];
+ const prohibited=[/\bALTER\s+TABLE\b/i,/\bUPDATE\s+tracker_pages\b/i,/\bINSERT\s+INTO\b/i,
+  /\bawait\s+_ensureCaseStudySchema\s*\(/,/\bawait\s+_caseStudyEventForPage\s*\(/];
  for(const re of prohibited)assert(!re.test(route),'Read-only GET was modified after review: '+re);
  fs.writeFileSync(output,source);
  console.log(JSON.stringify({result:'already_patched',get_route_bytes:route.length}));
