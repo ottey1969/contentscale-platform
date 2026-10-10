@@ -64,6 +64,7 @@ jobs:
             tests/staging-case-bulk-scan-sql.test.cjs \
             tests/staging-case-study-legacy-active-recovery.test.cjs \
             tests/staging-case-study-archive-fail-closed.test.cjs \
+            tests/staging-case-study-production-export.test.cjs \
             tests/staging-start-selector.test.cjs \
             tests/staging-safety-isolation.test.cjs
       - name: Install test dependencies without postinstall side effects
