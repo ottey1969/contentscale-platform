@@ -1,0 +1,35 @@
+name: Case Study manual scan candidate (isolated)
+on:
+  push:
+    branches: [case-first-manual-scan-candidate]
+    paths:
+      - scripts/prepare-case-first-manual-candidate.cjs
+      - .github/workflows/case-first-manual-scan-candidate.yml
+      - tests/staging-case-study-canonical-endpoint.test.cjs
+permissions:
+  contents: write
+jobs:
+  generate-and-check:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/case-first-manual-scan-candidate'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regenerate complete index only on isolated candidate branch
+        run: node scripts/prepare-case-first-manual-candidate.cjs src/index.js
+      - name: Confirm JavaScript parses
+        run: node --check src/index.js
+      - name: Run policy and boot selector tests
+        run: node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs
+      - name: Commit generated complete index to candidate branch
+        run: |
+          git config user.name "contentscale-candidate-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Candidate only: generated complete Case Study manual scan index"
+          git push origin HEAD:case-first-manual-scan-candidate
