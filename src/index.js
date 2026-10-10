@@ -1,4 +1,6 @@
 require('./staging/safety-gate.cjs').assertAppBootEnvironment(process.env);
+// Defense in depth only. The first-statement full-app boot fence remains absolute.
+const _csStagingStartupQuarantine = process.env.CS_DEPLOYMENT_TIER === 'staging';
 // v425: tracker client-action confirmation email after a previously emailed case-study checkpoint is completed.
 // v410: safe dead-URL correction plus correctly escaped generated browser JavaScript.
 const { buildOpportunityReport, FIVE_ENGINES } = (() => {
@@ -916,7 +918,7 @@ const rewriterHelpers = require('./rewriter-helpers');
 // Guarded require: a broken/missing Network module must never prevent the core platform from booting.
 let _networkModule = null;
 try {
-  _networkModule = require('./network/register-network');
+  if (!_csStagingStartupQuarantine) _networkModule = require('./network/register-network');
 } catch (err) {
   console.error('[NETWORK] Module load failed; core ContentScale continues without Network:', err.message);
 }
@@ -1815,7 +1817,7 @@ async function tryDbReconnect() {
     _dbReconnectInterval = null;
     _dbReconnectAttempts = 0;
     console.log('✅✅✅ DB auto-reconnect: CONNECTION RESTORED! All features now active.');
-    setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
+    if (!_csStagingStartupQuarantine) setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
     return true;
   } catch (e) {
     if (client) try { client.release(); } catch(_) {}
@@ -1970,7 +1972,7 @@ if (_dbReconnectInterval) {
   _dbReconnectAttempts = 0;
 }
 setTimeout(() => checkIsNeon().catch(err => console.error('🔍 Neon check error:', err.message)), 500);
-setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 1000);
+if (!_csStagingStartupQuarantine) setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 1000);
 return true;
 } catch (err) {
 // ALWAYS release client on failure — prevents pool exhaustion
@@ -24063,8 +24065,10 @@ async function _pqsSendDueCeoFollowups(){
     }
   }catch(e){console.warn('[ceo-outreach-followup]',e.message);}
 }
+if (!_csStagingStartupQuarantine) {
 setInterval(()=>_pqsSendDueCeoFollowups().catch(()=>{}),60*60*1000);
 setTimeout(()=>_pqsSendDueCeoFollowups().catch(()=>{}),90*1000);
+}
 
 
 // SECOND-TOUCH EMAIL — Quick Scan of OTHER page.
