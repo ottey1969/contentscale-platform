@@ -5,9 +5,16 @@ const fs=require('node:fs'),path=require('node:path');
 const source=path.resolve(__dirname,'../src/index.js');
 const destination=process.argv[2]||path.resolve(__dirname,'../case-first-manual-index.candidate.js');
 let s=fs.readFileSync(source,'utf8');
+const BOOST_OLD='async function startServer() {\n  // Auto-create boost_settings table if missing\n  if (pool) {';
+const BOOST_NEW='async function startServer() {\n  // Auto-create boost_settings table only outside isolated staging.\n  if (pool && !_csStagingStartupQuarantine) {';
+
 if(s.includes("const CONTENTSCALE_BUILD_ID = 'CS-2026-10-10-STAGING-CANDIDATE-v568-FIRST-MANUAL-SCAN';")){
   if(!s.includes('let _caseIsActive=false;')||!s.includes('case_study_fresh_cycle_initialized')||!s.startsWith("require('./staging/safety-gate.cjs')")){
     throw Error('STOP: candidate is only partially patched');
+  }
+  if(!s.includes(BOOST_NEW)){
+    if(s.split(BOOST_OLD).length!==2)throw Error('STOP: staging boot SQL guard marker changed');
+    s=s.replace(BOOST_OLD,BOOST_NEW);
   }
   if(path.resolve(destination)!==source)fs.writeFileSync(destination,s);
   console.log('Complete candidate already generated; safe idempotent verification');
@@ -63,7 +70,8 @@ once("const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH
  "const CONTENTSCALE_BUILD_ID = 'CS-2026-10-10-STAGING-CANDIDATE-v568-FIRST-MANUAL-SCAN';",'build ID');
 once("  build: 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH-PACING',",
  "  build: 'CS-2026-10-10-STAGING-CANDIDATE-v568-FIRST-MANUAL-SCAN',",'build info');
-if(applied!==7||Buffer.byteLength(s)<6000000||!s.startsWith("require('./staging/safety-gate.cjs')"))throw Error('STOP: source invariant failed');
+once(BOOST_OLD,BOOST_NEW,'staging startup boost table write guard');
+if(applied!==8||Buffer.byteLength(s)<6000000||!s.startsWith("require('./staging/safety-gate.cjs')"))throw Error('STOP: source invariant failed');
 // Staging startup fence intentionally remains; this candidate must NOT be deployed.
 fs.writeFileSync(destination,s);
 console.log('Candidate prepared; anchors='+applied+' bytes='+Buffer.byteLength(s)+' output='+destination);
