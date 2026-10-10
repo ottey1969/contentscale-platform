@@ -51,7 +51,7 @@ jobs:
           git diff --check
           test "$(git diff --name-only)" = "src/index.js"
           node --check src/index.js
-          node --test tests/staging-tracker-sitemap-candidate.test.cjs
+          SITEMAP_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-sitemap-candidate.test.cjs
           node --test tests/staging-tracker-canonical-handlers.test.cjs
           PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
       - name: Execute canonical route E2E on disposable PostgreSQL
