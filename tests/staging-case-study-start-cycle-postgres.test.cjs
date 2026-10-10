@@ -16,6 +16,7 @@ test('starting Case Study preserves historical proof and opens a fresh manual sc
   await db.query("CREATE TEMP TABLE tracker_case_study_content_versions(case_study_id integer,version_type text,captured_at timestamptz,content_hash text) ON COMMIT DROP");
   await db.query("CREATE TEMP TABLE tracker_snapshots(page_id integer,checked_at timestamptz) ON COMMIT DROP");
   await db.query("INSERT INTO tracker_pages(id,tracker_client_id,url,revision_cycle,is_done,manual_done,implementation_verified_at,brief_content,brief_evaluated_at,check_frequency) VALUES(17,3,'https://fixture.invalid/legacy',3,true,true,'2026-08-18T12:00:00Z','{\"outstanding_actions\":2,\"cycle_id\":\"historical\"}','2026-08-18T00:00:00Z','0')");
+  await db.query("UPDATE tracker_pages SET ranking_brief=$1::jsonb WHERE id=17", [JSON.stringify({seed_keyword:'historical-geo',verified_claims:['legacy claim']})]);
   await db.query("INSERT INTO tracker_snapshots VALUES(17,'2026-08-18T00:00:00Z')");
   const source=fs.readFileSync(process.env.CS_CASE_TEST_INDEX_FILE||path.resolve(__dirname,'../src/index.js'),'utf8');
   const a=source.indexOf('async function _caseStudyOpenFreshStartCycle('),b=source.indexOf('\n// v229: case-study URL pre-flight',a);
@@ -42,12 +43,20 @@ test('starting Case Study preserves historical proof and opens a fresh manual sc
   assert.equal(event.event_data.previous_manual_done,true);
   assert.equal(event.event_data.previous_revision_cycle,3);
   assert.equal(event.event_data.history_preserved,true);
+  const archive=(await db.query("SELECT event_data FROM tracker_case_study_events WHERE case_study_id=21 AND event_type='case_study_prior_brief_archived'")).rows;
+  assert.equal(archive.length,1,'Complete legacy Brief archive must exist before page reset');
+  assert.equal(archive[0].event_data.previous_brief_content.cycle_id,'historical');
+  assert.equal(archive[0].event_data.previous_brief_content.outstanding_actions,2);
+  assert.equal(archive[0].event_data.previous_ranking_brief.seed_keyword,'historical-geo');
+  assert.equal(archive[0].event_data.previous_manual_done,true);
   const oldSnap=await db.query("SELECT count(*)::int AS n FROM tracker_snapshots WHERE page_id=17 AND checked_at<'2026-10-10T12:00:00Z'");
   assert.equal(oldSnap.rows[0].n,1);
   const checkpoint=await db.query("SELECT version_type FROM tracker_case_study_content_versions WHERE case_study_id=21");
   assert.equal(checkpoint.rows[0].version_type,'pre_publication_r4');
   const again=await ctx.openCycle(3,updated,cs,'<html>unchanged</html>','verified_html','reload');
   assert.equal(again.already_initialized,true);assert.equal(checkpointCalls,1);
+  const archiveAfterReload=await db.query("SELECT COUNT(*)::int AS n FROM tracker_case_study_events WHERE case_study_id=21 AND event_type='case_study_prior_brief_archived'");
+  assert.equal(archiveAfterReload.rows[0].n,1,'Reload must not duplicate legacy Brief');
   await db.query('ROLLBACK');
  }catch(e){await db.query('ROLLBACK').catch(()=>{});throw e}finally{await db.end()}
 });
