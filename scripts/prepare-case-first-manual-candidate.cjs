@@ -17,7 +17,7 @@ function hardenPublicationEvidence(full){
   let route=full.slice(at,end);
   function single(a,b){
     if(route.includes(b))return;
-    if(route.split(a).length!==2)throw Error('STOP: publication safety anchor changed');
+    if(route.split(a).length!==2){const context=(route.match(/.{0,35}(?:_published|_caseFirstManualScan).{0,90}/g)||[]).slice(0,5);throw Error('STOP: publication anchor '+a.slice(0,45)+' matches='+(route.split(a).length-1)+' near='+JSON.stringify(context));}
     route=route.replace(a,b);
   }
   single("      const _first=await pool.query("+String.fromCharCode(96)+"SELECT cs.baseline_at,",
