@@ -1,0 +1,46 @@
+name: Staging boot DDL guard (read-only service unaffected)
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - scripts/staging-guard-boost-settings-startup.cjs
+      - .github/workflows/staging-boost-settings-guard.yml
+      - src/index.js
+permissions:
+  contents: write
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/tracker-staging'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Harden staged full app bootstrap only
+        run: node scripts/staging-guard-boost-settings-startup.cjs
+      - name: Validate exact staging fence and JS syntax
+        run: |
+          node --check src/index.js
+          node --check src/staging/tracker-readonly-server.cjs
+          node - <<'NODE'
+          const fs=require('node:fs'),assert=require('node:assert/strict');
+          const s=fs.readFileSync('src/index.js','utf8');
+          assert(s.startsWith("require('./staging/safety-gate.cjs').assertAppBootEnvironment(process.env);"));
+          const start=s.indexOf('async function startServer() {');
+          const end=s.indexOf('\nconsole.log(',start);
+          assert(start>=0&&end>start);
+          const body=s.slice(start,end);
+          assert(body.includes('if (pool && !_csStagingStartupQuarantine) {'));
+          assert(body.includes('boost_settings'));
+          NODE
+      - name: Confirm no staging safety gate edits
+        run: test -z "$(git diff --name-only -- src/staging/safety-gate.cjs src/staging/tracker-readonly-server.cjs)"
+      - name: Commit validated staged source only
+        run: |
+          git config user.name "contentscale-staging-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Staging: prevent boost_settings table write during quarantined boot"
+          git push origin HEAD:tracker-staging
