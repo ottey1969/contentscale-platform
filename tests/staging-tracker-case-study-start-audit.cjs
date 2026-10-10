@@ -2,7 +2,7 @@
 const fs=require('node:fs');const s=fs.readFileSync('src/index.js','utf8');
 const symbols=[
  {tag:'legacy_PRT_attach',start:"async function _ensurePerfectRoofingCaseStudy(",end:"async function _caseStudyEventForPage("},
- {tag:'explicit_case_study_start',start:"app.post('/api/tracker-client/:token/pages/:pageId/case-study/start'",end:"\n});"}
+ {tag:'explicit_case_study_start',start:"app.post('/api/tracker-client/:token/pages/:pageId/case-study/start'",end:"app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc'"}
 ];
 for(const item of symbols){
  const at=s.indexOf(item.start),end=s.indexOf(item.end,at+item.start.length);
