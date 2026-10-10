@@ -2,34 +2,40 @@ name: Case Study manual scan candidate (isolated)
 on:
   push:
     branches: [case-first-manual-scan-candidate]
-    paths:
-      - scripts/prepare-case-first-manual-candidate.cjs
-      - .github/workflows/case-first-manual-scan-candidate.yml
-      - tests/staging-case-study-canonical-endpoint.test.cjs
+  workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
 jobs:
-  generate-and-check:
+  isolated-checks:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/case-first-manual-scan-candidate'
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Regenerate complete index only on isolated candidate branch
+      - name: Regenerate full index inside CI runner only
         run: node scripts/prepare-case-first-manual-candidate.cjs src/index.js
-      - name: Confirm JavaScript parses
-        run: node --check src/index.js
-      - name: Run policy and boot selector tests
-        run: node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs
-      - name: Commit generated complete index to candidate branch
+      - name: Confirm candidate and startup JavaScript parse
         run: |
-          git config user.name "contentscale-candidate-bot"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/index.js
-          git diff --cached --quiet && exit 0
-          git commit -m "Candidate only: generated complete Case Study manual scan index"
-          git push origin HEAD:case-first-manual-scan-candidate
+          node --check src/index.js
+          node --check index.cjs
+          node --check src/staging/safety-gate.cjs
+      - name: Run all isolated candidate regression tests
+        run: |
+          node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-case-first-scan-existing-gate.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs
+      - name: Confirm CI did not modify committed sources
+        run: |
+          git diff --name-only
+          test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+      - name: Publish candidate for review only
+        uses: actions/upload-artifact@v4
+        with:
+          name: case-first-manual-scan-review-only
+          path: |
+            src/index.js
+            index.cjs
+            src/staging/safety-gate.cjs
+          retention-days: 7
