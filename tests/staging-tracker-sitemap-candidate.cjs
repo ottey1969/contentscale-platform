@@ -61,6 +61,8 @@ replaceOne("    if (urls.length) { try { await pool.query('UPDATE tracker_client
 "      persisted=(_saved.rowCount||0)>0;",
 "    }"
 ].join('\n'));
+replaceOne("urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));",
+"urls = urls.filter(u => { try { const x=new URL(u); return ['https:','http:'].includes(x.protocol)&&_allowedHost(x.hostname); } catch (_) { return false; } }).filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));");
 replaceOne("res.json({ success: true, urls, count: urls.length, complete: urls.length < MAX_URLS });",
 "res.json({ success: true, urls, count: urls.length, complete: urls.length < MAX_URLS, persisted });");
 const wrappers=[
