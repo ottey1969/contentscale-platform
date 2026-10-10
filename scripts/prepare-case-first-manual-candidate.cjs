@@ -5,6 +5,15 @@ const fs=require('node:fs'),path=require('node:path');
 const source=path.resolve(__dirname,'../src/index.js');
 const destination=process.argv[2]||path.resolve(__dirname,'../case-first-manual-index.candidate.js');
 let s=fs.readFileSync(source,'utf8');
+if(s.includes("const CONTENTSCALE_BUILD_ID = 'CS-2026-10-10-STAGING-CANDIDATE-v568-FIRST-MANUAL-SCAN';")){
+  if(!s.includes('let _caseIsActive=false;')||!s.includes('case_study_fresh_cycle_initialized')||!s.startsWith("require('./staging/safety-gate.cjs')")){
+    throw Error('STOP: candidate is only partially patched');
+  }
+  if(path.resolve(destination)!==source)fs.writeFileSync(destination,s);
+  console.log('Complete candidate already generated; safe idempotent verification');
+  process.exit(0);
+}
+
 let applied=0;
 function once(a,b,label){
  const n=s.split(a).length-1;
