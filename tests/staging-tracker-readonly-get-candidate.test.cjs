@@ -58,3 +58,11 @@ test('GET read-only candidate contains no implicit mutating helper invocation',(
  const forbidden=[/\bALTER TABLE\b/i,/\bUPDATE tracker_pages\b/i,/\bINSERT INTO migration_flags\b/i,/\bawait _ensureCaseStudySchema\b/,/\bawait _caseStudyEventForPage\b/];
  for(const regex of forbidden)assert.doesNotMatch(body,regex);
 });
+
+test('canonical GET candidate returns successful empty Tracker response without writes',async()=>{
+ const pool=fakePool();
+ const result=await call(makeHandler(pool));
+ assert.equal(result.statusCode,200,JSON.stringify(result.data));
+ assert.equal(result.data.success,true);
+ assert(pool.calls.every(sql=>/^\s*SELECT\b/i.test(sql)));
+});
