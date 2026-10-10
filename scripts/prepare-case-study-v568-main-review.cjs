@@ -11,11 +11,13 @@ if(s.includes("const CONTENTSCALE_BUILD_ID = 'CS-2026-10-10-REVIEW-v568-CASE-FIR
   if(!s.includes('let _caseIsActive=false;')||!s.includes('case_study_fresh_cycle_initialized')){
     throw Error('STOP: candidate is only partially patched');
   }
+  let updatedExistingCandidate=false;
   if(!s.includes(WALL_NEW)){
     if(s.split(WALL_OLD).length!==2)throw Error('STOP: live-wall fallback anchor drift');
     s=s.replace(WALL_OLD,WALL_NEW);
+    updatedExistingCandidate=true;
   }
-  if(path.resolve(destination)!==source)fs.writeFileSync(destination,s);
+  if(updatedExistingCandidate||path.resolve(destination)!==source)fs.writeFileSync(destination,s);
   console.log('Complete candidate already generated; safe idempotent verification');
   process.exit(0);
 }
