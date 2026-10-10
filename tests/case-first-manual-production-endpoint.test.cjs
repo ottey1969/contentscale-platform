@@ -16,8 +16,8 @@ function scenario(options={}){
   if(/^(UPDATE |INSERT |DELETE )/i.test(sql))writes++;
   if(sql.startsWith('ALTER TABLE'))return {rows:[]};
   if(sql.startsWith('SELECT id,claims_facts_updated_at FROM tracker_clients'))return {rows:[{id:3}]};
-  if(sql.startsWith('SELECT * FROM tracker_pages WHERE id='))return {rows:[page]};
-  if(sql.includes('FROM tracker_case_studies cs'))return {rows:[state]};
+  if(sql.startsWith('SELECT * FROM tracker_pages WHERE id='))return {rows:options.notOwner?[]:[page]};
+  if(sql.includes('FROM tracker_case_studies cs'))return {rows:options.noActiveCase?[]:[state]};
   unexpected.push(sql.slice(0,90));throw Error('Unexpected SQL: '+sql.slice(0,90));
  }};
  const ctx={app:{post(p,fn){handler=fn}},pool,_ensureMonitoringGateSchema:async()=>{},_trackerCheckStatus:new Map(),_sseBroadcast:()=>{},setImmediate:()=>{},Date,JSON,process:{env:{}},console:{error:()=>{},warn:()=>{},log:()=>{}},runTrackerCheck:()=>{throw Error('must never run actual scanner')}};
@@ -38,4 +38,11 @@ test('real endpoint blocks repeated scan after case baseline',async()=>{
 });
 test('real endpoint blocks uninitialized Case Study cycle',async()=>{
  const x=scenario({fresh:false});const r=await x.call();assert.equal(r.statusCode,409);assert.equal(r.payload.scan_locked,true);
+});
+
+test('cannot bypass ownership verification with case-study exception',async()=>{
+ const x=scenario({notOwner:true});const r=await x.call();assert.equal(r.statusCode,403);assert.equal(x.writes,0);
+});
+test('without active Case Study historical Done stays locked',async()=>{
+ const x=scenario({noActiveCase:true});const r=await x.call();assert.equal(r.statusCode,409);assert.equal(r.payload.scan_locked,true);
 });
