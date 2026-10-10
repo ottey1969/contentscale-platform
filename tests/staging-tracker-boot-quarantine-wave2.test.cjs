@@ -29,7 +29,9 @@ test('resumed batch jobs, expired sessions and bulk job updates are all quaranti
  assert(otto>=0 && s.slice(Math.max(0,otto-300),otto).includes('if (!'+g+') (async () => {'),
    'Otto automatic migrations must remain staging-quarantined');
  assert.equal(occurrences('if (!'+g+') (async () => { try { if (pool)'),1);
- assert.equal(occurrences("if (!"+g+" && process.env.ENABLE_BULK_WORKER === '1') {\nsetInterval(bulkWorkerTick"),1);
+ const bulk=s.indexOf("if (!"+g+" && process.env.ENABLE_BULK_WORKER === '1') {");
+ assert(bulk>=0 && s.slice(bulk,bulk+260).includes('setInterval(bulkWorkerTick'),
+  'Bulk worker is only registered outside staging quarantine');
 });
 test('contact-intelligence and Tracker background workers never start when quarantined',()=>{
  assert(s.includes('function _ciStartWorkers(){\nif('+g+')return;'));
