@@ -1,0 +1,21 @@
+name: Staging manual Case Study dashboard regression
+on:
+  push:
+    branches: [case-first-manual-dashboard-staging-test]
+    paths:
+      - tests/case-first-manual-dashboard-next-action.test.cjs
+      - .github/workflows/case-manual-dashboard-staging-test.yml
+jobs:
+  tracker-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify canonical index parses and staging fence remains
+        run: |
+          node --check src/index.js
+          if ! head -n 5 src/index.js | grep -q 'staging/safety-gate.cjs'; then exit 1; fi
+      - name: Test server route, dashboard state and scan-all SQL
+        run: node --test tests/staging-case-study-canonical-endpoint.test.cjs tests/case-first-manual-dashboard-next-action.test.cjs tests/case-scan-all-sql.test.cjs
