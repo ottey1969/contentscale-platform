@@ -3507,7 +3507,7 @@ async function _trackerFetchAndSaveSitemap(req, res, persist) {
       const _canonicalUrlSet=[...urls].sort();
       const snapshot_hash=require('node:crypto').createHash('sha256').update(sitemapUrl+'\n'+_canonicalUrlSet.join('\n')).digest('hex');
       const idempotency_key='sitemap:v1:'+snapshot_hash;
-      const _saved=await pool.query(`WITH event AS ( INSERT INTO tracker_workflow_sitemap_events (tracker_client_id,idempotency_key,snapshot_hash,event_payload) SELECT id,$5,$4,jsonb_build_object('source_url',$1,'urls_count',jsonb_array_length($2::jsonb),'source','tracker_sitemap_fetch') FROM tracker_clients WHERE token=$3 ON CONFLICT (tracker_client_id,idempotency_key) DO NOTHING RETURNING tracker_client_id ) UPDATE tracker_clients SET sitemap_url=$1,sitemap_urls=$2 WHERE token=$3 AND EXISTS(SELECT 1 FROM event) RETURNING id`,[sitemapUrl,JSON.stringify(urls),req.params.token,snapshot_hash,idempotency_key]);
+      const _saved=await pool.query(`WITH event AS ( INSERT INTO tracker_workflow_sitemap_events (tracker_client_id,idempotency_key,snapshot_hash,event_payload) SELECT id,$5,$4,jsonb_build_object('source_url',$1::text,'urls_count',jsonb_array_length($2::jsonb),'source','tracker_sitemap_fetch') FROM tracker_clients WHERE token=$3 ON CONFLICT (tracker_client_id,idempotency_key) DO NOTHING RETURNING tracker_client_id ) UPDATE tracker_clients SET sitemap_url=$1,sitemap_urls=$2 WHERE token=$3 AND EXISTS(SELECT 1 FROM event) RETURNING id`,[sitemapUrl,JSON.stringify(urls),req.params.token,snapshot_hash,idempotency_key]);
       persisted=(_saved.rowCount||0)>0;
     }
     res.json({ success: true, urls, count: urls.length, complete: urls.length < MAX_URLS, persisted });
