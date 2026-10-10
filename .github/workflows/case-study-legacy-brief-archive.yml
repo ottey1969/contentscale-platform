@@ -32,8 +32,8 @@ jobs:
           node-version: '22'
       - name: Build complete canonical index with archival guard only
         run: |
-          node --check scripts/prepare-case-study-legacy-brief-archive.cjs
-          node scripts/prepare-case-study-legacy-brief-archive.cjs src/index.js
+          node --check scripts/prepare-case-study-brief-archive.cjs
+          node scripts/prepare-case-study-brief-archive.cjs src/index.js
           node --check src/index.js
           git diff --check
       - name: Test fail-closed Brief archive and protected manual Case Study routes
