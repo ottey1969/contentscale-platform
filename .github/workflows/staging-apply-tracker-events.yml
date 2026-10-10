@@ -51,3 +51,4 @@ jobs:
           git add -- src/index.js
           git commit -m "staging: record atomic canonical Tracker status transitions"
           git push origin HEAD:refs/heads/tracker-staging
+# Re-run after legacy staging event assertions updated.
