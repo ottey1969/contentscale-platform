@@ -55,7 +55,14 @@ PRT historical classification:
 - A staging-only defense-in-depth quarantine now suppresses 2 `createAllTables`
   scheduling call sites, both timed CEO follow-up email invocations, and
   the eager Network import. Non-staging source behavior is unchanged at those sites.
-  **This quarantine is incomplete by design and is NOT sufficient to permit app boot.**
+- A second strictly staging-only quarantine also covers automatic Tracker profile
+  assignment, meta-intelligence schema ALTER at startup, initial Gemini model probing,
+  automatic abandoned-research updates, resumed batch jobs, Otto session migrations
+  and cleanup, bulk-job startup status repair, bulk worker registration, contact
+  intelligence worker resume, Tracker scheduled scans, and Boost session auto-close.
+  Each was guarded at its existing canonical callsite rather than creating duplicate
+  workflow logic. The complete full-app side-effect inventory is **still unfinished**.
+  **Neither quarantine permits the full application to start.**
 - Staging Nixpacks is the current builder. The inactive Dockerfile references
   `src/server.js`, which is not present in the repository. Do not switch builders
   without resolving that mismatch.
