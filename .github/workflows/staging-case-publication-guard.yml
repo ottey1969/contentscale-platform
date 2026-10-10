@@ -56,15 +56,16 @@ jobs:
           TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
           CS_CASE_TEST_INDEX_FILE: /tmp/case-guard-index.js
         run: node --test tests/staging-case-first-scan-postgres.test.cjs
-      - name: Publish ONLY verified index to staging
+      - name: Publish verified index and PostgreSQL flow proof to staging
         run: |
           cp /tmp/case-guard-index.js src/index.js
           git diff --check
           test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
-          if ! git diff --quiet -- src/index.js; then
+          printf "First manual scan, synthetic completion, repeat scan, publication and evidence lock verified for source %s and test %s\n" "$(git hash-object src/index.js)" "$(git hash-object tests/staging-case-first-scan-postgres.test.cjs)" > tests/staging-case-first-scan-postgres.verified
+          git add -- src/index.js tests/staging-case-first-scan-postgres.verified
+          if ! git diff --cached --quiet; then
             git config user.name "contentscale-staging-ci"
             git config user.email "contentscale-staging-ci@users.noreply.github.com"
-            git add -- src/index.js
-            git commit -m "staging: guard first Case Study scan after current revision publication"
+            git commit -m "staging: verify full synthetic Case Study scan cycle in PostgreSQL"
             git push origin HEAD:refs/heads/tracker-staging
           fi
