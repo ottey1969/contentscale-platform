@@ -1,0 +1,74 @@
+name: Production v568 Case Study candidate (NO DEPLOY)
+on:
+  push:
+    branches: [case-study-v568-production-candidate]
+    paths:
+      - '.github/workflows/case-study-v568-production-candidate.yml'
+      - 'scripts/prepare-production-case-first-scan.cjs'
+      - 'tests/staging-case-first-scan-postgres.test.cjs'
+      - 'tests/staging-case-study-ui-next-action.test.cjs'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release-candidate-only:
+    if: github.ref == 'refs/heads/case-study-v568-production-candidate'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify branch and no staging contamination
+        run: |
+          test "${GITHUB_REF_NAME}" = "case-study-v568-production-candidate"
+          test -z "${DATABASE_URL:-}"
+          test -z "$(git status --porcelain)"
+          ! grep -q '_csStagingStartupQuarantine' src/index.js
+      - name: Prepare surgical v568 candidate from canonical production source
+        run: |
+          node scripts/prepare-production-case-first-scan.cjs src/index.js
+          node --check src/index.js
+          node --check index.cjs
+          ! grep -q '_csStagingStartupQuarantine' src/index.js
+      - name: Verify real NEXT ACTION behavior
+        run: node --test tests/staging-case-study-ui-next-action.test.cjs
+      - name: Install isolated PostgreSQL driver
+        run: |
+          mkdir -p /tmp/contentscale-case-pg
+          npm install --prefix /tmp/contentscale-case-pg --no-save --no-package-lock --ignore-scripts pg@8
+      - name: Verify real manual scan route against disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
+        run: node --test tests/staging-case-first-scan-postgres.test.cjs
+      - name: Record validated full source on release candidate only
+        run: |
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+          printf "Review-only v568 candidate, UI and disposable PostgreSQL verified for source %s; production main NOT changed\n" "$(git hash-object src/index.js)" > tests/case-study-v568-production-candidate.verified
+          git add -- src/index.js tests/case-study-v568-production-candidate.verified
+          if ! git diff --cached --quiet; then
+            git config user.name "contentscale-release-candidate-ci"
+            git config user.email "contentscale-release-candidate-ci@users.noreply.github.com"
+            git commit -m "candidate: validate v568 first Case Study manual scan without deployment"
+            git push origin HEAD:refs/heads/case-study-v568-production-candidate
+          fi
