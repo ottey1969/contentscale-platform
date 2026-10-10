@@ -50,16 +50,17 @@ jobs:
           TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
           TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
         run: node --test tests/staging-case-first-scan-postgres.test.cjs
-      - name: Persist validated complete source to candidate branch only
+      - name: Persist validated source and PostgreSQL proof to candidate only
         run: |
           test "${GITHUB_REF_NAME}" = "case-first-manual-scan-candidate"
           git diff --check
           test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
-          if ! git diff --quiet -- src/index.js; then
+          printf "Disposable PostgreSQL route tests passed for source blob %s\n" "$(git hash-object src/index.js)" > tests/staging-case-first-scan-postgres.verified
+          git add -- src/index.js tests/staging-case-first-scan-postgres.verified
+          if ! git diff --cached --quiet; then
             git config user.name "contentscale-candidate-ci"
             git config user.email "contentscale-candidate-ci@users.noreply.github.com"
-            git add -- src/index.js
-            git commit -m "candidate: persist tested Case Study scan route and publication guard"
+            git commit -m "candidate: verified Case Study route against disposable PostgreSQL"
             git push origin HEAD:refs/heads/case-first-manual-scan-candidate
           fi
       - name: Publish candidate for review only
