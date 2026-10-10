@@ -53,3 +53,4 @@ jobs:
           git add -- src/index.js
           git commit -m "staging: preview saved Brief recovery on GET, persist through existing Finalize"
           git push origin HEAD:refs/heads/tracker-staging
+# Retry after updating canonical Prewrite GET release-contract assertions.
