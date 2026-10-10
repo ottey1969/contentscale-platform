@@ -38,6 +38,10 @@ jobs:
           node --test tests/staging-tracker-case-reads.test.cjs
       - name: Inspect case study GET handlers and schema helpers
         run: node tests/staging-case-study-get-source.cjs
+      - name: Generate shared deterministic Prewrite preview and finalize candidate
+        run: |
+          node tests/staging-prewrite-pure-get-candidate.cjs src/index.js /tmp/contentscale-prewrite-pure-get.js
+          node --check /tmp/contentscale-prewrite-pure-get.js
       - name: Inspect precise Prewrite getter and finalize code
         run: node tests/staging-prewrite-exact-source.cjs
       - name: Map existing explicit Prewrite maintenance route and owner scopes
