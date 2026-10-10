@@ -2,6 +2,13 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const input=process.argv[2]||'src/index.js',out=process.argv[3]||'/tmp/contentscale-sitemap-candidate.js';
 let source=fs.readFileSync(input,'utf8');
+if(source.includes('async function _trackerFetchAndSaveSitemap(')){
+ assert(source.includes("app.get('/api/tracker-client/:token/fetch-sitemap'") && source.includes("app.post('/api/tracker-client/:token/fetch-sitemap'"),'Incomplete shared sitemap handler');
+ assert(!source.includes("fetch('https://app.contentscale.site/api/tracker-client/' + TOKEN + '/fetch-sitemap"),'Staging UI still calls production');
+ fs.writeFileSync(out,source);
+ console.log(JSON.stringify({result:'sitemap_candidate_already_integrated',bytes:Buffer.byteLength(source)}));
+ process.exit(0);
+}
 const route="/api/tracker-client/:token/fetch-sitemap";
 const marker="app.get('"+route+"', async (req, res) => {";
 const start=source.indexOf(marker),end=source.indexOf('\n});',start);
