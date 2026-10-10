@@ -7,6 +7,7 @@ on:
       - 'scripts/apply-staging-case-publication-guard.cjs'
       - 'tests/staging-case-first-scan-postgres.test.cjs'
       - 'tests/staging-case-study-ui-next-action.test.cjs'
+      - 'tests/staging-case-study-start-cycle-postgres.test.cjs'
   workflow_dispatch:
 permissions:
   contents: write
@@ -61,12 +62,19 @@ jobs:
           TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
           CS_CASE_TEST_INDEX_FILE: /tmp/case-guard-index.js
         run: node --test tests/staging-case-first-scan-postgres.test.cjs
+      - name: Verify canonical Case Study start-cycle on disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
+          CS_CASE_TEST_INDEX_FILE: /tmp/case-guard-index.js
+        run: node --test tests/staging-case-study-start-cycle-postgres.test.cjs
       - name: Publish verified index and PostgreSQL flow proof to staging
         run: |
           cp /tmp/case-guard-index.js src/index.js
           git diff --check
           test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
-          printf "PostgreSQL scan lifecycle + NEXT ACTION UI verified for source %s, db test %s, ui test %s\n" "$(git hash-object src/index.js)" "$(git hash-object tests/staging-case-first-scan-postgres.test.cjs)" "$(git hash-object tests/staging-case-study-ui-next-action.test.cjs)" > tests/staging-case-first-scan-postgres.verified
+          printf "Case Study start, PostgreSQL scan lifecycle and UI verified: source %s; start %s; scan %s; UI %s\n" "$(git hash-object src/index.js)" "$(git hash-object tests/staging-case-study-start-cycle-postgres.test.cjs)" "$(git hash-object tests/staging-case-first-scan-postgres.test.cjs)" "$(git hash-object tests/staging-case-study-ui-next-action.test.cjs)" > tests/staging-case-first-scan-postgres.verified
           git add -- src/index.js tests/staging-case-first-scan-postgres.verified
           if ! git diff --cached --quiet; then
             git config user.name "contentscale-staging-ci"
