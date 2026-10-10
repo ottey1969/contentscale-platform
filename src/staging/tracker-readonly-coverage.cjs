@@ -18,7 +18,7 @@ function assessCanonicalReadRoutes(source=fs.readFileSync(path.resolve(__dirname
  const preMarker="app.get('/api/tracker-client/:token/prewrite-briefs/:id'";
  const preAt=source.indexOf(preMarker),preNext=source.indexOf('\napp.',preAt+preMarker.length);
  const preBody=preAt>=0?source.slice(preAt,preNext>preAt?preNext:preAt+11000):'';
- const prewriteGetFound=preAt>=0;
+ const prewriteGetFound=preAt>=0&&preNext>preAt&&source.indexOf(preMarker,preAt+preMarker.length)===-1;
  const prewriteGetWrites=prewriteGetFound&&/\b(?:UPDATE\s+(?:ONLY\s+)?(?:public\.)?prewrite_briefs\b|INSERT\s+INTO\s+(?:public\.)?prewrite_briefs\b|DELETE\s+FROM\s+(?:public\.)?prewrite_briefs\b|ALTER\s+TABLE\s+(?:public\.)?prewrite_briefs\b|TRUNCATE\s+(?:TABLE\s+)?(?:public\.)?prewrite_briefs\b)/i.test(preBody);
  const historicalAutoAttachDormant=source.includes('async function _ensurePerfectRoofingCaseStudy(')&&
    !source.includes('await _ensurePerfectRoofingCaseStudy(');
