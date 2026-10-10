@@ -25,7 +25,7 @@ function fakePool({missingColumn=false,missingTable=false,clientFound=true,onePa
 function makeHandler(pool){
  let handler;
  const app={get(_p,fn){assert.equal(_p,'/api/tracker-client/:token');handler=fn;}};
- const context={app,pool,console:{warn(){},log(){},error(...a){throw new Error('canonical GET error: '+String(a.map(String).join(' ')))}},setTimeout(){},clearTimeout(){},URL,Buffer,Date,Map,Set,Math,Number,JSON, _trackerNormalizeBriefQueues:(v)=>({changed:false,brief:v}),_trackerReparseManualEvidenceMap:(v)=>v};
+ const context={app,pool,console:{warn(){},log(){},error(...a){throw new Error('canonical GET error: '+String(a.map(String).join(' ')))}},setTimeout(){},clearTimeout(){},URL,Buffer,Date,Map,Set,Math,Number,JSON, _trackerNormalizeBriefQueues:(v)=>({changed:false,brief:v}),_trackerReparseManualEvidenceMap:(v)=>v,_caseStudyNormUrl:(u)=>u};
  vm.runInNewContext(body,context,{timeout:2500});
  return handler;
 }
