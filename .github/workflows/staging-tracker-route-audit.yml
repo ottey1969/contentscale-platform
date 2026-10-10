@@ -24,6 +24,10 @@ jobs:
         run: node tests/staging-tracker-surgical-patch.cjs src/index.js /tmp/contentscale-staging-tracker-patched.js && node --check /tmp/contentscale-staging-tracker-patched.js
       - name: Validate patched canonical Tracker handlers
         run: node --test tests/staging-tracker-patched-handlers.test.cjs
+      - name: Build and syntax-check GET read-only candidate
+        run: |
+          node tests/staging-tracker-readonly-get-candidate.cjs src/index.js /tmp/contentscale-readonly-get-candidate.js
+          node --check /tmp/contentscale-readonly-get-candidate.js
       - name: Inspect read route helper call graph
         run: node tests/staging-tracker-get-calls.cjs
       - name: Inspect critical canonical Tracker GET ranges
