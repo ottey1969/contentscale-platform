@@ -49,6 +49,10 @@ jobs:
         run: node tests/staging-prewrite-existing-maintenance-map.cjs
       - name: Check saved Brief API wrapper forwarding context
         run: node tests/staging-prewrite-ui-api-context.cjs
+      - name: Prepare and syntax-check strict saved Brief Network ownership candidate
+        run: |
+          node tests/staging-prewrite-placement-guard.cjs src/index.js /tmp/contentscale-prewrite-placement.js
+          node --check /tmp/contentscale-prewrite-placement.js
       - name: Verify saved Brief Finalize placement parameters
         run: node tests/staging-prewrite-ui-params-audit.cjs
       - name: Locate existing saved Brief Finalize UI without modifying it
