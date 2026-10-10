@@ -30,24 +30,35 @@ once('await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);',
 once('// On server restart: resume any interrupted jobs\nsetTimeout(async () => {',
      '// On server restart: resume any interrupted jobs\n'+gate+'setTimeout(async () => {',
      'batch job resume');
-once("(async () => {\nif (!pool) { console.log('[otto] Skipping session migrations",
-     gate+"(async () => {\nif (!pool) { console.log('[otto] Skipping session migrations",
-     'Otto automatic migrations');
-once('// SAFETY: on boot, fail any bulk jobs stuck mid-run so they cannot resume a runaway loop\n(async () => { try { if (pool)',
-     '// SAFETY: on boot, fail any bulk jobs stuck mid-run so they cannot resume a runaway loop\n'+gate+'(async () => { try { if (pool)',
-     'bulk automatic DB status repair');
-once("if (process.env.ENABLE_BULK_WORKER === '1') {\nsetInterval(bulkWorkerTick",
-     "if (!"+guard+" && process.env.ENABLE_BULK_WORKER === '1') {\nsetInterval(bulkWorkerTick",
+{
+ const needle="console.log('[otto] Skipping session migrations";
+ const at=s.indexOf(needle);assert(at>=0&&s.indexOf(needle,at+1)<0,'Otto marker must be unique');
+ const opener=s.lastIndexOf('(async () => {',at);
+ assert(opener>=0&&at-opener<250,'Otto startup IIFE moved');
+ s=s.slice(0,opener)+gate+s.slice(opener);
+}
+{
+ const needle='// SAFETY: on boot, fail any bulk jobs stuck mid-run so they cannot resume a runaway loop';
+ const at=s.indexOf(needle);assert(at>=0&&s.indexOf(needle,at+1)<0,'Bulk marker must be unique');
+ const opener=s.indexOf('(async () => { try { if (pool)',at);
+ assert(opener>at&&opener-at<350,'Bulk startup IIFE moved');
+ s=s.slice(0,opener)+gate+s.slice(opener);
+}
+once("if (process.env.ENABLE_BULK_WORKER === '1') {",
+     "if (!"+guard+" && process.env.ENABLE_BULK_WORKER === '1') {",
      'periodic bulk worker');
-once("function _ciStartWorkers(){\nif(_ciWorkersStarted)return;",
-     "function _ciStartWorkers(){\nif("+guard+")return;\nif(_ciWorkersStarted)return;",
+once("function _ciStartWorkers(){",
+     "function _ciStartWorkers(){\nif("+guard+")return;",
      'contact import/verification workers');
-once("function startTrackerScheduler() {\nif(_trackerSchedulerTimer) return;",
-     "function startTrackerScheduler() {\nif("+guard+")return;\nif(_trackerSchedulerTimer) return;",
+once("function startTrackerScheduler() {",
+     "function startTrackerScheduler() {\nif("+guard+")return;",
      'Tracker scanning scheduler');
-once("setInterval(autoCloseSessions, 30 * 60 * 1000);\nsetTimeout(autoCloseSessions, 5000);",
-     gate+"{\nsetInterval(autoCloseSessions, 30 * 60 * 1000);\nsetTimeout(autoCloseSessions, 5000);\n}",
-     'Boost auto-close DB timers');
+once("setInterval(autoCloseSessions, 30 * 60 * 1000);",
+     gate+"{\nsetInterval(autoCloseSessions, 30 * 60 * 1000);",
+     'Boost DB close interval');
+once("setTimeout(autoCloseSessions, 5000);",
+     "setTimeout(autoCloseSessions, 5000);\n}",
+     'Boost DB close initial timer');
 assert(s.startsWith(fence+'\n'),'Full app boot safety fence must not move');
 fs.writeFileSync(output,s);
 console.log(JSON.stringify({audit:'staging_startup_wave2',result:'candidate_built',guarded_features:11,full_app_boot_allowed:false}));
