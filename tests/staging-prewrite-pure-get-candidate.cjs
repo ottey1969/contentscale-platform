@@ -67,9 +67,10 @@ const replacement=[
 "    const _preview=await _pwbPrepareSavedBriefV506(row,{networkPlacement:req.query&&req.query.networkPlacement,networkEmbed:req.query&&req.query.networkEmbed});",
 response
 ].join('\n');
-let changedGet=get.replace(oldQa+'\n'+block+get.slice(responseStart,responseEnd),
- replacement);
-assert(changedGet!==get,'GET patch was not applied');
+const qaStart=get.indexOf('    const _hadAnyPersistedFinalQa=');
+assert(qaStart>=0&&qaStart<workStart,'QA source anchor changed');
+let changedGet=get.slice(0,qaStart)+replacement+get.slice(responseEnd);
+assert(changedGet!==get&&changedGet.includes('pending_explicit_save:_preview.pendingSave'),'GET patch was not applied');
 const finalize=s.slice(postAt,postAt+3500);
 const oldClone="    let brief={};try{brief=JSON.parse(JSON.stringify(auth.row.brief_json||{}));}catch(_e){brief=auth.row.brief_json||{};}";
 assert(finalize.includes(oldClone),'Finalize clone changed');
