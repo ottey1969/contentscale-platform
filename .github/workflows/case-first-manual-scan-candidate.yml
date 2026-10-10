@@ -9,6 +9,20 @@ jobs:
   isolated-checks:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/case-first-manual-scan-candidate'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,6 +40,16 @@ jobs:
       - name: Run all isolated candidate regression tests
         run: |
           node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-case-first-scan-db-fixture.test.cjs tests/staging-case-first-scan-existing-gate.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs
+      - name: Install isolated PostgreSQL test driver
+        run: |
+          mkdir -p /tmp/contentscale-case-pg
+          npm install --prefix /tmp/contentscale-case-pg --no-save --no-package-lock --ignore-scripts pg@8
+      - name: Execute real Case Study route against disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
+        run: node --test tests/staging-case-first-scan-postgres.test.cjs
       - name: Persist validated complete source to candidate branch only
         run: |
           test "${GITHUB_REF_NAME}" = "case-first-manual-scan-candidate"
