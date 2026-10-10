@@ -1,0 +1,38 @@
+name: Case Study production-source candidate (no deploy)
+on:
+  push:
+    branches: [case-first-manual-scan-production-candidate]
+    paths:
+      - scripts/prepare-case-first-manual-production.cjs
+      - tests/case-first-manual-production-endpoint.test.cjs
+      - .github/workflows/case-first-manual-production-candidate.yml
+permissions:
+  contents: write
+jobs:
+  generate-and-verify:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/case-first-manual-scan-production-candidate'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply surgical patch to authentic production source
+        run: node scripts/prepare-case-first-manual-production.cjs src/index.js
+      - name: Enforce no staging boot fence and valid JS
+        run: |
+          node --check src/index.js
+          if head -n 5 src/index.js | grep -q 'staging/safety-gate.cjs'; then
+            echo 'FAIL: staging-only boot fence in production candidate'
+            exit 1
+          fi
+      - name: Test canonical real endpoint in isolation
+        run: node --test tests/case-first-manual-production-endpoint.test.cjs
+      - name: Commit candidate index only on isolated branch
+        run: |
+          git config user.name "contentscale-candidate-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Production-source candidate only: first manual Case Study scan"
+          git push origin HEAD:case-first-manual-scan-production-candidate
