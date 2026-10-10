@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  statuses: write
 jobs:
   case-study-integration:
     runs-on: ubuntu-latest
@@ -122,3 +123,20 @@ jobs:
             scripts/prepare-case-study-brief-archive.cjs
             scripts/prepare-case-study-legacy-active-recovery.cjs
           retention-days: 7
+      - name: Record isolated test result on this integration commit
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_JOB_RESULT: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "case-study-release-integration"
+          if [ "$CI_JOB_RESULT" = "success" ]; then ci_state=success; else ci_state=failure; fi
+          payload="$(printf '{\"state\":\"%s\",\"context\":\"contentscale/case-study-integration\",\"description\":\"Disposable tests: %s; Railway unchanged\",\"target_url\":\"https://github.com/%s/actions/runs/%s\"}' "$ci_state" "$CI_JOB_RESULT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          curl --fail --silent --show-error --retry 3 -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            --data "$payload" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" >/dev/null
