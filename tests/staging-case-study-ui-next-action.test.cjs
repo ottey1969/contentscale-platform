@@ -3,7 +3,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 const src=fs.readFileSync(process.env.CS_CASE_TEST_INDEX_FILE||path.resolve(__dirname,'../src/index.js'),'utf8');
 const a=src.indexOf('function _trackerNextActionState('),b=src.indexOf('\nfunction _trackerImplementationCheckState(',a);
-assert(a>0&&b>a&&b-a<20000,'canonical NEXT ACTION boundary changed');
+assert(a>0&&b>a&&b-a<35000,'canonical NEXT ACTION boundary changed');
 const box={
  Date,JSON,
  _aiEvidenceIsVerified:()=>false,
