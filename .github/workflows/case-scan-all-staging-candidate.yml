@@ -1,0 +1,36 @@
+name: Staging scan-all canonical SQL candidate
+on:
+  push:
+    branches: [case-scan-all-staging-candidate]
+    paths:
+      - scripts/prepare-case-scan-all-sql.cjs
+      - tests/case-scan-all-sql.test.cjs
+      - .github/workflows/case-scan-all-staging-candidate.yml
+permissions:
+  contents: write
+jobs:
+  repair-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Repair only scan-all SQL on staging full source
+        run: node scripts/prepare-case-scan-all-sql.cjs src/index.js
+      - name: Validate JavaScript and canonical SQL
+        run: |
+          node --check src/index.js
+          node --test tests/case-scan-all-sql.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs
+          if ! head -n 5 src/index.js | grep -q 'staging/safety-gate.cjs'; then
+            echo 'STOP: staging boot fence missing'
+            exit 1
+          fi
+      - name: Commit tested source only to staging candidate
+        run: |
+          git config user.name "contentscale-candidate-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Staging candidate only: canonical scan-all SQL fix"
+          git push origin HEAD:case-scan-all-staging-candidate
