@@ -1,0 +1,114 @@
+name: Case Study staging integration (isolated, no deploy)
+on:
+  push:
+    branches: [case-study-staging-integration]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  isolated-checks:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/case-study-staging-integration'
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Regenerate full index inside CI runner only
+        run: |
+          node scripts/prepare-case-first-manual-candidate.cjs src/index.js
+          node scripts/prepare-case-bulk-scan-queries.cjs src/index.js
+      - name: Confirm candidate and startup JavaScript parse
+        run: |
+          node --check src/index.js
+          node --check index.cjs
+          node --check src/staging/safety-gate.cjs
+      - name: Run all isolated candidate regression tests
+        run: |
+          node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-case-first-scan-db-fixture.test.cjs tests/staging-case-first-scan-existing-gate.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs tests/staging-case-study-next-action.test.cjs tests/staging-case-bulk-scan-sql.test.cjs
+      - name: Install isolated PostgreSQL test driver
+        run: |
+          mkdir -p /tmp/contentscale-case-pg
+          npm install --prefix /tmp/contentscale-case-pg --no-save --no-package-lock --ignore-scripts pg@8
+      - name: Execute real Case Study route against disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: /tmp/contentscale-case-pg/node_modules/pg
+        run: node --test tests/staging-case-first-scan-postgres.test.cjs
+      - name: Install runtime dependencies without postinstall side effects
+        run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
+      - name: Prepare isolated full application boot copy
+        run: |
+          node tests/prepare-staging-boot-smoke.cjs
+          node --check src/__ci_staging_boot_smoke__.js
+      - name: Boot candidate's complete app with disposable PostgreSQL and denied external egress
+        env:
+          NODE_ENV: test
+          CS_DEPLOYMENT_TIER: staging
+          CS_STAGING_SCAN_EXECUTION_ENABLED: '0'
+          CS_STAGING_ISOLATED_DB_CONFIRMED: '0'
+          CS_STAGING_SIDE_EFFECTS_DISABLED: '0'
+          ENABLE_TRACKER_SCHEDULER: '0'
+          ENABLE_BULK_WORKER: '0'
+          APP_URL: http://127.0.0.1:18765
+          DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          PORT: '18765'
+        run: |
+          node --require ./tests/staging-boot-no-egress.cjs src/__ci_staging_boot_smoke__.js >/tmp/case-candidate-fullapp-smoke.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          reached=0
+          for i in $(seq 1 35); do
+            if curl --silent --max-time 2 --fail http://127.0.0.1:18765/api/build-info > /tmp/case-candidate-fullapp-health.json 2>/dev/null; then
+              reached=1
+              break
+            fi
+            if ! kill -0 $app_pid 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$reached" -ne 1 ]; then
+            tail -n 70 /tmp/case-candidate-fullapp-smoke.log
+            echo 'STOP: full app candidate did not boot in no-egress CI'
+            exit 1
+          fi
+          node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/case-candidate-fullapp-health.json'));if(!JSON.stringify(x).includes('v568'))process.exit(1)"
+          echo 'FULL APP CANDIDATE BOOT PASSED IN DISPOSABLE CI ONLY'
+      - name: Persist validated source and PostgreSQL proof to candidate only
+        run: |
+          test "${GITHUB_REF_NAME}" = "case-study-staging-integration"
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+          printf "Disposable PostgreSQL route tests passed for source blob %s\n" "$(git hash-object src/index.js)" > tests/staging-case-first-scan-postgres.verified
+          git add -- src/index.js tests/staging-case-first-scan-postgres.verified
+          if ! git diff --cached --quiet; then
+            git config user.name "contentscale-candidate-ci"
+            git config user.email "contentscale-candidate-ci@users.noreply.github.com"
+            git commit -m "candidate: verified Case Study route against disposable PostgreSQL"
+            git push origin HEAD:refs/heads/case-study-staging-integration
+          fi
+      - name: Publish candidate for review only
+        uses: actions/upload-artifact@v4
+        with:
+          name: case-study-staging-integration-review-only
+          path: |
+            src/index.js
+            index.cjs
+            src/staging/safety-gate.cjs
+          retention-days: 7
