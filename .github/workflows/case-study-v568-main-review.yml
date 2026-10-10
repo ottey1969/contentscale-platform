@@ -28,7 +28,7 @@ jobs:
           fi
           grep -Fq "CS-2026-10-10-REVIEW-v568-CASE-FIRST-MANUAL-SCAN" src/index.js
       - name: Run real endpoint isolation and dispatch regression
-        run: node --test tests/case-study-v568-review-endpoint.test.cjs
+        run: node --test tests/case-study-v568-review-endpoint.test.cjs tests/case-study-v568-live-wall-binding.test.cjs
       - name: Commit only validated canonical index to review branch
         run: |
           git config user.name "contentscale-review-bot"
