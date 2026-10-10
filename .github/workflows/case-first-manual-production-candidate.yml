@@ -6,6 +6,7 @@ on:
       - scripts/prepare-case-first-manual-production.cjs
       - scripts/prepare-case-scan-all-sql.cjs
       - tests/case-scan-all-sql.test.cjs
+      - tests/case-first-manual-dashboard-next-action.test.cjs
       - tests/case-first-manual-production-endpoint.test.cjs
       - .github/workflows/case-first-manual-production-candidate.yml
 permissions:
@@ -31,7 +32,7 @@ jobs:
             exit 1
           fi
       - name: Test canonical real endpoint in isolation
-        run: node --test tests/case-first-manual-production-endpoint.test.cjs tests/case-scan-all-sql.test.cjs
+        run: node --test tests/case-first-manual-production-endpoint.test.cjs tests/case-scan-all-sql.test.cjs tests/case-first-manual-dashboard-next-action.test.cjs
       - name: Commit candidate index only on isolated branch
         run: |
           git config user.name "contentscale-candidate-bot"
