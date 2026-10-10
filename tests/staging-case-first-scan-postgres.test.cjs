@@ -43,6 +43,13 @@ test('first Case Study scan uses real PostgreSQL evidence and publication state'
    return {code:res.statusCode,data:res.result,scheduled};
   }
   const initial=await call();assert.equal(initial.code,200);assert.equal(initial.data.message,'Check started');assert.equal(initial.scheduled,1);
+  // A freshly activated Case Study can have zero historical Tracker snapshots.
+  await db.query('DELETE FROM tracker_snapshots');
+  const firstWithoutSnapshot=await call();
+  assert.equal(firstWithoutSnapshot.code,200);
+  assert.equal(firstWithoutSnapshot.data.message,'Check started');
+  assert.equal(firstWithoutSnapshot.scheduled,1);
+  await db.query("INSERT INTO tracker_snapshots VALUES(17,'2026-08-18T00:00:00Z')");
   await db.query("INSERT INTO tracker_snapshots VALUES(17,'2026-10-10T12:10:00Z')");
   const repeated=await call();assert.equal(repeated.code,409);assert.equal(repeated.scheduled,0);
   await db.query("DELETE FROM tracker_snapshots WHERE checked_at>'2026-10-10T12:00:00Z'");
