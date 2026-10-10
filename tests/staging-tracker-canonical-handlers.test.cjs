@@ -117,8 +117,14 @@ test('canonical GET is NOT yet pure/read-only and new event tables have no direc
  const pos=source.indexOf(marker);
  assert.ok(pos>0);
  const fragment=source.slice(pos,pos+30000);
- assert.match(fragment,/ALTER TABLE tracker_clients/);
- assert.match(fragment,/ALTER TABLE tracker_pages/);
+ if(fragment.includes('migration_required:true')){
+   assert.doesNotMatch(fragment,/ALTER TABLE tracker_clients/);
+   assert.doesNotMatch(fragment,/ALTER TABLE tracker_pages/);
+ }else{
+   // Before read-only GET promotion, document the original migration-on-read problem.
+   assert.match(fragment,/ALTER TABLE tracker_clients/);
+   assert.match(fragment,/ALTER TABLE tracker_pages/);
+ }
  for(const name of ['tracker_workflow_events','tracker_workflow_client_events','tracker_workflow_sitemap_events']){
    assert.equal(source.includes(name),false,'Re-evaluate event wiring and these tests: '+name);
  }
