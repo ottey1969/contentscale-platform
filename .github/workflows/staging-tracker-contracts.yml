@@ -13,4 +13,4 @@ jobs:
         with:
           node-version: '22'
       - name: Tracker staging isolated unit tests
-        run: node --test tests/staging-tracker-readonly.test.cjs tests/staging-tracker-synthetic-readiness.test.cjs tests/staging-tracker-get-readiness.test.cjs
+        run: node --test tests/staging-tracker-readonly.test.cjs tests/staging-tracker-synthetic-readiness.test.cjs tests/staging-tracker-get-readiness.test.cjs tests/staging-tracker-historical-integrity.test.cjs
