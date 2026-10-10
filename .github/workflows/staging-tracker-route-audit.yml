@@ -20,6 +20,7 @@ jobs:
         run: |
           node tests/staging-tracker-sitemap-candidate.cjs src/index.js /tmp/contentscale-sitemap-candidate.js
           node --check /tmp/contentscale-sitemap-candidate.js
+          node --test tests/staging-tracker-sitemap-candidate.test.cjs
       - name: Audit sitemap source and event side-effect paths
         run: node tests/staging-tracker-sitemap-source-audit.cjs
       - name: Inspect app entrypoint ordering without running app
