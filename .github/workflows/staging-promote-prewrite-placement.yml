@@ -1,0 +1,56 @@
+name: Promote authorized Network placement context to saved Brief Finalize
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-promote-prewrite-placement.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  promote:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Confirm exclusive staging changes
+        run: |
+          test "${GITHUB_REF_NAME}" = "tracker-staging"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test -z "$(git status --porcelain)"
+          test -z "${DATABASE_URL:-}"
+      - name: Prepare canonical staging placement binding
+        run: |
+          node tests/staging-prewrite-placement-guard.cjs src/index.js /tmp/contentscale-prewrite-placement.js
+          node --check /tmp/contentscale-prewrite-placement.js
+          node --test tests/staging-prewrite-placement-guard.test.cjs
+      - name: Apply only canonical staging entrypoint
+        run: |
+          cp /tmp/contentscale-prewrite-placement.js src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js"
+      - name: Test updated saved Brief and canonical Tracker routes
+        run: |
+          PLACEMENT_CANDIDATE=src/index.js node --test tests/staging-prewrite-placement-guard.test.cjs
+          PREWRITE_CANDIDATE_FILE=src/index.js node --test tests/staging-prewrite-pure-get.test.cjs
+          node --test tests/staging-tracker-readonly-coverage.test.cjs tests/staging-tracker-release-decision.test.cjs
+          node --test tests/staging-tracker-canonical-handlers.test.cjs
+          PATCHED_GET=src/index.js node --test tests/staging-tracker-readonly-get-candidate.test.cjs
+          PATCHED_CANONICAL_FILE=src/index.js node --test tests/staging-tracker-patched-handlers.test.cjs
+          EVENT_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-event-candidate.test.cjs
+          SITEMAP_CANDIDATE_FILE=src/index.js node --test tests/staging-tracker-sitemap-candidate.test.cjs
+          CASE_CANDIDATE=src/index.js node --test tests/staging-tracker-case-reads.test.cjs
+      - name: Commit only validated staging source
+        run: |
+          git config user.name "contentscale-staging-ci"
+          git config user.email "contentscale-staging-ci@users.noreply.github.com"
+          git add -- src/index.js
+          git commit -m "staging: bind saved Brief evidence recovery to exact linked Network placement"
+          git push origin HEAD:refs/heads/tracker-staging
