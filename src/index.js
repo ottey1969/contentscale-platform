@@ -66795,7 +66795,7 @@ function startCaseStudyMilestoneScheduler(){
   },11*60*1000);
   console.log('[case-cycle] day 7/14/30 scheduler started');
 }
-startCaseStudyMilestoneScheduler();
+if (!_csStagingStartupQuarantine) startCaseStudyMilestoneScheduler();
 
 let _trackerSchedulerTimer = null;
 async function _requestDueClientMonitoringInput(){
@@ -67845,7 +67845,7 @@ console.log('[ContentScale] Backup routes loaded ✅');
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Start scheduler after DB is ready (called from startServer)
-setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
+if (!_csStagingStartupQuarantine) setTimeout(() => { if(pool) startTrackerScheduler(); }, 10000);
 
   // ── Start server ───────────────────────────────────────────────────────────
 startServer();
