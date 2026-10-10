@@ -16,6 +16,8 @@ for(const marker of [
  'CASE STUDY ACTIVE · FIRST MANUAL SCAN',
  'CASE STUDY ACTIVE · PREPARE FIRST MANUAL SCAN',
  'case_study_prior_brief_archived',
+ "check_frequency='0',next_check_at=NULL",
+ 'previous_check_frequency:page.check_frequency',
  '_publishedAfterBaseline'
 ]){
  if(!s.includes(marker))throw Error('RELEASE BLOCKED: missing verified integration marker: '+marker);
