@@ -218,7 +218,7 @@ async function fetchSitemap() {
   var url = document.getElementById('sitemapUrl').value.trim();
   if (!url) { toast('Enter sitemap URL'); return; }
   try {
-    var data = await api('/fetch-sitemap?url=' + encodeURIComponent(url));
+    var data = await api('/fetch-sitemap', 'POST', { url: url });
     if (data.urls && data.urls.length) {
       var list = document.getElementById('sitemapList');
       list.innerHTML = data.urls.slice(0,50).map(function(u) {
