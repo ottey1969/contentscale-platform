@@ -1,0 +1,86 @@
+name: Tracker disposable full-app boot smoke (NO DEPLOY)
+on:
+  push:
+    branches: [tracker-staging]
+    paths:
+      - '.github/workflows/staging-full-app-boot-smoke.yml'
+      - 'tests/staging-boot-no-egress.cjs'
+      - 'tests/prepare-staging-boot-smoke.cjs'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  disposable-smoke:
+    if: github.ref == 'refs/heads/tracker-staging'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install app dependencies without install scripts
+        run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
+      - name: Prepare disposable smoke-only full app
+        run: |
+          test -z "$(git status --porcelain)"
+          node tests/prepare-staging-boot-smoke.cjs
+          node --check src/__ci_staging_boot_smoke__.js
+      - name: Boot quarantined full app with localhost Postgres and no network egress
+        env:
+          NODE_ENV: test
+          CS_DEPLOYMENT_TIER: staging
+          CS_STAGING_SCAN_EXECUTION_ENABLED: '0'
+          CS_STAGING_ISOLATED_DB_CONFIRMED: '0'
+          CS_STAGING_SIDE_EFFECTS_DISABLED: '0'
+          ENABLE_TRACKER_SCHEDULER: '0'
+          ENABLE_BULK_WORKER: '0'
+          APP_URL: http://127.0.0.1:18765
+          DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          PORT: '18765'
+        run: |
+          node --require ./tests/staging-boot-no-egress.cjs src/__ci_staging_boot_smoke__.js > /tmp/staging-fullapp-smoke.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          status=0
+          for i in $(seq 1 35); do
+            if curl --silent --show-error --max-time 2 --fail http://127.0.0.1:18765/api/build-info > /tmp/staging-fullapp-health.json 2>/dev/null; then
+              status=1
+              break
+            fi
+            if ! kill -0 $app_pid 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if test "$status" -ne 1; then
+            echo 'Disposable full application did not reach build-info health route.'
+            tail -n 80 /tmp/staging-fullapp-smoke.log
+            exit 1
+          fi
+          node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/staging-fullapp-health.json'));if(!JSON.stringify(x).includes('CS-2026'))process.exit(1)"
+          echo 'DISPOSABLE APP BOOT PASSED (not Railway stage approval)'
+      - name: Record disposable boot verification only
+        run: |
+          printf "Full staging app booted only in disposable GitHub CI, source %s; no Railway app boot authorised\n" "$(git hash-object src/index.js)" > tests/staging-full-app-boot.verified
+          git add -- tests/staging-full-app-boot.verified
+          if ! git diff --cached --quiet; then
+            git config user.name "contentscale-staging-ci"
+            git config user.email "contentscale-staging-ci@users.noreply.github.com"
+            git commit -m "staging: verified disposable offline full-app startup"
+            git push origin HEAD:refs/heads/tracker-staging
+          fi
