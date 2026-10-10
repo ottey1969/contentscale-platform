@@ -30,6 +30,11 @@ jobs:
           node tests/staging-tracker-startup-quarantine-candidate.cjs src/index.js /tmp/contentscale-staging-startup-quarantine.js
           node --check /tmp/contentscale-staging-startup-quarantine.js
           node --test tests/staging-tracker-startup-quarantine.test.cjs
+      - name: Build and regression-test wave-two boot quarantine candidate without app start
+        run: |
+          node tests/staging-tracker-boot-quarantine-wave2.cjs src/index.js /tmp/contentscale-staging-boot-wave2.js
+          node --check /tmp/contentscale-staging-boot-wave2.js
+          node --test tests/staging-tracker-boot-quarantine-wave2.test.cjs
       - name: Inspect remaining automatic migrations batch jobs and scheduled workers
         run: node tests/staging-tracker-boot-remaining-context.cjs
       - name: Trace older Tracker migrations and delayed jobs before future full startup
