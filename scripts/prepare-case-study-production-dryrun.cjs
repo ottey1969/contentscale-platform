@@ -93,7 +93,7 @@ once("const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH
  "const CONTENTSCALE_BUILD_ID = 'CS-2026-10-11-PROD-DRYRUN-v568-FIRST-MANUAL-CASE';",'build ID');
 once("  build: 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH-PACING',",
  "  build: 'CS-2026-10-11-PROD-DRYRUN-v568-FIRST-MANUAL-CASE',",'build info');
-if(applied!==7||Buffer.byteLength(s)<6000000||!s.startsWith("require('./staging/safety-gate.cjs')"))throw Error('STOP: source invariant failed');
+if(applied!==7||Buffer.byteLength(s)<6000000||s.startsWith("require('./staging/safety-gate.cjs')")||s.includes('const _csStagingStartupQuarantine'))throw Error('STOP: source invariant failed');
 // Dry-run only: no staging overlay. Never deploy without release review.
 s=hardenPublicationEvidence(s);
 fs.writeFileSync(destination,s);
