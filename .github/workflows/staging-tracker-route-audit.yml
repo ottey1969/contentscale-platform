@@ -28,6 +28,7 @@ jobs:
         run: |
           node tests/staging-tracker-event-candidate.cjs src/index.js /tmp/contentscale-event-candidate.js
           node --check /tmp/contentscale-event-candidate.js
+          node --test tests/staging-tracker-event-candidate.test.cjs
       - name: Build and syntax-check GET read-only candidate
         run: |
           node tests/staging-tracker-readonly-get-candidate.cjs src/index.js /tmp/contentscale-readonly-get-candidate.js
