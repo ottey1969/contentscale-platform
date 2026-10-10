@@ -1,3 +1,4 @@
+require('./staging/safety-gate.cjs').assertAppBootEnvironment(process.env);
 // v425: tracker client-action confirmation email after a previously emailed case-study checkpoint is completed.
 // v410: safe dead-URL correction plus correctly escaped generated browser JavaScript.
 const { buildOpportunityReport, FIVE_ENGINES } = (() => {

@@ -1,3 +1,4 @@
+require('./src/staging/safety-gate.cjs').assertAppBootEnvironment(process.env);
 const { buildOpportunityReport, FIVE_ENGINES } = (() => {
 const FIVE_ENGINES = [
   ['google_aio', 'Google AI Overviews / Gemini'],
