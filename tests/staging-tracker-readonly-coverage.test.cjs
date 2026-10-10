@@ -49,3 +49,15 @@ test('Prewrite GET rejects alternate SQL mutations without booting the app',()=>
   assert.equal(assessCanonicalReadRoutes(mutated).prewrite_get_implicit_write_review,true,sql);
  }
 });
+
+test('Prewrite GET coverage fails closed on duplicate and missing route boundaries',()=>{
+ const marker="app.get('/api/tracker-client/:token/prewrite-briefs/:id'";
+ const at=original.indexOf(marker);
+ assert(at>=0);
+ const duplicated=original+'\n'+marker+" , async (req,res)=>{});";
+ assert.equal(assessCanonicalReadRoutes(duplicated).prewrite_get_implicit_write_review,true);
+ const next=original.indexOf('\napp.',at+marker.length);
+ assert(next>at);
+ const missingBoundary=original.slice(0,next).replace(marker, "app.get('/api/tracker-client/:token/prewrite-briefs/:otherId'");
+ assert.equal(assessCanonicalReadRoutes(missingBoundary).prewrite_get_implicit_write_review,true);
+});
