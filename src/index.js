@@ -3072,7 +3072,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
 // GET /api/tracker-client/:token — get client data + pages
 app.get('/api/tracker-client/:token', async (req, res) => {
   try {
-    await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
+    // Schema must be provisioned before GET; this route never alters customer tables.
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, disabled: true, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
@@ -3178,11 +3178,18 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       ,['monitoring_gsc_pages_at','TIMESTAMPTZ']
       ,['monitoring_gsc_queries_at','TIMESTAMPTZ']
     ];
-    for (const [col, type] of _trackerMainGetColumns) {
-      await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ' + col + ' ' + type);
+    const _colResults = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='tracker_pages'");
+    const _existingColumns = new Set(_colResults.rows.map(r => r.column_name));
+    const _missingColumns = _trackerMainGetColumns.filter(([col]) => !_existingColumns.has(col));
+    const _requiredTables = ['tracker_ai_evidence','tracker_case_studies','tracker_case_study_content_versions','tracker_case_study_events'];
+    const _tableResults = await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=ANY($1::text[])", [_requiredTables]);
+    const _existingTables = new Set(_tableResults.rows.map(r => r.table_name));
+    const _missingTables = _requiredTables.filter(t => !_existingTables.has(t));
+    if (_missingColumns.length || _missingTables.length) {
+      return res.status(503).json({ success:false, schema_ready:false, migration_required:true,
+        missing_columns:_missingColumns.map(([col])=>col), missing_tables:_missingTables,
+        error:'Tracker requires a controlled schema migration before this dashboard can load.' });
     }
-    // CONTENTSCALE-TRACKER-MAIN-GET-AI-EVIDENCE-HELPER-NAME-FIX-20260909=true
-    await _trackerEnsureAiEvidenceSchema();
 
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
@@ -3214,13 +3221,14 @@ app.get('/api/tracker-client/:token', async (req, res) => {
 
     const _evStem=String(client.domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' ');
     const _evAliases=[client.name,client.domain,_evStem];
-    const _briefQueueRepairs=[];
+    // Normalize legacy brief queues in response only. Persistence requires an explicit repair action.
     pagesR.rows.forEach(function(_p){
       const _normalizedBrief=_trackerNormalizeBriefQueues(_p.brief_content);
       if(_normalizedBrief.changed){
         _p.brief_content=_normalizedBrief.brief;
         if(_normalizedBrief.implementation_queue_empty)_p.implementation_status='evidence_only_complete';
-        _briefQueueRepairs.push(pool.query("UPDATE tracker_pages SET brief_content=$1,implementation_status=CASE WHEN $3::boolean THEN 'evidence_only_complete' ELSE implementation_status END WHERE id=$2",[JSON.stringify(_normalizedBrief.brief),_p.id,!!_normalizedBrief.implementation_queue_empty]).catch(function(e){console.warn('[brief-queue-normalize]',_p.id,e.message);}));
+
+        _p.brief_requires_persistent_repair=true;
       }
       _p.claims_facts_updated_at=client.claims_facts_updated_at||null;
       _p.ai_manual_evidence=_trackerReparseManualEvidenceMap(_p.ai_manual_evidence||{},_p.url,_evAliases,_p.revision_cycle);
@@ -3236,54 +3244,14 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       if(!String(client.email||'').trim())_missing.push('Tracker client email');
       _p.case_study_readiness={ready:_missing.length===0,missing:_missing,ai_checked:_aiN,gsc_pages:_hasGsc,gsc_queries:!!_p.has_gsc_queries||_zeroQueriesVerified,gsc_queries_zero_verified:_zeroQueriesVerified,scan:!!(_p.last_checked||_p.last_checked_at),html:!!_p.has_html_content,email:!!String(client.email||'').trim()};
     });
-    if(_briefQueueRepairs.length)await Promise.all(_briefQueueRepairs);
+    // No implicit brief updates on GET.
 
     // Activate and attach the real Perfect Roofing case study without changing its frozen baseline.
-    await _ensureCaseStudySchema();
-    for(const _p of pagesR.rows)await _ensurePerfectRoofingCaseStudy(client,_p);
+    // Case-study creation/attachment must be an explicit reviewed mutation.
     const _csr=await pool.query(`SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_data,started_at
       FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'`,[client.id]);
 
-    // v351 one-time self-heal: early builds attached a newly started case study to an
-    // implementation that had been verified before its baseline. That historical state
-    // remains in Proof & History, but it cannot complete the new case-study cycle.
-    for(const _cs of _csr.rows){
-      const _p=pagesR.rows.find(x=>Number(x.id)===Number(_cs.tracker_page_id));
-      if(!_p)continue;
-      const _baseAt=Date.parse(_cs.baseline_at||_cs.started_at||0)||0;
-      const _verifiedAt=Date.parse(_p.implementation_verified_at||0)||0;
-      if(_baseAt&&_verifiedAt&&_verifiedAt<_baseAt){
-        const _fresh=await _caseStudyOpenFreshStartCycle(client.id,_p,_cs,'','case_study_baseline_copy','backfill_pre_v351_case_study_start');
-        if(_fresh&&!_fresh.already_initialized){
-          _p.revision_cycle=_fresh.revision_cycle;
-          _p.is_done=false;_p.manual_done=false;_p.manual_done_at=null;
-          _p.implementation_status='case_study_baseline_locked';
-          _p.implementation_at=null;_p.implementation_verified_at=null;
-          _p.implementation_verified_brief_cycle_id=null;_p.implementation_before_graaf=null;
-          _p.needs_html=false;_p.html_pasted_at=null;
-          _p.brief_content=null;_p.ranking_brief=null;_p.brief_started_at=null;
-          _p.brief_evaluated_at=null;_p.brief_viewed_at=null;_p.brief_check_count=0;
-          _p.treatment=null;_p.treatment_target_url=null;_p.treatment_updated_at=null;_p.treatment_source=null;
-        }
-      }
-    }
-    // The v62 explicit-opt-in migration ran before the legacy Perfect Roofing case study could
-    // be attached on first load. Restore only its previously daily monitored emergency page;
-    // never enable the other discovered/imported pages.
-    try{
-      if(/perfectroofingteam\.com/i.test(String(client.domain||''))){
-        const _mr=await pool.query(`SELECT 1 FROM migration_flags WHERE key='perfect_roofing_daily_case_study_monitor_restore_v1'`);
-        if(!_mr.rows.length){
-          const _restored=await pool.query(`UPDATE tracker_pages p SET check_frequency='1day',next_check_at=COALESCE(p.last_checked_at,NOW())+INTERVAL '1 day',email_reminders=TRUE,ai_reminder_days=14,next_ai_reminder_at=NOW()+INTERVAL '14 days'
-            WHERE p.tracker_client_id=$1 AND lower(p.url) LIKE '%24-hour-emergency-roof-repair-nj%' AND EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.status='active') RETURNING p.id`,[client.id]);
-          if(_restored.rows.length){
-            const _rid=new Set(_restored.rows.map(x=>Number(x.id)));pagesR.rows.forEach(p=>{if(_rid.has(Number(p.id))){p.check_frequency='1day';p.next_check_at=new Date(Date.now()+86400000);p.email_reminders=true;p.ai_reminder_days=14;p.next_ai_reminder_at=new Date(Date.now()+14*86400000);}});
-          }
-          await pool.query(`INSERT INTO migration_flags(key) VALUES('perfect_roofing_daily_case_study_monitor_restore_v1') ON CONFLICT(key) DO NOTHING`);
-          console.log('[migrate] restored daily monitoring for',_restored.rowCount,'Perfect Roofing emergency case-study page');
-        }
-      }
-    }catch(e){console.warn('[migrate] Perfect Roofing monitoring restore',e.message);}
+    // Pre-v351 case-study baseline repairs and legacy monitoring restoration are now explicit maintenance operations.
     const _csIds=_csr.rows.map(x=>x.id);
     const _csvr=_csIds.length?await pool.query(`SELECT DISTINCT ON (case_study_id,version_type)
       case_study_id,version_type,captured_at,content_hash,version_data
@@ -3333,62 +3301,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     });
 
 
-    // v297 milestone self-heal for earlier builds that completed the work but did not write
-    // case_day_*_completed. This never guesses: it requires timestamped GSC + scan evidence,
-    // and Day 14 additionally requires all five timestamped manual AI checks.
-    const _utcDayStart=function(v){
-      const d=new Date(v); if(isNaN(d.getTime()))return 0;
-      return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
-    };
-    for(const _p of pagesR.rows){
-      const _cs=_p.case_study;
-      if(!_cs)continue;
-      const _ms=_p.case_study_milestones||{};
-      const _baseDay=_utcDayStart(_cs.baseline_at||_cs.started_at);
-      if(!_baseDay)continue;
-      const _scanAt=Date.parse(_p.last_checked||_p.last_checked_at||0)||0;
-      const _gp=Date.parse(_p.monitoring_gsc_pages_at||0)||0;
-      const _gq=Date.parse(_p.monitoring_gsc_queries_at||0)||0;
-
-      if(!_ms.case_day_7_completed){
-        const _due7=_baseDay+7*86400000;
-        if(Date.now()>=_due7 && _scanAt>=_due7 && _gp>=_due7 && _gq>=_due7){
-          const _doneAt=new Date(Math.max(_scanAt,_gp,_gq)).toISOString();
-          await _caseStudyEventForPage(client.id,_p.id,'case_day_7_completed',{
-            completed_at:_doneAt,evidence_only:false,manual_scan:true,self_healed:true,
-            gsc_pages_at:_p.monitoring_gsc_pages_at,gsc_queries_at:_p.monitoring_gsc_queries_at
-          }).catch(()=>{});
-          _ms.case_day_7_completed=_doneAt;
-          if(String(_p.monitoring_gate_label||'')==='case_day_7'){
-            await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[_p.id]).catch(()=>{});
-            _p.monitoring_waiting_input=false;_p.monitoring_gate_label=null;
-          }
-        }
-      }
-
-      if(_ms.case_day_7_completed && !_ms.case_day_14_completed){
-        const _due14=_utcDayStart(_ms.case_day_7_completed)+7*86400000;
-        const _aiMap=_p.ai_manual_evidence||{};
-        const _freshAi=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){
-          const ev=_aiMap[k]; if(!ev||ev.is_cleared===true||ev.is_cleared==='true'||ev.is_current_revision===false)return false;
-          const at=Date.parse(ev.updated_at||ev.verified_at||ev.created_at||0)||0;
-          return at>=_due14;
-        }).length;
-        if(Date.now()>=_due14 && _scanAt>=_due14 && _gp>=_due14 && _gq>=_due14 && _freshAi===5){
-          const _doneAt=new Date(Math.max(_scanAt,_gp,_gq)).toISOString();
-          await _caseStudyEventForPage(client.id,_p.id,'case_day_14_completed',{
-            completed_at:_doneAt,evidence_only:false,manual_scan:true,self_healed:true,
-            gsc_pages_at:_p.monitoring_gsc_pages_at,gsc_queries_at:_p.monitoring_gsc_queries_at,ai_checked:5
-          }).catch(()=>{});
-          _ms.case_day_14_completed=_doneAt;
-          if(String(_p.monitoring_gate_label||'')==='case_day_14'){
-            await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[_p.id]).catch(()=>{});
-            _p.monitoring_waiting_input=false;_p.monitoring_gate_label=null;
-          }
-        }
-      }
-      _p.case_study_milestones=_ms;
-    }
+    // Milestone completion requires an explicit event write after verified evidence; GET displays persisted events only.
 
     // Self-heal stale operational Briefs only when we have hard proof that THIS Brief/revision
     // was verified after it was evaluated. Old verification never closes a newer Brief.
@@ -3419,11 +3332,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
           next_focus:'Wait for fresh evidence before opening a new delta.',recycle_completed_actions:false};
         _p.brief_content=_b;
         _p.treatment=String(_p.treatment_source||'').toUpperCase()==='MANUAL'?_p.treatment:'KEEP';
-        await pool.query(`UPDATE tracker_pages SET brief_content=$1,
-          treatment=CASE WHEN COALESCE(treatment_source,'')='MANUAL' THEN treatment ELSE 'KEEP' END,
-          treatment_source=CASE WHEN COALESCE(treatment_source,'')='MANUAL' THEN treatment_source ELSE 'AUTO_BRIEF' END,
-          treatment_updated_at=NOW()
-          WHERE id=$2`,[JSON.stringify(_b),_p.id]).catch(()=>{});
+        _p.brief_requires_persistent_repair=true;
       }
     }
 
