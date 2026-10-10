@@ -4,7 +4,7 @@ on:
     branches: [case-first-manual-scan-candidate]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   isolated-checks:
     runs-on: ubuntu-latest
@@ -12,7 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -26,10 +26,18 @@ jobs:
       - name: Run all isolated candidate regression tests
         run: |
           node --test tests/staging-case-first-scan-eligibility.test.cjs tests/staging-case-first-scan-db-fixture.test.cjs tests/staging-case-first-scan-existing-gate.test.cjs tests/staging-case-study-canonical-endpoint.test.cjs tests/staging-start-selector.test.cjs tests/staging-safety-isolation.test.cjs
-      - name: Confirm CI did not modify committed sources
+      - name: Persist validated complete source to candidate branch only
         run: |
-          git diff --name-only
+          test "${GITHUB_REF_NAME}" = "case-first-manual-scan-candidate"
+          git diff --check
           test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+          if ! git diff --quiet -- src/index.js; then
+            git config user.name "contentscale-candidate-ci"
+            git config user.email "contentscale-candidate-ci@users.noreply.github.com"
+            git add -- src/index.js
+            git commit -m "candidate: persist tested Case Study scan route and publication guard"
+            git push origin HEAD:refs/heads/case-first-manual-scan-candidate
+          fi
       - name: Publish candidate for review only
         uses: actions/upload-artifact@v4
         with:
