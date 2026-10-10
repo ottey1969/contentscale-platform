@@ -20,9 +20,13 @@ once('setTimeout(function() { migrateTrackerPageProfiles(); }, 5000);',
      gate+'setTimeout(function() { migrateTrackerPageProfiles(); }, 5000);','legacy profile migration');
 once('await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);',
      gate+'await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);','Gemini model detection');
-once("// Recover any jobs stuck in 'researching' from previous server session\nif (pool && dbConnected) {",
-     "// Recover any jobs stuck in 'researching' from previous server session\nif (pool && dbConnected && !"+guard+") {",
-     'research job status recovery');
+{
+ const re=/\/\/ Recover any jobs stuck in 'researching' from previous server session\r?\n[ \t]*if \(pool && dbConnected\) \{/g;
+ const matches=[...s.matchAll(re)];
+ assert.equal(matches.length,1,'Missing or ambiguous research job recovery path');
+ s=s.replace(re,match=>match.replace('if (pool && dbConnected) {',
+   'if (pool && dbConnected && !'+guard+') {'));
+}
 once('// On server restart: resume any interrupted jobs\nsetTimeout(async () => {',
      '// On server restart: resume any interrupted jobs\n'+gate+'setTimeout(async () => {',
      'batch job resume');
