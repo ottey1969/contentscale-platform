@@ -12,11 +12,13 @@ test('real scanner SQL persists exactly one typed snapshot without changing GSC 
  try{
   await db.query('BEGIN');
   await db.query('CREATE TEMP TABLE tracker_pages(id integer primary key,url text,tracker_client_id integer,html_content text,html_source text,check_frequency text,last_checked_at timestamptz,next_check_at timestamptz,redirects_to text,redirect_checked_at timestamptz,last_page_hash text,last_graaf_score integer,fetch_reliable boolean,treatment text,treatment_source text,treatment_updated_at timestamptz,brief_content jsonb,brief_started_at timestamptz,brief_evaluated_at timestamptz,brief_status text,brief_claimed_by text,brief_claimed_at timestamptz,brief_check_count integer,implementation_status text,gsc_impressions integer,gsc_clicks integer,gsc_position numeric) ON COMMIT DROP');
+  await db.query('CREATE TEMP TABLE tracker_ai_evidence(id serial,page_id integer,engine text,evidence_method text,verified_at timestamptz,updated_at timestamptz,created_at timestamptz,is_cleared boolean,revision_cycle integer,exact_page_cited boolean,domain_cited boolean,brand_recommended boolean,brand_direct_supported boolean) ON COMMIT DROP');
   const source=fs.readFileSync(path.resolve(__dirname,'../src/index.js'),'utf8');
   const a=source.indexOf('async function runTrackerCheck('),b=source.indexOf('\n// ── Custom news management',a);
   assert(a>0&&b>a&&b-a<350000,'Scanner source unexpectedly moved');
   const scanner=source.slice(a,b);
   assert.doesNotMatch(scanner,/\b(?:ALTER|CREATE|DROP|TRUNCATE)\s+TABLE\b/i);
+  assert.doesNotMatch(scanner,/_trackerEnsureAiEvidenceSchema\s*\(/);
   const match=scanner.match(/INSERT INTO tracker_snapshots\s*\(([^]*?)\)\s*VALUES\s*\(/);
   assert(match,'Canonical snapshot INSERT moved');
   const names=match[1].split(',').map(x=>x.trim()).filter(Boolean);
@@ -37,7 +39,7 @@ test('real scanner SQL persists exactly one typed snapshot without changing GSC 
     const s=String(sql).trim();
     if(/^\s*(ALTER|CREATE|DROP|TRUNCATE)\s+TABLE\b/i.test(s))throw Error('Scanner DDL is forbidden');
     if(s.includes('FROM information_schema.columns'))
-     return db.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema LIKE 'pg_temp%' AND table_name IN ('tracker_pages','tracker_snapshots') AND column_name=ANY($1::text[])",args);
+     return db.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema LIKE 'pg_temp%' AND table_name IN ('tracker_pages','tracker_snapshots','tracker_ai_evidence') AND column_name=ANY($1::text[])",args);
     if(/^INSERT INTO tracker_snapshots\b/.test(s)||/^UPDATE tracker_pages\b/.test(s)||/^SELECT\b[^]*\bFROM tracker_snapshots\b/.test(s)||/^SELECT\b[^]*\bFROM tracker_pages\b/.test(s))
      return db.query(s,args);
     if(/^SELECT\b/.test(s))return {rows:[]};
