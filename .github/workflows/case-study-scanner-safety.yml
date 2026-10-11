@@ -120,6 +120,18 @@ jobs:
           PORT: '18765'
         run: |
           set -euo pipefail
+          # Only on GitHub's disposable postgres service; preserve canonical app migrations.
+          export CI=true
+          node - <<'NODE'
+          const fs=require('node:fs'),{Client}=require('pg');
+          (async()=>{
+            if(process.env.CI!=='true'||process.env.DATABASE_URL!=='postgres://test:test@127.0.0.1:5432/testdb') throw Error('Refusing schema fixture on non-disposable DB');
+            const db=new Client({connectionString:process.env.DATABASE_URL});
+            await db.connect();
+            try { await db.query(fs.readFileSync('tests/fixtures/staging-boot-schema.sql','utf8')); }
+            finally { await db.end(); }
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
           node tests/prepare-staging-boot-smoke.cjs
           node --check src/__ci_staging_boot_smoke__.js
           node --require ./tests/staging-boot-no-egress.cjs src/__ci_staging_boot_smoke__.js >/tmp/contentscale-integration-boot.log 2>&1 &
