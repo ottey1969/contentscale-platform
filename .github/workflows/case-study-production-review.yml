@@ -35,8 +35,8 @@ jobs:
       - name: Verify approved candidate and unchanged production base, offline export only
         env:
           BASE_MAIN: 5e23fd67945491fa229af25348e03eee772b846b
-          VALIDATED_CANDIDATE: 86b188e22d5f48169b3b492879dc41a6cda1b7f5
-          SOURCE_BLOB: da3229f020d426bcc365f37ed518b165881c27b6
+          VALIDATED_CANDIDATE: 4024bb347412e9bd779eb6c1bf8b45d4dcbca45d
+          SOURCE_BLOB: 95d79a5ff662b9a1134f1c1d1f7bddd15a7122de
         run: |
           set -euo pipefail
           test "$GITHUB_REF_NAME" = "case-study-scanner-safety-candidate"
@@ -61,7 +61,7 @@ jobs:
       - name: Exercise the exact main tree with only reviewed src/index.js replacement
         env:
           BASE_MAIN: 5e23fd67945491fa229af25348e03eee772b846b
-          VALIDATED_CANDIDATE: 86b188e22d5f48169b3b492879dc41a6cda1b7f5
+          VALIDATED_CANDIDATE: 4024bb347412e9bd779eb6c1bf8b45d4dcbca45d
         run: |
           set -euo pipefail
           git switch --detach "$BASE_MAIN"
@@ -85,7 +85,8 @@ jobs:
             staging-case-study-archive-fail-closed.test.cjs \
             staging-case-first-scan-postgres.test.cjs \
             staging-case-study-start-cycle-postgres.test.cjs \
-            staging-scanner-postgres-e2e.test.cjs; do
+            staging-scanner-postgres-e2e.test.cjs \
+            staging-case-study-spanish-locale.test.cjs; do
             git show "$VALIDATED_CANDIDATE:tests/$f" > "tests/$f"
           done
           node --test \
@@ -95,7 +96,8 @@ jobs:
             tests/staging-case-study-scan-failure-feedback.test.cjs \
             tests/staging-scanner-full-execution.test.cjs \
             tests/staging-case-bulk-scan-sql.test.cjs \
-            tests/staging-case-study-archive-fail-closed.test.cjs
+            tests/staging-case-study-archive-fail-closed.test.cjs \
+            tests/staging-case-study-spanish-locale.test.cjs
       - name: Run production review SQL paths against disposable PostgreSQL
         env:
           CI: 'true'
@@ -142,9 +144,13 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse origin/main)" = "$BASE_MAIN"
           git fetch origin case-study-v568-production-review
-          test "$(git rev-parse origin/case-study-v568-production-review)" = "$BASE_MAIN"
+          review_head="$(git rev-parse origin/case-study-v568-production-review)"
+          test "$review_head" = "782d29cfc9ef511a40b8fff6b4bebcd0881c0144"
           test "$(git diff --name-only)" = "src/index.js"
-          git switch -c case-study-v568-production-review
+          git restore -- src/index.js
+          git switch -C case-study-v568-production-review "$review_head"
+          cp /tmp/case-prod-review.js src/index.js
+          test "$(git diff --name-only)" = "src/index.js"
           git add -- src/index.js
           test "$(git diff --cached --name-only)" = "src/index.js"
           git config user.name contentscale-production-review-ci
