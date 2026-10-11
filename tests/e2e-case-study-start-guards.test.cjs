@@ -72,6 +72,7 @@ test('Case Study start persists one immutable baseline with verified five-engine
   if(s.includes('FROM tracker_clients'))return {rows:[client]};
   if(s.includes('FROM tracker_pages'))return {rows:[{...page,gsc_clicks:3,gsc_impressions:40,gsc_position:9,html_content:richHtml}]};
   if(s.includes('FROM tracker_case_studies'))return {rows:state.existing};
+  if(s.includes('AS fresh_cycle_initialized')&&s.includes('AS baseline_html_ready'))return {rows:[{fresh_cycle_initialized:true,baseline_html_ready:true}]};
   if(s.includes('FROM tracker_snapshots'))return {rows:[{checked_at:new Date('2026-10-10T00:00:00Z'),google_position:9}]};
   if(s.includes('FROM tracker_ai_evidence'))return {rows:evidences};
   if(s.includes('FROM tracker_gsc_queries'))return {rows:[{query:'roof repair',clicks:3,impressions:40,position:9,imported_at:new Date('2026-10-10')}]};
@@ -82,7 +83,6 @@ test('Case Study start persists one immutable baseline with verified five-engine
   }
   if(s.includes('INSERT INTO tracker_case_study_events')){baselineFrozen++;return {rows:[]};}
   if(s.includes('UPDATE tracker_pages'))return {rows:[]};
-  if(s.includes('AS fresh_cycle_initialized')&&s.includes('AS baseline_html_ready'))return {rows:[{fresh_cycle_initialized:true,baseline_html_ready:true}]};
   throw Error('Unexpected Case Study SQL '+s.slice(0,130));
  };
  const context={
