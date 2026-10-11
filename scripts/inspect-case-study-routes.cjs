@@ -27,3 +27,7 @@ if(process.env.CS_INSPECT_SCAN_ROUTES==='1'){
   }
  }
 }
+
+if(process.env.CS_INSPECT_SCAN_CONTEXT==='1'){
+ for(let i=4180;i<4320;i++)console.log('SCAN_SOURCE',i+1,lines[i]?.slice(0,700));
+}
