@@ -30,6 +30,7 @@ jobs:
           node --check src/tracker-growth-plan.cjs
           node tests/tracker-growth-plan.test.cjs
           node tests/tracker-growth-integration.test.cjs
+          node tests/tracker-completed-actions.test.cjs
       - name: Persist the exactly tested canonical scanner on review branch only
         if: success() && github.event_name == 'push'
         run: |
