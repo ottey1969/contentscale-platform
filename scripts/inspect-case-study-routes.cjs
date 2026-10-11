@@ -46,3 +46,7 @@ if(process.env.CS_INSPECT_SCANNER_CALLERS==='1'){
   console.log('RUN_TRACKER_CHECK',i+1,lines[i].slice(0,170),'OWNER_ROUTE',prev);
  }
 }
+
+if(process.env.CS_INSPECT_CHECK_ROUTE==='1'){
+ for(let i=8810;i<8932;i++)console.log('CHECK_ROUTE',i+1,lines[i]?.slice(0,760));
+}
