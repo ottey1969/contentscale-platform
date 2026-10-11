@@ -73,7 +73,7 @@ async function run(){
   const gateA=source.indexOf('function _trackerNormalScanGate(');
   const gateB=source.indexOf('// POST /api/tracker-client/:token/scan-all',gateA);
   const checkA=source.indexOf("app.post('/api/tracker-client/:token/check/:pageId'");
-  const checkB=source.indexOf('\\n});',checkA);
+  const checkB=source.indexOf('\n});',checkA);
   assert(gateA>0&&gateB>gateA&&checkA>0&&checkB>checkA,'Canonical single-page scan route missing');
   let checkHandler,queued=null,actualChecks=0;
   const checkContext={
@@ -83,7 +83,7 @@ async function run(){
    setImmediate:fn=>{queued=fn},
    runTrackerCheck:async()=>{actualChecks++;await client.query("INSERT INTO tracker_snapshots(id,page_id,checked_at,google_position) VALUES (99090,99002,$1,9)",[new Date(original.rows[0].baseline_at.getTime()+1000)]);}
   };
-  vm.runInNewContext(source.slice(gateA,gateB)+'\\n'+source.slice(checkA,checkB+4),checkContext,{timeout:4000});
+  vm.runInNewContext(source.slice(gateA,gateB)+'\n'+source.slice(checkA,checkB+4),checkContext,{timeout:4000});
   async function check(){
    const res={statusCode:200,status(n){this.statusCode=n;return this},json(body){this.body=JSON.parse(JSON.stringify(body));return body}};
    await checkHandler({params:{token:'case-e2e-synthetic',pageId:'99002'},body:{}},res);
