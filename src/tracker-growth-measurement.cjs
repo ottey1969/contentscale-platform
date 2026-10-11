@@ -69,7 +69,7 @@ function registerGrowthMeasurement(app,pool){
    if(!Number.isSafeInteger(publicationId)||publicationId<1)return res.status(400).json({success:false,error:'Invalid publication'});
    const rr=await pool.query("SELECT g.id,g.tracker_page_id,g.query,g.published_at,p.url FROM tracker_growth_publications g JOIN tracker_pages p ON p.id=g.tracker_page_id AND p.tracker_client_id=g.tracker_client_id WHERE g.id=$1 AND g.tracker_client_id=$2",[publicationId,c.id]);
    const pub=rr.rows[0];if(!pub)return res.status(404).json({success:false,error:'Publication not found'});
-   const host=new URL(pub.url).hostname,domain=new URL('https://'+String(c.domain).replace(/^https?:\\/\\//,'').split('/')[0]).hostname;
+   const host=new URL(pub.url).hostname,domain=new URL('https://'+String(c.domain).replace('https://','').replace('http://','').split('/')[0]).hostname;
    if(host!==domain)return res.status(403).json({success:false,error:'Different website'});
    const locked=await pool.query("SELECT 1 FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' LIMIT 1",[c.id,pub.tracker_page_id]);
    if(locked.rows.length)return res.status(409).json({success:false,error:'Case Study is locked: no measurement input permitted'});
