@@ -49,3 +49,4 @@ jobs:
           node tests/tracker-case-study-freshness.test.cjs
           node tests/tracker-growth-cockpit.test.cjs
           node tests/tracker-growth-execution.test.cjs
+          node tests/tracker-growth-measurement.test.cjs
