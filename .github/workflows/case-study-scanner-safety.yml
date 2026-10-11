@@ -53,6 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           before="$(sha256sum src/index.js | cut -d' ' -f1)"
+          cp src/index.js /tmp/contentscale-scanner-first-pass.js
           node scripts/prepare-case-first-manual-candidate.cjs src/index.js
           node scripts/prepare-case-bulk-scan-queries.cjs src/index.js
           node scripts/prepare-case-study-brief-archive.cjs src/index.js
@@ -60,7 +61,11 @@ jobs:
           node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
           node scripts/prepare-case-study-scanner-no-ddl.cjs src/index.js
           node scripts/prepare-case-study-manual-route-no-ddl.cjs src/index.js
-          test "$before" = "$(sha256sum src/index.js | cut -d' ' -f1)"
+          if [ "$before" != "$(sha256sum src/index.js | cut -d' ' -f1)" ]; then
+            diff -u /tmp/contentscale-scanner-first-pass.js src/index.js | head -n 100 || true
+            echo "STOP: candidate transforms are not idempotent"
+            exit 1
+          fi
       - name: Test first manual scan, archived Brief, legacy recovery and bulk isolation
         run: |
           node --test \
