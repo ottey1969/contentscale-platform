@@ -29,6 +29,7 @@ function scenario(options={}){
 test('real endpoint allows first manual scan despite old Done, without scheduler',async()=>{
  const x=scenario();const r=await x.call();
  assert.equal(r.statusCode,200);assert.equal(r.payload.message,'Check started');
+ assert.equal(x.page._caseStudyFirstManualScan,true); // explicit route-to-scanner integrity contract
  assert.equal(x.page.check_frequency,'0');assert.equal(x.writes,0);assert.deepEqual(x.unexpected,[]);
 });
 test('real endpoint allows first scan without old Done too',async()=>{
