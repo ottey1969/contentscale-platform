@@ -1,0 +1,67 @@
+name: CEO to QuickScan to Audit20 legal-page E2E
+on:
+  push:
+    branches: [ceo-legal-page-selection-e2e]
+  workflow_dispatch:
+permissions:
+  contents: write
+  statuses: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare one canonical CEO/QuickScan source, not a second scanner
+        run: |
+          set -euo pipefail
+          test "$(wc -c < src/index.js)" -gt 6000000
+          node scripts/prepare-ceo-legal-page-e2e.cjs src/index.js
+          node --check src/index.js
+          git diff --check
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/index.js" || test -z "$changed"
+      - name: Confirm deterministic source transform
+        run: |
+          set -euo pipefail
+          before="$(sha256sum src/index.js | cut -d' ' -f1)"
+          node scripts/prepare-ceo-legal-page-e2e.cjs src/index.js
+          test "$before" = "$(sha256sum src/index.js | cut -d' ' -f1)"
+      - name: Run CEO, QuickScan and interest-only Audit20 E2E tests
+        run: |
+          node --test tests/ceo-quickscan-audit20-legal-e2e.test.cjs
+      - name: Persist exact tested src/index.js to isolated candidate branch only
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "ceo-legal-page-selection-e2e"
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/index.js" || test -z "$changed"
+          git diff --check
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-ceo-e2e-ci
+            git config user.email contentscale-ceo-e2e-ci@users.noreply.github.com
+            git commit -m 'CEO/QuickScan legal-page exclusion; isolated E2E passed [skip ci]'
+            git push origin HEAD:refs/heads/ceo-legal-page-selection-e2e
+          fi
+      - name: Record review-only result, no deployment
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_RESULT: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          if [ "$CI_RESULT" = success ]; then state=success; else state=failure; fi
+          printf -v data '{"state":"%s","context":"contentscale/ceo-quickscan-audit20-e2e","description":"Isolated funnel test: %s; no deploy","target_url":"https://github.com/%s/actions/runs/%s"}' "$state" "$CI_RESULT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+          curl --fail --silent --show-error --retry 3 -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            --data "$data" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" >/dev/null
