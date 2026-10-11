@@ -83,7 +83,8 @@ jobs:
         run: |
           node --test \
             tests/staging-case-first-scan-postgres.test.cjs \
-            tests/staging-case-study-start-cycle-postgres.test.cjs
+            tests/staging-case-study-start-cycle-postgres.test.cjs \
+            tests/staging-scanner-postgres-e2e.test.cjs
       - name: Verify isolated full-app boot without provider access
         env:
           NODE_ENV: test
