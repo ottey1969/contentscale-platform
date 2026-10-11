@@ -93,3 +93,5 @@ jobs:
           })().catch(e=>{console.error(e);process.exitCode=1});
           NODE
           echo 'PASS: isolated canonical full-app boot and Tracker schema'
+      - name: Writable Case Study baseline and replay on disposable PostgreSQL (rollback)
+        run: node tests/e2e-case-study-postgres.cjs
