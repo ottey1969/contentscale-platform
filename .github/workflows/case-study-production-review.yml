@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  statuses: write
 jobs:
   production-review:
     runs-on: ubuntu-latest
@@ -155,3 +156,14 @@ jobs:
           name: contentscale-v568-production-review-NOT-DEPLOY
           path: /tmp/case-prod-review.js
           retention-days: 7
+
+      - name: Publish production-review CI result on triggering commit
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEW_RESULT: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          if [ "$REVIEW_RESULT" = "success" ]; then state=success; else state=failure; fi
+          payload="$(printf '{"state":"%s","context":"contentscale/production-review","description":"Isolated source-only review: %s; no production deploy","target_url":"https://github.com/%s/actions/runs/%s"}' "$state" "$REVIEW_RESULT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          curl --fail --silent --show-error --retry 3 -X POST             -H "Authorization: Bearer $GH_TOKEN"             -H "Accept: application/vnd.github+json"             -H "X-GitHub-Api-Version: 2022-11-28"             -H "Content-Type: application/json"             --data "$payload"             "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" >/dev/null
