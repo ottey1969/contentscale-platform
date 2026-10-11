@@ -12,14 +12,20 @@ const pages=[
 ];
 const queries=[
  {page_id:1,query:'content at scale',impressions:4667,clicks:1159,evidence_scope:'page_verified',imported_at:'2026-10-11T10:00:00Z'},
- {page_id:2,query:'google penalty recovery services',impressions:400,clicks:0,evidence_scope:'page_verified',imported_at:'2026-10-10T10:00:00Z'},
+ {page_id:2,query:'google penalty recovery services',position:23.5,impressions:400,clicks:0,evidence_scope:'page_verified',imported_at:'2026-10-10T10:00:00Z'},
  {page_id:2,query:'google penalty recovery services',impressions:999,clicks:99,evidence_scope:'legacy_unverified',imported_at:'2026-10-11T11:00:00Z'},
- {page_id:3,query:'content freshness seo',impressions:200,clicks:0,evidence_scope:'page_verified',imported_at:'2026-10-10T10:00:00Z'},
- {page_id:2,query:'google penalty recovery services',impressions:401,clicks:1,evidence_scope:'page_verified',imported_at:'2026-10-11T11:00:00Z'},
+ {page_id:3,query:'content freshness seo',position:11.7,impressions:200,clicks:0,evidence_scope:'page_verified',imported_at:'2026-10-10T10:00:00Z'},
+ {page_id:2,query:'google penalty recovery services',position:23.5,impressions:401,clicks:1,evidence_scope:'page_verified',imported_at:'2026-10-11T11:00:00Z'},
  {page_id:4,query:'private',impressions:99999,clicks:5,evidence_scope:'page_verified',imported_at:'2026-10-11T11:00:00Z'}
 ];
 const growth=computeGrowth(pages,queries,'contentscale.site',now);
 assert.equal(growth.pages.length,3);
+assert.equal(growth.query_opportunities.length,2);
+assert.equal(growth.query_opportunities[0].query,'google penalty recovery services');
+assert.equal(growth.query_opportunities[0].type,'RANKING_AND_CONTENT');
+assert.ok(growth.query_opportunities.every(x=>!x.query.includes('content at scale')));
+assert.ok(growth.query_opportunities.every(x=>!x.url.includes('app.contentscale.site')));
+
 assert.equal(growth.non_brand.impressions,601);
 assert.equal(growth.non_brand.clicks,1);
 assert.equal(growth.brand_or_ambiguous.clicks,1159);
@@ -46,6 +52,8 @@ registerGrowthCockpit({get(path,...handlers){routes[path]=handlers}},{
  const htmlReq={params:{token:'synthetic'}};
  await pageHandlers[0](htmlReq,htmlRes,()=>pageHandlers[1](htmlReq,htmlRes));
  assert.match(htmlRes.html,/Growth Cockpit/);
+ assert.match(htmlRes.html,/Top click opportunities/);
+ assert.match(htmlRes.html,/google penalty recovery services/);
  assert.match(htmlRes.html,/Case Study locked/);
  assert.doesNotMatch(htmlRes.html,/private/);
  console.log('PASS Growth Cockpit actual handlers, domain isolation, branded intent, dedupe and case history');
