@@ -40,6 +40,7 @@ test('Audit20 excludes empty product, privacy and unavailable pages without padd
  assert(urls.some(u=>u==='https://fixture.test/'));
  assert(!urls.some(u=>u.includes('blank')||u.includes('privacy')||u.includes('unavailable')));
  assert.equal(r.selected_count,2);
+ assert.equal(r.candidates.length,2,'unverified candidates must not be promoted as eligible');
  assert(r.excluded_content.some(x=>x.reason==='thin_or_empty'));
  assert(r.excluded_content.some(x=>x.reason==='html_unavailable'));
 });
