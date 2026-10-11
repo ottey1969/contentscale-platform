@@ -20553,6 +20553,7 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
 
   // Crawl fallback/augmentation. Homepage navigation is the first strong
   // structural signal; then verified same-domain internal links are followed.
+  const qualityCache=new Map();
   const queue=[origin+'/']; const seen=new Set(); let fetched=0, navigationUrls=0, internalUrls=0;
   while(queue.length&&fetched<35&&candidates.size<120){
     const current=queue.shift(),key=current.replace(/\/$/,'');
@@ -20560,6 +20561,7 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
     const got=await _audit20FetchHtmlInternal(req,current);
     if(!got.ok||!got.html)continue;
     fetched++;
+    qualityCache.set(key,got.html);
     const links=_audit20ExtractLinks(got.html,current);
     for(const x of links){
       add(x.url,x.source,x.anchor_text);
@@ -20571,7 +20573,20 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
 
   const all=[...candidates.values()].sort((a,b)=>b.priority-a.priority||a.url.localeCompare(b.url));
   const eligible=all.filter(x=>!_audit20LooksUtility(x.url));
-  const selected=eligible.slice(0,Math.max(1,Math.min(Number(maxPages)||20,20)));
+  const selected=[];
+  const excludedContent=[];
+  const {checkPageContent}=require('./prospect/page-quality.cjs');
+  const target=Math.max(1,Math.min(Number(maxPages)||20,20));
+  for(const item of eligible){
+    if(selected.length>=target)break;
+    const key=item.url.replace(/\/$/,'');
+    const cached=qualityCache.get(key);
+    const page=cached?{ok:true,html:cached}:await _audit20FetchHtmlInternal(req,item.url);
+    if(!page.ok||!page.html){excludedContent.push({url:item.url,reason:'html_unavailable'});continue;}
+    const quality=checkPageContent(page.html,item.type);
+    if(!quality.eligible){excludedContent.push({url:item.url,reason:quality.reason});continue;}
+    selected.push(item);
+  }
   return {
     success:true,
     domain:new URL(origin).hostname,
@@ -20579,7 +20594,8 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
     sitemap:{found:sitemapFound,url:sitemapUrl||null,urls_discovered:sitemapUrls},
     crawl:{pages_fetched:fetched,navigation_links_seen:navigationUrls,internal_links_seen:internalUrls},
     candidates_discovered:all.length,
-    eligible_pages:eligible.length,
+    eligible_pages:selected.length,
+    excluded_content:excludedContent.slice(0,60),
     selected_count:selected.length,
     target_max:20,
     incomplete:selected.length<20,
@@ -20587,7 +20603,7 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
       ?`Only ${selected.length} suitable verified page(s) were discovered. ContentScale will not invent URLs to reach 20.`
       :'20 suitable pages selected for audit.',
     selected,
-    candidates:eligible.slice(0,60)
+    candidates:selected.slice(0,60)
   };
 }
 
@@ -20671,8 +20687,8 @@ app.post('/api/prospect-quick-scan/:token/gsc-evidence',async(req,res)=>{
     _pqsSendLocalized(row,'gsc_connected','').catch(()=>{});return res.json({success:true,gsc_status:'connected',backup_saved:true});
   }catch(e){return res.status(500).json({success:false,error:e.message||'Could not save GSC evidence'});}
 });
-app.post('/api/prospect-quick-scan/:token/tracker-interest',async(req,res)=>{try{const token=String(req.params.token||'');const q=await pool.query(`UPDATE prospect_quick_scans SET tracker_interested=TRUE,tracker_interested_at=COALESCE(tracker_interested_at,NOW()),follow_up_status='tracker_interested',updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL RETURNING *`,[token]);if(!q.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});_pqsNotifyOwner(q.rows[0],'tracker_interest').catch(()=>{});return res.json({success:true,status:'tracker_interested',message:'Interest received. ContentScale can now see that you are interested in the AI Citations Tracker.'});}catch(e){return res.status(500).json({success:false,error:e.message})}});
-app.post('/api/prospect-quick-scan/admin/:token/audit20-ready',requireAdmin,async(req,res)=>{try{const token=String(req.params.token||''),url=String((req.body||{}).report_url||'').trim();if(!/^https:\/\//i.test(url))return res.status(400).json({success:false,error:'Valid HTTPS report URL required'});const q=await pool.query(`UPDATE prospect_quick_scans SET audit20_status='ready',audit20_ready_at=NOW(),audit20_report_url=$1,updated_at=NOW() WHERE token=$2 AND revoked_at IS NULL RETURNING *`,[url,token]);if(!q.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});const mail=await _pqsSendLocalized(q.rows[0],'audit_ready',url);if(mail.sent)await pool.query(`UPDATE prospect_quick_scans SET audit20_ready_email_sent_at=NOW() WHERE token=$1`,[token]);return res.json({success:true,email_sent:mail.sent,report_url:url});}catch(e){return res.status(500).json({success:false,error:e.message})}});
+app.post('/api/prospect-quick-scan/:token/tracker-interest',async(req,res)=>{try{const token=String(req.params.token||'');const q=await pool.query(`UPDATE prospect_quick_scans SET tracker_interested=TRUE,tracker_interested_at=COALESCE(tracker_interested_at,NOW()),follow_up_status='tracker_interested',updated_at=NOW() WHERE token=$1 AND revoked_at IS NULL AND tracker_interested IS DISTINCT FROM TRUE RETURNING *`,[token]);if(!q.rows.length){const existing=await pool.query('SELECT tracker_interested FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1',[token]);if(!existing.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});return res.json({success:true,status:'tracker_interested',already_interested:true});}_pqsNotifyOwner(q.rows[0],'tracker_interest').catch(()=>{});return res.json({success:true,status:'tracker_interested',message:'Interest received. ContentScale can now see that you are interested in the AI Citations Tracker.'});}catch(e){return res.status(500).json({success:false,error:e.message})}});
+app.post('/api/prospect-quick-scan/admin/:token/audit20-ready',requireAdmin,async(req,res)=>{try{const token=String(req.params.token||''),url=String((req.body||{}).report_url||'').trim();if(!/^https:\/\//i.test(url))return res.status(400).json({success:false,error:'Valid HTTPS report URL required'});const q=await pool.query(`UPDATE prospect_quick_scans SET audit20_status='ready',audit20_ready_at=NOW(),audit20_report_url=$1,updated_at=NOW() WHERE token=$2 AND revoked_at IS NULL AND audit20_interested=TRUE AND audit20_ready_at IS NULL RETURNING *`,[url,token]);if(!q.rows.length){const existing=await pool.query(`SELECT audit20_interested,audit20_ready_at,audit20_report_url FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1`,[token]);if(!existing.rows.length)return res.status(404).json({success:false,error:'Prospect not found'});const x=existing.rows[0];if(!x.audit20_interested)return res.status(409).json({success:false,error:'Audit 20 requires recorded prospect interest'});if(x.audit20_ready_at)return res.json({success:true,already_ready:true,email_sent:false,report_url:x.audit20_report_url});return res.status(409).json({success:false,error:'Audit 20 not ready for this transition'});}const mail=await _pqsSendLocalized(q.rows[0],'audit_ready',url);if(mail.sent)await pool.query(`UPDATE prospect_quick_scans SET audit20_ready_email_sent_at=NOW() WHERE token=$1`,[token]);return res.json({success:true,email_sent:mail.sent,report_url:url});}catch(e){return res.status(500).json({success:false,error:e.message})}});
 
 // PROSPECT CTA — explicit interest in the 20-Page Audit.
 // This records interest only. It NEVER starts the audit automatically.
@@ -20687,10 +20703,15 @@ app.post('/api/prospect-quick-scan/:token/audit20-interest',async(req,res)=>{
     if(!q.rows.length)return res.status(404).json({success:false,error:'Quick Scan not found'});
     const row=q.rows[0];
     if(!row.scan_completed_at&&!['completed','complete','scan_ready'].includes(String(row.status||'')))return res.status(409).json({success:false,error:'Complete the Quick Scan first'});
-    await pool.query(`UPDATE prospect_quick_scans
+    const interestWrite=await pool.query(`UPDATE prospect_quick_scans
       SET audit20_interested=TRUE,audit20_interested_at=COALESCE(audit20_interested_at,NOW()),
           audit20_interest_note=$1,follow_up_status='audit20_interested',updated_at=NOW()
-      WHERE token=$2`,[note,token]);
+      WHERE token=$2 AND revoked_at IS NULL AND audit20_interested IS DISTINCT FROM TRUE RETURNING token`,[note,token]);
+    if(!interestWrite.rows.length){
+      const previous=await pool.query('SELECT audit20_interested FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1',[token]);
+      if(!previous.rows.length)return res.status(404).json({success:false,error:'Quick Scan not found'});
+      return res.json({success:true,status:'audit20_interested',already_interested:true,email_sent:false,message:'Interest already recorded. The 20-Page Audit has not been started automatically.'});
+    }
     let emailSent=false;
     try{
       const full=await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 LIMIT 1`,[token]),prospect=full.rows[0]||{};

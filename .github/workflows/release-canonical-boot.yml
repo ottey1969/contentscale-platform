@@ -1,0 +1,102 @@
+name: Canonical production-base isolated boot (NO DEPLOY)
+on:
+  push:
+    branches: [release-20261011-canonical-funnel-safe]
+  pull_request:
+    paths:
+      - 'src/index.js'
+      - 'tests/fixtures/staging-boot-schema.sql'
+      - 'tests/staging-boot-no-egress.cjs'
+      - '.github/workflows/release-canonical-boot.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  disposable-app-boot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U test -d testdb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      NODE_ENV: test
+      CI: 'true'
+      CS_DEPLOYMENT_TIER: production
+      ENABLE_TRACKER_SCHEDULER: '0'
+      ENABLE_BULK_WORKER: '0'
+      APP_URL: http://127.0.0.1:18771
+      DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+      PORT: '18771'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require test-only database and install dependencies without scripts
+        run: |
+          set -euo pipefail
+          test "$CI" = true
+          test "$DATABASE_URL" = 'postgres://test:test@127.0.0.1:5432/testdb'
+          npm install --ignore-scripts --no-package-lock --no-audit --no-fund
+      - name: Initialize isolated synthetic schema only
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs'),{Client}=require('pg');
+          (async()=>{
+            if(process.env.CI!=='true'||process.env.DATABASE_URL!=='postgres://test:test@127.0.0.1:5432/testdb')
+              throw Error('Refusing schema fixture on non-disposable PostgreSQL');
+            const db=new Client({connectionString:process.env.DATABASE_URL});
+            await db.connect();
+            try { await db.query(fs.readFileSync('tests/fixtures/staging-boot-schema.sql','utf8')); }
+            finally { await db.end(); }
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
+      - name: Apply guarded sales intent replay fix for isolated boot
+        run: |
+          node scripts/patch-audit20-interest-idempotency.cjs src/index.js
+          node scripts/patch-audit20-interest-idempotency.cjs src/index.js
+          git diff --check
+      - name: Boot full canonical application on localhost with external network denied
+        run: |
+          set -euo pipefail
+          node --check src/index.js
+          node --require ./tests/staging-boot-no-egress.cjs index.cjs >/tmp/canonical-boot.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          reached=0
+          for i in $(seq 1 40); do
+            if curl --silent --max-time 2 --fail http://127.0.0.1:18771/api/build-info >/tmp/canonical-build.json 2>/dev/null; then reached=1; break; fi
+            if ! kill -0 "$app_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$reached" -ne 1 ]; then
+            tail -n 80 /tmp/canonical-boot.log
+            echo 'FAIL: main-based full application did not start against disposable DB'
+            exit 1
+          fi
+          node - <<'NODE'
+          const fs=require('fs'),{Client}=require('pg');
+          (async()=>{
+            const build=JSON.parse(fs.readFileSync('/tmp/canonical-build.json','utf8'));
+            if(!build||typeof build!=='object')throw Error('Build info invalid');
+            const c=new Client({connectionString:process.env.DATABASE_URL});await c.connect();
+            try{
+              const q=await c.query("SELECT to_regclass('public.tracker_pages') AS pages,to_regclass('public.tracker_case_studies') AS cases");
+              if(!q.rows[0].pages||!q.rows[0].cases)throw Error('Canonical Tracker schema missing');
+            }finally{await c.end()}
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          NODE
+          echo 'PASS: isolated canonical full-app boot and Tracker schema'
+      - name: Writable Case Study baseline and replay on disposable PostgreSQL (rollback)
+        run: node tests/e2e-case-study-postgres.cjs

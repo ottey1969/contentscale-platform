@@ -1,0 +1,71 @@
+name: Canonical prospect funnel checks (main-based review)
+on:
+  push:
+    branches: [release-20261011-canonical-funnel-safe]
+  pull_request:
+    paths:
+      - 'src/index.js'
+      - 'src/prospect/**'
+      - 'tests/e2e-*.test.cjs'
+      - '.github/workflows/release-canonical-funnel.yml'
+permissions:
+  contents: write
+jobs:
+  canonical-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply guarded Audit20 patch to canonical application
+        run: |
+          node scripts/patch-audit20-content-verification.cjs src/index.js
+          node scripts/patch-audit20-content-verification.cjs src/index.js
+          node scripts/patch-audit20-ready-state.cjs src/index.js
+          node scripts/patch-audit20-ready-state.cjs src/index.js
+          node scripts/patch-tracker-interest-idempotency.cjs src/index.js
+          node scripts/patch-tracker-interest-idempotency.cjs src/index.js
+          node scripts/patch-audit20-interest-idempotency.cjs src/index.js
+          node scripts/patch-audit20-interest-idempotency.cjs src/index.js
+          git diff --check
+      - name: Syntax and entrypoint
+        run: |
+          set -euo pipefail
+          node --check index.cjs
+          node --check src/index.js
+          node --check src/prospect/page-quality.cjs
+          test "$(grep -F -c "require('./src/index.js')" index.cjs)" -eq 1
+      - name: Commercial page quality
+        run: node tests/e2e-page-quality.test.cjs
+      - name: Existing CEO QuickScan Audit20 handler integration regressions
+        run: node --test tests/ceo-quickscan-audit20-legal-e2e.test.cjs tests/ceo-preflight-empty-page-e2e.test.cjs
+      - name: First Case Study manual scan and replay protection
+        run: node --test tests/e2e-case-study-first-manual-check.test.cjs
+      - name: Case Study start route fails closed against synthetic Tracker state
+        run: node --test tests/e2e-case-study-start-guards.test.cjs
+      - name: Tracker-interest idempotency against canonical handler
+        run: node --test tests/e2e-tracker-interest.test.cjs
+      - name: Canonical funnel route contracts
+        run: node tests/e2e-funnel-contract.test.cjs
+      - name: Run actual canonical Audit20 function against synthetic pages
+        run: node --test tests/e2e-audit20-content-selection.test.cjs
+      - name: Audit20 ready requires interest and idempotency
+        run: node --test tests/e2e-audit20-ready.test.cjs
+      - name: Persist only the exactly tested canonical source on review branch
+        if: ${{ success() && github.event_name == 'push' }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "release-20261011-canonical-funnel-safe"
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-review-ci
+            git config user.email contentscale-review-ci@users.noreply.github.com
+            git commit -m 'review only: apply verified Audit20 content quality gate [skip ci]'
+            git push origin HEAD:refs/heads/release-20261011-canonical-funnel-safe
+          fi
+      - name: Enforce full E2E release hold
+        run: |
+          echo 'Contract-only checks are NOT the writable five-stage end-to-end acceptance.'
+          echo 'Do not merge/deploy until isolated customer lifecycle test is green.'
