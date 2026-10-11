@@ -8942,8 +8942,10 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
              WHERE s.page_id=$1 ORDER BY s.checked_at DESC LIMIT 1`,
             [pageId]
           );
-          if (snap2.rows.length) {
-            const s = snap2.rows[0];
+          const s=snap2.rows&&snap2.rows[0];
+          const _started=Date.parse(st&&st.startedAt||'')||0;
+          const _checked=Date.parse(s&&s.checked_at||'')||0;
+          if (s&&_started&&_checked>=_started-2000) {
             _sseBroadcast({
               type: 'check_done',
               pageId,
@@ -8958,6 +8960,10 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
               score: s.score,
               ts: new Date().toISOString()
             });
+          } else {
+            const _noSnapshotMessage='Scan finished without a new snapshot. No new result was verified.';
+            if(st){st.failed=true;st.error_code='NO_NEW_SNAPSHOT';st.error=_noSnapshotMessage;}
+            _sseBroadcast({type:'check_error',pageId,domain,url:page.url,error:_noSnapshotMessage,ts:new Date().toISOString()});
           }
         } catch(e2) { console.warn('[client-check-done]', e2.message); }
       }
