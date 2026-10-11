@@ -35,6 +35,8 @@ jobs:
         run: node tests/e2e-page-quality.test.cjs
       - name: Canonical funnel route contracts
         run: node tests/e2e-funnel-contract.test.cjs
+      - name: Run actual canonical Audit20 function against synthetic pages
+        run: node --test tests/e2e-audit20-content-selection.test.cjs
       - name: Persist only the exactly tested canonical source on review branch
         if: ${{ success() && github.event_name == 'push' }}
         run: |
