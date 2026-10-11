@@ -39,6 +39,8 @@ jobs:
         run: node tests/e2e-page-quality.test.cjs
       - name: Existing CEO QuickScan Audit20 handler integration regressions
         run: node --test tests/ceo-quickscan-audit20-legal-e2e.test.cjs tests/ceo-preflight-empty-page-e2e.test.cjs
+      - name: Inspect canonical Case Study route markers (diagnostic)
+        run: node scripts/inspect-case-study-routes.cjs
       - name: Tracker-interest idempotency against canonical handler
         run: node --test tests/e2e-tracker-interest.test.cjs
       - name: Canonical funnel route contracts
