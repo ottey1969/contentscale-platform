@@ -175,7 +175,7 @@ test('Audit20 interest is independent: requires completed Quick Scan, never star
  const pool={async query(sql){
   if(/^SELECT token,status,scan_completed_at/.test(sql))return {rows:[{token:'fixture',status:state,scan_completed_at:state==='completed'?'now':null}]};
   if(/^SELECT \*/.test(sql))return {rows:[{language:'en',contact_email_origin:'website_found'}]};
-  if(/UPDATE prospect_quick_scans/.test(sql)){updates++;return {rows:[]}};
+  if(/UPDATE prospect_quick_scans/.test(sql)){updates++;return {rows:[{token:'fixture'}]}};
   throw Error('Unexpected audit-interest SQL');
  }};
  const handler=registerRoute(interest,{pool,process:{env:{}},_ensureProspectQuickScanTable:async()=>true,_pqsLang3:()=> 'en',_pqsValidEmail:()=>false,_pqsNotifyOwner:async()=>{},_audit20Discover:()=>{audits++;throw Error('Audit20 must not start')}});
