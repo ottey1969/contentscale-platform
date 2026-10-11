@@ -36,7 +36,7 @@ jobs:
       - name: Canonical funnel route contracts
         run: node tests/e2e-funnel-contract.test.cjs
       - name: Persist only the exactly tested canonical source on review branch
-        if: success()
+        if: ${{ success() && github.event_name == 'push' }}
         run: |
           set -euo pipefail
           test "$GITHUB_REF_NAME" = "release-20261011-canonical-funnel-safe"
