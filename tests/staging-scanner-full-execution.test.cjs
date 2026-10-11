@@ -8,7 +8,7 @@ assert(a>0&&b>a&&b-a<350000,'Canonical scanner bounds changed: manual review nee
 const scanner=s.slice(a,b);
 const required=['tracker_snapshots.gsc_brief','tracker_snapshots.source_suggestions','tracker_snapshots.author_trust_score','tracker_snapshots.author_trust_findings','tracker_snapshots.discovered_sources','tracker_pages.brief_check_count','tracker_pages.brief_content','tracker_pages.brief_started_at'];
 const html='<html><body>'+('<p>Unique synthetic content for safe isolated manual scan. </p>'.repeat(25))+'</body></html>';
-function fixture(schemaComplete=true){
+function fixture(schemaComplete=true,keyword=''){
  const state={writes:[],reads:[],fetches:[],steps:[],mails:0,snapshots:[],intervals:0,nextScheduled:false};
  const pool={async query(text,params=[]){
   const sql=String(text).trim();
@@ -46,7 +46,7 @@ function fixture(schemaComplete=true){
  };
  vm.runInNewContext(scanner+'\nglobalThis.runScanner=runTrackerCheck;',ctx,{timeout:10000});
  const page={id:17,url:'https://fixtures.invalid/page',html_content:html,html_source:'manual',
-  check_frequency:'0',tracker_client_id:3,keyword:'',brief_content:null,gsc_impressions:123,gsc_clicks:5,gsc_position:14};
+  check_frequency:'0',tracker_client_id:3,keyword,brief_content:null,gsc_impressions:123,gsc_clicks:5,gsc_position:14};
  return {state,page,execute:()=>ctx.runScanner(page,'',{},false)};
 }
 test('missing schema fails before HTML fetch, DB write or email',async()=>{
@@ -65,6 +65,14 @@ test('complete canonical manual scanner saves one snapshot with no DDL, external
  assert(f.state.steps.some(x=>x[1]==='complete'&&x[2]==='done'),'Scan completion step missing');
  assert.equal(f.page.gsc_impressions,123);
  assert.equal(f.page.gsc_clicks,5);
+});
+test('keyword scan saves an observation safely with no external provider keys',async()=>{
+ const f=fixture(true,'consultor geo');
+ await f.execute();
+ assert.equal(f.state.snapshots.length,1);
+ assert.deepEqual(f.state.fetches,['https://fixtures.invalid/page']);
+ assert.equal(f.state.mails,0);
+ assert.equal(f.state.nextScheduled,false);
 });
 test('scanner has no inline schema migrations or Case Study schema mutation helper',()=>{
  assert.doesNotMatch(scanner,/\b(?:ALTER|CREATE|DROP|TRUNCATE)\s+TABLE\b/i);
