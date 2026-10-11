@@ -1,0 +1,176 @@
+name: Review Case Study v569 first live-HTML integrity, no production deploy
+on:
+  push:
+    branches: [case-study-scanner-safety-candidate]
+    paths: [.github/workflows/case-study-v569-production-review.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+  statuses: write
+jobs:
+  production-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test -d testdb"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify approved candidate and unchanged production base, offline export only
+        env:
+          BASE_MAIN: 83d0e06c27542def2ea0f31c2e91e6f4d0e6bdb1
+          VALIDATED_CANDIDATE: 88deb3f9cd9779ac030df18865e2e57b1ca9e393
+          SOURCE_BLOB: a2b370f009f6403a65ee577bee6221e6c0830ab7
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "case-study-scanner-safety-candidate"
+          git fetch origin main
+          git fetch origin "$VALIDATED_CANDIDATE"
+          test "$(git rev-parse origin/main)" = "$BASE_MAIN"
+          git show "$VALIDATED_CANDIDATE:src/index.js" > /tmp/case-staging-source.js
+          git show "$VALIDATED_CANDIDATE:scripts/prepare-case-study-production-artifact.cjs" > /tmp/case-production-export.cjs
+          test "$(git hash-object /tmp/case-staging-source.js)" = "$SOURCE_BLOB"
+          node /tmp/case-production-export.cjs /tmp/case-staging-source.js /tmp/case-prod-review.js
+          node - <<'NODE'
+          const fs=require('fs');
+          const p='/tmp/case-prod-review.js',s=fs.readFileSync(p,'utf8');
+          const from='CS-2026-10-10-STAGING-CANDIDATE-v568-FIRST-MANUAL-SCAN';
+          const to='CS-2026-10-11-PRODUCTION-REVIEW-v569-FIRST-MANUAL-SCAN';
+          const n=s.split(from).length-1;
+          if(n<2||n>8)throw Error('REVIEW BLOCKED: unexpected build-label references '+n);
+          fs.writeFileSync(p,s.replaceAll(from,to));
+          NODE
+          node --check /tmp/case-prod-review.js
+          git show "$VALIDATED_CANDIDATE:tests/staging-boot-no-egress.cjs" > /tmp/case-review-no-egress.cjs
+      - name: Exercise the exact main tree with only reviewed src/index.js replacement
+        env:
+          BASE_MAIN: 83d0e06c27542def2ea0f31c2e91e6f4d0e6bdb1
+          VALIDATED_CANDIDATE: 88deb3f9cd9779ac030df18865e2e57b1ca9e393
+        run: |
+          set -euo pipefail
+          git switch --detach "$BASE_MAIN"
+          cp /tmp/case-prod-review.js src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js"
+          node - <<'NODE'
+          const s=require('fs').readFileSync('src/index.js','utf8');
+          if(s.includes("require('./staging/safety-gate.cjs')"))throw Error('Production review still imports staging safety gate');
+          if(!s.startsWith("if (process.env.CS_DEPLOYMENT_TIER === 'staging') throw"))throw Error('Production review not protected from staging misuse');
+          if(!s.includes('PRODUCTION-REVIEW-v569')||!s.includes('NO_NEW_SNAPSHOT')||!s.includes('CASE_FIRST_LIVE_NOT_VERIFIED:')||!s.includes('LIVE_HTML_NOT_VERIFIED'))throw Error('Production review missing validated Case Study fixes');
+          NODE
+          for f in \
+            staging-case-study-canonical-endpoint.test.cjs \
+            staging-case-study-next-action.test.cjs \
+            staging-case-study-legacy-active-recovery.test.cjs \
+            staging-case-study-scan-failure-feedback.test.cjs \
+            staging-scanner-full-execution.test.cjs \
+            staging-case-bulk-scan-sql.test.cjs \
+            staging-case-study-archive-fail-closed.test.cjs \
+            staging-case-first-scan-postgres.test.cjs \
+            staging-case-study-start-cycle-postgres.test.cjs \
+            staging-scanner-postgres-e2e.test.cjs \
+            staging-case-study-spanish-locale.test.cjs; do
+            git show "$VALIDATED_CANDIDATE:tests/$f" > "tests/$f"
+          done
+          node --test \
+            tests/staging-case-study-canonical-endpoint.test.cjs \
+            tests/staging-case-study-next-action.test.cjs \
+            tests/staging-case-study-legacy-active-recovery.test.cjs \
+            tests/staging-case-study-scan-failure-feedback.test.cjs \
+            tests/staging-scanner-full-execution.test.cjs \
+            tests/staging-case-bulk-scan-sql.test.cjs \
+            tests/staging-case-study-archive-fail-closed.test.cjs \
+            tests/staging-case-study-spanish-locale.test.cjs
+      - name: Run production review SQL paths against disposable PostgreSQL
+        env:
+          CI: 'true'
+          TRACKER_TEST_DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          TRACKER_PG_MODULE_PATH: pg
+        run: |
+          set -euo pipefail
+          npm install --ignore-scripts --no-package-lock --no-audit --no-fund
+          node --test \
+            tests/staging-case-first-scan-postgres.test.cjs \
+            tests/staging-case-study-start-cycle-postgres.test.cjs \
+            tests/staging-scanner-postgres-e2e.test.cjs
+      - name: Boot production review on disposable localhost only, external egress denied
+        env:
+          NODE_ENV: test
+          CS_DEPLOYMENT_TIER: production
+          ENABLE_TRACKER_SCHEDULER: '0'
+          ENABLE_BULK_WORKER: '0'
+          APP_URL: http://127.0.0.1:18766
+          DATABASE_URL: postgres://test:test@127.0.0.1:5432/testdb
+          PORT: '18766'
+        run: |
+          set -euo pipefail
+          node --require /tmp/case-review-no-egress.cjs src/index.js >/tmp/case-prod-review-boot.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid 2>/dev/null || true' EXIT
+          reached=0
+          for i in $(seq 1 40); do
+            if curl --silent --max-time 2 --fail http://127.0.0.1:18766/api/build-info >/tmp/case-prod-review-build.json 2>/dev/null; then reached=1; break; fi
+            if ! kill -0 $app_pid 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [ "$reached" -ne 1 ]; then
+            tail -n 65 /tmp/case-prod-review-boot.log
+            echo 'REVIEW BLOCKED: isolated production-mode boot did not pass'
+            exit 1
+          fi
+          node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/case-prod-review-build.json'));if(!JSON.stringify(x).includes('PRODUCTION-REVIEW-v569'))process.exit(1)"
+          echo 'PRODUCTION REVIEW APP BOOT VERIFIED ONLY IN DISPOSABLE CI'
+      - name: Commit source-only review to isolated branch; never deploy main or Railway
+        env:
+          BASE_MAIN: 83d0e06c27542def2ea0f31c2e91e6f4d0e6bdb1
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse origin/main)" = "$BASE_MAIN"
+          git fetch origin case-study-v569-production-review
+          review_head="$(git rev-parse origin/case-study-v569-production-review)"
+          test "$review_head" = "83d0e06c27542def2ea0f31c2e91e6f4d0e6bdb1"
+          test "$(git diff --name-only)" = "src/index.js"
+          git restore -- src/index.js
+          git switch -C case-study-v569-production-review "$review_head"
+          cp /tmp/case-prod-review.js src/index.js
+          test "$(git diff --name-only)" = "src/index.js"
+          git add -- src/index.js
+          test "$(git diff --cached --name-only)" = "src/index.js"
+          git config user.name contentscale-production-review-ci
+          git config user.email contentscale-production-review-ci@users.noreply.github.com
+          git commit -m "REVIEW ONLY: v569 Case Study first scan requires reliable live HTML; isolated tests"
+          git push origin HEAD:refs/heads/case-study-v569-production-review
+      - name: Archive standalone production review source, never deploy
+        uses: actions/upload-artifact@v4
+        with:
+          name: contentscale-v569-live-html-review-NOT-DEPLOY
+          path: /tmp/case-prod-review.js
+          retention-days: 7
+
+      - name: Publish production-review CI result on triggering commit
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REVIEW_RESULT: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          if [ "$REVIEW_RESULT" = "success" ]; then state=success; else state=failure; fi
+          payload="$(printf '{"state":"%s","context":"contentscale/v569-production-review","description":"Isolated source-only review: %s; no production deploy","target_url":"https://github.com/%s/actions/runs/%s"}' "$state" "$REVIEW_RESULT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          curl --fail --silent --show-error --retry 3 -X POST             -H "Authorization: Bearer $GH_TOKEN"             -H "Accept: application/vnd.github+json"             -H "X-GitHub-Api-Version: 2022-11-28"             -H "Content-Type: application/json"             --data "$payload"             "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" >/dev/null
