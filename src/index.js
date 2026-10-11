@@ -20434,10 +20434,25 @@ function _audit20SameHost(a,b){
     return clean(A.hostname)===clean(B.hostname);
   }catch(e){return false}
 }
+// Canonical utility-page exclusion for CEO page A, Quick Scan page B and Audit20 discovery.
+// Classification only: never performs scans, emails, database writes or full audits.
+function _ceoUtilityPage(rawUrl,title='',h1=''){
+  try{
+    const u=new URL(rawUrl);
+    const segments=decodeURIComponent(u.pathname||'/').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').split('/').filter(Boolean).map(v=>v.replace(/[_\s]+/g,'-'));
+    const excluded=/^(?:privacy|privacy-policy|privacy-statement|privacyverklaring|privacybeleid|privacypolicy|privacidad|politica-de-privacidad|datenschutz|datenschutzerklaerung|cookie|cookies|cookie-policy|cookiebeleid|cookieverklaring|politica-de-cookies|disclaimer|disclaimers|disclaimer-of-liability|terms|terms-of-service|terms-of-use|terms-and-conditions|terms-conditions|tos|voorwaarden|algemene-voorwaarden|gebruiksvoorwaarden|condiciones-de-uso|condiciones-generales|aviso-legal|legal-notice|legal-information|impressum|mentions-legales|gdpr|avg|accessibility-statement|toegankelijkheidsverklaring|refund-policy|return-policy|returns-policy|shipping-policy|thank-you|thankyou|bedankt|gracias|login|log-in|signin|sign-in|signup|sign-up|register|registration|checkout|cart|basket|account|my-account|unsubscribe|afmelden|404|not-found|search|feed|sitemap)$/i;
+    if(segments.some(v=>excluded.test(v)))return true;
+    if(segments.some(v=>/^(?:disclaimer|privacy-policy|cookie-policy|terms-and-conditions|algemene-voorwaarden|aviso-legal|legal-notice|impressum|datenschutz)(?:-(?:20\d\d|nl|en|es|de|fr|updated|update|page|v\d+))+$/.test(v)))return true;
+    const normalize=v=>String(v||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const exact=/^(?:disclaimer|privacy policy|privacy statement|privacyverklaring|privacybeleid|cookie policy|cookiebeleid|terms and conditions|terms of service|terms of use|algemene voorwaarden|gebruiksvoorwaarden|aviso legal|politica de privacidad|politica de cookies|datenschutzerklarung|legal notice|accessibility statement)(?:\s*[-:|–—]\s*.{1,90})?$/i;
+    if([title,h1].some(v=>exact.test(normalize(v))))return true;
+    return false;
+  }catch(e){return true}
+}
 function _audit20LooksUtility(url){
   try{
     const p=new URL(url).pathname.toLowerCase();
-    return /\/(privacy|privacy-policy|terms|terms-and-conditions|cookie|cookies|login|signin|signup|cart|checkout|account|wp-admin)(\/|$)/.test(p)
+    return _ceoUtilityPage(url)||/\/(privacy|privacy-policy|terms|terms-and-conditions|cookie|cookies|login|signin|signup|cart|checkout|account|wp-admin)(\/|$)/.test(p)
       || /\.(pdf|jpg|jpeg|png|gif|webp|svg|xml|zip|docx?|xlsx?|pptx?)$/i.test(p);
   }catch(e){return true}
 }
@@ -24227,6 +24242,11 @@ app.post('/api/ceo-report/start',async(req,res)=>{
       selection=await _pqsSelectBestScanPage(url,req);
       if(selection&&selection.selected_url)selected=selection.selected_url;
     }catch(_e){console.warn('[ceo-report] smart page selection:',_e.message)}
+    if(!selection||!selection.selected_url||!_pqsSelectorUrlEligible(selected)||!_audit20SameHost(selected,url)){
+      const unavailable=selection||{mode:'page_selection_failed',selected_url:null,reason:'No verified eligible business page could be selected.'};
+      await pool.query(`UPDATE prospect_quick_scans SET ceo_report_page_url=NULL,page_selection=$1::jsonb,updated_at=NOW() WHERE token=$2`,[JSON.stringify(unavailable),token]);
+      return res.status(422).json({success:false,code:'NO_ELIGIBLE_CEO_PAGE',error:'No suitable business page could be verified. Privacy, disclaimer and utility pages will not be scanned.',manual_review_required:true});
+    }
     await pool.query(`UPDATE prospect_quick_scans SET ceo_report_page_url=$1,page_selection=$2::jsonb,updated_at=NOW() WHERE token=$3`,
       [selected,JSON.stringify(selection||{mode:'auto',selected_url:selected,entry_mode:entry}),token]);
 
@@ -24579,6 +24599,7 @@ function _pqsSelectorTitle(html){const m=String(html||'').match(/<title\b[^>]*>(
 function _pqsSelectorUrlEligible(rawUrl){
   try{
     const u=new URL(rawUrl),p=String(u.pathname||'/').toLowerCase();
+    if(_ceoUtilityPage(u.href))return false;
     // Real HTML content pages only. Sitemap/media/archive/utility URLs may be discovered,
     // but they can never become the CEO opportunity page.
     if(/\.(?:jpe?g|png|gif|webp|svg|avif|ico|bmp|tiff?|pdf|docx?|xlsx?|pptx?|zip|rar|7z|xml|txt|csv|json)(?:$|\/)/i.test(p))return false;
@@ -24602,7 +24623,7 @@ function _pqsSelectorLooksArchive(page){
 function _pqsSelectorScore(page,homeUrl){
   const html=String(page&&page.html||''),text=_pqsSelectorText(html),words=text?text.split(/\s+/).filter(Boolean).length:0,title=_pqsSelectorTitle(html),h1=_pqsSelectorMeta(html,'h1');let u;try{u=new URL(page.url)}catch(e){return null}let home;try{home=new URL(homeUrl)}catch(e){home=u}
   const path=(u.pathname||'/').toLowerCase(),hay=(path+' '+title+' '+h1).toLowerCase();
-  if(!_pqsSelectorUrlEligible(u.href)||_pqsSelectorLooksArchive(page))return null;
+  if(!_audit20SameHost(u.href,home.href)||!_pqsSelectorUrlEligible(u.href)||_ceoUtilityPage(u.href,title,h1)||_pqsSelectorLooksArchive(page))return null;
   if(/(?:privacy|cookie|terms|legal|disclaimer|login|signin|signup|cart|checkout|account)(?:\/|$)/i.test(path))return null;
   const informational=/(?:\/blog(?:\/|$)|\/news(?:\/|$)|\/article(?:\/|$)|\/guides?(?:\/|$)|\/resources?(?:\/|$))/i.test(path)||/\b(blog|guide|article|news)\b/i.test(hay);
   let commercial=0;if(/(?:service|services|solution|solutions|product|products|property|properties|development|developments|project|projects|software|platform|consult|repair|roof|clinic|treatment|course|pricing|industry|industries|location|locations)/i.test(hay))commercial+=35;if(/(?:about|company|team|contact|career)/i.test(hay))commercial-=15;if(informational)commercial-=35;
@@ -24713,7 +24734,7 @@ async function _pqsSelectBestScanPage(rawUrl,req){
     selected:{url:selected.url,type:selected.type||'other',words:selected.words,score:selected.score,commercial_relevance:selected.commercial_relevance,thin_content_signal:!!selected.thin_content_signal,thin_signal:selected.thin_signal||0,opportunity_signals:selected.opportunity_signals||0,actionable_opportunity:selected.actionable_opportunity||0,reason:selected.reason||''},
     discovery:{urls_discovered:discovery&&discovery.candidates_discovered||rawCandidates.length,eligible_pages:discovery&&discovery.eligible_pages||rawCandidates.length,sitemap:discovery&&discovery.sitemap||null,crawl:discovery&&discovery.crawl||null,shortlisted:shortlist.length,prescreened:scores.length},
     candidates:debugCandidates
-  }:{selected_url:cleaned,mode:'auto_fallback',strategy:'multi_candidate_weak_commercial_prescreen',reason:'No meaningful first-party commercial page could be validated during pre-screening.',discovery:{urls_discovered:rawCandidates.length,shortlisted:shortlist.length,prescreened:scores.length},candidates:debugCandidates};
+  }:{selected_url:null,mode:'no_eligible_page',strategy:'multi_candidate_weak_commercial_prescreen',reason:'No verified business page was eligible. A legal or utility page is never a substitute for a CEO report.',discovery:{urls_discovered:rawCandidates.length,shortlisted:shortlist.length,prescreened:scores.length},candidates:debugCandidates};
 }
 function _pqsSelectablePage(rawUrl){
   const cleaned=_pqsCleanUrl(rawUrl);if(!cleaned)return null;
@@ -24735,6 +24756,7 @@ app.post('/api/prospect-quick-scan/:token/setup',_pqsPublicLimit,async(req,res)=
     if(!submittedPage)return res.status(400).json({success:false,error:'Enter a different page URL before starting the Quick Scan'});
     const page=_pqsSelectablePage(submittedPage);
     if(!page)return res.status(400).json({success:false,error:'Enter a valid public page URL'});
+    if(!_pqsSelectorUrlEligible(page))return res.status(400).json({success:false,code:'QUICKSCAN_UTILITY_PAGE',error:'Choose a real business page, not a disclaimer, privacy policy or other utility page.'});
     const norm=(v)=>{try{const u=new URL(v);return (u.protocol+'//'+u.hostname.toLowerCase()+u.pathname.replace(/\/+$/,'')+(u.search||'')).toLowerCase()}catch(e){return String(v||'').replace(/\/+$/,'').toLowerCase()}};
     const duplicateCeoScan=!!row.ceo_report_page_url&&norm(row.url)===norm(row.ceo_report_page_url);
     // A legacy/test scan that repeated Page A is not a valid Page B result. It
@@ -24761,6 +24783,7 @@ app.post('/api/prospect-quick-scan/:token/run',_pqsPublicLimit,async(req,res)=>{
     const q=await pool.query('SELECT * FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL',[req.params.token]);
     if(!q.rows.length)return res.status(404).json({success:false,error:'Not found'});
     row=q.rows[0];
+    if(!_pqsSelectorUrlEligible(row.url))return res.status(400).json({success:false,code:'QUICKSCAN_UTILITY_PAGE',error:'This is not a suitable business page for Quick Scan.'});
     if(row.ceo_report_page_url){
       const _normPqsUrl=(v)=>{try{const u=new URL(v);return (u.protocol+'//'+u.hostname.toLowerCase()+u.pathname.replace(/\/+$/,'')+(u.search||'')).toLowerCase()}catch(e){return String(v||'').replace(/\/+$/,'').toLowerCase()}};
       if(_normPqsUrl(row.url)===_normPqsUrl(row.ceo_report_page_url))return res.status(400).json({success:false,error:'Please choose a different important page. This page was already analyzed in your CEO Prospect Report.'});
