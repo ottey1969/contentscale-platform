@@ -66120,7 +66120,7 @@ MERGE RULES:
         // ── Email the brief to the client (previously briefs went ONLY to the live wall, never email) ──
         try {
           const _items = Array.isArray(brief2.items) ? brief2.items : [];
-          if ((_items.length && !snapshot._unchanged) || page._manual_requested) {
+          if (process.env.CS_DEPLOYMENT_TIER !== 'staging' && ((_items.length && !snapshot._unchanged) || page._manual_requested)) {
             const _esc = s => String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
             const _top = _items.slice(0, 3);
             const _gscCount = Array.isArray(brief2.gsc_brief) ? brief2.gsc_brief.length : 0;
