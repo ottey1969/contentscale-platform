@@ -3,6 +3,7 @@ const assert=require('node:assert/strict');
 const {computeGrowth,bucket,registerGrowthCockpit}=require('../src/tracker-growth-cockpit.cjs');
 const now=new Date('2026-10-11T12:00:00Z');
 assert.equal(bucket('content at scale','contentscale.site'),'brand_or_ambiguous');
+for(const q of ['contentatscale.ai','contentatscale ai detector','content scaling','scale content','sites at scale'])assert.equal(bucket(q,'contentscale.site'),'brand_or_ambiguous',q);
 assert.equal(bucket('AI citations tracker','contentscale.site'),'non_brand');
 const pages=[
  {id:1,url:'https://contentscale.site/',keyword:'content at scale',gsc_impressions:20847,gsc_clicks:2490,gsc_position:9.4,brief_content:{outstanding_actions:0},case_study_active:true},
@@ -22,6 +23,7 @@ const growth=computeGrowth(pages,queries,'contentscale.site',now);
 assert.equal(growth.pages.length,3);
 assert.equal(growth.query_opportunities.length,2);
 assert.equal(growth.query_opportunities[0].query,'google penalty recovery services');
+assert.equal(growth.query_opportunities[0].checklist.length,4);
 assert.equal(growth.query_opportunities[0].type,'RANKING_AND_CONTENT');
 assert.ok(growth.query_opportunities.every(x=>!x.query.includes('content at scale')));
 assert.ok(growth.query_opportunities.every(x=>!x.url.includes('app.contentscale.site')));
@@ -53,6 +55,7 @@ registerGrowthCockpit({get(path,...handlers){routes[path]=handlers}},{
  await pageHandlers[0](htmlReq,htmlRes,()=>pageHandlers[1](htmlReq,htmlRes));
  assert.match(htmlRes.html,/Growth Cockpit/);
  assert.match(htmlRes.html,/Top click opportunities/);
+ assert.match(htmlRes.html,/Action plan · 4 steps/);
  assert.match(htmlRes.html,/google penalty recovery services/);
  assert.match(htmlRes.html,/Case Study locked/);
  assert.doesNotMatch(htmlRes.html,/private/);
