@@ -25,6 +25,8 @@ jobs:
           node scripts/patch-audit20-content-verification.cjs src/index.js
           node scripts/patch-audit20-ready-state.cjs src/index.js
           node scripts/patch-audit20-ready-state.cjs src/index.js
+          node scripts/patch-tracker-interest-idempotency.cjs src/index.js
+          node scripts/patch-tracker-interest-idempotency.cjs src/index.js
           git diff --check
       - name: Syntax and entrypoint
         run: |
