@@ -9,7 +9,7 @@ on:
       - 'tests/e2e-*.test.cjs'
       - '.github/workflows/release-canonical-funnel.yml'
 permissions:
-  contents: read
+  contents: write
 jobs:
   canonical-contract:
     runs-on: ubuntu-latest
@@ -19,6 +19,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Apply guarded Audit20 patch to canonical application
+        run: |
+          node scripts/patch-audit20-content-verification.cjs src/index.js
+          node scripts/patch-audit20-content-verification.cjs src/index.js
+          git diff --check
       - name: Syntax and entrypoint
         run: |
           set -euo pipefail
@@ -30,6 +35,18 @@ jobs:
         run: node tests/e2e-page-quality.test.cjs
       - name: Canonical funnel route contracts
         run: node tests/e2e-funnel-contract.test.cjs
+      - name: Persist only the exactly tested canonical source on review branch
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "release-20261011-canonical-funnel-safe"
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-review-ci
+            git config user.email contentscale-review-ci@users.noreply.github.com
+            git commit -m 'review only: apply verified Audit20 content quality gate [skip ci]'
+            git push origin HEAD:refs/heads/release-20261011-canonical-funnel-safe
+          fi
       - name: Enforce full E2E release hold
         run: |
           echo 'Contract-only checks are NOT the writable five-stage end-to-end acceptance.'
