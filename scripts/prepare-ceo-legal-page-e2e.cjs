@@ -34,6 +34,13 @@ if(!s.includes('// Canonical utility-page exclusion for CEO page A, Quick Scan p
  if(s.split(anchor).length!==2)throw Error('STOP: shared filter anchor drift');
  s=s.replace(anchor,helper+anchor);
 }
+// Existing tested candidate may already contain the older utility rule.
+// Upgrade that single rule in place instead of adding a second classifier.
+const expectedRule=helper.split('\n').find(x=>x.includes('if(segments.some(v=>/^(?:disclaimer|'));
+const existingRules=s.split('\n').filter(x=>x.includes('if(segments.some(v=>/^(?:disclaimer|'));
+if(!expectedRule||existingRules.length!==1)throw Error('STOP: shared legal rule unexpected or duplicated');
+if(existingRules[0]!==expectedRule)s=s.replace(existingRules[0],expectedRule);
+
 uniqueReplace("    return /\\/(privacy|privacy-policy|terms|terms-and-conditions|cookie|cookies|login|signin|signup|cart|checkout|account|wp-admin)(\\/|$)/.test(p)",
 "    return _ceoUtilityPage(url)||/\\/(privacy|privacy-policy|terms|terms-and-conditions|cookie|cookies|login|signin|signup|cart|checkout|account|wp-admin)(\\/|$)/.test(p)",
 "Audit20 utility discovery exclusion");
