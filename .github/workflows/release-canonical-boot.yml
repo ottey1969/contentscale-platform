@@ -62,6 +62,11 @@ jobs:
             finally { await db.end(); }
           })().catch(e=>{console.error(e);process.exitCode=1});
           NODE
+      - name: Apply guarded sales intent replay fix for isolated boot
+        run: |
+          node scripts/patch-audit20-interest-idempotency.cjs src/index.js
+          node scripts/patch-audit20-interest-idempotency.cjs src/index.js
+          git diff --check
       - name: Boot full canonical application on localhost with external network denied
         run: |
           set -euo pipefail
