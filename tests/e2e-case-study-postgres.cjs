@@ -18,6 +18,68 @@ async function run(){
  await client.connect();
  await client.query('BEGIN');
  try{
+
+  // Prospect-to-Tracker handoff uses the same disposable transaction as Case Study.
+  // A TEMP table shadows only this connection; it never mutates production schema.
+  await client.query(`CREATE TEMP TABLE prospect_quick_scans (
+    token text PRIMARY KEY,revoked_at timestamptz,url text,ceo_report_url text,
+    ceo_report_page_url text,status text,scan_completed_at timestamptz,
+    audit20_interested boolean DEFAULT FALSE,audit20_interested_at timestamptz,
+    audit20_interest_note text,follow_up_status text,updated_at timestamptz,
+    business_name text,domain text,language text,contact_email_origin text,
+    visitor_email text,audit20_status text,audit20_ready_at timestamptz,
+    audit20_report_url text,audit20_ready_email_sent_at timestamptz,
+    tracker_interested boolean DEFAULT FALSE,tracker_interested_at timestamptz
+  )`);
+  await client.query("INSERT INTO prospect_quick_scans(token,url,status,domain,business_name,language,ceo_report_url,ceo_report_page_url) VALUES('prospect-e2e-synthetic','https://synthetic.example/roof-repair','pending','synthetic.example','Synthetic Service','en','https://example.org/ceo','https://synthetic.example/roof-repair')");
+  const prospectA=source.indexOf("app.post('/api/prospect-quick-scan/:token/audit20-interest'");
+  const prospectB=source.indexOf("app.post('/api/prospect-quick-scan/admin/:token/two-page-overview'",prospectA);
+  const auditReadyA=source.indexOf("app.post('/api/prospect-quick-scan/admin/:token/audit20-ready'");
+  const trackerInterestA=source.indexOf("app.post('/api/prospect-quick-scan/:token/tracker-interest'");
+  assert(prospectA>0&&prospectB>prospectA&&prospectB-prospectA<6500&&auditReadyA>0&&trackerInterestA>0,'Canonical sales transition boundaries changed');
+  const handlers={};let auditEmails=0;const ownerEvents=[];
+  const salesContext={
+    app:{post(route,...args){handlers[route]=args[args.length-1]}},
+    pool:client,Date,String,Number,JSON,console,process:{env:{}},
+    requireAdmin:()=>{},_ensureProspectQuickScanTable:async()=>true,
+    _pqsLang3:()=> 'en',_pqsValidEmail:()=>false,
+    _pqsNotifyOwner:async(_r,kind)=>{ownerEvents.push(kind)},
+    _pqsSendLocalized:async()=>{auditEmails++;return {sent:true}},
+  };
+  vm.runInNewContext(source.slice(prospectA,prospectB),salesContext,{timeout:4000});
+  vm.runInNewContext(source.slice(auditReadyA,source.indexOf('\\n',auditReadyA)),salesContext,{timeout:4000});
+  vm.runInNewContext(source.slice(trackerInterestA,source.indexOf('\\n',trackerInterestA)),salesContext,{timeout:4000});
+  async function sales(route,body={}){
+    const res={statusCode:200,status(n){this.statusCode=n;return this},json(x){this.body=JSON.parse(JSON.stringify(x));return x}};
+    await handlers[route]({params:{token:'prospect-e2e-synthetic'},body},res);
+    return res;
+  }
+  const interestRoute='/api/prospect-quick-scan/:token/audit20-interest';
+  const readyRoute='/api/prospect-quick-scan/admin/:token/audit20-ready';
+  const trackerRoute='/api/prospect-quick-scan/:token/tracker-interest';
+  const blocked=await sales(interestRoute);
+  assert.equal(blocked.statusCode,409,'Audit20 cannot begin before completed QuickScan');
+  await client.query("UPDATE prospect_quick_scans SET status='completed',scan_completed_at=NOW() WHERE token='prospect-e2e-synthetic'");
+  const interest=await sales(interestRoute);
+  assert.equal(interest.statusCode,200,JSON.stringify(interest.body));
+  let prospect=await client.query("SELECT * FROM prospect_quick_scans WHERE token='prospect-e2e-synthetic'");
+  assert.equal(prospect.rows[0].audit20_interested,true);
+  const ready=await sales(readyRoute,{report_url:'https://example.org/audit20'});
+  assert.equal(ready.statusCode,200,JSON.stringify(ready.body));
+  assert.equal(auditEmails,1);
+  const replayReady=await sales(readyRoute,{report_url:'https://example.org/replace'});
+  assert.equal(replayReady.body.already_ready,true);
+  assert.equal(replayReady.body.report_url,'https://example.org/audit20');
+  assert.equal(auditEmails,1);
+  assert.equal((await sales(trackerRoute)).statusCode,200);
+  const replayTracker=await sales(trackerRoute);
+  assert.equal(replayTracker.body.already_interested,true);
+  assert.equal(ownerEvents.filter(x=>x==='tracker_interest').length,1);
+  prospect=await client.query("SELECT * FROM prospect_quick_scans WHERE token='prospect-e2e-synthetic'");
+  assert.equal(prospect.rows[0].tracker_interested,true);
+  assert.equal(prospect.rows[0].audit20_report_url,'https://example.org/audit20');
+  console.log('PASS writable synthetic PG QuickScan -> interested Audit20 -> ready once -> Tracker interest once');
+
   // Test-only defaults for the historical-column fixture (not a production migration).
   await client.query('CREATE TEMP SEQUENCE synthetic_case_study_ids START 99010');
   await client.query("ALTER TABLE tracker_case_studies ALTER COLUMN id SET DEFAULT nextval('pg_temp.synthetic_case_study_ids')");
