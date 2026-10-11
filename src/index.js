@@ -8816,8 +8816,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/evidence-checkpoint/complete'
 // POST /api/tracker-client/:token/check/:pageId — trigger manual check
 app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
   try {
-    await _ensureMonitoringGateSchema();
-    await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
+    // Manual scan route uses migrated canonical schema; never performs DDL.
     const cr = await pool.query('SELECT id,claims_facts_updated_at FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
@@ -62875,8 +62874,8 @@ function detectContentLanguage(html) {
 async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
   // Canonical schema migrations are never executed by a customer scan.
   // Fail BEFORE any fetch, scoring or write when required columns are absent.
-  const _requiredScanColumns = {tracker_snapshots:['gsc_brief','source_suggestions','author_trust_score','author_trust_findings','discovered_sources'],tracker_pages:['brief_check_count','brief_content','brief_started_at']};
-  const _columnResult=await pool.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND table_name IN ('tracker_snapshots','tracker_pages') AND column_name=ANY($1::text[])",[Object.values(_requiredScanColumns).flat()]);
+  const _requiredScanColumns = {tracker_snapshots:['gsc_brief','source_suggestions','author_trust_score','author_trust_findings','discovered_sources'],tracker_pages:['brief_check_count','brief_content','brief_started_at'],tracker_ai_evidence:['id','page_id','engine','evidence_method','verified_at','updated_at','created_at','is_cleared','revision_cycle','exact_page_cited','domain_cited','brand_recommended','brand_direct_supported']};
+  const _columnResult=await pool.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND table_name IN ('tracker_snapshots','tracker_pages','tracker_ai_evidence') AND column_name=ANY($1::text[])",[Object.values(_requiredScanColumns).flat()]);
   const _present = new Set((_columnResult.rows||[]).map(r=>String(r.table_name)+'.'+String(r.column_name)));
   const _missing = Object.entries(_requiredScanColumns).flatMap(([table,cols])=>cols.filter(col=>!_present.has(table+'.'+col)).map(col=>table+'.'+col));
   if(_missing.length)throw new Error('TRACKER SCAN BLOCKED: database schema is incomplete: '+_missing.join(', '));
@@ -63368,7 +63367,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     // than the manual verification. Historical manual evidence is never overwritten.
     let freshManualPerplexity = null;
     try {
-      await _trackerEnsureAiEvidenceSchema();
+      // AI evidence table is prevalidated; never run schema migrations during a scan.
       const _pm = await pool.query(
         `SELECT id, exact_page_cited, domain_cited, brand_recommended, brand_direct_supported, is_cleared, verified_at, updated_at
          FROM tracker_ai_evidence
