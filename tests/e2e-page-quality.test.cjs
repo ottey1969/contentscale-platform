@@ -14,4 +14,16 @@ assert.equal(quality(wrap(controls + '<p>' + words + '</p>'), 'product').eligibl
 
 assert.equal(quality('<html><head><meta name="robots" content="noindex"></head><body><main>' + words + '</main></body></html>', 'product').eligible, false, 'noindex must not enter canonical scan');
 assert.equal(quality('<html><head><meta content="noindex,follow" name="robots"></head><body><main>' + words + '</main></body></html>', 'product').eligible, false, 'reverse meta attribute order must be rejected');
+
+// Regression: navigation, footer and checkout controls are not page content.
+// These were previously mistaken for useful prospect pages.
+const boilerplate = '<html><body><header>' + words + '</header><nav>' + words +
+  '</nav><main><form>' + controls + '</form></main><footer>' + words + '</footer></body></html>';
+assert.equal(quality(boilerplate, 'product').eligible, false,
+  'header/footer/navigation and checkout controls must not qualify an empty product');
+assert.equal(quality(wrap('<div id="app"></div><script>window.render()</script>'), 'service').eligible, false,
+  'empty JavaScript app shell must be rejected');
+assert.equal(quality(wrap('<p>' + words + '</p>'), 'product').eligible, true,
+  'legitimate commercial descriptions must remain scannable');
+
 console.log('PASS: commercial page quality tests');
