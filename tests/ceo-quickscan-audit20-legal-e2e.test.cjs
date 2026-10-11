@@ -44,7 +44,7 @@ function fixture(pagesAvailable=pages){
 }
 test('CEO URL classifier rejects legal pages in EN/NL/ES/DE, keeps real service pages',()=>{
  const {ctx}=fixture();
- for(const p of ['/disclaimer/','/disclaimer-2026/','/privacy-policy/','/privacyverklaring/','/algemene-voorwaarden/','/aviso-legal/','/politica-de-privacidad/','/cookiebeleid/','/impressum/','/thank-you/','/cart/','/legal/terms-and-conditions/']){
+ for(const p of ['/disclaimer/','/disclaimer-2026/','/disclaimer-2/','/privacy-policy/','/privacy-policy-2/','/privacyverklaring-2/','/privacybeleid-2/','/politica-de-privacidad-2/','/privacyverklaring/','/algemene-voorwaarden/','/aviso-legal/','/politica-de-privacidad/','/cookiebeleid/','/impressum/','/thank-you/','/cart/','/legal/terms-and-conditions/']){
    assert.equal(ctx.policy('https://client.example'+p),true,p);
    assert.equal(ctx.utility('https://client.example'+p),true,p);
    assert.equal(ctx.urlEligible('https://client.example'+p),false,p);
@@ -62,6 +62,12 @@ test('CEO discovery rejects attractive legal pages before expensive scoring and 
  assert.equal(f.io.discoveries,1,'CEO cheap discovery only, not a full Audit20 scan');
  assert(!f.io.pages.includes(disclaimer),'Disclaimer must not even be fetched in the CEO shortlist');
  assert(f.io.pages.includes(privacy),'An opaque URL may need a cheap title/H1 check, but it must never win');
+});
+test('real affected prospect privacy-policy-2 is never an eligible CEO or Quick Scan page',()=>{
+ const {ctx}=fixture();
+ assert.equal(ctx.policy('https://alwadifa.ma/privacy-policy-2/'),true);
+ assert.equal(ctx.urlEligible('https://alwadifa.ma/privacy-policy-2/'),false);
+ assert.equal(ctx.utility('https://alwadifa.ma/privacy-policy-2/'),true);
 });
 test('CEO rejects legal page after fetch by heading even with opaque slug and many words',()=>{
  const f=fixture(),p=f.ctx.score(pages.get(privacy),home);
