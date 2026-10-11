@@ -39,11 +39,30 @@ function computeGrowth(rows,queries,domain,now=new Date()){
   .map(q=>({...q,classification:bucket(q.query,domain)}));
  const nonBrand=classified.filter(q=>q.classification==='non_brand');
  const brand=classified.filter(q=>q.classification==='brand_or_ambiguous');
+ // Prioritize click opportunities from verified non-branded PAGE queries, not
+ // property-wide figures or guessed CTR increases. One row per page/query.
+ const queryOpportunities=nonBrand.filter(q=>Number(q.impressions)>=80&&Number(q.position)>0)
+  .map(q=>{
+   const page=pages.find(p=>String(p.id)===String(q.page_id));
+   const pos=Number(q.position),impressions=Number(q.impressions),clicks=Number(q.clicks)||0;
+   const ctr=impressions?clicks/impressions:0;
+   const type=pos<=10&&ctr<0.01?'SNIPPET_AND_INTENT_REVIEW':
+    pos>10&&pos<=20?'STRIKING_DISTANCE':
+    pos>20&&pos<=50?'RANKING_AND_CONTENT':'LONG_TERM_VISIBILITY';
+   const score=impressions*(pos<=20?1.5:pos<=50?1:0.35)*(clicks<=2?1.15:1);
+   return {page_id:q.page_id,url:page?.url||'',query:String(q.query),impressions,clicks,
+    position:Number(pos.toFixed(1)),ctr:Number((ctr*100).toFixed(2)),type,priority_score:Math.round(score),
+    case_study_locked:!!page?.case_study_active,
+    action:type==='SNIPPET_AND_INTENT_REVIEW'?'Review the actual SERP appearance, search intent, title and description; do not promise snippet CTR gains':
+      type==='STRIKING_DISTANCE'?'Compare top-10 competitor evidence, page content and contextual internal links':
+      type==='RANKING_AND_CONTENT'?'Verify intent match, competitive content gaps and internal-link support before changing this page':
+      'Research whether this query fits the page before investing in new content'};
+  }).filter(x=>x.url).sort((a,b)=>b.priority_score-a.priority_score).slice(0,30);
  const sum=arr=>arr.reduce((acc,x)=>({impressions:acc.impressions+(Number(x.impressions)||0),clicks:acc.clicks+(Number(x.clicks)||0)}),{impressions:0,clicks:0});
  return {domain:expected,mode:'GROWTH_READ_ONLY',generated_at:now.toISOString(),
   scope:'Latest verified exact-page GSC query rows (up to 75 days old), not a fixed 28-day trend',
   non_brand:sum(nonBrand),brand_or_ambiguous:sum(brand),
-  evidence_queries:classified.length,pages,case_study_policy:'READ_ONLY_NO_SCAN_NO_BASELINE_MUTATION'};
+  evidence_queries:classified.length,query_opportunities:queryOpportunities,pages,case_study_policy:'READ_ONLY_NO_SCAN_NO_BASELINE_MUTATION'};
 }
 function registerGrowthCockpit(app,pool){
  async function data(req,res,next){
@@ -67,7 +86,7 @@ function registerGrowthCockpit(app,pool){
  app.get('/track/:token/growth',data,(req,res)=>{
   const g=req.growth;
   const row=x=>`<tr><td><a href="${escapeHtml(x.url)}" rel="noopener noreferrer" target="_blank">${escapeHtml(x.url)}</a><small>${escapeHtml(x.keyword)}</small></td><td>${x.impressions.toLocaleString()}</td><td>${x.clicks}</td><td>${x.ctr.toFixed(2)}%</td><td>${x.position.toFixed(1)}</td><td>${escapeHtml(x.opportunity)}${x.case_study_active?' · Case Study locked':''}<small>${escapeHtml(x.next_action)}</small></td></tr>`;
-  res.set('Cache-Control','no-store').type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Growth Cockpit</title><style>body{font:15px/1.5 system-ui;background:#f6f8fc;color:#172337;max-width:1150px;margin:auto;padding:24px}h1{font-size:27px}.stats{display:flex;gap:14px;flex-wrap:wrap}.stats section{background:#fff;border:1px solid #d9e0eb;border-radius:12px;padding:16px;min-width:190px}.stats strong{display:block;font-size:25px}table{background:white;border-collapse:collapse;width:100%;margin-top:20px}th,td{text-align:left;border-bottom:1px solid #e0e5ef;padding:12px}small{display:block;color:#64748b}a{color:#1d4ed8;overflow-wrap:anywhere}.note{background:#fff7ed;border:1px solid #fed7aa;padding:14px;border-radius:10px}th{background:#eaf0fa}@media(max-width:680px){table{display:block;overflow-x:auto}}</style></head><body><p><a href="/track/${encodeURIComponent(req.params.token)}">← Tracker</a></p><h1>Growth Cockpit</h1><p>${escapeHtml(g.domain)} · read-only evidence · no automatic scans or publishing</p><div class="stats"><section>Non-brand verified clicks<strong>${g.non_brand.clicks.toLocaleString()}</strong></section><section>Non-brand impressions<strong>${g.non_brand.impressions.toLocaleString()}</strong></section><section>Brand / ambiguous clicks<strong>${g.brand_or_ambiguous.clicks.toLocaleString()}</strong></section><section>Verified query rows<strong>${g.evidence_queries}</strong></section></div><p class="note">These are latest saved query-level records, not a period-over-period growth claim. Brand-ambiguous phrases are excluded from non-brand totals. Case Study baselines remain untouched. Improve existing pages before approving a new spoke.</p><h2>Prioritized page opportunities</h2><table><thead><tr><th>Page</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Position</th><th>Next step</th></tr></thead><tbody>${g.pages.map(row).join('')}</tbody></table></body></html>`);
+  res.set('Cache-Control','no-store').type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Growth Cockpit</title><style>body{font:15px/1.5 system-ui;background:#f6f8fc;color:#172337;max-width:1150px;margin:auto;padding:24px}h1{font-size:27px}.stats{display:flex;gap:14px;flex-wrap:wrap}.stats section{background:#fff;border:1px solid #d9e0eb;border-radius:12px;padding:16px;min-width:190px}.stats strong{display:block;font-size:25px}table{background:white;border-collapse:collapse;width:100%;margin-top:20px}th,td{text-align:left;border-bottom:1px solid #e0e5ef;padding:12px}small{display:block;color:#64748b}a{color:#1d4ed8;overflow-wrap:anywhere}.note{background:#fff7ed;border:1px solid #fed7aa;padding:14px;border-radius:10px}th{background:#eaf0fa}@media(max-width:680px){table{display:block;overflow-x:auto}}</style></head><body><p><a href="/track/${encodeURIComponent(req.params.token)}">← Tracker</a></p><h1>Growth Cockpit</h1><p>${escapeHtml(g.domain)} · read-only evidence · no automatic scans or publishing</p><div class="stats"><section>Non-brand verified clicks<strong>${g.non_brand.clicks.toLocaleString()}</strong></section><section>Non-brand impressions<strong>${g.non_brand.impressions.toLocaleString()}</strong></section><section>Brand / ambiguous clicks<strong>${g.brand_or_ambiguous.clicks.toLocaleString()}</strong></section><section>Verified query rows<strong>${g.evidence_queries}</strong></section></div><p class="note">These are latest saved query-level records, not a period-over-period growth claim. Brand-ambiguous phrases are excluded from non-brand totals. Case Study baselines remain untouched. Improve existing pages before approving a new spoke.</p><h2>Top click opportunities — verified non-brand queries</h2><p>Priorities are based on impressions, position and low clicks. Ranking and CTR changes are not predicted results. Select a row, compare real search results, then improve the existing page.</p><table><thead><tr><th>Query / page</th><th>Impressions</th><th>Clicks</th><th>Position</th><th>Diagnosis and action</th></tr></thead><tbody>${g.query_opportunities.map(q=>`<tr><td><strong>${escapeHtml(q.query)}</strong><small><a href="${escapeHtml(q.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.url)}</a></small></td><td>${q.impressions.toLocaleString()}</td><td>${q.clicks}</td><td>${q.position}</td><td>${escapeHtml(q.type)}${q.case_study_locked?' · Case Study locked':''}<small>${escapeHtml(q.action)}</small></td></tr>`).join('')}</tbody></table><h2>Prioritized page opportunities</h2><table><thead><tr><th>Page</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Position</th><th>Next step</th></tr></thead><tbody>${g.pages.map(row).join('')}</tbody></table></body></html>`);
  });
 }
 module.exports={registerGrowthCockpit,computeGrowth,bucket};
