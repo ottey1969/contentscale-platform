@@ -6,7 +6,7 @@ const s=fs.readFileSync(file,'utf8');
 const a=s.indexOf('async function runTrackerCheck('),b=s.indexOf('\n// ── Custom news management',a);
 assert(a>0&&b>a&&b-a<350000,'Canonical scanner bounds changed: manual review needed');
 const scanner=s.slice(a,b);
-const required=['tracker_snapshots.gsc_brief','tracker_snapshots.source_suggestions','tracker_snapshots.author_trust_score','tracker_snapshots.author_trust_findings','tracker_snapshots.discovered_sources','tracker_pages.brief_check_count','tracker_pages.brief_content','tracker_pages.brief_started_at'];
+const required=['tracker_snapshots.gsc_brief','tracker_snapshots.source_suggestions','tracker_snapshots.author_trust_score','tracker_snapshots.author_trust_findings','tracker_snapshots.discovered_sources','tracker_pages.brief_check_count','tracker_pages.brief_content','tracker_pages.brief_started_at','tracker_ai_evidence.id','tracker_ai_evidence.page_id','tracker_ai_evidence.engine','tracker_ai_evidence.evidence_method','tracker_ai_evidence.verified_at','tracker_ai_evidence.updated_at','tracker_ai_evidence.created_at','tracker_ai_evidence.is_cleared','tracker_ai_evidence.revision_cycle','tracker_ai_evidence.exact_page_cited','tracker_ai_evidence.domain_cited','tracker_ai_evidence.brand_recommended','tracker_ai_evidence.brand_direct_supported'];
 const html='<html><body>'+('<p>Unique synthetic content for safe isolated manual scan. </p>'.repeat(25))+'</body></html>';
 function fixture(schemaComplete=true,keyword=''){
  const state={writes:[],reads:[],fetches:[],steps:[],mails:0,snapshots:[],intervals:0,nextScheduled:false};
@@ -77,5 +77,6 @@ test('keyword scan saves an observation safely with no external provider keys',a
 test('scanner has no inline schema migrations or Case Study schema mutation helper',()=>{
  assert.doesNotMatch(scanner,/\b(?:ALTER|CREATE|DROP|TRUNCATE)\s+TABLE\b/i);
  assert.doesNotMatch(scanner,/_ensureCaseStudySchema\s*\(/);
+ assert.doesNotMatch(scanner,/_trackerEnsureAiEvidenceSchema\s*\(/);
  assert.match(scanner,/TRACKER SCAN BLOCKED: database schema is incomplete/);
 });
