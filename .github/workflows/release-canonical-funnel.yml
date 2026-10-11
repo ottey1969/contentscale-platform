@@ -23,6 +23,8 @@ jobs:
         run: |
           node scripts/patch-audit20-content-verification.cjs src/index.js
           node scripts/patch-audit20-content-verification.cjs src/index.js
+          node scripts/patch-audit20-ready-state.cjs src/index.js
+          node scripts/patch-audit20-ready-state.cjs src/index.js
           git diff --check
       - name: Syntax and entrypoint
         run: |
@@ -37,6 +39,8 @@ jobs:
         run: node tests/e2e-funnel-contract.test.cjs
       - name: Run actual canonical Audit20 function against synthetic pages
         run: node --test tests/e2e-audit20-content-selection.test.cjs
+      - name: Audit20 ready requires interest and idempotency
+        run: node --test tests/e2e-audit20-ready.test.cjs
       - name: Persist only the exactly tested canonical source on review branch
         if: ${{ success() && github.event_name == 'push' }}
         run: |
