@@ -14,7 +14,7 @@ function checkPageContent(html, type = 'other') {
     || source.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)?.[1]
     || source.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)?.[1]
     || '';
-  body = body.replace(/<\/?(?:script|style|noscript|svg|nav|footer|header|aside)\b[^>]*>[\s\S]*?<\/(?:script|style|noscript|svg|nav|footer|header|aside)>/gi, ' ')
+  body = body.replace(/<(script|style|noscript|svg|nav|footer|header|aside|form|button|select|option|label)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, ' ')
     .replace(/<[^>]*>/g, ' ').replace(/&(?:nbsp|amp|quot|lt|gt);/gi, ' ')
     .replace(/\s+/g, ' ').trim();
   const words = body.split(/\s+/).filter(Boolean).length;
