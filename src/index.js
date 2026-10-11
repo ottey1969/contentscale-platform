@@ -293,7 +293,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-11-PRODUCTION-REVIEW-v568-FIRST-MANUAL-SCAN';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-11-PRODUCTION-REVIEW-v569-FIRST-MANUAL-SCAN';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -930,7 +930,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-11-PRODUCTION-REVIEW-v568-FIRST-MANUAL-SCAN',
+  build: 'CS-2026-10-11-PRODUCTION-REVIEW-v569-FIRST-MANUAL-SCAN',
   built_date: '2026-10-08',
   ceo_private: true,
   ceo_public: true,
@@ -8892,6 +8892,7 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
       page._completed_monitoring_gate=page.monitoring_gate_label||'monitoring';
       await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[page.id]);
     }
+    page._caseStudyFirstManualScan = _caseFirstManualScan;
     page._manual_requested = true;
     const pageId = page.id;
 
@@ -8926,8 +8927,9 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
         console.warn('[client-check]', e.message);
         const _failedStatus=_trackerCheckStatus.get(pageId);
         const _schemaFailure=String(e&&e.message||'').startsWith('TRACKER SCAN BLOCKED: database schema is incomplete:');
-        const _safeError=_schemaFailure?'The Tracker schema is not ready for this scan. No new result was verified.':'The scan did not complete. Check the page status before retrying.';
-        if(_failedStatus){_failedStatus.failed=true;_failedStatus.error_code=_schemaFailure?'SCHEMA_NOT_READY':'SCAN_FAILED';_failedStatus.error=_safeError;}
+        const _liveFailure=String(e&&e.message||'').startsWith('CASE_FIRST_LIVE_NOT_VERIFIED:');
+        const _safeError=_schemaFailure?'The Tracker schema is not ready for this scan. No new result was verified.':_liveFailure?'Current live HTML could not be verified. The Case Study baseline and history are unchanged. Retry the manual scan later.':'The scan did not complete. Check the page status before retrying.';
+        if(_failedStatus){_failedStatus.failed=true;_failedStatus.error_code=_schemaFailure?'SCHEMA_NOT_READY':_liveFailure?'LIVE_HTML_NOT_VERIFIED':'SCAN_FAILED';_failedStatus.error=_safeError;}
         _sseBroadcast({type:'check_error',pageId,domain,url:page.url,error:_safeError,ts:new Date().toISOString()});
         if(page._completed_monitoring_gate)await pool.query('UPDATE tracker_pages SET monitoring_waiting_input=TRUE,monitoring_gate_label=$2 WHERE id=$1',[page.id,page._completed_monitoring_gate]).catch(()=>{});
       } finally {
@@ -63117,6 +63119,10 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
     }
   }
 
+  // A first Case Study scan must prove the CURRENT live HTML. Historical cache is not proof.
+  if(page._caseStudyFirstManualScan && (!fetchReliable || htmlSource !== 'live_fresh')) {
+    throw new Error('CASE_FIRST_LIVE_NOT_VERIFIED: Live HTML was unavailable or unreliable. Historical HTML and baseline remain protected; retry this manual scan when the live page responds.');
+  }
   // Hash altijd berekenen over de HTML die we gaan analyseren
   if (effectiveHtml && effectiveHtml.length > 200) {
     effectiveHash = crypto.createHash('sha256').update(effectiveHtml).digest('hex').substring(0,16);
