@@ -1,0 +1,97 @@
+name: ContentScale v570 Case Study dashboard hydration (safe source-only)
+on:
+  push:
+    branches: [fix-v570-tracker-case-baseline-hydration]
+  workflow_dispatch:
+permissions:
+  contents: write
+  statuses: write
+jobs:
+  case-baseline-hydration:
+    if: github.ref == 'refs/heads/fix-v570-tracker-case-baseline-hydration'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply minimal fix to canonical existing production application
+        run: |
+          set -euo pipefail
+          node --check scripts/fix-v570-case-baseline-hydration.cjs
+          test "$(wc -c < src/index.js)" -gt 6000000
+          test "$(head -c 150 src/index.js)" != "" 
+          node scripts/fix-v570-case-baseline-hydration.cjs src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+      - name: Prove exactly same source after applying fix twice
+        run: |
+          set -euo pipefail
+          original="$(sha256sum src/index.js | cut -d' ' -f1)"
+          node scripts/fix-v570-case-baseline-hydration.cjs src/index.js
+          test "$original" = "$(sha256sum src/index.js | cut -d' ' -f1)"
+      - name: Reproduce screenshot and test both actual Spanish Case Study IDs
+        run: |
+          node --test tests/v570-case-baseline-hydration.test.cjs
+      - name: Guard all existing production architecture
+        run: |
+          set -euo pipefail
+          node - <<'NODE'
+          const fs=require('node:fs'),cp=require('node:child_process');
+          const s=fs.readFileSync('src/index.js','utf8');
+          const old=cp.execFileSync('git',['show','HEAD:src/index.js'],{encoding:'utf8',maxBuffer:12000000});
+          const single='SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_data,started_at';
+          const hydrated='SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_locked,baseline_data,started_at';
+          const assignment='      _p.case_study=_cs||null;';
+          const mapped=assignment+'\n      _p.case_study_baseline_locked=!!(_cs&&_cs.baseline_locked);';
+          const banner="if(nextState&&['REVIEW_BRIEF','CASE_PUBLISH_VERIFY','VERIFY_LIVE_PENDING'].includes(String(nextState.code||'')))return '';";
+          const hidden="if(nextState&&(['REVIEW_BRIEF','CASE_PUBLISH_VERIFY','VERIFY_LIVE_PENDING','PREPARE_CASE'].includes(String(nextState.code||''))||(nextState.code==='SCAN'&&p.case_study_active)))return '';";
+          const expect=old.replace(single,hydrated).replace(assignment,mapped).replace(banner,hidden);
+          if(s!==expect)throw Error('STOP: unexpected source change outside three surgical replacements');
+          if(!s.startsWith("if (process.env.CS_DEPLOYMENT_TIER === 'staging') throw"))throw Error('STOP: production boot protection changed');
+          if(!s.includes('async function runTrackerCheck('))throw Error('STOP: canonical scanner missing');
+          if(!s.includes('CASE STUDY ACTIVE · FIRST MANUAL SCAN'))throw Error('STOP: original NEXT ACTION missing');
+          console.log('VERIFIED: only the canonical SELECT, hydration flag, and redundant banner changed');
+          NODE
+      - name: Preserve reproducible code review
+        uses: actions/upload-artifact@v4
+        with:
+          name: contentscale-v570-source-only-screenshot-fix-REVIEW
+          path: |
+            src/index.js
+            scripts/fix-v570-case-baseline-hydration.cjs
+            tests/v570-case-baseline-hydration.test.cjs
+          retention-days: 7
+      - name: Commit the validated source only to v570 fix branch
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'fix-v570-tracker-case-baseline-hydration'
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            test "$(git diff --cached --name-only)" = "src/index.js"
+            git config user.name contentscale-case-baseline-ci
+            git config user.email contentscale-case-baseline-ci@users.noreply.github.com
+            git commit -m 'v570: CI verified Case Study baseline hydration [skip ci]'
+            git push origin HEAD:refs/heads/fix-v570-tracker-case-baseline-hydration
+          fi
+      - name: Report test status on final validated commit
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          if [ "$RESULT" = 'success' ]; then state=success; else state=failure; fi
+          payload="$(printf '{"state":"%s","context":"contentscale/v570-case-baseline","description":"Screenshot reproduction and source-only safety: %s","target_url":"https://github.com/%s/actions/runs/%s"}' "$state" "$RESULT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          curl --fail --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            --data "$payload" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" >/dev/null
