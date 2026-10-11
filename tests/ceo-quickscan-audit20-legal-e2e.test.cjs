@@ -61,7 +61,7 @@ test('CEO discovery rejects attractive legal pages before expensive scoring and 
  assert.equal(selected.mode,'auto');
  assert.equal(f.io.discoveries,1,'CEO cheap discovery only, not a full Audit20 scan');
  assert(!f.io.pages.includes(disclaimer),'Disclaimer must not even be fetched in the CEO shortlist');
- assert(!f.io.pages.includes(privacy),'Legal-looking opaque URL may be fetched cheaply but must not win');
+ assert(f.io.pages.includes(privacy),'An opaque URL may need a cheap title/H1 check, but it must never win');
 });
 test('CEO rejects legal page after fetch by heading even with opaque slug and many words',()=>{
  const f=fixture(),p=f.ctx.score(pages.get(privacy),home);
@@ -150,7 +150,7 @@ test('Quick Scan Page B rejects disclaimer before DB mutation and accepts servic
  assert.equal(f.io.dbWrites.length,0);
  const good=response();await handler({params:{token:'fixture'},body:{page_url:service}},good);
  assert.equal(good.statusCode,200,JSON.stringify(good.body));
- assert.equal(f.io.dbWrites.length,1);
+ assert.equal(f.io.dbWrites.length,2,'Existing legacy duplicate CEO scan is reset before saving a valid alternate Page B');
 });
 test('Audit20 interest is independent: requires completed Quick Scan, never starts audit automatically',async()=>{
  const interest=segment("app.post('/api/prospect-quick-scan/:token/audit20-interest',","app.post('/api/prospect-quick-scan/admin/:token/two-page-overview',",5500);
