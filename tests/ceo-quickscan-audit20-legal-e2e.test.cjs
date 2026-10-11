@@ -158,6 +158,17 @@ test('Quick Scan Page B rejects disclaimer before DB mutation and accepts servic
  assert.equal(good.statusCode,200,JSON.stringify(good.body));
  assert.equal(f.io.dbWrites.length,2,'Existing legacy duplicate CEO scan is reset before saving a valid alternate Page B');
 });
+test('CEO and QuickScan reject legal page candidates without producing Audit20',async()=>{
+ const result=await runCeo('public',new Map([
+  [home,page(home,'Privacy Policy','Privacy Policy',150)],
+  [service,page(service,'Disclaimer','Disclaimer',150)],
+  [privacy,page(privacy,'Privacy Policy','Privacy Policy',150)],
+  [disclaimer,page(disclaimer,'Disclaimer','Disclaimer',150)]
+ ]));
+ assert.equal(result.r.statusCode,422);
+ assert.equal(result.f.io.scans.length,0);
+ assert.equal(result.f.io.audits,0);
+});
 test('Audit20 interest is independent: requires completed Quick Scan, never starts audit automatically',async()=>{
  const interest=segment("app.post('/api/prospect-quick-scan/:token/audit20-interest',","app.post('/api/prospect-quick-scan/admin/:token/two-page-overview',",5500);
  let state='pending',updates=0,audits=0;
