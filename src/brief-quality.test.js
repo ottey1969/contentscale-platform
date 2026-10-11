@@ -58,7 +58,7 @@ test('Perfect Roofing Team: 6302 impressions and 2 clicks at position 41.6 must 
   assert.ok(results.some(x=>x.id==='high_impressions_low_clicks'));
   assert.ok(!results.some(x=>x.id==='ctr_gap'));
   assert.match(results.find(x=>x.id==='high_impressions_low_clicks').evidence,/6302 impressions, 2 clicks/);
-  assert.match(results.find(x=>x.id==='high_impressions_low_clicks').evidence,/0\\.03% CTR/);
+  assert.match(results.find(x=>x.id==='high_impressions_low_clicks').evidence,/0\.03% CTR/);
 });
 test('Two informational GEO pages with shared GSC query do not justify forced canonical or shortening', () => {
   const r=Q.detectCannibalization({keyword:'wat is geo',page:{url:'https://example.nl/wat-is-geo/'},
@@ -178,8 +178,9 @@ test('produces client-safe brief + change report + cannibalization rec', () => {
   assert.ok(!brief.recommendations.find((r) => /question-based h2/i.test(r.title)));
   // duplicate meta deduped
   assert.strictEqual(brief.recommendations.filter((r) => r.action === 'Replace title and meta').length, 1);
-  // cannibalization injected at top, HIGH
-  assert.strictEqual(brief.recommendations[0].title, 'Resolve keyword cannibalization');
+  // Sitemap overlap is review-only; it must not inject a destructive action.
+  assert.equal(report.cannibalization.needsReview,true);
+  assert.ok(!brief.recommendations.some(r=>/Resolve keyword cannibalization/i.test(r.title)));
   assert.strictEqual(brief.recommendations[0].priority, 'HIGH');
 });
 
@@ -277,7 +278,8 @@ test('injectGlobal:false skips global recs but still cleans + still reports', ()
   ]; };
   var withInj = Q.postProcessBrief({ recommendations: mk() }, ctx);                       // citation brief
   var noInj   = Q.postProcessBrief({ recommendations: mk() }, ctx, { injectGlobal: false }); // gsc brief
-  assert.ok(withInj.brief.recommendations.some(r => /cannibalization/i.test(r.title)));   // appears in citation
+  assert.ok(!withInj.brief.recommendations.some(r => /cannibalization/i.test(r.title))); // no unverified consolidation advice
+  assert.equal(withInj.report.cannibalization.needsReview,true);
   assert.ok(!noInj.brief.recommendations.some(r => /cannibalization/i.test(r.title)));    // NOT duplicated in gsc
   assert.ok(noInj.brief.recommendations.some(r => r.title === 'Add FAQ'));                 // real recs still kept
   assert.ok(!JSON.stringify(noInj.brief).toLowerCase().includes('successor'));            // fabrication still stripped
