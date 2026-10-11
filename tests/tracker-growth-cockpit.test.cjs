@@ -20,6 +20,12 @@ const queries=[
 ];
 const growth=computeGrowth(pages,queries,'contentscale.site',now);
 assert.equal(growth.pages.length,3);
+assert.equal(growth.query_opportunities.length,2);
+assert.equal(growth.query_opportunities[0].query,'google penalty recovery services');
+assert.equal(growth.query_opportunities[0].type,'RANKING_AND_CONTENT');
+assert.ok(growth.query_opportunities.every(x=>!x.query.includes('content at scale')));
+assert.ok(growth.query_opportunities.every(x=>!x.url.includes('app.contentscale.site')));
+
 assert.equal(growth.non_brand.impressions,601);
 assert.equal(growth.non_brand.clicks,1);
 assert.equal(growth.brand_or_ambiguous.clicks,1159);
@@ -46,6 +52,8 @@ registerGrowthCockpit({get(path,...handlers){routes[path]=handlers}},{
  const htmlReq={params:{token:'synthetic'}};
  await pageHandlers[0](htmlReq,htmlRes,()=>pageHandlers[1](htmlReq,htmlRes));
  assert.match(htmlRes.html,/Growth Cockpit/);
+ assert.match(htmlRes.html,/Top click opportunities/);
+ assert.match(htmlRes.html,/google penalty recovery services/);
  assert.match(htmlRes.html,/Case Study locked/);
  assert.doesNotMatch(htmlRes.html,/private/);
  console.log('PASS Growth Cockpit actual handlers, domain isolation, branded intent, dedupe and case history');
