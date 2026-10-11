@@ -2,6 +2,12 @@ name: Canonical production-base isolated boot (NO DEPLOY)
 on:
   push:
     branches: [release-20261011-canonical-funnel-safe]
+  pull_request:
+    paths:
+      - 'src/index.js'
+      - 'tests/fixtures/staging-boot-schema.sql'
+      - 'tests/staging-boot-no-egress.cjs'
+      - '.github/workflows/release-canonical-boot.yml'
   workflow_dispatch:
 permissions:
   contents: read
