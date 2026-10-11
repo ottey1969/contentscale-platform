@@ -18,7 +18,12 @@ once("_trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new
  'status initialization');
 const catchOld="      } catch(e) {\n        console.warn('[client-check]', e.message);\n        if(page._completed_monitoring_gate)";
 const catchNew="      } catch(e) {\n        console.warn('[client-check]', e.message);\n        const _failedStatus=_trackerCheckStatus.get(pageId);\n        const _schemaFailure=String(e&&e.message||'').startsWith('TRACKER SCAN BLOCKED: database schema is incomplete:');\n        const _safeError=_schemaFailure?'The Tracker schema is not ready for this scan. No new result was verified.':'The scan did not complete. Check the page status before retrying.';\n        if(_failedStatus){_failedStatus.failed=true;_failedStatus.error_code=_schemaFailure?'SCHEMA_NOT_READY':'SCAN_FAILED';_failedStatus.error=_safeError;}\n        _sseBroadcast({type:'check_error',pageId,domain,url:page.url,error:_safeError,ts:new Date().toISOString()});\n        if(page._completed_monitoring_gate)";
-once(catchOld,catchNew,'failure recording');
+// The stricter live-HTML first-scan guard extends this exact failure handler.
+// It is already fully installed and must not be rewritten on the second pass.
+const liveVariant=body.includes("const _liveFailure=String(e&&e.message||'').startsWith('CASE_FIRST_LIVE_NOT_VERIFIED:');")
+  &&body.includes("error_code=_schemaFailure?'SCHEMA_NOT_READY':_liveFailure?'LIVE_HTML_NOT_VERIFIED':'SCAN_FAILED';")
+  &&body.includes("Current live HTML could not be verified.");
+if(!liveVariant)once(catchOld,catchNew,'failure recording');
 once("        // Broadcast completion\n        try {\n          const snap2 = await pool.query(",
  "        // Never announce success based on a stale historical snapshot after a failed scan.\n        if (!st || !st.failed) try {\n          const snap2 = await pool.query(",
  'stale snapshot success guard');
