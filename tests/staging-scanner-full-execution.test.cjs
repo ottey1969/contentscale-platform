@@ -8,7 +8,7 @@ assert(a>0&&b>a&&b-a<350000,'Canonical scanner bounds changed: manual review nee
 const scanner=s.slice(a,b);
 const required=['tracker_snapshots.gsc_brief','tracker_snapshots.source_suggestions','tracker_snapshots.author_trust_score','tracker_snapshots.author_trust_findings','tracker_snapshots.discovered_sources','tracker_pages.brief_check_count','tracker_pages.brief_content','tracker_pages.brief_started_at','tracker_ai_evidence.id','tracker_ai_evidence.page_id','tracker_ai_evidence.engine','tracker_ai_evidence.evidence_method','tracker_ai_evidence.verified_at','tracker_ai_evidence.updated_at','tracker_ai_evidence.created_at','tracker_ai_evidence.is_cleared','tracker_ai_evidence.revision_cycle','tracker_ai_evidence.exact_page_cited','tracker_ai_evidence.domain_cited','tracker_ai_evidence.brand_recommended','tracker_ai_evidence.brand_direct_supported'];
 const html='<html><body>'+('<p>Unique synthetic content for safe isolated manual scan. </p>'.repeat(25))+'</body></html>';
-function fixture(schemaComplete=true,keyword=''){
+function fixture(schemaComplete=true,keyword='',fetchMode='ok'){
  const state={writes:[],reads:[],fetches:[],steps:[],mails:0,snapshots:[],intervals:0,nextScheduled:false};
  const pool={async query(text,params=[]){
   const sql=String(text).trim();
@@ -32,6 +32,7 @@ function fixture(schemaComplete=true,keyword=''){
   fetch:async url=>{
     state.fetches.push(String(url));
     if(String(url)!=='https://fixtures.invalid/page')throw Error('EXTERNAL NETWORK FORBIDDEN: '+url);
+    if(fetchMode==='error')throw Error('Synthetic upstream HTML fetch unavailable');
     return {ok:true,status:200,url:String(url),text:async()=>html};
   },
   _trSetStep:(...args)=>state.steps.push(args),
@@ -79,4 +80,16 @@ test('scanner has no inline schema migrations or Case Study schema mutation help
  assert.doesNotMatch(scanner,/_ensureCaseStudySchema\s*\(/);
  assert.doesNotMatch(scanner,/_trackerEnsureAiEvidenceSchema\s*\(/);
  assert.match(scanner,/TRACKER SCAN BLOCKED: database schema is incomplete/);
+});
+
+test('temporary HTML fetch failure preserves cached content and does not trigger email or schedule',async()=>{
+ const f=fixture(true,'consultor geo','error');
+ await f.execute();
+ assert.equal(f.state.snapshots.length,1,'Fallback cached HTML must still produce the configured observation');
+ assert.deepEqual(f.state.fetches,['https://fixtures.invalid/page']);
+ assert.equal(f.state.mails,0);
+ assert.equal(f.state.intervals,0);
+ assert.equal(f.state.nextScheduled,false);
+ assert.equal(f.page.gsc_impressions,123);
+ assert.equal(f.page.gsc_clicks,5);
 });
