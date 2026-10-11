@@ -56,6 +56,22 @@ registerGrowthCockpit({get(path,...handlers){routes[path]=handlers}},{
  assert.match(htmlRes.html,/Growth Cockpit/);
  assert.match(htmlRes.html,/Top click opportunities/);
  assert.match(htmlRes.html,/Action plan · 4 steps/);
+ assert.match(htmlRes.html,/Open \/ copy execution brief/);
+ const expHandlers=routes['/api/tracker-client/:token/growth/brief'];
+ assert.equal(expHandlers.length,2);
+ const exportReq={params:{token:'synthetic'},query:{page_id:'2',query:'google penalty recovery services'}};
+ const exportRes={statusCode:200,set(){return this},type(){return this},status(n){this.statusCode=n;return this},send(v){this.body=v;return v}};
+ await expHandlers[0](exportReq,exportRes,()=>expHandlers[1](exportReq,exportRes));
+ assert.equal(exportRes.statusCode,200);
+ assert.match(exportRes.body,/EVIDENCE-BASED GROWTH EXECUTION BRIEF/);
+ assert.match(exportRes.body,/google penalty recovery services/);
+ assert.match(exportRes.body,/Case Study restriction/);
+ assert.match(exportRes.body,/no scan, publication, or customer-site change performed/);
+ const rejected={...exportReq,query:{page_id:'2',query:'fabricated keyword'}};
+ const denied={statusCode:200,type(){return this},status(n){this.statusCode=n;return this},send(v){this.body=v;return v}};
+ await expHandlers[0](rejected,denied,()=>expHandlers[1](rejected,denied));
+ assert.equal(denied.statusCode,404);
+
  assert.match(htmlRes.html,/google penalty recovery services/);
  assert.match(htmlRes.html,/Case Study locked/);
  assert.doesNotMatch(htmlRes.html,/private/);
