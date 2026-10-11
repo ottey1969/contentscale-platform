@@ -39,3 +39,10 @@ if(process.env.CS_INSPECT_PAGE_ACTIONS==='1'){
  }
  for(let i=4125;i<4183;i++)console.log('SCAN_GATE',i+1,lines[i]?.slice(0,550));
 }
+
+if(process.env.CS_INSPECT_SCANNER_CALLERS==='1'){
+ for(let i=0;i<lines.length;i++)if(lines[i].includes('runTrackerCheck(')){
+  let prev='';for(let j=i;j>=Math.max(0,i-600);j--)if(/app\.(get|post|put|patch)\(/.test(lines[j])){prev=(j+1)+' '+lines[j].slice(0,180);break}
+  console.log('RUN_TRACKER_CHECK',i+1,lines[i].slice(0,170),'OWNER_ROUTE',prev);
+ }
+}
