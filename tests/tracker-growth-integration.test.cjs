@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const s=fs.readFileSync(require('node:path').resolve(__dirname,'../src/index.js'),'utf8');
+const a=s.indexOf("app.post('/api/tracker-client/:token/pages/:pageId/brief-action/resolve'");
+const b=s.indexOf("app.post('/api/tracker-client/:token/pages/:pageId/brief-action/restore'",a);
+assert(a>=0&&b>a,'canonical action resolution boundary');
+const r=s.slice(a,b);
+assert(r.includes("if(remaining===0)"),'Growth only after zero actions');
+assert(r.includes("brief.outstanding_actions=remaining"),'Outstanding actions must be derived');
+assert(r.includes("buildTrackerGrowthPlan({page,queries:growthQueries.rows,sitePages:growthSitePages.rows})"),'Verified growth plan integrated with canonical action resolution');
+assert(r.includes("evidence_scope='page_verified'"),'Never derive growth from unverified query data');
+assert(r.includes("brief.growth_loop.plan"),'Growth is separate from implementation queue');
+assert(r.includes("recycle_completed_actions:false"),'Closed tasks stay closed');
+console.log('PASS canonical Tracker Brief closeout has evidence-backed growth plan without reopening finished actions');

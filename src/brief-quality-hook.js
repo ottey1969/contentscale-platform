@@ -75,14 +75,32 @@ function buildCtx({ snapshot = {}, page = {}, sitemap, gscQueryPages }) {
   };
 }
 
+// Persistent Brief tombstones: verified/rejected/overridden actions should not
+// reappear solely because an LLM repeats them in a subsequent delta.
+function actionKey(a) {
+  return [a&&a.title,a&&a.action].map(v=>String(v||'').toLowerCase()
+    .replace(/<[^>]*>/g,' ').replace(/[^a-z0-9]+/g,' ').replace(/\s+/g,' ').trim()).join('|');
+}
+function resolvedKeys(page) {
+  let brief=page&&page.brief_content||{};
+  if(typeof brief==='string'){try{brief=JSON.parse(brief)}catch(_e){return new Set()}}
+  const entries=Array.isArray(brief.manual_resolutions)?brief.manual_resolutions:[];
+  return new Set(entries.filter(x=>x&&['AUTO_VERIFIED_SETTING','AUTO_VERIFIED_LIVE','MANUAL_OVERRIDE_COMPLETE','REJECTED_NOT_APPLICABLE'].includes(x.decision))
+    .map(x=>actionKey(x.action||x)).filter(Boolean));
+}
+
 function cleanTrackerBriefs({ snapshot, page, recommendations = [], gscBrief = [], sitemap, gscQueryPages }) {
   const ctx = buildCtx({ snapshot, page, sitemap, gscQueryPages });
   const rec = postProcessBrief({ recommendations: (recommendations || []).map(toQ) }, ctx, { injectGlobal: true });
   const gsc = postProcessBrief({ recommendations: (gscBrief || []).map(toQ) }, ctx, { injectGlobal: false });
+  const closed=resolvedKeys(page);
+  const filteredRec=rec.brief.recommendations.filter(x=>!closed.has(actionKey(x)));
+  const filteredGsc=gsc.brief.recommendations.filter(x=>!closed.has(actionKey(x)));
   return {
-    recommendations: rec.brief.recommendations.map(fromQ),
-    gscBrief: gsc.brief.recommendations.map(fromQ),
-    report: { citation: rec.report, gsc: gsc.report },
+    recommendations: filteredRec.map(fromQ),
+    gscBrief: filteredGsc.map(fromQ),
+    report: { citation: rec.report, gsc: gsc.report,
+      completed_actions_suppressed:rec.brief.recommendations.length-filteredRec.length+gsc.brief.recommendations.length-filteredGsc.length },
   };
 }
 

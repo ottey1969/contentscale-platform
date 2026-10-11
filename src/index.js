@@ -4616,6 +4616,23 @@ app.post('/api/tracker-client/:token/pages/:pageId/brief-action/resolve', async 
         next_focus:'Wait for fresh evidence before opening a new delta.',
         recycle_completed_actions:false
       };
+      // Growth is a distinct, evidence-based phase. Never backfill new defects or
+      // automatically publish spokes when the implementation queue reaches zero.
+      try{
+        const growthQueries=await pool.query(`SELECT query,clicks,impressions,position,imported_at,evidence_scope
+          FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified'
+          ORDER BY imported_at DESC,impressions DESC LIMIT 300`,[cr.rows[0].id,page.id]);
+        const growthSitePages=await pool.query(`SELECT url,keyword,gsc_keyword FROM tracker_pages
+          WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) LIMIT 1000`,[cr.rows[0].id]);
+        const {buildTrackerGrowthPlan}=require('./tracker-growth-plan.cjs');
+        brief.growth_loop.plan=buildTrackerGrowthPlan({page,queries:growthQueries.rows,sitePages:growthSitePages.rows});
+        brief.growth_loop.next_focus=brief.growth_loop.plan.opportunities.length
+          ? 'Review verified GSC ranking and distinct-intent growth opportunities; completed Brief actions remain closed.'
+          : 'No verified new action; obtain fresh page-level GSC evidence before a new growth cycle.';
+      }catch(growthError){
+        brief.growth_loop.plan={mode:'GROWTH_NOT_DEFECTS',verified:false,opportunities:[],
+          warnings:['Growth research evidence is temporarily unavailable; zero Brief actions remains valid.']};
+      }
     }
 
     await pool.query(`UPDATE tracker_pages SET
@@ -8397,7 +8414,7 @@ async function analyzeCannibalization(clientId) {
     const anySeparate = losers.some(function (l) { return _cannibalIsSeparate(keep, l); });
     const keywordKeys=pages.map(function(p){return _cannibalNorm(p.keyword)}).filter(Boolean);
     const exactDuplicate=keywordKeys.length===pages.length&&new Set(keywordKeys).size===1;
-    const recommendation=anySeparate?'keep_separate':(exactDuplicate?'consolidate_candidate':'differentiate');
+    const recommendation=anySeparate?'keep_separate':(exactDuplicate?'compare_content_and_intent':'differentiate');
     const totalImpressions=pages.reduce(function(n,p){return n+Number(p.impressions||0)},0);
 
     groups.push({
@@ -8405,17 +8422,17 @@ async function analyzeCannibalization(clientId) {
       shared: shared,
       pages: ranked,
       keep: { id: keep.id, url: keep.url, owner_basis:semanticOwner?'semantic_intent':'observed_query' },
-      redirect: exactDuplicate&&!anySeparate ? losers.map(function (l) { return { id: l.id, url: l.url }; }) : [],
+      redirect: [], // No content similarity or canonical proof was verified; never populate redirect targets from GSC alone.
       recommendation: recommendation,
       evidence_level:basis==='gsc_queries'?'PROVEN_OVERLAP':'LIKELY',
-      confidence: exactDuplicate||anySeparate?'high':'medium',
+      confidence: anySeparate?'high':'medium', // Shared keywords alone cannot establish duplicate content.
       total_impressions: totalImpressions,
       reason: semanticOwner
         ? ('Intended semantic owner: '+keep.url+' because its URL/target keyword matches the core query intent most precisely. Google currently surfaces the other URL(s); keep them live, differentiate their purpose and cross-link to the intended owner. This is an ownership recommendation, not a claim that the intended owner already ranks for the query.')
         : anySeparate
         ? 'Pages target legitimately different intent (e.g. residential vs commercial) — differentiate content and cross-link instead of merging.'
         : exactDuplicate
-        ? ('Exact duplicate target keyword. Candidate owner: '+keep.url+' based on query relevance and query-level GSC position. Preview and approve any 301; never execute automatically.')
+        ? ('Same target keyword is assigned to multiple URLs. Compare both full page bodies, intent and page-scoped GSC queries before deciding whether to differentiate, consolidate or leave both unchanged. Candidate URL for review: '+keep.url+'. No redirect or canonical is authorized.')
         : ('Both URLs rank for this query. Keep '+keep.url+' as the provisional owner based on query relevance and query-level GSC evidence; differentiate the other page(s) and cross-link. Do not 301 without an intent review.')
     });
   }

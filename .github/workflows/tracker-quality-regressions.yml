@@ -1,0 +1,48 @@
+name: Tracker evidence and growth regressions
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/index.js'
+      - 'src/brief-quality.js'
+      - 'src/brief-quality-hook.js'
+      - 'src/tracker-growth-plan.cjs'
+      - 'tests/tracker-*.test.cjs'
+      - 'src/brief-quality.test.js'
+  pull_request:
+    paths:
+      - 'src/index.js'
+      - 'src/brief-quality.js'
+      - 'src/brief-quality-hook.js'
+      - 'src/tracker-growth-plan.cjs'
+      - 'tests/tracker-*.test.cjs'
+      - 'src/brief-quality.test.js'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and canonical entry
+        run: |
+          node --check index.cjs
+          node --check src/index.js
+          node --check src/brief-quality.js
+          node --check src/brief-quality-hook.js
+          node --check src/tracker-growth-plan.cjs
+      - name: Verified cannibalization and ranking/CTR diagnosis
+        run: |
+          node src/brief-quality.test.js
+          node tests/tracker-cannib-evidence.test.cjs
+      - name: Zero-action closure, no recycling, growth proof
+        run: |
+          node tests/tracker-growth-plan.test.cjs
+          node tests/tracker-growth-integration.test.cjs
+          node tests/tracker-completed-actions.test.cjs
+          node tests/tracker-growth-closeout-handler.test.cjs
