@@ -51,3 +51,4 @@ jobs:
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs
+          node tests/tracker-growth-gsc-direct.test.cjs
