@@ -17,3 +17,13 @@ for(const signal of signals){
 if(process.env.CS_INSPECT_CASE_CONTEXT==='1'){
  for(let i=2969;i<3082;i++)console.log('CASE_SOURCE',i+1,lines[i]?.slice(0,650));
 }
+
+if(process.env.CS_INSPECT_SCAN_ROUTES==='1'){
+ for(let i=0;i<lines.length;i++){
+  const line=lines[i];
+  if(/app\.(get|post|put|patch)\(/.test(line)&&/scan|refresh|baseline|case-study/i.test(line)){
+   const route=line.match(/app\.(get|post|put|patch)\(\s*['"`]([^'"`]+)/);
+   if(route&&(/tracker-client|case-study/.test(route[2])))console.log('SCAN_ROUTE',i+1,route[1],route[2]);
+  }
+ }
+}
