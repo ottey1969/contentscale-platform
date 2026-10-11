@@ -8901,7 +8901,7 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     if (existing && existing.running) return res.json({ success: true, message: 'Already running', page_id: pageId, already_running: true });
 
     // Initialize status — same as engine route
-    _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: page.url });
+    _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, failed: false, error_code: null, error: null, url: page.url });
 
     // Broadcast check start to SSE so client UI updates
     const domain = (page.url||'').replace(/^https?:\/\//, '').split('/')[0];
@@ -8925,12 +8925,17 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
         }
       } catch(e) {
         console.warn('[client-check]', e.message);
+        const _failedStatus=_trackerCheckStatus.get(pageId);
+        const _schemaFailure=String(e&&e.message||'').startsWith('TRACKER SCAN BLOCKED: database schema is incomplete:');
+        const _safeError=_schemaFailure?'The Tracker schema is not ready for this scan. No new result was verified.':'The scan did not complete. Check the page status before retrying.';
+        if(_failedStatus){_failedStatus.failed=true;_failedStatus.error_code=_schemaFailure?'SCHEMA_NOT_READY':'SCAN_FAILED';_failedStatus.error=_safeError;}
+        _sseBroadcast({type:'check_error',pageId,domain,url:page.url,error:_safeError,ts:new Date().toISOString()});
         if(page._completed_monitoring_gate)await pool.query('UPDATE tracker_pages SET monitoring_waiting_input=TRUE,monitoring_gate_label=$2 WHERE id=$1',[page.id,page._completed_monitoring_gate]).catch(()=>{});
       } finally {
         const st = _trackerCheckStatus.get(pageId);
         if (st) { st.running = false; st.finishedAt = new Date().toISOString(); }
-        // Broadcast completion
-        try {
+        // Never announce success based on a stale historical snapshot after a failed scan.
+        if (!st || !st.failed) try {
           const snap2 = await pool.query(
             `SELECT s.*, p.url, p.keyword, p.gsc_keyword, p.brief_content
              FROM tracker_snapshots s JOIN tracker_pages p ON p.id=s.page_id
@@ -8972,8 +8977,8 @@ app.get('/api/tracker-client/:token/check-status/:pageId', async (req, res) => {
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success:false, error:'Not your page' });
     const state = _trackerCheckStatus.get(parseInt(req.params.pageId,10));
-    if (!state) return res.json({ success:true, running:false, steps:[], startedAt:null, finishedAt:null });
-    return res.json({ success:true, running:!!state.running, steps:state.steps||[], startedAt:state.startedAt||null, finishedAt:state.finishedAt||null });
+    if (!state) return res.json({ success:true, running:false, failed:false, error_code:null, error:null, steps:[], startedAt:null, finishedAt:null });
+    return res.json({ success:true, running:!!state.running, failed:!!state.failed, error_code:state.error_code||null, error:state.error||null, steps:state.steps||[], startedAt:state.startedAt||null, finishedAt:state.finishedAt||null });
   } catch(e) { return res.status(500).json({ success:false, error:e.message }); }
 });
 
@@ -51394,7 +51399,7 @@ async function savePrePublicationCheckpoint(pageId) {
         _finishSingleProven(false);
         if (_fullResolve) _fullResolve();
       } else {
-        pollAndShowBrief(pageId, 30, 2000, function(){ delete _checkAnimations[pageId]; _finishSingleProven(true); if (_fullResolve) _fullResolve(); }, _scanStartedAt);
+        pollAndShowBrief(pageId, 30, 2000, function(ok){ delete _checkAnimations[pageId]; _finishSingleProven(ok!==false); if (_fullResolve) _fullResolve(); }, _scanStartedAt);
       }
     } catch(e) {
       delete _checkAnimations[pageId];
@@ -53319,21 +53324,28 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         api('/pages/' + pageId).then(function(d2) {
           if (d2.success && d2.page && _isFinalBriefForScan(d2.page, scanStartedAt)) { openBriefFromPoll(d2.page); }
           else { hideScanOverlay(); loadPages(); toast('Scan finished, but the final brief is still saving \u2014 Copy remains locked', '#f59e0b'); }
-          if (onDone) onDone();
-        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); if (onDone) onDone(); });
+          if (onDone) onDone(!!(d2.success && d2.page && _isFinalBriefForScan(d2.page, scanStartedAt)));
+        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); if (onDone) onDone(false); });
         return;
       }
       api('/check-status/' + pageId).then(function(st) {
         var finished = st && !st.running && st.finishedAt;
         var finishedMs = finished ? new Date(st.finishedAt).getTime() : 0;
         if (!finished || (scanStartedAt && finishedMs < scanStartedAt - 2000)) return;
+        if (st.failed) {
+          clearInterval(timer);
+          hideScanOverlay();
+          toast(st.error || 'Scan failed. Please review the current page status.', '#f87171');
+          if (onDone) onDone(false);
+          return;
+        }
         api('/pages/' + pageId).then(function(d2) {
           // A finished snapshot is not enough: wait until the final merged/guarded brief from
           // this same scan has its own completion marker. This prevents stale Copy Brief exports.
           if (!d2.success || !d2.page || !_isFinalBriefForScan(d2.page, scanStartedAt)) return;
           clearInterval(timer);
           openBriefFromPoll(d2.page);
-          if (onDone) onDone();
+          if (onDone) onDone(true);
         }).catch(function(){});
       }).catch(function(){});
     }, intervalMs);
