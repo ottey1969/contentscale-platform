@@ -1,0 +1,36 @@
+name: Canonical prospect funnel checks (main-based review)
+on:
+  push:
+    branches: [release-20261011-canonical-funnel-safe]
+  pull_request:
+    paths:
+      - 'src/index.js'
+      - 'src/prospect/**'
+      - 'tests/e2e-*.test.cjs'
+      - '.github/workflows/release-canonical-funnel.yml'
+permissions:
+  contents: read
+jobs:
+  canonical-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax and entrypoint
+        run: |
+          set -euo pipefail
+          node --check index.cjs
+          node --check src/index.js
+          node --check src/prospect/page-quality.cjs
+          test "$(grep -F -c "require('./src/index.js')" index.cjs)" -eq 1
+      - name: Commercial page quality
+        run: node tests/e2e-page-quality.test.cjs
+      - name: Canonical funnel route contracts
+        run: node tests/e2e-funnel-contract.test.cjs
+      - name: Enforce full E2E release hold
+        run: |
+          echo 'Contract-only checks are NOT the writable five-stage end-to-end acceptance.'
+          echo 'Do not merge/deploy until isolated customer lifecycle test is green.'
