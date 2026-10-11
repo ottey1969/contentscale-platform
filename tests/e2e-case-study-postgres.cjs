@@ -47,8 +47,8 @@ async function run(){
     _pqsSendLocalized:async()=>{auditEmails++;return {sent:true}},
   };
   vm.runInNewContext(source.slice(prospectA,prospectB),salesContext,{timeout:4000});
-  vm.runInNewContext(source.slice(auditReadyA,source.indexOf('\\n',auditReadyA)),salesContext,{timeout:4000});
-  vm.runInNewContext(source.slice(trackerInterestA,source.indexOf('\\n',trackerInterestA)),salesContext,{timeout:4000});
+  vm.runInNewContext(source.slice(auditReadyA,source.indexOf('\n',auditReadyA)),salesContext,{timeout:4000});
+  vm.runInNewContext(source.slice(trackerInterestA,source.indexOf('\n',trackerInterestA)),salesContext,{timeout:4000});
   async function sales(route,body={}){
     const res={statusCode:200,status(n){this.statusCode=n;return this},json(x){this.body=JSON.parse(JSON.stringify(x));return x}};
     await handlers[route]({params:{token:'prospect-e2e-synthetic'},body},res);
