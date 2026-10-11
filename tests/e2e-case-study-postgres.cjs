@@ -62,6 +62,9 @@ async function run(){
   await client.query("UPDATE prospect_quick_scans SET status='completed',scan_completed_at=NOW() WHERE token='prospect-e2e-synthetic'");
   const interest=await sales(interestRoute);
   assert.equal(interest.statusCode,200,JSON.stringify(interest.body));
+  const repeatedInterest=await sales(interestRoute);
+  assert.equal(repeatedInterest.statusCode,200);
+  assert.equal(ownerEvents.filter(x=>x==='audit20_interest').length,1,'Repeat Audit20 interest must notify owner only once');
   let prospect=await client.query("SELECT * FROM prospect_quick_scans WHERE token='prospect-e2e-synthetic'");
   assert.equal(prospect.rows[0].audit20_interested,true);
   const ready=await sales(readyRoute,{report_url:'https://example.org/audit20'});
