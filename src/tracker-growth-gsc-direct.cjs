@@ -2,7 +2,27 @@
 const {getPageMetrics,tokenFromServiceAccount,tokenFromOAuthRefresh}=require('./gsc-client');
 const {windowDates,validateWindowInput}=require('./tracker-growth-measurement.cjs');
 const name=x=>String(x||'').trim().toLowerCase();
+async function serviceAccountJsonToken(raw,fetchImpl=fetch){
+ const crypto=require('node:crypto');
+ let key;
+ try{key=JSON.parse(raw)}catch{throw Error('GSC service-account configuration is not valid JSON')}
+ if(!key||!key.client_email||!key.private_key)throw Error('GSC service-account credentials are incomplete');
+ const now=Math.floor(Date.now()/1000),b64=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
+ const header=b64({alg:'RS256',typ:'JWT'});
+ const body=b64({iss:key.client_email,scope:'https://www.googleapis.com/auth/webmasters.readonly',
+   aud:'https://oauth2.googleapis.com/token',iat:now,exp:now+3500});
+ const msg=header+'.'+body;
+ const signature=crypto.sign('RSA-SHA256',Buffer.from(msg),key.private_key).toString('base64url');
+ const response=await fetchImpl('https://oauth2.googleapis.com/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+  body:new URLSearchParams({grant_type:'urn:ietf:params:oauth:grant-type:jwt-bearer',assertion:msg+'.'+signature}).toString(),
+  signal:AbortSignal.timeout(12000)});
+ if(!response.ok)throw Error('GSC service-account token exchange failed (HTTP '+response.status+')');
+ const result=await response.json();
+ if(!result.access_token)throw Error('GSC token exchange returned no access token');
+ return result.access_token;
+}
 async function gscToken(env=process.env){
+ if(env.GSC_SERVICE_ACCOUNT_JSON)return serviceAccountJsonToken(env.GSC_SERVICE_ACCOUNT_JSON);
  if(env.GSC_GROWTH_SERVICE_ACCOUNT_KEY_FILE)return tokenFromServiceAccount(env.GSC_GROWTH_SERVICE_ACCOUNT_KEY_FILE);
  if(env.GSC_GROWTH_CLIENT_ID&&env.GSC_GROWTH_CLIENT_SECRET&&env.GSC_GROWTH_REFRESH_TOKEN)return tokenFromOAuthRefresh({clientId:env.GSC_GROWTH_CLIENT_ID,clientSecret:env.GSC_GROWTH_CLIENT_SECRET,refreshToken:env.GSC_GROWTH_REFRESH_TOKEN});
  return null;
@@ -63,4 +83,4 @@ function registerGrowthGscDirect(app,pool,{env=process.env,pull=pullQueryWindow,
   }
  });
 }
-module.exports={registerGrowthGscDirect,pullQueryWindow,gscToken};
+module.exports={registerGrowthGscDirect,pullQueryWindow,gscToken,serviceAccountJsonToken};
