@@ -33,7 +33,7 @@ function fixture(schemaComplete=true,keyword='',fetchMode='ok'){
     state.fetches.push(String(url));
     if(String(url)!=='https://fixtures.invalid/page')throw Error('EXTERNAL NETWORK FORBIDDEN: '+url);
     if(fetchMode==='error')throw Error('Synthetic upstream HTML fetch unavailable');
-    return {ok:true,status:200,url:String(url),text:async()=>html};
+    return {ok:true,status:200,url:String(url),text:async()=>fetchMode==='suspicious'?'<html><body>Blocked</body></html>':html};
   },
   _trSetStep:(...args)=>state.steps.push(args),
   _canonicalContentScoreScan:async()=>({success:true,score:71,metrics:{accuracy:70},recommendations:[]}),
@@ -92,4 +92,24 @@ test('temporary HTML fetch failure preserves cached content and does not trigger
  assert.equal(f.state.nextScheduled,false);
  assert.equal(f.page.gsc_impressions,123);
  assert.equal(f.page.gsc_clicks,5);
+});
+
+test('FIRST Case Study scan refuses historical cached HTML when fetch fails; baseline and GSC remain',async()=>{
+ const f=fixture(true,'consultor geo','error');f.page._caseStudyFirstManualScan=true;
+ await assert.rejects(f.execute(),/CASE_FIRST_LIVE_NOT_VERIFIED/);
+ assert.equal(f.state.snapshots.length,0,'Do not close first Case Study scan using stale cache');
+ assert.equal(f.state.mails,0);assert.equal(f.state.intervals,0);assert.equal(f.state.nextScheduled,false);
+ assert.equal(f.page.gsc_impressions,123);assert.equal(f.page.gsc_clicks,5);
+});
+test('FIRST Case Study scan refuses suspicious HTML and does not save a snapshot',async()=>{
+ const f=fixture(true,'consultor geo','suspicious');f.page._caseStudyFirstManualScan=true;
+ await assert.rejects(f.execute(),/CASE_FIRST_LIVE_NOT_VERIFIED/);
+ assert.equal(f.state.snapshots.length,0);
+ assert.equal(f.state.mails,0);assert.equal(f.state.nextScheduled,false);
+});
+test('FIRST Case Study scan succeeds with reliably fetched current live HTML',async()=>{
+ const f=fixture(true,'consultor geo','ok');f.page._caseStudyFirstManualScan=true;
+ await f.execute();
+ assert.equal(f.state.snapshots.length,1);
+ assert.equal(f.state.mails,0);assert.equal(f.state.nextScheduled,false);
 });
