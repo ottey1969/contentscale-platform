@@ -37,6 +37,7 @@ jobs:
           set -euo pipefail
           node --check scripts/prepare-case-study-scanner-no-ddl.cjs
           node --check scripts/prepare-case-study-manual-route-no-ddl.cjs
+          node --check scripts/prepare-case-study-scan-failure-feedback.cjs
           node scripts/prepare-case-first-manual-candidate.cjs src/index.js
           node scripts/prepare-case-bulk-scan-queries.cjs src/index.js
           node scripts/prepare-case-study-brief-archive.cjs src/index.js
@@ -44,6 +45,7 @@ jobs:
           node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
           node scripts/prepare-case-study-scanner-no-ddl.cjs src/index.js
           node scripts/prepare-case-study-manual-route-no-ddl.cjs src/index.js
+          node scripts/prepare-case-study-scan-failure-feedback.cjs src/index.js
           node --check src/index.js
           node --check index.cjs
           git diff --check
@@ -61,6 +63,7 @@ jobs:
           node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
           node scripts/prepare-case-study-scanner-no-ddl.cjs src/index.js
           node scripts/prepare-case-study-manual-route-no-ddl.cjs src/index.js
+          node scripts/prepare-case-study-scan-failure-feedback.cjs src/index.js
           if [ "$before" != "$(sha256sum src/index.js | cut -d' ' -f1)" ]; then
             diff -u /tmp/contentscale-scanner-first-pass.js src/index.js | head -n 100 || true
             echo "STOP: candidate transforms are not idempotent"
@@ -81,7 +84,8 @@ jobs:
             tests/staging-start-selector.test.cjs \
             tests/staging-safety-isolation.test.cjs \
             tests/staging-scanner-full-execution.test.cjs \
-            tests/staging-case-study-manual-route-no-ddl.test.cjs
+            tests/staging-case-study-manual-route-no-ddl.test.cjs \
+            tests/staging-case-study-scan-failure-feedback.test.cjs
       - name: Install test dependencies without postinstall side effects
         run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
       - name: Exercise real SQL only on disposable PostgreSQL
@@ -142,6 +146,7 @@ jobs:
             scripts/prepare-case-study-legacy-active-recovery.cjs
             scripts/prepare-case-study-scanner-no-ddl.cjs
             scripts/prepare-case-study-manual-route-no-ddl.cjs
+            scripts/prepare-case-study-scan-failure-feedback.cjs
           retention-days: 7
       - name: Persist the exact tested canonical source to isolated integration branch
         if: success()
