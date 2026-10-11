@@ -3859,6 +3859,7 @@ async function _trackerCaseStudyReadonlySchema(spec={}) {
 }
 require('./tracker-growth-cockpit.cjs').registerGrowthCockpit(app,pool);
 require('./tracker-growth-execution.cjs').registerGrowthExecution(app,pool);
+require('./tracker-growth-measurement.cjs').registerGrowthMeasurement(app,pool);
 app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
