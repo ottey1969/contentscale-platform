@@ -20,9 +20,10 @@ for(const statement of ddl){
  const line="await pool.query('"+statement+"').catch(()=>{});";
  const count=body.split(line).length-1;
  if(count===1){
-  const indented=['  '+line+'\n','    '+line+'\n'].find(entry=>body.includes(entry));
-  if(!indented||body.split(indented).length!==2)throw Error('STOP: scanner DDL indentation unexpected: '+statement);
-  body=body.replace(indented,'');
+  const at=body.indexOf(line),start=body.lastIndexOf('\n',at)+1,end=body.indexOf('\n',at);
+  if(at<0||end<at||body.slice(start,at).trim()||body.slice(at+line.length,end).trim())
+    throw Error('STOP: unexpected text on scanner DDL line: '+statement);
+  body=body.slice(0,start)+body.slice(end+1);
  }
  else if(count!==0)throw Error('STOP: scanner DDL anchor duplicated: '+statement);
 }
