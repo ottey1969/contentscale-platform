@@ -2,3 +2,5 @@
 if(process.env.TRACKER_FOCUSED_SOURCE==='1'){
  for(const [a,b] of [[8131,8195],[8250,8300],[8370,8450],[4570,4630],[65060,65110]])for(let i=a-1;i<b;i++)console.log('FOCUSED',i+1,lines[i]?.slice(0,750));
 }
+
+if(process.env.TRACKER_ACTION_RESOLVE==='1')for(let i=4510;i<4640;i++)console.log('RESOLVE',i+1,lines[i]?.slice(0,780));
