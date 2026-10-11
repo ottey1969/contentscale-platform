@@ -96,7 +96,7 @@ async function runCeo(entry,available){
    throw Error('Unexpected CEO query '+String(sql).slice(0,80));
   }
  };
- const handler=registerRoute(ceoRoute,{...f.ctx,app:undefined,pool,crypto:require('node:crypto'),
+ const handler=registerRoute(ceoRoute,{...f.ctx,pool,crypto:require('node:crypto'),
   _ceoMainWebsiteUrl:()=>({domain:'client.example',url:home}),
   _ensureProspectQuickScanTable:async()=>true,
   _pqsValidEmail:()=>true,
