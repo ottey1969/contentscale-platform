@@ -40,10 +40,12 @@ jobs:
       - name: Guard all existing production architecture
         run: |
           set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "a1f2eb5e6577701b41479b1d6f597c56a8eacdd4"
           node - <<'NODE'
           const fs=require('node:fs'),cp=require('node:child_process');
           const s=fs.readFileSync('src/index.js','utf8');
-          const old=cp.execFileSync('git',['show','HEAD:src/index.js'],{encoding:'utf8',maxBuffer:12000000});
+          const old=cp.execFileSync('git',['show','origin/main:src/index.js'],{encoding:'utf8',maxBuffer:12000000});
           const single='SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_data,started_at';
           const hydrated='SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_locked,baseline_data,started_at';
           const assignment='      _p.case_study=_cs||null;';
