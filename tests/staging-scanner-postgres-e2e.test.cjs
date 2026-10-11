@@ -46,7 +46,7 @@ test('real scanner SQL persists exactly one typed snapshot without changing GSC 
     throw Error('Unexpected scanner write: '+s.slice(0,180));
   }};
   const ctx={pool,Date,JSON,Buffer,Promise,URL,URLSearchParams,AbortSignal,require,
-   process:{env:{}},console:{log(){},warn(){},error(){}},
+   process:{env:{CS_DEPLOYMENT_TIER:'staging'}},console:{log(){},warn(){},error(){}},
    setTimeout(){return 0},clearTimeout(){},setInterval(){intervals++;throw Error('Scheduler forbidden')},
    fetch:async url=>{fetches.push(String(url));if(String(url)!=='https://fixtures.invalid/page')throw Error('External network forbidden');return {ok:true,status:200,url:String(url),text:async()=>html};},
    _trSetStep:(...x)=>steps.push(x),
@@ -58,7 +58,7 @@ test('real scanner SQL persists exactly one typed snapshot without changing GSC 
    CONTENTSCALE_BUILD_ID:'CS-2026-10-10-STAGING-CANDIDATE-v568-FIRST-MANUAL-SCAN'
   };
   vm.runInNewContext(scanner+'\nglobalThis.scan=runTrackerCheck;',ctx,{timeout:10000});
-  await ctx.scan({id:17,tracker_client_id:3,url:'https://fixtures.invalid/page',html_content:html,html_source:'manual',check_frequency:'0',keyword:'',gsc_impressions:123,gsc_clicks:5,gsc_position:14},'',{},false);
+  await ctx.scan({id:17,tracker_client_id:3,url:'https://fixtures.invalid/page',html_content:html,html_source:'manual',_manual_requested:true,check_frequency:'0',keyword:'',gsc_impressions:123,gsc_clicks:5,gsc_position:14},'',{},false);
   const snapshots=(await db.query('SELECT page_id,score,scanner_version FROM tracker_snapshots')).rows;
   assert.equal(snapshots.length,1);assert.equal(snapshots[0].page_id,17);
   assert.equal(snapshots[0].score,71);assert.equal(snapshots[0].scanner_version,'synthetic-ci');
