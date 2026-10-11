@@ -12,7 +12,7 @@ function segment(start,end,max=50000){
 const utility=segment('// Canonical utility-page exclusion for CEO page A, Quick Scan page B and Audit20 discovery.','function _audit20Classify(',3500);
 const selector=segment('function _pqsSelectorText(','function _pqsSelectablePage(',19000);
 function page(url,title,h1,words){
- return {url,html:'<html><head><title>'+title+'</title></head><body><h1>'+h1+'</h1><p>'+('Real, verified business content about a relevant subject. '.repeat(words||40))+'</p></body></html>'};
+ return {url,html:'<html><head><title>'+title+'</title></head><body><h1>'+h1+'</h1><p>'+('Our team evaluates the condition of roofing materials, identifies leak sources, and explains practical solutions for property owners. Services cover detailed inspections, flashing improvements, weather protection and maintenance planning. Customers receive advice about the available installation options, project timelines, technical limitations and expected outcomes. We serve residential buildings and commercial locations with specialists who can document the work needed. ').repeat(Math.max(1,Math.ceil((words||40)/90)))+'</p><p>Specific recommendations depend on the roof type, measured damage, weather exposure, local building requirements and available materials.</p></body></html>'};
 }
 const home='https://client.example/';
 const service='https://client.example/services/roof-repair/';
