@@ -3296,7 +3296,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
 
     // Activate and attach the real Perfect Roofing case study without changing its frozen baseline.
     // Case-study creation/attachment must be an explicit reviewed mutation.
-    const _csr=await pool.query(`SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_data,started_at
+    const _csr=await pool.query(`SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_locked,baseline_data,started_at
       FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'`,[client.id]);
 
     // Pre-v351 case-study baseline repairs and legacy monitoring restoration are now explicit maintenance operations.
@@ -3328,6 +3328,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       const _cs=_csByUrl.get(_caseStudyNormUrl(_p.url));
       _p.case_study_active=!!_cs;
       _p.case_study=_cs||null;
+      _p.case_study_baseline_locked=!!(_cs&&_cs.baseline_locked);
       _p.case_study_fresh_cycle_initialized=!!(_cs&&_csmByCase.get(_cs.id)&&_csmByCase.get(_cs.id).case_study_fresh_cycle_initialized);
       _p.case_study_versions=_cs?(_csvByCase.get(_cs.id)||{}):{};
       _p.case_study_milestones=_cs?(_csmByCase.get(_cs.id)||{}):{};
@@ -48808,7 +48809,7 @@ function _trackerImplementationCheckState(p,isDone,nextState){
 function _trackerImplementationCheckHtml(p,isDone,nextState){
   // NEXT ACTION already explains these hand-off states and owns their button.
   // Rendering a second near-identical purple/amber panel made the card look stuck.
-  if(nextState&&['REVIEW_BRIEF','CASE_PUBLISH_VERIFY','VERIFY_LIVE_PENDING'].includes(String(nextState.code||'')))return '';
+  if(nextState&&(['REVIEW_BRIEF','CASE_PUBLISH_VERIFY','VERIFY_LIVE_PENDING','PREPARE_CASE'].includes(String(nextState.code||''))||(nextState.code==='SCAN'&&p.case_study_active)))return '';
   var x=_trackerImplementationCheckState(p,isDone,nextState);
   if(!x)return '';
   return '<div data-implementation-check="'+x.code+'" style="margin:8px 14px 4px;padding:9px 12px;border:1px solid '+x.border+';background:'+x.bg+';border-radius:8px;">'
