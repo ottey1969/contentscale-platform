@@ -8397,7 +8397,7 @@ async function analyzeCannibalization(clientId) {
     const anySeparate = losers.some(function (l) { return _cannibalIsSeparate(keep, l); });
     const keywordKeys=pages.map(function(p){return _cannibalNorm(p.keyword)}).filter(Boolean);
     const exactDuplicate=keywordKeys.length===pages.length&&new Set(keywordKeys).size===1;
-    const recommendation=anySeparate?'keep_separate':(exactDuplicate?'consolidate_candidate':'differentiate');
+    const recommendation=anySeparate?'keep_separate':(exactDuplicate?'compare_content_and_intent':'differentiate');
     const totalImpressions=pages.reduce(function(n,p){return n+Number(p.impressions||0)},0);
 
     groups.push({
@@ -8405,17 +8405,17 @@ async function analyzeCannibalization(clientId) {
       shared: shared,
       pages: ranked,
       keep: { id: keep.id, url: keep.url, owner_basis:semanticOwner?'semantic_intent':'observed_query' },
-      redirect: exactDuplicate&&!anySeparate ? losers.map(function (l) { return { id: l.id, url: l.url }; }) : [],
+      redirect: [], // No content similarity or canonical proof was verified; never populate redirect targets from GSC alone.
       recommendation: recommendation,
       evidence_level:basis==='gsc_queries'?'PROVEN_OVERLAP':'LIKELY',
-      confidence: exactDuplicate||anySeparate?'high':'medium',
+      confidence: anySeparate?'high':'medium', // Shared keywords alone cannot establish duplicate content.
       total_impressions: totalImpressions,
       reason: semanticOwner
         ? ('Intended semantic owner: '+keep.url+' because its URL/target keyword matches the core query intent most precisely. Google currently surfaces the other URL(s); keep them live, differentiate their purpose and cross-link to the intended owner. This is an ownership recommendation, not a claim that the intended owner already ranks for the query.')
         : anySeparate
         ? 'Pages target legitimately different intent (e.g. residential vs commercial) — differentiate content and cross-link instead of merging.'
         : exactDuplicate
-        ? ('Exact duplicate target keyword. Candidate owner: '+keep.url+' based on query relevance and query-level GSC position. Preview and approve any 301; never execute automatically.')
+        ? ('Same target keyword is assigned to multiple URLs. Compare both full page bodies, intent and page-scoped GSC queries before deciding whether to differentiate, consolidate or leave both unchanged. Candidate URL for review: '+keep.url+'. No redirect or canonical is authorized.')
         : ('Both URLs rank for this query. Keep '+keep.url+' as the provisional owner based on query relevance and query-level GSC evidence; differentiate the other page(s) and cross-link. Do not 301 without an intent review.')
     });
   }
