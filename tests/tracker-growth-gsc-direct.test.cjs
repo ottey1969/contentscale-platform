@@ -6,6 +6,20 @@ const {pullQueryWindow,registerGrowthGscDirect}=require('../src/tracker-growth-g
   {keys:['ai citation tracker'],clicks:8,impressions:400,position:17},
   {keys:['unrelated term'],clicks:9,impressions:450,position:9}
  ]:[{clicks:20,impressions:850,position:13,ctr:.02}]})}};
+ const crypto=require('node:crypto');
+ const kp=crypto.generateKeyPairSync('rsa',{modulusLength:2048});
+ const serviceKey=JSON.stringify({client_email:'growth-test@example.iam.gserviceaccount.com',private_key:kp.privateKey.export({type:'pkcs8',format:'pem'})});
+ const {serviceAccountJsonToken}=require('../src/tracker-growth-gsc-direct.cjs');
+ let signedAssertion=false;
+ const access=await serviceAccountJsonToken(serviceKey,async(_url,opts)=>{
+  const form=new URLSearchParams(opts.body),jwt=form.get('assertion'),segments=jwt.split('.');
+  assert.equal(segments.length,3);
+  const payload=JSON.parse(Buffer.from(segments[1],'base64url').toString());
+  assert.equal(payload.scope,'https://www.googleapis.com/auth/webmasters.readonly');
+  signedAssertion=crypto.verify('RSA-SHA256',Buffer.from(segments[0]+'.'+segments[1]),kp.publicKey,Buffer.from(segments[2],'base64url'));
+  return {ok:true,json:async()=>({access_token:'fake-token'})};
+ });
+ assert.equal(access,'fake-token');assert.equal(signedAssertion,true);
  const g=await pullQueryWindow({siteUrl:'sc-domain:contentscale.site',pageUrl:'https://contentscale.site/ai/',query:'ai citation tracker',startDate:'2026-07-04',endDate:'2026-07-31',token:'synthetic',fetchImpl});
  assert.equal(g.clicks,8);assert.equal(g.impressions,400);
  await assert.rejects(()=>pullQueryWindow({siteUrl:'sc-domain:contentscale.site',pageUrl:'https://contentscale.site/ai/',query:'fabricated query',startDate:'2026-07-04',endDate:'2026-07-31',token:'synthetic',fetchImpl}),/not returned/);
