@@ -40,6 +40,7 @@ jobs:
           node scripts/prepare-case-study-brief-archive.cjs src/index.js
           node scripts/prepare-case-study-manual-only.cjs src/index.js
           node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
+          node scripts/prepare-case-study-spanish-locale.cjs src/index.js
           node --check src/index.js
           node --check index.cjs
           git diff --check
@@ -54,6 +55,7 @@ jobs:
           node scripts/prepare-case-study-brief-archive.cjs src/index.js
           node scripts/prepare-case-study-manual-only.cjs src/index.js
           node scripts/prepare-case-study-legacy-active-recovery.cjs src/index.js
+          node scripts/prepare-case-study-spanish-locale.cjs src/index.js
           test "$before" = "$(sha256sum src/index.js | cut -d' ' -f1)"
       - name: Test first manual scan, archived Brief, legacy recovery and bulk isolation
         run: |
@@ -67,6 +69,7 @@ jobs:
             tests/staging-case-study-legacy-active-recovery.test.cjs \
             tests/staging-case-study-archive-fail-closed.test.cjs \
             tests/staging-case-study-production-export.test.cjs \
+            tests/staging-case-study-spanish-locale.test.cjs \
             tests/staging-start-selector.test.cjs \
             tests/staging-safety-isolation.test.cjs
       - name: Install test dependencies without postinstall side effects
@@ -126,6 +129,7 @@ jobs:
             scripts/prepare-case-study-brief-archive.cjs
             scripts/prepare-case-study-manual-only.cjs
             scripts/prepare-case-study-legacy-active-recovery.cjs
+            scripts/prepare-case-study-spanish-locale.cjs
           retention-days: 7
       - name: Persist the exact tested canonical source to isolated integration branch
         if: success()
