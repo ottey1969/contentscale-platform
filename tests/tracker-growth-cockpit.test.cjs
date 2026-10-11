@@ -12,10 +12,10 @@ const pages=[
 ];
 const queries=[
  {page_id:1,query:'content at scale',impressions:4667,clicks:1159,evidence_scope:'page_verified',imported_at:'2026-10-11T10:00:00Z'},
- {page_id:2,query:'google penalty recovery services',impressions:400,clicks:0,evidence_scope:'page_verified',imported_at:'2026-10-10T10:00:00Z'},
+ {page_id:2,query:'google penalty recovery services',position:23.5,impressions:400,clicks:0,evidence_scope:'page_verified',imported_at:'2026-10-10T10:00:00Z'},
  {page_id:2,query:'google penalty recovery services',impressions:999,clicks:99,evidence_scope:'legacy_unverified',imported_at:'2026-10-11T11:00:00Z'},
- {page_id:3,query:'content freshness seo',impressions:200,clicks:0,evidence_scope:'page_verified',imported_at:'2026-10-10T10:00:00Z'},
- {page_id:2,query:'google penalty recovery services',impressions:401,clicks:1,evidence_scope:'page_verified',imported_at:'2026-10-11T11:00:00Z'},
+ {page_id:3,query:'content freshness seo',position:11.7,impressions:200,clicks:0,evidence_scope:'page_verified',imported_at:'2026-10-10T10:00:00Z'},
+ {page_id:2,query:'google penalty recovery services',position:23.5,impressions:401,clicks:1,evidence_scope:'page_verified',imported_at:'2026-10-11T11:00:00Z'},
  {page_id:4,query:'private',impressions:99999,clicks:5,evidence_scope:'page_verified',imported_at:'2026-10-11T11:00:00Z'}
 ];
 const growth=computeGrowth(pages,queries,'contentscale.site',now);
