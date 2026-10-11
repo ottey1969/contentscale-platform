@@ -35,6 +35,8 @@ jobs:
           test "$(grep -F -c "require('./src/index.js')" index.cjs)" -eq 1
       - name: Commercial page quality
         run: node tests/e2e-page-quality.test.cjs
+      - name: Existing CEO QuickScan Audit20 handler integration regressions
+        run: node --test tests/ceo-quickscan-audit20-legal-e2e.test.cjs tests/ceo-preflight-empty-page-e2e.test.cjs
       - name: Canonical funnel route contracts
         run: node tests/e2e-funnel-contract.test.cjs
       - name: Run actual canonical Audit20 function against synthetic pages
