@@ -20553,6 +20553,7 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
 
   // Crawl fallback/augmentation. Homepage navigation is the first strong
   // structural signal; then verified same-domain internal links are followed.
+  const qualityCache=new Map();
   const queue=[origin+'/']; const seen=new Set(); let fetched=0, navigationUrls=0, internalUrls=0;
   while(queue.length&&fetched<35&&candidates.size<120){
     const current=queue.shift(),key=current.replace(/\/$/,'');
@@ -20560,6 +20561,7 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
     const got=await _audit20FetchHtmlInternal(req,current);
     if(!got.ok||!got.html)continue;
     fetched++;
+    qualityCache.set(key,got.html);
     const links=_audit20ExtractLinks(got.html,current);
     for(const x of links){
       add(x.url,x.source,x.anchor_text);
@@ -20571,7 +20573,20 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
 
   const all=[...candidates.values()].sort((a,b)=>b.priority-a.priority||a.url.localeCompare(b.url));
   const eligible=all.filter(x=>!_audit20LooksUtility(x.url));
-  const selected=eligible.slice(0,Math.max(1,Math.min(Number(maxPages)||20,20)));
+  const selected=[];
+  const excludedContent=[];
+  const {checkPageContent}=require('./prospect/page-quality.cjs');
+  const target=Math.max(1,Math.min(Number(maxPages)||20,20));
+  for(const item of eligible){
+    if(selected.length>=target)break;
+    const key=item.url.replace(/\/$/,'');
+    const cached=qualityCache.get(key);
+    const page=cached?{ok:true,html:cached}:await _audit20FetchHtmlInternal(req,item.url);
+    if(!page.ok||!page.html){excludedContent.push({url:item.url,reason:'html_unavailable'});continue;}
+    const quality=checkPageContent(page.html,item.type);
+    if(!quality.eligible){excludedContent.push({url:item.url,reason:quality.reason});continue;}
+    selected.push(item);
+  }
   return {
     success:true,
     domain:new URL(origin).hostname,
@@ -20579,7 +20594,8 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
     sitemap:{found:sitemapFound,url:sitemapUrl||null,urls_discovered:sitemapUrls},
     crawl:{pages_fetched:fetched,navigation_links_seen:navigationUrls,internal_links_seen:internalUrls},
     candidates_discovered:all.length,
-    eligible_pages:eligible.length,
+    eligible_pages:selected.length,
+    excluded_content:excludedContent.slice(0,60),
     selected_count:selected.length,
     target_max:20,
     incomplete:selected.length<20,
