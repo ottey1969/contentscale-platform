@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  statuses: write
 jobs:
   public-html-only:
     runs-on: ubuntu-latest
@@ -21,3 +22,19 @@ jobs:
         run: |
           node --check tests/case-study-live-fetch-readiness.cjs
           node tests/case-study-live-fetch-readiness.cjs
+
+      - name: Publish public HTML preflight result (no deployments)
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREFLIGHT_RESULT: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          if [ "$PREFLIGHT_RESULT" = "success" ]; then ci_state=success; else ci_state=failure; fi
+          payload="$(printf '{\"state\":\"%s\",\"context\":\"contentscale/public-case-html\",\"description\":\"Public Spanish HTML reachability: %s; no scan or DB actions\",\"target_url\":\"https://github.com/%s/actions/runs/%s\"}' "$ci_state" "$PREFLIGHT_RESULT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID")"
+          curl --fail --silent --show-error -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            --data "$payload" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" >/dev/null
