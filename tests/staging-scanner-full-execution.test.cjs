@@ -28,7 +28,7 @@ function fixture(schemaComplete=true,keyword=''){
  }};
  const ctx={pool,Date,JSON,Buffer,Promise,URL,URLSearchParams,AbortSignal,require,
   setTimeout(){return 0},clearTimeout(){},setInterval(){state.intervals++;throw Error('Unexpected scheduler')},
-  process:{env:{}},console:{log(){},warn(){},error(){}},
+  process:{env:{CS_DEPLOYMENT_TIER:'staging'}},console:{log(){},warn(){},error(){}},
   fetch:async url=>{
     state.fetches.push(String(url));
     if(String(url)!=='https://fixtures.invalid/page')throw Error('EXTERNAL NETWORK FORBIDDEN: '+url);
@@ -46,7 +46,7 @@ function fixture(schemaComplete=true,keyword=''){
  };
  vm.runInNewContext(scanner+'\nglobalThis.runScanner=runTrackerCheck;',ctx,{timeout:10000});
  const page={id:17,url:'https://fixtures.invalid/page',html_content:html,html_source:'manual',
-  check_frequency:'0',tracker_client_id:3,keyword,brief_content:null,gsc_impressions:123,gsc_clicks:5,gsc_position:14};
+  check_frequency:'0',tracker_client_id:3,keyword,_manual_requested:true,brief_content:null,gsc_impressions:123,gsc_clicks:5,gsc_position:14};
  return {state,page,execute:()=>ctx.runScanner(page,'',{},false)};
 }
 test('missing schema fails before HTML fetch, DB write or email',async()=>{
