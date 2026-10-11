@@ -1,0 +1,12 @@
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const code=fs.readFileSync(require('node:path').resolve(__dirname,'../src/index.js'),'utf8');
+const a=code.indexOf('async function analyzeCannibalization(clientId) {'),b=code.indexOf("// GET /api/tracker-client/:token/pages/check-cannibalization",a);
+assert(a>0&&b>a&&b-a<20000,'Canonical cannibalization engine moved');
+const central=code.slice(a,b);
+assert(central.includes('redirect: [],'),'No redirects until content is compared');
+assert(central.includes("'compare_content_and_intent'"),'Exact keyword overlap must call for verification, not consolidation');
+assert(!central.includes("recommendation=anySeparate?'keep_separate':(exactDuplicate?'consolidate_candidate'"),'Old forced consolidation must not return');
+assert(central.includes('evidence_level:'),'Preserve exact-GSC versus likely labels');
+assert(central.includes("basis==='gsc_queries'"),'Only verified page-query proof may be marked observed');
+console.log('PASS central Tracker cannibalization never invents redirects or canonicals from keywords alone');
