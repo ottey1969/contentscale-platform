@@ -15,4 +15,4 @@ jobs:
         with:
           node-version: '22'
       - run: node --check src/brief-quality.js && node src/brief-quality.test.js
-      - run: node scripts/inspect-tracker-growth-contract.cjs
+      - run: TRACKER_FOCUSED_SOURCE=1 node scripts/inspect-tracker-growth-contract.cjs
