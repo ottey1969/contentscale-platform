@@ -24620,10 +24620,46 @@ function _pqsSelectorLooksArchive(page){
   if(/<body\b[^>]*class=["'][^"']*\b(?:archive|category|tag|author)\b/i.test(html))return true;
   return false;
 }
+// Existing CEO and QuickScan scanners share a cheap content-readiness preflight.
+// This measures useful page evidence, not a Google ranking signal.
+function _pqsPageReadiness(page,expectedUrl){
+ const fail=(code,reason)=>({ok:false,code,reason});
+ if(!page||!page.html)return fail('PAGE_UNAVAILABLE','The page could not be retrieved as HTML.');
+ let actual,wanted;
+ try{actual=new URL(page.url);wanted=new URL(expectedUrl)}catch(e){return fail('INVALID_URL','Invalid page URL.');}
+ if(!_audit20SameHost(actual.href,wanted.href))return fail('FOREIGN_REDIRECT','The page redirects to a different website.');
+ const norm=u=>decodeURIComponent(u.pathname||'/').replace(/\/+$/,'')||'/';
+ if(norm(actual)!==norm(wanted))return fail('REDIRECTED_PAGE','The selected page redirects to another page.');
+ if(!_pqsSelectorUrlEligible(actual.href))return fail('UTILITY_PAGE','The page is not eligible business content.');
+ const html=String(page.html),title=_pqsSelectorTitle(html),h1=_pqsSelectorMeta(html,'h1');
+ if(_ceoUtilityPage(actual.href,title,h1))return fail('UTILITY_PAGE','Legal and utility pages cannot be scanned.');
+ const robots=(html.match(/<meta\b[^>]*\bname\s*=\s*['"](?:robots|googlebot)['"][^>]*>/gi)||[]).join(' ');
+ if(/\bnoindex\b/i.test(robots))return fail('NOT_INDEXABLE','The page is marked noindex.');
+ const heading=(title+' '+h1).trim();
+ if(/^(?:404|410|page not found|product not found|item not found|no products found|under construction|coming soon|website maintenance|temporarily unavailable)\b/i.test(heading)||/\b(?:product not found|page not found|no products found|under construction)\b/i.test(heading))
+  return fail('ERROR_OR_PLACEHOLDER','The page is missing, unfinished or a placeholder.');
+ if(/\blorem ipsum\b/i.test(html))return fail('PLACEHOLDER_COPY','Placeholder text is not business evidence.');
+ const region=(html.match(/<main\b[^>]*>([\s\S]*?)<\/main>/i)||html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)||html.match(/<body\b[^>]*>([\s\S]*?)<\/body>/i)||[])[1]||html;
+ const clean=region.replace(/<(?:nav|header|footer|aside|form|button|script|style|template|noscript|svg)\b[^>]*>[\s\S]*?<\/\s*(?:nav|header|footer|aside|form|button|script|style|template|noscript|svg)\s*>/gi,' ');
+ const blocks=[];const re=/<(p|li|dd|td|h2|h3)\b[^>]*>([\s\S]*?)<\/\1>/gi;let m;
+ while((m=re.exec(clean))&&blocks.length<200){const t=_pqsSelectorText(m[2]);if(t)blocks.push(t);}
+ const substantial=blocks.filter(t=>t.split(/\s+/).length>=12);
+ const meaningful=blocks.filter(t=>t.split(/\s+/).length>=7).join(' ');
+ const visible=meaningful||_pqsSelectorText(clean);
+ const tokens=visible.match(/[\p{L}\p{N}]+(?:[-'’][\p{L}\p{N}]+)*/gu)||[];
+ const cjk=(visible.match(/[\u3400-\u9fff]/gu)||[]).length;
+ const maxBlock=Math.max(0,...substantial.map(t=>t.split(/\s+/).length));
+ const n=tokens.length,distinct=new Set(tokens.map(t=>t.toLowerCase())).size;
+ if((n<65&&cjk<150)||(n<100&&cjk<150&&substantial.length<2&&maxBlock<75))
+  return fail('INSUFFICIENT_CONTENT','Too little meaningful page content; menus, buttons and footer text do not count.');
+ if(n>=65&&distinct/Math.max(n,1)<0.16)
+  return fail('REPEATED_BOILERPLATE','The page consists mainly of repeated text.');
+ return {ok:true,words:n,content_blocks:substantial.length};
+}
 function _pqsSelectorScore(page,homeUrl){
   const html=String(page&&page.html||''),text=_pqsSelectorText(html),words=text?text.split(/\s+/).filter(Boolean).length:0,title=_pqsSelectorTitle(html),h1=_pqsSelectorMeta(html,'h1');let u;try{u=new URL(page.url)}catch(e){return null}let home;try{home=new URL(homeUrl)}catch(e){home=u}
   const path=(u.pathname||'/').toLowerCase(),hay=(path+' '+title+' '+h1).toLowerCase();
-  if(!_audit20SameHost(u.href,home.href)||!_pqsSelectorUrlEligible(u.href)||_ceoUtilityPage(u.href,title,h1)||_pqsSelectorLooksArchive(page))return null;
+  if(!_audit20SameHost(u.href,home.href)||!_pqsSelectorUrlEligible(u.href)||_ceoUtilityPage(u.href,title,h1)||_pqsSelectorLooksArchive(page)||!_pqsPageReadiness(page,u.href).ok)return null;
   if(/(?:privacy|cookie|terms|legal|disclaimer|login|signin|signup|cart|checkout|account)(?:\/|$)/i.test(path))return null;
   const informational=/(?:\/blog(?:\/|$)|\/news(?:\/|$)|\/article(?:\/|$)|\/guides?(?:\/|$)|\/resources?(?:\/|$))/i.test(path)||/\b(blog|guide|article|news)\b/i.test(hay);
   let commercial=0;if(/(?:service|services|solution|solutions|product|products|property|properties|development|developments|project|projects|software|platform|consult|repair|roof|clinic|treatment|course|pricing|industry|industries|location|locations)/i.test(hay))commercial+=35;if(/(?:about|company|team|contact|career)/i.test(hay))commercial-=15;if(informational)commercial-=35;
@@ -24793,13 +24829,19 @@ app.post('/api/prospect-quick-scan/:token/run',_pqsPublicLimit,async(req,res)=>{
     // v391: a visitor may scan without supplying an email. The private link itself
     // remains the return path; an email only adds a completion notification.
     if(row.status==='scanning')return res.status(409).json({success:false,error:'This page is already being scanned'});
-    await pool.query(`UPDATE prospect_quick_scans SET status='scanning',scan_error=NULL,scan_started_at=NOW(),updated_at=NOW() WHERE token=$1`,[row.token]);
-    _pqsNotifyOwner(row,'started');
-    // If the visitor deliberately supplied another same-domain page, respect it. Otherwise discover
-    // a commercially useful page automatically instead of assuming the homepage is the best sample.
+    // Verify business content BEFORE starting a scan, changing scanning status or notifying owner.
     if(String(row.page_selection_mode||'auto')!=='manual'){
-      try{const choice=await _pqsSelectBestScanPage(row.url,req);if(choice&&choice.selected_url){row.url=choice.selected_url;row.page_selection=choice;row.page_selection_mode=choice.mode||'auto';await pool.query(`UPDATE prospect_quick_scans SET url=$1,page_selection_mode=$2,page_selection=$3::jsonb,updated_at=NOW() WHERE token=$4`,[row.url,row.page_selection_mode,JSON.stringify(choice),row.token]);}}catch(e){console.warn('[quick-scan] automatic page selection:',e.message)}
+      let choice=null;
+      try{choice=await _pqsSelectBestScanPage(row.url,req)}catch(e){console.warn('[quick-scan] automatic page selection:',e.message)}
+      if(!choice||!choice.selected_url)return res.status(422).json({success:false,code:'NO_ELIGIBLE_QUICKSCAN_PAGE',error:'No suitable business page was found. Choose a different service or product page.'});
+      row.url=choice.selected_url;row.page_selection=choice;row.page_selection_mode=choice.mode||'auto';
+      await pool.query("UPDATE prospect_quick_scans SET url=$1,page_selection_mode=$2,page_selection=$3::jsonb,updated_at=NOW() WHERE token=$4",[row.url,row.page_selection_mode,JSON.stringify(choice),row.token]);
     }
+    const checkedPage=await _pqsFetchPublicEmailPage(row.url);
+    const readiness=_pqsPageReadiness(checkedPage,row.url);
+    if(!readiness.ok)return res.status(422).json({success:false,code:'QUICKSCAN_PAGE_NOT_READY',reason:readiness.code,error:readiness.reason+' Choose a page with useful business information. The scan has not started.'});
+    await pool.query("UPDATE prospect_quick_scans SET status='scanning',scan_error=NULL,scan_started_at=NOW(),updated_at=NOW() WHERE token=$1",[row.token]);
+    _pqsNotifyOwner(row,'started');
     let d;
     try{d=await _canonicalContentScoreScan({url:row.url},{timeoutMs:90000});}
     catch(scanErr){d=scanErr.scan||{success:false,error:scanErr.message};}
