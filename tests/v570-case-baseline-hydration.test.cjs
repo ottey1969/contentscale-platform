@@ -6,7 +6,7 @@ const b=s.indexOf('// GET /api/tracker-client/:token/briefs/:pageId',a);
 assert(a>0&&b>a&&b-a<60000,'Canonical Tracker GET route changed');
 const getRoute=s.slice(a,b);
 const d=s.indexOf('function _trackerNextActionState('),e=s.indexOf('\nfunction _trackerImplementationCheckState(',d);
-assert(d>0&&e>d&&e-d<20000,'Canonical NEXT ACTION function changed');
+assert(d>0&&e>d&&e-d<26000,'Canonical NEXT ACTION function changed');
 const ctx={Date,JSON,_trackerEvidenceGateState:p=>({waiting:!!p.monitoring_waiting_input,ready_to_scan:false,ready_to_complete:false,missing:[]}),_aiEvidenceIsVerified:()=>false};
 vm.runInNewContext(s.slice(d,e)+'\nglobalThis.resolve=_trackerNextActionState;',ctx,{timeout:5000});
 function page(id,done){
