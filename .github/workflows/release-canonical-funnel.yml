@@ -41,8 +41,6 @@ jobs:
         run: node tests/e2e-page-quality.test.cjs
       - name: Existing CEO QuickScan Audit20 handler integration regressions
         run: node --test tests/ceo-quickscan-audit20-legal-e2e.test.cjs tests/ceo-preflight-empty-page-e2e.test.cjs
-      - name: Inspect canonical Case Study route markers (diagnostic)
-        run: CS_INSPECT_PROSPECT_ROUTES=1 node scripts/inspect-case-study-routes.cjs
       - name: First Case Study manual scan and replay protection
         run: node --test tests/e2e-case-study-first-manual-check.test.cjs
       - name: Case Study start route fails closed against synthetic Tracker state
