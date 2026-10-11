@@ -20703,10 +20703,15 @@ app.post('/api/prospect-quick-scan/:token/audit20-interest',async(req,res)=>{
     if(!q.rows.length)return res.status(404).json({success:false,error:'Quick Scan not found'});
     const row=q.rows[0];
     if(!row.scan_completed_at&&!['completed','complete','scan_ready'].includes(String(row.status||'')))return res.status(409).json({success:false,error:'Complete the Quick Scan first'});
-    await pool.query(`UPDATE prospect_quick_scans
+    const interestWrite=await pool.query(`UPDATE prospect_quick_scans
       SET audit20_interested=TRUE,audit20_interested_at=COALESCE(audit20_interested_at,NOW()),
           audit20_interest_note=$1,follow_up_status='audit20_interested',updated_at=NOW()
-      WHERE token=$2`,[note,token]);
+      WHERE token=$2 AND revoked_at IS NULL AND audit20_interested IS DISTINCT FROM TRUE RETURNING token`,[note,token]);
+    if(!interestWrite.rows.length){
+      const previous=await pool.query('SELECT audit20_interested FROM prospect_quick_scans WHERE token=$1 AND revoked_at IS NULL LIMIT 1',[token]);
+      if(!previous.rows.length)return res.status(404).json({success:false,error:'Quick Scan not found'});
+      return res.json({success:true,status:'audit20_interested',already_interested:true,email_sent:false,message:'Interest already recorded. The 20-Page Audit has not been started automatically.'});
+    }
     let emailSent=false;
     try{
       const full=await pool.query(`SELECT * FROM prospect_quick_scans WHERE token=$1 LIMIT 1`,[token]),prospect=full.rows[0]||{};
