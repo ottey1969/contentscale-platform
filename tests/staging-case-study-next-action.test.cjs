@@ -26,6 +26,12 @@ test('evidence checkpoint takes precedence over first manual scan',()=>{
 test('scan completed after baseline cannot display first manual scan again',()=>{
  const r=next(page(),'2026-10-10T12:10:00Z');assert.notEqual(r.label,'CASE STUDY ACTIVE · FIRST MANUAL SCAN');
 });
+test('synthetic baseline with a newer snapshot does not offer duplicate first scan',()=>{
+ const p=page({case_study:{baseline_locked:true,baseline_at:'2026-10-10T00:00:00Z'},check_frequency:'0'});
+ const r=next(p,'2026-10-10T01:00:00Z');
+ assert.notEqual(r.label,'CASE STUDY ACTIVE · FIRST MANUAL SCAN');
+ assert.notEqual(r.code,'SCAN');
+});
 test('missing fresh-cycle marker does not expose first manual scan action',()=>{
  const r=next(page({case_study_fresh_cycle_initialized:false}),null);
  assert.notEqual(r.label,'CASE STUDY ACTIVE · FIRST MANUAL SCAN');
