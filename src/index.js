@@ -3857,6 +3857,7 @@ async function _trackerCaseStudyReadonlySchema(spec={}) {
  }
  return {ready:missingTables.length===0&&missingColumns.length===0,missing_tables:missingTables,missing_columns:missingColumns};
 }
+require('./tracker-growth-cockpit.cjs').registerGrowthCockpit(app,pool);
 app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
