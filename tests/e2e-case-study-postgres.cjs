@@ -43,7 +43,7 @@ async function run(){
      return row.rows[0];
    },
    _caseStudyEventForPage:async()=>{},
-   _caseStudyOpenFreshStartCycle:async()=>({revision_cycle:2})
+   _caseStudyOpenFreshStartCycle:async()=>{await client.query("INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,event_at,source) VALUES((SELECT id FROM tracker_case_studies WHERE tracker_page_id=99002 LIMIT 1),99002,'case_study_fresh_cycle_initialized',NOW(),'synthetic_e2e')");return {revision_cycle:2}}
   };
   vm.runInNewContext(route,context,{timeout:4000});
   assert.equal(typeof handler,'function');
@@ -67,6 +67,39 @@ async function run(){
   const after=await client.query("SELECT id,baseline_data FROM tracker_case_studies WHERE tracker_page_id=99002");
   assert.equal(after.rowCount,1);assert.equal(after.rows[0].id,original.rows[0].id);
   assert.deepEqual(after.rows[0].baseline_data,original.rows[0].baseline_data);
+  // Continue through the ACTUAL manual-check HTTP handler using the persisted
+  // locked baseline + fresh-cycle event, without external scanning services.
+  await client.query("UPDATE tracker_pages SET manual_done=TRUE,brief_content='{\"outstanding_actions\":0}'::jsonb WHERE id=99002");
+  const gateA=source.indexOf('function _trackerNormalScanGate(');
+  const gateB=source.indexOf('// POST /api/tracker-client/:token/scan-all',gateA);
+  const checkA=source.indexOf("app.post('/api/tracker-client/:token/check/:pageId'");
+  const checkB=source.indexOf('\\n});',checkA);
+  assert(gateA>0&&gateB>gateA&&checkA>0&&checkB>checkA,'Canonical single-page scan route missing');
+  let checkHandler,queued=null,actualChecks=0;
+  const checkContext={
+   app:{post(_p,fn){checkHandler=fn}},pool:client,Date,Number,String,JSON,Math,Set,process:{env:{}},
+   console,_trackerCheckStatus:new Map(),_sseBroadcast:()=>{},
+   _ensureMonitoringGateSchema:async()=>{},_caseStudyEventForPage:async()=>{},
+   setImmediate:fn=>{queued=fn},
+   runTrackerCheck:async()=>{actualChecks++;await client.query("INSERT INTO tracker_snapshots(id,page_id,checked_at,google_position) VALUES (99090,99002,$1,9)",[new Date(original.rows[0].baseline_at.getTime()+1000)]);}
+  };
+  vm.runInNewContext(source.slice(gateA,gateB)+'\\n'+source.slice(checkA,checkB+4),checkContext,{timeout:4000});
+  async function check(){
+   const res={statusCode:200,status(n){this.statusCode=n;return this},json(body){this.body=JSON.parse(JSON.stringify(body));return body}};
+   await checkHandler({params:{token:'case-e2e-synthetic',pageId:'99002'},body:{}},res);
+   return res;
+  }
+  const accepted=await check();assert.equal(accepted.statusCode,200,JSON.stringify(accepted.body));
+  assert.equal(accepted.body.success,true);
+  assert(queued,'Manual check must schedule the canonical scan');
+  await queued();assert.equal(actualChecks,1);
+  const refused=await check();assert.equal(refused.statusCode,409,JSON.stringify(refused.body));
+  assert.equal(refused.body.scan_locked,true);
+  assert.equal(actualChecks,1,'A later scan may not replay the first-scan exception');
+  const frozen=await client.query('SELECT baseline_data FROM tracker_case_studies WHERE id=$1',[original.rows[0].id]);
+  assert.deepEqual(frozen.rows[0].baseline_data,original.rows[0].baseline_data);
+  console.log('PASS writable synthetic PG Case Study: first manual scan accepted, later replay blocked, baseline unchanged');
+
   console.log('PASS writable synthetic PG Case Study: baseline freeze, HTML, 5 engines, GSC, replay, immutable history');
  } finally {
   await client.query('ROLLBACK');
