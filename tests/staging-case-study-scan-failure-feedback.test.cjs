@@ -40,6 +40,19 @@ test('failed schema check is visible without leaking column details; stale snaps
  assert.equal(f.events.filter(e=>e.type==='check_error').length,1);
  const retry=await f.post();assert.equal(retry.statusCode,200);assert.equal(f.queued.length,1);
 });
+test('first Case Study scan with unverified live HTML shows actionable retry message, never stale success',async()=>{
+ const f=fixture('CASE_FIRST_LIVE_NOT_VERIFIED: historical cache is not a current page');
+ const accepted=await f.post();assert.equal(accepted.statusCode,200);
+ await f.flush();
+ const st=await f.status();assert.equal(st.payload.failed,true);
+ assert.equal(st.payload.error_code,'LIVE_HTML_NOT_VERIFIED');
+ assert.match(st.payload.error,/Current live HTML could not be verified/);
+ assert.match(st.payload.error,/Retry/);
+ assert.equal(f.events.filter(e=>e.type==='check_done').length,0);
+ assert.equal(f.events.filter(e=>e.type==='check_error').length,1);
+ const retry=await f.post();assert.equal(retry.statusCode,200);
+ assert.equal(f.queued.length,1);
+});
 test('failed AI/provider scan does not expose secret error text',async()=>{
  const f=fixture('Provider failed; token=secret-example');
  await f.post();await f.flush();const st=await f.status();
