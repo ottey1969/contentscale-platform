@@ -20603,7 +20603,7 @@ async function _audit20Discover(req,rawUrl,maxPages=20){
       ?`Only ${selected.length} suitable verified page(s) were discovered. ContentScale will not invent URLs to reach 20.`
       :'20 suitable pages selected for audit.',
     selected,
-    candidates:eligible.slice(0,60)
+    candidates:selected.slice(0,60)
   };
 }
 
