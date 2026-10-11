@@ -9,7 +9,7 @@ const q0=s.indexOf("app.get('/api/tracker-client/:token/check-status/:pageId', a
 const q1=s.indexOf('\n// GET /track/:token — client tracker page',q0);
 const u0=s.indexOf('function pollAndShowBrief('),u1=s.indexOf('\n  function _isFinalBriefForScan(',u0);
 assert(g0>0&&g1>g0&&r0>g1&&r1>r0&&q0>r1&&q1>q0&&u0>0&&u1>u0);
-function fixture(failure){
+function fixture(failure,snapshotAt='2026-08-18T00:00:00Z'){
  const page={id:17,tracker_client_id:3,url:'https://fixtures.invalid/page',manual_done:true,brief_content:{old:true},brief_evaluated_at:'2026-08-18T12:00:00Z',check_frequency:'0',monitoring_waiting_input:false,revision_cycle:4};
  const cycle={baseline_at:'2026-10-10T12:00:00Z',latest_snapshot_at:'2026-08-18T00:00:00Z',fresh_cycle_initialized:true,current_revision_published_at:null};
  const queued=[],events=[],queries=[];let scanCalls=0,post,get;
@@ -20,12 +20,12 @@ function fixture(failure){
   if(sql.startsWith('SELECT * FROM tracker_pages'))return {rows:[page]};
   if(sql.startsWith('SELECT id FROM tracker_pages'))return {rows:[{id:17}]};
   if(sql.includes('FROM tracker_case_studies cs'))return {rows:[cycle]};
-  if(sql.includes('FROM tracker_snapshots s JOIN tracker_pages p'))return {rows:[{url:page.url,score:97}]};
+  if(sql.includes('FROM tracker_snapshots s JOIN tracker_pages p'))return {rows:[{url:page.url,score:97,checked_at:snapshotAt}]};
   throw Error('Unexpected SQL: '+sql.slice(0,100));
  }};
  const ctx={app:{post(_url,fn){post=fn},get(_url,fn){get=fn}},pool,_trackerCheckStatus:states,
   _sseBroadcast:x=>events.push(JSON.parse(JSON.stringify(x))),setImmediate:fn=>queued.push(fn),
-  runTrackerCheck:async()=>{scanCalls++;throw Error(failure)},Date,JSON,process:{env:{}},console:{warn(){},error(){},log(){}}};
+  runTrackerCheck:async()=>{scanCalls++;if(failure)throw Error(failure)},Date,JSON,process:{env:{}},console:{warn(){},error(){},log(){}}};
  vm.runInNewContext(s.slice(g0,g1)+'\n'+s.slice(r0,r1)+'\n'+s.slice(q0,q1),ctx,{timeout:5000});
  const invoke=async fn=>{const res={statusCode:200,status(x){this.statusCode=x;return this},json(x){this.payload=JSON.parse(JSON.stringify(x));return this}};await fn({params:{token:'fixture-token',pageId:'17'}},res);return res;};
  return {post:()=>invoke(post),status:()=>invoke(get),flush:async()=>{for(const fn of queued.splice(0))await fn()},events,queries,queued,states,get scanCalls(){return scanCalls}};
@@ -60,4 +60,17 @@ test('dashboard immediately stops polling and returns a failed state without ope
 });
 test('checkPage propagates failure state to existing scan button',()=>{
  assert.match(s,/pollAndShowBrief\(pageId, 30, 2000, function\(ok\)\{ delete _checkAnimations\[pageId\]; _finishSingleProven\(ok!==false\)/);
+});
+
+test('handler that finishes with only a historical snapshot reports NO_NEW_SNAPSHOT, never check_done',async()=>{
+ const f=fixture(null);await f.post();await f.flush();const st=await f.status();
+ assert.equal(st.payload.failed,true);assert.equal(st.payload.error_code,'NO_NEW_SNAPSHOT');
+ assert.equal(f.events.filter(e=>e.type==='check_done').length,0);
+ assert.equal(f.events.filter(e=>e.type==='check_error').length,1);
+});
+test('new snapshot saved by successful handler emits one check_done and no failure',async()=>{
+ const f=fixture(null,new Date().toISOString());await f.post();await f.flush();const st=await f.status();
+ assert.equal(st.payload.failed,false);assert.equal(st.payload.error,null);
+ assert.equal(f.events.filter(e=>e.type==='check_done').length,1);
+ assert.equal(f.events.filter(e=>e.type==='check_error').length,0);
 });
