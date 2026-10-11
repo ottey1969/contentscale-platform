@@ -139,7 +139,22 @@ jobs:
             exit 1
           fi
           node -e "const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/contentscale-integration-build.json'));if(!JSON.stringify(x).includes('v568'))process.exit(1)"
-          echo 'INTEGRATION FULL APP START PASSED IN DISPOSABLE CI ONLY'
+          # The boot HTTP probe alone is not evidence that the Tracker schema loaded.
+          # Postgres may log rejected ALTERs while the process still responds 200.
+          node - <<'NODE'
+          const {Client}=require('pg');
+          (async()=>{
+            const db=new Client({connectionString:process.env.DATABASE_URL});
+            await db.connect();
+            try {
+              const q=await db.query("SELECT to_regclass('public.tracker_pages') AS pages, to_regclass('public.tracker_case_studies') AS studies");
+              if(!q.rows[0].pages || !q.rows[0].studies) {
+                throw Error('FAIL CLOSED: isolated app boot returned HTTP 200, but canonical Tracker/Case Study tables are missing');
+              }
+            } finally { await db.end(); }
+          })().catch(e=>{console.error(e.message);process.exitCode=1});
+          NODE
+          echo 'INTEGRATION FULL APP START AND SCHEMA READINESS PASSED IN DISPOSABLE CI ONLY'
       - name: Publish review artifact, NEVER deploy to Railway
         uses: actions/upload-artifact@v4
         with:
