@@ -1,0 +1,23 @@
+name: Case Study public HTML reachability (read-only)
+on:
+  push:
+    branches: [case-study-scanner-safety-candidate]
+    paths:
+      - tests/case-study-live-fetch-readiness.cjs
+      - .github/workflows/case-study-live-html-preflight.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-html-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fetch two public Spanish Case Study URLs, no credentials or mutations
+        run: |
+          node --check tests/case-study-live-fetch-readiness.cjs
+          node tests/case-study-live-fetch-readiness.cjs
