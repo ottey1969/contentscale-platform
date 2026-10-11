@@ -48,8 +48,9 @@ if(nAi===1)body=body.replace(aiMigration,aiNoMigration);
 else if(nAi!==0||!body.includes(aiNoMigration))throw Error('STOP: scanner AI evidence migration anchor changed');
 const oldAiList="tracker_pages:['brief_check_count','brief_content','brief_started_at']";
 const newAiList="tracker_pages:['brief_check_count','brief_content','brief_started_at'],tracker_ai_evidence:['id','page_id','engine','evidence_method','verified_at','updated_at','created_at','is_cleared','revision_cycle','exact_page_cited','domain_cited','brand_recommended','brand_direct_supported']";
-if(body.includes(oldAiList))body=body.replace(oldAiList,newAiList);
-else if(!body.includes(newAiList))throw Error('STOP: required scanner AI schema contract moved');
+if(body.includes(newAiList)){} // Already migrated: do not append duplicate required columns.
+else if(body.includes(oldAiList))body=body.replace(oldAiList,newAiList);
+else throw Error('STOP: required scanner AI schema contract moved');
 const oldSchemaTables="table_name IN ('tracker_snapshots','tracker_pages')";
 const newSchemaTables="table_name IN ('tracker_snapshots','tracker_pages','tracker_ai_evidence')";
 if(body.includes(oldSchemaTables))body=body.replace(oldSchemaTables,newSchemaTables);
