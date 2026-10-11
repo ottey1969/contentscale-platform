@@ -31,3 +31,11 @@ if(process.env.CS_INSPECT_SCAN_ROUTES==='1'){
 if(process.env.CS_INSPECT_SCAN_CONTEXT==='1'){
  for(let i=4180;i<4320;i++)console.log('SCAN_SOURCE',i+1,lines[i]?.slice(0,700));
 }
+
+if(process.env.CS_INSPECT_PAGE_ACTIONS==='1'){
+ for(let i=0;i<lines.length;i++){
+  const row=lines[i]; const m=row.match(/app\.(get|post|put|patch)\(\s*['"`]([^'"`]+)/);
+  if(m&&m[2].includes('/api/tracker-client/:token/pages/'))console.log('PAGE_ACTION',i+1,m[1],m[2]);
+ }
+ for(let i=4125;i<4183;i++)console.log('SCAN_GATE',i+1,lines[i]?.slice(0,550));
+}
