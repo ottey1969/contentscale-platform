@@ -79,6 +79,24 @@ jobs:
             git commit -m 'v570: CI verified Case Study baseline hydration [skip ci]'
             git push origin HEAD:refs/heads/fix-v570-tracker-case-baseline-hydration
           fi
+      - name: Publish exactly validated src/index.js to isolated source-only review branch
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = 'fix-v570-tracker-case-baseline-hydration'
+          tested_sha="$(git hash-object src/index.js)"
+          git fetch origin v570-case-baseline-source-only-review:refs/remotes/origin/v570-case-baseline-source-only-review
+          test "$(git rev-parse origin/v570-case-baseline-source-only-review)" = "a1f2eb5e6577701b41479b1d6f597c56a8eacdd4"
+          git worktree add --detach /tmp/contentscale-v570-source-review origin/v570-case-baseline-source-only-review
+          cp src/index.js /tmp/contentscale-v570-source-review/src/index.js
+          test "$tested_sha" = "$(git -C /tmp/contentscale-v570-source-review hash-object src/index.js)"
+          test "$(git -C /tmp/contentscale-v570-source-review diff --name-only)" = "src/index.js"
+          git -C /tmp/contentscale-v570-source-review config user.name contentscale-v570-ci
+          git -C /tmp/contentscale-v570-source-review config user.email contentscale-v570-ci@users.noreply.github.com
+          git -C /tmp/contentscale-v570-source-review add -- src/index.js
+          git -C /tmp/contentscale-v570-source-review commit -m 'v570: fix Case Study baseline hydration in existing live src/index.js'
+          git -C /tmp/contentscale-v570-source-review push origin HEAD:refs/heads/v570-case-baseline-source-only-review
+          echo "V570_SOURCE_ONLY_BLOB=$tested_sha"
       - name: Report test status on final validated commit
         if: ${{ always() }}
         env:
