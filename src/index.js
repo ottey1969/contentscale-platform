@@ -62960,6 +62960,8 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
   else if (_domainTld.endsWith('.jp')) { _scanLocale = 'jp'; _scanLang = 'ja'; _bingMkt = 'ja-JP'; }
   else if (_domainTld.endsWith('.se')) { _scanLocale = 'se'; _scanLang = 'sv'; _bingMkt = 'sv-SE'; }
   else if (_domainTld.endsWith('.no')) { _scanLocale = 'no'; _scanLang = 'no'; _bingMkt = 'nb-NO'; }
+  // Explicit Spanish ContentScale subdomain has .site TLD; never classify it as US/English.
+  if (_domainTld === 'es.contentscale.site') { _scanLocale = 'es'; _scanLang = 'es'; _bingMkt = 'es-ES'; }
   else if (_domainTld.endsWith('.dk')) { _scanLocale = 'dk'; _scanLang = 'da'; _bingMkt = 'da-DK'; }
 
   // ── 1. Fetch live HTML ──────────────────────────────────────────────────────
