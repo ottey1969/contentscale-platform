@@ -1,3 +1,6 @@
+if (process.env.CS_DEPLOYMENT_TIER === 'staging') throw new Error('RELEASE BLOCKED: production artifact cannot boot as staging');
+const _csStagingStartupQuarantine = process.env.CS_DEPLOYMENT_TIER === 'staging';
+// CONTENTSCALE-STAGING-STARTUP-QUARANTINE-WAVE2: automatic jobs, migrations, and provider calls.
 // v425: tracker client-action confirmation email after a previously emailed case-study checkpoint is completed.
 // v410: safe dead-URL correction plus correctly escaped generated browser JavaScript.
 const { buildOpportunityReport, FIVE_ENGINES } = (() => {
@@ -290,7 +293,7 @@ return { buildOpportunityReport, FIVE_ENGINES };
 
 })();
 
-const CONTENTSCALE_BUILD_ID = 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH-PACING';
+const CONTENTSCALE_BUILD_ID = 'CS-2026-10-11-PRODUCTION-REVIEW-v568-FIRST-MANUAL-SCAN';
 const CONTENTSCALE_BOOT_AT = new Date().toISOString();
 // CONTENTSCALE-AI-HANDOFF-V355 — PROSPECT FUNNEL INVARIANTS
 // 1. A prospect-facing success state must be backed by a saved server result.
@@ -915,7 +918,7 @@ const rewriterHelpers = require('./rewriter-helpers');
 // Guarded require: a broken/missing Network module must never prevent the core platform from booting.
 let _networkModule = null;
 try {
-  _networkModule = require('./network/register-network');
+  if (!_csStagingStartupQuarantine) _networkModule = require('./network/register-network');
 } catch (err) {
   console.error('[NETWORK] Module load failed; core ContentScale continues without Network:', err.message);
 }
@@ -927,7 +930,7 @@ const app = express();
 // Change BUILD_ID for every delivered canonical build.
 // ============================================================
 const CONTENTSCALE_BUILD_INFO = Object.freeze({
-  build: 'CS-2026-10-08-CANONICAL-v567-OUTREACH-BATCH-PACING',
+  build: 'CS-2026-10-11-PRODUCTION-REVIEW-v568-FIRST-MANUAL-SCAN',
   built_date: '2026-10-08',
   ceo_private: true,
   ceo_public: true,
@@ -1814,7 +1817,7 @@ async function tryDbReconnect() {
     _dbReconnectInterval = null;
     _dbReconnectAttempts = 0;
     console.log('✅✅✅ DB auto-reconnect: CONNECTION RESTORED! All features now active.');
-    setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
+    if (!_csStagingStartupQuarantine) setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 500);
     return true;
   } catch (e) {
     if (client) try { client.release(); } catch(_) {}
@@ -1969,7 +1972,7 @@ if (_dbReconnectInterval) {
   _dbReconnectAttempts = 0;
 }
 setTimeout(() => checkIsNeon().catch(err => console.error('🔍 Neon check error:', err.message)), 500);
-setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 1000);
+if (!_csStagingStartupQuarantine) setTimeout(() => createAllTables().catch(err => console.error('❌ Table error:', err)), 1000);
 return true;
 } catch (err) {
 // ALWAYS release client on failure — prevents pool exhaustion
@@ -2893,6 +2896,8 @@ async function _caseStudyOpenFreshStartCycle(clientId,page,cs,liveHtml,htmlSourc
   let priorBrief={};try{priorBrief=typeof page.brief_content==='string'?JSON.parse(page.brief_content||'{}'):(page.brief_content||{});}catch(e){priorBrief={};}
   const historicalState={
     previous_revision_cycle:previousCycle,
+    previous_check_frequency:page.check_frequency||'0',
+    previous_next_check_at:page.next_check_at||null,
     previous_is_done:!!page.is_done,
     previous_manual_done:!!page.manual_done,
     previous_implementation_status:page.implementation_status||null,
@@ -2902,8 +2907,30 @@ async function _caseStudyOpenFreshStartCycle(clientId,page,cs,liveHtml,htmlSourc
     previous_brief_cycle_id:priorBrief&&priorBrief.cycle_id||null,
     history_preserved:true
   };
+  // Archive complete pre-existing Brief state BEFORE the destructive new-cycle reset.
+  // Existing canonical Case Study event storage is the history source; no new table.
+  const _priorBriefPresent=page.brief_content!==null&&page.brief_content!==undefined;
+  const _priorRankingPresent=page.ranking_brief!==null&&page.ranking_brief!==undefined;
+  if(_priorBriefPresent||_priorRankingPresent){
+    const _oldBriefArchive=Object.assign({},historicalState,{
+      previous_brief_content:page.brief_content==null?null:page.brief_content,
+      previous_ranking_brief:page.ranking_brief==null?null:page.ranking_brief,
+      previous_brief_status:page.brief_status||null,
+      previous_brief_started_at:page.brief_started_at||null,
+      previous_brief_done_at:page.brief_done_at||null,
+      captured_before_reset_at:new Date().toISOString()
+    });
+    // If archival fails, fail closed: never clear the only remaining Brief copy.
+    await pool.query(`INSERT INTO tracker_case_study_events
+      (case_study_id,tracker_page_id,event_type,source,event_data,content_hash)
+      SELECT $1,$2,'case_study_prior_brief_archived','tracker_case_study_start',$3::jsonb,NULL
+      WHERE NOT EXISTS(SELECT 1 FROM tracker_case_study_events
+        WHERE case_study_id=$1 AND event_type='case_study_prior_brief_archived')`,
+      [cs.id,page.id,JSON.stringify(_oldBriefArchive)]);
+  }
   await pool.query(`UPDATE tracker_pages SET
       revision_cycle=$1,
+      check_frequency='0',next_check_at=NULL,
       is_done=FALSE,manual_done=FALSE,manual_done_at=NULL,
       implementation_status='case_study_baseline_locked',implementation_at=NULL,
       implementation_verified_at=NULL,implementation_verified_brief_cycle_id=NULL,
@@ -2955,7 +2982,28 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
     if(existing.rows[0].status==='active'){
       const _baseAt=Date.parse(existing.rows[0].baseline_at||existing.rows[0].started_at||0)||0;
       const _verifiedAt=Date.parse(page.implementation_verified_at||0)||0;
-      const _fresh=(_baseAt&&_verifiedAt&&_verifiedAt<_baseAt)?await _caseStudyOpenFreshStartCycle(client.id,page,existing.rows[0],'','case_study_baseline_copy','active_case_study_pre_v351_repair'):null;
+      // Inspect canonical DB evidence; no legacy inferred case_study_active column.
+      const _legacy=await pool.query(`SELECT
+        EXISTS(SELECT 1 FROM tracker_case_study_events ev WHERE ev.case_study_id=$1 AND ev.event_type='case_study_fresh_cycle_initialized') AS fresh_cycle_initialized,
+        (SELECT MAX(sn.checked_at) FROM tracker_snapshots sn WHERE sn.page_id=$2) AS latest_snapshot_at,
+        (SELECT MAX(v.captured_at) FROM tracker_case_study_content_versions v WHERE v.case_study_id=$1 AND v.version_type LIKE 'published_implementation%') AS latest_published_at,
+        EXISTS(SELECT 1 FROM tracker_case_study_content_versions v WHERE v.case_study_id=$1 AND v.version_type='baseline_html' AND LENGTH(v.html_content)>=500) AS baseline_html_ready`,
+        [existing.rows[0].id,page.id]);
+      const _prior=_legacy.rows[0]||{};
+      const _lastAt=Date.parse(_prior.latest_snapshot_at||0)||0;
+      const _publishedAt=Math.max(Date.parse(_prior.latest_published_at||0)||0,Date.parse(page.brief_published_at||0)||0,Date.parse(page.brief_published_confirmed_at||0)||0);
+      const _needsCycleRepair=!_prior.fresh_cycle_initialized;
+      const _repairReasons=[];
+      if(_needsCycleRepair){
+        if(!existing.rows[0].baseline_locked||!_baseAt)_repairReasons.push('baseline not locked');
+        if(!_prior.baseline_html_ready)_repairReasons.push('protected baseline HTML missing');
+        if(page.monitoring_waiting_input)_repairReasons.push('evidence checkpoint pending');
+        if(_lastAt>_baseAt)_repairReasons.push('a scan already occurred after the baseline');
+        if(_verifiedAt>_baseAt)_repairReasons.push('implementation verified after baseline');
+        if(_publishedAt>_baseAt)_repairReasons.push('revision published after baseline');
+      }
+      if(_repairReasons.length)return res.status(409).json({success:false,case_cycle_review_required:true,baseline_locked:true,error:'This active Case Study requires review before preparing its first manual scan: '+_repairReasons.join('; '),missing:_repairReasons});
+      const _fresh=_needsCycleRepair?await _caseStudyOpenFreshStartCycle(client.id,page,existing.rows[0],'','case_study_baseline_copy','active_legacy_case_first_manual_scan_repair'):null;
       return res.json({success:true,already_active:true,case_study:existing.rows[0],fresh_cycle_repaired:!!(_fresh&&!_fresh.already_initialized),revision_cycle:_fresh&&_fresh.revision_cycle||Number(page.revision_cycle||1),message:_fresh&&!_fresh.already_initialized?'The case study was already active, but its older implementation status predated the baseline. That status is now history only. A fresh case-study revision has started; scan the current live page next.':'This case study is already active and its baseline remains protected.'});
     }
     return res.status(409).json({success:false,protected_history:true,error:'This page already has protected case-study history. Its original baseline cannot be replaced. Continue that history or start a new revision cycle.'});
@@ -3072,7 +3120,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
 // GET /api/tracker-client/:token — get client data + pages
 app.get('/api/tracker-client/:token', async (req, res) => {
   try {
-    await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
+    // Schema must be provisioned before GET; this route never alters customer tables.
     const cr = await pool.query('SELECT * FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Tracker not found. Check your link is correct.' });
     if (cr.rows[0].status === 'disabled' || cr.rows[0].status === 'paused') return res.status(403).json({ success: false, disabled: true, error: 'This tracker is ' + cr.rows[0].status + '. Contact Ottmar to reactivate.' });
@@ -3178,11 +3226,18 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       ,['monitoring_gsc_pages_at','TIMESTAMPTZ']
       ,['monitoring_gsc_queries_at','TIMESTAMPTZ']
     ];
-    for (const [col, type] of _trackerMainGetColumns) {
-      await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS ' + col + ' ' + type);
+    const _colResults = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='tracker_pages'");
+    const _existingColumns = new Set(_colResults.rows.map(r => r.column_name));
+    const _missingColumns = _trackerMainGetColumns.filter(([col]) => !_existingColumns.has(col));
+    const _requiredTables = ['tracker_ai_evidence','tracker_case_studies','tracker_case_study_content_versions','tracker_case_study_events'];
+    const _tableResults = await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=ANY($1::text[])", [_requiredTables]);
+    const _existingTables = new Set(_tableResults.rows.map(r => r.table_name));
+    const _missingTables = _requiredTables.filter(t => !_existingTables.has(t));
+    if (_missingColumns.length || _missingTables.length) {
+      return res.status(503).json({ success:false, schema_ready:false, migration_required:true,
+        missing_columns:_missingColumns.map(([col])=>col), missing_tables:_missingTables,
+        error:'Tracker requires a controlled schema migration before this dashboard can load.' });
     }
-    // CONTENTSCALE-TRACKER-MAIN-GET-AI-EVIDENCE-HELPER-NAME-FIX-20260909=true
-    await _trackerEnsureAiEvidenceSchema();
 
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
@@ -3214,13 +3269,14 @@ app.get('/api/tracker-client/:token', async (req, res) => {
 
     const _evStem=String(client.domain||'').replace(/^www\./,'').split('.')[0].replace(/[-_]+/g,' ');
     const _evAliases=[client.name,client.domain,_evStem];
-    const _briefQueueRepairs=[];
+    // Normalize legacy brief queues in response only. Persistence requires an explicit repair action.
     pagesR.rows.forEach(function(_p){
       const _normalizedBrief=_trackerNormalizeBriefQueues(_p.brief_content);
       if(_normalizedBrief.changed){
         _p.brief_content=_normalizedBrief.brief;
         if(_normalizedBrief.implementation_queue_empty)_p.implementation_status='evidence_only_complete';
-        _briefQueueRepairs.push(pool.query("UPDATE tracker_pages SET brief_content=$1,implementation_status=CASE WHEN $3::boolean THEN 'evidence_only_complete' ELSE implementation_status END WHERE id=$2",[JSON.stringify(_normalizedBrief.brief),_p.id,!!_normalizedBrief.implementation_queue_empty]).catch(function(e){console.warn('[brief-queue-normalize]',_p.id,e.message);}));
+
+        _p.brief_requires_persistent_repair=true;
       }
       _p.claims_facts_updated_at=client.claims_facts_updated_at||null;
       _p.ai_manual_evidence=_trackerReparseManualEvidenceMap(_p.ai_manual_evidence||{},_p.url,_evAliases,_p.revision_cycle);
@@ -3236,54 +3292,14 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       if(!String(client.email||'').trim())_missing.push('Tracker client email');
       _p.case_study_readiness={ready:_missing.length===0,missing:_missing,ai_checked:_aiN,gsc_pages:_hasGsc,gsc_queries:!!_p.has_gsc_queries||_zeroQueriesVerified,gsc_queries_zero_verified:_zeroQueriesVerified,scan:!!(_p.last_checked||_p.last_checked_at),html:!!_p.has_html_content,email:!!String(client.email||'').trim()};
     });
-    if(_briefQueueRepairs.length)await Promise.all(_briefQueueRepairs);
+    // No implicit brief updates on GET.
 
     // Activate and attach the real Perfect Roofing case study without changing its frozen baseline.
-    await _ensureCaseStudySchema();
-    for(const _p of pagesR.rows)await _ensurePerfectRoofingCaseStudy(client,_p);
+    // Case-study creation/attachment must be an explicit reviewed mutation.
     const _csr=await pool.query(`SELECT id,tracker_page_id,canonical_url,status,baseline_at,baseline_data,started_at
       FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'`,[client.id]);
 
-    // v351 one-time self-heal: early builds attached a newly started case study to an
-    // implementation that had been verified before its baseline. That historical state
-    // remains in Proof & History, but it cannot complete the new case-study cycle.
-    for(const _cs of _csr.rows){
-      const _p=pagesR.rows.find(x=>Number(x.id)===Number(_cs.tracker_page_id));
-      if(!_p)continue;
-      const _baseAt=Date.parse(_cs.baseline_at||_cs.started_at||0)||0;
-      const _verifiedAt=Date.parse(_p.implementation_verified_at||0)||0;
-      if(_baseAt&&_verifiedAt&&_verifiedAt<_baseAt){
-        const _fresh=await _caseStudyOpenFreshStartCycle(client.id,_p,_cs,'','case_study_baseline_copy','backfill_pre_v351_case_study_start');
-        if(_fresh&&!_fresh.already_initialized){
-          _p.revision_cycle=_fresh.revision_cycle;
-          _p.is_done=false;_p.manual_done=false;_p.manual_done_at=null;
-          _p.implementation_status='case_study_baseline_locked';
-          _p.implementation_at=null;_p.implementation_verified_at=null;
-          _p.implementation_verified_brief_cycle_id=null;_p.implementation_before_graaf=null;
-          _p.needs_html=false;_p.html_pasted_at=null;
-          _p.brief_content=null;_p.ranking_brief=null;_p.brief_started_at=null;
-          _p.brief_evaluated_at=null;_p.brief_viewed_at=null;_p.brief_check_count=0;
-          _p.treatment=null;_p.treatment_target_url=null;_p.treatment_updated_at=null;_p.treatment_source=null;
-        }
-      }
-    }
-    // The v62 explicit-opt-in migration ran before the legacy Perfect Roofing case study could
-    // be attached on first load. Restore only its previously daily monitored emergency page;
-    // never enable the other discovered/imported pages.
-    try{
-      if(/perfectroofingteam\.com/i.test(String(client.domain||''))){
-        const _mr=await pool.query(`SELECT 1 FROM migration_flags WHERE key='perfect_roofing_daily_case_study_monitor_restore_v1'`);
-        if(!_mr.rows.length){
-          const _restored=await pool.query(`UPDATE tracker_pages p SET check_frequency='1day',next_check_at=COALESCE(p.last_checked_at,NOW())+INTERVAL '1 day',email_reminders=TRUE,ai_reminder_days=14,next_ai_reminder_at=NOW()+INTERVAL '14 days'
-            WHERE p.tracker_client_id=$1 AND lower(p.url) LIKE '%24-hour-emergency-roof-repair-nj%' AND EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.status='active') RETURNING p.id`,[client.id]);
-          if(_restored.rows.length){
-            const _rid=new Set(_restored.rows.map(x=>Number(x.id)));pagesR.rows.forEach(p=>{if(_rid.has(Number(p.id))){p.check_frequency='1day';p.next_check_at=new Date(Date.now()+86400000);p.email_reminders=true;p.ai_reminder_days=14;p.next_ai_reminder_at=new Date(Date.now()+14*86400000);}});
-          }
-          await pool.query(`INSERT INTO migration_flags(key) VALUES('perfect_roofing_daily_case_study_monitor_restore_v1') ON CONFLICT(key) DO NOTHING`);
-          console.log('[migrate] restored daily monitoring for',_restored.rowCount,'Perfect Roofing emergency case-study page');
-        }
-      }
-    }catch(e){console.warn('[migrate] Perfect Roofing monitoring restore',e.message);}
+    // Pre-v351 case-study baseline repairs and legacy monitoring restoration are now explicit maintenance operations.
     const _csIds=_csr.rows.map(x=>x.id);
     const _csvr=_csIds.length?await pool.query(`SELECT DISTINCT ON (case_study_id,version_type)
       case_study_id,version_type,captured_at,content_hash,version_data
@@ -3299,7 +3315,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       WHERE case_study_id=ANY($1::int[])
         AND event_type=ANY($2::text[])
       ORDER BY case_study_id,event_type,event_at DESC,id DESC`,[
-        _csIds,['case_day_7_completed','case_day_14_completed','cycle_day_30_report']
+        _csIds,['case_day_7_completed','case_day_14_completed','cycle_day_30_report','case_study_fresh_cycle_initialized']
       ]):{rows:[]};
     const _csmByCase=new Map();
     _csmr.rows.forEach(function(x){
@@ -3312,6 +3328,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       const _cs=_csByUrl.get(_caseStudyNormUrl(_p.url));
       _p.case_study_active=!!_cs;
       _p.case_study=_cs||null;
+      _p.case_study_fresh_cycle_initialized=!!(_cs&&_csmByCase.get(_cs.id)&&_csmByCase.get(_cs.id).case_study_fresh_cycle_initialized);
       _p.case_study_versions=_cs?(_csvByCase.get(_cs.id)||{}):{};
       _p.case_study_milestones=_cs?(_csmByCase.get(_cs.id)||{}):{};
       const _cycle=Number(_p.revision_cycle||1),_preKey=_cycle>1?'pre_publication_r'+_cycle:'pre_publication';
@@ -3333,62 +3350,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     });
 
 
-    // v297 milestone self-heal for earlier builds that completed the work but did not write
-    // case_day_*_completed. This never guesses: it requires timestamped GSC + scan evidence,
-    // and Day 14 additionally requires all five timestamped manual AI checks.
-    const _utcDayStart=function(v){
-      const d=new Date(v); if(isNaN(d.getTime()))return 0;
-      return Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
-    };
-    for(const _p of pagesR.rows){
-      const _cs=_p.case_study;
-      if(!_cs)continue;
-      const _ms=_p.case_study_milestones||{};
-      const _baseDay=_utcDayStart(_cs.baseline_at||_cs.started_at);
-      if(!_baseDay)continue;
-      const _scanAt=Date.parse(_p.last_checked||_p.last_checked_at||0)||0;
-      const _gp=Date.parse(_p.monitoring_gsc_pages_at||0)||0;
-      const _gq=Date.parse(_p.monitoring_gsc_queries_at||0)||0;
-
-      if(!_ms.case_day_7_completed){
-        const _due7=_baseDay+7*86400000;
-        if(Date.now()>=_due7 && _scanAt>=_due7 && _gp>=_due7 && _gq>=_due7){
-          const _doneAt=new Date(Math.max(_scanAt,_gp,_gq)).toISOString();
-          await _caseStudyEventForPage(client.id,_p.id,'case_day_7_completed',{
-            completed_at:_doneAt,evidence_only:false,manual_scan:true,self_healed:true,
-            gsc_pages_at:_p.monitoring_gsc_pages_at,gsc_queries_at:_p.monitoring_gsc_queries_at
-          }).catch(()=>{});
-          _ms.case_day_7_completed=_doneAt;
-          if(String(_p.monitoring_gate_label||'')==='case_day_7'){
-            await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[_p.id]).catch(()=>{});
-            _p.monitoring_waiting_input=false;_p.monitoring_gate_label=null;
-          }
-        }
-      }
-
-      if(_ms.case_day_7_completed && !_ms.case_day_14_completed){
-        const _due14=_utcDayStart(_ms.case_day_7_completed)+7*86400000;
-        const _aiMap=_p.ai_manual_evidence||{};
-        const _freshAi=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){
-          const ev=_aiMap[k]; if(!ev||ev.is_cleared===true||ev.is_cleared==='true'||ev.is_current_revision===false)return false;
-          const at=Date.parse(ev.updated_at||ev.verified_at||ev.created_at||0)||0;
-          return at>=_due14;
-        }).length;
-        if(Date.now()>=_due14 && _scanAt>=_due14 && _gp>=_due14 && _gq>=_due14 && _freshAi===5){
-          const _doneAt=new Date(Math.max(_scanAt,_gp,_gq)).toISOString();
-          await _caseStudyEventForPage(client.id,_p.id,'case_day_14_completed',{
-            completed_at:_doneAt,evidence_only:false,manual_scan:true,self_healed:true,
-            gsc_pages_at:_p.monitoring_gsc_pages_at,gsc_queries_at:_p.monitoring_gsc_queries_at,ai_checked:5
-          }).catch(()=>{});
-          _ms.case_day_14_completed=_doneAt;
-          if(String(_p.monitoring_gate_label||'')==='case_day_14'){
-            await pool.query("UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_reminder_sent_at=NULL WHERE id=$1",[_p.id]).catch(()=>{});
-            _p.monitoring_waiting_input=false;_p.monitoring_gate_label=null;
-          }
-        }
-      }
-      _p.case_study_milestones=_ms;
-    }
+    // Milestone completion requires an explicit event write after verified evidence; GET displays persisted events only.
 
     // Self-heal stale operational Briefs only when we have hard proof that THIS Brief/revision
     // was verified after it was evaluated. Old verification never closes a newer Brief.
@@ -3419,11 +3381,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
           next_focus:'Wait for fresh evidence before opening a new delta.',recycle_completed_actions:false};
         _p.brief_content=_b;
         _p.treatment=String(_p.treatment_source||'').toUpperCase()==='MANUAL'?_p.treatment:'KEEP';
-        await pool.query(`UPDATE tracker_pages SET brief_content=$1,
-          treatment=CASE WHEN COALESCE(treatment_source,'')='MANUAL' THEN treatment ELSE 'KEEP' END,
-          treatment_source=CASE WHEN COALESCE(treatment_source,'')='MANUAL' THEN treatment_source ELSE 'AUTO_BRIEF' END,
-          treatment_updated_at=NOW()
-          WHERE id=$2`,[JSON.stringify(_b),_p.id]).catch(()=>{});
+        _p.brief_requires_persistent_repair=true;
       }
     }
 
@@ -3534,19 +3492,30 @@ async function _resolveSitemapUrls(sitemapUrl, opts) {
 }
 
 // GET /api/tracker-client/:token/fetch-sitemap — fetch URLs from sitemap
-app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
+async function _trackerFetchAndSaveSitemap(req, res, persist) {
   try {
-    const cr = await pool.query('SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query('SELECT domain,status FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
-    const sitemapUrl = req.query.url;
+    if (persist && ['disabled','paused','deleted'].includes(cr.rows[0].status))
+      return res.status(403).json({success:false,error:'Tracker access paused'});
+    const sitemapUrl = String(persist ? (req.body && req.body.url) : req.query.url || '').trim();
+    let _requested;
+    try {_requested=new URL(sitemapUrl);} catch (_) {return res.status(400).json({success:false,error:'Valid sitemap URL required'});}
+    const _siteDomain=String(cr.rows[0].domain||'').replace(/^https?:\/\//i,'').split('/')[0].replace(/^www\./i,'').toLowerCase();
+    const _allowedHost=(host)=>{const h=String(host||'').replace(/^www\./i,'').toLowerCase();return !!_siteDomain && (h===_siteDomain || h.endsWith('.'+_siteDomain));};
+    if(!['https:','http:'].includes(_requested.protocol)||!_allowedHost(_requested.hostname)||_requested.username||_requested.password)
+      return res.status(400).json({success:false,error:'Sitemap URL must be on the tracked business domain'});
     if (!sitemapUrl) return res.status(400).json({ success: false, error: 'URL required' });
     const _zlib = require('zlib');
     // Fetch + decompress a sitemap/​sub-sitemap (handles .xml.gz files and gzip byte streams)
     async function _fetchSmXml(u){
+      let parsed;
+      try {parsed=new URL(u);} catch (_) {return '';}
+      if(!['https:','http:'].includes(parsed.protocol)||!_allowedHost(parsed.hostname)||parsed.username||parsed.password) return '';
       const c = new AbortController();
       const t = setTimeout(() => c.abort(), 12000);
       try {
-        const rr = await fetch(u, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: c.signal });
+        const rr = await fetch(u, { headers: { 'User-Agent': 'ContentScale-Bot/1.0' }, signal: c.signal, redirect:'error' });
         if (!rr.ok) return '';
         let buf = Buffer.from(await rr.arrayBuffer());
         if (/\.gz(\?|$)/i.test(u) || (buf.length > 2 && buf[0] === 0x1f && buf[1] === 0x8b)) {
@@ -3576,14 +3545,27 @@ app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
     // Skip non-content archive URLs (WordPress categories, tags, author pages, pagination, feeds, media)
     const _SKIP_ARCHIVE = /\/(category|categories|tag|tags|author|authors|uncategorized)(\/|$)|\/page\/\d+|\/feed\/?$|\/wp-(json|admin|content|includes)\//i;
     const _SKIP_FILE = /\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|xml|json)(\?|$)/i;
-    urls = urls.filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
+    urls = urls.filter(u => { try { const x=new URL(u); return ['https:','http:'].includes(x.protocol)&&_allowedHost(x.hostname); } catch (_) { return false; } }).filter(u => !_SKIP_ARCHIVE.test(u) && !_SKIP_FILE.test(u));
     // Dedup (normalise trailing slash) — complete set, capped only as a hard safety ceiling
     const _seenSm = new Set();
     urls = urls.filter(u => { const k = u.replace(/\/$/, ''); if (_seenSm.has(k)) return false; _seenSm.add(k); return true; }).slice(0, MAX_URLS);
     // Remember the sitemap URL + the full resolved URL list on the client (used by briefs for internal links + cannibalisation; avoids re-fetching per scan)
-    if (urls.length) { try { await pool.query('UPDATE tracker_clients SET sitemap_url=$1, sitemap_urls=$2 WHERE token=$3', [sitemapUrl, JSON.stringify(urls), req.params.token]); } catch(e){} }
-    res.json({ success: true, urls, count: urls.length, complete: urls.length < MAX_URLS });
+    let persisted=false;
+    if(persist && urls.length){
+      const _canonicalUrlSet=[...urls].sort();
+      const snapshot_hash=require('node:crypto').createHash('sha256').update(sitemapUrl+'\n'+_canonicalUrlSet.join('\n')).digest('hex');
+      const idempotency_key='sitemap:v1:'+snapshot_hash;
+      const _saved=await pool.query(`WITH event AS ( INSERT INTO tracker_workflow_sitemap_events (tracker_client_id,idempotency_key,snapshot_hash,event_payload) SELECT id,$5,$4,jsonb_build_object('source_url',$1::text,'urls_count',jsonb_array_length($2::jsonb),'source','tracker_sitemap_fetch') FROM tracker_clients WHERE token=$3 ON CONFLICT (tracker_client_id,idempotency_key) DO NOTHING RETURNING tracker_client_id ) UPDATE tracker_clients SET sitemap_url=$1,sitemap_urls=$2 WHERE token=$3 AND EXISTS(SELECT 1 FROM event) RETURNING id`,[sitemapUrl,JSON.stringify(urls),req.params.token,snapshot_hash,idempotency_key]);
+      persisted=(_saved.rowCount||0)>0;
+    }
+    res.json({ success: true, urls, count: urls.length, complete: urls.length < MAX_URLS, persisted });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
+}
+app.get('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
+  return _trackerFetchAndSaveSitemap(req, res, false);
+});
+app.post('/api/tracker-client/:token/fetch-sitemap', async (req, res) => {
+  return _trackerFetchAndSaveSitemap(req, res, true);
 });
 
 // PATCH /api/tracker-client/:token/pages/:pageId/html — update html_content + keyword
@@ -3860,10 +3842,24 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/pre-publication',a
 }catch(e){console.error('[case-study-pre-publication]',e.message);res.status(500).json({success:false,error:e.message});}});
 
 // Read-only case-study proof/history. There is intentionally no delete or baseline-edit route.
+async function _trackerCaseStudyReadonlySchema(spec={}) {
+ const tables=[...new Set(spec.tables||[])];
+ const rr=await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name=ANY($1::text[])",[tables]);
+ const found=new Set(rr.rows.map(r=>r.table_name));
+ const missingTables=tables.filter(t=>!found.has(t));
+ const missingColumns=[];
+ for(const [table,columns] of [['tracker_pages',spec.pageColumns||[]],['tracker_case_studies',spec.caseColumns||[]]]) {
+  if(!columns.length)continue;
+  const cc=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 AND column_name=ANY($2::text[])",[table,columns]);
+  const existing=new Set(cc.rows.map(r=>r.column_name));
+  for(const col of columns)if(!existing.has(col))missingColumns.push(table+'.'+col);
+ }
+ return {ready:missingTables.length===0&&missingColumns.length===0,missing_tables:missingTables,missing_columns:missingColumns};
+}
 app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
-  await _ensureCaseStudySchema();
+  const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_case_studies','tracker_case_study_events','tracker_case_study_content_versions']});if(!_schema.ready)return res.status(503).json({success:false,schema_ready:false,error:'Controlled case-study schema migration required',missing_tables:_schema.missing_tables});
   const csR=await pool.query(`SELECT * FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' ORDER BY id LIMIT 1`,[cr.rows[0].id,req.params.pageId]);
   if(!csR.rows.length)return res.status(404).json({success:false,error:'No active case study for this page'});
   const cs=csR.rows[0];
@@ -3880,7 +3876,7 @@ app.get('/api/tracker-client/:token/pages/:pageId/case-study',async(req,res)=>{t
 
 // Passwordless, read-only milestone report. The random token is the share credential.
 app.get('/case-study-report/:reportToken',async(req,res)=>{try{
-  await _ensureCaseStudySchema();const token=String(req.params.reportToken||'');if(!/^[a-f0-9]{48}$/.test(token))return res.status(404).send('Report not found');
+  const token=String(req.params.reportToken||'');if(!/^[a-f0-9]{48}$/.test(token))return res.status(404).send('Report not found');const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_case_studies','tracker_case_study_events'],caseColumns:['report_token']});if(!_schema.ready)return res.status(503).send('Report temporarily unavailable: schema migration required');
   const rr=await pool.query(`SELECT cs.client_name,cs.domain,cs.canonical_url,cs.primary_query,cs.baseline_at,e.event_at,e.event_data FROM tracker_case_studies cs JOIN LATERAL(SELECT event_at,event_data FROM tracker_case_study_events WHERE case_study_id=cs.id AND event_type='cycle_day_30_report' ORDER BY event_at DESC,id DESC LIMIT 1)e ON TRUE WHERE cs.report_token=$1`,[token]);if(!rr.rows.length)return res.status(404).send('Report not found');
   const x=rr.rows[0],d=typeof x.event_data==='string'?JSON.parse(x.event_data):x.event_data||{},b=d.baseline||{},c=d.current||{};
   const esc=v=>String(v==null?'—':v).replace(/[<>&"']/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[m]));
@@ -4226,12 +4222,12 @@ app.post('/api/tracker-client/:token/scan-all', async (req, res) => {
         LEFT JOIN tracker_snapshots s ON s.page_id = p.id
         WHERE p.tracker_client_id=$1 AND (p.is_active=TRUE OR p.is_active IS NULL)
         AND COALESCE(p.monitoring_waiting_input,FALSE)=FALSE
-        AND NOT (COALESCE(p.case_study_active,FALSE) AND COALESCE(p.manual_done,FALSE))
+        AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.tracker_client_id=p.tracker_client_id AND cs.status='active')
         AND s.id IS NULL
         ORDER BY p.created_at ASC
       `, [cr.rows[0].id]);
     } else {
-      pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(case_study_active,FALSE) AND COALESCE(manual_done,FALSE)) ORDER BY created_at ASC", [cr.rows[0].id]);
+      pages = await pool.query("SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status=\'active\') ORDER BY created_at ASC", [cr.rows[0].id]);
     }
 
     pages.rows.forEach(p=>{p.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;});
@@ -4266,7 +4262,7 @@ app.post('/api/tracker-client/:token/scan-selected', async (req, res) => {
     if (!ids.length) return res.status(400).json({ success: false, error: 'No pages selected' });
     // Only pages that belong to THIS client (security: don't scan another client's pages)
     const pages = await pool.query(
-      'SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND id = ANY($2::int[]) AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT (COALESCE(case_study_active,FALSE) AND COALESCE(manual_done,FALSE)) ORDER BY created_at ASC',
+      'SELECT * FROM tracker_pages WHERE tracker_client_id=$1 AND id = ANY($2::int[]) AND (is_active=TRUE OR is_active IS NULL) AND COALESCE(monitoring_waiting_input,FALSE)=FALSE AND NOT EXISTS (SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=tracker_pages.id AND cs.tracker_client_id=tracker_pages.tracker_client_id AND cs.status=\'active\') ORDER BY created_at ASC',
       [cr.rows[0].id, ids]
     );
     if (!pages.rows.length) return res.status(400).json({ success: false, error: 'No matching pages' });
@@ -5371,14 +5367,14 @@ app.post('/api/tracker-client/:token/gap-family-done', async (req, res) => {
 // Same rule as single toggle: only the user's explicit action reaches this, nothing automated.
 app.patch('/api/tracker-client/:token/pages/manual-done-all', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status NOT IN ('deleted','paused','disabled'))", [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const on = !!req.body.manual_done;
     const r = await pool.query(
-      'UPDATE tracker_pages SET manual_done=$1, manual_done_at=' + (on ? 'NOW()' : 'NULL') + ' WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL)',
+      `WITH changed AS ( UPDATE tracker_pages SET manual_done=$1, manual_done_at=CASE WHEN $1 THEN COALESCE(manual_done_at,NOW()) ELSE NULL END WHERE tracker_client_id=$2 AND (is_active=TRUE OR is_active IS NULL) AND manual_done IS DISTINCT FROM $1 RETURNING id,tracker_client_id,manual_done,manual_done_at ), page_logged AS ( INSERT INTO tracker_workflow_events (tracker_client_id,tracker_page_id,event_type,idempotency_key,event_data) SELECT tracker_client_id,id,'manual_done_changed', ('manual_done:'||id::text||':'||gen_random_uuid()::text)::varchar(128), jsonb_build_object('manual_done',manual_done,'manual_done_at',manual_done_at,'source','tracker_bulk_ui') FROM changed ON CONFLICT (tracker_client_id,tracker_page_id,idempotency_key) DO NOTHING RETURNING tracker_client_id,tracker_page_id ), client_logged AS ( INSERT INTO tracker_workflow_client_events (tracker_client_id,event_type,idempotency_key,event_data) SELECT $2,'manual_done_bulk_changed', ('manual_done_bulk:'||gen_random_uuid()::text)::varchar(128), jsonb_build_object('manual_done',$1,'changed_page_count',(SELECT COUNT(*) FROM page_logged),'source','tracker_bulk_ui') WHERE EXISTS (SELECT 1 FROM page_logged) ON CONFLICT (tracker_client_id,idempotency_key) DO NOTHING RETURNING tracker_client_id ) SELECT COUNT(*)::int AS changed_count FROM page_logged`,
       [on, cr.rows[0].id]
     );
-    res.json({ success: true, manual_done: on, updated: r.rowCount });
+    res.json({ success: true, manual_done: on, updated: Number(r.rows[0]?.changed_count||0) });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -5387,12 +5383,15 @@ app.patch('/api/tracker-client/:token/pages/manual-done-all', async (req, res) =
 // may change manual_done. Scans, HTML paste, brief generation, runTrackerCheck never touch it.
 app.patch('/api/tracker-client/:token/pages/:pageId/manual-done', async (req, res) => {
   try {
-    const cr = await pool.query('SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
+    const cr = await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status NOT IN ('deleted','paused','disabled'))", [req.params.token]);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const on = !!req.body.manual_done;
-    await pool.query('UPDATE tracker_pages SET manual_done=$1, manual_done_at=' + (on ? 'NOW()' : 'NULL') + ' WHERE id=$2', [on, req.params.pageId]);
+    await pool.query(
+      `WITH changed AS ( UPDATE tracker_pages SET manual_done=$1, manual_done_at=CASE WHEN $1 THEN COALESCE(manual_done_at,NOW()) ELSE NULL END WHERE id=$2 AND tracker_client_id=$3 AND manual_done IS DISTINCT FROM $1 RETURNING id,tracker_client_id,manual_done,manual_done_at ) INSERT INTO tracker_workflow_events (tracker_client_id,tracker_page_id,event_type,idempotency_key,event_data) SELECT tracker_client_id,id,'manual_done_changed', ('manual_done:'||id::text||':'||gen_random_uuid()::text)::varchar(128), jsonb_build_object('manual_done',manual_done,'manual_done_at',manual_done_at,'source','tracker_ui') FROM changed ON CONFLICT (tracker_client_id,tracker_page_id,idempotency_key) DO NOTHING RETURNING tracker_page_id`,
+      [on, req.params.pageId, cr.rows[0].id]
+    );
     res.json({ success: true, manual_done: on });
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
@@ -8816,16 +8815,39 @@ app.post('/api/tracker-client/:token/pages/:pageId/evidence-checkpoint/complete'
 // POST /api/tracker-client/:token/check/:pageId — trigger manual check
 app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
   try {
-    await _ensureMonitoringGateSchema();
-    await pool.query('ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS claims_facts_updated_at TIMESTAMPTZ').catch(()=>{});
+    // Manual scan route uses migrated canonical schema; never performs DDL.
     const cr = await pool.query('SELECT id,claims_facts_updated_at FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
     if (!cr.rows.length) return res.status(404).json({ success: false, error: 'Not found' });
     const own = await pool.query('SELECT * FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
     page.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;
+    let _caseFirstManualScan=false;
+    let _caseIsActive=false;
+    if(!page.monitoring_waiting_input){
+      const _publishedVersionType=Number(page.revision_cycle||1)>1?'published_implementation_r'+Number(page.revision_cycle):'published_implementation';
+      const _first=await pool.query(`SELECT cs.baseline_at,
+        (SELECT MAX(s.checked_at) FROM tracker_snapshots s WHERE s.page_id=$2) AS latest_snapshot_at,
+        (SELECT MAX(v.captured_at) FROM tracker_case_study_content_versions v
+          WHERE v.case_study_id=cs.id AND v.version_type=$3) AS current_revision_published_at,
+        EXISTS(SELECT 1 FROM tracker_case_study_events ev WHERE ev.case_study_id=cs.id
+          AND ev.event_type='case_study_fresh_cycle_initialized') AS fresh_cycle_initialized
+        FROM tracker_case_studies cs WHERE cs.tracker_client_id=$1 AND cs.tracker_page_id=$2
+        AND cs.status='active' AND cs.baseline_locked=TRUE ORDER BY cs.id DESC LIMIT 1`,
+        [cr.rows[0].id,page.id,_publishedVersionType]);
+      const _row=_first.rows[0]||{};
+      _caseIsActive=!!_row.baseline_at;
+      const _base=Date.parse(_row.baseline_at||'')||0;
+      const _last=Date.parse(_row.latest_snapshot_at||'')||0;
+      const _impl=Date.parse(page.implementation_verified_at||'')||0;
+      const _publicationTimes=[page.brief_published_at,page.brief_published_confirmed_at,_row.current_revision_published_at];
+      const _publishedAfterBaseline=_publicationTimes.some(t=>(Date.parse(t||'')||0)>_base);
+      // Match canonical publication evidence and never override a published revision.
+      _caseFirstManualScan=!!(_base&&(!_last||_last<=_base)&&_row.fresh_cycle_initialized&&
+        !(_impl>_base)&&!_publishedAfterBaseline);
+    }
     const normalScanGate=_trackerNormalScanGate(page);
-    if(!normalScanGate.allowed&&!page.monitoring_waiting_input){
+    if(!normalScanGate.allowed&&!page.monitoring_waiting_input&&!_caseFirstManualScan){
       return res.status(409).json({success:false,scan_locked:true,error:normalScanGate.reason,next_action_required:true});
     }
     // A completed case-study page follows the protected proof/verification loop.
@@ -8834,7 +8856,7 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     const _claimsFactsNewerThanBrief=!!(page.claims_facts_updated_at&&(!page.brief_evaluated_at||new Date(page.claims_facts_updated_at).getTime()>new Date(page.brief_evaluated_at).getTime()));
     const _savedBriefSafetyText=typeof page.brief_content==='string'?page.brief_content:JSON.stringify(page.brief_content||{});
     const _savedBriefSafetyStale=/contentscale\.site/i.test(String(page.url||''))&&/(?:verify and add direct-answer block|submit (?:the )?url to bing index|copilot[^.]{0,100}relies entirely on bing|verify and add author bio|3[.,]7\s*[x×]|based on analy[sz]ing (?:over )?200\+? websites|in my experience analy[sz]ing (?:over )?200\+? websites)/i.test(_savedBriefSafetyText);
-    if(page.case_study_active&&page.manual_done&&!page.monitoring_waiting_input&&!_claimsFactsNewerThanBrief&&!_savedBriefSafetyStale){
+    if(_caseIsActive&&page.manual_done&&!page.monitoring_waiting_input&&!_claimsFactsNewerThanBrief&&!_savedBriefSafetyStale&&!_caseFirstManualScan){
       return res.status(409).json({success:false,scan_not_needed:true,error:'No normal scan is needed for this completed case-study page. Use the current live verification or the next evidence checkpoint.'});
     }
     if(page.monitoring_waiting_input){
@@ -8878,7 +8900,7 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     if (existing && existing.running) return res.json({ success: true, message: 'Already running', page_id: pageId, already_running: true });
 
     // Initialize status — same as engine route
-    _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, url: page.url });
+    _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, failed: false, error_code: null, error: null, url: page.url });
 
     // Broadcast check start to SSE so client UI updates
     const domain = (page.url||'').replace(/^https?:\/\//, '').split('/')[0];
@@ -8902,20 +8924,27 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
         }
       } catch(e) {
         console.warn('[client-check]', e.message);
+        const _failedStatus=_trackerCheckStatus.get(pageId);
+        const _schemaFailure=String(e&&e.message||'').startsWith('TRACKER SCAN BLOCKED: database schema is incomplete:');
+        const _safeError=_schemaFailure?'The Tracker schema is not ready for this scan. No new result was verified.':'The scan did not complete. Check the page status before retrying.';
+        if(_failedStatus){_failedStatus.failed=true;_failedStatus.error_code=_schemaFailure?'SCHEMA_NOT_READY':'SCAN_FAILED';_failedStatus.error=_safeError;}
+        _sseBroadcast({type:'check_error',pageId,domain,url:page.url,error:_safeError,ts:new Date().toISOString()});
         if(page._completed_monitoring_gate)await pool.query('UPDATE tracker_pages SET monitoring_waiting_input=TRUE,monitoring_gate_label=$2 WHERE id=$1',[page.id,page._completed_monitoring_gate]).catch(()=>{});
       } finally {
         const st = _trackerCheckStatus.get(pageId);
         if (st) { st.running = false; st.finishedAt = new Date().toISOString(); }
-        // Broadcast completion
-        try {
+        // Never announce success based on a stale historical snapshot after a failed scan.
+        if (!st || !st.failed) try {
           const snap2 = await pool.query(
             `SELECT s.*, p.url, p.keyword, p.gsc_keyword, p.brief_content
              FROM tracker_snapshots s JOIN tracker_pages p ON p.id=s.page_id
              WHERE s.page_id=$1 ORDER BY s.checked_at DESC LIMIT 1`,
             [pageId]
           );
-          if (snap2.rows.length) {
-            const s = snap2.rows[0];
+          const s=snap2.rows&&snap2.rows[0];
+          const _started=Date.parse(st&&st.startedAt||'')||0;
+          const _checked=Date.parse(s&&s.checked_at||'')||0;
+          if (s&&_started&&_checked>=_started-2000) {
             _sseBroadcast({
               type: 'check_done',
               pageId,
@@ -8930,6 +8959,10 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
               score: s.score,
               ts: new Date().toISOString()
             });
+          } else {
+            const _noSnapshotMessage='Scan finished without a new snapshot. No new result was verified.';
+            if(st){st.failed=true;st.error_code='NO_NEW_SNAPSHOT';st.error=_noSnapshotMessage;}
+            _sseBroadcast({type:'check_error',pageId,domain,url:page.url,error:_noSnapshotMessage,ts:new Date().toISOString()});
           }
         } catch(e2) { console.warn('[client-check-done]', e2.message); }
       }
@@ -8949,8 +8982,8 @@ app.get('/api/tracker-client/:token/check-status/:pageId', async (req, res) => {
     const own = await pool.query('SELECT id FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2', [req.params.pageId, cr.rows[0].id]);
     if (!own.rows.length) return res.status(403).json({ success:false, error:'Not your page' });
     const state = _trackerCheckStatus.get(parseInt(req.params.pageId,10));
-    if (!state) return res.json({ success:true, running:false, steps:[], startedAt:null, finishedAt:null });
-    return res.json({ success:true, running:!!state.running, steps:state.steps||[], startedAt:state.startedAt||null, finishedAt:state.finishedAt||null });
+    if (!state) return res.json({ success:true, running:false, failed:false, error_code:null, error:null, steps:[], startedAt:null, finishedAt:null });
+    return res.json({ success:true, running:!!state.running, failed:!!state.failed, error_code:state.error_code||null, error:state.error||null, steps:state.steps||[], startedAt:state.startedAt||null, finishedAt:state.finishedAt||null });
   } catch(e) { return res.status(500).json({ success:false, error:e.message }); }
 });
 
@@ -10822,7 +10855,7 @@ app.get('/api/admin/tracker-clients', verifyAdmin, async (req, res) => {
 // Admin monitoring detail: observe and safely edit the client's per-page choices.
 app.get('/api/admin/tracker-clients/:id/monitoring', verifyAdmin, async (req, res) => {
   try {
-    await _ensureMonitoringGateSchema();
+    const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_clients','tracker_pages'],pageColumns:['monitoring_waiting_input','monitoring_gate_label','check_frequency','next_check_at']});if(!_schema.ready)return res.status(503).json({success:false,schema_ready:false,error:'Controlled monitoring schema migration required',missing_columns:_schema.missing_columns});
     const cr = await pool.query("SELECT id,name,domain FROM tracker_clients WHERE id=$1 AND status!='deleted'", [req.params.id]);
     if (!cr.rows.length) return res.status(404).json({ success:false, error:'Tracker client not found' });
     const pr = await pool.query("SELECT id,url,title,check_frequency,next_check_at,last_checked_at,monitoring_waiting_input,monitoring_gate_label FROM tracker_pages WHERE tracker_client_id=$1 AND (is_active=TRUE OR is_active IS NULL) ORDER BY CASE WHEN COALESCE(check_frequency,'0') IN ('0','0days','off','') THEN 1 ELSE 0 END,url", [req.params.id]);
@@ -10833,7 +10866,7 @@ app.get('/api/admin/tracker-clients/:id/monitoring', verifyAdmin, async (req, re
 // Admin readiness proof: verifies the durable workflow state without exposing secrets.
 app.get('/api/admin/tracker-readiness', verifyAdmin, async (req,res)=>{
   try{
-    await _ensureCaseStudySchema();await _ensureMonitoringGateSchema();await _trackerEnsureAiEvidenceSchema();
+    const _schema=await _trackerCaseStudyReadonlySchema({tables:['tracker_case_studies','tracker_case_study_events','tracker_case_study_content_versions','tracker_ai_evidence','tracker_clients','tracker_pages'],pageColumns:['monitoring_waiting_input','monitoring_request_at','monitoring_require_ai','monitoring_gate_label','monitoring_gsc_pages_at','monitoring_gsc_queries_at','check_frequency','next_check_at']});if(!_schema.ready)return res.status(503).json({success:false,ready:false,schema_ready:false,error:'Controlled Tracker schema migration required',missing_tables:_schema.missing_tables,missing_columns:_schema.missing_columns});
     const required=['monitoring_waiting_input','monitoring_request_at','monitoring_require_ai','monitoring_gate_label','monitoring_gsc_pages_at','monitoring_gsc_queries_at','check_frequency','next_check_at'];
     const cols=await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='tracker_pages' AND column_name=ANY($1::text[])",[required]);
     const present=new Set(cols.rows.map(x=>x.column_name)),missingColumns=required.filter(x=>!present.has(x));
@@ -18880,7 +18913,7 @@ httpServer.on('upgrade', (req, socket, head) => {
 
 // ── Auto-assign profile_id to tracker pages missing it ──────────────────────
 // Ensure meta_intel columns exist on startup
-(async function ensureMetaIntelColumns() {
+if (!_csStagingStartupQuarantine) (async function ensureMetaIntelColumns() {
   try {
     await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS meta_intel JSONB, ADD COLUMN IF NOT EXISTS meta_intel_at TIMESTAMPTZ');
     console.log('[startup] meta_intel columns ready');
@@ -18954,8 +18987,8 @@ async function migrateTrackerPageProfiles() {
 }
 
 async function startServer() {
-  // Auto-create boost_settings table if missing
-  if (pool) {
+  // Auto-create boost_settings table only outside isolated staging.
+  if (pool && !_csStagingStartupQuarantine) {
     try {
       await pool.query(`
         CREATE TABLE IF NOT EXISTS boost_settings (
@@ -18973,16 +19006,16 @@ console.log('[ContentScale] Build check: /api/build-info');
 console.log('[ContentScale] Base URL: ' + (process.env.BASE_URL || 'https://app.contentscale.site'));
 console.log('────────────────────────────────────────');
   // Run migration after a short delay to ensure tables are fully created
-  setTimeout(function() { migrateTrackerPageProfiles(); }, 5000);
+  if (!_csStagingStartupQuarantine) setTimeout(function() { migrateTrackerPageProfiles(); }, 5000);
 const dbConnected = await waitForDatabase();
   if (!dbConnected) {
     console.log('⚠️  Database NOT connected at startup — starting auto-reconnect timer');
     startDbReconnect();
   }
   // Auto-detect best Gemini model at startup
-  await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
+  if (!_csStagingStartupQuarantine) await detectBestGeminiModel(process.env.GEMINI_KEY_LEADCRAWLER);
   // Recover any jobs stuck in 'researching' from previous server session
-  if (pool && dbConnected) {
+  if (pool && dbConnected && !_csStagingStartupQuarantine) {
     try {
       const stuckR = await pool.query(`UPDATE content_jobs SET status='error', error_message='Server restarted during research — please try again' WHERE status='researching' RETURNING id, seed_keyword`);
       if (stuckR.rows.length) {
@@ -19269,7 +19302,7 @@ activeJobs.delete(jobId);
 }
 }
 // On server restart: resume any interrupted jobs
-setTimeout(async () => {
+if (!_csStagingStartupQuarantine) setTimeout(async () => {
 if (!pool) return;
 try {
 const r = await pool.query(`SELECT id FROM batch_jobs WHERE status='running' OR status='queued'`);
@@ -21312,6 +21345,7 @@ function _ciScheduleVerification(delay){
   if(_ciVerifyTimer.unref)_ciVerifyTimer.unref()
 }
 function _ciStartWorkers(){
+if(_csStagingStartupQuarantine)return;
   if(_ciWorkersStarted)return;_ciWorkersStarted=true;
   setImmediate(async()=>{try{const pending=await pool.query(`SELECT * FROM contact_intelligence_imports WHERE status IN ('uploaded','processing') AND file_path IS NOT NULL ORDER BY created_at`);for(const j of pending.rows){if(fs.existsSync(j.file_path))_ciImportQueue=_ciImportQueue.then(()=>_ciProcessImport(j.id,j.file_path,true));else await pool.query(`UPDATE contact_intelligence_imports SET status='failed',file_path=NULL,error='Temporary source file unavailable after restart; upload CSV again',completed_at=NOW(),updated_at=NOW() WHERE id=$1`,[j.id])}await pool.query(`UPDATE contact_intelligence_verification_jobs SET status='queued',updated_at=NOW() WHERE status='processing' AND updated_at<NOW()-INTERVAL '15 minutes'`);const active=await pool.query(`SELECT 1 FROM contact_intelligence_verification_jobs WHERE status IN ('queued','processing') LIMIT 1`);if(active.rows.length)_ciScheduleVerification(0)}catch(e){console.warn('[contact-intelligence] worker recovery:',e.message,'— retry in 30s');setTimeout(()=>{_ciWorkersStarted=false;_ciStartWorkers()},30000)}});
 }
@@ -24112,8 +24146,10 @@ async function _pqsSendDueCeoFollowups(){
     }
   }catch(e){console.warn('[ceo-outreach-followup]',e.message);}
 }
+if (!_csStagingStartupQuarantine) {
 setInterval(()=>_pqsSendDueCeoFollowups().catch(()=>{}),60*60*1000);
 setTimeout(()=>_pqsSendDueCeoFollowups().catch(()=>{}),90*1000);
+}
 
 
 // SECOND-TOUCH EMAIL — Quick Scan of OTHER page.
@@ -28626,7 +28662,7 @@ async function cleanupExpiredSessions() {
     if (r.rowCount > 0) console.log('[otto] cleanup: deleted', r.rowCount, 'expired sessions');
   } catch(e) { console.warn('[otto] cleanup error:', e.message); }
 }
-(async () => {
+if (!_csStagingStartupQuarantine) (async () => {
   if (!pool) { console.log('[otto] Skipping session migrations — DB down'); return; }
   await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_b64 TEXT`).catch(()=>{});
   await pool.query(`ALTER TABLE otto_sessions ADD COLUMN IF NOT EXISTS audio_chunks JSONB DEFAULT '[]'`).catch(()=>{});
@@ -38492,8 +38528,8 @@ function kickBulkWorker() {
 
 // Start the recurring worker
 // SAFETY: on boot, fail any bulk jobs stuck mid-run so they cannot resume a runaway loop
-(async () => { try { if (pool) { const rr = await pool.query("UPDATE content_bulk_jobs SET status='failed' WHERE status IN ('analysing','executing') RETURNING id"); if (rr.rowCount) console.warn('[bulk] Failed', rr.rowCount, 'stuck job(s) on boot'); } } catch(e) { console.warn('[bulk] boot cleanup:', e.message); } })();
-if (process.env.ENABLE_BULK_WORKER === '1') {
+if (!_csStagingStartupQuarantine) (async () => { try { if (pool) { const rr = await pool.query("UPDATE content_bulk_jobs SET status='failed' WHERE status IN ('analysing','executing') RETURNING id"); if (rr.rowCount) console.warn('[bulk] Failed', rr.rowCount, 'stuck job(s) on boot'); } } catch(e) { console.warn('[bulk] boot cleanup:', e.message); } })();
+if (!_csStagingStartupQuarantine && process.env.ENABLE_BULK_WORKER === '1') {
   setInterval(bulkWorkerTick, BULK_WORKER_INTERVAL_MS);
   console.log(`[bulk] Worker interval started (every ${BULK_WORKER_INTERVAL_MS}ms) — NOTE: this polls the DB every 5s and keeps Neon awake 24/7 (~6-9 CU-hrs/day). Disable ENABLE_BULK_WORKER when not actively using bulk jobs.`);
 } else {
@@ -45544,6 +45580,14 @@ function _csNum(p){ return (Math.round(p*10)/10); }
 function _csDateH(t){ try{ var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }catch(e){ return ''; } }
 function startCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
+  if(pg.case_study_active&&!pg.case_study_fresh_cycle_initialized){
+    if(!confirm('This Case Study is already active. Prepare its first manual scan now? The original baseline and historical Brief remain protected; no scan starts automatically.'))return;
+    api('/pages/'+pageId+'/case-study/start','POST',{monitoring_enabled:false,check_frequency:'0'})
+      .then(function(d){alert((d&&d.message)||'Case Study ready for the first manual scan.');if(typeof loadPages==='function')loadPages();})
+      .catch(function(e){alert(e.message||'Could not safely prepare the existing Case Study');});
+    return;
+  }
+
   var q=prompt('Primary query for this case study:',pg.keyword||pg.gsc_keyword||'');if(q===null)return;q=String(q||'').trim();
   if(!q){alert('Add the primary query first.');return;}
   if(!confirm('Start the protected case study now?\\n\\nTODAY becomes the immutable baseline. Earlier scans, Briefs, implementations and verifications remain visible in Proof & History, but they do not count as results of this case study.\\n\\nContentScale first verifies that this exact URL is still live and is not redirecting. A dead/redirected URL is stopped before the baseline is created.\\n\\nRequired baseline: completed page scan, captured HTML, GSC Pages + Queries, all 5 AI engines and the existing Tracker client email. Missing evidence blocks the start instead of being guessed.\\n\\nAfter starting: scan the current live page, open the new Brief, publish the new HTML, check current live, then measure later evidence against this baseline.\\n\\nDay 7 and Day 14: evidence review. Day 30: baseline-vs-current report.'))return;
@@ -46962,7 +47006,7 @@ async function runPrewriteFinalQa(btn){
   if(btn){btn.disabled=true;btn.textContent='Running final QA...';}
   if(stat)stat.textContent='Running deterministic final QA — no research and no Gemini...';
   try{
-    var d=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/finalize','POST',{});
+    var d=await api('/prewrite-briefs/'+encodeURIComponent(_pwbCurrentBriefId)+'/finalize'+(function(){var p=new URLSearchParams(window.location.search).get('networkPlacement');return p&&/^[0-9]+$/.test(p)&&Number.isSafeInteger(Number(p))&&Number(p)>0?'?networkEmbed=1&networkPlacement='+encodeURIComponent(p):'';})(),'POST',{});
     if(!d||!d.brief)throw new Error('Final QA returned no Brief.');
     _pwbCurrentBrief=d.brief;_pwbCurrentNotPassed=!(d.brief.ai_quality_check&&d.brief.ai_quality_check.ready_for_generation);_pwbFinalQaPersisted=true;_pwbInputsDirty=false;
     if(result)result.innerHTML=_renderIntentBar(d.brief.search_intent)+renderPrewriteBrief(d.brief);
@@ -48537,6 +48581,20 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   }
   if(implStatus==='manual_resolution_complete'&&currentRejected>0){
     return {code:'REVIEW_REJECTED',label:'CYCLE CLOSED · '+currentRejected+' REJECTED ACTION'+(currentRejected===1?'':'S'),detail:'Rejected actions remain recoverable. Review them here and restore only accidental rejections; no new scan or full Brief is needed.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Review rejected actions',buttonAction:'openRemainingActions('+p.id+')'};
+  }
+  // First manual scan of newly initialized Case Study, independent of scheduler.
+  var _caseBaselineAt=p.case_study&&p.case_study.baseline_locked&&p.case_study.baseline_at?new Date(p.case_study.baseline_at).getTime():0;
+  if(bool(p.case_study_active)&&!bool(p.case_study_fresh_cycle_initialized)&&_caseBaselineAt>0&&
+      !bool(p.monitoring_waiting_input)&&(!scanAt||scanAt<=_caseBaselineAt)&&
+      !(publishedAt>_caseBaselineAt)&&!(verifiedAt>_caseBaselineAt)){
+    return {code:'PREPARE_CASE',label:'CASE STUDY ACTIVE · PREPARE FIRST MANUAL SCAN',
+      detail:'This protected Case Study started before the new scan workflow. Prepare its current revision once; the old baseline and Brief will be archived. Then you can manually scan. Automatic scans stay off.',
+      color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'Prepare first manual scan',buttonAction:'startCaseStudy('+p.id+')'};
+  }
+  if(bool(p.case_study_active)&&bool(p.case_study_fresh_cycle_initialized)&&_caseBaselineAt>0&&
+      (!scanAt||scanAt<=_caseBaselineAt)&&!bool(p.monitoring_waiting_input)&&
+      !(publishedAt>_caseBaselineAt)&&!(verifiedAt>_caseBaselineAt)){
+    return {code:'SCAN',label:'CASE STUDY ACTIVE · FIRST MANUAL SCAN',detail:'Protected baseline saved. Scan the live page once for this new revision. Automatic scans remain off.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'Scan current live page',buttonAction:'checkPage('+p.id+')'};
   }
   if(personalSafetyStale){
     return {code:'REFRESH_CONTRACT',label:'BRIEF SAFETY RULES UPDATED · REBUILD ONCE',detail:'This saved Brief still contains a prohibited or already-completed personal-profile recommendation from an older build. Rebuild it once; the live HTML and proof history remain protected.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild corrected Brief',buttonAction:'checkPage('+p.id+')'};
@@ -51346,7 +51404,7 @@ async function savePrePublicationCheckpoint(pageId) {
         _finishSingleProven(false);
         if (_fullResolve) _fullResolve();
       } else {
-        pollAndShowBrief(pageId, 30, 2000, function(){ delete _checkAnimations[pageId]; _finishSingleProven(true); if (_fullResolve) _fullResolve(); }, _scanStartedAt);
+        pollAndShowBrief(pageId, 30, 2000, function(ok){ delete _checkAnimations[pageId]; _finishSingleProven(ok!==false); if (_fullResolve) _fullResolve(); }, _scanStartedAt);
       }
     } catch(e) {
       delete _checkAnimations[pageId];
@@ -52408,7 +52466,7 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
     var btn = document.querySelector('[onclick="fetchSitemap()"]');
     var _sp = _csSpinner(btn, 'Fetching sitemap');
     try {
-      var r = await fetch('https://app.contentscale.site/api/tracker-client/' + TOKEN + '/fetch-sitemap?url=' + encodeURIComponent(url));
+      var r = await fetch('/api/tracker-client/' + TOKEN + '/fetch-sitemap', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:url})});
       var data = await r.json();
       if (!data.success) { toast(data.error || 'Failed to fetch sitemap', '#f87171'); return; }
       var urls = data.urls || [];
@@ -53271,21 +53329,28 @@ document.addEventListener('visibilitychange', function(){ if(!document.hidden){ 
         api('/pages/' + pageId).then(function(d2) {
           if (d2.success && d2.page && _isFinalBriefForScan(d2.page, scanStartedAt)) { openBriefFromPoll(d2.page); }
           else { hideScanOverlay(); loadPages(); toast('Scan finished, but the final brief is still saving \u2014 Copy remains locked', '#f59e0b'); }
-          if (onDone) onDone();
-        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); if (onDone) onDone(); });
+          if (onDone) onDone(!!(d2.success && d2.page && _isFinalBriefForScan(d2.page, scanStartedAt)));
+        }).catch(function() { hideScanOverlay(); toast('Connection issue', '#f87171'); if (onDone) onDone(false); });
         return;
       }
       api('/check-status/' + pageId).then(function(st) {
         var finished = st && !st.running && st.finishedAt;
         var finishedMs = finished ? new Date(st.finishedAt).getTime() : 0;
         if (!finished || (scanStartedAt && finishedMs < scanStartedAt - 2000)) return;
+        if (st.failed) {
+          clearInterval(timer);
+          hideScanOverlay();
+          toast(st.error || 'Scan failed. Please review the current page status.', '#f87171');
+          if (onDone) onDone(false);
+          return;
+        }
         api('/pages/' + pageId).then(function(d2) {
           // A finished snapshot is not enough: wait until the final merged/guarded brief from
           // this same scan has its own completion marker. This prevents stale Copy Brief exports.
           if (!d2.success || !d2.page || !_isFinalBriefForScan(d2.page, scanStartedAt)) return;
           clearInterval(timer);
           openBriefFromPoll(d2.page);
-          if (onDone) onDone();
+          if (onDone) onDone(true);
         }).catch(function(){});
       }).catch(function(){});
     }, intervalMs);
@@ -61657,6 +61722,45 @@ app.get('/api/tracker-client/:token/prewrite-briefs', async (req, res) => {
 });
 
 // ── GET /api/tracker-client/:token/prewrite-briefs/:id — reopen one brief ───
+// Shared deterministic saved-Brief recovery. GET previews; existing Finalize POST persists.
+async function _pwbPrepareSavedBriefV506(row,options={}){
+    const _hadAnyPersistedFinalQa=!!(row.brief_json&&row.brief_json.publication_quality_check);
+    const _hadPersistedFinalQa=!!(_hadAnyPersistedFinalQa&&row.brief_json.final_qa_version==='v504-meta-policy');
+    let _viewBrief={};
+    try{_viewBrief=JSON.parse(JSON.stringify(row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{}));}catch(_e){_viewBrief=row.brief_json||{};}
+    try { if (_viewBrief && typeof _viewBrief === 'object' && !_viewBrief.language) _viewBrief.language = (row.language || 'en'); } catch(e) {}
+    // v506 — recover evidence already submitted to this exact Network placement instead of
+    // asking the owner to repeat work. This reads persisted async request snapshots only; it does
+    // not rerun SERP, competitor, evidence research or Gemini.
+    let _integrityMigrated=false,_integrityRecovery={ai_evidence_recovered:[],internal_destination_added:false,publisher_domain:''};
+    const _viewPlacementId=Number(options.networkPlacement||0),_viewNetwork=String(options.networkEmbed||'')==='1'&&Number.isSafeInteger(_viewPlacementId)&&_viewPlacementId>0;
+    if(_viewNetwork){
+      try{
+        const _ctx=await pool.query(`SELECT w.domain AS publisher_domain,w.scan_snapshot AS publisher_scan,ow.domain AS owner_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 AND c.prewrite_brief_id=$2 LIMIT 1`,[_viewPlacementId,row.id]);if(!_ctx.rows.length)throw new Error('Network placement is not linked to this saved Brief');
+        const _cx=_ctx.rows[0]||{},_pub=String(_cx.publisher_domain||_cx.owner_domain||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();_integrityRecovery.publisher_domain=_pub;
+        const _beforeIntegrity=JSON.stringify(_viewBrief);
+        _pwbEnsureResearchContractV506(_viewBrief,{network:true,publisher_domain:_pub});
+        let _submitted={};
+        try{const _jobs=await pool.query(`SELECT request_json FROM prewrite_async_jobs WHERE network_placement_id=$1 ORDER BY created_at DESC LIMIT 20`,[_viewPlacementId]);(_jobs.rows||[]).slice().reverse().forEach(function(j){const r=j.request_json&&typeof j.request_json==='object'?j.request_json:{},m=r.manualAiEvidence&&typeof r.manualAiEvidence==='object'?r.manualAiEvidence:{};_PWB_AI_ENGINES_V506.forEach(function(k){if(String(m[k]||'').trim())_submitted[k]=String(m[k]).trim();});});}catch(_jobErr){}
+        const _m=_pwbMergeManualAiEvidenceV506(_viewBrief,_submitted);_integrityRecovery.ai_evidence_recovered=_m.added||[];
+        const _li=_pwbEnsureNetworkInternalDestinationV506(_viewBrief,{publisher_domain:_pub,owner_domain:_cx.owner_domain||'',checked_url:String(_cx.publisher_scan&&_cx.publisher_scan.checked_url||'')});_integrityRecovery.internal_destination_added=!!(_li&&_li.source==='publisher_homepage_fallback');
+        _pwbEvidenceBackedGapV506(_viewBrief);_pwbCanonicalizeAiAnalysisV506(_viewBrief);
+        _integrityMigrated=JSON.stringify(_viewBrief)!==_beforeIntegrity;
+        if(_integrityMigrated){_viewBrief.integrity_history=Array.isArray(_viewBrief.integrity_history)?_viewBrief.integrity_history:[];_viewBrief.integrity_history.push({at:new Date().toISOString(),mode:'v506_recover_existing_work',research_rerun:false,gemini_calls:0,ai_evidence_recovered:_integrityRecovery.ai_evidence_recovered,internal_destination:_viewBrief.link_research&&_viewBrief.link_research.internal&&_viewBrief.link_research.internal.selected_url||'',publisher_domain:_pub});}
+      }catch(_integrityErr){console.warn('[prewrite-v506] integrity migration skipped:',_integrityErr.message);}
+    }
+    _pwbFinalPublicationPass(_viewBrief);
+    _viewBrief.ai_quality_check=_pwbReadiness(_viewBrief);
+    let _autoMigrated=false;
+    if(_hadAnyPersistedFinalQa&&!_hadPersistedFinalQa){
+      _viewBrief.final_qa_history=Array.isArray(_viewBrief.final_qa_history)?_viewBrief.final_qa_history:[];
+      _viewBrief.final_qa_history.push({at:new Date().toISOString(),mode:'automatic_policy_migration',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(_viewBrief.publication_quality_check&&_viewBrief.publication_quality_check.score||0)});
+      _autoMigrated=true;
+    }
+    const _pendingSave=Boolean(_integrityMigrated||_autoMigrated);
+    return {brief:_viewBrief,integrityMigrated:_integrityMigrated,integrityRecovery:_integrityRecovery,autoMigrated:_autoMigrated,finalQaPersisted:_hadPersistedFinalQa,pendingSave:_pendingSave};
+
+}
 app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
   try {
     const cr = await pool.query('SELECT id,domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status != $2)', [req.params.token, 'deleted']);
@@ -61722,44 +61826,8 @@ app.get('/api/tracker-client/:token/prewrite-briefs/:id', async (req, res) => {
     const _shareToken=String(_shareQr.rows[0]&&_shareQr.rows[0].share_token||'');
     const _shareBase=String(process.env.APP_URL||'https://app.contentscale.site').replace(/\/$/,'');
     const _shareInfo=/^[a-f0-9]{48}$/.test(_shareToken)?{active:true,url:_shareBase+'/share/prewrite/'+_shareToken,created_at:_shareQr.rows[0].share_created_at||null,expires_at:null,permanent:true}:{active:false,url:'',created_at:null,expires_at:null,permanent:true};
-    const _hadAnyPersistedFinalQa=!!(row.brief_json&&row.brief_json.publication_quality_check);
-    const _hadPersistedFinalQa=!!(_hadAnyPersistedFinalQa&&row.brief_json.final_qa_version==='v504-meta-policy');
-    // v504 — recalled finalized Briefs automatically migrate to the current deterministic meta/QA policy.
-    // This costs 0 research / 0 Gemini and prevents the owner from having to repeat a completed Final QA
-    // merely because ContentScale tightened its own deterministic rules in a later build.
-    let _viewBrief={};
-    try{_viewBrief=JSON.parse(JSON.stringify(row.brief_json&&typeof row.brief_json==='object'?row.brief_json:{}));}catch(_e){_viewBrief=row.brief_json||{};}
-    try { if (_viewBrief && typeof _viewBrief === 'object' && !_viewBrief.language) _viewBrief.language = (row.language || 'en'); } catch(e) {}
-    // v506 — recover evidence already submitted to this exact Network placement instead of
-    // asking the owner to repeat work. This reads persisted async request snapshots only; it does
-    // not rerun SERP, competitor, evidence research or Gemini.
-    let _integrityMigrated=false,_integrityRecovery={ai_evidence_recovered:[],internal_destination_added:false,publisher_domain:''};
-    const _viewPlacementId=Number(req.query&&req.query.networkPlacement||0),_viewNetwork=String(req.query&&req.query.networkEmbed||'')==='1'&&Number.isSafeInteger(_viewPlacementId)&&_viewPlacementId>0;
-    if(_viewNetwork){
-      try{
-        const _ctx=await pool.query(`SELECT w.domain AS publisher_domain,w.scan_snapshot AS publisher_scan,ow.domain AS owner_domain FROM network_placements p JOIN network_websites w ON w.id=p.publisher_website_id JOIN network_content c ON c.id=p.content_id LEFT JOIN network_websites ow ON ow.id=c.owner_website_id WHERE p.id=$1 LIMIT 1`,[_viewPlacementId]);
-        const _cx=_ctx.rows[0]||{},_pub=String(_cx.publisher_domain||_cx.owner_domain||'').trim().replace(/^https?:\/\//i,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();_integrityRecovery.publisher_domain=_pub;
-        const _beforeIntegrity=JSON.stringify(_viewBrief);
-        _pwbEnsureResearchContractV506(_viewBrief,{network:true,publisher_domain:_pub});
-        let _submitted={};
-        try{const _jobs=await pool.query(`SELECT request_json FROM prewrite_async_jobs WHERE network_placement_id=$1 ORDER BY created_at DESC LIMIT 20`,[_viewPlacementId]);(_jobs.rows||[]).slice().reverse().forEach(function(j){const r=j.request_json&&typeof j.request_json==='object'?j.request_json:{},m=r.manualAiEvidence&&typeof r.manualAiEvidence==='object'?r.manualAiEvidence:{};_PWB_AI_ENGINES_V506.forEach(function(k){if(String(m[k]||'').trim())_submitted[k]=String(m[k]).trim();});});}catch(_jobErr){}
-        const _m=_pwbMergeManualAiEvidenceV506(_viewBrief,_submitted);_integrityRecovery.ai_evidence_recovered=_m.added||[];
-        const _li=_pwbEnsureNetworkInternalDestinationV506(_viewBrief,{publisher_domain:_pub,owner_domain:_cx.owner_domain||'',checked_url:String(_cx.publisher_scan&&_cx.publisher_scan.checked_url||'')});_integrityRecovery.internal_destination_added=!!(_li&&_li.source==='publisher_homepage_fallback');
-        _pwbEvidenceBackedGapV506(_viewBrief);_pwbCanonicalizeAiAnalysisV506(_viewBrief);
-        _integrityMigrated=JSON.stringify(_viewBrief)!==_beforeIntegrity;
-        if(_integrityMigrated){_viewBrief.integrity_history=Array.isArray(_viewBrief.integrity_history)?_viewBrief.integrity_history:[];_viewBrief.integrity_history.push({at:new Date().toISOString(),mode:'v506_recover_existing_work',research_rerun:false,gemini_calls:0,ai_evidence_recovered:_integrityRecovery.ai_evidence_recovered,internal_destination:_viewBrief.link_research&&_viewBrief.link_research.internal&&_viewBrief.link_research.internal.selected_url||'',publisher_domain:_pub});}
-      }catch(_integrityErr){console.warn('[prewrite-v506] integrity migration skipped:',_integrityErr.message);}
-    }
-    _pwbFinalPublicationPass(_viewBrief);
-    _viewBrief.ai_quality_check=_pwbReadiness(_viewBrief);
-    let _finalQaPersisted=_hadPersistedFinalQa,_autoMigrated=false;
-    if(_hadAnyPersistedFinalQa&&!_hadPersistedFinalQa){
-      _viewBrief.final_qa_history=Array.isArray(_viewBrief.final_qa_history)?_viewBrief.final_qa_history:[];
-      _viewBrief.final_qa_history.push({at:new Date().toISOString(),mode:'automatic_policy_migration',version:'v504-meta-policy',research_rerun:false,gemini_calls:0,publication_score:Number(_viewBrief.publication_quality_check&&_viewBrief.publication_quality_check.score||0)});
-      _finalQaPersisted=true;_autoMigrated=true;
-    }
-    if(_integrityMigrated||_autoMigrated)await pool.query('UPDATE prewrite_briefs SET brief_json=$1 WHERE id=$2',[JSON.stringify(_viewBrief),row.id]);
-    res.json({ success: true, brief: _viewBrief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_autoMigrated, integrity_migrated:_integrityMigrated, integrity_recovery:_integrityRecovery, final_qa_persisted:_finalQaPersisted, share:_shareInfo });
+    const _preview=await _pwbPrepareSavedBriefV506(row,{networkPlacement:req.query&&req.query.networkPlacement,networkEmbed:req.query&&req.query.networkEmbed});
+    res.json({ success: true, brief: _preview.brief, brief_id:row.id, keyword: row.keyword, working_title: row.working_title, region: row.region, competitors_scraped: row.competitors_scraped, created_at: row.created_at, deterministic_qa_refreshed:true, deterministic_qa_migrated:_preview.autoMigrated, integrity_migrated:_preview.integrityMigrated, integrity_recovery:_preview.integrityRecovery, final_qa_persisted:_preview.finalQaPersisted, pending_explicit_save:_preview.pendingSave,research_rerun:false,gemini_calls:0,share:_shareInfo });
   } catch (e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
@@ -61775,6 +61843,7 @@ async function _pwbLoadAuthorizedSavedBriefV500(req,briefId){
   let r=await pool.query('SELECT id,client_id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 AND client_id=$2',[briefId,tracker.id]);
   let row=r.rows[0]||null,ownerDomain=String(tracker.domain||'').trim(),publisherDomain='',publisherCheckedUrl='',placementId=Number(req.query&&req.query.networkPlacement||0);
   const wantsNetwork=String(req.query&&req.query.networkEmbed||'')==='1'&&Number.isSafeInteger(placementId)&&placementId>0;
+  if(!wantsNetwork)placementId=0;
   if(wantsNetwork){
     const nr=await pool.query(`
       SELECT p.id,c.prewrite_brief_id,pb.client_id AS prewrite_client_id,ow.domain AS owner_domain,pw.domain AS publisher_domain,pw.scan_snapshot AS publisher_scan
@@ -61786,7 +61855,14 @@ async function _pwbLoadAuthorizedSavedBriefV500(req,briefId){
       WHERE p.id=$1 LIMIT 1
     `,[placementId]);
     const n=nr.rows[0]||null;
+    if(!n)placementId=0;
     if(n){
+      const _placementLinkedToBrief=Number(n.prewrite_brief_id||0)===Number(briefId||0);
+      const _syntheticIdentity=('network-placement-'+placementId+'.internal.contentscale.site').toLowerCase();
+      const _legacySyntheticOwner=String(tracker.domain||'').trim().toLowerCase()===_syntheticIdentity;
+      if(!_placementLinkedToBrief&&!_legacySyntheticOwner)placementId=0;
+    }
+    if(n&&placementId>0){
       if(n.owner_domain)ownerDomain=String(n.owner_domain).trim();
       if(n.publisher_domain)publisherDomain=String(n.publisher_domain).trim();
       try{publisherCheckedUrl=String(n.publisher_scan&&n.publisher_scan.checked_url||'').trim();}catch(_e){publisherCheckedUrl='';}
@@ -61817,7 +61893,8 @@ app.post('/api/tracker-client/:token/prewrite-briefs/:id/finalize', async (req,r
   try{
     const auth=await _pwbLoadAuthorizedSavedBriefV500(req,Number(req.params.id||0));
     if(auth.error)return res.status(auth.status||404).json({success:false,error:auth.error});
-    let brief={};try{brief=JSON.parse(JSON.stringify(auth.row.brief_json||{}));}catch(_e){brief=auth.row.brief_json||{};}
+    const _preview=await _pwbPrepareSavedBriefV506(auth.row,{networkPlacement:auth.placementId,networkEmbed:req.query&&req.query.networkEmbed});
+    let brief=_preview.brief;
     if(Number(auth.placementId||0)>0){_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:auth.publisherDomain||auth.ownerDomain||''});_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:auth.publisherDomain||auth.ownerDomain||'',owner_domain:auth.ownerDomain||'',checked_url:auth.publisherCheckedUrl||''});}
     _pwbEvidenceBackedGapV506(brief);_pwbCanonicalizeAiAnalysisV506(brief);
     _pwbFinalPublicationPass(brief);
@@ -62812,6 +62889,13 @@ function detectContentLanguage(html) {
 // Real APIs: Google CSE · Perplexity Sonar · You.com · Bing (optional)
 
 async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
+  // Canonical schema migrations are never executed by a customer scan.
+  // Fail BEFORE any fetch, scoring or write when required columns are absent.
+  const _requiredScanColumns = {tracker_snapshots:['gsc_brief','source_suggestions','author_trust_score','author_trust_findings','discovered_sources'],tracker_pages:['brief_check_count','brief_content','brief_started_at'],tracker_ai_evidence:['id','page_id','engine','evidence_method','verified_at','updated_at','created_at','is_cleared','revision_cycle','exact_page_cited','domain_cited','brand_recommended','brand_direct_supported']};
+  const _columnResult=await pool.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND table_name IN ('tracker_snapshots','tracker_pages','tracker_ai_evidence') AND column_name=ANY($1::text[])",[Object.values(_requiredScanColumns).flat()]);
+  const _present = new Set((_columnResult.rows||[]).map(r=>String(r.table_name)+'.'+String(r.column_name)));
+  const _missing = Object.entries(_requiredScanColumns).flatMap(([table,cols])=>cols.filter(col=>!_present.has(table+'.'+col)).map(col=>table+'.'+col));
+  if(_missing.length)throw new Error('TRACKER SCAN BLOCKED: database schema is incomplete: '+_missing.join(', '));
   keys = keys || {};
   const _sk  = keys.serpapiKey    || process.env.SERPAPI_KEY || process.env.SERPER_API_KEY || '';
   const _yk  = keys.youKey        || process.env.YOU_API_KEY            || '';
@@ -63300,7 +63384,7 @@ if (!forceRescan && prevSnap && prevSnap.html_hash === effectiveHash && prevSnap
     // than the manual verification. Historical manual evidence is never overwritten.
     let freshManualPerplexity = null;
     try {
-      await _trackerEnsureAiEvidenceSchema();
+      // AI evidence table is prevalidated; never run schema migrations during a scan.
       const _pm = await pool.query(
         `SELECT id, exact_page_cited, domain_cited, brand_recommended, brand_direct_supported, is_cleared, verified_at, updated_at
          FROM tracker_ai_evidence
@@ -65318,12 +65402,7 @@ If no unanchored claims found, return empty array: []`;
     }
     try { return JSON.stringify(val); } catch(e) { return null; }
   }
-  // Add new JSONB columns if not exists
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS gsc_brief JSONB').catch(()=>{});
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS source_suggestions JSONB').catch(()=>{});
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS author_trust_score INTEGER').catch(()=>{});
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS author_trust_findings JSONB').catch(()=>{});
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS discovered_sources JSONB').catch(()=>{});
+  // Required schema checked before any scan action.
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
@@ -65574,10 +65653,7 @@ If no unanchored claims found, return empty array: []`;
 
   // ── Generate Citation Brief ───────────────────────────────────────────────
   try {
-    // Ensure columns exist first
-    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0').catch(()=>{});
-    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB').catch(()=>{});
-    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ').catch(()=>{});
+    // Required schema checked before any scan action.
 
     const pageRow2 = await pool.query(
       'SELECT brief_content, COALESCE(brief_check_count, 0) as brief_check_count FROM tracker_pages WHERE id=$1',
@@ -66061,7 +66137,7 @@ MERGE RULES:
         // ── Email the brief to the client (previously briefs went ONLY to the live wall, never email) ──
         try {
           const _items = Array.isArray(brief2.items) ? brief2.items : [];
-          if ((_items.length && !snapshot._unchanged) || page._manual_requested) {
+          if (process.env.CS_DEPLOYMENT_TIER !== 'staging' && ((_items.length && !snapshot._unchanged) || page._manual_requested)) {
             const _esc = s => String(s==null?'':s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
             const _top = _items.slice(0, 3);
             const _gscCount = Array.isArray(brief2.gsc_brief) ? brief2.gsc_brief.length : 0;
@@ -66824,6 +66900,7 @@ async function _requestDueClientMonitoringInput(){
   }
 }
 function startTrackerScheduler() {
+if(_csStagingStartupQuarantine)return;
   if(_trackerSchedulerTimer) return;
   _trackerSchedulerTimer = setInterval(async () => {
     // Safe by default because pages themselves are explicit opt-in. Set the environment value
@@ -67518,8 +67595,10 @@ async function autoCloseSessions() {
 }
 
 // Run every 30 minutes
+if (!_csStagingStartupQuarantine) {
 setInterval(autoCloseSessions, 30 * 60 * 1000);
-setTimeout(autoCloseSessions, 5000); // run once on startup
+setTimeout(autoCloseSessions, 5000);
+} // run once on startup
 
 
 // ═══════════════════════════════════════════════════════════════════════════
