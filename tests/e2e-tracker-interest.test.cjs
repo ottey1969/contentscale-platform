@@ -14,11 +14,12 @@ function handlerFor(state){
   const pool={query:async(sql)=>{
     if(sql.includes('UPDATE prospect_quick_scans')){
       updates++;
+      if(state.missing)return {rows:[]};
       if(sql.includes('tracker_interested IS DISTINCT FROM TRUE')&&state.interested)return {rows:[]};
       state.interested=true;
       return {rows:[{tracker_interested:true}]};
     }
-    if(sql.includes('SELECT tracker_interested'))return {rows:[{tracker_interested:state.interested}]};
+    if(sql.includes('SELECT tracker_interested'))return {rows:state.missing?[]:[{tracker_interested:state.interested}]};
     throw Error('Unexpected SQL');
   }};
   vm.runInNewContext(line,{app:{post(_route,fn){handler=fn}},pool,_pqsNotifyOwner:async()=>{notifications++},console},{timeout:2000});
@@ -35,4 +36,16 @@ test('Tracker interest repeat is idempotent; no duplicate owner notifications',a
  assert.equal((await f.invoke()).code,200);
  assert.equal((await f.invoke()).code,200);
  assert.equal(f.counts().notifications,1,'duplicate tracker-interest click must not send another email');
+});
+
+test('Unknown Tracker prospect never sends owner notification',async()=>{
+ const f=handlerFor({interested:false,missing:true});
+ assert.equal((await f.invoke()).code,404);
+ assert.equal(f.counts().notifications,0);
+});
+test('Parallel Tracker interest clicks emit only one owner notification',async()=>{
+ const f=handlerFor({interested:false});
+ const [a,b]=await Promise.all([f.invoke(),f.invoke()]);
+ assert.equal(a.code,200);assert.equal(b.code,200);
+ assert.equal(f.counts().notifications,1);
 });
