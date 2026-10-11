@@ -1,0 +1,66 @@
+name: CEO and QuickScan empty-page preflight E2E
+on:
+  push:
+    branches: [ceo-preflight-empty-page-guard]
+  workflow_dispatch:
+permissions:
+  contents: write
+  statuses: write
+jobs:
+  verify-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate canonical source and add preflight
+        run: |
+          set -euo pipefail
+          test "$(wc -c < src/index.js)" -gt 6000000
+          node scripts/prepare-ceo-readiness-preflight.cjs src/index.js
+          node --check src/index.js
+          git diff --check
+          test "$(git diff --name-only)" = "src/index.js" || test -z "$(git diff --name-only)"
+      - name: Verify patch repeatability
+        run: |
+          set -euo pipefail
+          before="$(sha256sum src/index.js | cut -d' ' -f1)"
+          node scripts/prepare-ceo-readiness-preflight.cjs src/index.js
+          test "$before" = "$(sha256sum src/index.js | cut -d' ' -f1)"
+      - name: Execute real CEO QuickScan Audit20 and empty-page E2E regression tests
+        run: |
+          node --test tests/ceo-quickscan-audit20-legal-e2e.test.cjs tests/ceo-preflight-empty-page-e2e.test.cjs
+      - name: Persist the exact green canonical source ONLY to isolated candidate
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "ceo-preflight-empty-page-guard"
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/index.js" || test -z "$changed"
+          git diff --check
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-ceo-preflight-ci
+            git config user.email contentscale-ceo-preflight-ci@users.noreply.github.com
+            git commit -m 'CEO/QuickScan empty-page preflight: isolated E2E passed [skip ci]'
+            git push origin HEAD:refs/heads/ceo-preflight-empty-page-guard
+          fi
+      - name: Record pass or failure without any deployment
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_RESULT: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          if [ "$CI_RESULT" = success ]; then state=success; else state=failure; fi
+          printf -v data '{"state":"%s","context":"contentscale/ceo-preflight-e2e","description":"CEO/QuickScan content preflight: %s; not deployed","target_url":"https://github.com/%s/actions/runs/%s"}' "$state" "$CI_RESULT" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID"
+          curl --fail --silent --show-error --retry 3 -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            --data "$data" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" >/dev/null
