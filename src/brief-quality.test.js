@@ -53,6 +53,21 @@ test('stale freshness computed from real lastmod', () => {
   assert.ok(s.find((x) => x.id === 'stale'));
 });
 
+test('Perfect Roofing Team: 6302 impressions and 2 clicks at position 41.6 must trigger ranking diagnosis, not title blame', () => {
+  const results=Q.computeGscSignals({clicks:2,impressions:6302,position:41.6});
+  assert.ok(results.some(x=>x.id==='high_impressions_low_clicks'));
+  assert.ok(!results.some(x=>x.id==='ctr_gap'));
+  assert.match(results.find(x=>x.id==='high_impressions_low_clicks').evidence,/6302 impressions, 2 clicks/);
+  assert.match(results.find(x=>x.id==='high_impressions_low_clicks').evidence,/0\\.03% CTR/);
+});
+test('Two informational GEO pages with shared GSC query do not justify forced canonical or shortening', () => {
+  const r=Q.detectCannibalization({keyword:'wat is geo',page:{url:'https://example.nl/wat-is-geo/'},
+    site:{gscQueryPages:[{query:'wat is geo',url:'https://example.nl/wat-is-geo/',impressions:300},{query:'wat is geo',url:'https://example.nl/geo-gids/',impressions:500}]}});
+  assert.equal(r.cannibalized,false);
+  assert.equal(r.needsReview,true);
+  assert.equal(r.pages.length,2);
+  assert.match(r.note,/compare both page bodies/i);
+});
 console.log('detectCannibalization');
 test('flags multiple emergency pages from sitemap', () => {
   const r = Q.detectCannibalization({
@@ -66,7 +81,9 @@ test('flags multiple emergency pages from sitemap', () => {
       { url: 'https://x.com/roof-leak/' },
     ] },
   });
-  assert.strictEqual(r.cannibalized, true);
+  assert.strictEqual(r.cannibalized, false);
+  assert.strictEqual(r.needsReview, true);
+  assert.doesNotMatch(r.note, /pick one target|301 or re-target|canonical pointing/i);
   assert.ok(r.pages.length >= 2);
   assert.ok(!r.pages.includes('https://x.com/roof-leak/')); // different intent, not flagged
 });
@@ -80,7 +97,9 @@ test('GSC query->pages is authoritative when provided', () => {
     ] },
   });
   assert.strictEqual(r.source, 'gsc');
-  assert.strictEqual(r.cannibalized, true);
+  assert.strictEqual(r.cannibalized, false);
+  assert.strictEqual(r.needsReview, true);
+  assert.doesNotMatch(r.note, /pick one target|301 or re-target|canonical pointing/i);
   assert.strictEqual(r.pages.length, 2);
 });
 test('no false positive on a unique keyword', () => {
