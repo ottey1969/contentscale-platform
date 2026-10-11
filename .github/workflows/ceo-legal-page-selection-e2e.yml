@@ -4,7 +4,7 @@ on:
     branches: [ceo-legal-page-selection-e2e]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   statuses: write
 jobs:
   verify:
@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          persist-credentials: true
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -24,7 +24,8 @@ jobs:
           node scripts/prepare-ceo-legal-page-e2e.cjs src/index.js
           node --check src/index.js
           git diff --check
-          test "$(git diff --name-only)" = "src/index.js"
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/index.js" || test -z "$changed"
       - name: Confirm deterministic source transform
         run: |
           set -euo pipefail
@@ -34,6 +35,21 @@ jobs:
       - name: Run CEO, QuickScan and interest-only Audit20 E2E tests
         run: |
           node --test tests/ceo-quickscan-audit20-legal-e2e.test.cjs
+      - name: Persist exact tested src/index.js to isolated candidate branch only
+        if: success()
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF_NAME" = "ceo-legal-page-selection-e2e"
+          changed="$(git diff --name-only)"
+          test "$changed" = "src/index.js" || test -z "$changed"
+          git diff --check
+          git add -- src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-ceo-e2e-ci
+            git config user.email contentscale-ceo-e2e-ci@users.noreply.github.com
+            git commit -m 'CEO/QuickScan legal-page exclusion; isolated E2E passed [skip ci]'
+            git push origin HEAD:refs/heads/ceo-legal-page-selection-e2e
+          fi
       - name: Record review-only result, no deployment
         if: ${{ always() }}
         env:
@@ -48,4 +64,4 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Content-Type: application/json" \
             --data "$data" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" >/dev/null
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$(git rev-parse HEAD)" >/dev/null
