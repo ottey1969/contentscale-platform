@@ -7,7 +7,7 @@ let s=fs.readFileSync(file,'utf8');
 if(Buffer.byteLength(s)<6000000)throw Error('STOP: incomplete canonical app');
 function uniqueReplace(oldText,newText,label){
  const n=s.split(oldText).length-1;
- if(n===0&&s.includes(newText))return;
+ if(s.includes(newText))return;
  if(n!==1)throw Error('STOP: '+label+' source drift ('+n+')');
  s=s.replace(oldText,newText);
 }
