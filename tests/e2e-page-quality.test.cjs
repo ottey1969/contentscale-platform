@@ -8,4 +8,7 @@ assert.equal(quality(wrap('Buy'), 'product').eligible, false);
 assert.equal(quality(wrap(words), 'product').eligible, true);
 assert.equal(quality(wrap(words), 'service').eligible, true);
 assert.equal(quality('plain text', 'other').eligible, false);
+const controls = '<form>' + Array(60).fill('<label>Product options quantity shipping checkout delivery size color</label><button>Add to cart</button>').join('') + '</form>';
+assert.equal(quality(wrap(controls), 'product').eligible, false, 'form-only template must not be scan eligible');
+assert.equal(quality(wrap(controls + '<p>' + words + '</p>'), 'product').eligible, true, 'real product description remains eligible');
 console.log('PASS: commercial page quality tests');
