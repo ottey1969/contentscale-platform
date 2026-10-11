@@ -13,3 +13,7 @@ for(const signal of signals){
    console.log('LINE',i+1,'METHOD',route?.[1]||'?','PATH',route?.[2]||'?', 'MATCH',s.slice(Math.max(0,s.indexOf(signal)-110),s.indexOf(signal)+120).replace(/[^\x20-\x7e]/g,' '));
  }
 }
+
+if(process.env.CS_INSPECT_CASE_CONTEXT==='1'){
+ for(let i=2969;i<3082;i++)console.log('CASE_SOURCE',i+1,lines[i]?.slice(0,650));
+}
