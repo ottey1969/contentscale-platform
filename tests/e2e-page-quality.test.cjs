@@ -1,0 +1,11 @@
+'use strict';
+const assert = require('node:assert/strict');
+const quality = require('../src/prospect/page-quality.cjs').checkPageContent;
+const wrap = text => '<html><body><main>' + text + '</main></body></html>';
+const words = Array(45).fill('Genuine useful service information').join(' ');
+assert.equal(quality(wrap(''), 'product').eligible, false);
+assert.equal(quality(wrap('Buy'), 'product').eligible, false);
+assert.equal(quality(wrap(words), 'product').eligible, true);
+assert.equal(quality(wrap(words), 'service').eligible, true);
+assert.equal(quality('plain text', 'other').eligible, false);
+console.log('PASS: commercial page quality tests');
