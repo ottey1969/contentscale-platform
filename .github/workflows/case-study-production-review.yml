@@ -41,6 +41,7 @@ jobs:
           set -euo pipefail
           test "$GITHUB_REF_NAME" = "case-study-scanner-safety-candidate"
           git fetch origin main
+          git fetch origin "$VALIDATED_CANDIDATE"
           test "$(git rev-parse origin/main)" = "$BASE_MAIN"
           git show "$VALIDATED_CANDIDATE:src/index.js" > /tmp/case-staging-source.js
           git show "$VALIDATED_CANDIDATE:scripts/prepare-case-study-production-artifact.cjs" > /tmp/case-production-export.cjs
