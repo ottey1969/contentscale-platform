@@ -54,7 +54,14 @@ function computeGscSignals({ clicks = 0, impressions = 0, position = 0, lastModi
   const pct = (n) => `${(n * 100).toFixed(2)}%`;
 
   // --- CTR gap: the #1 lever when you already rank but barely get clicks ---
-  if (impressions >= 300 && exp > 0 && ctr < exp * 0.5) {
+  // Rankings beyond page two are a visibility problem first. Do not blame
+  // title/meta for a 0.03% CTR while the average position is 41.
+  if (impressions >= 300 && position > 20 && ctr < 0.005) {
+    signals.push({ id:'high_impressions_low_clicks', priority:'HIGH',
+      title:'High impressions, little traffic: ranking and query-intent gap',
+      evidence:`Verified GSC: ${impressions} impressions, ${clicks} clicks, ${pct(ctr)} CTR at average position ${position.toFixed(1)}. A title/meta problem alone is not proven.`,
+      lever:'First inspect exact-page GSC query positions and landing-page intent, distinguish neighboring pages, and compare the real top-ranking competitors. Only then prioritize page improvement or a verified new spoke.' });
+  } else if (impressions >= 300 && position > 0 && position <= 20 && exp > 0 && ctr < exp * 0.5) {
     signals.push({
       id: 'ctr_gap',
       priority: 'HIGH',
@@ -114,39 +121,37 @@ function slugTokens(url = '') {
 
 function detectCannibalization({ keyword, page, site }) {
   const current = (page && page.url) || '';
-  // Best evidence: GSC query -> pages. If you have it, use it (exact, not heuristic).
+  // Shared SERP queries indicate *possible overlap*, not duplicate content,
+  // intent conflict or a canonical/301 justification. Content comparison and
+  // query-to-URL performance must be verified before a consolidation decision.
+  const q=String(keyword||'').toLowerCase().trim();
   if (site && Array.isArray(site.gscQueryPages)) {
-    const q = keyword.toLowerCase().trim();
-    const pages = site.gscQueryPages
-      .filter((r) => (r.query || '').toLowerCase().trim() === q && r.impressions > 0)
-      .map((r) => r.url);
-    const unique = [...new Set(pages)];
-    if (unique.length > 1) {
-      return { cannibalized: true, source: 'gsc', keyword, pages: unique,
-        note: `${unique.length} pages take impressions for "${keyword}". Pick one target; 301 or re-target the rest.` };
-    }
-    return { cannibalized: false, source: 'gsc', keyword, pages: unique };
+    const pages=site.gscQueryPages.filter(r=>String(r.query||'').toLowerCase().trim()===q && Number(r.impressions)>0)
+      .map(r=>r.url).filter(Boolean);
+    const unique=[...new Set(pages)];
+    return {
+      cannibalized:false, possibleOverlap:unique.length>1, needsReview:unique.length>1,
+      verifiedDuplicateContent:false, source:'gsc', keyword, current, pages:unique,
+      note:unique.length>1
+        ? 'Multiple URLs appear for the same GSC query. Compare both page bodies, primary intent and query-level performance. Do not shorten, canonicalize, noindex or redirect either page based on query overlap alone.'
+        : ''
+    };
   }
-  // Fallback heuristic: sitemap slugs/titles sharing the keyword's core tokens.
-  const kw = new Set(coreTokens(keyword));
-  if (kw.size === 0 || !site || !Array.isArray(site.sitemap)) {
-    return { cannibalized: false, source: 'none', keyword, pages: [] };
-  }
-  const matches = site.sitemap.filter((p) => {
-    const toks = new Set([...slugTokens(p.url), ...coreTokens(p.title || '')]);
-    let overlap = 0; kw.forEach((t) => { if (toks.has(t)) overlap++; });
-    return overlap >= Math.max(2, kw.size - 1); // share (almost) all core tokens
-  }).map((p) => p.url);
-  const unique = [...new Set(matches)];
+  const kw=new Set(coreTokens(q));
+  if (!kw.size||!site||!Array.isArray(site.sitemap))
+    return {cannibalized:false,possibleOverlap:false,needsReview:false,source:'none',keyword,current,pages:[]};
+  const matches=site.sitemap.filter(p=>{
+    const toks=new Set([...slugTokens(p.url),...coreTokens(p.title||'')]);
+    let overlap=0;kw.forEach(t=>{if(toks.has(t))overlap++});
+    return overlap>=Math.max(2,kw.size-1);
+  }).map(p=>p.url).filter(Boolean);
+  const unique=[...new Set(matches)];
   return {
-    cannibalized: unique.length > 1,
-    source: 'sitemap',
-    keyword,
-    pages: unique,
-    current,
-    note: unique.length > 1
-      ? `${unique.length} pages look targeted at "${keyword}". Confirm in GSC (query → pages), then keep one and 301/re-target the others.`
-      : '',
+    cannibalized:false,possibleOverlap:unique.length>1,needsReview:unique.length>1,
+    verifiedDuplicateContent:false,source:'sitemap',keyword,current,pages:unique,
+    note:unique.length>1
+      ? 'Similar URL/title keywords are a discovery signal only. Verify page content, intent and exact-page GSC data; no consolidation recommendation is justified yet.'
+      : ''
   };
 }
 
