@@ -46,6 +46,7 @@ test('placeholder, soft-404, noindex and wrong-page redirects are blocked',()=>{
  assert.equal(inspect(product,html('Product not found','<p>'+words+'</p>')).code,'ERROR_OR_PLACEHOLDER');
  assert.equal(inspect(product,html('Roof Product','<p>Lorem ipsum dolor sit amet '+words+'</p>')).code,'PLACEHOLDER_COPY');
  assert.equal(inspect(product,html('Roof Product','<p>'+words+'</p>','<meta name="robots" content="noindex,follow">')).code,'NOT_INDEXABLE');
+ assert.equal(inspect(product,html('Roof Product','<p>'+words+'</p>','<meta content="noindex,follow" name="robots">')).code,'NOT_INDEXABLE');
  assert.equal(JSON.parse(JSON.stringify(ctx.inspect(scenario(home,good),product))).code,'REDIRECTED_PAGE');
  assert.equal(JSON.parse(JSON.stringify(ctx.inspect(scenario('https://other.example/product/roof-sealant/',good),product))).code,'FOREIGN_REDIRECT');
 });
