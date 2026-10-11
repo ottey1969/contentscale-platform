@@ -56,6 +56,11 @@ const newSchemaTables="table_name IN ('tracker_snapshots','tracker_pages','track
 if(body.includes(oldSchemaTables))body=body.replace(oldSchemaTables,newSchemaTables);
 else if(!body.includes(newSchemaTables))throw Error('STOP: scanner table preflight anchor moved');
 if(/_trackerEnsureAiEvidenceSchema\s*\(/.test(body))throw Error('STOP: scanner still calls AI schema migration helper');
+const emailOld="if ((_items.length && !snapshot._unchanged) || page._manual_requested) {";
+const emailSafe="if (process.env.CS_DEPLOYMENT_TIER !== 'staging' && ((_items.length && !snapshot._unchanged) || page._manual_requested)) {";
+if(body.includes(emailSafe)){} // Staging never sends Brief email.
+else if(body.includes(emailOld))body=body.replace(emailOld,emailSafe);
+else throw Error('STOP: manual scan email side-effect anchor changed');
 body=body.replace('  // Add new JSONB columns if not exists','  // Required schema checked before any scan action.');
 body=body.replace('    // Ensure columns exist first','    // Required schema checked before any scan action.');
 if(/\b(?:ALTER|CREATE|DROP|TRUNCATE)\s+TABLE\b/i.test(body))throw Error('STOP: scanner still contains schema DDL');
