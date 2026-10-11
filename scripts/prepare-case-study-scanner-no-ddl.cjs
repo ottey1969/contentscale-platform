@@ -41,6 +41,20 @@ if(!body.includes('TRACKER SCAN BLOCKED: database schema is incomplete')){
  if(body.split(marker).length!==2)throw Error('STOP: scanner entry anchor drifted');
  body=body.replace(marker,gate+'\n'+marker);
 }
+const aiMigration='await _trackerEnsureAiEvidenceSchema();';
+const aiNoMigration='// AI evidence table is prevalidated; never run schema migrations during a scan.';
+const nAi=body.split(aiMigration).length-1;
+if(nAi===1)body=body.replace(aiMigration,aiNoMigration);
+else if(nAi!==0||!body.includes(aiNoMigration))throw Error('STOP: scanner AI evidence migration anchor changed');
+const oldAiList="tracker_pages:['brief_check_count','brief_content','brief_started_at']";
+const newAiList="tracker_pages:['brief_check_count','brief_content','brief_started_at'],tracker_ai_evidence:['id','page_id','engine','evidence_method','verified_at','updated_at','created_at','is_cleared','revision_cycle','exact_page_cited','domain_cited','brand_recommended','brand_direct_supported']";
+if(body.includes(oldAiList))body=body.replace(oldAiList,newAiList);
+else if(!body.includes(newAiList))throw Error('STOP: required scanner AI schema contract moved');
+const oldSchemaTables="table_name IN ('tracker_snapshots','tracker_pages')";
+const newSchemaTables="table_name IN ('tracker_snapshots','tracker_pages','tracker_ai_evidence')";
+if(body.includes(oldSchemaTables))body=body.replace(oldSchemaTables,newSchemaTables);
+else if(!body.includes(newSchemaTables))throw Error('STOP: scanner table preflight anchor moved');
+if(/_trackerEnsureAiEvidenceSchema\s*\(/.test(body))throw Error('STOP: scanner still calls AI schema migration helper');
 body=body.replace('  // Add new JSONB columns if not exists','  // Required schema checked before any scan action.');
 body=body.replace('    // Ensure columns exist first','    // Required schema checked before any scan action.');
 if(/\b(?:ALTER|CREATE|DROP|TRUNCATE)\s+TABLE\b/i.test(body))throw Error('STOP: scanner still contains schema DDL');
