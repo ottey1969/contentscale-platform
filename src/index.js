@@ -62873,6 +62873,13 @@ function detectContentLanguage(html) {
 // Real APIs: Google CSE · Perplexity Sonar · You.com · Bing (optional)
 
 async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
+  // Canonical schema migrations are never executed by a customer scan.
+  // Fail BEFORE any fetch, scoring or write when required columns are absent.
+  const _requiredScanColumns = {tracker_snapshots:['gsc_brief','source_suggestions','author_trust_score','author_trust_findings','discovered_sources'],tracker_pages:['brief_check_count','brief_content','brief_started_at']};
+  const _columnResult=await pool.query("SELECT table_name,column_name FROM information_schema.columns WHERE table_schema='public' AND table_name IN ('tracker_snapshots','tracker_pages') AND column_name=ANY($1::text[])",[Object.values(_requiredScanColumns).flat()]);
+  const _present = new Set((_columnResult.rows||[]).map(r=>String(r.table_name)+'.'+String(r.column_name)));
+  const _missing = Object.entries(_requiredScanColumns).flatMap(([table,cols])=>cols.filter(col=>!_present.has(table+'.'+col)).map(col=>table+'.'+col));
+  if(_missing.length)throw new Error('TRACKER SCAN BLOCKED: database schema is incomplete: '+_missing.join(', '));
   keys = keys || {};
   const _sk  = keys.serpapiKey    || process.env.SERPAPI_KEY || process.env.SERPER_API_KEY || '';
   const _yk  = keys.youKey        || process.env.YOU_API_KEY            || '';
@@ -65379,12 +65386,7 @@ If no unanchored claims found, return empty array: []`;
     }
     try { return JSON.stringify(val); } catch(e) { return null; }
   }
-  // Add new JSONB columns if not exists
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS gsc_brief JSONB').catch(()=>{});
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS source_suggestions JSONB').catch(()=>{});
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS author_trust_score INTEGER').catch(()=>{});
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS author_trust_findings JSONB').catch(()=>{});
-  await pool.query('ALTER TABLE tracker_snapshots ADD COLUMN IF NOT EXISTS discovered_sources JSONB').catch(()=>{});
+  // Required schema checked before any scan action.
   const snapR = await pool.query(
     `INSERT INTO tracker_snapshots
       (page_id,checked_at,google_position,ai_google_overview_found,ai_google_overview_cited,ai_google_overview_text,
@@ -65635,10 +65637,7 @@ If no unanchored claims found, return empty array: []`;
 
   // ── Generate Citation Brief ───────────────────────────────────────────────
   try {
-    // Ensure columns exist first
-    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_check_count INTEGER DEFAULT 0').catch(()=>{});
-    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_content JSONB').catch(()=>{});
-    await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS brief_started_at TIMESTAMPTZ').catch(()=>{});
+    // Required schema checked before any scan action.
 
     const pageRow2 = await pool.query(
       'SELECT brief_content, COALESCE(brief_check_count, 0) as brief_check_count FROM tracker_pages WHERE id=$1',
