@@ -25,6 +25,8 @@ jobs:
           node --check src/brief-quality.js
           node src/brief-quality.test.js
           node tests/tracker-cannib-evidence.test.cjs
+      - name: Inspect existing action completion and growth transition
+        run: TRACKER_ACTION_RESOLVE=1 node scripts/inspect-tracker-growth-contract.cjs
       - name: Persist the exactly tested canonical scanner on review branch only
         if: success() && github.event_name == 'push'
         run: |
