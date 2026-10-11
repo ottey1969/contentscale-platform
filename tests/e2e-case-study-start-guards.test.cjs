@@ -82,7 +82,7 @@ test('Case Study start persists one immutable baseline with verified five-engine
   }
   if(s.includes('INSERT INTO tracker_case_study_events')){baselineFrozen++;return {rows:[]};}
   if(s.includes('UPDATE tracker_pages'))return {rows:[]};
-  if(s.includes('FROM tracker_case_study_events')&&s.includes('fresh_cycle_initialized'))return {rows:[{fresh_cycle_initialized:true,baseline_html_ready:true}]};
+  if(s.includes('AS fresh_cycle_initialized')&&s.includes('AS baseline_html_ready'))return {rows:[{fresh_cycle_initialized:true,baseline_html_ready:true}]};
   throw Error('Unexpected Case Study SQL '+s.slice(0,130));
  };
  const context={
