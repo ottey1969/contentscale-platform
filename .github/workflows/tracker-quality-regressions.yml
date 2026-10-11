@@ -47,3 +47,4 @@ jobs:
           node tests/tracker-completed-actions.test.cjs
           node tests/tracker-growth-closeout-handler.test.cjs
           node tests/tracker-case-study-freshness.test.cjs
+          node tests/tracker-growth-cockpit.test.cjs
