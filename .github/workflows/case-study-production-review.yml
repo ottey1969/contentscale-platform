@@ -35,7 +35,7 @@ jobs:
       - name: Verify approved candidate and unchanged production base, offline export only
         env:
           BASE_MAIN: 5e23fd67945491fa229af25348e03eee772b846b
-          VALIDATED_CANDIDATE: c1adb15fe842f59d2b3a2aa086ffa7d41d291726
+          VALIDATED_CANDIDATE: 86b188e22d5f48169b3b492879dc41a6cda1b7f5
           SOURCE_BLOB: da3229f020d426bcc365f37ed518b165881c27b6
         run: |
           set -euo pipefail
@@ -60,7 +60,7 @@ jobs:
       - name: Exercise the exact main tree with only reviewed src/index.js replacement
         env:
           BASE_MAIN: 5e23fd67945491fa229af25348e03eee772b846b
-          VALIDATED_CANDIDATE: c1adb15fe842f59d2b3a2aa086ffa7d41d291726
+          VALIDATED_CANDIDATE: 86b188e22d5f48169b3b492879dc41a6cda1b7f5
         run: |
           set -euo pipefail
           git switch --detach "$BASE_MAIN"
