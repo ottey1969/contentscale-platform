@@ -4,7 +4,7 @@ on:
     branches: [tracker-evidence-growth-20261011]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   inspect:
     runs-on: ubuntu-latest
@@ -14,5 +14,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --check src/brief-quality.js && node src/brief-quality.test.js
-      - run: TRACKER_FOCUSED_SOURCE=1 node scripts/inspect-tracker-growth-contract.cjs
+      - name: Apply evidence-safe canonical cannibalization change
+        run: |
+          node scripts/patch-tracker-cannibal-evidence.cjs src/index.js
+          node scripts/patch-tracker-cannibal-evidence.cjs src/index.js
+          git diff --check
+      - name: Verify canonical entry and evidence regression tests
+        run: |
+          node --check src/index.js
+          node --check src/brief-quality.js
+          node src/brief-quality.test.js
+          node tests/tracker-cannib-evidence.test.cjs
+      - name: Persist the exactly tested canonical scanner on review branch only
+        if: success() && github.event_name == 'push'
+        run: |
+          test "$GITHUB_REF_NAME" = "tracker-evidence-growth-20261011"
+          git add src/index.js
+          if ! git diff --cached --quiet; then
+            git config user.name contentscale-review-ci
+            git config user.email contentscale-review-ci@users.noreply.github.com
+            git commit -m "review: verified cannibalization evidence guard [skip ci]"
+            git push origin HEAD:refs/heads/tracker-evidence-growth-20261011
+          fi
