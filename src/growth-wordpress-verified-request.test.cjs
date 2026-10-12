@@ -60,6 +60,9 @@ function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy]
  assert(result.issues.includes('CANONICAL_WORDPRESS_POST_ID_LOOKUP_FAILED'));
  result=await prepareVerifiedGrowthWordPressRequest({...input(db()),expectedWordPressPostId:999});
  assert.equal(result.status,'OFFLINE_REQUEST_ONLY');
+ result=await prepareVerifiedGrowthWordPressRequest({...input(db()),fetchFreshWordPressHtml:async()=>({id:42,link:url,status:'publish',modified_gmt:'2026-10-12T08:00:00',content:{raw:'<!doctype html><html><body>'+html+'</body></html>'}})});
+ assert.equal(result.status,'BLOCKED');
+ assert(result.issues.includes('DIFFERENT_SOURCE_REPRESENTATIONS'));
  result=await prepareVerifiedGrowthWordPressRequest({...input(db()),authorized:false});
  assert.equal(result.status,'BLOCKED');
  console.log('PASS: guarded canonical WordPress offline bridge, last-check case study and source changes');
