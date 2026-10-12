@@ -32,6 +32,7 @@ on:
       - 'src/growth-wordpress-candidate-reader*.cjs'
       - 'src/growth-gsc-page-verification*.cjs'
       - 'migrations/growth-gsc-page-import-runs.sql'
+      - 'src/growth-wordpress-connection-route*.cjs'
       - 'src/growth-wordpress-admin-auth*.cjs'
       - 'src/growth-wordpress-identity-approval-route*.cjs'
       - 'src/tracker-growth-execution.cjs'
@@ -71,6 +72,8 @@ jobs:
         run: node src/tracker-growth-wordpress-integration.test.cjs
       - name: Verified WordPress mapping approval transaction
         run: node src/growth-wordpress-identity-approval-route.test.cjs
+      - name: Verified WordPress profile connection
+        run: node src/growth-wordpress-connection-route.test.cjs
       - name: Growth admin authentication
         run: node src/growth-wordpress-admin-auth.test.cjs
       - name: Authenticated WordPress post/page candidate discovery
