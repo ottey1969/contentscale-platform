@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
+const r=snapshotCompetitorLeads({page:{url:'https://contentscale.site/example/'},snapshot:{checked_at:'2026-10-01T00:00:00Z',google_competitors:[{url:'https://example.org/article'},{url:'https://www.contentscale.site/own'},{url:'http://not-secure.example/'}],ai_perplexity_competitors:['https://example.net/']}});
+assert.equal(r.status,'URL_LEADS_ONLY');
+assert.equal(r.leads.length,2);
+assert.equal(r.verified_gaps.length,0);
+assert.equal(r.checked_at,'2026-10-01T00:00:00Z');
+assert(r.leads.every(x=>x.status==='URL_ONLY_NOT_CONTENT_VERIFIED'));
+assert.equal(snapshotCompetitorLeads({page:{url:'invalid'}}).status,'INVALID_PAGE_URL');
+console.log('PASS: historical competitor URL leads are never assumed to be content gaps');
