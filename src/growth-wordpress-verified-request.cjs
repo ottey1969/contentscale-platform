@@ -3,6 +3,7 @@
 const {prepareGrowthWordPressHandoff}=require('./growth-wordpress-preparation.cjs');
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {toExistingWordPressDraftRequest}=require('./growth-wordpress-existing-handler.cjs');
+const {verifyGrowthWritePrecondition}=require('./growth-wordpress-handoff.cjs');
 async function prepareVerifiedGrowthWordPressRequest(input={}){
  const handoff=await prepareGrowthWordPressHandoff(input);
  if(handoff.status!=='SAFE_TO_PASS_TO_EXISTING_DRAFT_HANDLER')
@@ -29,6 +30,9 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
   return {status:'BLOCKED',stage:'CASE_STUDY',issues:['CASE_STUDY_LOCK'],request:null,dispatch_allowed:false};
  if(finalState.page.url!==latest.page.url)
   return {status:'BLOCKED',stage:'FINAL_CANONICAL_RECHECK',issues:['PAGE_IDENTITY_MISMATCH'],request:null,dispatch_allowed:false};
+ const finalProof=verifyGrowthWritePrecondition({source_precondition:handoff.source_precondition,
+  currentHtml:finalState.page.html_content,currentUrl:finalState.page.url});
+ if(!finalProof.valid)return {status:'BLOCKED',stage:'FINAL_CANONICAL_RECHECK',issues:finalProof.issues,request:null,dispatch_allowed:false};
  const checked=toExistingWordPressDraftRequest(handoff,{
   authorized:input.authorized===true,
   currentHtml:live.html,
