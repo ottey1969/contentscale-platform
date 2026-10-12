@@ -36,6 +36,7 @@ const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
  assert.equal(result.aiEvidence.length,1);
  assert.deepEqual(calls[1].args,[2,7,url]);
  assert.deepEqual(calls[2].args,[2,7]);
+ assert.match(calls[2].sql,/\bis_active IS TRUE\b/);
  await assert.rejects(loadGrowthTrackerEvidence(db,{pageId:0,clientId:2}),/VALID_PAGE_AND_CLIENT_REQUIRED/);
  const missing={query:async()=>({rows:[]})};
  await assert.rejects(loadGrowthTrackerEvidence(missing,{pageId:7,clientId:2}),/TRACKER_PAGE_NOT_FOUND/);
