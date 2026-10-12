@@ -5,7 +5,7 @@ function growthEvidenceContract({url,pageQueries=[],searchSpy,aiSpy,originalHtml
  const problems=[],gaps=[];
  function externalSource(source){
   try {const target=new URL(url),candidate=new URL(source);
-   return target.protocol==='https:'&&candidate.protocol==='https:'&&candidate.hostname!==target.hostname&&candidate.hostname.replace(/^www\\./,'')!==target.hostname.replace(/^www\\./,'');
+   return target.protocol==='https:'&&candidate.protocol==='https:'&&candidate.hostname!==target.hostname&&candidate.hostname.replace(/^www\./,'')!==target.hostname.replace(/^www\./,'');
   } catch {return false;}
  }
  const exact=pageQueries.filter(q=>q&&q.evidence_scope==='page_verified'&&q.page_url===url&&String(q.query||'').trim());
