@@ -1,0 +1,119 @@
+name: Growth Evidence and Render Gate
+on:
+  pull_request:
+    paths:
+      - 'src/growth-evidence-*.cjs'
+      - 'src/growth-tracker-evidence-adapter*.cjs'
+      - 'src/growth-canonical-loader*.cjs'
+      - 'src/growth-canonical-review*.cjs'
+      - 'src/growth-opportunity-plan*.cjs'
+      - 'src/growth-ai-visibility-summary*.cjs'
+      - 'src/growth-snapshot-competitors*.cjs'
+      - 'src/growth-edit-instructions*.cjs'
+      - 'src/growth-html-draft*.cjs'
+      - 'src/growth-draft-preparation*.cjs'
+      - 'src/growth-wordpress-draft-payload*.cjs'
+      - 'src/growth-wordpress-handoff*.cjs'
+      - 'src/growth-wordpress-preparation*.cjs'
+      - 'src/growth-wordpress-existing-handler*.cjs'
+      - 'src/growth-wordpress-verified-request*.cjs'
+      - 'src/growth-wordpress-canonical-id*.cjs'
+      - 'src/growth-wordpress-mapping-review*.cjs'
+      - 'src/growth-wordpress-mapping-preflight*.cjs'
+      - 'src/growth-wordpress-mapping-approval*.cjs'
+      - 'src/growth-live-routes*.cjs'
+      - 'src/growth-wordpress-source-compatibility*.cjs'
+      - 'src/growth-wordpress-edit-reader*.cjs'
+      - 'src/growth-wordpress-revision*.cjs'
+      - 'src/growth-wordpress-draft-writer*.cjs'
+      - 'src/growth-wordpress-draft-executor*.cjs'
+      - 'src/growth-wordpress-draft-transport*.cjs'
+      - 'src/growth-wordpress-preflight-route*.cjs'
+      - 'src/growth-wordpress-candidate-reader*.cjs'
+      - 'src/growth-gsc-page-verification*.cjs'
+      - 'migrations/growth-gsc-page-import-runs.sql'
+      - 'src/growth-wordpress-admin-auth*.cjs'
+      - 'src/growth-wordpress-identity-approval-route*.cjs'
+      - 'src/tracker-growth-execution.cjs'
+      - 'src/tracker-growth-wordpress-integration.test.cjs'
+      - 'src/growth-tracker-wordpress-identity*.cjs'
+      - '.github/workflows/growth-evidence-gate.yml'
+  workflow_dispatch:
+jobs:
+  growth-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Evidence contract tests
+        run: node src/growth-evidence-contract.test.cjs
+      - name: Draft and rendered-template guard tests
+        run: node src/growth-evidence-render-gate.test.cjs
+      - name: Canonical evidence loader
+        run: node src/growth-canonical-loader.test.cjs
+      - name: Canonical review integration
+        run: node src/growth-canonical-review.test.cjs
+      - name: Verified AI visibility summaries
+        run: node src/growth-ai-visibility-summary.test.cjs
+      - name: Historical competitor research leads
+        run: node src/growth-snapshot-competitors.test.cjs
+      - name: Existing WordPress draft formatting contract
+        run: node src/growth-wordpress-existing-handler.test.cjs
+      - name: Direct Tracker to WordPress identity review
+        run: node src/growth-tracker-wordpress-identity.test.cjs
+      - name: Exact-page GSC source verification and transactional import
+        run: node src/growth-gsc-page-verification.test.cjs
+      - name: Existing Tracker route wiring to live Growth preflight
+        run: node src/tracker-growth-wordpress-integration.test.cjs
+      - name: Verified WordPress mapping approval transaction
+        run: node src/growth-wordpress-identity-approval-route.test.cjs
+      - name: Growth admin authentication
+        run: node src/growth-wordpress-admin-auth.test.cjs
+      - name: Authenticated WordPress post/page candidate discovery
+        run: node src/growth-wordpress-candidate-reader.test.cjs
+      - name: Authenticated Growth preflight Express route
+        run: node src/growth-wordpress-preflight-route.test.cjs
+      - name: WordPress draft-only transport
+        run: node src/growth-wordpress-draft-transport.test.cjs
+      - name: Guarded WordPress draft executor
+        run: node src/growth-wordpress-draft-executor.test.cjs
+      - name: Guarded draft writer
+        run: node src/growth-wordpress-draft-writer.test.cjs
+      - name: WordPress revision verification
+        run: node src/growth-wordpress-revision.test.cjs
+      - name: Authenticated WordPress edit reader
+        run: node src/growth-wordpress-edit-reader.test.cjs
+      - name: Source representation compatibility
+        run: node src/growth-wordpress-source-compatibility.test.cjs
+      - name: Integrated Growth live route checks
+        run: node src/growth-live-routes.test.cjs
+      - name: Reviewed mapping approval transaction
+        run: node src/growth-wordpress-mapping-approval.test.cjs
+      - name: Migration readiness preflight
+        run: node src/growth-wordpress-mapping-preflight.test.cjs
+      - name: Read-only WordPress mapping candidate review
+        run: node src/growth-wordpress-mapping-review.test.cjs
+      - name: Canonical WordPress ID mapping
+        run: node src/growth-wordpress-canonical-id.test.cjs
+      - name: Verified offline WordPress request bridge
+        run: node src/growth-wordpress-verified-request.test.cjs
+      - name: WordPress offline preparation integration
+        run: node src/growth-wordpress-preparation.test.cjs
+      - name: WordPress handoff freshness guard
+        run: node src/growth-wordpress-handoff.test.cjs
+      - name: Offline WordPress draft payload
+        run: node src/growth-wordpress-draft-payload.test.cjs
+      - name: Growth draft preparation integration
+        run: node src/growth-draft-preparation.test.cjs
+      - name: Safe HTML draft assembly
+        run: node src/growth-html-draft.test.cjs
+      - name: Source-backed edit instructions
+        run: node src/growth-edit-instructions.test.cjs
+      - name: Per-page opportunity plan
+        run: node src/growth-opportunity-plan.test.cjs
+      - name: Canonical Tracker adapter
+        run: node src/growth-tracker-evidence-adapter.test.cjs

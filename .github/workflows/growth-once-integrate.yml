@@ -1,0 +1,35 @@
+name: Growth One-Time Canonical Integration
+on:
+  push:
+    branches:
+      - growth/evidence-render-quality-gate-20261012
+    paths:
+      - '.github/workflows/growth-once-integrate.yml'
+permissions:
+  contents: write
+jobs:
+  wire-existing-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Attach existing Express/GSC hooks safely
+        run: node .github/scripts/attach_growth_live_routes.cjs
+      - name: Syntax and route safety regressions
+        run: |
+          node --check src/index.js
+          node src/growth-live-routes.test.cjs
+          node src/growth-wordpress-mapping-approval.test.cjs
+          node src/growth-wordpress-draft-writer.test.cjs
+      - name: Commit ONLY the surgical index change
+        run: |
+          if git diff --quiet -- src/index.js; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- src/index.js
+          git commit -m 'Growth: wire canonical readiness and GSC route into existing Express app'
+          git push origin HEAD:growth/evidence-render-quality-gate-20261012

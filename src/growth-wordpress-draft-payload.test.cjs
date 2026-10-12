@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createGrowthWordPressDraftPayload}=require('./growth-wordpress-draft-payload.cjs');
+const ready={status:'READY_FOR_HUMAN_REVIEW',assembly:{status:'DRAFT_FOR_REVIEW',html:'<article><p>Approved</p></article>'},review:{ready:true,status:'READY_FOR_HUMAN_REVIEW',opportunity_plan:{automatic_draft_allowed:false},edit_instructions:{auto_publish:false}}};
+let r=createGrowthWordPressDraftPayload(ready,{title:'A factual title',editor_approved:true});
+assert.equal(r.status,'OFFLINE_WORDPRESS_DRAFT_PAYLOAD');
+assert.equal(r.payload.status,'draft');
+assert.equal(r.dispatch_allowed,false);
+assert.equal(r.payload.content,ready.assembly.html);
+r=createGrowthWordPressDraftPayload(ready,{title:'A factual title'});
+assert(r.issues.includes('HUMAN_APPROVAL_REQUIRED'));
+r=createGrowthWordPressDraftPayload({...ready,status:'BLOCKED'},{title:'A factual title',editor_approved:true});
+assert.equal(r.payload,null);
+r=createGrowthWordPressDraftPayload({...ready,review:{...ready.review,edit_instructions:{auto_publish:true}}},{title:'Title',editor_approved:true});
+assert(r.issues.includes('UNEXPECTED_PUBLICATION_STATE'));
+console.log('PASS: reviewed Growth HTML maps only to offline WordPress draft payload');
