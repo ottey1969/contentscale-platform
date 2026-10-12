@@ -43,8 +43,8 @@ function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy]
  assert.equal(result.status,'BLOCKED');
  assert(result.issues.includes('FRESH_WORDPRESS_READER_REQUIRED'));
  result=await prepareVerifiedGrowthWordPressRequest({...input(db()),fetchFreshWordPressHtml:async()=>({id:42,link:url,status:'publish',modified_gmt:'2026-10-12T08:00:00',content:{raw:html+' modified'}})});
- assert.equal(result.status,'BLOCKED');
- assert(result.issues.includes('SOURCE_CHANGED_REVIEW_AGAIN'));
+ assert.equal(result.status,'OFFLINE_REQUEST_ONLY');
+ assert.equal(result.wordpress_revision.valid,true);
  result=await prepareVerifiedGrowthWordPressRequest({...input(db()),fetchFreshWordPressHtml:async()=>{throw Error('WP unavailable')}});
  assert.equal(result.status,'BLOCKED');
  assert(result.issues.includes('FRESH_WORDPRESS_READ_FAILED'));
