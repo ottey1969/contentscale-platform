@@ -15,4 +15,9 @@ assert.equal(growthEvidenceContract({...base,searchSpy:[{...base.searchSpy[0],so
 const selfReference=growthEvidenceContract({...base,searchSpy:[{...base.searchSpy[0],source_url:url}]});
 assert.equal(selfReference.evidence_status,'RESEARCH_INCOMPLETE');
 assert.equal(selfReference.competitiveGaps.some(g=>g.kind==='SEARCH_SPY'),false);
-console.log('Growth evidence contract: 7 checks passed');
+const sameDomain=growthEvidenceContract({...base,searchSpy:[{...base.searchSpy[0],source_url:'https://www.contentscale.site/another-article/'}]});
+assert.equal(sameDomain.evidence_status,'RESEARCH_INCOMPLETE');
+assert.equal(sameDomain.competitiveGaps.some(g=>g.kind==='SEARCH_SPY'),false);
+const malformed=growthEvidenceContract({...base,searchSpy:[{...base.searchSpy[0],source_url:'https://'}]});
+assert.equal(malformed.evidence_status,'RESEARCH_INCOMPLETE');
+console.log('Growth evidence contract: 9 checks passed');
