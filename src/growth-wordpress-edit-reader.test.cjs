@@ -16,5 +16,17 @@ const {createGrowthWordPressEditReader}=require('./growth-wordpress-edit-reader.
  assert.throws(()=>createGrowthWordPressEditReader({siteUrl:'http://contentscale.site/',username:'x',applicationPassword:'x'}),/WP_READER_CONFIGURATION_REQUIRED/);
  const failed=createGrowthWordPressEditReader({siteUrl,username:'x',applicationPassword:'x',fetchImpl:async()=>({ok:false})});
  await assert.rejects(failed({postId:42,url}),/WORDPRESS_EDIT_READ_FAILED/);
- console.log('PASS: read-only WordPress edit-context authentication and identity');
+ let calls=[];
+ const readPage=createGrowthWordPressEditReader({siteUrl,username:'x',applicationPassword:'x',fetchImpl:async(endpoint)=>{
+  calls.push(endpoint);
+  if(endpoint.includes('/posts/'))return {ok:false,status:404};
+  return {ok:true,json:async()=>({id:42,link:url,status:'publish',modified_gmt:'2026-10-12T08:00:00',content:{raw:'<p>Page</p>'}})};
+ }});
+ const page=await readPage({postId:42,url});
+ assert.equal(page.content.raw,'<p>Page</p>');
+ assert.equal(calls.length,2);
+ assert.match(calls[1],/\/pages\/42\?context=edit/);
+ const notFound=createGrowthWordPressEditReader({siteUrl,username:'x',applicationPassword:'x',fetchImpl:async()=>({ok:false,status:404})});
+ await assert.rejects(notFound({postId:42,url}),/WORDPRESS_EDIT_POST_OR_PAGE_NOT_FOUND/);
+ console.log('PASS: read-only WordPress post/page edit-context authentication and identity');
 })().catch(err=>{console.error(err);process.exitCode=1});
