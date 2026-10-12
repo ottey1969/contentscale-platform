@@ -20,11 +20,20 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  catch {return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_READ_FAILED'],request:null,dispatch_allowed:false};}
  if(!live||live.url!==latest.page.url||typeof live.html!=='string'||!live.html.trim())
   return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_RESPONSE_INVALID'],request:null,dispatch_allowed:false};
+ // A slow WP read can race with a Tracker update or a newly activated Case Study.
+ // Re-read canonical state after the external await, then fail closed.
+ let finalState;
+ try {finalState=await loadGrowthTrackerEvidence(input.db,{pageId:input.pageId,clientId:input.clientId});}
+ catch {return {status:'BLOCKED',stage:'FINAL_CANONICAL_RECHECK',issues:['CANONICAL_RECHECK_FAILED'],request:null,dispatch_allowed:false};}
+ if(finalState.page.case_study_active)
+  return {status:'BLOCKED',stage:'CASE_STUDY',issues:['CASE_STUDY_LOCK'],request:null,dispatch_allowed:false};
+ if(finalState.page.url!==latest.page.url)
+  return {status:'BLOCKED',stage:'FINAL_CANONICAL_RECHECK',issues:['PAGE_IDENTITY_MISMATCH'],request:null,dispatch_allowed:false};
  const checked=toExistingWordPressDraftRequest(handoff,{
   authorized:input.authorized===true,
   currentHtml:live.html,
-  currentUrl:latest.page.url,
-  caseStudyLocked:latest.page.case_study_active
+  currentUrl:finalState.page.url,
+  caseStudyLocked:finalState.page.case_study_active
  });
  return {...checked,stage:'OFFLINE_WORDPRESS_REQUEST',
   note:'Not a write transaction. WP target revision and authorization must be reverified at actual write boundary.',
