@@ -12,12 +12,15 @@ function inspectGrowthDraft(input={}) {
  if(!Array.isArray(markers)||!markers.length)fail('TEMPLATE_UNDEFINED','Approved template markers must be supplied from the existing WordPress template.');
  else for(const marker of markers){
   if(typeof marker!=='string'||!marker.trim())fail('TEMPLATE_MARKER_INVALID','Template marker must be nonempty.');
-  else if(!html.includes(marker))fail('TEMPLATE_NOT_PRESERVED','Missing required template marker: '+marker);
+  else {if(!source.includes(marker))fail('TEMPLATE_MARKER_NOT_IN_ORIGINAL','Approved template marker cannot be verified in the original page: '+marker); if(!html.includes(marker))fail('TEMPLATE_NOT_PRESERVED','Missing required template marker: '+marker);}
  }
  const visibleText=html.replace(/<!--[^]*?-->/g,'').replace(/<script\b[^]*?<\/script>/gi,'').replace(/<style\b[^]*?<\/style>/gi,'').replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
  const imageTag=/<img\b[^>]*>/gi;
  const images=[...html.matchAll(imageTag)];
  const seen=new Set();
+ const originalImageSources=[...source.matchAll(imageTag)].map(m=>(m[0].match(/\bsrc\s*=\s*["']([^"']+)["']/i)||[])[1]).filter(Boolean);
+ const draftImageSources=new Set(images.map(m=>(m[0].match(/\bsrc\s*=\s*["']([^"']+)["']/i)||[])[1]).filter(Boolean));
+ for(const src of originalImageSources)if(!draftImageSources.has(src))fail('ORIGINAL_IMAGE_REMOVED','Original image is missing from the Growth draft: '+src);
  for(const m of images){
   const src=(m[0].match(/\bsrc\s*=\s*["']([^"']+)["']/i)||[])[1];
   const alt=(m[0].match(/\balt\s*=\s*["']([^"']*)["']/i)||[])[1];
