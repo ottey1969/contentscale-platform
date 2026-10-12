@@ -5,10 +5,11 @@ const {growthEvidenceContract}=require('./growth-evidence-contract.cjs');
 const {inspectGrowthDraft}=require('./growth-evidence-render-gate.cjs');
 function trackerGrowthReview({page={},gscRows=[],searchSpy,aiSpy,originalHtml='',draftHtml='',templateMarkers,claims,renderProof}={}){
  const pageId=Number(page.id);
+ const clientId=Number(page.tracker_client_id);
  const url=String(page.url||'');
  const rows=Array.isArray(gscRows)?gscRows:[];
  const validPage=Number.isSafeInteger(pageId)&&pageId>0&&/^https:\/\/[^/]+\//i.test(url);
- const pageQueries=rows.filter(r=>validPage&&Number(r.page_id)===pageId&&(!r.page_url||r.page_url===url)&&(!r.url||r.url===url)&&r.evidence_scope==='page_verified'&&String(r.query||'').trim())
+ const pageQueries=rows.filter(r=>validPage&&Number(r.page_id)===pageId&&Number.isSafeInteger(clientId)&&clientId>0&&Number(r.tracker_client_id)===clientId&&r.source_page_url===url&&r.evidence_scope==='page_verified'&&String(r.query||'').trim())
    .map(r=>({page_url:url,evidence_scope:'page_verified',query:r.query,
       clicks:r.clicks,impressions:r.impressions,position:r.position,imported_at:r.imported_at}));
  const verifiedZeroQueries=validPage&&pageQueries.length===0&&page.gsc_query_evidence_status==='exact_page_fetch_zero_queries'&&Boolean(page.gsc_autofetch_checked_at||page.gsc_query_fetch_at);
