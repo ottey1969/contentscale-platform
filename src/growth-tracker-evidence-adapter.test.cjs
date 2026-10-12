@@ -28,6 +28,10 @@ assert.equal(a.ready,false);assert(a.issues.some(x=>x.code==='TRACKER_PAGE_INVAL
 a=trackerGrowthReview({...base(),page:{id:2352,url,gsc_query_evidence_status:'exact_page_fetch_zero_queries',gsc_autofetch_checked_at:'2026-10-12T01:00:00Z'},gscRows:[]});
 assert.equal(a.ready,false);assert.equal(a.status,'BLOCKED_VERIFIED_ZERO_QUERIES');
 assert.equal(a.gsc_query_evidence_status,'exact_page_fetch_zero_queries');
+a=trackerGrowthReview({...base(),page:{id:2352,url,case_study_active:true,gsc_query_evidence_status:'exact_page_fetch_zero_queries',gsc_autofetch_checked_at:'2026-10-12T01:00:00Z'},gscRows:[]});
+assert.equal(a.status,'BLOCKED_CASE_STUDY');
+assert(a.issues.some(x=>x.code==='CASE_STUDY_LOCK'));
+assert.equal(a.gsc_query_evidence_status,'exact_page_fetch_zero_queries');
 a=trackerGrowthReview({...base(),gscRows:[]});
 assert.equal(a.gsc_query_evidence_status,'not_verified');
-console.log('PASS: canonical page_id evidence adapter; 9 cases');
+console.log('PASS: canonical page_id evidence adapter; 10 cases');
