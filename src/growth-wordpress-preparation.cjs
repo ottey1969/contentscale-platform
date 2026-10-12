@@ -6,6 +6,8 @@ const {createGrowthWordPressDraftPayload}=require('./growth-wordpress-draft-payl
 const {growthWordPressHandoff}=require('./growth-wordpress-handoff.cjs');
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 async function prepareGrowthWordPressHandoff(input={}){
+ const initial=await loadGrowthTrackerEvidence(input.db,{pageId:input.pageId,clientId:input.clientId});
+ const initialHtml=initial.page.html_content;
  const preparation=await prepareCanonicalGrowthDraft(input);
  if(preparation.status!=='READY_FOR_HUMAN_REVIEW')
   return {status:'BLOCKED',stage:'GROWTH_REVIEW',issues:preparation.review?.issues||preparation.assembly?.issues||[],payload:null,publication_allowed:false};
@@ -13,8 +15,9 @@ async function prepareGrowthWordPressHandoff(input={}){
  if(!payload.payload)return {status:'BLOCKED',stage:'EDITOR_APPROVAL',issues:payload.issues,payload:null,publication_allowed:false};
  // Repeat canonical check immediately before handoff. Still not a transaction or write.
  const canonical=await loadGrowthTrackerEvidence(input.db,{pageId:input.pageId,clientId:input.clientId});
+ if(initialHtml!==canonical.page.html_content)return {status:'BLOCKED',stage:'SOURCE_FRESHNESS',issues:['SOURCE_CHANGED_REVIEW_AGAIN'],payload:null,publication_allowed:false};
  if(canonical.page.case_study_active)return {status:'BLOCKED',stage:'CASE_STUDY',issues:['CASE_STUDY_LOCK'],payload:null,publication_allowed:false};
- const guarded=growthWordPressHandoff({draftPayload:payload,originalHtml:canonical.page.html_content,
+ const guarded=growthWordPressHandoff({draftPayload:payload,originalHtml:initialHtml,
   currentHtml:input.currentWordPressHtml,authorized:input.authorized===true,
   sourcePageUrl:canonical.page.url,expectedPageUrl:input.expectedPageUrl});
  return {...guarded,stage:'WORDPRESS_HANDOFF',publication_allowed:false};
