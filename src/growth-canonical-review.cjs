@@ -5,6 +5,7 @@ const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {trackerGrowthReview}=require('./growth-tracker-evidence-adapter.cjs');
 const {buildGrowthOpportunityPlan}=require('./growth-opportunity-plan.cjs');
 const {summarizeGrowthAiVisibility}=require('./growth-ai-visibility-summary.cjs');
+const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 async function reviewCanonicalGrowthDraft({db,pageId,clientId,searchSpy,aiSpy,draftHtml,templateMarkers,claims,renderProof}={}){
  const canonical=await loadGrowthTrackerEvidence(db,{pageId,clientId});
  const review=trackerGrowthReview({
@@ -14,6 +15,6 @@ async function reviewCanonicalGrowthDraft({db,pageId,clientId,searchSpy,aiSpy,dr
   originalHtml:canonical.page.html_content||'',
   draftHtml,templateMarkers,claims,renderProof
  });
- return {...review,ai_visibility:summarizeGrowthAiVisibility({page:canonical.page,rows:canonical.aiEvidence}),competitor_snapshot:canonical.competitorSnapshot,opportunity_plan:buildGrowthOpportunityPlan({page:canonical.page,gscRows:canonical.gscRows,searchSpy,aiSpy})};
+ return {...review,ai_visibility:summarizeGrowthAiVisibility({page:canonical.page,rows:canonical.aiEvidence}),competitor_research_leads:snapshotCompetitorLeads({page:canonical.page,snapshot:canonical.competitorSnapshot}),opportunity_plan:buildGrowthOpportunityPlan({page:canonical.page,gscRows:canonical.gscRows,searchSpy,aiSpy})};
 }
 module.exports={reviewCanonicalGrowthDraft};
