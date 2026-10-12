@@ -9,6 +9,7 @@ function database({locked=false}={}){
   if(sql.includes('FROM tracker_pages'))return {rows:[{id:7,tracker_client_id:2,url,html_content:'<article class="approved">Original</article>'}]};
   if(sql.includes('FROM tracker_gsc_queries'))return {rows:[{page_id:7,tracker_client_id:2,source_page_url:url,evidence_scope:'page_verified',query:'example',impressions:80,clicks:2}]};
   if(sql.includes('FROM tracker_case_studies'))return {rows:locked?[{id:1}]:[]};
+  if(sql.includes('FROM tracker_ai_evidence'))return {rows:[{page_id:7,tracker_client_id:2,engine:'chatgpt',evidence_method:'manual',brand_recommended:false,domain_cited:true,exact_page_cited:false,citation_urls:['https://example.org/'],verified_at:'2026-10-10T00:00:00Z',revision_cycle:1}]};
   throw new Error('unexpected');
  }};
 }
