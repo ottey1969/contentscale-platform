@@ -24,4 +24,6 @@ expectBlocked(x=>{x.html='<article class="approved"><p>'+('Useful text '.repeat(
 expectBlocked(x=>{x.html=x.html.replace('</article>','<img src="/a.jpg" alt="dup"></article>');},'IMAGE_DUPLICATE');
 expectBlocked(x=>{x.originalHtml='<article class="approved"><img src="/original.jpg" alt="Original"></article>';},'ORIGINAL_IMAGE_REMOVED');
 expectBlocked(x=>{x.templateMarkers=['<span class="invented">']; x.html=x.html.replace('</article>','<span class="invented"></span></article>');},'TEMPLATE_MARKER_NOT_IN_ORIGINAL');
-console.log('Growth evidence/render gate: 13 checks passed');
+expectBlocked(x=>{x.competitiveGaps=[{...x.competitiveGaps[0],competitor_url:'https://www.contentscale.site/another/'}];},'COMPETITIVE_GAP_UNSUPPORTED');
+expectBlocked(x=>{x.competitiveGaps=[{...x.competitiveGaps[0],competitor_url:'https://'}];},'COMPETITIVE_GAP_UNSUPPORTED');
+console.log('Growth evidence/render gate: 15 checks passed');
