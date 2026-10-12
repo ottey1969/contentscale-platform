@@ -22,4 +22,6 @@ expectBlocked(x=>{x.caseStudyLocked=true;},'CASE_STUDY_LOCK');
 expectBlocked(x=>{x.renderProof.mobile_checked=false;},'RENDER_NOT_REVIEWED');
 expectBlocked(x=>{x.html='<article class="approved"><p>'+('Useful text '.repeat(20))+'</p>'+['a','b','c','d'].map(n=>'<img src="/'+n+'.jpg" alt="'+n+'">').join('')+'</article>';},'IMAGE_STACK');
 expectBlocked(x=>{x.html=x.html.replace('</article>','<img src="/a.jpg" alt="dup"></article>');},'IMAGE_DUPLICATE');
-console.log('Growth evidence/render gate: 11 checks passed');
+expectBlocked(x=>{x.originalHtml='<article class="approved"><img src="/original.jpg" alt="Original"></article>';},'ORIGINAL_IMAGE_REMOVED');
+expectBlocked(x=>{x.templateMarkers=['<span class="invented">']; x.html=x.html.replace('</article>','<span class="invented"></span></article>');},'TEMPLATE_MARKER_NOT_IN_ORIGINAL');
+console.log('Growth evidence/render gate: 13 checks passed');
