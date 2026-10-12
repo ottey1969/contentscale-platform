@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {growthWordPressHandoff}=require('./growth-wordpress-handoff.cjs');
+const {growthWordPressHandoff,verifyGrowthWritePrecondition}=require('./growth-wordpress-handoff.cjs');
 const original='<article><p>Before</p></article>';
 const url='https://contentscale.site/page/';
 const draftPayload={status:'OFFLINE_WORDPRESS_DRAFT_PAYLOAD',dispatch_allowed:false,payload:{title:'Title',content:'<article>Draft</article>',status:'draft'}};
@@ -12,6 +12,10 @@ assert.equal(x.publication_allowed,false);
 assert.match(x.source_precondition.sha256,/^[a-f0-9]{64}$/);
 assert.equal(x.source_precondition.url,url);
 assert.equal(x.write_boundary_revalidation_required,true);
+assert.equal(verifyGrowthWritePrecondition({source_precondition:x.source_precondition,currentHtml:original,currentUrl:url}).valid,true);
+assert(verifyGrowthWritePrecondition({source_precondition:x.source_precondition,currentHtml:original+' updated',currentUrl:url}).issues.includes('SOURCE_CHANGED_REVIEW_AGAIN'));
+assert(verifyGrowthWritePrecondition({source_precondition:x.source_precondition,currentHtml:original,currentUrl:'https://different.test/'}).issues.includes('PAGE_IDENTITY_MISMATCH'));
+assert.equal(verifyGrowthWritePrecondition({currentHtml:original,currentUrl:url}).valid,false);
 x=growthWordPressHandoff({...base,currentHtml:original+' changed'});
 assert(x.issues.includes('SOURCE_CHANGED_REVIEW_AGAIN'));
 assert.equal(x.source_precondition,null);
