@@ -20,6 +20,8 @@ const pool={query:async(sql,args)=>{
 }};
 registerGrowthExecution(app,pool);
 assert(endpoints['/api/tracker-client/:token/growth/publication']);
+assert(endpoints['/api/growth/wordpress/profile/:profileId/connect']);
+assert.equal(endpoints['/api/growth/wordpress/profile/:profileId/connect'].handlers.length,2);
 const route=endpoints['/api/growth/wordpress/preflight/:clientId/:pageId'];
 assert(route);assert.equal(route.handlers.length,2);
 async function invoke(token){
