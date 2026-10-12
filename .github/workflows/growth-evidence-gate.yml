@@ -21,6 +21,7 @@ on:
       - 'src/growth-wordpress-mapping-review*.cjs'
       - 'src/growth-wordpress-mapping-preflight*.cjs'
       - 'src/growth-wordpress-source-compatibility*.cjs'
+      - 'src/growth-wordpress-edit-reader*.cjs'
       - 'src/growth-tracker-wordpress-identity*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
@@ -50,6 +51,8 @@ jobs:
         run: node src/growth-wordpress-existing-handler.test.cjs
       - name: Direct Tracker to WordPress identity review
         run: node src/growth-tracker-wordpress-identity.test.cjs
+      - name: Authenticated WordPress edit reader
+        run: node src/growth-wordpress-edit-reader.test.cjs
       - name: Source representation compatibility
         run: node src/growth-wordpress-source-compatibility.test.cjs
       - name: Migration readiness preflight
