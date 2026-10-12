@@ -12,7 +12,10 @@ function registerGrowthExecution(app,pool){
  try {
   const {registerGrowthWordPressPreflightRoute}=require('./growth-wordpress-preflight-route.cjs');
   const {createGrowthAdminMiddleware}=require('./growth-wordpress-admin-auth.cjs');
-  registerGrowthWordPressPreflightRoute({app,pool,verifyEngineAccess:createGrowthAdminMiddleware(pool)});
+  const verifyGrowthAdmin=createGrowthAdminMiddleware(pool);
+  registerGrowthWordPressPreflightRoute({app,pool,verifyEngineAccess:verifyGrowthAdmin});
+  const {registerGrowthWordPressApprovalRoute}=require('./growth-wordpress-identity-approval-route.cjs');
+  registerGrowthWordPressApprovalRoute({app,pool,verifyGrowthAdmin});
  } catch(error) {
   console.error('[growth-wordpress-preflight] optional registration failed:',error.message);
  }
