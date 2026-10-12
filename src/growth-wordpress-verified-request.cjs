@@ -8,6 +8,7 @@ const {parseFreshWordPressPost}=require('./growth-wordpress-raw-source.cjs');
 const {inspectGrowthSourceCompatibility}=require('./growth-wordpress-source-compatibility.cjs');
 const {resolveGrowthWordPressPostId}=require('./growth-wordpress-canonical-id.cjs');
 const {fingerprintWordPressRevision}=require('./growth-wordpress-revision.cjs');
+const {fingerprintWordPressRevision}=require('./growth-wordpress-revision.cjs');
 async function prepareVerifiedGrowthWordPressRequest(input={}){
  const handoff=await prepareGrowthWordPressHandoff(input);
  if(handoff.status!=='SAFE_TO_PASS_TO_EXISTING_DRAFT_HANDLER')
@@ -58,6 +59,7 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  return {...checked,stage:'OFFLINE_WORDPRESS_REQUEST',
   note:'Not a write transaction. WP target revision and authorization must be reverified at actual write boundary.',
   wordpress_source:{post_id:parsed.post_id,modified_gmt:parsed.modified_gmt,status:parsed.status},
+  wordpress_revision:fingerprintWordPressRevision(live,latest.page.url),
   wordpress_revision:fingerprintWordPressRevision(live,latest.page.url),
   publication_allowed:false,dispatch_allowed:false};
 }
