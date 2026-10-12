@@ -1,0 +1,24 @@
+'use strict';
+// Offline adapter only. No WordPress write, dispatch or publish.
+const {prepareGrowthWordPressHandoff}=require('./growth-wordpress-preparation.cjs');
+const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
+const {toExistingWordPressDraftRequest}=require('./growth-wordpress-existing-handler.cjs');
+async function prepareVerifiedGrowthWordPressRequest(input={}){
+ const handoff=await prepareGrowthWordPressHandoff(input);
+ if(handoff.status!=='SAFE_TO_PASS_TO_EXISTING_DRAFT_HANDLER')
+  return {status:'BLOCKED',stage:handoff.stage||'GROWTH_HANDOFF',issues:handoff.issues||[],request:null,dispatch_allowed:false};
+ // Check the canonical record again after editorial preparation; never trust caller-supplied case study state.
+ const latest=await loadGrowthTrackerEvidence(input.db,{pageId:input.pageId,clientId:input.clientId});
+ if(latest.page.case_study_active)return {status:'BLOCKED',stage:'CASE_STUDY',issues:['CASE_STUDY_LOCK'],request:null,dispatch_allowed:false};
+ if(latest.page.url!==handoff.source_precondition?.url)return {status:'BLOCKED',stage:'PAGE_IDENTITY',issues:['PAGE_IDENTITY_MISMATCH'],request:null,dispatch_allowed:false};
+ const checked=toExistingWordPressDraftRequest(handoff,{
+  authorized:input.authorized===true,
+  currentHtml:latest.page.html_content,
+  currentUrl:latest.page.url,
+  caseStudyLocked:latest.page.case_study_active
+ });
+ return {...checked,stage:'OFFLINE_WORDPRESS_REQUEST',
+  note:'Not a write transaction. WP target revision and authorization must be reverified at actual write boundary.',
+  publication_allowed:false,dispatch_allowed:false};
+}
+module.exports={prepareVerifiedGrowthWordPressRequest};
