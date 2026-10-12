@@ -5,6 +5,7 @@ const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {toExistingWordPressDraftRequest}=require('./growth-wordpress-existing-handler.cjs');
 const {verifyGrowthWritePrecondition}=require('./growth-wordpress-handoff.cjs');
 const {parseFreshWordPressPost}=require('./growth-wordpress-raw-source.cjs');
+const {inspectGrowthSourceCompatibility}=require('./growth-wordpress-source-compatibility.cjs');
 const {resolveGrowthWordPressPostId}=require('./growth-wordpress-canonical-id.cjs');
 async function prepareVerifiedGrowthWordPressRequest(input={}){
  const handoff=await prepareGrowthWordPressHandoff(input);
@@ -24,6 +25,8 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  const parsed=parseFreshWordPressPost(live,latest.page.url);
  if(!parsed.valid)
   return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_RESPONSE_INVALID'],request:null,dispatch_allowed:false};
+ const compatibility=inspectGrowthSourceCompatibility({trackerHtml:latest.page.html_content,wordpressRaw:live.content.raw});
+ if(!compatibility.compatible)return {status:'BLOCKED',stage:'SOURCE_REPRESENTATION',issues:[compatibility.status],request:null,dispatch_allowed:false};
  // The caller must resolve the WP post identity from a trusted canonical mapping.
  // URL equality alone is insufficient when content has been migrated/recreated.
  let mappedPostId;
