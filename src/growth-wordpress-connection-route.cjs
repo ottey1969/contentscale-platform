@@ -23,7 +23,7 @@ function registerGrowthWordPressConnectionRoute({app,pool,verifyGrowthAdmin,fetc
 (function(){
 'use strict';
 var form=document.getElementById('connect-form'),btn=document.getElementById('submit'),msg=document.getElementById('result');
-function key(){var manual=document.getElementById('admin').value.trim();if(manual)return manual;for(var name of ['adminToken','admin_token','adminKey','admin_key','lc_admin_key','lcAdminKey','engineAdminKey']){try{var v=localStorage.getItem(name)||sessionStorage.getItem(name);if(v)return v;}catch(e){}}return '';}
+function key(){var manual=document.getElementById('admin').value.trim();if(manual)return manual;for(var name of ['super_admin_session_token','superAdminToken','super_admin_token','adminToken','admin_token','adminKey','admin_key','lc_admin_key','lcAdminKey','engineAdminKey']){try{var v=localStorage.getItem(name)||sessionStorage.getItem(name);if(v)return v;}catch(e){}}return '';}
 form.addEventListener('submit',async function(event){
  event.preventDefault();btn.disabled=true;btn.textContent='Checking…';msg.className='';msg.style.display='none';
  var pass=document.getElementById('password'),token=key(),profile=document.getElementById('profile').value;
