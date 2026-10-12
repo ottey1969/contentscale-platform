@@ -17,6 +17,7 @@ on:
       - 'src/growth-wordpress-preparation*.cjs'
       - 'src/growth-wordpress-existing-handler*.cjs'
       - 'src/growth-wordpress-verified-request*.cjs'
+      - 'src/growth-wordpress-canonical-id*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
 jobs:
@@ -43,6 +44,8 @@ jobs:
         run: node src/growth-snapshot-competitors.test.cjs
       - name: Existing WordPress draft formatting contract
         run: node src/growth-wordpress-existing-handler.test.cjs
+      - name: Canonical WordPress ID mapping
+        run: node src/growth-wordpress-canonical-id.test.cjs
       - name: Verified offline WordPress request bridge
         run: node src/growth-wordpress-verified-request.test.cjs
       - name: WordPress offline preparation integration
