@@ -8,7 +8,6 @@ const {parseFreshWordPressPost}=require('./growth-wordpress-raw-source.cjs');
 const {inspectGrowthSourceCompatibility}=require('./growth-wordpress-source-compatibility.cjs');
 const {resolveGrowthWordPressPostId}=require('./growth-wordpress-canonical-id.cjs');
 const {fingerprintWordPressRevision}=require('./growth-wordpress-revision.cjs');
-const {fingerprintWordPressRevision}=require('./growth-wordpress-revision.cjs');
 async function prepareVerifiedGrowthWordPressRequest(input={}){
  const handoff=await prepareGrowthWordPressHandoff(input);
  if(handoff.status!=='SAFE_TO_PASS_TO_EXISTING_DRAFT_HANDLER')
