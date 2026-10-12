@@ -7,7 +7,7 @@ const post={id:71,link:url,status:'publish',modified_gmt:'2026-10-12T09:00:00',c
 const sourceRevision=fingerprintWordPressRevision(post,url);
 const offlineRequest={status:'OFFLINE_REQUEST_ONLY',dispatch_allowed:false,publication_allowed:false,
  request:{status:'draft',title:'Growth article',content:'<p>Fact checked draft</p>'},
- source_precondition:{sha256:'abc',url}};
+ source_precondition:{sha256:'abc',url},wordpress_revision:sourceRevision};
 const input=(more={})=>({authorized:true,editor_approved:true,offlineRequest,sourceRevision,
  readWordPressPost:async()=>post,
  checkCanonicalState:async()=>({case_study_active:false,url,source_sha256:'abc',allowed_to_draft:true}),
