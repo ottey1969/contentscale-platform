@@ -23,6 +23,7 @@ on:
       - 'src/growth-wordpress-source-compatibility*.cjs'
       - 'src/growth-wordpress-edit-reader*.cjs'
       - 'src/growth-wordpress-revision*.cjs'
+      - 'src/growth-wordpress-draft-executor*.cjs'
       - 'src/growth-tracker-wordpress-identity*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
@@ -52,6 +53,8 @@ jobs:
         run: node src/growth-wordpress-existing-handler.test.cjs
       - name: Direct Tracker to WordPress identity review
         run: node src/growth-tracker-wordpress-identity.test.cjs
+      - name: Guarded WordPress draft executor
+        run: node src/growth-wordpress-draft-executor.test.cjs
       - name: WordPress revision verification
         run: node src/growth-wordpress-revision.test.cjs
       - name: Authenticated WordPress edit reader
