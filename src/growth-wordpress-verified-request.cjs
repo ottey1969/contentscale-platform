@@ -4,6 +4,7 @@ const {prepareGrowthWordPressHandoff}=require('./growth-wordpress-preparation.cj
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {toExistingWordPressDraftRequest}=require('./growth-wordpress-existing-handler.cjs');
 const {verifyGrowthWritePrecondition}=require('./growth-wordpress-handoff.cjs');
+const {parseFreshWordPressPost}=require('./growth-wordpress-raw-source.cjs');
 async function prepareVerifiedGrowthWordPressRequest(input={}){
  const handoff=await prepareGrowthWordPressHandoff(input);
  if(handoff.status!=='SAFE_TO_PASS_TO_EXISTING_DRAFT_HANDLER')
@@ -19,7 +20,8 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  let live;
  try {live=await input.fetchFreshWordPressHtml({url:latest.page.url,pageId:input.pageId,clientId:input.clientId});}
  catch {return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_READ_FAILED'],request:null,dispatch_allowed:false};}
- if(!live||live.url!==latest.page.url||typeof live.html!=='string'||!live.html.trim())
+ const parsed=parseFreshWordPressPost(live,latest.page.url);
+ if(!parsed.valid)
   return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_RESPONSE_INVALID'],request:null,dispatch_allowed:false};
  // A slow WP read can race with a Tracker update or a newly activated Case Study.
  // Re-read canonical state after the external await, then fail closed.
@@ -35,12 +37,13 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  if(!finalProof.valid)return {status:'BLOCKED',stage:'FINAL_CANONICAL_RECHECK',issues:finalProof.issues,request:null,dispatch_allowed:false};
  const checked=toExistingWordPressDraftRequest(handoff,{
   authorized:input.authorized===true,
-  currentHtml:live.html,
+  currentHtml:parsed.html,
   currentUrl:finalState.page.url,
   caseStudyLocked:finalState.page.case_study_active
  });
  return {...checked,stage:'OFFLINE_WORDPRESS_REQUEST',
   note:'Not a write transaction. WP target revision and authorization must be reverified at actual write boundary.',
+  wordpress_source:{post_id:parsed.post_id,modified_gmt:parsed.modified_gmt,status:parsed.status},
   publication_allowed:false,dispatch_allowed:false};
 }
 module.exports={prepareVerifiedGrowthWordPressRequest};
