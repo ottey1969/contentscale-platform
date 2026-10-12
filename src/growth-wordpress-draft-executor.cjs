@@ -10,7 +10,7 @@ async function executeGrowthWordPressDraft(input={}){
  if(gate?.status!=='OFFLINE_REQUEST_ONLY'||gate.dispatch_allowed!==false||gate.publication_allowed!==false||
   gate.request?.status!=='draft'||typeof gate.request?.content!=='string'||!gate.request.content.trim()||
   typeof gate.request?.title!=='string'||!gate.request.title.trim())return deny('VERIFIED_OFFLINE_DRAFT_REQUIRED');
- const expected=input.sourceRevision;
+ const expected=gate.wordpress_revision;
  if(!expected?.valid||!Number.isSafeInteger(expected.post_id)||!expected.url||!expected.raw_sha256)
   return deny('WORDPRESS_SOURCE_REVISION_REQUIRED');
  if(typeof input.readWordPressPost!=='function'||typeof input.createWordPressDraft!=='function'||
