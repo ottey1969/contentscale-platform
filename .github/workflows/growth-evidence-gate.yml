@@ -23,6 +23,7 @@ on:
       - 'src/growth-wordpress-source-compatibility*.cjs'
       - 'src/growth-wordpress-edit-reader*.cjs'
       - 'src/growth-wordpress-revision*.cjs'
+      - 'src/growth-wordpress-draft-writer*.cjs'
       - 'src/growth-wordpress-draft-executor*.cjs'
       - 'src/growth-wordpress-draft-transport*.cjs'
       - 'src/growth-wordpress-preflight-route*.cjs'
@@ -78,6 +79,8 @@ jobs:
         run: node src/growth-wordpress-draft-transport.test.cjs
       - name: Guarded WordPress draft executor
         run: node src/growth-wordpress-draft-executor.test.cjs
+      - name: Guarded draft writer
+        run: node src/growth-wordpress-draft-writer.test.cjs
       - name: WordPress revision verification
         run: node src/growth-wordpress-revision.test.cjs
       - name: Authenticated WordPress edit reader
