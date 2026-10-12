@@ -23,6 +23,12 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  const parsed=parseFreshWordPressPost(live,latest.page.url);
  if(!parsed.valid)
   return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_RESPONSE_INVALID'],request:null,dispatch_allowed:false};
+ // The caller must resolve the WP post identity from a trusted canonical mapping.
+ // URL equality alone is insufficient when content has been migrated/recreated.
+ if(!Number.isSafeInteger(input.expectedWordPressPostId)||input.expectedWordPressPostId<=0)
+  return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['CANONICAL_WORDPRESS_POST_ID_REQUIRED'],request:null,dispatch_allowed:false};
+ if(parsed.post_id!==input.expectedWordPressPostId)
+  return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['WORDPRESS_POST_ID_MISMATCH'],request:null,dispatch_allowed:false};
  // A slow WP read can race with a Tracker update or a newly activated Case Study.
  // Re-read canonical state after the external await, then fail closed.
  let finalState;
