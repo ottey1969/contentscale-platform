@@ -42,7 +42,7 @@ form.addEventListener('submit',async function(event){
  });
  app.post('/api/growth/wordpress/profile/:profileId/connect',verifyGrowthAdmin,async(req,res)=>{
   const fail=(status,issue)=>res.status(status).json({success:false,status:'BLOCKED',issues:[issue]});
-  if(req.engineUser?.isAdmin!==true||!Number.isSafeInteger(req.engineUser.adminId)||req.engineUser.adminId<=0)
+  if(req.engineUser?.isAdmin!==true||typeof req.engineUser.adminId!=='string'||!req.engineUser.adminId.trim())
    return fail(403,'VERIFIED_ADMIN_REQUIRED');
   const profileId=Number(req.params.profileId),username=req.body?.username,password=req.body?.application_password;
   if(!Number.isSafeInteger(profileId)||profileId<=0||typeof username!=='string'||!username.trim()||username.length>160||
