@@ -23,5 +23,16 @@ const base=()=>({db:db(),pageId:3,clientId:4,searchSpy:[spy],aiSpy:[{...spy,sour
  assert.equal(r.stage,'EDITOR_APPROVAL');
  r=await prepareGrowthWordPressHandoff({...base(),authorized:false});
  assert(r.issues.includes('WRITE_AUTHORIZATION_REQUIRED'));
+ let pageFetches=0;
+ const changingDb={query:async(sql)=>{
+  if(sql.includes('FROM tracker_pages')){pageFetches++;return {rows:[{id:3,tracker_client_id:4,url,html_content:pageFetches>=3?html+' changed':html}]};}
+  if(sql.includes('FROM tracker_gsc_queries'))return {rows:[{tracker_client_id:4,page_id:3,source_page_url:url,evidence_scope:'page_verified',query:'example guide',impressions:80}]};
+  if(sql.includes('FROM tracker_case_studies')||sql.includes('FROM tracker_ai_evidence')||sql.includes('FROM tracker_snapshots'))return {rows:[]};
+  throw Error('Unexpected SQL');
+ }};
+ r=await prepareGrowthWordPressHandoff({...base(),db:changingDb});
+ assert.equal(r.status,'BLOCKED');
+ assert.equal(r.stage,'SOURCE_FRESHNESS');
+ assert(r.issues.includes('SOURCE_CHANGED_REVIEW_AGAIN'));
  console.log('PASS: canonical Growth preparation -> editor approval -> stale-source handoff');
 })().catch(e=>{console.error(e);process.exitCode=1});
