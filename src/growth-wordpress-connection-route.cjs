@@ -4,6 +4,41 @@
 function registerGrowthWordPressConnectionRoute({app,pool,verifyGrowthAdmin,fetchImpl=globalThis.fetch}={}){
  if(typeof app?.post!=='function'||typeof pool?.connect!=='function'||typeof verifyGrowthAdmin!=='function'||typeof fetchImpl!=='function')
   throw Error('GROWTH_WORDPRESS_CONNECTION_DEPENDENCIES_REQUIRED');
+ // Browser-facing setup form. Password never appears in URLs or browser storage.
+ app.get('/growth/wordpress/connect',(req,res)=>{
+  res.set('Cache-Control','no-store');
+  res.set('Content-Security-Policy',"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'");
+  res.type('html').send(`<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale · WordPress verbinden</title>
+<style>body{font-family:system-ui,Arial,sans-serif;background:#f6f8fb;color:#17263d;margin:0;padding:24px}main{max-width:560px;margin:45px auto;background:white;padding:32px;border:1px solid #dae2eb;border-radius:14px;box-shadow:0 8px 32px #17263d12}h1{font-size:25px;margin:0 0 12px}p{line-height:1.55;color:#45566c}label{display:block;font-weight:650;margin:18px 0 7px}input{width:100%;box-sizing:border-box;font:inherit;padding:13px;border:1px solid #b7c5d5;border-radius:8px}button{background:#137333;border:0;color:white;padding:14px 18px;font:inherit;font-weight:700;border-radius:8px;cursor:pointer;margin-top:22px;width:100%}button:disabled{opacity:.5;cursor:wait}#result{margin-top:18px;padding:12px;border-radius:8px;display:none;overflow-wrap:anywhere}#result.error{display:block;background:#fff2f2;color:#8a1c1c}#result.ok{display:block;background:#ecf8ed;color:#155724}small{color:#54677d}</style></head>
+<body><main><h1>WordPress verbinden</h1><p>Verbind je bestaande WordPress-site met ContentScale Growth. Je originele artikelen blijven ongewijzigd; er wordt niets gepubliceerd.</p>
+<form id="connect-form"><label for="profile">ContentScale-profiel</label><input id="profile" inputmode="numeric" type="number" min="1" value="4" required>
+<label for="username">WordPress-gebruikersnaam</label><input id="username" autocomplete="username" required>
+<label for="password">WordPress Application Password</label><input id="password" type="password" autocomplete="new-password" required>
+<label for="admin">ContentScale-beheerderssessiesleutel</label><input id="admin" type="password" autocomplete="off" placeholder="Alleen nodig als niet automatisch herkend">
+<small>Maak een Application Password aan in WordPress onder Gebruikers → Profiel. Je normale WordPress-wachtwoord wordt hier niet gebruikt. Het wachtwoord wordt niet in de browser opgeslagen.</small>
+<button id="submit" type="submit">Connect &amp; Verify</button></form><div id="result" role="status" aria-live="polite"></div>
+<p><small>Na een succesvolle verbinding kun je de Growth-controles uitvoeren. Sluit dit venster na gebruik.</small></p></main>
+<script>
+(function(){
+'use strict';
+var form=document.getElementById('connect-form'),btn=document.getElementById('submit'),msg=document.getElementById('result');
+function key(){var manual=document.getElementById('admin').value.trim();if(manual)return manual;for(var name of ['lc_admin_key','adminKey','admin_key','lcAdminKey','engineAdminKey','admin_token','adminToken']){try{var v=localStorage.getItem(name)||sessionStorage.getItem(name);if(v)return v;}catch(e){}}return '';}
+form.addEventListener('submit',async function(event){
+ event.preventDefault();btn.disabled=true;btn.textContent='Checking…';msg.className='';msg.style.display='none';
+ var pass=document.getElementById('password'),token=key(),profile=document.getElementById('profile').value;
+ try{
+ if(!token)throw Error('Geen beheerderssessie gevonden. Open deze pagina vanuit het beheerdersdashboard of vul je beheerderssessiesleutel in.');
+ var response=await fetch('/api/growth/wordpress/profile/'+encodeURIComponent(profile)+'/connect',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','x-admin-key':token},body:JSON.stringify({username:document.getElementById('username').value,application_password:pass.value})});
+ var result=await response.json();
+ if(!response.ok||result.success!==true)throw Error((result.issues||[]).join(', ')||'Verbinding mislukt');
+ pass.value='';msg.className='ok';msg.textContent='Verbinding gecontroleerd en opgeslagen voor '+result.site_url+'. Volgende stap: WordPress-paginakoppeling controleren.';
+ }catch(e){msg.className='error';msg.textContent=e.message||'Verbinding mislukt. Controleer de gegevens.';}
+ finally{btn.disabled=false;btn.textContent='Connect & Verify';msg.style.display='block';}
+});
+})();
+</script></body></html>`);
+ });
  app.post('/api/growth/wordpress/profile/:profileId/connect',verifyGrowthAdmin,async(req,res)=>{
   const fail=(status,issue)=>res.status(status).json({success:false,status:'BLOCKED',issues:[issue]});
   if(req.engineUser?.isAdmin!==true||!Number.isSafeInteger(req.engineUser.adminId)||req.engineUser.adminId<=0)
