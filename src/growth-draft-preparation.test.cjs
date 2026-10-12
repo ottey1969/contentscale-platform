@@ -22,5 +22,8 @@ function db(locked=false){return {query:async sql=>{
  assert.equal(result.status,'BLOCKED');assert.equal(result.review,null);
  result=await prepareCanonicalGrowthDraft({...input,additions:[]});
  assert.equal(result.status,'BLOCKED');
+ result=await prepareCanonicalGrowthDraft({...input,expectedSourceHtml:'<article>outdated</article>'});
+ assert.equal(result.status,'BLOCKED');
+ assert(result.issues.includes('SOURCE_CHANGED_REVIEW_AGAIN'));
  console.log('PASS: assembled Growth draft is reviewed and never auto-published');
 })().catch(e=>{console.error(e);process.exitCode=1});
