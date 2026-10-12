@@ -19,6 +19,9 @@ const base=()=>({db:database(),pageId:7,clientId:2,searchSpy:[observation],aiSpy
  assert.equal(result.ready,true,JSON.stringify(result.issues));
  assert.equal(result.query_count,1);
  assert.equal(result.opportunity_plan.actions.length,1);
+ assert.equal(result.ai_visibility.engines.length,1);
+ assert.equal(result.ai_visibility.engines[0].domain_cited,true);
+ assert.equal(result.ai_visibility.competitor_gaps_verified,false);
  assert.equal(result.opportunity_plan.automatic_draft_allowed,false);
  result=await reviewCanonicalGrowthDraft({...base(),db:database({locked:true})});
  assert.equal(result.status,'BLOCKED_CASE_STUDY');
