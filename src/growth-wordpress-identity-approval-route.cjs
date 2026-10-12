@@ -8,7 +8,7 @@ function registerGrowthWordPressApprovalRoute({app,pool,verifyGrowthAdmin,fetchI
   typeof verifyGrowthAdmin!=='function')throw Error('GROWTH_APPROVAL_DEPENDENCIES_REQUIRED');
  app.post('/api/growth/wordpress/mapping/:clientId/:pageId/approve',verifyGrowthAdmin,async(req,res)=>{
   const deny=(code,issue)=>res.status(code).json({success:false,status:'BLOCKED',issues:[issue],publication_allowed:false});
-  if(req.engineUser?.isAdmin!==true||!Number.isSafeInteger(req.engineUser.adminId)||req.engineUser.adminId<=0)
+  if(req.engineUser?.isAdmin!==true||!String(req.engineUser.adminId||'').trim())
    return deny(403,'VERIFIED_ADMIN_REQUIRED');
   const clientId=Number(req.params.clientId),pageId=Number(req.params.pageId),
    postId=Number(req.body?.wordpress_post_id),expectedSourceHash=req.body?.expected_source_sha256,

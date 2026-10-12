@@ -9,7 +9,7 @@ function createGrowthAdminMiddleware(pool){
   try{
    const found=await pool.query('SELECT id FROM super_admins WHERE session_token=$1 AND is_active=TRUE LIMIT 1',[key]);
    if(found.rows?.length!==1)return res.status(403).json({success:false,issues:['ADMIN_SESSION_INVALID']});
-   req.engineUser={isAdmin:true,adminId:Number(found.rows[0].id)};
+   req.engineUser={isAdmin:true,adminId:String(found.rows[0].id)};
    next();
   }catch{return res.status(503).json({success:false,issues:['ADMIN_AUTH_CHECK_UNAVAILABLE']});}
  };

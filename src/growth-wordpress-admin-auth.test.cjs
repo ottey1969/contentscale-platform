@@ -6,11 +6,11 @@ const makeRes=()=>({code:200,body:null,status(code){this.code=code;return this;}
  let seen,nextCalled=false;
  const auth=createGrowthAdminMiddleware({query:async(sql,args)=>{
   assert.match(sql,/FROM super_admins/);assert.match(sql,/is_active=TRUE/);
-  seen=args;return{rows:[{id:1}]};
+  seen=args;return{rows:[{id:'ADMIN-8AE3924B3136D1C8'}]};
  }});
  const req={headers:{'x-admin-key':'super-secret'}},res=makeRes();
  await auth(req,res,()=>{nextCalled=true;});
- assert.equal(nextCalled,true);assert.equal(req.engineUser.isAdmin,true);
+ assert.equal(nextCalled,true);assert.equal(req.engineUser.isAdmin,true);assert.equal(req.engineUser.adminId,'ADMIN-8AE3924B3136D1C8');
  assert.deepEqual(seen,['super-secret']);
  let denied=makeRes();
  await auth({headers:{}},denied,()=>{throw Error('must not call next')});
