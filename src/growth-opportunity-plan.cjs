@@ -13,7 +13,9 @@ function buildGrowthOpportunityPlan({page={},gscRows=[],searchSpy,aiSpy}={}){
  if(!valid)blockers.push('TRACKER_PAGE_INVALID');
  if(!queries.length)blockers.push('GSC_EXACT_PAGE_MISSING');
  if(!Array.isArray(searchSpy))blockers.push('SEARCH_SPY_NOT_MAPPED');
+ else if(searchSpy.length===0)blockers.push('SEARCH_SPY_NO_FINDINGS');
  if(!Array.isArray(aiSpy))blockers.push('AI_SPY_NOT_MAPPED');
+ else if(aiSpy.length===0)blockers.push('AI_SPY_NO_FINDINGS');
  if(page.case_study_active===true)blockers.push('CASE_STUDY_LOCK');
  const actions=queries.filter(q=>q.impressions!==null&&q.impressions>0).map(q=>({
   type:'REVIEW_SEARCH_INTENT',query:q.query,evidence:{clicks:q.clicks,impressions:q.impressions,position:q.position},
@@ -21,7 +23,7 @@ function buildGrowthOpportunityPlan({page={},gscRows=[],searchSpy,aiSpy}={}){
   priority_basis:'observed_impressions',expected_clicks:null
  }));
  return {page_id:pageId,tracker_client_id:clientId,url,status:blockers.length?'RESEARCH_INCOMPLETE':'EVIDENCE_READY_FOR_PLANNING',blockers,actions,
-  search_spy_status:Array.isArray(searchSpy)?'SUPPLIED_UNVERIFIED_SHAPE':'NOT_MAPPED',
-  ai_spy_status:Array.isArray(aiSpy)?'SUPPLIED_UNVERIFIED_SHAPE':'NOT_MAPPED',automatic_draft_allowed:false};
+  search_spy_status:Array.isArray(searchSpy)?searchSpy.length?'SUPPLIED_UNVERIFIED_SHAPE':'NO_FINDINGS':'NOT_MAPPED',
+  ai_spy_status:Array.isArray(aiSpy)?aiSpy.length?'SUPPLIED_UNVERIFIED_SHAPE':'NO_FINDINGS':'NOT_MAPPED',automatic_draft_allowed:false};
 }
 module.exports={buildGrowthOpportunityPlan};
