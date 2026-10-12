@@ -27,6 +27,8 @@ on:
       - 'src/growth-wordpress-draft-transport*.cjs'
       - 'src/growth-wordpress-preflight-route*.cjs'
       - 'src/growth-wordpress-candidate-reader*.cjs'
+      - 'src/growth-gsc-page-verification*.cjs'
+      - 'migrations/growth-gsc-page-import-runs.sql'
       - 'src/growth-wordpress-admin-auth*.cjs'
       - 'src/growth-wordpress-identity-approval-route*.cjs'
       - 'src/tracker-growth-execution.cjs'
@@ -60,6 +62,8 @@ jobs:
         run: node src/growth-wordpress-existing-handler.test.cjs
       - name: Direct Tracker to WordPress identity review
         run: node src/growth-tracker-wordpress-identity.test.cjs
+      - name: Exact-page GSC source verification and transactional import
+        run: node src/growth-gsc-page-verification.test.cjs
       - name: Existing Tracker route wiring to live Growth preflight
         run: node src/tracker-growth-wordpress-integration.test.cjs
       - name: Verified WordPress mapping approval transaction
