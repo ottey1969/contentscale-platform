@@ -1,7 +1,7 @@
 'use strict';
 // Converts already-researched Search Spy / AI Spy observations into a page-specific,
 // reviewable contract. Explicit provenance is required; no content generation or scans.
-function growthEvidenceContract({url,pageQueries=[],searchSpy=[],aiSpy=[],originalHtml='',templateMarkers=[]}={}){
+function growthEvidenceContract({url,pageQueries=[],searchSpy,aiSpy,originalHtml='',templateMarkers=[]}={}){
  const problems=[],gaps=[];
  const exact=pageQueries.filter(q=>q&&q.evidence_scope==='page_verified'&&q.page_url===url&&String(q.query||'').trim());
  if(!exact.length)problems.push('NO_EXACT_PAGE_GSC');
