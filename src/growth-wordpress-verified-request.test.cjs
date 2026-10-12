@@ -41,6 +41,12 @@ function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy]
  result=await prepareVerifiedGrowthWordPressRequest({...input(db()),fetchFreshWordPressHtml:async()=>({url:'https://other.example/',html})});
  assert.equal(result.status,'BLOCKED');
  assert(result.issues.includes('FRESH_WORDPRESS_RESPONSE_INVALID'));
+ result=await prepareVerifiedGrowthWordPressRequest(input(db({lockOnRead:5})));
+ assert.equal(result.status,'BLOCKED');
+ assert(result.issues.includes('CASE_STUDY_LOCK'));
+ result=await prepareVerifiedGrowthWordPressRequest(input(db({changeOnRead:5})));
+ assert.equal(result.status,'BLOCKED');
+ assert(result.issues.includes('SOURCE_CHANGED_REVIEW_AGAIN'));
  result=await prepareVerifiedGrowthWordPressRequest({...input(db()),authorized:false});
  assert.equal(result.status,'BLOCKED');
  console.log('PASS: guarded canonical WordPress offline bridge, last-check case study and source changes');
