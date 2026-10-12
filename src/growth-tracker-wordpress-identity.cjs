@@ -7,6 +7,13 @@ async function inspectTrackerWordPressIdentity({db,pageId,clientId,fetchWordPres
  let canonical;
  try {canonical=await loadGrowthTrackerEvidence(db,{pageId,clientId});}
  catch {return {status:'BLOCKED',issues:['TRACKER_CANONICAL_READ_FAILED'],candidate:null};}
+ // Multiple Tracker identities for the same URL require an explicit canonical-owner decision.
+ let duplicates;
+ try {duplicates=await db.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 LIMIT 2',[canonical.page.url]);}
+ catch {return {status:'BLOCKED',issues:['TRACKER_DUPLICATE_CHECK_FAILED'],candidate:null};}
+ if(!Array.isArray(duplicates.rows)||duplicates.rows.length!==1||
+  Number(duplicates.rows[0].id)!==Number(pageId)||Number(duplicates.rows[0].tracker_client_id)!==Number(clientId))
+  return {status:'BLOCKED',issues:['DUPLICATE_TRACKER_URL_REVIEW_REQUIRED'],candidate:null};
  if(canonical.page.case_study_active)return {status:'BLOCKED',issues:['CASE_STUDY_LOCK'],candidate:null};
  if(typeof fetchWordPressCandidates!=='function')return {status:'BLOCKED',issues:['AUTHENTICATED_WORDPRESS_READER_REQUIRED'],candidate:null};
  let posts;
