@@ -29,6 +29,8 @@ async function run({admin=true,authentication=true,capability=true,domain=url,ch
  assert.match(page.html,/Connect &amp; Verify/);
  assert.match(page.html,/type="password"/);
  assert.doesNotMatch(page.html,/ContentScale-beheerderssessiesleutel|id="admin"/);
+ assert.match(page.html,/store\.length/);
+ assert.match(page.html,/super_admin_session_token/);
  assert.match(page.html,/fetch\('\/api\/growth\/wordpress\/profile\//);
  assert.match(page.headers['Cache-Control'],/no-store/);
  const req={params:{profileId:'4'},engineUser:{isAdmin:admin,adminId:'ADMIN-8AE3924B3136D1C8'},
