@@ -32,14 +32,15 @@ async function approveGrowthWordPressMapping({db,pageId,clientId,reviewedBy,appr
    throw Error('EXISTING_MAPPING_CONFLICT');
   const sha=createHash('sha256').update(page.html_content).digest('hex');
   const write=await client.query(`INSERT INTO growth_wordpress_page_mapping
-   (tracker_client_id,tracker_page_id,wordpress_post_id,wordpress_url,wordpress_modified_gmt,source_sha256,reviewed_by)
-   VALUES ($1,$2,$3,$4,$5,$6,$7)
+   (tracker_client_id,tracker_page_id,wordpress_post_id,wordpress_url,wordpress_modified_gmt,source_sha256,wordpress_raw_sha256,reviewed_by)
+   VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
    ON CONFLICT (tracker_client_id,tracker_page_id) DO UPDATE SET
     wordpress_modified_gmt=EXCLUDED.wordpress_modified_gmt,
     source_sha256=EXCLUDED.source_sha256,
+    wordpress_raw_sha256=EXCLUDED.wordpress_raw_sha256,
     reviewed_by=EXCLUDED.reviewed_by, reviewed_at=now()
    RETURNING id,tracker_client_id,tracker_page_id,wordpress_post_id,wordpress_url`,
-   [clientId,pageId,postId,page.url,checked.modified_gmt,sha,reviewedBy.trim()]);
+   [clientId,pageId,postId,page.url,checked.modified_gmt,sha,createHash('sha256').update(wp.content.raw).digest('hex'),reviewedBy.trim()]);
   await client.query('COMMIT');started=false;
   return {status:'MAPPING_REVIEWED',issues:[],mapping:write.rows[0],publication_allowed:false};
  } catch(error) {
