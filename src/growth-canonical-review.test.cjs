@@ -20,6 +20,8 @@ const base=()=>({db:database(),pageId:7,clientId:2,searchSpy:[observation],aiSpy
  assert.equal(result.ready,true,JSON.stringify(result.issues));
  assert.equal(result.query_count,1);
  assert.equal(result.opportunity_plan.actions.length,1);
+ assert.equal(result.competitor_research_leads.leads.length,1);
+ assert.equal(result.competitor_research_leads.verified_gaps.length,0);
  assert.equal(result.ai_visibility.engines.length,1);
  assert.equal(result.ai_visibility.engines[0].domain_cited,true);
  assert.equal(result.ai_visibility.competitor_gaps_verified,false);
