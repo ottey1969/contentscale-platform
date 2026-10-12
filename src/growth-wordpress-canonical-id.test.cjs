@@ -6,6 +6,9 @@ function db({reviewed=[],legacy=[],missingTable=false}={}){
  return {query:async(sql,args)=>{
   if(sql.includes('FROM growth_wordpress_page_mapping')){
    assert.deepEqual(args,[7,2]);
+   assert.match(sql,/JOIN tracker_pages p/);
+   assert.match(sql,/p.tracker_client_id=m.tracker_client_id/);
+   assert.match(sql,/p.url=m.wordpress_url/);
    if(missingTable){const e=Error('relation missing');e.code='42P01';throw e;}
    return {rows:reviewed};
   }
