@@ -8,7 +8,7 @@ const app={
  post:(path,...handlers)=>{endpoints[path]={method:'POST',handlers};}
 };
 let writes=0;
-const pool={query:async(sql,args)=>{
+const pool={connect:async()=>({}),query:async(sql,args)=>{
  if(/^\s*(INSERT|UPDATE|DELETE|ALTER|CREATE|DROP)\b/i.test(sql)){writes++;throw Error('Write forbidden during preflight');}
  if(sql.includes('FROM super_admins'))return {rows:args[0]==='valid_admin'?[{id:1}]:[]};
  if(sql.includes('FROM tracker_pages WHERE id='))return {rows:[{id:2318,profile_id:4,tracker_client_id:10,url,html_content:'<!doctype html><html></html>'}]};
