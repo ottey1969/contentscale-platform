@@ -11,9 +11,13 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  const latest=await loadGrowthTrackerEvidence(input.db,{pageId:input.pageId,clientId:input.clientId});
  if(latest.page.case_study_active)return {status:'BLOCKED',stage:'CASE_STUDY',issues:['CASE_STUDY_LOCK'],request:null,dispatch_allowed:false};
  if(latest.page.url!==handoff.source_precondition?.url)return {status:'BLOCKED',stage:'PAGE_IDENTITY',issues:['PAGE_IDENTITY_MISMATCH'],request:null,dispatch_allowed:false};
+ // The Tracker snapshot alone cannot prove that live WordPress still matches.
+ // Require independently refreshed WordPress HTML at this handoff boundary.
+ if(typeof input.freshWordPressHtml!=='string'||!input.freshWordPressHtml.trim())
+  return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_HTML_REQUIRED'],request:null,dispatch_allowed:false};
  const checked=toExistingWordPressDraftRequest(handoff,{
   authorized:input.authorized===true,
-  currentHtml:latest.page.html_content,
+  currentHtml:input.freshWordPressHtml,
   currentUrl:latest.page.url,
   caseStudyLocked:latest.page.case_study_active
  });
