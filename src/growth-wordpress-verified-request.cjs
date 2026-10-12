@@ -26,9 +26,8 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
   return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_RESPONSE_INVALID'],request:null,dispatch_allowed:false};
  // The caller must resolve the WP post identity from a trusted canonical mapping.
  // URL equality alone is insufficient when content has been migrated/recreated.
- const resolveId=typeof input.resolveCanonicalWordPressPostId==='function'?input.resolveCanonicalWordPressPostId:resolveGrowthWordPressPostId;
  let mappedPostId;
- try {mappedPostId=await resolveId({db:input.db,pageId:input.pageId,clientId:input.clientId,url:latest.page.url});}
+ try {mappedPostId=await resolveGrowthWordPressPostId({db:input.db,url:latest.page.url});}
  catch {return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['CANONICAL_WORDPRESS_POST_ID_LOOKUP_FAILED'],request:null,dispatch_allowed:false};}
  if(!Number.isSafeInteger(mappedPostId)||mappedPostId<=0)
   return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['CANONICAL_WORDPRESS_POST_ID_REQUIRED'],request:null,dispatch_allowed:false};
