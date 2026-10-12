@@ -35722,6 +35722,16 @@ app.delete('/api/content/articles/:id', verifyEngineAccess, async (req, res) => 
   } catch(e) { res.status(500).json({ success: false, error: e.message }); }
 });
 
+// GROWTH_V2_CANONICAL_TRACKER_ROUTE_REGISTRATION_20261012
+// Registration isolated so Growth cannot prevent the legacy app starting.
+try {
+  require('./growth-live-routes.cjs').registerGrowthLiveRoutes({
+    app, pool, verifyEngineAccess, fetchExactGsc: _gscFetchVerifiedPageQueries
+  });
+} catch (growthRouteError) {
+  console.error('[Growth] Admin readiness routes unavailable:', growthRouteError.message);
+}
+
 // ── WordPress Publish ────────────────────────────────────────
 app.post('/api/content/articles/:id/publish-wp', verifyEngineAccess, async (req, res) => {
   try {
