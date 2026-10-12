@@ -14,6 +14,6 @@ async function reviewCanonicalGrowthDraft({db,pageId,clientId,searchSpy,aiSpy,dr
   originalHtml:canonical.page.html_content||'',
   draftHtml,templateMarkers,claims,renderProof
  });
- return {...review,ai_visibility:summarizeGrowthAiVisibility({page:canonical.page,rows:canonical.aiEvidence}),opportunity_plan:buildGrowthOpportunityPlan({page:canonical.page,gscRows:canonical.gscRows,searchSpy,aiSpy})};
+ return {...review,ai_visibility:summarizeGrowthAiVisibility({page:canonical.page,rows:canonical.aiEvidence}),competitor_snapshot:canonical.competitorSnapshot,opportunity_plan:buildGrowthOpportunityPlan({page:canonical.page,gscRows:canonical.gscRows,searchSpy,aiSpy})};
 }
 module.exports={reviewCanonicalGrowthDraft};
