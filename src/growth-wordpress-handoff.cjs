@@ -18,4 +18,14 @@ function growthWordPressHandoff({draftPayload,originalHtml,currentHtml,authorize
   source_precondition:issues.length?null:{url:sourcePageUrl,sha256:sourceHash},
   write_boundary_revalidation_required:true,publication_allowed:false};
 }
-module.exports={growthWordPressHandoff};
+// Must be called with fresh source HTML by the real draft writer, immediately before its write.
+function verifyGrowthWritePrecondition({source_precondition,currentHtml,currentUrl}={}){
+ const issues=[];
+ if(!source_precondition||typeof source_precondition.sha256!=='string'||!/^[a-f0-9]{64}$/.test(source_precondition.sha256))issues.push('SOURCE_PRECONDITION_MISSING');
+ if(typeof currentHtml!=='string'||!currentHtml.trim())issues.push('CURRENT_SOURCE_MISSING');
+ if(!source_precondition?.url||currentUrl!==source_precondition.url)issues.push('PAGE_IDENTITY_MISMATCH');
+ if(!issues.length&&createHash('sha256').update(currentHtml).digest('hex')!==source_precondition.sha256)
+  issues.push('SOURCE_CHANGED_REVIEW_AGAIN');
+ return {valid:issues.length===0,issues};
+}
+module.exports={growthWordPressHandoff,verifyGrowthWritePrecondition};
