@@ -6,6 +6,8 @@ async function prepareCanonicalGrowthDraft(input={}){
  const canonicalInput={...input};
  const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
  const evidence=await loadGrowthTrackerEvidence(input.db,{pageId:input.pageId,clientId:input.clientId});
+ if(typeof input.expectedSourceHtml==='string'&&evidence.page.html_content!==input.expectedSourceHtml)
+  return {status:'BLOCKED',stage:'SOURCE_FRESHNESS',assembly:null,review:null,issues:['SOURCE_CHANGED_REVIEW_AGAIN'],publication_allowed:false};
  const assembly=assembleGrowthHtmlDraft({originalHtml:evidence.page.html_content||'',additions:input.additions,caseStudyLocked:evidence.page.case_study_active===true});
  if(!assembly.html)return {status:'BLOCKED',assembly,review:null,publication_allowed:false};
  const review=await reviewCanonicalGrowthDraft({...canonicalInput,draftHtml:assembly.html});
