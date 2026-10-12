@@ -52,10 +52,16 @@ function inspectGrowthDraft(input={}) {
   else if(c.status==='verified'&&(!c.source_url||!/^https:\/\//.test(c.source_url)))
    fail('CLAIM_SOURCE_MISSING','Verified claim must have an HTTPS evidence URL.');
  }
+ function isExternalCompetitor(candidate){
+  try {const target=new URL(input.url),source=new URL(candidate);
+   const hostname=x=>x.hostname.replace(/^www\./,'');
+   return target.protocol==='https:'&&source.protocol==='https:'&&hostname(target)!==hostname(source);
+  } catch {return false;}
+ }
  const gaps=Array.isArray(input.competitiveGaps)?input.competitiveGaps:[];
  if(!gaps.length)fail('COMPETITIVE_DIFFERENTIATION_MISSING','Explain what search/AI competitors have, what is absent, and what the draft adds.');
  for(const g of gaps){
-  if(!g||!g.competitor_url||!/^https:\/\//.test(g.competitor_url)||!g.observed||!g.improvement||!g.where_in_draft)
+  if(!g||!g.competitor_url||!isExternalCompetitor(g.competitor_url)||!g.observed||!g.improvement||!g.where_in_draft)
    fail('COMPETITIVE_GAP_UNSUPPORTED','Each gap needs a competitor URL, observed finding, improvement and draft location.');
  }
  if(!input.renderProof||input.renderProof.desktop_checked!==true||input.renderProof.mobile_checked!==true)
