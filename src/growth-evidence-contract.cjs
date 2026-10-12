@@ -3,6 +3,11 @@
 // reviewable contract. Explicit provenance is required; no content generation or scans.
 function growthEvidenceContract({url,pageQueries=[],searchSpy,aiSpy,originalHtml='',templateMarkers=[]}={}){
  const problems=[],gaps=[];
+ function externalSource(source){
+  try {const target=new URL(url),candidate=new URL(source);
+   return target.protocol==='https:'&&candidate.protocol==='https:'&&candidate.hostname!==target.hostname&&candidate.hostname.replace(/^www\\./,'')!==target.hostname.replace(/^www\\./,'');
+  } catch {return false;}
+ }
  const exact=pageQueries.filter(q=>q&&q.evidence_scope==='page_verified'&&q.page_url===url&&String(q.query||'').trim());
  if(!exact.length)problems.push('NO_EXACT_PAGE_GSC');
  function take(kind,items){
@@ -13,7 +18,7 @@ function growthEvidenceContract({url,pageQueries=[],searchSpy,aiSpy,originalHtml
    const observed=String(item.observed||'').trim();
    const improvement=String(item.improvement||'').trim();
    const location=String(item.where_in_draft||'').trim();
-   if(!/^https:\/\//.test(source)||source===url||!observed||!improvement||!location){
+   if(!externalSource(source)||!observed||!improvement||!location){
     problems.push(kind+'_INCOMPLETE_EVIDENCE');
     continue;
    }
