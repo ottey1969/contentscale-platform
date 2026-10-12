@@ -5,7 +5,9 @@ const url='https://contentscale.site/example/';
 const page={id:7,tracker_client_id:2,url};
 const good={page_id:7,tracker_client_id:2,source_page_url:url,evidence_scope:'page_verified',query:'example guide',clicks:2,impressions:100,position:9};
 let p=buildGrowthOpportunityPlan({page,gscRows:[good],searchSpy:[],aiSpy:[]});
-assert.equal(p.status,'EVIDENCE_READY_FOR_PLANNING');
+assert.equal(p.status,'RESEARCH_INCOMPLETE');
+assert(p.blockers.includes('SEARCH_SPY_NO_FINDINGS'));
+assert(p.blockers.includes('AI_SPY_NO_FINDINGS'));
 assert.equal(p.actions.length,1);
 assert.equal(p.actions[0].expected_clicks,null);
 assert.equal(p.automatic_draft_allowed,false);
@@ -17,4 +19,4 @@ p=buildGrowthOpportunityPlan({page:{...page,case_study_active:true},gscRows:[goo
 assert(p.blockers.includes('CASE_STUDY_LOCK'));
 p=buildGrowthOpportunityPlan({page,gscRows:[],searchSpy:[],aiSpy:[]});
 assert(p.blockers.includes('GSC_EXACT_PAGE_MISSING'));
-console.log('PASS: deterministic Growth opportunity planner; 9 assertions');
+console.log('PASS: deterministic Growth opportunity planner; missing Spy evidence blocks readiness');
