@@ -16,6 +16,8 @@ function registerGrowthExecution(app,pool){
   registerGrowthWordPressPreflightRoute({app,pool,verifyEngineAccess:verifyGrowthAdmin});
   const {registerGrowthWordPressApprovalRoute}=require('./growth-wordpress-identity-approval-route.cjs');
   registerGrowthWordPressApprovalRoute({app,pool,verifyGrowthAdmin});
+  const {registerGrowthGscPageVerification}=require('./growth-gsc-page-verification.cjs');
+  registerGrowthGscPageVerification({app,pool,verifyGrowthAdmin});
  } catch(error) {
   console.error('[growth-wordpress-preflight] optional registration failed:',error.message);
  }
