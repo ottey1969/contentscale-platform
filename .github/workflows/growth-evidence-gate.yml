@@ -5,6 +5,7 @@ on:
       - 'src/growth-evidence-*.cjs'
       - 'src/growth-tracker-evidence-adapter*.cjs'
       - 'src/growth-canonical-loader*.cjs'
+      - 'src/growth-canonical-review*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
 jobs:
@@ -23,5 +24,7 @@ jobs:
         run: node src/growth-evidence-render-gate.test.cjs
       - name: Canonical evidence loader
         run: node src/growth-canonical-loader.test.cjs
+      - name: Canonical review integration
+        run: node src/growth-canonical-review.test.cjs
       - name: Canonical Tracker adapter
         run: node src/growth-tracker-evidence-adapter.test.cjs
