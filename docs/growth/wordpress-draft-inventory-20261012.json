@@ -1,11 +1,11 @@
 {
   "generated_at": "2026-10-12",
-  "scope": "Existing Tracker client 10 pages, correlated to WordPress published pages/posts",
-  "disclaimer": "Drafts are NOT published. Only Content Freshness #2802 is a standalone rewritten article. Review drafts retain their source HTML and add tailored growth editorial guidance; all inherited research claims require checking before any publication. No new scan or Case Study baseline mutation.",
+  "scope": "Tracker client 10, WordPress current source/draft inventory",
+  "disclaimer": "Drafts are not published. Growth review drafts retain existing source HTML plus a topic-specific editorial guidance section; inherited statements need full fact-check and human approval. Content Freshness #2802 is a separately rewritten draft. The original URLs remain untouched.",
   "counts": {
-    "GROWTH_REVIEW_DRAFT": 50,
+    "GROWTH_REVIEW_DRAFT": 54,
     "CASE_STUDY_LOCKED": 6,
-    "REQUIRES_SPECIAL_EDITORIAL_REVIEW": 10,
+    "REQUIRES_SPECIAL_EDITORIAL_REVIEW": 6,
     "NON_EDITORIAL_PAGE": 10,
     "FULL_REWRITE_DRAFT": 1,
     "NOT_MAPPED_TO_WORDPRESS": 24
@@ -163,9 +163,9 @@
       "wordpress_type": "post",
       "wordpress_slug": "contentscale-vs-neuronwriter",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2855,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2855&action=edit"
     },
     {
       "tracker_page_id": 2307,
@@ -295,9 +295,9 @@
       "wordpress_type": "post",
       "wordpress_slug": "security-breach-recovery",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2856,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2856&action=edit"
     },
     {
       "tracker_page_id": 2318,
@@ -307,9 +307,9 @@
       "wordpress_type": "post",
       "wordpress_slug": "reputation-crisis-management-1",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2857,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2857&action=edit"
     },
     {
       "tracker_page_id": 2319,
@@ -775,9 +775,9 @@
       "wordpress_type": "page",
       "wordpress_slug": "traffic-drop-after-changes",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2854,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2854&action=edit"
     },
     {
       "tracker_page_id": 2358,
