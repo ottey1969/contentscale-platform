@@ -13,7 +13,7 @@ function growthEvidenceContract({url,pageQueries=[],searchSpy,aiSpy,originalHtml
    const observed=String(item.observed||'').trim();
    const improvement=String(item.improvement||'').trim();
    const location=String(item.where_in_draft||'').trim();
-   if(!/^https:\/\//.test(source)||!observed||!improvement||!location){
+   if(!/^https:\/\//.test(source)||source===url||!observed||!improvement||!location){
     problems.push(kind+'_INCOMPLETE_EVIDENCE');
     continue;
    }
