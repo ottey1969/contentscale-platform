@@ -30,7 +30,7 @@ async function run({admin=true,authentication=true,capability=true,domain=url,ch
  assert.match(page.html,/type="password"/);
  assert.match(page.html,/fetch\('\/api\/growth\/wordpress\/profile\//);
  assert.match(page.headers['Cache-Control'],/no-store/);
- const req={params:{profileId:'4'},engineUser:{isAdmin:admin,adminId:12},
+ const req={params:{profileId:'4'},engineUser:{isAdmin:admin,adminId:'ADMIN-8AE3924B3136D1C8'},
   body:{username:'editor',application_password:'app-password'}};
  const res={statusCode:200,status(n){this.statusCode=n;return this},json(body){this.body=body;return this}};
  await handler(req,res);
