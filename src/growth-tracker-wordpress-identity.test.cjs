@@ -2,7 +2,8 @@
 const assert=require('node:assert/strict');
 const {inspectTrackerWordPressIdentity}=require('./growth-tracker-wordpress-identity.cjs');
 const url='https://contentscale.site/test/', html='<p>Original</p>';
-function db({lockAt=Infinity,changeAt=Infinity}={}){let reads=0,locks=0;return {query:async sql=>{
+function db({lockAt=Infinity,changeAt=Infinity,duplicate=false}={}){let reads=0,locks=0;return {query:async sql=>{
+ if(sql.includes('FROM tracker_pages WHERE url=$1'))return {rows:duplicate?[{id:7,tracker_client_id:2},{id:8,tracker_client_id:10}]:[{id:7,tracker_client_id:2}]};
  if(sql.includes('FROM tracker_pages')){reads++;return {rows:[{id:7,tracker_client_id:2,url,html_content:reads>=changeAt?html+' changed':html}]};}
  if(sql.includes('FROM tracker_case_studies')){locks++;return {rows:locks>=lockAt?[{id:1}]:[]};}
  return {rows:[]};
@@ -16,6 +17,7 @@ const input=(database,posts=[post])=>({db:database,pageId:7,clientId:2,fetchWord
  r=await inspectTrackerWordPressIdentity(input(db(),[]));assert(r.issues.includes('UNIQUE_WORDPRESS_POST_REQUIRED'));
  r=await inspectTrackerWordPressIdentity(input(db(),[post,{...post,id:100}]));assert(r.issues.includes('UNIQUE_WORDPRESS_POST_REQUIRED'));
  r=await inspectTrackerWordPressIdentity(input(db(),[{...post,link:'https://other.test/'}]));assert.equal(r.status,'BLOCKED');
+ r=await inspectTrackerWordPressIdentity(input(db({duplicate:true})));assert(r.issues.includes('DUPLICATE_TRACKER_URL_REVIEW_REQUIRED'));
  r=await inspectTrackerWordPressIdentity(input(db({lockAt:2})));assert(r.issues.includes('CASE_STUDY_LOCK'));
  r=await inspectTrackerWordPressIdentity(input(db({changeAt:2})));assert(r.issues.includes('TRACKER_SOURCE_CHANGED'));
  console.log('PASS: direct read-only Tracker to WordPress candidate review; safety races blocked');
