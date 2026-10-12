@@ -26,6 +26,9 @@ on:
       - 'src/growth-wordpress-draft-executor*.cjs'
       - 'src/growth-wordpress-draft-transport*.cjs'
       - 'src/growth-wordpress-preflight-route*.cjs'
+      - 'src/growth-wordpress-admin-auth*.cjs'
+      - 'src/tracker-growth-execution.cjs'
+      - 'src/tracker-growth-wordpress-integration.test.cjs'
       - 'src/growth-tracker-wordpress-identity*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
@@ -55,6 +58,10 @@ jobs:
         run: node src/growth-wordpress-existing-handler.test.cjs
       - name: Direct Tracker to WordPress identity review
         run: node src/growth-tracker-wordpress-identity.test.cjs
+      - name: Existing Tracker route wiring to live Growth preflight
+        run: node src/tracker-growth-wordpress-integration.test.cjs
+      - name: Growth admin authentication
+        run: node src/growth-wordpress-admin-auth.test.cjs
       - name: Authenticated Growth preflight Express route
         run: node src/growth-wordpress-preflight-route.test.cjs
       - name: WordPress draft-only transport
