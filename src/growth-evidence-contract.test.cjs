@@ -12,4 +12,7 @@ assert.equal(growthEvidenceContract({...base,searchSpy:[]}).evidence_status,'RES
 assert.equal(growthEvidenceContract({...base,aiSpy:[]}).evidence_status,'RESEARCH_INCOMPLETE');
 assert.equal(growthEvidenceContract({...base,templateMarkers:[]}).evidence_status,'RESEARCH_INCOMPLETE');
 assert.equal(growthEvidenceContract({...base,searchSpy:[{...base.searchSpy[0],source_url:'unverified'}]}).competitiveGaps.length,1);
-console.log('Growth evidence contract: 6 checks passed');
+const selfReference=growthEvidenceContract({...base,searchSpy:[{...base.searchSpy[0],source_url:url}]});
+assert.equal(selfReference.evidence_status,'RESEARCH_INCOMPLETE');
+assert.equal(selfReference.competitiveGaps.some(g=>g.kind==='SEARCH_SPY'),false);
+console.log('Growth evidence contract: 7 checks passed');
