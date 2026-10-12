@@ -1,11 +1,10 @@
 {
   "generated_at": "2026-10-12",
-  "scope": "Tracker client 10, WordPress current source/draft inventory",
-  "disclaimer": "Drafts are not published. Growth review drafts retain existing source HTML plus a topic-specific editorial guidance section; inherited statements need full fact-check and human approval. Content Freshness #2802 is a separately rewritten draft. The original URLs remain untouched.",
+  "scope": "ContentScale Tracker client 10 (101 pages), matched to WordPress production items and draft IDs",
+  "disclaimer": "All working Growth review drafts are unpublished copies of the original HTML plus a subject-specific editorial improvement/verification section; they are NOT complete fact-checked rewrites. Content Freshness is the only separately rewritten draft (#2802). The existing published originals remain unchanged. Case Study locks, non-editorial and non-WordPress URLs are excluded.",
   "counts": {
-    "GROWTH_REVIEW_DRAFT": 54,
+    "GROWTH_REVIEW_DRAFT": 60,
     "CASE_STUDY_LOCKED": 6,
-    "REQUIRES_SPECIAL_EDITORIAL_REVIEW": 6,
     "NON_EDITORIAL_PAGE": 10,
     "FULL_REWRITE_DRAFT": 1,
     "NOT_MAPPED_TO_WORDPRESS": 24
@@ -115,9 +114,9 @@
       "wordpress_type": "post",
       "wordpress_slug": "ai-content-detectors",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2861,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2861&action=edit"
     },
     {
       "tracker_page_id": 2303,
@@ -271,9 +270,9 @@
       "wordpress_type": "post",
       "wordpress_slug": "48-hour-mastery-plan",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2862,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2862&action=edit"
     },
     {
       "tracker_page_id": 2316,
@@ -283,9 +282,9 @@
       "wordpress_type": "post",
       "wordpress_slug": "algorithm-update-recovery",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2863,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2863&action=edit"
     },
     {
       "tracker_page_id": 2317,
@@ -391,9 +390,9 @@
       "wordpress_type": "page",
       "wordpress_slug": "craft-framework",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2858,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2858&action=edit"
     },
     {
       "tracker_page_id": 2326,
@@ -403,9 +402,9 @@
       "wordpress_type": "page",
       "wordpress_slug": "website-traffic-drop",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2860,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2860&action=edit"
     },
     {
       "tracker_page_id": 2327,
@@ -583,9 +582,9 @@
       "wordpress_type": "page",
       "wordpress_slug": "craft-framework-checklist",
       "case_study_locked": false,
-      "status": "REQUIRES_SPECIAL_EDITORIAL_REVIEW",
-      "draft_wordpress_id": null,
-      "draft_editor_url": null
+      "status": "GROWTH_REVIEW_DRAFT",
+      "draft_wordpress_id": 2859,
+      "draft_editor_url": "https://contentscale.site/wp-admin/post.php?post=2859&action=edit"
     },
     {
       "tracker_page_id": 2342,
