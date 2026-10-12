@@ -22,6 +22,14 @@ function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy]
  assert.equal(result.status,'OFFLINE_REQUEST_ONLY',JSON.stringify(result.issues));
  assert.equal(result.request.status,'draft');
  assert.equal(result.dispatch_allowed,false);
+ let readIdentity;
+ result=await prepareVerifiedGrowthWordPressRequest({...input(db()),fetchFreshWordPressHtml:async args=>{
+  readIdentity=args;
+  return {id:42,link:url,status:'publish',modified_gmt:'2026-10-12T08:00:00',content:{raw:html}};
+ }});
+ assert.equal(result.status,'OFFLINE_REQUEST_ONLY');
+ assert.equal(readIdentity.postId,42);
+ assert.equal(readIdentity.url,url);
  result=await prepareVerifiedGrowthWordPressRequest(input(db({lockOnRead:4})));
  assert.equal(result.status,'BLOCKED');
  assert(result.issues.includes('CASE_STUDY_LOCK'));
