@@ -7,6 +7,16 @@ function validPublish({url,query,notes,published_at}){
  return null;
 }
 function registerGrowthExecution(app,pool){
+ // Keep this optional integration isolated: any Growth preflight error must
+ // never prevent existing Tracker publication records from operating.
+ try {
+  const {registerGrowthWordPressPreflightRoute}=require('./growth-wordpress-preflight-route.cjs');
+  const {createGrowthAdminMiddleware}=require('./growth-wordpress-admin-auth.cjs');
+  registerGrowthWordPressPreflightRoute({app,pool,verifyEngineAccess:createGrowthAdminMiddleware(pool)});
+ } catch(error) {
+  console.error('[growth-wordpress-preflight] optional registration failed:',error.message);
+ }
+
  app.post('/api/tracker-client/:token/growth/publication',async(req,res)=>{
   try{
    const c=(await pool.query("SELECT id,domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted') LIMIT 1",[req.params.token])).rows[0];
