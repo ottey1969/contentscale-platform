@@ -19,19 +19,17 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  // Require independently refreshed WordPress HTML at this handoff boundary.
  if(typeof input.fetchFreshWordPressHtml!=='function')
   return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_READER_REQUIRED'],request:null,dispatch_allowed:false};
+ let mappedPostId;
+ try {mappedPostId=await resolveGrowthWordPressPostId({db:input.db,url:latest.page.url,pageId:input.pageId,clientId:input.clientId});}
+ catch {return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['CANONICAL_WORDPRESS_POST_ID_LOOKUP_FAILED'],request:null,dispatch_allowed:false};}
  let live;
- try {live=await input.fetchFreshWordPressHtml({url:latest.page.url,pageId:input.pageId,clientId:input.clientId});}
+ try {live=await input.fetchFreshWordPressHtml({postId:mappedPostId,url:latest.page.url,pageId:input.pageId,clientId:input.clientId});}
  catch {return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_READ_FAILED'],request:null,dispatch_allowed:false};}
  const parsed=parseFreshWordPressPost(live,latest.page.url);
  if(!parsed.valid)
   return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_RESPONSE_INVALID'],request:null,dispatch_allowed:false};
  const compatibility=inspectGrowthSourceCompatibility({trackerHtml:latest.page.html_content,wordpressRaw:live.content.raw});
  if(!compatibility.compatible)return {status:'BLOCKED',stage:'SOURCE_REPRESENTATION',issues:[compatibility.status],request:null,dispatch_allowed:false};
- // The caller must resolve the WP post identity from a trusted canonical mapping.
- // URL equality alone is insufficient when content has been migrated/recreated.
- let mappedPostId;
- try {mappedPostId=await resolveGrowthWordPressPostId({db:input.db,url:latest.page.url,pageId:input.pageId,clientId:input.clientId});}
- catch {return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['CANONICAL_WORDPRESS_POST_ID_LOOKUP_FAILED'],request:null,dispatch_allowed:false};}
  if(!Number.isSafeInteger(mappedPostId)||mappedPostId<=0)
   return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['CANONICAL_WORDPRESS_POST_ID_REQUIRED'],request:null,dispatch_allowed:false};
  if(parsed.post_id!==mappedPostId)
