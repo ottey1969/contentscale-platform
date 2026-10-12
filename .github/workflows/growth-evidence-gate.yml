@@ -15,6 +15,7 @@ on:
       - 'src/growth-wordpress-draft-payload*.cjs'
       - 'src/growth-wordpress-handoff*.cjs'
       - 'src/growth-wordpress-preparation*.cjs'
+      - 'src/growth-wordpress-existing-handler*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
 jobs:
@@ -39,6 +40,8 @@ jobs:
         run: node src/growth-ai-visibility-summary.test.cjs
       - name: Historical competitor research leads
         run: node src/growth-snapshot-competitors.test.cjs
+      - name: Existing WordPress draft formatting contract
+        run: node src/growth-wordpress-existing-handler.test.cjs
       - name: WordPress offline preparation integration
         run: node src/growth-wordpress-preparation.test.cjs
       - name: WordPress handoff freshness guard
