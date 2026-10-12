@@ -25,4 +25,9 @@ a=trackerGrowthReview({...base(),gscRows:[{page_id:2352,page_url:'https://conten
 assert.equal(a.ready,false);assert(a.issues.some(x=>x.code==='NO_EXACT_PAGE_GSC'));
 a=trackerGrowthReview({...base(),page:{id:0,url,case_study_active:false}});
 assert.equal(a.ready,false);assert(a.issues.some(x=>x.code==='TRACKER_PAGE_INVALID'));
-console.log('PASS: canonical page_id evidence adapter; 7 cases');
+a=trackerGrowthReview({...base(),page:{id:2352,url,gsc_query_evidence_status:'exact_page_fetch_zero_queries',gsc_autofetch_checked_at:'2026-10-12T01:00:00Z'},gscRows:[]});
+assert.equal(a.ready,false);assert.equal(a.status,'BLOCKED_VERIFIED_ZERO_QUERIES');
+assert.equal(a.gsc_query_evidence_status,'exact_page_fetch_zero_queries');
+a=trackerGrowthReview({...base(),gscRows:[]});
+assert.equal(a.gsc_query_evidence_status,'not_verified');
+console.log('PASS: canonical page_id evidence adapter; 9 cases');
