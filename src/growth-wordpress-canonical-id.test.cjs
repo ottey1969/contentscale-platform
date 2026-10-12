@@ -20,11 +20,11 @@ const check=(database,options={})=>resolveGrowthWordPressPostId({db:database,url
 (async()=>{
  assert.equal(await check(db({reviewed:[{wordpress_post_id:51,wordpress_url:url}]})),51);
  assert.equal(await check(db({legacy:[{wp_post_id:42}],missingTable:true})),42);
- assert.equal(await check(db({legacy:[{wp_post_id:42}]})),42);
- await assert.rejects(check(db()),/CANONICAL_WORDPRESS_MAPPING_MISSING/);
+ await assert.rejects(check(db({legacy:[{wp_post_id:42}]})),/REVIEWED_WORDPRESS_MAPPING_REQUIRED/);
+ await assert.rejects(check(db()),/REVIEWED_WORDPRESS_MAPPING_REQUIRED/);
  await assert.rejects(check(db({reviewed:[{wordpress_post_id:51,wordpress_url:'https://other.test/'}]})),/REVIEWED_WORDPRESS_MAPPING_CONFLICT/);
  await assert.rejects(check(db({reviewed:[{wordpress_post_id:51,wordpress_url:url},{wordpress_post_id:52,wordpress_url:url}]})),/AMBIGUOUS_REVIEWED_WORDPRESS_MAPPING/);
- await assert.rejects(check(db({legacy:[{wp_post_id:42},{wp_post_id:43}]})),/AMBIGUOUS_WORDPRESS_MAPPING/);
+ await assert.rejects(check(db({legacy:[{wp_post_id:42},{wp_post_id:43}],missingTable:true})),/AMBIGUOUS_WORDPRESS_MAPPING/);
  await assert.rejects(check(db(),{pageId:undefined}),/TRACKER_IDENTITY_REQUIRED/);
  await assert.rejects(check(db(),{url:'https://other.test/page?x=1'}),/CANONICAL_URL_REQUIRED/);
  const denied=db();denied.query=async()=>{const e=Error('permission denied');e.code='42501';throw e;};
