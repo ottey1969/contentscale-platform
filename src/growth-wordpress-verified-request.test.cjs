@@ -26,6 +26,9 @@ function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy]
  result=await prepareVerifiedGrowthWordPressRequest(input(db({changeOnRead:4})));
  assert.equal(result.status,'BLOCKED');
  assert(result.issues.includes('SOURCE_CHANGED_REVIEW_AGAIN'));
+ result=await prepareVerifiedGrowthWordPressRequest({...input(db()),freshWordPressHtml:html+' attacker-provided'});
+ assert.equal(result.status,'OFFLINE_REQUEST_ONLY');
+ assert.equal(result.dispatch_allowed,false);
  result=await prepareVerifiedGrowthWordPressRequest({...input(db()),fetchFreshWordPressHtml:undefined});
  assert.equal(result.status,'BLOCKED');
  assert(result.issues.includes('FRESH_WORDPRESS_READER_REQUIRED'));
