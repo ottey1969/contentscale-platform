@@ -1,5 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
+const {createHash}=require('node:crypto');
 const {approveGrowthWordPressMapping}=require('./growth-wordpress-mapping-approval.cjs');
 const url='https://contentscale.site/a/',html='<article>Original</article>';
 function fixture({duplicate=false,locked=false,wpId=43,existing=null}={}){
@@ -21,6 +22,11 @@ function fixture({duplicate=false,locked=false,wpId=43,existing=null}={}){
  let x=fixture();let r=await approveGrowthWordPressMapping(x.input);
  assert.equal(r.status,'MAPPING_REVIEWED');assert.equal(x.committed(),true);
  assert.equal(r.publication_allowed,false);assert(x.calls.some(c=>c.sql.includes('FOR UPDATE')));
+ const insert=x.calls.find(c=>c.sql.includes('INSERT INTO growth_wordpress_page_mapping'));
+ assert(insert,'Missing mapping insert');
+ assert.match(insert.sql,/wordpress_raw_sha256/);
+ assert.equal(insert.args[6],createHash('sha256').update(html).digest('hex'));
+ assert.equal(insert.args[7],'editor@example.com');
  for(const variation of [{duplicate:true},{locked:true},{wpId:44},{existing:{wordpress_post_id:45,wordpress_url:url}}]){
   x=fixture(variation);r=await approveGrowthWordPressMapping(x.input);
   assert.equal(r.status,'BLOCKED');assert.equal(x.committed(),false);assert.equal(x.rolledBack(),true);
