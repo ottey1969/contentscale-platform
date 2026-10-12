@@ -14,7 +14,7 @@ function db({lockOnRead=Infinity,changeOnRead=Infinity}={}){
   throw Error('Unexpected SQL');
  }};
 }
-function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy],aiSpy:[{...spy,source_url:'https://other.example.org/'}],templateMarkers:['class="approved"'],claims:[],renderProof:{desktop_checked:true,mobile_checked:true},additions:[{approved:true,evidence_ref:'evidence:1',html:'<section><h2>Example</h2><p>Checked example.</p></section>'}],title:'A useful guide',editor_approved:true,authorized:true,currentWordPressHtml:html,fetchFreshWordPressHtml:async()=>({id:42,link:url,status:'publish',modified_gmt:'2026-10-12T08:00:00',content:{raw:'<!-- wp:html -->\n'+html+'\n<!-- /wp:html -->'}}),expectedPageUrl:url,expectedWordPressPostId:42};}
+function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy],aiSpy:[{...spy,source_url:'https://other.example.org/'}],templateMarkers:['class="approved"'],claims:[],renderProof:{desktop_checked:true,mobile_checked:true},additions:[{approved:true,evidence_ref:'evidence:1',html:'<section><h2>Example</h2><p>Checked example.</p></section>'}],title:'A useful guide',editor_approved:true,authorized:true,currentWordPressHtml:html,fetchFreshWordPressHtml:async()=>({id:42,link:url,status:'publish',modified_gmt:'2026-10-12T08:00:00',content:{raw:'<!-- wp:html -->\n'+html+'\n<!-- /wp:html -->'}}),expectedPageUrl:url,resolveCanonicalWordPressPostId:async()=>42};}
 (async()=>{
  let result=await prepareVerifiedGrowthWordPressRequest(input(db()));
  assert.equal(result.status,'OFFLINE_REQUEST_ONLY',JSON.stringify(result.issues));
@@ -47,12 +47,17 @@ function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy]
  result=await prepareVerifiedGrowthWordPressRequest(input(db({changeOnRead:5})));
  assert.equal(result.status,'BLOCKED');
  assert(result.issues.includes('SOURCE_CHANGED_REVIEW_AGAIN'));
- result=await prepareVerifiedGrowthWordPressRequest({...input(db()),expectedWordPressPostId:undefined});
+ result=await prepareVerifiedGrowthWordPressRequest({...input(db()),resolveCanonicalWordPressPostId:undefined});
  assert.equal(result.status,'BLOCKED');
- assert(result.issues.includes('CANONICAL_WORDPRESS_POST_ID_REQUIRED'));
- result=await prepareVerifiedGrowthWordPressRequest({...input(db()),expectedWordPressPostId:43});
+ assert(result.issues.includes('CANONICAL_WORDPRESS_POST_ID_RESOLVER_REQUIRED'));
+ result=await prepareVerifiedGrowthWordPressRequest({...input(db()),resolveCanonicalWordPressPostId:async()=>43});
  assert.equal(result.status,'BLOCKED');
  assert(result.issues.includes('WORDPRESS_POST_ID_MISMATCH'));
+ result=await prepareVerifiedGrowthWordPressRequest({...input(db()),resolveCanonicalWordPressPostId:async()=>{throw Error('mapping unavailable')}});
+ assert.equal(result.status,'BLOCKED');
+ assert(result.issues.includes('CANONICAL_WORDPRESS_POST_ID_LOOKUP_FAILED'));
+ result=await prepareVerifiedGrowthWordPressRequest({...input(db()),expectedWordPressPostId:999});
+ assert.equal(result.status,'OFFLINE_REQUEST_ONLY');
  result=await prepareVerifiedGrowthWordPressRequest({...input(db()),authorized:false});
  assert.equal(result.status,'BLOCKED');
  console.log('PASS: guarded canonical WordPress offline bridge, last-check case study and source changes');
