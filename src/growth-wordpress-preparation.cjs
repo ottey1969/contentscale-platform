@@ -8,9 +8,9 @@ const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 async function prepareGrowthWordPressHandoff(input={}){
  const initial=await loadGrowthTrackerEvidence(input.db,{pageId:input.pageId,clientId:input.clientId});
  const initialHtml=initial.page.html_content;
- const preparation=await prepareCanonicalGrowthDraft(input);
+ const preparation=await prepareCanonicalGrowthDraft({...input,expectedSourceHtml:initialHtml});
  if(preparation.status!=='READY_FOR_HUMAN_REVIEW')
-  return {status:'BLOCKED',stage:'GROWTH_REVIEW',issues:preparation.review?.issues||preparation.assembly?.issues||[],payload:null,publication_allowed:false};
+  return {status:'BLOCKED',stage:'GROWTH_REVIEW',issues:preparation.issues||preparation.review?.issues||preparation.assembly?.issues||[],payload:null,publication_allowed:false};
  const payload=createGrowthWordPressDraftPayload(preparation,{editor_approved:input.editor_approved,title:input.title});
  if(!payload.payload)return {status:'BLOCKED',stage:'EDITOR_APPROVAL',issues:payload.issues,payload:null,publication_allowed:false};
  // Repeat canonical check immediately before handoff. Still not a transaction or write.
