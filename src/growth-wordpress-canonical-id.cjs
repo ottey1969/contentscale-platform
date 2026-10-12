@@ -10,7 +10,7 @@ async function resolveGrowthWordPressPostId({db,url,pageId,clientId}={}){
  let reviewed=[];
  try {
   const result=await db.query(
-   'SELECT wordpress_post_id,wordpress_url FROM growth_wordpress_page_mapping WHERE tracker_page_id=$1 AND tracker_client_id=$2 LIMIT 2',
+   'SELECT m.wordpress_post_id,m.wordpress_url FROM growth_wordpress_page_mapping m JOIN tracker_pages p ON p.id=m.tracker_page_id AND p.tracker_client_id=m.tracker_client_id AND p.url=m.wordpress_url WHERE m.tracker_page_id=$1 AND m.tracker_client_id=$2 LIMIT 2',
    [pid,cid]);
   reviewed=result.rows||[];
  } catch(error) {
