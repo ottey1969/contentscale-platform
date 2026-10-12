@@ -17,6 +17,8 @@ const base=()=>({db:database(),pageId:7,clientId:2,searchSpy:[observation],aiSpy
  let result=await reviewCanonicalGrowthDraft(base());
  assert.equal(result.ready,true,JSON.stringify(result.issues));
  assert.equal(result.query_count,1);
+ assert.equal(result.opportunity_plan.actions.length,1);
+ assert.equal(result.opportunity_plan.automatic_draft_allowed,false);
  result=await reviewCanonicalGrowthDraft({...base(),db:database({locked:true})});
  assert.equal(result.status,'BLOCKED_CASE_STUDY');
  result=await reviewCanonicalGrowthDraft({...base(),searchSpy:undefined});
