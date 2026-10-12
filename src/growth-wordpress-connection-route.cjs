@@ -15,7 +15,6 @@ function registerGrowthWordPressConnectionRoute({app,pool,verifyGrowthAdmin,fetc
 <form id="connect-form"><label for="profile">ContentScale-profiel</label><input id="profile" inputmode="numeric" type="number" min="1" value="4" required>
 <label for="username">WordPress-gebruikersnaam</label><input id="username" autocomplete="username" required>
 <label for="password">WordPress Application Password</label><input id="password" type="password" autocomplete="new-password" required>
-<label for="admin">ContentScale-beheerderssessiesleutel</label><input id="admin" type="password" autocomplete="off" placeholder="Alleen nodig als niet automatisch herkend">
 <small>Maak een Application Password aan in WordPress onder Gebruikers → Profiel. Je normale WordPress-wachtwoord wordt hier niet gebruikt. Het wachtwoord wordt niet in de browser opgeslagen.</small>
 <button id="submit" type="submit">Connect &amp; Verify</button></form><div id="result" role="status" aria-live="polite"></div>
 <p><small>Na een succesvolle verbinding kun je de Growth-controles uitvoeren. Sluit dit venster na gebruik.</small></p></main>
@@ -23,15 +22,15 @@ function registerGrowthWordPressConnectionRoute({app,pool,verifyGrowthAdmin,fetc
 (function(){
 'use strict';
 var form=document.getElementById('connect-form'),btn=document.getElementById('submit'),msg=document.getElementById('result');
-function key(){var manual=document.getElementById('admin').value.trim();if(manual)return manual;for(var name of ['super_admin_session_token','superAdminToken','super_admin_token','adminToken','admin_token','adminKey','admin_key','lc_admin_key','lcAdminKey','engineAdminKey']){try{var v=localStorage.getItem(name)||sessionStorage.getItem(name);if(v)return v;}catch(e){}}return '';}
+function key(){for(var name of ['super_admin_session_token','superAdminToken','super_admin_token','adminToken','admin_token','adminKey','admin_key','lc_admin_key','lcAdminKey','engineAdminKey']){try{var v=localStorage.getItem(name)||sessionStorage.getItem(name);if(v)return v;}catch(e){}}return '';}
 form.addEventListener('submit',async function(event){
  event.preventDefault();btn.disabled=true;btn.textContent='Checking…';msg.className='';msg.style.display='none';
  var pass=document.getElementById('password'),token=key(),profile=document.getElementById('profile').value;
  try{
- if(!token)throw Error('Geen beheerderssessie gevonden. Open deze pagina vanuit het beheerdersdashboard of vul je beheerderssessiesleutel in.');
+ if(!token)throw Error('Geen beheerderssessie gevonden. Log opnieuw in via het ContentScale-beheerdersdashboard en open dit formulier opnieuw.');
  var response=await fetch('/api/growth/wordpress/profile/'+encodeURIComponent(profile)+'/connect',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','x-admin-key':token},body:JSON.stringify({username:document.getElementById('username').value,application_password:pass.value})});
  var result=await response.json();
- if(response.status===401||response.status===403)throw Error('ContentScale-beheerderssessie is niet geldig (HTTP '+response.status+'). Gebruik de geldige sessiesleutel van je ContentScale-beheeraccount; dit is niet je WordPress-wachtwoord.');
+ if(response.status===401||response.status===403)throw Error('ContentScale-beheerderssessie is niet geldig (HTTP '+response.status+'). Log opnieuw in bij ContentScale en open dit formulier opnieuw.');
  if(!response.ok||result.success!==true)throw Error((result.issues||[]).join(', ')||'Verbinding mislukt');
  pass.value='';msg.className='ok';msg.textContent='Verbinding gecontroleerd en opgeslagen voor '+result.site_url+'. Volgende stap: WordPress-paginakoppeling controleren.';
  }catch(e){msg.className='error';msg.textContent=e.message||'Verbinding mislukt. Controleer de gegevens.';}
