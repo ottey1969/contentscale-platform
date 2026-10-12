@@ -13,7 +13,7 @@ async function loadGrowthTrackerEvidence(db,{pageId,clientId}={}){
  if(!page)throw new Error('TRACKER_PAGE_NOT_FOUND');
  const [gscResult,caseStudyResult,aiResult,snapshotResult]=await Promise.all([
   db.query("SELECT tracker_client_id,page_id,source_page_url,evidence_scope,query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND source_page_url=$3 AND evidence_scope='page_verified'",[cid,pid,page.url]),
-  db.query('SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' LIMIT 1',[cid,pid]),
+  db.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' LIMIT 1",[cid,pid]),
   db.query('SELECT page_id,tracker_client_id,engine,evidence_method,brand_recommended,domain_cited,exact_page_cited,citation_urls,verified_at,revision_cycle FROM tracker_ai_evidence WHERE page_id=$1 AND tracker_client_id=$2 AND is_cleared IS NOT TRUE',[pid,cid]),
   db.query('SELECT page_id,checked_at,google_competitors,ai_perplexity_competitors FROM tracker_snapshots WHERE page_id=$1 AND (google_competitors IS NOT NULL OR ai_perplexity_competitors IS NOT NULL) ORDER BY checked_at DESC,id DESC LIMIT 1',[pid])
  ]);
