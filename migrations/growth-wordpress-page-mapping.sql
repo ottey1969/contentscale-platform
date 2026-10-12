@@ -14,3 +14,8 @@ CREATE TABLE IF NOT EXISTS growth_wordpress_page_mapping (
   UNIQUE (wordpress_url,wordpress_post_id)
 );
 -- Mapping is a verified identity snapshot, not authorization to publish.
+
+-- Before adding any reviewed mapping, validate page ownership under a database lock.
+-- This migration deliberately creates no mappings or grants publication rights.
+-- An application-level approval transaction must check the current Tracker
+-- client/page identity, live WordPress revision and active Case Study status.
