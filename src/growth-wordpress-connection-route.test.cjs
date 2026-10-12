@@ -3,8 +3,8 @@ const assert=require('node:assert/strict');
 const {registerGrowthWordPressConnectionRoute}=require('./growth-wordpress-connection-route.cjs');
 const url='https://contentscale.site/craft-framework/';
 async function run({admin=true,authentication=true,capability=true,domain=url,changed=false}={}){
- let handler,updated=0,committed=false,rolledBack=false,fetchCalls=0;
- const app={post:(path,middleware,fn)=>{assert.equal(path,'/api/growth/wordpress/profile/:profileId/connect');handler=fn;}};
+ let handler,formHandler,updated=0,committed=false,rolledBack=false,fetchCalls=0;
+ const app={get:(path,fn)=>{assert.equal(path,'/growth/wordpress/connect');formHandler=fn;},post:(path,middleware,fn)=>{assert.equal(path,'/api/growth/wordpress/profile/:profileId/connect');handler=fn;}};
  const rows=[{url:domain}];
  const pool={query:async()=>({rows}),connect:async()=>({
   query:async(sql,args)=>{
@@ -24,6 +24,12 @@ async function run({admin=true,authentication=true,capability=true,domain=url,ch
   return {ok:authentication,json:async()=>({id:17,capabilities:capability?{edit_pages:true}:{read:true}})};
  };
  registerGrowthWordPressConnectionRoute({app,pool,verifyGrowthAdmin:()=>{},fetchImpl});
+ const page={headers:{},type(){return this;},set(k,v){this.headers[k]=v;return this;},send(html){this.html=html;return this;}};
+ formHandler({},page);
+ assert.match(page.html,/Connect &amp; Verify/);
+ assert.match(page.html,/type="password"/);
+ assert.match(page.html,/fetch\('\/api\/growth\/wordpress\/profile\//);
+ assert.match(page.headers['Cache-Control'],/no-store/);
  const req={params:{profileId:'4'},engineUser:{isAdmin:admin,adminId:12},
   body:{username:'editor',application_password:'app-password'}};
  const res={statusCode:200,status(n){this.statusCode=n;return this},json(body){this.body=body;return this}};
