@@ -27,7 +27,13 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
    if(mapping.rows.length!==1||mapping.rows[0].wordpress_url!==url||!Number.isSafeInteger(Number(mapping.rows[0].wordpress_post_id)))issues.push('REVIEWED_WORDPRESS_MAPPING_REQUIRED');
    if(!credentialsConfigured)issues.push('WORDPRESS_CREDENTIALS_REQUIRED');
    if(!state.page.html_content)issues.push('TRACKER_HTML_MISSING');
+   const nextAction=issues.includes('CASE_STUDY_LOCK')?'PRESERVE_CASE_STUDY_BASELINE':
+    issues.includes('WORDPRESS_CREDENTIALS_REQUIRED')?'CONFIGURE_WORDPRESS_PROFILE':
+    issues.includes('REVIEWED_WORDPRESS_MAPPING_REQUIRED')?'REVIEW_WORDPRESS_MAPPING':
+    issues.includes('EXACT_PAGE_GSC_QUERIES_REQUIRED')?'VERIFY_EXACT_PAGE_GSC':
+    issues.length?'RESOLVE_VERIFICATION_ISSUES':'REVIEW_GROWTH_DRAFT';
    return res.json({success:true,status:issues.length?'BLOCKED':'READY_FOR_EDITOR_VERIFICATION',
+    next_action:nextAction,
     page_id:identity.pageId,client_id:identity.clientId,url,
     gsc_verified_queries:state.gscRows.length,
     search_spy_present:!!state.page.serp_spy,
