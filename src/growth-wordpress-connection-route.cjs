@@ -22,12 +22,35 @@ function registerGrowthWordPressConnectionRoute({app,pool,verifyGrowthAdmin,fetc
 (function(){
 'use strict';
 var form=document.getElementById('connect-form'),btn=document.getElementById('submit'),msg=document.getElementById('result');
-function key(){for(var name of ['super_admin_session_token','superAdminToken','super_admin_token','adminToken','admin_token','adminKey','admin_key','lc_admin_key','lcAdminKey','engineAdminKey']){try{var v=localStorage.getItem(name)||sessionStorage.getItem(name);if(v)return v;}catch(e){}}return '';}
+function key(){
+ var preferred=['super_admin_session_token','superAdminToken','super_admin_token','adminToken','admin_token','adminKey','admin_key','lc_admin_key','lcAdminKey','engineAdminKey'];
+ function candidate(value){
+  if(typeof value!=='string')return '';
+  if(/^[a-f0-9]{64}$/i.test(value.trim()))return value.trim();
+  try{var data=JSON.parse(value);if(data&&typeof data==='object'){
+   for(var prop of ['session_token','sessionToken','token','admin_token','adminToken','key']){
+    if(typeof data[prop]==='string'&&/^[a-f0-9]{64}$/i.test(data[prop]))return data[prop];
+   }
+  }}catch(e){}
+  return '';
+ }
+ for(var store of [localStorage,sessionStorage]){
+  try{
+   for(var name of preferred){var token=candidate(store.getItem(name));if(token)return token;}
+   for(var i=0;i<store.length;i++){
+    var name=store.key(i);
+    if(!/admin|super|session|auth/i.test(name||''))continue;
+    var token=candidate(store.getItem(name));if(token)return token;
+   }
+  }catch(e){}
+ }
+ return '';
+}
 form.addEventListener('submit',async function(event){
  event.preventDefault();btn.disabled=true;btn.textContent='Checking…';msg.className='';msg.style.display='none';
  var pass=document.getElementById('password'),token=key(),profile=document.getElementById('profile').value;
  try{
- if(!token)throw Error('Geen beheerderssessie gevonden. Log opnieuw in via het ContentScale-beheerdersdashboard en open dit formulier opnieuw.');
+ if(!token)throw Error('Geen beheerderssessie gevonden in deze browser. Log in op het ContentScale-beheerdersdashboard in hetzelfde browserprofiel en open het formulier opnieuw.');
  var response=await fetch('/api/growth/wordpress/profile/'+encodeURIComponent(profile)+'/connect',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','x-admin-key':token},body:JSON.stringify({username:document.getElementById('username').value,application_password:pass.value})});
  var result=await response.json();
  if(response.status===401||response.status===403)throw Error('ContentScale-beheerderssessie is niet geldig (HTTP '+response.status+'). Log opnieuw in bij ContentScale en open dit formulier opnieuw.');
