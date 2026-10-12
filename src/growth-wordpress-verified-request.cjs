@@ -13,11 +13,16 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  if(latest.page.url!==handoff.source_precondition?.url)return {status:'BLOCKED',stage:'PAGE_IDENTITY',issues:['PAGE_IDENTITY_MISMATCH'],request:null,dispatch_allowed:false};
  // The Tracker snapshot alone cannot prove that live WordPress still matches.
  // Require independently refreshed WordPress HTML at this handoff boundary.
- if(typeof input.freshWordPressHtml!=='string'||!input.freshWordPressHtml.trim())
-  return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_HTML_REQUIRED'],request:null,dispatch_allowed:false};
+ if(typeof input.fetchFreshWordPressHtml!=='function')
+  return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_READER_REQUIRED'],request:null,dispatch_allowed:false};
+ let live;
+ try {live=await input.fetchFreshWordPressHtml({url:latest.page.url,pageId:input.pageId,clientId:input.clientId});}
+ catch {return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_READ_FAILED'],request:null,dispatch_allowed:false};}
+ if(!live||live.url!==latest.page.url||typeof live.html!=='string'||!live.html.trim())
+  return {status:'BLOCKED',stage:'WORDPRESS_SOURCE_FRESHNESS',issues:['FRESH_WORDPRESS_RESPONSE_INVALID'],request:null,dispatch_allowed:false};
  const checked=toExistingWordPressDraftRequest(handoff,{
   authorized:input.authorized===true,
-  currentHtml:input.freshWordPressHtml,
+  currentHtml:live.html,
   currentUrl:latest.page.url,
   caseStudyLocked:latest.page.case_study_active
  });
