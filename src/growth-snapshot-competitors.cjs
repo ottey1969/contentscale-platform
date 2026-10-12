@@ -13,7 +13,7 @@ function snapshotCompetitorLeads({page={},snapshot=null}={}){
    try{
     const parsed=new URL(candidate);
     if(parsed.protocol!=='https:'||parsed.hostname.replace(/^www\./,'')===own.hostname.replace(/^www\./,''))continue;
-    candidates.push({source:kind,url:parsed.href,status:'URL_ONLY_NOT_CONTENT_VERIFIED'});
+    candidates.push({source:kind,url:parsed.href,serp_title:typeof entry==='object'&&typeof entry.title==='string'?entry.title:null,serp_snippet:typeof entry==='object'&&typeof entry.snippet==='string'?entry.snippet:null,serp_position:typeof entry==='object'&&Number.isFinite(Number(entry.position))&&Number(entry.position)>0?Number(entry.position):null,status:'SERP_OBSERVATION_NOT_PAGE_CONTENT_VERIFIED'});
    }catch{}
   }
  }
