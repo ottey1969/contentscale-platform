@@ -27,7 +27,7 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  // The caller must resolve the WP post identity from a trusted canonical mapping.
  // URL equality alone is insufficient when content has been migrated/recreated.
  let mappedPostId;
- try {mappedPostId=await resolveGrowthWordPressPostId({db:input.db,url:latest.page.url});}
+ try {mappedPostId=await resolveGrowthWordPressPostId({db:input.db,url:latest.page.url,pageId:input.pageId,clientId:input.clientId});}
  catch {return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['CANONICAL_WORDPRESS_POST_ID_LOOKUP_FAILED'],request:null,dispatch_allowed:false};}
  if(!Number.isSafeInteger(mappedPostId)||mappedPostId<=0)
   return {status:'BLOCKED',stage:'WORDPRESS_IDENTITY',issues:['CANONICAL_WORDPRESS_POST_ID_REQUIRED'],request:null,dispatch_allowed:false};
