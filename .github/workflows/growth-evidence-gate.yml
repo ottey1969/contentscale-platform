@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/growth-evidence-*.cjs'
       - 'src/growth-tracker-evidence-adapter*.cjs'
+      - 'src/growth-canonical-loader*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
 jobs:
@@ -20,5 +21,7 @@ jobs:
         run: node src/growth-evidence-contract.test.cjs
       - name: Draft and rendered-template guard tests
         run: node src/growth-evidence-render-gate.test.cjs
+      - name: Canonical evidence loader
+        run: node src/growth-canonical-loader.test.cjs
       - name: Canonical Tracker adapter
         run: node src/growth-tracker-evidence-adapter.test.cjs
