@@ -1,0 +1,14 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {fingerprintWordPressRevision,compareWordPressRevision}=require('./growth-wordpress-revision.cjs');
+const url='https://contentscale.site/example/';
+const post={id:42,link:url,status:'publish',modified_gmt:'2026-10-12T10:00:00',content:{raw:'<!-- wp:html -->\n<p>Sample</p>\n<!-- /wp:html -->'}};
+const original=fingerprintWordPressRevision(post,url);
+assert.equal(original.valid,true);
+assert.equal(compareWordPressRevision(original,post).valid,true);
+assert(compareWordPressRevision(original,{...post,content:{raw:post.content.raw+' modified'}}).issues.includes('WORDPRESS_CONTENT_CHANGED'));
+assert(compareWordPressRevision(original,{...post,modified_gmt:'2026-10-12T11:00:00'}).issues.includes('WORDPRESS_REVISION_CHANGED'));
+assert(compareWordPressRevision(original,{...post,id:43}).issues.includes('WORDPRESS_POST_ID_CHANGED'));
+assert(compareWordPressRevision(original,{...post,status:'draft'}).issues.includes('WORDPRESS_STATUS_CHANGED'));
+assert.equal(compareWordPressRevision(null,post).valid,false);
+console.log('PASS: authenticated editor revision evidence, status and content tampering blocked');
