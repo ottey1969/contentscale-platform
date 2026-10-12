@@ -7,6 +7,7 @@ const spy={target_url:url,source_url:'https://competitor.example/article',observ
 function db({lockOnRead=Infinity,changeOnRead=Infinity,mappedIds=[42]}={}){
  let pageReads=0,caseReads=0;
  return {query:async(sql)=>{
+  if(sql.includes('FROM growth_wordpress_page_mapping')){const e=Error('not migrated');e.code='42P01';throw e;}
   if(sql.includes('FROM content_articles'))return {rows:mappedIds.map(wp_post_id=>({wp_post_id}))};
   if(sql.includes('FROM tracker_pages')){pageReads++;return {rows:[{id:3,tracker_client_id:4,url,html_content:pageReads>=changeOnRead?html+' changed':html}]};}
   if(sql.includes('FROM tracker_gsc_queries'))return {rows:[{tracker_client_id:4,page_id:3,source_page_url:url,evidence_scope:'page_verified',query:'example guide',impressions:80}]};
