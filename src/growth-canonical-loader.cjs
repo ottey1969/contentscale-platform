@@ -11,12 +11,14 @@ async function loadGrowthTrackerEvidence(db,{pageId,clientId}={}){
   [pid,cid]);
  const page=pageResult.rows?.[0];
  if(!page)throw new Error('TRACKER_PAGE_NOT_FOUND');
- const [gscResult,caseStudyResult]=await Promise.all([
+ const [gscResult,caseStudyResult,aiResult]=await Promise.all([
   db.query("SELECT tracker_client_id,page_id,source_page_url,evidence_scope,query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND source_page_url=$3 AND evidence_scope='page_verified'",[cid,pid,page.url]),
-  db.query('SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 LIMIT 1',[cid,pid])
+  db.query('SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 LIMIT 1',[cid,pid]),
+  db.query('SELECT page_id,tracker_client_id,engine,evidence_method,brand_recommended,domain_cited,exact_page_cited,citation_urls,verified_at,revision_cycle FROM tracker_ai_evidence WHERE page_id=$1 AND tracker_client_id=$2 AND is_cleared IS NOT TRUE',[pid,cid])
  ]);
  return {
   page:{...page,case_study_active:(caseStudyResult.rows||[]).length>0},
+  aiEvidence:(aiResult.rows||[]).filter(row=>Number(row.page_id)===pid&&Number(row.tracker_client_id)===cid),
   gscRows:(gscResult.rows||[]).filter(row=>row.tracker_client_id===cid&&row.page_id===pid&&row.source_page_url===page.url&&row.evidence_scope==='page_verified'),
   source:'canonical_tracker_read_only'
  };
