@@ -2,10 +2,10 @@
 const assert=require('node:assert/strict');
 const {registerGrowthWordPressConnectionRoute}=require('./growth-wordpress-connection-route.cjs');
 const url='https://contentscale.site/craft-framework/';
-async function run({admin=true,authentication=true,capability=true,domain=url,changed=false}={}){
+async function run({admin=true,authentication=true,capability=true,domain=url,changed=false,selected='https://contentscale.site/',mixed=false}={}){
  let handler,formHandler,updated=0,committed=false,rolledBack=false,fetchCalls=0;
  const app={get:(path,fn)=>{assert.equal(path,'/growth/wordpress/connect');formHandler=fn;},post:(path,middleware,fn)=>{assert.equal(path,'/api/growth/wordpress/profile/:profileId/connect');handler=fn;}};
- const rows=[{url:domain}];
+ const rows=mixed?[{url:domain},{url:'https://es.contentscale.site/example/'}]:[{url:domain}];
  const pool={query:async()=>({rows}),connect:async()=>({
   query:async(sql,args)=>{
    if(sql==='BEGIN'||sql==='ROLLBACK'||sql==='COMMIT'){if(sql==='COMMIT')committed=true;if(sql==='ROLLBACK')rolledBack=true;return {rows:[]};}
@@ -27,6 +27,7 @@ async function run({admin=true,authentication=true,capability=true,domain=url,ch
  const page={headers:{},type(){return this;},set(k,v){this.headers[k]=v;return this;},send(html){this.html=html;return this;}};
  formHandler({},page);
  assert.match(page.html,/Connect &amp; Verify/);
+ assert.match(page.html,/WordPress-website/);
  assert.match(page.html,/type="password"/);
  assert.doesNotMatch(page.html,/ContentScale-beheerderssessiesleutel|id="admin"/);
  assert.match(page.html,/store\.length/);
@@ -34,16 +35,16 @@ async function run({admin=true,authentication=true,capability=true,domain=url,ch
  assert.match(page.html,/fetch\('\/api\/growth\/wordpress\/profile\//);
  assert.match(page.headers['Cache-Control'],/no-store/);
  const req={params:{profileId:'4'},engineUser:{isAdmin:admin,adminId:'ADMIN-8AE3924B3136D1C8'},
-  body:{username:'editor',application_password:'app-password'}};
+  body:{username:'editor',application_password:'app-password',site_url:selected}};
  const res={statusCode:200,status(n){this.statusCode=n;return this},json(body){this.body=body;return this}};
  await handler(req,res);
  return {res,updated,committed,rolledBack,fetchCalls};
 }
 (async()=>{
- let x=await run();assert.equal(x.res.body.status,'WORDPRESS_PROFILE_CONNECTED');
+ let x=await run({mixed:true});assert.equal(x.res.body.status,'WORDPRESS_PROFILE_CONNECTED');
  assert.equal(x.updated,1);assert(x.committed);
  assert(!JSON.stringify(x.res.body).includes('app-password'));
- for(const o of [{admin:false},{authentication:false},{capability:false},
+ for(const o of [{admin:false},{authentication:false},{capability:false},{mixed:true,selected:'https://untracked.example/'},{mixed:true,selected:'http://contentscale.site/'},
   {domain:'https://other.test/unsafe/'},{changed:true}]){
   x=await run(o);
   if(o.domain){assert.equal(x.res.body.status,'BLOCKED');}

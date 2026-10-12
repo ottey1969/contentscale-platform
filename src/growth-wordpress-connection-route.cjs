@@ -12,7 +12,7 @@ function registerGrowthWordPressConnectionRoute({app,pool,verifyGrowthAdmin,fetc
 <html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale · WordPress verbinden</title>
 <style>body{font-family:system-ui,Arial,sans-serif;background:#f6f8fb;color:#17263d;margin:0;padding:24px}main{max-width:560px;margin:45px auto;background:white;padding:32px;border:1px solid #dae2eb;border-radius:14px;box-shadow:0 8px 32px #17263d12}h1{font-size:25px;margin:0 0 12px}p{line-height:1.55;color:#45566c}label{display:block;font-weight:650;margin:18px 0 7px}input{width:100%;box-sizing:border-box;font:inherit;padding:13px;border:1px solid #b7c5d5;border-radius:8px}button{background:#137333;border:0;color:white;padding:14px 18px;font:inherit;font-weight:700;border-radius:8px;cursor:pointer;margin-top:22px;width:100%}button:disabled{opacity:.5;cursor:wait}#result{margin-top:18px;padding:12px;border-radius:8px;display:none;overflow-wrap:anywhere}#result.error{display:block;background:#fff2f2;color:#8a1c1c}#result.ok{display:block;background:#ecf8ed;color:#155724}small{color:#54677d}</style></head>
 <body><main><h1>WordPress verbinden</h1><p>Verbind je bestaande WordPress-site met ContentScale Growth. Je originele artikelen blijven ongewijzigd; er wordt niets gepubliceerd.</p>
-<form id="connect-form"><label for="profile">ContentScale-profiel</label><input id="profile" inputmode="numeric" type="number" min="1" value="4" required>
+<form id="connect-form"><label for="site">WordPress-website</label><input id="site" type="url" value="https://contentscale.site/" autocomplete="url" required><small>Kies het exacte WordPress-domein, bijvoorbeeld https://contentscale.site/. Andere sites in hetzelfde Tracker-profiel worden niet gewijzigd.</small><label for="profile">ContentScale-profiel</label><input id="profile" inputmode="numeric" type="number" min="1" value="4" required>
 <label for="username">WordPress-gebruikersnaam</label><input id="username" autocomplete="username" required>
 <label for="password">WordPress Application Password</label><input id="password" type="password" autocomplete="new-password" required>
 <small>Maak een Application Password aan in WordPress onder Gebruikers → Profiel. Je normale WordPress-wachtwoord wordt hier niet gebruikt. Het wachtwoord wordt niet in de browser opgeslagen.</small>
@@ -51,7 +51,7 @@ form.addEventListener('submit',async function(event){
  var pass=document.getElementById('password'),token=key(),profile=document.getElementById('profile').value;
  try{
  if(!token)throw Error('Geen beheerderssessie gevonden in deze browser. Log in op het ContentScale-beheerdersdashboard in hetzelfde browserprofiel en open het formulier opnieuw.');
- var response=await fetch('/api/growth/wordpress/profile/'+encodeURIComponent(profile)+'/connect',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','x-admin-key':token},body:JSON.stringify({username:document.getElementById('username').value,application_password:pass.value})});
+ var response=await fetch('/api/growth/wordpress/profile/'+encodeURIComponent(profile)+'/connect',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json','x-admin-key':token},body:JSON.stringify({site_url:document.getElementById('site').value,username:document.getElementById('username').value,application_password:pass.value})});
  var result=await response.json();
  if(response.status===401||response.status===403)throw Error('ContentScale-beheerderssessie is niet geldig (HTTP '+response.status+'). Log opnieuw in bij ContentScale en open dit formulier opnieuw.');
  if(!response.ok||result.success!==true)throw Error((result.issues||[]).join(', ')||'Verbinding mislukt');
@@ -86,8 +86,18 @@ form.addEventListener('submit',async function(event){
     origins.add(url.origin);
    }
   }catch{return fail(409,'INVALID_TRACKER_DOMAIN');}
-  if(origins.size!==1)return fail(409,'PROFILE_MULTIPLE_SITE_ORIGINS');
-  const origin=[...origins][0];
+  const suppliedSite=req.body?.site_url;
+  if(typeof suppliedSite!=='string'||!suppliedSite.trim())return fail(400,'WORDPRESS_SITE_SELECTION_REQUIRED');
+  let origin;
+  try{
+   const selected=new URL(suppliedSite);
+   if(selected.protocol!=='https:'||selected.username||selected.password||selected.search||selected.hash||selected.pathname!=='/' ||
+     selected.port)return fail(400,'INVALID_WORDPRESS_SITE_SELECTION');
+   origin=selected.origin;
+  }catch{return fail(400,'INVALID_WORDPRESS_SITE_SELECTION');}
+  // A single legacy profile can contain several WordPress sites. The selected
+  // origin must exist among this profile's canonical tracked URLs.
+  if(!origins.has(origin))return fail(409,'WORDPRESS_SITE_NOT_IN_TRACKER_PROFILE');
   // Authenticated read verifies credentials before they can become active.
   try{
    const authorization='Basic '+Buffer.from(username.trim()+':'+password).toString('base64');
