@@ -26,6 +26,7 @@ on:
       - 'src/growth-wordpress-draft-executor*.cjs'
       - 'src/growth-wordpress-draft-transport*.cjs'
       - 'src/growth-wordpress-preflight-route*.cjs'
+      - 'src/growth-wordpress-candidate-reader*.cjs'
       - 'src/growth-wordpress-admin-auth*.cjs'
       - 'src/growth-wordpress-identity-approval-route*.cjs'
       - 'src/tracker-growth-execution.cjs'
@@ -65,6 +66,8 @@ jobs:
         run: node src/growth-wordpress-identity-approval-route.test.cjs
       - name: Growth admin authentication
         run: node src/growth-wordpress-admin-auth.test.cjs
+      - name: Authenticated WordPress post/page candidate discovery
+        run: node src/growth-wordpress-candidate-reader.test.cjs
       - name: Authenticated Growth preflight Express route
         run: node src/growth-wordpress-preflight-route.test.cjs
       - name: WordPress draft-only transport
