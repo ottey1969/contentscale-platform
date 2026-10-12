@@ -21,6 +21,7 @@ on:
       - 'src/growth-wordpress-mapping-review*.cjs'
       - 'src/growth-wordpress-mapping-preflight*.cjs'
       - 'src/growth-wordpress-mapping-approval*.cjs'
+      - 'src/growth-live-routes*.cjs'
       - 'src/growth-wordpress-source-compatibility*.cjs'
       - 'src/growth-wordpress-edit-reader*.cjs'
       - 'src/growth-wordpress-revision*.cjs'
@@ -88,6 +89,8 @@ jobs:
         run: node src/growth-wordpress-edit-reader.test.cjs
       - name: Source representation compatibility
         run: node src/growth-wordpress-source-compatibility.test.cjs
+      - name: Integrated Growth live route checks
+        run: node src/growth-live-routes.test.cjs
       - name: Reviewed mapping approval transaction
         run: node src/growth-wordpress-mapping-approval.test.cjs
       - name: Migration readiness preflight
