@@ -9,6 +9,7 @@ on:
       - 'src/growth-opportunity-plan*.cjs'
       - 'src/growth-ai-visibility-summary*.cjs'
       - 'src/growth-snapshot-competitors*.cjs'
+      - 'src/growth-edit-instructions*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
 jobs:
@@ -33,6 +34,8 @@ jobs:
         run: node src/growth-ai-visibility-summary.test.cjs
       - name: Historical competitor research leads
         run: node src/growth-snapshot-competitors.test.cjs
+      - name: Source-backed edit instructions
+        run: node src/growth-edit-instructions.test.cjs
       - name: Per-page opportunity plan
         run: node src/growth-opportunity-plan.test.cjs
       - name: Canonical Tracker adapter
