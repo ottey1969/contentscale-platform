@@ -48,6 +48,8 @@ async function prepareVerifiedGrowthWordPressRequest(input={}){
  const finalProof=verifyGrowthWritePrecondition({source_precondition:handoff.source_precondition,
   currentHtml:finalState.page.html_content,currentUrl:finalState.page.url});
  if(!finalProof.valid)return {status:'BLOCKED',stage:'FINAL_CANONICAL_RECHECK',issues:finalProof.issues,request:null,dispatch_allowed:false};
+ // A crawler stores rendered document HTML, which must not be used as the editor revision.
+ // At this stage the actual WordPress raw body is checked separately; no write permission is granted.
  const checked=toExistingWordPressDraftRequest(handoff,{
   authorized:input.authorized===true,
   currentHtml:parsed.html,
