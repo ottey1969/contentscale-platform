@@ -13,6 +13,6 @@ async function reviewCanonicalGrowthDraft({db,pageId,clientId,searchSpy,aiSpy,dr
   originalHtml:canonical.page.html_content||'',
   draftHtml,templateMarkers,claims,renderProof
  });
- return {...review,opportunity_plan:buildGrowthOpportunityPlan({page:canonical.page,gscRows:canonical.gscRows,searchSpy,aiSpy})};
+ return {...review,ai_visibility_evidence:canonical.aiEvidence,opportunity_plan:buildGrowthOpportunityPlan({page:canonical.page,gscRows:canonical.gscRows,searchSpy,aiSpy})};
 }
 module.exports={reviewCanonicalGrowthDraft};
