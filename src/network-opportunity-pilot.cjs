@@ -44,12 +44,14 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
    };
    const isMixcloud=String(a.domain).toLowerCase()==='mixcloud.com';
    const t=isMixcloud?['How Independent DJs Can Build a Loyal Audience Beyond Social Media','An article exploring how independent DJs and music creators can build relationships with listeners through consistent shows, community engagement and owned communication channels.']:topics[niche]||topics.other;
-   // Always label as a research lead, not verified competitive intelligence or approved publication.
+   const {inspectEditorialOverlap}=require('./network-editorial-overlap.cjs');
+   const overlap=await inspectEditorialOverlap({domain:a.domain,title:t[0],apiKey:process.env.SERPAPI_KEY});
+   // Never turn the absence of search data into a false claim that an idea is new.
    return res.json({success:true,title:t[0],pitch:t[1]+
     ' This proposed contribution would be reviewed for relevance, factual accuracy, topical overlap and editorial fit before any full article is written. No publication is promised.',
     evidence:{source:'contact_intelligence',website_checked:true,niche,public_bio:bio.slice(0,350),
       claimed_publisher_acceptance:false,competitive_gap_verified:false},
-    status:'SUGGESTED_FOR_ADMIN_REVIEW'});
+    overlap,status:'SUGGESTED_FOR_ADMIN_REVIEW'});
   }catch(error){console.error('[network-opportunity-suggest]',error.code||'UNAVAILABLE');
    return res.status(503).json({success:false,error:'SUGGESTION_UNAVAILABLE'});}
  });
