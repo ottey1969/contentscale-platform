@@ -36,7 +36,7 @@ function opportunityReviewHtml(){
    message(data.prospects.length+' prospects for manual review · no automatic emails');
    for(const p of data.prospects){
     const card=document.createElement('article'),h=document.createElement('h2');h.textContent=p.business_name;card.appendChild(h);
-    const desc=document.createElement('p');desc.className='muted';desc.textContent=p.domain+' · '+(p.niche||'niche not verified')+' · fit '+(p.network_fit_score??'not assessed')+' · '+(p.opportunity_status||'not prepared');card.appendChild(desc);
+    const desc=document.createElement('p');desc.className='muted';desc.textContent=p.domain+' · '+(p.niche||'niche not verified')+' · fit '+(p.network_fit_score??'not assessed')+' · contact: '+(p.contact_status||'NOT_CHECKED')+' · '+(p.opportunity_status||'not prepared');card.appendChild(desc);
     if(p.opportunity_status){const note=document.createElement('p');note.textContent='Opportunity already prepared. Reuse existing CRM state; no duplicate draft.';card.appendChild(note);items.appendChild(card);continue;}
     const title=addField(card,'Article title','input','A factual subject relevant to this website (15–150 characters)');
     const pitch=addField(card,'Why it helps and what would be proposed','textarea','Write at least 80 characters based on verified information. Do not claim publication is already secured.');
