@@ -152,7 +152,7 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
      AND source='lead_crawler' AND status='unclaimed' AND public_visibility='hidden' LIMIT 1`,[hash(token)]);
    if(data.rows.length!==1)return res.sendStatus(404);
    const row=data.rows[0],opp=row.opportunity;
-   if(!['prepared','interested'].includes(opp.status))return res.sendStatus(404);
+   if(!['prepared','invited','interested'].includes(opp.status))return res.sendStatus(404);
    const escape=s=>String(s||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
    res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow');
    return res.type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Content opportunity | ContentScale</title></head><body style="font:17px/1.6 system-ui;max-width:720px;margin:55px auto;padding:0 22px"><h1>Content opportunity for ${escape(row.business_name)}</h1><h2>${escape(opp.title)}</h2><p>${escape(opp.pitch)}</p><p>Interested? We will verify the website and confirm whether a suitable publishing opportunity exists before preparing the full article. No publication is guaranteed.</p><form method="post" action="/network/opportunity/${token}/interested"><button style="background:#16813f;color:white;padding:14px 24px;border:0;border-radius:7px;font:inherit" type="submit">I'm interested</button></form></body></html>`);
@@ -166,7 +166,7 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
      metadata=jsonb_set(metadata,'{content_opportunity,status}','"interested"'::jsonb),
      updated_at=now()
      WHERE metadata->'content_opportunity'->>'token_hash'=$1
-       AND metadata->'content_opportunity'->>'status'='prepared'
+       AND metadata->'content_opportunity'->>'status' IN ('prepared','invited')
        AND source='lead_crawler' AND status='unclaimed' AND public_visibility='hidden'
      RETURNING id`,[hash(token)]);
    if(!result.rows.length)return res.sendStatus(409);
