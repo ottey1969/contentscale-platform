@@ -235,7 +235,17 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
        AND metadata->'content_opportunity'->>'status' IN ('prepared','invited')
        AND source='lead_crawler' AND status='unclaimed' AND public_visibility='hidden'
      RETURNING id`,[hash(token)]);
-   if(!result.rows.length)return res.sendStatus(409);
+   if(!result.rows.length){
+    // A browser retry after a successful acceptance must not show a conflict
+    // or create a second participation event.
+    const prior=await pool.query(`SELECT id FROM network_directory_businesses
+      WHERE metadata->'content_opportunity'->>'token_hash'=$1
+        AND metadata->'content_opportunity'->>'status'='interested'
+        AND metadata->'content_opportunity'->>'publisher_understood_at' IS NOT NULL
+        AND source='lead_crawler' AND status='unclaimed' AND public_visibility='hidden'
+      LIMIT 1`,[hash(token)]);
+    if(!prior.rows.length)return res.sendStatus(409);
+   }
    res.set('Cache-Control','no-store');
    return res.type('html').send('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>Interest recorded | ContentScale Network</title><body style="font:18px/1.6 system-ui;max-width:650px;margin:60px auto;padding:0 18px"><p style="color:#16813f;font-weight:700">ContentScale Network</p><h1>Thank you — your interest is recorded</h1><p>We received your interest in the proposed content opportunity. No membership or publishing agreement has been created.</p><h2>What happens next?</h2><ol><li>ContentScale reviews the organization, website and fit for the proposed editorial collaboration.</li><li>We contact you with any questions and explain the participation options.</li><li>If you and ContentScale agree, we prepare an article for your review and potential publication on your own website with attribution.</li></ol><p>Questions? <a href="mailto:info@contentscale.site">info@contentscale.site</a></p></body></html>');
   }catch{return res.sendStatus(503);}
