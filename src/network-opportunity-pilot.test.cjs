@@ -22,6 +22,7 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert.match(page.body,/Prepare preview/);
  assert.match(page.body,/Generate suggested opportunity/);
  assert.match(page.body,/Approve & send email/);
+ assert.match(page.body,/Prepare preview → then approve & send email/);
  assert.match(page.body,/Reopen private preview/);
  assert.match(page.body,/contact_status/);
  assert.match(page.body,/diagnostic_code/);
