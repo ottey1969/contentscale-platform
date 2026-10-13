@@ -35,6 +35,7 @@ on:
       - 'src/growth-wordpress-connection-route*.cjs'
       - 'src/growth-wordpress-admin-auth*.cjs'
       - 'src/growth-wordpress-identity-approval-route*.cjs'
+      - 'src/network-opportunity-pilot*.cjs'
       - 'src/tracker-growth-execution.cjs'
       - 'src/tracker-growth-wordpress-integration.test.cjs'
       - 'src/growth-tracker-wordpress-identity*.cjs'
@@ -68,6 +69,8 @@ jobs:
         run: node src/growth-tracker-wordpress-identity.test.cjs
       - name: Exact-page GSC source verification and transactional import
         run: node src/growth-gsc-page-verification.test.cjs
+      - name: Network CRM opportunity invitation pilot
+        run: node src/network-opportunity-pilot.test.cjs
       - name: Existing Tracker route wiring to live Growth preflight
         run: node src/tracker-growth-wordpress-integration.test.cjs
       - name: Verified WordPress mapping approval transaction
