@@ -40,8 +40,8 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert(events.some(e=>e.sql.includes("WHEN 'interested' THEN 0") && e.sql.includes("'invited','interested','prepared'")));
  assert(events.some(e=>e.sql.includes('publisher_understood_at')&&e.sql.includes('website_check_outcome')));
  assert(events.some(e=>e.sql.includes('brevo_outreach_events') && e.sql.includes('email_last_event')));
- assert(events.some(e=>e.sql.includes('c.network_fit_score>=65') && e.sql.includes('c.website_verified_at IS NOT NULL')));
- assert(events.some(e=>e.sql.includes('c.suppressed_at IS NULL')));
+ assert(events.some(e=>e.sql.includes("n.metadata->'content_opportunity'->>'status' IN ('invited','interested','prepared')")));
+ assert(!events.some(e=>e.sql.includes('OR n.metadata->') && e.sql.includes('c.network_fit_score>=65')));
  x=await invoke('GET','/api/network/admin/opportunity/:id/suggestion',{engineUser:{isAdmin:true},params:{id:'11'}});
  assert.equal(x.statusCode,200);assert.equal(x.body.status,'SUGGESTED_FOR_ADMIN_REVIEW');assert.match(x.body.title,/Content Workflow/);
  const title='Marketing case study on creative agency workflows',pitch='This is a draft opportunity for an independent publisher. Participation and publication require verification and explicit agreement.';
