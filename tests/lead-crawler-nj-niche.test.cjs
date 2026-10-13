@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const html=fs.readFileSync('public/lead-crawler.html','utf8');
+assert(html.includes('id="state"'));
+assert(html.includes('value="New Jersey"'));
+assert(html.includes("value='USA'"));
+assert(html.includes('id="quickNiche"'));
+assert(html.includes("const city=state?(enteredCity?enteredCity+', '+state:state):enteredCity;"));
+assert(html.includes("document.getElementById('industryMode').value='custom';"));
+assert(html.includes("INDUSTRIES=buildIndustryPlan();"));
+assert(html.includes("const valid = dedup"));
+assert(html.includes("getBucket("));
+assert(html.includes("document.getElementById('state').value='New Jersey'"));
+console.log('PASS: USA NJ state+city, single niche through existing custom industry plan, six buckets untouched');

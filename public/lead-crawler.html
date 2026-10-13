@@ -1336,12 +1336,15 @@
             <input type="hidden" id="apiKey" value="">
             <div class="form-row">
                <div class="field"><label>City</label><input type="text" id="city" placeholder="e.g. Amsterdam" /></div>
-               <div class="field"><label>Country</label><input type="text" id="country" placeholder="e.g. Netherlands" /></div>
+               <div class="field"><label>State / region (optional)</label><select id="state" aria-label="State or region"><option value="">City only / no state</option><option value="New Jersey">New Jersey (NJ)</option></select></div>
+               <div class="field"><label>Country</label><input type="text" id="country" placeholder="e.g. USA" /></div>
+               <button type="button" class="crawl-btn" style="background:var(--surface);border:1px solid var(--border);color:var(--ink)" onclick="document.getElementById('country').value='USA';document.getElementById('state').value='New Jersey';document.getElementById('city').value='';toast('Target set to New Jersey, USA')">NJ · USA</button>
                <button class="crawl-btn" id="crawlBtn" onclick="startCrawl()">FIND LEADS →</button>
                <button class="stop-btn" id="stopBtn" onclick="stopCrawl()">■ STOP</button>
                <button type="button" id="importBtn" onclick="triggerImport()" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:0 20px;border-radius:6px;cursor:pointer;height:52px;">&#8593; Import</button>
                <input type="file" id="importFile" accept=".json,application/json" style="display:none;" onchange="importJSON(event)">
             </div>
+            <div class="scope-row" style="margin-bottom:12px"><div class="scope-field"><label for="quickNiche">Niche for this run (optional)</label><input type="text" id="quickNiche" placeholder="e.g. Roofing" /><div class="scope-help">Enter one niche to search only that business type. Leave blank to keep your existing 37 presets / custom business types. The six buckets work exactly as before.</div></div></div>
             <div class="scope-row">
                <div class="scope-field">
                   <label for="industryMode">Search scope</label>
@@ -1797,7 +1800,13 @@
          document.getElementById('resumeText').innerHTML=
          '<strong>'+s.leads.length+' leads</strong> saved for <strong>'+s.city+', '+s.country+'</strong> — '+
          done+'/'+INDUSTRIES.length+' business types done'+(remaining>0?' ('+remaining+' can still run)':' (complete)')+' — saved '+ageStr;
-         document.getElementById('city').value=s.city;
+         if(s.city==='New Jersey'||s.city.endsWith(', New Jersey')){
+           document.getElementById('state').value='New Jersey';
+           document.getElementById('city').value=s.city==='New Jersey'?'':s.city.slice(0,-', New Jersey'.length);
+         }else{
+           document.getElementById('state').value='';
+           document.getElementById('city').value=s.city;
+         }
          document.getElementById('country').value=s.country;
          initWaves();updateIndustryPlanUI();
          }
@@ -1927,9 +1936,17 @@ Use a real contact_form_url only when you found a page with a contact or quote f
          }
            // ── MAIN CRAWL ────────────────────────────────────────────────────────────
          async function startCrawl(){
-         const city=document.getElementById('city').value.trim();
+         const enteredCity=document.getElementById('city').value.trim();
+         const state=document.getElementById('state').value.trim();
+         const city=state?(enteredCity?enteredCity+', '+state:state):enteredCity;
          const country=document.getElementById('country').value.trim();
-         if(!city||!country){toast('Enter a city and country first');return;}
+         if(!city||!country){toast('Enter a city or state and country first');return;}
+         const quickNiche=document.getElementById('quickNiche').value.trim();
+         if(quickNiche){
+           // Reuse the established custom industry engine; never mutate bucket logic.
+           document.getElementById('industryMode').value='custom';
+           document.getElementById('customIndustries').value=quickNiche;
+         }
          INDUSTRIES=buildIndustryPlan();
          if(!INDUSTRIES.length){toast('Add at least one custom business type first');return;}
          initWaves();updateIndustryPlanUI();
