@@ -22,6 +22,7 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert.match(page.body,/Prepare preview/);
  assert.match(page.body,/Generate suggested opportunity/);
  assert.match(page.body,/Approve & send email/);
+ assert.match(page.body,/Accepted by Brevo; inbox delivery not yet confirmed/);
  assert.match(page.body,/Prepare preview → then approve & send email/);
  assert.match(page.body,/Reopen private preview/);
  assert.match(page.body,/contact_status/);
@@ -32,6 +33,7 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert.equal(x.statusCode,403);
  x=await invoke('GET','/api/network/admin/opportunity-pilot',{engineUser:{isAdmin:true}});
  assert.equal(x.body.prospects.length,1);
+ assert(events.some(e=>e.sql.includes('brevo_outreach_events') && e.sql.includes('email_last_event')));
  assert(events.some(e=>e.sql.includes('c.network_fit_score>=65') && e.sql.includes('c.website_verified_at IS NOT NULL')));
  assert(events.some(e=>e.sql.includes('c.suppressed_at IS NULL')));
  x=await invoke('GET','/api/network/admin/opportunity/:id/suggestion',{engineUser:{isAdmin:true},params:{id:'11'}});
