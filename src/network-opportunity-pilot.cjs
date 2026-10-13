@@ -14,7 +14,8 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
   try{
    const results=await pool.query(`SELECT n.id,n.business_name,n.domain,n.status,n.public_visibility,
      n.metadata->'content_opportunity'->>'status' AS opportunity_status,
-     c.niche,c.network_fit_score,c.website_verified_at IS NOT NULL AS website_checked
+     c.niche,c.network_fit_score,c.website_verified_at IS NOT NULL AS website_checked,
+     CASE WHEN c.email IS NULL OR btrim(c.email)='' THEN 'MISSING' WHEN c.suppressed_at IS NOT NULL THEN 'SUPPRESSED' WHEN c.email_type <> 'business' THEN 'REVIEW_REQUIRED' ELSE 'BUSINESS_CONTACT_FOUND' END AS contact_status
      FROM network_directory_businesses n
      JOIN contact_intelligence c ON c.id=n.contact_intelligence_id
      WHERE n.source='lead_crawler' AND n.public_visibility='hidden'
