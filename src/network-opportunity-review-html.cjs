@@ -140,7 +140,7 @@ function opportunityReviewHtml(){
    }
   }catch(e){message(e.message,true)}finally{el('refresh').disabled=false;}
  }
- el('sync-brevo').addEventListener('click',async()=>{
+ async function syncBrevoStatus(){
   const button=el('sync-brevo');button.disabled=true;button.textContent='Checking Brevo…';
   try{
    const result=await request('/api/network/admin/opportunity-pilot/sync-brevo',{method:'POST'});
@@ -148,8 +148,10 @@ function opportunityReviewHtml(){
    await load();
   }catch(e){message(e.message,true)}
   finally{button.disabled=false;button.textContent='Check Brevo delivery updates';}
- });
- el('refresh').addEventListener('click',load);load();
+ }
+ el('sync-brevo').addEventListener('click',syncBrevoStatus);
+ el('refresh').addEventListener('click',load);
+ load();syncBrevoStatus();
  })();</script></body></html>`;
 }
 module.exports={opportunityReviewHtml};
