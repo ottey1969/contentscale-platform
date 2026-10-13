@@ -48,7 +48,17 @@ function opportunityReviewHtml(){
       try{
        const draft=await request('/api/network/admin/opportunity/'+p.id+'/suggestion');
        title.value=draft.title;pitch.value=draft.pitch;
-       evidence.textContent='Suggested from existing verified website and Contact Intelligence. Review editorial relevance and overlap before preparing. Publication is not confirmed.';
+       evidence.textContent='Suggestion from Contact Intelligence. Indexed-page research: '+(draft.overlap?.status||'unavailable')+'. Publication is not confirmed.';
+       for(const item of draft.overlap?.sources||[]){
+        const line=document.createElement('div'),a=document.createElement('a');
+        a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';
+        a.textContent=item.title+' (topic overlap '+Math.round(item.similarity*100)+'%)';
+        line.appendChild(a);evidence.appendChild(line);
+       }
+       if(draft.overlap?.review_required) {
+        const warn=document.createElement('strong');warn.textContent=' Content overlap or missing evidence needs editorial review before invitation.';
+        evidence.appendChild(warn);
+       }
       }catch(e){evidence.className='error';evidence.textContent=e.message;}
       finally{suggest.disabled=false;suggest.textContent='Regenerate suggestion';}
     });
