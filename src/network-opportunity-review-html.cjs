@@ -4,7 +4,7 @@ function opportunityReviewHtml(){
  body{background:#f5f7fa;color:#162b40;font:16px/1.55 system-ui;margin:0;padding:25px}main{max-width:930px;margin:auto}header{display:flex;justify-content:space-between;align-items:center}h1{font-size:28px}article{border:1px solid #dbe3ec;border-radius:12px;padding:22px;background:#fff;margin:16px 0}label{display:block;margin:12px 0 5px;font-weight:600}input,textarea{font:inherit;box-sizing:border-box;width:100%;padding:10px;border:1px solid #9aacc2;border-radius:8px}button{font:inherit;background:#16783d;color:white;border:0;border-radius:8px;padding:10px 17px;cursor:pointer}button:disabled{opacity:.5;cursor:wait}.muted{color:#52677d}.error{color:#971b26}.ok{color:#116133}.row{display:flex;gap:14px;flex-wrap:wrap}small{color:#52677d}
  </style></head><body><main><header><h1>Network · Opportunity pilot</h1><span>Admin review</span></header>
  <p>Review five existing prospects. Prepare a specific content opportunity. No invitation is sent automatically and no business is added to public Network.</p>
- <button id="refresh">Load 5 prospects</button><p id="status" role="status" aria-live="polite"></p><section id="items"></section></main>
+ <button id="refresh">Load 5 prospects</button> <button id="sync-brevo" type="button">Check Brevo delivery updates</button><p id="status" role="status" aria-live="polite"></p><section id="items"></section></main>
  <script>(function(){
  'use strict';
  const el=id=>document.getElementById(id),status=el('status'),items=el('items');
@@ -140,6 +140,15 @@ function opportunityReviewHtml(){
    }
   }catch(e){message(e.message,true)}finally{el('refresh').disabled=false;}
  }
+ el('sync-brevo').addEventListener('click',async()=>{
+  const button=el('sync-brevo');button.disabled=true;button.textContent='Checking Brevo…';
+  try{
+   const result=await request('/api/network/admin/opportunity-pilot/sync-brevo',{method:'POST'});
+   message('Checked '+result.checked+' messages · '+result.saved+' new events · '+result.failed+' unavailable; then refreshed below.');
+   await load();
+  }catch(e){message(e.message,true)}
+  finally{button.disabled=false;button.textContent='Check Brevo delivery updates';}
+ });
  el('refresh').addEventListener('click',load);load();
  })();</script></body></html>`;
 }
