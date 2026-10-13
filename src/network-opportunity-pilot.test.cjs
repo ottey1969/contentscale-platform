@@ -29,6 +29,8 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert.equal(x.statusCode,403);
  x=await invoke('GET','/api/network/admin/opportunity-pilot',{engineUser:{isAdmin:true}});
  assert.equal(x.body.prospects.length,1);
+ assert(events.some(e=>e.sql.includes('c.network_fit_score>=65') && e.sql.includes('c.website_verified_at IS NOT NULL')));
+ assert(events.some(e=>e.sql.includes('c.suppressed_at IS NULL')));
  x=await invoke('GET','/api/network/admin/opportunity/:id/suggestion',{engineUser:{isAdmin:true},params:{id:'11'}});
  assert.equal(x.statusCode,200);assert.equal(x.body.status,'SUGGESTED_FOR_ADMIN_REVIEW');assert.match(x.body.title,/Content Workflow/);
  const title='Marketing case study on creative agency workflows',pitch='This is a draft opportunity for an independent publisher. Participation and publication require verification and explicit agreement.';
