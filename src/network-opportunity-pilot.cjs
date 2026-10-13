@@ -4,6 +4,8 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 const clean=value=>typeof value==='string'?value.trim():'';
 function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
  if(!app?.get||!app?.post||!pool?.query||!verifyGrowthAdmin)throw Error('NETWORK_OPPORTUNITY_DEPENDENCIES_REQUIRED');
+ const {registerNetworkBrevoEventSync}=require('./network-brevo-event-sync.cjs');
+ registerNetworkBrevoEventSync({app,pool,verifyGrowthAdmin});
  app.get('/network/opportunity-admin',(req,res)=>{
   const {opportunityReviewHtml}=require('./network-opportunity-review-html.cjs');
   res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow');
