@@ -73,6 +73,34 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
     invitation_sent:false,approval_required:true,publication_allowed:false});
   }catch(error){console.error('[network-opportunity-prepare]',{code:error.code||'UNKNOWN',detail:error.constraint||error.column||'DATABASE_WRITE_FAILED'});return res.status(503).json({success:false,error:'PREPARE_FAILED',diagnostic_code:error.code||'DATABASE_WRITE_FAILED'});}
  });
+ // Prospect self-service opt-out is scoped to this invitation and the
+ // central Contact Intelligence suppression list. No account required.
+ app.get('/network/opportunity/:token/unsubscribe',(req,res)=>{
+  const token=clean(req.params.token);
+  if(!/^[a-f0-9]{48}$/.test(token))return res.sendStatus(404);
+  res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow');
+  return res.type('html').send('<!doctype html><html><meta charset="utf-8"><title>Email preferences | ContentScale</title><body style="font:18px system-ui;max-width:640px;margin:60px auto"><h1>Email preferences</h1><p>You can stop content opportunity invitations from ContentScale.</p><form method="POST"><button type="submit">Unsubscribe</button></form></body></html>');
+ });
+ app.post('/network/opportunity/:token/unsubscribe',async(req,res)=>{
+  const token=clean(req.params.token);
+  if(!/^[a-f0-9]{48}$/.test(token))return res.sendStatus(404);
+  try{
+   const lookup=await pool.query(`SELECT c.id,c.email FROM network_directory_businesses n
+    JOIN contact_intelligence c ON c.id=n.contact_intelligence_id
+    WHERE n.metadata->'content_opportunity'->>'token_hash'=$1
+      AND n.source='lead_crawler' LIMIT 1`,[hash(token)]);
+   const c=lookup.rows?.[0];if(!c?.email)return res.sendStatus(404);
+   await pool.query(`INSERT INTO contact_intelligence_suppressions(contact_id,email,source,reason,actor)
+    SELECT $1,$2,'network_opportunity','prospect_opt_out','prospect'
+    WHERE NOT EXISTS(SELECT 1 FROM contact_intelligence_suppressions
+      WHERE lower(email)=lower($2))`,[c.id,c.email]);
+   await pool.query(`UPDATE contact_intelligence SET suppressed_at=COALESCE(suppressed_at,now()),
+     suppression_reason=COALESCE(suppression_reason,'network_opportunity_opt_out')
+     WHERE id=$1`,[c.id]);
+   res.set('Cache-Control','no-store').type('html').send('<!doctype html><html><meta charset="utf-8"><title>Unsubscribed</title><body style="font:18px system-ui;max-width:640px;margin:60px auto">You have been unsubscribed from ContentScale opportunity invitations.</body></html>');
+  }catch(error){console.error('[network-invite-opt-out]',error.code||'UNKNOWN');
+   return res.sendStatus(503);}
+ });
  // Explicit one-by-one admin-approved invitation via existing Brevo account.
  // Never bulk send and never contact suppressed or nonbusiness addresses.
  app.post('/api/network/admin/opportunity/:id/send-invitation',verifyGrowthAdmin,async(req,res)=>{
@@ -117,7 +145,7 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
      to:[{email:record.email}],subject:'A content opportunity for '+record.business_name,
      textContent:'Hello,\\n\\nWe have prepared an editorial content opportunity that may fit '+record.business_name+
       '. Review the proposed topic here: '+url+
-      '\\n\\nThis is a proposal only; publication is not guaranteed. If this is not relevant, you may ignore this message.\\n\\nContentScale'
+      '\\n\\nThis is a proposal only; publication is not guaranteed. If this is not relevant, unsubscribe here: https://app.contentscale.site/network/opportunity/'+token+'/unsubscribe\\n\\nContentScale'
     })});
    confirmedDelivery=response.ok;
    const body=await response.json().catch(()=>({}));
