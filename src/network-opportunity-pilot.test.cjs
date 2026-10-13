@@ -15,6 +15,9 @@ registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin:()=>{}});
 function res(){return {statusCode:200,headers:{},status(n){this.statusCode=n;return this},sendStatus(n){this.statusCode=n;return this},set(a,b){this.headers[a]=b;return this},type(){return this},json(a){this.body=a;return this},send(a){this.body=a;return this}};}
 async function invoke(method,path,req){const x=res();await routes[method+' '+path].at(-1)(req,x);return x;}
 (async()=>{
+ let page=await invoke('GET','/network/opportunity-admin',{});
+ assert.equal(page.statusCode,200);assert.match(page.body,/Network · Opportunity pilot/);
+ assert.match(page.body,/Prepare preview/);assert.equal(page.headers['X-Robots-Tag'],'noindex, nofollow');
  let x=await invoke('GET','/api/network/admin/opportunity-pilot',{engineUser:{isAdmin:false}});
  assert.equal(x.statusCode,403);
  x=await invoke('GET','/api/network/admin/opportunity-pilot',{engineUser:{isAdmin:true}});
