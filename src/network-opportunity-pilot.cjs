@@ -14,6 +14,8 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
   try{
    const results=await pool.query(`SELECT n.id,n.business_name,n.domain,n.status,n.public_visibility,
      n.metadata->'content_opportunity'->>'status' AS opportunity_status,
+     n.metadata->'content_opportunity'->>'publisher_understood_at' AS publisher_understood_at,
+     n.website_check->>'outcome' AS website_check_outcome,
      n.metadata->'content_opportunity'->'email_result'->>'provider_accepted' AS email_provider_accepted,
      n.metadata->'content_opportunity'->'email_result'->>'recorded_at' AS email_accepted_at,
      (SELECT e.event_type FROM brevo_outreach_events e
