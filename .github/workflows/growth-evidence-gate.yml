@@ -39,6 +39,8 @@ on:
       - 'src/network-opportunity-invitation*.cjs'
       - 'src/network-editorial-overlap*.cjs'
       - 'src/network-brevo-event-sync*.cjs'
+      - 'public/lead-crawler.html'
+      - 'tests/lead-crawler-nj-niche.test.cjs'
       - 'src/tracker-growth-execution.cjs'
       - 'src/tracker-growth-wordpress-integration.test.cjs'
       - 'src/growth-tracker-wordpress-identity*.cjs'
