@@ -61,6 +61,22 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
   }catch(error){console.error('[network-opportunity-suggest]',error.code||'UNAVAILABLE');
    return res.status(503).json({success:false,error:'SUGGESTION_UNAVAILABLE'});}
  });
+ app.post('/api/network/admin/opportunity/:id/refresh-preview',verifyGrowthAdmin,async(req,res)=>{
+  if(req.engineUser?.isAdmin!==true)return res.sendStatus(403);
+  const id=Number(req.params.id);
+  if(!Number.isSafeInteger(id)||id<=0)return res.sendStatus(400);
+  const token=randomBytes(24).toString('hex');
+  try{
+   const result=await pool.query(`UPDATE network_directory_businesses
+    SET metadata=jsonb_set(metadata,'{content_opportunity,token_hash}',to_jsonb($2::text)),updated_at=now()
+    WHERE id=$1 AND source='lead_crawler' AND status='unclaimed' AND public_visibility='hidden'
+      AND metadata->'content_opportunity'->>'status'='prepared'
+    RETURNING id,business_name,domain`,[id,hash(token)]);
+   if(!result.rows.length)return res.status(409).json({success:false,error:'ONLY_UNSENT_PREVIEWS_CAN_BE_REFRESHED'});
+   return res.json({success:true,preview_url:'/network/opportunity/'+token,prospect:result.rows[0],invitation_sent:false});
+  }catch(error){console.error('[network-preview-recovery]',error.code||'UNKNOWN');
+   return res.status(503).json({success:false,error:'PREVIEW_RECOVERY_UNAVAILABLE',diagnostic_code:error.code||'UNKNOWN'});}
+ });
  app.post('/api/network/admin/opportunity/:id/prepare',verifyGrowthAdmin,async(req,res)=>{
   if(req.engineUser?.isAdmin!==true)return res.sendStatus(403);
   const id=Number(req.params.id),title=clean(req.body?.title),pitch=clean(req.body?.pitch);

@@ -28,6 +28,26 @@ function opportunityReviewHtml(){
  function addField(card,labelName,kind,placeholder){
   const label=document.createElement('label');label.textContent=labelName;const input=document.createElement(kind);input.placeholder=placeholder;input.required=true;label.appendChild(input);card.appendChild(label);return input;
  }
+ function showActions(target,p,previewPath){
+  const link=new URL(previewPath,location.origin).href;
+  target.textContent='Private preview ready: ';
+  const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Open preview';target.appendChild(a);
+  const copy=document.createElement('button');copy.textContent='Copy preview link';copy.style.margin='0 10px';copy.addEventListener('click',()=>navigator.clipboard.writeText(link));target.appendChild(copy);
+  if(p.contact_status!=='BUSINESS_CONTACT_FOUND'||!p.business_contact_email){
+    const notice=document.createElement('strong');notice.textContent=' No eligible business email; sending unavailable.';target.appendChild(notice);return;
+  }
+  const send=document.createElement('button');send.textContent='Approve & send email';target.appendChild(send);
+  send.addEventListener('click',async()=>{
+   if(!confirm('Send this approved content opportunity to '+p.business_contact_email+'?'))return;
+   send.disabled=true;send.textContent='Sending…';
+   try{
+    await request('/api/network/admin/opportunity/'+p.id+'/send-invitation',{
+     method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({token:link.split('/').pop(),confirm_send:true})});
+    send.textContent='Email accepted by Brevo';target.className='ok';
+   }catch(e){send.textContent='Delivery outcome needs review';target.className='error';target.appendChild(document.createTextNode(' '+e.message));}
+  });
+ }
  async function load(){
   items.replaceChildren();message('Loading…');el('refresh').disabled=true;
   try{
@@ -37,7 +57,21 @@ function opportunityReviewHtml(){
    for(const p of data.prospects){
     const card=document.createElement('article'),h=document.createElement('h2');h.textContent=p.business_name;card.appendChild(h);
     const desc=document.createElement('p');desc.className='muted';desc.textContent=p.domain+' · '+(p.niche||'niche not verified')+' · fit '+(p.network_fit_score??'not assessed')+' · contact: '+(p.contact_status||'NOT_CHECKED')+' · '+(p.opportunity_status||'not prepared');card.appendChild(desc);const contact=document.createElement('p');contact.textContent='Contact: '+(p.business_contact_email||'not available')+' | '+(p.email_matches_site?'domain match':'domain review required');card.appendChild(contact);
-    if(p.opportunity_status){const note=document.createElement('p');note.textContent='Opportunity already prepared. Reuse existing CRM state; no duplicate draft.';card.appendChild(note);items.appendChild(card);continue;}
+    if(p.opportunity_status){
+      const note=document.createElement('p');note.textContent=p.opportunity_status==='prepared'?'Already prepared. Reopen your review and send without drafting again.':'Opportunity state: '+p.opportunity_status;card.appendChild(note);
+      if(p.opportunity_status==='prepared'){
+       const recover=document.createElement('button');recover.textContent='Reopen private preview & email';card.appendChild(recover);
+       const result=document.createElement('p');result.setAttribute('role','status');card.appendChild(result);
+       recover.addEventListener('click',async()=>{
+        recover.disabled=true;recover.textContent='Restoring…';
+        try{
+         const data=await request('/api/network/admin/opportunity/'+p.id+'/refresh-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+         showActions(result,p,data.preview_url);recover.textContent='Preview restored';
+        }catch(e){recover.disabled=false;recover.textContent='Retry preview';result.className='error';result.textContent=e.message;}
+       });
+      }
+      items.appendChild(card);continue;
+    }
     const title=addField(card,'Article title','input','A factual subject relevant to this website (15–150 characters)');
     const pitch=addField(card,'Why it helps and what would be proposed','textarea','Write at least 80 characters based on verified information. Do not claim publication is already secured.');
     pitch.rows=4;
@@ -79,21 +113,7 @@ function opportunityReviewHtml(){
      button.disabled=true;button.textContent='Saving…';result.textContent='';
      try{
       const data=await request('/api/network/admin/opportunity/'+p.id+'/prepare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title.value,pitch:pitch.value})});
-      const link=new URL(data.preview_url,location.origin).href;result.textContent='Prepared. Preview: ';
-      const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Open private preview';result.appendChild(a);
-      const copy=document.createElement('button');copy.textContent='Copy invitation link';copy.style.marginLeft='12px';copy.addEventListener('click',()=>navigator.clipboard.writeText(link));result.appendChild(copy);
-      const send=document.createElement('button');send.textContent='Approve & send email';send.style.marginLeft='12px';send.type='button';
-      result.appendChild(send);
-      send.addEventListener('click',async()=>{
-       if(!confirm('Send this reviewed content opportunity by email to the verified business contact? Only one email will be sent.'))return;
-       send.disabled=true;send.textContent='Sending…';
-       try{
-        const sent=await request('/api/network/admin/opportunity/'+p.id+'/send-invitation',{
-         method:'POST',headers:{'Content-Type':'application/json'},
-         body:JSON.stringify({token:link.split('/').pop(),confirm_send:true})});
-        send.textContent='Email accepted by provider';result.className='ok';
-       }catch(e){send.textContent='Review delivery result';result.className='error';result.appendChild(document.createTextNode(' '+e.message));}
-      });
+      showActions(result,p,data.preview_url);
       button.textContent='Prepared';title.disabled=true;pitch.disabled=true;
      }catch(e){result.className='error';result.textContent=e.message;button.disabled=false;button.textContent='Prepare preview (no email)';}
     });items.appendChild(card);
