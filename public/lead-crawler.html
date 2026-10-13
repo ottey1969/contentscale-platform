@@ -1338,6 +1338,7 @@
                <div class="field"><label>City</label><input type="text" id="city" placeholder="e.g. Amsterdam" /></div>
                <div class="field"><label>State / region (optional)</label><select id="state" aria-label="State or region"><option value="">City only / no state</option><option value="New Jersey">New Jersey (NJ)</option></select></div>
                <div class="field"><label>Country</label><input type="text" id="country" placeholder="e.g. USA" /></div>
+               <button type="button" class="crawl-btn" style="background:var(--surface);border:1px solid var(--border);color:var(--ink)" onclick="document.getElementById('country').value='USA';document.getElementById('state').value='New Jersey';document.getElementById('city').value='';toast('Target set to New Jersey, USA')">NJ · USA</button>
                <button class="crawl-btn" id="crawlBtn" onclick="startCrawl()">FIND LEADS →</button>
                <button class="stop-btn" id="stopBtn" onclick="stopCrawl()">■ STOP</button>
                <button type="button" id="importBtn" onclick="triggerImport()" style="background:var(--surface);color:var(--muted);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;padding:0 20px;border-radius:6px;cursor:pointer;height:52px;">&#8593; Import</button>
