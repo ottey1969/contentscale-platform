@@ -11,7 +11,7 @@ const pool={query:async(sql,args)=>{
  if(sql.includes('SELECT n.id,n.business_name,n.domain,n.metadata')&&sql.includes('email_suppressed')){
   return {rows:[{id:11,business_name:'Paperflamesmedia',domain:'paperflames.co',opportunity:{status:'prepared',token_hash:tokenHash},email:'hello@paperflames.co',email_type:'business',suppressed_at:null,email_suppressed:suppressed}]};
  }
- if(sql.includes('SET metadata=jsonb_set(metadata')&&sql.includes("'sending'")){claimed=true;return {rows:[{id:11}]};}
+ if(sql.includes('SET metadata=jsonb_set(metadata')&&sql.includes('sending')){claimed=true;return {rows:[{id:11}]};}
  if(sql.includes('SET metadata=jsonb_set(jsonb_set'))return {rows:[{id:11}]};
  if(sql.includes('SELECT c.id,c.email'))return {rows:[{id:1098473,email:'hello@paperflames.co'}]};
  if(sql.includes('contact_intelligence_suppressions')||sql.includes('UPDATE contact_intelligence SET'))return {rows:[]};
