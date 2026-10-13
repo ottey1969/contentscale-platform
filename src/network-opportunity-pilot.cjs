@@ -32,9 +32,10 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
      JOIN contact_intelligence c ON c.id=n.contact_intelligence_id
      WHERE n.source='lead_crawler' AND n.public_visibility='hidden'
        AND n.status='unclaimed'
-       AND ((c.network_fit_score>=65 AND c.website_verified_at IS NOT NULL AND c.suppressed_at IS NULL
-             AND lower(coalesce(c.niche,'')) NOT IN ('vape','vaping','nicotine','tobacco'))
-        OR n.metadata->'content_opportunity'->>'status' IN ('invited','interested','prepared'))
+       AND n.metadata->'content_opportunity'->>'status' IN ('invited','interested','prepared')
+       -- Historical outreach remains reviewable, but never suggest fresh
+       -- Network publishers from the imported Instagram/Contact Intelligence pool.
+       -- New NJ/bucket candidates must enter via a separately approved source.
      ORDER BY CASE n.metadata->'content_opportunity'->>'status'
        WHEN 'interested' THEN 0 WHEN 'invited' THEN 1 WHEN 'prepared' THEN 2 ELSE 3 END,
        c.network_fit_score DESC,n.id LIMIT 5`);
