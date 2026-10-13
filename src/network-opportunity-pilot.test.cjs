@@ -51,8 +51,8 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  const token=x.body.preview_url.split('/').pop();assert.match(token,/^[a-f0-9]{48}$/);
  assert(!events.some(e=>e.sql.includes('DELETE')||e.sql.includes('public_visibility=\'listed\'')));
  x=await invoke('GET','/network/opportunity/:token',{params:{token}});
- assert.equal(x.statusCode,200);assert.match(x.body,/I'm interested/);assert.equal(x.headers['X-Robots-Tag'],'noindex, nofollow');
+ assert.equal(x.statusCode,200);assert.match(x.body,/Yes, I am interested in ContentScale Network/);assert.match(x.body,/No commitment or automatic membership/);assert.equal(x.headers['X-Robots-Tag'],'noindex, nofollow');
  x=await invoke('POST','/network/opportunity/:token/interested',{params:{token}});
- assert.equal(x.statusCode,200);assert.match(x.body,/Your interest has been recorded/);
+ assert.equal(x.statusCode,200);assert.match(x.body,/your interest is recorded/i);assert.match(x.body,/What happens next/);
  console.log('PASS: CRM candidate selection, admin review, private preview and opt-in; no mail, no public listing');
 })().catch(e=>{console.error(e);process.exitCode=1});
