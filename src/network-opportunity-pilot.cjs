@@ -42,7 +42,7 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
    return res.json({success:true,status:'prepared',prospect:result.rows[0],
     preview_url:'/network/opportunity/'+token,
     invitation_sent:false,approval_required:true,publication_allowed:false});
-  }catch{return res.status(503).json({success:false,error:'PREPARE_FAILED'});}
+  }catch(error){console.error('[network-opportunity-prepare]',{code:error.code||'UNKNOWN',detail:error.constraint||error.column||'DATABASE_WRITE_FAILED'});return res.status(503).json({success:false,error:'PREPARE_FAILED',diagnostic_code:error.code||'DATABASE_WRITE_FAILED'});}
  });
  // No email dispatch: administrator explicitly reviews and sends preview link separately.
  app.get('/network/opportunity/:token',async(req,res)=>{
