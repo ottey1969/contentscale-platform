@@ -107,7 +107,8 @@ function opportunityReviewHtml(){
      const blog=document.createElement('a');blog.href='https://www.mixcloud.com/blog/';blog.target='_blank';blog.rel='noopener noreferrer';blog.textContent=' Review Mixcloud blog';
      context.appendChild(blog);card.appendChild(context);
     }
-    const button=document.createElement('button');button.textContent='Prepare preview (no email)';card.appendChild(button);
+    const step=document.createElement('p');step.className='muted';step.textContent='Next: generate or review the topic, then prepare the preview. After that, Approve & send email becomes available for an eligible business contact.';card.appendChild(step);
+    const button=document.createElement('button');button.textContent='Prepare preview → then approve & send email';card.appendChild(button);
     const result=document.createElement('p');result.setAttribute('role','status');card.appendChild(result);
     button.addEventListener('click',async()=>{
      button.disabled=true;button.textContent='Saving…';result.textContent='';
@@ -115,7 +116,7 @@ function opportunityReviewHtml(){
       const data=await request('/api/network/admin/opportunity/'+p.id+'/prepare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title.value,pitch:pitch.value})});
       showActions(result,p,data.preview_url);
       button.textContent='Prepared';title.disabled=true;pitch.disabled=true;
-     }catch(e){result.className='error';result.textContent=e.message;button.disabled=false;button.textContent='Prepare preview (no email)';}
+     }catch(e){result.className='error';result.textContent=e.message;button.disabled=false;button.textContent='Prepare preview → then approve & send email';}
     });items.appendChild(card);
    }
   }catch(e){message(e.message,true)}finally{el('refresh').disabled=false;}
