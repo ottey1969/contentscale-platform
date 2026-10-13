@@ -20,6 +20,8 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
      JOIN contact_intelligence c ON c.id=n.contact_intelligence_id
      WHERE n.source='lead_crawler' AND n.public_visibility='hidden'
        AND n.status='unclaimed' AND c.network_fit_score>=65
+       AND c.website_verified_at IS NOT NULL AND c.suppressed_at IS NULL
+       AND lower(coalesce(c.niche,'')) NOT IN ('vape','vaping','nicotine','tobacco')
      ORDER BY c.network_fit_score DESC,n.id LIMIT 5`);
    res.set('Cache-Control','no-store').json({success:true,prospects:results.rows,
     next_action:'REVIEW_AND_PREPARE',automatic_sending:false,public_listed:false});
@@ -34,7 +36,8 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
      c.niche,c.bio,c.website_verified_at,c.network_fit_score
      FROM network_directory_businesses n JOIN contact_intelligence c ON c.id=n.contact_intelligence_id
      WHERE n.id=$1 AND n.source='lead_crawler' AND n.status='unclaimed'
-       AND n.public_visibility='hidden' AND c.website_verified_at IS NOT NULL`,[id]);
+       AND n.public_visibility='hidden' AND c.website_verified_at IS NOT NULL
+       AND c.network_fit_score>=65 AND c.suppressed_at IS NULL`,[id]);
    if(found.rows.length!==1)return res.status(409).json({success:false,error:'VERIFIED_WEBSITE_REQUIRED'});
    const a=found.rows[0],niche=String(a.niche||'other').toLowerCase(),bio=clean(a.bio||'');
    const topics={
