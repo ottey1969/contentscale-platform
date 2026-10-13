@@ -86,8 +86,8 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
    const token=randomBytes(24).toString('hex'),tokenHash=hash(token);
    const result=await pool.query(`UPDATE network_directory_businesses
      SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{content_opportunity}',
-       jsonb_build_object('status','prepared','title',$2,'pitch',$3,
-       'token_hash',$4,'prepared_at',now(),'approved_to_send',false)),updated_at=now()
+       jsonb_build_object('status','prepared','title',$2::text,'pitch',$3::text,
+       'token_hash',$4::text,'prepared_at',now(),'approved_to_send',false)),updated_at=now()
      WHERE id=$1 AND source='lead_crawler' AND status='unclaimed' AND public_visibility='hidden'
        AND (metadata->'content_opportunity' IS NULL)
      RETURNING id,business_name,domain`,[id,title,pitch,tokenHash]);

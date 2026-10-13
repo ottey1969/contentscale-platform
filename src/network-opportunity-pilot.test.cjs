@@ -42,6 +42,7 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  x=await invoke('POST','/api/network/admin/opportunity/:id/prepare',{engineUser:{isAdmin:true},params:{id:'11'},body:{title:'short',pitch}});
  assert.equal(x.statusCode,400);
  x=await invoke('POST','/api/network/admin/opportunity/:id/prepare',{engineUser:{isAdmin:true},params:{id:'11'},body:{title,pitch}});
+ assert(events.some(e=>e.sql.includes("'title',$2::text,'pitch',$3::text") && e.sql.includes("'token_hash',$4::text")));
  assert.equal(x.body.status,'prepared');assert.equal(x.body.invitation_sent,false);
  let restored=await invoke('POST','/api/network/admin/opportunity/:id/refresh-preview',{engineUser:{isAdmin:true},params:{id:'11'}});
  assert.equal(restored.statusCode,200);assert.equal(restored.body.preview_url.split('/').length,4);assert.equal(restored.body.preview_url.split('/').pop().length,48);
