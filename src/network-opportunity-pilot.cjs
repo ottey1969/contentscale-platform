@@ -4,7 +4,11 @@ const hash=value=>createHash('sha256').update(value).digest('hex');
 const clean=value=>typeof value==='string'?value.trim():'';
 function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
  if(!app?.get||!app?.post||!pool?.query||!verifyGrowthAdmin)throw Error('NETWORK_OPPORTUNITY_DEPENDENCIES_REQUIRED');
- const publicFields='id,business_name,domain,source,status,public_visibility,metadata,verified_at';
+ app.get('/network/opportunity-admin',(req,res)=>{
+  const {opportunityReviewHtml}=require('./network-opportunity-review-html.cjs');
+  res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow');
+  return res.type('html').send(opportunityReviewHtml());
+ });
  app.get('/api/network/admin/opportunity-pilot',verifyGrowthAdmin,async(req,res)=>{
   if(req.engineUser?.isAdmin!==true)return res.sendStatus(403);
   try{
