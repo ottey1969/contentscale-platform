@@ -31,10 +31,13 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
      FROM network_directory_businesses n
      JOIN contact_intelligence c ON c.id=n.contact_intelligence_id
      WHERE n.source='lead_crawler' AND n.public_visibility='hidden'
-       AND n.status='unclaimed' AND c.network_fit_score>=65
-       AND c.website_verified_at IS NOT NULL AND c.suppressed_at IS NULL
-       AND lower(coalesce(c.niche,'')) NOT IN ('vape','vaping','nicotine','tobacco')
-     ORDER BY c.network_fit_score DESC,n.id LIMIT 5`);
+       AND n.status='unclaimed'
+       AND ((c.network_fit_score>=65 AND c.website_verified_at IS NOT NULL AND c.suppressed_at IS NULL
+             AND lower(coalesce(c.niche,'')) NOT IN ('vape','vaping','nicotine','tobacco'))
+        OR n.metadata->'content_opportunity'->>'status' IN ('invited','interested','prepared'))
+     ORDER BY CASE n.metadata->'content_opportunity'->>'status'
+       WHEN 'interested' THEN 0 WHEN 'invited' THEN 1 WHEN 'prepared' THEN 2 ELSE 3 END,
+       c.network_fit_score DESC,n.id LIMIT 5`);
    res.set('Cache-Control','no-store').json({success:true,prospects:results.rows,
     next_action:'REVIEW_AND_PREPARE',automatic_sending:false,public_listed:false});
   }catch{return res.status(503).json({success:false,error:'OPPORTUNITY_PILOT_UNAVAILABLE'});}
