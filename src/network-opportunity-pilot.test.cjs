@@ -11,7 +11,7 @@ const pool={query:async(sql,args)=>{
  if(sql.includes('SET metadata=jsonb_set')&&sql.includes('jsonb_build_object'))return {rows:[{id:11,business_name:'Paperflamesmedia',domain:'paperflames.co'}]};
  if(sql.includes('SELECT business_name,domain'))return {rows:[{business_name:'Paperflamesmedia',domain:'paperflames.co',opportunity:{status:'prepared',title:'Marketing case study on creative agency workflows',pitch:'This is a draft opportunity for an independent publisher. Participation and publication require verification and explicit agreement.'}}]};
  if(sql.includes("SELECT id FROM network_directory_businesses")&&sql.includes("'interested'"))return {rows:[{id:11}]};
- if(sql.includes('UPDATE network_directory_businesses SET')){if(sql.includes("'interested'")){interestSubmissions++;return {rows:interestSubmissions===1?[{id:11}]:[]};}return {rows:[{id:11}]};}
+ if(sql.includes('UPDATE network_directory_businesses SET')){if(sql.includes('{content_opportunity,status}')&&sql.includes('publisher_understood_at')){interestSubmissions++;return {rows:interestSubmissions===1?[{id:11}]:[]};}return {rows:[{id:11}]};}
  throw Error('Unexpected query: '+sql);
 }};
 registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin:()=>{}});
