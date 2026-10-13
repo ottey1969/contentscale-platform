@@ -24,6 +24,35 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
     next_action:'REVIEW_AND_PREPARE',automatic_sending:false,public_listed:false});
   }catch{return res.status(503).json({success:false,error:'OPPORTUNITY_PILOT_UNAVAILABLE'});}
  });
+ app.get('/api/network/admin/opportunity/:id/suggestion',verifyGrowthAdmin,async(req,res)=>{
+  if(req.engineUser?.isAdmin!==true)return res.sendStatus(403);
+  const id=Number(req.params.id);
+  if(!Number.isSafeInteger(id)||id<=0)return res.sendStatus(400);
+  try{
+   const found=await pool.query(`SELECT n.id,n.business_name,n.domain,
+     c.niche,c.bio,c.website_verified_at,c.network_fit_score
+     FROM network_directory_businesses n JOIN contact_intelligence c ON c.id=n.contact_intelligence_id
+     WHERE n.id=$1 AND n.source='lead_crawler' AND n.status='unclaimed'
+       AND n.public_visibility='hidden' AND c.website_verified_at IS NOT NULL`,[id]);
+   if(found.rows.length!==1)return res.status(409).json({success:false,error:'VERIFIED_WEBSITE_REQUIRED'});
+   const a=found.rows[0],niche=String(a.niche||'other').toLowerCase(),bio=clean(a.bio||'');
+   const topics={
+    marketing:['How Small Creative Teams Can Build a Sustainable Content Workflow','An editorial perspective on planning, producing and maintaining quality content for smaller teams.'],
+    music:['How Independent Music Creators Can Build a More Loyal Audience','An editorial perspective on helping DJs and independent music creators connect with listeners.'],
+    other:['Building an Engaged Community Around Independent Creative Work','An editorial proposal on audience relationships, community participation and sustainable creative publishing.'],
+    retail:['How Independent Shops Can Explain Their Expertise Through Useful Content','An editorial proposal on practical product education and building trust with useful customer guides.']
+   };
+   const isMixcloud=String(a.domain).toLowerCase()==='mixcloud.com';
+   const t=isMixcloud?['How Independent DJs Can Build a Loyal Audience Beyond Social Media','An article exploring how independent DJs and music creators can build relationships with listeners through consistent shows, community engagement and owned communication channels.']:topics[niche]||topics.other;
+   // Always label as a research lead, not verified competitive intelligence or approved publication.
+   return res.json({success:true,title:t[0],pitch:t[1]+
+    ' This proposed contribution would be reviewed for relevance, factual accuracy, topical overlap and editorial fit before any full article is written. No publication is promised.',
+    evidence:{source:'contact_intelligence',website_checked:true,niche,public_bio:bio.slice(0,350),
+      claimed_publisher_acceptance:false,competitive_gap_verified:false},
+    status:'SUGGESTED_FOR_ADMIN_REVIEW'});
+  }catch(error){console.error('[network-opportunity-suggest]',error.code||'UNAVAILABLE');
+   return res.status(503).json({success:false,error:'SUGGESTION_UNAVAILABLE'});}
+ });
  app.post('/api/network/admin/opportunity/:id/prepare',verifyGrowthAdmin,async(req,res)=>{
   if(req.engineUser?.isAdmin!==true)return res.sendStatus(403);
   const id=Number(req.params.id),title=clean(req.body?.title),pitch=clean(req.body?.pitch);
