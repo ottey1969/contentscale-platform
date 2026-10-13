@@ -7,6 +7,7 @@ const pool={query:async(sql,args)=>{
  events.push({sql,args});
  if(sql.includes('FROM network_directory_businesses n')&&sql.includes('c.bio'))return {rows:[{id:11,business_name:'Paperflamesmedia',domain:'paperflames.co',niche:'marketing',bio:'Marketing and social media services',website_verified_at:'2026-10-08',network_fit_score:90}]};
  if(sql.includes('FROM network_directory_businesses n'))return {rows:[{id:11,domain:'paperflames.co',website_checked:true,network_fit_score:90}]};
+ if(sql.includes('token_hash')&&sql.includes('status\'=\'prepared')&&sql.includes('UPDATE network_directory_businesses'))return {rows:[{id:11,business_name:'Paperflamesmedia',domain:'paperflames.co'}]};
  if(sql.includes('SET metadata=jsonb_set')&&sql.includes('jsonb_build_object'))return {rows:[{id:11,business_name:'Paperflamesmedia',domain:'paperflames.co'}]};
  if(sql.includes('SELECT business_name,domain'))return {rows:[{business_name:'Paperflamesmedia',domain:'paperflames.co',opportunity:{status:'prepared',title:'Marketing case study on creative agency workflows',pitch:'This is a draft opportunity for an independent publisher. Participation and publication require verification and explicit agreement.'}}]};
  if(sql.includes('UPDATE network_directory_businesses SET'))return {rows:[{id:11}]};
@@ -21,6 +22,7 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert.match(page.body,/Prepare preview/);
  assert.match(page.body,/Generate suggested opportunity/);
  assert.match(page.body,/Approve & send email/);
+ assert.match(page.body,/Reopen private preview/);
  assert.match(page.body,/contact_status/);
  assert.match(page.body,/diagnostic_code/);
  assert.match(page.body,/How Independent DJs Can Build a Loyal Audience/);
@@ -40,6 +42,8 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert.equal(x.statusCode,400);
  x=await invoke('POST','/api/network/admin/opportunity/:id/prepare',{engineUser:{isAdmin:true},params:{id:'11'},body:{title,pitch}});
  assert.equal(x.body.status,'prepared');assert.equal(x.body.invitation_sent,false);
+ let restored=await invoke('POST','/api/network/admin/opportunity/:id/refresh-preview',{engineUser:{isAdmin:true},params:{id:'11'}});
+ assert.equal(restored.statusCode,200);assert.match(restored.body.preview_url,/^\\/network\\/opportunity\\/[a-f0-9]{48}$/);
  const token=x.body.preview_url.split('/').pop();assert.match(token,/^[a-f0-9]{48}$/);
  assert(!events.some(e=>e.sql.includes('DELETE')||e.sql.includes('public_visibility=\'listed\'')));
  x=await invoke('GET','/network/opportunity/:token',{params:{token}});
