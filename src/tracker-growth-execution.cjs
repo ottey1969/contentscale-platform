@@ -18,6 +18,8 @@ function registerGrowthExecution(app,pool){
   registerGrowthWordPressApprovalRoute({app,pool,verifyGrowthAdmin});
   const {registerGrowthWordPressConnectionRoute}=require('./growth-wordpress-connection-route.cjs');
   registerGrowthWordPressConnectionRoute({app,pool,verifyGrowthAdmin});
+  const {registerNetworkOpportunityPilot}=require('./network-opportunity-pilot.cjs');
+  registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin});
   const {registerGrowthGscPageVerification}=require('./growth-gsc-page-verification.cjs');
   registerGrowthGscPageVerification({app,pool,verifyGrowthAdmin});
  } catch(error) {
