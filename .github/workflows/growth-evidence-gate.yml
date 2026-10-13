@@ -38,6 +38,7 @@ on:
       - 'src/network-opportunity-pilot*.cjs'
       - 'src/network-opportunity-invitation*.cjs'
       - 'src/network-editorial-overlap*.cjs'
+      - 'src/network-brevo-event-sync*.cjs'
       - 'src/tracker-growth-execution.cjs'
       - 'src/tracker-growth-wordpress-integration.test.cjs'
       - 'src/growth-tracker-wordpress-identity*.cjs'
@@ -73,6 +74,8 @@ jobs:
         run: node src/growth-gsc-page-verification.test.cjs
       - name: Network CRM opportunity invitation pilot
         run: node src/network-opportunity-pilot.test.cjs
+      - name: Brevo accepted-versus-delivery evidence reconciliation
+        run: node src/network-brevo-event-sync.test.cjs
       - name: Verified indexed editorial research and overlap
         run: node src/network-editorial-overlap.test.cjs
       - name: Approved Brevo invitation and unsubscribe safety
