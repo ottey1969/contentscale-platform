@@ -35,6 +35,7 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert.equal(x.statusCode,403);
  x=await invoke('GET','/api/network/admin/opportunity-pilot',{engineUser:{isAdmin:true}});
  assert.equal(x.body.prospects.length,1);
+ assert(events.some(e=>e.sql.includes("WHEN 'interested' THEN 0") && e.sql.includes("'invited','interested','prepared'")));
  assert(events.some(e=>e.sql.includes('publisher_understood_at')&&e.sql.includes('website_check_outcome')));
  assert(events.some(e=>e.sql.includes('brevo_outreach_events') && e.sql.includes('email_last_event')));
  assert(events.some(e=>e.sql.includes('c.network_fit_score>=65') && e.sql.includes('c.website_verified_at IS NOT NULL')));
