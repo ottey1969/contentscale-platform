@@ -73,6 +73,75 @@ function registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin}={}){
     invitation_sent:false,approval_required:true,publication_allowed:false});
   }catch(error){console.error('[network-opportunity-prepare]',{code:error.code||'UNKNOWN',detail:error.constraint||error.column||'DATABASE_WRITE_FAILED'});return res.status(503).json({success:false,error:'PREPARE_FAILED',diagnostic_code:error.code||'DATABASE_WRITE_FAILED'});}
  });
+ // Explicit one-by-one admin-approved invitation via existing Brevo account.
+ // Never bulk send and never contact suppressed or nonbusiness addresses.
+ app.post('/api/network/admin/opportunity/:id/send-invitation',verifyGrowthAdmin,async(req,res)=>{
+  if(req.engineUser?.isAdmin!==true)return res.sendStatus(403);
+  const id=Number(req.params.id),token=clean(req.body?.token),confirmed=req.body?.confirm_send===true;
+  if(!Number.isSafeInteger(id)||id<=0||!/^[a-f0-9]{48}$/.test(token)||!confirmed)
+   return res.status(400).json({success:false,error:'EXPLICIT_INVITATION_CONFIRMATION_REQUIRED'});
+  const fail=(status,error)=>res.status(status).json({success:false,error});
+  let record;
+  try{
+   const check=await pool.query(`SELECT n.id,n.business_name,n.domain,n.metadata->'content_opportunity' AS opportunity,
+    c.email,c.email_type,c.suppressed_at,c.source_consent,
+    EXISTS(SELECT 1 FROM contact_intelligence_suppressions s
+      WHERE lower(s.email)=lower(c.email)) AS email_suppressed
+    FROM network_directory_businesses n JOIN contact_intelligence c ON c.id=n.contact_intelligence_id
+    WHERE n.id=$1 AND n.source='lead_crawler' AND n.status='unclaimed'
+      AND n.public_visibility='hidden' LIMIT 1`,[id]);
+   record=check.rows?.[0];
+   if(!record||record.opportunity?.status!=='prepared'||record.opportunity?.token_hash!==hash(token))
+    return fail(409,'PREPARED_PRIVATE_OPPORTUNITY_REQUIRED');
+   if(!record.email||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(record.email)||
+       record.email_type!=='business'||record.suppressed_at||record.email_suppressed)
+    return fail(409,'VERIFIED_BUSINESS_EMAIL_AND_SUPPRESSION_CHECK_REQUIRED');
+   if(!process.env.BREVO_API_KEY||!process.env.FROM_EMAIL)return fail(503,'EMAIL_PROVIDER_NOT_CONFIGURED');
+   const claim=await pool.query(`UPDATE network_directory_businesses
+    SET metadata=jsonb_set(metadata,'{content_opportunity,status}','"sending"'::jsonb),updated_at=now()
+    WHERE id=$1 AND metadata->'content_opportunity'->>'token_hash'=$2
+      AND metadata->'content_opportunity'->>'status'='prepared'
+      AND source='lead_crawler' AND status='unclaimed' AND public_visibility='hidden'
+    RETURNING id`,[id,hash(token)]);
+   if(claim.rows.length!==1)return fail(409,'INVITATION_ALREADY_STARTED');
+  }catch(error){console.error('[network-invite-check]',error.code||'UNKNOWN');
+   return fail(503,'INVITATION_CHECK_UNAVAILABLE');}
+  const url='https://app.contentscale.site/network/opportunity/'+token;
+  let confirmedDelivery=false;
+  try{
+   const response=await fetch('https://api.brevo.com/v3/smtp/email',{method:'POST',
+    redirect:'error',signal:AbortSignal.timeout(12000),
+    headers:{'api-key':process.env.BREVO_API_KEY,'content-type':'application/json','accept':'application/json'},
+    body:JSON.stringify({
+     sender:{email:process.env.FROM_EMAIL,name:'ContentScale'},
+     to:[{email:record.email}],subject:'A content opportunity for '+record.business_name,
+     textContent:'Hello,\\n\\nWe have prepared an editorial content opportunity that may fit '+record.business_name+
+      '. Review the proposed topic here: '+url+
+      '\\n\\nThis is a proposal only; publication is not guaranteed. If this is not relevant, you may ignore this message.\\n\\nContentScale'
+    })});
+   confirmedDelivery=response.ok;
+   const body=await response.json().catch(()=>({}));
+   const nextState=confirmedDelivery?'invited':'send_unknown';
+   await pool.query(`UPDATE network_directory_businesses
+      SET metadata=jsonb_set(jsonb_set(metadata,'{content_opportunity,status}',to_jsonb($3::text)),
+       '{content_opportunity,email_result}',jsonb_build_object('provider_accepted',$4::boolean,'message_id',$5::text,'recorded_at',now())),
+       updated_at=now()
+      WHERE id=$1 AND metadata->'content_opportunity'->>'token_hash'=$2
+        AND metadata->'content_opportunity'->>'status'='sending'`,
+       [id,hash(token),nextState,confirmedDelivery,String(body.messageId||'')]);
+   if(!confirmedDelivery)return fail(502,'EMAIL_PROVIDER_REJECTED_CHECK_BEFORE_RETRY');
+   return res.json({success:true,status:'invited',provider_accepted:true,
+    message_id:String(body.messageId||''),recipient_domain:record.email.split('@')[1]});
+  }catch(error){
+   console.error('[network-opportunity-invite]',error.name||'UNKNOWN');
+   // Unknown delivery outcome is never blindly retried: prevents duplicate cold outreach.
+   try{await pool.query(`UPDATE network_directory_businesses
+     SET metadata=jsonb_set(metadata,'{content_opportunity,status}','"send_unknown"'::jsonb),updated_at=now()
+     WHERE id=$1 AND metadata->'content_opportunity'->>'token_hash'=$2
+       AND metadata->'content_opportunity'->>'status'='sending'`,[id,hash(token)]);}catch{}
+   return fail(503,'EMAIL_RESULT_UNKNOWN_REVIEW_BEFORE_RETRY');
+  }
+ });
  // No email dispatch: administrator explicitly reviews and sends preview link separately.
  app.get('/network/opportunity/:token',async(req,res)=>{
   const token=clean(req.params.token);
