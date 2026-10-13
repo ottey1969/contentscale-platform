@@ -57,6 +57,18 @@ function opportunityReviewHtml(){
    for(const p of data.prospects){
     const card=document.createElement('article'),h=document.createElement('h2');h.textContent=p.business_name;card.appendChild(h);
     const desc=document.createElement('p');desc.className='muted';desc.textContent=p.domain+' · '+(p.niche||'niche not verified')+' · fit '+(p.network_fit_score??'not assessed')+' · contact: '+(p.contact_status||'NOT_CHECKED')+' · '+(p.opportunity_status||'not prepared');card.appendChild(desc);const contact=document.createElement('p');contact.textContent='Contact: '+(p.business_contact_email||'not available')+' | '+(p.email_matches_site?'domain match':'domain review required');card.appendChild(contact);
+    if(p.opportunity_status==='interested'){
+      const action=document.createElement('p');action.className='ok';
+      action.textContent='Publisher interest recorded'+(p.publisher_understood_at?' · own-site publishing understood':' · consent needs review')+'. Next action: verify identity and publisher website in the existing company journey.';
+      card.appendChild(action);
+    }
+    if(p.opportunity_status==='interested'||p.opportunity_status==='invited'){
+      const jump=document.createElement('a');
+      jump.href='/network/company/'+p.id+'/admin';
+      jump.textContent='Open company journey →';
+      jump.style.display='inline-block';jump.style.marginBottom='14px';
+      card.appendChild(jump);
+    }
     if(p.opportunity_status==='invited'){
       const state=document.createElement('p');state.setAttribute('role','status');
       const ev=String(p.email_last_event||'').toLowerCase();
