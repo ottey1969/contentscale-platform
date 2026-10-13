@@ -57,6 +57,13 @@ function opportunityReviewHtml(){
    for(const p of data.prospects){
     const card=document.createElement('article'),h=document.createElement('h2');h.textContent=p.business_name;card.appendChild(h);
     const desc=document.createElement('p');desc.className='muted';desc.textContent=p.domain+' · '+(p.niche||'niche not verified')+' · fit '+(p.network_fit_score??'not assessed')+' · contact: '+(p.contact_status||'NOT_CHECKED')+' · '+(p.opportunity_status||'not prepared');card.appendChild(desc);const contact=document.createElement('p');contact.textContent='Contact: '+(p.business_contact_email||'not available')+' | '+(p.email_matches_site?'domain match':'domain review required');card.appendChild(contact);
+    if(p.opportunity_status==='invited'){
+      const state=document.createElement('p');state.setAttribute('role','status');
+      const ev=String(p.email_last_event||'').toLowerCase();
+      state.textContent='Email: '+(ev==='delivered'?'Delivered (Brevo event)':ev==='opened'?'Opened (Brevo event)':ev==='click'?'Clicked (Brevo event)':['hard_bounce','soft_bounce','blocked','invalid'].includes(ev)?'Delivery problem: '+ev:p.email_provider_accepted==='true'?'Accepted by Brevo; inbox delivery not yet confirmed':'Provider acceptance not confirmed');
+      if(p.email_accepted_at)state.textContent+=' · '+new Date(p.email_accepted_at).toLocaleString();
+      card.appendChild(state);
+    }
     if(p.opportunity_status){
       const note=document.createElement('p');note.textContent=p.opportunity_status==='prepared'?'Already prepared. Reopen your review and send without drafting again.':'Opportunity state: '+p.opportunity_status;card.appendChild(note);
       if(p.opportunity_status==='prepared'){
