@@ -23,7 +23,7 @@ function opportunityReviewHtml(){
  async function request(path,options={}){
   const t=token();if(!t)throw Error('Sign in to the ContentScale administrator dashboard first.');
   const r=await fetch(path,{...options,credentials:'same-origin',cache:'no-store',headers:{'x-admin-key':t,...options.headers}});
-  const data=await r.json();if(!r.ok||!data.success)throw Error(data.error||data.issues?.join(', ')||'Request failed');return data;
+  const data=await r.json();if(!r.ok||!data.success)throw Error((data.error||data.issues?.join(', ')||'Request failed')+(data.diagnostic_code?' (diagnostic '+data.diagnostic_code+')':''));return data;
  }
  function addField(card,labelName,kind,placeholder){
   const label=document.createElement('label');label.textContent=labelName;const input=document.createElement(kind);input.placeholder=placeholder;input.required=true;label.appendChild(input);card.appendChild(label);return input;
