@@ -41,6 +41,16 @@ function opportunityReviewHtml(){
     const title=addField(card,'Article title','input','A factual subject relevant to this website (15–150 characters)');
     const pitch=addField(card,'Why it helps and what would be proposed','textarea','Write at least 80 characters based on verified information. Do not claim publication is already secured.');
     pitch.rows=4;
+    // Verified editorial example: Mixcloud's public blog covers creator advice,
+    // Mixcloud Guides and music culture. Do not invent publication approval.
+    if(String(p.domain||'').toLowerCase()==='mixcloud.com'){
+     title.value='How Independent DJs Can Build a Loyal Audience Beyond Social Media';
+     pitch.value="Mixcloud already publishes practical advice for DJs, radio hosts and independent music creators. This proposed article would explore how independent DJs can build lasting relationships with listeners through consistent shows, community engagement, collaborations and owned communication channels. It would complement Mixcloud's existing creator advice without promising specific growth results. This is an editorial proposal for review, not a confirmed placement.";
+     const context=document.createElement('p');context.className='muted';
+     context.textContent='Verified publisher candidate: Mixcloud Blog publishes creator advice and music culture. Editorial overlap and acceptance require review.';
+     const blog=document.createElement('a');blog.href='https://www.mixcloud.com/blog/';blog.target='_blank';blog.rel='noopener noreferrer';blog.textContent=' Review Mixcloud blog';
+     context.appendChild(blog);card.appendChild(context);
+    }
     const button=document.createElement('button');button.textContent='Prepare preview (no email)';card.appendChild(button);
     const result=document.createElement('p');result.setAttribute('role','status');card.appendChild(result);
     button.addEventListener('click',async()=>{
