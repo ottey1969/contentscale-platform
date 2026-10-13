@@ -41,6 +41,18 @@ function opportunityReviewHtml(){
     const title=addField(card,'Article title','input','A factual subject relevant to this website (15–150 characters)');
     const pitch=addField(card,'Why it helps and what would be proposed','textarea','Write at least 80 characters based on verified information. Do not claim publication is already secured.');
     pitch.rows=4;
+    const suggest=document.createElement('button');suggest.textContent='Generate suggested opportunity';suggest.type='button';suggest.style.margin='8px 12px 12px 0';card.appendChild(suggest);
+    const evidence=document.createElement('p');evidence.className='muted';card.appendChild(evidence);
+    suggest.addEventListener('click',async()=>{
+      suggest.disabled=true;suggest.textContent='Researching existing evidence…';
+      try{
+       const draft=await request('/api/network/admin/opportunity/'+p.id+'/suggestion');
+       title.value=draft.title;pitch.value=draft.pitch;
+       evidence.textContent='Suggested from existing verified website and Contact Intelligence. Review editorial relevance and overlap before preparing. Publication is not confirmed.';
+      }catch(e){evidence.className='error';evidence.textContent=e.message;}
+      finally{suggest.disabled=false;suggest.textContent='Regenerate suggestion';}
+    });
+
     // Verified editorial example: Mixcloud's public blog covers creator advice,
     // Mixcloud Guides and music culture. Do not invent publication approval.
     if(String(p.domain||'').toLowerCase()==='mixcloud.com'){
@@ -60,6 +72,18 @@ function opportunityReviewHtml(){
       const link=new URL(data.preview_url,location.origin).href;result.textContent='Prepared. Preview: ';
       const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener noreferrer';a.textContent='Open private preview';result.appendChild(a);
       const copy=document.createElement('button');copy.textContent='Copy invitation link';copy.style.marginLeft='12px';copy.addEventListener('click',()=>navigator.clipboard.writeText(link));result.appendChild(copy);
+      const send=document.createElement('button');send.textContent='Approve & send email';send.style.marginLeft='12px';send.type='button';
+      result.appendChild(send);
+      send.addEventListener('click',async()=>{
+       if(!confirm('Send this reviewed content opportunity by email to the verified business contact? Only one email will be sent.'))return;
+       send.disabled=true;send.textContent='Sending…';
+       try{
+        const sent=await request('/api/network/admin/opportunity/'+p.id+'/send-invitation',{
+         method:'POST',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify({token:link.split('/').pop(),confirm_send:true})});
+        send.textContent='Email accepted by provider';result.className='ok';
+       }catch(e){send.textContent='Review delivery result';result.className='error';result.appendChild(document.createTextNode(' '+e.message));}
+      });
       button.textContent='Prepared';title.disabled=true;pitch.disabled=true;
      }catch(e){result.className='error';result.textContent=e.message;button.disabled=false;button.textContent='Prepare preview (no email)';}
     });items.appendChild(card);
