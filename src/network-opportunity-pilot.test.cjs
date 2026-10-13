@@ -19,7 +19,7 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  assert.equal(page.statusCode,200);assert.match(page.body,/Network · Opportunity pilot/);
  assert.match(page.body,/Prepare preview/);
  assert.match(page.body,/How Independent DJs Can Build a Loyal Audience/);
- assert.match(page.body,/mixcloud\\.com\\/blog/);assert.equal(page.headers['X-Robots-Tag'],'noindex, nofollow');
+ assert(page.body.includes('mixcloud.com/blog/'));assert.equal(page.headers['X-Robots-Tag'],'noindex, nofollow');
  let x=await invoke('GET','/api/network/admin/opportunity-pilot',{engineUser:{isAdmin:false}});
  assert.equal(x.statusCode,403);
  x=await invoke('GET','/api/network/admin/opportunity-pilot',{engineUser:{isAdmin:true}});
