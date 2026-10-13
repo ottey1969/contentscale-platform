@@ -1,7 +1,7 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {registerNetworkOpportunityPilot}=require('./network-opportunity-pilot.cjs');
-const routes={},events=[];
+const routes={},events=[];let interestSubmissions=0;
 const app={get:(p,...h)=>{routes['GET '+p]=h},post:(p,...h)=>{routes['POST '+p]=h}};
 const pool={query:async(sql,args)=>{
  events.push({sql,args});
@@ -10,7 +10,8 @@ const pool={query:async(sql,args)=>{
  if(sql.includes('token_hash')&&sql.includes('status\'=\'prepared')&&sql.includes('UPDATE network_directory_businesses'))return {rows:[{id:11,business_name:'Paperflamesmedia',domain:'paperflames.co'}]};
  if(sql.includes('SET metadata=jsonb_set')&&sql.includes('jsonb_build_object'))return {rows:[{id:11,business_name:'Paperflamesmedia',domain:'paperflames.co'}]};
  if(sql.includes('SELECT business_name,domain'))return {rows:[{business_name:'Paperflamesmedia',domain:'paperflames.co',opportunity:{status:'prepared',title:'Marketing case study on creative agency workflows',pitch:'This is a draft opportunity for an independent publisher. Participation and publication require verification and explicit agreement.'}}]};
- if(sql.includes('UPDATE network_directory_businesses SET'))return {rows:[{id:11}]};
+ if(sql.includes("SELECT id FROM network_directory_businesses")&&sql.includes("'interested'"))return {rows:[{id:11}]};
+ if(sql.includes('UPDATE network_directory_businesses SET')){if(sql.includes("'interested'")){interestSubmissions++;return {rows:interestSubmissions===1?[{id:11}]:[]};}return {rows:[{id:11}]};}
  throw Error('Unexpected query: '+sql);
 }};
 registerNetworkOpportunityPilot({app,pool,verifyGrowthAdmin:()=>{}});
@@ -59,5 +60,7 @@ async function invoke(method,path,req){const x=res();await routes[method+' '+pat
  x=await invoke('POST','/network/opportunity/:token/interested',{params:{token},body:{}});assert.equal(x.statusCode,400);
  x=await invoke('POST','/network/opportunity/:token/interested',{params:{token},body:{publisher_understood:'yes'}});
  assert.equal(x.statusCode,200);assert.match(x.body,/your interest is recorded/i);assert.match(x.body,/What happens next/);
+ x=await invoke('POST','/network/opportunity/:token/interested',{params:{token},body:{publisher_understood:'yes'}});
+ assert.equal(x.statusCode,200);assert.equal(interestSubmissions,2);
  console.log('PASS: CRM candidate selection, admin review, private preview and opt-in; no mail, no public listing');
 })().catch(e=>{console.error(e);process.exitCode=1});
