@@ -105,16 +105,18 @@ async function discoverCompanyContact(website,options={}){
     const address=raw.toLowerCase(),mailDomain=address.split('@')[1],local=address.split('@')[0];
     if(/^(no-?reply|donotreply|bounce|mailer-daemon)$/i.test(local)||
        /\.(?:png|jpe?g|webp|svg|gif|css|js)$/i.test(address)||
-       /^(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com|example\.com|example\.org)$/i.test(mailDomain))continue;
+       /^(example\.com|example\.org)$/i.test(mailDomain))continue;
     const same=mailDomain===host||mailDomain===websiteHost||host.endsWith('.'+mailDomain);
+    const freemail=/^(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com|aol\.com|icloud\.com)$/i.test(mailDomain);
     if(!results.has(address))results.set(address,{email:address,source_url:source,
-       email_domain_relationship:same?'same_domain':'publicly_listed_other_business_domain'});
+       contact_review_required:freemail,
+       email_domain_relationship:same?'same_domain':freemail?'public_mailbox_review_required':'publicly_listed_other_business_domain'});
    }
   }catch(e){checked.push({url:source,status:'unavailable',reason:fetchFailureCategory(e)});}
  }
  const contacts=[...results.values()].sort((a,b)=>service.scoreEmail(b.email,host)-service.scoreEmail(a.email,host));
  return {domain:host,email:contacts[0]?.email||null,source_url:contacts[0]?.source_url||null,
-  contacts,checked,relationship:contacts[0]?.email_domain_relationship||null,
+  contacts,checked,relationship:contacts[0]?.email_domain_relationship||null,contact_review_required:!!contacts[0]?.contact_review_required,
   verification:contacts.length?'publicly_observed':checked.every(c=>c.status==='unavailable')?'fetch_unavailable':'not_found'};
 }
 module.exports={discoverCompanyContact,hostForWebsite,publicIP,readWebsitePage,fetchFailureCategory};
