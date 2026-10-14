@@ -54,7 +54,7 @@ async function invoke(method,path,body,code='ok'){
  assert(h.includes('#pqsImportVisible,#pqsImportDismiss{display:none!important}'));
  assert(h.includes('window.importAllMapsToNetwork=async function()'));
  assert(h.includes("location.assign(data.review_url||'/network/acquisition')"));
- assert(!h.includes("setTimeout(()=>verifyPhoneTypes(), 1600);"),'no unrestricted mass Twilio lookup');
+ assert(h.includes("if(!allLeads.some(l=>/^google_maps_/.test(l.source||''))) setTimeout(()=>verifyPhoneTypes(), 1600);"),'Maps leads must skip automatic Twilio lookup');
  assert(h.includes('providerUnavailable=true'),'circuit breaker must stop 5xx');
  const html=fs.readFileSync('public/network-acquisition.html','utf8');
  assert.match(html,/No automatic invitations/);
