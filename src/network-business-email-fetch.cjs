@@ -25,7 +25,7 @@ function hostForWebsite(raw){
  if(!host.includes('.')||! /^[a-z0-9.-]+$/.test(host)||host.includes('..')||net.isIP(host)||/(^|\.)(localhost|local|internal|test|invalid|example)$/.test(host))throw Error('Public company domain required');
  return {host,websiteHost:url.hostname.toLowerCase()};
 }
-async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.request}={}){
+async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.request,redirectDepth=0}={}){
  const addresses=await resolve(host,{all:true,verbatim:true});
  if(!addresses.length||addresses.some(a=>!publicIP(a.address)))throw Error('Website DNS has unsafe addresses');
  const chosen=addresses[0];
@@ -36,6 +36,17 @@ async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.reque
    headers:{'Accept':'text/html','User-Agent':'ContentScale-Contact-Discovery/1.0'},
    lookup:(_hostname,_options,cb)=>cb(null,chosen.address,chosen.family),
    timeout:5000,rejectUnauthorized:true},res=>{
+    if([301,302,303,307,308].includes(res.statusCode)&&res.headers.location){
+     res.resume();
+     if(redirectDepth>=3)return finish(Error('Too many redirects'));
+     let dest;
+     try{dest=new URL(res.headers.location,'https://'+host+path);}catch{return finish(Error('Invalid redirect'));}
+     // Follow redirects only on the same public company hostname or www variant.
+     if(dest.protocol!=='https:'||dest.username||dest.password||dest.port||
+       dest.hostname.toLowerCase().replace(/^www\./,'')!==host.toLowerCase().replace(/^www\./,''))
+       return finish(Error('Cross-domain redirect needs manual review'));
+     return readWebsitePage(dest.hostname,dest.pathname+dest.search,{resolve,request,redirectDepth:redirectDepth+1}).then(v=>finish(null,v),finish);
+    }
     if(res.statusCode!==200){res.resume();return finish(Error('HTTP '+res.statusCode));}
     if(!/^text\/html/i.test(res.headers['content-type']||'')){res.resume();return finish(Error('Not HTML'));}
     if(Number(res.headers['content-length']||0)>750000){res.destroy();return finish(Error('Too large'));}
