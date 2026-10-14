@@ -1029,8 +1029,12 @@
             const LS_ADMIN = 'lc_admin_code';
             const LS_ROLE  = 'lc_role';
             const LS_CNAME = 'lc_client_name';
-            function adminCode(){ return sessionStorage.getItem(LS_ADMIN) || ''; }
-            function userRole(){ return sessionStorage.getItem(LS_ROLE) || ''; }
+            // Temporary legacy API compatibility: keep credentials only in page memory.
+            // Server-side session migration is required before headers can be removed.
+            let transientAdminCode='',transientRole='',transientClientName='';
+            try{sessionStorage.removeItem(LS_ADMIN);sessionStorage.removeItem(LS_ROLE);sessionStorage.removeItem(LS_CNAME);}catch{}
+            function adminCode(){ return transientAdminCode; }
+            function userRole(){ return transientRole; }
             function isUnlocked(){ return !!adminCode(); }
             function isAdmin(){ return userRole() === 'admin'; }
 
@@ -1056,9 +1060,9 @@
                 const data = await resp.json();
                 if(data.ok){
                   // sessionStorage: cleared when the tab closes — safer than localStorage
-                  sessionStorage.setItem(LS_ADMIN, code);
-                  sessionStorage.setItem(LS_ROLE, data.role || '');
-                  if(data.clientName) sessionStorage.setItem(LS_CNAME, data.clientName);
+                  transientAdminCode=code;
+                  transientRole=data.role||'';
+                  transientClientName=data.clientName||'';
                   inp.value = '';
                   applyLockState();
                   toast(data.role === 'admin'
@@ -1074,9 +1078,7 @@
             }
 
             function lockCrawler(){
-              sessionStorage.removeItem(LS_ADMIN);
-              sessionStorage.removeItem(LS_ROLE);
-              sessionStorage.removeItem(LS_CNAME);
+              transientAdminCode='';transientRole='';transientClientName='';
               applyLockState();
               toast('🔒 Locked');
             }
@@ -1139,7 +1141,7 @@
               }
 
               // Unlocked — show who you are and what you can see.
-              const cname = sessionStorage.getItem(LS_CNAME) || '';
+              const cname = transientClientName;
               bar.style.borderLeftColor = 'var(--green)';
               bar.innerHTML = '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">'
                 + '<span style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--green);">🔓 '
@@ -3682,7 +3684,7 @@ document.addEventListener('DOMContentLoaded',function(){
   importing=true;btn.disabled=true;btn.textContent='Importing '+items.length+' for Network review…';
   note.style.display='block';note.textContent='Saving private Network candidates. No email will be sent.';
   try{
-   const key=sessionStorage.getItem('lc_admin_code')||'';
+   const key=adminCode();
    const niche=(document.getElementById('quickNiche')?.value||document.getElementById('customIndustries')?.value.split('\n')[0]||'roofing').trim();
    const batch=items.map(l=>({
     name:l.name,website:l.website,phone:l.phone,address:l.address,
