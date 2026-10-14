@@ -239,7 +239,17 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
   if(!auth(req))return reply(res,403,{error:'Lead Crawler admin login required'});
   const id=Number(req.body?.company_id),token=clean(req.body?.token,50);
   if(!Number.isSafeInteger(id)||id<1||!tokenOk(token)||req.body?.approved!==true)return reply(res,400,{error:'Explicit approved Network invitation required'});
+  let sendLockClient=null,sendLockHeld=false;
   try{
+   // Serialize the shared Network quota check and Brevo acceptance across replicas.
+   if(typeof pool.connect==='function'){
+    sendLockClient=await pool.connect();
+    const lock=await sendLockClient.query('SELECT pg_try_advisory_lock(161997,24011) AS locked');
+    sendLockHeld=lock.rows[0]?.locked===true;
+    if(!sendLockHeld)return reply(res,429,{error:'Another Network invitation is being sent. Retry after the current attempt finishes.'});
+   }else if(process.env.NODE_ENV!=='test'){
+    return reply(res,503,{error:'Network send locking unavailable; sending disabled'});
+   }
    const c=await company(id),invite=inviteState(c);
    if(!c||invite?.status!=='prepared'||invite.token_hash!==hash(token)||c.public_visibility!=='hidden')return reply(res,409,{error:'Unsent, private Network invitation required'});
    if(!publicCompanyContact(invite.email,c.domain,invite.source_url,c.metadata?.acquisition?.email_discovery,invite.contact_evidence==='admin_source_confirmed'))return reply(res,409,{error:'Verified public business contact and matching company source required'});
@@ -269,6 +279,12 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    if(!accepted)return reply(res,503,{error:'Email result not confirmed. Check delivery manually before retrying.',status:'send_unknown'});
    return res.json({success:true,status:'invited',message_id:messageId,email_sent:true});
   }catch(e){console.error('[network-acquisition-send]',e.code||e.message);return reply(res,503,{error:'Network sending state unavailable. Verify the invitation before retrying.'});}
+  finally{
+   if(sendLockClient){
+    if(sendLockHeld){try{await sendLockClient.query('SELECT pg_advisory_unlock(161997,24011)');}catch(e){console.error('[network-send-unlock]',e.message);}}
+    sendLockClient.release();
+   }
+  }
  };
  app.post('/api/network/admin/acquisition/send-invitation',sendInvitation);
 
