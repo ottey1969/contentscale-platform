@@ -342,7 +342,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
     // Cross-domain business mailboxes can be legitimate, but also belong to
     // web agencies or other unrelated businesses. Require manual confirmation.
     const emailDomain=email.split('@')[1]||'';
-    const businessDomain=String(c.domain||'').toLowerCase().replace(/^www\\./,'');
+    const businessDomain=String(c.domain||'').toLowerCase().replace(/^www\./,'');
     if(emailDomain!==businessDomain&&!businessDomain.endsWith('.'+emailDomain)){
      outcome.skipped++;continue;
     }
