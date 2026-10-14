@@ -360,7 +360,12 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
     }
     if(result.statusCode!==200||!tokenOk(result.body?.token)){outcome.skipped++;continue;}
     const sent=await autoCall(sendInvitation,{company_id:c.id,token:result.body.token,approved:true});
-    if(sent.statusCode===200&&sent.body?.status==='invited')outcome.sent++;
+    if(sent.statusCode===200&&sent.body?.status==='invited'){
+     outcome.sent++;
+     try{
+      await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(metadata,'{acquisition,invitation,send_mode}',to_jsonb('automatic'::text),true) WHERE id=$1 AND source='maps_acquisition' AND metadata->'acquisition'->'invitation'->>'status'='invited' AND metadata->'acquisition'->'invitation'->>'token_hash'=$2",[c.id,hash(result.body.token)]);
+     }catch(e){console.error('[network-auto-provenance]',e.code||e.message);}
+    }
     else if(sent.statusCode===429){outcome.blocked=sent.body?.error;break;}
     else outcome.skipped++;
    }
