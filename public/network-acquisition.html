@@ -175,7 +175,7 @@ function render(){
   else if(c.email_discovery?.checked_at)box.append(tag('p','Op de gecontroleerde pagina’s is geen contactadres gevonden. Bekijk eventueel de contactpagina.','small warning'));
   const inv=c.invitation;
   if(inv?.status==='interested'){box.append(tag('p','Interested geregistreerd. Volgende stap: niche, bedrijf en geschiktheid voor het Network controleren.','success'));}
-  else if(inv?.status==='invited'){box.append(tag('p','Netwerkuitnodiging is verstuurd naar '+(inv.email||'bedrijfscontact')+'. Geen tweede uitnodiging verzenden.','success'));}
+  else if(inv?.status==='invited'){box.append(tag('p','Verstuurd'+(inv.sent_at?' op '+new Date(inv.sent_at).toLocaleString('nl-NL',{timeZone:'Asia/Manila'}):'')+' naar '+(inv.email||'bedrijfscontact')+'. Bevestigd, geen tweede uitnodiging verzenden.','success'));}
   else if(inv?.status==='sending'||inv?.status==='send_unknown'){box.append(tag('p','Verzending nog niet bevestigd. Controleer Brevo voordat je iets opnieuw verstuurt.','error'));}
   else if(inv?.status==='unsubscribed'){box.append(tag('p','Dit bedrijf heeft zich afgemeld. Verzending geblokkeerd.','warning'));}
   else {
@@ -288,6 +288,19 @@ function preview(c,d){
  root.append(tag('p',quota+reason+(outreach?.can_send_now?'':' De voorbereide uitnodiging blijft bewaard. Vernieuw de status nadat er opnieuw verzendruimte is.'),outreach?.can_send_now?'note':'warning'),send);
  return root;
 }
+// Background delivery status sync. Never start crawling or sending from polling.
+async function syncInvitationStatuses(){
+ if(!authenticated||busy||openId!==null||document.visibilityState==='hidden')return;
+ try{
+  const data=await api('/api/network/admin/acquisition/candidates');
+  companies=data.candidates||[];
+  total=Number(data.total??companies.length);
+  try{outreach=await api('/api/network/admin/acquisition/outreach-status');}catch{}
+  renderStats();
+  render();
+ }catch(e){console.warn('[acquisition-status-sync]',e.message);}
+}
+setInterval(syncInvitationStatuses,30000);
 el('unlockForm').onsubmit=unlock;el('refresh').onclick=refresh;el('batch').onclick=discoverBatch;el('filter').onchange=render;restoreSession();
 })();
 </script>
