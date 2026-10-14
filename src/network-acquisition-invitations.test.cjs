@@ -12,6 +12,20 @@ assert.equal(publicCompanyContact('hello@gmail.com','jerseycraftroofing.com','ht
 assert.equal(publicCompanyContact('penyakestimates@yahoo.com','penyakroofing.com','https://penyakroofing.com/',{email:'penyakestimates@yahoo.com',source_url:'https://penyakroofing.com/',verification:'publicly_observed'},true),true,'publicly listed Yahoo business email may be manually approved');
 
 assert.match(inviteMarkup('Acme Roofing','a'.repeat(48),'invited'),/I am interested/);
+const invitationPage=inviteMarkup('A&B <Roofing>','a'.repeat(48),'invited');
+assert.match(invitationPage,/<h1>Get Backlinks\. Get Cited\. Get Discovered\.<\/h1>/,'value proposition should lead the page');
+assert.match(invitationPage,/Get Backlinks\./);
+assert.match(invitationPage,/Get Cited\./);
+assert.match(invitationPage,/Get Discovered\./);
+assert.match(invitationPage,/Private invitation for A&amp;B &lt;Roofing&gt;/,'recipient name is escaped');
+assert.match(invitationPage,/not guarantees/i,'no backlinks, rankings or AI citation guarantees');
+assert.match(invitationPage,/No commitment/,'CTA must not imply enrollment');
+assert.match(invitationPage,/method="POST" action="\/network\/join\/a{48}\/interested"/);
+assert.match(invitationPage,/noindex,nofollow/,'private invitation must remain noindex');
+const confirmedPage=inviteMarkup('Acme Roofing','a'.repeat(48),'interested');
+assert.match(confirmedPage,/your interest has been recorded/i);
+assert.doesNotMatch(confirmedPage,/<form method="POST"/,'do not show an active interest CTA after opt-in');
+
 let sent=0,mail=null,company={id:7,business_name:'Acme Roofing',domain:'acme.com',canonical_url:'https://acme.com/',public_visibility:'hidden',metadata:{acquisition:{website_review:{status:'site_observed'},email_discovery:{email:'info@acme.com',source_url:'https://acme.com/contact',verification:'publicly_observed'}}}};
 const calls=[],routes={};
 const app={post:(url,fn)=>routes['POST '+url]=fn,get:(url,fn)=>routes['GET '+url]=fn};
@@ -61,7 +75,10 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
   process.env.BREVO_API_KEY='test-only';process.env.FROM_EMAIL='info@contentscale.site';
   r=await run('POST','/api/network/admin/acquisition/send-invitation',{company_id:7,token,approved:true});
   assert.equal(r.statusCode,200);assert.equal(r.body.status,'invited');assert.equal(sent,1);
-  assert.equal(mail.to[0].email,'info@acme.com');assert.match(mail.textContent,/Interested/);
+  assert.equal(mail.to[0].email,'info@acme.com');assert.match(mail.textContent,/Get Backlinks\. Get Cited\. Get Discovered\./);
+  assert.match(mail.textContent,/Interested/);
+  assert.match(mail.textContent,/not guaranteed/i);
+  assert.match(mail.textContent,/\/network\/join\//);
   assert.match(mail.textContent,/unsubscribe/);
   assert(company.metadata.acquisition.invitation.sent_at);
   r=await run('POST','/api/network/admin/acquisition/send-invitation',{company_id:7,token,approved:true});
