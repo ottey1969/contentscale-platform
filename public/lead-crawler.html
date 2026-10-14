@@ -3651,9 +3651,14 @@ document.addEventListener('DOMContentLoaded',function(){
  let importing=false,lastCount=-1;
  function leads(){
   try{
-   if(typeof allLeads==='undefined'||!Array.isArray(allLeads))return [];
-   if(!allLeads.length||!allLeads.every(x=>/^google_maps_(serper|serpapi)$/.test(x.source||'')))return [];
-   return allLeads;
+   const current=(typeof allLeads!=='undefined'&&Array.isArray(allLeads))?allLeads:[];
+   let rows=current;
+   if(!rows.length){
+    const session=JSON.parse(localStorage.getItem('lc_session')||'null');
+    rows=Array.isArray(session&&session.leads)?session.leads:[];
+   }
+   if(!rows.length||!rows.every(x=>/^google_maps_(serper|serpapi)$/.test(x.source||'')))return [];
+   return rows;
   }catch{return []}
  }
  function update(){
