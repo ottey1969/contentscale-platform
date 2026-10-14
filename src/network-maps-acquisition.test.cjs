@@ -54,6 +54,31 @@ async function invoke(method,path,body,code='ok'){
  assert.equal(q.output.results[0].email,'hello@njroof.example');
  q=await invoke('POST','/api/network/admin/acquisition/discover-batch',{company_ids:['15','15']});
  assert.equal(q.status,400,'duplicate IDs remain rejected');
+ // Network admin code must be exchanged for an HttpOnly server-signed cookie.
+ const previousSecret=process.env.LC_ADMIN_CODE;
+ process.env.LC_ADMIN_CODE='test-network-secret';
+ try{
+  let responseStatus=200,responseHeaders={},responseBody;
+  const loginReq={body:{code:'test-network-secret'},get:()=>null,headers:{},method:'POST'};
+  const loginRes={status(n){responseStatus=n;return this},set(k,v){responseHeaders[k]=v;return this},json(v){responseBody=v;return this}};
+  await routes['POST /api/network/admin/acquisition/session'](loginReq,loginRes);
+  assert.equal(responseStatus,200);assert.equal(responseBody.ok,true);
+  const cookie=responseHeaders['Set-Cookie'];
+  assert.match(cookie,/HttpOnly/);assert.match(cookie,/Secure/);assert.match(cookie,/SameSite=Strict/);
+  assert.doesNotMatch(cookie,/test-network-secret/);
+  const browserReq={body:{},headers:{cookie:cookie.split(';')[0]},method:'GET',get:()=>null};
+  responseBody=null;
+  await routes['GET /api/network/admin/acquisition/session'](browserReq,loginRes);
+  assert.equal(responseBody.authenticated,true);
+  responseBody=null;
+  await routes['GET /api/network/admin/acquisition/session']({...browserReq,headers:{cookie:'cs_network_admin=invalid'}},loginRes);
+  assert.equal(responseBody.authenticated,false);
+  responseStatus=200;responseBody=null;
+  await routes['POST /api/network/admin/acquisition/session']({...loginReq,body:{code:'wrong'}},loginRes);
+  assert.equal(responseStatus,403);
+ }finally{
+  if(previousSecret===undefined)delete process.env.LC_ADMIN_CODE;else process.env.LC_ADMIN_CODE=previousSecret;
+ }
  q=await invoke('GET','/network/acquisition',{});
  assert(q.sentFile.endsWith('network-acquisition.html'));
  assert.equal(q.headers['X-Robots-Tag'],'noindex, nofollow');
