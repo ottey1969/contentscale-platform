@@ -192,7 +192,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    return res.json({company_id:id,website_review:site});
   }catch(e){return reply(res,503,{error:'Site review could not be saved'});}
  });
- app.post('/api/network/admin/acquisition/prepare-invitation',async(req,res)=>{
+ const prepareInvitation=async(req,res)=>{
   if(!auth(req))return reply(res,403,{error:'Lead Crawler admin login required'});
   const id=Number(req.body?.company_id),email=clean(req.body?.email,254).toLowerCase(),source=clean(req.body?.source_url,1000);
   if(!Number.isSafeInteger(id)||id<1)return reply(res,400,{error:'Valid Network company ID required'});
@@ -216,8 +216,9 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    if(!saved.rows.length)return reply(res,409,{error:'Invitation was already prepared by another session'});
    return res.json({status:'prepared',company_id:id,recipient:email,preview_url:'/network/join/'+token,token,approval_required:true,email_sent:false});
   }catch(e){console.error('[network-acquisition-prepare]',e.code||e.message);return reply(res,503,{error:'Could not prepare the Network invitation'});}
- });
- app.post('/api/network/admin/acquisition/rotate-preview',async(req,res)=>{
+ };
+ app.post('/api/network/admin/acquisition/prepare-invitation',prepareInvitation);
+ const rotatePreview=async(req,res)=>{
   if(!auth(req))return reply(res,403,{error:'Lead Crawler admin login required'});
   const id=Number(req.body?.company_id);if(!Number.isSafeInteger(id)||id<1)return reply(res,400,{error:'Valid company required'});
   try{
@@ -226,14 +227,15 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    if(!r.rows.length)return reply(res,409,{error:'Only an unsent Network invitation preview can be refreshed'});
    return res.json({status:'prepared',token,preview_url:'/network/join/'+token,recipient:r.rows[0].email,email_sent:false});
   }catch(e){return reply(res,503,{error:'Could not refresh preview'});}
- });
+ };
+ app.post('/api/network/admin/acquisition/rotate-preview',rotatePreview);
  app.get('/api/network/admin/acquisition/outreach-status',async(req,res)=>{
   if(!auth(req))return reply(res,403,{error:'Lead Crawler admin login required'});
   try{
    return res.json(await networkWarmupSnapshot(pool));
   }catch(e){return reply(res,503,{error:'Network sending limits unavailable; sending disabled'});}
  });
- app.post('/api/network/admin/acquisition/send-invitation',async(req,res)=>{
+ const sendInvitation=async(req,res)=>{
   if(!auth(req))return reply(res,403,{error:'Lead Crawler admin login required'});
   const id=Number(req.body?.company_id),token=clean(req.body?.token,50);
   if(!Number.isSafeInteger(id)||id<1||!tokenOk(token)||req.body?.approved!==true)return reply(res,400,{error:'Explicit approved Network invitation required'});
@@ -267,7 +269,99 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    if(!accepted)return reply(res,503,{error:'Email result not confirmed. Check delivery manually before retrying.',status:'send_unknown'});
    return res.json({success:true,status:'invited',message_id:messageId,email_sent:true});
   }catch(e){console.error('[network-acquisition-send]',e.code||e.message);return reply(res,503,{error:'Network sending state unavailable. Verify the invitation before retrying.'});}
+ };
+ app.post('/api/network/admin/acquisition/send-invitation',sendInvitation);
+
+ // Automatic invitation worker uses the SAME prepare/rotate/send handlers.
+ // One worker across replicas via a session-level advisory lock; no duplicate retry
+ // on ambiguous provider results. Existing company state is authoritative.
+ let autoBusy=false;
+ function internalResponse(){
+  return {statusCode:200,body:null,status(code){this.statusCode=code;return this;},
+   json(data){this.body=data;return this;}};
+ }
+ async function internalCall(handler,body){
+  const response=internalResponse();
+  await handler({body,headers:{},get:()=>''},response);
+  return response;
+ }
+ // Auth is deliberately bypassed only for these trusted in-process calls.
+ // The same validators and persistence handlers are used through an internal
+ // authorization wrapper (never exposed to HTTP clients).
+ const autoAdminRequest={get:()=>process.env.LC_ADMIN_CODE||''};
+ async function autoCall(handler,body){
+  const response=internalResponse();
+  await handler({...autoAdminRequest,body},response);
+  return response;
+ }
+ async function autoDispatch(){
+  if(autoBusy||process.env.NETWORK_AUTO_INVITES==='off')return {skipped:'disabled_or_busy'};
+  if(typeof pool.connect!=='function')return {skipped:'pool_connection_unavailable'};
+  autoBusy=true;
+  let client,locked=false;
+  const outcome={prepared:0,sent:0,skipped:0,blocked:null};
+  try{
+   client=await pool.connect();
+   const lock=await client.query("SELECT pg_try_advisory_lock(161997,24010) AS locked");
+   locked=lock.rows[0]?.locked===true;
+   if(!locked)return {skipped:'another_worker_active'};
+   // First reconcile limits, then select only verified companies with observed
+   // business contact evidence. Never auto-approve a freemail address.
+   const current=await networkWarmupSnapshot(pool);
+   if(!current.can_send_now)return {...outcome,blocked:current.limit_reason};
+   const rows=await pool.query(`SELECT id,business_name,domain,canonical_url,metadata,public_visibility
+    FROM network_directory_businesses
+    WHERE source='maps_acquisition' AND public_visibility='hidden'
+    AND metadata->'acquisition'->'website_review'->>'status' IN ('site_observed','manual_reviewed')
+    AND metadata->'acquisition'->'email_discovery'->>'verification'='publicly_observed'
+    AND COALESCE(metadata->'acquisition'->'invitation'->>'status','') IN ('','draft','prepared')
+    ORDER BY id ASC LIMIT 100`);
+   for(const c of rows.rows){
+    const limits=await networkWarmupSnapshot(pool);
+    if(!limits.can_send_now){outcome.blocked=limits.limit_reason;break;}
+    const discovery=c.metadata?.acquisition?.email_discovery||{};
+    const email=String(discovery.email||'').toLowerCase();
+    const source=String(discovery.source_url||'');
+    if(!publicCompanyContact(email,c.domain,source,discovery,false)){outcome.skipped++;continue;}
+    const invitation=inviteState(c);
+    let result;
+    if(invitation?.status==='prepared'){
+     // Original tokens are deliberately not stored. Rotate atomically before send.
+     result=await autoCall(rotatePreview,{company_id:c.id});
+    }else{
+     result=await autoCall(prepareInvitation,{company_id:c.id,email,source_url:source});
+     if(result.statusCode===200)outcome.prepared++;
+    }
+    if(result.statusCode!==200||!tokenOk(result.body?.token)){outcome.skipped++;continue;}
+    const sent=await autoCall(sendInvitation,{company_id:c.id,token:result.body.token,approved:true});
+    if(sent.statusCode===200&&sent.body?.status==='invited')outcome.sent++;
+    else if(sent.statusCode===429){outcome.blocked=sent.body?.error;break;}
+    else outcome.skipped++;
+   }
+   return outcome;
+  }catch(e){
+   console.error('[network-auto-invitations]',e.code||e.message);
+   return {...outcome,error:'Auto worker failed safely'};
+  }finally{
+   if(client){
+    if(locked){try{await client.query("SELECT pg_advisory_unlock(161997,24010)");}catch(e){console.error('[network-auto-unlock]',e.message);}}
+    client.release();
+   }
+   autoBusy=false;
+  }
+ }
+ // Run after startup and periodically. Timer does not keep shutdown alive.
+ if(process.env.NODE_ENV!=='test'&&process.env.NETWORK_AUTO_INVITES!=='off'){
+  const timer=setInterval(()=>{autoDispatch().catch(e=>console.error('[network-auto-tick]',e.message));},15*60*1000);
+  timer.unref?.();
+  const startup=setTimeout(()=>{autoDispatch().catch(e=>console.error('[network-auto-start]',e.message));},45*1000);
+  startup.unref?.();
+ }
+ app.get('/api/network/admin/acquisition/auto-status',async(req,res)=>{
+  if(!auth(req))return reply(res,403,{error:'Admin login required'});
+  return res.json({enabled:process.env.NETWORK_AUTO_INVITES!=='off',running:autoBusy,interval_minutes:15,mode:'verified-only',manual_approval_required:false});
  });
+
  async function invitationByToken(token){
   const r=await pool.query("SELECT id,business_name,metadata->'acquisition'->'invitation' AS invitation FROM network_directory_businesses WHERE metadata->'acquisition'->'invitation'->>'token_hash'=$1 AND source='maps_acquisition' AND public_visibility='hidden' LIMIT 1",[hash(token)]);
   return r.rows[0]||null;
