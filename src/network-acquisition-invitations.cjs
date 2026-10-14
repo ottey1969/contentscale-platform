@@ -46,11 +46,54 @@ async function websiteEvidence(website,read=readWebsitePage){
 }
 function inviteState(row){return row?.metadata?.acquisition?.invitation || row?.invitation || null;}
 function inviteMarkup(name,token,state){
+ const safeName=escape(name);
  const url='/network/join/'+token;
- const intro='<p>ContentScale Network connects relevant businesses and independent publishers around original, useful content and verified business information.</p>';
- const text='<p>We would like to invite '+escape(name)+' to explore joining the ContentScale Network. Participation is optional. You can review proposed collaboration opportunities before agreeing to any publishing or placement. No publication, listing or membership is created merely by expressing interest.</p>';
- const form=state==='interested'?'<p style="color:#16783d;font-weight:700">Your interest has been recorded. We will contact you about the next step.</p>':('<form method="POST" action="'+url+'/interested"><button type="submit" style="background:#16813f;color:white;padding:14px 25px;border:0;border-radius:8px;font:inherit;cursor:pointer">I am interested</button></form>');
- return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network invitation | ContentScale</title></head><body style="font:17px/1.6 system-ui;max-width:720px;margin:50px auto;padding:0 22px"><p style="color:#16813f;font-weight:700">ContentScale Network · Private invitation</p><h1>Invitation for '+escape(name)+'</h1>'+intro+text+'<h2>What happens next?</h2><ol><li>Click Interested to let us know you want to learn more.</li><li>We check website quality, niche fit and your potential Network role together.</li><li>If both sides agree, we explain the relevant publishing, content or business opportunities. Any actual publication requires separate approval.</li></ol>'+form+'<p><small>Questions? <a href="mailto:info@contentscale.site">info@contentscale.site</a> · <a href="'+url+'/unsubscribe">Stop invitations</a></small></p></body></html>';
+ const action=state==='interested'
+  ? '<div class="confirmation" role="status"><strong>Thank you — your interest has been recorded.</strong><p>We will review the next step with you. No membership, publication, or payment is created by expressing interest.</p></div>'
+  : '<form method="POST" action="'+url+'/interested" class="interest"><button type="submit">Yes, I am interested <span aria-hidden="true">→</span></button><p class="fine">No commitment. No account or payment needed to express interest. We contact you about the next step.</p></form>';
+ return [
+  '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
+  '<meta name="robots" content="noindex,nofollow"><title>Get Backlinks. Get Cited. Get Discovered. | ContentScale Network</title>',
+  '<style>',
+  ':root{color-scheme:dark;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}',
+  '*{box-sizing:border-box}body{margin:0;background:#091526;color:#f0f6fb;font-size:16px;line-height:1.6}',
+  'a{color:#92d5ff}a:hover{text-decoration:none}.wrap{max-width:960px;margin:0 auto;padding:32px 22px 56px}',
+  '.brand{font-weight:800;font-size:18px;letter-spacing:.2px}.brand span{color:#62e4a1}',
+  '.intro{margin-top:54px}.eyebrow{font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#8de5b1;font-weight:750;margin:0 0 13px}',
+  'h1{font-size:clamp(35px,6vw,62px);font-weight:850;letter-spacing:-1.7px;line-height:1.08;max-width:920px;margin:0 0 20px}',
+  '.lead{max-width:760px;font-size:clamp(17px,2vw,21px);color:#c7d7e8;margin:0 0 22px}',
+  '.recipient{font-size:15px;color:#b6c9d9;margin-bottom:28px}.recipient strong{color:#fff}',
+  '.interest{margin:25px 0}.interest button{background:#168a4d;color:#fff;border:1px solid #32b978;padding:15px 26px;font:750 17px system-ui;border-radius:9px;cursor:pointer;box-shadow:0 6px 24px #041a123b}',
+  '.interest button:hover,.interest button:focus-visible{background:#1da75c}.fine{font-size:13px;color:#aabfd1;margin-top:10px;max-width:680px}',
+  '.benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:38px 0}',
+  '.benefit{padding:23px 21px;background:#10253b;border:1px solid #294967;border-radius:13px}',
+  '.benefit h2{font-size:20px;line-height:1.25;margin:0 0 10px}.benefit p{color:#bed0de;font-size:15px;margin:0}',
+  '.detail{border-top:1px solid #28435b;padding-top:24px}.detail h2{font-size:22px;margin:0 0 12px}',
+  '.steps{padding-left:23px;color:#c7d7e8}.steps li{padding-left:5px;margin:7px 0}',
+  '.confirmation{padding:17px 20px;background:#0d3529;border:1px solid #24895c;border-radius:10px;margin:24px 0}',
+  '.confirmation strong{color:#95eeb8}.confirmation p{margin:6px 0 0;color:#d2e6dd}',
+  '.notice{font-size:13px;color:#b0c2d0;margin:24px 0 0;max-width:760px}',
+  'footer{margin-top:36px;border-top:1px solid #28435b;padding-top:18px;color:#b2c6d5;font-size:13px}',
+  '@media(max-width:690px){.intro{margin-top:32px}.benefits{grid-template-columns:1fr;margin:25px 0}.wrap{padding:22px 17px 40px}.benefit{padding:17px}h1{letter-spacing:-.7px}}',
+  '</style></head><body><main class="wrap">',
+  '<div class="brand">ContentScale <span>Network</span></div>',
+  '<section class="intro" aria-label="Network invitation"><p class="eyebrow">Private invitation for '+safeName+'</p>',
+  '<h1>Get Backlinks. Get Cited. Get Discovered.</h1>',
+  '<p class="lead">Your business deserves to be found. Explore relevant publisher collaborations, editorial links, and verified business mentions that may help people discover you through search and AI-assisted research.</p>',
+  '<p class="recipient">You are invited to explore ContentScale Network opportunities for <strong>'+safeName+'</strong>.</p>',
+  action,
+  '</section><section class="benefits" aria-label="Potential benefits">',
+  '<article class="benefit"><h2>Get Backlinks.</h2><p>Explore opportunities for relevant, contextual links through original content on independently operated publisher websites.</p></article>',
+  '<article class="benefit"><h2>Get Cited.</h2><p>Make your verified business facts and expertise easier for publications and readers to reference accurately.</p></article>',
+  '<article class="benefit"><h2>Get Discovered.</h2><p>Expand the ways potential customers can encounter your business in search results and AI-assisted discovery.</p></article>',
+  '</section><section class="detail"><h2>What happens after you click Interested?</h2>',
+  '<ol class="steps"><li>We record your interest and review your website, niche, and potential Network fit.</li>',
+  '<li>We discuss relevant publishing or business opportunities with you.</li>',
+  '<li>You review any proposed collaboration before a placement or publication can happen.</li></ol>',
+  '<p class="notice">These are opportunities, not guarantees. Links, published mentions, rankings, traffic, or citations by AI systems are not promised. Expressing interest does not publish content, create a public profile, or enroll you in a paid service.</p></section>',
+  '<footer>Questions? <a href="mailto:info@contentscale.site">info@contentscale.site</a> · <a href="'+url+'/unsubscribe">Stop Network invitations</a></footer>',
+  '</main></body></html>'
+ ].join('');
 }
 function reply(res,status,obj){return res.status(status).json(obj);}
 function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvidence,sendEmail=globalThis.fetch}){
@@ -146,8 +189,8 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    try{
     const response=await sendEmail('https://api.brevo.com/v3/smtp/email',{method:'POST',redirect:'error',signal:AbortSignal.timeout(12000),headers:{'api-key':process.env.BREVO_API_KEY,'content-type':'application/json','accept':'application/json'},
      body:JSON.stringify({sender:{email:process.env.FROM_EMAIL,name:'ContentScale Network'},to:[{email:invite.email}],
-      subject:'Invitation to explore the ContentScale Network — '+clean(c.business_name,80),
-      textContent:'Hello,\n\nWe would like to invite '+clean(c.business_name,100)+' to explore joining the ContentScale Network. There is no obligation and no automatic publication or membership.\n\nSee your invitation and click Interested if you would like to learn more:\n'+url+'\n\nIf you do not want further invitations, unsubscribe here: '+unsubscribe+'\n\nContentScale Network'})});
+      subject:'Get Backlinks. Get Cited. Get Discovered. | ContentScale Network',
+      textContent:'Get Backlinks. Get Cited. Get Discovered.\n\nHello,\n\nWe would like to invite '+clean(c.business_name,100)+' to explore ContentScale Network. Discover opportunities for relevant publisher collaborations, contextual editorial backlinks, accurate business mentions and visibility in traditional and AI-assisted search.\n\nInterested? Review your private invitation and click Yes, I am interested:\n'+url+'\n\nThere is no obligation to join or publish. Links, search rankings and AI citations are not guaranteed. Every proposed collaboration requires review and approval.\n\nIf you do not want further invitations, unsubscribe here: '+unsubscribe+'\n\nContentScale Network'})});
     accepted=!!response.ok;
     const body=await response.json().catch(()=>({}));messageId=clean(body.messageId,180);
    }catch(e){console.error('[network-acquisition-brevo]',e.name||'UNKNOWN');}
