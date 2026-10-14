@@ -339,6 +339,13 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
     const email=String(discovery.email||'').toLowerCase();
     const source=String(discovery.source_url||'');
     if(!publicCompanyContact(email,c.domain,source,discovery,false)){outcome.skipped++;continue;}
+    // Cross-domain business mailboxes can be legitimate, but also belong to
+    // web agencies or other unrelated businesses. Require manual confirmation.
+    const emailDomain=email.split('@')[1]||'';
+    const businessDomain=String(c.domain||'').toLowerCase().replace(/^www\\./,'');
+    if(emailDomain!==businessDomain&&!businessDomain.endsWith('.'+emailDomain)){
+     outcome.skipped++;continue;
+    }
     const invitation=inviteState(c);
     if(invitation?.status==='prepared' && (invitation.email!==email || invitation.source_url!==source)){
      outcome.skipped++;continue; // changed contact details demand a fresh manual review
