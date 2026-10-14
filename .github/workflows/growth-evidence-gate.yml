@@ -39,6 +39,7 @@ on:
       - 'src/network-opportunity-invitation*.cjs'
       - 'src/network-editorial-overlap*.cjs'
       - 'src/network-brevo-event-sync*.cjs'
+      - 'src/lead-crawler-serpapi*.cjs'
       - 'public/lead-crawler.html'
       - 'scripts/fix-audit20-inline-label.cjs'
       - 'tests/audit20-inline-label.test.cjs'
@@ -85,6 +86,8 @@ jobs:
           node tests/audit20-inline-label.test.cjs
           node scripts/fix-audit20-inline-label.cjs src/index.js
           node --check src/index.js
+      - name: Source-backed New Jersey Maps research and browser syntax
+        run: node src/lead-crawler-serpapi.test.cjs
       - name: New Jersey USA niche controls and legacy bucket preservation
         run: node tests/lead-crawler-nj-niche.test.cjs
       - name: Verified indexed editorial research and overlap
