@@ -1,303 +1,212 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="nl"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Network Acquisitie · ContentScale</title>
 <style>
-:root{color-scheme:dark;font:14px/1.55 system-ui}
-*{box-sizing:border-box}
-body{margin:0;background:#0b1220;color:#e8edf5;padding:24px}
-main{max-width:1190px;margin:auto}
-h1{font-size:26px;margin:8px 0}h2{font-size:17px;margin:0 0 8px}
-a{color:#8bc3ff}p,.muted{color:#b1c0d1}
-.topnav{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px}
-.panel{background:#101b2c;border:1px solid #34465f;padding:17px;border-radius:12px;margin:14px 0}
-.warm{border-color:#a17736;background:#1c1a19}.warm h2{color:#facc15}
-.metrics{display:flex;gap:12px;flex-wrap:wrap}
-.metric{min-width:120px;flex:1;border:1px solid #34465f;padding:9px 12px;border-radius:8px;background:#0a1321}
-.metric b{display:block;font-size:19px}.metric small{color:#b1c0d1}
-.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:13px 0}
-button{background:#4338ca;border:1px solid #7776ed;color:white;padding:9px 12px;border-radius:7px;cursor:pointer;font-weight:700}
-button.secondary{background:#233148;border-color:#526784}
-button:disabled{opacity:.46;cursor:not-allowed}
-input,textarea{background:#0a1424;border:1px solid #5d718c;color:#f1f5f9;padding:9px;border-radius:6px;font:inherit;width:100%}
-input[type=checkbox]{width:auto}
-label{display:block;color:#c4d4e9;font-size:13px;margin:8px 0}
-input:focus,textarea:focus{outline:2px solid #a5b4fc}
-.company{border:1px solid #34465f;border-radius:10px;padding:15px;margin:9px 0;background:#101b2c}
-.companyheader{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
-.company h3{font-size:17px;margin:0}.company a{word-break:break-word}
-.pill{font-size:12px;color:#fcd34d;border:1px solid #9f7124;border-radius:20px;padding:3px 8px;display:inline-block}
-.pill.good{color:#86efac;border-color:#277348}
-.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
-.review{border-top:1px solid #31435a;margin-top:13px;padding-top:12px}
-.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
-.preview{padding:12px;background:#111025;border:1px solid #7367cf;border-radius:9px;margin-top:12px}
-.preview textarea{min-height:195px;white-space:pre-wrap}
-.info{font-size:12px;color:#cbd5e1}
-.error{color:#fda4af}.success{color:#86efac}
-.notice{border-left:3px solid #eab308;padding-left:11px}
-@media(max-width:700px){body{padding:12px}.formgrid{grid-template-columns:1fr}}
+:root{color-scheme:dark;font:14px/1.55 system-ui}*{box-sizing:border-box}body{margin:0;background:#0b1220;color:#e8edf5;padding:20px}main{max-width:1170px;margin:auto}a{color:#9bceff}h1{font-size:27px}h2{font-size:18px;margin:0 0 8px}h3{font-size:18px;margin:0}.muted,.info{color:#b7c8d8}.small{font-size:12px}.topnav,.toolbar,.actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}.topnav{margin:0 0 10px;gap:20px}.panel,.company{background:#112039;border:1px solid #37516d;padding:17px;border-radius:11px;margin:13px 0}.company{background:#0d1b30}.companyhead{display:flex;gap:15px;justify-content:space-between;flex-wrap:wrap}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}.stat{border:1px solid #3a526b;border-radius:8px;padding:11px;background:#0b182b}.stat b{display:block;font-size:22px}.stat small{color:#bed0df}.pill{display:inline-block;padding:3px 10px;border:1px solid #a47426;border-radius:20px;color:#fcd34d;font-size:12px}.pill.good{color:#90efa7;border-color:#248346}button{padding:10px 13px;border-radius:7px;color:#fff;border:1px solid #32a35a;background:#157b3a;font-weight:700;cursor:pointer}button.secondary{background:#233b59;border-color:#526d8a}button:disabled{background:#303a48;opacity:.55;cursor:not-allowed;border-color:#5a6370}input,select{background:#0b1526;color:#fff;border:1px solid #71859d;border-radius:6px;font:inherit;padding:9px;max-width:100%}input[type=email],input[type=url],input[type=password]{width:100%}label{display:block;margin:8px 0;color:#c5d7e9}.error{color:#ffacac}.success{color:#90efa7}.warning{color:#ffd383}.steps{line-height:1.9}.details{border-top:1px solid #344964;margin-top:14px;padding-top:12px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.note{font-size:12px;border-left:3px solid #c89c39;padding-left:9px}.preview{border:1px solid #3f8a5c;padding:12px;background:#0c2b24;border-radius:9px;margin-top:12px}.preview a{font-weight:700}#unlock[hidden]{display:none}@media(max-width:700px){body{padding:12px}.fields{grid-template-columns:1fr}.stat b{font-size:18px}}
 </style></head>
 <body><main>
-<nav class="topnav"><a href="/lead-crawler">← Scan next batch</a><a href="/quick-scan/admin#pqsEmailQueue">QuickScan · Outreach approval</a><a href="/network">Network home</a></nav>
+<nav class="topnav"><a href="/lead-crawler">← Nieuwe bedrijven scannen</a><a href="/network">Network overzicht</a></nav>
 <h1>Network · Acquisitie</h1>
-<section class="panel" id="adminUnlock" hidden><h2>Admin access required</h2><p>Acquisitie needs the same admin code as Lead Crawler. When opening a new browser tab, the previous tab session may not be available. Unlock here without leaving your work.</p><form id="adminUnlockForm" class="toolbar"><input id="adminUnlockCode" type="password" autocomplete="off" placeholder="Lead Crawler admin code" style="max-width:310px" required><button id="adminUnlockButton" type="submit">Unlock Acquisitie</button></form><div id="adminUnlockMessage" aria-live="polite" class="info"></div></section>
-<p>Companies stay in the same private Network directory while you review their website and decide whether to offer the CEO/QuickScan journey. No automatic invitations: a bulk import never sends mail and no company is publicly listed.</p>
-<section class="panel warm" id="warmup" aria-live="polite">
-<h2>Email warm-up · Existing QuickScan outreach</h2>
-<div id="warmupStatus" class="info">Checking current approved-outreach limits…</div>
-<div id="warmupMetrics" class="metrics"></div>
-<p id="warmupNext" class="info">Sending is allowed only after your explicit approval and within the server-enforced daily cap (Asia/Manila).</p>
+<p>Alle bedrijven blijven in het bestaande, private Network. Geen QuickScan, geen CEO-rapport en geen automatische uitnodigingen. Eerst website en bedrijfscontact controleren, daarna de Network-uitnodiging beoordelen.</p>
+<section class="panel" id="unlock" hidden>
+<h2>Admin toegang</h2><p>Gebruik dezelfde admincode als bij de Lead Crawler. Je hoeft Acquisitie hiervoor niet te verlaten.</p>
+<form id="unlockForm" class="toolbar"><input id="unlockCode" type="password" autocomplete="off" required placeholder="Lead Crawler admincode" style="max-width:290px"><button id="unlockSubmit" type="submit">Ontgrendelen</button></form><p id="unlockMessage" role="status" class="error"></p>
 </section>
 <section class="panel">
-<h2>What happens next?</h2>
-<p>1. Check the actual company website and public business contact. 2. Prepare an existing QuickScan prospect record (no scan or email). 3. Preview the real first outreach email and approve exactly one recipient. This first message links to the public CEO entry step. The private chosen-page QuickScan invitation and the later 5/5 report-ready email are separate stages.</p>
-<p class="notice">An NJ Google Maps phone is not an email address. Without an identifiable public business email source, the send control remains unavailable. Publisher recruitment is a separate approval journey.</p>
+<h2>Network-acquisitie voortgang</h2>
+<div id="metrics" class="stats"><div class="stat"><small>Bedrijven</small><b>—</b></div></div>
+<p class="info small" id="sendingStatus">Netwerkuitnodigingen worden alleen na jouw goedkeuring verstuurd; de dagelijkse verzendlimiet wordt op de server bewaakt.</p>
+</section>
+<section class="panel">
+<h2>De volgende stap</h2>
+<p class="steps">1. <strong>Importeer</strong> je bedrijven uit de Lead Crawler → 2. <strong>Automatisch onderzoek</strong> van website en zakelijk e-mailadres → 3. <strong>Bereid Network-uitnodiging voor</strong> → 4. <strong>Bekijk en verstuur</strong> na goedkeuring → 5. De eigenaar klikt op <strong>I am interested</strong> en verschijnt hier als geïnteresseerde.</p>
 <div class="toolbar">
-<button id="refresh" class="secondary">Refresh companies and warm-up</button>
-<button id="discoverBatch">Find emails for next 20 companies</button>
-<span id="batchProgress" class="info"></span>
-<label for="filter" style="margin:0">Show</label>
-<select id="filter" style="width:auto"><option value="all">All companies</option><option value="needs_email">Needs business email</option><option value="ready">Ready for approval</option><option value="sent">Outreach sent</option></select>
-<span id="summary" class="info">Loading…</span>
+<button id="batch">Onderzoek volgende 20 websites + e-mails</button>
+<button id="refresh" class="secondary">Vernieuwen</button>
+<select id="filter" aria-label="Filter bedrijven">
+<option value="all">Alle bedrijven</option><option value="needs">Nog onderzoeken</option><option value="email">E-mail gevonden</option><option value="prepared">Uitnodiging voorbereid</option><option value="invited">Uitnodiging verstuurd</option><option value="interested">Interested</option>
+</select>
 </div>
-<div id="message" aria-live="polite"></div>
-<div id="rows"></div>
+<p id="progress" role="status" class="info"></p><p id="message" role="status" class="error"></p><div id="companies"></div>
 </section>
 </main>
 <script>
 (function(){
 'use strict';
-const el=id=>document.getElementById(id);
-const key=()=>sessionStorage.getItem('lc_admin_code')||'';
-function showUnlock(reason){el('adminUnlock').hidden=false;el('adminUnlockMessage').textContent=reason||'Enter the same admin code used for Lead Crawler.';}
-async function unlock(ev){
- ev.preventDefault();const field=el('adminUnlockCode'),button=el('adminUnlockButton'),code=field.value.trim();
- if(!code)return;button.disabled=true;button.textContent='Checking…';
- try{
-  const response=await fetch('/api/admin/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok||!data.ok||data.role!=='admin')throw Error('Admin access not verified. Use your Lead Crawler admin code.');
-  sessionStorage.setItem('lc_admin_code',code);sessionStorage.setItem('lc_role','admin');field.value='';
-  el('adminUnlock').hidden=true;await refresh();
- }catch(err){el('adminUnlockMessage').textContent=err.message;}
- finally{button.disabled=false;button.textContent='Unlock Acquisitie';}
-}
-let candidates=[],prospects=[],schedule=null,hasOutreachAccess=false,openId=null,previewId=null,busy=false;
-function tag(name,txt,cls){const e=document.createElement(name);if(txt!==undefined)e.textContent=txt;if(cls)e.className=cls;return e;}
-function btn(txt,fn,cls){const b=tag('button',txt,cls);b.type='button';b.onclick=fn;return b;}
-function message(txt,good){el('message').textContent=txt||'';el('message').className=good?'success':'error';}
-function allowedSite(source,domain){
- try{const u=new URL(source);const host=u.hostname.toLowerCase().replace(/^www\./,'');return u.protocol==='https:'&&!u.username&&!u.password&&(host===domain||host.endsWith('.'+domain));}catch{return false;}
-}
-function getProspect(c){return prospects.find(p=>p.token===c.outreach_token)||prospects.find(p=>(p.domain||'').toLowerCase()===String(c.domain||'').toLowerCase())||null;}
-function status(c){
- const p=getProspect(c),sent=!!(c.outreach_sent_at||p&&p.outreach_sent_at);
- if(sent)return{label:'Outreach sent',group:'sent',good:true};
- if(c.outreach_revoked)return{label:'Previous record revoked — review',group:'needs_email'};
- if(p&&p.outreach_email_status==='sending')return{label:'Sending · check status',group:'ready'};
- if(p&&p.outreach_email_status==='failed')return{label:'Send failed · review before retry',group:'ready'};
- if(p&&p.outreach_email_status==='sent')return{label:'Outreach sent',group:'sent',good:true};
- if(p&&p.contact_email_origin==='likely_personal')return{label:'Personal email · blocked',group:'needs_email'};
- if(p&&p.contact_email&&p.contact_email_origin==='website_found')return{label:'Ready for your approval',group:'ready',good:true};
- if(c.email_discovery?.email)return{label:'Business email found · prepare outreach',group:'needs_email',good:true};
- return{label:'Business contact review required',group:'needs_email'};
-}
-function datetime(v){if(!v)return'None yet';const d=new Date(v);return Number.isNaN(d.getTime())?'Unknown':new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' PHT';}
-function mondayPHT(){
- const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
- const p=Object.fromEntries(parts.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
- const d=new Date(p.year+'-'+p.month+'-'+p.day+'T00:00:00Z');
- d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10);
-}
-function metric(label,value){const b=tag('div',undefined,'metric');b.append(tag('small',label),tag('b',value));return b;}
-function renderWarmup(){
- const root=el('warmupMetrics');root.replaceChildren();
- if(!hasOutreachAccess||!schedule){
-  el('warmupStatus').textContent='Current limits unavailable. Open QuickScan Admin with your admin code, then refresh Acquisitie. Email sending here is disabled until the real limit can be checked.';
-  el('warmupNext').textContent='No historical total or warm-up stage is guessed.';
-  return;
- }
- const s=schedule,cap=s.daily_cap,today=Number(s.sent_today||0);
- const weekly=prospects.filter(x=>x.outreach_sent_at&&x.outreach_email_status==='sent'&&datetimeToDay(x.outreach_sent_at)>=mondayPHT()).length;
- root.append(metric('Today sent',today+' / '+(cap==null?'—':cap)),
-   metric('Remaining today',s.remaining_today==null?'—':s.remaining_today),
-   metric('This week',weekly+(prospects.length>=1000?'+':'')+' sent'),
-   metric('Total sent',Number(s.total_sent||0)));
- el('warmupStatus').textContent=(s.warmup_complete?'Warm-up complete':'WARM-UP · CYCLE '+s.cycle+'/6 · DAY '+s.day_in_cycle+'/7 · '+s.completed_warmup_days+' FULL TARGET DAYS')+' · Last successful send: '+datetime(s.last_sent_at);
- el('warmupNext').textContent=s.warmup_complete?'Warm-up progression finished; provider and account restrictions still apply.':('Next increase: '+s.days_to_increase+' completed target days → '+s.next_cap+'/day. Completing a day, not simply waiting, advances the schedule. '+(s.can_send_now?'Approval and sending are currently available.':'Today’s limit reached — wait for the next permitted day.'));
-}
-function datetimeToDay(v){const d=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(v));const p=Object.fromEntries(d.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day;}
-async function api(path,options){
- const response=await fetch(path,Object.assign({cache:'no-store'},options||{},{headers:Object.assign({'x-admin-code':key()},options&&options.headers||{})}));
- const data=await response.json().catch(()=>({}));
- if(!response.ok)throw Error(data.error||('HTTP '+response.status));
+const el=id=>document.getElementById(id),admin=()=>sessionStorage.getItem('lc_admin_code')||'';
+let companies=[],total=0,outreach=null,busy=false,openId=null,prepared=new Map(),autoStarted=false;
+function tag(name,text,cls){const x=document.createElement(name);if(text!==undefined)x.textContent=text;if(cls)x.className=cls;return x;}
+function button(text,onclick,cls){const b=tag('button',text,cls);b.type='button';b.onclick=onclick;return b;}
+function setMessage(text,error=true){el('message').textContent=text||'';el('message').className=error?'error':'success';}
+function showUnlock(reason){el('unlock').hidden=false;el('unlockMessage').textContent=reason||'Log in met je Lead Crawler admincode.';}
+async function api(url,opts={}){
+ const resp=await fetch(url,{...opts,cache:'no-store',headers:{'x-admin-code':admin(),...(opts.headers||{})}});
+ const data=await resp.json().catch(()=>({}));
+ if(!resp.ok){if(resp.status===403)showUnlock('Adminsessie ontbreekt of is verlopen.');throw Error(data.error||'HTTP '+resp.status);}
  return data;
 }
-async function refresh(){
- if(busy)return;busy=true;el('refresh').disabled=true;message('');
+async function unlock(ev){
+ ev.preventDefault();const code=el('unlockCode').value.trim(),b=el('unlockSubmit');if(!code)return;
+ b.disabled=true;b.textContent='Controleren…';
  try{
-  const d=await api('/api/network/admin/acquisition/candidates');
-  candidates=d.candidates||[];
-  el('summary').textContent=Number(d.total??candidates.length)+' acquired companies · '+candidates.length+' recent shown';
-  try{
-   const q=await api('/api/prospect-quick-scan/admin/list');
-   hasOutreachAccess=true;prospects=q.items||[];schedule=q.outreach_schedule||null;
-  }catch(e){hasOutreachAccess=false;prospects=[];schedule=null;message('QuickScan outreach status unavailable: '+e.message+'. Acquisitie remains viewable; sending is disabled.');}
-  renderWarmup();render();
- }catch(e){if(/Admin login required|HTTP 403/i.test(e.message))showUnlock('Admin session is missing or expired. Unlock with your Lead Crawler code.');message('Cannot load Network Acquisitie: '+e.message)}
- finally{busy=false;el('refresh').disabled=false;}
+  const r=await fetch('/api/admin/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+  const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok||d.role!=='admin')throw Error('Admincode niet geaccepteerd.');
+  sessionStorage.setItem('lc_admin_code',code);sessionStorage.setItem('lc_role','admin');el('unlockCode').value='';el('unlock').hidden=true;await refresh();
+ }catch(e){el('unlockMessage').textContent=e.message;}finally{b.disabled=false;b.textContent='Ontgrendelen';}
+}
+function validSource(source,domain){try{const u=new URL(source);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&u.hostname.toLowerCase().replace(/^www\./,'')===String(domain||'').toLowerCase().replace(/^www\./,'');}catch{return false;}}
+function inspection(c){return c.website_review?.status||'not_checked';}
+function stage(c){
+ const inv=c.invitation?.status;
+ if(inv==='interested')return{label:'Interested · opvolgen',group:'interested',good:true};
+ if(inv==='invited')return{label:'Network-uitnodiging verstuurd',group:'invited',good:true};
+ if(inv==='prepared')return{label:'Uitnodiging voorbereid',group:'prepared'};
+ if(inv==='unsubscribed')return{label:'Uitgeschreven · niet mailen',group:'closed'};
+ if(inv==='sending'||inv==='send_unknown')return{label:'Verzendstatus controleren',group:'closed'};
+ if(c.email_discovery?.email&&['site_observed','manual_reviewed'].includes(inspection(c)))return{label:'Klaar voor Network-uitnodiging',group:'email',good:true};
+ if(c.email_discovery?.email)return{label:'E-mail gevonden · website controleren',group:'email'};
+ if(c.email_discovery?.checked_at)return{label:'Geen e-mail gevonden · controle nodig',group:'needs'};
+ return{label:'Website + e-mail nog controleren',group:'needs'};
+}
+function renderStats(){
+ const root=el('metrics');root.replaceChildren();
+ const checks=[['Bedrijven in Acquisitie',total],['E-mail gevonden',companies.filter(c=>!!c.email_discovery?.email).length],['Website gecontroleerd',companies.filter(c=>['site_observed','manual_reviewed'].includes(inspection(c))).length],['Uitnodiging verstuurd',companies.filter(c=>c.invitation?.status==='invited'||c.invitation?.status==='interested').length],['Interested',companies.filter(c=>c.invitation?.status==='interested').length]];
+ for(const [label,value]of checks){const block=tag('div',undefined,'stat');block.append(tag('small',label),tag('b',String(value)));root.append(block);}
+ el('sendingStatus').textContent=outreach?'Network e-mailopwarming · vandaag '+outreach.sent_today+'/'+outreach.daily_cap+' verstuurd · totaal '+outreach.total_sent+' · nog '+Math.max(0,outreach.daily_cap-outreach.sent_today)+' beschikbaar. Alleen na goedkeuring; geen automatische verzending.':'Verzendlimiet niet beschikbaar. Verzenden is uitgeschakeld totdat de serverstatus geladen is.';
+}
+async function refresh(){
+ if(busy)return;
+ el('refresh').disabled=true;setMessage('');
+ try{
+  const d=await api('/api/network/admin/acquisition/candidates');companies=d.candidates||[];total=Number(d.total??companies.length);
+  try{outreach=await api('/api/network/admin/acquisition/outreach-status');}catch(e){outreach=null;setMessage('Verzendstatus kon niet worden gecontroleerd: '+e.message);}
+  renderStats();render();
+  if(!autoStarted&&companies.some(c=>!c.email_discovery?.checked_at&&!c.website_review?.checked_at)){
+   autoStarted=true;el('progress').textContent='Automatisch website- en e-mailonderzoek gestart voor nieuwe import…';discoverBatch();
+  }
+ }catch(e){setMessage('Kan Acquisitie niet openen: '+e.message);}
+ finally{el('refresh').disabled=false;}
 }
 function render(){
- const holder=el('rows');holder.replaceChildren();
- const rows=candidates.filter(c=>el('filter').value==='all'||status(c).group===el('filter').value);
- if(!rows.length){holder.append(tag('p','No companies in this category.'));return;}
- rows.forEach(c=>{
-  const panel=tag('article',undefined,'company'),head=tag('div',undefined,'companyheader');
-  const info=tag('div'),h=tag('h3',c.business_name);
-  const meta=tag('div',(c.primary_niche||'Niche unverified')+' · '+(c.city||'New Jersey')+' · '+c.domain,'info');
-  info.append(h,meta);const st=status(c);
-  head.append(info,tag('span',st.label,'pill'+(st.good?' good':'')));panel.append(head);
-  const a=tag('a','Visit website');a.href=c.canonical_url;a.target='_blank';a.rel='noopener noreferrer';
-  const actions=tag('div',undefined,'actions');actions.append(a);
-  const p=getProspect(c);
-  if(st.group!=='sent'&&!c.outreach_revoked){
-   actions.append(btn(openId===c.id?'Close review':'Review for outreach',()=>{openId=openId===c.id?null:c.id;previewId=null;render();},'secondary'));
+ const root=el('companies');root.replaceChildren();
+ const rows=companies.filter(c=>el('filter').value==='all'||stage(c).group===el('filter').value);
+ if(!rows.length){root.append(tag('p','Geen bedrijven in deze categorie.','info'));return;}
+ for(const c of rows){
+  const status=stage(c),box=tag('article',undefined,'company'),header=tag('div',undefined,'companyhead'),info=tag('div');
+  info.append(tag('h3',c.business_name),tag('p',(c.primary_niche||'Niche nog niet bepaald')+' · '+(c.city||'NJ')+' · '+c.domain,'info small'));
+  header.append(info,tag('span',status.label,'pill'+(status.good?' good':'')));box.append(header);
+  const web=tag('a','Website bekijken ↗');web.href=c.canonical_url;web.target='_blank';web.rel='noopener noreferrer';
+  const actions=tag('div',undefined,'actions');actions.append(web);
+  if(c.website_review)box.append(tag('p','Website: '+c.website_review.status+' · '+(c.website_review.reason||''),'small '+(inspection(c)==='site_observed'?'success':'warning')));
+  if(c.email_discovery?.email){
+   const emailInfo=tag('p','Zakelijk e-mailadres: '+c.email_discovery.email+' · Bron: ','small success');
+   const src=tag('a','Bekijk bron ↗');src.href=c.email_discovery.source_url;src.target='_blank';src.rel='noopener noreferrer';emailInfo.append(src);box.append(emailInfo);
+  }else if(c.email_discovery?.checked_at)box.append(tag('p','Geen publiek e-mailadres gevonden. Je kunt de website zelf controleren.','small warning'));
+  const inv=c.invitation;
+  if(inv?.status==='interested'){box.append(tag('p','Interested geregistreerd. Volgende stap: niche, bedrijf en geschiktheid voor het Network controleren.','success'));}
+  else if(inv?.status==='invited'){box.append(tag('p','Netwerkuitnodiging is verstuurd naar '+(inv.email||'bedrijfscontact')+'. Geen tweede uitnodiging verzenden.','success'));}
+  else if(inv?.status==='sending'||inv?.status==='send_unknown'){box.append(tag('p','Verzending nog niet bevestigd. Controleer Brevo voordat je iets opnieuw verstuurt.','error'));}
+  else if(inv?.status==='unsubscribed'){box.append(tag('p','Dit bedrijf heeft zich afgemeld. Verzending geblokkeerd.','warning'));}
+  else {
+   actions.append(button('Website automatisch controleren',()=>inspect(c),'secondary'));
+   actions.append(button('Zakelijk e-mailadres zoeken',()=>findEmail(c),'secondary'));
+   actions.append(button(openId===c.id?'Sluiten':'Netwerk-uitnodiging voorbereiden',()=>{openId=openId===c.id?null:c.id;render();}));
   }
-  if(p&&p.token){
-   const q=tag('a','Open canonical QuickScan record →');q.href='/quick-scan/admin#pqsEmailQueue';actions.append(q);
-  }
-  panel.append(actions);
-  if(openId===c.id&&st.group!=='sent'&&!c.outreach_revoked)panel.append(reviewForm(c,p));
-  if(st.group==='sent'){
-    panel.append(tag('div','Sent: '+datetime(c.outreach_sent_at||p&&p.outreach_sent_at)+'. Company stays in Acquisitie until the actual next funnel stage.','info'));
-  }
-  if(c.outreach_revoked)panel.append(tag('p','This domain has a revoked QuickScan record. Do not create a duplicate; review its history in QuickScan Admin.','error'));
-  holder.append(panel);
- });
+  box.append(actions);
+  if(openId===c.id&&(!inv?.status||inv.status==='prepared'))box.append(review(c));
+  root.append(box);
+ }
 }
-function reviewForm(c,p){
- const box=tag('div',undefined,'review');
- if(p&&p.contact_email&&p.contact_email_origin==='website_found'){
-  box.append(tag('p','Verified business contact recorded: '+p.contact_email+'. Nothing has been sent by preparing it.','success'));
-  box.append(btn('Preview first outreach email',()=>{previewId=previewId===c.id?null:c.id;render();}));
-  if(previewId===c.id)box.append(preview(c,p));
-  return box;
- }
- box.append(tag('p','Only prepare a CEO/QuickScan sales prospect when you have checked this website and found a legitimate public business address. No email, scan or invitation is sent during preparation.','info'));
- const grid=tag('div',undefined,'formgrid'),labEmail=tag('label','Verified business email'),labSource=tag('label','Exact website page where email is shown');
- const email=tag('input');email.type='email';email.placeholder='e.g. contact@business.com';email.value=p&&p.contact_email||'';
- const source=tag('input');source.type='url';source.placeholder='https://company.example/contact/';source.value=c.email_discovery?.source_url||'';
- labEmail.append(email);labSource.append(source);grid.append(labEmail,labSource);box.append(grid);
- const check=tag('input');check.type='checkbox';const label=tag('label');label.append(check,document.createTextNode(' Confirm this is a public business contact on the business website, not a personal address. Automatic detection provides the source for review.'));
- if(c.email_discovery?.email&&allowedSite(c.email_discovery.source_url,c.domain)){check.checked=true;box.append(tag('p','Automatically found on '+c.email_discovery.source_url+'. No email sent.','success'));}
- box.append(label);const state=tag('div','','info');
- const find=btn('Find business email automatically',async()=>{
-  find.disabled=true;find.textContent='Searching website…';state.textContent='Checking public contact pages. No email is being sent.';state.className='info';
-  try{
-   const found=await api('/api/network/admin/acquisition/discover-email',{
-    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id})
-   });
-   if(found.email&&allowedSite(found.source_url,c.domain)){
-    email.value=found.email;source.value=found.source_url;check.checked=true;
-    state.textContent='Public website contact found: '+found.email+' · '+found.source_url+'. Ready to prepare in QuickScan; no email sent.';
-    state.className='success';
-   }else{
-    state.textContent='No same-domain public business email found. You may review the website manually or move to another company.';
-    state.className='info';
-   }
-  }catch(err){state.textContent='Automatic lookup failed: '+err.message+'. No records changed.';state.className='error';}
-  finally{find.disabled=false;find.textContent='Find business email automatically';}
- });
- box.append(find);
- const prepare=btn('Prepare in QuickScan Outreach · no email',async()=>{
-  if(!check.checked){state.textContent='First confirm you checked the business website.';state.className='error';return;}
-  const target=String(source.value||'').trim(),address=String(email.value||'').trim().toLowerCase();
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)||!allowedSite(target,c.domain)){
-   state.textContent='Enter a valid business email and an HTTPS source page on this business website.';state.className='error';return;
-  }
-  if(!hasOutreachAccess){state.textContent='QuickScan Admin access is required first.';state.className='error';return;}
-  prepare.disabled=true;prepare.textContent='Preparing…';state.textContent='Creating/reusing canonical company identity. No email is being sent.';
-  try{
-   // Crucially, create without email. If the second step fails, the candidate
-   // cannot silently become an eligible outbound recipient.
-   const created=await api('/api/prospect-quick-scan/admin/create',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({url:c.canonical_url,business_name:c.business_name,source:'lead_crawler',contact_email:'',language:'en',campaign:'Network Maps Acquisition'})
-   });
-   if(!created.token)throw Error('QuickScan did not confirm the canonical prospect record.');
-   await api('/api/prospect-quick-scan/admin/'+encodeURIComponent(created.token)+'/contact-email',{
-    method:'PATCH',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({email:address,origin:'website_found',source_url:target,comment:'Manually reviewed on same-domain public business website from Network Acquisitie. No invitation sent.'})
-   });
-   state.textContent='Prepared ✓. No email sent. Refreshing the approval preview…';state.className='success';
-   await refresh();openId=c.id;render();
-  }catch(err){state.textContent='Not ready for email: '+err.message+'. Review in QuickScan Admin before retrying; do not assume the invitation was prepared.';state.className='error';}
-  finally{prepare.disabled=false;prepare.textContent='Prepare in QuickScan Outreach · no email';}
- });
- box.append(prepare,state);return box;
+async function inspect(c){
+ if(busy)return;busy=true;el('batch').disabled=true;el('progress').textContent='Website '+c.domain+' controleren…';
+ try{const d=await api('/api/network/admin/acquisition/inspect-site',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id})});c.website_review=d.website_review;render();}catch(e){setMessage(e.message);}
+ finally{busy=false;el('batch').disabled=false;el('progress').textContent='';}
 }
-function preview(c,p){
- const box=tag('div',undefined,'preview');
- if(!hasOutreachAccess||!schedule||schedule.can_send_now!==true||Number(schedule.remaining_today||0)<1){
-  box.append(tag('div','Sending unavailable: current server warm-up limit or outreach status could not be verified.','error'));return box;
- }
- const copy=p.generated_outreach_copy;
- if(!copy||!copy.subject||!copy.body||!copy.url){
-  box.append(tag('div','Canonical outreach copy is not available for this prospect. Open QuickScan Admin and refresh; no send is possible here.','error'));return box;
- }
- if(p.outreach_email_status==='sending'||p.outreach_sent_at){
-  box.append(tag('div','Invitation already started or sent. Review the existing record; never send twice.','error'));return box;
- }
- const title=tag('b','Preview only · nothing sent');
- box.append(title,tag('p','To: '+p.contact_email+' · First step: public CEO Report ('+copy.url+')','info'));
- const subject=tag('input');subject.value=copy.subject;subject.readOnly=true;
- const body=tag('textarea');body.value=copy.body;body.readOnly=true;
- box.append(subject,body);
- const msg=tag('div','This sends one actual first-contact email. No QuickScan scan or 5/5 report-ready email is triggered.','info');
- const send=btn('Approve & send to this ONE company',async()=>{
-  if(!confirm('Approve and send this exact CEO invitation to '+p.contact_email+'? This will use one of today’s remaining warm-up slots.'))return;
-  send.disabled=true;send.textContent='Sending…';msg.textContent='Waiting for provider confirmation…';
-  try{
-   const d=await api('/api/prospect-quick-scan/admin/'+encodeURIComponent(p.token)+'/email-send',{
-    method:'POST',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({approved:true,subject:copy.subject,body:copy.body})
-   });
-   if(!d.success||d.status!=='sent')throw Error('Send was not confirmed by the server.');
-   msg.className='success';msg.textContent='Email accepted by provider. Reloading canonical status…';
-   previewId=null;await refresh();
-  }catch(e){msg.textContent='Delivery not confirmed: '+e.message+'. Check QuickScan history before retrying.';msg.className='error';send.disabled=false;send.textContent='Review and try again';}
- });
- box.append(msg,send,btn('Cancel',()=>{previewId=null;render();},'secondary'));
- return box;
+async function findEmail(c){
+ if(busy)return;busy=true;el('batch').disabled=true;el('progress').textContent='Zakelijk e-mailadres zoeken op '+c.domain+'…';
+ try{
+  const d=await api('/api/network/admin/acquisition/discover-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id})});
+  c.email_discovery={email:d.email,source_url:d.source_url,verification:d.verification,checked_at:new Date().toISOString()};render();
+ }catch(e){setMessage(e.message);}finally{busy=false;el('batch').disabled=false;el('progress').textContent='';}
 }
 async function discoverBatch(){
- if(busy)return;
- const targets=candidates.filter(c=>!c.email_discovery?.email&&status(c).group==='needs_email'&&!c.outreach_revoked).slice(0,20);
- if(!targets.length){el('batchProgress').textContent='No new company contacts to check in the displayed list.';return;}
- busy=true;const button=el('discoverBatch');button.disabled=true;el('refresh').disabled=true;
- let found=0,attempted=0,unavailable=0;
+ if(busy)return;const selected=companies.filter(c=>!c.invitation?.status&&(!c.website_review?.checked_at||!c.email_discovery?.checked_at)).slice(0,20);
+ if(!selected.length){el('progress').textContent='Alle zichtbare kandidaten zijn onderzocht. Voor ontbrekende e-mails kun je de website handmatig beoordelen.';return;}
+ busy=true;el('batch').disabled=true;el('refresh').disabled=true;let searched=0,found=0,verified=0,unavailable=0;
  try{
-  for(let i=0;i<targets.length;i+=5){
-   button.textContent='Checking '+(i+1)+'–'+Math.min(i+5,targets.length)+' / '+targets.length+'…';
-   el('batchProgress').textContent='Checking public company websites; no invitations sent.';
-   const data=await api('/api/network/admin/acquisition/discover-batch',{
-     method:'POST',headers:{'Content-Type':'application/json'},
-     body:JSON.stringify({company_ids:targets.slice(i,i+5).map(x=>x.id)})
-   });
-   for(const result of data.results||[]){
-    attempted++;
-    if(result.email){found++;const c=candidates.find(x=>x.id===result.company_id);if(c)c.email_discovery=result;}
-    if(result.verification==='unavailable')unavailable++;
+  for(let start=0;start<selected.length;start+=5){
+   el('batch').textContent='Onderzoeken '+(start+1)+'–'+Math.min(start+5,selected.length)+' / '+selected.length+'…';
+   const d=await api('/api/network/admin/acquisition/discover-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_ids:selected.slice(start,start+5).map(c=>c.id)})});
+   for(const item of d.results||[]){
+    searched++;if(item.email)found++;if(item.website_review?.status==='site_observed')verified++;if(item.verification==='unavailable')unavailable++;
+    const c=companies.find(c=>c.id===item.company_id);if(c){c.email_discovery={email:item.email,source_url:item.source_url,verification:item.verification,checked_at:item.checked_at||new Date().toISOString()};if(item.website_review)c.website_review=item.website_review;}
    }
-   el('batchProgress').textContent=attempted+'/'+targets.length+' checked · '+found+' found · '+unavailable+' unavailable. No emails sent.';
-   render();
+   el('progress').textContent=searched+'/'+selected.length+' websites · '+found+' e-mails · '+verified+' websites gevonden · '+unavailable+' beperkt bereikbaar. Geen uitnodigingen verstuurd.';
+   renderStats();render();
   }
- }catch(e){message('Batch email lookup interrupted: '+e.message+'. Previously found contacts remain saved.');}
- finally{busy=false;button.disabled=false;button.textContent='Find emails for next 20 companies';el('refresh').disabled=false;await refresh();}
+ }catch(e){setMessage('Onderzoek onderbroken: '+e.message+'. Opgeslagen resultaten blijven behouden.');}
+ finally{busy=false;el('batch').disabled=false;el('batch').textContent='Onderzoek volgende 20 websites + e-mails';el('refresh').disabled=false;await refresh();}
 }
-el('discoverBatch').onclick=discoverBatch;
-el('adminUnlockForm').onsubmit=unlock;
-el('refresh').onclick=refresh;el('filter').onchange=render;refresh();
+function review(c){
+ const root=tag('div',undefined,'details'),inv=c.invitation||{},draft=prepared.get(c.id);
+ root.append(tag('h3','Network uitnodiging voor '+c.business_name));
+ root.append(tag('p','De ontvanger krijgt een persoonlijke Network-uitnodigingspagina met een groene knop “I am interested”. Niets wordt automatisch verzonden.','info'));
+ if(inv.status==='prepared'){
+  root.append(tag('p','Deze uitnodiging is al voorbereid. Herstel zo nodig eerst de previewlink.','info'));
+  if(draft?.token)root.append(preview(c,draft));
+  else root.append(button('Uitnodigingspreview herstellen',async()=>{
+   try{const d=await api('/api/network/admin/acquisition/rotate-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id})});prepared.set(c.id,d);render();}catch(e){setMessage(e.message);}
+  }));
+  return root;
+ }
+ const verified=['site_observed','manual_reviewed'].includes(inspection(c));
+ if(!verified){
+  root.append(tag('p','Websitecontrole is vereist voordat een uitnodiging voorbereid kan worden. Als automatische controle niet lukt, bezoek de website en bevestig de handmatige controle.','warning'));
+  root.append(button('Ik heb deze bedrijfswebsite zelf gecontroleerd',async()=>{
+   if(!confirm('Heb je gecontroleerd dat de website werkelijk bij dit bedrijf hoort en geschikt is voor verdere Network-beoordeling?'))return;
+   try{const d=await api('/api/network/admin/acquisition/confirm-site',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id,confirmed:true})});c.website_review=d.website_review;render();}catch(e){setMessage(e.message);}
+  },'secondary'));
+  return root;
+ }
+ const fields=tag('div',undefined,'fields');
+ const labEmail=tag('label','Zakelijk e-mailadres'),email=tag('input');email.type='email';email.value=c.email_discovery?.email||'';email.placeholder='info@bedrijf.com';labEmail.append(email);
+ const labSource=tag('label','Publieke bronpagina van e-mailadres'),source=tag('input');source.type='url';source.value=c.email_discovery?.source_url||'';source.placeholder='https://bedrijf.com/contact';labSource.append(source);
+ fields.append(labEmail,labSource);root.append(fields);
+ const checkLabel=tag('label'),check=tag('input');check.type='checkbox';check.style.width='auto';
+ checkLabel.append(check,document.createTextNode(' Ik bevestig dat dit openbare zakelijke contactgegevens zijn, niet een privé-e-mailadres, en dat het bedrijf relevant is voor het Network.'));
+ root.append(checkLabel);
+ const result=tag('p','','info'),prepare=button('Bereid Network-uitnodiging voor',async()=>{
+  if(!check.checked){result.textContent='Controleer eerst de zakelijke contactgegevens.';result.className='error';return;}
+  if(!validSource(source.value,c.domain)||!email.value.includes('@')){result.textContent='E-mailadres en HTTPS-bron moeten bij dit bedrijf horen.';result.className='error';return;}
+  prepare.disabled=true;prepare.textContent='Voorbereiden…';
+  try{
+   const d=await api('/api/network/admin/acquisition/prepare-invitation',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({company_id:c.id,email:email.value.trim(),source_url:source.value.trim(),manually_verified:true})});
+   c.invitation={status:'prepared',email:d.recipient};prepared.set(c.id,d);render();
+  }catch(e){result.textContent=e.message;result.className='error';prepare.disabled=false;prepare.textContent='Bereid Network-uitnodiging voor';}
+ });
+ root.append(prepare,result);return root;
+}
+function preview(c,d){
+ const root=tag('div',undefined,'preview');
+ root.append(tag('h3','Uitnodiging klaar — nog niet verstuurd'),tag('p','Ontvanger: '+d.recipient,'info'));
+ const link=tag('a','Bekijk de echte uitnodiging met I am interested ↗');link.href=d.preview_url;link.target='_blank';link.rel='noopener noreferrer';root.append(link);
+ root.append(tag('p','De uitnodiging gaat uitsluitend over ContentScale Network. Er wordt geen CEO- of QuickScan-link verstuurd.','small'));
+ const send=button('Goedkeuren en deze Network-uitnodiging versturen',async()=>{
+  if(!outreach?.can_send_now){setMessage('De verzendlimiet is bereikt of de Network verzendstatus is niet beschikbaar.');return;}
+  if(!confirm('Netwerk-uitnodiging naar '+d.recipient+' versturen? Dit gebruikt één Network warm-up slot.'))return;
+  send.disabled=true;send.textContent='Versturen…';
+  try{
+   const response=await api('/api/network/admin/acquisition/send-invitation',{method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({company_id:c.id,token:d.token,approved:true})});
+   if(response.status!=='invited')throw Error('Verzending niet bevestigd');
+   prepared.delete(c.id);openId=null;await refresh();
+  }catch(e){setMessage('Verzending niet bevestigd: '+e.message+'. Controleer eerst de status voor opnieuw proberen.');send.disabled=false;send.textContent='Verzending controleren';}
+ });
+ send.disabled=!outreach?.can_send_now;root.append(tag('p','Bekijk de link vóór verzending. Versturen is alleen mogelijk na jouw goedkeuring en binnen de serverlimiet.','note'),send);
+ return root;
+}
+el('unlockForm').onsubmit=unlock;el('refresh').onclick=refresh;el('batch').onclick=discoverBatch;el('filter').onchange=render;refresh();
 })();
 </script>
 </body></html>
