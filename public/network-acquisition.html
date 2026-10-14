@@ -7,11 +7,12 @@
 <body><main>
 <nav class="topnav"><a href="/lead-crawler">← Nieuwe bedrijven scannen</a><a href="/network">Network overzicht</a></nav>
 <h1>Network · Acquisitie</h1>
-<p>Alle bedrijven blijven in het bestaande, private Network. Dit is uitsluitend Network-acquisitie. Er worden nooit automatisch uitnodigingen verzonden: eerst website en bedrijfscontact controleren, daarna de Network-uitnodiging beoordelen.</p>
+<p>Alle bedrijven blijven in het bestaande, private Network. Dit is uitsluitend Network-acquisitie. Geverifieerde zakelijke contacten ontvangen automatisch een Network-uitnodiging binnen de opwarmlimieten. Onzekere contacten worden niet automatisch benaderd.</p>
 <section class="panel" id="unlock" hidden>
 <h2>Admin toegang</h2><p>Gebruik dezelfde admincode als bij de Lead Crawler. Je hoeft Acquisitie hiervoor niet te verlaten.</p>
 <form id="unlockForm" class="toolbar"><input id="unlockCode" type="password" autocomplete="off" required placeholder="Lead Crawler admincode" style="max-width:290px"><button id="unlockSubmit" type="submit">Ontgrendelen</button></form><p id="unlockMessage" role="status" class="error"></p>
 </section>
+<p class="info small" id="autoInvitationStatus" role="status">Automatische uitnodigingen: status laden…</p>
 <section class="panel" id="warmupPanel" aria-label="Bestaande e-mailopwarming">
 <h2>E-mailopwarming <span class="pill" id="warmupBadge">Status laden…</span></h2>
 <p class="info small">Dit is de bestaande opwarming van je afzender. De dagvoortgang blijft gebaseerd op behaalde verzenddoelen, niet op de kalender of een nieuwe Network-import.</p>
@@ -117,6 +118,10 @@ async function refresh(){
  try{
   const d=await api('/api/network/admin/acquisition/candidates');companies=d.candidates||[];total=Number(d.total??companies.length);
   try{outreach=await api('/api/network/admin/acquisition/outreach-status');}catch(e){outreach=null;setMessage('Verzendstatus kon niet worden gecontroleerd: '+e.message);}
+  try{
+   const a=await api('/api/network/admin/acquisition/auto-status');
+   el('autoInvitationStatus').textContent=a.enabled?'Automatisch uitnodigen actief · elke '+a.interval_minutes+' minuten · alleen gecontroleerde websites en geverifieerde zakelijke e-mailadressen · binnen bestaande verzendlimieten.':'Automatische uitnodigingen staan uit.';
+  }catch(e){el('autoInvitationStatus').textContent='Automatische uitnodigingsstatus niet beschikbaar.';}
   renderStats();render();
   if(!autoStarted&&companies.some(c=>!c.invitation?.status&&(!c.email_discovery?.checked_at||(!c.email_discovery?.email&&c.email_discovery?.version!=='public-v4')))){
    autoStarted=true;el('progress').textContent='Automatisch website- en e-mailonderzoek gestart voor nieuwe import…';discoverBatch();
