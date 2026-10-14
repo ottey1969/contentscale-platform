@@ -40,6 +40,8 @@ on:
       - 'src/network-editorial-overlap*.cjs'
       - 'src/network-brevo-event-sync*.cjs'
       - 'public/lead-crawler.html'
+      - 'scripts/fix-audit20-inline-label.cjs'
+      - 'tests/audit20-inline-label.test.cjs'
       - 'tests/lead-crawler-nj-niche.test.cjs'
       - 'src/tracker-growth-execution.cjs'
       - 'src/tracker-growth-wordpress-integration.test.cjs'
@@ -78,6 +80,11 @@ jobs:
         run: node src/network-opportunity-pilot.test.cjs
       - name: Brevo accepted-versus-delivery evidence reconciliation
         run: node src/network-brevo-event-sync.test.cjs
+      - name: Audit 20 interest inline JavaScript label
+        run: |
+          node tests/audit20-inline-label.test.cjs
+          node scripts/fix-audit20-inline-label.cjs src/index.js
+          node --check src/index.js
       - name: New Jersey USA niche controls and legacy bucket preservation
         run: node tests/lead-crawler-nj-niche.test.cjs
       - name: Verified indexed editorial research and overlap
