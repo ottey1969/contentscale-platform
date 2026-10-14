@@ -67,12 +67,26 @@ async function discoverCompanyContact(website,options={}){
   try{
    const html=await readWebsitePage(websiteHost,path,options);
    checked.push({url:source,status:'checked'});
-   const found=service.detectBusinessContacts(html,source);
-   for(const address of found.all)if(!results.has(address))results.set(address,{email:address,source_url:source});
+   // Only read human-visible first-party content and explicit mailto links.
+   // A company can publicly list a business email hosted at another domain
+   // (e.g. jerseycraftroofing.com publishes info@jerseycraftexteriors.com).
+   const visible=html.replace(/<(script|style|noscript|template|svg)\\b[^>]*>[\\s\\S]*?<\\/\\1>/gi,' ');
+   const direct=visible.match(/mailto:[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}/gi)||[];
+   const readable=visible.replace(/<[^>]*>/g,' ');
+   const addresses=service.extractEmails(readable+' '+direct.join(' ').replace(/mailto:/gi,''));
+   for(const raw of addresses){
+    const address=raw.toLowerCase(),mailDomain=address.split('@')[1],local=address.split('@')[0];
+    if(/^(no-?reply|donotreply|bounce|mailer-daemon)$/i.test(local)||
+       /\\.(?:png|jpe?g|webp|svg|gif|css|js)$/i.test(address)||
+       /^(gmail\\.com|yahoo\\.com|outlook\\.com|hotmail\\.com|example\\.com|example\\.org)$/i.test(mailDomain))continue;
+    const same=mailDomain===host||mailDomain===websiteHost||host.endsWith('.'+mailDomain);
+    if(!results.has(address))results.set(address,{email:address,source_url:source,
+       email_domain_relationship:same?'same_domain':'publicly_listed_other_business_domain'});
+   }
   }catch(e){checked.push({url:source,status:'unavailable'});}
  }
  const contacts=[...results.values()].sort((a,b)=>service.scoreEmail(b.email,host)-service.scoreEmail(a.email,host));
  return {domain:host,email:contacts[0]?.email||null,source_url:contacts[0]?.source_url||null,
-  contacts,checked,verification:contacts.length?'publicly_observed':'not_found'};
+  contacts,checked,relationship:contacts[0]?.email_domain_relationship||null,verification:contacts.length?'publicly_observed':'not_found'};
 }
 module.exports={discoverCompanyContact,hostForWebsite,publicIP,readWebsitePage};
