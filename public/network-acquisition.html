@@ -173,6 +173,24 @@ function reviewForm(c,p){
  labEmail.append(email);labSource.append(source);grid.append(labEmail,labSource);box.append(grid);
  const check=tag('input');check.type='checkbox';const label=tag('label');label.append(check,document.createTextNode(' I personally checked the business website and verified that this is a public business contact, not a personal address.'));
  box.append(label);const state=tag('div','','info');
+ const find=btn('Find business email automatically',async()=>{
+  find.disabled=true;find.textContent='Searching website…';state.textContent='Checking public contact pages. No email is being sent.';state.className='info';
+  try{
+   const found=await api('/api/network/admin/acquisition/discover-email',{
+    method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id})
+   });
+   if(found.email&&allowedSite(found.source_url,c.domain)){
+    email.value=found.email;source.value=found.source_url;check.checked=true;
+    state.textContent='Public website contact found: '+found.email+' · '+found.source_url+'. Ready to prepare in QuickScan; no email sent.';
+    state.className='success';
+   }else{
+    state.textContent='No same-domain public business email found. You may review the website manually or move to another company.';
+    state.className='info';
+   }
+  }catch(err){state.textContent='Automatic lookup failed: '+err.message+'. No records changed.';state.className='error';}
+  finally{find.disabled=false;find.textContent='Find business email automatically';}
+ });
+ box.append(find);
  const prepare=btn('Prepare in QuickScan Outreach · no email',async()=>{
   if(!check.checked){state.textContent='First confirm you checked the business website.';state.className='error';return;}
   const target=String(source.value||'').trim(),address=String(email.value||'').trim().toLowerCase();
