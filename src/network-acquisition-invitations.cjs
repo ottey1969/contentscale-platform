@@ -50,6 +50,7 @@ async function networkWarmupSnapshot(pool){
  const used=pqsToday+networkToday;
  const available=active&&(completed||used<dailyCap);
  const networkCap=networkCapForWarmup(day,active);
+ const manilaDate=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  const canSend=available&&networkToday<networkCap;
  return {
   warmup:{active,complete:completed,progress_day:day,total_days:42,cycle:Math.min(6,Math.ceil(day/7)),
@@ -57,6 +58,8 @@ async function networkWarmupSnapshot(pool){
    remaining_today:dailyCap==null?null:Math.max(0,dailyCap-used),
    next_cap:completed?null:warmupDailyCap(Math.min(43,(Math.floor((day-1)/7)+1)*7+1)),
    progress_basis:'completed_daily_targets',timezone:'Asia/Manila',
+   counting_date:manilaDate,counting_window:'00:00–23:59 Asia/Manila',
+   count_scope:'ContentScale Network invitations plus prospect outreach only; other Brevo sends excluded',
    last_progress_update:row.progress_updated_at||null,
    legacy_sent_today:pqsToday,network_sent_today:networkToday,
    total_sent:pqsToday>=0?Number(legacy.rows[0]?.total_sent||0)+Number(network.rows[0]?.total_sent||0):0},
