@@ -8,7 +8,8 @@ assert.equal(sameBusinessUrl('https://www.acme.com/contact','acme.com'),true);
 assert.equal(sameBusinessUrl('http://acme.com/contact','acme.com'),false);
 assert.equal(publicCompanyContact('info@jerseycraftexteriors.com','jerseycraftroofing.com','https://jerseycraftroofing.com/about-us/',{email:'info@jerseycraftexteriors.com',source_url:'https://jerseycraftroofing.com/about-us/',verification:'publicly_observed'}),true,'first-party evidence permits another business email domain');
 assert.equal(publicCompanyContact('info@jerseycraftexteriors.com','jerseycraftroofing.com','https://jerseycraftexteriors.com/',null,true),false,'a different website cannot masquerade as the source');
-assert.equal(publicCompanyContact('hello@gmail.com','jerseycraftroofing.com','https://jerseycraftroofing.com/',null,true),false,'free mailbox blocked');
+assert.equal(publicCompanyContact('hello@gmail.com','jerseycraftroofing.com','https://jerseycraftroofing.com/',null,false),false,'free mailbox needs explicit admin verification');
+assert.equal(publicCompanyContact('penyakestimates@yahoo.com','penyakroofing.com','https://penyakroofing.com/',{email:'penyakestimates@yahoo.com',source_url:'https://penyakroofing.com/',verification:'publicly_observed'},true),true,'publicly listed Yahoo business email may be manually approved');
 
 assert.match(inviteMarkup('Acme Roofing','a'.repeat(48),'invited'),/I am interested/);
 let sent=0,mail=null,company={id:7,business_name:'Acme Roofing',domain:'acme.com',canonical_url:'https://acme.com/',public_visibility:'hidden',metadata:{acquisition:{website_review:{status:'site_observed'},email_discovery:{email:'info@acme.com',source_url:'https://acme.com/contact',verification:'publicly_observed'}}}};
