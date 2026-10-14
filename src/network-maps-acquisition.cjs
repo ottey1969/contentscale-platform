@@ -12,6 +12,7 @@ function authorized(req){
 }
 // Short-lived signed HttpOnly session: the admin secret never enters browser storage.
 const sessionName='cs_network_admin';
+const loginAttempts=new Map();
 function cookieSessionValid(req){
  const secret=process.env.LC_ADMIN_CODE||'';
  if(!secret)return false;
@@ -53,9 +54,17 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
  if(!app?.get||!app?.post||!pool?.query)throw Error('Network acquisition dependencies missing');
  const sessionAuth=req=>auth(req)||cookieSessionValid(req);
  app.post('/api/network/admin/acquisition/session', (req,res)=>{
+  const client=String(req.ip||req.socket?.remoteAddress||'unknown');
+  const now=Date.now(),attempt=loginAttempts.get(client);
+  if(attempt&&attempt.until>now&&attempt.count>=5)return res.status(429).set('Cache-Control','no-store').json({error:'Te veel inlogpogingen. Probeer later opnieuw.'});
   const code=String(req.body?.code||''),expected=process.env.LC_ADMIN_CODE||'';
   const good=expected.length>0&&code.length===expected.length&&crypto.timingSafeEqual(Buffer.from(code),Buffer.from(expected));
-  if(!good)return res.status(403).set('Cache-Control','no-store').json({error:'Admincode niet geaccepteerd'});
+  if(!good){
+   loginAttempts.set(client,{count:(attempt&&attempt.until>now?attempt.count:0)+1,until:now+15*60*1000});
+   if(loginAttempts.size>1000)loginAttempts.delete(loginAttempts.keys().next().value);
+   return res.status(403).set('Cache-Control','no-store').json({error:'Admincode niet geaccepteerd'});
+  }
+  loginAttempts.delete(client);
   return res.set('Cache-Control','no-store').set('Set-Cookie',newSessionCookie()).json({ok:true});
  });
  app.get('/api/network/admin/acquisition/session',(req,res)=>res.set('Cache-Control','no-store').json({authenticated:sessionAuth(req)}));
