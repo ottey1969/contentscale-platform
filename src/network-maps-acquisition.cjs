@@ -26,6 +26,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
   if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   try{
    const result=await pool.query(`SELECT n.id,n.business_name,n.domain,n.canonical_url,n.primary_niche,n.city,n.status,n.public_visibility,n.website_check,
+    n.metadata->'acquisition'->'email_discovery' AS email_discovery,
     p.token AS outreach_token,p.contact_email AS outreach_email,p.contact_email_origin AS outreach_email_origin,
     p.outreach_email_status,p.outreach_sent_at,p.ceo_report_url,p.quickscan_interested,
     p.revoked_at IS NOT NULL AS outreach_revoked
@@ -43,6 +44,36 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    const count=await pool.query("SELECT count(*)::int AS total FROM network_directory_businesses WHERE source='maps_acquisition'");
    return res.json({candidates:result.rows,total:Number(count.rows[0]?.total||0)});
   }catch(e){console.error('[network-acquisition] list',e.code||e.message);return res.status(503).json({error:'Network candidate list unavailable'})}
+ });
+ app.post('/api/network/admin/acquisition/discover-batch',async(req,res)=>{
+  if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
+  const ids=req.body?.company_ids;
+  if(!Array.isArray(ids)||ids.length<1||ids.length>5||new Set(ids).size!==ids.length||
+   ids.some(id=>!Number.isSafeInteger(id)||id<1))return res.status(400).json({error:'Select 1 to 5 unique acquisition company IDs'});
+  try{
+   const companies=await pool.query(
+    "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery FROM network_directory_businesses WHERE id=ANY($1::int[]) AND source='maps_acquisition'",[ids]);
+   if(companies.rows.length!==ids.length)return res.status(404).json({error:'One or more companies not found'});
+   const results=[];
+   for(const company of companies.rows){
+    if(company.email_discovery?.email){
+     results.push({company_id:company.id,...company.email_discovery,cached:true});continue;
+    }
+    try{
+     const result=await discoverCompanyContact(company.canonical_url,{maxPages:3});
+     if(result.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))throw Error('Company domain mismatch');
+     const discovery={email:result.email,source_url:result.source_url,verification:result.verification,checked_at:new Date().toISOString()};
+     if(result.email){
+      // Preserve the original company identity and all unrelated metadata keys.
+      await pool.query(
+       "UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",
+       [company.id,JSON.stringify(discovery)]);
+     }
+     results.push({company_id:company.id,...discovery,cached:false});
+    }catch(e){results.push({company_id:company.id,email:null,verification:'unavailable',error:'Website contact lookup unavailable'});}
+   }
+   return res.json({results,emails_sent:0});
+  }catch(e){console.error('[network-acquisition] batch discovery',e.code||e.message);return res.status(503).json({error:'Batch lookup unavailable; existing acquisition records preserved'})}
  });
  app.post('/api/network/admin/acquisition/discover-email',async(req,res)=>{
   if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
