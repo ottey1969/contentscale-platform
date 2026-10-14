@@ -22,6 +22,12 @@ assert.match(invitationPage,/not guarantees/i,'no backlinks, rankings or AI cita
 assert.match(invitationPage,/No commitment/,'CTA must not imply enrollment');
 assert.match(invitationPage,/method="POST" action="\/network\/join\/a{48}\/interested"/);
 assert.match(invitationPage,/noindex,nofollow/,'private invitation must remain noindex');
+assert.match(invitationPage,/Are you interested in a content opportunity\?/);
+assert.match(invitationPage,/claim and verify your business identity/i);
+const previewPage=inviteMarkup('Acme Roofing','a'.repeat(48),'prepared');
+assert.match(previewPage,/Preview only — invitation not sent/);
+assert.doesNotMatch(previewPage,/<button\b/i,'preview must not show an inoperable action');
+assert.doesNotMatch(previewPage,/<form method="POST"/,'preview must not record interest');
 const confirmedPage=inviteMarkup('Acme Roofing','a'.repeat(48),'interested');
 assert.match(confirmedPage,/your interest has been recorded/i);
 assert.doesNotMatch(confirmedPage,/<form method="POST"/,'do not show an active interest CTA after opt-in');
