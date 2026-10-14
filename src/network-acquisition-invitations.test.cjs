@@ -1,13 +1,17 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {registerNetworkAcquisitionInvitations,sameBusinessEmail,sameBusinessUrl,inviteMarkup}=require('./network-acquisition-invitations.cjs');
+const {registerNetworkAcquisitionInvitations,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup}=require('./network-acquisition-invitations.cjs');
 assert.equal(sameBusinessEmail('info@acme.com','acme.com'),true);
 assert.equal(sameBusinessEmail('no-reply@acme.com','acme.com'),false);
 assert.equal(sameBusinessEmail('hello@gmail.com','acme.com'),false);
 assert.equal(sameBusinessUrl('https://www.acme.com/contact','acme.com'),true);
 assert.equal(sameBusinessUrl('http://acme.com/contact','acme.com'),false);
+assert.equal(publicCompanyContact('info@jerseycraftexteriors.com','jerseycraftroofing.com','https://jerseycraftroofing.com/about-us/',{email:'info@jerseycraftexteriors.com',source_url:'https://jerseycraftroofing.com/about-us/',verification:'publicly_observed'}),true,'first-party evidence permits another business email domain');
+assert.equal(publicCompanyContact('info@jerseycraftexteriors.com','jerseycraftroofing.com','https://jerseycraftexteriors.com/',null,true),false,'a different website cannot masquerade as the source');
+assert.equal(publicCompanyContact('hello@gmail.com','jerseycraftroofing.com','https://jerseycraftroofing.com/',null,true),false,'free mailbox blocked');
+
 assert.match(inviteMarkup('Acme Roofing','a'.repeat(48),'invited'),/I am interested/);
-let sent=0,mail=null,company={id:7,business_name:'Acme Roofing',domain:'acme.com',canonical_url:'https://acme.com/',public_visibility:'hidden',metadata:{acquisition:{website_review:{status:'site_observed'},email_discovery:{email:'info@acme.com',source_url:'https://acme.com/contact'}}}};
+let sent=0,mail=null,company={id:7,business_name:'Acme Roofing',domain:'acme.com',canonical_url:'https://acme.com/',public_visibility:'hidden',metadata:{acquisition:{website_review:{status:'site_observed'},email_discovery:{email:'info@acme.com',source_url:'https://acme.com/contact',verification:'publicly_observed'}}}};
 const calls=[],routes={};
 const app={post:(url,fn)=>routes['POST '+url]=fn,get:(url,fn)=>routes['GET '+url]=fn};
 const pool={query:async(sql,args=[])=>{

@@ -6,6 +6,19 @@ async function run(){
  assert.equal(publicIP('8.8.8.8'),true);
  assert.equal(hostForWebsite('https://www.acme.com/contact').host,'acme.com');
  for(const url of ['http://acme.com','https://localhost','https://127.0.0.1','https://acme.com:8443'])assert.throws(()=>hostForWebsite(url));
+ const jersey=await discoverCompanyContact('https://jerseycraftroofing.com/',{
+   maxPages:1,resolve:async()=>[{address:'8.8.8.8',family:4}],
+   request:(options,callback)=>{
+     const {EventEmitter}=require('node:events');const req=new EventEmitter();
+     req.end=()=>{const res=new EventEmitter();res.statusCode=200;res.headers={'content-type':'text/html'};callback(res);
+       process.nextTick(()=>{res.emit('data',Buffer.from('<html><head><style>.ignore{content:"vendor@external.com"}</style></head><body><footer>Jersey Craft Roofing | info@jerseycraftexteriors.com</footer></body></html>'));res.emit('end');});};
+     req.destroy=()=>{};return req;
+   }
+ });
+ assert.equal(jersey.email,'info@jerseycraftexteriors.com','published alternate business domain must be detected');
+ assert.equal(jersey.source_url,'https://jerseycraftroofing.com/');
+ assert.equal(jersey.relationship,'publicly_listed_other_business_domain');
+ assert(!jersey.contacts.some(x=>x.email==='vendor@external.com'),'script/style emails must be ignored');
  const result=await discoverCompanyContact('https://acme.com',{maxPages:2,resolve:async()=>[{address:'8.8.8.8',family:4}],request:(options,callback)=>{
    const {EventEmitter}=require('node:events');
    const req=new EventEmitter();

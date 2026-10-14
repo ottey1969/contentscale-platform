@@ -15,6 +15,15 @@ function sameBusinessEmail(email,domain){
  const eDomain=address.split('@')[1], business=String(domain||'').toLowerCase().replace(/^www\./,'');
  return (eDomain===business || business.endsWith('.'+eDomain)) && !/^(no-?reply|donotreply|bounce|mailer-daemon)@/.test(address);
 }
+function publicCompanyContact(email,domain,source,discovery,manualConfirmed=false){
+ const address=String(email||'').trim().toLowerCase();
+ if(!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(address) ||
+  /^(?:no-?reply|bounce|donotreply|mailer-daemon)@/.test(address) ||
+  /@(gmail\.com|yahoo\.com|hotmail\.com|outlook\.com|example\.(?:com|org))$/.test(address) ||
+  !sameBusinessUrl(source,domain))return false;
+ const observed=discovery?.email?.toLowerCase()===address&&discovery?.source_url===source&&discovery?.verification==='publicly_observed';
+ return observed||(manualConfirmed===true&&sameBusinessUrl(source,domain));
+}
 function sameBusinessUrl(url,domain){
  try{const u=new URL(url);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&u.hostname.toLowerCase().replace(/^www\./,'')===String(domain).toLowerCase().replace(/^www\./,'');}catch{return false;}
 }
@@ -80,17 +89,15 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    const acq=c.metadata?.acquisition||{},audit=acq.website_review;
    if(!['site_observed','manual_reviewed'].includes(audit?.status))return reply(res,409,{error:'Check the business website first'});
    const discovered=acq.email_discovery;
-   const validSource=discovered?.email?.toLowerCase()===email&&discovered?.source_url===source||
-    req.body?.manually_verified===true&&sameBusinessUrl(source,c.domain);
-   if(!sameBusinessEmail(email,c.domain)||!sameBusinessUrl(source,c.domain)||!validSource)
-    return reply(res,409,{error:'A source-backed same-domain business email is required'});
+   if(!publicCompanyContact(email,c.domain,source,discovered,req.body?.manually_verified===true))
+    return reply(res,409,{error:'Business email needs an exact public source on this company website. An email hosted on another business domain is allowed when publicly listed on this website.'});
    const existing=inviteState(c);
    if(existing?.status && !['draft'].includes(existing.status))return reply(res,409,{error:'Network invitation already exists ('+existing.status+'). Review this record instead.'});
    // Exclude globally suppressed addresses even at preparation.
    const blocked=await pool.query("SELECT EXISTS(SELECT 1 FROM contact_intelligence_suppressions WHERE lower(email)=lower($1)) AS blocked",[email]);
    if(blocked.rows[0]?.blocked)return reply(res,409,{error:'This address has opted out of contact'});
    const token=crypto.randomBytes(24).toString('hex');
-   const invited={status:'prepared',token_hash:hash(token),email,source_url:source,prepared_at:new Date().toISOString(),sent_at:null};
+   const invited={status:'prepared',token_hash:hash(token),email,source_url:source,contact_evidence:discovered?.email?.toLowerCase()===email&&discovered?.source_url===source?'website_observed':'admin_source_confirmed',prepared_at:new Date().toISOString(),sent_at:null};
    const saved=await pool.query(
     "UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,invitation}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition' AND public_visibility='hidden' AND (metadata->'acquisition'->'invitation'->>'status' IS NULL OR metadata->'acquisition'->'invitation'->>'status'='draft') RETURNING id",
     [id,JSON.stringify(invited)]);
@@ -122,7 +129,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
   try{
    const c=await company(id),invite=inviteState(c);
    if(!c||invite?.status!=='prepared'||invite.token_hash!==hash(token)||c.public_visibility!=='hidden')return reply(res,409,{error:'Unsent, private Network invitation required'});
-   if(!sameBusinessEmail(invite.email,c.domain)||!sameBusinessUrl(invite.source_url,c.domain))return reply(res,409,{error:'Verified business contact required'});
+   if(!publicCompanyContact(invite.email,c.domain,invite.source_url,c.metadata?.acquisition?.email_discovery,invite.contact_evidence==='admin_source_confirmed'))return reply(res,409,{error:'Verified public business contact and matching company source required'});
    if(!['site_observed','manual_reviewed'].includes(c.metadata?.acquisition?.website_review?.status))return reply(res,409,{error:'Website must be reviewed before invitation'});
    const blocked=await pool.query("SELECT EXISTS(SELECT 1 FROM contact_intelligence_suppressions WHERE lower(email)=lower($1)) AS blocked",[invite.email]);
    if(blocked.rows[0]?.blocked || invite.status==='unsubscribed')return reply(res,409,{error:'This address opted out'});
@@ -188,4 +195,4 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  });
  app.post('/network/join/:token/unsubscribe',unsubscribe);
 }
-module.exports={registerNetworkAcquisitionInvitations,websiteEvidence,sameBusinessEmail,sameBusinessUrl,inviteMarkup};
+module.exports={registerNetworkAcquisitionInvitations,websiteEvidence,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup};

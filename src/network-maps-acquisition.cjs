@@ -39,12 +39,15 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
  });
  app.post('/api/network/admin/acquisition/discover-batch',async(req,res)=>{
   if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
-  const ids=req.body?.company_ids;
-  if(!Array.isArray(ids)||ids.length<1||ids.length>5||new Set(ids).size!==ids.length||
-   ids.some(id=>!Number.isSafeInteger(id)||id<1))return res.status(400).json({error:'Select 1 to 5 unique acquisition company IDs'});
+  const supplied=req.body?.company_ids;
+  // PostgreSQL BIGINT arrives as a decimal string in pg. Normalize without precision loss.
+  const ids=Array.isArray(supplied)?supplied.map(id=>typeof id==='string'?id.trim():String(id)):[];
+  if(ids.length<1||ids.length>5||new Set(ids).size!==ids.length||
+   ids.some(id=>!/^[1-9][0-9]{0,18}$/.test(id)||BigInt(id)>9223372036854775807n))
+   return res.status(400).json({error:'Select 1 to 5 unique acquisition company IDs'});
   try{
    const companies=await pool.query(
-    "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery, metadata->'acquisition'->'website_review' AS website_review FROM network_directory_businesses WHERE id=ANY($1::int[]) AND source='maps_acquisition'",[ids]);
+    "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery, metadata->'acquisition'->'website_review' AS website_review FROM network_directory_businesses WHERE id=ANY($1::bigint[]) AND source='maps_acquisition'",[ids]);
    if(companies.rows.length!==ids.length)return res.status(404).json({error:'One or more companies not found'});
    const results=await Promise.all(companies.rows.map(async company=>{
     let site=company.website_review;
@@ -59,11 +62,11 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
     try{
      const result=await discoverCompanyContact(company.canonical_url,{maxPages:4});
      if(result.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))throw Error('Company domain mismatch');
-     const discovery={email:result.email,source_url:result.source_url,verification:result.verification,checked_at:new Date().toISOString()};
+     const discovery={email:result.email,source_url:result.source_url,verification:result.verification,relationship:result.relationship,version:'public-v2',checked_at:new Date().toISOString()};
      await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(discovery)]);
      return {company_id:company.id,...discovery,website_review:site,cached:false};
     }catch(e){
-     const failed={email:null,source_url:null,verification:'unavailable',checked_at:new Date().toISOString()};
+     const failed={email:null,source_url:null,verification:'unavailable',version:'public-v2',checked_at:new Date().toISOString()};
      try{await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(failed)]);}catch{}
      return {company_id:company.id,...failed,website_review:site,error:'Website contact lookup unavailable'};
     }
@@ -81,7 +84,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    const company=record.rows[0];
    const data=await discoverCompanyContact(company.canonical_url);
    if(data.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))return res.status(422).json({error:'Company domain mismatch'});
-   const discovery={email:data.email,source_url:data.source_url,verification:data.verification,checked_at:new Date().toISOString()};
+   const discovery={email:data.email,source_url:data.source_url,verification:data.verification,relationship:data.relationship,version:'public-v2',checked_at:new Date().toISOString()};
    await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[id,JSON.stringify(discovery)]);
    return res.json({company_id:id,...data});
   }catch(e){console.error('[network-acquisition] public email discovery',e.code||e.message);return res.status(503).json({error:'Public contact lookup unavailable; no data was modified'})}

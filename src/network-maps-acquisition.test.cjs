@@ -15,6 +15,7 @@ const pool={query:async(sql,args)=>{
  queries.push({sql,args});
  if(sql.includes('INSERT INTO network_directory_businesses'))return {rows:queries.filter(x=>x.sql.includes('INSERT INTO network_directory_businesses')).length===1?[{id:15}]:[]};
  if(sql.includes('count(*)::int AS total'))return {rows:[{total:19}]};
+ if(sql.includes('id=ANY($1::bigint[])'))return {rows:[{id:'15',domain:'njroof.example',canonical_url:'https://njroof.example/',email_discovery:{email:'hello@njroof.example',source_url:'https://njroof.example/',verification:'publicly_observed'},website_review:{status:'site_observed',checked_at:'2026-10-14T00:00:00Z'}}]};
  if(sql.includes('FROM network_directory_businesses n')&&sql.includes("n.source='maps_acquisition'"))return {rows:[{id:15,business_name:source.name,canonical_url:'https://njroof.example/',source:'maps_acquisition',outreach_token:null,outreach_sent_at:null}]};
  throw Error('Unexpected SQL');
 }};
@@ -48,6 +49,11 @@ async function invoke(method,path,body,code='ok'){
  assert.equal(q.output.imported,0);assert.equal(q.output.duplicates,1);
  q=await invoke('GET','/api/network/admin/acquisition/candidates',{});
  assert.equal(q.status,200);assert.equal(q.output.candidates.length,1);assert.equal(q.output.total,19,'cumulative acquisitions must not be limited to displayed rows');
+ q=await invoke('POST','/api/network/admin/acquisition/discover-batch',{company_ids:['15']});
+ assert.equal(q.status,200,'PostgreSQL bigint IDs arrive as strings and must not return HTTP 400');
+ assert.equal(q.output.results[0].email,'hello@njroof.example');
+ q=await invoke('POST','/api/network/admin/acquisition/discover-batch',{company_ids:['15','15']});
+ assert.equal(q.status,400,'duplicate IDs remain rejected');
  q=await invoke('GET','/network/acquisition',{});
  assert(q.sentFile.endsWith('network-acquisition.html'));
  assert.equal(q.headers['X-Robots-Tag'],'noindex, nofollow');
