@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {registerNetworkAcquisitionInvitations,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup,warmupDailyCap,networkWarmupSnapshot}=require('./network-acquisition-invitations.cjs');
+const {registerNetworkAcquisitionInvitations,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup,warmupDailyCap,networkCapForWarmup,networkWarmupSnapshot}=require('./network-acquisition-invitations.cjs');
 assert.equal(sameBusinessEmail('info@acme.com','acme.com'),true);
 assert.equal(sameBusinessEmail('no-reply@acme.com','acme.com'),false);
 assert.equal(sameBusinessEmail('hello@gmail.com','acme.com'),false);
@@ -70,12 +70,14 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
 (async()=>{
  assert.equal(warmupDailyCap(9),30,'day 9 must retain the original Lead Crawler 30/day target');
  assert.equal(warmupDailyCap(1),20);assert.equal(warmupDailyCap(43),null);
+ assert.deepEqual([1,9,15,22,29,36,43].map(day=>networkCapForWarmup(day,true)),[4,6,8,10,15,20,20]);
+ assert.equal(networkCapForWarmup(9,false),0,'paused warming must block invites');
  let limits=await run('GET','/api/network/admin/acquisition/outreach-status');
  assert.equal(limits.statusCode,200,'existing original warm-up progress must load through Network Acquisitie');
  assert.equal(limits.body.warmup.progress_day,9);
  assert.equal(limits.body.warmup.daily_cap,30);
  assert.equal(limits.body.warmup.total_sent,258,'send history is not reset when entering Network');
- assert.equal(limits.body.daily_cap,2,'Network cap is independent of overall warm-up');
+ assert.equal(limits.body.daily_cap,6,'Network may use 20% of day 9 sender allowance');
  assert.equal(limits.body.can_send_now,true);
  limits=await run('GET','/api/network/admin/acquisition/outreach-status',{}, {'x-admin-code':'bad'});
  assert.equal(limits.statusCode,403,'warm-up counters require admin session');
@@ -94,7 +96,7 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
  const token=r.body.token;
  const previewPage=inviteMarkup('Acme Roofing',token,'prepared');
  assert.match(previewPage,/Invitation preview:/,'unsent preview must clearly identify its state');
- assert.match(previewPage,/disabled aria-disabled="true"/,'green interest CTA stays visible but inactive before send');
+ assert.doesNotMatch(previewPage,/<button\\b/i,'preview must show no dead CTA');
  assert.doesNotMatch(previewPage,/<form method="POST"/,'unsent preview must not include interest form');
  let early=await run('POST','/network/join/:token/interested',{}, {},{token});
  assert.equal(early.statusCode,409,'even direct POST must not record interest on unsent invitations');
