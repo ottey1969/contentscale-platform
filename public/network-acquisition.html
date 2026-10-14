@@ -1,38 +1,240 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network acquisition review | ContentScale</title>
-<style>body{background:#101827;color:#e8edf5;font:15px system-ui;margin:0;padding:24px}main{max-width:1130px;margin:0 auto}h1{font-size:26px}p{color:#adbcd0}a{color:#70b8ff}
-table{border-collapse:collapse;width:100%;margin-top:22px}td,th{padding:12px;text-align:left;border-bottom:1px solid #344357}th{color:#b1c2d8;font-weight:600}
-.status{color:#facc15}button{background:#243149;border:1px solid #60728c;color:white;padding:9px 13px;border-radius:6px;cursor:pointer}#message{margin:14px 0}.bad{color:#fb7185}</style></head><body><main>
-<p><a href="/lead-crawler">← Scan next batch</a> · <a href="/network">Network home</a></p>
-<h1>Network · Acquired business candidates</h1>
-<p>Private, imported New Jersey companies. A Google Maps listing is not proof that a website is suitable to publish content. Verify the website and whether this business should be a publisher or a potential client.</p>
-<p><strong>Emails sent: 0.</strong> No automatic invitations, membership or public directory listings were created. The CEO email queue is separate.</p>
-<button id="refresh">Refresh candidates</button><div id="message">Loading…</div>
-<table><thead><tr><th>Company</th><th>Location / niche</th><th>State</th><th>Next action</th></tr></thead><tbody id="rows"></tbody></table>
-</main><script>
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Network Acquisitie · ContentScale</title>
+<style>
+:root{color-scheme:dark;font:14px/1.55 system-ui}
+*{box-sizing:border-box}
+body{margin:0;background:#0b1220;color:#e8edf5;padding:24px}
+main{max-width:1190px;margin:auto}
+h1{font-size:26px;margin:8px 0}h2{font-size:17px;margin:0 0 8px}
+a{color:#8bc3ff}p,.muted{color:#b1c0d1}
+.topnav{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px}
+.panel{background:#101b2c;border:1px solid #34465f;padding:17px;border-radius:12px;margin:14px 0}
+.warm{border-color:#a17736;background:#1c1a19}.warm h2{color:#facc15}
+.metrics{display:flex;gap:12px;flex-wrap:wrap}
+.metric{min-width:120px;flex:1;border:1px solid #34465f;padding:9px 12px;border-radius:8px;background:#0a1321}
+.metric b{display:block;font-size:19px}.metric small{color:#b1c0d1}
+.toolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:13px 0}
+button{background:#4338ca;border:1px solid #7776ed;color:white;padding:9px 12px;border-radius:7px;cursor:pointer;font-weight:700}
+button.secondary{background:#233148;border-color:#526784}
+button:disabled{opacity:.46;cursor:not-allowed}
+input,textarea{background:#0a1424;border:1px solid #5d718c;color:#f1f5f9;padding:9px;border-radius:6px;font:inherit;width:100%}
+input[type=checkbox]{width:auto}
+label{display:block;color:#c4d4e9;font-size:13px;margin:8px 0}
+input:focus,textarea:focus{outline:2px solid #a5b4fc}
+.company{border:1px solid #34465f;border-radius:10px;padding:15px;margin:9px 0;background:#101b2c}
+.companyheader{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.company h3{font-size:17px;margin:0}.company a{word-break:break-word}
+.pill{font-size:12px;color:#fcd34d;border:1px solid #9f7124;border-radius:20px;padding:3px 8px;display:inline-block}
+.pill.good{color:#86efac;border-color:#277348}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.review{border-top:1px solid #31435a;margin-top:13px;padding-top:12px}
+.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.preview{padding:12px;background:#111025;border:1px solid #7367cf;border-radius:9px;margin-top:12px}
+.preview textarea{min-height:195px;white-space:pre-wrap}
+.info{font-size:12px;color:#cbd5e1}
+.error{color:#fda4af}.success{color:#86efac}
+.notice{border-left:3px solid #eab308;padding-left:11px}
+@media(max-width:700px){body{padding:12px}.formgrid{grid-template-columns:1fr}}
+</style></head>
+<body><main>
+<nav class="topnav"><a href="/lead-crawler">← Scan next batch</a><a href="/quick-scan/admin#pqsEmailQueue">QuickScan · Outreach approval</a><a href="/network">Network home</a></nav>
+<h1>Network · Acquisitie</h1>
+<p>Companies stay in the same private Network directory while you review their website and decide whether to offer the CEO/QuickScan journey. No automatic invitations: a bulk import never sends mail and no company is publicly listed.</p>
+<section class="panel warm" id="warmup" aria-live="polite">
+<h2>Email warm-up · Existing QuickScan outreach</h2>
+<div id="warmupStatus" class="info">Checking current approved-outreach limits…</div>
+<div id="warmupMetrics" class="metrics"></div>
+<p id="warmupNext" class="info">Sending is allowed only after your explicit approval and within the server-enforced daily cap (Asia/Manila).</p>
+</section>
+<section class="panel">
+<h2>What happens next?</h2>
+<p>1. Check the actual company website and public business contact. 2. Prepare an existing QuickScan prospect record (no scan or email). 3. Preview the real first outreach email and approve exactly one recipient. This first message links to the public CEO entry step. The private chosen-page QuickScan invitation and the later 5/5 report-ready email are separate stages.</p>
+<p class="notice">An NJ Google Maps phone is not an email address. Without an identifiable public business email source, the send control remains unavailable. Publisher recruitment is a separate approval journey.</p>
+<div class="toolbar">
+<button id="refresh" class="secondary">Refresh companies and warm-up</button>
+<label for="filter" style="margin:0">Show</label>
+<select id="filter" style="width:auto"><option value="all">All companies</option><option value="needs_email">Needs business email</option><option value="ready">Ready for approval</option><option value="sent">Outreach sent</option></select>
+<span id="summary" class="info">Loading…</span>
+</div>
+<div id="message" aria-live="polite"></div>
+<div id="rows"></div>
+</section>
+</main>
+<script>
 (function(){
- const message=document.getElementById('message'),tbody=document.getElementById('rows');
- function td(row,child){const cell=document.createElement('td');if(child instanceof Node)cell.appendChild(child);else cell.textContent=String(child||'');row.appendChild(cell)}
- async function load(){
-  message.className='';message.textContent='Loading…';
-  try{
-   const key=sessionStorage.getItem('lc_admin_code')||'';
-   const response=await fetch('/api/network/admin/acquisition/candidates',{headers:{'x-admin-code':key},cache:'no-store'});
-   const data=await response.json();
-   if(!response.ok)throw Error(data.error||'Log in to Lead Crawler as admin and return here.');
-   tbody.textContent='';
-   data.candidates.forEach(c=>{
-    const tr=document.createElement('tr'),company=document.createElement('div'),link=document.createElement('a');
-    company.textContent=c.business_name;
-    link.href=c.canonical_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open website';
-    const wrap=document.createElement('div');wrap.append(company,link);
-    td(tr,wrap);td(tr,(c.primary_niche||'Unknown niche')+' · '+(c.city||'NJ')+', USA');
-    const status=document.createElement('span');status.className='status';status.textContent='Private · not verified';
-    td(tr,status);td(tr,'Inspect website, validate publisher fit and business contact before inviting');
-    tbody.appendChild(tr);
-   });
-   message.textContent=Number(data.total??data.candidates.length)+' total private Network candidates ('+data.candidates.length+' recent shown). Each successful new batch adds to this total; duplicates are not counted twice. No emails sent.';
-  }catch(error){message.className='bad';message.textContent=error.message}
+'use strict';
+const el=id=>document.getElementById(id);
+const key=()=>sessionStorage.getItem('lc_admin_code')||'';
+let candidates=[],prospects=[],schedule=null,hasOutreachAccess=false,openId=null,previewId=null,busy=false;
+function tag(name,txt,cls){const e=document.createElement(name);if(txt!==undefined)e.textContent=txt;if(cls)e.className=cls;return e;}
+function btn(txt,fn,cls){const b=tag('button',txt,cls);b.type='button';b.onclick=fn;return b;}
+function message(txt,good){el('message').textContent=txt||'';el('message').className=good?'success':'error';}
+function allowedSite(source,domain){
+ try{const u=new URL(source);const host=u.hostname.toLowerCase().replace(/^www\./,'');return u.protocol==='https:'&&!u.username&&!u.password&&(host===domain||host.endsWith('.'+domain));}catch{return false;}
+}
+function getProspect(c){return prospects.find(p=>p.token===c.outreach_token)||prospects.find(p=>(p.domain||'').toLowerCase()===String(c.domain||'').toLowerCase())||null;}
+function status(c){
+ const p=getProspect(c),sent=!!(c.outreach_sent_at||p&&p.outreach_sent_at);
+ if(sent)return{label:'Outreach sent',group:'sent',good:true};
+ if(c.outreach_revoked)return{label:'Previous record revoked — review',group:'needs_email'};
+ if(p&&p.outreach_email_status==='sending')return{label:'Sending · check status',group:'ready'};
+ if(p&&p.outreach_email_status==='failed')return{label:'Send failed · review before retry',group:'ready'};
+ if(p&&p.outreach_email_status==='sent')return{label:'Outreach sent',group:'sent',good:true};
+ if(p&&p.contact_email_origin==='likely_personal')return{label:'Personal email · blocked',group:'needs_email'};
+ if(p&&p.contact_email&&p.contact_email_origin==='website_found')return{label:'Ready for your approval',group:'ready',good:true};
+ return{label:'Business contact review required',group:'needs_email'};
+}
+function datetime(v){if(!v)return'None yet';const d=new Date(v);return Number.isNaN(d.getTime())?'Unknown':new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' PHT';}
+function mondayPHT(){
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const p=Object.fromEntries(parts.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
+ const d=new Date(p.year+'-'+p.month+'-'+p.day+'T00:00:00Z');
+ d.setUTCDate(d.getUTCDate()-((d.getUTCDay()+6)%7));return d.toISOString().slice(0,10);
+}
+function metric(label,value){const b=tag('div',undefined,'metric');b.append(tag('small',label),tag('b',value));return b;}
+function renderWarmup(){
+ const root=el('warmupMetrics');root.replaceChildren();
+ if(!hasOutreachAccess||!schedule){
+  el('warmupStatus').textContent='Current limits unavailable. Open QuickScan Admin with your admin code, then refresh Acquisitie. Email sending here is disabled until the real limit can be checked.';
+  el('warmupNext').textContent='No historical total or warm-up stage is guessed.';
+  return;
  }
- document.getElementById('refresh').onclick=load;load();
+ const s=schedule,cap=s.daily_cap,today=Number(s.sent_today||0);
+ const weekly=prospects.filter(x=>x.outreach_sent_at&&x.outreach_email_status==='sent'&&datetimeToDay(x.outreach_sent_at)>=mondayPHT()).length;
+ root.append(metric('Today sent',today+' / '+(cap==null?'—':cap)),
+   metric('Remaining today',s.remaining_today==null?'—':s.remaining_today),
+   metric('This week',weekly+(prospects.length>=1000?'+':'')+' sent'),
+   metric('Total sent',Number(s.total_sent||0)));
+ el('warmupStatus').textContent=(s.warmup_complete?'Warm-up complete':'WARM-UP · CYCLE '+s.cycle+'/6 · DAY '+s.day_in_cycle+'/7 · '+s.completed_warmup_days+' FULL TARGET DAYS')+' · Last successful send: '+datetime(s.last_sent_at);
+ el('warmupNext').textContent=s.warmup_complete?'Warm-up progression finished; provider and account restrictions still apply.':('Next increase: '+s.days_to_increase+' completed target days → '+s.next_cap+'/day. Completing a day, not simply waiting, advances the schedule. '+(s.can_send_now?'Approval and sending are currently available.':'Today’s limit reached — wait for the next permitted day.'));
+}
+function datetimeToDay(v){const d=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(v));const p=Object.fromEntries(d.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day;}
+async function api(path,options){
+ const response=await fetch(path,Object.assign({cache:'no-store'},options||{},{headers:Object.assign({'x-admin-code':key()},options&&options.headers||{})}));
+ const data=await response.json().catch(()=>({}));
+ if(!response.ok)throw Error(data.error||('HTTP '+response.status));
+ return data;
+}
+async function refresh(){
+ if(busy)return;busy=true;el('refresh').disabled=true;message('');
+ try{
+  const d=await api('/api/network/admin/acquisition/candidates');
+  candidates=d.candidates||[];
+  el('summary').textContent=Number(d.total??candidates.length)+' acquired companies · '+candidates.length+' recent shown';
+  try{
+   const q=await api('/api/prospect-quick-scan/admin/list');
+   hasOutreachAccess=true;prospects=q.items||[];schedule=q.outreach_schedule||null;
+  }catch(e){hasOutreachAccess=false;prospects=[];schedule=null;message('QuickScan outreach status unavailable: '+e.message+'. Acquisitie remains viewable; sending is disabled.');}
+  renderWarmup();render();
+ }catch(e){message('Cannot load Network Acquisitie: '+e.message)}
+ finally{busy=false;el('refresh').disabled=false;}
+}
+function render(){
+ const holder=el('rows');holder.replaceChildren();
+ const rows=candidates.filter(c=>el('filter').value==='all'||status(c).group===el('filter').value);
+ if(!rows.length){holder.append(tag('p','No companies in this category.'));return;}
+ rows.forEach(c=>{
+  const panel=tag('article',undefined,'company'),head=tag('div',undefined,'companyheader');
+  const info=tag('div'),h=tag('h3',c.business_name);
+  const meta=tag('div',(c.primary_niche||'Niche unverified')+' · '+(c.city||'New Jersey')+' · '+c.domain,'info');
+  info.append(h,meta);const st=status(c);
+  head.append(info,tag('span',st.label,'pill'+(st.good?' good':'')));panel.append(head);
+  const a=tag('a','Visit website');a.href=c.canonical_url;a.target='_blank';a.rel='noopener noreferrer';
+  const actions=tag('div',undefined,'actions');actions.append(a);
+  const p=getProspect(c);
+  if(st.group!=='sent'&&!c.outreach_revoked){
+   actions.append(btn(openId===c.id?'Close review':'Review for outreach',()=>{openId=openId===c.id?null:c.id;previewId=null;render();},'secondary'));
+  }
+  if(p&&p.token){
+   const q=tag('a','Open canonical QuickScan record →');q.href='/quick-scan/admin#pqsEmailQueue';actions.append(q);
+  }
+  panel.append(actions);
+  if(openId===c.id&&st.group!=='sent'&&!c.outreach_revoked)panel.append(reviewForm(c,p));
+  if(st.group==='sent'){
+    panel.append(tag('div','Sent: '+datetime(c.outreach_sent_at||p&&p.outreach_sent_at)+'. Company stays in Acquisitie until the actual next funnel stage.','info'));
+  }
+  if(c.outreach_revoked)panel.append(tag('p','This domain has a revoked QuickScan record. Do not create a duplicate; review its history in QuickScan Admin.','error'));
+  holder.append(panel);
+ });
+}
+function reviewForm(c,p){
+ const box=tag('div',undefined,'review');
+ if(p&&p.contact_email&&p.contact_email_origin==='website_found'){
+  box.append(tag('p','Verified business contact recorded: '+p.contact_email+'. Nothing has been sent by preparing it.','success'));
+  box.append(btn('Preview first outreach email',()=>{previewId=previewId===c.id?null:c.id;render();}));
+  if(previewId===c.id)box.append(preview(c,p));
+  return box;
+ }
+ box.append(tag('p','Only prepare a CEO/QuickScan sales prospect when you have checked this website and found a legitimate public business address. No email, scan or invitation is sent during preparation.','info'));
+ const grid=tag('div',undefined,'formgrid'),labEmail=tag('label','Verified business email'),labSource=tag('label','Exact website page where email is shown');
+ const email=tag('input');email.type='email';email.placeholder='e.g. contact@business.com';email.value=p&&p.contact_email||'';
+ const source=tag('input');source.type='url';source.placeholder='https://company.example/contact/';
+ labEmail.append(email);labSource.append(source);grid.append(labEmail,labSource);box.append(grid);
+ const check=tag('input');check.type='checkbox';const label=tag('label');label.append(check,document.createTextNode(' I personally checked the business website and verified that this is a public business contact, not a personal address.'));
+ box.append(label);const state=tag('div','','info');
+ const prepare=btn('Prepare in QuickScan Outreach · no email',async()=>{
+  if(!check.checked){state.textContent='First confirm you checked the business website.';state.className='error';return;}
+  const target=String(source.value||'').trim(),address=String(email.value||'').trim().toLowerCase();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)||!allowedSite(target,c.domain)){
+   state.textContent='Enter a valid business email and an HTTPS source page on this business website.';state.className='error';return;
+  }
+  if(!hasOutreachAccess){state.textContent='QuickScan Admin access is required first.';state.className='error';return;}
+  prepare.disabled=true;prepare.textContent='Preparing…';state.textContent='Creating/reusing canonical company identity. No email is being sent.';
+  try{
+   // Crucially, create without email. If the second step fails, the candidate
+   // cannot silently become an eligible outbound recipient.
+   const created=await api('/api/prospect-quick-scan/admin/create',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({url:c.canonical_url,business_name:c.business_name,source:'lead_crawler',contact_email:'',language:'en',campaign:'Network Maps Acquisition'})
+   });
+   if(!created.token)throw Error('QuickScan did not confirm the canonical prospect record.');
+   await api('/api/prospect-quick-scan/admin/'+encodeURIComponent(created.token)+'/contact-email',{
+    method:'PATCH',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email:address,origin:'website_found',source_url:target,comment:'Manually reviewed on same-domain public business website from Network Acquisitie. No invitation sent.'})
+   });
+   state.textContent='Prepared ✓. No email sent. Refreshing the approval preview…';state.className='success';
+   await refresh();openId=c.id;render();
+  }catch(err){state.textContent='Not ready for email: '+err.message+'. Review in QuickScan Admin before retrying; do not assume the invitation was prepared.';state.className='error';}
+  finally{prepare.disabled=false;prepare.textContent='Prepare in QuickScan Outreach · no email';}
+ });
+ box.append(prepare,state);return box;
+}
+function preview(c,p){
+ const box=tag('div',undefined,'preview');
+ if(!hasOutreachAccess||!schedule||schedule.can_send_now!==true||Number(schedule.remaining_today||0)<1){
+  box.append(tag('div','Sending unavailable: current server warm-up limit or outreach status could not be verified.','error'));return box;
+ }
+ const copy=p.generated_outreach_copy;
+ if(!copy||!copy.subject||!copy.body||!copy.url){
+  box.append(tag('div','Canonical outreach copy is not available for this prospect. Open QuickScan Admin and refresh; no send is possible here.','error'));return box;
+ }
+ if(p.outreach_email_status==='sending'||p.outreach_sent_at){
+  box.append(tag('div','Invitation already started or sent. Review the existing record; never send twice.','error'));return box;
+ }
+ const title=tag('b','Preview only · nothing sent');
+ box.append(title,tag('p','To: '+p.contact_email+' · First step: public CEO Report ('+copy.url+')','info'));
+ const subject=tag('input');subject.value=copy.subject;subject.readOnly=true;
+ const body=tag('textarea');body.value=copy.body;body.readOnly=true;
+ box.append(subject,body);
+ const msg=tag('div','This sends one actual first-contact email. No QuickScan scan or 5/5 report-ready email is triggered.','info');
+ const send=btn('Approve & send to this ONE company',async()=>{
+  if(!confirm('Approve and send this exact CEO invitation to '+p.contact_email+'? This will use one of today’s remaining warm-up slots.'))return;
+  send.disabled=true;send.textContent='Sending…';msg.textContent='Waiting for provider confirmation…';
+  try{
+   const d=await api('/api/prospect-quick-scan/admin/'+encodeURIComponent(p.token)+'/email-send',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({approved:true,subject:copy.subject,body:copy.body})
+   });
+   if(!d.success||d.status!=='sent')throw Error('Send was not confirmed by the server.');
+   msg.className='success';msg.textContent='Email accepted by provider. Reloading canonical status…';
+   previewId=null;await refresh();
+  }catch(e){msg.textContent='Delivery not confirmed: '+e.message+'. Check QuickScan history before retrying.';msg.className='error';send.disabled=false;send.textContent='Review and try again';}
+ });
+ box.append(msg,send,btn('Cancel',()=>{previewId=null;render();},'secondary'));
+ return box;
+}
+el('refresh').onclick=refresh;el('filter').onchange=render;refresh();
 })();
-</script></body></html>
+</script>
+</body></html>
