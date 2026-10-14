@@ -50,7 +50,9 @@ function inviteMarkup(name,token,state){
  const url='/network/join/'+token;
  const action=state==='interested'
   ? '<div class="confirmation" role="status"><strong>Thank you — your interest has been recorded.</strong><p>We will review the next step with you. No membership, publication, or payment is created by expressing interest.</p></div>'
-  : '<form method="POST" action="'+url+'/interested" class="interest"><button type="submit">Yes, I am interested <span aria-hidden="true">→</span></button><p class="fine">No commitment. No account or payment needed to express interest. We contact you about the next step.</p></form>';
+  : state==='prepared'
+   ? '<div class="interest"><button type="button" disabled aria-disabled="true">Yes, I am interested <span aria-hidden="true">→</span></button><p class="fine">Invitation preview: this button becomes active only after the Network invitation is sent. No interest is recorded from previews.</p></div>'
+   : '<form method="POST" action="'+url+'/interested" class="interest"><button type="submit">Yes, I am interested <span aria-hidden="true">→</span></button><p class="fine">No commitment. No account or payment needed to express interest. We contact you about the next step.</p></form>';
  return [
   '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
   '<meta name="robots" content="noindex,nofollow"><title>Get Backlinks. Get Cited. Get Discovered. | ContentScale Network</title>',
@@ -64,7 +66,7 @@ function inviteMarkup(name,token,state){
   '.lead{max-width:760px;font-size:clamp(17px,2vw,21px);color:#c7d7e8;margin:0 0 22px}',
   '.recipient{font-size:15px;color:#b6c9d9;margin-bottom:28px}.recipient strong{color:#fff}',
   '.interest{margin:25px 0}.interest button{background:#168a4d;color:#fff;border:1px solid #32b978;padding:15px 26px;font:750 17px system-ui;border-radius:9px;cursor:pointer;box-shadow:0 6px 24px #041a123b}',
-  '.interest button:hover,.interest button:focus-visible{background:#1da75c}.fine{font-size:13px;color:#aabfd1;margin-top:10px;max-width:680px}',
+  '.interest button:hover,.interest button:focus-visible{background:#1da75c}.interest button:disabled{background:#41615b;border-color:#537c6b;cursor:not-allowed;opacity:.75;box-shadow:none}.fine{font-size:13px;color:#aabfd1;margin-top:10px;max-width:680px}',
   '.benefits{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:38px 0}',
   '.benefit{padding:23px 21px;background:#10253b;border:1px solid #294967;border-radius:13px}',
   '.benefit h2{font-size:20px;line-height:1.25;margin:0 0 10px}.benefit p{color:#bed0de;font-size:15px;margin:0}',
@@ -217,7 +219,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  app.post('/network/join/:token/interested',async(req,res)=>{
   const token=String(req.params.token||'');if(!tokenOk(token))return res.sendStatus(404);
   try{
-   const r=await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(jsonb_set(metadata,'{acquisition,invitation,status}','\"interested\"'::jsonb),'{acquisition,invitation,interested_at}',to_jsonb(now())),updated_at=now() WHERE metadata->'acquisition'->'invitation'->>'token_hash'=$1 AND source='maps_acquisition' AND public_visibility='hidden' AND metadata->'acquisition'->'invitation'->>'status' IN ('prepared','invited') RETURNING id",[hash(token)]);
+   const r=await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(jsonb_set(metadata,'{acquisition,invitation,status}','\"interested\"'::jsonb),'{acquisition,invitation,interested_at}',to_jsonb(now())),updated_at=now() WHERE metadata->'acquisition'->'invitation'->>'token_hash'=$1 AND source='maps_acquisition' AND public_visibility='hidden' AND metadata->'acquisition'->'invitation'->>'status'='invited' RETURNING id",[hash(token)]);
    if(!r.rows.length){const already=await invitationByToken(token);if(already?.invitation?.status!=='interested')return res.sendStatus(409);}
    return res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex,nofollow').type('html').send('<!doctype html><html lang="en"><meta charset="utf-8"><title>Interest recorded · ContentScale Network</title><body style="font:18px/1.6 system-ui;max-width:680px;margin:50px auto;padding:0 22px"><h1>Thank you — your interest is recorded</h1><p>ContentScale Network will review the next step with you. No publication, public listing or membership has been created.</p><p>Questions? <a href="mailto:info@contentscale.site">Contact us</a>.</p></body></html>');
   }catch(e){return res.sendStatus(503);}
