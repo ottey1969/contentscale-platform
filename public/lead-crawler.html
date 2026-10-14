@@ -2115,7 +2115,9 @@ Use a real contact_form_url only when you found a page with a contact or quote f
          document.getElementById('results').innerHTML='';
          renderAll();
          setTimeout(()=>resolveSitemapsPhase2(), 800);
-         setTimeout(()=>verifyPhoneTypes(), 1600);
+         // Maps acquisition only requires a public business phone. Twilio line type
+         // is optional and must never make 20 paid lookups automatically.
+         if(!allLeads.some(l=>/^google_maps_/.test(l.source||''))) setTimeout(()=>verifyPhoneTypes(), 1600);
          setTimeout(()=>discoverContactForms(true), 2400);
          } else {
            document.getElementById('emptyState').style.display='block';
@@ -2211,13 +2213,16 @@ Use a real contact_form_url only when you found a page with a contact or quote f
            phoneVerificationActive = true;
            updateVerifyBtn(true, unverified.length);
            let verified = 0, failed = 0;
-           const CONCURRENCY = 5;
-           for(let i=0; i<unverified.length; i+=CONCURRENCY){
+           // One request at a time: stop at the first provider 5xx/config error
+           // instead of issuing a burst of failed Twilio requests.
+           const CONCURRENCY = 1;
+           let providerUnavailable=false;
+           for(let i=0; i<unverified.length&&!providerUnavailable; i+=CONCURRENCY){
              const chunk = unverified.slice(i, i+CONCURRENCY);
              await Promise.allSettled(chunk.map(async lead => {
                try{
                  const resp = await fetch('/api/lookup/number?phone='+encodeURIComponent(lead.phone));
-                 if(!resp.ok) throw new Error('HTTP '+resp.status);
+                 if(!resp.ok){if(resp.status>=500||resp.status===401||resp.status===403){providerUnavailable=true;}throw new Error('HTTP '+resp.status)}
                  const data = await resp.json();
                  lead.phoneType = data.lineType || 'unknown';
                  lead.aiCallAllowed = data.aiCallAllowed !== false;
@@ -2234,7 +2239,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
            phoneVerificationActive = false;
            saveSession(document.getElementById('city').value, document.getElementById('country').value);
            updateVerifyBtn(false, 0);
-           toast('✓ Verified '+verified+' numbers'+(failed?' ('+failed+' lookup failed)':''));
+           toast(providerUnavailable?'Phone lookup provider unavailable — stopped without retrying remaining leads':'✓ Verified '+verified+' numbers'+(failed?' ('+failed+' lookup failed)':''));
          }
          function updateVerifyBtn(active, remaining){
            const btn = document.getElementById('verifyPhoneBtn');
@@ -2394,7 +2399,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
          const c={};BUCKET_DEFS.forEach(b=>c[b.key]=0);
          allLeads.forEach(l=>c[getBucket(l.estimated_pages)]++);
          const g=c.skeleton+c.brochure;
-         const avg=t?Math.round(allLeads.reduce((a,l)=>a+(l.content_score||75),0)/t):0;
+         const scored=allLeads.filter(l=>Number.isFinite(Number(l.content_score))&&l.content_score!==null&&l.content_score!==undefined);const avg=scored.length?Math.round(scored.reduce((a,l)=>a+Number(l.content_score),0)/scored.length):'—';
          document.getElementById('statsRow').innerHTML=`
          <div class="stat hi"><div class="sn">${t}</div><div class="sl">Total Leads</div></div>
          <div class="stat"><div class="sn" style="color:var(--gold)">${g}</div><div class="sl">🔥 Goldmine (5–30)</div></div>
@@ -3631,5 +3636,64 @@ document.addEventListener('DOMContentLoaded',function(){
 })();
 </script>
 
+
+<style>
+/* The historic QuickScan bulk-import bridge must never intercept Network leads. */
+#pqsImportVisible,#pqsImportDismiss{display:none!important}
+#networkImportAllBtn{display:none;position:fixed;right:18px;bottom:80px;z-index:10001;background:#5b21b6;color:white;border:1px solid #a78bfa;padding:13px 16px;border-radius:10px;font:800 12px Arial;cursor:pointer;box-shadow:0 8px 30px #0008}
+#networkImportAllBtn:disabled{opacity:.65;cursor:wait}
+#networkImportNotice{display:none;position:fixed;right:18px;bottom:135px;z-index:10001;max-width:430px;background:#111827;color:#f8fafc;border:1px solid #64748b;padding:10px;border-radius:8px;font:12px Arial}
+</style>
+<button type="button" id="networkImportAllBtn" onclick="importAllMapsToNetwork()">Import to Network</button>
+<div id="networkImportNotice" role="status"></div>
+<script>
+(function(){
+ let importing=false,lastCount=-1;
+ function leads(){
+  try{
+   if(typeof allLeads==='undefined'||!Array.isArray(allLeads))return [];
+   if(!allLeads.length||!allLeads.every(x=>/^google_maps_(serper|serpapi)$/.test(x.source||'')))return [];
+   return allLeads;
+  }catch{return []}
+ }
+ function update(){
+  const btn=document.getElementById('networkImportAllBtn');
+  if(!btn||importing)return;
+  const items=leads();const count=items.length;
+  btn.style.display=count?'block':'none';
+  if(count!==lastCount){btn.textContent='⬆ Import all '+count+' leads to Network';lastCount=count}
+ }
+ window.importAllMapsToNetwork=async function(){
+  if(importing)return;
+  const items=leads(),btn=document.getElementById('networkImportAllBtn'),note=document.getElementById('networkImportNotice');
+  if(!items.length)return;
+  importing=true;btn.disabled=true;btn.textContent='Importing '+items.length+' for Network review…';
+  note.style.display='block';note.textContent='Saving private Network candidates. No email will be sent.';
+  try{
+   const key=sessionStorage.getItem('lc_admin_code')||'';
+   const niche=(document.getElementById('quickNiche')?.value||document.getElementById('customIndustries')?.value.split('\n')[0]||'roofing').trim();
+   const batch=items.map(l=>({
+    name:l.name,website:l.website,phone:l.phone,address:l.address,
+    source:l.source,place_id:l.place_id,niche:niche||l.type||'roofing'
+   }));
+   const resp=await fetch('/api/network/admin/acquisition/import',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-admin-code':key},
+    body:JSON.stringify({leads:batch})
+   });
+   const data=await resp.json().catch(()=>({error:'Invalid import response'}));
+   if(!resp.ok)throw new Error(data.error||'Network import failed (HTTP '+resp.status+')');
+   note.textContent=data.imported+' new, '+data.duplicates+' already known. No emails sent. Opening Network review…';
+   btn.textContent='Open Network review';
+   location.assign(data.review_url||'/network/acquisition');
+  }catch(err){
+   note.textContent='Import not completed: '+err.message;
+   btn.disabled=false;importing=false;lastCount=-1;update();
+  }
+ };
+ setInterval(update,650);
+ document.addEventListener('DOMContentLoaded',update);
+})();
+</script>
 </body>
 </html>

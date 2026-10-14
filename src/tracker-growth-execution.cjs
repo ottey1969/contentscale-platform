@@ -10,6 +10,7 @@ function registerGrowthExecution(app,pool){
  // Keep NJ lead discovery on the existing server and outside Network/CRM writes.
  try{
   require('./lead-crawler-serpapi.cjs').registerLeadCrawlerSerpApi(app);
+  require('./network-maps-acquisition.cjs').registerNetworkMapsAcquisition({app,pool});
  }catch(error){
   console.error('[lead-crawler-serpapi] registration failed:',error.message);
  }
