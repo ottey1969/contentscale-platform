@@ -45,14 +45,15 @@
 <script>
 (function(){
 'use strict';
-const el=id=>document.getElementById(id),admin=()=>sessionStorage.getItem('lc_admin_code')||'';
+const el=id=>document.getElementById(id);
+let authenticated=false;
 let companies=[],total=0,outreach=null,busy=false,openId=null,prepared=new Map(),autoStarted=false;
 function tag(name,text,cls){const x=document.createElement(name);if(text!==undefined)x.textContent=text;if(cls)x.className=cls;return x;}
 function button(text,onclick,cls){const b=tag('button',text,cls);b.type='button';b.onclick=onclick;return b;}
 function setMessage(text,error=true){el('message').textContent=text||'';el('message').className=error?'error':'success';}
 function showUnlock(reason){el('unlock').hidden=false;el('unlockMessage').textContent=reason||'Log in met je Lead Crawler admincode.';}
 async function api(url,opts={}){
- const resp=await fetch(url,{...opts,cache:'no-store',headers:{'x-admin-code':admin(),...(opts.headers||{})}});
+ const resp=await fetch(url,{...opts,cache:'no-store',credentials:'same-origin',headers:{...(opts.headers||{})}});
  const data=await resp.json().catch(()=>({}));
  if(!resp.ok){if(resp.status===403)showUnlock('Adminsessie ontbreekt of is verlopen.');throw Error(data.error||'HTTP '+resp.status);}
  return data;
@@ -61,10 +62,18 @@ async function unlock(ev){
  ev.preventDefault();const code=el('unlockCode').value.trim(),b=el('unlockSubmit');if(!code)return;
  b.disabled=true;b.textContent='Controleren…';
  try{
-  const r=await fetch('/api/admin/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
-  const d=await r.json().catch(()=>({}));if(!r.ok||!d.ok||d.role!=='admin')throw Error('Admincode niet geaccepteerd.');
-  sessionStorage.setItem('lc_admin_code',code);sessionStorage.setItem('lc_role','admin');el('unlockCode').value='';el('unlock').hidden=true;await refresh();
+  const r=await fetch('/api/network/admin/acquisition/session',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+  if(!r.ok)throw Error('Admincode niet geaccepteerd.');
+  authenticated=true;el('unlockCode').value='';el('unlock').hidden=true;await refresh();
  }catch(e){el('unlockMessage').textContent=e.message;}finally{b.disabled=false;b.textContent='Ontgrendelen';}
+}
+async function restoreSession(){
+ try{
+  const r=await fetch('/api/network/admin/acquisition/session',{cache:'no-store',credentials:'same-origin'});
+  const d=await r.json();authenticated=r.ok&&d.authenticated===true;
+ }catch{authenticated=false;}
+ if(authenticated){el('unlock').hidden=true;await refresh();}
+ else showUnlock('Log in met je Lead Crawler admincode. De code wordt niet in de browser opgeslagen.');
 }
 function normalizeSource(source){const raw=String(source||'').trim();return raw&&!/^https?:\/\//i.test(raw)?'https://'+raw:raw;}
 function validSource(source,domain){try{const u=new URL(normalizeSource(source));return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&u.hostname.toLowerCase().replace(/^www\./,'')===String(domain||'').toLowerCase().replace(/^www\./,'');}catch{return false;}}
@@ -113,7 +122,7 @@ function renderStats(){
 }
 async function refresh(){
  if(busy)return;
- if(!admin()){showUnlock('Log in met de Lead Crawler admincode om de 19 Network-bedrijven te bekijken.');return;}
+ if(!authenticated){showUnlock('Log in met de Lead Crawler admincode om Network-bedrijven te bekijken.');return;}
  el('refresh').disabled=true;setMessage('');
  try{
   const d=await api('/api/network/admin/acquisition/candidates');companies=d.candidates||[];total=Number(d.total??companies.length);
@@ -260,7 +269,7 @@ function preview(c,d){
  root.append(tag('p',quota+reason+(outreach?.can_send_now?'':' De voorbereide uitnodiging blijft bewaard. Vernieuw de status nadat er opnieuw verzendruimte is.'),outreach?.can_send_now?'note':'warning'),send);
  return root;
 }
-el('unlockForm').onsubmit=unlock;el('refresh').onclick=refresh;el('batch').onclick=discoverBatch;el('filter').onchange=render;refresh();
+el('unlockForm').onsubmit=unlock;el('refresh').onclick=refresh;el('batch').onclick=discoverBatch;el('filter').onchange=render;restoreSession();
 })();
 </script>
 </body></html>
