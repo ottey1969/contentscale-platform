@@ -3665,7 +3665,9 @@ document.addEventListener('DOMContentLoaded',function(){
 #networkImportAllBtn{display:none;position:fixed;right:18px;bottom:80px;z-index:10001;background:#5b21b6;color:white;border:1px solid #a78bfa;padding:13px 16px;border-radius:10px;font:800 12px Arial;cursor:pointer;box-shadow:0 8px 30px #0008}
 #networkImportAllBtn:disabled{opacity:.65;cursor:wait}
 #networkImportNotice{display:none;position:fixed;right:18px;bottom:135px;z-index:10001;max-width:430px;background:#111827;color:#f8fafc;border:1px solid #64748b;padding:10px;border-radius:8px;font:12px Arial}
+#networkNextScanBtn{display:none;position:fixed;right:18px;bottom:188px;z-index:10001;background:#157b3a;color:white;border:1px solid #32a35a;padding:10px 14px;border-radius:8px;font:700 13px Arial;cursor:pointer}
 </style>
+<button type="button" id="networkNextScanBtn" onclick="nextNetworkScan()">Scan volgende batch →</button>
 <button type="button" id="networkImportAllBtn" onclick="importAllMapsToNetwork()">Import to Network</button>
 <a href="/network/acquisition" id="networkAcquisitionLink" style="position:fixed;right:18px;bottom:45px;z-index:10001;color:#93c5fd;font:12px Arial">View Acquisitie →</a>
 <div id="networkImportNotice" role="status"></div>
@@ -3693,8 +3695,16 @@ document.addEventListener('DOMContentLoaded',function(){
   const items=leads();const count=items.length;
   btn.style.display=count?'block':'none';
   if(count!==lastCount){btn.textContent='⬆ Import all '+count+' leads to Network';lastCount=count}
+  if(count>0)document.getElementById('networkNextScanBtn').style.display='none';
  }
- window.importAllMapsToNetwork=async function(){
+ window.nextNetworkScan=function(){
+  const note=document.getElementById('networkImportNotice'),next=document.getElementById('networkNextScanBtn');
+  if(note)note.style.display='none';
+  if(next)next.style.display='none';
+  document.getElementById('crawlBtn').disabled=false;
+  startCrawl();
+ };
+  window.importAllMapsToNetwork=async function(){
   if(importing)return;
   const items=leads(),btn=document.getElementById('networkImportAllBtn'),note=document.getElementById('networkImportNotice');
   if(!items.length)return;
@@ -3726,7 +3736,8 @@ document.addEventListener('DOMContentLoaded',function(){
    document.getElementById('emptyState').style.display='block';
    document.getElementById('crawlBtn').disabled=false;
    initWaves();updateIndustryPlanUI();
-   note.textContent=data.imported+' new Network companies, '+data.duplicates+' already known. Batch complete. Scan again or open Acquisitie.';
+   note.textContent=data.imported+' nieuwe bedrijven toegevoegd; '+data.duplicates+' al bekend. Deze batch is verwerkt. Scan de volgende batch of bekijk Acquisitie.';
+   document.getElementById('networkNextScanBtn').style.display='block';
    btn.style.display='none';btn.disabled=false;importing=false;lastCount=-1;
   }catch(err){
    note.textContent='Import not completed: '+err.message;
