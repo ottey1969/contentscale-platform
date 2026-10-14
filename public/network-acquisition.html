@@ -247,7 +247,12 @@ function preview(c,d){
    prepared.delete(c.id);openId=null;await refresh();
   }catch(e){setMessage('Verzending niet bevestigd: '+e.message+'. Controleer eerst de status voor opnieuw proberen.');send.disabled=false;send.textContent='Verzending controleren';}
  });
- send.disabled=!outreach?.can_send_now;root.append(tag('p','Bekijk de link vóór verzending. Versturen is alleen mogelijk na jouw goedkeuring en binnen de serverlimiet.','note'),send);
+ send.disabled=!outreach?.can_send_now;
+ const reason=!outreach?'Verzendstatus niet beschikbaar. Controleer de adminsessie of probeer Status vernieuwen.'
+  :outreach.can_send_now?'De uitnodiging kan binnen de huidige limieten worden verstuurd, na jouw goedkeuring.'
+  :(outreach.limit_reason||'Verzenden momenteel niet toegestaan.');
+ const quota=outreach?'Vandaag Network: '+outreach.sent_today+'/'+outreach.daily_cap+' · totale afzender: '+(outreach.warmup?.sent_today??'—')+'/'+(outreach.warmup?.daily_cap??'—')+'. ':'';
+ root.append(tag('p',quota+reason+(outreach?.can_send_now?'':' De voorbereide uitnodiging blijft bewaard. Vernieuw de status nadat er opnieuw verzendruimte is.'),outreach?.can_send_now?'note':'warning'),send);
  return root;
 }
 el('unlockForm').onsubmit=unlock;el('refresh').onclick=refresh;el('batch').onclick=discoverBatch;el('filter').onchange=render;refresh();
