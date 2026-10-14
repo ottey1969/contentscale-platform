@@ -50,7 +50,8 @@ async function networkWarmupSnapshot(pool){
  const used=pqsToday+networkToday;
  const available=active&&(completed||used<dailyCap);
  const networkCap=networkCapForWarmup(day,active);
- const manilaDate=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ const dateParts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(p=>[p.type,p.value]));
+ const manilaDate=dateParts.year+'-'+dateParts.month+'-'+dateParts.day;
  const canSend=available&&networkToday<networkCap;
  return {
   warmup:{active,complete:completed,progress_day:day,total_days:42,cycle:Math.min(6,Math.ceil(day/7)),
