@@ -3645,10 +3645,14 @@ document.addEventListener('DOMContentLoaded',function(){
 #networkImportNotice{display:none;position:fixed;right:18px;bottom:135px;z-index:10001;max-width:430px;background:#111827;color:#f8fafc;border:1px solid #64748b;padding:10px;border-radius:8px;font:12px Arial}
 </style>
 <button type="button" id="networkImportAllBtn" onclick="importAllMapsToNetwork()">Import to Network</button>
+<a href="/network/acquisition" id="networkAcquisitionLink" style="position:fixed;right:18px;bottom:45px;z-index:10001;color:#93c5fd;font:12px Arial">View Acquisitie →</a>
 <div id="networkImportNotice" role="status"></div>
 <script>
 (function(){
  let importing=false,lastCount=-1;
+  const batchKey='lc_network_imported_batch';
+  function batchId(rows){return rows.map(x=>(x.website||'').toLowerCase().replace(/\/+$/,'')).sort().join('|');}
+  function imported(rows){return !!rows.length&&sessionStorage.getItem(batchKey)===batchId(rows);}
  function leads(){
   try{
    const current=(typeof allLeads!=='undefined'&&Array.isArray(allLeads))?allLeads:[];
@@ -3657,7 +3661,7 @@ document.addEventListener('DOMContentLoaded',function(){
     const session=JSON.parse(localStorage.getItem('lc_session')||'null');
     rows=Array.isArray(session&&session.leads)?session.leads:[];
    }
-   if(!rows.length||!rows.every(x=>/^google_maps_(serper|serpapi)$/.test(x.source||'')))return [];
+   if(!rows.length||!rows.every(x=>/^google_maps_(serper|serpapi)$/.test(x.source||''))||imported(rows))return [];
    return rows;
   }catch{return []}
  }
@@ -3688,9 +3692,20 @@ document.addEventListener('DOMContentLoaded',function(){
    });
    const data=await resp.json().catch(()=>({error:'Invalid import response'}));
    if(!resp.ok)throw new Error(data.error||'Network import failed (HTTP '+resp.status+')');
-   note.textContent=data.imported+' new, '+data.duplicates+' already known. No emails sent. Opening Network review…';
-   btn.textContent='Open Network review';
-   location.assign(data.review_url||'/network/acquisition');
+   if(data.success!==true||data.submitted!==items.length||data.imported+data.duplicates!==new Set(items.map(x=>new URL(x.website).hostname.toLowerCase().replace(/^www\./,''))).size)
+    throw new Error('Import confirmation incomplete. Keep this batch and check Network review.');
+   sessionStorage.setItem(batchKey,batchId(items));
+   localStorage.removeItem('lc_session');
+   allLeads=[];completedIndustries=new Set();selected.clear();
+   document.getElementById('results').innerHTML='';
+   document.getElementById('statsRow').style.display='none';
+   document.getElementById('toolbar').style.display='none';
+   document.getElementById('resumeBanner').style.display='none';
+   document.getElementById('emptyState').style.display='block';
+   document.getElementById('crawlBtn').disabled=false;
+   initWaves();updateIndustryPlanUI();
+   note.textContent=data.imported+' new Network companies, '+data.duplicates+' already known. Batch complete. Scan again or open Acquisitie.';
+   btn.style.display='none';btn.disabled=false;importing=false;lastCount=-1;
   }catch(err){
    note.textContent='Import not completed: '+err.message;
    btn.disabled=false;importing=false;lastCount=-1;update();

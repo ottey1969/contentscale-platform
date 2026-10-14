@@ -14,6 +14,7 @@ const app={get:(path,fn)=>routes['GET '+path]=fn,post:(path,fn)=>routes['POST '+
 const pool={query:async(sql,args)=>{
  queries.push({sql,args});
  if(sql.includes('INSERT INTO network_directory_businesses'))return {rows:queries.filter(x=>x.sql.includes('INSERT INTO network_directory_businesses')).length===1?[{id:15}]:[]};
+ if(sql.includes('count(*)::int AS total'))return {rows:[{total:19}]};
  if(sql.includes('SELECT id,business_name'))return {rows:[{id:15,business_name:source.name,canonical_url:'https://njroof.example/',source:'maps_acquisition'}]};
  throw Error('Unexpected SQL');
 }};
@@ -46,7 +47,7 @@ async function invoke(method,path,body,code='ok'){
  q=await invoke('POST',api,{leads:[source]});
  assert.equal(q.output.imported,0);assert.equal(q.output.duplicates,1);
  q=await invoke('GET','/api/network/admin/acquisition/candidates',{});
- assert.equal(q.status,200);assert.equal(q.output.candidates.length,1);
+ assert.equal(q.status,200);assert.equal(q.output.candidates.length,1);assert.equal(q.output.total,19,'cumulative acquisitions must not be limited to displayed rows');
  q=await invoke('GET','/network/acquisition',{});
  assert(q.sentFile.endsWith('network-acquisition.html'));
  assert.equal(q.headers['X-Robots-Tag'],'noindex, nofollow');
@@ -54,11 +55,15 @@ async function invoke(method,path,body,code='ok'){
  assert(h.includes('#pqsImportVisible,#pqsImportDismiss{display:none!important}'));
  assert(h.includes('window.importAllMapsToNetwork=async function()'));
  assert(h.includes("localStorage.getItem('lc_session')"),'saved Maps leads must remain importable after browser refresh');
- assert(h.includes("location.assign(data.review_url||'/network/acquisition')"));
+ assert(h.includes("localStorage.removeItem('lc_session')"),'successful Network import must release the scan session');
+ assert(h.includes("sessionStorage.setItem(batchKey,batchId(items))"),'batch completion must be tracked to avoid reimport after refresh');
+ assert(h.includes("btn.style.display='none'"),'import counter must return to zero');
  assert(h.includes("if(!allLeads.some(l=>/^google_maps_/.test(l.source||''))) setTimeout(()=>verifyPhoneTypes(), 1600);"),'Maps leads must skip automatic Twilio lookup');
  assert(h.includes('providerUnavailable=true'),'circuit breaker must stop 5xx');
  const html=fs.readFileSync('public/network-acquisition.html','utf8');
  assert.match(html,/No automatic invitations/);
+ assert.match(html,/data.total/,'Acquisitie must show cumulative total');
+ assert.match(html,/Scan next batch/,'review must offer next scan');
  for(const [file,source] of [['public/lead-crawler.html',h],['public/network-acquisition.html',html]]){
   const scripts=[...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
   for(let i=0;i<scripts.length;i++)assert.doesNotThrow(()=>new Function(scripts[i][1]),file+' inline script '+i);
