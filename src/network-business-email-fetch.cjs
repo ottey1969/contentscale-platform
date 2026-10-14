@@ -3,6 +3,7 @@
 const dns=require('node:dns').promises;
 const https=require('node:https');
 const net=require('node:net');
+const zlib=require('node:zlib');
 const EmailDetectionService=require('./services/email-detection-service');
 const paths=['/','/contact','/contact-us','/about','/about-us','/contacto','/kontakt','/over-ons'];
 function publicIP(ip){
@@ -35,7 +36,7 @@ async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.reque
   let done=false;
   const finish=(err,data)=>{if(done)return;done=true;err?reject(err):resolvePage(data)};
   const req=request({hostname:host,servername:host,path,method:'GET',port:443,
-   headers:{'Accept':'text/html','User-Agent':'ContentScale-Contact-Discovery/1.0'},
+   headers:{'Accept':'text/html','Accept-Encoding':'identity','User-Agent':'ContentScale-Contact-Discovery/1.0'},
    // Node's autoSelectFamily passes lookup({all:true}) and expects an ARRAY.
    // Returning a scalar address caused ERR_INVALID_IP_ADDRESS for every real site.
    lookup:(_hostname,lookupOptions,cb)=>lookupOptions?.all
@@ -58,7 +59,18 @@ async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.reque
     if(Number(res.headers['content-length']||0)>750000){res.destroy();return finish(Error('Too large'));}
     let total=0,buffers=[];
     res.on('data',chunk=>{total+=chunk.length;if(total>750000){res.destroy();finish(Error('Too large'))}else buffers.push(chunk)});
-    res.on('end',()=>finish(null,Buffer.concat(buffers).toString('utf8')));
+    res.on('end',()=>{
+      try{
+       let bytes=Buffer.concat(buffers);
+       const encoding=String(res.headers['content-encoding']||'identity').toLowerCase();
+       if(encoding==='gzip'||encoding==='x-gzip')bytes=zlib.gunzipSync(bytes,{maxOutputLength:1500000});
+       else if(encoding==='deflate')bytes=zlib.inflateSync(bytes,{maxOutputLength:1500000});
+       else if(encoding==='br')bytes=zlib.brotliDecompressSync(bytes,{maxOutputLength:1500000});
+       else if(encoding!=='identity')throw Error('Unsupported content encoding');
+       if(bytes.length>1500000)throw Error('HTML too large after decompression');
+       finish(null,bytes.toString('utf8'));
+      }catch(e){finish(e);}
+    });
     res.on('error',err=>finish(err));
   });
   req.on('timeout',()=>req.destroy(Error('Timeout')));
