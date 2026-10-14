@@ -8,7 +8,19 @@ const clean=(v,n=250)=>String(v??'').replace(/[\x00-\x1f<>]/g,'').trim().slice(0
 const hash=token=>crypto.createHash('sha256').update(token).digest('hex');
 const tokenOk=token=>/^[a-f0-9]{48}$/.test(String(token||''));
 const escape=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[ch]));
-const cap=()=>Math.max(0,Math.min(20,Number(process.env.NETWORK_ACQUISITION_DAILY_CAP||2)||0));
+// Reserve at most 20% of the current sender warm-up allowance for Network.
+// Keep an independent hard ceiling, and never bypass the shared daily sender cap.
+function networkCapForWarmup(day,active){
+ if(!active)return 0;
+ const senderCap=warmupDailyCap(day);
+ const calculated=Math.min(20,Math.max(2,Math.floor((senderCap??100)*0.2)));
+ const override=process.env.NETWORK_ACQUISITION_DAILY_CAP;
+ if(override!==undefined && override!==''){
+  const parsed=Number(override);
+  if(Number.isInteger(parsed)&&parsed>=0)return Math.min(calculated,parsed);
+ }
+ return calculated;
+}
 const baseUrl=()=>String(process.env.PUBLIC_APP_URL||'https://app.contentscale.site').replace(/\/+$/,'');
 // Read the existing Lead Crawler warm-up progress. Never start/reset/advance it here.
 // Network has its own smaller invitation cap, but uses the same sender and therefore
@@ -37,7 +49,7 @@ async function networkWarmupSnapshot(pool){
  const networkToday=Number(network.rows[0]?.sent_today||0);
  const used=pqsToday+networkToday;
  const available=active&&(completed||used<dailyCap);
- const networkCap=cap();
+ const networkCap=networkCapForWarmup(day,active);
  const canSend=available&&networkToday<networkCap;
  return {
   warmup:{active,complete:completed,progress_day:day,total_days:42,cycle:Math.min(6,Math.ceil(day/7)),
@@ -294,4 +306,4 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  });
  app.post('/network/join/:token/unsubscribe',unsubscribe);
 }
-module.exports={registerNetworkAcquisitionInvitations,websiteEvidence,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup,warmupDailyCap,networkWarmupSnapshot};
+module.exports={registerNetworkAcquisitionInvitations,websiteEvidence,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup,warmupDailyCap,networkCapForWarmup,networkWarmupSnapshot};
