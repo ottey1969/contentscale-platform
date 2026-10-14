@@ -11,7 +11,7 @@ assert.equal(publicCompanyContact('info@jerseycraftexteriors.com','jerseycraftro
 assert.equal(publicCompanyContact('hello@gmail.com','jerseycraftroofing.com','https://jerseycraftroofing.com/',null,true),false,'free mailbox blocked');
 
 assert.match(inviteMarkup('Acme Roofing','a'.repeat(48),'invited'),/I am interested/);
-let sent=0,mail=null,company={id:7,business_name:'Acme Roofing',domain:'acme.com',canonical_url:'https://acme.com/',public_visibility:'hidden',metadata:{acquisition:{website_review:{status:'site_observed'},email_discovery:{email:'info@acme.com',source_url:'https://acme.com/contact'}}}};
+let sent=0,mail=null,company={id:7,business_name:'Acme Roofing',domain:'acme.com',canonical_url:'https://acme.com/',public_visibility:'hidden',metadata:{acquisition:{website_review:{status:'site_observed'},email_discovery:{email:'info@acme.com',source_url:'https://acme.com/contact',verification:'publicly_observed'}}}};
 const calls=[],routes={};
 const app={post:(url,fn)=>routes['POST '+url]=fn,get:(url,fn)=>routes['GET '+url]=fn};
 const pool={query:async(sql,args=[])=>{
