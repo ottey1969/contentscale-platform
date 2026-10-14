@@ -83,7 +83,7 @@ async function refresh(){
   const d=await api('/api/network/admin/acquisition/candidates');companies=d.candidates||[];total=Number(d.total??companies.length);
   try{outreach=await api('/api/network/admin/acquisition/outreach-status');}catch(e){outreach=null;setMessage('Verzendstatus kon niet worden gecontroleerd: '+e.message);}
   renderStats();render();
-  if(!autoStarted&&companies.some(c=>!c.email_discovery?.checked_at&&!c.website_review?.checked_at)){
+  if(!autoStarted&&companies.some(c=>!c.invitation?.status&&(!c.email_discovery?.checked_at||(!c.email_discovery?.email&&c.email_discovery?.version!=='public-v2')))){
    autoStarted=true;el('progress').textContent='Automatisch website- en e-mailonderzoek gestart voor nieuwe import…';discoverBatch();
   }
  }catch(e){setMessage('Kan Acquisitie niet openen: '+e.message);}
@@ -128,11 +128,11 @@ async function findEmail(c){
  if(busy)return;busy=true;el('batch').disabled=true;el('progress').textContent='Zakelijk e-mailadres zoeken op '+c.domain+'…';
  try{
   const d=await api('/api/network/admin/acquisition/discover-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id})});
-  c.email_discovery={email:d.email,source_url:d.source_url,verification:d.verification,relationship:d.relationship,checked_at:new Date().toISOString()};render();
+  c.email_discovery={email:d.email,source_url:d.source_url,verification:d.verification,relationship:d.relationship,version:'public-v2',checked_at:new Date().toISOString()};render();
  }catch(e){setMessage(e.message);}finally{busy=false;el('batch').disabled=false;el('progress').textContent='';}
 }
 async function discoverBatch(){
- if(busy)return;const selected=companies.filter(c=>!c.invitation?.status&&(!c.website_review?.checked_at||!c.email_discovery?.checked_at)).slice(0,20);
+ if(busy)return;const selected=companies.filter(c=>!c.invitation?.status&&(!c.website_review?.checked_at||!c.email_discovery?.checked_at||(!c.email_discovery?.email&&c.email_discovery?.version!=='public-v2'))).slice(0,20);
  if(!selected.length){el('progress').textContent='Alle zichtbare kandidaten zijn onderzocht. Voor ontbrekende e-mails kun je de website handmatig beoordelen.';return;}
  busy=true;el('batch').disabled=true;el('refresh').disabled=true;let searched=0,found=0,verified=0,unavailable=0;
  try{
@@ -141,7 +141,7 @@ async function discoverBatch(){
    const d=await api('/api/network/admin/acquisition/discover-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_ids:selected.slice(start,start+5).map(c=>c.id)})});
    for(const item of d.results||[]){
     searched++;if(item.email)found++;if(item.website_review?.status==='site_observed')verified++;if(item.verification==='unavailable')unavailable++;
-    const c=companies.find(c=>String(c.id)===String(item.company_id));if(c){c.email_discovery={email:item.email,source_url:item.source_url,verification:item.verification,relationship:item.relationship,checked_at:item.checked_at||new Date().toISOString()};if(item.website_review)c.website_review=item.website_review;}
+    const c=companies.find(c=>String(c.id)===String(item.company_id));if(c){c.email_discovery={email:item.email,source_url:item.source_url,verification:item.verification,relationship:item.relationship,version:item.version,checked_at:item.checked_at||new Date().toISOString()};if(item.website_review)c.website_review=item.website_review;}
    }
    el('progress').textContent=searched+'/'+selected.length+' websites · '+found+' e-mails · '+verified+' websites gevonden · '+unavailable+' beperkt bereikbaar. Geen uitnodigingen verstuurd.';
    renderStats();render();
