@@ -171,7 +171,7 @@ function reviewForm(c,p){
  const email=tag('input');email.type='email';email.placeholder='e.g. contact@business.com';email.value=p&&p.contact_email||'';
  const source=tag('input');source.type='url';source.placeholder='https://company.example/contact/';
  labEmail.append(email);labSource.append(source);grid.append(labEmail,labSource);box.append(grid);
- const check=tag('input');check.type='checkbox';const label=tag('label');label.append(check,document.createTextNode(' Confirm this is a public business contact on the company's website, not a personal address. Automatic detection provides the source for review.'));
+ const check=tag('input');check.type='checkbox';const label=tag('label');label.append(check,document.createTextNode(' Confirm this is a public business contact on the business website, not a personal address. Automatic detection provides the source for review.'));
  box.append(label);const state=tag('div','','info');
  const find=btn('Find business email automatically',async()=>{
   find.disabled=true;find.textContent='Searching website…';state.textContent='Checking public contact pages. No email is being sent.';state.className='info';
