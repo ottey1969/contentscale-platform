@@ -20,7 +20,7 @@ function candidate(raw){
  if(['app.contentscale.site','contentscale.site'].includes(domain))return null;
  return {name,address,phone,website:site,domain,niche,source:raw.source,place_id:plain(raw.place_id,180)};
 }
-function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
+function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=discoverCompanyContact,inspect=websiteEvidence,backfillDelayMs=12000}){
  if(!app?.get||!app?.post||!pool?.query)throw Error('Network acquisition dependencies missing');
  app.get('/network/acquisition',(_req,res)=>res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').sendFile(path.resolve(__dirname,'../public/network-acquisition.html')));
  app.get('/api/network/admin/acquisition/candidates',async(req,res)=>{
@@ -48,14 +48,14 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
     let site=company.website_review;
     if(!site?.checked_at||(site.status==='review_required'&&/Website unavailable or restricted|Website check failed/i.test(site.reason||''))){
      try{
-      site=await websiteEvidence(company.canonical_url);
+      site=await inspect(company.canonical_url);
       await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,website_review}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(site)]);
      }catch(e){site={status:'review_required',reason:'Website check failed',checked_at:new Date().toISOString()};}
     }
     const prev=company.email_discovery;
     if(prev?.email){return {company_id:company.id,...prev,website_review:site,cached:true};}
     try{
-     const result=await discoverCompanyContact(company.canonical_url,{maxPages:5});
+     const result=await discover(company.canonical_url,{maxPages:5});
      if(result.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))throw Error('Company domain mismatch');
      const discovery={email:result.email,source_url:result.source_url,verification:result.verification,relationship:result.relationship,contact_review_required:result.contact_review_required,fetch_issues:result.checked.filter(x=>x.status==='unavailable').map(x=>x.reason).slice(0,5),version:'public-v4',checked_at:new Date().toISOString()};
      await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(discovery)]);
@@ -94,7 +94,8 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
     if(inspected)console.info('[network-acquisition-backfill] sites='+inspected+' emails_found='+found+' no_email_sent=true');
    }catch(e){console.error('[network-acquisition-backfill]',e.code||e.message);}
    finally{emailBackfillRunning=false;}
-  },12000);
+  },Math.max(0,Math.min(30000,backfillDelayMs)));
+
   if(typeof timer.unref==='function')timer.unref();
  }
  app.post('/api/network/admin/acquisition/discover-batch',async(req,res)=>{
@@ -118,7 +119,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    const record=await pool.query("SELECT id,domain,canonical_url FROM network_directory_businesses WHERE id=$1 AND source='maps_acquisition' LIMIT 1",[id]);
    if(!record.rows.length)return res.status(404).json({error:'Acquisition company not found'});
    const company=record.rows[0];
-   const data=await discoverCompanyContact(company.canonical_url);
+   const data=await discover(company.canonical_url);
    if(data.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))return res.status(422).json({error:'Company domain mismatch'});
    const discovery={email:data.email,source_url:data.source_url,verification:data.verification,relationship:data.relationship,contact_review_required:data.contact_review_required,fetch_issues:data.checked.filter(x=>x.status==='unavailable').map(x=>x.reason).slice(0,5),version:'public-v4',checked_at:new Date().toISOString()};
    await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[id,JSON.stringify(discovery)]);
