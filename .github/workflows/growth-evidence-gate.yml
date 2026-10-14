@@ -40,6 +40,8 @@ on:
       - 'src/network-editorial-overlap*.cjs'
       - 'src/network-brevo-event-sync*.cjs'
       - 'src/lead-crawler-serpapi*.cjs'
+      - 'src/network-maps-acquisition*.cjs'
+      - 'public/network-acquisition.html'
       - 'public/lead-crawler.html'
       - 'scripts/fix-audit20-inline-label.cjs'
       - 'tests/audit20-inline-label.test.cjs'
@@ -90,6 +92,8 @@ jobs:
         run: node src/lead-crawler-serpapi.test.cjs
       - name: New Jersey Google Maps provider authorization and fallback
         run: node src/lead-crawler-provider-fallback.test.cjs
+      - name: Network acquisition and crawler phone-error regression
+        run: node src/network-maps-acquisition.test.cjs
       - name: New Jersey USA niche controls and legacy bucket preservation
         run: node tests/lead-crawler-nj-niche.test.cjs
       - name: Verified indexed editorial research and overlap
