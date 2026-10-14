@@ -78,6 +78,12 @@ async function invoke(method,path,body,code='ok'){
  assert(!html.includes('/api/prospect-quick-scan/'),'Acquisitie must not create QuickScan records');
  assert(!html.includes('QuickScan Admin'),'Network Acquisitie is independent');
  assert.match(html,/serverlimiet/,'Network warm-up limit is visible');
+ assert.match(html,/id="warmupPanel"/,'warm-up must be above acquisition companies');
+ assert.match(html,/id="warmupDay"/,'restore previously saved warm-up day counter');
+ assert.match(html,/id="warmupUsed"/,'show combined sender daily progress');
+ assert.match(html,/id="networkUsed"/,'show Network cap separately');
+ assert.match(html,/outreach\?\.warmup/,'use canonical server provided warm-up status');
+ assert.match(html,/Geen reset en geen automatische verzending/,'reassure progress is not reset');
  assert.match(queries.find(q=>q.sql.includes("n.source='maps_acquisition'")).sql,/metadata->'acquisition'/,'use canonical Network metadata');
  assert.match(html,/Nieuwe bedrijven scannen/,'review must offer next scan');
  for(const [file,source] of [['public/lead-crawler.html',h],['public/network-acquisition.html',html]]){
