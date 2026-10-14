@@ -155,7 +155,7 @@ async function discoverBatch(){
 function review(c){
  const root=tag('div',undefined,'details'),inv=c.invitation||{},draft=prepared.get(c.id);
  root.append(tag('h3','Network uitnodiging voor '+c.business_name));
- root.append(tag('p','De ontvanger krijgt een persoonlijke Network-uitnodigingspagina met een groene knop “I am interested”. Niets wordt automatisch verzonden.','info'));
+ root.append(tag('p','De ontvanger ziet eerst de voordelen: “Get Backlinks. Get Cited. Get Discovered.” Daarna kan die op “Yes, I am interested” klikken. Niets wordt automatisch verzonden.','info'));
  if(inv.status==='prepared'){
   root.append(tag('p','Deze uitnodiging is al voorbereid. Herstel zo nodig eerst de previewlink.','info'));
   if(draft?.token)root.append(preview(c,draft));
@@ -200,7 +200,7 @@ function review(c){
 function preview(c,d){
  const root=tag('div',undefined,'preview');
  root.append(tag('h3','Uitnodiging klaar — nog niet verstuurd'),tag('p','Ontvanger: '+d.recipient,'info'));
- const link=tag('a','Bekijk de echte uitnodiging met I am interested ↗');link.href=d.preview_url;link.target='_blank';link.rel='noopener noreferrer';root.append(link);
+ const link=tag('a','Bekijk de Network-uitnodiging en Interested-knop ↗');link.href=d.preview_url;link.target='_blank';link.rel='noopener noreferrer';root.append(link);
  root.append(tag('p','De uitnodiging gaat uitsluitend over ContentScale Network. Er wordt alleen deze Network-uitnodigingslink verstuurd.','small'));
  const send=button('Goedkeuren en deze Network-uitnodiging versturen',async()=>{
   if(!outreach?.can_send_now){setMessage('De verzendlimiet is bereikt of de Network verzendstatus is niet beschikbaar.');return;}
