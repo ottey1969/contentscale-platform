@@ -62,7 +62,11 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
      const discovery={email:result.email,source_url:result.source_url,verification:result.verification,checked_at:new Date().toISOString()};
      await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(discovery)]);
      return {company_id:company.id,...discovery,website_review:site,cached:false};
-    }catch(e){return {company_id:company.id,email:null,website_review:site,verification:'unavailable',error:'Website contact lookup unavailable'};}
+    }catch(e){
+     const failed={email:null,source_url:null,verification:'unavailable',checked_at:new Date().toISOString()};
+     try{await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(failed)]);}catch{}
+     return {company_id:company.id,...failed,website_review:site,error:'Website contact lookup unavailable'};
+    }
    }));
    return res.json({results,emails_sent:0});
   }catch(e){console.error('[network-acquisition] batch discovery',e.code||e.message);return res.status(503).json({error:'Batch lookup unavailable; existing acquisition records preserved'})}
