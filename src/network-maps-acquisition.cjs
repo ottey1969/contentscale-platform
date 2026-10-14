@@ -10,6 +10,35 @@ function authorized(req){
  const configured=process.env.LC_ADMIN_CODE||'',submitted=String(req.get('x-admin-code')||'');
  return configured.length>0&&configured.length===submitted.length&&crypto.timingSafeEqual(Buffer.from(configured),Buffer.from(submitted));
 }
+// Short-lived signed HttpOnly session: the admin secret never enters browser storage.
+const sessionName='cs_network_admin';
+function cookieSessionValid(req){
+ const secret=process.env.LC_ADMIN_CODE||'';
+ if(!secret)return false;
+ const header=String(req.headers?.cookie||'');
+ const pair=header.split(';').map(v=>v.trim()).find(v=>v.startsWith(sessionName+'='));
+ if(!pair)return false;
+ const value=pair.slice(sessionName.length+1);
+ const parts=value.split('.');
+ if(parts.length!==3||!/^[a-f0-9]{32}$/.test(parts[0])||!/^\d{13}$/.test(parts[1])||!/^[a-f0-9]{64}$/.test(parts[2]))return false;
+ const ts=Number(parts[1]),now=Date.now();
+ if(!Number.isSafeInteger(ts)||ts>now+60000||now-ts>8*60*60*1000)return false;
+ const payload=parts[0]+'.'+parts[1];
+ const expected=crypto.createHmac('sha256',secret).update('network-session-v1:'+payload).digest('hex');
+ const a=Buffer.from(expected,'hex'),b=Buffer.from(parts[2],'hex');
+ if(!crypto.timingSafeEqual(a,b))return false;
+ // SameSite Strict protects normal navigation; enforce same-origin for writes too.
+ if(!['GET','HEAD','OPTIONS'].includes(req.method||'GET')){
+  const origin=req.get?.('origin');
+  if(origin){try{if(new URL(origin).host!==req.get('host'))return false;}catch{return false;}}
+ }
+ return true;
+}
+function newSessionCookie(){
+ const payload=crypto.randomBytes(16).toString('hex')+'.'+String(Date.now());
+ const signature=crypto.createHmac('sha256',process.env.LC_ADMIN_CODE).update('network-session-v1:'+payload).digest('hex');
+ return sessionName+'='+payload+'.'+signature+'; Path=/api/network/admin/acquisition; HttpOnly; Secure; SameSite=Strict; Max-Age=28800';
+}
 function candidate(raw){
  if(!raw||!['google_maps_serper','google_maps_serpapi'].includes(raw.source))return null;
  const site=safeWebsite(raw.website);
@@ -22,9 +51,19 @@ function candidate(raw){
 }
 function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=discoverCompanyContact,inspect=websiteEvidence,backfillDelayMs=12000}){
  if(!app?.get||!app?.post||!pool?.query)throw Error('Network acquisition dependencies missing');
+ const sessionAuth=req=>auth(req)||cookieSessionValid(req);
+ app.post('/api/network/admin/acquisition/session', (req,res)=>{
+  const code=String(req.body?.code||''),expected=process.env.LC_ADMIN_CODE||'';
+  const good=expected.length>0&&code.length===expected.length&&crypto.timingSafeEqual(Buffer.from(code),Buffer.from(expected));
+  if(!good)return res.status(403).set('Cache-Control','no-store').json({error:'Admincode niet geaccepteerd'});
+  return res.set('Cache-Control','no-store').set('Set-Cookie',newSessionCookie()).json({ok:true});
+ });
+ app.get('/api/network/admin/acquisition/session',(req,res)=>res.set('Cache-Control','no-store').json({authenticated:sessionAuth(req)}));
+ app.post('/api/network/admin/acquisition/logout',(req,res)=>res.set('Cache-Control','no-store').set('Set-Cookie',sessionName+'=; Path=/api/network/admin/acquisition; HttpOnly; Secure; SameSite=Strict; Max-Age=0').json({ok:true}));
+
  app.get('/network/acquisition',(_req,res)=>res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').sendFile(path.resolve(__dirname,'../public/network-acquisition.html')));
  app.get('/api/network/admin/acquisition/candidates',async(req,res)=>{
-  if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
+  if(!sessionAuth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   try{
    const result=await pool.query(`SELECT n.id,n.business_name,n.domain,n.canonical_url,n.primary_niche,n.city,n.status,n.public_visibility,n.website_check,
     n.metadata->'acquisition'->'email_discovery' AS email_discovery,
@@ -99,7 +138,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
   if(typeof timer.unref==='function')timer.unref();
  }
  app.post('/api/network/admin/acquisition/discover-batch',async(req,res)=>{
-  if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
+  if(!sessionAuth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   const supplied=req.body?.company_ids;
   // PostgreSQL BIGINT arrives as a decimal string in pg. Normalize without precision loss.
   const ids=Array.isArray(supplied)?supplied.map(id=>typeof id==='string'?id.trim():String(id)):[];
@@ -112,7 +151,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
   }catch(e){console.error('[network-acquisition] batch discovery',e.code||e.message);return res.status(503).json({error:'Batch lookup unavailable; existing acquisition records preserved'})}
  });
  app.post('/api/network/admin/acquisition/discover-email',async(req,res)=>{
-  if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
+  if(!sessionAuth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   const id=Number(req.body?.company_id);
   if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Valid company ID required'});
   try{
@@ -127,7 +166,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
   }catch(e){console.error('[network-acquisition] public email discovery',e.code||e.message);return res.status(503).json({error:'Public contact lookup unavailable; no data was modified'})}
  });
  app.post('/api/network/admin/acquisition/import',async(req,res)=>{
-  if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
+  if(!sessionAuth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   const entries=req.body?.leads;
   if(!Array.isArray(entries)||entries.length<1||entries.length>25)return res.status(400).json({error:'Select between 1 and 25 Maps leads'});
   const valid=entries.map(candidate);
@@ -157,7 +196,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
   }catch(e){console.error('[network-acquisition] import',e.code||e.message);
    return res.status(503).json({error:'Network import interrupted. Check the review list before retrying; duplicate websites cannot be imported twice.'})}
  });
- registerNetworkAcquisitionInvitations({app,pool,auth});
+ registerNetworkAcquisitionInvitations({app,pool,auth:sessionAuth});
  scheduleEmailBackfill();
 }
 module.exports={registerNetworkMapsAcquisition,candidate};
