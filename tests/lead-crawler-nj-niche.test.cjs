@@ -12,4 +12,8 @@ assert(html.includes("INDUSTRIES=buildIndustryPlan();"));
 assert(html.includes("const valid = dedup"));
 assert(html.includes("getBucket("));
 assert(html.includes("document.getElementById('state').value='New Jersey'"));
+assert(html.includes("enteredCity.toLowerCase()!==state.toLowerCase()"));
+assert(html.includes('No verifiable businesses found'));
+assert(html.includes('This search is not marked completed'));
+assert(html.includes('No structured business results returned'));
 console.log('PASS: USA NJ state+city, single niche through existing custom industry plan, six buckets untouched');
