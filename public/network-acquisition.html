@@ -15,7 +15,8 @@
 <p class="info small" id="autoInvitationStatus" role="status">Automatische uitnodigingen: status laden…</p>
 <section class="panel" id="warmupPanel" aria-label="Bestaande e-mailopwarming">
 <h2>E-mailopwarming <span class="pill" id="warmupBadge">Status laden…</span></h2>
-<p class="info small">Dit is de bestaande opwarming van je afzender. De dagvoortgang blijft gebaseerd op behaalde verzenddoelen, niet op de kalender of een nieuwe Network-import.</p>
+<p class="info small">De verzendteller loopt per kalenderdag in Filipijnse tijd (00:00–23:59). Automatische én handmatige Network-uitnodigingen tellen mee. Je opwarmdag verandert alleen volgens de bestaande opwarmvoortgang.</p>
+<p id="warmupPeriod" class="info small" role="status">Verzendperiode laden…</p>
 <div class="stats" id="warmupMetrics">
 <div class="stat"><small>Opwarmdag</small><b id="warmupDay">— / 42</b></div>
 <div class="stat"><small>Geregistreerd in ContentScale vandaag</small><b id="warmupUsed">—</b></div>
@@ -97,19 +98,21 @@ function renderWarmup(){
  const w=outreach?.warmup;
  const badge=el('warmupBadge'),detail=el('warmupDetail');
  if(!w){
+  el('warmupPeriod').textContent='Meetperiode niet beschikbaar; verzending blijft geblokkeerd.';
   el('warmupDay').textContent='— / 42';el('warmupUsed').textContent='—';
   el('warmupRemaining').textContent='—';el('networkUsed').textContent='—';
   badge.textContent='Niet beschikbaar';badge.className='pill';
   detail.textContent='Opwarmstatus kan niet worden geladen. Voor je veiligheid blijft Network-verzending geblokkeerd.';
   detail.className='warning small';return;
  }
+ el('warmupPeriod').textContent='Meetperiode: '+(w.counting_date||'vandaag')+' · '+(w.counting_window||'00:00–23:59 Asia/Manila')+'. Nieuwe kalenderdag: 00:00 Manila-tijd. Dit is geen automatische verhoging van je opwarmdag.';
  el('warmupDay').textContent=w.progress_day+' / '+w.total_days;
  el('warmupUsed').textContent=w.sent_today+' / '+(w.daily_cap==null?'geen ContentScale-limiet':w.daily_cap);
  el('warmupRemaining').textContent=w.remaining_today==null?'—':String(w.remaining_today);
  el('networkUsed').textContent=outreach.sent_today+' / '+outreach.daily_cap;
  badge.textContent=w.complete?'Voltooid':w.active?'Actief':'Gepauzeerd';
  badge.className='pill'+(w.active?' good':'');
- const origin=w.legacy_sent_today+' oude acquisitie + '+w.network_sent_today+' Network = '+w.sent_today+' door ContentScale geregistreerde e-mails vandaag (Manila-tijd). Directe Brevo-verzendingen en andere e-mailstromen zijn niet bevestigd in deze teller.';
+ const origin=w.network_sent_today+' Network-uitnodigingen (automatisch én handmatig) + '+w.legacy_sent_today+' bestaande acquisitie = '+w.sent_today+' geregistreerde verzendingen in deze periode. Direct via Brevo verstuurde e-mails en andere stromen worden niet meegeteld.';
  const nextDay=(Math.floor((w.progress_day-1)/7)+1)*7+1;
  const next=w.complete?'De opwarmfase is voltooid.':w.active?'INGESTELDE opwarmlimiet: '+w.daily_cap+' e-mails per dag (dag '+w.progress_day+'/42). '+(w.next_cap==null?'':'PAS LATER: '+w.next_cap+' e-mails per dag vanaf opwarmdag '+nextDay+', uitsluitend na behaalde verzenddoelen.'):'De oorspronkelijke opwarming staat gepauzeerd.';
  detail.textContent=origin+' '+next+' Geen reset en geen automatische verzending.';
