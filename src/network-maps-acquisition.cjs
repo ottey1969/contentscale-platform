@@ -46,8 +46,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    const companies=await pool.query(
     "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery, metadata->'acquisition'->'website_review' AS website_review FROM network_directory_businesses WHERE id=ANY($1::int[]) AND source='maps_acquisition'",[ids]);
    if(companies.rows.length!==ids.length)return res.status(404).json({error:'One or more companies not found'});
-   const results=[];
-   for(const company of companies.rows){
+   const results=await Promise.all(companies.rows.map(async company=>{
     let site=company.website_review;
     if(!site?.checked_at){
      try{
@@ -56,15 +55,15 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
      }catch(e){site={status:'review_required',reason:'Website check failed',checked_at:new Date().toISOString()};}
     }
     const prev=company.email_discovery;
-    if(prev?.email){results.push({company_id:company.id,...prev,website_review:site,cached:true});continue;}
+    if(prev?.email){return {company_id:company.id,...prev,website_review:site,cached:true};}
     try{
-     const result=await discoverCompanyContact(company.canonical_url,{maxPages:5});
+     const result=await discoverCompanyContact(company.canonical_url,{maxPages:4});
      if(result.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))throw Error('Company domain mismatch');
      const discovery={email:result.email,source_url:result.source_url,verification:result.verification,checked_at:new Date().toISOString()};
      await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(discovery)]);
-     results.push({company_id:company.id,...discovery,website_review:site,cached:false});
-    }catch(e){results.push({company_id:company.id,email:null,website_review:site,verification:'unavailable',error:'Website contact lookup unavailable'});}
-   }
+     return {company_id:company.id,...discovery,website_review:site,cached:false};
+    }catch(e){return {company_id:company.id,email:null,website_review:site,verification:'unavailable',error:'Website contact lookup unavailable'};}
+   }));
    return res.json({results,emails_sent:0});
   }catch(e){console.error('[network-acquisition] batch discovery',e.code||e.message);return res.status(503).json({error:'Batch lookup unavailable; existing acquisition records preserved'})}
  });
