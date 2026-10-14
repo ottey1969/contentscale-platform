@@ -280,11 +280,6 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
   return {statusCode:200,body:null,status(code){this.statusCode=code;return this;},
    json(data){this.body=data;return this;}};
  }
- async function internalCall(handler,body){
-  const response=internalResponse();
-  await handler({body,headers:{},get:()=>''},response);
-  return response;
- }
  // Auth is deliberately bypassed only for these trusted in-process calls.
  // The same validators and persistence handlers are used through an internal
  // authorization wrapper (never exposed to HTTP clients).
@@ -324,6 +319,9 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
     const source=String(discovery.source_url||'');
     if(!publicCompanyContact(email,c.domain,source,discovery,false)){outcome.skipped++;continue;}
     const invitation=inviteState(c);
+    if(invitation?.status==='prepared' && (invitation.email!==email || invitation.source_url!==source)){
+     outcome.skipped++;continue; // changed contact details demand a fresh manual review
+    }
     let result;
     if(invitation?.status==='prepared'){
      // Original tokens are deliberately not stored. Rotate atomically before send.
@@ -338,6 +336,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
     else if(sent.statusCode===429){outcome.blocked=sent.body?.error;break;}
     else outcome.skipped++;
    }
+   console.info('[network-auto-invitations] run',JSON.stringify(outcome));
    return outcome;
   }catch(e){
    console.error('[network-auto-invitations]',e.code||e.message);
