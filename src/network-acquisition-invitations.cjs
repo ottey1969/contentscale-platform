@@ -108,7 +108,7 @@ function inviteMarkup(name,token,state){
   '.brand{font-weight:800;font-size:18px;letter-spacing:.2px}.brand span{color:#62e4a1}',
   '.intro{margin-top:54px}.eyebrow{font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#8de5b1;font-weight:750;margin:0 0 13px}',
   'h1{font-size:clamp(35px,6vw,62px);font-weight:850;letter-spacing:-1.7px;line-height:1.08;max-width:920px;margin:0 0 20px}',
-  '.lead{max-width:760px;font-size:clamp(17px,2vw,21px);color:#c7d7e8;margin:0 0 22px}.question{font-size:clamp(21px,3vw,29px);margin:10px 0 18px;line-height:1.3}'
+  '.lead{max-width:760px;font-size:clamp(17px,2vw,21px);color:#c7d7e8;margin:0 0 22px}.question{font-size:clamp(21px,3vw,29px);margin:10px 0 18px;line-height:1.3}',
   '.recipient{font-size:15px;color:#b6c9d9;margin-bottom:28px}.recipient strong{color:#fff}',
   '.interest{margin:25px 0}.interest button{background:#168a4d;color:#fff;border:1px solid #32b978;padding:15px 26px;font:750 17px system-ui;border-radius:9px;cursor:pointer;box-shadow:0 6px 24px #041a123b}',
   '.interest button:hover,.interest button:focus-visible{background:#1da75c}.interest button:disabled{background:#41615b;border-color:#537c6b;cursor:not-allowed;opacity:.75;box-shadow:none}.fine{font-size:13px;color:#aabfd1;margin-top:10px;max-width:680px}',
