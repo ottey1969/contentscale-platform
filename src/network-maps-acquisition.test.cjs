@@ -62,7 +62,7 @@ async function invoke(method,path,body,code='ok'){
  assert(h.includes('providerUnavailable=true'),'circuit breaker must stop 5xx');
  const html=fs.readFileSync('public/network-acquisition.html','utf8');
  assert.match(html,/No automatic invitations/);
- assert.match(html,/data.total/,'Acquisitie must show cumulative total');
+ assert.match(html,/d.total/,'Acquisitie must show cumulative total');
  assert.match(html,/outreach_schedule/,'Acquisitie must show exact existing warmup schedule');
  assert.match(html,/\/api\/prospect-quick-scan\/admin\/list/,'warmup must come from established QuickScan admin status');
  assert.match(html,/\/api\/prospect-quick-scan\/admin\/create/,'review uses canonical QuickScan prospect, not a shadow table');
