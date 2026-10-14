@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {patch}=require('../scripts/fix-audit20-inline-label.cjs');
+const source=String.raw`const h='<button id="audit20-interest-btn">Yes — I\\'m interested in the 20-Page Audit</button>';`;
+const fixed=patch(source);
+assert(fixed.includes('Yes — Interested in the 20-Page Audit'));
+assert(!fixed.includes("I\\'m interested"));
+assert.doesNotThrow(()=>new Function(fixed));
+assert.throws(()=>patch('no such button'));
+console.log('PASS: exact Audit 20 interest label repaired without modifying unrelated script');
