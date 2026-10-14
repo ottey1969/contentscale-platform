@@ -7,6 +7,12 @@ function validPublish({url,query,notes,published_at}){
  return null;
 }
 function registerGrowthExecution(app,pool){
+ // Keep NJ lead discovery on the existing server and outside Network/CRM writes.
+ try{
+  require('./lead-crawler-serpapi.cjs').registerLeadCrawlerSerpApi(app);
+ }catch(error){
+  console.error('[lead-crawler-serpapi] registration failed:',error.message);
+ }
  // Keep this optional integration isolated: any Growth preflight error must
  // never prevent existing Tracker publication records from operating.
  try {
