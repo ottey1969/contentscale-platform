@@ -1673,8 +1673,11 @@
          }
          let activeBucket='all',activeSearch='',sortField='score',stratOpen=true,errors=[];
          let completedIndustries=new Set();
-         // ── GEMINI KEY MANAGEMENT (BYOK — opgeslagen in localStorage gebruiker) ──
+         // ── GEMINI KEY MANAGEMENT (BYOK — alleen tijdelijk in werkgeheugen) ──
          const LS_GEMINI_KEY = 'lc_gemini_key';
+         // Keys stay in page memory only. Purge legacy persistent copies on load.
+         let ephemeralGeminiKey=null;
+         try{localStorage.removeItem(LS_GEMINI_KEY);}catch{}
 
          function maskGeminiKey(k) {
            if (!k || k.length < 12) return 'AIzaSy···';
@@ -1688,11 +1691,11 @@
              status.innerHTML = '<span style="color:var(--red)">❌ Ongeldige key — moet beginnen met AIzaSy en minstens 20 tekens lang zijn</span>';
              return;
            }
-           localStorage.setItem(LS_GEMINI_KEY, key);
+           ephemeralGeminiKey=key;
            document.getElementById('geminiKeyInput').value = '';
            status.innerHTML = '';
            showGeminiSavedState(key);
-           toast('✅ Gemini key opgeslagen — je kunt nu crawlen!');
+           toast('✅ Gemini key tijdelijk actief — alleen tot je deze pagina sluit.');
          }
 
          function showGeminiSavedState(key) {
@@ -1708,7 +1711,7 @@
          }
 
          function removeGeminiKey() {
-           localStorage.removeItem(LS_GEMINI_KEY);
+           ephemeralGeminiKey=null;
            showGeminiEntryState();
            toast('Key verwijderd');
          }
@@ -1721,12 +1724,12 @@
          }
 
          function getGeminiKey() {
-           return localStorage.getItem(LS_GEMINI_KEY) || null;
+           return ephemeralGeminiKey;
          }
 
          // Init op pagina load
          document.addEventListener('DOMContentLoaded', () => {
-           const saved = localStorage.getItem(LS_GEMINI_KEY);
+           const saved = ephemeralGeminiKey;
            if (saved && saved.length >= 20) {
              showGeminiSavedState(saved);
            } else {
