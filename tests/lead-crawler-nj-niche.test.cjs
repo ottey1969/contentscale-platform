@@ -16,4 +16,8 @@ assert(html.includes("enteredCity.toLowerCase()!==state.toLowerCase()"));
 assert(html.includes('No verifiable businesses found'));
 assert(html.includes('This search is not marked completed'));
 assert(html.includes('No structured business results returned'));
+assert(html.includes("responseMimeType: 'application/json'"));
+assert(html.includes("candidate?.finishReason"));
+assert(html.includes("candidate?.content?.parts||[]"));
+assert(html.includes('Do not invent businesses'));
 console.log('PASS: USA NJ state+city, single niche through existing custom industry plan, six buckets untouched');
