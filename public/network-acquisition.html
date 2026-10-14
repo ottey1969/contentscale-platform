@@ -18,8 +18,8 @@
 <p class="info small">Dit is de bestaande opwarming van je afzender. De dagvoortgang blijft gebaseerd op behaalde verzenddoelen, niet op de kalender of een nieuwe Network-import.</p>
 <div class="stats" id="warmupMetrics">
 <div class="stat"><small>Opwarmdag</small><b id="warmupDay">— / 42</b></div>
-<div class="stat"><small>Vandaag totaal verzonden</small><b id="warmupUsed">—</b></div>
-<div class="stat"><small>Resterend vandaag</small><b id="warmupRemaining">—</b></div>
+<div class="stat"><small>Geregistreerd in ContentScale vandaag</small><b id="warmupUsed">—</b></div>
+<div class="stat"><small>Resterend volgens ContentScale</small><b id="warmupRemaining">—</b></div>
 <div class="stat"><small>Network-uitnodigingen vandaag</small><b id="networkUsed">—</b></div>
 </div>
 <p class="info small" id="warmupDetail" role="status">We laden je bestaande opwarmgeschiedenis. Er wordt niets opnieuw gestart.</p>
@@ -109,9 +109,9 @@ function renderWarmup(){
  el('networkUsed').textContent=outreach.sent_today+' / '+outreach.daily_cap;
  badge.textContent=w.complete?'Voltooid':w.active?'Actief':'Gepauzeerd';
  badge.className='pill'+(w.active?' good':'');
- const origin=w.legacy_sent_today+' vanuit bestaande acquisitie + '+w.network_sent_today+' Network = '+w.sent_today+' verzonden vandaag (Manila-tijd).';
+ const origin=w.legacy_sent_today+' oude acquisitie + '+w.network_sent_today+' Network = '+w.sent_today+' door ContentScale geregistreerde e-mails vandaag (Manila-tijd). Directe Brevo-verzendingen en andere e-mailstromen zijn niet bevestigd in deze teller.';
  const nextDay=(Math.floor((w.progress_day-1)/7)+1)*7+1;
- const next=w.complete?'De opwarmfase is voltooid.':w.active?'HUIDIGE limiet: '+w.daily_cap+' e-mails per dag (dag '+w.progress_day+'/42). '+(w.next_cap==null?'':'PAS LATER: '+w.next_cap+' e-mails per dag vanaf opwarmdag '+nextDay+', uitsluitend na behaalde verzenddoelen.'):'De oorspronkelijke opwarming staat gepauzeerd.';
+ const next=w.complete?'De opwarmfase is voltooid.':w.active?'INGESTELDE opwarmlimiet: '+w.daily_cap+' e-mails per dag (dag '+w.progress_day+'/42). '+(w.next_cap==null?'':'PAS LATER: '+w.next_cap+' e-mails per dag vanaf opwarmdag '+nextDay+', uitsluitend na behaalde verzenddoelen.'):'De oorspronkelijke opwarming staat gepauzeerd.';
  detail.textContent=origin+' '+next+' Geen reset en geen automatische verzending.';
  detail.className='info small';
 }
