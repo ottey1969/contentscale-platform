@@ -98,7 +98,8 @@ function renderWarmup(){
  badge.textContent=w.complete?'Voltooid':w.active?'Actief':'Gepauzeerd';
  badge.className='pill'+(w.active?' good':'');
  const origin=w.legacy_sent_today+' vanuit bestaande acquisitie + '+w.network_sent_today+' Network = '+w.sent_today+' verzonden vandaag (Manila-tijd).';
- const next=w.complete?'De opwarmfase is voltooid.':w.active?'Opwarmcyclus '+w.cycle+' · dag '+w.day_in_cycle+'/7 · volgende daglimiet '+(w.next_cap??'—')+' na behalen van de benodigde verzenddoelen.':'De oorspronkelijke opwarming staat gepauzeerd.';
+ const nextDay=(Math.floor((w.progress_day-1)/7)+1)*7+1;
+ const next=w.complete?'De opwarmfase is voltooid.':w.active?'HUIDIGE limiet: '+w.daily_cap+' e-mails per dag (dag '+w.progress_day+'/42). '+(w.next_cap==null?'':'PAS LATER: '+w.next_cap+' e-mails per dag vanaf opwarmdag '+nextDay+', uitsluitend na behaalde verzenddoelen.'):'De oorspronkelijke opwarming staat gepauzeerd.';
  detail.textContent=origin+' '+next+' Geen reset en geen automatische verzending.';
  detail.className='info small';
 }
