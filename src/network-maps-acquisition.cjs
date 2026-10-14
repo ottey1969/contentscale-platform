@@ -87,8 +87,9 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
       ORDER BY id DESC LIMIT 25`);
     for(let i=0;i<rows.rows.length;i+=5){
      const ids=rows.rows.slice(i,i+5).map(x=>String(x.id));
-     const results=await discoverAndSave(ids);
-     inspected+=results.length;found+=results.filter(x=>x.email).length;
+     try{const results=await discoverAndSave(ids);
+      inspected+=results.length;found+=results.filter(x=>x.email).length;
+     }catch(error){console.error('[network-acquisition-backfill-batch]',error.code||error.message);}
     }
     if(inspected)console.info('[network-acquisition-backfill] sites='+inspected+' emails_found='+found+' no_email_sent=true');
    }catch(e){console.error('[network-acquisition-backfill]',e.code||e.message);}
