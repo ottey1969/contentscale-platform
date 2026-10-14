@@ -1,0 +1,11 @@
+'use strict';
+const assert=require('node:assert/strict');
+const EmailDetectionService=require('./services/email-detection-service');
+const service=new EmailDetectionService();
+const result=service.detectBusinessContacts('<a href="mailto:INFO@acme.com">Email</a><p>sales@acme.com other@external.com no-reply@acme.com</p>','https://www.acme.com/contact');
+assert.deepEqual(result.all,['info@acme.com','sales@acme.com']);
+assert.equal(result.best,'info@acme.com');
+assert.equal(result.count,2);
+assert.equal(result.verification,'publicly_observed');
+assert.equal(service.detectFromPage('<b>support@acme.com</b>','https://acme.com').best,'support@acme.com');
+console.log('CEO business email reuse tests passed');

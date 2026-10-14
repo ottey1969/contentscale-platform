@@ -1,0 +1,21 @@
+name: Business email discovery
+on:
+  pull_request:
+    paths:
+      - 'src/network-business-email-fetch*'
+      - 'src/services/email-detection-service.js'
+      - 'src/ceo-business-email.test.cjs'
+      - 'src/network-maps-acquisition.cjs'
+      - 'public/network-acquisition.html'
+      - '.github/workflows/business-email-discovery.yml'
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node src/ceo-business-email.test.cjs
+      - run: node src/network-business-email-fetch.test.cjs

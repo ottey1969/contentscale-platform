@@ -3,6 +3,7 @@
 const crypto=require('node:crypto');
 const path=require('node:path');
 const {safeWebsite}=require('./lead-crawler-serpapi.cjs');
+const {discoverCompanyContact}=require('./network-business-email-fetch.cjs');
 const plain=(x,n=200)=>String(x??'').replace(/[\x00-\x1f<>]/g,'').trim().slice(0,n);
 function authorized(req){
  const configured=process.env.LC_ADMIN_CODE||'',submitted=String(req.get('x-admin-code')||'');
@@ -42,6 +43,19 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    const count=await pool.query("SELECT count(*)::int AS total FROM network_directory_businesses WHERE source='maps_acquisition'");
    return res.json({candidates:result.rows,total:Number(count.rows[0]?.total||0)});
   }catch(e){console.error('[network-acquisition] list',e.code||e.message);return res.status(503).json({error:'Network candidate list unavailable'})}
+ });
+ app.post('/api/network/admin/acquisition/discover-email',async(req,res)=>{
+  if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
+  const id=Number(req.body?.company_id);
+  if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Valid company ID required'});
+  try{
+   const record=await pool.query("SELECT id,domain,canonical_url FROM network_directory_businesses WHERE id=$1 AND source='maps_acquisition' LIMIT 1",[id]);
+   if(!record.rows.length)return res.status(404).json({error:'Acquisition company not found'});
+   const company=record.rows[0];
+   const data=await discoverCompanyContact(company.canonical_url);
+   if(data.domain!==String(company.domain).toLowerCase().replace(/^www\\./,''))return res.status(422).json({error:'Company domain mismatch'});
+   return res.json({company_id:id,...data});
+  }catch(e){console.error('[network-acquisition] public email discovery',e.code||e.message);return res.status(503).json({error:'Public contact lookup unavailable; no data was modified'})}
  });
  app.post('/api/network/admin/acquisition/import',async(req,res)=>{
   if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
