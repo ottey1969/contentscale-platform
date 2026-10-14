@@ -6,7 +6,7 @@ assert(html.includes('id="state"'));
 assert(html.includes('value="New Jersey"'));
 assert(html.includes("value='USA'"));
 assert(html.includes('id="quickNiche"'));
-assert(html.includes("const city=state?(enteredCity?enteredCity+', '+state:state):enteredCity;"));
+assert(html.includes("const city=state?(enteredCity&&enteredCity.toLowerCase()!==state.toLowerCase()"));
 assert(html.includes("document.getElementById('industryMode').value='custom';"));
 assert(html.includes("INDUSTRIES=buildIndustryPlan();"));
 assert(html.includes("const valid = dedup"));
