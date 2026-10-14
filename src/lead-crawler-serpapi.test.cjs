@@ -17,7 +17,7 @@ assert.equal(mapBusiness({...roofing,website:'https://yelp.com/biz/example'},{to
 assert.equal(mapBusiness({...roofing,phone:''},{town:''}),null);
 const routes={};const app={post:(path,handler)=>{routes[path]=handler;}};
 let calls=0;
-registerLeadCrawlerSerpApi(app,{apiKey:()=> 'mock-key',auth:req=>req.get('x-admin-code')==='admin',
+registerLeadCrawlerSerpApi(app,{apiKey:()=> 'mock-key',serperKey:()=>'',auth:req=>req.get('x-admin-code')==='admin',
   fetchImpl:async(url)=>{calls++;const parsed=new URL(url);assert.equal(parsed.searchParams.get('engine'),'google_maps');
     assert.equal(parsed.searchParams.get('q'),'roofing businesses in Newark, New Jersey, USA');
     return {ok:true,json:async()=>({local_results:[roofing,{...roofing,address:'Brooklyn, NY'},{...roofing,title:'Duplicate Listing'}]})};}});
