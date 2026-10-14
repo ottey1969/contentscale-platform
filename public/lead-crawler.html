@@ -1881,7 +1881,7 @@
          // ── PHASE 1: FIND BUSINESSES (Gemini 1.5 Flash — server key) ──────────────
          async function callClaude(city, country, ind) {
              const prompt = `You are a high-precision B2B Lead Scraper. Use Google Search to find REAL local businesses.
-MISSION: Find 15 real ${ind.q} businesses in ${city}, ${country} that need SEO content services.
+MISSION: Return up to 8 REAL ${ind.q} businesses in ${city}, ${country} with independently identifiable websites. Do not invent businesses, URLs, or contact details. If you have no verified results, return [].
 CRITICAL: Search for actual business names, phone numbers, and websites. A lead without a phone number is WORTHLESS.
 Look for businesses with simple/outdated websites (5-30 pages) — these are the best leads.
 
@@ -1907,7 +1907,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
                      },
                      body: JSON.stringify({
                          contents: [{ parts: [{ text: prompt }] }],
-                         generationConfig: { temperature: 0.2, maxOutputTokens: 4096 }
+                         generationConfig: { temperature: 0.1, maxOutputTokens: 8192, responseMimeType: 'application/json' }
                      })
                  });
 
@@ -1920,7 +1920,12 @@ Use a real contact_form_url only when you found a page with a contact or quote f
                  }
 
                  const data = await resp.json();
-                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+                 const candidate=data.candidates?.[0];
+                 const text=(candidate?.content?.parts||[]).map(part=>typeof part.text==='string'?part.text:'').join('\n').trim();
+                 if(!text){
+                   const reason=candidate?.finishReason||data.promptFeedback?.blockReason||data.error?.message||'EMPTY_RESPONSE';
+                   throw new Error('Gemini returned no business data (reason: '+String(reason).slice(0,90)+'). No leads were saved.');
+                 }
 
                  // Update the live grounding free-tier meter (server attaches _grounding)
                  if (data._grounding) updateGroundingMeter(data._grounding);
