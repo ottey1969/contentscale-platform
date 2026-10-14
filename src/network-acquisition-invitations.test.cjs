@@ -46,6 +46,9 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
  const token=r.body.token;
  r=await run('GET','/network/join/:token',{}, {},{token});
  assert.equal(r.statusCode,200);assert.match(r.body,/I am interested/);assert.doesNotMatch(r.body,/QuickScan/);
+ r=await run('GET','/network/join/:token/unsubscribe',{}, {},{token});
+ assert.equal(r.statusCode,200);assert.match(r.body,/Confirm/);
+ assert.equal(company.metadata.acquisition.invitation.status,'prepared','GET unsubscribe must not mutate');
  r=await run('POST','/api/network/admin/acquisition/send-invitation',{company_id:7,token,approved:false});
  assert.equal(r.statusCode,400);assert.equal(sent,0);
  const oldKey=process.env.BREVO_API_KEY,oldFrom=process.env.FROM_EMAIL;
@@ -53,7 +56,7 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
   process.env.BREVO_API_KEY='test-only';process.env.FROM_EMAIL='info@contentscale.site';
   r=await run('POST','/api/network/admin/acquisition/send-invitation',{company_id:7,token,approved:true});
   assert.equal(r.statusCode,200);assert.equal(r.body.status,'invited');assert.equal(sent,1);
-  assert.equal(mail.to[0].email,'info@acme.com');assert.match(mail.textContent,/I[nterested]*|Interested/);
+  assert.equal(mail.to[0].email,'info@acme.com');assert.match(mail.textContent,/Interested/);
   assert.match(mail.textContent,/unsubscribe/);
   assert(company.metadata.acquisition.invitation.sent_at);
   r=await run('POST','/api/network/admin/acquisition/send-invitation',{company_id:7,token,approved:true});
