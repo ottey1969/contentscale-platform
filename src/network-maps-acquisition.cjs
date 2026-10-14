@@ -62,11 +62,11 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
     try{
      const result=await discoverCompanyContact(company.canonical_url,{maxPages:4});
      if(result.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))throw Error('Company domain mismatch');
-     const discovery={email:result.email,source_url:result.source_url,verification:result.verification,checked_at:new Date().toISOString()};
+     const discovery={email:result.email,source_url:result.source_url,verification:result.verification,relationship:result.relationship,version:'public-v2',checked_at:new Date().toISOString()};
      await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(discovery)]);
      return {company_id:company.id,...discovery,website_review:site,cached:false};
     }catch(e){
-     const failed={email:null,source_url:null,verification:'unavailable',checked_at:new Date().toISOString()};
+     const failed={email:null,source_url:null,verification:'unavailable',version:'public-v2',checked_at:new Date().toISOString()};
      try{await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(failed)]);}catch{}
      return {company_id:company.id,...failed,website_review:site,error:'Website contact lookup unavailable'};
     }
@@ -84,7 +84,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    const company=record.rows[0];
    const data=await discoverCompanyContact(company.canonical_url);
    if(data.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))return res.status(422).json({error:'Company domain mismatch'});
-   const discovery={email:data.email,source_url:data.source_url,verification:data.verification,checked_at:new Date().toISOString()};
+   const discovery={email:data.email,source_url:data.source_url,verification:data.verification,relationship:data.relationship,version:'public-v2',checked_at:new Date().toISOString()};
    await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[id,JSON.stringify(discovery)]);
    return res.json({company_id:id,...data});
   }catch(e){console.error('[network-acquisition] public email discovery',e.code||e.message);return res.status(503).json({error:'Public contact lookup unavailable; no data was modified'})}
