@@ -8,23 +8,15 @@ const clean=(v,n=250)=>String(v??'').replace(/[\x00-\x1f<>]/g,'').trim().slice(0
 const hash=token=>crypto.createHash('sha256').update(token).digest('hex');
 const tokenOk=token=>/^[a-f0-9]{48}$/.test(String(token||''));
 const escape=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[ch]));
-// Reserve at most 20% of the current sender warm-up allowance for Network.
-// Keep an independent hard ceiling, and never bypass the shared daily sender cap.
+// Network shares the sender's full daily warm-up budget with other tracked
+// ContentScale outreach. No separate 20% quota or network-specific cap.
 function networkCapForWarmup(day,active){
  if(!active)return 0;
- const senderCap=warmupDailyCap(day);
- const calculated=Math.min(20,Math.max(2,Math.floor((senderCap??100)*0.2)));
- const override=process.env.NETWORK_ACQUISITION_DAILY_CAP;
- if(override!==undefined && override!==''){
-  const parsed=Number(override);
-  if(Number.isInteger(parsed)&&parsed>=0)return Math.min(calculated,parsed);
- }
- return calculated;
+ return warmupDailyCap(day);
 }
 const baseUrl=()=>String(process.env.PUBLIC_APP_URL||'https://app.contentscale.site').replace(/\/+$/,'');
 // Read the existing Lead Crawler warm-up progress. Never start/reset/advance it here.
-// Network has its own smaller invitation cap, but uses the same sender and therefore
-// must not exceed the remaining overall warm-up allowance.
+// The shared sender daily limit covers both Network and legacy outreach.
 function warmupDailyCap(day){
  if(day<=7)return 20;
  if(day<=14)return 30;
@@ -52,7 +44,7 @@ async function networkWarmupSnapshot(pool){
  const networkCap=networkCapForWarmup(day,active);
  const dateParts=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date()).map(p=>[p.type,p.value]));
  const manilaDate=dateParts.year+'-'+dateParts.month+'-'+dateParts.day;
- const canSend=available&&networkToday<networkCap;
+ const canSend=available;
  return {
   warmup:{active,complete:completed,progress_day:day,total_days:42,cycle:Math.min(6,Math.ceil(day/7)),
    day_in_cycle:((day-1)%7)+1, daily_cap:dailyCap,sent_today:used,
@@ -66,8 +58,8 @@ async function networkWarmupSnapshot(pool){
    total_sent:pqsToday>=0?Number(legacy.rows[0]?.total_sent||0)+Number(network.rows[0]?.total_sent||0):0},
   sent_today:networkToday,total_sent:Number(network.rows[0]?.total_sent||0),
   interested:Number(network.rows[0]?.interested||0),daily_cap:networkCap,
-  remaining_today:Math.max(0,networkCap-networkToday),can_send_now:canSend,
-  sender:'ContentScale Network', limit_reason:!active?'Original email warm-up is paused':!available?'Original sender warm-up daily limit reached':networkToday>=networkCap?'Network daily invitation limit reached':null
+  remaining_today:Math.max(0,(dailyCap??used)-used),can_send_now:canSend,
+  sender:'ContentScale Network', limit_reason:!active?'Original email warm-up is paused':!available?'Original sender warm-up daily limit reached':null
  };
 }
 function sameBusinessEmail(email,domain){
