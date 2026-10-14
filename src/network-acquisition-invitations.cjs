@@ -283,7 +283,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  // Auth is deliberately bypassed only for these trusted in-process calls.
  // The same validators and persistence handlers are used through an internal
  // authorization wrapper (never exposed to HTTP clients).
- const autoAdminRequest={get:()=>process.env.LC_ADMIN_CODE||''};
+ const autoAdminRequest={headers:{'x-admin-code':process.env.LC_ADMIN_CODE||''},get:(name)=>name?.toLowerCase()==='x-admin-code'?(process.env.LC_ADMIN_CODE||''):''};
  async function autoCall(handler,body){
   const response=internalResponse();
   await handler({...autoAdminRequest,body},response);
@@ -291,6 +291,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  }
  async function autoDispatch(){
   if(autoBusy||process.env.NETWORK_AUTO_INVITES==='off')return {skipped:'disabled_or_busy'};
+  if(!process.env.LC_ADMIN_CODE)return {skipped:'admin_credential_unavailable'};
   if(typeof pool.connect!=='function')return {skipped:'pool_connection_unavailable'};
   autoBusy=true;
   let client,locked=false;
