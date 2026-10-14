@@ -35,7 +35,7 @@ assert.doesNotMatch(confirmedPage,/<form method="POST"/,'do not show an active i
 let sent=0,mail=null,company={id:7,business_name:'Acme Roofing',domain:'acme.com',canonical_url:'https://acme.com/',public_visibility:'hidden',metadata:{acquisition:{website_review:{status:'site_observed'},email_discovery:{email:'info@acme.com',source_url:'https://acme.com/contact',verification:'publicly_observed'}}}};
 const calls=[],routes={};
 const app={post:(url,fn)=>routes['POST '+url]=fn,get:(url,fn)=>routes['GET '+url]=fn};
-const pool={query:async(sql,args=[])=>{
+const pool={connect:async()=>({query:async(sql)=>({rows:[{locked:true}]}),release:()=>{}}),query:async(sql,args=[])=>{
  calls.push(sql);
  if(sql.startsWith('SELECT id,business_name,domain,canonical_url'))return {rows:[company]};
  if(sql.includes('contact_intelligence_suppressions'))return {rows:[{blocked:false}]};
@@ -95,7 +95,7 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
  assert.equal(r.statusCode,200);assert.equal(r.body.status,'prepared');assert.equal(sent,0);
  const token=r.body.token;
  const previewPage=inviteMarkup('Acme Roofing',token,'prepared');
- assert.match(previewPage,/Invitation preview:/,'unsent preview must clearly identify its state');
+ assert.match(previewPage,/Preview only — invitation not sent/,'unsent preview must clearly identify its state');
  assert.doesNotMatch(previewPage,/<button\\b/i,'preview must show no dead CTA');
  assert.doesNotMatch(previewPage,/<form method="POST"/,'unsent preview must not include interest form');
  let early=await run('POST','/network/join/:token/interested',{}, {},{token});
