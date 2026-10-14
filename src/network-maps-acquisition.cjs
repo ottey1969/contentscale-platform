@@ -39,12 +39,15 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
  });
  app.post('/api/network/admin/acquisition/discover-batch',async(req,res)=>{
   if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
-  const ids=req.body?.company_ids;
-  if(!Array.isArray(ids)||ids.length<1||ids.length>5||new Set(ids).size!==ids.length||
-   ids.some(id=>!Number.isSafeInteger(id)||id<1))return res.status(400).json({error:'Select 1 to 5 unique acquisition company IDs'});
+  const supplied=req.body?.company_ids;
+  // PostgreSQL BIGINT arrives as a decimal string in pg. Normalize without precision loss.
+  const ids=Array.isArray(supplied)?supplied.map(id=>typeof id==='string'?id.trim():String(id)):[];
+  if(ids.length<1||ids.length>5||new Set(ids).size!==ids.length||
+   ids.some(id=>!/^[1-9][0-9]{0,18}$/.test(id)||BigInt(id)>9223372036854775807n))
+   return res.status(400).json({error:'Select 1 to 5 unique acquisition company IDs'});
   try{
    const companies=await pool.query(
-    "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery, metadata->'acquisition'->'website_review' AS website_review FROM network_directory_businesses WHERE id=ANY($1::int[]) AND source='maps_acquisition'",[ids]);
+    "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery, metadata->'acquisition'->'website_review' AS website_review FROM network_directory_businesses WHERE id=ANY($1::bigint[]) AND source='maps_acquisition'",[ids]);
    if(companies.rows.length!==ids.length)return res.status(404).json({error:'One or more companies not found'});
    const results=await Promise.all(companies.rows.map(async company=>{
     let site=company.website_review;
