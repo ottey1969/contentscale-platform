@@ -54,7 +54,8 @@ async function unlock(ev){
   sessionStorage.setItem('lc_admin_code',code);sessionStorage.setItem('lc_role','admin');el('unlockCode').value='';el('unlock').hidden=true;await refresh();
  }catch(e){el('unlockMessage').textContent=e.message;}finally{b.disabled=false;b.textContent='Ontgrendelen';}
 }
-function validSource(source,domain){try{const u=new URL(source);return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&u.hostname.toLowerCase().replace(/^www\./,'')===String(domain||'').toLowerCase().replace(/^www\./,'');}catch{return false;}}
+function normalizeSource(source){const raw=String(source||'').trim();return raw&&!/^https?:\/\//i.test(raw)?'https://'+raw:raw;}
+function validSource(source,domain){try{const u=new URL(normalizeSource(source));return u.protocol==='https:'&&!u.username&&!u.password&&!u.port&&u.hostname.toLowerCase().replace(/^www\./,'')===String(domain||'').toLowerCase().replace(/^www\./,'');}catch{return false;}}
 function inspection(c){return c.website_review?.status||'not_checked';}
 function stage(c){
  const inv=c.invitation?.status;
@@ -76,6 +77,7 @@ function renderStats(){
 }
 async function refresh(){
  if(busy)return;
+ if(!admin()){showUnlock('Log in met de Lead Crawler admincode om de 19 Network-bedrijven te bekijken.');return;}
  el('refresh').disabled=true;setMessage('');
  try{
   const d=await api('/api/network/admin/acquisition/candidates');companies=d.candidates||[];total=Number(d.total??companies.length);
@@ -126,7 +128,7 @@ async function findEmail(c){
  if(busy)return;busy=true;el('batch').disabled=true;el('progress').textContent='Zakelijk e-mailadres zoeken op '+c.domain+'…';
  try{
   const d=await api('/api/network/admin/acquisition/discover-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id})});
-  c.email_discovery={email:d.email,source_url:d.source_url,verification:d.verification,checked_at:new Date().toISOString()};render();
+  c.email_discovery={email:d.email,source_url:d.source_url,verification:d.verification,relationship:d.relationship,checked_at:new Date().toISOString()};render();
  }catch(e){setMessage(e.message);}finally{busy=false;el('batch').disabled=false;el('progress').textContent='';}
 }
 async function discoverBatch(){
@@ -139,7 +141,7 @@ async function discoverBatch(){
    const d=await api('/api/network/admin/acquisition/discover-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_ids:selected.slice(start,start+5).map(c=>c.id)})});
    for(const item of d.results||[]){
     searched++;if(item.email)found++;if(item.website_review?.status==='site_observed')verified++;if(item.verification==='unavailable')unavailable++;
-    const c=companies.find(c=>c.id===item.company_id);if(c){c.email_discovery={email:item.email,source_url:item.source_url,verification:item.verification,checked_at:item.checked_at||new Date().toISOString()};if(item.website_review)c.website_review=item.website_review;}
+    const c=companies.find(c=>String(c.id)===String(item.company_id));if(c){c.email_discovery={email:item.email,source_url:item.source_url,verification:item.verification,relationship:item.relationship,checked_at:item.checked_at||new Date().toISOString()};if(item.website_review)c.website_review=item.website_review;}
    }
    el('progress').textContent=searched+'/'+selected.length+' websites · '+found+' e-mails · '+verified+' websites gevonden · '+unavailable+' beperkt bereikbaar. Geen uitnodigingen verstuurd.';
    renderStats();render();
@@ -170,14 +172,19 @@ function review(c){
  }
  const fields=tag('div',undefined,'fields');
  const labEmail=tag('label','Zakelijk e-mailadres'),email=tag('input');email.type='email';email.value=c.email_discovery?.email||'';email.placeholder='info@bedrijf.com';labEmail.append(email);
- const labSource=tag('label','Publieke bronpagina van e-mailadres'),source=tag('input');source.type='url';source.value=c.email_discovery?.source_url||'';source.placeholder='https://bedrijf.com/contact';labSource.append(source);
+ const labSource=tag('label','Bronpagina op de website van dit bedrijf'),source=tag('input');source.type='url';source.value=c.email_discovery?.source_url||'';source.placeholder=c.canonical_url;labSource.append(source);
  fields.append(labEmail,labSource);root.append(fields);
+ root.append(tag('p','Let op: een bedrijf kan een e-mailadres op een ander domein gebruiken. Als dat adres op de eigen website vermeld staat, gebruik dan de eigen websitepagina als bron, niet het e-maildomein.','info small'));
  const checkLabel=tag('label'),check=tag('input');check.type='checkbox';check.style.width='auto';
  checkLabel.append(check,document.createTextNode(' Ik bevestig dat dit openbare zakelijke contactgegevens zijn, niet een privé-e-mailadres, en dat het bedrijf relevant is voor het Network.'));
  root.append(checkLabel);
  const result=tag('p','','info'),prepare=button('Bereid Network-uitnodiging voor',async()=>{
   if(!check.checked){result.textContent='Controleer eerst de zakelijke contactgegevens.';result.className='error';return;}
-  if(!validSource(source.value,c.domain)||!email.value.includes('@')){result.textContent='E-mailadres en HTTPS-bron moeten bij dit bedrijf horen.';result.className='error';return;}
+  source.value=normalizeSource(source.value);
+  if(!validSource(source.value,c.domain)||!email.value.includes('@')){
+   result.textContent='De bron moet een pagina op de bedrijfswebsite zijn (bijv. '+c.canonical_url+'). Het e-mailadres mag op een ander zakelijk domein staan wanneer dat op die pagina wordt vermeld.';
+   result.className='error';return;
+  }
   prepare.disabled=true;prepare.textContent='Voorbereiden…';
   try{
    const d=await api('/api/network/admin/acquisition/prepare-invitation',{method:'POST',headers:{'Content-Type':'application/json'},
