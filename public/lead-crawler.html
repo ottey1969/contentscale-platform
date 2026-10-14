@@ -2594,6 +2594,21 @@ Use a real contact_form_url only when you found a page with a contact or quote f
          // VAPI VOICEBOT SYSTEM
          // ════════════════════════════════════════════════════════
          const LS_VAPI = 'lc_vapi_config';
+         let ephemeralVapiKey='';
+         // Clear legacy persisted Vapi credentials without deleting harmless preferences.
+         try{
+           const legacy=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+           if(legacy && Object.prototype.hasOwnProperty.call(legacy,'vapiKey')){
+             delete legacy.vapiKey;
+             localStorage.setItem(LS_VAPI,JSON.stringify(legacy));
+           }
+         }catch{}
+         function currentVapiConfig(){
+           try{
+             const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+             return cfg?{...cfg,vapiKey:ephemeralVapiKey}:null;
+           }catch{return null;}
+         }
          const LS_CALLLOG = 'lc_call_log';
          
          // callStates: Map of leadId → {state, callId, label, statusText, startedAt}
@@ -2614,7 +2629,9 @@ Use a real contact_form_url only when you found a page with a contact or quote f
            if(!cfg.vapiKey||!cfg.phoneId||!cfg.callerName){
              toast('⚠ Fill in API Key, Phone Number ID and your name');return;
            }
-           localStorage.setItem(LS_VAPI, JSON.stringify(cfg));
+           ephemeralVapiKey=cfg.vapiKey;
+            const nonSecret={...cfg};delete nonSecret.vapiKey;
+            localStorage.setItem(LS_VAPI, JSON.stringify(nonSecret));
            document.getElementById('vapiSavedBadge').style.display='inline-block';
            document.getElementById('vapiConfigBadge').style.display='inline-block';
            document.getElementById('vapiToggleTxt').textContent='Voicebot Ready';
@@ -2623,7 +2640,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
          
          function loadVapiConfig(){
            try{
-             const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+             const cfg=currentVapiConfig();
              if(!cfg) return null;
              document.getElementById('vapiKey').value=cfg.vapiKey||'';
              document.getElementById('vapiPhoneId').value=cfg.phoneId||'';
@@ -2828,7 +2845,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
            }
          
            // ── Branch 3: ContentScale via Vapi (default) ──
-           const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+           const cfg=currentVapiConfig();
            if(!cfg||!cfg.vapiKey||!cfg.phoneId){
              toast('⚠ Configure your Voicebot first — click "Configure Voicebot" above');
              document.getElementById('vapiPanel').classList.add('visible');return;
@@ -2954,7 +2971,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
            // AI never calls mobile: only verified non-mobile lines are eligible
            const sel=getSelLeads().filter(l=>l.phone && !manualLeads.has(makeId(l)) && l.phoneType && l.aiCallAllowed!==false);
            if(!sel.length){toast('No selected leads with phone numbers (or all marked "I\'ll call")');return;}
-           const cfg=JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+           const cfg=currentVapiConfig();
            if(!cfg||!cfg.vapiKey){
              toast('⚠ Configure Voicebot first');
              document.getElementById('vapiPanel').classList.add('visible');return;
@@ -3225,7 +3242,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
         function startQueue() {
           if (_queueRunning) return;
           if (!hasAcceptedTerms()) { showTermsModal(); return; }
-          const cfg = JSON.parse(localStorage.getItem(LS_VAPI)||'null');
+          const cfg = currentVapiConfig();
           if (!cfg||!cfg.vapiKey) {
             toast('⚠ Configure Voicebot first');
             document.getElementById('vapiPanel').classList.add('visible');
@@ -3364,7 +3381,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
            renderComplianceMode();
            renderLicenseState();
            // Pre-fill Vapi defaults if nothing saved yet
-           if(!localStorage.getItem(LS_VAPI)){
+           if(!currentVapiConfig()?.vapiKey){
              document.getElementById('vapiPhoneId').value       = '4a3b17c5-24f0-4e65-b64d-29e8e3f446a3';
              document.getElementById('vapiCallerName').value    = 'Ottmar from ContentScale';
              document.getElementById('vapiCompany').value       = 'ContentScale';
