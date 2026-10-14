@@ -1,0 +1,16 @@
+name: Temporary Network Email Fetch Diagnostics
+on:
+  push:
+    branches:
+      - fix/network-email-fetch-root-cause-20261014
+  workflow_dispatch:
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node src/network-email-fetch-diagnostic.cjs
