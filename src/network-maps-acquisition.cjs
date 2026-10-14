@@ -25,7 +25,8 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
   if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   try{
    const result=await pool.query("SELECT id,business_name,domain,canonical_url,primary_niche,city,status,public_visibility,website_check FROM network_directory_businesses WHERE source='maps_acquisition' ORDER BY created_at DESC,id DESC LIMIT 300");
-   return res.json({candidates:result.rows});
+   const count=await pool.query("SELECT count(*)::int AS total FROM network_directory_businesses WHERE source='maps_acquisition'");
+   return res.json({candidates:result.rows,total:Number(count.rows[0]?.total||0)});
   }catch(e){console.error('[network-acquisition] list',e.code||e.message);return res.status(503).json({error:'Network candidate list unavailable'})}
  });
  app.post('/api/network/admin/acquisition/import',async(req,res)=>{
