@@ -143,9 +143,10 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
     const body=await response.json().catch(()=>({}));messageId=clean(body.messageId,180);
    }catch(e){console.error('[network-acquisition-brevo]',e.name||'UNKNOWN');}
    const status=accepted?'invited':'send_unknown';
-   await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(jsonb_set(metadata,'{acquisition,invitation,status}',to_jsonb($3::text)),'{acquisition,invitation,email_result}',jsonb_build_object('provider_accepted',$4::boolean,'message_id',$5::text,'recorded_at',now())), updated_at=now() WHERE id=$1 AND source='maps_acquisition' AND metadata->'acquisition'->'invitation'->>'token_hash'=$2 AND metadata->'acquisition'->'invitation'->>'status'='sending'",[id,hash(token),status,accepted,messageId]);
+   // Commit the send status, provider evidence and sent timestamp atomically.
+   const resultPatch={status,email_result:{provider_accepted:accepted,message_id:messageId,recorded_at:new Date().toISOString()},sent_at:accepted?new Date().toISOString():null};
+   await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(metadata,'{acquisition,invitation}',COALESCE(metadata->'acquisition'->'invitation','{}'::jsonb) || $3::jsonb,true),updated_at=now() WHERE id=$1 AND source='maps_acquisition' AND metadata->'acquisition'->'invitation'->>'token_hash'=$2 AND metadata->'acquisition'->'invitation'->>'status'='sending'",[id,hash(token),JSON.stringify(resultPatch)]);
    if(!accepted)return reply(res,503,{error:'Email result not confirmed. Check delivery manually before retrying.',status:'send_unknown'});
-   await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(metadata,'{acquisition,invitation,sent_at}',to_jsonb(now())) WHERE id=$1 AND source='maps_acquisition' AND metadata->'acquisition'->'invitation'->>'status'='invited'",[id]);
    return res.json({success:true,status:'invited',message_id:messageId,email_sent:true});
   }catch(e){console.error('[network-acquisition-send]',e.code||e.message);return reply(res,503,{error:'Network sending state unavailable. Verify the invitation before retrying.'});}
  });
