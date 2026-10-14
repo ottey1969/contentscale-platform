@@ -22,17 +22,18 @@
 <div class="stat"><small>Geregistreerd in ContentScale vandaag</small><b id="warmupUsed">—</b></div>
 <div class="stat"><small>Resterend volgens ContentScale</small><b id="warmupRemaining">—</b></div>
 <div class="stat"><small>Network-uitnodigingen vandaag</small><b id="networkUsed">—</b></div>
+<div class="stat"><small>Network-uitnodigingen totaal bevestigd</small><b id="networkTotalSent">—</b></div>
 </div>
 <p class="info small" id="warmupDetail" role="status">We laden je bestaande opwarmgeschiedenis. Er wordt niets opnieuw gestart.</p>
 </section>
 <section class="panel">
 <h2>Network-acquisitie voortgang</h2>
 <div id="metrics" class="stats"><div class="stat"><small>Bedrijven</small><b>—</b></div></div>
-<p class="info small" id="sendingStatus">Netwerkuitnodigingen worden alleen na jouw goedkeuring verstuurd; de dagelijkse verzendlimiet wordt op de server bewaakt.</p>
+<p class="info small" id="sendingStatus">Gecontroleerde uitnodigingen worden automatisch verzonden binnen de serverlimieten. Andere contacten vragen eerst beoordeling.</p>
 </section>
 <section class="panel">
 <h2>De volgende stap</h2>
-<p class="steps">1. <strong>Importeer</strong> je bedrijven uit de Lead Crawler → 2. <strong>Automatisch onderzoek</strong> van website en zakelijk e-mailadres → 3. <strong>Bereid Network-uitnodiging voor</strong> → 4. <strong>Bekijk en verstuur</strong> na goedkeuring → 5. De eigenaar klikt op <strong>I am interested</strong> en verschijnt hier als geïnteresseerde.</p>
+<p class="steps">1. Importeer bedrijven → 2. Website en contactgegevens worden gecontroleerd → 3. Geschikte uitnodigingen worden automatisch voorbereid en verzonden binnen de limieten → 4. Controleer alleen uitzonderingen → 5. Reacties komen bij Interested.</p>
 <div class="toolbar">
 <button id="batch">Onderzoek volgende 20 websites + e-mails</button>
 <button id="refresh" class="secondary">Vernieuwen</button>
@@ -100,7 +101,7 @@ function renderWarmup(){
  if(!w){
   el('warmupPeriod').textContent='Meetperiode niet beschikbaar; verzending blijft geblokkeerd.';
   el('warmupDay').textContent='— / 42';el('warmupUsed').textContent='—';
-  el('warmupRemaining').textContent='—';el('networkUsed').textContent='—';
+  el('warmupRemaining').textContent='—';el('networkUsed').textContent='—';el('networkTotalSent').textContent='—';
   badge.textContent='Niet beschikbaar';badge.className='pill';
   detail.textContent='Opwarmstatus kan niet worden geladen. Voor je veiligheid blijft Network-verzending geblokkeerd.';
   detail.className='warning small';return;
@@ -110,20 +111,21 @@ function renderWarmup(){
  el('warmupUsed').textContent=w.sent_today+' / '+(w.daily_cap==null?'geen ContentScale-limiet':w.daily_cap);
  el('warmupRemaining').textContent=w.remaining_today==null?'—':String(w.remaining_today);
  el('networkUsed').textContent=outreach.sent_today+' / '+outreach.daily_cap;
+ el('networkTotalSent').textContent=String(outreach.total_sent??'—');
  badge.textContent=w.complete?'Voltooid':w.active?'Actief':'Gepauzeerd';
  badge.className='pill'+(w.active?' good':'');
  const origin=w.network_sent_today+' Network-uitnodigingen (automatisch én handmatig) + '+w.legacy_sent_today+' bestaande acquisitie = '+w.sent_today+' geregistreerde verzendingen in deze periode. Direct via Brevo verstuurde e-mails en andere stromen worden niet meegeteld.';
  const nextDay=(Math.floor((w.progress_day-1)/7)+1)*7+1;
  const next=w.complete?'De opwarmfase is voltooid.':w.active?'INGESTELDE opwarmlimiet: '+w.daily_cap+' e-mails per dag (dag '+w.progress_day+'/42). '+(w.next_cap==null?'':'PAS LATER: '+w.next_cap+' e-mails per dag vanaf opwarmdag '+nextDay+', uitsluitend na behaalde verzenddoelen.'):'De oorspronkelijke opwarming staat gepauzeerd.';
- detail.textContent=origin+' '+next+' Geen reset en geen automatische verzending.';
+ detail.textContent=origin+' '+next+' Geen reset van je opwarmvoortgang.';
  detail.className='info small';
 }
 function renderStats(){
  const root=el('metrics');root.replaceChildren();
- const checks=[['Bedrijven in Acquisitie',total],['E-mail gevonden',companies.filter(c=>!!c.email_discovery?.email).length],['Website gecontroleerd',companies.filter(c=>['site_observed','manual_reviewed'].includes(inspection(c))).length],['Uitnodiging verstuurd',companies.filter(c=>c.invitation?.status==='invited'||c.invitation?.status==='interested').length],['Interested',companies.filter(c=>c.invitation?.status==='interested').length]];
+ const checks=[['Bedrijven in Acquisitie',total],['E-mail gevonden',companies.filter(c=>!!c.email_discovery?.email).length],['Website gecontroleerd',companies.filter(c=>['site_observed','manual_reviewed'].includes(inspection(c))).length],['Uitnodiging verstuurd · bevestigd',outreach?.total_sent??'—'],['Interested',outreach?.interested??'—']];
  for(const [label,value]of checks){const block=tag('div',undefined,'stat');block.append(tag('small',label),tag('b',String(value)));root.append(block);}
  renderWarmup();
- el('sendingStatus').textContent=outreach?'Network-uitnodigingen · vandaag '+outreach.sent_today+'/'+outreach.daily_cap+' verstuurd · totaal '+outreach.total_sent+' · Network-ruimte '+outreach.remaining_today+'; gecombineerde afzenderlimiet wordt ook gecontroleerd. '+(outreach.limit_reason||'Verzending uitsluitend na goedkeuring.'):'Network-verzendlimiet niet beschikbaar. Verzenden is uitgeschakeld totdat de serverstatus geladen is.';
+ el('sendingStatus').textContent=outreach?'Network-uitnodigingen · vandaag '+outreach.sent_today+'/'+outreach.daily_cap+' verstuurd · totaal '+outreach.total_sent+' · Network-ruimte '+outreach.remaining_today+'; gecombineerde afzenderlimiet wordt ook gecontroleerd. '+(outreach.limit_reason||'Automatische verzending actief binnen de serverlimieten.'):'Network-verzendlimiet niet beschikbaar. Verzenden is uitgeschakeld totdat de serverstatus geladen is.';
 }
 async function refresh(){
  if(busy)return;
@@ -208,7 +210,7 @@ async function discoverBatch(){
 function review(c){
  const root=tag('div',undefined,'details'),inv=c.invitation||{},draft=prepared.get(c.id);
  root.append(tag('h3','Network uitnodiging voor '+c.business_name));
- root.append(tag('p','De ontvanger ziet eerst de voordelen: “Get Backlinks. Get Cited. Get Discovered.” Daarna kan die op “Yes, I am interested” klikken. Niets wordt automatisch verzonden.','info'));
+ root.append(tag('p','De ontvanger ziet eerst de voordelen: “Get Backlinks. Get Cited. Get Discovered.” Daarna kan die op “Yes, I am interested” klikken. Geschikte zakelijke contacten worden automatisch uitgenodigd binnen de huidige limieten.','info'));
  if(inv.status==='prepared'){
   root.append(tag('p','Deze uitnodiging is al voorbereid. Herstel zo nodig eerst de previewlink.','info'));
   if(draft?.token)root.append(preview(c,draft));
