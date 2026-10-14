@@ -1631,6 +1631,12 @@
          {key:'active',   label:'NEEDS QUALITY',  sublabel:'Active Sites',   range:'60 – 150 Pages', cls:'bk-active',   icon:'⚡', hot:'✓ Audit + Retainer', action:'Content audit + rewrite plan',  desc:'Publishing but inconsistently. Quality is low, SEO structure is a mess.'},
          {key:'estab',    label:'LARGE LIBRARY',  sublabel:'Established',    range:'150+ Pages',     cls:'bk-estab',    icon:'🏢', hot:'↗ High Ticket',    action:'Content audit pitch',           desc:'Big content library. Likely has writers. Pitch an audit — 30% is probably hurting rankings.'},
          ];
+         // Unverified page counts stay separate; the original six strategy buckets
+         // remain unchanged until an actual website page count is established.
+         BUCKET_DEFS.push({key:'pending',label:'PAGE COUNT PENDING',sublabel:'Website audit required',
+           range:'Not measured',cls:'bk-ghost',icon:'🔎',hot:'VERIFY FIRST',
+           action:'Check website pages before assigning a sales bucket',
+           desc:'These are sourced New Jersey businesses. No sitemap/page count was verified, so no size-based bucket or content claims are inferred.'});
          let allLeads=[],selected=new Set(),stopped=false,fiveHourHit=false;
          const LS_MANUAL_LEADS='lc_manual_leads';
          let manualLeads=new Set();
@@ -1836,7 +1842,8 @@
          setTimeout(()=>t.classList.remove('show'),2500);
          }
          function getBucket(p){
-         p=p||0;
+         if(p===null||p===undefined||p===''||!Number.isFinite(Number(p)))return 'pending';
+         p=Number(p);
          if(p<5)return 'ghost';
          if(p<15)return 'skeleton';
          if(p<30)return 'brochure';
@@ -1880,6 +1887,20 @@
 
          // ── PHASE 1: FIND BUSINESSES (Gemini 1.5 Flash — server key) ──────────────
          async function callClaude(city, country, ind) {
+             // In NJ, use real Google Maps business records instead of requesting
+             // an LLM to invent a business list or silently return EMPTY_RESPONSE.
+             if(/(?:^|[\\s,])(?:New Jersey|NJ)(?:$|[\\s,])/i.test(city) && /^(USA|US|United States)$/i.test(country)){
+               const response=await fetch('/api/lead-crawler/verified-nj-search',{
+                 method:'POST',
+                 headers:adminHeaders({'Content-Type':'application/json'}),
+                 body:JSON.stringify({city,country,niche:ind.q,industry_id:ind.id})
+               });
+               const data=await response.json().catch(()=>({error:'Invalid research response'}));
+               if(!response.ok)throw new Error(data.error||'Maps business research failed (HTTP '+response.status+')');
+               if(!Array.isArray(data.leads))throw new Error('Maps research did not return a business list');
+               if(!data.leads.length)throw new Error('No NJ businesses with a sourced website, telephone and NJ address were found for this search.');
+               return data.leads.map(l=>({...l,industry_id:ind.id}));
+             }
              const prompt = `You are a high-precision B2B Lead Scraper. Use Google Search to find REAL local businesses.
 MISSION: Return up to 8 REAL ${ind.q} businesses in ${city}, ${country} with independently identifiable websites. Do not invent businesses, URLs, or contact details. If you have no verified results, return [].
 CRITICAL: Search for actual business names, phone numbers, and websites. A lead without a phone number is WORTHLESS.
