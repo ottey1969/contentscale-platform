@@ -40,7 +40,7 @@ input:focus,textarea:focus{outline:2px solid #a5b4fc}
 <body><main>
 <nav class="topnav"><a href="/lead-crawler">← Scan next batch</a><a href="/quick-scan/admin#pqsEmailQueue">QuickScan · Outreach approval</a><a href="/network">Network home</a></nav>
 <h1>Network · Acquisitie</h1>
-<p>Companies stay in the same private Network directory while you review their website and decide whether to offer the CEO/QuickScan journey. No bulk import sends mail and no company is publicly listed.</p>
+<p>Companies stay in the same private Network directory while you review their website and decide whether to offer the CEO/QuickScan journey. No automatic invitations: a bulk import never sends mail and no company is publicly listed.</p>
 <section class="panel warm" id="warmup" aria-live="polite">
 <h2>Email warm-up · Existing QuickScan outreach</h2>
 <div id="warmupStatus" class="info">Checking current approved-outreach limits…</div>
@@ -109,7 +109,7 @@ function renderWarmup(){
  el('warmupStatus').textContent=(s.warmup_complete?'Warm-up complete':'WARM-UP · CYCLE '+s.cycle+'/6 · DAY '+s.day_in_cycle+'/7 · '+s.completed_warmup_days+' FULL TARGET DAYS')+' · Last successful send: '+datetime(s.last_sent_at);
  el('warmupNext').textContent=s.warmup_complete?'Warm-up progression finished; provider and account restrictions still apply.':('Next increase: '+s.days_to_increase+' completed target days → '+s.next_cap+'/day. Completing a day, not simply waiting, advances the schedule. '+(s.can_send_now?'Approval and sending are currently available.':'Today’s limit reached — wait for the next permitted day.'));
 }
-function datetimeToDay(v){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(v));}
+function datetimeToDay(v){const d=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(v));const p=Object.fromEntries(d.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return p.year+'-'+p.month+'-'+p.day;}
 async function api(path,options){
  const response=await fetch(path,Object.assign({cache:'no-store'},options||{},{headers:Object.assign({'x-admin-code':key()},options&&options.headers||{})}));
  const data=await response.json().catch(()=>({}));
