@@ -27,6 +27,31 @@ class EmailDetectionService {
   }
 
   /**
+   * Extract public business contacts belonging to the company domain.
+   * Works with HTML already obtained by existing CEO / crawler scans:
+   * no extra network request, API fee, or SSRF exposure.
+   */
+  detectBusinessContacts(html, pageUrl) {
+    const url = new URL(pageUrl);
+    if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid business page URL');
+    const domain = url.hostname.toLowerCase().replace(/^www\./, '');
+    const candidates = this.extractEmails(String(html || '')
+      .replace(/&#64;|&#x40;|&commat;/gi, '@')
+      .replace(/&#46;|&#x2e;/gi, '.'));
+    const emails = candidates.map(email => email.toLowerCase()).filter(email => {
+      const addressDomain = email.split('@')[1];
+      const local = email.split('@')[0];
+      return (addressDomain === domain || domain.endsWith('.' + addressDomain))
+        && !/^(?:no-?reply|donotreply|bounce|mailer-daemon)$/.test(local)
+        && !/\.(?:png|jpe?g|gif|svg|webp|css|js)$/i.test(email);
+    });
+    const unique = [...new Set(emails)];
+    unique.sort((a,b) => this.scoreEmail(b,domain) - this.scoreEmail(a,domain));
+    return { all:unique, best:unique[0] || null, count:unique.length,
+      source_url:url.href, verification:'publicly_observed' };
+  }
+
+  /**
    * Score email quality (likelihood of being a contact email)
    */
   scoreEmail(email, domain) {
