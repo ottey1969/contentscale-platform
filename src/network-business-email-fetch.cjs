@@ -36,7 +36,11 @@ async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.reque
   const finish=(err,data)=>{if(done)return;done=true;err?reject(err):resolvePage(data)};
   const req=request({hostname:host,servername:host,path,method:'GET',port:443,
    headers:{'Accept':'text/html','User-Agent':'ContentScale-Contact-Discovery/1.0'},
-   lookup:(_hostname,_options,cb)=>cb(null,chosen.address,chosen.family),
+   // Node's autoSelectFamily passes lookup({all:true}) and expects an ARRAY.
+   // Returning a scalar address caused ERR_INVALID_IP_ADDRESS for every real site.
+   lookup:(_hostname,lookupOptions,cb)=>lookupOptions?.all
+    ? cb(null,[{address:chosen.address,family:chosen.family}])
+    : cb(null,chosen.address,chosen.family),
    timeout:5000,rejectUnauthorized:true},res=>{
     if([301,302,303,307,308].includes(res.statusCode)&&res.headers.location){
      res.resume();
@@ -60,6 +64,15 @@ async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.reque
   req.on('timeout',()=>req.destroy(Error('Timeout')));
   req.on('error',err=>finish(err));req.end();
  });
+}
+function fetchFailureCategory(e){
+ const key=String(e?.code||e?.message||'').toUpperCase();
+ if(/ENOTFOUND|EAI_AGAIN|ENODATA/.test(key))return 'dns_error';
+ if(/ERR_INVALID_IP_ADDRESS|EADDRNOTAVAIL|ECONNREFUSED|ENETUNREACH|ETIMEDOUT|TIMEOUT|ECONNRESET/.test(key))return 'connection_error';
+ if(/CERT|TLS|SSL|UNABLE_TO_VERIFY/.test(key))return 'tls_error';
+ if(/HTTP 403|HTTP 429|HTTP 503|NOT HTML/.test(key))return 'blocked_or_non_html';
+ if(/TOO LARGE|TOO MANY/.test(key))return 'limited';
+ return 'fetch_error';
 }
 async function discoverCompanyContact(website,options={}){
  const {host,websiteHost}=hostForWebsite(website);
@@ -85,10 +98,11 @@ async function discoverCompanyContact(website,options={}){
     if(!results.has(address))results.set(address,{email:address,source_url:source,
        email_domain_relationship:same?'same_domain':'publicly_listed_other_business_domain'});
    }
-  }catch(e){checked.push({url:source,status:'unavailable'});}
+  }catch(e){checked.push({url:source,status:'unavailable',reason:fetchFailureCategory(e)});}
  }
  const contacts=[...results.values()].sort((a,b)=>service.scoreEmail(b.email,host)-service.scoreEmail(a.email,host));
  return {domain:host,email:contacts[0]?.email||null,source_url:contacts[0]?.source_url||null,
-  contacts,checked,relationship:contacts[0]?.email_domain_relationship||null,verification:contacts.length?'publicly_observed':'not_found'};
+  contacts,checked,relationship:contacts[0]?.email_domain_relationship||null,
+  verification:contacts.length?'publicly_observed':checked.every(c=>c.status==='unavailable')?'fetch_unavailable':'not_found'};
 }
-module.exports={discoverCompanyContact,hostForWebsite,publicIP,readWebsitePage};
+module.exports={discoverCompanyContact,hostForWebsite,publicIP,readWebsitePage,fetchFailureCategory};
