@@ -4,6 +4,18 @@
 // Never touches Network, Contact Intelligence, CRM, or any database table.
 const crypto=require('node:crypto');
 const cache=new Map();
+const providerCooldown=new Map();
+function providerFailureReason(status,body,provider){
+ const info=String(body?.message||body?.error||'').slice(0,200).replace(/[\r\n]/g,' ');
+ if(status===401)return 'HTTP 401: '+provider+' API key invalid or unauthorized in Railway';
+ if(status===400)return 'HTTP 400: '+provider+' rejected request'+(info?': '+info:'');
+ if(status===403)return 'HTTP 403: '+provider+' access forbidden';
+ if(status===429)return 'HTTP 429: '+provider+' quota or rate limit';
+ return 'HTTP '+status+(info?': '+info:'');
+}
+function providerBlocked(name,key){const e=providerCooldown.get(name);return e&&e.key===key&&e.until>Date.now()?e.reason:null;}
+function providerFailed(name,key,reason){if(/HTTP (400|401|403|429)/.test(reason))providerCooldown.set(name,{key,reason,until:Date.now()+10*60*1000});}
+
 function clean(v,max=160){return String(v??'').replace(/[<>&\x22\x27\x60]/g,'').trim().slice(0,max);}
 function safeWebsite(raw){
   try{
@@ -56,7 +68,7 @@ async function querySerper({fetchImpl,key,query,page=0}){
   body:JSON.stringify({q:query,gl:'us',hl:'en',...(page?{page:page+1}:{})}),
   signal:AbortSignal.timeout(23000)
  });
- if(!response.ok)throw new ProviderFailure('Serper','HTTP '+response.status);
+ if(!response.ok){const errorBody=await response.json().catch(()=>({}));throw new ProviderFailure('Serper',providerFailureReason(response.status,errorBody,'Serper'));}
  const data=await response.json();
  if(data?.error||!Array.isArray(data?.places))throw new ProviderFailure('Serper','invalid Maps response');
  return data.places.map(row=>({
@@ -76,7 +88,7 @@ async function querySerpApi({fetchImpl,key,query,page=0}){
  if(page)url.searchParams.set('start',String(page*20));
  url.searchParams.set('api_key',key);
  const response=await fetchImpl(url.toString(),{signal:AbortSignal.timeout(23000)});
- if(!response.ok)throw new ProviderFailure('SerpAPI','HTTP '+response.status);
+ if(!response.ok){const errorBody=await response.json().catch(()=>({}));throw new ProviderFailure('SerpAPI',providerFailureReason(response.status,errorBody,'SerpAPI'));}
  const data=await response.json();
  if(data?.error||!Array.isArray(data?.local_results))throw new ProviderFailure('SerpAPI','invalid Maps response');
  return data.local_results;
@@ -129,7 +141,7 @@ function registerLeadCrawlerSerpApi(app,{
      try{rows=await querySerper({fetchImpl,key:primaryKey,query,page});pageProvider='google_maps_serper';}
      catch(err){
       const message=err instanceof ProviderFailure?err.reason:(err?.name==='TimeoutError'?'timeout':'request failed');
-      failures.push('Serper '+message);console.warn('[lead-crawler] Serper provider failed:',message);
+      failures.push('Serper '+message);providerFailed('Serper',primaryKey,message);console.warn('[lead-crawler] Serper provider failed:',message);
      }
     }
     if(rows===null&&fallbackKey){
@@ -137,12 +149,12 @@ function registerLeadCrawlerSerpApi(app,{
      try{rows=await querySerpApi({fetchImpl,key:fallbackKey,query,page});pageProvider='google_maps_serpapi';}
      catch(err){
       const message=err instanceof ProviderFailure?err.reason:(err?.name==='TimeoutError'?'timeout':'request failed');
-      failures.push('SerpAPI '+message);console.warn('[lead-crawler] SerpAPI provider failed:',message);
+      failures.push('SerpAPI '+message);providerFailed('SerpAPI',fallbackKey,message);console.warn('[lead-crawler] SerpAPI provider failed:',message);
      }
     }
     if(rows===null){
      if(!leads.length)return res.status(503).json({
-      error:'Google Maps providers unavailable: '+failures.join('; ')+'. Check the provider API keys, access and quotas in Railway.',
+      error:'Google Maps providers unavailable: '+(failures.length?failures.join('; '):[providerBlocked('Serper',primaryKey),providerBlocked('SerpAPI',fallbackKey)].filter(Boolean).join('; '))+'. Check API keys and Maps permissions in Railway. Repeated failing requests are paused for 10 minutes.',
       providers_attempted:attempts
      });
      break; // Preserve already discovered, source-backed leads.
