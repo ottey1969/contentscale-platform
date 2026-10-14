@@ -1927,7 +1927,10 @@ Use a real contact_form_url only when you found a page with a contact or quote f
 
                  // Extract JSON array from response (strip any accidental markdown)
                  const cleaned = text.match(/\[[\s\S]*\]/);
-                 return cleaned ? JSON.parse(cleaned[0]) : [];
+                 if(!cleaned)throw new Error('No structured business results returned by research provider. Retry this niche or choose a specific city.');
+                 const parsed=JSON.parse(cleaned[0]);
+                 if(!Array.isArray(parsed))throw new Error('Research provider returned an invalid business list.');
+                 return parsed;
 
              } catch (err) {
                  console.error('[Crawler][' + ind.label + '] Error:', err.message);
@@ -1938,7 +1941,7 @@ Use a real contact_form_url only when you found a page with a contact or quote f
          async function startCrawl(){
          const enteredCity=document.getElementById('city').value.trim();
          const state=document.getElementById('state').value.trim();
-         const city=state?(enteredCity?enteredCity+', '+state:state):enteredCity;
+         const city=state?(enteredCity&&enteredCity.toLowerCase()!==state.toLowerCase()&&enteredCity.toLowerCase()!=='nj'?enteredCity+', '+state:state):enteredCity;
          const country=document.getElementById('country').value.trim();
          if(!city||!country){toast('Enter a city or state and country first');return;}
          const quickNiche=document.getElementById('quickNiche').value.trim();
@@ -1995,9 +1998,14 @@ Use a real contact_form_url only when you found a page with a contact or quote f
          const valid = dedup((leads||[]).filter(l=>l?.name&&l?.website));
          valid.forEach(l=>{ if(!l.sitemap) l.sitemap = l.website+'/sitemap.xml'; });
          allLeads.push(...valid);
-         completedIndustries.add(ind.id);
-         saveSession(city,country);
-         setWave(ind.id,'done',valid.length);
+         if(!valid.length){
+           errors.push('['+ind.label+'] No verifiable businesses found for '+city+', '+country+'. Try a specific city in New Jersey or another niche. This search is not marked completed.');
+           setWave(ind.id,'error',0);
+         }else{
+           completedIndustries.add(ind.id);
+           saveSession(city,country);
+           setWave(ind.id,'done',valid.length);
+         }
          done++; updateProg(done,allLeads.length);
          appendLiveCards(valid);
          } catch(err){
@@ -2078,7 +2086,11 @@ Use a real contact_form_url only when you found a page with a contact or quote f
          setTimeout(()=>resolveSitemapsPhase2(), 800);
          setTimeout(()=>verifyPhoneTypes(), 1600);
          setTimeout(()=>discoverContactForms(true), 2400);
-         } else document.getElementById('emptyState').style.display='block';
+         } else {
+           document.getElementById('emptyState').style.display='block';
+           const paragraph=document.querySelector('#emptyState p');
+           if(paragraph) paragraph.textContent='No verified businesses were returned for this location and niche. The search is not recorded as completed. Check the error details above, then try again or enter a specific city in New Jersey.';
+         }
          }
          // ── PHASE 2: SITEMAP RESOLUTION ─────────────
          let sitemapResolutionActive = false;
