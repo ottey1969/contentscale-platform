@@ -95,7 +95,7 @@ function inviteMarkup(name,token,state){
  const action=state==='interested'
   ? '<div class="confirmation" role="status"><strong>Thank you — your interest has been recorded.</strong><p>We will review the next step with you. No membership, publication, or payment is created by expressing interest.</p></div>'
   : state==='prepared'
-   ? '<div class="interest"><button type="button" disabled aria-disabled="true">Yes, I am interested <span aria-hidden="true">→</span></button><p class="fine">Invitation preview: this button becomes active only after the Network invitation is sent. No interest is recorded from previews.</p></div>'
+   ? '<div class="confirmation" role="status"><strong>Preview only — invitation not sent.</strong><p>The recipient will be able to express interest after you send the invitation. This preview cannot record interest.</p></div>'
    : '<form method="POST" action="'+url+'/interested" class="interest"><button type="submit">Yes, I am interested <span aria-hidden="true">→</span></button><p class="fine">No commitment. No account or payment needed to express interest. We contact you about the next step.</p></form>';
  return [
   '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
@@ -107,7 +107,7 @@ function inviteMarkup(name,token,state){
   '.brand{font-weight:800;font-size:18px;letter-spacing:.2px}.brand span{color:#62e4a1}',
   '.intro{margin-top:54px}.eyebrow{font-size:12px;letter-spacing:1.6px;text-transform:uppercase;color:#8de5b1;font-weight:750;margin:0 0 13px}',
   'h1{font-size:clamp(35px,6vw,62px);font-weight:850;letter-spacing:-1.7px;line-height:1.08;max-width:920px;margin:0 0 20px}',
-  '.lead{max-width:760px;font-size:clamp(17px,2vw,21px);color:#c7d7e8;margin:0 0 22px}',
+  '.lead{max-width:760px;font-size:clamp(17px,2vw,21px);color:#c7d7e8;margin:0 0 22px}.question{font-size:clamp(21px,3vw,29px);margin:10px 0 18px;line-height:1.3}'
   '.recipient{font-size:15px;color:#b6c9d9;margin-bottom:28px}.recipient strong{color:#fff}',
   '.interest{margin:25px 0}.interest button{background:#168a4d;color:#fff;border:1px solid #32b978;padding:15px 26px;font:750 17px system-ui;border-radius:9px;cursor:pointer;box-shadow:0 6px 24px #041a123b}',
   '.interest button:hover,.interest button:focus-visible{background:#1da75c}.interest button:disabled{background:#41615b;border-color:#537c6b;cursor:not-allowed;opacity:.75;box-shadow:none}.fine{font-size:13px;color:#aabfd1;margin-top:10px;max-width:680px}',
@@ -126,7 +126,8 @@ function inviteMarkup(name,token,state){
   '<section class="intro" aria-label="Network invitation"><p class="eyebrow">Private invitation for '+safeName+'</p>',
   '<h1>Get Backlinks. Get Cited. Get Discovered.</h1>',
   '<p class="lead">Your business deserves to be found. Explore relevant publisher collaborations, editorial links, and verified business mentions that may help people discover you through search and AI-assisted research.</p>',
-  '<p class="recipient">You are invited to explore ContentScale Network opportunities for <strong>'+safeName+'</strong>.</p>',
+  '<p class="recipient">A potential content opportunity for <strong>'+safeName+'</strong>.</p>',
+  '<h2 class="question">Are you interested in a content opportunity?</h2>',
   action,
   '</section><section class="benefits" aria-label="Potential benefits">',
   '<article class="benefit"><h2>Get Backlinks.</h2><p>Explore opportunities for relevant, contextual links through original content on independently operated publisher websites.</p></article>',
@@ -134,6 +135,7 @@ function inviteMarkup(name,token,state){
   '<article class="benefit"><h2>Get Discovered.</h2><p>Expand the ways potential customers can encounter your business in search results and AI-assisted discovery.</p></article>',
   '</section><section class="detail"><h2>What happens after you click Interested?</h2>',
   '<ol class="steps"><li>We record your interest and review your website, niche, and potential Network fit.</li>',
+  '<li>After expressing interest, you can claim and verify your business identity before any public business profile is activated.</li>',
   '<li>We discuss relevant publishing or business opportunities with you.</li>',
   '<li>You review any proposed collaboration before a placement or publication can happen.</li></ol>',
   '<p class="notice">These are opportunities, not guarantees. Links, published mentions, rankings, traffic, or citations by AI systems are not promised. Expressing interest does not publish content, create a public profile, or enroll you in a paid service.</p></section>',
