@@ -1932,7 +1932,12 @@ Use a real contact_form_url only when you found a page with a contact or quote f
 
                  // Extract JSON array from response (strip any accidental markdown)
                  const cleaned = text.match(/\[[\s\S]*\]/);
-                 if(!cleaned)throw new Error('No structured business results returned by research provider. Retry this niche or choose a specific city.');
+                 if(!cleaned){
+                   const kind=String(data?.candidates?.[0]?.finishReason||data?.promptFeedback?.blockReason||data?.error?.code||'UNSTRUCTURED');
+                   const shape=Object.keys(data||{}).filter(k=>!['apiKey','key'].includes(k)).join(',');
+                   const excerpt=text.slice(0,180).replace(/[\\r\\n]+/g,' ');
+                   throw new Error('Provider returned no JSON array. Reason='+kind+'; response fields='+shape+'; excerpt='+excerpt);
+                 }
                  const parsed=JSON.parse(cleaned[0]);
                  if(!Array.isArray(parsed))throw new Error('Research provider returned an invalid business list.');
                  return parsed;
