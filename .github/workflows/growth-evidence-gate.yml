@@ -88,6 +88,8 @@ jobs:
           node --check src/index.js
       - name: Source-backed New Jersey Maps research and browser syntax
         run: node src/lead-crawler-serpapi.test.cjs
+      - name: New Jersey Google Maps provider authorization and fallback
+        run: node src/lead-crawler-provider-fallback.test.cjs
       - name: New Jersey USA niche controls and legacy bucket preservation
         run: node tests/lead-crawler-nj-niche.test.cjs
       - name: Verified indexed editorial research and overlap

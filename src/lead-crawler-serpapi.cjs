@@ -45,49 +45,108 @@ function authorized(req){
  if(!configured||!submitted||configured.length!==submitted.length)return false;
  return crypto.timingSafeEqual(Buffer.from(configured),Buffer.from(submitted));
 }
-function registerLeadCrawlerSerpApi(app,{fetchImpl=global.fetch,apiKey=()=>process.env.SERPAPI_KEY,auth=authorized}={}){
+
+class ProviderFailure extends Error {
+ constructor(provider,reason){super(provider+': '+reason);this.provider=provider;this.reason=reason;}
+}
+async function querySerper({fetchImpl,key,query}){
+ const response=await fetchImpl('https://google.serper.dev/maps',{
+  method:'POST',
+  headers:{'X-API-KEY':key,'Content-Type':'application/json'},
+  body:JSON.stringify({q:query,gl:'us',hl:'en'}),
+  signal:AbortSignal.timeout(23000)
+ });
+ if(!response.ok)throw new ProviderFailure('Serper','HTTP '+response.status);
+ const data=await response.json();
+ if(data?.error||!Array.isArray(data?.places))throw new ProviderFailure('Serper','invalid Maps response');
+ return data.places.map(row=>({
+  ...row,
+  phone:row.phone||row.phoneNumber||'',
+  type:row.type||row.category||'',
+  place_id:row.place_id||row.placeId||row.cid||''
+ }));
+}
+async function querySerpApi({fetchImpl,key,query}){
+ const url=new URL('https://serpapi.com/search.json');
+ url.searchParams.set('engine','google_maps');
+ url.searchParams.set('type','search');
+ url.searchParams.set('q',query);
+ url.searchParams.set('gl','us');
+ url.searchParams.set('hl','en');
+ url.searchParams.set('api_key',key);
+ const response=await fetchImpl(url.toString(),{signal:AbortSignal.timeout(23000)});
+ if(!response.ok)throw new ProviderFailure('SerpAPI','HTTP '+response.status);
+ const data=await response.json();
+ if(data?.error||!Array.isArray(data?.local_results))throw new ProviderFailure('SerpAPI','invalid Maps response');
+ return data.local_results;
+}
+function registerLeadCrawlerSerpApi(app,{
+ fetchImpl=global.fetch,
+ apiKey=()=>process.env.SERPAPI_KEY,
+ serperKey=()=>process.env.SERPER_API_KEY,
+ auth=authorized
+}={}){
  app.post('/api/lead-crawler/verified-nj-search',async(req,res)=>{
   if(!auth(req))return res.status(403).json({error:'Admin login required for NJ research'});
   const raw=req.body||{};
   const scope=njScope(raw.city,raw.country);
   const niche=clean(raw.niche,70);
   if(!scope||niche.length<2||niche.length>70)return res.status(400).json({error:'Select USA, New Jersey and a niche'});
-  const key=apiKey();
-  if(!key)return res.status(503).json({error:'SerpAPI research is not configured'});
   const cacheKey=[scope.location.toLowerCase(),niche.toLowerCase()].join('|');
   const cached=cache.get(cacheKey);
-  if(cached&&cached.until>Date.now())return res.json({...cached.body,cached:true});
-  const url=new URL('https://serpapi.com/search.json');
-  url.searchParams.set('engine','google_maps');
-  url.searchParams.set('type','search');
-  url.searchParams.set('q',niche+' businesses in '+scope.location+', USA');
-  url.searchParams.set('gl','us');
-  url.searchParams.set('hl','en');
-  url.searchParams.set('api_key',key);
-  try{
-   const response=await fetchImpl(url.toString(),{signal:AbortSignal.timeout(23000)});
-   if(!response.ok)return res.status(502).json({error:'Business research provider HTTP '+response.status});
-   const payload=await response.json();
-   if(payload.error)return res.status(502).json({error:'Business research provider: '+clean(payload.error,180)});
-   if(!Array.isArray(payload.local_results))return res.status(502).json({error:'Google Maps results unavailable for this search'});
-   const seen=new Set();
-   const leads=[];
-   for(const row of payload.local_results){
-     const lead=mapBusiness(row,scope);
-     if(!lead||seen.has(lead.website))continue;
-     lead.industry_id=clean(raw.industry_id||'',80);
-     seen.add(lead.website);
-     leads.push(lead);
-     if(leads.length>=20)break;
+  if(cached&&cached.until>Date.now())return res.json({...cached.body,cached:true,provider_calls:0});
+  const primaryKey=String(serperKey()||'').trim();
+  const fallbackKey=String(apiKey()||'').trim();
+  if(!primaryKey&&!fallbackKey)return res.status(503).json({
+    error:'NJ business search is not configured. Set SERPER_API_KEY or SERPAPI_KEY in Railway.'
+  });
+  const query=niche+' businesses in '+scope.location+', USA';
+  let rows=null,provider=null,attempts=0;
+  const failures=[];
+  if(primaryKey){
+   attempts++;
+   try{
+    rows=await querySerper({fetchImpl,key:primaryKey,query});
+    provider='google_maps_serper';
+   }catch(err){
+    const message=err instanceof ProviderFailure?err.reason:(err?.name==='TimeoutError'?'timeout':'request failed');
+    failures.push('Serper '+message);
+    console.warn('[lead-crawler] Serper provider failed:',message);
    }
-   const body={leads,source:'google_maps_serpapi',location:scope.location,verified_page_counts:0,
-      notice:'Businesses, websites, phone numbers and NJ addresses are taken from Maps results. Website page counts and content gaps are not yet audited.'};
-   cache.set(cacheKey,{until:Date.now()+20*60*1000,body});
-   if(cache.size>100)cache.delete(cache.keys().next().value);
-   return res.json(body);
-  }catch(err){
-   return res.status(502).json({error:'Google Maps research failed: '+clean(err?.message||'provider unavailable',120)});
   }
+  if(rows===null&&fallbackKey){
+   attempts++;
+   try{
+    rows=await querySerpApi({fetchImpl,key:fallbackKey,query});
+    provider='google_maps_serpapi';
+   }catch(err){
+    const message=err instanceof ProviderFailure?err.reason:(err?.name==='TimeoutError'?'timeout':'request failed');
+    failures.push('SerpAPI '+message);
+    console.warn('[lead-crawler] SerpAPI provider failed:',message);
+   }
+  }
+  if(rows===null)return res.status(503).json({
+   error:'Google Maps providers unavailable: '+failures.join('; ')+'. Check the provider API keys, access and quotas in Railway.',
+   providers_attempted:attempts
+  });
+  const seen=new Set(),leads=[];
+  for(const row of rows){
+   const lead=mapBusiness(row,scope);
+   if(!lead||seen.has(lead.website))continue;
+   lead.industry_id=clean(raw.industry_id||'',80);
+   lead.source=provider;
+   seen.add(lead.website);
+   leads.push(lead);
+   if(leads.length>=20)break;
+  }
+  const body={
+   leads,source:provider,location:scope.location,verified_page_counts:0,
+   provider_calls:attempts,
+   notice:'Business website, phone and NJ address are from Google Maps results. Website page counts and content gaps are not yet audited.'
+  };
+  cache.set(cacheKey,{until:Date.now()+20*60*1000,body});
+  if(cache.size>100)cache.delete(cache.keys().next().value);
+  return res.json(body);
  });
 }
-module.exports={registerLeadCrawlerSerpApi,njScope,mapBusiness,safeWebsite};
+module.exports={registerLeadCrawlerSerpApi,njScope,mapBusiness,safeWebsite,querySerper,querySerpApi};
