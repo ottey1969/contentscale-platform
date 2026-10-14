@@ -1,8 +1,5 @@
-name: Temporary Network Email Fetch Diagnostics
+name: Network Public Website Fetch Smoke
 on:
-  push:
-    branches:
-      - fix/network-email-fetch-root-cause-20261014
   workflow_dispatch:
 jobs:
   diagnostic:
