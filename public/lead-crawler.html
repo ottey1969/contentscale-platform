@@ -2648,9 +2648,9 @@ Use a real contact_form_url only when you found a page with a contact or quote f
              document.getElementById('vapiCompany').value=cfg.company||'';
              document.getElementById('vapiCallbackNumber').value=cfg.callback||'';
              document.getElementById('vapiOpeningLine').value=cfg.openingLine||'Hi, is this {name}? My name is Ottmar from ContentScale — I just ran a quick scan of your website and spotted a few things that could get you a lot more traffic. Do you have 2 minutes?';
-             document.getElementById('vapiSavedBadge').style.display='inline-block';
-             document.getElementById('vapiConfigBadge').style.display='inline-block';
-             document.getElementById('vapiToggleTxt').textContent='Voicebot Ready';
+             document.getElementById('vapiSavedBadge').style.display=cfg.vapiKey?'inline-block':'none';
+             document.getElementById('vapiConfigBadge').style.display=cfg.vapiKey?'inline-block':'none';
+             document.getElementById('vapiToggleTxt').textContent=cfg.vapiKey?'Voicebot Ready':'Enter Vapi key';
              return cfg;
            }catch(e){return null;}
          }
