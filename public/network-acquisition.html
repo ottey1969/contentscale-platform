@@ -7,7 +7,7 @@
 <body><main>
 <nav class="topnav"><a href="/lead-crawler">← Nieuwe bedrijven scannen</a><a href="/network">Network overzicht</a></nav>
 <h1>Network · Acquisitie</h1>
-<p>Alle bedrijven blijven in het bestaande, private Network. Geen QuickScan, geen CEO-rapport en geen automatische uitnodigingen. Eerst website en bedrijfscontact controleren, daarna de Network-uitnodiging beoordelen.</p>
+<p>Alle bedrijven blijven in het bestaande, private Network. Dit is uitsluitend Network-acquisitie. Er worden nooit automatisch uitnodigingen verzonden: eerst website en bedrijfscontact controleren, daarna de Network-uitnodiging beoordelen.</p>
 <section class="panel" id="unlock" hidden>
 <h2>Admin toegang</h2><p>Gebruik dezelfde admincode als bij de Lead Crawler. Je hoeft Acquisitie hiervoor niet te verlaten.</p>
 <form id="unlockForm" class="toolbar"><input id="unlockCode" type="password" autocomplete="off" required placeholder="Lead Crawler admincode" style="max-width:290px"><button id="unlockSubmit" type="submit">Ontgrendelen</button></form><p id="unlockMessage" role="status" class="error"></p>
@@ -191,7 +191,7 @@ function preview(c,d){
  const root=tag('div',undefined,'preview');
  root.append(tag('h3','Uitnodiging klaar — nog niet verstuurd'),tag('p','Ontvanger: '+d.recipient,'info'));
  const link=tag('a','Bekijk de echte uitnodiging met I am interested ↗');link.href=d.preview_url;link.target='_blank';link.rel='noopener noreferrer';root.append(link);
- root.append(tag('p','De uitnodiging gaat uitsluitend over ContentScale Network. Er wordt geen CEO- of QuickScan-link verstuurd.','small'));
+ root.append(tag('p','De uitnodiging gaat uitsluitend over ContentScale Network. Er wordt alleen deze Network-uitnodigingslink verstuurd.','small'));
  const send=button('Goedkeuren en deze Network-uitnodiging versturen',async()=>{
   if(!outreach?.can_send_now){setMessage('De verzendlimiet is bereikt of de Network verzendstatus is niet beschikbaar.');return;}
   if(!confirm('Netwerk-uitnodiging naar '+d.recipient+' versturen? Dit gebruikt één Network warm-up slot.'))return;
