@@ -165,7 +165,9 @@ function registerLeadCrawlerSerpApi(app,{
    }
    // A short page usually means the end. If all its listings are already
    // known, allow one more page before declaring the niche exhausted.
-   if(rows.length<20&&!(page===0&&knownDomains.size&&rows.length>0&&leads.length===0))break;
+   // Do not stop on a short Maps page if all results are already known;
+   // next pages may contain previously unseen businesses.
+   if(rows.length===0 || (rows.length<20&&leads.length>0))break;
   }
   const body={
    leads,source:provider,location:scope.location,verified_page_counts:0,
