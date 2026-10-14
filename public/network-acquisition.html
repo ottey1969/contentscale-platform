@@ -143,10 +143,10 @@ async function discoverBatch(){
    el('batch').textContent='Onderzoeken '+(start+1)+'–'+Math.min(start+5,selected.length)+' / '+selected.length+'…';
    const d=await api('/api/network/admin/acquisition/discover-batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_ids:selected.slice(start,start+5).map(c=>c.id)})});
    for(const item of d.results||[]){
-    searched++;if(item.email)found++;if(item.website_review?.status==='site_observed')verified++;if(item.verification==='unavailable')unavailable++;
+    searched++;if(item.email)found++;if(item.website_review?.status==='site_observed')verified++;if(item.verification==='fetch_unavailable'||item.verification==='unavailable')unavailable++;
     const c=companies.find(c=>String(c.id)===String(item.company_id));if(c){c.email_discovery={email:item.email,source_url:item.source_url,verification:item.verification,relationship:item.relationship,contact_review_required:item.contact_review_required,version:item.version,checked_at:item.checked_at||new Date().toISOString()};if(item.website_review)c.website_review=item.website_review;}
    }
-   el('progress').textContent=searched+'/'+selected.length+' websites · '+found+' e-mails · '+verified+' websites gevonden · '+unavailable+' beperkt bereikbaar. Geen uitnodigingen verstuurd.';
+   el('progress').textContent=searched+'/'+selected.length+' websites · '+found+' e-mails · '+verified+' websites gevonden · '+unavailable+' technisch niet bereikbaar. Geen uitnodigingen verstuurd.';
    renderStats();render();
   }
  }catch(e){setMessage('Onderzoek onderbroken: '+e.message+'. Opgeslagen resultaten blijven behouden.');}
