@@ -178,7 +178,14 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    res.set('Cache-Control','no-store').type('html').send('<!doctype html><html lang="en"><meta charset="utf-8"><title>Unsubscribed</title><body style="font:18px system-ui;max-width:650px;margin:50px auto"><h1>Unsubscribed</h1><p>You will not receive further ContentScale Network acquisition invitations for this company.</p></body></html>');
   }catch(e){return res.sendStatus(503);}
  }
- app.get('/network/join/:token/unsubscribe',unsubscribe);
+ app.get('/network/join/:token/unsubscribe',async(req,res)=>{
+  const token=String(req.params.token||'');if(!tokenOk(token))return res.sendStatus(404);
+  try{
+   const record=await invitationByToken(token);if(!record)return res.sendStatus(404);
+   res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex,nofollow').type('html')
+     .send('<!doctype html><html lang="en"><meta charset="utf-8"><title>Stop Network invitations</title><body style="font:18px system-ui;max-width:650px;margin:50px auto;padding:0 20px"><h1>Stop Network invitations</h1><p>Confirm that you no longer want to receive Network invitations.</p><form action="/network/join/'+token+'/unsubscribe" method="post"><button type="submit" style="background:#157b3a;color:#fff;border:0;padding:14px 20px;border-radius:8px">Unsubscribe</button></form></body></html>');
+  }catch(e){return res.sendStatus(503);}
+ });
  app.post('/network/join/:token/unsubscribe',unsubscribe);
 }
 module.exports={registerNetworkAcquisitionInvitations,websiteEvidence,sameBusinessEmail,sameBusinessUrl,inviteMarkup};
