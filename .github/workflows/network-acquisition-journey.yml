@@ -5,6 +5,7 @@ on:
       - 'src/network-acquisition-invitations.cjs'
       - 'src/network-acquisition-invitations.test.cjs'
       - 'src/network-maps-acquisition.cjs'
+      - 'src/network-maps-auto-backfill.test.cjs'
       - 'public/network-acquisition.html'
       - 'src/network-business-email-fetch.cjs'
       - '.github/workflows/network-acquisition-journey.yml'
@@ -20,5 +21,6 @@ jobs:
       - run: node --check src/network-acquisition-invitations.cjs
       - run: node src/network-acquisition-invitations.test.cjs
       - run: node src/network-maps-acquisition.test.cjs
+      - run: node src/network-maps-auto-backfill.test.cjs
       - run: node src/network-business-email-fetch.test.cjs
       - run: node src/ceo-business-email.test.cjs
