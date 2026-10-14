@@ -1,10 +1,12 @@
 'use strict';
 const assert=require('node:assert/strict');
 const {patch}=require('../scripts/fix-audit20-inline-label.cjs');
-const source=String.raw`const h='<button id="audit20-interest-btn">Yes — I\\'m interested in the 20-Page Audit</button>';`;
+const broken=String.raw`'<button id="audit20-interest-btn">Yes — I\\'m interested in the 20-Page Audit</button>';`;
+const source='const html='+broken+'\nconst other='+broken;
+assert.throws(()=>new Function(source),SyntaxError);
 const fixed=patch(source);
-assert(fixed.includes('Yes — Interested in the 20-Page Audit'));
+assert.equal((fixed.match(/Yes — Interested in the 20-Page Audit/g)||[]).length,2);
 assert(!fixed.includes("I\\'m interested"));
 assert.doesNotThrow(()=>new Function(fixed));
 assert.throws(()=>patch('no such button'));
-console.log('PASS: exact Audit 20 interest label repaired without modifying unrelated script');
+console.log('PASS: both injected Audit 20 CTA templates repaired, browser JavaScript parse valid');
