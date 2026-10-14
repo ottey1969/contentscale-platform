@@ -2,6 +2,7 @@
 // The Network Acquisition funnel belongs to the canonical Network company.
 // No CEO, QuickScan or prospect_quick_scans dependency.
 const crypto=require('node:crypto');
+const path=require('node:path');
 const {readWebsitePage,hostForWebsite}=require('./network-business-email-fetch.cjs');
 const clean=(v,n=250)=>String(v??'').replace(/[\x00-\x1f<>]/g,'').trim().slice(0,n);
 const hash=token=>crypto.createHash('sha256').update(token).digest('hex');
@@ -146,6 +147,12 @@ function inviteMarkup(name,token,state){
 function reply(res,status,obj){return res.status(status).json(obj);}
 function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvidence,sendEmail=globalThis.fetch}){
  if(!app?.post||!app?.get||!pool?.query||typeof auth!=='function')throw Error('Network acquisition invitation dependencies missing');
+ // Explicit canonical admin page route: public/network-acquisition.html is an asset,
+ // not a URL alias. Register through the existing Network module.
+ app.get('/network/acquisition',(req,res)=>{
+  if(!auth(req))return res.status(403).send('Admin access required');
+  return res.set('Cache-Control','no-store').sendFile(path.resolve(__dirname,'../public/network-acquisition.html'));
+ });
  async function company(id){
   const r=await pool.query("SELECT id,business_name,domain,canonical_url,public_visibility,metadata FROM network_directory_businesses WHERE id=$1 AND source='maps_acquisition' LIMIT 1",[id]);
   return r.rows[0]||null;
