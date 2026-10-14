@@ -4,6 +4,7 @@ const crypto=require('node:crypto');
 const path=require('node:path');
 const {safeWebsite}=require('./lead-crawler-serpapi.cjs');
 const {discoverCompanyContact}=require('./network-business-email-fetch.cjs');
+const {registerNetworkAcquisitionInvitations,websiteEvidence}=require('./network-acquisition-invitations.cjs');
 const plain=(x,n=200)=>String(x??'').replace(/[\x00-\x1f<>]/g,'').trim().slice(0,n);
 function authorized(req){
  const configured=process.env.LC_ADMIN_CODE||'',submitted=String(req.get('x-admin-code')||'');
@@ -27,18 +28,9 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
   try{
    const result=await pool.query(`SELECT n.id,n.business_name,n.domain,n.canonical_url,n.primary_niche,n.city,n.status,n.public_visibility,n.website_check,
     n.metadata->'acquisition'->'email_discovery' AS email_discovery,
-    p.token AS outreach_token,p.contact_email AS outreach_email,p.contact_email_origin AS outreach_email_origin,
-    p.outreach_email_status,p.outreach_sent_at,p.ceo_report_url,p.quickscan_interested,
-    p.revoked_at IS NOT NULL AS outreach_revoked
+    n.metadata->'acquisition'->'website_review' AS website_review,
+    n.metadata->'acquisition'->'invitation' AS invitation
     FROM network_directory_businesses n
-    LEFT JOIN LATERAL (
-      SELECT token,contact_email,contact_email_origin,outreach_email_status,outreach_sent_at,
-             ceo_report_url,quickscan_interested,revoked_at
-      FROM prospect_quick_scans
-      WHERE lower(domain)=lower(n.domain)
-      ORDER BY (revoked_at IS NULL) DESC, created_at ASC
-      LIMIT 1
-    ) p ON TRUE
     WHERE n.source='maps_acquisition'
     ORDER BY n.created_at DESC,n.id DESC LIMIT 300`);
    const count=await pool.query("SELECT count(*)::int AS total FROM network_directory_businesses WHERE source='maps_acquisition'");
@@ -52,26 +44,30 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    ids.some(id=>!Number.isSafeInteger(id)||id<1))return res.status(400).json({error:'Select 1 to 5 unique acquisition company IDs'});
   try{
    const companies=await pool.query(
-    "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery FROM network_directory_businesses WHERE id=ANY($1::int[]) AND source='maps_acquisition'",[ids]);
+    "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery, metadata->'acquisition'->'website_review' AS website_review FROM network_directory_businesses WHERE id=ANY($1::int[]) AND source='maps_acquisition'",[ids]);
    if(companies.rows.length!==ids.length)return res.status(404).json({error:'One or more companies not found'});
-   const results=[];
-   for(const company of companies.rows){
-    if(company.email_discovery?.email){
-     results.push({company_id:company.id,...company.email_discovery,cached:true});continue;
+   const results=await Promise.all(companies.rows.map(async company=>{
+    let site=company.website_review;
+    if(!site?.checked_at){
+     try{
+      site=await websiteEvidence(company.canonical_url);
+      await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,website_review}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(site)]);
+     }catch(e){site={status:'review_required',reason:'Website check failed',checked_at:new Date().toISOString()};}
     }
+    const prev=company.email_discovery;
+    if(prev?.email){return {company_id:company.id,...prev,website_review:site,cached:true};}
     try{
-     const result=await discoverCompanyContact(company.canonical_url,{maxPages:3});
+     const result=await discoverCompanyContact(company.canonical_url,{maxPages:4});
      if(result.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))throw Error('Company domain mismatch');
      const discovery={email:result.email,source_url:result.source_url,verification:result.verification,checked_at:new Date().toISOString()};
-     if(result.email){
-      // Preserve the original company identity and all unrelated metadata keys.
-      await pool.query(
-       "UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",
-       [company.id,JSON.stringify(discovery)]);
-     }
-     results.push({company_id:company.id,...discovery,cached:false});
-    }catch(e){results.push({company_id:company.id,email:null,verification:'unavailable',error:'Website contact lookup unavailable'});}
-   }
+     await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(discovery)]);
+     return {company_id:company.id,...discovery,website_review:site,cached:false};
+    }catch(e){
+     const failed={email:null,source_url:null,verification:'unavailable',checked_at:new Date().toISOString()};
+     try{await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[company.id,JSON.stringify(failed)]);}catch{}
+     return {company_id:company.id,...failed,website_review:site,error:'Website contact lookup unavailable'};
+    }
+   }));
    return res.json({results,emails_sent:0});
   }catch(e){console.error('[network-acquisition] batch discovery',e.code||e.message);return res.status(503).json({error:'Batch lookup unavailable; existing acquisition records preserved'})}
  });
@@ -84,7 +80,9 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    if(!record.rows.length)return res.status(404).json({error:'Acquisition company not found'});
    const company=record.rows[0];
    const data=await discoverCompanyContact(company.canonical_url);
-   if(data.domain!==String(company.domain).toLowerCase().replace(/^www\\./,''))return res.status(422).json({error:'Company domain mismatch'});
+   if(data.domain!==String(company.domain).toLowerCase().replace(/^www\./,''))return res.status(422).json({error:'Company domain mismatch'});
+   const discovery={email:data.email,source_url:data.source_url,verification:data.verification,checked_at:new Date().toISOString()};
+   await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,email_discovery}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition'",[id,JSON.stringify(discovery)]);
    return res.json({company_id:id,...data});
   }catch(e){console.error('[network-acquisition] public email discovery',e.code||e.message);return res.status(503).json({error:'Public contact lookup unavailable; no data was modified'})}
  });
@@ -118,5 +116,6 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
   }catch(e){console.error('[network-acquisition] import',e.code||e.message);
    return res.status(503).json({error:'Network import interrupted. Check the review list before retrying; duplicate websites cannot be imported twice.'})}
  });
+ registerNetworkAcquisitionInvitations({app,pool,auth});
 }
 module.exports={registerNetworkMapsAcquisition,candidate};
