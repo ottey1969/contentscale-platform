@@ -41,7 +41,10 @@ const pool={query:async(sql,args=[])=>{
    company.metadata.acquisition.invitation=JSON.parse(args[1]);return {rows:[{id:7}]};
   }
   if(sql.includes('"sending"'))company.metadata.acquisition.invitation.status='sending';
-  if(sql.includes('"interested"'))company.metadata.acquisition.invitation.status='interested';
+  if(sql.includes('"interested"')){
+   if(company.metadata.acquisition.invitation.status!=='invited')return {rows:[]};
+   company.metadata.acquisition.invitation.status='interested';
+  }
   if(sql.includes('"unsubscribed"'))company.metadata.acquisition.invitation.status='unsubscribed';
   return {rows:[{id:7}]};
  }
@@ -63,6 +66,13 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
  r=await run('POST','/api/network/admin/acquisition/prepare-invitation',{company_id:7,email:'info@acme.com',source_url:'https://acme.com/contact'});
  assert.equal(r.statusCode,200);assert.equal(r.body.status,'prepared');assert.equal(sent,0);
  const token=r.body.token;
+ const previewPage=inviteMarkup('Acme Roofing',token,'prepared');
+ assert.match(previewPage,/Invitation preview:/,'unsent preview must clearly identify its state');
+ assert.match(previewPage,/disabled aria-disabled="true"/,'green interest CTA stays visible but inactive before send');
+ assert.doesNotMatch(previewPage,/<form method="POST"/,'unsent preview must not include interest form');
+ let early=await run('POST','/network/join/:token/interested',{}, {},{token});
+ assert.equal(early.statusCode,409,'even direct POST must not record interest on unsent invitations');
+ assert.equal(company.metadata.acquisition.invitation.status,'prepared','unsent interest cannot alter canonical state');
  r=await run('GET','/network/join/:token',{}, {},{token});
  assert.equal(r.statusCode,200);assert.match(r.body,/I am interested/);assert.doesNotMatch(r.body,/QuickScan/);
  r=await run('GET','/network/join/:token/unsubscribe',{}, {},{token});
