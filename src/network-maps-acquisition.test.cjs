@@ -83,6 +83,11 @@ async function invoke(method,path,body,code='ok'){
  assert(q.sentFile.endsWith('network-acquisition.html'));
  assert.equal(q.headers['X-Robots-Tag'],'noindex, nofollow');
  const h=fs.readFileSync('public/lead-crawler.html','utf8');
+ assert.doesNotMatch(h,/sessionStorage\.setItem\(LS_ADMIN,\s*code\)/,'admin code must never be persistently stored');
+ assert.doesNotMatch(h,/localStorage\.setItem\(LS_GEMINI_KEY,\s*key\)/,'Gemini key must not enter localStorage');
+ assert.doesNotMatch(h,/localStorage\.setItem\(LS_VAPI,\s*JSON\.stringify\(cfg\)\)/,'Vapi credential must not enter localStorage');
+ assert.match(h,/delete nonSecret\.vapiKey/,'persist only harmless Voicebot preferences');
+
  assert(h.includes('#pqsImportVisible,#pqsImportDismiss{display:none!important}'));
  assert(h.includes('window.importAllMapsToNetwork=async function()'));
  assert(h.includes("localStorage.getItem('lc_session')"),'saved Maps leads must remain importable after browser refresh');
