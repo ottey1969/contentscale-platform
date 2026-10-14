@@ -12,6 +12,17 @@
 <h2>Admin toegang</h2><p>Gebruik dezelfde admincode als bij de Lead Crawler. Je hoeft Acquisitie hiervoor niet te verlaten.</p>
 <form id="unlockForm" class="toolbar"><input id="unlockCode" type="password" autocomplete="off" required placeholder="Lead Crawler admincode" style="max-width:290px"><button id="unlockSubmit" type="submit">Ontgrendelen</button></form><p id="unlockMessage" role="status" class="error"></p>
 </section>
+<section class="panel" id="warmupPanel" aria-label="Bestaande e-mailopwarming">
+<h2>E-mailopwarming <span class="pill" id="warmupBadge">Status laden…</span></h2>
+<p class="info small">Dit is de bestaande opwarming van je afzender. De dagvoortgang blijft gebaseerd op behaalde verzenddoelen, niet op de kalender of een nieuwe Network-import.</p>
+<div class="stats" id="warmupMetrics">
+<div class="stat"><small>Opwarmdag</small><b id="warmupDay">— / 42</b></div>
+<div class="stat"><small>Vandaag totaal verzonden</small><b id="warmupUsed">—</b></div>
+<div class="stat"><small>Resterend vandaag</small><b id="warmupRemaining">—</b></div>
+<div class="stat"><small>Network-uitnodigingen vandaag</small><b id="networkUsed">—</b></div>
+</div>
+<p class="info small" id="warmupDetail" role="status">We laden je bestaande opwarmgeschiedenis. Er wordt niets opnieuw gestart.</p>
+</section>
 <section class="panel">
 <h2>Network-acquisitie voortgang</h2>
 <div id="metrics" class="stats"><div class="stat"><small>Bedrijven</small><b>—</b></div></div>
@@ -70,11 +81,33 @@ function stage(c){
  if(c.email_discovery?.checked_at)return{label:'Geen openbaar e-mailadres gevonden · controle nodig',group:'needs'};
  return{label:'Website + e-mail nog controleren',group:'needs'};
 }
+function renderWarmup(){
+ const w=outreach?.warmup;
+ const badge=el('warmupBadge'),detail=el('warmupDetail');
+ if(!w){
+  el('warmupDay').textContent='— / 42';el('warmupUsed').textContent='—';
+  el('warmupRemaining').textContent='—';el('networkUsed').textContent='—';
+  badge.textContent='Niet beschikbaar';badge.className='pill';
+  detail.textContent='Opwarmstatus kan niet worden geladen. Voor je veiligheid blijft Network-verzending geblokkeerd.';
+  detail.className='warning small';return;
+ }
+ el('warmupDay').textContent=w.progress_day+' / '+w.total_days;
+ el('warmupUsed').textContent=w.sent_today+' / '+(w.daily_cap==null?'geen ContentScale-limiet':w.daily_cap);
+ el('warmupRemaining').textContent=w.remaining_today==null?'—':String(w.remaining_today);
+ el('networkUsed').textContent=outreach.sent_today+' / '+outreach.daily_cap;
+ badge.textContent=w.complete?'Voltooid':w.active?'Actief':'Gepauzeerd';
+ badge.className='pill'+(w.active?' good':'');
+ const origin=w.legacy_sent_today+' vanuit bestaande acquisitie + '+w.network_sent_today+' Network = '+w.sent_today+' verzonden vandaag (Manila-tijd).';
+ const next=w.complete?'De opwarmfase is voltooid.':w.active?'Opwarmcyclus '+w.cycle+' · dag '+w.day_in_cycle+'/7 · volgende daglimiet '+(w.next_cap??'—')+' na behalen van de benodigde verzenddoelen.':'De oorspronkelijke opwarming staat gepauzeerd.';
+ detail.textContent=origin+' '+next+' Geen reset en geen automatische verzending.';
+ detail.className='info small';
+}
 function renderStats(){
  const root=el('metrics');root.replaceChildren();
  const checks=[['Bedrijven in Acquisitie',total],['E-mail gevonden',companies.filter(c=>!!c.email_discovery?.email).length],['Website gecontroleerd',companies.filter(c=>['site_observed','manual_reviewed'].includes(inspection(c))).length],['Uitnodiging verstuurd',companies.filter(c=>c.invitation?.status==='invited'||c.invitation?.status==='interested').length],['Interested',companies.filter(c=>c.invitation?.status==='interested').length]];
  for(const [label,value]of checks){const block=tag('div',undefined,'stat');block.append(tag('small',label),tag('b',String(value)));root.append(block);}
- el('sendingStatus').textContent=outreach?'Network e-mailopwarming · vandaag '+outreach.sent_today+'/'+outreach.daily_cap+' verstuurd · totaal '+outreach.total_sent+' · nog '+Math.max(0,outreach.daily_cap-outreach.sent_today)+' beschikbaar. Alleen na goedkeuring; geen automatische verzending.':'Verzendlimiet niet beschikbaar. Verzenden is uitgeschakeld totdat de serverstatus geladen is.';
+ renderWarmup();
+ el('sendingStatus').textContent=outreach?'Network-uitnodigingen · vandaag '+outreach.sent_today+'/'+outreach.daily_cap+' verstuurd · totaal '+outreach.total_sent+' · Network-ruimte '+outreach.remaining_today+'; gecombineerde afzenderlimiet wordt ook gecontroleerd. '+(outreach.limit_reason||'Verzending uitsluitend na goedkeuring.'):'Network-verzendlimiet niet beschikbaar. Verzenden is uitgeschakeld totdat de serverstatus geladen is.';
 }
 async function refresh(){
  if(busy)return;
