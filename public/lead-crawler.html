@@ -3636,5 +3636,64 @@ document.addEventListener('DOMContentLoaded',function(){
 })();
 </script>
 
+
+<style>
+/* The historic QuickScan bulk-import bridge must never intercept Network leads. */
+#pqsImportVisible,#pqsImportDismiss{display:none!important}
+#networkImportAllBtn{display:none;position:fixed;right:18px;bottom:80px;z-index:10001;background:#5b21b6;color:white;border:1px solid #a78bfa;padding:13px 16px;border-radius:10px;font:800 12px Arial;cursor:pointer;box-shadow:0 8px 30px #0008}
+#networkImportAllBtn:disabled{opacity:.65;cursor:wait}
+#networkImportNotice{display:none;position:fixed;right:18px;bottom:135px;z-index:10001;max-width:430px;background:#111827;color:#f8fafc;border:1px solid #64748b;padding:10px;border-radius:8px;font:12px Arial}
+</style>
+<button type="button" id="networkImportAllBtn" onclick="importAllMapsToNetwork()">Import to Network</button>
+<div id="networkImportNotice" role="status"></div>
+<script>
+(function(){
+ let importing=false,lastCount=-1;
+ function leads(){
+  try{
+   if(typeof allLeads==='undefined'||!Array.isArray(allLeads))return [];
+   if(!allLeads.length||!allLeads.every(x=>/^google_maps_(serper|serpapi)$/.test(x.source||'')))return [];
+   return allLeads;
+  }catch{return []}
+ }
+ function update(){
+  const btn=document.getElementById('networkImportAllBtn');
+  if(!btn||importing)return;
+  const items=leads();const count=items.length;
+  btn.style.display=count?'block':'none';
+  if(count!==lastCount){btn.textContent='⬆ Import all '+count+' leads to Network';lastCount=count}
+ }
+ window.importAllMapsToNetwork=async function(){
+  if(importing)return;
+  const items=leads(),btn=document.getElementById('networkImportAllBtn'),note=document.getElementById('networkImportNotice');
+  if(!items.length)return;
+  importing=true;btn.disabled=true;btn.textContent='Importing '+items.length+' for Network review…';
+  note.style.display='block';note.textContent='Saving private Network candidates. No email will be sent.';
+  try{
+   const key=sessionStorage.getItem('lc_admin_code')||'';
+   const niche=(document.getElementById('quickNiche')?.value||document.getElementById('customIndustries')?.value.split('\n')[0]||'roofing').trim();
+   const batch=items.map(l=>({
+    name:l.name,website:l.website,phone:l.phone,address:l.address,
+    source:l.source,place_id:l.place_id,niche:niche||l.type||'roofing'
+   }));
+   const resp=await fetch('/api/network/admin/acquisition/import',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-admin-code':key},
+    body:JSON.stringify({leads:batch})
+   });
+   const data=await resp.json().catch(()=>({error:'Invalid import response'}));
+   if(!resp.ok)throw new Error(data.error||'Network import failed (HTTP '+resp.status+')');
+   note.textContent=data.imported+' new, '+data.duplicates+' already known. No emails sent. Opening Network review…';
+   btn.textContent='Open Network review';
+   location.assign(data.review_url||'/network/acquisition');
+  }catch(err){
+   note.textContent='Import not completed: '+err.message;
+   btn.disabled=false;importing=false;lastCount=-1;update();
+  }
+ };
+ setInterval(update,650);
+ document.addEventListener('DOMContentLoaded',update);
+})();
+</script>
 </body>
 </html>
