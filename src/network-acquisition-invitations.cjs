@@ -19,8 +19,10 @@ function publicCompanyContact(email,domain,source,discovery,manualConfirmed=fals
  const address=String(email||'').trim().toLowerCase();
  if(!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(address) ||
   /^(?:no-?reply|bounce|donotreply|mailer-daemon)@/.test(address) ||
-  /@(gmail\.com|yahoo\.com|hotmail\.com|outlook\.com|example\.(?:com|org))$/.test(address) ||
+  /@example\.(?:com|org)$/.test(address) ||
   !sameBusinessUrl(source,domain))return false;
+ const freemail=/@(gmail\.com|yahoo\.com|hotmail\.com|outlook\.com|aol\.com|icloud\.com)$/.test(address);
+ if(freemail&&!manualConfirmed)return false;
  const observed=discovery?.email?.toLowerCase()===address&&discovery?.source_url===source&&discovery?.verification==='publicly_observed';
  return observed||(manualConfirmed===true&&sameBusinessUrl(source,domain));
 }
@@ -97,7 +99,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    const blocked=await pool.query("SELECT EXISTS(SELECT 1 FROM contact_intelligence_suppressions WHERE lower(email)=lower($1)) AS blocked",[email]);
    if(blocked.rows[0]?.blocked)return reply(res,409,{error:'This address has opted out of contact'});
    const token=crypto.randomBytes(24).toString('hex');
-   const invited={status:'prepared',token_hash:hash(token),email,source_url:source,contact_evidence:discovered?.email?.toLowerCase()===email&&discovered?.source_url===source?'website_observed':'admin_source_confirmed',prepared_at:new Date().toISOString(),sent_at:null};
+   const invited={status:'prepared',token_hash:hash(token),email,source_url:source,contact_evidence:/@(gmail\.com|yahoo\.com|hotmail\.com|outlook\.com|aol\.com|icloud\.com)$/.test(email)?'admin_source_confirmed':discovered?.email?.toLowerCase()===email&&discovered?.source_url===source?'website_observed':'admin_source_confirmed',prepared_at:new Date().toISOString(),sent_at:null};
    const saved=await pool.query(
     "UPDATE network_directory_businesses SET metadata=jsonb_set(COALESCE(metadata,'{}'::jsonb),'{acquisition,invitation}',$2::jsonb,true) WHERE id=$1 AND source='maps_acquisition' AND public_visibility='hidden' AND (metadata->'acquisition'->'invitation'->>'status' IS NULL OR metadata->'acquisition'->'invitation'->>'status'='draft') RETURNING id",
     [id,JSON.stringify(invited)]);
