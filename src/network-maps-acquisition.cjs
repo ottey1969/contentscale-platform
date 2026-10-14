@@ -24,7 +24,21 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
  app.get('/api/network/admin/acquisition/candidates',async(req,res)=>{
   if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   try{
-   const result=await pool.query("SELECT id,business_name,domain,canonical_url,primary_niche,city,status,public_visibility,website_check FROM network_directory_businesses WHERE source='maps_acquisition' ORDER BY created_at DESC,id DESC LIMIT 300");
+   const result=await pool.query(`SELECT n.id,n.business_name,n.domain,n.canonical_url,n.primary_niche,n.city,n.status,n.public_visibility,n.website_check,
+    p.token AS outreach_token,p.contact_email AS outreach_email,p.contact_email_origin AS outreach_email_origin,
+    p.outreach_email_status,p.outreach_sent_at,p.ceo_report_url,p.quickscan_interested,
+    p.revoked_at IS NOT NULL AS outreach_revoked
+    FROM network_directory_businesses n
+    LEFT JOIN LATERAL (
+      SELECT token,contact_email,contact_email_origin,outreach_email_status,outreach_sent_at,
+             ceo_report_url,quickscan_interested,revoked_at
+      FROM prospect_quick_scans
+      WHERE lower(domain)=lower(n.domain)
+      ORDER BY (revoked_at IS NULL) DESC, created_at ASC
+      LIMIT 1
+    ) p ON TRUE
+    WHERE n.source='maps_acquisition'
+    ORDER BY n.created_at DESC,n.id DESC LIMIT 300`);
    const count=await pool.query("SELECT count(*)::int AS total FROM network_directory_businesses WHERE source='maps_acquisition'");
    return res.json({candidates:result.rows,total:Number(count.rows[0]?.total||0)});
   }catch(e){console.error('[network-acquisition] list',e.code||e.message);return res.status(503).json({error:'Network candidate list unavailable'})}
