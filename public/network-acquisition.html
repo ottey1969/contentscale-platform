@@ -40,6 +40,7 @@ input:focus,textarea:focus{outline:2px solid #a5b4fc}
 <body><main>
 <nav class="topnav"><a href="/lead-crawler">← Scan next batch</a><a href="/quick-scan/admin#pqsEmailQueue">QuickScan · Outreach approval</a><a href="/network">Network home</a></nav>
 <h1>Network · Acquisitie</h1>
+<section class="panel" id="adminUnlock" hidden><h2>Admin access required</h2><p>Acquisitie needs the same admin code as Lead Crawler. When opening a new browser tab, the previous tab session may not be available. Unlock here without leaving your work.</p><form id="adminUnlockForm" class="toolbar"><input id="adminUnlockCode" type="password" autocomplete="off" placeholder="Lead Crawler admin code" style="max-width:310px" required><button id="adminUnlockButton" type="submit">Unlock Acquisitie</button></form><div id="adminUnlockMessage" aria-live="polite" class="info"></div></section>
 <p>Companies stay in the same private Network directory while you review their website and decide whether to offer the CEO/QuickScan journey. No automatic invitations: a bulk import never sends mail and no company is publicly listed.</p>
 <section class="panel warm" id="warmup" aria-live="polite">
 <h2>Email warm-up · Existing QuickScan outreach</h2>
@@ -68,6 +69,19 @@ input:focus,textarea:focus{outline:2px solid #a5b4fc}
 'use strict';
 const el=id=>document.getElementById(id);
 const key=()=>sessionStorage.getItem('lc_admin_code')||'';
+function showUnlock(reason){el('adminUnlock').hidden=false;el('adminUnlockMessage').textContent=reason||'Enter the same admin code used for Lead Crawler.';}
+async function unlock(ev){
+ ev.preventDefault();const field=el('adminUnlockCode'),button=el('adminUnlockButton'),code=field.value.trim();
+ if(!code)return;button.disabled=true;button.textContent='Checking…';
+ try{
+  const response=await fetch('/api/admin/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code})});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||!data.ok||data.role!=='admin')throw Error('Admin access not verified. Use your Lead Crawler admin code.');
+  sessionStorage.setItem('lc_admin_code',code);sessionStorage.setItem('lc_role','admin');field.value='';
+  el('adminUnlock').hidden=true;await refresh();
+ }catch(err){el('adminUnlockMessage').textContent=err.message;}
+ finally{button.disabled=false;button.textContent='Unlock Acquisitie';}
+}
 let candidates=[],prospects=[],schedule=null,hasOutreachAccess=false,openId=null,previewId=null,busy=false;
 function tag(name,txt,cls){const e=document.createElement(name);if(txt!==undefined)e.textContent=txt;if(cls)e.className=cls;return e;}
 function btn(txt,fn,cls){const b=tag('button',txt,cls);b.type='button';b.onclick=fn;return b;}
@@ -130,7 +144,7 @@ async function refresh(){
    hasOutreachAccess=true;prospects=q.items||[];schedule=q.outreach_schedule||null;
   }catch(e){hasOutreachAccess=false;prospects=[];schedule=null;message('QuickScan outreach status unavailable: '+e.message+'. Acquisitie remains viewable; sending is disabled.');}
   renderWarmup();render();
- }catch(e){message('Cannot load Network Acquisitie: '+e.message)}
+ }catch(e){if(/Admin login required|HTTP 403/i.test(e.message))showUnlock('Admin session is missing or expired. Unlock with your Lead Crawler code.');message('Cannot load Network Acquisitie: '+e.message)}
  finally{busy=false;el('refresh').disabled=false;}
 }
 function render(){
@@ -282,6 +296,7 @@ async function discoverBatch(){
  finally{busy=false;button.disabled=false;button.textContent='Find emails for next 20 companies';el('refresh').disabled=false;await refresh();}
 }
 el('discoverBatch').onclick=discoverBatch;
+el('adminUnlockForm').onsubmit=unlock;
 el('refresh').onclick=refresh;el('filter').onchange=render;refresh();
 })();
 </script>
