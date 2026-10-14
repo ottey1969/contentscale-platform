@@ -150,7 +150,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  // Explicit canonical admin page route: public/network-acquisition.html is an asset,
  // not a URL alias. Register through the existing Network module.
  app.get('/network/acquisition',(req,res)=>{
-  if(!auth(req))return res.status(403).send('Admin access required');
+  // Browser navigation has no admin API header; the page's API calls enforce auth.
   return res.set('Cache-Control','no-store').sendFile(path.resolve(__dirname,'../public/network-acquisition.html'));
  });
  async function company(id){
