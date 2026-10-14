@@ -20,7 +20,9 @@ function publicIP(ip){
 }
 function hostForWebsite(raw){
  const url=new URL(raw);
- if(url.protocol!=='https:'||url.port||url.username||url.password)throw Error('HTTPS company domain required');
+ // Imported Maps records can carry legacy http:// URL labels. Never fetch over HTTP;
+ // validate the public hostname and attempt HTTPS to the same host instead.
+ if(!['https:','http:'].includes(url.protocol)||url.port||url.username||url.password)throw Error('Public company domain required');
  const host=url.hostname.toLowerCase().replace(/^www\./,'');
  if(!host.includes('.')||! /^[a-z0-9.-]+$/.test(host)||host.includes('..')||net.isIP(host)||/(^|\.)(localhost|local|internal|test|invalid|example)$/.test(host))throw Error('Public company domain required');
  return {host,websiteHost:url.hostname.toLowerCase()};

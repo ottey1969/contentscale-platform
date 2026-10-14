@@ -5,7 +5,8 @@ async function run(){
  for(const ip of ['127.0.0.1','10.2.3.4','192.168.1.3','169.254.169.254','172.16.1.2','::1','fc00::1','2001:db8::1'])assert.equal(publicIP(ip),false,ip);
  assert.equal(publicIP('8.8.8.8'),true);
  assert.equal(hostForWebsite('https://www.acme.com/contact').host,'acme.com');
- for(const url of ['http://acme.com','https://localhost','https://127.0.0.1','https://acme.com:8443'])assert.throws(()=>hostForWebsite(url));
+ assert.equal(hostForWebsite('http://www.acme.com/').host,'acme.com','HTTP-origin imported Maps URLs must upgrade to HTTPS-only fetch');
+ for(const url of ['https://localhost','https://127.0.0.1','https://acme.com:8443'])assert.throws(()=>hostForWebsite(url));
  const jersey=await discoverCompanyContact('https://jerseycraftroofing.com/',{
    maxPages:1,resolve:async()=>[{address:'8.8.8.8',family:4}],
    request:(options,callback)=>{
