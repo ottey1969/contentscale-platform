@@ -9,6 +9,50 @@ const tokenOk=token=>/^[a-f0-9]{48}$/.test(String(token||''));
 const escape=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','"':'&quot;',"'":'&#39;'}[ch]));
 const cap=()=>Math.max(0,Math.min(20,Number(process.env.NETWORK_ACQUISITION_DAILY_CAP||2)||0));
 const baseUrl=()=>String(process.env.PUBLIC_APP_URL||'https://app.contentscale.site').replace(/\/+$/,'');
+// Read the existing Lead Crawler warm-up progress. Never start/reset/advance it here.
+// Network has its own smaller invitation cap, but uses the same sender and therefore
+// must not exceed the remaining overall warm-up allowance.
+function warmupDailyCap(day){
+ if(day<=7)return 20;
+ if(day<=14)return 30;
+ if(day<=21)return 40;
+ if(day<=28)return 50;
+ if(day<=35)return 75;
+ if(day<=42)return 100;
+ return null;
+}
+async function networkWarmupSnapshot(pool){
+ const [cfg,legacy,network]=await Promise.all([
+  pool.query("SELECT progress_day,is_active,progress_updated_at FROM warmup_config WHERE user_id=$1 LIMIT 1",['lead_crawler_outreach']),
+  pool.query("SELECT COUNT(*) FILTER(WHERE (outreach_sent_at AT TIME ZONE 'Asia/Manila')::date=(NOW() AT TIME ZONE 'Asia/Manila')::date)::int AS sent_today,COUNT(*)::int AS total_sent FROM prospect_quick_scans WHERE outreach_sent_at IS NOT NULL"),
+  pool.query("SELECT count(*) FILTER(WHERE (metadata->'acquisition'->'invitation'->>'sent_at')::timestamptz AT TIME ZONE 'Asia/Manila'>=(now() AT TIME ZONE 'Asia/Manila')::date)::int AS sent_today,count(*) FILTER(WHERE metadata->'acquisition'->'invitation'->>'sent_at' IS NOT NULL)::int AS total_sent,count(*) FILTER(WHERE metadata->'acquisition'->'invitation'->>'status'='interested')::int AS interested FROM network_directory_businesses WHERE source='maps_acquisition'")
+ ]);
+ const row=cfg.rows[0];
+ if(!row)throw Error('Original email warm-up configuration unavailable');
+ const day=Math.max(1,Math.min(1000,Number(row.progress_day)||1));
+ const active=row.is_active===true, completed=day>42;
+ const dailyCap=active?warmupDailyCap(day):null;
+ const pqsToday=Number(legacy.rows[0]?.sent_today||0);
+ const networkToday=Number(network.rows[0]?.sent_today||0);
+ const used=pqsToday+networkToday;
+ const available=active&&(completed||used<dailyCap);
+ const networkCap=cap();
+ const canSend=available&&networkToday<networkCap;
+ return {
+  warmup:{active,complete:completed,progress_day:day,total_days:42,cycle:Math.min(6,Math.ceil(day/7)),
+   day_in_cycle:((day-1)%7)+1, daily_cap:dailyCap,sent_today:used,
+   remaining_today:dailyCap==null?null:Math.max(0,dailyCap-used),
+   next_cap:completed?null:warmupDailyCap(Math.min(43,(Math.floor((day-1)/7)+1)*7+1)),
+   progress_basis:'completed_daily_targets',timezone:'Asia/Manila',
+   last_progress_update:row.progress_updated_at||null,
+   legacy_sent_today:pqsToday,network_sent_today:networkToday,
+   total_sent:pqsToday>=0?Number(legacy.rows[0]?.total_sent||0)+Number(network.rows[0]?.total_sent||0):0},
+  sent_today:networkToday,total_sent:Number(network.rows[0]?.total_sent||0),
+  interested:Number(network.rows[0]?.interested||0),daily_cap:networkCap,
+  remaining_today:Math.max(0,networkCap-networkToday),can_send_now:canSend,
+  sender:'ContentScale Network', limit_reason:!active?'Original email warm-up is paused':!available?'Original sender warm-up daily limit reached':networkToday>=networkCap?'Network daily invitation limit reached':null
+ };
+}
 function sameBusinessEmail(email,domain){
  const address=String(email||'').toLowerCase().trim();
  if(!/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/.test(address))return false;
@@ -165,8 +209,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  app.get('/api/network/admin/acquisition/outreach-status',async(req,res)=>{
   if(!auth(req))return reply(res,403,{error:'Lead Crawler admin login required'});
   try{
-   const d=await pool.query("SELECT count(*) FILTER(WHERE (metadata->'acquisition'->'invitation'->>'sent_at')::timestamptz AT TIME ZONE 'Asia/Manila' >= (now() AT TIME ZONE 'Asia/Manila')::date)::int AS sent_today,count(*) FILTER(WHERE metadata->'acquisition'->'invitation'->>'sent_at' IS NOT NULL)::int AS total_sent,count(*) FILTER(WHERE metadata->'acquisition'->'invitation'->>'status'='interested')::int AS interested FROM network_directory_businesses WHERE source='maps_acquisition'");
-   const counts=d.rows[0]||{};return res.json({sent_today:counts.sent_today||0,total_sent:counts.total_sent||0,interested:counts.interested||0,daily_cap:cap(),can_send_now:(counts.sent_today||0)<cap(),sender:'ContentScale Network'});
+   return res.json(await networkWarmupSnapshot(pool));
   }catch(e){return reply(res,503,{error:'Network sending limits unavailable; sending disabled'});}
  });
  app.post('/api/network/admin/acquisition/send-invitation',async(req,res)=>{
@@ -180,8 +223,8 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    if(!['site_observed','manual_reviewed'].includes(c.metadata?.acquisition?.website_review?.status))return reply(res,409,{error:'Website must be reviewed before invitation'});
    const blocked=await pool.query("SELECT EXISTS(SELECT 1 FROM contact_intelligence_suppressions WHERE lower(email)=lower($1)) AS blocked",[invite.email]);
    if(blocked.rows[0]?.blocked || invite.status==='unsubscribed')return reply(res,409,{error:'This address opted out'});
-   const counts=await pool.query("SELECT count(*)::int AS sent_today FROM network_directory_businesses WHERE source='maps_acquisition' AND (metadata->'acquisition'->'invitation'->>'sent_at')::timestamptz AT TIME ZONE 'Asia/Manila' >= (now() AT TIME ZONE 'Asia/Manila')::date");
-   if(Number(counts.rows[0]?.sent_today||0)>=cap())return reply(res,429,{error:'Network email warm-up daily sending cap reached'});
+   const limits=await networkWarmupSnapshot(pool);
+   if(!limits.can_send_now)return reply(res,429,{error:limits.limit_reason||'Daily sender limit reached',network_daily_cap:limits.daily_cap,warmup_daily_cap:limits.warmup.daily_cap});
    if(!process.env.BREVO_API_KEY||!process.env.FROM_EMAIL)return reply(res,503,{error:'Network email sender is not configured'});
    const claimed=await pool.query("UPDATE network_directory_businesses SET metadata=jsonb_set(metadata,'{acquisition,invitation,status}','\"sending\"'::jsonb) WHERE id=$1 AND source='maps_acquisition' AND metadata->'acquisition'->'invitation'->>'status'='prepared' AND metadata->'acquisition'->'invitation'->>'token_hash'=$2 RETURNING id",[id,hash(token)]);
    if(!claimed.rows.length)return reply(res,409,{error:'Invitation already being sent'});
@@ -242,4 +285,4 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  });
  app.post('/network/join/:token/unsubscribe',unsubscribe);
 }
-module.exports={registerNetworkAcquisitionInvitations,websiteEvidence,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup};
+module.exports={registerNetworkAcquisitionInvitations,websiteEvidence,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup,warmupDailyCap,networkWarmupSnapshot};

@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {registerNetworkAcquisitionInvitations,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup}=require('./network-acquisition-invitations.cjs');
+const {registerNetworkAcquisitionInvitations,sameBusinessEmail,sameBusinessUrl,publicCompanyContact,inviteMarkup,warmupDailyCap,networkWarmupSnapshot}=require('./network-acquisition-invitations.cjs');
 assert.equal(sameBusinessEmail('info@acme.com','acme.com'),true);
 assert.equal(sameBusinessEmail('no-reply@acme.com','acme.com'),false);
 assert.equal(sameBusinessEmail('hello@gmail.com','acme.com'),false);
@@ -33,8 +33,9 @@ const pool={query:async(sql,args=[])=>{
  calls.push(sql);
  if(sql.startsWith('SELECT id,business_name,domain,canonical_url'))return {rows:[company]};
  if(sql.includes('contact_intelligence_suppressions'))return {rows:[{blocked:false}]};
- if(sql.includes('SELECT count(*)::int AS sent_today'))return {rows:[{sent_today:0}]};
- if(sql.includes('count(*) FILTER('))return {rows:[{sent_today:0,total_sent:0,interested:0}]};
+ if(sql.includes('FROM warmup_config WHERE user_id='))return {rows:[{progress_day:9,is_active:true,progress_updated_at:'2026-10-14T14:00:33Z'}]};
+ if(sql.includes('FROM prospect_quick_scans WHERE outreach_sent_at IS NOT NULL'))return {rows:[{sent_today:0,total_sent:258}]};
+ if(sql.includes("FROM network_directory_businesses WHERE source='maps_acquisition'"))return {rows:[{sent_today:0,total_sent:0,interested:0}]};
  if(sql.includes('RETURNING id')&&sql.includes('UPDATE network_directory_businesses')){
   if(sql.includes("'{acquisition,invitation}'")&&sql.includes('RETURNING id')){
    if(company.metadata.acquisition.invitation?.status)return {rows:[]};
@@ -61,6 +62,25 @@ function response(){
 }
 async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){const res=response();await routes[method+' '+url]({body,headers,params},res);return res;}
 (async()=>{
+ assert.equal(warmupDailyCap(9),30,'day 9 must retain the original Lead Crawler 30/day target');
+ assert.equal(warmupDailyCap(1),20);assert.equal(warmupDailyCap(43),null);
+ let limits=await run('GET','/api/network/admin/acquisition/outreach-status');
+ assert.equal(limits.statusCode,200,'existing original warm-up progress must load through Network Acquisitie');
+ assert.equal(limits.body.warmup.progress_day,9);
+ assert.equal(limits.body.warmup.daily_cap,30);
+ assert.equal(limits.body.warmup.total_sent,258,'send history is not reset when entering Network');
+ assert.equal(limits.body.daily_cap,2,'Network cap is independent of overall warm-up');
+ assert.equal(limits.body.can_send_now,true);
+ limits=await run('GET','/api/network/admin/acquisition/outreach-status',{}, {'x-admin-code':'bad'});
+ assert.equal(limits.statusCode,403,'warm-up counters require admin session');
+ const reachingCap=await networkWarmupSnapshot({query:async(sql)=>{
+  if(sql.includes('FROM warmup_config'))return {rows:[{progress_day:9,is_active:true}]};
+  if(sql.includes('FROM prospect_quick_scans'))return {rows:[{sent_today:29,total_sent:258}]};
+  return {rows:[{sent_today:1,total_sent:1,interested:0}]};
+ }});
+ assert.equal(reachingCap.warmup.sent_today,30,'shared sender count includes both acquisition streams');
+ assert.equal(reachingCap.warmup.remaining_today,0);
+ assert.equal(reachingCap.can_send_now,false,'Network must not exceed sender warm-up limit');
  let r=await run('POST','/api/network/admin/acquisition/prepare-invitation',{company_id:7,email:'info@acme.com',source_url:'https://acme.com/contact'},{'x-admin-code':'bad'});
  assert.equal(r.statusCode,403);assert.equal(sent,0);
  r=await run('POST','/api/network/admin/acquisition/prepare-invitation',{company_id:7,email:'info@acme.com',source_url:'https://acme.com/contact'});
