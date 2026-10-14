@@ -107,9 +107,10 @@ function registerLeadCrawlerSerpApi(app,{
   const niche=clean(raw.niche,70);
   if(!scope||niche.length<2||niche.length>70)return res.status(400).json({error:'Select USA, New Jersey and a niche'});
   const primaryKey=String(serperKey()||'').trim();
-  const fallbackKey=String(apiKey()||'').trim();
-  if(!primaryKey&&!fallbackKey)return res.status(503).json({
-    error:'NJ business search is not configured. Set SERPER_API_KEY or SERPAPI_KEY in Railway.'
+  // SerpAPI is deliberately excluded from this flow: it is a distinct provider
+  // and its HTTP 401 must not mask successful Serper.dev research.
+  if(!primaryKey)return res.status(503).json({
+    error:'NJ business search requires SERPER_API_KEY (Serper.dev) in Railway.'
   });
   // Network is the canonical history. Never offer an already imported company
   // as a "new" result, even after browser refresh, another user, or a deployment.
@@ -126,17 +127,17 @@ function registerLeadCrawlerSerpApi(app,{
   const query=niche+' businesses in '+scope.location+', USA';
   const seen=new Set(knownDomains),leads=[],failures=[];
   let attempts=0,usedCache=true,provider=null,pagesChecked=0;
-  // Maps providers return about 20 businesses/page. Continue to the next
+  // Serper.dev Maps returns about 20 businesses/page. Continue to the next
   // provider page when earlier results were already imported. Hard cap at 6.
   for(let page=0;page<6&&leads.length<20;page++){
    const cacheKey=[scope.location.toLowerCase(),niche.toLowerCase(),String(page)].join('|');
    const cached=cache.get(cacheKey);
    let rows=null,pageProvider=null;
-   if(cached&&cached.until>Date.now()&&((cached.provider==='google_maps_serper'&&primaryKey)||(cached.provider==='google_maps_serpapi'&&fallbackKey))){
+   if(cached&&cached.until>Date.now()&&cached.provider==='google_maps_serper'&&primaryKey){
     rows=cached.rows;pageProvider=cached.provider;
    }else{
     usedCache=false;
-    if(primaryKey){
+    if(!providerBlocked('Serper',primaryKey)){
      attempts++;
      try{rows=await querySerper({fetchImpl,key:primaryKey,query,page});pageProvider='google_maps_serper';}
      catch(err){
@@ -144,17 +145,9 @@ function registerLeadCrawlerSerpApi(app,{
       failures.push('Serper '+message);providerFailed('Serper',primaryKey,message);console.warn('[lead-crawler] Serper provider failed:',message);
      }
     }
-    if(rows===null&&fallbackKey){
-     attempts++;
-     try{rows=await querySerpApi({fetchImpl,key:fallbackKey,query,page});pageProvider='google_maps_serpapi';}
-     catch(err){
-      const message=err instanceof ProviderFailure?err.reason:(err?.name==='TimeoutError'?'timeout':'request failed');
-      failures.push('SerpAPI '+message);providerFailed('SerpAPI',fallbackKey,message);console.warn('[lead-crawler] SerpAPI provider failed:',message);
-     }
-    }
     if(rows===null){
      if(!leads.length)return res.status(503).json({
-      error:'Google Maps providers unavailable: '+(failures.length?failures.join('; '):[providerBlocked('Serper',primaryKey),providerBlocked('SerpAPI',fallbackKey)].filter(Boolean).join('; '))+'. Check API keys and Maps permissions in Railway. Repeated failing requests are paused for 10 minutes.',
+      error:'Serper.dev Maps request unavailable: '+(failures.length?failures.join('; '):(providerBlocked('Serper',primaryKey)||'No provider response'))+'. Existing Network companies remain saved. Check the Serper response and query; failed requests are paused for 10 minutes.',
       providers_attempted:attempts
      });
      break; // Preserve already discovered, source-backed leads.
