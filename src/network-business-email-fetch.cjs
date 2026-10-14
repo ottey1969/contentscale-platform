@@ -3,6 +3,7 @@
 const dns=require('node:dns').promises;
 const https=require('node:https');
 const net=require('node:net');
+const zlib=require('node:zlib');
 const EmailDetectionService=require('./services/email-detection-service');
 const paths=['/','/contact','/contact-us','/about','/about-us','/contacto','/kontakt','/over-ons'];
 function publicIP(ip){
@@ -35,8 +36,12 @@ async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.reque
   let done=false;
   const finish=(err,data)=>{if(done)return;done=true;err?reject(err):resolvePage(data)};
   const req=request({hostname:host,servername:host,path,method:'GET',port:443,
-   headers:{'Accept':'text/html','User-Agent':'ContentScale-Contact-Discovery/1.0'},
-   lookup:(_hostname,_options,cb)=>cb(null,chosen.address,chosen.family),
+   headers:{'Accept':'text/html','Accept-Encoding':'identity','User-Agent':'ContentScale-Contact-Discovery/1.0'},
+   // Node's autoSelectFamily passes lookup({all:true}) and expects an ARRAY.
+   // Returning a scalar address caused ERR_INVALID_IP_ADDRESS for every real site.
+   lookup:(_hostname,lookupOptions,cb)=>lookupOptions?.all
+    ? cb(null,[{address:chosen.address,family:chosen.family}])
+    : cb(null,chosen.address,chosen.family),
    timeout:5000,rejectUnauthorized:true},res=>{
     if([301,302,303,307,308].includes(res.statusCode)&&res.headers.location){
      res.resume();
@@ -54,12 +59,32 @@ async function readWebsitePage(host,path,{resolve=dns.lookup,request=https.reque
     if(Number(res.headers['content-length']||0)>750000){res.destroy();return finish(Error('Too large'));}
     let total=0,buffers=[];
     res.on('data',chunk=>{total+=chunk.length;if(total>750000){res.destroy();finish(Error('Too large'))}else buffers.push(chunk)});
-    res.on('end',()=>finish(null,Buffer.concat(buffers).toString('utf8')));
+    res.on('end',()=>{
+      try{
+       let bytes=Buffer.concat(buffers);
+       const encoding=String(res.headers['content-encoding']||'identity').toLowerCase();
+       if(encoding==='gzip'||encoding==='x-gzip')bytes=zlib.gunzipSync(bytes,{maxOutputLength:1500000});
+       else if(encoding==='deflate')bytes=zlib.inflateSync(bytes,{maxOutputLength:1500000});
+       else if(encoding==='br')bytes=zlib.brotliDecompressSync(bytes,{maxOutputLength:1500000});
+       else if(encoding!=='identity')throw Error('Unsupported content encoding');
+       if(bytes.length>1500000)throw Error('HTML too large after decompression');
+       finish(null,bytes.toString('utf8'));
+      }catch(e){finish(e);}
+    });
     res.on('error',err=>finish(err));
   });
   req.on('timeout',()=>req.destroy(Error('Timeout')));
   req.on('error',err=>finish(err));req.end();
  });
+}
+function fetchFailureCategory(e){
+ const key=String(e?.code||e?.message||'').toUpperCase();
+ if(/ENOTFOUND|EAI_AGAIN|ENODATA/.test(key))return 'dns_error';
+ if(/ERR_INVALID_IP_ADDRESS|EADDRNOTAVAIL|ECONNREFUSED|ENETUNREACH|ETIMEDOUT|TIMEOUT|ECONNRESET/.test(key))return 'connection_error';
+ if(/CERT|TLS|SSL|UNABLE_TO_VERIFY/.test(key))return 'tls_error';
+ if(/HTTP 403|HTTP 429|HTTP 503|NOT HTML/.test(key))return 'blocked_or_non_html';
+ if(/TOO LARGE|TOO MANY/.test(key))return 'limited';
+ return 'fetch_error';
 }
 async function discoverCompanyContact(website,options={}){
  const {host,websiteHost}=hostForWebsite(website);
@@ -80,15 +105,18 @@ async function discoverCompanyContact(website,options={}){
     const address=raw.toLowerCase(),mailDomain=address.split('@')[1],local=address.split('@')[0];
     if(/^(no-?reply|donotreply|bounce|mailer-daemon)$/i.test(local)||
        /\.(?:png|jpe?g|webp|svg|gif|css|js)$/i.test(address)||
-       /^(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com|example\.com|example\.org)$/i.test(mailDomain))continue;
+       /^(example\.com|example\.org)$/i.test(mailDomain))continue;
     const same=mailDomain===host||mailDomain===websiteHost||host.endsWith('.'+mailDomain);
+    const freemail=/^(gmail\.com|yahoo\.com|outlook\.com|hotmail\.com|aol\.com|icloud\.com)$/i.test(mailDomain);
     if(!results.has(address))results.set(address,{email:address,source_url:source,
-       email_domain_relationship:same?'same_domain':'publicly_listed_other_business_domain'});
+       contact_review_required:freemail,
+       email_domain_relationship:same?'same_domain':freemail?'public_mailbox_review_required':'publicly_listed_other_business_domain'});
    }
-  }catch(e){checked.push({url:source,status:'unavailable'});}
+  }catch(e){checked.push({url:source,status:'unavailable',reason:fetchFailureCategory(e)});}
  }
  const contacts=[...results.values()].sort((a,b)=>service.scoreEmail(b.email,host)-service.scoreEmail(a.email,host));
  return {domain:host,email:contacts[0]?.email||null,source_url:contacts[0]?.source_url||null,
-  contacts,checked,relationship:contacts[0]?.email_domain_relationship||null,verification:contacts.length?'publicly_observed':'not_found'};
+  contacts,checked,relationship:contacts[0]?.email_domain_relationship||null,contact_review_required:!!contacts[0]?.contact_review_required,
+  verification:contacts.length?'publicly_observed':checked.every(c=>c.status==='unavailable')?'fetch_unavailable':'not_found'};
 }
-module.exports={discoverCompanyContact,hostForWebsite,publicIP,readWebsitePage};
+module.exports={discoverCompanyContact,hostForWebsite,publicIP,readWebsitePage,fetchFailureCategory};

@@ -1,0 +1,13 @@
+name: Network Public Website Fetch Smoke
+on:
+  workflow_dispatch:
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node src/network-email-fetch-diagnostic.cjs
