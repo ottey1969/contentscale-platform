@@ -19,5 +19,17 @@ express.application.init=function(...args){
     return res.sendFile(path.join(__dirname,'public','network-acquisition.html'));
   });
 };
+// Preserve actionable file/line diagnostics when optional modules fail registration.
+const Module=require('node:module');
+const originalLoad=Module._load;
+Module._load=function(request,parent,isMain){
+  try{return originalLoad.apply(this,arguments);}
+  catch(err){
+    if(err instanceof SyntaxError){
+      console.error('[syntax-load-diagnostic] request='+request+' parent='+String(parent?.filename||'unknown')+' stack='+String(err.stack||err));
+    }
+    throw err;
+  }
+};
 // Continue into the existing canonical server. No shell && chaining required.
 require('./src/index.js');
