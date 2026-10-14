@@ -46,6 +46,8 @@
 (function(){
 'use strict';
 const el=id=>document.getElementById(id);
+// Migration cleanup: remove any admin code left by older versions of this page.
+try{sessionStorage.removeItem('lc_admin_code');sessionStorage.removeItem('lc_role');}catch{}
 let authenticated=false;
 let companies=[],total=0,outreach=null,busy=false,openId=null,prepared=new Map(),autoStarted=false;
 function tag(name,text,cls){const x=document.createElement(name);if(text!==undefined)x.textContent=text;if(cls)x.className=cls;return x;}
