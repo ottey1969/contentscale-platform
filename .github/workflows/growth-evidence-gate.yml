@@ -81,7 +81,10 @@ jobs:
       - name: Brevo accepted-versus-delivery evidence reconciliation
         run: node src/network-brevo-event-sync.test.cjs
       - name: Audit 20 interest inline JavaScript label
-        run: node tests/audit20-inline-label.test.cjs
+        run: |
+          node tests/audit20-inline-label.test.cjs
+          node scripts/fix-audit20-inline-label.cjs src/index.js
+          node --check src/index.js
       - name: New Jersey USA niche controls and legacy bucket preservation
         run: node tests/lead-crawler-nj-niche.test.cjs
       - name: Verified indexed editorial research and overlap
