@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Network acquisition review | ContentScale</title>
+<style>body{background:#101827;color:#e8edf5;font:15px system-ui;margin:0;padding:24px}main{max-width:1130px;margin:0 auto}h1{font-size:26px}p{color:#adbcd0}a{color:#70b8ff}
+table{border-collapse:collapse;width:100%;margin-top:22px}td,th{padding:12px;text-align:left;border-bottom:1px solid #344357}th{color:#b1c2d8;font-weight:600}
+.status{color:#facc15}button{background:#243149;border:1px solid #60728c;color:white;padding:9px 13px;border-radius:6px;cursor:pointer}#message{margin:14px 0}.bad{color:#fb7185}</style></head><body><main>
+<p><a href="/lead-crawler">← Lead Crawler</a> · <a href="/network">Network home</a></p>
+<h1>Network · Acquired business candidates</h1>
+<p>Private, imported New Jersey companies. A Google Maps listing is not proof that a website is suitable to publish content. Verify the website and whether this business should be a publisher or a potential client.</p>
+<p><strong>Emails sent: 0.</strong> No automatic invitations, membership or public directory listings were created. The CEO email queue is separate.</p>
+<button id="refresh">Refresh candidates</button><div id="message">Loading…</div>
+<table><thead><tr><th>Company</th><th>Location / niche</th><th>State</th><th>Next action</th></tr></thead><tbody id="rows"></tbody></table>
+</main><script>
+(function(){
+ const message=document.getElementById('message'),tbody=document.getElementById('rows');
+ function td(row,child){const cell=document.createElement('td');if(child instanceof Node)cell.appendChild(child);else cell.textContent=String(child||'');row.appendChild(cell)}
+ async function load(){
+  message.className='';message.textContent='Loading…';
+  try{
+   const key=sessionStorage.getItem('lc_admin_code')||'';
+   const response=await fetch('/api/network/admin/acquisition/candidates',{headers:{'x-admin-code':key},cache:'no-store'});
+   const data=await response.json();
+   if(!response.ok)throw Error(data.error||'Log in to Lead Crawler as admin and return here.');
+   tbody.textContent='';
+   data.candidates.forEach(c=>{
+    const tr=document.createElement('tr'),company=document.createElement('div'),link=document.createElement('a');
+    company.textContent=c.business_name;
+    link.href=c.canonical_url;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open website';
+    const wrap=document.createElement('div');wrap.append(company,link);
+    td(tr,wrap);td(tr,(c.primary_niche||'Unknown niche')+' · '+(c.city||'NJ')+', USA');
+    const status=document.createElement('span');status.className='status';status.textContent='Private · not verified';
+    td(tr,status);td(tr,'Inspect website, validate publisher fit and business contact before inviting');
+    tbody.appendChild(tr);
+   });
+   message.textContent=data.candidates.length+' private Network candidates. No emails sent.';
+  }catch(error){message.className='bad';message.textContent=error.message}
+ }
+ document.getElementById('refresh').onclick=load;load();
+})();
+</script></body></html>
