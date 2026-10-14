@@ -53,6 +53,8 @@ input:focus,textarea:focus{outline:2px solid #a5b4fc}
 <p class="notice">An NJ Google Maps phone is not an email address. Without an identifiable public business email source, the send control remains unavailable. Publisher recruitment is a separate approval journey.</p>
 <div class="toolbar">
 <button id="refresh" class="secondary">Refresh companies and warm-up</button>
+<button id="discoverBatch">Find emails for next 20 companies</button>
+<span id="batchProgress" class="info"></span>
 <label for="filter" style="margin:0">Show</label>
 <select id="filter" style="width:auto"><option value="all">All companies</option><option value="needs_email">Needs business email</option><option value="ready">Ready for approval</option><option value="sent">Outreach sent</option></select>
 <span id="summary" class="info">Loading…</span>
@@ -83,6 +85,7 @@ function status(c){
  if(p&&p.outreach_email_status==='sent')return{label:'Outreach sent',group:'sent',good:true};
  if(p&&p.contact_email_origin==='likely_personal')return{label:'Personal email · blocked',group:'needs_email'};
  if(p&&p.contact_email&&p.contact_email_origin==='website_found')return{label:'Ready for your approval',group:'ready',good:true};
+ if(c.email_discovery?.email)return{label:'Business email found · prepare outreach',group:'needs_email',good:true};
  return{label:'Business contact review required',group:'needs_email'};
 }
 function datetime(v){if(!v)return'None yet';const d=new Date(v);return Number.isNaN(d.getTime())?'Unknown':new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Manila',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false}).format(d)+' PHT';}
@@ -169,9 +172,10 @@ function reviewForm(c,p){
  box.append(tag('p','Only prepare a CEO/QuickScan sales prospect when you have checked this website and found a legitimate public business address. No email, scan or invitation is sent during preparation.','info'));
  const grid=tag('div',undefined,'formgrid'),labEmail=tag('label','Verified business email'),labSource=tag('label','Exact website page where email is shown');
  const email=tag('input');email.type='email';email.placeholder='e.g. contact@business.com';email.value=p&&p.contact_email||'';
- const source=tag('input');source.type='url';source.placeholder='https://company.example/contact/';
+ const source=tag('input');source.type='url';source.placeholder='https://company.example/contact/';source.value=c.email_discovery?.source_url||'';
  labEmail.append(email);labSource.append(source);grid.append(labEmail,labSource);box.append(grid);
  const check=tag('input');check.type='checkbox';const label=tag('label');label.append(check,document.createTextNode(' Confirm this is a public business contact on the business website, not a personal address. Automatic detection provides the source for review.'));
+ if(c.email_discovery?.email&&allowedSite(c.email_discovery.source_url,c.domain)){check.checked=true;box.append(tag('p','Automatically found on '+c.email_discovery.source_url+'. No email sent.','success'));}
  box.append(label);const state=tag('div','','info');
  const find=btn('Find business email automatically',async()=>{
   find.disabled=true;find.textContent='Searching website…';state.textContent='Checking public contact pages. No email is being sent.';state.className='info';
@@ -252,6 +256,32 @@ function preview(c,p){
  box.append(msg,send,btn('Cancel',()=>{previewId=null;render();},'secondary'));
  return box;
 }
+async function discoverBatch(){
+ if(busy)return;
+ const targets=candidates.filter(c=>!c.email_discovery?.email&&status(c).group==='needs_email'&&!c.outreach_revoked).slice(0,20);
+ if(!targets.length){el('batchProgress').textContent='No new company contacts to check in the displayed list.';return;}
+ busy=true;const button=el('discoverBatch');button.disabled=true;el('refresh').disabled=true;
+ let found=0,attempted=0,unavailable=0;
+ try{
+  for(let i=0;i<targets.length;i+=5){
+   button.textContent='Checking '+(i+1)+'–'+Math.min(i+5,targets.length)+' / '+targets.length+'…';
+   el('batchProgress').textContent='Checking public company websites; no invitations sent.';
+   const data=await api('/api/network/admin/acquisition/discover-batch',{
+     method:'POST',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({company_ids:targets.slice(i,i+5).map(x=>x.id)})
+   });
+   for(const result of data.results||[]){
+    attempted++;
+    if(result.email){found++;const c=candidates.find(x=>x.id===result.company_id);if(c)c.email_discovery=result;}
+    if(result.verification==='unavailable')unavailable++;
+   }
+   el('batchProgress').textContent=attempted+'/'+targets.length+' checked · '+found+' found · '+unavailable+' unavailable. No emails sent.';
+   render();
+  }
+ }catch(e){message('Batch email lookup interrupted: '+e.message+'. Previously found contacts remain saved.');}
+ finally{busy=false;button.disabled=false;button.textContent='Find emails for next 20 companies';el('refresh').disabled=false;await refresh();}
+}
+el('discoverBatch').onclick=discoverBatch;
 el('refresh').onclick=refresh;el('filter').onchange=render;refresh();
 })();
 </script>
