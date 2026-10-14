@@ -37,18 +37,13 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
    return res.json({candidates:result.rows,total:Number(count.rows[0]?.total||0)});
   }catch(e){console.error('[network-acquisition] list',e.code||e.message);return res.status(503).json({error:'Network candidate list unavailable'})}
  });
- app.post('/api/network/admin/acquisition/discover-batch',async(req,res)=>{
-  if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
-  const supplied=req.body?.company_ids;
-  // PostgreSQL BIGINT arrives as a decimal string in pg. Normalize without precision loss.
-  const ids=Array.isArray(supplied)?supplied.map(id=>typeof id==='string'?id.trim():String(id)):[];
-  if(ids.length<1||ids.length>5||new Set(ids).size!==ids.length||
-   ids.some(id=>!/^[1-9][0-9]{0,18}$/.test(id)||BigInt(id)>9223372036854775807n))
-   return res.status(400).json({error:'Select 1 to 5 unique acquisition company IDs'});
-  try{
-   const companies=await pool.query(
+
+ // One canonical discovery path shared by the admin batch and the automatic
+ // recovery of legacy scans. Never prepares or dispatches email.
+ async function discoverAndSave(ids){
+  const companies=await pool.query(
     "SELECT id,domain,canonical_url,metadata->'acquisition'->'email_discovery' AS email_discovery, metadata->'acquisition'->'website_review' AS website_review FROM network_directory_businesses WHERE id=ANY($1::bigint[]) AND source='maps_acquisition'",[ids]);
-   if(companies.rows.length!==ids.length)return res.status(404).json({error:'One or more companies not found'});
+   if(companies.rows.length!==ids.length)throw Error('ACQUISITION_COMPANIES_NOT_FOUND');
    const results=await Promise.all(companies.rows.map(async company=>{
     let site=company.website_review;
     if(!site?.checked_at||(site.status==='review_required'&&/Website unavailable or restricted|Website check failed/i.test(site.reason||''))){
@@ -71,6 +66,46 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
      return {company_id:company.id,...failed,website_review:site,error:'Website contact lookup unavailable'};
     }
    }));
+
+  return results;
+ }
+ let emailBackfillScheduled=false,emailBackfillRunning=false;
+ function scheduleEmailBackfill(){
+  if(emailBackfillScheduled||emailBackfillRunning)return;
+  emailBackfillScheduled=true;
+  const timer=setTimeout(async()=>{
+   emailBackfillScheduled=false;
+   if(emailBackfillRunning)return;
+   emailBackfillRunning=true;
+   let inspected=0,found=0;
+   try{
+    const rows=await pool.query(`SELECT id FROM network_directory_businesses
+      WHERE source='maps_acquisition'
+        AND COALESCE(metadata->'acquisition'->'email_discovery'->>'email','')=''
+        AND COALESCE(metadata->'acquisition'->'email_discovery'->>'version','')<>'public-v4'
+        AND COALESCE(metadata->'acquisition'->'invitation'->>'status','')=''
+      ORDER BY id DESC LIMIT 25`);
+    for(let i=0;i<rows.rows.length;i+=5){
+     const ids=rows.rows.slice(i,i+5).map(x=>String(x.id));
+     const results=await discoverAndSave(ids);
+     inspected+=results.length;found+=results.filter(x=>x.email).length;
+    }
+    if(inspected)console.info('[network-acquisition-backfill] sites='+inspected+' emails_found='+found+' no_email_sent=true');
+   }catch(e){console.error('[network-acquisition-backfill]',e.code||e.message);}
+   finally{emailBackfillRunning=false;}
+  },12000);
+  if(typeof timer.unref==='function')timer.unref();
+ }
+ app.post('/api/network/admin/acquisition/discover-batch',async(req,res)=>{
+  if(!auth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
+  const supplied=req.body?.company_ids;
+  // PostgreSQL BIGINT arrives as a decimal string in pg. Normalize without precision loss.
+  const ids=Array.isArray(supplied)?supplied.map(id=>typeof id==='string'?id.trim():String(id)):[];
+  if(ids.length<1||ids.length>5||new Set(ids).size!==ids.length||
+   ids.some(id=>!/^[1-9][0-9]{0,18}$/.test(id)||BigInt(id)>9223372036854775807n))
+   return res.status(400).json({error:'Select 1 to 5 unique acquisition company IDs'});
+  try{
+   const results=await discoverAndSave(ids);
    return res.json({results,emails_sent:0});
   }catch(e){console.error('[network-acquisition] batch discovery',e.code||e.message);return res.status(503).json({error:'Batch lookup unavailable; existing acquisition records preserved'})}
  });
@@ -114,11 +149,13 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized}){
     const result=await pool.query(sql,[slug,c.name,c.domain,c.website,c.place_id,c.niche,'New Jersey',JSON.stringify(meta)]);
     if(result.rows.length)inserted++;else duplicates++;
    }
+   if(inserted>0)scheduleEmailBackfill();
    return res.json({success:true,imported:inserted,duplicates,submitted:entries.length,review_url:'/network/acquisition',
      status:'private_review',emails_sent:0,public_listed:0});
   }catch(e){console.error('[network-acquisition] import',e.code||e.message);
    return res.status(503).json({error:'Network import interrupted. Check the review list before retrying; duplicate websites cannot be imported twice.'})}
  });
  registerNetworkAcquisitionInvitations({app,pool,auth});
+ scheduleEmailBackfill();
 }
 module.exports={registerNetworkMapsAcquisition,candidate};
