@@ -16,7 +16,7 @@ function bucket(q,brand){
  if(domainStem.length>=6&&n.includes(domainStem))return 'brand_or_ambiguous';
  // Common user searches abbreviate company names by omitting the final
  // legal/crew term; treat these as ambiguous instead of promising nonbrand leads.
- if(domainStem==='perfectroofingteam'&&/^perfect roofing(?: team)?(?: |$)/.test(k))return 'brand_or_ambiguous';
+ if(domainStem.length>=10&&n.length>=8&&n!==domainStem&&domainStem.startsWith(n)&&k.split(' ').length>=2)return 'brand_or_ambiguous';
  return 'non_brand';
 }
 function host(url){try{return new URL(url).hostname.toLowerCase()}catch{return ''}}
@@ -91,7 +91,7 @@ function buildGrowthClientBrief(g){
   'Non-branded query impressions (NOT unique visitors): '+g.non_brand.impressions,
   'Non-branded organic clicks: '+g.non_brand.clicks,
   'Branded/ambiguous query clicks: '+g.brand_or_ambiguous.clicks,
-  'Qualified roofing/customer inquiries: NOT MEASURED in this report.',
+  'Qualified calls, forms and customer inquiries: NOT MEASURED in this report.',
   '',
   top?'PRIORITY QUERY: '+top.query:'NEXT ACTION: Import fresh exact-page Search Console queries.',
   top?'Existing URL: '+top.url:'',
