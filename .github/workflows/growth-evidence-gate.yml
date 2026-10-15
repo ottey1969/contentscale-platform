@@ -72,6 +72,41 @@ jobs:
         run: node src/growth-live-routes.test.cjs
       - name: Tracker to WordPress integration contract
         run: node src/tracker-growth-wordpress-integration.test.cjs
+  growth-schema:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: growth_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d growth_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: test_only_password
+      PGDATABASE: growth_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create only minimal test parent keys
+        run: psql -v ON_ERROR_STOP=1 -c 'CREATE TABLE tracker_clients(id INTEGER PRIMARY KEY); CREATE TABLE tracker_pages(id INTEGER PRIMARY KEY);'
+      - name: Verify Growth migrations on disposable PostgreSQL
+        run: |
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-wordpress-page-mapping.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-page-import-runs.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-wordpress-page-mapping.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-page-import-runs.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('growth_wordpress_page_mapping','growth_gsc_page_import_runs')" | grep -qx '2'
   growth-gate:
     runs-on: ubuntu-latest
     permissions:
