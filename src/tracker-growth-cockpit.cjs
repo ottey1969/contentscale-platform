@@ -62,7 +62,7 @@ function computeGrowth(rows,queries,domain,now=new Date()){
     : type==='STRIKING_DISTANCE'
     ? ['Compare the top-ranking results and their search intent against this exact page','Identify factual information, first-hand examples or helpful sections genuinely missing','Add relevant contextual internal links from existing related pages','Publish only verified improvements and measure page-query clicks after indexing']
     : ['Verify the exact query intent against the current page and live search results','Compare competitor coverage and identify real, non-duplicative gaps','Improve the existing page and connect relevant hub/spoke internal links','Capture a comparable 28-day GSC baseline before publication and review again after'];
-   return {page_id:q.page_id,url:page?.url||'',query:String(q.query),impressions,clicks,
+   return {page_id:q.page_id,url:page?.url||'',query:String(q.query),impressions,clicks,imported_at:q.imported_at||null,
     position:Number(pos.toFixed(1)),ctr:Number((ctr*100).toFixed(2)),type,priority_score:Math.round(score),
     case_study_locked:!!page?.case_study_active,checklist,
     action:type==='SNIPPET_AND_INTENT_REVIEW'?'Review the actual SERP appearance, search intent, title and description; do not promise snippet CTR gains':
