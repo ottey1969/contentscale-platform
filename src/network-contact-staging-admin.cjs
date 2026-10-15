@@ -42,7 +42,7 @@ function registerContactStagingAdmin(app,pool,auth){
     checked++;
     if(evidence.status==='site_observed'){
      verified++;
-     await pool.query("UPDATE contact_intelligence SET status=CASE WHEN status IN ('qualified','needs_review') THEN 'domain_verified' ELSE status END,website_url=COALESCE(website_url,$2),website_verified_at=NOW(),updated_at=NOW() WHERE id=$1 AND status NOT IN ('archived','suppressed')",[c.id,website]);
+     await pool.query("UPDATE contact_intelligence SET website_verified_at=CASE WHEN status='domain_verified' THEN NOW() ELSE website_verified_at END,reason=CASE WHEN status='domain_verified' THEN reason ELSE 'Homepage reachable; complete canonical QuickScan website verification for Network' END,updated_at=NOW() WHERE id=$1 AND status NOT IN ('archived','suppressed')",[c.id]);
     }else{
      await pool.query("UPDATE contact_intelligence SET reason='Website recheck requires manual review',updated_at=NOW() WHERE id=$1 AND status NOT IN ('archived','suppressed')",[c.id]);
     }
