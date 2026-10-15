@@ -5,11 +5,18 @@ const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 function bucket(q,brand){
  const k=norm(q);
  if(!k)return 'unknown';
- const stem=norm(brand||'').replace(/ /g,'');
+ // Brand names in Tracker are usually passed as a domain. Comparing the whole
+ // "perfectroofingteamcom" against the query misses "perfect roofing team".
+ // Normalize the registrable site's first hostname label as the brand stem.
+ const raw=String(brand||'').toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').split('/')[0];
+ const domainStem=norm(raw.split('.')[0]).replace(/ /g,'');
  const n=k.replace(/ /g,'');
  if(n.includes('contentscale')||n.includes('contentatscale')||k.includes('content scale')||k.includes('content at scale')||k==='content scaling'||k==='scale content'||k==='sites at scale')
   return 'brand_or_ambiguous';
- if(stem.length>=6&&n.includes(stem))return 'brand_or_ambiguous';
+ if(domainStem.length>=6&&n.includes(domainStem))return 'brand_or_ambiguous';
+ // Common user searches abbreviate company names by omitting the final
+ // legal/crew term; treat these as ambiguous instead of promising nonbrand leads.
+ if(domainStem==='perfectroofingteam'&&/^perfect roofing(?: team)?(?: |$)/.test(k))return 'brand_or_ambiguous';
  return 'non_brand';
 }
 function host(url){try{return new URL(url).hostname.toLowerCase()}catch{return ''}}
@@ -69,6 +76,45 @@ function computeGrowth(rows,queries,domain,now=new Date()){
   non_brand:sum(nonBrand),brand_or_ambiguous:sum(brand),
   evidence_queries:classified.length,query_opportunities:queryOpportunities,pages,case_study_policy:'READ_ONLY_NO_SCAN_NO_BASELINE_MUTATION'};
 }
+// Produces an owner-facing opportunity report, not a fabricated success story.
+// A distinct dated measurement report lives at /growth/measurement.
+function buildGrowthClientBrief(g){
+ const top=g.query_opportunities.find(q=>!q.case_study_locked);
+ const latest=g.query_opportunities.map(q=>q.imported_at).filter(Boolean).sort().at(-1)||null;
+ const lines=[
+  'CONTENTSCALE GROWTH — VERIFIED CLICK OPPORTUNITY',
+  'Website: '+g.domain,
+  'Report generated: '+g.generated_at,
+  'Status: '+(top?'EVIDENCE-BASED IMPROVEMENT OPPORTUNITY':'MORE PAGE-VERIFIED RESEARCH REQUIRED'),
+  'Data scope: latest saved page-specific verified GSC query records; NOT a fixed date-window trend.',
+  'Latest recorded query import: '+(latest||'not available'),
+  'Non-branded query impressions (NOT unique visitors): '+g.non_brand.impressions,
+  'Non-branded organic clicks: '+g.non_brand.clicks,
+  'Branded/ambiguous query clicks: '+g.brand_or_ambiguous.clicks,
+  'Qualified roofing/customer inquiries: NOT MEASURED in this report.',
+  '',
+  top?'PRIORITY QUERY: '+top.query:'NEXT ACTION: Import fresh exact-page Search Console queries.',
+  top?'Existing URL: '+top.url:'',
+  top?'Search Console: '+top.impressions+' impressions; '+top.clicks+' clicks; average position '+top.position:'',
+  top?'Opportunity type: '+top.type:'',
+  top?'Recommended next step: '+top.action:'',
+  '',
+  'WHAT WE WILL DO:',
+  '1. Check the real search intent and ranking competitors for the selected query.',
+  '2. Preserve the existing page and design; add only useful, differentiated, verifiable improvements.',
+  '3. Verify rendered desktop/mobile output and get editorial approval before publishing.',
+  '4. Record the actual publication; compare equal, non-overlapping, dated GSC page-query windows.',
+  '5. Where available, separately measure phone calls, inquiries and attributable jobs.',
+  '',
+  'EVIDENCE LIMITATIONS:',
+  '- Visibility and rankings do not prove traffic or customer acquisition.',
+  '- These are the latest imported page-query observations; do not compare them as equal periods.',
+  '- No future clicks, ranking gains, job revenue or causal impact are guaranteed.',
+  '- Existing Case Studies are read-only during their protected measurement cycle.'
+ ];
+ return lines.filter(x=>x!==undefined).join('\n');
+}
+
 function registerGrowthCockpit(app,pool){
  async function data(req,res,next){
   try{
@@ -116,10 +162,25 @@ function registerGrowthCockpit(app,pool){
   ];
   res.set('Cache-Control','no-store').type('text/plain; charset=utf-8').send(lines.join('\n'));
  });
+ app.get('/api/tracker-client/:token/growth/client-brief',data,(req,res)=>{
+  res.set('Cache-Control','private, no-store').type('text/plain; charset=utf-8')
+    .send(buildGrowthClientBrief(req.growth));
+ });
+ app.get('/track/:token/growth/client-brief',data,(req,res)=>{
+  const report=buildGrowthClientBrief(req.growth);
+  res.set('Cache-Control','private, no-store').type('html').send(
+   '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+   '<title>ContentScale Growth — Client Opportunity Brief</title>'+
+   '<style>body{font:16px/1.55 system-ui;margin:24px auto;max-width:900px;padding:15px;color:#15233a;background:#f6f8fc}main{background:#fff;border:1px solid #dae2ed;padding:24px;border-radius:12px}pre{white-space:pre-wrap;font:inherit;overflow-wrap:anywhere}a{color:#1d4ed8}</style></head><body>'+
+   '<p><a href="/track/'+encodeURIComponent(req.params.token)+'/growth">← Growth Cockpit</a></p><main><h1>Verified Growth Opportunity Brief</h1>'+
+   '<p>This is a documented improvement opportunity, not proof of results yet.</p><pre>'+escapeHtml(report)+'</pre>'+
+   '</main></body></html>'
+  );
+ });
  app.get('/track/:token/growth',data,(req,res)=>{
   const g=req.growth;
   const row=x=>`<tr><td><a href="${escapeHtml(x.url)}" rel="noopener noreferrer" target="_blank">${escapeHtml(x.url)}</a><small>${escapeHtml(x.keyword)}</small></td><td>${x.impressions.toLocaleString()}</td><td>${x.clicks}</td><td>${x.ctr.toFixed(2)}%</td><td>${x.position.toFixed(1)}</td><td>${escapeHtml(x.opportunity)}${x.case_study_active?' · Case Study locked':''}<small>${escapeHtml(x.next_action)}</small></td></tr>`;
-  res.set('Cache-Control','no-store').type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Growth Cockpit</title><style>body{font:15px/1.5 system-ui;background:#f6f8fc;color:#172337;max-width:1150px;margin:auto;padding:24px}h1{font-size:27px}.stats{display:flex;gap:14px;flex-wrap:wrap}.stats section{background:#fff;border:1px solid #d9e0eb;border-radius:12px;padding:16px;min-width:190px}.stats strong{display:block;font-size:25px}table{background:white;border-collapse:collapse;width:100%;margin-top:20px}th,td{text-align:left;border-bottom:1px solid #e0e5ef;padding:12px}small{display:block;color:#64748b}a{color:#1d4ed8;overflow-wrap:anywhere}.note{background:#fff7ed;border:1px solid #fed7aa;padding:14px;border-radius:10px}th{background:#eaf0fa}label{display:block;margin:8px 0}input,textarea{display:block;width:100%;max-width:550px;padding:9px;margin:4px 0;border:1px solid #cbd5e1;border-radius:7px}button{background:#168347;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer}button:disabled{opacity:.5}@media(max-width:680px){table{display:block;overflow-x:auto}}</style></head><body><p><a href="/track/${encodeURIComponent(req.params.token)}">← Tracker</a></p><h1>Growth Cockpit</h1><p>${escapeHtml(g.domain)} · read-only evidence · no automatic scans or publishing</p><div class="stats"><section>Non-brand verified clicks<strong>${g.non_brand.clicks.toLocaleString()}</strong></section><section>Non-brand impressions<strong>${g.non_brand.impressions.toLocaleString()}</strong></section><section>Brand / ambiguous clicks<strong>${g.brand_or_ambiguous.clicks.toLocaleString()}</strong></section><section>Verified query rows<strong>${g.evidence_queries}</strong></section></div><p class="note">These are latest saved query-level records, not a period-over-period growth claim. Brand-ambiguous phrases are excluded from non-brand totals. Case Study baselines remain untouched. Improve existing pages before approving a new spoke.</p><p><a href="/track/${encodeURIComponent(req.params.token)}/growth/measurement" target="_blank" rel="noopener noreferrer">View publication measurement readiness</a> — checks whether published changes can be measured honestly. Missing GSC date ranges are never treated as proof of click growth.</p><h2>Top click opportunities — verified non-brand queries</h2><p>Priorities are based on impressions, position and low clicks. Ranking and CTR changes are not predicted results. Select a row, compare real search results, then improve the existing page.</p><table><thead><tr><th>Query / page</th><th>Impressions</th><th>Clicks</th><th>Position</th><th>Diagnosis and action</th></tr></thead><tbody>${g.query_opportunities.map(q=>`<tr><td><strong>${escapeHtml(q.query)}</strong><small><a href="${escapeHtml(q.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.url)}</a></small></td><td>${q.impressions.toLocaleString()}</td><td>${q.clicks}</td><td>${q.position}</td><td>${escapeHtml(q.type)}${q.case_study_locked?' · Case Study locked':''}<small>${escapeHtml(q.action)}</small><p><a href="/api/tracker-client/${encodeURIComponent(req.params.token)}/growth/brief?page_id=${encodeURIComponent(q.page_id)}&query=${encodeURIComponent(q.query)}" target="_blank" rel="noopener noreferrer">Open / copy execution brief</a></p>${q.case_study_locked?'':`<details><summary>Record actual publication</summary><form class="growth-log-form" data-page="${q.page_id}" data-query="${escapeHtml(q.query)}"><label>Publication date and time <input name="published_at" type="datetime-local" required></label><label>What actually changed? <textarea name="notes" required maxlength="3000" rows="3" placeholder="Describe verified changes and links actually published"></textarea></label><button type="submit">Save publication checkpoint</button><small role="status"></small></form></details>`}<details><summary>Action plan · 4 steps</summary><ol>${q.checklist.map(step=>`<li>${escapeHtml(step)}</li>`).join('')}</ol><p>${q.case_study_locked?'Case Study: research only; do not change this protected page during the measurement cycle.':'No automatic site edits. Review and publish changes deliberately.'}</p></details></td></tr>`).join('')}</tbody></table><h2>Prioritized page opportunities</h2><table><thead><tr><th>Page</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Position</th><th>Next step</th></tr></thead><tbody>${g.pages.map(row).join('')}</tbody></table><script>document.addEventListener('submit',async function(e){var f=e.target;if(!f.classList.contains('growth-log-form'))return;e.preventDefault();var b=f.querySelector('button'),out=f.querySelector('[role=status]');b.disabled=true;b.textContent='Saving…';out.textContent='';try{var x=await fetch('/api/tracker-client/'+encodeURIComponent(location.pathname.split('/')[2])+'/growth/publication',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(f.dataset.page),query:f.dataset.query,notes:f.elements.notes.value,published_at:new Date(f.elements.published_at.value).toISOString()})});var r=await x.json();out.textContent=r.success?'Recorded. Awaiting comparable GSC measurements.':(r.error||'Not saved');}catch(err){out.textContent='Not saved. Check the date and connection.'}finally{b.disabled=false;b.textContent='Save publication checkpoint'}});</script></body></html>`);
+  res.set('Cache-Control','no-store').type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ContentScale Growth Cockpit</title><style>body{font:15px/1.5 system-ui;background:#f6f8fc;color:#172337;max-width:1150px;margin:auto;padding:24px}h1{font-size:27px}.stats{display:flex;gap:14px;flex-wrap:wrap}.stats section{background:#fff;border:1px solid #d9e0eb;border-radius:12px;padding:16px;min-width:190px}.stats strong{display:block;font-size:25px}table{background:white;border-collapse:collapse;width:100%;margin-top:20px}th,td{text-align:left;border-bottom:1px solid #e0e5ef;padding:12px}small{display:block;color:#64748b}a{color:#1d4ed8;overflow-wrap:anywhere}.note{background:#fff7ed;border:1px solid #fed7aa;padding:14px;border-radius:10px}th{background:#eaf0fa}label{display:block;margin:8px 0}input,textarea{display:block;width:100%;max-width:550px;padding:9px;margin:4px 0;border:1px solid #cbd5e1;border-radius:7px}button{background:#168347;color:white;border:0;border-radius:7px;padding:9px 12px;cursor:pointer}button:disabled{opacity:.5}@media(max-width:680px){table{display:block;overflow-x:auto}}</style></head><body><p><a href="/track/${encodeURIComponent(req.params.token)}">← Tracker</a></p><h1>Growth Cockpit</h1><p>${escapeHtml(g.domain)} · read-only evidence · no automatic scans or publishing</p><div class="stats"><section>Non-brand verified clicks<strong>${g.non_brand.clicks.toLocaleString()}</strong></section><section>Non-brand impressions<strong>${g.non_brand.impressions.toLocaleString()}</strong></section><section>Brand / ambiguous clicks<strong>${g.brand_or_ambiguous.clicks.toLocaleString()}</strong></section><section>Verified query rows<strong>${g.evidence_queries}</strong></section></div><p class="note">These are latest saved query-level records, not a period-over-period growth claim. Brand-ambiguous phrases are excluded from non-brand totals. Case Study baselines remain untouched. Improve existing pages before approving a new spoke.</p><p><a href="/track/${encodeURIComponent(req.params.token)}/growth/measurement" target="_blank" rel="noopener noreferrer">View publication measurement readiness</a> — checks whether published changes can be measured honestly. Missing GSC date ranges are never treated as proof of click growth.</p><section class="note"><strong>One recommended next action</strong><p>${escapeHtml(g.query_opportunities.find(x=>!x.case_study_locked)?.action||'Import fresh verified GSC page-query data first.')}</p><p><a href="/track/${encodeURIComponent(req.params.token)}/growth/client-brief">Open owner-ready Growth Opportunity Brief</a> — based only on actual evidence, never a promise of clicks.</p></section><h2>Top click opportunities — verified non-brand queries</h2><p>Priorities are based on impressions, position and low clicks. Ranking and CTR changes are not predicted results. Select a row, compare real search results, then improve the existing page.</p><table><thead><tr><th>Query / page</th><th>Impressions</th><th>Clicks</th><th>Position</th><th>Diagnosis and action</th></tr></thead><tbody>${g.query_opportunities.map(q=>`<tr><td><strong>${escapeHtml(q.query)}</strong><small><a href="${escapeHtml(q.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(q.url)}</a></small></td><td>${q.impressions.toLocaleString()}</td><td>${q.clicks}</td><td>${q.position}</td><td>${escapeHtml(q.type)}${q.case_study_locked?' · Case Study locked':''}<small>${escapeHtml(q.action)}</small><p><a href="/api/tracker-client/${encodeURIComponent(req.params.token)}/growth/brief?page_id=${encodeURIComponent(q.page_id)}&query=${encodeURIComponent(q.query)}" target="_blank" rel="noopener noreferrer">Open / copy execution brief</a></p>${q.case_study_locked?'':`<details><summary>Record actual publication</summary><form class="growth-log-form" data-page="${q.page_id}" data-query="${escapeHtml(q.query)}"><label>Publication date and time <input name="published_at" type="datetime-local" required></label><label>What actually changed? <textarea name="notes" required maxlength="3000" rows="3" placeholder="Describe verified changes and links actually published"></textarea></label><button type="submit">Save publication checkpoint</button><small role="status"></small></form></details>`}<details><summary>Action plan · 4 steps</summary><ol>${q.checklist.map(step=>`<li>${escapeHtml(step)}</li>`).join('')}</ol><p>${q.case_study_locked?'Case Study: research only; do not change this protected page during the measurement cycle.':'No automatic site edits. Review and publish changes deliberately.'}</p></details></td></tr>`).join('')}</tbody></table><h2>Prioritized page opportunities</h2><table><thead><tr><th>Page</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Position</th><th>Next step</th></tr></thead><tbody>${g.pages.map(row).join('')}</tbody></table><script>document.addEventListener('submit',async function(e){var f=e.target;if(!f.classList.contains('growth-log-form'))return;e.preventDefault();var b=f.querySelector('button'),out=f.querySelector('[role=status]');b.disabled=true;b.textContent='Saving…';out.textContent='';try{var x=await fetch('/api/tracker-client/'+encodeURIComponent(location.pathname.split('/')[2])+'/growth/publication',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(f.dataset.page),query:f.dataset.query,notes:f.elements.notes.value,published_at:new Date(f.elements.published_at.value).toISOString()})});var r=await x.json();out.textContent=r.success?'Recorded. Awaiting comparable GSC measurements.':(r.error||'Not saved');}catch(err){out.textContent='Not saved. Check the date and connection.'}finally{b.disabled=false;b.textContent='Save publication checkpoint'}});</script></body></html>`);
  });
 }
-module.exports={registerGrowthCockpit,computeGrowth,bucket};
+module.exports={registerGrowthCockpit,computeGrowth,bucket,buildGrowthClientBrief};
