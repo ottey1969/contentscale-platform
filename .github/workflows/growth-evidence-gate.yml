@@ -12,6 +12,8 @@ on:
       - 'src/growth-edit-instructions*.cjs'
       - 'src/growth-html-draft*.cjs'
       - 'src/growth-elementor-draft*.cjs'
+      - 'src/growth-elementor-rest-bridge*.cjs'
+      - 'wordpress/contentscale-growth-elementor/**'
       - 'src/growth-draft-preparation*.cjs'
       - 'src/growth-wordpress-draft-payload*.cjs'
       - 'src/growth-wordpress-handoff*.cjs'
@@ -74,6 +76,10 @@ jobs:
         run: node src/growth-elementor-draft.test.cjs
       - name: Elementor unpublished builder draft verification
         run: node src/growth-elementor-draft-executor.test.cjs
+      - name: Elementor WordPress authenticated bridge mock E2E
+        run: node src/growth-elementor-rest-bridge.test.cjs
+      - name: PHP WordPress Elementor bridge syntax
+        run: php -l wordpress/contentscale-growth-elementor/contentscale-growth-elementor.php
       - name: Verified adjacent GSC outcomes
         run: node src/growth-gsc-window-comparison.test.cjs
       - name: Canonical Tracker Growth routes
