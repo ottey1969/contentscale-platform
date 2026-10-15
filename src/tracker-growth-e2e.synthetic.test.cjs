@@ -42,7 +42,7 @@ let draft,meta,writes=0;
   checkCanonicalState:async()=>({wordpress_post_id:111,case_study_active:false,allow_draft:true}),
   createDraft:async()=>{writes++;return {id:333,status:'draft'};},
   writeDraftElementorMeta:async x=>{meta=x.elementor_data;},
-  readDraft:async()=>({id:333,type:'pages',status:'draft',elementor_edit_mode:'builder',elementor_data:meta})
+  readDraft:async()=>({id:333,type:'pages',status:'draft',source_post_id:111,elementor_edit_mode:'builder',elementor_data:meta})
  });
  assert.equal(executed.status,'ELEMENTOR_DRAFT_VERIFIED',JSON.stringify(executed.issues));
  assert.equal(executed.published,false);assert.equal(writes,1);
