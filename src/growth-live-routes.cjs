@@ -2,6 +2,7 @@
 // Integrates the existing Tracker, exact-page GSC writer and WordPress identity
 // into ONE admin-only readiness endpoint. No parallel Growth database model.
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
+const {compareGrowthGscWindows}=require('./growth-gsc-window-comparison.cjs');
 function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}){
  if(!app||!pool||typeof verifyEngineAccess!=='function'||typeof fetchExactGsc!=='function')
   throw Error('GROWTH_ROUTE_DEPENDENCIES_REQUIRED');
@@ -67,6 +68,29 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
     next_action:state.page.case_study_active?'PRESERVE_CASE_STUDY_BASELINE':stale?'REFRESH_EXACT_PAGE_GSC':'REVIEW_CLICK_OPPORTUNITIES',
     queries:opportunities,publication_allowed:false});
   }catch(error){return res.status(503).json({success:false,code:'GROWTH_CLICK_OPPORTUNITIES_UNAVAILABLE'});}
+ });
+ app.get('/api/growth/admin/pages/:pageId/outcomes',verifyEngineAccess,adminOnly,async(req,res)=>{
+  const identity=ids(req);
+  if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
+  let state;
+  try {state=await loadGrowthTrackerEvidence(pool,identity);}
+  catch {return res.status(503).json({success:false,code:'GROWTH_CANONICAL_PAGE_UNAVAILABLE'});}
+  try {
+   const runs=await pool.query(
+    'SELECT page_url,gsc_property,start_date,end_date,clicks,impressions,position,query_count,imported_at FROM growth_gsc_page_import_runs WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND page_url=$3 ORDER BY end_date DESC,imported_at DESC LIMIT 100',
+    [identity.clientId,identity.pageId,state.page.url]);
+   const comparison=compareGrowthGscWindows({pageUrl:state.page.url,runs:runs.rows||[]});
+   return res.json({success:true,page_id:identity.pageId,client_id:identity.clientId,
+    case_study_locked:state.page.case_study_active===true,
+    publication_allowed:false,metric_scope:'gsc_exact_page_import_runs',
+    ...comparison});
+  }catch(error){
+   const missing=error?.code==='42P01';
+   return res.status(503).json({success:false,status:missing?'GSC_HISTORY_SCHEMA_REQUIRED':'GSC_HISTORY_UNAVAILABLE',
+    code:missing?'GSC_HISTORY_SCHEMA_REQUIRED':'GSC_HISTORY_UNAVAILABLE',
+    page_id:identity.pageId,publication_allowed:false,
+    next_action:missing?'VERIFY_EXISTING_GSC_IMPORT_MIGRATION':'RETRY_READ_ONLY_GSC_HISTORY'});
+  }
  });
  app.post('/api/growth/admin/pages/:pageId/refresh-gsc',verifyEngineAccess,adminOnly,async(req,res)=>{
   const identity=ids(req);if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
