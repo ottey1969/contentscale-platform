@@ -36,6 +36,18 @@ async function call(overrides={},admin=true){
  await next(0);return res;
 }
 (async()=>{
+ const screen=app.routes['GET /growth/cms-handoff'];
+ assert.equal(screen.length,1);
+ const screenRes={headers:{},set(k,v){this.headers[k]=v;return this},
+  type(x){this.contentType=x;return this},send(x){this.body=x;return this}};
+ screen[0]({},screenRes);
+ assert.equal(screenRes.contentType,'html');
+ assert.equal(screenRes.headers['X-Robots-Tag'],'noindex, nofollow');
+ assert(screenRes.body.includes('Wix'));
+ assert(screenRes.body.includes('contentscale-growth-'));
+ assert(screenRes.body.includes('/cms-handoff/source?client_id='));
+ assert(screenRes.body.includes('Goed')||screenRes.body.includes('goedgekeurde'));
+ assert(!screenRes.body.includes('WordPress Application Password'));
  const sourceStack=app.routes['GET /api/growth/admin/pages/:pageId/cms-handoff/source'];
  assert.equal(sourceStack.length,3);
  const sourceReq={engineUser:{isAdmin:true},params:{pageId:'22'},query:{client_id:'7'}};
