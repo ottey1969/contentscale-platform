@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const {registerGrowthLiveRoutes}=require('./growth-live-routes.cjs');
 const url='https://contentscale.site/google-penalty-recovery/';
-function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],historyTableMissing=false,queryText='google penalty recovery'}={}){
+function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],historyTableMissing=false,queryText='google penalty recovery',gscProviderEnabled=true}={}){
  const routes={};let writes=0;
  const app={get:(path,...handlers)=>routes['GET '+path]=handlers,post:(path,...handlers)=>routes['POST '+path]=handlers};
  const pool={query:async(sql,args)=>{
@@ -20,7 +20,7 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
   if(sql.includes('FROM content_profiles'))return {rows:[]};
   throw Error('Unexpected SQL: '+sql);
  }};
- registerGrowthLiveRoutes({app,pool,verifyEngineAccess:(req,res,next)=>next(),fetchExactGsc:async()=>{writes++;return {page_checked:true,saved:3};}});
+ registerGrowthLiveRoutes({app,pool,verifyEngineAccess:(req,res,next)=>next(),fetchExactGsc:gscProviderEnabled?async()=>{writes++;return {page_checked:true,saved:3};}:undefined});
  async function request(method,kind=method==='GET'?'readiness':'refresh-gsc'){const h=routes[method+' /api/growth/admin/pages/:pageId/'+kind];
   const req={engineUser:{isAdmin:admin},params:{pageId:'2303'},query:{client_id:'10'},body:{client_id:10}};
   const response={statusCode:200,status(code){this.statusCode=code;return this;},json(data){this.body=data;return this;}};
@@ -40,6 +40,10 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
  assert.equal(r.body.next_action,'PREPARE_CMS_NEUTRAL_HANDOFF');
  assert.equal(f.writes(),0);
  r=await f.request('POST');assert.equal(r.body.verified_queries,3);assert.equal(f.writes(),1);
+ f=fixture({gscProviderEnabled:false,queries:0});r=await f.request('GET');
+ assert.equal(r.body.status,'READY_FOR_CMS_NEUTRAL_HANDOFF');
+ r=await f.request('POST');assert.equal(r.body.code,'GSC_CONNECTION_OPTIONAL');
+ assert.equal(f.writes(),0);
  f=fixture({admin:false});r=await f.request('POST');assert.equal(r.statusCode,403);assert.equal(f.writes(),0);
  f=fixture({locked:true});r=await f.request('GET');assert.equal(r.body.next_action,'PRESERVE_CASE_STUDY_BASELINE');r=await f.request('POST');assert.equal(r.statusCode,409);assert.equal(f.writes(),0);
  f=fixture({duplicates:true,queries:0});r=await f.request('GET');assert(r.body.issues.includes('DUPLICATE_TRACKER_URL'));assert.equal(r.body.cms_neutral.ready,false);assert.equal(r.body.cms_neutral.requires_gsc,false);
