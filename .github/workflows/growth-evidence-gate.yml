@@ -49,6 +49,7 @@ on:
       - 'tests/audit20-inline-label.test.cjs'
       - 'tests/lead-crawler-nj-niche.test.cjs'
       - 'src/tracker-growth-execution.cjs'
+      - 'src/tracker-growth-e2e.synthetic.test.cjs'
       - 'src/tracker-growth-wordpress-integration.test.cjs'
       - 'src/growth-tracker-wordpress-identity*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
@@ -77,6 +78,8 @@ jobs:
         run: node src/growth-live-routes.test.cjs
       - name: Tracker to WordPress integration contract
         run: node src/tracker-growth-wordpress-integration.test.cjs
+      - name: Synthetic click-to-editor-to-results Growth journey
+        run: node src/tracker-growth-e2e.synthetic.test.cjs
   growth-schema:
     runs-on: ubuntu-latest
     permissions:
