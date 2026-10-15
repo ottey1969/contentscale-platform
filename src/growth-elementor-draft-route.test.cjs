@@ -29,7 +29,7 @@ const mockFetch=async (u,options)=>{
  if(path==='/source/2204'){result={id:2204,type:'pages',status:'publish',elementor_edit_mode:'builder',elementor_data:json};}
  else if(path==='/draft'&&options.method==='POST'){
   created++;assert.equal(b.source_id,2204);assert.equal(b.source_sha256,sha(json));
-  draft={id:778,type:'pages',status:'draft',elementor_edit_mode:'builder',elementor_data:json};
+  draft={id:778,type:'pages',status:'draft',source_post_id:2204,elementor_edit_mode:'builder',elementor_data:json};
   result={id:778,type:'pages',status:'draft'};
  }else if(path==='/draft/778/meta'&&options.method==='POST'){
   wrote++;draft.elementor_data=b.elementor_data;
