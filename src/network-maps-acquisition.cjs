@@ -85,6 +85,45 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
    return res.json({ok:true,archived:!restore});
   }catch(e){console.error('[network-acquisition] archive',e.code||e.message);return res.status(503).json({error:'Could not update acquisition visibility'});}
  });
+
+ // Shared Contact Intelligence records: staging remains the source of truth.
+ app.get('/api/network/admin/acquisition/contact-intelligence',async(req,res)=>{
+  if(!sessionAuth(req))return res.status(403).json({error:'Admin login required'});
+  try{
+   const mode=String(req.query.mode||'active');
+   const where=mode==='archived'?"c.status='archived'":mode==='network'?"c.status='domain_verified' AND c.network_publisher_candidate IS TRUE AND COALESCE(c.network_fit_score,0)>=60":"c.status<>'archived'";
+   const q=await pool.query(`SELECT c.id,c.company_name,c.niche,c.country,c.email,c.status,c.website_url,c.website_candidate,c.website_verified_at,c.network_fit_score,c.network_fit_label,c.network_publisher_candidate,c.network_vertical,n.id AS network_id,n.status AS network_status
+     FROM contact_intelligence c LEFT JOIN LATERAL
+     (SELECT id,status FROM network_directory_businesses WHERE contact_intelligence_id=c.id OR (c.website_url IS NOT NULL AND lower(domain)=lower(regexp_replace(split_part(split_part(c.website_url,'://',2),'/',1),'^www\\.',''))) ORDER BY (contact_intelligence_id=c.id) DESC LIMIT 1) n ON TRUE
+     WHERE ${where} ORDER BY c.id DESC LIMIT 200`);
+   return res.json({items:q.rows,total:q.rowCount,mode});
+  }catch(e){console.error('[contact-intelligence-network-list]',e.code||e.message);return res.status(503).json({error:'Contact Intelligence unavailable'});}
+ });
+ app.post('/api/network/admin/acquisition/contact-intelligence/action',async(req,res)=>{
+  if(!sessionAuth(req))return res.status(403).json({error:'Admin login required'});
+  const action=String(req.body?.action||''),ids=[...new Set((Array.isArray(req.body?.ids)?req.body.ids:[]).map(Number).filter(n=>Number.isSafeInteger(n)&&n>0))].slice(0,100);
+  if(!ids.length||!['archive','restore','select_network'].includes(action))return res.status(400).json({error:'Choose records and a valid action'});
+  try{
+   if(action==='archive'||action==='restore'){
+    await pool.query('ALTER TABLE contact_intelligence ADD COLUMN IF NOT EXISTS staging_previous_status text');
+    const sql=action==='archive'
+     ? "UPDATE contact_intelligence SET staging_previous_status=status,status='archived',updated_at=now() WHERE id=ANY($1::bigint[]) AND status NOT IN ('archived','suppressed','promoted') RETURNING id"
+     : "UPDATE contact_intelligence SET status=CASE WHEN staging_previous_status IN ('qualified','needs_review','needs_domain','domain_verified','rejected_personal') THEN staging_previous_status ELSE 'needs_review' END,staging_previous_status=NULL,updated_at=now() WHERE id=ANY($1::bigint[]) AND status='archived' RETURNING id";
+    const result=await pool.query(sql,[ids]);
+    return res.json({ok:true,changed:result.rowCount,skipped:ids.length-result.rowCount});
+   }
+   const q=await pool.query(`UPDATE network_directory_businesses n
+    SET metadata=jsonb_set(COALESCE(n.metadata,'{}'::jsonb),'{contact_intelligence,network_selected}', 'true'::jsonb,true),updated_at=now()
+    FROM contact_intelligence c
+    WHERE c.id=ANY($1::bigint[]) AND c.status='domain_verified'
+      AND c.website_verified_at IS NOT NULL AND c.network_publisher_candidate IS TRUE
+      AND COALESCE(c.network_fit_score,0)>=60
+      AND (n.contact_intelligence_id=c.id OR (c.website_url IS NOT NULL AND lower(n.domain)=lower(regexp_replace(split_part(split_part(c.website_url,'://',2),'/',1),'^www\\.',''))))
+    RETURNING n.id`,[ids]);
+   return res.json({ok:true,changed:q.rowCount,skipped:ids.length-q.rowCount,message:'Existing canonical Network companies selected; no duplicates or invitations created.'});
+  }catch(e){console.error('[contact-intelligence-network-action]',e.code||e.message);return res.status(503).json({error:'Contact Intelligence update unavailable'});}
+ });
+ app.get('/network/acquisition/contact-intelligence',(_req,res)=>res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').sendFile(path.resolve(__dirname,'../public/network-contact-intelligence.html')));
  app.get('/api/network/admin/acquisition/candidates',async(req,res)=>{
   if(!sessionAuth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   try{
