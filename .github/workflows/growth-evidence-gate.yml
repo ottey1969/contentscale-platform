@@ -23,6 +23,8 @@ on:
       - 'src/growth-wordpress-mapping-preflight*.cjs'
       - 'src/growth-wordpress-mapping-approval*.cjs'
       - 'src/growth-live-routes*.cjs'
+      - 'src/growth-funnel-evaluation*.cjs'
+      - 'src/growth-search-intent*.cjs'
       - 'src/growth-wordpress-source-compatibility*.cjs'
       - 'src/growth-wordpress-edit-reader*.cjs'
       - 'src/growth-wordpress-revision*.cjs'
