@@ -74,3 +74,13 @@ User provided a forwarded PRT invoice conversation. An issued USD 12,000 invoice
 - Authentic reviews may be requested after completed jobs, without incentive, pressure or selection of only happy customers. Publishing real project photographs requires permission and the right to publish; do not invent proof.
 - There is no generic 80% pre-sold traffic rate. Search intent governs the page: urgent service users want availability and direct contact; researching users want explanations; price seekers want scope and estimates; comparison users need verifiable differentiation and trust.
 - Implementation in draft PR #93: growth-funnel-evaluation and growth-search-intent, wired to the canonical query opportunities and owner-facing report, protected with tests. Not a live production measurement integration yet.
+
+
+## Canonical Elementor live integration development — additional checkpoint
+- Installable WordPress Application Password Elementor draft bridge now exists at wordpress/contentscale-growth-elementor/contentscale-growth-elementor.php. It uses current_user_can, clones existing page/post to unpublished draft, verifies original Elementor data SHA, and only writes/reads the clone metadata.
+- An authenticated fail-closed Node transport adapter lives in src/growth-elementor-rest-bridge.cjs.
+- The new admin-only route POST /api/growth/admin/pages/:pageId/elementor-draft is registered through the existing Tracker Growth execution module. It requires an explicit approved edit list, actual verified page GSC query evidence, unique Tracker URL, reviewed WordPress mapping, current profile credentials, active Case Study unlocked, original Elementor revision recheck, draft-only creation, exact source ID and metadata readback.
+- WordPress CSS/images and source remain untouched in the synthetic integration. The plugin route returns only a new private draft, never publish.
+- PHP syntax and WordPress bridge mock E2E, actual admin route, regressions and Network tests are part of GitHub CI.
+- IMPORTANT: the external WordPress bridge has NOT been installed and tested on a connected website. WPVibe access was exhausted in this session. Credentials and source-origin are not in GitHub. Do not claim real Elementor production E2E passed.
+- Do not merge/deploy while the intended WordPress bridge, live readback, staging migration, frontend review and user-facing workflow remain unverified.
