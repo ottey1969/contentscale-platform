@@ -63,3 +63,14 @@ User provided a forwarded PRT invoice conversation. An issued USD 12,000 invoice
 - Never equate zero Search Console clicks on one landing page to zero jobs company-wide.
 - No dollar amounts, invoice numbers, customer names, email addresses or service addresses are included in client-facing reports or the commercial event schema.
 - This module is implemented in draft PR #93, validated in synthetic regression tests and on isolated Neon test branch, and **is not yet a production feature**.
+
+## Clarified conversion responsibilities and Search Intent
+
+- The business owner says zero calls, while September GBP shows four phone-button clicks. A phone-button click is not a verified completed or answered call. Phone records, availability, number routing and missed-call counts need independent checks; never infer the owner is dishonest.
+- SEO visibility (GSC/GBP impressions), organic page clicks, GBP phone-button actions, actual conversations, qualified leads, quotes, accepted jobs, completed work and paid revenue are different measurements.
+- One confirmed job from 20 connected calls is 5%; four confirmed jobs from four connected calls is 100%, but only for properly matched periods, channels and cohorts. GBP tap events cannot be used as a denominator for confirmed close rates.
+- The owner can invoice under his own business name while subcontracting. This does not prove where a customer came from, that work was done, or that an invoice was paid.
+- Growth must work without invoice access. Optional anonymized weekly aggregate leads/quotes/wins are enough to distinguish marketing performance from owner closing effectiveness.
+- Authentic reviews may be requested after completed jobs, without incentive, pressure or selection of only happy customers. Publishing real project photographs requires permission and the right to publish; do not invent proof.
+- There is no generic 80% pre-sold traffic rate. Search intent governs the page: urgent service users want availability and direct contact; researching users want explanations; price seekers want scope and estimates; comparison users need verifiable differentiation and trust.
+- Implementation in draft PR #93: growth-funnel-evaluation and growth-search-intent, wired to the canonical query opportunities and owner-facing report, protected with tests. Not a live production measurement integration yet.
