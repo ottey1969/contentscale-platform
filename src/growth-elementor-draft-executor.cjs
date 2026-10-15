@@ -5,18 +5,29 @@ const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
 // Elementor-capable WordPress bridge that can write and reread draft metadata.
 // WP REST content alone cannot safely preserve an Elementor page design.
 async function executeGrowthElementorDraft({
-  approvedCandidate,sourcePostId,sourcePostType,sourceRevisionVerified=false,
-  originalCaseStudyUnlocked=false,createDraft,writeDraftElementorMeta,readDraft
+  approvedCandidate,sourcePostId,sourcePostType,
+  readOriginalPost,checkCanonicalState,createDraft,writeDraftElementorMeta,readDraft
 }={}){
  const deny=code=>({status:'BLOCKED',issues:[code],published:false,draft:null});
  if(approvedCandidate?.status!=='DRAFT_FOR_REVIEW'||approvedCandidate.publish_allowed!==false||
   typeof approvedCandidate.elementor_json!=='string'||!approvedCandidate.changed_widgets?.length)
   return deny('APPROVED_ELEMENTOR_CANDIDATE_REQUIRED');
- if(!Number.isSafeInteger(sourcePostId)||sourcePostId<=0||!['pages','posts'].includes(sourcePostType)||
-  sourceRevisionVerified!==true||originalCaseStudyUnlocked!==true)
-  return deny('SOURCE_IDENTITY_AND_CASE_STUDY_RECHECK_REQUIRED');
- if(typeof createDraft!=='function'||typeof writeDraftElementorMeta!=='function'||typeof readDraft!=='function')
+ if(!Number.isSafeInteger(sourcePostId)||sourcePostId<=0||!['pages','posts'].includes(sourcePostType))
+  return deny('SOURCE_IDENTITY_REQUIRED');
+ if(typeof readOriginalPost!=='function'||typeof checkCanonicalState!=='function'||
+  typeof createDraft!=='function'||typeof writeDraftElementorMeta!=='function'||typeof readDraft!=='function')
   return deny('ELEMENTOR_DRAFT_META_BRIDGE_REQUIRED');
+ let original,canonical;
+ try {
+  original=await readOriginalPost({id:sourcePostId,type:sourcePostType});
+  canonical=await checkCanonicalState({id:sourcePostId});
+ }catch{return deny('FRESH_SOURCE_RECHECK_FAILED')}
+ if(original?.id!==sourcePostId||original?.type!==sourcePostType||original?.status!=='publish'||
+  typeof original.elementor_data!=='string'||sha(original.elementor_data)!==approvedCandidate.original_sha256)
+  return deny('ELEMENTOR_SOURCE_REVISION_CHANGED');
+ if(canonical?.case_study_active!==false||canonical?.allow_draft!==true||
+  canonical?.wordpress_post_id!==sourcePostId)
+  return deny('TRACKER_CANONICAL_DRAFT_AUTHORIZATION_REQUIRED');
  let created;
  try{created=await createDraft({type:sourcePostType,status:'draft'});}
  catch{return deny('WORDPRESS_DRAFT_CREATE_FAILED');}
