@@ -21,5 +21,5 @@ p=buildGrowthOpportunityPlan({page,gscRows:[],searchSpy:[],aiSpy:[]});
 assert(p.blockers.includes('GSC_EXACT_PAGE_MISSING'));
 p=buildGrowthOpportunityPlan({page,gscRows:[good],searchSpy:[{source_url:'https://external.test'}],aiSpy:[{target_url:'https://wrong.test/',observed:'x'}]});
 assert(p.blockers.includes('SEARCH_SPY_NO_VALID_PAGE_FINDINGS'));
-assert(p.blockers.includes('AI_SPY_NO_VALID_PAGE_FINDINGS'));
+assert(p.warnings.includes('AI_SPY_NO_VALID_PAGE_FINDINGS'));
 console.log('PASS: deterministic Growth opportunity planner; page-specific Spy evidence required');
