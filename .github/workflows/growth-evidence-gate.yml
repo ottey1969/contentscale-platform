@@ -69,6 +69,8 @@ jobs:
         run: node src/growth-html-draft.test.cjs
       - name: Elementor builder original-preserving draft edit
         run: node src/growth-elementor-draft.test.cjs
+      - name: Elementor unpublished builder draft verification
+        run: node src/growth-elementor-draft-executor.test.cjs
       - name: Verified adjacent GSC outcomes
         run: node src/growth-gsc-window-comparison.test.cjs
       - name: Canonical Tracker Growth routes
