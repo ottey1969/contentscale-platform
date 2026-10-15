@@ -11,6 +11,7 @@ on:
       - 'src/growth-snapshot-competitors*.cjs'
       - 'src/growth-edit-instructions*.cjs'
       - 'src/growth-html-draft*.cjs'
+      - 'src/growth-elementor-draft*.cjs'
       - 'src/growth-draft-preparation*.cjs'
       - 'src/growth-wordpress-draft-payload*.cjs'
       - 'src/growth-wordpress-handoff*.cjs'
@@ -66,6 +67,8 @@ jobs:
         run: node src/growth-evidence-render-gate.test.cjs
       - name: Protected original WordPress document assembly
         run: node src/growth-html-draft.test.cjs
+      - name: Elementor builder original-preserving draft edit
+        run: node src/growth-elementor-draft.test.cjs
       - name: Verified adjacent GSC outcomes
         run: node src/growth-gsc-window-comparison.test.cjs
       - name: Canonical Tracker Growth routes
