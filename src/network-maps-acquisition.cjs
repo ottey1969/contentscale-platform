@@ -71,13 +71,27 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
  app.post('/api/network/admin/acquisition/logout',(req,res)=>res.set('Cache-Control','no-store').set('Set-Cookie',sessionName+'=; Path=/api/network/admin/acquisition; HttpOnly; Secure; SameSite=Strict; Max-Age=0').json({ok:true}));
 
  app.get('/network/acquisition',(_req,res)=>res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').sendFile(path.resolve(__dirname,'../public/network-acquisition.html')));
+ app.post('/api/network/admin/acquisition/archive',async(req,res)=>{
+  if(!sessionAuth(req))return res.status(403).json({error:'Admin login required'});
+  const id=Number(req.body?.company_id),restore=req.body?.restore===true;
+  if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({error:'Valid company ID required'});
+  try{
+   const result=await pool.query(`UPDATE network_directory_businesses SET metadata=jsonb_set(metadata,'{acquisition,archived_at}',${restore?"'null'::jsonb":"to_jsonb(now())"},true),updated_at=now()
+    WHERE id=$1 AND source='maps_acquisition'
+      AND COALESCE(metadata->'acquisition'->'invitation'->>'status','') NOT IN ('invited','interested','sending','send_unknown')
+    RETURNING id`,[id]);
+   if(!result.rowCount)return res.status(409).json({error:'Company not found or invitation already sent; sent companies cannot be archived here'});
+   return res.json({ok:true,archived:!restore});
+  }catch(e){console.error('[network-acquisition] archive',e.code||e.message);return res.status(503).json({error:'Could not update acquisition visibility'});}
+ });
  app.get('/api/network/admin/acquisition/candidates',async(req,res)=>{
   if(!sessionAuth(req))return res.status(403).json({error:'Lead Crawler admin login required'});
   try{
    const result=await pool.query(`SELECT n.id,n.business_name,n.domain,n.canonical_url,n.primary_niche,n.city,n.status,n.public_visibility,n.website_check,
     n.metadata->'acquisition'->'email_discovery' AS email_discovery,
     n.metadata->'acquisition'->'website_review' AS website_review,
-    n.metadata->'acquisition'->'invitation' AS invitation
+    n.metadata->'acquisition'->'invitation' AS invitation,
+    n.metadata->'acquisition'->>'archived_at' AS archived_at
     FROM network_directory_businesses n
     WHERE n.source='maps_acquisition'
     ORDER BY n.created_at DESC,n.id DESC LIMIT 300`);
