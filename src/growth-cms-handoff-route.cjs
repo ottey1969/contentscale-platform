@@ -13,15 +13,22 @@ function registerGrowthCmsHandoffRoute({app,pool,verifyEngineAccess}={}){
   const originalExpected=req.body?.source_sha256;
   if(!/^[a-f0-9]{64}$/.test(String(originalExpected||'')))
    return res.status(400).json({success:false,status:'BLOCKED',code:'SOURCE_REVISION_APPROVAL_REQUIRED'});
-  let page,duplicated;
+  let page,duplicated,verifiedRows=[];
   try{
-   const state=await loadGrowthTrackerEvidence(pool,{clientId,pageId});page=state.page;
+   const state=await loadGrowthTrackerEvidence(pool,{clientId,pageId});page=state.page;verifiedRows=state.gscRows||[];
    duplicated=await pool.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 LIMIT 3',[page.url]);
   }catch{return res.status(503).json({success:false,status:'BLOCKED',code:'CANONICAL_TRACKER_PAGE_UNAVAILABLE'});}
   if(duplicated.rows?.length!==1||Number(duplicated.rows[0].id)!==pageId||Number(duplicated.rows[0].tracker_client_id)!==clientId)
    return res.status(409).json({success:false,status:'BLOCKED',code:'DUPLICATE_CANONICAL_PAGE_IDENTITY'});
   const sourceHash=createHash('sha256').update(page.html_content||'').digest('hex');
   if(sourceHash!==originalExpected)return res.status(409).json({success:false,status:'BLOCKED',code:'TRACKER_SOURCE_CHANGED'});
+  const requestedEvidence=String(req.body?.evidence_scope||'needs_access');
+  // Never trust a caller to self-assert a verified Google query.
+  if(requestedEvidence==='verified'&&!verifiedRows.some(r=>
+    r.evidence_scope==='page_verified'&&r.source_page_url===page.url&&
+    String(r.query||'').toLowerCase().trim()===String(req.body?.focus_query||'').toLowerCase().trim()))
+   return res.status(409).set('Cache-Control','private, no-store')
+    .json({success:false,status:'BLOCKED',code:'VERIFIED_GSC_EVIDENCE_NOT_FOUND',publication_allowed:false});
   const handoff=prepareGrowthCmsHandoff({
    canonicalUrl:page.url,originalHtml:page.html_content,caseStudyLocked:page.case_study_active,
    sourceExpectedSha256:originalExpected,editorApproved:req.body?.editor_approved,
