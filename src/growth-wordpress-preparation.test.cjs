@@ -11,7 +11,7 @@ function db(){return {query:async sql=>{
  if(sql.includes('FROM tracker_ai_evidence')||sql.includes('FROM tracker_snapshots'))return {rows:[]};
  throw Error('Unexpected SQL');
 }};}
-const base=()=>({db:db(),pageId:3,clientId:4,searchSpy:[spy],aiSpy:[{...spy,source_url:'https://other.example.org/'}],templateMarkers:['class="approved"'],claims:[],renderProof:{desktop_checked:true,mobile_checked:true},additions:[{approved:true,evidence_ref:'evidence:1',html:'<section><h2>Example</h2><p>Checked example.</p></section>'}],title:'A useful guide',editor_approved:true,authorized:true,currentWordPressHtml:html,expectedPageUrl:url});
+const base=()=>({db:db(),pageId:3,clientId:4,searchSpy:[spy],aiSpy:[{...spy,source_url:'https://other.example.org/'}],templateMarkers:['class="approved"'],claims:[],renderProof:{desktop_checked:true,mobile_checked:true},additions:[{approved:true,evidence_ref:'evidence:1',html:'<section><h2>Example</h2><p>This documented example explains a specific roof assessment and why the corresponding repair is appropriate.</p></section>'}],title:'A useful guide',editor_approved:true,authorized:true,currentWordPressHtml:html,expectedPageUrl:url});
 (async()=>{
  let r=await prepareGrowthWordPressHandoff(base());
  assert.equal(r.status,'SAFE_TO_PASS_TO_EXISTING_DRAFT_HANDLER',JSON.stringify(r.issues));
