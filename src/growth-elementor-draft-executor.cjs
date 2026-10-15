@@ -43,7 +43,7 @@ async function executeGrowthElementorDraft({
  catch{return {status:'BLOCKED',issues:['ELEMENTOR_META_READBACK_FAILED'],published:false,
   draft:{id:created.id,status:'draft',needs_cleanup_review:true}};}
  if(current?.id!==created.id||current?.status!=='draft'||current?.type!==sourcePostType||
-  current.elementor_edit_mode!=='builder'||typeof current.elementor_data!=='string'||
+  current.elementor_edit_mode!=='builder'||current.source_post_id!==sourcePostId||typeof current.elementor_data!=='string'||
   sha(current.elementor_data)!==approvedCandidate.candidate_sha256)
   return {status:'BLOCKED',issues:['ELEMENTOR_META_OR_STATUS_MISMATCH'],published:false,
    draft:{id:created.id,status:'draft',needs_cleanup_review:true}};
