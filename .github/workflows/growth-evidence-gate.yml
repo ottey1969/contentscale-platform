@@ -28,6 +28,7 @@ on:
       - 'src/growth-live-routes*.cjs'
       - 'src/growth-funnel-evaluation*.cjs'
       - 'src/growth-search-intent*.cjs'
+      - 'src/growth-cms-handoff*.cjs'
       - 'src/growth-wordpress-source-compatibility*.cjs'
       - 'src/growth-wordpress-edit-reader*.cjs'
       - 'src/growth-wordpress-revision*.cjs'
@@ -99,6 +100,10 @@ jobs:
         run: node src/growth-funnel-evaluation.test.cjs
       - name: Growth intent tests
         run: node src/growth-search-intent.test.cjs
+      - name: Vendor-independent Wix and CMS handoff files and ZIP
+        run: node src/growth-cms-handoff.test.cjs
+      - name: Verify reviewed CMS handoff API with optional GSC and no WordPress
+        run: node src/growth-cms-handoff-route.test.cjs
   growth-schema:
     runs-on: ubuntu-latest
     permissions:
