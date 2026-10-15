@@ -17,7 +17,7 @@ assert.equal(prepared.status,'DRAFT_FOR_REVIEW');
   checkCanonicalState:async()=>({wordpress_post_id:3269,case_study_active:false,allow_draft:true}),
   createDraft:async req=>{createdCount++;assert.equal(req.status,'draft');assert.equal(req.type,'pages');return{id:6001,status:'draft'};},
   writeDraftElementorMeta:async req=>{assert.equal(req.id,6001);draftMeta=req.elementor_data;},
-  readDraft:async req=>({id:req.id,status:'draft',type:'pages',elementor_edit_mode:'builder',elementor_data:draftMeta})
+  readDraft:async req=>({id:req.id,status:'draft',type:'pages',source_post_id:3269,elementor_edit_mode:'builder',elementor_data:draftMeta})
  };
  let result=await executeGrowthElementorDraft(opts);
  assert.equal(result.status,'ELEMENTOR_DRAFT_VERIFIED',JSON.stringify(result.issues));
