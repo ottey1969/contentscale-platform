@@ -21,11 +21,15 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
   try {
    const state=await loadGrowthTrackerEvidence(pool,identity);
    const url=state.page.url;
-   const [dups,mapping,profiles]=await Promise.all([
-    pool.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 LIMIT 3',[url]),
+   const dups=await pool.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 LIMIT 3',[url]);
+   // WordPress identity tables are OPTIONAL for Wix and manual handoff. A missing
+   // CMS mapping must never make universal Growth readiness unavailable.
+   const [mappingLookup,profileLookup]=await Promise.allSettled([
     pool.query('SELECT wordpress_post_id,wordpress_url FROM growth_wordpress_page_mapping WHERE tracker_page_id=$1 AND tracker_client_id=$2 LIMIT 2',[identity.pageId,identity.clientId]),
     pool.query("SELECT id,wp_url FROM content_profiles WHERE NULLIF(BTRIM(wp_user),'') IS NOT NULL AND NULLIF(BTRIM(wp_app_password),'') IS NOT NULL")
    ]);
+   const mapping=mappingLookup.status==='fulfilled'?mappingLookup.value:{rows:[]};
+   const profiles=profileLookup.status==='fulfilled'?profileLookup.value:{rows:[]};
    const site=new URL(url).origin;
    const credentialsConfigured=profiles.rows.some(p=>{try{return new URL(p.wp_url).origin===site;}catch{return false;}});
    const issues=[];
@@ -34,10 +38,12 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
    if(!state.gscRows.length)issues.push('EXACT_PAGE_GSC_QUERIES_REQUIRED');
    if(mapping.rows.length!==1||mapping.rows[0].wordpress_url!==url||!Number.isSafeInteger(Number(mapping.rows[0].wordpress_post_id)))issues.push('REVIEWED_WORDPRESS_MAPPING_REQUIRED');
    if(!credentialsConfigured)issues.push('WORDPRESS_CREDENTIALS_REQUIRED');
+   if(mappingLookup.status==='rejected')issues.push('WORDPRESS_MAPPING_SCHEMA_OPTIONAL');
+   if(profileLookup.status==='rejected')issues.push('WORDPRESS_PROFILE_READ_OPTIONAL');
    if(!state.page.html_content)issues.push('TRACKER_HTML_MISSING');
    const handoffIssues=issues.filter(x=>['CASE_STUDY_LOCK','DUPLICATE_TRACKER_URL','TRACKER_HTML_MISSING'].includes(x));
    const handoffReady=handoffIssues.length===0;
-   const wpIssues=issues.filter(x=>['REVIEWED_WORDPRESS_MAPPING_REQUIRED','WORDPRESS_CREDENTIALS_REQUIRED'].includes(x));
+   const wpIssues=issues.filter(x=>['REVIEWED_WORDPRESS_MAPPING_REQUIRED','WORDPRESS_CREDENTIALS_REQUIRED','WORDPRESS_MAPPING_SCHEMA_OPTIONAL','WORDPRESS_PROFILE_READ_OPTIONAL'].includes(x));
    const wpReady=issues.length===0;
    const nextAction=state.page.case_study_active?'PRESERVE_CASE_STUDY_BASELINE':
     handoffReady&&!wpReady?'PREPARE_CMS_NEUTRAL_HANDOFF':
