@@ -17,6 +17,10 @@ assert.equal(p.brand_or_ambiguous.impressions,1500);
 assert.equal(p.non_brand.impressions,545);
 assert(buildGrowthClientBrief(p).includes('545 impressions; 0 clicks; average position 32'));
 assert(buildGrowthClientBrief(p).includes('NOT MEASURED'));
+assert(buildGrowthClientBrief(p).includes('Search intent: URGENT_SERVICE'));
+assert(buildGrowthClientBrief(p).includes('Google Business Profile call-button clicks are not verified conversations'));
+assert(buildGrowthClientBrief(p).includes('No universal conversion percentage'));
+assert(buildGrowthClientBrief(p).includes('real job photos and authentic customer feedback'));
 assert(buildGrowthClientBrief(p).includes('zero clicks to a specific landing page does NOT mean the company has no customers or jobs'));
 assert(buildGrowthClientBrief(p).includes('An issued invoice alone does NOT verify completed work'));
 
