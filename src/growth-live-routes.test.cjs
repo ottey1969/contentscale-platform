@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const {registerGrowthLiveRoutes}=require('./growth-live-routes.cjs');
 const url='https://contentscale.site/google-penalty-recovery/';
-function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],historyTableMissing=false,queryText='google penalty recovery',gscProviderEnabled=true}={}){
+function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],historyTableMissing=false,queryText='google penalty recovery',gscProviderEnabled=true,wpSchemaMissing=false}={}){
  const routes={};let writes=0;
  const app={get:(path,...handlers)=>routes['GET '+path]=handlers,post:(path,...handlers)=>routes['POST '+path]=handlers};
  const pool={query:async(sql,args)=>{
@@ -16,7 +16,7 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
   if(sql.includes('FROM tracker_case_studies'))return {rows:locked?[{id:1}]:[]};
   if(sql.includes('FROM tracker_ai_evidence')||sql.includes('FROM tracker_snapshots'))return {rows:[]};
   if(sql.includes('FROM tracker_pages WHERE url='))return {rows:duplicates?[{id:2303},{id:999}]:[{id:2303}]};
-  if(sql.includes('FROM growth_wordpress_page_mapping'))return {rows:[]};
+  if(sql.includes('FROM growth_wordpress_page_mapping')){if(wpSchemaMissing)throw Object.assign(Error('missing optional table'),{code:'42P01'});return {rows:[]}}
   if(sql.includes('FROM content_profiles'))return {rows:[]};
   throw Error('Unexpected SQL: '+sql);
  }};
@@ -47,6 +47,10 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
  f=fixture({admin:false});r=await f.request('POST');assert.equal(r.statusCode,403);assert.equal(f.writes(),0);
  f=fixture({locked:true});r=await f.request('GET');assert.equal(r.body.next_action,'PRESERVE_CASE_STUDY_BASELINE');r=await f.request('POST');assert.equal(r.statusCode,409);assert.equal(f.writes(),0);
  f=fixture({duplicates:true,queries:0});r=await f.request('GET');assert(r.body.issues.includes('DUPLICATE_TRACKER_URL'));assert.equal(r.body.cms_neutral.ready,false);assert.equal(r.body.cms_neutral.requires_gsc,false);
+ f=fixture({wpSchemaMissing:true,queries:0});r=await f.request('GET');
+ assert.equal(r.body.status,'READY_FOR_CMS_NEUTRAL_HANDOFF');
+ assert(r.body.wordpress_draft.issues.includes('WORDPRESS_MAPPING_SCHEMA_OPTIONAL'));
+ assert.equal(r.body.cms_neutral.ready,true);
  f=fixture({queries:0});r=await f.request('GET');
  assert.equal(r.body.status,'READY_FOR_CMS_NEUTRAL_HANDOFF');
  assert.equal(r.body.gsc_verified_queries,0);
