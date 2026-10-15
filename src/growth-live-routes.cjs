@@ -52,7 +52,7 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
   try{
    const state=await loadGrowthTrackerEvidence(pool,identity);
    const rows=state.gscRows.filter(r=>r.source_page_url===state.page.url&&r.evidence_scope==='page_verified');
-   const commercial=/\b(roof|roofing|replacement|repair|installation|install|leak|storm|damage|emergency|contractor|estimate|quote)\b/i;
+   const commercial=/\b(roof|roofing|replacement|repair|installation|install|leak|storm|damage|emergency|contractor|estimate|quote|chimney|flashing|gutter|gutters|siding|skylight|waterproofing)\b/i;
    const brand=new URL(state.page.url).hostname.toLowerCase().includes('perfectroofingteam.com')?/perfect\s*roofing\s*team/i:/(?!)/;
    const opportunities=rows.map(r=>({query:String(r.query||'').trim(),clicks:Number(r.clicks)||0,impressions:Number(r.impressions)||0,position:Number(r.position)||null,imported_at:r.imported_at||null}))
     .filter(r=>r.query&&r.impressions>0&&!brand.test(r.query))
