@@ -28,7 +28,7 @@ const bridge=createGrowthElementorRestBridge({siteUrl:'https://synthetic.example
   if(options.method==='GET'&&path==='/source/2204')result=canonicalPost;
   else if(options.method==='POST'&&path==='/draft'){
    assert.equal(body.source_id,2204);assert.equal(body.source_sha256,sha(original));
-   draft={id:9001,type:'pages',status:'draft',elementor_edit_mode:'builder',elementor_data:original};
+   draft={id:9001,type:'pages',status:'draft',source_post_id:2204,elementor_edit_mode:'builder',elementor_data:original};
    writes.push('create-draft');
    result={id:9001,type:'pages',status:'draft'};
   }else if(options.method==='POST'&&path==='/draft/9001/meta'){
