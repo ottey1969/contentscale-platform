@@ -9,7 +9,8 @@ aiSpy:[{target_url:url,source_url:'https://example.org/citation',observed:'AI an
 assert.equal(growthEvidenceContract(base).evidence_status,'EVIDENCE_READY');
 assert.equal(growthEvidenceContract({...base,pageQueries:[{page_url:'https://other.site/',query:'false',evidence_scope:'page_verified'}]}).evidence_status,'RESEARCH_INCOMPLETE');
 assert.equal(growthEvidenceContract({...base,searchSpy:[]}).evidence_status,'RESEARCH_INCOMPLETE');
-assert.equal(growthEvidenceContract({...base,aiSpy:[]}).evidence_status,'RESEARCH_INCOMPLETE');
+assert.equal(growthEvidenceContract({...base,aiSpy:[]}).evidence_status,'EVIDENCE_READY');
+assert(growthEvidenceContract({...base,aiSpy:[]}).warnings.includes('AI_SPY_EVIDENCE_UNAVAILABLE'));
 assert.equal(growthEvidenceContract({...base,templateMarkers:[]}).evidence_status,'RESEARCH_INCOMPLETE');
 assert.equal(growthEvidenceContract({...base,searchSpy:[{...base.searchSpy[0],source_url:'unverified'}]}).competitiveGaps.length,1);
 const selfReference=growthEvidenceContract({...base,searchSpy:[{...base.searchSpy[0],source_url:url}]});
