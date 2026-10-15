@@ -159,7 +159,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
  // not a URL alias. Register through the existing Network module.
  app.get('/network/acquisition',(req,res)=>{
   // Browser navigation has no admin API header; the page's API calls enforce auth.
-  return res.set('Cache-Control','no-store').sendFile(path.resolve(__dirname,'../public/network-acquisition.html'));
+  return res.set('Cache-Control','no-store').set('X-Robots-Tag','noindex, nofollow').sendFile(path.resolve(__dirname,'../public/network-acquisition.html'));
  });
  async function company(id){
   const r=await pool.query("SELECT id,business_name,domain,canonical_url,public_visibility,metadata FROM network_directory_businesses WHERE id=$1 AND source='maps_acquisition' LIMIT 1",[id]);
