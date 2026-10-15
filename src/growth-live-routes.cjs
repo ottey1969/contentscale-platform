@@ -3,10 +3,13 @@
 // into ONE admin-only readiness endpoint. No parallel Growth database model.
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {compareGrowthGscWindows}=require('./growth-gsc-window-comparison.cjs');
+const {registerGrowthCommercialOutcomeRoutes}=require('./growth-commercial-outcome-routes.cjs');
 function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}){
  if(!app||!pool||typeof verifyEngineAccess!=='function'||typeof fetchExactGsc!=='function')
   throw Error('GROWTH_ROUTE_DEPENDENCIES_REQUIRED');
  const adminOnly=(req,res,next)=>req.engineUser?.isAdmin===true?next():res.status(403).json({success:false,code:'GROWTH_ADMIN_ONLY'});
+ // Company-wide funnel stages remain private and independent of page-specific GSC rankings.
+ registerGrowthCommercialOutcomeRoutes({app,pool,verifyEngineAccess});
  const ids=req=>({pageId:Number(req.params.pageId),clientId:Number(req.query.client_id||req.body?.client_id)});
  const validIds=x=>Number.isSafeInteger(x.pageId)&&x.pageId>0&&Number.isSafeInteger(x.clientId)&&x.clientId>0;
  app.get('/api/growth/admin/pages/:pageId/readiness',verifyEngineAccess,adminOnly,async(req,res)=>{
