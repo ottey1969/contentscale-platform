@@ -42,7 +42,7 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
  f=fixture({duplicates:true,queries:0});r=await f.request('GET');assert(r.body.issues.includes('DUPLICATE_TRACKER_URL'));assert(r.body.issues.includes('EXACT_PAGE_GSC_QUERIES_REQUIRED'));
  f=fixture({queryText:'chimney flashing nj'});r=await f.request('GET','click-opportunities');
  assert.equal(r.statusCode,200);
- assert(r.body.opportunities.some(x=>x.query==='chimney flashing nj'&&x.commercial_intent_signal===true),'real chimney/flashing demand is commercial');
+ assert(r.body.queries.some(x=>x.query==='chimney flashing nj'&&x.commercial_intent_signal===true),'real chimney/flashing demand is commercial');
  // Read-only outcome comparisons must never require a draft or overwrite Case Studies.
  f=fixture();r=await f.request('GET','outcomes');
  assert.equal(r.body.status,'NO_VERIFIED_GSC_HISTORY');
