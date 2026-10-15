@@ -6,6 +6,32 @@ function registerGrowthCmsHandoffRoute({app,pool,verifyEngineAccess}={}){
  if(typeof app?.post!=='function'||typeof pool?.query!=='function'||typeof verifyEngineAccess!=='function')
   throw Error('GROWTH_CMS_HANDOFF_DEPENDENCIES_REQUIRED');
  const admin=(req,res,next)=>req.engineUser?.isAdmin===true?next():res.status(403).json({success:false,code:'GROWTH_ADMIN_ONLY'});
+ app.get('/api/growth/admin/pages/:pageId/cms-handoff/source',verifyEngineAccess,admin,async(req,res)=>{
+  const clientId=Number(req.query?.client_id),pageId=Number(req.params.pageId);
+  if(!Number.isSafeInteger(clientId)||clientId<1||!Number.isSafeInteger(pageId)||pageId<1)
+   return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
+  try{
+   const state=await loadGrowthTrackerEvidence(pool,{clientId,pageId});
+   const page=state.page,dups=await pool.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 LIMIT 3',[page.url]);
+   if(state.page.case_study_active)
+    return res.status(409).json({success:false,code:'CASE_STUDY_BASELINE_LOCKED'});
+   if(dups.rows?.length!==1||Number(dups.rows[0].id)!==pageId||Number(dups.rows[0].tracker_client_id)!==clientId)
+    return res.status(409).json({success:false,code:'DUPLICATE_CANONICAL_PAGE_IDENTITY'});
+   if(!page.html_content?.trim())
+    return res.status(409).json({success:false,code:'TRACKER_PAGE_SOURCE_REQUIRED'});
+   const source_sha256=createHash('sha256').update(page.html_content).digest('hex');
+   const queries=[...new Set((state.gscRows||[]).filter(x=>
+    x.source_page_url===page.url&&x.evidence_scope==='page_verified')
+    .map(x=>String(x.query||'').trim()).filter(Boolean))].slice(0,20);
+   return res.set('Cache-Control','private, no-store')
+    .json({success:true,client_id:clientId,page_id:pageId,canonical_url:page.url,
+     source_sha256,editor_review_required:true,auto_publish:false,
+     cms_options:['wix','wordpress','webflow','squarespace','custom','generic'],
+     page_verified_query_examples:queries,
+     wordpress_required:false,paid_api_required:false,source_snapshot_available:true,
+     next_action:'PREPARE_CMS_NEUTRAL_HANDOFF'});
+  }catch{return res.status(503).json({success:false,code:'CANONICAL_SOURCE_UNAVAILABLE'});}
+ });
  app.post('/api/growth/admin/pages/:pageId/cms-handoff',verifyEngineAccess,admin,async(req,res)=>{
   const clientId=Number(req.body?.client_id),pageId=Number(req.params.pageId);
   if(!Number.isSafeInteger(clientId)||clientId<1||!Number.isSafeInteger(pageId)||pageId<1)
