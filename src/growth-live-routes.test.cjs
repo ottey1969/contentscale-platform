@@ -31,15 +31,23 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
 }
 (async()=>{
  let f=fixture();let r=await f.request('GET');
- assert.equal(r.body.success,true);assert.equal(r.body.status,'BLOCKED');
- assert(r.body.issues.includes('WORDPRESS_CREDENTIALS_REQUIRED'));
- assert(r.body.issues.includes('REVIEWED_WORDPRESS_MAPPING_REQUIRED'));
- assert.equal(r.body.next_action,'CONFIGURE_WORDPRESS_PROFILE');
+ assert.equal(r.body.success,true);assert.equal(r.body.status,'READY_FOR_CMS_NEUTRAL_HANDOFF');
+ assert(r.body.warnings.includes('WORDPRESS_CREDENTIALS_REQUIRED'));
+ assert(r.body.warnings.includes('REVIEWED_WORDPRESS_MAPPING_REQUIRED'));
+ assert.equal(r.body.cms_neutral.ready,true);
+ assert.equal(r.body.cms_neutral.requires_wordpress,false);
+ assert.equal(r.body.cms_neutral.requires_paid_provider,false);
+ assert.equal(r.body.next_action,'PREPARE_CMS_NEUTRAL_HANDOFF');
  assert.equal(f.writes(),0);
  r=await f.request('POST');assert.equal(r.body.verified_queries,3);assert.equal(f.writes(),1);
  f=fixture({admin:false});r=await f.request('POST');assert.equal(r.statusCode,403);assert.equal(f.writes(),0);
  f=fixture({locked:true});r=await f.request('GET');assert.equal(r.body.next_action,'PRESERVE_CASE_STUDY_BASELINE');r=await f.request('POST');assert.equal(r.statusCode,409);assert.equal(f.writes(),0);
- f=fixture({duplicates:true,queries:0});r=await f.request('GET');assert(r.body.issues.includes('DUPLICATE_TRACKER_URL'));assert(r.body.issues.includes('EXACT_PAGE_GSC_QUERIES_REQUIRED'));
+ f=fixture({duplicates:true,queries:0});r=await f.request('GET');assert(r.body.issues.includes('DUPLICATE_TRACKER_URL'));assert.equal(r.body.cms_neutral.ready,false);assert.equal(r.body.cms_neutral.requires_gsc,false);
+ f=fixture({queries:0});r=await f.request('GET');
+ assert.equal(r.body.status,'READY_FOR_CMS_NEUTRAL_HANDOFF');
+ assert.equal(r.body.gsc_verified_queries,0);
+ assert.equal(r.body.cms_neutral.evidence_scope,'needs_access');
+ assert.equal(r.body.next_action,'PREPARE_CMS_NEUTRAL_HANDOFF');
  f=fixture({queryText:'chimney flashing nj'});r=await f.request('GET','click-opportunities');
  assert.equal(r.statusCode,200);
  assert(r.body.queries.some(x=>x.query==='chimney flashing nj'&&x.commercial_intent_signal===true),'real chimney/flashing demand is commercial');
