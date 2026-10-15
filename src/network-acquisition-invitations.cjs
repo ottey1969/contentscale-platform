@@ -320,6 +320,7 @@ function registerNetworkAcquisitionInvitations({app,pool,auth,inspect=websiteEvi
    const rows=await pool.query(`SELECT id,business_name,domain,canonical_url,metadata,public_visibility
     FROM network_directory_businesses
     WHERE source='maps_acquisition' AND public_visibility='hidden'
+    AND (metadata->'acquisition'->>'archived_at' IS NULL OR metadata->'acquisition'->>'archived_at'='null')
     AND metadata->'acquisition'->'website_review'->>'status' IN ('site_observed','manual_reviewed')
     AND metadata->'acquisition'->'email_discovery'->>'verification'='publicly_observed'
     AND COALESCE(metadata->'acquisition'->'invitation'->>'status','') IN ('','draft','prepared')
