@@ -31,6 +31,7 @@ on:
       - 'src/growth-wordpress-preflight-route*.cjs'
       - 'src/growth-wordpress-candidate-reader*.cjs'
       - 'src/growth-gsc-page-verification*.cjs'
+      - 'src/growth-gsc-window-comparison*.cjs'
       - 'migrations/growth-gsc-page-import-runs.sql'
       - 'src/growth-wordpress-connection-route*.cjs'
       - 'src/growth-wordpress-admin-auth*.cjs'
@@ -79,6 +80,8 @@ jobs:
         run: node src/growth-tracker-wordpress-identity.test.cjs
       - name: Exact-page GSC source verification and transactional import
         run: node src/growth-gsc-page-verification.test.cjs
+      - name: Compare verified nonoverlapping Growth GSC windows
+        run: node src/growth-gsc-window-comparison.test.cjs
       - name: Network CRM opportunity invitation pilot
         run: node src/network-opportunity-pilot.test.cjs
       - name: Brevo accepted-versus-delivery evidence reconciliation
