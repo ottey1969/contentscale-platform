@@ -1,5 +1,6 @@
 'use strict';
 const {URL}=require('node:url');
+const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
 const escapeHtml=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 function bucket(q,brand){
@@ -80,6 +81,7 @@ function computeGrowth(rows,queries,domain,now=new Date()){
 // A distinct dated measurement report lives at /growth/measurement.
 function buildGrowthClientBrief(g){
  const top=g.query_opportunities.find(q=>!q.case_study_locked);
+ const intent=top?classifyGrowthSearchIntent(top.query):null;
  const latest=g.query_opportunities.map(q=>q.imported_at).filter(Boolean).sort().at(-1)||null;
  const lines=[
   'CONTENTSCALE GROWTH — VERIFIED CLICK OPPORTUNITY',
@@ -100,6 +102,9 @@ function buildGrowthClientBrief(g){
   top?'Existing URL: '+top.url:'',
   top?'Search Console: '+top.impressions+' impressions; '+top.clicks+' clicks; average position '+top.position:'',
   top?'Opportunity type: '+top.type:'',
+  intent?'Search intent: '+intent.intent:'',
+  intent?'Appropriate contact goal: '+intent.goal:'',
+  intent?'Intent-specific page action: '+intent.next_action:'',
   top?'Recommended next step: '+top.action:'',
   '',
   'WHAT WE WILL DO:',
@@ -112,6 +117,11 @@ function buildGrowthClientBrief(g){
   '',
   'EVIDENCE LIMITATIONS:',
   '- Visibility and rankings do not prove traffic or customer acquisition.',
+  '- Google Business Profile call-button clicks are not verified conversations, and callers may never visit the website.',
+  '- Actual calls, qualified inquiries, estimates and won jobs require their own evidence sources and matching time periods.',
+  '- No universal conversion percentage (including claims of 80% pre-sold visitors) applies across search intents.',
+  '- A business owner may handle pricing and closing; the Growth report does not infer the reason a lead was lost.',
+  '- Ask for real job photos and authentic customer feedback with permission; never generate fictional jobs or filtered reviews.',
   '- These are the latest imported page-query observations; do not compare them as equal periods.',
   '- No future clicks, ranking gains, job revenue or causal impact are guaranteed.',
   '- Existing Case Studies are read-only during their protected measurement cycle.'
