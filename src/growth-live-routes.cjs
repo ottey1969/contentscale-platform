@@ -4,6 +4,7 @@
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {compareGrowthGscWindows}=require('./growth-gsc-window-comparison.cjs');
 const {registerGrowthCommercialOutcomeRoutes}=require('./growth-commercial-outcome-routes.cjs');
+const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
 function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}){
  if(!app||!pool||typeof verifyEngineAccess!=='function'||typeof fetchExactGsc!=='function')
   throw Error('GROWTH_ROUTE_DEPENDENCIES_REQUIRED');
@@ -56,7 +57,7 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
    const brand=new URL(state.page.url).hostname.toLowerCase().includes('perfectroofingteam.com')?/perfect\s*roofing\s*team/i:/(?!)/;
    const opportunities=rows.map(r=>({query:String(r.query||'').trim(),clicks:Number(r.clicks)||0,impressions:Number(r.impressions)||0,position:Number(r.position)||null,imported_at:r.imported_at||null}))
     .filter(r=>r.query&&r.impressions>0&&!brand.test(r.query))
-    .map(r=>({...r,commercial_intent_signal:commercial.test(r.query)}))
+    .map(r=>{const match=classifyGrowthSearchIntent(r.query);return {...r,commercial_intent_signal:commercial.test(r.query),search_intent:match.intent,conversion_goal:match.goal,intent_next_action:match.next_action,assumed_sales_probability:null};})
     .sort((a,b)=>Number(b.commercial_intent_signal)-Number(a.commercial_intent_signal)||b.impressions-a.impressions);
    const lastImport=rows.reduce((latest,r)=>{const time=Date.parse(r.imported_at||'');return Number.isFinite(time)&&time>latest?time:latest;},0);
    const ageDays=lastImport?Math.max(0,Math.floor((Date.now()-lastImport)/86400000)):null;
