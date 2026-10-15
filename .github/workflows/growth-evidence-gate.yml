@@ -13,6 +13,7 @@ on:
       - 'src/growth-html-draft*.cjs'
       - 'src/growth-elementor-draft*.cjs'
       - 'src/growth-elementor-rest-bridge*.cjs'
+      - 'src/growth-elementor-draft-route*.cjs'
       - 'wordpress/contentscale-growth-elementor/**'
       - 'src/growth-draft-preparation*.cjs'
       - 'src/growth-wordpress-draft-payload*.cjs'
@@ -78,6 +79,8 @@ jobs:
         run: node src/growth-elementor-draft-executor.test.cjs
       - name: Elementor WordPress authenticated bridge mock E2E
         run: node src/growth-elementor-rest-bridge.test.cjs
+      - name: Actual Tracker Elementor draft route safety and plugin contract
+        run: node src/growth-elementor-draft-route.test.cjs
       - name: PHP WordPress Elementor bridge syntax
         run: php -l wordpress/contentscale-growth-elementor/contentscale-growth-elementor.php
       - name: Verified adjacent GSC outcomes
