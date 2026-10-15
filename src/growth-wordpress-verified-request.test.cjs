@@ -16,7 +16,7 @@ function db({lockOnRead=Infinity,changeOnRead=Infinity,mappedIds=[42]}={}){
   throw Error('Unexpected SQL');
  }};
 }
-function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy],aiSpy:[{...spy,source_url:'https://other.example.org/'}],templateMarkers:['class="approved"'],claims:[],renderProof:{desktop_checked:true,mobile_checked:true},additions:[{approved:true,evidence_ref:'evidence:1',html:'<section><h2>Example</h2><p>Checked example.</p></section>'}],title:'A useful guide',editor_approved:true,authorized:true,currentWordPressHtml:html,fetchFreshWordPressHtml:async()=>({id:42,link:url,status:'publish',modified_gmt:'2026-10-12T08:00:00',content:{raw:'<!-- wp:html -->\n'+html+'\n<!-- /wp:html -->'}}),expectedPageUrl:url};}
+function input(database){return {db:database,pageId:3,clientId:4,searchSpy:[spy],aiSpy:[{...spy,source_url:'https://other.example.org/'}],templateMarkers:['class="approved"'],claims:[],renderProof:{desktop_checked:true,mobile_checked:true},additions:[{approved:true,evidence_ref:'evidence:1',html:'<section><h2>Example</h2><p>Checked and sourced example that explains what property owners should inspect before approving repairs.</p></section>'}],title:'A useful guide',editor_approved:true,authorized:true,currentWordPressHtml:html,fetchFreshWordPressHtml:async()=>({id:42,link:url,status:'publish',modified_gmt:'2026-10-12T08:00:00',content:{raw:'<!-- wp:html -->\n'+html+'\n<!-- /wp:html -->'}}),expectedPageUrl:url};}
 (async()=>{
  let result=await prepareVerifiedGrowthWordPressRequest(input(db()));
  assert.equal(result.status,'OFFLINE_REQUEST_ONLY',JSON.stringify(result.issues));
