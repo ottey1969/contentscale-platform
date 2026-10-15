@@ -54,10 +54,17 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
     .filter(r=>r.query&&r.impressions>0&&!brand.test(r.query))
     .map(r=>({...r,commercial_intent_signal:commercial.test(r.query)}))
     .sort((a,b)=>Number(b.commercial_intent_signal)-Number(a.commercial_intent_signal)||b.impressions-a.impressions);
+   const lastImport=rows.reduce((latest,r)=>{const time=Date.parse(r.imported_at||'');return Number.isFinite(time)&&time>latest?time:latest;},0);
+   const ageDays=lastImport?Math.max(0,Math.floor((Date.now()-lastImport)/86400000)):null;
+   const stale=ageDays===null||ageDays>3;
+   const status=state.page.case_study_active?'CASE_STUDY_LOCKED':
+    !opportunities.length?'NEEDS_EXACT_PAGE_GSC':stale?'GSC_REFRESH_REQUIRED':'VERIFIED_QUERIES_REVIEW';
    return res.json({success:true,page_id:identity.pageId,url:state.page.url,
-    status:opportunities.length?'VERIFIED_QUERIES_REVIEW':'NEEDS_EXACT_PAGE_GSC',
-    case_study_locked:state.page.case_study_active,
+    status,case_study_locked:state.page.case_study_active,
     metric_scope:'page_verified_only',historical_page_aggregate_excluded:true,
+    gsc_last_imported_at:lastImport?new Date(lastImport).toISOString():null,gsc_age_days:ageDays,
+    fresh_for_planning:!stale,
+    next_action:state.page.case_study_active?'PRESERVE_CASE_STUDY_BASELINE':stale?'REFRESH_EXACT_PAGE_GSC':'REVIEW_CLICK_OPPORTUNITIES',
     queries:opportunities,publication_allowed:false});
   }catch(error){return res.status(503).json({success:false,code:'GROWTH_CLICK_OPPORTUNITIES_UNAVAILABLE'});}
  });
