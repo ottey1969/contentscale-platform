@@ -66,7 +66,7 @@ async function main(){
  assert(!r.body.error.includes('s-key')&&!r.body.error.includes('p-key'));
 
  const noKeys=suite({serperKey:'',serpapiKey:'',fetchImpl:()=>{throw Error('should not fetch');}});
- r=await noKeys('roofing without keys');assert.equal(r.status,503);assert.match(r.body.error,/not configured/);
+ r=await noKeys('roofing without keys');assert.equal(r.status,503);assert.match(r.body.error,/requires/);
  console.log('PASS: Serper-only NJ Maps, per-request credit count, 20-min cache, fail-closed provider errors, 403 auth, no key exposure');
 }
 main().catch(err=>{console.error(err);process.exitCode=1;});
