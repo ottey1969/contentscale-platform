@@ -2,10 +2,12 @@
 const {createHash}=require('node:crypto');
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {prepareGrowthCmsHandoff,packageGrowthZip}=require('./growth-cms-handoff.cjs');
+const {registerGrowthCmsHandoffScreen}=require('./growth-cms-handoff-screen.cjs');
 function registerGrowthCmsHandoffRoute({app,pool,verifyEngineAccess}={}){
  if(typeof app?.post!=='function'||typeof pool?.query!=='function'||typeof verifyEngineAccess!=='function')
   throw Error('GROWTH_CMS_HANDOFF_DEPENDENCIES_REQUIRED');
  const admin=(req,res,next)=>req.engineUser?.isAdmin===true?next():res.status(403).json({success:false,code:'GROWTH_ADMIN_ONLY'});
+ registerGrowthCmsHandoffScreen(app);
  app.get('/api/growth/admin/pages/:pageId/cms-handoff/source',verifyEngineAccess,admin,async(req,res)=>{
   const clientId=Number(req.query?.client_id),pageId=Number(req.params.pageId);
   if(!Number.isSafeInteger(clientId)||clientId<1||!Number.isSafeInteger(pageId)||pageId<1)
