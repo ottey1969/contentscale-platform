@@ -43,6 +43,24 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
     issues,publication_allowed:false});
   }catch(error){return res.status(503).json({success:false,code:'GROWTH_READINESS_UNAVAILABLE'});}
  });
+ app.get('/api/growth/admin/pages/:pageId/click-opportunities',verifyEngineAccess,adminOnly,async(req,res)=>{
+  const identity=ids(req);if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
+  try{
+   const state=await loadGrowthTrackerEvidence(pool,identity);
+   const rows=state.gscRows.filter(r=>r.source_page_url===state.page.url&&r.evidence_scope==='page_verified');
+   const commercial=/\\b(roof|roofing|replacement|repair|installation|install|leak|storm|damage|emergency|contractor|estimate|quote)\\b/i;
+   const brand=/perfect\\s*roofing\\s*team/i;
+   const opportunities=rows.map(r=>({query:String(r.query||'').trim(),clicks:Number(r.clicks)||0,impressions:Number(r.impressions)||0,position:Number(r.position)||null,imported_at:r.imported_at||null}))
+    .filter(r=>r.query&&r.impressions>0&&!brand.test(r.query))
+    .map(r=>({...r,commercial_intent_signal:commercial.test(r.query)}))
+    .sort((a,b)=>Number(b.commercial_intent_signal)-Number(a.commercial_intent_signal)||b.impressions-a.impressions);
+   return res.json({success:true,page_id:identity.pageId,url:state.page.url,
+    status:opportunities.length?'VERIFIED_QUERIES_REVIEW':'NEEDS_EXACT_PAGE_GSC',
+    case_study_locked:state.page.case_study_active,
+    metric_scope:'page_verified_only',historical_page_aggregate_excluded:true,
+    queries:opportunities,publication_allowed:false});
+  }catch(error){return res.status(503).json({success:false,code:'GROWTH_CLICK_OPPORTUNITIES_UNAVAILABLE'});}
+ });
  app.post('/api/growth/admin/pages/:pageId/refresh-gsc',verifyEngineAccess,adminOnly,async(req,res)=>{
   const identity=ids(req);if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
   try {
