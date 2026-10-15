@@ -53,6 +53,25 @@ on:
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
 jobs:
+  growth-core:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Growth proof and editorial quality
+        run: node src/growth-evidence-render-gate.test.cjs
+      - name: Protected original WordPress document assembly
+        run: node src/growth-html-draft.test.cjs
+      - name: Verified adjacent GSC outcomes
+        run: node src/growth-gsc-window-comparison.test.cjs
+      - name: Canonical Tracker Growth routes
+        run: node src/growth-live-routes.test.cjs
+      - name: Tracker to WordPress integration contract
+        run: node src/tracker-growth-wordpress-integration.test.cjs
   growth-gate:
     runs-on: ubuntu-latest
     permissions:
