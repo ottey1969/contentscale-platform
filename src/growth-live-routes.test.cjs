@@ -43,6 +43,10 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
  f=fixture({queryText:'chimney flashing nj'});r=await f.request('GET','click-opportunities');
  assert.equal(r.statusCode,200);
  assert(r.body.queries.some(x=>x.query==='chimney flashing nj'&&x.commercial_intent_signal===true),'real chimney/flashing demand is commercial');
+ assert(r.body.queries.every(x=>x.assumed_sales_probability===null),'no unsupported close probability');
+ f=fixture({queryText:'24 hour emergency roof repair nj'});r=await f.request('GET','click-opportunities');
+ assert.equal(r.body.queries[0].search_intent,'URGENT_SERVICE');
+ assert.equal(r.body.queries[0].conversion_goal,'QUALIFIED_URGENT_PHONE_CONTACT');
  // Read-only outcome comparisons must never require a draft or overwrite Case Studies.
  f=fixture();r=await f.request('GET','outcomes');
  assert.equal(r.body.status,'NO_VERIFIED_GSC_HISTORY');
