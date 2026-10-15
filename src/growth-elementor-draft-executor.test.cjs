@@ -13,7 +13,8 @@ assert.equal(prepared.status,'DRAFT_FOR_REVIEW');
 (async()=>{
  let draftMeta='',createdCount=0;
  const opts={approvedCandidate:prepared,sourcePostId:3269,sourcePostType:'pages',
-  sourceRevisionVerified:true,originalCaseStudyUnlocked:true,
+  readOriginalPost:async()=>({id:3269,type:'pages',status:'publish',elementor_data:original}),
+  checkCanonicalState:async()=>({wordpress_post_id:3269,case_study_active:false,allow_draft:true}),
   createDraft:async req=>{createdCount++;assert.equal(req.status,'draft');assert.equal(req.type,'pages');return{id:6001,status:'draft'};},
   writeDraftElementorMeta:async req=>{assert.equal(req.id,6001);draftMeta=req.elementor_data;},
   readDraft:async req=>({id:req.id,status:'draft',type:'pages',elementor_edit_mode:'builder',elementor_data:draftMeta})
@@ -23,9 +24,9 @@ assert.equal(prepared.status,'DRAFT_FOR_REVIEW');
  assert.equal(result.published,false);
  assert.equal(result.draft.source_post_id,3269);
  assert.equal(createdCount,1);
- result=await executeGrowthElementorDraft({...opts,sourceRevisionVerified:false});
+ result=await executeGrowthElementorDraft({...opts,readOriginalPost:async()=>({id:3269,type:'pages',status:'publish',elementor_data:'[]'})});
  assert.equal(result.status,'BLOCKED');assert.equal(createdCount,1);
- result=await executeGrowthElementorDraft({...opts,originalCaseStudyUnlocked:false});
+ result=await executeGrowthElementorDraft({...opts,checkCanonicalState:async()=>({wordpress_post_id:3269,case_study_active:true,allow_draft:true})});
  assert.equal(result.status,'BLOCKED');assert.equal(createdCount,1);
  result=await executeGrowthElementorDraft({...opts,writeDraftElementorMeta:undefined});
  assert.equal(result.status,'BLOCKED');assert.equal(createdCount,1);
