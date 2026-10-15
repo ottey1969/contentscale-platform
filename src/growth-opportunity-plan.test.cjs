@@ -7,14 +7,14 @@ const good={page_id:7,tracker_client_id:2,source_page_url:url,evidence_scope:'pa
 let p=buildGrowthOpportunityPlan({page,gscRows:[good],searchSpy:[],aiSpy:[]});
 assert.equal(p.status,'RESEARCH_INCOMPLETE');
 assert(p.blockers.includes('SEARCH_SPY_NO_VALID_PAGE_FINDINGS'));
-assert(p.blockers.includes('AI_SPY_NO_VALID_PAGE_FINDINGS'));
+assert(p.warnings.includes('AI_SPY_NO_VALID_PAGE_FINDINGS'));
 assert.equal(p.actions.length,1);
 assert.equal(p.actions[0].expected_clicks,null);
 assert.equal(p.automatic_draft_allowed,false);
 p=buildGrowthOpportunityPlan({page,gscRows:[good,{...good,tracker_client_id:3,query:'other client'},{...good,source_page_url:'https://elsewhere.test/',query:'other page'},{...good,evidence_scope:'legacy_unverified',query:'legacy'}]});
 assert.deepEqual(p.actions.map(x=>x.query),['example guide']);
 assert(p.blockers.includes('SEARCH_SPY_NOT_MAPPED'));
-assert(p.blockers.includes('AI_SPY_NOT_MAPPED'));
+assert(p.warnings.includes('AI_SPY_NOT_MAPPED'));
 p=buildGrowthOpportunityPlan({page:{...page,case_study_active:true},gscRows:[good],searchSpy:[],aiSpy:[]});
 assert(p.blockers.includes('CASE_STUDY_LOCK'));
 p=buildGrowthOpportunityPlan({page,gscRows:[],searchSpy:[],aiSpy:[]});
