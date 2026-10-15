@@ -102,7 +102,7 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
  assert.equal(early.statusCode,409,'even direct POST must not record interest on unsent invitations');
  assert.equal(company.metadata.acquisition.invitation.status,'prepared','unsent interest cannot alter canonical state');
  r=await run('GET','/network/join/:token',{}, {},{token});
- assert.equal(r.statusCode,200);assert.match(r.body,/I am interested/);assert.doesNotMatch(r.body,/QuickScan/);
+ assert.equal(r.statusCode,200);assert.match(r.body,/Preview only — invitation not sent/);assert.doesNotMatch(r.body,/<form method="POST"/);assert.doesNotMatch(r.body,/QuickScan/);
  r=await run('GET','/network/join/:token/unsubscribe',{}, {},{token});
  assert.equal(r.statusCode,200);assert.match(r.body,/Confirm/);
  assert.equal(company.metadata.acquisition.invitation.status,'prepared','GET unsubscribe must not mutate');
