@@ -15,7 +15,7 @@ assert.equal(a.counts.verified_organic_attribution,0);
 assert.equal(a.conversion_attribution_proven,false);
 assert.equal(a.paid_revenue_amount,null);
 assert.equal(a.next_action,'CONFIRM_INVOICE_ACCEPTED_WORK_COMPLETED_AND_PAYMENT_SEPARATELY');
-assert(!JSON.stringify(a).includes('email'),'No client email or private invoice content retained');
+assert.deepEqual(Object.keys(a.records[0]).sort(),['internal_evidence_id','stage','channel','observed_at','source','channel_verified','payment_verified','completion_verified','invoice_present','needs_stage_confirmation','needs_channel_confirmation'].sort());
 a=classifyCommercialEvidence([
  {internal_evidence_id:'e1',stage:'invoice_issued',source:'redacted_invoice',channel:'organic_search',
    channel_verified:true,observed_at:observed},
