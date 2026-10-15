@@ -80,6 +80,8 @@ jobs:
         run: node src/tracker-growth-wordpress-integration.test.cjs
       - name: Synthetic click-to-editor-to-results Growth journey
         run: node src/tracker-growth-e2e.synthetic.test.cjs
+      - name: Distinguish invoicing, completed work and SEO-attributed leads
+        run: node src/growth-commercial-outcomes.test.cjs
   growth-schema:
     runs-on: ubuntu-latest
     permissions:
