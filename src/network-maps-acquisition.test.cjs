@@ -98,7 +98,7 @@ async function invoke(method,path,body,code='ok'){
  assert(h.includes('providerUnavailable=true'),'circuit breaker must stop 5xx');
  const html=fs.readFileSync('public/network-acquisition.html','utf8');
 
- assert.match(html,/nooit automatisch uitnodigingen verzonden/i,'Network messages are not auto-sent');
+ assert.match(html,/Geverifieerde zakelijke contacten ontvangen automatisch een Network-uitnodiging binnen de opwarmlimieten/i,'Verified contacts use the shared warm-up budget');
  assert.match(html,/d.total/,'Acquisitie must show cumulative total');
  assert.match(html,/Onderzoek volgende 20 websites/,'batch website and email research available');
  assert.match(html,/api\/network\/admin\/acquisition\/discover-batch/,'batch research uses canonical Network records');
