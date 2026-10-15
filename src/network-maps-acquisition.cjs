@@ -5,6 +5,7 @@ const path=require('node:path');
 const {safeWebsite}=require('./lead-crawler-serpapi.cjs');
 const {discoverCompanyContact}=require('./network-business-email-fetch.cjs');
 const {registerNetworkAcquisitionInvitations,websiteEvidence}=require('./network-acquisition-invitations.cjs');
+const {registerContactStagingAdmin}=require('./network-contact-staging-admin.cjs');
 const plain=(x,n=200)=>String(x??'').replace(/[\x00-\x1f<>]/g,'').trim().slice(0,n);
 function authorized(req){
  const configured=process.env.LC_ADMIN_CODE||'',submitted=String(req.get('x-admin-code')||'');
@@ -219,6 +220,7 @@ function registerNetworkMapsAcquisition({app,pool,auth=authorized,discover=disco
   }catch(e){console.error('[network-acquisition] import',e.code||e.message);
    return res.status(503).json({error:'Network import interrupted. Check the review list before retrying; duplicate websites cannot be imported twice.'})}
  });
+ registerContactStagingAdmin(app,pool,sessionAuth);
  registerNetworkAcquisitionInvitations({app,pool,auth:sessionAuth});
  scheduleEmailBackfill();
 }
