@@ -7,7 +7,7 @@ const {registerGrowthCommercialOutcomeRoutes}=require('./growth-commercial-outco
 const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
 const {registerGrowthCmsHandoffRoute}=require('./growth-cms-handoff-route.cjs');
 function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}){
- if(!app||!pool||typeof verifyEngineAccess!=='function'||typeof fetchExactGsc!=='function')
+ if(!app||!pool||typeof verifyEngineAccess!=='function')
   throw Error('GROWTH_ROUTE_DEPENDENCIES_REQUIRED');
  const adminOnly=(req,res,next)=>req.engineUser?.isAdmin===true?next():res.status(403).json({success:false,code:'GROWTH_ADMIN_ONLY'});
  // Company-wide funnel stages remain private and independent of page-specific GSC rankings.
@@ -35,12 +35,15 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
    if(mapping.rows.length!==1||mapping.rows[0].wordpress_url!==url||!Number.isSafeInteger(Number(mapping.rows[0].wordpress_post_id)))issues.push('REVIEWED_WORDPRESS_MAPPING_REQUIRED');
    if(!credentialsConfigured)issues.push('WORDPRESS_CREDENTIALS_REQUIRED');
    if(!state.page.html_content)issues.push('TRACKER_HTML_MISSING');
-   const nextAction=issues.includes('CASE_STUDY_LOCK')?'PRESERVE_CASE_STUDY_BASELINE':
-    issues.includes('WORDPRESS_CREDENTIALS_REQUIRED')?'CONFIGURE_WORDPRESS_PROFILE':
-    issues.includes('REVIEWED_WORDPRESS_MAPPING_REQUIRED')?'REVIEW_WORDPRESS_MAPPING':
-    issues.includes('EXACT_PAGE_GSC_QUERIES_REQUIRED')?'VERIFY_EXACT_PAGE_GSC':
-    issues.length?'RESOLVE_VERIFICATION_ISSUES':'REVIEW_GROWTH_DRAFT';
-   return res.json({success:true,status:issues.length?'BLOCKED':'READY_FOR_EDITOR_VERIFICATION',
+   const handoffIssues=issues.filter(x=>['CASE_STUDY_LOCK','DUPLICATE_TRACKER_URL','TRACKER_HTML_MISSING'].includes(x));
+   const handoffReady=handoffIssues.length===0;
+   const wpIssues=issues.filter(x=>['REVIEWED_WORDPRESS_MAPPING_REQUIRED','WORDPRESS_CREDENTIALS_REQUIRED'].includes(x));
+   const wpReady=issues.length===0;
+   const nextAction=state.page.case_study_active?'PRESERVE_CASE_STUDY_BASELINE':
+    handoffReady&&!wpReady?'PREPARE_CMS_NEUTRAL_HANDOFF':
+    wpReady?'REVIEW_GROWTH_DRAFT': 'RESOLVE_PAGE_SOURCE_ISSUES';
+   return res.json({success:true,status:wpReady?'READY_FOR_EDITOR_VERIFICATION':
+    handoffReady?'READY_FOR_CMS_NEUTRAL_HANDOFF':'BLOCKED',
     next_action:nextAction,
     page_id:identity.pageId,client_id:identity.clientId,url,
     gsc_verified_queries:state.gscRows.length,
@@ -48,7 +51,13 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
     ai_evidence_count:state.aiEvidence.length,
     mapping_present:mapping.rows.length===1,
     wordpress_credentials_configured:credentialsConfigured,
-    issues,publication_allowed:false});
+    cms_neutral:{ready:handoffReady,requires_wordpress:false,requires_paid_provider:false,
+     supported:['wix','wordpress','webflow','squarespace','custom','generic'],
+     blockers:handoffIssues,requires_gsc:false,evidence_scope:state.gscRows.length?'verified_or_observed':'needs_access'},
+    wordpress_draft:{ready:wpReady,issues:wpIssues},
+    issues:handoffReady?handoffIssues:issues,
+    warnings:handoffReady?issues:[],
+    publication_allowed:false});
   }catch(error){return res.status(503).json({success:false,code:'GROWTH_READINESS_UNAVAILABLE'});}
  });
  app.get('/api/growth/admin/pages/:pageId/click-opportunities',verifyEngineAccess,adminOnly,async(req,res)=>{
@@ -104,6 +113,7 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
   try {
    const state=await loadGrowthTrackerEvidence(pool,identity);
    if(state.page.case_study_active)return res.status(409).json({success:false,code:'CASE_STUDY_LOCK'});
+   if(typeof fetchExactGsc!=='function')return res.status(409).json({success:false,code:'GSC_CONNECTION_OPTIONAL',next_action:'CONTINUE_WITH_CMS_NEUTRAL_HANDOFF'});
    const result=await fetchExactGsc(identity.clientId,identity.pageId,state.page.url);
    if(result.page_checked!==true)return res.status(409).json({success:false,code:result.reason||'GSC_PAGE_NOT_VERIFIED'});
    return res.json({success:true,page_id:identity.pageId,verified_page_url:state.page.url,verified_queries:result.saved,page_checked:true});
