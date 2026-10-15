@@ -82,6 +82,8 @@ jobs:
         run: node src/tracker-growth-e2e.synthetic.test.cjs
       - name: Distinguish invoicing, completed work and SEO-attributed leads
         run: node src/growth-commercial-outcomes.test.cjs
+      - name: Private commercial outcome route contract
+        run: node src/growth-commercial-outcome-routes.test.cjs
   growth-schema:
     runs-on: ubuntu-latest
     permissions:
@@ -114,9 +116,11 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -f migrations/growth-wordpress-page-mapping.sql
           psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-page-import-runs.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-commercial-outcome-events.sql
           psql -v ON_ERROR_STOP=1 -f migrations/growth-wordpress-page-mapping.sql
           psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-page-import-runs.sql
-          psql -v ON_ERROR_STOP=1 -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('growth_wordpress_page_mapping','growth_gsc_page_import_runs')" | grep -qx '2'
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-commercial-outcome-events.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('growth_wordpress_page_mapping','growth_gsc_page_import_runs','growth_commercial_outcome_events')" | grep -qx '3'
   growth-gate:
     runs-on: ubuntu-latest
     permissions:
