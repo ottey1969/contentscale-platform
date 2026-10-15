@@ -16,9 +16,9 @@ const pool={query:async(sql,args=[])=>{
  if(sql.includes('FROM tracker_pages WHERE url='))return{rows:duplicates?[{id:22,tracker_client_id:7},{id:23,tracker_client_id:9}]:[{id:22,tracker_client_id:7}]};
  throw Error('Unrecognized query '+sql);
 }};
-const app={routes:{},post(path,...middleware){this.routes[path]=middleware}};
+const app={routes:{},post(path,...middleware){this.routes['POST '+path]=middleware},get(path,...middleware){this.routes['GET '+path]=middleware}};
 registerGrowthCmsHandoffRoute({app,pool,verifyEngineAccess:(req,res,next)=>next()});
-const endpoint=app.routes['/api/growth/admin/pages/:pageId/cms-handoff'];assert.equal(endpoint.length,3);
+const endpoint=app.routes['POST /api/growth/admin/pages/:pageId/cms-handoff'];assert.equal(endpoint.length,3);
 async function call(overrides={},admin=true){
  const body={client_id:7,source_sha256:hash,editor_approved:true,cms:'wix',
  seo_title:'Roof Repair NJ | Verified Local Options',
@@ -36,6 +36,17 @@ async function call(overrides={},admin=true){
  await next(0);return res;
 }
 (async()=>{
+ const sourceStack=app.routes['GET /api/growth/admin/pages/:pageId/cms-handoff/source'];
+ assert.equal(sourceStack.length,3);
+ const sourceReq={engineUser:{isAdmin:true},params:{pageId:'22'},query:{client_id:'7'}};
+ const sourceRes={statusCode:200,headers:{},status(n){this.statusCode=n;return this},
+  set(k,v){this.headers[k]=v;return this},json(x){this.payload=x;return this}};
+ let index=0;const run=()=>{const fn=sourceStack[index++];if(fn)return fn(sourceReq,sourceRes,run)};
+ await run();
+ assert.equal(sourceRes.payload.source_sha256,hash);
+ assert.equal(sourceRes.payload.wordpress_required,false);
+ assert.equal(sourceRes.payload.paid_api_required,false);
+ assert.deepEqual(sourceRes.payload.page_verified_query_examples,['roof repair nj']);
  let r=await call();
  assert.equal(r.statusCode,200,JSON.stringify(r.payload));
  assert.equal(r.payload.status,'HANDOFF_READY_FOR_EDITOR');
