@@ -38,7 +38,7 @@
 <button id="batch">Onderzoek volgende 20 websites + e-mails</button>
 <button id="refresh" class="secondary">Vernieuwen</button>
 <select id="filter" aria-label="Filter bedrijven">
-<option value="all">Alle bedrijven</option><option value="needs">Nog onderzoeken</option><option value="email">E-mail gevonden</option><option value="prepared">Uitnodiging voorbereid</option><option value="invited">Uitnodiging verstuurd</option><option value="interested">Interested</option>
+<option value="all">Actieve bedrijven</option><option value="archived">Uit acquisitie verwijderd</option><option value="needs">Nog onderzoeken</option><option value="email">E-mail gevonden</option><option value="prepared">Uitnodiging voorbereid</option><option value="invited">Uitnodiging verstuurd</option><option value="interested">Interested</option>
 </select>
 </div>
 <p id="progress" role="status" class="info"></p><p id="message" role="status" class="error"></p><div id="companies"></div>
@@ -149,7 +149,7 @@ async function refresh(){
    el('autoInvitationStatus').textContent=a.enabled?'Automatisch uitnodigen actief · elke '+a.interval_minutes+' minuten · alleen gecontroleerde websites en geverifieerde zakelijke e-mailadressen · binnen bestaande verzendlimieten.':'Automatische uitnodigingen staan uit.';
   }catch(e){el('autoInvitationStatus').textContent='Automatische uitnodigingsstatus niet beschikbaar.';}
   renderStats();render();
-  if(!autoStarted&&companies.some(c=>!c.invitation?.status&&(!c.email_discovery?.checked_at||(!c.email_discovery?.email&&c.email_discovery?.version!=='public-v4')))){
+  if(!autoStarted&&companies.some(c=>!c.archived_at&&!c.invitation?.status&&(!c.email_discovery?.checked_at||(!c.email_discovery?.email&&c.email_discovery?.version!=='public-v4')))){
    autoStarted=true;el('progress').textContent='Automatisch website- en e-mailonderzoek gestart voor nieuwe import…';discoverBatch();
   }
  }catch(e){setMessage('Kan Acquisitie niet openen: '+e.message);}
@@ -157,7 +157,7 @@ async function refresh(){
 }
 function render(){
  const root=el('companies');root.replaceChildren();
- const rows=companies.filter(c=>el('filter').value==='all'||stage(c).group===el('filter').value);
+ const rows=companies.filter(c=>el('filter').value==='archived'?!!c.archived_at:!c.archived_at&&(el('filter').value==='all'||stage(c).group===el('filter').value));
  if(!rows.length){root.append(tag('p','Geen bedrijven in deze categorie.','info'));return;}
  for(const c of rows){
   const status=stage(c),box=tag('article',undefined,'company'),header=tag('div',undefined,'companyhead'),info=tag('div');
@@ -165,6 +165,8 @@ function render(){
   header.append(info,tag('span',status.label,'pill'+(status.good?' good':'')));box.append(header);
   const web=tag('a','Website bekijken ↗');web.href=c.canonical_url;web.target='_blank';web.rel='noopener noreferrer';
   const actions=tag('div',undefined,'actions');actions.append(web);
+  if(c.archived_at)actions.append(button('Terugzetten in acquisitie',()=>archiveCompany(c,true),'secondary'));
+  else if(!['invited','interested','sending','send_unknown'].includes(c.invitation?.status))actions.append(button('Verwijder uit acquisitie',()=>archiveCompany(c,false),'secondary'));
   if(c.website_review)box.append(tag('p','Website: '+c.website_review.status+' · '+(c.website_review.reason||''),'small '+(inspection(c)==='site_observed'?'success':'warning')));
   if(c.email_discovery?.email){
    const emailInfo=tag('p','Zakelijk e-mailadres: '+c.email_discovery.email+' · Bron: ','small success');
@@ -178,7 +180,7 @@ function render(){
   else if(inv?.status==='invited'){box.append(tag('p','Verstuurd'+(inv.sent_at?' op '+new Date(inv.sent_at).toLocaleString('nl-NL',{timeZone:'Asia/Manila'}):'')+' naar '+(inv.email||'bedrijfscontact')+'. Bevestigd, geen tweede uitnodiging verzenden.','success'));}
   else if(inv?.status==='sending'||inv?.status==='send_unknown'){box.append(tag('p','Verzending nog niet bevestigd. Controleer Brevo voordat je iets opnieuw verstuurt.','error'));}
   else if(inv?.status==='unsubscribed'){box.append(tag('p','Dit bedrijf heeft zich afgemeld. Verzending geblokkeerd.','warning'));}
-  else {
+  else if(!c.archived_at){
    if(!['site_observed','manual_reviewed'].includes(inspection(c)))actions.append(button('Website opnieuw controleren',()=>inspect(c),'secondary'));
    if(!c.email_discovery?.email)actions.append(button('E-mailadres opnieuw zoeken',()=>findEmail(c),'secondary'));
    if(!c.email_discovery?.email||externalBusinessEmail(c)||c.email_discovery?.contact_review_required||c.website_review?.status!=='site_observed')actions.append(button(openId===c.id?'Beoordeling sluiten':'Contact en uitnodiging beoordelen',()=>{openId=openId===c.id?null:c.id;render();}));
@@ -188,6 +190,19 @@ function render(){
   if(openId===c.id&&(!inv?.status||inv.status==='prepared'))box.append(review(c));
   root.append(box);
  }
+}
+async function archiveCompany(c,restore){
+ if(busy)return;
+ if(!restore&&!confirm('Dit bedrijf uit de actieve acquisitielijst verwijderen? Het blijft in de centrale Network-database en kan later teruggezet worden.'))return;
+ busy=true;
+ try{
+  await api('/api/network/admin/acquisition/archive',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({company_id:c.id,restore})});
+  c.archived_at=restore?null:new Date().toISOString();
+  if(openId===c.id)openId=null;
+  setMessage(restore?'Bedrijf teruggezet in acquisitie.':'Uit acquisitie verwijderd. Centraal bedrijfsrecord blijft behouden.',false);
+  render();
+ }catch(e){setMessage('Kon bedrijfsstatus niet aanpassen: '+e.message);}
+ finally{busy=false;}
 }
 async function inspect(c){
  if(busy)return;busy=true;el('batch').disabled=true;el('progress').textContent='Website '+c.domain+' controleren…';
@@ -202,7 +217,7 @@ async function findEmail(c){
  }catch(e){setMessage(e.message);}finally{busy=false;el('batch').disabled=false;el('progress').textContent='';}
 }
 async function discoverBatch(){
- if(busy)return;const selected=companies.filter(c=>!c.invitation?.status&&(!c.website_review?.checked_at||!c.email_discovery?.checked_at||(!c.email_discovery?.email&&c.email_discovery?.version!=='public-v4'))).slice(0,20);
+ if(busy)return;const selected=companies.filter(c=>!c.archived_at&&!c.invitation?.status&&(!c.website_review?.checked_at||!c.email_discovery?.checked_at||(!c.email_discovery?.email&&c.email_discovery?.version!=='public-v4'))).slice(0,20);
  if(!selected.length){el('progress').textContent='Alle zichtbare kandidaten zijn onderzocht. Voor ontbrekende e-mails kun je de website handmatig beoordelen.';return;}
  busy=true;el('batch').disabled=true;el('refresh').disabled=true;let searched=0,found=0,verified=0,unavailable=0;
  try{
