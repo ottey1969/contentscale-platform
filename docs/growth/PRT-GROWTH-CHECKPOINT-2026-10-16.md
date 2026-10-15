@@ -47,3 +47,10 @@ Measure commercial rankings -> qualified organic clicks -> phone/form inquiries 
 
 ## Tracker Growth build status
 Growth PR #93 contains the next read-only client opportunity brief, GSC window comparisons, stronger editorial checks, template-safe draft assembly and page/post draft transport. Growth-specific tests and disposable PostgreSQL migration tests passed. The complete legacy CI still reports an independent Network test failure. No deployment or live PRT modifications were made after the pause; a real staging-to-WordPress end-to-end verification remains required.
+
+## 16 October integration results
+- The Network Acquisition Journey, general test suite and full Growth Evidence and Render Gate are all green on Growth draft PR #93.
+- The shared 30/day day-nine sender warm-up policy, verified-only invitations, noindex acquisition page and unsent invitation preview assertions were reconciled in tests.
+- Both additive Growth tables exist in a separate isolated Neon integration branch; the exact-page GSC history table was additionally verified on a migration-preview branch with synthetic records. Neither was applied to the parent staging or the Railway production database.
+- Elementor draft protection can now: verify exact original builder JSON, apply approved single-widget changes without changing original IDs/images/stylesheet, require a fresh source + Case Study check, create a new unpublished draft and verify Elementor metadata readback through a caller-supplied WordPress meta bridge. Synthetic cross-module end-to-end contract is green.
+- **Remaining real-world launch blockers:** the ContentScale application has no verified WordPress Application Password connection for PRT in its current Railway environment; a real Elementor-capable draft metadata bridge has not been verified against a customer WordPress site; migration promotion to the parent database requires specific approval; no live production deploy occurred. Do not represent the synthetic E2E tests as a successful customer-site publishing integration.
