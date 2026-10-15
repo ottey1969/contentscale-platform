@@ -29,7 +29,7 @@ async function executeGrowthElementorDraft({
   canonical?.wordpress_post_id!==sourcePostId)
   return deny('TRACKER_CANONICAL_DRAFT_AUTHORIZATION_REQUIRED');
  let created;
- try{created=await createDraft({type:sourcePostType,status:'draft'});}
+ try{created=await createDraft({sourcePostId,sourceSha256:approvedCandidate.original_sha256,type:sourcePostType,status:'draft'});}
  catch{return deny('WORDPRESS_DRAFT_CREATE_FAILED');}
  if(!Number.isSafeInteger(created?.id)||created.id<=0||created.id===sourcePostId||created.status!=='draft')
   return deny('WORDPRESS_DRAFT_NOT_CONFIRMED');
