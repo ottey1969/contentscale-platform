@@ -139,6 +139,9 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
    if(source?.status==='NO_VERIFIED_DAILY_GSC')return res.set('Cache-Control','private, no-store')
     .json({success:true,status:'NO_VERIFIED_DAILY_GSC',confirmed:false,page_id:identity.pageId,
      next_action:'IMPORT_VERIFIED_EXACT_PAGE_GSC_DAYS',publication_allowed:false});
+   if(source?.status==='DAILY_GSC_EVIDENCE_REVIEW_REQUIRED')return res.status(409)
+    .set('Cache-Control','private, no-store')
+    .json({success:false,code:'DAILY_GSC_EVIDENCE_REVIEW_REQUIRED',confirmed:false,publication_allowed:false});
    if(source?.status==='MULTIPLE_GSC_PROPERTIES_REVIEW_REQUIRED')return res.status(409)
     .json({success:false,code:'MULTIPLE_GSC_PROPERTIES_REVIEW_REQUIRED',publication_allowed:false});
    if(source?.page_url!==state.page.url||!source?.gsc_property||!Array.isArray(source.rows))
