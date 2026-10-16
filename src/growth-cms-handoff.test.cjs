@@ -54,6 +54,25 @@ for(const unsafeHref of ['java&#x73;cript:alert(1)','java&#115;cript:alert(1)','
  assert.equal(fail.status,'BLOCKED',unsafeHref);
  assert(fail.issues.includes('ENCODED_LINK_TARGET_NOT_ALLOWED'));
 }
+// CMS handoff must not carry active, hidden, or styling-overriding markup.
+for(const payload of [
+ '<svg><foreignObject><p>Untrusted content inside an embedded graphic.</p></foreignObject></svg>',
+ '<template><h2>Hidden roofing section</h2><p>This must never be exported as indexable prose.</p></template>',
+ '<video src="https://example.test/track.mp4"></video>',
+ '<p style="position:fixed">Override the owner site design and conceal controls.</p>',
+ '<p contenteditable="true">Pretend the reviewed page can be rewritten.</p>',
+ '<p><a href="https://user:secret@evil.example/path">Misleading link target</a></p>'
+]){
+ const trial=prepareGrowthCmsHandoff({...params,changes:[{...approved[0],
+  html:'<section><h2>Checked repairs</h2><p>Repair assessments should document visible roof and gutter conditions before work starts.</p>'+payload+'</section>'}]});
+ assert.equal(trial.status,'BLOCKED',payload);
+ assert(trial.issues.includes(payload.includes('user:secret@')?'LINK_TARGET_INVALID':'UNSAFE_OR_NONINDEXABLE_HTML'));
+}
+const controlHref=prepareGrowthCmsHandoff({...params,changes:[{...approved[0],
+ html:'<section><h2>Checked repairs</h2><p>Repair assessments should document visible roof conditions before choosing a contractor.</p><a href="https://synthetic-roofer.example/\\nexternal">Contact</a></section>'}]});
+assert.equal(controlHref.status,'BLOCKED');
+assert(controlHref.issues.includes('LINK_TARGET_CONTROL_CHARACTER'));
+
 const unquoted=prepareGrowthCmsHandoff({...params,changes:[{...approved[0],html:'<section><h2>Roofing checks</h2><p>Documented roofing work should be inspected before choosing the next repair.</p><a href=https://synthetic-roofer.example/contact/>Contact</a></section>'}]});
 assert.equal(unquoted.status,'BLOCKED');
 assert(unquoted.issues.includes('UNQUOTED_LINK_TARGET_NOT_ALLOWED'));
