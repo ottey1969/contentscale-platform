@@ -46,6 +46,10 @@ async function call(overrides={},admin=true){
  assert(screenRes.body.includes('Wix'));
  assert(screenRes.body.includes('contentscale-growth-'));
  assert(screenRes.body.includes('revenueFields'));
+ assert(screenRes.body.includes('daily-breakthrough?client_id='));
+ assert(screenRes.body.includes('publishedOn'));
+ assert(screenRes.body.includes('measured_click_lift_candidate'));
+
  assert(screenRes.body.includes("revenue_mode:'intent_to_revenue'"));
  assert(screenRes.body.includes("previewResult.revenue_status!=='READY_FOR_EDITOR'"));
  assert(screenRes.body.includes('offerVerified'));
