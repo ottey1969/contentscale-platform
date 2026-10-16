@@ -69,7 +69,7 @@ for(const payload of [
  assert(trial.issues.includes(payload.includes('user:secret@')?'LINK_TARGET_INVALID':'UNSAFE_OR_NONINDEXABLE_HTML'));
 }
 const controlHref=prepareGrowthCmsHandoff({...params,changes:[{...approved[0],
- html:'<section><h2>Checked repairs</h2><p>Repair assessments should document visible roof conditions before choosing a contractor.</p><a href="https://synthetic-roofer.example/\\nexternal">Contact</a></section>'}]});
+ html:'<section><h2>Checked repairs</h2><p>Repair assessments should document visible roof conditions before choosing a contractor.</p><a href="https://synthetic-roofer.example/'+String.fromCharCode(10)+'external">Contact</a></section>'}]});
 assert.equal(controlHref.status,'BLOCKED');
 assert(controlHref.issues.includes('LINK_TARGET_CONTROL_CHARACTER'));
 
