@@ -21,7 +21,8 @@ const fetchImpl=async(request,init)=>{const body=JSON.parse(init.body);
  assert(!validateProperty('https://contentscale.site/roof/','https://contentscale.site/roofing/'));
  assert(validateProperty('https://contentscale.site/roof/','https://contentscale.site/roof/repair/'));
  assert(!validateProperty('https://contentscale.site/roof/','https://contentscale.site.evil.example/roof/'));
- assert(!validateProperty('https://contentscale.site:443/roof/','https://contentscale.site/roof/'));
+ assert(!validateProperty('https://contentscale.site:8443/roof/','https://contentscale.site/roof/'));
+ assert(validateProperty('https://contentscale.site:443/roof/','https://contentscale.site/roof/'));
  assert(!validateProperty('https://user:pass@contentscale.site/roof/','https://contentscale.site/roof/'));
  assert(!validateProperty('https://contentscale.site/roof/?query=1','https://contentscale.site/roof/'));
 
