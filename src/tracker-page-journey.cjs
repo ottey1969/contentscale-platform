@@ -28,7 +28,9 @@
     // Case Study evidence belongs to the current protected cycle ONLY after the baseline.
     var oldCaseBrief=caseActive&&caseBaselineAt>0&&evaluatedAt>0&&evaluatedAt<=caseBaselineAt;
     // A scan performed after the Brief does not make the earlier Brief a fresh change request.
-    var laterScan=scanAt>0&&evaluatedAt>0&&scanAt>evaluatedAt+300000;
+    // Never infer a new revision from normal ordering of a scan and its Brief.
+    // Only a later non-case scan separated by at least a full day is ambiguous/stale.
+    var laterScan=!caseActive&&scanAt>0&&evaluatedAt>0&&scanAt>evaluatedAt+86400000;
     var historicalBrief=!!(brief&&p.brief_content&&(oldCaseBrief||laterScan));
     var currentScanNeedsBrief=scanAt>0&&
       ((caseActive&&caseBaselineAt>0&&scanAt>caseBaselineAt&&
