@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const {registerGrowthLiveRoutes}=require('./growth-live-routes.cjs');
 const url='https://contentscale.site/google-penalty-recovery/';
-function fixture({admin=true,locked=false,duplicates=false,wrongOwner=false,queries=1,unverifiedQueries=false,runs=[],historyTableMissing=false,queryText='google penalty recovery',gscProviderEnabled=true,wpSchemaMissing=false,dailyProvider=false}={}){
+function fixture({admin=true,locked=false,duplicates=false,wrongOwner=false,queries=1,unverifiedQueries=false,runs=[],historyTableMissing=false,queryText='google penalty recovery',gscProviderEnabled=true,wpSchemaMissing=false,dailyProvider=false,dailyInvalid=false}={}){
  const routes={};let writes=0;
  const app={get:(path,...handlers)=>routes['GET '+path]=handlers,post:(path,...handlers)=>routes['POST '+path]=handlers};
  const pool={query:async(sql,args)=>{
@@ -22,7 +22,7 @@ function fixture({admin=true,locked=false,duplicates=false,wrongOwner=false,quer
   throw Error('Unexpected SQL: '+sql);
  }};
  registerGrowthLiveRoutes({app,pool,verifyEngineAccess:(req,res,next)=>next(),fetchExactGsc:gscProviderEnabled?async()=>{writes++;return {page_checked:true,saved:3};}:undefined,
-  fetchVerifiedDailyGsc:dailyProvider?async()=>({page_url:url,gsc_property:'sc-domain:contentscale.site',rows:[]}):undefined});
+  fetchVerifiedDailyGsc:dailyProvider?async()=>dailyInvalid?{status:'DAILY_GSC_EVIDENCE_REVIEW_REQUIRED'}:({page_url:url,gsc_property:'sc-domain:contentscale.site',rows:[]}):undefined});
  async function request(method,kind=method==='GET'?'readiness':'refresh-gsc'){const h=routes[method+' /api/growth/admin/pages/:pageId/'+kind];
   const req={engineUser:{isAdmin:admin},params:{pageId:'2303'},query:{client_id:'10',published_on:'2026-09-01'},body:{client_id:10}};
   const response={statusCode:200,headers:{},status(code){this.statusCode=code;return this;},set(key,value){this.headers[key]=value;return this;},json(data){this.body=data;return this;}};
@@ -55,6 +55,11 @@ function fixture({admin=true,locked=false,duplicates=false,wrongOwner=false,quer
  f=fixture({dailyProvider:true});r=await f.request('GET','daily-breakthrough');
  assert.equal(r.body.status,'BASELINE_28_SETTLED_DAYS_REQUIRED');
  assert.equal(r.body.publication_allowed,false);
+ f=fixture({dailyProvider:true,dailyInvalid:true});r=await f.request('GET','daily-breakthrough');
+ assert.equal(r.statusCode,409);
+ assert.equal(r.body.code,'DAILY_GSC_EVIDENCE_REVIEW_REQUIRED');
+ assert.equal(r.body.confirmed,false);
+ assert.equal(r.headers['Cache-Control'],'private, no-store');
  f=fixture({gscProviderEnabled:false,queries:0});r=await f.request('GET');
  assert.equal(r.body.status,'READY_FOR_CMS_NEUTRAL_HANDOFF');
  r=await f.request('POST');assert.equal(r.body.code,'GSC_CONNECTION_OPTIONAL');
