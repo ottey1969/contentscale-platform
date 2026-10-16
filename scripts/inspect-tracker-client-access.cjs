@@ -28,3 +28,15 @@ for(let i=0;i<lines.length;i++){
 }
 assert(total>0,'Canonical client Tracker routes were not found');
 console.log('PASS: inspected '+total+' actual client routes; do not infer access status from a Growth-only test.');
+
+for(const title of ["app.get('/api/tracker-client/:token',", "app.get('/track/:token',", "app.get('/track/:token/live',"]){
+ const at=lines.findIndex(l=>l.includes(title));
+ if(at<0){console.log('FOCUSED_ROUTE_NOT_FOUND '+title);continue}
+ console.log('FOCUSED_ROUTE '+title+' AT '+(at+1));
+ for(let j=at;j<Math.min(lines.length,at+55);j++){
+  const line=lines[j].trim();
+  if(!line||line.length>350)continue;
+  if(/password|private_key|api_key|secret|access.token/i.test(line))continue;
+  console.log('  '+(j+1)+' '+line.slice(0,280));
+ }
+}
