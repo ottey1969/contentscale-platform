@@ -6,6 +6,7 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
  const routes={};let writes=0;
  const app={get:(path,...handlers)=>routes['GET '+path]=handlers,post:(path,...handlers)=>routes['POST '+path]=handlers};
  const pool={query:async(sql,args)=>{
+  if(sql.includes('FROM growth_gsc_daily_page_evidence'))return {rows:[]};
   if(sql.includes('FROM growth_gsc_page_import_runs')){
    assert.deepEqual(args,[10,2303,url],'read-only history must be scoped to tenant, page and canonical URL');
    if(historyTableMissing)throw Object.assign(Error('relation does not exist'),{code:'42P01'});
@@ -42,7 +43,7 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
  assert.equal(f.writes(),0);
  r=await f.request('POST');assert.equal(r.body.verified_queries,3);assert.equal(f.writes(),1);
  r=await f.request('GET','daily-breakthrough');
- assert.equal(r.body.status,'DAILY_GSC_PROVIDER_NOT_CONFIGURED');
+ assert.equal(r.body.status,'NO_VERIFIED_DAILY_GSC');
  assert.equal(r.body.confirmed,false);
  f=fixture({dailyProvider:true});r=await f.request('GET','daily-breakthrough');
  assert.equal(r.body.status,'BASELINE_28_SETTLED_DAYS_REQUIRED');
