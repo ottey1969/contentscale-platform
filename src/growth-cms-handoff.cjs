@@ -50,8 +50,11 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   for(const m of h.matchAll(/<h[2-6]\b[^>]*>([\s\S]*?)<\/h[2-6]>/gi)){
    if(!asText(m[1]))issues.push('EMPTY_HEADING');
   }
+  if(/<a\b[^>]*\bhref\s*=\s*(?!["'])/i.test(h))issues.push('UNQUOTED_LINK_TARGET_NOT_ALLOWED');
   for(const m of h.matchAll(/<a\b[^>]*href=["']([^"']+)["'][^>]*>/gi)){
    const ref=m[1];
+   // Entity decoding happens in the browser before navigation.
+   if(/&(?:#|colon\b|tab\b|newline\b)/i.test(ref))issues.push('ENCODED_LINK_TARGET_NOT_ALLOWED');
    if(ref.startsWith('#')){links.push({url:ref,type:'in_page'});continue}
    let target;try{target=new URL(ref,canonicalUrl)}catch{}
    if(!target||!['http:','https:','tel:','mailto:'].includes(target.protocol))issues.push('LINK_TARGET_INVALID');
