@@ -45,7 +45,7 @@ function csgd_create($r) {
  if(is_wp_error($draft))return $draft;
  // Copy only the page-builder metadata necessary to preserve the source design.
  foreach(array('_elementor_data','_elementor_edit_mode','_elementor_page_settings',
-   '_elementor_template_type','_wp_page_template') as $key) {
+   '_elementor_template_type','_wp_page_template','_thumbnail_id') as $key) {
   $value=get_post_meta($id,$key,true);
   if($value!=='' && $value!==false)update_post_meta($draft,$key,wp_slash($value));
  }
