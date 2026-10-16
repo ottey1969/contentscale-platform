@@ -135,15 +135,24 @@ function registerGrowthCockpit(app,pool){
    const cr=await pool.query("SELECT id,name,domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted') LIMIT 1",[req.params.token]);
    if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
    const client=cr.rows[0];
-   const [p,q]=await Promise.all([
-    pool.query(`SELECT p.id,p.url,p.keyword,p.gsc_impressions,p.gsc_clicks,p.gsc_position,p.brief_content,
+   // Tracker/Growth access is independent from optional Google Search Console.
+   // A query table outage or missing connection must not lock the client out.
+   const p=await pool.query(`SELECT p.id,p.url,p.keyword,p.gsc_impressions,p.gsc_clicks,p.gsc_position,p.brief_content,
       EXISTS(SELECT 1 FROM tracker_case_studies cs WHERE cs.tracker_page_id=p.id AND cs.tracker_client_id=$1 AND cs.status='active') AS case_study_active
-      FROM tracker_pages p WHERE p.tracker_client_id=$1 ORDER BY p.gsc_impressions DESC NULLS LAST LIMIT 1000`,[client.id]),
-    pool.query(`SELECT q.page_id,q.query,q.clicks,q.impressions,q.position,q.imported_at,q.evidence_scope
+      FROM tracker_pages p WHERE p.tracker_client_id=$1 ORDER BY p.gsc_impressions DESC NULLS LAST LIMIT 1000`,[client.id]);
+   let evidenceRows=[],gscAvailable=true;
+   try {
+    const q=await pool.query(`SELECT q.page_id,q.query,q.clicks,q.impressions,q.position,q.imported_at,q.evidence_scope
       FROM tracker_gsc_queries q WHERE q.tracker_client_id=$1 AND q.evidence_scope='page_verified'
-      ORDER BY q.imported_at DESC LIMIT 5000`,[client.id])
-   ]);
-   req.growth=computeGrowth(p.rows,q.rows,client.domain);
+      ORDER BY q.imported_at DESC LIMIT 5000`,[client.id]);
+    evidenceRows=q.rows||[];
+   } catch (error) {
+    gscAvailable=false;
+    console.warn('[tracker-growth] optional GSC evidence unavailable',String(error.code||'unknown'));
+   }
+   req.growth=computeGrowth(p.rows,evidenceRows,client.domain);
+   req.growth.gsc_evidence_status=gscAvailable?(evidenceRows.length?'AVAILABLE':'NEEDS_ACCESS'):'UNAVAILABLE';
+   req.growth.gsc_connected_required_for_access=false;
    req.growth.client_id=client.id;
    next();
   }catch(e){res.status(503).json({success:false,error:'Verified growth evidence temporarily unavailable'})}
