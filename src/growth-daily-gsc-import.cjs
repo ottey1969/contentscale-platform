@@ -13,7 +13,14 @@ function validateProperty(property,pageUrl){
  let page;try{page=new URL(pageUrl)}catch{return false}
  if(page.protocol!=='https:'||page.username||page.password||page.search||page.hash)return false;
  if(property.startsWith('sc-domain:'))return page.hostname===property.slice(10)||page.hostname.endsWith('.'+property.slice(10));
- try{const url=new URL(property);return url.protocol==='https:'&&pageUrl.startsWith(url.href)}catch{return false}
+ try{
+  const scope=new URL(property);
+  if(scope.protocol!=='https:'||scope.username||scope.password||scope.search||scope.hash||scope.port||
+     page.origin!==scope.origin)return false;
+  // A URL-prefix property owns its exact path and descendants, not similarly named siblings.
+  return page.pathname.startsWith(scope.pathname.endsWith('/')?scope.pathname:scope.pathname+'/')||
+   page.pathname===scope.pathname;
+ }catch{return false}
 }
 async function importVerifiedDailyGrowthGsc({db,clientId,pageId,pageUrl,gscProperty,accessToken,
  startDate,endDate,fetchImpl}={}){
