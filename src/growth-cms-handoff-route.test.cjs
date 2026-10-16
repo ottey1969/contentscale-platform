@@ -45,6 +45,11 @@ async function call(overrides={},admin=true){
  assert.equal(screenRes.headers['X-Robots-Tag'],'noindex, nofollow');
  assert(screenRes.body.includes('Wix'));
  assert(screenRes.body.includes('contentscale-growth-'));
+ assert(screenRes.body.includes('revenueFields'));
+ assert(screenRes.body.includes("revenue_mode:'intent_to_revenue'"));
+ assert(screenRes.body.includes("previewResult.revenue_status!=='READY_FOR_EDITOR'"));
+ assert(screenRes.body.includes('offerVerified'));
+
  assert(screenRes.body.includes('/cms-handoff/source?client_id='));
  assert(screenRes.body.includes('Goed')||screenRes.body.includes('goedgekeurde'));
  assert(!screenRes.body.includes('WordPress Application Password'));
