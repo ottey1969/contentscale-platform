@@ -6,6 +6,7 @@ const path=require('node:path');
 const {patch,marker}=require('../scripts/fix-tracker-manual-monitoring-next-action.cjs');
 const original=fs.readFileSync(path.join(__dirname,'index.js'),'utf8');
 const fixed=patch(original).source;
+assert(original.includes(marker),'the REAL canonical Tracker browser must include the guard');
 assert(fixed.includes(marker));
 assert.equal(patch(fixed).changed,false,'surgical fix must be idempotent');
 assert.equal(patch(fixed).source,fixed,'never duplicate the UI guard');
