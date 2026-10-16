@@ -14,6 +14,17 @@ const fetchImpl=async(request,init)=>{const body=JSON.parse(init.body);
 (async()=>{
  assert(validateProperty(property,url));
  assert(!validateProperty('sc-domain:competitor.com',url));
+ // URL-prefix scopes must not match lookalike domains, sibling paths, ports or credentials.
+ assert(validateProperty('https://contentscale.site/',url));
+ assert(validateProperty('https://contentscale.site/aeo-vs-geo-vs-seo/',url));
+ assert(!validateProperty('https://contentscale.site/aeo-vs-geo-vs-seo/','https://contentscale.site/aeo-vs-geo-vs-seo-extra/'));
+ assert(!validateProperty('https://contentscale.site/roof/','https://contentscale.site/roofing/'));
+ assert(validateProperty('https://contentscale.site/roof/','https://contentscale.site/roof/repair/'));
+ assert(!validateProperty('https://contentscale.site/roof/','https://contentscale.site.evil.example/roof/'));
+ assert(!validateProperty('https://contentscale.site:443/roof/','https://contentscale.site/roof/'));
+ assert(!validateProperty('https://user:pass@contentscale.site/roof/','https://contentscale.site/roof/'));
+ assert(!validateProperty('https://contentscale.site/roof/?query=1','https://contentscale.site/roof/'));
+
  const out=await importVerifiedDailyGrowthGsc({db,clientId:10,pageId:20,pageUrl:url,gscProperty:property,
   accessToken:'sample-token-test',startDate:'2026-09-01',endDate:'2026-09-04',fetchImpl});
  assert.equal(out.verified_dates,2);
