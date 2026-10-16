@@ -4,7 +4,7 @@
 const DAY=86400000;
 const date=s=>{if(typeof s!=='string'||!/^(20\d\d)-(\d\d)-(\d\d)$/.test(s))return null;const t=Date.parse(s+'T00:00:00Z');return Number.isFinite(t)&&new Date(t).toISOString().slice(0,10)===s?t:null};
 const iso=t=>new Date(t).toISOString().slice(0,10);
-function evaluateDailyClickBreakthrough({pageUrl,gscProperty,publishedOn,asOf,rows=[],minimumLiftPercent=15}={}){
+function evaluateDailyClickBreakthrough({pageUrl,gscProperty,publishedOn,asOf,rows=[],minimumLiftPercent=15,publicationEvidenceVerified=false}={}){
  const fail=(status,extra={})=>({status,confirmed:false,causal_attribution:false,commercial_outcome_proven:false,...extra});
  const publication=date(publishedOn),today=date(asOf);
  if(!pageUrl||!/^https:\/\//.test(pageUrl)||!gscProperty||publication===null||today===null||publication>today)
@@ -37,14 +37,14 @@ function evaluateDailyClickBreakthrough({pageUrl,gscProperty,publishedOn,asOf,ro
  for(let i=6;i<28;i++)rolling.push(after.values.slice(i-6,i+1).reduce((x,r)=>x+r.clicks,0)/7);
  const last7=rolling.slice(-7),sustained=last7.length===7&&last7.every(n=>n>before.average);
  const nonbrandLift=knownNonbrand&&postNonbrand>preNonbrand;
- const confirmed=elevated&&sustained&&nonbrandLift;
- return {status:confirmed?'CONFIRMED_SUSTAINED_CLICK_LIFT':!knownNonbrand?'NONBRANDED_SPLIT_REQUIRED':'NO_CONFIRMED_BREAKTHROUGH',
+ const confirmed=elevated&&sustained&&nonbrandLift&&publicationEvidenceVerified===true;
+ return {status:confirmed?'CONFIRMED_SUSTAINED_CLICK_LIFT':!publicationEvidenceVerified?'PUBLICATION_DATE_EVIDENCE_REQUIRED':!knownNonbrand?'NONBRANDED_SPLIT_REQUIRED':'NO_CONFIRMED_BREAKTHROUGH',
   confirmed,causal_attribution:false,commercial_outcome_proven:false,
   baseline:{start:iso(publication-28*DAY),end:iso(publication-DAY),clicks:before.clicks,average:before.average},
   after:{start:iso(publication),end:iso(publication+27*DAY),clicks:after.clicks,average:after.average},
   change_percent:100*(after.clicks-before.clicks)/before.clicks,
   trailing_7_day_averages:last7,nonbranded:{measured:knownNonbrand,previous:preNonbrand,current:postNonbrand},
-  criteria:{minimum_lift_percent:minimumLiftPercent,elevated,sustained_7_days:sustained,nonbranded_growth:nonbrandLift},
+  criteria:{minimum_lift_percent:minimumLiftPercent,elevated,sustained_7_days:sustained,nonbranded_growth:nonbrandLift,publication_date_verified:publicationEvidenceVerified===true},
   note:'Observational click increase only. Does not prove causation, contacts, sales or paid revenue.'};
 }
 module.exports={evaluateDailyClickBreakthrough};
