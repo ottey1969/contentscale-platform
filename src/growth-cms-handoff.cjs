@@ -27,7 +27,8 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  if(!url||url.protocol!=='https:'||url.username||url.password||url.hash||url.search||
     !url.hostname||url.port)issues.push('CANONICAL_HTTPS_URL_REQUIRED');
  if(typeof originalHtml!=='string'||!originalHtml.trim())issues.push('ORIGINAL_PAGE_SNAPSHOT_REQUIRED');
- if(sourceExpectedSha256&&sha(originalHtml)!==sourceExpectedSha256)issues.push('SOURCE_REVISION_CHANGED');
+ if(!/^[a-f0-9]{64}$/.test(String(sourceExpectedSha256||'')))issues.push('SOURCE_REVISION_APPROVAL_REQUIRED');
+ else if(typeof originalHtml==='string'&&sha(originalHtml)!==sourceExpectedSha256)issues.push('SOURCE_REVISION_CHANGED');
  if(caseStudyLocked)issues.push('CASE_STUDY_BASELINE_LOCKED');
  if(editorApproved!==true)issues.push('EDITOR_APPROVAL_REQUIRED');
  if(!Array.isArray(changes)||changes.length<1||changes.length>12)issues.push('APPROVED_SECTION_COUNT_REQUIRED');
