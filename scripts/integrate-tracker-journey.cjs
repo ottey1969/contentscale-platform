@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const file=path.join(__dirname,'../src/index.js');
 let source=fs.readFileSync(file,'utf8');
+if(source.length<5000000)throw Error('TRACKER_CANONICAL_SOURCE_TOO_SMALL: refuse to modify an incomplete index.js');
 const marker='CONTENTSCALE_CANONICAL_GROWTH_JOURNEY_V1';
 if(source.includes(marker)){console.log('Tracker journey integration already present');process.exit(0);}
 function once(before,after,name){
