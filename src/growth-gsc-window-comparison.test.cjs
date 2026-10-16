@@ -17,6 +17,9 @@ assert.equal(a.changes.clicks_change_percent,100);
 assert(Math.abs(a.changes.avg_position_improvement-8.1)<0.00001);
 assert.equal(a.attribution_established,false);
 assert.equal(a.call_and_job_conversions_measured,false);
+assert.equal(a.click_breakthrough.status,'CANDIDATE_UPLIFT_NOT_CONFIRMED');
+assert.equal(a.click_breakthrough.confirmed,false);
+assert.equal(a.click_breakthrough.daily_7_day_trend_available,false);
 a=compareGrowthGscWindows({pageUrl,runs:[current,run('2026-09-01','2026-09-28',10000,1)]});
 assert.equal(a.status,'COMPARABLE_NONOVERLAPPING_WINDOW_REQUIRED','rolling overlapping windows cannot claim improvement');
 a=compareGrowthGscWindows({pageUrl,runs:[current,run('2026-08-18','2026-09-14',10000,1,{gsc_property:'https://perfectroofingteam.com/'})]});
@@ -28,6 +31,7 @@ assert.equal(a.status,'COMPARABLE_NONOVERLAPPING_WINDOW_REQUIRED','legacy http/w
 a=compareGrowthGscWindows({pageUrl,runs:[run('2026-09-15','2026-10-12',100,0),run('2026-08-18','2026-09-14',100,0)]});
 assert.equal(a.status,'READY_FOR_RESULT_REVIEW');
 assert.equal(a.changes.clicks_change_percent,null,'zero click baseline cannot yield fake percentage uplift');
+assert.equal(a.click_breakthrough.status,'ZERO_CLICK_BASELINE_REQUIRES_ABSOLUTE_REVIEW');
 a=compareGrowthGscWindows({pageUrl,runs:[]});
 assert.equal(a.status,'NO_VERIFIED_GSC_HISTORY');
 a=compareGrowthGscWindows({pageUrl,runs:[run('2026-10-02','2026-09-01',20,0)]});
