@@ -10,6 +10,18 @@ async function readVerifiedDailyGrowthGsc(pool,{clientId,pageId,pageUrl}={}){
   "SELECT page_url,gsc_property,observed_date AS date,search_type,clicks,impressions,nonbrand_clicks,verified FROM growth_gsc_daily_page_evidence WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND page_url=$3 AND verified=TRUE AND search_type='web' ORDER BY observed_date DESC LIMIT 400",
   [client,page,pageUrl]);
  const rows=(result.rows||[]).map(r=>({...r,date:r.date instanceof Date?r.date.toISOString().slice(0,10):String(r.date).slice(0,10)}));
+ // A verified flag in SQL is not sufficient if stored rows are corrupt or stale.
+ // Fail closed instead of presenting fabricated zeros, duplicate dates or mixed identities.
+ for(const r of rows){
+  if(r.page_url!==pageUrl||r.verified!==true||r.search_type!=='web'||
+     typeof r.gsc_property!=='string'||!r.gsc_property||
+     !/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date)||
+     !Number.isSafeInteger(Number(r.clicks))||Number(r.clicks)<0||
+     !Number.isSafeInteger(Number(r.impressions))||Number(r.impressions)<Number(r.clicks)||
+     (r.nonbrand_clicks!=null&&(!Number.isSafeInteger(Number(r.nonbrand_clicks))||
+       Number(r.nonbrand_clicks)<0||Number(r.nonbrand_clicks)>Number(r.clicks))))
+    return {page_url:pageUrl,gsc_property:null,rows:[],status:'DAILY_GSC_EVIDENCE_REVIEW_REQUIRED'};
+ }
  const properties=[...new Set(rows.map(r=>r.gsc_property))];
  if(!rows.length)return {page_url:pageUrl,gsc_property:null,rows:[],status:'NO_VERIFIED_DAILY_GSC'};
  if(properties.length!==1)return {page_url:pageUrl,gsc_property:null,rows:[],status:'MULTIPLE_GSC_PROPERTIES_REVIEW_REQUIRED'};
