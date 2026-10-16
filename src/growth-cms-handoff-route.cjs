@@ -2,6 +2,7 @@
 const {createHash}=require('node:crypto');
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {prepareGrowthCmsHandoff,packageGrowthZip}=require('./growth-cms-handoff.cjs');
+const {buildUnifiedGrowthHandoff}=require('./growth-unified-workflow.cjs');
 const {registerGrowthCmsHandoffScreen}=require('./growth-cms-handoff-screen.cjs');
 function registerGrowthCmsHandoffRoute({app,pool,verifyEngineAccess}={}){
  if(typeof app?.post!=='function'||typeof pool?.query!=='function'||typeof verifyEngineAccess!=='function')
@@ -57,20 +58,29 @@ function registerGrowthCmsHandoffRoute({app,pool,verifyEngineAccess}={}){
     String(r.query||'').toLowerCase().trim()===String(req.body?.focus_query||'').toLowerCase().trim()))
    return res.status(409).set('Cache-Control','private, no-store')
     .json({success:false,status:'BLOCKED',code:'VERIFIED_GSC_EVIDENCE_NOT_FOUND',publication_allowed:false});
-  const handoff=prepareGrowthCmsHandoff({
+  const revenueRequested=req.body?.revenue_mode==='intent_to_revenue';
+  if(req.body?.revenue_mode&&req.body.revenue_mode!=='intent_to_revenue')
+   return res.status(400).json({success:false,status:'BLOCKED',code:'REVENUE_MODE_UNSUPPORTED'});
+  const handoffInput={
    canonicalUrl:page.url,originalHtml:page.html_content,caseStudyLocked:page.case_study_active,
    sourceExpectedSha256:originalExpected,editorApproved:req.body?.editor_approved,
    cms:req.body?.cms||'generic',pageTitle:req.body?.seo_title,
    metaDescription:req.body?.meta_description,changes:req.body?.approved_changes,
    focusQuery:req.body?.focus_query||'',evidenceScope:req.body?.evidence_scope||'needs_access',
-   language:req.body?.language||'en'
-  });
+   language:req.body?.language||'en',
+   // Only an editor-approved, explicitly supplied offer may be emitted in a handoff.
+   offers:revenueRequested?req.body?.offers||{}:{},
+   contentSummary:revenueRequested?String(req.body?.content_summary||'').slice(0,5000):'',
+   primaryGoal:req.body?.primary_goal||'qualified_lead'
+  };
+  const unified=revenueRequested?buildUnifiedGrowthHandoff(handoffInput):null;
+  const handoff=revenueRequested?unified.editorial:prepareGrowthCmsHandoff(handoffInput);
   if(handoff.status!=='HANDOFF_READY_FOR_EDITOR')
    return res.status(409).set('Cache-Control','private, no-store')
     .json({success:false,status:handoff.status,issues:handoff.issues,warnings:handoff.warnings,publication_allowed:false});
   if(req.body?.format==='zip'){
    let zip;
-   try{zip=packageGrowthZip(handoff.files);}catch{return res.status(409).json({success:false,status:'BLOCKED',code:'DELIVERY_PACKAGE_INVALID'});}
+   try{zip=revenueRequested?unified.zip:packageGrowthZip(handoff.files);}catch{return res.status(409).json({success:false,status:'BLOCKED',code:'DELIVERY_PACKAGE_INVALID'});}
    return res.set('Cache-Control','private, no-store')
     .set('Content-Type','application/zip')
     .set('Content-Disposition','attachment; filename="contentscale-growth-cms-handoff.zip"')
@@ -79,8 +89,11 @@ function registerGrowthCmsHandoffRoute({app,pool,verifyEngineAccess}={}){
   if(req.body?.format&&req.body.format!=='json')
    return res.status(400).json({success:false,status:'BLOCKED',code:'HANDOFF_FORMAT_UNSUPPORTED'});
   return res.set('Cache-Control','private, no-store').json({success:true,client_id:clientId,page_id:pageId,
-   status:handoff.status,publication_allowed:false,next_action:handoff.next_action,
-   warnings:handoff.warnings,manifest:handoff.manifest,files:handoff.files});
+   status:revenueRequested?unified.status:handoff.status,publication_allowed:false,
+   next_action:revenueRequested?unified.next_action:handoff.next_action,
+   warnings:handoff.warnings,manifest:revenueRequested?unified.manifest:handoff.manifest,
+   files:revenueRequested?unified.files:handoff.files,
+   ...(revenueRequested?{revenue_status:unified.revenue.status,revenue_warnings:unified.revenue.warnings}: {})});
  });
 }
 module.exports={registerGrowthCmsHandoffRoute};
