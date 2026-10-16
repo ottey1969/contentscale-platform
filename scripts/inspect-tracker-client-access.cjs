@@ -60,3 +60,19 @@ for(const [label,open,close] of [
   if(++emitted>=75)break;
  }
 }
+
+console.log('CLIENT_MAIN_GET_CONTINUATION 3193-3418');
+for(let i=3192;i<Math.min(lines.length,3418);i++){
+ const s=lines[i].trim();
+ if(!/gsc|\bSELECT\b|\.query\(|res\.json|res\.status|return|\bclient\b|page|catch|await|status/i.test(s))continue;
+ if(/password|private_key|api_key|secret|access.token/i.test(s))continue;
+ console.log('  '+(i+1)+' '+s.slice(0,270));
+}
+console.log('GSC_UI_REFERENCES');
+let cnt=0;
+for(let i=0;i<lines.length;i++){
+ if(!/(__GSC_ENABLED__|GSC_ENABLED|GSC_ENABLED|GSC is required|connect GSC|Connect GSC|GSC_REQUIRED)/i.test(lines[i]))continue;
+ if(/password|private_key|api_key|secret|access.token/i.test(lines[i]))continue;
+ console.log('  '+(i+1)+' '+lines[i].trim().slice(0,280));
+ if(++cnt>=28)break;
+}
