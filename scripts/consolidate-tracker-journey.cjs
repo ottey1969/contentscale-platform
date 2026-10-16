@@ -5,6 +5,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const file=path.join(__dirname,'../src/index.js');
 let source=fs.readFileSync(file,'utf8');
+if(!source.includes('CONTENTSCALE_CANONICAL_GROWTH_JOURNEY_V1'))throw Error('CANONICAL_TRACKER_STATE_MODULE_NOT_INTEGRATED');
 const marker='CONTENTSCALE_SHARED_MONITORING_GUARD_V1';
 if(source.includes(marker)){console.log('Canonical My Check lifecycle already consolidated');process.exit(0)}
 const start=source.indexOf('  // CONTENTSCALE-MANUAL-MONITORING-PRIORITY:');
