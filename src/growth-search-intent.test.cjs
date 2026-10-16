@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
+const emergency=classifyGrowthSearchIntent('24 hour emergency roof repair NJ');
+assert.equal(emergency.intent,'URGENT_SERVICE');
+assert.equal(emergency.goal,'QUALIFIED_URGENT_PHONE_CONTACT');
+assert.equal(emergency.sales_completion_assumed,false);
+assert.equal(emergency.universal_conversion_probability,null);
+assert.equal(classifyGrowthSearchIntent('roof repair cost NJ').intent,'QUOTE_OR_COST');
+assert.equal(classifyGrowthSearchIntent('best roofing contractors NJ').intent,'SERVICE_COMPARISON');
+assert.equal(classifyGrowthSearchIntent('roof repair Bergen County').intent,'LOCAL_COMMERCIAL_SERVICE');
+assert.equal(classifyGrowthSearchIntent('how to identify roof water damage').intent,'INFORMATIONAL_RESEARCH');
+assert.equal(classifyGrowthSearchIntent('roof repair Bergen County',{surface:'google_business_profile'}).discovery_surface,'CALL_OR_MAP_ACTION_WITHOUT_WEBSITE_VISIT');
+const unknown=classifyGrowthSearchIntent('perfectroofingteam');
+assert.equal(unknown.intent,'UNCLEAR');
+assert.equal(unknown.universal_conversion_probability,null);
+console.log('PASS: search intent and surface govern conversion goal, never assumed 80 percent presale');

@@ -21,7 +21,7 @@ function trackerGrowthReview({page={},gscRows=[],searchSpy,aiSpy,originalHtml=''
  const issues=[...(!validPage?[{code:'TRACKER_PAGE_INVALID',message:'A valid canonical Tracker page ID and absolute HTTPS page URL are required.'}]:[]),...problems,...result.issues];
  return {ready:issues.length===0,status:page.case_study_active===true?'BLOCKED_CASE_STUDY':verifiedZeroQueries?'BLOCKED_VERIFIED_ZERO_QUERIES':issues.length?'BLOCKED':'READY_FOR_HUMAN_REVIEW',
    gsc_query_evidence_status:verifiedZeroQueries?'exact_page_fetch_zero_queries':pageQueries.length?'page_verified_queries':'not_verified',
-   page_id:pageId,url,query_count:pageQueries.length,issues,warnings:result.warnings,
+   page_id:pageId,url,query_count:pageQueries.length,issues,warnings:[...result.warnings,...(contract.warnings||[]).map(code=>({code,message:'AI research not available; no citation claim will be made.'}))],
    evidence_status:contract.evidence_status,image_count:result.image_count};
 }
 module.exports={trackerGrowthReview};

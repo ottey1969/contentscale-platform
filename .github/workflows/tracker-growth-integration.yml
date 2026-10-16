@@ -1,0 +1,48 @@
+name: Tracker Growth Canonical Integration
+on:
+  push:
+    branches:
+      - growth/prt-baseline-tracker-resume-20261016
+    paths:
+      - scripts/integrate-tracker-journey.cjs
+      - scripts/consolidate-tracker-journey.cjs
+      - scripts/fix-tracker-readonly-access.cjs
+permissions:
+  contents: write
+jobs:
+  integrate-tracker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the Growth branch (never production)
+        uses: actions/checkout@v4
+        with:
+          ref: growth/prt-baseline-tracker-resume-20261016
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Check deterministic migration script
+        run: node --check scripts/integrate-tracker-journey.cjs
+      - name: Integrate existing Tracker page journey and Growth UI
+        run: node scripts/integrate-tracker-journey.cjs
+      - name: Consolidate previous My Check patch into shared contract
+        run: node scripts/consolidate-tracker-journey.cjs
+      - name: Repair client read-only API access without touching write routes
+        run: node scripts/fix-tracker-readonly-access.cjs --write
+      - name: Test both client link types, GSC independence and status guard
+        run: node scripts/tracker-readonly-access.test.cjs
+      - name: Check canonical Tracker server syntax
+        run: node --check src/index.js
+      - name: Test existing and future page states and embedded tour
+        run: |
+          node scripts/tracker-page-journey.test.cjs
+          node src/tracker-manual-monitoring-next-action.test.cjs
+      - name: Persist the reviewed code only to the Growth feature branch
+        run: |
+          git config user.name "contentscale-growth-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.js
+          if ! git diff --cached --quiet; then
+            git commit -m "Integrate canonical Tracker Growth journey and guided tour"
+            git push origin HEAD:growth/prt-baseline-tracker-resume-20261016
+          fi

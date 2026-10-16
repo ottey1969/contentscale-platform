@@ -98,7 +98,7 @@ async function invoke(method,path,body,code='ok'){
  assert(h.includes('providerUnavailable=true'),'circuit breaker must stop 5xx');
  const html=fs.readFileSync('public/network-acquisition.html','utf8');
 
- assert.match(html,/nooit automatisch uitnodigingen verzonden/i,'Network messages are not auto-sent');
+ assert.match(html,/Geverifieerde zakelijke contacten ontvangen automatisch een Network-uitnodiging binnen de opwarmlimieten/i,'Verified contacts use the shared warm-up budget');
  assert.match(html,/d.total/,'Acquisitie must show cumulative total');
  assert.match(html,/Onderzoek volgende 20 websites/,'batch website and email research available');
  assert.match(html,/api\/network\/admin\/acquisition\/discover-batch/,'batch research uses canonical Network records');
@@ -113,7 +113,7 @@ async function invoke(method,path,body,code='ok'){
  assert.match(html,/id="warmupUsed"/,'show combined sender daily progress');
  assert.match(html,/id="networkUsed"/,'show Network cap separately');
  assert.match(html,/outreach\?\.warmup/,'use canonical server provided warm-up status');
- assert.match(html,/Geen reset en geen automatische verzending/,'reassure progress is not reset');
+ assert.match(html,/Je opwarmdag verandert alleen volgens de bestaande opwarmvoortgang/,'reassure warm-up history is not reset while allowing verified automatic invites');
  assert.match(queries.find(q=>q.sql.includes("n.source='maps_acquisition'")).sql,/metadata->'acquisition'/,'use canonical Network metadata');
  assert.match(html,/Nieuwe bedrijven scannen/,'review must offer next scan');
  for(const [file,source] of [['public/lead-crawler.html',h],['public/network-acquisition.html',html]]){

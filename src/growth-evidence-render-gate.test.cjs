@@ -26,4 +26,20 @@ expectBlocked(x=>{x.originalHtml='<article class="approved"><img src="/original.
 expectBlocked(x=>{x.templateMarkers=['<span class="invented">']; x.html=x.html.replace('</article>','<span class="invented"></span></article>');},'TEMPLATE_MARKER_NOT_IN_ORIGINAL');
 expectBlocked(x=>{x.competitiveGaps=[{...x.competitiveGaps[0],competitor_url:'https://www.contentscale.site/another/'}];},'COMPETITIVE_GAP_UNSUPPORTED');
 expectBlocked(x=>{x.competitiveGaps=[{...x.competitiveGaps[0],competitor_url:'https://'}];},'COMPETITIVE_GAP_UNSUPPORTED');
-console.log('Growth evidence/render gate: 15 checks passed');
+
+expectBlocked(x=>{x.html=x.html.replace('</article>','<h2>What Roofing Services Does Bergen County Need?</h2><h2>Why Choose This Roofer?</h2><p>We explain repairs and replacements based on inspected property conditions.</p></article>');},'HEADING_WITHOUT_ANSWER');
+expectBlocked(x=>{x.html=x.html.replace('</article>','<h2>What services are offered?</h2><img src="/b.jpg" alt="Roof"></article>');},'HEADING_WITHOUT_ANSWER');
+expectBlocked(x=>{x.html=x.html.replace('</article>','<h2></h2><p>Roof repair, replacement and inspection in NJ can be requested by phone.</p></article>');},'HEADING_EMPTY');
+expectBlocked(x=>{x.html=x.html.replace('</article>','<p>Sources: U.S. roofing-industry data, 2025; Insurance Information Institute, 2024.</p></article>');},'SOURCE_ATTRIBUTION_VAGUE');
+expectBlocked(x=>{x.wordpress_embedded=true;x.html='<!DOCTYPE html><html><head></head><body>'+x.html+'</body></html>';},'EMBEDDED_DOCUMENT_SHELL');
+expectBlocked(x=>{x.html='<!DOCTYPE html><html><head></head><body>'+x.html+'</body></html><html></html>';},'DUPLICATE_HTML_DOCUMENT');
+{
+ const x=base();x.html=x.html.replace('</article>','<h2>Roof repair and replacement</h2><p>We inspect flashing, water ingress, and roof material condition before advising whether a durable localized repair or wider replacement is appropriate.</p></article>');
+ assert.equal(inspectGrowthDraft(x).ready,true,'Legitimate fully explained H2 should pass');
+}
+{
+ const x=base();x.html=x.html.replace('</article>','<p>Sources: <a href="https://www.iii.org/">Insurance Information Institute, 2024</a>.</p></article>');
+ assert.equal(inspectGrowthDraft(x).ready,true,'Traceable source attribution should pass');
+}
+
+console.log('Growth evidence/render gate: 23 checks passed');

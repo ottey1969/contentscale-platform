@@ -70,14 +70,14 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
 (async()=>{
  assert.equal(warmupDailyCap(9),30,'day 9 must retain the original Lead Crawler 30/day target');
  assert.equal(warmupDailyCap(1),20);assert.equal(warmupDailyCap(43),null);
- assert.deepEqual([1,9,15,22,29,36,43].map(day=>networkCapForWarmup(day,true)),[4,6,8,10,15,20,20]);
+ assert.deepEqual([1,9,15,22,29,36,43].map(day=>networkCapForWarmup(day,true)),[20,30,40,50,75,100,null]);
  assert.equal(networkCapForWarmup(9,false),0,'paused warming must block invites');
  let limits=await run('GET','/api/network/admin/acquisition/outreach-status');
  assert.equal(limits.statusCode,200,'existing original warm-up progress must load through Network Acquisitie');
  assert.equal(limits.body.warmup.progress_day,9);
  assert.equal(limits.body.warmup.daily_cap,30);
  assert.equal(limits.body.warmup.total_sent,258,'send history is not reset when entering Network');
- assert.equal(limits.body.daily_cap,6,'Network may use 20% of day 9 sender allowance');
+ assert.equal(limits.body.daily_cap,30,'Network shares the full day 9 sender allowance');
  assert.equal(limits.body.can_send_now,true);
  limits=await run('GET','/api/network/admin/acquisition/outreach-status',{}, {'x-admin-code':'bad'});
  assert.equal(limits.statusCode,403,'warm-up counters require admin session');
@@ -102,7 +102,7 @@ async function run(method,url,body={},headers={'x-admin-code':'ok'},params={}){c
  assert.equal(early.statusCode,409,'even direct POST must not record interest on unsent invitations');
  assert.equal(company.metadata.acquisition.invitation.status,'prepared','unsent interest cannot alter canonical state');
  r=await run('GET','/network/join/:token',{}, {},{token});
- assert.equal(r.statusCode,200);assert.match(r.body,/I am interested/);assert.doesNotMatch(r.body,/QuickScan/);
+ assert.equal(r.statusCode,200);assert.match(r.body,/Preview only — invitation not sent/);assert.doesNotMatch(r.body,/<form method="POST"/);assert.doesNotMatch(r.body,/QuickScan/);
  r=await run('GET','/network/join/:token/unsubscribe',{}, {},{token});
  assert.equal(r.statusCode,200);assert.match(r.body,/Confirm/);
  assert.equal(company.metadata.acquisition.invitation.status,'prepared','GET unsubscribe must not mutate');

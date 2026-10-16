@@ -15,5 +15,25 @@ assert.equal(x.status,'BLOCKED');assert.equal(x.html,null);
 x=assembleGrowthHtmlDraft({originalHtml:original,additions:[{approved:true,evidence_ref:'x',html:'<script>alert(1)</script>'}]});
 assert(x.issues.includes('UNSAFE_ADDITION_HTML'));
 x=assembleGrowthHtmlDraft({originalHtml:'<div>not article</div>',additions:[{approved:true,evidence_ref:'x',html:'<p>New</p>'}]});
-assert(x.issues.includes('ARTICLE_BOUNDARY_NOT_FOUND'));
-console.log('PASS: editor-approved HTML additions preserve original article');
+assert(x.issues.includes('CONTENT_BOUNDARY_REVIEW_REQUIRED'));
+
+const addition={approved:true,evidence_ref:'reviewed:roofing-repair',html:'<section><h2>What homeowners should check</h2><p>Inspect flashing, drainage, roof damage and water entry before approving work.</p></section>'};
+const articleFooter='<article class="approved"><h1>Roof repair</h1><p>Original content</p></article><footer>Unchanged contact</footer>';
+x=assembleGrowthHtmlDraft({originalHtml:articleFooter,additions:[addition]});
+assert.equal(x.status,'DRAFT_FOR_REVIEW');assert.equal(x.insertion_boundary,'article');
+assert(x.html.indexOf('What homeowners')<x.html.indexOf('</article>'));
+assert(x.html.endsWith('<footer>Unchanged contact</footer>'),'original footer preserved');
+const mainOriginal='<main class="approved"><h1>Services</h1><p>Original layout</p></main><footer>Unchanged</footer>';
+x=assembleGrowthHtmlDraft({originalHtml:mainOriginal,additions:[addition]});
+assert.equal(x.insertion_boundary,'main');assert(x.html.includes('<footer>Unchanged</footer>'));
+const elementorDoc='<!DOCTYPE html><html><head><title>Existing title</title></head><body><div class="wrap"><h1>Hudson roofing</h1><img src="/existing.jpg" alt="Existing"></div></body></html>';
+x=assembleGrowthHtmlDraft({originalHtml:elementorDoc,additions:[addition]});
+assert.equal(x.status,'DRAFT_FOR_REVIEW');assert.equal(x.insertion_boundary,'body');
+assert(x.html.startsWith(elementorDoc.slice(0,elementorDoc.indexOf('</body>'))));
+assert(x.html.includes('<img src="/existing.jpg" alt="Existing">'),'existing image preserved');
+assert(x.html.endsWith('</body></html>'),'existing original document preserved');
+const noApproved=assembleGrowthHtmlDraft({originalHtml:elementorDoc,additions:[{approved:false,html:'<p>Blocked</p>'}]});
+assert.equal(noApproved.status,'NO_APPROVED_EDITS');
+assert.equal(noApproved.html,elementorDoc);
+
+console.log('PASS: Growth HTML assembly preserves article, main, full WordPress document, images, and guarded placement');

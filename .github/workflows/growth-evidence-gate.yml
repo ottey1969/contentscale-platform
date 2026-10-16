@@ -11,6 +11,10 @@ on:
       - 'src/growth-snapshot-competitors*.cjs'
       - 'src/growth-edit-instructions*.cjs'
       - 'src/growth-html-draft*.cjs'
+      - 'src/growth-elementor-draft*.cjs'
+      - 'src/growth-elementor-rest-bridge*.cjs'
+      - 'src/growth-elementor-draft-route*.cjs'
+      - 'wordpress/contentscale-growth-elementor/**'
       - 'src/growth-draft-preparation*.cjs'
       - 'src/growth-wordpress-draft-payload*.cjs'
       - 'src/growth-wordpress-handoff*.cjs'
@@ -22,6 +26,9 @@ on:
       - 'src/growth-wordpress-mapping-preflight*.cjs'
       - 'src/growth-wordpress-mapping-approval*.cjs'
       - 'src/growth-live-routes*.cjs'
+      - 'src/growth-funnel-evaluation*.cjs'
+      - 'src/growth-search-intent*.cjs'
+      - 'src/growth-cms-handoff*.cjs'
       - 'src/growth-wordpress-source-compatibility*.cjs'
       - 'src/growth-wordpress-edit-reader*.cjs'
       - 'src/growth-wordpress-revision*.cjs'
@@ -31,7 +38,9 @@ on:
       - 'src/growth-wordpress-preflight-route*.cjs'
       - 'src/growth-wordpress-candidate-reader*.cjs'
       - 'src/growth-gsc-page-verification*.cjs'
+      - 'src/growth-gsc-window-comparison*.cjs'
       - 'migrations/growth-gsc-page-import-runs.sql'
+      - 'migrations/growth-gsc-daily-page-evidence.sql'
       - 'src/growth-wordpress-connection-route*.cjs'
       - 'src/growth-wordpress-admin-auth*.cjs'
       - 'src/growth-wordpress-identity-approval-route*.cjs'
@@ -46,12 +55,100 @@ on:
       - 'scripts/fix-audit20-inline-label.cjs'
       - 'tests/audit20-inline-label.test.cjs'
       - 'tests/lead-crawler-nj-niche.test.cjs'
+      - 'src/index.js'
+      - 'src/tracker-manual-monitoring-next-action.test.cjs'
+      - 'scripts/fix-tracker-manual-monitoring-next-action.cjs'
       - 'src/tracker-growth-execution.cjs'
+      - 'src/tracker-growth-e2e.synthetic.test.cjs'
       - 'src/tracker-growth-wordpress-integration.test.cjs'
       - 'src/growth-tracker-wordpress-identity*.cjs'
       - '.github/workflows/growth-evidence-gate.yml'
   workflow_dispatch:
 jobs:
+  growth-core:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Growth proof and editorial quality
+        run: node src/growth-evidence-render-gate.test.cjs
+      - name: Tracker completed-monitoring versus historical Brief regression
+        run: node src/tracker-manual-monitoring-next-action.test.cjs
+      - name: Protected original WordPress document assembly
+        run: node src/growth-html-draft.test.cjs
+      - name: Elementor builder original-preserving draft edit
+        run: node src/growth-elementor-draft.test.cjs
+      - name: Elementor unpublished builder draft verification
+        run: node src/growth-elementor-draft-executor.test.cjs
+      - name: Elementor WordPress authenticated bridge mock E2E
+        run: node src/growth-elementor-rest-bridge.test.cjs
+      - name: Actual Tracker Elementor draft route safety and plugin contract
+        run: node src/growth-elementor-draft-route.test.cjs
+      - name: PHP WordPress Elementor bridge syntax
+        run: php -l wordpress/contentscale-growth-elementor/contentscale-growth-elementor.php
+      - name: Verified adjacent GSC outcomes
+        run: node src/growth-gsc-window-comparison.test.cjs
+      - name: Canonical Tracker Growth routes
+        run: node src/growth-live-routes.test.cjs
+      - name: Tracker to WordPress integration contract
+        run: node src/tracker-growth-wordpress-integration.test.cjs
+      - name: Synthetic click-to-editor-to-results Growth journey
+        run: node src/tracker-growth-e2e.synthetic.test.cjs
+      - name: Distinguish invoicing, completed work and SEO-attributed leads
+        run: node src/growth-commercial-outcomes.test.cjs
+      - name: Private commercial outcome route contract
+        run: node src/growth-commercial-outcome-routes.test.cjs
+      - name: Growth contact funnel tests
+        run: node src/growth-funnel-evaluation.test.cjs
+      - name: Growth intent tests
+        run: node src/growth-search-intent.test.cjs
+      - name: Vendor-independent Wix and CMS handoff files and ZIP
+        run: node src/growth-cms-handoff.test.cjs
+      - name: Verify reviewed CMS handoff API with optional GSC and no WordPress
+        run: node src/growth-cms-handoff-route.test.cjs
+  growth-schema:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: growth_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d growth_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: test_only_password
+      PGDATABASE: growth_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create only minimal test parent keys
+        run: psql -v ON_ERROR_STOP=1 -c 'CREATE TABLE tracker_clients(id INTEGER PRIMARY KEY); CREATE TABLE tracker_pages(id INTEGER PRIMARY KEY);'
+      - name: Verify Growth migrations on disposable PostgreSQL
+        run: |
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-wordpress-page-mapping.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-page-import-runs.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-daily-page-evidence.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-commercial-outcome-events.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-wordpress-page-mapping.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-page-import-runs.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-daily-page-evidence.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-commercial-outcome-events.sql
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('growth_wordpress_page_mapping','growth_gsc_page_import_runs','growth_commercial_outcome_events','growth_gsc_daily_page_evidence')" | grep -qx '4'
   growth-gate:
     runs-on: ubuntu-latest
     permissions:
@@ -79,6 +176,8 @@ jobs:
         run: node src/growth-tracker-wordpress-identity.test.cjs
       - name: Exact-page GSC source verification and transactional import
         run: node src/growth-gsc-page-verification.test.cjs
+      - name: Compare verified nonoverlapping Growth GSC windows
+        run: node src/growth-gsc-window-comparison.test.cjs
       - name: Network CRM opportunity invitation pilot
         run: node src/network-opportunity-pilot.test.cjs
       - name: Brevo accepted-versus-delivery evidence reconciliation

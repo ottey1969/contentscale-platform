@@ -18,7 +18,7 @@ assert.equal(a.ready,false);assert(a.issues.some(x=>x.code==='NO_EXACT_PAGE_GSC'
 a=trackerGrowthReview({...base(),page:{id:2352,url,tracker_client_id:12,case_study_active:true}});
 assert.equal(a.ready,false);assert(a.issues.some(x=>x.code==='CASE_STUDY_LOCK'));
 a=trackerGrowthReview({...base(),aiSpy:undefined});
-assert.equal(a.ready,false);assert(a.issues.some(x=>x.code==='AI_SPY_NOT_PROVIDED'));
+assert.equal(a.ready,true);assert(a.warnings.some(x=>x.code==='AI_SPY_NOT_PROVIDED'));
 a=trackerGrowthReview({...base(),draftHtml:'<h1>Missing original template</h1><p>'+('words '.repeat(50))+'</p>'});
 assert.equal(a.ready,false);assert(a.issues.some(x=>x.code==='TEMPLATE_NOT_PRESERVED'));
 a=trackerGrowthReview({...base(),gscRows:[{page_id:2352,source_page_url:'https://contentscale.site/another-page/',query:'wrong landing page',evidence_scope:'page_verified'}]});

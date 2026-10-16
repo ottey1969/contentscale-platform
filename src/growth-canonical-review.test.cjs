@@ -30,6 +30,9 @@ const base=()=>({db:database(),pageId:7,clientId:2,searchSpy:[observation],aiSpy
  assert.equal(result.opportunity_plan.automatic_draft_allowed,false);
  result=await reviewCanonicalGrowthDraft({...base(),db:database({locked:true})});
  assert.equal(result.status,'BLOCKED_CASE_STUDY');
+ result=await reviewCanonicalGrowthDraft({...base(),aiSpy:undefined});
+ assert.equal(result.ready,true,'Commercial search optimization remains possible without AI citations');
+ assert(result.opportunity_plan.warnings.includes('AI_SPY_NOT_MAPPED'));
  result=await reviewCanonicalGrowthDraft({...base(),searchSpy:undefined});
  assert.equal(result.ready,false);
  assert(result.issues.some(x=>x.code==='SEARCH_SPY_NOT_PROVIDED'));

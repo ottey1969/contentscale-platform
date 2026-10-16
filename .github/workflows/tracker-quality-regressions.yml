@@ -4,6 +4,11 @@ on:
     branches: [main]
     paths:
       - 'src/index.js'
+      - 'scripts/inspect-tracker-client-access.cjs'
+      - 'scripts/fix-tracker-readonly-access.cjs'
+      - 'scripts/tracker-readonly-access.test.cjs'
+      - 'src/tracker-page-journey.cjs'
+      - 'scripts/tracker-page-journey.test.cjs'
       - 'src/brief-quality.js'
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
@@ -12,6 +17,11 @@ on:
   pull_request:
     paths:
       - 'src/index.js'
+      - 'scripts/inspect-tracker-client-access.cjs'
+      - 'scripts/fix-tracker-readonly-access.cjs'
+      - 'scripts/tracker-readonly-access.test.cjs'
+      - 'src/tracker-page-journey.cjs'
+      - 'scripts/tracker-page-journey.test.cjs'
       - 'src/brief-quality.js'
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
@@ -40,6 +50,12 @@ jobs:
         run: |
           node src/brief-quality.test.js
           node tests/tracker-cannib-evidence.test.cjs
+      - name: Canonical lifecycle across all Tracker pages and inline Growth tour
+        run: |
+          node --check src/tracker-page-journey.cjs
+          node scripts/tracker-page-journey.test.cjs
+      - name: Inspect actual client Tracker access independent from GSC
+        run: node scripts/inspect-tracker-client-access.cjs
       - name: Zero-action closure, no recycling, growth proof
         run: |
           node tests/tracker-growth-plan.test.cjs
@@ -48,6 +64,8 @@ jobs:
           node tests/tracker-growth-closeout-handler.test.cjs
           node tests/tracker-case-study-freshness.test.cjs
           node tests/tracker-growth-cockpit.test.cjs
+          node src/tracker-growth-no-gsc-access.test.cjs
+          node scripts/tracker-readonly-access.test.cjs
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs

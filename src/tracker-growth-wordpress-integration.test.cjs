@@ -2,6 +2,28 @@
 const assert=require('node:assert/strict');
 const {registerGrowthExecution}=require('./tracker-growth-execution.cjs');
 const url='https://contentscale.site/reputation-crisis-management-1/';
+
+// Growth client reports must distinguish brand clicks from commercial discovery.
+const {bucket,computeGrowth,buildGrowthClientBrief}=require('./tracker-growth-cockpit.cjs');
+assert.equal(bucket('perfect roofing team nj','perfectroofingteam.com'),'brand_or_ambiguous');
+assert.equal(bucket('Perfect Roofing','perfectroofingteam.com'),'brand_or_ambiguous');
+assert.equal(bucket('emergency roof repair nj','perfectroofingteam.com'),'non_brand');
+const prtUrl='https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/';
+const proof={page_id:11,query:'24 hour emergency roof repair nj',impressions:545,clicks:0,position:32,evidence_scope:'page_verified',imported_at:'2026-10-14T00:00:00Z'};
+const p=computeGrowth([{id:11,url:prtUrl,gsc_impressions:1000,gsc_clicks:0,gsc_position:40,case_study_active:false}],
+ [proof,{...proof,query:'perfect roofing team',impressions:1500,clicks:1}],
+ 'perfectroofingteam.com',new Date('2026-10-16T00:00:00Z'));
+assert.equal(p.brand_or_ambiguous.impressions,1500);
+assert.equal(p.non_brand.impressions,545);
+assert(buildGrowthClientBrief(p).includes('545 impressions; 0 clicks; average position 32'));
+assert(buildGrowthClientBrief(p).includes('NOT MEASURED'));
+assert(buildGrowthClientBrief(p).includes('Search intent: URGENT_SERVICE'));
+assert(buildGrowthClientBrief(p).includes('Google Business Profile call-button clicks are not verified conversations'));
+assert(buildGrowthClientBrief(p).includes('No universal conversion percentage'));
+assert(buildGrowthClientBrief(p).includes('real job photos and authentic customer feedback'));
+assert(buildGrowthClientBrief(p).includes('zero clicks to a specific landing page does NOT mean the company has no customers or jobs'));
+assert(buildGrowthClientBrief(p).includes('An issued invoice alone does NOT verify completed work'));
+
 const endpoints={};
 const app={
  get:(path,...handlers)=>{endpoints[path]={method:'GET',handlers};},

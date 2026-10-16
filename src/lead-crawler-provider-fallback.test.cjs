@@ -48,32 +48,25 @@ async function main(){
  r=await request('roofing');assert.equal(r.body.cached,true);assert.equal(r.body.provider_calls,0);
  assert.equal(providers.length,1,'cached call must not charge another provider request');
 
+ // Canonical NJ discovery uses Serper.dev alone. SerpAPI is reserved for
+ // other crawler paths; a failed Maps API must never trigger an implicit
+ // paid second-provider request.
  const calls=[];
- const fallback=suite({fetchImpl:async(url,opts)=>{
+ const blocked=suite({fetchImpl:async(url)=>{
   calls.push(url);
-  if(url.includes('google.serper.dev'))return{ok:false,status:401};
-  assert(url.startsWith('https://serpapi.com/search.json?'));
-  assert.equal(new URL(url).searchParams.get('api_key'),'p-key');
-  return{ok:true,status:200,json:async()=>({local_results:[{
-   title:'Roof Repair NJ',website:'https://roofrepair-nj.example',phone:'6095551111',
-   address:'Trenton, NJ 08608',type:'Roofing contractor'
-  }]})};
+  assert.equal(url,'https://google.serper.dev/maps');
+  return{ok:false,status:401,json:async()=>({error:'invalid key'})};
  }});
- r=await fallback('roofing replacement');
- assert.equal(r.status,200);assert.equal(r.body.source,'google_maps_serpapi');
- assert.equal(r.body.provider_calls,2);assert.equal(r.body.leads.length,1);
- assert.equal(calls.length,2,'one Serper request then exactly one fallback request');
-
- const bothFail=suite({fetchImpl:async()=>({ok:false,status:401})});
- r=await bothFail('roofing no credentials');
+ r=await blocked('roofing replacement');
  assert.equal(r.status,503);
- assert.match(r.body.error,/Serper HTTP 401/);
- assert.match(r.body.error,/SerpAPI HTTP 401/);
- assert.equal(r.body.providers_attempted,2);
+ assert.match(r.body.error,/Serper/);
+ assert.match(r.body.error,/HTTP 401/);
+ assert.equal(r.body.providers_attempted,1);
+ assert.equal(calls.length,1,'Serper failure must never call SerpAPI');
  assert(!r.body.error.includes('s-key')&&!r.body.error.includes('p-key'));
 
  const noKeys=suite({serperKey:'',serpapiKey:'',fetchImpl:()=>{throw Error('should not fetch');}});
- r=await noKeys('roofing without keys');assert.equal(r.status,503);assert.match(r.body.error,/not configured/);
- console.log('PASS: Serper Maps primary, per-request credit count, 20-min cache, existing SerpAPI 401 fallback, two-failure diagnostics, 403 auth, no key exposure');
+ r=await noKeys('roofing without keys');assert.equal(r.status,503);assert.match(r.body.error,/requires/);
+ console.log('PASS: Serper-only NJ Maps, per-request credit count, 20-min cache, fail-closed provider errors, 403 auth, no key exposure');
 }
 main().catch(err=>{console.error(err);process.exitCode=1;});
