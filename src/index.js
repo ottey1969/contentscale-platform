@@ -48719,21 +48719,13 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   if(implStatus==='manual_resolution_complete'&&currentRejected>0){
     return {code:'REVIEW_REJECTED',label:'CYCLE CLOSED · '+currentRejected+' REJECTED ACTION'+(currentRejected===1?'':'S'),detail:'Rejected actions remain recoverable. Review them here and restore only accidental rejections; no new scan or full Brief is needed.',color:'#fca5a5',border:'#ef4444',bg:'#2a0a0a',button:'Review rejected actions',buttonAction:'openRemainingActions('+p.id+')'};
   }
-  // CONTENTSCALE-MANUAL-MONITORING-PRIORITY: after a completed My Check,
-  // old scans and Briefs stay HISTORY, not a fresh publication task.
-  // New scans, evaluations, HTML edits and publication confirmations after the
-  // check reopen the correct workflow; evidence checkpoints are checked above.
-  var manualDoneAt=Date.parse(p.manual_done_at||'')||0;
-  var completedManualCheck=bool(p.manual_done)&&manualDoneAt>0;
-  var postCheckWork=(scanAt>0&&scanAt>manualDoneAt)||
-    (evaluatedAt>0&&evaluatedAt>manualDoneAt)||
-    (htmlAt>0&&htmlAt>manualDoneAt)||
-    (confirmedAt>0&&confirmedAt>manualDoneAt)||
-    (publishedAt>0&&publishedAt>manualDoneAt);
-  if(completedManualCheck&&scanAt>0&&scanAt<=manualDoneAt&&
-      !postCheckWork&&implStatus!=='verifying'){
+  // CONTENTSCALE_SHARED_MONITORING_GUARD_V1: My Check is a personal closure, never publication proof.
+  // Fresh scan, edited HTML, explicit publication and evidence milestones reopen work.
+  // One status contract applies to existing and future Tracker page records.
+  var _completedJourney=window.ContentScaleTrackerJourney.inspect(p,lastCheckedRaw);
+  if(_completedJourney.personal_completion_controls_workflow){
     return {code:'MONITOR',label:'COMPLETED · MONITORING — HISTORICAL BRIEF',
-      detail:'Your completed My Check is newer than the last page scan and Brief. The saved Brief is historical, not a new requirement to publish HTML or run another scan. Keep existing AI/GSC evidence and Proof & History available. '+(nextEvidence||'Wait for the next evidence checkpoint.'),
+      detail:'Your My Check is newer than the previous scan and Brief. The old Brief stays in Proof & History, not a new requirement to publish HTML or rescan. My Check itself does not verify publication. '+(nextEvidence||'Wait for verified evidence.'),
       color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
   }
   // First manual scan of newly initialized Case Study, independent of scheduler.
