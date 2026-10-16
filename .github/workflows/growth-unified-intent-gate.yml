@@ -1,0 +1,34 @@
+name: Growth Unified Intent & Revenue Gate
+on:
+  pull_request:
+    paths:
+      - 'src/growth-intent-revenue.cjs'
+      - 'src/growth-intent-revenue.test.cjs'
+      - 'src/growth-unified-workflow.cjs'
+      - 'src/growth-unified-workflow.test.cjs'
+      - 'src/growth-cms-handoff.cjs'
+      - 'src/growth-cms-handoff.test.cjs'
+      - '.github/workflows/growth-unified-intent-gate.yml'
+  push:
+    paths:
+      - 'src/growth-intent-revenue.cjs'
+      - 'src/growth-intent-revenue.test.cjs'
+      - 'src/growth-unified-workflow.cjs'
+      - 'src/growth-unified-workflow.test.cjs'
+      - 'src/growth-cms-handoff.cjs'
+      - 'src/growth-cms-handoff.test.cjs'
+      - '.github/workflows/growth-unified-intent-gate.yml'
+jobs:
+  intent-to-revenue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Existing cross-CMS handoff
+        run: node src/growth-cms-handoff.test.cjs
+      - name: Intent and offer verification
+        run: node src/growth-intent-revenue.test.cjs
+      - name: One Growth end-to-end handoff
+        run: node src/growth-unified-workflow.test.cjs
