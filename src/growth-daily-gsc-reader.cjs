@@ -15,7 +15,7 @@ async function readVerifiedDailyGrowthGsc(pool,{clientId,pageId,pageUrl}={}){
  for(const r of rows){
   if(r.page_url!==pageUrl||r.verified!==true||r.search_type!=='web'||
      typeof r.gsc_property!=='string'||!r.gsc_property||
-     !/^\\d{4}-\\d{2}-\\d{2}$/.test(r.date)||
+     !/^\d{4}-\d{2}-\d{2}$/.test(r.date)||
      !Number.isSafeInteger(Number(r.clicks))||Number(r.clicks)<0||
      !Number.isSafeInteger(Number(r.impressions))||Number(r.impressions)<Number(r.clicks)||
      (r.nonbrand_clicks!=null&&(!Number.isSafeInteger(Number(r.nonbrand_clicks))||
