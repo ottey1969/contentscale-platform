@@ -40,3 +40,23 @@ for(const title of ["app.get('/api/tracker-client/:token',", "app.get('/track/:t
   console.log('  '+(j+1)+' '+line.slice(0,280));
  }
 }
+
+for(const [label,open,close] of [
+ ['CLIENT_API',"app.get('/api/tracker-client/:token',","app.get('/api/tracker-client/:token/briefs/"],
+ ['CLIENT_PAGE',"app.get('/track/:token',","app.get('/track/:token/"]
+]){
+ const from=lines.findIndex(l=>l.includes(open));
+ if(from<0)continue;
+ let to=lines.findIndex((l,i)=>i>from&&l.includes(close));
+ if(to<0||to>from+700)to=Math.min(lines.length,from+350);
+ console.log('ACCESS_SCOPE '+label+' '+(from+1)+' to '+(to+1));
+ const rg=/gsc|search.console|connect|status|disabled|paused|res\.json|res\.send|res\.redirect|\.query\(|\.rows|catch\s*\(|/i;
+ let emitted=0;
+ for(let k=from;k<to;k++){
+  if(!rg.test(lines[k]))continue;
+  const line=lines[k].trim();
+  if(/password|private_key|api_key|secret|access.token/i.test(line))continue;
+  console.log('  '+(k+1)+' '+line.slice(0,260));
+  if(++emitted>=75)break;
+ }
+}
