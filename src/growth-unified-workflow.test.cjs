@@ -4,6 +4,7 @@ const {createHash}=require('node:crypto');
 const {buildUnifiedGrowthHandoff}=require('./growth-unified-workflow.cjs');
 const input={canonicalUrl:'https://example.test/aeo-vs-geo-vs-seo/',originalHtml:'<h1>AEO vs GEO vs SEO</h1><p>Original useful explanation.</p>',
  changes:[{approved:true,evidence_ref:'observed:owner-review',html:'<section><h2>When GEO matters</h2><p>Use GEO analysis when evaluating how discovery systems present information from your site. Check the specific limitations of evidence.</p><a href="https://example.test/services/">Our services</a></section>'}],
+ sourceExpectedSha256:createHash('sha256').update('<h1>AEO vs GEO vs SEO</h1><p>Original useful explanation.</p>').digest('hex'),
  editorApproved:true,cms:'wix',pageTitle:'AEO vs GEO vs SEO Explained',metaDescription:'Understand AEO vs GEO vs SEO, the main differences and how search visibility is evaluated.',focusQuery:'AEO vs GEO vs SEO',evidenceScope:'observed',
  offers:{ai_visibility:{url:'https://example.test/ai-visibility-check/',available:true,claimsVerified:true}}};
 const done=buildUnifiedGrowthHandoff(input);
