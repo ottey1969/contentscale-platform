@@ -6,6 +6,7 @@ const {compareGrowthGscWindows}=require('./growth-gsc-window-comparison.cjs');
 const {evaluateDailyClickBreakthrough}=require('./growth-click-breakthrough.cjs');
 const {readVerifiedDailyGrowthGsc}=require('./growth-daily-gsc-reader.cjs');
 const {importVerifiedDailyGrowthGsc}=require('./growth-daily-gsc-import.cjs');
+const {growthServiceAccountToken}=require('./growth-gsc-service-token.cjs');
 const {registerGrowthCommercialOutcomeRoutes}=require('./growth-commercial-outcome-routes.cjs');
 const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
 const {registerGrowthCmsHandoffRoute}=require('./growth-cms-handoff-route.cjs');
@@ -148,7 +149,9 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
  app.post('/api/growth/admin/pages/:pageId/import-daily-gsc',verifyEngineAccess,adminOnly,async(req,res)=>{
   const identity=ids(req);
   if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
-  if(typeof resolveGrowthGscToken!=='function')return res.status(409).json({
+  const growthTokenResolver=typeof resolveGrowthGscToken==='function'?resolveGrowthGscToken:
+   process.env.GSC_SERVICE_ACCOUNT_JSON?growthServiceAccountToken:null;
+  if(typeof growthTokenResolver!=='function')return res.status(409).json({
    success:false,code:'AUTHORIZED_GSC_TOKEN_RESOLVER_REQUIRED',publication_allowed:false});
   const startDate=String(req.body?.start_date||''),endDate=String(req.body?.end_date||'');
   if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(startDate)||
@@ -160,7 +163,7 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
    const client=await pool.query('SELECT id,gsc_property FROM tracker_clients WHERE id=$1 LIMIT 1',[identity.clientId]);
    const property=client.rows?.[0]?.gsc_property;
    if(!property)return res.status(409).json({success:false,code:'REGISTERED_GSC_PROPERTY_REQUIRED'});
-   const token=await resolveGrowthGscToken(identity.clientId,property);
+   const token=await growthTokenResolver(identity.clientId,property);
    if(!token)return res.status(409).json({success:false,code:'AUTHORIZED_GSC_CONNECTION_REQUIRED'});
    const result=await importVerifiedDailyGrowthGsc({db:pool,clientId:identity.clientId,
     pageId:identity.pageId,pageUrl:state.page.url,gscProperty:property,
