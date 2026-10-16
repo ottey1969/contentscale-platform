@@ -49,6 +49,14 @@ for(const tweak of [
  const b=prepareGrowthCmsHandoff({...params,...tweak});
  assert.equal(b.status,'BLOCKED',JSON.stringify(tweak));
 }
+for(const unsafeHref of ['java&#x73;cript:alert(1)','java&#115;cript:alert(1)','java&Tab;script:alert(1)']){
+ const fail=prepareGrowthCmsHandoff({...params,changes:[{...approved[0],html:'<section><h2>Roofing checks</h2><p>Documented roofing work should be inspected before choosing the next repair.</p><a href="'+unsafeHref+'">Details</a></section>'}]});
+ assert.equal(fail.status,'BLOCKED',unsafeHref);
+ assert(fail.issues.includes('ENCODED_LINK_TARGET_NOT_ALLOWED'));
+}
+const unquoted=prepareGrowthCmsHandoff({...params,changes:[{...approved[0],html:'<section><h2>Roofing checks</h2><p>Documented roofing work should be inspected before choosing the next repair.</p><a href=https://synthetic-roofer.example/contact/>Contact</a></section>'}]});
+assert.equal(unquoted.status,'BLOCKED');
+assert(unquoted.issues.includes('UNQUOTED_LINK_TARGET_NOT_ALLOWED'));
 const noGsc=prepareGrowthCmsHandoff({...params,cms:'custom',evidenceScope:'observed',focusQuery:''});
 assert.equal(noGsc.status,'HANDOFF_READY_FOR_EDITOR');
 assert.equal(noGsc.manifest.publication_allowed,false);
