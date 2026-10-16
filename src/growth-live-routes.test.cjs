@@ -29,10 +29,11 @@ function fixture({admin=true,locked=false,duplicates=false,wrongOwner=false,quer
   let i=0;const next=()=>{const cb=h[i++];if(cb)return cb(req,response,next)};
   await next();return response;
  }
- return {request,writes:()=>writes};
+ return {request,writes:()=>writes,elementorRegistered:()=>Array.isArray(routes['POST /api/growth/admin/pages/:pageId/elementor-draft'])};
 }
 (async()=>{
- let f=fixture();let r=await f.request('GET');
+ let f=fixture();assert.equal(f.elementorRegistered(),true,'canonical Growth router must mount optional draft-only Elementor adapter');
+ let r=await f.request('GET');
  assert.equal(r.body.success,true);assert.equal(r.body.status,'READY_FOR_CMS_NEUTRAL_HANDOFF');
  assert(r.body.warnings.includes('WORDPRESS_CREDENTIALS_REQUIRED'));
  assert(r.body.warnings.includes('REVIEWED_WORDPRESS_MAPPING_REQUIRED'));
