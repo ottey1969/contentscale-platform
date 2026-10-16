@@ -50,7 +50,9 @@ jobs:
         run: |
           node --check src/tracker-page-journey.cjs
           node scripts/tracker-page-journey.test.cjs
-      - name: Inspect actual client Tracker access independent from GSC\n        run: node scripts/inspect-tracker-client-access.cjs\n      - name: Zero-action closure, no recycling, growth proof
+      - name: Inspect actual client Tracker access independent from GSC
+        run: node scripts/inspect-tracker-client-access.cjs
+      - name: Zero-action closure, no recycling, growth proof
         run: |
           node tests/tracker-growth-plan.test.cjs
           node tests/tracker-growth-integration.test.cjs
