@@ -12,7 +12,8 @@
   function inspect(p,lastCheckedRaw){
     p=p||{};
     var brief=obj(p.brief_content),caseStudy=obj(p.case_study);
-    var caseActive=yes(p.case_study_active),manualDone=yes(p.manual_done)||!!at(p.manual_done_at);
+    var caseActive=yes(p.case_study_active),manualDoneAt=at(p.manual_done_at);
+    var manualDone=yes(p.manual_done)&&manualDoneAt>0;
     var caseBaselineAt=at(caseStudy.baseline_at||p.case_study_baseline_at);
     var scanAt=at(lastCheckedRaw||p.last_checked||p.last_checked_at);
     var evaluatedAt=at(p.brief_evaluated_at);
@@ -39,10 +40,16 @@
       (verifiedCycle||(freshBrief&&(verifiedAt>=evaluatedAt||publishedAt>=evaluatedAt)));
     var schedule=String(p.check_frequency==null?'0':p.check_frequency).toLowerCase();
     var scheduleEnabled=!(schedule===''||schedule==='0'||schedule==='0days'||schedule==='off');
+    var lastEditedAt=at(p.html_pasted_at);
+    var completedMonitoring=manualDone&&scanAt>0&&scanAt<=manualDoneAt&&
+      !(evaluatedAt>manualDoneAt||lastEditedAt>manualDoneAt||
+        confirmedAt>manualDoneAt||publishedAt>manualDoneAt) &&
+      implementationStatus!=='verifying';
     var waitingInput=yes(p.monitoring_waiting_input);
     var hasOpenReview=freshBrief&&outstanding>0&&!cycleVerified&&confirmedAt<evaluatedAt;
     return {
-      manual_checked:manualDone,implementation_verified:cycleVerified,
+      manual_checked:manualDone,personal_completion_controls_workflow:completedMonitoring,
+      implementation_verified:cycleVerified,
       case_study_active:caseActive,case_baseline_known:caseBaselineAt>0,
       scheduled_scans_enabled:scheduleEnabled,evidence_checkpoint_waiting:waitingInput,
       historical_brief:historicalBrief,current_scan_needs_brief:currentScanNeedsBrief,
