@@ -5,6 +5,8 @@ on:
     paths:
       - 'src/index.js'
       - 'scripts/inspect-tracker-client-access.cjs'
+      - 'scripts/fix-tracker-readonly-access.cjs'
+      - 'scripts/tracker-readonly-access.test.cjs'
       - 'src/tracker-page-journey.cjs'
       - 'scripts/tracker-page-journey.test.cjs'
       - 'src/brief-quality.js'
@@ -16,6 +18,8 @@ on:
     paths:
       - 'src/index.js'
       - 'scripts/inspect-tracker-client-access.cjs'
+      - 'scripts/fix-tracker-readonly-access.cjs'
+      - 'scripts/tracker-readonly-access.test.cjs'
       - 'src/tracker-page-journey.cjs'
       - 'scripts/tracker-page-journey.test.cjs'
       - 'src/brief-quality.js'
@@ -61,6 +65,7 @@ jobs:
           node tests/tracker-case-study-freshness.test.cjs
           node tests/tracker-growth-cockpit.test.cjs
           node src/tracker-growth-no-gsc-access.test.cjs
+          node scripts/tracker-readonly-access.test.cjs
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs
