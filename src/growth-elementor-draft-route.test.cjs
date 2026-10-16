@@ -2,6 +2,9 @@
 const assert=require('node:assert/strict'),crypto=require('node:crypto');
 const {registerGrowthElementorDraftRoute}=require('./growth-elementor-draft-route.cjs');
 const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
+const phpBridge=require('node:fs').readFileSync(require('node:path').join(__dirname,'../wordpress/contentscale-growth-elementor/contentscale-growth-elementor.php'),'utf8');
+assert(/_elementor_page_settings[\s\S]{0,160}'_thumbnail_id'\) as \$key/.test(phpBridge),
+ 'Unpublished Elementor clone must retain the original featured-image ID and page settings');
 const url='https://site.example/roof-repair/';
 const trackerHtml='<article><h1>Roofing</h1><p>Existing crawl source</p></article>';
 const html='<article><h1>Roofing NJ</h1><p>Existing reliable roofing advice.</p><img src="/real.jpg" alt="Roof"></article>';
