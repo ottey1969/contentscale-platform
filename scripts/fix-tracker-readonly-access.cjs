@@ -1,5 +1,6 @@
 'use strict';
 // Exact, idempotent change to the existing canonical Tracker GET route.
+// Hotfix scope: one read-only API lookup; never touch POST, case studies or GSC imports.
 // GSC remains optional for reading; client disabled/paused states remain enforced.
 // Read-only share links already render /track/:token, but the page's initial
 // GET /api/tracker-client/:token previously rejected that same token.
