@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - 'src/index.js'
+      - 'scripts/fix-tracker-readonly-access.cjs'
+      - 'scripts/tracker-readonly-access.test.cjs'
       - 'src/brief-quality.js'
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
@@ -12,6 +14,8 @@ on:
   pull_request:
     paths:
       - 'src/index.js'
+      - 'scripts/fix-tracker-readonly-access.cjs'
+      - 'scripts/tracker-readonly-access.test.cjs'
       - 'src/brief-quality.js'
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
@@ -48,6 +52,7 @@ jobs:
           node tests/tracker-growth-closeout-handler.test.cjs
           node tests/tracker-case-study-freshness.test.cjs
           node tests/tracker-growth-cockpit.test.cjs
+          node scripts/tracker-readonly-access.test.cjs
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs
