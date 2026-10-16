@@ -4,6 +4,7 @@
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {compareGrowthGscWindows}=require('./growth-gsc-window-comparison.cjs');
 const {evaluateDailyClickBreakthrough}=require('./growth-click-breakthrough.cjs');
+const {readVerifiedDailyGrowthGsc}=require('./growth-daily-gsc-reader.cjs');
 const {registerGrowthCommercialOutcomeRoutes}=require('./growth-commercial-outcome-routes.cjs');
 const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
 const {registerGrowthCmsHandoffRoute}=require('./growth-cms-handoff-route.cjs');
@@ -122,10 +123,14 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
   if(!/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/.test(publishedOn))return res.status(400).json({success:false,code:'VERIFIED_PUBLICATION_DATE_REQUIRED'});
   try{
    const state=await loadGrowthTrackerEvidence(pool,identity);
-   if(typeof fetchVerifiedDailyGsc!=='function')return res.set('Cache-Control','private, no-store').json({
-    success:true,status:'DAILY_GSC_PROVIDER_NOT_CONFIGURED',page_id:identity.pageId,
-    confirmed:false,publication_allowed:false,next_action:'CONNECT_VERIFIED_DAILY_GSC_READER'});
-   const source=await fetchVerifiedDailyGsc(identity.clientId,identity.pageId,state.page.url);
+   const source=typeof fetchVerifiedDailyGsc==='function'?
+    await fetchVerifiedDailyGsc(identity.clientId,identity.pageId,state.page.url):
+    await readVerifiedDailyGrowthGsc(pool,{clientId:identity.clientId,pageId:identity.pageId,pageUrl:state.page.url});
+   if(source?.status==='NO_VERIFIED_DAILY_GSC')return res.set('Cache-Control','private, no-store')
+    .json({success:true,status:'NO_VERIFIED_DAILY_GSC',confirmed:false,page_id:identity.pageId,
+     next_action:'IMPORT_VERIFIED_EXACT_PAGE_GSC_DAYS',publication_allowed:false});
+   if(source?.status==='MULTIPLE_GSC_PROPERTIES_REVIEW_REQUIRED')return res.status(409)
+    .json({success:false,code:'MULTIPLE_GSC_PROPERTIES_REVIEW_REQUIRED',publication_allowed:false});
    if(source?.page_url!==state.page.url||!source?.gsc_property||!Array.isArray(source.rows))
     return res.status(409).json({success:false,code:'EXACT_PAGE_DAILY_GSC_REQUIRED'});
    const outcome=evaluateDailyClickBreakthrough({pageUrl:state.page.url,
@@ -133,7 +138,7 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
    return res.set('Cache-Control','private, no-store').json({success:true,page_id:identity.pageId,
     case_study_locked:state.page.case_study_active===true,publication_allowed:false,
     source:'verified_exact_page_daily_gsc',...outcome});
-  }catch(error){return res.status(503).json({success:false,code:'DAILY_GSC_UNAVAILABLE'});}
+  }catch(error){const missing=error?.code==='42P01';return res.status(503).json({success:false,code:missing?'DAILY_GSC_SCHEMA_REQUIRED':'DAILY_GSC_UNAVAILABLE',publication_allowed:false});}
  });
  app.post('/api/growth/admin/pages/:pageId/refresh-gsc',verifyEngineAccess,adminOnly,async(req,res)=>{
   const identity=ids(req);if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
