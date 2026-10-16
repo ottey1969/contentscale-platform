@@ -1,5 +1,6 @@
 'use strict';
 // Exact, idempotent change to the existing canonical Tracker GET route.
+// GSC remains optional for reading; client disabled/paused states remain enforced.
 // Read-only share links already render /track/:token, but the page's initial
 // GET /api/tracker-client/:token previously rejected that same token.
 const fs=require('node:fs');
