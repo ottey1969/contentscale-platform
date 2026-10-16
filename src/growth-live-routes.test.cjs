@@ -83,6 +83,17 @@ function fixture({admin=true,locked=false,duplicates=false,wrongOwner=false,quer
  f=fixture({queryText:'24 hour emergency roof repair nj'});r=await f.request('GET','click-opportunities');
  assert.equal(r.body.queries[0].search_intent,'URGENT_SERVICE');
  assert.equal(r.body.queries[0].conversion_goal,'QUALIFIED_URGENT_PHONE_CONTACT');
+ f=fixture({queryText:'content scale'});r=await f.request('GET','click-opportunities');
+ assert.equal(r.statusCode,200);
+ assert.equal(r.body.status,'NO_NONBRAND_CANDIDATES_REVIEW');
+ assert.equal(r.body.queries.length,0);
+ assert.equal(r.body.branded_or_ambiguous_queries_excluded,1);
+ assert.equal(r.body.nonbrand_click_totals_verified,false);
+ assert.equal(r.body.next_action,'REVIEW_BRAND_OR_AMBIGUOUS_QUERIES');
+ f=fixture({queryText:'google penalty recovery'});r=await f.request('GET','click-opportunities');
+ assert.equal(r.body.status,'VERIFIED_QUERIES_REVIEW');
+ assert.equal(r.body.queries.length,1);
+ assert.equal(r.body.branded_or_ambiguous_queries_excluded,0);
  // Read-only outcome comparisons must never require a draft or overwrite Case Studies.
  f=fixture();r=await f.request('GET','outcomes');
  assert.equal(r.body.status,'NO_VERIFIED_GSC_HISTORY');
