@@ -138,7 +138,11 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
     gscProperty:source.gsc_property,publishedOn,asOf:new Date().toISOString().slice(0,10),rows:source.rows});
    return res.set('Cache-Control','private, no-store').json({success:true,page_id:identity.pageId,
     case_study_locked:state.page.case_study_active===true,publication_allowed:false,
-    source:'verified_exact_page_daily_gsc',...outcome});
+    source:'verified_exact_page_daily_gsc',...outcome,
+    // The query-string publication date is a user claim, not proof of when content changed.
+    status:outcome.confirmed?'PUBLICATION_DATE_VERIFICATION_REQUIRED':outcome.status,
+    confirmed:false,publication_date_verified:false,
+    measured_click_lift_candidate:outcome.confirmed===true});
   }catch(error){const missing=error?.code==='42P01';return res.status(503).json({success:false,code:missing?'DAILY_GSC_SCHEMA_REQUIRED':'DAILY_GSC_UNAVAILABLE',publication_allowed:false});}
  });
  app.post('/api/growth/admin/pages/:pageId/import-daily-gsc',verifyEngineAccess,adminOnly,async(req,res)=>{
