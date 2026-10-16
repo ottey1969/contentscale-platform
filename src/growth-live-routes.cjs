@@ -38,8 +38,9 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
    const credentialsConfigured=profiles.rows.some(p=>{try{return new URL(p.wp_url).origin===site;}catch{return false;}});
    const issues=[];
    if(state.page.case_study_active)issues.push('CASE_STUDY_LOCK');
-   if(dups.rows.length!==1)issues.push('DUPLICATE_TRACKER_URL');
-   if(!state.gscRows.length)issues.push('EXACT_PAGE_GSC_QUERIES_REQUIRED');
+   if(dups.rows.length!==1||Number(dups.rows[0]?.id)!==identity.pageId||Number(dups.rows[0]?.tracker_client_id)!==identity.clientId)issues.push('DUPLICATE_TRACKER_URL');
+   const exactPageGscRows=(state.gscRows||[]).filter(r=>r.source_page_url===url&&r.evidence_scope==='page_verified');
+   if(!exactPageGscRows.length)issues.push('EXACT_PAGE_GSC_QUERIES_REQUIRED');
    if(mapping.rows.length!==1||mapping.rows[0].wordpress_url!==url||!Number.isSafeInteger(Number(mapping.rows[0].wordpress_post_id)))issues.push('REVIEWED_WORDPRESS_MAPPING_REQUIRED');
    if(!credentialsConfigured)issues.push('WORDPRESS_CREDENTIALS_REQUIRED');
    if(mappingLookup.status==='rejected')issues.push('WORDPRESS_MAPPING_SCHEMA_OPTIONAL');
@@ -56,14 +57,14 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
     handoffReady?'READY_FOR_CMS_NEUTRAL_HANDOFF':'BLOCKED',
     next_action:nextAction,
     page_id:identity.pageId,client_id:identity.clientId,url,
-    gsc_verified_queries:state.gscRows.length,
+    gsc_verified_queries:exactPageGscRows.length,
     search_spy_present:!!state.page.serp_spy,
     ai_evidence_count:state.aiEvidence.length,
     mapping_present:mapping.rows.length===1,
     wordpress_credentials_configured:credentialsConfigured,
     cms_neutral:{ready:handoffReady,requires_wordpress:false,requires_paid_provider:false,
      supported:['wix','wordpress','webflow','squarespace','custom','generic'],
-     blockers:handoffIssues,requires_gsc:false,evidence_scope:state.gscRows.length?'verified_or_observed':'needs_access'},
+     blockers:handoffIssues,requires_gsc:false,evidence_scope:exactPageGscRows.length?'verified':'needs_access'},
     wordpress_draft:{ready:wpReady,issues:wpIssues},
     issues:handoffReady?handoffIssues:issues,
     warnings:handoffReady?issues:[],
