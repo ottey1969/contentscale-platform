@@ -3,10 +3,11 @@
 // into ONE admin-only readiness endpoint. No parallel Growth database model.
 const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {compareGrowthGscWindows}=require('./growth-gsc-window-comparison.cjs');
+const {evaluateDailyClickBreakthrough}=require('./growth-click-breakthrough.cjs');
 const {registerGrowthCommercialOutcomeRoutes}=require('./growth-commercial-outcome-routes.cjs');
 const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
 const {registerGrowthCmsHandoffRoute}=require('./growth-cms-handoff-route.cjs');
-function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}){
+function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fetchVerifiedDailyGsc}={}){
  if(!app||!pool||typeof verifyEngineAccess!=='function')
   throw Error('GROWTH_ROUTE_DEPENDENCIES_REQUIRED');
  const adminOnly=(req,res,next)=>req.engineUser?.isAdmin===true?next():res.status(403).json({success:false,code:'GROWTH_ADMIN_ONLY'});
@@ -113,6 +114,26 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
     page_id:identity.pageId,publication_allowed:false,
     next_action:missing?'VERIFY_EXISTING_GSC_IMPORT_MIGRATION':'RETRY_READ_ONLY_GSC_HISTORY'});
   }
+ });
+ app.get('/api/growth/admin/pages/:pageId/daily-breakthrough',verifyEngineAccess,adminOnly,async(req,res)=>{
+  const identity=ids(req);
+  if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
+  const publishedOn=String(req.query.published_on||'');
+  if(!/^20\\d\\d-\\d\\d-\\d\\d$/.test(publishedOn))return res.status(400).json({success:false,code:'VERIFIED_PUBLICATION_DATE_REQUIRED'});
+  try{
+   const state=await loadGrowthTrackerEvidence(pool,identity);
+   if(typeof fetchVerifiedDailyGsc!=='function')return res.set('Cache-Control','private, no-store').json({
+    success:true,status:'DAILY_GSC_PROVIDER_NOT_CONFIGURED',page_id:identity.pageId,
+    confirmed:false,publication_allowed:false,next_action:'CONNECT_VERIFIED_DAILY_GSC_READER'});
+   const source=await fetchVerifiedDailyGsc(identity.clientId,identity.pageId,state.page.url);
+   if(source?.page_url!==state.page.url||!source?.gsc_property||!Array.isArray(source.rows))
+    return res.status(409).json({success:false,code:'EXACT_PAGE_DAILY_GSC_REQUIRED'});
+   const outcome=evaluateDailyClickBreakthrough({pageUrl:state.page.url,
+    gscProperty:source.gsc_property,publishedOn,asOf:new Date().toISOString().slice(0,10),rows:source.rows});
+   return res.set('Cache-Control','private, no-store').json({success:true,page_id:identity.pageId,
+    case_study_locked:state.page.case_study_active===true,publication_allowed:false,
+    source:'verified_exact_page_daily_gsc',...outcome});
+  }catch(error){return res.status(503).json({success:false,code:'DAILY_GSC_UNAVAILABLE'});}
  });
  app.post('/api/growth/admin/pages/:pageId/refresh-gsc',verifyEngineAccess,adminOnly,async(req,res)=>{
   const identity=ids(req);if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
