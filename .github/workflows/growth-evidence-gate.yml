@@ -40,6 +40,7 @@ on:
       - 'src/growth-gsc-page-verification*.cjs'
       - 'src/growth-gsc-window-comparison*.cjs'
       - 'migrations/growth-gsc-page-import-runs.sql'
+      - 'migrations/growth-gsc-daily-page-evidence.sql'
       - 'src/growth-wordpress-connection-route*.cjs'
       - 'src/growth-wordpress-admin-auth*.cjs'
       - 'src/growth-wordpress-identity-approval-route*.cjs'
@@ -136,11 +137,13 @@ jobs:
         run: |
           psql -v ON_ERROR_STOP=1 -f migrations/growth-wordpress-page-mapping.sql
           psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-page-import-runs.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-daily-page-evidence.sql
           psql -v ON_ERROR_STOP=1 -f migrations/growth-commercial-outcome-events.sql
           psql -v ON_ERROR_STOP=1 -f migrations/growth-wordpress-page-mapping.sql
           psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-page-import-runs.sql
+          psql -v ON_ERROR_STOP=1 -f migrations/growth-gsc-daily-page-evidence.sql
           psql -v ON_ERROR_STOP=1 -f migrations/growth-commercial-outcome-events.sql
-          psql -v ON_ERROR_STOP=1 -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('growth_wordpress_page_mapping','growth_gsc_page_import_runs','growth_commercial_outcome_events')" | grep -qx '3'
+          psql -v ON_ERROR_STOP=1 -Atc "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('growth_wordpress_page_mapping','growth_gsc_page_import_runs','growth_commercial_outcome_events','growth_gsc_daily_page_evidence')" | grep -qx '4'
   growth-gate:
     runs-on: ubuntu-latest
     permissions:
