@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const {inspect}=require('../src/tracker-page-journey.cjs');
+const {inspect,pageEvidence}=require('../src/tracker-page-journey.cjs');
 const baseline='2026-10-07T10:00:00Z';
 const before='2026-10-01T10:00:00Z';
 const after='2026-10-09T10:00:00Z';
@@ -39,6 +39,19 @@ j=inspect({...p,case_study_active:false,case_study:null,brief_content:null,
  manual_done_at:null,gsc_clicks:null,gsc_impressions:null});
 assert.equal(j.historical_brief,false);
 assert.equal(j.current_brief_review_required,false);
+const portfolio={query_opportunities:[
+ {page_id:20,url:'https://roofer.example/roof/',query:'roof leak repair nj',impressions:397,clicks:0,position:34,priority_score:990,imported_at:'2026-10-10',case_study_locked:true},
+ {page_id:21,url:'https://roofer.example/gutters/',query:'gutter company nj',impressions:500,clicks:2,priority_score:1200}
+]};
+let opportunity=pageEvidence(portfolio,20);
+assert.equal(opportunity.status,'PAGE_VERIFIED_NONBRAND_OPPORTUNITIES');
+assert.equal(opportunity.queries.length,1);
+assert.equal(opportunity.queries[0].query,'roof leak repair nj');
+assert.equal(opportunity.queries[0].clicks,0);
+assert.equal(opportunity.queries[0].locked,true);
+assert.equal(pageEvidence(portfolio,22).status,'NO_VERIFIED_NONBRAND_OPPORTUNITIES');
+assert.equal(pageEvidence(null,22).status,'NEEDS_VERIFIED_EXACT_PAGE_GSC');
+assert.deepEqual(pageEvidence(null,22).queries,[]);
 const index=fs.readFileSync(path.join(__dirname,'../src/index.js'),'utf8');
 assert(index.includes('CONTENTSCALE_CANONICAL_GROWTH_JOURNEY_V1'));
 assert(index.includes('ContentScaleTrackerJourney.inspect(p,lastCheckedRaw)'));
