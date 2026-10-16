@@ -21,5 +21,15 @@ registerGrowthCockpit(app,{async query(sql){
  assert.equal(res.body.gsc_evidence_status,'UNAVAILABLE');
  assert.equal(res.body.gsc_connected_required_for_access,false);
  assert.deepEqual(res.body.query_opportunities,[]);
+ const html={set(){return this},type(){return this},send(s){this.source=s;return this}};
+ const growthView=routes['/track/:token/growth'];
+ await growthView[0](req,html,()=>growthView[1](req,html));
+ assert.match(html.source,/Non-brand verified clicks<strong>Needs access<\/strong>/);
+ assert.match(html.source,/GSC: Needs access/);
+ assert.doesNotMatch(html.source,/Non-brand verified clicks<strong>0<\/strong>/);
+ const brief={set(){return this},type(){return this},send(s){this.body=s;return this}};
+ const clientBrief=routes['/api/tracker-client/:token/growth/client-brief'];
+ await clientBrief[0](req,brief,()=>clientBrief[1](req,brief));
+ assert.match(brief.body,/not verified as zero/);
  console.log('PASS: Growth page remains open without Google Search Console; absence is not verified zero.');
 })().catch(err=>{console.error(err);process.exitCode=1});
