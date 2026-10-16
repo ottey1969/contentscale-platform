@@ -56,6 +56,7 @@ jobs:
           node tests/tracker-growth-closeout-handler.test.cjs
           node tests/tracker-case-study-freshness.test.cjs
           node tests/tracker-growth-cockpit.test.cjs
+          node src/tracker-growth-no-gsc-access.test.cjs
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs
