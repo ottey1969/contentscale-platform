@@ -44,8 +44,8 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   }
   const h=part.html;
   if(typeof h!=='string'||h.length>90000||
-   /<(?:\/?)(?:script|style|iframe|form|object|embed|html|head|body|meta|link)\b/i.test(h)||
-   /\son\w+\s*=|javascript\s*:|data\s*:/i.test(h))issues.push('UNSAFE_OR_NONINDEXABLE_HTML');
+   /<(?:\/?)(?:script|style|iframe|form|object|embed|html|head|body|meta|link|svg|math|template|textarea|button|input|select|option|video|audio|source|picture|frame|frameset|base|title|noscript|canvas|applet|portal|plaintext|xmp|dialog)\b/i.test(h)||
+   /\s(?:on[\w:-]+|style|srcdoc|formaction|autofocus|contenteditable)\s*=|(?:javascript|vbscript)\s*:|data\s*:/i.test(h))issues.push('UNSAFE_OR_NONINDEXABLE_HTML');
   if(!/<(?:p|h[2-6]|li)\b/i.test(h)||asText(h).length<30)issues.push('SUBSTANTIVE_SECTION_TEXT_REQUIRED');
   for(const m of h.matchAll(/<h[2-6]\b[^>]*>([\s\S]*?)<\/h[2-6]>/gi)){
    if(!asText(m[1]))issues.push('EMPTY_HEADING');
@@ -55,9 +55,11 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    const ref=m[1];
    // Entity decoding happens in the browser before navigation.
    if(/&(?:#|colon\b|tab\b|newline\b)/i.test(ref))issues.push('ENCODED_LINK_TARGET_NOT_ALLOWED');
+   if(/[\u0000-\u001f\u007f]/.test(ref))issues.push('LINK_TARGET_CONTROL_CHARACTER');
    if(ref.startsWith('#')){links.push({url:ref,type:'in_page'});continue}
    let target;try{target=new URL(ref,canonicalUrl)}catch{}
-   if(!target||!['http:','https:','tel:','mailto:'].includes(target.protocol))issues.push('LINK_TARGET_INVALID');
+   if(!target||!['http:','https:','tel:','mailto:'].includes(target.protocol)||
+      target.username||target.password)issues.push('LINK_TARGET_INVALID');
    else links.push({url:ref,type:target.protocol==='tel:'?'phone':target.protocol==='mailto:'?'email':
     url&&target.hostname===url.hostname?'same_domain':'external'});
   }
