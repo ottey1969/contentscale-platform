@@ -1,5 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
+const {createHash}=require('node:crypto');
 const {buildUnifiedGrowthHandoff}=require('./growth-unified-workflow.cjs');
 const input={canonicalUrl:'https://example.test/aeo-vs-geo-vs-seo/',originalHtml:'<h1>AEO vs GEO vs SEO</h1><p>Original useful explanation.</p>',
  changes:[{approved:true,evidence_ref:'observed:owner-review',html:'<section><h2>When GEO matters</h2><p>Use GEO analysis when evaluating how discovery systems present information from your site. Check the specific limitations of evidence.</p><a href="https://example.test/services/">Our services</a></section>'}],
