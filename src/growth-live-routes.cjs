@@ -119,7 +119,7 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
   const identity=ids(req);
   if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
   const publishedOn=String(req.query.published_on||'');
-  if(!/^20\\d\\d-\\d\\d-\\d\\d$/.test(publishedOn))return res.status(400).json({success:false,code:'VERIFIED_PUBLICATION_DATE_REQUIRED'});
+  if(!/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/.test(publishedOn))return res.status(400).json({success:false,code:'VERIFIED_PUBLICATION_DATE_REQUIRED'});
   try{
    const state=await loadGrowthTrackerEvidence(pool,identity);
    if(typeof fetchVerifiedDailyGsc!=='function')return res.set('Cache-Control','private, no-store').json({
