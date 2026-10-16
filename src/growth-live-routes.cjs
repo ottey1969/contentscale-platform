@@ -5,10 +5,11 @@ const {loadGrowthTrackerEvidence}=require('./growth-canonical-loader.cjs');
 const {compareGrowthGscWindows}=require('./growth-gsc-window-comparison.cjs');
 const {evaluateDailyClickBreakthrough}=require('./growth-click-breakthrough.cjs');
 const {readVerifiedDailyGrowthGsc}=require('./growth-daily-gsc-reader.cjs');
+const {importVerifiedDailyGrowthGsc}=require('./growth-daily-gsc-import.cjs');
 const {registerGrowthCommercialOutcomeRoutes}=require('./growth-commercial-outcome-routes.cjs');
 const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
 const {registerGrowthCmsHandoffRoute}=require('./growth-cms-handoff-route.cjs');
-function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fetchVerifiedDailyGsc}={}){
+function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fetchVerifiedDailyGsc,resolveGrowthGscToken}={}){
  if(!app||!pool||typeof verifyEngineAccess!=='function')
   throw Error('GROWTH_ROUTE_DEPENDENCIES_REQUIRED');
  const adminOnly=(req,res,next)=>req.engineUser?.isAdmin===true?next():res.status(403).json({success:false,code:'GROWTH_ADMIN_ONLY'});
@@ -139,6 +140,36 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
     case_study_locked:state.page.case_study_active===true,publication_allowed:false,
     source:'verified_exact_page_daily_gsc',...outcome});
   }catch(error){const missing=error?.code==='42P01';return res.status(503).json({success:false,code:missing?'DAILY_GSC_SCHEMA_REQUIRED':'DAILY_GSC_UNAVAILABLE',publication_allowed:false});}
+ });
+ app.post('/api/growth/admin/pages/:pageId/import-daily-gsc',verifyEngineAccess,adminOnly,async(req,res)=>{
+  const identity=ids(req);
+  if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
+  if(typeof resolveGrowthGscToken!=='function')return res.status(409).json({
+   success:false,code:'AUTHORIZED_GSC_TOKEN_RESOLVER_REQUIRED',publication_allowed:false});
+  const startDate=String(req.body?.start_date||''),endDate=String(req.body?.end_date||'');
+  if(!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(startDate)||
+     !/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(endDate))
+   return res.status(400).json({success:false,code:'DAILY_GSC_DATES_REQUIRED'});
+  try{
+   const state=await loadGrowthTrackerEvidence(pool,identity);
+   if(state.page.case_study_active)return res.status(409).json({success:false,code:'CASE_STUDY_LOCK'});
+   const client=await pool.query('SELECT id,gsc_property FROM tracker_clients WHERE id=$1 LIMIT 1',[identity.clientId]);
+   const property=client.rows?.[0]?.gsc_property;
+   if(!property)return res.status(409).json({success:false,code:'REGISTERED_GSC_PROPERTY_REQUIRED'});
+   const token=await resolveGrowthGscToken(identity.clientId,property);
+   if(!token)return res.status(409).json({success:false,code:'AUTHORIZED_GSC_CONNECTION_REQUIRED'});
+   const result=await importVerifiedDailyGrowthGsc({db:pool,clientId:identity.clientId,
+    pageId:identity.pageId,pageUrl:state.page.url,gscProperty:property,
+    accessToken:token,startDate,endDate});
+   return res.set('Cache-Control','private, no-store').json({success:true,
+    page_id:identity.pageId,publication_allowed:false,...result});
+  }catch(error){
+   const schemaMissing=error?.code==='42P01';
+   const invalid=/^(VERIFIED_GSC_PAGE_IDENTITY_REQUIRED|SETTLED_DAILY_DATE_WINDOW_REQUIRED|GSC_DAILY_RESPONSE_REJECTED|TRACKER_CANONICAL_PAGE_CHANGED)$/.test(error?.message||'');
+   return res.status(schemaMissing?503:invalid?409:503).json({success:false,
+    code:schemaMissing?'DAILY_GSC_SCHEMA_REQUIRED':invalid?error.message:'DAILY_GSC_IMPORT_UNAVAILABLE',
+    publication_allowed:false});
+  }
  });
  app.post('/api/growth/admin/pages/:pageId/refresh-gsc',verifyEngineAccess,adminOnly,async(req,res)=>{
   const identity=ids(req);if(!validIds(identity))return res.status(400).json({success:false,code:'TRACKER_IDS_REQUIRED'});
