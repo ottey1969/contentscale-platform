@@ -66,6 +66,22 @@ async function call(overrides={},admin=true){
  assert.equal(r.payload.manifest.evidence_scope,'needs_access');
  assert.equal(r.payload.files.length,6);
  assert.equal(dbWrites,0);
+ r=await call({revenue_mode:'intent_to_revenue',focus_query:'roof leaks',
+  offers:{roof_leak:{url:'https://roofer.example/roof-inspection/',available:true,claimsVerified:true}}});
+ assert.equal(r.statusCode,200,JSON.stringify(r.payload));
+ assert.equal(r.payload.status,'UNIFIED_HANDOFF_READY_FOR_EDITOR');
+ assert.equal(r.payload.files.length,9);
+ assert(r.payload.files.find(f=>f.name==='06-revenue-cta.html').content.includes('Request inspection'));
+ assert.equal(r.payload.manifest.publication_allowed,false);
+ r=await call({revenue_mode:'intent_to_revenue',focus_query:'roof leaks',offers:{}});
+ assert.equal(r.statusCode,200);
+ assert.equal(r.payload.status,'EDITORIAL_HANDOFF_READY_REVENUE_NEEDS_EVIDENCE');
+ assert(!r.payload.files.find(f=>f.name==='06-revenue-cta.html').content.includes('<aside'));
+ r=await call({revenue_mode:'intent_to_revenue',focus_query:'roof leaks',format:'zip',
+  offers:{roof_leak:{url:'https://roofer.example/roof-inspection/',available:true,claimsVerified:true}}});
+ assert(Buffer.isBuffer(r.payload));assert.equal(r.payload.readUInt16LE(r.payload.length-22+10),9);
+ r=await call({revenue_mode:'bogus'});
+ assert.equal(r.statusCode,400);
  r=await call({format:'zip'});
  assert(Buffer.isBuffer(r.payload));
  assert.equal(r.statusCode,200);
