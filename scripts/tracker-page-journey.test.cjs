@@ -39,6 +39,23 @@ j=inspect({...p,case_study_active:false,case_study:null,brief_content:null,
  manual_done_at:null,gsc_clicks:null,gsc_impressions:null});
 assert.equal(j.historical_brief,false);
 assert.equal(j.current_brief_review_required,false);
+const closed={...p,case_study:{baseline_at:'2026-09-25T00:00:00Z'},
+  brief_evaluated_at:'2026-10-01T12:00:00Z',
+  last_checked_at:'2026-10-01T13:00:00Z',
+  manual_done:true,manual_done_at:'2026-10-08T10:00:00Z'};
+assert.equal(inspect(closed).personal_completion_controls_workflow,true,
+ 'a completed personal check prevents reordering historical Brief work');
+for(const changes of [
+ {manual_done:false},{manual_done_at:null},
+ {last_checked_at:'2026-10-10T12:00:00Z'},
+ {brief_evaluated_at:'2026-10-10T12:00:00Z'},
+ {html_pasted_at:'2026-10-10T12:00:00Z'},
+ {current_revision_published_at:'2026-10-10T12:00:00Z'},
+ {implementation_status:'verifying'}
+]){
+ assert.equal(inspect({...closed,...changes}).personal_completion_controls_workflow,false,
+  'fresh or unfinished work must remain actionable: '+JSON.stringify(changes));
+}
 const portfolio={query_opportunities:[
  {page_id:20,url:'https://roofer.example/roof/',query:'roof leak repair nj',impressions:397,clicks:0,position:34,priority_score:990,imported_at:'2026-10-10',case_study_locked:true},
  {page_id:21,url:'https://roofer.example/gutters/',query:'gutter company nj',impressions:500,clicks:2,priority_score:1200}
