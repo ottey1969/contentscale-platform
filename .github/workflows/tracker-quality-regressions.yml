@@ -9,6 +9,7 @@ on:
       - 'src/brief-quality.js'
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
+      - 'src/tracker-growth-cockpit.cjs'
       - 'tests/tracker-*.test.cjs'
       - 'src/brief-quality.test.js'
   pull_request:
@@ -19,6 +20,7 @@ on:
       - 'src/brief-quality.js'
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
+      - 'src/tracker-growth-cockpit.cjs'
       - 'tests/tracker-*.test.cjs'
       - 'src/brief-quality.test.js'
   workflow_dispatch:
@@ -52,6 +54,7 @@ jobs:
           node tests/tracker-growth-closeout-handler.test.cjs
           node tests/tracker-case-study-freshness.test.cjs
           node tests/tracker-growth-cockpit.test.cjs
+          node tests/tracker-growth-no-gsc-access.test.cjs
           node scripts/tracker-readonly-access.test.cjs
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
