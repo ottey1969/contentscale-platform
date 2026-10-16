@@ -50,5 +50,7 @@ jobs:
         run: node src/growth-daily-gsc-reader.test.cjs
       - name: Settled daily click breakthrough
         run: node src/growth-click-breakthrough.test.cjs
+      - name: Production wiring preflight (must pass before release)
+        run: node src/growth-production-wiring.preflight.cjs
       - name: One Growth end-to-end handoff
         run: node src/growth-unified-workflow.test.cjs
