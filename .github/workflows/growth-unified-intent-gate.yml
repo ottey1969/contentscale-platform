@@ -2,6 +2,10 @@ name: Growth Unified Intent & Revenue Gate
 on:
   pull_request:
     paths:
+      - 'src/growth-click-breakthrough.cjs'
+      - 'src/growth-click-breakthrough.test.cjs'
+      - 'src/growth-click-breakthrough.cjs'
+      - 'src/growth-click-breakthrough.test.cjs'
       - 'src/growth-intent-revenue.cjs'
       - 'src/growth-intent-revenue.test.cjs'
       - 'src/growth-unified-workflow.cjs'
@@ -30,5 +34,7 @@ jobs:
         run: node src/growth-cms-handoff.test.cjs
       - name: Intent and offer verification
         run: node src/growth-intent-revenue.test.cjs
+      - name: Settled daily click breakthrough
+        run: node src/growth-click-breakthrough.test.cjs
       - name: One Growth end-to-end handoff
         run: node src/growth-unified-workflow.test.cjs
