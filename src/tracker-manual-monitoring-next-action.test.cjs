@@ -3,20 +3,23 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
-const {patch,marker}=require('../scripts/fix-tracker-manual-monitoring-next-action.cjs');
 const original=fs.readFileSync(path.join(__dirname,'index.js'),'utf8');
-const fixed=patch(original).source;
-assert(original.includes(marker),'the REAL canonical Tracker browser must include the guard');
-assert(fixed.includes(marker));
-assert.equal(patch(fixed).changed,false,'surgical fix must be idempotent');
-assert.equal(patch(fixed).source,fixed,'never duplicate the UI guard');
-const start=fixed.indexOf('function _trackerEvidenceGateState(p){');
-const end=fixed.indexOf('function _trackerImplementationCheckState(',start);
+assert(original.includes('CONTENTSCALE_CANONICAL_GROWTH_JOURNEY_V1'));
+assert(original.includes('CONTENTSCALE_SHARED_MONITORING_GUARD_V1'));
+assert(!original.includes('CONTENTSCALE-MANUAL-MONITORING-PRIORITY:'),
+ 'old competing page-specific override must be removed');
+const start=original.indexOf('function _trackerEvidenceGateState(p){');
+const end=original.indexOf('function _trackerImplementationCheckState(',start);
 assert(start>0&&end>start,'extract ACTUAL Tracker browser state machine');
-const state=vm.runInNewContext(fixed.slice(start,end)+'\n_trackerNextActionState;',{
- Date,
- _aiEvidenceIsVerified:()=>true
+const templateExpression="${require('fs').readFileSync(require('path').join(__dirname,'tracker-page-journey.cjs'),'utf8')}";
+let code=original.slice(start,end);
+assert(code.includes(templateExpression),'Tracker embeds the one shared lifecycle source');
+code=code.replace(templateExpression,fs.readFileSync(path.join(__dirname,'tracker-page-journey.cjs'),'utf8'));
+const windowStub={};
+const state=vm.runInNewContext(code+'\n_trackerNextActionState;',{
+ Date,window:windowStub,_aiEvidenceIsVerified:()=>true
 });
+assert.equal(typeof windowStub.ContentScaleTrackerJourney?.inspect,'function');
 const base={
  id:20,url:'https://synthetic-roofer.example/roof-replacement/',
  case_study_active:true,case_study:{baseline_locked:true,baseline_at:'2026-09-25T00:00:00Z'},
@@ -35,18 +38,18 @@ const evaluate=(overrides={})=>{
  return state(p,p.is_done===true,p.last_checked,'Next evidence request: 31 Oct 2026');
 };
 let r=evaluate();
-assert.equal(r.code,'MONITOR','manual completed page must not be ordered to reopen an old Brief');
+assert.equal(r.code,'MONITOR','My Check completed page must not reopen old Brief');
 assert.match(r.detail,/Proof & History/);
 assert.match(r.detail,/Next evidence request/);
 assert.equal(r.button,'');
 r=evaluate({manual_done:false});
 assert.equal(r.code,'REVIEW_BRIEF','uncompleted editorial workflow remains available');
 r=evaluate({manual_done_at:null});
-assert.equal(r.code,'REVIEW_BRIEF','without completion timestamp do not infer closure');
+assert.equal(r.code,'REVIEW_BRIEF','completion requires a real timestamp');
 r=evaluate({brief_evaluated_at:'2026-10-10T12:00:00Z',last_checked:'2026-10-10T12:00:00Z'});
-assert.equal(r.code,'REVIEW_BRIEF','a genuinely NEW scan after My Check must reopen the Brief');
+assert.equal(r.code,'REVIEW_BRIEF','genuinely new scan after My Check reopens Brief');
 r=evaluate({html_pasted_at:'2026-10-10T12:00:00Z'});
-assert.notEqual(r.code,'MONITOR','new HTML requires fresh review');
+assert.notEqual(r.code,'MONITOR','new HTML must not be masked');
 r=evaluate({current_revision_published_at:'2026-10-10T12:00:00Z'});
 assert.notEqual(r.code,'MONITOR','post-check publication must not be masked');
 r=evaluate({implementation_status:'verifying'});
@@ -59,5 +62,5 @@ r=evaluate({monitoring_waiting_input:true,monitoring_gate_label:'case_day_30',
  monitoring_gsc_pages_at:'2026-10-15T12:00:00Z',
  monitoring_gsc_queries_at:'2026-10-15T12:00:00Z',
  monitoring_require_ai:false});
-assert.equal(r.code,'CHECKPOINT_READY','completed evidence milestone must remain actionable');
-console.log('PASS: My Check completed monitoring beats stale Brief; fresh work and evidence checkpoints still work');
+assert.equal(r.code,'CHECKPOINT_READY','ready evidence milestone remains actionable');
+console.log('PASS: one canonical Tracker classifier; closed personal work, real new edits, protected evidence');
