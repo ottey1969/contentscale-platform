@@ -5,6 +5,7 @@ on:
       - growth/prt-baseline-tracker-resume-20261016
     paths:
       - scripts/integrate-tracker-journey.cjs
+      - scripts/consolidate-tracker-journey.cjs
 permissions:
   contents: write
 jobs:
@@ -23,10 +24,14 @@ jobs:
         run: node --check scripts/integrate-tracker-journey.cjs
       - name: Integrate existing Tracker page journey and Growth UI
         run: node scripts/integrate-tracker-journey.cjs
+      - name: Consolidate previous My Check patch into shared contract
+        run: node scripts/consolidate-tracker-journey.cjs
       - name: Check canonical Tracker server syntax
         run: node --check src/index.js
       - name: Test existing and future page states and embedded tour
-        run: node scripts/tracker-page-journey.test.cjs
+        run: |
+          node scripts/tracker-page-journey.test.cjs
+          node src/tracker-manual-monitoring-next-action.test.cjs
       - name: Persist the reviewed code only to the Growth feature branch
         run: |
           git config user.name "contentscale-growth-ci"
