@@ -37,8 +37,18 @@ function evaluateDailyClickBreakthrough({pageUrl,gscProperty,publishedOn,asOf,ro
  for(let i=6;i<28;i++)rolling.push(after.values.slice(i-6,i+1).reduce((x,r)=>x+r.clicks,0)/7);
  const last7=rolling.slice(-7),sustained=last7.length===7&&last7.every(n=>n>before.average);
  const nonbrandLift=knownNonbrand&&postNonbrand>preNonbrand;
- const confirmed=elevated&&sustained&&nonbrandLift&&publicationEvidenceVerified===true;
- return {status:confirmed?'CONFIRMED_SUSTAINED_CLICK_LIFT':!publicationEvidenceVerified?'PUBLICATION_DATE_EVIDENCE_REQUIRED':!knownNonbrand?'NONBRANDED_SPLIT_REQUIRED':'NO_CONFIRMED_BREAKTHROUGH',
+ const totalPageCandidate=elevated&&sustained;
+ const confirmed=totalPageCandidate&&nonbrandLift&&publicationEvidenceVerified===true;
+ const status=confirmed?'CONFIRMED_SUSTAINED_CLICK_LIFT':
+  !totalPageCandidate?'NO_SUSTAINED_UPLIFT_PROVEN':
+  !knownNonbrand?'NONBRANDED_SPLIT_REQUIRED':
+  !nonbrandLift?'NO_NONBRANDED_GROWTH':
+  !publicationEvidenceVerified?'PUBLICATION_DATE_EVIDENCE_REQUIRED':'NO_CONFIRMED_BREAKTHROUGH';
+ const nextAction= !totalPageCandidate?'MONITOR_SETTLED_DAILY_CLICKS':
+  !knownNonbrand?'OBTAIN_VERIFIED_NONBRANDED_DAILY_EVIDENCE':
+  !nonbrandLift?'REVIEW_BRANDED_QUERY_MIX':
+  !publicationEvidenceVerified?'VERIFY_ACTUAL_PUBLICATION_DATE':'REVIEW_OBSERVED_GROWTH';
+ return {status,next_action:nextAction,total_page_click_uplift_candidate:totalPageCandidate,
   confirmed,causal_attribution:false,commercial_outcome_proven:false,
   baseline:{start:iso(publication-28*DAY),end:iso(publication-DAY),clicks:before.clicks,average:before.average},
   after:{start:iso(publication),end:iso(publication+27*DAY),clicks:after.clicks,average:after.average},
