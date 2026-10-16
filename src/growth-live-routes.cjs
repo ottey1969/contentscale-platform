@@ -11,6 +11,7 @@ const {registerGrowthCommercialOutcomeRoutes}=require('./growth-commercial-outco
 const {classifyGrowthSearchIntent}=require('./growth-search-intent.cjs');
 const {bucket: classifyGrowthBrand}=require('./tracker-growth-cockpit.cjs');
 const {registerGrowthCmsHandoffRoute}=require('./growth-cms-handoff-route.cjs');
+const {registerGrowthElementorDraftRoute}=require('./growth-elementor-draft-route.cjs');
 function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fetchVerifiedDailyGsc,resolveGrowthGscToken}={}){
  if(!app||!pool||typeof verifyEngineAccess!=='function')
   throw Error('GROWTH_ROUTE_DEPENDENCIES_REQUIRED');
@@ -19,6 +20,9 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc,fet
  registerGrowthCommercialOutcomeRoutes({app,pool,verifyEngineAccess});
  // Universal reviewed handoff is NOT dependent on CMS credentials, GSC access or paid providers.
  registerGrowthCmsHandoffRoute({app,pool,verifyEngineAccess});
+ // Elementor is an optional, protected adapter of the same canonical Growth router.
+ // Registration makes no WP calls and never touches a published source by itself.
+ registerGrowthElementorDraftRoute({app,pool,verifyGrowthAdmin:verifyEngineAccess});
  const ids=req=>({pageId:Number(req.params.pageId),clientId:Number(req.query.client_id||req.body?.client_id)});
  const validIds=x=>Number.isSafeInteger(x.pageId)&&x.pageId>0&&Number.isSafeInteger(x.clientId)&&x.clientId>0;
  app.get('/api/growth/admin/pages/:pageId/readiness',verifyEngineAccess,adminOnly,async(req,res)=>{
