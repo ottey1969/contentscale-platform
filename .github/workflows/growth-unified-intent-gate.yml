@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'src/growth-daily-gsc-import.cjs'
+      - 'src/staging/growth-readonly-probe.cjs'
+      - 'src/staging/growth-readonly-probe.test.cjs'
       - 'src/growth-daily-gsc-import.test.cjs'
       - 'src/growth-daily-gsc-reader.cjs'
       - 'src/growth-daily-gsc-reader.test.cjs'
@@ -21,6 +23,8 @@ on:
   push:
     paths:
       - 'src/growth-daily-gsc-import.cjs'
+      - 'src/staging/growth-readonly-probe.cjs'
+      - 'src/staging/growth-readonly-probe.test.cjs'
       - 'src/growth-daily-gsc-import.test.cjs'
       - 'src/growth-daily-gsc-reader.cjs'
       - 'src/growth-daily-gsc-reader.test.cjs'
@@ -58,3 +62,5 @@ jobs:
         run: node src/growth-production-wiring.preflight.cjs
       - name: One Growth end-to-end handoff
         run: node src/growth-unified-workflow.test.cjs
+      - name: Isolated staging Growth boot, safe schema and CMS probe
+        run: node src/staging/growth-readonly-probe.test.cjs
