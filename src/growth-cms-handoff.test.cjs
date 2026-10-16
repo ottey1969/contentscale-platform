@@ -40,6 +40,7 @@ const parsed=[];let off=0;while(off<zip.length&&zip.readUInt32LE(off)===0x04034b
 assert.deepEqual(parsed.map(x=>x.name),names);
 assert.equal(parsed[3].value,x.files[3].content);
 for(const tweak of [
+ {sourceExpectedSha256:undefined},{sourceExpectedSha256:'not-a-hash'},
  {editorApproved:false}, {sourceExpectedSha256:'0'.repeat(64)}, {caseStudyLocked:true},
  {cms:'invented'}, {changes:[{...approved[0],html:'<h2></h2><p>Short</p>'}]},
  {changes:[{...approved[0],html:'<script>bad()</script><p>Content</p>'}]},
