@@ -7,7 +7,7 @@ const baseline='2026-10-07T10:00:00Z';
 const before='2026-10-01T10:00:00Z';
 const after='2026-10-09T10:00:00Z';
 const p={id:20,case_study_active:true,case_study:{baseline_at:baseline},
-  manual_done_at:'2026-10-08T12:00:00Z',check_frequency:'0',
+  manual_done:true,manual_done_at:'2026-10-08T12:00:00Z',check_frequency:'0',
   brief_content:{outstanding_actions:3,cycle_id:'cycle-before'},
   brief_evaluated_at:before,last_checked_at:before,
   implementation_status:'open'};
