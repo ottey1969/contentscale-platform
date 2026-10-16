@@ -24,7 +24,7 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
   fetchVerifiedDailyGsc:dailyProvider?async()=>({page_url:url,gsc_property:'sc-domain:contentscale.site',rows:[]}):undefined});
  async function request(method,kind=method==='GET'?'readiness':'refresh-gsc'){const h=routes[method+' /api/growth/admin/pages/:pageId/'+kind];
   const req={engineUser:{isAdmin:admin},params:{pageId:'2303'},query:{client_id:'10',published_on:'2026-09-01'},body:{client_id:10}};
-  const response={statusCode:200,status(code){this.statusCode=code;return this;},json(data){this.body=data;return this;}};
+  const response={statusCode:200,headers:{},status(code){this.statusCode=code;return this;},set(key,value){this.headers[key]=value;return this;},json(data){this.body=data;return this;}};
   let i=0;const next=()=>{const cb=h[i++];if(cb)return cb(req,response,next)};
   await next();return response;
  }
