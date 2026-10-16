@@ -55,6 +55,9 @@ on:
       - 'scripts/fix-audit20-inline-label.cjs'
       - 'tests/audit20-inline-label.test.cjs'
       - 'tests/lead-crawler-nj-niche.test.cjs'
+      - 'src/index.js'
+      - 'src/tracker-manual-monitoring-next-action.test.cjs'
+      - 'scripts/fix-tracker-manual-monitoring-next-action.cjs'
       - 'src/tracker-growth-execution.cjs'
       - 'src/tracker-growth-e2e.synthetic.test.cjs'
       - 'src/tracker-growth-wordpress-integration.test.cjs'
@@ -73,6 +76,8 @@ jobs:
           node-version: '22'
       - name: Growth proof and editorial quality
         run: node src/growth-evidence-render-gate.test.cjs
+      - name: Tracker completed-monitoring versus historical Brief regression
+        run: node src/tracker-manual-monitoring-next-action.test.cjs
       - name: Protected original WordPress document assembly
         run: node src/growth-html-draft.test.cjs
       - name: Elementor builder original-preserving draft edit
