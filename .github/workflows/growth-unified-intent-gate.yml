@@ -2,8 +2,14 @@ name: Growth Unified Intent & Revenue Gate
 on:
   pull_request:
     paths:
+      - 'src/growth-daily-gsc-reader.cjs'
+      - 'src/growth-daily-gsc-reader.test.cjs'
+      - 'migrations/growth-gsc-daily-page-evidence.sql'
       - 'src/growth-click-breakthrough.cjs'
       - 'src/growth-click-breakthrough.test.cjs'
+      - 'src/growth-daily-gsc-reader.cjs'
+      - 'src/growth-daily-gsc-reader.test.cjs'
+      - 'migrations/growth-gsc-daily-page-evidence.sql'
       - 'src/growth-click-breakthrough.cjs'
       - 'src/growth-click-breakthrough.test.cjs'
       - 'src/growth-intent-revenue.cjs'
@@ -34,6 +40,8 @@ jobs:
         run: node src/growth-cms-handoff.test.cjs
       - name: Intent and offer verification
         run: node src/growth-intent-revenue.test.cjs
+      - name: Canonical daily GSC evidence read
+        run: node src/growth-daily-gsc-reader.test.cjs
       - name: Settled daily click breakthrough
         run: node src/growth-click-breakthrough.test.cjs
       - name: One Growth end-to-end handoff
