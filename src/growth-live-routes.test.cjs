@@ -50,6 +50,7 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
  r=await f.request('GET','daily-breakthrough');
  assert.equal(r.body.status,'NO_VERIFIED_DAILY_GSC');
  assert.equal(r.body.confirmed,false);
+ assert.equal(r.headers['Cache-Control'],'private, no-store');
  f=fixture({dailyProvider:true});r=await f.request('GET','daily-breakthrough');
  assert.equal(r.body.status,'BASELINE_28_SETTLED_DAYS_REQUIRED');
  assert.equal(r.body.publication_allowed,false);
