@@ -42,6 +42,11 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1,runs=[],his
  assert.equal(r.body.next_action,'PREPARE_CMS_NEUTRAL_HANDOFF');
  assert.equal(f.writes(),0);
  r=await f.request('POST');assert.equal(r.body.verified_queries,3);assert.equal(f.writes(),1);
+ r=await f.request('POST','import-daily-gsc');
+ assert.equal(r.statusCode,409);
+ assert.equal(r.body.code,'AUTHORIZED_GSC_TOKEN_RESOLVER_REQUIRED');
+ assert.equal(f.writes(),1);
+
  r=await f.request('GET','daily-breakthrough');
  assert.equal(r.body.status,'NO_VERIFIED_DAILY_GSC');
  assert.equal(r.body.confirmed,false);
