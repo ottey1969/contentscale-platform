@@ -6,6 +6,7 @@ on:
     paths:
       - scripts/integrate-tracker-journey.cjs
       - scripts/consolidate-tracker-journey.cjs
+      - scripts/fix-tracker-readonly-access.cjs
 permissions:
   contents: write
 jobs:
@@ -26,6 +27,10 @@ jobs:
         run: node scripts/integrate-tracker-journey.cjs
       - name: Consolidate previous My Check patch into shared contract
         run: node scripts/consolidate-tracker-journey.cjs
+      - name: Repair client read-only API access without touching write routes
+        run: node scripts/fix-tracker-readonly-access.cjs --write
+      - name: Test both client link types, GSC independence and status guard
+        run: node scripts/tracker-readonly-access.test.cjs
       - name: Check canonical Tracker server syntax
         run: node --check src/index.js
       - name: Test existing and future page states and embedded tour
