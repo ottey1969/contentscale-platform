@@ -45,6 +45,22 @@ function compareGrowthGscWindows({pageUrl,runs=[]}={}){
    avg_position_improvement:current.position===null||previous.position===null?null:previous.position-current.position,
    clicks_change_percent:previous.clicks?100*(current.clicks-previous.clicks)/previous.clicks:null,
    impressions_change_percent:previous.impressions?100*(current.impressions-previous.impressions)/previous.impressions:null},
+  click_breakthrough:{
+   status:current.days<28?'INSUFFICIENT_COMPARABLE_DAYS':
+    previous.clicks===0?'ZERO_CLICK_BASELINE_REQUIRES_ABSOLUTE_REVIEW':
+    current.clicks>=Math.ceil(previous.clicks*1.15)&&current.clicks>previous.clicks?
+     'CANDIDATE_UPLIFT_NOT_CONFIRMED':'NO_SUSTAINED_UPLIFT_PROVEN',
+   baseline_clicks:previous.clicks,current_clicks:current.clicks,
+   baseline_clicks_per_day:previous.clicks/previous.days,
+   current_clicks_per_day:current.clicks/current.days,
+   minimum_uplift_percent:15,
+   confirmed:false,
+   daily_7_day_trend_available:false,
+   nonbranded_click_split_available:false,
+   requires:['28_SEPARATE_SETTLED_POST_CHANGE_DAYS','DAILY_7_DAY_TREND','NONBRANDED_CLICK_SPLIT',
+    'QUERY_INTENT_VALIDATION','VERIFIED_PUBLICATION_DATE'],
+   explanation:'Aggregate GSC windows can show a candidate increase but cannot establish a sustained trend, commercial lift or attribution.'
+  },
   next_action:'REVIEW_MEASURED_COMMERCIAL_OUTCOMES',
   explanation:'Comparison covers GSC Search performance only; rankings and clicks are not proof of jobs or causality.'});
 }
