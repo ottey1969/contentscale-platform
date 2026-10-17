@@ -17,7 +17,7 @@ function sectionEvidence(html,query){
   const words=plain(following).slice(0,2400);
   const how=/\b(how|steps?|strategy|strategies|improve|optimiz|scale|plan|process|approach|method|tips|checklist)\b/i.test(h)?1:0;
   return {heading:h,matched_terms:intersection,snippet:words.slice(0,500),approx_words:words?words.split(/\s+/).length:0,
-   score:intersection*3+how};
+   score:intersection*3+how+(/^(?:how|steps|strategy|strategies|process|checklist)\b/i.test(h)?2:0)};
  }).filter(x=>x.matched_terms>0).sort((a,b)=>b.score-a.score);
  return evidence[0]||null;
 }
