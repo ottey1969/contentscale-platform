@@ -73,7 +73,7 @@ function computeGrowth(rows,queries,domain,now=new Date()){
   evidence_queries:classified.length,query_opportunities:queryOpportunities,pages,case_study_policy:'READ_ONLY_NO_SCAN_NO_BASELINE_MUTATION'};
 }
 function registerGrowthCockpit(app,pool){
- registerTrackerGrowthCmsExport(app,pool);
+ if(typeof app.post==='function')registerTrackerGrowthCmsExport(app,pool);
  async function data(req,res,next){
   try{
    const cr=await pool.query("SELECT id,name,domain,token,status FROM tracker_clients WHERE (token=$1 OR readonly_token=$1) AND (status IS NULL OR status!='deleted') LIMIT 1",[req.params.token]);
