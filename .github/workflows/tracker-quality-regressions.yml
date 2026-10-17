@@ -12,6 +12,9 @@ on:
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
       - 'src/tracker-growth-cockpit.cjs'
+      - 'src/tracker-growth-measurement.cjs'
+      - 'tests/tracker-growth-no-gsc-research.test.cjs'
+      - 'tests/tracker-growth-measurement-share.test.cjs'
       - 'public/tracker-growth-ui.js'
       - 'scripts/integrate-tracker-growth-navigation.cjs'
       - 'scripts/integrate-tracker-growth-tour.cjs'
@@ -29,6 +32,9 @@ on:
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
       - 'src/tracker-growth-cockpit.cjs'
+      - 'src/tracker-growth-measurement.cjs'
+      - 'tests/tracker-growth-no-gsc-research.test.cjs'
+      - 'tests/tracker-growth-measurement-share.test.cjs'
       - 'public/tracker-growth-ui.js'
       - 'scripts/integrate-tracker-growth-navigation.cjs'
       - 'scripts/integrate-tracker-growth-tour.cjs'
@@ -73,5 +79,7 @@ jobs:
           node scripts/tracker-growth-navigation.test.cjs
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
+          node tests/tracker-growth-no-gsc-research.test.cjs
+          node tests/tracker-growth-measurement-share.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs
           node tests/tracker-growth-gsc-direct.test.cjs
