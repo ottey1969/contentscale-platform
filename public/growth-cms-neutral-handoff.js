@@ -77,6 +77,7 @@
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
    void loadResearchSuggestions(data);
+   $('generateEditorialDraft').disabled=false;
    var needsManual=data.manual_source_required===true;
    $('manualSourceWrap').hidden=!needsManual;
    $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
@@ -109,6 +110,44 @@
    }
   }catch(err){status('sourceStatus',err.message||'Could not verify original source',true)}
   finally{this.disabled=false;ready()}
+ });
+ $('generateEditorialDraft').addEventListener('click',async function(){
+  if(!safe.source)return;
+  var btn=this;btn.disabled=true;status('aiDraftStatus','Preparing a source-bounded editorial draft…',false);
+  try{
+   var r=await fetch(base+'/editor-draft',{method:'POST',credentials:'same-origin',
+    cache:'no-store',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({page_id:pageId,focus_query:$('query').value.trim()})});
+   var output=await r.json();
+   if(!r.ok||output.success!==true)throw Error(output.code||'Draft not available');
+   if(output.status!=='AI_DRAFT_REVIEW_REQUIRED'||!output.draft){
+    status('aiDraftStatus','AI is optional: '+(output.status||'Unconfigured')+'. You can continue with the regular reviewed CMS handoff.',true);
+    return;
+   }
+   if(output.canonical_url!==safe.source.canonical_url||Number(output.page_id)!==pageId)
+    throw Error('Source identity changed');
+   var draft=output.draft;
+   if(draft.seo_title)$('title').value=draft.seo_title;
+   if(draft.meta_description)$('meta').value=draft.meta_description;
+   var parts=draft.sections||[];
+   if(parts.length){
+    $('heading').value=parts[0].h2;
+    $('copy').value=(parts[0].paragraphs||[]).join('\n\n');
+   }
+   var wrap=$('growthAdditionalSections');wrap.textContent='';
+   parts.slice(1,5).forEach(function(section,i){
+    var group=document.createElement('fieldset');group.dataset.growthDraftSection='1';
+    var legend=document.createElement('legend');legend.textContent='AI draft section '+(i+2)+' · verify facts';group.appendChild(legend);
+    var title=document.createElement('input');title.className='draft-h2';
+    title.value=section.h2;title.setAttribute('aria-label','Reviewed H2 '+(i+2));group.appendChild(title);
+    var body=document.createElement('textarea');body.className='draft-copy';
+    body.value=(section.paragraphs||[]).join('\n\n');body.setAttribute('aria-label','Reviewed copy '+(i+2));group.appendChild(body);
+    wrap.appendChild(group);
+   });
+   $('approved').checked=false;ready();
+   status('aiDraftStatus','Editable AI draft prepared from the original page. All claims and each section still require your review and explicit approval.',false);
+  }catch(err){status('aiDraftStatus',String(err.message||err),true)}
+  finally{btn.disabled=!safe.source}
  });
  function build(){
   const src=safe.source;if(!src)throw Error('Check the saved original page first');
