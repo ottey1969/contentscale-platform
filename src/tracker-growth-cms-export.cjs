@@ -31,7 +31,22 @@ function registerTrackerGrowthCmsExport(app,pool){
  app.get('/track/:token/growth/cms-export',async(req,res)=>{
   try{
    const v=await loadEditablePage(pool,req.params.token,req.query.page_id,{allowMissingHtml:true});
-   if(v.status!==200)return res.status(v.status).type('text').send(v.code);
+   if(v.status!==200){
+    const copy={
+     CASE_STUDY_BASELINE_LOCKED:'This tracked page has an active Case Study. Growth research remains available, but publishing and CMS handoff are protected until the measurement cycle is released.',
+     DUPLICATE_CANONICAL_PAGE_IDENTITY:'This same URL has more than one page record inside this Tracker account. Review the duplicated records; nothing has been changed.',
+     CANONICAL_DOMAIN_INVALID:'The website domain could not be verified against the current Tracker account.',
+     PAGE_DOMAIN_MISMATCH:'This page belongs to a different website than the current Tracker.',
+     OWNER_LINK_REQUIRED:'Use the Tracker owner link to prepare a CMS package. Shared read-only links can still open Growth research.',
+     VALID_PAGE_ID_REQUIRED:'Choose a tracked page from Growth first.',
+     ORIGINAL_PAGE_SNAPSHOT_REQUIRED:'The original page source is missing. Choose the manual, explicitly unverified HTML handoff option instead.'
+    };
+    const msg=copy[v.code]||'This page cannot currently prepare a CMS handoff.';
+    const back='/track/'+encodeURIComponent(String(req.params.token||''))+'/growth';
+    return res.status(v.status).set('Cache-Control','private, no-store')
+     .set('X-Robots-Tag','noindex, nofollow').set('Referrer-Policy','no-referrer')
+     .type('html').send('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Growth handoff status</title><body style="max-width:700px;margin:50px auto;font:16px/1.55 system-ui;padding:20px"><h1>CMS handoff is not available for this page</h1><p>'+msg+'</p><p>Reason: <code>'+v.code+'</code></p><p><a href="'+back+'">← Return to Growth research</a></p><p>No scan, GSC connection or website change was started.</p></body></html>');
+   }
    const html=fs.readFileSync(path.resolve(__dirname,'../public/growth-cms-neutral-handoff.html'),'utf8');
    return res.set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex, nofollow')
     .set('Referrer-Policy','no-referrer').type('html').send(html);
