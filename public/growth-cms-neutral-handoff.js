@@ -23,7 +23,7 @@
    var res=await fetch(url,{cache:'no-store',credentials:'same-origin'});
    if(!res.ok)throw Error('Research unavailable');
    var d=await res.json(),x=d.handoff_suggestions||{};
-   if(d.success!==true||d.page_id!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
+   if(d.success!==true||Number(d.page_id)!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
    if(!$('query').value&&x.query)$('query').value=x.query;
    if(!$('title').value&&x.title)$('title').value=x.title;
    if(!$('meta').value&&x.meta)$('meta').value=x.meta;
