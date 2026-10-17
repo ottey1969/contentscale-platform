@@ -8,6 +8,8 @@ assert.equal(patch(s).changed,false,'GSC fix must be idempotent');
 assert(s.includes(marker));
 assert(!s.includes('GSC is mandatory in Tracker'));
 assert(!s.includes('Required before Tracker can continue'));
+assert(!s.includes('it runs Step 2 first if you skipped it'));
+assert(s.includes('it runs the intent-grouping step first when needed'));
 assert(s.includes('Tracker workflow \\u2014 GSC is optional'));
 assert(s.includes('Optional \\u2014 Connect Google Search Console'));
 assert(s.includes('Optional \\u2014 Import GSC data'));
