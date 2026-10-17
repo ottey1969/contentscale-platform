@@ -164,6 +164,14 @@
   }
   const paragraphs=copy.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n');
   const html='<section><h2>'+esc(heading)+'</h2>'+paragraphs+linkHtml+'</section>';
+  const reviewedSections=[{approved:true,evidence_ref:'editor_reviewed:'+($('query').value.trim()||'original_page'),html}];
+  document.querySelectorAll('[data-growth-draft-section]').forEach(function(group){
+   var h2=group.querySelector('.draft-h2')?.value.trim()||'';
+   var body=group.querySelector('.draft-copy')?.value.trim()||'';
+   if(!h2||body.length<30)throw Error('Review every AI section or remove empty suggestions');
+   var markup='<section><h2>'+esc(h2)+'</h2>'+body.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n')+'</section>';
+   reviewedSections.push({approved:true,evidence_ref:'editor_reviewed:AI_source_review',html:markup});
+  });
   var manual=src.manual_source_required===true;
   if(manual&&(!$('manualAcknowledged').checked||$('manualOriginalHtml').value.trim().length<120))
    throw Error('Provide historical original-page HTML and acknowledge that it is not live-verified');
@@ -172,7 +180,7 @@
     manual_source_acknowledged:true,source_provenance:'OWNER_SUPPLIED_UNVERIFIED'}:{}),
    cms:$('cms').value,evidence_scope:$('evidence').value,focus_query:$('query').value.trim(),
    seo_title:$('title').value.trim(),meta_description:$('meta').value.trim(),
-   approved_changes:[{approved:true,evidence_ref:($('evidence').value==='verified'?'gsc:':'editor_reviewed:')+($('query').value.trim()||'original_page'),html}]};
+   approved_changes:reviewedSections};
  }
  async function post(body,format){
   const response=await fetch(base,{method:'POST',cache:'no-store',credentials:'same-origin',
