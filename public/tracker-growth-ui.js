@@ -69,6 +69,9 @@
  var NL_UI={
   'Growth Cockpit':'Growth-overzicht',
   'Prepare a CMS-independent Growth handoff':'Maak een CMS-onafhankelijk Growth-pakket',
+  'Optional manual source when the Tracker has no saved HTML':'Optionele handmatige bron wanneer de Tracker geen HTML heeft',
+  'Original existing page HTML (H1 and paragraph required; 120–120,000 bytes)':'Oorspronkelijke pagina-HTML (H1 en alinea vereist; 120–120.000 bytes)',
+  'I supplied this historical page source and understand it is not live-verified. I will check the real page before implementing anything.':'Ik heb deze historische paginabron aangeleverd en begrijp dat deze niet live is gecontroleerd. Ik controleer de huidige pagina voordat ik iets aanpas.',
   '1. Check original Tracker page':'1. Controleer de oorspronkelijke Tracker-pagina',
   '2. Review the existing page and evidence':'2. Beoordeel de bestaande pagina en het bewijs',
   '3. Approve useful content for the original page':'3. Keur nuttige inhoud voor de bestaande pagina goed',
