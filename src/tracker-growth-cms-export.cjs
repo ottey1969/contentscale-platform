@@ -30,6 +30,8 @@ async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowL
 function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtml,generateDraft=generateGrowthEditorDraft}={}){
  if(!app||typeof app.get!=='function'||typeof app.post!=='function'||!pool||typeof pool.query!=='function')
   throw Error('CMS_HANDOFF_DEPENDENCIES_REQUIRED');
+ // Reuse source-identity-bound editorial drafts to avoid repeated optional AI charges.
+ const draftCache=new Map(),DRAFT_TTL=10*60*1000;
  app.get('/track/:token/growth/cms-export',async(req,res)=>{
   try{
    const v=await loadEditablePage(pool,req.params.token,req.query.page_id,{allowMissingHtml:true});
@@ -115,8 +117,19 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
      if(topics.length>=4)break;
     }
    }catch(_err){topics=[];}
-   const out=await generateDraft({sourceHtml:original,pageUrl:v.page.url,
-    focusQuery:focus,topics});
+   const draftKey=[v.client.id,v.page.id,v.source_mode,v.page.case_study_active?'locked':'unlocked',
+    sha(String(original||'')),focus,topics.join('|')].join(':');
+   const cached=draftCache.get(draftKey);
+   let out;
+   if(cached&&Date.now()-cached.created<DRAFT_TTL)out=await cached.promise;
+   else{
+    const promise=Promise.resolve().then(()=>generateDraft({sourceHtml:original,pageUrl:v.page.url,focusQuery:focus,topics}));
+    draftCache.set(draftKey,{created:Date.now(),promise});
+    try{out=await promise;
+     if(out?.status!=='AI_DRAFT_REVIEW_REQUIRED')draftCache.delete(draftKey);
+    }catch(error){draftCache.delete(draftKey);throw error}
+    while(draftCache.size>30)draftCache.delete(draftCache.keys().next().value);
+   }
    return res.set('Cache-Control','private, no-store').json({success:true,page_id:v.page.id,
     canonical_url:v.page.url,...out,requires_editor_approval:true,
     no_gsc_requirement:true,auto_publishing:false,case_study_protected:true,
