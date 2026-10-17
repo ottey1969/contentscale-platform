@@ -69,6 +69,9 @@
  var NL_UI={
   'Growth Cockpit':'Growth-overzicht',
   'Automatic Growth research':'Automatisch Growth-onderzoek',
+  'Previously saved Tracker Brief — historical context':'Eerder opgeslagen Tracker Brief — historische context',
+  'Previous AI/content recommendations':'Eerdere AI- en inhoudsaanbevelingen',
+  'Previous GSC/SEO recommendations':'Eerdere GSC- en SEO-aanbevelingen',
   'Search intent and internal site architecture':'Zoekintentie en interne sitestructuur',
   'Run automatic Growth research · Search / AI / Content':'Automatisch onderzoek starten · Search / AI / Content',
   'Automatic research evidence':'Automatisch verzameld onderzoeksbewijs',
