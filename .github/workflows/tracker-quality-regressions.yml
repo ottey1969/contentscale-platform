@@ -4,6 +4,10 @@ on:
     branches: [main]
     paths:
       - 'src/index.js'
+      - 'src/tracker-page-journey.cjs'
+      - 'scripts/integrate-canonical-page-journey.cjs'
+      - 'scripts/canonical-page-journey.test.cjs'
+      - 'tests/tracker-canonical-journey-pure.test.cjs'
       - 'scripts/fix-tracker-optional-gsc-advice.cjs'
       - 'scripts/tracker-optional-gsc-advice.test.cjs'
       - 'scripts/fix-tracker-readonly-access.cjs'
@@ -33,6 +37,10 @@ on:
   pull_request:
     paths:
       - 'src/index.js'
+      - 'src/tracker-page-journey.cjs'
+      - 'scripts/integrate-canonical-page-journey.cjs'
+      - 'scripts/canonical-page-journey.test.cjs'
+      - 'tests/tracker-canonical-journey-pure.test.cjs'
       - 'scripts/fix-tracker-optional-gsc-advice.cjs'
       - 'scripts/tracker-optional-gsc-advice.test.cjs'
       - 'scripts/fix-tracker-readonly-access.cjs'
@@ -95,6 +103,8 @@ jobs:
           node tests/tracker-case-study-freshness.test.cjs
           node tests/tracker-growth-cockpit.test.cjs
           node scripts/tracker-optional-gsc-advice.test.cjs
+          node scripts/canonical-page-journey.test.cjs
+          node tests/tracker-canonical-journey-pure.test.cjs
           node tests/tracker-growth-no-gsc-access.test.cjs
           node scripts/tracker-readonly-access.test.cjs
           node scripts/tracker-growth-navigation.test.cjs

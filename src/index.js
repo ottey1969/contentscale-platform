@@ -48663,6 +48663,8 @@ function _trackerEvidenceGateState(p){
   return {waiting:waiting,gate:gate,checkpoint:checkpoint,missing:missing,ready:waiting&&missing.length===0,ready_to_complete:waiting&&checkpoint&&missing.length===0,ready_to_scan:waiting&&!checkpoint&&missing.length===0};
 }
 
+
+${require('fs').readFileSync(require('path').join(__dirname,'tracker-page-journey.cjs'),'utf8')}
 function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   function bool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
   function parse(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(v)}catch(e){return null}}
@@ -48733,6 +48735,23 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
       !(publishedAt>_caseBaselineAt)&&!(verifiedAt>_caseBaselineAt)){
     return {code:'SCAN',label:'CASE STUDY ACTIVE · FIRST MANUAL SCAN',detail:'Protected baseline saved. Scan the live page once for this new revision. Automatic scans remain off.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'Scan current live page',buttonAction:'checkPage('+p.id+')'};
   }
+  // CONTENTSCALE_CANONICAL_PAGE_JOURNEY_V2: one canonical page decision, not another per-page override.
+  var _canonicalJourney=window.ContentScaleTrackerJourney.inspect(p,lastCheckedRaw);
+  if(_canonicalJourney.personal_completion_controls_workflow){
+   return {code:'MONITOR',label:'COMPLETED · MONITORING — HISTORICAL BRIEF',
+    detail:'My Check is newer than the previous scan and Brief. That Brief is history, not a new publishing or rescan instruction. This personal check is not proof of publication. '+(nextEvidence||'Wait for new verified evidence.'),
+    color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
+  }
+  if(_canonicalJourney.current_scan_needs_brief){
+   return {code:'BRIEF_PENDING',label:'CURRENT SCAN SAVED · AWAIT CURRENT BRIEF',
+    detail:'A new scan exists, but the previous Brief belongs to older evidence. No second scan, GSC connection or publishing is required simply to review the pending evaluation.',
+    color:'#fbbf24',border:'#a16207',bg:'#2a1f05',button:'',buttonAction:''};
+  }
+  if(_canonicalJourney.historical_brief){
+   return {code:'MONITOR',label:'HISTORICAL BRIEF · RESEARCH OR MONITOR',
+    detail:'The old Brief remains in Proof & History, not a new publication order. Tracker and Growth remain available with scheduled scans off. '+(nextEvidence||''),
+    color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
+  }
   if(personalSafetyStale){
     return {code:'REFRESH_CONTRACT',label:'BRIEF SAFETY RULES UPDATED · REBUILD ONCE',detail:'This saved Brief still contains a prohibited or already-completed personal-profile recommendation from an older build. Rebuild it once; the live HTML and proof history remain protected.',color:'#67e8f9',border:'#0891b2',bg:'#083344',button:'Rebuild corrected Brief',buttonAction:'checkPage('+p.id+')'};
   }
@@ -48745,7 +48764,7 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   var checkpointAt=p.prepublication_checkpoint_at?new Date(p.prepublication_checkpoint_at).getTime():0;
   if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&!p.current_revision_published_at&&checkpointAt>0&&(!evaluatedAt||evaluatedAt<checkpointAt)){
     if(evaluatedAt&&p.brief_content&&outstanding!=null){
-      if(outstanding>0&&!briefReviewed)return {code:'REVIEW_BRIEF',label:'SCAN COMPLETE · OPEN THE BRIEF',detail:'The current live page has already been scanned and its Brief is ready. Do not scan again. Open the Brief, review the actions, update and publish the HTML, then Check current live.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
+      if(outstanding>0&&!briefReviewed)return {code:'REVIEW_BRIEF',label:'CURRENT CYCLE · REVIEW VERIFIED BRIEF ACTIONS',detail:'The current live page has already been scanned and its Brief is ready. Do not scan again. Open the Brief, review the actions, update and publish the HTML, then Check current live.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
       if(outstanding>0)return {code:'CASE_PUBLISH_VERIFY',label:'PUBLICATION CONFIRMED · CHECK CURRENT LIVE',detail:'You explicitly confirmed that the safe Brief actions were applied and the revised page was published. Check the current live URL now; this verifies only the existing implementation actions and does not run a new scan.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
       return {code:'MONITOR',label:'NO NEW SCAN NEEDED',detail:'The existing evaluated Brief has no open actions. Keep the protected evidence and wait for a new evidence checkpoint.',color:'#86efac',border:'#16a34a',bg:'#052e16',button:'',buttonAction:''};
     }
@@ -48768,7 +48787,7 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   // authoritative transition. Merely opening/reading the Brief is read-only.
   if(bool(p.case_study_active)&&bool(p.prepublication_checkpoint_saved)&&outstanding>0&&evaluatedAt>0&&lastCheckedRaw&&implStatus!=='verifying'){
     if(!briefReviewed){
-      return {code:'REVIEW_BRIEF',label:'SCAN COMPLETE · OPEN THE BRIEF',detail:'The current live page has already been scanned and its Brief is ready. Do not scan again. Open the Brief, review the actions, update and publish the HTML, then Check current live.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
+      return {code:'REVIEW_BRIEF',label:'CURRENT CYCLE · REVIEW VERIFIED BRIEF ACTIONS',detail:'The current live page has already been scanned and its Brief is ready. Do not scan again. Open the Brief, review the actions, update and publish the HTML, then Check current live.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
     }
     return {code:'CASE_PUBLISH_VERIFY',label:'PUBLICATION CONFIRMED · CHECK CURRENT LIVE',detail:'The revised page was explicitly confirmed as published. Check this live URL now. The existing implementation actions are resolved by this comparison; no new scan or baseline is required.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
   }
@@ -48777,7 +48796,7 @@ function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
   }
   if(bool(p.case_study_active)&&!isDone&&bool(p.prepublication_checkpoint_saved)&&outstanding>0&&evaluatedAt>=checkpointAt&&implStatus!=='verifying'){
     if(!briefReviewed){
-      return {code:'REVIEW_BRIEF',label:'SCAN COMPLETE · OPEN THE BRIEF',detail:'The current live page has already been scanned and its Brief is ready. Do not scan again. Open the Brief, review the actions, update and publish the HTML, then Check current live.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
+      return {code:'REVIEW_BRIEF',label:'CURRENT CYCLE · REVIEW VERIFIED BRIEF ACTIONS',detail:'The current live page has already been scanned and its Brief is ready. Do not scan again. Open the Brief, review the actions, update and publish the HTML, then Check current live.',color:'#c4b5fd',border:'#8b5cf6',bg:'#17102b',button:'Open Brief',buttonAction:'viewLastBrief('+p.id+')'};
     }
     return {code:'CASE_PUBLISH_VERIFY',label:'PUBLICATION CONFIRMED · CHECK CURRENT LIVE',detail:'You confirmed that the relevant changes are published. ContentScale can now fetch the live URL and compare it with the protected version. No HTML upload or new scan is required.',color:'#fde68a',border:'#f59e0b',bg:'#291b05',button:'Check current live',buttonAction:'verifyCurrentBriefLive('+p.id+',this)'};
   }
