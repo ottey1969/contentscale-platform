@@ -3,6 +3,7 @@ const {inspectSavedGrowthHtml}=require('./tracker-growth-snapshot-signals.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {summarizeGrowthAiVisibility}=require('./growth-ai-visibility-summary.cjs');
 const {buildTrackerGrowthPlan}=require('./tracker-growth-plan.cjs');
+const {classifyGrowthIntent,suggestInternalGrowthLinks}=require('./growth-intent-site-graph.cjs');
 function plain(s){return String(s||'').replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|quot|nbsp|lt|gt|#39);/g,' ').replace(/\s+/g,' ').trim()}
 function excerpt(html,limit=8){
  if(typeof html!=='string')return {title:null,description:null,h1:[],h2:[],paragraph_samples:[]};
@@ -16,7 +17,7 @@ function excerpt(html,limit=8){
 }
 const words=x=>String(x||'').toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(x=>x.length>3&&!new Set(['with','from','your','this','that','about','when','what','where','some','more','will','best','have','into','voor','over','deze','geen','voor','zijn','also','page','home','services']).has(x));
 const sHtml=x=>String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,aiRows=[],gscRows=[],competitorPages=[],now=new Date()}={}){
+function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,aiRows=[],gscRows=[],competitorPages=[],sitePages=[],now=new Date()}={}){
  const url=String(page.url||'');
  const saved=inspectSavedGrowthHtml(savedHtml,url);
  const actual=live?.html?inspectSavedGrowthHtml(live.html,url):saved;
@@ -65,7 +66,11 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  if(!ai.engines.length)add('AI_EVIDENCE_NOT_AVAILABLE','INFO','No stored AI observation','Do not claim AI recommendations or citations until verified observations are recorded');
  const intendedTitle=(actualText.title||focus||'').slice(0,70);
  const titleCandidate=(!actualText.title&&focus)?(focus.length<=57?focus:'').trim():null;
- const plan=buildTrackerGrowthPlan({page,queries:validQ,sitePages:[],now});
+ const plan=buildTrackerGrowthPlan({page,queries:validQ,sitePages,now});
+ const intent=classifyGrowthIntent(focus);
+ const siteGraph=suggestInternalGrowthLinks({pageUrl:url,focusQuery:focus,currentHtml:actualHtml,sitePages});
+ if(siteGraph.candidates.length)add('CONTEXTUAL_INTERNAL_LINK_CANDIDATES','REVIEW',siteGraph.candidates.map(x=>x.url),'Review relevant existing tracked pages and add natural contextual links only when useful');
+ if(siteGraph.intent_overlap_risks.length)add('POSSIBLE_INTENT_OVERLAP','REVIEW',siteGraph.intent_overlap_risks.map(x=>x.url),'Inspect actual query and page intent before creating another spoke or consolidating URLs');
  const priorities=findings.sort((a,b)=>({HIGH:0,MEDIUM:1,REVIEW:2,INFO:3}[a.priority]??4)-({HIGH:0,MEDIUM:1,REVIEW:2,INFO:3}[b.priority]??4));
  const editorial={
   status:'REVIEWABLE_RESEARCH_DRAFT_NOT_PUBLISHABLE',
@@ -79,6 +84,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
   candidate_sections:comparative.slice(0,5).map(x=>({proposed_topic:x.heading,
    derived_from:x.source_url,approval_needed:'Verify actual page need, facts, originality and distinct search intent. Never copy competitor text.'})),
   prioritized_edits:priorities.filter(x=>x.priority!=='INFO').slice(0,8),
+  inferred_intent:intent,site_link_candidates:siteGraph.candidates,possible_intent_overlap:siteGraph.intent_overlap_risks,
   fact_check_required:true,
   cms_handoff_available:!page.case_study_active,
   cms_targets:['Wix','WordPress','Webflow','Squarespace','custom']
@@ -90,12 +96,12 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
    exact_gsc_queries:verifiedCount,ai_engines:ai.engines.length,competitor_leads:leads.leads.length,competitors_live_reviewed:comparison.length,
    result:'AUTOMATED_RESEARCH_REPORT',published:false,forecasted_click_gain:null},
   page_content:{status:source,live_url:live?.final_url||null,signals:actual,headings:actualText},
-  search:{focus_query:focus||null,verified_queries:queries.map(q=>({query:q.query,impressions:Number(q.impressions),clicks:Number(q.clicks),position:q.position==null?null:Number(q.position),imported_at:q.imported_at})),
+  search:{focus_query:focus||null,intent,verified_queries:queries.map(q=>({query:q.query,impressions:Number(q.impressions),clicks:Number(q.clicks),position:q.position==null?null:Number(q.position),imported_at:q.imported_at})),
    warnings:plan.warnings,observed_opportunities:plan.opportunities},
   competitors:{snapshot_status:leads.status,snapshot_checked_at:leads.checked_at,
    leads:leads.leads.slice(0,12),live_reviewed:comparison,topic_candidates:comparative.slice(0,10),
    caution:'Historical SERP leads are not current rankings. Live page headings only show topics, not proven factual differences.'},
-  ai_visibility:ai,findings:priorities,editorial,
+  ai_visibility:ai,site_architecture:siteGraph,findings:priorities,editorial,
   protection:'No GSC requirement, no scan scheduler change, no content/Case Study writes, no automatic publication.'
  };
 }
