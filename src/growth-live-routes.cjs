@@ -45,7 +45,9 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
     cms_neutral:{ready:!state.page.case_study_active&&!issues.includes('DUPLICATE_TRACKER_URL'),uses_live_html_if_missing:true,requires_gsc:false,requires_wordpress:false},
     optional_evidence_unavailable:state.optional_evidence_unavailable||[],
     wordpress_credentials_configured:credentialsConfigured,
-    issues,publication_allowed:false});
+    issues:issues.filter(x=>x==='DUPLICATE_TRACKER_URL'),
+    research_warnings:issues.filter(x=>x!=='DUPLICATE_TRACKER_URL'),
+    publication_issues:issues,publication_allowed:false});
   }catch(error){return res.status(503).json({success:false,code:'GROWTH_READINESS_UNAVAILABLE'});}
  });
  app.get('/api/growth/admin/pages/:pageId/click-opportunities',verifyEngineAccess,adminOnly,async(req,res)=>{
