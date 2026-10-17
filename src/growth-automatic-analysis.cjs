@@ -6,6 +6,7 @@ const {buildTrackerGrowthPlan}=require('./tracker-growth-plan.cjs');
 const {classifyGrowthIntent,suggestInternalGrowthLinks}=require('./growth-intent-site-graph.cjs');
 const {chooseGrowthNextAction,topicAligned,queryFit}=require('./growth-one-action-decision.cjs');
 const {buildGrowthPracticalBrief,sectionEvidence}=require('./growth-practical-brief.cjs');
+const {readerJourney}=require('./growth-reader-journey.cjs');
 function plain(s){return String(s||'').replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|quot|nbsp|lt|gt|#39);/g,' ').replace(/\s+/g,' ').trim()}
 function excerpt(html,limit=8){
  if(typeof html!=='string')return {title:null,description:null,h1:[],h2:[],paragraph_samples:[]};
@@ -129,6 +130,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  const provisional={url,page_content:{headings:actualText},search:{focus_query:focus,verified_queries:queries},
   competitors:{live_reviewed:comparison},growth_decision:decision};
  const practical=buildGrowthPracticalBrief({report:provisional,html:actualHtml});
+ const visitor_journey=readerJourney({report:{...provisional,case_study_locked:!!page.case_study_active,site_architecture:siteGraph},plan:practical});
  editorial.change_proposal=practical.change;
  return {
   success:true,generated_at:now.toISOString(),page_id:page.id,url,case_study_locked:!!page.case_study_active,
@@ -143,7 +145,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
    nonmatching_topic_observations:comparative.filter(x=>!subjectMatchedTopics.includes(x)).slice(0,10).map(x=>({...x,status:'OTHER_INTENT_RESEARCH_ONLY_NOT_CONTENT_GAP'})), 
    excluded_unaligned_topics:comparative.length-subjectMatchedTopics.length,
    caution:'Historical SERP leads are not current rankings. Live page headings only show topics, not proven factual differences.'},
-  ai_visibility:ai,site_architecture:siteGraph,growth_decision:decision,practical_growth_plan:practical,previous_brief:previousGrowthBrief(previousBrief),findings:priorities,editorial,
+  ai_visibility:ai,site_architecture:siteGraph,growth_decision:decision,practical_growth_plan:practical,visitor_journey,previous_brief:previousGrowthBrief(previousBrief),findings:priorities,editorial,
   protection:'No GSC requirement, no scan scheduler change, no content/Case Study writes, no automatic publication.'
  };
 }
