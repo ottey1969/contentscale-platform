@@ -3,6 +3,7 @@ const fs=require('node:fs'),path=require('node:path');
 const file=path.resolve(__dirname,'../src/index.js');
 const start='const _CLIENT_TRACKER_HTML = ' + String.fromCharCode(96);
 const marker='CONTENTSCALE_SHARED_TRACKER_GROWTH_NAV_V1';
+// Never modify scanner, Prewrite, GSC permission or customer write routes.
 const growthNav='    <!-- CONTENTSCALE_SHARED_TRACKER_GROWTH_NAV_V1 -->\n    <a id="growthDirectNav" class="cs-btn" href="/track/__TOKEN__/growth" style="border-color:#2563eb;color:#bfdbfe;font-weight:800;background:#0b244d;" title="Open Growth directly; GSC is optional">&#8599; Growth</a>\n';
 const scriptTag='<script defer src="/tracker-growth-ui.js"></script>\n';
 function patch(source){
