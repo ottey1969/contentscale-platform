@@ -11,11 +11,13 @@ if (/Yes — I\\*'m interested in the 20-Page Audit/.test(source)) {
 // Validate CEO website input at the canonical request boundary before any scan starts.
 // Keep the repair idempotent across Railway restarts and fail boot if anchors drift.
 {
-  const {patch}=require('./scripts/fix-ceo-domain-validation.cjs');
-  const corrected=patch(fs.readFileSync(entry,'utf8'));
-  if(corrected!==fs.readFileSync(entry,'utf8')){
+  const source=fs.readFileSync(entry,'utf8');
+  const normalize=require('./scripts/fix-ceo-domain-validation.cjs').patch;
+  const validateForms=require('./scripts/fix-ceo-form-validation.cjs').patch;
+  const corrected=validateForms(normalize(source));
+  if(corrected!==source){
     fs.writeFileSync(entry,corrected);
-    console.log('[startup] corrected CEO website validation (HTTP 400 on invalid domain)');
+    console.log('[startup] corrected CEO public/private domain intake (HTTP 400 on invalid domain)');
   }
 }
 // The acquisition admin page must exist in the canonical Express app regardless
