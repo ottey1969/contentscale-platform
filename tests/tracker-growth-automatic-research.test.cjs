@@ -58,7 +58,8 @@ async function testRoutes(){
  let caseLocked=true;
  const middleware=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:req.params.token==='owner-token',pages:[{id:7,url:own,keyword:'roof repair',case_study_active:caseLocked}]};next()};
  const fetchLive=async url=>{calls.push(url);return {html:url===own?html:rivalHtml,final_url:url,retrieved_at:'2026-10-17T00:00:00Z',source:'LIVE_PUBLIC_HTTPS'}};
- registerGrowthAutomaticResearch({get(path,...handlers){route[path]=handlers}},db,middleware,{fetchLive});
+ registerGrowthAutomaticResearch({get(path,...handlers){route[path]=handlers}},db,middleware,{fetchLive,
+  searchLive:async()=>({status:'NO_RELEVANT_PUBLIC_SEARCH_LEADS',leads:[],source:'BING_PUBLIC_RSS',query:'roof repair near me'})});
  async function invoke(path,token='readonly-client-token',page_id='7'){
   const req={params:{token},query:{page_id}},res={
    statusCode:200,headers:{},status(x){this.statusCode=x;return this},
