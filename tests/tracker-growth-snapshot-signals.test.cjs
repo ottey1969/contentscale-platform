@@ -38,7 +38,7 @@ registerGrowthCockpit({get(p,...handlers){routes[p]=handlers}},{
  const res={statusCode:200,status(v){this.statusCode=v;return this},type(){return this},set(){return this},send(v){this.body=v;return this}};
  await handlers[0](req,res,()=>handlers[1](req,res));
  assert.equal(res.statusCode,200);
- assert.match(res.body,/SAVED HISTORICAL EXCERPT, NOT VERIFIED LIVE/);
+ assert.match(res.body,/OBSERVED HISTORICAL EXCERPT, NOT VERIFIED LIVE/);
  assert.match(res.body,/H1 count observed: 1; H2 count observed: 1/);
  assert.match(res.body,/Links observed: 1 internal, 1 external/);
  assert.match(res.body,/NO GSC REQUIRED/);
