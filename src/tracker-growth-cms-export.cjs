@@ -4,7 +4,7 @@ const {prepareGrowthCmsHandoff,packageGrowthZip}=require('./growth-cms-handoff.c
 const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const {generateGrowthEditorDraft}=require('./growth-source-grounded-editor.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
-async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false}={}){
+async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowLockedResearchDraft=false}={}){
  const id=Number(pageId);
  if(!Number.isSafeInteger(id)||id<1)return {status:400,code:'VALID_PAGE_ID_REQUIRED'};
  const c=(await pool.query("SELECT id,domain,token,status FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted') LIMIT 1",[token])).rows[0];
@@ -18,7 +18,7 @@ async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false}={}){
   home=new URL('https://'+String(c.domain).replace(/^https?:\/\//,'').split('/')[0]).hostname;
  }catch{return {status:409,code:'CANONICAL_DOMAIN_INVALID'}}
  if(hostname!==home)return {status:403,code:'PAGE_DOMAIN_MISMATCH'};
- if(p.case_study_active)return {status:409,code:'CASE_STUDY_BASELINE_LOCKED'};
+ if(p.case_study_active&&!allowLockedResearchDraft)return {status:409,code:'CASE_STUDY_BASELINE_LOCKED'};
  if(!String(p.html_content||'').trim()&&!allowMissingHtml)return {status:409,code:'ORIGINAL_PAGE_SNAPSHOT_REQUIRED'};
  // Canonical identity is unique per Tracker client, not globally across other customers.
  // A different client's matching URL never invalidates this owner's page.
@@ -89,7 +89,8 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
  });
  app.post('/api/tracker-client/:token/growth/cms-export/editor-draft',async(req,res)=>{
   try{
-   const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true});
+   // Research-only draft: Case Study baseline remains strictly unchanged.
+   const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true,allowLockedResearchDraft:true});
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
    let original=v.page.html_content;
    if(!String(original||'').trim()){
@@ -100,6 +101,9 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    }
    // Historical Search Intelligence is optional context, not a live ranking claim.
    let topics=[],snapshotCheckedAt=null;
+   const focus=String(req.body?.focus_query||v.page.keyword||'').slice(0,160);
+   const wrongProductTitle=title=>/\b(detector|brandwell|contentatscale|plagiarism|coupon|discount)\b/i.test(title)&&
+    !/\b(detector|brandwell|contentatscale|plagiarism|coupon|discount)\b/i.test(focus);
    try{
     const prior=await pool.query('SELECT checked_at,google_competitors,ai_perplexity_competitors FROM tracker_snapshots WHERE page_id=$1 AND (google_competitors IS NOT NULL OR ai_perplexity_competitors IS NOT NULL) ORDER BY checked_at DESC,id DESC LIMIT 1',[v.page.id]);
     const row=prior.rows?.[0];
@@ -107,15 +111,16 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     for(const entry of [...(Array.isArray(row?.google_competitors)?row.google_competitors:[]),
        ...(Array.isArray(row?.ai_perplexity_competitors)?row.ai_perplexity_competitors:[])]){
      const title=typeof entry==='object'&&entry&&typeof entry.title==='string'?entry.title.trim():'';
-     if(title&&title.length<150&&!topics.includes(title))topics.push(title);
+     if(title&&title.length<150&&!topics.includes(title)&&!wrongProductTitle(title))topics.push(title);
      if(topics.length>=4)break;
     }
    }catch(_err){topics=[];}
    const out=await generateDraft({sourceHtml:original,pageUrl:v.page.url,
-    focusQuery:String(req.body?.focus_query||v.page.keyword||'').slice(0,160),topics});
+    focusQuery:focus,topics});
    return res.set('Cache-Control','private, no-store').json({success:true,page_id:v.page.id,
     canonical_url:v.page.url,...out,requires_editor_approval:true,
     no_gsc_requirement:true,auto_publishing:false,case_study_protected:true,
+    case_study_locked:v.page.case_study_active===true,review_only:true,
     historical_competitor_titles_used:topics.length,historical_snapshot_checked_at:snapshotCheckedAt});
   }catch(e){console.warn('[growth-editor-draft]',String(e?.code||'UNAVAILABLE'));
    return res.status(503).json({success:false,code:'EDITOR_DRAFT_TEMPORARILY_UNAVAILABLE'});}
