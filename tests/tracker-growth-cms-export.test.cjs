@@ -10,7 +10,11 @@ const pool={async query(sql,args=[]){
  if(sql.includes('FROM tracker_clients'))return {rows:args[0]==='owner-token'?[{id:7,domain:'roofer.example',token:'owner-token',status:'active'}]:[]};
  if(sql.includes('FROM tracker_pages p'))return {rows:[{...page,url:crossDomain?'https://unrelated.example/private/':url,
   html_content:sourceMissing?null:source,case_study_active:caseLock}]};
- if(sql.includes('FROM tracker_pages WHERE url='))return {rows:duplicates?[{id:12,tracker_client_id:7},{id:12,tracker_client_id:8}]:[{id:12,tracker_client_id:7}]};
+ if(sql.includes('FROM tracker_pages WHERE url=')){
+  assert.match(sql,/AND tracker_client_id=\$2/,'Duplicate identity must be per client, never global');
+  assert.equal(args[1],7);
+  return {rows:duplicates?[{id:12,tracker_client_id:7},{id:99,tracker_client_id:7}]:[{id:12,tracker_client_id:7}]};
+ }
  if(sql.includes('FROM tracker_gsc_queries'))return {rows:[]};
  throw Error('Unexpected SQL: '+sql.slice(0,90));
 }};
