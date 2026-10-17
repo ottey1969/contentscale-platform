@@ -17,3 +17,5 @@ console.log('STATIC_HANDLERS');
 for(const q of ['express.static(',"app.use('/",'public/']){let pos=0,count=0;while((pos=s.indexOf(q,pos))>=0&&count++<8){console.log('STAT '+q+' LINE '+s.slice(0,pos).split('\n').length+' CONTEXT '+s.slice(Math.max(0,pos-150),pos+320).replace(/\n/g,' '));pos+=q.length;}}
 const ti=s.indexOf('function startTour(');
 if(ti>=0){console.log('TOUR_DEFINITION '+s.slice(ti,ti+10000).replace(/\n/g,' ').slice(0,9000));}
+
+const tb=s.indexOf('function _tourBuildSteps(');if(tb>=0)console.log('TOUR_BUILD '+s.slice(tb,tb+9800).replace(/\n/g,' ').slice(0,9100));
