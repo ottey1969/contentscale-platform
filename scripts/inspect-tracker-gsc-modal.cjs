@@ -2,6 +2,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const file=path.resolve(__dirname,'../src/index.js'),s=fs.readFileSync(file,'utf8');
 if(s.length<5_000_000)throw Error('Canonical source missing');
+// Inspection is read-only and confined to the feature branch.
 const keys=[
  'REQUIRED BEFORE TRACKER CAN CONTINUE',
  'GSC is mandatory in Tracker',
