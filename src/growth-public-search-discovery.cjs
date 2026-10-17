@@ -9,7 +9,10 @@ const decode=x=>String(x||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1')
  .replace(/&#x([0-9a-f]{1,6});/gi,(_,n)=>{const v=parseInt(n,16);return v>0&&v<=0x10ffff?String.fromCodePoint(v):''})
  .replace(/&(amp|lt|gt|quot|apos|nbsp);/gi,(_,n)=>({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '}[n.toLowerCase()]||''));
 const clean=x=>decode(x).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
-const product=/\b(detector|detection|plagiarism|brandwell|contentatscale|undetectable|ai writer|ai writing tool|review|reviews|login|coupon|discount|jobs|careers)\b/i;
+const product=/\b(detector|detection|plagiarism|brandwell|contentatscale|undetectable|ai writer|ai writing tool|login|coupon|discount|jobs|careers)\b/i;
+const wrongProductIntent=(title,snippet,query)=>
+ (product.test(title)||/\b(review|reviews)\b/i.test(title)&&/\b(tool|software|platform|product|brandwell)\b/i.test(title)||
+  /\b(ai detector|plagiarism detector|brandwell ai)\b/i.test(snippet))&&!product.test(query);
 const infrastructure=/^(?:www\.)?(?:bing\.com|microsoft\.com|google\.com|youtube\.com|facebook\.com|instagram\.com|pinterest\.com|linkedin\.com)$/i;
 function parseBingRss(xml,{query='',ownUrl='',limit=7}={}){
  const raw=String(xml||'');
@@ -25,7 +28,7 @@ function parseBingRss(xml,{query='',ownUrl='',limit=7}={}){
   if(host===own||infrastructure.test(host)||seen.has(url.href)||!title)continue;
   const titleTokens=new Set(terms(title)),matched=required.filter(x=>titleTokens.has(x));
   if(required.length&&matched.length<Math.min(2,required.length))continue;
-  if(product.test(title+' '+snippet)&&!product.test(query))continue;
+  if(wrongProductIntent(title,snippet,query))continue;
   if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(url.pathname))continue;
   seen.add(url.href);
   rows.push({url:url.href,title:title.slice(0,180),snippet,source:'BING_PUBLIC_RSS',status:'FRESH_BING_RSS_LEAD_NOT_GOOGLE_RANKING',query});
@@ -57,4 +60,78 @@ async function discoverGrowthCompetitors({query,ownUrl,fetchFeed=fetchPublicGrow
   query:term,leads:items,checked_at:feed?.retrieved_at||new Date(now).toISOString(),source:'BING_PUBLIC_RSS',
   warning:'Bing RSS is an optional public discovery source; results and order do NOT establish current Google rankings. Page comparison is based on separately retrieved HTML.'};
 }
-module.exports={discoverGrowthCompetitors,parseBingRss,clean};
+
+function parseSerpApiGoogleOrganic(payload,{query='',ownUrl='',limit=7}={}){
+ const results=Array.isArray(payload?.organic_results)?payload.organic_results:[];
+ let own='';try{own=new URL(ownUrl).hostname.replace(/^www\./,'').toLowerCase()}catch{}
+ const needle=terms(query),seen=new Set(),leads=[];
+ for(const item of results){
+  if(!item||typeof item.title!=='string'||typeof item.link!=='string')continue;
+  let parsed;try{parsed=validateUrl(item.link)}catch{continue}
+  const hostname=parsed.hostname.replace(/^www\./,'').toLowerCase();
+  if(hostname===own||infrastructure.test(hostname)||seen.has(parsed.href))continue;
+  const title=clean(item.title).slice(0,180),snippet=clean(item.snippet||'').slice(0,400);
+  const matched=needle.filter(w=>terms(title).includes(w));
+  if(needle.length&&matched.length<Math.min(2,needle.length))continue;
+  if(wrongProductIntent(title,snippet,query))continue;
+  if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(parsed.pathname))continue;
+  seen.add(parsed.href);
+  const position=Number(item.position);
+  leads.push({url:parsed.href,title,snippet,source:'SERPAPI_GOOGLE_ORGANIC',
+   status:'GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION',query,
+   serp_position:Number.isInteger(position)&&position>=1&&position<=200?position:null,
+   geographic_scope:'US',search_language:'en'});
+  if(leads.length>=limit)break;
+ }
+ return leads;
+}
+async function optionalGoogleOrganicDiscovery({query,ownUrl,fetchImpl=global.fetch,key=process.env.SERPAPI_KEY,now=new Date()}={}){
+ const available=String(key||'').trim();
+ if(!available)return {status:'OPTIONAL_PROVIDER_NOT_CONFIGURED',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
+ if(typeof fetchImpl!=='function')return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
+ const url=new URL('https://serpapi.com/search.json');
+ url.searchParams.set('engine','google');url.searchParams.set('q',query);
+ url.searchParams.set('gl','us');url.searchParams.set('hl','en');url.searchParams.set('num','10');
+ url.searchParams.set('api_key',available);
+ try{
+  const response=await fetchImpl(url.href,{method:'GET',signal:AbortSignal.timeout(10000)});
+  if(!response.ok)return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'HTTP_'+response.status,
+   source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
+  const payload=await response.json();
+  if(payload?.error||!Array.isArray(payload?.organic_results))
+   return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR',
+    source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
+  const leads=parseSerpApiGoogleOrganic(payload,{query,ownUrl,limit:7});
+  return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',
+   source:'SERPAPI_GOOGLE_ORGANIC',leads,query,checked_at:new Date(now).toISOString(),
+   scope:{country:'us',language:'en',source:'Google organic results through optional configured SerpAPI'},
+   warning:'Organic positions describe observed search result placement in a US English lookup, not the tracked page ranking, a search-volume estimate, or proven traffic. This provider is optional.'};
+ }catch(e){
+  return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:String(e?.name==='TimeoutError'?'TIMEOUT':e?.code||'FETCH_FAILED').slice(0,70),
+   source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
+ }
+}
+async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
+ fetchFree=discoverGrowthCompetitors,fetchGoogle=optionalGoogleOrganicDiscovery,now=new Date()}={}){
+ // Avoid a paid provider call whenever the free public feed returned relevant
+ // leads. If it fails and an existing key is configured, use at most one query.
+ const publicResult=await Promise.resolve().then(()=>fetchFree({query,ownUrl,now}))
+  .catch(()=>({status:'PUBLIC_SEARCH_UNAVAILABLE',source:'BING_PUBLIC_RSS',leads:[],query,reason:'FETCH_FAILED'}));
+ if(Array.isArray(publicResult.leads)&&publicResult.leads.length)
+  return {...publicResult,provider_attempts:['BING_PUBLIC_RSS'],fallback_used:false};
+ if(publicResult.status==='QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH')
+  return {...publicResult,provider_attempts:[],fallback_used:false};
+ const google=await Promise.resolve().then(()=>fetchGoogle({query,ownUrl,now}))
+  .catch(()=>({status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query}));
+ if(Array.isArray(google.leads)&&google.leads.length)
+  return {...google,provider_attempts:['BING_PUBLIC_RSS','SERPAPI_GOOGLE_ORGANIC'],
+   fallback_used:true,free_discovery_status:publicResult.status};
+ return {...publicResult,provider_attempts:google.status==='OPTIONAL_PROVIDER_NOT_CONFIGURED'?['BING_PUBLIC_RSS']:
+  ['BING_PUBLIC_RSS','SERPAPI_GOOGLE_ORGANIC'],fallback_used:false,
+  optional_google_status:google.status,free_discovery_status:publicResult.status,
+  warning:(publicResult.warning||'Free public search may be unavailable.')+
+   ' Optional Google organic lookup: '+google.status+'. No competitor ranking or content gap is inferred from a missing response.'};
+}
+module.exports={discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,
+ optionalGoogleOrganicDiscovery,parseSerpApiGoogleOrganic,parseBingRss,clean};
+
