@@ -58,11 +58,17 @@
   }else node('p','A single actionable recommendation is not yet available. See supporting evidence.',s);
   var discovery=d.search_discovery||{};
   s=section('Search competitors for this Growth query');
-  var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>x.discovery_source==='BING_PUBLIC_RSS');
+  var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>
+   x.discovery_source==='BING_PUBLIC_RSS'||x.discovery_source==='SERPAPI_GOOGLE_ORGANIC');
+  var googleSource=discovery.source==='SERPAPI_GOOGLE_ORGANIC';
   node('p','Search topic: '+(discovery.target_query||discovery.query||'Not established')+
-   ' · Public discovery: '+(discovery.status||'NOT_CHECKED')+
-   ' · '+liveRivals.length+' query-aligned competitor HTML pages retrieved.',s);
-  node('small','Public Bing RSS discovery is optional and may be unavailable. This is not a Google ranking report; actual HTML findings do not prove a content gap.',s);
+   ' · Source: '+(googleSource?'Google organic (optional provider)':'Public Bing RSS')+
+   ' · Status: '+(discovery.status||'NOT_CHECKED')+
+   ' · '+liveRivals.length+' competitor HTML pages retrieved.',s);
+  node('small',googleSource?'Google organic listings observed through the configured optional SerpAPI (US / English). These are search-result observations, not verified target-page GSC rankings or traffic.':
+    'Free public Bing RSS discovery is optional and may be blocked. This source does not verify Google rankings; an optional configured Google lookup is tried only when free discovery returns no relevant leads.',s);
+  if(discovery.free_discovery_status)node('small','Free search: '+discovery.free_discovery_status,s);
+  if(discovery.optional_google_status)node('small','Optional Google search: '+discovery.optional_google_status,s);
   if(discovery.reason)node('small','Source status: '+discovery.reason,s);
   if(liveRivals.length){
    liveRivals.forEach(function(c){

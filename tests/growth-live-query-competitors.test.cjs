@@ -23,9 +23,12 @@ const pool={query:async sql=>{
 let locked=true;
 const data=(req,res,next)=>{req.growthTrackerClientId=10;req.growth={can_edit:true,pages:[{id:2320,url,case_study_active:locked}]};next()};
 const fetchLive=async pageUrl=>{visited.push(pageUrl);return {html:pageUrl===url?html:rivalHtml,retrieved_at:new Date().toISOString(),final_url:pageUrl,source:'LIVE_PUBLIC_HTTPS'}};
+let searchSource='BING_PUBLIC_RSS';
 const searchLive=async ({query,ownUrl})=>{searched.push({query,ownUrl});return {
- status:'FRESH_PUBLIC_SEARCH_LEADS',query,checked_at:new Date().toISOString(),source:'BING_PUBLIC_RSS',
- leads:[{url:good,title:'Content Scaling Strategies and Workflows',source:'BING_PUBLIC_RSS',status:'FRESH_BING_RSS_LEAD_NOT_GOOGLE_RANKING'}]};};
+ status:searchSource==='BING_PUBLIC_RSS'?'FRESH_PUBLIC_SEARCH_LEADS':'FRESH_GOOGLE_ORGANIC_LEADS',
+ query,checked_at:new Date().toISOString(),source:searchSource,
+ leads:[{url:good,title:'Content Scaling Strategies and Workflows',source:searchSource,
+ status:searchSource==='BING_PUBLIC_RSS'?'FRESH_BING_RSS_LEAD_NOT_GOOGLE_RANKING':'GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION'}]};};
 registerGrowthAutomaticResearch(app,pool,data,{fetchLive,searchLive});
 async function invoke(){
  const res={statusCode:200,headers:{},status(x){this.statusCode=x;return this},set(){return this},json(data){this.body=data;return this}};
@@ -58,7 +61,11 @@ async function invoke(){
  assert.equal(r.summary.published,false);
  const cached=await invoke();assert.equal(cached.statusCode,200);assert.equal(searched.length,1);assert.equal(visited.length,2);
  locked=false;
+ searchSource='SERPAPI_GOOGLE_ORGANIC';
  const unlocked=await invoke();assert.equal(unlocked.statusCode,200);
+ assert.equal(unlocked.body.search_discovery.source,'SERPAPI_GOOGLE_ORGANIC');
+ assert.equal(unlocked.body.competitors.live_reviewed[0].discovery_source,'SERPAPI_GOOGLE_ORGANIC');
+ assert.equal(unlocked.body.practical_growth_plan.competitors.side_by_side.length,1);
  assert.equal(unlocked.body.case_study_locked,false,'cache must not reuse a locked report after owner changes Case Study state');
  assert.equal(unlocked.body.growth_decision.protection.case_study_locked,false);
  assert.equal(searched.length,2,'lock change invalidates in-memory research cache');

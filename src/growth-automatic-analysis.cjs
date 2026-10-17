@@ -48,8 +48,11 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  for(const q of validQ){const k=String(q.query||'').toLowerCase().trim(),old=newest.get(k);if(k&&(!old||Date.parse(q.imported_at||'')>Date.parse(old.imported_at||'')))newest.set(k,q)}
  const queries=[...newest.values()].sort((a,b)=>(Number(b.impressions)||0)-(Number(a.impressions)||0)).slice(0,12);
  const focus=queries[0]?.query||String(page.keyword||'').trim()||actualText.h1[0]||'';
- const comparison=competitorPages.filter(x=>x&&x.live?.html&&x.url&&(x.search_source==='BING_PUBLIC_RSS'||x.search_source==='HISTORICAL_SERP_TOPIC_MATCH'||leads.leads.some(c=>c.url===x.url))).slice(0,4).map(x=>{
-  const summary=excerpt(x.live.html),focusSection=sectionEvidence(x.live.html,focus);
+ // Competitors must be examined for the prioritized low-click opportunity,
+ // not merely the highest-volume historical GSC query.
+ const competitorResearchFocus=chooseGrowthNextAction({page,queries,headings:actualText,now}).primary_next_action.query||focus;
+ const comparison=competitorPages.filter(x=>x&&x.live?.html&&x.url&&(x.search_source==='BING_PUBLIC_RSS'||x.search_source==='SERPAPI_GOOGLE_ORGANIC'||x.search_source==='HISTORICAL_SERP_TOPIC_MATCH'||leads.leads.some(c=>c.url===x.url))).slice(0,4).map(x=>{
+  const summary=excerpt(x.live.html),focusSection=sectionEvidence(x.live.html,competitorResearchFocus);
   return {url:x.url,source:'LIVE_COMPETITOR_HTML_OBSERVED',discovery_source:x.search_source||'HISTORICAL_SERP',
    search_query:x.search_query||null,retrieved_at:x.live.retrieved_at,
    title:summary.title,h1:summary.h1,h2:summary.h2,paragraph_samples:summary.paragraph_samples,description:summary.description,
