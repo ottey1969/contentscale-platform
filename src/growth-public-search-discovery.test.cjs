@@ -31,6 +31,13 @@ assert(found.every(x=>x.status==='FRESH_BING_RSS_LEAD_NOT_GOOGLE_RANKING'));
  assert.equal(invalid.status,'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH');
  const noFeed=await discoverGrowthCompetitors({query:'content scaling',ownUrl:own,
   fetchFeed:async()=>({html:'<html>Captcha required</html>'})});
- assert.equal(noFeed.status,'NO_RELEVANT_PUBLIC_SEARCH_LEADS');assert.deepEqual(noFeed.leads,[]);
+ assert.equal(noFeed.status,'PUBLIC_SEARCH_UNAVAILABLE');assert.deepEqual(noFeed.leads,[]);
+ assert.equal(noFeed.reason,'UNEXPECTED_NON_RSS_RESPONSE');
+ const empty=await discoverGrowthCompetitors({query:'content scaling',ownUrl:own,
+  fetchFeed:async()=>({html:'<rss><channel><title>none</title></channel></rss>'})});
+ assert.equal(empty.status,'NO_RELEVANT_PUBLIC_SEARCH_LEADS');
+ const partial=await discoverGrowthCompetitors({query:'content scaling',ownUrl:own,
+  fetchFeed:async()=>({html:xml,truncated:true})});
+ assert.equal(partial.status,'PARTIAL_PUBLIC_SEARCH_LEADS');
  console.log('PASS: bounded no-key public search, query scoping, no private IP, off-intent suppression, no Google rank claim, provider failure');
 })().catch(e=>{console.error(e);process.exitCode=1});
