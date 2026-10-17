@@ -37,6 +37,28 @@
    for(var item of (x.findings||[]).slice(0,5)){
     var p=document.createElement('p');p.textContent=item.priority+' · '+item.action;target.appendChild(p);
    }
+   if(x.candidate_headings?.length){
+    var topics=document.createElement('p');
+    topics.textContent='Topics observed in competitor pages (NOT verified page gaps): '+x.candidate_headings.slice(0,3).map(a=>a.text).join(' · ');
+    target.appendChild(topics);
+   }
+   if(x.internal_url){
+    var use=document.createElement('button');use.type='button';
+    use.textContent='Review contextual same-site link';
+    use.addEventListener('click',function(){
+     if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
+     if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
+     var caution=document.createElement('p');
+     caution.textContent='Verify the destination and context before approving the handoff.';
+     target.appendChild(caution);
+    });
+    target.appendChild(use);
+   }
+   if(!x.meta||!x.title){
+    var missing=document.createElement('p');
+    missing.textContent='Missing SEO metadata requires an editor-written, source-checked proposal.';
+    target.appendChild(missing);
+   }
    ready();
   }catch(e){target.hidden=false;target.textContent='Research could not be loaded. Manual review stays available without GSC.';}
  }
