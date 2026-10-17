@@ -1,0 +1,20 @@
+name: Investigate canonical Tracker GSC access gate (branch only)
+on:
+  push:
+    branches:
+      - hotfix/tracker-gsc-modal-20261017
+    paths:
+      - scripts/inspect-tracker-gsc-modal.cjs
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read exact modal code from canonical source
+        run: node scripts/inspect-tracker-gsc-modal.cjs
