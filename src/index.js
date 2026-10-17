@@ -51093,6 +51093,8 @@ function _tourEls(){
   }
   return {box:box,tip:tip};
 }
+// CONTENTSCALE_DIRECT_GROWTH_TOUR_STEP_V1 — shared existing Tracker tour.
+_tourSteps.push({sel:'#growthDirectNav',phase:'GROWTH',title:'Open Growth directly',text:'Use this button to open Growth at any time. Neither GSC nor a new scan or OpenBrief is required to enter. Without GSC, verified click data remains Needs access.'});
 function _tourBuildSteps(){return _tourSteps.filter(function(s){var e=document.querySelector(s.sel);return e&&e.offsetParent!==null&&e.getBoundingClientRect().width>0&&e.getBoundingClientRect().height>0;});}
 function startTour(manual){
   endTour(false);_tourRunSteps=_tourBuildSteps();
