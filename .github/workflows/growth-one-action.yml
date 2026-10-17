@@ -3,6 +3,11 @@ on:
   pull_request:
     paths:
       - 'src/growth-one-action-decision*.cjs'
+      - 'src/growth-public-search-discovery*.cjs'
+      - 'src/growth-public-html-reader.cjs'
+      - 'src/growth-practical-brief.cjs'
+      - 'tests/growth-live-query-competitors.test.cjs'
+      - 'tests/tracker-growth-automatic-research.test.cjs'
       - 'src/growth-automatic-analysis.cjs'
       - 'public/growth-automatic-report-ui.js'
       - 'src/tracker-growth-automatic-routes.cjs'
@@ -11,6 +16,11 @@ on:
     branches: [main]
     paths:
       - 'src/growth-one-action-decision*.cjs'
+      - 'src/growth-public-search-discovery*.cjs'
+      - 'src/growth-public-html-reader.cjs'
+      - 'src/growth-practical-brief.cjs'
+      - 'tests/growth-live-query-competitors.test.cjs'
+      - 'tests/tracker-growth-automatic-research.test.cjs'
       - 'src/growth-automatic-analysis.cjs'
       - 'public/growth-automatic-report-ui.js'
       - 'src/tracker-growth-automatic-routes.cjs'
@@ -27,9 +37,17 @@ jobs:
           node-version: '22'
       - name: Canonical read-only Growth recommendation regression
         run: node src/growth-one-action-decision.test.cjs
+      - name: Public query discovery, no paid provider and live competitor route
+        run: |
+          node src/growth-public-search-discovery.test.cjs
+          node tests/growth-live-query-competitors.test.cjs
+          node tests/tracker-growth-automatic-research.test.cjs
       - name: New and existing client JS syntax
         run: |
           node --check src/growth-one-action-decision.cjs
+          node --check src/growth-public-search-discovery.cjs
+          node --check src/growth-practical-brief.cjs
+          node --check src/growth-public-html-reader.cjs
           node --check src/growth-automatic-analysis.cjs
           node --check src/tracker-growth-automatic-routes.cjs
           node --check public/growth-automatic-report-ui.js
