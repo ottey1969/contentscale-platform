@@ -1,7 +1,6 @@
 'use strict';
 // Every informational Growth opportunity must provide an independently usable
 // reader outcome as well as an optional path through ContentScale. Read-only.
-const {queryFit}=require('./growth-one-action-decision.cjs');
 function readerJourney({report={},plan={}}={}){
  const query=String(plan.focus_query||report?.growth_decision?.primary_next_action?.query||report?.search?.focus_query||'').trim();
  const url=String(report.url||plan.page_url||'');
@@ -48,7 +47,7 @@ function readerJourney({report={},plan={}}={}){
    code:action,
    first:'Check whether an existing same-site page already satisfies the distinct search intent.',
    existing_pages_to_check:sameSite,
-   alternative:existingHasCandidate?'IMPROVE_EXISTING_OR_JUSTIFIED_SPOKE':'RESEARCH_JUSTIFIED_SPOKE',
+   alternative:existingHasCandidate?'VERIFY_EXISTING_OR_JUSTIFIED_SPOKE':'RESEARCH_JUSTIFIED_SPOKE',
    mandatory_follow_through:'If the tracked page is protected, continue growth research on an existing page or a genuinely distinct spoke; do not conclude that no page changes means no Growth action.',
    spoke_policy:'A new spoke needs verified distinct live search intent, full-site duplication review, a helpful step-by-step answer, measured target queries and a contextual internal-link proposal; no new page by default.',
    internal_link_policy:'Suggest relevant source paragraphs and target URLs; verify both pages are live and relevant before writing links.',
@@ -59,7 +58,8 @@ function readerJourney({report={},plan={}}={}){
    automatic_publication_allowed:false,existing_rankings_protected:protectedPage,
    note:'Case Study locks prevent publication and baseline changes, never research or preparation.'},
   quality_gates:{
-   reader_gets_practical_answer:true,
+   practical_walkthrough_prepared:true,
+   reader_answer_completeness_verified:false,
    search_intent_verified:false,
    same_site_cannibalization_verified:false,
    competitor_advantage_proven:false,
