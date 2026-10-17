@@ -14,6 +14,8 @@ assert(!result.source.includes('1. Add Sitemap + GSC'));
 assert(result.source.includes('id="briefLangSel"'),'SEO brief language setting remains untouched');
 assert(result.source.includes('CONTENTSCALE_TRACKER_GSC_OPTIONAL_ADVICE_V1'),'GSC blocker remains disabled');
 assert(result.source.includes('_tourMaybeAutoStart'),'guided Tracker tour remains available');
+assert(result.source.includes('CONTENTSCALE_DIRECT_GROWTH_TOUR_STEP_V1'),'Growth must be reachable from the existing guided tour');
+assert(result.source.includes("_tourSteps.push({sel:'#growthDirectNav'"),'Growth tour step links to the actual toolbar button');
 const js=fs.readFileSync(path.resolve(__dirname,'../public/tracker-growth-ui.js'),'utf8');
 assert(!js.includes('fetch('),'UI navigation must not call GSC or external providers');
 function fixture(route,storage){
