@@ -29,3 +29,14 @@ for(const k of keys){
 }
 console.log('TOTAL MATCHES '+found);
 if(found===0)process.exitCode=1;
+
+console.log('\n--- SCOPED GATE REGISTRATION ---');
+const lines=s.split('\n');
+for(let n=51625;n<=51685;n++)console.log('SOURCE '+n+' '+String(lines[n-1]||'').slice(0,1400));
+for(const term of ['_renderGscRequiredGate(', '_gscRequired', '_gscConnectionRequired','csGscRequiredGate','_renderGscSetupBanner(']){
+ let from=0,i,count=0;
+ while((i=s.indexOf(term,from))!==-1&&count++<20){
+  console.log('USE '+term+' LINE '+s.slice(0,i).split('\n').length+' CONTEXT '+s.slice(Math.max(0,i-360),i+470).replace(/\n/g,' '));
+  from=i+term.length;
+ }
+}
