@@ -40,7 +40,7 @@ async function exec(route,token,query={}){
  assert.match(brief.body,/NO GSC REQUIRED/);
  assert.match(brief.body,/WordPress, Wix, or any other CMS/);
  assert.match(brief.body,/clicks, impressions and rankings UNKNOWN/);
- assert.doesNotMatch(brief.body,/verified.*ranking/i);
+ assert.match(brief.body,/not a verified ranking query/);
  const locked=await exec('/api/tracker-client/:token/growth/research-brief',share,{page_id:'12'});
  assert.match(locked.body,/LOCKED — research only/);
  const missing=await exec('/api/tracker-client/:token/growth/research-brief',share,{page_id:'13'});
