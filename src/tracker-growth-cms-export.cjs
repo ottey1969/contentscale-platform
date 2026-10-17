@@ -18,7 +18,9 @@ async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false}={}){
  if(hostname!==home)return {status:403,code:'PAGE_DOMAIN_MISMATCH'};
  if(p.case_study_active)return {status:409,code:'CASE_STUDY_BASELINE_LOCKED'};
  if(!String(p.html_content||'').trim()&&!allowMissingHtml)return {status:409,code:'ORIGINAL_PAGE_SNAPSHOT_REQUIRED'};
- const duplicates=await pool.query("SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 LIMIT 3",[p.url]);
+ // Canonical identity is unique per Tracker client, not globally across other customers.
+ // A different client's matching URL never invalidates this owner's page.
+ const duplicates=await pool.query("SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 AND tracker_client_id=$2 LIMIT 3",[p.url,c.id]);
  if(duplicates.rows.length!==1||Number(duplicates.rows[0].id)!==id||Number(duplicates.rows[0].tracker_client_id)!==Number(c.id))
   return {status:409,code:'DUPLICATE_CANONICAL_PAGE_IDENTITY'};
  return {status:200,client:c,page:p,source_sha256:String(p.html_content||'').trim()?sha(p.html_content):null,source_mode:String(p.html_content||'').trim()?'TRACKER_SAVED_HTML':'MANUAL_HTML_REQUIRED'};
