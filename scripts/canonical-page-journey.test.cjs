@@ -38,6 +38,7 @@ assert.match(r.detail,/Proof & History|history/i);
 assert.notEqual(next({manual_done:false}).code,'MONITOR','Uncompleted work must not be filed as completed monitoring');
 assert.notEqual(next({manual_done_at:null}).code,'MONITOR','A timestamp is required before treating My Check as completion');
 r=next({last_checked:'2026-10-10T12:00:00Z'});
+console.log('CANONICAL_PRECEDENCE_INSPECT '+JSON.stringify(code.slice(code.indexOf('function _trackerNextActionState('),code.indexOf('function _trackerNextActionState(')+14000)).slice(0,15500));
 assert.equal(r.code,'BRIEF_PENDING','New genuinely distinct scan must not reuse an older Brief');
 assert.equal(r.button,'');
 r=next({brief_evaluated_at:'2026-10-10T12:00:00Z',last_checked:'2026-10-10T13:00:00Z',brief_content:{outstanding_actions:3,cycle_id:'current'}});
