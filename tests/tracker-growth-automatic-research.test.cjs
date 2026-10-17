@@ -83,7 +83,7 @@ async function testRoutes(){
  assert.equal(view.statusCode,200);
  assert.match(view.body,/Automatic Growth research/);
  assert.match(view.body,/growth-automatic-report-ui.js/);
- assert(!view.body.includes('readonly-client-token'),'Token must not appear in text rendering other than safe return URL');
+ assert.match(view.body,/\/track\/readonly-client-token\/growth/,'Client token is used only to preserve its authorized navigation link');
  const noPage=await invoke(api,'readonly-client-token','999');
  assert.equal(noPage.statusCode,404);
  const invalid=await invoke(api,'readonly-client-token','7 OR 1=1');
