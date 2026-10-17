@@ -49,11 +49,11 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  const queries=[...newest.values()].sort((a,b)=>(Number(b.impressions)||0)-(Number(a.impressions)||0)).slice(0,12);
  const focus=queries[0]?.query||String(page.keyword||'').trim()||actualText.h1[0]||'';
  const comparison=competitorPages.filter(x=>x&&x.live?.html&&x.url&&(x.search_source==='BING_PUBLIC_RSS'||x.search_source==='HISTORICAL_SERP_TOPIC_MATCH'||leads.leads.some(c=>c.url===x.url))).slice(0,4).map(x=>{
-  const summary=excerpt(x.live.html);
+  const summary=excerpt(x.live.html),focusSection=sectionEvidence(x.live.html,focus);
   return {url:x.url,source:'LIVE_COMPETITOR_HTML_OBSERVED',discovery_source:x.search_source||'HISTORICAL_SERP',
    search_query:x.search_query||null,retrieved_at:x.live.retrieved_at,
    title:summary.title,h1:summary.h1,h2:summary.h2,paragraph_samples:summary.paragraph_samples,description:summary.description,
-   observed_focus_section:sectionEvidence(x.live.html,focus)?(()=>{const e=sectionEvidence(x.live.html,focus);return {heading:e.heading,excerpt:e.snippet.slice(0,200),approx_words:e.approx_words}})():null,
+   observed_focus_section:focusSection?{heading:focusSection.heading,excerpt:focusSection.snippet.slice(0,200),approx_words:focusSection.approx_words}:null,
    signals:{...inspectSavedGrowthHtml(x.live.html,x.url),evidence_scope:'LIVE_COMPETITOR_HTML_OBSERVED',
     caution:'HTTP HTML retrieved at the shown time, not browser-rendered. A search listing does not establish a current Google ranking.'}};
  });
