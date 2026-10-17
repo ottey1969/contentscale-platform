@@ -36,7 +36,8 @@ function patch(s){
  const gate=s.slice(i,e);
  if(gate.includes(marker)){
   if(gate.includes('position:fixed;inset:0'))throw Error('MODAL_STILL_PRESENT');
-  return {source:s,changed:false};
+  const updated=s.replace('it runs Step 2 first if you skipped it, then scans every affected page','it runs the intent-grouping step first when needed, then scans every affected page');
+  return {source:updated,changed:updated!==s};
  }
  if(!gate.includes("gate.style.cssText='position:fixed;inset:0"))throw Error('EXPECTED_SCREEN_BLOCKING_GSC_MODAL_NOT_FOUND');
  if(!gate.includes('GSC is mandatory in Tracker'))throw Error('MANDATORY_GSC_TEXT_MISSING');
@@ -52,6 +53,7 @@ function patch(s){
   if(out.split(oldText).length!==2)throw Error('AMBIGUOUS_GSC_BANNER_COPY: '+oldText);
   out=out.replace(oldText,newText);
  }
+ out=out.replace('it runs Step 2 first if you skipped it, then scans every affected page','it runs the intent-grouping step first when needed, then scans every affected page');
  if(out.includes('GSC is mandatory in Tracker')||out.includes('Required before Tracker can continue'))throw Error('OLD_GSC_BLOCKER_COPY_STILL_PRESENT');
  return {source:out,changed:true};
 }
