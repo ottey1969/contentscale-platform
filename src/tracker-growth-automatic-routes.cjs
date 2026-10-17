@@ -5,6 +5,7 @@ const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
 const {proposeHandoffFromResearch}=require('./growth-research-handoff-suggestions.cjs');
 const {discoverGrowthCompetitorsWithFallback}=require('./growth-public-search-discovery.cjs');
 const {queryFit}=require('./growth-one-action-decision.cjs');
+const {autonomouslyFindGrowthOpportunity}=require('./growth-autonomous-opportunity.cjs');
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
@@ -57,6 +58,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    ...comparisons.filter(x=>!x.live).map(x=>'COMPETITOR_LIVE_'+(x.reason||'UNAVAILABLE')),
    ...(['PUBLIC_SEARCH_UNAVAILABLE','NO_RELEVANT_PUBLIC_SEARCH_LEADS','QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH'].includes(discovery.status)?['LIVE_SEARCH_'+discovery.status]:[])
   ];
+  report.autonomous_growth_opportunity=autonomouslyFindGrowthOpportunity({report,discovery});
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=comparisons.length;
   report.summary.optional_evidence_complete=unavailable.length===0;
