@@ -6,6 +6,7 @@
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
  const safe={source:null};
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
+ $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
  function status(id,msg,error){
   const el=$(id);el.textContent=msg;el.style.color=error?'#b91c1c':'#166534';
  }
