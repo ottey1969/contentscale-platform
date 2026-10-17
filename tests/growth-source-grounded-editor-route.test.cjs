@@ -27,12 +27,15 @@ async function run(token='owner-token',page_id=17){
  let r=await run();assert.equal(r.statusCode,200);assert.equal(r.body.success,true);
  assert.equal(r.body.historical_competitor_titles_used,1);
  assert.equal(r.body.auto_publishing,false);assert.equal(r.body.no_gsc_requirement,true);assert.equal(aiCalls,1);assert.equal(fetchCalls,1);
+ r=await run();assert.equal(r.statusCode,200);
+ assert.equal(aiCalls,1,'same source/query editor draft must reuse the model result');
+ assert.equal(fetchCalls,2);
  assert.equal((await run('readonly-token')).statusCode,403);
  active=true;r=await run();assert.equal(r.statusCode,200,'research-only editorial drafts work during Case Study');
  assert.equal(r.body.case_study_locked,true);assert.equal(r.body.review_only,true);
- assert.equal(r.body.auto_publishing,false);assert.equal(aiCalls,2);assert.equal(fetchCalls,2);
+ assert.equal(r.body.auto_publishing,false);assert.equal(aiCalls,2);assert.equal(fetchCalls,3);
  active=false;
- saved=true;r=await run();assert.equal(r.statusCode,200);assert.equal(fetchCalls,1);
+ saved=true;r=await run();assert.equal(r.statusCode,200);assert.equal(fetchCalls,3);
  assert.equal(aiCalls,3);assert.equal(writes,0);
- console.log('PASS owner-only Growth AI editor draft route without GSC, CMS writes or Case Study override');
+ console.log('PASS owner-only Growth draft under Case Study with safe cache, no GSC requirement, no CMS writes');
 })().catch(e=>{console.error(e);process.exitCode=1});
