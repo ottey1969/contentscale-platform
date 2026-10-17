@@ -70,6 +70,22 @@
     catch(_){copyDraft.textContent='Copy unavailable on this browser'}
    });
    node('small','Only insert if the original section does not already answer this well. Review claims, accuracy, placement and duplicate content.',s);
+   var save=node('button','Download editorial brief (.md)',s);save.type='button';
+   save.addEventListener('click',function(){
+    var lines=['# ContentScale Growth · Editorial improvement (not published)','',
+      'Original URL: '+String(d.url||''),'Working query: '+String(plan.focus_query||'Unknown'),
+      'Case Study protected: '+(plan.guard?.case_study_locked?'YES':'NO'),'',
+      '## Existing section to review',change.target_section||'Choose the appropriate existing section',
+      '','## Proposed improvement',...change.ready_to_review_text,'',
+      '## Why this is being reviewed',String(recommendation?.reason||''),'',
+      '## Review guard',String(change.summary||''),'',
+      'Do not change the original page, live Case Study or publish without editor approval.',
+      'GSC imported_at is not a reporting-period boundary; no promised ranking or click uplift.'];
+    var blob=new Blob([lines.join('\n\n')],{type:'text/markdown;charset=utf-8'});
+    var href=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=href;a.download='contentscale-growth-editorial-brief.md';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(href),2000);
+   });
   }else{
    node('h3','Specific editorial steps',s);
    list(change.steps||[],s,x=>x);
