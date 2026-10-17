@@ -103,7 +103,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    'button:disabled{opacity:.5}.info{color:#5b6475;font-size:13px}.error{color:#b42318}',
    'pre{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:8px 0}@media(max-width:600px){body{padding:12px}section{padding:12px}}',
    '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
-   '<body><main data-page-id="'+v.id+'"><p><a href="'+back+'">← Growth</a></p>',
+   '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
    '<section><div role="status" id="researchStatus">Analyzing the URL and observed competitor evidence…</div>',
