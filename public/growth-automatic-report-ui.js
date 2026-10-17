@@ -56,6 +56,26 @@
     catch(_){copy.textContent='Copy unavailable — use Download research report'}
    });
   }else node('p','A single actionable recommendation is not yet available. See supporting evidence.',s);
+  var opportunity=d.autonomous_growth_opportunity||{};
+  if(opportunity.primary_opportunity){
+   s=section('Additional search growth opportunity — evidence led');
+   var op=opportunity.primary_opportunity;
+   node('h3',op.query,s);
+   node('p','Observed exact-page GSC: '+op.observed_impressions+' impressions, '+op.observed_clicks+' clicks, '+op.observed_ctr_pct+'% CTR, average position '+op.observed_average_position+'.',s);
+   node('small','GSC import: '+(op.imported_at||'unknown')+'; underlying measurement range not confirmed by this export.',s);
+   node('p',op.analysis,s);
+   var proposal=opportunity.recommendation||{};
+   node('strong','Next researched action',s);
+   node('p',proposal.editorial_next||'Verify distinct search intent and existing-site coverage first.',s);
+   node('p','Reader outcome: '+(proposal.practical_reader_deliverable||'Useful, verifiable next steps'),s);
+   node('p','Internal linking: '+(proposal.internal_link_handoff||'Verify before suggesting a link.'),s);
+   node('strong','Related existing pages to investigate',s);
+   if(opportunity.existing_destinations?.length)opportunity.existing_destinations.forEach(function(x){
+    var item=node('p',null,s);link(x.url,x.url,item);node('small','Not yet verified as matching the intent.',item);
+   });else node('p','No relevant same-site page was established from the available Tracker inventory. Do not invent a destination.',s);
+   node('small','Remaining verification: '+(opportunity.verification_needed||[]).join(' · '),s);
+   node('small','Protection: no homepage title/H1 rewrite, no automatic new page, no Case Study changes or publication.',s);
+  }
   var discovery=d.search_discovery||{};
   s=section('Search competitors for this Growth query');
   var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>
