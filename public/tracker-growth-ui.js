@@ -68,6 +68,23 @@
  // Translate known interface copy only; leave user-provided query, URL and evidence unchanged.
  var NL_UI={
   'Growth Cockpit':'Growth-overzicht',
+  'Automatic Growth research':'Automatisch Growth-onderzoek',
+  'Run automatic Growth research · Search / AI / Content':'Automatisch onderzoek starten · Search / AI / Content',
+  'Automatic research evidence':'Automatisch verzameld onderzoeksbewijs',
+  'Page analysis — observed facts':'Pagina-analyse — waargenomen feiten',
+  'Google Search Intelligence':'Google Search Intelligence',
+  'Search and AI competitor research':'Onderzoek naar Search- en AI-concurrenten',
+  'Prioritized, source-grounded improvement decisions':'Verbeterbesluiten op basis van bronnen',
+  'Editor-ready Growth plan — preserve the original URL':'Growth-plan ter beoordeling — behoud de oorspronkelijke URL',
+  'Existing section headings':'Bestaande tussenkoppen',
+  'Evidence-based opportunities':'Kansen op basis van onderzoeksbewijs',
+  'Automatically inspected public competitor pages':'Automatisch onderzochte openbare concurrentenpagina’s',
+  'Candidate differences — confirm before editing':'Mogelijke verschillen — eerst verifiëren',
+  'Existing AI visibility evidence':'Bestaand bewijs voor AI-zichtbaarheid',
+  'Proposed sections from observed sources':'Voorgestelde secties op basis van bronnen',
+  'Download research report (JSON)':'Onderzoeksrapport downloaden (JSON)',
+  'Open cached analysis':'Opgeslagen analyse openen',
+  'No supported observations in this source.':'Geen onderbouwde observaties in deze bron.',
   'Prepare a CMS-independent Growth handoff':'Maak een CMS-onafhankelijk Growth-pakket',
   'Optional manual source when the Tracker has no saved HTML':'Optionele handmatige bron wanneer de Tracker geen HTML heeft',
   'Original existing page HTML (H1 and paragraph required; 120–120,000 bytes)':'Oorspronkelijke pagina-HTML (H1 en alinea vereist; 120–120.000 bytes)',
@@ -181,7 +198,7 @@
  }
 
  function init(){
-  var path=location.pathname,match=path.match(/^\/track\/([^/]+)(?:\/growth(?:\/measurement|\/cms-export)?)?\/?$/);
+  var path=location.pathname,match=path.match(/^\/track\/([^/]+)(?:\/growth(?:\/measurement|\/cms-export|\/auto-research)?)?\/?$/);
   if(!match)return;
   var toolbar=document.getElementById('gbpAdvisorNav');
   if(toolbar){

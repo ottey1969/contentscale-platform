@@ -1,0 +1,94 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {registerGrowthAutomaticResearch}=require('../src/tracker-growth-automatic-routes.cjs');
+const {analyzeGrowthEvidence,excerpt}=require('../src/growth-automatic-analysis.cjs');
+const {publicV4,validateUrl}=require('../src/growth-public-html-reader.cjs');
+const own='https://roof.example/service/';
+const rival='https://comp.example/roof-inspection/';
+const html='<html><head><title>Roof Repair Service</title><meta name="description" content="Roof repairs for homes and buildings"></head><body><h1>Roof Repair Service</h1><h2>When to request a check</h2><p>Review the damage and determine whether a professional assessment is appropriate.</p></body></html>';
+const rivalHtml='<html><head><title>Roof Inspection Information</title></head><body><h1>Inspection overview</h1><h2>Questions before a roof inspection</h2><h2>What happens after damage?</h2><p>Inspection steps and service limitations.</p></body></html>';
+assert.equal(publicV4('127.0.0.1'),false);
+assert.equal(publicV4('10.1.2.3'),false);
+assert.equal(publicV4('172.20.1.2'),false);
+assert.equal(publicV4('192.168.0.1'),false);
+assert.equal(publicV4('169.254.169.254'),false);
+assert.equal(publicV4('198.18.1.20'),false);
+assert.equal(publicV4('203.0.113.1'),false);
+assert.equal(publicV4('1.1.1.1'),true);
+assert.throws(()=>validateUrl('http://roof.example/page'),/PUBLIC_HTTPS/);
+assert.throws(()=>validateUrl('https://127.0.0.1/private'),/PUBLIC_HTTPS/);
+assert.throws(()=>validateUrl('https://roof.example:8443/page'),/PUBLIC_HTTPS/);
+assert.deepEqual(excerpt(html).h2,['When to request a check']);
+const page={id:7,tracker_client_id:4,url:own,keyword:'roof repairs',case_study_active:false};
+const snapshot={page_id:7,checked_at:'2026-10-10T00:00:00Z',google_competitors:[{url:rival,title:'Roof Inspection'}]};
+const gsc=[{page_id:7,tracker_client_id:4,source_page_url:own,evidence_scope:'page_verified',query:'roof repair near me',impressions:300,clicks:2,position:18,imported_at:'2026-10-17T00:00:00Z'}];
+const ai=[{page_id:7,tracker_client_id:4,engine:'perplexity',brand_recommended:false,domain_cited:true,exact_page_cited:false,citation_urls:[],verified_at:'2026-10-10T00:00:00Z',revision_cycle:1}];
+const computed=analyzeGrowthEvidence({page,savedHtml:null,live:{html,final_url:own,retrieved_at:'2026-10-17T00:00:00Z'},snapshot,aiRows:ai,gscRows:gsc,
+ competitorPages:[{url:rival,live:{html:rivalHtml,retrieved_at:'2026-10-17T00:00:01Z'}}]});
+assert.equal(computed.summary.primary_source,'LIVE_PUBLIC_HTML_OBSERVED');
+assert.equal(computed.summary.exact_gsc_queries,1);
+assert.equal(computed.summary.ai_engines,1);
+assert.equal(computed.summary.competitors_live_reviewed,1);
+assert.equal(computed.competitors.topic_candidates.length>=1,true);
+assert.equal(computed.page_content.signals.h1_count_observed,1);
+assert.equal(computed.editorial.preserve_existing_page,true);
+assert.equal(computed.editorial.status,'REVIEWABLE_RESEARCH_DRAFT_NOT_PUBLISHABLE');
+assert.equal(computed.summary.forecasted_click_gain,null);
+const missing=analyzeGrowthEvidence({page,savedHtml:null,snapshot:null,aiRows:[],gscRows:[],competitorPages:[]});
+assert.equal(missing.summary.primary_source,'NO_PAGE_HTML');
+assert.equal(missing.search.verified_queries.length,0);
+assert.equal(missing.page_content.signals.h1_count_observed,undefined);
+assert.equal(missing.editorial.focus_query.status,'WORKING_TOPIC_NOT_RANKING_PROOF');
+async function testRoutes(){
+ const route={},calls=[];
+ const db={async query(sql,args){
+  if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql))throw Error('No writes permitted');
+  if(sql.includes('LEFT(html_content'))return {rows:[{id:7,tracker_client_id:4,url:own,keyword:'roof repair',saved_html:html}]};
+  if(sql.includes('FROM tracker_snapshots'))return {rows:[snapshot]};
+  if(sql.includes('FROM tracker_ai_evidence'))return {rows:ai};
+  if(sql.includes('FROM tracker_gsc_queries'))return {rows:gsc};
+  throw Error('Unexpected database access '+sql.slice(0,120));
+ }};
+ const middleware=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={pages:[{id:7,url:own,keyword:'roof repair',case_study_active:true}]};next()};
+ const fetchLive=async url=>{calls.push(url);return {html:url===own?html:rivalHtml,final_url:url,retrieved_at:'2026-10-17T00:00:00Z',source:'LIVE_PUBLIC_HTTPS'}};
+ registerGrowthAutomaticResearch({get(path,...handlers){route[path]=handlers}},db,middleware,{fetchLive});
+ async function invoke(path,token='readonly-client-token',page_id='7'){
+  const req={params:{token},query:{page_id}},res={
+   statusCode:200,headers:{},status(x){this.statusCode=x;return this},
+   set(k,v){this.headers[k]=v;return this},type(){return this},
+   json(x){this.body=x;return this},send(x){this.body=x;return this}
+  };
+  const stack=route[path];assert(stack,'Route registered '+path);
+  await new Promise((resolve,reject)=>{
+   try{
+    const invokeAt=i=>{if(i>=stack.length)return resolve();
+     Promise.resolve(stack[i](req,res,()=>invokeAt(i+1))).then(()=>{if(i===stack.length-1)resolve()},reject);
+    };invokeAt(0);
+   }catch(e){reject(e)}
+  });
+  return res;
+ }
+ const api='/api/tracker-client/:token/growth/auto-research';
+ const report=await invoke(api);
+ assert.equal(report.statusCode,200);
+ assert.equal(report.body.case_study_locked,true);
+ assert.equal(report.body.access.can_edit,false);
+ assert.equal(report.body.summary.competitors_live_reviewed,1);
+ assert.equal(report.body.search.verified_queries.length,1);
+ assert.equal(calls.length,2,'One target and one competitor fetched');
+ const again=await invoke(api);
+ assert.equal(again.statusCode,200);
+ assert.equal(calls.length,2,'Shared safe cache prevents duplicate network calls');
+ const view=await invoke('/track/:token/growth/auto-research');
+ assert.equal(view.statusCode,200);
+ assert.match(view.body,/Automatic Growth research/);
+ assert.match(view.body,/growth-automatic-report-ui.js/);
+ assert.match(view.body,/\/track\/readonly-client-token\/growth/,'Client token is used only to preserve its authorized navigation link');
+ const noPage=await invoke(api,'readonly-client-token','999');
+ assert.equal(noPage.statusCode,404);
+ const invalid=await invoke(api,'readonly-client-token','7 OR 1=1');
+ assert.equal(invalid.statusCode,400);
+ const later=registerGrowthAutomaticResearch;
+ assert.equal(typeof later,'function');
+}
+testRoutes().then(()=>console.log('PASS Growth automatic: live page, real competitor, AI, GSC, locked Case Study, read-only access, no bogus zero, public-HTTPS SSRF limits')).catch(e=>{console.error(e);process.exitCode=1});
