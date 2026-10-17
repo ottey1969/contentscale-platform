@@ -69,6 +69,9 @@
  var NL_UI={
   'Growth Cockpit':'Growth-overzicht',
   'Automatic Growth research':'Automatisch Growth-onderzoek',
+  'Next: reviewed CMS delivery and measurement':'Volgende stap: gecontroleerde CMS-oplevering en meting',
+  'Prepare reviewed Wix / WordPress / other CMS package':'Maak gecontroleerd pakket voor Wix / WordPress / ander CMS',
+  'Review publication measurement readiness':'Controleer of publicatieresultaten meetbaar zijn',
   'Previously saved Tracker Brief — historical context':'Eerder opgeslagen Tracker Brief — historische context',
   'Previous AI/content recommendations':'Eerdere AI- en inhoudsaanbevelingen',
   'Previous GSC/SEO recommendations':'Eerdere GSC- en SEO-aanbevelingen',

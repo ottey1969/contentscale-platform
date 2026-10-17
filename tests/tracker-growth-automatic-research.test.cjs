@@ -54,7 +54,8 @@ async function testRoutes(){
   if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:[{id:11,url:'https://roof.example/roof-repair-guide/',keyword:'roof repair guide'}]};
   throw Error('Unexpected database access '+sql.slice(0,120));
  }};
- const middleware=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={pages:[{id:7,url:own,keyword:'roof repair',case_study_active:true}]};next()};
+ let caseLocked=true;
+ const middleware=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:req.params.token==='owner-token',pages:[{id:7,url:own,keyword:'roof repair',case_study_active:caseLocked}]};next()};
  const fetchLive=async url=>{calls.push(url);return {html:url===own?html:rivalHtml,final_url:url,retrieved_at:'2026-10-17T00:00:00Z',source:'LIVE_PUBLIC_HTTPS'}};
  registerGrowthAutomaticResearch({get(path,...handlers){route[path]=handlers}},db,middleware,{fetchLive});
  async function invoke(path,token='readonly-client-token',page_id='7'){
@@ -88,6 +89,15 @@ async function testRoutes(){
  assert.equal(view.statusCode,200);
  assert.match(view.body,/Automatic Growth research/);
  assert.match(view.body,/growth-automatic-report-ui.js/);
+ assert.doesNotMatch(view.body,/id="growthEditorHandoff"/,'Read-only Case Study cannot be offered publishing');
+ assert.match(view.body,/growthMeasurementLink/);
+ caseLocked=false;
+ const readOnlyView=await invoke('/track/:token/growth/auto-research');
+ assert.doesNotMatch(readOnlyView.body,/id="growthEditorHandoff"/,'Readonly share token must not receive export');
+ const ownedView=await invoke('/track/:token/growth/auto-research','owner-token');
+ assert.match(ownedView.body,/id="growthEditorHandoff"/);
+ assert.match(ownedView.body,/\/track\/owner-token\/growth\/cms-export\?page_id=7/);
+ caseLocked=true;
  assert.match(view.body,/\/track\/readonly-client-token\/growth/,'Client token is used only to preserve its authorized navigation link');
  const noPage=await invoke(api,'readonly-client-token','999');
  assert.equal(noPage.statusCode,404);

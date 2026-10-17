@@ -33,6 +33,8 @@ button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;flex-wrap:wr
 <form id="handoffForm">
 <fieldset><legend>2. Review the existing page and evidence</legend>
 <p id="canonicalUrl" class="small">Original page not checked yet.</p>
+<div id="growthResearchHints" class="note" hidden aria-live="polite"></div>
+<p class="small"><a id="researchReviewLink" href="#">Open automatic Search / AI / competitor research for this page</a></p>
 <div class="form-grid">
 <div><label for="cms">Website editor</label><select id="cms"><option value="generic">Other / custom CMS</option><option value="wix">Wix</option><option value="wordpress">WordPress</option><option value="webflow">Webflow</option><option value="squarespace">Squarespace</option><option value="custom">Custom</option></select></div>
 <div><label for="evidence">Research evidence</label><select id="evidence"><option value="needs_access">Needs access — no verified GSC</option><option value="observed">Observed — editor-reviewed source</option><option value="verified">Verified — exact GSC page/query data</option></select></div>

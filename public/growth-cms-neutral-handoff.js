@@ -6,6 +6,7 @@
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
  const safe={source:null};
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
+ $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
  function status(id,msg,error){
   const el=$(id);el.textContent=msg;el.style.color=error?'#b91c1c':'#166534';
  }
@@ -15,6 +16,52 @@
   $('download').disabled=!(safe.source&&$('approved').checked&&manualReady);
  }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+ async function loadResearchSuggestions(src){
+  var target=$('growthResearchHints');
+  try{
+   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
+   var res=await fetch(url,{cache:'no-store',credentials:'same-origin'});
+   if(!res.ok)throw Error('Research unavailable');
+   var d=await res.json(),x=d.handoff_suggestions||{};
+   if(d.success!==true||Number(d.page_id)!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
+   if(!$('query').value&&x.query)$('query').value=x.query;
+   if(!$('title').value&&x.title)$('title').value=x.title;
+   if(!$('meta').value&&x.meta)$('meta').value=x.meta;
+   if(x.verified_query&&$('evidence').value==='needs_access')$('evidence').value='verified';
+   else if(x.source_type!=='NO_PAGE_HTML'&&$('evidence').value==='needs_access')$('evidence').value='observed';
+   target.hidden=false;target.textContent='';
+   var label=document.createElement('strong');label.textContent='Automatic Growth research: editor review';target.appendChild(label);
+   var note=document.createElement('p');
+   note.textContent='Existing metadata and observed exact-page evidence were copied where available. New facts, content and publication approval are never invented.';
+   target.appendChild(note);
+   for(var item of (x.findings||[]).slice(0,5)){
+    var p=document.createElement('p');p.textContent=item.priority+' · '+item.action;target.appendChild(p);
+   }
+   if(x.candidate_headings?.length){
+    var topics=document.createElement('p');
+    topics.textContent='Topics observed in competitor pages (NOT verified page gaps): '+x.candidate_headings.slice(0,3).map(a=>a.text).join(' · ');
+    target.appendChild(topics);
+   }
+   if(x.internal_url){
+    var use=document.createElement('button');use.type='button';
+    use.textContent='Review contextual same-site link';
+    use.addEventListener('click',function(){
+     if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
+     if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
+     var caution=document.createElement('p');
+     caution.textContent='Verify the destination and context before approving the handoff.';
+     target.appendChild(caution);
+    });
+    target.appendChild(use);
+   }
+   if(!x.meta||!x.title){
+    var missing=document.createElement('p');
+    missing.textContent='Missing SEO metadata requires an editor-written, source-checked proposal.';
+    target.appendChild(missing);
+   }
+   ready();
+  }catch(e){target.hidden=false;target.textContent='Research could not be loaded. Manual review stays available without GSC.';}
+ }
  if(!Number.isSafeInteger(pageId)||pageId<1){
   status('sourceStatus','A valid tracked page ID is required. Return to Growth and select a page.',true);
   $('checkSource').disabled=true;
@@ -29,6 +76,7 @@
    const data=await response.json();
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
+   void loadResearchSuggestions(data);
    var needsManual=data.manual_source_required===true;
    $('manualSourceWrap').hidden=!needsManual;
    $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
@@ -110,4 +158,6 @@
   }catch(err){status('downloadStatus',err.message||'Download failed',true)}
   finally{ready()}
  });
+ // Direct from Growth: verify owner, source and research automatically; never approve or publish.
+ if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(()=>{if(!$('checkSource').disabled)$('checkSource').click()});
 })();
