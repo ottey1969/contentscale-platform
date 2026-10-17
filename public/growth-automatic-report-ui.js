@@ -56,8 +56,43 @@
     catch(_){copy.textContent='Copy unavailable — use Download research report'}
    });
   }else node('p','A single actionable recommendation is not yet available. See supporting evidence.',s);
+  var plan=d.practical_growth_plan||{},change=plan.change||{};
+  s=section('Prepared improvement · review before publishing');
+  if(change.target_section)node('p','Keep this existing section: "'+change.target_section+'"',s);
+  node('p',change.summary||'A supported content change is not available from the inspected source.',s);
+  if(change.ready_to_review_text?.length){
+   var formatted=change.ready_to_review_text.join('\n\n');
+   node('h3','Proposed copy — not yet published',s);
+   change.ready_to_review_text.forEach(p=>node('p',p,s));
+   var copyDraft=node('button','Copy proposed text',s);copyDraft.type='button';
+   copyDraft.addEventListener('click',async function(){
+    try{await navigator.clipboard.writeText(formatted);copyDraft.textContent='Text copied'}
+    catch(_){copyDraft.textContent='Copy unavailable on this browser'}
+   });
+   node('small','Only insert if the original section does not already answer this well. Review claims, accuracy, placement and duplicate content.',s);
+  }else{
+   node('h3','Specific editorial steps',s);
+   list(change.steps||[],s,x=>x);
+  }
+  if(plan.guard?.case_study_locked)node('p','The Case Study remains locked. This is an editorial proposal only; no published content or baseline has changed.',s);
+  s=section('What happened to the other research?');
+  var rows=plan.classifications||[],categories=plan.query_categories||{};
+  node('p',rows.length+' GSC queries classified · '+(categories.PROTECT||0)+' protected · '+
+   (categories.IMPROVE_EXISTING||0)+' investigated · '+(categories.SEPARATE_OR_UNCONFIRMED_INTENT||0)+' other or unconfirmed intent · '+
+   (categories.BRAND_NAVIGATION||0)+' branded',s);
+  var other=node('details',null,s);node('summary','See every query and why it was kept or separated',other);
+  if(rows.length)table(['Search query','Evidence','Decision'],
+    rows.map(q=>[q.query,q.impressions+' impressions · '+q.clicks+' clicks · position '+(q.position===null?'unknown':q.position.toFixed(1)),q.category+': '+q.meaning]),other);
+  else node('p','GSC is optional; this plan can still be reviewed without ranking data.',other);
+  var rival=plan.competitors||{};
+  node('p',rival.inspected||0+' competitor pages inspected · '+(rival.relevant_to_action||0)+' relevant to the selected query by topic · '+
+   (rival.requiring_separate_intent_review||0)+' kept as other-intent research.',s);
+  node('small',rival.warning||'No current SERP ranking claim is established.',s);
+  var rivals=node('details',null,s);node('summary','See inspected competitor pages and relevance',rivals);
+  (rival.classification||[]).forEach(c=>{var item=node('div',null,rivals);link(c.url,c.title||c.url,item);
+   node('small',c.category+' — '+c.reason,item)});
   researchDetails=node('details',null,container);
-  node('summary','Show the underlying research and evidence',researchDetails);
+  node('summary','Show full technical evidence, Search and AI observations',researchDetails);
   s=section('Automatic research evidence');
   var summary=d.summary||{};
   node('p','Primary page: '+String(summary.primary_source||'UNKNOWN')+
