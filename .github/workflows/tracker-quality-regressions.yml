@@ -33,6 +33,7 @@ on:
       - 'tests/tracker-growth-cms-export.test.cjs'
       - 'tests/tracker-growth-export-canonical-scope.test.cjs'
       - 'tests/tracker-growth-cms-manual-source.test.cjs'
+      - 'tests/tracker-growth-cms-live-source.test.cjs'
       - 'src/tracker-growth-measurement.cjs'
       - 'tests/tracker-growth-no-gsc-research.test.cjs'
       - 'tests/tracker-growth-measurement-share.test.cjs'
@@ -75,6 +76,7 @@ on:
       - 'tests/tracker-growth-cms-export.test.cjs'
       - 'tests/tracker-growth-export-canonical-scope.test.cjs'
       - 'tests/tracker-growth-cms-manual-source.test.cjs'
+      - 'tests/tracker-growth-cms-live-source.test.cjs'
       - 'src/tracker-growth-measurement.cjs'
       - 'tests/tracker-growth-no-gsc-research.test.cjs'
       - 'tests/tracker-growth-measurement-share.test.cjs'
@@ -138,6 +140,7 @@ jobs:
           node tests/tracker-growth-cms-export.test.cjs
           node tests/tracker-growth-export-canonical-scope.test.cjs
           node tests/tracker-growth-cms-manual-source.test.cjs
+          node tests/tracker-growth-cms-live-source.test.cjs
           node tests/tracker-growth-snapshot-signals.test.cjs
           node tests/tracker-growth-automatic-research.test.cjs
           node tests/growth-intent-site-graph.test.cjs
