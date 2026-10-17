@@ -1,0 +1,28 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {createBrowserManager}=require('./browser-manager.cjs');
+const fs={existsSync:p=>p==='/usr/bin/chromium'};
+const log={info(){},warn(){},error(){}};
+const makeBrowser=()=>{const listeners={};return {version:async()=> 'Chromium',isConnected:()=>true,close:async()=>{},on:(event,cb)=>{listeners[event]=cb},drop(){listeners.disconnected?.()}}};
+(async()=>{
+ let stored=null,count=0,options;
+ const mock={launch:async opts=>{count++;options=opts;await new Promise(resolve=>setTimeout(resolve,1));return makeBrowser()}};
+ const m=createBrowserManager({puppeteer:mock,fs,env:{PUPPETEER_EXECUTABLE_PATH:'/bad'},logger:log,getCurrent:()=>stored,setCurrent:x=>{stored=x}});
+ const [a,b,c]=await Promise.all([m.getBrowser(),m.getBrowser(),m.getBrowser()]);
+ assert.equal(count,1,'concurrent scanner requests must share one launch');
+ assert.equal(a,b);assert.equal(b,c);
+ assert.equal(options.executablePath,'/usr/bin/chromium');
+ assert.ok(!options.args.includes('--single-process'));
+ assert.ok(!options.args.includes('--no-zygote'));
+ assert.equal(await m.getBrowser(),a);
+ a.drop();
+ assert.equal(stored,null,'disconnected browser must not remain cached');
+ await m.getBrowser();
+ assert.equal(count,2);
+ let failCount=0,failed=null;
+ const fail=createBrowserManager({puppeteer:{launch:async()=>{failCount++;if(failCount===1)throw new Error('fake chromium fail');return makeBrowser()}},fs,env:{},logger:log,getCurrent:()=>failed,setCurrent:x=>{failed=x}});
+ assert.equal(await fail.getBrowser(),null);
+ assert.ok(await fail.getBrowser());
+ assert.equal(failCount,2,'later request must recover after failed launch');
+ console.log('browser-manager: concurrency, arguments, recovery OK');
+})().catch(e=>{console.error(e);process.exitCode=1});

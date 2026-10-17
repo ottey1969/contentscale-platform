@@ -20,6 +20,15 @@ if (/Yes — I\\*'m interested in the 20-Page Audit/.test(source)) {
     console.log('[startup] corrected CEO public/private domain intake (HTTP 400 on invalid domain)');
   }
 }
+// One canonical Chromium lifecycle for all existing scanner routes.
+{
+  const source=fs.readFileSync(entry,'utf8');
+  const corrected=require('./scripts/repair-canonical-browser.cjs').patch(source);
+  if(corrected!==source){
+    fs.writeFileSync(entry,corrected);
+    console.log('[startup] installed shared Chromium lifecycle and CEO 503 recovery');
+  }
+}
 // The acquisition admin page must exist in the canonical Express app regardless
 // of optional Network feature registration. API endpoints retain their own auth.
 const express=require('express');
