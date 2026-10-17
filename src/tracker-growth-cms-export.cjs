@@ -98,11 +98,25 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
      return res.status(409).json({success:false,code:'PAGE_SOURCE_DOMAIN_MISMATCH'});
     original=live.html;
    }
+   // Historical Search Intelligence is optional context, not a live ranking claim.
+   let topics=[],snapshotCheckedAt=null;
+   try{
+    const prior=await pool.query('SELECT checked_at,google_competitors,ai_perplexity_competitors FROM tracker_snapshots WHERE page_id=$1 AND (google_competitors IS NOT NULL OR ai_perplexity_competitors IS NOT NULL) ORDER BY checked_at DESC,id DESC LIMIT 1',[v.page.id]);
+    const row=prior.rows?.[0];
+    snapshotCheckedAt=row?.checked_at||null;
+    for(const entry of [...(Array.isArray(row?.google_competitors)?row.google_competitors:[]),
+       ...(Array.isArray(row?.ai_perplexity_competitors)?row.ai_perplexity_competitors:[])]){
+     const title=typeof entry==='object'&&entry&&typeof entry.title==='string'?entry.title.trim():'';
+     if(title&&title.length<150&&!topics.includes(title))topics.push(title);
+     if(topics.length>=4)break;
+    }
+   }catch(_err){topics=[];}
    const out=await generateDraft({sourceHtml:original,pageUrl:v.page.url,
-    focusQuery:String(req.body?.focus_query||v.page.keyword||'').slice(0,160),topics:[]});
+    focusQuery:String(req.body?.focus_query||v.page.keyword||'').slice(0,160),topics});
    return res.set('Cache-Control','private, no-store').json({success:true,page_id:v.page.id,
     canonical_url:v.page.url,...out,requires_editor_approval:true,
-    no_gsc_requirement:true,auto_publishing:false,case_study_protected:true});
+    no_gsc_requirement:true,auto_publishing:false,case_study_protected:true,
+    historical_competitor_titles_used:topics.length,historical_snapshot_checked_at:snapshotCheckedAt});
   }catch(e){console.warn('[growth-editor-draft]',String(e?.code||'UNAVAILABLE'));
    return res.status(503).json({success:false,code:'EDITOR_DRAFT_TEMPORARILY_UNAVAILABLE'});}
  });
