@@ -19,3 +19,4 @@ const ti=s.indexOf('function startTour(');
 if(ti>=0){console.log('TOUR_DEFINITION '+s.slice(ti,ti+10000).replace(/\n/g,' ').slice(0,9000));}
 
 const tb=s.indexOf('function _tourBuildSteps(');if(tb>=0)console.log('TOUR_BUILD '+s.slice(tb,tb+9800).replace(/\n/g,' ').slice(0,9100));
+const ts=s.indexOf('var _tourSteps');if(ts>=0)console.log('TOUR_STEPS '+s.slice(ts,ts+6500).replace(/\n/g,' ').slice(0,6500));
