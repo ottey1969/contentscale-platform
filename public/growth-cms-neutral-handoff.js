@@ -158,4 +158,6 @@
   }catch(err){status('downloadStatus',err.message||'Download failed',true)}
   finally{ready()}
  });
+ // Direct from Growth: verify owner, source and research automatically; never approve or publish.
+ if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(()=>{if(!$('checkSource').disabled)$('checkSource').click()});
 })();
