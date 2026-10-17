@@ -35,7 +35,30 @@
     (needsManual?' · No saved page HTML — manually supply unverified original source.':
      ' · revision fingerprint saved · nothing was changed.');
    if(!$('query').value) $('query').value=data.working_keyword||'';
-   status('sourceStatus',data.manual_source_required?'Tracker page identity verified; a manually supplied HTML source is required.':'Original Tracker page verified. Review the proposed content before downloading.',false);
+   if(needsManual){
+    status('sourceStatus','No saved Tracker HTML. Retrieving public original URL automatically…',false);
+    try{
+     const liveResponse=await fetch(base+'/public-source?page_id='+encodeURIComponent(pageId),
+      {cache:'no-store',credentials:'same-origin'});
+     const liveData=await liveResponse.json();
+     if(!liveResponse.ok||liveData.success!==true)throw Error(liveData.code||'Public HTML unavailable');
+     $('manualOriginalHtml').value=liveData.html;
+     const title=/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(liveData.html);
+     if(title&&!$('title').value)$('title').value=title[1].replace(/<[^>]*>/g,' ').trim().slice(0,100);
+     const desc=(liveData.html.match(/<meta\b[^>]*>/gi)||[]).find(x=>/\bname\s*=\s*["']description["']/i.test(x));
+     const meta=desc&&/\bcontent\s*=\s*["']([^"']+)["']/i.exec(desc);
+     if(meta&&!$('meta').value)$('meta').value=meta[1].slice(0,220);
+     $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
+      ' · public HTML retrieved '+(liveData.retrieved_at||'')+
+      ' · not browser-rendered, not saved, publication still needs editor approval.';
+     status('sourceStatus','Original public page fetched. Review the HTML and approve its historical, unverified source status before creating the package.',false);
+    }catch(err){
+     status('sourceStatus','Public URL could not be read automatically ('+
+      String(err.message||'Unavailable')+'). Paste the original HTML manually to continue.',true);
+    }
+   }else{
+    status('sourceStatus','Saved original Tracker source verified. Review content before preparing the handoff.',false);
+   }
   }catch(err){status('sourceStatus',err.message||'Could not verify original source',true)}
   finally{this.disabled=false;ready()}
  });
