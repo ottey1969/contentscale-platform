@@ -58,7 +58,8 @@ async function testRoutes(){
  let caseLocked=true;
  const middleware=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:req.params.token==='owner-token',pages:[{id:7,url:own,keyword:'roof repair',case_study_active:caseLocked}]};next()};
  const fetchLive=async url=>{calls.push(url);return {html:url===own?html:rivalHtml,final_url:url,retrieved_at:'2026-10-17T00:00:00Z',source:'LIVE_PUBLIC_HTTPS'}};
- registerGrowthAutomaticResearch({get(path,...handlers){route[path]=handlers}},db,middleware,{fetchLive});
+ registerGrowthAutomaticResearch({get(path,...handlers){route[path]=handlers}},db,middleware,{fetchLive,
+  searchLive:async()=>({status:'NO_RELEVANT_PUBLIC_SEARCH_LEADS',leads:[],source:'BING_PUBLIC_RSS',query:'roof repair near me'})});
  async function invoke(path,token='readonly-client-token',page_id='7'){
   const req={params:{token},query:{page_id}},res={
    statusCode:200,headers:{},status(x){this.statusCode=x;return this},
@@ -80,12 +81,14 @@ async function testRoutes(){
  assert.equal(report.statusCode,200);
  assert.equal(report.body.case_study_locked,true);
  assert.equal(report.body.access.can_edit,false);
- assert.equal(report.body.summary.competitors_live_reviewed,1);
+ assert.equal(report.body.summary.competitors_live_reviewed,0,'unrelated historical roof inspection page is not selected as current competitor');
+ assert.equal(report.body.competitors.leads.length,1,'historical lead remains in the evidence inventory');
+ assert.equal(report.body.search_discovery.status,'NO_RELEVANT_PUBLIC_SEARCH_LEADS');
  assert.equal(report.body.search.verified_queries.length,1);
- assert.equal(calls.length,2,'One target and one competitor fetched');
+ assert.equal(calls.length,1,'Only the tracked page is fetched when no related competitor passes the intent gate');
  const again=await invoke(api);
  assert.equal(again.statusCode,200);
- assert.equal(calls.length,2,'Shared safe cache prevents duplicate network calls');
+ assert.equal(calls.length,1,'Shared safe cache prevents duplicate network calls');
  const view=await invoke('/track/:token/growth/auto-research');
  assert.equal(view.statusCode,200);
  assert.match(view.body,/Automatic Growth research/);

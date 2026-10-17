@@ -56,7 +56,48 @@
     catch(_){copy.textContent='Copy unavailable — use Download research report'}
    });
   }else node('p','A single actionable recommendation is not yet available. See supporting evidence.',s);
+  var discovery=d.search_discovery||{};
+  s=section('Search competitors for this Growth query');
+  var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>x.discovery_source==='BING_PUBLIC_RSS');
+  node('p','Search topic: '+(discovery.target_query||discovery.query||'Not established')+
+   ' · Public discovery: '+(discovery.status||'NOT_CHECKED')+
+   ' · '+liveRivals.length+' query-aligned competitor HTML pages retrieved.',s);
+  node('small','Public Bing RSS discovery is optional and may be unavailable. This is not a Google ranking report; actual HTML findings do not prove a content gap.',s);
+  if(discovery.reason)node('small','Source status: '+discovery.reason,s);
+  if(liveRivals.length){
+   liveRivals.forEach(function(c){
+    var item=node('div',null,s);link(c.url,c.title||c.url,item);
+    node('small','Observed H2 topics: '+(c.h2||[]).slice(0,6).join(' · '),item);
+   });
+  }else{
+   node('p','No newly discovered competitors could be verified for this exact search topic. Historical leads remain in the detailed research, not as substitutes for a verified live comparison.',s);
+  }
   var plan=d.practical_growth_plan||{},change=plan.change||{};
+  var pairs=plan.competitors?.side_by_side||[];
+  if(pairs.length){
+   s=section('Side-by-side: what the competitor actually says');
+   pairs.forEach(function(pair){
+    var block=node('div',null,s);
+    node('h3','Competitor: '+pair.competitor_section,block);
+    node('p','Observed excerpt: '+(pair.competitor_excerpt||'Not available'),block);
+    node('p','Your section: '+(pair.tracked_page_section||'No matching section in inspected HTML'),block);
+    if(pair.tracked_page_excerpt)node('p','Your observed excerpt: '+pair.tracked_page_excerpt,block);
+    node('small',pair.interpretation,block);
+    node('small','What to do: '+pair.editorial_action,block);
+    link(pair.competitor_url,'Competitor source',block);
+   });
+  }
+  var questions=plan.competitors?.comparison_questions||[];
+  if(questions.length){
+   s=section('What the relevant competitors cover');
+   node('p','Observed competitor topics to compare with the current page; differences are NOT automatically missing content.',s);
+   questions.forEach(function(q){
+    var block=node('div',null,s);
+    node('strong',q.observed_heading,block);
+    node('small',q.editorial_check,block);
+    link(q.competitor_url,'Observed source',block);
+   });
+  }
   s=section('Prepared improvement · review before publishing');
   if(change.target_section)node('p','Keep this existing section: "'+change.target_section+'"',s);
   node('p',change.summary||'A supported content change is not available from the inspected source.',s);

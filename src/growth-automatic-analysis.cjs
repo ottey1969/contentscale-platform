@@ -5,7 +5,7 @@ const {summarizeGrowthAiVisibility}=require('./growth-ai-visibility-summary.cjs'
 const {buildTrackerGrowthPlan}=require('./tracker-growth-plan.cjs');
 const {classifyGrowthIntent,suggestInternalGrowthLinks}=require('./growth-intent-site-graph.cjs');
 const {chooseGrowthNextAction,topicAligned,queryFit}=require('./growth-one-action-decision.cjs');
-const {buildGrowthPracticalBrief}=require('./growth-practical-brief.cjs');
+const {buildGrowthPracticalBrief,sectionEvidence}=require('./growth-practical-brief.cjs');
 function plain(s){return String(s||'').replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|quot|nbsp|lt|gt|#39);/g,' ').replace(/\s+/g,' ').trim()}
 function excerpt(html,limit=8){
  if(typeof html!=='string')return {title:null,description:null,h1:[],h2:[],paragraph_samples:[]};
@@ -48,11 +48,14 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  for(const q of validQ){const k=String(q.query||'').toLowerCase().trim(),old=newest.get(k);if(k&&(!old||Date.parse(q.imported_at||'')>Date.parse(old.imported_at||'')))newest.set(k,q)}
  const queries=[...newest.values()].sort((a,b)=>(Number(b.impressions)||0)-(Number(a.impressions)||0)).slice(0,12);
  const focus=queries[0]?.query||String(page.keyword||'').trim()||actualText.h1[0]||'';
- const comparison=competitorPages.filter(x=>x&&x.live?.html&&x.url&&leads.leads.some(c=>c.url===x.url)).slice(0,4).map(x=>{
-  const summary=excerpt(x.live.html);
-  return {url:x.url,source:'LIVE_COMPETITOR_HTML_OBSERVED',retrieved_at:x.live.retrieved_at,
-   title:summary.title,h1:summary.h1,h2:summary.h2,description:summary.description,
-   signals:{...inspectSavedGrowthHtml(x.live.html,x.url),evidence_scope:'LIVE_COMPETITOR_HTML_OBSERVED'}};
+ const comparison=competitorPages.filter(x=>x&&x.live?.html&&x.url&&(x.search_source==='BING_PUBLIC_RSS'||x.search_source==='HISTORICAL_SERP_TOPIC_MATCH'||leads.leads.some(c=>c.url===x.url))).slice(0,4).map(x=>{
+  const summary=excerpt(x.live.html),focusSection=sectionEvidence(x.live.html,focus);
+  return {url:x.url,source:'LIVE_COMPETITOR_HTML_OBSERVED',discovery_source:x.search_source||'HISTORICAL_SERP',
+   search_query:x.search_query||null,retrieved_at:x.live.retrieved_at,
+   title:summary.title,h1:summary.h1,h2:summary.h2,paragraph_samples:summary.paragraph_samples,description:summary.description,
+   observed_focus_section:focusSection?{heading:focusSection.heading,excerpt:focusSection.snippet.slice(0,200),approx_words:focusSection.approx_words}:null,
+   signals:{...inspectSavedGrowthHtml(x.live.html,x.url),evidence_scope:'LIVE_COMPETITOR_HTML_OBSERVED',
+    caution:'HTTP HTML retrieved at the shown time, not browser-rendered. A search listing does not establish a current Google ranking.'}};
  });
  const observedTopics=new Set(words([actualText.title,...actualText.h1,...actualText.h2,...actualText.paragraph_samples].join(' ')));
  const comparative=[];
