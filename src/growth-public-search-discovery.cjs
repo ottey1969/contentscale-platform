@@ -46,8 +46,14 @@ async function discoverGrowthCompetitors({query,ownUrl,fetchFeed=fetchPublicGrow
    source:'BING_PUBLIC_RSS',reason:String(e?.code||'FETCH_FAILED').slice(0,80)};
  }
  const body=feed?.html||'';
+ if(!/<rss\b/i.test(body)||!/<channel\b/i.test(body))
+  return {status:'PUBLIC_SEARCH_UNAVAILABLE',query:term,leads:[],
+   checked_at:feed?.retrieved_at||new Date(now).toISOString(),source:'BING_PUBLIC_RSS',
+   reason:'UNEXPECTED_NON_RSS_RESPONSE',
+   warning:'Public search returned something other than RSS (possibly a bot-check or changed format). This is a source failure, not evidence that no competitors exist.'};
  const items=parseBingRss(body,{query:term,ownUrl,limit:7});
- return {status:items.length?'FRESH_PUBLIC_SEARCH_LEADS':'NO_RELEVANT_PUBLIC_SEARCH_LEADS',
+ return {status:feed.truncated?(items.length?'PARTIAL_PUBLIC_SEARCH_LEADS':'PUBLIC_SEARCH_PARTIAL'):
+   items.length?'FRESH_PUBLIC_SEARCH_LEADS':'NO_RELEVANT_PUBLIC_SEARCH_LEADS',
   query:term,leads:items,checked_at:feed?.retrieved_at||new Date(now).toISOString(),source:'BING_PUBLIC_RSS',
   warning:'Bing RSS is an optional public discovery source; results and order do NOT establish current Google rankings. Page comparison is based on separately retrieved HTML.'};
 }
