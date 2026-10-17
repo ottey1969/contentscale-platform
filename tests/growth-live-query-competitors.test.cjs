@@ -20,7 +20,8 @@ const pool={query:async sql=>{
  if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:[{id:99,url:'https://contentscale.site/content-at-scale/',keyword:'content at scale'}]};
  throw Error('Unexpected query '+sql);
 }};
-const data=(req,res,next)=>{req.growthTrackerClientId=10;req.growth={can_edit:true,pages:[{id:2320,url,case_study_active:true}]};next()};
+let locked=true;
+const data=(req,res,next)=>{req.growthTrackerClientId=10;req.growth={can_edit:true,pages:[{id:2320,url,case_study_active:locked}]};next()};
 const fetchLive=async pageUrl=>{visited.push(pageUrl);return {html:pageUrl===url?html:rivalHtml,retrieved_at:new Date().toISOString(),final_url:pageUrl,source:'LIVE_PUBLIC_HTTPS'}};
 const searchLive=async ({query,ownUrl})=>{searched.push({query,ownUrl});return {
  status:'FRESH_PUBLIC_SEARCH_LEADS',query,checked_at:new Date().toISOString(),source:'BING_PUBLIC_RSS',
@@ -50,8 +51,16 @@ async function invoke(){
  assert.equal(r.access.can_edit,false);assert.equal(writes,0);
  assert.equal(r.practical_growth_plan.competitors.inspected,1);
  assert.equal(r.practical_growth_plan.competitors.relevant_to_action,1);
+ assert.equal(r.practical_growth_plan.competitors.side_by_side.length,1);
+ assert.match(r.practical_growth_plan.competitors.side_by_side[0].competitor_section,/content inventory/i);
+ assert.match(r.practical_growth_plan.competitors.side_by_side[0].competitor_excerpt,/workflows/i);
  assert.equal(r.search.verified_queries.length,3);
  assert.equal(r.summary.published,false);
  const cached=await invoke();assert.equal(cached.statusCode,200);assert.equal(searched.length,1);assert.equal(visited.length,2);
+ locked=false;
+ const unlocked=await invoke();assert.equal(unlocked.statusCode,200);
+ assert.equal(unlocked.body.case_study_locked,false,'cache must not reuse a locked report after owner changes Case Study state');
+ assert.equal(unlocked.body.growth_decision.protection.case_study_locked,false);
+ assert.equal(searched.length,2,'lock change invalidates in-memory research cache');
  console.log('PASS: source-aligned fresh competitor, preserved historical evidence, one next action, protected Case Study, no writes');
 })().catch(e=>{console.error(e);process.exitCode=1});
