@@ -138,6 +138,59 @@
    list(change.steps||[],s,x=>x);
   }
   if(plan.guard?.case_study_locked)node('p','The Case Study remains locked. This is an editorial proposal only; no published content or baseline has changed.',s);
+  if(main.getAttribute('data-owner-draft')==='true'){
+   s=section('Prepare a full reviewed editorial draft');
+   node('p','One-click owner-only drafting from your observed page and selected Growth query. No CMS connection, new URL or automatic publication. Your active Case Study stays protected.',s);
+   var prepare=node('button','Prepare detailed draft for review',s);prepare.type='button';
+   var output=node('div',null,s),draftStatus=node('small','Optional AI assistance; the prepared editorial brief above remains available if the provider is unavailable.',s);
+   prepare.addEventListener('click',async function(){
+    prepare.disabled=true;draftStatus.textContent='Preparing a source-grounded draft without publishing…';
+    output.textContent='';
+    try{
+     var response=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export/editor-draft',{
+      method:'POST',credentials:'same-origin',cache:'no-store',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({page_id:Number(id),focus_query:String(recommendation?.query||plan.focus_query||'').slice(0,160)})
+     });
+     var result=await response.json();
+     if(!response.ok||result.success!==true)throw Error(result.code||'Draft generation unavailable');
+     if(result.status!=='AI_DRAFT_REVIEW_REQUIRED'||!result.draft?.sections?.length){
+      draftStatus.textContent='Optional detailed draft unavailable: '+String(result.status||'NO_DRAFT')+'. The reviewed copy above remains available.';
+      return;
+     }
+     var draft=result.draft;
+     draftStatus.textContent='Draft prepared · SOURCE ONLY · editor approval required · NOT published'+(result.case_study_locked?' · active Case Study protected':'');
+     node('h3','Draft proposal — editorial review required',output);
+     if(draft.seo_title)node('p','Suggested title (do not replace a strong ranking title automatically): '+draft.seo_title,output);
+     if(draft.meta_description)node('p','Suggested description: '+draft.meta_description,output);
+     draft.sections.forEach(function(section){
+      node('h3',section.h2,output);
+      (section.paragraphs||[]).forEach(p=>node('p',p,output));
+     });
+     node('small','Only source-supported facts may be published after verification. Preserve original H1, existing useful content, images and URL. No auto publishing.',output);
+     var content=['# Growth editorial proposal — not published','',
+      'Original URL: '+String(d.url||''),'Chosen Growth query: '+String(recommendation?.query||plan.focus_query||''),
+      'Case Study locked: '+(result.case_study_locked?'YES':'NO'),'', 'Suggested SEO title: '+String(draft.seo_title||''),
+      'Suggested description: '+String(draft.meta_description||''),'',
+      ...draft.sections.flatMap(section=>['## '+section.h2,...(section.paragraphs||[]),'']),
+      'All claims require owner review. No live content has been modified.'].join('\n\n');
+     var copyFull=node('button','Copy complete draft',output);copyFull.type='button';
+     copyFull.addEventListener('click',async function(){
+      try{await navigator.clipboard.writeText(content);copyFull.textContent='Draft copied'}
+      catch(_){copyFull.textContent='Clipboard unavailable'}
+     });
+     var download=node('button','Download full draft (.md)',output);download.type='button';
+     download.addEventListener('click',function(){
+      var blob=new Blob([content],{type:'text/markdown;charset=utf-8'});
+      var href=URL.createObjectURL(blob),a=document.createElement('a');
+      a.href=href;a.download='contentscale-growth-full-editor-draft.md';document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(href),2000);
+     });
+    }catch(error){
+     draftStatus.textContent='Detailed draft not available: '+String(error.message||error)+'. The prepared editorial copy above is still available.';
+    }finally{prepare.disabled=false}
+   });
+  }
   s=section('What happened to the other research?');
   var rows=plan.classifications||[],categories=plan.query_categories||{};
   node('p',rows.length+' GSC queries classified · '+(categories.PROTECT||0)+' protected · '+
