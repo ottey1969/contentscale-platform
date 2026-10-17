@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Growth · CMS-independent handoff</title>
+<style>
+body{font:15px/1.55 system-ui,sans-serif;background:#f6f8fc;color:#172337;margin:0;padding:22px}
+main{max-width:840px;margin:auto;background:#fff;border:1px solid #dbe4ee;border-radius:14px;padding:26px}
+h1{font-size:26px;margin:.3em 0}h2{font-size:17px;margin-top:20px}label{display:block;margin:12px 0 5px;font-weight:650}
+input,select,textarea{box-sizing:border-box;width:100%;padding:11px;border:1px solid #bac5d6;border-radius:7px;background:#fff;color:#172337;font:inherit}
+textarea{resize:vertical;min-height:100px}button{border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:750;padding:11px 16px;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:20px}
+.small{font-size:13px;color:#64748b}.note{border-left:3px solid #2563eb;padding:12px;background:#eff6ff;border-radius:5px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}fieldset{margin:20px 0;padding:14px;border:1px solid #d7e0ee;border-radius:8px}
+.check{display:flex;gap:10px;align-items:flex-start}.check input{width:auto;margin-top:7px}
+[role=status]{white-space:pre-wrap;font-weight:650;overflow-wrap:anywhere}a{color:#1d4ed8}@media(max-width:650px){.form-grid{grid-template-columns:1fr}main{padding:16px}}
+</style>
+<script defer src="/growth-cms-neutral-handoff.js"></script>
+<script defer src="/tracker-growth-ui.js"></script>
+</head>
+<body><main>
+<p><a id="backToGrowth" href="#">← Growth</a></p>
+<h1>Prepare a CMS-independent Growth handoff</h1>
+<p class="note">Work on the existing page, not a duplicate. GSC and paid providers are optional. The package does not publish any content or change the client's website.</p>
+<div class="actions"><button type="button" id="checkSource">1. Check original Tracker page</button><span id="sourceStatus" role="status"></span></div>
+<form id="handoffForm">
+<fieldset><legend>2. Review the existing page and evidence</legend>
+<p id="canonicalUrl" class="small">Original page not checked yet.</p>
+<div class="form-grid">
+<div><label for="cms">Website editor</label><select id="cms"><option value="generic">Other / custom CMS</option><option value="wix">Wix</option><option value="wordpress">WordPress</option><option value="webflow">Webflow</option><option value="squarespace">Squarespace</option><option value="custom">Custom</option></select></div>
+<div><label for="evidence">Research evidence</label><select id="evidence"><option value="needs_access">Needs access — no verified GSC</option><option value="observed">Observed — editor-reviewed source</option><option value="verified">Verified — exact GSC page/query data</option></select></div>
+</div>
+<label for="query">Working query (never claim an unverified ranking)</label><input id="query" maxlength="300">
+<label for="title">Reviewed SEO title</label><input id="title" maxlength="100" required>
+<label for="meta">Reviewed meta description</label><textarea id="meta" maxlength="220" rows="2" required></textarea>
+</fieldset>
+<fieldset><legend>3. Approve useful content for the original page</legend>
+<label for="heading">New approved H2 heading</label><input id="heading" required>
+<label for="copy">Fact-checked copy (at least 30 characters)</label><textarea id="copy" rows="7" required placeholder="Use real customer-approved facts and documented evidence. No invented reviews, rankings or projects."></textarea>
+<div class="form-grid"><div><label for="linkUrl">Optional contextual internal link URL</label><input id="linkUrl" type="url" placeholder="https://example.com/service/"></div><div><label for="linkText">Internal link label</label><input id="linkText" placeholder="Related service"></div></div>
+<label class="check"><input id="approved" type="checkbox" required><span>I reviewed the actual page, the proposed facts, source evidence and link. I approve a package for a human editor, not automatic publication.</span></label>
+</fieldset>
+<div class="actions"><button id="download" type="submit" disabled>4. Download reviewed CMS handoff ZIP</button><span id="downloadStatus" role="status"></span></div>
+</form>
+<p class="small">Includes editable Markdown, indexable HTML fragments, SEO metadata, a preservation checklist and an honest measurement plan. For Wix, use native heading/text elements, not an iframe.</p>
+</main></body></html>
