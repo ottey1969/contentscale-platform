@@ -43,7 +43,7 @@ function suggestInternalGrowthLinks({pageUrl='',focusQuery='',currentHtml='',sit
   const common=target.filter(x=>profile.has(x));
   const overlap=base.length?common.length/base.length:0;
   if(base.length>=2&&kw.length>=2&&common.length>=2&&
-     common.length/Math.max(base.length,kw.length)>=0.8)
+     common.length/Math.max(base.length,kw.length)>=0.65)
    overlaps.push({url:other.href,keyword:raw.keyword||null,evidence:'TRACKER_KEYWORD_OVERLAP_HEURISTIC',verified_cannibalization:false});
   if(common.length<Math.min(2,base.length)||overlap<0.4||currentLinks.has(route))continue;
   const candidate={url:other.href,tracked_keyword:raw.keyword||null,
