@@ -93,11 +93,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
    '<button id="downloadResearch" type="button" hidden>Download research report (JSON)</button></section>',
    '<div id="growthAutomaticReport"></div>',
-   '<section id="growthNextAction"><h2>Next: reviewed CMS delivery and measurement</h2>',
+   '<details id="growthNextAction"><summary>Later: reviewed CMS handoff and measurement</summary>',
    allowHandoff?'<p><a id="growthEditorHandoff" href="'+handoff+'">Prepare reviewed Wix / WordPress / other CMS package</a> — original URL preserved, editor approval required.</p>':
     v.page.case_study_active?'<p>Active Case Study baseline is protected. Research and measurement remain available; no publishing package until unlocked.</p>':
     '<p>Shared read-only access: research and measurement only. The account owner approves a CMS package.</p>',
-   '<p><a id="growthMeasurementLink" href="'+base+'/measurement">Review publication measurement readiness</a> — GSC is optional for research and required only for verified Google measurements.</p></section>',
+   '<p><a id="growthMeasurementLink" href="'+base+'/measurement">Review publication measurement readiness</a> — GSC is optional for research and required only for verified Google measurements.</p></details>',
    '</main></body></html>'
   ].join('');
   return res.set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex,nofollow')
