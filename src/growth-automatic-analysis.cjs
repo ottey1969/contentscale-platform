@@ -4,6 +4,7 @@ const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {summarizeGrowthAiVisibility}=require('./growth-ai-visibility-summary.cjs');
 const {buildTrackerGrowthPlan}=require('./tracker-growth-plan.cjs');
 const {classifyGrowthIntent,suggestInternalGrowthLinks}=require('./growth-intent-site-graph.cjs');
+const {chooseGrowthNextAction,topicAligned,queryFit}=require('./growth-one-action-decision.cjs');
 function plain(s){return String(s||'').replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|quot|nbsp|lt|gt|#39);/g,' ').replace(/\s+/g,' ').trim()}
 function excerpt(html,limit=8){
  if(typeof html!=='string')return {title:null,description:null,h1:[],h2:[],paragraph_samples:[]};
@@ -35,6 +36,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  const url=String(page.url||'');
  const saved=inspectSavedGrowthHtml(savedHtml,url);
  const actual=live?.html?inspectSavedGrowthHtml(live.html,url):saved;
+ if(live?.html){actual.evidence_scope='LIVE_PUBLIC_HTML_OBSERVED';actual.caution='HTTP HTML retrieved from the public URL; browser rendering and current Google rankings are not verified. Counts may be limited by excerpt length.';}
  const actualHtml=live?.html||savedHtml||'';
  const source=live?.html?'LIVE_PUBLIC_HTML_OBSERVED':saved.available?'SAVED_HTML_HISTORICAL':'NO_PAGE_HTML';
  const actualText=excerpt(actualHtml);
@@ -49,7 +51,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
   const summary=excerpt(x.live.html);
   return {url:x.url,source:'LIVE_COMPETITOR_HTML_OBSERVED',retrieved_at:x.live.retrieved_at,
    title:summary.title,h1:summary.h1,h2:summary.h2,description:summary.description,
-   signals:inspectSavedGrowthHtml(x.live.html,x.url)};
+   signals:{...inspectSavedGrowthHtml(x.live.html,x.url),evidence_scope:'LIVE_COMPETITOR_HTML_OBSERVED'}};
  });
  const observedTopics=new Set(words([actualText.title,...actualText.h1,...actualText.h2,...actualText.paragraph_samples].join(' ')));
  const comparative=[];
@@ -63,6 +65,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
    }
   }
  }
+ const subjectMatchedTopics=comparative.filter(x=>topicAligned(x.heading,actualText));
  const findings=[];
  function add(code,priority,evidence,action){findings.push({code,priority,evidence,action})}
  if(!actual.available)add('SOURCE_UNAVAILABLE','HIGH','No accessible live or saved HTML','Restore page access or supply an original source; other research can continue');
@@ -75,7 +78,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
   if(actual.images_missing_alt_observed>0)add('IMAGE_ALT_REVIEW','MEDIUM',source,actual.images_missing_alt_observed+' observed images without nonempty alt; decide descriptive versus decorative');
   if(actual.noindex_directive_observed)add('NOINDEX_OBSERVED','HIGH',source,'Confirm the intended indexing policy on the live page before any publication');
  }
- if(comparative.length)add('COMPETITOR_TOPIC_CANDIDATES','REVIEW',comparison.map(x=>x.url).slice(0,4),'Evaluate observed competitor topic headings against full actual page and intended query');
+ if(subjectMatchedTopics.length)add('COMPETITOR_TOPIC_CANDIDATES','REVIEW',subjectMatchedTopics.map(x=>x.source_url).slice(0,4),'Review only competitor headings aligned with the tracked page subject; a heading is not proof of a content gap');
  if(!queries.length)add('EXACT_PAGE_GSC_OPTIONAL','INFO','No exact-page verified GSC query available','Keep research active without GSC; do not claim rankings, zero clicks or uplift');
  if(!ai.engines.length)add('AI_EVIDENCE_NOT_AVAILABLE','INFO','No stored AI observation','Do not claim AI recommendations or citations until verified observations are recorded');
  const intendedTitle=(actualText.title||focus||'').slice(0,70);
@@ -83,6 +86,10 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  const plan=buildTrackerGrowthPlan({page,queries:validQ,sitePages,now});
  const intent=classifyGrowthIntent(focus);
  const siteGraph=suggestInternalGrowthLinks({pageUrl:url,focusQuery:focus,currentHtml:actualHtml,sitePages});
+ const decision=chooseGrowthNextAction({page,queries,headings:actualText,siteGraph,now});
+ // Never surface a location, detector, product-review or other unsupported
+ // query as a proposed new spoke merely because it has impressions.
+ const safePlanOpportunities=plan.opportunities.filter(x=>!x.seed_query||queryFit(x.seed_query,actualText).fit);
  if(siteGraph.candidates.length)add('CONTEXTUAL_INTERNAL_LINK_CANDIDATES','REVIEW',siteGraph.candidates.map(x=>x.url),'Review relevant existing tracked pages and add natural contextual links only when useful');
  if(siteGraph.intent_overlap_risks.length)add('POSSIBLE_INTENT_OVERLAP','REVIEW',siteGraph.intent_overlap_risks.map(x=>x.url),'Inspect actual query and page intent before creating another spoke or consolidating URLs');
  const priorities=findings.sort((a,b)=>({HIGH:0,MEDIUM:1,REVIEW:2,INFO:3}[a.priority]??4)-({HIGH:0,MEDIUM:1,REVIEW:2,INFO:3}[b.priority]??4));
@@ -95,7 +102,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
   existing_description:actualText.description,
   existing_h1:actualText.h1,
   observed_h2:actualText.h2,
-  candidate_sections:comparative.slice(0,5).map(x=>({proposed_topic:x.heading,
+  candidate_sections:subjectMatchedTopics.slice(0,5).map(x=>({proposed_topic:x.heading,
    derived_from:x.source_url,approval_needed:'Verify actual page need, facts, originality and distinct search intent. Never copy competitor text.'})),
   prioritized_edits:priorities.filter(x=>x.priority!=='INFO').slice(0,8),
   inferred_intent:intent,site_link_candidates:siteGraph.candidates,possible_intent_overlap:siteGraph.intent_overlap_risks,
@@ -111,11 +118,12 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
    result:'AUTOMATED_RESEARCH_REPORT',published:false,forecasted_click_gain:null},
   page_content:{status:source,live_url:live?.final_url||null,signals:actual,headings:actualText},
   search:{focus_query:focus||null,intent,verified_queries:queries.map(q=>({query:q.query,impressions:Number(q.impressions),clicks:Number(q.clicks),position:q.position==null?null:Number(q.position),imported_at:q.imported_at})),
-   warnings:plan.warnings,observed_opportunities:plan.opportunities},
-  competitors:{snapshot_status:leads.status,snapshot_checked_at:leads.checked_at,
-   leads:leads.leads.slice(0,12),live_reviewed:comparison,topic_candidates:comparative.slice(0,10),
+   warnings:plan.warnings,observed_opportunities:safePlanOpportunities},
+  competitors:{snapshot_status:leads.status,snapshot_checked_at:leads.checked_at,total_leads:leads.leads.length,
+   leads:leads.leads.slice(0,12),live_reviewed:comparison,topic_candidates:subjectMatchedTopics.slice(0,10),
+   excluded_unaligned_topics:comparative.length-subjectMatchedTopics.length,
    caution:'Historical SERP leads are not current rankings. Live page headings only show topics, not proven factual differences.'},
-  ai_visibility:ai,site_architecture:siteGraph,previous_brief:previousGrowthBrief(previousBrief),findings:priorities,editorial,
+  ai_visibility:ai,site_architecture:siteGraph,growth_decision:decision,previous_brief:previousGrowthBrief(previousBrief),findings:priorities,editorial,
   protection:'No GSC requirement, no scan scheduler change, no content/Case Study writes, no automatic publication.'
  };
 }

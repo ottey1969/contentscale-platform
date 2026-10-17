@@ -14,7 +14,8 @@
    var a=node('a',label,parent);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';return a
   }catch{return node('span',label,parent)}
  }
- function section(title){var s=node('section',null,container);node('h2',title,s);return s}
+ var researchDetails=null;
+ function section(title){var s=node('section',null,researchDetails||container);node('h2',title,s);return s}
  function table(headers,rows,parent){
   var t=node('table',null,parent),head=node('thead',null,t),tr=node('tr',null,head);
   headers.forEach(h=>node('th',h,tr));
@@ -28,8 +29,36 @@
   data.forEach(item=>node('li',display(item),ul));
  }
  function render(d){
-  container.textContent='';
-  var s=section('Automatic research evidence');
+  container.textContent='';researchDetails=null;
+  var decision=d.growth_decision||{},recommendation=decision.primary_next_action;
+  var s=section('Your next Growth action');
+  if(recommendation){
+   node('h3',recommendation.title,s);
+   node('p',recommendation.reason,s);
+   node('p','Do this: '+recommendation.instruction,s);
+   if(recommendation.related_pages_to_check?.length){
+    node('strong','Check an existing page before creating a new one:',s);
+    recommendation.related_pages_to_check.forEach(u=>{var item=node('p',null,s);link(u,u,item)});
+   }
+   node('small','Safety: '+recommendation.stop_before,s);
+   node('p',decision.protection?.case_study_locked?'Case Study is active: research and review only. No live edits or publishing.':'No automatic publishing. Owner reviews any CMS changes.',s);
+   if(decision.protection?.preserve_existing_top_rankings){
+    node('strong','Protect already performing queries',s);
+    node('p',(decision.protected_queries||[]).map(q=>q.query+' (position '+q.position.toFixed(1)+', '+q.clicks+' clicks)').join(' · '),s);
+   }
+   node('small',(decision.excluded_queries||[]).length+' off-intent, stale or unverified queries excluded from recommendations. GSC import date is not its measurement period.',s);
+   var copy=node('button','Copy this editorial action',s);copy.type='button';
+   copy.addEventListener('click',async function(){
+    var content=[d.url,recommendation.title,recommendation.reason,recommendation.instruction,
+      'Review related pages: '+(recommendation.related_pages_to_check||[]).join(', '),
+      recommendation.stop_before,decision.protection?.case_study_locked?'CASE STUDY LOCKED — no edits':'Editorial approval required'].join('\n');
+    try{await navigator.clipboard.writeText(content);copy.textContent='Copied — ready for editorial review'}
+    catch(_){copy.textContent='Copy unavailable — use Download research report'}
+   });
+  }else node('p','A single actionable recommendation is not yet available. See supporting evidence.',s);
+  researchDetails=node('details',null,container);
+  node('summary','Show the underlying research and evidence',researchDetails);
+  s=section('Automatic research evidence');
   var summary=d.summary||{};
   node('p','Primary page: '+String(summary.primary_source||'UNKNOWN')+
    ' · Checked: '+(summary.live_retrieved_at||'saved snapshot only')+
@@ -77,7 +106,8 @@
   s=section('Search and AI competitor research');
   var competitors=d.competitors||{};
   node('p','Historical search results: '+(competitors.snapshot_checked_at||'No snapshot timestamp')+
-   ' · '+(competitors.leads||[]).length+' stored competitor leads · '+(competitors.live_reviewed||[]).length+' reviewed live documents',s);
+   ' · showing '+(competitors.leads||[]).length+' of '+(competitors.total_leads??(competitors.leads||[]).length)+' competitor leads · '+(competitors.live_reviewed||[]).length+' inspected HTML documents',s);
+  if(competitors.excluded_unaligned_topics)node('small',competitors.excluded_unaligned_topics+' competitor headings excluded: they do not match this page subject.',s);
   var leads=competitors.leads||[];
   var ul=node('ul',null,s);
   leads.forEach(x=>{var li=node('li',x.source+' · '+(x.serp_title||'Observed URL')+' · ',ul);link(x.url,x.url,li)});
@@ -91,8 +121,8 @@
   node('h3','Candidate differences — confirm before editing',s);
   list(competitors.topic_candidates||[],s,x=>x.heading+' — source: '+x.source_url+' (not a proven content gap)');
   var ai=d.ai_visibility||{};
-  node('h3','Existing AI visibility evidence',s);
-  list(ai.engines||[],s,e=>e.engine+': recommended '+(e.recommended?'Yes':'Not observed')+
+  node('h3','Saved AI visibility observations (not a new automated AI test)',s);
+  list(ai.engines||[],s,e=>e.engine+' ('+(e.method||'historical')+'): recommended '+(e.recommended?'Yes':'Not observed')+
    '; domain cited '+(e.domain_cited?'Yes':'Not observed')+
    '; exact page cited '+(e.exact_page_cited?'Yes':'Not observed')+
    '; checked '+(e.verified_at||'date unknown'));
