@@ -51,7 +51,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  // Competitors must be examined for the prioritized low-click opportunity,
  // not merely the highest-volume historical GSC query.
  const competitorResearchFocus=chooseGrowthNextAction({page,queries,headings:actualText,now}).primary_next_action.query||focus;
- const comparison=competitorPages.filter(x=>x&&x.live?.html&&x.url&&(x.search_source==='BING_PUBLIC_RSS'||x.search_source==='SERPAPI_GOOGLE_ORGANIC'||x.search_source==='HISTORICAL_SERP_TOPIC_MATCH'||leads.leads.some(c=>c.url===x.url))).slice(0,4).map(x=>{
+ const comparison=competitorPages.filter(x=>x&&x.live?.html&&x.url&&(x.search_source==='BING_PUBLIC_RSS'||x.search_source==='SERPER_GOOGLE_ORGANIC'||x.search_source==='HISTORICAL_SERP_TOPIC_MATCH'||leads.leads.some(c=>c.url===x.url))).slice(0,4).map(x=>{
   const summary=excerpt(x.live.html),focusSection=sectionEvidence(x.live.html,competitorResearchFocus);
   return {url:x.url,source:'LIVE_COMPETITOR_HTML_OBSERVED',discovery_source:x.search_source||'HISTORICAL_SERP',
    search_query:x.search_query||null,retrieved_at:x.live.retrieved_at,

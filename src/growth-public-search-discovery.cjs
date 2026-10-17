@@ -61,8 +61,8 @@ async function discoverGrowthCompetitors({query,ownUrl,fetchFeed=fetchPublicGrow
   warning:'Bing RSS is an optional public discovery source; results and order do NOT establish current Google rankings. Page comparison is based on separately retrieved HTML.'};
 }
 
-function parseSerpApiGoogleOrganic(payload,{query='',ownUrl='',limit=7}={}){
- const results=Array.isArray(payload?.organic_results)?payload.organic_results:[];
+function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7}={}){
+ const results=Array.isArray(payload?.organic)?payload.organic:[];
  let own='';try{own=new URL(ownUrl).hostname.replace(/^www\./,'').toLowerCase()}catch{}
  const needle=terms(query),seen=new Set(),leads=[];
  for(const item of results){
@@ -77,7 +77,7 @@ function parseSerpApiGoogleOrganic(payload,{query='',ownUrl='',limit=7}={}){
   if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(parsed.pathname))continue;
   seen.add(parsed.href);
   const position=Number(item.position);
-  leads.push({url:parsed.href,title,snippet,source:'SERPAPI_GOOGLE_ORGANIC',
+  leads.push({url:parsed.href,title,snippet,source:'SERPER_GOOGLE_ORGANIC',
    status:'GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION',query,
    serp_position:Number.isInteger(position)&&position>=1&&position<=200?position:null,
    geographic_scope:'US',search_language:'en'});
@@ -85,30 +85,33 @@ function parseSerpApiGoogleOrganic(payload,{query='',ownUrl='',limit=7}={}){
  }
  return leads;
 }
-async function optionalGoogleOrganicDiscovery({query,ownUrl,fetchImpl=global.fetch,key=process.env.SERPAPI_KEY,now=new Date()}={}){
- const available=String(key||'').trim();
- if(!available)return {status:'OPTIONAL_PROVIDER_NOT_CONFIGURED',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
- if(typeof fetchImpl!=='function')return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
- const url=new URL('https://serpapi.com/search.json');
- url.searchParams.set('engine','google');url.searchParams.set('q',query);
- url.searchParams.set('gl','us');url.searchParams.set('hl','en');url.searchParams.set('num','10');
- url.searchParams.set('api_key',available);
+async function optionalGoogleOrganicDiscovery({query,ownUrl,fetchImpl=global.fetch,key=process.env.SERPER_API_KEY,now=new Date()}={}){
+ const term=String(query||'').trim(),available=String(key||'').trim();
+ if(!term||term.length>100||!/^[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/-]*$/u.test(term))
+  return {status:'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
+ if(!available)return {status:'OPTIONAL_PROVIDER_NOT_CONFIGURED',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
+ if(typeof fetchImpl!=='function')return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
+ // Serper.dev accepts POST JSON; never put API credentials into URL or logs.
  try{
-  const response=await fetchImpl(url.href,{method:'GET',signal:AbortSignal.timeout(10000)});
+  const response=await fetchImpl('https://google.serper.dev/search',{
+   method:'POST',headers:{'X-API-KEY':available,'Content-Type':'application/json'},
+   body:JSON.stringify({q:term,gl:'us',hl:'en',num:10}),
+   signal:AbortSignal.timeout(10000)
+  });
   if(!response.ok)return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'HTTP_'+response.status,
-   source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
+   source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
   const payload=await response.json();
-  if(payload?.error||!Array.isArray(payload?.organic_results))
+  if(payload?.error||!Array.isArray(payload?.organic))
    return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR',
-    source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
-  const leads=parseSerpApiGoogleOrganic(payload,{query,ownUrl,limit:7});
+    source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
+  const leads=parseSerperGoogleOrganic(payload,{query:term,ownUrl,limit:7});
   return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',
-   source:'SERPAPI_GOOGLE_ORGANIC',leads,query,checked_at:new Date(now).toISOString(),
-   scope:{country:'us',language:'en',source:'Google organic results through optional configured SerpAPI'},
-   warning:'Organic positions describe observed search result placement in a US English lookup, not the tracked page ranking, a search-volume estimate, or proven traffic. This provider is optional.'};
+   source:'SERPER_GOOGLE_ORGANIC',leads,query:term,checked_at:new Date(now).toISOString(),
+   scope:{country:'us',language:'en',source:'Google organic results through optional configured Serper.dev'},
+   warning:'Organic positions describe observed search result placement in a US English lookup, not the tracked page ranking, a search-volume estimate, or proven traffic. Serper.dev is optional.'};
  }catch(e){
   return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:String(e?.name==='TimeoutError'?'TIMEOUT':e?.code||'FETCH_FAILED').slice(0,70),
-   source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query};
+   source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  }
 }
 async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
@@ -122,16 +125,16 @@ async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
  if(publicResult.status==='QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH')
   return {...publicResult,provider_attempts:[],fallback_used:false};
  const google=await Promise.resolve().then(()=>fetchGoogle({query,ownUrl,now}))
-  .catch(()=>({status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query}));
+  .catch(()=>({status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPER_GOOGLE_ORGANIC',leads:[],query}));
  if(Array.isArray(google.leads)&&google.leads.length)
-  return {...google,provider_attempts:['BING_PUBLIC_RSS','SERPAPI_GOOGLE_ORGANIC'],
+  return {...google,provider_attempts:['BING_PUBLIC_RSS','SERPER_GOOGLE_ORGANIC'],
    fallback_used:true,free_discovery_status:publicResult.status};
  return {...publicResult,provider_attempts:google.status==='OPTIONAL_PROVIDER_NOT_CONFIGURED'?['BING_PUBLIC_RSS']:
-  ['BING_PUBLIC_RSS','SERPAPI_GOOGLE_ORGANIC'],fallback_used:false,
+  ['BING_PUBLIC_RSS','SERPER_GOOGLE_ORGANIC'],fallback_used:false,
   optional_google_status:google.status,free_discovery_status:publicResult.status,
   warning:(publicResult.warning||'Free public search may be unavailable.')+
    ' Optional Google organic lookup: '+google.status+'. No competitor ranking or content gap is inferred from a missing response.'};
 }
 module.exports={discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,
- optionalGoogleOrganicDiscovery,parseSerpApiGoogleOrganic,parseBingRss,clean};
+ optionalGoogleOrganicDiscovery,parseSerperGoogleOrganic,parseBingRss,clean};
 
