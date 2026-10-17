@@ -9,13 +9,19 @@
  function status(id,msg,error){
   const el=$(id);el.textContent=msg;el.style.color=error?'#b91c1c':'#166534';
  }
- function ready(){ $('download').disabled=!(safe.source&&$('approved').checked) }
+ function ready(){
+  var hasManual=safe.source&&safe.source.manual_source_required;
+  var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
+  $('download').disabled=!(safe.source&&$('approved').checked&&manualReady);
+ }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  if(!Number.isSafeInteger(pageId)||pageId<1){
   status('sourceStatus','A valid tracked page ID is required. Return to Growth and select a page.',true);
   $('checkSource').disabled=true;
  }
  $('approved').addEventListener('change',ready);
+ $('manualAcknowledged').addEventListener('change',ready);
+ $('manualOriginalHtml').addEventListener('input',ready);
  $('checkSource').addEventListener('click',async function(){
   this.disabled=true;safe.source=null;ready();status('sourceStatus','Checking the saved original page…',false);
   try{
@@ -23,9 +29,13 @@
    const data=await response.json();
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
-   $('canonicalUrl').textContent='Original URL: '+data.canonical_url+' · revision fingerprint saved · nothing was changed.';
+   var needsManual=data.manual_source_required===true;
+   $('manualSourceWrap').hidden=!needsManual;
+   $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
+    (needsManual?' · No saved page HTML — manually supply unverified original source.':
+     ' · revision fingerprint saved · nothing was changed.');
    if(!$('query').value) $('query').value=data.working_keyword||'';
-   status('sourceStatus','Original Tracker page verified. Review the proposed content before downloading.',false);
+   status('sourceStatus',data.manual_source_required?'Tracker page identity verified; a manually supplied HTML source is required.':'Original Tracker page verified. Review the proposed content before downloading.',false);
   }catch(err){status('sourceStatus',err.message||'Could not verify original source',true)}
   finally{this.disabled=false;ready()}
  });
@@ -44,7 +54,12 @@
   }
   const paragraphs=copy.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n');
   const html='<section><h2>'+esc(heading)+'</h2>'+paragraphs+linkHtml+'</section>';
+  var manual=src.manual_source_required===true;
+  if(manual&&(!$('manualAcknowledged').checked||$('manualOriginalHtml').value.trim().length<120))
+   throw Error('Provide historical original-page HTML and acknowledge that it is not live-verified');
   return {page_id:pageId,source_sha256:src.source_sha256,editor_approved:true,
+   ...(manual?{original_html_override:$('manualOriginalHtml').value,
+    manual_source_acknowledged:true,source_provenance:'OWNER_SUPPLIED_UNVERIFIED'}:{}),
    cms:$('cms').value,evidence_scope:$('evidence').value,focus_query:$('query').value.trim(),
    seo_title:$('title').value.trim(),meta_description:$('meta').value.trim(),
    approved_changes:[{approved:true,evidence_ref:($('evidence').value==='verified'?'gsc:':'editor_reviewed:')+($('query').value.trim()||'original_page'),html}]};
