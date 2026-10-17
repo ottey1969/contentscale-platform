@@ -2,6 +2,7 @@
 // One side-effect-free lifecycle policy for every existing and future Tracker page.
 // No database, GSC, scheduler or protected Case Study state writes.
 // This change is isolated from all customer account, content publishing and CMS actions.
+// Existing main next-action states remain authoritative unless the cycle is demonstrably historical.
 const fs=require('node:fs'),path=require('node:path');
 const file=path.resolve(__dirname,'../src/index.js');
 const marker='CONTENTSCALE_CANONICAL_PAGE_JOURNEY_V2';
