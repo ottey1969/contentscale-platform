@@ -19,5 +19,7 @@ jobs:
           node-version: '24'
       - name: Syntax check index.js
         run: node -c index.js
+      - name: CEO public/private input regression and syntax
+        run: node --test tests/ceo-domain-form.test.cjs
       - name: Done
-        run: echo "OK — index.js parses"
+        run: echo "OK — CEO domain boundary and startup syntax verified"
