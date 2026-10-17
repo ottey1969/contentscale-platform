@@ -12,3 +12,8 @@ for(const term of ['<body>','<div class="cs-header','cs-toolbar','toolbar','star
  let i=0,seen=0;
  while((i=view.indexOf(term,i))>=0&&seen++<9){console.log('TEMPLATE '+JSON.stringify(term)+' OFFSET '+i+' CONTEXT '+view.slice(Math.max(0,i-230),i+700).replace(/\n/g,' ').slice(0,950));i+=term.length;}
 }
+
+console.log('STATIC_HANDLERS');
+for(const q of ['express.static(',"app.use('/",'public/']){let pos=0,count=0;while((pos=s.indexOf(q,pos))>=0&&count++<8){console.log('STAT '+q+' LINE '+s.slice(0,pos).split('\n').length+' CONTEXT '+s.slice(Math.max(0,pos-150),pos+320).replace(/\n/g,' '));pos+=q.length;}}
+const ti=s.indexOf('function startTour(');
+if(ti>=0){console.log('TOUR_DEFINITION '+s.slice(ti,ti+10000).replace(/\n/g,' ').slice(0,9000));}
