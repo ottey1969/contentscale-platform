@@ -59,6 +59,21 @@
    node('h3','Evidence-based opportunities',s);
    list(search.observed_opportunities,s,x=>x.type+': '+x.evidence+' — '+x.next_action);
   }
+  s=section('Search intent and internal site architecture');
+  var intent=search.intent||{};
+  node('p','Detected intent: '+(intent.intent||'UNKNOWN')+' — heuristic; verify the actual SERP before editing.',s);
+  node('p','Recommended page response: '+(intent.suggested_page_action||'Verify search intent'),s);
+  var graph=d.site_architecture||{};
+  node('h3','Relevant existing pages — contextual internal link candidates',s);
+  var links=graph.candidates||[];
+  if(!links.length)node('p','No grounded related-page recommendation found in the available Tracker inventory.',s);
+  links.forEach(x=>{var block=node('div',null,s);link(x.url,x.url,block);
+   node('small','Shared topic terms: '+(x.overlapping_terms||[]).join(', ')+'. '+x.action,block)});
+  node('h3','Possible overlapping intent — not confirmed cannibalization',s);
+  var overlaps=graph.intent_overlap_risks||[];
+  if(!overlaps.length)node('p','No strong keyword overlap identified in the available inventory.',s);
+  overlaps.forEach(x=>{var block=node('div',null,s);link(x.url,x.url,block);
+   node('small','Shared keyword: '+(x.keyword||'Unknown')+' · Manual SERP/page-intent confirmation required',block)});
   s=section('Search and AI competitor research');
   var competitors=d.competitors||{};
   node('p','Historical search results: '+(competitors.snapshot_checked_at||'No snapshot timestamp')+
