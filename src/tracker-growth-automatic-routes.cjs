@@ -69,6 +69,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  app.get('/track/:token/growth/auto-research',data,(req,res)=>{
   const v=check(req,res);if(!v)return;
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
+  const base='/track/'+encodeURIComponent(req.params.token)+'/growth';
+  const allowHandoff=req.growth?.can_edit===true&&!v.page.case_study_active;
+  const handoff='/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(v.id);
   const html=[
    '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
    '<meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">',
@@ -87,7 +90,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<section><div role="status" id="researchStatus">Analyzing the URL and observed competitor evidence…</div>',
    '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
    '<button id="downloadResearch" type="button" hidden>Download research report (JSON)</button></section>',
-   '<div id="growthAutomaticReport"></div></main></body></html>'
+   '<div id="growthAutomaticReport"></div>',
+   '<section id="growthNextAction"><h2>Next: reviewed CMS delivery and measurement</h2>',
+   allowHandoff?'<p><a id="growthEditorHandoff" href="'+handoff+'">Prepare reviewed Wix / WordPress / other CMS package</a> — original URL preserved, editor approval required.</p>':
+    v.page.case_study_active?'<p>Active Case Study baseline is protected. Research and measurement remain available; no publishing package until unlocked.</p>':
+    '<p>Shared read-only access: research and measurement only. The account owner approves a CMS package.</p>',
+   '<p><a id="growthMeasurementLink" href="'+base+'/measurement">Review publication measurement readiness</a> — GSC is optional for research and required only for verified Google measurements.</p></section>',
+   '</main></body></html>'
   ].join('');
   return res.set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex,nofollow')
    .set('Referrer-Policy','no-referrer').type('html').send(html);
