@@ -1,0 +1,20 @@
+name: Inspect Tracker Growth navigation (feature only)
+on:
+  push:
+    branches:
+      - feature/tracker-growth-shared-language-20261017
+    paths:
+      - scripts/inspect-tracker-growth-navigation.cjs
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inspect canonical UI and language hooks
+        run: node scripts/inspect-tracker-growth-navigation.cjs
