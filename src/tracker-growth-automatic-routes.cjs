@@ -3,9 +3,9 @@ const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
 const {proposeHandoffFromResearch}=require('./growth-research-handoff-suggestions.cjs');
-const {discoverGrowthCompetitors}=require('./growth-public-search-discovery.cjs');
+const {discoverGrowthCompetitorsWithFallback}=require('./growth-public-search-discovery.cjs');
 const {queryFit}=require('./growth-one-action-decision.cjs');
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitors}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -40,7 +40,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const discovery=await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url}))
    .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
   const fresh=(Array.isArray(discovery.leads)?discovery.leads:[]).slice(0,3);
-  const candidates=[...fresh.map(x=>({...x,search_source:'BING_PUBLIC_RSS'})),
+  const candidates=[...fresh.map(x=>({...x,search_source:x.source==='SERPAPI_GOOGLE_ORGANIC'?'SERPAPI_GOOGLE_ORGANIC':'BING_PUBLIC_RSS'})),
    ...historical.filter(x=>!fresh.some(y=>y.url===x.url)&&queryFit(x.serp_title||'',{title:targetQuery,h1:[],h2:[]}).fit)
     .map(x=>({...x,search_source:'HISTORICAL_SERP_TOPIC_MATCH'}))].slice(0,3);
   const comparisons=await Promise.all(candidates.map(async lead=>{
