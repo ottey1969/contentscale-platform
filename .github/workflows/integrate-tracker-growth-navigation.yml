@@ -1,0 +1,38 @@
+name: Integrate direct Tracker Growth navigation (feature only)
+on:
+  push:
+    branches:
+      - feature/tracker-growth-shared-language-20261017
+    paths:
+      - scripts/integrate-tracker-growth-navigation.cjs
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/tracker-growth-shared-language-20261017
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Integrate real Tracker navigation
+        run: node scripts/integrate-tracker-growth-navigation.cjs --write
+      - name: Verify navigation, security, default language and syntax
+        run: |
+          node scripts/tracker-growth-navigation.test.cjs
+          node --check src/index.js
+          node --check src/tracker-growth-cockpit.cjs
+          node --check public/tracker-growth-ui.js
+      - name: Commit only tested canonical source
+        run: |
+          git config user.name "contentscale-tracker-ci"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.js
+          if ! git diff --cached --quiet; then
+            git commit -m "Expose Growth directly in Tracker toolbar and align optional GSC welcome"
+            git push origin HEAD:feature/tracker-growth-shared-language-20261017
+          fi
