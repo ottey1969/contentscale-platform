@@ -73,6 +73,20 @@
    node('p','No newly discovered competitors could be verified for this exact search topic. Historical leads remain in the detailed research, not as substitutes for a verified live comparison.',s);
   }
   var plan=d.practical_growth_plan||{},change=plan.change||{};
+  var pairs=plan.competitors?.side_by_side||[];
+  if(pairs.length){
+   s=section('Side-by-side: what the competitor actually says');
+   pairs.forEach(function(pair){
+    var block=node('div',null,s);
+    node('h3','Competitor: '+pair.competitor_section,block);
+    node('p','Observed excerpt: '+(pair.competitor_excerpt||'Not available'),block);
+    node('p','Your section: '+(pair.tracked_page_section||'No matching section in inspected HTML'),block);
+    if(pair.tracked_page_excerpt)node('p','Your observed excerpt: '+pair.tracked_page_excerpt,block);
+    node('small',pair.interpretation,block);
+    node('small','What to do: '+pair.editorial_action,block);
+    link(pair.competitor_url,'Competitor source',block);
+   });
+  }
   var questions=plan.competitors?.comparison_questions||[];
   if(questions.length){
    s=section('What the relevant competitors cover');
