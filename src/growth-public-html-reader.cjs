@@ -38,7 +38,7 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
    const done=(e,value)=>{if(completed)return;completed=true;if(e)reject(e);else resolve(value)};
    const req=httpsModule.request(url,{
     method:'GET',headers:{'User-Agent':'ContentScaleGrowthResearch/1.0 (+https://contentscale.site/)','Accept':'text/html,application/xhtml+xml','Accept-Encoding':'identity'},
-    lookup(_name,_options,cb){cb(null,address,4)},rejectUnauthorized:true,timeout
+    family:4,autoSelectFamily:false,lookup(_name,_options,cb){cb(null,address,4)},rejectUnauthorized:true,timeout
    },res=>{
     const status=res.statusCode||0;
     if([301,302,303,307,308].includes(status)){
