@@ -61,10 +61,10 @@ async function invoke(){
  assert.equal(r.summary.published,false);
  const cached=await invoke();assert.equal(cached.statusCode,200);assert.equal(searched.length,1);assert.equal(visited.length,2);
  locked=false;
- searchSource='SERPAPI_GOOGLE_ORGANIC';
+ searchSource='SERPER_GOOGLE_ORGANIC';
  const unlocked=await invoke();assert.equal(unlocked.statusCode,200);
- assert.equal(unlocked.body.search_discovery.source,'SERPAPI_GOOGLE_ORGANIC');
- assert.equal(unlocked.body.competitors.live_reviewed[0].discovery_source,'SERPAPI_GOOGLE_ORGANIC');
+ assert.equal(unlocked.body.search_discovery.source,'SERPER_GOOGLE_ORGANIC');
+ assert.equal(unlocked.body.competitors.live_reviewed[0].discovery_source,'SERPER_GOOGLE_ORGANIC');
  assert.equal(unlocked.body.practical_growth_plan.competitors.side_by_side.length,1);
  assert.equal(unlocked.body.case_study_locked,false,'cache must not reuse a locked report after owner changes Case Study state');
  assert.equal(unlocked.body.growth_decision.protection.case_study_locked,false);
