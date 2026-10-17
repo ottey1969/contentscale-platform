@@ -3,7 +3,9 @@ const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
 const {proposeHandoffFromResearch}=require('./growth-research-handoff-suggestions.cjs');
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml}={}){
+const {discoverGrowthCompetitors}=require('./growth-public-search-discovery.cjs');
+const {queryFit}=require('./growth-one-action-decision.cjs');
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitors}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -28,18 +30,32 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   ]);
   const rows=i=>optional[i].status==='fulfilled'?optional[i].value.rows||[]:[];
   const unavailable=optional.map((x,i)=>x.status==='rejected'?['competitor_snapshots','ai_evidence','gsc_queries','site_inventory'][i]:null).filter(Boolean);
-  const snapshot=rows(0)[0]||null,leads=snapshotCompetitorLeads({page,snapshot}).leads.slice(0,3);
+  const snapshot=rows(0)[0]||null,historical=snapshotCompetitorLeads({page,snapshot}).leads;
   const own=await fetchLive(page.url).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
-  const comparisons=await Promise.all(leads.map(async lead=>{
-   try{const live=await fetchLive(lead.url);return {url:lead.url,live}}
-   catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70)}}
+  // Determine the chosen exact-page query BEFORE competitor discovery.
+  // Historical SERPs may be about another brand/product even on the same URL.
+  const seed=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
+   snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:[],sitePages:rows(3),previousBrief:page.brief_content});
+  const targetQuery=seed.growth_decision?.primary_next_action?.query||String(page.keyword||'').trim()||seed.search?.focus_query||'';
+  const discovery=await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url}))
+   .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
+  const fresh=(Array.isArray(discovery.leads)?discovery.leads:[]).slice(0,3);
+  const candidates=[...fresh.map(x=>({...x,search_source:'BING_PUBLIC_RSS'})),
+   ...historical.filter(x=>!fresh.some(y=>y.url===x.url)&&queryFit(x.serp_title||'',{title:targetQuery,h1:[],h2:[]}).fit)
+    .map(x=>({...x,search_source:'HISTORICAL_SERP_TOPIC_MATCH'}))].slice(0,3);
+  const comparisons=await Promise.all(candidates.map(async lead=>{
+   try{const live=await fetchLive(lead.url);return {url:lead.url,live,search_source:lead.search_source,search_query:targetQuery}}
+   catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70),search_source:lead.search_source}}
   }));
   const report=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
+  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,7),target_query:targetQuery,
+   fetched_competitor_urls:comparisons.filter(x=>x.live).map(x=>x.url)};
   report.evidence_warnings=[
    ...unavailable.map(x=>'OPTIONAL_'+x.toUpperCase()+'_UNAVAILABLE'),
    ...(own.code?['TARGET_LIVE_'+own.code]:[]),
-   ...comparisons.filter(x=>!x.live).map(x=>'COMPETITOR_LIVE_'+(x.reason||'UNAVAILABLE'))
+   ...comparisons.filter(x=>!x.live).map(x=>'COMPETITOR_LIVE_'+(x.reason||'UNAVAILABLE')),
+   ...(['PUBLIC_SEARCH_UNAVAILABLE','NO_RELEVANT_PUBLIC_SEARCH_LEADS','QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH'].includes(discovery.status)?['LIVE_SEARCH_'+discovery.status]:[])
   ];
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=comparisons.length;
