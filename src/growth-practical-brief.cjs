@@ -40,10 +40,12 @@ function classifyAllQueries({report,decision}){
 }
 function meaningfulCompetitorEvidence(report,focus){
  const list=report?.competitors?.live_reviewed||[],query=String(focus||'').toLowerCase();
- const offIntent=/\bdetector\b|\bdetect\b|\bplagiarism\b|\baccuracy\b|\breviews?\b|\bbrandwell\b/i;
+ const otherProduct=/\b(detector|detection|plagiarism|brandwell|contentatscale|ai writer|ai writing tool)\b/i;
  return list.map(item=>{
   const title=String(item.title||''),sample=[title,...(item.h1||[]),...(item.h2||[]).slice(0,10)].join(' ');
-  const conflict=offIntent.test(sample)&&!offIntent.test(query);
+  // A quality-assurance section saying 'review before publishing' is NOT a
+  // product-review SERP. Do not drop genuine editorial competitors for this verb.
+  const conflict=(otherProduct.test(sample)||(/\breviews?\b/i.test(title)&&/\b(tool|software|platform|product)\b/i.test(title)))&&!otherProduct.test(query);
   const tokens=terms(query),observed=new Set(terms(sample)),matched=tokens.filter(x=>observed.has(x));
   return {url:item.url,title,read_at:item.retrieved_at||null,
    category:conflict?'DIFFERENT_SEARCH_INTENT':matched.length>=Math.min(2,tokens.length)?'TOPIC_ALIGNED_NEEDS_SERP_CHECK':'TOPIC_MATCH_NOT_ESTABLISHED',
