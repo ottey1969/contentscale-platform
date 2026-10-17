@@ -96,6 +96,18 @@
    '; domain cited '+(e.domain_cited?'Yes':'Not observed')+
    '; exact page cited '+(e.exact_page_cited?'Yes':'Not observed')+
    '; checked '+(e.verified_at||'date unknown'));
+  var past=d.previous_brief||{};
+  if(past.status==='HISTORICAL_BRIEF_NOT_CURRENT_LIVE_EVIDENCE'){
+   s=section('Previously saved Tracker Brief — historical context');
+   node('p','Generated: '+(past.generated_at||'date unknown')+' · '+
+    (past.implementation_complete?'Previously completed cycle':'Completion is not assumed')+
+    ' · historical recommendations are NOT new publication tasks.',s);
+   node('small',past.warning,s);
+   node('h3','Previous AI/content recommendations',s);
+   list(past.items||[],s,x=>x.priority+' · '+x.title+' — '+x.action);
+   node('h3','Previous GSC/SEO recommendations',s);
+   list(past.gsc_items||[],s,x=>x.priority+' · '+x.title+' — '+x.action);
+  }
   s=section('Prioritized, source-grounded improvement decisions');
   var findings=d.findings||[];
   list(findings,s,f=>f.priority+' · '+f.code+': '+f.action+' (basis: '+f.evidence+')');

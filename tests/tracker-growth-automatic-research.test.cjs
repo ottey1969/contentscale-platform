@@ -24,8 +24,12 @@ const snapshot={page_id:7,checked_at:'2026-10-10T00:00:00Z',google_competitors:[
 const gsc=[{page_id:7,tracker_client_id:4,source_page_url:own,evidence_scope:'page_verified',query:'roof repair near me',impressions:300,clicks:2,position:18,imported_at:'2026-10-17T00:00:00Z'}];
 const ai=[{page_id:7,tracker_client_id:4,engine:'perplexity',brand_recommended:false,domain_cited:true,exact_page_cited:false,citation_urls:[],verified_at:'2026-10-10T00:00:00Z',revision_cycle:1}];
 const computed=analyzeGrowthEvidence({page,savedHtml:null,live:{html,final_url:own,retrieved_at:'2026-10-17T00:00:00Z'},snapshot,aiRows:ai,gscRows:gsc,
- competitorPages:[{url:rival,live:{html:rivalHtml,retrieved_at:'2026-10-17T00:00:01Z'}}]});
+ competitorPages:[{url:rival,live:{html:rivalHtml,retrieved_at:'2026-10-17T00:00:01Z'}}],previousBrief:{generated_at:'2026-09-12T00:00:00Z',implementation_complete:true,outstanding_actions:0,items:[{title:'Historic content addition',action:'Old completed recommendation',priority:'HIGH'}],gsc_brief:[{title:'Old GSC evidence',action:'Review historical query'}]}});
 assert.equal(computed.summary.primary_source,'LIVE_PUBLIC_HTML_OBSERVED');
+assert.equal(computed.previous_brief.implementation_complete,true);
+assert.equal(computed.previous_brief.status,'HISTORICAL_BRIEF_NOT_CURRENT_LIVE_EVIDENCE');
+assert.equal(computed.previous_brief.items.length,1);
+assert.match(computed.previous_brief.warning,/not reopen automatically/);
 assert.equal(computed.summary.exact_gsc_queries,1);
 assert.equal(computed.summary.ai_engines,1);
 assert.equal(computed.summary.competitors_live_reviewed,1);
