@@ -5,6 +5,7 @@ on:
       - feature/tracker-growth-shared-language-20261017
     paths:
       - scripts/integrate-tracker-growth-navigation.cjs
+      - scripts/integrate-tracker-growth-tour.cjs
 permissions:
   contents: write
 jobs:
@@ -20,7 +21,9 @@ jobs:
         with:
           node-version: '22'
       - name: Integrate real Tracker navigation
-        run: node scripts/integrate-tracker-growth-navigation.cjs --write
+        run: |
+          node scripts/integrate-tracker-growth-navigation.cjs --write
+          node scripts/integrate-tracker-growth-tour.cjs --write
       - name: Verify navigation, security, default language and syntax
         run: |
           node scripts/tracker-growth-navigation.test.cjs
