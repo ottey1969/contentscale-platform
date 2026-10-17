@@ -30,6 +30,9 @@ on:
       - 'src/tracker-growth-snapshot-signals.cjs'
       - 'tests/tracker-growth-snapshot-signals.test.cjs'
       - 'src/tracker-growth-cms-export.cjs'
+      - 'src/growth-source-grounded-editor.cjs'
+      - 'tests/growth-source-grounded-editor.test.cjs'
+      - 'tests/growth-source-grounded-editor-route.test.cjs'
       - 'src/growth-cms-handoff.cjs'
       - 'public/growth-cms-neutral-handoff.html'
       - 'public/growth-cms-neutral-handoff.js'
@@ -77,6 +80,9 @@ on:
       - 'src/tracker-growth-snapshot-signals.cjs'
       - 'tests/tracker-growth-snapshot-signals.test.cjs'
       - 'src/tracker-growth-cms-export.cjs'
+      - 'src/growth-source-grounded-editor.cjs'
+      - 'tests/growth-source-grounded-editor.test.cjs'
+      - 'tests/growth-source-grounded-editor-route.test.cjs'
       - 'src/growth-cms-handoff.cjs'
       - 'public/growth-cms-neutral-handoff.html'
       - 'public/growth-cms-neutral-handoff.js'
@@ -115,6 +121,7 @@ jobs:
           node --check src/brief-quality-hook.js
           node --check src/tracker-growth-plan.cjs
           node --check src/tracker-growth-cms-export.cjs
+          node --check src/growth-source-grounded-editor.cjs
           node --check src/tracker-growth-snapshot-signals.cjs
           node --check src/growth-public-html-reader.cjs
           node --check src/growth-automatic-analysis.cjs
@@ -147,6 +154,8 @@ jobs:
           node tests/tracker-growth-no-gsc-research.test.cjs
           node src/growth-cms-handoff.test.cjs
           node tests/tracker-growth-cms-export.test.cjs
+          node tests/growth-source-grounded-editor.test.cjs
+          node tests/growth-source-grounded-editor-route.test.cjs
           node tests/tracker-growth-export-canonical-scope.test.cjs
           node tests/tracker-growth-cms-manual-source.test.cjs
           node tests/tracker-growth-cms-live-source.test.cjs
