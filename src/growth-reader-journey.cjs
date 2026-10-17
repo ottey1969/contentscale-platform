@@ -18,6 +18,21 @@ function readerJourney({report={},plan={}}={}){
   {stage:'GROWTH',visitor_goal:'Identify additional qualified impressions and clicks after known issues are addressed',deliverable:'Distinct-intent opportunity, existing-page/spoke choice, factual copy and internal-link proposal',optional_next:'CASE_STUDY'},
   {stage:'CASE_STUDY',visitor_goal:'See whether real performance changed',deliverable:'Verified before/after evidence with dates, never invented click uplift',optional_next:null}
  ];
+ const content_scaling=/\b(content scaling|scale content|content at scale)\b/i.test(query);
+ const practical_steps=content_scaling?[
+  {title:'Inventory the existing content',instruction:'List indexable, useful URLs and their intended search questions. Identify duplicate topics before planning new articles.',reader_deliverable:'URL + intended query + page type inventory'},
+  {title:'Read real search demand',instruction:'Use dated Google Search Console page/query rows. Separate impressions, clicks, CTR and average position; a high impression count is not proof of lost clicks.',reader_deliverable:'Evidence table of URLs and queries with measurement dates'},
+  {title:'Protect successful pages',instruction:'Mark pages with strong, relevant clicks as protected. Do not rewrite their title or H1 merely to insert a new keyword.',reader_deliverable:'Protected-URL list with reasons'},
+  {title:'Compare distinct intent',instruction:'Review live search results and competing answers for the selected query, then read your existing page in full. Do not equate different H2s with a verified gap.',reader_deliverable:'Unanswered reader question and cited evidence, or no-change finding'},
+  {title:'Select one editorial action',instruction:'Improve a suitable existing page first. Prepare a separate spoke only if it serves a different, verified reader goal and will not cannibalize the current page.',reader_deliverable:'Specific existing URL or proposed distinct-intent spoke, with link candidates'},
+  {title:'Implement and verify',instruction:'Keep an editorial change record, then compare matching date ranges and the same URL/query in Search Console. Report changes in clicks and impressions without forecasting guaranteed uplift.',reader_deliverable:'Dated before/after measurement sheet'}
+ ]:[
+  {title:'Answer the user question',instruction:'State the answer directly, define the scope and limitations, and give a truthful example.',reader_deliverable:'A self-contained answer'},
+  {title:'Demonstrate an actionable method',instruction:'Give ordered steps with inputs, decisions, examples and usable outputs rather than another list of SEO slogans.',reader_deliverable:'An independently usable walkthrough'},
+  {title:'Identify supporting evidence',instruction:'Distinguish observed HTML, verified dated GSC queries, historical competitor leads and manually checked AI visibility.',reader_deliverable:'Evidence-and-limitations table'},
+  {title:'Choose what to improve',instruction:'Check the existing site inventory and live search intent before creating a new page.',reader_deliverable:'A defensible improvement or distinct-intent spoke proposal'},
+  {title:'Measure the result',instruction:'Use comparable page/query date ranges; do not confuse import dates with a GSC measurement window.',reader_deliverable:'Verification checklist'}
+ ];
  const existingHasCandidate=sameSite.length>0;
  const next=report.growth_decision?.primary_next_action||{};
  // A protected page still requires a research action. A new URL is a
@@ -28,6 +43,7 @@ function readerJourney({report={},plan={}}={}){
   query,tracked_page:url,
   outcome_contract:'Answer the reader query directly and leave the reader with a practical result they can use without creating an account.',
   stages:staged,
+  practical_reader_deliverable:{type:content_scaling?'CONTENT_SCALING_WALKTHROUGH':'SEARCH_INTENT_WALKTHROUGH',steps:practical_steps,independent_use:true,commercial_cta_optional:true},
   growth_route:{
    code:action,
    first:'Check whether an existing same-site page already satisfies the distinct search intent.',
