@@ -16,6 +16,7 @@ on:
       - 'tests/tracker-growth-no-gsc-research.test.cjs'
       - 'tests/tracker-growth-measurement-share.test.cjs'
       - 'public/tracker-growth-ui.js'
+      - 'tests/tracker-growth-locale-round2.test.cjs'
       - 'scripts/integrate-tracker-growth-navigation.cjs'
       - 'scripts/integrate-tracker-growth-tour.cjs'
       - 'scripts/tracker-growth-navigation.test.cjs'
@@ -36,6 +37,7 @@ on:
       - 'tests/tracker-growth-no-gsc-research.test.cjs'
       - 'tests/tracker-growth-measurement-share.test.cjs'
       - 'public/tracker-growth-ui.js'
+      - 'tests/tracker-growth-locale-round2.test.cjs'
       - 'scripts/integrate-tracker-growth-navigation.cjs'
       - 'scripts/integrate-tracker-growth-tour.cjs'
       - 'scripts/tracker-growth-navigation.test.cjs'
@@ -77,6 +79,7 @@ jobs:
           node tests/tracker-growth-no-gsc-access.test.cjs
           node scripts/tracker-readonly-access.test.cjs
           node scripts/tracker-growth-navigation.test.cjs
+          node tests/tracker-growth-locale-round2.test.cjs
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
           node tests/tracker-growth-no-gsc-research.test.cjs
