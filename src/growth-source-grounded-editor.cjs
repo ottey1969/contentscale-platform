@@ -40,7 +40,7 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
  let canonical;try{canonical=new URL(pageUrl)}catch{return {status:'INVALID_PAGE_URL',draft:null}}
  if(canonical.protocol!=='https:')return {status:'HTTPS_REQUIRED',draft:null};
  const source=sourceFacts(sourceHtml);
- if(source.text.length<180)return {status:'INSUFFICIENT_PAGE_SOURCE',draft:null};
+ if(source.text.length<120)return {status:'INSUFFICIENT_PAGE_SOURCE',draft:null};
  if(!apiKey)return {status:'OPTIONAL_AI_NOT_CONFIGURED',draft:null};
  if(!/^[a-zA-Z0-9._-]{5,80}$/.test(model))return {status:'INVALID_MODEL',draft:null};
  const prompt=[
