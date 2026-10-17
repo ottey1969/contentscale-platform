@@ -17,7 +17,21 @@ function excerpt(html,limit=8){
 }
 const words=x=>String(x||'').toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}\s]/gu,' ').split(/\s+/).filter(x=>x.length>3&&!new Set(['with','from','your','this','that','about','when','what','where','some','more','will','best','have','into','voor','over','deze','geen','voor','zijn','also','page','home','services']).has(x));
 const sHtml=x=>String(x||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,aiRows=[],gscRows=[],competitorPages=[],sitePages=[],now=new Date()}={}){
+function previousGrowthBrief(brief){
+ if(!brief||typeof brief!=='object'||Array.isArray(brief))return {status:'NO_PREVIOUS_BRIEF',items:[],gsc_items:[]};
+ const take=list=>(Array.isArray(list)?list:[]).slice(0,12).filter(v=>v&&typeof v==='object')
+  .map(v=>({title:String(v.title||'').slice(0,180),action:String(v.action||'').slice(0,500),
+   priority:String(v.priority||'').slice(0,45),system:String(v.system||'').slice(0,80)}))
+  .filter(x=>x.title||x.action);
+ return {status:'HISTORICAL_BRIEF_NOT_CURRENT_LIVE_EVIDENCE',
+  generated_at:typeof brief.generated_at==='string'?brief.generated_at:null,
+  cycle_id:typeof brief.cycle_id==='string'?brief.cycle_id:null,
+  implementation_complete:brief.implementation_complete===true,
+  outstanding_actions:Number.isSafeInteger(Number(brief.outstanding_actions))?Number(brief.outstanding_actions):null,
+  items:take(brief.items),gsc_items:take(brief.gsc_brief),
+  warning:'These are saved historical AI/SEO recommendations. Review current source and actual new evidence; a completed Brief must not reopen automatically.'};
+}
+function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,aiRows=[],gscRows=[],competitorPages=[],sitePages=[],previousBrief=null,now=new Date()}={}){
  const url=String(page.url||'');
  const saved=inspectSavedGrowthHtml(savedHtml,url);
  const actual=live?.html?inspectSavedGrowthHtml(live.html,url):saved;
@@ -101,7 +115,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
   competitors:{snapshot_status:leads.status,snapshot_checked_at:leads.checked_at,
    leads:leads.leads.slice(0,12),live_reviewed:comparison,topic_candidates:comparative.slice(0,10),
    caution:'Historical SERP leads are not current rankings. Live page headings only show topics, not proven factual differences.'},
-  ai_visibility:ai,site_architecture:siteGraph,findings:priorities,editorial,
+  ai_visibility:ai,site_architecture:siteGraph,previous_brief:previousGrowthBrief(previousBrief),findings:priorities,editorial,
   protection:'No GSC requirement, no scan scheduler change, no content/Case Study writes, no automatic publication.'
  };
 }
