@@ -68,6 +68,30 @@
  // Translate known interface copy only; leave user-provided query, URL and evidence unchanged.
  var NL_UI={
   'Growth Cockpit':'Growth-overzicht',
+  'Prepare a CMS-independent Growth handoff':'Maak een CMS-onafhankelijk Growth-pakket',
+  '1. Check original Tracker page':'1. Controleer de oorspronkelijke Tracker-pagina',
+  '2. Review the existing page and evidence':'2. Beoordeel de bestaande pagina en het bewijs',
+  '3. Approve useful content for the original page':'3. Keur nuttige inhoud voor de bestaande pagina goed',
+  '4. Download reviewed CMS handoff ZIP':'4. Download het gecontroleerde CMS-pakket (ZIP)',
+  'Website editor':'Website-editor',
+  'Research evidence':'Onderzoeksbewijs',
+  'Needs access — no verified GSC':'Toegang nodig — geen geverifieerde GSC',
+  'Observed — editor-reviewed source':'Waargenomen — bron gecontroleerd door redacteur',
+  'Verified — exact GSC page/query data':'Geverifieerd — exacte GSC-pagina en zoekopdracht',
+  'Working query (never claim an unverified ranking)':'Werkzoekopdracht (geen onbewezen positie claimen)',
+  'Reviewed SEO title':'Gecontroleerde SEO-titel',
+  'Reviewed meta description':'Gecontroleerde metabeschrijving',
+  'New approved H2 heading':'Nieuwe goedgekeurde H2-kop',
+  'Fact-checked copy (at least 30 characters)':'Gecontroleerde tekst (minimaal 30 tekens)',
+  'Optional contextual internal link URL':'Optionele relevante interne link-URL',
+  'Internal link label':'Tekst voor de interne link',
+  'Original page not checked yet.':'Oorspronkelijke pagina nog niet gecontroleerd.',
+  'Other / custom CMS':'Ander / eigen CMS',
+  'Custom':'Eigen systeem',
+  'Wix':'Wix',
+  'WordPress':'WordPress',
+  'Webflow':'Webflow',
+  'Squarespace':'Squarespace',
   'Prioritized page opportunities':'Pagina’s met groeikansen',
   'Top click opportunities — verified non-brand queries':'Klikkansen — geverifieerde niet-merkzoekopdrachten',
   'Research opportunities without GSC':'Onderzoekskansen zonder GSC',
@@ -154,7 +178,7 @@
  }
 
  function init(){
-  var path=location.pathname,match=path.match(/^\/track\/([^/]+)(?:\/growth(?:\/measurement)?)?\/?$/);
+  var path=location.pathname,match=path.match(/^\/track\/([^/]+)(?:\/growth(?:\/measurement|\/cms-export)?)?\/?$/);
   if(!match)return;
   var toolbar=document.getElementById('gbpAdvisorNav');
   if(toolbar){
@@ -186,6 +210,10 @@
   var tip=document.getElementById('tourTip');
   if(tip&&typeof MutationObserver==='function'){
    new MutationObserver(function(){apply(getLang())}).observe(tip,{childList:true,subtree:true});
+  }
+  var handoff=document.getElementById('handoffForm');
+  if(handoff&&typeof MutationObserver==='function'){
+   new MutationObserver(function(){apply(getLang())}).observe(handoff,{childList:true,subtree:true});
   }
   var banner=document.getElementById('gscSetupBanner');
   if(banner&&typeof MutationObserver==='function'){
