@@ -53,6 +53,7 @@ function meaningfulCompetitorEvidence(report,focus){
     'Contains matching terms only. Competitor relevance, current ranking and factual advantage are not established.',
    observed_headings:(item.h2||[]).slice(0,8),
    observed_paragraph_samples:(item.paragraph_samples||[]).slice(0,2),
+   observed_focus_section:item.observed_focus_section||null,
    discovery_source:item.discovery_source||'HISTORICAL_SERP'};
  });
 }
@@ -66,6 +67,13 @@ function buildGrowthPracticalBrief({report,html=''}={}){
  const queries=classified_queries.reduce((a,r)=>(a[r.category]=(a[r.category]||0)+1,a),{});
  const matchedRivals=competitors.filter(x=>x.category==='TOPIC_ALIGNED_NEEDS_SERP_CHECK');
  const ownHeadings=new Set((report.page_content?.headings?.h2||[]).map(x=>normalize(x)));
+ const sideBySide=matchedRivals.filter(r=>r.observed_focus_section?.heading).map(r=>({
+  competitor_url:r.url,competitor_section:r.observed_focus_section.heading,
+  competitor_excerpt:String(r.observed_focus_section.excerpt||'').slice(0,180),
+  tracked_page_section:section?.heading||null,tracked_page_excerpt:String(section?.snippet||'').slice(0,180),
+  interpretation:'Observed public HTML excerpts, not proof that either page performs better or that the topic is missing.',
+  editorial_action:'Read the two sections in full; if the existing page leaves a practical reader question unanswered, prepare an original evidence-based addition for review.'
+ })).slice(0,3);
  const comparisonQuestions=matchedRivals.flatMap(r=>r.observed_headings.filter(h=>{
   const norm=normalize(h);
   return norm&&norm.length>12&&!/^(?:conclusion|summary|more from|related articles|frequently asked questions|faq|references)$/i.test(norm);
@@ -76,7 +84,7 @@ function buildGrowthPracticalBrief({report,html=''}={}){
   focus_query:query,query_categories:queries,classifications:classified_queries,
   competitors:{inspected:competitors.length,relevant_to_action:matchedRivals.length,
    requiring_separate_intent_review:competitors.length-matchedRivals.length,classification:competitors,
-   comparison_questions:comparisonQuestions,
+   comparison_questions:comparisonQuestions,side_by_side:sideBySide,
    warning:matchedRivals.length?'Matching terms are not proof of current SERP competition.':
     'The saved competitor sample does not establish search competitors for this Growth action. Do not copy or benchmark against unrelated detector/review pages.'},
   content_section:section?{heading:section.heading,observed_excerpt:section.snippet,approx_observed_words:section.approx_words,source:'LIVE_OR_SAVED_HTML_EXCERPT'}:null,
