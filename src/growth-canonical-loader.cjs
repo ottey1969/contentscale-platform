@@ -11,17 +11,24 @@ async function loadGrowthTrackerEvidence(db,{pageId,clientId}={}){
   [pid,cid]);
  const page=pageResult.rows?.[0];
  if(!page)throw new Error('TRACKER_PAGE_NOT_FOUND');
- const [gscResult,caseStudyResult,aiResult,snapshotResult]=await Promise.all([
+ const responses=await Promise.allSettled([
   db.query("SELECT tracker_client_id,page_id,source_page_url,evidence_scope,query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND source_page_url=$3 AND evidence_scope='page_verified'",[cid,pid,page.url]),
   db.query("SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' LIMIT 1",[cid,pid]),
   db.query('SELECT page_id,tracker_client_id,engine,evidence_method,brand_recommended,domain_cited,exact_page_cited,citation_urls,verified_at,revision_cycle FROM tracker_ai_evidence WHERE page_id=$1 AND tracker_client_id=$2 AND is_cleared IS NOT TRUE',[pid,cid]),
   db.query('SELECT page_id,checked_at,google_competitors,ai_perplexity_competitors FROM tracker_snapshots WHERE page_id=$1 AND (google_competitors IS NOT NULL OR ai_perplexity_competitors IS NOT NULL) ORDER BY checked_at DESC,id DESC LIMIT 1',[pid])
  ]);
+ const rowset=i=>responses[i].status==='fulfilled'?responses[i].value.rows||[]:[];
+ const unavailable=responses.map((x,i)=>x.status==='rejected'?['gsc','case_studies','ai','competitor_snapshots'][i]:null).filter(Boolean);
+ // If the Case Study table is unavailable, publication must be locked rather than
+ // assuming a missing record proves absence of a protected baseline.
+ const lockUnknown=responses[1].status==='rejected';
  return {
-  page:{...page,case_study_active:(caseStudyResult.rows||[]).length>0},
-  competitorSnapshot:(snapshotResult.rows||[]).find(row=>Number(row.page_id)===pid)||null,
-  aiEvidence:(aiResult.rows||[]).filter(row=>Number(row.page_id)===pid&&Number(row.tracker_client_id)===cid),
-  gscRows:(gscResult.rows||[]).filter(row=>row.tracker_client_id===cid&&row.page_id===pid&&row.source_page_url===page.url&&row.evidence_scope==='page_verified'),
+  page:{...page,case_study_active:lockUnknown||rowset(1).length>0,
+   case_study_status_unknown:lockUnknown},
+  competitorSnapshot:rowset(3).find(row=>Number(row.page_id)===pid)||null,
+  aiEvidence:rowset(2).filter(row=>Number(row.page_id)===pid&&Number(row.tracker_client_id)===cid),
+  gscRows:rowset(0).filter(row=>row.tracker_client_id===cid&&row.page_id===pid&&row.source_page_url===page.url&&row.evidence_scope==='page_verified'),
+  optional_evidence_unavailable:unavailable,
   source:'canonical_tracker_read_only'
  };
 }
