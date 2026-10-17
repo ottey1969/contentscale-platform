@@ -51679,7 +51679,7 @@ function _renderGscSetupBanner() {
     + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#60a5fa;text-transform:uppercase;margin-bottom:8px;">Tracker workflow \u2014 GSC is optional</div>'
     + _step1
     + '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 Sort this out for me:</b> click it in the Impression Gap panel below \u2014 groups your queries into intent families with one clear verdict each.</div>'
-    + '<div><b style="color:#93c5fd;">Step 2 \u2014 Scan:</b> in the Cannibalization panel, use \ud83d\ude80 <b>Do everything</b> on any VERIFIED OVERLAP group \u2014 it runs Step 2 first if you skipped it, then scans every affected page so the brief can compare intent and recommend a safe next step.</div>'
+    + '<div><b style="color:#93c5fd;">Step 2 \u2014 Scan:</b> in the Cannibalization panel, use \ud83d\ude80 <b>Do everything</b> on any VERIFIED OVERLAP group \u2014 it runs the intent-grouping step first when needed, then scans every affected page so the brief can compare intent and recommend a safe next step.</div>'
     + '</div>';
 }
 // Show welcome on first visit (or force with ?welcome=1)
