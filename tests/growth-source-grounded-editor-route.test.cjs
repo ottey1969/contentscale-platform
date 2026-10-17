@@ -7,7 +7,7 @@ const original='<html><h1>Roof repair</h1><p>A roof inspection can establish the
 const pool={async query(sql,args){
  if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql)){writes++;throw Error('Writes forbidden')}
  if(sql.includes('FROM tracker_clients'))return {rows:args[0]==='owner-token'?[{id:4,domain:'example.org',token:'owner-token',status:'active'}]:[]};
- if(sql.includes('FROM tracker_snapshots'))return {rows:[{checked_at:'2026-10-10T08:00:00Z',google_competitors:[{url:'https://other.example/a',title:'Roof inspection guide'}],ai_perplexity_competitors:[]}]};
+ if(sql.includes('FROM tracker_snapshots'))return {rows:[{checked_at:'2026-10-10T08:00:00Z',google_competitors:[{url:'https://other.example/a',title:'Roof inspection guide'},{url:'https://other.example/detector',title:'BrandWell AI detector review'}],ai_perplexity_competitors:[]}]};
  if(sql.includes('FROM tracker_pages p'))return {rows:[{id:17,url:ownUrl,html_content:saved?original:null,keyword:'roof repair',case_study_active:active}]};
  if(sql.includes('FROM tracker_pages WHERE url=')){assert.equal(args[1],4);return{rows:[{id:17,tracker_client_id:4}]}};
  throw Error('Unexpected SQL '+sql);
@@ -27,9 +27,15 @@ async function run(token='owner-token',page_id=17){
  let r=await run();assert.equal(r.statusCode,200);assert.equal(r.body.success,true);
  assert.equal(r.body.historical_competitor_titles_used,1);
  assert.equal(r.body.auto_publishing,false);assert.equal(r.body.no_gsc_requirement,true);assert.equal(aiCalls,1);assert.equal(fetchCalls,1);
+ r=await run();assert.equal(r.statusCode,200);
+ assert.equal(aiCalls,1,'same source/query editor draft must reuse the model result');
+ assert.equal(fetchCalls,2);
  assert.equal((await run('readonly-token')).statusCode,403);
- active=true;assert.equal((await run()).statusCode,409);active=false;
- saved=true;r=await run();assert.equal(r.statusCode,200);assert.equal(fetchCalls,1);
- assert.equal(aiCalls,2);assert.equal(writes,0);
- console.log('PASS owner-only Growth AI editor draft route without GSC, CMS writes or Case Study override');
+ active=true;r=await run();assert.equal(r.statusCode,200,'research-only editorial drafts work during Case Study');
+ assert.equal(r.body.case_study_locked,true);assert.equal(r.body.review_only,true);
+ assert.equal(r.body.auto_publishing,false);assert.equal(aiCalls,2);assert.equal(fetchCalls,3);
+ active=false;
+ saved=true;r=await run();assert.equal(r.statusCode,200);assert.equal(fetchCalls,3);
+ assert.equal(aiCalls,3);assert.equal(writes,0);
+ console.log('PASS owner-only Growth draft under Case Study with safe cache, no GSC requirement, no CMS writes');
 })().catch(e=>{console.error(e);process.exitCode=1});
