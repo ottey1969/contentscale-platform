@@ -113,7 +113,7 @@ async function invoke(method,path,body,code='ok'){
  assert.match(html,/id="warmupUsed"/,'show combined sender daily progress');
  assert.match(html,/id="networkUsed"/,'show Network cap separately');
  assert.match(html,/outreach\?\.warmup/,'use canonical server provided warm-up status');
- assert.match(html,/Geen reset en geen automatische verzending/,'reassure progress is not reset');
+ assert.match(html,/Je opwarmdag verandert alleen volgens de bestaande opwarmvoortgang/i,'Warm-up progress is retained even as verified invites are sent automatically');
  assert.match(queries.find(q=>q.sql.includes("n.source='maps_acquisition'")).sql,/metadata->'acquisition'/,'use canonical Network metadata');
  assert.match(html,/Nieuwe bedrijven scannen/,'review must offer next scan');
  for(const [file,source] of [['public/lead-crawler.html',h],['public/network-acquisition.html',html]]){
