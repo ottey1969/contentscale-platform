@@ -16,6 +16,11 @@ on:
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
       - 'src/tracker-growth-cockpit.cjs'
+      - 'src/growth-public-html-reader.cjs'
+      - 'src/growth-automatic-analysis.cjs'
+      - 'src/tracker-growth-automatic-routes.cjs'
+      - 'public/growth-automatic-report-ui.js'
+      - 'tests/tracker-growth-automatic-research.test.cjs'
       - 'src/tracker-growth-snapshot-signals.cjs'
       - 'tests/tracker-growth-snapshot-signals.test.cjs'
       - 'src/tracker-growth-cms-export.cjs'
@@ -51,6 +56,11 @@ on:
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
       - 'src/tracker-growth-cockpit.cjs'
+      - 'src/growth-public-html-reader.cjs'
+      - 'src/growth-automatic-analysis.cjs'
+      - 'src/tracker-growth-automatic-routes.cjs'
+      - 'public/growth-automatic-report-ui.js'
+      - 'tests/tracker-growth-automatic-research.test.cjs'
       - 'src/tracker-growth-snapshot-signals.cjs'
       - 'tests/tracker-growth-snapshot-signals.test.cjs'
       - 'src/tracker-growth-cms-export.cjs'
@@ -92,6 +102,10 @@ jobs:
           node --check src/tracker-growth-plan.cjs
           node --check src/tracker-growth-cms-export.cjs
           node --check src/tracker-growth-snapshot-signals.cjs
+          node --check src/growth-public-html-reader.cjs
+          node --check src/growth-automatic-analysis.cjs
+          node --check src/tracker-growth-automatic-routes.cjs
+          node --check public/growth-automatic-report-ui.js
           node --check public/growth-cms-neutral-handoff.js
           node --check public/tracker-growth-ui.js
       - name: Verified cannibalization and ranking/CTR diagnosis
@@ -121,6 +135,7 @@ jobs:
           node tests/tracker-growth-export-canonical-scope.test.cjs
           node tests/tracker-growth-cms-manual-source.test.cjs
           node tests/tracker-growth-snapshot-signals.test.cjs
+          node tests/tracker-growth-automatic-research.test.cjs
           node tests/tracker-growth-measurement-share.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs
           node tests/tracker-growth-gsc-direct.test.cjs
