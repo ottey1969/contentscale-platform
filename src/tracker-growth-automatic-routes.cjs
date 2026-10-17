@@ -66,7 +66,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  }
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
-  const key=v.clientId+':'+v.id,stored=cache.get(key);
+  // Never serve a recently cached unlocked result after Case Study activation.
+  const key=v.clientId+':'+v.id+':'+(v.page.case_study_active?'locked':'unlocked')+':'+v.page.url,stored=cache.get(key);
   if(stored?.result&&Date.now()-stored.created<TTL)
    return res.set('Cache-Control','private, no-store').json(stored.result);
   if(stored?.promise){
