@@ -10,7 +10,7 @@ assert.equal(candidate({...source,address:'New York, NY'}),null);
 assert.equal(candidate({...source,phone:''}),null);
 assert.equal(candidate({...source,website:'https://yelp.com/foo'}),null);
 const routes={},queries=[];
-const app={get:(path,fn)=>routes['GET '+path]=fn,post:(path,fn)=>routes['POST '+path]=fn};
+const app={get:(path,fn)=>{if(!routes['GET '+path])routes['GET '+path]=fn},post:(path,fn)=>routes['POST '+path]=fn};
 const pool={query:async(sql,args)=>{
  queries.push({sql,args});
  if(sql.includes('INSERT INTO network_directory_businesses'))return {rows:queries.filter(x=>x.sql.includes('INSERT INTO network_directory_businesses')).length===1?[{id:15}]:[]};
