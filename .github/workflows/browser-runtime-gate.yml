@@ -1,0 +1,27 @@
+name: Canonical Chromium safety gate
+on:
+  pull_request:
+    paths:
+      - 'src/browser-manager.cjs'
+      - 'src/browser-manager.test.cjs'
+      - 'scripts/repair-canonical-browser.cjs'
+      - 'scripts/repair-canonical-browser.test.cjs'
+      - 'index.cjs'
+      - '.github/workflows/browser-runtime-gate.yml'
+  workflow_dispatch:
+jobs:
+  browser-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Browser manager and canonical patch unit contracts
+        run: |
+          node src/browser-manager.test.cjs
+          node scripts/repair-canonical-browser.test.cjs
+      - name: Patch canonical server and syntax check
+        run: |
+          node -e "const fs=require('node:fs');const p=require('./scripts/repair-canonical-browser.cjs').patch;const f='src/index.js';const s=fs.readFileSync(f,'utf8');const n=p(s);if(!n.includes('startup preflight:'))throw Error('browser launcher missing');fs.writeFileSync(f,n)"
+          node --check src/index.js
