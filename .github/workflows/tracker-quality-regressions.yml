@@ -12,6 +12,12 @@ on:
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
       - 'src/tracker-growth-cockpit.cjs'
+      - 'src/tracker-growth-cms-export.cjs'
+      - 'src/growth-cms-handoff.cjs'
+      - 'public/growth-cms-neutral-handoff.html'
+      - 'public/growth-cms-neutral-handoff.js'
+      - 'src/growth-cms-handoff.test.cjs'
+      - 'tests/tracker-growth-cms-export.test.cjs'
       - 'src/tracker-growth-measurement.cjs'
       - 'tests/tracker-growth-no-gsc-research.test.cjs'
       - 'tests/tracker-growth-measurement-share.test.cjs'
@@ -33,6 +39,12 @@ on:
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
       - 'src/tracker-growth-cockpit.cjs'
+      - 'src/tracker-growth-cms-export.cjs'
+      - 'src/growth-cms-handoff.cjs'
+      - 'public/growth-cms-neutral-handoff.html'
+      - 'public/growth-cms-neutral-handoff.js'
+      - 'src/growth-cms-handoff.test.cjs'
+      - 'tests/tracker-growth-cms-export.test.cjs'
       - 'src/tracker-growth-measurement.cjs'
       - 'tests/tracker-growth-no-gsc-research.test.cjs'
       - 'tests/tracker-growth-measurement-share.test.cjs'
@@ -62,6 +74,8 @@ jobs:
           node --check src/brief-quality.js
           node --check src/brief-quality-hook.js
           node --check src/tracker-growth-plan.cjs
+          node --check src/tracker-growth-cms-export.cjs
+          node --check public/growth-cms-neutral-handoff.js
           node --check public/tracker-growth-ui.js
       - name: Verified cannibalization and ranking/CTR diagnosis
         run: |
@@ -83,6 +97,8 @@ jobs:
           node tests/tracker-growth-execution.test.cjs
           node tests/tracker-growth-measurement.test.cjs
           node tests/tracker-growth-no-gsc-research.test.cjs
+          node src/growth-cms-handoff.test.cjs
+          node tests/tracker-growth-cms-export.test.cjs
           node tests/tracker-growth-measurement-share.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs
           node tests/tracker-growth-gsc-direct.test.cjs
