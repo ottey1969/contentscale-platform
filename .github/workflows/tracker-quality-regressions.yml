@@ -23,6 +23,8 @@ on:
       - 'src/growth-intent-site-graph.cjs'
       - 'tests/growth-intent-site-graph.test.cjs'
       - 'src/tracker-growth-automatic-routes.cjs'
+      - 'src/growth-research-handoff-suggestions.cjs'
+      - 'tests/growth-research-handoff-suggestions.test.cjs'
       - 'public/growth-automatic-report-ui.js'
       - 'tests/tracker-growth-automatic-research.test.cjs'
       - 'src/tracker-growth-snapshot-signals.cjs'
@@ -68,6 +70,8 @@ on:
       - 'src/growth-intent-site-graph.cjs'
       - 'tests/growth-intent-site-graph.test.cjs'
       - 'src/tracker-growth-automatic-routes.cjs'
+      - 'src/growth-research-handoff-suggestions.cjs'
+      - 'tests/growth-research-handoff-suggestions.test.cjs'
       - 'public/growth-automatic-report-ui.js'
       - 'tests/tracker-growth-automatic-research.test.cjs'
       - 'src/tracker-growth-snapshot-signals.cjs'
@@ -115,6 +119,7 @@ jobs:
           node --check src/growth-public-html-reader.cjs
           node --check src/growth-automatic-analysis.cjs
           node --check src/tracker-growth-automatic-routes.cjs
+          node --check src/growth-research-handoff-suggestions.cjs
           node --check public/growth-automatic-report-ui.js
           node --check public/growth-cms-neutral-handoff.js
           node --check public/tracker-growth-ui.js
@@ -147,6 +152,7 @@ jobs:
           node tests/tracker-growth-cms-live-source.test.cjs
           node tests/tracker-growth-snapshot-signals.test.cjs
           node tests/tracker-growth-automatic-research.test.cjs
+          node tests/growth-research-handoff-suggestions.test.cjs
           node src/growth-live-routes.test.cjs
           node src/growth-canonical-loader-optional.test.cjs
           node tests/growth-intent-site-graph.test.cjs
