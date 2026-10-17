@@ -9,8 +9,10 @@ function patch(source){
  if(typeof source!=='string'||source.length<5_000_000)throw Error('CANONICAL_TRACKER_REQUIRED');
  const pos=source.indexOf(start);
  if(pos<0||source.indexOf(start,pos+start.length)>=0)throw Error('TRACKER_HTML_DEFINITION_UNEXPECTED');
- const after=source.indexOf("app.get('/track/:token'",pos);
- if(after<pos)throw Error('TRACKER_ROUTE_MISSING');
+ // The canonical route is registered earlier in index.js; only touch the first
+ // 100 KB of the known client template (header, toolbar, and welcome screen).
+ const after=pos+100000;
+ if(after>source.length)throw Error('TRACKER_TEMPLATE_TOO_SHORT');
  let fragment=source.slice(pos,after);
  if(fragment.includes(marker)){
   if(!fragment.includes(scriptTag))throw Error('TRACKER_NAV_MISSING_LANGUAGE_CLIENT');
