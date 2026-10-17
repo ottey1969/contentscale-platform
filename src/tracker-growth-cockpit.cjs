@@ -1,5 +1,6 @@
 'use strict';
 const {URL}=require('node:url');
+const {inspectSavedGrowthHtml}=require('./tracker-growth-snapshot-signals.cjs');
 const {registerTrackerGrowthCmsExport}=require('./tracker-growth-cms-export.cjs');
 const escapeHtml=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -99,6 +100,7 @@ function registerGrowthCockpit(app,pool){
    req.growth.gsc_evidence_status=gscAvailable?(evidenceRows.length?'AVAILABLE':'NEEDS_ACCESS'):'UNAVAILABLE';
    req.growth.gsc_connected_required_for_access=false;
    req.growth.can_edit=client.token===req.params.token;
+   req.growthTrackerClientId=client.id;
    next();
   }catch(e){res.status(503).json({success:false,error:'Verified growth evidence temporarily unavailable'})}
  }
@@ -131,17 +133,40 @@ function registerGrowthCockpit(app,pool){
   ];
   res.set('Cache-Control','no-store').type('text/plain; charset=utf-8').send(lines.join('\n'));
  });
- app.get('/api/tracker-client/:token/growth/research-brief',data,(req,res)=>{
+ app.get('/api/tracker-client/:token/growth/research-brief',data,async(req,res)=>{
   const id=String(req.query&&req.query.page_id||'');
   if(!/^[1-9][0-9]{0,12}$/.test(id))return res.status(400).type('text').send('Select an existing tracked page');
   const page=req.growth.pages.find(p=>String(p.id)===id);
   if(!page)return res.status(404).type('text').send('Tracked page not found for this website');
+  // Optional saved snapshot evidence: no network fetch, scanner or Google account.
+  let observations=inspectSavedGrowthHtml(null,page.url);
+  try{
+   const saved=(await pool.query('SELECT LEFT(html_content,120000) AS saved_html, LENGTH(html_content)>120000 AS excerpt_truncated FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2 LIMIT 1',[req.growthTrackerClientId,Number(id)])).rows[0];
+   observations=inspectSavedGrowthHtml(saved?.saved_html||null,page.url);
+   if(observations.available)observations.excerpt_truncated=!!saved?.excerpt_truncated;
+  }catch(e){console.warn('[growth-research] optional saved snapshot unavailable',String(e.code||'unknown'))}
+  const observed=observations.available?[
+   'Saved HTML evidence: OBSERVED HISTORICAL EXCERPT, NOT VERIFIED LIVE',
+   'HTML excerpt truncated: '+observations.excerpt_truncated,
+   'Title observed: '+observations.title_observed+'; meta description observed: '+observations.meta_description_observed,
+   'H1 count observed: '+observations.h1_count_observed+'; H2 count observed: '+observations.h2_count_observed,
+   'Canonical tag observed: '+observations.canonical_tag_observed+'; noindex directive observed: '+observations.noindex_directive_observed,
+   'Links observed: '+observations.internal_links_observed+' internal, '+observations.external_links_observed+' external',
+   'Images in excerpt: '+observations.images_observed+'; missing alt in excerpt: '+observations.images_missing_alt_observed,
+   'Approximate words in excerpt: '+observations.approx_excerpt_words,
+   observations.caution
+  ]:[
+   'Saved HTML evidence: NOT AVAILABLE — no conclusion about missing headings, metadata or content',
+   observations.caution
+  ];
   const lines=[
    'CONTENTSCALE — GROWTH RESEARCH BRIEF (NO GSC REQUIRED)',
    'Tracked page: '+page.url,
    'Working keyword (not a verified ranking query): '+(page.keyword||'Not specified'),
    'Evidence status: '+(page.gsc_present?'Some saved page-level GSC fields; fresh exact-page query validation still needed':'GSC not supplied — clicks, impressions and rankings UNKNOWN'),
    'Opportunity: '+page.opportunity,
+   ...observed,
+   '',
    'Proposal only. No competitor findings, Google positions or click uplift are claimed as verified.',
    'Case Study policy: '+(page.case_study_active?'LOCKED — research only, do not publish or change the existing baseline':'Changes need human review and actual publication evidence'),
    '',
