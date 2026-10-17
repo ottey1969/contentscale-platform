@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/growth-one-action-decision*.cjs'
       - 'src/growth-public-search-discovery*.cjs'
+      - 'src/growth-optional-google-fallback*.cjs'
       - 'src/growth-public-html-reader.cjs'
       - 'src/growth-practical-brief.cjs'
       - 'tests/growth-live-query-competitors.test.cjs'
@@ -17,6 +18,7 @@ on:
     paths:
       - 'src/growth-one-action-decision*.cjs'
       - 'src/growth-public-search-discovery*.cjs'
+      - 'src/growth-optional-google-fallback*.cjs'
       - 'src/growth-public-html-reader.cjs'
       - 'src/growth-practical-brief.cjs'
       - 'tests/growth-live-query-competitors.test.cjs'
@@ -40,6 +42,7 @@ jobs:
       - name: Public query discovery, no paid provider and live competitor route
         run: |
           node src/growth-public-search-discovery.test.cjs
+          node src/growth-optional-google-fallback.test.cjs
           node tests/growth-live-query-competitors.test.cjs
           node tests/tracker-growth-automatic-research.test.cjs
       - name: New and existing client JS syntax
