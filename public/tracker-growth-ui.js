@@ -62,9 +62,99 @@
     el.textContent=lang==='nl'?(map[el.dataset.csOrig]||el.dataset.csOrig):el.dataset.csOrig;
    });
   }
+  localizeVisibleText(lang);
  }
+
+ // Translate known interface copy only; leave user-provided query, URL and evidence unchanged.
+ var NL_UI={
+  'Growth Cockpit':'Growth-overzicht',
+  'Prioritized page opportunities':'Pagina’s met groeikansen',
+  'Top click opportunities — verified non-brand queries':'Klikkansen — geverifieerde niet-merkzoekopdrachten',
+  'Research opportunities without GSC':'Onderzoekskansen zonder GSC',
+  'Open research brief · no GSC required':'Open onderzoeksbrief · GSC niet nodig',
+  'Open / copy execution brief':'Open of kopieer uitvoeringsbrief',
+  'View publication measurement readiness':'Bekijk of publicatieresultaten meetbaar zijn',
+  'Action plan · 4 steps':'Actieplan · 4 stappen',
+  'Record actual publication':'Registreer echte publicatie',
+  'Publication date and time':'Publicatiedatum en -tijd',
+  'What actually changed?':'Wat is daadwerkelijk aangepast?',
+  'Save publication checkpoint':'Publicatie registreren',
+  'Saving…':'Opslaan…',
+  'Recorded. Awaiting comparable GSC measurements.':'Geregistreerd. Vergelijkbare GSC-metingen ontbreken nog.',
+  'Case Study locked':'Case Study vergrendeld',
+  'Query / page':'Zoekopdracht / pagina',
+  'Page':'Pagina',
+  'Impressions':'Vertoningen',
+  'Clicks':'Klikken',
+  'Position':'Positie',
+  'Diagnosis and action':'Analyse en actie',
+  'Next step':'Volgende stap',
+  'Needs access':'GSC-toegang nodig',
+  'RANKING_GAP':'Positiekans — onderzoek nodig',
+  'CTR_REVIEW':'CTR-analyse nodig',
+  'CONTENT_RESEARCH':'Inhoudsonderzoek zonder GSC',
+  'MEASURE':'Meetgegevens verzamelen',
+  'SNIPPET_AND_INTENT_REVIEW':'Snippet en zoekintentie onderzoeken',
+  'STRIKING_DISTANCE':'Binnen bereik top 10 — onderzoeken',
+  'RANKING_AND_CONTENT':'Positie en inhoud onderzoeken',
+  'LONG_TERM_VISIBILITY':'Zichtbaarheid op langere termijn',
+  'Measured click growth':'Gemeten klikgroei',
+  'Loading records…':'Meetgegevens laden…',
+  'Step 1 — Record an actual published optimization':'Stap 1 — Registreer een gepubliceerde verbetering',
+  '← Return to Growth Cockpit':'← Terug naar Growth',
+  '← Growth Cockpit':'← Growth-overzicht',
+  'Import both periods from GSC':'Importeer beide perioden uit GSC',
+  'Enter the two exact GSC windows':'Voer de twee exacte GSC-perioden in',
+  'GSC page/query export':'GSC-export per pagina en zoekopdracht',
+  'Manually transcribed GSC page/query':'Handmatig overgenomen GSC-paginagegevens',
+  'Read-only shared view — the account owner can record actual publication and GSC windows. The measurement evidence above remains visible.':'Gedeelde weergave, alleen lezen — uitsluitend de eigenaar kan publicaties en GSC-perioden registreren. De meetgegevens hierboven blijven zichtbaar.',
+  'Research page intent, factual quality, content coverage and internal links; GSC is optional for starting this review':'Onderzoek zoekintentie, feiten, inhoud en interne links; GSC is niet nodig om te beginnen',
+  'Collect comparable fresh GSC evidence':'Verzamel recente vergelijkbare GSC-gegevens',
+  '1. Add Sitemap (GSC optional)':'1. Voeg sitemap toe (GSC optioneel)',
+  '✨ Guided Tour':'✨ Rondleiding',
+  '← Back':'← Vorige',
+  'Next →':'Volgende →',
+  'Finish tour ✓':'Rondleiding afronden ✓',
+  'OVERVIEW':'OVERZICHT',
+  'SETUP':'INSTELLEN',
+  'DATA':'GEGEVENS',
+  'WORKSPACE':'WERKRUIMTE',
+  'PRIORITY':'PRIORITEIT',
+  'EXECUTION':'UITVOERING',
+  'GROWTH':'GROEI',
+  'Open Growth directly':'Open Growth direct',
+  'Visibility at a glance':'Zichtbaarheid in één oogopslag',
+  'Track an existing page':'Volg een bestaande pagina',
+  'Prewrite is only for a new spoke':'Prewrite is alleen voor een nieuwe ondersteunende pagina',
+  'Connect real search demand':'Koppel echte zoekvraag',
+  'Protect the site architecture':'Bescherm de websitestructuur',
+  'Choose the brief language':'Kies de taal van de SEO-brief',
+  'Control what AI may claim':'Bepaal welke claims AI mag gebruiken',
+  'Run Gap Analysis before writing':'Voer eerst een gap-analyse uit',
+  'Scan real opportunities':'Scan echte kansen',
+  'Control the scan scope':'Bepaal welke pagina’s worden gescand',
+  'One card, one decision cycle':'Eén paginakaart, één besliscyclus',
+  'Verify five AI engines':'Controleer vijf AI-systemen',
+  'Review the implementation plan':'Beoordeel het uitvoeringsplan'
+ };
+ var EN_UI={};Object.keys(NL_UI).forEach(function(k){if(!EN_UI[NL_UI[k]])EN_UI[NL_UI[k]]=k});
+ function localizeVisibleText(lang){
+  if(!document.body||typeof document.createTreeWalker!=='function')return;
+  var dictionary=lang==='nl'?NL_UI:EN_UI,walker=document.createTreeWalker(document.body,4),node;
+  while((node=walker.nextNode())){
+   var p=node.parentElement;if(!p)continue;
+   if(p.closest&&p.closest('script,style,pre,code,input,textarea,[contenteditable="true"],td:first-child strong,td:first-child a'))continue;
+   var v=node.nodeValue,k=v.trim();
+   if(!k||!Object.prototype.hasOwnProperty.call(dictionary,k))continue;
+   node.nodeValue=v.replace(k,dictionary[k]);
+  }
+  if(location.pathname.indexOf('/growth/measurement')>=0){
+   document.title=lang==='nl'?'Growth-metingen · ContentScale':'Growth measurement · ContentScale';
+  }
+ }
+
  function init(){
-  var path=location.pathname,match=path.match(/^\/track\/([^/]+)(?:\/growth)?\/?$/);
+  var path=location.pathname,match=path.match(/^\/track\/([^/]+)(?:\/growth(?:\/measurement)?)?\/?$/);
   if(!match)return;
   var toolbar=document.getElementById('gbpAdvisorNav');
   if(toolbar){
@@ -84,11 +174,19 @@
    select.style.cssText='color:#dbeafe;background:#111827;border:1px solid #475569;border-radius:7px;padding:7px;font-size:12px;';
    [['en','EN'],['nl','NL']].forEach(function(pair){var o=document.createElement('option');o.value=pair[0];o.textContent=pair[1];select.appendChild(o)});
    if(toolbar){toolbar.parentNode.insertBefore(select,toolbar)}
-   else{var first=document.querySelector('body > p');if(first)first.appendChild(select)}
+   else{var first=document.querySelector('body > p');if(first)first.appendChild(select);else if(document.body)document.body.insertBefore(select,document.body.firstChild)}
   }
   select.addEventListener('change',function(){setLang(select.value)});
   apply(getLang());
   // GSC status resolves asynchronously. Keep any optional advice in the chosen language.
+  var records=document.getElementById('records');
+  if(records&&typeof MutationObserver==='function'){
+   new MutationObserver(function(){apply(getLang())}).observe(records,{childList:true,subtree:true});
+  }
+  var tip=document.getElementById('tourTip');
+  if(tip&&typeof MutationObserver==='function'){
+   new MutationObserver(function(){apply(getLang())}).observe(tip,{childList:true,subtree:true});
+  }
   var banner=document.getElementById('gscSetupBanner');
   if(banner&&typeof MutationObserver==='function'){
    var observer=new MutationObserver(function(){apply(getLang())});
