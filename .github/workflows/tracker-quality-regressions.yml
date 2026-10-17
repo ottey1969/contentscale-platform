@@ -24,6 +24,7 @@ on:
       - 'public/growth-cms-neutral-handoff.js'
       - 'src/growth-cms-handoff.test.cjs'
       - 'tests/tracker-growth-cms-export.test.cjs'
+      - 'tests/tracker-growth-cms-manual-source.test.cjs'
       - 'src/tracker-growth-measurement.cjs'
       - 'tests/tracker-growth-no-gsc-research.test.cjs'
       - 'tests/tracker-growth-measurement-share.test.cjs'
@@ -57,6 +58,7 @@ on:
       - 'public/growth-cms-neutral-handoff.js'
       - 'src/growth-cms-handoff.test.cjs'
       - 'tests/tracker-growth-cms-export.test.cjs'
+      - 'tests/tracker-growth-cms-manual-source.test.cjs'
       - 'src/tracker-growth-measurement.cjs'
       - 'tests/tracker-growth-no-gsc-research.test.cjs'
       - 'tests/tracker-growth-measurement-share.test.cjs'
@@ -114,6 +116,7 @@ jobs:
           node tests/tracker-growth-no-gsc-research.test.cjs
           node src/growth-cms-handoff.test.cjs
           node tests/tracker-growth-cms-export.test.cjs
+          node tests/tracker-growth-cms-manual-source.test.cjs
           node tests/tracker-growth-snapshot-signals.test.cjs
           node tests/tracker-growth-measurement-share.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs

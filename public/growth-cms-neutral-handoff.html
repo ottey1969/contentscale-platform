@@ -23,6 +23,13 @@ button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;flex-wrap:wr
 <h1>Prepare a CMS-independent Growth handoff</h1>
 <p class="note">Work on the existing page, not a duplicate. GSC and paid providers are optional. The package does not publish any content or change the client's website.</p>
 <div class="actions"><button type="button" id="checkSource">1. Check original Tracker page</button><span id="sourceStatus" role="status"></span></div>
+<section id="manualSourceWrap" class="note" hidden aria-label="Manual original page HTML">
+<h2>Optional manual source when the Tracker has no saved HTML</h2>
+<p>Paste the existing page's original HTML from your website editor or a recent saved export. This is <strong>not verified against the live website</strong> and will never be stored in Tracker or published automatically. Do not paste passwords, cookies, API tokens, private customer data or unpublished confidential content.</p>
+<label for="manualOriginalHtml">Original existing page HTML (H1 and paragraph required; 120–120,000 bytes)</label>
+<textarea id="manualOriginalHtml" rows="10" placeholder="&lt;main&gt;&lt;h1&gt;Original page heading&lt;/h1&gt;&lt;p&gt;Original published page content…&lt;/p&gt;&lt;/main&gt;"></textarea>
+<label class="check"><input type="checkbox" id="manualAcknowledged"><span>I supplied this historical page source and understand it is not live-verified. I will check the real page before implementing anything.</span></label>
+</section>
 <form id="handoffForm">
 <fieldset><legend>2. Review the existing page and evidence</legend>
 <p id="canonicalUrl" class="small">Original page not checked yet.</p>
