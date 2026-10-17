@@ -54,6 +54,7 @@
    const data=await response.json();
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
+   void loadResearchSuggestions(data);
    var needsManual=data.manual_source_required===true;
    $('manualSourceWrap').hidden=!needsManual;
    $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
