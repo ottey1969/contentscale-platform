@@ -5,6 +5,7 @@ on:
       - 'src/growth-evidence-*.cjs'
       - 'src/growth-tracker-evidence-adapter*.cjs'
       - 'src/growth-canonical-loader*.cjs'
+      - 'src/growth-canonical-loader-optional.test.cjs'
       - 'src/growth-canonical-review*.cjs'
       - 'src/growth-opportunity-plan*.cjs'
       - 'src/growth-ai-visibility-summary*.cjs'
@@ -67,6 +68,8 @@ jobs:
         run: node src/growth-evidence-render-gate.test.cjs
       - name: Canonical evidence loader
         run: node src/growth-canonical-loader.test.cjs
+      - name: Optional GSC/AI evidence and protected Case Study fail-closed
+        run: node src/growth-canonical-loader-optional.test.cjs
       - name: Canonical review integration
         run: node src/growth-canonical-review.test.cjs
       - name: Verified AI visibility summaries
