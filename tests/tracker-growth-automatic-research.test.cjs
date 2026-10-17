@@ -47,6 +47,7 @@ async function testRoutes(){
   if(sql.includes('FROM tracker_snapshots'))return {rows:[snapshot]};
   if(sql.includes('FROM tracker_ai_evidence'))return {rows:ai};
   if(sql.includes('FROM tracker_gsc_queries'))return {rows:gsc};
+  if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:[{id:11,url:'https://roof.example/roof-repair-guide/',keyword:'roof repair guide'}]};
   throw Error('Unexpected database access '+sql.slice(0,120));
  }};
  const middleware=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={pages:[{id:7,url:own,keyword:'roof repair',case_study_active:true}]};next()};
