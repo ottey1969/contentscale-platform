@@ -5,7 +5,7 @@ const {summarizeGrowthAiVisibility}=require('./growth-ai-visibility-summary.cjs'
 const {buildTrackerGrowthPlan}=require('./tracker-growth-plan.cjs');
 const {classifyGrowthIntent,suggestInternalGrowthLinks}=require('./growth-intent-site-graph.cjs');
 const {chooseGrowthNextAction,topicAligned,queryFit}=require('./growth-one-action-decision.cjs');
-const {buildGrowthPracticalBrief}=require('./growth-practical-brief.cjs');
+const {buildGrowthPracticalBrief,sectionEvidence}=require('./growth-practical-brief.cjs');
 function plain(s){return String(s||'').replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|quot|nbsp|lt|gt|#39);/g,' ').replace(/\s+/g,' ').trim()}
 function excerpt(html,limit=8){
  if(typeof html!=='string')return {title:null,description:null,h1:[],h2:[],paragraph_samples:[]};
@@ -53,6 +53,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
   return {url:x.url,source:'LIVE_COMPETITOR_HTML_OBSERVED',discovery_source:x.search_source||'HISTORICAL_SERP',
    search_query:x.search_query||null,retrieved_at:x.live.retrieved_at,
    title:summary.title,h1:summary.h1,h2:summary.h2,paragraph_samples:summary.paragraph_samples,description:summary.description,
+   observed_focus_section:sectionEvidence(x.live.html,focus)?(()=>{const e=sectionEvidence(x.live.html,focus);return {heading:e.heading,excerpt:e.snippet.slice(0,200),approx_words:e.approx_words}})():null,
    signals:{...inspectSavedGrowthHtml(x.live.html,x.url),evidence_scope:'LIVE_COMPETITOR_HTML_OBSERVED',
     caution:'HTTP HTML retrieved at the shown time, not browser-rendered. A search listing does not establish a current Google ranking.'}};
  });
