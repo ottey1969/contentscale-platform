@@ -36,11 +36,14 @@ function patch(source){
  function exact(s,n){if(source.split(s).length!==2)throw Error('AMBIGUOUS_'+n)}
  exact(current,'NEXT_ACTION');
  exact(stale,'SAFETY_STALE');
- exact(legacy,'LEGACY_MONITORING');
- exact(next,'CASE_STUDY_SCAN');
- let a=source.indexOf(legacy),e=source.indexOf(next,a);
- if(e<=a||e-a>4000)throw Error('LEGACY_STATE_BOUNDARY_CHANGED');
- source=source.slice(0,a)+source.slice(e);
+ const legacyCount=source.split(legacy).length-1;
+ if(legacyCount>1)throw Error('AMBIGUOUS_LEGACY_MONITORING');
+ if(legacyCount===1){
+  exact(next,'CASE_STUDY_SCAN');
+  let a=source.indexOf(legacy),e=source.indexOf(next,a);
+  if(e<=a||e-a>4000)throw Error('LEGACY_STATE_BOUNDARY_CHANGED');
+  source=source.slice(0,a)+source.slice(e);
+ } else console.log('Existing main has no competing legacy monitoring override; preserve current branch structure.');
  source=source.replace(current,'\n'+shared+'\n'+current);
  source=source.replace(stale,guard+stale);
  const old='SCAN COMPLETE · OPEN THE BRIEF',count=source.split(old).length-1;
