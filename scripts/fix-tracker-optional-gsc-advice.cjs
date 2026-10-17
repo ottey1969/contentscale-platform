@@ -1,5 +1,6 @@
 'use strict';
 // Idempotent canonical patch, no DB writes, no token or GSC permission changes.
+// Runs against the same src/index.js used by the production Tracker route.
 const fs=require('node:fs'),path=require('node:path');
 const file=path.resolve(__dirname,'../src/index.js');
 const start='function _renderGscRequiredGate(d) {';
