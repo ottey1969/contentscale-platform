@@ -26,7 +26,7 @@ function validateUrl(raw){
  url.hash='';
  return url;
 }
-async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,limit=120000,timeout=6500,redirects=2}={}){
+async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,limit=120000,timeout=6500,redirects=2,allowFeedXml=false}={}){
  let url=validateUrl(raw);
  for(let n=0;n<=redirects;n++){
   const addresses=await lookup(url.hostname,{family:4,all:true,verbatim:true});
@@ -48,7 +48,7 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
     }
     if(status!==200){res.resume();return done(Object.assign(Error('HTTP_'+status),{code:'HTTP_'+status}))}
     const mime=String(res.headers['content-type']||'').toLowerCase();
-    if(!/(text\/html|application\/xhtml\+xml)/.test(mime)){
+    if(!/(text\/html|application\/xhtml\+xml)/.test(mime)&&!(allowFeedXml&&url.hostname==='www.bing.com'&&/\b(application\/(?:rss\+xml|xml)|text\/xml)\b/.test(mime))){
      res.resume();return done(Object.assign(Error('NOT_HTML'),{code:'NOT_HTML'}));
     }
     const chunks=[];let size=0,truncated=false;
