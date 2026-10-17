@@ -16,6 +16,30 @@
   $('download').disabled=!(safe.source&&$('approved').checked&&manualReady);
  }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+ async function loadResearchSuggestions(src){
+  var target=$('growthResearchHints');
+  try{
+   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
+   var res=await fetch(url,{cache:'no-store',credentials:'same-origin'});
+   if(!res.ok)throw Error('Research unavailable');
+   var d=await res.json(),x=d.handoff_suggestions||{};
+   if(d.success!==true||d.page_id!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
+   if(!$('query').value&&x.query)$('query').value=x.query;
+   if(!$('title').value&&x.title)$('title').value=x.title;
+   if(!$('meta').value&&x.meta)$('meta').value=x.meta;
+   if(x.verified_query&&$('evidence').value==='needs_access')$('evidence').value='verified';
+   else if(x.source_type!=='NO_PAGE_HTML'&&$('evidence').value==='needs_access')$('evidence').value='observed';
+   target.hidden=false;target.textContent='';
+   var label=document.createElement('strong');label.textContent='Automatic Growth research: editor review';target.appendChild(label);
+   var note=document.createElement('p');
+   note.textContent='Existing metadata and observed exact-page evidence were copied where available. New facts, content and publication approval are never invented.';
+   target.appendChild(note);
+   for(var item of (x.findings||[]).slice(0,5)){
+    var p=document.createElement('p');p.textContent=item.priority+' · '+item.action;target.appendChild(p);
+   }
+   ready();
+  }catch(e){target.hidden=false;target.textContent='Research could not be loaded. Manual review stays available without GSC.';}
+ }
  if(!Number.isSafeInteger(pageId)||pageId<1){
   status('sourceStatus','A valid tracked page ID is required. Return to Growth and select a page.',true);
   $('checkSource').disabled=true;
