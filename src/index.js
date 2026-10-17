@@ -45097,6 +45097,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
   .cs-btn{font-size:10px!important;padding:6px 8px!important;}
 }
 </style>
+<script defer src="/tracker-growth-ui.js"></script>
 </head>
 <body>
 
@@ -45114,8 +45115,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
         <div class="wl-step" style="animation-delay:0s">
           <div class="wl-step-num">1</div>
           <div class="wl-step-content">
-            <div class="wl-step-title">1. Add Sitemap + GSC</div>
-            <div class="wl-step-desc">For a new client, add the sitemap and import both GSC Pages and Queries. This identifies real URLs, demand and current performance.</div>
+            <div class="wl-step-title">1. Add Sitemap (GSC optional)</div>
+            <div class="wl-step-desc">Add your sitemap to begin tracking. Google Search Console is optional and provides verified queries, clicks, impressions and rankings when connected.</div>
           </div>
         </div>
         <div class="wl-step" style="animation-delay:0.15s">
@@ -45212,6 +45213,8 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     <button id="prewriteBriefBtn" class="cs-btn" onclick="showPrewriteBriefModal()" style="border-color:#f59e0b;color:#fbbf24;font-weight:700;" title="No page yet? Get a brief for a keyword before you write anything.">&#x1f3af; Pre-Write Brief</button>
     <button id="gscBtn" class="cs-btn" onclick="gscAction()" title="Google Search Console" style="border-color:#374151;color:#6b7280;"><i class="fas fa-chart-line"></i> GSC off</button>
     <!-- v381: GBP remains a separate optional workspace; it never changes Tracker scores by itself. -->
+        <!-- CONTENTSCALE_SHARED_TRACKER_GROWTH_NAV_V1 -->
+    <a id="growthDirectNav" class="cs-btn" href="/track/__TOKEN__/growth" style="border-color:#2563eb;color:#bfdbfe;font-weight:800;background:#0b244d;" title="Open Growth directly; GSC is optional">&#8599; Growth</a>
     <a id="gbpAdvisorNav" class="cs-btn" href="/track/__TOKEN__/gbp" style="border-color:#22c55e;color:#86efac;font-weight:700;" title="Optional local-business workspace: compare manual GBP facts with the website and prepare posts">&#x1f4cd; GBP Advisor</a>
     <button class="cs-btn" onclick="showImportModal('paste')" style="border-color:#6b7280;color:#6b7280;"><i class="fas fa-paste"></i> Paste</button>
     <button id="sitemapBtn" class="cs-btn" onclick="showImportModal('sitemap')" style="border-color:#38bdf8;color:#38bdf8;" title="Import from sitemap"><i class="fas fa-list"></i> Sitemap</button>
