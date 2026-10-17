@@ -14,7 +14,7 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
    const state=await loadGrowthTrackerEvidence(pool,identity);
    const url=state.page.url;
    const [dups,mapping,profiles]=await Promise.all([
-    pool.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 LIMIT 3',[url]),
+    pool.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 AND tracker_client_id=$2 LIMIT 3',[url,identity.clientId]),
     pool.query('SELECT wordpress_post_id,wordpress_url FROM growth_wordpress_page_mapping WHERE tracker_page_id=$1 AND tracker_client_id=$2 LIMIT 2',[identity.pageId,identity.clientId]),
     pool.query("SELECT id,wp_url FROM content_profiles WHERE NULLIF(BTRIM(wp_user),'') IS NOT NULL AND NULLIF(BTRIM(wp_app_password),'') IS NOT NULL")
    ]);
