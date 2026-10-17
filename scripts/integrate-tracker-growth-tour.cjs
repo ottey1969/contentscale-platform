@@ -2,6 +2,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const file=path.resolve(__dirname,'../src/index.js');
 const marker='CONTENTSCALE_DIRECT_GROWTH_TOUR_STEP_V1';
+// The tour describes existing navigation only; it never triggers a scan.
 const anchor='function _tourBuildSteps(){';
 const extra="// CONTENTSCALE_DIRECT_GROWTH_TOUR_STEP_V1 — shared existing Tracker tour.\n"+
  "_tourSteps.push({sel:'#growthDirectNav',phase:'GROWTH',title:'Open Growth directly',text:'Use this button to open Growth at any time. Neither GSC nor a new scan or OpenBrief is required to enter. Without GSC, verified click data remains Needs access.'});\n";
