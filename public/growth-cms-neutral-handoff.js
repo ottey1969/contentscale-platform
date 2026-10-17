@@ -77,6 +77,7 @@
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
    void loadResearchSuggestions(data);
+   $('generateEditorialDraft').disabled=false;
    var needsManual=data.manual_source_required===true;
    $('manualSourceWrap').hidden=!needsManual;
    $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
@@ -110,6 +111,44 @@
   }catch(err){status('sourceStatus',err.message||'Could not verify original source',true)}
   finally{this.disabled=false;ready()}
  });
+ $('generateEditorialDraft').addEventListener('click',async function(){
+  if(!safe.source)return;
+  var btn=this;btn.disabled=true;status('aiDraftStatus','Preparing a source-bounded editorial draft…',false);
+  try{
+   var r=await fetch(base+'/editor-draft',{method:'POST',credentials:'same-origin',
+    cache:'no-store',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({page_id:pageId,focus_query:$('query').value.trim()})});
+   var output=await r.json();
+   if(!r.ok||output.success!==true)throw Error(output.code||'Draft not available');
+   if(output.status!=='AI_DRAFT_REVIEW_REQUIRED'||!output.draft){
+    status('aiDraftStatus','AI is optional: '+(output.status||'Unconfigured')+'. You can continue with the regular reviewed CMS handoff.',true);
+    return;
+   }
+   if(output.canonical_url!==safe.source.canonical_url||Number(output.page_id)!==pageId)
+    throw Error('Source identity changed');
+   var draft=output.draft;
+   if(draft.seo_title)$('title').value=draft.seo_title;
+   if(draft.meta_description)$('meta').value=draft.meta_description;
+   var parts=draft.sections||[];
+   if(parts.length){
+    $('heading').value=parts[0].h2;
+    $('copy').value=(parts[0].paragraphs||[]).join('\n\n');
+   }
+   var wrap=$('growthAdditionalSections');wrap.textContent='';
+   parts.slice(1,5).forEach(function(section,i){
+    var group=document.createElement('fieldset');group.dataset.growthDraftSection='1';
+    var legend=document.createElement('legend');legend.textContent='AI draft section '+(i+2)+' · verify facts';group.appendChild(legend);
+    var title=document.createElement('input');title.className='draft-h2';
+    title.value=section.h2;title.setAttribute('aria-label','Reviewed H2 '+(i+2));group.appendChild(title);
+    var body=document.createElement('textarea');body.className='draft-copy';
+    body.value=(section.paragraphs||[]).join('\n\n');body.setAttribute('aria-label','Reviewed copy '+(i+2));group.appendChild(body);
+    wrap.appendChild(group);
+   });
+   $('approved').checked=false;ready();
+   status('aiDraftStatus','Editable AI draft prepared from the original page. All claims and each section still require your review and explicit approval.',false);
+  }catch(err){status('aiDraftStatus',String(err.message||err),true)}
+  finally{btn.disabled=!safe.source}
+ });
  function build(){
   const src=safe.source;if(!src)throw Error('Check the saved original page first');
   if(!$('approved').checked)throw Error('Editorial approval is required');
@@ -125,6 +164,14 @@
   }
   const paragraphs=copy.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n');
   const html='<section><h2>'+esc(heading)+'</h2>'+paragraphs+linkHtml+'</section>';
+  const reviewedSections=[{approved:true,evidence_ref:'editor_reviewed:'+($('query').value.trim()||'original_page'),html}];
+  document.querySelectorAll('[data-growth-draft-section]').forEach(function(group){
+   var h2=group.querySelector('.draft-h2')?.value.trim()||'';
+   var body=group.querySelector('.draft-copy')?.value.trim()||'';
+   if(!h2||body.length<30)throw Error('Review every AI section or remove empty suggestions');
+   var markup='<section><h2>'+esc(h2)+'</h2>'+body.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n')+'</section>';
+   reviewedSections.push({approved:true,evidence_ref:'editor_reviewed:AI_source_review',html:markup});
+  });
   var manual=src.manual_source_required===true;
   if(manual&&(!$('manualAcknowledged').checked||$('manualOriginalHtml').value.trim().length<120))
    throw Error('Provide historical original-page HTML and acknowledge that it is not live-verified');
@@ -133,7 +180,7 @@
     manual_source_acknowledged:true,source_provenance:'OWNER_SUPPLIED_UNVERIFIED'}:{}),
    cms:$('cms').value,evidence_scope:$('evidence').value,focus_query:$('query').value.trim(),
    seo_title:$('title').value.trim(),meta_description:$('meta').value.trim(),
-   approved_changes:[{approved:true,evidence_ref:($('evidence').value==='verified'?'gsc:':'editor_reviewed:')+($('query').value.trim()||'original_page'),html}]};
+   approved_changes:reviewedSections};
  }
  async function post(body,format){
   const response=await fetch(base,{method:'POST',cache:'no-store',credentials:'same-origin',
