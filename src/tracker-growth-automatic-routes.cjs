@@ -2,6 +2,7 @@
 const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
+const {proposeHandoffFromResearch}=require('./growth-research-handoff-suggestions.cjs');
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
@@ -43,6 +44,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=comparisons.length;
   report.summary.optional_evidence_complete=unavailable.length===0;
+  report.handoff_suggestions=proposeHandoffFromResearch(report,page.url);
   report.access={can_edit:false,read_only_analysis:true};
   return report;
  }
