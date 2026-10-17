@@ -16,6 +16,8 @@ on:
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
       - 'src/tracker-growth-cockpit.cjs'
+      - 'src/growth-live-routes.cjs'
+      - 'src/growth-canonical-loader.cjs'
       - 'src/growth-public-html-reader.cjs'
       - 'src/growth-automatic-analysis.cjs'
       - 'src/growth-intent-site-graph.cjs'
@@ -59,6 +61,8 @@ on:
       - 'src/brief-quality-hook.js'
       - 'src/tracker-growth-plan.cjs'
       - 'src/tracker-growth-cockpit.cjs'
+      - 'src/growth-live-routes.cjs'
+      - 'src/growth-canonical-loader.cjs'
       - 'src/growth-public-html-reader.cjs'
       - 'src/growth-automatic-analysis.cjs'
       - 'src/growth-intent-site-graph.cjs'
@@ -143,6 +147,8 @@ jobs:
           node tests/tracker-growth-cms-live-source.test.cjs
           node tests/tracker-growth-snapshot-signals.test.cjs
           node tests/tracker-growth-automatic-research.test.cjs
+          node src/growth-live-routes.test.cjs
+          node src/growth-canonical-loader-optional.test.cjs
           node tests/growth-intent-site-graph.test.cjs
           node tests/tracker-growth-measurement-share.test.cjs
           node tests/tracker-growth-dated-windows.test.cjs

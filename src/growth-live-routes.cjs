@@ -13,34 +13,41 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
   try {
    const state=await loadGrowthTrackerEvidence(pool,identity);
    const url=state.page.url;
-   const [dups,mapping,profiles]=await Promise.all([
-    pool.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 LIMIT 3',[url]),
+   const dups=await pool.query('SELECT id,tracker_client_id FROM tracker_pages WHERE url=$1 AND tracker_client_id=$2 LIMIT 3',[url,identity.clientId]);
+   const [mappingState,profileState]=await Promise.allSettled([
     pool.query('SELECT wordpress_post_id,wordpress_url FROM growth_wordpress_page_mapping WHERE tracker_page_id=$1 AND tracker_client_id=$2 LIMIT 2',[identity.pageId,identity.clientId]),
     pool.query("SELECT id,wp_url FROM content_profiles WHERE NULLIF(BTRIM(wp_user),'') IS NOT NULL AND NULLIF(BTRIM(wp_app_password),'') IS NOT NULL")
    ]);
+   const mapping=mappingState.status==='fulfilled'?mappingState.value:{rows:[]};
+   const profiles=profileState.status==='fulfilled'?profileState.value:{rows:[]};
    const site=new URL(url).origin;
    const credentialsConfigured=profiles.rows.some(p=>{try{return new URL(p.wp_url).origin===site;}catch{return false;}});
    const issues=[];
    if(state.page.case_study_active)issues.push('CASE_STUDY_LOCK');
-   if(dups.rows.length!==1)issues.push('DUPLICATE_TRACKER_URL');
+   if(dups.rows.length!==1||Number(dups.rows[0]?.id)!==identity.pageId)issues.push('DUPLICATE_TRACKER_URL');
    if(!state.gscRows.length)issues.push('EXACT_PAGE_GSC_QUERIES_REQUIRED');
    if(mapping.rows.length!==1||mapping.rows[0].wordpress_url!==url||!Number.isSafeInteger(Number(mapping.rows[0].wordpress_post_id)))issues.push('REVIEWED_WORDPRESS_MAPPING_REQUIRED');
    if(!credentialsConfigured)issues.push('WORDPRESS_CREDENTIALS_REQUIRED');
    if(!state.page.html_content)issues.push('TRACKER_HTML_MISSING');
-   const nextAction=issues.includes('CASE_STUDY_LOCK')?'PRESERVE_CASE_STUDY_BASELINE':
-    issues.includes('WORDPRESS_CREDENTIALS_REQUIRED')?'CONFIGURE_WORDPRESS_PROFILE':
-    issues.includes('REVIEWED_WORDPRESS_MAPPING_REQUIRED')?'REVIEW_WORDPRESS_MAPPING':
-    issues.includes('EXACT_PAGE_GSC_QUERIES_REQUIRED')?'VERIFY_EXACT_PAGE_GSC':
-    issues.length?'RESOLVE_VERIFICATION_ISSUES':'REVIEW_GROWTH_DRAFT';
-   return res.json({success:true,status:issues.length?'BLOCKED':'READY_FOR_EDITOR_VERIFICATION',
+   const nextAction=issues.includes('CASE_STUDY_LOCK')?'RESEARCH_ONLY_PRESERVE_CASE_STUDY_BASELINE':
+    issues.includes('WORDPRESS_CREDENTIALS_REQUIRED')?'RUN_AUTOMATIC_GROWTH_RESEARCH':
+    issues.includes('REVIEWED_WORDPRESS_MAPPING_REQUIRED')?'RUN_AUTOMATIC_GROWTH_RESEARCH':
+    issues.includes('EXACT_PAGE_GSC_QUERIES_REQUIRED')?'RUN_AUTOMATIC_GROWTH_RESEARCH':
+    issues.length?'RUN_AUTOMATIC_GROWTH_RESEARCH':'REVIEW_GROWTH_DRAFT';
+   return res.json({success:true,status:issues.includes('CASE_STUDY_LOCK')?'RESEARCH_ONLY_CASE_STUDY':issues.includes('DUPLICATE_TRACKER_URL')?'REVIEW_PAGE_IDENTITY':'AUTO_RESEARCH_READY',
     next_action:nextAction,
     page_id:identity.pageId,client_id:identity.clientId,url,
-    gsc_verified_queries:state.gscRows.length,
+    gsc_verified_queries:state.gscRows.length,gsc_required_for_research:false,
     search_spy_present:!!state.page.serp_spy,
     ai_evidence_count:state.aiEvidence.length,
     mapping_present:mapping.rows.length===1,
+    automatic_research:{ready:!issues.includes('DUPLICATE_TRACKER_URL'),requires_gsc:false,requires_wordpress:false,requires_html_snapshot:false,requires_paid_provider:false,case_study_read_only:state.page.case_study_active},
+    cms_neutral:{ready:!state.page.case_study_active&&!issues.includes('DUPLICATE_TRACKER_URL'),uses_live_html_if_missing:true,requires_gsc:false,requires_wordpress:false},
+    optional_evidence_unavailable:state.optional_evidence_unavailable||[],
     wordpress_credentials_configured:credentialsConfigured,
-    issues,publication_allowed:false});
+    issues:issues.filter(x=>x==='DUPLICATE_TRACKER_URL'),
+    research_warnings:issues.filter(x=>x!=='DUPLICATE_TRACKER_URL'),
+    publication_issues:issues,publication_allowed:false});
   }catch(error){return res.status(503).json({success:false,code:'GROWTH_READINESS_UNAVAILABLE'});}
  });
  app.get('/api/growth/admin/pages/:pageId/click-opportunities',verifyEngineAccess,adminOnly,async(req,res)=>{
