@@ -26,14 +26,18 @@ function fixture({admin=true,locked=false,duplicates=false,queries=1}={}){
 }
 (async()=>{
  let f=fixture();let r=await f.request('GET');
- assert.equal(r.body.success,true);assert.equal(r.body.status,'BLOCKED');
+ assert.equal(r.body.success,true);assert.equal(r.body.status,'AUTO_RESEARCH_READY');
+ assert.equal(r.body.automatic_research.ready,true);
+ assert.equal(r.body.automatic_research.requires_gsc,false);
+ assert.equal(r.body.automatic_research.requires_wordpress,false);
  assert(r.body.issues.includes('WORDPRESS_CREDENTIALS_REQUIRED'));
  assert(r.body.issues.includes('REVIEWED_WORDPRESS_MAPPING_REQUIRED'));
- assert.equal(r.body.next_action,'CONFIGURE_WORDPRESS_PROFILE');
+ assert.equal(r.body.next_action,'RUN_AUTOMATIC_GROWTH_RESEARCH');
  assert.equal(f.writes(),0);
  r=await f.request('POST');assert.equal(r.body.verified_queries,3);assert.equal(f.writes(),1);
  f=fixture({admin:false});r=await f.request('POST');assert.equal(r.statusCode,403);assert.equal(f.writes(),0);
- f=fixture({locked:true});r=await f.request('GET');assert.equal(r.body.next_action,'PRESERVE_CASE_STUDY_BASELINE');r=await f.request('POST');assert.equal(r.statusCode,409);assert.equal(f.writes(),0);
- f=fixture({duplicates:true,queries:0});r=await f.request('GET');assert(r.body.issues.includes('DUPLICATE_TRACKER_URL'));assert(r.body.issues.includes('EXACT_PAGE_GSC_QUERIES_REQUIRED'));
+ f=fixture({locked:true});r=await f.request('GET');assert.equal(r.body.next_action,'RESEARCH_ONLY_PRESERVE_CASE_STUDY_BASELINE');r=await f.request('POST');assert.equal(r.statusCode,409);assert.equal(f.writes(),0);
+ f=fixture({duplicates:true,queries:0});r=await f.request('GET');assert(r.body.issues.includes('DUPLICATE_TRACKER_URL'));
+ assert.equal(r.body.automatic_research.ready,false);assert(r.body.issues.includes('EXACT_PAGE_GSC_QUERIES_REQUIRED'));
  console.log('PASS: actual Growth admin routes, no WP writes, exact-page GSC and Case Study guards');
 })().catch(e=>{console.error(e);process.exitCode=1});
