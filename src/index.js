@@ -51646,35 +51646,40 @@ if (_gscAutoFetchAvailable) {
   _renderGscRequiredGate({required:true,connected:false,available:false});
 }
 function _renderGscRequiredGate(d) {
+  // CONTENTSCALE_TRACKER_GSC_OPTIONAL_ADVICE_V1: GSC is not an entry requirement.
+  // Remove any old modal and display optional help inside existing Tracker.
   var old=document.getElementById('csGscRequiredGate'); if(old) old.remove();
-  if(_NETWORK_PREWRITE_AUTHORIZED) return;
+  var host=document.getElementById('gscSetupBanner');
+  if(!host || _NETWORK_PREWRITE_AUTHORIZED) return;
+  var prior=document.getElementById('csGscOptionalAdvice'); if(prior) prior.remove();
   if(d && d.connected) return;
-  var gate=document.createElement('div'); gate.id='csGscRequiredGate';
-  gate.style.cssText='position:fixed;inset:0;background:rgba(3,7,18,.94);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;';
-  var email=(d&&d.service_account_email)||_gscServiceAccountEmail||'';
-  var setup=email
-    ? '<ol style="margin:12px 0 16px;padding-left:20px;line-height:1.8;color:#dbeafe"><li>Open Google Search Console for this website.</li><li>Go to <b>Settings → Users and permissions → Add user</b>.</li><li>Add the ContentScale address below. <b>Restricted</b> access is enough.</li><li>Return here and click <b>Check connection</b>. ContentScale verifies the access automatically and unlocks Tracker.</li></ol><div style="background:#020617;border:1px solid #334155;border-radius:8px;padding:10px;word-break:break-all;color:#93c5fd;font-family:monospace">'+email.replace(/</g,'&lt;')+'</div><button id="csCopyGsc" style="margin-top:10px;padding:9px 14px;border-radius:7px;border:1px solid #3b82f6;background:#1d4ed8;color:white;font-weight:800;cursor:pointer">Copy GSC access address</button>'
-    : '<div style="padding:12px;background:#3f1d1d;border:1px solid #ef4444;border-radius:8px;color:#fecaca">ContentScale GSC auto-connect is not configured on the server yet. Tracker cannot start until GSC access is available.</div>';
-  gate.innerHTML='<div style="max-width:650px;width:100%;background:#0b1220;border:1px solid #2563eb;border-radius:16px;padding:24px;box-shadow:0 24px 80px #000"><div style="font-size:11px;font-weight:900;letter-spacing:.08em;color:#60a5fa;text-transform:uppercase">Required before Tracker can continue</div><h2 style="margin:8px 0;color:#f8fafc">Connect Google Search Console</h2><p style="color:#cbd5e1;line-height:1.65">GSC is mandatory in Tracker because ContentScale needs verified Google queries, impressions, clicks and positions for the baseline, checkpoints and before/after proof. The free 1-page report does not require this. For Tracker, the client only needs to grant access once; ContentScale then checks the connection automatically and unlocks Tracker.</p>'+setup+'<button id="csCheckGsc" style="margin-top:14px;padding:11px 16px;border-radius:8px;border:0;background:#16a34a;color:white;font-weight:900;cursor:pointer">✓ I added access — check connection</button><div id="csGscCheckMsg" style="margin-top:10px;color:#94a3b8;font-size:12px">Nothing else in Tracker needs to be configured first.</div></div>';
-  document.body.appendChild(gate);
-  var cp=document.getElementById('csCopyGsc'); if(cp) cp.onclick=function(){navigator.clipboard.writeText(email);cp.textContent='✓ Copied';};
-  var ck=document.getElementById('csCheckGsc'); if(ck) ck.onclick=async function(){var msg=document.getElementById('csGscCheckMsg');ck.disabled=true;ck.textContent='Checking…';try{var r=await api('/gsc-autofetch-status','GET');if(r&&r.connected){msg.style.color='#4ade80';msg.textContent='✓ GSC connected. Tracker is unlocked.';setTimeout(function(){location.reload()},500);}else{msg.style.color='#fbbf24';msg.textContent='Access is not visible yet. Check the property and user address, then try again.';ck.disabled=false;ck.textContent='Check connection again';}}catch(e){msg.style.color='#f87171';msg.textContent=e.message||'Connection check failed';ck.disabled=false;ck.textContent='Check connection again';}};
+  var note=document.createElement('div');
+  note.id='csGscOptionalAdvice';
+  note.setAttribute('role','note');
+  note.style.cssText='margin:0 0 10px;padding:12px 14px;border:1px solid #2563eb;border-radius:9px;background:#0b192e;color:#dbeafe;font-size:12px;line-height:1.55;';
+  var title=document.createElement('strong');
+  title.textContent='Recommended — Connect Google Search Console (optional)';
+  title.style.cssText='display:block;color:#93c5fd;font-size:12px;margin-bottom:5px;';
+  var info=document.createElement('div');
+  info.textContent='You can use Tracker now without connecting GSC. Connect it later for verified Google queries, clicks, impressions, rankings and comparable before/after measurements. Missing GSC data is not zero traffic.';
+  note.appendChild(title);note.appendChild(info);
+  host.prepend(note);
 }
 function _renderGscSetupBanner() {
   var host = document.getElementById('gscSetupBanner');
   if (!host) return;
   if(_NETWORK_PREWRITE_AUTHORIZED){host.style.display='none';host.innerHTML='';return;}
   var _step1 = _gscServiceAccountEmail
-    ? ('<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 Connect one-click GSC data (skips manual CSV exports):</b> add this address as a Search Console user on your property (Settings \u2192 Users and permissions \u2192 Add user, \u201cRestricted\u201d is enough):<br>'
+    ? ('<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Optional \u2014 Connect Google Search Console (skips manual CSV exports):</b> add this address as a Search Console user on your property (Settings \u2192 Users and permissions \u2192 Add user, \u201cRestricted\u201d is enough):<br>'
         + '<code style="background:#0d1117;padding:3px 8px;border-radius:4px;color:#93c5fd;font-family:monospace;display:inline-block;margin:4px 0;">' + _gscServiceAccountEmail.replace(/</g,'&lt;') + '</code> '
         + '<button onclick="navigator.clipboard.writeText(&quot;' + _gscServiceAccountEmail.replace(/"/g,'&quot;') + '&quot;);toast(&quot;Copied\u2014 paste it into GSC \u2192 Settings \u2192 Users and permissions&quot;,&quot;#4ade80&quot;)" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#1e3a8a;border:1px solid #3b82f6;color:#bfdbfe;">Copy</button>'
         + '<br><b>What happens next:</b> \u26a1 Auto-fetch retrieves GSC data directly when clicked. This is one-click retrieval, not a scheduled daily refresh.</div>')
-    : '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 Import your GSC data:</b> paste your Queries CSV via \u201cAdd pages to track\u201d (manual, since one-click auto-fetch isn\u2019t configured on this server yet).</div>';
+    : '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Optional \u2014 Import GSC data:</b> paste your Queries CSV via \u201cAdd pages to track\u201d (manual, since one-click auto-fetch isn\u2019t configured on this server yet).</div>';
   host.innerHTML = '<div style="background:rgba(96,165,250,.08);border:1px solid #3b82f6;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:11px;color:#bfdbfe;line-height:1.6;">'
-    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#60a5fa;text-transform:uppercase;margin-bottom:8px;">How this tracker works \u2014 do these in order</div>'
+    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;color:#60a5fa;text-transform:uppercase;margin-bottom:8px;">Tracker workflow \u2014 GSC is optional</div>'
     + _step1
-    + '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 2 \u2014 Sort this out for me:</b> click it in the Impression Gap panel below \u2014 groups your queries into intent families with one clear verdict each.</div>'
-    + '<div><b style="color:#93c5fd;">Step 3 \u2014 Scan:</b> in the Cannibalization panel, use \ud83d\ude80 <b>Do everything</b> on any VERIFIED OVERLAP group \u2014 it runs Step 2 first if you skipped it, then scans every affected page so the brief can compare intent and recommend a safe next step.</div>'
+    + '<div style="margin-bottom:8px;"><b style="color:#93c5fd;">Step 1 \u2014 Sort this out for me:</b> click it in the Impression Gap panel below \u2014 groups your queries into intent families with one clear verdict each.</div>'
+    + '<div><b style="color:#93c5fd;">Step 2 \u2014 Scan:</b> in the Cannibalization panel, use \ud83d\ude80 <b>Do everything</b> on any VERIFIED OVERLAP group \u2014 it runs Step 2 first if you skipped it, then scans every affected page so the brief can compare intent and recommend a safe next step.</div>'
     + '</div>';
 }
 // Show welcome on first visit (or force with ?welcome=1)
