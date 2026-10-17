@@ -15,7 +15,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  };
  async function analyze(v){
   const cid=v.clientId,pid=v.id;
-  const saved=await pool.query("SELECT id,tracker_client_id,url,keyword,LEFT(html_content,120000) AS saved_html FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2 LIMIT 1",[cid,pid]);
+  const saved=await pool.query("SELECT id,tracker_client_id,url,keyword,brief_content,LEFT(html_content,120000) AS saved_html FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2 LIMIT 1",[cid,pid]);
   const page=saved.rows[0];
   if(!page||page.url!==v.page.url)throw Object.assign(Error('PAGE_IDENTITY_CHANGED'),{code:'PAGE_IDENTITY_CHANGED'});
   page.case_study_active=v.page.case_study_active;
@@ -34,7 +34,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70)}}
   }));
   const report=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
-   snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3)});
+   snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
   report.evidence_warnings=[
    ...unavailable.map(x=>'OPTIONAL_'+x.toUpperCase()+'_UNAVAILABLE'),
    ...(own.code?['TARGET_LIVE_'+own.code]:[]),
