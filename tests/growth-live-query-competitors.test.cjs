@@ -29,12 +29,9 @@ registerGrowthAutomaticResearch(app,pool,data,{fetchLive,searchLive});
 async function invoke(){
  const res={statusCode:200,headers:{},status(x){this.statusCode=x;return this},set(){return this},json(data){this.body=data;return this}};
  const req={query:{page_id:'2320'},params:{token:'fixture'}},handlers=routes['/api/tracker-client/:token/growth/auto-research'];
- await new Promise((resolve,reject)=>{
-  let i=0;
-  const next=()=>{const f=handlers[i++];if(!f)return resolve();
-    try{Promise.resolve(f(req,res,next)).then(()=>{if(i===handlers.length)resolve()},reject)}catch(e){reject(e)}};
-  next();
- });
+ let running;
+ handlers[0](req,res,()=>{running=Promise.resolve(handlers[1](req,res))});
+ await running;
  return res;
 }
 (async()=>{
