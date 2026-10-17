@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node:crypto');
 const {prepareGrowthCmsHandoff,packageGrowthZip}=require('./growth-cms-handoff.cjs');
+const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false}={}){
  const id=Number(pageId);
@@ -25,7 +26,7 @@ async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false}={}){
   return {status:409,code:'DUPLICATE_CANONICAL_PAGE_IDENTITY'};
  return {status:200,client:c,page:p,source_sha256:String(p.html_content||'').trim()?sha(p.html_content):null,source_mode:String(p.html_content||'').trim()?'TRACKER_SAVED_HTML':'MANUAL_HTML_REQUIRED'};
 }
-function registerTrackerGrowthCmsExport(app,pool){
+function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtml}={}){
  if(!app||typeof app.get!=='function'||typeof app.post!=='function'||!pool||typeof pool.query!=='function')
   throw Error('CMS_HANDOFF_DEPENDENCIES_REQUIRED');
  app.get('/track/:token/growth/cms-export',async(req,res)=>{
@@ -63,6 +64,27 @@ function registerTrackerGrowthCmsExport(app,pool){
     cms_options:['wix','wordpress','webflow','squarespace','custom','generic'],
     gsc_required:false,editor_approval_required:true,auto_publishing:false});
   }catch{return res.status(503).json({success:false,code:'SOURCE_SNAPSHOT_UNAVAILABLE'})}
+ });
+ app.get('/api/tracker-client/:token/growth/cms-export/public-source',async(req,res)=>{
+  try{
+   const v=await loadEditablePage(pool,req.params.token,req.query.page_id,{allowMissingHtml:true});
+   if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
+   if(v.source_mode==='TRACKER_SAVED_HTML')return res.status(409).json({success:false,code:'SAVED_TRACKER_HTML_ALREADY_AVAILABLE'});
+   const live=await fetchLive(v.page.url);
+   const originalHost=new URL(v.page.url).hostname.replace(/^www\./,'');
+   const redirectedHost=new URL(live.final_url||v.page.url).hostname.replace(/^www\./,'');
+   if(originalHost!==redirectedHost)return res.status(409).json({success:false,code:'LIVE_SOURCE_REDIRECTED_OFF_DOMAIN'});
+   if(typeof live.html!=='string'||live.html.length<120||Buffer.byteLength(live.html,'utf8')>120000||
+      !/<h1\b[^>]*>[\s\S]*?<\/h1>/i.test(live.html))
+    return res.status(409).json({success:false,code:'LIVE_HTML_NEEDS_OWNER_REVIEW'});
+   return res.set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex, nofollow')
+    .set('Referrer-Policy','no-referrer').json({success:true,page_id:v.page.id,
+     canonical_url:v.page.url,html:live.html,source_sha256:sha(live.html),
+     retrieved_at:live.retrieved_at||null,source_provenance:'LIVE_PUBLIC_HTML_OBSERVED',
+     live_render_verified:false,auto_published:false,stored_in_tracker:false,
+     next_action:'OWNER_REVIEW_ORIGINAL_HTML_AND_APPROVE_EDITOR_HANDOFF'});
+  }catch(e){console.warn('[growth-cms-public-source]',String(e?.code||'SOURCE_FETCH_FAILED'));
+   return res.status(503).json({success:false,code:'PUBLIC_HTML_UNAVAILABLE_USE_MANUAL_SOURCE'})}
  });
  app.post('/api/tracker-client/:token/growth/cms-export',async(req,res)=>{
   try{
