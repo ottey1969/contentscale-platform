@@ -58,7 +58,21 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    ...comparisons.filter(x=>!x.live).map(x=>'COMPETITOR_LIVE_'+(x.reason||'UNAVAILABLE')),
    ...(['PUBLIC_SEARCH_UNAVAILABLE','NO_RELEVANT_PUBLIC_SEARCH_LEADS','QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH'].includes(discovery.status)?['LIVE_SEARCH_'+discovery.status]:[])
   ];
-  report.autonomous_growth_opportunity=autonomouslyFindGrowthOpportunity({report,discovery});
+  const siteOrigin=new URL(page.url).origin;
+  const related=(report.site_architecture?.candidates||[]).filter(x=>{
+   try{return new URL(x.url).origin===siteOrigin&&x.url!==page.url}catch{return false}
+  }).slice(0,4);
+  const sameSiteReviews=await Promise.all(related.map(async x=>{
+   try{
+    const fresh=await fetchLive(x.url);
+    const inspected=require('./growth-automatic-analysis.cjs').excerpt(fresh.html);
+    return {url:x.url,tracked_keyword:x.tracked_keyword||null,verified_live:true,
+     title:inspected.title,h1:inspected.h1,h2:inspected.h2,
+     fetched_at:fresh.retrieved_at||null};
+   }catch(e){return {url:x.url,tracked_keyword:x.tracked_keyword||null,
+     verified_live:false,reason:String(e?.code||'PUBLIC_HTML_UNAVAILABLE').slice(0,60)}}
+  }));
+  report.autonomous_growth_opportunity=autonomouslyFindGrowthOpportunity({report,discovery,existingPageReviews:sameSiteReviews});
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=comparisons.length;
   report.summary.optional_evidence_complete=unavailable.length===0;

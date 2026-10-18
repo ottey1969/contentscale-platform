@@ -23,4 +23,14 @@ assert.equal(result.primary_opportunity.actual_gsc_period,null);
 const missing=autonomouslyFindGrowthOpportunity({report:{url:'https://example.com/',growth_decision:{primary_next_action:{}}},discovery:{}});
 assert.equal(missing.status,'GROWTH_EVIDENCE_INCOMPLETE');
 assert.equal(missing.safeguards.publication_allowed,false);
+const checked=autonomouslyFindGrowthOpportunity({report:{...base,site_architecture:{candidates:[
+ {url:'https://contentscale.site/content-at-scale-is-now-brandwell/',tracked_keyword:'content at scale is now brandwell'},
+ {url:'https://contentscale.site/content-at-scale/',tracked_keyword:'content at scale'}
+ ]}},discovery:{},existingPageReviews:[
+ {url:'https://contentscale.site/content-at-scale-is-now-brandwell/',verified_live:true,title:'Content At Scale Is Now BrandWell'},
+ {url:'https://contentscale.site/content-at-scale/',verified_live:true,title:'Content at Scale Explained',h2:['How to scale content without losing quality']}
+]});
+assert.equal(checked.existing_destinations[0].suitability,'SEPARATE_PRODUCT_INTENT');
+assert.equal(checked.existing_destinations[1].suitability,'TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW');
+assert.equal(checked.safeguards.publication_allowed,false);
 console.log('PASS: evidence-backed next opportunity protects rankings and denies unverified publication');

@@ -43,7 +43,8 @@ async function invoke(){
  assert.equal(response.statusCode,200,JSON.stringify(response.body));
  const r=response.body;
  assert.equal(searched.length,1);assert.equal(searched[0].query,'content scaling');
- assert.deepEqual(visited,[url,good],'obsolete detector rival must not be fetched');
+ assert.deepEqual(visited,[url,good,'https://contentscale.site/content-at-scale/'],'obsolete detector rival must not be fetched; same-site destination is inspected');
+ assert.equal(r.autonomous_growth_opportunity.existing_destinations[0].verified_live,true);
  assert.equal(r.search_discovery.status,'FRESH_PUBLIC_SEARCH_LEADS');
  assert.equal(r.competitors.live_reviewed.length,1);
  assert.equal(r.competitors.live_reviewed[0].url,good);
@@ -59,7 +60,7 @@ async function invoke(){
  assert.match(r.practical_growth_plan.competitors.side_by_side[0].competitor_excerpt,/workflows/i);
  assert.equal(r.search.verified_queries.length,3);
  assert.equal(r.summary.published,false);
- const cached=await invoke();assert.equal(cached.statusCode,200);assert.equal(searched.length,1);assert.equal(visited.length,2);
+ const cached=await invoke();assert.equal(cached.statusCode,200);assert.equal(searched.length,1);assert.equal(visited.length,3);
  locked=false;
  searchSource='SERPER_GOOGLE_ORGANIC';
  const unlocked=await invoke();assert.equal(unlocked.statusCode,200);
