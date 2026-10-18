@@ -1,0 +1,16 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {evaluateExistingBody}=require('./growth-existing-body-evidence.cjs');
+const html='<html><head><title>Content scaling</title><script>Search Console fake data</script></head><body><nav>Content audit</nav><main><h1>How to scale content</h1><p>Start with a content audit. Review Search Console impressions and clicks, compare search intent and measure results. For example, choose one useful page.</p></main></body></html>';
+const a=evaluateExistingBody({html,query:'content scaling'});
+assert.equal(a.status,'PUBLIC_HTML_CONTENT_OBSERVED');
+assert.equal(a.evidence_checks.inventory,true);
+assert.equal(a.evidence_checks.search_data,true);
+assert.equal(a.evidence_checks.decisions,true);
+assert.equal(a.evidence_checks.worked_example,true);
+assert.equal(a.no_proven_gaps,true);
+const b=evaluateExistingBody({html:'<h1>Content scaling guide</h1>',truncated:true,query:'content scaling'});
+assert.equal(b.status,'PARTIAL_HTML_ONLY');
+assert.equal(b.evidence_checks.search_data,false);
+assert.equal(b.no_proven_gaps,true);
+console.log('PASS Growth existing site body evidence and conservative claims');

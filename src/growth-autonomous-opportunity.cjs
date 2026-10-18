@@ -29,7 +29,8 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
   return {url:p.url,tracked_keyword:p.tracked_keyword||null,
    reason:'Primary page intent assessed from URL, title and H1; subsidiary H2 mentions do not reclassify the entire guide. Full body intent still needs checking.',
    suitability,verified_live:!!live?.verified_live,observed_title:live?.title||null,
-   observed_h1:live?.h1||[],observed_h2:live?.h2||[],existing_link_in_source:false};
+   observed_h1:live?.h1||[],observed_h2:live?.h2||[],
+   body_evidence:live?.body_evidence||null,existing_link_in_source:false};
  });
  const protect=report.growth_decision?.protection||{};
  const topQueries=(report.growth_decision?.protected_queries||[]).slice(0,5).map(x=>({query:x.query,clicks:x.clicks,impressions:x.impressions,average_position:x.position}));
@@ -66,7 +67,7 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
    insertion_policy:'Only in a naturally relevant explanatory paragraph after verifying there is no existing duplicate link; never alter the protected H1/title.'
   }:null,
   excluded_product_intent_urls:alternate.map(x=>x.url),
-  verification_gate:'Full-page information needs and overlap are not yet checked; prepared outline is not a publish-ready article.',
+  verification_gate:'Body evidence is screened, but reader needs, overlap, missing information and live SERP advantage still require substantive review. Prepared outline is not a publish-ready article.',
   can_publish:false
  }:null;
  const recommendation=selected?{
