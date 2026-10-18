@@ -6,13 +6,22 @@ function proposeHandoffFromResearch(report,canonicalUrl){
   return {status:'RESEARCH_EVIDENCE_IDENTITY_MISMATCH',safe:false};
  const source=report.page_content||{},headings=source.headings||{},search=report.search||{};
  const verified=Array.isArray(search.verified_queries)?search.verified_queries:[];
- const phrase=verified.length&&typeof verified[0].query==='string'?verified[0].query:
+ const selected=report.growth_decision?.primary_next_action?.query;
+ const phrase=typeof selected==='string'&&selected.trim()?selected:
+   verified.length&&typeof verified[0].query==='string'?verified[0].query:
    typeof search.focus_query==='string'?search.focus_query:'';
  const clean=x=>typeof x==='string'?x.replace(/[\u0000-\u001f]/g,' ').trim():'';
  const ownOrigin=(()=>{try{return new URL(canonicalUrl).origin}catch{return null}})();
  const linkCandidates=(report.site_architecture?.candidates||[]);
+ const eligibleUrls=new Set(report.growth_decision?.primary_next_action?.related_pages_to_check||[]);
+ const differentIntent=/\b(?:brandwell|detector|detection|review|pricing|alternatives)\b/i;
  const link=linkCandidates.find(x=>{
-  try{const u=new URL(x.url);return ownOrigin&&u.protocol==='https:'&&u.origin===ownOrigin&&u.href!==canonicalUrl&&x.status==='CONTEXTUAL_INTERNAL_LINK_CANDIDATE'}catch{return false}
+  try{
+   const u=new URL(x.url),candidateIntent=[x.tracked_keyword||'',u.pathname.replace(/[\/_-]+/g,' ')].join(' ');
+   return ownOrigin&&u.protocol==='https:'&&u.origin===ownOrigin&&u.href!==canonicalUrl&&
+    x.status==='CONTEXTUAL_INTERNAL_LINK_CANDIDATE'&&eligibleUrls.has(x.url)&&
+    !differentIntent.test(candidateIntent);
+  }catch{return false}
  });
  const candidates=(report.editorial?.candidate_sections||[]).filter(x=>x&&typeof x.proposed_topic==='string').slice(0,4);
  const findings=(report.findings||[]).filter(x=>x&&x.priority!=='INFO').slice(0,6);
