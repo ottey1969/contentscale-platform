@@ -19,5 +19,7 @@ const {optionalSerpApiOrganicDiscovery,discoverGrowthCompetitorsWithFallback}=re
   fetchGoogle:async()=>result});
  assert.equal(free.source,'SERPAPI_GOOGLE_ORGANIC');
  assert.deepEqual(free.provider_attempts,['BING_PUBLIC_RSS','SERPAPI_GOOGLE_ORGANIC']);
+ const failure=await discoverGrowthCompetitorsWithFallback({query:'content scaling',ownUrl:'https://contentscale.site/',fetchFree:async()=>({source:'BING_PUBLIC_RSS',status:'NO_RELEVANT_PUBLIC_SEARCH_LEADS',leads:[]}),fetchGoogle:async()=>({source:'SERPAPI_GOOGLE_ORGANIC',status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'HTTP_429',leads:[]})});
+ assert.equal(failure.optional_google_failure_reason,'HTTP_429');
  console.log('PASS Growth SerpAPI fallback, source truth, intent exclusions');
 })().catch(e=>{console.error(e);process.exitCode=1});

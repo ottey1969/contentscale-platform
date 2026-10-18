@@ -77,7 +77,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.autonomous_growth_opportunity=autonomouslyFindGrowthOpportunity({report,discovery,existingPageReviews:sameSiteReviews});
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=comparisons.length;
-  report.summary.optional_evidence_complete=unavailable.length===0;
+  report.summary.optional_evidence_complete=unavailable.length===0&&!(discovery.provider_attempts?.length&&!discovery.leads?.length);
+  report.summary.live_search_evidence_complete=!!(discovery.leads?.length);
+  if(discovery.optional_google_failure_reason)report.evidence_warnings.push('SERPAPI_GOOGLE_'+discovery.optional_google_failure_reason);
   report.handoff_suggestions=proposeHandoffFromResearch(report,page.url);
   report.access={can_edit:false,read_only_analysis:true};
   return report;
