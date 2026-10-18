@@ -90,6 +90,13 @@
     node('h3','Evidence-guided editorial copy',s);
     node('p','Status: '+copy.status,s);
     if(copy.target_url)link(copy.target_url,'Inspected target URL',s);
+    if(copy.one_next_action){
+     node('strong','One next action: '+copy.one_next_action.code,s);
+     node('p',copy.one_next_action.instruction,s);
+    }
+    if((copy.held_possible_duplicates||[]).length)
+     node('p',(copy.held_possible_duplicates||[]).length+' possible duplicate additions held back pending comparison.',s);
+
     (copy.proposed_additions||[]).forEach(function(proposal){
      var item=node('div',null,s);
      node('strong',proposal.proposed_heading,item);
