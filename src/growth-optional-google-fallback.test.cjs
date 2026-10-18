@@ -1,13 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
-// Regression: Growth must never spend credits via the former provider.
-for(const file of ['src/growth-public-search-discovery.cjs','src/tracker-growth-automatic-routes.cjs',
- 'src/growth-automatic-analysis.cjs','public/growth-automatic-report-ui.js']){
- const source=fs.readFileSync(file,'utf8');
- assert(!/SERPAPI_KEY|serpapi\.com|SERPAPI_GOOGLE_ORGANIC/i.test(source),
-  'Growth cannot use the unpurchased provider: '+file);
-}
+// The production fallback must use the already configured SerpAPI account.
+const providerSource=fs.readFileSync('src/growth-public-search-discovery.cjs','utf8');
+assert(providerSource.includes('fetchGoogle=optionalSerpApiOrganicDiscovery'));
 
 const {discoverGrowthCompetitorsWithFallback,optionalGoogleOrganicDiscovery,
  parseSerperGoogleOrganic,parseBingRss}=require('./growth-public-search-discovery.cjs');
