@@ -2,6 +2,7 @@
 // Evidence-led, read-only next opportunity. No writes, no click projections.
 // Inputs come from the canonical Growth report and the same live SERP discovery.
 const {terms}=require('./growth-intent-site-graph.cjs');
+const {prepareEvidenceGuidedCopy}=require('./growth-evidence-guided-copy.cjs');
 function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageReviews=[]}={}){
  const action=report.growth_decision?.primary_next_action||{};
  const query=String(action.query||'').trim();
@@ -49,6 +50,7 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
  const fitting=relevant.filter(x=>x.suitability==='TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW');
  const alternate=relevant.filter(x=>x.suitability==='SEPARATE_PRODUCT_INTENT');
  const nextEditorialTarget=fitting[0]||null;
+ const evidence_guided_copy=prepareEvidenceGuidedCopy({target:nextEditorialTarget,query,protectedSource:origin});
  const editorialPackage=selected?{
   decision:nextEditorialTarget?'EXISTING_PAGE_CONTENT_REVIEW':'DISTINCT_SPOKE_RESEARCH_REQUIRED',
   proposed_target_url:nextEditorialTarget?.url||null,
@@ -87,7 +89,7 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
   primary_opportunity:selected,protected_baseline:topQueries,
   live_search:{source,query,observed_leads:liveLeads.slice(0,5).map(x=>({url:x.url,title:x.title||x.serp_title||null})),at_least_two_leads:currentSerp,
    caution:'Search listings do not prove full-page relevance or a current stable rank.'},
-  existing_destinations:relevant,possible_topic_overlap:overlap,editorial_package:editorialPackage,
+  existing_destinations:relevant,possible_topic_overlap:overlap,editorial_package:editorialPackage,evidence_guided_copy,
   recommendation,verification_needed:missing,
   safeguards:{case_study_locked:!!protect.case_study_locked,protect_existing_top_rankings:!!protect.preserve_existing_top_rankings,
     no_title_h1_changes:true,automatic_content_edits:false,publication_allowed:false,click_gain_forecast:null}
