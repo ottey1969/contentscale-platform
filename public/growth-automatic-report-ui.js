@@ -69,6 +69,22 @@
    node('p',proposal.editorial_next||'Verify distinct search intent and existing-site coverage first.',s);
    node('p','Reader outcome: '+(proposal.practical_reader_deliverable||'Useful, verifiable next steps'),s);
    node('p','Internal linking: '+(proposal.internal_link_handoff||'Verify before suggesting a link.'),s);
+   if(opportunity.editorial_package){
+    var pkg=opportunity.editorial_package;
+    node('h3','Prepared editorial next step',s);
+    node('p','Decision: '+pkg.decision+(pkg.proposed_target_url?' · Target: '+pkg.proposed_target_url:''),s);
+    node('p','Useful outcome for the reader: '+pkg.visitor_outcome,s);
+    var steps=node('ol',null,s);
+    (pkg.reader_steps||[]).forEach(function(step){
+     var li=node('li',null,steps);node('strong',step.heading+': ',li);
+     node('span',step.action+' Deliverable: '+step.output,li);
+    });
+    if(pkg.internal_link_recommendation){
+     node('p','Possible contextual link: '+pkg.internal_link_recommendation.suggested_anchor,s);
+     link(pkg.internal_link_recommendation.destination,'Review destination page',s);
+    }
+    node('small',pkg.verification_gate,s);
+   }
    node('strong','Related existing pages to investigate',s);
    if(opportunity.existing_destinations?.length)opportunity.existing_destinations.forEach(function(x){
     var item=node('p',null,s);link(x.url,x.url,item);node('small','Not yet verified as matching the intent.',item);
