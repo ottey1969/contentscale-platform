@@ -12,7 +12,7 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
   inventory:/\b(?:content audit|inventory|existing (?:pages|content)|audit your content|audit before you add|audit (?:before|first)|fix what you have before publishing)\b/i.test(text),
   search_data:/\b(?:search console|impressions|click.through rate|ctr)\b/i.test(text),
   decisions:/\b(?:prioriti[sz]|search intent|cannibaliz|overlap|consolidat)\b/i.test(text),
-  measurement:/\b(?:measure|clicks|performance|baseline|track results)\b/i.test(text),
+  measurement:/\b(?:compare (?:clicks|impressions|performance)|track (?:clicks|impressions|results)|measur(?:e|ing) (?:organic |search |traffic |the )?(?:clicks|impressions|performance|results|traffic)|before.and.after|baseline.{0,60}(?:clicks|impressions|traffic)|(?:clicks|impressions).{0,70}(?:period|after (?:publishing|publication|updating)|baseline))\b/i.test(text),
   worked_example:/\b(?:for example|example:|worked example|sample plan)\b/i.test(text)
  };
  // Preserve concise observed source paragraphs for editorial comparison.
@@ -27,7 +27,7 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
    inventory:/content audit|inventory|existing (?:pages|content)|audit before you add|audit (?:before|first)|fix what you have before publishing/i,
    search_data:/search console|impressions|click.through rate|\bctr\b/i,
    decisions:/prioriti[sz]|search intent|cannibaliz|overlap|consolidat/i,
-   measurement:/measure|clicks|performance|baseline|track results/i,
+   measurement:/compare (?:clicks|impressions|performance)|track (?:clicks|impressions|results)|measur(?:e|ing) (?:organic |search |traffic |the )?(?:clicks|impressions|performance|results|traffic)|before.and.after|baseline.{0,60}(?:clicks|impressions|traffic)|(?:clicks|impressions).{0,70}(?:period|after (?:publishing|publication|updating)|baseline)/i,
    worked_example:/for example|example:|worked example|sample plan/i
   }[k];
   return [k,paragraphs.filter(x=>pattern.test(x)).slice(0,2).map(x=>x.slice(0,460))];
