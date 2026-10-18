@@ -103,19 +103,30 @@ function buildGrowthPracticalBrief({report,html=''}={}){
    ready_to_review_text:[]},
   guard:{case_study_locked:locked,can_prepare_review_copy:true,can_publish:false,can_change_live:false,
    disclaimer:'Research and editorial preparation are permitted; an active Case Study baseline and existing content remain unchanged.'}};
- // Real, useful edit example only where the user's observed GSC topic matches
- // content-scaling strategy. It is process advice, not an invented client result.
- if(/\bcontent scaling\b|\bscale content\b|\bcontent at scale\b/i.test(query)&&
-     /\bcontent\b/i.test([report.page_content?.headings?.title,section?.heading].join(' '))){
-  m.change.type=alreadyHere?'PREPARE_EXPANSION_OF_EXISTING_SECTION':'PROPOSE_SECTION_FOR_REVIEW';
-  m.change.summary='Prepare a practical explanation of scaling content while protecting search intent, quality and clicks. Add to the matching existing section only if its current answer lacks these steps.';
-  m.change.ready_to_review_text=[
-   'Scaling content should start with the pages and search intentions you already serve, not with a target article count. Inventory the existing URLs, identify overlapping topics, and check which pages already attract impressions and clicks. That establishes what should be updated, consolidated, supported with internal links, or left unchanged.',
-   'For each proposed improvement, compare the page with the current search results for its intended query. Give the reader a direct answer and practical next steps. Review factual accuracy, useful examples, author credibility, and relevant links before approving the update. Preserve strong existing rankings instead of rewriting titles or headings simply to add keywords.',
-   'After publication, measure clicks and impressions for the same URL over comparable date ranges. Treat AI-system mentions or citations as separate observations, not a substitute for verified Google Search Console metrics. If the current answer already explains these steps clearly, do not add duplicate text.'
-  ];
-  m.change.copy_ready=true;
+ // Never claim copy is ready from a keyword match or prewritten template.
+ // Provide a concrete, source-linked comparison task instead. A gap remains
+ // unverified until the full target article and competing answer are compared.
+ const evidencePair=sideBySide.find(x=>x.tracked_page_section&&x.competitor_excerpt&&x.tracked_page_excerpt);
+ if(evidencePair){
+  m.change.type='VERIFY_SPECIFIC_EXISTING_ANSWER_AGAINST_COMPETITOR';
+  m.change.summary='Compare the existing section "'+evidencePair.tracked_page_section+
+   '" with "'+evidencePair.competitor_section+'" from '+evidencePair.competitor_url+
+   '. Determine the exact unanswered reader question before writing new copy.';
+  m.change.specific_evidence_review={
+   focus_query:query,own_page_url:report.url,own_section:evidencePair.tracked_page_section,
+   own_observed_excerpt:evidencePair.tracked_page_excerpt,
+   competitor_url:evidencePair.competitor_url,competitor_section:evidencePair.competitor_section,
+   competitor_observed_excerpt:evidencePair.competitor_excerpt,
+   verified_gap:false,requires_full_page_comparison:true,
+   next_action:'Read both complete sections and record a specific missing fact, step or example with source evidence, or explicitly decide NO_CHANGE.'
+  };
+ }else{
+  m.change.type='VERIFY_INTENT_BEFORE_CONTENT_CHANGE';
+  m.change.summary='No sufficiently comparable existing and competitor passages were retrieved. Do not invent an improvement.';
  }
+ m.change.copy_ready=false;
+ m.change.ready_to_review_text=[];
+
  return m;
 }
 module.exports={buildGrowthPracticalBrief,sectionEvidence,classifyAllQueries,meaningfulCompetitorEvidence};
