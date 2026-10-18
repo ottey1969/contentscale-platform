@@ -8,6 +8,9 @@ body_evidence:{status:'PUBLIC_HTML_CONTENT_OBSERVED',source_truncated:false,evid
 const a=prepareEvidenceGuidedCopy({target,query:'content scaling',protectedSource:'https://example.com/'});
 assert.equal(a.status,'ONE_EDITORIAL_CANDIDATE_REQUIRES_REVIEW');
 assert.equal(a.proposed_additions.length,1);
+assert.equal(a.proposed_additions[0].reviewable_paragraph,null,'prewritten boilerplate must not appear as an editorial draft');
+assert.equal(a.proposed_additions[0].research_only,true);
+assert.equal(a.proposal_ready,false,'no verified missing reader need, hence no draft-ready proposal');
 assert.equal(a.one_next_action.code,'REVIEW_ONE_POSSIBLE_GAP');
 assert.equal(a.no_proven_content_gaps,true);
 assert.equal(a.publish_allowed,false);
