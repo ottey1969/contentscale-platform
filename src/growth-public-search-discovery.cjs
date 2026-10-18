@@ -163,7 +163,7 @@ async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
    fallback_used:true,free_discovery_status:publicResult.status};
  return {...publicResult,provider_attempts:google.status==='OPTIONAL_PROVIDER_NOT_CONFIGURED'?['BING_PUBLIC_RSS']:
   ['BING_PUBLIC_RSS',google.source||'SERPAPI_GOOGLE_ORGANIC'],fallback_used:false,
-  optional_google_status:google.status,free_discovery_status:publicResult.status,
+  optional_google_status:google.status,optional_google_failure_reason:google.reason||null,free_discovery_status:publicResult.status,
   warning:(publicResult.warning||'Free public search may be unavailable.')+
    ' Optional Google organic lookup: '+google.status+'. No competitor ranking or content gap is inferred from a missing response.'};
 }
