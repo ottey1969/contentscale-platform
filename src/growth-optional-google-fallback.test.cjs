@@ -1,9 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
-// The production fallback must use the already configured SerpAPI account.
+// The production fallback uses the existing funded Serper.dev account.
 const providerSource=fs.readFileSync('src/growth-public-search-discovery.cjs','utf8');
-assert(providerSource.includes('fetchGoogle=optionalSerpApiOrganicDiscovery'));
+assert(providerSource.includes('fetchGoogle=optionalGoogleOrganicDiscovery'));
 
 const {discoverGrowthCompetitorsWithFallback,optionalGoogleOrganicDiscovery,
  parseSerperGoogleOrganic,parseBingRss}=require('./growth-public-search-discovery.cjs');
