@@ -39,4 +39,17 @@ assert(checked.editorial_package.excluded_product_intent_urls.some(x=>x.includes
 assert.equal(checked.editorial_package.reader_steps.length,5);
 assert.equal(checked.editorial_package.can_publish,false);
 assert.equal(missing.editorial_package,null);
+// Live 18 October regression: the informational content-at-scale guide has
+// a secondary BrandWell H2, but its main topic is still informational.
+const liveGuide=autonomouslyFindGrowthOpportunity({report:{...base,site_architecture:{candidates:[
+ {url:'https://contentscale.site/content-at-scale-is-now-brandwell/',tracked_keyword:'content at scale is now brandwell'},
+ {url:'https://contentscale.site/content-at-scale/',tracked_keyword:'content at scale'}
+]}},existingPageReviews:[
+ {url:'https://contentscale.site/content-at-scale-is-now-brandwell/',verified_live:true,title:'Content At Scale Is Now BrandWell: Free Alternative Inside',h1:['Content at Scale Is Now BrandWell: What Changed in 2026']},
+ {url:'https://contentscale.site/content-at-scale/',verified_live:true,title:'What Is Content At Scale In 2026? The New Definition',h1:['What Is Content at Scale in 2026? (And Why the Name Changed)'],h2:['Why Did Content at Scale Rebrand to BrandWell?','How to Do Content at Scale the Right Way in 2026']}
+]});
+assert.equal(liveGuide.existing_destinations[0].suitability,'SEPARATE_PRODUCT_INTENT');
+assert.equal(liveGuide.existing_destinations[1].suitability,'TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW');
+assert.equal(liveGuide.editorial_package.proposed_target_url,'https://contentscale.site/content-at-scale/');
+assert.equal(liveGuide.editorial_package.can_publish,false);
 console.log('PASS: evidence-backed next opportunity protects rankings and denies unverified publication');
