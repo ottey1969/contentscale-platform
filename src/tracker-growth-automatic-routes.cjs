@@ -6,6 +6,7 @@ const {proposeHandoffFromResearch}=require('./growth-research-handoff-suggestion
 const {discoverGrowthCompetitorsWithFallback}=require('./growth-public-search-discovery.cjs');
 const {queryFit}=require('./growth-one-action-decision.cjs');
 const {autonomouslyFindGrowthOpportunity}=require('./growth-autonomous-opportunity.cjs');
+const {evaluateExistingBody}=require('./growth-existing-body-evidence.cjs');
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
@@ -68,7 +69,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     const inspected=require('./growth-automatic-analysis.cjs').excerpt(fresh.html);
     return {url:x.url,tracked_keyword:x.tracked_keyword||null,verified_live:true,
      title:inspected.title,h1:inspected.h1,h2:inspected.h2,
-     fetched_at:fresh.retrieved_at||null};
+     fetched_at:fresh.retrieved_at||null,
+     body_evidence:evaluateExistingBody({html:fresh.html,truncated:fresh.truncated,query:targetQuery})};
    }catch(e){return {url:x.url,tracked_keyword:x.tracked_keyword||null,
      verified_live:false,reason:String(e?.code||'PUBLIC_HTML_UNAVAILABLE').slice(0,60)}}
   }));
