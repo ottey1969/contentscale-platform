@@ -33,4 +33,10 @@ const checked=autonomouslyFindGrowthOpportunity({report:{...base,site_architectu
 assert.equal(checked.existing_destinations[0].suitability,'SEPARATE_PRODUCT_INTENT');
 assert.equal(checked.existing_destinations[1].suitability,'TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW');
 assert.equal(checked.safeguards.publication_allowed,false);
+assert.equal(checked.editorial_package.decision,'EXISTING_PAGE_CONTENT_REVIEW');
+assert.equal(checked.editorial_package.proposed_target_url,'https://contentscale.site/content-at-scale/');
+assert(checked.editorial_package.excluded_product_intent_urls.some(x=>x.includes('brandwell')));
+assert.equal(checked.editorial_package.reader_steps.length,5);
+assert.equal(checked.editorial_package.can_publish,false);
+assert.equal(missing.editorial_package,null);
 console.log('PASS: evidence-backed next opportunity protects rankings and denies unverified publication');
