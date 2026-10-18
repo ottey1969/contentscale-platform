@@ -15,6 +15,23 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
   measurement:/\b(?:measure|clicks|performance|baseline|track results)\b/i.test(text),
   worked_example:/\b(?:for example|example:|worked example|sample plan)\b/i.test(text)
  };
+ // Preserve concise observed source paragraphs for editorial comparison.
+ // Excludes page navigation, scripts, and any markup; no gap is inferred.
+ const cleaned=String(html||'').replace(/<(?:script|style|svg|noscript|template|nav|footer|header)\b[^>]*>[\s\S]*?<\/(?:script|style|svg|noscript|template|nav|footer|header)>/gi,' ');
+ const paragraphs=Array.from(cleaned.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi))
+  .map(x=>textOf(x[1])).filter(x=>x.length>=45).slice(0,80);
+ const observed_paragraphs=paragraphs.slice(0,8).map(x=>x.slice(0,460));
+ const evidence_passages=Object.fromEntries(Object.keys(questions).map(k=>{
+  const pattern={
+   definition:/content (?:scaling|at scale)|scaling content/i,
+   inventory:/content audit|inventory|existing (?:pages|content)/i,
+   search_data:/search console|impressions|click.through rate|\bctr\b/i,
+   decisions:/prioriti[sz]|search intent|cannibaliz|overlap|consolidat/i,
+   measurement:/measure|clicks|performance|baseline|track results/i,
+   worked_example:/for example|example:|worked example|sample plan/i
+  }[k];
+  return [k,paragraphs.filter(x=>pattern.test(x)).slice(0,2).map(x=>x.slice(0,460))];
+ }));
  const present=Object.entries(questions).filter(x=>x[1]).map(x=>x[0]);
  const notObserved=Object.entries(questions).filter(x=>!x[1]).map(x=>x[0]);
  const queryTerms=String(query||'').toLowerCase().split(/\s+/).filter(x=>x.length>3);
@@ -23,7 +40,7 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
   status:truncated?'PARTIAL_HTML_ONLY':'PUBLIC_HTML_CONTENT_OBSERVED',
   source:'PUBLIC_HTML_TEXT_HEURISTIC',
   inspected_text_chars:text.length,source_truncated:!!truncated,
-  evidence_checks:questions,observed_elements:present,
+  evidence_checks:questions,observed_elements:present,\n  observed_paragraphs,evidence_passages,
   elements_not_detected:notObserved,
   query_terms_observed:queryTermsObserved,
   no_proven_gaps:true,
