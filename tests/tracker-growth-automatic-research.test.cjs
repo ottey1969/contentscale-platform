@@ -85,10 +85,10 @@ async function testRoutes(){
  assert.equal(report.body.competitors.leads.length,1,'historical lead remains in the evidence inventory');
  assert.equal(report.body.search_discovery.status,'NO_RELEVANT_PUBLIC_SEARCH_LEADS');
  assert.equal(report.body.search.verified_queries.length,1);
- assert.equal(calls.length,1,'Only the tracked page is fetched when no related competitor passes the intent gate');
+ assert.deepEqual(calls,[own,'https://roof.example/roof-repair-guide/'],'No unrelated competitor fetch; related first-party page is inspected');
  const again=await invoke(api);
  assert.equal(again.statusCode,200);
- assert.equal(calls.length,1,'Shared safe cache prevents duplicate network calls');
+ assert.equal(calls.length,2,'Shared safe cache prevents duplicate network calls');
  const view=await invoke('/track/:token/growth/auto-research');
  assert.equal(view.statusCode,200);
  assert.match(view.body,/Automatic Growth research/);
