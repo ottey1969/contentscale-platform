@@ -85,6 +85,19 @@
     }
     node('small',pkg.verification_gate,s);
    }
+   var copy=opportunity.evidence_guided_copy||{};
+   if(copy.status){
+    node('h3','Evidence-guided editorial copy',s);
+    node('p','Status: '+copy.status,s);
+    if(copy.target_url)link(copy.target_url,'Inspected target URL',s);
+    (copy.proposed_additions||[]).forEach(function(proposal){
+     var item=node('div',null,s);
+     node('strong',proposal.proposed_heading,item);
+     node('p',proposal.reviewable_paragraph,item);
+     node('small','Review before use: '+proposal.action,item);
+    });
+    if(copy.verification)node('small',copy.verification,s);
+   }
    node('strong','Related existing pages to investigate',s);
    if(opportunity.existing_destinations?.length)opportunity.existing_destinations.forEach(function(x){
     var item=node('p',null,s);link(x.url,x.url,item);node('small','Not yet verified as matching the intent.',item);
