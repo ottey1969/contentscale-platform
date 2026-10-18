@@ -9,9 +9,9 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
  const metrics=action.metrics||null;
  const origin=String(report.url||'');
  const liveLeads=(discovery.leads||[]).filter(x=>x&&typeof x.url==='string'&&
-   (x.source==='SERPER_GOOGLE_ORGANIC'||discovery.source==='SERPER_GOOGLE_ORGANIC'||x.source==='BING_PUBLIC_RSS'||discovery.source==='BING_PUBLIC_RSS'));
+   (x.source==='SERPAPI_GOOGLE_ORGANIC'||x.source==='SERPER_GOOGLE_ORGANIC'||discovery.source==='SERPAPI_GOOGLE_ORGANIC'||discovery.source==='SERPER_GOOGLE_ORGANIC'||x.source==='BING_PUBLIC_RSS'||discovery.source==='BING_PUBLIC_RSS'));
  const source=discovery.source||null;
- const currentSerp=!!query&&liveLeads.length>=2&&['SERPER_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(source);
+ const currentSerp=!!query&&liveLeads.length>=2&&['SERPAPI_GOOGLE_ORGANIC','SERPER_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(source);
  const existing=(report.site_architecture?.candidates||[]).filter(x=>x?.url&&x.url!==origin).slice(0,4);
  const overlap=(report.site_architecture?.intent_overlap_risks||[]).filter(x=>x?.url&&x.url!==origin).slice(0,5);
  const primaryTopic=terms(query);
