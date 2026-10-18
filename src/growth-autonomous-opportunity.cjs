@@ -2,7 +2,7 @@
 // Evidence-led, read-only next opportunity. No writes, no click projections.
 // Inputs come from the canonical Growth report and the same live SERP discovery.
 const {terms}=require('./growth-intent-site-graph.cjs');
-function autonomouslyFindGrowthOpportunity({report={},discovery={}}={}){
+function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageReviews=[]}={}){
  const action=report.growth_decision?.primary_next_action||{};
  const query=String(action.query||'').trim();
  const metrics=action.metrics||null;
@@ -14,17 +14,25 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={}}={}){
  const existing=(report.site_architecture?.candidates||[]).filter(x=>x?.url&&x.url!==origin).slice(0,4);
  const overlap=(report.site_architecture?.intent_overlap_risks||[]).filter(x=>x?.url&&x.url!==origin).slice(0,5);
  const primaryTopic=terms(query);
- const relevant=existing.map(p=>({
-  url:p.url,tracked_keyword:p.tracked_keyword||null,reason:'Candidate in the same Tracker site inventory; live page and actual intent still require verification',
-  suitability:'UNVERIFIED',existing_link_in_source:false
- }));
+ const reviewed=new Map((Array.isArray(existingPageReviews)?existingPageReviews:[]).map(x=>[x.url,x]));
+ const relevant=existing.map(p=>{
+  const live=reviewed.get(p.url);
+  const headings=[live?.title,...(live?.h1||[]),...(live?.h2||[])].filter(Boolean).join(' ').toLowerCase();
+  const brandwell=/\bbrandwell\b|\bis now\b|\bdetector\b|\breview\b/i.test(headings+' '+p.url);
+  const topic=/\bcontent\b/i.test(headings)&&/\bscal(?:e|ing|able)\b/i.test(headings);
+  const suitability=!live?.verified_live?'NOT_VERIFIED':brandwell?'SEPARATE_PRODUCT_INTENT':topic?'TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW':'TOPIC_NOT_ESTABLISHED';
+  return {url:p.url,tracked_keyword:p.tracked_keyword||null,
+   reason:'Inspected same-domain public HTML when available; title and headings are evidence of topic, not proof of full intent fit.',
+   suitability,verified_live:!!live?.verified_live,observed_title:live?.title||null,
+   observed_h1:live?.h1||[],observed_h2:live?.h2||[],existing_link_in_source:false};
+ });
  const protect=report.growth_decision?.protection||{};
  const topQueries=(report.growth_decision?.protected_queries||[]).slice(0,5).map(x=>({query:x.query,clicks:x.clicks,impressions:x.impressions,average_position:x.position}));
  const likelyInfo=/\b(how|what|why|guide|strategy|steps|scaling|scale|content)\b/i.test(query);
  const missing=[];
  if(!metrics)missing.push('EXACT_PAGE_QUERY_METRICS');
  if(!currentSerp)missing.push('TWO_CURRENT_SEARCH_RESULTS_FOR_INTENT');
- if(!relevant.length)missing.push('EXISTING_RELEVANT_SITE_DESTINATION_NOT_ESTABLISHED');
+ if(!relevant.some(x=>x.suitability==='TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW'))missing.push('EXISTING_RELEVANT_SITE_DESTINATION_NOT_ESTABLISHED');
  missing.push('FULL_PAGE_INTENT_DIFFERENTIATION_NOT_VERIFIED','DATED_GSC_MEASUREMENT_WINDOW_NOT_ESTABLISHED');
  const selected=metrics?{
   query,observed_impressions:metrics.impressions,observed_clicks:metrics.clicks,
