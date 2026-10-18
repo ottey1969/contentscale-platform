@@ -40,6 +40,30 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
   imported_at:metrics.imported_at||null,actual_gsc_period:null,
   analysis:metrics.average_position>10?'Average ranking beyond the first page is a possible stronger limitation than snippet CTR; verify results by country and device.':'Investigate intent and result appearance as well as page ranking.'
  }:null;
+ const fitting=relevant.filter(x=>x.suitability==='TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW');
+ const alternate=relevant.filter(x=>x.suitability==='SEPARATE_PRODUCT_INTENT');
+ const nextEditorialTarget=fitting[0]||null;
+ const editorialPackage=selected?{
+  decision:nextEditorialTarget?'EXISTING_PAGE_CONTENT_REVIEW':'DISTINCT_SPOKE_RESEARCH_REQUIRED',
+  proposed_target_url:nextEditorialTarget?.url||null,
+  focus_query:query,
+  visitor_outcome:'Explain the query directly and give a practical sequence that ends in a useful deliverable, not merely another tool recommendation.',
+  reader_steps:[
+   {heading:'Inventory pages and questions',action:'List useful existing URLs, map each to a distinct reader question, and identify overlap.',output:'Content inventory and question map'},
+   {heading:'Find real search opportunity',action:'Compare actual page-level Google Search Console queries, impressions, clicks and positions using dated periods.',output:'Prioritized evidence table'},
+   {heading:'Preserve working pages',action:'Keep strong page titles and H1s; identify which other relevant page can serve the missing intention.',output:'Protected pages and candidate URLs'},
+   {heading:'Compare and improve',action:'Read competing answers and the existing full page, identify a genuinely unanswered reader question, then prepare original examples and precise improvements.',output:'Evidence-linked content edit plan'},
+   {heading:'Measure the difference',action:'After approved publication, compare the same URLs and queries over equivalent dated windows.',output:'Before/after click and impression comparison'}
+  ],
+  internal_link_recommendation:nextEditorialTarget?{
+   source_page:origin,destination:nextEditorialTarget.url,
+   suggested_anchor:query,
+   insertion_policy:'Only in a naturally relevant explanatory paragraph after verifying there is no existing duplicate link; never alter the protected H1/title.'
+  }:null,
+  excluded_product_intent_urls:alternate.map(x=>x.url),
+  verification_gate:'Full-page information needs and overlap are not yet checked; prepared outline is not a publish-ready article.',
+  can_publish:false
+ }:null;
  const recommendation=selected?{
   action:'RESEARCH_EXISTING_DESTINATION_THEN_PREPARE_SPOKE_IF_NEEDED',
   target_query:query,
@@ -57,7 +81,7 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
   primary_opportunity:selected,protected_baseline:topQueries,
   live_search:{source,query,observed_leads:liveLeads.slice(0,5).map(x=>({url:x.url,title:x.title||x.serp_title||null})),at_least_two_leads:currentSerp,
    caution:'Search listings do not prove full-page relevance or a current stable rank.'},
-  existing_destinations:relevant,possible_topic_overlap:overlap,
+  existing_destinations:relevant,possible_topic_overlap:overlap,editorial_package:editorialPackage,
   recommendation,verification_needed:missing,
   safeguards:{case_study_locked:!!protect.case_study_locked,protect_existing_top_rankings:!!protect.preserve_existing_top_rankings,
     no_title_h1_changes:true,automatic_content_edits:false,publication_allowed:false,click_gain_forecast:null}
