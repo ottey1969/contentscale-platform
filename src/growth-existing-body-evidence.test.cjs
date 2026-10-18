@@ -16,4 +16,7 @@ const b=evaluateExistingBody({html:'<h1>Content scaling guide</h1>',truncated:tr
 assert.equal(b.status,'PARTIAL_HTML_ONLY');
 assert.equal(b.evidence_checks.search_data,false);
 assert.equal(b.no_proven_gaps,true);
+const realGuide=evaluateExistingBody({html:'<html><main><p>Step 1 — Audit before you add. In Google Search Console, find pages over 90 days old with impressions but near-zero clicks. Those are likely stale or competing with each other. Fix what you have before publishing anything new.</p></main></html>',query:'content scaling'});
+assert.equal(realGuide.evidence_checks.inventory,true,'Existing audit-first advice is semantically equivalent to an inventory step');
+assert(realGuide.evidence_passages.inventory.some(x=>x.includes('Audit before you add')));
 console.log('PASS Growth existing site body evidence and conservative claims');

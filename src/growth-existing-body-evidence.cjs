@@ -9,7 +9,7 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
  const text=textOf(html),lower=text.toLowerCase();
  const questions={
   definition:/\b(?:content scaling|scaling content|content at scale|scale content)\b/i.test(text),
-  inventory:/\b(?:content audit|inventory|existing (?:pages|content)|audit your content)\b/i.test(text),
+  inventory:/\b(?:content audit|inventory|existing (?:pages|content)|audit your content|audit before you add|audit (?:before|first)|fix what you have before publishing)\b/i.test(text),
   search_data:/\b(?:search console|impressions|click.through rate|ctr)\b/i.test(text),
   decisions:/\b(?:prioriti[sz]|search intent|cannibaliz|overlap|consolidat)\b/i.test(text),
   measurement:/\b(?:measure|clicks|performance|baseline|track results)\b/i.test(text),
@@ -24,7 +24,7 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
  const evidence_passages=Object.fromEntries(Object.keys(questions).map(k=>{
   const pattern={
    definition:/content (?:scaling|at scale)|scaling content/i,
-   inventory:/content audit|inventory|existing (?:pages|content)/i,
+   inventory:/content audit|inventory|existing (?:pages|content)|audit before you add|audit (?:before|first)|fix what you have before publishing/i,
    search_data:/search console|impressions|click.through rate|\bctr\b/i,
    decisions:/prioriti[sz]|search intent|cannibaliz|overlap|consolidat/i,
    measurement:/measure|clicks|performance|baseline|track results/i,
