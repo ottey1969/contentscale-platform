@@ -13,13 +13,14 @@ function proposeHandoffFromResearch(report,canonicalUrl){
  const clean=x=>typeof x==='string'?x.replace(/[\u0000-\u001f]/g,' ').trim():'';
  const ownOrigin=(()=>{try{return new URL(canonicalUrl).origin}catch{return null}})();
  const linkCandidates=(report.site_architecture?.candidates||[]);
- const eligibleUrls=new Set(report.growth_decision?.primary_next_action?.related_pages_to_check||[]);
+ const scopedUrls=report.growth_decision?.primary_next_action?.related_pages_to_check;
+ const eligibleUrls=Array.isArray(scopedUrls)?new Set(scopedUrls):null;
  const differentIntent=/\b(?:brandwell|detector|detection|review|pricing|alternatives)\b/i;
  const link=linkCandidates.find(x=>{
   try{
    const u=new URL(x.url),candidateIntent=[x.tracked_keyword||'',u.pathname.replace(/[\/_-]+/g,' ')].join(' ');
    return ownOrigin&&u.protocol==='https:'&&u.origin===ownOrigin&&u.href!==canonicalUrl&&
-    x.status==='CONTEXTUAL_INTERNAL_LINK_CANDIDATE'&&eligibleUrls.has(x.url)&&
+    x.status==='CONTEXTUAL_INTERNAL_LINK_CANDIDATE'&&(!eligibleUrls||eligibleUrls.has(x.url))&&
     !differentIntent.test(candidateIntent);
   }catch{return false}
  });
