@@ -31,7 +31,8 @@ function prepareEvidenceGuidedCopy({target=null,query='',protectedSource='' }={}
  const candidates=absent.map(k=>{
   const matches=relatedPassages(CHECKS[k].paragraph,(evidence.evidence_passages?.[k]||[]).concat(evidence.observed_paragraphs||[]));
   const strongest=matches[0]?.token_overlap||0;
-  return {code:k,proposed_heading:CHECKS[k].heading,reviewable_paragraph:CHECKS[k].paragraph,
+  return {code:k,proposed_heading:CHECKS[k].heading,reviewable_paragraph:null,
+   research_only:true,source_evidence_required:true,observed_comparison_passages:matches.map(x=>x.text),
    basis:'TOPIC_NOT_DETECTED_IN_OBSERVED_HTML_NOT_A_VERIFIED_CONTENT_GAP',
    similarity_review:{method:'BOUNDED_LEXICAL_OVERLAP_NOT_SEMANTIC_PROOF',nearest_existing_passages:matches,highest_overlap_pct:strongest},
    status:strongest>=35?'HOLD_POSSIBLE_DUPLICATE':'EDITORIAL_REVIEW_REQUIRED',
@@ -45,13 +46,14 @@ function prepareEvidenceGuidedCopy({target=null,query='',protectedSource='' }={}
   query,target_url:target.url,protected_source_url:protectedSource,
   evidence_source:evidence.status,
   already_observed:present,not_detected:absent,
-  proposed_additions:actionable,held_possible_duplicates:held,copy_ready:false,proposal_ready:actionable.length>0,
-  one_next_action:actionable.length?{code:'REVIEW_ONE_POSSIBLE_GAP',target_url:target.url,focus_query:query,topic:actionable[0].proposed_heading,instruction:'Compare the displayed nearest source paragraphs, and insert only a genuinely missing helpful answer.'}:{code:'VERIFY_NO_CHANGE_OR_MORE_EVIDENCE',target_url:target.url,focus_query:query,instruction:'Existing passages may already cover the topics; verify before proposing more copy.'},
+  proposed_additions:actionable,held_possible_duplicates:held,copy_ready:false,proposal_ready:false,
+  research_hypothesis_available:actionable.length>0,
+  one_next_action:actionable.length?{code:'REVIEW_ONE_POSSIBLE_GAP',target_url:target.url,focus_query:query,topic:actionable[0].proposed_heading,instruction:'Compare the observed passages and current live competitors. Do not draft or insert copy until a specific unanswered question is verified.'}:{code:'VERIFY_NO_CHANGE_OR_MORE_EVIDENCE',target_url:target.url,focus_query:query,instruction:'Existing passages may already cover the topics; verify before proposing more copy.'},
   source_passages:evidence.evidence_passages||{},observed_paragraphs:evidence.observed_paragraphs||[],
   no_proven_content_gaps:true,requires_editorial_review:true,
   publish_allowed:false,
   preserve_existing_text:true,preserve_title_h1:true,
-  verification:'A detector only establishes presence/absence of matching terms; it does not demonstrate that the current article is incomplete. Check original paragraphs for conceptual duplicates before insertion.'
+  verification:'The topic checks are research hypotheses, not draft text. A detector only establishes presence/absence of matching terms; it does not demonstrate that the current article is incomplete. Check original paragraphs for conceptual duplicates before insertion.'
  };
 }
 module.exports={prepareEvidenceGuidedCopy};
