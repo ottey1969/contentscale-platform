@@ -17,12 +17,17 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
  const reviewed=new Map((Array.isArray(existingPageReviews)?existingPageReviews:[]).map(x=>[x.url,x]));
  const relevant=existing.map(p=>{
   const live=reviewed.get(p.url);
-  const headings=[live?.title,...(live?.h1||[]),...(live?.h2||[])].filter(Boolean).join(' ').toLowerCase();
-  const brandwell=/\bbrandwell\b|\bis now\b|\bdetector\b|\breview\b/i.test(headings+' '+p.url);
+  // Primary intent comes from the URL, title and H1. A reference to a
+  // product in an H2 is not enough to reclassify an informational guide.
+  const main=[live?.title,...(live?.h1||[])].filter(Boolean).join(' ').toLowerCase();
+  const headings=[main,...(live?.h2||[])].join(' ').toLowerCase();
+  const path=(()=>{try{return new URL(p.url).pathname.toLowerCase()}catch{return ''}})();
+  const productPrimary=/\b(?:brandwell|ai detector|product review)\b/i.test(main)||
+   /(?:brandwell|ai-detector|product-review)/i.test(path);
   const topic=/\bcontent\b/i.test(headings)&&/\bscal(?:e|ing|able)\b/i.test(headings);
-  const suitability=!live?.verified_live?'NOT_VERIFIED':brandwell?'SEPARATE_PRODUCT_INTENT':topic?'TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW':'TOPIC_NOT_ESTABLISHED';
+  const suitability=!live?.verified_live?'NOT_VERIFIED':productPrimary?'SEPARATE_PRODUCT_INTENT':topic?'TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW':'TOPIC_NOT_ESTABLISHED';
   return {url:p.url,tracked_keyword:p.tracked_keyword||null,
-   reason:'Inspected same-domain public HTML when available; title and headings are evidence of topic, not proof of full intent fit.',
+   reason:'Primary page intent assessed from URL, title and H1; subsidiary H2 mentions do not reclassify the entire guide. Full body intent still needs checking.',
    suitability,verified_live:!!live?.verified_live,observed_title:live?.title||null,
    observed_h1:live?.h1||[],observed_h2:live?.h2||[],existing_link_in_source:false};
  });
