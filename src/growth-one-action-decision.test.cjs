@@ -53,9 +53,9 @@ assert.equal(report.practical_growth_plan.competitors.relevant_to_action,0);
 assert.equal(report.practical_growth_plan.competitors.classification[0].category,'DIFFERENT_SEARCH_INTENT');
 assert.equal(report.competitors.nonmatching_topic_observations.length,2,'unrelated headings retained for audit, not promoted as content gaps');
 assert.equal(report.practical_growth_plan.change.target_section,'How do you scale content without losing quality?');
-assert.equal(report.practical_growth_plan.change.copy_ready,true);
-assert(report.practical_growth_plan.change.ready_to_review_text.length>=2,'automatic prepared copy must replace empty editorial recommendations');
-assert.match(report.practical_growth_plan.change.ready_to_review_text.join(' '),/Google Search Console/);
+assert.equal(report.practical_growth_plan.change.copy_ready,false,'unverified content gaps must never produce copy-ready boilerplate');
+assert.deepEqual(report.practical_growth_plan.change.ready_to_review_text,[]);
+assert.equal(report.practical_growth_plan.change.type,'VERIFY_INTENT_BEFORE_CONTENT_CHANGE');
 assert.equal(report.practical_growth_plan.guard.can_change_live,false);
 assert.equal(report.practical_growth_plan.guard.case_study_locked,true);
 assert(!report.growth_decision.primary_next_action.related_pages_to_check.some(x=>/brandwell/.test(x)),
@@ -78,7 +78,7 @@ assert.equal(noGsc.growth_decision.primary_next_action.code,'REVIEW_PAGE_INTENT'
 assert.equal(noGsc.growth_decision.protection.case_study_locked,false);
 assert.equal(noGsc.growth_decision.protection.publication_allowed,false);
 assert.equal(noGsc.growth_decision.protected_queries.length,0);
-assert.equal(noGsc.practical_growth_plan.change.copy_ready,true,'copy can be reviewed without paid AI or GSC');
+assert.equal(noGsc.practical_growth_plan.change.copy_ready,false,'no observed gap means no copy-ready claim');
 assert.match(noGsc.practical_growth_plan.change.evidence_basis,/without exact-page GSC metrics/);
 assert.equal(noGsc.practical_growth_plan.guard.can_publish,false);
 const stale=chooseGrowthNextAction({page,queries:[{query:'content scaling',impressions:1000,clicks:0,position:15,imported_at:'2026-01-01'}],headings:report.page_content.headings,now});
