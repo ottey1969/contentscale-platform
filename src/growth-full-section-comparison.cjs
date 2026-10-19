@@ -11,6 +11,7 @@ function isEditorialHeading(heading,query){
  // or directly names a concept from the chosen search query.
  return q.some(w=>ht.has(w))||/\b(?:strategy|strategies|process|workflow|repurpos|audit|measur|roi|blog|quality|planning|publishing)\w*\b/i.test(h);
 }
+function topicTerms(query){return [...new Set(String(query||'').toLowerCase().match(/[a-z]{4,}/g)||[])].map(w=>w.replace(/(?:ing|ed|es|s)$/,'')).filter(w=>w.length>=4);}
 function sections(html,truncated=false){
  const safe=String(html||'').slice(0,120000).replace(/<(script|style|nav|footer|noscript|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
  const heads=[...safe.matchAll(/<h[23]\b[^>]*>([\s\S]*?)<\/h[23]\s*>/gi)].slice(0,50);
@@ -22,7 +23,7 @@ function sections(html,truncated=false){
 function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,competitors=[]}={}){
  if(!ownHtml)return {status:'OWN_SOURCE_INCOMPLETE',verified_gap:false,copy_ready:false,comparisons:[]};
  const own=sections(ownHtml,ownTruncated),comparison=[];
- const qt=tokens(query);
+ const qt=tokens(query),topic=topicTerms(query);
  for(const item of competitors.slice(0,4)){
   if(!item?.live?.html)continue;
   const theirs=sections(item.live.html,item.live.truncated===true);
@@ -30,6 +31,12 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
    if(!isEditorialHeading(section.heading,query))continue;
    const st=tokens(section.heading+' '+section.text.slice(0,300));
    if(qt.length&&!qt.some(x=>st.includes(x)))continue;
+   // 'content scaling' has zero distinctive tokens after common-word removal.
+   // Preserve an explicit topic gate rather than accidentally matching every heading.
+   const headline=section.heading.toLowerCase();
+   const topicHits=topic.filter(x=>headline.includes(x)).length;
+   if(!qt.length&&topic.length>=2&&topicHits===0&&
+      !/\b(?:repurpos|audit|measur|planning|strategy|strategies|workflow|publish|creation)\w*\b/i.test(headline))continue;
    const ranked=own.map(o=>{
     const a=tokens(section.text),b=new Set(tokens(o.text)),overlap=a.filter(t=>b.has(t));
     const headingTerms=new Set(tokens(o.heading)),competitorHeadingTerms=tokens(section.heading);
@@ -57,4 +64,4 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
   editorial_decision:'VERIFY_UNANSWERED_READER_TASK_OR_NO_CHANGE',
   requirement:'Only complete sections wholly present in captured HTML may be compared. Truncated captures never prove absence. Verify actual user task, factual difference and page intent before writing.'};
 }
-module.exports={compareFullSections,sections,isEditorialHeading};
+module.exports={compareFullSections,sections,isEditorialHeading,topicTerms};
