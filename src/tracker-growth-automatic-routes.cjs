@@ -64,9 +64,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const related=(report.site_architecture?.candidates||[]).filter(x=>{
    try{return new URL(x.url).origin===siteOrigin&&x.url!==page.url}catch{return false}
   }).slice(0,4);
+  const destinationSources=new Map();
   const sameSiteReviews=await Promise.all(related.map(async x=>{
    try{
     const fresh=await fetchLive(x.url);
+    destinationSources.set(x.url,fresh);
     const inspected=require('./growth-automatic-analysis.cjs').excerpt(fresh.html);
     return {url:x.url,tracked_keyword:x.tracked_keyword||null,verified_live:true,
      title:inspected.title,h1:inspected.h1,h2:inspected.h2,
@@ -79,6 +81,19 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.full_section_comparison=compareFullSections({query:targetQuery,ownUrl:page.url,
    ownHtml:own.live?.html||page.saved_html||'',ownTruncated:own.live?.truncated===true,
    competitors:comparisons.filter(x=>x.search_source==='SERPER_GOOGLE_ORGANIC'||x.search_source==='SERPAPI_GOOGLE_ORGANIC'||x.search_source==='BING_PUBLIC_RSS')});
+  // Compare the distinct growth intent on its likely existing destination,
+  // not only the protected homepage that surfaced the GSC opportunity.
+  const proposed=report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
+   report.growth_decision?.primary_next_action?.related_pages_to_check?.find(u=>destinationSources.has(u))||null;
+  const selectedSource=proposed?destinationSources.get(proposed):null;
+  report.destination_section_comparison=selectedSource?compareFullSections({
+   query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,
+   ownTruncated:selectedSource.truncated===true,
+   competitors:comparisons.filter(x=>['SERPER_GOOGLE_ORGANIC','SERPAPI_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(x.search_source))
+  }):{status:'EXISTING_DESTINATION_EVIDENCE_UNAVAILABLE',target_url:proposed,
+   verified_gap:false,copy_ready:false,comparisons:[]};
+  report.destination_section_comparison.target_url=proposed;
+  report.destination_section_comparison.protected_source_url=page.url;
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=comparisons.length;
   report.summary.optional_evidence_complete=unavailable.length===0&&!(discovery.provider_attempts?.length&&!discovery.leads?.length);
