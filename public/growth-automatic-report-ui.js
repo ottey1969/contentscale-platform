@@ -275,6 +275,7 @@
       method:'POST',credentials:'same-origin',cache:'no-store',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({page_id:draftPageId,focus_query:draftQuery,
+       growth_source_page_id:Number(id),
        research_context:{target_url:draftSourceUrl,focus_query:draftQuery,observations:draftResearch}})
      });
      var result=await response.json();
@@ -288,6 +289,7 @@
       source_warning:result.draft_source_warning||null,
       source_retrieved_at:result.draft_source_retrieved_at||null,
       competitor_research_passages_used:Number(result.live_competitor_observations_used||0),
+      gsc_context:result.gsc_context||{status:'NO_VERIFIED_GSC',gsc_required:false},
       draft:result.status==='AI_DRAFT_REVIEW_REQUIRED'?result.draft||null:null,
       published:false,case_study_unchanged:true,requires_editor_approval:true
      };
@@ -302,6 +304,15 @@
      node('p','Research questions from current competitor reading: '+
       String(result.live_competitor_observations_used||0)+
       ' · editorial comparison only, not proven gaps or copied competitor text.',output);
+     var gsc=result.gsc_context||{},gscStatus=gsc.status||'NO_VERIFIED_GSC';
+     node('p','GSC (optional): '+gscStatus+
+      '. Source and destination URL measurements are kept separate. Existing successful queries are protected; missing GSC never blocks this draft.',output);
+     if(gsc.source_query_metrics&&gsc.source_url)
+      node('small','Source-page opportunity for “'+gsc.source_query_metrics.query+
+       '”: '+gsc.source_query_metrics.impressions+' impressions, '+
+       gsc.source_query_metrics.clicks+' clicks, average position '+
+       gsc.source_query_metrics.average_position.toFixed(1)+
+       ' — belongs to '+gsc.source_url+', NOT the draft destination.',output);
      node('h3','Draft proposal — editorial review required',output);
      if(draft.seo_title)node('p','Suggested title (do not replace a strong ranking title automatically): '+draft.seo_title,output);
      if(draft.meta_description)node('p','Suggested description: '+draft.meta_description,output);

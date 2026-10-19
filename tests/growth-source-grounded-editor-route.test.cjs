@@ -3,13 +3,14 @@ const assert=require('node:assert/strict');
 const {registerTrackerGrowthCmsExport}=require('../src/tracker-growth-cms-export.cjs');
 const ownUrl='https://example.org/roof-repair/';
 let active=false,saved=false,writes=0,aiCalls=0,fetchCalls=0;
-let liveHtml=null,liveFailed=false;
+let liveHtml=null,liveFailed=false,enableGsc=false;
 const original='<html><h1>Roof repair</h1><p>A roof inspection can establish the observed condition before a repair is proposed.</p><p>Check the project scope and review the existing materials before discussing options.</p></html>';
 liveHtml=original;
 const refreshed=original.replace('A roof inspection can establish the observed condition before a repair is proposed.','A current roof inspection records visible conditions and confirms material details before any repair options are recommended.');
 const pool={async query(sql,args){
  if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql)){writes++;throw Error('Writes forbidden')}
  if(sql.includes('FROM tracker_clients'))return {rows:args[0]==='owner-token'?[{id:4,domain:'example.org',token:'owner-token',status:'active'}]:[]};
+ if(sql.includes('FROM tracker_gsc_queries'))return {rows:enableGsc?[{page_id:17,tracker_client_id:4,source_page_url:ownUrl,evidence_scope:'page_verified',query:'roof repair',impressions:500,clicks:11,position:4,imported_at:'2026-10-19T10:00:00Z'}]:[]};
  if(sql.includes('FROM tracker_snapshots'))return {rows:[{checked_at:'2026-10-10T08:00:00Z',google_competitors:[{url:'https://other.example/a',title:'Roof inspection guide'},{url:'https://other.example/detector',title:'BrandWell AI detector review'}],ai_perplexity_competitors:[]}]};
  if(sql.includes('FROM tracker_pages p'))return {rows:[{id:17,url:ownUrl,html_content:saved?original:null,keyword:'roof repair',case_study_active:active}]};
  if(sql.includes('FROM tracker_pages WHERE url=')){assert.equal(args[1],4);return{rows:[{id:17,tracker_client_id:4}]}};
@@ -19,6 +20,8 @@ const routes={};
 registerTrackerGrowthCmsExport({get(){},post:(p,fn)=>{routes[p]=fn}},pool,{
  fetchLive:async()=>{fetchCalls++;if(liveFailed)throw Error('temporary fetch failure');return{html:liveHtml,final_url:ownUrl,retrieved_at:'2026-10-19T12:00:00Z'}},
  generateDraft:async x=>{aiCalls++;assert.equal(x.pageUrl,ownUrl);assert.equal(x.sourceHtml,liveFailed?original:liveHtml);assert.deepEqual(x.topics,x.researchObservations?.length?['Audit before scaling']:['Roof inspection guide']);
+  assert.equal(x.gscContext.gsc_required,false);
+  if(enableGsc)assert.equal(x.gscContext.destination_query_metrics.impressions,500);
   return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:[{h2:'Inspection steps',paragraphs:['A reviewed explanation requiring editor consent.']}],editor_approved:false}}}
 });
 async function run(token='owner-token',page_id=17,research_context=null){
@@ -58,6 +61,11 @@ async function run(token='owner-token',page_id=17,research_context=null){
  assert.equal(r.body.historical_competitor_titles_used,0);
  assert.equal(r.body.historical_snapshot_checked_at,null,'old snapshots are not needed when live research is present');
  assert.equal(aiCalls,5,'live research context generates its own review-only draft');
+ enableGsc=true;
+ r=await run();
+ assert.equal(r.body.gsc_context.status,'EXACT_DESTINATION_QUERY_VERIFIED');
+ assert.equal(r.body.gsc_context.destination_query_metrics.impressions,500);
+ assert.equal(aiCalls,6);
  assert.equal(writes,0);
  console.log('PASS owner-only Growth draft under Case Study with safe cache, no GSC requirement, no CMS writes');
 })().catch(e=>{console.error(e);process.exitCode=1});

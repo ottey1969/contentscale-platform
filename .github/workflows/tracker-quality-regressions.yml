@@ -33,6 +33,8 @@ on:
       - 'src/growth-source-grounded-editor.cjs'
       - 'src/growth-editorial-research-context.cjs'
       - 'src/growth-editorial-research-context.test.cjs'
+      - 'src/growth-optional-gsc-draft-evidence.cjs'
+      - 'src/growth-optional-gsc-draft-evidence.test.cjs'
       - 'tests/growth-source-grounded-editor.test.cjs'
       - 'tests/growth-source-grounded-editor-route.test.cjs'
       - 'tests/growth-auto-owner-draft-export.test.cjs'
@@ -86,6 +88,8 @@ on:
       - 'src/growth-source-grounded-editor.cjs'
       - 'src/growth-editorial-research-context.cjs'
       - 'src/growth-editorial-research-context.test.cjs'
+      - 'src/growth-optional-gsc-draft-evidence.cjs'
+      - 'src/growth-optional-gsc-draft-evidence.test.cjs'
       - 'tests/growth-source-grounded-editor.test.cjs'
       - 'tests/growth-source-grounded-editor-route.test.cjs'
       - 'tests/growth-auto-owner-draft-export.test.cjs'
@@ -164,6 +168,7 @@ jobs:
           node tests/growth-source-grounded-editor-route.test.cjs
           node tests/growth-auto-owner-draft-export.test.cjs
           node src/growth-editorial-research-context.test.cjs
+          node src/growth-optional-gsc-draft-evidence.test.cjs
           node tests/tracker-growth-export-canonical-scope.test.cjs
           node tests/tracker-growth-cms-manual-source.test.cjs
           node tests/tracker-growth-cms-live-source.test.cjs
