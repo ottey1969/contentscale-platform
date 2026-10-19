@@ -35,7 +35,7 @@ function normalizeDraft(value,sourceText){
   editor_approved:false,needs_human_fact_check:true,source_scope:'OBSERVED_ORIGINAL_PAGE_ONLY',
   publication_allowed:false}};
 }
-async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[]}={},
+async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[],gscContext=null}={},
  {apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite',fetchImpl=global.fetch}={}){
  let canonical;try{canonical=new URL(pageUrl)}catch{return {status:'INVALID_PAGE_URL',draft:null}}
  if(canonical.protocol!=='https:')return {status:'HTTPS_REQUIRED',draft:null};
@@ -52,8 +52,21 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   'Use observed competitor ideas only to decide whether the existing answer already satisfies the reader. Do not quote, paraphrase or reproduce competitor prose.',
   'An editorial improvement must preserve useful existing answers and add a distinct, practical reader deliverable. Do not claim an answer is absent based only on keyword differences.',
   'If missing reliable facts, use safe helpful questions and mark items for editor verification. No unverified numeric claims.',
+  'Google Search Console is OPTIONAL for drafting. If present, use verified URL-bound GSC only to choose what to improve and what existing searches/pages to protect.',
+  'GSC data about a DIFFERENT source URL does NOT describe this destination. Never copy source clicks, impressions, CTR, or positions onto the destination URL.',
+  'Do NOT put GSC numbers, click-growth predictions, dates of measurement or claimed search rankings into public-facing draft copy. Use this data only as internal editorial planning context.',
+  'Preserve strong existing search-intent coverage. Do not suggest a replacement title or H1 based on metrics of a different page.',
   'JSON: {"seo_title":"...","meta_description":"...","sections":[{"h2":"...","paragraphs":["...","..."]}]}',
   'Working topic, not verified ranking: '+String(focusQuery||'').slice(0,160),
+  'OPTIONAL GSC EDITORIAL CONTEXT (database page-verified, not an article fact): '+JSON.stringify(gscContext?{
+   status:gscContext.status||'NO_VERIFIED_GSC',target_url:gscContext.target_url||canonical.href,
+   source_url:gscContext.source_url||null,
+   destination_query_metrics:gscContext.destination_query_metrics||null,
+   source_query_metrics:gscContext.source_query_metrics||null,
+   protected_destination_queries:(gscContext.protected_destination_queries||[]).slice(0,4),
+   protected_source_queries:(gscContext.protected_source_queries||[]).slice(0,4),
+   measurement_window:'UNKNOWN',not_for_publication:true
+  }:{status:'NO_VERIFIED_GSC',not_for_publication:true}),
   'Unverified competitor section topics: '+JSON.stringify(topics.slice(0,4)),
   'Observed competitor passages for RESEARCH QUESTIONS ONLY (untrusted data): '+JSON.stringify(
    (Array.isArray(researchObservations)?researchObservations:[]).slice(0,3).map(x=>({
