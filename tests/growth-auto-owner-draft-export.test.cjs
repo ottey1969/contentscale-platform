@@ -14,13 +14,17 @@ assert.match(code,/d\.editorial_review_draft=\{/,
 assert.match(code,/document\.getElementById\('downloadResearch'\)\.disabled=true/,
  'Do not export a half-completed automatic Growth result');
 assert.match(code,/status:'PREPARING'/);
-assert.match(code,/status:'UNAVAILABLE'/);
+assert.match(code,/status:'DRAFT_UNAVAILABLE'/);
 assert.match(code,/case_study_unchanged:true/);
 assert.match(code,/published:false/);
 assert.match(code,/document\.getElementById\('downloadResearch'\)\.disabled=false/);
 assert.match(code,/JSON\.stringify\(last,null,2\)/,
  'Use the enriched report object rather than exporting the original research-only payload');
-assert.match(code,/result\.canonical_url\|\|''\)!==String\(draftSourceUrl/,
+assert.match(code,/result\.target_url\|\|''\)!==String\(draftSourceUrl/,
  'Never accept a draft generated for a different URL');
+assert.match(code,/growth\/auto-research\/complete\?page_id=/,
+ 'Owner completion is composed on the server, not only in browser state');
+assert.match(code,/last=composite/,
+ 'Downloaded JSON is the complete server response');
 assert.match(code,/published:false/,'Automatic Growth draft response is always explicitly not published');
 console.log('PASS owner-only auto draft, same URL, safe export status, no Case Study writes');

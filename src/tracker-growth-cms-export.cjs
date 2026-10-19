@@ -91,7 +91,7 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
   }catch(e){console.warn('[growth-cms-public-source]',String(e?.code||'SOURCE_FETCH_FAILED'));
    return res.status(503).json({success:false,code:'PUBLIC_HTML_UNAVAILABLE_USE_MANUAL_SOURCE'})}
  });
- app.post('/api/tracker-client/:token/growth/cms-export/editor-draft',async(req,res)=>{
+ const ownerDraftHandler=async(req,res)=>{
   try{
    // Research-only draft: Case Study baseline remains strictly unchanged.
    const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true,allowLockedResearchDraft:true});
@@ -165,7 +165,8 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     research_context_status:liveResearch.status,gsc_context:gscContext});
   }catch(e){console.warn('[growth-editor-draft]',String(e?.code||'UNAVAILABLE'));
    return res.status(503).json({success:false,code:'EDITOR_DRAFT_TEMPORARILY_UNAVAILABLE'});}
- });
+ };
+ app.post('/api/tracker-client/:token/growth/cms-export/editor-draft',ownerDraftHandler);
  app.post('/api/tracker-client/:token/growth/cms-export',async(req,res)=>{
   try{
    const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true});
@@ -232,5 +233,17 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
   }catch(e){console.error('[growth-cms-export]',String(e.code||e.message).slice(0,120));
    return res.status(503).json({success:false,code:'CMS_HANDOFF_FAILED'})}
  });
+ // Compose owner-only Growth reports using exactly the same authorization and
+ // draft handler as the existing POST endpoint. No DB writes or CMS publication.
+ return {completeOwnerDraft:async({token,body})=>{
+  const outcome={statusCode:200,body:null};
+  const response={
+   status(code){outcome.statusCode=code;return this},
+   set(){return this},
+   json(value){outcome.body=value;return value}
+  };
+  await ownerDraftHandler({params:{token},body},response);
+  return outcome;
+ }};
 }
 module.exports={registerTrackerGrowthCmsExport,loadEditablePage};

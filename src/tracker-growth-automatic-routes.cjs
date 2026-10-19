@@ -11,7 +11,7 @@ const {compareFullSections}=require('./growth-full-section-comparison.cjs');
 const {decideGrowthEditorialAction}=require('./growth-editorial-decision-gate.cjs');
 const {buildGrowthEvidenceExample}=require('./growth-evidence-bound-example.cjs');
 const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.cjs');
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -159,6 +159,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(discovery.optional_google_failure_reason)report.evidence_warnings.push('SERPAPI_GOOGLE_'+discovery.optional_google_failure_reason);
   report.handoff_suggestions=proposeHandoffFromResearch(report,page.url);
   report.access={can_edit:false,read_only_analysis:true};
+  report.editorial_review_draft={status:'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN',auto_started:false,
+   draft:null,published:false,case_study_unchanged:true};
   return report;
  }
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
@@ -181,6 +183,67 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    cache.delete(key);console.warn('[growth-auto-research]',String(e?.code||'RESEARCH_ERROR'));
    return res.status(503).json({success:false,code:'AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE'});
   }
+ });
+ // The old GET remains a research-only, read-only-safe endpoint. The complete
+ // owner report is assembled server-side so downloaded JSON cannot silently omit
+ // the editorial draft just because client JavaScript was not executed.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/auto-research/complete',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  if(req.growth?.can_edit!==true||typeof completeOwnerDraft!=='function')
+   return res.status(403).set('Cache-Control','private, no-store')
+    .json({success:false,code:'OWNER_ONLY_COMPLETION_REQUIRED'});
+  const key=v.clientId+':'+v.id+':'+(v.page.case_study_active?'locked':'unlocked')+':'+v.page.url;
+  let report;
+  try{
+   const stored=cache.get(key);
+   report=stored&&Date.now()-stored.created<TTL?
+    (stored.result||await stored.promise):await analyze(v);
+   if(!stored||Date.now()-stored.created>=TTL)
+    cache.set(key,{created:Date.now(),result:report});
+  }catch{
+   return res.status(503).json({success:false,code:'GROWTH_RESEARCH_UNAVAILABLE'});
+  }
+  const target=report.destination_gsc_evidence||{},targetUrl=target.target_url||report.url;
+  const targetId=targetUrl===report.url?v.id:Number(target.target_page_id);
+  const base={auto_started:true,target_url:targetUrl,source_page_id:targetId,
+   published:false,case_study_unchanged:true,requires_editor_approval:true};
+  let completion;
+  if(!Number.isSafeInteger(targetId)||targetId<1){
+   completion={...base,status:'DESTINATION_TRACKER_PAGE_REQUIRED',draft:null};
+  }else{
+   const query=String(report.editorial_decision_gate?.focus_query||
+    report.growth_decision?.primary_next_action?.query||'').slice(0,160);
+   const researchContext={
+    target_url:targetUrl,focus_query:query,
+    observations:(report.destination_section_comparison?.comparisons||[]).filter(c=>
+     c.competitor_url&&c.competitor_heading&&String(c.competitor_excerpt||'').length>=75)
+     .slice(0,3).map(c=>({competitor_url:c.competitor_url,
+      competitor_heading:c.competitor_heading,competitor_excerpt:String(c.competitor_excerpt).slice(0,600)}))
+   };
+   try{
+    const outcome=await completeOwnerDraft({token:req.params.token,body:{
+     page_id:targetId,focus_query:query,growth_source_page_id:v.id,
+     research_context:researchContext
+    }});
+    const detail=outcome?.body||{};
+    const validIdentity=detail.canonical_url===targetUrl&&Number(detail.page_id)===targetId;
+    completion={...base,status:outcome.statusCode===200&&detail.success===true&&validIdentity?
+     detail.status||'DRAFT_STATUS_UNKNOWN':'DRAFT_UNAVAILABLE',
+     error_code:outcome.statusCode===200&&detail.success===true&&validIdentity?
+      null:(!validIdentity&&detail.success===true?'DRAFT_SOURCE_IDENTITY_MISMATCH':detail.code||'OWNER_DRAFT_FAILED'),
+     draft:validIdentity&&detail.status==='AI_DRAFT_REVIEW_REQUIRED'?detail.draft||null:null,
+     source_type:validIdentity?detail.draft_source_type||null:null,
+     source_warning:validIdentity?detail.draft_source_warning||null:null,
+     source_retrieved_at:validIdentity?detail.draft_source_retrieved_at||null:null,
+     gsc_context:validIdentity?detail.gsc_context||{status:'NO_VERIFIED_GSC',gsc_required:false}:null,
+     competitor_research_passages_used:validIdentity?Number(detail.live_competitor_observations_used||0):0};
+   }catch{completion={...base,status:'DRAFT_UNAVAILABLE',error_code:'OWNER_DRAFT_FAILED',draft:null}}
+  }
+  return res.set('Cache-Control','private, no-store').json({...report,
+   access:{can_edit:true,read_only_analysis:false,owner_report:true},
+   editorial_review_draft:completion,
+   report_completion:{status:completion.status==='AI_DRAFT_REVIEW_REQUIRED'?'COMPLETE_FOR_OWNER_REVIEW':'RESEARCH_COMPLETE_DRAFT_NOT_READY',
+    owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
  });
  app.get('/track/:token/growth/auto-research',data,(req,res)=>{
   const v=check(req,res);if(!v)return;
