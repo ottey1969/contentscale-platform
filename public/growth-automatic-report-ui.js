@@ -252,10 +252,22 @@
     prepare.disabled=true;draftStatus.textContent='Preparing a source-grounded draft without publishing…';
     output.textContent='';
     try{
+     // Carry the already-observed competitor excerpts to the draft as bounded
+     // research questions. The server treats these as untrusted, never factual proof.
+     var draftQuery=String(recommendation?.query||plan.focus_query||'').slice(0,160);
+     var seenRivals=new Set(),draftResearch=[];
+     (d.destination_section_comparison?.comparisons||[]).forEach(function(c){
+      if(draftResearch.length>=3||!c?.competitor_url||!c?.competitor_heading||
+       !c?.competitor_excerpt||c.competitor_excerpt.length<75||seenRivals.has(c.competitor_url))return;
+      seenRivals.add(c.competitor_url);
+      draftResearch.push({competitor_url:c.competitor_url,competitor_heading:c.competitor_heading,
+       competitor_excerpt:c.competitor_excerpt.slice(0,600)});
+     });
      var response=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export/editor-draft',{
       method:'POST',credentials:'same-origin',cache:'no-store',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({page_id:draftPageId,focus_query:String(recommendation?.query||plan.focus_query||'').slice(0,160)})
+      body:JSON.stringify({page_id:draftPageId,focus_query:draftQuery,
+       research_context:{target_url:draftSourceUrl,focus_query:draftQuery,observations:draftResearch}})
      });
      var result=await response.json();
      if(!response.ok||result.success!==true)throw Error(result.code||'Draft generation unavailable');
@@ -269,6 +281,9 @@
      var liveDraftSource=result.draft_source_type==='LIVE_PUBLIC_HTML';
      draftStatus.textContent='Draft prepared · '+(liveDraftSource?'CURRENT PUBLIC HTML':'SAVED TRACKER HTML — CHECK FRESHNESS')+
       ' · editor approval required · NOT published'+(result.case_study_locked?' · active Case Study protected':'');
+     node('p','Research questions from current competitor reading: '+
+      String(result.live_competitor_observations_used||0)+
+      ' · editorial comparison only, not proven gaps or copied competitor text.',output);
      node('h3','Draft proposal — editorial review required',output);
      if(draft.seo_title)node('p','Suggested title (do not replace a strong ranking title automatically): '+draft.seo_title,output);
      if(draft.meta_description)node('p','Suggested description: '+draft.meta_description,output);

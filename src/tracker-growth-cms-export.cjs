@@ -3,6 +3,7 @@ const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node
 const {prepareGrowthCmsHandoff,packageGrowthZip}=require('./growth-cms-handoff.cjs');
 const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('./growth-source-grounded-editor.cjs');
+const {normalizeGrowthResearchContext}=require('./growth-editorial-research-context.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowLockedResearchDraft=false}={}){
  const id=Number(pageId);
@@ -117,9 +118,11 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    // Historical Search Intelligence is optional context, not a live ranking claim.
    let topics=[],snapshotCheckedAt=null;
    const focus=String(req.body?.focus_query||v.page.keyword||'').slice(0,160);
+   const liveResearch=normalizeGrowthResearchContext(req.body?.research_context,{targetUrl:v.page.url,focusQuery:focus});
    const wrongProductTitle=title=>/\b(detector|brandwell|contentatscale|plagiarism|coupon|discount)\b/i.test(title)&&
     !/\b(detector|brandwell|contentatscale|plagiarism|coupon|discount)\b/i.test(focus);
-   try{
+   if(liveResearch.observations.length)topics=liveResearch.observations.map(x=>x.competitor_heading);
+   else try{
     const prior=await pool.query('SELECT checked_at,google_competitors,ai_perplexity_competitors FROM tracker_snapshots WHERE page_id=$1 AND (google_competitors IS NOT NULL OR ai_perplexity_competitors IS NOT NULL) ORDER BY checked_at DESC,id DESC LIMIT 1',[v.page.id]);
     const row=prior.rows?.[0];
     snapshotCheckedAt=row?.checked_at||null;
@@ -131,12 +134,12 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     }
    }catch(_err){topics=[];}
    const draftKey=[v.client.id,v.page.id,sourceOrigin,v.page.case_study_active?'locked':'unlocked',
-    sha(String(original||'')),focus,topics.join('|')].join(':');
+    sha(String(original||'')),focus,topics.join('|'),sha(JSON.stringify(liveResearch.observations))].join(':');
    const cached=draftCache.get(draftKey);
    let out;
    if(cached&&Date.now()-cached.created<DRAFT_TTL)out=await cached.promise;
    else{
-    const promise=Promise.resolve().then(()=>generateDraft({sourceHtml:original,pageUrl:v.page.url,focusQuery:focus,topics}));
+    const promise=Promise.resolve().then(()=>generateDraft({sourceHtml:original,pageUrl:v.page.url,focusQuery:focus,topics,researchObservations:liveResearch.observations}));
     draftCache.set(draftKey,{created:Date.now(),promise});
     try{out=await promise;
      if(out?.status!=='AI_DRAFT_REVIEW_REQUIRED')draftCache.delete(draftKey);
@@ -148,7 +151,11 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     draft_source_retrieved_at:sourceRetrievedAt,requires_editor_approval:true,
     no_gsc_requirement:true,auto_publishing:false,case_study_protected:true,
     case_study_locked:v.page.case_study_active===true,review_only:true,
-    historical_competitor_titles_used:topics.length,historical_snapshot_checked_at:snapshotCheckedAt});
+    historical_competitor_titles_used:liveResearch.observations.length?0:topics.length,
+    historical_snapshot_checked_at:snapshotCheckedAt,
+    live_competitor_observations_used:liveResearch.observations.length,
+    research_context_scope:liveResearch.scope,
+    research_context_status:liveResearch.status});
   }catch(e){console.warn('[growth-editor-draft]',String(e?.code||'UNAVAILABLE'));
    return res.status(503).json({success:false,code:'EDITOR_DRAFT_TEMPORARILY_UNAVAILABLE'});}
  });
