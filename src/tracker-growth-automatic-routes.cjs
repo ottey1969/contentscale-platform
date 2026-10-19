@@ -136,8 +136,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     report.evidence_warnings.push('DESTINATION_GSC_LOOKUP_UNAVAILABLE');
    }
   }
-  const exactTargetRow=destinationGscRows.find(x=>
-   String(x.query||'').trim().toLowerCase()===targetQuery.trim().toLowerCase());
+  const exactTargetRow=destinationGscRows.find(x=>{
+   const impressions=Number(x.impressions),clicks=Number(x.clicks),position=Number(x.position);
+   return String(x.query||'').trim().toLowerCase()===targetQuery.trim().toLowerCase()&&
+    Number.isFinite(impressions)&&impressions>0&&Number.isFinite(clicks)&&clicks>=0&&
+    clicks<=impressions&&Number.isFinite(position)&&position>0;
+  });
   report.destination_gsc_evidence={
    status:exactTargetRow?'EXACT_QUERY_VERIFIED':destinationGscStatus,
    target_url:proposed,focus_query:targetQuery,
