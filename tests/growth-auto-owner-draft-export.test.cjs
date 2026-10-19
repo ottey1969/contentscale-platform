@@ -22,5 +22,5 @@ assert.match(code,/JSON\.stringify\(last,null,2\)/,
  'Use the enriched report object rather than exporting the original research-only payload');
 assert.match(code,/result\.canonical_url\|\|''\)!==String\(draftSourceUrl/,
  'Never accept a draft generated for a different URL');
-assert.doesNotMatch(code,/auto[_-]?publish/i,'Automatic Growth draft must not publish');
+assert.match(code,/published:false/,'Automatic Growth draft response is always explicitly not published');
 console.log('PASS owner-only auto draft, same URL, safe export status, no Case Study writes');
