@@ -8,6 +8,7 @@ const {queryFit}=require('./growth-one-action-decision.cjs');
 const {autonomouslyFindGrowthOpportunity}=require('./growth-autonomous-opportunity.cjs');
 const {evaluateExistingBody}=require('./growth-existing-body-evidence.cjs');
 const {compareFullSections}=require('./growth-full-section-comparison.cjs');
+const {decideGrowthEditorialAction}=require('./growth-editorial-decision-gate.cjs');
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
@@ -94,6 +95,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    verified_gap:false,copy_ready:false,comparisons:[]};
   report.destination_section_comparison.target_url=proposed;
   report.destination_section_comparison.protected_source_url=page.url;
+  report.editorial_decision_gate=decideGrowthEditorialAction({report,destination:report.destination_section_comparison});
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=comparisons.length;
   report.summary.optional_evidence_complete=unavailable.length===0&&!(discovery.provider_attempts?.length&&!discovery.leads?.length);

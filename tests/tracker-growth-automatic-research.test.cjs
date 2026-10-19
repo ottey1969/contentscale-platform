@@ -89,6 +89,9 @@ async function testRoutes(){
  assert.equal(report.body.destination_section_comparison.protected_source_url,own);
  assert.equal(report.body.destination_section_comparison.copy_ready,false);
  assert.equal(report.body.destination_section_comparison.verified_gap,false);
+ assert.equal(report.body.editorial_decision_gate.publish_allowed,false);
+ assert.equal(report.body.editorial_decision_gate.copy_ready,false);
+ assert.equal(report.body.editorial_decision_gate.case_study_locked,true);
  assert.deepEqual(calls,[own,'https://roof.example/roof-repair-guide/'],'No unrelated competitor fetch; related first-party page is inspected');
  const again=await invoke(api);
  assert.equal(again.statusCode,200);
