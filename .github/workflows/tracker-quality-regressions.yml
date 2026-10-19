@@ -35,6 +35,7 @@ on:
       - 'src/growth-editorial-research-context.test.cjs'
       - 'tests/growth-source-grounded-editor.test.cjs'
       - 'tests/growth-source-grounded-editor-route.test.cjs'
+      - 'tests/growth-auto-owner-draft-export.test.cjs'
       - 'src/growth-cms-handoff.cjs'
       - 'public/growth-cms-neutral-handoff.html'
       - 'public/growth-cms-neutral-handoff.js'
@@ -87,6 +88,7 @@ on:
       - 'src/growth-editorial-research-context.test.cjs'
       - 'tests/growth-source-grounded-editor.test.cjs'
       - 'tests/growth-source-grounded-editor-route.test.cjs'
+      - 'tests/growth-auto-owner-draft-export.test.cjs'
       - 'src/growth-cms-handoff.cjs'
       - 'public/growth-cms-neutral-handoff.html'
       - 'public/growth-cms-neutral-handoff.js'
@@ -160,6 +162,7 @@ jobs:
           node tests/tracker-growth-cms-export.test.cjs
           node tests/growth-source-grounded-editor.test.cjs
           node tests/growth-source-grounded-editor-route.test.cjs
+          node tests/growth-auto-owner-draft-export.test.cjs
           node src/growth-editorial-research-context.test.cjs
           node tests/tracker-growth-export-canonical-scope.test.cjs
           node tests/tracker-growth-cms-manual-source.test.cjs
