@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.cjs');
+const words='A scalable publishing workflow must record sources, editorial steps, ownership, revisions and dates. '.repeat(7);
+const rich='<h1>Content Scaling</h1><h2>Audits Are Critical to Content Scaling</h2><p>'+words+'</p><h2>Measure Results</h2><p>'+words+'</p>';
+assert.equal(assessGrowthCompetitorContent({html:rich,query:'content scaling'}).eligible,true);
+assert.equal(assessGrowthCompetitorContent({html:'<title>Content Scaling</title><p>Win the new front door of search</p>',query:'content scaling'}).eligible,false,'Jasper-like navigation fragments must not be treated as full articles');
+assert.equal(assessGrowthCompetitorContent({html:'<h1>Content Scaling</h1><h2>Book a Demo</h2><p>'+words+'</p>',query:'content scaling'}).eligible,false,'sales CTA is not editorial content');
+assert.equal(assessGrowthCompetitorContent({html:'<h1>Content Scaling</h1><h2>Content Strategy</h2><p>Short text</p>',query:'content scaling'}).eligible,false);
+console.log('PASS Growth competitor quality rejects unreadable articles and promo banners');

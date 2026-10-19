@@ -51,6 +51,8 @@ async function testRoutes(){
   if(sql.includes('LEFT(html_content'))return {rows:[{id:7,tracker_client_id:4,url:own,keyword:'roof repair',saved_html:html}]};
   if(sql.includes('FROM tracker_snapshots'))return {rows:[snapshot]};
   if(sql.includes('FROM tracker_ai_evidence'))return {rows:ai};
+  if(sql.includes('FROM tracker_gsc_queries')&&args?.length===3&&args[2]==='https://roof.example/roof-repair-guide/')
+   return {rows:[{page_id:11,tracker_client_id:4,source_page_url:args[2],evidence_scope:'page_verified',query:'roof repair near me',impressions:94,clicks:4,position:8.5,imported_at:'2026-10-19T10:00:00Z'}]};
   if(sql.includes('FROM tracker_gsc_queries'))return {rows:gsc};
   if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:[{id:11,url:'https://roof.example/roof-repair-guide/',keyword:'roof repair guide'}]};
   throw Error('Unexpected database access '+sql.slice(0,120));
@@ -94,6 +96,14 @@ async function testRoutes(){
  assert.equal(report.body.editorial_decision_gate.case_study_locked,true);
  assert.equal(report.body.evidence_bound_example.publish_allowed,false);
  assert.equal(report.body.evidence_bound_example.copy_ready,false);
+ assert.equal(report.body.destination_gsc_evidence.status,'EXACT_QUERY_VERIFIED');
+ assert.equal(report.body.destination_gsc_evidence.target_url,'https://roof.example/roof-repair-guide/');
+ assert.equal(report.body.destination_gsc_evidence.metrics.impressions,94);
+ assert.equal(report.body.evidence_bound_example.evidence.source_url,'https://roof.example/roof-repair-guide/');
+ assert.equal(report.body.evidence_bound_example.evidence.impressions,94);
+ assert.equal(report.body.evidence_bound_example.evidence.clicks,4);
+ assert.equal(report.body.evidence_bound_example.status,'EVIDENCE_BOUND_EXAMPLE_FOR_REVIEW');
+ assert.equal(report.body.evidence_bound_example.publish_allowed,false);
  assert.deepEqual(calls,[own,'https://roof.example/roof-repair-guide/'],'No unrelated competitor fetch; related first-party page is inspected');
  const again=await invoke(api);
  assert.equal(again.statusCode,200);
