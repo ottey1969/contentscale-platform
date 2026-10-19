@@ -4,6 +4,7 @@ const {prepareGrowthCmsHandoff,packageGrowthZip}=require('./growth-cms-handoff.c
 const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('./growth-source-grounded-editor.cjs');
 const {normalizeGrowthResearchContext}=require('./growth-editorial-research-context.cjs');
+const {loadGrowthOptionalGsc}=require('./growth-optional-gsc-draft-evidence.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowLockedResearchDraft=false}={}){
  const id=Number(pageId);
@@ -119,6 +120,10 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    let topics=[],snapshotCheckedAt=null;
    const focus=String(req.body?.focus_query||v.page.keyword||'').slice(0,160);
    const liveResearch=normalizeGrowthResearchContext(req.body?.research_context,{targetUrl:v.page.url,focusQuery:focus});
+   // GSC is never a prerequisite. If imported for either page, read it independently
+   // with exact client+page+source URL verification; never map source clicks to target.
+   const gscContext=await loadGrowthOptionalGsc(pool,{clientId:v.client.id,targetPage:v.page,
+    sourcePageId:req.body?.growth_source_page_id,focusQuery:focus});
    const wrongProductTitle=title=>/\b(detector|brandwell|contentatscale|plagiarism|coupon|discount)\b/i.test(title)&&
     !/\b(detector|brandwell|contentatscale|plagiarism|coupon|discount)\b/i.test(focus);
    if(liveResearch.observations.length)topics=liveResearch.observations.map(x=>x.competitor_heading);
@@ -134,12 +139,14 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     }
    }catch(_err){topics=[];}
    const draftKey=[v.client.id,v.page.id,sourceOrigin,v.page.case_study_active?'locked':'unlocked',
-    sha(String(original||'')),focus,topics.join('|'),sha(JSON.stringify(liveResearch.observations))].join(':');
+    sha(String(original||'')),focus,topics.join('|'),sha(JSON.stringify(liveResearch.observations)),
+    sha(JSON.stringify(gscContext))].join(':');
    const cached=draftCache.get(draftKey);
    let out;
    if(cached&&Date.now()-cached.created<DRAFT_TTL)out=await cached.promise;
    else{
-    const promise=Promise.resolve().then(()=>generateDraft({sourceHtml:original,pageUrl:v.page.url,focusQuery:focus,topics,researchObservations:liveResearch.observations}));
+    const promise=Promise.resolve().then(()=>generateDraft({sourceHtml:original,pageUrl:v.page.url,focusQuery:focus,topics,
+     researchObservations:liveResearch.observations,gscContext}));
     draftCache.set(draftKey,{created:Date.now(),promise});
     try{out=await promise;
      if(out?.status!=='AI_DRAFT_REVIEW_REQUIRED')draftCache.delete(draftKey);
@@ -155,7 +162,7 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     historical_snapshot_checked_at:snapshotCheckedAt,
     live_competitor_observations_used:liveResearch.observations.length,
     research_context_scope:liveResearch.scope,
-    research_context_status:liveResearch.status});
+    research_context_status:liveResearch.status,gsc_context:gscContext});
   }catch(e){console.warn('[growth-editor-draft]',String(e?.code||'UNAVAILABLE'));
    return res.status(503).json({success:false,code:'EDITOR_DRAFT_TEMPORARILY_UNAVAILABLE'});}
  });
