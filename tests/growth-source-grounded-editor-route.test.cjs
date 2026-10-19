@@ -17,7 +17,7 @@ const pool={async query(sql,args){
  throw Error('Unexpected SQL '+sql);
 }};
 const routes={};
-registerTrackerGrowthCmsExport({get(){},post:(p,fn)=>{routes[p]=fn}},pool,{
+const cms=registerTrackerGrowthCmsExport({get(){},post:(p,fn)=>{routes[p]=fn}},pool,{
  fetchLive:async()=>{fetchCalls++;if(liveFailed)throw Error('temporary fetch failure');return{html:liveHtml,final_url:ownUrl,retrieved_at:'2026-10-19T12:00:00Z'}},
  generateDraft:async x=>{aiCalls++;assert.equal(x.pageUrl,ownUrl);assert.equal(x.sourceHtml,liveFailed?original:liveHtml);assert.deepEqual(x.topics,x.researchObservations?.length?['Audit before scaling']:['Roof inspection guide']);
   assert.equal(x.gscContext.gsc_required,false);
@@ -66,6 +66,17 @@ async function run(token='owner-token',page_id=17,research_context=null){
  assert.equal(r.body.gsc_context.status,'EXACT_DESTINATION_QUERY_VERIFIED');
  assert.equal(r.body.gsc_context.destination_query_metrics.impressions,500);
  assert.equal(aiCalls,6);
+ const completed=await cms.completeOwnerDraft({
+  token:'owner-token',body:{page_id:17,focus_query:'roof repair'}
+ });
+ assert.equal(completed.statusCode,200);
+ assert.equal(completed.body.success,true);
+ assert.equal(completed.body.canonical_url,ownUrl);
+ assert.equal(completed.body.auto_publishing,false);
+ const forbiddenCompletion=await cms.completeOwnerDraft({
+  token:'readonly-token',body:{page_id:17,focus_query:'roof repair'}
+ });
+ assert.equal(forbiddenCompletion.statusCode,403,'shared access cannot invoke owner draft service');
  assert.equal(writes,0);
  console.log('PASS owner-only Growth draft under Case Study with safe cache, no GSC requirement, no CMS writes');
 })().catch(e=>{console.error(e);process.exitCode=1});
