@@ -23,11 +23,18 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
    if(qt.length&&!qt.some(x=>st.includes(x)))continue;
    const ranked=own.map(o=>{
     const a=tokens(section.text),b=new Set(tokens(o.text)),overlap=a.filter(t=>b.has(t));
-    return {url:ownUrl,heading:o.heading,excerpt:o.text.slice(0,650),shared_terms:overlap.slice(0,12),lexical_coverage_pct:a.length?Math.round(overlap.length/a.length*100):null};
-   }).sort((a,b)=>(b.lexical_coverage_pct||0)-(a.lexical_coverage_pct||0));
+    const headingTerms=new Set(tokens(o.heading)),competitorHeadingTerms=tokens(section.heading);
+    const headingAgreement=competitorHeadingTerms.filter(t=>headingTerms.has(t)).length;
+    const coverage=a.length?Math.round(overlap.length/a.length*100):0;
+    return {url:ownUrl,heading:o.heading,excerpt:o.text.slice(0,650),shared_terms:overlap.slice(0,12),lexical_coverage_pct:coverage,
+     heading_shared_terms:headingAgreement,eligible_match:(headingAgreement>0&&overlap.length>=2)||
+      (coverage>=20&&overlap.length>=4)};
+   }).filter(x=>x.eligible_match).sort((a,b)=>(b.heading_shared_terms-a.heading_shared_terms)||
+    (b.lexical_coverage_pct-a.lexical_coverage_pct));
    comparison.push({competitor_url:item.url,competitor_heading:section.heading,
     competitor_excerpt:section.text.slice(0,900),competitor_word_count:section.words,
     nearest_existing_section:ranked[0]||null,
+    match_status:ranked.length?'POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED':'NO_RELIABLE_SECTION_MATCH',
     source_scope:ownTruncated||item.live.truncated?'PARTIAL_HTML_OBSERVATION':'BOUNDED_HTML_OBSERVATION',
     assessment:'UNVERIFIED_READER_NEED',verified_gap:false,
     reason:'Observed full HTML section excerpts and lexical overlap cannot alone prove missing information, improved ranking, or a factual advantage.'});

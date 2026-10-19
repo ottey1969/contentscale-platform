@@ -7,7 +7,8 @@ const r=compareFullSections({query:'content scaling',ownUrl:'https://example.com
 assert.equal(r.status,'FULL_SECTION_COMPARISON_RESEARCH_ONLY');
 assert.equal(r.comparisons.length,1);
 assert.equal(r.comparisons[0].competitor_url,'https://other.example/');
-assert.equal(r.comparisons[0].nearest_existing_section.heading,'How to scale content');
+assert.equal(r.comparisons[0].match_status,'NO_RELIABLE_SECTION_MATCH','Unrelated existing section must not be presented as the closest answer');
+assert.equal(r.comparisons[0].nearest_existing_section,null);
 assert.equal(r.verified_gap,false);
 assert.equal(r.copy_ready,false);
 assert.equal(compareFullSections({query:'content scaling',ownHtml:own,ownTruncated:true,competitors:[]}).status,'NO_COMPARABLE_COMPLETE_SECTIONS');
@@ -20,4 +21,7 @@ assert.equal(partial.verified_gap,false);
 assert.equal(partial.copy_ready,false);
 assert.equal(partial.comparisons.length,1);
 assert.equal(partial.comparisons[0].source_scope,'PARTIAL_HTML_OBSERVATION');
+const unrelated=compareFullSections({query:'content scaling',ownUrl:'https://example.com/',ownHtml:'<h2>Why Did BrandWell Rebrand?</h2><p>The former software name changed after its product portfolio expanded. The rebrand affected the marketing platform but not the general subject of editorial workflows, article quality or scaling strategy for websites.</p>',competitors:[{url:'https://other.example/',live:{html:'<h2>Creating Blogs for Content Scaling</h2><p>Blogging builds a repeatable publishing workflow. Reuse your white paper research to create several independently useful tutorials, publish them for readers with different questions, and refresh those articles as audience interests change over time.</p>'}}]});
+assert.equal(unrelated.comparisons[0].nearest_existing_section,null,'BrandWell rebranding must not match creating blogs');
+assert.equal(unrelated.comparisons[0].match_status,'NO_RELIABLE_SECTION_MATCH');
 console.log('PASS full section comparison preserves bounded partial observations, without absence or publish claims');
