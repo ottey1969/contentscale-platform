@@ -112,6 +112,22 @@
    node('small','Remaining verification: '+(opportunity.verification_needed||[]).join(' · '),s);
    node('small','Protection: no homepage title/H1 rewrite, no automatic new page, no Case Study changes or publication.',s);
   }
+  var destinationGsc=d.destination_gsc_evidence||{};
+  if(destinationGsc.target_url){
+   s=section('Selected page · search evidence');
+   node('p','Destination: '+destinationGsc.target_url,s);
+   if(destinationGsc.exact_query_verified&&destinationGsc.metrics){
+    var dm=destinationGsc.metrics;
+    node('p','Verified for this page and query: '+dm.impressions+' impressions, '+dm.clicks+
+     ' clicks, average position '+dm.average_position+'.',s);
+    node('small','GSC imported: '+(dm.imported_at||'unknown')+
+     ' · actual measurement period: unknown. Homepage metrics were not reused.',s);
+   }else{
+    node('p','No exact-page verified GSC for this destination/query ('+
+     String(destinationGsc.status||'not checked')+'). Homepage data will not be assigned to this page.',s);
+    node('small','Public-page and competitor research may continue without GSC. No verified Google click gain can be claimed.',s);
+   }
+  }
   var sample=d.evidence_bound_example||{};
   if(sample.status==='DESTINATION_GSC_EVIDENCE_REQUIRED'){
    s=section('Growth evidence · target page verification needed');
