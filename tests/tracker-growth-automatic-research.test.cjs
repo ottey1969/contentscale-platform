@@ -98,6 +98,7 @@ async function testRoutes(){
  assert.equal(report.body.evidence_bound_example.copy_ready,false);
  assert.equal(report.body.destination_gsc_evidence.status,'EXACT_QUERY_VERIFIED');
  assert.equal(report.body.destination_gsc_evidence.target_url,'https://roof.example/roof-repair-guide/');
+ assert.equal(report.body.destination_gsc_evidence.target_page_id,11,'Only the same-client selected destination may be used for owner draft');
  assert.equal(report.body.destination_gsc_evidence.metrics.impressions,94);
  assert.equal(report.body.evidence_bound_example.evidence.source_url,'https://roof.example/roof-repair-guide/');
  assert.equal(report.body.evidence_bound_example.evidence.impressions,94);

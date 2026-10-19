@@ -237,9 +237,17 @@
   if(plan.guard?.case_study_locked)node('p','The Case Study remains locked. This is an editorial proposal only; no published content or baseline has changed.',s);
   if(main.getAttribute('data-owner-draft')==='true'){
    s=section('Prepare a full reviewed editorial draft');
-   node('p','One-click owner-only drafting from your observed page and selected Growth query. No CMS connection, new URL or automatic publication. Your active Case Study stays protected.',s);
+   node('p','Owner-only drafting from the selected, observed Growth destination and working query. No CMS connection, new URL or automatic publication. Case Studies stay protected.',s);
+   var distinctDestination=!!destinationGsc.target_url&&destinationGsc.target_url!==d.url;
+   var draftSourceUrl=distinctDestination?destinationGsc.target_url:d.url;
+   var draftPageId=distinctDestination?Number(destinationGsc.target_page_id):Number(id);
+   var validDraftPage=Number.isSafeInteger(draftPageId)&&draftPageId>0;
+   node('p','Draft source URL: '+String(draftSourceUrl||'Unavailable'),s);
    var prepare=node('button','Prepare detailed draft for review',s);prepare.type='button';
-   var output=node('div',null,s),draftStatus=node('small','Optional AI assistance; the prepared editorial brief above remains available if the provider is unavailable.',s);
+   var output=node('div',null,s),draftStatus=node('small',
+    validDraftPage?'Optional AI assistance; a review-only draft does not change any live page.':
+     'Selected destination is not a verified Tracker page belonging to this account; drafting the homepage instead is blocked.',s);
+   if(!validDraftPage)prepare.disabled=true;
    prepare.addEventListener('click',async function(){
     prepare.disabled=true;draftStatus.textContent='Preparing a source-grounded draft without publishing…';
     output.textContent='';
@@ -247,10 +255,12 @@
      var response=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export/editor-draft',{
       method:'POST',credentials:'same-origin',cache:'no-store',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({page_id:Number(id),focus_query:String(recommendation?.query||plan.focus_query||'').slice(0,160)})
+      body:JSON.stringify({page_id:draftPageId,focus_query:String(recommendation?.query||plan.focus_query||'').slice(0,160)})
      });
      var result=await response.json();
      if(!response.ok||result.success!==true)throw Error(result.code||'Draft generation unavailable');
+     if(String(result.canonical_url||'')!==String(draftSourceUrl||''))
+      throw Error('DRAFT_SOURCE_URL_MISMATCH');
      if(result.status!=='AI_DRAFT_REVIEW_REQUIRED'||!result.draft?.sections?.length){
       draftStatus.textContent='Optional detailed draft unavailable: '+String(result.status||'NO_DRAFT')+'. The reviewed copy above remains available.';
       return;
@@ -266,7 +276,7 @@
      });
      node('small','Only source-supported facts may be published after verification. Preserve original H1, existing useful content, images and URL. No auto publishing.',output);
      var content=['# Growth editorial proposal — not published','',
-      'Original URL: '+String(d.url||''),'Chosen Growth query: '+String(recommendation?.query||plan.focus_query||''),
+      'Original URL: '+String(result.canonical_url||''),'Chosen Growth query: '+String(recommendation?.query||plan.focus_query||''),
       'Case Study locked: '+(result.case_study_locked?'YES':'NO'),'', 'Suggested SEO title: '+String(draft.seo_title||''),
       'Suggested description: '+String(draft.meta_description||''),'',
       ...draft.sections.flatMap(section=>['## '+section.h2,...(section.paragraphs||[]),'']),
