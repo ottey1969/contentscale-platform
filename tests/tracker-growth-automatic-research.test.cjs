@@ -85,6 +85,10 @@ async function testRoutes(){
  assert.equal(report.body.competitors.leads.length,1,'historical lead remains in the evidence inventory');
  assert.equal(report.body.search_discovery.status,'NO_RELEVANT_PUBLIC_SEARCH_LEADS');
  assert.equal(report.body.search.verified_queries.length,1);
+ assert.equal(report.body.destination_section_comparison.target_url,'https://roof.example/roof-repair-guide/');
+ assert.equal(report.body.destination_section_comparison.protected_source_url,own);
+ assert.equal(report.body.destination_section_comparison.copy_ready,false);
+ assert.equal(report.body.destination_section_comparison.verified_gap,false);
  assert.deepEqual(calls,[own,'https://roof.example/roof-repair-guide/'],'No unrelated competitor fetch; related first-party page is inspected');
  const again=await invoke(api);
  assert.equal(again.statusCode,200);
