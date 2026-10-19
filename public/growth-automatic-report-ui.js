@@ -148,7 +148,7 @@
    node('p','This is a grounded candidate example, not a verified content gap and not published.',s);
    var copyExample=node('button','Copy evidence-based example',s);copyExample.type='button';
    copyExample.addEventListener('click',async function(){
-    try{await navigator.clipboard.writeText(sample.heading+'\\n\\n'+sample.proposed_text);
+    try{await navigator.clipboard.writeText(sample.heading+'\n\n'+sample.proposed_text);
      copyExample.textContent='Copied — ready for editorial review'}
     catch(_){copyExample.textContent='Clipboard unavailable — use report JSON'}
    });
@@ -312,7 +312,7 @@
     rows.map(q=>[q.query,q.impressions+' impressions · '+q.clicks+' clicks · position '+(q.position===null?'unknown':q.position.toFixed(1)),q.category+': '+q.meaning]),other);
   else node('p','GSC is optional; this plan can still be reviewed without ranking data.',other);
   var rival=plan.competitors||{};
-  node('p',rival.inspected||0+' competitor pages inspected · '+(rival.relevant_to_action||0)+' relevant to the selected query by topic · '+
+  node('p',(rival.inspected||0)+' competitor pages inspected · '+(rival.relevant_to_action||0)+' relevant to the selected query by topic · '+
    (rival.requiring_separate_intent_review||0)+' kept as other-intent research.',s);
   node('small',rival.warning||'No current SERP ranking claim is established.',s);
   var rivals=node('details',null,s);node('summary','See inspected competitor pages and relevance',rivals);
