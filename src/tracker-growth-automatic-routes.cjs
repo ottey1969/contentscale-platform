@@ -240,6 +240,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    }catch{completion={...base,status:'DRAFT_UNAVAILABLE',error_code:'OWNER_DRAFT_FAILED',draft:null}}
   }
   return res.set('Cache-Control','private, no-store').json({...report,
+   access:{can_edit:true,read_only_analysis:false,owner_report:true},
    editorial_review_draft:completion,
    report_completion:{status:completion.status==='AI_DRAFT_REVIEW_REQUIRED'?'COMPLETE_FOR_OWNER_REVIEW':'RESEARCH_COMPLETE_DRAFT_NOT_READY',
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
