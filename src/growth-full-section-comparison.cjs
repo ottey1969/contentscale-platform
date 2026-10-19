@@ -3,6 +3,14 @@
 // No generative templates, paid API dependencies or publication rights.
 const strip=s=>String(s||'').replace(/<(?:script|style|nav|footer|form|noscript)\b[^>]*>[\s\S]*?<\/\s*(?:script|style|nav|footer|form|noscript)>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|nbsp|quot|#39);/gi,' ').replace(/\s+/g,' ').trim();
 const tokens=s=>[...new Set(strip(s).toLowerCase().match(/[a-z]{4,}/g)||[])].filter(w=>!new Set(['that','this','with','from','your','have','been','will','into','than','their','content','scale','scaling','page','pages','about','which','when','what','where','should','more','before','after','using','also','these']).has(w));
+function isEditorialHeading(heading,query){
+ const h=String(heading||'').trim();
+ if(/\b(?:book a demo|register now|get a demo|request demo|contact sales|subscribe|free trial|case study|see how .* keeps .* on.brand|our customers|related posts|recommended articles)\b/i.test(h))return false;
+ const q=tokens(query),ht=new Set(tokens(h));
+ // A general section heading is useful only when it describes an editorial task
+ // or directly names a concept from the chosen search query.
+ return q.some(w=>ht.has(w))||/\b(?:strategy|strategies|process|workflow|repurpos|audit|measur|roi|blog|quality|planning|publishing)\w*\b/i.test(h);
+}
 function sections(html,truncated=false){
  const safe=String(html||'').slice(0,120000).replace(/<(script|style|nav|footer|noscript|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ');
  const heads=[...safe.matchAll(/<h[23]\b[^>]*>([\s\S]*?)<\/h[23]\s*>/gi)].slice(0,50);
@@ -19,6 +27,7 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
   if(!item?.live?.html)continue;
   const theirs=sections(item.live.html,item.live.truncated===true);
   for(const section of theirs){
+   if(!isEditorialHeading(section.heading,query))continue;
    const st=tokens(section.heading+' '+section.text.slice(0,300));
    if(qt.length&&!qt.some(x=>st.includes(x)))continue;
    const ranked=own.map(o=>{
@@ -48,4 +57,4 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
   editorial_decision:'VERIFY_UNANSWERED_READER_TASK_OR_NO_CHANGE',
   requirement:'Only complete sections wholly present in captured HTML may be compared. Truncated captures never prove absence. Verify actual user task, factual difference and page intent before writing.'};
 }
-module.exports={compareFullSections,sections};
+module.exports={compareFullSections,sections,isEditorialHeading};
