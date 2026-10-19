@@ -23,6 +23,19 @@ assert.equal(r.draft,null);
    const sent=JSON.parse(options.body);assert.equal(sent.contents.length,1);
    return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(content)}]}}]})};}});
  assert.equal(result.status,'AI_DRAFT_REVIEW_REQUIRED');assert.equal(result.publication_allowed,false);assert.equal(calls,1);
+ const relevant=[{competitor_heading:'Audit existing pages first',
+  competitor_excerpt:'First review the existing roof service pages, mark duplicated reader questions and prepare only distinct original improvements.'}];
+ const enriched=await generateGrowthEditorDraft({sourceHtml:html,pageUrl:'https://roof.example/roof-repair/',
+  focusQuery:'roof repairs',researchObservations:relevant},{apiKey:'test-key',fetchImpl:async(_url,options)=>{
+  const sent=JSON.parse(options.body),prompt=sent.contents[0].parts[0].text;
+  assert.match(prompt,/Audit existing pages first/);
+  assert.match(prompt,/UNTRUSTED questions/);
+  assert.match(prompt,/ONLY factual source/);
+  assert.match(prompt,/never proof of a gap/);
+  return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(content)}]}}]})};
+ }});
+ assert.equal(enriched.status,'AI_DRAFT_REVIEW_REQUIRED');
+ assert.equal(enriched.publication_allowed,false);
  const js=fs.readFileSync('public/growth-cms-neutral-handoff.js','utf8');
  assert(js.includes("base+'/editor-draft'"));
  assert(js.includes("$('approved').checked=false"));
