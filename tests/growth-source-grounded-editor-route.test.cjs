@@ -3,7 +3,10 @@ const assert=require('node:assert/strict');
 const {registerTrackerGrowthCmsExport}=require('../src/tracker-growth-cms-export.cjs');
 const ownUrl='https://example.org/roof-repair/';
 let active=false,saved=false,writes=0,aiCalls=0,fetchCalls=0;
+let liveHtml=null,liveFailed=false;
 const original='<html><h1>Roof repair</h1><p>A roof inspection can establish the observed condition before a repair is proposed.</p><p>Check the project scope and review the existing materials before discussing options.</p></html>';
+liveHtml=original;
+const refreshed=original.replace('A roof inspection can establish the observed condition before a repair is proposed.','A current roof inspection records visible conditions and confirms material details before any repair options are recommended.');
 const pool={async query(sql,args){
  if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql)){writes++;throw Error('Writes forbidden')}
  if(sql.includes('FROM tracker_clients'))return {rows:args[0]==='owner-token'?[{id:4,domain:'example.org',token:'owner-token',status:'active'}]:[]};
@@ -14,8 +17,8 @@ const pool={async query(sql,args){
 }};
 const routes={};
 registerTrackerGrowthCmsExport({get(){},post:(p,fn)=>{routes[p]=fn}},pool,{
- fetchLive:async()=>{fetchCalls++;return{html:original,final_url:ownUrl}},
- generateDraft:async x=>{aiCalls++;assert.equal(x.pageUrl,ownUrl);assert.equal(x.sourceHtml,original);assert.deepEqual(x.topics,['Roof inspection guide']);
+ fetchLive:async()=>{fetchCalls++;if(liveFailed)throw Error('temporary fetch failure');return{html:liveHtml,final_url:ownUrl,retrieved_at:'2026-10-19T12:00:00Z'}},
+ generateDraft:async x=>{aiCalls++;assert.equal(x.pageUrl,ownUrl);assert.equal(x.sourceHtml,liveFailed?original:liveHtml);assert.deepEqual(x.topics,['Roof inspection guide']);
   return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:[{h2:'Inspection steps',paragraphs:['A reviewed explanation requiring editor consent.']}],editor_approved:false}}}
 });
 async function run(token='owner-token',page_id=17){
@@ -35,7 +38,15 @@ async function run(token='owner-token',page_id=17){
  assert.equal(r.body.case_study_locked,true);assert.equal(r.body.review_only,true);
  assert.equal(r.body.auto_publishing,false);assert.equal(aiCalls,2);assert.equal(fetchCalls,3);
  active=false;
- saved=true;r=await run();assert.equal(r.statusCode,200);assert.equal(fetchCalls,3);
- assert.equal(aiCalls,3);assert.equal(writes,0);
+ saved=true;liveHtml=refreshed;
+ r=await run();assert.equal(r.statusCode,200);assert.equal(fetchCalls,4);
+ assert.equal(r.body.draft_source_type,'LIVE_PUBLIC_HTML','fresh public page must override stale saved HTML');
+ assert.equal(r.body.draft_source_retrieved_at,'2026-10-19T12:00:00Z');
+ assert.equal(aiCalls,3);
+ liveFailed=true;r=await run();assert.equal(r.statusCode,200);assert.equal(fetchCalls,5);
+ assert.equal(r.body.draft_source_type,'TRACKER_SAVED_HTML_FALLBACK');
+ assert.equal(r.body.draft_source_warning,'LIVE_SOURCE_UNAVAILABLE_OR_INCOMPLETE');
+ assert.equal(aiCalls,4,'saved fallback cannot reuse draft cache from live source');
+ assert.equal(writes,0);
  console.log('PASS owner-only Growth draft under Case Study with safe cache, no GSC requirement, no CMS writes');
 })().catch(e=>{console.error(e);process.exitCode=1});

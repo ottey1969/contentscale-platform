@@ -266,7 +266,9 @@
       return;
      }
      var draft=result.draft;
-     draftStatus.textContent='Draft prepared · SOURCE ONLY · editor approval required · NOT published'+(result.case_study_locked?' · active Case Study protected':'');
+     var liveDraftSource=result.draft_source_type==='LIVE_PUBLIC_HTML';
+     draftStatus.textContent='Draft prepared · '+(liveDraftSource?'CURRENT PUBLIC HTML':'SAVED TRACKER HTML — CHECK FRESHNESS')+
+      ' · editor approval required · NOT published'+(result.case_study_locked?' · active Case Study protected':'');
      node('h3','Draft proposal — editorial review required',output);
      if(draft.seo_title)node('p','Suggested title (do not replace a strong ranking title automatically): '+draft.seo_title,output);
      if(draft.meta_description)node('p','Suggested description: '+draft.meta_description,output);
@@ -276,7 +278,9 @@
      });
      node('small','Only source-supported facts may be published after verification. Preserve original H1, existing useful content, images and URL. No auto publishing.',output);
      var content=['# Growth editorial proposal — not published','',
-      'Original URL: '+String(result.canonical_url||''),'Chosen Growth query: '+String(recommendation?.query||plan.focus_query||''),
+      'Original URL: '+String(result.canonical_url||''),'Source: '+String(result.draft_source_type||'UNKNOWN'),
+      'Source checked: '+String(result.draft_source_retrieved_at||'Unknown — historical snapshot possible'),
+      'Chosen Growth query: '+String(recommendation?.query||plan.focus_query||''),
       'Case Study locked: '+(result.case_study_locked?'YES':'NO'),'', 'Suggested SEO title: '+String(draft.seo_title||''),
       'Suggested description: '+String(draft.meta_description||''),'',
       ...draft.sections.flatMap(section=>['## '+section.h2,...(section.paragraphs||[]),'']),
