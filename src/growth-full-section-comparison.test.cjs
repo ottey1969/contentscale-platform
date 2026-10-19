@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {compareFullSections}=require('./growth-full-section-comparison.cjs');
+const own='<h2>How to scale content</h2><p>Review search intent and existing pages before creating new pages. Compare rankings and clicks and avoid rewriting strong title tags. Document changes and monitor search performance.</p>';
+const competitor='<h2>Strategies for content scaling</h2><p>Build a content inventory, map editorial decisions to reader intentions and perform research. Use templates for repeated workflows and monitor the outcomes over time.</p>';
+const r=compareFullSections({query:'content scaling',ownUrl:'https://example.com/',ownHtml:own,competitors:[{url:'https://other.example/',live:{html:competitor,truncated:false}}]});
+assert.equal(r.status,'FULL_SECTION_COMPARISON_RESEARCH_ONLY');
+assert.equal(r.comparisons.length,1);
+assert.equal(r.comparisons[0].competitor_url,'https://other.example/');
+assert.equal(r.comparisons[0].nearest_existing_section.heading,'How to scale content');
+assert.equal(r.verified_gap,false);
+assert.equal(r.copy_ready,false);
+assert.equal(compareFullSections({query:'content scaling',ownHtml:own,ownTruncated:true,competitors:[]}).status,'OWN_SOURCE_INCOMPLETE');
+assert.equal(compareFullSections({query:'content scaling',ownHtml:own,competitors:[{url:'https://other.example/',live:{html:competitor,truncated:true}}]}).comparisons.length,0);
+console.log('PASS full section comparison is evidence-labelled, never fabricated or auto-publishable');
