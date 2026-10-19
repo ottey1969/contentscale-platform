@@ -18,11 +18,11 @@ const pool={async query(sql,args){
 const routes={};
 registerTrackerGrowthCmsExport({get(){},post:(p,fn)=>{routes[p]=fn}},pool,{
  fetchLive:async()=>{fetchCalls++;if(liveFailed)throw Error('temporary fetch failure');return{html:liveHtml,final_url:ownUrl,retrieved_at:'2026-10-19T12:00:00Z'}},
- generateDraft:async x=>{aiCalls++;assert.equal(x.pageUrl,ownUrl);assert.equal(x.sourceHtml,liveFailed?original:liveHtml);assert.deepEqual(x.topics,['Roof inspection guide']);
+ generateDraft:async x=>{aiCalls++;assert.equal(x.pageUrl,ownUrl);assert.equal(x.sourceHtml,liveFailed?original:liveHtml);assert.deepEqual(x.topics,x.researchObservations?.length?['Audit before scaling']:['Roof inspection guide']);
   return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:[{h2:'Inspection steps',paragraphs:['A reviewed explanation requiring editor consent.']}],editor_approved:false}}}
 });
-async function run(token='owner-token',page_id=17){
- const req={params:{token},body:{page_id,focus_query:'roof repair'}};
+async function run(token='owner-token',page_id=17,research_context=null){
+ const req={params:{token},body:{page_id,focus_query:'roof repair',research_context}};
  const res={statusCode:200,headers:{},status(x){this.statusCode=x;return this},set(k,v){this.headers[k]=v;return this},json(x){this.body=x;return this}};
  await routes['/api/tracker-client/:token/growth/cms-export/editor-draft'](req,res);return res;
 }
@@ -47,6 +47,17 @@ async function run(token='owner-token',page_id=17){
  assert.equal(r.body.draft_source_type,'TRACKER_SAVED_HTML_FALLBACK');
  assert.equal(r.body.draft_source_warning,'LIVE_SOURCE_UNAVAILABLE_OR_INCOMPLETE');
  assert.equal(aiCalls,4,'saved fallback cannot reuse draft cache from live source');
+ liveFailed=false;liveHtml=refreshed;
+ const researched={target_url:ownUrl,focus_query:'roof repair',observations:[
+  {competitor_url:'https://editor.example/roof-guide/',competitor_heading:'Audit before scaling',
+   competitor_excerpt:'A complete original guide first inventories real service pages and checks the reader tasks each answer provides. This is competitor context only and must not be presented as a verified factual gap.'}]};
+ r=await run('owner-token',17,researched);
+ assert.equal(r.statusCode,200);
+ assert.equal(r.body.live_competitor_observations_used,1);
+ assert.equal(r.body.research_context_scope,'UNTRUSTED_RESEARCH_QUESTIONS_ONLY');
+ assert.equal(r.body.historical_competitor_titles_used,0);
+ assert.equal(r.body.historical_snapshot_checked_at,null,'old snapshots are not needed when live research is present');
+ assert.equal(aiCalls,5,'live research context generates its own review-only draft');
  assert.equal(writes,0);
  console.log('PASS owner-only Growth draft under Case Study with safe cache, no GSC requirement, no CMS writes');
 })().catch(e=>{console.error(e);process.exitCode=1});
