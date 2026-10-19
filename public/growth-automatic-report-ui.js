@@ -112,6 +112,10 @@
    node('small','Remaining verification: '+(opportunity.verification_needed||[]).join(' · '),s);
    node('small','Protection: no homepage title/H1 rewrite, no automatic new page, no Case Study changes or publication.',s);
   }
+  if(main.getAttribute('data-owner-draft')!=='true'){
+   s=section('Research-only access');
+   node('p','This is an evidence report, NOT a complete Growth draft. Use the Tracker owner link to create a full editorial review draft and download the combined JSON. GSC is optional.',s);
+  }
   var destinationGsc=d.destination_gsc_evidence||{};
   if(destinationGsc.target_url){
    s=section('Selected page · search evidence');
@@ -249,7 +253,7 @@
      'Selected destination is not a verified Tracker page belonging to this account; drafting the homepage instead is blocked.',s);
    if(!validDraftPage){
     prepare.disabled=true;
-    d.editorial_review_draft={status:'DESTINATION_TRACKER_PAGE_REQUIRED',target_url:draftSourceUrl||null,
+    if(!d.report_completion)d.editorial_review_draft={status:'DESTINATION_TRACKER_PAGE_REQUIRED',target_url:draftSourceUrl||null,
      auto_started:false,published:false,case_study_unchanged:true};
    }else if(!d.report_completion){
     d.editorial_review_draft={status:'PREPARING',target_url:draftSourceUrl,
@@ -263,7 +267,9 @@
      return;
     }
     if(result.status!=='AI_DRAFT_REVIEW_REQUIRED'||!result.draft?.sections?.length){
-     draftStatus.textContent='Optional detailed draft unavailable: '+String(result.status||'NO_DRAFT')+'. The reviewed copy above remains available.';
+     draftStatus.textContent='Detailed draft status: '+String(result.status||'NO_DRAFT')+
+      (result.error_code?' ('+String(result.error_code).slice(0,110)+')':'')+
+      '. The researched evidence is available; no page was published.';
      return;
     }
     var draft=result.draft;
@@ -469,9 +475,12 @@
   if(d.case_study_locked)node('p','Active Case Study protection: DO NOT implement changes during the locked measurement cycle.',s);
   document.getElementById('downloadResearch').hidden=false;
   document.getElementById('researchStatus').textContent=
+   d.report_completion?.owner_only?
+    'Owner Growth report · editorial draft: '+String(d.editorial_review_draft?.status||'UNKNOWN')+
+     ' · no automatic publication.':
    d.editorial_review_draft?.status==='PREPARING'?
     'Automatic research complete · preparing owner-only editorial review draft (NOT publishing)…':
-    'Automatic research completed · source checks shown above.';
+    'Research-only report · a full editorial draft requires the Tracker owner link.';
  }
  async function run(){
   var status=document.getElementById('researchStatus');
