@@ -14,11 +14,11 @@ function buildGrowthEvidenceExample({report={},decision={}}={}){
  const sourceUrl=normalizeUrl(report.url),targetUrl=normalizeUrl(target);
  const base={status:'NOT_READY',publish_allowed:false,copy_ready:false,requires_editorial_review:true,
   protected_source:report.url||null,target_url:target||null,focus_query:query};
- if(sourceUrl&&targetUrl&&sourceUrl!==targetUrl)return {...base,status:'DESTINATION_GSC_EVIDENCE_REQUIRED',reason:'Query metrics describe the tracked source page, not the proposed editorial destination.',source_metrics_url:report.url,target_metrics_url:target,one_next_action:'Fetch verified page/query performance for this exact destination before preparing destination-specific copy.'};
  if(!query||!target||!Number.isFinite(impressions)||impressions<=0||!Number.isFinite(clicks)||clicks<0||clicks>impressions||
   !Number.isFinite(position)||position<=0)return {...base,reason:'Exact-page impressions, clicks, position and confirmed target are required.'};
  if(!['REVIEW_EXISTING','NEEDS_EVIDENCE'].includes(decision.decision))
   return {...base,reason:'Unrecognized editorial decision; do not invent a content task.'};
+ if(sourceUrl&&targetUrl&&sourceUrl!==targetUrl)return {...base,status:'DESTINATION_GSC_EVIDENCE_REQUIRED',reason:'Query metrics describe the tracked source page, not the proposed editorial destination.',source_metrics_url:report.url,target_metrics_url:target,one_next_action:'Fetch verified page/query performance for this exact destination before preparing destination-specific copy.'};
  // The GSC measurement window was not supplied; never present these counts as timeless or recent.
  const counts=impressions.toLocaleString('en-US'),clickCount=clicks.toLocaleString('en-US');
  const block=position>10?
