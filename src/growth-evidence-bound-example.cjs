@@ -16,6 +16,7 @@ function buildGrowthEvidenceExample({report={},decision={},destinationGscRows=[]
  const impressions=Number(m.impressions),clicks=Number(m.clicks),position=Number(m.position??m.average_position);
  const base={status:'NOT_READY',publish_allowed:false,copy_ready:false,requires_editorial_review:true,
   protected_source:report.url||null,target_url:target||null,focus_query:query};
+ if(!sourceUrl||!targetUrl)return {...base,reason:'Valid source and destination URLs are required to isolate GSC evidence.'};
  if(!query||!target||!Number.isFinite(impressions)||impressions<=0||!Number.isFinite(clicks)||clicks<0||clicks>impressions||
   !Number.isFinite(position)||position<=0)return {...base,reason:'Exact-page impressions, clicks, position and confirmed target are required.'};
  if(!['REVIEW_EXISTING','NEEDS_EVIDENCE'].includes(decision.decision))
