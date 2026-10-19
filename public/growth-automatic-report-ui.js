@@ -131,10 +131,10 @@
   var sample=d.evidence_bound_example||{};
   if(sample.status==='DESTINATION_GSC_EVIDENCE_REQUIRED'){
    s=section('Growth evidence · target page verification needed');
-   node('p','GSC clicks and impressions belong to the tracked page, not the proposed destination. No destination-specific text has been prepared.',s);
+   node('p','GSC clicks and impressions belong to the tracked page, not the proposed destination. No destination-specific GSC example has been prepared; this does NOT block source-grounded editorial drafting.',s);
    if(sample.source_metrics_url)node('p','Measured source: '+sample.source_metrics_url,s);
    if(sample.target_metrics_url)node('p','Destination requiring its own GSC data: '+sample.target_metrics_url,s);
-   node('small',sample.one_next_action||'Review page-specific Search Console evidence before drafting.',s);
+   node('small',sample.one_next_action||'Exact destination GSC is required for click/position claims, not editorial drafting.',s);
   }
   if(sample.status==='EVIDENCE_BOUND_EXAMPLE_FOR_REVIEW'&&sample.proposed_text){
    s=section('Evidence-based example · editorial review');
