@@ -2,7 +2,7 @@
 const fs=require('node:fs'),path=require('node:path'),{createHash}=require('node:crypto');
 const {prepareGrowthCmsHandoff,packageGrowthZip}=require('./growth-cms-handoff.cjs');
 const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
-const {generateGrowthEditorDraft}=require('./growth-source-grounded-editor.cjs');
+const {generateGrowthEditorDraft,sourceFacts}=require('./growth-source-grounded-editor.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowLockedResearchDraft=false}={}){
  const id=Number(pageId);
@@ -94,12 +94,25 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    // Research-only draft: Case Study baseline remains strictly unchanged.
    const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true,allowLockedResearchDraft:true});
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
-   let original=v.page.html_content;
-   if(!String(original||'').trim()){
-    const live=await fetchLive(v.page.url);
-    if(new URL(live.final_url||v.page.url).hostname.replace(/^www\./,'')!==new URL(v.page.url).hostname.replace(/^www\./,''))
-     return res.status(409).json({success:false,code:'PAGE_SOURCE_DOMAIN_MISMATCH'});
+   // A review-only draft must be based on today's public page when obtainable,
+   // not a possibly old Tracker HTML baseline. Never save the refreshed source.
+   let original=null,sourceOrigin='LIVE_PUBLIC_HTML',sourceWarning=null,sourceRetrievedAt=null;
+   try{
+    const live=await fetchLive(v.page.url),expected=new URL(v.page.url),actual=new URL(live.final_url||v.page.url);
+    const sameHost=expected.hostname.replace(/^www\./,'')===actual.hostname.replace(/^www\./,'');
+    const samePath=(expected.pathname.replace(/\/+$/,'')||'/')===(actual.pathname.replace(/\/+$/,'')||'/');
+    if(actual.protocol!=='https:'||!sameHost||!samePath)throw Error('LIVE_SOURCE_IDENTITY_MISMATCH');
+    if(sourceFacts(live.html).text.length<120)throw Error('LIVE_SOURCE_NOT_SUBSTANTIVE');
     original=live.html;
+    sourceRetrievedAt=live.retrieved_at||null;
+   }catch{
+    sourceWarning='LIVE_SOURCE_UNAVAILABLE_OR_INCOMPLETE';
+   }
+   if(!original){
+    if(sourceFacts(v.page.html_content).text.length<120)
+     return res.status(409).json({success:false,code:'CURRENT_ORIGINAL_SOURCE_UNAVAILABLE'});
+    original=v.page.html_content;
+    sourceOrigin='TRACKER_SAVED_HTML_FALLBACK';
    }
    // Historical Search Intelligence is optional context, not a live ranking claim.
    let topics=[],snapshotCheckedAt=null;
@@ -117,7 +130,7 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
      if(topics.length>=4)break;
     }
    }catch(_err){topics=[];}
-   const draftKey=[v.client.id,v.page.id,v.source_mode,v.page.case_study_active?'locked':'unlocked',
+   const draftKey=[v.client.id,v.page.id,sourceOrigin,v.page.case_study_active?'locked':'unlocked',
     sha(String(original||'')),focus,topics.join('|')].join(':');
    const cached=draftCache.get(draftKey);
    let out;
@@ -131,7 +144,8 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     while(draftCache.size>30)draftCache.delete(draftCache.keys().next().value);
    }
    return res.set('Cache-Control','private, no-store').json({success:true,page_id:v.page.id,
-    canonical_url:v.page.url,...out,requires_editor_approval:true,
+    canonical_url:v.page.url,...out,draft_source_type:sourceOrigin,draft_source_warning:sourceWarning,
+    draft_source_retrieved_at:sourceRetrievedAt,requires_editor_approval:true,
     no_gsc_requirement:true,auto_publishing:false,case_study_protected:true,
     case_study_locked:v.page.case_study_active===true,review_only:true,
     historical_competitor_titles_used:topics.length,historical_snapshot_checked_at:snapshotCheckedAt});
