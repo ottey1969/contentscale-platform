@@ -137,6 +137,8 @@ async function testRoutes(){
  assert.equal(finished.statusCode,200);
  assert.equal(finished.body.success,true);
  assert.equal(finished.body.editorial_review_draft.status,'AI_DRAFT_REVIEW_REQUIRED');
+ assert.equal(finished.body.access.can_edit,true);
+ assert.equal(finished.body.access.owner_report,true);
  assert.equal(finished.body.editorial_review_draft.target_url,'https://roof.example/roof-repair-guide/');
  assert.equal(finished.body.editorial_review_draft.draft.sections[0].h2,'Safe advice');
  assert.equal(finished.body.editorial_review_draft.published,false);
