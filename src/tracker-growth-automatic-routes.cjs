@@ -48,7 +48,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Discussion listings remain in SERP evidence but should not displace readable
   // long-form articles in the limited content-comparison budget.
   const editorialHost=url=>{try{const host=new URL(url).hostname.toLowerCase();
-   return !/(^|\\.)(?:reddit\\.com|quora\\.com)$/.test(host)}
+   return !/(^|\.)(?:reddit\.com|quora\.com)$/.test(host)}
    catch{return false}};
   const fresh=(Array.isArray(discovery.leads)?discovery.leads:[])
    .filter(x=>x.url&&editorialHost(x.url)).slice(0,6);
