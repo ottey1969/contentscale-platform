@@ -46,6 +46,7 @@ assert.equal(missing.page_content.signals.h1_count_observed,undefined);
 assert.equal(missing.editorial.focus_query.status,'WORKING_TOPIC_NOT_RANKING_PROOF');
 async function testRoutes(){
  const route={},calls=[];
+ let ownerDraftCalls=0;
  const db={async query(sql,args){
   if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql))throw Error('No writes permitted');
   if(sql.includes('LEFT(html_content'))return {rows:[{id:7,tracker_client_id:4,url:own,keyword:'roof repair',saved_html:html}]};
@@ -60,7 +61,25 @@ async function testRoutes(){
  let caseLocked=true;
  const middleware=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:req.params.token==='owner-token',pages:[{id:7,url:own,keyword:'roof repair',case_study_active:caseLocked}]};next()};
  const fetchLive=async url=>{calls.push(url);return {html:url===own?html:rivalHtml,final_url:url,retrieved_at:'2026-10-17T00:00:00Z',source:'LIVE_PUBLIC_HTTPS'}};
- registerGrowthAutomaticResearch({get(path,...handlers){route[path]=handlers}},db,middleware,{fetchLive,
+ registerGrowthAutomaticResearch({
+  get(path,...handlers){route[path]=handlers},
+  post(path,...handlers){route[path]=handlers}
+ },db,middleware,{fetchLive,
+  completeOwnerDraft:async({token,body})=>{
+   ownerDraftCalls++;
+   assert.equal(token,'owner-token');
+   assert.equal(body.page_id,11,'must draft selected tracked destination, not protected homepage');
+   assert.equal(body.growth_source_page_id,7);
+   assert.equal(body.focus_query,'roof repair near me');
+   assert.equal(body.research_context.target_url,'https://roof.example/roof-repair-guide/');
+   return {statusCode:200,body:{
+    success:true,page_id:11,canonical_url:'https://roof.example/roof-repair-guide/',
+    status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:[{h2:'Safe advice',paragraphs:['Review the actual roof condition before planning a repair.']}]},
+    draft_source_type:'LIVE_PUBLIC_HTML',live_competitor_observations_used:0,
+    gsc_context:{status:'EXACT_DESTINATION_QUERY_VERIFIED',gsc_required:false},
+    auto_publishing:false,case_study_protected:true
+   }};
+  },
   searchLive:async()=>({status:'NO_RELEVANT_PUBLIC_SEARCH_LEADS',leads:[],source:'BING_PUBLIC_RSS',query:'roof repair near me'})});
  async function invoke(path,token='readonly-client-token',page_id='7'){
   const req={params:{token},query:{page_id}},res={
@@ -82,6 +101,7 @@ async function testRoutes(){
  const report=await invoke(api);
  assert.equal(report.statusCode,200);
  assert.equal(report.body.case_study_locked,true);
+ assert.equal(report.body.editorial_review_draft.status,'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN','GET export may not pretend draft has been generated');
  assert.equal(report.body.access.can_edit,false);
  assert.equal(report.body.summary.competitors_live_reviewed,0,'unrelated historical roof inspection page is not selected as current competitor');
  assert.equal(report.body.competitors.leads.length,1,'historical lead remains in the evidence inventory');
@@ -109,6 +129,25 @@ async function testRoutes(){
  const again=await invoke(api);
  assert.equal(again.statusCode,200);
  assert.equal(calls.length,2,'Shared safe cache prevents duplicate network calls');
+ const complete='/api/tracker-client/:token/growth/auto-research/complete';
+ const readonlyCompletion=await invoke(complete,'readonly-client-token');
+ assert.equal(readonlyCompletion.statusCode,403,'readonly shared token must never trigger billable AI');
+ assert.equal(ownerDraftCalls,0);
+ const finished=await invoke(complete,'owner-token');
+ assert.equal(finished.statusCode,200);
+ assert.equal(finished.body.success,true);
+ assert.equal(finished.body.editorial_review_draft.status,'AI_DRAFT_REVIEW_REQUIRED');
+ assert.equal(finished.body.editorial_review_draft.target_url,'https://roof.example/roof-repair-guide/');
+ assert.equal(finished.body.editorial_review_draft.draft.sections[0].h2,'Safe advice');
+ assert.equal(finished.body.editorial_review_draft.published,false);
+ assert.equal(finished.body.editorial_review_draft.case_study_unchanged,true);
+ assert.equal(finished.body.report_completion.status,'COMPLETE_FOR_OWNER_REVIEW');
+ assert.equal(ownerDraftCalls,1);
+ assert.equal(calls.length,2,'Combined owner completion should reuse cached research rather than repeat search costs');
+ const unmodified=await invoke(api);
+ assert.equal(unmodified.body.editorial_review_draft.status,'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN',
+  'Owner-only draft must not leak through shared research cache');
+
  const view=await invoke('/track/:token/growth/auto-research');
  assert.equal(view.statusCode,200);
  assert.match(view.body,/Automatic Growth research/);
