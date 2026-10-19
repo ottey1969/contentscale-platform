@@ -274,7 +274,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
    '<section><div role="status" id="researchStatus">Analyzing the URL and observed competitor evidence…</div>',
    '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
-   '<button id="downloadResearch" type="button" hidden>Download research report (JSON)</button></section>',
+   '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?
+    'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button></section>',
    '<div id="growthAutomaticReport"></div>',
    '<details id="growthNextAction"><summary>Later: reviewed CMS handoff and measurement</summary>',
    allowHandoff?'<p><a id="growthEditorHandoff" href="'+handoff+'">Prepare reviewed Wix / WordPress / other CMS package</a> — original URL preserved, editor approval required.</p>':
