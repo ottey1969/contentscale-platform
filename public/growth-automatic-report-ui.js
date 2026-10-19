@@ -251,11 +251,67 @@
     prepare.disabled=true;
     d.editorial_review_draft={status:'DESTINATION_TRACKER_PAGE_REQUIRED',target_url:draftSourceUrl||null,
      auto_started:false,published:false,case_study_unchanged:true};
-   }else{
+   }else if(!d.report_completion){
     d.editorial_review_draft={status:'PREPARING',target_url:draftSourceUrl,
      auto_started:true,published:false,case_study_unchanged:true};
     document.getElementById('downloadResearch').disabled=true;
    }
+   var showDraftResult=function(result){
+    output.textContent='';
+    if(String(result.target_url||'')!==String(draftSourceUrl||'')){
+     draftStatus.textContent='Draft URL mismatch · no text displayed.';
+     return;
+    }
+    if(result.status!=='AI_DRAFT_REVIEW_REQUIRED'||!result.draft?.sections?.length){
+     draftStatus.textContent='Optional detailed draft unavailable: '+String(result.status||'NO_DRAFT')+'. The reviewed copy above remains available.';
+     return;
+    }
+    var draft=result.draft;
+    var liveDraftSource=result.source_type==='LIVE_PUBLIC_HTML';
+    draftStatus.textContent='Draft prepared · '+(liveDraftSource?'CURRENT PUBLIC HTML':'SAVED TRACKER HTML — CHECK FRESHNESS')+
+     ' · editor approval required · NOT published'+(d.case_study_locked?' · active Case Study protected':'');
+    node('p','Research questions from current competitor reading: '+
+     String(result.competitor_research_passages_used||0)+
+     ' · editorial comparison only, not proven gaps or copied competitor text.',output);
+    var gsc=result.gsc_context||{},gscStatus=gsc.status||'NO_VERIFIED_GSC';
+    node('p','GSC (optional): '+gscStatus+
+     '. Source and destination URL measurements are kept separate. Existing successful queries are protected; missing GSC never blocks this draft.',output);
+    if(gsc.source_query_metrics&&gsc.source_url)
+     node('small','Source-page opportunity for “'+gsc.source_query_metrics.query+
+      '”: '+gsc.source_query_metrics.impressions+' impressions, '+
+      gsc.source_query_metrics.clicks+' clicks, average position '+
+      gsc.source_query_metrics.average_position.toFixed(1)+
+      ' — belongs to '+gsc.source_url+', NOT the draft destination.',output);
+    node('h3','Draft proposal — editorial review required',output);
+    if(draft.seo_title)node('p','Suggested title (do not replace a strong ranking title automatically): '+draft.seo_title,output);
+    if(draft.meta_description)node('p','Suggested description: '+draft.meta_description,output);
+    draft.sections.forEach(function(section){
+     node('h3',section.h2,output);
+     (section.paragraphs||[]).forEach(p=>node('p',p,output));
+    });
+    node('small','Only source-supported facts may be published after verification. Preserve original H1, existing useful content, images and URL. No auto publishing.',output);
+    var content=['# Growth editorial proposal — not published','',
+     'Original URL: '+String(result.target_url||''),'Source: '+String(result.source_type||'UNKNOWN'),
+     'Source checked: '+String(result.source_retrieved_at||'Unknown — historical snapshot possible'),
+     'Chosen Growth query: '+String(recommendation?.query||plan.focus_query||''),
+     'Case Study locked: '+(d.case_study_locked?'YES':'NO'),'', 'Suggested SEO title: '+String(draft.seo_title||''),
+     'Suggested description: '+String(draft.meta_description||''),'',
+     ...draft.sections.flatMap(section=>['## '+section.h2,...(section.paragraphs||[]),'']),
+     'All claims require owner review. No live content has been modified.'].join('\n\n');
+    var copyFull=node('button','Copy complete draft',output);copyFull.type='button';
+    copyFull.addEventListener('click',async function(){
+     try{await navigator.clipboard.writeText(content);copyFull.textContent='Draft copied'}
+     catch(_){copyFull.textContent='Clipboard unavailable'}
+    });
+    var download=node('button','Download full draft (.md)',output);download.type='button';
+    download.addEventListener('click',function(){
+     var blob=new Blob([content],{type:'text/markdown;charset=utf-8'});
+     var href=URL.createObjectURL(blob),a=document.createElement('a');
+     a.href=href;a.download='contentscale-growth-full-editor-draft.md';document.body.appendChild(a);a.click();a.remove();
+     setTimeout(()=>URL.revokeObjectURL(href),2000);
+    });
+
+   };
    var prepareDraft=async function(){
     prepare.disabled=true;draftStatus.textContent='Preparing a source-grounded draft without publishing…';
     output.textContent='';
@@ -279,54 +335,7 @@
       last=composite;
       d.editorial_review_draft=result;
      }
-     if(result.status!=='AI_DRAFT_REVIEW_REQUIRED'||!result.draft?.sections?.length){
-      draftStatus.textContent='Optional detailed draft unavailable: '+String(result.status||'NO_DRAFT')+'. The reviewed copy above remains available.';
-      return;
-     }
-     var draft=result.draft;
-     var liveDraftSource=result.source_type==='LIVE_PUBLIC_HTML';
-     draftStatus.textContent='Draft prepared · '+(liveDraftSource?'CURRENT PUBLIC HTML':'SAVED TRACKER HTML — CHECK FRESHNESS')+
-      ' · editor approval required · NOT published'+(d.case_study_locked?' · active Case Study protected':'');
-     node('p','Research questions from current competitor reading: '+
-      String(result.competitor_research_passages_used||0)+
-      ' · editorial comparison only, not proven gaps or copied competitor text.',output);
-     var gsc=result.gsc_context||{},gscStatus=gsc.status||'NO_VERIFIED_GSC';
-     node('p','GSC (optional): '+gscStatus+
-      '. Source and destination URL measurements are kept separate. Existing successful queries are protected; missing GSC never blocks this draft.',output);
-     if(gsc.source_query_metrics&&gsc.source_url)
-      node('small','Source-page opportunity for “'+gsc.source_query_metrics.query+
-       '”: '+gsc.source_query_metrics.impressions+' impressions, '+
-       gsc.source_query_metrics.clicks+' clicks, average position '+
-       gsc.source_query_metrics.average_position.toFixed(1)+
-       ' — belongs to '+gsc.source_url+', NOT the draft destination.',output);
-     node('h3','Draft proposal — editorial review required',output);
-     if(draft.seo_title)node('p','Suggested title (do not replace a strong ranking title automatically): '+draft.seo_title,output);
-     if(draft.meta_description)node('p','Suggested description: '+draft.meta_description,output);
-     draft.sections.forEach(function(section){
-      node('h3',section.h2,output);
-      (section.paragraphs||[]).forEach(p=>node('p',p,output));
-     });
-     node('small','Only source-supported facts may be published after verification. Preserve original H1, existing useful content, images and URL. No auto publishing.',output);
-     var content=['# Growth editorial proposal — not published','',
-      'Original URL: '+String(result.target_url||''),'Source: '+String(result.source_type||'UNKNOWN'),
-      'Source checked: '+String(result.source_retrieved_at||'Unknown — historical snapshot possible'),
-      'Chosen Growth query: '+String(recommendation?.query||plan.focus_query||''),
-      'Case Study locked: '+(d.case_study_locked?'YES':'NO'),'', 'Suggested SEO title: '+String(draft.seo_title||''),
-      'Suggested description: '+String(draft.meta_description||''),'',
-      ...draft.sections.flatMap(section=>['## '+section.h2,...(section.paragraphs||[]),'']),
-      'All claims require owner review. No live content has been modified.'].join('\n\n');
-     var copyFull=node('button','Copy complete draft',output);copyFull.type='button';
-     copyFull.addEventListener('click',async function(){
-      try{await navigator.clipboard.writeText(content);copyFull.textContent='Draft copied'}
-      catch(_){copyFull.textContent='Clipboard unavailable'}
-     });
-     var download=node('button','Download full draft (.md)',output);download.type='button';
-     download.addEventListener('click',function(){
-      var blob=new Blob([content],{type:'text/markdown;charset=utf-8'});
-      var href=URL.createObjectURL(blob),a=document.createElement('a');
-      a.href=href;a.download='contentscale-growth-full-editor-draft.md';document.body.appendChild(a);a.click();a.remove();
-      setTimeout(()=>URL.revokeObjectURL(href),2000);
-     });
+     showDraftResult(result);
     }catch(error){
      var errorCode=String(error.message||error||'DRAFT_UNAVAILABLE').slice(0,110);
      if(last===d)d.editorial_review_draft={status:'DRAFT_UNAVAILABLE',error_code:errorCode,
@@ -345,7 +354,8 @@
    // This page was explicitly opened to perform owner Growth research. Complete
    // the optional second step automatically; do not require another button press.
    // Non-owner sessions and untracked destinations never invoke the AI endpoint.
-   if(validDraftPage)void prepareDraft();
+   if(validDraftPage&&d.report_completion)showDraftResult(d.editorial_review_draft||{status:'NO_DRAFT_RESULT',target_url:draftSourceUrl});
+   else if(validDraftPage)void prepareDraft();
   }
   s=section('What happened to the other research?');
   var rows=plan.classifications||[],categories=plan.query_categories||{};
@@ -468,7 +478,13 @@
   status.className='';status.textContent='Analyzing page HTML, verified queries, historical search competitors and AI evidence…';
   document.getElementById('retryResearch').disabled=true;
   try{
-   var response=await fetch(endpoint,{credentials:'same-origin',cache:'no-store'});
+   var owner=main.getAttribute('data-owner-draft')==='true';
+   var completeEndpoint='/api/tracker-client/'+encodeURIComponent(token)+
+    '/growth/auto-research/complete?page_id='+encodeURIComponent(id);
+   var response=await fetch(owner?completeEndpoint:endpoint,{
+    method:owner?'POST':'GET',credentials:'same-origin',cache:'no-store',
+    ...(owner?{headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(id)})}:{})
+   });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
    last=result;render(result);
