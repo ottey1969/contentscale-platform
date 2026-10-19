@@ -506,7 +506,9 @@
   if(!last)return;
   var blob=new Blob([JSON.stringify(last,null,2)],{type:'application/json'});
   var href=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=href;a.download='contentscale-growth-automatic-report.json';document.body.appendChild(a);a.click();a.remove();
+  a.href=href;a.download=main.getAttribute('data-owner-draft')==='true'?
+   'contentscale-growth-complete-review.json':'contentscale-growth-research-only.json';
+  document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(href),2000);
  });
  run();
