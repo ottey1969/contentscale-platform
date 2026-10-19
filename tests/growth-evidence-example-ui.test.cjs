@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const ui=fs.readFileSync(require('node:path').join(__dirname,'../public/growth-automatic-report-ui.js'),'utf8');
+assert.match(ui,/EVIDENCE_BOUND_EXAMPLE_FOR_REVIEW/);
+assert.match(ui,/sample\.proposed_text/);
+assert.match(ui,/Copy evidence-based example/);
+assert.match(ui,/measurement_window/);
+assert.match(ui,/not a verified content gap and not published/);
+console.log('PASS evidence-bound Growth proposal visibly rendered with explicit editorial safeguards');

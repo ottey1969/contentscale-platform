@@ -112,6 +112,24 @@
    node('small','Remaining verification: '+(opportunity.verification_needed||[]).join(' · '),s);
    node('small','Protection: no homepage title/H1 rewrite, no automatic new page, no Case Study changes or publication.',s);
   }
+  var sample=d.evidence_bound_example||{};
+  if(sample.status==='EVIDENCE_BOUND_EXAMPLE_FOR_REVIEW'&&sample.proposed_text){
+   s=section('Evidence-based example · editorial review');
+   node('h3',sample.heading,s);
+   node('p',sample.proposed_text,s);
+   if(sample.target_url){node('strong','Existing page to review: ',s);link(sample.target_url,sample.target_url,s);}
+   node('small','Observed source: '+String(sample.evidence?.source_url||'Unknown')+
+    ' · GSC imported: '+String(sample.evidence?.imported_at||'Unknown')+
+    ' · actual measurement period: '+String(sample.evidence?.measurement_window||'Unknown'),s);
+   node('small',sample.editorial_check||'Check for duplicates before proposing any insertion.',s);
+   node('p','This is a grounded candidate example, not a verified content gap and not published.',s);
+   var copyExample=node('button','Copy evidence-based example',s);copyExample.type='button';
+   copyExample.addEventListener('click',async function(){
+    try{await navigator.clipboard.writeText(sample.heading+'\\n\\n'+sample.proposed_text);
+     copyExample.textContent='Copied — ready for editorial review'}
+    catch(_){copyExample.textContent='Clipboard unavailable — use report JSON'}
+   });
+  }
   var discovery=d.search_discovery||{};
   s=section('Search competitors for this Growth query');
   var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>
