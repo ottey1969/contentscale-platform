@@ -247,8 +247,16 @@
    var output=node('div',null,s),draftStatus=node('small',
     validDraftPage?'Optional AI assistance; a review-only draft does not change any live page.':
      'Selected destination is not a verified Tracker page belonging to this account; drafting the homepage instead is blocked.',s);
-   if(!validDraftPage)prepare.disabled=true;
-   prepare.addEventListener('click',async function(){
+   if(!validDraftPage){
+    prepare.disabled=true;
+    d.editorial_review_draft={status:'DESTINATION_TRACKER_PAGE_REQUIRED',target_url:draftSourceUrl||null,
+     auto_started:false,published:false,case_study_unchanged:true};
+   }else{
+    d.editorial_review_draft={status:'PREPARING',target_url:draftSourceUrl,
+     auto_started:true,published:false,case_study_unchanged:true};
+    document.getElementById('downloadResearch').disabled=true;
+   }
+   var prepareDraft=async function(){
     prepare.disabled=true;draftStatus.textContent='Preparing a source-grounded draft without publishing…';
     output.textContent='';
     try{
@@ -273,6 +281,16 @@
      if(!response.ok||result.success!==true)throw Error(result.code||'Draft generation unavailable');
      if(String(result.canonical_url||'')!==String(draftSourceUrl||''))
       throw Error('DRAFT_SOURCE_URL_MISMATCH');
+     if(last===d)d.editorial_review_draft={
+      status:String(result.status||'UNKNOWN'),auto_started:true,
+      target_url:draftSourceUrl,source_page_id:draftPageId,
+      source_type:result.draft_source_type||null,
+      source_warning:result.draft_source_warning||null,
+      source_retrieved_at:result.draft_source_retrieved_at||null,
+      competitor_research_passages_used:Number(result.live_competitor_observations_used||0),
+      draft:result.status==='AI_DRAFT_REVIEW_REQUIRED'?result.draft||null:null,
+      published:false,case_study_unchanged:true,requires_editor_approval:true
+     };
      if(result.status!=='AI_DRAFT_REVIEW_REQUIRED'||!result.draft?.sections?.length){
       draftStatus.textContent='Optional detailed draft unavailable: '+String(result.status||'NO_DRAFT')+'. The reviewed copy above remains available.';
       return;
@@ -313,9 +331,24 @@
       setTimeout(()=>URL.revokeObjectURL(href),2000);
      });
     }catch(error){
-     draftStatus.textContent='Detailed draft not available: '+String(error.message||error)+'. The prepared editorial copy above is still available.';
-    }finally{prepare.disabled=false}
-   });
+     var errorCode=String(error.message||error||'DRAFT_UNAVAILABLE').slice(0,110);
+     if(last===d)d.editorial_review_draft={status:'UNAVAILABLE',error_code:errorCode,
+      auto_started:true,target_url:draftSourceUrl,published:false,case_study_unchanged:true};
+     draftStatus.textContent='Detailed draft not available: '+errorCode+'. The research remains available.';
+    }finally{
+     prepare.disabled=false;
+     if(last===d){
+      document.getElementById('downloadResearch').disabled=false;
+      document.getElementById('researchStatus').textContent=
+       'Research complete · editorial draft: '+String(d.editorial_review_draft?.status||'UNKNOWN')+' · NOT published.';
+     }
+    }
+   };
+   prepare.addEventListener('click',prepareDraft);
+   // This page was explicitly opened to perform owner Growth research. Complete
+   // the optional second step automatically; do not require another button press.
+   // Non-owner sessions and untracked destinations never invoke the AI endpoint.
+   if(validDraftPage)void prepareDraft();
   }
   s=section('What happened to the other research?');
   var rows=plan.classifications||[],categories=plan.query_categories||{};
@@ -428,7 +461,10 @@
   node('p','Next action: review the ranked findings, compare source evidence, and prepare the verified content on the existing page. No unsupported competitor claims, auto-publishing or artificial click forecasts.',s);
   if(d.case_study_locked)node('p','Active Case Study protection: DO NOT implement changes during the locked measurement cycle.',s);
   document.getElementById('downloadResearch').hidden=false;
-  document.getElementById('researchStatus').textContent='Automatic research completed · source checks shown above.';
+  document.getElementById('researchStatus').textContent=
+   d.editorial_review_draft?.status==='PREPARING'?
+    'Automatic research complete · preparing owner-only editorial review draft (NOT publishing)…':
+    'Automatic research completed · source checks shown above.';
  }
  async function run(){
   var status=document.getElementById('researchStatus');
