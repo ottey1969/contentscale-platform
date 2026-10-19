@@ -1,0 +1,17 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {buildGrowthEvidenceExample}=require('./growth-evidence-bound-example.cjs');
+const report={url:'https://site.example/',growth_decision:{primary_next_action:{query:'content scaling',metrics:{impressions:3943,clicks:2,average_position:12.7248,imported_at:'2026-10-11T11:34:03Z'}}}};
+const target={decision:'NEEDS_EVIDENCE',target_url:'https://site.example/existing/'};
+const result=buildGrowthEvidenceExample({report,decision:target});
+assert.equal(result.status,'EVIDENCE_BOUND_EXAMPLE_FOR_REVIEW');
+assert.match(result.proposed_text,/3,943 impressions and 2 clicks/);
+assert.match(result.proposed_text,/outside the top ten/);
+assert.equal(result.evidence.measurement_window,'UNKNOWN');
+assert.equal(result.gap_proven,false);
+assert.equal(result.copy_ready,false);
+assert.equal(result.publish_allowed,false);
+assert.equal(result.target_url,target.target_url);
+assert.equal(buildGrowthEvidenceExample({report:{...report,growth_decision:{primary_next_action:{query:'content scaling',metrics:{impressions:200,clicks:201,average_position:10}}}},decision:target}).status,'NOT_READY');
+assert.equal(buildGrowthEvidenceExample({report,decision:{decision:'NO_CHANGE',target_url:target.target_url}}).status,'NOT_READY');
+console.log('PASS evidence-bound example: real numbers, no invented period, no publication');
