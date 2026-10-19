@@ -144,7 +144,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   });
   report.destination_gsc_evidence={
    status:exactTargetRow?'EXACT_QUERY_VERIFIED':destinationGscRows.some(x=>String(x.query||'').trim().toLowerCase()===targetQuery.trim().toLowerCase())?'INVALID_EXACT_QUERY_METRICS':destinationGscStatus,
-   target_url:proposed,focus_query:targetQuery,
+   target_url:proposed,target_page_id:destinationPage?Number(destinationPage.id):null,focus_query:targetQuery,
    exact_query_verified:!!exactTargetRow,
    // Never copy homepage clicks or infer a measurement window for this destination.
    metrics:exactTargetRow?{impressions:Number(exactTargetRow.impressions),clicks:Number(exactTargetRow.clicks),
