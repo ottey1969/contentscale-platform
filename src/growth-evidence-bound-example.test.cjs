@@ -16,6 +16,8 @@ const crossPage=buildGrowthEvidenceExample({report,decision:{decision:'NEEDS_EVI
 assert.equal(crossPage.status,'DESTINATION_GSC_EVIDENCE_REQUIRED');
 assert.equal(crossPage.proposed_text,undefined);
 assert.equal(crossPage.copy_ready,false);
+assert.equal(crossPage.non_gsc_editorial_draft_allowed,true,'Missing GSC should not be mistaken for a content-drafting block');
+assert.match(crossPage.one_next_action,/drafting without GSC/);
 assert.equal(crossPage.source_metrics_url,'https://site.example/');
 const targetUrl='https://site.example/existing/';
 const destinationRow={page_id:42,tracker_client_id:7,source_page_url:targetUrl,
