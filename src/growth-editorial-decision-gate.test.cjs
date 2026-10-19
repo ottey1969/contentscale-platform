@@ -7,7 +7,7 @@ const missing=decideGrowthEditorialAction({report,destination:{status:'EXISTING_
 assert.equal(missing.decision,'NEEDS_EVIDENCE');
 assert.equal(missing.publish_allowed,false);
 const unrelated=decideGrowthEditorialAction({report,destination:{...base,comparisons:[{competitor_url:'https://rival.example/',match_status:'NO_RELIABLE_SECTION_MATCH',nearest_existing_section:null}]}});
-assert.equal(unrelated.decision,'VERIFY_DISTINCT_INTENT');
+assert.equal(unrelated.decision,'NEEDS_EVIDENCE');
 assert.equal(unrelated.verified_gap,false);
 const related=decideGrowthEditorialAction({report,destination:{...base,comparisons:[{competitor_url:'https://rival.example/',competitor_heading:'Content scaling process',match_status:'POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED',nearest_existing_section:{heading:'Our content scaling process'}}]}});
 assert.equal(related.decision,'REVIEW_EXISTING');
