@@ -17,6 +17,24 @@ assert.equal(crossPage.status,'DESTINATION_GSC_EVIDENCE_REQUIRED');
 assert.equal(crossPage.proposed_text,undefined);
 assert.equal(crossPage.copy_ready,false);
 assert.equal(crossPage.source_metrics_url,'https://site.example/');
+const targetUrl='https://site.example/existing/';
+const destinationRow={page_id:42,tracker_client_id:7,source_page_url:targetUrl,
+ evidence_scope:'page_verified',query:'content scaling',impressions:94,clicks:4,position:8.5,imported_at:'2026-10-19T10:00:00Z'};
+const verifiedTarget=buildGrowthEvidenceExample({report,decision:{decision:'NEEDS_EVIDENCE',target_url:targetUrl},destinationGscRows:[destinationRow]});
+assert.equal(verifiedTarget.status,'EVIDENCE_BOUND_EXAMPLE_FOR_REVIEW');
+assert.equal(verifiedTarget.evidence.source_url,targetUrl);
+assert.equal(verifiedTarget.evidence.scope,'EXACT_DESTINATION_PAGE_VERIFIED_GSC');
+assert.equal(verifiedTarget.evidence.impressions,94);
+assert.equal(verifiedTarget.evidence.clicks,4);
+assert.match(verifiedTarget.proposed_text,/94 impressions and 4 clicks/);
+assert.doesNotMatch(verifiedTarget.proposed_text,/3,943/,'homepage metrics must not leak into destination copy');
+assert.equal(verifiedTarget.copy_ready,false);
+assert.equal(verifiedTarget.publish_allowed,false);
+for(const invalid of [{...destinationRow,query:'other search'}, {...destinationRow,source_page_url:'https://site.example/different/'},
+ {...destinationRow,evidence_scope:'site_wide'}]){
+ assert.equal(buildGrowthEvidenceExample({report,decision:{decision:'NEEDS_EVIDENCE',target_url:targetUrl},destinationGscRows:[invalid]}).status,
+  'DESTINATION_GSC_EVIDENCE_REQUIRED','unverified source, query or scope must never impersonate exact destination GSC');
+}
 assert.equal(buildGrowthEvidenceExample({report:{...report,growth_decision:{primary_next_action:{query:'content scaling',metrics:{impressions:200,clicks:201,average_position:10}}}},decision:target}).status,'NOT_READY');
 assert.equal(buildGrowthEvidenceExample({report,decision:{decision:'NO_CHANGE',target_url:target.target_url}}).status,'NOT_READY');
 console.log('PASS evidence-bound example: real numbers, no invented period, no publication');
