@@ -38,7 +38,8 @@ async function check(owner){
    report_completion:{status:'RESEARCH_ONLY_NO_EDITORIAL_DRAFT'},
    editorial_review_draft:{status:'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN',auto_started:false,draft:null}};
  class URLShim extends NativeURL{}
- URLShim.createObjectURL=()=> 'blob:test';
+ let downloadedBlob=null;
+ URLShim.createObjectURL=blob=>{downloadedBlob=blob;return 'blob:test';};
  URLShim.revokeObjectURL=()=>{};
  const document={
   body:new StubNode('body'),
@@ -62,6 +63,20 @@ async function check(owner){
  assert.equal(elements.downloadResearch.hidden,false,'Finished report can be exported');
  assert.equal(elements.downloadResearch.disabled,false,'Download is not held after full report');
  assert.match(elements.researchStatus.textContent,owner?/Owner Growth report/:/Research-only report/);
+ elements.downloadResearch.click();
+ assert(downloadedBlob,'Export must create a JSON Blob from the displayed result');
+ const exported=JSON.parse(await downloadedBlob.text());
+ const latestDownload=document.body.children[document.body.children.length-1];
+ assert.equal(latestDownload.download,owner?'contentscale-growth-complete-review.json':
+  'contentscale-growth-research-only.json');
+ if(owner){
+  assert.equal(exported.report_completion.status,'COMPLETE_FOR_OWNER_REVIEW');
+  assert.equal(exported.editorial_review_draft.status,'AI_DRAFT_REVIEW_REQUIRED');
+  assert.equal(exported.editorial_review_draft.draft.sections[0].h2,'Owner-only improvement');
+ }else{
+  assert.equal(exported.editorial_review_draft.status,'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN');
+  assert.equal(exported.editorial_review_draft.draft,null);
+ }
  const allText=function traverse(n){return [n.textContent,...n.children.map(traverse)].join(' ');};
  if(owner)assert.match(allText(elements.growthAutomaticReport),/Owner-only improvement/);
 }
