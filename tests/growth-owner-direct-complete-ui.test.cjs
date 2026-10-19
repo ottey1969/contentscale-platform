@@ -62,8 +62,8 @@ async function check(owner){
  assert.equal(elements.downloadResearch.hidden,false,'Finished report can be exported');
  assert.equal(elements.downloadResearch.disabled,false,'Download is not held after full report');
  assert.match(elements.researchStatus.textContent,owner?/Owner Growth report/:/Research-only report/);
- if(owner)assert.match(elements.growthAutomaticReport.children
-   .map(x=>x.children.map(y=>y.textContent).join(' ')).join(' '),/Owner-only improvement/);
+ const allText=function traverse(n){return [n.textContent,...n.children.map(traverse)].join(' ');};
+ if(owner)assert.match(allText(elements.growthAutomaticReport),/Owner-only improvement/);
 }
 (async()=>{
  await check(true);await check(false);
