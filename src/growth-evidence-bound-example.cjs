@@ -10,7 +10,7 @@ function buildGrowthEvidenceExample({report={},decision={}}={}){
  const impressions=Number(m.impressions),clicks=Number(m.clicks),position=Number(m.average_position);
  // Metrics belong to the tracked source URL. A different proposed destination needs
  // its own verified page/query GSC rows before any destination-specific copy is offered.
- const normalizeUrl=value=>{try{const u=new URL(value);return u.origin+u.pathname.replace(new RegExp('/+
+ const normalizeUrl=value=>{try{const u=new URL(value);return u.origin+u.pathname+(u.pathname.endsWith('/')?'':'/');}catch{return null}};
  const sourceUrl=normalizeUrl(report.url),targetUrl=normalizeUrl(target);
  const base={status:'NOT_READY',publish_allowed:false,copy_ready:false,requires_editorial_review:true,
   protected_source:report.url||null,target_url:target||null,focus_query:query};
