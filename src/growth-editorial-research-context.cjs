@@ -7,7 +7,7 @@ function normalizeGrowthResearchContext(payload,{targetUrl='',focusQuery=''}={})
  if(String(payload.target_url||'')!==String(targetUrl||'')||
     String(payload.focus_query||'').trim().toLowerCase()!==String(focusQuery||'').trim().toLowerCase())return blank;
  const observations=[],seen=new Set();
- const clean=v=>String(typeof v==='string'?v:'').replace(/<[^>]*>/g,' ').replace(/[\\u0000-\\u001f\\u007f]/g,' ').replace(/\\s+/g,' ').trim();
+ const clean=v=>String(typeof v==='string'?v:'').replace(/<[^>]*>/g,' ').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim();
  for(const raw of (Array.isArray(payload.observations)?payload.observations:[]).slice(0,8)){
   if(!raw||typeof raw!=='object'||Array.isArray(raw))continue;
   const url=clean(raw.competitor_url),heading=clean(raw.competitor_heading).slice(0,140),
