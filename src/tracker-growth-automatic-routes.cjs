@@ -84,7 +84,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Compare the distinct growth intent on its likely existing destination,
   // not only the protected homepage that surfaced the GSC opportunity.
   const proposed=report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
-   report.growth_decision?.primary_next_action?.related_pages_to_check?.[0]||null;
+   report.growth_decision?.primary_next_action?.related_pages_to_check?.find(u=>destinationSources.has(u))||null;
   const selectedSource=proposed?destinationSources.get(proposed):null;
   report.destination_section_comparison=selectedSource?compareFullSections({
    query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,
