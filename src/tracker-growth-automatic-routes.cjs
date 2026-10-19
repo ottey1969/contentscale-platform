@@ -97,7 +97,37 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.destination_section_comparison.target_url=proposed;
   report.destination_section_comparison.protected_source_url=page.url;
   report.editorial_decision_gate=decideGrowthEditorialAction({report,destination:report.destination_section_comparison});
-  report.evidence_bound_example=buildGrowthEvidenceExample({report,decision:report.editorial_decision_gate});
+  // A homepage GSC observation is never evidence about a different editorial URL.
+  // Resolve the selected destination to a tracked page owned by this same client,
+  // then read only independently page-verified rows for that exact URL and page_id.
+  const destinationPage=selectedSource&&proposed!==page.url?
+   rows(3).find(x=>x.url===proposed&&Number.isSafeInteger(Number(x.id))):null;
+  let destinationGscRows=[],destinationGscStatus='NO_TRACKED_DESTINATION';
+  if(destinationPage){
+   try{
+    const evidence=await pool.query(
+     "SELECT page_id,tracker_client_id,source_page_url,evidence_scope,query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND source_page_url=$3 AND evidence_scope='page_verified' ORDER BY imported_at DESC LIMIT 150",
+     [cid,destinationPage.id,proposed]);
+    destinationGscRows=(evidence.rows||[]).filter(x=>
+     String(x.page_id)===String(destinationPage.id)&&String(x.tracker_client_id)===String(cid)&&x.source_page_url===proposed&&x.evidence_scope==='page_verified');
+    destinationGscStatus=destinationGscRows.length?'PAGE_VERIFIED_ROWS_AVAILABLE':'NO_VERIFIED_DESTINATION_ROWS';
+   }catch{
+    destinationGscStatus='DESTINATION_GSC_LOOKUP_UNAVAILABLE';
+    report.evidence_warnings.push('DESTINATION_GSC_LOOKUP_UNAVAILABLE');
+   }
+  }
+  const exactTargetRow=destinationGscRows.find(x=>
+   String(x.query||'').trim().toLowerCase()===targetQuery.trim().toLowerCase());
+  report.destination_gsc_evidence={
+   status:exactTargetRow?'EXACT_QUERY_VERIFIED':destinationGscStatus,
+   target_url:proposed,focus_query:targetQuery,
+   exact_query_verified:!!exactTargetRow,
+   // Never copy homepage clicks or infer a measurement window for this destination.
+   metrics:exactTargetRow?{impressions:Number(exactTargetRow.impressions),clicks:Number(exactTargetRow.clicks),
+    average_position:Number(exactTargetRow.position),imported_at:exactTargetRow.imported_at||null,
+    measurement_window:'UNKNOWN',source_url:proposed}:null
+  };
+  report.evidence_bound_example=buildGrowthEvidenceExample({report,decision:report.editorial_decision_gate,destinationGscRows});
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=comparisons.length;
   report.summary.optional_evidence_complete=unavailable.length===0&&!(discovery.provider_attempts?.length&&!discovery.leads?.length);
