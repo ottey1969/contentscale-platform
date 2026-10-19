@@ -158,9 +158,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.summary.live_search_evidence_complete=!!(discovery.leads?.length);
   if(discovery.optional_google_failure_reason)report.evidence_warnings.push('SERPAPI_GOOGLE_'+discovery.optional_google_failure_reason);
   report.handoff_suggestions=proposeHandoffFromResearch(report,page.url);
-  report.access={can_edit:false,read_only_analysis:true};
+  // This object is always the research-only GET response, regardless of
+  // the caller's actual owner permission. Do not misrepresent its access
+  // metadata as an authorization decision or as a completed Growth report.
+  report.access={can_edit:false,read_only_analysis:true,
+   report_mode:'RESEARCH_ONLY',editor_permissions_not_evaluated:true};
   report.editorial_review_draft={status:'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN',auto_started:false,
    draft:null,published:false,case_study_unchanged:true};
+  report.report_completion={status:'RESEARCH_ONLY_NO_EDITORIAL_DRAFT',
+   owner_only_completion_route_required:true};
   return report;
  }
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
@@ -268,7 +274,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
    '<section><div role="status" id="researchStatus">Analyzing the URL and observed competitor evidence…</div>',
    '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
-   '<button id="downloadResearch" type="button" hidden>Download research report (JSON)</button></section>',
+   '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?
+    'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button></section>',
    '<div id="growthAutomaticReport"></div>',
    '<details id="growthNextAction"><summary>Later: reviewed CMS handoff and measurement</summary>',
    allowHandoff?'<p><a id="growthEditorHandoff" href="'+handoff+'">Prepare reviewed Wix / WordPress / other CMS package</a> — original URL preserved, editor approval required.</p>':
