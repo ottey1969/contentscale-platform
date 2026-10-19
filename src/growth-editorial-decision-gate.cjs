@@ -18,7 +18,7 @@ function decideGrowthEditorialAction({report={},destination={}}={}){
  const reliable=comparisons.filter(x=>x.match_status==='POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED'&&x.nearest_existing_section&&x.competitor_url);
  if(reliable.length)return {...base,decision:'REVIEW_EXISTING',reason:'A related answer exists on the selected destination. Word overlap does not establish an improvement.',next_action:'Review the identified existing section and the competitor answer before claiming a missing reader task.',
   strongest_comparison:{own_heading:reliable[0].nearest_existing_section.heading,competitor_heading:reliable[0].competitor_heading,competitor_url:reliable[0].competitor_url}};
- if(comparisons.length)return {...base,decision:'VERIFY_DISTINCT_INTENT',reason:'Competitor sections were observed, but none reliably matches an existing answer. This does not prove an absent topic.',next_action:'Verify whether the query belongs on this existing page or requires another destination; do not draft speculative copy.'};
+ if(comparisons.length)return {...base,decision:'NEEDS_EVIDENCE',reason:'Competitor sections were observed, but none reliably matches an existing answer. This does not establish different search intent or a missing topic.',next_action:'Obtain an intent-matched, substantive passage from both pages before proposing any page change.'};
  return {...base,decision:'NEEDS_EVIDENCE',reason:'No comparable fully observed section establishes a specific editorial action.',next_action:'Retrieve readable sections from an intent-matched competitor and existing destination.'};
 }
 module.exports={decideGrowthEditorialAction};
