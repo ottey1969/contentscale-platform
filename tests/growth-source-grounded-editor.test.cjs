@@ -56,7 +56,7 @@ assert.equal(r.draft,null);
  assert.equal(stillBad.draft,null,'Repeated unsupported claims never become publishable copy');
  assert.equal(stillBad.numeric_claim_retry_succeeded,false);
  const offTopic={...content,sections:[{h2:'How artificial intelligence citations work',
-  paragraphs:['AI citations are about presenting an answer with sources to assistants and do not establish whether roof repairs are needed.']},
+  paragraphs:['AI citations rely on providing well structured answers with attributable sources that assistants can display to readers.']},
   ...content.sections]};
  assert.equal(normalizeDraft(offTopic,facts.text,'roof repairs').status,'AI_DRAFT_OFF_TOPIC_SECTION');
  let intentCalls=0;
