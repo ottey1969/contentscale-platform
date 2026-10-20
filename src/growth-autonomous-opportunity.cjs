@@ -25,7 +25,12 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
   const path=(()=>{try{return new URL(p.url).pathname.toLowerCase()}catch{return ''}})();
   const productPrimary=/\b(?:brandwell|ai detector|product review)\b/i.test(main)||
    /(?:brandwell|ai-detector|product-review)/i.test(path);
-  const topic=/\bcontent\b/i.test(headings)&&/\bscal(?:e|ing|able)\b/i.test(headings);
+  // Match primary search intent across niches; no content-scaling special case.
+  const stem=t=>String(t).replace(/(?:ing|ed|es|s)$/,'').replace(/e$/,'');
+  const expected=primaryTopic.map(stem);
+  const titleTerms=new Set(terms(main+' '+path.replace(/[-/]/g,' ')).map(stem));
+  const hits=expected.filter(t=>titleTerms.has(t)).length;
+  const topic=expected.length>0&&hits>=Math.min(2,expected.length);
   const suitability=!live?.verified_live?'NOT_VERIFIED':productPrimary?'SEPARATE_PRODUCT_INTENT':topic?'TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW':'TOPIC_NOT_ESTABLISHED';
   return {url:p.url,tracked_keyword:p.tracked_keyword||null,
    reason:'Primary page intent assessed from URL, title and H1; subsidiary H2 mentions do not reclassify the entire guide. Full body intent still needs checking.',
