@@ -56,13 +56,22 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
   proposed_target_url:nextEditorialTarget?.url||null,
   focus_query:query,
   visitor_outcome:'Explain the query directly and give a practical sequence that ends in a useful deliverable, not merely another tool recommendation.',
-  reader_steps:[
-   {heading:'Inventory pages and questions',action:'List useful existing URLs, map each to a distinct reader question, and identify overlap.',output:'Content inventory and question map'},
-   {heading:'Find real search opportunity',action:'Compare actual page-level Google Search Console queries, impressions, clicks and positions using dated periods.',output:'Prioritized evidence table'},
-   {heading:'Preserve working pages',action:'Keep strong page titles and H1s; identify which other relevant page can serve the missing intention.',output:'Protected pages and candidate URLs'},
-   {heading:'Compare and improve',action:'Read competing answers and the existing full page, identify a genuinely unanswered reader question, then prepare original examples and precise improvements.',output:'Evidence-linked content edit plan'},
-   {heading:'Measure the difference',action:'After approved publication, compare the same URLs and queries over equivalent dated windows.',output:'Before/after click and impression comparison'}
-  ],
+  // Produce a source-grounded work queue, not the same invented five-step
+  // 'content scaling' template for roofing, legal, finance and every query.
+  // A missing topic stays unverified; do not claim it is a content gap.
+  reader_steps:nextEditorialTarget?.body_evidence?.evidence_passages?
+   Object.entries(nextEditorialTarget.body_evidence.evidence_passages)
+    .filter(([,passages])=>Array.isArray(passages)&&passages.length)
+    .slice(0,5).map(([topic,passages])=>({
+     heading:topic.replace(/_/g,' '),
+     action:'Review the existing page answer before proposing an update',
+     observed_passage:passages[0],
+     source_url:nextEditorialTarget.url,
+     evidence_status:'EXISTING_PASSAGE_OBSERVED_NO_GAP_PROVEN',
+     output:'Retain existing answer or identify a distinct unanswered reader task'
+    })) : [],
+  reader_steps_status:nextEditorialTarget?.body_evidence?.evidence_passages?
+   'SOURCE_DERIVED_REVIEW_QUEUE':'NO_OBSERVED_SOURCE_PASSAGES',
   internal_link_recommendation:nextEditorialTarget?{
    source_page:origin,destination:nextEditorialTarget.url,
    suggested_anchor:query,
