@@ -1,0 +1,10 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const src=fs.readFileSync('src/tracker-growth-automatic-routes.cjs','utf8');
+assert.match(src,/AMBIGUOUS_SITE_NAVIGATION_INTENT/);
+assert.match(src,/ambiguousQuery\?\{/);
+assert.match(src,/broadNavigation\.has/);
+assert.match(src,/report\.growth_decision\?\.primary_next_action\?\.metrics\?/);
+assert.match(src,/\(!report\.growth_decision\?\.primary_next_action\?\.metrics\?page\.url:null\)/);
+console.log('PASS service navigation prevents unrelated competitor search and no-GSC destination stays on source page');

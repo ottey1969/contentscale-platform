@@ -43,7 +43,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const seed=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:[],sitePages:rows(3),previousBrief:page.brief_content});
   const targetQuery=seed.growth_decision?.primary_next_action?.query||String(page.keyword||'').trim()||seed.search?.focus_query||'';
-  const discovery=await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url}))
+  // Single-word navigation labels ('services', 'about', 'contact') do not
+  // identify competitive search intent. Never compare a services page with
+  // Windows Services Manager solely because they share one generic token.
+  const broadNavigation=new Set(['services','service','about','contact','home','products','solutions','pricing']);
+  const ambiguousQuery=broadNavigation.has(String(targetQuery).trim().toLowerCase());
+  const discovery=ambiguousQuery?{
+   status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:targetQuery,leads:[],
+   reason:'The target keyword is a navigation label; derive the real service intent from observed page content before competitor search.'
+  }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url}))
    .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
   // Discussion listings remain in SERP evidence but should not displace readable
   // long-form articles in the limited content-comparison budget.
@@ -106,7 +114,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Compare the distinct growth intent on its likely existing destination,
   // not only the protected homepage that surfaced the GSC opportunity.
   const proposed=report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
-   report.growth_decision?.primary_next_action?.related_pages_to_check?.find(u=>destinationSources.has(u))||
+   (report.growth_decision?.primary_next_action?.metrics?
+    report.growth_decision.primary_next_action.related_pages_to_check?.find(u=>destinationSources.has(u)):null)||
    // Without verified GSC, research the selected page itself. Never invent
    // an untracked destination or discard otherwise available live content.
    (!report.growth_decision?.primary_next_action?.metrics?page.url:null);
