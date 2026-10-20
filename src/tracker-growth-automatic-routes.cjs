@@ -233,11 +233,16 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     }});
     const detail=outcome?.body||{};
     const validIdentity=detail.canonical_url===targetUrl&&Number(detail.page_id)===targetId;
+    // Never label a generated response complete unless there is actual reviewable body content.
+    const sections=Array.isArray(detail.draft?.sections)?detail.draft.sections:[];
+    const hasSubstantiveDraft=sections.some(section=>
+     typeof section?.h2==='string'&&section.h2.trim().length>2&&
+     Array.isArray(section.paragraphs)&&section.paragraphs.some(p=>typeof p==='string'&&p.trim().length>=80));
     completion={...base,status:outcome.statusCode===200&&detail.success===true&&validIdentity?
-     detail.status||'DRAFT_STATUS_UNKNOWN':'DRAFT_UNAVAILABLE',
+     detail.status==='AI_DRAFT_REVIEW_REQUIRED'&&!hasSubstantiveDraft?'DRAFT_CONTENT_INCOMPLETE':detail.status||'DRAFT_STATUS_UNKNOWN':'DRAFT_UNAVAILABLE',
      error_code:outcome.statusCode===200&&detail.success===true&&validIdentity?
       null:(!validIdentity&&detail.success===true?'DRAFT_SOURCE_IDENTITY_MISMATCH':detail.code||'OWNER_DRAFT_FAILED'),
-     draft:validIdentity&&detail.status==='AI_DRAFT_REVIEW_REQUIRED'?detail.draft||null:null,
+     draft:validIdentity&&detail.status==='AI_DRAFT_REVIEW_REQUIRED'&&hasSubstantiveDraft?detail.draft:null,
      source_type:validIdentity?detail.draft_source_type||null:null,
      source_warning:validIdentity?detail.draft_source_warning||null:null,
      source_retrieved_at:validIdentity?detail.draft_source_retrieved_at||null:null,
