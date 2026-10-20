@@ -2,7 +2,13 @@
 // Read-only source comparison. Distinguishes observed text from proven missing facts.
 // No generative templates, paid API dependencies or publication rights.
 const strip=s=>String(s||'').replace(/<(?:script|style|nav|footer|form|noscript)\b[^>]*>[\s\S]*?<\/\s*(?:script|style|nav|footer|form|noscript)>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|nbsp|quot|#39);/gi,' ').replace(/\s+/g,' ').trim();
-const tokens=s=>[...new Set(strip(s).toLowerCase().match(/[a-z]{4,}/g)||[])].filter(w=>!new Set(['that','this','with','from','your','have','been','will','into','than','their','content','scale','scaling','page','pages','about','which','when','what','where','should','more','before','after','using','also','these']).has(w));
+const STOP=new Set(['that','this','with','from','your','have','been','will','into','than','their','content','scale','scaling','page','pages','about','which','when','what','where','should','more','before','after','using','also','these']);
+const stem=w=>w.endsWith('ies')?w.slice(0,-3)+'y':
+ w.endsWith('ing')&&w.length>6?w.slice(0,-3).replace(/e$/,''):
+ w.endsWith('ed')&&w.length>5?w.slice(0,-2):
+ w.endsWith('s')&&w.length>5?w.slice(0,-1):w;
+const tokens=s=>[...new Set((strip(s).toLowerCase().match(/[a-z]{4,}/g)||[])
+ .filter(w=>!STOP.has(w)).map(stem))];
 function isEditorialHeading(heading,query){
  const h=String(heading||'').trim();
  if(/\b(?:book a demo|register now|get a demo|request demo|contact sales|subscribe|free trial|case study|see how .* keeps .* on.brand|our customers|related posts|recommended articles)\b/i.test(h))return false;
@@ -43,7 +49,7 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
     const headingAgreement=competitorHeadingTerms.filter(t=>headingTerms.has(t)).length;
     const coverage=a.length?Math.round(overlap.length/a.length*100):0;
     return {url:ownUrl,heading:o.heading,excerpt:o.text.slice(0,650),shared_terms:overlap.slice(0,12),lexical_coverage_pct:coverage,
-     heading_shared_terms:headingAgreement,eligible_match:(headingAgreement>0&&overlap.length>=2)||
+     heading_shared_terms:headingAgreement,eligible_match:(headingAgreement>0&&overlap.length>=1)||
       (coverage>=20&&overlap.length>=4)};
    }).filter(x=>x.eligible_match).sort((a,b)=>(b.heading_shared_terms-a.heading_shared_terms)||
     (b.lexical_coverage_pct-a.lexical_coverage_pct));
@@ -56,7 +62,9 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
     reason:'Observed full HTML section excerpts and lexical overlap cannot alone prove missing information, improved ranking, or a factual advantage.'});
   }
  }
- comparison.sort((a,b)=>(a.nearest_existing_section?.lexical_coverage_pct??0)-(b.nearest_existing_section?.lexical_coverage_pct??0));
+ comparison.sort((a,b)=>
+  Number(!!b.nearest_existing_section)-Number(!!a.nearest_existing_section)||
+  (b.nearest_existing_section?.lexical_coverage_pct??0)-(a.nearest_existing_section?.lexical_coverage_pct??0));
  return {status:comparison.length?'FULL_SECTION_COMPARISON_RESEARCH_ONLY':'NO_COMPARABLE_COMPLETE_SECTIONS',
   focus_query:query,own_url:ownUrl,own_sections_observed:own.length,competitor_sections_compared:comparison.length,
   own_html_truncated:ownTruncated,comparison_scope:ownTruncated||competitors.some(x=>x.live?.truncated)?'PARTIAL_SOURCE_NO_ABSENCE_CLAIMS':'BOUNDED_SOURCE_NO_ABSENCE_CLAIMS',
