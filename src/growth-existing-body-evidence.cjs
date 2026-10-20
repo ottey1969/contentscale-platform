@@ -32,6 +32,16 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
   }[k];
   return [k,paragraphs.filter(x=>pattern.test(x)).slice(0,2).map(x=>x.slice(0,460))];
  }));
+ // Add observed passages matching the actual focus query for any industry.
+ // A lexical match is review evidence, never proof of a factual content gap.
+ const queryWords=[...new Set(String(query||'').toLowerCase().match(/[a-z]{4,}/g)||[])];
+ const stem=w=>String(w).replace(/(?:ing|ed|es|s)$/,'').replace(/e$/,'');
+ const queryStems=queryWords.map(stem);
+ const queryPassages=queryStems.length?paragraphs.filter(p=>{
+  const textStems=new Set((p.toLowerCase().match(/[a-z]{4,}/g)||[]).map(stem));
+  return queryStems.filter(w=>textStems.has(w)).length>=Math.min(2,queryStems.length);
+ }).slice(0,3).map(p=>p.slice(0,460)):[];
+ if(queryPassages.length)evidence_passages.query_answer=queryPassages;
  const present=Object.entries(questions).filter(x=>x[1]).map(x=>x[0]);
  const notObserved=Object.entries(questions).filter(x=>!x[1]).map(x=>x[0]);
  const queryTerms=String(query||'').toLowerCase().split(/\s+/).filter(x=>x.length>3);
