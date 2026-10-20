@@ -12,7 +12,7 @@ function sourceFacts(html){
  }
  return {text:blocks.join('\n').slice(0,11000),count:blocks.length};
 }
-function normalizeDraft(value,sourceText){
+function normalizeDraft(value,sourceText,focusQuery=''){
  let obj=value;
  if(typeof obj==='string'){
   try{obj=JSON.parse(obj.replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,'').trim())}
@@ -24,6 +24,14 @@ function normalizeDraft(value,sourceText){
   paragraphs:(Array.isArray(it?.paragraphs)?it.paragraphs:[]).slice(0,4).map(text).filter(x=>x.length>=40),
   source_status:'AI_COPY_NEEDS_FACT_CHECK'})).filter(x=>x.h2&&x.paragraphs.length);
  if(!sections.length)return {status:'AI_DRAFT_TOO_THIN',draft:null};
+ // A supported claim may still belong to the wrong search intent.
+ // Require each proposed section to address a distinctive focus-query term.
+ const queryTerms=[...new Set(String(focusQuery||'').toLowerCase().match(/[a-z]{4,}/g)||[])]
+  .filter(w=>!['content','about','with','from','your','what','which','the','page','pages'].includes(w));
+ if(queryTerms.length&&sections.some(section=>{
+  const body=(section.h2+' '+section.paragraphs.join(' ')).toLowerCase();
+  return !queryTerms.some(term=>body.includes(term.replace(/(?:ing|ed|es|s)$/,'').slice(0,Math.max(4,term.length-3))));
+ }))return {status:'AI_DRAFT_OFF_TOPIC_SECTION',draft:null};
  const title=text(obj.seo_title).slice(0,100),description=text(obj.meta_description).slice(0,220);
  const generated=[title,description,...sections.flatMap(s=>[s.h2,...s.paragraphs])].join(' ');
  const num=/\b\d[\d,.%/-]*\b/g,known=new Set(String(sourceText).match(num)||[]);
@@ -89,17 +97,18 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   };
   const raw=await request(prompt);
   if(raw===null)return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null};
-  let result=normalizeDraft(raw,source.text),repaired=false;
+  let result=normalizeDraft(raw,source.text,focusQuery),repaired=false;
   // A factual rejection remains a rejection. Give the model one bounded
   // opportunity to rewrite without numbers; never silently delete claims.
-  if(result.status==='AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED'){
-   const retry=await request(prompt+'\\nSTRICT RETRY: Your previous draft contained a numeral not supported by the original page. Rewrite the editorial proposal without ANY digits, numeric quantities, dates, numbered steps, or claims of rankings or performance. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.');
+  if(['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION'].includes(result.status)){
+   const retry=await request(prompt+'\\nSTRICT RETRY: Your previous draft failed factual-number validation or contained an off-topic section. Rewrite every section so it clearly addresses the working search query; remove off-topic sections about unrelated AI citations or tools. Use no unsupported digits, numeric quantities, dates, numbered steps, rankings or performance claims. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.');
    if(retry!==null){
-    const checked=normalizeDraft(retry,source.text);
+    const checked=normalizeDraft(retry,source.text,focusQuery);
     if(checked.status==='AI_DRAFT_REVIEW_REQUIRED'){result=checked;repaired=true}
    }
   }
   return {...result,source_blocks:source.count,source_url:canonical.href,
+   draft_quality_retry_attempted:['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION'].includes(result.status)||repaired,
    numeric_claim_retry_attempted:result.status==='AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED'||repaired,
    numeric_claim_retry_succeeded:repaired,
    provenance:'AI_PROPOSAL_UNVERIFIED_EDITOR_REVIEW',publication_allowed:false};
