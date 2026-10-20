@@ -250,9 +250,37 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      competitor_research_passages_used:validIdentity?Number(detail.live_competitor_observations_used||0):0};
    }catch{completion={...base,status:'DRAFT_UNAVAILABLE',error_code:'OWNER_DRAFT_FAILED',draft:null}}
   }
+  // Package the actual observed passages with the draft. A reader can now
+  // inspect precisely which source supports each proposed editorial review.
+  const workPacket={
+   status:completion.draft?'DRAFT_AND_SOURCE_COMPARISON_FOR_REVIEW':'SOURCE_COMPARISON_ONLY',
+   target_url:completion.target_url||report.destination_section_comparison?.target_url||report.url,
+   focus_query:report.editorial_decision_gate?.focus_query||null,
+   generated_draft:completion.draft||null,
+   evidence_verified:report.editorial_decision_gate?.verified_gap===true,
+   case_study_locked:report.case_study_locked===true,
+   publication_allowed:false,
+   source_comparisons:(report.destination_section_comparison?.comparisons||[]).slice(0,6).map(x=>({
+    competitor_url:x.competitor_url,
+    competitor_heading:x.competitor_heading,
+    competitor_observed_excerpt:x.competitor_excerpt,
+    competitor_word_count:x.competitor_word_count,
+    destination_url:report.destination_section_comparison?.target_url||null,
+    destination_heading:x.nearest_existing_section?.heading||null,
+    destination_observed_excerpt:x.nearest_existing_section?.excerpt||null,
+    match_status:x.match_status,
+    source_scope:x.source_scope,
+    finding:'UNVERIFIED_READER_NEED',
+    editorial_check:x.nearest_existing_section?
+     'Check whether the observed destination section already answers the same reader task. Retain existing useful text and record a distinct missing answer only if supported.':
+     'No reliable matching destination section was observed. Check the complete page before treating this as a missing answer.'
+   })),
+   next_action:'Review linked source passages against the generated draft; approve only distinct factual improvements. Do not infer a ranking advantage or missing content from term overlap.'
+  };
   return res.set('Cache-Control','private, no-store').json({...report,
    access:{can_edit:true,read_only_analysis:false,owner_report:true},
    editorial_review_draft:completion,
+   editorial_work_packet:workPacket,
    report_completion:{status:completion.status!=='AI_DRAFT_REVIEW_REQUIRED'?'RESEARCH_COMPLETE_DRAFT_NOT_READY':
      report.editorial_decision_gate?.verified_gap===true&&report.editorial_decision_gate?.copy_ready===true?
      'COMPLETE_FOR_OWNER_REVIEW':'REVIEW_DRAFT_AVAILABLE_EVIDENCE_PENDING',
