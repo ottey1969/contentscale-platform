@@ -141,6 +141,12 @@ async function testRoutes(){
  assert.equal(finished.body.access.owner_report,true);
  assert.equal(finished.body.editorial_review_draft.target_url,'https://roof.example/roof-repair-guide/');
  assert.equal(finished.body.editorial_review_draft.draft.sections[0].h2,'Safe advice');
+ assert.equal(finished.body.editorial_work_packet.status,'DRAFT_AND_SOURCE_COMPARISON_FOR_REVIEW');
+ assert.equal(finished.body.editorial_work_packet.publication_allowed,false);
+ assert.equal(finished.body.editorial_work_packet.evidence_verified,false);
+ assert.equal(finished.body.editorial_work_packet.target_url,'https://roof.example/roof-repair-guide/');
+ assert.equal(finished.body.editorial_work_packet.generated_draft.sections[0].h2,'Safe advice');
+ assert(Array.isArray(finished.body.editorial_work_packet.source_comparisons));
  assert.equal(finished.body.editorial_review_draft.published,false);
  assert.equal(finished.body.editorial_review_draft.case_study_unchanged,true);
  assert.equal(finished.body.report_completion.status,'REVIEW_DRAFT_AVAILABLE_EVIDENCE_PENDING');
