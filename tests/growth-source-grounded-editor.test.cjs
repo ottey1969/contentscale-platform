@@ -68,6 +68,16 @@ assert.equal(r.draft,null);
  assert.equal(intentCalls,2,'One bounded retry for an off-topic section');
  assert.equal(onIntent.status,'AI_DRAFT_REVIEW_REQUIRED');
  assert.equal(onIntent.draft_quality_retry_attempted,true);
+ const unrelatedTitle={...content,seo_title:'Why the Brand Name Changed'};
+ assert.equal(normalizeDraft(unrelatedTitle,facts.text,'roof repairs').status,'AI_DRAFT_FOCUS_QUERY_MISSING_TITLE');
+ let titleAttempts=0;
+ const fixedTitle=await generateGrowthEditorDraft({sourceHtml:html,pageUrl:'https://roof.example/roof-repair/',focusQuery:'roof repairs'},
+  {apiKey:'test-key',fetchImpl:async()=>{
+   titleAttempts++;
+   return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(titleAttempts===1?unrelatedTitle:content)}]}}]})};
+  }});
+ assert.equal(titleAttempts,2);
+ assert.equal(fixedTitle.status,'AI_DRAFT_REVIEW_REQUIRED');
  const js=fs.readFileSync('public/growth-cms-neutral-handoff.js','utf8');
  assert(js.includes("base+'/editor-draft'"));
  assert(js.includes("$('approved').checked=false"));

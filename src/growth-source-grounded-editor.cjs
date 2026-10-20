@@ -33,6 +33,11 @@ function normalizeDraft(value,sourceText,focusQuery=''){
   return !queryTerms.some(term=>body.includes(term.replace(/(?:ing|ed|es|s)$/,'').slice(0,Math.max(4,term.length-3))));
  }))return {status:'AI_DRAFT_OFF_TOPIC_SECTION',draft:null};
  const title=text(obj.seo_title).slice(0,100),description=text(obj.meta_description).slice(0,220);
+ // SEO focus stays with the selected query, including the generated title.
+ // Avoid attractive but unrelated brand-history / AI-tool angles on a scaling task.
+ const focus=String(focusQuery||'').trim().toLocaleLowerCase('en');
+ if(focus&&!title.toLocaleLowerCase('en').includes(focus))
+  return {status:'AI_DRAFT_FOCUS_QUERY_MISSING_TITLE',draft:null};
  const generated=[title,description,...sections.flatMap(s=>[s.h2,...s.paragraphs])].join(' ');
  const num=/\b\d[\d,.%/-]*\b/g,known=new Set(String(sourceText).match(num)||[]);
  if((generated.match(num)||[]).some(v=>!known.has(v)))return {status:'AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED',draft:null};
@@ -100,15 +105,15 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   let result=normalizeDraft(raw,source.text,focusQuery),repaired=false;
   // A factual rejection remains a rejection. Give the model one bounded
   // opportunity to rewrite without numbers; never silently delete claims.
-  if(['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION'].includes(result.status)){
-   const retry=await request(prompt+'\\nSTRICT RETRY: Your previous draft failed factual-number validation or contained an off-topic section. Rewrite every section so it clearly addresses the working search query; remove off-topic sections about unrelated AI citations or tools. Use no unsupported digits, numeric quantities, dates, numbered steps, rankings or performance claims. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.');
+  if(['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE'].includes(result.status)){
+   const retry=await request(prompt+'\\nSTRICT RETRY: Your previous draft failed factual-number validation, topic alignment, or omitted the exact working focus query from the SEO title. Include the exact focus query in the SEO title, and rewrite every section so it clearly addresses the working search query; remove off-topic sections about unrelated AI citations or tools. Use no unsupported digits, numeric quantities, dates, numbered steps, rankings or performance claims. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.');
    if(retry!==null){
     const checked=normalizeDraft(retry,source.text,focusQuery);
     if(checked.status==='AI_DRAFT_REVIEW_REQUIRED'){result=checked;repaired=true}
    }
   }
   return {...result,source_blocks:source.count,source_url:canonical.href,
-   draft_quality_retry_attempted:['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION'].includes(result.status)||repaired,
+   draft_quality_retry_attempted:['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE'].includes(result.status)||repaired,
    numeric_claim_retry_attempted:result.status==='AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED'||repaired,
    numeric_claim_retry_succeeded:repaired,
    provenance:'AI_PROPOSAL_UNVERIFIED_EDITOR_REVIEW',publication_allowed:false};
