@@ -143,7 +143,9 @@ async function testRoutes(){
  assert.equal(finished.body.editorial_review_draft.draft.sections[0].h2,'Safe advice');
  assert.equal(finished.body.editorial_review_draft.published,false);
  assert.equal(finished.body.editorial_review_draft.case_study_unchanged,true);
- assert.equal(finished.body.report_completion.status,'COMPLETE_FOR_OWNER_REVIEW');
+ assert.equal(finished.body.report_completion.status,'REVIEW_DRAFT_AVAILABLE_EVIDENCE_PENDING');
+ assert.equal(finished.body.report_completion.verified_gap,false);
+ assert.equal(finished.body.report_completion.copy_ready,false);
  assert.equal(ownerDraftCalls,1);
  returnShortDraft=true;
  const incomplete=await invoke(complete,'owner-token');

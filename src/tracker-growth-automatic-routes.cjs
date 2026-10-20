@@ -253,7 +253,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   return res.set('Cache-Control','private, no-store').json({...report,
    access:{can_edit:true,read_only_analysis:false,owner_report:true},
    editorial_review_draft:completion,
-   report_completion:{status:completion.status==='AI_DRAFT_REVIEW_REQUIRED'?'COMPLETE_FOR_OWNER_REVIEW':'RESEARCH_COMPLETE_DRAFT_NOT_READY',
+   report_completion:{status:completion.status!=='AI_DRAFT_REVIEW_REQUIRED'?'RESEARCH_COMPLETE_DRAFT_NOT_READY':
+     report.editorial_decision_gate?.verified_gap===true&&report.editorial_decision_gate?.copy_ready===true?
+     'COMPLETE_FOR_OWNER_REVIEW':'REVIEW_DRAFT_AVAILABLE_EVIDENCE_PENDING',
+    evidence_gate:report.editorial_decision_gate?.decision||'UNVERIFIED',
+    verified_gap:report.editorial_decision_gate?.verified_gap===true,
+    copy_ready:report.editorial_decision_gate?.copy_ready===true,
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
  });
  app.get('/track/:token/growth/auto-research',data,(req,res)=>{
