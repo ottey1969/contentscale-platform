@@ -55,6 +55,19 @@ assert.equal(r.draft,null);
  assert.equal(stillBad.status,'AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED');
  assert.equal(stillBad.draft,null,'Repeated unsupported claims never become publishable copy');
  assert.equal(stillBad.numeric_claim_retry_succeeded,false);
+ const offTopic={...content,sections:[{h2:'How artificial intelligence citations work',
+  paragraphs:['AI citations rely on providing well structured answers with attributable sources that assistants can display to readers.']},
+  ...content.sections]};
+ assert.equal(normalizeDraft(offTopic,facts.text,'roof repairs').status,'AI_DRAFT_OFF_TOPIC_SECTION');
+ let intentCalls=0;
+ const onIntent=await generateGrowthEditorDraft({sourceHtml:html,pageUrl:'https://roof.example/roof-repair/',focusQuery:'roof repairs'},
+  {apiKey:'test-key',fetchImpl:async()=>{
+   intentCalls++;
+   return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(intentCalls===1?offTopic:content)}]}}]})};
+  }});
+ assert.equal(intentCalls,2,'One bounded retry for an off-topic section');
+ assert.equal(onIntent.status,'AI_DRAFT_REVIEW_REQUIRED');
+ assert.equal(onIntent.draft_quality_retry_attempted,true);
  const js=fs.readFileSync('public/growth-cms-neutral-handoff.js','utf8');
  assert(js.includes("base+'/editor-draft'"));
  assert(js.includes("$('approved').checked=false"));
