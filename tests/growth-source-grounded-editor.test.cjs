@@ -36,6 +36,25 @@ assert.equal(r.draft,null);
  }});
  assert.equal(enriched.status,'AI_DRAFT_REVIEW_REQUIRED');
  assert.equal(enriched.publication_allowed,false);
+ const invalidNumeric={...content,sections:[{h2:'Roof care',paragraphs:['This roof inspection always takes 999 days and has guaranteed outcomes for every homeowner.']}]};
+ let attempt=0;
+ const repaired=await generateGrowthEditorDraft({sourceHtml:html,pageUrl:'https://roof.example/roof-repair/'},
+  {apiKey:'test-key',fetchImpl:async(_url,options)=>{
+   attempt++;
+   const msg=JSON.parse(options.body).contents[0].parts[0].text;
+   if(attempt===2)assert.match(msg,/STRICT RETRY/);
+   return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(attempt===1?invalidNumeric:content)}]}}]})};
+  }});
+ assert.equal(attempt,2,'Only one retry for an unsupported numeric claim');
+ assert.equal(repaired.status,'AI_DRAFT_REVIEW_REQUIRED');
+ assert.equal(repaired.numeric_claim_retry_succeeded,true);
+ attempt=0;
+ const stillBad=await generateGrowthEditorDraft({sourceHtml:html,pageUrl:'https://roof.example/roof-repair/'},
+  {apiKey:'test-key',fetchImpl:async()=>{attempt++;return {ok:true,json:async()=>({candidates:[{content:{parts:[{text:JSON.stringify(invalidNumeric)}]}}]})};}});
+ assert.equal(attempt,2);
+ assert.equal(stillBad.status,'AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED');
+ assert.equal(stillBad.draft,null,'Repeated unsupported claims never become publishable copy');
+ assert.equal(stillBad.numeric_claim_retry_succeeded,false);
  const js=fs.readFileSync('public/growth-cms-neutral-handoff.js','utf8');
  assert(js.includes("base+'/editor-draft'"));
  assert(js.includes("$('approved').checked=false"));
