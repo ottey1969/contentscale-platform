@@ -58,7 +58,7 @@ async function testRoutes(){
   if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:[{id:11,url:'https://roof.example/roof-repair-guide/',keyword:'roof repair guide'}]};
   throw Error('Unexpected database access '+sql.slice(0,120));
  }};
- let caseLocked=true;
+ let caseLocked=true,returnShortDraft=false;
  const middleware=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:req.params.token==='owner-token',pages:[{id:7,url:own,keyword:'roof repair',case_study_active:caseLocked}]};next()};
  const fetchLive=async url=>{calls.push(url);return {html:url===own?html:rivalHtml,final_url:url,retrieved_at:'2026-10-17T00:00:00Z',source:'LIVE_PUBLIC_HTTPS'}};
  registerGrowthAutomaticResearch({
@@ -74,7 +74,7 @@ async function testRoutes(){
    assert.equal(body.research_context.target_url,'https://roof.example/roof-repair-guide/');
    return {statusCode:200,body:{
     success:true,page_id:11,canonical_url:'https://roof.example/roof-repair-guide/',
-    status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:[{h2:'Safe advice',paragraphs:['Review the actual roof condition before planning a repair.']}]},
+    status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:[{h2:'Safe advice',paragraphs:[returnShortDraft?'Too short to count as a usable article.':'Review the actual roof condition before planning a repair. Explain the warning signs, inspection limitations, and when the homeowner should seek a qualified contractor before committing to a specific repair.']}]},
     draft_source_type:'LIVE_PUBLIC_HTML',live_competitor_observations_used:0,
     gsc_context:{status:'EXACT_DESTINATION_QUERY_VERIFIED',gsc_required:false},
     auto_publishing:false,case_study_protected:true
@@ -145,6 +145,13 @@ async function testRoutes(){
  assert.equal(finished.body.editorial_review_draft.case_study_unchanged,true);
  assert.equal(finished.body.report_completion.status,'COMPLETE_FOR_OWNER_REVIEW');
  assert.equal(ownerDraftCalls,1);
+ returnShortDraft=true;
+ const incomplete=await invoke(complete,'owner-token');
+ assert.equal(incomplete.statusCode,200);
+ assert.equal(incomplete.body.editorial_review_draft.status,'DRAFT_CONTENT_INCOMPLETE');
+ assert.equal(incomplete.body.editorial_review_draft.draft,null,'A short placeholder cannot be exported as complete editorial content');
+ assert.equal(incomplete.body.report_completion.status,'RESEARCH_COMPLETE_DRAFT_NOT_READY');
+ assert.equal(ownerDraftCalls,2);
  assert.equal(calls.length,2,'Combined owner completion should reuse cached research rather than repeat search costs');
  const unmodified=await invoke(api);
  assert.equal(unmodified.body.editorial_review_draft.status,'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN',

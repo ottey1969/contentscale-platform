@@ -78,14 +78,30 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
  ].join('\n');
  try{
   const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(apiKey);
-  const res=await fetchImpl(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],
-    generationConfig:{temperature:0.2,maxOutputTokens:5000,responseMimeType:'application/json'}}),
-   signal:AbortSignal.timeout(35000)});
-  if(!res.ok)return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null};
-  const json=await res.json();
-  const raw=json.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'';
-  return {...normalizeDraft(raw,source.text),source_blocks:source.count,source_url:canonical.href,
+  const request=async message=>{
+   const res=await fetchImpl(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:message}]}],
+     generationConfig:{temperature:0.2,maxOutputTokens:5000,responseMimeType:'application/json'}}),
+    signal:AbortSignal.timeout(35000)});
+   if(!res.ok)return null;
+   const json=await res.json();
+   return json.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'';
+  };
+  const raw=await request(prompt);
+  if(raw===null)return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null};
+  let result=normalizeDraft(raw,source.text),repaired=false;
+  // A factual rejection remains a rejection. Give the model one bounded
+  // opportunity to rewrite without numbers; never silently delete claims.
+  if(result.status==='AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED'){
+   const retry=await request(prompt+'\\nSTRICT RETRY: Your previous draft contained a numeral not supported by the original page. Rewrite the editorial proposal without ANY digits, numeric quantities, dates, numbered steps, or claims of rankings or performance. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.');
+   if(retry!==null){
+    const checked=normalizeDraft(retry,source.text);
+    if(checked.status==='AI_DRAFT_REVIEW_REQUIRED'){result=checked;repaired=true}
+   }
+  }
+  return {...result,source_blocks:source.count,source_url:canonical.href,
+   numeric_claim_retry_attempted:result.status==='AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED'||repaired,
+   numeric_claim_retry_succeeded:repaired,
    provenance:'AI_PROPOSAL_UNVERIFIED_EDITOR_REVIEW',publication_allowed:false};
  }catch{return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null}}
 }
