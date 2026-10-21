@@ -89,7 +89,7 @@ function buildGrowthPracticalBrief({report,html=''}={}){
     'The saved competitor sample does not establish search competitors for this Growth action. Do not copy or benchmark against unrelated detector/review pages.'},
   content_section:section?{heading:section.heading,observed_excerpt:section.snippet,approx_observed_words:section.approx_words,source:'LIVE_OR_SAVED_HTML_EXCERPT'}:null,
   change:{type:alreadyHere?'REVIEW_AND_IMPROVE_EXISTING_SECTION':'PROPOSE_RELEVANT_SECTION_FOR_REVIEW',
-   target_section:section?.heading||null,evidence_basis:next.query?'Exact-page GSC query + observed website section; this is not a proven SERP gap.':'Observed page topic without exact-page GSC metrics; no ranking or click assertions are made.',
+   target_section:section?.heading||null,evidence_basis:next.metrics?'Exact-page GSC query + observed website section; this is not a proven SERP gap.':'Observed page topic without exact-page GSC metrics; no ranking or click assertions are made.',
    retain_title_h1:true,new_page_required:false,copy_ready:false,editor_review_required:true,
    summary:alreadyHere?'Check the existing answer for completeness and add missing practical steps only after reviewing the source.':
     'No matching H2 in the inspected excerpt. Prepare a focused, factual answer on the original URL for review.',
