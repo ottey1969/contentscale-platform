@@ -27,3 +27,12 @@ assert.equal(report.editorial.site_link_candidates.length,2);
 assert(report.findings.some(x=>x.code==='POSSIBLE_INTENT_OVERLAP'));
 assert.equal(report.summary.forecasted_click_gain,null);
 console.log('PASS automatic Growth intent and internal site graph');
+
+const noMedia=suggestInternalGrowthLinks({pageUrl:'https://contentscale.site/ai-overview-optimization/',
+ focusQuery:'ai overview optimization',sitePages:[
+ {url:'https://contentscale.site/wp-content/uploads/2025/10/AI-Overview-optimization-framework-showing-GRAAF-CRAFT.jpg',keyword:'AI Overview optimization framework'},
+ {url:'https://contentscale.site/ai-overview-optimization-checklist/',keyword:'ai overview optimization checklist'},
+ {url:'https://contentscale.site/downloads/ai-overview-optimization.pdf',keyword:'ai overview optimization'}
+ ]});
+assert.deepEqual(noMedia.candidates.map(x=>x.url),['https://contentscale.site/ai-overview-optimization-checklist/']);
+assert(noMedia.intent_overlap_risks.every(x=>!x.url.endsWith('.jpg')&&!x.url.endsWith('.pdf')));

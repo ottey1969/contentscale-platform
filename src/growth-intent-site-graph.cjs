@@ -35,6 +35,10 @@ function suggestInternalGrowthLinks({pageUrl='',focusQuery='',currentHtml='',sit
   if(!raw||typeof raw.url!=='string')continue;
   let other;try{other=new URL(raw.url)}catch{continue}
   if(other.origin!==origin||other.href===canonical.href||!/https?:/.test(other.protocol))continue;
+  // Media, uploads, feeds and machine endpoints are not editorial page destinations.
+  // Ignore them before keyword overlap scoring to prevent false internal-link and cannibalization recommendations.
+  if(/\/(?:wp-content\/uploads|wp-includes|assets\/images|static\/images)(?:\/|$)/i.test(other.pathname)||
+     /\.(?:jpe?g|png|webp|gif|svg|avif|ico|pdf|mp4|webm|mp3|xml|json|txt|zip)(?:$)/i.test(other.pathname))continue;
   const route=other.pathname.replace(/\/+$/,'')||'/';
   if(/(?:^|\/)(privacy|terms|disclaimer|cookie|imprint|legal|feed|sitemap|wp-json|robots)(?:\/|$)/i.test(route))continue;
   const kw=terms(raw.keyword||''),pathTokens=terms(other.pathname.replace(/[-_/]+/g,' '));
