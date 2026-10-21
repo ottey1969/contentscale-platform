@@ -23,3 +23,30 @@ const {optionalSerpApiOrganicDiscovery,discoverGrowthCompetitorsWithFallback}=re
  assert.equal(failure.optional_google_failure_reason,'HTTP_429');
  console.log('PASS Growth SerpAPI fallback, source truth, intent exclusions');
 })().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{
+ let called=0;
+ const originalFetch=global.fetch, originalKey=process.env.SERPAPI_KEY, originalAlt=process.env.SERPAPI_API_KEY;
+ try{
+  process.env.SERPAPI_KEY='test-key-for-regression';
+  global.fetch=async url=>{
+   called++;
+   assert.equal(new URL(url).hostname,'serpapi.com','Default fallback must never call legacy Serper.dev');
+   return {ok:true,json:async()=>({organic_results:[{
+    title:'AI Overview Optimization Guide',link:'https://example.net/ai-overview-optimization/',position:3,
+    snippet:'An informational optimization guide'
+   }]})};
+  };
+  const found=await discoverGrowthCompetitorsWithFallback({
+   query:'ai overview optimization',ownUrl:'https://contentscale.site/ai-overview-optimization/',
+   fetchFree:async()=>({source:'BING_PUBLIC_RSS',status:'NO_RELEVANT_PUBLIC_SEARCH_LEADS',leads:[]})
+  });
+  assert.equal(called,1);
+  assert.equal(found.source,'SERPAPI_GOOGLE_ORGANIC');
+  assert.equal(found.leads.length,1);
+  assert.deepEqual(found.provider_attempts,['BING_PUBLIC_RSS','SERPAPI_GOOGLE_ORGANIC']);
+ }finally{
+  global.fetch=originalFetch;
+  if(originalKey===undefined)delete process.env.SERPAPI_KEY;else process.env.SERPAPI_KEY=originalKey;
+  if(originalAlt===undefined)delete process.env.SERPAPI_API_KEY;else process.env.SERPAPI_API_KEY=originalAlt;
+ }
+})().catch(e=>{console.error(e);process.exitCode=1});

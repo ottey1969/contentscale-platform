@@ -147,7 +147,7 @@ async function optionalSerpApiOrganicDiscovery({query,ownUrl,fetchImpl=global.fe
  }
 }
 async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
- fetchFree=discoverGrowthCompetitors,fetchGoogle=optionalGoogleOrganicDiscovery,now=new Date()}={}){
+ fetchFree=discoverGrowthCompetitors,fetchGoogle=optionalSerpApiOrganicDiscovery,now=new Date()}={}){
  // Avoid a paid provider call whenever the free public feed returned relevant
  // leads. If it fails and an existing key is configured, use at most one query.
  const publicResult=await Promise.resolve().then(()=>fetchFree({query,ownUrl,now}))
@@ -157,9 +157,9 @@ async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
  if(publicResult.status==='QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH')
   return {...publicResult,provider_attempts:[],fallback_used:false};
  const google=await Promise.resolve().then(()=>fetchGoogle({query,ownUrl,now}))
-  .catch(()=>({status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPER_GOOGLE_ORGANIC',leads:[],query}));
+  .catch(()=>({status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query}));
  if(Array.isArray(google.leads)&&google.leads.length)
-  return {...google,provider_attempts:['BING_PUBLIC_RSS',google.source||'SERPER_GOOGLE_ORGANIC'],
+  return {...google,provider_attempts:['BING_PUBLIC_RSS',google.source||'SERPAPI_GOOGLE_ORGANIC'],
    fallback_used:true,free_discovery_status:publicResult.status};
  return {...publicResult,provider_attempts:google.status==='OPTIONAL_PROVIDER_NOT_CONFIGURED'?['BING_PUBLIC_RSS']:
   ['BING_PUBLIC_RSS',google.source||'SERPER_GOOGLE_ORGANIC'],fallback_used:false,
