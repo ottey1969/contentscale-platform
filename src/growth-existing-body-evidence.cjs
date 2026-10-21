@@ -7,13 +7,16 @@ function textOf(html){
 }
 function evaluateExistingBody({html='',truncated=false,query=''}={}){
  const text=textOf(html),lower=text.toLowerCase();
+ // Check the actual requested topic. These observations work for any niche.
+ // Absence of a matching phrase is never proof of a missing answer.
+ const queryTerms=String(query||'').toLowerCase().match(/[a-z]{4,}/g)||[];
+ const stem=w=>String(w).replace(/(?:ing|ed|es|s)$/,'').replace(/e$/,'');
+ const queryStems=[...new Set(queryTerms.map(stem))];
+ const bodyStems=new Set((lower.match(/[a-z]{4,}/g)||[]).map(stem));
+ const matchCount=queryStems.filter(x=>bodyStems.has(x)).length;
  const questions={
-  definition:/\b(?:content scaling|scaling content|content at scale|scale content)\b/i.test(text),
-  inventory:/\b(?:content audit|inventory|existing (?:pages|content)|audit your content|audit before you add|audit (?:before|first)|fix what you have before publishing)\b/i.test(text),
-  search_data:/\b(?:search console|impressions|click.through rate|ctr)\b/i.test(text),
-  decisions:/\b(?:prioriti[sz]|search intent|cannibaliz|overlap|consolidat)\b/i.test(text),
-  measurement:/\b(?:compare (?:clicks|impressions|performance)|track (?:clicks|impressions|results)|measur(?:e|ing) (?:organic |search |traffic |the )?(?:clicks|impressions|performance|results|traffic)|before.and.after|baseline.{0,60}(?:clicks|impressions|traffic)|(?:clicks|impressions).{0,70}(?:period|after (?:publishing|publication|updating)|baseline))\b/i.test(text),
-  worked_example:/\b(?:for example|example:|worked example|sample plan)\b/i.test(text)
+  query_answer:queryStems.length>0&&matchCount>=Math.min(2,queryStems.length),
+  supporting_examples:/\\b(?:for example|example:|case study|worked example|sample plan)\\b/i.test(text)
  };
  // Preserve concise observed source paragraphs for editorial comparison.
  // Excludes page navigation, scripts, and any markup; no gap is inferred.
@@ -44,8 +47,8 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
  if(queryPassages.length)evidence_passages.query_answer=queryPassages;
  const present=Object.entries(questions).filter(x=>x[1]).map(x=>x[0]);
  const notObserved=Object.entries(questions).filter(x=>!x[1]).map(x=>x[0]);
- const queryTerms=String(query||'').toLowerCase().split(/\s+/).filter(x=>x.length>3);
- const queryTermsObserved=queryTerms.filter(x=>lower.includes(x));
+ const observedQueryTerms=String(query||'').toLowerCase().split(/\s+/).filter(x=>x.length>3);
+ const queryTermsObserved=observedQueryTerms.filter(x=>lower.includes(x));
  return {
   status:truncated?'PARTIAL_HTML_ONLY':'PUBLIC_HTML_CONTENT_OBSERVED',
   source:'PUBLIC_HTML_TEXT_HEURISTIC',
