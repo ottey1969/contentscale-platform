@@ -1,34 +1,10 @@
-// Canonical ContentScale production entry. Keep startup inside one Node process.
+// Canonical production entry. Source repairs belong to the Docker build, not server startup.
 const fs=require('node:fs');
 const path=require('node:path');
-const entry=path.join(__dirname,'src','index.js');
-const source=fs.readFileSync(entry,'utf8');
-if (/Yes — I\\*'m interested in the 20-Page Audit/.test(source)) {
-  const {patch}=require('./scripts/fix-audit20-inline-label.cjs');
-  fs.writeFileSync(entry,patch(source));
-  console.log('[startup] corrected Audit 20 inline CTA text');
-}
-// Validate CEO website input at the canonical request boundary before any scan starts.
-// Keep the repair idempotent across Railway restarts and fail boot if anchors drift.
-{
-  const source=fs.readFileSync(entry,'utf8');
-  const normalize=require('./scripts/fix-ceo-domain-validation.cjs').patch;
-  const validateForms=require('./scripts/fix-ceo-form-validation.cjs').patch;
-  const corrected=validateForms(normalize(source));
-  if(corrected!==source){
-    fs.writeFileSync(entry,corrected);
-    console.log('[startup] corrected CEO public/private domain intake (HTTP 400 on invalid domain)');
-  }
-}
-// One canonical Chromium lifecycle for all existing scanner routes.
-{
-  const source=fs.readFileSync(entry,'utf8');
-  const corrected=require('./scripts/repair-canonical-browser.cjs').patch(source);
-  if(corrected!==source){
-    fs.writeFileSync(entry,corrected);
-    console.log('[startup] installed shared Chromium lifecycle and CEO 503 recovery');
-  }
-}
+const source=fs.readFileSync(path.join(__dirname,'src','index.js'),'utf8');
+if(!source.includes("const _canonicalBrowserManager = require('./browser-manager.cjs')")||
+   !source.includes('function isCeoDomainInput(value)'))
+ throw Error('CANONICAL_BUILD_ARTIFACT_REQUIRED: run node scripts/prepare-canonical-production.cjs at build time');
 // The acquisition admin page must exist in the canonical Express app regardless
 // of optional Network feature registration. API endpoints retain their own auth.
 const express=require('express');
