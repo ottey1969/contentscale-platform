@@ -13,7 +13,8 @@ const {buildGrowthEvidenceExample}=require('./growth-evidence-bound-example.cjs'
 const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.cjs');
 const {decideOwnerGrowthEdit}=require('./growth-owner-edit-decision.cjs');
 const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null}={}){
+const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -40,6 +41,22 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const unavailable=optional.map((x,i)=>x.status==='rejected'?['competitor_snapshots','ai_evidence','gsc_queries','site_inventory'][i]:null).filter(Boolean);
   const snapshot=rows(0)[0]||null,historical=snapshotCompetitorLeads({page,snapshot}).leads;
   const own=await fetchLive(page.url).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
+  // Only use the browser if the static public source is too thin to assess.
+  // Prevent mock-network tests from launching real Chromium unintentionally.
+  let renderStatus=own.live?'STATIC_HTML_USED':'STATIC_HTML_UNAVAILABLE';
+  if(own.live&&needsGrowthRender(own.live.html)&&
+     (fetchLive===fetchPublicGrowthHtml||renderOwn!==renderPublicGrowthPage)){
+   const rendered=await renderOwn(page.url);
+   renderStatus=rendered?.status||'RENDER_UNAVAILABLE';
+   if(rendered?.live?.html&&
+      (rendered.live.html.length>own.live.html.length||/<h1\\b/i.test(rendered.live.html)&&!/<h1\\b/i.test(own.live.html))){
+    own.live=rendered.live;
+   }else if(renderStatus==='BROWSER_RENDERED_SAME_ORIGIN'){
+    renderStatus='BROWSER_NO_ADDITIONAL_READABLE_CONTENT';
+   }
+  }else if(own.live&&needsGrowthRender(own.live.html)){
+   renderStatus='BROWSER_FALLBACK_NOT_CONFIGURED';
+  }
   // Determine the chosen exact-page query BEFORE competitor discovery.
   // Historical SERPs may be about another brand/product even on the same URL.
   const seed=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
@@ -84,6 +101,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
   report.intent_resolution=intentResolution;
+  report.page_content.render_status=renderStatus;
+  report.summary.render_status=renderStatus;
+
   report.original_tracked_keyword=page.keyword;
   if(!targetQuery){
    report.growth_decision.primary_next_action.query=null;
