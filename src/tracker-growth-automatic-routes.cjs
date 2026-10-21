@@ -262,6 +262,38 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      competitor_research_passages_used:validIdentity?Number(detail.live_competitor_observations_used||0):0};
    }catch{completion={...base,status:'DRAFT_UNAVAILABLE',error_code:'OWNER_DRAFT_FAILED',draft:null}}
   }
+  // An owner-only source-validated draft is a concrete editorial candidate.
+  // It is NOT evidence that competitors beat the page or that content is absent.
+  const paired=(report.destination_section_comparison?.comparisons||[]).find(x=>
+   x.match_status==='POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED'&&
+   x.nearest_existing_section?.heading&&
+   String(x.nearest_existing_section?.excerpt||'').length>=50&&
+   String(x.competitor_excerpt||'').length>=75&&x.competitor_url);
+  const firstDraftSection=completion.draft?.sections?.find(x=>
+   x?.h2&&Array.isArray(x.paragraphs)&&x.paragraphs.some(p=>String(p||'').trim().length>=80));
+  const isProtected=report.case_study_locked===true;
+  const completeDecision=completion.draft&&firstDraftSection&&paired&&!isProtected&&
+   completion.target_url===report.destination_section_comparison?.target_url?{
+    ...report.editorial_decision_gate,
+    decision:'IMPROVE_EXISTING',
+    decision_scope:'OWNER_REVIEW_CANDIDATE_NOT_VERIFIED_GAP',
+    target_url:completion.target_url,
+    target_section:paired.nearest_existing_section.heading,
+    draft_heading:firstDraftSection.h2,
+    proposed_text:firstDraftSection.paragraphs.join('\\n\\n'),
+    existing_passage:paired.nearest_existing_section.excerpt,
+    source_comparison:{competitor_url:paired.competitor_url,
+     competitor_heading:paired.competitor_heading,competitor_passage:paired.competitor_excerpt},
+    verified_gap:false,copy_ready:true,publish_allowed:false,
+    requires_editor_approval:true,
+    facts:[...(report.editorial_decision_gate?.facts||[]),
+     {code:'OWNER_DRAFT_SOURCE_VALIDATED',source:'EXISTING_OWNER_DRAFT_HANDLER'}],
+    uncertainties:[...(report.editorial_decision_gate?.uncertainties||[]),
+     'Editor must verify that this draft adds a distinct answer; lexical similarity cannot prove a content gap.'],
+    next_action:'Review the exact section and proposed text; reject duplication or unverified claims before any CMS handoff.'
+   }:{...report.editorial_decision_gate,
+    decision_scope:'RESEARCH_ONLY_NO_CONFIRMED_EDIT',
+    publish_allowed:false,copy_ready:false};
   // Package the actual observed passages with the draft. A reader can now
   // inspect precisely which source supports each proposed editorial review.
   const workPacket={
@@ -269,6 +301,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    target_url:completion.target_url||report.destination_section_comparison?.target_url||report.url,
    focus_query:report.editorial_decision_gate?.focus_query||null,
    generated_draft:completion.draft||null,
+   editorial_decision:completeDecision,
    evidence_verified:report.editorial_decision_gate?.verified_gap===true,
    case_study_locked:report.case_study_locked===true,
    publication_allowed:false,
@@ -290,15 +323,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    next_action:'Review linked source passages against the generated draft; approve only distinct factual improvements. Do not infer a ranking advantage or missing content from term overlap.'
   };
   return res.set('Cache-Control','private, no-store').json({...report,
+   editorial_decision_gate:completeDecision,
    access:{can_edit:true,read_only_analysis:false,owner_report:true},
    editorial_review_draft:completion,
    editorial_work_packet:workPacket,
    report_completion:{status:completion.status!=='AI_DRAFT_REVIEW_REQUIRED'?'RESEARCH_COMPLETE_DRAFT_NOT_READY':
-     report.editorial_decision_gate?.verified_gap===true&&report.editorial_decision_gate?.copy_ready===true?
-     'COMPLETE_FOR_OWNER_REVIEW':'REVIEW_DRAFT_AVAILABLE_EVIDENCE_PENDING',
-    evidence_gate:report.editorial_decision_gate?.decision||'UNVERIFIED',
-    verified_gap:report.editorial_decision_gate?.verified_gap===true,
-    copy_ready:report.editorial_decision_gate?.copy_ready===true,
+     completeDecision.decision==='IMPROVE_EXISTING'?'CONCRETE_EDIT_FOR_OWNER_REVIEW':'REVIEW_DRAFT_AVAILABLE_EVIDENCE_PENDING',
+    evidence_gate:completeDecision.decision||'UNVERIFIED',
+    verified_gap:completeDecision.verified_gap===true,
+    copy_ready:completeDecision.copy_ready===true,
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
  });
  app.get('/track/:token/growth/auto-research',data,(req,res)=>{
