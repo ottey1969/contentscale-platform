@@ -24,27 +24,15 @@ function evaluateExistingBody({html='',truncated=false,query=''}={}){
  const paragraphs=Array.from(cleaned.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi))
   .map(x=>textOf(x[1])).filter(x=>x.length>=45).slice(0,80);
  const observed_paragraphs=paragraphs.slice(0,8).map(x=>x.slice(0,460));
- const evidence_passages=Object.fromEntries(Object.keys(questions).map(k=>{
-  const pattern={
-   definition:/content (?:scaling|at scale)|scaling content/i,
-   inventory:/content audit|inventory|existing (?:pages|content)|audit before you add|audit (?:before|first)|fix what you have before publishing/i,
-   search_data:/search console|impressions|click.through rate|\bctr\b/i,
-   decisions:/prioriti[sz]|search intent|cannibaliz|overlap|consolidat/i,
-   measurement:/compare (?:clicks|impressions|performance)|track (?:clicks|impressions|results)|measur(?:e|ing) (?:organic |search |traffic |the )?(?:clicks|impressions|performance|results|traffic)|before.and.after|baseline.{0,60}(?:clicks|impressions|traffic)|(?:clicks|impressions).{0,70}(?:period|after (?:publishing|publication|updating)|baseline)/i,
-   worked_example:/for example|example:|worked example|sample plan/i
-  }[k];
-  return [k,paragraphs.filter(x=>pattern.test(x)).slice(0,2).map(x=>x.slice(0,460))];
- }));
- // Add observed passages matching the actual focus query for any industry.
- // A lexical match is review evidence, never proof of a factual content gap.
- const queryWords=[...new Set(String(query||'').toLowerCase().match(/[a-z]{4,}/g)||[])];
- const stem=w=>String(w).replace(/(?:ing|ed|es|s)$/,'').replace(/e$/,'');
- const queryStems=queryWords.map(stem);
- const queryPassages=queryStems.length?paragraphs.filter(p=>{
-  const textStems=new Set((p.toLowerCase().match(/[a-z]{4,}/g)||[]).map(stem));
-  return queryStems.filter(w=>textStems.has(w)).length>=Math.min(2,queryStems.length);
- }).slice(0,3).map(p=>p.slice(0,460)):[];
- if(queryPassages.length)evidence_passages.query_answer=queryPassages;
+ const passageMatch=p=>{
+  const stems=new Set((p.toLowerCase().match(/[a-z]{4,}/g)||[]).map(stem));
+  return queryStems.length>0&&queryStems.filter(w=>stems.has(w)).length>=Math.min(2,queryStems.length);
+ };
+ const evidence_passages={
+  query_answer:paragraphs.filter(passageMatch).slice(0,3).map(p=>p.slice(0,460)),
+  supporting_examples:paragraphs.filter(p=>/\\b(?:for example|example:|case study|worked example|sample plan)\\b/i.test(p))
+   .slice(0,2).map(p=>p.slice(0,460))
+ };
  const present=Object.entries(questions).filter(x=>x[1]).map(x=>x[0]);
  const notObserved=Object.entries(questions).filter(x=>!x[1]).map(x=>x[0]);
  const observedQueryTerms=String(query||'').toLowerCase().split(/\s+/).filter(x=>x.length>3);
