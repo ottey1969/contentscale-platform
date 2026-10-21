@@ -9,6 +9,7 @@ on:
       - 'src/growth-practical-brief.cjs'
       - 'tests/growth-live-query-competitors.test.cjs'
       - 'tests/tracker-growth-automatic-research.test.cjs'
+      - 'tests/growth-self-destination-identity.test.cjs'
       - 'src/growth-automatic-analysis.cjs'
       - 'public/growth-automatic-report-ui.js'
       - 'src/tracker-growth-automatic-routes.cjs'
@@ -23,6 +24,7 @@ on:
       - 'src/growth-practical-brief.cjs'
       - 'tests/growth-live-query-competitors.test.cjs'
       - 'tests/tracker-growth-automatic-research.test.cjs'
+      - 'tests/growth-self-destination-identity.test.cjs'
       - 'src/growth-automatic-analysis.cjs'
       - 'public/growth-automatic-report-ui.js'
       - 'src/tracker-growth-automatic-routes.cjs'
@@ -45,6 +47,7 @@ jobs:
           node src/growth-optional-google-fallback.test.cjs
           node tests/growth-live-query-competitors.test.cjs
           node tests/tracker-growth-automatic-research.test.cjs
+          node --test tests/growth-self-destination-identity.test.cjs
       - name: New and existing client JS syntax
         run: |
           node --check src/growth-one-action-decision.cjs

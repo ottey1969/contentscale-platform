@@ -161,8 +161,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // A homepage GSC observation is never evidence about a different editorial URL.
   // Resolve the selected destination to a tracked page owned by this same client,
   // then read only independently page-verified rows for that exact URL and page_id.
-  const destinationPage=selectedSource&&proposed!==page.url?
-   rows(3).find(x=>x.url===proposed&&Number.isSafeInteger(Number(x.id))):null;
+  // The original tracked page remains a valid destination when no separate spoke is selected.
+  // Do not report NO_TRACKED_DESTINATION merely because target_url equals the source URL.
+  const destinationPage=selectedSource&&proposed?
+   (proposed===page.url?{id:v.id,url:page.url}:
+    rows(3).find(x=>x.url===proposed&&Number.isSafeInteger(Number(x.id)))):null;
   let destinationGscRows=[],destinationGscStatus='NO_TRACKED_DESTINATION';
   if(destinationPage){
    try{
