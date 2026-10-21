@@ -31,7 +31,50 @@
  function render(d){
   container.textContent='';researchDetails=null;
   var decision=d.growth_decision||{},recommendation=decision.primary_next_action;
-  var s=section('Your next Growth action');
+  var ownerReport=main.getAttribute('data-owner-draft')==='true'&&d.access?.owner_report===true;
+  var outcome=ownerReport&&d.editorial_work_packet?.editorial_decision?
+   d.editorial_work_packet.editorial_decision:(d.editorial_decision_gate||{});
+  var primary=section('Growth result · decision and evidence');
+  node('h3',String(outcome.decision||'DATA_BLOCKED').replace(/_/g,' '),primary);
+  node('p',String(outcome.reason||outcome.next_action||'A verified editorial decision was not available.'),primary);
+  if(outcome.target_url){var chosen=node('p','Target page: ',primary);link(outcome.target_url,outcome.target_url,chosen)}
+  node('p','Focus query: '+String(outcome.focus_query||d.intent_resolution?.query||d.search?.focus_query||'not verified'),primary);
+  node('small','Decision scope: '+String(outcome.decision_scope||'OBSERVED_RESEARCH_ONLY')+
+   ' · Verified content gap: '+(outcome.verified_gap===true?'YES':'NO')+
+   ' · Automatic publishing: DISABLED',primary);
+  if(outcome.decision==='DATA_BLOCKED'){
+   node('p','Blocked evidence: '+String(outcome.blocker_code||'SPECIFIC_EVIDENCE_NOT_ESTABLISHED'),primary);
+   node('p','Required check: '+String(outcome.next_action||'Obtain missing readable source evidence.'),primary);
+  }
+  if(d.page_content?.render_status)
+   node('p','Page capture: '+String(d.page_content.render_status),primary);
+  if(d.intent_resolution?.status)
+   node('p','Search intent: '+String(d.intent_resolution.status)+
+    (d.intent_resolution.original_keyword?' · Original tracked term: '+d.intent_resolution.original_keyword:''),primary);
+  if(ownerReport&&outcome.decision==='IMPROVE_EXISTING'&&outcome.proposed_text){
+   node('h3','Concrete improvement for editorial review',primary);
+   node('p','Existing section: '+String(outcome.target_section||'unspecified'),primary);
+   if(outcome.existing_passage){node('strong','Existing observed passage',primary);node('pre',outcome.existing_passage,primary)}
+   node('strong','Proposed replacement/addition — fact-check before approval',primary);
+   node('pre',outcome.proposed_text,primary);
+   if(outcome.source_comparison?.competitor_url){
+    var competitor=node('p','Compared with: ',primary);
+    link(outcome.source_comparison.competitor_url,outcome.source_comparison.competitor_heading||outcome.source_comparison.competitor_url,competitor);
+    if(outcome.source_comparison.competitor_passage)node('pre',outcome.source_comparison.competitor_passage,primary);
+   }
+   node('p','This is a reviewable proposal, NOT a proven ranking gain or automatically verified missing answer.',primary);
+   var copyEdit=node('button','Copy proposed Growth edit',primary);copyEdit.type='button';
+   copyEdit.addEventListener('click',async function(){
+    var material=['Target: '+String(outcome.target_url||''),'Section: '+String(outcome.target_section||''),
+     'Existing passage: '+String(outcome.existing_passage||''),'Proposed text:',outcome.proposed_text,
+     'Source: '+String(outcome.source_comparison?.competitor_url||''),'Editor approval required. No automatic publication.'].join('\\n\\n');
+    try{await navigator.clipboard.writeText(material);copyEdit.textContent='Copied'}
+    catch(_){copyEdit.textContent='Copy unavailable'}
+   });
+  }else if(ownerReport&&d.editorial_review_draft?.draft?.sections?.length){
+   node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
+  }
+  var s=section('Research context and next check');
   if(recommendation){
    node('h3',recommendation.title,s);
    node('p',recommendation.reason,s);
