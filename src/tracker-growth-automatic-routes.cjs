@@ -12,6 +12,7 @@ const {decideGrowthEditorialAction}=require('./growth-editorial-decision-gate.cj
 const {buildGrowthEvidenceExample}=require('./growth-evidence-bound-example.cjs');
 const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.cjs');
 const {decideOwnerGrowthEdit}=require('./growth-owner-edit-decision.cjs');
+const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
@@ -43,17 +44,18 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Historical SERPs may be about another brand/product even on the same URL.
   const seed=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:[],sitePages:rows(3),previousBrief:page.brief_content});
-  const targetQuery=seed.growth_decision?.primary_next_action?.query||String(page.keyword||'').trim()||seed.search?.focus_query||'';
-  // Single-word navigation labels ('services', 'about', 'contact') do not
-  // identify competitive search intent. Never compare a services page with
-  // Windows Services Manager solely because they share one generic token.
-  const broadNavigation=new Set(['services','service','about','contact','home','products','solutions','pricing']);
-  const ambiguousQuery=broadNavigation.has(String(targetQuery).trim().toLowerCase());
-  const discovery=ambiguousQuery?{
-   status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:targetQuery,leads:[],
-   reason:'The target keyword is a navigation label; derive the real service intent from observed page content before competitor search.'
+  const rawFocus=seed.growth_decision?.primary_next_action?.query||String(page.keyword||'').trim()||seed.search?.focus_query||'';
+  const intentResolution=resolveGrowthPageIntent({keyword:rawFocus,
+   title:seed.page_content?.headings?.title||'',
+   h1:seed.page_content?.headings?.h1||[],
+   description:seed.page_content?.headings?.description||''});
+  const targetQuery=intentResolution.query||'';
+  const discovery=!targetQuery?{
+   status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
+   reason:intentResolution.warning||'No search phrase is justified by observed page content.'
   }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url}))
-   .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
+   .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',
+    reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
   // Discussion listings remain in SERP evidence but should not displace readable
   // long-form articles in the limited content-comparison budget.
   const editorialHost=url=>{try{const host=new URL(url).hostname.toLowerCase();
@@ -79,8 +81,14 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    attempted=attempted.concat(await Promise.all(extra.map(fetchCompetitor)));
    comparisons=eligible(attempted);
   }
-  const report=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
+  const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
+  report.intent_resolution=intentResolution;
+  report.original_tracked_keyword=page.keyword;
+  if(!targetQuery){
+   report.growth_decision.primary_next_action.query=null;
+   report.search.focus_query=null;
+  }
   report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,7),target_query:targetQuery,
    fetched_competitor_urls:comparisons.filter(x=>x.live).map(x=>x.url),
    discarded_unreadable_article_count:attempted.filter(x=>x.live&&!x.quality?.eligible).length};
