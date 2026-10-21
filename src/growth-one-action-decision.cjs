@@ -67,7 +67,7 @@ function chooseGrowthNextAction({page={},queries=[],headings={},siteGraph={},now
    related_pages_to_check:candidateUrls,
    stop_before:'No title/H1 rewrite, new spoke, consolidation, publication or Case Study baseline change without separate evidence and owner approval.'};
  }else{
-  next={code:'REVIEW_PAGE_INTENT',title:'Check this page against the live search intent',query:null,metrics:null,
+  next={code:'REVIEW_PAGE_INTENT',title:'Check this page against the live search intent',query:String(page.keyword||headings.h1?.[0]||headings.title||'').trim().slice(0,160)||null,metrics:null,
    reason:supported.length?'No supported high-impression, low-click ranking opportunity meets the threshold.':'No sufficiently recent, on-page-aligned exact-page query is available.',
    instruction:'Review the existing page and live SERP; keep working without GSC when unavailable. Do not invent a click gain.',
    related_pages_to_check:candidateUrls,
