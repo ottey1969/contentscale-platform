@@ -34,6 +34,9 @@ RUN npm ci --omit=dev --legacy-peer-deps 2>/dev/null || \
 # Copy application files
 COPY . .
 
+# Apply legacy canonical compatibility repairs once, deterministically, at build time.
+RUN node scripts/prepare-canonical-production.cjs
+
 EXPOSE 3000
 
 CMD ["node", "index.cjs"]
