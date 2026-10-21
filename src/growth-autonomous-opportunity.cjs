@@ -51,7 +51,12 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
   observed_average_position:metrics.average_position,observed_ctr_pct:metrics.ctr_pct,
   imported_at:metrics.imported_at||null,actual_gsc_period:null,
   analysis:metrics.average_position>10?'Average ranking beyond the first page is a possible stronger limitation than snippet CTR; verify results by country and device.':'Investigate intent and result appearance as well as page ranking.'
- }:null;
+ }:(currentSerp?{
+  query,observed_impressions:null,observed_clicks:null,observed_average_position:null,
+  observed_ctr_pct:null,imported_at:null,actual_gsc_period:null,
+  source:'LIVE_SEARCH_INTENT_LEADS_ONLY',
+  analysis:'Current search results provide a topic research starting point, not measured demand, ranking, a verified gap, or permission to publish.'
+ }:null);
  const fitting=relevant.filter(x=>x.suitability==='TOPIC_RELATED_REQUIRES_FULL_INTENT_REVIEW');
  const alternate=relevant.filter(x=>x.suitability==='SEPARATE_PRODUCT_INTENT');
  const nextEditorialTarget=fitting[0]||null;
@@ -99,7 +104,8 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
  }:null;
  return {
   status:selected?'GROWTH_OPPORTUNITY_FOUND_NEEDS_EDITORIAL_VALIDATION':'GROWTH_EVIDENCE_INCOMPLETE',
-  evidence_level:selected?'EXACT_PAGE_GSC_METRICS_WITH_SERP_VERIFICATION_PENDING':'INSUFFICIENT_EXACT_PAGE_GSC',
+  evidence_level:metrics?'EXACT_PAGE_GSC_METRICS_WITH_SERP_VERIFICATION_PENDING':
+   currentSerp?'LIVE_SERP_WITHOUT_GSC_METRICS':'INSUFFICIENT_LIVE_SEARCH_EVIDENCE',
   primary_opportunity:selected,protected_baseline:topQueries,
   live_search:{source,query,observed_leads:liveLeads.slice(0,5).map(x=>({url:x.url,title:x.title||x.serp_title||null})),at_least_two_leads:currentSerp,
    caution:'Search listings do not prove full-page relevance or a current stable rank.'},
