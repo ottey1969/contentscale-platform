@@ -36,6 +36,25 @@ function decideGrowthEditorialAction({report={},destination={}}={}){
   uncertainties.push('No two complete, intent-aligned passages can be compared to justify a specific content change.');
   return fail('No reliable paired target-page and competitor passage establishes an editorial change.','PAIRED_EVIDENCE_MISSING');
  }
+ // A positive change decision needs separately verified, source-linked evidence
+ // and concrete reviewer text, never only a regex or an AI confidence score.
+ const opportunity=report.verified_editorial_opportunity;
+ if(opportunity?.verified===true&&opportunity.focus_query===query&&
+    opportunity.target_url===target&&Array.isArray(opportunity.evidence)&&
+    opportunity.evidence.some(x=>x?.source_url&&x?.excerpt)&&
+    typeof opportunity.proposed_text==='string'&&opportunity.proposed_text.trim().length>=80&&
+    typeof opportunity.target_section==='string'&&opportunity.target_section.trim()){
+  if(opportunity.type==='IMPROVE_EXISTING')
+   return {...base,decision:'IMPROVE_EXISTING',reason:'A sourced, distinct answer gap and exact review text were independently verified.',
+    proposed_text:opportunity.proposed_text,target_section:opportunity.target_section,
+    evidence:[...evidence,...opportunity.evidence],copy_ready:true,
+    verified_gap:true,next_action:'Owner reviews source-backed edit; publication remains disabled.'};
+  if(opportunity.type==='NEW_DISTINCT_PAGE'&&opportunity.site_overlap_checked===true&&opportunity.distinct_intent_verified===true)
+   return {...base,decision:'NEW_DISTINCT_PAGE',reason:'Distinct search intent and site overlap were verified with source-linked editorial copy.',
+    proposed_text:opportunity.proposed_text,target_section:opportunity.target_section,
+    evidence:[...evidence,...opportunity.evidence],copy_ready:true,
+    verified_gap:true,next_action:'Owner reviews proposed new page; publication remains disabled.'};
+ }
  // Lexical overlap proves neither completeness nor an absent answer.
  // Keep a factual recommendation without pretending to have verified an edit.
  uncertainties.push('Paired passages have lexical overlap but substantive user-task sufficiency has not been verified.');
