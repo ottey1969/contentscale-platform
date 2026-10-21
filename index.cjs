@@ -35,6 +35,13 @@ const express=require('express');
 const originalInit=express.application.init;
 express.application.init=function(...args){
   originalInit.apply(this,args);
+  // Minimal runtime fingerprint to correlate GitHub and Railway builds.
+  // Do not expose credentials, environment dumps, or server paths.
+  this.get('/api/version',(req,res)=>{
+    res.set('Cache-Control','no-store');
+    res.json({service:'contentscale-platform',commit:process.env.RAILWAY_GIT_COMMIT_SHA||process.env.GIT_SHA||null,
+      branch:process.env.RAILWAY_GIT_BRANCH||null});
+  });
   this.get('/network/acquisition',(req,res)=>{
     res.set('Cache-Control','no-store');
     return res.sendFile(path.join(__dirname,'public','network-acquisition.html'));
