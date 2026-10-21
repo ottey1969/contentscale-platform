@@ -53,3 +53,21 @@ assert.equal(liveGuide.existing_destinations[1].suitability,'TOPIC_RELATED_REQUI
 assert.equal(liveGuide.editorial_package.proposed_target_url,'https://contentscale.site/content-at-scale/');
 assert.equal(liveGuide.editorial_package.can_publish,false);
 console.log('PASS: evidence-backed next opportunity protects rankings and denies unverified publication');
+
+const withoutGsc=autonomouslyFindGrowthOpportunity({report:{
+ url:'https://contentscale.site/ai-overview-optimization/',
+ growth_decision:{primary_next_action:{query:'ai overview optimization',metrics:null},protection:{case_study_locked:false}},
+ site_architecture:{candidates:[],intent_overlap_risks:[]}
+},discovery:{source:'SERPAPI_GOOGLE_ORGANIC',leads:[
+ {source:'SERPAPI_GOOGLE_ORGANIC',url:'https://editorial.example/ai-overview-optimization/',title:'AI Overview Optimization Guide'},
+ {source:'SERPAPI_GOOGLE_ORGANIC',url:'https://guide.example/google-ai-overviews/',title:'How to Optimize for AI Overviews'}
+]}});
+assert.equal(withoutGsc.status,'GROWTH_OPPORTUNITY_FOUND_NEEDS_EDITORIAL_VALIDATION');
+assert.equal(withoutGsc.evidence_level,'LIVE_SERP_WITHOUT_GSC_METRICS');
+assert.equal(withoutGsc.primary_opportunity.observed_clicks,null);
+assert.equal(withoutGsc.primary_opportunity.observed_impressions,null);
+assert.equal(withoutGsc.primary_opportunity.observed_average_position,null);
+assert.equal(withoutGsc.primary_opportunity.actual_gsc_period,null);
+assert.equal(withoutGsc.editorial_package.can_publish,false);
+assert.equal(withoutGsc.editorial_package.decision,'DISTINCT_SPOKE_RESEARCH_REQUIRED');
+assert.equal(withoutGsc.safeguards.publication_allowed,false);
