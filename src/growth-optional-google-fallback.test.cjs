@@ -1,9 +1,9 @@
 'use strict';
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
-// Canonical default is SerpAPI. Legacy Serper.dev helper is tested only for compatibility.
+// Canonical Growth fallback uses Serper.dev. Do not switch to SerpAPI.
 const providerSource=fs.readFileSync('src/growth-public-search-discovery.cjs','utf8');
-assert(providerSource.includes('fetchGoogle=optionalSerpApiOrganicDiscovery'));
+assert(providerSource.includes('fetchGoogle=optionalGoogleOrganicDiscovery'));
 
 const {discoverGrowthCompetitorsWithFallback,optionalGoogleOrganicDiscovery,
  parseSerperGoogleOrganic,parseBingRss}=require('./growth-public-search-discovery.cjs');
