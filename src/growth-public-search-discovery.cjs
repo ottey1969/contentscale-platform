@@ -157,9 +157,9 @@ async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
  if(publicResult.status==='QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH')
   return {...publicResult,provider_attempts:[],fallback_used:false};
  const google=await Promise.resolve().then(()=>fetchGoogle({query,ownUrl,now}))
-  .catch(()=>({status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query}));
+  .catch(()=>({status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPER_GOOGLE_ORGANIC',leads:[],query}));
  if(Array.isArray(google.leads)&&google.leads.length)
-  return {...google,provider_attempts:['BING_PUBLIC_RSS',google.source||'SERPAPI_GOOGLE_ORGANIC'],
+  return {...google,provider_attempts:['BING_PUBLIC_RSS',google.source||'SERPER_GOOGLE_ORGANIC'],
    fallback_used:true,free_discovery_status:publicResult.status};
  return {...publicResult,provider_attempts:google.status==='OPTIONAL_PROVIDER_NOT_CONFIGURED'?['BING_PUBLIC_RSS']:
   ['BING_PUBLIC_RSS',google.source||'SERPER_GOOGLE_ORGANIC'],fallback_used:false,
