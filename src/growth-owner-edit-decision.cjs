@@ -102,4 +102,4 @@ function decideOwnerGrowthEdit({report={},completion={},sources={}}={}){
   uncertainties:[...(base.uncertainties||[]),'Editor must confirm the proposed paragraph adds a distinct useful answer; lexical similarity alone does not prove a gap.'],
   next_action:'Review proposed text against existing passage and linked competitor quotation before any CMS handoff.'};
 }
-module.exports={decideOwnerGrowthEdit};
+module.exports={decideOwnerGrowthEdit,checkDraftSection,validParagraphs,plainText,shingles};

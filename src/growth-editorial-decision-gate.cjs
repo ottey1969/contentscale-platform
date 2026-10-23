@@ -3,7 +3,7 @@
 // Publication and Case Study modifications are never authorized by this decision.
 const normQ=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,' ');
 // Evidence-based path (coverage supplied): intent + complete body evidence + site architecture.
-function decideFromCoverage({base,report,destination,coverage,serpIntent,destinationIntent,attempts,query,target,protection,protectedQueries,fail}){
+function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,destinationIntent,attempts,query,target,protection,protectedQueries,fail}){
  const facts=base.facts,uncertainties=base.uncertainties;
  const strong=(protection.case_study_locked&&protectedQueries.find(x=>normQ(x.query)===normQ(query)&&x.position<=3&&x.clicks>=10))||null;
  if(strong){
@@ -72,6 +72,24 @@ function decideFromCoverage({base,report,destination,coverage,serpIntent,destina
   evidence:chosen.flatMap(evidenceFor).slice(0,6),
   copy_ready:false,copy_status:'AWAITING_OWNER_DRAFT_COMPLETION',
   next_action:'Owner completion drafts only the missing task(s) for the stated placement; publication stays disabled.'};
+}
+
+// A planned IMPROVE_EXISTING / NEW_DISTINCT_PAGE becomes copy_ready ONLY when the producer
+// (growth-verified-opportunity.cjs) attached a verified opportunity for the exact query, target and type.
+function decideFromCoverage(args){
+ const planned=decideFromCoveragePlan(args);
+ const opp=args.report?.verified_editorial_opportunity;
+ if(!opp||opp.verified!==true||!['IMPROVE_EXISTING','NEW_DISTINCT_PAGE'].includes(planned.decision)||opp.type!==planned.decision)return planned;
+ const sameScope=opp.focus_query===planned.focus_query&&opp.target_url===planned.target_url;
+ const hasEvidence=Array.isArray(opp.evidence)&&opp.evidence.some(x=>x?.source_url&&x?.excerpt);
+ const hasText=typeof opp.proposed_text==='string'&&opp.proposed_text.trim().length>=80;
+ if(!sameScope||!hasEvidence||!hasText)return {...planned,uncertainties:[...planned.uncertainties,'A verified opportunity was supplied but did not match the planned scope, evidence or text length; it was ignored.']};
+ if(planned.decision==='NEW_DISTINCT_PAGE'&&!(opp.site_overlap_checked===true&&opp.distinct_intent_verified===true))return planned;
+ return {...planned,copy_ready:true,verified_gap:true,copy_status:'REVIEW_READY',verified_by:opp.producer||'VERIFIED_EDITORIAL_OPPORTUNITY',
+  proposed_text:opp.proposed_text,target_section:opp.target_section,placement:opp.placement||planned.placement||null,
+  draft_heading:opp.draft_heading||null,additional_sections:opp.additional_sections||[],draft_validation:opp.draft_validation||[],
+  new_page_draft:opp.new_page_draft||undefined,evidence:[...planned.evidence,...opp.evidence],
+  next_action:planned.decision==='NEW_DISTINCT_PAGE'?'Owner reviews the new-page draft; publication remains disabled.':'Owner reviews the source-backed edit at the stated placement; publication remains disabled.'};
 }
 function decideGrowthEditorialAction({report={},destination={},coverage=null,serpIntent=null,destinationIntent=null,attempts=[]}={}){
  const action=report.growth_decision?.primary_next_action||{};

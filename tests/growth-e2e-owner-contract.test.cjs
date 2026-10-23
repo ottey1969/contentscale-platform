@@ -92,6 +92,10 @@ test('owner POST: draft is validated against the missing task and exported with 
  const d=b.editorial_work_packet.editorial_decision;
  assert.equal(d.decision,'IMPROVE_EXISTING');assert.equal(d.copy_ready,true);assert.equal(d.publish_allowed,false);
  assert.equal(d.target_url,DEST);assert.equal(d.proposed_text,GOOD.join('\n\n'));
+ assert.equal(b.verified_opportunity_status.verified,true,'producer ran inside the owner POST');
+ assert.equal(b.verified_opportunity_status.producer,'GROWTH_VERIFIED_OPPORTUNITY_PRODUCER');
+ assert.equal(d.verified_by,'GROWTH_TASK_COVERAGE_PLUS_DRAFT_VALIDATION','the gate released copy through its verified_editorial_opportunity branch');
+ assert.equal(b.editorial_decision_gate.verified_gap,true);
  assert.equal(d.draft_validation[0].competitor_wording_reused,false);
  assert.equal(b.editorial_decision_gate.decision,'IMPROVE_EXISTING');
  assert.equal(b.report_completion.status,'CONCRETE_EDIT_FOR_OWNER_REVIEW');
@@ -116,6 +120,7 @@ test('draft guard: competitor wording, off-task text, duplicates and provider bl
   const h=harness({drafts:[make]}),r=await h.invoke(h.POST,'owner-token'),d=r.body.editorial_work_packet.editorial_decision;
   assert.equal(d.decision,'IMPROVE_EXISTING');assert.equal(d.copy_ready,false);assert.equal(d.proposed_text,undefined);assert.match(d.copy_status,expect);
   assert.equal(r.body.report_completion.status,'RESEARCH_COMPLETE_DRAFT_NOT_READY');
+  assert.equal(r.body.verified_opportunity_status.verified,false,'producer refuses unverified drafts');
  }
  const h=harness({drafts:[()=>({canonical_url:DEST,status:'OPTIONAL_AI_NOT_CONFIGURED',draft:null})]});
  const r=await h.invoke(h.POST,'owner-token');

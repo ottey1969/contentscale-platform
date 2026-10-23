@@ -16,6 +16,7 @@ const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
 const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent}=require('./growth-reader-task-coverage.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
+const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
@@ -349,7 +350,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      completion={...completion,provider_status:completion.status,error_code:completion.status,status:'BLOCKED_PROVIDER'};
    }catch{completion={...base,status:'DRAFT_UNAVAILABLE',error_code:'OWNER_DRAFT_FAILED',draft:null}}
   }
-  const completeDecision=decideOwnerGrowthEdit({report,completion,sources:report.__sources||{}});
+  // Producer -> gate -> owner decision: the gate's existing verified_editorial_opportunity branch now has a real producer.
+  const produced=produceVerifiedEditorialOpportunity({report,completion,sources:report.__sources||{}});
+  const finalGate=produced.opportunity?decideGrowthEditorialAction({
+   report:{...report,verified_editorial_opportunity:produced.opportunity},destination:report.destination_section_comparison,
+   coverage:report.reader_task_coverage,serpIntent:report.serp_intent,destinationIntent:report.destination_intent,
+   attempts:report.editorial_decision_gate?.attempted_sources||[]}):report.editorial_decision_gate;
+  const completeDecision=decideOwnerGrowthEdit({report:{...report,editorial_decision_gate:finalGate},completion,sources:report.__sources||{}});
   const handoffPackage=buildOwnerHandoffPackage({report,decision:completeDecision,completion,linkPlan:report.internal_link_plan||[]});
   // Package the actual observed passages with the draft. A reader can now
   // inspect precisely which source supports each proposed editorial review.
@@ -385,6 +392,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    editorial_review_draft:completion,
    editorial_work_packet:workPacket,
    handoff_package:handoffPackage,
+   verified_opportunity_status:{producer:'GROWTH_VERIFIED_OPPORTUNITY_PRODUCER',status:produced.status,rejections:produced.rejections,verified:!!produced.opportunity},
    report_completion:{status:
      completeDecision.decision==='NO_CHANGE'?'NO_CHANGE_CLOSURE_REPORT':
      completeDecision.decision==='NEEDS_EVIDENCE'?'NEEDS_EVIDENCE_REPORT':
