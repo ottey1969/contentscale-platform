@@ -136,30 +136,24 @@ async function testRoutes(){
  const finished=await invoke(complete,'owner-token');
  assert.equal(finished.statusCode,200);
  assert.equal(finished.body.success,true);
- assert.equal(finished.body.editorial_review_draft.status,'AI_DRAFT_REVIEW_REQUIRED');
+ // No live SERP intent and no readable competitors in this scenario: the decision is an honest
+ // NEEDS_EVIDENCE, no provider call is made and no generic copy is forced.
+ assert.equal(finished.body.editorial_review_draft.status,'NOT_REQUIRED_FOR_DECISION');
+ assert.equal(finished.body.editorial_review_draft.draft,null);
  assert.equal(finished.body.access.can_edit,true);
  assert.equal(finished.body.access.owner_report,true);
- assert.equal(finished.body.editorial_review_draft.target_url,'https://roof.example/roof-repair-guide/');
- assert.equal(finished.body.editorial_review_draft.draft.sections[0].h2,'Safe advice');
- assert.equal(finished.body.editorial_work_packet.status,'DRAFT_AND_SOURCE_COMPARISON_FOR_REVIEW');
  assert.equal(finished.body.editorial_work_packet.publication_allowed,false);
  assert.equal(finished.body.editorial_work_packet.evidence_verified,false);
- assert.equal(finished.body.editorial_work_packet.target_url,'https://roof.example/roof-repair-guide/');
- assert.equal(finished.body.editorial_work_packet.generated_draft.sections[0].h2,'Safe advice');
- assert(Array.isArray(finished.body.editorial_work_packet.source_comparisons));
  assert.equal(finished.body.editorial_review_draft.published,false);
  assert.equal(finished.body.editorial_review_draft.case_study_unchanged,true);
- assert.equal(finished.body.report_completion.status,'REVIEW_DRAFT_AVAILABLE_EVIDENCE_PENDING');
- assert.equal(finished.body.report_completion.verified_gap,false);
+ assert.equal(finished.body.editorial_decision_gate.decision,'NEEDS_EVIDENCE');
+ const codes=finished.body.editorial_decision_gate.missing_evidence.map(x=>x.code);
+ assert(codes.includes('SERP_INTENT_EVIDENCE')&&codes.includes('READABLE_COMPETITOR_ARTICLES'),'exact missing evidence is named');
+ assert(finished.body.editorial_decision_gate.attempted_sources.some(x=>x.source==='SEARCH_PROVIDERS'),'attempted automatic sources are listed');
+ assert.equal(finished.body.report_completion.status,'NEEDS_EVIDENCE_REPORT');
  assert.equal(finished.body.report_completion.copy_ready,false);
- assert.equal(ownerDraftCalls,1);
- returnShortDraft=true;
- const incomplete=await invoke(complete,'owner-token');
- assert.equal(incomplete.statusCode,200);
- assert.equal(incomplete.body.editorial_review_draft.status,'DRAFT_CONTENT_INCOMPLETE');
- assert.equal(incomplete.body.editorial_review_draft.draft,null,'A short placeholder cannot be exported as complete editorial content');
- assert.equal(incomplete.body.report_completion.status,'RESEARCH_COMPLETE_DRAFT_NOT_READY');
- assert.equal(ownerDraftCalls,2);
+ assert.match(finished.body.handoff_package.markdown,/Missing evidence/);
+ assert.equal(ownerDraftCalls,0,'a NEEDS_EVIDENCE outcome must not spend a provider call');
  assert.equal(calls.length,2,'Combined owner completion should reuse cached research rather than repeat search costs');
  const unmodified=await invoke(api);
  assert.equal(unmodified.body.editorial_review_draft.status,'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN',

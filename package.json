@@ -8,7 +8,7 @@
     "start": "node index.cjs",
     "dev": "nodemon index.cjs",
     "lint": "eslint .",
-    "test": "node --check public/growth-automatic-report-ui.js && node --test tests/growth-clause-source-and-lock.test.cjs tests/growth-owner-result-visible.test.cjs tests/growth-self-destination-identity.test.cjs && node --test tests/canonical-immutable-startup.test.cjs && node --test tests/growth-core-decision-contract.test.cjs tests/growth-owner-edit-decision.test.cjs tests/growth-page-intent-resolver.test.cjs tests/growth-safe-browser-renderer.test.cjs && jest --detectOpenHandles",
+    "test": "node --check public/growth-automatic-report-ui.js && node --test tests/growth-clause-source-and-lock.test.cjs tests/growth-owner-result-visible.test.cjs tests/growth-self-destination-identity.test.cjs && node --test tests/canonical-immutable-startup.test.cjs && node --test tests/growth-core-decision-contract.test.cjs tests/growth-owner-edit-decision.test.cjs tests/growth-page-intent-resolver.test.cjs tests/growth-safe-browser-renderer.test.cjs tests/growth-e2e-owner-contract.test.cjs && jest --detectOpenHandles",
     "test:quality": "node src/brief-quality.test.js && node src/gsc-client.test.js",
     "postinstall": "puppeteer browsers install chrome"
   },

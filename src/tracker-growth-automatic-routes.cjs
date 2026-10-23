@@ -14,6 +14,9 @@ const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.
 const {decideOwnerGrowthEdit}=require('./growth-owner-edit-decision.cjs');
 const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
+const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent}=require('./growth-reader-task-coverage.cjs');
+const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
+const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
@@ -142,13 +145,29 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    competitors:comparisons.filter(x=>x.search_source==='SERPER_GOOGLE_ORGANIC'||x.search_source==='SERPAPI_GOOGLE_ORGANIC'||x.search_source==='BING_PUBLIC_RSS')});
   // Compare the distinct growth intent on its likely existing destination,
   // not only the protected homepage that surfaced the GSC opportunity.
-  const proposed=report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
+  let proposed=report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
    (report.growth_decision?.primary_next_action?.metrics?
     report.growth_decision.primary_next_action.related_pages_to_check?.find(u=>destinationSources.has(u)):null)||
    // Without verified GSC, research the selected page itself. Never invent
    // an untracked destination or discard otherwise available live content.
    (!report.growth_decision?.primary_next_action?.metrics?page.url:null);
-  const selectedSource=proposed===page.url?own.live:(proposed?destinationSources.get(proposed):null);
+  let selectedSource=proposed===page.url?own.live:(proposed?destinationSources.get(proposed):null);
+  // Intent comes from live organic results and the page's own title/H1, never from word overlap alone.
+  const serpIntent=inferSerpIntent({query:targetQuery,leads:discovery.leads});
+  const intentOf=(u,src)=>{const ex=excerptOf(src?.html);
+   return classifyDestinationIntent({query:targetQuery,title:ex.title,h1:ex.h1,url:u,serpIntent:serpIntent.intent})};
+  let destinationIntent=selectedSource?intentOf(proposed,selectedSource):null;
+  let compatibleAlternatives=[...destinationSources].filter(([u])=>u!==proposed)
+   .map(([u,src])=>({url:u,intent:intentOf(u,src)})).filter(x=>x.intent.verdict==='COMPATIBLE');
+  if(destinationIntent?.verdict==='DIFFERENT'&&compatibleAlternatives.length){
+   const alt=compatibleAlternatives[0],from=proposed;
+   proposed=alt.url;selectedSource=destinationSources.get(alt.url);
+   destinationIntent={...alt.intent,retargeted_from:from};
+   compatibleAlternatives=compatibleAlternatives.slice(1);
+  }
+  report.site_architecture={...(report.site_architecture||{}),
+   compatible_existing_pages:compatibleAlternatives.map(x=>({url:x.url,intent_class:x.intent.class}))};
+  report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
   report.destination_section_comparison=selectedSource?compareFullSections({
    query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,
    ownTruncated:selectedSource.truncated===true,
@@ -157,7 +176,28 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    verified_gap:false,copy_ready:false,comparisons:[]};
   report.destination_section_comparison.target_url=proposed;
   report.destination_section_comparison.protected_source_url=page.url;
-  report.editorial_decision_gate=decideGrowthEditorialAction({report,destination:report.destination_section_comparison});
+  const competitorPages=comparisons.filter(x=>['SERPER_GOOGLE_ORGANIC','SERPAPI_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(x.search_source))
+   .map(x=>({url:x.url,html:x.live.html,truncated:x.live.truncated===true}));
+  const siblingPages=[...destinationSources].filter(([u])=>u!==proposed).map(([u,src])=>({url:u,html:src.html,truncated:src.truncated===true}));
+  if(own.live&&proposed!==page.url)siblingPages.push({url:page.url,html:own.live.html,truncated:own.live.truncated===true});
+  const coverage=selectedSource?analyzeReaderTaskCoverage({query:targetQuery,
+   serpIntent:serpIntent.intent==='MIXED_OR_INSUFFICIENT'?'INFORMATIONAL_GUIDE':serpIntent.intent,
+   destination:{url:proposed,html:selectedSource.html,truncated:selectedSource.truncated===true},
+   competitors:competitorPages,sitePages:siblingPages}):
+   {status:'NO_DESTINATION_SOURCE',tasks:[],competitors_considered:[],destination_truncated:false};
+  report.reader_task_coverage=coverage;
+  const attempts=[
+   {source:'TARGET_STATIC_HTML',status:renderStatus,detail:own.code||null},
+   {source:'SEARCH_PROVIDERS',status:discovery.status||'UNKNOWN',detail:(discovery.provider_attempts||[]).map(a=>typeof a==='string'?a:(a.provider||a.source||'')).join(', ')||discovery.source||null},
+   {source:'HISTORICAL_SNAPSHOT_LEADS',status:historical.length?'LEADS_AVAILABLE':'NONE',detail:String(historical.length)+' stored leads'},
+   {source:'COMPETITOR_HTML_FETCH',status:competitorPages.length>=2?'READABLE':'INSUFFICIENT',
+    detail:attempted.length+' attempted, '+competitorPages.length+' complete readable articles'}];
+  report.editorial_decision_gate=decideGrowthEditorialAction({report,destination:report.destination_section_comparison,
+   coverage,serpIntent,destinationIntent,attempts});
+  report.internal_link_plan=proposed?planInternalLinks({targetUrl:proposed,focusQuery:targetQuery,
+   pages:[{url:page.url,html:own.live?.html||page.saved_html,truncated:own.live?.truncated===true},...siblingPages.filter(x=>x.url!==page.url)]}):[];
+  Object.defineProperty(report,'__sources',{value:{destinationHtml:selectedSource?.html||'',
+   competitorHtml:competitorPages.map(c=>c.html)},enumerable:false});
   // A homepage GSC observation is never evidence about a different editorial URL.
   // Resolve the selected destination to a tracked page owned by this same client,
   // then read only independently page-verified rows for that exact URL and page_id.
@@ -258,7 +298,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const base={auto_started:true,target_url:targetUrl,source_page_id:targetId,
    published:false,case_study_unchanged:true,requires_editor_approval:true};
   let completion;
-  if(!Number.isSafeInteger(targetId)||targetId<1){
+  const gateDecision=report.editorial_decision_gate?.decision;
+  const gate=report.editorial_decision_gate||{};
+  if(['NO_CHANGE','NEEDS_EVIDENCE'].includes(gateDecision)){
+   // Final outcomes: no provider call and no forced copy.
+   completion={...base,status:'NOT_REQUIRED_FOR_DECISION',decision:gateDecision,draft:null,error_code:null};
+  }else if(!Number.isSafeInteger(targetId)||targetId<1){
    completion={...base,status:'DESTINATION_TRACKER_PAGE_REQUIRED',draft:null};
   }else{
    const query=String(report.editorial_decision_gate?.focus_query||
@@ -268,8 +313,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     observations:(report.destination_section_comparison?.comparisons||[]).filter(c=>
      c.competitor_url&&c.competitor_heading&&String(c.competitor_excerpt||'').length>=75)
      .slice(0,3).map(c=>({competitor_url:c.competitor_url,
-      competitor_heading:c.competitor_heading,competitor_excerpt:String(c.competitor_excerpt).slice(0,600)}))
+      competitor_heading:c.competitor_heading,competitor_excerpt:String(c.competitor_excerpt).slice(0,600)})),
+    reader_task:gate.improvement_plan?{mode:'SECTION_IMPROVEMENT',
+     tasks:gate.improvement_plan.tasks.map(t=>({code:t.code,label:t.label,placement_mode:t.placement?.mode,
+      placement_heading:t.placement?.section_heading,destination_status:t.destination_status})),
+     existing_headings:report.reader_task_coverage?.destination_section_headings||[]}:
+     gate.new_page_plan?{mode:'NEW_DISTINCT_PAGE',tasks:gate.new_page_plan.tasks.slice(0,2).map(t=>({code:t.code,label:t.label})),
+      existing_headings:report.reader_task_coverage?.destination_section_headings||[]}:null
    };
+   // Competitor passages are context only; with a verified task the observations are not required.
    try{
     const outcome=await completeOwnerDraft({token:req.params.token,body:{
      page_id:targetId,focus_query:query,growth_source_page_id:v.id,
@@ -292,9 +344,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      source_retrieved_at:validIdentity?detail.draft_source_retrieved_at||null:null,
      gsc_context:validIdentity?detail.gsc_context||{status:'NO_VERIFIED_GSC',gsc_required:false}:null,
      competitor_research_passages_used:validIdentity?Number(detail.live_competitor_observations_used||0):0};
+    // An unconfigured or unreachable AI provider is an explicit blocker, never a silent empty draft.
+    if(['OPTIONAL_AI_NOT_CONFIGURED','OPTIONAL_AI_UNAVAILABLE'].includes(completion.status))
+     completion={...completion,provider_status:completion.status,error_code:completion.status,status:'BLOCKED_PROVIDER'};
    }catch{completion={...base,status:'DRAFT_UNAVAILABLE',error_code:'OWNER_DRAFT_FAILED',draft:null}}
   }
-  const completeDecision=decideOwnerGrowthEdit({report,completion});
+  const completeDecision=decideOwnerGrowthEdit({report,completion,sources:report.__sources||{}});
+  const handoffPackage=buildOwnerHandoffPackage({report,decision:completeDecision,completion,linkPlan:report.internal_link_plan||[]});
   // Package the actual observed passages with the draft. A reader can now
   // inspect precisely which source supports each proposed editorial review.
   const workPacket={
@@ -328,11 +384,16 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    access:{can_edit:true,read_only_analysis:false,owner_report:true},
    editorial_review_draft:completion,
    editorial_work_packet:workPacket,
-   report_completion:{status:completion.status!=='AI_DRAFT_REVIEW_REQUIRED'?'RESEARCH_COMPLETE_DRAFT_NOT_READY':
-     completeDecision.decision==='IMPROVE_EXISTING'?'CONCRETE_EDIT_FOR_OWNER_REVIEW':'REVIEW_DRAFT_AVAILABLE_EVIDENCE_PENDING',
+   handoff_package:handoffPackage,
+   report_completion:{status:
+     completeDecision.decision==='NO_CHANGE'?'NO_CHANGE_CLOSURE_REPORT':
+     completeDecision.decision==='NEEDS_EVIDENCE'?'NEEDS_EVIDENCE_REPORT':
+     completeDecision.copy_ready===true?(completeDecision.decision==='NEW_DISTINCT_PAGE'?'NEW_PAGE_DRAFT_FOR_OWNER_REVIEW':'CONCRETE_EDIT_FOR_OWNER_REVIEW'):
+     'RESEARCH_COMPLETE_DRAFT_NOT_READY',
     evidence_gate:completeDecision.decision||'UNVERIFIED',
     verified_gap:completeDecision.verified_gap===true,
     copy_ready:completeDecision.copy_ready===true,
+    draft_provider_status:completion.status,
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
  });
  app.get('/track/:token/growth/auto-research',data,(req,res)=>{

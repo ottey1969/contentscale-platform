@@ -139,14 +139,14 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     }
    }catch(_err){topics=[];}
    const draftKey=[v.client.id,v.page.id,sourceOrigin,v.page.case_study_active?'locked':'unlocked',
-    sha(String(original||'')),focus,topics.join('|'),sha(JSON.stringify(liveResearch.observations)),
+    sha(String(original||'')),focus,topics.join('|'),sha(JSON.stringify(liveResearch.observations)),sha(JSON.stringify(liveResearch.reader_task||null)),
     sha(JSON.stringify(gscContext))].join(':');
    const cached=draftCache.get(draftKey);
    let out;
    if(cached&&Date.now()-cached.created<DRAFT_TTL)out=await cached.promise;
    else{
     const promise=Promise.resolve().then(()=>generateDraft({sourceHtml:original,pageUrl:v.page.url,focusQuery:focus,topics,
-     researchObservations:liveResearch.observations,gscContext}));
+     researchObservations:liveResearch.observations,gscContext,readerTask:liveResearch.reader_task||null}));
     draftCache.set(draftKey,{created:Date.now(),promise});
     try{out=await promise;
      if(out?.status!=='AI_DRAFT_REVIEW_REQUIRED')draftCache.delete(draftKey);
