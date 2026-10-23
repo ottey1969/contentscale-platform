@@ -147,7 +147,7 @@ async function optionalSerpApiOrganicDiscovery({query,ownUrl,fetchImpl=global.fe
  }
 }
 async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
- fetchFree=discoverGrowthCompetitors,fetchGoogle=optionalSerpApiOrganicDiscovery,now=new Date()}={}){
+ fetchFree=discoverGrowthCompetitors,fetchGoogle=optionalGoogleOrganicDiscovery,now=new Date()}={}){
  // Avoid a paid provider call whenever the free public feed returned relevant
  // leads. If it fails and an existing key is configured, use at most one query.
  const publicResult=await Promise.resolve().then(()=>fetchFree({query,ownUrl,now}))
