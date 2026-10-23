@@ -197,3 +197,10 @@ test('browser contract: owner sees decision, placement and proposed text; downlo
  assert.equal(ro.requests[0].method,'GET');ro.el.downloadResearch.click();
  const roJson=JSON.parse(await ro.blobs[0].text());assert.equal(roJson.editorial_review_draft.draft,null,'read-only export never contains a draft');
 });
+if(process.env.GROWTH_DUMP)test('dump (isolation-stub draft, offline fixture run)',async()=>{
+ const h=harness({drafts:[draftFor('Refresh and reuse what you already published',GOOD)]});
+ const g=await h.invoke(h.GET),p=await h.invoke(h.POST,'owner-token');
+ fs.writeFileSync(process.env.GROWTH_DUMP+'/fixture-run-decision.json',JSON.stringify({NOTE:'OFFLINE FIXTURE RUN derived from export 27 captured text; AI draft is an isolation stub; NOT live production evidence.',
+  get_decision:g.body.editorial_decision_gate,serp_intent:g.body.serp_intent,coverage:g.body.reader_task_coverage},null,1));
+ fs.writeFileSync(process.env.GROWTH_DUMP+'/fixture-run-owner-package.md','> OFFLINE FIXTURE RUN (export-27 captured text, isolation-stub draft). Not live, not production evidence.\n\n'+p.body.handoff_package.markdown);
+});
