@@ -20,14 +20,14 @@ function decideGrowthEditorialAction({report={},destination={}}={}){
  if(!query)return fail('No meaningful page topic was selected.','TOPIC_NOT_RESOLVED');
  if(!target||destination.status==='EXISTING_DESTINATION_EVIDENCE_UNAVAILABLE'||destination.status==='OWN_SOURCE_INCOMPLETE')
   return fail('Readable target-page sections were unavailable.','TARGET_HTML_UNAVAILABLE');
- if(destination.own_html_truncated||destination.comparison_scope==='PARTIAL_SOURCE_NO_ABSENCE_CLAIMS')
+ if(destination.own_html_truncated===true)
   return fail('The fetched page or competitor source was truncated.','HTML_TRUNCATED');
  const reliable=comparisons.filter(x=>x.match_status==='POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED'&&x.nearest_existing_section&&x.competitor_url);
  for(const c of reliable.slice(0,3)){
   evidence.push({source_url:target,type:'OWN_PAGE',heading:c.nearest_existing_section.heading,excerpt:c.nearest_existing_section.excerpt||''});
   evidence.push({source_url:c.competitor_url,type:'COMPETITOR',heading:c.competitor_heading,excerpt:c.competitor_excerpt||''});
  }
- if(protection.case_study_locked&&protectedQueries.some(x=>x.position<=3&&x.clicks>=10)){
+ if(protection.case_study_locked&&target===protectedUrl&&protectedQueries.some(x=>x.position<=3&&x.clicks>=10)){
   facts.push({code:'STRONG_PROTECTED_QUERY',source:'PAGE_VERIFIED_GSC',queries:protectedQueries.slice(0,4)});
   uncertainties.push('Other separate growth opportunities may exist; protecting this page is not proof of a perfect article.');
   return {...base,decision:'NO_CHANGE',reason:'Preserve the strong, locked existing page and its verified search baseline.',next_action:'Continue research on other pages without changing this Case Study baseline.'};
