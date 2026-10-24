@@ -1,4 +1,5 @@
 'use strict';
+const {differsFromQuery}=require('./growth-intent-signals.cjs');
 // Evidence-led, read-only next opportunity. No writes, no click projections.
 // Inputs come from the canonical Growth report and the same live SERP discovery.
 const {terms}=require('./growth-intent-site-graph.cjs');
@@ -23,8 +24,7 @@ function autonomouslyFindGrowthOpportunity({report={},discovery={},existingPageR
   const main=[live?.title,...(live?.h1||[])].filter(Boolean).join(' ').toLowerCase();
   const headings=[main,...(live?.h2||[])].join(' ').toLowerCase();
   const path=(()=>{try{return new URL(p.url).pathname.toLowerCase()}catch{return ''}})();
-  const productPrimary=/\b(?:brandwell|ai detector|product review)\b/i.test(main)||
-   /(?:brandwell|ai-detector|product-review)/i.test(path);
+  const productPrimary=differsFromQuery(main+' '+path.replace(/[-_/]+/g,' '),query).length>0;
   // Match primary search intent across niches; no content-scaling special case.
   const stem=t=>String(t).replace(/(?:ing|ed|es|s)$/,'').replace(/e$/,'');
   const expected=primaryTopic.map(stem);

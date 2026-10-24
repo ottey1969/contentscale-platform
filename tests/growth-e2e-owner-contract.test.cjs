@@ -58,9 +58,10 @@ function harness({pageId=fx.tracked_page.id,pageUrl=HOME,keyword='content at sca
 const draftFor=(h2,paras,url=DEST)=>body=>({canonical_url:url,status:'AI_DRAFT_REVIEW_REQUIRED',
  draft:{seo_title:null,meta_description:null,sections:[{h2,paragraphs:paras}]},
  draft_source_type:'LIVE_PUBLIC_HTML',live_competitor_observations_used:3,gsc_context:{status:'NO_VERIFIED_GSC',gsc_required:false}});
-// Test-authored isolation text (no numbers, no competitor wording) teaching the missing task.
-const GOOD=['Start from what you already publish. Open the content inventory from your audit, mark the pages that still answer a live question, and refresh those before you commission anything new: update the examples, correct outdated steps and add the questions readers now ask.',
- 'Then reuse what is strong. Turn one tested guide into a checklist, a short explainer and a reference table, and keep a note of which original page each reused part came from so the refreshed versions never contradict each other.'];
+// Test-authored isolation text (no figures, no competitor wording). 'never' is softened by the claim guard.
+const GOOD=['Before commissioning anything new, decide which existing pages are worth repurposing: list the pages that still answer a live question, then repurpose the strongest guide into a checklist or a short explainer for another channel.',
+ 'Keep a note of which original page each repurposed piece came from, so the refreshed versions never contradict each other and every update has one clear owner.'];
+const GOOD_SAFE=[GOOD[0],GOOD[1].replace('never contradict','rarely contradict')];
 
 test('GET research is research-only and already carries the evidence-based decision for the exact destination',async()=>{
  const h=harness(),r=await h.invoke(h.GET);
@@ -73,7 +74,7 @@ test('GET research is research-only and already carries the evidence-based decis
  assert.equal(b.editorial_decision_gate.target_url,DEST);assert.equal(b.editorial_decision_gate.protected_url,HOME);
  assert.equal(b.editorial_decision_gate.copy_ready,false,'no copy before owner completion');
  const task=b.editorial_decision_gate.improvement_plan.tasks[0];
- assert.equal(task.code,'repurposing_refresh');assert(task.placement.section_heading||task.placement.mode);
+ assert.equal(task.code,'task_repurp');assert.equal(task.match.key,'repurp');assert(task.placement.section_heading||task.placement.mode);
  assert(task.competitor_evidence.length>=2,'two independent competitor sources');
  assert.equal(new Set(task.competitor_evidence.map(x=>new URL(x.url).hostname)).size,2);
  // Homepage GSC never becomes destination performance.
@@ -83,16 +84,17 @@ test('GET research is research-only and already carries the evidence-based decis
 });
 
 test('owner POST: draft is validated against the missing task and exported with placement, sources and links',async()=>{
- const h=harness({drafts:[draftFor('Refresh and reuse what you already published',GOOD)]});
+ const h=harness({drafts:[draftFor('Repurpose what you already published',GOOD)]});
  const r=await h.invoke(h.POST,'owner-token');
  assert.equal(r.statusCode,200);const b=r.body;
  assert.equal(h.providerCalls.length,1);const call=h.providerCalls[0].body;
  assert.equal(call.page_id,2298,'drafts the selected destination, never the homepage');assert.equal(call.growth_source_page_id,2320);
  assert.equal(call.research_context.reader_task.mode,'SECTION_IMPROVEMENT');
- assert.equal(call.research_context.reader_task.tasks[0].code,'repurposing_refresh');
+ assert.equal(call.research_context.reader_task.tasks[0].code,'task_repurp');
  const d=b.editorial_work_packet.editorial_decision;
  assert.equal(d.decision,'IMPROVE_EXISTING');assert.equal(d.copy_ready,true);assert.equal(d.publish_allowed,false);
- assert.equal(d.target_url,DEST);assert.equal(d.proposed_text,GOOD.join('\n\n'));
+ assert.equal(d.target_url,DEST);assert.equal(d.proposed_text,GOOD_SAFE.join('\n\n'),'claim guard softened exactly one absolute word and logged it');
+ assert.equal(d.safe_rewrites.length,1);assert.match(d.safe_rewrites[0].before,/never contradict/);assert.match(d.safe_rewrites[0].after,/rarely contradict/);
  assert.equal(b.verified_opportunity_status.verified,true,'producer ran inside the owner POST');
  assert.equal(b.verified_opportunity_status.producer,'GROWTH_VERIFIED_OPPORTUNITY_PRODUCER');
  assert.equal(d.verified_by,'GROWTH_TASK_COVERAGE_PLUS_DRAFT_VALIDATION','the gate released copy through its verified_editorial_opportunity branch');
@@ -110,12 +112,13 @@ test('owner POST: draft is validated against the missing task and exported with 
  assert.equal(h.writes.length,0,'no database write, Case Study untouched');
 });
 
-test('draft guard: competitor wording, off-task text, duplicates and provider blockers never become copy',async()=>{
+test('draft guard: competitor wording, off-task text, duplicates, unsupported claims and provider blockers never become copy',async()=>{
  const copied=byUrl['https://www.textbroker.com/create-scalable-content'].find(x=>/recycled or repurposed/.test(x.excerpt)).excerpt.split(/\s+/).slice(0,14).join(' ');
  const cases=[
-  [draftFor('Reuse and refresh',[GOOD[0]+' '+copied+' to keep working smarter every single month for the whole team.',GOOD[1]]),/DRAFT_REJECTED_DRAFT_REUSES_COMPETITOR_WORDING/],
+  [draftFor('Repurpose what you already published',[GOOD[0]+' '+copied+' to keep working smarter every single month for the whole team.',GOOD[1]]),/DRAFT_REJECTED_DRAFT_REUSES_COMPETITOR_WORDING/],
   [draftFor('Tool pricing',['Pricing pages should list every plan next to its monthly cost and show a clear comparison table for buyers.','Add a short note on how to contact sales for custom quotes and volume discounts.']),/DRAFT_REJECTED_DRAFT_OFF_TASK/],
-  [draftFor('Reuse and refresh',[fx.destination.paragraphs[2],fx.destination.paragraphs[3]]),/DRAFT_REJECTED_(?:DRAFT_DUPLICATES_DESTINATION|DRAFT_OFF_TASK)/]
+  [draftFor('Repurpose what you already published',[fx.destination.paragraphs[2],fx.destination.paragraphs[3]]),/DRAFT_REJECTED_(?:DRAFT_DUPLICATES_DESTINATION|DRAFT_OFF_TASK)/],
+  [draftFor('Repurpose your best guide',['Repurpose your best guide and it guarantees higher rankings within 30 days, because search engines always reward repurposed pages.','Repurposing also proves ChatGPT will cite your page, and our award-winning team repurposes content for every client.']),/DRAFT_REJECTED_DRAFT_UNSUPPORTED_CLAIMS/]
  ];
  for(const [make,expect] of cases){
   const h=harness({drafts:[make]}),r=await h.invoke(h.POST,'owner-token'),d=r.body.editorial_work_packet.editorial_decision;
@@ -123,6 +126,10 @@ test('draft guard: competitor wording, off-task text, duplicates and provider bl
   assert.equal(r.body.report_completion.status,'RESEARCH_COMPLETE_DRAFT_NOT_READY');
   assert.equal(r.body.verified_opportunity_status.verified,false,'producer refuses unverified drafts');
  }
+ // The rejection names the exact claims so the owner sees why.
+ const h2=harness({drafts:[cases[3][0]]}),r2=await h2.invoke(h2.POST,'owner-token');
+ const codes=r2.body.editorial_work_packet.editorial_decision.draft_rejections.flatMap(x=>(x.claim_violations||[]).map(v=>v.code));
+ for(const c of ['ABSOLUTE_CLAIM','UNPROVEN_OUTCOME_CLAIM','UNSOURCED_NUMBER'])assert(codes.includes(c),'expected '+c+' in '+codes);
  const h=harness({drafts:[()=>({canonical_url:DEST,status:'OPTIONAL_AI_NOT_CONFIGURED',draft:null})]});
  const r=await h.invoke(h.POST,'owner-token');
  assert.equal(r.body.editorial_review_draft.status,'BLOCKED_PROVIDER');assert.equal(r.body.editorial_review_draft.draft,null);
@@ -130,10 +137,10 @@ test('draft guard: competitor wording, off-task text, duplicates and provider bl
 });
 
 test('NO_CHANGE is reachable with evidence and makes no provider call (synthetic path test)',async()=>{
- const taught='Refresh before you replace. Review the content inventory, update outdated pages with current examples, and repurpose the strongest guide into a checklist so the same research is reused instead of rewritten.';
+ const taught='Repurpose before you replace. Review the pages you already have, and repurpose the strongest guide into a checklist so the repurposed version reuses the same research instead of repeating it.';
  const h=harness({pages:{[DEST]:destHtml([taught,taught.replace('Refresh before you replace','Reuse what already works')])}});
  const r=await h.invoke(h.POST,'owner-token'),b=r.body;
- assert.equal(b.editorial_decision_gate.decision,'NO_CHANGE');assert.equal(b.editorial_decision_gate.closure_report.tasks_checked[0].code,'repurposing_refresh');
+ assert.equal(b.editorial_decision_gate.decision,'NO_CHANGE');assert.equal(b.editorial_decision_gate.closure_report.tasks_checked[0].code,'task_repurp');
  assert.equal(b.report_completion.status,'NO_CHANGE_CLOSURE_REPORT');assert.equal(h.providerCalls.length,0);
  assert.match(b.handoff_package.markdown,/Closure report/);
 });
@@ -185,16 +192,17 @@ async function runUi(h,owner){
  return {el,blobs,requests};
 }
 test('browser contract: owner sees decision, placement and proposed text; downloads equal the server result',async()=>{
- const h=harness({drafts:[draftFor('Refresh and reuse what you already published',GOOD)]});
+ const h=harness({drafts:[draftFor('Repurpose what you already published',GOOD)]});
  const ui=await runUi(h,true);
  assert.equal(ui.requests.length,1);assert.equal(ui.requests[0].method,'POST','owner flow starts the completion route directly, no client-only completion');
  const shown=allText(ui.el.growthAutomaticReport);
- assert.match(shown,/IMPROVE EXISTING/);assert.match(shown,/Placement:/);assert.match(shown,/Refresh and reuse|Start from what you already publish/);
+ assert.match(shown,/IMPROVE EXISTING/);assert.match(shown,/Placement:/);assert.match(shown,/Repurpose what you already published|Before commissioning anything new/);
  assert.match(shown,/NOT a proven ranking gain/);
  ui.el.downloadResearch.click();
  const json=JSON.parse(await ui.blobs[0].text());
  assert.equal(json.editorial_decision_gate.decision,'IMPROVE_EXISTING');assert.equal(json.editorial_decision_gate.copy_ready,true);
- assert.equal(json.editorial_review_draft.draft.sections[0].paragraphs[0],GOOD[0]);
+ assert.equal(json.editorial_review_draft.draft.sections[0].paragraphs[0],GOOD[0],'raw provider draft is preserved untouched');
+ assert.equal(json.editorial_work_packet.editorial_decision.proposed_text,GOOD_SAFE.join('\n\n'),'the reviewed text is the guarded one');
  assert.equal(json.report_completion.status,'CONCRETE_EDIT_FOR_OWNER_REVIEW');
  const dl=findAll(ui.el.growthAutomaticReport,n=>n.tagName==='button'&&/owner package/.test(n._text))[0];
  assert(dl,'owner package download exists');dl.click();
@@ -204,7 +212,7 @@ test('browser contract: owner sees decision, placement and proposed text; downlo
  const roJson=JSON.parse(await ro.blobs[0].text());assert.equal(roJson.editorial_review_draft.draft,null,'read-only export never contains a draft');
 });
 if(process.env.GROWTH_DUMP)test('dump (isolation-stub draft, offline fixture run)',async()=>{
- const h=harness({drafts:[draftFor('Refresh and reuse what you already published',GOOD)]});
+ const h=harness({drafts:[draftFor('Repurpose what you already published',GOOD)]});
  const g=await h.invoke(h.GET),p=await h.invoke(h.POST,'owner-token');
  fs.writeFileSync(process.env.GROWTH_DUMP+'/fixture-run-decision.json',JSON.stringify({NOTE:'OFFLINE FIXTURE RUN derived from export 27 captured text; AI draft is an isolation stub; NOT live production evidence.',
   get_decision:g.body.editorial_decision_gate,serp_intent:g.body.serp_intent,coverage:g.body.reader_task_coverage},null,1));
@@ -212,7 +220,7 @@ if(process.env.GROWTH_DUMP)test('dump (isolation-stub draft, offline fixture run
 });
 
 test('real-world truncation: competitor captures cut at the 120 kB fetch limit still count as evidence of what they teach',async()=>{
- const h=harness({truncateCompetitors:true,drafts:[draftFor('Refresh and reuse what you already published',GOOD)]});
+ const h=harness({truncateCompetitors:true,drafts:[draftFor('Repurpose what you already published',GOOD)]});
  const g=await h.invoke(h.GET),cov=g.body.reader_task_coverage;
  assert.notEqual(g.body.editorial_decision_gate.decision,'DATA_BLOCKED','truncated competitors must not block the decision: '+JSON.stringify(g.body.editorial_decision_gate.missing_evidence)+JSON.stringify(cov.competitor_diagnostics));
  assert.equal(cov.competitor_diagnostics.used_partial_capture,2);assert.equal(cov.competitor_diagnostics.distinct_hosts,2);

@@ -2,20 +2,21 @@
 // Read-only source comparison. Distinguishes observed text from proven missing facts.
 // No generative templates, paid API dependencies or publication rights.
 const strip=s=>String(s||'').replace(/<(?:script|style|nav|footer|form|noscript)\b[^>]*>[\s\S]*?<\/\s*(?:script|style|nav|footer|form|noscript)>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|nbsp|quot|#39);/gi,' ').replace(/\s+/g,' ').trim();
-const STOP=new Set(['that','this','with','from','your','have','been','will','into','than','their','content','scale','scaling','page','pages','about','which','when','what','where','should','more','before','after','using','also','these']);
+// Language function words only. No topic, industry or product words.
+const STOP=new Set(['that','this','with','from','your','have','been','will','into','than','their','about','which','when','what','where','should','more','before','after','using','also','these']);
 const stem=w=>w.endsWith('ies')?w.slice(0,-3)+'y':
  w.endsWith('ing')&&w.length>6?w.slice(0,-3).replace(/e$/,''):
  w.endsWith('ed')&&w.length>5?w.slice(0,-2):
  w.endsWith('s')&&w.length>5?w.slice(0,-1):w;
 const tokens=s=>[...new Set((strip(s).toLowerCase().match(/[a-z]{4,}/g)||[])
  .filter(w=>!STOP.has(w)).map(stem))];
+// A heading is rejected only when it is a call to action or page furniture. Whether a section is on topic is
+// decided from the query's own words, never from an industry vocabulary.
 function isEditorialHeading(heading,query){
  const h=String(heading||'').trim();
- if(/\b(?:book a demo|register now|get a demo|request demo|contact sales|subscribe|free trial|case study|see how .* keeps .* on.brand|our customers|related posts|recommended articles)\b/i.test(h))return false;
- const q=tokens(query),ht=new Set(tokens(h));
- // A general section heading is useful only when it describes an editorial task
- // or directly names a concept from the chosen search query.
- return q.some(w=>ht.has(w))||/\b(?:strategy|strategies|process|workflow|repurpos|audit|measur|roi|blog|quality|planning|publishing)\w*\b/i.test(h);
+ if(h.length<3)return false;
+ if(/\b(?:book a demo|register now|get a demo|request (?:a )?demo|contact sales|contact us|subscribe|newsletter|free trial|free quote|case study|our customers|related (?:posts|articles)|recommended articles|leave a (?:reply|comment)|share this|table of contents|about the author|comments?)\b/i.test(h))return false;
+ return true;
 }
 function topicTerms(query){return [...new Set(String(query||'').toLowerCase().match(/[a-z]{4,}/g)||[])].map(w=>w.replace(/(?:ing|ed|es|s)$/,'')).filter(w=>w.length>=4);}
 function sections(html,truncated=false){
@@ -41,8 +42,7 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
    // Preserve an explicit topic gate rather than accidentally matching every heading.
    const headline=section.heading.toLowerCase();
    const topicHits=topic.filter(x=>headline.includes(x)).length;
-   if(!qt.length&&topic.length>=2&&topicHits===0&&
-      !/\b(?:repurpos|audit|measur|planning|strategy|strategies|workflow|publish|creation)\w*\b/i.test(headline))continue;
+   if(!qt.length&&topic.length>=2&&topicHits===0)continue;
    const ranked=own.map(o=>{
     const a=tokens(section.text),b=new Set(tokens(o.text)),overlap=a.filter(t=>b.has(t));
     const headingTerms=new Set(tokens(o.heading)),competitorHeadingTerms=tokens(section.heading);
@@ -72,4 +72,4 @@ function compareFullSections({query='',ownUrl='',ownHtml='',ownTruncated=false,c
   editorial_decision:'VERIFY_UNANSWERED_READER_TASK_OR_NO_CHANGE',
   requirement:'Only complete sections wholly present in captured HTML may be compared. Truncated captures never prove absence. Verify actual user task, factual difference and page intent before writing.'};
 }
-module.exports={compareFullSections,sections,isEditorialHeading,topicTerms};
+module.exports={compareFullSections,sections,isEditorialHeading,topicTerms,tokens};

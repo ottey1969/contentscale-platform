@@ -11,53 +11,6 @@ const plain=x=>String(x||'').replace(/<[^>]+>/g,' ').replace(/&(?:nbsp|#160);/gi
  .replace(/&(?:quot|#8220|#8221);/gi,'"').replace(/&(?:#39|#8217);/gi,"'").replace(/\s+/g,' ').trim();
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()}catch{return ''}};
 
-// Each task has an ANCHOR (the defining concept) and supporting terms. A block teaches the task only
-// when the anchor and at least one more distinct term are present.
-const TASK_SETS={
- INFORMATIONAL_PROCESS:{
-  audit_inventory:{label:'Audit and inventory existing content before producing more',
-   anchor:/\baudits?\b|\binventor(?:y|ies)\b|content gaps?/,
-   terms:[/\baudits?\b/,/\binventor(?:y|ies)\b/,/content gaps?/,/existing content|current content|every piece of content/,/stale|outdated|underperform/,/overlap|cannibali[sz]/,/spreadsheet|list of/]},
-  repurposing_refresh:{label:'Reuse, refresh and repurpose content you already have',
-   anchor:/repurpos|recycl|refresh|\breus(?:e|ing)\b/,
-   terms:[/repurpos/,/recycl/,/refresh/,/\breus(?:e|ing)\b/,/update (?:your |existing |old )/,/evergreen/,/content blocks?|components?/]},
-  planning_workflow:{label:'Plan a repeatable workflow, calendar and briefs',
-   anchor:/workflow|calendar|agile|\bplanning\b|repeatable process|\bbriefs?\b/,
-   terms:[/workflow/,/(?:editorial|content) calendar/,/\bplanning\b|\bplan\b/,/repeatable|systemati[sz]/,/\bsteps?\b|step \d/,/agile|sprint|iterat/,/\bbriefs?\b/,/roles?|responsibilit|approval/]},
-  measurement_roi:{label:'Measure results with KPIs and ROI',
-   anchor:/\bkpis?\b|\broi\b|return on invest|\bmetrics?\b|\bmeasur|conversions?|bounce|click.?through|\bctr\b/,
-   terms:[/\bkpis?\b/,/\broi\b|return on invest/,/\bmetrics?\b/,/conversions?/,/bounce/,/click.?through|\bctr\b/,/\bmeasur/,/\btrack/,/performance (?:data|report|review)/]},
-  quality_consistency:{label:'Keep quality and brand voice consistent as volume grows',
-   anchor:/style guide|brand voice|tone of voice|fact.?check|guidelines?|consisten/,
-   terms:[/style guide|brand voice|tone of voice/,/consisten/,/fact.?check/,/\bediting\b|\beditor(?:ial)?\b|\breview process/,/guidelines?/,/quality (?:control|check|standard|bar|signal)/]},
-  tooling_automation:{label:'Choose tools and automation that fit the workflow',
-   anchor:/\btools?\b|software|platform/,
-   terms:[/\btools?\b|software|platform/,/automat/,/templates?/,/project management/,/\bcms\b|content management/]},
-  audience_intent:{label:'Start from the audience and search intent',
-   anchor:/personas?|\baudience|search intent|reader (?:task|question)/,
-   terms:[/personas?/,/\baudience/,/customer (?:journey|need|question)|buyer journey/,/segment/,/search intent|reader (?:task|question)/]}
- },
- LOCAL_SERVICE:{
-  cost_factors:{label:'Explain what drives the cost and how quotes are built',
-   anchor:/\bcosts?\b|\bpric(?:e|es|ing)\b|estimate|\bquote/,
-   terms:[/\bcosts?\b/,/\bpric(?:e|es|ing)\b/,/estimate|\bquote/,/per square|square (?:foot|feet)|\bsq\.? ?ft/,/materials?/,/labou?r/,/\bsize\b|\bpitch\b|access/]},
-  inspection_process:{label:'Show the inspection and repair process step by step',
-   anchor:/inspect|assessment|\bprocess\b|\bsteps?\b/,
-   terms:[/inspect/,/assessment|evaluat/,/\bprocess\b/,/\bsteps?\b|step \d/,/timeline|how long|schedule/,/documentat|photos?/]},
-  damage_signs:{label:'Help the reader recognise signs of damage or a leak',
-   anchor:/\bsigns?\b|symptoms?|warning/,
-   terms:[/\bsigns?\b/,/symptoms?|warning/,/\bleaks?\b/,/stains?|water damage/,/missing|cracked|curling|damaged/]},
-  material_options:{label:'Compare repair or replacement material options',
-   anchor:/shingles?|\bmetal\b|\bflat roof|\btpo\b|\bepdm\b|slate|\btile\b|materials?/,
-   terms:[/shingles?/,/\bmetal\b/,/flat roof|\btpo\b|\bepdm\b/,/slate|\btile\b/,/materials?/,/lifespan|durab|life expectancy/]},
-  warranty_permits:{label:'Explain warranty, licensing and permits',
-   anchor:/warrant|licen[sc]|insur|permit|certif/,
-   terms:[/warrant/,/licen[sc]/,/insur/,/permit/,/certif/,/code (?:requirement|compliance)/]},
-  emergency_response:{label:'Say what to do right away in an emergency or storm',
-   anchor:/emergenc|storm|\btarp|temporary/,
-   terms:[/emergenc/,/storm/,/\btarp/,/temporary/,/same.?day|24.?hour|immediate/,/insurance claim/]}
- }
-};
 const STEMS=w=>String(w||'').toLowerCase().replace(/[^a-z]/g,'').replace(/(?:ing|ed|es|s|e)$/,'');
 const GENERIC_ROOTS=new Set(['content','page','best','guide','service','services']);
 function queryRoots(query){
@@ -85,20 +38,15 @@ function groupSections(list){
  }
  return [...map.values()].map(s=>({heading:s.heading,text:s.texts.join(' '),words:s.texts.join(' ').split(/\s+/).filter(Boolean).length,paragraphs:s.texts}));
 }
-function taskHits(task,text){
- const lower=String(text||'').toLowerCase();
- if(!task.anchor.test(lower))return [];
- return task.terms.map((re,i)=>re.test(lower)?i:-1).filter(i=>i>=0);
-}
-const termNames=(task,idx)=>idx.map(i=>String(task.terms[i]).replace(/^\/|\/[a-z]*$/g,'').replace(/\\b/g,'').slice(0,40));
-
 // ---------- SERP intent (from fresh organic leads, discussions excluded) ----------
 const DISCUSSION=/(^|\.)(reddit\.com|quora\.com|stackexchange\.com|news\.ycombinator\.com)$/;
 function classifyTitle(title,snippet=''){
- const t=(String(title||'')+' '+String(snippet||'')).toLowerCase();
- if(/\b(near me|contractors?|companies|company|installers?|repair services?|free estimate|emergency)\b|\bin [a-z]+,? (?:nj|ny|ca|tx|fl|pa)\b/.test(t))return 'LOCAL_SERVICE';
+ const raw=String(title||'')+' '+String(snippet||''),t=raw.toLowerCase();
+ // Local service: an explicit local marker (near me, 'City, ST', ZIP) or a company/provider listing, never a state list.
+ const cityState=/\b[A-Z][a-z]+(?: [A-Z][a-z]+)?,? (?:[A-Z]{2})\b(?! [a-z])/.test(raw)&&!/\b(?:AI|SEO|PDF|USA|FAQ|CEO|ROI|KPI|CMS|API)\b/.test(raw.match(/\b[A-Z][a-z]+(?: [A-Z][a-z]+)?,? [A-Z]{2}\b/)?.[0]||'');
+ if(/\b(near me|nearby|free estimate|free quote|call now|serving|service area|open now|licensed and insured|same.?day service|emergency service)\b|\b\d{5}\b/.test(t)||cityState||/\b(contractors?|companies|company|providers?|installers?|specialists?)\b.{0,20}\b(in|near)\b/.test(t))return 'LOCAL_SERVICE';
  if(/\b(best|top \d+|reviews?|vs\.?|versus|alternatives?|compared|pricing|plans?)\b/.test(t))return 'COMMERCIAL_COMPARISON';
- if(/\b(what is|what are|how to|how do|guide|tips|ways|steps|strateg(?:y|ies)|explained|everything you need|best practices|checklist|examples)\b|\b\d+ (?:tips|ways|steps|strategies|best practices)\b/.test(t))return 'INFORMATIONAL_GUIDE';
+ if(/\b(what is|what are|how to|how do|how much|how long|how many|guide|tips|ways|steps|strateg(?:y|ies)|explained|everything you need|best practices|checklist|examples)\b|\b\d+ (?:tips|ways|steps|strategies|best practices)\b/.test(t))return 'INFORMATIONAL_GUIDE';
  return 'UNCLASSIFIED';
 }
 function inferSerpIntent({query='',leads=[]}={}){
@@ -119,11 +67,12 @@ function classifyDestinationIntent({query='',title='',h1=[],url='',serpIntent='M
  const roots=queryRoots(query).distinct,headRoots=new Set((head.match(/[a-z]{4,}/g)||[]).map(STEMS));
  const overlap=roots.filter(r=>headRoots.has(r));
  let cls='UNCLASSIFIED';
- if(/\b(is now|alternative|alternatives|review|reviews|pricing|login|coupon|vs\.?|versus|compared?)\b/.test(head))cls='PRODUCT_OR_COMPARISON';
+ const productish=/\b(is now|alternatives?|reviews?|login|coupon|vs\.?|versus|compared?)\b/.test(head)||(serpIntent!=='LOCAL_SERVICE'&&/\bpricing\b/.test(head));
+ if(productish)cls='PRODUCT_OR_COMPARISON';
  else if(/\b(what is|what are|how to|guide|tips|ways|steps|explained|strateg(?:y|ies)|checklist)\b/.test(head))cls='INFORMATIONAL_GUIDE';
- else if(/\b(services?|near me|company|contractors?)\b/.test(head))cls='LOCAL_SERVICE';
+ else if(/\b(services?|near me|company|contractors?|serving)\b/.test(head)||classifyTitle(title)==='LOCAL_SERVICE')cls='LOCAL_SERVICE';
  const compatible=serpIntent==='INFORMATIONAL_GUIDE'?cls==='INFORMATIONAL_GUIDE'
-  :serpIntent==='LOCAL_SERVICE'?cls==='LOCAL_SERVICE'||cls==='INFORMATIONAL_GUIDE'
+  :serpIntent==='LOCAL_SERVICE'?(cls==='LOCAL_SERVICE'||cls==='INFORMATIONAL_GUIDE'||(cls==='UNCLASSIFIED'&&overlap.length>0))
   :serpIntent==='COMMERCIAL_COMPARISON'?cls==='PRODUCT_OR_COMPARISON':false;
  const different=cls!=='UNCLASSIFIED'&&!compatible&&serpIntent!=='MIXED_OR_INSUFFICIENT';
  return {url,class:cls,query_root_overlap:overlap,
@@ -131,14 +80,13 @@ function classifyDestinationIntent({query='',title='',h1=[],url='',serpIntent='M
   basis:'TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF',observed_head:head.slice(0,220)};
 }
 
-function chooseTaskSet(serpIntent){return serpIntent==='LOCAL_SERVICE'?'LOCAL_SERVICE':'INFORMATIONAL_PROCESS'}
 
-function pickPlacement(destSections,taskCode,tasks){
- const task=tasks[taskCode];
- const scored=destSections.map((s,i)=>({i,s,h:taskHits(task,s.heading+' '+s.text).length})).filter(x=>x.h>0).sort((a,b)=>b.h-a.h);
- if(scored.length&&scored[0].h>=2)return {mode:'EXTEND_SECTION',section_heading:scored[0].s.heading,
-  reason:'This existing section already touches the task ('+scored[0].h+' matching concepts); deepen it instead of adding a duplicate.'};
- const END=/\b(where to go next|next steps?|faq|frequently|conclusion|alternative|get started|try|cta|summary|sources?)\b/i;
+const {deriveReaderTasks,destinationStatus,taskHitsInText}=require('./growth-derived-reader-tasks.cjs');
+function pickPlacement(destSections,task,skip){
+ const scored=destSections.map(s=>({s,h:taskHitsInText(task,s.heading+' '+s.text,skip)})).filter(x=>x.h.key>=1||x.h.co>=2).sort((a,b)=>(b.h.key+b.h.co)-(a.h.key+a.h.co));
+ if(scored.length&&scored[0].h.key>=1)return {mode:'EXTEND_SECTION',section_heading:scored[0].s.heading,
+  reason:'This existing section already touches the task ('+scored[0].h.key+' mention(s) of its core concept); deepen it instead of adding a duplicate.'};
+ const END=/\b(where to go next|next steps?|faq|frequently|conclusion|alternative|get started|contact|summary|sources?)\b/i;
  const body=destSections.filter(s=>s.words>=30&&!END.test(s.heading)&&s.heading!=='(introduction)');
  const anchor=body[body.length-1]||destSections.find(s=>s.words>=30)||destSections[0];
  return anchor?{mode:'ADD_AFTER_SECTION',section_heading:anchor.heading,
@@ -147,9 +95,10 @@ function pickPlacement(destSections,taskCode,tasks){
 }
 
 function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',destination={},competitors=[],sitePages=[]}={}){
- const setName=chooseTaskSet(serpIntent),tasks=TASK_SETS[setName];
+ const qr=queryRoots(query),skip=new Set(qr.all.map(x=>x.slice(0,6)));
  const destBlocks=blocks(destination.html),destSections=groupSections(destBlocks);
- // Partial competitor captures can prove that a captured passage teaches a task, never that it is absent.
+ // A competitor article is evidence of what it TEACHES (presence). A capture cut at the fetch limit still proves the
+ // text captured before the cut; an element cut mid-way never closes and is never read. Truncation never proves ABSENCE.
  const received=Array.isArray(competitors)?competitors.filter(c=>c&&c.url):[];
  const usable=received.filter(c=>c.html);
  const compInfo=usable.map(c=>({url:c.url,host:host(c.url),partial:c.truncated===true,
@@ -158,37 +107,27 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
   with_no_readable_sections:usable.length-compInfo.length,used:compInfo.length,
   used_partial_capture:compInfo.filter(c=>c.partial).length,used_complete_capture:compInfo.filter(c=>!c.partial).length,
   distinct_hosts:new Set(compInfo.map(c=>c.host)).size};
+ const derived=compInfo.length>=2?deriveReaderTasks({query,competitors:compInfo,queryRootSet:skip}):[];
  const result=[];
- for(const [code,task] of Object.entries(tasks)){
-  const support=[];
-  for(const c of compInfo){
-   const hit=c.sections.map(s=>{const head=taskHits(task,s.heading),all=taskHits(task,s.heading+' '+s.text);
-     return {s,head:head.length,all:all.length,idx:all}})
-    .filter(x=>x.all>=3||(x.head>=1&&x.all>=2)).sort((a,b)=>b.all-a.all)[0];
-   if(hit)support.push({url:c.url,host:c.host,heading:hit.s.heading,excerpt:hit.s.text.slice(0,420),concepts:termNames(task,hit.idx)});
-  }
-  const independent=new Set(support.map(x=>x.host)).size;
-  const paragraphHits=destBlocks.map(b=>({b,idx:taskHits(task,b.text)})).filter(x=>x.idx.length>=2);
-  const totalDistinct=new Set(destBlocks.flatMap(b=>taskHits(task,b.text))).size;
-  const status=paragraphHits.length>=2||paragraphHits.some(x=>x.idx.length>=3)?'COVERED':
-   paragraphHits.length===1||totalDistinct>=3?'PARTIAL':'NOT_OBSERVED';
-  // Other same-site pages: a task already taught there is a link target, not a duplicate to write.
+ for(const task of derived){
+  const dest=destinationStatus(task,destBlocks,skip);
   const elsewhere=[];
   for(const p of Array.isArray(sitePages)?sitePages:[]){
    if(!p?.html||p.truncated===true||p.url===destination.url)continue;
-   const pb=blocks(p.html).filter(b=>taskHits(task,b.text).length>=2);
-   if(pb.length>=2)elsewhere.push({url:p.url,heading:pb[0].heading||null,excerpt:pb[0].text.slice(0,260)});
+   const st=destinationStatus(task,blocks(p.html),skip);
+   if(st.status==='COVERED')elsewhere.push({url:p.url,heading:st.passages[0]?.heading||null,excerpt:st.passages[0]?.text.slice(0,260)||''});
   }
-  result.push({code,label:task.label,supported_by_competitors:independent>=2,independent_sources:independent,
-   competitor_support:support,
-   destination:{status,passages:paragraphHits.slice(0,2).map(x=>({heading:x.b.heading||null,text:x.b.text.slice(0,300),concepts:termNames(task,x.idx)}))},
-   covered_elsewhere_on_site:elsewhere.slice(0,2),
-   placement:status==='COVERED'?null:pickPlacement(destSections,code,tasks)});
+  result.push({code:task.code,label:task.label,match:{key:task.key,co_terms:task.co_terms},
+   supported_by_competitors:new Set(task.support.map(x=>x.host)).size>=2,
+   independent_sources:new Set(task.support.map(x=>x.host)).size,competitor_support:task.support,
+   destination:dest,covered_elsewhere_on_site:elsewhere.slice(0,2),
+   placement:dest.status==='COVERED'?null:pickPlacement(destSections,task,skip)});
  }
  const supported=result.filter(t=>t.supported_by_competitors);
  return {status:compInfo.length>=2&&new Set(compInfo.map(c=>c.host)).size>=2?'READER_TASK_COVERAGE_OBSERVED':'INSUFFICIENT_READABLE_COMPETITORS',
-  method:'ANCHORED_CONCEPT_GROUPS_ON_COMPLETE_CAPTURED_HTML_NOT_SEMANTIC_PROOF',
-  task_set:setName,destination_url:destination.url||null,destination_truncated:destination.truncated===true,
+  method:'TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF',
+  task_set:'DERIVED_FROM_COMPETITOR_SECTIONS',serp_intent:serpIntent,
+  destination_url:destination.url||null,destination_truncated:destination.truncated===true,
   destination_sections:destSections.map(s=>({heading:s.heading,words:s.words})),
   competitors_considered:compInfo.map(c=>({url:c.url,host:c.host,partial:c.partial,sections:c.sections.length})),
   competitor_diagnostics:competitorDiagnostics,
@@ -200,4 +139,5 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
   linked_elsewhere_task_codes:supported.filter(t=>t.destination.status!=='COVERED'&&t.covered_elsewhere_on_site.length).map(t=>t.code),
   destination_section_headings:destSections.map(s=>s.heading)};
 }
-module.exports={analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,classifyTitle,blocks,groupSections,queryRoots,TASK_SETS,STEMS};
+
+module.exports={analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,classifyTitle,blocks,groupSections,queryRoots,STEMS};

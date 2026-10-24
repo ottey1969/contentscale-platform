@@ -197,7 +197,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    coverage,serpIntent,destinationIntent,attempts});
   report.internal_link_plan=proposed?planInternalLinks({targetUrl:proposed,focusQuery:targetQuery,
    pages:[{url:page.url,html:own.live?.html||page.saved_html,truncated:own.live?.truncated===true},...siblingPages.filter(x=>x.url!==page.url)]}):[];
-  Object.defineProperty(report,'__sources',{value:{destinationHtml:selectedSource?.html||'',
+  Object.defineProperty(report,'__sources',{value:{brandLabel:(()=>{try{return new URL(proposed||page.url).hostname.replace(/^www\./,'').split('.')[0].toLowerCase().replace(/[^a-z0-9]/g,'')}catch{return ''}})(),destinationHtml:selectedSource?.html||'',
    competitorHtml:competitorPages.map(c=>c.html)},enumerable:false});
   // A homepage GSC observation is never evidence about a different editorial URL.
   // Resolve the selected destination to a tracked page owned by this same client,

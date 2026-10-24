@@ -8,12 +8,11 @@
 //  4. for a new page: distinct intent and same-site overlap were both checked by the gate.
 // It never writes text itself, never calls a provider and never publishes. Without a valid draft it returns
 // {opportunity:null, rejections} so the gate keeps its research-only outcome.
-const {checkDraftSection,validParagraphs,plainText}=require('./growth-owner-edit-decision.cjs');
+const {checkDraftSection,assessSectionClaims,validParagraphs,plainText}=require('./growth-owner-edit-decision.cjs');
 
 function produceVerifiedEditorialOpportunity({report={},completion={},sources={}}={}){
  const gate=report.editorial_decision_gate||{};
  const query=String(gate.focus_query||'').trim();
- const setName=report.reader_task_coverage?.task_set||'INFORMATIONAL_PROCESS';
  const sections=(completion.draft?.sections||[]).filter(s=>s?.h2&&validParagraphs(s).length);
  const none=(code,rejections=[])=>({opportunity:null,status:code,rejections});
  if(!completion.draft)return none('NO_OWNER_DRAFT');
@@ -26,7 +25,7 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
   for(const section of sections){
    let hit=null;
    for(const task of plan.tasks){
-    const r=checkDraftSection(section,{task,setName,destinationText,competitorTexts});
+    const r=checkDraftSection(section,{task,destinationText,competitorTexts,query,brandLabel:sources.brandLabel||''});
     if(r.ok){hit={task,section,r};break}
     rejections.push({heading:section.h2,task:task.code,...r});
    }
@@ -46,19 +45,22 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
    focus_query:query,target_url:gate.target_url,
    target_section:first.task.placement?.section_heading||'(page start)',
    placement:first.task.placement||null,task_codes:accepted.map(a=>a.task.code),
-   proposed_text:validParagraphs(first.section).join('\n\n'),
-   additional_sections:accepted.slice(1).map(a=>({task:a.task.code,placement:a.task.placement,heading:a.section.h2,text:validParagraphs(a.section).join('\n\n')})),
+   proposed_text:first.r.paragraphs.join('\n\n'),safe_rewrites:accepted.flatMap(a=>a.r.safe_rewrites),
+   additional_sections:accepted.slice(1).map(a=>({task:a.task.code,placement:a.task.placement,heading:a.section.h2,text:a.r.paragraphs.join('\n\n')})),
    draft_heading:first.section.h2,evidence,
-   draft_validation:accepted.map(a=>({task:a.task.code,heading:a.section.h2,concept_hits:a.r.concept_hits,duplicate_overlap_pct:a.r.duplicate_overlap_pct,competitor_wording_reused:false}))}};
+   draft_validation:accepted.map(a=>({task:a.task.code,heading:a.section.h2,concept_hits:a.r.concept_hits,duplicate_overlap_pct:a.r.duplicate_overlap_pct,competitor_wording_reused:false,claims_checked:true,safe_rewrites:a.r.safe_rewrites.length}))}};
  }
 
  if(gate.decision==='NEW_DISTINCT_PAGE'&&gate.new_page_plan&&query){
   const usable=sections.filter(s=>validParagraphs(s).length);
   if(usable.length<2)return none('NEW_PAGE_DRAFT_TOO_THIN');
-  const {shingles}=require('./growth-owner-edit-decision.cjs');
-  const reuse=usable.some(s=>{const mine=shingles(validParagraphs(s).join(' '),8);
-   return competitorTexts.some(c=>{const t=shingles(c,8);for(const x of mine)if(t.has(x))return true;return false})});
+  const {ngramSet}=require('./growth-owner-edit-decision.cjs');
+  const reuse=usable.some(s=>{const mine=ngramSet(validParagraphs(s).join(' '),8);
+   return competitorTexts.some(c=>{const t=ngramSet(c,8);for(const x of mine)if(t.has(x))return true;return false})});
   if(reuse)return none('NEW_PAGE_DRAFT_REUSES_COMPETITOR_WORDING');
+  const reviewed=usable.map(sec=>({sec,...assessSectionClaims(sec,{destinationText,query,brandLabel:sources.brandLabel||''})}));
+  const bad=reviewed.flatMap(r=>r.violations);
+  if(bad.length)return none('NEW_PAGE_DRAFT_UNSUPPORTED_CLAIMS',bad.slice(0,6));
   const evidence=(gate.new_page_plan.tasks||[]).flatMap(t=>(t.competitor_evidence||[]).slice(0,1)
    .map(e=>({source_url:e.url,heading:e.heading,excerpt:String(e.excerpt||'').slice(0,300),type:'COMPETITOR'})));
   return {status:'VERIFIED_NEW_DISTINCT_PAGE',rejections:[],opportunity:{
@@ -66,8 +68,8 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
    focus_query:query,target_url:gate.target_url,target_section:'(new page)',
    // The gate already required SERP intent + a DIFFERENT destination verdict + no compatible/overlapping same-site page.
    site_overlap_checked:true,distinct_intent_verified:gate.distinct_intent_evidence?.destination?.verdict==='DIFFERENT',
-   proposed_text:usable.map(s=>'## '+s.h2+'\n\n'+validParagraphs(s).join('\n\n')).join('\n\n'),
-   new_page_draft:{working_query:query,sections:usable.map(s=>({h2:s.h2,paragraphs:validParagraphs(s)})),
+   proposed_text:reviewed.map(r=>'## '+r.sec.h2+'\n\n'+r.paragraphs.join('\n\n')).join('\n\n'),
+   new_page_draft:{working_query:query,sections:reviewed.map(r=>({h2:r.sec.h2,paragraphs:r.paragraphs})),safe_rewrites:reviewed.flatMap(r=>r.safe_rewrites),
     seo_title:completion.draft?.seo_title||null,meta_description:completion.draft?.meta_description||null,
     facts_source_url:gate.new_page_plan.facts_source_url},
    evidence}};

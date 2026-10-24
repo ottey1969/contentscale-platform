@@ -1,4 +1,5 @@
 'use strict';
+const {differsFromQuery}=require('./growth-intent-signals.cjs');
 const {inspectSavedGrowthHtml}=require('./tracker-growth-snapshot-signals.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {summarizeGrowthAiVisibility}=require('./growth-ai-visibility-summary.cjs');
@@ -100,8 +101,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  if(nextQuery&&Array.isArray(decision.primary_next_action.related_pages_to_check))
   decision.primary_next_action.related_pages_to_check=siteGraph.candidates.filter(c=>{
    const kw=String(c.tracked_keyword||'').toLowerCase();
-   return !(/\b(brandwell|detector|review|pricing|alternatives)\b/.test(kw)&&
-     !/\b(brandwell|detector|review|pricing|alternatives)\b/.test(nextQuery));
+   return differsFromQuery(kw,nextQuery).length===0;
   }).map(c=>c.url).slice(0,3);
  // Never surface a location, detector, product-review or other unsupported
  // query as a proposed new spoke merely because it has impressions.

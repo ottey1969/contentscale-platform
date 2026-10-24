@@ -75,7 +75,19 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
    for(const ev of (it.task?.competitor_evidence||[]).slice(0,2))L.push('> Compared with '+ev.url+' (“'+ev.heading+'”): '+clip(ev.excerpt,160)+'…');
    L.push('');
   }
-  if(!decision.copy_ready)L.push('**No reviewable copy yet:** '+(decision.copy_status||'')+'. '+(decision.next_action||''),'');
+  if(!decision.copy_ready){
+   L.push('**No reviewable copy yet:** '+(decision.copy_status||'')+'. '+(decision.next_action||''),'');
+   for(const rj of decision.draft_rejections||[]){
+    L.push('- Draft section “'+clip(rj.heading||'',80)+'” rejected: '+(rj.code||'')+(rj.reason?' — '+rj.reason:''));
+    for(const v of rj.claim_violations||[])L.push('  - '+v.code+': '+v.reason+' (“'+clip(v.sentence,120)+'”)');
+   }
+   L.push('');
+  }
+  if((decision.safe_rewrites||[]).length){
+   L.push('**Wording softened automatically (review each change):**','');
+   for(const w of decision.safe_rewrites)L.push('- “'+clip(w.before,140)+'” → “'+clip(w.after,140)+'”');
+   L.push('');
+  }
  }
  if(d==='NEW_DISTINCT_PAGE'){
   const pg=decision.new_page_draft;
