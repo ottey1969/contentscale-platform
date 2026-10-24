@@ -20,7 +20,7 @@ const competitorHtml=url=>byUrl[url]?'<html><body><article>'+byUrl[url].map(x=>'
 const gscRows=pageId=>fx.gsc_homepage_rows.map(r=>({page_id:pageId,tracker_client_id:4,source_page_url:HOME,evidence_scope:'page_verified',...r}));
 
 function harness({pageId=fx.tracked_page.id,pageUrl=HOME,keyword='content at scale',saved=homepageHtml,withGsc=true,
- locked=true,inventory=fx.site_inventory_test_ids.rows,pages={},leads=fx.serp_leads,drafts=[]}={}){
+ locked=true,inventory=fx.site_inventory_test_ids.rows,pages={},leads=fx.serp_leads,drafts=[],truncateCompetitors=false,truncateDestination=false}={}){
  const route={},writes=[],providerCalls=[];
  const html={[HOME]:homepageHtml,[DEST]:destHtml(),[BRAND]:brandHtml,...pages};
  const db={async query(sql,args){
@@ -36,7 +36,8 @@ function harness({pageId=fx.tracked_page.id,pageUrl=HOME,keyword='content at sca
  const fetchLive=async url=>{
   const body=html[url]??(byUrl[url]||/jasper|optimizely/.test(url)?competitorHtml(url):null);
   if(body==null)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
-  return {html:body,final_url:url,retrieved_at:'2026-10-21T10:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'};
+  const isComp=!!byUrl[url]||/jasper|optimizely/.test(url);
+  return {html:body,final_url:url,retrieved_at:'2026-10-21T10:00:00Z',truncated:(truncateCompetitors&&isComp)||(truncateDestination&&url===DEST),source:'LIVE_PUBLIC_HTTPS'};
  };
  const searchLive=async()=>({status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_PUBLIC_SEARCH_LEADS',source:'SERPER_GOOGLE_ORGANIC',
   query:'content scaling',leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-21T10:00:00Z'});
@@ -208,4 +209,20 @@ if(process.env.GROWTH_DUMP)test('dump (isolation-stub draft, offline fixture run
  fs.writeFileSync(process.env.GROWTH_DUMP+'/fixture-run-decision.json',JSON.stringify({NOTE:'OFFLINE FIXTURE RUN derived from export 27 captured text; AI draft is an isolation stub; NOT live production evidence.',
   get_decision:g.body.editorial_decision_gate,serp_intent:g.body.serp_intent,coverage:g.body.reader_task_coverage},null,1));
  fs.writeFileSync(process.env.GROWTH_DUMP+'/fixture-run-owner-package.md','> OFFLINE FIXTURE RUN (export-27 captured text, isolation-stub draft). Not live, not production evidence.\n\n'+p.body.handoff_package.markdown);
+});
+
+test('real-world truncation: competitor captures cut at the 120 kB fetch limit still count as evidence of what they teach',async()=>{
+ const h=harness({truncateCompetitors:true,drafts:[draftFor('Refresh and reuse what you already published',GOOD)]});
+ const g=await h.invoke(h.GET),cov=g.body.reader_task_coverage;
+ assert.notEqual(g.body.editorial_decision_gate.decision,'DATA_BLOCKED','truncated competitors must not block the decision: '+JSON.stringify(g.body.editorial_decision_gate.missing_evidence)+JSON.stringify(cov.competitor_diagnostics));
+ assert.equal(cov.competitor_diagnostics.used_partial_capture,2);assert.equal(cov.competitor_diagnostics.distinct_hosts,2);
+ assert(cov.competitors_considered.every(c=>c.partial===true));
+ assert.equal(g.body.editorial_decision_gate.decision,'IMPROVE_EXISTING');
+ const p=await h.invoke(h.POST,'owner-token');
+ assert.equal(p.body.report_completion.status,'CONCRETE_EDIT_FOR_OWNER_REVIEW');assert.equal(p.body.editorial_work_packet.editorial_decision.copy_ready,true);
+});
+test('a truncated DESTINATION still cannot support an absence claim and says exactly why',async()=>{
+ const h=harness({truncateDestination:true}),g=await h.invoke(h.GET),d=g.body.editorial_decision_gate;
+ assert.equal(d.decision,'DATA_BLOCKED');assert(d.missing_evidence.some(x=>x.code==='COMPLETE_DESTINATION_HTML'));
+ assert.equal(h.providerCalls.length,0);
 });
