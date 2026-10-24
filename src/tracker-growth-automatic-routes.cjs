@@ -360,6 +360,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   }
   // Producer -> gate -> owner decision: the gate's existing verified_editorial_opportunity branch now has a real producer.
   const produced=produceVerifiedEditorialOpportunity({report,completion,sources:report.__sources||{}});
+  // The provider's raw output stays visible, but every section says whether it was accepted, so rejected text is never
+  // mistaken for the validated proposal.
+  if(completion.draft&&Array.isArray(completion.draft.sections)){
+   const ok=new Set(produced.accepted_headings||[]);
+   const why=h=>(produced.rejections||[]).filter(x=>x.heading===h).map(x=>({task:x.task,code:x.code,reason:x.reason||null,claim_violations:(x.claim_violations||[]).map(v=>v.code)}));
+   completion.draft={...completion.draft,raw_provider_output:true,
+    sections:completion.draft.sections.map(sec=>({...sec,review_status:ok.has(sec.h2)?'ACCEPTED_FOR_OWNER_REVIEW':'REJECTED_NOT_PART_OF_PROPOSAL',
+     rejection_reasons:ok.has(sec.h2)?undefined:why(sec.h2)}))};
+  }
   const finalGate=produced.opportunity?decideGrowthEditorialAction({
    report:{...report,verified_editorial_opportunity:produced.opportunity},destination:report.destination_section_comparison,
    coverage:report.reader_task_coverage,serpIntent:report.serp_intent,destinationIntent:report.destination_intent,

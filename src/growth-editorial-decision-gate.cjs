@@ -65,8 +65,8 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  const chosen=gaps.sort((a,b)=>(b.independent_sources-a.independent_sources)||(a.destination.status==='PARTIAL'?-1:1)).slice(0,2);
  return {...base,decision:'IMPROVE_EXISTING',verified_gap:true,
   gap_basis:'TASK_TAUGHT_BY_2_PLUS_INDEPENDENT_COMPETITORS_AND_NOT_FULLY_COVERED_IN_COMPLETE_DESTINATION_HTML',
-  reason:'The existing page is a compatible destination, and '+chosen.length+' reader task(s) taught by independent competitors are '+
-   chosen.map(t=>t.destination.status==='PARTIAL'?'only partly':'not').join('/')+' covered on it.',
+  reason:'The existing page is a compatible destination, and '+chosen.length+' reader task(s) taught by 2+ independent competitors are missing ('+
+   chosen.filter(t=>t.destination.status!=='PARTIAL').length+') or only partly covered ('+chosen.filter(t=>t.destination.status==='PARTIAL').length+') on it. A task counts as verified only after a draft for it passes the checks.',
   improvement_plan:{target_url:target,preserve:['existing title','existing H1','existing useful paragraphs','existing internal links'],
    tasks:chosen.map(t=>({code:t.code,label:t.label,match:t.match,destination_status:t.destination.status,placement:t.placement,
     competitor_evidence:t.competitor_support.slice(0,2),destination_evidence:t.destination.passages})),
@@ -92,7 +92,13 @@ function decideFromCoverage(args){
  return {...planned,copy_ready:true,verified_gap:true,copy_status:'REVIEW_READY',verified_by:opp.producer||'VERIFIED_EDITORIAL_OPPORTUNITY',
   proposed_text:opp.proposed_text,target_section:opp.target_section,placement:opp.placement||planned.placement||null,
   draft_heading:opp.draft_heading||null,additional_sections:opp.additional_sections||[],draft_validation:opp.draft_validation||[],
-  new_page_draft:opp.new_page_draft||undefined,evidence:[...planned.evidence,...opp.evidence],
+  new_page_draft:opp.new_page_draft||undefined,
+  improvement_plan:planned.improvement_plan&&Array.isArray(opp.task_codes)?{...planned.improvement_plan,
+   tasks:planned.improvement_plan.tasks.filter(t=>opp.task_codes.includes(t.code)),
+   unverified_task_codes:planned.improvement_plan.tasks.filter(t=>!opp.task_codes.includes(t.code)).map(t=>t.code)}:planned.improvement_plan,
+  reason:planned.decision==='IMPROVE_EXISTING'&&Array.isArray(opp.task_codes)?
+   'The existing page is a compatible destination and '+opp.task_codes.length+' reader task(s) taught by 2+ independent competitors are missing or only partly covered on it; the draft for '+(opp.task_codes.length===1?'it':'them')+' passed the task, duplication, wording and claim checks.':planned.reason,
+  evidence:(()=>{const seen=new Set();return [...opp.evidence].filter(e=>{const k=[e.type,e.source_url,e.heading].join('|');if(seen.has(k))return false;seen.add(k);return true})})(),
   next_action:planned.decision==='NEW_DISTINCT_PAGE'?'Owner reviews the new-page draft; publication remains disabled.':'Owner reviews the source-backed edit at the stated placement; publication remains disabled.'};
 }
 function decideGrowthEditorialAction({report={},destination={},coverage=null,serpIntent=null,destinationIntent=null,attempts=[]}={}){

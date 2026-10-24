@@ -17,6 +17,8 @@ on:
       - 'tests/growth-truncated-evidence.test.cjs'
       - 'tests/growth-claim-guard.test.cjs'
       - 'tests/growth-review-16-regression.test.cjs'
+      - 'tests/growth-review-17-regression.test.cjs'
+      - 'tests/fixtures/growth-review-17-production.json'
       - 'tests/fixtures/growth-review-16/**'
       - 'tests/growth-industry-neutrality.test.cjs'
       - 'tests/growth-local-service-pipeline.test.cjs'
@@ -82,7 +84,7 @@ jobs:
           node src/growth-serper-only.test.cjs
       - name: Evidence-based decision, verified opportunity producer and owner GET-POST-UI contract
         run: |
-          node --test tests/growth-core-decision-contract.test.cjs tests/growth-owner-edit-decision.test.cjs tests/growth-verified-opportunity.test.cjs tests/growth-truncated-evidence.test.cjs tests/growth-claim-guard.test.cjs tests/growth-review-16-regression.test.cjs tests/growth-industry-neutrality.test.cjs tests/growth-local-service-pipeline.test.cjs tests/growth-e2e-owner-contract.test.cjs
+          node --test tests/growth-core-decision-contract.test.cjs tests/growth-owner-edit-decision.test.cjs tests/growth-verified-opportunity.test.cjs tests/growth-truncated-evidence.test.cjs tests/growth-claim-guard.test.cjs tests/growth-review-16-regression.test.cjs tests/growth-review-17-regression.test.cjs tests/growth-industry-neutrality.test.cjs tests/growth-local-service-pipeline.test.cjs tests/growth-e2e-owner-contract.test.cjs
       - name: New and existing client JS syntax
         run: |
           node --check src/growth-one-action-decision.cjs

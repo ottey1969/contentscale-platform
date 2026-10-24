@@ -1,0 +1,164 @@
+{
+ "_provenance": {
+  "source": "contentscale-growth-complete-review (17).json generated_at 2026-10-24T14:52:26.291Z",
+  "honesty": "Verbatim production output. Destination text is not part of the report (only section headings and word counts), so any test using body text for those sections is marked synthetic in the test file.",
+  "code_version": "production e6ecc96 (claim guard v1)"
+ },
+ "query": "content scaling",
+ "destination_url": "https://contentscale.site/content-at-scale/",
+ "destination_sections": [
+  {
+   "heading": "What Is Content at Scale in 2026? (And Why the Name Changed)",
+   "words": 108
+  },
+  {
+   "heading": "📑 Table of Contents",
+   "words": 133
+  },
+  {
+   "heading": "What Is Content at Scale?",
+   "words": 148
+  },
+  {
+   "heading": "Why “Content at Scale” No Longer Means Volume",
+   "words": 155
+  },
+  {
+   "heading": "🔑 The distinction that matters",
+   "words": 38
+  },
+  {
+   "heading": "Why Did Content at Scale Rebrand to BrandWell?",
+   "words": 172
+  },
+  {
+   "heading": "How AI Engines Decide What to Cite",
+   "words": 122
+  },
+  {
+   "heading": "✅ What makes a page citeable",
+   "words": 87
+  },
+  {
+   "heading": "How to Do Content at Scale the Right Way in 2026",
+   "words": 174
+  },
+  {
+   "heading": "How to Start Today",
+   "words": 178
+  },
+  {
+   "heading": "The Free AI Citations Tracker: Verify You’re Actually Cited",
+   "words": 68
+  },
+  {
+   "heading": "🔥 What the tracker does",
+   "words": 175
+  },
+  {
+   "heading": "Content at Scale & AI Search Statistics (2025–2026)",
+   "words": 163
+  },
+  {
+   "heading": "Dutch B2B SaaS: 12 volume articles rebuilt to per-page quality",
+   "words": 84
+  },
+  {
+   "heading": "Want to scale content without losing quality?",
+   "words": 40
+  },
+  {
+   "heading": "📚 Related Reading",
+   "words": 147
+  }
+ ],
+ "raw_draft_sections": [
+  {
+   "h2": "How to Implement Collaborative Content Creation",
+   "paragraphs": [
+    "Scaling content sustainably requires a collaborative creation workflow that connects subject matter experts, strategists, and editors. Instead of assigning content generation in isolation, establish unified briefs where domain experts contribute core insights, facts, and unique methodologies before drafting begins.",
+    "Implement clear review stages to verify factual precision, tone, and search intent alignment. Having editors and experts evaluate content against pre-established quality criteria prevents bottlenecks during post-production and maintains consistent quality across high publishing volumes.",
+    "Maintain an active feedback loop between content performance and editorial planning. Use search performance data and citation outcomes to refine future briefs, ensuring team members focus collaborative efforts on topics with proven visibility potential."
+   ],
+   "source_status": "AI_COPY_NEEDS_FACT_CHECK"
+  },
+  {
+   "h2": "How to Scale Distribution Through Content Repurposing",
+   "paragraphs": [
+    "Content repurposing maximizes the value of existing published assets by converting thorough core guides into targeted formats across multiple distribution channels. Begin by identifying high-performing articles that contain modular elements, such as distinct data points, frameworks, or actionable steps.",
+    "Transform comprehensive articles into concise deliverables tailored to specific reader contexts, such as social summary posts, email newsletter insights, or slide decks. Focus on preserving the accuracy and key arguments of the original source material while adapting the presentation to match channel expectations.",
+    "Organize a centralized content inventory to track primary authority pages alongside their repurposed spin-offs. Updating core facts or figures in the main source document allows teams to systematically refresh dependent formats, ensuring accuracy and brand consistency across all touchpoints."
+   ],
+   "source_status": "AI_COPY_NEEDS_FACT_CHECK"
+  }
+ ],
+ "accepted_heading": "How to Scale Distribution Through Content Repurposing",
+ "plan_tasks": [
+  {
+   "code": "task_creati",
+   "label": "Competitors teach “Collaborative Content Creation”",
+   "destination_status": "NOT_OBSERVED",
+   "placement": {
+    "mode": "ADD_AFTER_SECTION",
+    "section_heading": "📚 Related Reading",
+    "reason": "No existing section teaches this task; add it after the last substantive body section and before any closing, FAQ or call-to-action block."
+   }
+  },
+  {
+   "code": "task_repurp",
+   "label": "Competitors teach “Content Repurposing”",
+   "destination_status": "NOT_OBSERVED",
+   "placement": {
+    "mode": "ADD_AFTER_SECTION",
+    "section_heading": "📚 Related Reading",
+    "reason": "No existing section teaches this task; add it after the last substantive body section and before any closing, FAQ or call-to-action block."
+   }
+  }
+ ],
+ "competitors_considered": [
+  {
+   "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+   "host": "aprimo.com",
+   "partial": true,
+   "sections": 8
+  },
+  {
+   "url": "https://www.textbroker.com/create-scalable-content",
+   "host": "textbroker.com",
+   "partial": false,
+   "sections": 18
+  },
+  {
+   "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation",
+   "host": "optimizely.com",
+   "partial": true,
+   "sections": 3
+  }
+ ],
+ "rejections": [
+  {
+   "heading": "How to Implement Collaborative Content Creation",
+   "task": "task_creati",
+   "ok": false,
+   "code": "DRAFT_OFF_TASK",
+   "concept_hits": 2,
+   "reason": "The text does not teach the missing reader task near its start (core concept “creati” plus related concepts)."
+  },
+  {
+   "heading": "How to Implement Collaborative Content Creation",
+   "task": "task_repurp",
+   "ok": false,
+   "code": "DRAFT_OFF_TASK",
+   "concept_hits": 0,
+   "reason": "The text does not teach the missing reader task near its start (core concept “repurp” plus related concepts)."
+  },
+  {
+   "heading": "How to Scale Distribution Through Content Repurposing",
+   "task": "task_creati",
+   "ok": false,
+   "code": "DRAFT_OFF_TASK",
+   "concept_hits": 0,
+   "reason": "The text does not teach the missing reader task near its start (core concept “creati” plus related concepts)."
+  }
+ ]
+}

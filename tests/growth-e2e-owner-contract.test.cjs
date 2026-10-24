@@ -234,3 +234,22 @@ test('a truncated DESTINATION still cannot support an absence claim and says exa
  assert.equal(d.decision,'DATA_BLOCKED');assert(d.missing_evidence.some(x=>x.code==='COMPLETE_DESTINATION_HTML'));
  assert.equal(h.providerCalls.length,0);
 });
+
+test('raw provider sections are labelled accepted or rejected everywhere they appear; rejected text never enters the proposal or the package',async()=>{
+ const off=['Pricing pages should list every plan next to its monthly cost and show a clear comparison table for buyers.','Add a short note on how to contact sales for custom quotes and volume discounts.'];
+ const make=body=>({canonical_url:DEST,status:'AI_DRAFT_REVIEW_REQUIRED',draft_source_type:'LIVE_PUBLIC_HTML',live_competitor_observations_used:3,
+  draft:{seo_title:null,meta_description:null,sections:[{h2:'Tool pricing',paragraphs:off},{h2:'Repurpose what you already published',paragraphs:GOOD}]}});
+ const h=harness({drafts:[make]}),r=await h.invoke(h.POST,'owner-token'),b=r.body;
+ const raw=b.editorial_review_draft.draft.sections,packet=b.editorial_work_packet.generated_draft.sections;
+ for(const list of [raw,packet]){
+  assert.equal(list.find(s=>s.h2==='Tool pricing').review_status,'REJECTED_NOT_PART_OF_PROPOSAL');
+  assert.equal(list.find(s=>s.h2==='Repurpose what you already published').review_status,'ACCEPTED_FOR_OWNER_REVIEW');
+  assert(list.find(s=>s.h2==='Tool pricing').rejection_reasons.some(x=>x.code==='DRAFT_OFF_TASK'));
+ }
+ assert.equal(b.editorial_review_draft.draft.raw_provider_output,true);
+ const d=b.editorial_work_packet.editorial_decision;
+ assert.equal(d.copy_ready,true);assert(!d.proposed_text.includes('monthly cost'));assert.equal(d.improvement_plan.tasks.length,1,'only the verified task remains in the final decision');
+ const md=b.handoff_package.markdown;
+ assert.match(md,/Generated but rejected[\s\S]*Tool pricing[\s\S]*DRAFT_OFF_TASK/);assert(!md.includes('monthly cost'));
+ assert.match(md,/### Change 1: Competitors teach “[^”]*[Rr]epurpos/);
+});
