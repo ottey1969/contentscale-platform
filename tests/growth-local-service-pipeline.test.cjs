@@ -17,8 +17,8 @@ const pages={'https://roofer-a.example/roof-repair-nj/':comp('Roof repair in Pat
 const leads=[['https://roofer-a.example/roof-repair-nj/','Roof Repair in Paterson, NJ | Roofer A'],['https://roofer-b.example/services/roof-repair/','Roof Repairs in Bergen County NJ - Roofer B'],
  ['https://roofer-c.example/near-me/','Emergency Roof Repair Near Me | Roofer C'],['https://roofer-d.example/hackensack/','Roof Repair Contractors in Hackensack, NJ']]
  .map(([url,title],i)=>({url,title,snippet:'Local roof repair',source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}));
-function harness(drafts){
- const route={},writes=[],providerCalls=[];
+function harness(drafts,{flaky={}}={}){
+ const route={},writes=[],providerCalls=[],fetchCalls={};
  const db={async query(sql){
   if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql)){writes.push(sql);throw Error('No writes permitted')}
   if(sql.includes('LEFT(html_content'))return {rows:[{id:77,tracker_client_id:4,url:URL_,keyword:'roof repair lodi nj',saved_html:ownHtml}]};
@@ -26,7 +26,9 @@ function harness(drafts){
  }};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},db,(req,res,next)=>{req.growthTrackerClientId=4;
   req.growth={can_edit:req.params.token==='owner-token',pages:[{id:77,url:URL_,keyword:'roof repair lodi nj',case_study_active:true}]};next()},{
-  fetchLive:async url=>{const html=url===URL_?ownHtml:pages[url];if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
+  retryDelayMs:0,
+  fetchLive:async url=>{fetchCalls[url]=(fetchCalls[url]||0)+1;if(flaky[url]>0){flaky[url]--;throw Object.assign(new Error('HTTP_202'),{code:'HTTP_202'})}
+   const html=url===URL_?ownHtml:pages[url];if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
    return {html,final_url:url,retrieved_at:'2026-10-24T10:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
   searchLive:async()=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:'roof repair lodi nj',leads,provider_attempts:['BING_PUBLIC_RSS','SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-24T10:00:00Z'}),
   completeOwnerDraft:async({body})=>{providerCalls.push(body);const d=drafts.shift();
@@ -34,7 +36,7 @@ function harness(drafts){
     draft:{seo_title:null,meta_description:null,sections:[d]}}:{success:false,code:'NO_STUB'}}}});
  const call=async(path,token)=>{const req={params:{token},query:{page_id:'77'}},res={statusCode:200,status(x){this.statusCode=x;return this},set(){return this},type(){return this},json(x){this.body=x;return this},send(x){this.body=x;return this}};
   const stack=route[path];await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});return res};
- return {call,writes,providerCalls,GET:'/api/tracker-client/:token/growth/auto-research',POST:'/api/tracker-client/:token/growth/auto-research/complete'};
+ return {call,writes,providerCalls,fetchCalls,GET:'/api/tracker-client/:token/growth/auto-research',POST:'/api/tracker-client/:token/growth/auto-research/complete'};
 }
 const STRONG={h2:'How to read a roof repair estimate',paragraphs:['A written estimate should list the materials, the labour and any special access the crew needs, so ask for every line before you approve the work and ask how the estimate changes if hidden damage is found.',
  'We are licensed and insured in New Jersey, and we send a technician to look at the damage first, so the estimate you receive is based on what we actually saw on your roof.']};
@@ -74,4 +76,15 @@ test('local service: a sourced softening is applied and logged for the reviewer'
  assert.equal(d.copy_ready,true,JSON.stringify(d.draft_rejections||d.copy_status));assert.match(d.proposed_text,/usually makes it easier/);
  assert.equal(d.safe_rewrites.length,1);assert.equal(d.safe_rewrites[0].changes[0].from,'always');
  assert.match(r.body.handoff_package.markdown,/Wording softened automatically/);
+});
+
+test('a competitor answering HTTP 202 (accepted, not ready) is retried exactly once',async()=>{
+ const a='https://roofer-a.example/roof-repair-nj/';
+ const ok=harness([],{flaky:{[a]:1}}),g=await ok.call(ok.GET,'client-token');
+ assert.equal(ok.fetchCalls[a],2,'one retry');assert.equal(g.body.reader_task_coverage.competitor_diagnostics.used,2);
+ assert(!g.body.evidence_warnings.includes('COMPETITOR_LIVE_HTTP_202'));assert.equal(g.body.editorial_decision_gate.decision,'IMPROVE_EXISTING');
+ const stuck=harness([],{flaky:{[a]:5}}),s=await stuck.call(stuck.GET,'client-token');
+ assert.equal(stuck.fetchCalls[a],2,'never more than one retry');assert(s.body.evidence_warnings.includes('COMPETITOR_LIVE_HTTP_202'));
+ assert.equal(s.body.editorial_decision_gate.decision,'DATA_BLOCKED','one remaining competitor is not enough, and the report says why');
+ assert(s.body.editorial_decision_gate.missing_evidence.some(x=>x.code==='READABLE_COMPETITOR_ARTICLES'&&/received/.test(x.detail)));
 });

@@ -9,13 +9,19 @@ const STEM=w=>lower(w).replace(/[^a-z0-9]/g,'').replace(/(?:ing|ed|es|s|e)$/,'')
 const contentRoots=t=>[...new Set((lower(t).match(/[a-z]{5,}/g)||[]).map(STEM).filter(x=>x.length>=4))];
 
 // 1. Absolute / guarantee language. SOFTENABLE words are weakened (never strengthened); the rest is rejected.
-const SOFTEN=[[/\balways\b/gi,'usually'],[/\bnever\b/gi,'rarely'],[/\bensures\b/gi,'helps ensure'],[/(?<!help )(?<!helps )\bensure\b/gi,'help ensure'],[/(?<!helping )\bensuring\b/gi,'helping ensure'],
+const SOFTEN=[[/\balways\b/gi,'usually'],[/\bnever\b/gi,'rarely'],[/\bensures\b/gi,'helps ensure'],[/(?<!helping )\bensuring\b/gi,'helping ensure'],
  [/\bdefinitely\b/gi,'often'],[/\bcertainly\b/gi,'often'],[/\bwill (?=(?:help|make|let|give|allow|save|reduce|improve)\b)/gi,'can ']];
-const ABSOLUTE=/\b(guarantee[sd]?|guaranteeing|proven|prove[sn]?|100\s?%|foolproof|risk[- ]free|flawless|perfect results?|unmatched|unbeatable|number one|#\s?1|best[- ]in[- ]class|the best|only way|no risk|instantly|overnight|without fail)\b/i;
+const ABSOLUTE=/\b(guarantee[sd]?|guaranteeing|proven|prove[sn]?|100\s?%|foolproof|risk[- ]free|flawless|perfect results?|unmatched|unbeatable|number one|#\s?1|best[- ]in[- ]class|the best|only way|no risk|instantly|overnight|without fail|eliminates?|completely (?:removes?|solves?|prevents?)|(?:exact|exactly|precisely)\s+(?:\w+\s+){0,2}(?:return|results?|impact|roi|numbers?|figures?|performance|value|gain)s?)\b/i;
 // 1b. Unsupported superlatives about a service or product (allowed only if the destination page uses the same word).
 const SUPERLATIVE=/\b(safest|fastest|cheapest|easiest|most (?:comfortable|effective|reliable|trusted|popular|affordable|durable|accurate|efficient|powerful)|best (?!practices?\b))\b/i;
 // 2. Outcome promises about rankings, traffic, leads or revenue.
-const OUTCOME=/\b(rank(?:s|ed|ing|ings)?\s+(?:higher|better|first|#?\s?1|on page one)|(?:improv\w*|boost\w*|increas\w*|grow\w*|lift\w*|skyrocket\w*|doubl\w*|triple\w*)\s+(?:your\s+|the\s+|its\s+)?(?:search\s+)?(?:rank\w*|seo|visibility|traffic|clicks|conversions?|leads|sales|revenue|bookings|calls|enquiries|inquiries|ctr)|(?:more|higher|extra)\s+(?:organic\s+)?(?:traffic|clicks|conversions?|leads|sales|revenue|bookings|calls|enquiries|inquiries)|(?:higher|better|top|first)\s+(?:search\s+)?(?:rankings?|positions?|placements?)|page one|first page of google|top of google|top (?:\d+|three|ten) results?|get(?:ting)?\s+(?:more\s+)?(?:customers|clients|leads|jobs))\b/i;
+const OUTCOME=/\b(rank(?:s|ed|ing|ings)?\s+(?:higher|better|first|#?\s?1|on page one)|(?:improv\w*|boost\w*|increas\w*|grow\w*|lift\w*|skyrocket\w*|doubl\w*|triple\w*)\s+(?:your\s+|the\s+|its\s+)?(?:search\s+)?(?:rank\w*|seo|visibility|traffic|clicks|conversions?|leads|sales|revenue|bookings|calls|enquiries|inquiries|ctr)|(?:more|higher|extra)\s+(?:organic\s+)?(?:traffic|clicks|conversions?|leads|sales|revenue|bookings|calls|enquiries|inquiries)|(?:higher|better|top|first)\s+(?:search\s+)?(?:rankings?|positions?|placements?)|maximi[sz]\w*\s+(?:your\s+|the\s+|overall\s+|content\s+)*(?:roi|returns?|revenue|traffic|results|conversions?|leads|sales|visibility)|page one|first page of google|top of google|top (?:\d+|three|ten) results?|get(?:ting)?\s+(?:more\s+)?(?:customers|clients|leads|jobs))\b/i;
+// 2b. Declarative comparative performance claims ("X demonstrate higher engagement than Y"). Advice about how to
+// measure or compare is allowed, so sentences built around check/compare/measure/track are skipped.
+const COMPARATIVE=/\b(?:higher|better|greater|stronger|improved|increased|superior|more)\s+(?:search\s+|organic\s+|user\s+|audience\s+|long[- ]term\s+)?(?:engagement|performance|results?|conversion rates?|retention|visibility|roi|returns?|citation rates?|click[- ]through)\b/i;
+const MEASURING_ADVICE=/\b(whether|if you|check|compare|measure|track|monitor|evaluate|review|correlate|identify|look at)\b/i;
+// 2c. Internal process text that leaked into reader-facing copy (instructions to the editor, placeholders).
+const EDITOR_NOTE=/\b(?:for (?:internal )?editor(?:ial)? (?:verification|review|check)\b|internal editor\b|mark (?:those|these|that|this)\b[^.]*\b(?:verification|review)\b|submit (?:those|these)\b[^.]*\bverification\b|verify (?:those|these) (?:items|figures|numbers|claims)\b)|\[(?:verify|todo|tbd|insert)[^\]]*\]|\bTODO\b|lorem ipsum|\bplaceholder\b/i;
 // 3. Claims about AI assistants / AI search citing or recommending content.
 const AI_CITE=/\b(?:(?:cited|citations?|recommended|recommends?|mentioned|surfaced|quoted|referenced|picked up|trusted)\b[^.]{0,60}\b(?:chatgpt|gemini|perplexity|claude|copilot|ai overviews?|ai search|llms?|ai assistants?|generative (?:ai|engines?)|answer engines?)|(?:chatgpt|gemini|perplexity|claude|copilot|ai overviews?|ai search|llms?|ai assistants?|generative (?:ai|engines?)|answer engines?)\b[^.]{0,60}\b(?:cites?|recommends?|prefers?|favou?rs?|trusts?|ranks?|surfaces?|quotes?|picks)\b)/i;
 // 4. Credentials / reputation about the business. Verifiable only if the destination page itself states them.
@@ -43,6 +49,7 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
  const add=(code,sentence,reason)=>violations.push({code,sentence:sentence.slice(0,220),reason});
  for(let sentence of sentencesOf(text)){
   const original=sentence,local=[];
+  if(EDITOR_NOTE.test(sentence)){rewrites.push({before:original,after:'',changes:[{from:'internal note addressed to an editor',to:'(sentence removed from reader-facing copy)'}]});continue}
   const flag=(code,reason)=>local.push({code,reason});
   // Absolute words that can be weakened safely are weakened first; whatever remains is judged.
   let softened=sentence;const applied=[];
@@ -50,6 +57,7 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
   sentence=softened;
   const m1=sentence.match(ABSOLUTE);if(m1)flag('ABSOLUTE_CLAIM','Contains the unqualified claim “'+m1[0]+'”; the sources do not prove it and it cannot be softened without changing its meaning.');
   const m1b=sentence.match(SUPERLATIVE);if(m1b&&!dest.includes(lower(m1b[0])))flag('UNSUPPORTED_SUPERLATIVE','Uses the comparative claim “'+m1b[0]+'” without support on the destination page.');
+  const m2b=!MEASURING_ADVICE.test(sentence)&&sentence.match(COMPARATIVE);if(m2b)flag('UNPROVEN_OUTCOME_CLAIM','Asserts a comparative performance result (“'+m2b[0]+'”) that no measurement on the page or in the sources supports.');
   const m2=sentence.match(OUTCOME);if(m2)flag('UNPROVEN_OUTCOME_CLAIM','Promises a ranking, traffic, lead or revenue outcome (“'+m2[0]+'”). No measurement supports it.');
   const m3=sentence.match(AI_CITE);if(m3)flag('UNPROVEN_AI_CITATION_CLAIM','Claims how AI assistants or AI search treat the content. No independent observation supports it.');
   const bad=[...new Set(numbersIn(sentence).filter(n=>!destNums.has(n)))];

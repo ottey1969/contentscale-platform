@@ -18,7 +18,7 @@ const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent}=requ
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -87,11 +87,19 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const candidates=[...fresh.map(x=>({...x,search_source:x.source==='SERPAPI_GOOGLE_ORGANIC'?'SERPAPI_GOOGLE_ORGANIC':x.source==='SERPER_GOOGLE_ORGANIC'?'SERPER_GOOGLE_ORGANIC':'BING_PUBLIC_RSS'})),
    ...historical.filter(x=>editorialHost(x.url)&&!fresh.some(y=>y.url===x.url)&&queryFit(x.serp_title||'',{title:targetQuery,h1:[],h2:[]}).fit)
     .map(x=>({...x,search_source:'HISTORICAL_SERP_TOPIC_MATCH'}))].slice(0,6);
-  const fetchCompetitor=async lead=>{
+  const fetchCompetitorOnce=async lead=>{
    try{const live=await fetchLive(lead.url);
     return {url:lead.url,live,quality:assessGrowthCompetitorContent({html:live.html,query:targetQuery,truncated:live.truncated}),
      search_source:lead.search_source,search_query:targetQuery}}
    catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70),search_source:lead.search_source}}
+  };
+  // HTTP 202 means 'accepted, not ready yet' (seen on a real competitor). Retry exactly once, then report it as unavailable.
+  const fetchCompetitor=async lead=>{
+   const first=await fetchCompetitorOnce(lead);
+   if(first.reason!=='HTTP_202')return first;
+   await new Promise(done=>setTimeout(done,Math.max(0,retryDelayMs)));
+   const second=await fetchCompetitorOnce(lead);
+   return {...second,retried_after_http_202:true};
   };
   let attempted=await Promise.all(candidates.slice(0,3).map(fetchCompetitor));
   const eligible=items=>items.filter(x=>x.live&&x.quality?.eligible).slice(0,3);
