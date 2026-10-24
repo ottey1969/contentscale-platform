@@ -5,13 +5,13 @@ const {produceVerifiedEditorialOpportunity}=require('../src/growth-verified-oppo
 const {decideGrowthEditorialAction}=require('../src/growth-editorial-decision-gate.cjs');
 const T='https://site.example/guide/',HOME='https://site.example/';
 const destHtml='<h1>What is scaling</h1><p>Scaling means producing more pages while keeping each page useful for the reader who asked a question.</p>';
-const compHtml='<h2>Reusing content</h2><p>Reuse and repurpose what you already published by refreshing the examples and recycling the best guide into new formats for each channel and audience.</p>';
-const plan={decision:'IMPROVE_EXISTING',focus_query:'content scaling',target_url:T,protected_url:HOME,improvement_plan:{target_url:T,tasks:[{code:'repurposing_refresh',
- label:'Reuse, refresh and repurpose content you already have',destination_status:'NOT_OBSERVED',placement:{mode:'ADD_AFTER_SECTION',section_heading:'What is scaling',reason:'r'},
+const compHtml='<h2>Repurposing content</h2><p>Repurpose what you already published by refreshing the examples and recycling the best guide into new formats for each channel and audience.</p>';
+const plan={decision:'IMPROVE_EXISTING',focus_query:'content scaling',target_url:T,protected_url:HOME,improvement_plan:{target_url:T,tasks:[{code:'task_repurp',match:{key:'repurp',co_terms:[]},
+ label:'Competitors teach repurposing',destination_status:'NOT_OBSERVED',placement:{mode:'ADD_AFTER_SECTION',section_heading:'What is scaling',reason:'r'},
  competitor_evidence:[{url:'https://a.example/x',heading:'Reusing content',excerpt:'Reuse and repurpose what you already published by refreshing examples.'}],destination_evidence:[]}]}};
 const report={url:HOME,editorial_decision_gate:plan,reader_task_coverage:{task_set:'INFORMATIONAL_PROCESS'}};
-const good={target_url:T,draft:{sections:[{h2:'Refresh and reuse what you already published',paragraphs:[
- 'Before writing anything new, refresh the pages you already have: update their examples, correct outdated steps and reuse the strongest guide as a checklist for another channel.']}]}};
+const good={target_url:T,draft:{sections:[{h2:'Repurpose what you already published',paragraphs:[
+ 'Before writing anything new, decide which existing pages to repurpose: update their examples, correct outdated steps and repurpose the strongest guide as a checklist for another channel.']}]}};
 const src={destinationHtml:destHtml,competitorHtml:[compHtml]};
 
 test('producer verifies a draft that teaches the planned missing task',()=>{
@@ -19,13 +19,13 @@ test('producer verifies a draft that teaches the planned missing task',()=>{
  assert.equal(r.status,'VERIFIED_IMPROVE_EXISTING');const o=r.opportunity;
  assert.equal(o.verified,true);assert.equal(o.type,'IMPROVE_EXISTING');assert.equal(o.focus_query,'content scaling');
  assert.equal(o.target_url,T);assert(o.proposed_text.length>=80);assert(o.evidence.some(e=>e.source_url&&e.excerpt));
- assert.deepEqual(o.task_codes,['repurposing_refresh']);
+ assert.deepEqual(o.task_codes,['task_repurp']);
 });
 test('producer returns null (never invents) without a draft, with an off-task draft, a duplicate or reused competitor wording',()=>{
  assert.equal(produceVerifiedEditorialOpportunity({report,completion:{target_url:T,draft:null},sources:src}).opportunity,null);
  const off={target_url:T,draft:{sections:[{h2:'Pricing and plans',paragraphs:['Compare every plan next to its monthly cost and add a short table for buyers who want to contact sales about custom quotes.']}]}};
  assert.equal(produceVerifiedEditorialOpportunity({report,completion:off,sources:src}).status,'DRAFT_FAILED_TASK_VERIFICATION');
- const copied={target_url:T,draft:{sections:[{h2:'Reuse',paragraphs:['Reuse and repurpose what you already published by refreshing the examples and recycling the best guide into new formats for each channel and audience today.']}]}};
+ const copied={target_url:T,draft:{sections:[{h2:'Repurpose',paragraphs:['Repurpose what you already published by refreshing the examples and recycling the best guide into new formats for each channel and audience today.']}]}};
  const r=produceVerifiedEditorialOpportunity({report,completion:copied,sources:src});
  assert.equal(r.opportunity,null);assert(r.rejections.some(x=>x.code==='DRAFT_REUSES_COMPETITOR_WORDING'));
  const wrongTarget=produceVerifiedEditorialOpportunity({report,completion:{...good,target_url:'https://site.example/other/'},sources:src});
@@ -34,7 +34,7 @@ test('producer returns null (never invents) without a draft, with an off-task dr
 test('gate turns a planned improvement into copy_ready only with a matching verified opportunity',()=>{
  const args={report:{...report,url:HOME,growth_decision:{protection:{case_study_locked:true},primary_next_action:{query:'content scaling'}}},
   destination:{target_url:T,comparisons:[],status:'FULL_SECTION_COMPARISON_RESEARCH_ONLY'},
-  coverage:{competitors_considered:[{url:'a'},{url:'b'}],destination_truncated:false,tasks:[{code:'repurposing_refresh',label:'Reuse',supported_by_competitors:true,independent_sources:2,
+  coverage:{competitors_considered:[{url:'a'},{url:'b'}],destination_truncated:false,tasks:[{code:'task_repurp',match:{key:'repurp',co_terms:[]},label:'Reuse',supported_by_competitors:true,independent_sources:2,
    competitor_support:[{url:'https://a.example/x',heading:'h',excerpt:'e'},{url:'https://b.example/y',heading:'h',excerpt:'e'}],destination:{status:'NOT_OBSERVED',passages:[]},covered_elsewhere_on_site:[],placement:{mode:'ADD_AFTER_SECTION',section_heading:'What is scaling',reason:'r'}}],destination_section_headings:['What is scaling']},
   serpIntent:{status:'SERP_INTENT_OBSERVED',intent:'INFORMATIONAL_GUIDE',agreeing_leads:3,organic_leads_considered:4,leads:[]},destinationIntent:{class:'INFORMATIONAL_GUIDE',verdict:'COMPATIBLE'},attempts:[]};
  const planned=decideGrowthEditorialAction(args);

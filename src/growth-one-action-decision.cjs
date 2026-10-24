@@ -17,10 +17,10 @@ function queryFit(query,headings){
  const label=String(query||'').toLowerCase(),needle=terms(label);
  const headline=terms([headings.title,...(headings.h1||[]),...(headings.h2||[])].join(' '));
  const present=new Set(headline),matched=needle.filter(w=>present.has(w));
- if(/\bnear me\b|\bnearby\b|\bin\s+(los angeles|new york|london|amsterdam)\b/.test(label) &&
+ if(/\bnear me\b|\bnearby\b|\bin\s+[a-z]{3,}(?:\s+[a-z]{3,})?\s*$/.test(label) &&
     !(/\bnear me\b|\bnearby\b/.test([headings.title,...(headings.h1||[]),...(headings.h2||[])].join(' ').toLowerCase())) &&
     !needle.every(w=>present.has(w)))return {fit:false,reason:'LOCATION_INTENT_NOT_SUPPORTED_BY_PAGE'};
- const hard=['detector','detect','plagiarism','review','reviews','accuracy','coupon','pricing','price','login','download','software','alternatives','alternative','jobs','careers'];
+ const hard=['review','reviews','coupon','pricing','price','login','download','software','alternatives','alternative','jobs','careers'];
  const absent=needle.filter(w=>hard.includes(w)&&!present.has(w));
  if(absent.length)return {fit:false,reason:'DIFFERENT_SEARCH_INTENT',unmatched:absent};
  if(!needle.length||matched.length<Math.min(2,needle.length)||matched.length/needle.length<0.67)

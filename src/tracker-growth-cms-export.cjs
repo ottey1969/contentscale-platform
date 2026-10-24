@@ -124,8 +124,7 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    // with exact client+page+source URL verification; never map source clicks to target.
    const gscContext=await loadGrowthOptionalGsc(pool,{clientId:v.client.id,targetPage:v.page,
     sourcePageId:req.body?.growth_source_page_id,focusQuery:focus});
-   const wrongProductTitle=title=>/\b(detector|brandwell|contentatscale|plagiarism|coupon|discount)\b/i.test(title)&&
-    !/\b(detector|brandwell|contentatscale|plagiarism|coupon|discount)\b/i.test(focus);
+   const wrongProductTitle=title=>require('./growth-intent-signals.cjs').differsFromQuery(title,focus).length>0;
    if(liveResearch.observations.length)topics=liveResearch.observations.map(x=>x.competitor_heading);
    else try{
     const prior=await pool.query('SELECT checked_at,google_competitors,ai_perplexity_competitors FROM tracker_snapshots WHERE page_id=$1 AND (google_competitors IS NOT NULL OR ai_perplexity_competitors IS NOT NULL) ORDER BY checked_at DESC,id DESC LIMIT 1',[v.page.id]);

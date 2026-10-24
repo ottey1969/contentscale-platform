@@ -55,8 +55,11 @@ function registerGrowthLiveRoutes({app,pool,verifyEngineAccess,fetchExactGsc}={}
   try{
    const state=await loadGrowthTrackerEvidence(pool,identity);
    const rows=state.gscRows.filter(r=>r.source_page_url===state.page.url&&r.evidence_scope==='page_verified');
-   const commercial=/\b(roof|roofing|replacement|repair|installation|install|leak|storm|damage|emergency|contractor|estimate|quote)\b/i;
-   const brand=new URL(state.page.url).hostname.toLowerCase().includes('perfectroofingteam.com')?/perfect\s*roofing\s*team/i:/(?!)/;
+   // Transactional/local-service signals common to many industries; no trade- or client-specific words.
+   const commercial=/\b(near me|cost|costs|price|pricing|quote|estimate|hire|book|service|services|company|companies|contractor|contractors|emergency|repair|installation|install|replacement)\b/i;
+   // Branded queries = the site's own domain label (spaces ignored), derived per client, never hard-coded.
+   const label=new URL(state.page.url).hostname.replace(/^www\./,'').split('.')[0].toLowerCase();
+   const brand={test:q=>label.length>=4&&String(q).toLowerCase().replace(/[^a-z0-9]/g,'').includes(label.replace(/[^a-z0-9]/g,''))};
    const opportunities=rows.map(r=>({query:String(r.query||'').trim(),clicks:Number(r.clicks)||0,impressions:Number(r.impressions)||0,position:Number(r.position)||null,imported_at:r.imported_at||null}))
     .filter(r=>r.query&&r.impressions>0&&!brand.test(r.query))
     .map(r=>({...r,commercial_intent_signal:commercial.test(r.query)}))

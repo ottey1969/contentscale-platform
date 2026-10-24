@@ -1,4 +1,5 @@
 'use strict';
+const {navDiffersFromQuery}=require('./growth-intent-signals.cjs');
 // Optional, public, low-frequency Bing web RSS discovery. Bing's public RSS
 // format is experimental, NOT a Google SERP, ranking or guaranteed service.
 // If unavailable, return a visible status; never substitute invented results.
@@ -9,10 +10,8 @@ const decode=x=>String(x||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1')
  .replace(/&#x([0-9a-f]{1,6});/gi,(_,n)=>{const v=parseInt(n,16);return v>0&&v<=0x10ffff?String.fromCodePoint(v):''})
  .replace(/&(amp|lt|gt|quot|apos|nbsp);/gi,(_,n)=>({amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '}[n.toLowerCase()]||''));
 const clean=x=>decode(x).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
-const product=/\b(detector|detection|plagiarism|brandwell|contentatscale|undetectable|ai writer|ai writing tool|login|coupon|discount|jobs|careers)\b/i;
-const wrongProductIntent=(title,snippet,query)=>
- (product.test(title)||/\b(review|reviews)\b/i.test(title)&&/\b(tool|software|platform|product|brandwell)\b/i.test(title)||
-  /\b(ai detector|plagiarism detector|brandwell ai)\b/i.test(snippet))&&!product.test(query);
+const wrongProductIntent=(title,snippet,query)=>navDiffersFromQuery(title,query).length>0||
+ (/\b(reviews?|alternatives?|vs\.?|versus)\b/i.test(title)&&!/\b(reviews?|alternatives?|vs\.?|versus)\b/i.test(query));
 const infrastructure=/^(?:www\.)?(?:bing\.com|microsoft\.com|google\.com|youtube\.com|facebook\.com|instagram\.com|pinterest\.com|linkedin\.com)$/i;
 function parseBingRss(xml,{query='',ownUrl='',limit=7}={}){
  const raw=String(xml||'');

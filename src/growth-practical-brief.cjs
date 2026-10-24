@@ -1,4 +1,5 @@
 'use strict';
+const {differsFromQuery}=require('./growth-intent-signals.cjs');
 // Read-only working plan. Retains every legitimate evidence observation while
 // separating useful improvements from unrelated / historical search intents.
 const {terms,queryFit}=require('./growth-one-action-decision.cjs');
@@ -40,12 +41,14 @@ function classifyAllQueries({report,decision}){
 }
 function meaningfulCompetitorEvidence(report,focus){
  const list=report?.competitors?.live_reviewed||[],query=String(focus||'').toLowerCase();
- const otherProduct=/\b(detector|detection|plagiarism|brandwell|contentatscale|ai writer|ai writing tool)\b/i;
+ const otherProduct={test:t=>differsFromQuery(t,query).length>0};
  return list.map(item=>{
   const title=String(item.title||''),sample=[title,...(item.h1||[]),...(item.h2||[]).slice(0,10)].join(' ');
   // A quality-assurance section saying 'review before publishing' is NOT a
   // product-review SERP. Do not drop genuine editorial competitors for this verb.
-  const conflict=(otherProduct.test(sample)||(/\breviews?\b/i.test(title)&&/\b(tool|software|platform|product)\b/i.test(title)))&&!otherProduct.test(query);
+  // Primary intent = title + H1 only; modifier words in subsidiary H2s never reclassify a whole guide.
+  const primary=[title,...(item.h1||[])].join(' ');
+  const conflict=otherProduct.test(primary)||(/\breviews?\b/i.test(title)&&/\b(tool|software|platform|product)\b/i.test(title)&&!/\breviews?\b/i.test(query));
   const tokens=terms(query),observed=new Set(terms(sample)),matched=tokens.filter(x=>observed.has(x));
   return {url:item.url,title,read_at:item.retrieved_at||null,
    category:conflict?'DIFFERENT_SEARCH_INTENT':matched.length>=Math.min(2,tokens.length)?'TOPIC_ALIGNED_NEEDS_SERP_CHECK':'TOPIC_MATCH_NOT_ESTABLISHED',
@@ -86,7 +89,7 @@ function buildGrowthPracticalBrief({report,html=''}={}){
    requiring_separate_intent_review:competitors.length-matchedRivals.length,classification:competitors,
    comparison_questions:comparisonQuestions,side_by_side:sideBySide,
    warning:matchedRivals.length?'Matching terms are not proof of current SERP competition.':
-    'The saved competitor sample does not establish search competitors for this Growth action. Do not copy or benchmark against unrelated detector/review pages.'},
+    'The saved competitor sample does not establish search competitors for this Growth action. Do not copy or benchmark against unrelated review, comparison or pricing pages.'},
   content_section:section?{heading:section.heading,observed_excerpt:section.snippet,approx_observed_words:section.approx_words,source:'LIVE_OR_SAVED_HTML_EXCERPT'}:null,
   change:{type:alreadyHere?'REVIEW_AND_IMPROVE_EXISTING_SECTION':'PROPOSE_RELEVANT_SECTION_FOR_REVIEW',
    target_section:section?.heading||null,evidence_basis:next.metrics?'Exact-page GSC query + observed website section; this is not a proven SERP gap.':'Observed page topic without exact-page GSC metrics; no ranking or click assertions are made.',

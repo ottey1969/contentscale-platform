@@ -42,7 +42,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
    return {...base,decision:'NEW_DISTINCT_PAGE',verified_gap:true,gap_basis:'DIFFERENT_SEARCH_INTENT_AND_NO_COMPATIBLE_SAME_SITE_PAGE',
     reason:'Live results agree on a '+serpIntent.intent+' intent, but the selected page is '+(destinationIntent.class||'a different type')+'; no compatible same-site page was found.',
     distinct_intent_evidence:{serp:serpIntent.leads.slice(0,5),destination:destinationIntent},
-    new_page_plan:{working_query:query,facts_source_url:target,tasks:supported.slice(0,4).map(t=>({code:t.code,label:t.label,competitor_evidence:t.competitor_support.slice(0,2)})),
+    new_page_plan:{working_query:query,facts_source_url:target,tasks:supported.slice(0,4).map(t=>({code:t.code,label:t.label,match:t.match,competitor_evidence:t.competitor_support.slice(0,2)})),
      internal_links:{from:[target,report.url].filter(Boolean),anchor_policy:'Natural anchor inside a relevant existing paragraph; verify no duplicate link first.'}},
     evidence:supported.flatMap(evidenceFor).slice(0,6),
     next_action:'Owner reviews the new-page draft and the intent evidence; publication stays disabled.'};
@@ -68,7 +68,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   reason:'The existing page is a compatible destination, and '+chosen.length+' reader task(s) taught by independent competitors are '+
    chosen.map(t=>t.destination.status==='PARTIAL'?'only partly':'not').join('/')+' covered on it.',
   improvement_plan:{target_url:target,preserve:['existing title','existing H1','existing useful paragraphs','existing internal links'],
-   tasks:chosen.map(t=>({code:t.code,label:t.label,destination_status:t.destination.status,placement:t.placement,
+   tasks:chosen.map(t=>({code:t.code,label:t.label,match:t.match,destination_status:t.destination.status,placement:t.placement,
     competitor_evidence:t.competitor_support.slice(0,2),destination_evidence:t.destination.passages})),
    internal_links_to_review:linked.map(t=>({task:t.code,link_to:t.covered_elsewhere_on_site[0].url,reason:'Already taught there.'})),
    quality_conditions:['No numeric or factual claim that the destination page does not already state or the owner cannot verify.','Do not reproduce competitor wording.',

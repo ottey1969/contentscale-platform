@@ -15,7 +15,7 @@ function proposeHandoffFromResearch(report,canonicalUrl){
  const linkCandidates=(report.site_architecture?.candidates||[]);
  const scopedUrls=report.growth_decision?.primary_next_action?.related_pages_to_check;
  const eligibleUrls=Array.isArray(scopedUrls)?new Set(scopedUrls):null;
- const differentIntent=/\b(?:brandwell|detector|detection|review|pricing|alternatives)\b/i;
+ const differentIntent=require('./growth-intent-signals.cjs').OFF_INTENT_RE;
  const link=linkCandidates.find(x=>{
   try{
    const u=new URL(x.url),candidateIntent=[x.tracked_keyword||'',u.pathname.replace(/[\/_-]+/g,' ')].join(' ');
