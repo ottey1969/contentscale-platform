@@ -45,8 +45,10 @@ function classifyTitle(title,snippet=''){
  // Local service: an explicit local marker (near me, 'City, ST', ZIP) or a company/provider listing, never a state list.
  const cityState=/\b[A-Z][a-z]+(?: [A-Z][a-z]+)?,? (?:[A-Z]{2})\b(?! [a-z])/.test(raw)&&!/\b(?:AI|SEO|PDF|USA|FAQ|CEO|ROI|KPI|CMS|API)\b/.test(raw.match(/\b[A-Z][a-z]+(?: [A-Z][a-z]+)?,? [A-Z]{2}\b/)?.[0]||'');
  if(/\b(near me|nearby|free estimate|free quote|call now|serving|service area|open now|licensed and insured|same.?day service|emergency service)\b|\b\d{5}\b/.test(t)||cityState||/\b(contractors?|companies|company|providers?|installers?|specialists?)\b.{0,20}\b(in|near)\b/.test(t))return 'LOCAL_SERVICE';
- if(/\b(best|top \d+|reviews?|vs\.?|versus|alternatives?|compared|pricing|plans?)\b/.test(t))return 'COMMERCIAL_COMPARISON';
- if(/\b(what is|what are|how to|how do|how much|how long|how many|guide|tips|ways|steps|strateg(?:y|ies)|explained|everything you need|best practices|checklist|examples)\b|\b\d+ (?:tips|ways|steps|strategies|best practices)\b/.test(t))return 'INFORMATIONAL_GUIDE';
+ // A snippet often contains 'plans' or 'best' in passing; only the title decides comparison vs guide.
+ const tt=String(title||'').toLowerCase();
+ if(/\b(best|top \d+|reviews?|vs\.?|versus|alternatives?|compared|pricing|plans?)\b/.test(tt))return 'COMMERCIAL_COMPARISON';
+ if(/\b(what is|what are|how to|how do|how much|how long|how many|guide|tips|ways|steps|strateg(?:y|ies)|explained|everything you need|best practices|checklist|examples)\b|\b\d+ (?:tips|ways|steps|strategies|best practices)\b/.test(tt))return 'INFORMATIONAL_GUIDE';
  return 'UNCLASSIFIED';
 }
 function inferSerpIntent({query='',leads=[]}={}){
