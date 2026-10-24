@@ -21,10 +21,14 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  else if(coverage.destination_truncated||destination.own_html_truncated)
   missing.push({code:'COMPLETE_DESTINATION_HTML',detail:'The captured destination HTML was truncated, so absence of a task cannot be claimed.'});
  if(!sources)missing.push({code:'SERP_INTENT_EVIDENCE',detail:'Fewer than three non-discussion organic results agree on one search intent.'});
- if(readable<2)missing.push({code:'READABLE_COMPETITOR_ARTICLES',detail:'Fewer than two independent, complete, readable competitor articles were captured.'});
+ const cd=coverage.competitor_diagnostics||{};
+ if(readable<2||(cd.distinct_hosts!==undefined&&cd.distinct_hosts<2))missing.push({code:'READABLE_COMPETITOR_ARTICLES',
+  detail:'Fewer than two competitor articles on different sites yielded readable sections. Diagnostics: received '+(cd.received??'?')+', without HTML '+(cd.without_html??'?')+
+   ', no readable sections '+(cd.with_no_readable_sections??'?')+', used '+(cd.used??readable)+' ('+(cd.used_partial_capture??'?')+' cut at the fetch limit, which still counts as evidence of what they teach), distinct sites '+(cd.distinct_hosts??'?')+'.'});
  if(missing.length)return {...base,decision:'DATA_BLOCKED',blocker_code:missing[0].code,missing_evidence:missing,
   attempted_sources:attempts,reason:'Required evidence was not accessible: '+missing.map(x=>x.code).join(', ')+'.',
   next_action:'Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.'};
+ if((coverage.unverifiable_site_pages||[]).length)uncertainties.push('Same-site pages not fully readable ('+coverage.unverifiable_site_pages.length+'): a task could already be taught there beyond the captured part, so verify before publishing.');
  const supported=(coverage.tasks||[]).filter(t=>t.supported_by_competitors);
  facts.push({code:'SERP_INTENT',value:serpIntent.intent,agreeing_leads:serpIntent.agreeing_leads,of:serpIntent.organic_leads_considered});
  facts.push({code:'DESTINATION_INTENT',value:destinationIntent?.class||null,verdict:destinationIntent?.verdict||'UNVERIFIED'});

@@ -149,8 +149,15 @@ function pickPlacement(destSections,taskCode,tasks){
 function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',destination={},competitors=[],sitePages=[]}={}){
  const setName=chooseTaskSet(serpIntent),tasks=TASK_SETS[setName];
  const destBlocks=blocks(destination.html),destSections=groupSections(destBlocks);
- const usable=(Array.isArray(competitors)?competitors:[]).filter(c=>c&&c.url&&c.html&&c.truncated!==true);
- const compInfo=usable.map(c=>({url:c.url,host:host(c.url),sections:groupSections(blocks(c.html)).filter(s=>s.words>=40)}));
+ // Partial competitor captures can prove that a captured passage teaches a task, never that it is absent.
+ const received=Array.isArray(competitors)?competitors.filter(c=>c&&c.url):[];
+ const usable=received.filter(c=>c.html);
+ const compInfo=usable.map(c=>({url:c.url,host:host(c.url),partial:c.truncated===true,
+  sections:groupSections(blocks(c.html)).filter(s=>s.words>=40)})).filter(c=>c.sections.length);
+ const competitorDiagnostics={received:received.length,without_html:received.length-usable.length,
+  with_no_readable_sections:usable.length-compInfo.length,used:compInfo.length,
+  used_partial_capture:compInfo.filter(c=>c.partial).length,used_complete_capture:compInfo.filter(c=>!c.partial).length,
+  distinct_hosts:new Set(compInfo.map(c=>c.host)).size};
  const result=[];
  for(const [code,task] of Object.entries(tasks)){
   const support=[];
@@ -179,11 +186,13 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
    placement:status==='COVERED'?null:pickPlacement(destSections,code,tasks)});
  }
  const supported=result.filter(t=>t.supported_by_competitors);
- return {status:compInfo.length>=2?'READER_TASK_COVERAGE_OBSERVED':'INSUFFICIENT_READABLE_COMPETITORS',
+ return {status:compInfo.length>=2&&new Set(compInfo.map(c=>c.host)).size>=2?'READER_TASK_COVERAGE_OBSERVED':'INSUFFICIENT_READABLE_COMPETITORS',
   method:'ANCHORED_CONCEPT_GROUPS_ON_COMPLETE_CAPTURED_HTML_NOT_SEMANTIC_PROOF',
   task_set:setName,destination_url:destination.url||null,destination_truncated:destination.truncated===true,
   destination_sections:destSections.map(s=>({heading:s.heading,words:s.words})),
-  competitors_considered:compInfo.map(c=>({url:c.url,host:c.host,sections:c.sections.length})),
+  competitors_considered:compInfo.map(c=>({url:c.url,host:c.host,partial:c.partial,sections:c.sections.length})),
+  competitor_diagnostics:competitorDiagnostics,
+  unverifiable_site_pages:(Array.isArray(sitePages)?sitePages:[]).filter(p=>p&&p.url!==destination.url&&(p.truncated===true||!p.html)).map(p=>p.url),
   tasks:result,
   supported_task_codes:supported.map(t=>t.code),
   gap_task_codes:supported.filter(t=>t.destination.status!=='COVERED'&&!t.covered_elsewhere_on_site.length).map(t=>t.code),
