@@ -40,7 +40,7 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
    for(const e of (a.task.destination_evidence||[]).slice(0,1))
     evidence.push({source_url:gate.target_url,heading:e.heading||null,excerpt:String(e.text||'').slice(0,300),type:'OWN_PAGE'});
   }
-  return {status:'VERIFIED_IMPROVE_EXISTING',rejections,opportunity:{
+  return {status:'VERIFIED_IMPROVE_EXISTING',rejections,accepted_headings:accepted.map(a=>a.section.h2),opportunity:{
    verified:true,type:'IMPROVE_EXISTING',producer:'GROWTH_TASK_COVERAGE_PLUS_DRAFT_VALIDATION',
    focus_query:query,target_url:gate.target_url,
    target_section:first.task.placement?.section_heading||'(page start)',

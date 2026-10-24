@@ -83,16 +83,29 @@ function classifyDestinationIntent({query='',title='',h1=[],url='',serpIntent='M
 }
 
 
-const {deriveReaderTasks,destinationStatus,taskHitsInText}=require('./growth-derived-reader-tasks.cjs');
+const {deriveReaderTasks,destinationStatus,taskHitsInText,wordsOf}=require('./growth-derived-reader-tasks.cjs');
+// Page furniture is never a placement anchor: navigation, closing reading lists, FAQ and calls to action.
+const FURNITURE=/^(?:table of contents|contents|related(?: reading| posts| articles| content)?|further reading|read more|see also|sources?|references|faq|frequently asked|conclusion|summary|about(?: the author)?|share|comments?|newsletter|subscribe|contact|get started|book|want to|ready to|looking to|interested in)\b/i;
+const headClean=h=>String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
+const isFurniture=s=>s.heading==='(introduction)'||s.words<30||FURNITURE.test(headClean(s.heading));
 function pickPlacement(destSections,task,skip){
- const scored=destSections.map(s=>({s,h:taskHitsInText(task,s.heading+' '+s.text,skip)})).filter(x=>x.h.key>=1||x.h.co>=2).sort((a,b)=>(b.h.key+b.h.co)-(a.h.key+a.h.co));
- if(scored.length&&scored[0].h.key>=1)return {mode:'EXTEND_SECTION',section_heading:scored[0].s.heading,
-  reason:'This existing section already touches the task ('+scored[0].h.key+' mention(s) of its core concept); deepen it instead of adding a duplicate.'};
- const END=/\b(where to go next|next steps?|faq|frequently|conclusion|alternative|get started|contact|summary|sources?)\b/i;
- const body=destSections.filter(s=>s.words>=30&&!END.test(s.heading)&&s.heading!=='(introduction)');
- const anchor=body[body.length-1]||destSections.find(s=>s.words>=30)||destSections[0];
+ const body=destSections.filter(s=>!isFurniture(s));
+ // 1) the section already mentions the task's core concept: deepen it instead of adding a duplicate
+ const touching=body.map(s=>({s,h:taskHitsInText(task,s.heading+' '+s.text,skip)})).filter(x=>x.h.key>=1).sort((a,b)=>b.h.key-a.h.key)[0];
+ if(touching)return {mode:'EXTEND_SECTION',section_heading:touching.s.heading,
+  reason:'This existing section already mentions the task’s core concept ('+touching.h.key+'×); deepen it instead of adding a duplicate.'};
+ // 2) otherwise add it right after the existing section whose concepts are closest to what the competitors teach
+ const taskRoots=new Set(wordsOf(task.support.map(x=>x.heading+' '+x.excerpt).join(' '),skip));
+ const related=body.map(s=>({s,shared:[...new Set(wordsOf(s.heading+' '+s.text,skip))].filter(r=>taskRoots.has(r)&&r!==task.key)}))
+  .filter(x=>x.shared.length>=3).sort((a,b)=>b.shared.length-a.shared.length)[0];
+ if(related)return {mode:'ADD_AFTER_SECTION',section_heading:related.s.heading,
+  reason:'Closest existing section by shared concepts ('+related.shared.slice(0,4).join(', ')+'); the new section continues that explanation.'};
+ // 3) no related section: after the last instructional body section, never after closing or call-to-action blocks
+ const instructional=[...body].reverse().find(s=>/^(?:how|steps?|guide)\b/i.test(headClean(s.heading)));
+ const anchor=instructional||body[body.length-1];
  return anchor?{mode:'ADD_AFTER_SECTION',section_heading:anchor.heading,
-  reason:'No existing section teaches this task; add it after the last substantive body section and before any closing, FAQ or call-to-action block.'}:
+  reason:instructional?'No section is closely related; placed after the last instructional section and before closing, reading-list or call-to-action blocks.':
+   'No section is closely related; placed after the last substantive body section and before closing blocks.'}:
   {mode:'ADD_AFTER_SECTION',section_heading:null,reason:'No substantive destination section was readable.'};
 }
 
@@ -119,12 +132,15 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
    const st=destinationStatus(task,blocks(p.html),skip);
    if(st.status==='COVERED')elsewhere.push({url:p.url,heading:st.passages[0]?.heading||null,excerpt:st.passages[0]?.text.slice(0,260)||''});
   }
-  result.push({code:task.code,label:task.label,match:{key:task.key,co_terms:task.co_terms},
+  result.push({code:task.code,label:task.label,match:{key:task.key,co_terms:task.co_terms,concepts:task.concepts},
    supported_by_competitors:new Set(task.support.map(x=>x.host)).size>=2,
    independent_sources:new Set(task.support.map(x=>x.host)).size,competitor_support:task.support,
    destination:dest,covered_elsewhere_on_site:elsewhere.slice(0,2),
    placement:dest.status==='COVERED'?null:pickPlacement(destSections,task,skip)});
  }
+ const seenAnchor=new Map();
+ for(const t of result){if(!t.placement)continue;const k=t.placement.mode+'|'+t.placement.section_heading;
+  if(seenAnchor.has(k)){t.placement={...t.placement,reason:t.placement.reason+' Place it after the section proposed for “'+seenAnchor.get(k)+'”.'}}else seenAnchor.set(k,t.label)}
  const supported=result.filter(t=>t.supported_by_competitors);
  return {status:compInfo.length>=2&&new Set(compInfo.map(c=>c.host)).size>=2?'READER_TASK_COVERAGE_OBSERVED':'INSUFFICIENT_READABLE_COMPETITORS',
   method:'TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF',

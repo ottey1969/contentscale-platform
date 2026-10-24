@@ -75,7 +75,7 @@ test('local service: a sourced softening is applied and logged for the reviewer'
  const h=harness([soft]),r=await h.call(h.POST,'owner-token'),d=r.body.editorial_work_packet.editorial_decision;
  assert.equal(d.copy_ready,true,JSON.stringify(d.draft_rejections||d.copy_status));assert.match(d.proposed_text,/usually makes it easier/);
  assert.equal(d.safe_rewrites.length,1);assert.equal(d.safe_rewrites[0].changes[0].from,'always');
- assert.match(r.body.handoff_package.markdown,/Wording softened automatically/);
+ assert.match(r.body.handoff_package.markdown,/Wording changed automatically/);
 });
 
 test('a competitor answering HTTP 202 (accepted, not ready) is retried exactly once',async()=>{

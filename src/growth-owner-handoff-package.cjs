@@ -53,26 +53,34 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   L.push('','Agreement: '+report.serp_intent.agreeing_leads+' of '+report.serp_intent.organic_leads_considered+' → '+report.serp_intent.intent+'.','');
  }
  if(cov?.tasks?.length){
-  L.push('## Reader-task comparison','','Competitors read in full: '+(cov.competitors_considered||[]).map(c=>c.url).join(', ')+'.','',
+  L.push('## Reader-task comparison','','Competitor pages read: '+(cov.competitors_considered||[]).map(c=>c.url+(c.partial?' (captured partially, cut at the fetch limit; text before the cut is evidence, nothing after it is assumed)':' (captured completely)')).join('; ')+'.','',
    '| Reader task | Independent competitor sources | Your target page |','|---|---:|---|');
+  const verified=new Set((decision.improvement_plan?.tasks||[]).map(t=>t.code));
   for(const t of cov.tasks.filter(x=>x.independent_sources>0))
-   L.push('| '+t.label+' | '+t.independent_sources+' | '+t.destination.status.replace(/_/g,' ').toLowerCase()+(t.covered_elsewhere_on_site?.length?' (taught on '+t.covered_elsewhere_on_site[0].url+')':'')+' |');
+   L.push('| '+t.label+(verified.has(t.code)?' — **draft verified**':'')+' | '+t.independent_sources+' | '+t.destination.status.replace(/_/g,' ').toLowerCase()+(t.covered_elsewhere_on_site?.length?' (taught on '+t.covered_elsewhere_on_site[0].url+')':'')+' |');
   L.push('','Method: '+cov.method+'. A concept match is an observation, not proof of quality or ranking.','');
  }
  if(d==='IMPROVE_EXISTING'){
   const plan=decision.improvement_plan||{};
   L.push('## What changes where','','**Existing URL:** '+(decision.target_url||plan.target_url),'',
    '**Keep unchanged:** '+(plan.preserve||[]).join('; ')+'.','');
-  const items=[{task:(plan.tasks||[])[0],heading:decision.draft_heading,text:decision.proposed_text,placement:decision.placement},
+  const firstCode=(decision.draft_validation||[])[0]?.task;
+  const items=[{task:(plan.tasks||[]).find(t=>t.code===firstCode)||(plan.tasks||[])[0],heading:decision.draft_heading,text:decision.proposed_text,placement:decision.placement},
    ...(decision.additional_sections||[]).map(a=>({task:(plan.tasks||[]).find(t=>t.code===a.task),heading:a.heading,text:a.text,placement:a.placement}))];
   let n=1;
   for(const it of items){
    if(!it.text)continue;
    L.push('### Change '+n+++': '+(it.task?.label||it.heading),'',
-    '- **Placement:** '+((it.placement?.mode||'').replace(/_/g,' ').toLowerCase())+' — section “'+(it.placement?.section_heading||'(page start)')+'”',
+    '- **Placement:** '+(it.placement?.mode==='EXTEND_SECTION'?'extend the existing section':'add as a new section directly after')+' “'+(it.placement?.section_heading||'(page start)')+'”',
     '- **Why there:** '+(it.placement?.reason||''),
     '- **Add this H2:** '+it.heading,'','**Proposed text (fact-check before approval):**','',it.text,'');
    for(const ev of (it.task?.competitor_evidence||[]).slice(0,2))L.push('> Compared with '+ev.url+' (“'+ev.heading+'”): '+clip(ev.excerpt,160)+'…');
+   L.push('');
+  }
+  const rejectedRaw=(completion?.draft?.sections||[]).filter(s=>s.review_status==='REJECTED_NOT_PART_OF_PROPOSAL');
+  if(decision.copy_ready&&rejectedRaw.length){
+   L.push('**Generated but rejected (not part of the proposal, text omitted on purpose):**','');
+   for(const s of rejectedRaw)L.push('- “'+clip(s.h2,90)+'” — '+((s.rejection_reasons||[]).map(x=>x.code+(x.claim_violations?.length?' ('+x.claim_violations.join(', ')+')':'')).join('; ')||'did not pass the checks'));
    L.push('');
   }
   if(!decision.copy_ready){
@@ -84,8 +92,15 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
    L.push('');
   }
   if((decision.safe_rewrites||[]).length){
-   L.push('**Wording softened automatically (review each change):**','');
-   for(const w of decision.safe_rewrites)L.push('- “'+clip(w.before,140)+'” → “'+clip(w.after,140)+'”');
+   L.push('**Wording changed automatically (review each change):**','');
+   for(const w of decision.safe_rewrites){
+    if(w.after==='')L.push('- Removed an internal note that had leaked into the draft: “'+clip(w.before,110)+'…”');
+    else for(const c of w.changes){
+     const i=w.before.toLowerCase().indexOf(String(c.from).toLowerCase());
+     const ctx=i>=0?w.before.slice(Math.max(0,i-45),i+String(c.from).length+45):w.before;
+     L.push('- “…'+ctx.trim()+'…”: “'+c.from+'” → “'+c.to+'”');
+    }
+   }
    L.push('');
   }
  }
