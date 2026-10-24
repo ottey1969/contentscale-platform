@@ -43,8 +43,38 @@
    ' · Verified content gap: '+(outcome.verified_gap===true?'YES':'NO')+
    ' · Automatic publishing: DISABLED',primary);
   if(outcome.decision==='DATA_BLOCKED'){
-   node('p','Blocked evidence: '+String(outcome.blocker_code||'SPECIFIC_EVIDENCE_NOT_ESTABLISHED'),primary);
-   node('p','Required check: '+String(outcome.next_action||'Obtain missing readable source evidence.'),primary);
+   node('p','Missing evidence — what is needed and why:',primary);
+   var miss=node('ul',null,primary);
+   (outcome.missing_evidence||[{code:outcome.blocker_code||'SPECIFIC_EVIDENCE_NOT_ESTABLISHED',detail:outcome.next_action||''}])
+    .forEach(function(m){node('li',String(m.code)+' — '+String(m.detail||''),miss)});
+   if((outcome.attempted_sources||[]).length){
+    node('p','Automatic sources already tried:',primary);
+    var tried=node('ul',null,primary);
+    outcome.attempted_sources.forEach(function(a){node('li',String(a.source)+': '+String(a.status)+(a.detail?' ('+String(a.detail)+')':''),tried)});
+   }
+  }
+  if(outcome.decision==='NO_CHANGE'&&outcome.closure_report){
+   node('p','Closure report — nothing needs to change for the checked reader tasks:',primary);
+   var closed=node('ul',null,primary);
+   (outcome.closure_report.tasks_checked||[]).forEach(function(t){node('li',String(t.label)+' → '+String(t.destination_status).replace(/_/g,' ').toLowerCase(),closed)});
+   if(outcome.closure_report.note)node('small',String(outcome.closure_report.note),primary);
+  }
+  if(outcome.decision==='NEW_DISTINCT_PAGE'){
+   node('p','Distinct search intent verified: '+String(d.serp_intent?.intent||'')+' ('+String(d.serp_intent?.agreeing_leads||0)+' of '+String(d.serp_intent?.organic_leads_considered||0)+' organic results). No compatible same-site page was found.',primary);
+   if(outcome.new_page_draft){
+    node('h3','Proposed new page for review',primary);
+    outcome.new_page_draft.sections.forEach(function(sec){node('strong',sec.h2,primary);node('pre',sec.paragraphs.join('\n\n'),primary)});
+   }else node('p','Draft status: '+String(outcome.copy_status||'not available'),primary);
+  }
+  var pack=ownerReport&&d.handoff_package?.markdown;
+  if(pack){
+   var dlPack=node('button','Download owner package (.md)',primary);dlPack.type='button';
+   dlPack.addEventListener('click',function(){
+    var blob=new Blob([pack],{type:'text/markdown;charset=utf-8'});
+    var href=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=href;a.download='contentscale-growth-owner-package.md';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(href)},2000);
+   });
   }
   if(d.page_content?.render_status)
    node('p','Page capture: '+String(d.page_content.render_status),primary);
@@ -54,6 +84,7 @@
   if(ownerReport&&outcome.decision==='IMPROVE_EXISTING'&&outcome.proposed_text){
    node('h3','Concrete improvement for editorial review',primary);
    node('p','Existing section: '+String(outcome.target_section||'unspecified'),primary);
+   if(outcome.placement)node('p','Placement: '+String(outcome.placement.mode||'').replace(/_/g,' ').toLowerCase()+' — '+String(outcome.placement.reason||''),primary);
    if(outcome.existing_passage){node('strong','Existing observed passage',primary);node('pre',outcome.existing_passage,primary)}
    node('strong','Proposed replacement/addition — fact-check before approval',primary);
    node('pre',outcome.proposed_text,primary);

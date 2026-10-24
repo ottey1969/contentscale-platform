@@ -29,7 +29,7 @@ test('verified, protected Case Study gives a NO_CHANGE decision, not an invented
 test('insufficient comparisons returns explicit DATA_BLOCKED with source reason',()=>{
  const report={url,search:{focus_query:'roof repair'},growth_decision:{primary_next_action:{query:'roof repair'}}};
  const d=decideGrowthEditorialAction({report,destination:{target_url:url,status:'NO_COMPARABLE_COMPLETE_SECTIONS',comparisons:[]}});
- assert.equal(d.decision,'DATA_BLOCKED');assert.equal(d.blocker_code,'PAIRED_EVIDENCE_MISSING');
+ assert.equal(d.decision,'DATA_BLOCKED');assert.equal(d.blocker_code,'PAIRED_EVIDENCE_MISSING');assert.ok(d.missing_evidence.length&&Array.isArray(d.attempted_sources));
 });
 test('a verified edit must provide concrete factual text and source evidence',()=>{
  const report={url,search:{focus_query:'roof repair'},growth_decision:{primary_next_action:{query:'roof repair'}},verified_editorial_opportunity:{

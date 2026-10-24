@@ -12,7 +12,7 @@ function sourceFacts(html){
  }
  return {text:blocks.join('\n').slice(0,11000),count:blocks.length};
 }
-function normalizeDraft(value,sourceText,focusQuery=''){
+function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true}={}){
  let obj=value;
  if(typeof obj==='string'){
   try{obj=JSON.parse(obj.replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,'').trim())}
@@ -36,19 +36,19 @@ function normalizeDraft(value,sourceText,focusQuery=''){
  // SEO focus stays with the selected query, including the generated title.
  // Avoid attractive but unrelated brand-history / AI-tool angles on a scaling task.
  const focus=String(focusQuery||'').trim().toLocaleLowerCase('en');
- if(focus&&!title.toLocaleLowerCase('en').includes(focus))
+ if(requireTitle&&focus&&!title.toLocaleLowerCase('en').includes(focus))
   return {status:'AI_DRAFT_FOCUS_QUERY_MISSING_TITLE',draft:null};
- const generated=[title,description,...sections.flatMap(s=>[s.h2,...s.paragraphs])].join(' ');
+ const generated=(requireTitle?[title,description]:[]).concat(sections.flatMap(s=>[s.h2,...s.paragraphs])).join(' ');
  const num=/\b\d[\d,.%/-]*\b/g,known=new Set(String(sourceText).match(num)||[]);
  if((generated.match(num)||[]).some(v=>!known.has(v)))return {status:'AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED',draft:null};
  const risk=/\b(guaranteed|award.winning|best.rated|five.star|fully insured|certified technicians|same.day appointments)\b/gi;
  if((generated.match(risk)||[]).some(v=>!sourceText.toLowerCase().includes(v.toLowerCase())))
   return {status:'AI_DRAFT_UNSUPPORTED_CLAIM',draft:null};
- return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:title,meta_description:description,sections,
+ return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:requireTitle?title:null,meta_description:requireTitle?description:null,title_h1_preserved:!requireTitle,sections,
   editor_approved:false,needs_human_fact_check:true,source_scope:'OBSERVED_ORIGINAL_PAGE_ONLY',
   publication_allowed:false}};
 }
-async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[],gscContext=null}={},
+async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[],gscContext=null,readerTask=null}={},
  {apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite',fetchImpl=global.fetch}={}){
  let canonical;try{canonical=new URL(pageUrl)}catch{return {status:'INVALID_PAGE_URL',draft:null}}
  if(canonical.protocol!=='https:')return {status:'HTTPS_REQUIRED',draft:null};
@@ -69,6 +69,14 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   'GSC data about a DIFFERENT source URL does NOT describe this destination. Never copy source clicks, impressions, CTR, or positions onto the destination URL.',
   'Do NOT put GSC numbers, click-growth predictions, dates of measurement or claimed search rankings into public-facing draft copy. Use this data only as internal editorial planning context.',
   'Preserve strong existing search-intent coverage. Do not suggest a replacement title or H1 based on metrics of a different page.',
+  ...(readerTask?.mode==='SECTION_IMPROVEMENT'?[
+   'TASK MODE: SECTION_IMPROVEMENT. Write ONLY the missing reader task(s) listed here, each as its own H2 section with 2-4 paragraphs that a reader can act on: '+JSON.stringify(readerTask.tasks),
+   'Do not repeat anything the original page already teaches. Existing H2 headings (do not duplicate): '+JSON.stringify(readerTask.existing_headings||[]),
+   'Procedural how-to guidance is allowed; every statistic, date, named study, price or claim about the site owner must come from the original text. Do not output a title or meta description.'
+  ]:readerTask?.mode==='NEW_DISTINCT_PAGE'?[
+   'TASK MODE: NEW_DISTINCT_PAGE. The reader intent differs from the original page, so write 3-5 sections for a SEPARATE new page on the working query. The original text is the only factual source about the site owner; competitor passages are questions only.',
+   'Reader tasks to teach: '+JSON.stringify(readerTask.tasks)
+  ]:[]),
   'JSON: {"seo_title":"...","meta_description":"...","sections":[{"h2":"...","paragraphs":["...","..."]}]}',
   'Working topic, not verified ranking: '+String(focusQuery||'').slice(0,160),
   'OPTIONAL GSC EDITORIAL CONTEXT (database page-verified, not an article fact): '+JSON.stringify(gscContext?{
@@ -102,13 +110,14 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   };
   const raw=await request(prompt);
   if(raw===null)return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null};
-  let result=normalizeDraft(raw,source.text,focusQuery),repaired=false;
+  const normOpts={requireTitle:readerTask?.mode!=='SECTION_IMPROVEMENT'};
+  let result=normalizeDraft(raw,source.text,focusQuery,normOpts),repaired=false;
   // A factual rejection remains a rejection. Give the model one bounded
   // opportunity to rewrite without numbers; never silently delete claims.
   if(['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE'].includes(result.status)){
    const retry=await request(prompt+'\\nSTRICT RETRY: Your previous draft failed factual-number validation, topic alignment, or omitted the exact working focus query from the SEO title. Include the exact focus query in the SEO title, and rewrite every section so it clearly addresses the working search query; remove off-topic sections about unrelated AI citations or tools. Use no unsupported digits, numeric quantities, dates, numbered steps, rankings or performance claims. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.');
    if(retry!==null){
-    const checked=normalizeDraft(retry,source.text,focusQuery);
+    const checked=normalizeDraft(retry,source.text,focusQuery,normOpts);
     if(checked.status==='AI_DRAFT_REVIEW_REQUIRED'){result=checked;repaired=true}
    }
   }

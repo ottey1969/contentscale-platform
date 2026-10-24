@@ -16,6 +16,6 @@ test('No GSC does not erase international SEO focus or block observed destinatio
 test('Without GSC and without readable competitor passages, preserve topic but do not invent gap',()=>{
  const report={url:'https://contentscale.site/ai-content-detectors/',search:{focus_query:'ai content detectors'},growth_decision:{primary_next_action:{query:null,metrics:null}}};
  const d=decideGrowthEditorialAction({report,destination:{target_url:report.url,status:'NO_COMPARABLE_COMPLETE_SECTIONS',comparisons:[]}});
- assert.equal(d.focus_query,'ai content detectors');assert.equal(d.decision,'NEEDS_EVIDENCE');
+ assert.equal(d.focus_query,'ai content detectors');assert.equal(d.decision,'DATA_BLOCKED');
  assert.equal(d.publish_allowed,false);
 });

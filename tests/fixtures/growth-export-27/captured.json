@@ -1,0 +1,347 @@
+{
+ "_provenance": {
+  "source": "contentscale-growth-automatic-report (27).json, generated_at 2026-10-19T16:54:09.967Z",
+  "honesty": "Text below is copied verbatim from captured excerpts inside export 27. Excerpts are bounded (<=900 chars/section, 8 destination paragraphs). This is NOT the full live page and NOT a fake website; absence conclusions drawn from it describe the capture only.",
+  "reconstructed": [
+   "destination <h1> taken from the link text 'What Is Content at Scale in 2026?' on the sibling BrandWell page (not directly observed)",
+   "destination H2 structure unknown (not captured)"
+  ]
+ },
+ "tracked_page": {
+  "id": 2320,
+  "url": "https://contentscale.site/",
+  "case_study_locked": true,
+  "keyword": null
+ },
+ "destination": {
+  "id": 2298,
+  "url": "https://contentscale.site/content-at-scale/",
+  "h1": "What Is Content at Scale in 2026?",
+  "paragraphs": [
+   "What is content at scale? In 2026 it means content good enough to rank in Google and get cited by AI — not just volume. Content at scale used to be a simple promise: publish more, rank more. That promise broke. According to Search Engine Land (Semrush data, 2025) , AI Overviews now answer a large share of informational queries before a single organic result is clicked. This guide covers what content at scale actually means in 2026, why its definition chang",
+   "Sources: BrightEdge / Conductor, 2025 , Seer Interactive, 2025 , Semrush, 2025",
+   "Content at scale is the systematic production of high-quality content in large volumes — consistently and efficiently — so a brand stays visible across every channel and search surface. The phrase describes both an outcome (broad, durable visibility) and an operating model (a repeatable process rather than one-off articles).",
+   "In 2026, the definition carries an extra requirement. It is no longer enough to publish many pages; each page has to satisfy the quality signals Google and AI assistants reward — experience, expertise, search-intent match, accuracy, and freshness — so it can rank in traditional search and be cited in AI answers. Quality is measured per page, not by raw output.",
+   "Key Point: content at scale in 2026 = volume that does not sacrifice per-page quality. The moment quality drops to hit a word count or a publishing quota, it stops being content at scale and becomes content sprawl.",
+   "The meaning changed for one reason: volume became a commodity. The moment large language models could generate a long article on command, producing words at scale stopped being a competitive advantage. What remains scarce — and therefore valuable — is the research, authority, and quality measurement behind the words.",
+   "“Content itself is really not a USP in the age of AI because any LLM can now generate content at the touch of a button.”",
+   "That shift is also why the well-known AI content platform Content at Scale rebranded to BrandWell in August 2024 — the name implied a volume tool, and volume was no longer the point. BrandWell (formerly Content at Scale) now positions itself as an AI content detector and quality-verification platform. The full story of that rebrand, and the eight signals McCoy confirmed still drive rankings, is covered separately: Content at Scale Is Now BrandWell — What C",
+   "Step 1 — Audit before you add. In Google Search Console, find pages over 90 days old with impressions but near-zero clicks. Those are likely stale or competing with each other. Fix what you have before publishing anything new.",
+   "~35% higher CTR — brands cited inside AI Overviews earn about 35% higher organic click-through than brands that are not cited. ( Seer Interactive, 2025 )"
+  ],
+  "extra_passages_from_source_passages": 2
+ },
+ "gsc_homepage_rows": [
+  {
+   "query": "content at scale",
+   "impressions": 4667,
+   "clicks": 1159,
+   "position": 1.422112706235269,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "content scaling",
+   "impressions": 3943,
+   "clicks": 2,
+   "position": 12.724828810550342,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "content at scale ai detector",
+   "impressions": 1432,
+   "clicks": 234,
+   "position": 5.989525139664805,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "content scale",
+   "impressions": 866,
+   "clicks": 198,
+   "position": 1.4849884526558892,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "content at scale review",
+   "impressions": 620,
+   "clicks": 0,
+   "position": 13.624193548387098,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "content scale ai",
+   "impressions": 399,
+   "clicks": 118,
+   "position": 2.50125313283208,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "contentscale",
+   "impressions": 374,
+   "clicks": 37,
+   "position": 2.2459893048128343,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "contentatscale.ai",
+   "impressions": 342,
+   "clicks": 25,
+   "position": 5.821637426900585,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "contentscale ai detector",
+   "impressions": 290,
+   "clicks": 44,
+   "position": 2.1068965517241383,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "contentatscale",
+   "impressions": 259,
+   "clicks": 71,
+   "position": 2.1003861003861006,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "content at scale ai",
+   "impressions": 234,
+   "clicks": 67,
+   "position": 1.7735042735042734,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  },
+  {
+   "query": "ai content scale",
+   "impressions": 188,
+   "clicks": 5,
+   "position": 4.8563829787234045,
+   "imported_at": "2026-10-11T11:34:03.167Z"
+  }
+ ],
+ "primary_opportunity": {
+  "query": "content scaling",
+  "observed_impressions": 3943,
+  "observed_clicks": 2,
+  "observed_average_position": 12.724828810550342,
+  "observed_ctr_pct": 0.05,
+  "imported_at": "2026-10-11T11:34:03.167Z",
+  "actual_gsc_period": null,
+  "analysis": "Average ranking beyond the first page is a possible stronger limitation than snippet CTR; verify results by country and device."
+ },
+ "serp_leads": [
+  {
+   "url": "https://www.jasper.ai/blog/content-scaling",
+   "title": "Content Scaling: 7 Tips for Creating More High-Quality ...",
+   "snippet": "Content scaling refers to expanding your content creation process to produce high-quality content pieces quickly and efficiently.",
+   "source": "SERPER_GOOGLE_ORGANIC",
+   "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+   "query": "content scaling",
+   "serp_position": 1,
+   "geographic_scope": "US",
+   "search_language": "en"
+  },
+  {
+   "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+   "title": "Content Scaling: Everything You Need To Know",
+   "snippet": "A scaled content approach lets an organization produce high-quality, audience-targeted pieces at high volume without sacrificing personalization or brand voice.",
+   "source": "SERPER_GOOGLE_ORGANIC",
+   "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+   "query": "content scaling",
+   "serp_position": 2,
+   "geographic_scope": "US",
+   "search_language": "en"
+  },
+  {
+   "url": "https://www.textbroker.com/create-scalable-content",
+   "title": "Content Scaling to Boost Your Marketing Strategy for More ...",
+   "snippet": "Content scaling allows you to test different formats, topics, and strategies to identify what works best for new audiences. By creating various content at scale ...",
+   "source": "SERPER_GOOGLE_ORGANIC",
+   "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+   "query": "content scaling",
+   "serp_position": 3,
+   "geographic_scope": "US",
+   "search_language": "en"
+  },
+  {
+   "url": "https://www.reddit.com/r/SEO/comments/xegv5q/how_do_you_scale_content_creation/",
+   "title": "How do you scale content creation?",
+   "snippet": "",
+   "source": "SERPER_GOOGLE_ORGANIC",
+   "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+   "query": "content scaling",
+   "serp_position": 4,
+   "geographic_scope": "US",
+   "search_language": "en"
+  },
+  {
+   "url": "https://www.quora.com/How-can-you-scale-your-content-creation-effectively",
+   "title": "How can you scale your content creation effectively?",
+   "snippet": "",
+   "source": "SERPER_GOOGLE_ORGANIC",
+   "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+   "query": "content scaling",
+   "serp_position": 5,
+   "geographic_scope": "US",
+   "search_language": "en"
+  },
+  {
+   "url": "https://www.reddit.com/r/OutOfTheLoop/comments/5h367z/what_is_content_awareness_scale/",
+   "title": "What is Content Awareness Scale?",
+   "snippet": "",
+   "source": "SERPER_GOOGLE_ORGANIC",
+   "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+   "query": "content scaling",
+   "serp_position": 6,
+   "geographic_scope": "US",
+   "search_language": "en"
+  },
+  {
+   "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation",
+   "title": "Content scaling: 8 ways to create better content, (way) faster",
+   "snippet": "Choose the right tools for the job · 1) Project management tools · 2) Content calendar tools · 3) Analytics and performance tracking tools · 4) ...",
+   "source": "SERPER_GOOGLE_ORGANIC",
+   "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+   "query": "content scaling",
+   "serp_position": 7,
+   "geographic_scope": "US",
+   "search_language": "en"
+  }
+ ],
+ "competitor_sections": [
+  {
+   "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+   "heading": "Content Repurposing",
+   "excerpt": "Reusing and repurposing improves content return on investment (ROI) and expedites the scaling process. Traditional content distribution is linear, creating customized material for each platform and campaign. A repurposing strategy breaks down content into its components. Each piece combines content blocks marketers can reclaim, redesign, and compile for another campaign or channel."
+  },
+  {
+   "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+   "heading": "Agile Content Planning",
+   "excerpt": "Being agile is a project management methodology focusing on time-limited action phases, frequent hypothesis testing, and incremental improvements. Agile marketing has taken off among scalability-focused strategists, including those involved in content. Traditional content strategy development is a longer-term approach, requiring planners to schedule content far in advance. When scalability is the goal, brands need a more flexible approach. Agile content planning allows teams to adjust their course more frequently and plan based on results. The performance of one growth iteration will inform the next, enabling success to build on success."
+  },
+  {
+   "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+   "heading": "Measuring Content Scaling Success and ROI",
+   "excerpt": "Organizations must track the success of content-related campaigns from day one, using key performance indicators (KPIs) that show revenue and engagement effects ? not just the number of eyes on the page. Here are some common KPIs worth tracking: Click-through rate: The percentage of viewers who click the internal links in your content Bounce rate: The rate of viewers who leave within a few seconds of arriving on your page Conversions: How many people take a target action, such as purchasing or signing up for a mailing list KPIs may change as the brand’s marketing strategy grows and content plays a different role. Flexibility is key."
+  },
+  {
+   "url": "https://www.textbroker.com/create-scalable-content",
+   "heading": "Audits Are Critical to Content Scaling",
+   "excerpt": "The first step in an effective content scaling strategy is completing a thorough content audit . An audit involves taking inventory of your current content and identifying content gaps . If you haven’t completed a content audit in the last quarter, take some time to sit down and: Make a list of every piece of content you currently own Note where you’ve used each piece of content Record essential metrics for each piece of content (such as page hits) Make a list of any content pieces you need but don’t have yet When conducting your audit, keep in mind the scalably definition. This will help you identify the source materials you can use to scale content creation and the areas that require immediate attention to strengthen your scalable marketing strategy. This audit serves as the bedrock for developing an impactful content scaling plan."
+  },
+  {
+   "url": "https://www.textbroker.com/create-scalable-content",
+   "heading": "Personas Help Guide Your Marketing Strategy",
+   "excerpt": "Consistency is essential for a successful content scaling strategy. Your brand’s voice and style should remain similar across all platforms. The right style helps your customers connect with your content and builds brand confidence. Scalably creating content allows you to maintain consistency across all platforms, reinforcing your brand’s voice and style. That doesn’t mean you only have to work with one writer. When scaling content production, it’s best to have a style guide defining brand expectations and buyer personas. You’ll send agencies and writers this guide and a detailed job brief. Personas help writers produce better scalable content by: Making them understand what the target audience needs Clarifying the tone and style that you’re looking for Identifying relevant topics to cover when writing content that scales Buyer personas describe the characteristics of your target custome"
+  },
+  {
+   "url": "https://www.textbroker.com/create-scalable-content",
+   "heading": "Can I recycle or repurpose content?",
+   "excerpt": "Content scaling is all about working smarter, not harder. A great way to do this is through recycled or repurposed content. To get the most significant return on your investment, refreshing your existing content and creating new content into your content strategy is the way to go. What existing content can you update or give a fresh new take? What new topics can you address in several content pieces spread over multiple weeks or turn into entirely different content types (white papers, infographics, or videos) scalably? Consider these before writing everything from scratch."
+  }
+ ],
+ "sibling_pages": [
+  {
+   "url": "https://contentscale.site/content-at-scale-is-now-brandwell/",
+   "tracked_keyword": "content at scale is now brandwell",
+   "title": "Content At Scale Is Now BrandWell: Free Alternative Inside",
+   "h1": [
+    "Content at Scale Is Now BrandWell: What Changed in 2026"
+   ],
+   "h2": [
+    "Is Content at Scale Now BrandWell?",
+    "Why the Rebrand Happened",
+    "The 8 Signals That Still Drive Rankings",
+    "BrandWell vs ContentScale: What’s the Difference?",
+    "Where to Go Next",
+    "The Content at Scale Alternative: Score First, Then Engine",
+    "Make your content good enough to get cited"
+   ],
+   "observed_paragraphs": [
+    "If you searched for Content at Scale , BrandWell, or “Content at Scale is now BrandWell” and landed here, you’re not confused — the platform was renamed. This is the story of why a tool literally named after content volume walked away from that name, what its own president said on stage about it, and which ranking signals survived the shift. For the plain definition of the term itself, see What Is Content at Scale in 2026?",
+    "Yes. Content at Scale rebranded to BrandWell in August 2024. The product — an AI writing platform that generated long-form articles from a keyword — continued operating under the new name. If you have an old bookmark, an old invoice, or a half-remembered review for “Content at Scale,” it now points to BrandWell.",
+    "If you’re trying to place what you remember: the original Content at Scale was an AI content writer built around Julia McCoy’s CRAFT Framework — Cut the fluff, Review/edit/optimise, Add expertise, Fact-check, and Trust signals — paired with a built-in CopyScape plagiarism check so every draft came back verified original. People genuinely liked it; the AI writer was the product’s strongest feature, and CRAFT became a widely cited standard for editing AI-gen",
+    "The rename was not cosmetic. A company rarely abandons a category-defining, exact-match keyword in its own name unless the keyword has stopped describing where the value is. That is exactly what happened here.",
+    "Content at Scale is now BrandWell for one reason: when the company that built its name on producing content at volume no longer leads with it, volume is no longer where the advantage lives. The lesson is not “stop making content” — it is “make each page good enough to be cited.”",
+    "The GRAAF Framework builds directly on that lineage rather than replacing it: GRAAF is a 50-point quality foundation (Genuinely Credible, Relevant, Actionable, Accurate, Fresh), combined with the original 30-point CRAFT editing methodology and 20 points of technical SEO, for a 100-point ContentScore. See the full breakdown on the GRAAF Framework and CRAFT Framework pages.",
+    "The clearest explanation came from the platform’s own then-president, Julia McCoy, speaking at PubCon. Her point was blunt: in the age of AI, the content itself is no longer the differentiator.",
+    "“Content itself is really not a USP in the age of AI because any LLM can now generate content at the touch of a button.”"
+   ]
+  },
+  {
+   "url": "https://contentscale.site/content-at-scale/",
+   "tracked_keyword": "content at scale",
+   "title": "What Is Content At Scale In 2026? The New Definition",
+   "h1": [
+    "What Is Content at Scale in 2026? (And Why the Name Changed)"
+   ],
+   "h2": [
+    "What Is Content at Scale?",
+    "Why “Content at Scale” No Longer Means Volume",
+    "Why Did Content at Scale Rebrand to BrandWell?",
+    "How AI Engines Decide What to Cite",
+    "How to Do Content at Scale the Right Way in 2026",
+    "How to Start Today",
+    "The Free AI Citations Tracker: Verify You’re Actually Cited"
+   ]
+  }
+ ],
+ "site_overlap_risks": [
+  {
+   "url": "https://contentscale.site/content-at-scale/",
+   "keyword": "content at scale",
+   "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+   "verified_cannibalization": false
+  },
+  {
+   "url": "https://contentscale.site/content-scale-vs-content-at-scale/",
+   "keyword": "content scale vs content at scale",
+   "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+   "verified_cannibalization": false
+  }
+ ],
+ "export_state_for_comparison": {
+  "decision": "NEEDS_EVIDENCE",
+  "copy_ready": false,
+  "draft": null,
+  "report_completion": "RESEARCH_ONLY_NO_EDITORIAL_DRAFT"
+ },
+ "homepage": {
+  "title": "Content At Scale, Done Right — Free Quality Score Tracker",
+  "description": "Content at scale without the quality drop. Score any page free with the GRAAF Framework, track your AI citations Google rankings. Built by an SEO consultant.",
+  "h1": [
+   "Beyond Content at Scale Track Your AI Citations Rankings in 2026"
+  ],
+  "h2": [
+   "What is content at scale?",
+   "How do you scale content without losing quality or search visibility?",
+   "What can you do with a content scaling strategy?",
+   "What information should a content scaling workflow preserve?",
+   "When you are ready to measure a page, use the evidence-based tracker.",
+   "Writing a brand-new page? Get the exact brief before you write a word.",
+   "New here? Follow the 48-Hour Plan to get cited"
+  ],
+  "paragraphs": [
+   "Created by Ottmar J.G. Francisca · Independent SEO Consultant · Amsterdam",
+   "Based in Amsterdam 🇳🇱 — working with founders, SaaS teams and marketing leads across the Netherlands, EU, UK, United States, Canada, Australia New Zealand who want their pages to rank on Google and "
+  ]
+ },
+ "site_inventory_test_ids": {
+  "_note": "IDs other than 2298 are test-only placeholders; the export does not contain them.",
+  "rows": [
+   {
+    "id": 2298,
+    "url": "https://contentscale.site/content-at-scale/",
+    "keyword": "content at scale"
+   },
+   {
+    "id": 9001,
+    "url": "https://contentscale.site/content-at-scale-is-now-brandwell/",
+    "keyword": "content at scale is now brandwell"
+   },
+   {
+    "id": 9002,
+    "url": "https://contentscale.site/content-scale-vs-content-at-scale/",
+    "keyword": "content scale vs content at scale"
+   }
+  ]
+ }
+}

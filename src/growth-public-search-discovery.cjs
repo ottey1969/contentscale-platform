@@ -85,6 +85,8 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7}={}){
  }
  return leads;
 }
+// Serper.dev is the only paid Google-organic provider for Growth (product rule). Growth reads ONLY SERPER_API_KEY;
+// SERPAPI_KEY is never used as a fallback, even though other tracker code paths still accept it.
 async function optionalGoogleOrganicDiscovery({query,ownUrl,fetchImpl=global.fetch,key=process.env.SERPER_API_KEY,now=new Date()}={}){
  const term=String(query||'').trim(),available=String(key||'').trim();
  if(!term||term.length>100||!/^[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/-]*$/u.test(term))
@@ -114,38 +116,6 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,fetchImpl=global.fet
    source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  }
 }
-// Canonical paid fallback: SerpAPI only. The legacy Serper.dev helper above
-// remains for compatibility tests, but is never used by the default route.
-async function optionalSerpApiOrganicDiscovery({query,ownUrl,fetchImpl=global.fetch,key=process.env.SERPAPI_KEY||process.env.SERPAPI_API_KEY,now=new Date()}={}){
- const term=String(query||'').trim(),available=String(key||'').trim();
- if(!term||term.length>100||!/^[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/-]*$/u.test(term))
-  return {status:'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query:term};
- if(!available)return {status:'OPTIONAL_PROVIDER_NOT_CONFIGURED',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query:term};
- if(typeof fetchImpl!=='function')return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query:term};
- try{
-  const url=new URL('https://serpapi.com/search.json');
-  for(const [k,v] of Object.entries({engine:'google',q:term,gl:'us',hl:'en',num:'10',api_key:available}))
-   url.searchParams.set(k,v);
-  const response=await fetchImpl(url.toString(),{signal:AbortSignal.timeout(10000)});
-  if(!response.ok)return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'HTTP_'+response.status,
-   source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query:term};
-  const payload=await response.json();
-  if(payload?.error||!Array.isArray(payload?.organic_results))
-   return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR',
-    source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query:term};
-  const organic=payload.organic_results.map(x=>({title:x.title,link:x.link,snippet:x.snippet,position:x.position}));
-  const leads=parseSerperGoogleOrganic({organic},{query:term,ownUrl,limit:7})
-   .map(x=>({...x,source:'SERPAPI_GOOGLE_ORGANIC'}));
-  return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',
-   source:'SERPAPI_GOOGLE_ORGANIC',leads,query:term,checked_at:new Date(now).toISOString(),
-   scope:{country:'us',language:'en',source:'Google organic results through configured SerpAPI'},
-   warning:'Observed US/English search results are not the tracked page ranking or proof of click gains. SerpAPI is the only supported paid Growth discovery provider.'};
- }catch(e){
-  return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',
-   reason:String(e?.name==='TimeoutError'?'TIMEOUT':e?.code||'FETCH_FAILED').slice(0,70),
-   source:'SERPAPI_GOOGLE_ORGANIC',leads:[],query:term};
- }
-}
 async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
  fetchFree=discoverGrowthCompetitors,fetchGoogle=optionalGoogleOrganicDiscovery,now=new Date()}={}){
  // Avoid a paid provider call whenever the free public feed returned relevant
@@ -168,5 +138,5 @@ async function discoverGrowthCompetitorsWithFallback({query,ownUrl,
    ' Optional Google organic lookup: '+google.status+'. No competitor ranking or content gap is inferred from a missing response.'};
 }
 module.exports={discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,
- optionalGoogleOrganicDiscovery,optionalSerpApiOrganicDiscovery,parseSerperGoogleOrganic,parseBingRss,clean};
+ optionalGoogleOrganicDiscovery,parseSerperGoogleOrganic,parseBingRss,clean};
 
