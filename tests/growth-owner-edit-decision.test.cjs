@@ -4,7 +4,7 @@ const assert=require('node:assert/strict');
 const {decideOwnerGrowthEdit}=require('../src/growth-owner-edit-decision.cjs');
 const url='https://roof.example/leak-repair/';
 const report={url,case_study_locked:false,
- editorial_decision_gate:{decision:'NEEDS_EVIDENCE',focus_query:'roof leak repair',facts:[],uncertainties:[],evidence:[]},
+ editorial_decision_gate:{decision:'DATA_BLOCKED',focus_query:'roof leak repair',facts:[],uncertainties:[],evidence:[]},
  destination_section_comparison:{target_url:url,comparisons:[{
   competitor_url:'https://other.example/leaks',competitor_heading:'Roof leak inspection',
   competitor_excerpt:'Inspect the water entry point and affected roofing materials before selecting a repair. Identify obvious signs and discuss limits.',
@@ -26,13 +26,13 @@ test('reviewable source-backed improvement does not claim a proven gap or publis
 });
 test('Case Study locked rejects automatic changes even with a complete source-backed draft',()=>{
  const r=decideOwnerGrowthEdit({report:{...report,case_study_locked:true},completion});
- assert.equal(r.decision,'NEEDS_EVIDENCE');
+ assert.equal(r.decision,'DATA_BLOCKED');
  assert.equal(r.copy_ready,false);
  assert.equal(r.publish_allowed,false);
 });
 test('no peer evidence or invented draft cannot be passed as a validated improvement',()=>{
  const r=decideOwnerGrowthEdit({report:{...report,destination_section_comparison:{target_url:url,comparisons:[]}},completion});
- assert.equal(r.decision,'NEEDS_EVIDENCE');assert.equal(r.copy_ready,false);
+ assert.equal(r.decision,'DATA_BLOCKED');assert.equal(r.copy_ready,false);
  const a=decideOwnerGrowthEdit({report,completion:{...completion,draft:{sections:[{h2:'Placeholder',paragraphs:['Too short']}]}}});
  assert.equal(a.copy_ready,false);
 });

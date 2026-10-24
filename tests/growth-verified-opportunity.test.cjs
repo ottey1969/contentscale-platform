@@ -60,7 +60,7 @@ test('new page needs both distinct-intent and overlap flags even from the produc
  const thin=produceVerifiedEditorialOpportunity({report:{editorial_decision_gate:g,reader_task_coverage:{}},completion:{target_url:T,draft:{sections:[secs[0]]}},sources:{}});
  assert.equal(thin.opportunity,null);
 });
-test('NO_CHANGE and NEEDS_EVIDENCE never request copy',()=>{
- for(const d of ['NO_CHANGE','NEEDS_EVIDENCE'])
+test('NO_CHANGE and DATA_BLOCKED never request copy',()=>{
+ for(const d of ['NO_CHANGE','DATA_BLOCKED'])
   assert.equal(produceVerifiedEditorialOpportunity({report:{editorial_decision_gate:{decision:d,focus_query:'q'}},completion:good,sources:src}).opportunity,null);
 });

@@ -70,11 +70,11 @@ function decideFromEvidence({report,completion,base,sources}){
    proposed_text:usable.map(s=>'## '+s.h2+'\n\n'+validParagraphs(s).join('\n\n')).join('\n\n'),
    next_action:'Review the new-page draft, the intent evidence and the internal-link plan; approve before any CMS handoff.'};
  }
- // NO_CHANGE and NEEDS_EVIDENCE are final: no copy is forced.
- return {...base,...common,copy_ready:false,copy_status:base.decision==='NO_CHANGE'?'NOT_REQUIRED_NO_CHANGE':'NOT_AVAILABLE_NEEDS_EVIDENCE'};
+ // NO_CHANGE and DATA_BLOCKED are final: no copy is forced.
+ return {...base,...common,copy_ready:false,copy_status:base.decision==='NO_CHANGE'?'NOT_REQUIRED_NO_CHANGE':'NOT_AVAILABLE_DATA_BLOCKED'};
 }
 function decideOwnerGrowthEdit({report={},completion={},sources={}}={}){
- const base=report.editorial_decision_gate||{decision:'NEEDS_EVIDENCE',facts:[],uncertainties:[],evidence:[]};
+ const base=report.editorial_decision_gate||{decision:'DATA_BLOCKED',facts:[],uncertainties:[],evidence:[]};
  if(report.reader_task_coverage)return decideFromEvidence({report,completion,base,sources});
  const rows=report.destination_section_comparison?.comparisons||[];
  const pair=rows.find(x=>x.match_status==='POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED'&&

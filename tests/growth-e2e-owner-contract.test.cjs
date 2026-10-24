@@ -137,9 +137,9 @@ test('NO_CHANGE is reachable with evidence and makes no provider call (synthetic
  assert.match(b.handoff_package.markdown,/Closure report/);
 });
 
-test('NEEDS_EVIDENCE names what is missing and which automatic sources were already tried',async()=>{
+test('DATA_BLOCKED names what is missing and which automatic sources were already tried',async()=>{
  const h=harness({leads:[]}),r=await h.invoke(h.POST,'owner-token'),d=r.body.editorial_decision_gate;
- assert.equal(d.decision,'NEEDS_EVIDENCE');
+ assert.equal(d.decision,'DATA_BLOCKED');
  assert(d.missing_evidence.some(x=>x.code==='SERP_INTENT_EVIDENCE'));
  assert(['TARGET_STATIC_HTML','SEARCH_PROVIDERS','COMPETITOR_HTML_FETCH'].every(s=>d.attempted_sources.some(a=>a.source===s)));
  assert.equal(h.providerCalls.length,0);assert.match(r.body.handoff_package.markdown,/Automatic sources already tried/);

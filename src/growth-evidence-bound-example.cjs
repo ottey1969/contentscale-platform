@@ -19,7 +19,7 @@ function buildGrowthEvidenceExample({report={},decision={},destinationGscRows=[]
  if(!sourceUrl||!targetUrl)return {...base,reason:'Valid source and destination URLs are required to isolate GSC evidence.'};
  if(!query||!target||!Number.isFinite(impressions)||impressions<=0||!Number.isFinite(clicks)||clicks<0||clicks>impressions||
   !Number.isFinite(position)||position<=0)return {...base,reason:'Exact-page impressions, clicks, position and confirmed target are required.'};
- if(!['NEEDS_EVIDENCE','DATA_BLOCKED','NO_CHANGE','IMPROVE_EXISTING','NEW_DISTINCT_PAGE'].includes(decision.decision))
+ if(!['DATA_BLOCKED','NO_CHANGE','IMPROVE_EXISTING','NEW_DISTINCT_PAGE'].includes(decision.decision))
   return {...base,reason:'Unrecognized editorial decision; do not invent a content task.'};
  if(sourceUrl&&targetUrl&&sourceUrl!==targetUrl&&!exactDestinationRow)return {...base,status:'DESTINATION_GSC_EVIDENCE_REQUIRED',reason:'Query metrics describe the tracked source page, not the proposed editorial destination.',source_metrics_url:report.url,target_metrics_url:target,one_next_action:'Exact destination GSC is needed only for destination-specific click/ranking claims. Continue HTML-based competitor research and owner-reviewed drafting without GSC.',non_gsc_editorial_draft_allowed:true};
  // The GSC measurement window was not supplied; never present these counts as timeless or recent.

@@ -137,7 +137,7 @@ async function testRoutes(){
  assert.equal(finished.statusCode,200);
  assert.equal(finished.body.success,true);
  // No live SERP intent and no readable competitors in this scenario: the decision is an honest
- // NEEDS_EVIDENCE, no provider call is made and no generic copy is forced.
+ // DATA_BLOCKED, no provider call is made and no generic copy is forced.
  assert.equal(finished.body.editorial_review_draft.status,'NOT_REQUIRED_FOR_DECISION');
  assert.equal(finished.body.editorial_review_draft.draft,null);
  assert.equal(finished.body.access.can_edit,true);
@@ -146,14 +146,14 @@ async function testRoutes(){
  assert.equal(finished.body.editorial_work_packet.evidence_verified,false);
  assert.equal(finished.body.editorial_review_draft.published,false);
  assert.equal(finished.body.editorial_review_draft.case_study_unchanged,true);
- assert.equal(finished.body.editorial_decision_gate.decision,'NEEDS_EVIDENCE');
+ assert.equal(finished.body.editorial_decision_gate.decision,'DATA_BLOCKED');
  const codes=finished.body.editorial_decision_gate.missing_evidence.map(x=>x.code);
  assert(codes.includes('SERP_INTENT_EVIDENCE')&&codes.includes('READABLE_COMPETITOR_ARTICLES'),'exact missing evidence is named');
  assert(finished.body.editorial_decision_gate.attempted_sources.some(x=>x.source==='SEARCH_PROVIDERS'),'attempted automatic sources are listed');
- assert.equal(finished.body.report_completion.status,'NEEDS_EVIDENCE_REPORT');
+ assert.equal(finished.body.report_completion.status,'DATA_BLOCKED_REPORT');
  assert.equal(finished.body.report_completion.copy_ready,false);
  assert.match(finished.body.handoff_package.markdown,/Missing evidence/);
- assert.equal(ownerDraftCalls,0,'a NEEDS_EVIDENCE outcome must not spend a provider call');
+ assert.equal(ownerDraftCalls,0,'a DATA_BLOCKED outcome must not spend a provider call');
  assert.equal(calls.length,2,'Combined owner completion should reuse cached research rather than repeat search costs');
  const unmodified=await invoke(api);
  assert.equal(unmodified.body.editorial_review_draft.status,'RESEARCH_ONLY_OWNER_COMPLETION_NOT_RUN',

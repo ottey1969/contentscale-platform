@@ -35,14 +35,14 @@
   var outcome=ownerReport&&d.editorial_work_packet?.editorial_decision?
    d.editorial_work_packet.editorial_decision:(d.editorial_decision_gate||{});
   var primary=section('Growth result · decision and evidence');
-  node('h3',String(outcome.decision||'NEEDS_EVIDENCE').replace(/_/g,' '),primary);
+  node('h3',String(outcome.decision||'DATA_BLOCKED').replace(/_/g,' '),primary);
   node('p',String(outcome.reason||outcome.next_action||'A verified editorial decision was not available.'),primary);
   if(outcome.target_url){var chosen=node('p','Target page: ',primary);link(outcome.target_url,outcome.target_url,chosen)}
   node('p','Focus query: '+String(outcome.focus_query||d.intent_resolution?.query||d.search?.focus_query||'not verified'),primary);
   node('small','Decision scope: '+String(outcome.decision_scope||'OBSERVED_RESEARCH_ONLY')+
    ' · Verified content gap: '+(outcome.verified_gap===true?'YES':'NO')+
    ' · Automatic publishing: DISABLED',primary);
-  if(outcome.decision==='NEEDS_EVIDENCE'||outcome.decision==='DATA_BLOCKED'){
+  if(outcome.decision==='DATA_BLOCKED'){
    node('p','Missing evidence — what is needed and why:',primary);
    var miss=node('ul',null,primary);
    (outcome.missing_evidence||[{code:outcome.blocker_code||'SPECIFIC_EVIDENCE_NOT_ESTABLISHED',detail:outcome.next_action||''}])

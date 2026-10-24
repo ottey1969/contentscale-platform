@@ -33,7 +33,7 @@ function planInternalLinks({targetUrl='',focusQuery='',pages=[]}={}){
 }
 
 function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=[]}={}){
- const L=[],d=decision.decision||'NEEDS_EVIDENCE';
+ const L=[],d=decision.decision||'DATA_BLOCKED';
  const g=report.destination_gsc_evidence||{};
  L.push('# ContentScale Growth — owner review package','',
   '| | |','|---|---|',
@@ -91,7 +91,7 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   if(decision.closure_report?.note)L.push('',decision.closure_report.note);
   L.push('');
  }
- if(d==='NEEDS_EVIDENCE'){
+ if(d==='DATA_BLOCKED'){
   L.push('## Missing evidence','');
   for(const m of decision.missing_evidence||[])L.push('- **'+m.code+':** '+m.detail);
   L.push('','### Automatic sources already tried','');

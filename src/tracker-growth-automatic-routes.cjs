@@ -301,7 +301,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   let completion;
   const gateDecision=report.editorial_decision_gate?.decision;
   const gate=report.editorial_decision_gate||{};
-  if(['NO_CHANGE','NEEDS_EVIDENCE'].includes(gateDecision)){
+  if(['NO_CHANGE','DATA_BLOCKED'].includes(gateDecision)){
    // Final outcomes: no provider call and no forced copy.
    completion={...base,status:'NOT_REQUIRED_FOR_DECISION',decision:gateDecision,draft:null,error_code:null};
   }else if(!Number.isSafeInteger(targetId)||targetId<1){
@@ -395,7 +395,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    verified_opportunity_status:{producer:'GROWTH_VERIFIED_OPPORTUNITY_PRODUCER',status:produced.status,rejections:produced.rejections,verified:!!produced.opportunity},
    report_completion:{status:
      completeDecision.decision==='NO_CHANGE'?'NO_CHANGE_CLOSURE_REPORT':
-     completeDecision.decision==='NEEDS_EVIDENCE'?'NEEDS_EVIDENCE_REPORT':
+     completeDecision.decision==='DATA_BLOCKED'?'DATA_BLOCKED_REPORT':
      completeDecision.copy_ready===true?(completeDecision.decision==='NEW_DISTINCT_PAGE'?'NEW_PAGE_DRAFT_FOR_OWNER_REVIEW':'CONCRETE_EDIT_FOR_OWNER_REVIEW'):
      'RESEARCH_COMPLETE_DRAFT_NOT_READY',
     evidence_gate:completeDecision.decision||'UNVERIFIED',

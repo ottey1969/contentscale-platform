@@ -22,7 +22,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   missing.push({code:'COMPLETE_DESTINATION_HTML',detail:'The captured destination HTML was truncated, so absence of a task cannot be claimed.'});
  if(!sources)missing.push({code:'SERP_INTENT_EVIDENCE',detail:'Fewer than three non-discussion organic results agree on one search intent.'});
  if(readable<2)missing.push({code:'READABLE_COMPETITOR_ARTICLES',detail:'Fewer than two independent, complete, readable competitor articles were captured.'});
- if(missing.length)return {...base,decision:'NEEDS_EVIDENCE',blocker_code:missing[0].code,missing_evidence:missing,
+ if(missing.length)return {...base,decision:'DATA_BLOCKED',blocker_code:missing[0].code,missing_evidence:missing,
   attempted_sources:attempts,reason:'Required evidence was not accessible: '+missing.map(x=>x.code).join(', ')+'.',
   next_action:'Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.'};
  const supported=(coverage.tasks||[]).filter(t=>t.supported_by_competitors);
@@ -47,7 +47,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  const gaps=supported.filter(t=>t.destination.status!=='COVERED'&&!(t.covered_elsewhere_on_site||[]).length);
  const linked=supported.filter(t=>t.destination.status!=='COVERED'&&(t.covered_elsewhere_on_site||[]).length);
  if(!supported.length)
-  return {...base,decision:'NEEDS_EVIDENCE',blocker_code:'SHARED_COMPETITOR_REQUIREMENTS',missing_evidence:[{code:'SHARED_COMPETITOR_REQUIREMENTS',
+  return {...base,decision:'DATA_BLOCKED',blocker_code:'SHARED_COMPETITOR_REQUIREMENTS',missing_evidence:[{code:'SHARED_COMPETITOR_REQUIREMENTS',
    detail:'No reader task was taught by two independent competitor articles, so there is no shared requirement to compare.'}],attempted_sources:attempts,
    reason:'Competitor pages were read but share no common reader task.',next_action:'Add more readable competitor articles for the same query, or accept the page as is.'};
  if(!gaps.length)
@@ -106,7 +106,7 @@ function decideGrowthEditorialAction({report={},destination={},coverage=null,ser
   gsc_optional:true,exact_page_query_metrics_verified:!!action.metrics,
   evidence_count:comparisons.length,facts,uncertainties,evidence};
  if(query)facts.push({code:'TOPIC_SELECTED',value:query,source:action.query?'PAGE_VERIFIED_GSC_OR_TRACKED_TOPIC':'TRACKED_PAGE_TOPIC'});
- const fail=(reason,code)=>({...base,decision:'NEEDS_EVIDENCE',reason,blocker_code:code,missing_evidence:[{code,detail:reason}],attempted_sources:attemptsList,
+ const fail=(reason,code)=>({...base,decision:'DATA_BLOCKED',reason,blocker_code:code,missing_evidence:[{code,detail:reason}],attempted_sources:attemptsList,
   next_action:'Resolve the named source or intent blocker; do not create text without matching evidence.'});
  if(!query)return fail('No meaningful page topic was selected.','TOPIC_NOT_RESOLVED');
  if(coverage)return decideFromCoverage({base,report,destination,coverage,serpIntent,destinationIntent,attempts:attemptsList,query,target,protection,protectedQueries,fail});
@@ -150,7 +150,7 @@ function decideGrowthEditorialAction({report={},destination={},coverage=null,ser
  // Lexical overlap proves neither completeness nor an absent answer.
  // Keep a factual recommendation without pretending to have verified an edit.
  uncertainties.push('Paired passages have lexical overlap but substantive user-task sufficiency has not been verified.');
- return {...base,decision:'NEEDS_EVIDENCE',blocker_code:'SUBSTANTIVE_GAP_NOT_VERIFIED',missing_evidence:[{code:'SUBSTANTIVE_GAP_NOT_VERIFIED',detail:'Paired passages overlap lexically but no reader task was verified.'}],attempted_sources:attemptsList,
+ return {...base,decision:'DATA_BLOCKED',blocker_code:'SUBSTANTIVE_GAP_NOT_VERIFIED',missing_evidence:[{code:'SUBSTANTIVE_GAP_NOT_VERIFIED',detail:'Paired passages overlap lexically but no reader task was verified.'}],attempted_sources:attemptsList,
   reason:'Relevant sections were compared, but no supported new fact or reader task has been established.',
   next_action:'Verify one distinct unanswered reader task with sourced supporting material or explicitly decide NO_CHANGE.',
   strongest_comparison:{own_heading:reliable[0].nearest_existing_section.heading,

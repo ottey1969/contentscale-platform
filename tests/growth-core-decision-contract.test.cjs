@@ -26,10 +26,10 @@ test('verified, protected Case Study gives a NO_CHANGE decision, not an invented
  const d=decideGrowthEditorialAction({report,destination:compare});
  assert.equal(d.decision,'NO_CHANGE');assert.equal(d.publish_allowed,false);
 });
-test('insufficient comparisons returns explicit NEEDS_EVIDENCE with source reason',()=>{
+test('insufficient comparisons returns explicit DATA_BLOCKED with source reason',()=>{
  const report={url,search:{focus_query:'roof repair'},growth_decision:{primary_next_action:{query:'roof repair'}}};
  const d=decideGrowthEditorialAction({report,destination:{target_url:url,status:'NO_COMPARABLE_COMPLETE_SECTIONS',comparisons:[]}});
- assert.equal(d.decision,'NEEDS_EVIDENCE');assert.equal(d.blocker_code,'PAIRED_EVIDENCE_MISSING');assert.ok(d.missing_evidence.length&&Array.isArray(d.attempted_sources));
+ assert.equal(d.decision,'DATA_BLOCKED');assert.equal(d.blocker_code,'PAIRED_EVIDENCE_MISSING');assert.ok(d.missing_evidence.length&&Array.isArray(d.attempted_sources));
 });
 test('a verified edit must provide concrete factual text and source evidence',()=>{
  const report={url,search:{focus_query:'roof repair'},growth_decision:{primary_next_action:{query:'roof repair'}},verified_editorial_opportunity:{
@@ -46,5 +46,5 @@ test('unverified new pages are blocked',()=>{
   verified:false,focus_query:'roof repair',target_url:url,type:'NEW_DISTINCT_PAGE'
  }};
  const d=decideGrowthEditorialAction({report,destination:compare});
- assert.equal(d.decision,'NEEDS_EVIDENCE');
+ assert.equal(d.decision,'DATA_BLOCKED');
 });
