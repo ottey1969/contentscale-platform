@@ -365,10 +365,17 @@
     node('h3','Draft proposal — editorial review required',output);
     if(draft.seo_title)node('p','Suggested title (do not replace a strong ranking title automatically): '+draft.seo_title,output);
     if(draft.meta_description)node('p','Suggested description: '+draft.meta_description,output);
-    draft.sections.forEach(function(section){
+    // Only sections that passed the checks are presented as a proposal. Rejected provider text is never rendered or copied.
+    var acceptedSections=draft.sections.filter(function(sec){return sec.review_status!=='REJECTED_NOT_PART_OF_PROPOSAL'});
+    var rejectedSections=draft.sections.filter(function(sec){return sec.review_status==='REJECTED_NOT_PART_OF_PROPOSAL'});
+    acceptedSections.forEach(function(section){
      node('h3',section.h2,output);
      (section.paragraphs||[]).forEach(p=>node('p',p,output));
     });
+    if(rejectedSections.length){
+     node('strong','Generated but rejected — NOT part of the proposal (text withheld):',output);
+     rejectedSections.forEach(function(sec){node('p','• '+String(sec.h2)+' — '+(sec.rejection_reasons||[]).map(function(x){return String(x.code)}).join(', '),output)});
+    }
     node('small','Only source-supported facts may be published after verification. Preserve original H1, existing useful content, images and URL. No auto publishing.',output);
     var content=['# Growth editorial proposal — not published','',
      'Original URL: '+String(result.target_url||''),'Source: '+String(result.source_type||'UNKNOWN'),
@@ -376,7 +383,7 @@
      'Chosen Growth query: '+String(recommendation?.query||plan.focus_query||''),
      'Case Study locked: '+(d.case_study_locked?'YES':'NO'),'', 'Suggested SEO title: '+String(draft.seo_title||''),
      'Suggested description: '+String(draft.meta_description||''),'',
-     ...draft.sections.flatMap(section=>['## '+section.h2,...(section.paragraphs||[]),'']),
+     ...acceptedSections.flatMap(section=>['## '+section.h2,...(section.paragraphs||[]),'']),
      'All claims require owner review. No live content has been modified.'].join('\n\n');
     var copyFull=node('button','Copy complete draft',output);copyFull.type='button';
     copyFull.addEventListener('click',async function(){

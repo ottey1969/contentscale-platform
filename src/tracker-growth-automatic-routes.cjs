@@ -117,6 +117,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.summary.render_status=renderStatus;
 
   report.original_tracked_keyword=page.keyword;
+  report.search.top_gsc_query=report.search.focus_query;
+  report.search.focus_query=targetQuery||null;
+  // The selection made on the FIRST pass (before the working query was written back as the page keyword) is the truth.
+  const sel0=seed.growth_decision||{};
+  report.query_selection={status:sel0.selection?.status||null,source:sel0.selection?.source||null,query:targetQuery||null,
+   destination:sel0.primary_next_action?.destination||null,source_page_signal:sel0.primary_next_action?.source_page_signal||null,
+   brand_queries_excluded:sel0.brand_queries||[],excluded:(sel0.excluded_queries||[]).slice(0,12),protected:(sel0.protected_queries||[]).slice(0,5)};
   if(!targetQuery){
    report.growth_decision.primary_next_action.query=null;
    report.search.focus_query=null;
@@ -135,6 +142,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const related=(report.site_architecture?.candidates||[]).filter(x=>{
    try{return new URL(x.url).origin===siteOrigin&&x.url!==page.url}catch{return false}
   }).slice(0,4);
+  // The selection layer names the proper home of the chosen query; it is always read, even when keyword overlap ranks it lower.
+  const designated=report.growth_decision?.primary_next_action?.destination?.url||null;
+  if(designated&&designated!==page.url&&!related.some(x=>x.url===designated)){
+   try{if(new URL(designated).origin===siteOrigin)related.push({url:designated,tracked_keyword:report.growth_decision.primary_next_action.destination.keyword||null})}catch{}
+  }
   const destinationSources=new Map();
   const sameSiteReviews=await Promise.all(related.map(async x=>{
    try{
@@ -154,7 +166,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    competitors:comparisons.filter(x=>x.search_source==='SERPER_GOOGLE_ORGANIC'||x.search_source==='SERPAPI_GOOGLE_ORGANIC'||x.search_source==='BING_PUBLIC_RSS')});
   // Compare the distinct growth intent on its likely existing destination,
   // not only the protected homepage that surfaced the GSC opportunity.
-  let proposed=report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
+  let proposed=(designated&&(designated===page.url||destinationSources.has(designated))?designated:null)||report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
    (report.growth_decision?.primary_next_action?.metrics?
     report.growth_decision.primary_next_action.related_pages_to_check?.find(u=>destinationSources.has(u)):null)||
    // Without verified GSC, research the selected page itself. Never invent
@@ -362,26 +374,29 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const produced=produceVerifiedEditorialOpportunity({report,completion,sources:report.__sources||{}});
   // The provider's raw output stays visible, but every section says whether it was accepted, so rejected text is never
   // mistaken for the validated proposal.
+  // Decisions run on the raw provider output; every OUTPUT uses completionOut, where rejected text is withheld.
+  let completionOut=completion;
   if(completion.draft&&Array.isArray(completion.draft.sections)){
    const ok=new Set(produced.accepted_headings||[]);
    const why=h=>(produced.rejections||[]).filter(x=>x.heading===h).map(x=>({task:x.task,code:x.code,reason:x.reason||null,claim_violations:(x.claim_violations||[]).map(v=>v.code)}));
-   completion.draft={...completion.draft,raw_provider_output:true,
-    sections:completion.draft.sections.map(sec=>({...sec,review_status:ok.has(sec.h2)?'ACCEPTED_FOR_OWNER_REVIEW':'REJECTED_NOT_PART_OF_PROPOSAL',
-     rejection_reasons:ok.has(sec.h2)?undefined:why(sec.h2)}))};
+   completionOut={...completion,draft:{...completion.draft,raw_provider_output:true,
+    // Rejected provider text is withheld from every output (JSON, packet, export, UI): only its heading and the reasons remain.
+    sections:completion.draft.sections.map(sec=>ok.has(sec.h2)?{...sec,review_status:'ACCEPTED_FOR_OWNER_REVIEW'}:
+     {h2:sec.h2,paragraphs:[],body_withheld:true,review_status:'REJECTED_NOT_PART_OF_PROPOSAL',rejection_reasons:why(sec.h2)})}};
   }
   const finalGate=produced.opportunity?decideGrowthEditorialAction({
    report:{...report,verified_editorial_opportunity:produced.opportunity},destination:report.destination_section_comparison,
    coverage:report.reader_task_coverage,serpIntent:report.serp_intent,destinationIntent:report.destination_intent,
    attempts:report.editorial_decision_gate?.attempted_sources||[]}):report.editorial_decision_gate;
   const completeDecision=decideOwnerGrowthEdit({report:{...report,editorial_decision_gate:finalGate},completion,sources:report.__sources||{}});
-  const handoffPackage=buildOwnerHandoffPackage({report,decision:completeDecision,completion,linkPlan:report.internal_link_plan||[]});
+  const handoffPackage=buildOwnerHandoffPackage({report,decision:completeDecision,completion:completionOut,linkPlan:report.internal_link_plan||[]});
   // Package the actual observed passages with the draft. A reader can now
   // inspect precisely which source supports each proposed editorial review.
   const workPacket={
    status:completion.draft?'DRAFT_AND_SOURCE_COMPARISON_FOR_REVIEW':'SOURCE_COMPARISON_ONLY',
    target_url:completion.target_url||report.destination_section_comparison?.target_url||report.url,
    focus_query:report.editorial_decision_gate?.focus_query||null,
-   generated_draft:completion.draft||null,
+   generated_draft:completionOut.draft||null,
    editorial_decision:completeDecision,
    evidence_verified:report.editorial_decision_gate?.verified_gap===true,
    case_study_locked:report.case_study_locked===true,
@@ -406,7 +421,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   return res.set('Cache-Control','private, no-store').json({...report,
    editorial_decision_gate:completeDecision,
    access:{can_edit:true,read_only_analysis:false,owner_report:true},
-   editorial_review_draft:completion,
+   editorial_review_draft:completionOut,
    editorial_work_packet:workPacket,
    handoff_package:handoffPackage,
    verified_opportunity_status:{producer:'GROWTH_VERIFIED_OPPORTUNITY_PRODUCER',status:produced.status,rejections:produced.rejections,verified:!!produced.opportunity},

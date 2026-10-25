@@ -46,6 +46,20 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   '| Case Study | '+(report.case_study_locked?'Locked — content and baseline untouched.':'Not locked — still untouched.')+' |','',
   '## Why this decision','',decision.reason||decision.next_action||'',
   decision.gap_basis?'\nEvidence basis: `'+decision.gap_basis+'`.':'','');
+ const qs=report.query_selection;
+ if(qs?.query){
+  L.push('## Query and destination','','- Working query: **'+qs.query+'** ('+String(qs.source||'').toLowerCase().replace(/_/g,' ')+')');
+  if(qs.destination?.url)L.push('- Destination page: '+qs.destination.url+' — '+String(qs.destination.basis||'').toLowerCase().replace(/_/g,' '));
+  for(const u of qs.destination?.competing_same_site_pages||[])L.push('- Also close to this query (possible overlap, review): '+u);
+  if(qs.source_page_signal)L.push('- '+qs.source_page_signal.note+' Source page: '+qs.source_page_signal.source_page_url);
+  if((qs.brand_queries_excluded||[]).length)L.push('- Brand or navigational queries kept out of competitor research: '+qs.brand_queries_excluded.join(', '));
+  L.push('');
+ }
+ if((report.search_discovery?.rejected_leads||[]).length){
+  L.push('## Search results filtered out','');
+  for(const x of report.search_discovery.rejected_leads.slice(0,8))L.push('- '+clip(x.title,80)+' — '+x.reason);
+  L.push('');
+ }
  const cov=report.reader_task_coverage;
  if(report.serp_intent?.leads?.length){
   L.push('## Search intent observed','','Fresh organic results for “'+(decision.focus_query||'')+'” ('+(report.search_discovery?.source||'search provider')+', '+(report.search_discovery?.checked_at||'')+'). Discussion sites excluded. Placement here is not a ranking of your page.','');
@@ -75,6 +89,16 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
     '- **Why there:** '+(it.placement?.reason||''),
     '- **Add this H2:** '+it.heading,'','**Proposed text (fact-check before approval):**','',it.text,'');
    for(const ev of (it.task?.competitor_evidence||[]).slice(0,2))L.push('> Compared with '+ev.url+' (“'+ev.heading+'”): '+clip(ev.excerpt,160)+'…');
+   L.push('');
+  }
+  if(decision.claim_review){
+   const cr=decision.claim_review;
+   L.push('**Claim review — copy_ready means “reviewable”, not “verified”:**','',
+    '- Statements sourced from the destination page: '+cr.counts.sourced_from_page,
+    '- General advice (procedural, not a factual claim): '+cr.counts.general_advice,
+    '- General statements NOT verified by any source: '+cr.counts.general_statement_unverified);
+   for(const x of cr.needs_fact_check||[])L.push('  - Fact-check: “'+clip(x,160)+'”');
+   for(const x of cr.requirements||[])L.push('- '+x);
    L.push('');
   }
   const rejectedRaw=(completion?.draft?.sections||[]).filter(s=>s.review_status==='REJECTED_NOT_PART_OF_PROPOSAL');

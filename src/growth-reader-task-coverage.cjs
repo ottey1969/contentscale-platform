@@ -91,7 +91,9 @@ const isFurniture=s=>s.heading==='(introduction)'||s.words<30||FURNITURE.test(he
 function pickPlacement(destSections,task,skip){
  const body=destSections.filter(s=>!isFurniture(s));
  // 1) the section already mentions the task's core concept: deepen it instead of adding a duplicate
- const touching=body.map(s=>({s,h:taskHitsInText(task,s.heading+' '+s.text,skip)})).filter(x=>x.h.key>=1).sort((a,b)=>b.h.key-a.h.key)[0];
+ // A single passing mention of a generic word is not a touch; the concept must be in the heading or recur in the section.
+ const touching=body.map(s=>({s,h:taskHitsInText(task,s.heading+' '+s.text,skip),inHead:taskHitsInText(task,s.heading,skip).key>=1}))
+  .filter(x=>x.inHead||x.h.key>=2).sort((a,b)=>(Number(b.inHead)-Number(a.inHead))||b.h.key-a.h.key)[0];
  if(touching)return {mode:'EXTEND_SECTION',section_heading:touching.s.heading,
   reason:'This existing section already mentions the task’s core concept ('+touching.h.key+'×); deepen it instead of adding a duplicate.'};
  // 2) otherwise add it right after the existing section whose concepts are closest to what the competitors teach

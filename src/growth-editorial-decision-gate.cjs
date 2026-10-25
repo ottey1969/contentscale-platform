@@ -91,7 +91,7 @@ function decideFromCoverage(args){
  if(planned.decision==='NEW_DISTINCT_PAGE'&&!(opp.site_overlap_checked===true&&opp.distinct_intent_verified===true))return planned;
  return {...planned,copy_ready:true,verified_gap:true,copy_status:'REVIEW_READY',verified_by:opp.producer||'VERIFIED_EDITORIAL_OPPORTUNITY',
   proposed_text:opp.proposed_text,target_section:opp.target_section,placement:opp.placement||planned.placement||null,
-  draft_heading:opp.draft_heading||null,additional_sections:opp.additional_sections||[],draft_validation:opp.draft_validation||[],
+  draft_heading:opp.draft_heading||null,additional_sections:opp.additional_sections||[],draft_validation:opp.draft_validation||[],claim_review:opp.claim_review||null,evidence_confidence:opp.claim_review?.confidence||null,
   new_page_draft:opp.new_page_draft||undefined,
   improvement_plan:planned.improvement_plan&&Array.isArray(opp.task_codes)?{...planned.improvement_plan,
    tasks:planned.improvement_plan.tasks.filter(t=>opp.task_codes.includes(t.code)),

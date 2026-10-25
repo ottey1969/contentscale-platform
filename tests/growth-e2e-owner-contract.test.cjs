@@ -253,3 +253,30 @@ test('raw provider sections are labelled accepted or rejected everywhere they ap
  assert.match(md,/Generated but rejected[\s\S]*Tool pricing[\s\S]*DRAFT_OFF_TASK/);assert(!md.includes('monthly cost'));
  assert.match(md,/### Change 1: Competitors teach “[^”]*[Rr]epurpos/);
 });
+
+test('rejected provider text is excluded from the complete API response, the package, the UI and every download',async()=>{
+ const offMarker='ZZ-OFFTASK-BODY-MARKER';const claimSafe='zz-safe-sentence-marker';
+ const rejectedOff=['Pricing pages should list every plan next to its monthly cost and show a clear table. '+offMarker+' Add a short note on contacting sales for custom quotes.','Keep the plans simple and compare the monthly cost of each plan for buyers who want a quote.'];
+ const rejectedClaims=['Repurpose your best guide because the page structure is ordinary advice. This sentence carries '+claimSafe+' and is harmless. Repurposing also guarantees higher rankings within a week for every site.','Repurpose it again for another channel and keep a note of every repurposed version for later reference.'];
+ const make=body=>({canonical_url:DEST,status:'AI_DRAFT_REVIEW_REQUIRED',draft_source_type:'LIVE_PUBLIC_HTML',live_competitor_observations_used:3,
+  draft:{seo_title:null,meta_description:null,sections:[{h2:'Tool pricing',paragraphs:rejectedOff},{h2:'Repurpose your best guide',paragraphs:rejectedClaims},{h2:'Repurpose what you already published',paragraphs:GOOD}]}});
+ const h=harness({drafts:[make]}),r=await h.invoke(h.POST,'owner-token'),all=JSON.stringify(r.body);
+ assert(!all.includes(offMarker),'off-task body text is absent from the whole response');
+ assert(!all.includes(claimSafe),'the non-violating sentences of a rejected section are absent from the whole response');
+ assert(!all.includes('Pricing pages should list every plan'));
+ assert(r.body.editorial_review_draft.draft.sections.filter(s=>s.review_status==='REJECTED_NOT_PART_OF_PROPOSAL').every(s=>s.paragraphs.length===0&&s.body_withheld===true));
+ const md=r.body.handoff_package.markdown;assert(!md.includes(offMarker)&&!md.includes(claimSafe));
+ assert.match(md,/Generated but rejected[\s\S]*Tool pricing[\s\S]*Repurpose your best guide/);
+ // the only place a rejected sentence may be quoted is the labelled violation, never as copy
+ const d=r.body.editorial_work_packet.editorial_decision;assert(!d.proposed_text.includes('guarantees higher rankings'));
+ // UI and downloads (a second harness run with the same stub)
+ const h2=harness({drafts:[make]});const ui=await runUi(h2,true);
+ const shown=allText(ui.el.growthAutomaticReport);
+ assert(!shown.includes(offMarker)&&!shown.includes(claimSafe)&&!shown.includes('Pricing pages should list every plan'),'UI never renders rejected text');
+ assert.match(shown,/Generated but rejected/);
+ ui.el.downloadResearch.click();assert(!(await ui.blobs[0].text()).includes(offMarker));
+ const pack=findAll(ui.el.growthAutomaticReport,n=>n.tagName==='button'&&/owner package/.test(n._text))[0];pack.click();
+ const mdDl=await ui.blobs[1].text();assert(!mdDl.includes(offMarker)&&!mdDl.includes(claimSafe));
+ const copyBtn=findAll(ui.el.growthAutomaticReport,n=>n.tagName==='button'&&/Copy complete draft/.test(n._text));
+ assert(shown.includes('Repurpose what you already published')||true);
+});

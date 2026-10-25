@@ -11,13 +11,15 @@ const plainText=html=>blocks(html).map(b=>b.text).join(' ');
 const validParagraphs=s=>Array.isArray(s?.paragraphs)?s.paragraphs.filter(p=>typeof p==='string'&&p.trim().length>=80):[];
 // Claim review of one drafted section against the ONLY factual source (the destination page text).
 function assessSectionClaims(section,{destinationText='',query='',brandLabel=''}={}){
- const paragraphs=[],rewrites=[],violations=[];
+ const paragraphs=[],rewrites=[],violations=[],review=[];
  for(const original of validParagraphs(section)){
   const r=assessDraftClaims({text:original,destinationText,query,brandLabel});
-  violations.push(...r.violations);rewrites.push(...r.safe_rewrites);
+  violations.push(...r.violations);rewrites.push(...r.safe_rewrites);review.push(...(r.claim_review||[]));
   paragraphs.push(r.safe_rewrites.length?r.safe_text:original);
  }
- return {ok:violations.length===0,paragraphs,safe_rewrites:rewrites,violations};
+ const ok=violations.length===0;
+ // A rejected section yields no usable text at all: nothing of it can leak into a proposal.
+ return {ok,paragraphs:ok?paragraphs:[],safe_rewrites:ok?rewrites:[],violations,claim_review:review};
 }
 // Draft acceptance for the evidence-based path: the text must teach the observed missing task (core concept in the
 // heading or opening paragraph plus shared co-concepts), must not repeat the destination, must not reuse competitor
@@ -39,7 +41,7 @@ function checkDraftSection(section,{task,destinationText='',competitorTexts=[],q
  const claims=assessSectionClaims(section,{destinationText,query,brandLabel});
  if(!claims.ok)return {ok:false,code:'DRAFT_UNSUPPORTED_CLAIMS',concept_hits:taught.key_mentions,duplicate_overlap_pct:overlap,
   claim_violations:claims.violations.slice(0,6),reason:'Rejected: '+claims.violations.slice(0,3).map(v=>v.code).join(', ')+'.'};
- return {ok:true,concept_hits:taught.key_mentions+taught.co_terms_hit,duplicate_overlap_pct:overlap,paragraphs:claims.paragraphs,safe_rewrites:claims.safe_rewrites};
+ return {ok:true,concept_hits:taught.key_mentions+taught.co_terms_hit,duplicate_overlap_pct:overlap,paragraphs:claims.paragraphs,safe_rewrites:claims.safe_rewrites,claim_review:claims.claim_review};
 }
 function decideFromEvidence({report,completion,base,sources}){
  const common={publish_allowed:false,requires_editor_approval:true,case_study_unchanged:true};

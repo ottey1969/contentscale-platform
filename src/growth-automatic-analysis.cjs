@@ -52,7 +52,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  const focus=queries[0]?.query||String(page.keyword||'').trim()||actualText.h1[0]||'';
  // Competitors must be examined for the prioritized low-click opportunity,
  // not merely the highest-volume historical GSC query.
- const competitorResearchFocus=chooseGrowthNextAction({page,queries,headings:actualText,now}).primary_next_action.query||focus;
+ const competitorResearchFocus=chooseGrowthNextAction({page,queries,headings:actualText,siteInventory:sitePages,now}).primary_next_action.query||focus;
  const comparison=competitorPages.filter(x=>x&&x.live?.html&&x.url&&(x.search_source==='BING_PUBLIC_RSS'||x.search_source==='SERPER_GOOGLE_ORGANIC'||x.search_source==='SERPAPI_GOOGLE_ORGANIC'||x.search_source==='HISTORICAL_SERP_TOPIC_MATCH'||leads.leads.some(c=>c.url===x.url))).slice(0,4).map(x=>{
   const summary=excerpt(x.live.html),focusSection=sectionEvidence(x.live.html,competitorResearchFocus);
   return {url:x.url,source:'LIVE_COMPETITOR_HTML_OBSERVED',discovery_source:x.search_source||'HISTORICAL_SERP',
@@ -95,7 +95,7 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
  const plan=buildTrackerGrowthPlan({page,queries:validQ,sitePages,now});
  const intent=classifyGrowthIntent(focus);
  const siteGraph=suggestInternalGrowthLinks({pageUrl:url,focusQuery:focus,currentHtml:actualHtml,sitePages});
- const decision=chooseGrowthNextAction({page,queries,headings:actualText,siteGraph,now});
+ const decision=chooseGrowthNextAction({page,queries,headings:actualText,siteGraph,siteInventory:sitePages,now});
  // Related URLs must suit the selected intent, not just share 'content' or 'scale'.
  const nextQuery=String(decision.primary_next_action.query||'').toLowerCase();
  if(nextQuery&&Array.isArray(decision.primary_next_action.related_pages_to_check))

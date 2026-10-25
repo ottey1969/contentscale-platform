@@ -25,9 +25,14 @@ test('placement never lands on closing furniture; with no related section it fol
  assert(fx.plan_tasks.every(p=>/Related Reading/.test(p.placement.section_heading)),'documents the production defect');
 });
 test('a section that already contains the concept is extended, and a related section is preferred over the fallback',()=>{
- const dest='<h1>Guide</h1><h2>Reuse and refresh</h2><p>Teams often repurpose their strongest guide, and the same notes about newsletters and slides help them avoid starting again whenever a new channel needs material, so this short section keeps a list of formats the group already knows well.</p><h2>How to start</h2><p>'+'Filler words describing a general introduction to the topic for readers. '.repeat(6)+'</p>';
+ const dest='<h1>Guide</h1><h2>Repurpose and refresh</h2><p>Teams often repurpose their strongest guide, and the same notes about newsletters and slides help them avoid starting again whenever a new channel needs material, so this short section keeps a list of formats the group already knows well.</p><h2>How to start</h2><p>'+'Filler words describing a general introduction to the topic for readers. '.repeat(6)+'</p>';
  const cov=analyzeReaderTaskCoverage({query:fx.query,serpIntent:'INFORMATIONAL_GUIDE',destination:{url:'https://s.example/g/',html:dest},competitors:[comp('https://a.example/x','Content Repurposing'),comp('https://b.example/y','Can I recycle or repurpose content?')]});
- const t=cov.tasks.find(x=>x.match.key==='repurp');assert.equal(t.placement.mode,'EXTEND_SECTION');assert.equal(t.placement.section_heading,'Reuse and refresh');
+ const t=cov.tasks.find(x=>x.match.key==='repurp');assert.equal(t.placement.mode,'EXTEND_SECTION');assert.equal(t.placement.section_heading,'Repurpose and refresh');
+ // One passing mention of the concept in an unrelated section is NOT a reason to extend that section (real ContentScale case:
+ // the word "tool" appeared once in a product-feature section and the generic guidance was merged into it).
+ const once='<h1>Guide</h1><h2>What the tracker does</h2><p>'+'The tracker checks pages and, as a side note, teams may repurpose a guide once in a while when they have time to spare for it. '+'It lists results on one screen for the reviewer and keeps the history for later comparison by the team. '.repeat(2)+'</p><h2>How to start</h2><p>'+'Filler words describing a general introduction to the topic for readers. '.repeat(6)+'</p>';
+ const c2=analyzeReaderTaskCoverage({query:fx.query,serpIntent:'INFORMATIONAL_GUIDE',destination:{url:'https://s.example/g/',html:once},competitors:[comp('https://a.example/x','Content Repurposing'),comp('https://b.example/y','Can I recycle or repurpose content?')]});
+ const t2=c2.tasks.find(x=>x.match.key==='repurp');assert.equal(t2.placement.mode,'ADD_AFTER_SECTION');assert.notEqual(t2.placement.section_heading,'What the tracker does');
 });
 test('a word that is the TOPIC of an article ("creation") is not reported as a reader task two sites agree on',()=>{
  const topicPara=n=>'Content creation depends on clear briefs, a steady cadence and a review habit that the whole team follows. '.repeat(n);

@@ -10,6 +10,14 @@
 // {opportunity:null, rejections} so the gate keeps its research-only outcome.
 const {checkDraftSection,assessSectionClaims,validParagraphs,plainText}=require('./growth-owner-edit-decision.cjs');
 
+// Typed claim summary shown to the owner. copy_ready never means 'verified true': it means reviewable.
+function summarizeClaims(rows){
+ const by=c=>rows.filter(x=>x.class===c);
+ return {counts:{sourced_from_page:by('SOURCED_FROM_PAGE').length,general_advice:by('GENERAL_ADVICE').length,general_statement_unverified:by('GENERAL_STATEMENT_UNVERIFIED').length},
+  needs_fact_check:by('GENERAL_STATEMENT_UNVERIFIED').map(x=>x.sentence),
+  confidence:by('GENERAL_STATEMENT_UNVERIFIED').length?'REVIEWABLE_WITH_UNVERIFIED_STATEMENTS':'REVIEWABLE_ADVICE_AND_SOURCED_STATEMENTS',
+  requirements:['Fact-check every statement against your own knowledge and sources before publishing.','Owner approval is required; nothing is published automatically.']};
+}
 function produceVerifiedEditorialOpportunity({report={},completion={},sources={}}={}){
  const gate=report.editorial_decision_gate||{};
  const query=String(gate.focus_query||'').trim();
@@ -46,6 +54,7 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
    target_section:first.task.placement?.section_heading||'(page start)',
    placement:first.task.placement||null,task_codes:accepted.map(a=>a.task.code),
    proposed_text:first.r.paragraphs.join('\n\n'),safe_rewrites:accepted.flatMap(a=>a.r.safe_rewrites),
+   claim_review:summarizeClaims(accepted.flatMap(a=>a.r.claim_review||[])),
    additional_sections:accepted.slice(1).map(a=>({task:a.task.code,placement:a.task.placement,heading:a.section.h2,text:a.r.paragraphs.join('\n\n')})),
    draft_heading:first.section.h2,evidence,
    draft_validation:accepted.map(a=>({task:a.task.code,heading:a.section.h2,concept_hits:a.r.concept_hits,duplicate_overlap_pct:a.r.duplicate_overlap_pct,competitor_wording_reused:false,claims_checked:true,safe_rewrites:a.r.safe_rewrites.length}))}};
