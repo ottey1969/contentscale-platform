@@ -40,7 +40,9 @@ assert.equal(report.growth_decision.protection.case_study_locked,true);
 assert.equal(report.growth_decision.protection.publication_allowed,false);
 assert.equal(report.growth_decision.protection.preserve_existing_top_rankings,true);
 assert(report.growth_decision.protected_queries.some(x=>x.query==='content at scale'));
-assert(report.growth_decision.excluded_queries.some(x=>x.query==='content at scale ai detector'));
+// No brand- or product-specific word list: the detector query is simply not an opportunity (16% CTR at position 6).
+assert(!report.growth_decision.primary_next_action.query.includes('detector'));
+assert(!(report.growth_decision.other_reviewable_queries||[]).some(x=>/detector/.test(x.query)));
 assert(report.growth_decision.excluded_queries.some(x=>x.query==='content at scale review'));
 assert(!report.search.observed_opportunities.some(x=>/detector|near me|los angeles/i.test(x.seed_query||'')));
 assert.equal(report.editorial.candidate_sections.length,0,'off-intent detector headings must not become suggested sections');
@@ -61,7 +63,8 @@ assert.equal(report.practical_growth_plan.guard.case_study_locked,true);
 assert(!report.growth_decision.primary_next_action.related_pages_to_check.some(x=>/brandwell/.test(x)),
  'brandwell product intent should not be a primary internal link for content scaling');
 assert(report.practical_growth_plan.classifications.some(x=>x.query==='content at scale'&&x.category==='PROTECT'));
-assert(report.practical_growth_plan.classifications.some(x=>x.query==='content at scale ai detector'&&x.category==='SEPARATE_OR_UNCONFIRMED_INTENT'));
+// Healthy 16% CTR at position 6: not an opportunity and not a reason to touch the page; it stays in the evidence inventory.
+assert(report.practical_growth_plan.classifications.some(x=>x.query==='content at scale ai detector'&&x.category==='MONITOR_OR_QUALIFY'));
 assert(report.practical_growth_plan.classifications.some(x=>x.query==='content scaling'&&x.category==='IMPROVE_EXISTING'));
 
 assert.equal(report.competitors.topic_candidates.length,0);

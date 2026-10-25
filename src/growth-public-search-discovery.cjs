@@ -1,5 +1,6 @@
 'use strict';
 const {navDiffersFromQuery}=require('./growth-intent-signals.cjs');
+const {rejectLead}=require('./growth-serp-quality.cjs');
 // Optional, public, low-frequency Bing web RSS discovery. Bing's public RSS
 // format is experimental, NOT a Google SERP, ranking or guaranteed service.
 // If unavailable, return a visible status; never substitute invented results.
@@ -29,6 +30,7 @@ function parseBingRss(xml,{query='',ownUrl='',limit=7}={}){
   if(required.length&&matched.length<Math.min(2,required.length))continue;
   if(wrongProductIntent(title,snippet,query))continue;
   if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(url.pathname))continue;
+  if(rejectLead({query,lead:{url:url.href,title,snippet},ownHost:own}))continue;
   seen.add(url.href);
   rows.push({url:url.href,title:title.slice(0,180),snippet,source:'BING_PUBLIC_RSS',status:'FRESH_BING_RSS_LEAD_NOT_GOOGLE_RANKING',query});
   if(rows.length>=limit)break;
@@ -60,7 +62,7 @@ async function discoverGrowthCompetitors({query,ownUrl,fetchFeed=fetchPublicGrow
   warning:'Bing RSS is an optional public discovery source; results and order do NOT establish current Google rankings. Page comparison is based on separately retrieved HTML.'};
 }
 
-function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7}={}){
+function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLog=null}={}){
  const results=Array.isArray(payload?.organic)?payload.organic:[];
  let own='';try{own=new URL(ownUrl).hostname.replace(/^www\./,'').toLowerCase()}catch{}
  const needle=terms(query),seen=new Set(),leads=[];
@@ -74,6 +76,8 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7}={}){
   if(needle.length&&matched.length<Math.min(2,needle.length))continue;
   if(wrongProductIntent(title,snippet,query))continue;
   if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(parsed.pathname))continue;
+  const why=rejectLead({query,lead:{url:parsed.href,title,snippet},ownHost:own});
+  if(why){(rejectedLog||[]).push({url:parsed.href,title:title.slice(0,100),reason:why});continue}
   seen.add(parsed.href);
   const position=Number(item.position);
   leads.push({url:parsed.href,title,snippet,source:'SERPER_GOOGLE_ORGANIC',
@@ -105,9 +109,10 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,fetchImpl=global.fet
   if(payload?.error||!Array.isArray(payload?.organic))
    return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR',
     source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
-  const leads=parseSerperGoogleOrganic(payload,{query:term,ownUrl,limit:7});
+  const rejected_leads=[];
+  const leads=parseSerperGoogleOrganic(payload,{query:term,ownUrl,limit:7,rejectedLog:rejected_leads});
   return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',
-   source:'SERPER_GOOGLE_ORGANIC',leads,query:term,checked_at:new Date(now).toISOString(),
+   source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,12),query:term,checked_at:new Date(now).toISOString(),
    scope:{country:'us',language:'en',source:'Google organic results through optional configured Serper.dev'},
    warning:'Organic positions describe observed search result placement in a US English lookup, not the tracked page ranking, a search-volume estimate, or proven traffic. Serper.dev is optional.'};
  }catch(e){

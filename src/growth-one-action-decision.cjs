@@ -33,51 +33,40 @@ function topicAligned(heading,headings){
  // subject vocabulary. A difference alone never proves a missing topic.
  return tokens.length>=2&&tokens.filter(w=>headline.has(w)).length>=2;
 }
-function chooseGrowthNextAction({page={},queries=[],headings={},siteGraph={},now=new Date()}={}){
- const nowMs=new Date(now).getTime();
- const seen=new Set(),supported=[],excluded=[],preserve=[];
- for(const q of Array.isArray(queries)?queries:[]){
-  if(!q||typeof q.query!=='string')continue;
-  const name=q.query.trim(),key=name.toLowerCase();
-  if(!name||seen.has(key))continue;seen.add(key);
-  const metric=safeMetric(q);
-  const imported=Date.parse(q.imported_at||'');
-  if(!metric||!Number.isFinite(imported)||imported>nowMs||nowMs-imported>75*86400000){
-   excluded.push({query:name,reason:'MISSING_OR_STALE_QUERY_EVIDENCE'});continue;
-  }
-  const fit=queryFit(name,headings);
-  if(!fit.fit){excluded.push({query:name,reason:fit.reason});continue}
-  const entry={query:name,...metric,imported_at:q.imported_at,fit:'HEADING_HEURISTIC_NOT_LIVE_SERP_PROOF'};
-  supported.push(entry);
-  if(metric.position<=3&&metric.clicks>=10&&metric.impressions>=100)preserve.push(entry);
- }
- // Low clicks at an average position outside the top 10 usually requires
- // ranking / page-intent work, not a snippet-only CTR promise.
- const underserved=supported.filter(x=>x.impressions>=150&&x.position>=4&&x.position<=35&&x.ctr_pct<=3)
-  .sort((a,b)=>b.impressions-a.impressions||a.position-b.position);
- const chosen=underserved[0]||null,protectedBaseline=preserve.length>0;
+// Single entry for "which query, which URL". Delegates to growth-query-selection (evidence-aware, industry-neutral) so
+// the decision no longer depends on a query being printed in this page's own headline.
+function chooseGrowthNextAction({page={},queries=[],headings={},siteGraph={},siteInventory=null,now=new Date()}={}){
+ const {selectGrowthQuery}=require('./growth-query-selection.cjs');
+ const inventory=Array.isArray(siteInventory)?siteInventory:(siteGraph.candidates||[]).map(x=>({url:x.url,keyword:x.tracked_keyword,id:x.page_id??null}));
+ const sel=selectGrowthQuery({page,queries,headings,inventory,now});
  const candidateUrls=(siteGraph.candidates||[]).map(x=>x.url).filter(x=>typeof x==='string').slice(0,3);
- const locked=page.case_study_active===true;
+ if(sel.destination?.url&&sel.destination.url!==page.url&&!candidateUrls.includes(sel.destination.url))candidateUrls.unshift(sel.destination.url);
+ const locked=page.case_study_active===true,chosen=sel.chosen||null;
  let next;
  if(chosen){
+  const far=chosen.position>35;
   next={code:'VERIFY_INTENT_AND_EXISTING_DESTINATION',title:'Investigate clicks for "'+chosen.query+'"',
    query:chosen.query,metrics:{impressions:chosen.impressions,clicks:chosen.clicks,ctr_pct:chosen.ctr_pct,average_position:chosen.position,imported_at:chosen.imported_at},
-   reason:chosen.impressions+' exact-page impressions and '+chosen.clicks+' clicks; average position '+chosen.position.toFixed(1)+'. The ranking may be a larger obstacle than the search snippet.',
-   instruction:'Compare the live search intent with this URL and existing same-site pages. If the existing page fits, propose one targeted improvement on that URL for editorial review. Do not create another page by default.',
+   reason:chosen.impressions+' exact-page impressions and '+chosen.clicks+' clicks; average position '+chosen.position.toFixed(1)+'. '+
+    (far?'The average position is far beyond the first page, so ranking relative to live competitors is a larger obstacle than the snippet.':'The ranking may be a larger obstacle than the search snippet.'),
+   instruction:'Compare the live search intent with the destination URL and existing same-site pages. If the existing page fits, propose one targeted improvement on that URL for editorial review. Do not create another page by default.',
+   destination:sel.destination,source_page_signal:sel.surfacing_signal||null,query_source:sel.source,
    related_pages_to_check:candidateUrls,
    stop_before:'No title/H1 rewrite, new spoke, consolidation, publication or Case Study baseline change without separate evidence and owner approval.'};
  }else{
-  next={code:'REVIEW_PAGE_INTENT',title:'Check this page against the live search intent',query:String(page.keyword||headings.h1?.[0]||headings.title||'').trim().slice(0,160)||null,metrics:null,
-   reason:supported.length?'No supported high-impression, low-click ranking opportunity meets the threshold.':'No sufficiently recent, on-page-aligned exact-page query is available.',
+  next={code:'REVIEW_PAGE_INTENT',title:'Check this page against the live search intent',query:sel.query||null,metrics:null,
+   reason:sel.query?'No verified high-impression, low-click query qualified; using '+sel.source.toLowerCase().replace(/_/g,' ')+'.':sel.reason||'No sufficiently recent exact-page query is available.',
    instruction:'Review the existing page and live SERP; keep working without GSC when unavailable. Do not invent a click gain.',
+   destination:sel.destination||null,query_source:sel.source,query_status:sel.status,
    related_pages_to_check:candidateUrls,
    stop_before:'No automatic content or Case Study changes.'};
  }
  return {status:locked?'RESEARCH_ONLY_CASE_STUDY_LOCKED':'EDITOR_REVIEW_REQUIRED',
-  confidence:'QUERY_DATA_VERIFIED_INTENT_HEURISTIC',protection:{case_study_locked:locked,preserve_existing_top_rankings:protectedBaseline,
+  confidence:'QUERY_DATA_VERIFIED_INTENT_HEURISTIC',protection:{case_study_locked:locked,preserve_existing_top_rankings:(sel.protected||[]).length>0,
    publication_allowed:false,automatic_page_changes:false},
-  primary_next_action:next,protected_queries:preserve.slice(0,5),
-  excluded_queries:excluded.slice(0,12),other_reviewable_queries:underserved.slice(1,4),
+  primary_next_action:next,protected_queries:(sel.protected||[]).slice(0,5),
+  excluded_queries:(sel.excluded||[]).slice(0,12),brand_queries:sel.brand_queries||[],other_reviewable_queries:(sel.other_candidates||[]).slice(0,3),
+  selection:{status:sel.status,source:sel.source,destination:sel.destination||null},
   guidance:'One action first. GSC import timestamp is not a measurement period; compare equivalent dated ranges after any approved publication.'};
 }
 module.exports={chooseGrowthNextAction,topicAligned,queryFit,terms};
