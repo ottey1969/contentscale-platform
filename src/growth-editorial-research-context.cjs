@@ -30,7 +30,8 @@ function normalizeGrowthResearchContext(payload,{targetUrl='',focusQuery=''}={})
   reader_task={mode:rt.mode,
    tasks:list(rt.tasks).slice(0,2).map(t=>({code:clean(t?.code).slice(0,40),label:clean(t?.label).slice(0,140),
     placement_mode:clean(t?.placement_mode).slice(0,30),placement_heading:clean(t?.placement_heading).slice(0,180),
-    destination_status:clean(t?.destination_status).slice(0,20)})).filter(t=>t.code&&t.label),
+    destination_status:clean(t?.destination_status).slice(0,20),
+    core_words:(Array.isArray(t?.core_words)?t.core_words:[]).slice(0,5).map(w=>String(w).toLowerCase().replace(/[^a-z]/g,'').slice(0,24)).filter(Boolean)})).filter(t=>t.code&&t.label),
    existing_headings:list(rt.existing_headings).slice(0,30).map(x=>clean(x).slice(0,140)).filter(Boolean)};
   if(!reader_task.tasks.length)reader_task=null;
  }

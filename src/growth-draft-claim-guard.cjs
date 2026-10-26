@@ -9,7 +9,7 @@ const STEM=w=>lower(w).replace(/[^a-z0-9]/g,'').replace(/(?:ing|ed|es|s|e)$/,'')
 const contentRoots=t=>[...new Set((lower(t).match(/[a-z]{5,}/g)||[]).map(STEM).filter(x=>x.length>=4))];
 
 // 1. Absolute / guarantee language. SOFTENABLE words are weakened (never strengthened); the rest is rejected.
-const SOFTEN=[[/\balways\b/gi,'usually'],[/\bnever\b/gi,'rarely'],[/\bensures\b/gi,'helps ensure'],[/(?<!helping )\bensuring\b/gi,'helping ensure'],
+const SOFTEN=[[/\b(?:completely|fully|totally|entirely)\s+eliminates\b/gi,'reduces'],[/\beliminates\b/gi,'reduces'],[/\bprevents\b/gi,'helps prevent'],[/\balways\b/gi,'usually'],[/\bnever\b/gi,'rarely'],[/\bensures\b/gi,'helps ensure'],[/(?<!helping )\bensuring\b/gi,'helping ensure'],
  [/\bdefinitely\b/gi,'often'],[/\bcertainly\b/gi,'often'],[/\bwill (?=(?:help|make|let|give|allow|save|reduce|improve)\b)/gi,'can '],
  [/\bmaximi[sz]es (?=(?:the |your |its |their )?(?:value|impact|reach|efficiency|output)\b)/gi,'can increase '],[/\bmaximi[sz]e (?=(?:the |your |its |their )?(?:value|impact|reach|efficiency|output)\b)/gi,'increase ']];
 const ABSOLUTE=/\b(guarantee[sd]?|guaranteeing|proven|prove[sn]?|100\s?%|foolproof|risk[- ]free|flawless|perfect results?|unmatched|unbeatable|number one|#\s?1|best[- ]in[- ]class|the best|only way|no risk|instantly|overnight|without fail|eliminates?|(?:the|a) complete (?:picture|context|view|solution|answer|performance \\w+)|completely (?:removes?|solves?|prevents?)|(?:exact|exactly|precisely)\s+(?:\w+\s+){0,2}(?:return|results?|impact|roi|numbers?|figures?|performance|value|gain)s?)\b/i;
@@ -26,14 +26,20 @@ const EDITOR_NOTE=/\b(?:for (?:internal )?editor(?:ial)? (?:verification|review|
 // 2d. Capability claims: a tool, tracker, platform or system is said to DO something. Generic advice about choosing or
 // using tools is fine; an assertion about what a tool does must be stated on the destination page or it is unverified.
 const CAP_SUBJECT='(?:tools?|trackers?|tracking|monitoring|platforms?|software|dashboards?|systems?|scoring|automation|analytics|(?:automated|ai[- ]powered|ai)\\s+\\w+)';
-const CAP_VERB_S='(?:monitors|tracks|identifies|confirms|shows|provides|detects|measures|alerts|reports|scores|verifies|flags|records|analy[sz]es|generates|delivers|reveals|surfaces|checks|validates|highlights|captures|compares|predicts|automates|ensures|guarantees|discovers|finds|pinpoints)';
+const CAP_VERB_S='(?:monitors|tracks|identifies|confirms|provides|detects|verifies|analy[sz]es|generates|reveals|highlights|captures|compares|predicts|automates|ensures|guarantees|discovers|finds|pinpoints|validates|delivers)';
+// Plural nouns that are also verbs ("quality checks", "monthly reports"): only a verb when a SINGULAR tool noun is the subject.
+const CAP_VERB_AMBIGUOUS='(?:checks|reports|scores|records|flags|alerts|measures|shows|surfaces)';
+const CAP_SINGULAR_SUBJECT='(?:tool|tracker|tracking|monitoring|platform|software|dashboard|system|scoring|automation|analytics)';
 const CAP_VERB_BASE='(?:monitor|track|identify|confirm|show|provide|detect|measure|alert|report|score|verify|flag|record|analy[sz]e|generate|deliver|reveal|surface|check|validate|highlight|capture|compare|predict|automate|pinpoint)';
+const CAP_AMB=new RegExp('\\b'+CAP_SINGULAR_SUBJECT+'\\b(?:\\s+\\w+){0,2}?\\s+'+CAP_VERB_AMBIGUOUS+'\\b','i');
 const CAP_S=new RegExp('\\b'+CAP_SUBJECT+'\\b[^.;,]{0,70}?\\b'+CAP_VERB_S+'\\b','i');
 const CAP_PLURAL=new RegExp('\\b(?:tools|trackers|platforms|systems|dashboards|analytics)\\b\\s+(?:\\w+\\s+){0,2}?'+CAP_VERB_BASE+'\\b','i');
 const CAP_ADVICE_LEAD=/\b(?:use|using|with|choose|select|pick|adopt|implement|integrate|run|consider|when|if|should|need|needs|want|ask)\b[^.]{0,40}\b(?:tools|trackers|platforms|systems|dashboards|analytics)\b/i;
 const PRECISION=/\b(?:exactly|precisely|real[- ]time|in real time|directly quoted|every single|each and every|automatically)\b/i;
 function capabilityClaim(sentence){
- const m=sentence.match(CAP_S);if(m)return m[0];
+ // Advice to the reader ("Integrate automated quality checks that scan…") describes a practice, not what OUR tool does.
+ if(IMPERATIVE_VERB.test(sentence.trim())&&!FIRST_PERSON.test(sentence))return null;
+ const m=sentence.match(CAP_S)||sentence.match(CAP_AMB);if(m)return m[0];
  const p=sentence.match(CAP_PLURAL);
  if(p&&!CAP_ADVICE_LEAD.test(sentence)&&!/\bto\s+(?:\w+\s+){0,1}$/i.test(sentence.slice(0,sentence.indexOf(p[0]))))return p[0];
  return null;
@@ -58,7 +64,9 @@ function entitiesIn(sentence){
 }
 
 // text: draft paragraph(s); destinationText: the ONLY factual source; query: the working query.
-const IMPERATIVE=/^(?:use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioritis?e|focus|avoid|ensure|confirm|schedule|assign|audit|extract|apply|maintain|continuously|then|first|next|once|before|after|if)\b/i;
+// Real instruction verbs only (conjunctions such as once/then/if/before do not make a sentence advice).
+const IMPERATIVE_VERB=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|turn|connect|run|test|document|update|define|set|write|plan|prioriti[sz]e|focus|avoid|ensure|confirm|assign|audit|extract|apply|maintain|feed)\b/i;
+const IMPERATIVE=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioritis?e|focus|avoid|ensure|confirm|schedule|assign|audit|extract|apply|maintain|continuously|then|first|next|once|before|after|if)\b/i;
 const ADVICE_MODAL=/\b(?:should|can|could|may|might|consider|try|helps?|allows?|lets?)\b/i;
 function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={}){
  const dest=lower(destinationText),destRoots=new Set(contentRoots(destinationText)),destNums=new Set(numbersIn(destinationText));
@@ -111,7 +119,7 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
   }
   if(local.length){for(const v of local)add(v.code,original,v.reason)}
   else{if(applied.length)rewrites.push({before:original,after:sentence,changes:applied});kept.push(sentence);
-   review.push({sentence:sentence.slice(0,260),class:supportedBy(original)?'SOURCED_FROM_PAGE':(applied.length?false:(IMPERATIVE.test(original)||ADVICE_MODAL.test(original)))?'GENERAL_ADVICE':'GENERAL_STATEMENT_UNVERIFIED'})}
+   review.push({confirm_with_owner:(supportedBy(original)||businessSubject)&&/\b(?:24\/7|24[- ]hours?|around the clock|every|all|licen[sc]ed|insured|bonded|certified|accredited|warrant\w*|guarantee\w*|same[- ]day|\d)/i.test(original),sentence:sentence.slice(0,260),class:supportedBy(original)?'SOURCED_FROM_PAGE':(applied.length?false:(IMPERATIVE.test(original)||ADVICE_MODAL.test(original)))?'GENERAL_ADVICE':'GENERAL_STATEMENT_UNVERIFIED'})}
  }
  return {ok:violations.length===0,violations,safe_rewrites:rewrites,safe_text:kept.join(' '),claim_review:review};
 }

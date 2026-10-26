@@ -39,7 +39,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   const alt=(report.site_architecture?.compatible_existing_pages||[]);
   const overlap=(report.site_architecture?.intent_overlap_risks||[]).filter(x=>x.verified_cannibalization===true);
   if(!alt.length&&!overlap.length)
-   return {...base,decision:'NEW_DISTINCT_PAGE',verified_gap:true,gap_basis:'DIFFERENT_SEARCH_INTENT_AND_NO_COMPATIBLE_SAME_SITE_PAGE',
+   return {...base,decision:'NEW_DISTINCT_PAGE',verified_gap:false,gap_observed:true,gap_basis:'DIFFERENT_SEARCH_INTENT_AND_NO_COMPATIBLE_SAME_SITE_PAGE',
     reason:'Live results agree on a '+serpIntent.intent+' intent, but the selected page is '+(destinationIntent.class||'a different type')+'; no compatible same-site page was found.',
     distinct_intent_evidence:{serp:serpIntent.leads.slice(0,5),destination:destinationIntent},
     new_page_plan:{working_query:query,facts_source_url:target,tasks:supported.slice(0,4).map(t=>({code:t.code,label:t.label,match:t.match,competitor_evidence:t.competitor_support.slice(0,2)})),
@@ -63,7 +63,8 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
    internal_link_candidates:linked.map(t=>({task:t.code,link_to:t.covered_elsewhere_on_site[0].url,reason:'Task is taught there; link instead of duplicating.'})),
    evidence:supported.flatMap(evidenceFor).slice(0,6),next_action:'Keep the page unchanged; revisit only if live results or the page change.'};
  const chosen=gaps.sort((a,b)=>(b.independent_sources-a.independent_sources)||(a.destination.status==='PARTIAL'?-1:1)).slice(0,2);
- return {...base,decision:'IMPROVE_EXISTING',verified_gap:true,
+ // verified_gap stays false until a draft for the task passes every check (the producer sets it); gap_observed is the research finding.
+ return {...base,decision:'IMPROVE_EXISTING',verified_gap:false,gap_observed:true,
   gap_basis:'TASK_TAUGHT_BY_2_PLUS_INDEPENDENT_COMPETITORS_AND_NOT_FULLY_COVERED_IN_COMPLETE_DESTINATION_HTML',
   reason:'The existing page is a compatible destination, and '+chosen.length+' reader task(s) taught by 2+ independent competitors are missing ('+
    chosen.filter(t=>t.destination.status!=='PARTIAL').length+') or only partly covered ('+chosen.filter(t=>t.destination.status==='PARTIAL').length+') on it. A task counts as verified only after a draft for it passes the checks.',
@@ -114,7 +115,7 @@ function decideGrowthEditorialAction({report={},destination={},coverage=null,ser
   case_study_locked:protection.case_study_locked===true,preserve_title_h1:true,
   publish_allowed:false,copy_ready:false,verified_gap:false,
   gsc_optional:true,exact_page_query_metrics_verified:!!action.metrics,
-  evidence_count:comparisons.length,facts,uncertainties,evidence};
+  evidence_count:comparisons.length,facts,uncertainties,evidence,attempted_sources:attemptsList};
  if(query)facts.push({code:'TOPIC_SELECTED',value:query,source:action.query?'PAGE_VERIFIED_GSC_OR_TRACKED_TOPIC':'TRACKED_PAGE_TOPIC'});
  const fail=(reason,code)=>({...base,decision:'DATA_BLOCKED',reason,blocker_code:code,missing_evidence:[{code,detail:reason}],attempted_sources:attemptsList,
   next_action:'Resolve the named source or intent blocker; do not create text without matching evidence.'});

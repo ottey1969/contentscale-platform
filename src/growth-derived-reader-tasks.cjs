@@ -22,9 +22,28 @@ function sectionProfile(sec,skip){
  return {counts,head};
 }
 // competitors: [{host,url,sections:[{heading,text,words}]}]  ->  up to `limit` tasks
+// A competitor section that sells the competitor itself (its product, its client story) describes THEIR offer,
+// not a task the reader must learn. Detected from the competitor's own name and from case-study / possessive headings.
+// otherHostsText: the lower-cased text of the OTHER competitors. A site name that is also an ordinary word the other sites use
+// ("dentist-one.example" talking about dentists) is the topic, not a brand.
+function isPromotionalSection(sec,host,otherHostsText=''){
+ const label=String(host||'').replace(/^www\./,'').split('.')[0].toLowerCase().replace(/[^a-z0-9]/g,''),root=label.length>=5?label.slice(0,6):'';
+ const heading=String(sec.heading||''),hay=(heading+' '+String(sec.text||'')).toLowerCase();
+ if(/\b(?:case stud(?:y|ies)|customer stor(?:y|ies)|success stor(?:y|ies)|testimonials?|client stor(?:y|ies)|why (?:choose|work with) us|our (?:clients|customers|pricing|plans))\b/i.test(heading))return true;
+ if(/^[A-Z][\w-]+['’]s\s/.test(heading))return true;
+ if(root&&!String(otherHostsText).includes(root)){if(heading.toLowerCase().replace(/[^a-z0-9]/g,'').includes(root))return true;const n=hay.split(root).length-1;if(n>=2)return true}
+ return false;
+}
+function surfaceOf(root,texts){
+ const count=new Map();
+ for(const t of texts)for(const w of String(t||'').toLowerCase().match(/[a-z]{5,}/g)||[])if(!IGNORED.has(w)&&!IGNORED.has(STEM(w))&&root_(w)===root)count.set(w,(count.get(w)||0)+1);
+ return [...count].sort((a,b)=>b[1]-a[1])[0]?.[0]||root;
+}
+const root_=w=>STEM(w).slice(0,6);
 function deriveReaderTasks({query='',competitors=[],queryRootSet=new Set(),limit=4}={}){
  const skip=new Set(queryRootSet);
- const profiles=competitors.map(c=>({c,secs:c.sections.map(sec=>({sec,...sectionProfile(sec,skip)}))}));
+ const textOf=c=>c.sections.map(s=>s.heading+' '+s.text).join(' ').toLowerCase();
+ const profiles=competitors.map(c=>({c,secs:c.sections.filter(sec=>!isPromotionalSection(sec,c.host,competitors.filter(o=>o!==c).map(textOf).join(' '))).map(sec=>({sec,...sectionProfile(sec,skip)}))}));
  const roots=new Set();for(const p of profiles)for(const s of p.secs)for(const [r,n] of s.counts)if(n>=3)roots.add(r);
  // A root present in most sections of one article is that article's TOPIC (e.g. 'creation' in a guide about content
  // creation), not a task taught in one section. Such roots are dropped so two sites sharing only the topic word are not
@@ -60,7 +79,8 @@ function deriveReaderTasks({query='',competitors=[],queryRootSet=new Set(),limit
   if(keys.some(k=>used.has(k)))continue; // one task per competitor section
   keys.forEach(k=>used.add(k));
   const lead=c.per.find(x=>x.best.head.has(c.root))||c.per[0];
-  tasks.push({code:'task_'+c.root,key:c.root,co_terms:c.co,concepts:c.concepts,
+  const texts=c.per.map(x=>x.best.sec.heading+' '+x.best.sec.text);
+  tasks.push({code:'task_'+c.root,key:c.root,co_terms:c.co,concepts:c.concepts,core_words:[surfaceOf(c.root,texts),...c.concepts.slice(1,4).map(r=>surfaceOf(r,texts))],
    label:'Competitors teach “'+lead.best.sec.heading.slice(0,90)+'”',
    support:c.per.map(x=>({url:x.url,host:x.host,heading:x.best.sec.heading,excerpt:x.best.sec.text.slice(0,420),concepts:[c.root,...c.co].slice(0,4),partial:!!x.partial}))});
   if(tasks.length>=limit)break;
@@ -88,4 +108,4 @@ function destinationStatus(task,blocksList,skip=new Set()){
  const status=strong.length>=2||strong.some(x=>x.key>=2)?'COVERED':per.length?'PARTIAL':'NOT_OBSERVED';
  return {status,passages:(strong.length?strong:per).slice(0,2).map(x=>({heading:x.b.heading||null,text:x.b.text.slice(0,300),concepts:[task.key,...task.co_terms].slice(0,4)}))};
 }
-module.exports={deriveReaderTasks,draftTeachesTask,destinationStatus,taskHitsInText,wordsOf,root,STEM,IGNORED};
+module.exports={isPromotionalSection,deriveReaderTasks,draftTeachesTask,destinationStatus,taskHitsInText,wordsOf,root,STEM,IGNORED};

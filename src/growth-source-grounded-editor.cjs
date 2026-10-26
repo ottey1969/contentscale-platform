@@ -22,6 +22,7 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true}={}){
  const text=v=>plain(typeof v==='string'?v:'').slice(0,900);
  const sections=obj.sections.slice(0,6).map(it=>({h2:text(it?.h2).slice(0,140),
   paragraphs:(Array.isArray(it?.paragraphs)?it.paragraphs:[]).slice(0,4).map(text).filter(x=>x.length>=40),
+  task_code:/^task_[a-z0-9]{3,12}$/.test(String(it?.task_code||''))?String(it.task_code):undefined,
   source_status:'AI_COPY_NEEDS_FACT_CHECK'})).filter(x=>x.h2&&x.paragraphs.length);
  if(!sections.length)return {status:'AI_DRAFT_TOO_THIN',draft:null};
  // A supported claim may still belong to the wrong search intent.
@@ -70,14 +71,16 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   'Do NOT put GSC numbers, click-growth predictions, dates of measurement or claimed search rankings into public-facing draft copy. Use this data only as internal editorial planning context.',
   'Preserve strong existing search-intent coverage. Do not suggest a replacement title or H1 based on metrics of a different page.',
   ...(readerTask?.mode==='SECTION_IMPROVEMENT'?[
-   'TASK MODE: SECTION_IMPROVEMENT. Write ONLY the missing reader task(s) listed here, each as its own H2 section with 2-4 paragraphs that a reader can act on: '+JSON.stringify(readerTask.tasks),
+   'TASK MODE: SECTION_IMPROVEMENT. Write ONLY the missing reader task(s) listed here: exactly ONE H2 section per task (never combine tasks), 2-4 paragraphs each that a reader can act on. Tasks: '+JSON.stringify(readerTask.tasks),
+   'Every section must carry the "task_code" of the task it teaches. Put the task\'s core_words in the H2 and in the first sentence, and explain the task itself, not a neighbouring topic.',
+   'Write reader advice, not product claims: never state what any tool, tracker or software does or detects; avoid absolute verbs (eliminates, prevents, ensures, guarantees, proves) and promises about rankings, traffic, AI citations or ROI; use no figures that are not in the original text.',
    'Do not repeat anything the original page already teaches. Existing H2 headings (do not duplicate): '+JSON.stringify(readerTask.existing_headings||[]),
    'Procedural how-to guidance is allowed; every statistic, date, named study, price or claim about the site owner must come from the original text. Do not output a title or meta description.'
   ]:readerTask?.mode==='NEW_DISTINCT_PAGE'?[
    'TASK MODE: NEW_DISTINCT_PAGE. The reader intent differs from the original page, so write 3-5 sections for a SEPARATE new page on the working query. The original text is the only factual source about the site owner; competitor passages are questions only.',
    'Reader tasks to teach: '+JSON.stringify(readerTask.tasks)
   ]:[]),
-  'JSON: {"seo_title":"...","meta_description":"...","sections":[{"h2":"...","paragraphs":["...","..."]}]}',
+  'JSON: {"seo_title":"...","meta_description":"...","sections":[{"task_code":"(task code when in task mode, else omit)","h2":"...","paragraphs":["...","..."]}]}',
   'Working topic, not verified ranking: '+String(focusQuery||'').slice(0,160),
   'OPTIONAL GSC EDITORIAL CONTEXT (database page-verified, not an article fact): '+JSON.stringify(gscContext?{
    status:gscContext.status||'NO_VERIFIED_GSC',target_url:gscContext.target_url||canonical.href,

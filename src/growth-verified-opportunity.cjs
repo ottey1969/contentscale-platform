@@ -15,8 +15,11 @@ function summarizeClaims(rows){
  const by=c=>rows.filter(x=>x.class===c);
  return {counts:{sourced_from_page:by('SOURCED_FROM_PAGE').length,general_advice:by('GENERAL_ADVICE').length,general_statement_unverified:by('GENERAL_STATEMENT_UNVERIFIED').length},
   needs_fact_check:by('GENERAL_STATEMENT_UNVERIFIED').map(x=>x.sentence),
+  needs_owner_confirmation:rows.filter(x=>x.confirm_with_owner).map(x=>x.sentence),
   confidence:by('GENERAL_STATEMENT_UNVERIFIED').length?'REVIEWABLE_WITH_UNVERIFIED_STATEMENTS':'REVIEWABLE_ADVICE_AND_SOURCED_STATEMENTS',
-  requirements:['Fact-check every statement against your own knowledge and sources before publishing.','Owner approval is required; nothing is published automatically.']};
+  requirements:['Fact-check every statement against your own knowledge and sources before publishing.',
+   ...(rows.some(x=>x.confirm_with_owner)?['Some statements repeat claims the page itself makes (availability, coverage, credentials or figures). They are only as true as the page: confirm each with the business before reusing it in new copy.']:[]),
+   'Owner approval is required; nothing is published automatically.']};
 }
 function produceVerifiedEditorialOpportunity({report={},completion={},sources={}}={}){
  const gate=report.editorial_decision_gate||{};
@@ -32,7 +35,8 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
   const plan=gate.improvement_plan,rejections=[],accepted=[];
   for(const section of sections){
    let hit=null;
-   for(const task of plan.tasks){
+   const labelled=plan.tasks.find(t=>t.code===section.task_code);
+   for(const task of (labelled?[labelled]:plan.tasks)){
     const r=checkDraftSection(section,{task,destinationText,competitorTexts,query,brandLabel:sources.brandLabel||''});
     if(r.ok){hit={task,section,r};break}
     rejections.push({heading:section.h2,task:task.code,...r});

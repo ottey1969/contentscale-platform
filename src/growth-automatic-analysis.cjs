@@ -8,7 +8,7 @@ const {classifyGrowthIntent,suggestInternalGrowthLinks}=require('./growth-intent
 const {chooseGrowthNextAction,topicAligned,queryFit}=require('./growth-one-action-decision.cjs');
 const {buildGrowthPracticalBrief,sectionEvidence}=require('./growth-practical-brief.cjs');
 const {readerJourney}=require('./growth-reader-journey.cjs');
-function plain(s){return String(s||'').replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|quot|nbsp|lt|gt|#39);/g,' ').replace(/\s+/g,' ').trim()}
+function plain(s){return require('./growth-text.cjs').decodeEntities(String(s||'').replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim()}
 function excerpt(html,limit=8){
  if(typeof html!=='string')return {title:null,description:null,h1:[],h2:[],paragraph_samples:[]};
  const clean=html.slice(0,120000).replace(/<(script|style|template)\b[^>]*>[\s\S]*?<\/\1>/gi,' ').replace(/<!--[\s\S]*?-->/g,'');

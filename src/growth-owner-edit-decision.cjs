@@ -53,7 +53,8 @@ function decideFromEvidence({report,completion,base,sources}){
   const rejected=[],accepted=[];
   for(const section of sections){
    let best=null;
-   for(const task of tasks){const r=checkDraftSection(section,{task,destinationText,competitorTexts,query:base.focus_query,brandLabel:sources.brandLabel||''});
+   const labelled=tasks.find(t=>t.code===section.task_code);
+   for(const task of (labelled?[labelled]:tasks)){const r=checkDraftSection(section,{task,destinationText,competitorTexts,query:base.focus_query,brandLabel:sources.brandLabel||''});
     if(r.ok){best={task,r,section};break}rejected.push({heading:section.h2,task:task.code,...r})}
    if(best)accepted.push(best);
   }

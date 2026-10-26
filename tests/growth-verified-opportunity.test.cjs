@@ -38,7 +38,7 @@ test('gate turns a planned improvement into copy_ready only with a matching veri
    competitor_support:[{url:'https://a.example/x',heading:'h',excerpt:'e'},{url:'https://b.example/y',heading:'h',excerpt:'e'}],destination:{status:'NOT_OBSERVED',passages:[]},covered_elsewhere_on_site:[],placement:{mode:'ADD_AFTER_SECTION',section_heading:'What is scaling',reason:'r'}}],destination_section_headings:['What is scaling']},
   serpIntent:{status:'SERP_INTENT_OBSERVED',intent:'INFORMATIONAL_GUIDE',agreeing_leads:3,organic_leads_considered:4,leads:[]},destinationIntent:{class:'INFORMATIONAL_GUIDE',verdict:'COMPATIBLE'},attempts:[]};
  const planned=decideGrowthEditorialAction(args);
- assert.equal(planned.decision,'IMPROVE_EXISTING');assert.equal(planned.copy_ready,false);assert.equal(planned.verified_gap,true,'task-level gap evidence');
+ assert.equal(planned.decision,'IMPROVE_EXISTING');assert.equal(planned.copy_ready,false);assert.equal(planned.verified_gap,false,'not verified before a draft passes');assert.equal(planned.gap_observed,true,'task-level gap evidence is recorded separately');
  const opp={verified:true,type:'IMPROVE_EXISTING',producer:'P',focus_query:'content scaling',target_url:T,target_section:'What is scaling',
   proposed_text:'x'.repeat(90),evidence:[{source_url:'https://a.example/x',excerpt:'quoted'}]};
  const done=decideGrowthEditorialAction({...args,report:{...args.report,verified_editorial_opportunity:opp}});
