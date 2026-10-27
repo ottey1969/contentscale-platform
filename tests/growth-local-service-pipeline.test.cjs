@@ -17,7 +17,7 @@ const pages={'https://roofer-a.example/roof-repair-nj/':comp('Roof repair in Pat
 const leads=[['https://roofer-a.example/roof-repair-nj/','Roof Repair in Paterson, NJ | Roofer A'],['https://roofer-b.example/services/roof-repair/','Roof Repairs in Bergen County NJ - Roofer B'],
  ['https://roofer-c.example/near-me/','Emergency Roof Repair Near Me | Roofer C'],['https://roofer-d.example/hackensack/','Roof Repair Contractors in Hackensack, NJ']]
  .map(([url,title],i)=>({url,title,snippet:'Local roof repair',source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}));
-function harness(drafts,{flaky={}}={}){
+function harness(drafts,{flaky={},extraPages={},fail={},leadList=null}={}){
  const route={},writes=[],providerCalls=[],fetchCalls={};
  const db={async query(sql){
   if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql)){writes.push(sql);throw Error('No writes permitted')}
@@ -28,9 +28,10 @@ function harness(drafts,{flaky={}}={}){
   req.growth={can_edit:req.params.token==='owner-token',pages:[{id:77,url:URL_,keyword:'roof repair lodi nj',case_study_active:true}]};next()},{
   retryDelayMs:0,
   fetchLive:async url=>{fetchCalls[url]=(fetchCalls[url]||0)+1;if(flaky[url]>0){flaky[url]--;throw Object.assign(new Error('HTTP_202'),{code:'HTTP_202'})}
-   const html=url===URL_?ownHtml:pages[url];if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
+   if(fail[url])throw Object.assign(new Error(fail[url]),{code:fail[url]});
+   const html=url===URL_?ownHtml:(extraPages[url]??pages[url]);if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
    return {html,final_url:url,retrieved_at:'2026-10-24T10:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
-  searchLive:async()=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:'roof repair lodi nj',leads,provider_attempts:['BING_PUBLIC_RSS','SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-24T10:00:00Z'}),
+  searchLive:async()=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:'roof repair lodi nj',leads:leadList||leads,provider_attempts:['BING_PUBLIC_RSS','SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-24T10:00:00Z'}),
   completeOwnerDraft:async({body})=>{providerCalls.push(body);const d=drafts.shift();
    return {statusCode:200,body:d?{success:true,page_id:body.page_id,canonical_url:URL_,status:'AI_DRAFT_REVIEW_REQUIRED',draft_source_type:'LIVE_PUBLIC_HTML',live_competitor_observations_used:2,
     draft:{seo_title:null,meta_description:null,sections:[d]}}:{success:false,code:'NO_STUB'}}}});
@@ -87,4 +88,33 @@ test('a competitor answering HTTP 202 (accepted, not ready) is retried exactly o
  assert.equal(stuck.fetchCalls[a],2,'never more than one retry');assert(s.body.evidence_warnings.includes('COMPETITOR_LIVE_HTTP_202'));
  assert.equal(s.body.editorial_decision_gate.decision,'DATA_BLOCKED','one remaining competitor is not enough, and the report says why');
  assert(s.body.editorial_decision_gate.missing_evidence.some(x=>x.code==='READABLE_COMPETITOR_ARTICLES'&&/received/.test(x.detail)));
+});
+
+test('competitor fetching continues in batches past blocked, timed-out and unreadable pages, logs every URL, and never bypasses a block',async()=>{
+ const mk=(n,p)=>({url:'https://c'+n+'.example/'+p+'/',title:'Roof Repair in Paterson, NJ | C'+n,snippet:'Local roof repair',source:'SERPER_GOOGLE_ORGANIC',serp_position:n});
+ const L=[1,2,3,4,5,6,7,8].map(n=>mk(n,'roof-repair-nj'));
+ const shell='<html><body><div id="app"></div>'+'<script>window.__x=1;</script>'.repeat(900)+'</body></html>';
+ const extra={};for(const n of [4,5,6])extra[L[n-1].url]=pages['https://roofer-'+(n%2?'a':'b')+'.example/'+(n%2?'roof-repair-nj/':'services/roof-repair/')];
+ const h=harness([],{leadList:L,fail:{[L[0].url]:'HTTP_403',[L[1].url]:'FETCH_TIMEOUT'},extraPages:{[L[2].url]:shell,...extra}});
+ const b=(await h.call(h.GET,'client-token')).body,log=b.search_discovery.competitor_fetch_log;
+ assert.equal(log.length,6,'second batch needed: first three yielded nothing readable, stops once three readable pages exist');
+ assert.deepEqual(log.slice(0,3).map(x=>x.explanation),['BLOCKED_BY_SITE_RESPECTED','TIMEOUT','JS_RENDERED_PAGE_NO_STATIC_TEXT']);
+ assert.deepEqual(log.slice(3).map(x=>x.outcome),['READABLE','READABLE','READABLE']);
+ assert.equal(h.fetchCalls[L[0].url],1,'a 403 is respected: exactly one request, no retry or workaround');
+ assert.equal(h.fetchCalls[L[6].url]||0,0,'untried candidates are not fetched once enough evidence exists');
+ assert.match(b.search_discovery.competitor_fetch_summary,/6 tried: 3 readable, 1 blocked by the site \(respected\), 1 timed out, 1 fetched but not readable/);
+ assert.match(b.search_discovery.competitor_fetch_summary,/2 further candidate\(s\) untried/);
+ assert(b.editorial_decision_gate.attempted_sources.some(a=>a.source==='COMPETITOR_HTML_FETCH'&&/blocked by the site/.test(a.detail)),'the gate carries the same diagnostics');
+});
+test('when too few readable competitors exist, DATA_BLOCKED explains every attempt per URL',async()=>{
+ const mk=n=>({url:'https://d'+n+'.example/roof-repair/',title:'Roof Repair in Paterson, NJ | D'+n,snippet:'x',source:'SERPER_GOOGLE_ORGANIC',serp_position:n});
+ const L=[1,2,3,4].map(mk);const h=harness([],{leadList:L,fail:{[L[0].url]:'HTTP_403',[L[1].url]:'HTTP_404',[L[2].url]:'HTTP_503'},extraPages:{[L[3].url]:'<html><body><p>Hi</p></body></html>'}});
+ const b=(await h.call(h.GET,'client-token')).body;
+ assert.equal(b.editorial_decision_gate.decision,'DATA_BLOCKED');
+ assert.deepEqual(b.search_discovery.competitor_fetch_log.map(x=>x.explanation),['BLOCKED_BY_SITE_RESPECTED','PAGE_NOT_FOUND','SITE_ERROR','NO_PARAGRAPH_TEXT']);
+ const m=b.editorial_decision_gate.missing_evidence.find(x=>x.code==='READABLE_COMPETITOR_ARTICLES');assert(m);assert.equal(b.report_completion.status,'DATA_BLOCKED_REPORT'===b.report_completion.status?'DATA_BLOCKED_REPORT':b.report_completion.status);
+ assert.equal(h.providerCalls.length,0);assert.equal(h.writes.length,0);
+ const {buildOwnerHandoffPackage}=require('../src/growth-owner-handoff-package.cjs');
+ const md=buildOwnerHandoffPackage({report:b,decision:b.editorial_decision_gate,completion:{}}).markdown;
+ assert.match(md,/## Competitor pages tried/);assert.match(md,/d1\.example — fetch failed \(blocked by site respected\)/);assert.match(md,/d4\.example — not readable \(no paragraph text\)/);
 });

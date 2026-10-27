@@ -55,7 +55,7 @@ async function discoverGrowthCompetitors({query,ownUrl,fetchFeed=fetchPublicGrow
    checked_at:feed?.retrieved_at||new Date(now).toISOString(),source:'BING_PUBLIC_RSS',
    reason:'UNEXPECTED_NON_RSS_RESPONSE',
    warning:'Public search returned something other than RSS (possibly a bot-check or changed format). This is a source failure, not evidence that no competitors exist.'};
- const items=parseBingRss(body,{query:term,ownUrl,limit:7});
+ const items=parseBingRss(body,{query:term,ownUrl,limit:10});
  return {status:feed.truncated?(items.length?'PARTIAL_PUBLIC_SEARCH_LEADS':'PUBLIC_SEARCH_PARTIAL'):
    items.length?'FRESH_PUBLIC_SEARCH_LEADS':'NO_RELEVANT_PUBLIC_SEARCH_LEADS',
   query:term,leads:items,checked_at:feed?.retrieved_at||new Date(now).toISOString(),source:'BING_PUBLIC_RSS',

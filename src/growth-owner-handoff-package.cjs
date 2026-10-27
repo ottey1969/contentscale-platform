@@ -60,6 +60,11 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   for(const x of report.search_discovery.rejected_leads.slice(0,8))L.push('- '+clip(x.title,80)+' — '+x.reason);
   L.push('');
  }
+ if((report.search_discovery?.competitor_fetch_log||[]).length){
+  L.push('## Competitor pages tried','',report.search_discovery.competitor_fetch_summary||'','');
+  for(const x of report.search_discovery.competitor_fetch_log)L.push('- '+x.host+' — '+x.outcome.toLowerCase().replace(/_/g,' ')+(x.explanation?' ('+String(x.explanation).toLowerCase().replace(/_/g,' ')+')':'')+(x.partial_capture?', captured partially':''));
+  L.push('');
+ }
  const cov=report.reader_task_coverage;
  if(report.serp_intent?.leads?.length){
   L.push('## Search intent observed','','Fresh organic results for “'+(decision.focus_query||'')+'” ('+(report.search_discovery?.source||'search provider')+', '+(report.search_discovery?.checked_at||'')+'). Discussion sites excluded. Placement here is not a ranking of your page.','');
@@ -98,6 +103,7 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
     '- General advice (procedural, not a factual claim): '+cr.counts.general_advice,
     '- General statements NOT verified by any source: '+cr.counts.general_statement_unverified);
    for(const x of cr.needs_fact_check||[])L.push('  - Fact-check: “'+clip(x,160)+'”');
+   for(const x of cr.needs_owner_confirmation||[])L.push('  - Confirm with the business (repeats a claim the page makes): “'+clip(x,160)+'”');
    for(const x of cr.requirements||[])L.push('- '+x);
    L.push('');
   }

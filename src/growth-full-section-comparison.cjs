@@ -1,7 +1,7 @@
 'use strict';
 // Read-only source comparison. Distinguishes observed text from proven missing facts.
 // No generative templates, paid API dependencies or publication rights.
-const strip=s=>String(s||'').replace(/<(?:script|style|nav|footer|form|noscript)\b[^>]*>[\s\S]*?<\/\s*(?:script|style|nav|footer|form|noscript)>/gi,' ').replace(/<[^>]+>/g,' ').replace(/&(?:amp|nbsp|quot|#39);/gi,' ').replace(/\s+/g,' ').trim();
+const strip=s=>require('./growth-text.cjs').decodeEntities(String(s||'').replace(/<(?:script|style|nav|footer|form|noscript)\b[^>]*>[\s\S]*?<\/\s*(?:script|style|nav|footer|form|noscript)>/gi,' ').replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim();
 // Language function words only. No topic, industry or product words.
 const STOP=new Set(['that','this','with','from','your','have','been','will','into','than','their','about','which','when','what','where','should','more','before','after','using','also','these']);
 const stem=w=>w.endsWith('ies')?w.slice(0,-3)+'y':

@@ -40,7 +40,7 @@
   if(outcome.target_url){var chosen=node('p','Target page: ',primary);link(outcome.target_url,outcome.target_url,chosen)}
   node('p','Focus query: '+String(outcome.focus_query||d.intent_resolution?.query||d.search?.focus_query||'not verified'),primary);
   node('small','Decision scope: '+String(outcome.decision_scope||'OBSERVED_RESEARCH_ONLY')+
-   ' · Verified content gap: '+(outcome.verified_gap===true?'YES':'NO')+
+   ' · Verified content gap: '+(outcome.verified_gap===true?'YES':(outcome.gap_observed===true?'NO — task gap observed, verified only after a draft passes the checks':'NO'))+
    ' · Automatic publishing: DISABLED',primary);
   if(outcome.decision==='DATA_BLOCKED'){
    node('p','Missing evidence — what is needed and why:',primary);

@@ -1,0 +1,239 @@
+{
+ "_provenance": {
+  "sources": [
+   "contentscale-growth-complete-review (2).json PRT 2026-10-26T00:51:34.178Z",
+   "contentscale-growth-complete-review (4).json ContentScale 2026-10-26T02:26:19.579Z"
+  ],
+  "honesty": "Verbatim production evidence. Competitor page bodies are not part of the reports, so tests that need bodies use labelled SYNTHETIC text that mirrors the observed structure."
+ },
+ "prt": {
+  "query": "emergency roof repair nj",
+  "serp_leads": [
+   {
+    "url": "https://www.alpharoofer.com/emergency-roof-repair",
+    "title": "Emergency Roofing Repair Services | Montgomery County, PA",
+    "snippet": "Roof leaks and sudden damage require immediate attention. Alpha Roofing and Siding LLC provides emergency roof repair services in Pennsylvania and New Jersey."
+   },
+   {
+    "url": "https://emergencyroofrepairnj.net/",
+    "title": "Emergency Roof Repair NJ",
+    "snippet": "Our team of skilled professionals is on call 24/7, ready to respond to roofing emergencies throughout New Jersey, from Bergen County to Cape May."
+   },
+   {
+    "url": "https://precisionwindowsnj.com/emergency-roof-repair-nj",
+    "title": "Emergency Roof Repair NJ | 24-Hour Storm Tarping",
+    "snippet": "Roof open, leaking, or hit by a limb? 24-hour emergency tarping and storm response across New Jersey. Call (201) 275-9185."
+   },
+   {
+    "url": "https://www.rhinoroofingnj.com/emergency-roof-repair",
+    "title": "Emergency Roof Repair",
+    "snippet": "At Rhino Roofing NJ, we prioritize urgent situations, providing estimates within 24 to 48 hours and scheduling standard work within a week. For critical ..."
+   },
+   {
+    "url": "https://www.gfedale.com/nj/roofing/repair/emergency",
+    "title": "Emergency Roof Repair in New Jersey | 24/7 Response",
+    "snippet": "Call G. Fedale's emergency roof repair team at 302-225-7663 for fast help with roof leaks, storm damage, and other emergency situations. If you or someone ..."
+   },
+   {
+    "url": "https://morriscountyroofing.com/emergency-roof-repair-nj",
+    "title": "Emergency Roof Repair NJ | 24/7 Same-Day",
+    "snippet": "Morris County Roofing offers 24/7 emergency roof repair throughout Morris County NJ. Call (973) 975-9110 any time — day or night — for storm damage, active ..."
+   },
+   {
+    "url": "https://njroofingcompany.com/this-is-an-emergency/",
+    "title": "Emergency Roof Repair Services in Northern NJ | Roof4Roof",
+    "snippet": "Roof4Roof, a New Jersey roofing company, offers a range of emergency roofing services across Hudson, Bergen, Passaic, Essex, Union, Morris, Sussex, ..."
+   }
+  ],
+  "fetched": [
+   "https://precisionwindowsnj.com/emergency-roof-repair-nj"
+  ],
+  "warnings": [
+   "COMPETITOR_LIVE_HTTP_403",
+   "COMPETITOR_LIVE_FETCH_TIMEOUT",
+   "COMPETITOR_HTML_INSUFFICIENT_READABLE_ARTICLE",
+   "COMPETITOR_HTML_INSUFFICIENT_READABLE_ARTICLE",
+   "COMPETITOR_HTML_INSUFFICIENT_READABLE_ARTICLE"
+  ],
+  "summary": {
+   "competitors_live_reviewed": 1,
+   "competitor_fetch_attempts": 6
+  },
+  "decision": "DATA_BLOCKED"
+ },
+ "cs": {
+  "destination_sections": [
+   {
+    "heading": "Content Scaling in 2026: A Quality-First Guide to Sustainable Growth",
+    "words": 116
+   },
+   {
+    "heading": "&#128209; Table of Contents",
+    "words": 101
+   },
+   {
+    "heading": "How to Audit Your Content Before You Scale",
+    "words": 233
+   },
+   {
+    "heading": "What Is the GRAAF Framework for Content Scaling?",
+    "words": 147
+   },
+   {
+    "heading": "&#9888;&#65039; Common Mistake",
+    "words": 83
+   },
+   {
+    "heading": "Quality-First vs Volume-First Content Scaling",
+    "words": 89
+   },
+   {
+    "heading": "How the GRAAF Workflow Works (Brief &rarr; Publish)",
+    "words": 84
+   },
+   {
+    "heading": "&#128273; The 5-Step GRAAF Workflow",
+    "words": 151
+   },
+   {
+    "heading": "How to Start Scaling Content the Right Way",
+    "words": 191
+   },
+   {
+    "heading": "Content Scaling Statistics — 2024&#8211;2026",
+    "words": 115
+   },
+   {
+    "heading": "What Google&rsquo;s Guidelines and the Data Show",
+    "words": 98
+   },
+   {
+    "heading": "E-commerce Blog (Home Goods, US): 78% Traffic Recovery in 90 Days",
+    "words": 77
+   },
+   {
+    "heading": "Want to Scale Content Without Losing Quality?",
+    "words": 39
+   },
+   {
+    "heading": "Content Scaling — 8 Questions People Ask",
+    "words": 414
+   },
+   {
+    "heading": "&#128218; Related Articles",
+    "words": 223
+   }
+  ],
+  "plan_tasks": [
+   {
+    "code": "task_templa",
+    "label": "Competitors teach “Stellar’s Templates”",
+    "destination_status": "NOT_OBSERVED",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "&#128273; The 5-Step GRAAF Workflow",
+     "reason": "Closest existing section by shared concepts (workfl, brief, struct, expert); the new section continues that explanation."
+    }
+   },
+   {
+    "code": "task_automa",
+    "label": "Competitors teach “Automation and AI Tools”",
+    "destination_status": "NOT_OBSERVED",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "&#128218; Related Articles",
+     "reason": "Closest existing section by shared concepts (specia, experi, organi, genera); the new section continues that explanation."
+    }
+   }
+  ],
+  "raw_draft_sections": [
+   {
+    "h2": "Standardised Content Templates for Quality Scaling",
+    "paragraphs": []
+   },
+   {
+    "h2": "Integrating Automation and AI Tools into Content Workflows",
+    "paragraphs": []
+   }
+  ],
+  "rejections": [
+   {
+    "heading": "Standardised Content Templates for Quality Scaling",
+    "task": "task_templa",
+    "ok": false,
+    "code": "DRAFT_UNSUPPORTED_CLAIMS",
+    "concept_hits": 5,
+    "duplicate_overlap_pct": 0,
+    "claim_violations": [
+     {
+      "code": "ABSOLUTE_CLAIM",
+      "sentence": "This procedural step eliminates guesswork, standardises formatting across all published assets, and prevents low-quality drafts from progressing into production.",
+      "reason": "Contains the unqualified claim “eliminates”; the sources do not prove it and it cannot be softened without changing its meaning."
+     }
+    ],
+    "reason": "Rejected: ABSOLUTE_CLAIM."
+   },
+   {
+    "heading": "Standardised Content Templates for Quality Scaling",
+    "task": "task_automa",
+    "ok": false,
+    "code": "DRAFT_OFF_TASK",
+    "concept_hits": 1,
+    "reason": "The text does not teach the missing reader task near its start (core concept “automa” plus related concepts)."
+   },
+   {
+    "heading": "Integrating Automation and AI Tools into Content Workflows",
+    "task": "task_templa",
+    "ok": false,
+    "code": "DRAFT_OFF_TASK",
+    "concept_hits": 3,
+    "reason": "The text does not teach the missing reader task near its start (core concept “templa” plus related concepts)."
+   },
+   {
+    "heading": "Integrating Automation and AI Tools into Content Workflows",
+    "task": "task_automa",
+    "ok": false,
+    "code": "DRAFT_UNSUPPORTED_CLAIMS",
+    "concept_hits": 7,
+    "duplicate_overlap_pct": 0,
+    "claim_violations": [
+     {
+      "code": "UNSUPPORTED_CAPABILITY_CLAIM",
+      "sentence": "Integrate automated quality checks that scan for missing citations, formatting compliance, and readability metrics prior to final sign-off.",
+      "reason": "States what a tool or system does (“automated quality checks”) but the destination page does not say so; generic advice cannot stand in for a verified product capability."
+     }
+    ],
+    "reason": "Rejected: UNSUPPORTED_CAPABILITY_CLAIM."
+   }
+  ],
+  "verified_gap_in_production": true,
+  "competitor_support": [
+   {
+    "task": "task_templa",
+    "hosts": [
+     [
+      "optimizely.com",
+      "How to scale your content creation"
+     ],
+     [
+      "stellarcontent.com",
+      "Stellar’s Templates"
+     ]
+    ]
+   },
+   {
+    "task": "task_automa",
+    "hosts": [
+     [
+      "aprimo.com",
+      "Automation and AI Tools"
+     ],
+     [
+      "stellarcontent.com",
+      "Paris Mechanical"
+     ]
+    ]
+   }
+  ]
+ }
+}

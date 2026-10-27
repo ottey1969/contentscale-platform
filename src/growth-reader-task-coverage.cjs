@@ -7,8 +7,8 @@
 
 const CLEAN=/<(script|style|nav|footer|noscript|template|svg|form|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
 const CTA=/\b(?:book a demo|register now|get a demo|request (?:a )?demo|contact sales|subscribe|sign up|free trial|our customers|related posts|recommended articles|share this|newsletter)\b/i;
-const plain=x=>String(x||'').replace(/<[^>]+>/g,' ').replace(/&(?:nbsp|#160);/gi,' ').replace(/&amp;/gi,'&')
- .replace(/&(?:quot|#8220|#8221);/gi,'"').replace(/&(?:#39|#8217);/gi,"'").replace(/\s+/g,' ').trim();
+const {decodeEntities}=require('./growth-text.cjs');
+const plain=x=>decodeEntities(String(x||'').replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim();
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()}catch{return ''}};
 
 const STEMS=w=>String(w||'').toLowerCase().replace(/[^a-z]/g,'').replace(/(?:ing|ed|es|s|e)$/,'');
@@ -134,7 +134,7 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
    const st=destinationStatus(task,blocks(p.html),skip);
    if(st.status==='COVERED')elsewhere.push({url:p.url,heading:st.passages[0]?.heading||null,excerpt:st.passages[0]?.text.slice(0,260)||''});
   }
-  result.push({code:task.code,label:task.label,match:{key:task.key,co_terms:task.co_terms,concepts:task.concepts},
+  result.push({code:task.code,label:task.label,match:{key:task.key,co_terms:task.co_terms,concepts:task.concepts,core_words:task.core_words},
    supported_by_competitors:new Set(task.support.map(x=>x.host)).size>=2,
    independent_sources:new Set(task.support.map(x=>x.host)).size,competitor_support:task.support,
    destination:dest,covered_elsewhere_on_site:elsewhere.slice(0,2),
