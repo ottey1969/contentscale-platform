@@ -35,8 +35,9 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
   const plan=gate.improvement_plan,rejections=[],accepted=[];
   for(const section of sections){
    let hit=null;
-   const labelled=plan.tasks.find(t=>t.code===section.task_code);
-   for(const task of (labelled?[labelled]:plan.tasks)){
+  const labelled=section.task_code?plan.tasks.find(t=>t.code===section.task_code):null;
+  const candidateTasks=section.task_code?(labelled?[labelled]:[]):plan.tasks;
+  for(const task of candidateTasks){
     const r=checkDraftSection(section,{task,destinationText,competitorTexts,query,brandLabel:sources.brandLabel||''});
     if(r.ok){hit={task,section,r};break}
     rejections.push({heading:section.h2,task:task.code,...r});

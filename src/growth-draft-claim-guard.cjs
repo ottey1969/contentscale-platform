@@ -26,7 +26,7 @@ const EDITOR_NOTE=/\b(?:for (?:internal )?editor(?:ial)? (?:verification|review|
 // 2d. Capability claims: a tool, tracker, platform or system is said to DO something. Generic advice about choosing or
 // using tools is fine; an assertion about what a tool does must be stated on the destination page or it is unverified.
 const CAP_SUBJECT='(?:tools?|trackers?|tracking|monitoring|platforms?|software|dashboards?|systems?|scoring|automation|analytics|(?:automated|ai[- ]powered|ai)\\s+\\w+)';
-const CAP_VERB_S='(?:monitors|tracks|identifies|confirms|provides|detects|verifies|analy[sz]es|generates|reveals|highlights|captures|compares|predicts|automates|ensures|guarantees|discovers|finds|pinpoints|validates|delivers)';
+const CAP_VERB_S='(?:monitors|tracks|identifies|confirms|provides|detects|verifies|analy[sz]es|generates|reveals|highlights|captures|compares|predicts|automates|ensures|guarantees|discovers|finds|pinpoints|validates|delivers|shows)';
 // Plural nouns that are also verbs ("quality checks", "monthly reports"): only a verb when a SINGULAR tool noun is the subject.
 const CAP_VERB_AMBIGUOUS='(?:checks|reports|scores|records|flags|alerts|measures|shows|surfaces)';
 const CAP_SINGULAR_SUBJECT='(?:tool|tracker|tracking|monitoring|platform|software|dashboard|system|scoring|automation|analytics)';
@@ -64,8 +64,8 @@ function entitiesIn(sentence){
 }
 
 // text: draft paragraph(s); destinationText: the ONLY factual source; query: the working query.
-// Real instruction verbs only (conjunctions such as once/then/if/before do not make a sentence advice).
-const IMPERATIVE_VERB=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|turn|connect|run|test|document|update|define|set|write|plan|prioriti[sz]e|focus|avoid|ensure|confirm|assign|audit|extract|apply|maintain|feed)\b/i;
+// Conjunctions such as once/then/if/before do not by themselves make advice imperative.
+const IMPERATIVE_VERB=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioriti[sz]e|focus|avoid|ensure|confirm|assign|audit|extract|apply|maintain|feed)\b/i;
 const IMPERATIVE=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioritis?e|focus|avoid|ensure|confirm|schedule|assign|audit|extract|apply|maintain|continuously|then|first|next|once|before|after|if)\b/i;
 const ADVICE_MODAL=/\b(?:should|can|could|may|might|consider|try|helps?|allows?|lets?)\b/i;
 function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={}){
