@@ -33,6 +33,7 @@ function harness(drafts,{flaky={},extraPages={},fail={},leadList=null}={}){
    return {html,final_url:url,retrieved_at:'2026-10-24T10:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
   searchLive:async()=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:'roof repair lodi nj',leads:leadList||leads,provider_attempts:['BING_PUBLIC_RSS','SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-24T10:00:00Z'}),
   completeOwnerDraft:async({body})=>{providerCalls.push(body);const d=drafts.shift();
+   if(d&&d.__raw)return {statusCode:200,body:{success:true,page_id:body.page_id,canonical_url:URL_,draft_source_type:'LIVE_PUBLIC_HTML',...d.__raw}};
    return {statusCode:200,body:d?{success:true,page_id:body.page_id,canonical_url:URL_,status:'AI_DRAFT_REVIEW_REQUIRED',draft_source_type:'LIVE_PUBLIC_HTML',live_competitor_observations_used:2,
     draft:{seo_title:null,meta_description:null,sections:[d]}}:{success:false,code:'NO_STUB'}}}});
  const call=async(path,token)=>{const req={params:{token},query:{page_id:'77'}},res={statusCode:200,status(x){this.statusCode=x;return this},set(){return this},type(){return this},json(x){this.body=x;return this},send(x){this.body=x;return this}};
@@ -117,4 +118,13 @@ test('when too few readable competitors exist, DATA_BLOCKED explains every attem
  const {buildOwnerHandoffPackage}=require('../src/growth-owner-handoff-package.cjs');
  const md=buildOwnerHandoffPackage({report:b,decision:b.editorial_decision_gate,completion:{}}).markdown;
  assert.match(md,/## Competitor pages tried/);assert.match(md,/d1\.example — fetch failed \(blocked by site respected\)/);assert.match(md,/d4\.example — not readable \(no paragraph text\)/);
+});
+
+test('a draft rejected by the generator’s own topic check is reported with the section names in the response and the owner package',async()=>{
+ const raw={__raw:{status:'AI_DRAFT_OFF_TOPIC_SECTION',draft:null,rejected_sections:[{h2:'Pasta cooking basics',reason:'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD'}]}};
+ const h=harness([raw]),r=await h.call(h.POST,'owner-token'),b=r.body;
+ assert.equal(b.editorial_review_draft.status,'AI_DRAFT_OFF_TOPIC_SECTION');assert.equal(b.editorial_review_draft.draft,null);
+ assert.deepEqual(b.editorial_review_draft.generator_rejections,[{h2:'Pasta cooking basics',reason:'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD'}]);
+ assert.equal(b.editorial_work_packet.editorial_decision.copy_ready,false);assert.equal(b.report_completion.status,'RESEARCH_COMPLETE_DRAFT_NOT_READY');
+ assert.match(b.handoff_package.markdown,/generator’s own topic check rejected the whole draft[\s\S]*Pasta cooking basics/);
 });

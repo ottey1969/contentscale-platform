@@ -110,7 +110,7 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,fetchImpl=global.fet
    return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR',
     source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
   const rejected_leads=[];
-  const leads=parseSerperGoogleOrganic(payload,{query:term,ownUrl,limit:7,rejectedLog:rejected_leads});
+  const leads=parseSerperGoogleOrganic(payload,{query:term,ownUrl,limit:10,rejectedLog:rejected_leads});
   return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',
    source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,12),query:term,checked_at:new Date(now).toISOString(),
    scope:{country:'us',language:'en',source:'Google organic results through optional configured Serper.dev'},

@@ -40,21 +40,27 @@ function surfaceOf(root,texts){
  return [...count].sort((a,b)=>b[1]-a[1])[0]?.[0]||root;
 }
 const root_=w=>STEM(w).slice(0,6);
-function deriveReaderTasks({query='',competitors=[],queryRootSet=new Set(),limit=4}={}){
+function deriveReaderTasks(args){return deriveReaderTasksDetailed(args).tasks}
+// Same derivation, plus a plain account of WHY no task was shared when none was (shown in DATA_BLOCKED reports).
+function deriveReaderTasksDetailed({query='',competitors=[],queryRootSet=new Set(),limit=4}={}){
  const skip=new Set(queryRootSet);
  const textOf=c=>c.sections.map(s=>s.heading+' '+s.text).join(' ').toLowerCase();
  const profiles=competitors.map(c=>({c,secs:c.sections.filter(sec=>!isPromotionalSection(sec,c.host,competitors.filter(o=>o!==c).map(textOf).join(' '))).map(sec=>({sec,...sectionProfile(sec,skip)}))}));
- const roots=new Set();for(const p of profiles)for(const s of p.secs)for(const [r,n] of s.counts)if(n>=3)roots.add(r);
+ // A concept qualifies in a section when it is in that section's HEADING (two independent sites each giving a heading to the same
+ // concept is strong evidence even in short sections) or is mentioned at least three times.
+ const qualifies=(s,r)=>s.head.has(r)||(s.counts.get(r)||0)>=3;
+ const roots=new Set();for(const p of profiles)for(const s of p.secs)for(const [r] of s.counts)if(qualifies(s,r))roots.add(r);
+ const droppedTopical=new Set();
  // A root present in most sections of one article is that article's TOPIC (e.g. 'creation' in a guide about content
  // creation), not a task taught in one section. Such roots are dropped so two sites sharing only the topic word are not
  // reported as agreeing on a task.
  const topical=r=>profiles.some(p=>p.secs.length>=3&&p.secs.filter(s=>s.counts.has(r)).length/p.secs.length>=0.6);
  const cands=[];
  for(const r of roots){
-  if(topical(r))continue;
+  if(topical(r)){droppedTopical.add(r);continue}
   const per=[];
   for(const p of profiles){
-   const best=p.secs.filter(s=>(s.counts.get(r)||0)>=3).sort((a,b)=>b.counts.get(r)-a.counts.get(r))[0];
+   const best=p.secs.filter(s=>qualifies(s,r)).sort((a,b)=>(Number(b.head.has(r))-Number(a.head.has(r)))||(b.counts.get(r)-a.counts.get(r)))[0];
    if(best)per.push({host:p.c.host,url:p.c.url,partial:p.c.partial,best});
   }
   const hosts=new Set(per.map(x=>x.host));
@@ -85,7 +91,14 @@ function deriveReaderTasks({query='',competitors=[],queryRootSet=new Set(),limit
    support:c.per.map(x=>({url:x.url,host:x.host,heading:x.best.sec.heading,excerpt:x.best.sec.text.slice(0,420),concepts:[c.root,...c.co].slice(0,4),partial:!!x.partial}))});
   if(tasks.length>=limit)break;
  }
- return tasks;
+
+ const single=new Map();
+ for(const p of profiles)for(const sec of p.secs)for(const [r] of sec.counts)if(qualifies(sec,r)&&!topical(r)){const m=single.get(r)||{hosts:new Set(),n:0};m.hosts.add(p.c.host);m.n+=sec.counts.get(r);single.set(r,m)}
+ const diagnostics={hosts:profiles.map(p=>({host:p.c.host,sections_read:p.c.sections.length,sections_used:p.secs.length,sections_excluded_as_promotional:p.c.sections.length-p.secs.length,
+   headings:p.secs.slice(0,8).map(x=>x.sec.heading.slice(0,60))})),
+  concepts_on_one_site_only:[...single].filter(([,m])=>m.hosts.size===1).sort((a,b)=>b[1].n-a[1].n).slice(0,8).map(([r,m])=>({concept:r,site:[...m.hosts][0]})),
+  topic_wide_words_ignored:[...droppedTopical].slice(0,8)};
+ return {tasks,diagnostics};
 }
 // How much of a task a block of destination text covers, and whether free text (a draft) is on that task.
 function taskHitsInText(task,text,skip=new Set()){
@@ -108,4 +121,4 @@ function destinationStatus(task,blocksList,skip=new Set()){
  const status=strong.length>=2||strong.some(x=>x.key>=2)?'COVERED':per.length?'PARTIAL':'NOT_OBSERVED';
  return {status,passages:(strong.length?strong:per).slice(0,2).map(x=>({heading:x.b.heading||null,text:x.b.text.slice(0,300),concepts:[task.key,...task.co_terms].slice(0,4)}))};
 }
-module.exports={isPromotionalSection,deriveReaderTasks,draftTeachesTask,destinationStatus,taskHitsInText,wordsOf,root,STEM,IGNORED};
+module.exports={isPromotionalSection,deriveReaderTasks,deriveReaderTasksDetailed,draftTeachesTask,destinationStatus,taskHitsInText,wordsOf,root,STEM,IGNORED};

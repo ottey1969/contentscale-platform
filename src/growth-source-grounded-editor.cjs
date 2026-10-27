@@ -12,7 +12,7 @@ function sourceFacts(html){
  }
  return {text:blocks.join('\n').slice(0,11000),count:blocks.length};
 }
-function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true}={}){
+function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTerms=[]}={}){
  let obj=value;
  if(typeof obj==='string'){
   try{obj=JSON.parse(obj.replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,'').trim())}
@@ -29,10 +29,17 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true}={}){
  // Require each proposed section to address a distinctive focus-query term.
  const queryTerms=[...new Set(String(focusQuery||'').toLowerCase().match(/[a-z]{4,}/g)||[])]
   .filter(w=>!['content','about','with','from','your','what','which','the','page','pages'].includes(w));
- if(queryTerms.length&&sections.some(section=>{
+ // In task mode the section is judged on its own assigned task: it may carry a focus-query term OR the task's core words
+ // (a section about "templates" need not repeat "scaling"). Without either it is off topic. The model is told which section failed.
+ const stemOf=w=>String(w).toLowerCase().replace(/(?:ing|ed|es|s|e)$/,'');
+ const taskStems=[...new Set((Array.isArray(taskTerms)?taskTerms:[]).map(stemOf).filter(w=>w.length>=4))];
+ const onTopic=section=>{
   const body=(section.h2+' '+section.paragraphs.join(' ')).toLowerCase();
-  return !queryTerms.some(term=>body.includes(term.replace(/(?:ing|ed|es|s)$/,'').slice(0,Math.max(4,term.length-3))));
- }))return {status:'AI_DRAFT_OFF_TOPIC_SECTION',draft:null};
+  const focusHit=queryTerms.some(term=>body.includes(term.replace(/(?:ing|ed|es|s)$/,'').slice(0,Math.max(4,term.length-3))));
+  return focusHit||taskStems.some(t=>body.includes(t.slice(0,Math.max(4,t.length-1))));
+ };
+ const offTopic=queryTerms.length?sections.filter(section=>!onTopic(section)):[];
+ if(offTopic.length)return {status:'AI_DRAFT_OFF_TOPIC_SECTION',draft:null,rejected_sections:offTopic.map(x=>({h2:x.h2,reason:taskStems.length?'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD':'NO_FOCUS_QUERY_TERM'}))};
  const title=text(obj.seo_title).slice(0,100),description=text(obj.meta_description).slice(0,220);
  // SEO focus stays with the selected query, including the generated title.
  // Avoid attractive but unrelated brand-history / AI-tool angles on a scaling task.
@@ -113,12 +120,18 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   };
   const raw=await request(prompt);
   if(raw===null)return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null};
-  const normOpts={requireTitle:readerTask?.mode!=='SECTION_IMPROVEMENT'};
+  const taskMode=readerTask?.mode==='SECTION_IMPROVEMENT';
+  const taskTerms=taskMode?(readerTask.tasks||[]).flatMap(t=>t.core_words||[]):[];
+  const normOpts={requireTitle:!taskMode,taskTerms};
   let result=normalizeDraft(raw,source.text,focusQuery,normOpts),repaired=false;
   // A factual rejection remains a rejection. Give the model one bounded
   // opportunity to rewrite without numbers; never silently delete claims.
   if(['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE'].includes(result.status)){
-   const retry=await request(prompt+'\\nSTRICT RETRY: Your previous draft failed factual-number validation, topic alignment, or omitted the exact working focus query from the SEO title. Include the exact focus query in the SEO title, and rewrite every section so it clearly addresses the working search query; remove off-topic sections about unrelated AI citations or tools. Use no unsupported digits, numeric quantities, dates, numbered steps, rankings or performance claims. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.');
+   const failedWhy=(result.rejected_sections||[]).map(x=>'"'+x.h2+'" ('+x.reason+')').join('; ');
+   const retryText=taskMode?
+    '\\nSTRICT RETRY: Your previous draft failed validation'+(failedWhy?' for these sections: '+failedWhy:'')+'. Write exactly one section per task, each with its "task_code". Each section must use the task\'s core_words in its H2 and first sentence (or the working query terms) and teach that task only. Do not output a title or meta description. Use no unsupported digits, numeric quantities, dates, rankings or performance claims, and make no statement about what any tool does. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.':
+    '\\nSTRICT RETRY: Your previous draft failed factual-number validation, topic alignment, or omitted the exact working focus query from the SEO title. Include the exact focus query in the SEO title, and rewrite every section so it clearly addresses the working search query; remove off-topic sections about unrelated AI citations or tools. Use no unsupported digits, numeric quantities, dates, numbered steps, rankings or performance claims. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.';
+   const retry=await request(prompt+retryText);
    if(retry!==null){
     const checked=normalizeDraft(retry,source.text,focusQuery,normOpts);
     if(checked.status==='AI_DRAFT_REVIEW_REQUIRED'){result=checked;repaired=true}
