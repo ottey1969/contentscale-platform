@@ -381,6 +381,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      error_code:outcome.statusCode===200&&detail.success===true&&validIdentity?
       null:(!validIdentity&&detail.success===true?'DRAFT_SOURCE_IDENTITY_MISMATCH':detail.code||'OWNER_DRAFT_FAILED'),
      draft:validIdentity&&detail.status==='AI_DRAFT_REVIEW_REQUIRED'&&hasSubstantiveDraft?detail.draft:null,
+     generator_rejections:validIdentity&&Array.isArray(detail.rejected_sections)?detail.rejected_sections.slice(0,6).map(x=>({h2:String(x.h2||'').slice(0,140),reason:String(x.reason||'').slice(0,80)})):null,
      source_type:validIdentity?detail.draft_source_type||null:null,
      source_warning:validIdentity?detail.draft_source_warning||null:null,
      source_retrieved_at:validIdentity?detail.draft_source_retrieved_at||null:null,

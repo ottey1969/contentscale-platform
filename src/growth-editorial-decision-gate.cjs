@@ -52,7 +52,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  const linked=supported.filter(t=>t.destination.status!=='COVERED'&&(t.covered_elsewhere_on_site||[]).length);
  if(!supported.length)
   return {...base,decision:'DATA_BLOCKED',blocker_code:'SHARED_COMPETITOR_REQUIREMENTS',missing_evidence:[{code:'SHARED_COMPETITOR_REQUIREMENTS',
-   detail:'No reader task was taught by two independent competitor articles, so there is no shared requirement to compare.'}],attempted_sources:attempts,
+   detail:'No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. '+explainNoShared(coverage.task_derivation)}],attempted_sources:attempts,
    reason:'Competitor pages were read but share no common reader task.',next_action:'Add more readable competitor articles for the same query, or accept the page as is.'};
  if(!gaps.length)
   return {...base,decision:'NO_CHANGE',decision_scope:'DESTINATION_TEACHES_SHARED_TASKS',verified_gap:false,gap_basis:null,
@@ -79,6 +79,12 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   next_action:'Owner completion drafts only the missing task(s) for the stated placement; publication stays disabled.'};
 }
 
+function explainNoShared(td){
+ if(!td)return 'Task derivation did not run (fewer than two readable sites).';
+ const per=(td.hosts||[]).map(h=>h.host+': '+h.sections_used+' of '+h.sections_read+' sections used'+(h.sections_excluded_as_promotional?' ('+h.sections_excluded_as_promotional+' promotional excluded)':'')).join('; ');
+ const one=(td.concepts_on_one_site_only||[]).slice(0,5).map(x=>x.concept+' ('+x.site+')').join(', ');
+ return 'Sites read — '+per+'.'+(one?' Concepts taught on only one site: '+one+'.':'')+((td.topic_wide_words_ignored||[]).length?' Topic-wide words ignored: '+td.topic_wide_words_ignored.join(', ')+'.':'');
+}
 // A planned IMPROVE_EXISTING / NEW_DISTINCT_PAGE becomes copy_ready ONLY when the producer
 // (growth-verified-opportunity.cjs) attached a verified opportunity for the exact query, target and type.
 function decideFromCoverage(args){

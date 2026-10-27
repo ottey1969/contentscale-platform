@@ -113,6 +113,11 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
    for(const s of rejectedRaw)L.push('- “'+clip(s.h2,90)+'” — '+((s.rejection_reasons||[]).map(x=>x.code+(x.claim_violations?.length?' ('+x.claim_violations.join(', ')+')':'')).join('; ')||'did not pass the checks'));
    L.push('');
   }
+  if(!decision.copy_ready&&(completion?.generator_rejections||[]).length){
+   L.push('**The generator’s own topic check rejected the whole draft before validation** ('+String(completion.status||'')+'):','');
+   for(const x of completion.generator_rejections)L.push('- “'+clip(x.h2,90)+'” — '+x.reason);
+   L.push('');
+  }
   if(!decision.copy_ready){
    L.push('**No reviewable copy yet:** '+(decision.copy_status||'')+'. '+(decision.next_action||''),'');
    for(const rj of decision.draft_rejections||[]){

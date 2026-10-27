@@ -83,7 +83,7 @@ function classifyDestinationIntent({query='',title='',h1=[],url='',serpIntent='M
 }
 
 
-const {deriveReaderTasks,destinationStatus,taskHitsInText,wordsOf}=require('./growth-derived-reader-tasks.cjs');
+const {deriveReaderTasksDetailed,destinationStatus,taskHitsInText,wordsOf}=require('./growth-derived-reader-tasks.cjs');
 // Page furniture is never a placement anchor: navigation, closing reading lists, FAQ and calls to action.
 const FURNITURE=/^(?:table of contents|contents|related(?: reading| posts| articles| content)?|further reading|read more|see also|sources?|references|faq|frequently asked|conclusion|summary|about(?: the author)?|share|comments?|newsletter|subscribe|contact|get started|book|want to|ready to|looking to|interested in)\b/i;
 const headClean=h=>String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
@@ -124,7 +124,8 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
   with_no_readable_sections:usable.length-compInfo.length,used:compInfo.length,
   used_partial_capture:compInfo.filter(c=>c.partial).length,used_complete_capture:compInfo.filter(c=>!c.partial).length,
   distinct_hosts:new Set(compInfo.map(c=>c.host)).size};
- const derived=compInfo.length>=2?deriveReaderTasks({query,competitors:compInfo,queryRootSet:skip}):[];
+ const derivation=compInfo.length>=2?deriveReaderTasksDetailed({query,competitors:compInfo,queryRootSet:skip}):{tasks:[],diagnostics:null};
+ const derived=derivation.tasks;
  const result=[];
  for(const task of derived){
   const dest=destinationStatus(task,destBlocks,skip);
@@ -150,7 +151,7 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
   destination_url:destination.url||null,destination_truncated:destination.truncated===true,
   destination_sections:destSections.map(s=>({heading:s.heading,words:s.words})),
   competitors_considered:compInfo.map(c=>({url:c.url,host:c.host,partial:c.partial,sections:c.sections.length})),
-  competitor_diagnostics:competitorDiagnostics,
+  competitor_diagnostics:competitorDiagnostics,task_derivation:derivation.diagnostics,
   unverifiable_site_pages:(Array.isArray(sitePages)?sitePages:[]).filter(p=>p&&p.url!==destination.url&&(p.truncated===true||!p.html)).map(p=>p.url),
   tasks:result,
   supported_task_codes:supported.map(t=>t.code),
