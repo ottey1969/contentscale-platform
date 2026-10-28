@@ -13,5 +13,5 @@ test('legacy Tracker initial fetch is replaced only inside runTrackerCheck and b
 });
 test('Tracker initial reader has safe closed behavior on public source errors',async()=>{
  await assert.rejects(()=>fetchInitialTrackerPage('http://127.0.0.1/'),/HTTPS|INVALID|URL|HOST/i);
- await assert.rejects(()=>fetchInitialTrackerPage('https://127.0.0.1/'),/IP|HOST|INVALID/i);
+ await assert.rejects(()=>fetchInitialTrackerPage('https://127.0.0.1/'),/HTTPS|IP|HOST|INVALID/i);
 });
