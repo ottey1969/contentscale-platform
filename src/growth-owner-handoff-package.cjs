@@ -62,7 +62,7 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
  }
  if((report.search_discovery?.competitor_fetch_log||[]).length){
   L.push('## Competitor pages tried','',report.search_discovery.competitor_fetch_summary||'','');
-  for(const x of report.search_discovery.competitor_fetch_log)L.push('- '+x.host+' — '+x.outcome.toLowerCase().replace(/_/g,' ')+(x.explanation?' ('+String(x.explanation).toLowerCase().replace(/_/g,' ')+')':'')+(x.partial_capture?', captured partially':''));
+  for(const x of report.search_discovery.competitor_fetch_log)L.push('- '+x.host+' — '+x.outcome.toLowerCase().replace(/_/g,' ')+(x.explanation?' ('+String(x.explanation).toLowerCase().replace(/_/g,' ')+')':'')+(x.partial_capture?', captured partially':'')+(x.rendered_fallback?', read after browser rendering':'')+(x.render_status&&!x.rendered_fallback?', render attempt: '+String(x.render_status).toLowerCase().replace(/_/g,' '):''));
   L.push('');
  }
  const cov=report.reader_task_coverage;
@@ -103,6 +103,7 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
     '- General advice (procedural, not a factual claim): '+cr.counts.general_advice,
     '- General statements NOT verified by any source: '+cr.counts.general_statement_unverified);
    for(const x of cr.needs_fact_check||[])L.push('  - Fact-check: “'+clip(x,160)+'”');
+   for(const x of cr.needs_safety_review||[])L.push('  - Safety review by a qualified professional: “'+clip(x,160)+'”');
    for(const x of cr.needs_owner_confirmation||[])L.push('  - Confirm with the business (repeats a claim the page makes): “'+clip(x,160)+'”');
    for(const x of cr.requirements||[])L.push('- '+x);
    L.push('');

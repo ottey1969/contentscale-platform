@@ -257,7 +257,7 @@ test('raw provider sections are labelled accepted or rejected everywhere they ap
 test('rejected provider text is excluded from the complete API response, the package, the UI and every download',async()=>{
  const offMarker='ZZ-OFFTASK-BODY-MARKER';const claimSafe='zz-safe-sentence-marker';
  const rejectedOff=['Pricing pages should list every plan next to its monthly cost and show a clear table. '+offMarker+' Add a short note on contacting sales for custom quotes.','Keep the plans simple and compare the monthly cost of each plan for buyers who want a quote.'];
- const rejectedClaims=['Repurpose your best guide because the page structure is ordinary advice. This sentence carries '+claimSafe+' and is harmless. Repurposing also guarantees higher rankings within a week for every site.','Repurpose it again for another channel and keep a note of every repurposed version for later reference.'];
+ const rejectedClaims=['Repurpose your best guide because the page structure is ordinary advice. This sentence carries '+claimSafe+' and is ordinary. Repurposing also guarantees higher rankings within a week for every site.','Repurpose it again for another channel and keep a note of every repurposed version for later reference.'];
  const make=body=>({canonical_url:DEST,status:'AI_DRAFT_REVIEW_REQUIRED',draft_source_type:'LIVE_PUBLIC_HTML',live_competitor_observations_used:3,
   draft:{seo_title:null,meta_description:null,sections:[{h2:'Tool pricing',paragraphs:rejectedOff},{h2:'Repurpose your best guide',paragraphs:rejectedClaims},{h2:'Repurpose what you already published',paragraphs:GOOD}]}});
  const h=harness({drafts:[make]}),r=await h.invoke(h.POST,'owner-token'),all=JSON.stringify(r.body);

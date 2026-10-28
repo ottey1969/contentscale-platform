@@ -54,7 +54,7 @@ function deriveReaderTasksDetailed({query='',competitors=[],queryRootSet=new Set
  // A root present in most sections of one article is that article's TOPIC (e.g. 'creation' in a guide about content
  // creation), not a task taught in one section. Such roots are dropped so two sites sharing only the topic word are not
  // reported as agreeing on a task.
- const topical=r=>profiles.some(p=>p.secs.length>=3&&p.secs.filter(s=>s.counts.has(r)).length/p.secs.length>=0.6);
+ const topical=r=>profiles.some(p=>p.secs.length>=3&&p.secs.filter(s=>s.counts.has(r)).length/p.secs.length>=0.35);
  const cands=[];
  for(const r of roots){
   if(topical(r)){droppedTopical.add(r);continue}
@@ -65,6 +65,12 @@ function deriveReaderTasksDetailed({query='',competitors=[],queryRootSet=new Set
   }
   const hosts=new Set(per.map(x=>x.host));
   if(hosts.size<2||!per.some(x=>x.best.head.has(r)))continue;
+  // A host whose support is a heading only (fewer than three mentions) must be corroborated: another concept must appear in
+  // the best sections of two hosts. Otherwise two sites merely share a word in a heading ("…content creation", "…creation tools").
+  if(per.some(x=>(x.best.counts.get(r)||0)<3)){
+   const seen=new Map();for(const x of per)for(const [r2] of x.best.counts){if(r2===r||topical(r2))continue;seen.set(r2,(seen.get(r2)||new Set()).add(x.host))}
+   if(![...seen.values()].some(h=>h.size>=2))continue;
+  }
   // Coherence: other concepts that the sections on different sites share. Without any, the root is likely a stray word.
   const shared=new Map();
   for(const x of per)for(const [r2,n] of x.best.counts){if(r2===r||n<2)continue;shared.set(r2,(shared.get(r2)||[]).concat(x.host))}

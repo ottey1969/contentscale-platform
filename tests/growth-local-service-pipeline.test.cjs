@@ -17,7 +17,7 @@ const pages={'https://roofer-a.example/roof-repair-nj/':comp('Roof repair in Pat
 const leads=[['https://roofer-a.example/roof-repair-nj/','Roof Repair in Paterson, NJ | Roofer A'],['https://roofer-b.example/services/roof-repair/','Roof Repairs in Bergen County NJ - Roofer B'],
  ['https://roofer-c.example/near-me/','Emergency Roof Repair Near Me | Roofer C'],['https://roofer-d.example/hackensack/','Roof Repair Contractors in Hackensack, NJ']]
  .map(([url,title],i)=>({url,title,snippet:'Local roof repair',source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}));
-function harness(drafts,{flaky={},extraPages={},fail={},leadList=null}={}){
+function harness(drafts,{flaky={},extraPages={},fail={},leadList=null,renderOwn=null}={}){
  const route={},writes=[],providerCalls=[],fetchCalls={};
  const db={async query(sql){
   if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql)){writes.push(sql);throw Error('No writes permitted')}
@@ -26,7 +26,7 @@ function harness(drafts,{flaky={},extraPages={},fail={},leadList=null}={}){
  }};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},db,(req,res,next)=>{req.growthTrackerClientId=4;
   req.growth={can_edit:req.params.token==='owner-token',pages:[{id:77,url:URL_,keyword:'roof repair lodi nj',case_study_active:true}]};next()},{
-  retryDelayMs:0,
+  retryDelayMs:0,...(renderOwn?{renderOwn}:{}),
   fetchLive:async url=>{fetchCalls[url]=(fetchCalls[url]||0)+1;if(flaky[url]>0){flaky[url]--;throw Object.assign(new Error('HTTP_202'),{code:'HTTP_202'})}
    if(fail[url])throw Object.assign(new Error(fail[url]),{code:fail[url]});
    const html=url===URL_?ownHtml:(extraPages[url]??pages[url]);if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
@@ -55,6 +55,7 @@ test('local service: local intent, compatible existing page (no new page), deriv
 test('local service: strong sourced draft is offered for review; the sourced credential is allowed',async()=>{
  const h=harness([STRONG]),r=await h.call(h.POST,'owner-token'),d=r.body.editorial_work_packet.editorial_decision;
  assert.equal(d.decision,'IMPROVE_EXISTING');assert.equal(d.copy_ready,true,JSON.stringify(d.draft_rejections||d.copy_status));
+ assert.equal(r.body.editorial_work_packet.evidence_verified,true,'one evidence status: the packet agrees with the final decision');assert.equal(r.body.editorial_work_packet.evidence_status,'TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW');
  assert.equal(d.publish_allowed,false);assert.equal(d.case_study_unchanged,true);assert.equal(r.body.report_completion.automatic_publishing,false);
  assert.equal(d.placement.mode,'ADD_AFTER_SECTION');assert(d.placement.section_heading);assert.match(r.body.handoff_package.markdown,/Placement:/);
  assert.equal(h.writes.length,0);
@@ -67,6 +68,7 @@ test('local service: weak and unsupported drafts are rejected with concrete reas
  for(const [draft,codes] of cases){
   const h=harness([draft]),r=await h.call(h.POST,'owner-token'),d=r.body.editorial_work_packet.editorial_decision;
   assert.equal(d.copy_ready,false);assert.equal(d.proposed_text,undefined);assert.equal(r.body.report_completion.status,'RESEARCH_COMPLETE_DRAFT_NOT_READY');
+  assert.equal(r.body.editorial_work_packet.evidence_verified,false);assert.equal(r.body.editorial_work_packet.evidence_status,'TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED');
   assert(d.draft_rejections.length>0,'a concrete reason is returned');
   assert.match(r.body.handoff_package.markdown,/rejected: /,'the owner package explains the rejection');
   if(codes){const got=d.draft_rejections.flatMap(x=>(x.claim_violations||[]).map(v=>v.code));for(const c of codes)assert(got.includes(c),c+' missing from '+got)}
@@ -127,4 +129,21 @@ test('a draft rejected by the generator’s own topic check is reported with the
  assert.deepEqual(b.editorial_review_draft.generator_rejections,[{h2:'Pasta cooking basics',reason:'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD'}]);
  assert.equal(b.editorial_work_packet.editorial_decision.copy_ready,false);assert.equal(b.report_completion.status,'RESEARCH_COMPLETE_DRAFT_NOT_READY');
  assert.match(b.handoff_package.markdown,/generator’s own topic check rejected the whole draft[\s\S]*Pasta cooking basics/);
+});
+
+test('JS-rendered competitor pages are read in the restricted browser (bounded); a refused page is never rendered',async()=>{
+ const mk=n=>({url:'https://r'+n+'.example/roof-repair/',title:'Roof Repair in Paterson, NJ | R'+n,snippet:'x',source:'SERPER_GOOGLE_ORGANIC',serp_position:n});
+ const L=[1,2,3,4,5,6].map(mk);
+ const shell='<html><body><div id="app"></div>'+'<script>window.__x=1;</script>'.repeat(900)+'</body></html>';
+ const rendered=pages['https://roofer-a.example/roof-repair-nj/'];
+ const calls=[];const renderOwn=async url=>{calls.push(url);return url===L[3].url?{status:'RENDER_UNAVAILABLE',live:null}:{status:'BROWSER_RENDERED_SAME_ORIGIN',live:{html:rendered,final_url:url,status:200,retrieved_at:'t',truncated:false,source:'LIVE_PUBLIC_BROWSER_RENDERED'}}};
+ const h=harness([],{leadList:L,renderOwn,fail:{[L[0].url]:'HTTP_403'},extraPages:{[L[1].url]:shell,[L[2].url]:shell,[L[3].url]:shell,[L[4].url]:shell,[L[5].url]:shell}});
+ const b=(await h.call(h.GET,'client-token')).body,log=b.search_discovery.competitor_fetch_log;
+ const compCalls=calls.filter(u=>u!==URL_);// the first call is the page's own thin source, rendered by the pre-existing own-page fallback
+ assert(!compCalls.includes(L[0].url),'a 403 is never rendered (that would bypass the site\'s refusal)');
+ assert.deepEqual(compCalls,[L[1].url,L[2].url,L[3].url],'at most three renders, sequential, only for pages that answered but hold no static text');
+ assert.equal(log.find(x=>x.url===L[1].url).rendered_fallback,true);assert.equal(log.find(x=>x.url===L[3].url).rendered_fallback,false);assert.equal(log.find(x=>x.url===L[3].url).render_status,'RENDER_UNAVAILABLE');
+ assert.match(b.search_discovery.competitor_fetch_summary,/2 read after rendering in the restricted browser/);
+ const noRender=harness([],{leadList:L,fail:{[L[0].url]:'HTTP_403'},extraPages:{[L[1].url]:shell,[L[2].url]:shell}}),n=(await noRender.call(noRender.GET,'client-token')).body;
+ assert(n.search_discovery.competitor_fetch_log.every(x=>!x.rendered_fallback),'without an injected or real fetcher nothing launches a browser');
 });

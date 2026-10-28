@@ -87,7 +87,8 @@ const {deriveReaderTasksDetailed,destinationStatus,taskHitsInText,wordsOf}=requi
 // Page furniture is never a placement anchor: navigation, closing reading lists, FAQ and calls to action.
 const FURNITURE=/^(?:table of contents|contents|related(?: reading| posts| articles| content)?|further reading|read more|see also|sources?|references|faq|frequently asked|conclusion|summary|about(?: the author)?|share|comments?|newsletter|subscribe|contact|get started|book|want to|ready to|looking to|interested in)\b/i;
 const headClean=h=>String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
-const isFurniture=s=>s.heading==='(introduction)'||s.words<30||FURNITURE.test(headClean(s.heading));
+const FAQ_LIKE=/\bfaqs?\b|\bq&a\b|\bpeople also ask\b|\bquestions?\b[^.]{0,30}\b(?:ask|asked|answered|answers)\b|\b(?:ask|asked)\b[^.]{0,20}\bquestions?\b/i;
+const isFurniture=s=>s.heading==='(introduction)'||s.words<30||FURNITURE.test(headClean(s.heading))||FAQ_LIKE.test(headClean(s.heading));
 function pickPlacement(destSections,task,skip){
  const body=destSections.filter(s=>!isFurniture(s));
  // 1) the section already mentions the task's core concept: deepen it instead of adding a duplicate

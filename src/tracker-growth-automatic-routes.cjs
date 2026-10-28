@@ -110,11 +110,24 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   for(const c of candidates){const h=hostOf(c.url);if(seenHosts.has(h))continue;seenHosts.add(h);candidatePool.push(c)}
   for(const c of candidates)if(!candidatePool.includes(c))candidatePool.push(c);
   let attempted=[];const fetchLog=[];
+  // A page that answered (HTTP 200) but holds no static text is rendered in the restricted browser, at most three per run and
+  // only while fewer than three readable articles exist. A page that REFUSED access (403 etc.) is never rendered: that would bypass the block.
+  let renderBudget=3;const renderNotes={};
+  const canRender=fetchLive===fetchPublicGrowthHtml||renderOwn!==renderPublicGrowthPage;
   const eligible=items=>items.filter(x=>x.live&&x.quality?.eligible).slice(0,3);
   let comparisons=[];let cursor=0;
   while(cursor<candidatePool.length&&comparisons.length<3){
    const batch=candidatePool.slice(cursor,cursor+3);cursor+=3;
    const results=await Promise.all(batch.map(fetchCompetitor));
+   for(let i=0;i<results.length;i++){const x=results[i];
+    const have=comparisons.length+results.filter(y=>y.live&&y.quality?.eligible).length;
+    if(canRender&&renderBudget>0&&have<3&&x.live&&!x.quality?.eligible&&['JS_RENDERED_PAGE_NO_STATIC_TEXT','NO_PARAGRAPH_TEXT'].includes(x.quality?.reason_code)){
+     renderBudget--;const rendered=await Promise.resolve().then(()=>renderOwn(x.url)).catch(()=>({status:'RENDER_UNAVAILABLE'}));
+     renderNotes[x.url]=rendered?.status||'RENDER_UNAVAILABLE';
+     if(rendered?.live?.html){const q=assessGrowthCompetitorContent({html:rendered.live.html,query:targetQuery,truncated:rendered.live.truncated});
+      if(q.eligible)results[i]={...x,live:rendered.live,quality:q,rendered_fallback:true}}
+    }
+   }
    results.forEach((x,i)=>{
     const lead=batch[i];
     fetchLog.push({url:x.url,host:hostOf(x.url),serp_position:lead.serp_position??null,source:lead.search_source,
@@ -122,6 +135,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      code:x.live?(x.quality?.reason_code||null):(x.reason||'FETCH_FAILED'),
      explanation:x.live?(x.quality?.eligible?null:x.quality?.reason_code):explain(x.reason||''),
      partial_capture:x.live?.truncated===true,retried_after_http_202:x.retried_after_http_202===true,
+     rendered_fallback:x.rendered_fallback===true,render_status:renderNotes[x.url]||null,
      readable_words:x.quality?.readable_words??null});
    });
    attempted=attempted.concat(results);comparisons=eligible(attempted);
@@ -130,6 +144,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    const blocked=fetchLog.filter(x=>x.explanation==='BLOCKED_BY_SITE_RESPECTED').length,timeouts=fetchLog.filter(x=>x.explanation==='TIMEOUT').length;
    return fetchLog.length+' tried: '+c('READABLE')+' readable, '+blocked+' blocked by the site (respected), '+timeouts+' timed out, '+c('NOT_READABLE')+' fetched but not readable'+
     (fetchLog.filter(x=>x.outcome==='NOT_READABLE').length?' ('+[...new Set(fetchLog.filter(x=>x.outcome==='NOT_READABLE').map(x=>x.code))].join(', ')+')':'')+
+    (fetchLog.some(x=>x.rendered_fallback)?'; '+fetchLog.filter(x=>x.rendered_fallback).length+' read after rendering in the restricted browser':'')+
     '; '+Math.max(0,candidatePool.length-cursor)+' further candidate(s) untried'})();
   const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
@@ -420,7 +435,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    focus_query:report.editorial_decision_gate?.focus_query||null,
    generated_draft:completionOut.draft||null,
    editorial_decision:completeDecision,
-   evidence_verified:report.editorial_decision_gate?.verified_gap===true,
+   evidence_verified:completeDecision.verified_gap===true&&completeDecision.copy_ready===true,evidence_status:completeDecision.verified_gap===true?'TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW':completeDecision.gap_observed===true?'TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED':'NO_VERIFIED_GAP',
    case_study_locked:report.case_study_locked===true,
    publication_allowed:false,
    source_comparisons:(report.destination_section_comparison?.comparisons||[]).slice(0,6).map(x=>({
