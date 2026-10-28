@@ -80,6 +80,12 @@ function deriveTopicQuery(headings,brand){
 function selectGrowthQuery({page={},queries=[],headings={},inventory=[],now=new Date()}={}){
  const nowMs=new Date(now).getTime(),brand=brandInfo({url:page.url,title:headings.title});
  const profile=pageProfile(headings),seen=new Set(),candidates=[],excluded=[],brandQueries=[],protect=[];
+ // A topical source page (not the homepage or a brand keyword) has its own topic. Its GSC rows are evidence about THIS page:
+ // a query its own keyword already covers stays here (unless the page is a locked Case Study), and when several rows qualify
+ // the one closest to the page's own topic wins over a merely larger, broader neighbour query.
+ const srcPath=(()=>{try{return new URL(page.url).pathname}catch{return '/'}})();
+ const srcKw=String(page.keyword||'').trim()&&!isBrandQuery(page.keyword,brand)?tok(page.keyword):[];
+ const topical=srcPath!=='/'&&srcKw.length>0;
  for(const q of Array.isArray(queries)?queries:[]){
   if(!q||typeof q.query!=='string')continue;
   const name=q.query.trim(),key=name.toLowerCase();
@@ -97,7 +103,11 @@ function selectGrowthQuery({page={},queries=[],headings={},inventory=[],now=new 
   const ownFit=own.ratio>=0.67&&own.matched.length>=Math.min(2,qt.length);
   // The query's proper home: a dedicated tracked URL for exactly this topic wins over a broader page that merely mentions it.
   let destination=null;
-  if(site&&site.best.exact)destination={url:site.best.url,page_id:site.best.page_id,basis:'DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY',coverage:1,keyword:site.best.keyword,competing_same_site_pages:site.others.map(x=>x.url)};
+  const align=topical?coverage(qt,srcKw).ratio:null;
+  const sourceOwns=topical&&align>=0.99&&ownFit;
+  if(sourceOwns&&page.case_study_active!==true)destination={url:page.url,page_id:page.id??null,basis:'SOURCE_PAGE_TOPIC_COVERS_QUERY',coverage:1,
+   competing_same_site_pages:site?[site.best.url,...site.others.map(x=>x.url)].filter(u=>u!==page.url).slice(0,4):[]};
+  else if(site&&site.best.exact)destination={url:site.best.url,page_id:site.best.page_id,basis:'DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY',coverage:1,keyword:site.best.keyword,competing_same_site_pages:site.others.map(x=>x.url)};
   else if(ownFit)destination={url:page.url,page_id:page.id??null,basis:'CURRENT_PAGE_TEXT_COVERS_QUERY_TERMS',coverage:Math.round(own.ratio*100)/100};
   else if(site)destination={url:site.best.url,page_id:site.best.page_id,basis:'TRACKED_PAGE_COVERS_QUERY_TERMS',coverage:Math.round(site.best.ratio*100)/100,keyword:site.best.keyword,competing_same_site_pages:site.others.map(x=>x.url)};
   // A protected Case Study page is never the page we propose changes for when another tracked page covers the query.
@@ -108,14 +118,17 @@ function selectGrowthQuery({page={},queries=[],headings={},inventory=[],now=new 
    note:'These are the SOURCE page’s rows. They are not performance data for the destination page.',source_page_url:page.url}:null;
   const action=metric.position<=3&&metric.clicks>=10&&metric.impressions>=100?'PROTECT_BASELINE':
    metric.position<=35?'CLICK_AND_CONTENT_REVIEW':'VISIBILITY_GAP_COMPARE_WITH_LIVE_COMPETITORS';
-  const row={...entry,destination,action_class:action,surfacing_signal:surfacing,local_intent:NEAR_ME.test(name.toLowerCase())||/\b[a-z]{2}\b$/.test(name)};
+  const row={...entry,destination,action_class:action,surfacing_signal:surfacing,source_topic_alignment:align===null?null:Math.round(align*100)/100,
+   local_intent:NEAR_ME.test(name.toLowerCase())||/\b[a-z]{2}\b$/.test(name)};
   if(action==='PROTECT_BASELINE')protect.push(row);else candidates.push(row);
  }
  // Opportunity = visible but not converting: enough impressions and a low click-through, at any average position.
- const open=candidates.filter(x=>x.impressions>=100&&x.ctr_pct<=3).sort((a,b)=>b.impressions-a.impressions||a.position-b.position);
+ const open=candidates.filter(x=>x.impressions>=100&&x.ctr_pct<=3).sort((a,b)=>
+  (topical?(b.source_topic_alignment-a.source_topic_alignment):0)||b.impressions-a.impressions||a.position-b.position);
  const chosen=open[0]||null;
  if(chosen)return {status:'QUERY_SELECTED_FROM_VERIFIED_GSC',query:chosen.query,source:'VERIFIED_EXACT_PAGE_GSC',chosen,destination:chosen.destination,
-  surfacing_signal:chosen.surfacing_signal,other_candidates:open.slice(1,4),protected:protect.slice(0,5),excluded:excluded.slice(0,12),brand_queries:brandQueries.slice(0,6),brand:{label:brand.label}};
+  surfacing_signal:chosen.surfacing_signal,other_candidates:open.slice(1,4),
+  ranking_basis:topical?'SOURCE_PAGE_TOPIC_ALIGNMENT_THEN_IMPRESSIONS':'IMPRESSIONS',protected:protect.slice(0,5),excluded:excluded.slice(0,12),brand_queries:brandQueries.slice(0,6),brand:{label:brand.label}};
  // No usable GSC opportunity: tracked keyword, then the page's own topic. Never a brand query.
  const kw=String(page.keyword||'').trim(),generic=new Set(['services','service','products','solutions','about','contact','home','index','pricing','offers']);
  if(kw&&!generic.has(kw.toLowerCase())&&!isBrandQuery(kw,brand)){

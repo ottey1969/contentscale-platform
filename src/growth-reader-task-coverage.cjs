@@ -8,6 +8,8 @@
 const CLEAN=/<(script|style|nav|footer|noscript|template|svg|form|aside)\b[^>]*>[\s\S]*?<\/\1\s*>/gi;
 const CTA=/\b(?:book a demo|register now|get a demo|request (?:a )?demo|contact sales|subscribe|sign up|free trial|our customers|related posts|recommended articles|share this|newsletter)\b/i;
 const {decodeEntities}=require('./growth-text.cjs');
+const {RESEARCH_HTML_LIMIT}=require('./growth-public-html-reader.cjs');
+const {statesIn}=require('./growth-serp-quality.cjs');
 const plain=x=>decodeEntities(String(x||'').replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim();
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()}catch{return ''}};
 
@@ -19,7 +21,7 @@ function queryRoots(query){
  return {all,distinct:distinct.length?distinct:all};
 }
 function blocks(html){
- const safe=String(html||'').slice(0,250000).replace(CLEAN,' ');
+ const safe=String(html||'').slice(0,RESEARCH_HTML_LIMIT).replace(CLEAN,' ');
  const out=[];let heading='';
  for(const m of safe.matchAll(/<(h[1-4]|p|li)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi)){
   const tag=m[1].toLowerCase(),text=plain(m[2]);
@@ -40,27 +42,59 @@ function groupSections(list){
 }
 // ---------- SERP intent (from fresh organic leads, discussions excluded) ----------
 const DISCUSSION=/(^|\.)(reddit\.com|quora\.com|stackexchange\.com|news\.ycombinator\.com)$/;
+// 'Best practices', 'best way' and 'best time' are instructional phrases, not a product comparison.
+const NON_COMMERCIAL_BEST=/\bbest\s+(?:practices?|ways?|time|approach|method)\b/gi;
 function classifyTitle(title,snippet=''){
  const raw=String(title||'')+' '+String(snippet||''),t=raw.toLowerCase();
- // Local service: an explicit local marker (near me, 'City, ST', ZIP) or a company/provider listing, never a state list.
+ // Local service: an explicit local marker (near me, 'City, ST', ZIP), a company/provider listing, or a US state named in
+ // the TITLE (a snippet names places in passing). Never a list of trades.
  const cityState=/\b[A-Z][a-z]+(?: [A-Z][a-z]+)?,? (?:[A-Z]{2})\b(?! [a-z])/.test(raw)&&!/\b(?:AI|SEO|PDF|USA|FAQ|CEO|ROI|KPI|CMS|API)\b/.test(raw.match(/\b[A-Z][a-z]+(?: [A-Z][a-z]+)?,? [A-Z]{2}\b/)?.[0]||'');
- if(/\b(near me|nearby|free estimate|free quote|call now|serving|service area|open now|licensed and insured|same.?day service|emergency service)\b|\b\d{5}\b/.test(t)||cityState||/\b(contractors?|companies|company|providers?|installers?|specialists?)\b.{0,20}\b(in|near)\b/.test(t))return 'LOCAL_SERVICE';
+ const stateInTitle=statesIn(String(title||'')).length>0;
+ if(/\b(near me|nearby|free estimate|free quote|call now|serving|service area|open now|licensed and insured|same.?day service|emergency service)\b|\b\d{5}\b|\b24\/7\b/.test(t)||cityState||stateInTitle||/\b(contractors?|companies|company|providers?|installers?|specialists?)\b.{0,20}\b(in|near)\b/.test(t))return 'LOCAL_SERVICE';
  // A snippet often contains 'plans' or 'best' in passing; only the title decides comparison vs guide.
- const tt=String(title||'').toLowerCase();
- if(/\b(best|top \d+|reviews?|vs\.?|versus|alternatives?|compared|pricing|plans?)\b/.test(tt))return 'COMMERCIAL_COMPARISON';
- if(/\b(what is|what are|how to|how do|how much|how long|how many|guide|tips|ways|steps|strateg(?:y|ies)|explained|everything you need|best practices|checklist|examples)\b|\b\d+ (?:tips|ways|steps|strategies|best practices)\b/.test(tt))return 'INFORMATIONAL_GUIDE';
+ const tt=String(title||'').toLowerCase(),commercialTitle=tt.replace(NON_COMMERCIAL_BEST,' ');
+ if(/\b(best|top \d+|reviews?|vs\.?|versus|alternatives?|compared|pricing|plans?)\b/.test(commercialTitle))return 'COMMERCIAL_COMPARISON';
+ if(/\b(what is|what are|how to|how do|how much|how long|how many|why|when to|guide|tips|ways|steps|strateg(?:y|ies)|explained|everything you need|need to know|what you need|what [a-z ]{0,30}need to|best practices?|checklist|examples|getting started|quick reference|introduction to|beginner'?s?|basics|overview|tutorial|faqs?|signs of|causes of)\b|\b\d+ (?:tips|ways|steps|strategies|best practices)\b/.test(tt))return 'INFORMATIONAL_GUIDE';
  return 'UNCLASSIFIED';
 }
-function inferSerpIntent({query='',leads=[]}={}){
+// Local-service results routinely share the first page with homeowner/buyer guides; for a local query the two are one
+// intent family (the destination check treats a guide as compatible with a local SERP for the same reason).
+const COMPATIBLE_FAMILY={LOCAL_SERVICE:['INFORMATIONAL_GUIDE']};
+const MIN_LEADS=3,MIN_AGREEMENT=0.6;
+// pages: competitor pages actually read [{url,html}]. A result whose title/snippet is unclassifiable is classified a second
+// time from the H1 of its own page, so a terse title does not make an otherwise clear SERP "mixed".
+function inferSerpIntent({query='',leads=[],pages=[]}={}){
  const usable=(Array.isArray(leads)?leads:[]).filter(l=>l&&l.url&&!DISCUSSION.test(host(l.url)));
- const votes={};const rows=usable.map(l=>{const c=classifyTitle(l.title,l.snippet);votes[c]=(votes[c]||0)+1;return {url:l.url,title:String(l.title||'').slice(0,140),class:c}});
+ const byUrl=new Map((Array.isArray(pages)?pages:[]).filter(p=>p&&p.url&&p.html).map(p=>[p.url,p.html]));
+ const votes={};
+ const rows=usable.map(l=>{
+  let c=classifyTitle(l.title,l.snippet),basis='TITLE_AND_SNIPPET';
+  if(c==='UNCLASSIFIED'&&byUrl.has(l.url)){
+   const h1=(byUrl.get(l.url).match(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i)||[])[1];
+   const fromPage=h1?classifyTitle(plain(h1)):'UNCLASSIFIED';
+   if(fromPage!=='UNCLASSIFIED'){c=fromPage;basis='READ_PAGE_H1'}
+  }
+  votes[c]=(votes[c]||0)+1;
+  return {url:l.url,title:String(l.title||'').slice(0,140),class:c,basis};
+ });
  const ranked=Object.entries(votes).filter(([k])=>k!=='UNCLASSIFIED').sort((a,b)=>b[1]-a[1]);
  const [top,count]=ranked[0]||[null,0];
- const verified=usable.length>=3&&top&&count/usable.length>=0.6;
+ const family=top?(COMPATIBLE_FAMILY[top]||[]):[];
+ const compatible=count+family.reduce((n,k)=>n+(votes[k]||0),0);
+ const direct=usable.length>=MIN_LEADS&&top&&count/usable.length>=MIN_AGREEMENT;
+ const viaFamily=!direct&&usable.length>=MIN_LEADS&&top&&family.length>0&&count>=2&&count>=Math.max(0,...family.map(k=>votes[k]||0))&&compatible/usable.length>=MIN_AGREEMENT;
+ const verified=!!(direct||viaFamily);
+ const classes=Object.entries(votes).sort((a,b)=>b[1]-a[1]).map(([k,n])=>k+' '+n).join(', ');
  return {status:verified?'SERP_INTENT_OBSERVED':'SERP_INTENT_NOT_ESTABLISHED',
   intent:verified?top:'MIXED_OR_INSUFFICIENT',query:String(query||''),
-  organic_leads_considered:usable.length,agreeing_leads:count,leads:rows.slice(0,8),
-  method:'TITLE_AND_SNIPPET_PATTERNS_ON_FRESH_ORGANIC_LEADS',
+  organic_leads_considered:usable.length,agreeing_leads:count,compatible_leads:compatible,
+  agreement_basis:direct?'SINGLE_INTENT':viaFamily?'LOCAL_SERVICE_WITH_GUIDES':null,
+  class_counts:votes,
+  reason:verified?null:usable.length<MIN_LEADS?'Only '+usable.length+' usable organic result(s) after excluding discussion sites; at least '+MIN_LEADS+' are needed to read an intent.':
+   'No intent reaches '+Math.round(MIN_AGREEMENT*100)+'% of '+usable.length+' usable organic results (classes: '+classes+').',
+  pages_used_for_classification:rows.filter(r=>r.basis==='READ_PAGE_H1').length,
+  leads:rows.slice(0,10),
+  method:byUrl.size?'TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES':'TITLE_AND_SNIPPET_PATTERNS_ON_FRESH_ORGANIC_LEADS',
   scope:'One lookup; observed placement is not a tracked-page ranking.'};
 }
 // ---------- Destination page intent ----------

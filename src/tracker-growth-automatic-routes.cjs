@@ -1,5 +1,5 @@
 'use strict';
-const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
+const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
 const {proposeHandoffFromResearch}=require('./growth-research-handoff-suggestions.cjs');
@@ -17,6 +17,8 @@ const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-
 const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent}=require('./growth-reader-task-coverage.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
+const {deriveMarket}=require('./growth-serp-quality.cjs');
+const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
@@ -44,7 +46,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const rows=i=>optional[i].status==='fulfilled'?optional[i].value.rows||[]:[];
   const unavailable=optional.map((x,i)=>x.status==='rejected'?['competitor_snapshots','ai_evidence','gsc_queries','site_inventory'][i]:null).filter(Boolean);
   const snapshot=rows(0)[0]||null,historical=snapshotCompetitorLeads({page,snapshot}).leads;
-  const own=await fetchLive(page.url).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
+  const own=await fetchLive(page.url,RESEARCH_FETCH).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
   // Only use the browser if the static public source is too thin to assess.
   // Prevent mock-network tests from launching real Chromium unintentionally.
   let renderStatus=own.live?'STATIC_HTML_USED':'STATIC_HTML_UNAVAILABLE';
@@ -70,11 +72,16 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    title:seed.page_content?.headings?.title||'',
    h1:seed.page_content?.headings?.h1||[],
    description:seed.page_content?.headings?.description||''});
+  // The resolver only sees the keyword string; record where the working query actually came from (GSC row or tracker keyword).
+  const selectionSource=seed.growth_decision?.selection?.source;
+  if(intentResolution.source==='TRACKER_KEYWORD'&&selectionSource&&selectionSource!=='TRACKER_KEYWORD')intentResolution.source=selectionSource;
   const targetQuery=intentResolution.query||'';
+  // Market = the place the SOURCE page serves (its tracked keyword and URL), so a shorter GSC query keeps its locality.
+  const market=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url}):null;
   const discovery=!targetQuery?{
    status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
    reason:intentResolution.warning||'No search phrase is justified by observed page content.'
-  }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url}))
+  }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url,market}))
    .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',
     reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
   // Discussion listings remain in SERP evidence but should not displace readable
@@ -82,13 +89,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const editorialHost=url=>{try{const host=new URL(url).hostname.toLowerCase();
    return !/(^|\.)(?:reddit\.com|quora\.com)$/.test(host)}
    catch{return false}};
+  // Same-market pages are read first; general sources that name no place follow (stable within each group).
+  const marketRank=x=>x.market_relevance==='SAME_MARKET'?0:1;
   const fresh=(Array.isArray(discovery.leads)?discovery.leads:[])
-   .filter(x=>x.url&&editorialHost(x.url)).slice(0,10);
+   .filter(x=>x.url&&editorialHost(x.url)).map((x,i)=>({x,i})).sort((a,b)=>marketRank(a.x)-marketRank(b.x)||a.i-b.i).map(o=>o.x).slice(0,10);
   const candidates=[...fresh.map(x=>({...x,search_source:x.source==='SERPAPI_GOOGLE_ORGANIC'?'SERPAPI_GOOGLE_ORGANIC':x.source==='SERPER_GOOGLE_ORGANIC'?'SERPER_GOOGLE_ORGANIC':'BING_PUBLIC_RSS'})),
    ...historical.filter(x=>editorialHost(x.url)&&!fresh.some(y=>y.url===x.url)&&queryFit(x.serp_title||'',{title:targetQuery,h1:[],h2:[]}).fit)
     .map(x=>({...x,search_source:'HISTORICAL_SERP_TOPIC_MATCH'}))].slice(0,10);
   const fetchCompetitorOnce=async lead=>{
-   try{const live=await fetchLive(lead.url);
+   try{const live=await fetchLive(lead.url,RESEARCH_FETCH);
     return {url:lead.url,live,quality:assessGrowthCompetitorContent({html:live.html,query:targetQuery,truncated:live.truncated}),
      search_source:lead.search_source,search_query:targetQuery}}
    catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70),search_source:lead.search_source}}
@@ -164,7 +173,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    report.growth_decision.primary_next_action.query=null;
    report.search.focus_query=null;
   }
-  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:targetQuery,
+  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:targetQuery,market,
    fetched_competitor_urls:comparisons.filter(x=>x.live).map(x=>x.url),competitor_fetch_log:fetchLog,competitor_fetch_summary:fetchSummary,
    discarded_unreadable_article_count:attempted.filter(x=>x.live&&!x.quality?.eligible).length};
   report.evidence_warnings=[
@@ -186,7 +195,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const destinationSources=new Map();
   const sameSiteReviews=await Promise.all(related.map(async x=>{
    try{
-    const fresh=await fetchLive(x.url);
+    const fresh=await fetchLive(x.url,RESEARCH_FETCH);
     destinationSources.set(x.url,fresh);
     const inspected=require('./growth-automatic-analysis.cjs').excerpt(fresh.html);
     return {url:x.url,tracked_keyword:x.tracked_keyword||null,verified_live:true,
@@ -210,7 +219,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    (!report.growth_decision?.primary_next_action?.metrics?page.url:null);
   let selectedSource=proposed===page.url?own.live:(proposed?destinationSources.get(proposed):null);
   // Intent comes from live organic results and the page's own title/H1, never from word overlap alone.
-  const serpIntent=inferSerpIntent({query:targetQuery,leads:discovery.leads});
+  const serpIntent=inferSerpIntent({query:targetQuery,leads:discovery.leads,pages:comparisons.filter(x=>x.live?.html).map(x=>({url:x.url,html:x.live.html}))});
   const intentOf=(u,src)=>{const ex=excerptOf(src?.html);
    return classifyDestinationIntent({query:targetQuery,title:ex.title,h1:ex.h1,url:u,serpIntent:serpIntent.intent})};
   let destinationIntent=selectedSource?intentOf(proposed,selectedSource):null;
@@ -297,7 +306,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.summary.competitor_fetch_attempts=attempted.length;
   report.summary.optional_evidence_complete=unavailable.length===0&&!(discovery.provider_attempts?.length&&!discovery.leads?.length);
   report.summary.live_search_evidence_complete=!!(discovery.leads?.length);
-  if(discovery.optional_google_failure_reason)report.evidence_warnings.push('SERPAPI_GOOGLE_'+discovery.optional_google_failure_reason);
+  if(discovery.optional_google_failure_reason)report.evidence_warnings.push('SERPER_GOOGLE_'+discovery.optional_google_failure_reason);
   report.handoff_suggestions=proposeHandoffFromResearch(report,page.url);
   // This object is always the research-only GET response, regardless of
   // the caller's actual owner permission. Do not misrepresent its access
@@ -425,7 +434,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    report:{...report,verified_editorial_opportunity:produced.opportunity},destination:report.destination_section_comparison,
    coverage:report.reader_task_coverage,serpIntent:report.serp_intent,destinationIntent:report.destination_intent,
    attempts:report.editorial_decision_gate?.attempted_sources||[]}):report.editorial_decision_gate;
-  const completeDecision=decideOwnerGrowthEdit({report:{...report,editorial_decision_gate:finalGate},completion,sources:report.__sources||{}});
+  const ownerDecision=decideOwnerGrowthEdit({report:{...report,editorial_decision_gate:finalGate},completion,sources:report.__sources||{}});
+  // The final decision's evidence ladder is the single source for every output below (packet, package, completion, UI).
+  const evidenceStatus=deriveEvidenceStatus({decision:ownerDecision,serpIntent:report.serp_intent,coverage:report.reader_task_coverage});
+  const completeDecision={...ownerDecision,verified_gap:evidenceStatus.verified_gap,copy_ready:evidenceStatus.copy_ready,evidence_status:evidenceStatus};
   const handoffPackage=buildOwnerHandoffPackage({report,decision:completeDecision,completion:completionOut,linkPlan:report.internal_link_plan||[]});
   // Package the actual observed passages with the draft. A reader can now
   // inspect precisely which source supports each proposed editorial review.
@@ -435,7 +447,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    focus_query:report.editorial_decision_gate?.focus_query||null,
    generated_draft:completionOut.draft||null,
    editorial_decision:completeDecision,
-   evidence_verified:completeDecision.verified_gap===true&&completeDecision.copy_ready===true,evidence_status:completeDecision.verified_gap===true?'TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW':completeDecision.gap_observed===true?'TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED':'NO_VERIFIED_GAP',
+   evidence_verified:evidenceStatus.draft_checked,evidence_status:evidenceStatus.label,evidence_ladder:evidenceStatus,
    case_study_locked:report.case_study_locked===true,
    publication_allowed:false,
    source_comparisons:(report.destination_section_comparison?.comparisons||[]).slice(0,6).map(x=>({
@@ -470,7 +482,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     evidence_gate:completeDecision.decision||'UNVERIFIED',
     verified_gap:completeDecision.verified_gap===true,
     copy_ready:completeDecision.copy_ready===true,
-    draft_provider_status:completion.status,
+    draft_provider_status:completion.status,evidence_status:evidenceStatus,
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
  });
  app.get('/track/:token/growth/auto-research',data,(req,res)=>{

@@ -3,7 +3,7 @@
 // Pin the original host to a DNS-validated public IPv4 and prohibit all other
 // browser requests. This is not a crawler for arbitrary internal URLs.
 const dns=require('node:dns').promises;
-const {validateUrl,publicV4}=require('./growth-public-html-reader.cjs');
+const {validateUrl,publicV4,compactPublicHtml,RESEARCH_HTML_LIMIT}=require('./growth-public-html-reader.cjs');
 let busy=false;
 async function renderPublicGrowthPage(raw,{puppeteer=null,lookup=dns.lookup,timeoutMs=11000}={}){
  if(busy)return {status:'RENDER_BUSY',live:null};
@@ -37,9 +37,11 @@ async function renderPublicGrowthPage(raw,{puppeteer=null,lookup=dns.lookup,time
   if(validateUrl(finalUrl).hostname!==url.hostname)
    return {status:'REDIRECTED_OUTSIDE_ORIGIN',live:null};
   if(!rendered||rendered.length<150)return {status:'RENDERED_HTML_INCOMPLETE',live:null};
+  // The rendered DOM is compacted like a static research read: inline CSS/JS must not push the article past the cap.
+  const readable=compactPublicHtml(rendered);
   return {status:'BROWSER_RENDERED_SAME_ORIGIN',live:{
-   html:rendered.slice(0,120000),final_url:finalUrl,status:200,
-   retrieved_at:new Date().toISOString(),truncated:rendered.length>120000,
+   html:readable.slice(0,RESEARCH_HTML_LIMIT),final_url:finalUrl,status:200,
+   retrieved_at:new Date().toISOString(),truncated:readable.length>RESEARCH_HTML_LIMIT,
    source:'LIVE_PUBLIC_BROWSER_RENDERED'}};
  }catch(e){
   return {status:'RENDER_UNAVAILABLE',code:String(e?.code||e?.name||'BROWSER_FAILED').slice(0,60),live:null};

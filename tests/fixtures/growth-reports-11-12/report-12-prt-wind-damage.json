@@ -1,0 +1,800 @@
+{
+ "_source": "Verbatim subset of the production Growth complete-review JSON (report 12, generated 2026-10-28T06:33:57.475Z). Only fields the decision chain reads are kept.",
+ "generated_at": "2026-10-28T06:33:57.475Z",
+ "page_id": 2413,
+ "url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+ "case_study_locked": true,
+ "original_tracked_keyword": "wind damage roof repair nj",
+ "query_selection": {
+  "status": "QUERY_SELECTED_FROM_VERIFIED_GSC",
+  "source": "VERIFIED_EXACT_PAGE_GSC",
+  "query": "storm damage roof repair",
+  "destination": {
+   "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+   "page_id": 2360,
+   "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+   "coverage": 1,
+   "keyword": "storm damage roof repair",
+   "competing_same_site_pages": [
+    "https://perfectroofingteam.com/storm-damage-roof-repair-nj/"
+   ]
+  },
+  "source_page_signal": {
+   "type": "SOURCE_PAGE_SURFACES_FOR_QUERY_OWNED_BY_ANOTHER_PAGE",
+   "note": "These are the SOURCE page’s rows. They are not performance data for the destination page.",
+   "source_page_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+  },
+  "brand_queries_excluded": [],
+  "excluded": [],
+  "protected": []
+ },
+ "serp_intent": {
+  "status": "SERP_INTENT_NOT_ESTABLISHED",
+  "intent": "MIXED_OR_INSUFFICIENT",
+  "query": "storm damage roof repair",
+  "organic_leads_considered": 5,
+  "agreeing_leads": 1,
+  "leads": [
+   {
+    "url": "https://www.schoenherrroofing.com/storm-damage/",
+    "title": "Storm Damage Roof Repair in SE & SW Michigan",
+    "class": "LOCAL_SERVICE"
+   },
+   {
+    "url": "https://www.concraft.com/storm-and-flood-damage/roof-damage-from-storm",
+    "title": "Roof Damage Restoration Service in Michigan",
+    "class": "UNCLASSIFIED"
+   },
+   {
+    "url": "https://www.thisoldhouse.com/roofing/storm-damage-roof-repair",
+    "title": "How To Repair a Roof With Storm Damage",
+    "class": "INFORMATIONAL_GUIDE"
+   },
+   {
+    "url": "https://michigan-roofing.com/michigan-storm-damage-roof-repair",
+    "title": "Michigan Storm Damage Roof Repair | 24/7 Emergency",
+    "class": "UNCLASSIFIED"
+   },
+   {
+    "url": "https://www.allconroofing.com/storm-damage-roof-repair-what-homeowners-need-to-know/",
+    "title": "Storm Damage Roof Repair: What Homeowners Need to ...",
+    "class": "UNCLASSIFIED"
+   }
+  ],
+  "method": "TITLE_AND_SNIPPET_PATTERNS_ON_FRESH_ORGANIC_LEADS",
+  "scope": "One lookup; observed placement is not a tracked-page ranking."
+ },
+ "destination_intent": {
+  "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+  "class": "INFORMATIONAL_GUIDE",
+  "query_root_overlap": [
+   "storm",
+   "damag",
+   "roof",
+   "repair"
+  ],
+  "verdict": "UNVERIFIED",
+  "basis": "TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF",
+  "observed_head": "storm damage roof repair nj: 7 steps to avoid costly damage | storm damage roof repair nj — 7 steps to restore your home fast"
+ },
+ "reader_task_coverage": {
+  "status": "READER_TASK_COVERAGE_OBSERVED",
+  "method": "TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF",
+  "task_set": "DERIVED_FROM_COMPETITOR_SECTIONS",
+  "serp_intent": "INFORMATIONAL_GUIDE",
+  "destination_url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+  "destination_truncated": true,
+  "destination_sections": [
+   {
+    "heading": "(introduction)",
+    "words": 11
+   },
+   {
+    "heading": "Storm Damage Roof Repair NJ — 7 Steps to Restore Your Home Fast",
+    "words": 239
+   },
+   {
+    "heading": "📑 Table of Contents",
+    "words": 96
+   },
+   {
+    "heading": "Full Insurance Claim Assistance for Storm Damage",
+    "words": 116
+   },
+   {
+    "heading": "Types of Storm Damage That Affect NJ Roofs",
+    "words": 262
+   }
+  ],
+  "competitors_considered": [
+   {
+    "url": "https://www.concraft.com/storm-and-flood-damage/roof-damage-from-storm",
+    "host": "concraft.com",
+    "partial": true,
+    "sections": 9
+   },
+   {
+    "url": "https://michigan-roofing.com/michigan-storm-damage-roof-repair",
+    "host": "michigan-roofing.com",
+    "partial": false,
+    "sections": 2
+   },
+   {
+    "url": "https://www.allconroofing.com/storm-damage-roof-repair-what-homeowners-need-to-know/",
+    "host": "allconroofing.com",
+    "partial": false,
+    "sections": 5
+   }
+  ],
+  "competitor_diagnostics": {
+   "received": 3,
+   "without_html": 0,
+   "with_no_readable_sections": 0,
+   "used": 3,
+   "used_partial_capture": 1,
+   "used_complete_capture": 2,
+   "distinct_hosts": 3
+  },
+  "task_derivation": {
+   "hosts": [
+    {
+     "host": "concraft.com",
+     "sections_read": 9,
+     "sections_used": 6,
+     "sections_excluded_as_promotional": 3,
+     "headings": [
+      "Roof Damage Restoration Service in Michigan",
+      "Why You Need Professional Roof Restoration",
+      "Common Types of Roof Damage After Storms",
+      "Storm-Damaged Roof Restoration in Michigan",
+      "Insurance Claim Assistance After a Storm",
+      "Call Us Now for Roof Damage Restoration in Michigan"
+     ]
+    },
+    {
+     "host": "michigan-roofing.com",
+     "sections_read": 2,
+     "sections_used": 2,
+     "sections_excluded_as_promotional": 0,
+     "headings": [
+      "Michigan Storm Damage Roof Repair",
+      "Insurance Claim Assistance"
+     ]
+    },
+    {
+     "host": "allconroofing.com",
+     "sections_read": 5,
+     "sections_used": 3,
+     "sections_excluded_as_promotional": 2,
+     "headings": [
+      "Storm Damage Roof Repair: What Homeowners Need to Know",
+      "Signs of Storm Damage to Your Roof",
+      "Why You Should Address Storm Damage Promptly"
+     ]
+    }
+   ],
+   "concepts_on_one_site_only": [
+    {
+     "concept": "addres",
+     "site": "allconroofing.com"
+    },
+    {
+     "concept": "servic",
+     "site": "concraft.com"
+    },
+    {
+     "concept": "sign",
+     "site": "allconroofing.com"
+    },
+    {
+     "concept": "larg",
+     "site": "allconroofing.com"
+    },
+    {
+     "concept": "profes",
+     "site": "concraft.com"
+    },
+    {
+     "concept": "prompt",
+     "site": "allconroofing.com"
+    }
+   ],
+   "topic_wide_words_ignored": [
+    "restor",
+    "michig",
+    "homeow",
+    "leak",
+    "water",
+    "shingl",
+    "debri",
+    "caus"
+   ]
+  },
+  "unverifiable_site_pages": [
+   "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "https://perfectroofingteam.com/storm-damage-repair/"
+  ],
+  "tasks": [
+   {
+    "code": "task_insura",
+    "label": "Competitors teach “Insurance Claim Assistance After a Storm”",
+    "match": {
+     "key": "insura",
+     "co_terms": [
+      "claim",
+      "assist"
+     ],
+     "concepts": [
+      "insura",
+      "claim",
+      "assist"
+     ],
+     "core_words": [
+      "insurance",
+      "claim",
+      "assistance"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://www.concraft.com/storm-and-flood-damage/roof-damage-from-storm",
+      "host": "concraft.com",
+      "heading": "Insurance Claim Assistance After a Storm",
+      "excerpt": "Filing an insurance claim after a storm can feel overwhelming. We make it easier by documenting visible and hidden damage with photos, reports, and estimates. Our team works with your insurance provider to support your claim and speed up the process, so you can focus on getting your property back in shape while we take care of the paperwork and communication.",
+      "concepts": [
+       "insura",
+       "claim",
+       "assist"
+      ],
+      "partial": true
+     },
+     {
+      "url": "https://michigan-roofing.com/michigan-storm-damage-roof-repair",
+      "host": "michigan-roofing.com",
+      "heading": "Insurance Claim Assistance",
+      "excerpt": "Dealing with insurance after storm damage is stressful. We've helped thousands of Michigan homeowners navigate the claims process successfully. Our team handles the paperwork, meets with adjusters, and advocates for fair compensation on your behalf. You pay nothing out of pocket beyond your deductible for covered repairs. We work directly with your insurance company to ensure all damage is properly documented and cov",
+      "concepts": [
+       "insura",
+       "claim",
+       "assist"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "COVERED",
+     "passages": [
+      {
+       "heading": "Storm Damage Roof Repair NJ — 7 Steps to Restore Your Home Fast",
+       "text": "Storm damage roof repair in NJ means emergency inspection, temporary tarping, and full restoration after wind, hail, or fallen trees. Perfect Roofing Team responds 24/7 across all of New Jersey — free on-site estimate, insurance claim documentation included.",
+       "concepts": [
+        "insura",
+        "claim",
+        "assist"
+       ]
+      },
+      {
+       "heading": "Storm Damage Roof Repair NJ — 7 Steps to Restore Your Home Fast",
+       "text": "Perfect Roofing Team provides 24/7 emergency storm damage roof repair across New Jersey. We specialize in rapid response — wind, hail, and fallen-tree damage — with free on-site estimates, full insurance claim support, and licensed professionals serving all 21 NJ counties.",
+       "concepts": [
+        "insura",
+        "claim",
+        "assist"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [
+     {
+      "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+      "heading": "Watch for these warning signs:",
+      "excerpt": "Never climb onto your roof to inspect damage after a wind event. Contact us for a professional assessment — we document everything safely and provide detailed photographic evidence for insurance claims."
+     },
+     {
+      "url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+      "heading": "Watch for these warning signs:",
+      "excerpt": "Never climb onto your roof to inspect damage after a wind event. Contact us for a professional assessment — we document everything safely and provide detailed photographic evidence for insurance claims."
+     }
+    ],
+    "placement": null
+   }
+  ],
+  "supported_task_codes": [
+   "task_insura"
+  ],
+  "gap_task_codes": [],
+  "covered_task_codes": [
+   "task_insura"
+  ],
+  "linked_elsewhere_task_codes": [],
+  "destination_section_headings": [
+   "(introduction)",
+   "Storm Damage Roof Repair NJ — 7 Steps to Restore Your Home Fast",
+   "📑 Table of Contents",
+   "Full Insurance Claim Assistance for Storm Damage",
+   "Types of Storm Damage That Affect NJ Roofs"
+  ]
+ },
+ "site_architecture": {
+  "status": "SITE_INVENTORY_OBSERVED_NOT_LINK_VALIDATED",
+  "inspected_site_pages": 68,
+  "candidates": [
+   {
+    "url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+    "tracked_keyword": "storm damage roof repair nj",
+    "overlapping_terms": [
+     "storm",
+     "damage",
+     "roof",
+     "repair"
+    ],
+    "evidence": "CANONICAL_TRACKER_SITE_INVENTORY",
+    "status": "CONTEXTUAL_INTERNAL_LINK_CANDIDATE",
+    "action": "Confirm destination is useful and live; if so, link naturally from an appropriate relevant paragraph on the current page",
+    "exists_in_observed_page": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+    "tracked_keyword": "storm damage roof repair",
+    "overlapping_terms": [
+     "storm",
+     "damage",
+     "roof",
+     "repair"
+    ],
+    "evidence": "CANONICAL_TRACKER_SITE_INVENTORY",
+    "status": "CONTEXTUAL_INTERNAL_LINK_CANDIDATE",
+    "action": "Confirm destination is useful and live; if so, link naturally from an appropriate relevant paragraph on the current page",
+    "exists_in_observed_page": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+    "tracked_keyword": "wind damage roof repair",
+    "overlapping_terms": [
+     "damage",
+     "roof",
+     "repair"
+    ],
+    "evidence": "CANONICAL_TRACKER_SITE_INVENTORY",
+    "status": "CONTEXTUAL_INTERNAL_LINK_CANDIDATE",
+    "action": "Confirm destination is useful and live; if so, link naturally from an appropriate relevant paragraph on the current page",
+    "exists_in_observed_page": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/storm-damage-repair/",
+    "tracked_keyword": "storm damage repair",
+    "overlapping_terms": [
+     "storm",
+     "damage",
+     "repair"
+    ],
+    "evidence": "CANONICAL_TRACKER_SITE_INVENTORY",
+    "status": "CONTEXTUAL_INTERNAL_LINK_CANDIDATE",
+    "action": "Confirm destination is useful and live; if so, link naturally from an appropriate relevant paragraph on the current page",
+    "exists_in_observed_page": false
+   }
+  ],
+  "intent_overlap_risks": [
+   {
+    "url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+    "keyword": "storm damage roof repair nj",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+    "keyword": "storm damage roof repair",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+    "keyword": "wind damage roof repair",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/#statistics",
+    "keyword": "wind damage roof repair nj",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/storm-damage-repair/",
+    "keyword": "storm damage repair",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   }
+  ],
+  "caution": "Related URLs are grounded in the same client Tracker inventory; topical overlap is not proven cannibalization or a verified live link.",
+  "compatible_existing_pages": []
+ },
+ "editorial_decision_gate": {
+  "focus_query": "storm damage roof repair",
+  "protected_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "target_url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+  "case_study_locked": true,
+  "preserve_title_h1": true,
+  "publish_allowed": false,
+  "copy_ready": false,
+  "verified_gap": false,
+  "gsc_optional": true,
+  "exact_page_query_metrics_verified": true,
+  "evidence_count": 6,
+  "facts": [
+   {
+    "code": "TOPIC_SELECTED",
+    "value": "storm damage roof repair",
+    "source": "PAGE_VERIFIED_GSC_OR_TRACKED_TOPIC"
+   }
+  ],
+  "uncertainties": [],
+  "evidence": [],
+  "attempted_sources": [
+   {
+    "source": "TARGET_STATIC_HTML",
+    "status": "STATIC_HTML_USED",
+    "detail": null
+   },
+   {
+    "source": "SEARCH_PROVIDERS",
+    "status": "FRESH_GOOGLE_ORGANIC_LEADS",
+    "detail": "BING_PUBLIC_RSS, SERPER_GOOGLE_ORGANIC"
+   },
+   {
+    "source": "HISTORICAL_SNAPSHOT_LEADS",
+    "status": "LEADS_AVAILABLE",
+    "detail": "14 stored leads"
+   },
+   {
+    "source": "COMPETITOR_HTML_FETCH",
+    "status": "READABLE",
+    "detail": "5 tried: 3 readable, 0 blocked by the site (respected), 0 timed out, 2 fetched but not readable (JS_RENDERED_PAGE_NO_STATIC_TEXT); 1 read after rendering in the restricted browser; 0 further candidate(s) untried"
+   }
+  ],
+  "decision": "DATA_BLOCKED",
+  "blocker_code": "COMPLETE_DESTINATION_HTML",
+  "missing_evidence": [
+   {
+    "code": "COMPLETE_DESTINATION_HTML",
+    "detail": "The captured destination HTML was truncated, so absence of a task cannot be claimed."
+   },
+   {
+    "code": "SERP_INTENT_EVIDENCE",
+    "detail": "Fewer than three non-discussion organic results agree on one search intent."
+   }
+  ],
+  "reason": "Required evidence was not accessible: COMPLETE_DESTINATION_HTML, SERP_INTENT_EVIDENCE.",
+  "next_action": "Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.",
+  "requires_editor_approval": true,
+  "case_study_unchanged": true,
+  "copy_status": "NOT_AVAILABLE_DATA_BLOCKED"
+ },
+ "report_completion": {
+  "status": "DATA_BLOCKED_REPORT",
+  "evidence_gate": "DATA_BLOCKED",
+  "verified_gap": false,
+  "copy_ready": false,
+  "draft_provider_status": "NOT_REQUIRED_FOR_DECISION",
+  "owner_only": true,
+  "automatic_publishing": false,
+  "case_study_unchanged": true
+ },
+ "page_content": {
+  "headings": {
+   "title": "Wind Damage Roof Repair NJ | 2-Hour Emergency Response",
+   "description": "Wind damage roof repair in NJ, all 21 counties. Licensed & insured, 2-hour emergency response, free inspection & insurance claim help. Call (862) 238-6353.",
+   "h1": [
+    "Storm & Wind Damage Roof Repair in New Jersey"
+   ],
+   "h2": [
+    "💰 What is the Cost of Wind Damage Roof Repair in New Jersey?",
+    "🔍 Key Signs of Wind Damage on NJ Roofs",
+    "📋 Our Wind Damage Repair Process",
+    "❄️ Hail Damage Inspection & Repair",
+    "🚨 Emergency Storm Restoration Available 24/7",
+    "⚙️ Insurance Claims for Storm Damage",
+    "📍 Service Areas: Storm & Wind Repair Across All 21 NJ Counties",
+    "❓ Frequently Asked Questions"
+   ],
+   "paragraph_samples": [
+    "Protecting Your Home or Business with Expert Roofing You Can Trust.\"",
+    "High winds can lift or tear away shingles, loosen flashing, and leave a New Jersey roof exposed to leaks. Perfect Roofing Team inspects wind-related roof damage, explains repair or replacement options",
+    "Wind-specific service: This page focuses on lifted or missing shingles, loosened flashing, wind-driven openings, and wind-related emergency tarping. For active leaks or broader emergency roof damage, "
+   ]
+  }
+ },
+ "search": {
+  "focus_query": "storm damage roof repair",
+  "verified_queries": [
+   {
+    "query": "storm damage roof repair",
+    "impressions": 1292,
+    "clicks": 0,
+    "position": 87.07120743034056,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "roof wind damage repair",
+    "impressions": 291,
+    "clicks": 0,
+    "position": 44.04123711340206,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "wind damage roof replacement",
+    "impressions": 205,
+    "clicks": 0,
+    "position": 41.1609756097561,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "wind damage repair",
+    "impressions": 174,
+    "clicks": 0,
+    "position": 74.42528735632185,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "roof repair for storm and wind damage",
+    "impressions": 165,
+    "clicks": 0,
+    "position": 43.61212121212121,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "storm damage roof replacement",
+    "impressions": 156,
+    "clicks": 0,
+    "position": 90.41666666666667,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "roof wind damage",
+    "impressions": 105,
+    "clicks": 0,
+    "position": 71.20952380952382,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "wind damage roof restoration",
+    "impressions": 90,
+    "clicks": 0,
+    "position": 47.144444444444446,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "wind damage to roof",
+    "impressions": 88,
+    "clicks": 0,
+    "position": 71.375,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "roof wind repair",
+    "impressions": 83,
+    "clicks": 0,
+    "position": 50.42168674698795,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "roof repair wind damage",
+    "impressions": 75,
+    "clicks": 0,
+    "position": 42.973333333333336,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   {
+    "query": "wind damage repair hampton nj",
+    "impressions": 71,
+    "clicks": 0,
+    "position": 38.183098591549296,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   }
+  ]
+ },
+ "search_discovery": {
+  "status": "FRESH_GOOGLE_ORGANIC_LEADS",
+  "source": "SERPER_GOOGLE_ORGANIC",
+  "query": "storm damage roof repair",
+  "target_query": "storm damage roof repair",
+  "checked_at": "2026-10-28T06:33:50.024Z",
+  "scope": {
+   "country": "us",
+   "language": "en",
+   "source": "Google organic results through optional configured Serper.dev"
+  },
+  "leads": [
+   {
+    "url": "https://www.schoenherrroofing.com/storm-damage/",
+    "title": "Storm Damage Roof Repair in SE & SW Michigan",
+    "snippet": "Schoenherr Roofing's Process: Nearby Storm Damage Repairs · 1. Initial Consultation · 2. Plan Development and Estimate · 3. Repair or Replacement Work · 4.",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "storm damage roof repair",
+    "serp_position": 1,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://www.concraft.com/storm-and-flood-damage/roof-damage-from-storm",
+    "title": "Roof Damage Restoration Service in Michigan",
+    "snippet": "Concraft provides restoration for storm damaged roofs in Michigan. Call us to secure, repair, and restore your property after storm damage.",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "storm damage roof repair",
+    "serp_position": 2,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://www.thisoldhouse.com/roofing/storm-damage-roof-repair",
+    "title": "How To Repair a Roof With Storm Damage",
+    "snippet": "Step 1: Take Safety Precautions. Step 2: Document the Damage Before. Step 3: Make Temporary Repairs. You can apply tin flashing or roofing cement to small ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "storm damage roof repair",
+    "serp_position": 4,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://michigan-roofing.com/michigan-storm-damage-roof-repair",
+    "title": "Michigan Storm Damage Roof Repair | 24/7 Emergency",
+    "snippet": "Southwest Michigan's top-rated GAF Master Elite roofer. Roof replacement, repair & storm damage in Kalamazoo, Portage & Battle Creek. Free estimates!",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "storm damage roof repair",
+    "serp_position": 5,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://www.allconroofing.com/storm-damage-roof-repair-what-homeowners-need-to-know/",
+    "title": "Storm Damage Roof Repair: What Homeowners Need to ...",
+    "snippet": "Learn how to spot and repair storm damage to your roof. Protect your home with expert tips and a free inspection from Allcon Roofing.",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "storm damage roof repair",
+    "serp_position": 9,
+    "geographic_scope": "US",
+    "search_language": "en"
+   }
+  ],
+  "rejected_leads": [
+   {
+    "url": "https://www.reddit.com/r/DIY/comments/1n7t7qt/the_storm_destroyed_my_roof_shingles_heres_how_i/",
+    "title": "The Storm Destroyed My Roof Shingles — Here's How I ...",
+    "reason": "AGGREGATOR_OR_PROFILE_NOT_A_COMPARABLE_PAGE"
+   },
+   {
+    "url": "https://www.reddit.com/r/Home/comments/1dsuu96/ive_just_had_my_roof_evaluated_for_storm_damage/",
+    "title": "I've just had my roof evaluated for storm damage and the insurance adjuster said I'm approved for a ",
+    "reason": "AGGREGATOR_OR_PROFILE_NOT_A_COMPARABLE_PAGE"
+   },
+   {
+    "url": "https://www.quora.com/Is-it-better-to-repair-or-replace-a-roof-with-significant-storm-damage",
+    "title": "Is it better to repair or replace a roof with significant storm damage?",
+    "reason": "AGGREGATOR_OR_PROFILE_NOT_A_COMPARABLE_PAGE"
+   },
+   {
+    "url": "https://www.quora.com/Can-a-storm-damaged-roof-be-repaired-or-does-it-need-to-be-replaced",
+    "title": "Can a storm-damaged roof be repaired, or does it need to be replaced?",
+    "reason": "AGGREGATOR_OR_PROFILE_NOT_A_COMPARABLE_PAGE"
+   },
+   {
+    "url": "https://www.quora.com/What-should-I-do-immediately-after-storm-damage-to-my-roof",
+    "title": "What should I do immediately after storm damage to my roof?",
+    "reason": "AGGREGATOR_OR_PROFILE_NOT_A_COMPARABLE_PAGE"
+   }
+  ],
+  "provider_attempts": [
+   "BING_PUBLIC_RSS",
+   "SERPER_GOOGLE_ORGANIC"
+  ],
+  "competitor_fetch_log": [
+   {
+    "url": "https://www.schoenherrroofing.com/storm-damage/",
+    "host": "schoenherrroofing.com",
+    "serp_position": 1,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "NOT_READABLE",
+    "code": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "explanation": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "rendered_fallback": false,
+    "render_status": "BROWSER_RENDERED_SAME_ORIGIN",
+    "readable_words": 0
+   },
+   {
+    "url": "https://www.concraft.com/storm-and-flood-damage/roof-damage-from-storm",
+    "host": "concraft.com",
+    "serp_position": 2,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "rendered_fallback": false,
+    "render_status": null,
+    "readable_words": 731
+   },
+   {
+    "url": "https://www.thisoldhouse.com/roofing/storm-damage-roof-repair",
+    "host": "thisoldhouse.com",
+    "serp_position": 4,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "NOT_READABLE",
+    "code": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "explanation": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "rendered_fallback": false,
+    "render_status": "BROWSER_RENDERED_SAME_ORIGIN",
+    "readable_words": 0
+   },
+   {
+    "url": "https://michigan-roofing.com/michigan-storm-damage-roof-repair",
+    "host": "michigan-roofing.com",
+    "serp_position": 5,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": false,
+    "retried_after_http_202": false,
+    "rendered_fallback": true,
+    "render_status": "BROWSER_RENDERED_SAME_ORIGIN",
+    "readable_words": 401
+   },
+   {
+    "url": "https://www.allconroofing.com/storm-damage-roof-repair-what-homeowners-need-to-know/",
+    "host": "allconroofing.com",
+    "serp_position": 9,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": false,
+    "retried_after_http_202": false,
+    "rendered_fallback": false,
+    "render_status": null,
+    "readable_words": 835
+   }
+  ],
+  "competitor_fetch_summary": "5 tried: 3 readable, 0 blocked by the site (respected), 0 timed out, 2 fetched but not readable (JS_RENDERED_PAGE_NO_STATIC_TEXT); 1 read after rendering in the restricted browser; 0 further candidate(s) untried"
+ },
+ "destination_section_comparison": {
+  "status": "FULL_SECTION_COMPARISON_RESEARCH_ONLY",
+  "target_url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+  "own_html_truncated": true,
+  "protected_source_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+ },
+ "growth_decision": {
+  "protection": {
+   "case_study_locked": true,
+   "preserve_existing_top_rankings": false,
+   "publication_allowed": false,
+   "automatic_page_changes": false
+  },
+  "protected_queries": [],
+  "selection": {
+   "status": "QUERY_SELECTED_FROM_VERIFIED_GSC",
+   "source": "VERIFIED_EXACT_PAGE_GSC",
+   "destination": {
+    "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+    "page_id": 2360,
+    "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+    "coverage": 1,
+    "keyword": "storm damage roof repair",
+    "competing_same_site_pages": [
+     "https://perfectroofingteam.com/storm-damage-roof-repair-nj/"
+    ]
+   }
+  }
+ }
+}

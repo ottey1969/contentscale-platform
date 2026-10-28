@@ -2,6 +2,7 @@
 // CMS-neutral owner package (Markdown + structured JSON). WordPress/Wix/other CMS stay optional.
 // Describes what changes on which existing URL and where. Never publishes, never touches a Case Study.
 const {blocks,queryRoots,STEMS}=require('./growth-reader-task-coverage.cjs');
+const {LADDER_LABELS}=require('./growth-evidence-status.cjs');
 const clip=(x,n)=>String(x==null?'':x).replace(/\s+/g,' ').trim().slice(0,n);
 const pathOf=u=>{try{return new URL(u).pathname}catch{return null}};
 const esc=s=>String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -46,6 +47,11 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   '| Case Study | '+(report.case_study_locked?'Locked — content and baseline untouched.':'Not locked — still untouched.')+' |','',
   '## Why this decision','',decision.reason||decision.next_action||'',
   decision.gap_basis?'\nEvidence basis: `'+decision.gap_basis+'`.':'','');
+ if(decision.evidence_status){
+  L.push('## Evidence status','','| Check | Status |','|---|---|');
+  for(const [k,label] of LADDER_LABELS)L.push('| '+label+' | '+(decision.evidence_status[k]===true?'yes':'no')+' |');
+  L.push('');
+ }
  const qs=report.query_selection;
  if(qs?.query){
   L.push('## Query and destination','','- Working query: **'+qs.query+'** ('+String(qs.source||'').toLowerCase().replace(/_/g,' ')+')');

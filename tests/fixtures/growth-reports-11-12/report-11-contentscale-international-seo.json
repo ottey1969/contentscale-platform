@@ -1,0 +1,718 @@
+{
+ "_source": "Verbatim subset of the production Growth complete-review JSON (report 11, generated 2026-10-28T06:33:30.546Z). Only fields the decision chain reads are kept.",
+ "generated_at": "2026-10-28T06:33:30.546Z",
+ "page_id": 2324,
+ "url": "https://contentscale.site/international-seo/",
+ "case_study_locked": false,
+ "original_tracked_keyword": "international seo",
+ "query_selection": {
+  "status": "QUERY_FROM_TRACKED_KEYWORD",
+  "source": "TRACKER_KEYWORD",
+  "query": "international seo",
+  "destination": {
+   "url": "https://contentscale.site/international-seo/",
+   "page_id": 2324,
+   "basis": "TRACKED_KEYWORD_OF_THIS_PAGE",
+   "coverage": null
+  },
+  "source_page_signal": null,
+  "brand_queries_excluded": [],
+  "excluded": [],
+  "protected": []
+ },
+ "serp_intent": {
+  "status": "SERP_INTENT_NOT_ESTABLISHED",
+  "intent": "MIXED_OR_INSUFFICIENT",
+  "query": "international seo",
+  "organic_leads_considered": 9,
+  "agreeing_leads": 5,
+  "leads": [
+   {
+    "url": "https://moz.com/learn/seo/international-seo",
+    "title": "International SEO Best Practices",
+    "class": "COMMERCIAL_COMPARISON"
+   },
+   {
+    "url": "https://www.semrush.com/blog/international-seo/",
+    "title": "International SEO: Best Practices for Global Online Success",
+    "class": "COMMERCIAL_COMPARISON"
+   },
+   {
+    "url": "https://phrase.com/blog/posts/international-seo/",
+    "title": "International SEO: Complete Guide (2026)",
+    "class": "INFORMATIONAL_GUIDE"
+   },
+   {
+    "url": "https://www.searchenginejournal.com/international-seo-start-guide/232129/",
+    "title": "Getting Started In International SEO: A Quick Reference ...",
+    "class": "UNCLASSIFIED"
+   },
+   {
+    "url": "https://globallink.transperfect.com/blog/international-seo-for-your-multilingual-website-a-checklist",
+    "title": "International SEO for Your Multilingual Website: A Checklist",
+    "class": "INFORMATIONAL_GUIDE"
+   },
+   {
+    "url": "https://www.novicell.com/services/digital-marketing/seo/international-seo/",
+    "title": "International SEO - Optimise your website for more countries",
+    "class": "UNCLASSIFIED"
+   },
+   {
+    "url": "https://yoast.com/what-is-international-seo/",
+    "title": "What is international SEO?",
+    "class": "INFORMATIONAL_GUIDE"
+   },
+   {
+    "url": "https://neilpatel.com/blog/how-to-international-seo/",
+    "title": "International SEO Guide: How to Reach a Global Audience",
+    "class": "INFORMATIONAL_GUIDE"
+   }
+  ],
+  "method": "TITLE_AND_SNIPPET_PATTERNS_ON_FRESH_ORGANIC_LEADS",
+  "scope": "One lookup; observed placement is not a tracked-page ranking."
+ },
+ "destination_intent": {
+  "url": "https://contentscale.site/international-seo/",
+  "class": "INFORMATIONAL_GUIDE",
+  "query_root_overlap": [
+   "international"
+  ],
+  "verdict": "UNVERIFIED",
+  "basis": "TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF",
+  "observed_head": "international seo: free 47-point checklist for nl & eu | international seo: the 2026 guide for nl, uk, be & lu markets"
+ },
+ "reader_task_coverage": {
+  "status": "READER_TASK_COVERAGE_OBSERVED",
+  "method": "TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF",
+  "task_set": "DERIVED_FROM_COMPETITOR_SECTIONS",
+  "serp_intent": "INFORMATIONAL_GUIDE",
+  "destination_url": "https://contentscale.site/international-seo/",
+  "destination_truncated": false,
+  "destination_sections": [
+   {
+    "heading": "International SEO: The 2026 Guide for NL, UK, BE & LU Markets",
+    "words": 82
+   },
+   {
+    "heading": "📑 Table of Contents",
+    "words": 8
+   },
+   {
+    "heading": "What Is International SEO & Why It Matters for NL, UK, BE & LU",
+    "words": 205
+   },
+   {
+    "heading": "Which URL Structure Should You Use?",
+    "words": 86
+   },
+   {
+    "heading": "How Do You Implement Hreflang Correctly?",
+    "words": 79
+   },
+   {
+    "heading": "⚠️ The 6 Hreflang Mistakes That Break International SEO",
+    "words": 70
+   },
+   {
+    "heading": "Market-by-Market Guide: NL, UK, BE, LU & English Markets",
+    "words": 184
+   },
+   {
+    "heading": "Key Statistics: International SEO Results 2026",
+    "words": 105
+   },
+   {
+    "heading": "NL + BE Expansion: Capturing Dutch & Flemish Search Demand",
+    "words": 82
+   },
+   {
+    "heading": "Check Your International SEO Score Free",
+    "words": 32
+   },
+   {
+    "heading": "International SEO — Questions People Ask",
+    "words": 237
+   },
+   {
+    "heading": "📚 Related Articles",
+    "words": 176
+   }
+  ],
+  "competitors_considered": [
+   {
+    "url": "https://moz.com/learn/seo/international-seo",
+    "host": "moz.com",
+    "partial": false,
+    "sections": 14
+   },
+   {
+    "url": "https://www.semrush.com/blog/international-seo/",
+    "host": "semrush.com",
+    "partial": true,
+    "sections": 7
+   },
+   {
+    "url": "https://phrase.com/blog/posts/international-seo/",
+    "host": "phrase.com",
+    "partial": true,
+    "sections": 1
+   }
+  ],
+  "competitor_diagnostics": {
+   "received": 3,
+   "without_html": 0,
+   "with_no_readable_sections": 0,
+   "used": 3,
+   "used_partial_capture": 2,
+   "used_complete_capture": 1,
+   "distinct_hosts": 3
+  },
+  "task_derivation": {
+   "hosts": [
+    {
+     "host": "moz.com",
+     "sections_read": 14,
+     "sections_used": 14,
+     "sections_excluded_as_promotional": 0,
+     "headings": [
+      "What is international SEO?",
+      "Do you need to go international?",
+      "Developing an international SEO strategy",
+      "URL structures for international sites",
+      "Language-target your website (or website pages)",
+      "Tailor your content to your target user's language and cultu",
+      "Keyword research for international SEO",
+      "Technical considerations for international SEO"
+     ]
+    },
+    {
+     "host": "semrush.com",
+     "sections_read": 7,
+     "sections_used": 6,
+     "sections_excluded_as_promotional": 1,
+     "headings": [
+      "What Is International SEO?",
+      "Analyze Your Current Traffic",
+      "Assess Market Viability",
+      "Review International SEO Resource Requirements",
+      "Conduct Thorough Market Research for Different Regions",
+      "Adapt Your Content for Cultural and Regional Preferences"
+     ]
+    },
+    {
+     "host": "phrase.com",
+     "sections_read": 1,
+     "sections_used": 1,
+     "sections_excluded_as_promotional": 0,
+     "headings": [
+      "(introduction)"
+     ]
+    }
+   ],
+   "concepts_on_one_site_only": [
+    {
+     "concept": "keywor",
+     "site": "moz.com"
+    },
+    {
+     "concept": "struct",
+     "site": "moz.com"
+    },
+    {
+     "concept": "domain",
+     "site": "moz.com"
+    },
+    {
+     "concept": "cctld",
+     "site": "moz.com"
+    },
+    {
+     "concept": "avoid",
+     "site": "moz.com"
+    },
+    {
+     "concept": "adapt",
+     "site": "semrush.com"
+    },
+    {
+     "concept": "platfo",
+     "site": "phrase.com"
+    },
+    {
+     "concept": "transl",
+     "site": "phrase.com"
+    }
+   ],
+   "topic_wide_words_ignored": [
+    "differ",
+    "countr",
+    "langua",
+    "specif",
+    "target",
+    "audien",
+    "market",
+    "search"
+   ]
+  },
+  "unverifiable_site_pages": [],
+  "tasks": [
+   {
+    "code": "task_cultur",
+    "label": "Competitors teach “Tailor your content to your target user's language and culture”",
+    "match": {
+     "key": "cultur",
+     "co_terms": [
+      "target",
+      "conten",
+      "region"
+     ],
+     "concepts": [
+      "cultur",
+      "adapt",
+      "prefer",
+      "match"
+     ],
+     "core_words": [
+      "cultural",
+      "adapt",
+      "preferences",
+      "match"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://moz.com/learn/seo/international-seo",
+      "host": "moz.com",
+      "heading": "Tailor your content to your target user's language and culture",
+      "excerpt": "Make sure you are providing information that's suited to your target audience(s). By using the local language, currency, and timezone together with contact information like addresses and phone numbers, you're sending users and search engines strong signals that they're in the right spot. Also think about cultural differences when you're creating your design and content. Different regions look at things like color, la",
+      "concepts": [
+       "cultur",
+       "target",
+       "conten",
+       "region"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://www.semrush.com/blog/international-seo/",
+      "host": "semrush.com",
+      "heading": "Adapt Your Content for Cultural and Regional Preferences",
+      "excerpt": "Content localization adapts everything about your website's content to match the cultural preferences and expectations of your target region. Translation simply converts text from one language to another while maintaining its meaning. Localization adapts your entire messaging to match local preferences, values, and cultural context. Here's an example of a localized page by an American beauty brand. They created regio",
+      "concepts": [
+       "cultur",
+       "target",
+       "conten",
+       "region"
+      ],
+      "partial": true
+     }
+    ],
+    "destination": {
+     "status": "COVERED",
+     "passages": [
+      {
+       "heading": "Market-by-Market Guide: NL, UK, BE, LU & English Markets",
+       "text": "Each market needs its own hreflang code, currency references, regulatory context, and cultural examples. Getting the code right is only half the job — the content must feel local too.",
+       "concepts": [
+        "cultur",
+        "target",
+        "conten",
+        "region"
+       ]
+      },
+      {
+       "heading": "International SEO — Questions People Ask",
+       "text": "Belgium needs two hreflang codes: nl-BE for Flemish and fr-BE for Wallonia French. Never reuse nl-NL for Belgian Dutch, as vocabulary and cultural context differ. Regional sensitivities make correct language targeting important for trust and rankings.",
+       "concepts": [
+        "cultur",
+        "target",
+        "conten",
+        "region"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": null
+   },
+   {
+    "code": "task_analyz",
+    "label": "Competitors teach “Measuring and analyzing international SEO performance”",
+    "match": {
+     "key": "analyz",
+     "co_terms": [
+      "traffi"
+     ],
+     "concepts": [
+      "analyz",
+      "traffi",
+      "visito",
+      "monito",
+      "measur",
+      "perfor",
+      "metric",
+      "curren"
+     ],
+     "core_words": [
+      "analyzing",
+      "traffic",
+      "visitors",
+      "monitor"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://moz.com/learn/seo/international-seo",
+      "host": "moz.com",
+      "heading": "Measuring and analyzing international SEO performance",
+      "excerpt": "Measuring and analyzing your international SEO performance is crucial to understanding the effectiveness of your strategy. Here are some key metrics to track: Organic traffic: Monitor the number of organic visitors to your website. This can help you gauge the success of your SEO efforts in driving traffic from search engines. Search engine rankings : Track your website’s rankings in search engines. This includes moni",
+      "concepts": [
+       "analyz",
+       "traffi"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://www.semrush.com/blog/international-seo/",
+      "host": "semrush.com",
+      "heading": "Analyze Your Current Traffic",
+      "excerpt": "Analyze your current traffic to see where your visitors are coming from. If a lot of your site visitors are from a different country, you might want to look into expanding your offerings (more on this below) and implementing international SEO. Find out where your site visitors are located using Google Analytics 4 (GA4) . Open your account and navigate to \" Reports \" > \" User Attributes \" > “ Demographic details .\" Ne",
+      "concepts": [
+       "analyz",
+       "traffi"
+      ],
+      "partial": true
+     }
+    ],
+    "destination": {
+     "status": "NOT_OBSERVED",
+     "passages": []
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "What Is International SEO & Why It Matters for NL, UK, BE & LU",
+     "reason": "Closest existing section by shared concepts (googl, countr, effect, search); the new section continues that explanation."
+    }
+   }
+  ],
+  "supported_task_codes": [
+   "task_cultur",
+   "task_analyz"
+  ],
+  "gap_task_codes": [
+   "task_analyz"
+  ],
+  "covered_task_codes": [
+   "task_cultur"
+  ],
+  "linked_elsewhere_task_codes": [],
+  "destination_section_headings": [
+   "International SEO: The 2026 Guide for NL, UK, BE & LU Markets",
+   "📑 Table of Contents",
+   "What Is International SEO & Why It Matters for NL, UK, BE & LU",
+   "Which URL Structure Should You Use?",
+   "How Do You Implement Hreflang Correctly?",
+   "⚠️ The 6 Hreflang Mistakes That Break International SEO",
+   "Market-by-Market Guide: NL, UK, BE, LU & English Markets",
+   "Key Statistics: International SEO Results 2026",
+   "NL + BE Expansion: Capturing Dutch & Flemish Search Demand",
+   "Check Your International SEO Score Free",
+   "International SEO — Questions People Ask",
+   "📚 Related Articles"
+  ]
+ },
+ "site_architecture": {
+  "status": "SITE_INVENTORY_OBSERVED_NOT_LINK_VALIDATED",
+  "inspected_site_pages": 100,
+  "candidates": [],
+  "intent_overlap_risks": [],
+  "caution": "Related URLs are grounded in the same client Tracker inventory; topical overlap is not proven cannibalization or a verified live link.",
+  "compatible_existing_pages": []
+ },
+ "editorial_decision_gate": {
+  "focus_query": "international seo",
+  "protected_url": "https://contentscale.site/international-seo/",
+  "target_url": "https://contentscale.site/international-seo/",
+  "case_study_locked": false,
+  "preserve_title_h1": true,
+  "publish_allowed": false,
+  "copy_ready": false,
+  "verified_gap": false,
+  "gsc_optional": true,
+  "exact_page_query_metrics_verified": false,
+  "evidence_count": 6,
+  "facts": [
+   {
+    "code": "TOPIC_SELECTED",
+    "value": "international seo",
+    "source": "PAGE_VERIFIED_GSC_OR_TRACKED_TOPIC"
+   }
+  ],
+  "uncertainties": [],
+  "evidence": [],
+  "attempted_sources": [
+   {
+    "source": "TARGET_STATIC_HTML",
+    "status": "STATIC_HTML_USED",
+    "detail": null
+   },
+   {
+    "source": "SEARCH_PROVIDERS",
+    "status": "FRESH_GOOGLE_ORGANIC_LEADS",
+    "detail": "BING_PUBLIC_RSS, SERPER_GOOGLE_ORGANIC"
+   },
+   {
+    "source": "HISTORICAL_SNAPSHOT_LEADS",
+    "status": "LEADS_AVAILABLE",
+    "detail": "5 stored leads"
+   },
+   {
+    "source": "COMPETITOR_HTML_FETCH",
+    "status": "READABLE",
+    "detail": "3 tried: 3 readable, 0 blocked by the site (respected), 0 timed out, 0 fetched but not readable; 6 further candidate(s) untried"
+   }
+  ],
+  "decision": "DATA_BLOCKED",
+  "blocker_code": "SERP_INTENT_EVIDENCE",
+  "missing_evidence": [
+   {
+    "code": "SERP_INTENT_EVIDENCE",
+    "detail": "Fewer than three non-discussion organic results agree on one search intent."
+   }
+  ],
+  "reason": "Required evidence was not accessible: SERP_INTENT_EVIDENCE.",
+  "next_action": "Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.",
+  "requires_editor_approval": true,
+  "case_study_unchanged": true,
+  "copy_status": "NOT_AVAILABLE_DATA_BLOCKED"
+ },
+ "report_completion": {
+  "status": "DATA_BLOCKED_REPORT",
+  "evidence_gate": "DATA_BLOCKED",
+  "verified_gap": false,
+  "copy_ready": false,
+  "draft_provider_status": "NOT_REQUIRED_FOR_DECISION",
+  "owner_only": true,
+  "automatic_publishing": false,
+  "case_study_unchanged": true
+ },
+ "page_content": {
+  "headings": {
+   "title": "International SEO: Free 47-Point Checklist For NL & EU",
+   "description": "Is Google sending your NL & EU traffic to the US? Master international SEO with hreflang, localised URLs & a free 47-point checklist. Get a free audit.",
+   "h1": [
+    "International SEO: The 2026 Guide for NL, UK, BE & LU Markets"
+   ],
+   "h2": [
+    "What Is International SEO & Why It Matters for NL, UK, BE & LU",
+    "Which URL Structure Should You Use?",
+    "How Do You Implement Hreflang Correctly?",
+    "Market-by-Market Guide: NL, UK, BE, LU & English Markets",
+    "Key Statistics: International SEO Results 2026",
+    "Check Your International SEO Score Free",
+    "International SEO — Questions People Ask"
+   ],
+   "paragraph_samples": [
+    "In short: International SEO tells Google which country and language each page targets, using hreflang, localised URLs, and market-specific content. Without it, Google guesses — and for businesses serv",
+    "International SEO is the strategic process of optimizing your website to rank effectively in search engines across different countries and languages. It involves adapting your content, technical setup"
+   ]
+  }
+ },
+ "search": {
+  "focus_query": "international seo",
+  "verified_queries": []
+ },
+ "search_discovery": {
+  "status": "FRESH_GOOGLE_ORGANIC_LEADS",
+  "source": "SERPER_GOOGLE_ORGANIC",
+  "query": "international seo",
+  "target_query": "international seo",
+  "checked_at": "2026-10-28T06:33:27.740Z",
+  "scope": {
+   "country": "us",
+   "language": "en",
+   "source": "Google organic results through optional configured Serper.dev"
+  },
+  "leads": [
+   {
+    "url": "https://moz.com/learn/seo/international-seo",
+    "title": "International SEO Best Practices",
+    "snippet": "International SEO is the process of optimizing your website so that search engines can easily identify which countries you want to target and which languages ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 1,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://www.semrush.com/blog/international-seo/",
+    "title": "International SEO: Best Practices for Global Online Success",
+    "snippet": "International SEO is the process of optimizing your website to rank across multiple countries and languages.",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 2,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://phrase.com/blog/posts/international-seo/",
+    "title": "International SEO: Complete Guide (2026)",
+    "snippet": "International SEO is the practice of optimizing a website to make it more visible and rank higher in search engines in different countries and ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 3,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://www.searchenginejournal.com/international-seo-start-guide/232129/",
+    "title": "Getting Started In International SEO: A Quick Reference ...",
+    "snippet": "Expand your reach with international SEO. This guide explores the unique challenges and strategies for succeeding in global markets.",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 4,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://globallink.transperfect.com/blog/international-seo-for-your-multilingual-website-a-checklist",
+    "title": "International SEO for Your Multilingual Website: A Checklist",
+    "snippet": "International SEO is a process of optimizing your website to give it the best chance of ranking highly on search engines that are used by the countries and ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 5,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://www.novicell.com/services/digital-marketing/seo/international-seo/",
+    "title": "International SEO - Optimise your website for more countries",
+    "snippet": "International SEO is when a company's strategy shifts its focus from only one specific country to other or additional countries.",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 6,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://yoast.com/what-is-international-seo/",
+    "title": "What is international SEO?",
+    "snippet": "International SEO focuses on optimizing content for different languages for the search engines. With a proper multilingual SEO strategy, people ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 7,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://neilpatel.com/blog/how-to-international-seo/",
+    "title": "International SEO Guide: How to Reach a Global Audience",
+    "snippet": "International SEO is the process of optimizing your website's visibility for search engines to display to users in different languages and ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 8,
+    "geographic_scope": "US",
+    "search_language": "en"
+   },
+   {
+    "url": "https://www.specbee.com/blogs/international-seo-strategies-how-to-optimize-website-for-global-audiences",
+    "title": "International SEO strategies: How to optimize your website ...",
+    "snippet": "Want to grow your business worldwide? International SEO is the key! Learn about the key strategies, and ranking factors, and also find a ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "international seo",
+    "serp_position": 10,
+    "geographic_scope": "US",
+    "search_language": "en"
+   }
+  ],
+  "rejected_leads": [],
+  "provider_attempts": [
+   "BING_PUBLIC_RSS",
+   "SERPER_GOOGLE_ORGANIC"
+  ],
+  "competitor_fetch_log": [
+   {
+    "url": "https://moz.com/learn/seo/international-seo",
+    "host": "moz.com",
+    "serp_position": 1,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": false,
+    "retried_after_http_202": false,
+    "rendered_fallback": false,
+    "render_status": null,
+    "readable_words": 2127
+   },
+   {
+    "url": "https://www.semrush.com/blog/international-seo/",
+    "host": "semrush.com",
+    "serp_position": 2,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "rendered_fallback": false,
+    "render_status": null,
+    "readable_words": 1315
+   },
+   {
+    "url": "https://phrase.com/blog/posts/international-seo/",
+    "host": "phrase.com",
+    "serp_position": 3,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "rendered_fallback": false,
+    "render_status": null,
+    "readable_words": 137
+   }
+  ],
+  "competitor_fetch_summary": "3 tried: 3 readable, 0 blocked by the site (respected), 0 timed out, 0 fetched but not readable; 6 further candidate(s) untried"
+ },
+ "destination_section_comparison": {
+  "status": "FULL_SECTION_COMPARISON_RESEARCH_ONLY",
+  "target_url": "https://contentscale.site/international-seo/",
+  "own_html_truncated": false,
+  "protected_source_url": "https://contentscale.site/international-seo/"
+ },
+ "growth_decision": {
+  "protection": {
+   "case_study_locked": false,
+   "preserve_existing_top_rankings": false,
+   "publication_allowed": false,
+   "automatic_page_changes": false
+  },
+  "protected_queries": [],
+  "selection": {
+   "status": "QUERY_FROM_TRACKED_KEYWORD",
+   "source": "TRACKER_KEYWORD",
+   "destination": {
+    "url": "https://contentscale.site/international-seo/",
+    "page_id": 2324,
+    "basis": "TRACKED_KEYWORD_OF_THIS_PAGE",
+    "coverage": null
+   }
+  }
+ }
+}

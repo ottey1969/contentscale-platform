@@ -15,12 +15,23 @@ function statesIn(text,{queryMode=false}={}){
 // Directories, marketplaces, social profiles and review aggregators. They list businesses; they are not comparable pages.
 const AGGREGATOR=/(^|\.)(yelp\.com|angi\.com|angieslist\.com|homeadvisor\.com|thumbtack\.com|bbb\.org|yellowpages\.com|mapquest\.com|nextdoor\.com|porch\.com|houzz\.com|buildzoom\.com|manta\.com|superpages\.com|trustpilot\.com|expertise\.com|threebestrated\.com|fixr\.com|networx\.com|chamberofcommerce\.com|clutch\.co|g2\.com|capterra\.com|glassdoor\.com|indeed\.com|facebook\.com|instagram\.com|linkedin\.com|pinterest\.com|youtube\.com|tiktok\.com|x\.com|twitter\.com|reddit\.com|quora\.com|wikipedia\.org|gravatar\.com)$/i;
 const LISTICLE=/^(?:the\s+)?(?:top|best)\s+\d+\b|\b(?:top|best)\s+\d+\s+.*\b(?:in|near)\b|\bdirectory\b|\bfind (?:a|the) (?:best|top|local)\b|\bcompare (?:quotes|prices|pros)\b/i;
+// The market a page serves, from what the site itself states: the working query, the page's tracked keyword and its URL
+// slug ("...-roof-repair-nj/"). A GSC query is often shorter than the page's topic ("storm damage roof repair" for a
+// New Jersey page), so the query alone under-states the place. Titles are not used: they name places in passing.
+function deriveMarket({query='',keyword='',url=''}={}){
+ let slug='';try{slug=decodeURIComponent(new URL(url).pathname).replace(/[-_/]+/g,' ')}catch{}
+ const states=[...new Set([query,keyword,slug].flatMap(x=>statesIn(x,{queryMode:true})))];
+ const name=a=>US[a].replace(/\b[a-z]/g,c=>c.toUpperCase());
+ return states.length?{states,country:'us',location:states.length===1?name(states[0])+', United States':null,
+  source:'QUERY_KEYWORD_OR_URL_OF_THE_SOURCE_PAGE'}:null;
+}
 // query: the working query; lead: {url,title,snippet}. Returns null when the lead is acceptable, else a reason code.
-function rejectLead({query='',lead={},ownHost=''}={}){
+// marketStates: the place the source page serves (deriveMarket), applied even when the query itself names no place.
+function rejectLead({query='',lead={},ownHost='',marketStates=[]}={}){
  let host='';try{host=new URL(lead.url).hostname.replace(/^www\./,'').toLowerCase()}catch{return 'INVALID_URL'}
  if(ownHost&&(host===ownHost||host.endsWith('.'+ownHost)))return 'OWN_SITE';
  if(AGGREGATOR.test(host))return 'AGGREGATOR_OR_PROFILE_NOT_A_COMPARABLE_PAGE';
- const qStates=statesIn(query,{queryMode:true});
+ const qStates=[...new Set([...statesIn(query,{queryMode:true}),...(Array.isArray(marketStates)?marketStates:[])])];
  const text=String(lead.title||'')+' '+String(lead.snippet||'');
  if(qStates.length){ // a place-bound query: other-region pages are not competitors
   if(LISTICLE.test(String(lead.title||'')))return 'DIRECTORY_STYLE_LISTING_FOR_A_LOCAL_QUERY';
@@ -29,4 +40,11 @@ function rejectLead({query='',lead={},ownHost=''}={}){
  }
  return null;
 }
-module.exports={rejectLead,statesIn,AGGREGATOR,US};
+// A kept lead either names the same market (a geographically comparable competitor) or names no place at all (a general
+// informational source). The distinction is reported and same-market pages are read first.
+function marketRelevance(lead={},marketStates=[]){
+ if(!marketStates.length)return 'NO_MARKET_SCOPE';
+ const st=statesIn(String(lead.title||'')+' '+String(lead.snippet||''));
+ return st.some(x=>marketStates.includes(x))?'SAME_MARKET':'NO_REGION_STATED_GENERAL_SOURCE';
+}
+module.exports={rejectLead,statesIn,deriveMarket,marketRelevance,AGGREGATOR,US};
