@@ -1,22 +1,30 @@
 'use strict';
-// Build-time, scope-limited hardening of Tracker's initial page fetch.
-// The source uses a legacy native fetch({redirect:'follow'}) before redirect verification.
-// Replace only that one request, never global fetch and never other modules.
+// Scoped, idempotent canonical build-time replacement of the legacy Tracker scan's first native fetch.
+// Handles nested headers and options; replaces exactly one request, never global fetch.
 function patch(source){
  const input=String(source);
  const start=input.indexOf('async function runTrackerCheck(');
  if(start<0)throw Error('TRACKER_SAFE_FETCH_FUNCTION_NOT_FOUND');
- const end=input.indexOf('\nasync function ',start+10);
- const scopeEnd=end<0?input.length:end;
+ const end=input.indexOf('\nasync function ',start+10),scopeEnd=end<0?input.length:end;
  const head=input.slice(0,start),body=input.slice(start,scopeEnd),tail=input.slice(scopeEnd);
- const pattern=/fetch\(page\.url,\s*\{\s*redirect:\s*['"]follow['"]\s*\}\s*\)/g;
- const occurrences=[...body.matchAll(pattern)].length;
- const hardened='require(\'./tracker-safe-initial-fetch.cjs\').fetchInitialTrackerPage(page.url)';
- if(occurrences===0){
-  if(body.includes(hardened))return input;
-  throw Error('TRACKER_UNSAFE_INITIAL_FETCH_MISSING_OR_CHANGED: '+[...body.matchAll(/fetch\s*\(\s*page\.url/g)].slice(0,5).map(m=>body.slice(Math.max(0,m.index-100),m.index+260).replace(/\s+/g,' ')).join(' | '));
+ const hardened="require('./tracker-safe-initial-fetch.cjs').fetchInitialTrackerPage(page.url)";
+ if(body.includes(hardened))return input;
+ const hits=[];
+ const token='fetch(page.url,';
+ let idx=-1;
+ while((idx=body.indexOf(token,idx+1))!==-1){
+  let depth=0,quote=null,escaped=false,close=-1;
+  for(let j=idx+5;j<body.length;j++){
+   const ch=body[j];
+   if(quote){if(escaped)escaped=false;else if(ch==='\\')escaped=true;else if(ch===quote)quote=null;continue}
+   if(ch==='"'||ch==="'"||ch==='\x60'){quote=ch;continue}
+   if(ch==='(')depth++;else if(ch===')'){depth--;if(depth===0){close=j;break}}
+  }
+  if(close<0)throw Error('TRACKER_FETCH_UNBALANCED_CALL');
+  const call=body.slice(idx,close+1);
+  if(/redirect\s*:\s*['"]follow['"]/.test(call))hits.push({idx,close});
  }
- if(occurrences!==1)throw Error('TRACKER_UNSAFE_INITIAL_FETCH_AMBIGUOUS_'+occurrences);
- return head+body.replace(pattern,hardened)+tail;
+ if(hits.length!==1)throw Error('TRACKER_INITIAL_FETCH_EXPECTED_ONE_FOUND_'+hits.length);
+ return head+body.slice(0,hits[0].idx)+hardened+body.slice(hits[0].close+1)+tail;
 }
 module.exports={patch};
