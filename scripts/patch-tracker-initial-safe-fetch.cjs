@@ -13,7 +13,7 @@ function patch(source){
  const token='fetch(page.url,';
  let idx=-1;
  while((idx=body.indexOf(token,idx+1))!==-1){
-  let depth=0,quote=null,escaped=false,close=-1;
+  let depth=1,quote=null,escaped=false,close=-1;
   for(let j=idx+5;j<body.length;j++){
    const ch=body[j];
    if(quote){if(escaped)escaped=false;else if(ch==='\\')escaped=true;else if(ch===quote)quote=null;continue}
