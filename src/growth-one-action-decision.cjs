@@ -47,7 +47,10 @@ function chooseGrowthNextAction({page={},queries=[],headings={},siteGraph={},sit
   const far=chosen.position>35;
   next={code:'VERIFY_INTENT_AND_EXISTING_DESTINATION',title:'Investigate clicks for "'+chosen.query+'"',
    query:chosen.query,metrics:{impressions:chosen.impressions,clicks:chosen.clicks,ctr_pct:chosen.ctr_pct,average_position:chosen.position,imported_at:chosen.imported_at},
-   reason:chosen.impressions+' exact-page impressions and '+chosen.clicks+' clicks; average position '+chosen.position.toFixed(1)+'. '+
+   // Imported GSC rows are history, never the current ranking: the import date is stated with every figure.
+   reason:chosen.impressions+' exact-page impressions and '+chosen.clicks+' clicks; average position '+chosen.position.toFixed(1)+
+    ' in Search Console data imported '+String(chosen.imported_at||'').slice(0,10)+' (historical, not a current ranking'+
+    (chosen.destination?.url&&chosen.destination.url!==page.url?'; rows of the source page, not of the destination':'')+'). '+
     (far?'The average position is far beyond the first page, so ranking relative to live competitors is a larger obstacle than the snippet.':'The ranking may be a larger obstacle than the search snippet.'),
    instruction:'Compare the live search intent with the destination URL and existing same-site pages. If the existing page fits, propose one targeted improvement on that URL for editorial review. Do not create another page by default.',
    destination:sel.destination,source_page_signal:sel.surfacing_signal||null,query_source:sel.source,

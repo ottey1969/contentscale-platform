@@ -42,6 +42,13 @@
   node('small','Decision scope: '+String(outcome.decision_scope||'OBSERVED_RESEARCH_ONLY')+
    ' · Verified content gap: '+(outcome.verified_gap===true?'YES':(outcome.gap_observed===true?'NO — task gap observed, verified only after a draft passes the checks':'NO'))+
    ' · Automatic publishing: DISABLED',primary);
+  if(outcome.evidence_status){
+   var ladder=node('ul',null,primary);
+   [['search_intent_confirmed','Search intent confirmed from live results'],['competitor_content_observed','Competitor content read (2+ sites)'],
+    ['destination_fully_examined','Target page read completely'],['missing_task_established','Missing reader task established'],
+    ['draft_checked','Draft checked (task fit, duplication, wording, claims)'],['factual_claims_confirmed','Factual claims confirmed by the owner'],
+    ['publication_approved','Publication approved']].forEach(function(r){node('li',r[1]+': '+(outcome.evidence_status[r[0]]===true?'yes':'no'),ladder)});
+  }
   if(outcome.decision==='DATA_BLOCKED'){
    node('p','Missing evidence — what is needed and why:',primary);
    var miss=node('ul',null,primary);

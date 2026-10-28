@@ -280,3 +280,23 @@ test('rejected provider text is excluded from the complete API response, the pac
  const copyBtn=findAll(ui.el.growthAutomaticReport,n=>n.tagName==='button'&&/Copy complete draft/.test(n._text));
  assert(shown.includes('Repurpose what you already published')||true);
 });
+// ---- One evidence status: the same ladder in the decision, work packet, completion, owner package and UI ----
+test('evidence status is identical in every output for a verified draft and for a blocked run',async()=>{
+ const check=b=>{
+  const st=b.editorial_decision_gate.evidence_status;assert(st,'decision carries the ladder');
+  assert.deepEqual(b.editorial_work_packet.evidence_ladder,st);assert.deepEqual(b.report_completion.evidence_status,st);
+  assert.equal(b.editorial_work_packet.evidence_verified,st.draft_checked);assert.equal(b.report_completion.verified_gap,st.verified_gap);
+  assert.equal(b.report_completion.copy_ready,st.copy_ready);assert.equal(b.editorial_decision_gate.copy_ready,st.copy_ready);
+  assert.equal(b.editorial_decision_gate.verified_gap,st.verified_gap);assert.equal(st.publication_approved,false);assert.equal(st.factual_claims_confirmed,false);
+  assert.match(b.handoff_package.markdown,new RegExp('\\| Draft checked \\(task fit, duplication, wording, claims\\) \\| '+(st.draft_checked?'yes':'no')+' \\|'));
+  return st;
+ };
+ const ok=await harness({drafts:[draftFor('Repurpose what you already published',GOOD)]}).invoke('/api/tracker-client/:token/growth/auto-research/complete','owner-token');
+ const st=check(ok.body);assert.equal(st.draft_checked,true);assert.equal(st.search_intent_confirmed,true);
+ const blocked=await harness({truncateDestination:true}).invoke('/api/tracker-client/:token/growth/auto-research/complete','owner-token');
+ const sb=check(blocked.body);assert.equal(blocked.body.editorial_decision_gate.decision,'DATA_BLOCKED');assert.equal(sb.draft_checked,false);
+ assert.equal(sb.destination_fully_examined,false);
+ const ui=await runUi(harness({drafts:[draftFor('Repurpose what you already published',GOOD)]}),true);
+ assert.match(allText(ui.el.growthAutomaticReport),/Draft checked \(task fit, duplication, wording, claims\): yes/);
+ assert.match(allText(ui.el.growthAutomaticReport),/Publication approved: no/);
+});

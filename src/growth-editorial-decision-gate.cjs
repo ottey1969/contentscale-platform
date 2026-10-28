@@ -1,6 +1,7 @@
 'use strict';
 // Deterministic evidence-based result, with no inferred content gaps from lexical overlap.
 // Publication and Case Study modifications are never authorized by this decision.
+const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const normQ=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,' ');
 // Evidence-based path (coverage supplied): intent + complete body evidence + site architecture.
 function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,destinationIntent,attempts,query,target,protection,protectedQueries,fail}){
@@ -16,11 +17,13 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  const sources=serpIntent?.status==='SERP_INTENT_OBSERVED';
  const readable=(coverage.competitors_considered||[]).length;
  const missing=[];
+ // A truncated destination still PROVES what it teaches in the captured part; it only cannot prove absence. So truncation
+ // blocks a gap claim (checked below, once the tasks are known), not the whole decision.
+ const destinationTruncated=!!(coverage.destination_truncated||destination.own_html_truncated);
  if(!target||destination.status==='EXISTING_DESTINATION_EVIDENCE_UNAVAILABLE'||destination.status==='OWN_SOURCE_INCOMPLETE')
   missing.push({code:'TARGET_HTML_UNAVAILABLE',detail:'The target page body could not be read after static fetch and the restricted browser render.'});
- else if(coverage.destination_truncated||destination.own_html_truncated)
-  missing.push({code:'COMPLETE_DESTINATION_HTML',detail:'The captured destination HTML was truncated, so absence of a task cannot be claimed.'});
- if(!sources)missing.push({code:'SERP_INTENT_EVIDENCE',detail:'Fewer than three non-discussion organic results agree on one search intent.'});
+ if(!sources)missing.push({code:'SERP_INTENT_EVIDENCE',detail:serpIntent?.reason||'Fewer than three non-discussion organic results agree on one search intent.',
+  observed:serpIntent?{considered:serpIntent.organic_leads_considered,agreeing:serpIntent.agreeing_leads,class_counts:serpIntent.class_counts||null,method:serpIntent.method}:null});
  const cd=coverage.competitor_diagnostics||{};
  if(readable<2||(cd.distinct_hosts!==undefined&&cd.distinct_hosts<2))missing.push({code:'READABLE_COMPETITOR_ARTICLES',
   detail:'Fewer than two competitor articles on different sites yielded readable sections. Diagnostics: received '+(cd.received??'?')+', without HTML '+(cd.without_html??'?')+
@@ -50,13 +53,23 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  }
  const gaps=supported.filter(t=>t.destination.status!=='COVERED'&&!(t.covered_elsewhere_on_site||[]).length);
  const linked=supported.filter(t=>t.destination.status!=='COVERED'&&(t.covered_elsewhere_on_site||[]).length);
+ const blocked=(code,detail,reason,next)=>({...base,decision:'DATA_BLOCKED',blocker_code:code,missing_evidence:[{code,detail}],attempted_sources:attempts,reason,next_action:next});
  if(!supported.length)
-  return {...base,decision:'DATA_BLOCKED',blocker_code:'SHARED_COMPETITOR_REQUIREMENTS',missing_evidence:[{code:'SHARED_COMPETITOR_REQUIREMENTS',
-   detail:'No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. '+explainNoShared(coverage.task_derivation)}],attempted_sources:attempts,
-   reason:'Competitor pages were read but share no common reader task.',next_action:'Add more readable competitor articles for the same query, or accept the page as is.'};
+  return blocked('SHARED_COMPETITOR_REQUIREMENTS','No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. '+explainNoShared(coverage.task_derivation),
+   'Competitor pages were read but share no common reader task.','Add more readable competitor articles for the same query, or accept the page as is.');
+ // Absence on a truncated destination is unknown, never a gap.
+ if(gaps.length&&destinationTruncated)
+  return blocked('COMPLETE_DESTINATION_HTML','The captured destination HTML was cut at the readable-HTML limit and '+gaps.length+' shared task(s) were not observed in the captured part ('+gaps.map(t=>t.code).join(', ')+'); absence after the cut cannot be claimed.',
+   'Required evidence was not accessible: COMPLETE_DESTINATION_HTML.','Re-run when the destination can be read completely, or check the named task(s) on the live page by hand.');
+ // "Nothing is missing" is only as strong as the competitor task set: a competitor cut at the fetch limit may teach more after the cut.
+ const completeHosts=new Set((coverage.competitors_considered||[]).filter(c=>c.partial!==true).map(c=>c.host)).size;
+ if(!gaps.length&&completeHosts<2)
+  return blocked('COMPLETE_COMPETITOR_HTML','All shared tasks are taught on the destination, but fewer than two competitor articles were captured completely ('+completeHosts+'), so tasks taught after a cut are unknown. A NO_CHANGE closure needs a complete task set.',
+   'Required evidence was not accessible: COMPLETE_COMPETITOR_HTML.','Re-run with complete competitor captures before closing this query as NO_CHANGE.');
  if(!gaps.length)
   return {...base,decision:'NO_CHANGE',decision_scope:'DESTINATION_TEACHES_SHARED_TASKS',verified_gap:false,gap_basis:null,
-   reason:'Every reader task taught by two or more independent competitors is already taught on the destination or on another same-site page.',
+   reason:'Every reader task taught by two or more independent competitors is already taught on the destination or on another same-site page.'+
+    (destinationTruncated?' The destination capture was cut at the readable-HTML limit; every task was found before the cut.':''),
    closure_report:{destination:target,tasks_checked:supported.map(t=>({code:t.code,label:t.label,destination_status:t.destination.status,
      destination_passages:t.destination.passages,covered_elsewhere:t.covered_elsewhere_on_site||[]})),
     competitors:coverage.competitors_considered,limit:'Lexical concept groups on captured HTML; no ranking or quality claim.'},
@@ -108,7 +121,12 @@ function decideFromCoverage(args){
   evidence:(()=>{const seen=new Set();return [...opp.evidence].filter(e=>{const k=[e.type,e.source_url,e.heading].join('|');if(seen.has(k))return false;seen.add(k);return true})})(),
   next_action:planned.decision==='NEW_DISTINCT_PAGE'?'Owner reviews the new-page draft; publication remains disabled.':'Owner reviews the source-backed edit at the stated placement; publication remains disabled.'};
 }
-function decideGrowthEditorialAction({report={},destination={},coverage=null,serpIntent=null,destinationIntent=null,attempts=[]}={}){
+// Every decision carries the same evidence ladder, so downstream outputs never re-derive verified_gap / copy_ready on their own.
+function decideGrowthEditorialAction(args={}){
+ const decision=decideGrowthEditorialActionCore(args);
+ return {...decision,evidence_status:deriveEvidenceStatus({decision,serpIntent:args.serpIntent||null,coverage:args.coverage||null})};
+}
+function decideGrowthEditorialActionCore({report={},destination={},coverage=null,serpIntent=null,destinationIntent=null,attempts=[]}={}){
  const action=report.growth_decision?.primary_next_action||{};
  const query=String(action.query||report.search_discovery?.target_query||report.search?.focus_query||'').trim();
  const protectedUrl=String(report.url||''),target=destination.target_url||destination.own_url||null;

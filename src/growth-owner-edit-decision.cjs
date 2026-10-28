@@ -53,11 +53,16 @@ function decideFromEvidence({report,completion,base,sources}){
   const rejected=[],accepted=[];
   for(const section of sections){
    let best=null;
-   const labelled=tasks.find(t=>t.code===section.task_code);
-   for(const task of (labelled?[labelled]:tasks)){const r=checkDraftSection(section,{task,destinationText,competitorTexts,query:base.focus_query,brandLabel:sources.brandLabel||''});
+   // Same candidate rule as the producer: a section labelled with a task outside the plan is not re-matched to another task.
+   const labelled=section.task_code?tasks.find(t=>t.code===section.task_code):null;
+   for(const task of (section.task_code?(labelled?[labelled]:[]):tasks)){const r=checkDraftSection(section,{task,destinationText,competitorTexts,query:base.focus_query,brandLabel:sources.brandLabel||''});
     if(r.ok){best={task,r,section};break}rejected.push({heading:section.h2,task:task.code,...r})}
    if(best)accepted.push(best);
   }
+  // copy_ready follows the producer's verification (verified_gap on the gate), never a second, independent judgement.
+  if(completion.draft&&accepted.length&&base.verified_gap!==true)
+   return {...base,...common,copy_ready:false,copy_status:'DRAFT_NOT_VERIFIED_BY_PRODUCER',draft_rejections:rejected.slice(0,6),
+    next_action:'The draft did not pass the verified-opportunity checks for this target and query; regenerate or write the missing task manually.'};
   if(!completion.draft||!accepted.length)
    return {...base,...common,copy_ready:false,
     copy_status:!completion.draft?'DRAFT_NOT_AVAILABLE_'+String(completion.status||'UNKNOWN'):'DRAFT_REJECTED_'+String(rejected[0]?.code||'NO_VALID_SECTION'),
@@ -80,6 +85,8 @@ function decideFromEvidence({report,completion,base,sources}){
  }
  if(base.decision==='NEW_DISTINCT_PAGE'&&base.new_page_plan){
   const usable=sections.filter(s=>validParagraphs(s).length);
+  if(completion.draft&&usable.length>=2&&base.verified_gap!==true)
+   return {...base,...common,copy_ready:false,copy_status:'DRAFT_NOT_VERIFIED_BY_PRODUCER',next_action:'The new-page draft did not pass the verified-opportunity checks; regenerate.'};
   if(!completion.draft||usable.length<2)
    return {...base,...common,copy_ready:false,copy_status:!completion.draft?'DRAFT_NOT_AVAILABLE_'+String(completion.status||'UNKNOWN'):'DRAFT_TOO_THIN_FOR_NEW_PAGE',
     next_action:'Complete owner draft generation; a new page needs at least two substantive sections.'};
