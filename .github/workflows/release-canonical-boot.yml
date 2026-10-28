@@ -67,6 +67,8 @@ jobs:
           node scripts/patch-audit20-interest-idempotency.cjs src/index.js
           node scripts/patch-audit20-interest-idempotency.cjs src/index.js
           git diff --check
+      - name: Prepare canonical production artifact (same as Docker build)
+        run: node scripts/prepare-canonical-production.cjs
       - name: Boot full canonical application on localhost with external network denied
         run: |
           set -euo pipefail
