@@ -1,0 +1,619 @@
+{
+ "_source": "Verbatim subset of production Growth complete-review JSON (report 16, generated 2026-10-28T20:23:35.530Z, after PR #192). Only fields the regression reads are kept.",
+ "generated_at": "2026-10-28T20:23:35.530Z",
+ "page_id": 2413,
+ "url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+ "case_study_locked": true,
+ "query_selection": {
+  "status": "QUERY_SELECTED_FROM_VERIFIED_GSC",
+  "source": "VERIFIED_EXACT_PAGE_GSC",
+  "query": "roof wind damage repair",
+  "destination": {
+   "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+   "page_id": 2361,
+   "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+   "coverage": 1,
+   "keyword": "wind damage roof repair",
+   "competing_same_site_pages": [
+    "https://perfectroofingteam.com/wind-damage-roof-repair-nj/#statistics"
+   ]
+  },
+  "source_page_signal": {
+   "type": "SOURCE_PAGE_SURFACES_FOR_QUERY_OWNED_BY_ANOTHER_PAGE",
+   "note": "These are the SOURCE page’s rows. They are not performance data for the destination page.",
+   "source_page_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+  },
+  "brand_queries_excluded": [],
+  "excluded": [],
+  "protected": []
+ },
+ "serp_intent": {
+  "status": "SERP_INTENT_OBSERVED",
+  "intent": "INFORMATIONAL_GUIDE",
+  "query": "roof wind damage repair",
+  "organic_leads_considered": 3,
+  "agreeing_leads": 2,
+  "compatible_leads": 2,
+  "agreement_basis": "SINGLE_INTENT",
+  "class_counts": {
+   "INFORMATIONAL_GUIDE": 2,
+   "UNCLASSIFIED": 1
+  },
+  "reason": null,
+  "pages_used_for_classification": 0,
+  "leads": [
+   {
+    "url": "https://reconroof.com/blog/wind-damage-to-roof/",
+    "title": "6 Step Guide To Inspect & Repair Wind Damage To Roof",
+    "class": "INFORMATIONAL_GUIDE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://theroofingbrief.com/wind-damage-roof-repair/",
+    "title": "Wind Damage Roof Repair: Cost, Fixes, Timeline",
+    "class": "UNCLASSIFIED",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://mmroofsiding.com/blog/storm-damage-roof-repair/",
+    "title": "Wind Damage Roof Repair: 5 Steps To Take After A Storm",
+    "class": "INFORMATIONAL_GUIDE",
+    "basis": "TITLE_AND_SNIPPET"
+   }
+  ],
+  "method": "TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES",
+  "scope": "One lookup; observed placement is not a tracked-page ranking."
+ },
+ "destination_intent": {
+  "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+  "class": "LOCAL_SERVICE",
+  "query_root_overlap": [
+   "roof",
+   "wind",
+   "damag",
+   "repair"
+  ],
+  "missing_query_roots": [],
+  "verdict": "DIFFERENT",
+  "basis": "TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF",
+  "observed_head": "wind damage roof repair nj | 2-hour emergency response | storm & wind damage roof repair in new jersey"
+ },
+ "editorial_decision_gate": {
+  "focus_query": "roof wind damage repair",
+  "protected_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "target_url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+  "case_study_locked": true,
+  "preserve_title_h1": true,
+  "publish_allowed": false,
+  "copy_ready": false,
+  "verified_gap": false,
+  "gsc_optional": true,
+  "exact_page_query_metrics_verified": true,
+  "evidence_count": 6,
+  "facts": [
+   {
+    "code": "TOPIC_SELECTED",
+    "value": "roof wind damage repair",
+    "source": "PAGE_VERIFIED_GSC_OR_TRACKED_TOPIC"
+   },
+   {
+    "code": "SERP_INTENT",
+    "value": "INFORMATIONAL_GUIDE",
+    "agreeing_leads": 2,
+    "of": 3
+   },
+   {
+    "code": "DESTINATION_INTENT",
+    "value": "LOCAL_SERVICE",
+    "verdict": "DIFFERENT"
+   }
+  ],
+  "uncertainties": [
+   "A verified opportunity was supplied but did not match the planned scope, evidence or text length; it was ignored."
+  ],
+  "evidence": [],
+  "attempted_sources": [
+   {
+    "source": "TARGET_STATIC_HTML",
+    "status": "STATIC_HTML_USED",
+    "detail": null
+   },
+   {
+    "source": "SEARCH_PROVIDERS",
+    "status": "FRESH_GOOGLE_ORGANIC_LEADS",
+    "detail": "BING_PUBLIC_RSS, SERPER_GOOGLE_ORGANIC"
+   },
+   {
+    "source": "HISTORICAL_SNAPSHOT_LEADS",
+    "status": "LEADS_AVAILABLE",
+    "detail": "14 stored leads"
+   },
+   {
+    "source": "COMPETITOR_HTML_FETCH",
+    "status": "READABLE",
+    "detail": "3 tried: 2 readable, 0 blocked by the site (respected), 1 timed out, 0 fetched but not readable; 0 further candidate(s) untried"
+   }
+  ],
+  "decision": "NEW_DISTINCT_PAGE",
+  "gap_observed": true,
+  "gap_basis": "DIFFERENT_SEARCH_INTENT_AND_NO_COMPATIBLE_SAME_SITE_PAGE",
+  "reason": "Live results agree on a INFORMATIONAL_GUIDE intent, but the selected page is LOCAL_SERVICE; no compatible same-site page was found.",
+  "distinct_intent_evidence": {
+   "serp": [
+    {
+     "url": "https://reconroof.com/blog/wind-damage-to-roof/",
+     "title": "6 Step Guide To Inspect & Repair Wind Damage To Roof",
+     "class": "INFORMATIONAL_GUIDE",
+     "basis": "TITLE_AND_SNIPPET"
+    },
+    {
+     "url": "https://theroofingbrief.com/wind-damage-roof-repair/",
+     "title": "Wind Damage Roof Repair: Cost, Fixes, Timeline",
+     "class": "UNCLASSIFIED",
+     "basis": "TITLE_AND_SNIPPET"
+    },
+    {
+     "url": "https://mmroofsiding.com/blog/storm-damage-roof-repair/",
+     "title": "Wind Damage Roof Repair: 5 Steps To Take After A Storm",
+     "class": "INFORMATIONAL_GUIDE",
+     "basis": "TITLE_AND_SNIPPET"
+    }
+   ],
+   "destination": {
+    "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+    "class": "LOCAL_SERVICE",
+    "query_root_overlap": [
+     "roof",
+     "wind",
+     "damag",
+     "repair"
+    ],
+    "missing_query_roots": [],
+    "verdict": "DIFFERENT",
+    "basis": "TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF",
+    "observed_head": "wind damage roof repair nj | 2-hour emergency response | storm & wind damage roof repair in new jersey"
+   }
+  },
+  "new_page_plan": {
+   "working_query": "roof wind damage repair",
+   "facts_source_url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+   "tasks": [],
+   "internal_links": {
+    "from": [
+     "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+     "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+    ],
+    "anchor_policy": "Natural anchor inside a relevant existing paragraph; verify no duplicate link first."
+   }
+  },
+  "next_action": "The new-page draft did not pass the verified-opportunity checks; regenerate.",
+  "evidence_status": {
+   "decision": "NEW_DISTINCT_PAGE",
+   "search_intent_confirmed": true,
+   "competitor_content_observed": true,
+   "destination_fully_examined": true,
+   "missing_task_established": true,
+   "draft_checked": false,
+   "factual_claims_confirmed": false,
+   "publication_approved": false,
+   "copy_ready": false,
+   "verified_gap": false,
+   "label": "TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED"
+  },
+  "requires_editor_approval": true,
+  "case_study_unchanged": true,
+  "copy_status": "DRAFT_NOT_VERIFIED_BY_PRODUCER"
+ },
+ "report_completion": {
+  "status": "RESEARCH_COMPLETE_DRAFT_NOT_READY",
+  "evidence_gate": "NEW_DISTINCT_PAGE",
+  "verified_gap": false,
+  "copy_ready": false,
+  "draft_provider_status": "AI_DRAFT_REVIEW_REQUIRED",
+  "evidence_status": {
+   "decision": "NEW_DISTINCT_PAGE",
+   "search_intent_confirmed": true,
+   "competitor_content_observed": true,
+   "destination_fully_examined": true,
+   "missing_task_established": true,
+   "draft_checked": false,
+   "factual_claims_confirmed": false,
+   "publication_approved": false,
+   "copy_ready": false,
+   "verified_gap": false,
+   "label": "TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED"
+  },
+  "owner_only": true,
+  "automatic_publishing": false,
+  "case_study_unchanged": true
+ },
+ "verified_opportunity_status": {
+  "producer": "GROWTH_VERIFIED_OPPORTUNITY_PRODUCER",
+  "status": "VERIFIED_NEW_DISTINCT_PAGE",
+  "rejections": [],
+  "verified": true
+ },
+ "page_content": {
+  "headings": {
+   "title": "Wind Damage Roof Repair NJ | 2-Hour Emergency Response",
+   "description": "Wind damage roof repair in NJ, all 21 counties. Licensed & insured, 2-hour emergency response, free inspection & insurance claim help. Call (862) 238-6353.",
+   "h1": [
+    "Storm & Wind Damage Roof Repair in New Jersey"
+   ],
+   "h2": [
+    "💰 What is the Cost of Wind Damage Roof Repair in New Jersey?",
+    "🔍 Key Signs of Wind Damage on NJ Roofs",
+    "📋 Our Wind Damage Repair Process",
+    "❄️ Hail Damage Inspection & Repair",
+    "🚨 Emergency Storm Restoration Available 24/7",
+    "⚙️ Insurance Claims for Storm Damage",
+    "📍 Service Areas: Storm & Wind Repair Across All 21 NJ Counties",
+    "❓ Frequently Asked Questions"
+   ],
+   "paragraph_samples": [
+    "Protecting Your Home or Business with Expert Roofing You Can Trust.\"",
+    "High winds can lift or tear away shingles, loosen flashing, and leave a New Jersey roof exposed to leaks. Perfect Roofing Team inspects wind-related roof damage, explains repair or replacement options",
+    "Wind-specific service: This page focuses on lifted or missing shingles, loosened flashing, wind-driven openings, and wind-related emergency tarping. For active leaks or broader emergency roof damage, "
+   ]
+  }
+ },
+ "site_architecture": {
+  "compatible_existing_pages": [],
+  "same_type_pages_on_another_topic": [
+   {
+    "url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+    "missing_query_roots": [
+     "wind"
+    ]
+   },
+   {
+    "url": "https://perfectroofingteam.com/storm-damage-repair/",
+    "missing_query_roots": [
+     "wind"
+    ]
+   },
+   {
+    "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+    "missing_query_roots": [
+     "wind"
+    ]
+   }
+  ],
+  "intent_overlap_risks": [
+   {
+    "url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+    "keyword": "storm damage roof repair nj",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+    "keyword": "storm damage roof repair",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+    "keyword": "wind damage roof repair",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/#statistics",
+    "keyword": "wind damage roof repair nj",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   },
+   {
+    "url": "https://perfectroofingteam.com/storm-damage-repair/",
+    "keyword": "storm damage repair",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   }
+  ]
+ },
+ "search_discovery": {
+  "target_query": "roof wind damage repair",
+  "leads": [
+   {
+    "url": "https://reconroof.com/blog/wind-damage-to-roof/",
+    "title": "6 Step Guide To Inspect & Repair Wind Damage To Roof",
+    "snippet": "Inspect From the Ground: Walk around your property to spot missing shingles, flashing damage, or fallen debris. Use binoculars for a closer look ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "roof wind damage repair",
+    "serp_position": 2,
+    "geographic_scope": "New Jersey, United States",
+    "search_language": "en",
+    "market_relevance": "NO_REGION_STATED_GENERAL_SOURCE"
+   },
+   {
+    "url": "https://theroofingbrief.com/wind-damage-roof-repair/",
+    "title": "Wind Damage Roof Repair: Cost, Fixes, Timeline",
+    "snippet": "Wind damage roof repair costs $150 to $500 for a few shingles, $400 to $1,500 for a slope-edge strip with flashing, and $1,000 to $4,000 or more ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "roof wind damage repair",
+    "serp_position": 6,
+    "geographic_scope": "New Jersey, United States",
+    "search_language": "en",
+    "market_relevance": "NO_REGION_STATED_GENERAL_SOURCE"
+   },
+   {
+    "url": "https://mmroofsiding.com/blog/storm-damage-roof-repair/",
+    "title": "Wind Damage Roof Repair: 5 Steps To Take After A Storm",
+    "snippet": "Did high winds damage your roof? Our guide explains the 5 essential steps for wind damage roof repair, from inspection to insurance claims.",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "roof wind damage repair",
+    "serp_position": 9,
+    "geographic_scope": "New Jersey, United States",
+    "search_language": "en",
+    "market_relevance": "NO_REGION_STATED_GENERAL_SOURCE"
+   }
+  ],
+  "market": {
+   "states": [
+    "NJ"
+   ],
+   "country": "us",
+   "location": "New Jersey, United States",
+   "source": "QUERY_KEYWORD_OR_URL_OF_THE_SOURCE_PAGE"
+  }
+ },
+ "reader_task_coverage": {
+  "status": "READER_TASK_COVERAGE_OBSERVED",
+  "method": "TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF",
+  "task_set": "DERIVED_FROM_COMPETITOR_SECTIONS",
+  "serp_intent": "INFORMATIONAL_GUIDE",
+  "destination_url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+  "destination_truncated": false,
+  "destination_capture": {
+   "raw_bytes": 80274,
+   "raw_cap_bytes": 2500000,
+   "raw_cap_hit": false,
+   "readable_chars": 37595,
+   "readable_limit": 600000,
+   "cause": null
+  },
+  "destination_sections": [
+   {
+    "heading": "(introduction)",
+    "words": 11
+   },
+   {
+    "heading": "Storm & Wind Damage Roof Repair in New Jersey",
+    "words": 200
+   },
+   {
+    "heading": "💰 What is the Cost of Wind Damage Roof Repair in New Jersey?",
+    "words": 101
+   },
+   {
+    "heading": "Watch for these warning signs:",
+    "words": 136
+   },
+   {
+    "heading": "📋 Our Wind Damage Repair Process",
+    "words": 172
+   },
+   {
+    "heading": "❄️ Hail Damage Inspection & Repair",
+    "words": 49
+   },
+   {
+    "heading": "Hail Damage Signs:",
+    "words": 79
+   },
+   {
+    "heading": "🚨 Emergency Storm Restoration Available 24/7",
+    "words": 47
+   },
+   {
+    "heading": "Our Emergency Service Includes:",
+    "words": 80
+   },
+   {
+    "heading": "⚙️ Insurance Claims for Storm Damage",
+    "words": 65
+   },
+   {
+    "heading": "How We Support Your Claim:",
+    "words": 68
+   },
+   {
+    "heading": "Your Insurance Claim Timeline:",
+    "words": 94
+   },
+   {
+    "heading": "📍 Service Areas: Storm & Wind Repair Across All 21 NJ Counties",
+    "words": 167
+   },
+   {
+    "heading": "❓ Frequently Asked Questions",
+    "words": 311
+   },
+   {
+    "heading": "Wind Damage? Don't Wait — Act Within 24 Hours",
+    "words": 13
+   }
+  ],
+  "competitors_considered": [
+   {
+    "url": "https://reconroof.com/blog/wind-damage-to-roof/",
+    "host": "reconroof.com",
+    "partial": false,
+    "sections": 11
+   },
+   {
+    "url": "https://theroofingbrief.com/wind-damage-roof-repair/",
+    "host": "theroofingbrief.com",
+    "partial": false,
+    "sections": 15
+   }
+  ],
+  "competitor_diagnostics": {
+   "received": 2,
+   "without_html": 0,
+   "with_no_readable_sections": 0,
+   "used": 2,
+   "used_partial_capture": 0,
+   "used_complete_capture": 2,
+   "distinct_hosts": 2
+  },
+  "task_derivation": {
+   "hosts": [
+    {
+     "host": "reconroof.com",
+     "sections_read": 11,
+     "sections_used": 10,
+     "sections_excluded_as_promotional": 1,
+     "headings": [
+      "6 Step Guide To Inspect & Repair Wind Damage To Roof",
+      "💨 Understanding Wind Damage to Roofs",
+      "How Wind Affects Different Roofing Materials",
+      "Common Signs of Wind Damage",
+      "✅ 6 Steps To Inspect and Repair Wind Damage",
+      "What to Look for in a Contractor",
+      "⭐️ Preventing Future Wind Damage",
+      "Factors That Influence Cost"
+     ]
+    },
+    {
+     "host": "theroofingbrief.com",
+     "sections_read": 15,
+     "sections_used": 15,
+     "sections_excluded_as_promotional": 0,
+     "headings": [
+      "Wind Damage Roof Repair: What to Fix, Cost, and Timeline",
+      "What does wind actually do to a roof?",
+      "How much wind does it take to damage shingles?",
+      "How do you tell if wind damaged your roof?",
+      "How is wind damage repaired, step by step?",
+      "What does wind damage roof repair cost?",
+      "Should you repair or replace after wind damage?",
+      "Can you DIY wind damage roof repair?"
+     ]
+    }
+   ],
+   "concepts_on_one_site_only": [
+    {
+     "concept": "nail",
+     "site": "theroofingbrief.com"
+    },
+    {
+     "concept": "clas",
+     "site": "theroofingbrief.com"
+    },
+    {
+     "concept": "preven",
+     "site": "reconroof.com"
+    },
+    {
+     "concept": "ground",
+     "site": "theroofingbrief.com"
+    },
+    {
+     "concept": "creas",
+     "site": "theroofingbrief.com"
+    },
+    {
+     "concept": "florid",
+     "site": "theroofingbrief.com"
+    },
+    {
+     "concept": "differ",
+     "site": "reconroof.com"
+    },
+    {
+     "concept": "futur",
+     "site": "reconroof.com"
+    }
+   ],
+   "topic_wide_words_ignored": [
+    "inspec",
+    "materi",
+    "shingl",
+    "contra",
+    "insura",
+    "protec",
+    "replac",
+    "miss"
+   ]
+  },
+  "unverifiable_site_pages": [],
+  "tasks": [],
+  "supported_task_codes": [],
+  "gap_task_codes": [],
+  "covered_task_codes": [],
+  "linked_elsewhere_task_codes": [],
+  "destination_section_headings": [
+   "(introduction)",
+   "Storm & Wind Damage Roof Repair in New Jersey",
+   "💰 What is the Cost of Wind Damage Roof Repair in New Jersey?",
+   "Watch for these warning signs:",
+   "📋 Our Wind Damage Repair Process",
+   "❄️ Hail Damage Inspection & Repair",
+   "Hail Damage Signs:",
+   "🚨 Emergency Storm Restoration Available 24/7",
+   "Our Emergency Service Includes:",
+   "⚙️ Insurance Claims for Storm Damage",
+   "How We Support Your Claim:",
+   "Your Insurance Claim Timeline:",
+   "📍 Service Areas: Storm & Wind Repair Across All 21 NJ Counties",
+   "❓ Frequently Asked Questions",
+   "Wind Damage? Don't Wait — Act Within 24 Hours"
+  ]
+ },
+ "destination_section_comparison": {
+  "status": "FULL_SECTION_COMPARISON_RESEARCH_ONLY",
+  "target_url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+  "own_html_truncated": false,
+  "protected_source_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+ },
+ "growth_decision": {
+  "protection": {
+   "case_study_locked": true,
+   "preserve_existing_top_rankings": false,
+   "publication_allowed": false,
+   "automatic_page_changes": false
+  },
+  "protected_queries": [],
+  "primary_next_action": {
+   "code": "VERIFY_INTENT_AND_EXISTING_DESTINATION",
+   "title": "Investigate clicks for \"roof wind damage repair\"",
+   "query": "roof wind damage repair",
+   "metrics": {
+    "impressions": 291,
+    "clicks": 0,
+    "ctr_pct": 0,
+    "average_position": 44.04123711340206,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   "reason": "291 exact-page impressions and 0 clicks; average position 44.0 in Search Console data imported Thu Oct 08 (historical, not a current ranking; rows of the source page, not of the destination). The average position is far beyond the first page, so ranking relative to live competitors is a larger obstacle than the snippet.",
+   "instruction": "Compare the live search intent with the destination URL and existing same-site pages. If the existing page fits, propose one targeted improvement on that URL for editorial review. Do not create another page by default.",
+   "destination": {
+    "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+    "page_id": 2361,
+    "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+    "coverage": 1,
+    "keyword": "wind damage roof repair",
+    "competing_same_site_pages": [
+     "https://perfectroofingteam.com/wind-damage-roof-repair-nj/#statistics"
+    ]
+   },
+   "source_page_signal": {
+    "type": "SOURCE_PAGE_SURFACES_FOR_QUERY_OWNED_BY_ANOTHER_PAGE",
+    "note": "These are the SOURCE page’s rows. They are not performance data for the destination page.",
+    "source_page_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+   },
+   "query_source": "VERIFIED_EXACT_PAGE_GSC",
+   "related_pages_to_check": [
+    "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+    "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+    "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/"
+   ],
+   "stop_before": "No title/H1 rewrite, new spoke, consolidation, publication or Case Study baseline change without separate evidence and owner approval."
+  }
+ }
+}

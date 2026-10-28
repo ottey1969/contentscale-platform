@@ -37,6 +37,13 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  facts.push({code:'DESTINATION_INTENT',value:destinationIntent?.class||null,verdict:destinationIntent?.verdict||'UNVERIFIED'});
  const evidenceFor=t=>[...t.competitor_support.slice(0,2).map(x=>({type:'COMPETITOR',source_url:x.url,heading:x.heading,excerpt:x.excerpt.slice(0,300)})),
   ...t.destination.passages.slice(0,1).map(x=>({type:'OWN_PAGE',source_url:target,heading:x.heading,excerpt:x.text}))];
+ const blocked=(code,detail,reason,next)=>({...base,decision:'DATA_BLOCKED',blocker_code:code,missing_evidence:[{code,detail}],attempted_sources:attempts,reason,next_action:next});
+ // Every outcome below (a new page, an edit, or "nothing missing") is defined by shared reader tasks; without one there is no plan.
+ if(!supported.length)
+  return blocked('SHARED_COMPETITOR_REQUIREMENTS','No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. '+explainNoShared(coverage.task_derivation),
+   'Competitor pages were read but share no common reader task.','Add more readable competitor articles for the same query, or accept the page as is.');
+ const identity=destination.destination_identity||null;
+ if(identity?.resolves_to_source)facts.push({code:'DESTINATION_RESOLVES_TO_SOURCE_PAGE',basis:identity.basis,url:identity.url,source_url:identity.source_url});
  // Different search intent: a separate page, but only when no same-site page already serves it.
  if(destinationIntent?.verdict==='DIFFERENT'){
   const alt=(report.site_architecture?.compatible_existing_pages||[]);
@@ -53,10 +60,6 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  }
  const gaps=supported.filter(t=>t.destination.status!=='COVERED'&&!(t.covered_elsewhere_on_site||[]).length);
  const linked=supported.filter(t=>t.destination.status!=='COVERED'&&(t.covered_elsewhere_on_site||[]).length);
- const blocked=(code,detail,reason,next)=>({...base,decision:'DATA_BLOCKED',blocker_code:code,missing_evidence:[{code,detail}],attempted_sources:attempts,reason,next_action:next});
- if(!supported.length)
-  return blocked('SHARED_COMPETITOR_REQUIREMENTS','No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. '+explainNoShared(coverage.task_derivation),
-   'Competitor pages were read but share no common reader task.','Add more readable competitor articles for the same query, or accept the page as is.');
  // Absence on a truncated destination is unknown, never a gap.
  if(gaps.length&&destinationTruncated)
   return blocked('COMPLETE_DESTINATION_HTML','The captured destination HTML was cut'+captureNote(coverage.destination_capture)+' and '+gaps.length+' shared task(s) were not observed in the captured part ('+gaps.map(t=>t.code).join(', ')+'); absence after the cut cannot be claimed.',
@@ -75,6 +78,10 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
     competitors:coverage.competitors_considered,limit:'Lexical concept groups on captured HTML; no ranking or quality claim.'},
    internal_link_candidates:linked.map(t=>({task:t.code,link_to:t.covered_elsewhere_on_site[0].url,reason:'Task is taught there; link instead of duplicating.'})),
    evidence:supported.flatMap(evidenceFor).slice(0,6),next_action:'Keep the page unchanged; revisit only if live results or the page change.'};
+ // An edit on a URL that is the locked Case Study under another address is an edit of the Case Study.
+ if(identity?.source_protected)
+  return blocked('DESTINATION_IS_PROTECTED_CASE_STUDY','The selected destination '+identity.url+' is the locked Case Study page '+identity.source_url+' ('+identity.basis+'), so the missing task(s) '+gaps.map(t=>t.code).join(', ')+' cannot be added there.',
+   'The only page for this query is the protected Case Study.','Revisit after the Case Study measurement cycle, or create a distinct page only if the search intent differs.');
  const chosen=gaps.sort((a,b)=>(b.independent_sources-a.independent_sources)||(a.destination.status==='PARTIAL'?-1:1)).slice(0,2);
  // verified_gap stays false until a draft for the task passes every check (the producer sets it); gap_observed is the research finding.
  return {...base,decision:'IMPROVE_EXISTING',verified_gap:false,gap_observed:true,

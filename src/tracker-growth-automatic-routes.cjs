@@ -20,6 +20,19 @@ const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportuni
 const {deriveMarket}=require('./growth-serp-quality.cjs');
 const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
+// URL identity: a tracked sibling can redirect to, canonicalise to, or serve the same document as the source page.
+const normUrl=u=>{try{const x=new URL(u);return (x.origin+x.pathname.replace(/\/+$/,'')).toLowerCase()}catch{return ''}};
+const canonicalOf=html=>{const tag=(String(html||'').match(/<link\b[^>]*\brel=["']?canonical\b[^>]*>/i)||[''])[0];return (tag.match(/\bhref=["']([^"']+)["']/i)||[])[1]||null};
+function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourceProtected}){
+ if(!url||!source||normUrl(url)===normUrl(sourceUrl))return null;
+ const head=src=>{const e=excerptOf(src?.html);return [e.title,...(e.h1||[])].join(' | ').trim().toLowerCase()};
+ let canonical=null;try{canonical=canonicalOf(source.html)?new URL(canonicalOf(source.html),url).href:null}catch{}
+ const basis=source.final_url&&normUrl(source.final_url)===normUrl(sourceUrl)?'REDIRECTS_TO_SOURCE_PAGE':
+  canonical&&normUrl(canonical)===normUrl(sourceUrl)?'CANONICAL_POINTS_TO_SOURCE_PAGE':
+  sourceSource&&head(source)&&head(source)===head(sourceSource)?'SAME_TITLE_AND_H1_AS_SOURCE_PAGE':null;
+ return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
+  final_url:source.final_url||null,canonical};
+}
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
@@ -241,6 +254,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.site_architecture={...(report.site_architecture||{}),
    compatible_existing_pages:compatibleAlternatives.map(x=>({url:x.url,intent_class:x.intent.class,...(x.protected?{protected_case_study:true}:{})})),
    same_type_pages_on_another_topic:topicMismatches};
+  const destinationIdentity=resolveDestinationIdentity({url:proposed,source:selectedSource,sourceUrl:page.url,sourceSource:own.live,sourceProtected:page.case_study_active===true});
+  report.destination_identity=destinationIdentity;
   report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
   report.destination_section_comparison=selectedSource?compareFullSections({
    query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,
@@ -249,6 +264,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   }):{status:'EXISTING_DESTINATION_EVIDENCE_UNAVAILABLE',target_url:proposed,
    verified_gap:false,copy_ready:false,comparisons:[]};
   report.destination_section_comparison.target_url=proposed;
+  report.destination_section_comparison.destination_identity=destinationIdentity;
   report.destination_section_comparison.protected_source_url=page.url;
   const competitorPages=comparisons.filter(x=>['SERPER_GOOGLE_ORGANIC','SERPAPI_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(x.search_source))
    .map(x=>({url:x.url,html:x.live.html,truncated:x.live.truncated===true}));
