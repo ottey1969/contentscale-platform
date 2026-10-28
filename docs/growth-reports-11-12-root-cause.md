@@ -93,3 +93,17 @@ SEO performance", Moz + Semrush), geplaatst na "What Is International SEO & Why 
   | Gate (`growth-editorial-decision-gate.cjs`) | `NEW_DISTINCT_PAGE` werd vóór de controle op gedeelde lezerstaken genomen: een nieuwe pagina zonder één taak die twee concurrenten delen (2 gelezen sites, 0 gedeelde taken). | Gedeelde-taak-controle staat vóór elke uitkomst; zonder gedeelde taak `DATA_BLOCKED SHARED_COMPETITOR_REQUIREMENTS` met diagnose. | 12 |
   | Producer (`growth-verified-opportunity.cjs`) | Meldde `VERIFIED_NEW_DISTINCT_PAGE` zonder bronbewijs; de gate negeerde het → tegenstrijdige status. | Zonder bronbewijs geen verificatie (`NEW_PAGE_WITHOUT_SHARED_TASK_EVIDENCE`). | 12b |
   | Route, URL-identiteit | `/emergency-roofing/wind-damage-roof-repair/` leverde exact de titel en H1 van de vergrendelde bronpagina (doorverwijzing of duplicaat). Een bewerking daar = bewerking van de Case Study. | `destination_identity`: redirect (`final_url`), canonical of identieke titel+H1 → `resolves_to_source`; is de bron vergrendeld, dan blokkeert een bewerking met `DESTINATION_IS_PROTECTED_CASE_STUDY`. Een werkelijk nieuwe pagina blijft mogelijk. | 13 |
+
+## Automatische 301-afhandeling (opvolging PR #193)
+- **Lezer** (`growth-public-html-reader.cjs`): elke hop wordt vastgelegd (`redirect_chain`: status + Location), elke hop opnieuw
+  gevalideerd (alleen publieke HTTPS / publiek IPv4); lus → `REDIRECT_LOOP`, te lange keten → `REDIRECT_LIMIT`, fouten houden de keten.
+- **URL-identiteit** (`growth-url-identity.cjs`, één bron voor tekst en soort): `PERMANENT_REDIRECT` (alleen 301/308),
+  `TEMPORARY_REDIRECT` (302/303/307 ergens in de keten), `REDIRECT_LOOP`, `REDIRECT_CHAIN_TOO_LONG`, `REDIRECT_DESTINATION_UNAVAILABLE`,
+  `REDIRECT_STATUS_UNKNOWN`, canonical-only (`NO_REDIRECT` + `canonical_points_elsewhere`). Alleen een permanente keten maakt de oude URL een alias.
+- **Growth**: de eind-URL van een permanente alias is de pagina-identiteit; eindigt de keten op de bronpagina, dan is dat de bestemming
+  (vergrendeld → `DESTINATION_IS_PROTECTED_CASE_STUDY`). Een alias is nooit een tweede kandidaatpagina. De tracked alias en de bron-GSC-rijen
+  blijven onaangeroerd. Advies in JSON (`url_identities`, `destination_identity.advice`), UI en eigenaarspakket:
+  `301 redirect detected: OLD → FINAL. This is one page, not duplicate content. Keep the working redirect; no website change is required. …`
+- **Tracker** (`src/index.js`): de scan legt de echte hopstatussen vast; alleen 301/308 zet `redirects_to`, een tijdelijke redirect blijft
+  een eigen pagina. De paginakaart toont het één-pagina-advies; voor redirects geen verwijderknoppen meer, alleen optioneel "Also track the
+  destination" (oude rij blijft). Dode URL's (404/410) houden hun bestaande knoppen. Geen schemawijziging.

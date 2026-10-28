@@ -42,6 +42,8 @@
   node('small','Decision scope: '+String(outcome.decision_scope||'OBSERVED_RESEARCH_ONLY')+
    ' · Verified content gap: '+(outcome.verified_gap===true?'YES':(outcome.gap_observed===true?'NO — task gap observed, verified only after a draft passes the checks':'NO'))+
    ' · Automatic publishing: DISABLED',primary);
+  var idNotes=[];[d.destination_identity&&d.destination_identity.advice].concat((d.url_identities||[]).map(function(x){return x.advice})).forEach(function(n){if(n&&idNotes.indexOf(n)<0)idNotes.push(n)});
+  if(idNotes.length){node('p','URL identity:',primary);var ids=node('ul',null,primary);idNotes.forEach(function(n){node('li',String(n),ids)})}
   if(outcome.evidence_status){
    var ladder=node('ul',null,primary);
    [['search_intent_confirmed','Search intent confirmed from live results'],['competitor_content_observed','Competitor content read (2+ sites)'],

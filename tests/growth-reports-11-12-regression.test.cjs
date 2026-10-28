@@ -358,7 +358,7 @@ test('12b. The producer never calls a new-page draft verified without shared-tas
  assert.equal(r.opportunity,null);assert.equal(r.status,'NEW_PAGE_WITHOUT_SHARED_TASK_EVIDENCE');
 });
 // SYNTHETIC route run: the tracked sibling serves the locked source page (redirect or identical title/H1) and a real gap exists.
-async function runIdentity({redirect=false}={}){
+async function runIdentity({mode='same',locked=true}={}){
  const SRC='https://roofer.example/wind-damage-roof-repair-nj/',SIB='https://roofer.example/emergency-roofing/wind-damage-roof-repair/';
  const route={};const fresh=new Date(Date.now()-3*86400000).toISOString();
  const db={async query(sql,args){
@@ -373,12 +373,16 @@ async function runIdentity({redirect=false}={}){
  const comp=(h)=>'<html><head><title>Wind damage roof repair guide</title></head><body><h1>Wind damage roof repair</h1><h2>'+h+'</h2><p>Keep every insurance claim photo, insurance adjuster note and insurance claim number together; the insurance claim moves faster when the insurance documentation is complete and dated.</p><p>'+para+'</p></body></html>';
  const fetchLive=async url=>{
   if(url===SRC)return {html:srcHtml,final_url:SRC,truncated:false};
-  if(url===SIB)return {html:srcHtml,final_url:redirect?SRC:SIB,truncated:false};
+  if(url===SIB){
+   if(mode==='loop')throw Object.assign(Error('REDIRECT_LOOP'),{code:'REDIRECT_LOOP',redirect_chain:[{url:SIB,status:301,location:SIB+'x/'},{url:SIB+'x/',status:301,location:SIB}]});
+   const hop=mode==='301'||mode==='308'||mode==='302'?[{url:SIB,status:Number(mode),location:SRC}]:[];
+   return {html:srcHtml,final_url:mode==='same'?SIB:SRC,requested_url:SIB,redirect_chain:hop,truncated:false};
+  }
   return {html:comp(url.includes('g0')?'Insurance claim documentation':'Documenting the insurance claim'),final_url:url,truncated:false};
  };
  const searchLive=async args=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:args.query,provider_attempts:['SERPER_GOOGLE_ORGANIC'],leads:
   ['How to Fix Wind Damage on a Roof','Wind Damage Roof Repair Guide','Signs of Wind Damage: A Checklist'].map((title,i)=>({url:'https://g'+i+'.example/w',title,source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}))});
- const mw=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:false,pages:[{id:7,url:SRC,keyword:'wind damage roof repair nj',case_study_active:true}]};next()};
+ const mw=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:false,pages:[{id:7,url:SRC,keyword:'wind damage roof repair nj',case_study_active:locked}]};next()};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(){}},db,mw,{fetchLive,searchLive,renderOwn:async()=>({status:'RENDER_UNAVAILABLE',live:null})});
  const res={statusCode:200,set(){return this},status(x){this.statusCode=x;return this},json(x){this.body=x;return this}};
  const stack=route['/api/tracker-client/:token/growth/auto-research'],req={params:{token:'t'},query:{page_id:'7'}};
@@ -386,15 +390,74 @@ async function runIdentity({redirect=false}={}){
  assert.equal(res.statusCode,200,JSON.stringify(res.body));
  return {b:res.body,SRC,SIB};
 }
-test('13. Route: a sibling that serves the locked Case Study (same title/H1 or redirect) is never edited',async()=>{
- for(const redirect of [false,true]){
-  const {b,SRC,SIB}=await runIdentity({redirect});
+test('13. Route: a sibling that only LOOKS like the locked Case Study (same title/H1, or moved with unknown status) is never edited and never called a 301',async()=>{
+ for(const mode of ['same','unknown']){
+  const {b,SRC,SIB}=await runIdentity({mode});
   assert.equal(b.query_selection.destination.url,SIB);
   assert.equal(b.destination_identity.resolves_to_source,true);
-  assert.equal(b.destination_identity.basis,redirect?'REDIRECTS_TO_SOURCE_PAGE':'SAME_TITLE_AND_H1_AS_SOURCE_PAGE');
+  assert.equal(b.destination_identity.basis,mode==='same'?'SAME_TITLE_AND_H1_AS_SOURCE_PAGE':'REDIRECTS_TO_SOURCE_PAGE_STATUS_UNKNOWN');
   assert.equal(b.destination_identity.source_url,SRC);
   const g=b.editorial_decision_gate;
   assert.equal(g.decision,'DATA_BLOCKED',JSON.stringify({d:g.decision,m:g.missing_evidence}));assert.equal(g.blocker_code,'DESTINATION_IS_PROTECTED_CASE_STUDY');
-  assert.equal(g.copy_ready,false);
+  assert(!(b.url_identities||[]).some(x=>x.kind==='PERMANENT_REDIRECT'||/^30[18] redirect detected/.test(x.advice||'')),'never labelled as a proven 301');
+  assert(!/^30[18] redirect detected/.test(String(b.destination_identity.advice||'')));
  }
+});
+test('14. Route: a 301/308 alias of the locked source is one page: final URL is the identity, edits are blocked, advice says keep the redirect',async()=>{
+ for(const mode of ['301','308']){
+  const {b,SRC,SIB}=await runIdentity({mode});
+  const di=b.destination_identity;
+  assert.equal(di.kind,'PERMANENT_REDIRECT');assert.equal(di.basis,'PERMANENT_REDIRECT_TO_SOURCE_PAGE');assert.equal(di.alias_of,SRC);assert.deepEqual(di.http_statuses,[Number(mode)]);
+  assert.equal(b.editorial_decision_gate.target_url,SRC,'the final URL is the page identity');assert.equal(b.query_selection.destination.url,SIB,'the tracked alias is kept, not deleted');
+  assert.equal(b.editorial_decision_gate.blocker_code,'DESTINATION_IS_PROTECTED_CASE_STUDY');assert.equal(b.editorial_decision_gate.copy_ready,false);
+  assert.match(di.advice,new RegExp('^'+mode+' redirect detected: '+SIB.replace(/[.*+?^${}()|[\]\\/]/g,'\\$&')+' → '));
+  assert.match(di.advice,/This is one page, not duplicate content\. Keep the working redirect; no website change is required\./);
+  assert.match(di.advice,/locked Case Study: edits to it are blocked/);
+  assert(b.url_identities.some(x=>x.kind==='PERMANENT_REDIRECT'&&x.original_url===SIB&&x.final_url===SRC));
+  assert(!b.site_architecture.compatible_existing_pages.some(x=>x.url===SIB),'an alias is never a second candidate page');
+ }
+});
+test('14b. Route: the same alias with an UNLOCKED source: the source keeps its own query and stays editable',async()=>{
+ const {b,SRC}=await runIdentity({mode:'301',locked:false});
+ assert.equal(b.query_selection.destination.url,SRC);assert.equal(b.editorial_decision_gate.target_url,SRC);
+ assert.notEqual(b.editorial_decision_gate.blocker_code,'DESTINATION_IS_PROTECTED_CASE_STUDY');
+});
+test('14c. Route: temporary redirects and loops are reported as such and never merged',async()=>{
+ const t=await runIdentity({mode:'302'});
+ const tid=t.b.url_identities.find(x=>x.original_url===t.SIB);
+ assert.equal(tid.kind,'TEMPORARY_REDIRECT');assert.equal(tid.alias_of,null);assert.match(tid.advice,/^Temporary redirect detected \(302\)/);
+ assert.notEqual(t.b.editorial_decision_gate.target_url,t.SRC,'a temporary redirect never makes the source the destination');
+ assert.equal(t.b.editorial_decision_gate.decision,'DATA_BLOCKED');assert.equal(t.b.editorial_decision_gate.copy_ready,false);
+ const l=await runIdentity({mode:'loop'});
+ const lid=l.b.url_identities.find(x=>x.original_url===l.SIB);
+ assert.equal(lid.kind,'REDIRECT_LOOP');assert.equal(lid.final_url,null);assert.match(lid.advice,/Redirect loop detected/);
+});
+const {buildOwnerHandoffPackage}=require('../src/growth-owner-handoff-package.cjs');
+const {identityFromFetch,identityAdvice}=require('../src/growth-url-identity.cjs');
+// SYNTHETIC HTTPS server per URL: {status, location} for a hop, or an HTML body.
+const routedHttps=routes=>({request(url,opts,cb){const req=new EventEmitter();req.end=()=>{const r=routes[url.href]||{status:404};const res=new EventEmitter();
+ res.statusCode=r.status;res.headers=r.location?{location:r.location}:{'content-type':'text/html'};res.resume=()=>{};res.destroy=()=>{};cb(res);
+ if(r.status===200){res.emit('data',Buffer.from(r.body||'<h1>x</h1>'));res.emit('end')}};req.destroy=()=>{};return req}});
+test('15. Reader records every hop: 301/308 chain, temporary hop, loop, chain limit, and a redirect to a private network is refused',async()=>{
+ const A='https://p.example/old/',B='https://p.example/mid/',C='https://p.example/new/';
+ const ok=await fetchPublicGrowthHtml(A,{lookup,httpsModule:routedHttps({[A]:{status:301,location:B},[B]:{status:308,location:'/new/'},[C]:{status:200,body:'<link rel="canonical" href="'+C+'"><h1>New</h1>'}}),compact:true});
+ assert.equal(ok.final_url,C);assert.deepEqual(ok.redirect_chain.map(h=>h.status),[301,308]);assert.equal(ok.requested_url,A);
+ const id=identityFromFetch(A,ok);assert.equal(id.kind,'PERMANENT_REDIRECT');assert.equal(id.alias_of,C);assert.equal(id.canonical_points_elsewhere,false);
+ const tmp=await fetchPublicGrowthHtml(A,{lookup,httpsModule:routedHttps({[A]:{status:301,location:B},[B]:{status:302,location:C},[C]:{status:200}})});
+ assert.equal(identityFromFetch(A,tmp).kind,'TEMPORARY_REDIRECT','one temporary hop makes the whole chain temporary');
+ await assert.rejects(fetchPublicGrowthHtml(A,{lookup,httpsModule:routedHttps({[A]:{status:301,location:B},[B]:{status:301,location:A}})}),e=>e.code==='REDIRECT_LOOP'&&e.redirect_chain.length===2);
+ await assert.rejects(fetchPublicGrowthHtml(A,{lookup,httpsModule:routedHttps({[A]:{status:301,location:B},[B]:{status:301,location:C},[C]:{status:301,location:'https://p.example/x/'}})}),e=>e.code==='REDIRECT_LIMIT'&&e.redirect_chain.length===3);
+ const priv=async h=>h==='internal.example'?[{address:'10.0.0.5',family:4}]:[{address:'93.184.216.34',family:4}];
+ await assert.rejects(fetchPublicGrowthHtml(A,{lookup:priv,httpsModule:routedHttps({[A]:{status:301,location:'https://internal.example/admin'}})}),
+  e=>e.code==='PUBLIC_IPV4_UNAVAILABLE'&&e.redirect_chain[0].status===301,'a redirect hop to a private address is never requested');
+ await assert.rejects(fetchPublicGrowthHtml(A,{lookup,httpsModule:routedHttps({[A]:{status:301,location:'http://p.example/plain/'}})}),e=>e.code==='PUBLIC_HTTPS_URL_REQUIRED');
+ const gone=identityFromFetch(A,{error:'HTTP_404',redirect_chain:[{url:A,status:301,location:C}]});
+ assert.equal(gone.kind,'REDIRECT_DESTINATION_UNAVAILABLE');assert.match(identityAdvice(gone),/could not be read \(HTTP_404\)/);
+});
+test('15b. Owner package shows the same URL-identity advice as the JSON, once',()=>{
+ const advice=identityAdvice(identityFromFetch('https://p.example/old/',{final_url:'https://p.example/new/',redirect_chain:[{url:'https://p.example/old/',status:301,location:'https://p.example/new/'}]}),{lockedUrls:['https://p.example/new/']});
+ const report={url:'https://p.example/new/',destination_identity:{advice,resolves_to_source:true},url_identities:[{advice}]};
+ const md=buildOwnerHandoffPackage({report,decision:{decision:'DATA_BLOCKED',missing_evidence:[]}}).markdown;
+ assert.match(md,/## URL identity/);assert.equal(md.split('This is one page, not duplicate content').length-1,1);
+ assert.match(md,/Keep the working redirect; no website change is required/);assert.match(md,/edits to it are blocked/);
 });

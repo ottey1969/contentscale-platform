@@ -49446,10 +49446,10 @@ function renderPages() {
             ? '\\u274c <b>This URL no longer exists</b> ' + String(p.redirects_to).replace(/</g,"&lt;")
             : isCanon
             ? '\\ud83d\\udd17 <b>Canonical duplicate</b> \\u2014 Google treats <span style="font-family:monospace;color:#fecaca;">' + canonUrl.replace(/</g,"&lt;") + '</span> as the real page. Not a conflict; you only need to track the canonical.'
-            : '\\u21aa\\ufe0f <b>This URL is a 301 redirect</b> \\u2192 <span style="font-family:monospace;color:#fecaca;">' + String(p.redirects_to).replace(/</g,"&lt;") + '</span>';
-          var _bg = isCanon ? 'rgba(96,165,250,.1)' : 'rgba(248,113,113,.1)';
-          var _bd = isCanon ? '#1e3a8a' : '#7f1d1d';
-          var _fg = isCanon ? '#93c5fd' : '#fca5a5';
+            : '\\u21aa\\ufe0f <b>Permanent redirect detected:</b> <span style="font-family:monospace;">' + String(p.url).replace(/</g,"&lt;") + '</span> \\u2192 <span style="font-family:monospace;color:#bbf7d0;">' + String(p.redirects_to).replace(/</g,"&lt;") + '</span>. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker uses the destination as the page identity and keeps this URL as an alias (its history, GSC rows and Case Study data stay).';
+          var _bg = isCanon ? 'rgba(96,165,250,.1)' : isDead404 ? 'rgba(248,113,113,.1)' : 'rgba(74,222,128,.08)';
+          var _bd = isCanon ? '#1e3a8a' : isDead404 ? '#7f1d1d' : '#166534';
+          var _fg = isCanon ? '#93c5fd' : isDead404 ? '#fca5a5' : '#bbf7d0';
           var _action='';
           if(isDead404){
             var _suggested=deadSuggestion&&deadSuggestion.url?String(deadSuggestion.url):'';
@@ -49457,9 +49457,9 @@ function renderPages() {
               +'<button onclick="correctDeadPageUrl(' + p.id + ',&quot;' + _suggested.replace(/"/g,'&quot;') + '&quot;)" style="margin-top:5px;cursor:pointer;font-size:10px;font-weight:800;padding:4px 12px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;">\\u2713 Correct tracked URL</button>'
               +' <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:5px;cursor:pointer;font-size:10px;font-weight:700;padding:4px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Archive dead page</button>';
           }else if(destTracked){
-            _action='The destination is <b>already tracked</b> \\u2014 archive this duplicate URL. <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Archive duplicate</button>';
+            _action='The destination is already tracked. No action needed.';
           }else{
-            _action='One click swaps this URL for its verified destination: <button onclick="removeRedirectedPage(' + p.id + ',&quot;' + String(isCanon?canonUrl:p.redirects_to).replace(/"/g,"&quot;") + '&quot;)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:800;padding:3px 12px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;">\\u2713 Track destination instead</button> <button onclick="removeRedirectedPage(' + p.id + ',null)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:700;padding:3px 10px;border-radius:5px;background:#7f1d1d;border:1px solid #b91c1c;color:#fecaca;">Archive old URL</button>';
+            _action='Optional: <button onclick="trackRedirectDestination(' + p.id + ',&quot;' + String(isCanon?canonUrl:p.redirects_to).replace(/"/g,"&quot;") + '&quot;)" style="margin-top:4px;cursor:pointer;font-size:10px;font-weight:800;padding:3px 12px;border-radius:5px;background:#166534;border:1px solid #16a34a;color:#bbf7d0;">Also track the destination</button> (this URL is kept).';
           }
           return '<div style="background:' + _bg + ';border:1px solid ' + _bd + ';border-radius:6px;padding:7px 10px;margin:4px 0;font-size:11px;color:' + _fg + ';line-height:1.5;">' + _head + '<br>' + _action + '</div>';
         })() : '')
@@ -51165,6 +51165,12 @@ async function correctDeadPageUrl(pageId,suggestedUrl){
   }catch(e){toast(e.message||'Could not correct URL','#f87171');}
 }
 
+// Adds the redirect/canonical destination as its own tracked page and keeps the old row as an alias (no deletion).
+async function trackRedirectDestination(pageId, addUrl) {
+  if (!addUrl) return;
+  try { await api('/pages', 'POST', { url: addUrl }); toast('Destination added; the old URL stays as an alias.', '#4ade80'); loadPages(); }
+  catch(e) { toast('Could not add the destination', '#f87171'); }
+}
 async function removeRedirectedPage(pageId, addUrl) {
   var msg = addUrl ? 'Swap this dead URL for its destination (' + addUrl + ')?' : 'Remove this redirected (dead) URL from the tracker?';
   if (!confirm(msg)) return;
@@ -63209,8 +63215,30 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
           const _reqPath = new URL(page.url).pathname.replace(/\/+$/,'');
           const _finPath = new URL(liveResp.url).pathname.replace(/\/+$/,'');
           if (liveResp.url && _finPath && _reqPath && _finPath.toLowerCase() !== _reqPath.toLowerCase()) {
-            await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', [liveResp.url, pageId]).catch(()=>{});
-            _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f Redirects to ' + liveResp.url + ' \u2014 this tracked URL is a 301; track the destination instead.');
+            // Record the real hop statuses (bounded, manual). Only a fully permanent chain (301/308) makes this URL an alias of
+            // its destination; a temporary redirect (302/303/307) keeps it as its own tracked URL. Nothing is deleted.
+            const _hops = [];
+            try {
+              let _at = page.url;
+              for (let _i = 0; _i < 4; _i++) {
+                const _r = await fetch(_at, { method: 'GET', redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale/1.0)', 'Accept': 'text/html,application/xhtml+xml' }, signal: AbortSignal.timeout(8000) });
+                try { await _r.body?.cancel(); } catch (e) {}
+                if (![301, 302, 303, 307, 308].includes(_r.status)) break;
+                const _loc = _r.headers.get('location'); if (!_loc) break;
+                const _next = new URL(_loc, _at).toString();
+                _hops.push(_r.status);
+                if (_next === _at) break;
+                _at = _next;
+              }
+            } catch (e) {}
+            const _permanent = _hops.length > 0 && _hops.every(c => c === 301 || c === 308);
+            if (_permanent) {
+              await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', [liveResp.url, pageId]).catch(()=>{});
+              _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f ' + _hops.join(' \u2192 ') + ' redirect detected: ' + page.url + ' \u2192 ' + liveResp.url + '. This is one page, not duplicate content. Keep the working redirect; no website change is required.');
+            } else {
+              await pool.query('UPDATE tracker_pages SET redirects_to=NULL, redirect_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
+              _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f ' + (_hops.length ? 'Temporary redirect (' + _hops.join(' \u2192 ') + ')' : 'Redirect with unrecorded status') + ' to ' + liveResp.url + ' \u2014 not treated as a permanent move; this URL stays tracked as its own page.');
+            }
           } else {
             await pool.query('UPDATE tracker_pages SET redirects_to=NULL, redirect_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
           }

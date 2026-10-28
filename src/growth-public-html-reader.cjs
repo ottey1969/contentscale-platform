@@ -57,12 +57,18 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
   return {html:readable.slice(0,limit),truncated:cut||readable.length>limit,capture};
  };
  let url=validateUrl(raw);
+ // Every hop is recorded (status + Location) so callers can tell a permanent move (301/308) from a temporary one,
+ // a loop or an unreachable destination. Each hop is re-validated (public HTTPS, public IPv4) before it is requested.
+ const requested=url.href,chain=[],seen=new Set([url.href]);
+ const fail=(code)=>{throw Object.assign(Error(code),{code,redirect_chain:chain,requested_url:requested})};
  for(let n=0;n<=redirects;n++){
   const addresses=await lookup(url.hostname,{family:4,all:true,verbatim:true});
   const valid=(Array.isArray(addresses)?addresses:[]).map(a=>a.address).filter(publicV4);
-  if(!valid.length)throw Object.assign(Error('PUBLIC_IPV4_UNAVAILABLE'),{code:'PUBLIC_IPV4_UNAVAILABLE'});
+  if(!valid.length)fail('PUBLIC_IPV4_UNAVAILABLE');
   const address=valid[0];
   const result=await new Promise((resolve,reject)=>{
+   // Errors keep the hops already taken, so "redirects to an unreachable page" is distinguishable from "unreachable".
+   reject=(r=>e=>r(Object.assign(e,{redirect_chain:e.redirect_chain||chain.slice(),requested_url:requested})))(reject);
    let completed=false;
    const done=(e,value)=>{if(completed)return;completed=true;if(e)reject(e);else resolve(value)};
    const req=httpsModule.request(url,{
@@ -73,7 +79,7 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
     if([301,302,303,307,308].includes(status)){
      const redirect=res.headers.location;res.resume();
      if(!redirect)return done(Object.assign(Error('REDIRECT_WITHOUT_LOCATION'),{code:'REDIRECT_WITHOUT_LOCATION'}));
-     return done(null,{redirect:String(redirect)});
+     return done(null,{redirect:String(redirect),status});
     }
     if(status!==200){res.resume();return done(Object.assign(Error('HTTP_'+status),{code:'HTTP_'+status}))}
     const mime=String(res.headers['content-type']||'').toLowerCase();
@@ -101,9 +107,12 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
    req.on('error',e=>done(e));
    req.end();
   });
-  if(!result.redirect)return result;
-  if(n===redirects)throw Object.assign(Error('REDIRECT_LIMIT'),{code:'REDIRECT_LIMIT'});
-  url=validateUrl(new URL(result.redirect,url).href);
+  if(!result.redirect)return {...result,requested_url:requested,redirect_chain:chain};
+  let next;try{next=validateUrl(new URL(result.redirect,url).href)}catch(e){chain.push({url:url.href,status:result.status,location:result.redirect});fail(e.code||'INVALID_REDIRECT_TARGET')}
+  chain.push({url:url.href,status:result.status,location:next.href});
+  if(seen.has(next.href))fail('REDIRECT_LOOP');
+  if(n===redirects)fail('REDIRECT_LIMIT');
+  seen.add(next.href);url=next;
  }
  throw Error('UNEXPECTED_FETCH_STATE');
 }

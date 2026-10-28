@@ -19,15 +19,18 @@ const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-hando
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
 const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
+const {identityFromFetch,identityAdvice}=require('./growth-url-identity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
 // URL identity: a tracked sibling can redirect to, canonicalise to, or serve the same document as the source page.
 const normUrl=u=>{try{const x=new URL(u);return (x.origin+x.pathname.replace(/\/+$/,'')).toLowerCase()}catch{return ''}};
 const canonicalOf=html=>{const tag=(String(html||'').match(/<link\b[^>]*\brel=["']?canonical\b[^>]*>/i)||[''])[0];return (tag.match(/\bhref=["']([^"']+)["']/i)||[])[1]||null};
+// Signals WITHOUT a proven permanent redirect (status unknown, canonical, identical title/H1). They protect a locked source
+// page but are never reported as a 301.
 function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourceProtected}){
  if(!url||!source||normUrl(url)===normUrl(sourceUrl))return null;
  const head=src=>{const e=excerptOf(src?.html);return [e.title,...(e.h1||[])].join(' | ').trim().toLowerCase()};
  let canonical=null;try{canonical=canonicalOf(source.html)?new URL(canonicalOf(source.html),url).href:null}catch{}
- const basis=source.final_url&&normUrl(source.final_url)===normUrl(sourceUrl)?'REDIRECTS_TO_SOURCE_PAGE':
+ const basis=source.final_url&&normUrl(source.final_url)===normUrl(sourceUrl)?'REDIRECTS_TO_SOURCE_PAGE_STATUS_UNKNOWN':
   canonical&&normUrl(canonical)===normUrl(sourceUrl)?'CANONICAL_POINTS_TO_SOURCE_PAGE':
   sourceSource&&head(source)&&head(source)===head(sourceSource)?'SAME_TITLE_AND_H1_AS_SOURCE_PAGE':null;
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
@@ -205,26 +208,41 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(designated&&designated!==page.url&&!related.some(x=>x.url===designated)){
    try{if(new URL(designated).origin===siteOrigin)related.push({url:designated,tracked_keyword:report.growth_decision.primary_next_action.destination.keyword||null})}catch{}
   }
-  const destinationSources=new Map();
+  // Same-site pages are read once; each read also yields the URL's HTTP identity. A 301/308 address is an ALIAS of its final
+  // page: the final URL is the page identity (and the source page itself when the chain ends there), so one page is never
+  // selected or compared twice. Temporary redirects and unreachable chains are reported but never merged.
+  const destinationSources=new Map(),urlIdentities=[],aliasOf=new Map();
   const sameSiteReviews=await Promise.all(related.map(async x=>{
    try{
     const fresh=await fetchLive(x.url,RESEARCH_FETCH);
-    destinationSources.set(x.url,fresh);
+    const id=identityFromFetch(x.url,fresh);urlIdentities.push(id);
+    if(id.alias_of)aliasOf.set(x.url,id.alias_of);
+    if(id.kind==='PERMANENT_REDIRECT'){
+     const fin=id.alias_of;
+     if(normUrl(fin)!==normUrl(page.url)&&![...destinationSources.keys()].some(u=>normUrl(u)===normUrl(fin)))destinationSources.set(fin,fresh);
+    }else if(id.kind==='NO_REDIRECT'||id.kind==='REDIRECT_STATUS_UNKNOWN')destinationSources.set(x.url,fresh);
     const inspected=require('./growth-automatic-analysis.cjs').excerpt(fresh.html);
     return {url:x.url,tracked_keyword:x.tracked_keyword||null,verified_live:true,
      title:inspected.title,h1:inspected.h1,h2:inspected.h2,
      fetched_at:fresh.retrieved_at||null,
      body_evidence:evaluateExistingBody({html:fresh.html,truncated:fresh.truncated,query:targetQuery})};
-   }catch(e){return {url:x.url,tracked_keyword:x.tracked_keyword||null,
+   }catch(e){urlIdentities.push(identityFromFetch(x.url,{error:String(e?.code||'PUBLIC_HTML_UNAVAILABLE').slice(0,60),redirect_chain:e?.redirect_chain}));
+    return {url:x.url,tracked_keyword:x.tracked_keyword||null,
      verified_live:false,reason:String(e?.code||'PUBLIC_HTML_UNAVAILABLE').slice(0,60)}}
   }));
+  const lockedUrls=page.case_study_active===true?[page.url]:[];
+  report.url_identities=urlIdentities.filter(id=>id.kind!=='NO_REDIRECT'||id.canonical_points_elsewhere)
+   .map(id=>({...id,advice:identityAdvice(id,{lockedUrls})}));
+  // The designated destination is identified by its final URL when it is a permanent alias.
+  const designatedAlias=designated&&aliasOf.get(designated)||null;
+  const designatedFinal=designatedAlias?(normUrl(designatedAlias)===normUrl(page.url)?page.url:designatedAlias):designated;
   report.autonomous_growth_opportunity=autonomouslyFindGrowthOpportunity({report,discovery,existingPageReviews:sameSiteReviews});
   report.full_section_comparison=compareFullSections({query:targetQuery,ownUrl:page.url,
    ownHtml:own.live?.html||page.saved_html||'',ownTruncated:own.live?.truncated===true,
    competitors:comparisons.filter(x=>x.search_source==='SERPER_GOOGLE_ORGANIC'||x.search_source==='SERPAPI_GOOGLE_ORGANIC'||x.search_source==='BING_PUBLIC_RSS')});
   // Compare the distinct growth intent on its likely existing destination,
   // not only the protected homepage that surfaced the GSC opportunity.
-  let proposed=(designated&&(designated===page.url||destinationSources.has(designated))?designated:null)||report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
+  let proposed=(designatedFinal&&(designatedFinal===page.url||destinationSources.has(designatedFinal))?designatedFinal:null)||report.autonomous_growth_opportunity?.editorial_package?.proposed_target_url||
    (report.growth_decision?.primary_next_action?.metrics?
     report.growth_decision.primary_next_action.related_pages_to_check?.find(u=>destinationSources.has(u)):null)||
    // Without verified GSC, research the selected page itself. Never invent
@@ -254,7 +272,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.site_architecture={...(report.site_architecture||{}),
    compatible_existing_pages:compatibleAlternatives.map(x=>({url:x.url,intent_class:x.intent.class,...(x.protected?{protected_case_study:true}:{})})),
    same_type_pages_on_another_topic:topicMismatches};
-  const destinationIdentity=resolveDestinationIdentity({url:proposed,source:selectedSource,sourceUrl:page.url,sourceSource:own.live,sourceProtected:page.case_study_active===true});
+  const aliasIdentity=designatedAlias?urlIdentities.find(id=>id.original_url===designated):null;
+  const destinationIdentity=aliasIdentity?{url:designated,final_url:aliasIdentity.final_url,kind:aliasIdentity.kind,http_statuses:aliasIdentity.http_statuses,
+    resolves_to_source:proposed===page.url,basis:proposed===page.url?'PERMANENT_REDIRECT_TO_SOURCE_PAGE':'PERMANENT_REDIRECT_TO_FINAL_PAGE',
+    source_url:page.url,source_protected:proposed===page.url&&page.case_study_active===true,alias_of:aliasIdentity.final_url,
+    advice:identityAdvice(aliasIdentity,{lockedUrls})}:
+   resolveDestinationIdentity({url:proposed,source:selectedSource,sourceUrl:page.url,sourceSource:own.live,sourceProtected:page.case_study_active===true});
   report.destination_identity=destinationIdentity;
   report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
   report.destination_section_comparison=selectedSource?compareFullSections({

@@ -52,6 +52,15 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   for(const [k,label] of LADDER_LABELS)L.push('| '+label+' | '+(decision.evidence_status[k]===true?'yes':'no')+' |');
   L.push('');
  }
+ // URL identity (redirects, canonicals): shown before anything else about the destination, in the same words as the UI.
+ const idNotes=[...new Set([report.destination_identity?.advice,...(report.url_identities||[]).map(x=>x.advice)].filter(Boolean))];
+ if(idNotes.length||report.destination_identity?.resolves_to_source){
+  L.push('## URL identity','');
+  for(const n of idNotes)L.push('- '+n);
+  const di=report.destination_identity;
+  if(di?.resolves_to_source&&!di.advice)L.push('- The selected destination '+di.url+' resolves to the source page '+di.source_url+' ('+String(di.basis||'').toLowerCase().replace(/_/g,' ')+'). This is not a proven 301.'+(di.source_protected?' The source page is a locked Case Study, so edits are blocked.':''));
+  L.push('');
+ }
  const qs=report.query_selection;
  if(qs?.query){
   L.push('## Query and destination','','- Working query: **'+qs.query+'** ('+String(qs.source||'').toLowerCase().replace(/_/g,' ')+')');
