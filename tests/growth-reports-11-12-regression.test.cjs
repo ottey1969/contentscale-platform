@@ -261,3 +261,76 @@ test('5c. GET route: the source page market is passed to search, same-market com
  assert(res.body.editorial_decision_gate.evidence_status,'GET decision carries the evidence ladder');
  assert.equal(res.body.editorial_decision_gate.copy_ready,false);
 });
+
+// ---------- Report 14 (production run after PR #191): the route retargeted a wind query to a storm page ----------
+const r14=require('./fixtures/growth-reports-11-12/report-14-prt-wind-damage-after-191.json');
+test('R14 production outcome: market and selection were right, then retargeting jumped to a page on another topic',()=>{
+ assert.equal(r14.query_selection.query,'roof wind damage repair');assert.equal(r14.query_selection.destination.url,WIND_SIBLING);
+ assert.deepEqual(r14.search_discovery.market.states,['NJ']);
+ assert.equal(r14.destination_intent.retargeted_from,WIND_SIBLING);assert.equal(r14.destination_intent.url,'https://perfectroofingteam.com/storm-damage-roof-repair-nj/');
+ assert.equal(r14.editorial_decision_gate.blocker_code,'COMPLETE_DESTINATION_HTML');
+});
+test('11. The storm page lacks the topic root "wind": it is never a compatible home for the wind query',()=>{
+ const storm=classifyDestinationIntent({query:'roof wind damage repair',title:'Storm Damage Roof Repair NJ: 7 Steps to Avoid Costly Damage',h1:['Storm Damage Roof Repair NJ — 7 Steps to Restore Your Home Fast'],
+  url:'https://perfectroofingteam.com/storm-damage-roof-repair-nj/',serpIntent:'INFORMATIONAL_GUIDE'});
+ assert.equal(storm.verdict,'COMPATIBLE','same page type…');assert.deepEqual(storm.missing_query_roots,['wind'],'…but another topic');
+ const wind=classifyDestinationIntent({query:'roof wind damage repair',title:'Wind Damage Roof Repair: 5 Steps',h1:['Repairing wind damage'],url:'https://x.example/wind-damage-roof-repair/',serpIntent:'INFORMATIONAL_GUIDE'});
+ assert.deepEqual(wind.missing_query_roots,[]);
+});
+// SYNTHETIC route run shaped like report 14: locked wind source, wind service sibling (designated), storm guide, optional wind guide.
+async function runPrtLike({withWindGuide=false}={}){
+ const SRC='https://roofer.example/wind-damage-roof-repair-nj/',SIB='https://roofer.example/emergency-roofing/wind-damage-roof-repair/',
+  STORM='https://roofer.example/storm-damage-roof-repair-nj/',GUIDE='https://roofer.example/wind-damage-roof-guide/';
+ const route={};const fresh=new Date(Date.now()-3*86400000).toISOString();
+ const inventory=[{id:21,url:SIB,keyword:'roof wind damage repair'},{id:22,url:STORM,keyword:'storm damage roof repair nj'},...(withWindGuide?[{id:23,url:GUIDE,keyword:'wind damage roof guide'}]:[])];
+ const db={async query(sql,args){
+  if(/^\s*(UPDATE|INSERT|DELETE)/i.test(sql))throw Error('no writes');
+  if(sql.includes('LEFT(html_content'))return {rows:[{id:7,tracker_client_id:4,url:SRC,keyword:'wind damage roof repair nj',saved_html:''}]};
+  if(sql.includes('FROM tracker_gsc_queries'))return {rows:args[1]===7?[{page_id:7,tracker_client_id:4,source_page_url:SRC,evidence_scope:'page_verified',query:'roof wind damage repair',impressions:291,clicks:0,position:44,imported_at:fresh}]:[]};
+  if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:inventory};
+  return {rows:[]};
+ }};
+ const pg=(title,h1,secs)=>'<html><head><title>'+title+'</title></head><body><h1>'+h1+'</h1>'+secs.map(([h,p])=>'<h2>'+h+'</h2><p>'+p+'</p>').join('')+'</body></html>';
+ const para='Walk around the house after the storm passes and note lifted shingles, bent flashing and granules collecting in the gutters before calling anyone.';
+ const html={[SRC]:pg('Wind Damage Roof Repair NJ | 2-Hour Emergency Response','Storm & Wind Damage Roof Repair in New Jersey',[['Wind damage signs',para]]),
+  [SIB]:pg('Wind Damage Roof Repair NJ | Emergency Roofing Company','Wind Damage Roof Repair Company',[['Our wind repair service',para]]),
+  [STORM]:pg('Storm Damage Roof Repair NJ: 7 Steps to Avoid Costly Damage','Storm Damage Roof Repair NJ — 7 Steps',[['Types of storm damage',para]]),
+  [GUIDE]:pg('Wind Damage Roof Repair Guide: Steps for Homeowners','How to repair wind damage on a roof',[['Wind damage signs',para]])};
+ const fetchLive=async url=>{const body=html[url]||pg('Wind damage roof repair guide','How to repair wind damage',[['Insurance documentation',para+' '+para]]);
+  return {html:body,final_url:url,retrieved_at:'2026-10-28T20:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}};
+ const searchLive=async args=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:args.query,provider_attempts:['SERPER_GOOGLE_ORGANIC'],leads:
+  ['How to Fix Wind Damage on a Roof','Wind Damage Roof Repair Guide','Signs of Wind Damage: A Checklist'].map((title,i)=>({url:'https://g'+i+'.example/w',title,source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}))});
+ const mw=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:false,pages:[{id:7,url:SRC,keyword:'wind damage roof repair nj',case_study_active:true}]};next()};
+ registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(){}},db,mw,{fetchLive,searchLive,renderOwn:async()=>({status:'RENDER_UNAVAILABLE',live:null})});
+ const res={statusCode:200,set(){return this},status(x){this.statusCode=x;return this},json(x){this.body=x;return this}};
+ const stack=route['/api/tracker-client/:token/growth/auto-research'],req={params:{token:'t'},query:{page_id:'7'}};
+ await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});
+ assert.equal(res.statusCode,200,JSON.stringify(res.body));
+ return {b:res.body,SRC,SIB,STORM,GUIDE};
+}
+test('11b. Route: a service-type wind destination is not retargeted to a storm guide; the storm page is reported as another topic',async()=>{
+ const {b,SIB,STORM}=await runPrtLike();
+ assert.equal(b.query_selection.destination.url,SIB);
+ assert.notEqual(b.editorial_decision_gate.target_url,STORM);assert.notEqual(b.destination_intent.url,STORM);
+ assert(b.site_architecture.same_type_pages_on_another_topic.some(x=>x.url===STORM&&x.missing_query_roots.includes('wind')));
+ assert(!b.site_architecture.compatible_existing_pages.some(x=>x.url===STORM));
+});
+test('11c. Route: when a same-topic wind guide exists it is the retarget; a locked source is never the edit target',async()=>{
+ const {b,SIB,GUIDE,SRC}=await runPrtLike({withWindGuide:true});
+ assert.equal(b.destination_intent.retargeted_from,SIB);assert.equal(b.destination_intent.url,GUIDE);assert.equal(b.editorial_decision_gate.target_url,GUIDE);
+ assert.notEqual(b.editorial_decision_gate.target_url,SRC);
+});
+test('6c. Page-builder attribute soup and data URIs are removed; an incomplete capture names its cause',async()=>{
+ const soup='<html><head><title>T</title></head><body>'+('<div class="'+'elementor-col-50 e-con '.repeat(40)+'" data-settings="{&quot;a&quot;:1}" aria-hidden="false"><img src="data:image/png;base64,'+'A'.repeat(3000)+'" srcset="a.jpg 1x, b.jpg 2x"></div>').repeat(400)+
+  '<h2 id="claims">Insurance claim help</h2><p>Readable text after the page-builder markup.</p></body></html>';
+ assert(soup.length>1500000);
+ const r=await fetchPublicGrowthHtml('https://own.example/p/',{lookup,httpsModule:mockHttps(soup),compact:true,limit:600000});
+ assert.equal(r.truncated,false);assert.match(r.html,/<h2 id="claims">Insurance claim help<\/h2>/);assert.equal(r.capture.cause,null);
+ const cut=await fetchPublicGrowthHtml('https://own.example/p/',{lookup,httpsModule:mockHttps('<p>'+'word '.repeat(200000)+'</p>'),compact:true,limit:600000});
+ assert.equal(cut.truncated,true);assert.equal(cut.capture.cause,'READABLE_HTML_EXCEEDED_LIMIT');
+ const d=decideGrowthEditorialAction({report:{url:'https://own.example/p/',growth_decision:{primary_next_action:{query:'q'},protection:{}}},destination:{target_url:'https://own.example/p/'},
+  serpIntent:{status:'SERP_INTENT_OBSERVED',intent:'INFORMATIONAL_GUIDE'},destinationIntent:{verdict:'COMPATIBLE'},
+  coverage:{destination_truncated:true,destination_capture:cut.capture,competitors_considered:[{host:'a.example'},{host:'b.example'}],competitor_diagnostics:{distinct_hosts:2},
+   tasks:[{code:'task_x',label:'x',supported_by_competitors:true,independent_sources:2,competitor_support:[],destination:{status:'NOT_OBSERVED',passages:[]},covered_elsewhere_on_site:[]}]}});
+ assert.equal(d.blocker_code,'COMPLETE_DESTINATION_HTML');assert.match(d.missing_evidence[0].detail,/readable HTML \d+ characters/);
+});

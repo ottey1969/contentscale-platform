@@ -37,7 +37,11 @@ function compactPublicHtml(html){
   .replace(/<script\b(?![^>]*application\/ld\+json)[^>]*>[\s\S]*?<\/script\s*>/gi,' ')
   .replace(/<(style|svg|template)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,' ')
   .replace(/<link\b(?![^>]*\brel=["']?(?:canonical|alternate)\b)[^>]*>/gi,' ')
-  .replace(/\s(?:style|data-[\w-]+)=(?:"[^"]*"|'[^']*')/gi,'')
+  .replace(/<iframe\b[^>]*>[\s\S]*?<\/iframe\s*>/gi,' ')
+  // Page-builder attribute soup (utility classes, responsive image sets, inline data URIs, ARIA and event handlers) is
+  // often larger than the article itself; no parser reads it. id and href are kept (anchors and link checks use them).
+  .replace(/\s(?:style|class|srcset|sizes|data-[\w-]+|aria-[\w-]+|on[a-z]+)=(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,'')
+  .replace(/\b(src|href)=(["'])data:[^"']*\2/gi,'$1=""')
   .replace(/[ \t\r\n]{2,}/g,' ');
 }
 // compact:true (research reads): stream up to rawLimit bytes, compact, then apply `limit` to the readable HTML.
@@ -47,7 +51,10 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
  const finish=(html,cut)=>{
   if(!compact)return {html,truncated:cut};
   const readable=compactPublicHtml(html);
-  return {html:readable.slice(0,limit),truncated:cut||readable.length>limit};
+  // Why a capture is incomplete, so a report can name the cause instead of a bare "truncated".
+  const capture={raw_bytes:Buffer.byteLength(html,'utf8'),raw_cap_bytes:byteCap,raw_cap_hit:cut,readable_chars:readable.length,readable_limit:limit,
+   cause:cut?'RAW_RESPONSE_EXCEEDED_BYTE_CAP':readable.length>limit?'READABLE_HTML_EXCEEDED_LIMIT':null};
+  return {html:readable.slice(0,limit),truncated:cut||readable.length>limit,capture};
  };
  let url=validateUrl(raw);
  for(let n=0;n<=redirects;n++){
@@ -101,6 +108,6 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
  throw Error('UNEXPECTED_FETCH_STATE');
 }
 // Research reads keep up to this much READABLE (compacted) HTML; the reader-task and section parsers read the same amount.
-const RESEARCH_HTML_LIMIT=300000;
+const RESEARCH_HTML_LIMIT=600000;
 const RESEARCH_FETCH={compact:true,limit:RESEARCH_HTML_LIMIT};
 module.exports={fetchPublicGrowthHtml,validateUrl,publicV4,compactPublicHtml,RESEARCH_HTML_LIMIT,RESEARCH_FETCH};

@@ -59,7 +59,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
    'Competitor pages were read but share no common reader task.','Add more readable competitor articles for the same query, or accept the page as is.');
  // Absence on a truncated destination is unknown, never a gap.
  if(gaps.length&&destinationTruncated)
-  return blocked('COMPLETE_DESTINATION_HTML','The captured destination HTML was cut at the readable-HTML limit and '+gaps.length+' shared task(s) were not observed in the captured part ('+gaps.map(t=>t.code).join(', ')+'); absence after the cut cannot be claimed.',
+  return blocked('COMPLETE_DESTINATION_HTML','The captured destination HTML was cut'+captureNote(coverage.destination_capture)+' and '+gaps.length+' shared task(s) were not observed in the captured part ('+gaps.map(t=>t.code).join(', ')+'); absence after the cut cannot be claimed.',
    'Required evidence was not accessible: COMPLETE_DESTINATION_HTML.','Re-run when the destination can be read completely, or check the named task(s) on the live page by hand.');
  // "Nothing is missing" is only as strong as the competitor task set: a competitor cut at the fetch limit may teach more after the cut.
  const completeHosts=new Set((coverage.competitors_considered||[]).filter(c=>c.partial!==true).map(c=>c.host)).size;
@@ -92,6 +92,8 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   next_action:'Owner completion drafts only the missing task(s) for the stated placement; publication stays disabled.'};
 }
 
+const captureNote=c=>!c?'':c.cause==='RAW_RESPONSE_EXCEEDED_BYTE_CAP'?' (the response exceeded the '+c.raw_cap_bytes+'-byte download cap)':
+ c.cause==='READABLE_HTML_EXCEEDED_LIMIT'?' (readable HTML '+c.readable_chars+' characters after removing scripts and styles, limit '+c.readable_limit+')':'';
 function explainNoShared(td){
  if(!td)return 'Task derivation did not run (fewer than two readable sites).';
  const per=(td.hosts||[]).map(h=>h.host+': '+h.sections_used+' of '+h.sections_read+' sections used'+(h.sections_excluded_as_promotional?' ('+h.sections_excluded_as_promotional+' promotional excluded)':'')).join('; ');

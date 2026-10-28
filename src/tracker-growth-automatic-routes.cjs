@@ -223,16 +223,24 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const intentOf=(u,src)=>{const ex=excerptOf(src?.html);
    return classifyDestinationIntent({query:targetQuery,title:ex.title,h1:ex.h1,url:u,serpIntent:serpIntent.intent})};
   let destinationIntent=selectedSource?intentOf(proposed,selectedSource):null;
-  let compatibleAlternatives=[...destinationSources].filter(([u])=>u!==proposed)
-   .map(([u,src])=>({url:u,intent:intentOf(u,src)})).filter(x=>x.intent.verdict==='COMPATIBLE');
-  if(destinationIntent?.verdict==='DIFFERENT'&&compatibleAlternatives.length){
-   const alt=compatibleAlternatives[0],from=proposed;
-   proposed=alt.url;selectedSource=destinationSources.get(alt.url);
-   destinationIntent={...alt.intent,retargeted_from:from};
-   compatibleAlternatives=compatibleAlternatives.slice(1);
+  // An alternative must match the page type AND the whole topic of the query: a storm page is never the home of a wind query.
+  // The source page counts as an existing home of the intent too; when it is a locked Case Study it can block a new page
+  // (cannibalisation) but is never chosen as the edit target.
+  const fits=x=>x.intent.verdict==='COMPATIBLE'&&!(x.intent.missing_query_roots||[]).length;
+  const alternativePool=[...destinationSources].filter(([u])=>u!==proposed).map(([u,src])=>({url:u,intent:intentOf(u,src)}));
+  if(own.live&&proposed&&proposed!==page.url)alternativePool.push({url:page.url,intent:intentOf(page.url,own.live),source_page:true,protected:page.case_study_active===true});
+  let compatibleAlternatives=alternativePool.filter(fits);
+  const topicMismatches=alternativePool.filter(x=>x.intent.verdict==='COMPATIBLE'&&!fits(x)).map(x=>({url:x.url,missing_query_roots:x.intent.missing_query_roots}));
+  const retarget=compatibleAlternatives.find(x=>!x.protected);
+  if(destinationIntent?.verdict==='DIFFERENT'&&retarget){
+   const from=proposed;
+   proposed=retarget.url;selectedSource=retarget.source_page?own.live:destinationSources.get(retarget.url);
+   destinationIntent={...retarget.intent,retargeted_from:from};
+   compatibleAlternatives=compatibleAlternatives.filter(x=>x!==retarget);
   }
   report.site_architecture={...(report.site_architecture||{}),
-   compatible_existing_pages:compatibleAlternatives.map(x=>({url:x.url,intent_class:x.intent.class}))};
+   compatible_existing_pages:compatibleAlternatives.map(x=>({url:x.url,intent_class:x.intent.class,...(x.protected?{protected_case_study:true}:{})})),
+   same_type_pages_on_another_topic:topicMismatches};
   report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
   report.destination_section_comparison=selectedSource?compareFullSections({
    query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,
@@ -248,7 +256,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(own.live&&proposed!==page.url)siblingPages.push({url:page.url,html:own.live.html,truncated:own.live.truncated===true});
   const coverage=selectedSource?analyzeReaderTaskCoverage({query:targetQuery,
    serpIntent:serpIntent.intent==='MIXED_OR_INSUFFICIENT'?'INFORMATIONAL_GUIDE':serpIntent.intent,
-   destination:{url:proposed,html:selectedSource.html,truncated:selectedSource.truncated===true},
+   destination:{url:proposed,html:selectedSource.html,truncated:selectedSource.truncated===true,capture:selectedSource.capture||null},
    competitors:competitorPages,sitePages:siblingPages}):
    {status:'NO_DESTINATION_SOURCE',tasks:[],competitors_considered:[],destination_truncated:false};
   report.reader_task_coverage=coverage;
