@@ -14,7 +14,7 @@ function patch(source){
  const hardened='require(\'./tracker-safe-initial-fetch.cjs\').fetchInitialTrackerPage(page.url)';
  if(occurrences===0){
   if(body.includes(hardened))return input;
-  throw Error('TRACKER_UNSAFE_INITIAL_FETCH_MISSING_OR_CHANGED');
+  throw Error('TRACKER_UNSAFE_INITIAL_FETCH_MISSING_OR_CHANGED: '+[...body.matchAll(/fetch\\s*\\(\\s*page\\.url/g)].slice(0,5).map(m=>body.slice(Math.max(0,m.index-100),m.index+260).replace(/\\s+/g,' ')).join(' | '));
  }
  if(occurrences!==1)throw Error('TRACKER_UNSAFE_INITIAL_FETCH_AMBIGUOUS_'+occurrences);
  return head+body.replace(pattern,hardened)+tail;
