@@ -22,10 +22,43 @@ test('tracker client script compiles and the redirect card gives the one-page ad
  assert.match(html,/async function trackRedirectDestination\(pageId, addUrl\)[\s\S]{0,200}api\('\/pages', 'POST'/);
  assert(!/async function trackRedirectDestination[\s\S]{0,300}'DELETE'/.test(html),'adding the destination never deletes the old row');
 });
-test('tracker scan marks only a fully permanent (301/308) chain as an alias; temporary redirects stay their own page',()=>{
- const scan=src.slice(src.indexOf('// Record the real hop statuses (bounded, manual).'),src.indexOf("// Record the real hop statuses (bounded, manual).")+2600);
- assert.match(scan,/redirect: 'manual'/);assert.match(scan,/_i < 4/,'bounded number of hops');
- assert.match(scan,/_hops\.every\(c => c === 301 \|\| c === 308\)/);
- assert.match(scan,/UPDATE tracker_pages SET redirects_to=NULL/,'a temporary redirect clears the alias flag');
+test('tracker scan verifies aliases only through the shared SSRF-safe reader and never deletes a page',()=>{
+ const at=src.indexOf('// Verify the hop statuses with the shared SSRF-safe reader');assert(at>0);
+ const scan=src.slice(at,at+2400);
+ assert.match(scan,/require\('\.\/growth-url-identity\.cjs'\)\.verifyPermanentAlias\(page\.url, \{ expectedFinal: liveResp\.url \}\)/);
+ assert(!/redirect: ?'manual'/.test(src.slice(at-200,at+2400)),'no unvalidated manual redirect crawl');
+ assert.match(scan,/UPDATE tracker_pages SET redirects_to=NULL/,'anything not proven permanent clears the alias flag');
  assert(!/DELETE FROM tracker_pages/.test(scan),'the scan never deletes a tracked page');
+});
+// SYNTHETIC HTTPS per URL ({status, location} or HTML) and DNS (public unless the host is listed as private).
+const {EventEmitter}=require('node:events');
+const {fetchPublicGrowthHtml}=require('../src/growth-public-html-reader.cjs');
+const {verifyPermanentAlias}=require('../src/growth-url-identity.cjs');
+const routed=routes=>({request(url,opts,cb){const req=new EventEmitter();req.end=()=>{const r=routes[url.href]||{status:404};const res=new EventEmitter();
+ res.statusCode=r.status;res.headers=r.location?{location:r.location}:{'content-type':'text/html'};res.resume=()=>{};res.destroy=()=>{};cb(res);
+ if(r.status===200){res.emit('data',Buffer.from('<h1>x</h1>'));res.emit('end')}};req.destroy=()=>{};return req}});
+const dns=privateHosts=>async h=>privateHosts.includes(h)?[{address:'192.168.1.10',family:4}]:[{address:'93.184.216.34',family:4}];
+const check=(routes,{expectedFinal=null,priv=[]}={})=>verifyPermanentAlias('https://shop.example/old/',{expectedFinal,
+ fetchHtml:(u,o)=>fetchPublicGrowthHtml(u,{...o,lookup:dns(priv),httpsModule:routed(routes)})});
+const OLD='https://shop.example/old/',NEW='https://shop.example/new/';
+test('verifyPermanentAlias: 301/308 to the URL the scan saw is an alias; everything else fails closed',async()=>{
+ const ok=await check({[OLD]:{status:301,location:NEW},[NEW]:{status:200}},{expectedFinal:NEW});
+ assert.equal(ok.permanent,true);assert.deepEqual(ok.hops,[301]);
+ assert.equal((await check({[OLD]:{status:308,location:NEW},[NEW]:{status:200}},{expectedFinal:NEW})).permanent,true);
+ const cases={
+  'redirect to 127.0.0.1':[{[OLD]:{status:301,location:'https://127.0.0.1/admin'}},{}],
+  'redirect to an RFC1918 host':[{[OLD]:{status:301,location:'https://intranet.example/'}},{priv:['intranet.example']}],
+  'HTTP downgrade':[{[OLD]:{status:301,location:'http://shop.example/new/'}},{}],
+  'redirect loop':[{[OLD]:{status:301,location:NEW},[NEW]:{status:301,location:OLD}},{}],
+  'mixed 301 then 302':[{[OLD]:{status:301,location:'https://shop.example/mid/'},'https://shop.example/mid/':{status:302,location:NEW},[NEW]:{status:200}},{expectedFinal:NEW}],
+  'unreachable target':[{[OLD]:{status:301,location:NEW},[NEW]:{status:503}},{}],
+  'final URL differs from what the scan saw':[{[OLD]:{status:301,location:NEW},[NEW]:{status:200}},{expectedFinal:'https://shop.example/other/'}],
+  'no redirect at all':[{[OLD]:{status:200}},{expectedFinal:NEW}]
+ };
+ for(const [name,[routes,opts]] of Object.entries(cases)){
+  const r=await check(routes,opts);
+  assert.equal(r.permanent,false,name+' must fail closed ('+r.kind+')');
+ }
+ const priv=await check({[OLD]:{status:301,location:'https://intranet.example/'}},{priv:['intranet.example']});
+ assert.equal(priv.error,'PUBLIC_IPV4_UNAVAILABLE','the private host is refused before any request is sent');
 });

@@ -49,4 +49,17 @@ function identityAdvice(id,{lockedUrls=[]}={}){
   default:return null;
  }
 }
-module.exports={identityFromFetch,identityAdvice,canonicalOf,sameUrl,normUrl:norm};
+// Tracker scans: is `url` a PERMANENT alias of `expectedFinal`? Uses the same bounded, SSRF-safe reader as Growth (public
+// HTTPS only, every hop DNS-validated to a public IPv4, no downgrade). Fails closed: a loop, an unreachable or private target,
+// a temporary or unknown hop, or a final URL other than the one the scan saw is never an alias.
+async function verifyPermanentAlias(url,{expectedFinal=null,fetchHtml=null,redirects=4}={}){
+ const read=fetchHtml||require('./growth-public-html-reader.cjs').fetchPublicGrowthHtml;
+ let fetched;
+ try{fetched=await read(url,{limit:1024,redirects,timeout:8000})}
+ catch(e){const id=identityFromFetch(url,{error:String(e?.code||'FETCH_FAILED').slice(0,60),redirect_chain:e?.redirect_chain});
+  return {permanent:false,kind:id.kind,hops:id.http_statuses,final_url:null,error:id.error}}
+ const id=identityFromFetch(url,fetched);
+ const matches=!expectedFinal||sameUrl(id.final_url,expectedFinal);
+ return {permanent:id.kind==='PERMANENT_REDIRECT'&&matches,kind:matches?id.kind:'FINAL_URL_MISMATCH',hops:id.http_statuses,final_url:id.final_url,error:null};
+}
+module.exports={identityFromFetch,identityAdvice,verifyPermanentAlias,canonicalOf,sameUrl,normUrl:norm};

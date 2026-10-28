@@ -63215,29 +63215,18 @@ async function runTrackerCheck(page, geminiKey, keys, forceRescan = false) {
           const _reqPath = new URL(page.url).pathname.replace(/\/+$/,'');
           const _finPath = new URL(liveResp.url).pathname.replace(/\/+$/,'');
           if (liveResp.url && _finPath && _reqPath && _finPath.toLowerCase() !== _reqPath.toLowerCase()) {
-            // Record the real hop statuses (bounded, manual). Only a fully permanent chain (301/308) makes this URL an alias of
-            // its destination; a temporary redirect (302/303/307) keeps it as its own tracked URL. Nothing is deleted.
-            const _hops = [];
-            try {
-              let _at = page.url;
-              for (let _i = 0; _i < 4; _i++) {
-                const _r = await fetch(_at, { method: 'GET', redirect: 'manual', headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ContentScale/1.0)', 'Accept': 'text/html,application/xhtml+xml' }, signal: AbortSignal.timeout(8000) });
-                try { await _r.body?.cancel(); } catch (e) {}
-                if (![301, 302, 303, 307, 308].includes(_r.status)) break;
-                const _loc = _r.headers.get('location'); if (!_loc) break;
-                const _next = new URL(_loc, _at).toString();
-                _hops.push(_r.status);
-                if (_next === _at) break;
-                _at = _next;
-              }
-            } catch (e) {}
-            const _permanent = _hops.length > 0 && _hops.every(c => c === 301 || c === 308);
+            // Verify the hop statuses with the shared SSRF-safe reader (public HTTPS only, every hop DNS-validated to a public
+            // IPv4, bounded). Only a fully permanent chain (301/308) ending at the URL this scan saw makes this URL an alias of
+            // its destination; anything else fails closed and the URL stays its own tracked page. Nothing is deleted.
+            const _alias = await require('./growth-url-identity.cjs').verifyPermanentAlias(page.url, { expectedFinal: liveResp.url }).catch(() => ({ permanent: false, hops: [], kind: 'CHECK_FAILED' }));
+            const _hops = _alias.hops || [];
+            const _permanent = _alias.permanent === true;
             if (_permanent) {
               await pool.query('UPDATE tracker_pages SET redirects_to=$1, redirect_checked_at=NOW() WHERE id=$2', [liveResp.url, pageId]).catch(()=>{});
               _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f ' + _hops.join(' \u2192 ') + ' redirect detected: ' + page.url + ' \u2192 ' + liveResp.url + '. This is one page, not duplicate content. Keep the working redirect; no website change is required.');
             } else {
               await pool.query('UPDATE tracker_pages SET redirects_to=NULL, redirect_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
-              _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f ' + (_hops.length ? 'Temporary redirect (' + _hops.join(' \u2192 ') + ')' : 'Redirect with unrecorded status') + ' to ' + liveResp.url + ' \u2014 not treated as a permanent move; this URL stays tracked as its own page.');
+              _trSetStep(pageId, 'html_hash', 'done', '\u21aa\ufe0f Redirect to ' + liveResp.url + ' not verified as permanent (' + (_alias.kind || 'UNKNOWN') + (_hops.length ? ': ' + _hops.join(' \u2192 ') : '') + ') \u2014 this URL stays tracked as its own page.');
             }
           } else {
             await pool.query('UPDATE tracker_pages SET redirects_to=NULL, redirect_checked_at=NOW() WHERE id=$1', [pageId]).catch(()=>{});
