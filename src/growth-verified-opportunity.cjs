@@ -79,6 +79,8 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
   if(bad.length)return none('NEW_PAGE_DRAFT_UNSUPPORTED_CLAIMS',bad.slice(0,6));
   const evidence=(gate.new_page_plan.tasks||[]).flatMap(t=>(t.competitor_evidence||[]).slice(0,1)
    .map(e=>({source_url:e.url,heading:e.heading,excerpt:String(e.excerpt||'').slice(0,300),type:'COMPETITOR'})));
+  // The gate only ignores an opportunity without source evidence; the producer must not call such a draft verified.
+  if(!evidence.some(e=>e.source_url&&e.excerpt))return none('NEW_PAGE_WITHOUT_SHARED_TASK_EVIDENCE');
   return {status:'VERIFIED_NEW_DISTINCT_PAGE',rejections:[],opportunity:{
    verified:true,type:'NEW_DISTINCT_PAGE',producer:'GROWTH_INTENT_EVIDENCE_PLUS_DRAFT_VALIDATION',
    focus_query:query,target_url:gate.target_url,target_section:'(new page)',

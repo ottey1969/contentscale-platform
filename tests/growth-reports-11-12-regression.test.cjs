@@ -334,3 +334,67 @@ test('6c. Page-builder attribute soup and data URIs are removed; an incomplete c
    tasks:[{code:'task_x',label:'x',supported_by_competitors:true,independent_sources:2,competitor_support:[],destination:{status:'NOT_OBSERVED',passages:[]},covered_elsewhere_on_site:[]}]}});
  assert.equal(d.blocker_code,'COMPLETE_DESTINATION_HTML');assert.match(d.missing_evidence[0].detail,/readable HTML \d+ characters/);
 });
+
+// ---------- Report 16 (production run after PR #192): a new page without shared tasks, and a sibling that IS the source ----------
+const r16=require('./fixtures/growth-reports-11-12/report-16-prt-wind-damage-after-192.json');
+const {produceVerifiedEditorialOpportunity}=require('../src/growth-verified-opportunity.cjs');
+test('R16 production outcome: NEW_DISTINCT_PAGE with zero shared tasks, producer "verified" but gate ignored it',()=>{
+ assert.equal(r16.editorial_decision_gate.decision,'NEW_DISTINCT_PAGE');assert.deepEqual(r16.reader_task_coverage.tasks,[]);
+ assert.equal(r16.verified_opportunity_status.status,'VERIFIED_NEW_DISTINCT_PAGE');assert.equal(r16.editorial_decision_gate.copy_ready,false);
+ assert.equal(r16.destination_intent.url,'https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/');
+ const srcHead=[r16.page_content.headings.title,...r16.page_content.headings.h1].join(' | ').toLowerCase();
+ assert.equal(r16.destination_intent.observed_head,srcHead,'the "sibling" served the locked source page title and H1');
+});
+test('12. R16 real coverage: without a task shared by two competitors no new page is proposed (DATA_BLOCKED with diagnosis)',()=>{
+ const d=decideGrowthEditorialAction({report:r16,destination:r16.destination_section_comparison,coverage:r16.reader_task_coverage,
+  serpIntent:r16.serp_intent,destinationIntent:r16.destination_intent,attempts:r16.editorial_decision_gate.attempted_sources});
+ assert.equal(d.decision,'DATA_BLOCKED');assert.equal(d.blocker_code,'SHARED_COMPETITOR_REQUIREMENTS');
+ assert.match(d.missing_evidence[0].detail,/reconroof\.com/);assert.equal(d.evidence_status.missing_task_established,false);
+});
+test('12b. The producer never calls a new-page draft verified without shared-task evidence',()=>{
+ const gate={decision:'NEW_DISTINCT_PAGE',focus_query:'roof wind damage repair',target_url:'https://x.example/a/',new_page_plan:{working_query:'q',facts_source_url:'https://x.example/a/',tasks:[]}};
+ const para='Walk the property after high winds and photograph every lifted shingle, bent flashing strip and gutter full of granules before anything is moved.';
+ const r=produceVerifiedEditorialOpportunity({report:{editorial_decision_gate:gate},completion:{draft:{sections:[{h2:'Signs',paragraphs:[para]},{h2:'Next steps',paragraphs:[para.replace('Walk','Then walk')]}]}},sources:{destinationHtml:'<p>x</p>'}});
+ assert.equal(r.opportunity,null);assert.equal(r.status,'NEW_PAGE_WITHOUT_SHARED_TASK_EVIDENCE');
+});
+// SYNTHETIC route run: the tracked sibling serves the locked source page (redirect or identical title/H1) and a real gap exists.
+async function runIdentity({redirect=false}={}){
+ const SRC='https://roofer.example/wind-damage-roof-repair-nj/',SIB='https://roofer.example/emergency-roofing/wind-damage-roof-repair/';
+ const route={};const fresh=new Date(Date.now()-3*86400000).toISOString();
+ const db={async query(sql,args){
+  if(/^\s*(UPDATE|INSERT|DELETE)/i.test(sql))throw Error('no writes');
+  if(sql.includes('LEFT(html_content'))return {rows:[{id:7,tracker_client_id:4,url:SRC,keyword:'wind damage roof repair nj',saved_html:''}]};
+  if(sql.includes('FROM tracker_gsc_queries'))return {rows:args[1]===7?[{page_id:7,tracker_client_id:4,source_page_url:SRC,evidence_scope:'page_verified',query:'roof wind damage repair',impressions:291,clicks:0,position:44,imported_at:fresh}]:[]};
+  if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:[{id:21,url:SIB,keyword:'roof wind damage repair'}]};
+  return {rows:[]};
+ }};
+ const para='Walk around the house after the wind drops and note lifted shingles, bent flashing and granules in the gutters before calling anyone.';
+ const srcHtml='<html><head><title>Wind Damage Roof Repair Guide: 5 Steps</title></head><body><h1>How to handle wind damage on a roof</h1><h2>Signs of wind damage</h2><p>'+para+'</p></body></html>';
+ const comp=(h)=>'<html><head><title>Wind damage roof repair guide</title></head><body><h1>Wind damage roof repair</h1><h2>'+h+'</h2><p>Keep every insurance claim photo, insurance adjuster note and insurance claim number together; the insurance claim moves faster when the insurance documentation is complete and dated.</p><p>'+para+'</p></body></html>';
+ const fetchLive=async url=>{
+  if(url===SRC)return {html:srcHtml,final_url:SRC,truncated:false};
+  if(url===SIB)return {html:srcHtml,final_url:redirect?SRC:SIB,truncated:false};
+  return {html:comp(url.includes('g0')?'Insurance claim documentation':'Documenting the insurance claim'),final_url:url,truncated:false};
+ };
+ const searchLive=async args=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:args.query,provider_attempts:['SERPER_GOOGLE_ORGANIC'],leads:
+  ['How to Fix Wind Damage on a Roof','Wind Damage Roof Repair Guide','Signs of Wind Damage: A Checklist'].map((title,i)=>({url:'https://g'+i+'.example/w',title,source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}))});
+ const mw=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:false,pages:[{id:7,url:SRC,keyword:'wind damage roof repair nj',case_study_active:true}]};next()};
+ registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(){}},db,mw,{fetchLive,searchLive,renderOwn:async()=>({status:'RENDER_UNAVAILABLE',live:null})});
+ const res={statusCode:200,set(){return this},status(x){this.statusCode=x;return this},json(x){this.body=x;return this}};
+ const stack=route['/api/tracker-client/:token/growth/auto-research'],req={params:{token:'t'},query:{page_id:'7'}};
+ await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});
+ assert.equal(res.statusCode,200,JSON.stringify(res.body));
+ return {b:res.body,SRC,SIB};
+}
+test('13. Route: a sibling that serves the locked Case Study (same title/H1 or redirect) is never edited',async()=>{
+ for(const redirect of [false,true]){
+  const {b,SRC,SIB}=await runIdentity({redirect});
+  assert.equal(b.query_selection.destination.url,SIB);
+  assert.equal(b.destination_identity.resolves_to_source,true);
+  assert.equal(b.destination_identity.basis,redirect?'REDIRECTS_TO_SOURCE_PAGE':'SAME_TITLE_AND_H1_AS_SOURCE_PAGE');
+  assert.equal(b.destination_identity.source_url,SRC);
+  const g=b.editorial_decision_gate;
+  assert.equal(g.decision,'DATA_BLOCKED',JSON.stringify({d:g.decision,m:g.missing_evidence}));assert.equal(g.blocker_code,'DESTINATION_IS_PROTECTED_CASE_STUDY');
+  assert.equal(g.copy_ready,false);
+ }
+});
