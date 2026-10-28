@@ -42,6 +42,8 @@ async function renderPublicGrowthPage(raw,{puppeteer=null,lookup=dns.lookup,time
   return {status:'BROWSER_RENDERED_SAME_ORIGIN',live:{
    html:readable.slice(0,RESEARCH_HTML_LIMIT),final_url:finalUrl,status:200,
    retrieved_at:new Date().toISOString(),truncated:readable.length>RESEARCH_HTML_LIMIT,
+   capture:{raw_bytes:rendered.length,raw_cap_hit:false,readable_chars:readable.length,readable_limit:RESEARCH_HTML_LIMIT,
+    cause:readable.length>RESEARCH_HTML_LIMIT?'READABLE_HTML_EXCEEDED_LIMIT':null},
    source:'LIVE_PUBLIC_BROWSER_RENDERED'}};
  }catch(e){
   return {status:'RENDER_UNAVAILABLE',code:String(e?.code||e?.name||'BROWSER_FAILED').slice(0,60),live:null};

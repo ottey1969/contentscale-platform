@@ -111,7 +111,12 @@ function classifyDestinationIntent({query='',title='',h1=[],url='',serpIntent='M
   :serpIntent==='LOCAL_SERVICE'?(cls==='LOCAL_SERVICE'||cls==='INFORMATIONAL_GUIDE'||(cls==='UNCLASSIFIED'&&overlap.length>0))
   :serpIntent==='COMMERCIAL_COMPARISON'?cls==='PRODUCT_OR_COMPARISON':false;
  const different=cls!=='UNCLASSIFIED'&&!compatible&&serpIntent!=='MIXED_OR_INSUFFICIENT';
- return {url,class:cls,query_root_overlap:overlap,
+ // Topic completeness: every distinct query root must appear in the title/H1 or the URL slug. A page that shares only the
+ // generic part of the query ("roof … damage repair" without "wind") is about a different topic, whatever its page type.
+ let slug='';try{slug=decodeURIComponent(new URL(url).pathname).toLowerCase()}catch{}
+ const topicRoots=new Set([...headRoots,...(slug.match(/[a-z]{4,}/g)||[]).map(STEMS)]);
+ const missing=roots.filter(r=>!topicRoots.has(r));
+ return {url,class:cls,query_root_overlap:overlap,missing_query_roots:missing,
   verdict:different?'DIFFERENT':compatible&&overlap.length?'COMPATIBLE':'UNVERIFIED',
   basis:'TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF',observed_head:head.slice(0,220)};
 }
@@ -183,7 +188,7 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
  return {status:compInfo.length>=2&&new Set(compInfo.map(c=>c.host)).size>=2?'READER_TASK_COVERAGE_OBSERVED':'INSUFFICIENT_READABLE_COMPETITORS',
   method:'TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF',
   task_set:'DERIVED_FROM_COMPETITOR_SECTIONS',serp_intent:serpIntent,
-  destination_url:destination.url||null,destination_truncated:destination.truncated===true,
+  destination_url:destination.url||null,destination_truncated:destination.truncated===true,destination_capture:destination.capture||null,
   destination_sections:destSections.map(s=>({heading:s.heading,words:s.words})),
   competitors_considered:compInfo.map(c=>({url:c.url,host:c.host,partial:c.partial,sections:c.sections.length})),
   competitor_diagnostics:competitorDiagnostics,task_derivation:derivation.diagnostics,

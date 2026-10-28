@@ -73,3 +73,14 @@ SEO performance", Moz + Semrush), geplaatst na "What Is International SEO & Why 
    - `DATA_BLOCKED` alleen met een blokkade die het echte tekort beschrijft (bv. `READABLE_COMPETITOR_ARTICLES` met diagnose).
 5. In beide: `evidence_status` gelijk in `editorial_decision_gate`, `editorial_work_packet.evidence_ladder`, `report_completion.evidence_status`;
    tabel "Evidence status" in het eigenaarspakket; `publication_approved:false`; Case Study ongewijzigd.
+
+## Productieruns na PR #191 (rapporten 13 en 14, 28-10-2026)
+- **Rapport 13 (page 2324)** — geaccepteerd. Intentie `INFORMATIONAL_GUIDE` (8/9), 3 volledig gelezen concurrenten, `IMPROVE_EXISTING`
+  met een geverifieerd concept voor `task_resear` (keyword research per markt); het concept voor `task_perfor` werd door de
+  claim guard afgewezen en is niet in het voorstel opgenomen. `copy_ready = verified_gap = evidence_verified = true`, ladder identiek in alle uitvoer.
+- **Rapport 14 (page 2413)** — selectie en markt correct (wind-query, wind-zusterpagina, `NJ`, Serper `location`, geen Michigan),
+  maar daarna nieuwe fout:
+  | Waar | Wat | Correctie | Test |
+  |---|---|---|---|
+  | Route, retargeting (`tracker-growth-automatic-routes.cjs`) | De wind-zusterpagina kreeg intentie `DIFFERENT`; de route koos het eerste "compatibele" alternatief op paginatype alleen → `/storm-damage-roof-repair-nj/` (mist "wind"). | Alternatief moet paginatype **én** alle onderscheidende query-woorden (titel/H1/URL) dekken (`missing_query_roots`). De bronpagina telt mee als bestaand thuis (blokkeert een nieuwe pagina), maar een vergrendelde Case Study wordt nooit het doel. Pagina's van hetzelfde type over een ander onderwerp worden gerapporteerd (`same_type_pages_on_another_topic`). | 11, 11b, 11c |
+  | Lezer (`growth-public-html-reader.cjs`) | De (verkeerde) stormpagina bleef "truncated" na compactie. Oorzaak niet vast te stellen: de site is vanuit de ontwikkelcontainer niet bereikbaar. | Compactie verwijdert nu ook page-builder-attributen (`class`, `srcset`, `data:`-URI's, `aria-*`, event handlers) en iframes; leesbare limiet 600 KB; elke onvolledige capture meldt nu de oorzaak (`RAW_RESPONSE_EXCEEDED_BYTE_CAP` of `READABLE_HTML_EXCEEDED_LIMIT` met aantallen) in `missing_evidence`. | 6c |
