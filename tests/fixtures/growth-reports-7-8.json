@@ -1,0 +1,496 @@
+{
+ "_provenance": {
+  "sources": [
+   "contentscale-growth-complete-review (7).json ContentScale 2026-10-27T11:55",
+   "contentscale-growth-complete-review (8).json PRT 2026-10-27T11:56"
+  ],
+  "honesty": "Verbatim production output. Competitor bodies are not in the reports; tests needing bodies use labelled SYNTHETIC text."
+ },
+ "cs": {
+  "decision": "IMPROVE_EXISTING",
+  "copy_ready": true,
+  "verified_gap": true,
+  "evidence_verified_in_packet": false,
+  "proposed_text": "Establishing a systematic approach to content creation depends on seamless team collaboration, supported by central management tools and repeatable briefing templates. When multiple contributors work simultaneously, establishing clear handoff points between subject matter experts, writers, and editors maintains consistency across all assets. Structuring the initial production brief around core search intent helps every participant understand the target audience before drafting begins.\n\nTo implement this process effectively, establish shared brief structures that outline required headings, key sources, and quality standards before assigning work. Standardized brief documentation helps writers align with tone and E-E-A-T requirements without constant back-and-forth communication. Assigning explicit reviewer roles for subject matter validation supports editorial oversight prior to final publishing checks.\n\nMaintain clear operational guidelines within project boards so team members can track progress from research draft to final sign-off. Documenting clear criteria for approval helps reviewers provide actionable feedback, assisting teams to avoid bottlenecks while upholding quality gates across publication schedules.",
+  "additional_sections": [
+   {
+    "task": "task_repurp",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "Content Scaling — 8 Questions People Ask",
+     "reason": "Closest existing section by shared concepts (addres, piec, block, updat); the new section continues that explanation."
+    },
+    "heading": "Content Repurposing Strategies to Recycle Existing Assets",
+    "text": "Strategic content repurposing allows editorial teams to recycle existing high-performing assets into new formats while preserving core search intent and factual accuracy. Rather than drafting every topic from scratch, evaluating existing articles that demonstrate strong topical authority provides a foundation for multi-channel expansion. Updating and adapting established insights helps reach different audience segments without diluting original editorial quality.\n\nTo execute a structured adaptation plan, identify existing long-form guides that contain verified data or expert insights. Reframe core subtopics into standalone summaries, instructional checklists, or digest formats tailored to specific platform requirements. Confirming that every adapted asset maintains named sources and accurate references supports E-E-A-T signals across distribution channels.\n\nWhen adapting primary content across multiple channels, monitor performance to determine which subtopics warrant further expansion. Revisit published pieces periodically to refresh facts, update citations, and maintain alignment with search guidance, helping sustain audience interest across your published library."
+   }
+  ],
+  "placement": {
+   "mode": "ADD_AFTER_SECTION",
+   "section_heading": "What Is the GRAAF Framework for Content Scaling?",
+   "reason": "Closest existing section by shared concepts (standa, repeat, operat); the new section continues that explanation."
+  },
+  "claim_review": {
+   "counts": {
+    "sourced_from_page": 0,
+    "general_advice": 6,
+    "general_statement_unverified": 10
+   },
+   "needs_fact_check": [
+    "Establishing a systematic approach to content creation depends on seamless team collaboration, supported by central management tools and repeatable briefing templates.",
+    "When multiple contributors work simultaneously, establishing clear handoff points between subject matter experts, writers, and editors maintains consistency across all assets.",
+    "To implement this process effectively, establish shared brief structures that outline required headings, key sources, and quality standards before assigning work.",
+    "Assigning explicit reviewer roles for subject matter validation supports editorial oversight prior to final publishing checks.",
+    "Rather than drafting every topic from scratch, evaluating existing articles that demonstrate strong topical authority provides a foundation for multi-channel expansion.",
+    "To execute a structured adaptation plan, identify existing long-form guides that contain verified data or expert insights.",
+    "Reframe core subtopics into standalone summaries, instructional checklists, or digest formats tailored to specific platform requirements.",
+    "Confirming that every adapted asset maintains named sources and accurate references supports E-E-A-T signals across distribution channels.",
+    "When adapting primary content across multiple channels, monitor performance to determine which subtopics warrant further expansion.",
+    "Revisit published pieces periodically to refresh facts, update citations, and maintain alignment with search guidance, helping sustain audience interest across your published library."
+   ],
+   "needs_owner_confirmation": [],
+   "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+   "requirements": [
+    "Fact-check every statement against your own knowledge and sources before publishing.",
+    "Owner approval is required; nothing is published automatically."
+   ]
+  },
+  "plan_tasks": [
+   {
+    "code": "task_creati",
+    "label": "Competitors teach “Collaborative Content Creation”",
+    "destination_status": "NOT_OBSERVED",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "What Is the GRAAF Framework for Content Scaling?",
+     "reason": "Closest existing section by shared concepts (standa, repeat, operat); the new section continues that explanation."
+    }
+   },
+   {
+    "code": "task_repurp",
+    "label": "Competitors teach “Content Repurposing”",
+    "destination_status": "NOT_OBSERVED",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "Content Scaling — 8 Questions People Ask",
+     "reason": "Closest existing section by shared concepts (addres, piec, block, updat); the new section continues that explanation."
+    }
+   }
+  ],
+  "destination_sections": [
+   {
+    "heading": "Content Scaling in 2026: A Quality-First Guide to Sustainable Growth",
+    "words": 116
+   },
+   {
+    "heading": "📑 Table of Contents",
+    "words": 101
+   },
+   {
+    "heading": "How to Audit Your Content Before You Scale",
+    "words": 233
+   },
+   {
+    "heading": "What Is the GRAAF Framework for Content Scaling?",
+    "words": 147
+   },
+   {
+    "heading": "⚠️ Common Mistake",
+    "words": 83
+   },
+   {
+    "heading": "Quality-First vs Volume-First Content Scaling",
+    "words": 89
+   },
+   {
+    "heading": "How the GRAAF Workflow Works (Brief &rarr; Publish)",
+    "words": 84
+   },
+   {
+    "heading": "🔑 The 5-Step GRAAF Workflow",
+    "words": 151
+   },
+   {
+    "heading": "How to Start Scaling Content the Right Way",
+    "words": 191
+   },
+   {
+    "heading": "Content Scaling Statistics — 2024–2026",
+    "words": 115
+   },
+   {
+    "heading": "What Google’s Guidelines and the Data Show",
+    "words": 98
+   },
+   {
+    "heading": "E-commerce Blog (Home Goods, US): 78% Traffic Recovery in 90 Days",
+    "words": 77
+   },
+   {
+    "heading": "Want to Scale Content Without Losing Quality?",
+    "words": 39
+   },
+   {
+    "heading": "Content Scaling — 8 Questions People Ask",
+    "words": 414
+   },
+   {
+    "heading": "📚 Related Articles",
+    "words": 223
+   }
+  ],
+  "fetch_summary": "6 tried: 5 readable, 0 blocked by the site (respected), 0 timed out, 1 fetched but not readable (JS_RENDERED_PAGE_NO_STATIC_TEXT); 1 further candidate(s) untried",
+  "fetch_log": [
+   {
+    "url": "https://www.jasper.ai/blog/content-scaling",
+    "host": "jasper.ai",
+    "serp_position": 1,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "NOT_READABLE",
+    "code": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "explanation": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 22
+   },
+   {
+    "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+    "host": "aprimo.com",
+    "serp_position": 2,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 695
+   },
+   {
+    "url": "https://www.textbroker.com/create-scalable-content",
+    "host": "textbroker.com",
+    "serp_position": 4,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": false,
+    "retried_after_http_202": false,
+    "readable_words": 1822
+   },
+   {
+    "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation",
+    "host": "optimizely.com",
+    "serp_position": 5,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 1133
+   },
+   {
+    "url": "https://www.stellarcontent.com/blog/content-marketing/content-scaling/",
+    "host": "stellarcontent.com",
+    "serp_position": 7,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 3384
+   },
+   {
+    "url": "https://impact.com/news/content-teams-production-without-sacrificing-quality-sanity/",
+    "host": "impact.com",
+    "serp_position": 8,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": false,
+    "retried_after_http_202": false,
+    "readable_words": 1433
+   }
+  ],
+  "competitor_support": [
+   {
+    "task": "task_creati",
+    "hosts": [
+     [
+      "aprimo.com",
+      "Collaborative Content Creation"
+     ],
+     [
+      "optimizely.com",
+      "How to scale your content creation"
+     ]
+    ]
+   },
+   {
+    "task": "task_repurp",
+    "hosts": [
+     [
+      "aprimo.com",
+      "Content Repurposing"
+     ],
+     [
+      "textbroker.com",
+      "Can I recycle or repurpose content?"
+     ]
+    ]
+   }
+  ]
+ },
+ "prt": {
+  "decision": "IMPROVE_EXISTING",
+  "copy_ready": true,
+  "verified_gap": true,
+  "evidence_verified_in_packet": false,
+  "proposed_text": "Determining what counts as an urgent roofing emergency helps homeowners decide when immediate dispatch is necessary versus scheduling standard repairs. An immediate emergency usually involves active water intrusion entering living spaces, structural impact from fallen tree limbs, or severe storm damage that leaves underlying roof decking completely exposed to the elements.\n\nWhen evaluating severe weather impacts, assessing whether structural integrity or safety is compromised is essential before taking action. Major sagging along the roofline, active interior ceiling leaks near electrical fixtures, or extensive missing shingle sections during ongoing rain all qualify as immediate hazards that require temporary tarping or urgent stabilization.\n\nIf you observe isolated shingle wear or minor discoloration without active water flow during clear weather, those issues can typically wait for standard business hours. Clear identification of critical hazards allows you to protect interior property quickly and arrange prompt professional assistance across NJ counties without delay.",
+  "additional_sections": [],
+  "placement": {
+   "mode": "ADD_AFTER_SECTION",
+   "section_heading": "What Qualifies as a 24 Hour Emergency Roof Repair Situation in NJ?",
+   "reason": "Closest existing section by shared concepts (qualif, situat, damag, activ); the new section continues that explanation."
+  },
+  "claim_review": {
+   "counts": {
+    "sourced_from_page": 0,
+    "general_advice": 3,
+    "general_statement_unverified": 3
+   },
+   "needs_fact_check": [
+    "An immediate emergency usually involves active water intrusion entering living spaces, structural impact from fallen tree limbs, or severe storm damage that leaves underlying roof decking completely exposed to the elements.",
+    "When evaluating severe weather impacts, assessing whether structural integrity or safety is compromised is essential before taking action.",
+    "Major sagging along the roofline, active interior ceiling leaks near electrical fixtures, or extensive missing shingle sections during ongoing rain all qualify as immediate hazards that require temporary tarping or urgent stabilization."
+   ],
+   "needs_owner_confirmation": [],
+   "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+   "requirements": [
+    "Fact-check every statement against your own knowledge and sources before publishing.",
+    "Owner approval is required; nothing is published automatically."
+   ]
+  },
+  "plan_tasks": [
+   {
+    "code": "task_count",
+    "label": "Competitors teach “What counts as a roof emergency?”",
+    "destination_status": "NOT_OBSERVED",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "What Qualifies as a 24 Hour Emergency Roof Repair Situation in NJ?",
+     "reason": "Closest existing section by shared concepts (qualif, situat, damag, activ); the new section continues that explanation."
+    }
+   }
+  ],
+  "destination_sections": [
+   {
+    "heading": "(introduction)",
+    "words": 11
+   },
+   {
+    "heading": "24 Hour Emergency Roof Repair NJ — Immediate 24/7 Dispatch",
+    "words": 103
+   },
+   {
+    "heading": "📑 In This Guide",
+    "words": 121
+   },
+   {
+    "heading": "24 Hour Emergency Roof Repair NJ — What to Do Right Now",
+    "words": 22
+   },
+   {
+    "heading": "🚨 5 Steps in a Roof Emergency",
+    "words": 188
+   },
+   {
+    "heading": "How Fast Can You Get Emergency Roof Repair in NJ?",
+    "words": 65
+   },
+   {
+    "heading": "What Qualifies as a 24 Hour Emergency Roof Repair Situation in NJ?",
+    "words": 131
+   },
+   {
+    "heading": "⚠️ Don't Wait It Out",
+    "words": 58
+   },
+   {
+    "heading": "What Does Emergency Roof Repair Cost in NJ?",
+    "words": 93
+   },
+   {
+    "heading": "What You Receive Before Work Starts",
+    "words": 27
+   },
+   {
+    "heading": "Does NJ homeowner's insurance cover emergency roof repair?",
+    "words": 48
+   },
+   {
+    "heading": "How Long Does 24 Hour Emergency Roof Repair in NJ Take?",
+    "words": 117
+   },
+   {
+    "heading": "Why Choose Perfect Roofing Team LLC?",
+    "words": 123
+   },
+   {
+    "heading": "Choosing a 24 Hour Emergency Roof Repair NJ Contractor",
+    "words": 29
+   },
+   {
+    "heading": "🔑 What to Verify Before You Call",
+    "words": 111
+   },
+   {
+    "heading": "Emergency Roof Repair in Bergen and Hudson County, NJ",
+    "words": 65
+   },
+   {
+    "heading": "24 Hour Emergency Roof Repair NJ — All 21 Counties",
+    "words": 23
+   },
+   {
+    "heading": "Roof Emergency in NJ? Call Right Now — We Answer 24/7",
+    "words": 32
+   },
+   {
+    "heading": "24 Hour Emergency Roof Repair NJ — Frequently Asked Questions",
+    "words": 346
+   },
+   {
+    "heading": "📚 Related Roofing Services",
+    "words": 131
+   }
+  ],
+  "fetch_summary": "9 tried: 3 readable, 1 blocked by the site (respected), 0 timed out, 5 fetched but not readable (JS_RENDERED_PAGE_NO_STATIC_TEXT); 0 further candidate(s) untried",
+  "fetch_log": [
+   {
+    "url": "https://emergencyroofrepairnj.net/",
+    "host": "emergencyroofrepairnj.net",
+    "serp_position": 1,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "NOT_READABLE",
+    "code": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "explanation": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 0
+   },
+   {
+    "url": "https://precisionwindowsnj.com/emergency-roof-repair-nj",
+    "host": "precisionwindowsnj.com",
+    "serp_position": 2,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 3473
+   },
+   {
+    "url": "https://www.alpharoofer.com/emergency-roof-repair",
+    "host": "alpharoofer.com",
+    "serp_position": 3,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "NOT_READABLE",
+    "code": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "explanation": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 0
+   },
+   {
+    "url": "https://www.gfedale.com/nj/roofing/repair/emergency",
+    "host": "gfedale.com",
+    "serp_position": 4,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "FETCH_FAILED",
+    "code": "HTTP_403",
+    "explanation": "BLOCKED_BY_SITE_RESPECTED",
+    "partial_capture": false,
+    "retried_after_http_202": false,
+    "readable_words": null
+   },
+   {
+    "url": "https://morriscountyroofing.com/emergency-roof-repair-nj",
+    "host": "morriscountyroofing.com",
+    "serp_position": 6,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": false,
+    "retried_after_http_202": false,
+    "readable_words": 353
+   },
+   {
+    "url": "https://www.rhinoroofingnj.com/emergency-roof-repair",
+    "host": "rhinoroofingnj.com",
+    "serp_position": 7,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "NOT_READABLE",
+    "code": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "explanation": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 0
+   },
+   {
+    "url": "https://njroofingcompany.com/this-is-an-emergency/",
+    "host": "njroofingcompany.com",
+    "serp_position": 8,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "NOT_READABLE",
+    "code": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "explanation": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 0
+   },
+   {
+    "url": "https://www.mjroofingllc.com/emergency-roof-repair-south-jersey/",
+    "host": "mjroofingllc.com",
+    "serp_position": 9,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "READABLE",
+    "code": null,
+    "explanation": null,
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 885
+   },
+   {
+    "url": "https://chaseroof.com/emergency-roof-repair/",
+    "host": "chaseroof.com",
+    "serp_position": 10,
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "outcome": "NOT_READABLE",
+    "code": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "explanation": "JS_RENDERED_PAGE_NO_STATIC_TEXT",
+    "partial_capture": true,
+    "retried_after_http_202": false,
+    "readable_words": 0
+   }
+  ],
+  "competitor_support": [
+   {
+    "task": "task_count",
+    "hosts": [
+     [
+      "morriscountyroofing.com",
+      "What counts as a roof emergency?"
+     ],
+     [
+      "mjroofingllc.com",
+      "What Counts as a Roofing Emergency?"
+     ]
+    ]
+   }
+  ]
+ }
+}

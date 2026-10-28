@@ -20,7 +20,7 @@ on:
       - 'tests/growth-review-17-regression.test.cjs'
       - 'tests/growth-root-cause-regression.test.cjs'
       - 'tests/growth-final-quality-regression.test.cjs'
-      - 'tests/growth-generator-and-shared-tasks.test.cjs'
+      - 'tests/growth-generator-and-shared-tasks.test.cjs tests/growth-evidence-status-safety-regression.test.cjs'
       - 'tests/fixtures/growth-reports-2-4.json'
       - 'src/growth-text.cjs'
       - 'tests/fixtures/growth-root-cause/**'

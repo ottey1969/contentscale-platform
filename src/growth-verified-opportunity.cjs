@@ -16,9 +16,11 @@ function summarizeClaims(rows){
  return {counts:{sourced_from_page:by('SOURCED_FROM_PAGE').length,general_advice:by('GENERAL_ADVICE').length,general_statement_unverified:by('GENERAL_STATEMENT_UNVERIFIED').length},
   needs_fact_check:by('GENERAL_STATEMENT_UNVERIFIED').map(x=>x.sentence),
   needs_owner_confirmation:rows.filter(x=>x.confirm_with_owner).map(x=>x.sentence),
+  needs_safety_review:rows.filter(x=>x.safety_review).map(x=>x.sentence),
   confidence:by('GENERAL_STATEMENT_UNVERIFIED').length?'REVIEWABLE_WITH_UNVERIFIED_STATEMENTS':'REVIEWABLE_ADVICE_AND_SOURCED_STATEMENTS',
   requirements:['Fact-check every statement against your own knowledge and sources before publishing.',
    ...(rows.some(x=>x.confirm_with_owner)?['Some statements repeat claims the page itself makes (availability, coverage, credentials or figures). They are only as true as the page: confirm each with the business before reusing it in new copy.']:[]),
+   ...(rows.some(x=>x.safety_review)?['Safety-related guidance (hazards, urgency, what can wait) must be reviewed by a qualified professional before publication. If in doubt, the text should treat a situation as urgent and point readers to professional help, and to emergency services where life or property is at risk.']:[]),
    'Owner approval is required; nothing is published automatically.']};
 }
 function produceVerifiedEditorialOpportunity({report={},completion={},sources={}}={}){

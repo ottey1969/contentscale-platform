@@ -44,6 +44,12 @@ function capabilityClaim(sentence){
  if(p&&!CAP_ADVICE_LEAD.test(sentence)&&!/\bto\s+(?:\w+\s+){0,1}$/i.test(sentence.slice(0,sentence.indexOf(p[0]))))return p[0];
  return null;
 }
+// 2e. Safety. Telling a reader that a problem is safe, harmless or can wait is a risk-bearing factual claim: unconditional
+// assurances need a source (the destination page itself); hedged "can typically wait" statements and any hazard guidance are
+// kept but flagged for professional safety review. Wording is cross-industry (home, health, electrical, vehicles...).
+const SAFETY_ASSURANCE_HARD=/\b(?:safe(?:ly)?\s+to\s+(?:wait|ignore|delay|leave|postpone)|can\s+safely\s+(?:wait|be\s+ignored|be\s+left|be\s+delayed)|(?:no|not\s+any)\s+(?:immediate\s+|real\s+|serious\s+)?(?:danger|risk|hazard)|nothing\s+to\s+worry|is\s+not\s+(?:an?\s+)?(?:emergency|dangerous)|no\s+need\s+to\s+(?:worry|hurry|rush|call)|(?:won['’]t|will\s+not)\s+(?:cause|get\s+worse|spread)|harmless)\b/i;
+const SAFETY_ASSURANCE_SOFT=/\b(?:can|may|could|might)\s+(?:typically\s+|usually\s+|often\s+|generally\s+|normally\s+)?(?:safely\s+)?(?:wait|be\s+(?:delayed|postponed|left|deferred))\b|\b(?:not\s+urgent|non[- ]urgent|no\s+urgency)\b/i;
+const SAFETY_HAZARD=/\b(?:collaps\w*|structural(?:ly)?|sagg\w*|electric\w*|electrocut\w*|live\s+wires?|power\s+lines?|gas\s+(?:leak|line|smell)|carbon\s+monoxide|fires?|smoke|flood\w*|mold|mould|asbestos|toxic|poison\w*|injur\w*|dangerous|hazards?|hazardous|evacuat\w*|911|emergency\s+services|unstable|falling|fallen\s+(?:tree|limb|debris)|chest\s+pain|bleeding)\b/i;
 // 3. Claims about AI assistants / AI search citing or recommending content.
 const AI_TERMS='chatgpt|gemini|perplexity|claude|copilot|ai overviews?|ai search|llms?|ai assistants?|generative (?:ai|engines?|search (?:platforms?|engines?))|answer engines?|ai answers?|generated answers?|ai responses?|ai surfaces|ai engines?';
 const AI_CITE=new RegExp('\\b(?:(?:cited|cite|cites|citing|citations?|recommended|recommends?|mentioned|surfaced|quoted|referenced|picked up|trusted)\\b[^.]{0,60}\\b(?:'+AI_TERMS+')|(?:'+AI_TERMS+')\\b[^.]{0,60}\\b(?:cites?|recommends?|prefers?|favou?rs?|trusts?|ranks?|surfaces?|quotes?|picks|quoted|cited))','i');
@@ -91,6 +97,8 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
   const cap=capabilityClaim(original);
   if(cap&&!supportedBy(original)){flag('UNSUPPORTED_CAPABILITY_CLAIM','States what a tool or system does (“'+cap.trim().slice(0,70)+'”) but the destination page does not say so; generic advice cannot stand in for a verified product capability.');
    const pr=original.match(PRECISION);if(pr)flag('UNSUPPORTED_PRECISION_CLAIM','Adds a precision claim (“'+pr[0]+'”) that no source supports.')}
+  const sa=original.match(SAFETY_ASSURANCE_HARD);
+  if(sa&&!supportedBy(original))flag('UNSUPPORTED_SAFETY_ASSURANCE','Tells the reader something is safe, harmless or needs no action (“'+sa[0]+'”). That is a safety claim: it needs a source or a qualified professional, not a generated sentence.');
   const m3=(!MEASURING_ADVICE.test(original)||cap)&&!supportedBy(original)&&original.match(AI_CITE);if(m3)flag('UNPROVEN_AI_CITATION_CLAIM','Claims how AI assistants or AI search treat the content. No independent observation supports it.');
   const bad=[...new Set(numbersIn(sentence).filter(n=>!destNums.has(n)))];
   if(bad.length)flag('UNSOURCED_NUMBER','The figure(s) '+bad.join(', ')+' do not appear in the destination page, so they are not verifiable from the sources.');
@@ -119,7 +127,7 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
   }
   if(local.length){for(const v of local)add(v.code,original,v.reason)}
   else{if(applied.length)rewrites.push({before:original,after:sentence,changes:applied});kept.push(sentence);
-   review.push({confirm_with_owner:(supportedBy(original)||businessSubject)&&/\b(?:24\/7|24[- ]hours?|around the clock|every|all|licen[sc]ed|insured|bonded|certified|accredited|warrant\w*|guarantee\w*|same[- ]day|\d)/i.test(original),sentence:sentence.slice(0,260),class:supportedBy(original)?'SOURCED_FROM_PAGE':(applied.length?false:(IMPERATIVE.test(original)||ADVICE_MODAL.test(original)))?'GENERAL_ADVICE':'GENERAL_STATEMENT_UNVERIFIED'})}
+   review.push({safety_review:SAFETY_HAZARD.test(original)||SAFETY_ASSURANCE_SOFT.test(original)||SAFETY_ASSURANCE_HARD.test(original),confirm_with_owner:(supportedBy(original)||businessSubject)&&/\b(?:24\/7|24[- ]hours?|around the clock|every|all|licen[sc]ed|insured|bonded|certified|accredited|warrant\w*|guarantee\w*|same[- ]day|\d)/i.test(original),sentence:sentence.slice(0,260),class:supportedBy(original)?'SOURCED_FROM_PAGE':(applied.length?false:(IMPERATIVE.test(original)||ADVICE_MODAL.test(original)))?'GENERAL_ADVICE':'GENERAL_STATEMENT_UNVERIFIED'})}
  }
  return {ok:violations.length===0,violations,safe_rewrites:rewrites,safe_text:kept.join(' '),claim_review:review};
 }
