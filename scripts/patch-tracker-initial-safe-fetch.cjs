@@ -22,7 +22,7 @@ function patch(source){
   }
   if(close<0)throw Error('TRACKER_FETCH_UNBALANCED_CALL');
   const call=body.slice(idx,close+1);
-  if(/redirect\s*:\s*['"]follow['"]/.test(call))hits.push({idx,close});
+  if(/headers\s*:|redirect\s*:/.test(call))hits.push({idx,close});
  }
  if(hits.length!==1)throw Error('TRACKER_INITIAL_FETCH_EXPECTED_ONE_FOUND_'+hits.length);
  return head+body.slice(0,hits[0].idx)+hardened+body.slice(hits[0].close+1)+tail;
