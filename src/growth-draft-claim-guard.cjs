@@ -54,6 +54,15 @@ const SAFETY_ASSURANCE_SOFT=/\b(?:can|may|could|might)\s+(?:typically\s+|usually
 const SAFETY_HAZARD=/\b(?:collaps\w*|structural(?:ly)?\s+(?:\w+\s+)?(?:damage[ds]?|failures?|integrity|cracks?|cracking|collapse|unsound|compromised|weak(?:ness|ened)?|engineers?|movement|defects?)|sagg\w*|electric\w*|electrocut\w*|live\s+wires?|power\s+lines?|gas\s+(?:leak|line|smell)|carbon\s+monoxide|fires?|smoke|flood\w*|mold|mould|asbestos|toxic|poison\w*|injur\w*|dangerous|hazards?|hazardous|evacuat\w*|911|emergency\s+services|unstable\s+(?:\w+\s+)?(?:ground|structures?|walls?|roofs?|ceilings?|floors?|ladders?|trees?|surfaces?|footing|chimneys?|buildings?|scaffold\w*|slopes?)|falling\s+(?:debris|objects?|trees?|branch(?:es)?|limbs?|ice|glass|tiles?|bricks?|from|off)|fallen\s+(?:tree|limb|debris)|chest\s+pain|bleeding)\b/i;
 // 3. Claims about AI assistants / AI search citing or recommending content.
 const AI_TERMS='chatgpt|gemini|perplexity|claude|copilot|ai overviews?|ai search|llms?|ai assistants?|generative (?:ai|engines?|search (?:platforms?|engines?))|answer engines?|ai answers?|generated answers?|ai responses?|ai surfaces|ai engines?';
+// 3b. Mechanism claims: why AI or search systems pick, verify or cite content, stated as a reason for a page change
+// ("…markup so generative engines can easily reference your content", "…tables that prevent retrieval algorithms from
+// verifying your claims", "…to align with retrieval requirements"). Also inside reader instructions: the instruction is
+// advice, the reason given for it is an unproven claim about how those systems work.
+const MECH_AGENT='(?:'+AI_TERMS+'|generative (?:models?|systems?)|retrieval (?:systems?|algorithms?|models?|engines?|pipelines?)|(?:search )?algorithms?|search engines?|language models?|crawlers?)';
+const MECH_VERB='(?:cite|reference|retrieve|verify|understand|trust|extract|select|pick|surface|rank|recommend|parse|interpret|quote|synthesi[sz]e|find|index|use)';
+const AI_MECHANISM=new RegExp('\\b(?:so(?:\\s+that)?|to\\s+help|helps?|helping|allows?|allowing|enabl\\w*|lets?|making\\s+it\\s+easier\\s+for)\\s+(?:the\\s+|these\\s+|modern\\s+)?'+MECH_AGENT+'\\s+(?:can\\s+|to\\s+|will\\s+|could\\s+)?(?:\\w+ly\\s+)?'+MECH_VERB+'\\w*'+
+ '|\\b(?:prevent\\w*|stop\\w*|block\\w*|keep\\w*)\\s+(?:the\\s+|these\\s+|modern\\s+)?'+MECH_AGENT+'\\s+from\\b'+
+ '|\\b(?:align\\w*|match\\w*|meet\\w*|satisf\\w*)\\s+(?:with\\s+)?[^.;]{0,30}\\b(?:retrieval|ranking|algorithm\\w*|ai|generative|citation)\\s+(?:requirements|signals|preferences|criteria|standards)\\b','i');
 const AI_CITE=new RegExp('\\b(?:(?:cited|cite|cites|citing|citations?|recommended|recommends?|mentioned|surfaced|quoted|referenced|picked up|trusted)\\b[^.]{0,60}\\b(?:'+AI_TERMS+')|(?:'+AI_TERMS+')\\b[^.]{0,60}\\b(?:cites?|recommends?|prefers?|favou?rs?|trusts?|ranks?|surfaces?|quotes?|picks|quoted|cited))','i');
 // 4. Credentials / reputation about the business. Verifiable only if the destination page itself states them.
 const CREDENTIAL=/\b(licen[sc]ed|insured|bonded|certified|accredited|warrant(?:y|ies)|award[- ]winning|years of experience|family[- ]owned|family[- ]operated|top[- ]rated|trusted by|leading|premier|specialists?|experts?|\d+[- ]star|a\+ rating|locally owned)\b/ig;
@@ -118,6 +127,8 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
   const sa=original.match(SAFETY_ASSURANCE_HARD);
   if(sa&&!supportedBy(original))flag('UNSUPPORTED_SAFETY_ASSURANCE','Tells the reader something is safe, harmless or needs no action (“'+sa[0]+'”). That is a safety claim: it needs a source or a qualified professional, not a generated sentence.');
   const m3=(!MEASURING_ADVICE.test(original)||cap)&&!supportedBy(original)&&original.match(AI_CITE);if(m3)flag('UNPROVEN_AI_CITATION_CLAIM','Claims how AI assistants or AI search treat the content. No independent observation supports it.');
+  const mech=!supportedBy(original)&&original.match(AI_MECHANISM);
+  if(mech)flag('UNPROVEN_AI_MECHANISM_CLAIM','Gives a reason for how AI or search systems select, verify or cite content (“'+mech[0]+'”). No independent observation supports it; describe what the reader can observe instead.');
   const bad=[...new Set(numbersIn(sentence).filter(n=>!destNums.has(n)))];
   if(bad.length)flag('UNSOURCED_NUMBER','The figure(s) '+bad.join(', ')+' do not appear in the destination page, so they are not verifiable from the sources.');
   const businessSubject=FIRST_PERSON.test(sentence)||(brandLabel&&lower(sentence).replace(/[^a-z0-9]/g,'').includes(brandLabel));
@@ -149,4 +160,4 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
  }
  return {ok:violations.length===0,violations,safe_rewrites:rewrites,safe_text:kept.join(' '),claim_review:review};
 }
-module.exports={assessDraftClaims,sentencesOf,contentRoots,numbersIn};
+module.exports={assessDraftClaims,sentencesOf,contentRoots,numbersIn,AI_MECHANISM};

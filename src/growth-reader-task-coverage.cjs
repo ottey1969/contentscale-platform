@@ -23,12 +23,12 @@ function queryRoots(query){
 }
 function blocks(html){
  const safe=String(html||'').slice(0,RESEARCH_HTML_LIMIT).replace(CLEAN,' ');
- const out=[];let heading='';
+ const out=[];let heading='',level=0;
  for(const m of safe.matchAll(/<(h[1-4]|p|li)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi)){
   const tag=m[1].toLowerCase(),text=plain(m[2]);
   if(!text)continue;
-  if(tag[0]==='h'){heading=text.slice(0,180);continue}
-  if(text.split(/\s+/).length>=8&&!CTA.test(text))out.push({heading,text:text.slice(0,1400),tag});
+  if(tag[0]==='h'){heading=text.slice(0,180);level=Number(tag[1]);continue}
+  if(text.split(/\s+/).length>=8&&!CTA.test(text))out.push({heading,text:text.slice(0,1400),tag,level});
  }
  return out;
 }
@@ -36,10 +36,10 @@ function groupSections(list){
  const map=new Map();
  for(const b of list){
   const key=b.heading||'(introduction)';
-  if(!map.has(key))map.set(key,{heading:key,texts:[]});
+  if(!map.has(key))map.set(key,{heading:key,texts:[],level:b.level||0});
   map.get(key).texts.push(b.text);
  }
- return [...map.values()].map(s=>({heading:s.heading,text:s.texts.join(' '),words:s.texts.join(' ').split(/\s+/).filter(Boolean).length,paragraphs:s.texts}));
+ return [...map.values()].map(s=>({heading:s.heading,level:s.level,text:s.texts.join(' '),words:s.texts.join(' ').split(/\s+/).filter(Boolean).length,paragraphs:s.texts}));
 }
 // ---------- SERP intent (from fresh organic leads, discussions excluded) ----------
 const DISCUSSION=/(^|\.)(reddit\.com|quora\.com|stackexchange\.com|news\.ycombinator\.com)$/;
@@ -154,14 +154,20 @@ const isFurniture=s=>s.heading==='(introduction)'||s.words<30||FURNITURE.test(he
 const LIST_ITEM=/^\d{1,2}[a-z]?[.)]\s/i;
 // A heading that presents the concept as something to remove ("Eliminates the manual entry", "Avoid …", "Instead of …")
 // argues against the task: teaching that task inside it contradicts the section.
+// A comparison task ("citation tracking vs. backlink monitoring") belongs exactly in a section that contrasts the two
+// ("Why citations replace backlinks"), so the rule only applies to tasks that teach the concept itself.
+const COMPARISON_TASK=/\b(?:vs\.?|versus|compared?|comparison|comparing|differ\w*|instead\s+of|replac\w*)\b/i;
 const AGAINST=/\b(?:eliminat\w*|avoid\w*|stop\w*|no\s+more|without|replac\w*|instead\s+of|get\s+rid\s+of|remov\w*|ditch\w*|myths?|mistakes?)\b/i;
 function pickPlacement(destSections,task,skip){
+ const against=COMPARISON_TASK.test(String(task.label||''))?null:AGAINST;
+ // The opening section under the H1 introduces the page; a new reader task never goes inside it.
+ const opening=destSections.find(s=>s.level===1);
  const numbered=destSections.filter(s=>LIST_ITEM.test(headClean(s.heading))).length>=2;
  const body=destSections.filter(s=>!isFurniture(s)&&!(numbered&&LIST_ITEM.test(headClean(s.heading))));
  // 1) the section already mentions the task's core concept: deepen it instead of adding a duplicate
  // A single passing mention of a generic word is not a touch; the concept must be in the heading or recur in the section.
  const touching=body.map(s=>({s,h:taskHitsInText(task,s.heading+' '+s.text,skip),inHead:taskHitsInText(task,s.heading,skip).key>=1}))
-  .filter(x=>(x.inHead||x.h.key>=2)&&!AGAINST.test(headClean(x.s.heading))).sort((a,b)=>(Number(b.inHead)-Number(a.inHead))||b.h.key-a.h.key)[0];
+  .filter(x=>(x.inHead||x.h.key>=2)&&x.s!==opening&&!(against&&against.test(headClean(x.s.heading)))).sort((a,b)=>(Number(b.inHead)-Number(a.inHead))||b.h.key-a.h.key)[0];
  if(touching)return {mode:'EXTEND_SECTION',section_heading:touching.s.heading,
   reason:'This existing section already mentions the task’s core concept ('+touching.h.key+'×); deepen it instead of adding a duplicate.'};
  // 2) otherwise add it right after the existing section whose concepts are closest to what the competitors teach
