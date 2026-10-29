@@ -1,0 +1,554 @@
+{
+ "_source": "Verbatim subset of production Growth complete-review JSON (report 27, PRT homepage, generated 2026-10-29T01:00:59.099Z, after PR #199).",
+ "generated_at": "2026-10-29T01:00:59.099Z",
+ "page_id": 2281,
+ "url": "https://perfectroofingteam.com/",
+ "case_study_locked": true,
+ "query_selection": {
+  "status": "QUERY_SELECTED_FROM_VERIFIED_GSC",
+  "source": "VERIFIED_EXACT_PAGE_GSC",
+  "query": "emergency roof repair nj",
+  "destination": {
+   "url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+   "page_id": 2290,
+   "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+   "coverage": 1,
+   "keyword": "emergency roof repair nj",
+   "competing_same_site_pages": [
+    "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/"
+   ],
+   "tracked_url": "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+   "tracked_page_id": 2359,
+   "url_identity": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ]
+  },
+  "source_page_signal": {
+   "type": "SOURCE_PAGE_SURFACES_FOR_QUERY_OWNED_BY_ANOTHER_PAGE",
+   "note": "These are the SOURCE page’s rows. They are not performance data for the destination page.",
+   "source_page_url": "https://perfectroofingteam.com/"
+  },
+  "brand_queries_excluded": [],
+  "excluded": [
+   {
+    "query": "emergency roof repair hudson county",
+    "reason": "NO_KNOWN_SAME_SITE_PAGE_COVERS_THIS_QUERY",
+    "unmatched": [
+     "hudson",
+     "county"
+    ]
+   },
+   {
+    "query": "american team roofing contracting",
+    "reason": "NO_KNOWN_SAME_SITE_PAGE_COVERS_THIS_QUERY",
+    "unmatched": [
+     "american",
+     "contract"
+    ]
+   },
+   {
+    "query": "complete roofing services little egg harbor, nj",
+    "reason": "NO_KNOWN_SAME_SITE_PAGE_COVERS_THIS_QUERY",
+    "unmatched": [
+     "littl",
+     "egg",
+     "harbor"
+    ]
+   }
+  ],
+  "protected": []
+ },
+ "destination_identity": {
+  "url": "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+  "final_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "kind": "PERMANENT_REDIRECT",
+  "http_statuses": [
+   301
+  ],
+  "resolves_to_source": false,
+  "basis": "PERMANENT_REDIRECT_TO_FINAL_PAGE",
+  "source_url": "https://perfectroofingteam.com/",
+  "source_protected": false,
+  "alias_of": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/ → https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/ as an alias. The final page is a locked Case Study: edits to it are blocked until the Case Study measurement cycle ends; research continues.",
+  "destination_locked": true,
+  "destination_protected": true,
+  "locked_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/"
+ },
+ "serp_intent": {
+  "status": "SERP_INTENT_OBSERVED",
+  "intent": "LOCAL_SERVICE",
+  "query": "emergency roof repair nj",
+  "organic_leads_considered": 8,
+  "agreeing_leads": 8,
+  "compatible_leads": 8,
+  "agreement_basis": "SINGLE_INTENT",
+  "class_counts": {
+   "LOCAL_SERVICE": 8
+  },
+  "reason": null,
+  "pages_used_for_classification": 0,
+  "leads": [
+   {
+    "url": "https://emergencyroofrepairnj.net/",
+    "title": "Emergency Roof Repair NJ",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://precisionwindowsnj.com/emergency-roof-repair-nj",
+    "title": "Emergency Roof Repair NJ | 24-Hour Storm Tarping",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://www.gfedale.com/nj/roofing/repair/emergency",
+    "title": "Emergency Roof Repair in New Jersey | 24/7 Response",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://www.rhinoroofingnj.com/emergency-roof-repair",
+    "title": "Emergency Roof Repair",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://betterbuiltroofingnj.com/emergency-roof-repair/",
+    "title": "Emergency Roof Repair - Better Build Construction",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://morriscountyroofing.com/emergency-roof-repair-nj",
+    "title": "Emergency Roof Repair NJ | 24/7 Same-Day",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://njroofingcompany.com/this-is-an-emergency/",
+    "title": "Emergency Roof Repair Services in Northern NJ | Roof4Roof",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://www.jdavidroofing.net/storm-damage-roof-repair/emergency-roof-repair/",
+    "title": "Emergency Roof Repair in Linden, NJ",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   }
+  ],
+  "method": "TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES",
+  "scope": "One lookup; observed placement is not a tracked-page ranking."
+ },
+ "destination_intent": {
+  "url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "class": "LOCAL_SERVICE",
+  "query_root_overlap": [
+   "emergency",
+   "roof",
+   "repair"
+  ],
+  "missing_query_roots": [],
+  "verdict": "COMPATIBLE",
+  "basis": "TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF",
+  "observed_head": "24 hour emergency roof repair nj | immediate 24/7 dispatch | 24 hour emergency roof repair nj — immediate 24/7 dispatch"
+ },
+ "editorial_decision_gate": {
+  "focus_query": "emergency roof repair nj",
+  "protected_url": "https://perfectroofingteam.com/",
+  "target_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "case_study_locked": true,
+  "preserve_title_h1": true,
+  "publish_allowed": false,
+  "copy_ready": false,
+  "verified_gap": false,
+  "gsc_optional": true,
+  "exact_page_query_metrics_verified": true,
+  "evidence_count": 6,
+  "facts": [
+   {
+    "code": "TOPIC_SELECTED",
+    "value": "emergency roof repair nj",
+    "source": "PAGE_VERIFIED_GSC_OR_TRACKED_TOPIC"
+   },
+   {
+    "code": "SERP_INTENT",
+    "value": "LOCAL_SERVICE",
+    "agreeing_leads": 8,
+    "of": 8
+   },
+   {
+    "code": "DESTINATION_INTENT",
+    "value": "LOCAL_SERVICE",
+    "verdict": "COMPATIBLE"
+   }
+  ],
+  "uncertainties": [],
+  "evidence": [],
+  "attempted_sources": [
+   {
+    "source": "TARGET_STATIC_HTML",
+    "status": "STATIC_HTML_USED",
+    "detail": null
+   },
+   {
+    "source": "SEARCH_PROVIDERS",
+    "status": "FRESH_GOOGLE_ORGANIC_LEADS",
+    "detail": "BING_PUBLIC_RSS, SERPER_GOOGLE_ORGANIC"
+   },
+   {
+    "source": "HISTORICAL_SNAPSHOT_LEADS",
+    "status": "LEADS_AVAILABLE",
+    "detail": "11 stored leads"
+   },
+   {
+    "source": "COMPETITOR_HTML_FETCH",
+    "status": "READABLE",
+    "detail": "6 tried: 5 readable, 1 blocked by the site (respected), 0 timed out, 0 fetched but not readable; 2 further candidate(s) untried"
+   }
+  ],
+  "decision": "DATA_BLOCKED",
+  "blocker_code": "SHARED_COMPETITOR_REQUIREMENTS",
+  "missing_evidence": [
+   {
+    "code": "SHARED_COMPETITOR_REQUIREMENTS",
+    "detail": "No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. Sites read — emergencyroofrepairnj.net: 3 of 4 sections used (1 promotional excluded); precisionwindowsnj.com: 10 of 11 sections used (1 promotional excluded); rhinoroofingnj.com: 1 of 3 sections used (2 promotional excluded). Concepts taught on only one site: ceil (precisionwindowsnj.com), strip (precisionwindowsnj.com), fasten (precisionwindowsnj.com), counti (emergencyroofrepairnj.net), proble (precisionwindowsnj.com). Topic-wide words ignored: jersey, expert, serv, stat, team, ready, respon, water."
+   }
+  ],
+  "reason": "Competitor pages were read but share no common reader task.",
+  "next_action": "Add more readable competitor articles for the same query, or accept the page as is.",
+  "evidence_status": {
+   "decision": "DATA_BLOCKED",
+   "search_intent_confirmed": true,
+   "competitor_content_observed": true,
+   "destination_fully_examined": true,
+   "missing_task_established": false,
+   "draft_checked": false,
+   "factual_claims_confirmed": false,
+   "publication_approved": false,
+   "copy_ready": false,
+   "verified_gap": false,
+   "label": "EVIDENCE_INCOMPLETE"
+  },
+  "requires_editor_approval": true,
+  "case_study_unchanged": true,
+  "copy_status": "NOT_AVAILABLE_DATA_BLOCKED"
+ },
+ "reader_task_coverage": {
+  "status": "READER_TASK_COVERAGE_OBSERVED",
+  "method": "TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF",
+  "task_set": "DERIVED_FROM_COMPETITOR_SECTIONS",
+  "serp_intent": "LOCAL_SERVICE",
+  "destination_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "destination_truncated": false,
+  "destination_capture": {
+   "raw_bytes": 73181,
+   "raw_cap_bytes": 2500000,
+   "raw_cap_hit": false,
+   "readable_chars": 41059,
+   "readable_limit": 600000,
+   "cause": null
+  },
+  "destination_sections": [
+   {
+    "heading": "(introduction)",
+    "words": 11
+   },
+   {
+    "heading": "24 Hour Emergency Roof Repair NJ — Immediate 24/7 Dispatch",
+    "words": 103
+   },
+   {
+    "heading": "📑 In This Guide",
+    "words": 121
+   },
+   {
+    "heading": "24 Hour Emergency Roof Repair NJ — What to Do Right Now",
+    "words": 22
+   },
+   {
+    "heading": "🚨 5 Steps in a Roof Emergency",
+    "words": 188
+   },
+   {
+    "heading": "How Fast Can You Get Emergency Roof Repair in NJ?",
+    "words": 65
+   },
+   {
+    "heading": "What Qualifies as a 24 Hour Emergency Roof Repair Situation in NJ?",
+    "words": 131
+   },
+   {
+    "heading": "⚠️ Don't Wait It Out",
+    "words": 58
+   },
+   {
+    "heading": "What Does Emergency Roof Repair Cost in NJ?",
+    "words": 93
+   },
+   {
+    "heading": "What You Receive Before Work Starts",
+    "words": 27
+   },
+   {
+    "heading": "Does NJ homeowner's insurance cover emergency roof repair?",
+    "words": 48
+   },
+   {
+    "heading": "How Long Does 24 Hour Emergency Roof Repair in NJ Take?",
+    "words": 117
+   },
+   {
+    "heading": "Why Choose Perfect Roofing Team LLC?",
+    "words": 123
+   },
+   {
+    "heading": "Choosing a 24 Hour Emergency Roof Repair NJ Contractor",
+    "words": 29
+   },
+   {
+    "heading": "🔑 What to Verify Before You Call",
+    "words": 111
+   },
+   {
+    "heading": "Emergency Roof Repair in Bergen and Hudson County, NJ",
+    "words": 65
+   },
+   {
+    "heading": "24 Hour Emergency Roof Repair NJ — All 21 Counties",
+    "words": 23
+   },
+   {
+    "heading": "Roof Emergency in NJ? Call Right Now — We Answer 24/7",
+    "words": 32
+   },
+   {
+    "heading": "24 Hour Emergency Roof Repair NJ — Frequently Asked Questions",
+    "words": 346
+   },
+   {
+    "heading": "📚 Related Roofing Services",
+    "words": 131
+   }
+  ],
+  "competitors_considered": [
+   {
+    "url": "https://emergencyroofrepairnj.net/",
+    "host": "emergencyroofrepairnj.net",
+    "partial": false,
+    "sections": 4
+   },
+   {
+    "url": "https://precisionwindowsnj.com/emergency-roof-repair-nj",
+    "host": "precisionwindowsnj.com",
+    "partial": false,
+    "sections": 11
+   },
+   {
+    "url": "https://www.rhinoroofingnj.com/emergency-roof-repair",
+    "host": "rhinoroofingnj.com",
+    "partial": false,
+    "sections": 3
+   }
+  ],
+  "competitor_diagnostics": {
+   "received": 3,
+   "without_html": 0,
+   "with_no_readable_sections": 0,
+   "used": 3,
+   "used_partial_capture": 0,
+   "used_complete_capture": 3,
+   "distinct_hosts": 3
+  },
+  "task_derivation": {
+   "hosts": [
+    {
+     "host": "emergencyroofrepairnj.net",
+     "sections_read": 4,
+     "sections_used": 3,
+     "sections_excluded_as_promotional": 1,
+     "headings": [
+      "Emergency Roof Repair NJ Your Trusted 24/7 Roofing Experts A",
+      "Why Choose Emergency Roof Repair NJ?",
+      "At Emergency Roof Repair NJ, we pride ourselves on serving e"
+     ]
+    },
+    {
+     "host": "precisionwindowsnj.com",
+     "sections_read": 11,
+     "sections_used": 10,
+     "sections_excluded_as_promotional": 1,
+     "headings": [
+      "Emergency Roof Repair in North New Jersey",
+      "What to do before anyone gets there",
+      "The bulging ceiling, and why the right move is to put a hole",
+      "How a tarp is actually anchored — and why most of them fail",
+      "What a tarp buys you — and what it can't cover",
+      "When it isn't a leak — limbs, punctures, and the order the w",
+      "Nor'easter season is emergency season",
+      "Photograph it before we cover it — and don't sign the big co"
+     ]
+    },
+    {
+     "host": "rhinoroofingnj.com",
+     "sections_read": 3,
+     "sections_used": 1,
+     "sections_excluded_as_promotional": 2,
+     "headings": [
+      "Act Now for Emergency Roof Repair!"
+     ]
+    }
+   ],
+   "concepts_on_one_site_only": [
+    {
+     "concept": "ceil",
+     "site": "precisionwindowsnj.com"
+    },
+    {
+     "concept": "strip",
+     "site": "precisionwindowsnj.com"
+    },
+    {
+     "concept": "fasten",
+     "site": "precisionwindowsnj.com"
+    },
+    {
+     "concept": "counti",
+     "site": "emergencyroofrepairnj.net"
+    },
+    {
+     "concept": "proble",
+     "site": "precisionwindowsnj.com"
+    },
+    {
+     "concept": "wrapp",
+     "site": "precisionwindowsnj.com"
+    },
+    {
+     "concept": "batten",
+     "site": "precisionwindowsnj.com"
+    },
+    {
+     "concept": "struct",
+     "site": "precisionwindowsnj.com"
+    }
+   ],
+   "topic_wide_words_ignored": [
+    "jersey",
+    "expert",
+    "serv",
+    "stat",
+    "team",
+    "ready",
+    "respon",
+    "water"
+   ]
+  },
+  "unverifiable_site_pages": [],
+  "tasks": [],
+  "supported_task_codes": [],
+  "gap_task_codes": [],
+  "covered_task_codes": [],
+  "linked_elsewhere_task_codes": [],
+  "destination_section_headings": [
+   "(introduction)",
+   "24 Hour Emergency Roof Repair NJ — Immediate 24/7 Dispatch",
+   "📑 In This Guide",
+   "24 Hour Emergency Roof Repair NJ — What to Do Right Now",
+   "🚨 5 Steps in a Roof Emergency",
+   "How Fast Can You Get Emergency Roof Repair in NJ?",
+   "What Qualifies as a 24 Hour Emergency Roof Repair Situation in NJ?",
+   "⚠️ Don't Wait It Out",
+   "What Does Emergency Roof Repair Cost in NJ?",
+   "What You Receive Before Work Starts",
+   "Does NJ homeowner's insurance cover emergency roof repair?",
+   "How Long Does 24 Hour Emergency Roof Repair in NJ Take?",
+   "Why Choose Perfect Roofing Team LLC?",
+   "Choosing a 24 Hour Emergency Roof Repair NJ Contractor",
+   "🔑 What to Verify Before You Call",
+   "Emergency Roof Repair in Bergen and Hudson County, NJ",
+   "24 Hour Emergency Roof Repair NJ — All 21 Counties",
+   "Roof Emergency in NJ? Call Right Now — We Answer 24/7",
+   "24 Hour Emergency Roof Repair NJ — Frequently Asked Questions",
+   "📚 Related Roofing Services"
+  ]
+ },
+ "destination_section_comparison": {
+  "status": "FULL_SECTION_COMPARISON_RESEARCH_ONLY",
+  "target_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "own_html_truncated": false,
+  "protected_source_url": "https://perfectroofingteam.com/",
+  "destination_identity": {
+   "url": "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+   "final_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "resolves_to_source": false,
+   "basis": "PERMANENT_REDIRECT_TO_FINAL_PAGE",
+   "source_url": "https://perfectroofingteam.com/",
+   "source_protected": false,
+   "alias_of": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/ → https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/ as an alias. The final page is a locked Case Study: edits to it are blocked until the Case Study measurement cycle ends; research continues.",
+   "destination_locked": true,
+   "destination_protected": true,
+   "locked_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/"
+  }
+ },
+ "growth_decision": {
+  "protection": {
+   "case_study_locked": true,
+   "preserve_existing_top_rankings": false,
+   "publication_allowed": false,
+   "automatic_page_changes": false
+  },
+  "protected_queries": [],
+  "primary_next_action": {
+   "code": "VERIFY_INTENT_AND_EXISTING_DESTINATION",
+   "title": "Investigate clicks for \"emergency roof repair nj\"",
+   "query": "emergency roof repair nj",
+   "metrics": {
+    "impressions": 559,
+    "clicks": 0,
+    "ctr_pct": 0,
+    "average_position": 50.88550983899821,
+    "imported_at": "2026-10-01T09:49:57.000Z"
+   },
+   "reason": "559 exact-page impressions and 0 clicks; average position 50.9 in Search Console data imported Thu Oct 01 (historical, not a current ranking; rows of the source page, not of the destination). The average position is far beyond the first page, so ranking relative to live competitors is a larger obstacle than the snippet.",
+   "instruction": "Compare the live search intent with the destination URL and existing same-site pages. If the existing page fits, propose one targeted improvement on that URL for editorial review. Do not create another page by default.",
+   "destination": {
+    "url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+    "page_id": 2290,
+    "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+    "coverage": 1,
+    "keyword": "emergency roof repair nj",
+    "competing_same_site_pages": [
+     "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/"
+    ],
+    "tracked_url": "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+    "tracked_page_id": 2359,
+    "url_identity": "PERMANENT_REDIRECT",
+    "http_statuses": [
+     301
+    ]
+   },
+   "source_page_signal": {
+    "type": "SOURCE_PAGE_SURFACES_FOR_QUERY_OWNED_BY_ANOTHER_PAGE",
+    "note": "These are the SOURCE page’s rows. They are not performance data for the destination page.",
+    "source_page_url": "https://perfectroofingteam.com/"
+   },
+   "query_source": "VERIFIED_EXACT_PAGE_GSC",
+   "related_pages_to_check": [
+    "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+    "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+    "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/"
+   ],
+   "stop_before": "No title/H1 rewrite, new spoke, consolidation, publication or Case Study baseline change without separate evidence and owner approval.",
+   "stage": "RESEARCH_STARTING_POINT",
+   "superseded_by": "editorial_decision_gate"
+  }
+ }
+}

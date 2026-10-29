@@ -46,7 +46,13 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  facts.push({code:'DESTINATION_INTENT',value:destinationIntent?.class||null,verdict:destinationIntent?.verdict||'UNVERIFIED'});
  const evidenceFor=t=>[...t.competitor_support.slice(0,2).map(x=>({type:'COMPETITOR',source_url:x.url,heading:x.heading,excerpt:x.excerpt.slice(0,300)})),
   ...t.destination.passages.slice(0,1).map(x=>({type:'OWN_PAGE',source_url:target,heading:x.heading,excerpt:x.text}))];
- const blocked=(code,detail,reason,next)=>({...base,decision:'DATA_BLOCKED',blocker_code:code,missing_evidence:[{code,detail}],attempted_sources:attempts,reason,next_action:next});
+ // A protected destination stays the primary outcome for every later block too; the research gap is then a limitation.
+ const blocked=(code,detail,reason,next)=>protectedId&&code!=='DESTINATION_IS_PROTECTED_CASE_STUDY'?
+  {...base,decision:'DATA_BLOCKED',blocker_code:'DESTINATION_IS_PROTECTED_CASE_STUDY',
+   missing_evidence:[{code:'DESTINATION_IS_PROTECTED_CASE_STUDY',detail:protectedMessage(protectedId)},{code,detail}],research_limitations:[{code,detail}],attempted_sources:attempts,
+   reason:'The page for this query is a protected Case Study; no website change is required now. Separately: '+reason,
+   next_action:'Keep the page and any working redirect unchanged until the Case Study measurement cycle ends. Research limitations are listed separately.'}:
+  {...base,decision:'DATA_BLOCKED',blocker_code:code,missing_evidence:[{code,detail}],attempted_sources:attempts,reason,next_action:next};
  // Every outcome below (a new page, an edit, or "nothing missing") is defined by shared reader tasks; without one there is no plan.
  if(!supported.length)
   return blocked('SHARED_COMPETITOR_REQUIREMENTS','No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. '+explainNoShared(coverage.task_derivation),
