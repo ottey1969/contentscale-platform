@@ -24,6 +24,19 @@ function ensureTables(pool){
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     finished_at TIMESTAMPTZ)`);
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS access_label TEXT');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS invite_id BIGINT');
+  // Personal invitations: only a SHA-256 hash of the link token is stored.
+  await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
+    id BIGSERIAL PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE,
+    label TEXT NOT NULL,
+    email_lock TEXT,
+    max_checks INTEGER NOT NULL,
+    used_checks INTEGER NOT NULL DEFAULT 0,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    last_used_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   await pool.query('CREATE INDEX IF NOT EXISTS growth_free_checks_email_idx ON growth_free_checks(email,created_at)');
   await pool.query('CREATE INDEX IF NOT EXISTS growth_free_checks_url_idx ON growth_free_checks(url,query,created_at)');
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_hire_requests(
@@ -59,13 +72,13 @@ async function recentResult(pool,{url,query}){
    WHERE url=$1 AND query=$2 AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query])).rows[0]||null;
 }
 
-async function createCheck(pool,{email,ipHash,url,host,query,marketingConsent,cached,accessLabel=null}){
+async function createCheck(pool,{email,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null}){
  const row=(await pool.query(`INSERT INTO growth_free_checks
-   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label)
-   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15)
+   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id)
+   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16)
    RETURNING id,public_id,access_key,status`,
   [token(9),token(18),email,ipHash,url,host,query,cached?'DONE':'QUEUED',cached?cached.decision:null,
-   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel])).rows[0];
+   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId])).rows[0];
  return row;
 }
 
@@ -106,4 +119,39 @@ async function forgetEmail(pool,email){
  return {checks:c.rowCount||0,hire_requests:h.rowCount||0};
 }
 
-module.exports={ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+const hashToken=t=>crypto.createHash('sha256').update(String(t)).digest('hex');
+const INVITE_COLUMNS='id,label,email_lock,max_checks,used_checks,expires_at,revoked_at,last_used_at,created_at';
+function inviteStatus(inv,now=Date.now()){
+ if(!inv)return 'NOT_FOUND';
+ if(inv.revoked_at)return 'REVOKED';
+ if(new Date(inv.expires_at).getTime()<=now)return 'EXPIRED';
+ if(Number(inv.used_checks)>=Number(inv.max_checks))return 'USED_UP';
+ return 'ACTIVE';
+}
+// The link token is returned once, at creation; it cannot be recovered later.
+async function createInvite(pool,{label,emailLock=null,maxChecks,days}){
+ const t=token(24);
+ const row=(await pool.query(`INSERT INTO growth_free_invites(token_hash,label,email_lock,max_checks,expires_at)
+   VALUES ($1,$2,$3,$4,NOW()+make_interval(days=>$5)) RETURNING ${INVITE_COLUMNS}`,[hashToken(t),label,emailLock,maxChecks,days])).rows[0];
+ return {...row,token:t};
+}
+async function getInvite(pool,t){
+ if(!/^[A-Za-z0-9_-]{20,80}$/.test(String(t||'')))return null;
+ return (await pool.query(`SELECT ${INVITE_COLUMNS} FROM growth_free_invites WHERE token_hash=$1 LIMIT 1`,[hashToken(t)])).rows[0]||null;
+}
+// Atomic: two simultaneous requests can never use more than max_checks.
+async function consumeInvite(pool,id){
+ return (await pool.query(`UPDATE growth_free_invites SET used_checks=used_checks+1,last_used_at=NOW()
+   WHERE id=$1 AND revoked_at IS NULL AND expires_at>NOW() AND used_checks<max_checks RETURNING ${INVITE_COLUMNS}`,[id])).rows[0]||null;
+}
+async function refundInvite(pool,id){
+ await pool.query('UPDATE growth_free_invites SET used_checks=GREATEST(used_checks-1,0) WHERE id=$1',[id]);
+}
+async function listInvites(pool){
+ return (await pool.query(`SELECT ${INVITE_COLUMNS} FROM growth_free_invites ORDER BY id DESC LIMIT 200`)).rows;
+}
+async function revokeInvite(pool,id){
+ return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
+}
+
+module.exports={createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

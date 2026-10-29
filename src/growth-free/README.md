@@ -22,6 +22,25 @@ It reuses the existing Growth research engine unchanged
 | `routes.cjs` | Pages, API, limits, access keys, admin |
 | `server.cjs` | Runs the tool on its own (own domain / own Railway service) |
 
+## Who can use it — three ways
+
+| Who | How | Limits |
+|---|---|---|
+| **You** | `/free-growth/admin` → log in with `GROWTH_FREE_ADMIN_KEY` → "Run a check yourself" | None (24-hour cache still applies) |
+| **Someone you invite** | Admin → "Invite someone" → send the personal link | Per link: number of checks (default 3), validity (default 7 days), optionally only one email address. Withdraw with one click; takes effect immediately. |
+| **The public on your own site** | An access key with `hosts` (below) — no code in the link | Per email, per IP, per key per day + total daily cap |
+
+Invitation links:
+* are 32 random characters; only a SHA-256 fingerprint is stored, so the link is shown once and cannot be recovered (create a new one if lost);
+* with an email lock, a shared link is useless to anyone else;
+* a check served from the 24-hour cache, or a check that fails, does not use up the invitation;
+* work on any domain (no site key needed) and cannot be embedded in other sites.
+
+Admin login: a signed session cookie (HttpOnly, SameSite=Strict, Secure on https, 12 hours);
+changes need an extra header that other websites cannot send; 10 wrong attempts per IP block
+login for 15 minutes; the admin key is never accepted in a URL and must be at least 16 characters.
+Changing `GROWTH_FREE_ADMIN_KEY` ends every session.
+
 ## Access keys — where it may be used
 
 Nothing runs without a valid key. Without one, the page says "not activated
@@ -63,7 +82,7 @@ Embed on a website:
 | `GROWTH_FREE_PER_EMAIL_PER_DAY` | 3 | Default per-email limit |
 | `GROWTH_FREE_PER_IP_PER_DAY` | 3 | Per visitor IP (stored hashed) |
 | `GROWTH_FREE_CONCURRENCY` | 2 | Checks running at the same time |
-| `GROWTH_FREE_ADMIN_KEY` | — | Turns on `/free-growth/admin` (leads list, CSV, delete by email) |
+| `GROWTH_FREE_ADMIN_KEY` | — | 16+ characters. Turns on `/free-growth/admin` (own checks, invitations, leads, CSV, delete by email) |
 | `GROWTH_FREE_HIRE_WEBHOOK_URL` | — | https URL that receives every "do it for me" request (Slack, Zapier, Make) |
 | `GROWTH_FREE_CONTACT_URL` / `_BRAND` / `_SERVICE_TEXT` | — | Defaults for keys that do not set them |
 | `GROWTH_FREE_PRIVACY_URL` | — | Privacy link in the footer |
@@ -82,9 +101,9 @@ from the stored result: no new paid search, and it does not count toward limits.
 
 ## Admin
 
-`/free-growth/admin`: enter `GROWTH_FREE_ADMIN_KEY` to see the hire requests and
-checks, download a CSV, or (API) `POST /api/free-growth/admin/forget {"email":…}`
-with header `x-admin-key` to delete everything stored for an email address.
+`/free-growth/admin`: log in with `GROWTH_FREE_ADMIN_KEY` to run your own checks, create and
+withdraw invitations, see hire requests and checks, download a CSV and delete everything stored
+for an email address. Scripts can use the same API with the header `x-admin-key`.
 
 ## Tests
 

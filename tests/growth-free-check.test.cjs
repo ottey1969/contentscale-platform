@@ -68,14 +68,22 @@ test('every decision has an honest plain-language summary',()=>{
 });
 
 function memoryStore(){
- const checks=[],hires=[];let id=0;
- return {checks,hires,
+ const checks=[],hires=[],invites=[];let id=0;
+ const inv=i=>invites.find(x=>x.id===i);
+ return {checks,hires,invites,
+  async createInvite(_p,{label,emailLock,maxChecks,days}){const t='invite-token-'+(invites.length+1)+'-abcdefghijkl';
+   const v={id:invites.length+1,token_hash:t,label,email_lock:emailLock,max_checks:maxChecks,used_checks:0,expires_at:new Date(Date.now()+days*864e5),revoked_at:null};invites.push(v);return {...v,token:t}},
+  async getInvite(_p,t){return invites.find(i=>i.token_hash===t)||null},
+  async consumeInvite(_p,i){const v=inv(i);if(v.revoked_at||v.expires_at<=new Date()||v.used_checks>=v.max_checks)return null;v.used_checks++;return v},
+  async refundInvite(_p,i){const v=inv(i);v.used_checks=Math.max(0,v.used_checks-1)},
+  async listInvites(){return invites},
+  async revokeInvite(_p,i){const v=inv(i);if(!v||v.revoked_at)return null;v.revoked_at=new Date();return {id:i}},
   async ensureTables(){},
   async usage(_p,{email,ipHash,accessLabel}){const d=checks.filter(c=>!c.cached_from);return {by_email:d.filter(c=>c.email===email).length,by_ip:d.filter(c=>c.ip_hash===ipHash).length,total:d.length,by_key:d.filter(c=>c.access_label===accessLabel).length}},
   async recentResult(_p,{url,query}){return [...checks].reverse().find(c=>c.url===url&&c.query===query&&c.status==='DONE')||null},
   async createCheck(_p,o){const c={id:++id,public_id:'pub'+id,access_key:'key'+id+'abcdefgh',email:o.email,ip_hash:o.ipHash,url:o.url,query:o.query,
    status:o.cached?'DONE':'QUEUED',decision:o.cached?o.cached.decision:null,summary:o.cached?o.cached.summary:null,report:o.cached?o.cached.report:null,
-   cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,finished_at:null};checks.push(c);return c},
+   cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
   async getCheck(_p,pid,key){const c=checks.find(c=>c.public_id===pid);return c&&c.access_key===key?c:null},
   async createHireRequest(_p,o){const h={id:hires.length+1,...o};hires.push(h);return h},
@@ -92,7 +100,7 @@ async function server(opts={}){
  const service=registerFreeGrowth(app,null,{config:{...freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:KEYS}),perIp:50,daily:10,...opts.config},engine,engineDeps,storage,
   fetchImpl:async(url,init)=>{hooks.push({url,body:JSON.parse(init.body)});return {ok:true}}});
  const srv=app.listen(0);const base='http://127.0.0.1:'+srv.address().port;
- const post=async(p,b,h={})=>{const r=await fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json',...h},body:JSON.stringify(b)});return {status:r.status,body:await r.json()}};
+ const post=async(p,b,h={})=>{const r=await fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json',...h},body:JSON.stringify(b)});return {status:r.status,headers:r.headers,body:await r.json()}};
  const get=async(p,h={})=>{const r=await fetch(base+p,{headers:h});const type=r.headers.get('content-type')||'';return {status:r.status,headers:r.headers,body:type.includes('json')?await r.json():await r.text()}};
  return {srv,base,post,get,storage,calls,hooks,service};
 }
@@ -143,7 +151,7 @@ test('failed research is reported honestly',async t=>{
 });
 
 test('hire request is stored and forwarded; admin needs the key',async t=>{
- const s=await server({config:{adminKey:'admin-secret-1'}});t.after(()=>s.srv.close());
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
  await s.post('/api/free-growth/checks',ok);await s.service.idle();
  assert.equal((await s.post('/api/free-growth/checks/pub1/hire?k=key1abcdefgh',{name:'Ann',email:'ann@acme.example',consent:false})).status,400);
  assert.equal((await s.post('/api/free-growth/checks/pub1/hire?k=bad',{name:'Ann',email:'ann@acme.example',consent:true})).status,404);
@@ -152,11 +160,11 @@ test('hire request is stored and forwarded; admin needs the key',async t=>{
  assert.equal(s.hooks.length,0,'no webhook configured');
  assert.equal((await s.get('/api/free-growth/admin/leads')).status,404);
  assert.equal((await s.get('/api/free-growth/admin/leads',{'x-admin-key':'wrong'})).status,404);
- const leads=await s.get('/api/free-growth/admin/leads',{'x-admin-key':'admin-secret-1'});
+ const leads=await s.get('/api/free-growth/admin/leads',{'x-admin-key':'admin-secret-0123456789'});
  assert.equal(leads.body.hires[0].name,'Ann');
- const csv=await s.get('/api/free-growth/admin/leads.csv',{'x-admin-key':'admin-secret-1'});
+ const csv=await s.get('/api/free-growth/admin/leads.csv',{'x-admin-key':'admin-secret-0123456789'});
  assert.match(csv.body,/"'=HYPERLINK/,'spreadsheet formulas are neutralised');
- const forget=await s.post('/api/free-growth/admin/forget',{email:'owner@acme-roofing.example'},{'x-admin-key':'admin-secret-1'});
+ const forget=await s.post('/api/free-growth/admin/forget',{email:'owner@acme-roofing.example'},{'x-admin-key':'admin-secret-0123456789'});
  assert.equal(forget.body.deleted.checks,1);
 });
 
@@ -250,4 +258,89 @@ test('no key needed on your own domain (hosts); other domains still need the key
  const res=JSON.parse((await call('GET','/api/free-growth/checks/'+id.id+'?k='+id.key,'free.contentscale.site')).body);
  assert.equal(res.new_check_url,'/free-growth','no key in the "new check" link on your own domain');
  assert.equal(storage.checks[0].access_label,'own site');
+});
+
+const ADMIN={'x-admin-key':'admin-secret-0123456789'};
+test('personal invitations: own quota, expiry, email lock, revoke; cache and failures do not cost a check',async t=>{
+ let fail=false;
+ const s=await server({config:{adminKey:'admin-secret-0123456789'},engine:async(input,deps)=>fail?{statusCode:503,report:{success:false,code:'AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE'}}:runFreeGrowthResearch(input,deps)});
+ t.after(()=>s.srv.close());
+ assert.equal((await s.post('/api/free-growth/admin/invites',{label:'Jan'})).status,404,'only the owner can invite');
+ assert.equal((await s.post('/api/free-growth/admin/invites',{label:''},ADMIN)).status,400);
+ const made=await s.post('/api/free-growth/admin/invites',{label:'Jan — Acme',email_lock:'Jan@Acme.example',max_checks:2,days:7},ADMIN);
+ assert.equal(made.status,200);
+ const token=new URL(made.body.link).searchParams.get('invite');
+ assert.match(made.body.note,/cannot be shown again/);assert.equal(made.body.invite.token,undefined);
+ assert.equal(s.storage.invites[0].email_lock,'jan@acme.example');
+ // The invitation page works on any domain, without a site key.
+ const pageRes=await s.get('/free-growth?invite='+token);
+ assert.equal(pageRes.status,200);assert.match(pageRes.body,/Personal invitation/);assert.match(pageRes.body,/2 of 2 checks left/);
+ assert.match(pageRes.body,/j\*\*\*@acme\.example/);assert.doesNotMatch(pageRes.body,/jan@acme\.example/,'the full address is not revealed to whoever holds the link');
+ assert.equal(pageRes.headers.get('referrer-policy'),'no-referrer');
+ const body=x=>({invite:token,url:URL_,query:'roof repair lodi nj',email:'jan@acme.example',consent:true,...x});
+ // Shared link: someone else's email does not work.
+ const shared=await s.post('/api/free-growth/checks',body({email:'someone@else.example'}));
+ assert.equal(shared.status,403);assert.match(shared.body.error,/only works with the email address/);
+ assert.equal(s.storage.invites[0].used_checks,0);
+ assert.equal((await s.post('/api/free-growth/checks',body({}))).status,202);await s.service.idle();
+ assert.equal(s.storage.invites[0].used_checks,1);assert.equal(s.storage.checks[0].access_label,'invite: Jan — Acme');
+ // Same page + term again: served from cache, costs nothing.
+ assert.equal((await s.post('/api/free-growth/checks',body({}))).body.status,'DONE');assert.equal(s.storage.invites[0].used_checks,1);
+ // A failed check is given back.
+ fail=true;assert.equal((await s.post('/api/free-growth/checks',body({url:'https://acme.example/x/'}))).status,202);await s.service.idle();
+ assert.equal(s.storage.invites[0].used_checks,1,'failed research refunds the check');fail=false;
+ assert.equal((await s.post('/api/free-growth/checks',body({url:'https://acme.example/y/'}))).status,202);await s.service.idle();
+ const used=await s.post('/api/free-growth/checks',body({url:'https://acme.example/z/'}));
+ assert.equal(used.status,403);assert.match(used.body.error,/All checks of this invitation have been used/);
+ assert.match((await s.get('/free-growth?invite='+token)).body,/All checks of this invitation have been used/);
+ // Revoke: link stops immediately.
+ const second=await s.post('/api/free-growth/admin/invites',{label:'Piet'},ADMIN);
+ const t2=new URL(second.body.link).searchParams.get('invite');
+ assert.equal((await s.post('/api/free-growth/admin/invites/2/revoke',{},ADMIN)).status,200);
+ assert.equal((await s.post('/api/free-growth/admin/invites/2/revoke',{},ADMIN)).status,404,'already withdrawn');
+ assert.match((await s.get('/free-growth?invite='+t2)).body,/This invitation was withdrawn/);
+ assert.equal((await s.post('/api/free-growth/checks',{invite:t2,url:URL_,email:'p@x.example',consent:true})).status,403);
+ // Expired.
+ const third=await s.post('/api/free-growth/admin/invites',{label:'Old'},ADMIN);s.storage.invites[2].expires_at=new Date(Date.now()-1000);
+ assert.match((await s.get('/free-growth?invite='+new URL(third.body.link).searchParams.get('invite'))).body,/This invitation has expired/);
+ assert.equal((await s.get('/free-growth?invite=made-up-token-123456789')).status,403);
+ const list=await s.get('/api/free-growth/admin/invites',ADMIN);
+ assert.deepEqual(list.body.invites.map(i=>i.status),['USED_UP','REVOKED','EXPIRED']);
+});
+
+test('admin: login session (HttpOnly, SameSite=Strict, 12h), CSRF header, brute-force limit, own checks without limits',async t=>{
+ const s=await server({config:{adminKey:'admin-secret-0123456789',perEmail:1}});t.after(()=>s.srv.close());
+ assert.equal((await s.post('/api/free-growth/admin/login',{key:'wrong'})).status,401);
+ const ok2=await s.post('/api/free-growth/admin/login',{key:'admin-secret-0123456789'});
+ assert.equal(ok2.status,200);
+ const cookie=ok2.headers.get('set-cookie');
+ assert.match(cookie,/^gf_admin=\d+\.[A-Za-z0-9_-]+; Path=\/; HttpOnly; SameSite=Strict; Max-Age=43200/);
+ const jar={cookie:cookie.split(';')[0]};
+ assert.equal((await s.get('/api/free-growth/admin/invites',jar)).status,200,'GET with session');
+ assert.equal((await s.post('/api/free-growth/admin/invites',{label:'x'},jar)).status,404,'cookie alone cannot write (CSRF)');
+ assert.equal((await s.post('/api/free-growth/admin/invites',{label:'x'},{...jar,'X-Requested-With':'growth-free-admin'})).status,200);
+ const forged={cookie:'gf_admin='+(Date.now()+1e6)+'.forged'};
+ assert.equal((await s.get('/api/free-growth/admin/invites',forged)).status,404);
+ const expired=cookie.split(';')[0].replace(/=\d+\./,'='+(Date.now()-1)+'.');
+ assert.equal((await s.get('/api/free-growth/admin/invites',{cookie:expired})).status,404,'a changed expiry breaks the signature');
+ const page=await s.get('/free-growth/admin',jar);assert.match(page.body,/Invite someone/);
+ for(const m of page.body.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
+ // Owner checks: no daily limit (perEmail is 1 here).
+ const w={...jar,'X-Requested-With':'growth-free-admin'};
+ for(const path of ['a','b','c'])assert.equal((await s.post('/api/free-growth/admin/run',{url:'https://acme.example/'+path+'/'},w)).status,202);
+ await s.service.idle();
+ assert.ok(s.storage.checks.every(c=>c.access_label==='admin'));
+ const r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');assert.equal(r.body.new_check_url,'/free-growth/admin');
+ // Brute force: 10 wrong attempts, then blocked even with the right key.
+ for(let i=0;i<10;i++)await s.post('/api/free-growth/admin/login',{key:'nope'+i});
+ assert.equal((await s.post('/api/free-growth/admin/login',{key:'admin-secret-0123456789'})).status,429);
+ const out=await s.post('/api/free-growth/admin/logout',{},w);assert.match(out.headers.get('set-cookie'),/Max-Age=0/);
+});
+
+test('admin stays off with a missing or short key; the key is never accepted in the URL',async t=>{
+ assert.equal(freeGrowthConfig({GROWTH_FREE_ADMIN_KEY:'short'}).adminKey,'');
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
+ assert.equal((await s.get('/api/free-growth/admin/leads?key=admin-secret-0123456789')).status,404);
+ const off=await server({config:{adminKey:''}});t.after(()=>off.srv.close());
+ assert.equal((await off.post('/api/free-growth/admin/login',{key:''})).status,404);
 });

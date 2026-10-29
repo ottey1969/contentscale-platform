@@ -2,6 +2,7 @@
 // Free public Growth check, separate from the Tracker: own pages, own API, own
 // tables, own settings (GROWTH_FREE_* environment variables). It can be mounted
 // in the main app or run on its own domain with server.cjs.
+const crypto=require('node:crypto');
 const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
@@ -45,7 +46,8 @@ function freeGrowthDefaults(env){
   perIp:int(env.GROWTH_FREE_PER_IP_PER_DAY,3),
   daily:int(env.GROWTH_FREE_DAILY_LIMIT,50),
   concurrency:Math.max(1,int(env.GROWTH_FREE_CONCURRENCY,2)),
-  adminKey:env.GROWTH_FREE_ADMIN_KEY||'',
+  // Admin needs a long secret; a short one keeps the admin switched off.
+  adminKey:String(env.GROWTH_FREE_ADMIN_KEY||'').length>=16?String(env.GROWTH_FREE_ADMIN_KEY):'',
   ipSalt:env.GROWTH_FREE_IP_SALT||env.SESSION_SECRET||'growth-free-check',
   contactUrl:/^https:\/\//.test(env.GROWTH_FREE_CONTACT_URL||'')?env.GROWTH_FREE_CONTACT_URL:'',
   privacyUrl:/^https?:\/\//.test(env.GROWTH_FREE_PRIVACY_URL||'')?env.GROWTH_FREE_PRIVACY_URL:'',
@@ -80,17 +82,18 @@ blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color
 </style></head><body><main>${body}<p class="muted" style="margin-top:40px">${esc(cfg.brand)} · Free Growth check${cfg.privacyUrl?` · <a href="${esc(cfg.privacyUrl)}">Privacy</a>`:''}</p></main></body></html>`;
 }
 
-function formPage(cfg,api,base,accessKey){
+function formPage(cfg,api,base,accessKey,invite=null){
  return page('Free Growth check — what is your page missing?',`
 <p class="kicker">Free · no account needed</p>
 <h1>What does your page miss compared to the pages Google ranks?</h1>
 <p class="lead">Enter one page of your website. The check reads your page and the pages that rank for your search, and tells you in plain language whether to change something — or not. You also get the full research data (JSON) to work with yourself.</p>
+${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
 <form id="f" class="card" novalidate>
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
  <label for="query">Search term (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. roof repair lodi nj">
  <small>The words your customers type into Google. Leave empty to let the check derive it from your page.</small>
  <label for="email">Your email</label><input id="email" name="email" type="email" required maxlength="200" placeholder="you@company.com">
- <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result. Max ${cfg.perEmail} free checks per day.</span></label>
+ <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` Max ${cfg.perEmail} free checks per day.`}</span></label>
  <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
  <p><button type="submit">Run the free check</button> <small id="s" role="status"></small></p>
 </form>
@@ -103,7 +106,7 @@ function formPage(cfg,api,base,accessKey){
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
 b.disabled=true;s.textContent='Starting…';
-try{var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},url:f.url.value,query:f.query.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked})});
+try{var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err.message;s.className='error';b.disabled=false}});
 </script>`,cfg);
@@ -140,6 +143,12 @@ poll(0);
 </script>`,cfg);
 }
 
+const INVITE_TEXT={REVOKED:'This invitation was withdrawn.',EXPIRED:'This invitation has expired.',USED_UP:'All checks of this invitation have been used.',NOT_FOUND:'This invitation link is not valid.'};
+function inviteClosed(cfg,status){
+ return page('Free Growth check',`<h1>${esc(INVITE_TEXT[status]||INVITE_TEXT.NOT_FOUND)}</h1><p class="lead">Ask the person who invited you for a new link.</p>`,cfg);
+}
+const maskEmail=e=>{const [u,d]=String(e||'').split('@');return d?(u.slice(0,1)+'***@'+d):''};
+const fmtDay=x=>{const t=new Date(x);return Number.isFinite(t.getTime())?t.toISOString().slice(0,10):''};
 function notActivated(cfg){
  return page('Free Growth check',`<h1>This free check is not activated here</h1><p class="lead">The link is missing a valid access key. Ask the website that sent you here for the correct link.</p>`,cfg);
 }
@@ -152,6 +161,49 @@ function findKey(config,value,req){
  return host?(config.accessKeys||[]).find(k=>k.hosts&&k.hosts.includes(host))||null:null;
 }
 const offerOf=k=>({brand:k.brand,contact_url:k.contactUrl||null,service_text:k.serviceText});
+
+function adminPage(cfg,api,base,loggedIn){
+ return page('Growth check — admin',`
+<h1>Free Growth check — admin</h1>
+<div id="login" class="card"${loggedIn?' hidden':''}><form id="lf"><label>Admin key<input name="key" type="password" autocomplete="current-password" required></label><p><button>Log in</button> <small id="ls" role="status"></small></p></form><p class="muted">The session lasts 12 hours on this browser only.</p></div>
+<div id="app"${loggedIn?'':' hidden'}>
+ <p><button class="ghost" id="logout" type="button">Log out</button></p>
+ <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">No limits for you. The same page and search term within 24 hours comes from the stored result.</p>
+  <form id="rf"><label>Page address<input name="url" type="url" required maxlength="500" placeholder="https://..."></label><label>Search term (optional)<input name="query" maxlength="120"></label><p><button>Run check</button> <small role="status" id="rs"></small></p></form></div>
+ <div class="card"><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
+  <form id="if"><label>For whom? (name or company)<input name="label" required maxlength="80"></label>
+  <label>Only for this email address (recommended)<input name="email_lock" type="email" maxlength="200" placeholder="name@company.com"></label>
+  <label>Number of checks<input name="max_checks" type="number" min="1" max="50" value="3"></label>
+  <label>Valid for (days)<input name="days" type="number" min="1" max="90" value="7"></label>
+  <p><button>Create invitation link</button> <small role="status" id="is"></small></p></form><div id="newlink"></div></div>
+ <h2>Invitations</h2><div id="invites"></div>
+ <h2>Leads</h2><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div>
+ <div class="card"><h2 style="margin-top:0">Delete someone's data</h2><form id="ff"><label>Email address<input name="email" type="email" required></label><p><button>Delete everything for this email</button> <small role="status" id="fs"></small></p></form></div>
+</div>
+<script>
+var API=${js(api)},H={'Content-Type':'application/json','X-Requested-With':'growth-free-admin'};
+function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function day(x){return String(x||'').slice(0,10)}
+async function post(p,b){var r=await fetch(API+p,{method:'POST',credentials:'same-origin',headers:H,body:JSON.stringify(b||{})});var d=await r.json().catch(function(){return {success:false,error:'Unavailable'}});if(r.status===404&&!d.error)d.error='Not logged in';return d}
+async function get(p){var r=await fetch(API+p,{credentials:'same-origin',cache:'no-store'});return r.json()}
+var STATUS={ACTIVE:'Active',EXPIRED:'Expired',REVOKED:'Withdrawn',USED_UP:'Used up'};
+async function load(){
+ var i=await get('/admin/invites');if(!i.success){document.getElementById('app').hidden=true;document.getElementById('login').hidden=false;return}
+ document.getElementById('invites').innerHTML=i.invites.length?i.invites.map(function(v){return '<div class="card"><strong>'+esc(v.label)+'</strong> · '+esc(STATUS[v.status]||v.status)+'<br><small>'+esc(v.used_checks)+' of '+esc(v.max_checks)+' checks used · valid until '+esc(day(v.expires_at))+(v.email_lock?' · only for '+esc(v.email_lock):' · anyone with the link')+(v.last_used_at?' · last used '+esc(day(v.last_used_at)):'')+'</small>'+(v.status==='ACTIVE'?'<p><button class="ghost revoke" data-id="'+esc(v.id)+'">Withdraw</button></p>':'')+'</div>'}).join(''):'<p class="muted">No invitations yet.</p>';
+ var d=await get('/admin/leads');
+ document.getElementById('leads').innerHTML='<h3>Hire requests ('+d.hires.length+')</h3>'+d.hires.map(function(h){return '<div class="card"><strong>'+esc(h.name)+'</strong> &lt;'+esc(h.email)+'&gt; '+esc(h.company||'')+' '+esc(h.phone||'')+'<br><small>'+esc(h.created_at)+' · '+esc(h.url)+' · '+esc(h.decision||'')+' · '+esc(h.access_label||'')+'</small><p>'+esc(h.message||'')+'</p></div>'}).join('')+
+ '<h3>Checks ('+d.checks.length+')</h3>'+d.checks.map(function(c){return '<div class="card"><strong>'+esc(c.email)+'</strong>'+(c.marketing_consent?' · may be emailed':'')+'<br><small>'+esc(c.access_label||'')+' · '+esc(c.created_at)+' · '+esc(c.status)+' · '+esc(c.decision||c.error_code||'')+(c.cached?' · cached':'')+'</small><br><a href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">'+esc(c.url)+'</a> '+esc(c.query||'')+'</div>'}).join('')}
+document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load()});
+document.getElementById('logout').addEventListener('click',async function(){await post('/admin/logout');location.reload()});
+document.getElementById('rf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
+document.getElementById('if').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('is');var d=await post('/admin/invites',{label:f.label.value,email_lock:f.email_lock.value,max_checks:Number(f.max_checks.value),days:Number(f.days.value)});if(!d.success){st.textContent=d.error;return}st.textContent='';f.reset();f.max_checks.value=3;f.days.value=7;
+ document.getElementById('newlink').innerHTML='<p class="note"><strong>Copy this link now</strong> — it cannot be shown again.<br><input readonly id="lnk" value="'+esc(d.link)+'"> <button type="button" id="cp">Copy</button></p>';document.getElementById('cp').onclick=function(){var x=document.getElementById('lnk');x.select();navigator.clipboard&&navigator.clipboard.writeText(x.value);this.textContent='Copied'};load()});
+document.addEventListener('click',async function(e){var b=e.target.closest('button.revoke');if(!b)return;if(!confirm('Withdraw this invitation? The link stops working immediately.'))return;var d=await post('/admin/invites/'+b.dataset.id+'/revoke');if(!d.success)alert(d.error);load()});
+document.getElementById('csv').addEventListener('click',async function(e){e.preventDefault();var r=await fetch(API+'/admin/leads.csv',{credentials:'same-origin'});if(!r.ok){alert('Not logged in');return}var b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='growth-free-leads.csv';a.click()});
+document.getElementById('ff').addEventListener('submit',async function(e){e.preventDefault();if(!confirm('Delete all checks and requests of this email address?'))return;var d=await post('/admin/forget',{email:e.target.email.value});document.getElementById('fs').textContent=d.success?('Deleted '+d.deleted.checks+' checks, '+d.deleted.hire_requests+' requests'):(d.error||'Failed');load()});
+if(${js(!!loggedIn)})load();
+</script>`,cfg);
+}
 
 const FAIL_TEXT={
  INTERRUPTED:'The check was interrupted. Please run it again.',
@@ -172,6 +224,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      const out=await engine({url:job.url,query:job.query},engineDeps);
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
+      if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
      }else{
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
       await storage.setStatus(pool,job.id,{status:'DONE',decision:summary.decision,summary,report:out.report});
@@ -179,6 +232,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     }catch(e){
      console.warn('[free-growth] check failed',String(e&&e.code||e&&e.message||'unknown').slice(0,80));
      await storage.setStatus(pool,job.id,{status:'FAILED',error_code:'RESEARCH_FAILED'}).catch(()=>{});
+     if(job.inviteId)await storage.refundInvite(pool,job.inviteId).catch(()=>{});
     }finally{running--;pump()}
    })();
    jobs.add(p);p.finally(()=>jobs.delete(p));
@@ -186,6 +240,18 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  }
  const resultUrl=row=>`${basePath}/r/${encodeURIComponent(row.public_id)}?k=${encodeURIComponent(row.access_key)}`;
 
+ app.get(basePath,async(req,res,next)=>{
+  if(!(req.query&&req.query.invite))return next();
+  // Personal invitation: works on any domain, limited to its own number of checks and validity.
+  try{
+   await storage.ensureTables(pool);
+   const inv=await storage.getInvite(pool,req.query.invite),status=store.inviteStatus(inv);
+   res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').set('Content-Security-Policy',"frame-ancestors 'none'");
+   if(status!=='ACTIVE')return res.status(403).type('html').send(inviteClosed(config,status));
+   res.type('html').send(formPage(config,apiPath,basePath,'',{token:String(req.query.invite),label:'',
+    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)}));
+  }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
+ });
  app.get(basePath,(req,res)=>{
   const entry=findKey(config,req.query&&req.query.key,req);
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
@@ -200,6 +266,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.post(apiPath+'/checks',async(req,res)=>{
   try{
    const b=req.body||{};
+   if(b.invite)return await startInviteCheck(req,res,b);
    const entry=findKey(config,b.key,req);
    if(!entry)return res.status(403).json({success:false,error:'This free check is not activated here'});
    const origin=req.get&&req.get('origin');
@@ -225,6 +292,34 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   }catch(e){console.error('[free-growth] start failed',e.message);res.status(503).json({success:false,error:'The free check is temporarily unavailable'})}
  });
 
+ // Shared input checks for every way of starting a check.
+ function readInput(b,res){
+  const email=clean(b.email,200).toLowerCase();
+  if(!EMAIL.test(email)){res.status(400).json({success:false,error:'Enter a valid email address'});return null}
+  if(b.consent!==true){res.status(400).json({success:false,error:'Please accept the storage notice'});return null}
+  const v=validatePublicUrl(b.url);if(v.error){res.status(400).json({success:false,error:v.error});return null}
+  return {email,url:v.url,host:v.host,query:clean(b.query,120)};
+ }
+ async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null}){
+  const cached=await storage.recentResult(pool,{url:input.url,query:input.query});
+  // A cached result costs nothing, so it never uses up an invitation.
+  if(!cached&&beforeRun&&!(await beforeRun()))return;
+  const row=await storage.createCheck(pool,{email:input.email,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId});
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,inviteId:cached?null:inviteId});pump()}
+  res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
+ }
+ async function startInviteCheck(req,res,b){
+  const input=readInput(b,res);if(!input)return;
+  await storage.ensureTables(pool);
+  const inv=await storage.getInvite(pool,b.invite),status=store.inviteStatus(inv);
+  if(status!=='ACTIVE')return res.status(403).json({success:false,error:INVITE_TEXT[status]});
+  if(inv.email_lock&&inv.email_lock!==input.email)
+   return res.status(403).json({success:false,error:'This invitation only works with the email address it was sent to'});
+  await start(res,input,{ipHash:store.hashIp(req.ip,config.ipSalt),marketingConsent:b.marketing_consent===true,
+   accessLabel:'invite: '+inv.label,inviteId:inv.id,
+   beforeRun:async()=>{if(await storage.consumeInvite(pool,inv.id))return true;res.status(403).json({success:false,error:INVITE_TEXT.USED_UP});return false}});
+ }
+
  async function load(req,res){
   try{
    await storage.ensureTables(pool);
@@ -238,7 +333,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,
    summary:row.summary||null,cached:!!row.cached_from,error_code:row.error_code||null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
-   new_check_url:(()=>{const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
+   new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
+    const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
     if(!k)return null;
     const host=String(req.hostname||'').toLowerCase().replace(/^www\./,'');
     return k.hosts.includes(host)?basePath:`${basePath}?key=${encodeURIComponent(k.key)}`;})(),
@@ -271,24 +367,81 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   }catch(e){console.error('[free-growth] hire failed',e.message);res.status(503).json({success:false,error:'Could not send your request. Please try again.'})}
  });
 
- // Admin: disabled unless GROWTH_FREE_ADMIN_KEY is set.
+ // Admin: off unless GROWTH_FREE_ADMIN_KEY (16+ characters) is set. Scripts send the
+ // key in the x-admin-key header; the admin page logs in once and gets a signed,
+ // HttpOnly, SameSite=Strict session cookie (12 hours). Changing the key ends all sessions.
+ const SESSION='gf_admin',SESSION_MS=12*3600*1000;
+ const sign=exp=>crypto.createHmac('sha256',config.adminKey).update('growth-free-admin|'+exp).digest('base64url');
+ const readCookie=(req,name)=>{for(const part of String(req.headers&&req.headers.cookie||'').split(';')){const i=part.indexOf('=');if(i>0&&part.slice(0,i).trim()===name)return part.slice(i+1).trim()}return ''};
+ function sessionValid(req){
+  const [exp,mac]=readCookie(req,SESSION).split('.');
+  return !!config.adminKey&&Number(exp)>Date.now()&&store.sameKey(sign(exp),mac);
+ }
  const admin=(req,res)=>{
-  const key=req.get?.('x-admin-key')||req.headers?.['x-admin-key']||req.query?.key;
-  if(!config.adminKey||!store.sameKey(config.adminKey,key)){res.status(404).json({success:false,error:'Not found'});return false}
+  const header=req.get?.('x-admin-key')||req.headers?.['x-admin-key'];
+  const viaKey=!!config.adminKey&&!!header&&store.sameKey(config.adminKey,header);
+  const viaSession=!viaKey&&sessionValid(req);
+  // Cookie-based writes need a custom header, which another website cannot send (CSRF).
+  if(!(viaKey||(viaSession&&(req.method==='GET'||req.get?.('x-requested-with')==='growth-free-admin')))){res.status(404).json({success:false,error:'Not found'});return false}
   return true;
  };
- app.get(basePath+'/admin',(req,res)=>res.set('Cache-Control','no-store').type('html').send(page('Growth leads — admin',`
-<h1>Free Growth check — leads</h1>
-<form id="k" class="card"><label>Admin key<input id="key" type="password" autocomplete="off"></label><p><button>Show leads</button> <a id="csv" class="btn ghost" href="#">Download CSV</a></p></form>
-<div id="out"></div>
-<script>
-var API=${js(apiPath)};function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function key(){return document.getElementById('key').value}
-document.getElementById('csv').addEventListener('click',async function(e){e.preventDefault();var r=await fetch(API+'/admin/leads.csv',{headers:{'x-admin-key':key()}});if(!r.ok){alert('Wrong key');return}var b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='growth-free-leads.csv';a.click()});
-document.getElementById('k').addEventListener('submit',async function(e){e.preventDefault();var o=document.getElementById('out');var r=await fetch(API+'/admin/leads',{headers:{'x-admin-key':key()}});var d=await r.json();if(!d.success){o.textContent='Wrong key or unavailable';return}
-o.innerHTML='<h2>Hire requests ('+d.hires.length+')</h2>'+d.hires.map(function(h){return '<div class="card"><strong>'+esc(h.name)+'</strong> &lt;'+esc(h.email)+'&gt; '+esc(h.company||'')+' '+esc(h.phone||'')+'<br><small>'+esc(h.created_at)+' · '+esc(h.url)+' · '+esc(h.decision||'')+'</small><p>'+esc(h.message||'')+'</p></div>'}).join('')+
-'<h2>Free checks ('+d.checks.length+')</h2>'+d.checks.map(function(c){return '<div class="card"><strong>'+esc(c.email)+'</strong>'+(c.marketing_consent?' · may be emailed':'')+'<br><small>'+esc(c.access_label||'')+' · '+esc(c.created_at)+' · '+esc(c.status)+' · '+esc(c.decision||c.error_code||'')+(c.cached?' · cached':'')+'</small><br><a href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">'+esc(c.url)+'</a> '+esc(c.query||'')+'</div>'}).join('')});
-</script>`,config)));
+ const attempts=new Map();
+ if(typeof app.post==='function'){
+  app.post(apiPath+'/admin/login',(req,res)=>{
+   if(!config.adminKey)return res.status(404).json({success:false,error:'Not found'});
+   const ip=String(req.ip||''),now=Date.now(),a=attempts.get(ip)||{n:0,reset:now+15*60000};
+   if(now>a.reset){a.n=0;a.reset=now+15*60000}
+   if(a.n>=10)return res.status(429).json({success:false,error:'Too many attempts. Try again in 15 minutes.'});
+   if(!store.sameKey(config.adminKey,req.body&&req.body.key)){a.n++;attempts.set(ip,a);if(attempts.size>5000)attempts.clear();return res.status(401).json({success:false,error:'Wrong admin key'})}
+   attempts.delete(ip);
+   const exp=String(now+SESSION_MS);
+   res.set('Set-Cookie',`${SESSION}=${exp}.${sign(exp)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${SESSION_MS/1000}${req.secure?'; Secure':''}`);
+   res.json({success:true,expires_at:new Date(Number(exp)).toISOString()});
+  });
+  app.post(apiPath+'/admin/logout',(req,res)=>{
+   res.set('Set-Cookie',`${SESSION}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${req.secure?'; Secure':''}`);res.json({success:true});
+  });
+  // The owner's own checks: no daily limits (results are still cached for 24 hours).
+  app.post(apiPath+'/admin/run',async(req,res)=>{
+   if(!admin(req,res))return;
+   try{
+    const b=req.body||{};
+    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
+    await storage.ensureTables(pool);
+    await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,120)},{accessLabel:'admin'});
+   }catch(e){console.error('[free-growth] admin run failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'})}
+  });
+  app.post(apiPath+'/admin/invites',async(req,res)=>{
+   if(!admin(req,res))return;
+   const b=req.body||{};
+   const label=clean(b.label,80);
+   if(!label)return res.status(400).json({success:false,error:'Give the invitation a name (who is it for?)'});
+   const emailLock=b.email_lock?clean(b.email_lock,200).toLowerCase():null;
+   if(emailLock&&!EMAIL.test(emailLock))return res.status(400).json({success:false,error:'Enter a valid email address or leave it empty'});
+   const maxChecks=Math.min(Math.max(int(b.max_checks,3),1),50),days=Math.min(Math.max(int(b.days,7),1),90);
+   try{
+    await storage.ensureTables(pool);
+    const inv=await storage.createInvite(pool,{label,emailLock,maxChecks,days});
+    const origin=`${req.protocol}://${req.get('host')}`;
+    res.json({success:true,invite:{...inv,token:undefined,status:store.inviteStatus(inv)},
+     link:`${origin}${basePath}?invite=${encodeURIComponent(inv.token)}`,
+     note:'Copy this link now: only a fingerprint is stored, the link cannot be shown again.'});
+   }catch(e){console.error('[free-growth] invite failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'})}
+  });
+  app.post(apiPath+'/admin/invites/:id/revoke',async(req,res)=>{
+   if(!admin(req,res))return;
+   if(!/^[1-9][0-9]{0,12}$/.test(String(req.params.id)))return res.status(400).json({success:false,error:'Invalid invitation'});
+   try{await storage.ensureTables(pool);const r=await storage.revokeInvite(pool,Number(req.params.id));
+    res.status(r?200:404).json({success:!!r,...(r?{}:{error:'Not found or already withdrawn'})})}
+   catch(e){res.status(503).json({success:false,error:'Temporarily unavailable'})}
+  });
+ }
+ app.get(apiPath+'/admin/invites',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{await storage.ensureTables(pool);res.set('Cache-Control','no-store').json({success:true,invites:(await storage.listInvites(pool)).map(i=>({...i,status:store.inviteStatus(i)}))})}
+  catch(e){res.status(503).json({success:false,error:'Temporarily unavailable'})}
+ });
+ app.get(basePath+'/admin',(req,res)=>res.set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(adminPage(config,apiPath,basePath,sessionValid(req))));
  app.get(apiPath+'/admin/leads',async(req,res)=>{
   if(!admin(req,res))return;
   try{await storage.ensureTables(pool);res.set('Cache-Control','no-store').json({success:true,...await storage.listLeads(pool)})}
