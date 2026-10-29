@@ -53,7 +53,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(!/^[1-9][0-9]{0,12}$/.test(raw)){res.status(400).json({success:false,code:'VALID_TRACKER_PAGE_ID_REQUIRED'});return null}
   const page=req.growth?.pages?.find(x=>String(x.id)===raw);
   if(!page){res.status(404).json({success:false,code:'TRACKER_PAGE_NOT_FOUND'});return null}
-  return {id:Number(raw),page,clientId:req.growthTrackerClientId};
+  // Every locked Case Study of this client, not only the source page: a destination elsewhere on the site can be locked too.
+  const lockedPages=(req.growth?.pages||[]).filter(x=>x&&x.case_study_active===true&&x.url).map(x=>({id:Number(x.id),url:String(x.url)}));
+  return {id:Number(raw),page,clientId:req.growthTrackerClientId,lockedPages};
  };
  async function analyze(v){
   const cid=v.clientId,pid=v.id;
@@ -238,7 +240,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     return {url:x.url,tracked_keyword:x.tracked_keyword||null,
      verified_live:false,reason:String(e?.code||'PUBLIC_HTML_UNAVAILABLE').slice(0,60)}}
   }));
-  const lockedUrls=page.case_study_active===true?[page.url]:[];
+  const lockedUrls=[...new Set([...(page.case_study_active===true?[page.url]:[]),...(v.lockedPages||[]).map(x=>x.url)])];
+  const isLocked=u=>!!u&&lockedUrls.some(l=>normUrl(l)===normUrl(u));
   report.url_identities=urlIdentities.filter(id=>id.kind!=='NO_REDIRECT'||id.canonical_points_elsewhere)
    .map(id=>({...id,advice:identityAdvice(id,{lockedUrls})}));
   // The designated destination is identified by its final URL when it is a permanent alias.
@@ -266,7 +269,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // The source page counts as an existing home of the intent too; when it is a locked Case Study it can block a new page
   // (cannibalisation) but is never chosen as the edit target.
   const fits=x=>x.intent.verdict==='COMPATIBLE'&&!(x.intent.missing_query_roots||[]).length;
-  const alternativePool=[...destinationSources].filter(([u])=>u!==proposed).map(([u,src])=>({url:u,intent:intentOf(u,src)}));
+  const alternativePool=[...destinationSources].filter(([u])=>u!==proposed).map(([u,src])=>({url:u,intent:intentOf(u,src),...(isLocked(u)?{protected:true}:{})}));
   if(own.live&&proposed&&proposed!==page.url)alternativePool.push({url:page.url,intent:intentOf(page.url,own.live),source_page:true,protected:page.case_study_active===true});
   let compatibleAlternatives=alternativePool.filter(fits);
   const topicMismatches=alternativePool.filter(x=>x.intent.verdict==='COMPATIBLE'&&!fits(x)).map(x=>({url:x.url,missing_query_roots:x.intent.missing_query_roots}));
@@ -286,11 +289,17 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     source_url:page.url,source_protected:proposed===page.url&&page.case_study_active===true,alias_of:aliasIdentity.final_url,
     advice:identityAdvice(aliasIdentity,{lockedUrls})}:
    resolveDestinationIdentity({url:proposed,source:selectedSource,sourceUrl:page.url,sourceSource:own.live,sourceProtected:page.case_study_active===true});
-  report.destination_identity=destinationIdentity;
+  // A destination that is itself a locked Case Study (another tracked page, not the source) is protected in its own right.
+  const destinationLocked=!!proposed&&normUrl(proposed)!==normUrl(page.url)&&isLocked(proposed);
+  const finalIdentity=destinationLocked?{...(destinationIdentity||{url:proposed}),destination_locked:true,destination_protected:true,locked_url:proposed}:destinationIdentity;
+  report.destination_identity=finalIdentity;
   // One identity everywhere: a destination that is a proven 301/308 alias is reported by its final URL in the selection too;
   // the tracked alias stays visible as tracked_url (no Tracker row, GSC row or Case Study identity is changed).
   if(aliasIdentity){
-   const toFinal=d=>d&&d.url===designated?{...d,url:designatedFinal,tracked_url:designated,url_identity:aliasIdentity.kind,http_statuses:aliasIdentity.http_statuses}:d;
+   // The page id follows the final URL too (the source page, or the tracked row for the final URL); the alias row keeps its own id.
+   const finalId=normUrl(designatedFinal)===normUrl(page.url)?v.id:(rows(3).find(r=>normUrl(r.url)===normUrl(designatedFinal))?.id??null);
+   const toFinal=d=>d&&d.url===designated?{...d,url:designatedFinal,page_id:finalId===null?null:Number(finalId),tracked_url:designated,tracked_page_id:d.page_id??null,
+    url_identity:aliasIdentity.kind,http_statuses:aliasIdentity.http_statuses}:d;
    if(report.query_selection)report.query_selection.destination=toFinal(report.query_selection.destination);
    const pna=report.growth_decision?.primary_next_action;
    if(pna)pna.destination=toFinal(pna.destination);
@@ -304,7 +313,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   }):{status:'EXISTING_DESTINATION_EVIDENCE_UNAVAILABLE',target_url:proposed,
    verified_gap:false,copy_ready:false,comparisons:[]};
   report.destination_section_comparison.target_url=proposed;
-  report.destination_section_comparison.destination_identity=destinationIdentity;
+  report.destination_section_comparison.destination_identity=finalIdentity;
   report.destination_section_comparison.protected_source_url=page.url;
   const competitorPages=comparisons.filter(x=>['SERPER_GOOGLE_ORGANIC','SERPAPI_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(x.search_source))
    .map(x=>({url:x.url,html:x.live.html,truncated:x.live.truncated===true}));
