@@ -4,6 +4,7 @@
 const {blocks,queryRoots}=require('./growth-reader-task-coverage.cjs');
 const {draftTeachesTask,taskHitsInText}=require('./growth-derived-reader-tasks.cjs');
 const {assessDraftClaims,headingMismatch}=require('./growth-draft-claim-guard.cjs');
+const {answerCheckFor}=require('./growth-task-meaning.cjs');
 const skipSet=query=>new Set(queryRoots(query).all.map(x=>x.slice(0,6)));
 const words=t=>String(t||'').toLowerCase().match(/[a-z0-9']+/g)||[];
 const ngramSet=(t,n)=>{const w=words(t),out=new Set();for(let i=0;i+n<=w.length;i++)out.add(w.slice(i,i+n).join(' '));return out};
@@ -24,7 +25,7 @@ function assessSectionClaims(section,{destinationText='',query='',brandLabel=''}
 // Draft acceptance for the evidence-based path: the text must teach the observed missing task (core concept in the
 // heading or opening paragraph plus shared co-concepts), must not repeat the destination, must not reuse competitor
 // wording, and every claim must pass the claim guard. Safe softening is applied and logged; anything else rejects.
-function checkDraftSection(section,{task,destinationText='',competitorTexts=[],query='',brandLabel=''}){
+function checkDraftSection(section,{task,destinationText='',competitorTexts=[],query='',brandLabel='',answerCheck=null}){
  const body=(section.h2+' '+validParagraphs(section).join(' ')).toLowerCase();
  const skip=skipSet(query);
  if(!task.match)return {ok:false,code:'DRAFT_OFF_TASK',concept_hits:0};
@@ -38,6 +39,9 @@ function checkDraftSection(section,{task,destinationText='',competitorTexts=[],q
  if(overlap>=35)return {ok:false,code:'DRAFT_DUPLICATES_DESTINATION',concept_hits:taught.key_mentions,duplicate_overlap_pct:overlap};
  const m8=ngramSet(body,8);
  for(const c of competitorTexts){const theirs=ngramSet(c,8);for(const x of m8)if(theirs.has(x))return {ok:false,code:'DRAFT_REUSES_COMPETITOR_WORDING',concept_hits:taught.key_mentions,duplicate_overlap_pct:overlap}}
+ // A task confirmed by the meaning check carries its reader question: the section must answer exactly that question.
+ const answer=answerCheckFor(task,answerCheck,section.h2);
+ if(answer)return {ok:false,code:answer.code,concept_hits:taught.key_mentions,reason:answer.reason};
  const mismatch=headingMismatch(section.h2,validParagraphs(section).join(' '));
  if(mismatch)return {ok:false,code:'DRAFT_HEADING_DOES_NOT_MATCH_CONTENT',concept_hits:taught.key_mentions,duplicate_overlap_pct:overlap,
   heading_check:{code:mismatch.code,instructions:mismatch.instructions,sentences:mismatch.sentences},reason:mismatch.reason};
@@ -58,7 +62,7 @@ function decideFromEvidence({report,completion,base,sources}){
    let best=null;
    // Same candidate rule as the producer: a section labelled with a task outside the plan is not re-matched to another task.
    const labelled=section.task_code?tasks.find(t=>t.code===section.task_code):null;
-   for(const task of (section.task_code?(labelled?[labelled]:[]):tasks)){const r=checkDraftSection(section,{task,destinationText,competitorTexts,query:base.focus_query,brandLabel:sources.brandLabel||''});
+   for(const task of (section.task_code?(labelled?[labelled]:[]):tasks)){const r=checkDraftSection(section,{task,destinationText,competitorTexts,query:base.focus_query,brandLabel:sources.brandLabel||'',answerCheck:completion.answer_check||null});
     if(r.ok){best={task,r,section};break}rejected.push({heading:section.h2,task:task.code,...r})}
    if(best)accepted.push(best);
   }
@@ -70,7 +74,8 @@ function decideFromEvidence({report,completion,base,sources}){
    return {...base,...common,copy_ready:false,
     copy_status:!completion.draft?'DRAFT_NOT_AVAILABLE_'+String(completion.status||'UNKNOWN'):'DRAFT_REJECTED_'+String(rejected[0]?.code||'NO_VALID_SECTION'),
     draft_rejections:rejected.slice(0,6),
-    next_action:!completion.draft?'Complete owner draft generation (provider status: '+String(completion.status||'UNKNOWN')+'), then review.':
+    next_action:completion.status==='EDITOR_WRITES'?'AI drafts are switched off: write the section for each confirmed reader question yourself, then use the CMS handoff with your own text.':
+     !completion.draft?'Complete owner draft generation (provider status: '+String(completion.status||'UNKNOWN')+'), then review.':
      'The generated text did not meet the evidence conditions; regenerate or write the missing task manually.'};
   const first=accepted[0],place=first.task.placement||{};
   const ev=first.task.competitor_evidence[0]||{};

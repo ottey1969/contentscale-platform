@@ -36,7 +36,7 @@ async function runFreeGrowthResearch({url,query},deps={}){
  const page={id:FREE_PAGE_ID,url,keyword:String(query||'').trim().slice(0,120),case_study_active:false};
  const route={};
  const options={retryDelayMs:deps.retryDelayMs??1500};
- for(const k of ['fetchLive','searchLive','renderOwn'])if(typeof deps[k]==='function')options[k]=deps[k];
+ for(const k of ['fetchLive','searchLive','renderOwn','judgeTasks'])if(typeof deps[k]==='function')options[k]=deps[k];
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h}},readOnlySource(page),(req,res,next)=>{
   req.growthTrackerClientId=FREE_CLIENT_ID;req.growth={can_edit:false,pages:[page]};next();
  },options);

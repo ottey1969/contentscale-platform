@@ -74,7 +74,7 @@ function harness(leadList){
   if(sql.includes('LEFT(html_content'))return {rows:[{id:77,tracker_client_id:4,url:URL_,keyword:'roof repair lodi nj',saved_html:ownHtml}]};
   return {rows:[]};
  }},(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:false,pages:[{id:77,url:URL_,keyword:'roof repair lodi nj',case_study_active:false}]};next()},{
-  retryDelayMs:0,
+  retryDelayMs:0,...require('./helpers/meaning-check-stand-in.cjs').meaningStandIn,
   fetchLive:async url=>{fetched.push(url);const html=pages[url];if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
    return {html,final_url:url,retrieved_at:'2026-10-29T06:53:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
   searchLive:async()=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:'roof repair lodi nj',leads:leadList,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-29T06:53:00Z'})});

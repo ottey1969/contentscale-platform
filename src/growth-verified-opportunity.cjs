@@ -40,7 +40,7 @@ function produceVerifiedEditorialOpportunity({report={},completion={},sources={}
   const labelled=section.task_code?plan.tasks.find(t=>t.code===section.task_code):null;
   const candidateTasks=section.task_code?(labelled?[labelled]:[]):plan.tasks;
   for(const task of candidateTasks){
-    const r=checkDraftSection(section,{task,destinationText,competitorTexts,query,brandLabel:sources.brandLabel||''});
+    const r=checkDraftSection(section,{task,destinationText,competitorTexts,query,brandLabel:sources.brandLabel||'',answerCheck:completion.answer_check||null});
     if(r.ok){hit={task,section,r};break}
     rejections.push({heading:section.h2,task:task.code,...r});
    }

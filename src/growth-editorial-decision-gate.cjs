@@ -74,7 +74,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
     reason:'Google mostly shows tool pages and tool comparisons for "'+query+'" ('+serpIntent.compatible_leads+' of '+serpIntent.organic_leads_considered+' results), but the selected page is '+(destinationIntent.class==='INFORMATIONAL_GUIDE'?'a guide':'not a tool page')+' and no tool page for this search was found on the site.',
     distinct_intent_evidence:{serp:serpIntent.leads.slice(0,6),destination:destinationIntent},
     new_page_plan:{page_type:'PRODUCT_OR_TOOL_PAGE',working_query:query,requires_owner_product_facts:true,facts_source_url:null,
-     tasks:supported.slice(0,4).map(t=>({code:t.code,label:t.label,match:t.match,competitor_evidence:t.competitor_support.slice(0,2)})),
+     tasks:supported.slice(0,4).map(t=>({code:t.code,label:t.label,...(t.reader_question?{reader_question:t.reader_question}:{}),match:t.match,competitor_evidence:t.competitor_support.slice(0,2)})),
      internal_links:{from:[target,report.url].filter(Boolean),anchor_policy:'Link from the guide to the tool page in a relevant paragraph.'},
      keep_existing_page:target},
     evidence:supported.flatMap(evidenceFor).slice(0,6),
@@ -82,6 +82,16 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
     next_action:'Only if you offer such a tool: create its own page with your real features, pricing and screenshots, and link to it from '+(target||'the guide')+'. Keep the guide as it is. Growth does not write product claims.'};
   uncertainties.push('A tool page for this search exists on the site but could not be used as the destination (protected or already chosen); the guide is compared as is.');
  }
+ // Word overlap only proposes candidate tasks; the meaning check confirms that the competitors answer the same reader
+ // question and whether this page already answers it. Without that judgement nothing is confirmed: the editor writes.
+ const mc=coverage.meaning_check;
+ if(!supported.length&&mc&&mc.candidates>0&&(mc.status!=='JUDGED'||!(mc.different_questions||[]).length))
+  return blocked('TASK_MEANING_NOT_VERIFIED','Competitor pages share '+mc.candidates+' candidate topic(s), but it could not be checked whether they answer the same reader question ('+mc.status+(mc.error?': '+mc.error:'')+'). Shared words alone are not evidence of a content gap.',
+   'The reader questions behind the candidate topics could not be verified, so no gap is claimed and no text is generated.','Write the section yourself from the candidate topics and competitor evidence, or re-run when the meaning check is available.');
+ if(!supported.length&&mc&&mc.status==='JUDGED'&&mc.candidates>0)
+  return blocked('SHARED_COMPETITOR_REQUIREMENTS','Competitor sections shared words but answered different reader questions: '+
+   (mc.different_questions||[]).map(x=>x.code+' ('+x.reason+')').join('; ')+(mc.not_verified?.length?' Not verifiable: '+mc.not_verified.join(', ')+'.':''),
+   'No reader question is answered by two independent competitor articles.','Accept the page as is, or research a more specific search term.');
  // Every outcome below (a new page, an edit, or "nothing missing") is defined by shared reader tasks; without one there is no plan.
  if(!supported.length)
   return blocked('SHARED_COMPETITOR_REQUIREMENTS','No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. '+explainNoShared(coverage.task_derivation),
@@ -96,7 +106,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
    return {...base,decision:'NEW_DISTINCT_PAGE',verified_gap:false,gap_observed:true,gap_basis:'DIFFERENT_SEARCH_INTENT_AND_NO_COMPATIBLE_SAME_SITE_PAGE',
     reason:'Live results agree on a '+serpIntent.intent+' intent, but the selected page is '+(destinationIntent.class||'a different type')+'; no compatible same-site page was found.',
     distinct_intent_evidence:{serp:serpIntent.leads.slice(0,5),destination:destinationIntent},
-    new_page_plan:{working_query:query,facts_source_url:target,tasks:supported.slice(0,4).map(t=>({code:t.code,label:t.label,match:t.match,competitor_evidence:t.competitor_support.slice(0,2)})),
+    new_page_plan:{working_query:query,facts_source_url:target,tasks:supported.slice(0,4).map(t=>({code:t.code,label:t.label,...(t.reader_question?{reader_question:t.reader_question}:{}),match:t.match,competitor_evidence:t.competitor_support.slice(0,2)})),
      internal_links:{from:[target,report.url].filter(Boolean),anchor_policy:'Natural anchor inside a relevant existing paragraph; verify no duplicate link first.'}},
     evidence:supported.flatMap(evidenceFor).slice(0,6),
     next_action:'Owner reviews the new-page draft and the intent evidence; publication stays disabled.'};
@@ -133,7 +143,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   reason:'The existing page is a compatible destination, and '+chosen.length+' reader task(s) taught by 2+ independent competitors are missing ('+
    chosen.filter(t=>t.destination.status!=='PARTIAL').length+') or only partly covered ('+chosen.filter(t=>t.destination.status==='PARTIAL').length+') on it. A task counts as verified only after a draft for it passes the checks.',
   improvement_plan:{target_url:target,preserve:['existing title','existing H1','existing useful paragraphs','existing internal links'],
-   tasks:chosen.map(t=>({code:t.code,label:t.label,match:t.match,destination_status:t.destination.status,placement:t.placement,
+   tasks:chosen.map(t=>({code:t.code,label:t.label,...(t.reader_question?{reader_question:t.reader_question}:{}),match:t.match,destination_status:t.destination.status,placement:t.placement,
     competitor_evidence:t.competitor_support.slice(0,2),destination_evidence:t.destination.passages})),
    internal_links_to_review:linked.map(t=>({task:t.code,link_to:t.covered_elsewhere_on_site[0].url,reason:'Already taught there.'})),
    quality_conditions:['No numeric or factual claim that the destination page does not already state or the owner cannot verify.','Do not reproduce competitor wording.',
