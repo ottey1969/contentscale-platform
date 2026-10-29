@@ -86,8 +86,13 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  if(captions.length===0)warnings.push('IMAGES_OPTIONAL_REAL_IMAGE_EVIDENCE_IF_AVAILABLE');
  if(issues.length)return {status:'BLOCKED',issues:[...new Set(issues)],warnings:[...new Set(warnings)],files:[],publication_allowed:false};
  const fragments=approved.map(x=>x.html.trim()).join('\n\n');
- const allMarkdown=approved.map((x,i)=>'### Approved change '+(i+1)+'\nEvidence: '+x.evidence_ref+'\nPlacement: '+placementText(x.placement)+'\n\n'+renderChangeMarkdown(x.html)).join('\n\n');
- const placementSteps=approved.map((x,i)=>'   - Change '+(i+1)+': '+placementText(x.placement)+'.').join('\n');
+ // New sections that share one anchor are a chain in package order: the second goes directly after the first, never
+ // also "directly after" the same existing heading (which would reverse or interleave them).
+ const where=(x,i)=>{const prev=approved[i-1];
+  return prev&&x.placement&&prev.placement&&x.placement.mode==='ADD_AFTER_SECTION'&&prev.placement.mode==='ADD_AFTER_SECTION'&&
+   x.placement.section_heading===prev.placement.section_heading?'Add as a new section directly after Change '+i+' (both follow “'+x.placement.section_heading+'”)':placementText(x.placement)};
+ const allMarkdown=approved.map((x,i)=>'### Approved change '+(i+1)+'\nEvidence: '+x.evidence_ref+'\nPlacement: '+where(x,i)+'\n\n'+renderChangeMarkdown(x.html)).join('\n\n');
+ const placementSteps=approved.map((x,i)=>'   - Change '+(i+1)+': '+where(x,i)+'.').join('\n');
  // Audit trail: was the checked Growth text published as proposed, or edited by the editor?
  const norm=t=>asText(t).toLowerCase().replace(/\s+/g,' ').trim();
  const proposal=growthProposal&&Array.isArray(growthProposal.sections)?{id:growthProposal.id,

@@ -24,11 +24,21 @@ function ensureTable(pool){
 // Only a checked edit of an existing page becomes a handoff proposal (copy_ready means every section passed the checks).
 function proposalFromDecision(d){
  if(!d||d.decision!=='IMPROVE_EXISTING'||d.copy_ready!==true||!d.proposed_text||!d.draft_heading)return null;
- const placement=p=>p&&p.section_heading?{mode:p.mode==='EXTEND_SECTION'?'EXTEND_SECTION':'ADD_AFTER_SECTION',section_heading:clip(p.section_heading,200)}:null;
- const label=code=>((d.improvement_plan&&d.improvement_plan.tasks)||[]).find(t=>t.code===code)?.label||null;
- const sections=[{h2:clip(d.draft_heading,200),text:clip(d.proposed_text,8000),placement:placement(d.placement),task:label((d.draft_validation||[])[0]?.task)},
-  ...(d.additional_sections||[]).map(a=>({h2:clip(a.heading,200),text:clip(a.text,8000),placement:placement(a.placement),task:label(a.task)}))]
+ const plan=(d.improvement_plan&&d.improvement_plan.tasks)||[];
+ const label=code=>plan.find(t=>t.code===code)?.label||null;
+ // The plan's placement carries the chain order (after_task_code) when several sections share one anchor.
+ const placement=(p,code)=>{const q=plan.find(t=>t.code===code)?.placement||p;
+  return p&&p.section_heading?{mode:p.mode==='EXTEND_SECTION'?'EXTEND_SECTION':'ADD_AFTER_SECTION',section_heading:clip(p.section_heading,200),
+   ...(q&&q.after_task_code&&q.section_heading===p.section_heading?{after_task_code:String(q.after_task_code).slice(0,40)}:{})}:null};
+ const mainCode=(d.draft_validation||[])[0]?.task;
+ const unordered=[{h2:clip(d.draft_heading,200),text:clip(d.proposed_text,8000),placement:placement(d.placement,mainCode),task:label(mainCode),task_code:mainCode||null},
+  ...(d.additional_sections||[]).map(a=>({h2:clip(a.heading,200),text:clip(a.text,8000),placement:placement(a.placement,a.task),task:label(a.task),task_code:a.task||null}))]
   .filter(s=>s.h2&&s.text);
+ // Page order: a section that must follow another proposed section comes right after it.
+ const sections=[];
+ const place=s=>{if(sections.includes(s))return;const before=s.placement&&s.placement.after_task_code&&unordered.find(x=>x.task_code===s.placement.after_task_code&&x!==s);
+  if(before&&!sections.includes(before))place(before);sections.push(s)};
+ unordered.forEach(place);
  if(!sections.length)return null;
  const cr=d.claim_review||{};
  const list=x=>(Array.isArray(x)?x:[]).slice(0,20).map(v=>clip(v,400));
