@@ -1,0 +1,294 @@
+{
+ "_note": "Real data from production Growth report 55 (contentscale.site page 2294, generated 2026-10-29T22:56:28.292Z): the editorial decision fields the proposal store uses. Report 55 predates placement.after_task_code; the order it states in prose (task_priori after task_manual) is the one the coverage step now writes as a field.",
+ "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+ "cms_handoff": {
+  "proposal_id": 5,
+  "target_page_id": 2294
+ },
+ "editorial_decision_gate": {
+  "decision": "IMPROVE_EXISTING",
+  "copy_ready": true,
+  "target_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+  "focus_query": "ai citation tracker",
+  "placement": {
+   "mode": "ADD_AFTER_SECTION",
+   "section_heading": "⚙️ How AI Citation Trackers Actually Work",
+   "reason": "Closest existing section by shared concepts (track, googl, brand, query); the new section continues that explanation. Place it after the section proposed for “Competitors teach “Manually search your most important keywords.””."
+  },
+  "draft_heading": "How to Prioritize Content Using Domain Authority and Organic Traffic Metrics",
+  "proposed_text": "To prioritize optimization tasks effectively, evaluate your content assets using domain authority metrics and existing organic traffic levels. Compile a list of your top-performing URLs from search console data and web analytics to establish a baseline performance list. Identify which high-traffic pages contain distinct factual assets but lack explicit source links in current AI summaries.\n\nDivide your catalog into clear tier groups based on resource allocation needs. Assign high priority to core landing pages that combine strong organic traffic with high topical authority. Place secondary informational posts or low-volume assets into later optimization batches.\n\nExecute targeted content updates on the highest-priority tier first. Add structured author details, explicit data citations, and clear summary blocks to those specific pages. Audit the updated URLs after publishing to monitor changes in citation frequency and source attribution.",
+  "additional_sections": [
+   {
+    "task": "task_manual",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "⚙️ How AI Citation Trackers Actually Work",
+     "reason": "Closest existing section by shared concepts (googl, brand, queri, acros); the new section continues that explanation."
+    },
+    "heading": "How to Run Manual Audits for Core Keywords and Conversational Queries",
+    "text": "Conduct a manual search for your top-performing target keywords and conversational queries across public generative engines. Open a fresh private browsing session to avoid personalized search history bias. Enter exact-match target terms along with common phrasing variations into the prompt box.\n\nDocument every source link and brand reference generated in the response text. Note whether competing websites appear in listed footnotes, and record instances where your specific page URLs are cited or omitted for key prompt variations.\n\nCompare manual findings across multiple testing rounds to uncover consistent pattern gaps. Log these results in a tracking spreadsheet to determine which specific page sections require clearer formatting or direct factual statements."
+   }
+  ],
+  "claim_review": {
+   "counts": {
+    "sourced_from_page": 0,
+    "general_advice": 6,
+    "general_statement_unverified": 10
+   },
+   "needs_fact_check": [
+    "To prioritize optimization tasks effectively, evaluate your content assets using domain authority metrics and existing organic traffic levels.",
+    "Compile a list of your top-performing URLs from search console data and web analytics to establish a baseline performance list.",
+    "Divide your catalog into clear tier groups based on resource allocation needs.",
+    "Place secondary informational posts or low-volume assets into later optimization batches.",
+    "Execute targeted content updates on the highest-priority tier first.",
+    "Conduct a manual search for your top-performing target keywords and conversational queries across public generative engines.",
+    "Open a fresh private browsing session to avoid personalized search history bias.",
+    "Enter exact-match target terms along with common phrasing variations into the prompt box.",
+    "Note whether competing websites appear in listed footnotes, and record instances where your specific page URLs are cited or omitted for key prompt variations.",
+    "Log these results in a tracking spreadsheet to determine which specific page sections require clearer formatting or direct factual statements."
+   ],
+   "needs_owner_confirmation": [],
+   "needs_safety_review": [],
+   "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+   "requirements": [
+    "Fact-check every statement against your own knowledge and sources before publishing.",
+    "Owner approval is required; nothing is published automatically."
+   ]
+  },
+  "evidence": [
+   {
+    "source_url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "heading": "What is the best way to prioritize content for citations vs mentions?",
+    "excerpt": "If your goal is authority and influence, prioritize citation-ready content first. Informational, high-trust assets, such as guides, definitions, comparisons, and research-backed articles, are more likely to earn citations because AI engines rely on them as sources. Mentions, on the other hand, are o",
+    "type": "COMPETITOR"
+   },
+   {
+    "source_url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+    "heading": "Which AI search platform should I prioritize for tracking?",
+    "excerpt": "Start with the platform driving the most traffic to your industry. ChatGPT accounts for roughly 56% of AI referral traffic across most sites, making it the default priority. However, Google AI Overviews has far more query volume (15 billion daily vs. 2.5 billion for ChatGPT), so tracking both is ess",
+    "type": "COMPETITOR"
+   },
+   {
+    "source_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+    "heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+    "excerpt": "Citations = New Backlinks: RAG-based AI systems prioritize cited sources over traditional ranking signals. ( Pew Research, 2024 )",
+    "type": "OWN_PAGE"
+   },
+   {
+    "source_url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "heading": "Manually search your most important keywords.",
+    "excerpt": "One of the simplest ways to start is to manually search for your priority keywords on AI-driven platforms like ChatGPT, Perplexity AI, and Google AI Overviews. Run informational queries, comparison-based searches, and “best of” prompts that mirror real buyer behavior. Check whether AI overviews: Tip",
+    "type": "COMPETITOR"
+   },
+   {
+    "source_url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+    "heading": "The Manual Audit Process",
+    "excerpt": "Build a prompt library : Compile 20–50 prompts your target customers would ask AI engines. Include informational queries (“What is [topic]?”), commercial queries (“Best tools for [use case]”), and comparison queries (“[Your brand] vs [competitor]”). Use insights from your keyword and prompt research",
+    "type": "COMPETITOR"
+   },
+   {
+    "source_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+    "heading": "⚙️ Essential Features Beyond Basic Monitoring",
+    "excerpt": "Automated Domain Scanning: Manual URL entry doesn’t scale. Bulk scanning with automatic re-crawling every 3 days ensures continuous monitoring without operational overhead.",
+    "type": "OWN_PAGE"
+   }
+  ],
+  "evidence_status": {
+   "decision": "IMPROVE_EXISTING",
+   "search_intent_confirmed": true,
+   "competitor_content_observed": true,
+   "destination_fully_examined": true,
+   "missing_task_established": true,
+   "draft_checked": true,
+   "factual_claims_confirmed": false,
+   "publication_approved": false,
+   "copy_ready": true,
+   "verified_gap": true,
+   "label": "TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW"
+  },
+  "intent_scope": {
+   "compared_with": "guides",
+   "results_of_this_type": 3,
+   "of": 8,
+   "overall_intent": "PRODUCT_TOOL",
+   "other_intent_served_by": [
+    {
+     "url": "https://contentscale.site/free-ai-citations-tracker/",
+     "page_type": "PRODUCT_TOOL",
+     "protected_case_study": true
+    }
+   ],
+   "note": "Google also shows tool pages for this search; on your site https://contentscale.site/free-ai-citations-tracker/ serves that (protected Case Study: left unchanged)."
+  },
+  "improvement_plan": {
+   "target_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+   "preserve": [
+    "existing title",
+    "existing H1",
+    "existing useful paragraphs",
+    "existing internal links"
+   ],
+   "tasks": [
+    {
+     "code": "task_priori",
+     "label": "Competitors teach “What is the best way to prioritize content for citations vs mentions?”",
+     "match": {
+      "key": "priori",
+      "co_terms": [],
+      "concepts": [
+       "priori",
+       "author",
+       "traffi"
+      ],
+      "core_words": [
+       "prioritize",
+       "authority",
+       "traffic"
+      ]
+     },
+     "destination_status": "PARTIAL",
+     "placement": {
+      "mode": "ADD_AFTER_SECTION",
+      "section_heading": "⚙️ How AI Citation Trackers Actually Work",
+      "reason": "Closest existing section by shared concepts (track, googl, brand, query); the new section continues that explanation. Place it after the section proposed for “Competitors teach “Manually search your most important keywords.””."
+     },
+     "competitor_evidence": [
+      {
+       "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+       "host": "blog.hubspot.com",
+       "heading": "What is the best way to prioritize content for citations vs mentions?",
+       "excerpt": "If your goal is authority and influence, prioritize citation-ready content first. Informational, high-trust assets, such as guides, definitions, comparisons, and research-backed articles, are more likely to earn citations because AI engines rely on them as sources. Mentions, on the other hand, are often influenced by brand authority and third-party signals. If you’re earlier in your growth journey, investing in thoug",
+       "concepts": [
+        "priori"
+       ],
+       "partial": false
+      },
+      {
+       "url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+       "host": "otterly.ai",
+       "heading": "Which AI search platform should I prioritize for tracking?",
+       "excerpt": "Start with the platform driving the most traffic to your industry. ChatGPT accounts for roughly 56% of AI referral traffic across most sites, making it the default priority. However, Google AI Overviews has far more query volume (15 billion daily vs. 2.5 billion for ChatGPT), so tracking both is essential for a complete picture. Check your GA4 AI Search channel to see which platforms already send you the most traffic",
+       "concepts": [
+        "priori"
+       ],
+       "partial": false
+      }
+     ],
+     "destination_evidence": [
+      {
+       "heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+       "text": "Citations = New Backlinks: RAG-based AI systems prioritize cited sources over traditional ranking signals. ( Pew Research, 2024 )",
+       "concepts": [
+        "priori"
+       ]
+      },
+      {
+       "heading": "Why Citations Replace Backlinks in AI Search",
+       "text": "Traditional SEO relied on backlinks as trust signals. In the RAG era, AI systems retrieve content based on semantic relevance and E-E-A-T alignment, not link equity. According to Ahrefs (2025) , different AI engines prioritize different content signals: Perplexity favors academic sourcing and Copilo",
+       "concepts": [
+        "priori"
+       ]
+      }
+     ]
+    },
+    {
+     "code": "task_manual",
+     "label": "Competitors teach “Manually search your most important keywords.”",
+     "match": {
+      "key": "manual",
+      "co_terms": [
+       "compet"
+      ],
+      "concepts": [
+       "manual",
+       "keywor",
+       "queri"
+      ],
+      "core_words": [
+       "manual",
+       "keywords",
+       "queries"
+      ]
+     },
+     "destination_status": "PARTIAL",
+     "placement": {
+      "mode": "ADD_AFTER_SECTION",
+      "section_heading": "⚙️ How AI Citation Trackers Actually Work",
+      "reason": "Closest existing section by shared concepts (googl, brand, queri, acros); the new section continues that explanation."
+     },
+     "competitor_evidence": [
+      {
+       "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+       "host": "blog.hubspot.com",
+       "heading": "Manually search your most important keywords.",
+       "excerpt": "One of the simplest ways to start is to manually search for your priority keywords on AI-driven platforms like ChatGPT, Perplexity AI, and Google AI Overviews. Run informational queries, comparison-based searches, and “best of” prompts that mirror real buyer behavior. Check whether AI overviews: Tip: If competitors appear where you think you should be, then you’ve identified a potential opportunity. You can then look",
+       "concepts": [
+        "manual",
+        "compet"
+       ],
+       "partial": false
+      },
+      {
+       "url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+       "host": "otterly.ai",
+       "heading": "The Manual Audit Process",
+       "excerpt": "Build a prompt library : Compile 20–50 prompts your target customers would ask AI engines. Include informational queries (“What is [topic]?”), commercial queries (“Best tools for [use case]”), and comparison queries (“[Your brand] vs [competitor]”). Use insights from your keyword and prompt research to build this list. Run prompts across platforms : Test each prompt on ChatGPT, Perplexity, Google Gemini, and Google A",
+       "concepts": [
+        "manual",
+        "compet"
+       ],
+       "partial": false
+      }
+     ],
+     "destination_evidence": [
+      {
+       "heading": "⚙️ Essential Features Beyond Basic Monitoring",
+       "text": "Automated Domain Scanning: Manual URL entry doesn’t scale. Bulk scanning with automatic re-crawling every 3 days ensures continuous monitoring without operational overhead.",
+       "concepts": [
+        "manual",
+        "compet"
+       ]
+      },
+      {
+       "heading": "❓ People Also Ask — AI Citation Trackers",
+       "text": "To track citations in Google AI Overviews, you need a specialized tool that monitors RAG-based retrieval patterns rather than traditional SERP rankings. The Free AI Citations Tracker scans your domain every 3 days and identifies exactly which pages are being cited by Google AIO, Perplexity, and Copi",
+       "concepts": [
+        "manual",
+        "compet"
+       ]
+      }
+     ]
+    }
+   ],
+   "internal_links_to_review": [],
+   "quality_conditions": [
+    "No numeric or factual claim that the destination page does not already state or the owner cannot verify.",
+    "Do not reproduce competitor wording.",
+    "Do not repeat anything the destination already teaches.",
+    "Keep title and H1.",
+    "Owner approval before any publication."
+   ],
+   "unverified_task_codes": []
+  },
+  "draft_validation": [
+   {
+    "task": "task_priori",
+    "heading": "How to Prioritize Content Using Domain Authority and Organic Traffic Metrics",
+    "concept_hits": 6,
+    "duplicate_overlap_pct": 0,
+    "competitor_wording_reused": false,
+    "claims_checked": true,
+    "safe_rewrites": 0
+   },
+   {
+    "task": "task_manual",
+    "heading": "How to Run Manual Audits for Core Keywords and Conversational Queries",
+    "concept_hits": 5,
+    "duplicate_overlap_pct": 0,
+    "competitor_wording_reused": false,
+    "claims_checked": true,
+    "safe_rewrites": 0
+   }
+  ]
+ }
+}
