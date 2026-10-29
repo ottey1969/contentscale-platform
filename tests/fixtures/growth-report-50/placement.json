@@ -1,0 +1,172 @@
+{
+ "_note": "Real data from production Growth report 50 (contentscale.site page 2294, generated 2026-10-29T10:41:04.435Z): the destination section headings with their observed word counts, and the derived reader task with its two competitor sources. Section body text is not part of the report and is not reconstructed here.",
+ "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+ "destination_sections": [
+  {
+   "heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+   "words": 254
+  },
+  {
+   "heading": "📑 Table of Contents",
+   "words": 96
+  },
+  {
+   "heading": "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+   "words": 165
+  },
+  {
+   "heading": "⚙️ How AI Citation Trackers Actually Work",
+   "words": 126
+  },
+  {
+   "heading": "Why Citations Replace Backlinks in AI Search",
+   "words": 101
+  },
+  {
+   "heading": "🗣️ Industry Consensus: The Shift is Real",
+   "words": 58
+  },
+  {
+   "heading": "The Actionable Advantage",
+   "words": 53
+  },
+  {
+   "heading": "📈 Real Results: From Invisible to Cited",
+   "words": 22
+  },
+  {
+   "heading": "Case Study: SaaS Blog (B2B)",
+   "words": 64
+  },
+  {
+   "heading": "Case Study: Local Service (NL Market)",
+   "words": 55
+  },
+  {
+   "heading": "📊 ContentScale vs. OmniSEO vs. PixelMojo",
+   "words": 45
+  },
+  {
+   "heading": "New here? Follow the 48-Hour Plan to get cited",
+   "words": 51
+  },
+  {
+   "heading": "⚙️ Essential Features Beyond Basic Monitoring",
+   "words": 106
+  },
+  {
+   "heading": "⚠️ Common Mistake: Tracking Without Acting",
+   "words": 95
+  },
+  {
+   "heading": "What Makes My Free Tracker Different",
+   "words": 193
+  },
+  {
+   "heading": "1. It Eliminates the “Manual Entry” Friction",
+   "words": 71
+  },
+  {
+   "heading": "2. It Provides Immediate Solutions, Not Just Data",
+   "words": 55
+  },
+  {
+   "heading": "3. It Targets Real Intent, Not Just Random Keywords",
+   "words": 67
+  },
+  {
+   "heading": "3b. It Closes the Impressions Gap",
+   "words": 80
+  },
+  {
+   "heading": "3c. It Flags Stale Content Before It Costs You Citations",
+   "words": 72
+  },
+  {
+   "heading": "4. It Future-Proofs Your Strategy with Multi-Engine Tracking",
+   "words": 53
+  },
+  {
+   "heading": "5. It Works as a Client-Facing Entry Point for Agencies",
+   "words": 66
+  },
+  {
+   "heading": "6. Privacy-First & GDPR Compliant",
+   "words": 42
+  },
+  {
+   "heading": "7. Transparency: The Live Client Wall",
+   "words": 118
+  },
+  {
+   "heading": "In Short",
+   "words": 31
+  },
+  {
+   "heading": "8. It Adapts to How You Actually Want to Work",
+   "words": 35
+  },
+  {
+   "heading": "Do It Yourself",
+   "words": 17
+  },
+  {
+   "heading": "Done-For-You",
+   "words": 18
+  },
+  {
+   "heading": "Team Handoff",
+   "words": 23
+  },
+  {
+   "heading": "Multi-Language HTML Import",
+   "words": 28
+  },
+  {
+   "heading": "❓ People Also Ask — AI Citation Trackers",
+   "words": 424
+  },
+  {
+   "heading": "Ready to Move Beyond Diagnostics?",
+   "words": 65
+  },
+  {
+   "heading": "❓ Frequently Asked Questions",
+   "words": 355
+  },
+  {
+   "heading": "📚 Related — ContentScale Resources",
+   "words": 295
+  }
+ ],
+ "task": {
+  "code": "task_manual",
+  "key": "manual",
+  "co_terms": [],
+  "concepts": [
+   "manual",
+   "keywor"
+  ],
+  "core_words": [
+   "manual",
+   "keywords"
+  ],
+  "support": [
+   {
+    "host": "blog.hubspot.com",
+    "heading": "Manually search your most important keywords.",
+    "excerpt": "One of the simplest ways to start is to manually search for your priority keywords on AI-driven platforms like ChatGPT, Perplexity AI, and Google AI Overviews. Run informational queries, comparison-based searches, and “best of” prompts that mirror real buyer behavior. Check whether AI overviews: Tip: If competitors appear where you think you should be, then you’ve identified a potential opportunity. You can then look"
+   },
+   {
+    "host": "useomnia.com",
+    "heading": "Moving from manual audit to ongoing AI citation monitoring",
+    "excerpt": "The manual workflow above is the right starting point. It builds intuition, costs nothing, and gives you a real baseline faster than any onboarding process. But it has a ceiling. Once you are tracking more than a handful of prompts, trying to detect trends over time, or reporting to a board, the manual approach starts to break down. Not because the methodology is wrong, but because the volume and consistency required"
+   }
+  ]
+ },
+ "placement_in_report": {
+  "mode": "EXTEND_SECTION",
+  "section_heading": "1. It Eliminates the “Manual Entry” Friction",
+  "reason": "This existing section already mentions the task’s core concept (1×); deepen it instead of adding a duplicate."
+ }
+}

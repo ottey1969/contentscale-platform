@@ -92,9 +92,14 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  const norm=t=>asText(t).toLowerCase().replace(/\s+/g,' ').trim();
  const proposal=growthProposal&&Array.isArray(growthProposal.sections)?{id:growthProposal.id,
   editor_changed_text:approved.length!==growthProposal.sections.length||approved.some((x,i)=>{const s=growthProposal.sections[i]||{};return norm(x.html)!==norm('<h2>'+s.h2+'</h2>'+String(s.text||''))})}:null;
- const listOf=k=>(reviewNotes&&Array.isArray(reviewNotes[k])?reviewNotes[k]:[]).map(x=>clean(x).slice(0,400)).filter(Boolean).slice(0,20);
+ // Review notes belong to the Growth text: a sentence the editor removed or rewrote is no longer listed, and new
+ // editor text is marked as not checked by Growth instead of inheriting checks written for other sentences.
+ const approvedText=norm(approved.map(x=>x.html).join(' '));
+ const listOf=k=>(reviewNotes&&Array.isArray(reviewNotes[k])?reviewNotes[k]:[]).map(x=>clean(x).slice(0,400)).filter(Boolean)
+  .filter(x=>approvedText.includes(norm(x))).slice(0,20);
  const review={fact_check:listOf('needs_fact_check'),owner_confirmation:listOf('needs_owner_confirmation'),safety_review:listOf('needs_safety_review')};
- const hasReview=review.fact_check.length+review.owner_confirmation.length+review.safety_review.length>0;
+ const editorText=proposal&&proposal.editor_changed_text;
+ const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length>0;
  const delivery='CMS-independent handoff for existing page '+canonicalUrl+'\n'+
  'No autopublishing. Implement in your normal website editor using native, indexable text components.\n'+
  'Platform: '+cms+'. Keep original URL, navigation, design, existing text and images unless explicitly reviewed.\n'+
@@ -117,7 +122,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   language:clean(language)||'en',change_count:approved.length,
   change_evidence:approved.map(x=>x.evidence_ref),
   change_placements:approved.map(x=>x.placement||null),
-  growth_proposal:proposal,review_items:{fact_check:review.fact_check.length,owner_confirmation:review.owner_confirmation.length,safety_review:review.safety_review.length},
+  growth_proposal:proposal,editor_text_unchecked_by_growth:!!editorText,review_items:{fact_check:review.fact_check.length,owner_confirmation:review.owner_confirmation.length,safety_review:review.safety_review.length},
   links,images:captions,warnings:[...new Set(warnings)]
  };
  const files=[
@@ -135,7 +140,8 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
    (review.fact_check.length?'\n## Fact-check\n\n'+review.fact_check.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.owner_confirmation.length?'\n## Confirm with the business\n\n'+review.owner_confirmation.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
-   (review.safety_review.length?'\n## Safety review by a qualified professional\n\n'+review.safety_review.map(x=>'- [ ] '+x).join('\n')+'\n':'')}]:[])
+   (review.safety_review.length?'\n## Safety review by a qualified professional\n\n'+review.safety_review.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
+   (editorText?'\n## Text written or changed by the editor\n\nGrowth did not check the sentences the editor wrote or changed. Check every factual statement in them yourself before publishing.\n':'')}]:[])
  ];
  return {status:'HANDOFF_READY_FOR_EDITOR',issues:[],warnings:[...new Set(warnings)],files,manifest,publication_allowed:false,
   downloadable:true,next_action:'HAND_TO_WEBSITE_OWNER_OR_CMS_EDITOR'};
