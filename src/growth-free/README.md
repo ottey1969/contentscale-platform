@@ -34,11 +34,14 @@ GROWTH_FREE_ACCESS_KEYS=my-own-site-2026,linkedin-campaign-01
 or with settings per key (JSON):
 
 ```
-GROWTH_FREE_ACCESS_KEYS=[{"key":"contentscale-site-01","label":"contentscale.site","origins":["https://contentscale.site"],"daily":30,"per_email":3,"contact_url":"https://cal.com/you","brand":"ContentScale","service_text":"I write the missing sections for you."},{"key":"partner-roofer-77","label":"partner roofer","origins":["https://partner.example"],"daily":5}]
+GROWTH_FREE_ACCESS_KEYS=[{"key":"contentscale-site-01","label":"contentscale.site","hosts":["contentscale.site"],"origins":["https://contentscale.site"],"daily":30,"per_email":3,"contact_url":"https://cal.com/you","brand":"ContentScale","service_text":"I write the missing sections for you."},{"key":"partner-roofer-77","label":"partner roofer","origins":["https://partner.example"],"daily":5}]
 ```
 
 * `key` (8–80 letters, digits, `-`, `_`) goes in the link: `/free-growth?key=contentscale-site-01`.
   Keys are visible in the link, so they are not passwords: the limits and allowed sites are the protection.
+* `hosts`: domains where **no key is needed in the link** — typically your own site, e.g.
+  `"hosts":["contentscale.site","free.contentscale.site"]` → `https://free.contentscale.site/free-growth` just works,
+  and the key is not visible in the page. On every other domain the key is still required.
 * `origins`: the only websites that may embed the page in an iframe (and post to it). Empty = anywhere.
 * `daily`: free checks per day for this key. `per_email`: per visitor email per day.
 * `contact_url`, `brand`, `service_text`: the paid offer shown under results that came through this key.

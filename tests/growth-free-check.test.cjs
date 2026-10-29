@@ -225,3 +225,29 @@ test('standalone server runs the same tool on its own',async t=>{
  assert.equal(home.status,302);assert.equal(home.headers.get('location'),'/free-growth?key=own-domain-key-1');
  assert.equal((await fetch(base+'/free-growth?key=own-domain-key-1')).status,200);
 });
+
+test('no key needed on your own domain (hosts); other domains still need the key',async t=>{
+ const app=express();app.use(express.json());
+ const storage=memoryStore();
+ const cfg=freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:JSON.stringify([{key:'own-site-key-001',label:'own site',hosts:['https://www.contentscale.site/','free.contentscale.site'],daily:5}])});
+ assert.deepEqual(cfg.accessKeys[0].hosts,['contentscale.site','free.contentscale.site']);
+ const service=registerFreeGrowth(app,null,{config:cfg,storage,engine:async()=>({statusCode:200,report:{editorial_decision_gate:{decision:'NO_CHANGE'}}})});
+ const srv=app.listen(0);t.after(()=>srv.close());
+ const http=require('node:http');
+ const call=(method,path,host,body)=>new Promise((ok,bad)=>{const data=body?JSON.stringify(body):null;
+  const rq=http.request({host:'127.0.0.1',port:srv.address().port,method,path,headers:{Host:host,...(data?{'Content-Type':'application/json','Content-Length':Buffer.byteLength(data)}:{})}},
+   rs=>{let b='';rs.on('data',c=>b+=c);rs.on('end',()=>ok({status:rs.statusCode,body:b}))});rq.on('error',bad);if(data)rq.write(data);rq.end()});
+ const own=await call('GET','/free-growth','www.contentscale.site');
+ assert.equal(own.status,200);assert.match(own.body,/Run the free check/);
+ assert.doesNotMatch(own.body,/own-site-key-001/,'the key is not even in the page source');
+ assert.equal((await call('GET','/free-growth','other-site.example')).status,403);
+ assert.equal((await call('GET','/free-growth?key=own-site-key-001','other-site.example')).status,200,'with the key it still works elsewhere');
+ const started=await call('POST','/api/free-growth/checks','free.contentscale.site',{url:URL_,email:'a@b.example',consent:true});
+ assert.equal(started.status,202);
+ assert.equal((await call('POST','/api/free-growth/checks','other-site.example',{url:URL_,email:'a@b.example',consent:true})).status,403);
+ await service.idle();
+ const id=JSON.parse(started.body);
+ const res=JSON.parse((await call('GET','/api/free-growth/checks/'+id.id+'?k='+id.key,'free.contentscale.site')).body);
+ assert.equal(res.new_check_url,'/free-growth','no key in the "new check" link on your own domain');
+ assert.equal(storage.checks[0].access_label,'own site');
+});

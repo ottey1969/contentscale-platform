@@ -23,7 +23,10 @@ function parseAccessKeys(raw,defaults){
   const origins=(Array.isArray(x.origins)?x.origins:x.origins?String(x.origins).split(/[\s,]+/):[]).map(o=>{
    try{const u=new URL(o);return u.protocol==='https:'||u.hostname==='localhost'?u.origin:null}catch{return null}
   }).filter(Boolean);
-  return {key:String(x.key),label:clean(x.label,60)||String(x.key).slice(0,6),origins,
+  // hosts: domains where this key applies without ?key= in the link (e.g. your own site).
+  const hosts=(Array.isArray(x.hosts)?x.hosts:x.hosts?String(x.hosts).split(/[\s,]+/):[])
+   .map(h=>String(h).trim().toLowerCase().replace(/^https?:\/\//,'').replace(/[/:].*$/,'').replace(/^www\./,'')).filter(h=>/^[a-z0-9.-]+\.[a-z]{2,}$/.test(h));
+  return {key:String(x.key),label:clean(x.label,60)||String(x.key).slice(0,6),origins,hosts,
    daily:int(x.daily,defaults.daily),perEmail:int(x.per_email,defaults.perEmail),
    brand:x.brand?clean(x.brand,80):defaults.brand,
    contactUrl:/^https:\/\//.test(x.contact_url||'')?x.contact_url:defaults.contactUrl,
@@ -140,9 +143,13 @@ poll(0);
 function notActivated(cfg){
  return page('Free Growth check',`<h1>This free check is not activated here</h1><p class="lead">The link is missing a valid access key. Ask the website that sent you here for the correct link.</p>`,cfg);
 }
-function findKey(config,value){
+// An explicit key in the link wins; without one, a key whose "hosts" include the
+// domain the page is served on applies (no key needed on your own site).
+function findKey(config,value,req){
  const v=String(value||'');
- return (config.accessKeys||[]).find(k=>store.sameKey(k.key,v))||null;
+ if(v)return (config.accessKeys||[]).find(k=>store.sameKey(k.key,v))||null;
+ const host=String(req&&req.hostname||'').toLowerCase().replace(/^www\./,'');
+ return host?(config.accessKeys||[]).find(k=>k.hosts&&k.hosts.includes(host))||null:null;
 }
 const offerOf=k=>({brand:k.brand,contact_url:k.contactUrl||null,service_text:k.serviceText});
 
@@ -180,11 +187,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const resultUrl=row=>`${basePath}/r/${encodeURIComponent(row.public_id)}?k=${encodeURIComponent(row.access_key)}`;
 
  app.get(basePath,(req,res)=>{
-  const entry=findKey(config,req.query&&req.query.key);
+  const entry=findKey(config,req.query&&req.query.key,req);
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
   res.set('Content-Security-Policy','frame-ancestors '+(entry.origins.length?"'self' "+entry.origins.join(' '):'*'));
-  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry},apiPath,basePath,entry.key));
+  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry},apiPath,basePath,req.query&&req.query.key?entry.key:''));
  });
  app.get(basePath+'/r/:id',(req,res)=>res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html')
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())
@@ -193,7 +200,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.post(apiPath+'/checks',async(req,res)=>{
   try{
    const b=req.body||{};
-   const entry=findKey(config,b.key);
+   const entry=findKey(config,b.key,req);
    if(!entry)return res.status(403).json({success:false,error:'This free check is not activated here'});
    const origin=req.get&&req.get('origin');
    if(origin&&entry.origins.length&&origin!==`${req.protocol}://${req.get('host')}`&&!entry.origins.includes(origin))
@@ -231,7 +238,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,
    summary:row.summary||null,cached:!!row.cached_from,error_code:row.error_code||null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
-   new_check_url:(()=>{const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);return k?`${basePath}?key=${encodeURIComponent(k.key)}`:null})(),
+   new_check_url:(()=>{const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
+    if(!k)return null;
+    const host=String(req.hostname||'').toLowerCase().replace(/^www\./,'');
+    return k.hosts.includes(host)?basePath:`${basePath}?key=${encodeURIComponent(k.key)}`;})(),
    error_text:row.status==='FAILED'?(FAIL_TEXT[row.error_code]||'The check could not finish. Please try again later.'):null});
  });
  app.get(apiPath+'/checks/:id/report.json',async(req,res)=>{
