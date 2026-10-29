@@ -24,6 +24,14 @@ const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'
 // URL identity: a tracked sibling can redirect to, canonicalise to, or serve the same document as the source page.
 const normUrl=u=>{try{const x=new URL(u);return (x.origin+x.pathname.replace(/\/+$/,'')).toLowerCase()}catch{return ''}};
 const canonicalOf=html=>{const tag=(String(html||'').match(/<link\b[^>]*\brel=["']?canonical\b[^>]*>/i)||[''])[0];return (tag.match(/\bhref=["']([^"']+)["']/i)||[])[1]||null};
+// The opening recommendation (query + where to look) is where research STARTS; the editorial decision is where it ends.
+// Both are kept, but the starting point is marked as superseded so no output presents it as the current advice.
+function markFinalDecision(report,decision){
+ const gd=report.growth_decision;if(!gd||!decision)return;
+ gd.final_decision={decision:decision.decision||null,blocker_code:decision.blocker_code||null,target_url:decision.target_url||null,
+  copy_ready:decision.copy_ready===true,reason:decision.reason||null,next_action:decision.next_action||null};
+ if(gd.primary_next_action)gd.primary_next_action={...gd.primary_next_action,stage:'RESEARCH_STARTING_POINT',superseded_by:'editorial_decision_gate'};
+}
 // Signals WITHOUT a proven permanent redirect (status unknown, canonical, identical title/H1). They protect a locked source
 // page but are never reported as a 301.
 function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourceProtected}){
@@ -279,6 +287,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     advice:identityAdvice(aliasIdentity,{lockedUrls})}:
    resolveDestinationIdentity({url:proposed,source:selectedSource,sourceUrl:page.url,sourceSource:own.live,sourceProtected:page.case_study_active===true});
   report.destination_identity=destinationIdentity;
+  // One identity everywhere: a destination that is a proven 301/308 alias is reported by its final URL in the selection too;
+  // the tracked alias stays visible as tracked_url (no Tracker row, GSC row or Case Study identity is changed).
+  if(aliasIdentity){
+   const toFinal=d=>d&&d.url===designated?{...d,url:designatedFinal,tracked_url:designated,url_identity:aliasIdentity.kind,http_statuses:aliasIdentity.http_statuses}:d;
+   if(report.query_selection)report.query_selection.destination=toFinal(report.query_selection.destination);
+   const pna=report.growth_decision?.primary_next_action;
+   if(pna)pna.destination=toFinal(pna.destination);
+   for(const q of report.growth_decision?.other_reviewable_queries||[])q.destination=toFinal(q.destination);
+  }
   report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
   report.destination_section_comparison=selectedSource?compareFullSections({
    query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,
@@ -301,12 +318,14 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.reader_task_coverage=coverage;
   const attempts=[
    {source:'TARGET_STATIC_HTML',status:renderStatus,detail:own.code||null},
-   {source:'SEARCH_PROVIDERS',status:discovery.status||'UNKNOWN',detail:(discovery.provider_attempts||[]).map(a=>typeof a==='string'?a:(a.provider||a.source||'')).join(', ')||discovery.source||null},
+   {source:'SEARCH_PROVIDERS',status:discovery.status||'UNKNOWN',detail:((discovery.provider_attempts||[]).map(a=>typeof a==='string'?a:(a.provider||a.source||'')).join(', ')||discovery.source||'')+
+    (discovery.market_query_retry?'; market query "'+discovery.market_query_retry.query+'" added '+discovery.market_query_retry.added_leads+' lead(s)':'')||null},
    {source:'HISTORICAL_SNAPSHOT_LEADS',status:historical.length?'LEADS_AVAILABLE':'NONE',detail:String(historical.length)+' stored leads'},
    {source:'COMPETITOR_HTML_FETCH',status:competitorPages.length>=2?'READABLE':'INSUFFICIENT',
     detail:fetchSummary}];
   report.editorial_decision_gate=decideGrowthEditorialAction({report,destination:report.destination_section_comparison,
    coverage,serpIntent,destinationIntent,attempts});
+  markFinalDecision(report,report.editorial_decision_gate);
   report.internal_link_plan=proposed?planInternalLinks({targetUrl:proposed,focusQuery:targetQuery,
    pages:[{url:page.url,html:own.live?.html||page.saved_html,truncated:own.live?.truncated===true},...siblingPages.filter(x=>x.url!==page.url)]}):[];
   Object.defineProperty(report,'__sources',{value:{brandLabel:(()=>{try{return new URL(proposed||page.url).hostname.replace(/^www\./,'').split('.')[0].toLowerCase().replace(/[^a-z0-9]/g,'')}catch{return ''}})(),destinationHtml:selectedSource?.html||'',
@@ -514,6 +533,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    })),
    next_action:'Review linked source passages against the generated draft; approve only distinct factual improvements. Do not infer a ranking advantage or missing content from term overlap.'
   };
+  markFinalDecision(report,completeDecision);
   return res.set('Cache-Control','private, no-store').json({...report,
    editorial_decision_gate:completeDecision,
    access:{can_edit:true,read_only_analysis:false,owner_report:true},

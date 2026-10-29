@@ -100,22 +100,37 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,fetchImp
  if(!available)return {status:'OPTIONAL_PROVIDER_NOT_CONFIGURED',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  if(typeof fetchImpl!=='function')return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  // Serper.dev accepts POST JSON; never put API credentials into URL or logs.
- try{
+ const ask=async q=>{
   const response=await fetchImpl('https://google.serper.dev/search',{
    method:'POST',headers:{'X-API-KEY':available,'Content-Type':'application/json'},
    // A local page is researched where it competes: Serper's documented `location` parameter localises the organic results.
-   body:JSON.stringify({q:term,gl:'us',hl:'en',num:10,...(market?.location?{location:market.location}:{})}),
+   body:JSON.stringify({q,gl:'us',hl:'en',num:10,...(market?.location?{location:market.location}:{})}),
    signal:AbortSignal.timeout(10000)
   });
-  if(!response.ok)return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'HTTP_'+response.status,
-   source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
+  if(!response.ok)return {failure:'HTTP_'+response.status};
   const payload=await response.json();
-  if(payload?.error||!Array.isArray(payload?.organic))
-   return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR',
-    source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
+  if(payload?.error||!Array.isArray(payload?.organic))return {failure:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR'};
+  return {payload};
+ };
+ try{
+  const first=await ask(term);
+  if(first.failure)return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',reason:first.failure,source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
   const rejected_leads=[];
-  const leads=parseSerperGoogleOrganic(payload,{query:term,ownUrl,limit:10,rejectedLog:rejected_leads,market});
-  return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',
+  let leads=parseSerperGoogleOrganic(first.payload,{query:term,ownUrl,limit:10,rejectedLog:rejected_leads,market});
+  // A localised lookup can still be dominated by other-state providers; when fewer than three comparable results survive the
+  // market filter, ask once more with the market named in the query. Bounded to one extra call; nothing is invented.
+  let market_query_retry=null;
+  const place=market?.location?market.location.split(',')[0].trim():'';
+  if(place&&leads.length<3&&!term.toLowerCase().includes(place.toLowerCase())){
+   const q2=term+' '+place,second=await ask(q2).catch(()=>({failure:'FETCH_FAILED'}));
+   if(second.payload){
+    const extra=parseSerperGoogleOrganic(second.payload,{query:term,ownUrl,limit:10,rejectedLog:rejected_leads,market})
+     .filter(l=>!leads.some(x=>x.url===l.url)).map(l=>({...l,query:q2,market_query:true}));
+    leads=[...leads,...extra].slice(0,10);
+    market_query_retry={query:q2,added_leads:extra.length};
+   }else market_query_retry={query:q2,added_leads:0,failure:second.failure};
+  }
+  return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',market_query_retry,
    source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,12),query:term,checked_at:new Date(now).toISOString(),
    scope:{country:'us',language:'en',location:market?.location||null,market_states:market?.states||[],source:'Google organic results through optional configured Serper.dev'},
    warning:'Organic positions describe observed search result placement in a US English lookup'+(market?.location?' localised to '+market.location:'')+', not the tracked page ranking, a search-volume estimate, or proven traffic. Serper.dev is optional.'};

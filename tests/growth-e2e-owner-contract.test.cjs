@@ -300,3 +300,9 @@ test('evidence status is identical in every output for a verified draft and for 
  assert.match(allText(ui.el.growthAutomaticReport),/Draft checked \(task fit, duplication, wording, claims\): yes/);
  assert.match(allText(ui.el.growthAutomaticReport),/Publication approved: no/);
 });
+test('UI: once a decision exists, the opening recommendation is shown as the starting point, not as the advice to follow',async()=>{
+ const ui=await runUi(harness({drafts:[draftFor('Repurpose what you already published',GOOD)]}),true);
+ const shown=allText(ui.el.growthAutomaticReport);
+ assert.match(shown,/How the research started/);assert.match(shown,/Starting point only\. The decision at the top of this report \(IMPROVE EXISTING\) replaces this step\./);
+ assert(!/Do this: /.test(shown),'the superseded instruction is not presented as the action');
+});

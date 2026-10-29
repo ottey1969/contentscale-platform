@@ -114,11 +114,13 @@
   }else if(ownerReport&&d.editorial_review_draft?.draft?.sections?.length){
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
-  var s=section('Research context and next check');
+  var superseded=!!(decision.final_decision&&recommendation&&recommendation.stage==='RESEARCH_STARTING_POINT');
+  var s=superseded?section('How the research started'):section('Research context and next check');
+  if(superseded)node('p','Starting point only. The decision at the top of this report ('+String(decision.final_decision.decision||'').replace(/_/g,' ')+') replaces this step.',s);
   if(recommendation){
    node('h3',recommendation.title,s);
    node('p',recommendation.reason,s);
-   node('p','Do this: '+recommendation.instruction,s);
+   if(!superseded)node('p','Do this: '+recommendation.instruction,s);
    if(recommendation.related_pages_to_check?.length){
     node('strong','Check an existing page before creating a new one:',s);
     recommendation.related_pages_to_check.forEach(u=>{var item=node('p',null,s);link(u,u,item)});
@@ -130,7 +132,7 @@
     node('p',(decision.protected_queries||[]).map(q=>q.query+' (position '+q.position.toFixed(1)+', '+q.clicks+' clicks)').join(' · '),s);
    }
    node('small',(decision.excluded_queries||[]).length+' off-intent, stale or unverified queries excluded from recommendations. GSC import date is not its measurement period.',s);
-   var copy=node('button','Copy this editorial action',s);copy.type='button';
+   var copy=node('button','Copy this editorial action',s);copy.type='button';if(superseded)copy.hidden=true;
    copy.addEventListener('click',async function(){
     var content=[d.url,recommendation.title,recommendation.reason,recommendation.instruction,
       'Review related pages: '+(recommendation.related_pages_to_check||[]).join(', '),
