@@ -14,7 +14,9 @@ const IGNORED=new Set(('about above after again against also always another beca
  'people really actually often usually well make sure also still even much while these those might likely based include includes including '+
  'process processes approach approaches strategy strategies method methods solution solutions result results '+
  // Time words ('a recent storm', 'the latest update') name when, not what; they never define a reader task.
- 'recent recently latest anyway lately').split(/\s+/));
+ 'recent recently latest anyway lately '+
+ // Words that structure a page (question/answer blocks, contact forms) rather than name its subject.
+ 'question questions answer answers answered frequently asked contact contacts').split(/\s+/));
 const wordsOf=(text,skip)=>(String(text||'').toLowerCase().match(/[a-z]{5,}/g)||[]).filter(w=>!IGNORED.has(w)&&!IGNORED.has(STEM(w))).map(root).filter(r=>r.length>=4&&!skip.has(r));
 const countMap=(arr)=>{const m=new Map();for(const r of arr)m.set(r,(m.get(r)||0)+1);return m};
 
@@ -28,7 +30,12 @@ function sectionProfile(sec,skip){
 // not a task the reader must learn. Detected from the competitor's own name and from case-study / possessive headings.
 // otherHostsText: the lower-cased text of the OTHER competitors. A site name that is also an ordinary word the other sites use
 // ("dentist-one.example" talking about dentists) is the topic, not a brand.
+// Page furniture: contact/quote blocks, FAQ containers and navigation headings frame a page; they are not something the reader
+// must learn. Industry-neutral, heading-level only (an individual question heading such as "Is wind damage covered?" stays).
+const FURNITURE_HEADING=/^(?:contact(?: us| information)?(?: today| now)?|get in touch|reach us|call us(?: today| now)?|request (?:a |your )?(?:free )?(?:quote|estimate|inspection|consultation|demo)|get (?:a |your )?(?:free )?(?:quote|estimate)|book (?:a|an|your)\b.*|schedule (?:a|an|your)\b.*|faqs?|frequently asked(?: questions)?|common questions|questions(?: and answers)?|q ?& ?a|related (?:posts|articles|services|pages)|our (?:team|services|locations)|service areas?|areas we serve|about us|share this|follow us)\s*[?:.!]*$/i;
+const isFurnitureHeading=h=>FURNITURE_HEADING.test(String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim());
 function isPromotionalSection(sec,host,otherHostsText=''){
+ if(isFurnitureHeading(sec.heading))return true;
  const label=String(host||'').replace(/^www\./,'').split('.')[0].toLowerCase().replace(/[^a-z0-9]/g,''),root=label.length>=5?label.slice(0,6):'';
  const heading=String(sec.heading||''),hay=(heading+' '+String(sec.text||'')).toLowerCase();
  if(/\b(?:case stud(?:y|ies)|customer stor(?:y|ies)|success stor(?:y|ies)|testimonials?|client stor(?:y|ies)|why (?:choose|work with) us|our (?:clients|customers|pricing|plans))\b/i.test(heading))return true;
@@ -129,4 +136,4 @@ function destinationStatus(task,blocksList,skip=new Set()){
  const status=strong.length>=2||strong.some(x=>x.key>=2)?'COVERED':per.length?'PARTIAL':'NOT_OBSERVED';
  return {status,passages:(strong.length?strong:per).slice(0,2).map(x=>({heading:x.b.heading||null,text:x.b.text.slice(0,300),concepts:[task.key,...task.co_terms].slice(0,4)}))};
 }
-module.exports={isPromotionalSection,deriveReaderTasks,deriveReaderTasksDetailed,draftTeachesTask,destinationStatus,taskHitsInText,wordsOf,root,STEM,IGNORED};
+module.exports={isPromotionalSection,isFurnitureHeading,deriveReaderTasks,deriveReaderTasksDetailed,draftTeachesTask,destinationStatus,taskHitsInText,wordsOf,root,STEM,IGNORED};

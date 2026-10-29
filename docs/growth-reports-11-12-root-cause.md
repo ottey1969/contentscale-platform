@@ -119,3 +119,8 @@ SEO performance", Moz + Semrush), geplaatst na "What Is International SEO & Why 
   | Blokkade-volgorde | SERP-tekort stond vóór de beschermde Case Study | Beschermde bestemming is de primaire uitkomst ("no website change is required"); SERP e.d. als `research_limitations` | 17 |
   | Selectie toonde oude 301-URL | Alleen de gate gebruikte de eind-URL | `query_selection`/`primary_next_action` tonen de eind-URL, oude URL als `tracked_url` | 14 |
   | Startadvies vs eindbeslissing | `REVIEW_PAGE_INTENT` bleef als advies zichtbaar | `growth_decision.final_decision`; startadvies gemarkeerd als `RESEARCH_STARTING_POINT`, UI toont het als vertrekpunt | 18, UI-test |
+
+## Productieruns na PR #197 (rapporten 19–22)
+- **19 (page 2324)** en **20 (ContentScale-homepage → `/content-scaling/`)**: `IMPROVE_EXISTING` met geverifieerd concept; consistent.
+- **21 (page 2413)**: 301 herkend; extra marktquery leverde 8 NJ-resultaten; primaire uitkomst `DESTINATION_IS_PROTECTED_CASE_STUDY`, evidence-label `CASE_STUDY_PROTECTED_NO_CHANGE_REQUIRED`. Geaccepteerd.
+- **22 (PRT-homepage, page 2281)**: 301-alias `/emergency-roofing/emergency-roof-repair-nj/` → `/24-hour-emergency-roof-repair-nj/` correct als eind-URL gebruikt. Fout: de enige "taak" kwam uit een FAQ-container ("Common questions") en een contactblok ("Contact Us"), wat leidde tot een zinloos concept ("…under your service title"). Correctie: zulke koppen zijn paginameubilair en worden bij taakafleiding overgeslagen; vraag/antwoord- en contactwoorden vormen geen taakconcept. Test 19.

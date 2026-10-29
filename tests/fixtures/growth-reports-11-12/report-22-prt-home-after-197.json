@@ -1,0 +1,309 @@
+{
+ "_source": "Verbatim subset of production Growth complete-review JSON (report 22, PRT homepage, generated 2026-10-29T00:37:18.874Z, after PR #197).",
+ "generated_at": "2026-10-29T00:37:18.874Z",
+ "page_id": 2281,
+ "url": "https://perfectroofingteam.com/",
+ "case_study_locked": true,
+ "query_selection": {
+  "status": "QUERY_SELECTED_FROM_VERIFIED_GSC",
+  "source": "VERIFIED_EXACT_PAGE_GSC",
+  "query": "emergency roof repair nj",
+  "destination": {
+   "url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+   "page_id": 2359,
+   "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+   "coverage": 1,
+   "keyword": "emergency roof repair nj",
+   "competing_same_site_pages": [
+    "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/"
+   ],
+   "tracked_url": "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+   "url_identity": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ]
+  },
+  "source_page_signal": {
+   "type": "SOURCE_PAGE_SURFACES_FOR_QUERY_OWNED_BY_ANOTHER_PAGE",
+   "note": "These are the SOURCE page’s rows. They are not performance data for the destination page.",
+   "source_page_url": "https://perfectroofingteam.com/"
+  },
+  "brand_queries_excluded": [],
+  "excluded": [
+   {
+    "query": "emergency roof repair hudson county",
+    "reason": "NO_KNOWN_SAME_SITE_PAGE_COVERS_THIS_QUERY",
+    "unmatched": [
+     "hudson",
+     "county"
+    ]
+   },
+   {
+    "query": "american team roofing contracting",
+    "reason": "NO_KNOWN_SAME_SITE_PAGE_COVERS_THIS_QUERY",
+    "unmatched": [
+     "american",
+     "contract"
+    ]
+   },
+   {
+    "query": "complete roofing services little egg harbor, nj",
+    "reason": "NO_KNOWN_SAME_SITE_PAGE_COVERS_THIS_QUERY",
+    "unmatched": [
+     "littl",
+     "egg",
+     "harbor"
+    ]
+   }
+  ],
+  "protected": []
+ },
+ "destination_identity": {
+  "url": "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+  "final_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "kind": "PERMANENT_REDIRECT",
+  "http_statuses": [
+   301
+  ],
+  "resolves_to_source": false,
+  "basis": "PERMANENT_REDIRECT_TO_FINAL_PAGE",
+  "source_url": "https://perfectroofingteam.com/",
+  "source_protected": false,
+  "alias_of": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/ → https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/ as an alias."
+ },
+ "url_identities": [
+  {
+   "original_url": "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+   "final_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "redirect_chain": [
+    {
+     "url": "https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/",
+     "status": 301,
+     "location": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/"
+    }
+   ],
+   "error": null,
+   "canonical_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+   "canonical_points_elsewhere": false,
+   "alias_of": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/ → https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/emergency-roof-repair-nj/ as an alias."
+  },
+  {
+   "original_url": "https://perfectroofingteam.com/emergency-roofing/roof-leak-repair-near-me/",
+   "final_url": "https://perfectroofingteam.com/roof-leak/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "redirect_chain": [
+    {
+     "url": "https://perfectroofingteam.com/emergency-roofing/roof-leak-repair-near-me/",
+     "status": 301,
+     "location": "https://perfectroofingteam.com/roof-leak/"
+    }
+   ],
+   "error": null,
+   "canonical_url": "https://perfectroofingteam.com/roof-leak/",
+   "canonical_points_elsewhere": false,
+   "alias_of": "https://perfectroofingteam.com/roof-leak/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/roof-leak-repair-near-me/ → https://perfectroofingteam.com/roof-leak/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/roof-leak/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/roof-leak-repair-near-me/ as an alias."
+  },
+  {
+   "original_url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+   "final_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "redirect_chain": [
+    {
+     "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+     "status": 301,
+     "location": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+    }
+   ],
+   "error": null,
+   "canonical_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "canonical_points_elsewhere": false,
+   "alias_of": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/ → https://perfectroofingteam.com/wind-damage-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/wind-damage-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/ as an alias."
+  },
+  {
+   "original_url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+   "final_url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "redirect_chain": [
+    {
+     "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+     "status": 301,
+     "location": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/"
+    }
+   ],
+   "error": null,
+   "canonical_url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "canonical_points_elsewhere": false,
+   "alias_of": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/ → https://perfectroofingteam.com/storm-damage-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/storm-damage-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/ as an alias."
+  }
+ ],
+ "serp_intent": {
+  "status": "SERP_INTENT_OBSERVED",
+  "intent": "LOCAL_SERVICE",
+  "query": "emergency roof repair nj",
+  "organic_leads_considered": 7,
+  "agreeing_leads": 7,
+  "compatible_leads": 7,
+  "agreement_basis": "SINGLE_INTENT",
+  "class_counts": {
+   "LOCAL_SERVICE": 7
+  },
+  "reason": null,
+  "pages_used_for_classification": 0,
+  "leads": [
+   {
+    "url": "https://emergencyroofrepairnj.net/",
+    "title": "Emergency Roof Repair NJ",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://precisionwindowsnj.com/emergency-roof-repair-nj",
+    "title": "Emergency Roof Repair NJ | 24-Hour Storm Tarping",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://www.gfedale.com/nj/roofing/repair/emergency",
+    "title": "Emergency Roof Repair in New Jersey | 24/7 Response",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://www.rhinoroofingnj.com/emergency-roof-repair",
+    "title": "Emergency Roof Repair",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://betterbuiltroofingnj.com/emergency-roof-repair/",
+    "title": "Emergency Roof Repair - Better Build Construction",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://morriscountyroofing.com/emergency-roof-repair-nj",
+    "title": "Emergency Roof Repair NJ | 24/7 Same-Day",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://roofleakrepairnjpros.com/",
+    "title": "24/7 Emergency Roof Leak Repair NJ: Expert Roofing Solutions",
+    "class": "LOCAL_SERVICE",
+    "basis": "TITLE_AND_SNIPPET"
+   }
+  ],
+  "method": "TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES",
+  "scope": "One lookup; observed placement is not a tracked-page ranking."
+ },
+ "reader_task_coverage": {
+  "tasks": [
+   {
+    "code": "task_questi",
+    "label": "Competitors teach “Common questions”",
+    "match": {
+     "key": "questi",
+     "co_terms": [],
+     "concepts": [
+      "questi",
+      "point",
+      "contac",
+      "titl",
+      "descri",
+      "answer",
+      "visito",
+      "intere",
+      "inform"
+     ],
+     "core_words": [
+      "question",
+      "point",
+      "contact",
+      "title"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://precisionwindowsnj.com/emergency-roof-repair-nj",
+      "host": "precisionwindowsnj.com",
+      "heading": "Common questions",
+      "excerpt": "It's the middle of the night and water is coming in. Is this actually an emergency, or can it wait until morning? Three things make it a tonight call: the roof is physically open with more weather coming, water is reaching electrical fixtures or a ceiling is sagging, or something structural is involved — a limb, a visible sag, cracking sounds. Most everything else keeps until first light, and we'll say so rather than",
+      "concepts": [
+       "questi"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://www.rhinoroofingnj.com/emergency-roof-repair",
+      "host": "rhinoroofingnj.com",
+      "heading": "Contact Us",
+      "excerpt": "When you're facing a roofing emergency, every minute counts. Our team at Rhino Roofing NJ is standing by, ready to provide the swift, professional service you need to secure your home. We understand the stress and urgency of roof emergencies, and we're committed to responding quickly and effectively. Don't let roof damage compromise your home's safety and integrity. Contact us now for immediate emergency roof repair ",
+      "concepts": [
+       "questi"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "NOT_OBSERVED",
+     "passages": []
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "🚨 5 Steps in a Roof Emergency",
+     "reason": "Closest existing section by shared concepts (immedi, night, servic, morn); the new section continues that explanation."
+    }
+   }
+  ],
+  "competitors_considered": [
+   {
+    "url": "https://emergencyroofrepairnj.net/",
+    "host": "emergencyroofrepairnj.net",
+    "partial": false,
+    "sections": 4
+   },
+   {
+    "url": "https://precisionwindowsnj.com/emergency-roof-repair-nj",
+    "host": "precisionwindowsnj.com",
+    "partial": false,
+    "sections": 11
+   },
+   {
+    "url": "https://www.rhinoroofingnj.com/emergency-roof-repair",
+    "host": "rhinoroofingnj.com",
+    "partial": false,
+    "sections": 3
+   }
+  ],
+  "destination_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/"
+ },
+ "editorial_decision_gate": {
+  "decision": "IMPROVE_EXISTING",
+  "target_url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+  "draft_heading": "Key Contact Points and Questions to Review Under an Emergency Roof Title",
+  "proposed_text": "When making emergency contact during an active roof leak, addressing every key point and question under your service title helps ensure prompt preparation by emergency dispatch teams. Before placing the phone call, observe where water is entering the building, whether structural damage or missing shingles are visible from ground level, and if ceiling surfaces or electrical fixtures are directly threatened. Organizing these specific facts before calling allows the dispatch representative to document the critical details needed for safety recommendations.\n\nProperty owners should also summarize key situational details to discuss during the call. Record when water intrusion was first noticed, whether severe storm winds or fallen debris caused visible damage, and whether the building is a residential or commercial property. Having this practical information ready helps incoming personnel anticipate access requirements and select appropriate temporary tarping or mitigation equipment prior to arriving for an on-site evaluation.\n\nFinally, ensure that work areas and entryway access points remain unobstructed while waiting for assistance. Keep interior pathways clear to attic hatches or upper levels, move vehicles away from exterior roof lines, and keep pets and family members safely distant from compromised structural areas. Once the crew arrives, completes their initial evaluation, and presents a cost estimate for review, you can grant approval for immediate leak mitigation.",
+  "copy_ready": true,
+  "verified_gap": true
+ }
+}
