@@ -20,7 +20,7 @@ const competitorHtml=url=>byUrl[url]?'<html><body><article>'+byUrl[url].map(x=>'
 const gscRows=pageId=>fx.gsc_homepage_rows.map(r=>({page_id:pageId,tracker_client_id:4,source_page_url:HOME,evidence_scope:'page_verified',...r}));
 
 function harness({pageId=fx.tracked_page.id,pageUrl=HOME,keyword='content at scale',saved=homepageHtml,withGsc=true,
- locked=true,inventory=fx.site_inventory_test_ids.rows,pages={},leads=fx.serp_leads,drafts=[],truncateCompetitors=false,truncateDestination=false}={}){
+ locked=true,inventory=fx.site_inventory_test_ids.rows,pages={},leads=fx.serp_leads,drafts=[],truncateCompetitors=false,truncateDestination=false,outcomes=null}={}){
  const route={},writes=[],providerCalls=[];
  const html={[HOME]:homepageHtml,[DEST]:destHtml(),[BRAND]:brandHtml,...pages};
  const db={async query(sql,args){
@@ -45,7 +45,8 @@ function harness({pageId=fx.tracked_page.id,pageUrl=HOME,keyword='content at sca
   // ISOLATION_STUB_NOT_PRODUCTION_EVIDENCE: stands in for the AI provider only.
   completeOwnerDraft:async({token,body})=>{providerCalls.push({token,body});
    const next=drafts.shift();
-   return {statusCode:200,body:next?{success:true,page_id:body.page_id,...next(body)}:{success:false,code:'NO_STUB'}}}});
+   return {statusCode:200,body:next?{success:true,page_id:body.page_id,...next(body)}:{success:false,code:'NO_STUB'}}},
+  ...(outcomes?{recordResearchOutcome:async x=>{outcomes.push(x)}}:{})});
  async function invoke(path,token='readonly-client-token',page_id=String(pageId)){
   const req={params:{token},query:{page_id}},res={statusCode:200,headers:{},status(x){this.statusCode=x;return this},
    set(k,v){this.headers[k]=v;return this},type(){return this},json(x){this.body=x;return this},send(x){this.body=x;return this}};
@@ -313,4 +314,18 @@ test('UI: an established improvement whose draft was rejected says so plainly an
  assert.match(shown,/Improvement identified — no approved publication text yet/);
  assert.match(shown,/Status: draft rejected/);
  assert(!findAll(ui.el.growthAutomaticReport,n=>n.tagName==='button'&&/Copy proposed Growth edit/.test(n._text)).length,'no copy button without approved text');
+});
+
+test('Cockpit memory: only the owner research run reports its final decision, read-only research does not',async()=>{
+ const outcomes=[],h=harness({outcomes});
+ await h.invoke(h.GET);
+ await new Promise(r=>setImmediate(r));
+ assert.equal(outcomes.length,0,'read-only research is never remembered');
+ const r=await h.invoke(h.POST,'owner-token');
+ await new Promise(r=>setImmediate(r));
+ assert.equal(outcomes.length,1);
+ assert.equal(outcomes[0].clientId,4);
+ assert.equal(outcomes[0].pageId,fx.tracked_page.id);
+ assert.equal(outcomes[0].decision,r.body.editorial_decision_gate.decision);
+ assert.equal(h.writes.length,0,'the research itself still writes nothing');
 });
