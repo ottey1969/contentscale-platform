@@ -43,7 +43,9 @@ function isPromotionalSection(sec,host,otherHostsText=''){
  const words=String(sec.text||'').split(/\s+/).filter(Boolean).length,self=(String(sec.text||'').match(/\b(?:we|we're|we've|our|ours|us)\b/gi)||[]).length;
  if(words>=20&&self>=3&&self/words>=0.04)return true;
  // Two explicit sales phrases ("our team is here", "our seasoned professionals", "we offer") mark a short sales block too.
- const sales=(String(sec.text||'').match(/\b(?:our (?:\w+ )?(?:team|professionals|experts|crews?|technicians|specialists|staff|company)|we (?:offer|provide|specialize|are here)|call us|contact us)\b/gi)||[]).length;
+ // A service offering ("we install…", "X provides gutter installation… services", "our reliable gutter services") advertises
+ // what the competitor sells; it is not something the reader has to learn.
+ const sales=(String(sec.text||'').match(/\b(?:our (?:\w+ )?(?:team|professionals|experts|crews?|technicians|specialists|staff|company)|our (?:\w+ ){0,3}services|we (?:offer|provide|specialize|are here|install|repair|replace|serve|handle|deliver)|provides? [^.]{0,80}?\bservices\b|call us|contact us)\b/gi)||[]).length;
  if(sales>=2)return true;
  // Digits in a domain spell the brand ("4seasons-construction" is "Four Seasons Construction" in headings).
  const DIGIT=['zero','one','two','three','four','five','six','seven','eight','nine'];
@@ -51,7 +53,13 @@ function isPromotionalSection(sec,host,otherHostsText=''){
  const heading=String(sec.heading||''),hay=(heading+' '+String(sec.text||'')).toLowerCase();
  if(/\b(?:case stud(?:y|ies)|customer stor(?:y|ies)|success stor(?:y|ies)|testimonials?|client stor(?:y|ies)|why (?:choose|work with) us|our (?:clients|customers|pricing|plans))\b/i.test(heading))return true;
  if(/^[A-Z][\w-]+['’]s\s/.test(heading))return true;
- if(root&&!String(otherHostsText).includes(root)){if(heading.toLowerCase().replace(/[^a-z0-9]/g,'').includes(root))return true;const n=hay.split(root).length-1;if(n>=2)return true}
+ // The brand is matched on compacted text too ("A & J Reliable" is ajreliable.com); one brand mention plus a sales phrase is
+ // the competitor describing itself.
+ const compactHay=hay.replace(/[^a-z0-9]/g,'');
+ if(root&&!String(otherHostsText).replace(/[^a-z0-9]/g,'').includes(root)){
+  if(heading.toLowerCase().replace(/[^a-z0-9]/g,'').includes(root))return true;
+  const n=compactHay.split(root).length-1;if(n>=2||(n>=1&&sales>=1))return true;
+ }
  return false;
 }
 function surfaceOf(root,texts){
