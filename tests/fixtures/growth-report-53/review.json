@@ -1,0 +1,199 @@
+{
+ "_note": "Real data from production Growth report 53 (contentscale.site page 2294, generated 2026-10-29T12:54:57.748Z): the accepted AI draft (main and additional section), the destination section headings with word counts, and the backlink task with its competitor sources. Section body text of the page is not part of the report and is not reconstructed.",
+ "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+ "focus_query": "ai citation tracker",
+ "copy_ready": true,
+ "cms_handoff": {
+  "proposal_id": 2,
+  "target_page_id": 2294
+ },
+ "draft": [
+  {
+   "task": "task_matter",
+   "h2": "Why AI Citation Tracking Matters Now for Search Strategy",
+   "text": "Understanding why AI citation tracking matters now requires analyzing how modern retrieval systems present immediate answers directly inside search interfaces. To evaluate your current visibility, begin by identifying key informational queries that drive top-of-funnel discovery, then test these prompts across major generative search platforms to observe which domains appear in direct source references. Document whether your domain appears in answer footers or inline callouts, and note any key structural gaps in pages where competitors earn citations.\n\nNext, audit your priority landing pages for missing entity definitions, unstructured comparison tables, or outdated citations that prevent retrieval algorithms from verifying your claims. Content managers should establish a weekly routine to cross-reference search engine impression data against generative citation references, flagging high-impression URLs that lack citation placement. By addressing these entity gaps early, teams can update page structure and schema markup to align with real-time retrieval requirements.",
+   "placement": {
+    "mode": "ADD_AFTER_SECTION",
+    "section_heading": "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+    "reason": "Closest existing section by shared concepts (monito, genera, platfo, refere); the new section continues that explanation."
+   }
+  },
+  {
+   "task": "task_backli",
+   "h2": "Comparing AI Citation Analysis to Backlink Evaluation",
+   "text": "While traditional backlink auditing focuses on accumulating off-page link equity, AI citation analysis evaluates whether content is directly retrieved and synthesized by generative models. Start by comparing your backlink profile report against generative search results for identical head terms to determine if high-authority links correlate with AI citation placement. Review whether cited pages feature direct factual statements, structured data headers, and clear entity definitions rather than relying strictly on off-page link equity.\n\nTo build an integrated optimization workflow, assign editorial team members to check both external links and AI citations during monthly content reviews. Identify target URLs that possess strong link profiles but fail to achieve AI citations, then restructure their introductory paragraphs to include concise, declarative answers to the primary search query. Finally, verify that core assertions are supported by structured entity markup so generative engines can easily reference your content alongside existing backlink signals.",
+   "placement": {
+    "mode": "EXTEND_SECTION",
+    "section_heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+    "reason": "This existing section already mentions the task’s core concept (2×); deepen it instead of adding a duplicate."
+   }
+  }
+ ],
+ "destination_sections": [
+  {
+   "heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+   "words": 254
+  },
+  {
+   "heading": "📑 Table of Contents",
+   "words": 96
+  },
+  {
+   "heading": "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+   "words": 165
+  },
+  {
+   "heading": "⚙️ How AI Citation Trackers Actually Work",
+   "words": 126
+  },
+  {
+   "heading": "Why Citations Replace Backlinks in AI Search",
+   "words": 101
+  },
+  {
+   "heading": "🗣️ Industry Consensus: The Shift is Real",
+   "words": 58
+  },
+  {
+   "heading": "The Actionable Advantage",
+   "words": 53
+  },
+  {
+   "heading": "📈 Real Results: From Invisible to Cited",
+   "words": 22
+  },
+  {
+   "heading": "Case Study: SaaS Blog (B2B)",
+   "words": 64
+  },
+  {
+   "heading": "Case Study: Local Service (NL Market)",
+   "words": 55
+  },
+  {
+   "heading": "📊 ContentScale vs. OmniSEO vs. PixelMojo",
+   "words": 45
+  },
+  {
+   "heading": "New here? Follow the 48-Hour Plan to get cited",
+   "words": 51
+  },
+  {
+   "heading": "⚙️ Essential Features Beyond Basic Monitoring",
+   "words": 106
+  },
+  {
+   "heading": "⚠️ Common Mistake: Tracking Without Acting",
+   "words": 95
+  },
+  {
+   "heading": "What Makes My Free Tracker Different",
+   "words": 193
+  },
+  {
+   "heading": "1. It Eliminates the “Manual Entry” Friction",
+   "words": 71
+  },
+  {
+   "heading": "2. It Provides Immediate Solutions, Not Just Data",
+   "words": 55
+  },
+  {
+   "heading": "3. It Targets Real Intent, Not Just Random Keywords",
+   "words": 67
+  },
+  {
+   "heading": "3b. It Closes the Impressions Gap",
+   "words": 80
+  },
+  {
+   "heading": "3c. It Flags Stale Content Before It Costs You Citations",
+   "words": 72
+  },
+  {
+   "heading": "4. It Future-Proofs Your Strategy with Multi-Engine Tracking",
+   "words": 53
+  },
+  {
+   "heading": "5. It Works as a Client-Facing Entry Point for Agencies",
+   "words": 66
+  },
+  {
+   "heading": "6. Privacy-First & GDPR Compliant",
+   "words": 42
+  },
+  {
+   "heading": "7. Transparency: The Live Client Wall",
+   "words": 118
+  },
+  {
+   "heading": "In Short",
+   "words": 31
+  },
+  {
+   "heading": "8. It Adapts to How You Actually Want to Work",
+   "words": 35
+  },
+  {
+   "heading": "Do It Yourself",
+   "words": 17
+  },
+  {
+   "heading": "Done-For-You",
+   "words": 18
+  },
+  {
+   "heading": "Team Handoff",
+   "words": 23
+  },
+  {
+   "heading": "Multi-Language HTML Import",
+   "words": 28
+  },
+  {
+   "heading": "❓ People Also Ask — AI Citation Trackers",
+   "words": 424
+  },
+  {
+   "heading": "Ready to Move Beyond Diagnostics?",
+   "words": 65
+  },
+  {
+   "heading": "❓ Frequently Asked Questions",
+   "words": 355
+  },
+  {
+   "heading": "📚 Related — ContentScale Resources",
+   "words": 295
+  }
+ ],
+ "backlink_task": {
+  "code": "task_backli",
+  "label": "Competitors teach “AI Citation Tracking vs. Traditional Backlink Monitoring”",
+  "key": "backli",
+  "co_terms": [],
+  "concepts": [
+   "backli"
+  ],
+  "support": [
+   {
+    "host": "omniseo.com",
+    "heading": "AI Citation Tracking vs. Traditional Backlink Monitoring",
+    "excerpt": "Backlink tools tell you where links point. AI citation tracking tells you where AI systems recommend your content in real user conversations. Those are different visibility surfaces with different optimization levers. Backlink growth can support authority, but it does not automatically translate into citation wins in ChatGPT, Perplexity, or Google AI Overviews. OmniSEO gives you a dedicated AI citation layer so your "
+   },
+   {
+    "host": "slatehq.com",
+    "heading": "Citations vs Mentions vs Backlinks",
+    "excerpt": "These three terms get mixed up constantly in buyer conversations. The short version: A citation is the strongest signal because it shows the model picked your URL specifically. Understanding Perplexity's citation methodology helps illustrate why this matters: only a small fraction of pages retrieved actually make it into the cited sources. A mention shows the model knows your brand exists in this category. A backlink"
+   },
+   {
+    "host": "airops.com",
+    "heading": "Do backlinks still matter for AI citations?",
+    "excerpt": "Off-domain presence and extractable evidence move AI citations more than raw backlink counts. One study of 167,551 brand citations found 85.7% of AI citations point to third-party sites a brand does not own, and a Princeton-led study found that adding machine-extractable provenance like statistics, quotations, and citations can lift visibility in AI answers by up to 40% . Earn mentions on trusted external sites, and "
+   }
+  ]
+ },
+ "h1": [
+  "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )"
+ ]
+}

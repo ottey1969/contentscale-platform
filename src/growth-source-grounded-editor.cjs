@@ -1,5 +1,6 @@
 'use strict';
 // Optional, owner-reviewed writing from the observed original page. Never publish.
+const {AI_MECHANISM}=require('./growth-draft-claim-guard.cjs');
 const plain=x=>String(x||'').replace(/<(?:script|style|template)\b[^>]*>[\s\S]*?<\/(?:script|style|template)>/gi,' ')
  .replace(/<[^>]+>/g,' ').replace(/&(?:nbsp|amp|quot|lt|gt|#39);/gi,' ').replace(/\s+/g,' ').trim();
 function sourceFacts(html){
@@ -12,6 +13,7 @@ function sourceFacts(html){
  }
  return {text:blocks.join('\n').slice(0,11000),count:blocks.length};
 }
+const RETRY_STATUSES=['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE','AI_DRAFT_UNPROVEN_AI_MECHANISM'];
 function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTerms=[]}={}){
  let obj=value;
  if(typeof obj==='string'){
@@ -49,6 +51,13 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
  const generated=(requireTitle?[title,description]:[]).concat(sections.flatMap(s=>[s.h2,...s.paragraphs])).join(' ');
  const num=/\b\d[\d,.%/-]*\b/g,known=new Set(String(sourceText).match(num)||[]);
  if((generated.match(num)||[]).some(v=>!known.has(v)))return {status:'AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED',draft:null};
+ // A reason for how AI or search systems pick, verify or cite content is an unproven claim (also inside an instruction),
+ // unless the original page itself says it. The model is told which sentence failed and gets one rewrite.
+ const sourceLower=String(sourceText).toLowerCase();
+ const mechanism=sections.flatMap(s=>s.paragraphs.flatMap(p=>p.split(/(?<=[.!?])\s+/)).map(t=>({h2:s.h2,t,m:t.match(AI_MECHANISM)})))
+  .filter(x=>x.m&&!sourceLower.includes(x.m[0].toLowerCase()));
+ if(mechanism.length)return {status:'AI_DRAFT_UNPROVEN_AI_MECHANISM',draft:null,
+  rejected_sections:mechanism.slice(0,4).map(x=>({h2:x.h2,reason:'UNPROVEN_AI_MECHANISM: "'+x.t.slice(0,160)+'"'}))};
  const risk=/\b(guaranteed|award.winning|best.rated|five.star|fully insured|certified technicians|same.day appointments)\b/gi;
  if((generated.match(risk)||[]).some(v=>!sourceText.toLowerCase().includes(v.toLowerCase())))
   return {status:'AI_DRAFT_UNSUPPORTED_CLAIM',draft:null};
@@ -82,6 +91,8 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    'Every section must carry the "task_code" of the task it teaches. Put the task\'s core_words in the H2 and in the first sentence, and explain the task itself, not a neighbouring topic.',
    'Make each step concrete (who does what, in which order, what to check) without inventing figures, names, response times, service areas or results.',
    'Write reader advice, not product claims: never state what any tool, tracker or software does or detects; avoid absolute verbs (eliminates, prevents, ensures, guarantees, proves) and promises about rankings, traffic, AI citations or ROI; use no figures that are not in the original text.',
+   'Never explain why or how AI assistants, AI search or search engines select, verify, retrieve or cite content, and never present page features (schema or entity markup, structure, tables, author information) as a reason they do. Describe only what the reader can do and observe.',
+   'Be concise and concrete: short sentences, no introductory filler ("Understanding why … requires …"). The H2 must name what the section delivers: steps need a "How to" heading, a "Why" heading needs actual reasons.',
    'Do not repeat anything the original page already teaches. Existing H2 headings (do not duplicate): '+JSON.stringify(readerTask.existing_headings||[]),
    'Procedural how-to guidance is allowed; every statistic, date, named study, price or claim about the site owner must come from the original text. Do not output a title or meta description.'
   ]:readerTask?.mode==='NEW_DISTINCT_PAGE'?[
@@ -127,11 +138,11 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   let result=normalizeDraft(raw,source.text,focusQuery,normOpts),repaired=false;
   // A factual rejection remains a rejection. Give the model one bounded
   // opportunity to rewrite without numbers; never silently delete claims.
-  if(['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE'].includes(result.status)){
+  if(RETRY_STATUSES.includes(result.status)){
    const failedWhy=(result.rejected_sections||[]).map(x=>'"'+x.h2+'" ('+x.reason+')').join('; ');
    const retryText=taskMode?
-    '\\nSTRICT RETRY: Your previous draft failed validation'+(failedWhy?' for these sections: '+failedWhy:'')+'. Write exactly one section per task, each with its "task_code". Each section must use the task\'s core_words in its H2 and first sentence (or the working query terms) and teach that task only. Do not output a title or meta description. Use no unsupported digits, numeric quantities, dates, rankings or performance claims, and make no statement about what any tool does. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.':
-    '\\nSTRICT RETRY: Your previous draft failed factual-number validation, topic alignment, or omitted the exact working focus query from the SEO title. Include the exact focus query in the SEO title, and rewrite every section so it clearly addresses the working search query; remove off-topic sections about unrelated AI citations or tools. Use no unsupported digits, numeric quantities, dates, numbered steps, rankings or performance claims. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.';
+    '\\nSTRICT RETRY: Your previous draft failed validation'+(failedWhy?' for these sections: '+failedWhy:'')+'. Write exactly one section per task, each with its "task_code". Each section must use the task\'s core_words in its H2 and first sentence (or the working query terms) and teach that task only. Do not output a title or meta description. Use no unsupported digits, numeric quantities, dates, rankings or performance claims, and make no statement about what any tool does or about why AI or search systems select, verify or cite content. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.':
+    '\\nSTRICT RETRY: Your previous draft failed factual-number validation, topic alignment, or omitted the exact working focus query from the SEO title. Include the exact focus query in the SEO title, and rewrite every section so it clearly addresses the working search query; remove off-topic sections about unrelated AI citations or tools. Use no unsupported digits, numeric quantities, dates, numbered steps, rankings or performance claims, and no reasons for why AI or search systems select, verify or cite content. The original page remains the only source of factual claims. Do not reuse the rejected text. Return complete JSON with substantive original paragraphs.';
    const retry=await request(prompt+retryText);
    if(retry!==null){
     const checked=normalizeDraft(retry,source.text,focusQuery,normOpts);
@@ -139,7 +150,7 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    }
   }
   return {...result,source_blocks:source.count,source_url:canonical.href,
-   draft_quality_retry_attempted:['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE'].includes(result.status)||repaired,
+   draft_quality_retry_attempted:RETRY_STATUSES.includes(result.status)||repaired,
    numeric_claim_retry_attempted:result.status==='AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED'||repaired,
    numeric_claim_retry_succeeded:repaired,
    provenance:'AI_PROPOSAL_UNVERIFIED_EDITOR_REVIEW',publication_allowed:false};
