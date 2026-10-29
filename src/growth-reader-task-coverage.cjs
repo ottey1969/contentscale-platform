@@ -217,7 +217,9 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
  }
  const seenAnchor=new Map();
  for(const t of result){if(!t.placement)continue;const k=t.placement.mode+'|'+t.placement.section_heading;
-  if(seenAnchor.has(k)){t.placement={...t.placement,reason:t.placement.reason+' Place it after the section proposed for “'+seenAnchor.get(k)+'”.'}}else seenAnchor.set(k,t.label)}
+  // Several new sections at one anchor form a chain in this order; after_task_code makes the order explicit for the handoff.
+  if(seenAnchor.has(k)){const prev=seenAnchor.get(k);t.placement={...t.placement,after_task_code:prev.code,reason:t.placement.reason+' Place it after the section proposed for “'+prev.label+'”.'}}
+  seenAnchor.set(k,{code:t.code,label:t.label})}
  const supported=result.filter(t=>t.supported_by_competitors);
  return {status:compInfo.length>=2&&new Set(compInfo.map(c=>c.host)).size>=2?'READER_TASK_COVERAGE_OBSERVED':'INSUFFICIENT_READABLE_COMPETITORS',
   method:'TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF',
