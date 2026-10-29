@@ -130,6 +130,11 @@ m1=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory
 assert.equal(m1.best_candidate.basis,'FINISH_STARTED_WORK');
 assert.equal(m1.best_candidate.page_id,7);
 assert.match(m1.best_candidate.reasons[1],/not been published yet/);
+assert.equal(m1.best_candidate.label,'open second topic','the heading names the researched search term');
+// Research started from the page list (no query row): the page's tracked keyword names it, not "This page".
+const pageOnly=assessGrowthCandidates(computeGrowth(pages,[],'site.example',now),{now,pageRows:pages,
+ memory:[mem({tracker_page_id:7,query_key:'',query:'',status:'RESEARCHED',researched_at:ago(1),research_decision:'IMPROVE_EXISTING'})]});
+assert.equal(pageOnly.best_candidate.basis,'FINISH_STARTED_WORK');assert.equal(pageOnly.best_candidate.label,'second');
 assert.equal(m1.best_candidate.runner_up.query,'open best topic');
 // Once a publication is recorded after the research, it waits for measurement instead.
 const pubs=[...publications,{id:43,tracker_page_id:7,query:'open second topic',notes:'z',published_at:ago(2)}];
