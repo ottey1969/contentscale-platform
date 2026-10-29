@@ -15,6 +15,7 @@ const {decideOwnerGrowthEdit}=require('./growth-owner-edit-decision.cjs');
 const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
 const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent}=require('./growth-reader-task-coverage.cjs');
+const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
@@ -318,6 +319,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    for(const q of report.growth_decision?.other_reviewable_queries||[])q.destination=toFinal(q.destination);
   }
   report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
+  // Checked on the page that will actually be compared (after any retarget).
+  report.serp_meaning=checkQueryMeaning({query:targetQuery,leads:discovery.leads,destinationHtml:selectedSource?.html||''});
   report.destination_section_comparison=selectedSource?compareFullSections({
    query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,
    ownTruncated:selectedSource.truncated===true,
@@ -478,6 +481,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(['NO_CHANGE','DATA_BLOCKED'].includes(gateDecision)){
    // Final outcomes: no provider call and no forced copy.
    completion={...base,status:'NOT_REQUIRED_FOR_DECISION',decision:gateDecision,draft:null,error_code:null};
+  }else if(gate.new_page_plan?.page_type==='PRODUCT_OR_TOOL_PAGE'){
+   // A product page is written from the owner's real product facts; no provider call, no generated feature or price claims.
+   completion={...base,status:'OWNER_PRODUCT_FACTS_REQUIRED',decision:gateDecision,draft:null,error_code:null};
   }else if(!Number.isSafeInteger(targetId)||targetId<1){
    completion={...base,status:'DESTINATION_TRACKER_PAGE_REQUIRED',draft:null};
   }else{

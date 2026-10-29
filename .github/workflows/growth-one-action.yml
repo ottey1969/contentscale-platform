@@ -50,6 +50,8 @@ on:
       - 'tests/growth-destination-lock.test.cjs'
       - 'tests/growth-reports-38-41-regression.test.cjs'
       - 'tests/growth-reports-42-44-regression.test.cjs'
+      - 'tests/growth-tool-and-meaning-intent.test.cjs'
+      - 'src/growth-serp-meaning.cjs'
       - 'tests/fixtures/growth-reports-42-44/**'
       - 'tests/fixtures/growth-reports-38-41/**'
       - 'src/growth-word-match.cjs'
@@ -90,6 +92,8 @@ on:
       - 'tests/growth-destination-lock.test.cjs'
       - 'tests/growth-reports-38-41-regression.test.cjs'
       - 'tests/growth-reports-42-44-regression.test.cjs'
+      - 'tests/growth-tool-and-meaning-intent.test.cjs'
+      - 'src/growth-serp-meaning.cjs'
       - 'tests/fixtures/growth-reports-42-44/**'
       - 'tests/fixtures/growth-reports-38-41/**'
       - 'src/growth-word-match.cjs'
@@ -124,7 +128,7 @@ jobs:
           node --test tests/growth-core-decision-contract.test.cjs tests/growth-owner-edit-decision.test.cjs tests/growth-verified-opportunity.test.cjs tests/growth-truncated-evidence.test.cjs tests/growth-claim-guard.test.cjs tests/growth-review-16-regression.test.cjs tests/growth-review-17-regression.test.cjs tests/growth-root-cause-regression.test.cjs tests/growth-final-quality-regression.test.cjs tests/growth-generator-and-shared-tasks.test.cjs tests/growth-industry-neutrality.test.cjs tests/growth-local-service-pipeline.test.cjs tests/growth-e2e-owner-contract.test.cjs
           node --test tests/growth-core-decision-contract.test.cjs tests/growth-owner-edit-decision.test.cjs tests/growth-verified-opportunity.test.cjs tests/growth-truncated-evidence.test.cjs tests/growth-claim-guard.test.cjs tests/growth-review-16-regression.test.cjs tests/growth-review-17-regression.test.cjs tests/growth-root-cause-regression.test.cjs tests/growth-final-quality-regression.test.cjs tests/growth-industry-neutrality.test.cjs tests/growth-local-service-pipeline.test.cjs tests/growth-e2e-owner-contract.test.cjs
       - name: Reports 11/12 regressions (intent, destination, market, readable HTML, evidence status)
-        run: node --test tests/growth-reports-11-12-regression.test.cjs tests/growth-evidence-status-safety-regression.test.cjs tests/tracker-redirect-advice.test.cjs tests/growth-destination-lock.test.cjs tests/growth-reports-26-27-regression.test.cjs tests/growth-reports-38-41-regression.test.cjs tests/growth-reports-42-44-regression.test.cjs
+        run: node --test tests/growth-reports-11-12-regression.test.cjs tests/growth-evidence-status-safety-regression.test.cjs tests/tracker-redirect-advice.test.cjs tests/growth-destination-lock.test.cjs tests/growth-reports-26-27-regression.test.cjs tests/growth-reports-38-41-regression.test.cjs tests/growth-reports-42-44-regression.test.cjs tests/growth-tool-and-meaning-intent.test.cjs
       - name: Full repository test chain (npm test)
         env:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
