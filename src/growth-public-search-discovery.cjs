@@ -97,6 +97,7 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLo
 }
 // Serper.dev is the only paid Google-organic provider for Growth (product rule). Growth reads ONLY SERPER_API_KEY;
 // SERPAPI_KEY is never used as a fallback, even though other tracker code paths still accept it.
+// Paid calls per run: one, plus at most one retry when fewer than three usable results remain (market query or page 2).
 async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,fetchImpl=global.fetch,key=process.env.SERPER_API_KEY,now=new Date()}={}){
  const term=String(query||'').trim(),available=String(key||'').trim();
  if(!term||term.length>100||!/^[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/-]*$/u.test(term))
@@ -104,11 +105,11 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,fetchImp
  if(!available)return {status:'OPTIONAL_PROVIDER_NOT_CONFIGURED',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  if(typeof fetchImpl!=='function')return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  // Serper.dev accepts POST JSON; never put API credentials into URL or logs.
- const ask=async q=>{
+ const ask=async(q,page=1)=>{
   const response=await fetchImpl('https://google.serper.dev/search',{
    method:'POST',headers:{'X-API-KEY':available,'Content-Type':'application/json'},
    // A local page is researched where it competes: Serper's documented `location` parameter localises the organic results.
-   body:JSON.stringify({q,gl:'us',hl:'en',num:10,...(market?.location?{location:market.location}:{})}),
+   body:JSON.stringify({q,gl:'us',hl:'en',num:10,...(page>1?{page}:{}),...(market?.location?{location:market.location}:{})}),
    signal:AbortSignal.timeout(10000)
   });
   if(!response.ok)return {failure:'HTTP_'+response.status};
@@ -134,7 +135,19 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,fetchImp
     market_query_retry={query:q2,added_leads:extra.length};
    }else market_query_retry={query:q2,added_leads:0,failure:second.failure};
   }
-  return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',market_query_retry,
+  // Owner decision (2026-10-29): without a market, a thin first page (fewer than three usable results) may cost exactly one
+  // more Serper call for result page 2 of the same query. Never more than two paid calls per research run.
+  let next_page_retry=null;
+  if(!market_query_retry&&leads.length<3){
+   const second=await ask(term,2).catch(()=>({failure:'FETCH_FAILED'}));
+   if(second.payload){
+    const extra=parseSerperGoogleOrganic(second.payload,{query:term,ownUrl,limit:10,rejectedLog:rejected_leads,market})
+     .filter(l=>!leads.some(x=>x.url===l.url)).map(l=>({...l,result_page:2}));
+    leads=[...leads,...extra].slice(0,10);
+    next_page_retry={page:2,added_leads:extra.length,organic_results_received:second.payload.organic.length};
+   }else next_page_retry={page:2,added_leads:0,failure:second.failure};
+  }
+  return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',market_query_retry,next_page_retry,
    organic_results_received:first.payload.organic.length,
    source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,20),query:term,checked_at:new Date(now).toISOString(),
    scope:{country:'us',language:'en',location:market?.location||null,market_states:market?.states||[],source:'Google organic results through optional configured Serper.dev'},

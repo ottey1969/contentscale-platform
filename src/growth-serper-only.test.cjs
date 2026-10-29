@@ -27,7 +27,10 @@ async function withEnv(env,fn){
   const calls=[];
   global.fetch=async(url,opts)=>{calls.push({host:new URL(url).hostname,opts});return {ok:true,json:async()=>payload}};
   const found=await discoverGrowthCompetitorsWithFallback({query:'ai overview optimization',ownUrl:'https://contentscale.site/ai-overview-optimization/',fetchFree:noFree});
-  assert.equal(calls.length,1);assert.equal(calls[0].host,'google.serper.dev');
+  // One usable lead (< 3): exactly one bounded retry for result page 2 is allowed (owner decision 2026-10-29), never more.
+  assert.equal(calls.length,2);assert.equal(calls[0].host,'google.serper.dev');assert.equal(calls[1].host,'google.serper.dev');
+  assert.equal(JSON.parse(calls[0].opts.body).page,undefined);assert.equal(JSON.parse(calls[1].opts.body).page,2);
+  assert.equal(found.next_page_retry.page,2);
   assert.equal(calls[0].opts.method,'POST');assert.equal(calls[0].opts.headers['X-API-KEY'],'serper-key');
   assert.equal(found.source,'SERPER_GOOGLE_ORGANIC');assert.equal(found.leads.length,1);
   assert.deepEqual(found.provider_attempts,['BING_PUBLIC_RSS','SERPER_GOOGLE_ORGANIC']);

@@ -61,3 +61,18 @@ test('R33: every organic result that is not used is logged with a reason, so a t
  assert.equal(leads.length,1);
  assert.deepEqual(log.map(x=>x.reason).sort(),['DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT','NON_CONTENT_PATH','QUERY_TERMS_NOT_IN_TITLE','SEARCH_OR_SOCIAL_INFRASTRUCTURE']);
 });
+const {optionalGoogleOrganicDiscovery}=require('../src/growth-public-search-discovery.cjs');
+test('R33: a thin SERP without a market costs at most one extra Serper call (page 2); a full SERP costs exactly one',async()=>{
+ const org=n=>Array.from({length:n},(_,i)=>({title:'International SEO guide part '+(i+1),link:'https://site'+i+'.example/international-seo/',position:i+1}));
+ const run=async pages=>{const calls=[];const r=await optionalGoogleOrganicDiscovery({query:'international seo',ownUrl:'https://contentscale.site/',key:'k',
+  fetchImpl:async(u,o)=>{const b=JSON.parse(o.body);calls.push(b);return {ok:true,json:async()=>({organic:pages[(b.page||1)-1]||[]})}}});return {r,calls}};
+ const full=await run([org(5)]);assert.equal(full.calls.length,1);assert.equal(full.r.next_page_retry,null);
+ const thin=await run([org(2),org(6).slice(2)]);
+ assert.equal(thin.calls.length,2);assert.equal(thin.calls[1].page,2);assert.equal(thin.calls[1].q,'international seo');
+ assert.equal(thin.r.next_page_retry.added_leads,4);assert(thin.r.leads.length>=3);assert(thin.r.leads.some(l=>l.result_page===2));
+ const still=await run([org(1),[]]);assert.equal(still.calls.length,2,'never a third call');assert.equal(still.r.next_page_retry.added_leads,0);
+ // With a market the existing market-query retry is the only retry: still at most two calls.
+ const calls=[];await optionalGoogleOrganicDiscovery({query:'roof repair',ownUrl:'https://x.example/',key:'k',market:{states:['NJ'],location:'New Jersey, United States'},
+  fetchImpl:async(u,o)=>{calls.push(JSON.parse(o.body));return {ok:true,json:async()=>({organic:[]})}}});
+ assert.equal(calls.length,2);assert.equal(calls[1].q,'roof repair New Jersey');assert.equal(calls[1].page,undefined);
+});
