@@ -127,8 +127,8 @@ var API=${js(api+'/checks/'+id)},Q=${js(q)},CONTACT=${js(cfg.contactUrl)},SERVIC
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var ENG_STATE={};
 function aiHtml(a){var x=a.summary,h='<h2 id="ai">AI answers</h2><p class="lead"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
- h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?'not checked':!e.sources?'no source links given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
-  return '<div class="eng '+(e.checked?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = source links in that AI answer.</p>';
+ h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?'not checked':!e.verifiable?'no RESOURCES section — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
+  return '<div class="eng '+(e.checked&&e.verifiable?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked&&e.verifiable?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = links in the RESOURCES list of that AI answer. Links that appear only in the answer text do not count as sources.</p>';
  if(x.top_cited_sites.length)h+='<h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul>';
  if(x.steps.length)h+='<h3>What to do</h3><ol>'+x.steps.map(function(t){return '<li>'+esc(t)+'</li>'}).join('')+'</ol>';
  var next=x.engines.filter(function(e){return !e.checked})[0]||x.engines[0];
@@ -406,7 +406,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const parsed=ai.parseAiAnswer(text,{pageUrl:row.url});
    await storage.saveAiAnswer(pool,{checkId:row.id,engine,rawText:text,parsed});
    const aiPart=await aiFor(row);
-   res.json({success:true,engine,parsed:{sources:parsed.sources.length,own_site_cited:parsed.own_site_cited,exact_page_cited:parsed.exact_page_cited},
+   res.json({success:true,engine,parsed:{sources:parsed.sources.length,resources_status:parsed.resources_status,verifiable:parsed.sources_verifiable,own_site_cited:parsed.own_site_cited,exact_page_cited:parsed.exact_page_cited,own_url_mentioned_not_cited:parsed.own_url_mentioned_not_cited},
     ai:{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary},
     summary:withAiLimits(row.summary,aiPart)});
   }catch(e){console.error('[free-growth] AI answer failed',e.message);res.status(503).json({success:false,error:'Could not analyse the answer. Please try again.'})}

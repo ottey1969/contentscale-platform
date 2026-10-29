@@ -372,10 +372,10 @@ test('pasted AI answers: sources, own site, exact page, escaped markdown, noise 
  const none=ai.parseAiAnswer('ANSWER: x\nRESOURCES:\nNO VERIFIED RESOURCES',{pageUrl:page});
  assert.equal(none.no_sources,true);assert.equal(none.own_site_cited,false);
  assert.equal(ai.rootOf('shop.example.co.uk'),'example.co.uk');
- const sum=ai.summarizeAiAnswers([{engine:'perplexity',parsed:other},{engine:'chatgpt',parsed:ai.parseAiAnswer('RESOURCES: https://roofer-a.example/x https://roofer-b.example/y',{pageUrl:page})}],
+ const sum=ai.summarizeAiAnswers([{engine:'perplexity',parsed:other},{engine:'chatgpt',parsed:ai.parseAiAnswer('RESOURCES:\nhttps://roofer-a.example/x https://roofer-b.example/y',{pageUrl:page})}],
   {pageUrl:page,googleUrls:['https://roofer-a.example/roof-repair-nj/']});
  assert.equal(sum.checked,2);assert.equal(sum.cited_by,1);assert.equal(sum.exact_page_by,0);
- assert.equal(sum.headline,'Cited by 1 of 2 AI systems checked');assert.match(sum.explanation,/different page/);
+ assert.equal(sum.headline,'Cited by 1 of 2 AI systems with a source list');assert.match(sum.explanation,/different page/);
  assert.deepEqual(sum.also_in_google,['roofer-a.example']);
  assert.ok(sum.steps.some(x=>/another page of your site/.test(x)));
  assert.equal(ai.summarizeAiAnswers([],{pageUrl:page}).headline,'AI answers not checked yet');
@@ -401,7 +401,7 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: x\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://acme-roofing.example/roof-repair-lodi-nj/'});
  assert.equal(s.storage.aiRows.length,1);
  r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
- assert.equal(r.body.ai.summary.headline,'Cited by 1 of 1 AI system checked');
+ assert.equal(r.body.ai.summary.headline,'Cited by 1 of 1 AI system with a source list');
  assert.deepEqual(r.body.ai.summary.also_in_google,['roofer-a.example'],'compared with the Google results of this check');
  assert.ok(!r.body.summary.limitations.some(x=>/were not checked/.test(x)));assert.ok(r.body.summary.limitations.some(x=>/differ per user/.test(x)));
  const dl=await s.get('/api/free-growth/checks/pub1/report.json?k=key1abcdefgh');
@@ -410,4 +410,43 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  for(const m of page.body.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
  assert.match(page.body,/Your page in Google and in AI answers/);
  await s.service.idle();
+});
+
+test('review: only an explicit RESOURCES section counts as AI sources',()=>{
+ const page='https://acme-roofing.example/roof-repair-lodi-nj/';
+ // (1) Own URL only in ANSWER, RESOURCES declares none: not cited.
+ const one=ai.parseAiAnswer('ANSWER:\nSee https://acme-roofing.example/roof-repair-lodi-nj/ for prices.\n\nRESOURCES:\nNO VERIFIED RESOURCES',{pageUrl:page});
+ assert.deepEqual(one.sources,[]);assert.equal(one.resources_status,'NONE_DECLARED');assert.equal(one.sources_verifiable,true);
+ assert.equal(one.own_site_cited,false);assert.equal(one.exact_page_cited,false);
+ assert.equal(one.own_url_mentioned_not_cited,true,'the mention is reported, but never as a citation');
+ assert.deepEqual(one.mentioned_urls_not_sources,['https://acme-roofing.example/roof-repair-lodi-nj/']);
+ // Same with an empty RESOURCES section.
+ assert.equal(ai.parseAiAnswer('ANSWER: https://acme-roofing.example/roof-repair-lodi-nj/\nRESOURCES:\n',{pageUrl:page}).own_site_cited,false);
+ // (2) Own URL listed under RESOURCES (markdown heading, bold, escaped): cited.
+ for(const heading of ['RESOURCES:','**RESOURCES:**','## Resources','RESOURCES'])
+  {const two=ai.parseAiAnswer('ANSWER: Roof repair explained.\n'+heading+'\n- https\\://acme-roofing\\.example/roof-repair-lodi-nj/\n- https://roofer-a.example/x',{pageUrl:page});
+   assert.equal(two.resources_status,'LISTED',heading);assert.equal(two.own_site_cited,true,heading);assert.equal(two.exact_page_cited,true,heading);assert.equal(two.sources.length,2,heading)}
+ // A URL in the answer is not added to the sources even when RESOURCES lists others.
+ const mixed=ai.parseAiAnswer('ANSWER: also https://acme-roofing.example/other/\nRESOURCES:\nhttps://roofer-a.example/x',{pageUrl:page});
+ assert.deepEqual(mixed.sources,['https://roofer-a.example/x']);assert.equal(mixed.own_site_cited,false);
+ // The word "resources" inside a sentence is not the section heading.
+ const prose=ai.parseAiAnswer('ANSWER: Good resources: https://acme-roofing.example/roof-repair-lodi-nj/ explains it.',{pageUrl:page});
+ assert.equal(prose.resources_status,'MISSING');assert.equal(prose.own_site_cited,false);
+ // (3) Missing or malformed RESOURCES: not verified, labelled honestly.
+ const missing=ai.parseAiAnswer('Here is my answer with https://acme-roofing.example/roof-repair-lodi-nj/ and https://roofer-a.example/x',{pageUrl:page});
+ assert.equal(missing.resources_status,'MISSING');assert.equal(missing.sources_verifiable,false);assert.deepEqual(missing.sources,[]);
+ const malformed=ai.parseAiAnswer('ANSWER: x\nRESOURCES:\nsee the links above',{pageUrl:page});
+ assert.equal(malformed.resources_status,'NO_VALID_URLS');assert.equal(malformed.sources_verifiable,false);
+ const onlyBad=ai.summarizeAiAnswers([{engine:'chatgpt',raw_text:'Answer with https://acme-roofing.example/roof-repair-lodi-nj/'}],{pageUrl:page});
+ assert.equal(onlyBad.headline,'Not verified: no source list in the pasted answers');assert.equal(onlyBad.cited_by,0);
+ assert.equal(onlyBad.engines.find(e=>e.id==='chatgpt').verifiable,false);
+ assert.ok(onlyBad.steps.some(x=>/again from a new chat/.test(x)));
+ const mix=ai.summarizeAiAnswers([{engine:'chatgpt',raw_text:'no list https://acme-roofing.example/roof-repair-lodi-nj/'},
+  {engine:'perplexity',raw_text:'ANSWER: x\nRESOURCES:\nhttps://roofer-a.example/x'}],{pageUrl:page});
+ assert.equal(mix.headline,'Not cited by AI: 0 of 1 AI system with a source list');
+ assert.match(mix.explanation,/ChatGPT Search: no RESOURCES section, not verified/);
+ assert.deepEqual(mix.top_cited_sites,[{site:'roofer-a.example',ai_systems:1}],'unverified answers do not feed the site list');
+ // Stored answers are re-read with the current rules (raw_text wins over an old parsed result).
+ const stale=ai.summarizeAiAnswers([{engine:'claude',raw_text:'mention https://acme-roofing.example/roof-repair-lodi-nj/',parsed:{sources:['https://acme-roofing.example/roof-repair-lodi-nj/'],own_site_cited:true,exact_page_cited:true,source_sites:['acme-roofing.example']}}],{pageUrl:page});
+ assert.equal(stale.cited_by,0);
 });
