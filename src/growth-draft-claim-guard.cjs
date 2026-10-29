@@ -38,7 +38,7 @@ const CAP_ADVICE_LEAD=/\b(?:use|using|with|choose|select|pick|adopt|implement|in
 const PRECISION=/\b(?:exactly|precisely|real[- ]time|in real time|directly quoted|every single|each and every|automatically)\b/i;
 function capabilityClaim(sentence){
  // Advice to the reader ("Integrate automated quality checks that scan…") describes a practice, not what OUR tool does.
- if(IMPERATIVE_VERB.test(sentence.trim())&&!FIRST_PERSON.test(sentence))return null;
+ if(IMPERATIVE_VERB.test(withoutLead(sentence))&&!FIRST_PERSON.test(sentence))return null;
  const m=sentence.match(CAP_S)||sentence.match(CAP_AMB);if(m)return m[0];
  const p=sentence.match(CAP_PLURAL);
  if(p&&!CAP_ADVICE_LEAD.test(sentence)&&!/\bto\s+(?:\w+\s+){0,1}$/i.test(sentence.slice(0,sentence.indexOf(p[0]))))return p[0];
@@ -73,7 +73,12 @@ function entitiesIn(sentence){
 
 // text: draft paragraph(s); destinationText: the ONLY factual source; query: the working query.
 // Conjunctions such as once/then/if/before do not by themselves make advice imperative.
-const IMPERATIVE_VERB=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioriti[sz]e|focus|avoid|ensure|confirm|assign|audit|extract|apply|maintain|feed)\b/i;
+const IMPERATIVE_VERB=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioriti[sz]e|focus|avoid|ensure|confirm|assign|audit|extract|apply|maintain|feed|note|open|enter|save|repeat|look|search|inspect|export|copy|paste|select|pick|log|test|spot|verify|watch)\b/i;
+// An instruction often opens with a sequence word ("Finally, compare …", "Next, open …"): the verb after it is still
+// addressed to the reader. Only content-free sequence words are skipped; a leading clause ("When the tracker confirms …,
+// apply …") can itself carry a claim and is never skipped.
+const LEAD=/^(?:(?:and|then|next|finally|lastly|first(?:ly)?|second(?:ly)?|third(?:ly)?|also|afterwards|after that|in addition|meanwhile|now)\b,?\s+)+/i;
+const withoutLead=s=>String(s).trim().replace(LEAD,'');
 const IMPERATIVE=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioritis?e|focus|avoid|ensure|confirm|schedule|assign|audit|extract|apply|maintain|continuously|then|first|next|once|before|after|if)\b/i;
 const ADVICE_MODAL=/\b(?:should|can|could|may|might|consider|try|helps?|allows?|lets?)\b/i;
 // "do not guarantee", "cannot prove", "is never risk-free" are disclaimers, not claims: an absolute word counts only

@@ -11,6 +11,8 @@ on:
       - 'tests/growth-report-51-review-regression.test.cjs'
       - 'tests/fixtures/growth-report-50/**'
       - 'tests/fixtures/growth-report-51/**'
+      - 'tests/growth-report-52-regression.test.cjs'
+      - 'tests/fixtures/growth-report-52/**'
       - 'package.json'
       - '.github/workflows/growth-cms-handoff-chain.yml'
   push:
@@ -45,7 +47,7 @@ jobs:
       - name: UI scripts parse
         run: node --check public/growth-cms-neutral-handoff.js && node --check public/growth-automatic-report-ui.js
       - name: Proposal store and CMS package (report 50)
-        run: node --test tests/growth-proposal-cms-handoff.test.cjs tests/growth-report-51-review-regression.test.cjs
+        run: node --test tests/growth-proposal-cms-handoff.test.cjs tests/growth-report-51-review-regression.test.cjs tests/growth-report-52-regression.test.cjs
       - name: Research -> proposal -> CMS package -> publication without GSC -> Cockpit -> measurement (real PostgreSQL)
         env:
           GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e

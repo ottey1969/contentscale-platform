@@ -1,0 +1,31 @@
+{
+ "_note": "Real data from production Growth report 52 (contentscale.site page 2294, generated 2026-10-29T12:38:41.221Z): the task placement and the draft rejection. The rejected draft body was withheld in the report and is not reconstructed.",
+ "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+ "focus_query": "ai citation tracker",
+ "decision": "IMPROVE_EXISTING",
+ "copy_ready": false,
+ "evidence_label": "TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED",
+ "placement": {
+  "mode": "ADD_AFTER_SECTION",
+  "section_heading": "⚙️ How AI Citation Trackers Actually Work",
+  "reason": "Closest existing section by shared concepts (track, googl, queri, perple); the new section continues that explanation."
+ },
+ "draft_rejections": [
+  {
+   "heading": "How to Perform a Manual Search for Your Core Keywords in AI Engines",
+   "task": "task_manual",
+   "ok": false,
+   "code": "DRAFT_UNSUPPORTED_CLAIMS",
+   "concept_hits": 2,
+   "duplicate_overlap_pct": 0,
+   "claim_violations": [
+    {
+     "code": "UNSUPPORTED_CAPABILITY_CLAIM",
+     "sentence": "Finally, compare these findings against your existing search analytics to highlight visibility gaps.",
+     "reason": "States what a tool or system does (“analytics to highlight”) but the destination page does not say so; generic advice cannot stand in for a verified product capability."
+    }
+   ],
+   "reason": "Rejected: UNSUPPORTED_CAPABILITY_CLAIM."
+  }
+ ]
+}
