@@ -69,7 +69,9 @@
    if(outcome.closure_report.note)node('small',String(outcome.closure_report.note),primary);
   }
   if(outcome.decision==='NEW_DISTINCT_PAGE'){
-   node('p','Distinct search intent verified: '+String(d.serp_intent?.intent||'')+' ('+String(d.serp_intent?.agreeing_leads||0)+' of '+String(d.serp_intent?.organic_leads_considered||0)+' organic results). No compatible same-site page was found.',primary);
+   node('p','Distinct search intent verified: '+String(d.serp_intent?.intent||'')+' ('+String(d.serp_intent?.compatible_leads||d.serp_intent?.agreeing_leads||0)+' of '+String(d.serp_intent?.organic_leads_considered||0)+' organic results). No compatible same-site page was found.',primary);
+   if(outcome.new_page_plan&&outcome.new_page_plan.page_type==='PRODUCT_OR_TOOL_PAGE')
+    node('p','Google shows tool pages for this search. Create a separate tool page only if you offer such a tool, written from your real features, pricing and screenshots; keep the existing page and link to the tool page. Growth does not generate product claims.',primary);
    if(outcome.new_page_draft){
     node('h3','Proposed new page for review',primary);
     outcome.new_page_draft.sections.forEach(function(sec){node('strong',sec.h2,primary);node('pre',sec.paragraphs.join('\n\n'),primary)});

@@ -44,6 +44,8 @@ function groupSections(list){
 // ---------- SERP intent (from fresh organic leads, discussions excluded) ----------
 const DISCUSSION=/(^|\.)(reddit\.com|quora\.com|stackexchange\.com|news\.ycombinator\.com)$/;
 // 'Best practices', 'best way' and 'best time' are instructional phrases, not a product comparison.
+// Words that name a software product (generic product nouns, no category or brand list).
+const TOOL_PAGE=/\b(?:tool|software|platform|app|checker|tracker|generator|analy[sz]er|calculator|plugin|extension|dashboard|free trial|sign up)\b/;
 const NON_COMMERCIAL_BEST=/\bbest\s+(?:practices?|ways?|time|approach|method)\b/gi;
 function classifyTitle(title,snippet=''){
  const raw=String(title||'')+' '+String(snippet||''),t=raw.toLowerCase();
@@ -56,11 +58,14 @@ function classifyTitle(title,snippet=''){
  const tt=String(title||'').toLowerCase(),commercialTitle=tt.replace(NON_COMMERCIAL_BEST,' ');
  if(/\b(best|top \d+|reviews?|vs\.?|versus|alternatives?|compared|pricing|plans?)\b/.test(commercialTitle))return 'COMMERCIAL_COMPARISON';
  if(/\b(what is|what are|what to do|how to|how do|how much|how long|how many|why|when to|guide|tips|ways|steps|strateg(?:y|ies)|explained|everything you need|need to know|what you need|what [a-z ]{0,30}need to|best practices?|checklist|examples|getting started|quick reference|introduction to|beginner'?s?|basics|overview|tutorial|faqs?|signs of|causes of)\b|\b\d+ (?:tips|ways|steps|strategies|best practices)\b/.test(tt))return 'INFORMATIONAL_GUIDE';
+ // A software product's own page: the title names the tool itself, not a guide about it or a list of tools.
+ if(TOOL_PAGE.test(tt))return 'PRODUCT_TOOL';
  return 'UNCLASSIFIED';
 }
 // Local-service results routinely share the first page with homeowner/buyer guides; for a local query the two are one
 // intent family (the destination check treats a guide as compatible with a local SERP for the same reason).
-const COMPATIBLE_FAMILY={LOCAL_SERVICE:['INFORMATIONAL_GUIDE']};
+// Someone looking for a tool reads tool pages and "best tools" comparisons alike; both serve choosing a product.
+const COMPATIBLE_FAMILY={LOCAL_SERVICE:['INFORMATIONAL_GUIDE'],PRODUCT_TOOL:['COMMERCIAL_COMPARISON']};
 const MIN_LEADS=3,MIN_AGREEMENT=0.6;
 // pages: competitor pages actually read [{url,html}]. A result whose title/snippet is unclassifiable is classified a second
 // time from the H1 of its own page, so a terse title does not make an otherwise clear SERP "mixed".
@@ -89,7 +94,7 @@ function inferSerpIntent({query='',leads=[],pages=[]}={}){
  return {status:verified?'SERP_INTENT_OBSERVED':'SERP_INTENT_NOT_ESTABLISHED',
   intent:verified?top:'MIXED_OR_INSUFFICIENT',query:String(query||''),
   organic_leads_considered:usable.length,agreeing_leads:count,compatible_leads:compatible,
-  agreement_basis:direct?'SINGLE_INTENT':viaFamily?'LOCAL_SERVICE_WITH_GUIDES':null,
+  agreement_basis:direct?'SINGLE_INTENT':viaFamily?(top==='PRODUCT_TOOL'?'TOOL_PAGES_WITH_COMPARISONS':'LOCAL_SERVICE_WITH_GUIDES'):null,
   class_counts:votes,
   reason:verified?null:usable.length<MIN_LEADS?'Only '+usable.length+' usable organic result(s) after excluding discussion sites; at least '+MIN_LEADS+' are needed to read an intent.':
    'No intent reaches '+Math.round(MIN_AGREEMENT*100)+'% of '+usable.length+' usable organic results (classes: '+classes+').',
@@ -109,9 +114,12 @@ function classifyDestinationIntent({query='',title='',h1=[],url='',serpIntent='M
  if(productish)cls='PRODUCT_OR_COMPARISON';
  else if(/\b(what is|what are|how to|guide|tips|ways|steps|explained|strateg(?:y|ies)|checklist)\b/.test(head))cls='INFORMATIONAL_GUIDE';
  else if(/\b(services?|near me|company|contractors?|serving)\b/.test(head)||classifyTitle(title)==='LOCAL_SERVICE')cls='LOCAL_SERVICE';
+ else if(TOOL_PAGE.test(head))cls='PRODUCT_TOOL';
  const compatible=serpIntent==='INFORMATIONAL_GUIDE'?cls==='INFORMATIONAL_GUIDE'
   :serpIntent==='LOCAL_SERVICE'?(cls==='LOCAL_SERVICE'||cls==='INFORMATIONAL_GUIDE'||(cls==='UNCLASSIFIED'&&overlap.length>0))
-  :serpIntent==='COMMERCIAL_COMPARISON'?cls==='PRODUCT_OR_COMPARISON':false;
+  :serpIntent==='COMMERCIAL_COMPARISON'?cls==='PRODUCT_OR_COMPARISON'
+  // A tool search is served by the tool's own page (or its pricing/comparison page), never by a guide about the topic.
+  :serpIntent==='PRODUCT_TOOL'?(cls==='PRODUCT_TOOL'||cls==='PRODUCT_OR_COMPARISON'):false;
  const different=cls!=='UNCLASSIFIED'&&!compatible&&serpIntent!=='MIXED_OR_INSUFFICIENT';
  // Topic completeness: every distinct query root must appear in the title/H1 or the URL slug. A page that shares only the
  // generic part of the query ("roof … damage repair" without "wind") is about a different topic, whatever its page type.

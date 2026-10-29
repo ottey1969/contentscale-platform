@@ -83,6 +83,9 @@ function decideFromEvidence({report,completion,base,sources}){
    uncertainties:[...(base.uncertainties||[]),'Fact-check every sentence; the validator checks task fit, duplication and wording reuse, not truth.'],
    next_action:'Review the proposed text at the stated placement; approve before any CMS handoff. Nothing is published.'};
  }
+ // A tool/product page is written by the owner from real product facts; there is no generated draft to review.
+ if(base.decision==='NEW_DISTINCT_PAGE'&&base.new_page_plan?.page_type==='PRODUCT_OR_TOOL_PAGE')
+  return {...base,...common,copy_ready:false,copy_status:'OWNER_PRODUCT_FACTS_REQUIRED',next_action:base.next_action};
  if(base.decision==='NEW_DISTINCT_PAGE'&&base.new_page_plan){
   const usable=sections.filter(s=>validParagraphs(s).length);
   if(completion.draft&&usable.length>=2&&base.verified_gap!==true)

@@ -13,6 +13,7 @@ const BLOCKER_TEXT={
  TOPIC_NOT_RESOLVED:'The search topic of this page could not be determined. Try again with a search term.',
  EXISTING_DESTINATION_EVIDENCE_UNAVAILABLE:'The page that should answer this search could not be read.',
  DIFFERENT_SEARCH_INTENT_AND_NO_COMPATIBLE_SAME_SITE_PAGE:'People searching for this want a different kind of page than the one you entered.',
+ QUERY_MEANS_SOMETHING_ELSE:'Google uses this search term for a different subject than your page, so the results are not comparable with your page.',
  SUBSTANTIVE_GAP_NOT_VERIFIED:'No missing answer was confirmed by at least two independent ranking pages.'
 };
 const DIY_BLOCKED=[
@@ -62,6 +63,12 @@ function summarizeFreeGrowth(report,{url,query}={}){
    'Write it in your own words with facts you can stand behind. Do not copy the example pages.',
    'Keep your current title, main heading and useful text.',
    'After publishing, wait 28 days and compare clicks in Google Search Console with the 28 days before.'];
+ }else if(decision==='NEW_DISTINCT_PAGE'&&(gate.new_page_plan||{}).page_type==='PRODUCT_OR_TOOL_PAGE'){
+  headline='Google shows tool pages for this search';
+  explanation='People searching for this mostly get software tools and tool comparisons, and your page is not a tool page.';
+  steps=['Only if you offer such a tool: create a separate page for the tool itself, with its real features, pricing and screenshots.',
+   'Keep your current page as it is and link from it to the tool page.',
+   'Do not turn your current page into a sales page for a tool you do not offer.'];
  }else if(decision==='NEW_DISTINCT_PAGE'){
   const plan=gate.new_page_plan||{tasks:[]};
   tasks=(plan.tasks||[]).map(t=>({title:taskTitle(t.label),where:'On the new page.',status:'Not on your page',evidence:evidenceOf(t.competitor_evidence)}));
@@ -78,7 +85,14 @@ function summarizeFreeGrowth(report,{url,query}={}){
   const code=gate.blocker_code||(gate.missing_evidence&&gate.missing_evidence[0]&&gate.missing_evidence[0].code)||null;
   headline='Not enough reliable evidence for advice';
   explanation=BLOCKER_TEXT[code]||'The research could not collect enough reliable evidence. We do not guess.';
-  steps=DIY_BLOCKED;
+  steps=code==='QUERY_MEANS_SOMETHING_ELSE'?['Keep your page as it is: do not rewrite it toward the other meaning.',
+   'Check again with a more specific search term that includes words from your own page.']:DIY_BLOCKED;
+  if(code==='QUERY_MEANS_SOMETHING_ELSE'){
+   const other=((gate.missing_evidence||[]).find(m=>m.code===code)||{}).observed;
+   const w=other&&other.absent_on_page?other.absent_on_page.map(x=>'“'+x.word+'”').join(', '):'';
+   headline='Google means something else by this search term';
+   if(w)explanation='Most Google results for this term are about '+w+', which your page never mentions. Comparing your page with them would give wrong advice.';
+  }
  }
  const limitations=[
   'Google Search Console was not used: clicks, impressions and positions of your site are unknown in this free check.',

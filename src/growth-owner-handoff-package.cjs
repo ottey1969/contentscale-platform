@@ -157,8 +157,12 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
  }
  if(d==='NEW_DISTINCT_PAGE'){
   const pg=decision.new_page_draft;
+  const tool=decision.new_page_plan?.page_type==='PRODUCT_OR_TOOL_PAGE';
   L.push('## New page proposal','','Working query: '+(decision.new_page_plan?.working_query||''),'',
-   'Why a separate page: '+decision.reason,'','Facts source on your site: '+(decision.new_page_plan?.facts_source_url||''),'');
+   'Why a separate page: '+decision.reason,'',
+   ...(tool?['Page type: **tool / product page**. Write it yourself from your real product: features, pricing, screenshots. Growth does not generate product claims.',
+    '','Keep the existing page '+(decision.new_page_plan?.keep_existing_page||'')+' as it is and link from it to the new tool page.','']
+    :['Facts source on your site: '+(decision.new_page_plan?.facts_source_url||''),'']));
   if(pg){if(pg.seo_title)L.push('**Proposed title:** '+pg.seo_title,'');if(pg.meta_description)L.push('**Proposed description:** '+pg.meta_description,'');
    for(const s of pg.sections){L.push('## '+s.h2,'',...s.paragraphs.flatMap(p=>[p,'']))}}
   else L.push('**No reviewable copy yet:** '+(decision.copy_status||''),'');

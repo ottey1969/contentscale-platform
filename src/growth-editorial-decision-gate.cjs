@@ -17,6 +17,13 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  const sources=serpIntent?.status==='SERP_INTENT_OBSERVED';
  const readable=(coverage.competitors_considered||[]).length;
  const missing=[];
+ // Google uses the term for another subject than this page: nothing comparable exists, and the page is never rewritten toward it.
+ const meaning=report?.serp_meaning;
+ if(meaning?.status==='DIFFERENT_MEANING'){
+  const w=meaning.absent_on_page.map(x=>'"'+x.word+'" ('+x.in_titles+' of '+meaning.results_considered+' titles)').join(', ');
+  missing.push({code:'QUERY_MEANS_SOMETHING_ELSE',detail:'Google\'s results for "'+query+'" are about '+w+', which the page never mentions. The search term means something else there, so those results are not comparable with this page.',
+   observed:{absent_on_page:meaning.absent_on_page,results_considered:meaning.results_considered}});
+ }
  // A truncated destination still PROVES what it teaches in the captured part; it only cannot prove absence. So truncation
  // blocks a gap claim (checked below, once the tasks are known), not the whole decision.
  const destinationTruncated=!!(coverage.destination_truncated||destination.own_html_truncated);
@@ -37,6 +44,9 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
    attempted_sources:attempts,reason:'The page for this query is the protected Case Study'+(protectedId.kind==='PERMANENT_REDIRECT'?' (reached through a permanent redirect)':'')+'; no website change is required now. Separately, research evidence was incomplete: '+missing.map(x=>x.code).join(', ')+'.',
    next_action:'Keep the page and any working redirect unchanged until the Case Study measurement cycle ends. Research limitations are listed separately.'};
  }
+ if(missing.length&&missing[0].code==='QUERY_MEANS_SOMETHING_ELSE')return {...base,decision:'DATA_BLOCKED',blocker_code:missing[0].code,missing_evidence:missing,
+  attempted_sources:attempts,reason:missing[0].detail,
+  next_action:'Keep the page as it is; do not rewrite it toward the other meaning. To grow this page, research a more specific search term that includes words from the page itself.'};
  if(missing.length)return {...base,decision:'DATA_BLOCKED',blocker_code:missing[0].code,missing_evidence:missing,
   attempted_sources:attempts,reason:'Required evidence was not accessible: '+missing.map(x=>x.code).join(', ')+'.',
   next_action:'Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.'};
@@ -53,6 +63,24 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
    reason:'The page for this query is a protected Case Study; no website change is required now. Separately: '+reason,
    next_action:'Keep the page and any working redirect unchanged until the Case Study measurement cycle ends. Research limitations are listed separately.'}:
   {...base,decision:'DATA_BLOCKED',blocker_code:code,missing_evidence:[{code,detail}],attempted_sources:attempts,reason,next_action:next};
+ // Searchers want a tool and the selected page is not one: the route already retargets to a compatible tool page on the site
+ // when one exists. Without one, the advice is a separate product page — written by the owner from real product facts, because
+ // Growth never invents features, prices or results. This does not depend on shared reader tasks.
+ if(serpIntent?.intent==='PRODUCT_TOOL'&&destinationIntent?.verdict==='DIFFERENT'){
+  const alt=(report.site_architecture?.compatible_existing_pages||[]);
+  if(!alt.length)
+   return {...base,decision:'NEW_DISTINCT_PAGE',verified_gap:false,gap_observed:true,gap_basis:'TOOL_SEARCH_AND_NO_TOOL_PAGE_ON_SITE',
+    reason:'Google mostly shows tool pages and tool comparisons for "'+query+'" ('+serpIntent.compatible_leads+' of '+serpIntent.organic_leads_considered+' results), but the selected page is '+(destinationIntent.class==='INFORMATIONAL_GUIDE'?'a guide':'not a tool page')+' and no tool page for this search was found on the site.',
+    distinct_intent_evidence:{serp:serpIntent.leads.slice(0,6),destination:destinationIntent},
+    new_page_plan:{page_type:'PRODUCT_OR_TOOL_PAGE',working_query:query,requires_owner_product_facts:true,facts_source_url:null,
+     tasks:supported.slice(0,4).map(t=>({code:t.code,label:t.label,match:t.match,competitor_evidence:t.competitor_support.slice(0,2)})),
+     internal_links:{from:[target,report.url].filter(Boolean),anchor_policy:'Link from the guide to the tool page in a relevant paragraph.'},
+     keep_existing_page:target},
+    evidence:supported.flatMap(evidenceFor).slice(0,6),
+    copy_ready:false,copy_status:'OWNER_PRODUCT_FACTS_REQUIRED',
+    next_action:'Only if you offer such a tool: create its own page with your real features, pricing and screenshots, and link to it from '+(target||'the guide')+'. Keep the guide as it is. Growth does not write product claims.'};
+  uncertainties.push('A tool page for this search exists on the site but could not be used as the destination (protected or already chosen); the guide is compared as is.');
+ }
  // Every outcome below (a new page, an edit, or "nothing missing") is defined by shared reader tasks; without one there is no plan.
  if(!supported.length)
   return blocked('SHARED_COMPETITOR_REQUIREMENTS','No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. '+explainNoShared(coverage.task_derivation),
