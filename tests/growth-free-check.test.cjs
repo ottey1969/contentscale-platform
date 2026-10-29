@@ -126,6 +126,11 @@ test('public flow: start, poll, result, JSON download, cache, limits',async t=>{
  assert.equal(res.body.status,'DONE');assert.equal(res.body.decision,'IMPROVE_EXISTING');
  assert.equal(res.body.summary.tasks[0].title,'How a repair estimate is built');
  assert.equal(res.body.report,undefined,'the large report is only in the download');
+ // Every difference with the ranking pages is listed for the owner to choose from; nothing is written for them.
+ const g=res.body.summary.gaps;
+ assert.equal(g.status,'OBSERVED');assert(g.items.length>=1,JSON.stringify(g).slice(0,300));
+ assert(g.items.every(x=>x.id&&x.title&&x.group&&x.status));
+ const page=await s.get(started.body.result_url);assert.match(page.body,/Choose what goes on your site/);assert.match(page.body,/Download selection as editor brief/);
  assert.equal((await s.get('/api/free-growth/checks/pub1?k=wrong')).status,404);
  const dl=await s.get('/api/free-growth/checks/pub1/report.json?k=key1abcdefgh');
  assert.match(dl.headers.get('content-disposition'),/attachment; filename="growth-check-pub1.json"/);
