@@ -259,7 +259,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    // Without verified GSC, research the selected page itself. Never invent
    // an untracked destination or discard otherwise available live content.
    (!report.growth_decision?.primary_next_action?.metrics?page.url:null);
-  let selectedSource=proposed===page.url?own.live:(proposed?destinationSources.get(proposed):null);
+  // Fragment aliases identify the same document. Use the protected sibling's actual URL
+  // (not the #fragment Tracker row) as the final editorial target.
+  const lockedSibling=proposed&&(v.lockedPages||[]).find(x=>Number(x.id)!==v.id&&normUrl(x.url)===normUrl(proposed));
+  if(lockedSibling)proposed=lockedSibling.url;
+  let selectedSource=proposed===page.url?own.live:(proposed?(destinationSources.get(proposed)||
+   (normUrl(proposed)===normUrl(page.url)?own.live:null)):null);
   // Intent comes from live organic results and the page's own title/H1, never from word overlap alone.
   const serpIntent=inferSerpIntent({query:targetQuery,leads:discovery.leads,pages:comparisons.filter(x=>x.live?.html).map(x=>({url:x.url,html:x.live.html}))});
   const intentOf=(u,src)=>{const ex=excerptOf(src?.html);
