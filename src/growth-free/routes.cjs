@@ -142,6 +142,35 @@ function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
  b.onclick=async function(){var st=document.getElementById('aiStatus'),eng=document.getElementById('aiEngine').value,txt=document.getElementById('aiText').value;if(!txt.trim()){st.textContent='Paste the answer first.';return}b.disabled=true;st.textContent='Analysing…';
   try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();render(d);var el=document.getElementById('ai');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
+var GAPS=null;
+var GAP_GROUPS=[['MISSING_TOPIC','Not on your page'],['PARTIAL_TOPIC','Partly on your page'],['PAGE_ELEMENT','Page elements the ranking pages have'],['UNMATCHED_TOPIC','Could not be matched to your page'],['COMPETITOR_SECTION','Sections on the ranking pages (not grouped)']];
+function gapsHtml(g){if(!g||g.status!=='OBSERVED')return '';
+ var h='<h2 id="gaps">Choose what goes on your site</h2><p class="lead">'+esc(g.note)+'</p><p class="muted">Compared with '+esc(g.ranking_pages_read)+' readable ranking page(s). '+(g.items.length?g.items.length+' difference(s) found.':'No difference found.')+'</p>';
+ if(!g.items.length)return h;
+ GAP_GROUPS.forEach(function(gr){var list=g.items.filter(function(x){return x.group===gr[0]});if(!list.length)return;
+  h+='<h3>'+esc(gr[1])+' ('+list.length+')</h3>';
+  list.forEach(function(x){h+='<label class="check card gap"><input type="checkbox" class="gapPick" value="'+esc(x.id)+'"><span><strong>'+esc(x.title)+'</strong> <small>'+esc(x.status)+(x.ranking_pages?' · on '+esc(x.ranking_pages)+(x.of?' of '+esc(x.of):'')+' ranking page(s)':'')+(x.your_section?' · closest on your page: “'+esc(x.your_section)+'”':'')+'</small>'+
+   (x.examples.length?'<br><small>'+x.examples.map(function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}).join(' · ')+'</small>':'')+'</span></label>'})});
+ h+='<p><strong id="gapCount">0 selected</strong></p><p><button type="button" id="gapAll" class="ghost">Select all</button> <button type="button" id="gapNone" class="ghost">Clear</button></p>';
+ h+='<p><button type="button" id="gapDownload">Download selection as editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p>';
+ return h}
+function gapBrief(g,s){var picked={};document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
+ var items=g.items.filter(function(x){return picked[x.id]});
+ var L=['# Editor brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Chosen from the comparison with '+g.ranking_pages_read+' ranking page(s). Write in your own words with facts you can stand behind; do not copy the ranking pages.',''];
+ GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
+  list.forEach(function(x){L.push('- [ ] **'+x.title+'** ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
+   x.examples.forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))})});L.push('')});
+ L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
+ return {count:items.length,text:L.join('\\n')}}
+function wireGaps(g,s){var box=document.getElementById('gapDownload');if(!box)return;
+ var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected'};
+ document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',count)});
+ document.getElementById('gapAll').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=true});count()};
+ document.getElementById('gapNone').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=false});count()};
+ var st=document.getElementById('gapStatus');
+ box.onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}
+  var url=URL.createObjectURL(new Blob([b.text],{type:'text/markdown'})),a=document.createElement('a');a.href=url;a.download='editor-brief.md';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);st.textContent=b.count+' item(s) in the brief.'};
+ document.getElementById('gapCopy').onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}if(navigator.clipboard)navigator.clipboard.writeText(b.text);st.textContent='Copied ('+b.count+' item(s)).'}}
 function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
@@ -151,13 +180,14 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  h+='<h2 id="google">Google search (blue links)</h2><p class="lead"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
  h+='<h3>What to do</h3><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
+ h+=gapsHtml(s.gaps);
  var c=s.checked;h+='<h2>What was checked</h2><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small></div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong></div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div></div>';
  if(a)h+=aiHtml(a);
  h+='<h2>Limits of this free check</h2><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p>';
  h+='<h2>Do it yourself</h2><p>Download the complete research data and process it yourself or with your own tools.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;wireAi();
+ o.innerHTML=h;wireAi();wireGaps(s.gaps,s);
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
