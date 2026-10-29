@@ -83,6 +83,7 @@ function summarizeFreeGrowth(report,{url,query}={}){
  const limitations=[
   'Google Search Console was not used: clicks, impressions and positions of your site are unknown in this free check.',
   'Only this one page was checked, not the rest of your website.',
+  'Only Google\'s normal search results were compared. AI answers (ChatGPT, Perplexity, Google AI Overviews) were not checked in this free check.',
   ...(gate.research_limitations||[]).slice(0,3).map(x=>typeof x==='string'?x:(x.detail||x.message||x.code||'')).filter(Boolean)
  ];
  return {decision,headline,explanation,steps,tasks,checked,limitations,

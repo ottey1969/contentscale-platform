@@ -52,6 +52,7 @@ test('real Growth engine on one URL gives a plain-language decision with sources
  assert.equal(s.checked.what_google_shows,'local service pages');
  assert.equal(s.checked.search_term_source,'YOU_ENTERED_IT');
  assert.match(s.limitations[0],/Search Console was not used/);
+ assert.ok(s.limitations.some(x=>/AI answers \(ChatGPT, Perplexity, Google AI Overviews\) were not checked/.test(x)),'never implies AI visibility was checked');
  assert.match(s.promises,/No ranking or traffic increase is promised/);
 });
 
