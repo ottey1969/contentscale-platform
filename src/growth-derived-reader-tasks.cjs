@@ -36,7 +36,9 @@ const FURNITURE_HEADING=/^(?:contact(?: us| information)?(?: today| now)?|get in
 const isFurnitureHeading=h=>FURNITURE_HEADING.test(String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim());
 function isPromotionalSection(sec,host,otherHostsText=''){
  if(isFurnitureHeading(sec.heading))return true;
- const label=String(host||'').replace(/^www\./,'').split('.')[0].toLowerCase().replace(/[^a-z0-9]/g,''),root=label.length>=5?label.slice(0,6):'';
+ // Digits in a domain spell the brand ("4seasons-construction" is "Four Seasons Construction" in headings).
+ const DIGIT=['zero','one','two','three','four','five','six','seven','eight','nine'];
+ const label=String(host||'').replace(/^www\./,'').split('.')[0].toLowerCase().replace(/[0-9]/g,d=>DIGIT[+d]).replace(/[^a-z]/g,''),root=label.length>=5?label.slice(0,6):'';
  const heading=String(sec.heading||''),hay=(heading+' '+String(sec.text||'')).toLowerCase();
  if(/\b(?:case stud(?:y|ies)|customer stor(?:y|ies)|success stor(?:y|ies)|testimonials?|client stor(?:y|ies)|why (?:choose|work with) us|our (?:clients|customers|pricing|plans))\b/i.test(heading))return true;
  if(/^[A-Z][\w-]+['’]s\s/.test(heading))return true;

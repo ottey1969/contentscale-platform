@@ -1,0 +1,151 @@
+{
+ "_source": "Verbatim subset (report 26, generated 2026-10-29T01:00:42.473Z): reader tasks only.",
+ "reader_task_coverage": {
+  "tasks": [
+   {
+    "code": "task_season",
+    "label": "Competitors teach “The Pre-Season Check That Makes Storms Boring”",
+    "match": {
+     "key": "season",
+     "co_terms": [
+      "storm",
+      "inspec"
+     ],
+     "concepts": [
+      "season",
+      "alread",
+      "check",
+      "constr"
+     ],
+     "core_words": [
+      "seasons",
+      "already",
+      "check",
+      "construction"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://tristateroofingandchimneys.com/storm-damage-roofing-nj",
+      "host": "tristateroofingandchimneys.com",
+      "heading": "The Pre-Season Check That Makes Storms Boring",
+      "excerpt": "Most of the storm damage we repair started before the storm. Wind doesn't usually tear off a well-sealed shingle — it finds the tab whose seal strip already failed, the flashing that was already lifting, the ridge cap nail that already backed out. The storm finishes what time started, and then you're stuck arguing with an adjuster about which one did it. A pre-season inspection closes those doors while the weather is",
+      "concepts": [
+       "season",
+       "storm",
+       "inspec"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://www.4seasons-construction.com/nj/storm-damage-roof-repair",
+      "host": "4seasons-construction.com",
+      "heading": "The Facts on Four Seasons Roofing and Construction",
+      "excerpt": "We at Four Seasons Roofing and Construction provide storm damage roof repair in New Jersey. We are a home improvement contractor based at 38 Speer Ave in Clifton, New Jersey. We have held New Jersey Home Improvement Contractor registration #13VH11720500 since 2021. We install GAF and Owens Corning roofing systems. See every roofing service we offer · Request a free roof estimate Storm hit your roof? Call (862) 318-39",
+      "concepts": [
+       "season",
+       "storm",
+       "inspec"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "NOT_OBSERVED",
+     "passages": []
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "Storm & Wind Damage Roof Repair in New Jersey",
+     "reason": "Closest existing section by shared concepts (storm, jersey, shingl, flash); the new section continues that explanation."
+    }
+   },
+   {
+    "code": "task_homeow",
+    "label": "Competitors teach “Is storm damage covered by homeowners insurance in NJ?”",
+    "match": {
+     "key": "homeow",
+     "co_terms": [
+      "storm",
+      "cover",
+      "insura"
+     ],
+     "concepts": [
+      "homeow",
+      "cover"
+     ],
+     "core_words": [
+      "homeowners",
+      "covered"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://tristateroofingandchimneys.com/storm-damage-roofing-nj",
+      "host": "tristateroofingandchimneys.com",
+      "heading": "Is storm damage covered by homeowners insurance in NJ?",
+      "excerpt": "Generally yes, when the damage is sudden and storm-caused rather than gradual. What trips homeowners up is the fine print: many NJ policies now carry a separate wind/hail deductible that's higher than the standard one, and some switch roofs past a certain age to actual-cash-value, paying depreciated value instead of replacement cost. Check those two clauses before you file — they shape what a claim is actually worth.",
+      "concepts": [
+       "homeow",
+       "storm",
+       "cover",
+       "insura"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://morriscountyroofing.com/storm-damage-roof-repair-nj",
+      "host": "morriscountyroofing.com",
+      "heading": "Does homeowners insurance cover storm damage roof repair in NJ?",
+      "excerpt": "Yes. Homeowners insurance in New Jersey typically covers roof damage caused by sudden storm events including wind, hail, fallen trees, and ice dams. Morris County Roofing documents all damage and works directly with your insurance adjuster at no extra charge. Call (973) 975-9110 for a free storm damage inspection.",
+      "concepts": [
+       "homeow",
+       "storm",
+       "cover",
+       "insura"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "COVERED",
+     "passages": [
+      {
+       "heading": "💰 What is the Cost of Wind Damage Roof Repair in New Jersey?",
+       "text": "Perfect Roofing Team provides upfront, itemized estimates with no hidden fees. Many repairs are fully covered by homeowner's insurance when submitted by a licensed contractor.",
+       "concepts": [
+        "homeow",
+        "storm",
+        "cover",
+        "insura"
+       ]
+      },
+      {
+       "heading": "❄️ Hail Damage Inspection & Repair",
+       "text": "Hail storms can cause significant roof damage in just minutes. Unlike wind, which primarily affects shingles and flashing, hail creates impact dents and punctures that compromise your roof's waterproof integrity. Many homeowners don't immediately see hail damage — but when it goes unrepaired, leaks ",
+       "concepts": [
+        "homeow",
+        "storm",
+        "cover",
+        "insura"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [
+     {
+      "url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+      "heading": "📑 Table of Contents",
+      "excerpt": "Storm damage roof repair NJ is one of the most urgent problems a homeowner can face. New Jersey's Atlantic-coast location exposes homes to nor'easters, severe thunderstorms, hail, and high winds that lift shingles and open up entry points for water. According "
+     }
+    ],
+    "placement": null
+   }
+  ]
+ }
+}

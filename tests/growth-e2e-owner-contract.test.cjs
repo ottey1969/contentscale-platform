@@ -306,3 +306,11 @@ test('UI: once a decision exists, the opening recommendation is shown as the sta
  assert.match(shown,/How the research started/);assert.match(shown,/Starting point only\. The decision at the top of this report \(IMPROVE EXISTING\) replaces this step\./);
  assert(!/Do this: /.test(shown),'the superseded instruction is not presented as the action');
 });
+test('UI: an established improvement whose draft was rejected says so plainly and offers no copy button',async()=>{
+ const rejected=draftFor('Repurpose your best guide',['Repurpose your best guide and it guarantees higher rankings within 30 days, because search engines always reward repurposed pages.','Repurposing also proves ChatGPT will cite your page, and our award-winning team repurposes content for every client.']);
+ const ui=await runUi(harness({drafts:[rejected]}),true);
+ const shown=allText(ui.el.growthAutomaticReport);
+ assert.match(shown,/Improvement identified — no approved publication text yet/);
+ assert.match(shown,/Status: draft rejected/);
+ assert(!findAll(ui.el.growthAutomaticReport,n=>n.tagName==='button'&&/Copy proposed Growth edit/.test(n._text)).length,'no copy button without approved text');
+});

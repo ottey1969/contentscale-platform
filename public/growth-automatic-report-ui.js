@@ -111,6 +111,12 @@
     try{await navigator.clipboard.writeText(material);copyEdit.textContent='Copied'}
     catch(_){copyEdit.textContent='Copy unavailable'}
    });
+  }else if(outcome.decision==='IMPROVE_EXISTING'&&outcome.copy_ready!==true){
+   // The improvement itself is established; only the text is not. Say both, so the owner knows what is and is not ready.
+   node('h3','Improvement identified — no approved publication text yet',primary);
+   var tasks=(outcome.improvement_plan?.tasks||[]).map(function(t){return String(t.label||t.code)});
+   if(tasks.length)node('p','Missing on '+String(outcome.target_url||'the target page')+': '+tasks.join(' · '),primary);
+   node('p','Status: '+String(outcome.copy_status||'DRAFT_NOT_AVAILABLE').replace(/_/g,' ').toLowerCase()+'. '+String(outcome.next_action||'Regenerate the draft or write the missing section by hand; nothing is published.'),primary);
   }else if(ownerReport&&d.editorial_review_draft?.draft?.sections?.length){
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
