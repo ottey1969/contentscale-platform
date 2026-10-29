@@ -88,6 +88,19 @@ const IMPERATIVE_VERB=/^(?:integrate|implement|adopt|introduce|establish|include
 // apply …") can itself carry a claim and is never skipped.
 const LEAD=/^(?:(?:and|then|next|finally|lastly|first(?:ly)?|second(?:ly)?|third(?:ly)?|also|afterwards|after that|in addition|meanwhile|now)\b,?\s+)+/i;
 const withoutLead=s=>String(s).trim().replace(LEAD,'');
+// The H2 promises what the section delivers. A "Why …" heading needs reasons: when more than a third of its sentences
+// are instructions it is a how-to under the wrong heading.
+// (Counting only: a leading purpose clause "To begin tracking, assemble …" still makes an instruction.)
+const PURPOSE_LEAD=/^to\s+[^,.;]{1,60},\s+/i;
+function headingMismatch(h2,text){
+ const head=String(h2||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
+ const list=sentencesOf(text);if(!list.length)return null;
+ const instructions=list.filter(t=>IMPERATIVE_VERB.test(withoutLead(t).replace(PURPOSE_LEAD,''))).length;
+ if(/^why\b/i.test(head)&&instructions*3>list.length)
+  return {code:'HEADING_PROMISES_REASONS_BUT_GIVES_STEPS',instructions,sentences:list.length,
+   reason:'The heading asks “why”, but '+instructions+' of '+list.length+' sentences are instructions. Give the reasons, or use a “How to” heading for the steps.'};
+ return null;
+}
 const IMPERATIVE=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioritis?e|focus|avoid|ensure|confirm|schedule|assign|audit|extract|apply|maintain|continuously|then|first|next|once|before|after|if)\b/i;
 const ADVICE_MODAL=/\b(?:should|can|could|may|might|consider|try|helps?|allows?|lets?)\b/i;
 // "do not guarantee", "cannot prove", "is never risk-free" are disclaimers, not claims: an absolute word counts only
@@ -101,8 +114,19 @@ function affirmed(sentence,re){
  }
  return null;
 }
+// A named source ("According to Search Engine Journal", "(Semrush State of SEO, 2025)", "a study by X") is a factual claim
+// about that source: the name must be on the destination page, or the sentence is an invented citation.
+const ATTRIBUTION=/\b(?:[Aa]ccording\s+to|[Aa]s\s+reported\s+by|[Dd]ata\s+from|[Rr]esearch\s+(?:by|from)|(?:[Aa]|[Tt]he)\s+(?:\d{4}\s+)?(?:study|survey|report|analysis)\s+(?:by|from))\s+((?:the\s+)?[A-Z][\w&'’.-]*(?:\s+(?:of\s+)?[A-Z][\w&'’.-]*){0,5})|\(\s*([A-Z][\w&'’.-]*(?:\s+[A-Z][\w&'’.-]*){0,5})\s*,\s*(?:[A-Z][a-z]+\s+)?\d{4}\s*\)/;
 function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={}){
  const dest=lower(destinationText),destRoots=new Set(contentRoots(destinationText)),destNums=new Set(numbersIn(destinationText));
+ // A figure counts as sourced only where the page states it in the same context: a destination sentence that contains
+ // the figure AND shares most of the draft sentence's content words. The same digits elsewhere on the page (a year in
+ // another citation, a count in a case study) do not source a new statistic.
+ // A trailing citation ("… differently. ( Ahrefs, 2025 )") belongs to the sentence before it, so that sentence counts too.
+ const destList=sentencesOf(destinationText);
+ const destNumberSentences=destList.map((t,i)=>({nums:new Set(numbersIn(t)),roots:new Set(contentRoots((destList[i-1]||'')+' '+t))})).filter(x=>x.nums.size);
+ const figureInContext=(n,sentence)=>{const r=contentRoots(sentence).filter(x=>!/^\d/.test(x));if(!r.length)return destNums.has(n);
+  return destNumberSentences.some(d=>d.nums.has(n)&&r.filter(x=>d.roots.has(x)).length/r.length>=0.5)};
  const queryRoots=new Set(contentRoots(query));
  const destSentences=sentencesOf(destinationText).map(s=>contentRoots(s)).filter(r=>r.length>=5);
  const violations=[],rewrites=[],kept=[],review=[];
@@ -131,6 +155,10 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
   if(mech)flag('UNPROVEN_AI_MECHANISM_CLAIM','Gives a reason for how AI or search systems select, verify or cite content (“'+mech[0]+'”). No independent observation supports it; describe what the reader can observe instead.');
   const bad=[...new Set(numbersIn(sentence).filter(n=>!destNums.has(n)))];
   if(bad.length)flag('UNSOURCED_NUMBER','The figure(s) '+bad.join(', ')+' do not appear in the destination page, so they are not verifiable from the sources.');
+  else{const out=[...new Set(numbersIn(sentence).filter(n=>!figureInContext(n,sentence)))];
+   if(out.length)flag('UNSOURCED_NUMBER','The figure(s) '+out.join(', ')+' appear on the destination page only in another context, so this statement is not sourced.')}
+  const at=sentence.match(ATTRIBUTION),named=at&&(at[1]||at[2]).trim().replace(/^the\s+/i,'').replace(/[.'’]+$/,'');
+  if(named&&!dest.includes(lower(named)))flag('UNSOURCED_ATTRIBUTION','Cites “'+named+'” as a source, but the destination page does not name it; a generated citation cannot be verified.');
   const businessSubject=FIRST_PERSON.test(sentence)||(brandLabel&&lower(sentence).replace(/[^a-z0-9]/g,'').includes(brandLabel));
   if(businessSubject){
    const creds=[...new Set((sentence.match(CREDENTIAL)||[]).map(lower))].filter(c=>!dest.includes(c.replace(/s$/,'')));
@@ -160,4 +188,4 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
  }
  return {ok:violations.length===0,violations,safe_rewrites:rewrites,safe_text:kept.join(' '),claim_review:review};
 }
-module.exports={assessDraftClaims,sentencesOf,contentRoots,numbersIn,AI_MECHANISM};
+module.exports={assessDraftClaims,sentencesOf,contentRoots,numbersIn,AI_MECHANISM,ATTRIBUTION,headingMismatch};
