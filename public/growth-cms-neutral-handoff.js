@@ -86,6 +86,7 @@
    if(!res.ok)throw Error('Research unavailable');
    var d=await res.json(),x=d.handoff_suggestions||{};
    if(d.success!==true||Number(d.page_id)!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
+   if(d.competitor_overview&&typeof window.renderGrowthCompetitorOverview==='function'){var ov=$('growthCompetitorOverview');ov.textContent='';try{ov.hidden=!window.renderGrowthCompetitorOverview(d.competitor_overview,ov)}catch(e){ov.hidden=true}}
    if(!$('query').value&&x.query)$('query').value=x.query;
    if(!$('title').value&&x.title)$('title').value=x.title;
    if(!$('meta').value&&x.meta)$('meta').value=x.meta;

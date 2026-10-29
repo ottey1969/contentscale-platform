@@ -252,6 +252,11 @@
    });
   }
   var discovery=d.search_discovery||{};
+  // Optional shared renderer (growth-competitor-overview.js); the report renders fully without it.
+  var renderOverview=typeof window!=='undefined'&&window.renderGrowthCompetitorOverview;
+  if(d.competitor_overview&&typeof renderOverview==='function'){
+   try{renderOverview(d.competitor_overview,node('section',null,researchDetails||container))}catch(e){}
+  }
   s=section('Search competitors for this Growth query');
   var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>
    x.discovery_source==='BING_PUBLIC_RSS'||x.discovery_source==='SERPER_GOOGLE_ORGANIC');
