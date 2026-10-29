@@ -19,7 +19,10 @@ const IGNORED=new Set(('about above after again against also always another beca
  'question questions answer answers answered frequently asked contact contacts '+
  // Marketing adjectives sell a provider; two headings sharing "affordable" or "expert" do not teach the same thing.
  'affordable expert experts expertise professional professionals trusted reliable reliability premier leading certified licensed '+
- 'insured experienced reputable dedicated dedication local quality').split(/\s+/));
+ 'insured experienced reputable dedicated dedication local quality '+
+ // Transaction verbs say that something is offered, not what: "They offer the best warranties" and "X offers payment plans"
+ // share only the verb, never a reader task.
+ 'offer offers offered offering provide provides provided providing deliver delivers delivered delivering').split(/\s+/));
 const wordsOf=(text,skip)=>(String(text||'').toLowerCase().match(/[a-z]{5,}/g)||[]).filter(w=>!IGNORED.has(w)&&!IGNORED.has(STEM(w))).map(root).filter(r=>r.length>=4&&!skip.has(r));
 const countMap=(arr)=>{const m=new Map();for(const r of arr)m.set(r,(m.get(r)||0)+1);return m};
 
@@ -45,7 +48,7 @@ function isPromotionalSection(sec,host,otherHostsText=''){
  // Two explicit sales phrases ("our team is here", "our seasoned professionals", "we offer") mark a short sales block too.
  // A service offering ("we install…", "X provides gutter installation… services", "our reliable gutter services") advertises
  // what the competitor sells; it is not something the reader has to learn.
- const sales=(String(sec.text||'').match(/\b(?:our (?:\w+ )?(?:team|professionals|experts|crews?|technicians|specialists|staff|company)|our (?:\w+ ){0,3}services|we (?:offer|provide|specialize|are here|install|repair|replace|serve|handle|deliver)|provides? [^.]{0,80}?\bservices\b|call us|contact us)\b/gi)||[]).length;
+ const sales=(String(sec.text||'').match(/\b(?:our (?:\w+ ){0,2}(?:team|professionals|experts|crews?|technicians|specialists|staff|company|contractors?|installers?|consultants?|advisors?|engineers?|agents?|partners?)|our (?:\w+ ){0,3}services|we (?:offer|provide|specialize|are here|install|repair|replace|serve|handle|deliver)|provides? [^.]{0,80}?\bservices\b|call us|contact us)\b/gi)||[]).length;
  if(sales>=2)return true;
  // Digits in a domain spell the brand ("4seasons-construction" is "Four Seasons Construction" in headings).
  const DIGIT=['zero','one','two','three','four','five','six','seven','eight','nine'];

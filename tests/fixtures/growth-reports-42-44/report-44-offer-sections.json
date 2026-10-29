@@ -1,0 +1,22 @@
+{
+ "_source": "Production report 44 (2026-10-29, perfectroofingteam.com/bergen-county-roofing-services/, query roof repair bergen county): the two competitor sections that produced the task \"They Offer the Best Warranties\", as captured (excerpts).",
+ "query": "roof repair bergen county",
+ "production_task": {
+  "label": "Competitors teach “They Offer the Best Warranties”",
+  "key": "offer"
+ },
+ "sections": [
+  {
+   "host": "ajreliable.com",
+   "url": "https://ajreliable.com/roofers-bergen-county-nj/",
+   "heading": "Affordable Roofing Service Bergen County, NJ",
+   "text": "A & J Reliable, Inc. offers flexible payment plans that enable homeowners to pay for the services offered. We have installment offers, low-interest credit facilities, or collaboration with credit institutions. Our roofing contractors give free estimates and quotes so clients are financially prepared to complete the project knowing all the details up front."
+  },
+  {
+   "host": "crsroofing.net",
+   "url": "https://crsroofing.net/roofing-contractor-bergen-county-nj/",
+   "heading": "They Offer the Best Warranties",
+   "text": "Speaking of warranties, they are not all the same — not by a long shot. Some “standard warranties” are in force for only five or ten years. Also, standard manufacturer warranties typically cover materials but not the cost of labor. This means that, someday, your roof could prove defective and you’d still be on the hook for hundreds or thousands in labor expenses. That’s a key reason that top contractors often align t"
+  }
+ ]
+}
