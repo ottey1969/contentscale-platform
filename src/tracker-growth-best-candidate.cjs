@@ -70,7 +70,7 @@ function classify(row,page,ctx){
   if(m.research_decision==='DATA_BLOCKED'&&age<BLOCKED_RETRY_DAYS)
    return {status:'RESEARCH_BLOCKED',label:`Research on ${fmtDate(at)} could not finish (${plain(m.research_blocker)||'not enough reliable data'}). Other pages come first; this one is offered again after ${fmtDate(at+BLOCKED_RETRY_DAYS*DAY)}.`};
   if(['IMPROVE_EXISTING','NEW_DISTINCT_PAGE'].includes(m.research_decision)&&!publishedAfter&&age<IMPROVEMENT_OPEN_DAYS)
-   return {status:'IMPROVEMENT_FOUND',decision:m.research_decision,researched_at:m.researched_at,
+   return {status:'IMPROVEMENT_FOUND',decision:m.research_decision,researched_at:m.researched_at,research_query:m.query||null,
     label:`Research on ${fmtDate(at)} found an improvement (${DECISION_TEXT[m.research_decision]}). Next: review the proposal, publish it yourself, then record the publication.`};
  }
  if(row.position>0&&row.position<=3&&row.clicks>0&&row.ctr>=2)
@@ -108,7 +108,9 @@ function assessGrowthCandidates(growth,{publications=[],windows=[],now=new Date(
   .sort((a,b)=>ts(b.eligibility.researched_at)-ts(a.eligibility.researched_at))[0];
  if(started){
   const id=started.page_id??started.id;
-  best={basis:'FINISH_STARTED_WORK',page_id:id,url:started.url,query:started.query||null,priority_score:started.priority_score??started.priority,
+  // The heading names what was researched: the search term, else the page's tracked keyword (never just "this page").
+  best={basis:'FINISH_STARTED_WORK',page_id:id,url:started.url,query:started.query||null,
+   label:started.query||started.eligibility.research_query||started.keyword||null,priority_score:started.priority_score??started.priority,
    runner_up:open[0]?{page_id:open[0].page_id,query:open[0].query,priority_score:open[0].priority_score}:null,
    reasons:[
     `On ${fmtDate(started.eligibility.researched_at)} the Growth research found an improvement for this page: ${DECISION_TEXT[started.eligibility.decision]}.`,
