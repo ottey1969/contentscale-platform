@@ -259,7 +259,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    // Without verified GSC, research the selected page itself. Never invent
    // an untracked destination or discard otherwise available live content.
    (!report.growth_decision?.primary_next_action?.metrics?page.url:null);
-  let selectedSource=proposed===page.url?own.live:(proposed?destinationSources.get(proposed):null);
+  // Fragment aliases identify the same document. Use the protected sibling's actual URL
+  // (not the #fragment Tracker row) as the final editorial target.
+  const lockedSibling=proposed&&(v.lockedPages||[]).find(x=>Number(x.id)!==v.id&&normUrl(x.url)===normUrl(proposed));
+  if(lockedSibling)proposed=lockedSibling.url;
+  let selectedSource=proposed===page.url?own.live:(proposed?(destinationSources.get(proposed)||
+   (normUrl(proposed)===normUrl(page.url)?own.live:null)):null);
   // Intent comes from live organic results and the page's own title/H1, never from word overlap alone.
   const serpIntent=inferSerpIntent({query:targetQuery,leads:discovery.leads,pages:comparisons.filter(x=>x.live?.html).map(x=>({url:x.url,html:x.live.html}))});
   const intentOf=(u,src)=>{const ex=excerptOf(src?.html);
@@ -290,7 +295,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     advice:identityAdvice(aliasIdentity,{lockedUrls})}:
    resolveDestinationIdentity({url:proposed,source:selectedSource,sourceUrl:page.url,sourceSource:own.live,sourceProtected:page.case_study_active===true});
   // A destination that is itself a locked Case Study (another tracked page, not the source) is protected in its own right.
-  const destinationLocked=!!proposed&&normUrl(proposed)!==normUrl(page.url)&&isLocked(proposed);
+  // A fragment-only Tracker row (#statistics) is the same document as a locked sibling.
+  // Do not exempt same-document destinations merely because the source row itself is unlocked.
+  const destinationLocked=!!proposed&&isLocked(proposed)&&(
+   normUrl(proposed)!==normUrl(page.url)||
+   (v.lockedPages||[]).some(x=>Number(x.id)!==v.id&&normUrl(x.url)===normUrl(proposed))
+  );
   const finalIdentity=destinationLocked?{...(destinationIdentity||{url:proposed}),destination_locked:true,destination_protected:true,locked_url:proposed}:destinationIdentity;
   report.destination_identity=finalIdentity;
   // One identity everywhere: a destination that is a proven 301/308 alias is reported by its final URL in the selection too;
