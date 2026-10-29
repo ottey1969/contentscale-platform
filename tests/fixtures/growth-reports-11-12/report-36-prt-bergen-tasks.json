@@ -1,0 +1,87 @@
+{
+ "_source": "Verbatim subset (report 36, PRT /bergen-county-roofing-services/, generated 2026-10-29T01:45:14.994Z, after #201): reader tasks.",
+ "reader_task_coverage": {
+  "tasks": [
+   {
+    "code": "task_gutter",
+    "label": "Competitors teach “6. Gutter Installation and Cleaning”",
+    "match": {
+     "key": "gutter",
+     "co_terms": [
+      "instal"
+     ],
+     "concepts": [
+      "gutter",
+      "instal",
+      "clean",
+      "founda"
+     ],
+     "core_words": [
+      "gutter",
+      "installation",
+      "cleaning",
+      "foundation"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://ajreliable.com/roofers-bergen-county-nj/",
+      "host": "ajreliable.com",
+      "heading": "6. Gutter Installation and Cleaning",
+      "excerpt": "Having a reliable gutter system is important, because it literally protects the foundation of your home. A properly operating gutter system prevents water from running off the roof and building up around the foundation. Over time, this water build up can cause immense pressure on a foundation and lead to cracking. A & J Reliable, Inc. provides gutter installation , cleaning, and guard installation services. Our seaml",
+      "concepts": [
+       "gutter",
+       "instal"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://www.a1affordable.com/bergen-county--nj",
+      "host": "a1affordable.com",
+      "heading": "Bergen County Gutter Installation & Maintenance Experts",
+      "excerpt": "Protect your home from water damage with our reliable gutter services in Bergen County, NJ. We install seamless aluminum gutters, perform cleanings and repairs, and add protective guards to keep your system flowing all year long. Roofing, Chimney, Masonry, and Gutter Services In Bergen County, NJ",
+      "concepts": [
+       "gutter",
+       "instal"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "PARTIAL",
+     "passages": [
+      {
+       "heading": "What Roofing Services Does Bergen County Need?",
+       "text": "Inspection and maintenance: evaluate vulnerable flashing, drainage, sealants, gutters, and visible deterioration before problems grow.",
+       "concepts": [
+        "gutter",
+        "instal"
+       ]
+      },
+      {
+       "heading": "Common Roofing Problems in Bergen County, NJ",
+       "text": "The most frequent issues local roofers see are wind-lifted or missing shingles, leaks around chimneys and vents, clogged or damaged gutters, and granule loss from aging asphalt. Wind and hail are the #1 U.S. home-insurance claim, and 32% of homeowners reported weather-related property impacts in the",
+       "concepts": [
+        "gutter",
+        "instal"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "Common Roofing Problems in Bergen County, NJ",
+     "reason": "Closest existing section by shared concepts (around, chimne, damag, proper); the new section continues that explanation."
+    }
+   }
+  ]
+ },
+ "editorial_decision_gate": {
+  "decision": "IMPROVE_EXISTING",
+  "draft_heading": "Gutter Cleaning and Installation to Protect the Home Foundation",
+  "copy_ready": true
+ }
+}

@@ -76,3 +76,15 @@ test('R33: a thin SERP without a market costs at most one extra Serper call (pag
   fetchImpl:async(u,o)=>{calls.push(JSON.parse(o.body));return {ok:true,json:async()=>({organic:[]})}}});
  assert.equal(calls.length,2);assert.equal(calls[1].q,'roof repair New Jersey');assert.equal(calls[1].page,undefined);
 });
+
+// ---------- Report 36 (PRT Bergen after #201): a competitor's service offering ("we install gutters") became the task ----------
+const r36=require('./fixtures/growth-reports-11-12/report-36-prt-bergen-tasks.json');
+test('R36: a competitor advertising a service it sells is not a reader task; plain advice about the same subject still is',()=>{
+ const t=r36.reader_task_coverage.tasks.find(x=>x.code==='task_gutter');assert(t);assert.equal(r36.editorial_decision_gate.copy_ready,true,'production proposed gutter copy');
+ for(const s of t.competitor_support){
+  const others=t.competitor_support.filter(x=>x!==s).map(x=>(x.heading+' '+x.excerpt).toLowerCase()).join(' ');
+  assert.equal(isPromotionalSection({heading:s.heading,text:s.excerpt},s.host,others),true,s.host+': '+s.heading);
+ }
+ const advice={heading:'Keep gutters clear',text:'Gutters carry rain off the roof edge and away from the foundation. Clear leaves and twigs twice a year, check that downspouts discharge at least a few feet from the wall, and look for sagging hangers after storms.'};
+ assert.equal(isPromotionalSection(advice,'homeadvice.example',''),false);
+});
