@@ -292,7 +292,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // A destination that is itself a locked Case Study (another tracked page, not the source) is protected in its own right.
   // A fragment-only Tracker row (#statistics) is the same document as a locked sibling.
   // Do not exempt same-document destinations merely because the source row itself is unlocked.
-  const destinationLocked=!!proposed&&isLocked(proposed);
+  const destinationLocked=!!proposed&&isLocked(proposed)&&(
+   normUrl(proposed)!==normUrl(page.url)||
+   (v.lockedPages||[]).some(x=>Number(x.id)!==v.id&&normUrl(x.url)===normUrl(proposed))
+  );
   const finalIdentity=destinationLocked?{...(destinationIdentity||{url:proposed}),destination_locked:true,destination_protected:true,locked_url:proposed}:destinationIdentity;
   report.destination_identity=finalIdentity;
   // One identity everywhere: a destination that is a proven 301/308 alias is reported by its final URL in the selection too;
