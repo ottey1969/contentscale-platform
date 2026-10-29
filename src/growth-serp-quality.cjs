@@ -27,15 +27,18 @@ function deriveMarket({query='',keyword='',url=''}={}){
 }
 // query: the working query; lead: {url,title,snippet}. Returns null when the lead is acceptable, else a reason code.
 // marketStates: the place the source page serves (deriveMarket), applied even when the query itself names no place.
+// The place a lead names in its title, snippet or URL path ("…/wind-damage-repair-colorado-spring-…"). The path is read for
+// full state names only (lower-case slugs carry no reliable two-letter codes).
+const leadStates=lead=>{let path='';try{path=decodeURIComponent(new URL(lead.url).pathname).toLowerCase().replace(/[-_/]+/g,' ')}catch{}
+ return [...new Set([...statesIn(String(lead.title||'')+' '+String(lead.snippet||'')),...statesIn(path)])]};
 function rejectLead({query='',lead={},ownHost='',marketStates=[]}={}){
  let host='';try{host=new URL(lead.url).hostname.replace(/^www\./,'').toLowerCase()}catch{return 'INVALID_URL'}
  if(ownHost&&(host===ownHost||host.endsWith('.'+ownHost)))return 'OWN_SITE';
  if(AGGREGATOR.test(host))return 'AGGREGATOR_OR_PROFILE_NOT_A_COMPARABLE_PAGE';
  const qStates=[...new Set([...statesIn(query,{queryMode:true}),...(Array.isArray(marketStates)?marketStates:[])])];
- const text=String(lead.title||'')+' '+String(lead.snippet||'');
  if(qStates.length){ // a place-bound query: other-region pages are not competitors
   if(LISTICLE.test(String(lead.title||'')))return 'DIRECTORY_STYLE_LISTING_FOR_A_LOCAL_QUERY';
-  const rStates=statesIn(text);
+  const rStates=leadStates(lead);
   if(rStates.length&&!rStates.some(s=>qStates.includes(s)))return 'DIFFERENT_REGION:'+rStates.join(',');
  }
  return null;
@@ -44,7 +47,7 @@ function rejectLead({query='',lead={},ownHost='',marketStates=[]}={}){
 // informational source). The distinction is reported and same-market pages are read first.
 function marketRelevance(lead={},marketStates=[]){
  if(!marketStates.length)return 'NO_MARKET_SCOPE';
- const st=statesIn(String(lead.title||'')+' '+String(lead.snippet||''));
+ const st=leadStates(lead);
  return st.some(x=>marketStates.includes(x))?'SAME_MARKET':'NO_REGION_STATED_GENERAL_SOURCE';
 }
-module.exports={rejectLead,statesIn,deriveMarket,marketRelevance,AGGREGATOR,US};
+module.exports={rejectLead,statesIn,leadStates,deriveMarket,marketRelevance,AGGREGATOR,US};

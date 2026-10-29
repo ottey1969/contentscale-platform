@@ -12,7 +12,9 @@ const IGNORED=new Set(('about above after again against also always another beca
  'read learn example examples list free today important main good great better right several common simple easy quick first next final conclusion introduction '+
  'overview summary benefit benefits work works working help helps helping start started build building create creating used using time times thing things '+
  'people really actually often usually well make sure also still even much while these those might likely based include includes including '+
- 'process processes approach approaches strategy strategies method methods solution solutions result results').split(/\s+/));
+ 'process processes approach approaches strategy strategies method methods solution solutions result results '+
+ // Time words ('a recent storm', 'the latest update') name when, not what; they never define a reader task.
+ 'recent recently latest anyway lately').split(/\s+/));
 const wordsOf=(text,skip)=>(String(text||'').toLowerCase().match(/[a-z]{5,}/g)||[]).filter(w=>!IGNORED.has(w)&&!IGNORED.has(STEM(w))).map(root).filter(r=>r.length>=4&&!skip.has(r));
 const countMap=(arr)=>{const m=new Map();for(const r of arr)m.set(r,(m.get(r)||0)+1);return m};
 

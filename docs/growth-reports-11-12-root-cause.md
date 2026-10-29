@@ -107,3 +107,15 @@ SEO performance", Moz + Semrush), geplaatst na "What Is International SEO & Why 
 - **Tracker** (`src/index.js`): de scan legt de echte hopstatussen vast; alleen 301/308 zet `redirects_to`, een tijdelijke redirect blijft
   een eigen pagina. De paginakaart toont het één-pagina-advies; voor redirects geen verwijderknoppen meer, alleen optioneel "Also track the
   destination" (oude rij blijft). Dode URL's (404/410) houden hun bestaande knoppen. Geen schemawijziging.
+
+## Productieruns na PR #194 (rapporten 17 en 18)
+- **Rapport 17 (page 2324)** — `IMPROVE_EXISTING` met geverifieerde concepten voor 2 taken; consistent.
+- **Rapport 18 (page 2413)** — 301 correct herkend (`PERMANENT_REDIRECT`, eindpagina = vergrendelde bron), advies getoond. Restpunten en correcties:
+  | Punt | Oorzaak | Correctie | Test |
+  |---|---|---|---|
+  | Coloradopagina telde als concurrent voor NJ | Plaats stond alleen in de URL (`…-colorado-spring-…`) | URL-pad wordt gelezen voor volledige staatsnamen | 16 |
+  | Slechts 2 bruikbare zoekresultaten | Gelokaliseerde lookup vol andere-staat-aanbieders | Eén extra Serper-call met de markt in de query wanneer < 3 resultaten overblijven; gemeld in `attempted_sources` | 5b |
+  | "Taak" `task_recent` | Tijdwoord "recent" in twee koppen | Tijdwoorden worden genegeerd bij taakafleiding | 16b |
+  | Blokkade-volgorde | SERP-tekort stond vóór de beschermde Case Study | Beschermde bestemming is de primaire uitkomst ("no website change is required"); SERP e.d. als `research_limitations` | 17 |
+  | Selectie toonde oude 301-URL | Alleen de gate gebruikte de eind-URL | `query_selection`/`primary_next_action` tonen de eind-URL, oude URL als `tracked_url` | 14 |
+  | Startadvies vs eindbeslissing | `REVIEW_PAGE_INTENT` bleef als advies zichtbaar | `growth_decision.final_decision`; startadvies gemarkeerd als `RESEARCH_STARTING_POINT`, UI toont het als vertrekpunt | 18, UI-test |

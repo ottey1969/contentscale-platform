@@ -28,6 +28,15 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  if(readable<2||(cd.distinct_hosts!==undefined&&cd.distinct_hosts<2))missing.push({code:'READABLE_COMPETITOR_ARTICLES',
   detail:'Fewer than two competitor articles on different sites yielded readable sections. Diagnostics: received '+(cd.received??'?')+', without HTML '+(cd.without_html??'?')+
    ', no readable sections '+(cd.with_no_readable_sections??'?')+', used '+(cd.used??readable)+' ('+(cd.used_partial_capture??'?')+' cut at the fetch limit, which still counts as evidence of what they teach), distinct sites '+(cd.distinct_hosts??'?')+'.'});
+ // When the destination is the locked Case Study (directly or through a proven 301), that protection is the primary outcome:
+ // no website change is possible or needed now. Missing research evidence is reported after it as a separate limitation.
+ const protectedId=destination.destination_identity?.source_protected===true?destination.destination_identity:null;
+ if(missing.length&&protectedId){
+  const first={code:'DESTINATION_IS_PROTECTED_CASE_STUDY',detail:protectedMessage(protectedId)};
+  return {...base,decision:'DATA_BLOCKED',blocker_code:first.code,missing_evidence:[first,...missing],research_limitations:missing,
+   attempted_sources:attempts,reason:'The page for this query is the protected Case Study'+(protectedId.kind==='PERMANENT_REDIRECT'?' (reached through a permanent redirect)':'')+'; no website change is required now. Separately, research evidence was incomplete: '+missing.map(x=>x.code).join(', ')+'.',
+   next_action:'Keep the page and any working redirect unchanged until the Case Study measurement cycle ends. Research limitations are listed separately.'};
+ }
  if(missing.length)return {...base,decision:'DATA_BLOCKED',blocker_code:missing[0].code,missing_evidence:missing,
   attempted_sources:attempts,reason:'Required evidence was not accessible: '+missing.map(x=>x.code).join(', ')+'.',
   next_action:'Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.'};
@@ -80,7 +89,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
    evidence:supported.flatMap(evidenceFor).slice(0,6),next_action:'Keep the page unchanged; revisit only if live results or the page change.'};
  // An edit on a URL that is the locked Case Study under another address is an edit of the Case Study.
  if(identity?.source_protected)
-  return blocked('DESTINATION_IS_PROTECTED_CASE_STUDY','The selected destination '+identity.url+' is the locked Case Study page '+identity.source_url+' ('+identity.basis+'), so the missing task(s) '+gaps.map(t=>t.code).join(', ')+' cannot be added there.',
+  return blocked('DESTINATION_IS_PROTECTED_CASE_STUDY',protectedMessage(identity)+' The missing task(s) '+gaps.map(t=>t.code).join(', ')+' cannot be added there now.',
    'The only page for this query is the protected Case Study.','Revisit after the Case Study measurement cycle, or create a distinct page only if the search intent differs.');
  const chosen=gaps.sort((a,b)=>(b.independent_sources-a.independent_sources)||(a.destination.status==='PARTIAL'?-1:1)).slice(0,2);
  // verified_gap stays false until a draft for the task passes every check (the producer sets it); gap_observed is the research finding.
@@ -99,6 +108,8 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   next_action:'Owner completion drafts only the missing task(s) for the stated placement; publication stays disabled.'};
 }
 
+const protectedMessage=id=>(id.kind==='PERMANENT_REDIRECT'?'The selected URL '+id.url+' permanently redirects ('+(id.http_statuses||[]).join(' → ')+') to ':'The selected URL '+id.url+' resolves ('+String(id.basis||'').toLowerCase().replace(/_/g,' ')+') to ')+
+ 'the locked Case Study page '+id.source_url+'. Edits are blocked to protect the Case Study baseline; no website change is required.';
 const captureNote=c=>!c?'':c.cause==='RAW_RESPONSE_EXCEEDED_BYTE_CAP'?' (the response exceeded the '+c.raw_cap_bytes+'-byte download cap)':
  c.cause==='READABLE_HTML_EXCEEDED_LIMIT'?' (readable HTML '+c.readable_chars+' characters after removing scripts and styles, limit '+c.readable_limit+')':'';
 function explainNoShared(td){

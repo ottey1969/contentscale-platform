@@ -20,7 +20,7 @@ function deriveEvidenceStatus({decision={},serpIntent=null,coverage=null}={}){
  };
  status.copy_ready=status.draft_checked;
  status.verified_gap=status.draft_checked;
- status.label=status.draft_checked?'TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW':status.missing_task_established?'TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED':
+ status.label=decision.blocker_code==='DESTINATION_IS_PROTECTED_CASE_STUDY'?'CASE_STUDY_PROTECTED_NO_CHANGE_REQUIRED':status.draft_checked?'TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW':status.missing_task_established?'TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED':
   d==='NO_CHANGE'?'NO_GAP_ALL_SHARED_TASKS_COVERED':d==='DATA_BLOCKED'?'EVIDENCE_INCOMPLETE':'NO_VERIFIED_GAP';
  return status;
 }

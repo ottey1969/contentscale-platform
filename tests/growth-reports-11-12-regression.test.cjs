@@ -130,7 +130,9 @@ test('5b. Serper.dev is asked for the source page market via its location parame
   {title:'How to Spot Wind Damage on a Roof',link:'https://guide.example/wind',position:3}]})}};
  const market=deriveMarket({query:'roof wind damage repair',keyword:'wind damage roof repair nj',url:r12.url});
  const r=await optionalGoogleOrganicDiscovery({query:'roof wind damage repair',ownUrl:r12.url,market,fetchImpl,key:'test-key'});
- assert.equal(calls.length,1);assert.equal(calls[0].url,'https://google.serper.dev/search');assert.equal(calls[0].body.location,'New Jersey, United States');
+ assert.equal(calls[0].url,'https://google.serper.dev/search');assert.equal(calls[0].body.location,'New Jersey, United States');
+ // Only two comparable leads survived the market filter: exactly one extra Serper call names the market in the query.
+ assert.equal(calls.length,2);assert.equal(calls[1].body.q,'roof wind damage repair New Jersey');assert.equal(r.market_query_retry.query,'roof wind damage repair New Jersey');
  assert.deepEqual(r.leads.map(l=>l.url),['https://nj-roofer.example/wind','https://guide.example/wind']);
  assert.deepEqual(r.leads.map(l=>l.market_relevance),['SAME_MARKET','NO_REGION_STATED_GENERAL_SOURCE']);
  assert(r.rejected_leads.some(x=>x.reason==='DIFFERENT_REGION:MI'));assert.equal(r.scope.location,'New Jersey, United States');
@@ -408,7 +410,9 @@ test('14. Route: a 301/308 alias of the locked source is one page: final URL is 
   const {b,SRC,SIB}=await runIdentity({mode});
   const di=b.destination_identity;
   assert.equal(di.kind,'PERMANENT_REDIRECT');assert.equal(di.basis,'PERMANENT_REDIRECT_TO_SOURCE_PAGE');assert.equal(di.alias_of,SRC);assert.deepEqual(di.http_statuses,[Number(mode)]);
-  assert.equal(b.editorial_decision_gate.target_url,SRC,'the final URL is the page identity');assert.equal(b.query_selection.destination.url,SIB,'the tracked alias is kept, not deleted');
+  assert.equal(b.editorial_decision_gate.target_url,SRC,'the final URL is the page identity');
+  assert.equal(b.query_selection.destination.url,SRC,'selection reports the same final URL');assert.equal(b.query_selection.destination.tracked_url,SIB,'the tracked alias is kept, not deleted');
+  assert.equal(b.growth_decision.primary_next_action.destination.url,SRC);
   assert.equal(b.editorial_decision_gate.blocker_code,'DESTINATION_IS_PROTECTED_CASE_STUDY');assert.equal(b.editorial_decision_gate.copy_ready,false);
   assert.match(di.advice,new RegExp('^'+mode+' redirect detected: '+SIB.replace(/[.*+?^${}()|[\]\\/]/g,'\\$&')+' → '));
   assert.match(di.advice,/This is one page, not duplicate content\. Keep the working redirect; no website change is required\./);
@@ -460,4 +464,49 @@ test('15b. Owner package shows the same URL-identity advice as the JSON, once',(
  const md=buildOwnerHandoffPackage({report,decision:{decision:'DATA_BLOCKED',missing_evidence:[]}}).markdown;
  assert.match(md,/## URL identity/);assert.equal(md.split('This is one page, not duplicate content').length-1,1);
  assert.match(md,/Keep the working redirect; no website change is required/);assert.match(md,/edits to it are blocked/);
+});
+
+// ---------- Report 18 (production run after PR #194): 301 recognised; geo leak via URL, a time-word "task", blocker order ----------
+const r18=require('./fixtures/growth-reports-11-12/report-18-prt-wind-damage-after-194.json');
+const {deriveReaderTasksDetailed}=require('../src/growth-derived-reader-tasks.cjs');
+test('R18 production outcome: 301 recognised, but a Colorado page passed the NJ filter and SERP evidence blocked first',()=>{
+ assert.equal(r18.destination_identity.kind,'PERMANENT_REDIRECT');assert.equal(r18.destination_identity.source_protected,true);
+ assert.equal(r18.editorial_decision_gate.blocker_code,'SERP_INTENT_EVIDENCE');
+ assert(r18.search_discovery.leads.some(l=>/colorado-spring/.test(l.url)));
+ assert.deepEqual(r18.reader_task_coverage.tasks.map(t=>t.code),['task_recent']);
+});
+test('16. A place named only in the URL path is still another market; "near you" is local, "what to do" is a guide',()=>{
+ const co=r18.search_discovery.leads.find(l=>/colorado-spring/.test(l.url));
+ assert.equal(rejectLead({query:'roof wind damage repair',lead:co,marketStates:['NJ']}),'DIFFERENT_REGION:CO');
+ const sd=r18.search_discovery.leads.find(l=>/sundownexteriors/.test(l.url));
+ assert.equal(rejectLead({query:'roof wind damage repair',lead:sd,marketStates:['NJ']}),null,'no place named: a general source');
+ assert.equal(classifyTitle(co.title,co.snippet),'LOCAL_SERVICE');assert.equal(classifyTitle(sd.title,sd.snippet),'INFORMATIONAL_GUIDE');
+ assert.equal(rejectLead({query:'roof repair',lead:{url:'https://x.example/roof-repair-colorado/',title:'Roof repair'}}),null,'no market: no place filter');
+});
+test('16b. A time word shared by two headings ("recent storm") is not a reader task (SYNTHETIC sections shaped like report 18)',()=>{
+ const sec=(h,t)=>({heading:h,text:t,words:t.split(/\s+/).length});
+ const filler='Homeowners should document visible shingle damage with dated photos, then compare the photos with the inspection report before any contractor visit.';
+ const competitors=[
+  {host:'a.example',url:'https://a.example/x',sections:[sec('What to do after a recent storm','A recent storm can loosen flashing. After the recent storm, walk the yard and note recent debris near gutters and flashing. '+filler),sec('Insurance paperwork','Keep the claim number and adjuster notes together with every invoice and photo so paperwork stays complete. '+filler),sec('Choosing materials','Architectural shingles and synthetic underlayment resist uplift better than three-tab shingles in exposed locations. '+filler)]},
+  {host:'b.example',url:'https://b.example/y',sections:[sec('No damage from the recent ice storm?','Even without visible damage from the recent ice storm, recent freeze cycles can lift flashing; recent debris in gutters is a sign. '+filler),sec('Gutter care','Clear gutters twice a year so water does not back up under the first shingle course near the eaves. '+filler),sec('Attic ventilation','Balanced intake and exhaust ventilation keeps the attic dry and reduces ice dam formation along the eaves. '+filler)]}];
+ const keys=deriveReaderTasksDetailed({query:'roof wind damage repair',competitors}).tasks.map(x=>x.key);
+ assert(!keys.includes('recent'),keys.join(','));
+});
+test('17. R18: the protected Case Study is the primary outcome; missing SERP evidence is a separate research limitation',()=>{
+ const serp=inferSerpIntent({query:'roof wind damage repair',leads:r18.search_discovery.leads});
+ assert.equal(serp.status,'SERP_INTENT_NOT_ESTABLISHED');
+ const d=decideGrowthEditorialAction({report:r18,destination:r18.destination_section_comparison,coverage:r18.reader_task_coverage,
+  serpIntent:serp,destinationIntent:r18.destination_intent,attempts:r18.editorial_decision_gate.attempted_sources});
+ assert.equal(d.decision,'DATA_BLOCKED');assert.equal(d.blocker_code,'DESTINATION_IS_PROTECTED_CASE_STUDY');
+ assert.match(d.missing_evidence[0].detail,/permanently redirects \(301\) to the locked Case Study page .*no website change is required/);
+ assert.deepEqual(d.research_limitations.map(x=>x.code),['SERP_INTENT_EVIDENCE']);
+ assert.match(d.reason,/no website change is required now\. Separately, research evidence was incomplete: SERP_INTENT_EVIDENCE/);
+ assert.equal(d.evidence_status.label,'CASE_STUDY_PROTECTED_NO_CHANGE_REQUIRED');assert.equal(d.copy_ready,false);
+});
+test('18. Route: the opening recommendation is marked as the starting point and the final decision is recorded next to it',async()=>{
+ const {b}=await runIdentity({mode:'301'});
+ assert.equal(b.growth_decision.primary_next_action.stage,'RESEARCH_STARTING_POINT');
+ assert.equal(b.growth_decision.final_decision.decision,b.editorial_decision_gate.decision);
+ assert.equal(b.growth_decision.final_decision.blocker_code,b.editorial_decision_gate.blocker_code);
+ assert.equal(b.growth_decision.final_decision.target_url,b.editorial_decision_gate.target_url);
 });

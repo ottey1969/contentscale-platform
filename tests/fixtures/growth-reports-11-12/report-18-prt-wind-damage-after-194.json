@@ -1,0 +1,634 @@
+{
+ "_source": "Verbatim subset of production Growth complete-review JSON (report 18, generated 2026-10-28T22:28:26.857Z, after PR #194).",
+ "generated_at": "2026-10-28T22:28:26.857Z",
+ "page_id": 2413,
+ "url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+ "case_study_locked": true,
+ "query_selection": {
+  "status": "QUERY_SELECTED_FROM_VERIFIED_GSC",
+  "source": "VERIFIED_EXACT_PAGE_GSC",
+  "query": "roof wind damage repair",
+  "destination": {
+   "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+   "page_id": 2361,
+   "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+   "coverage": 1,
+   "keyword": "wind damage roof repair",
+   "competing_same_site_pages": [
+    "https://perfectroofingteam.com/wind-damage-roof-repair-nj/#statistics"
+   ]
+  },
+  "source_page_signal": {
+   "type": "SOURCE_PAGE_SURFACES_FOR_QUERY_OWNED_BY_ANOTHER_PAGE",
+   "note": "These are the SOURCE page’s rows. They are not performance data for the destination page.",
+   "source_page_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+  },
+  "brand_queries_excluded": [],
+  "excluded": [],
+  "protected": []
+ },
+ "serp_intent": {
+  "status": "SERP_INTENT_NOT_ESTABLISHED",
+  "intent": "MIXED_OR_INSUFFICIENT",
+  "query": "roof wind damage repair",
+  "organic_leads_considered": 2,
+  "agreeing_leads": 1,
+  "compatible_leads": 1,
+  "agreement_basis": null,
+  "class_counts": {
+   "UNCLASSIFIED": 1,
+   "COMMERCIAL_COMPARISON": 1
+  },
+  "reason": "Only 2 usable organic result(s) after excluding discussion sites; at least 3 are needed to read an intent.",
+  "pages_used_for_classification": 0,
+  "leads": [
+   {
+    "url": "https://sundownexteriors.com/what-to-do-if-you-need-wind-damage-roof-repair-after-a-recent-storm/",
+    "title": "What To Do If You Need Wind Damage Roof Repair After a ...",
+    "class": "UNCLASSIFIED",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://cheyennemtnroofing.com/wind-damage-repair-colorado-spring-roof-repair-near-me/",
+    "title": "BEST Wind Damage Roof Repair Near You",
+    "class": "COMMERCIAL_COMPARISON",
+    "basis": "TITLE_AND_SNIPPET"
+   }
+  ],
+  "method": "TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES",
+  "scope": "One lookup; observed placement is not a tracked-page ranking."
+ },
+ "destination_intent": {
+  "url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "class": "LOCAL_SERVICE",
+  "query_root_overlap": [
+   "roof",
+   "wind",
+   "damag",
+   "repair"
+  ],
+  "missing_query_roots": [],
+  "verdict": "UNVERIFIED",
+  "basis": "TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF",
+  "observed_head": "wind damage roof repair nj | 2-hour emergency response | storm & wind damage roof repair in new jersey"
+ },
+ "destination_identity": {
+  "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+  "final_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "kind": "PERMANENT_REDIRECT",
+  "http_statuses": [
+   301
+  ],
+  "resolves_to_source": true,
+  "basis": "PERMANENT_REDIRECT_TO_SOURCE_PAGE",
+  "source_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "source_protected": true,
+  "alias_of": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/ → https://perfectroofingteam.com/wind-damage-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/wind-damage-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/ as an alias. The final page is a locked Case Study: edits to it are blocked until the Case Study measurement cycle ends; research continues."
+ },
+ "url_identities": [
+  {
+   "original_url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+   "final_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "redirect_chain": [
+    {
+     "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+     "status": 301,
+     "location": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+    }
+   ],
+   "error": null,
+   "canonical_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "canonical_points_elsewhere": false,
+   "alias_of": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/ → https://perfectroofingteam.com/wind-damage-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/wind-damage-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/ as an alias. The final page is a locked Case Study: edits to it are blocked until the Case Study measurement cycle ends; research continues."
+  },
+  {
+   "original_url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+   "final_url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "redirect_chain": [
+    {
+     "url": "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+     "status": 301,
+     "location": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/"
+    }
+   ],
+   "error": null,
+   "canonical_url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "canonical_points_elsewhere": false,
+   "alias_of": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/ → https://perfectroofingteam.com/storm-damage-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/storm-damage-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/ as an alias."
+  },
+  {
+   "original_url": "https://perfectroofingteam.com/storm-damage-repair/",
+   "final_url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "redirect_chain": [
+    {
+     "url": "https://perfectroofingteam.com/storm-damage-repair/",
+     "status": 301,
+     "location": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/"
+    }
+   ],
+   "error": null,
+   "canonical_url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "canonical_points_elsewhere": false,
+   "alias_of": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/storm-damage-repair/ → https://perfectroofingteam.com/storm-damage-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/storm-damage-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/storm-damage-repair/ as an alias."
+  }
+ ],
+ "editorial_decision_gate": {
+  "focus_query": "roof wind damage repair",
+  "protected_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "target_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "case_study_locked": true,
+  "preserve_title_h1": true,
+  "publish_allowed": false,
+  "copy_ready": false,
+  "verified_gap": false,
+  "gsc_optional": true,
+  "exact_page_query_metrics_verified": true,
+  "evidence_count": 6,
+  "facts": [
+   {
+    "code": "TOPIC_SELECTED",
+    "value": "roof wind damage repair",
+    "source": "PAGE_VERIFIED_GSC_OR_TRACKED_TOPIC"
+   }
+  ],
+  "uncertainties": [],
+  "evidence": [],
+  "attempted_sources": [
+   {
+    "source": "TARGET_STATIC_HTML",
+    "status": "STATIC_HTML_USED",
+    "detail": null
+   },
+   {
+    "source": "SEARCH_PROVIDERS",
+    "status": "FRESH_GOOGLE_ORGANIC_LEADS",
+    "detail": "BING_PUBLIC_RSS, SERPER_GOOGLE_ORGANIC"
+   },
+   {
+    "source": "HISTORICAL_SNAPSHOT_LEADS",
+    "status": "LEADS_AVAILABLE",
+    "detail": "14 stored leads"
+   },
+   {
+    "source": "COMPETITOR_HTML_FETCH",
+    "status": "READABLE",
+    "detail": "2 tried: 2 readable, 0 blocked by the site (respected), 0 timed out, 0 fetched but not readable; 0 further candidate(s) untried"
+   }
+  ],
+  "decision": "DATA_BLOCKED",
+  "blocker_code": "SERP_INTENT_EVIDENCE",
+  "missing_evidence": [
+   {
+    "code": "SERP_INTENT_EVIDENCE",
+    "detail": "Only 2 usable organic result(s) after excluding discussion sites; at least 3 are needed to read an intent.",
+    "observed": {
+     "considered": 2,
+     "agreeing": 1,
+     "class_counts": {
+      "UNCLASSIFIED": 1,
+      "COMMERCIAL_COMPARISON": 1
+     },
+     "method": "TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES"
+    }
+   }
+  ],
+  "reason": "Required evidence was not accessible: SERP_INTENT_EVIDENCE.",
+  "next_action": "Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.",
+  "evidence_status": {
+   "decision": "DATA_BLOCKED",
+   "search_intent_confirmed": false,
+   "competitor_content_observed": true,
+   "destination_fully_examined": true,
+   "missing_task_established": false,
+   "draft_checked": false,
+   "factual_claims_confirmed": false,
+   "publication_approved": false,
+   "copy_ready": false,
+   "verified_gap": false,
+   "label": "EVIDENCE_INCOMPLETE"
+  },
+  "requires_editor_approval": true,
+  "case_study_unchanged": true,
+  "copy_status": "NOT_AVAILABLE_DATA_BLOCKED"
+ },
+ "report_completion": {
+  "status": "DATA_BLOCKED_REPORT",
+  "evidence_gate": "DATA_BLOCKED",
+  "verified_gap": false,
+  "copy_ready": false,
+  "draft_provider_status": "NOT_REQUIRED_FOR_DECISION",
+  "evidence_status": {
+   "decision": "DATA_BLOCKED",
+   "search_intent_confirmed": false,
+   "competitor_content_observed": true,
+   "destination_fully_examined": true,
+   "missing_task_established": false,
+   "draft_checked": false,
+   "factual_claims_confirmed": false,
+   "publication_approved": false,
+   "copy_ready": false,
+   "verified_gap": false,
+   "label": "EVIDENCE_INCOMPLETE"
+  },
+  "owner_only": true,
+  "automatic_publishing": false,
+  "case_study_unchanged": true
+ },
+ "search_discovery": {
+  "target_query": "roof wind damage repair",
+  "leads": [
+   {
+    "url": "https://sundownexteriors.com/what-to-do-if-you-need-wind-damage-roof-repair-after-a-recent-storm/",
+    "title": "What To Do If You Need Wind Damage Roof Repair After a ...",
+    "snippet": "Steps To Take After Locating Roof Wind Damage · 1. Document the Damage · 2. Contact Your Local Roofers · 3. File an Insurance Claim · 4. Follow Your Repair or ...",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "roof wind damage repair",
+    "serp_position": 7,
+    "geographic_scope": "New Jersey, United States",
+    "search_language": "en",
+    "market_relevance": "NO_REGION_STATED_GENERAL_SOURCE"
+   },
+   {
+    "url": "https://cheyennemtnroofing.com/wind-damage-repair-colorado-spring-roof-repair-near-me/",
+    "title": "BEST Wind Damage Roof Repair Near You",
+    "snippet": "We offer roof inspections, attic ventilation improvements, and gutter maintenance to prevent ice buildup and leaks caused by snow and freezing temperatures.",
+    "source": "SERPER_GOOGLE_ORGANIC",
+    "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+    "query": "roof wind damage repair",
+    "serp_position": 9,
+    "geographic_scope": "New Jersey, United States",
+    "search_language": "en",
+    "market_relevance": "NO_REGION_STATED_GENERAL_SOURCE"
+   }
+  ],
+  "rejected_leads": [
+   {
+    "url": "https://rmext.com/services/storm-damage/wind-damage/",
+    "title": "Wind Damage Repair Services in Denver, CO",
+    "reason": "DIFFERENT_REGION:CO"
+   },
+   {
+    "url": "https://www.virtuous-roofs.com/services/storm-damage-insurance-wind",
+    "title": "Wind Damage Roof Repair | Denver Metro & N. Colorado",
+    "reason": "DIFFERENT_REGION:CO"
+   },
+   {
+    "url": "https://www.schoenherrroofing.com/storm-damage/",
+    "title": "Storm Damage Roof Repair in SE & SW Michigan",
+    "reason": "DIFFERENT_REGION:MI"
+   },
+   {
+    "url": "https://redrockroofing.com/wind-damage-roof-repair-colorado/",
+    "title": "Wind Damage Roof Repair in Colorado | Free Video ...",
+    "reason": "DIFFERENT_REGION:CO"
+   }
+  ],
+  "market": {
+   "states": [
+    "NJ"
+   ],
+   "country": "us",
+   "location": "New Jersey, United States",
+   "source": "QUERY_KEYWORD_OR_URL_OF_THE_SOURCE_PAGE"
+  }
+ },
+ "reader_task_coverage": {
+  "status": "READER_TASK_COVERAGE_OBSERVED",
+  "method": "TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF",
+  "task_set": "DERIVED_FROM_COMPETITOR_SECTIONS",
+  "serp_intent": "INFORMATIONAL_GUIDE",
+  "destination_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "destination_truncated": false,
+  "destination_capture": {
+   "raw_bytes": 80274,
+   "raw_cap_bytes": 2500000,
+   "raw_cap_hit": false,
+   "readable_chars": 37595,
+   "readable_limit": 600000,
+   "cause": null
+  },
+  "destination_sections": [
+   {
+    "heading": "(introduction)",
+    "words": 11
+   },
+   {
+    "heading": "Storm & Wind Damage Roof Repair in New Jersey",
+    "words": 200
+   },
+   {
+    "heading": "💰 What is the Cost of Wind Damage Roof Repair in New Jersey?",
+    "words": 101
+   },
+   {
+    "heading": "Watch for these warning signs:",
+    "words": 136
+   },
+   {
+    "heading": "📋 Our Wind Damage Repair Process",
+    "words": 172
+   },
+   {
+    "heading": "❄️ Hail Damage Inspection & Repair",
+    "words": 49
+   },
+   {
+    "heading": "Hail Damage Signs:",
+    "words": 79
+   },
+   {
+    "heading": "🚨 Emergency Storm Restoration Available 24/7",
+    "words": 47
+   },
+   {
+    "heading": "Our Emergency Service Includes:",
+    "words": 80
+   },
+   {
+    "heading": "⚙️ Insurance Claims for Storm Damage",
+    "words": 65
+   },
+   {
+    "heading": "How We Support Your Claim:",
+    "words": 68
+   },
+   {
+    "heading": "Your Insurance Claim Timeline:",
+    "words": 94
+   },
+   {
+    "heading": "📍 Service Areas: Storm & Wind Repair Across All 21 NJ Counties",
+    "words": 167
+   },
+   {
+    "heading": "❓ Frequently Asked Questions",
+    "words": 311
+   },
+   {
+    "heading": "Wind Damage? Don't Wait — Act Within 24 Hours",
+    "words": 13
+   }
+  ],
+  "competitors_considered": [
+   {
+    "url": "https://sundownexteriors.com/what-to-do-if-you-need-wind-damage-roof-repair-after-a-recent-storm/",
+    "host": "sundownexteriors.com",
+    "partial": false,
+    "sections": 7
+   },
+   {
+    "url": "https://cheyennemtnroofing.com/wind-damage-repair-colorado-spring-roof-repair-near-me/",
+    "host": "cheyennemtnroofing.com",
+    "partial": false,
+    "sections": 6
+   }
+  ],
+  "competitor_diagnostics": {
+   "received": 2,
+   "without_html": 0,
+   "with_no_readable_sections": 0,
+   "used": 2,
+   "used_partial_capture": 0,
+   "used_complete_capture": 2,
+   "distinct_hosts": 2
+  },
+  "task_derivation": {
+   "hosts": [
+    {
+     "host": "sundownexteriors.com",
+     "sections_read": 7,
+     "sections_used": 6,
+     "sections_excluded_as_promotional": 1,
+     "headings": [
+      "What To Do If You Need Wind Damage Roof Repair After a Recen",
+      "How To Tell When Your Roof Has Wind Damage",
+      "1. Document the Damage",
+      "2. Contact Your Local Roofers",
+      "3. File an Insurance Claim",
+      "4. Follow Your Repair or Replacement Recommendations"
+     ]
+    },
+    {
+     "host": "cheyennemtnroofing.com",
+     "sections_read": 6,
+     "sections_used": 5,
+     "sections_excluded_as_promotional": 1,
+     "headings": [
+      "Best Wind Damage Roof Repair Near You",
+      "How Does Colorado Springs Wind Damage Affect Your Roof?",
+      "What are the Signs of Roof Wind Damage?",
+      "I Don’t See Any Damage from The Recent Ice Storm. Should I H",
+      "Google Reviews of Our Wind Damage Roof Repair"
+     ]
+    }
+   ],
+   "concepts_on_one_site_only": [
+    {
+     "concept": "replac",
+     "site": "sundownexteriors.com"
+    },
+    {
+     "concept": "claim",
+     "site": "sundownexteriors.com"
+    },
+    {
+     "concept": "googl",
+     "site": "cheyennemtnroofing.com"
+    },
+    {
+     "concept": "docume",
+     "site": "sundownexteriors.com"
+    },
+    {
+     "concept": "contac",
+     "site": "sundownexteriors.com"
+    },
+    {
+     "concept": "local",
+     "site": "sundownexteriors.com"
+    },
+    {
+     "concept": "insura",
+     "site": "sundownexteriors.com"
+    },
+    {
+     "concept": "affect",
+     "site": "cheyennemtnroofing.com"
+    }
+   ],
+   "topic_wide_words_ignored": [
+    "storm",
+    "recomm",
+    "colora",
+    "spring",
+    "inspec",
+    "shingl",
+    "gutter"
+   ]
+  },
+  "unverifiable_site_pages": [],
+  "tasks": [
+   {
+    "code": "task_recent",
+    "label": "Competitors teach “What To Do If You Need Wind Damage Roof Repair After a Recent Storm”",
+    "match": {
+     "key": "recent",
+     "co_terms": [
+      "storm"
+     ],
+     "concepts": [
+      "recent",
+      "proper"
+     ],
+     "core_words": [
+      "recent",
+      "property"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://sundownexteriors.com/what-to-do-if-you-need-wind-damage-roof-repair-after-a-recent-storm/",
+      "host": "sundownexteriors.com",
+      "heading": "What To Do If You Need Wind Damage Roof Repair After a Recent Storm",
+      "excerpt": "Home » What To Do If You Need Wind Damage Roof Repair After a Recent Storm Many homeowners falsely assume that roofs can easily withstand any type of wind. Unfortunately, even the most hurricane-proof roofing systems have thresholds of around 110 to 160 mph winds, meaning a Category 2 hurricane or a standard tornado could send your shingles flying. If a recent storm leaves you needing wind damage roof repair, you mus",
+      "concepts": [
+       "recent",
+       "storm"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://cheyennemtnroofing.com/wind-damage-repair-colorado-spring-roof-repair-near-me/",
+      "host": "cheyennemtnroofing.com",
+      "heading": "I Don’t See Any Damage from The Recent Ice Storm. Should I Have My Property Inspected Anyway?",
+      "excerpt": "Yes, getting your home inspected for wind damage is always a good idea if you are worried that the recent storm might have damaged your property. Wind damage can be subtle and not visible to the untrained eye, but the longer it goes untreated, it can cause more damage.",
+      "concepts": [
+       "recent",
+       "storm"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "NOT_OBSERVED",
+     "passages": []
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "Watch for these warning signs:",
+     "reason": "Closest existing section by shared concepts (shingl, thresh, system, around); the new section continues that explanation."
+    }
+   }
+  ],
+  "supported_task_codes": [
+   "task_recent"
+  ],
+  "gap_task_codes": [
+   "task_recent"
+  ],
+  "covered_task_codes": [],
+  "linked_elsewhere_task_codes": [],
+  "destination_section_headings": [
+   "(introduction)",
+   "Storm & Wind Damage Roof Repair in New Jersey",
+   "💰 What is the Cost of Wind Damage Roof Repair in New Jersey?",
+   "Watch for these warning signs:",
+   "📋 Our Wind Damage Repair Process",
+   "❄️ Hail Damage Inspection & Repair",
+   "Hail Damage Signs:",
+   "🚨 Emergency Storm Restoration Available 24/7",
+   "Our Emergency Service Includes:",
+   "⚙️ Insurance Claims for Storm Damage",
+   "How We Support Your Claim:",
+   "Your Insurance Claim Timeline:",
+   "📍 Service Areas: Storm & Wind Repair Across All 21 NJ Counties",
+   "❓ Frequently Asked Questions",
+   "Wind Damage? Don't Wait — Act Within 24 Hours"
+  ]
+ },
+ "destination_section_comparison": {
+  "status": "FULL_SECTION_COMPARISON_RESEARCH_ONLY",
+  "target_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "own_html_truncated": false,
+  "protected_source_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+  "destination_identity": {
+   "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+   "final_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "kind": "PERMANENT_REDIRECT",
+   "http_statuses": [
+    301
+   ],
+   "resolves_to_source": true,
+   "basis": "PERMANENT_REDIRECT_TO_SOURCE_PAGE",
+   "source_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "source_protected": true,
+   "alias_of": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+   "advice": "301 redirect detected: https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/ → https://perfectroofingteam.com/wind-damage-roof-repair-nj/. This is one page, not duplicate content. Keep the working redirect; no website change is required. Tracker should use https://perfectroofingteam.com/wind-damage-roof-repair-nj/ as the page identity and retain https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/ as an alias. The final page is a locked Case Study: edits to it are blocked until the Case Study measurement cycle ends; research continues."
+  }
+ },
+ "growth_decision": {
+  "protection": {
+   "case_study_locked": true,
+   "preserve_existing_top_rankings": false,
+   "publication_allowed": false,
+   "automatic_page_changes": false
+  },
+  "protected_queries": [],
+  "primary_next_action": {
+   "code": "VERIFY_INTENT_AND_EXISTING_DESTINATION",
+   "title": "Investigate clicks for \"roof wind damage repair\"",
+   "query": "roof wind damage repair",
+   "metrics": {
+    "impressions": 291,
+    "clicks": 0,
+    "ctr_pct": 0,
+    "average_position": 44.04123711340206,
+    "imported_at": "2026-10-08T03:47:58.108Z"
+   },
+   "reason": "291 exact-page impressions and 0 clicks; average position 44.0 in Search Console data imported Thu Oct 08 (historical, not a current ranking; rows of the source page, not of the destination). The average position is far beyond the first page, so ranking relative to live competitors is a larger obstacle than the snippet.",
+   "instruction": "Compare the live search intent with the destination URL and existing same-site pages. If the existing page fits, propose one targeted improvement on that URL for editorial review. Do not create another page by default.",
+   "destination": {
+    "url": "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/",
+    "page_id": 2361,
+    "basis": "DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY",
+    "coverage": 1,
+    "keyword": "wind damage roof repair",
+    "competing_same_site_pages": [
+     "https://perfectroofingteam.com/wind-damage-roof-repair-nj/#statistics"
+    ]
+   },
+   "source_page_signal": {
+    "type": "SOURCE_PAGE_SURFACES_FOR_QUERY_OWNED_BY_ANOTHER_PAGE",
+    "note": "These are the SOURCE page’s rows. They are not performance data for the destination page.",
+    "source_page_url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/"
+   },
+   "query_source": "VERIFIED_EXACT_PAGE_GSC",
+   "related_pages_to_check": [
+    "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+    "https://perfectroofingteam.com/emergency-roofing/storm-damage-roof-repair/",
+    "https://perfectroofingteam.com/emergency-roofing/wind-damage-roof-repair/"
+   ],
+   "stop_before": "No title/H1 rewrite, new spoke, consolidation, publication or Case Study baseline change without separate evidence and owner approval."
+  }
+ }
+}
