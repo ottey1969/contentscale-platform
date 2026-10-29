@@ -328,7 +328,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const attempts=[
    {source:'TARGET_STATIC_HTML',status:renderStatus,detail:own.code||null},
    {source:'SEARCH_PROVIDERS',status:discovery.status||'UNKNOWN',detail:((discovery.provider_attempts||[]).map(a=>typeof a==='string'?a:(a.provider||a.source||'')).join(', ')||discovery.source||'')+
-    (discovery.market_query_retry?'; market query "'+discovery.market_query_retry.query+'" added '+discovery.market_query_retry.added_leads+' lead(s)':'')||null},
+    (discovery.market_query_retry?'; market query "'+discovery.market_query_retry.query+'" added '+discovery.market_query_retry.added_leads+' lead(s)':'')+
+    (Number.isFinite(discovery.organic_results_received)?'; '+discovery.organic_results_received+' organic result(s) received, '+(discovery.rejected_leads||[]).length+' not used (reasons in search_discovery.rejected_leads)':'')||null},
    {source:'HISTORICAL_SNAPSHOT_LEADS',status:historical.length?'LEADS_AVAILABLE':'NONE',detail:String(historical.length)+' stored leads'},
    {source:'COMPETITOR_HTML_FETCH',status:competitorPages.length>=2?'READABLE':'INSUFFICIENT',
     detail:fetchSummary}];

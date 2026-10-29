@@ -73,12 +73,16 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLo
   if(!item||typeof item.title!=='string'||typeof item.link!=='string')continue;
   let parsed;try{parsed=validateUrl(item.link)}catch{continue}
   const hostname=parsed.hostname.replace(/^www\./,'').toLowerCase();
-  if(hostname===own||infrastructure.test(hostname)||seen.has(parsed.href))continue;
+  if(seen.has(parsed.href))continue;
   const title=clean(item.title).slice(0,180),snippet=clean(item.snippet||'').slice(0,400);
+  // Every organic result that is not used is logged with its reason, so a thin SERP can be explained from the report.
+  const drop=reason=>{(rejectedLog||[]).push({url:parsed.href,title:title.slice(0,100),reason})};
+  if(hostname===own){drop('OWN_SITE');continue}
+  if(infrastructure.test(hostname)){drop('SEARCH_OR_SOCIAL_INFRASTRUCTURE');continue}
   const matched=needle.filter(w=>terms(title).includes(w));
-  if(needle.length&&matched.length<Math.min(2,needle.length))continue;
-  if(wrongProductIntent(title,snippet,query))continue;
-  if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(parsed.pathname))continue;
+  if(needle.length&&matched.length<Math.min(2,needle.length)){drop('QUERY_TERMS_NOT_IN_TITLE');continue}
+  if(wrongProductIntent(title,snippet,query)){drop('DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT');continue}
+  if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(parsed.pathname)){drop('NON_CONTENT_PATH');continue}
   const why=rejectLead({query,lead:{url:parsed.href,title,snippet},ownHost:own,marketStates});
   if(why){(rejectedLog||[]).push({url:parsed.href,title:title.slice(0,100),reason:why});continue}
   seen.add(parsed.href);
@@ -86,7 +90,7 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLo
   leads.push({url:parsed.href,title,snippet,source:'SERPER_GOOGLE_ORGANIC',
    status:'GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION',query,
    serp_position:Number.isInteger(position)&&position>=1&&position<=200?position:null,
-   geographic_scope:market?.location||'US',search_language:'en',market_relevance:marketRelevance({title,snippet},marketStates)});
+   geographic_scope:market?.location||'US',search_language:'en',market_relevance:marketRelevance({url:parsed.href,title,snippet},marketStates)});
   if(leads.length>=limit)break;
  }
  return leads;
@@ -131,7 +135,8 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,fetchImp
    }else market_query_retry={query:q2,added_leads:0,failure:second.failure};
   }
   return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',market_query_retry,
-   source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,12),query:term,checked_at:new Date(now).toISOString(),
+   organic_results_received:first.payload.organic.length,
+   source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,20),query:term,checked_at:new Date(now).toISOString(),
    scope:{country:'us',language:'en',location:market?.location||null,market_states:market?.states||[],source:'Google organic results through optional configured Serper.dev'},
    warning:'Organic positions describe observed search result placement in a US English lookup'+(market?.location?' localised to '+market.location:'')+', not the tracked page ranking, a search-volume estimate, or proven traffic. Serper.dev is optional.'};
  }catch(e){

@@ -16,7 +16,10 @@ const IGNORED=new Set(('about above after again against also always another beca
  // Time words ('a recent storm', 'the latest update') name when, not what; they never define a reader task.
  'recent recently latest anyway lately '+
  // Words that structure a page (question/answer blocks, contact forms) rather than name its subject.
- 'question questions answer answers answered frequently asked contact contacts').split(/\s+/));
+ 'question questions answer answers answered frequently asked contact contacts '+
+ // Marketing adjectives sell a provider; two headings sharing "affordable" or "expert" do not teach the same thing.
+ 'affordable expert experts expertise professional professionals trusted reliable reliability premier leading certified licensed '+
+ 'insured experienced reputable dedicated dedication local quality').split(/\s+/));
 const wordsOf=(text,skip)=>(String(text||'').toLowerCase().match(/[a-z]{5,}/g)||[]).filter(w=>!IGNORED.has(w)&&!IGNORED.has(STEM(w))).map(root).filter(r=>r.length>=4&&!skip.has(r));
 const countMap=(arr)=>{const m=new Map();for(const r of arr)m.set(r,(m.get(r)||0)+1);return m};
 
@@ -36,6 +39,12 @@ const FURNITURE_HEADING=/^(?:contact(?: us| information)?(?: today| now)?|get in
 const isFurnitureHeading=h=>FURNITURE_HEADING.test(String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim());
 function isPromotionalSection(sec,host,otherHostsText=''){
  if(isFurnitureHeading(sec.heading))return true;
+ // Copy written about the provider itself ("our team is here…", "we offer…") is a sales section, whatever its heading.
+ const words=String(sec.text||'').split(/\s+/).filter(Boolean).length,self=(String(sec.text||'').match(/\b(?:we|we're|we've|our|ours|us)\b/gi)||[]).length;
+ if(words>=20&&self>=3&&self/words>=0.04)return true;
+ // Two explicit sales phrases ("our team is here", "our seasoned professionals", "we offer") mark a short sales block too.
+ const sales=(String(sec.text||'').match(/\b(?:our (?:\w+ )?(?:team|professionals|experts|crews?|technicians|specialists|staff|company)|we (?:offer|provide|specialize|are here)|call us|contact us)\b/gi)||[]).length;
+ if(sales>=2)return true;
  // Digits in a domain spell the brand ("4seasons-construction" is "Four Seasons Construction" in headings).
  const DIGIT=['zero','one','two','three','four','five','six','seven','eight','nine'];
  const label=String(host||'').replace(/^www\./,'').split('.')[0].toLowerCase().replace(/[0-9]/g,d=>DIGIT[+d]).replace(/[^a-z]/g,''),root=label.length>=5?label.slice(0,6):'';

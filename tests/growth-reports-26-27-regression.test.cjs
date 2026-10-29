@@ -31,3 +31,33 @@ test('R27: a locked destination is the primary outcome; the missing shared task 
  const open=decideGrowthEditorialAction({report:r27,destination:{...destination,destination_identity:null},coverage:r27.reader_task_coverage,serpIntent:r27.serp_intent,destinationIntent:r27.destination_intent,attempts:[]});
  assert.equal(open.blocker_code,'SHARED_COMPETITOR_REQUIREMENTS');
 });
+
+// ---------- Report 32 (PRT /bergen-county-roofing-services/, after #200): tasks built from sales copy ----------
+const r32=require('./fixtures/growth-reports-11-12/report-32-prt-bergen-tasks.json');
+const {deriveReaderTasksDetailed}=require('../src/growth-derived-reader-tasks.cjs');
+const {parseSerperGoogleOrganic}=require('../src/growth-public-search-discovery.cjs');
+test('R32: sections written about the provider ("our team", "our 93-year history") are sales copy, not reader tasks',()=>{
+ const sup=c=>r32.reader_task_coverage.tasks.find(t=>t.code===c).competitor_support;
+ for(const code of ['task_contra','task_storm','task_afford']){
+  const homestead=sup(code).find(x=>x.host==='homesteadroofing.com');
+  assert.equal(isPromotionalSection({heading:homestead.heading,text:homestead.excerpt},homestead.host,''),true,code+': '+homestead.heading);
+ }
+ const permit=sup('task_replac').find(x=>x.host==='ajreliable.com');
+ assert.equal(isPromotionalSection({heading:permit.heading,text:permit.excerpt},permit.host,''),false,'the permit answer is real reader information');
+ // The production task set rebuilt from its own excerpts no longer contains the "affordable" or "contractor" pseudo-tasks.
+ const byHost={};for(const t of r32.reader_task_coverage.tasks)for(const s of t.competitor_support)(byHost[s.host]=byHost[s.host]||[]).push({heading:s.heading,text:s.excerpt,words:s.excerpt.split(/\s+/).length});
+ const competitors=Object.entries(byHost).map(([host,sections])=>({host,url:'https://'+host+'/',sections}));
+ const keys=deriveReaderTasksDetailed({query:'roof repair bergen county',competitors}).tasks.map(t=>t.key);
+ assert(!keys.includes('afford')&&!keys.includes('contra'),keys.join(','));
+});
+test('R33: every organic result that is not used is logged with a reason, so a thin SERP is explainable',()=>{
+ const log=[];
+ const leads=parseSerperGoogleOrganic({organic:[
+  {title:'International SEO Best Practices',link:'https://moz.com/learn/seo/international-seo',position:1},
+  {title:'Global expansion handbook',link:'https://example.org/handbook',position:2},
+  {title:'International SEO tool pricing vs alternatives',link:'https://tool.example/pricing',position:3},
+  {title:'International SEO archive',link:'https://blog.example/tag/international-seo/',position:4},
+  {title:'International SEO on YouTube',link:'https://www.youtube.com/watch?v=1',position:5}]},{query:'international seo',ownUrl:'https://contentscale.site/',rejectedLog:log});
+ assert.equal(leads.length,1);
+ assert.deepEqual(log.map(x=>x.reason).sort(),['DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT','NON_CONTENT_PATH','QUERY_TERMS_NOT_IN_TITLE','SEARCH_OR_SOCIAL_INFRASTRUCTURE']);
+});
