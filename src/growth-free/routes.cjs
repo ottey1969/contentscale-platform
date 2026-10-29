@@ -6,6 +6,7 @@ const crypto=require('node:crypto');
 const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
+const ai=require('./ai-answers.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -78,15 +79,17 @@ small,.muted{color:var(--muted)}a{color:var(--accent);overflow-wrap:anywhere}.no
 .kicker{text-transform:uppercase;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.03em;margin:0}
 blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color:var(--muted)}ol li,ul li{margin:6px 0}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.grid div{border:1px solid var(--line);border-radius:10px;padding:10px}
-.grid strong{display:block;font-size:18px}.error{color:#c2410c}
+.grid strong{display:block;font-size:18px}.grid.two{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}.grid.two a{font-size:14px}
+.grid.five{grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}.eng{text-align:center}.eng small{display:block}.eng strong{font-size:26px}.eng.yes{border-color:var(--accent)}.eng.no{border-color:#c2410c}
+select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}h3{font-size:17px;margin:1.2em 0 .4em}.error{color:#c2410c}
 </style></head><body><main>${body}<p class="muted" style="margin-top:40px">${esc(cfg.brand)} · Free Growth check${cfg.privacyUrl?` · <a href="${esc(cfg.privacyUrl)}">Privacy</a>`:''}</p></main></body></html>`;
 }
 
 function formPage(cfg,api,base,accessKey,invite=null){
  return page('Free Growth check — what is your page missing?',`
 <p class="kicker">Free · no account needed</p>
-<h1>What does your page miss compared to the pages Google ranks?</h1>
-<p class="lead">Enter one page of your website. The check reads your page and the pages that rank for your search, and tells you in plain language whether to change something — or not. You also get the full research data (JSON) to work with yourself.</p>
+<h1>Is your page found in Google — and in AI answers?</h1>
+<p class="lead">Enter one page of your website. The check compares it with the pages Google ranks for your search and tells you in plain language whether to change something — or not. Then check in two minutes whether ChatGPT, Perplexity, Google AI Overviews, Claude and Copilot cite your page. You also get the full research data (JSON) to work with yourself.</p>
 ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
 <form id="f" class="card" novalidate>
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
@@ -100,6 +103,7 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
 <div class="card"><h2 style="margin-top:0">What you get</h2><ul>
 <li>One clear decision: <strong>leave it</strong>, <strong>add a missing answer</strong>, <strong>make a separate page</strong>, or <strong>not enough evidence</strong>.</li>
 <li>Where to add it on your page, with the ranking pages that support it.</li>
+<li>Whether AI answers cite your site or this page — and which sites they cite instead.</li>
 <li>The full research as JSON, to process yourself or with your own tools.</li></ul>
 <p class="muted">No ranking promises. Nothing is changed on your website. Takes about one minute.</p></div>
 <script>
@@ -121,18 +125,39 @@ function resultPage(cfg,api,base,id,key){
 <script>
 var API=${js(api+'/checks/'+id)},Q=${js(q)},CONTACT=${js(cfg.contactUrl)},SERVICE=${js(cfg.serviceText)},BRAND=${js(cfg.brand)};
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var ENG_STATE={};
+function aiHtml(a){var x=a.summary,h='<h2 id="ai">AI answers</h2><p class="lead"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
+ h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?'not checked':!e.sources?'no source links given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
+  return '<div class="eng '+(e.checked?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = source links in that AI answer.</p>';
+ if(x.top_cited_sites.length)h+='<h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul>';
+ if(x.steps.length)h+='<h3>What to do</h3><ol>'+x.steps.map(function(t){return '<li>'+esc(t)+'</li>'}).join('')+'</ol>';
+ var next=x.engines.filter(function(e){return !e.checked})[0]||x.engines[0];
+ h+='<div class="card"><h3 style="margin-top:0">Check '+(x.checked?'another':'an')+' AI system — free, takes 2 minutes</h3><ol><li>Choose the AI system.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong>.</li><li>Paste the complete answer below, including the source links.</li></ol>'+
+  '<label>AI system<select id="aiEngine">'+x.engines.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===next.id?' selected':'')+'>'+esc(e.label)+(e.checked?' ✓':'')+'</option>'}).join('')+'</select></label>'+
+  '<label>Prompt (the same for every AI system)<textarea id="aiPrompt" rows="6" readonly>'+esc(a.prompt)+'</textarea></label><p><button type="button" class="ghost" id="aiCopy">Copy prompt</button></p>'+
+  '<label>Answer from the AI system<textarea id="aiText" rows="7" maxlength="'+esc(a.max_paste)+'" placeholder="Paste the complete answer here"></textarea></label><p><button type="button" id="aiSave">Analyse answer</button> <small role="status" id="aiStatus"></small></p></div>';
+ h+='<p class="muted">'+esc(x.caveat)+'</p>';return h}
+function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
+ document.getElementById('aiCopy').onclick=function(){var t=document.getElementById('aiPrompt');t.select();if(navigator.clipboard)navigator.clipboard.writeText(t.value);this.textContent='Copied ✓'};
+ b.onclick=async function(){var st=document.getElementById('aiStatus'),eng=document.getElementById('aiEngine').value,txt=document.getElementById('aiText').value;if(!txt.trim()){st.textContent='Paste the answer first.';return}b.disabled=true;st.textContent='Analysing…';
+  try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
+   var d=await (await fetch(API+Q,{cache:'no-store'})).json();render(d);var el=document.getElementById('ai');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
 function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
- var h='<p class="kicker">Result'+(d.cached?' · from a check of this page in the last 24 hours':'')+'</p><h1>'+esc(s.headline)+'</h1><p class="lead">'+esc(s.explanation)+'</p>';
+ var a=d.ai,as=a&&a.summary;
+ var h='<p class="kicker">Result · Google + AI'+(d.cached?' · Google part from a check of this page in the last 24 hours':'')+'</p><h1>Your page in Google and in AI answers</h1>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
- h+='<h2>What to do</h2><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
+ h+='<div class="grid two"><div><small>Google search (blue links)</small><strong>'+esc(s.headline)+'</strong><a href="#google">Details ↓</a></div><div><small>AI answers ('+(as?as.checked:0)+' of 5 AI systems checked)</small><strong>'+esc(as?as.headline:'AI answers not available')+'</strong><a href="#ai">'+(as&&as.checked?'Details ↓':'Check AI now ↓')+'</a></div></div>';
+ h+='<h2 id="google">Google search (blue links)</h2><p class="lead"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
+ h+='<h3>What to do</h3><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
  var c=s.checked;h+='<h2>What was checked</h2><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small></div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong></div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div></div>';
+ if(a)h+=aiHtml(a);
  h+='<h2>Limits of this free check</h2><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p>';
  h+='<h2>Do it yourself</h2><p>Download the complete research data and process it yourself or with your own tools.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;
+ o.innerHTML=h;wireAi();
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
@@ -328,10 +353,28 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    return row;
   }catch(e){console.error('[free-growth] load failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'});return null}
  }
+ // Search term the AI prompt must use: the one entered, or the one the research derived.
+ const searchTermOf=row=>String(row.query||row.summary&&row.summary.checked&&row.summary.checked.search_term||'').trim();
+ const googleUrlsOf=row=>((row.report&&row.report.search_discovery&&row.report.search_discovery.leads)||[]).map(l=>l&&l.url).filter(Boolean);
+ async function aiFor(row){
+  const term=searchTermOf(row);
+  if(row.status!=='DONE'||!term)return null;
+  let answers=[];
+  try{answers=await storage.listAiAnswers(pool,row.id)}catch(e){console.warn('[free-growth] AI answers unavailable',String(e&&e.code||'unknown'))}
+  return {search_term:term,prompt:ai.directPrompt(term),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,
+   summary:ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row)})};
+ }
+ // Once AI answers are pasted, the "AI not checked" limitation is replaced by the AI caveat.
+ function withAiLimits(summary,aiPart){
+  if(!summary||!aiPart||!aiPart.summary.checked)return summary;
+  return {...summary,limitations:[...summary.limitations.filter(x=>!/AI answers .* were not checked/.test(x)),aiPart.summary.caveat]};
+ }
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
+  const aiPart=await aiFor(row);
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,
-   summary:row.summary||null,cached:!!row.cached_from,error_code:row.error_code||null,
+   ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
+   summary:withAiLimits(row.summary,aiPart)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -343,10 +386,30 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.get(apiPath+'/checks/:id/report.json',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  const aiPart=await aiFor(row);
   res.set('Cache-Control','no-store').set('Content-Disposition',`attachment; filename="growth-check-${row.public_id}.json"`)
    .json({generated_by:config.brand+' free Growth check',url:row.url,search_term:row.query||null,checked_at:row.finished_at,
     disclaimer:'Research data only. No ranking or traffic increase is promised. Google Search Console data was not used.',
-    summary:row.summary,report:row.report});
+    summary:withAiLimits(row.summary,aiPart),
+    ai_answers:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,summary:aiPart.summary,
+     answers:aiPart.answers.map(a=>({engine:a.engine,pasted_at:a.created_at,parsed:a.parsed,raw_text:a.raw_text}))}:null,
+    report:row.report});
+ });
+ app.post(apiPath+'/checks/:id/ai',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  try{
+   const b=req.body||{},engine=String(b.engine||''),text=String(b.text||'');
+   if(row.status!=='DONE'||!searchTermOf(row))return res.status(409).json({success:false,error:'The Google part of the check must finish first'});
+   if(!ai.ENGINE_IDS.has(engine))return res.status(400).json({success:false,error:'Choose the AI system you used'});
+   if(!text.trim())return res.status(400).json({success:false,error:'Paste the complete answer first'});
+   if(text.length>ai.MAX_PASTE)return res.status(413).json({success:false,error:'This answer is too long; paste only the answer and its sources'});
+   const parsed=ai.parseAiAnswer(text,{pageUrl:row.url});
+   await storage.saveAiAnswer(pool,{checkId:row.id,engine,rawText:text,parsed});
+   const aiPart=await aiFor(row);
+   res.json({success:true,engine,parsed:{sources:parsed.sources.length,own_site_cited:parsed.own_site_cited,exact_page_cited:parsed.exact_page_cited},
+    ai:{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary},
+    summary:withAiLimits(row.summary,aiPart)});
+  }catch(e){console.error('[free-growth] AI answer failed',e.message);res.status(503).json({success:false,error:'Could not analyse the answer. Please try again.'})}
  });
  app.post(apiPath+'/checks/:id/hire',async(req,res)=>{
   const row=await load(req,res);if(!row)return;

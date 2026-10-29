@@ -5,6 +5,12 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
 
 * one plain-language decision: leave it / add a missing answer / make a separate page / not enough evidence;
 * where to add it, with the ranking pages that support it;
+* **AI answers** (Google AIO / Gemini, ChatGPT Search, Perplexity, Claude, Copilot): the visitor copies one
+  prompt for the exact search term — the same prompt as the Quick Scan "Keyword / question" mode — into each AI
+  system and pastes the answer back. The check shows per AI system how many source links it gave, whether your site
+  or this exact page is cited, which sites AI cites instead, and which of those also rank in Google.
+  No AI API is called (no cost); answers are stored per check (`growth_free_ai_answers`) and included in the JSON.
+  A test keeps the prompt identical to the Quick Scan prompt in `src/index.js`;
 * the complete research as a JSON download, to process themselves;
 * a "done for you" offer (paid): booking link and/or a request form.
 
@@ -17,8 +23,9 @@ It reuses the existing Growth research engine unchanged
 | File | What it does |
 |---|---|
 | `engine.cjs` | Runs the Growth research for one public URL (URL validation, read-only data source) |
-| `summary.cjs` | Turns the report into plain language — change wording here |
-| `store.cjs` | Own tables `growth_free_checks`, `growth_free_hire_requests` (created automatically) |
+| `summary.cjs` | Turns the Google report into plain language — change wording here |
+| `ai-answers.cjs` | AI prompt, reading pasted AI answers, AI summary |
+| `store.cjs` | Own tables `growth_free_checks`, `growth_free_ai_answers`, `growth_free_invites`, `growth_free_hire_requests` (created automatically) |
 | `routes.cjs` | Pages, API, limits, access keys, admin |
 | `server.cjs` | Runs the tool on its own (own domain / own Railway service) |
 

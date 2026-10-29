@@ -49,6 +49,15 @@ function ensureTables(pool){
     message TEXT,
     status TEXT NOT NULL DEFAULT 'NEW',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  // AI answers pasted by the visitor, one per AI system per check (latest wins).
+  await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_ai_answers(
+    id BIGSERIAL PRIMARY KEY,
+    check_id BIGINT NOT NULL REFERENCES growth_free_checks(id) ON DELETE CASCADE,
+    engine TEXT NOT NULL,
+    raw_text TEXT NOT NULL,
+    parsed JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE(check_id,engine))`);
  })().catch(e=>{ensured=null;throw e});
  return ensured;
 }
@@ -119,6 +128,13 @@ async function forgetEmail(pool,email){
  return {checks:c.rowCount||0,hire_requests:h.rowCount||0};
 }
 
+async function saveAiAnswer(pool,{checkId,engine,rawText,parsed}){
+ await pool.query(`INSERT INTO growth_free_ai_answers(check_id,engine,raw_text,parsed) VALUES ($1,$2,$3,$4::jsonb)
+   ON CONFLICT (check_id,engine) DO UPDATE SET raw_text=EXCLUDED.raw_text,parsed=EXCLUDED.parsed,created_at=NOW()`,[checkId,engine,rawText,JSON.stringify(parsed)]);
+}
+async function listAiAnswers(pool,checkId){
+ return (await pool.query('SELECT engine,raw_text,parsed,created_at FROM growth_free_ai_answers WHERE check_id=$1 ORDER BY engine',[checkId])).rows;
+}
 const hashToken=t=>crypto.createHash('sha256').update(String(t)).digest('hex');
 const INVITE_COLUMNS='id,label,email_lock,max_checks,used_checks,expires_at,revoked_at,last_used_at,created_at';
 function inviteStatus(inv,now=Date.now()){
@@ -154,4 +170,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

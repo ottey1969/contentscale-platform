@@ -7,6 +7,7 @@ const {runFreeGrowthResearch,validatePublicUrl,readOnlySource}=require('../src/g
 const {summarizeFreeGrowth}=require('../src/growth-free/summary.cjs');
 const {registerFreeGrowth,freeGrowthConfig,parseAccessKeys}=require('../src/growth-free/routes.cjs');
 const {createFreeGrowthServer}=require('../src/growth-free/server.cjs');
+const ai=require('../src/growth-free/ai-answers.cjs');
 
 const URL_='https://acme-roofing.example/roof-repair-lodi-nj/';
 const ownHtml='<html><head><title>Roof Repair in Lodi, NJ | Acme Roofing</title></head><body><h1>Roof Repair in Lodi, NJ</h1>'+
@@ -71,7 +72,10 @@ test('every decision has an honest plain-language summary',()=>{
 function memoryStore(){
  const checks=[],hires=[],invites=[];let id=0;
  const inv=i=>invites.find(x=>x.id===i);
- return {checks,hires,invites,
+ const aiRows=[];
+ return {checks,hires,invites,aiRows,
+  async saveAiAnswer(_p,{checkId,engine,rawText,parsed}){const i=aiRows.findIndex(r=>r.check_id===checkId&&r.engine===engine);const row={check_id:checkId,engine,raw_text:rawText,parsed,created_at:new Date()};if(i>=0)aiRows[i]=row;else aiRows.push(row)},
+  async listAiAnswers(_p,checkId){return aiRows.filter(r=>r.check_id===checkId)},
   async createInvite(_p,{label,emailLock,maxChecks,days}){const t='invite-token-'+(invites.length+1)+'-abcdefghijkl';
    const v={id:invites.length+1,token_hash:t,label,email_lock:emailLock,max_checks:maxChecks,used_checks:0,expires_at:new Date(Date.now()+days*864e5),revoked_at:null};invites.push(v);return {...v,token:t}},
   async getInvite(_p,t){return invites.find(i=>i.token_hash===t)||null},
@@ -344,4 +348,66 @@ test('admin stays off with a missing or short key; the key is never accepted in 
  assert.equal((await s.get('/api/free-growth/admin/leads?key=admin-secret-0123456789')).status,404);
  const off=await server({config:{adminKey:''}});t.after(()=>off.srv.close());
  assert.equal((await off.post('/api/free-growth/admin/login',{key:''})).status,404);
+});
+
+test('AI prompt is exactly the Quick Scan keyword/question prompt',()=>{
+ const src=require('node:fs').readFileSync(require('node:path').join(__dirname,'../src/index.js'),'utf8');
+ const m=src.match(/function directPrompt\(\)\{var q=directQuery\(\);return \[([\s\S]*?)\]\.join/);
+ assert.ok(m,'Quick Scan directPrompt still exists');
+ const quick=[...m[1].matchAll(/'((?:[^'\\]|\\.)*)'|q\|\|'\[ENTER EXACT KEYWORD OR QUESTION\]'/g)].map(x=>x[1]===undefined?ai.QUERY_SLOT:x[1]);
+ // The regex also captures the slot's own literal; drop that duplicate.
+ const lines=quick.filter((x,i)=>!(x===ai.QUERY_SLOT&&quick[i-1]===ai.QUERY_SLOT));
+ assert.deepEqual(lines,ai.DIRECT_PROMPT_LINES);
+ const p=ai.directPrompt('roof repair lodi nj');
+ assert.match(p,/QUERY:\n\nroof repair lodi nj\n\nInstructions:/);assert.doesNotMatch(p,/ENTER EXACT KEYWORD/);
+});
+
+test('pasted AI answers: sources, own site, exact page, escaped markdown, noise links',()=>{
+ const page='https://acme-roofing.example/roof-repair-lodi-nj/';
+ const p=ai.parseAiAnswer('**ANSWER:** Acme Roofing is one option.\nRESOURCES:\nhttps\\://www\\.acme-roofing\\.example/roof-repair-lodi-nj/\nhttps://roofer-a.example/roof-repair-nj/?utm_source=chatgpt.com\n[a](https://roofer-a.example/roof-repair-nj/).\nhttps://www.google.com/search?q=roof\nhttps://maps.app.goo.gl/abc',{pageUrl:page});
+ assert.deepEqual(p.sources,['https://www.acme-roofing.example/roof-repair-lodi-nj/','https://roofer-a.example/roof-repair-nj/?utm_source=chatgpt.com']);
+ assert.equal(p.own_site_cited,true);assert.equal(p.exact_page_cited,true);assert.equal(p.site_name_mentioned,true);
+ const other=ai.parseAiAnswer('ANSWER: x\nRESOURCES:\nhttps://blog.acme-roofing.example/other/',{pageUrl:page});
+ assert.equal(other.own_site_cited,true,'subdomain counts as your site');assert.equal(other.exact_page_cited,false);
+ const none=ai.parseAiAnswer('ANSWER: x\nRESOURCES:\nNO VERIFIED RESOURCES',{pageUrl:page});
+ assert.equal(none.no_sources,true);assert.equal(none.own_site_cited,false);
+ assert.equal(ai.rootOf('shop.example.co.uk'),'example.co.uk');
+ const sum=ai.summarizeAiAnswers([{engine:'perplexity',parsed:other},{engine:'chatgpt',parsed:ai.parseAiAnswer('RESOURCES: https://roofer-a.example/x https://roofer-b.example/y',{pageUrl:page})}],
+  {pageUrl:page,googleUrls:['https://roofer-a.example/roof-repair-nj/']});
+ assert.equal(sum.checked,2);assert.equal(sum.cited_by,1);assert.equal(sum.exact_page_by,0);
+ assert.equal(sum.headline,'Cited by 1 of 2 AI systems checked');assert.match(sum.explanation,/different page/);
+ assert.deepEqual(sum.also_in_google,['roofer-a.example']);
+ assert.ok(sum.steps.some(x=>/another page of your site/.test(x)));
+ assert.equal(ai.summarizeAiAnswers([],{pageUrl:page}).headline,'AI answers not checked yet');
+});
+
+test('result: Google and AI together; AI answers are stored, summarised and in the JSON',async t=>{
+ let release;const gate=new Promise(r=>release=r);
+ const s=await server({engine:async(input,deps)=>{await gate;return runFreeGrowthResearch(input,deps)}});t.after(()=>s.srv.close());
+ await s.post('/api/free-growth/checks',ok);
+ assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'x'})).status,409,'Google part first');
+ release();
+ await s.service.idle();
+ let r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
+ assert.equal(r.body.ai.summary.checked,0);assert.match(r.body.ai.prompt,/roof repair lodi nj/);
+ assert.ok(r.body.summary.limitations.some(x=>/were not checked/.test(x)));
+ assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'bard',text:'x'})).status,400);
+ assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'  '})).status,400);
+ assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'x'.repeat(ai.MAX_PASTE+1)})).status,413);
+ assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=wrong',{engine:'perplexity',text:'x'})).status,404);
+ const saved=await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: Roofer A explains estimates.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://roofer-b.example/services/roof-repair/'});
+ assert.equal(saved.status,200);assert.equal(saved.body.parsed.sources,2);assert.equal(saved.body.parsed.own_site_cited,false);
+ // Pasting again for the same AI system replaces the earlier answer.
+ await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: x\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://acme-roofing.example/roof-repair-lodi-nj/'});
+ assert.equal(s.storage.aiRows.length,1);
+ r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
+ assert.equal(r.body.ai.summary.headline,'Cited by 1 of 1 AI system checked');
+ assert.deepEqual(r.body.ai.summary.also_in_google,['roofer-a.example'],'compared with the Google results of this check');
+ assert.ok(!r.body.summary.limitations.some(x=>/were not checked/.test(x)));assert.ok(r.body.summary.limitations.some(x=>/differ per user/.test(x)));
+ const dl=await s.get('/api/free-growth/checks/pub1/report.json?k=key1abcdefgh');
+ assert.equal(dl.body.ai_answers.answers[0].engine,'perplexity');assert.match(dl.body.ai_answers.answers[0].raw_text,/acme-roofing/);
+ const page=await s.get('/free-growth/r/pub1?k=key1abcdefgh');
+ for(const m of page.body.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
+ assert.match(page.body,/Your page in Google and in AI answers/);
+ await s.service.idle();
 });
