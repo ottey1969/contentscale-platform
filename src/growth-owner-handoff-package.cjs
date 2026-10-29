@@ -94,6 +94,23 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
    L.push('| '+t.label+(verified.has(t.code)?' — **draft verified**':'')+' | '+t.independent_sources+' | '+t.destination.status.replace(/_/g,' ').toLowerCase()+(t.covered_elsewhere_on_site?.length?' (taught on '+t.covered_elsewhere_on_site[0].url+')':'')+' |');
   L.push('','Method: '+cov.method+'. A concept match is an observation, not proof of quality or ranking.','');
  }
+ const ov=report.competitor_overview;
+ if(ov&&ov.status==='OBSERVED'){
+  // For the editor: what the ranking pages contain that this page does not (observation, no fact check).
+  L.push('## What the ranking pages have that this page does not','','Compared with '+ov.ranking_pages_read+' readable ranking page(s). Observation only: no fact check, no ranking promise. The editor decides what to add.','',
+   '- Length: this page '+ov.length.this_page_words+' words / '+ov.length.this_page_h2+' H2; ranking pages (median) '+ov.length.ranking_pages_median_words+' words / '+ov.length.ranking_pages_median_h2+' H2.');
+  for(const f of ov.elements_they_have_and_this_page_lacks||[])L.push('- '+f.label+': on '+f.ranking_pages_with_it+' of '+f.of+' ranking pages, not on this page.');
+  for(const f of ov.structured_data_they_have_and_this_page_lacks||[])L.push('- Structured data "'+f.type+'": on '+f.ranking_pages_with_it+' of '+f.of+' ranking pages, not on this page.');
+  if(ov.topics_status==='GROUPED'){
+   const gaps=(ov.topics||[]).filter(t=>t.this_page!=='YES');
+   L.push('','### Topics not (fully) on this page','');
+   for(const t of gaps)L.push('- **'+t.topic+'** ('+(t.this_page==='PARTLY'?'partly here: “'+t.this_page_heading+'”':t.this_page==='NO'?'not here':'not matched')+'; '+t.ranking_pages+' ranking page(s)): '+t.sections.slice(0,3).map(x=>x.host+' “'+x.heading+'”').join(', '));
+  }else{
+   L.push('','### All ranking-page sections (not grouped: '+String(ov.topics_status||'').toLowerCase().replace(/_/g,' ')+')','');
+   for(const x of (ov.ungrouped_sections||[]).slice(0,80))L.push('- '+(x.position?'#'+x.position+' ':'')+x.host+': '+x.heading);
+  }
+  L.push('');
+ }
  if(decision.intent_scope)L.push('## What Google shows','','Compared with: '+decision.intent_scope.compared_with+' ('+decision.intent_scope.results_of_this_type+' of '+decision.intent_scope.of+' results).','',decision.intent_scope.note,'');
  if(d==='IMPROVE_EXISTING'){
   const plan=decision.improvement_plan||{};

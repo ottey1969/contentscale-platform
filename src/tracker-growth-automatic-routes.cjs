@@ -16,6 +16,7 @@ const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
 const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageTypeScope,blocks:pageBlocks,groupSections}=require('./growth-reader-task-coverage.cjs');
 const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-task-meaning.cjs');
+const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
 const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
@@ -46,7 +47,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -401,6 +402,14 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    applyTaskMeaning(coverage,judgement||{status:'JUDGE_UNAVAILABLE',verdicts:{}});
   }
   report.reader_task_coverage=coverage;
+  // Full comparison with every readable ranking page for the editor: elements and topics this page lacks (no fact check).
+  if(selectedSource){
+   const position=new Map(fetchLog.map(x=>[x.url,x.serp_position]));
+   const ranking=attempted.filter(x=>x.live&&x.quality?.eligible&&['SERPER_GOOGLE_ORGANIC','SERPAPI_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(x.search_source))
+    .map(x=>({url:x.url,html:x.live.html,truncated:x.live.truncated===true,serp_position:position.get(x.url)??null}));
+   try{report.competitor_overview=await buildOverview({query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,competitors:ranking})}
+   catch{report.competitor_overview={status:'OVERVIEW_UNAVAILABLE'}}
+  }
   const attempts=[
    {source:'TARGET_STATIC_HTML',status:renderStatus,detail:own.code||null},
    {source:'SEARCH_PROVIDERS',status:discovery.status||'UNKNOWN',detail:((discovery.provider_attempts||[]).map(a=>typeof a==='string'?a:(a.provider||a.source||'')).join(', ')||discovery.source||'')+
@@ -684,7 +693,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    'button{background:#1d4ed8;color:white;border:0;padding:10px 14px;border-radius:8px;font:inherit;cursor:pointer}',
    'button:disabled{opacity:.5}.info{color:#5b6475;font-size:13px}.error{color:#b42318}',
    'pre{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:8px 0}@media(max-width:600px){body{padding:12px}section{padding:12px}}',
-   '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
+   '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-competitor-overview.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',

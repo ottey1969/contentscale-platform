@@ -64,3 +64,12 @@ Word overlap between two competitor pages only proposes *candidate* tasks. Produ
 **Fail closed.** If there is no key, the call fails or the answer is invalid, no task is confirmed. The gate reports `TASK_MEANING_NOT_VERIFIED`, and the editor writes from the candidate topics.
 
 **Editor writes.** Set `GROWTH_AI_DRAFTS=off` to keep the research and the confirmed reader questions but generate no AI text. The CMS handoff takes the editor's own text.
+
+## Competitor overview for the editor
+
+Every research run with a readable page adds `competitor_overview`: what the readable ranking pages contain that this page does not. It is an observation, not a fact check and not a verified gap. The editor decides what to add, which is the main deliverable when `GROWTH_AI_DRAFTS=off`.
+
+- **Page elements** (deterministic, from HTML). Length, H2/H3, FAQ, question headings, tables, lists, images, video, structured data types, author and date. An element is reported when at least half of the ranking pages (minimum two) have it and this page does not.
+- **Topics.** All content headings of every ranking page; furniture and the competitor's own sales sections are left out. They are grouped by meaning in one model call, with per topic whether this page covers it (YES / PARTLY / NO with an existing heading). Invented hosts or headings are dropped, an invented page heading never counts as covered, and headings the model leaves out are still listed. Without the model, the full heading list per ranking page is delivered, marked as not grouped.
+
+The overview is shown on the research page and on the CMS handoff page, and is included in the owner package (Markdown).
