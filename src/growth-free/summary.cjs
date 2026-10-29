@@ -14,6 +14,7 @@ const BLOCKER_TEXT={
  EXISTING_DESTINATION_EVIDENCE_UNAVAILABLE:'The page that should answer this search could not be read.',
  DIFFERENT_SEARCH_INTENT_AND_NO_COMPATIBLE_SAME_SITE_PAGE:'People searching for this want a different kind of page than the one you entered.',
  QUERY_MEANS_SOMETHING_ELSE:'Google uses this search term for a different subject than your page, so the results are not comparable with your page.',
+ TASK_MEANING_NOT_VERIFIED:'Ranking pages share topics with each other, but it could not be checked whether they answer the same question, so no gap is claimed.',
  SUBSTANTIVE_GAP_NOT_VERIFIED:'No missing answer was confirmed by at least two independent ranking pages.'
 };
 const DIY_BLOCKED=[
@@ -55,7 +56,7 @@ function summarizeFreeGrowth(report,{url,query}={}){
  let headline,explanation,steps=[],tasks=[];
  if(decision==='IMPROVE_EXISTING'){
   const plan=gate.improvement_plan||{tasks:[]};
-  tasks=plan.tasks.map(t=>({title:taskTitle(t.label),where:placementText(t.placement),
+  tasks=plan.tasks.map(t=>({title:t.reader_question||taskTitle(t.label),where:placementText(t.placement),
    status:t.destination_status==='PARTIAL'?'Only partly answered on your page':'Not found on your page',evidence:evidenceOf(t.competitor_evidence)}));
   headline=tasks.length===1?'Add one missing answer to this page':`Add ${tasks.length} missing answers to this page`;
   explanation='Your page is the right kind of page for this search, but at least two independent pages that rank for it explain something your page does not.';

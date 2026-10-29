@@ -14,7 +14,8 @@ const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.
 const {decideOwnerGrowthEdit}=require('./growth-owner-edit-decision.cjs');
 const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
-const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageTypeScope}=require('./growth-reader-task-coverage.cjs');
+const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageTypeScope,blocks:pageBlocks,groupSections}=require('./growth-reader-task-coverage.cjs');
+const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-task-meaning.cjs');
 const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
@@ -45,7 +46,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -392,6 +393,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     extra_pages_readable:comparisons.length-before,competitor_pages_used:competitorPages.length};
    fetchSummary=fetchSummaryNow()+'; read '+batch.length+' more because the first pages shared no reader task';
   }
+  // Shared words only propose candidate tasks: the meaning check confirms the reader question and the page verdict.
+  if(selectedSource&&(coverage.tasks||[]).some(t=>t.supported_by_competitors)){
+   let judgement;
+   try{judgement=await judgeTasks({query:targetQuery,coverage,pageSections:groupSections(pageBlocks(selectedSource.html))})}
+   catch(e){judgement={status:'JUDGE_UNAVAILABLE',error:String(e?.code||'JUDGE_FAILED').slice(0,40),verdicts:{}}}
+   applyTaskMeaning(coverage,judgement||{status:'JUDGE_UNAVAILABLE',verdicts:{}});
+  }
   report.reader_task_coverage=coverage;
   const attempts=[
    {source:'TARGET_STATIC_HTML',status:renderStatus,detail:own.code||null},
@@ -519,6 +527,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    completion={...base,status:'OWNER_PRODUCT_FACTS_REQUIRED',decision:gateDecision,draft:null,error_code:null};
   }else if(!Number.isSafeInteger(targetId)||targetId<1){
    completion={...base,status:'DESTINATION_TRACKER_PAGE_REQUIRED',draft:null};
+  }else if(String(process.env.GROWTH_AI_DRAFTS||'').toLowerCase()==='off'){
+   // Owner setting: research and confirmed reader questions only; the editor writes the text (CMS handoff takes own text).
+   completion={...base,status:'EDITOR_WRITES',decision:gateDecision,draft:null,error_code:null};
   }else{
    const query=String(report.editorial_decision_gate?.focus_query||
     report.growth_decision?.primary_next_action?.query||'').slice(0,160);
@@ -529,7 +540,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      .slice(0,3).map(c=>({competitor_url:c.competitor_url,
       competitor_heading:c.competitor_heading,competitor_excerpt:String(c.competitor_excerpt).slice(0,600)})),
     reader_task:gate.improvement_plan?{mode:'SECTION_IMPROVEMENT',
-     tasks:gate.improvement_plan.tasks.map(t=>({code:t.code,label:t.label,placement_mode:t.placement?.mode,
+     tasks:gate.improvement_plan.tasks.map(t=>({code:t.code,label:t.label,...(t.reader_question?{reader_question:t.reader_question}:{}),placement_mode:t.placement?.mode,
       placement_heading:t.placement?.section_heading,destination_status:t.destination_status,core_words:t.match?.core_words})),
      existing_headings:report.reader_task_coverage?.destination_section_headings||[]}:
      gate.new_page_plan?{mode:'NEW_DISTINCT_PAGE',tasks:gate.new_page_plan.tasks.slice(0,2).map(t=>({code:t.code,label:t.label})),
@@ -563,6 +574,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     if(['OPTIONAL_AI_NOT_CONFIGURED','OPTIONAL_AI_UNAVAILABLE'].includes(completion.status))
      completion={...completion,provider_status:completion.status,error_code:completion.status,status:'BLOCKED_PROVIDER'};
    }catch{completion={...base,status:'DRAFT_UNAVAILABLE',error_code:'OWNER_DRAFT_FAILED',draft:null}}
+  }
+  // A section written for a confirmed reader question must answer that question (checked by meaning, not by shared words).
+  if(completion.draft&&gate.improvement_plan&&gate.improvement_plan.tasks.some(t=>t.reader_question)){
+   try{completion={...completion,answer_check:await judgeAnswers({sections:completion.draft.sections||[],tasks:gate.improvement_plan.tasks})}}
+   catch(e){completion={...completion,answer_check:{status:'JUDGE_UNAVAILABLE',error:String(e?.code||'JUDGE_FAILED').slice(0,40),verdicts:{}}}}
   }
   // Producer -> gate -> owner decision: the gate's existing verified_editorial_opportunity branch now has a real producer.
   const produced=produceVerifiedEditorialOpportunity({report,completion,sources:report.__sources||{}});

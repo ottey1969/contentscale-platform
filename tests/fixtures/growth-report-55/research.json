@@ -1,0 +1,976 @@
+{
+ "_note": "Real data from production Growth report 55 (contentscale.site page 2294, generated 2026-10-29T22:56:28.292Z): the research fields the decision gate reads, including all four word-matched candidate tasks with their competitor sections. Report 55 predates the meaning check.",
+ "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+ "page_id": 2294,
+ "generated_at": "2026-10-29T22:56:28.292Z",
+ "case_study_locked": false,
+ "reader_task_coverage": {
+  "status": "READER_TASK_COVERAGE_OBSERVED",
+  "method": "TASKS_DERIVED_FROM_SECTIONS_OF_2_PLUS_INDEPENDENT_COMPETITORS_NO_INDUSTRY_VOCABULARY_NOT_SEMANTIC_PROOF",
+  "task_set": "DERIVED_FROM_COMPETITOR_SECTIONS",
+  "serp_intent": "INFORMATIONAL_GUIDE",
+  "destination_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+  "destination_truncated": false,
+  "destination_capture": {
+   "raw_bytes": 140036,
+   "raw_cap_bytes": 2500000,
+   "raw_cap_hit": false,
+   "readable_chars": 50838,
+   "readable_limit": 600000,
+   "cause": null
+  },
+  "destination_sections": [
+   {
+    "heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+    "words": 254
+   },
+   {
+    "heading": "📑 Table of Contents",
+    "words": 96
+   },
+   {
+    "heading": "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+    "words": 165
+   },
+   {
+    "heading": "⚙️ How AI Citation Trackers Actually Work",
+    "words": 126
+   },
+   {
+    "heading": "Why Citations Replace Backlinks in AI Search",
+    "words": 101
+   },
+   {
+    "heading": "🗣️ Industry Consensus: The Shift is Real",
+    "words": 58
+   },
+   {
+    "heading": "The Actionable Advantage",
+    "words": 53
+   },
+   {
+    "heading": "📈 Real Results: From Invisible to Cited",
+    "words": 22
+   },
+   {
+    "heading": "Case Study: SaaS Blog (B2B)",
+    "words": 64
+   },
+   {
+    "heading": "Case Study: Local Service (NL Market)",
+    "words": 55
+   },
+   {
+    "heading": "📊 ContentScale vs. OmniSEO vs. PixelMojo",
+    "words": 45
+   },
+   {
+    "heading": "New here? Follow the 48-Hour Plan to get cited",
+    "words": 51
+   },
+   {
+    "heading": "⚙️ Essential Features Beyond Basic Monitoring",
+    "words": 106
+   },
+   {
+    "heading": "⚠️ Common Mistake: Tracking Without Acting",
+    "words": 95
+   },
+   {
+    "heading": "What Makes My Free Tracker Different",
+    "words": 193
+   },
+   {
+    "heading": "1. It Eliminates the “Manual Entry” Friction",
+    "words": 71
+   },
+   {
+    "heading": "2. It Provides Immediate Solutions, Not Just Data",
+    "words": 55
+   },
+   {
+    "heading": "3. It Targets Real Intent, Not Just Random Keywords",
+    "words": 67
+   },
+   {
+    "heading": "3b. It Closes the Impressions Gap",
+    "words": 80
+   },
+   {
+    "heading": "3c. It Flags Stale Content Before It Costs You Citations",
+    "words": 72
+   },
+   {
+    "heading": "4. It Future-Proofs Your Strategy with Multi-Engine Tracking",
+    "words": 53
+   },
+   {
+    "heading": "5. It Works as a Client-Facing Entry Point for Agencies",
+    "words": 66
+   },
+   {
+    "heading": "6. Privacy-First & GDPR Compliant",
+    "words": 42
+   },
+   {
+    "heading": "7. Transparency: The Live Client Wall",
+    "words": 118
+   },
+   {
+    "heading": "In Short",
+    "words": 31
+   },
+   {
+    "heading": "8. It Adapts to How You Actually Want to Work",
+    "words": 35
+   },
+   {
+    "heading": "Do It Yourself",
+    "words": 17
+   },
+   {
+    "heading": "Done-For-You",
+    "words": 18
+   },
+   {
+    "heading": "Team Handoff",
+    "words": 23
+   },
+   {
+    "heading": "Multi-Language HTML Import",
+    "words": 28
+   },
+   {
+    "heading": "❓ People Also Ask — AI Citation Trackers",
+    "words": 424
+   },
+   {
+    "heading": "Ready to Move Beyond Diagnostics?",
+    "words": 65
+   },
+   {
+    "heading": "❓ Frequently Asked Questions",
+    "words": 355
+   },
+   {
+    "heading": "📚 Related — ContentScale Resources",
+    "words": 295
+   }
+  ],
+  "competitors_considered": [
+   {
+    "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "host": "blog.hubspot.com",
+    "partial": false,
+    "sections": 23
+   },
+   {
+    "url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+    "host": "otterly.ai",
+    "partial": false,
+    "sections": 24
+   }
+  ],
+  "competitor_diagnostics": {
+   "received": 2,
+   "without_html": 0,
+   "with_no_readable_sections": 0,
+   "used": 2,
+   "used_partial_capture": 0,
+   "used_complete_capture": 2,
+   "distinct_hosts": 2
+  },
+  "task_derivation": {
+   "hosts": [
+    {
+     "host": "blog.hubspot.com",
+     "sections_read": 23,
+     "sections_used": 22,
+     "sections_excluded_as_promotional": 1,
+     "headings": [
+      "HUBSPOT AEO TOOL",
+      "What are AI citations?",
+      "What counts as an AI mention vs an AI citation?",
+      "How to Track AI Engine Citations",
+      "Manually search your most important keywords.",
+      "Look for parameters in URLs.",
+      "Track traffic using Google Analytics.",
+      "Set up custom dashboards that isolate AI referral domains ov"
+     ]
+    },
+    {
+     "host": "otterly.ai",
+     "sections_read": 24,
+     "sections_used": 23,
+     "sections_excluded_as_promotional": 1,
+     "headings": [
+      "How to Track AI Search Engine Citations & Sources: The Compl",
+      "Why AI Citation Tracking Matters Now",
+      "The Two Layers of AI Citation Tracking",
+      "Create a Custom AI Search Channel",
+      "Understand the Attribution Gaps",
+      "What GSC Does Track",
+      "What GSC Doesn’t Track",
+      "Extract AI-Relevant Queries"
+     ]
+    }
+   ],
+   "concepts_on_one_site_only": [
+    {
+     "concept": "hubspo",
+     "site": "blog.hubspot.com"
+    },
+    {
+     "concept": "grader",
+     "site": "blog.hubspot.com"
+    },
+    {
+     "concept": "channe",
+     "site": "otterly.ai"
+    },
+    {
+     "concept": "queri",
+     "site": "otterly.ai"
+    },
+    {
+     "concept": "analyt",
+     "site": "blog.hubspot.com"
+    },
+    {
+     "concept": "semrus",
+     "site": "blog.hubspot.com"
+    },
+    {
+     "concept": "metric",
+     "site": "otterly.ai"
+    },
+    {
+     "concept": "parame",
+     "site": "blog.hubspot.com"
+    }
+   ],
+   "topic_wide_words_ignored": [
+    "brand",
+    "engin",
+    "visibi",
+    "search",
+    "track",
+    "tool",
+    "conten",
+    "mentio"
+   ]
+  },
+  "unverifiable_site_pages": [],
+  "tasks": [
+   {
+    "code": "task_dashbo",
+    "label": "Competitors teach “Set up custom dashboards that isolate AI referral domains over time”",
+    "match": {
+     "key": "dashbo",
+     "co_terms": [],
+     "concepts": [
+      "dashbo",
+      "custom",
+      "report"
+     ],
+     "core_words": [
+      "dashboard",
+      "custom",
+      "reporting"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+      "host": "blog.hubspot.com",
+      "heading": "Set up custom dashboards that isolate AI referral domains over time",
+      "excerpt": "For teams that need a scalable, client-ready way to monitor AI citation impact, a dedicated dashboard in Looker Studio is a practical option. Using regex filters on the Session source / medium dimension makes this easy to scale. Instead of manually checking GA4 each time, your dashboard becomes a live AI visibility panel that updates automatically. This approach doesn’t measure raw citation frequency inside AI engine",
+      "concepts": [
+       "dashbo"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+      "host": "otterly.ai",
+      "heading": "The Reporting Dashboard",
+      "excerpt": "Your AI citation report should include these core elements: Share of Voice : your brand vs. top 3 competitors Citation Frequency by Platform : broken down by ChatGPT, Perplexity, Google AIO, and others Top Cited Pages : which URLs earn the most AI citations Citation Gaps : prompts where competitors are cited but you’re not AI Referral Traffic : from GA4, including conversion rates Actionable Recommendations : specifi",
+      "concepts": [
+       "dashbo"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "PARTIAL",
+     "passages": [
+      {
+       "heading": "7. Transparency: The Live Client Wall",
+       "text": "Perhaps the most unique aspect of working with ContentScale is our Live Client Wall . Unlike traditional agencies that hide behind monthly reports and vague excuses, we maintain an open, live dashboard where you can see exactly what is being worked on in real-time.",
+       "concepts": [
+        "dashbo"
+       ]
+      },
+      {
+       "heading": "❓ Frequently Asked Questions",
+       "text": "ContentScale differs by providing actionable Citation Briefs with specific sentence-level recommendations, integrating Google Search Console data to detect intent cannibalization, tracking 5 AI engines simultaneously, and offering these features completely free with Privacy-First / Minimal Data Coll",
+       "concepts": [
+        "dashbo"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+     "reason": "Closest existing section by shared concepts (monito, platfo, action, specif); the new section continues that explanation."
+    }
+   },
+   {
+    "code": "task_manual",
+    "label": "Competitors teach “Manually search your most important keywords.”",
+    "match": {
+     "key": "manual",
+     "co_terms": [
+      "compet"
+     ],
+     "concepts": [
+      "manual",
+      "keywor",
+      "queri"
+     ],
+     "core_words": [
+      "manual",
+      "keywords",
+      "queries"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+      "host": "blog.hubspot.com",
+      "heading": "Manually search your most important keywords.",
+      "excerpt": "One of the simplest ways to start is to manually search for your priority keywords on AI-driven platforms like ChatGPT, Perplexity AI, and Google AI Overviews. Run informational queries, comparison-based searches, and “best of” prompts that mirror real buyer behavior. Check whether AI overviews: Tip: If competitors appear where you think you should be, then you’ve identified a potential opportunity. You can then look",
+      "concepts": [
+       "manual",
+       "compet"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+      "host": "otterly.ai",
+      "heading": "The Manual Audit Process",
+      "excerpt": "Build a prompt library : Compile 20–50 prompts your target customers would ask AI engines. Include informational queries (“What is [topic]?”), commercial queries (“Best tools for [use case]”), and comparison queries (“[Your brand] vs [competitor]”). Use insights from your keyword and prompt research to build this list. Run prompts across platforms : Test each prompt on ChatGPT, Perplexity, Google Gemini, and Google A",
+      "concepts": [
+       "manual",
+       "compet"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "PARTIAL",
+     "passages": [
+      {
+       "heading": "⚙️ Essential Features Beyond Basic Monitoring",
+       "text": "Automated Domain Scanning: Manual URL entry doesn’t scale. Bulk scanning with automatic re-crawling every 3 days ensures continuous monitoring without operational overhead.",
+       "concepts": [
+        "manual",
+        "compet"
+       ]
+      },
+      {
+       "heading": "❓ People Also Ask — AI Citation Trackers",
+       "text": "To track citations in Google AI Overviews, you need a specialized tool that monitors RAG-based retrieval patterns rather than traditional SERP rankings. The Free AI Citations Tracker scans your domain every 3 days and identifies exactly which pages are being cited by Google AIO, Perplexity, and Copi",
+       "concepts": [
+        "manual",
+        "compet"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "⚙️ How AI Citation Trackers Actually Work",
+     "reason": "Closest existing section by shared concepts (googl, brand, queri, acros); the new section continues that explanation."
+    }
+   },
+   {
+    "code": "task_traffi",
+    "label": "Competitors teach “Should we separate AI-influenced traffic from organic in reports?”",
+    "match": {
+     "key": "traffi",
+     "co_terms": [
+      "organi"
+     ],
+     "concepts": [
+      "traffi",
+      "organi",
+      "referr",
+      "report",
+      "attrib"
+     ],
+     "core_words": [
+      "traffic",
+      "organic",
+      "referrer",
+      "reports"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+      "host": "blog.hubspot.com",
+      "heading": "Should we separate AI-influenced traffic from organic in reports?",
+      "excerpt": "Yes, segment AI-influenced traffic from traditional organic search in your reporting. While some AI traffic may technically fall under organic channels, its user behavior, intent patterns, and conversion pathways can differ significantly from standard blue-link search traffic. For my clients, AI traffic converts at around 7% compared to around 1% of organic traffic.",
+      "concepts": [
+       "traffi",
+       "organi"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+      "host": "otterly.ai",
+      "heading": "Understand the Attribution Gaps",
+      "excerpt": "Not all AI traffic is identifiable. Here are the current limitations: ChatGPT free users don’t send referrer data – their visits appear as Direct traffic Google AI Overviews don’t pass separate referral parameters – citations appear as standard Google organic traffic in GA4 Mobile app referrals from most LLMs pass inconsistent or no referrer data Custom channel groups don’t backfill – they only apply from the date yo",
+      "concepts": [
+       "traffi",
+       "organi"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "COVERED",
+     "passages": [
+      {
+       "heading": "Case Study: SaaS Blog (B2B)",
+       "text": "Challenge: 40% drop in organic traffic after Google AI Overviews launched. Their “How-to” guides were being used by AI but not cited.",
+       "concepts": [
+        "traffi",
+        "organi"
+       ]
+      },
+      {
+       "heading": "3b. It Closes the Impressions Gap",
+       "text": "An impressions gap is when GSC shows a page racking up impressions — meaning it’s already being surfaced to searchers — but the click-through rate stays flat because the page isn’t cited in the AI Overview that now sits above the organic results. The tracker flags exactly these pages: high impressio",
+       "concepts": [
+        "traffi",
+        "organi"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": null
+   },
+   {
+    "code": "task_priori",
+    "label": "Competitors teach “What is the best way to prioritize content for citations vs mentions?”",
+    "match": {
+     "key": "priori",
+     "co_terms": [],
+     "concepts": [
+      "priori",
+      "author",
+      "traffi"
+     ],
+     "core_words": [
+      "prioritize",
+      "authority",
+      "traffic"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+      "host": "blog.hubspot.com",
+      "heading": "What is the best way to prioritize content for citations vs mentions?",
+      "excerpt": "If your goal is authority and influence, prioritize citation-ready content first. Informational, high-trust assets, such as guides, definitions, comparisons, and research-backed articles, are more likely to earn citations because AI engines rely on them as sources. Mentions, on the other hand, are often influenced by brand authority and third-party signals. If you’re earlier in your growth journey, investing in thoug",
+      "concepts": [
+       "priori"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+      "host": "otterly.ai",
+      "heading": "Which AI search platform should I prioritize for tracking?",
+      "excerpt": "Start with the platform driving the most traffic to your industry. ChatGPT accounts for roughly 56% of AI referral traffic across most sites, making it the default priority. However, Google AI Overviews has far more query volume (15 billion daily vs. 2.5 billion for ChatGPT), so tracking both is essential for a complete picture. Check your GA4 AI Search channel to see which platforms already send you the most traffic",
+      "concepts": [
+       "priori"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "PARTIAL",
+     "passages": [
+      {
+       "heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+       "text": "Citations = New Backlinks: RAG-based AI systems prioritize cited sources over traditional ranking signals. ( Pew Research, 2024 )",
+       "concepts": [
+        "priori"
+       ]
+      },
+      {
+       "heading": "Why Citations Replace Backlinks in AI Search",
+       "text": "Traditional SEO relied on backlinks as trust signals. In the RAG era, AI systems retrieve content based on semantic relevance and E-E-A-T alignment, not link equity. According to Ahrefs (2025) , different AI engines prioritize different content signals: Perplexity favors academic sourcing and Copilo",
+       "concepts": [
+        "priori"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "⚙️ How AI Citation Trackers Actually Work",
+     "reason": "Closest existing section by shared concepts (track, googl, brand, query); the new section continues that explanation. Place it after the section proposed for “Competitors teach “Manually search your most important keywords.””."
+    }
+   }
+  ],
+  "supported_task_codes": [
+   "task_dashbo",
+   "task_manual",
+   "task_traffi",
+   "task_priori"
+  ],
+  "gap_task_codes": [
+   "task_dashbo",
+   "task_manual",
+   "task_priori"
+  ],
+  "covered_task_codes": [
+   "task_traffi"
+  ],
+  "linked_elsewhere_task_codes": [],
+  "destination_section_headings": [
+   "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+   "📑 Table of Contents",
+   "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+   "⚙️ How AI Citation Trackers Actually Work",
+   "Why Citations Replace Backlinks in AI Search",
+   "🗣️ Industry Consensus: The Shift is Real",
+   "The Actionable Advantage",
+   "📈 Real Results: From Invisible to Cited",
+   "Case Study: SaaS Blog (B2B)",
+   "Case Study: Local Service (NL Market)",
+   "📊 ContentScale vs. OmniSEO vs. PixelMojo",
+   "New here? Follow the 48-Hour Plan to get cited",
+   "⚙️ Essential Features Beyond Basic Monitoring",
+   "⚠️ Common Mistake: Tracking Without Acting",
+   "What Makes My Free Tracker Different",
+   "1. It Eliminates the “Manual Entry” Friction",
+   "2. It Provides Immediate Solutions, Not Just Data",
+   "3. It Targets Real Intent, Not Just Random Keywords",
+   "3b. It Closes the Impressions Gap",
+   "3c. It Flags Stale Content Before It Costs You Citations",
+   "4. It Future-Proofs Your Strategy with Multi-Engine Tracking",
+   "5. It Works as a Client-Facing Entry Point for Agencies",
+   "6. Privacy-First & GDPR Compliant",
+   "7. Transparency: The Live Client Wall",
+   "In Short",
+   "8. It Adapts to How You Actually Want to Work",
+   "Do It Yourself",
+   "Done-For-You",
+   "Team Handoff",
+   "Multi-Language HTML Import",
+   "❓ People Also Ask — AI Citation Trackers",
+   "Ready to Move Beyond Diagnostics?",
+   "❓ Frequently Asked Questions",
+   "📚 Related — ContentScale Resources"
+  ]
+ },
+ "serp_intent": {
+  "status": "SERP_INTENT_OBSERVED",
+  "intent": "INFORMATIONAL_GUIDE",
+  "query": "ai citation tracker",
+  "organic_leads_considered": 8,
+  "agreeing_leads": 3,
+  "compatible_leads": 3,
+  "agreement_basis": "MIXED_SERP_PAGE_TYPE_PRESENT",
+  "class_counts": {
+   "PRODUCT_TOOL": 3,
+   "INFORMATIONAL_GUIDE": 3,
+   "COMMERCIAL_COMPARISON": 2
+  },
+  "reason": null,
+  "pages_used_for_classification": 0,
+  "leads": [
+   {
+    "url": "https://aisearch.similarweb.com/ai-brand-visibility/citation-analysis/",
+    "title": "AI Citation Checker: Track & Analyze AI Answer Sources",
+    "class": "PRODUCT_TOOL",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://omniseo.com/solutions/ai-citation-tracker/",
+    "title": "AI Citation Tracker | AI Content Citation Tracking Tool",
+    "class": "PRODUCT_TOOL",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://digiday.com/media/wtf-is-ai-citation-tracking/",
+    "title": "WTF is AI citation tracking?",
+    "class": "INFORMATIONAL_GUIDE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://www.taskade.com/agents/research/academic-citation-tracker",
+    "title": "AI Citation Tracker for Academic Sources, Papers",
+    "class": "PRODUCT_TOOL",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://www.airops.com/blog/ai-citation-tracking-tools",
+    "title": "Best AI citation tracking tools for content leaders in 2026",
+    "class": "COMMERCIAL_COMPARISON",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "title": "How to track (and grow) AI engine citations",
+    "class": "INFORMATIONAL_GUIDE",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://slatehq.com/blog/best-ai-citation-tracking-tools",
+    "title": "11 Best AI Citation Tracking Tools (2026): Ranked & Compared",
+    "class": "COMMERCIAL_COMPARISON",
+    "basis": "TITLE_AND_SNIPPET"
+   },
+   {
+    "url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+    "title": "How to Track AI Search Engine Citations & Sources",
+    "class": "INFORMATIONAL_GUIDE",
+    "basis": "TITLE_AND_SNIPPET"
+   }
+  ],
+  "method": "TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES",
+  "scope": "One lookup; observed placement is not a tracked-page ranking.",
+  "page_type_scope": {
+   "page_type": "INFORMATIONAL_GUIDE",
+   "results_of_this_type": 3,
+   "of": 8,
+   "urls": [
+    "https://digiday.com/media/wtf-is-ai-citation-tracking/",
+    "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/"
+   ],
+   "titles": [
+    "WTF is AI citation tracking?",
+    "How to track (and grow) AI engine citations",
+    "How to Track AI Search Engine Citations & Sources"
+   ],
+   "overall_intent": "PRODUCT_TOOL",
+   "overall_status": "SERP_INTENT_OBSERVED",
+   "class_counts": {
+    "PRODUCT_TOOL": 3,
+    "INFORMATIONAL_GUIDE": 3,
+    "COMMERCIAL_COMPARISON": 2
+   },
+   "rule": "Mixed results: the page is compared only with the 3 of 8 results of its own type.",
+   "other_intent_served_by": [
+    {
+     "url": "https://contentscale.site/free-ai-citations-tracker/",
+     "page_type": "PRODUCT_TOOL",
+     "protected_case_study": true
+    }
+   ],
+   "competitors_compared": [
+    "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/"
+   ]
+  }
+ },
+ "destination_intent": {
+  "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+  "class": "INFORMATIONAL_GUIDE",
+  "query_root_overlap": [
+   "citation",
+   "tracker"
+  ],
+  "missing_query_roots": [],
+  "verdict": "COMPATIBLE",
+  "basis": "TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF",
+  "observed_head": "what is an ai citation tracker? free multi-engine seo tool | what is an ai citation tracker? ( and why diagnostics aren’t enough )"
+ },
+ "destination_section_comparison": {
+  "status": "FULL_SECTION_COMPARISON_RESEARCH_ONLY",
+  "focus_query": "ai citation tracker",
+  "own_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+  "own_sections_observed": 29,
+  "competitor_sections_compared": 42,
+  "own_html_truncated": false,
+  "comparison_scope": "BOUNDED_SOURCE_NO_ABSENCE_CLAIMS",
+  "comparisons": [
+   {
+    "competitor_url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "competitor_heading": "HubSpot AEO Tool",
+    "competitor_excerpt": "See exactly where your brand shows up in answer engines and take action to close AI visibility gaps. Track AI mentions. Analyze citations Monitor prompts Benchmark competitors Learn more. Topics: Answer Engine Optimization",
+    "competitor_word_count": 33,
+    "nearest_existing_section": {
+     "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+     "heading": "❓ Frequently Asked Questions",
+     "excerpt": "What is an AI citation tracker? + An AI citation tracker monitors when generative AI platforms like Google AI Overviews, Perplexity, and Copilot reference your content (Claude and Brave support coming soon). Advanced tools go beyond monitoring by providing actionable “Citation Briefs” with exact copy-paste recommendations to improve citation eligibility. The Free AI Citations Tracker offers both monitoring and actionable briefs at no cost. How does ContentScale differ from OmniSEO or PixelMojo? + ContentScale differs by providing actionable Citation Briefs with specific sentence-level recommendations, integrating Google Search Console data to",
+     "shared_terms": [
+      "brand",
+      "shows",
+      "answer",
+      "engine",
+      "take",
+      "visibility",
+      "track",
+      "citation",
+      "monitor",
+      "competitor",
+      "optimization"
+     ],
+     "lexical_coverage_pct": 52,
+     "heading_shared_terms": 0,
+     "eligible_match": true
+    },
+    "match_status": "POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED",
+    "source_scope": "BOUNDED_HTML_OBSERVATION",
+    "assessment": "UNVERIFIED_READER_NEED",
+    "verified_gap": false,
+    "reason": "Observed full HTML section excerpts and lexical overlap cannot alone prove missing information, improved ranking, or a factual advantage."
+   },
+   {
+    "competitor_url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+    "competitor_heading": "The Reporting Dashboard",
+    "competitor_excerpt": "Your AI citation report should include these core elements: AI Visibility Score : trending over time Share of Voice : your brand vs. top 3 competitors Citation Frequency by Platform : broken down by ChatGPT, Perplexity, Google AIO, and others Top Cited Pages : which URLs earn the most AI citations Citation Gaps : prompts where competitors are cited but you’re not AI Referral Traffic : from GA4, including conversion rates Actionable Recommendations : specific pages to optimize or create",
+    "competitor_word_count": 80,
+    "nearest_existing_section": {
+     "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+     "heading": "❓ Frequently Asked Questions",
+     "excerpt": "What is an AI citation tracker? + An AI citation tracker monitors when generative AI platforms like Google AI Overviews, Perplexity, and Copilot reference your content (Claude and Brave support coming soon). Advanced tools go beyond monitoring by providing actionable “Citation Briefs” with exact copy-paste recommendations to improve citation eligibility. The Free AI Citations Tracker offers both monitoring and actionable briefs at no cost. How does ContentScale differ from OmniSEO or PixelMojo? + ContentScale differs by providing actionable Citation Briefs with specific sentence-level recommendations, integrating Google Search Console data to",
+     "shared_terms": [
+      "citation",
+      "visibility",
+      "voice",
+      "brand",
+      "competitor",
+      "frequency",
+      "platform",
+      "perplexity",
+      "google",
+      "cited",
+      "earn",
+      "most"
+     ],
+     "lexical_coverage_pct": 44,
+     "heading_shared_terms": 0,
+     "eligible_match": true
+    },
+    "match_status": "POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED",
+    "source_scope": "BOUNDED_HTML_OBSERVATION",
+    "assessment": "UNVERIFIED_READER_NEED",
+    "verified_gap": false,
+    "reason": "Observed full HTML section excerpts and lexical overlap cannot alone prove missing information, improved ranking, or a factual advantage."
+   },
+   {
+    "competitor_url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+    "competitor_heading": "How is AI citation tracking different from traditional SEO rank tracking?",
+    "competitor_excerpt": "Traditional rank tracking monitors your position in a static list of results for specific keywords. AI citation tracking monitors whether your content appears at all in dynamically generated responses – and in what context. The shift is from “what position am I in?” to “am I a trusted source that AI recommends?”",
+    "competitor_word_count": 52,
+    "nearest_existing_section": {
+     "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+     "heading": "⚙️ How AI Citation Trackers Actually Work",
+     "excerpt": "Most marketers assume citation tracking is just “Googling your brand name.” In reality, advanced trackers use a three-step RAG simulation process: Query Simulation: The tool runs thousands of natural language queries (e.g., “best CRM for small business”) across Google AI Overviews, Perplexity, and Copilot. Source Extraction: It parses the JSON response from the AI engine to identify which URLs were retrieved from the vector database vs. which were generated from training data. E-E-A-T Gap Analysis: It compares your cited content against the top 3 cited competitors to find missing “trust signals” like author bios, original data, or specific en",
+     "shared_terms": [
+      "track",
+      "result",
+      "specific",
+      "citation",
+      "content",
+      "generat",
+      "response",
+      "trust",
+      "source"
+     ],
+     "lexical_coverage_pct": 41,
+     "heading_shared_terms": 1,
+     "eligible_match": true
+    },
+    "match_status": "POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED",
+    "source_scope": "BOUNDED_HTML_OBSERVATION",
+    "assessment": "UNVERIFIED_READER_NEED",
+    "verified_gap": false,
+    "reason": "Observed full HTML section excerpts and lexical overlap cannot alone prove missing information, improved ranking, or a factual advantage."
+   },
+   {
+    "competitor_url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+    "competitor_heading": "Quarterly: Strategic Review",
+    "competitor_excerpt": "Audit your full citation landscape: which pages earn citations, which competitors gained ground, and which content gaps exist. Use this to inform your content calendar and GEO audit priorities .",
+    "competitor_word_count": 30,
+    "nearest_existing_section": {
+     "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+     "heading": "❓ People Also Ask — AI Citation Trackers",
+     "excerpt": "How do I track citations in Google AI Overviews? + To track citations in Google AI Overviews, you need a specialized tool that monitors RAG-based retrieval patterns rather than traditional SERP rankings. The Free AI Citations Tracker scans your domain every 3 days and identifies exactly which pages are being cited by Google AIO, Perplexity, and Copilot (Claude and Brave support coming soon). Unlike manual checking, it provides an actionable “Citation Brief” with specific sentences to add and placement recommendations to increase citation frequency. What is the best free AI citation tracker? + The best free AI citation tracker depends on wheth",
+     "shared_terms": [
+      "citation",
+      "landscape",
+      "pages",
+      "competitor",
+      "content",
+      "gaps"
+     ],
+     "lexical_coverage_pct": 40,
+     "heading_shared_terms": 0,
+     "eligible_match": true
+    },
+    "match_status": "POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED",
+    "source_scope": "BOUNDED_HTML_OBSERVATION",
+    "assessment": "UNVERIFIED_READER_NEED",
+    "verified_gap": false,
+    "reason": "Observed full HTML section excerpts and lexical overlap cannot alone prove missing information, improved ranking, or a factual advantage."
+   },
+   {
+    "competitor_url": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+    "competitor_heading": "If Your Citations Are Declining",
+    "competitor_excerpt": "AI engines frequently re-evaluate their sources. Check for content freshness issues (outdated statistics, old dates), technical problems (crawl blocks, slow page speed), or competitive content that’s been recently published on the same topic.",
+    "competitor_word_count": 33,
+    "nearest_existing_section": {
+     "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+     "heading": "3c. It Flags Stale Content Before It Costs You Citations",
+     "excerpt": "AI systems favor recently verified information — a page with an outdated “last updated” date, old statistics, or references to a previous year gets deprioritized even if the underlying advice is still correct. The tracker checks publish and modified dates against your content’s actual freshness signals and flags pages that read as stale, so you know exactly which dates, stats, and examples to refresh before you lose a citation you already had. Fig 4: The Lead-to-Specialist workflow enabled by ContentScale, allowing you to scale AI optimization efficiently",
+     "shared_terms": [
+      "check",
+      "content",
+      "freshnes",
+      "outdat",
+      "statistic",
+      "dates",
+      "page",
+      "recently",
+      "publish"
+     ],
+     "lexical_coverage_pct": 39,
+     "heading_shared_terms": 1,
+     "eligible_match": true
+    },
+    "match_status": "POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED",
+    "source_scope": "BOUNDED_HTML_OBSERVATION",
+    "assessment": "UNVERIFIED_READER_NEED",
+    "verified_gap": false,
+    "reason": "Observed full HTML section excerpts and lexical overlap cannot alone prove missing information, improved ranking, or a factual advantage."
+   },
+   {
+    "competitor_url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "competitor_heading": "What are AI citations?",
+    "competitor_excerpt": "An AI citation occurs when an AI engine explicitly references your website as a source for its response. That typically includes a link to your content on platforms such as ChatGPT, Perplexity AI, or Google AI Overviews (AIO). There are two types of citations — those that appear in a sidebar and those within the response. Here’s what both types of AI citations look like in Google’s AIO: When AI cites your content, it signals that your website contributed directly to the answer it generated. That’s the clearest indicator of content authority within AI-generated search experiences.",
+    "competitor_word_count": 96,
+    "nearest_existing_section": {
+     "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+     "heading": "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+     "excerpt": "An AI citation tracker monitors when generative AI platforms reference your content in their responses. However, the market has split into two distinct categories: diagnostic trackers that simply tell you whether you’re being cited, and actionable trackers that provide specific, executable recommendations to improve citation eligibility. According to Google’s Search Quality Rater Guidelines (2024) , E-E-A-T signals directly influence which sources AI systems select for citations. Advanced trackers operationalize these guidelines by analyzing your content against the same criteria AI systems use, then generating “Citation Briefs” with exact se",
+     "shared_terms": [
+      "citation",
+      "engine",
+      "reference",
+      "source",
+      "response",
+      "content",
+      "platform",
+      "google",
+      "overview",
+      "those",
+      "both",
+      "signal"
+     ],
+     "lexical_coverage_pct": 38,
+     "heading_shared_terms": 1,
+     "eligible_match": true
+    },
+    "match_status": "POSSIBLE_TOPICAL_MATCH_REVIEW_REQUIRED",
+    "source_scope": "BOUNDED_HTML_OBSERVATION",
+    "assessment": "UNVERIFIED_READER_NEED",
+    "verified_gap": false,
+    "reason": "Observed full HTML section excerpts and lexical overlap cannot alone prove missing information, improved ranking, or a factual advantage."
+   }
+  ],
+  "verified_gap": false,
+  "copy_ready": false,
+  "editorial_decision": "VERIFY_UNANSWERED_READER_TASK_OR_NO_CHANGE",
+  "requirement": "Only complete sections wholly present in captured HTML may be compared. Truncated captures never prove absence. Verify actual user task, factual difference and page intent before writing.",
+  "target_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+  "destination_identity": null,
+  "protected_source_url": "https://contentscale.site/what-is-ai-citation-tracker/"
+ },
+ "site_architecture": {
+  "status": "SITE_INVENTORY_OBSERVED_NOT_LINK_VALIDATED",
+  "inspected_site_pages": 100,
+  "candidates": [],
+  "intent_overlap_risks": [
+   {
+    "url": "https://contentscale.site/free-ai-citations-tracker/",
+    "keyword": "free ai citation tracker",
+    "evidence": "TRACKER_KEYWORD_OVERLAP_HEURISTIC",
+    "verified_cannibalization": false
+   }
+  ],
+  "caution": "Related URLs are grounded in the same client Tracker inventory; topical overlap is not proven cannibalization or a verified live link.",
+  "compatible_existing_pages": [
+   {
+    "url": "https://contentscale.site/free-ai-citations-tracker/",
+    "intent_class": "PRODUCT_TOOL",
+    "protected_case_study": true
+   }
+  ],
+  "same_type_pages_on_another_topic": []
+ },
+ "serp_meaning": {
+  "status": "SAME_MEANING",
+  "query": "ai citation tracker",
+  "results_considered": 8,
+  "dominant_words": [],
+  "absent_on_page": [],
+  "basis": "Words in at least 60% of result titles (min. 3) that are not part of the page's subject: not in its title or headings, and not frequent in its text."
+ },
+ "decision_in_report": {
+  "decision": "IMPROVE_EXISTING",
+  "plan": [
+   "task_priori",
+   "task_manual"
+  ]
+ },
+ "attempted_sources": [
+  {
+   "source": "TARGET_STATIC_HTML",
+   "status": "STATIC_HTML_USED",
+   "detail": null
+  },
+  {
+   "source": "SEARCH_PROVIDERS",
+   "status": "FRESH_GOOGLE_ORGANIC_LEADS",
+   "detail": "BING_PUBLIC_RSS, SERPER_GOOGLE_ORGANIC; 10 organic result(s) received, 2 not used (reasons in search_discovery.rejected_leads)"
+  },
+  {
+   "source": "HISTORICAL_SNAPSHOT_LEADS",
+   "status": "LEADS_AVAILABLE",
+   "detail": "15 stored leads"
+  },
+  {
+   "source": "COMPETITOR_HTML_FETCH",
+   "status": "READABLE",
+   "detail": "7 tried: 6 readable, 0 blocked by the site (respected), 0 timed out, 0 fetched but not readable; 2 further candidate(s) untried; compared only with results of the page's own type (INFORMATIONAL_GUIDE)"
+  }
+ ],
+ "search_discovery": {
+  "target_query": "ai citation tracker"
+ }
+}

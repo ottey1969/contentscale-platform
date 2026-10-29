@@ -62,7 +62,7 @@ test.before(async()=>{
  ids.client=Number(c.id);
  ids.page=Number((await pool.query('INSERT INTO tracker_pages(tracker_client_id,url,keyword,html_content) VALUES ($1,$2,$3,$4) RETURNING id',[c.id,URL_,'roof repair lodi nj',OWN])).rows[0].id);
  const app=express();app.use(express.json({limit:'2mb'}));
- registerGrowthCockpit(app,pool,{research:{fetchLive,searchLive,retryDelayMs:0},cms:{fetchLive,generateDraft}});
+ registerGrowthCockpit(app,pool,{research:{fetchLive,searchLive,retryDelayMs:0,...require('./helpers/meaning-check-stand-in.cjs').meaningStandIn,},cms:{fetchLive,generateDraft}});
  registerGrowthExecution(app,pool);registerGrowthMeasurement(app,pool);
  await new Promise(ok=>{server=app.listen(0,'127.0.0.1',ok)});
  base='http://127.0.0.1:'+server.address().port;

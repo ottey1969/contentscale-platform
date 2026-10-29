@@ -26,7 +26,7 @@ function harness(drafts,{flaky={},extraPages={},fail={},leadList=null,renderOwn=
  }};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},db,(req,res,next)=>{req.growthTrackerClientId=4;
   req.growth={can_edit:req.params.token==='owner-token',pages:[{id:77,url:URL_,keyword:'roof repair lodi nj',case_study_active:true}]};next()},{
-  retryDelayMs:0,...(renderOwn?{renderOwn}:{}),
+  retryDelayMs:0,...require('./helpers/meaning-check-stand-in.cjs').meaningStandIn,...(renderOwn?{renderOwn}:{}),
   fetchLive:async url=>{fetchCalls[url]=(fetchCalls[url]||0)+1;if(flaky[url]>0){flaky[url]--;throw Object.assign(new Error('HTTP_202'),{code:'HTTP_202'})}
    if(fail[url])throw Object.assign(new Error(fail[url]),{code:fail[url]});
    const html=url===URL_?ownHtml:(extraPages[url]??pages[url]);if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
@@ -146,4 +146,15 @@ test('JS-rendered competitor pages are read in the restricted browser (bounded);
  assert.match(b.search_discovery.competitor_fetch_summary,/2 read after rendering in the restricted browser/);
  const noRender=harness([],{leadList:L,fail:{[L[0].url]:'HTTP_403'},extraPages:{[L[1].url]:shell,[L[2].url]:shell}}),n=(await noRender.call(noRender.GET,'client-token')).body;
  assert(n.search_discovery.competitor_fetch_log.every(x=>!x.rendered_fallback),'without an injected or real fetcher nothing launches a browser');
+});
+
+test('owner setting GROWTH_AI_DRAFTS=off: research and confirmed questions, no provider call, the editor writes',async()=>{
+ const before=process.env.GROWTH_AI_DRAFTS;process.env.GROWTH_AI_DRAFTS='off';
+ try{
+  const h=harness([STRONG]),r=await h.call(h.POST,'owner-token'),d=r.body.editorial_work_packet.editorial_decision;
+  assert.equal(h.providerCalls.length,0);
+  assert.equal(d.decision,'IMPROVE_EXISTING');assert.equal(d.copy_ready,false);
+  assert.equal(d.copy_status,'DRAFT_NOT_AVAILABLE_EDITOR_WRITES');assert.match(d.next_action,/write the section/);
+  assert(d.improvement_plan.tasks.every(t=>t.reader_question),'the editor gets the confirmed reader questions');
+ }finally{if(before===undefined)delete process.env.GROWTH_AI_DRAFTS;else process.env.GROWTH_AI_DRAFTS=before}
 });

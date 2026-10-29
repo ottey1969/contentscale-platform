@@ -46,3 +46,21 @@ Measured differences are shown as observations, not as proof of causation.
 5. **Measurement.** The Cockpit marks the page as recently changed for 28 days. After that, clicks are compared only when both equal 28-day Search Console windows (before and after) have been entered; there is no number before that.
 
 The full chain runs against a real PostgreSQL database in `tests/growth-cms-chain-postgres.test.cjs` (workflow `growth-cms-handoff-chain.yml`).
+
+## Reader tasks: candidates by shared words, confirmed by meaning
+
+Word overlap between two competitor pages only proposes *candidate* tasks. Production reports showed many pairs that share one word but answer different questions (for example "prioritize content for citations vs mentions" versus "which AI platform to prioritize"). A shared word also does not prove that the page already answers the question.
+
+`src/growth-task-meaning.cjs` therefore makes two judgements with the configured language model (`GEMINI_API_KEY`; model `GROWTH_JUDGE_MODEL`, default `GEMINI_MODEL_BRIEF`):
+
+1. **One call per research run.** For each candidate it decides:
+   - whether the competitor sections answer the same reader question, and states that question;
+   - which websites answer it;
+   - whether the page answers it (YES, PARTLY or NO, naming an existing heading).
+
+   Every answer is validated against the input: only known task codes, only hosts that support the task, at least two hosts, and only exact page headings. Anything else confirms nothing.
+2. **One call per owner draft.** It checks whether each drafted section answers its confirmed question. A section that does not (or cannot be checked) is rejected like any other failed section.
+
+**Fail closed.** If there is no key, the call fails or the answer is invalid, no task is confirmed. The gate reports `TASK_MEANING_NOT_VERIFIED`, and the editor writes from the candidate topics.
+
+**Editor writes.** Set `GROWTH_AI_DRAFTS=off` to keep the research and the confirmed reader questions but generate no AI text. The CMS handoff takes the editor's own text.

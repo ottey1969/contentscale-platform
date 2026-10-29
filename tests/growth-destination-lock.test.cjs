@@ -32,7 +32,7 @@ async function run({destLocked=false,viaAlias=false,fragmentSource=false}={}){
   leads:['How to Fix Storm Damage on a Roof','Storm Damage Roof Guide','Signs of Storm Damage: A Checklist'].map((title,i)=>({url:'https://g'+i+'.example/s',title,source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}))});
  const mw=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:false,pages:[{id:7,url:sourceUrl,keyword:fragmentSource?'storm damage roof guide':'roofer',case_study_active:!fragmentSource},
   {id:viaAlias?32:31,url:DEST,keyword:'storm damage roof guide',case_study_active:destLocked}]};next()};
- registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(){}},db,mw,{fetchLive,searchLive,renderOwn:async()=>({status:'RENDER_UNAVAILABLE',live:null})});
+ registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(){}},db,mw,{...require('./helpers/meaning-check-stand-in.cjs').meaningStandIn,fetchLive,searchLive,renderOwn:async()=>({status:'RENDER_UNAVAILABLE',live:null})});
  const res={statusCode:200,set(){return this},status(x){this.statusCode=x;return this},json(x){this.body=x;return this}};
  const stack=route['/api/tracker-client/:token/growth/auto-research'],req={params:{token:'t'},query:{page_id:'7'}};
  await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});

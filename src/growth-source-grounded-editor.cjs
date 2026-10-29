@@ -97,6 +97,7 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   'Preserve strong existing search-intent coverage. Do not suggest a replacement title or H1 based on metrics of a different page.',
   ...(readerTask?.mode==='SECTION_IMPROVEMENT'?[
    'TASK MODE: SECTION_IMPROVEMENT. Write ONLY the missing reader task(s) listed here: exactly ONE H2 section per task (never combine tasks), 2-4 paragraphs each that a reader can act on. Tasks: '+JSON.stringify(readerTask.tasks),
+   'When a task has a "reader_question", the section must answer exactly that question for that reader, nothing broader or neighbouring, and its H2 must say what it answers.',
    'Every section must carry the "task_code" of the task it teaches. Put the task\'s core_words in the H2 and in the first sentence, and explain the task itself, not a neighbouring topic.',
    'Make each step concrete (who does what, in which order, what to check) without inventing figures, names, response times, service areas or results.',
    'Write reader advice, not product claims: never state what any tool, tracker or software does or detects; avoid absolute verbs (eliminates, prevents, ensures, guarantees, proves) and promises about rankings, traffic, AI citations or ROI; use no figures that are not in the original text.',

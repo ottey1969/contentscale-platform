@@ -41,7 +41,7 @@ function harness({pageId=fx.tracked_page.id,pageUrl=HOME,keyword='content at sca
  };
  const searchLive=async()=>({status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_PUBLIC_SEARCH_LEADS',source:'SERPER_GOOGLE_ORGANIC',
   query:'content scaling',leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-21T10:00:00Z'});
- registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},db,middleware,{fetchLive,searchLive,
+ registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},db,middleware,{...require('./helpers/meaning-check-stand-in.cjs').meaningStandIn,fetchLive,searchLive,
   // ISOLATION_STUB_NOT_PRODUCTION_EVIDENCE: stands in for the AI provider only.
   completeOwnerDraft:async({token,body})=>{providerCalls.push({token,body});
    const next=drafts.shift();
