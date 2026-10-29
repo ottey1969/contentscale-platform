@@ -1,0 +1,295 @@
+{
+ "_source": "Verbatim subset (report 32, PRT /bergen-county-roofing-services/, generated 2026-10-29T01:16:53.507Z): reader tasks and gate.",
+ "reader_task_coverage": {
+  "tasks": [
+   {
+    "code": "task_replac",
+    "label": "Competitors teach “Window Replacement”",
+    "match": {
+     "key": "replac",
+     "co_terms": [],
+     "concepts": [
+      "replac",
+      "window",
+      "perfor",
+      "energy",
+      "effici",
+      "instal",
+      "look",
+      "permit"
+     ],
+     "core_words": [
+      "replacement",
+      "windows",
+      "performance",
+      "energy"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://homesteadroofing.com/",
+      "host": "homesteadroofing.com",
+      "heading": "Window Replacement",
+      "excerpt": "High quality replacement windows that improve comfort, reduce drafts, and boost energy efficiency with a clean, secure fit. Window replacement in Northern NJ is one of the most effective ways to improve comfort, energy efficiency, and curb appeal.Today’s replacement windows are designed to seal out drafts, maintain consistent indoor temperatures, and deliver reliable, long-term performance with minimal maintenance. W",
+      "concepts": [
+       "replac"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://ajreliable.com/roofers-bergen-county-nj/",
+      "host": "ajreliable.com",
+      "heading": "Do you need a permit for roof replacement in NJ?",
+      "excerpt": "No. In 2018, New Jersey’s Department of Community Affairs passed new legislation that allows for roof replacements on single-family or two-family homes ( see details here ). The roof replacement was reclassified to fall in the category of standard maintenance in New Jersey and thus no longer needs a building permit like other aspects might. This only reinforces the idea that every homeowner should research their cont",
+      "concepts": [
+       "replac"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "COVERED",
+     "passages": [
+      {
+       "heading": "What Roofing Services Does Bergen County Need?",
+       "text": "Roof replacement: consider a written replacement proposal when wear is widespread, leaks recur, or repairs would not provide a durable outcome.",
+       "concepts": [
+        "replac"
+       ]
+      },
+      {
+       "heading": "Why Choose Perfect Roofing Team for Bergen County Roofing?",
+       "text": "Bergen County roofing services generally fall into four categories: repair, replacement, maintenance, and emergency response. Most homeowners start with a repair — fixing leaks, replacing damaged shingles, or sealing flashing — while aging roofs eventually need full replacement. Routine maintenance ",
+       "concepts": [
+        "replac"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [
+     {
+      "url": "https://perfectroofingteam.com/roof-repair/",
+      "heading": "Roof Replacement",
+      "excerpt": "A roof replacement is necessary when repairs are no longer sufficient to maintain roof integrity. Signs you might need a replacement include frequent leaks, significant shingle damage, or the roof nearing its lifespan."
+     },
+     {
+      "url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+      "heading": "Storm Damage Roof Repair NJ — Statistics",
+      "excerpt": "Average U.S. roof replacement runs ~$9,500 — a useful benchmark when weighing repair vs. replacement after major damage. (U.S. roofing-industry data, 2025)"
+     }
+    ],
+    "placement": null
+   },
+   {
+    "code": "task_contra",
+    "label": "Competitors teach “A Local Ridgewood Roofing Contractor”",
+    "match": {
+     "key": "contra",
+     "co_terms": [],
+     "concepts": [
+      "contra",
+      "ridgew",
+      "local",
+      "expert"
+     ],
+     "core_words": [
+      "contractors",
+      "ridgewood",
+      "local",
+      "expert"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://homesteadroofing.com/",
+      "host": "homesteadroofing.com",
+      "heading": "A Local Ridgewood Roofing Contractor",
+      "excerpt": "Our 93-year history in this area speaks to our dedication and reliability. Our roofing contractors take immense pride in being deeply rooted in Ridgewood, allowing us to understand our local homeowners’ unique challenges and needs. When you choose us, you’re choosing a company that values community and strives to deliver excellence to our neighbors.",
+      "concepts": [
+       "contra"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://ajreliable.com/roofers-bergen-county-nj/",
+      "host": "ajreliable.com",
+      "heading": "Expert Roofing Contractors in Bergen County, NJ",
+      "excerpt": "When selecting roofing contractors in Bergen County, NJ, the types of roofing materials available and the expertise of roofers matter. Local professionals like A & J Reliable can help you choose your property best. Covering New York, New Jersey & Connecticut Area since 1979 A & J Reliable, Inc. offers top-notch roofing solutions for residential and commercial properties. With years of experience, our team of skilled ",
+      "concepts": [
+       "contra"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "PARTIAL",
+     "passages": [
+      {
+       "heading": "Bergen County Roofing Services — Repair, Replacement & 24/7 Emergency Roofing",
+       "text": "Perfect Roofing Team is a licensed and insured roofing contractor serving all of Bergen County, NJ — offering roof repair, replacement, inspections, and 24/7 emergency response. Based in Lodi, Bergen County. Free on-site estimates. Insurance claim support included. As of 2026, we continue to be the ",
+       "concepts": [
+        "contra"
+       ]
+      },
+      {
+       "heading": "Bergen County Roofing Services — Repair, Replacement & 24/7 Emergency Roofing",
+       "text": "While we also handle urgent repairs, our primary focus for Bergen County clients is on comprehensive solutions — replacements, new installations, and 24/7 emergency response for significant issues. Based in Lodi, we are a licensed and insured local contractor providing free on-site estimates and ins",
+       "concepts": [
+        "contra"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [
+     {
+      "url": "https://perfectroofingteam.com/storm-damage-roof-repair-nj/",
+      "heading": "Choosing a Storm Damage Roof Repair NJ Contractor",
+      "excerpt": "Here’s what to do first in storm damage roof repair NJ: ensure safety, document the damage, get an emergency tarp installed, then contact your insurer and a licensed contractor. Perfect Roofing Team is a licensed and insured NJ contractor based in Lodi, provid"
+     }
+    ],
+    "placement": {
+     "mode": "EXTEND_SECTION",
+     "section_heading": "Bergen County Roofing Services — Repair, Replacement & 24/7 Emergency Roofing",
+     "reason": "This existing section already mentions the task’s core concept (3×); deepen it instead of adding a duplicate."
+    }
+   },
+   {
+    "code": "task_storm",
+    "label": "Competitors teach “Storm Damage Experts”",
+    "match": {
+     "key": "storm",
+     "co_terms": [
+      "damag"
+     ],
+     "concepts": [
+      "storm",
+      "damag"
+     ],
+     "core_words": [
+      "storm",
+      "damage"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://homesteadroofing.com/",
+      "host": "homesteadroofing.com",
+      "heading": "Storm Damage Experts",
+      "excerpt": "Nature’s forces can take a toll on your roofing system, but our team is here to restore its strength and resilience. Whether it’s fallen branches, wind-blown shingles, or other weather-related challenges, our seasoned professionals know how to assess and repair the damage with precision.",
+      "concepts": [
+       "storm",
+       "damag"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://ajreliable.com/roofers-bergen-county-nj/",
+      "host": "ajreliable.com",
+      "heading": "Storms",
+      "excerpt": "Storms can cause significant damage to your roof. High winds can lift or tear off shingles, exposing the roof to water damage. You should always consider calling your local and trusted roofing contractors after a storm hits. You never know what damage could be lurking underneath the shingles.",
+      "concepts": [
+       "storm",
+       "damag"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "COVERED",
+     "passages": [
+      {
+       "heading": "Bergen County Roofing Services — Repair, Replacement & 24/7 Emergency Roofing",
+       "text": "About the Author: Perfect Roofing Team is a licensed and insured NJ roofing contractor with over 4 years of experience serving homeowners and businesses across all 21 counties. Based in Lodi, NJ, our team brings hands-on expertise in roofing, storm damage, and emergency repairs to every project, ens",
+       "concepts": [
+        "storm",
+        "damag"
+       ]
+      },
+      {
+       "heading": "Roof Repair in Bergen County, NJ: Repair, Replace, or Protect the Roof?",
+       "text": "Based in Lodi, Bergen County, Perfect Roofing Team handles roof leaks, damaged shingles, flashing problems, storm damage, inspections, and replacement discussions for residential and commercial properties. The right next step depends on the roof's condition, not just the size of the leak.",
+       "concepts": [
+        "storm",
+        "damag"
+       ]
+      }
+     ]
+    },
+    "covered_elsewhere_on_site": [
+     {
+      "url": "https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/",
+      "heading": "24 Hour Emergency Roof Repair NJ — Immediate 24/7 Dispatch",
+      "excerpt": "Qualifies: active leaks, storm or wind damage, missing shingles, flashing damage, hail and roof damage from branches."
+     },
+     {
+      "url": "https://perfectroofingteam.com/wind-damage-roof-repair-nj/",
+      "heading": "❄️ Hail Damage Inspection & Repair",
+      "excerpt": "Hail storms can cause significant roof damage in just minutes. Unlike wind, which primarily affects shingles and flashing, hail creates impact dents and punctures that compromise your roof's waterproof integrity. Many homeowners don't immediately see hail dama"
+     }
+    ],
+    "placement": null
+   },
+   {
+    "code": "task_afford",
+    "label": "Competitors teach “Affordable Financing Options”",
+    "match": {
+     "key": "afford",
+     "co_terms": [],
+     "concepts": [
+      "afford",
+      "offer"
+     ],
+     "core_words": [
+      "affordable",
+      "offers"
+     ]
+    },
+    "supported_by_competitors": true,
+    "independent_sources": 2,
+    "competitor_support": [
+     {
+      "url": "https://homesteadroofing.com/",
+      "host": "homesteadroofing.com",
+      "heading": "Affordable Financing Options",
+      "excerpt": "Nature’s forces can take a toll on your roof, but our team is here to restore its strength and resilience. Whether it’s fallen branches, wind-blown shingles, or other weather-related challenges, our seasoned professionals know how to assess and repair the damage with precision. Our team is here to help answer any questions you may have!",
+      "concepts": [
+       "afford"
+      ],
+      "partial": false
+     },
+     {
+      "url": "https://ajreliable.com/roofers-bergen-county-nj/",
+      "host": "ajreliable.com",
+      "heading": "Affordable Roofing Service Bergen County, NJ",
+      "excerpt": "A & J Reliable, Inc. offers flexible payment plans that enable homeowners to pay for the services offered. We have installment offers, low-interest credit facilities, or collaboration with credit institutions. Our roofing contractors give free estimates and quotes so clients are financially prepared to complete the project knowing all the details up front.",
+      "concepts": [
+       "afford"
+      ],
+      "partial": false
+     }
+    ],
+    "destination": {
+     "status": "NOT_OBSERVED",
+     "passages": []
+    },
+    "covered_elsewhere_on_site": [],
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "Why Choose Perfect Roofing Team for Bergen County Roofing?",
+     "reason": "Closest existing section by shared concepts (contra, servic, reliab, instal); the new section continues that explanation."
+    }
+   }
+  ]
+ },
+ "editorial_decision_gate": {
+  "decision": "IMPROVE_EXISTING",
+  "draft_heading": "Evaluating Affordable Financing Options and Roofing Offers",
+  "copy_ready": true
+ }
+}

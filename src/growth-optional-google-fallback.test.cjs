@@ -26,12 +26,13 @@ assert.equal(parseBingRss(rss,{query,ownUrl}).length,1,'legitimate editorial rev
 (async()=>{
  let costed=0,seenUrl,seenOptions;
  const googleFetch=async (url,options)=>{
-  costed++;seenUrl=new URL(url);seenOptions=options;
+  costed++;if(costed===1){seenUrl=new URL(url);seenOptions=options}
   return {ok:true,json:async()=>google};
  };
  const googleGood=await optionalGoogleOrganicDiscovery({query,ownUrl,key:'test-in-memory-key',
   fetchImpl:googleFetch,now:new Date('2026-10-17T12:00:00Z')});
- assert.equal(costed,1);assert.equal(seenUrl.hostname,'google.serper.dev');
+ // Two usable leads (< 3): one bounded page-2 retry is allowed (owner decision 2026-10-29); the first request is checked below.
+ assert.equal(costed,2);assert.equal(seenUrl.hostname,'google.serper.dev');
  assert.equal(seenUrl.pathname,'/search');
  assert.equal(seenUrl.search,'','API key must never appear in a URL');
  assert.equal(seenOptions.method,'POST');
