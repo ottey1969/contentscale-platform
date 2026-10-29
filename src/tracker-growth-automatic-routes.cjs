@@ -103,7 +103,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(intentResolution.source==='TRACKER_KEYWORD'&&selectionSource&&selectionSource!=='TRACKER_KEYWORD')intentResolution.source=selectionSource;
   const targetQuery=intentResolution.query||'';
   // Market = the place the SOURCE page serves (its tracked keyword and URL), so a shorter GSC query keeps its locality.
-  const market=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url}):null;
+  const market=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,\n   pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
   const discovery=!targetQuery?{
    status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
    reason:intentResolution.warning||'No search phrase is justified by observed page content.'
