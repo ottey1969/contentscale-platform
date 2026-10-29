@@ -510,3 +510,25 @@ test('18. Route: the opening recommendation is marked as the starting point and 
  assert.equal(b.growth_decision.final_decision.blocker_code,b.editorial_decision_gate.blocker_code);
  assert.equal(b.growth_decision.final_decision.target_url,b.editorial_decision_gate.target_url);
 });
+
+// ---------- Report 22 (PRT homepage, after PR #197): 301 alias resolved, but a FAQ block + a contact block became a "task" ----------
+const r22=require('./fixtures/growth-reports-11-12/report-22-prt-home-after-197.json');
+const {isFurnitureHeading}=require('../src/growth-derived-reader-tasks.cjs');
+test('R22 production outcome: 301 alias used as final URL; the only task was built from "Common questions" + "Contact Us"',()=>{
+ assert.equal(r22.destination_identity.kind,'PERMANENT_REDIRECT');assert.equal(r22.query_selection.destination.url,'https://perfectroofingteam.com/24-hour-emergency-roof-repair-nj/');
+ assert.deepEqual(r22.reader_task_coverage.tasks[0].competitor_support.map(x=>x.heading),['Common questions','Contact Us']);
+ assert.equal(r22.editorial_decision_gate.copy_ready,true);assert.match(r22.editorial_decision_gate.proposed_text,/under your service title/);
+});
+test('19. FAQ containers and contact/quote blocks are page furniture, never reader tasks; real question headings stay',()=>{
+ for(const h of r22.reader_task_coverage.tasks[0].competitor_support.map(x=>x.heading))assert.equal(isFurnitureHeading(h),true,h);
+ for(const h of ['📞 Contact Us Today','Get a Free Quote','FAQ','Frequently Asked Questions','Request a Free Inspection'])assert.equal(isFurnitureHeading(h),true,h);
+ for(const h of ['Is storm damage covered by homeowners insurance in NJ?','Insurance claim documentation','Temporary tarping'])assert.equal(isFurnitureHeading(h),false,h);
+ // SYNTHETIC sections shaped like report 22 (the production excerpts are cut at 420 characters).
+ const sec=(h,t)=>({heading:h,text:t,words:t.split(/\s+/).length});
+ const other='Tarping a damaged section keeps rain out until permanent repairs; crews secure the tarp past the ridge and weigh the edges with battens to resist wind.';
+ const competitors=[
+  {host:'precision.example',url:'https://precision.example/e',sections:[sec('Common questions','Is this actually an emergency, or can it wait until morning? Common questions answered: what counts as an emergency question, how fast is the response, and which question to ask first. Each question has a short answer, and the questions below cover contact details, the title of your request and a short description. '+other),sec('Temporary tarping',other+' '+other)]},
+  {host:'rhino.example',url:'https://rhino.example/e',sections:[sec('Contact Us','Contact us with any question. Point of contact, title and a short description help our team answer your question quickly; every question gets an answer from a real person and contact is answered day and night. '+other),sec('Storm tarps',other+' '+other)]}];
+ const keys=deriveReaderTasksDetailed({query:'emergency roof repair nj',competitors}).tasks.map(t=>t.key);
+ assert(!keys.includes('questi')&&!keys.includes('contac'),keys.join(','));assert(keys.includes('tarp'),'a real shared task is still found');
+});
