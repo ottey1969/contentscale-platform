@@ -115,3 +115,14 @@ for an email address. Scripts can use the same API with the header `x-admin-key`
 ## Tests
 
 `node --test tests/growth-free-check.test.cjs` (workflow `growth-free-check.yml`).
+
+## Choose what goes on your site (editor mode)
+
+The standalone check never writes text. Each result has a **Choose what goes on your site** section that lists every difference with the readable ranking pages:
+
+- topics not on the page;
+- topics only partly on the page, with the closest section on the page;
+- page elements that most ranking pages have (FAQ, tables, lists, video, structured data, author, date, length);
+- topics that could not be matched to the page.
+
+Each item names the ranking pages and their Google positions. Tick what should go on the site, then **Download selection as editor brief** (Markdown checklist) or **Copy**. Grouping by topic needs `GEMINI_API_KEY`. Without it, every section of every ranking page is listed separately ("not grouped"). It is an observation, not a fact check.

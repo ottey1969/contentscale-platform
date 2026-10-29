@@ -37,6 +37,33 @@ function evidenceOf(list){
   heading:e.heading||null,excerpt:String(e.excerpt||'').slice(0,400)}));
 }
 
+// Every gap between the ranking pages and this page, as one list the owner chooses from (nothing is written for them).
+// From report.competitor_overview: topics not or only partly on the page, topics that could not be matched, page
+// elements and structured data most ranking pages have, and (without grouping) every ranking-page section.
+function gapList(ov){
+ if(!ov||ov.status!=='OBSERVED')return {status:ov?ov.status:'NOT_AVAILABLE',items:[]};
+ const items=[];
+ const ex=list=>(list||[]).slice(0,4).map(x=>({site:x.host,heading:x.heading,position:x.position??null}));
+ const STATUS={NO:'Not on your page',PARTLY:'Partly on your page',UNKNOWN:'Not matched to your page'};
+ if(ov.topics_status==='GROUPED'){
+  for(const t of ov.topics||[]){if(t.this_page==='YES')continue;
+   items.push({id:'topic-'+items.length,group:t.this_page==='NO'?'MISSING_TOPIC':t.this_page==='PARTLY'?'PARTIAL_TOPIC':'UNMATCHED_TOPIC',
+    title:t.topic,status:STATUS[t.this_page],your_section:t.this_page_heading||null,ranking_pages:t.ranking_pages,examples:ex(t.sections)})}
+ }
+ for(const x of (ov.topics_status==='GROUPED'?[]:ov.ungrouped_sections||[]))
+  items.push({id:'section-'+items.length,group:'COMPETITOR_SECTION',title:x.heading,status:'Not compared (topics not grouped)',ranking_pages:1,examples:[{site:x.host,heading:x.heading,position:x.position??null}]});
+ for(const f of ov.elements_they_have_and_this_page_lacks||[])
+  items.push({id:'element-'+f.key,group:'PAGE_ELEMENT',title:f.label,status:'Not on your page',ranking_pages:f.ranking_pages_with_it,of:f.of,examples:[]});
+ for(const f of ov.structured_data_they_have_and_this_page_lacks||[])
+  items.push({id:'schema-'+f.type,group:'PAGE_ELEMENT',title:'Structured data: '+f.type,status:'Not on your page',ranking_pages:f.ranking_pages_with_it,of:f.of,examples:[]});
+ const L=ov.length||{};
+ if(L.ranking_pages_median_words&&L.this_page_words<L.ranking_pages_median_words*0.6)
+  items.push({id:'length',group:'PAGE_ELEMENT',title:'Length',status:'Your page has '+L.this_page_words+' words; ranking pages have about '+L.ranking_pages_median_words,ranking_pages:null,examples:[]});
+ return {status:'OBSERVED',topics_grouped:ov.topics_status==='GROUPED',ranking_pages_read:ov.ranking_pages_read,
+  ranking_pages:(ov.ranking_pages||[]).map(p=>({url:p.url,position:p.serp_position??null})),items,
+  note:'What the readable ranking pages contain and your page does not. Not a fact check and not a ranking promise: you choose what goes on your site.'};
+}
+
 function summarizeFreeGrowth(report,{url,query}={}){
  const gate=report&&report.editorial_decision_gate||{};
  const decision=gate.decision||'DATA_BLOCKED';
@@ -103,9 +130,9 @@ function summarizeFreeGrowth(report,{url,query}={}){
   ...(gate.research_limitations||[]).slice(0,3).map(x=>typeof x==='string'?x:(x.detail||x.message||x.code||'')).filter(Boolean)
  ];
  if(scopeNote)limitations.push('Google shows more than one kind of page for this search. Your page was compared only with the '+gate.intent_scope.compared_with+' ('+gate.intent_scope.results_of_this_type+' of '+gate.intent_scope.of+'). '+scopeNote);
- return {decision,headline,explanation,steps,tasks,checked,limitations,
+ return {decision,headline,explanation,steps,tasks,checked,limitations,gaps:gapList(report&&report.competitor_overview),
   url:url||report?.url||null,
   promises:'No ranking or traffic increase is promised. Nothing was changed on your website.'};
 }
 
-module.exports={summarizeFreeGrowth,BLOCKER_TEXT};
+module.exports={summarizeFreeGrowth,BLOCKER_TEXT,gapList};

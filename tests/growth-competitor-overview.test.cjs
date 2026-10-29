@@ -53,3 +53,20 @@ test('without the model the editor still gets every ranking-page section, marked
   model:{model:'t',call:async()=>{throw Error('down')}}});
  assert.equal(failing.topics_status,'NOT_GROUPED_MODEL_UNAVAILABLE');assert.equal(failing.ungrouped_sections.length,1);
 });
+
+test('standalone check: every difference becomes one choosable item, grouped by status (real report 55 headings)',()=>{
+ const {gapList}=require('../src/growth-free/summary.cjs');
+ // MODEL_ANSWER (grouping only)
+ const v=validateTopics(JSON.stringify({topics:[
+  {topic:'Why tracking AI citations matters now',sections:[{host:'otterly.ai',heading:'Why AI Citation Tracking Matters Now'}],page_covers:'NO',page_heading:null},
+  {topic:'What an AI citation is',sections:[{host:'blog.hubspot.com',heading:'What are AI citations?'}],page_covers:'PARTLY',page_heading:'🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)'},
+  {topic:'Covered topic',sections:[{host:'otterly.ai',heading:'The Two Layers of AI Citation Tracking'}],page_covers:'YES',page_heading:'⚙️ How AI Citation Trackers Actually Work'}]}),competitors,page);
+ const ov={status:'OBSERVED',ranking_pages_read:2,topics_status:'GROUPED',topics:v.topics,ungrouped_sections:v.ungrouped_sections,
+  elements_they_have_and_this_page_lacks:[{key:'tables',label:'A table (comparison or overview)',ranking_pages_with_it:2,of:2}],structured_data_they_have_and_this_page_lacks:[],
+  length:{this_page_words:4301,ranking_pages_median_words:2900},ranking_pages:[]};
+ const g=gapList(ov);
+ assert.deepEqual(g.items.map(x=>x.group),['MISSING_TOPIC','PARTIAL_TOPIC','PAGE_ELEMENT'],'a covered topic is not a gap; no length gap when this page is longer');
+ assert.equal(g.items[1].your_section,'🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)');
+ assert(new Set(g.items.map(x=>x.id)).size===g.items.length,'ids are unique');
+ assert.equal(gapList(null).items.length,0);
+});
