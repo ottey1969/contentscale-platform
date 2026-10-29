@@ -106,3 +106,15 @@ test('report 40: with no unread candidates the honest blocker stays; with a shar
  assert.equal(e.reader_task_coverage.extended_competitor_reading,undefined);
  assert.equal(early.fetched.filter(u=>u!==URL_).length,3,'nothing extra fetched');
 });
+
+// Report 43: Sussex County NJ must not compare to Sussex County DE.
+test('R43: an explicit same-county NJ heading localizes research and rejects Delaware competitors',()=>{
+ const {deriveMarket,rejectLead}=require('../src/growth-serp-quality.cjs');
+ const query='sussex county roofing services',url='https://perfectroofingteam.com/sussex-county-roofing-services/';
+ const market=deriveMarket({query,keyword:query,url,pageHeadings:['Common Roofing Problems in Sussex County, NJ']});
+ assert.deepEqual(market.states,['NJ']);
+ assert.equal(rejectLead({query,marketStates:market.states,lead:{url:'https://pjfitz.com/areas/delaware/roofing-contractors-in-sussex-county/',title:'Expert Roofing Contractors in Sussex County, DE'}}),'DIFFERENT_REGION:DE');
+ assert.equal(rejectLead({query,marketStates:market.states,lead:{url:'https://nj.example/sussex-county-nj',title:'Sussex County, NJ Roofing Services'}}),null);
+ const unknown=deriveMarket({query,keyword:query,url,pageHeadings:['Service areas across New Jersey','Sussex County roof repairs']});
+ assert.equal(unknown,null,'a state mentioned without the same county is not enough');
+});
