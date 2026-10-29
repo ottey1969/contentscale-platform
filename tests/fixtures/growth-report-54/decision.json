@@ -1,0 +1,212 @@
+{
+ "_note": "Real data from production Growth report 54 (contentscale.site page 2294, generated 2026-10-29T22:42:10.699Z): the editorial decision fields the proposal store uses, and the accepted/rejected status of each AI draft section. The destination page text is not part of the report and is not reconstructed.",
+ "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+ "editorial_decision_gate": {
+  "decision": "IMPROVE_EXISTING",
+  "copy_ready": true,
+  "target_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+  "focus_query": "ai citation tracker",
+  "placement": {
+   "mode": "ADD_AFTER_SECTION",
+   "section_heading": "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+   "reason": "Closest existing section by shared concepts (monito, genera, platfo, refere); the new section continues that explanation."
+  },
+  "draft_heading": "Why AI Citation Tracking Matters Now for Search Strategy",
+  "proposed_text": "AI citation tracking matters now because audience discovery increasingly occurs within generated answers where source links provide direct visibility. Marketers can monitor how frequently generative platforms reference their pages alongside standard search engine results. To begin tracking, assemble a core list of natural language queries, run these across conversational engines, and log which URLs appear as source citations.\n\nCompare your cited pages against competitor links to locate visibility gaps in key topic areas. According to Search Engine Journal (March 2025), 68% of AI Overviews include at least one citation link, making direct verification essential for preserving audience reach. Audit uncited pages against cited competitors to review structural clarity, clear headings, and concise answer formatting.\n\nTrack citation status on a regular weekly schedule across multiple generative platforms. Record whether structural content updates lead to changes in citation frequency over time. This systematic audit process helps teams measure and refine their search presence based on observed citation data.",
+  "additional_sections": [],
+  "claim_review": {
+   "counts": {
+    "sourced_from_page": 0,
+    "general_advice": 6,
+    "general_statement_unverified": 3
+   },
+   "needs_fact_check": [
+    "AI citation tracking matters now because audience discovery increasingly occurs within generated answers where source links provide direct visibility.",
+    "To begin tracking, assemble a core list of natural language queries, run these across conversational engines, and log which URLs appear as source citations.",
+    "According to Search Engine Journal (March 2025), 68% of AI Overviews include at least one citation link, making direct verification essential for preserving audience reach."
+   ],
+   "needs_owner_confirmation": [],
+   "needs_safety_review": [],
+   "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+   "requirements": [
+    "Fact-check every statement against your own knowledge and sources before publishing.",
+    "Owner approval is required; nothing is published automatically."
+   ]
+  },
+  "evidence": [
+   {
+    "source_url": "https://omniseo.com/solutions/ai-citation-tracker/",
+    "heading": "What Is AI Citation Tracking and Why It Matters Now",
+    "excerpt": "AI citation tracking has become essential because visibility in AI-generated answers is now a major discovery channel for brands. When users ask ChatGPT, Perplexity, or Google AI Overviews for recommendations, those platforms cite a small set of sources and shape buyer consideration immediately. If ",
+    "type": "COMPETITOR"
+   },
+   {
+    "source_url": "https://www.airops.com/blog/ai-citation-tracking-tools",
+    "heading": "Why this matters for your team",
+    "excerpt": "Conventional stacks break at exactly this point. A monitoring dashboard tells you where you are invisible, an SEO suite reports rankings, and a writing tool drafts copy, but the handoffs between them are manual and the backlog grows faster than anyone can clear it. AirOps removes the handoffs, so th",
+    "type": "COMPETITOR"
+   },
+   {
+    "source_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+    "heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+    "excerpt": "Privacy Matters: Privacy-First / Minimal Data Collection trackers are essential for GDPR/AVG compliance in European markets.",
+    "type": "OWN_PAGE"
+   }
+  ],
+  "evidence_status": {
+   "decision": "IMPROVE_EXISTING",
+   "search_intent_confirmed": true,
+   "competitor_content_observed": true,
+   "destination_fully_examined": true,
+   "missing_task_established": true,
+   "draft_checked": true,
+   "factual_claims_confirmed": false,
+   "publication_approved": false,
+   "copy_ready": true,
+   "verified_gap": true,
+   "label": "TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW"
+  },
+  "intent_scope": {
+   "compared_with": "guides",
+   "results_of_this_type": 2,
+   "of": 8,
+   "overall_intent": "PRODUCT_TOOL",
+   "other_intent_served_by": [
+    {
+     "url": "https://contentscale.site/free-ai-citations-tracker/",
+     "page_type": "PRODUCT_TOOL",
+     "protected_case_study": true
+    }
+   ],
+   "note": "Google also shows tool pages for this search; on your site https://contentscale.site/free-ai-citations-tracker/ serves that (protected Case Study: left unchanged)."
+  },
+  "improvement_plan": {
+   "target_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+   "preserve": [
+    "existing title",
+    "existing H1",
+    "existing useful paragraphs",
+    "existing internal links"
+   ],
+   "tasks": [
+    {
+     "code": "task_matter",
+     "label": "Competitors teach “What Is AI Citation Tracking and Why It Matters Now”",
+     "match": {
+      "key": "matter",
+      "co_terms": [
+       "track",
+       "chatgp"
+      ],
+      "concepts": [
+       "matter"
+      ],
+      "core_words": [
+       "matters"
+      ]
+     },
+     "destination_status": "PARTIAL",
+     "placement": {
+      "mode": "ADD_AFTER_SECTION",
+      "section_heading": "🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)",
+      "reason": "Closest existing section by shared concepts (monito, genera, platfo, refere); the new section continues that explanation."
+     },
+     "competitor_evidence": [
+      {
+       "url": "https://omniseo.com/solutions/ai-citation-tracker/",
+       "host": "omniseo.com",
+       "heading": "What Is AI Citation Tracking and Why It Matters Now",
+       "excerpt": "AI citation tracking has become essential because visibility in AI-generated answers is now a major discovery channel for brands. When users ask ChatGPT, Perplexity, or Google AI Overviews for recommendations, those platforms cite a small set of sources and shape buyer consideration immediately. If your team only tracks traditional rankings, you miss how often your pages are actually referenced inside AI responses. O",
+       "concepts": [
+        "matter",
+        "track",
+        "chatgp"
+       ],
+       "partial": false
+      },
+      {
+       "url": "https://www.airops.com/blog/ai-citation-tracking-tools",
+       "host": "airops.com",
+       "heading": "Why this matters for your team",
+       "excerpt": "Conventional stacks break at exactly this point. A monitoring dashboard tells you where you are invisible, an SEO suite reports rankings, and a writing tool drafts copy, but the handoffs between them are manual and the backlog grows faster than anyone can clear it. AirOps removes the handoffs, so the distance between spotting a gap and publishing the fix collapses from weeks to a single working session. The outcomes ",
+       "concepts": [
+        "matter",
+        "track",
+        "chatgp"
+       ],
+       "partial": false
+      }
+     ],
+     "destination_evidence": [
+      {
+       "heading": "What Is an AI Citation Tracker? ( And Why Diagnostics Aren’t Enough )",
+       "text": "Privacy Matters: Privacy-First / Minimal Data Collection trackers are essential for GDPR/AVG compliance in European markets.",
+       "concepts": [
+        "matter",
+        "track",
+        "chatgp"
+       ]
+      },
+      {
+       "heading": "📊 ContentScale vs. OmniSEO vs. PixelMojo",
+       "text": "Understanding how leading trackers differ clarifies why actionability matters. Below is an honest comparison based on publicly available feature sets and testing.",
+       "concepts": [
+        "matter",
+        "track",
+        "chatgp"
+       ]
+      }
+     ]
+    }
+   ],
+   "internal_links_to_review": [],
+   "quality_conditions": [
+    "No numeric or factual claim that the destination page does not already state or the owner cannot verify.",
+    "Do not reproduce competitor wording.",
+    "Do not repeat anything the destination already teaches.",
+    "Keep title and H1.",
+    "Owner approval before any publication."
+   ],
+   "unverified_task_codes": [
+    "task_backli"
+   ]
+  },
+  "draft_validation": [
+   {
+    "task": "task_matter",
+    "heading": "Why AI Citation Tracking Matters Now for Search Strategy",
+    "concept_hits": 2,
+    "duplicate_overlap_pct": 3,
+    "competitor_wording_reused": false,
+    "claims_checked": true,
+    "safe_rewrites": 0
+   }
+  ]
+ },
+ "draft_sections": [
+  {
+   "h2": "Why AI Citation Tracking Matters Now for Search Strategy",
+   "review_status": "ACCEPTED_FOR_OWNER_REVIEW",
+   "rejection_reasons": null
+  },
+  {
+   "h2": "Comparing AI Citation Tracking vs. Traditional Backlink Monitoring",
+   "review_status": "REJECTED_NOT_PART_OF_PROPOSAL",
+   "rejection_reasons": [
+    {
+     "task": "task_backli",
+     "code": "DRAFT_UNSUPPORTED_CLAIMS",
+     "reason": "Rejected: UNSUPPORTED_CAPABILITY_CLAIM, UNPROVEN_AI_CITATION_CLAIM.",
+     "claim_violations": [
+      "UNSUPPORTED_CAPABILITY_CLAIM",
+      "UNPROVEN_AI_CITATION_CLAIM"
+     ]
+    }
+   ]
+  }
+ ],
+ "cms_handoff": {
+  "proposal_id": 4,
+  "target_page_id": 2294
+ }
+}

@@ -3,7 +3,7 @@
 // same-page/competitor quotations. Never claim an automatically verified gap.
 const {blocks,queryRoots}=require('./growth-reader-task-coverage.cjs');
 const {draftTeachesTask,taskHitsInText}=require('./growth-derived-reader-tasks.cjs');
-const {assessDraftClaims}=require('./growth-draft-claim-guard.cjs');
+const {assessDraftClaims,headingMismatch}=require('./growth-draft-claim-guard.cjs');
 const skipSet=query=>new Set(queryRoots(query).all.map(x=>x.slice(0,6)));
 const words=t=>String(t||'').toLowerCase().match(/[a-z0-9']+/g)||[];
 const ngramSet=(t,n)=>{const w=words(t),out=new Set();for(let i=0;i+n<=w.length;i++)out.add(w.slice(i,i+n).join(' '));return out};
@@ -38,6 +38,9 @@ function checkDraftSection(section,{task,destinationText='',competitorTexts=[],q
  if(overlap>=35)return {ok:false,code:'DRAFT_DUPLICATES_DESTINATION',concept_hits:taught.key_mentions,duplicate_overlap_pct:overlap};
  const m8=ngramSet(body,8);
  for(const c of competitorTexts){const theirs=ngramSet(c,8);for(const x of m8)if(theirs.has(x))return {ok:false,code:'DRAFT_REUSES_COMPETITOR_WORDING',concept_hits:taught.key_mentions,duplicate_overlap_pct:overlap}}
+ const mismatch=headingMismatch(section.h2,validParagraphs(section).join(' '));
+ if(mismatch)return {ok:false,code:'DRAFT_HEADING_DOES_NOT_MATCH_CONTENT',concept_hits:taught.key_mentions,duplicate_overlap_pct:overlap,
+  heading_check:{code:mismatch.code,instructions:mismatch.instructions,sentences:mismatch.sentences},reason:mismatch.reason};
  const claims=assessSectionClaims(section,{destinationText,query,brandLabel});
  if(!claims.ok)return {ok:false,code:'DRAFT_UNSUPPORTED_CLAIMS',concept_hits:taught.key_mentions,duplicate_overlap_pct:overlap,
   claim_violations:claims.violations.slice(0,6),reason:'Rejected: '+claims.violations.slice(0,3).map(v=>v.code).join(', ')+'.'};
