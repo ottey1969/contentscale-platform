@@ -21,14 +21,13 @@ const LISTICLE=/^(?:the\s+)?(?:top|best)\s+\d+\b|\b(?:top|best)\s+\d+\s+.*\b(?:i
 function deriveMarket({query='',keyword='',url='',pageHeadings=[]}={}){
  let slug='';try{slug=decodeURIComponent(new URL(url).pathname).replace(/[-_/]+/g,' ')}catch{}
  const states=[...new Set([query,keyword,slug].flatMap(x=>statesIn(x,{queryMode:true})))];
- // County names may be shared by multiple states (Sussex County NJ vs DE).
- // Only use an explicit SAME-COUNTY + state in the source page's own headings,
- // never a state mentioned elsewhere in the page as a passing reference.
+ // County names can be shared by different states (Sussex County, NJ vs DE).
+ // Only accept an explicit same-county state in the source page's headings.
  if(!states.length){
-  const match=String(query+' '+keyword+' '+slug).match(/\\b([a-z][a-z-]*)\\s+county\\b/i);
+  const match=String(query+' '+keyword+' '+slug).match(/\b([a-z][a-z-]*)\s+county\b/i);
   if(match){
-   const county=match[1].replace(/[.*+?^${}()|[\\]\\]/g,'\\ const states=[...new Set([query,keyword,slug].flatMap(x=>statesIn(x,{queryMode:true})))];');
-   const p=new RegExp('\\\\b'+county+'\\\\s+county\\\\s*(?:,|in|of|-)\\\\s*(new jersey|delaware|[A-Z]{2})\\\\b','i');
+   const county=match[1];
+   const p=new RegExp('\\b'+county+'\\s+county\\s*(?:,|in|of|-)\\s*(new jersey|delaware|[A-Z]{2})\\b','i');
    for(const heading of pageHeadings){
     const m=String(heading||'').match(p);
     if(m){
@@ -39,7 +38,7 @@ function deriveMarket({query='',keyword='',url='',pageHeadings=[]}={}){
  }
  const name=a=>US[a].replace(/\b[a-z]/g,c=>c.toUpperCase());
  return states.length?{states,country:'us',location:states.length===1?name(states[0])+', United States':null,
-  source:'QUERY_KEYWORD_OR_URL_OF_THE_SOURCE_PAGE'}:null;
+  source:'QUERY_KEYWORD_URL_OR_EXPLICIT_SAME_COUNTY_HEADING'}:null;
 }
 // query: the working query; lead: {url,title,snippet}. Returns null when the lead is acceptable, else a reason code.
 // marketStates: the place the source page serves (deriveMarket), applied even when the query itself names no place.
