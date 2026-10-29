@@ -49,7 +49,9 @@ function capabilityClaim(sentence){
 // kept but flagged for professional safety review. Wording is cross-industry (home, health, electrical, vehicles...).
 const SAFETY_ASSURANCE_HARD=/\b(?:safe(?:ly)?\s+to\s+(?:wait|ignore|delay|leave|postpone)|can\s+safely\s+(?:wait|be\s+ignored|be\s+left|be\s+delayed)|(?:no|not\s+any)\s+(?:immediate\s+|real\s+|serious\s+)?(?:danger|risk|hazard)|nothing\s+to\s+worry|is\s+not\s+(?:an?\s+)?(?:emergency|dangerous)|no\s+need\s+to\s+(?:worry|hurry|rush|call)|(?:won['’]t|will\s+not)\s+(?:cause|get\s+worse|spread)|harmless)\b/i;
 const SAFETY_ASSURANCE_SOFT=/\b(?:can|may|could|might)\s+(?:typically\s+|usually\s+|often\s+|generally\s+|normally\s+)?(?:safely\s+)?(?:wait|be\s+(?:delayed|postponed|left|deferred))\b|\b(?:not\s+urgent|non[- ]urgent|no\s+urgency)\b/i;
-const SAFETY_HAZARD=/\b(?:collaps\w*|structural(?:ly)?|sagg\w*|electric\w*|electrocut\w*|live\s+wires?|power\s+lines?|gas\s+(?:leak|line|smell)|carbon\s+monoxide|fires?|smoke|flood\w*|mold|mould|asbestos|toxic|poison\w*|injur\w*|dangerous|hazards?|hazardous|evacuat\w*|911|emergency\s+services|unstable|falling|fallen\s+(?:tree|limb|debris)|chest\s+pain|bleeding)\b/i;
+// Words with an everyday non-physical sense ("structural gaps", "falling rankings", "unstable results") count only
+// in their physical-damage sense; every other hazard word counts on its own.
+const SAFETY_HAZARD=/\b(?:collaps\w*|structural(?:ly)?\s+(?:\w+\s+)?(?:damage[ds]?|failures?|integrity|cracks?|cracking|collapse|unsound|compromised|weak(?:ness|ened)?|engineers?|movement|defects?)|sagg\w*|electric\w*|electrocut\w*|live\s+wires?|power\s+lines?|gas\s+(?:leak|line|smell)|carbon\s+monoxide|fires?|smoke|flood\w*|mold|mould|asbestos|toxic|poison\w*|injur\w*|dangerous|hazards?|hazardous|evacuat\w*|911|emergency\s+services|unstable\s+(?:\w+\s+)?(?:ground|structures?|walls?|roofs?|ceilings?|floors?|ladders?|trees?|surfaces?|footing|chimneys?|buildings?|scaffold\w*|slopes?)|falling\s+(?:debris|objects?|trees?|branch(?:es)?|limbs?|ice|glass|tiles?|bricks?|from|off)|fallen\s+(?:tree|limb|debris)|chest\s+pain|bleeding)\b/i;
 // 3. Claims about AI assistants / AI search citing or recommending content.
 const AI_TERMS='chatgpt|gemini|perplexity|claude|copilot|ai overviews?|ai search|llms?|ai assistants?|generative (?:ai|engines?|search (?:platforms?|engines?))|answer engines?|ai answers?|generated answers?|ai responses?|ai surfaces|ai engines?';
 const AI_CITE=new RegExp('\\b(?:(?:cited|cite|cites|citing|citations?|recommended|recommends?|mentioned|surfaced|quoted|referenced|picked up|trusted)\\b[^.]{0,60}\\b(?:'+AI_TERMS+')|(?:'+AI_TERMS+')\\b[^.]{0,60}\\b(?:cites?|recommends?|prefers?|favou?rs?|trusts?|ranks?|surfaces?|quotes?|picks|quoted|cited))','i');
@@ -74,6 +76,17 @@ function entitiesIn(sentence){
 const IMPERATIVE_VERB=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioriti[sz]e|focus|avoid|ensure|confirm|assign|audit|extract|apply|maintain|feed)\b/i;
 const IMPERATIVE=/^(?:integrate|implement|adopt|introduce|establish|include|route|standardi[sz]e|automate|schedule|train|organi[sz]e|centrali[sz]e|use|start|begin|list|ask|check|compare|review|add|create|build|keep|make|choose|track|measure|record|map|decide|identify|turn|connect|run|test|document|update|define|set|write|plan|prioritis?e|focus|avoid|ensure|confirm|schedule|assign|audit|extract|apply|maintain|continuously|then|first|next|once|before|after|if)\b/i;
 const ADVICE_MODAL=/\b(?:should|can|could|may|might|consider|try|helps?|allows?|lets?)\b/i;
+// "do not guarantee", "cannot prove", "is never risk-free" are disclaimers, not claims: an absolute word counts only
+// when no negation precedes it within the same clause (up to six words before it).
+const NEGATION=/\b(?:not|never|no|nor|cannot|can['’]t|don['’]t|doesn['’]t|didn['’]t|won['’]t|isn['’]t|aren['’]t|wasn['’]t|without)\b(?:\s+[\w'’-]+){0,6}\s*$/i;
+function affirmed(sentence,re){
+ const g=new RegExp(re.source,re.flags.includes('g')?re.flags:re.flags+'g');
+ for(const m of sentence.matchAll(g)){
+  const before=sentence.slice(0,m.index).split(/[,;:()—–]|\bbut\b/i).pop();
+  if(!NEGATION.test(before))return m;
+ }
+ return null;
+}
 function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={}){
  const dest=lower(destinationText),destRoots=new Set(contentRoots(destinationText)),destNums=new Set(numbersIn(destinationText));
  const queryRoots=new Set(contentRoots(query));
@@ -90,7 +103,7 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
   let softened=sentence;const applied=[];
   for(const [re,to] of SOFTEN)softened=softened.replace(re,m=>{applied.push({from:m,to});return /^[A-Z]/.test(m)?to[0].toUpperCase()+to.slice(1):to});
   sentence=softened;
-  const m1=sentence.match(ABSOLUTE);if(m1)flag('ABSOLUTE_CLAIM','Contains the unqualified claim “'+m1[0]+'”; the sources do not prove it and it cannot be softened without changing its meaning.');
+  const m1=affirmed(sentence,ABSOLUTE);if(m1)flag('ABSOLUTE_CLAIM','Contains the unqualified claim “'+m1[0]+'”; the sources do not prove it and it cannot be softened without changing its meaning.');
   const m1b=sentence.match(SUPERLATIVE);if(m1b&&!dest.includes(lower(m1b[0])))flag('UNSUPPORTED_SUPERLATIVE','Uses the comparative claim “'+m1b[0]+'” without support on the destination page.');
   const m2b=!MEASURING_ADVICE.test(sentence)&&sentence.match(COMPARATIVE);if(m2b)flag('UNPROVEN_OUTCOME_CLAIM','Asserts a comparative performance result (“'+m2b[0]+'”) that no measurement on the page or in the sources supports.');
   const m2=original.match(OUTCOME)||sentence.match(OUTCOME);if(m2)flag('UNPROVEN_OUTCOME_CLAIM','Promises a ranking, traffic, lead or revenue outcome (“'+m2[0]+'”). No measurement supports it.');

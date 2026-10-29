@@ -149,12 +149,19 @@ const FURNITURE=/^(?:table of contents|contents|related(?: reading| posts| artic
 const headClean=h=>String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim();
 const FAQ_LIKE=/\bfaqs?\b|\bq&a\b|\bpeople also ask\b|\bquestions?\b[^.]{0,30}\b(?:ask|asked|answered|answers)\b|\b(?:ask|asked)\b[^.]{0,20}\bquestions?\b/i;
 const isFurniture=s=>s.heading==='(introduction)'||s.words<30||FURNITURE.test(headClean(s.heading))||FAQ_LIKE.test(headClean(s.heading));
+// A numbered heading ("1. …", "3b) …") is one item of a list of reasons or features when the page has a run of them;
+// new instructions inside or between those items would break the list, so list items are never an anchor.
+const LIST_ITEM=/^\d{1,2}[a-z]?[.)]\s/i;
+// A heading that presents the concept as something to remove ("Eliminates the manual entry", "Avoid …", "Instead of …")
+// argues against the task: teaching that task inside it contradicts the section.
+const AGAINST=/\b(?:eliminat\w*|avoid\w*|stop\w*|no\s+more|without|replac\w*|instead\s+of|get\s+rid\s+of|remov\w*|ditch\w*|myths?|mistakes?)\b/i;
 function pickPlacement(destSections,task,skip){
- const body=destSections.filter(s=>!isFurniture(s));
+ const numbered=destSections.filter(s=>LIST_ITEM.test(headClean(s.heading))).length>=2;
+ const body=destSections.filter(s=>!isFurniture(s)&&!(numbered&&LIST_ITEM.test(headClean(s.heading))));
  // 1) the section already mentions the task's core concept: deepen it instead of adding a duplicate
  // A single passing mention of a generic word is not a touch; the concept must be in the heading or recur in the section.
  const touching=body.map(s=>({s,h:taskHitsInText(task,s.heading+' '+s.text,skip),inHead:taskHitsInText(task,s.heading,skip).key>=1}))
-  .filter(x=>x.inHead||x.h.key>=2).sort((a,b)=>(Number(b.inHead)-Number(a.inHead))||b.h.key-a.h.key)[0];
+  .filter(x=>(x.inHead||x.h.key>=2)&&!AGAINST.test(headClean(x.s.heading))).sort((a,b)=>(Number(b.inHead)-Number(a.inHead))||b.h.key-a.h.key)[0];
  if(touching)return {mode:'EXTEND_SECTION',section_heading:touching.s.heading,
   reason:'This existing section already mentions the task’s core concept ('+touching.h.key+'×); deepen it instead of adding a duplicate.'};
  // 2) otherwise add it right after the existing section whose concepts are closest to what the competitors teach
@@ -236,4 +243,4 @@ function pageTypeScope({serpIntent,destinationClass}={}){
   overall_intent:serpIntent.intent,overall_status:serpIntent.status,class_counts:serpIntent.class_counts||{},
   rule:'Mixed results: the page is compared only with the '+same.length+' of '+of+' results of its own type.'};
 }
-module.exports={analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,classifyTitle,blocks,groupSections,queryRoots,STEMS,pageTypeScope,COMPATIBLE_FAMILY};
+module.exports={analyzeReaderTaskCoverage,pickPlacement,inferSerpIntent,classifyDestinationIntent,classifyTitle,blocks,groupSections,queryRoots,STEMS,pageTypeScope,COMPATIBLE_FAMILY};
