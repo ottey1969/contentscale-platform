@@ -5,6 +5,7 @@ const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('./growth-source-grounded-editor.cjs');
 const {normalizeGrowthResearchContext}=require('./growth-editorial-research-context.cjs');
 const {loadGrowthOptionalGsc}=require('./growth-optional-gsc-draft-evidence.cjs');
+const {latestProposal,proposalById}=require('./growth-proposal-store.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowLockedResearchDraft=false}={}){
  const id=Number(pageId);
@@ -166,6 +167,16 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    return res.status(503).json({success:false,code:'EDITOR_DRAFT_TEMPORARILY_UNAVAILABLE'});}
  };
  app.post('/api/tracker-client/:token/growth/cms-export/editor-draft',ownerDraftHandler);
+ // The checked Growth proposal for this page (owner link only; never for a locked Case Study page).
+ app.get('/api/tracker-client/:token/growth/cms-export/proposal',async(req,res)=>{
+  try{
+   const v=await loadEditablePage(pool,req.params.token,req.query?.page_id,{allowMissingHtml:true});
+   if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
+   const p=await latestProposal(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url});
+   res.set('Cache-Control','private, no-store').json({success:true,proposal:p?{id:Number(p.id),created_at:p.created_at,focus_query:p.focus_query,
+    sections:p.sections,review:p.review,evidence_label:p.evidence_label,intent_note:p.intent_note}:null});
+  }catch(e){console.warn('[growth-cms-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'GROWTH_PROPOSAL_UNAVAILABLE'})}
+ });
  app.post('/api/tracker-client/:token/growth/cms-export',async(req,res)=>{
   try{
    const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true});
@@ -197,7 +208,16 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     }catch{return res.status(409).json({success:false,code:'VERIFIED_GSC_EVIDENCE_UNAVAILABLE'})}
     if(!verified.length)return res.status(409).json({success:false,code:'VERIFIED_GSC_EVIDENCE_NOT_FOUND'});
    }
-   const result=prepareGrowthCmsHandoff({
+   let growthProposal=null;
+   if(req.body?.growth_proposal_id!=null){
+    if(!Number.isSafeInteger(Number(req.body.growth_proposal_id))||Number(req.body.growth_proposal_id)<1)
+     return res.status(400).json({success:false,code:'GROWTH_PROPOSAL_ID_INVALID'});
+    const p=await proposalById(pool,{clientId:v.client.id,id:req.body.growth_proposal_id});
+    if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
+     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
+    growthProposal={id:Number(p.id),sections:p.sections};
+   }
+   const result=prepareGrowthCmsHandoff({growthProposal,reviewNotes:req.body?.review_notes||null,
     canonicalUrl:v.page.url,originalHtml,sourceExpectedSha256:originalHash,
     caseStudyLocked:v.page.case_study_active,editorApproved:req.body?.editor_approved===true,
     cms:req.body?.cms||'generic',pageTitle:req.body?.seo_title,

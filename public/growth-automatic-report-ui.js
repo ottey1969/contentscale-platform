@@ -438,6 +438,7 @@
      var result=composite.editorial_review_draft||{};
      if(String(result.target_url||'')!==String(draftSourceUrl||''))
       throw Error('DRAFT_SOURCE_URL_MISMATCH');
+     pointHandoff(composite);
      if(last===d){
       last=composite;
       d.editorial_review_draft=result;
@@ -583,6 +584,12 @@
     'Automatic research complete · preparing owner-only editorial review draft (NOT publishing)…':
     'Research-only report · a full editorial draft requires the Tracker owner link.';
  }
+ // A checked edit proposal is stored for the page that should change (not this research page): the CMS package opens there.
+ function pointHandoff(r){
+  var a=document.getElementById('growthEditorHandoff'),h=r&&r.cms_handoff;
+  if(!a||!h||typeof h.url!=='string'||h.url.indexOf('/track/')!==0)return;
+  a.href=h.url;a.textContent='Prepare the CMS package with the checked Growth text';
+ }
  async function run(){
   var status=document.getElementById('researchStatus');
   status.className='';status.textContent='Analyzing page HTML, verified queries, historical search competitors and AI evidence…';
@@ -597,7 +604,7 @@
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
-   last=result;render(result);
+   last=result;render(result);pointHandoff(result);
   }catch(e){status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false
   }finally{document.getElementById('retryResearch').disabled=false}

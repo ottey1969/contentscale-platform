@@ -5,6 +5,7 @@ const {registerTrackerGrowthCmsExport}=require('./tracker-growth-cms-export.cjs'
 const {registerGrowthAutomaticResearch}=require('./tracker-growth-automatic-routes.cjs');
 const {assessGrowthCandidates}=require('./tracker-growth-best-candidate.cjs');
 const {loadMemory,recordAction,recordResearchOutcome}=require('./tracker-growth-recommendation-memory.cjs');
+const {saveProposal}=require('./growth-proposal-store.cjs');
 const escapeHtml=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 function bucket(q,brand){
@@ -76,8 +77,9 @@ function computeGrowth(rows,queries,domain,now=new Date()){
   non_brand:sum(nonBrand),brand_or_ambiguous:sum(brand),
   evidence_queries:classified.length,query_opportunities:queryOpportunities,pages,case_study_policy:'READ_ONLY_NO_SCAN_NO_BASELINE_MUTATION'};
 }
-function registerGrowthCockpit(app,pool){
- const ownerDraftService=typeof app.post==='function'?registerTrackerGrowthCmsExport(app,pool):null;
+// deps: optional injection of the network/AI boundaries (tests run the real chain without the internet).
+function registerGrowthCockpit(app,pool,deps={}){
+ const ownerDraftService=typeof app.post==='function'?registerTrackerGrowthCmsExport(app,pool,deps.cms||{}):null;
  async function data(req,res,next){
   try{
    const cr=await pool.query("SELECT id,name,domain,token,status FROM tracker_clients WHERE (token=$1 OR readonly_token=$1) AND (status IS NULL OR status!='deleted') LIMIT 1",[req.params.token]);
@@ -119,7 +121,8 @@ function registerGrowthCockpit(app,pool){
   }catch(e){res.status(503).json({success:false,error:'Verified growth evidence temporarily unavailable'})}
  }
  registerGrowthAutomaticResearch(app,pool,data,{completeOwnerDraft:ownerDraftService?.completeOwnerDraft,
-  recordResearchOutcome:args=>recordResearchOutcome(pool,args)});
+  recordResearchOutcome:args=>recordResearchOutcome(pool,args),
+  recordProposal:args=>saveProposal(pool,args),...(deps.research||{})});
  // Owner-only memory of the Cockpit's advice: started, skipped or restored.
  // The snapshot is taken from server-side evidence, never from the browser.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/recommendation',data,async(req,res)=>{

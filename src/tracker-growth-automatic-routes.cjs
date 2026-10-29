@@ -45,7 +45,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -623,7 +623,17 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     decision:completeDecision.decision,blocker:completeDecision.blocker_code||null,
     evidenceStatus:evidenceStatus.label,focusQuery:report.editorial_decision_gate?.focus_query||''}))
     .catch(e=>console.warn('[growth-auto-research] recommendation memory not saved',String(e?.code||'unknown')));
+  // Optional Cockpit hook (owner route only): a checked edit proposal is stored so the CMS handoff uses exactly this text.
+  let proposalRef=null;
+  // Never for a protected Case Study page: its content and baseline stay untouched.
+  const targetLocked=(targetId===v.id&&v.page.case_study_active===true)||(v.lockedPages||[]).some(x=>x.id===targetId||x.url===targetUrl);
+  if(typeof recordProposal==='function'&&!targetLocked&&completeDecision.decision==='IMPROVE_EXISTING'&&completeDecision.copy_ready===true){
+   try{proposalRef=await recordProposal({clientId:v.clientId,researchPageId:v.id,targetPageId:targetId,decision:completeDecision})}
+   catch(e){console.warn('[growth-auto-research] proposal not saved',String(e?.code||'unknown'))}
+  }
   return res.set('Cache-Control','private, no-store').json({...report,
+   cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
+    url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(targetId)}:null,
    editorial_decision_gate:completeDecision,
    access:{can_edit:true,read_only_analysis:false,owner_report:true},
    editorial_review_draft:completionOut,

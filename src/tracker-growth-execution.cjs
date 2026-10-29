@@ -1,4 +1,5 @@
 'use strict';
+const {proposalById}=require('./growth-proposal-store.cjs');
 function validPublish({url,query,notes,published_at}){
  const stamp=Date.parse(published_at||'');
  if(!url||!/^https:\/\//i.test(url)||!String(query||'').trim())return 'A verified HTTPS page and query are required';
@@ -48,14 +49,26 @@ function registerGrowthExecution(app,pool){
    const locked=(await pool.query("SELECT 1 FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' LIMIT 1",[c.id,pageId])).rows.length>0;
    if(locked)return res.status(409).json({success:false,case_study_locked:true,error:'Active Case Study: publication tracking is locked. Keep the baseline unchanged.'});
    const verified=(await pool.query("SELECT 1 FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND LOWER(query)=LOWER($3) AND evidence_scope='page_verified' LIMIT 1",[c.id,pageId,query])).rows.length>0;
-   if(!verified)return res.status(409).json({success:false,error:'No verified exact-page GSC query evidence for this opportunity'});
-   // Publication log is isolated from briefs, snapshots and Case Study tables.
+   // GSC is optional: without verified exact-page evidence the publication is still recorded, marked NEEDS_ACCESS,
+   // so measurement later says Search Console data is needed instead of blocking the record.
+   const proposalId=req.body&&req.body.growth_proposal_id!=null?Number(req.body.growth_proposal_id):null;
+   if(proposalId!==null&&(!Number.isSafeInteger(proposalId)||proposalId<1))return res.status(400).json({success:false,error:'Invalid Growth proposal'});
+   if(proposalId!==null){
+    const proposal=await proposalById(pool,{clientId:c.id,id:proposalId});
+    if(!proposal||Number(proposal.target_page_id)!==pageId||proposal.target_url!==pg.url)
+     return res.status(409).json({success:false,error:'This Growth proposal belongs to another page'});
+   }
+   // Publication log is isolated from briefs, snapshots and Case Study tables (additive columns only).
    await pool.query(`CREATE TABLE IF NOT EXISTS tracker_growth_publications (
     id BIGSERIAL PRIMARY KEY,tracker_client_id BIGINT NOT NULL,tracker_page_id BIGINT NOT NULL,
     query TEXT NOT NULL,notes TEXT NOT NULL,published_at TIMESTAMPTZ NOT NULL,
-    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
-   const result=await pool.query("INSERT INTO tracker_growth_publications (tracker_client_id,tracker_page_id,query,notes,published_at) VALUES ($1,$2,$3,$4,$5) RETURNING id,published_at,recorded_at",[c.id,pageId,query,notes,publishedAt]);
-   res.json({success:true,publication:result.rows[0],state:'PUBLISHED_AWAITING_GSC_COMPARISON',measured_improvement:false});
+    recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
+    ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS gsc_evidence TEXT;
+    ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS growth_proposal_id BIGINT`);
+   const gscEvidence=verified?'VERIFIED':'NEEDS_ACCESS';
+   const result=await pool.query("INSERT INTO tracker_growth_publications (tracker_client_id,tracker_page_id,query,notes,published_at,gsc_evidence,growth_proposal_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,published_at,recorded_at",[c.id,pageId,query,notes,publishedAt,gscEvidence,proposalId]);
+   res.json({success:true,publication:result.rows[0],gsc_evidence:gscEvidence,
+    state:verified?'PUBLISHED_AWAITING_GSC_COMPARISON':'PUBLISHED_NEEDS_SEARCH_CONSOLE_FOR_MEASUREMENT',measured_improvement:false});
   }catch(e){console.error('[growth-publication]',e.message);res.status(503).json({success:false,error:'Publication record unavailable; no claims were made'})}
  });
 }
