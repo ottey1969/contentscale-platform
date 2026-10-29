@@ -44,7 +44,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -545,6 +545,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    next_action:'Review linked source passages against the generated draft; approve only distinct factual improvements. Do not infer a ranking advantage or missing content from term overlap.'
   };
   markFinalDecision(report,completeDecision);
+  // Optional Cockpit memory (owner route only): remember the outcome so the
+  // Cockpit does not suggest the same research again and can follow it up.
+  if(typeof recordResearchOutcome==='function')
+   Promise.resolve().then(()=>recordResearchOutcome({clientId:v.clientId,pageId:v.id,targetPageId:targetId,
+    decision:completeDecision.decision,blocker:completeDecision.blocker_code||null,
+    evidenceStatus:evidenceStatus.label,focusQuery:report.editorial_decision_gate?.focus_query||''}))
+    .catch(e=>console.warn('[growth-auto-research] recommendation memory not saved',String(e?.code||'unknown')));
   return res.set('Cache-Control','private, no-store').json({...report,
    editorial_decision_gate:completeDecision,
    access:{can_edit:true,read_only_analysis:false,owner_report:true},

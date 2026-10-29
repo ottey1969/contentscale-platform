@@ -4,10 +4,23 @@
 // output for non-experts; no forecasts, no invented clicks or rankings.
 const {sameUrl}=require('./growth-url-identity.cjs');
 const {compareDatedWindows}=require('./tracker-growth-measurement.cjs');
+const {norm:memoryKey}=require('./tracker-growth-recommendation-memory.cjs');
 
 const DAY=86400000;
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-const fmtDate=x=>{const t=Date.parse(x);return Number.isFinite(t)?new Date(t).toISOString().slice(0,10):''};
+// pg returns timestamptz as Date objects; tests and JSON use strings or numbers.
+const ts=x=>x instanceof Date?x.getTime():typeof x==='number'?x:Date.parse(x);
+const fmtDate=x=>{const t=ts(x);return Number.isFinite(t)?new Date(t).toISOString().slice(0,10):''};
+const plain=x=>String(x||'').toLowerCase().replace(/_/g,' ');
+const DECISION_TEXT={IMPROVE_EXISTING:'improve the existing page',NEW_DISTINCT_PAGE:'write a separate new page',NO_CHANGE:'no change needed',DATA_BLOCKED:'not enough reliable data'};
+const NO_CHANGE_RECHECK_DAYS=90,BLOCKED_RETRY_DAYS=7,IMPROVEMENT_OPEN_DAYS=60;
+
+// Exact page+query memory first, then what was remembered for the page itself.
+function memoryFor(pageId,query,memory){
+ const own=memory.filter(m=>String(m.tracker_page_id)===String(pageId));
+ if(query!=null){const k=memoryKey(query);return own.find(m=>m.query_key===k)||own.find(m=>m.query_key==='')||null}
+ return own[0]||null;
+}
 
 // tracker_pages.redirects_to holds either a destination URL, "(dead 404 …)",
 // "(corrected duplicate → URL)" or "(redirect 302)" without a destination.
@@ -21,7 +34,7 @@ function redirectInfo(flag){
 
 function measurementFor(pageId,query,publications,windows,now){
  const own=publications.filter(p=>String(p.tracker_page_id)===String(pageId)&&(query==null||norm(p.query)===norm(query)))
-  .sort((a,b)=>(Date.parse(b.published_at)||0)-(Date.parse(a.published_at)||0));
+  .sort((a,b)=>(ts(b.published_at)||0)-(ts(a.published_at)||0));
  if(!own.length)return null;
  const m=compareDatedWindows(own[0],windows.filter(w=>String(w.publication_id)===String(own[0].id)),now);
  const day=fmtDate(m.published_at),wait=Math.max(0,28-m.days_since_publication);
@@ -45,6 +58,21 @@ function classify(row,page,ctx){
  }
  if(row.measurement&&row.measurement.status==='WAITING_FOR_28_DAYS')
   return {status:'JUST_CHANGED',label:'Recently changed — let it settle. Changing it again now makes the result impossible to measure.'};
+ const m=row.memory;
+ if(m&&m.status==='SKIPPED')
+  return {status:'SKIPPED_BY_OWNER',label:`You marked this as not relevant on ${fmtDate(m.skipped_at)}${m.skip_reason?': “'+m.skip_reason+'”':''}. The system will not suggest it again unless you restore it.`};
+ if(m&&m.researched_at&&m.research_decision){
+  const at=ts(m.researched_at),age=(ctx.now.getTime()-at)/DAY;
+  const publishedAfter=row.measurement&&ts(row.measurement.published_at)>=at;
+  const before=Number(m.snapshot&&m.snapshot.impressions)||0;
+  if(m.research_decision==='NO_CHANGE'&&age<NO_CHANGE_RECHECK_DAYS&&!(before>0&&row.impressions>=2*before))
+   return {status:'NO_CHANGE_FOUND',label:`Research on ${fmtDate(at)} found that no change is needed. The system looks again after ${fmtDate(at+NO_CHANGE_RECHECK_DAYS*DAY)}, or sooner if Google impressions double.`};
+  if(m.research_decision==='DATA_BLOCKED'&&age<BLOCKED_RETRY_DAYS)
+   return {status:'RESEARCH_BLOCKED',label:`Research on ${fmtDate(at)} could not finish (${plain(m.research_blocker)||'not enough reliable data'}). Other pages come first; this one is offered again after ${fmtDate(at+BLOCKED_RETRY_DAYS*DAY)}.`};
+  if(['IMPROVE_EXISTING','NEW_DISTINCT_PAGE'].includes(m.research_decision)&&!publishedAfter&&age<IMPROVEMENT_OPEN_DAYS)
+   return {status:'IMPROVEMENT_FOUND',decision:m.research_decision,researched_at:m.researched_at,
+    label:`Research on ${fmtDate(at)} found an improvement (${DECISION_TEXT[m.research_decision]}). Next: review the proposal, publish it yourself, then record the publication.`};
+ }
  if(row.position>0&&row.position<=3&&row.clicks>0&&row.ctr>=2)
   return {status:'WORKING',label:'Already working: top 3 in Google and getting clicks. Leave it.'};
  return {status:'CANDIDATE',label:'Not protected, not redirected and not recently changed — safe to research and improve.'};
@@ -59,23 +87,35 @@ function positionSentence(pos){
 
 const SCORE_RULE='Score = impressions × position weight (1.5 for positions 1–20, 1 for 21–50, 0.35 further back) × 1.15 when the page has 2 clicks or fewer.';
 
-function assessGrowthCandidates(growth,{publications=[],windows=[],now=new Date(),pageRows=[]}={}){
+function assessGrowthCandidates(growth,{publications=[],windows=[],now=new Date(),pageRows=[],memory=[]}={}){
  const raw=new Map(pageRows.map(p=>[String(p.id),p]));
- const ctx={pages:growth.pages};
+ const ctx={pages:growth.pages,now};
  const queries=growth.query_opportunities.map(q=>{
   const measurement=measurementFor(q.page_id,q.query,publications,windows,now)||measurementFor(q.page_id,null,publications,windows,now);
-  const base={...q,locked:q.case_study_locked,measurement};
+  const mem=memoryFor(q.page_id,q.query,memory);
+  const base={...q,locked:q.case_study_locked,measurement,memory:mem};
   return {...q,measurement,eligibility:classify(base,raw.get(String(q.page_id)),ctx)};
  });
  const pages=growth.pages.map(p=>{
   const measurement=measurementFor(p.id,null,publications,windows,now);
-  return {...p,measurement,eligibility:classify({...p,locked:p.case_study_active,measurement},raw.get(String(p.id)),ctx)};
+  return {...p,measurement,eligibility:classify({...p,locked:p.case_study_active,measurement,memory:memoryFor(p.id,null,memory)},raw.get(String(p.id)),ctx)};
  });
  const skipped={};
  for(const q of queries)if(q.eligibility.status!=='CANDIDATE')skipped[q.eligibility.status]=(skipped[q.eligibility.status]||0)+1;
  const open=queries.filter(q=>q.eligibility.status==='CANDIDATE');
  let best=null;
- if(open.length){
+ const started=[...queries,...pages].filter(x=>x.eligibility.status==='IMPROVEMENT_FOUND')
+  .sort((a,b)=>ts(b.eligibility.researched_at)-ts(a.eligibility.researched_at))[0];
+ if(started){
+  const id=started.page_id??started.id;
+  best={basis:'FINISH_STARTED_WORK',page_id:id,url:started.url,query:started.query||null,priority_score:started.priority_score??started.priority,
+   runner_up:open[0]?{page_id:open[0].page_id,query:open[0].query,priority_score:open[0].priority_score}:null,
+   reasons:[
+    `On ${fmtDate(started.eligibility.researched_at)} the Growth research found an improvement for this page: ${DECISION_TEXT[started.eligibility.decision]}.`,
+    'It has not been published yet. Finishing work that is already researched is quicker than starting something new.',
+    open[0]?`After this, the next best is “${open[0].query}”.`:'There is no other open candidate right now.'
+   ],score_rule:'Unfinished, already researched improvements come first; then the highest score. '+SCORE_RULE,measurement:started.measurement};
+ }else if(open.length){
   const q=open[0],next=open[1];
   const reasons=[
    `Google showed this page ${q.impressions.toLocaleString('en-US')} times for “${q.query}”, but it received only ${q.clicks} click${q.clicks===1?'':'s'} (${q.ctr}% of searchers).`,
@@ -97,6 +137,33 @@ function assessGrowthCandidates(growth,{publications=[],windows=[],now=new Date(
     'No verified search-query rows are available yet, so this choice uses saved page-level Search Console totals.'
    ],score_rule:'Pages with many impressions and few clicks rank first.',measurement:p.measurement};
  }
+ const history=memory.map(m=>{
+  const page=growth.pages.find(p=>String(p.id)===String(m.tracker_page_id));
+  const since=ts(m.started_at||m.researched_at||m.skipped_at)||0;
+  const pub=publications.filter(p=>String(p.tracker_page_id)===String(m.tracker_page_id)&&(ts(p.published_at)||0)>=since)
+   .sort((a,b)=>ts(a.published_at)-ts(b.published_at))[0];
+  const measurement=pub?measurementFor(pub.tracker_page_id,pub.query,[pub],windows,now):null;
+  const outcome=m.status==='SKIPPED'?'Skipped by you'+(m.skip_reason?': '+m.skip_reason:'')
+   :measurement?measurement.label
+   :m.research_decision==='NO_CHANGE'?'Research: no change needed'
+   :m.research_decision==='DATA_BLOCKED'?'Research could not finish ('+(plain(m.research_blocker)||'not enough reliable data')+')'
+   :m.research_decision?'Research: '+DECISION_TEXT[m.research_decision]+' — not published yet'
+   :m.started_at?'Research started — no result saved yet':'Open';
+  return {page_id:m.tracker_page_id,url:page?page.url:null,date:fmtDate(m.started_at||m.skipped_at||m.researched_at),query:m.query||null,system_choice:!!m.system_choice,
+   started_at:m.started_at||null,skipped_at:m.skipped_at||null,research_decision:m.research_decision||null,researched_at:m.researched_at||null,
+   snapshot:m.snapshot||{},published_at:pub?pub.published_at:null,measurement,outcome};
+ }).filter(h=>h.url);
+ const chosen=history.filter(h=>h.system_choice&&h.started_at);
+ const track_record={
+  started:history.filter(h=>h.started_at).length,
+  system_choices_started:chosen.length,
+  skipped:history.filter(h=>h.skipped_at).length,
+  improvement_found:history.filter(h=>['IMPROVE_EXISTING','NEW_DISTINCT_PAGE'].includes(h.research_decision)).length,
+  no_change:history.filter(h=>h.research_decision==='NO_CHANGE').length,
+  published:history.filter(h=>h.published_at).length,
+  system_choices_measured:chosen.filter(h=>h.measurement&&h.measurement.status==='COMPARABLE_USER_PROVIDED_GSC').length,
+  system_choices_click_change:chosen.filter(h=>h.measurement&&h.measurement.status==='COMPARABLE_USER_PROVIDED_GSC').reduce((a,h)=>a+h.measurement.click_change,0)
+ };
  const records=publications.map(pub=>measurementFor(pub.tracker_page_id,pub.query,[pub],windows,now)).filter(Boolean);
  const measurement_summary={
   recorded:records.length,
@@ -105,9 +172,9 @@ function assessGrowthCandidates(growth,{publications=[],windows=[],now=new Date(
   measured:records.filter(r=>r.status==='COMPARABLE_USER_PROVIDED_GSC').length,
   measured_click_change:records.filter(r=>r.status==='COMPARABLE_USER_PROVIDED_GSC').reduce((a,r)=>a+r.click_change,0)
  };
- return {best_candidate:best,
+ return {best_candidate:best,history,track_record,
   no_candidate_reason:best?null:(growth.evidence_queries||growth.pages.some(p=>p.gsc_present)
-   ?'Every page with Search Console demand is protected, redirected, recently changed or already working. Nothing needs to be changed right now.'
+   ?'Every page with Search Console demand is protected, redirected, recently changed, already researched, skipped by you or already working. Nothing needs to be changed right now.'
    :'There is no Search Console data yet, so the system cannot tell which page has the most demand. Run Growth research on the page that matters most to your business; it will say whether a change is needed.'),
   skipped,query_opportunities:queries,pages,measurement_summary};
 }

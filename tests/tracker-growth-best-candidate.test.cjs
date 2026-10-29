@@ -86,10 +86,73 @@ const pl=assessGrowthCandidates(computeGrowth(pageLevel,[],'site.example',now),{
 assert.equal(pl.best_candidate.page_id,11);
 assert.equal(pl.best_candidate.basis,'SAVED_PAGE_LEVEL_GSC');
 
+// ---- Server-side memory: the system learns from what happened before ----
+const mem=(o)=>({query_key:'',query:'',status:'STARTED',system_choice:false,snapshot:{},...o});
+const memory=[
+ mem({tracker_page_id:6,query_key:'open best topic',query:'open best topic',status:'SKIPPED',skipped_at:ago(3),skip_reason:'we do not offer this'}),
+];
+let m1=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory});
+assert.equal(m1.query_opportunities.find(x=>x.query==='open best topic').eligibility.status,'SKIPPED_BY_OWNER');
+assert.match(m1.query_opportunities.find(x=>x.query==='open best topic').eligibility.label,/we do not offer this/);
+assert.equal(m1.best_candidate.query,'open second topic','a skipped suggestion is replaced by the next safe one');
+// Research said NO_CHANGE: not suggested again for 90 days ...
+const noChange=[mem({tracker_page_id:6,query_key:'open best topic',query:'open best topic',status:'RESEARCHED',system_choice:true,
+ started_at:ago(5),researched_at:ago(5),research_decision:'NO_CHANGE',snapshot:{impressions:2900,clicks:2,position:12}})];
+m1=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory:noChange});
+assert.equal(m1.query_opportunities.find(x=>x.query==='open best topic').eligibility.status,'NO_CHANGE_FOUND');
+// pg returns timestamptz columns as Date objects: dates must still be shown.
+const pgRow=[{...noChange[0],started_at:new Date(ago(5)),researched_at:new Date(ago(5))}];
+const pgView=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory:pgRow});
+assert.match(pgView.query_opportunities.find(x=>x.query==='open best topic').eligibility.label,/^Research on \d{4}-\d{2}-\d{2} found .* after \d{4}-\d{2}-\d{2},/);
+assert.match(pgView.history[0].date,/^\d{4}-\d{2}-\d{2}$/);
+assert.equal(m1.best_candidate.query,'open second topic');
+assert.equal(m1.track_record.no_change,1);
+assert.equal(m1.history[0].outcome,'Research: no change needed');
+// ... unless Google demand doubled since that research.
+noChange[0].snapshot.impressions=1400;
+m1=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory:noChange});
+assert.equal(m1.best_candidate.query,'open best topic');
+// ... or 90 days passed.
+noChange[0].snapshot.impressions=2900;noChange[0].researched_at=ago(91);
+m1=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory:noChange});
+assert.equal(m1.best_candidate.query,'open best topic');
+// DATA_BLOCKED: retried after 7 days, not before.
+const blocked=[mem({tracker_page_id:6,query_key:'open best topic',status:'RESEARCHED',researched_at:ago(2),research_decision:'DATA_BLOCKED',research_blocker:'INSUFFICIENT_COMPETITOR_EVIDENCE'})];
+m1=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory:blocked});
+assert.equal(m1.query_opportunities.find(x=>x.query==='open best topic').eligibility.status,'RESEARCH_BLOCKED');
+assert.match(m1.query_opportunities.find(x=>x.query==='open best topic').eligibility.label,/insufficient competitor evidence/);
+blocked[0].researched_at=ago(8);
+assert.equal(assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory:blocked}).best_candidate.query,'open best topic');
+// Research found an improvement but nothing was published: finish that first, even above higher scores.
+const found=[mem({tracker_page_id:7,query_key:'open second topic',query:'open second topic',status:'RESEARCHED',system_choice:true,
+ started_at:ago(4),researched_at:ago(4),research_decision:'IMPROVE_EXISTING',snapshot:{impressions:1000,clicks:1,position:25}})];
+m1=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory:found});
+assert.equal(m1.best_candidate.basis,'FINISH_STARTED_WORK');
+assert.equal(m1.best_candidate.page_id,7);
+assert.match(m1.best_candidate.reasons[1],/not been published yet/);
+assert.equal(m1.best_candidate.runner_up.query,'open best topic');
+// Once a publication is recorded after the research, it waits for measurement instead.
+const pubs=[...publications,{id:43,tracker_page_id:7,query:'open second topic',notes:'z',published_at:ago(2)}];
+m1=assessGrowthCandidates(growth,{publications:pubs,windows,now,pageRows:pages,memory:found});
+assert.equal(m1.query_opportunities.find(x=>x.query==='open second topic').eligibility.status,'JUST_CHANGED');
+assert.equal(m1.best_candidate.query,'open best topic');
+assert.equal(m1.track_record.published,1);
+assert.match(m1.history[0].outcome,/Wait 26 more days/);
+// The system's own choices are measured separately.
+const measuredChoice=[mem({tracker_page_id:7,query_key:'open second topic',query:'open second topic',system_choice:true,started_at:ago(100)})];
+m1=assessGrowthCandidates(growth,{publications,windows,now,pageRows:pages,memory:measuredChoice});
+assert.equal(m1.track_record.system_choices_measured,1);
+assert.equal(m1.track_record.system_choices_click_change,6);
+
 const routes={},seen=[];
-registerGrowthCockpit({get(path,...h){routes[path]=h}},{query:async(sql)=>{
+const writes=[];
+registerGrowthCockpit({get(path,...h){routes[path]=h},post(path,...h){routes['POST '+path]=h}},{query:async(sql,args)=>{
  seen.push(sql);
- if(/^\s*(INSERT|UPDATE|DELETE|ALTER|CREATE)\b/i.test(sql))throw Error('Cockpit must stay read-only');
+ if(/^\s*(INSERT|UPDATE|DELETE|ALTER|CREATE)\b/i.test(sql)){writes.push({sql,args});
+  if(/^\s*INSERT INTO tracker_growth_recommendations/.test(sql))return {rows:[{id:1,status:/'SKIPPED'/.test(sql)?'SKIPPED':'STARTED'}]};
+  return {rows:[]};
+ }
+ if(sql.includes('FROM tracker_growth_recommendations'))return {rows:[]};
  if(sql.includes('FROM tracker_clients'))return {rows:[{id:9,domain:'site.example',token:'owner',status:'active'}]};
  if(sql.includes('FROM tracker_pages p'))return {rows:pages};
  if(sql.includes('FROM tracker_gsc_queries q'))return {rows:queries};
@@ -104,7 +167,11 @@ registerGrowthCockpit({get(path,...h){routes[path]=h}},{query:async(sql)=>{
  const html=res.html;
  assert.match(html,/Start here — the system's choice/);
  assert.match(html,/<h2>“open best topic”<\/h2>/);
- assert.match(html,/class="go" href="\/track\/owner\/growth\/auto-research\?page_id=6"/);
+ assert.match(html,/class="go start-rec" href="\/track\/owner\/growth\/auto-research\?page_id=6" data-page="6" data-query="open best topic"/);
+ assert.match(html,/Not relevant for my business\? Skip it/);
+ assert.match(html,/What the system remembers/);
+ // Every inline script must compile (a syntax error would silently disable the buttons).
+ for(const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
  assert.match(html,/★ Start here<\/span><strong>open best topic/);
  assert.match(html,/Protected — do not change/);
  assert.match(html,/Old address \(redirect\)/);
@@ -114,6 +181,26 @@ registerGrowthCockpit({get(path,...h){routes[path]=h}},{query:async(sql)=>{
  assert.match(html,/Changes measured<strong>1 of 2<\/strong>/);
  assert.match(html,/Not chosen first: [^<]*1 protected Case Study row/);
  assert.ok(seen.some(s=>s.includes('p.redirects_to')));
+ assert.equal(writes.length,0,'viewing the Cockpit never writes');
+ const post=(token,body)=>new Promise((ok,bad)=>{const h=routes['POST /api/tracker-client/:token/growth/recommendation'];
+  const rq={params:{token},body},rs={statusCode:200,status(c){this.statusCode=c;return this},set(){return this},json(x){this.body=x;ok(this);return this}};
+  Promise.resolve(h[0](rq,rs,()=>h[1](rq,rs))).catch(bad)});
+ // The ownership check comes from the tracker token, not from the browser.
+ const readOnly=await post('shared-readonly',{action:'skip',page_id:6,query:'open best topic'});
+ assert.equal(readOnly.statusCode,403);
+ assert.equal(writes.length,0);
+ const ownerOnly=await post('owner',{action:'start',page_id:6,query:'open best topic'});
+ assert.equal(ownerOnly.statusCode,200);
+ assert.equal(ownerOnly.body.system_choice,true);
+ assert.equal(ownerOnly.body.research_url,'/track/owner/growth/auto-research?page_id=6');
+ const ins=writes.find(w=>/INSERT INTO tracker_growth_recommendations/.test(w.sql));
+ assert.deepEqual(ins.args.slice(0,5),[9,6,'open best topic','open best topic',true]);
+ const snap=JSON.parse(ins.args[5]);
+ assert.equal(snap.impressions,3000);assert.equal(snap.clicks,2);assert.equal(snap.basis,'VERIFIED_PAGE_QUERY_GSC');
+ const invented=await post('owner',{action:'start',page_id:6,query:'a query nobody searched'});
+ assert.equal(invented.statusCode,404);
+ const badAction=await post('owner',{action:'publish',page_id:6});
+ assert.equal(badAction.statusCode,400);
  const api=routes['/api/tracker-client/:token/growth'];
  const r2={json(x){this.body=x}};
  await api[0](req,r2,()=>api[1](req,r2));
