@@ -7,18 +7,19 @@ const HOME='https://roofer.example/',DEST='https://roofer.example/storm-damage-g
 const para='Walk around the house after the storm passes and note lifted shingles, bent flashing and granules in the gutters before calling anyone.';
 const ins='Keep every insurance claim photo, insurance adjuster note and insurance claim number together; the insurance claim moves faster when the insurance documentation is complete and dated.';
 const pg=(t,h,secs)=>'<html><head><title>'+t+'</title></head><body><h1>'+h+'</h1>'+secs.map(([a,b])=>'<h2>'+a+'</h2><p>'+b+'</p>').join('')+'</body></html>';
-async function run({destLocked=false,viaAlias=false}={}){
- const route={},fresh=new Date(Date.now()-3*86400000).toISOString(),tracked=viaAlias?ALIAS:DEST;
+async function run({destLocked=false,viaAlias=false,fragmentSource=false}={}){
+ const route={},fresh=new Date(Date.now()-3*86400000).toISOString(),tracked=viaAlias?ALIAS:DEST,sourceUrl=fragmentSource?DEST+'#statistics':HOME;
  const inventory=[{id:31,url:tracked,keyword:'storm damage roof guide'},...(viaAlias?[{id:32,url:DEST,keyword:'storm damage guide nj'}]:[])];
  const db={async query(sql,args){
   if(/^\s*(UPDATE|INSERT|DELETE)/i.test(sql))throw Error('no writes');
-  if(sql.includes('LEFT(html_content'))return {rows:[{id:7,tracker_client_id:4,url:HOME,keyword:'roofer',saved_html:''}]};
-  if(sql.includes('FROM tracker_gsc_queries'))return {rows:args[1]===7?[{page_id:7,tracker_client_id:4,source_page_url:HOME,evidence_scope:'page_verified',query:'storm damage roof guide',impressions:400,clicks:0,position:30,imported_at:fresh}]:[]};
+  if(sql.includes('LEFT(html_content'))return {rows:[{id:7,tracker_client_id:4,url:sourceUrl,keyword:fragmentSource?'storm damage roof guide':'roofer',saved_html:''}]};
+  if(sql.includes('FROM tracker_gsc_queries'))return {rows:args[1]===7?[{page_id:7,tracker_client_id:4,source_page_url:sourceUrl,evidence_scope:'page_verified',query:'storm damage roof guide',impressions:400,clicks:0,position:30,imported_at:fresh}]:[]};
   if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:inventory};
   return {rows:[]};
  }};
  const destHtml=pg('Storm Damage Roof Guide: 6 Steps','How to handle storm damage on a roof',[['Signs of storm damage',para+' '+para]]);
  const fetchLive=async url=>{
+  if(url===sourceUrl&&fragmentSource)return {html:destHtml,final_url:DEST,redirect_chain:[]};
   if(url===HOME)return {html:pg('Roofer | Home','Roofer',[['Welcome',para]]),final_url:HOME,redirect_chain:[]};
   if(url===ALIAS)return {html:destHtml,final_url:DEST,requested_url:ALIAS,redirect_chain:[{url:ALIAS,status:301,location:DEST}]};
   if(url===DEST)return {html:destHtml,final_url:DEST,redirect_chain:[]};
@@ -29,7 +30,7 @@ async function run({destLocked=false,viaAlias=false}={}){
  };
  const searchLive=async a=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:a.query,provider_attempts:['SERPER_GOOGLE_ORGANIC'],
   leads:['How to Fix Storm Damage on a Roof','Storm Damage Roof Guide','Signs of Storm Damage: A Checklist'].map((title,i)=>({url:'https://g'+i+'.example/s',title,source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}))});
- const mw=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:false,pages:[{id:7,url:HOME,keyword:'roofer',case_study_active:true},
+ const mw=(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:false,pages:[{id:7,url:sourceUrl,keyword:fragmentSource?'storm damage roof guide':'roofer',case_study_active:!fragmentSource},
   {id:viaAlias?32:31,url:DEST,keyword:'storm damage roof guide',case_study_active:destLocked}]};next()};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(){}},db,mw,{fetchLive,searchLive,renderOwn:async()=>({status:'RENDER_UNAVAILABLE',live:null})});
  const res={statusCode:200,set(){return this},status(x){this.statusCode=x;return this},json(x){this.body=x;return this}};
@@ -58,4 +59,12 @@ test('a 301 alias resolved to its final page carries the final page id; the alia
  assert.equal(b.growth_decision.primary_next_action.destination.page_id,32);
  const locked=await run({viaAlias:true,destLocked:true});
  assert.equal(locked.editorial_decision_gate.blocker_code,'DESTINATION_IS_PROTECTED_CASE_STUDY','the lock follows the final URL, not the alias');
+});
+
+test('R41: an unlocked Tracker #fragment row cannot bypass the Case Study lock of the same final document',async()=>{
+ const b=await run({fragmentSource:true,destLocked:true});
+ assert.equal(b.editorial_decision_gate.target_url,DEST);
+ assert.equal(b.destination_identity.destination_locked,true,'final page lock must not be bypassed by a source URL fragment');
+ assert.equal(b.editorial_decision_gate.blocker_code,'DESTINATION_IS_PROTECTED_CASE_STUDY');
+ assert.equal(b.editorial_decision_gate.copy_ready,false);
 });
