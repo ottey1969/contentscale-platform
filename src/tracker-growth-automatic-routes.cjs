@@ -14,7 +14,7 @@ const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.
 const {decideOwnerGrowthEdit}=require('./growth-owner-edit-decision.cjs');
 const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
-const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent}=require('./growth-reader-task-coverage.cjs');
+const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageTypeScope}=require('./growth-reader-task-coverage.cjs');
 const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
@@ -216,6 +216,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const related=(report.site_architecture?.candidates||[]).filter(x=>{
    try{return new URL(x.url).origin===siteOrigin&&x.url!==page.url}catch{return false}
   }).slice(0,4);
+  // Tracked pages that overlap the query (e.g. an existing tool page for a tool search, possibly a locked Case Study) are read
+  // too, so they can be weighed as the home of an intent instead of only being listed as an overlap risk.
+  for(const o of report.site_architecture?.intent_overlap_risks||[]){
+   if(related.length>=6||!o?.url||o.url===page.url||related.some(x=>x.url===o.url))continue;
+   try{if(new URL(o.url).origin===siteOrigin)related.push({url:o.url,tracked_keyword:o.keyword||null})}catch{}
+  }
   // The selection layer names the proper home of the chosen query; it is always read, even when keyword overlap ranks it lower.
   const designated=report.growth_decision?.primary_next_action?.destination?.url||null;
   if(designated&&designated!==page.url&&!related.some(x=>x.url===designated)){
@@ -269,7 +275,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   let selectedSource=proposed===page.url?own.live:(proposed?(destinationSources.get(proposed)||
    (normUrl(proposed)===normUrl(page.url)?own.live:null)):null);
   // Intent comes from live organic results and the page's own title/H1, never from word overlap alone.
-  const serpIntent=inferSerpIntent({query:targetQuery,leads:discovery.leads,pages:comparisons.filter(x=>x.live?.html).map(x=>({url:x.url,html:x.live.html}))});
+  let serpIntent=inferSerpIntent({query:targetQuery,leads:discovery.leads,pages:comparisons.filter(x=>x.live?.html).map(x=>({url:x.url,html:x.live.html}))});
   const intentOf=(u,src)=>{const ex=excerptOf(src?.html);
    return classifyDestinationIntent({query:targetQuery,title:ex.title,h1:ex.h1,url:u,serpIntent:serpIntent.intent})};
   let destinationIntent=selectedSource?intentOf(proposed,selectedSource):null;
@@ -287,6 +293,33 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    proposed=retarget.url;selectedSource=retarget.source_page?own.live:destinationSources.get(retarget.url);
    destinationIntent={...retarget.intent,retargeted_from:from};
    compatibleAlternatives=compatibleAlternatives.filter(x=>x!==retarget);
+  }
+  // Mixed results with the page's own type clearly present: compare the page with that type only, and name which same-site page
+  // (if any) serves the other, dominant intent. A protected page is named, never edited.
+  let typeScope=null;
+  if(selectedSource&&destinationIntent&&destinationIntent.verdict!=='COMPATIBLE'){
+   typeScope=pageTypeScope({serpIntent,destinationClass:destinationIntent.class});
+   if(typeScope){
+    const overallIntent=serpIntent.intent;
+    typeScope.other_intent_served_by=overallIntent==='MIXED_OR_INSUFFICIENT'?[]:alternativePool
+     .filter(x=>x.intent.verdict==='COMPATIBLE'&&!(x.intent.missing_query_roots||[]).length)
+     .map(x=>({url:x.url,page_type:x.intent.class,...(x.protected?{protected_case_study:true}:{})}));
+    serpIntent={...serpIntent,status:'SERP_INTENT_OBSERVED',intent:typeScope.page_type,agreement_basis:'MIXED_SERP_PAGE_TYPE_PRESENT',
+     agreeing_leads:typeScope.results_of_this_type,compatible_leads:typeScope.results_of_this_type,reason:null,page_type_scope:typeScope};
+    destinationIntent=intentOf(proposed,selectedSource);
+    // Competitors: only results of the page's own type; read further candidates of that type when fewer than two were read.
+    const inScope=x=>typeScope.urls.includes(x.url);
+    let scoped=comparisons.filter(inScope);
+    if(scoped.length<2){
+     const tried=new Set(attempted.map(x=>x.url));
+     const extra=candidatePool.filter(c=>inScope(c)&&!tried.has(c.url)).slice(0,3);
+     if(extra.length){const results=await Promise.all(extra.map(fetchCompetitor));results.forEach((x,i)=>logFetch(x,extra[i]));attempted=attempted.concat(results)}
+     scoped=attempted.filter(x=>inScope(x)&&x.live&&x.quality?.eligible).slice(0,6);
+    }
+    comparisons=scoped;
+    typeScope.competitors_compared=comparisons.map(x=>x.url);
+    fetchSummary=fetchSummaryNow()+'; compared only with results of the page\'s own type ('+typeScope.page_type+')';
+   }
   }
   report.site_architecture={...(report.site_architecture||{}),
    compatible_existing_pages:compatibleAlternatives.map(x=>({url:x.url,intent_class:x.intent.class,...(x.protected?{protected_case_study:true}:{})})),

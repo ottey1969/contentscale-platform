@@ -21,7 +21,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  const meaning=report?.serp_meaning;
  if(meaning?.status==='DIFFERENT_MEANING'){
   const w=meaning.absent_on_page.map(x=>'"'+x.word+'" ('+x.in_titles+' of '+meaning.results_considered+' titles)').join(', ');
-  missing.push({code:'QUERY_MEANS_SOMETHING_ELSE',detail:'Google\'s results for "'+query+'" are about '+w+', which the page never mentions. The search term means something else there, so those results are not comparable with this page.',
+  missing.push({code:'QUERY_MEANS_SOMETHING_ELSE',detail:'Google\'s results for "'+query+'" are about '+w+', which is not the subject of this page (not in its title or headings, and at most a passing mention). The search term means something else there, so those results are not comparable with this page.',
    observed:{absent_on_page:meaning.absent_on_page,results_considered:meaning.results_considered}});
  }
  // A truncated destination still PROVES what it teaches in the captured part; it only cannot prove absence. So truncation
@@ -52,7 +52,8 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   next_action:'Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.'};
  if((coverage.unverifiable_site_pages||[]).length)uncertainties.push('Same-site pages not fully readable ('+coverage.unverifiable_site_pages.length+'): a task could already be taught there beyond the captured part, so verify before publishing.');
  const supported=(coverage.tasks||[]).filter(t=>t.supported_by_competitors);
- facts.push({code:'SERP_INTENT',value:serpIntent.intent,agreeing_leads:serpIntent.agreeing_leads,of:serpIntent.organic_leads_considered});
+ facts.push({code:'SERP_INTENT',value:serpIntent.intent,agreeing_leads:serpIntent.agreeing_leads,of:serpIntent.organic_leads_considered,
+  ...(serpIntent.page_type_scope?{basis:'MIXED_SERP_PAGE_TYPE_PRESENT',overall_intent:serpIntent.page_type_scope.overall_intent,class_counts:serpIntent.page_type_scope.class_counts}:{})});
  facts.push({code:'DESTINATION_INTENT',value:destinationIntent?.class||null,verdict:destinationIntent?.verdict||'UNVERIFIED'});
  const evidenceFor=t=>[...t.competitor_support.slice(0,2).map(x=>({type:'COMPETITOR',source_url:x.url,heading:x.heading,excerpt:x.excerpt.slice(0,300)})),
   ...t.destination.passages.slice(0,1).map(x=>({type:'OWN_PAGE',source_url:target,heading:x.heading,excerpt:x.text}))];
@@ -176,8 +177,22 @@ function decideFromCoverage(args){
   next_action:planned.decision==='NEW_DISTINCT_PAGE'?'Owner reviews the new-page draft; publication remains disabled.':'Owner reviews the source-backed edit at the stated placement; publication remains disabled.'};
 }
 // Every decision carries the same evidence ladder, so downstream outputs never re-derive verified_gap / copy_ready on their own.
+const INTENT_NAME={PRODUCT_TOOL:'tool pages',COMMERCIAL_COMPARISON:'comparisons',INFORMATIONAL_GUIDE:'guides',LOCAL_SERVICE:'local service pages'};
+// Mixed results: what was compared, and where the other intent lives on the site. A protected page is named, never changed.
+function intentScopeNote(scope){
+ if(!scope)return null;
+ const own=INTENT_NAME[scope.page_type]||scope.page_type,other=INTENT_NAME[scope.overall_intent]||null;
+ const served=(scope.other_intent_served_by||[])[0];
+ const note=served?'Google also shows '+other+' for this search; on your site '+served.url+' serves that'+(served.protected_case_study?' (protected Case Study: left unchanged).':'.')
+  :scope.overall_intent==='PRODUCT_TOOL'?'Google also shows tool pages for this search and your site has no tool page for it. Consider one only if you offer such a tool, written from real product facts.'
+  :'Google shows several page types for this search; this page was compared only with the '+own+'.';
+ return {compared_with:own,results_of_this_type:scope.results_of_this_type,of:scope.of,overall_intent:scope.overall_intent,
+  other_intent_served_by:scope.other_intent_served_by||[],note};
+}
 function decideGrowthEditorialAction(args={}){
- const decision=decideGrowthEditorialActionCore(args);
+ const core=decideGrowthEditorialActionCore(args);
+ const scope=intentScopeNote(args.serpIntent?.page_type_scope);
+ const decision=scope?{...core,intent_scope:scope}:core;
  return {...decision,evidence_status:deriveEvidenceStatus({decision,serpIntent:args.serpIntent||null,coverage:args.coverage||null})};
 }
 function decideGrowthEditorialActionCore({report={},destination={},coverage=null,serpIntent=null,destinationIntent=null,attempts=[]}={}){

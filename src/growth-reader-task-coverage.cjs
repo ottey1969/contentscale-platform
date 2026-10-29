@@ -47,7 +47,18 @@ const DISCUSSION=/(^|\.)(reddit\.com|quora\.com|stackexchange\.com|news\.ycombin
 // Words that name a software product (generic product nouns, no category or brand list).
 const TOOL_PAGE=/\b(?:tool|software|platform|app|checker|tracker|generator|analy[sz]er|calculator|plugin|extension|dashboard|free trial|sign up)\b/;
 const NON_COMMERCIAL_BEST=/\bbest\s+(?:practices?|ways?|time|approach|method)\b/gi;
-function classifyTitle(title,snippet=''){
+// A title phrased as a question ("WTF is AI citation tracking?") is an explainer; a page under a product path
+// (/features/, /solutions/, /tools/, /pricing) is the product's own page. Both only decide titles nothing else classifies.
+const QUESTION_TITLE=/^\s*(?:what|what's|whats|wtf|who|why|how|when|which|where|is|are|can|does|do|should)\b[^?]{0,120}\?/i;
+const PRODUCT_PATH=/\/(?:features?|solutions?|products?|tools?|platform|pricing|app)(?:\/|$)/i;
+function classifyTitle(title,snippet='',url=''){
+ const c=classifyTitleText(title,snippet);
+ if(c!=='UNCLASSIFIED')return c;
+ if(QUESTION_TITLE.test(String(title||'')))return 'INFORMATIONAL_GUIDE';
+ try{if(url&&PRODUCT_PATH.test(new URL(url).pathname))return 'PRODUCT_TOOL'}catch{}
+ return 'UNCLASSIFIED';
+}
+function classifyTitleText(title,snippet=''){
  const raw=String(title||'')+' '+String(snippet||''),t=raw.toLowerCase();
  // Local service: an explicit local marker (near me, 'City, ST', ZIP), a company/provider listing, or a US state named in
  // the TITLE (a snippet names places in passing). Never a list of trades.
@@ -74,7 +85,7 @@ function inferSerpIntent({query='',leads=[],pages=[]}={}){
  const byUrl=new Map((Array.isArray(pages)?pages:[]).filter(p=>p&&p.url&&p.html).map(p=>[p.url,p.html]));
  const votes={};
  const rows=usable.map(l=>{
-  let c=classifyTitle(l.title,l.snippet),basis='TITLE_AND_SNIPPET';
+  let c=classifyTitle(l.title,l.snippet,l.url),basis='TITLE_AND_SNIPPET';
   if(c==='UNCLASSIFIED'&&byUrl.has(l.url)){
    const h1=(byUrl.get(l.url).match(/<h1\b[^>]*>([\s\S]*?)<\/h1\s*>/i)||[])[1];
    const fromPage=h1?classifyTitle(plain(h1)):'UNCLASSIFIED';
@@ -211,4 +222,18 @@ function analyzeReaderTaskCoverage({query='',serpIntent='INFORMATIONAL_GUIDE',de
   destination_section_headings:destSections.map(s=>s.heading)};
 }
 
-module.exports={analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,classifyTitle,blocks,groupSections,queryRoots,STEMS};
+// Mixed results: when Google shows several page types and the selected page's own type is clearly among them (2+ results and
+// 25%+ of the usable ones), the page is compared with the results of its own type only. The dominant intent is kept as a fact,
+// never as a reason to compare a guide with tool pages. The 60% rule for a single intent is unchanged.
+const PAGE_TYPE_MIN_RESULTS=2,PAGE_TYPE_MIN_SHARE=0.25;
+function pageTypeScope({serpIntent,destinationClass}={}){
+ if(!serpIntent||!destinationClass||destinationClass==='UNCLASSIFIED')return null;
+ const family=[destinationClass,...(COMPATIBLE_FAMILY[destinationClass]||[])];
+ const same=(serpIntent.leads||[]).filter(l=>family.includes(l.class));
+ const of=Number(serpIntent.organic_leads_considered)||0;
+ if(same.length<PAGE_TYPE_MIN_RESULTS||!of||same.length/of<PAGE_TYPE_MIN_SHARE)return null;
+ return {page_type:destinationClass,results_of_this_type:same.length,of,urls:same.map(l=>l.url),titles:same.map(l=>l.title),
+  overall_intent:serpIntent.intent,overall_status:serpIntent.status,class_counts:serpIntent.class_counts||{},
+  rule:'Mixed results: the page is compared only with the '+same.length+' of '+of+' results of its own type.'};
+}
+module.exports={analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,classifyTitle,blocks,groupSections,queryRoots,STEMS,pageTypeScope,COMPATIBLE_FAMILY};

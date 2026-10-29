@@ -68,6 +68,7 @@
    (outcome.closure_report.tasks_checked||[]).forEach(function(t){node('li',String(t.label)+' → '+String(t.destination_status).replace(/_/g,' ').toLowerCase(),closed)});
    if(outcome.closure_report.note)node('small',String(outcome.closure_report.note),primary);
   }
+  if(outcome.intent_scope)node('p','What Google shows: compared only with '+String(outcome.intent_scope.compared_with)+' ('+String(outcome.intent_scope.results_of_this_type)+' of '+String(outcome.intent_scope.of)+' results). '+String(outcome.intent_scope.note),primary);
   if(outcome.decision==='NEW_DISTINCT_PAGE'){
    node('p','Distinct search intent verified: '+String(d.serp_intent?.intent||'')+' ('+String(d.serp_intent?.compatible_leads||d.serp_intent?.agreeing_leads||0)+' of '+String(d.serp_intent?.organic_leads_considered||0)+' organic results). No compatible same-site page was found.',primary);
    if(outcome.new_page_plan&&outcome.new_page_plan.page_type==='PRODUCT_OR_TOOL_PAGE')
