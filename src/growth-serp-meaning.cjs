@@ -8,6 +8,9 @@ const {sameWord}=require('./growth-word-match.cjs');
 const {decodeEntities}=require('./growth-text.cjs');
 
 const MIN_RESULTS=3,MIN_SHARE=0.6;
+// A word belongs to the page's SUBJECT when it is in the title or a heading (H1-H3), or is frequent in the body
+// (5+ times and 0.5%+ of the words). One passing mention in a long page does not make it the page's subject.
+const BODY_MIN_COUNT=5,BODY_MIN_SHARE=0.005;
 const plain=html=>decodeEntities(String(html||'').replace(/<(script|style|noscript|svg)\b[\s\S]*?<\/\1\s*>/gi,' ').replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ');
 const words=t=>[...new Set((String(t||'').toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!IGNORED.has(w)&&!IGNORED.has(STEM(w))))];
 const hostLabel=u=>{try{return new URL(u).hostname.replace(/^www\./,'').split('.')[0].toLowerCase()}catch{return ''}};
@@ -29,12 +32,17 @@ function checkQueryMeaning({query='',leads=[],destinationHtml=''}={}){
   }
  }
  const dominant=clusters.filter(c=>c.titles.length>=MIN_RESULTS&&c.titles.length/usable.length>=MIN_SHARE);
- const pageWords=words(plain(destinationHtml));
- const absent=dominant.filter(c=>!pageWords.some(w=>sameWord(w,c.word)));
+ const html=String(destinationHtml||'');
+ const headText=[...html.matchAll(/<(title|h[1-3])\b[^>]*>([\s\S]*?)<\/\1\s*>/gi)].map(m=>plain(m[2])).join(' ');
+ const headWords=words(headText);
+ const bodyTokens=(plain(html).toLowerCase().match(/[a-z]{4,}/g)||[]);
+ const bodyCount=w=>bodyTokens.filter(t=>sameWord(t,w)).length;
+ const onSubject=w=>headWords.some(h=>sameWord(h,w))||(()=>{const n=bodyCount(w);return n>=BODY_MIN_COUNT&&n/Math.max(1,bodyTokens.length)>=BODY_MIN_SHARE})();
+ const absent=dominant.filter(c=>!onSubject(c.word));
  return {status:absent.length?'DIFFERENT_MEANING':'SAME_MEANING',query:String(query||''),results_considered:usable.length,
   dominant_words:dominant.map(c=>({word:c.word,in_titles:c.titles.length})),
-  absent_on_page:absent.map(c=>({word:c.word,in_titles:c.titles.length,example_titles:c.titles.slice(0,3)})),
-  basis:'Words in at least '+Math.round(MIN_SHARE*100)+'% of result titles (min. '+MIN_RESULTS+') that the page text never uses.'};
+  absent_on_page:absent.map(c=>({word:c.word,in_titles:c.titles.length,example_titles:c.titles.slice(0,3),mentions_in_page_body:bodyCount(c.word)})),
+  basis:'Words in at least '+Math.round(MIN_SHARE*100)+'% of result titles (min. '+MIN_RESULTS+') that are not part of the page\'s subject: not in its title or headings, and not frequent in its text.'};
 }
 
 module.exports={checkQueryMeaning};

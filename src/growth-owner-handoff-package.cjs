@@ -94,6 +94,7 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
    L.push('| '+t.label+(verified.has(t.code)?' — **draft verified**':'')+' | '+t.independent_sources+' | '+t.destination.status.replace(/_/g,' ').toLowerCase()+(t.covered_elsewhere_on_site?.length?' (taught on '+t.covered_elsewhere_on_site[0].url+')':'')+' |');
   L.push('','Method: '+cov.method+'. A concept match is an observation, not proof of quality or ranking.','');
  }
+ if(decision.intent_scope)L.push('## What Google shows','','Compared with: '+decision.intent_scope.compared_with+' ('+decision.intent_scope.results_of_this_type+' of '+decision.intent_scope.of+' results).','',decision.intent_scope.note,'');
  if(d==='IMPROVE_EXISTING'){
   const plan=decision.improvement_plan||{};
   L.push('## What changes where','','**Existing URL:** '+(decision.target_url||plan.target_url),'',
