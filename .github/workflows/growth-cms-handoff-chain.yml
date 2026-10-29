@@ -1,0 +1,55 @@
+name: Growth proposal to CMS handoff (PostgreSQL chain)
+on:
+  pull_request:
+    paths:
+      - 'src/growth-*.cjs'
+      - 'src/tracker-growth-*.cjs'
+      - 'public/growth-cms-neutral-handoff.*'
+      - 'public/growth-automatic-report-ui.js'
+      - 'tests/growth-proposal-cms-handoff.test.cjs'
+      - 'tests/growth-cms-chain-postgres.test.cjs'
+      - 'tests/fixtures/growth-report-50/**'
+      - 'package.json'
+      - '.github/workflows/growth-cms-handoff-chain.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/growth-*.cjs'
+      - 'src/tracker-growth-*.cjs'
+      - 'public/growth-cms-neutral-handoff.*'
+jobs:
+  cms-handoff-chain:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: growth_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (no browser download)
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm ci --ignore-scripts
+      - name: UI scripts parse
+        run: node --check public/growth-cms-neutral-handoff.js && node --check public/growth-automatic-report-ui.js
+      - name: Proposal store and CMS package (report 50)
+        run: node --test tests/growth-proposal-cms-handoff.test.cjs
+      - name: Research -> proposal -> CMS package -> publication without GSC -> Cockpit -> measurement (real PostgreSQL)
+        env:
+          GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e
+        run: node --test tests/growth-cms-chain-postgres.test.cjs
+      - name: Existing publication, export and Cockpit tests
+        run: |
+          node tests/tracker-growth-execution.test.cjs
+          node tests/tracker-growth-measurement.test.cjs
+          node --test tests/tracker-growth-cockpit.test.cjs tests/tracker-growth-best-candidate.test.cjs tests/tracker-growth-automatic-research.test.cjs tests/growth-local-service-pipeline.test.cjs

@@ -1,0 +1,181 @@
+{
+ "_note": "Subset of production Growth report 50 (contentscale.site page 2294, owner research of 2026-10-29T10:41:04.435Z): editorial_decision_gate fields used by the proposal store and CMS handoff.",
+ "page_id": 2294,
+ "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+ "editorial_decision_gate": {
+  "decision": "IMPROVE_EXISTING",
+  "copy_ready": true,
+  "target_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+  "focus_query": "ai citation tracker",
+  "placement": {
+   "mode": "EXTEND_SECTION",
+   "section_heading": "1. It Eliminates the “Manual Entry” Friction",
+   "reason": "This existing section already mentions the task’s core concept (1×); deepen it instead of adding a duplicate."
+  },
+  "draft_heading": "How to Do a Manual Search for Important Keywords",
+  "proposed_text": "To execute a manual search for your primary keywords, begin by assembling a list of core terms that represent your central subject matter. Open a clean browser session without active user history to reduce personal bias during queries. Enter each prompt into the search interface individually, observing how the engine processes the request and returns synthesized answers alongside referenced sources.\n\nNext, inspect the resulting output to review which specific web addresses appear in footnote citations or sidebar reference links. Note whether your own published pages are cited directly, or if alternative sites serve as the basis for the response. Document the exact phrasing surrounding any citations to determine how information from authority sources is selected during retrieval.\n\nFinally, compare cited competitor pages against your own published text to spot structural gaps. Check whether rival sources include clear author background details, direct factual statements, or distinct entity markup that makes content easier for engines to process. Use these observed variations to adjust your editorial structure and improve topical clarity across target pages.",
+  "additional_sections": [],
+  "claim_review": {
+   "counts": {
+    "sourced_from_page": 0,
+    "general_advice": 4,
+    "general_statement_unverified": 5
+   },
+   "needs_fact_check": [
+    "To execute a manual search for your primary keywords, begin by assembling a list of core terms that represent your central subject matter.",
+    "Open a clean browser session without active user history to reduce personal bias during queries.",
+    "Enter each prompt into the search interface individually, observing how the engine processes the request and returns synthesized answers alongside referenced sources.",
+    "Note whether your own published pages are cited directly, or if alternative sites serve as the basis for the response.",
+    "Finally, compare cited competitor pages against your own published text to spot structural gaps."
+   ],
+   "needs_owner_confirmation": [],
+   "needs_safety_review": [
+    "Finally, compare cited competitor pages against your own published text to spot structural gaps."
+   ],
+   "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+   "requirements": [
+    "Fact-check every statement against your own knowledge and sources before publishing.",
+    "Safety-related guidance (hazards, urgency, what can wait) must be reviewed by a qualified professional before publication. If in doubt, the text should treat a situation as urgent and point readers to professional help, and to emergency services where life or property is at risk.",
+    "Owner approval is required; nothing is published automatically."
+   ]
+  },
+  "evidence": [
+   {
+    "source_url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+    "heading": "Manually search your most important keywords.",
+    "excerpt": "One of the simplest ways to start is to manually search for your priority keywords on AI-driven platforms like ChatGPT, Perplexity AI, and Google AI Overviews. Run informational queries, comparison-based searches, and “best of” prompts that mirror real buyer behavior. Check whether AI overviews: Tip",
+    "type": "COMPETITOR"
+   },
+   {
+    "source_url": "https://www.useomnia.com/blog/ai-citation-tracking",
+    "heading": "Moving from manual audit to ongoing AI citation monitoring",
+    "excerpt": "The manual workflow above is the right starting point. It builds intuition, costs nothing, and gives you a real baseline faster than any onboarding process. But it has a ceiling. Once you are tracking more than a handful of prompts, trying to detect trends over time, or reporting to a board, the man",
+    "type": "COMPETITOR"
+   },
+   {
+    "source_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+    "heading": "⚙️ Essential Features Beyond Basic Monitoring",
+    "excerpt": "Automated Domain Scanning: Manual URL entry doesn’t scale. Bulk scanning with automatic re-crawling every 3 days ensures continuous monitoring without operational overhead.",
+    "type": "OWN_PAGE"
+   }
+  ],
+  "evidence_status": {
+   "decision": "IMPROVE_EXISTING",
+   "search_intent_confirmed": true,
+   "competitor_content_observed": true,
+   "destination_fully_examined": true,
+   "missing_task_established": true,
+   "draft_checked": true,
+   "factual_claims_confirmed": false,
+   "publication_approved": false,
+   "copy_ready": true,
+   "verified_gap": true,
+   "label": "TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW"
+  },
+  "intent_scope": {
+   "compared_with": "guides",
+   "results_of_this_type": 3,
+   "of": 8,
+   "overall_intent": "PRODUCT_TOOL",
+   "other_intent_served_by": [
+    {
+     "url": "https://contentscale.site/free-ai-citations-tracker/",
+     "page_type": "PRODUCT_TOOL",
+     "protected_case_study": true
+    }
+   ],
+   "note": "Google also shows tool pages for this search; on your site https://contentscale.site/free-ai-citations-tracker/ serves that (protected Case Study: left unchanged)."
+  },
+  "improvement_plan": {
+   "target_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+   "preserve": [
+    "existing title",
+    "existing H1",
+    "existing useful paragraphs",
+    "existing internal links"
+   ],
+   "tasks": [
+    {
+     "code": "task_manual",
+     "label": "Competitors teach “Manually search your most important keywords.”",
+     "match": {
+      "key": "manual",
+      "co_terms": [],
+      "concepts": [
+       "manual",
+       "keywor"
+      ],
+      "core_words": [
+       "manual",
+       "keywords"
+      ]
+     },
+     "destination_status": "PARTIAL",
+     "placement": {
+      "mode": "EXTEND_SECTION",
+      "section_heading": "1. It Eliminates the “Manual Entry” Friction",
+      "reason": "This existing section already mentions the task’s core concept (1×); deepen it instead of adding a duplicate."
+     },
+     "competitor_evidence": [
+      {
+       "url": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+       "host": "blog.hubspot.com",
+       "heading": "Manually search your most important keywords.",
+       "excerpt": "One of the simplest ways to start is to manually search for your priority keywords on AI-driven platforms like ChatGPT, Perplexity AI, and Google AI Overviews. Run informational queries, comparison-based searches, and “best of” prompts that mirror real buyer behavior. Check whether AI overviews: Tip: If competitors appear where you think you should be, then you’ve identified a potential opportunity. You can then look",
+       "concepts": [
+        "manual"
+       ],
+       "partial": false
+      },
+      {
+       "url": "https://www.useomnia.com/blog/ai-citation-tracking",
+       "host": "useomnia.com",
+       "heading": "Moving from manual audit to ongoing AI citation monitoring",
+       "excerpt": "The manual workflow above is the right starting point. It builds intuition, costs nothing, and gives you a real baseline faster than any onboarding process. But it has a ceiling. Once you are tracking more than a handful of prompts, trying to detect trends over time, or reporting to a board, the manual approach starts to break down. Not because the methodology is wrong, but because the volume and consistency required",
+       "concepts": [
+        "manual"
+       ],
+       "partial": false
+      }
+     ],
+     "destination_evidence": [
+      {
+       "heading": "⚙️ Essential Features Beyond Basic Monitoring",
+       "text": "Automated Domain Scanning: Manual URL entry doesn’t scale. Bulk scanning with automatic re-crawling every 3 days ensures continuous monitoring without operational overhead.",
+       "concepts": [
+        "manual"
+       ]
+      },
+      {
+       "heading": "❓ People Also Ask — AI Citation Trackers",
+       "text": "To track citations in Google AI Overviews, you need a specialized tool that monitors RAG-based retrieval patterns rather than traditional SERP rankings. The Free AI Citations Tracker scans your domain every 3 days and identifies exactly which pages are being cited by Google AIO, Perplexity, and Copi",
+       "concepts": [
+        "manual"
+       ]
+      }
+     ]
+    }
+   ],
+   "internal_links_to_review": [],
+   "quality_conditions": [
+    "No numeric or factual claim that the destination page does not already state or the owner cannot verify.",
+    "Do not reproduce competitor wording.",
+    "Do not repeat anything the destination already teaches.",
+    "Keep title and H1.",
+    "Owner approval before any publication."
+   ],
+   "unverified_task_codes": []
+  },
+  "draft_validation": [
+   {
+    "task": "task_manual",
+    "heading": "How to Do a Manual Search for Important Keywords",
+    "concept_hits": 3,
+    "duplicate_overlap_pct": 0,
+    "competitor_wording_reused": false,
+    "claims_checked": true,
+    "safe_rewrites": 0
+   }
+  ]
+ }
+}

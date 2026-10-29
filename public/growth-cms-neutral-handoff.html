@@ -45,6 +45,8 @@ button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;flex-wrap:wr
 </fieldset>
 <fieldset><legend>3. Approve useful content for the original page</legend>
 <div class="actions"><button type="button" id="generateEditorialDraft" disabled>Optional AI-assisted draft from the original page</button><small id="aiDraftStatus" role="status">Only if an AI provider is configured; the normal no-GSC, no-provider handoff remains available.</small></div>
+<div id="growthProposal" class="note" hidden aria-live="polite"></div>
+<div id="mainPlacement"></div>
 <label for="heading">New approved H2 heading</label><input id="heading" required>
 <label for="copy">Fact-checked copy (at least 30 characters)</label><textarea id="copy" rows="7" required placeholder="Use real customer-approved facts and documented evidence. No invented reviews, rankings or projects."></textarea>
 <div id="growthAdditionalSections" aria-label="Additional optional drafted sections"></div>
@@ -53,5 +55,14 @@ button:disabled{opacity:.5;cursor:not-allowed}.actions{display:flex;flex-wrap:wr
 </fieldset>
 <div class="actions"><button id="download" type="submit" disabled>4. Download reviewed CMS handoff ZIP</button><span id="downloadStatus" role="status"></span></div>
 </form>
+<section id="publicationWrap" class="note" hidden aria-label="Record actual publication">
+<h2>5. After the change is live: record the publication</h2>
+<p>Only fill this in once the editor has actually published the change on the original page. This starts the 28-day measurement; it does not change the website.</p>
+<form id="publicationForm">
+<label for="publishedAt">Publication date and time</label><input id="publishedAt" type="datetime-local" required>
+<label for="publicationNotes">What was actually published?</label><textarea id="publicationNotes" rows="3" maxlength="3000" required></textarea>
+<div class="actions"><button type="submit" id="recordPublication">Save publication checkpoint</button><span id="publicationStatus" role="status"></span></div>
+</form>
+</section>
 <p class="small">Includes editable Markdown, indexable HTML fragments, SEO metadata, a preservation checklist and an honest measurement plan. For Wix, use native heading/text elements, not an iframe.</p>
 </main></body></html>

@@ -18,9 +18,13 @@ function renderChangeMarkdown(html){
  .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&amp;/gi,'&').replace(/&nbsp;/gi,' ')
  .replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/\n{3,}/g,'\n\n').trim();
 }
+const PLACEMENT_MODES={EXTEND_SECTION:'Extend the existing section',ADD_AFTER_SECTION:'Add as a new section directly after'};
+const placementText=p=>p?PLACEMENT_MODES[p.mode]+' “'+p.section_heading+'”':'Choose a suitable position on the page';
+// growthProposal: {id, sections:[{h2,text}]} — the checked Growth proposal this handoff came from (for the audit trail).
+// reviewNotes: {needs_fact_check, needs_owner_confirmation, needs_safety_review} — sentences the owner must check before publishing.
 function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApproved=false,
  cms='generic',pageTitle,metaDescription,focusQuery='',evidenceScope='needs_access',
- caseStudyLocked=false,sourceExpectedSha256,language='en'}={}){
+ caseStudyLocked=false,sourceExpectedSha256,language='en',growthProposal=null,reviewNotes=null}={}){
  const issues=[],warnings=[];
  let url;
  try{url=new URL(canonicalUrl)}catch{}
@@ -44,6 +48,10 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    issues.push('SECTION_APPROVAL_AND_EVIDENCE_REQUIRED');continue;
   }
   const h=part.html;
+  if(part.placement!=null){
+   const p=part.placement;
+   if(!p||!PLACEMENT_MODES[p.mode]||typeof p.section_heading!=='string'||!clean(p.section_heading)||p.section_heading.length>200)issues.push('PLACEMENT_INVALID');
+  }
   if(typeof h!=='string'||h.length>90000||
    /<(?:\/?)(?:script|style|iframe|form|object|embed|html|head|body|meta|link|svg|math|template|textarea|button|input|select|option|video|audio|source|picture|frame|frameset|base|title|noscript|canvas|applet|portal|plaintext|xmp|dialog)\b/i.test(h)||
    /\s(?:on[\w:-]+|style|srcdoc|formaction|autofocus|contenteditable)\s*=|(?:javascript|vbscript)\s*:|data\s*:/i.test(h))issues.push('UNSAFE_OR_NONINDEXABLE_HTML');
@@ -78,12 +86,20 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  if(captions.length===0)warnings.push('IMAGES_OPTIONAL_REAL_IMAGE_EVIDENCE_IF_AVAILABLE');
  if(issues.length)return {status:'BLOCKED',issues:[...new Set(issues)],warnings:[...new Set(warnings)],files:[],publication_allowed:false};
  const fragments=approved.map(x=>x.html.trim()).join('\n\n');
- const allMarkdown=approved.map((x,i)=>'### Approved change '+(i+1)+'\nEvidence: '+x.evidence_ref+'\n\n'+renderChangeMarkdown(x.html)).join('\n\n');
+ const allMarkdown=approved.map((x,i)=>'### Approved change '+(i+1)+'\nEvidence: '+x.evidence_ref+'\nPlacement: '+placementText(x.placement)+'\n\n'+renderChangeMarkdown(x.html)).join('\n\n');
+ const placementSteps=approved.map((x,i)=>'   - Change '+(i+1)+': '+placementText(x.placement)+'.').join('\n');
+ // Audit trail: was the checked Growth text published as proposed, or edited by the editor?
+ const norm=t=>asText(t).toLowerCase().replace(/\s+/g,' ').trim();
+ const proposal=growthProposal&&Array.isArray(growthProposal.sections)?{id:growthProposal.id,
+  editor_changed_text:approved.length!==growthProposal.sections.length||approved.some((x,i)=>{const s=growthProposal.sections[i]||{};return norm(x.html)!==norm('<h2>'+s.h2+'</h2>'+String(s.text||''))})}:null;
+ const listOf=k=>(reviewNotes&&Array.isArray(reviewNotes[k])?reviewNotes[k]:[]).map(x=>clean(x).slice(0,400)).filter(Boolean).slice(0,20);
+ const review={fact_check:listOf('needs_fact_check'),owner_confirmation:listOf('needs_owner_confirmation'),safety_review:listOf('needs_safety_review')};
+ const hasReview=review.fact_check.length+review.owner_confirmation.length+review.safety_review.length>0;
  const delivery='CMS-independent handoff for existing page '+canonicalUrl+'\n'+
  'No autopublishing. Implement in your normal website editor using native, indexable text components.\n'+
  'Platform: '+cms+'. Keep original URL, navigation, design, existing text and images unless explicitly reviewed.\n'+
  '1. Open the ORIGINAL page in the CMS, not a new duplicate URL.\n'+
- '2. Add the approved sections in a suitable position. Preserve the existing H1, template, images, mobile styling, and content.\n'+
+ '2. Place each approved section exactly as stated, and preserve the existing H1, template, images, mobile styling, and content:\n'+placementSteps+'\n'+
  '3. Set page SEO title and meta description only if the editor supports them; do not paste meta tags into the page body.\n'+
  '4. Insert and test contextual internal/external links and click-to-call controls.\n'+
  '5. Use native Wix text elements for SEO (when CMS is Wix); do not treat an HTML iframe/embed as the page content.\n'+
@@ -100,6 +116,8 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   meta:{title:pageTitle.trim(),description:metaDescription.trim()},
   language:clean(language)||'en',change_count:approved.length,
   change_evidence:approved.map(x=>x.evidence_ref),
+  change_placements:approved.map(x=>x.placement||null),
+  growth_proposal:proposal,review_items:{fact_check:review.fact_check.length,owner_confirmation:review.owner_confirmation.length,safety_review:review.safety_review.length},
   links,images:captions,warnings:[...new Set(warnings)]
  };
  const files=[
@@ -113,7 +131,11 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    'After publication: compare equal, non-overlapping page periods at 14/30/60 days; attribute causality cautiously.\n'+
    'Without Search Console access, label metrics NEEDS ACCESS. Do not insert zeros.\n'+
    'GBP phone-button taps are not answered calls; call logs, quotes, won jobs require independent information.\n'+
-   'Review any real project photos/reviews with the owner; never invent customer experiences.\n'}
+   'Review any real project photos/reviews with the owner; never invent customer experiences.\n'},
+  ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
+   (review.fact_check.length?'\n## Fact-check\n\n'+review.fact_check.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
+   (review.owner_confirmation.length?'\n## Confirm with the business\n\n'+review.owner_confirmation.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
+   (review.safety_review.length?'\n## Safety review by a qualified professional\n\n'+review.safety_review.map(x=>'- [ ] '+x).join('\n')+'\n':'')}]:[])
  ];
  return {status:'HANDOFF_READY_FOR_EDITOR',issues:[],warnings:[...new Set(warnings)],files,manifest,publication_allowed:false,
   downloadable:true,next_action:'HAND_TO_WEBSITE_OWNER_OR_CMS_EDITOR'};

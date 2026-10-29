@@ -4,7 +4,7 @@
  const token=String(location.pathname.split('/')[2]||'');
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null};
+ const safe={source:null,proposal:null};
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
  $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
  function status(id,msg,error){
@@ -13,7 +13,67 @@
  function ready(){
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
-  $('download').disabled=!(safe.source&&$('approved').checked&&manualReady);
+  var factsChecked=[...document.querySelectorAll('.fact-item')].every(x=>x.checked);
+  $('download').disabled=!(safe.source&&$('approved').checked&&manualReady&&factsChecked);
+ }
+ // Placement of a section on the existing page: proposed by Growth, adjustable by the owner, never guessed.
+ function placementSelect(p){
+  var label=document.createElement('label');label.textContent='Where on the page';
+  var sel=document.createElement('select');sel.className='placement';sel.dataset.heading=p.section_heading;
+  [['ADD_AFTER_SECTION','As a new section after “'+p.section_heading+'”'],['EXTEND_SECTION','Inside the existing section “'+p.section_heading+'”'],['','Let the editor choose a suitable position']]
+   .forEach(function(o){var opt=document.createElement('option');opt.value=o[0];opt.textContent=o[1];sel.appendChild(opt)});
+  sel.value=p.mode;label.appendChild(sel);return label;
+ }
+ function placementOf(container){
+  var sel=container&&container.querySelector('select.placement');
+  return sel&&sel.value?{mode:sel.value,section_heading:sel.dataset.heading}:null;
+ }
+ function addSection(h2,text,legendText,placement){
+  var group=document.createElement('fieldset');group.dataset.growthDraftSection='1';
+  var legend=document.createElement('legend');legend.textContent=legendText;group.appendChild(legend);
+  if(placement)group.appendChild(placementSelect(placement));
+  var title=document.createElement('input');title.className='draft-h2';title.value=h2;title.setAttribute('aria-label','Reviewed H2: '+legendText);group.appendChild(title);
+  var body=document.createElement('textarea');body.className='draft-copy';body.value=text;body.setAttribute('aria-label','Reviewed copy: '+legendText);group.appendChild(body);
+  $('growthAdditionalSections').appendChild(group);
+ }
+ // The checked Growth proposal for this page is used as-is: same H2s, text, placement and fact-check list.
+ async function loadProposal(src){
+  try{
+   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
+   var d=await res.json();
+   if(!res.ok||d.success!==true||!d.proposal||!(d.proposal.sections||[]).length||safe.source!==src)return;
+   if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
+   var p=d.proposal,first=p.sections[0];
+   safe.proposal=p;
+   $('heading').value=first.h2;$('copy').value=first.text;
+   $('mainPlacement').textContent='';if(first.placement)$('mainPlacement').appendChild(placementSelect(first.placement));
+   p.sections.slice(1,5).forEach(function(x,i){addSection(x.h2,x.text,'Growth proposal section '+(i+2),x.placement)});
+   if(!$('query').value&&p.focus_query)$('query').value=p.focus_query;
+   var box=$('growthProposal');box.textContent='';box.hidden=false;
+   var h=document.createElement('strong');h.textContent='Checked Growth proposal #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(h);
+   var intro=document.createElement('p');
+   intro.textContent='This is the text Growth checked against the ranking pages'+(p.focus_query?' for “'+p.focus_query+'”':'')+'. You may still edit it; the package records whether you did. Nothing is published.';
+   box.appendChild(intro);
+   if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent='Evidence: '+p.evidence_label;box.appendChild(ev)}
+   if(p.intent_note){var inote=document.createElement('p');inote.className='small';inote.textContent=p.intent_note;box.appendChild(inote)}
+   var r=p.review||{},groups=[['needs_fact_check','Check that these sentences are true'],['needs_owner_confirmation','Confirm with the business'],['needs_safety_review','Safety review by a qualified professional']];
+   var seen=new Set();
+   groups.forEach(function(g){
+    // One tick per sentence, under the first (strictest-listed) check that names it.
+    var items=(r[g[0]]||[]).filter(function(x){if(seen.has(x))return false;seen.add(x);return true});if(!items.length)return;
+    var t=document.createElement('p');t.textContent=g[1]+' (tick each one before downloading):';box.appendChild(t);
+    items.forEach(function(item){
+     var l=document.createElement('label');l.className='check';
+     var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
+     var sp=document.createElement('span');sp.textContent=item;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
+    });
+   });
+   if((r.competitor_sources||[]).length){
+    var cs=document.createElement('p');cs.className='small';
+    cs.textContent='Compared with: '+r.competitor_sources.map(x=>x.url).join(' · ');box.appendChild(cs);
+   }
+   $('approved').checked=false;ready();
+  }catch(e){/* no proposal: manual or AI-assisted text stays available */}
  }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
  async function loadResearchSuggestions(src){
@@ -77,6 +137,7 @@
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
    void loadResearchSuggestions(data);
+   void loadProposal(data);
    $('generateEditorialDraft').disabled=false;
    var needsManual=data.manual_source_required===true;
    $('manualSourceWrap').hidden=!needsManual;
@@ -134,16 +195,10 @@
     $('heading').value=parts[0].h2;
     $('copy').value=(parts[0].paragraphs||[]).join('\n\n');
    }
-   var wrap=$('growthAdditionalSections');wrap.textContent='';
-   parts.slice(1,5).forEach(function(section,i){
-    var group=document.createElement('fieldset');group.dataset.growthDraftSection='1';
-    var legend=document.createElement('legend');legend.textContent='AI draft section '+(i+2)+' · verify facts';group.appendChild(legend);
-    var title=document.createElement('input');title.className='draft-h2';
-    title.value=section.h2;title.setAttribute('aria-label','Reviewed H2 '+(i+2));group.appendChild(title);
-    var body=document.createElement('textarea');body.className='draft-copy';
-    body.value=(section.paragraphs||[]).join('\n\n');body.setAttribute('aria-label','Reviewed copy '+(i+2));group.appendChild(body);
-    wrap.appendChild(group);
-   });
+   // An AI draft replaces the checked Growth proposal; the package then no longer claims to come from it.
+   safe.proposal=null;$('growthProposal').hidden=true;$('growthProposal').textContent='';$('mainPlacement').textContent='';
+   $('growthAdditionalSections').textContent='';
+   parts.slice(1,5).forEach(function(section,i){addSection(section.h2,(section.paragraphs||[]).join('\n\n'),'AI draft section '+(i+2)+' · verify facts',null)});
    $('approved').checked=false;ready();
    status('aiDraftStatus','Editable AI draft prepared from the original page. All claims and each section still require your review and explicit approval.',false);
   }catch(err){status('aiDraftStatus',String(err.message||err),true)}
@@ -164,13 +219,15 @@
   }
   const paragraphs=copy.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n');
   const html='<section><h2>'+esc(heading)+'</h2>'+paragraphs+linkHtml+'</section>';
-  const reviewedSections=[{approved:true,evidence_ref:'editor_reviewed:'+($('query').value.trim()||'original_page'),html}];
+  const proposal=safe.proposal;
+  const reviewedSections=[{approved:true,evidence_ref:proposal?'growth_proposal:'+proposal.id:'editor_reviewed:'+($('query').value.trim()||'original_page'),
+   html,placement:placementOf($('mainPlacement'))}];
   document.querySelectorAll('[data-growth-draft-section]').forEach(function(group){
    var h2=group.querySelector('.draft-h2')?.value.trim()||'';
    var body=group.querySelector('.draft-copy')?.value.trim()||'';
    if(!h2||body.length<30)throw Error('Review every AI section or remove empty suggestions');
    var markup='<section><h2>'+esc(h2)+'</h2>'+body.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n')+'</section>';
-   reviewedSections.push({approved:true,evidence_ref:'editor_reviewed:AI_source_review',html:markup});
+   reviewedSections.push({approved:true,evidence_ref:proposal?'growth_proposal:'+proposal.id:'editor_reviewed:AI_source_review',html:markup,placement:placementOf(group)});
   });
   var manual=src.manual_source_required===true;
   if(manual&&(!$('manualAcknowledged').checked||$('manualOriginalHtml').value.trim().length<120))
@@ -180,6 +237,7 @@
     manual_source_acknowledged:true,source_provenance:'OWNER_SUPPLIED_UNVERIFIED'}:{}),
    cms:$('cms').value,evidence_scope:$('evidence').value,focus_query:$('query').value.trim(),
    seo_title:$('title').value.trim(),meta_description:$('meta').value.trim(),
+   ...(proposal?{growth_proposal_id:proposal.id,review_notes:proposal.review||null}:{}),
    approved_changes:reviewedSections};
  }
  async function post(body,format){
@@ -201,9 +259,33 @@
    a.href=href;a.download='contentscale-growth-cms-neutral.zip';document.body.appendChild(a);a.click();a.remove();
    setTimeout(()=>URL.revokeObjectURL(href),3000);
    status('downloadStatus','ZIP ready. No site change or publication performed.'+
+    (preview.manifest?.growth_proposal?(preview.manifest.growth_proposal.editor_changed_text?' The text differs from Growth proposal #'+preview.manifest.growth_proposal.id+' (recorded in the package).':' Text exactly as in Growth proposal #'+preview.manifest.growth_proposal.id+'.'):'')+
     ((preview.warnings||[]).length?' Review: '+preview.warnings.join(', '):''),false);
+   showPublicationForm(payload);
   }catch(err){status('downloadStatus',err.message||'Download failed',true)}
   finally{ready()}
+ });
+ // Only after the package exists: the owner records when the editor actually published it (starts the 28-day measurement).
+ function showPublicationForm(payload){
+  safe.published={page_id:pageId,query:payload.focus_query,growth_proposal_id:payload.growth_proposal_id};
+  var heads=payload.approved_changes.map(c=>(/<h2>([\s\S]*?)<\/h2>/.exec(c.html)||[])[1]).filter(Boolean).map(h=>h.replace(/&[^;]+;/g,' ').trim());
+  if(!$('publicationNotes').value)$('publicationNotes').value='Added to '+safe.source.canonical_url+': '+heads.join('; ')+(payload.growth_proposal_id?' (Growth proposal #'+payload.growth_proposal_id+')':'');
+  $('publicationWrap').hidden=false;
+ }
+ $('publicationForm').addEventListener('submit',async function(ev){
+  ev.preventDefault();var btn=$('recordPublication');btn.disabled=true;
+  try{
+   if(!safe.published)throw Error('Download the reviewed package first');
+   if(!safe.published.query)throw Error('A working query is required to measure the change');
+   var at=new Date($('publishedAt').value);if(!Number.isFinite(at.getTime()))throw Error('Enter the actual publication date and time');
+   var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/publication',{method:'POST',cache:'no-store',credentials:'same-origin',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify({...safe.published,notes:$('publicationNotes').value.trim(),published_at:at.toISOString()})});
+   var d=await r.json();
+   if(!r.ok||d.success!==true)throw Error(d.error||'Not saved');
+   status('publicationStatus',d.gsc_evidence==='VERIFIED'?'Recorded. Measurement compares the 28 days before and after publication with Search Console data.':
+    'Recorded. Without Search Console access the result is not measured yet: add the 28-day before/after numbers from Search Console on the measurement page.',false);
+  }catch(err){status('publicationStatus',err.message||'Not saved',true)}
+  finally{btn.disabled=false}
  });
  // Direct from Growth: verify owner, source and research automatically; never approve or publish.
  if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(()=>{if(!$('checkSource').disabled)$('checkSource').click()});
