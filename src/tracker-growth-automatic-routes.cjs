@@ -163,8 +163,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
       if(q.eligible)results[i]={...x,live:rendered.live,quality:q,rendered_fallback:true}}
     }
    }
-   results.forEach((x,i)=>{
-    const lead=batch[i];
+   results.forEach((x,i)=>logFetch(x,batch[i]));
+   attempted=attempted.concat(results);comparisons=eligible(attempted);
+  }
+  function logFetch(x,lead){
     fetchLog.push({url:x.url,host:hostOf(x.url),serp_position:lead.serp_position??null,source:lead.search_source,
      outcome:x.live?(x.quality?.eligible?'READABLE':'NOT_READABLE'):'FETCH_FAILED',
      code:x.live?(x.quality?.reason_code||null):(x.reason||'FETCH_FAILED'),
@@ -172,15 +174,14 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
      partial_capture:x.live?.truncated===true,retried_after_http_202:x.retried_after_http_202===true,
      rendered_fallback:x.rendered_fallback===true,render_status:renderNotes[x.url]||null,
      readable_words:x.quality?.readable_words??null});
-   });
-   attempted=attempted.concat(results);comparisons=eligible(attempted);
   }
-  const fetchSummary=(()=>{const c=k=>fetchLog.filter(x=>x.outcome===k).length;
+  const fetchSummaryNow=()=>{const c=k=>fetchLog.filter(x=>x.outcome===k).length;
    const blocked=fetchLog.filter(x=>x.explanation==='BLOCKED_BY_SITE_RESPECTED').length,timeouts=fetchLog.filter(x=>x.explanation==='TIMEOUT').length;
    return fetchLog.length+' tried: '+c('READABLE')+' readable, '+blocked+' blocked by the site (respected), '+timeouts+' timed out, '+c('NOT_READABLE')+' fetched but not readable'+
     (fetchLog.filter(x=>x.outcome==='NOT_READABLE').length?' ('+[...new Set(fetchLog.filter(x=>x.outcome==='NOT_READABLE').map(x=>x.code))].join(', ')+')':'')+
     (fetchLog.some(x=>x.rendered_fallback)?'; '+fetchLog.filter(x=>x.rendered_fallback).length+' read after rendering in the restricted browser':'')+
-    '; '+Math.max(0,candidatePool.length-cursor)+' further candidate(s) untried'})();
+    '; '+Math.max(0,candidatePool.length-cursor)+' further candidate(s) untried'};
+  let fetchSummary=fetchSummaryNow();
   const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
   report.intent_resolution=intentResolution;
@@ -319,11 +320,31 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    .map(x=>({url:x.url,html:x.live.html,truncated:x.live.truncated===true}));
   const siblingPages=[...destinationSources].filter(([u])=>u!==proposed).map(([u,src])=>({url:u,html:src.html,truncated:src.truncated===true}));
   if(own.live&&proposed!==page.url)siblingPages.push({url:page.url,html:own.live.html,truncated:own.live.truncated===true});
-  const coverage=selectedSource?analyzeReaderTaskCoverage({query:targetQuery,
+  const coverageFor=pages=>selectedSource?analyzeReaderTaskCoverage({query:targetQuery,
    serpIntent:serpIntent.intent==='MIXED_OR_INSUFFICIENT'?'INFORMATIONAL_GUIDE':serpIntent.intent,
    destination:{url:proposed,html:selectedSource.html,truncated:selectedSource.truncated===true,capture:selectedSource.capture||null},
-   competitors:competitorPages,sitePages:siblingPages}):
+   competitors:pages,sitePages:siblingPages}):
    {status:'NO_DESTINATION_SOURCE',tasks:[],competitors_considered:[],destination_truncated:false};
+  let coverage=coverageFor(competitorPages);
+  // "No shared reader task" is only concluded after the candidates Google already returned are used: when the pages
+  // read so far share none and unread candidates remain, one more batch (max three, no new search) is read first.
+  if(selectedSource&&!(coverage.supported_task_codes||[]).length&&cursor<candidatePool.length){
+   const batch=candidatePool.slice(cursor,cursor+3);cursor+=3;
+   const results=await Promise.all(batch.map(fetchCompetitor));
+   results.forEach((x,i)=>logFetch(x,batch[i]));
+   attempted=attempted.concat(results);
+   const before=comparisons.length;
+   comparisons=attempted.filter(x=>x.live&&x.quality?.eligible).slice(0,6);
+   const searchPages=comparisons.filter(x=>['SERPER_GOOGLE_ORGANIC','SERPAPI_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(x.search_source));
+   competitorPages.splice(0,competitorPages.length,...searchPages.map(x=>({url:x.url,html:x.live.html,truncated:x.live.truncated===true})));
+   coverage=coverageFor(competitorPages);
+   report.destination_section_comparison={...compareFullSections({query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,
+    ownTruncated:selectedSource.truncated===true,competitors:searchPages}),
+    target_url:proposed,destination_identity:finalIdentity,protected_source_url:page.url};
+   coverage.extended_competitor_reading={reason:'NO_SHARED_TASK_IN_FIRST_PAGES_READ',extra_pages_tried:batch.length,
+    extra_pages_readable:comparisons.length-before,competitor_pages_used:competitorPages.length};
+   fetchSummary=fetchSummaryNow()+'; read '+batch.length+' more because the first pages shared no reader task';
+  }
   report.reader_task_coverage=coverage;
   const attempts=[
    {source:'TARGET_STATIC_HTML',status:renderStatus,detail:own.code||null},
