@@ -1,0 +1,107 @@
+{
+ "_source": "Production report 39 (2026-10-29, ai citation tracker): Google organic titles/URLs as captured in search_discovery (leads + rejected_leads). Titles only; no page content.",
+ "query": "ai citation tracker",
+ "own_url": "https://contentscale.site/what-is-ai-citation-tracker/",
+ "organic": [
+  {
+   "title": "AI Citation Tracker | AI Content Citation Tracking Tool",
+   "link": "https://omniseo.com/solutions/ai-citation-tracker/",
+   "position": 3
+  },
+  {
+   "title": "AI Citation Tracker for Academic Sources, Papers",
+   "link": "https://www.taskade.com/agents/research/academic-citation-tracker",
+   "position": 6
+  },
+  {
+   "title": "AI Citation Tracker - Where & How AI Engines Cite Your Domain",
+   "link": "https://aeohub.ai/tools/citation-tracker",
+   "position": 5
+  },
+  {
+   "title": "AI Citation Checker: Track & Analyze AI Answer Sources",
+   "link": "https://aisearch.similarweb.com/ai-brand-visibility/citation-analysis/",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "What tools do you guys use to track AI citations for your ...",
+   "link": "https://www.reddit.com/r/SEO/comments/1tkcg7o/what_tools_do_you_guys_use_to_track_ai_citations/",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "WTF is AI citation tracking?",
+   "link": "https://digiday.com/media/wtf-is-ai-citation-tracking/",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "11 Best AI Citation Tracking Tools (2026): Ranked & Compared",
+   "link": "https://slatehq.com/blog/best-ai-citation-tracking-tools",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "How to track (and grow) AI engine citations",
+   "link": "https://blog.hubspot.com/marketing/ai-citation-tracking",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "Best AI citation tracking tools for content leaders in 2026",
+   "link": "https://www.airops.com/blog/ai-citation-tracking-tools",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "7 best AI citation tracking tools to find citation gaps in 2026",
+   "link": "https://www.linkedin.com/pulse/7-best-ai-citation-tracking-tools-find-gaps-2026-geertrui-laleman-99ele",
+   "production_reason": "SEARCH_OR_SOCIAL_INFRASTRUCTURE"
+  },
+  {
+   "title": "AI Citation Tracking: See Which URLs AI Cites",
+   "link": "https://siftly.ai/features/ai-citation-tracking",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "AI Citation Tracking Guide: What it is, How to Measure ... - Omnia",
+   "link": "https://www.useomnia.com/blog/ai-citation-tracking",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "How to Track AI Overviews: Mentions, Citations, and Brand ...",
+   "link": "https://www.youtube.com/watch?v=Q5PNG0q3yzE",
+   "production_reason": "SEARCH_OR_SOCIAL_INFRASTRUCTURE"
+  },
+  {
+   "title": "Mention & Citation Tracking for AI Visibility | Conductor Features",
+   "link": "https://www.conductor.com/platform/features/ai-search-performance/ai-mention-citation-tracking/",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "How to Track AI Search Engine Citations & Sources",
+   "link": "https://otterly.ai/blog/how-to-track-ai-search-engine-citations-sources/",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "AI Citation Tracking: A Guide to Generative AI Visibility",
+   "link": "https://semai.ai/ai-citation-report",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "AI Overviews Tracker",
+   "link": "https://wellows.com/tools/ai-overviews-tracker/",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "11 Best AI Citation Tracking Tools for B2B Marketing ...",
+   "link": "https://indexly.ai/blog/11-best-ai-citation-tracking-tools/",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "AI Citation Tracking for Blogs | Leafpad",
+   "link": "https://leafpad.io/ai-citations",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  },
+  {
+   "title": "Google AI Overviews citation tracking: How to measure ...",
+   "link": "https://discoveredlabs.com/blog/google-ai-overviews-citation-tracking-how-to-measure-your-visibility",
+   "production_reason": "QUERY_TERMS_NOT_IN_TITLE"
+  }
+ ]
+}

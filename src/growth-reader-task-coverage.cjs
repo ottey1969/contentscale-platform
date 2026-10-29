@@ -10,6 +10,7 @@ const CTA=/\b(?:book a demo|register now|get a demo|request (?:a )?demo|contact 
 const {decodeEntities}=require('./growth-text.cjs');
 const {RESEARCH_HTML_LIMIT}=require('./growth-public-html-reader.cjs');
 const {statesIn}=require('./growth-serp-quality.cjs');
+const {sameWord}=require('./growth-word-match.cjs');
 const plain=x=>decodeEntities(String(x||'').replace(/<[^>]+>/g,' ')).replace(/\s+/g,' ').trim();
 const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'').toLowerCase()}catch{return ''}};
 
@@ -101,7 +102,8 @@ function inferSerpIntent({query='',leads=[],pages=[]}={}){
 function classifyDestinationIntent({query='',title='',h1=[],url='',serpIntent='MIXED_OR_INSUFFICIENT'}={}){
  const head=[title,...(Array.isArray(h1)?h1:[h1])].map(plain).join(' | ').toLowerCase();
  const roots=queryRoots(query).distinct,headRoots=new Set((head.match(/[a-z]{4,}/g)||[]).map(STEMS));
- const overlap=roots.filter(r=>headRoots.has(r));
+ const hasRoot=(set,r)=>set.has(r)||[...set].some(w=>sameWord(r,w));
+ const overlap=roots.filter(r=>hasRoot(headRoots,r));
  let cls='UNCLASSIFIED';
  const productish=/\b(is now|alternatives?|reviews?|login|coupon|vs\.?|versus|compared?)\b/.test(head)||(serpIntent!=='LOCAL_SERVICE'&&/\bpricing\b/.test(head));
  if(productish)cls='PRODUCT_OR_COMPARISON';
@@ -115,7 +117,7 @@ function classifyDestinationIntent({query='',title='',h1=[],url='',serpIntent='M
  // generic part of the query ("roof … damage repair" without "wind") is about a different topic, whatever its page type.
  let slug='';try{slug=decodeURIComponent(new URL(url).pathname).toLowerCase()}catch{}
  const topicRoots=new Set([...headRoots,...(slug.match(/[a-z]{4,}/g)||[]).map(STEMS)]);
- const missing=roots.filter(r=>!topicRoots.has(r));
+ const missing=roots.filter(r=>!hasRoot(topicRoots,r));
  return {url,class:cls,query_root_overlap:overlap,missing_query_roots:missing,
   verdict:different?'DIFFERENT':compatible&&overlap.length?'COMPATIBLE':'UNVERIFIED',
   basis:'TITLE_AND_H1_PATTERNS_NOT_FULL_BODY_PROOF',observed_head:head.slice(0,220)};

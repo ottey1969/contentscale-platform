@@ -6,6 +6,7 @@ const {rejectLead,marketRelevance}=require('./growth-serp-quality.cjs');
 // If unavailable, return a visible status; never substitute invented results.
 const {fetchPublicGrowthHtml,validateUrl}=require('./growth-public-html-reader.cjs');
 const {terms}=require('./growth-one-action-decision.cjs');
+const {matchedTerms}=require('./growth-word-match.cjs');
 const decode=x=>String(x||'').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1')
  .replace(/&#(\d{1,6});/g,(_,n)=>{const v=Number(n);return v>0&&v<=0x10ffff?String.fromCodePoint(v):''})
  .replace(/&#x([0-9a-f]{1,6});/gi,(_,n)=>{const v=parseInt(n,16);return v>0&&v<=0x10ffff?String.fromCodePoint(v):''})
@@ -27,7 +28,8 @@ function parseBingRss(xml,{query='',ownUrl='',limit=7,market=null}={}){
   let url;try{url=validateUrl(href)}catch{continue}
   const host=url.hostname.replace(/^www\./,'').toLowerCase();
   if(host===own||infrastructure.test(host)||seen.has(url.href)||!title)continue;
-  const titleTokens=new Set(terms(title)),matched=required.filter(x=>titleTokens.has(x));
+  // Word forms count (tracker ↔ tracking): a title about the same thing is not dropped for its grammar.
+  const matched=matchedTerms(required,terms(title));
   if(required.length&&matched.length<Math.min(2,required.length))continue;
   if(wrongProductIntent(title,snippet,query))continue;
   if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(url.pathname))continue;
@@ -79,7 +81,7 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLo
   const drop=reason=>{(rejectedLog||[]).push({url:parsed.href,title:title.slice(0,100),reason})};
   if(hostname===own){drop('OWN_SITE');continue}
   if(infrastructure.test(hostname)){drop('SEARCH_OR_SOCIAL_INFRASTRUCTURE');continue}
-  const matched=needle.filter(w=>terms(title).includes(w));
+  const matched=matchedTerms(needle,terms(title));
   if(needle.length&&matched.length<Math.min(2,needle.length)){drop('QUERY_TERMS_NOT_IN_TITLE');continue}
   if(wrongProductIntent(title,snippet,query)){drop('DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT');continue}
   if(/(?:^|\/)(?:privacy|terms|disclaimer|login|signup|checkout|tag|category|search)(?:\/|$)/i.test(parsed.pathname)){drop('NON_CONTENT_PATH');continue}
