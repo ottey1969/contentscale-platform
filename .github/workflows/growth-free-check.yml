@@ -1,0 +1,33 @@
+name: Free Growth check (standalone)
+on:
+  pull_request:
+    paths:
+      - 'src/growth-free/**'
+      - 'tests/growth-free-check.test.cjs'
+      - 'src/tracker-growth-automatic-routes.cjs'
+      - 'src/growth-*.cjs'
+      - 'package.json'
+      - '.github/workflows/growth-free-check.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/growth-free/**'
+      - 'tests/growth-free-check.test.cjs'
+      - 'src/tracker-growth-automatic-routes.cjs'
+      - 'src/growth-*.cjs'
+jobs:
+  free-growth-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies (no browser download)
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm ci --ignore-scripts
+      - name: Access keys, limits, read-only engine, summary, public flow, admin, standalone server
+        run: node --test tests/growth-free-check.test.cjs
