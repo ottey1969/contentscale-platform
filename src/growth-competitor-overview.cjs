@@ -103,9 +103,12 @@ function validateTopics(raw,competitors,page){
  return {topics:topics.sort((a,b)=>order[a.this_page]-order[b.this_page]||b.ranking_pages-a.ranking_pages),ungrouped_sections:missed};
 }
 
-async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitors=[],model=geminiModel()}={}){
+// newPage: there is no page yet (research for a new page from a Pre-Write brief). Everything the ranking pages have is
+// then "not on the page yet"; the comparison logic is the same.
+async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitors=[],model=geminiModel(),newPage=false}={}){
  const readable=(competitors||[]).filter(c=>c&&c.url&&c.html);
- if(!ownHtml||readable.length<1)return {status:'NOT_ENOUGH_PAGES',ranking_pages_read:readable.length};
+ if((!ownHtml&&!newPage)||readable.length<1)return {status:'NOT_ENOUGH_PAGES',ranking_pages_read:readable.length};
+ ownHtml=ownHtml||'';
  const own=pageElements(ownHtml);
  const pages=readable.map(c=>({url:c.url,host:hostOf(c.url),serp_position:c.serp_position??null,partial_capture:c.truncated===true,
   elements:pageElements(c.html),sections:contentSections(c.url,c.html)}));
@@ -114,7 +117,7 @@ async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitor
   scope:'What the readable ranking pages contain compared with this page. Observation only: no fact check, no ranking promise; the editor decides what to add.',
   ranking_pages:pages.map(p=>({url:p.url,host:p.host,serp_position:p.serp_position,partial_capture:p.partial_capture,elements:p.elements,
    content_headings:p.sections.map(s=>s.heading)})),
-  this_page_elements:own,this_page_sections:page.map(s=>({heading:s.heading,excerpt:s.excerpt,words:s.words,furniture:isFurnitureHeading(s.heading)})),this_page_fingerprint:require('./growth-selected-writing.cjs').pageFingerprint(ownHtml),...compareElements(own,pages)};
+  this_page_elements:own,this_page_sections:page.map(s=>({heading:s.heading,excerpt:s.excerpt,words:s.words,furniture:isFurnitureHeading(s.heading)})),this_page_fingerprint:newPage?null:require('./growth-selected-writing.cjs').pageFingerprint(ownHtml),...(newPage?{new_page:true}:{}),...compareElements(own,pages)};
  let grouped=null,topicStatus='NOT_GROUPED_NO_MODEL';
  if(model){
   try{

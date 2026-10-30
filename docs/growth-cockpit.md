@@ -159,6 +159,17 @@ Every writing run produces `dossier` (version 1): search term, research date, pa
 
 Every written section carries `basis`: the question it answers, the evidence level (`READER_QUESTION_CONFIRMED_BY_AI`, `COMPETITOR_TEXT`, `COMPETITOR_HEADINGS_ONLY`), the competitor sources, where it goes and why the item was in the list. A section with only competitor headings behind it is `MARKED_NO_SOURCE_TEXT`, with a whole-section fact-check note. The basis travels to the CMS package (`06-fact-check-before-publishing.md`, "What each section rests on") for every section still in the approved text.
 
+### New pages from a Pre-Write brief (one Growth system)
+
+For a page that does not exist yet, Growth starts from a Pre-Write brief instead of a tracked URL: `/track/:token/growth/new-page` (owner only; linked from the Growth Cockpit) lists the client's briefs; "Research as a new page" opens the research for one.
+
+- **Same parts as the existing-page research:** market and language (Growth setting per brief, field by field, else the brief), the same search and ranking-page reading (`growth-ranking-page-reader.cjs`, shared), the same competitor overview and gap list in new-page mode (every topic "to cover on the new page"), the same selection, writing rounds of four, one run at a time, claim checks, flags, evidence dossier and transactional storage.
+- **Overlap with the site (cannibalisation):** the brief's keyword is compared with the tracked pages (keyword and URL words). A tracked page with the same keyword: the existing page should be improved instead, and writing a new page needs the owner's explicit confirmation (`EXISTING_PAGE_TARGETS_THIS_KEYWORD`). Most of the keyword in a tracked page, or one keyword inside the other: a warning. Per topic: a tracked page holding the topic's own words marks the topic and keeps it from being recommended.
+- **Facts about the business** come from the site's homepage, never from the competitors; the sections are checked against it.
+- **Result:** a new-page concept (`tracker_growth_new_page_concepts`, additive) and a package for the editor (`GET …/growth/new-page/package?gap_list_id=`, Markdown or `format=json`): title, planned URL (`https://domain/<keyword-slug>/`, flagged when it is already tracked), sections with their basis, flagged sentences, fact-check list, next steps and the evidence dossiers. Nothing is published and no existing page is changed.
+- **Storage:** gap lists of new pages have no tracked page (`target_page_id` NULL) and belong to the brief (`prewrite_brief_id`, `page_kind: NEW_PAGE`); the market setting of a brief is kept with page id `-brief_id`.
+- **After publication** the URL is added to the Tracker and continues in the existing-page research and measurement.
+
 ### One leading decision
 
 When the editorial decision gate decides, the earlier automatic opportunity (e.g. `DISTINCT_SPOKE_RESEARCH_REQUIRED`) is kept for traceability but marked `stage: EARLIER_RESEARCH_STEP`, `superseded_by: editorial_decision_gate`, and shown as "Earlier research step (replaced by the decision at the top)".

@@ -17,18 +17,25 @@ function ensureTable(pool){
   .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS source_fingerprint TEXT'))
   .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS written_ids JSONB'))
   .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS research JSONB'))
+  // New pages (research from a Pre-Write brief) have no tracked page yet: the list belongs to the brief instead.
+  .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS prewrite_brief_id BIGINT'))
+  .then(()=>pool.query("ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS page_kind TEXT NOT NULL DEFAULT 'EXISTING_PAGE'"))
+  .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ALTER COLUMN target_page_id DROP NOT NULL'))
   .catch(e=>{ensured=null;throw e});
  return ensured;
 }
-async function saveGapList(pool,{clientId,targetPageId,targetUrl,focusQuery,list}){
- if(!list||!Array.isArray(list.items)||!Number.isSafeInteger(Number(targetPageId)))return null;
+async function saveGapList(pool,{clientId,targetPageId=null,prewriteBriefId=null,targetUrl,focusQuery,list}){
+ const newPage=prewriteBriefId!=null;
+ if(!list||!Array.isArray(list.items)||(!newPage&&!Number.isSafeInteger(Number(targetPageId)))||(newPage&&!Number.isSafeInteger(Number(prewriteBriefId))))return null;
  await ensureTable(pool);
  return (await pool.query(`INSERT INTO tracker_growth_gap_lists (tracker_client_id,target_page_id,target_url,focus_query,items
-   ,source_fingerprint,research) VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7::jsonb) RETURNING id,created_at`,[clientId,Number(targetPageId),targetUrl,focusQuery||null,JSON.stringify(list.items),list.source_fingerprint||null,JSON.stringify(list.research||null)])).rows[0];
+   ,source_fingerprint,research,prewrite_brief_id,page_kind) VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7::jsonb,$8,$9) RETURNING id,created_at`,
+  [clientId,newPage?null:Number(targetPageId),targetUrl,focusQuery||null,JSON.stringify(list.items),list.source_fingerprint||null,JSON.stringify(list.research||null),
+   newPage?Number(prewriteBriefId):null,newPage?'NEW_PAGE':'EXISTING_PAGE'])).rows[0];
 }
 async function getGapList(pool,{clientId,id}){
  if(!Number.isSafeInteger(Number(id))||Number(id)<1)return null;
- try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,items,selected,written_ids,research,source_fingerprint,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
+ try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,items,selected,written_ids,research,source_fingerprint,prewrite_brief_id,page_kind,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
  catch(e){if(e.code==='42P01')return null;throw e}
 }
 // A deliberate selection by the owner (the selection endpoint): replaces the selected ids. Writing never calls this.
@@ -49,8 +56,8 @@ async function saveWritten(pool,{clientId,id,itemIds}){
 }
 // The open part of the page's latest selection, for a new research run of the same page. Each pending item comes with
 // its identity (title and competitor sections) so the new research can check it is still the same need.
-async function getOpenSelection(pool,{clientId,targetPageId,beforeId=null}){
- try{const row=(await pool.query(`SELECT id,items,selected,written_ids,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND target_page_id=$2 AND selected IS NOT NULL AND ($3::bigint IS NULL OR id<$3) ORDER BY id DESC LIMIT 1`,[clientId,Number(targetPageId),beforeId])).rows[0];
+async function getOpenSelection(pool,{clientId,targetPageId=null,prewriteBriefId=null,beforeId=null}){
+ try{const row=(await pool.query(`SELECT id,items,selected,written_ids,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND `+(prewriteBriefId!=null?'prewrite_brief_id':'target_page_id')+`=$2 AND selected IS NOT NULL AND ($3::bigint IS NULL OR id<$3) ORDER BY id DESC LIMIT 1`,[clientId,Number(prewriteBriefId!=null?prewriteBriefId:targetPageId),beforeId])).rows[0];
   if(!row)return null;const done=new Set((row.written_ids||[]).map(String));
   const byId=new Map((row.items||[]).map(x=>[String(x.id),x]));
   const pending=(row.selected||[]).map(String).filter(x=>!done.has(x)&&byId.get(x)?.writable);

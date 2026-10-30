@@ -18,7 +18,8 @@ const STOP=new Set('about after again also because being between could does each
 const coreWords=t=>[...new Set((String(t||'').toLowerCase().match(/[a-z]{4,}/g)||[]).filter(w=>!STOP.has(w)))].slice(0,5);
 
 // Selected items -> the writer's task list (codes the writer must echo back) and its competitor context.
-function writingRequest(items,{targetUrl,focusQuery,existingHeadings=[]}={}){
+// mode NEW_DISTINCT_PAGE: the sections are written for a new page (research from a Pre-Write brief).
+function writingRequest(items,{targetUrl,focusQuery,existingHeadings=[],mode='SECTION_IMPROVEMENT'}={}){
  const chosen=items.filter(x=>x&&x.writable).slice(0,MAX_ITEMS);
  const tasks=chosen.map((it,i)=>({code:'task_sel'+i,label:clip(it.title,140),...(it.reader_question?{reader_question:clip(it.reader_question,200)}:{}),
   placement_mode:it.placement?.mode||'',placement_heading:it.placement?.section_heading||'',destination_status:it.status==='Partly on your page'?'PARTIAL':'NOT_OBSERVED',
@@ -27,7 +28,7 @@ function writingRequest(items,{targetUrl,focusQuery,existingHeadings=[]}={}){
   .map(e=>({competitor_url:e.url,competitor_heading:clip(e.heading,140),competitor_excerpt:clip(e.excerpt,600)}))).slice(0,6);
  return {items:chosen,codeOf:new Map(chosen.map((it,i)=>['task_sel'+i,it])),
   research_context:{target_url:targetUrl,focus_query:focusQuery,observations,
-   reader_task:{mode:'SECTION_IMPROVEMENT',tasks,existing_headings:existingHeadings.slice(0,30)}}};
+   reader_task:{mode,tasks,existing_headings:existingHeadings.slice(0,30)}}};
 }
 
 // What a written section rests on, shown with it: the question it answers, the competitor fragments behind it, where it
@@ -92,8 +93,8 @@ function evidenceDossier({items=[],research=null,sourceFingerprint=null,writerSt
 
 // generate(researchContext) -> {status, draft, flags, source_text}: the Tracker passes the owner draft handler (live page,
 // identity checks), the standalone passes the generator with the public page it already read.
-async function writeForSelection({items,targetUrl,focusQuery,existingHeadings,generate,research=null,sourceFingerprint=null}){
- const request=writingRequest(items||[],{targetUrl,focusQuery,existingHeadings});
+async function writeForSelection({items,targetUrl,focusQuery,existingHeadings,generate,research=null,sourceFingerprint=null,mode}){
+ const request=writingRequest(items||[],{targetUrl,focusQuery,existingHeadings,mode});
  if(!request.items.length)return {status:'NOTHING_TO_WRITE',sections:[],not_written:[],reason:'Select at least one topic or question (page elements are added by the editor, not written).'};
  let out;
  try{out=await generate(request.research_context)}catch(e){out={status:'WRITER_UNAVAILABLE'}}

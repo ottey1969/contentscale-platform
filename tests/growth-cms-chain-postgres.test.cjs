@@ -27,7 +27,9 @@ const estimateA='A repair estimate lists materials, labour and access. The estim
 const estimateB='Ask the contractor for a written estimate that separates materials from labour. A clear estimate also states what happens if hidden damage appears, so the final invoice never surprises you after the old layer is removed from the roof, and an itemised estimate makes that comparison easy.';
 // SYNTHETIC second section (step 11 needs two writable items).
 const flashingA='Flashing seals the joints around chimneys, vents and skylights. When flashing cracks or lifts, water runs behind it and the decking rots slowly, so a crew should check every joint and reseal or replace the flashing before the leak spreads inside the house.';
-const pages={[URL_]:OWN,[LOCKED_URL]:LOCKED,
+// SYNTHETIC homepage: the facts about the business a new page is written from.
+const HOME_HTML='<html><body><h1>Acme Roofing</h1><p>Acme Roofing is a licensed and insured roofing contractor in Lodi, New Jersey. Our crew repairs and replaces residential roofs, inspects roofs after storms and explains every finding before any work starts.</p></body></html>';
+const pages={[URL_]:OWN,[LOCKED_URL]:LOCKED,[HOME+'/']:HOME_HTML,
  'https://roofer-a.example/roof-repair-nj/':comp('Roof repair in Paterson, NJ',[['How a repair estimate is built',estimateA],['When a roof needs flashing work',flashingA]]),
  'https://roofer-b.example/services/roof-repair/':comp('Roof repairs in Bergen County, NJ',[['What goes into an estimate',estimateB]])};
 const leads=[['https://roofer-a.example/roof-repair-nj/','Roof Repair in Paterson, NJ | Roofer A'],['https://roofer-b.example/services/roof-repair/','Roof Repairs in Bergen County NJ - Roofer B'],
@@ -64,7 +66,7 @@ CREATE TABLE tracker_snapshots(id BIGSERIAL PRIMARY KEY,page_id BIGINT,checked_a
 CREATE TABLE prewrite_briefs(id SERIAL PRIMARY KEY,client_id INTEGER,keyword TEXT,working_title TEXT,language TEXT,region TEXT,brief_json JSONB,competitors_scraped INTEGER,created_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE tracker_ai_evidence(id BIGSERIAL PRIMARY KEY,page_id BIGINT,tracker_client_id BIGINT,engine TEXT,evidence_method TEXT,brand_recommended BOOLEAN,
  domain_cited BOOLEAN,exact_page_cited BOOLEAN,citation_urls JSONB,verified_at TIMESTAMPTZ,revision_cycle INTEGER,is_cleared BOOLEAN);`;
-const TABLES=['prewrite_briefs','tracker_clients','tracker_pages','tracker_case_studies','tracker_gsc_queries','tracker_snapshots','tracker_ai_evidence',
+const TABLES=['tracker_growth_new_page_concepts','prewrite_briefs','tracker_clients','tracker_pages','tracker_case_studies','tracker_gsc_queries','tracker_snapshots','tracker_ai_evidence',
  'tracker_growth_proposals','tracker_growth_publications','tracker_growth_gsc_windows','tracker_growth_recommendations','tracker_growth_gap_lists','tracker_growth_page_markets','tracker_growth_writing_runs'];
 
 test.before(async()=>{
@@ -379,6 +381,57 @@ test('12. target market and language: the Pre-Write brief of the keyword, or the
  const report=(await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false})).body;
  const used=report.search_discovery.search_locale;
  assert.deepEqual([used.source,used.language_source,used.brief.id,used.prewrite_alternatives.map(x=>x.country)],['FROM_PREWRITE_BRIEF','FROM_PREWRITE_BRIEF',briefId,['GB']]);
+});
+
+test('13. new page from a Pre-Write brief: same research, overlap check, selection, writing rounds, stored concept and package',async()=>{
+ // SYNTHETIC brief for a page the site does not have yet.
+ const nb=(await pool.query("INSERT INTO prewrite_briefs(client_id,keyword,working_title,language,region,brief_json) VALUES ($1,'roof inspection lodi nj','Roof inspection in Lodi','English','us','{}') RETURNING id",[ids.client])).rows[0].id;
+ const listPage=(await api('GET','/track/owner-tok/growth/new-page')).body;
+ assert.match(listPage,/roof inspection lodi nj/);assert.match(listPage,new RegExp('new-page\\?brief_id='+nb));
+ assert.doesNotMatch((await api('GET','/track/share-tok/growth/new-page')).body,/Research as a new page/,'owner only');
+ assert.match((await api('GET','/track/owner-tok/growth')).body,/New page from a Pre-Write brief/,'reachable from the Growth Cockpit');
+ assert.match((await api('GET','/track/owner-tok/growth/new-page?brief_id='+nb)).body,/id="newPageStatus"/);
+ const before=searches.length,aiBefore=aiCalls.length,proposalsBefore=(await pool.query('SELECT count(*)::int n FROM tracker_growth_proposals')).rows[0].n;
+ assert.equal((await api('POST','/api/tracker-client/share-tok/growth/new-page/research',{brief_id:nb})).status,403);
+ const r=await api('POST','/api/tracker-client/owner-tok/growth/new-page/research',{brief_id:nb});
+ assert.equal(r.status,200,JSON.stringify(r.body).slice(0,300));
+ assert.equal(aiCalls.length,aiBefore,'research writes nothing');
+ const used=searches.slice(before).pop();
+ assert.equal(used.query,'roof inspection lodi nj');assert.deepEqual([used.locale.country,used.locale.hl,used.locale.source],['US','en','FROM_PREWRITE_BRIEF'],'market and language from the brief');
+ const gl=r.body.gap_list;
+ assert.equal(gl.page_kind,'NEW_PAGE');assert(gl.items.some(x=>x.writable),JSON.stringify(gl.items).slice(0,300));
+ assert(gl.items.filter(x=>x.writable).every(x=>x.status==='To cover on the new page'));
+ assert.equal(r.body.new_page_research.planned_url,HOME+'/roof-inspection-lodi-nj/');
+ assert.notEqual(r.body.new_page_research.overlap.status,'EXISTING_PAGE_TARGETS_THIS_KEYWORD');
+ const row=(await pool.query('SELECT target_page_id,prewrite_brief_id,page_kind FROM tracker_growth_gap_lists WHERE id=$1',[gl.id])).rows[0];
+ assert.deepEqual([row.target_page_id,Number(row.prewrite_brief_id),row.page_kind],[null,Number(nb),'NEW_PAGE'],'no tracked page needed');
+ // Selection and writing: the same rounds, flags and storage; the concept is stored, not a CMS proposal.
+ const pick=gl.items.filter(x=>x.writable).slice(0,2).map(x=>x.id);
+ assert.equal((await api('POST',gl.selection_url,{gap_list_id:gl.id,item_ids:pick})).status,200);
+ const w=await api('POST',gl.write_url,{gap_list_id:gl.id,item_ids:pick});
+ assert.equal(w.status,200,JSON.stringify(w.body).slice(0,300));assert.equal(w.body.stored,true);assert.equal(w.body.page_kind,'NEW_PAGE');
+ assert.deepEqual(w.body.sections.map(x=>x.item_id).sort(),[...pick].sort());
+ assert(w.body.sections.some(x=>x.flags.some(f=>f.code==='UNSOURCED_NUMBER'&&/68%/.test(f.sentence))),'checked against the business facts (homepage)');
+ assert.deepEqual([...(await pool.query('SELECT written_ids FROM tracker_growth_gap_lists WHERE id=$1',[gl.id])).rows[0].written_ids].sort(),[...pick].sort());
+ assert.equal((await pool.query('SELECT count(*)::int n FROM tracker_growth_proposals')).rows[0].n,proposalsBefore,'no change proposal for an existing page');
+ assert.equal((await api('POST',gl.write_url,{gap_list_id:gl.id,item_ids:pick})).body.code,'SELECTION_ALREADY_WRITTEN');
+ // The package: the concept, its basis, the flagged sentence to rewrite, the next steps and the evidence dossier.
+ const pkg=await api('GET',w.body.new_page_package.url);
+ assert.equal(pkg.status,200);assert.match(pkg.body,/# New page concept: Roof inspection in Lodi/);assert.match(pkg.body,/Planned URL: https:\/\/acme-roofing\.example\/roof-inspection-lodi-nj\/ \(not published\)/);
+ assert.match(pkg.body,/## Flagged by Growth: rewrite or remove[\s\S]*68%/);assert.match(pkg.body,/Add the published URL to the Tracker/);assert.match(pkg.body,/## Evidence dossier/);
+ const json=(await api('GET',w.body.new_page_package.url+'&format=json')).body.package;
+ assert.equal(json.kind,'NEW_PAGE_CONCEPT');assert.equal(json.sections.length,2);assert.equal(json.dossiers[0].research.focus_query,'roof inspection lodi nj');
+ // Cannibalisation: a brief for the keyword a tracked page already targets is flagged and needs confirmation to write.
+ const same=(await pool.query("SELECT id FROM prewrite_briefs WHERE client_id=$1 AND LOWER(keyword)='roof repair lodi nj' ORDER BY id LIMIT 1",[ids.client])).rows[0].id;
+ const r2=await api('POST','/api/tracker-client/owner-tok/growth/new-page/research',{brief_id:same});
+ assert.equal(r2.body.new_page_research.overlap.status,'EXISTING_PAGE_TARGETS_THIS_KEYWORD');assert.equal(r2.body.new_page_research.overlap.exact[0].url,URL_);
+ const g2=r2.body.gap_list,p2=g2.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
+ const refused=await api('POST',g2.write_url,{gap_list_id:g2.id,item_ids:p2});
+ assert.equal(refused.status,409);assert.equal(refused.body.code,'EXISTING_PAGE_TARGETS_THIS_KEYWORD');assert.equal(refused.body.existing_pages[0].url,URL_);
+ assert.equal((await api('POST',g2.write_url,{gap_list_id:g2.id,item_ids:p2,confirm_new_page:true})).status,200,'the owner may still decide for a separate page');
+ // A new-page list is not usable from the existing-page routes and the other way round.
+ assert.equal((await api('POST','/api/tracker-client/owner-tok/growth/new-page/selection',{gap_list_id:1,item_ids:['x']})).body.code,'NEW_PAGE_GAP_LIST_NOT_FOUND');
+ assert.equal(await pageHtml(ids.page),OWN,'existing pages are never changed');
 });
 
 test('9. nothing outside the Growth tables was written',async()=>{
