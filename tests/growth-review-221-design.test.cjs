@@ -187,17 +187,20 @@ test('evidence record per writing run: research, market, date, page version, AI 
 });
 
 // Code audit of 95e576c: an earlier selection is carried over only when the new research shows the same need.
-test('carry-over checks identity: same id and same need is ticked; same id with other content needs remapping; gone is listed',()=>{
+test('carry-over checks identity: same id, title and section is ticked; partial agreement asks to confirm; other content needs remapping',()=>{
  const {remapSelection}=require('../src/growth-selected-writing.cjs');
  const g=list(fresh(),overview());
  const a=g.items.find(x=>x.title==='Understand the Attribution Gaps'),b=g.items.find(x=>x.title==='Extract AI-Relevant Queries');
+ const c=g.items.find(x=>x.title==='Create a Custom AI Search Channel');
  const src=it=>it.examples.map(e=>e.site+'|'+e.heading.toLowerCase());
  const out=remapSelection([
-  {id:a.id,title:a.title,sources:src(a)},
-  // The same id now names another need (e.g. an id scheme or grouping changed): not ticked, the candidate is named.
-  {id:b.id,title:'A different need',sources:src(a)},
+  {id:a.id,title:a.title,sources:src(a)},                                  // same id, title and section: ticked
+  {id:c.id,title:'An earlier title',sources:src(c)},                       // same item, title changed: confirm
+  {id:b.id,title:'A different need',sources:src(a)},                       // id now names other content: remap to a
   {id:'s-gone',title:'A section no ranking page has any more',sources:['gone.example|x']}],g.items);
  assert.deepEqual(out.carried,[a.id]);
- assert.deepEqual(out.needs_remapping.map(x=>[x.old_id,x.candidates.map(c=>c.id)]),[[b.id,[a.id]]]);
+ assert.deepEqual(out.needs_confirmation.map(x=>[x.old_id,x.candidate.id]),[[c.id,c.id]]);assert.match(out.needs_confirmation[0].reason,/title changed/);
+ assert.deepEqual(out.needs_remapping.map(x=>[x.old_id,x.candidates.map(k=>k.id)]),[[b.id,[a.id]]]);
  assert.deepEqual(out.no_longer_found.map(x=>x.old_id),['s-gone']);
 });
+

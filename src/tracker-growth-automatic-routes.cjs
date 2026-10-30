@@ -687,7 +687,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    try{const open=await loadOpenSelection({clientId:v.clientId,targetPageId:targetId,beforeId:Number(gapRef.id)});
     if(open&&open.pending.length){const m=remapSelection(open.pending_items||[],gapList.items);
      // Shown ticked only; it becomes the new list's selection when the owner confirms it (the selection is never implied).
-     carried={from_gap_list_id:open.gap_list_id,pending_ids:m.carried,needs_remapping:m.needs_remapping,no_longer_found:m.no_longer_found,
+     carried={from_gap_list_id:open.gap_list_id,pending_ids:m.carried,needs_confirmation:m.needs_confirmation,needs_remapping:m.needs_remapping,no_longer_found:m.no_longer_found,
       note:'Items you selected earlier and that were not written yet. Ticked again only when the new research still shows the same need; nothing is written until you click.'};}}
    catch(e){console.warn('[growth-auto-research] open selection not loaded',String(e?.code||'unknown'))}
   }

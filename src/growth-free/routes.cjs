@@ -8,6 +8,7 @@ const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const {writeForSelection,planBatch,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
+const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded-editor.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 
@@ -171,7 +172,7 @@ function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.grou
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
  (r.sections||[]).forEach(function(x){var fl=(x.flags||[]).filter(function(f){return f.sentence}).map(function(f){return f.sentence});
-  h+='<div class="card"><strong>'+esc(x.h2)+'</strong><br><small>'+(x.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+x.flags.length+' item(s) to rewrite or remove':x.status==='MARKED_NO_SOURCE_TEXT'?'Marked: no competitor text behind it':'Concept for review')+(x.item_title?' · for “'+esc(x.item_title)+'”':'')+(x.placement&&x.placement.section_heading?' · place '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':' · you choose the place')+'</small>';
+  h+='<div class="card"><strong>'+esc(x.h2)+'</strong><br><small>'+(x.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+x.flags.length+' item(s) to rewrite or remove':x.status==='MARKED_NO_SOURCE_TEXT'?'Marked: no competitor text behind it':'Concept for review')+(x.item_title?' · for “'+esc(x.item_title)+'”':'')+(x.run?' · run '+esc(x.run):'')+(x.placement&&x.placement.section_heading?' · place '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':' · you choose the place')+'</small>';
   if(x.basis)h+='<br><small>Answers: “'+esc(x.basis.answers)+'” · basis: '+esc(String(x.basis.evidence_level||'').toLowerCase().split('_').join(' '))+((x.basis.competitor_evidence||[]).length?' · sources: '+x.basis.competitor_evidence.map(function(e){return esc(e.site)}).join(', '):'')+'</small>'+(x.basis.warning?'<p class="note">'+esc(x.basis.warning)+'</p>':'');
   (x.paragraphs||[]).forEach(function(p){var out=esc(p);fl.forEach(function(f){out=out.split(esc(f)).join('<mark title="Flagged: rewrite or remove">'+esc(f)+'</mark>')});h+='<p>'+out+'</p>'});
   if((x.flags||[]).length)h+='<ul>'+x.flags.map(function(f){return '<li>'+(f.sentence?'“'+esc(f.sentence)+'” — ':'Whole section — ')+esc(f.reason)+'</li>'}).join('')+'</ul>';
@@ -197,8 +198,8 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
  if(wb)wb.onclick=async function(){var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});var st=document.getElementById('gapStatus');
   if(!ids.length){st.textContent='Select at least one topic or question.';return}
   wb.disabled=true;st.textContent='Writing concepts…';
-  try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});var x=await r.json();if(!x.success)throw Error(x.error||'Not written');
-   wr.innerHTML=writtenHtml(x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
+  try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});var x=await r.json();if(x.stored===false&&(x.sections||[]).length){wr.innerHTML=writtenHtml(x);st.textContent=x.error;wb.disabled=false;return}if(!x.success)throw Error(x.error||'Not written');
+   wr.innerHTML=writtenHtml(x.all_written||x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
   catch(err){st.textContent=err.message;wb.disabled=false}};
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected'};
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',count)});
@@ -437,7 +438,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return {...summary,limitations:[...summary.limitations.filter(x=>!/AI answers .* were not checked/.test(x)),aiPart.summary.caveat]};
  }
  const writingAllowed=row=>config.writing==='all'||(config.writing!=='off'&&row.access_label==='admin')||(config.writing==='invited'&&!!row.invite_id);
- const writingInfo=row=>({allowed:writingAllowed(row),remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:row.written||null});
+ const writingInfo=row=>({allowed:writingAllowed(row),remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:viewOf(row.written)});
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   const aiPart=await aiFor(row);
@@ -476,22 +477,21 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const items=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return res.status(400).json({success:false,error:'Select at least one topic or question first.'});
   if(!items.some(x=>x.writable))return res.status(400).json({success:false,error:'Page elements are added by the editor; select a topic or question to write.'});
-  let claimed=false;
+  let token=null;
   try{
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
    const html=String(live&&live.html||'');
    const researched=row.summary&&row.summary.gaps&&row.summary.gaps.source_fingerprint;
    if(researched&&pageFingerprint(html)!==researched)return res.status(409).json({success:false,error:'Your page changed since this check. Run a new check so the advice matches the page.'});
    // One run at a time per check: a parallel or repeated click gets "in progress", never a second AI call.
-   if(typeof storage.claimWriting==='function'&&!(await storage.claimWriting(pool,{checkId:row.id})))
-    return res.status(409).json({success:false,error:'Concepts for this check are being written right now. Wait a moment and reload.'});
-   claimed=typeof storage.claimWriting==='function';
+   if(typeof storage.claimWriting==='function'){token=await storage.claimWriting(pool,{checkId:row.id});
+    if(!token)return res.status(409).json({success:false,error:'Concepts for this check are being written right now. Wait a moment and reload.'})}
    // What is written already is read AFTER the claim, so a run that just finished is never written again.
-   const fresh=claimed?(await storage.getCheck(pool,req.params.id,req.query.k))||row:row;
+   const fresh=token?(await storage.getCheck(pool,req.params.id,req.query.k))||row:row;
    const doneBefore=(fresh.written&&fresh.written.done_item_ids)||[];
    // The whole selection is kept: this run writes the next four not written yet; the rest stays for the next run.
    const plan=planBatch(items,req.body&&req.body.rewrite===true?[]:doneBefore);
-   if(!plan.batch.length){if(claimed)await storage.releaseWriting(pool,{checkId:row.id}).catch(()=>{});claimed=false;
+   if(!plan.batch.length){if(token)await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});token=null;
     return res.status(409).json({success:false,error:'Every selected item has been written already. Select other items, or download the editor brief.'})}
    const write=engineDeps.generateDraft||generateGrowthEditorDraft;
    const focusQuery=row.query||(row.summary&&row.summary.checked&&row.summary.checked.search_term)||'';
@@ -500,13 +500,19 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     generate:async ctx=>({...(await write({sourceHtml:html,pageUrl:row.url,focusQuery,readerTask:ctx.reader_task,researchObservations:ctx.observations,fallbackFlagged:true})),source_text:sourceFacts(html).text})});
    const done=(written.sections||[]).map(s=>s.item_id);
    const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));
-   written.done_item_ids=[...new Set([...doneBefore,...done])];written.pending=pending;
-   const counted=await storage.recordWriting(pool,{checkId:row.id,written,limit:config.writeLimit||3});claimed=false;
-   if(!counted){if(typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id}).catch(()=>{});
+   written.pending=pending;
+   // Every run is kept (with its dossier); the earlier runs' concepts stay available after reload.
+   const doc=mergeWritten(fresh.written,written);
+   const counted=await storage.recordWriting(pool,{checkId:row.id,written:doc,limit:config.writeLimit||3,token});
+   const mine=token;token=null;
+   if(counted&&counted.superseded)return res.status(409).json({success:false,stored:false,sections:written.sections||[],
+    error:'This writing run took too long and another run took over, so this text was not stored. It is shown here so it is not lost.'});
+   if(!counted){if(mine&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token:mine}).catch(()=>{});
     return res.status(429).json({success:false,error:'The writing limit for this check is reached.'})}
-   res.set('Cache-Control','no-store').json({success:true,...written,remaining:Math.max(0,(config.writeLimit||3)-counted.write_count),published:false});
+   res.set('Cache-Control','no-store').json({success:true,...written,done_item_ids:doc.done_item_ids,all_written:viewOf(doc),stored:true,
+    remaining:Math.max(0,(config.writeLimit||3)-counted.write_count),published:false});
   }catch(e){console.error('[free-growth] writing failed',String(e.code||e.message).slice(0,80));
-   if(claimed&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id}).catch(()=>{});
+   if(token&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});
    res.status(503).json({success:false,error:'Writing is not available right now. Your selection works with the editor brief.'})}
  });
  app.post(apiPath+'/checks/:id/ai',async(req,res)=>{

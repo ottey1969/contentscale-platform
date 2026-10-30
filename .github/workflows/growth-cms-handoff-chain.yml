@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/growth-*.cjs'
       - 'src/tracker-growth-*.cjs'
+      - 'src/growth-free/store.cjs'
       - 'public/growth-cms-neutral-handoff.*'
       - 'public/growth-automatic-report-ui.js'
       - 'tests/growth-proposal-cms-handoff.test.cjs'

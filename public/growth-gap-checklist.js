@@ -33,6 +33,7 @@
   var carried=list.carried_over&&list.carried_over.pending_ids||[];
   var co=list.carried_over||{};
   if(carried.length)el('p',carried.length+' item(s) from your earlier selection are not written yet and are ticked again (the new research still shows the same need).',box,'small');
+  (co.needs_confirmation||[]).forEach(function(x){el('p','Confirm topic match: your earlier item “'+x.title+'” may be “'+x.candidate.title+'” now ('+x.reason+') Tick it yourself if it is the same.',box,'small')});
   (co.needs_remapping||[]).forEach(function(x){el('p','Check the link: your earlier item “'+x.title+'” is not clearly the same need in this research. Possibly: '+x.candidates.map(function(c){return '“'+c.title+'”'}).join(', ')+'. Not ticked.',box,'small')});
   if((co.no_longer_found||[]).length)el('p','No longer in this research: '+co.no_longer_found.map(function(x){return '“'+x.title+'”'}).join(', ')+'.',box,'small');
   var boxes=[];

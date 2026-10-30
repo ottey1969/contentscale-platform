@@ -55,6 +55,23 @@ test('writing runs: one active run per list, a crashed run gives way after its l
  assert.equal(String((await runs.lastStoredRun(pool,{gapListId:gl.id})).proposal_id),String(ok.proposal.id));
 });
 
+test('standalone writing lock: a late run (lease expired) can neither store nor release; the active token can',async()=>{
+ const free=require('../src/growth-free/store.cjs');await free.ensureTables(pool);
+ const id=(await pool.query("INSERT INTO growth_free_checks(public_id,access_key,email,url,host,status) VALUES('pg-'||floor(random()*1e9),'k','owner@example.test','https://example.test/','example.test','DONE') RETURNING id")).rows[0].id;
+ try{
+  const a=await free.claimWriting(pool,{checkId:id});assert(a);
+  assert.equal(await free.claimWriting(pool,{checkId:id}),null,'one run at a time');
+  await pool.query("UPDATE growth_free_checks SET writing_since=NOW()-INTERVAL '11 minutes' WHERE id=$1",[id]);
+  const b=await free.claimWriting(pool,{checkId:id});assert(b&&b!==a,'B takes over with a new token');
+  assert.deepEqual(await free.recordWriting(pool,{checkId:id,written:{runs:['A']},limit:3,token:a}),{superseded:true});
+  await free.releaseWriting(pool,{checkId:id,token:a});
+  const row=(await pool.query('SELECT written,writing_token,write_count FROM growth_free_checks WHERE id=$1',[id])).rows[0];
+  assert.equal(row.written,null);assert.equal(row.writing_token,b,'A did not clear B\'s lock');assert.equal(row.write_count,0);
+  assert.equal((await free.recordWriting(pool,{checkId:id,written:{runs:['B']},limit:3,token:b})).write_count,1);
+  assert.deepEqual((await pool.query('SELECT written,writing_token FROM growth_free_checks WHERE id=$1',[id])).rows[0],{written:{runs:['B']},writing_token:null});
+ }finally{await pool.query('DELETE FROM growth_free_checks WHERE id=$1',[id])}
+});
+
 test('markets: set in order, invalid codes dropped, an empty list removes the setting',async()=>{
  assert.deepEqual(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:['nl','UK','xx','be'],language:'en'}),{countries:['NL','GB','BE'],language:'en'});
  assert.deepEqual((await markets.getPageMarkets(pool,{clientId:client,pageId:page})).countries,['NL','GB','BE']);

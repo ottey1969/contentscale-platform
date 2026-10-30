@@ -91,9 +91,12 @@ function memoryStore(){
    cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
   async getCheck(_p,pid,key){const c=checks.find(c=>c.public_id===pid);return c&&c.access_key===key?c:null},
-  async claimWriting(_p,{checkId}){const c=checks.find(x=>x.id===checkId);if(c.writing)return false;c.writing=true;return true},
-  async releaseWriting(_p,{checkId}){checks.find(x=>x.id===checkId).writing=false},
-  async recordWriting(_p,{checkId,written,limit}){const c=checks.find(x=>x.id===checkId);c.writing=false;if((c.write_count||0)>=limit)return null;c.written=written;c.write_count=(c.write_count||0)+1;return {write_count:c.write_count}},
+  // Same fencing as store.cjs: a token per run; only the active token may store or release (lease expiry via expire()).
+  async claimWriting(_p,{checkId}){const c=checks.find(x=>x.id===checkId);if(c.writing_token&&!c.expired)return null;c.expired=false;c.writing_token='tok'+(++id);return c.writing_token},
+  async releaseWriting(_p,{checkId,token}){const c=checks.find(x=>x.id===checkId);if(c.writing_token===token)c.writing_token=null},
+  async recordWriting(_p,{checkId,written,limit,token}){const c=checks.find(x=>x.id===checkId);if(token&&c.writing_token!==token)return {superseded:true};
+   if((c.write_count||0)>=limit)return null;c.written=written;c.write_count=(c.write_count||0)+1;c.writing_token=null;return {write_count:c.write_count}},
+  expire(checkId){checks.find(x=>x.id===checkId).expired=true},
   async createHireRequest(_p,o){const h={id:hires.length+1,...o};hires.push(h);return h},
   async listLeads(){return {checks,hires}},
   async forgetEmail(_p,e){const n=checks.length;for(let i=checks.length-1;i>=0;i--)if(checks[i].email===e)checks.splice(i,1);return {checks:n-checks.length,hire_requests:0}}
@@ -488,13 +491,57 @@ test('writing for a selection is optional: only where allowed, only the selected
  const stale=await all.post(p2,{item_ids:pick});pages[URL_]=original;
  assert.equal(stale.status,409);assert.match(stale.body.error,/changed since this check/);assert.equal(calls.length,1);
  // A run in progress (another click): the second request is told so, with no AI call; afterwards it works again.
- const rowB=await all.storage.getCheck(null,B.id,B.k);assert.equal(await all.storage.claimWriting(null,{checkId:rowB.id}),true);
+ const rowB=await all.storage.getCheck(null,B.id,B.k);const held=await all.storage.claimWriting(null,{checkId:rowB.id});assert(held);
  const busy=await all.post(p2,{item_ids:pick,rewrite:true});
  assert.equal(busy.status,409);assert.match(busy.body.error,/being written right now/);assert.equal(calls.length,1);
- await all.storage.releaseWriting(null,{checkId:rowB.id});
+ await all.storage.releaseWriting(null,{checkId:rowB.id,token:held});
  // A written item is not written again by accident; asking explicitly rewrites it.
  const again=await all.post(p2,{item_ids:pick});assert.equal(again.status,409);assert.match(again.body.error,/written already/);assert.equal(calls.length,1);
  assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,200);
  assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,429,'limit per check');
  const page=await all.get(b.body.result_url);assert.match(page.body,/Write selected with AI/);
+});
+
+// Code audit of e1869f2. SYNTHETIC: six hand-made gap items on a synthetic check (the synthetic pages above produce one).
+async function writingSetup(t,{slow=false}={}){
+ const calls=[],gates=[];
+ engineDeps.generateDraft=async args=>{calls.push(args);if(slow){let open;const g=new Promise(ok=>{open=ok});gates.push(open);await g}
+  return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:(args.readerTask?.tasks||[]).map(x=>({task_code:x.code,h2:'About '+x.label,
+   paragraphs:['A concept paragraph about '+x.label+' that the editor reviews and rewrites in their own words before use.']}))}}};
+ t.after(()=>{delete engineDeps.generateDraft});
+ const s=await server({config:{writing:'all',writeLimit:3}});t.after(()=>s.srv.close());
+ const b=await s.post('/api/free-growth/checks',ok);await s.service.idle();
+ const m=/\/r\/([^?]+)\?k=(.+)$/.exec(b.body.result_url),row=await s.storage.getCheck(null,m[1],m[2]);
+ const six=['Estimate lines','Hidden damage','Flashing checks','Warranty terms','Permit rules','Storm claims'].map((title,i)=>({id:'s-six'+i,group:'COMPETITOR_SECTION',writable:true,title,status:'Not compared with your page',examples:[]}));
+ row.summary.gaps.items=[...six,...row.summary.gaps.items];
+ return {s,row,six,calls,gates,path:'/api/free-growth/checks/'+m[1]+'/write?k='+m[2],view:()=>s.get('/api/free-growth/checks/'+m[1]+'?k='+m[2])};
+}
+
+test('standalone: six topics in two runs, all six concepts stay available after reload, each run with its dossier',async t=>{
+ const w=await writingSetup(t),ids=w.six.map(x=>x.id);
+ const one=await w.s.post(w.path,{item_ids:ids});
+ assert.equal(one.status,200);assert.deepEqual(one.body.sections.map(x=>x.item_id),ids.slice(0,4));assert.deepEqual(one.body.pending.map(x=>x.item_id),ids.slice(4));
+ const two=await w.s.post(w.path,{item_ids:ids});
+ assert.deepEqual(two.body.sections.map(x=>x.item_id),ids.slice(4));assert.deepEqual(two.body.pending,[]);
+ const reload=(await w.view()).body.writing.last;
+ assert.deepEqual(reload.sections.map(x=>x.item_id).sort(),[...ids].sort(),'all six concepts after reload');
+ assert.deepEqual(reload.sections.map(x=>x.run),[1,1,1,1,2,2]);
+ assert.equal(w.row.written.runs.length,2);assert(w.row.written.runs.every(r=>r.dossier&&r.dossier.items.length===r.sections.length),'a dossier per run');
+ assert.equal((await w.s.post(w.path,{item_ids:ids})).status,409,'nothing is written twice');
+});
+
+test('standalone: a run that outlives its lease can neither store its text nor clear the lock of the run that took over',async t=>{
+ const w=await writingSetup(t,{slow:true}),ids=w.six.map(x=>x.id).slice(0,2);
+ const a=w.s.post(w.path,{item_ids:ids});
+ for(let i=0;i<100&&!w.gates.length;i++)await new Promise(ok=>setTimeout(ok,10));
+ w.s.storage.expire(w.row.id);                                   // A's lease runs out
+ const b=w.s.post(w.path,{item_ids:ids});                        // B takes over
+ for(let i=0;i<100&&w.gates.length<2;i++)await new Promise(ok=>setTimeout(ok,10));
+ const tokenB=w.row.writing_token;assert(tokenB);
+ w.gates[0]();const late=await a;                               // A comes back late
+ assert.equal(late.status,409);assert.equal(late.body.stored,false);assert.match(late.body.error,/another run took over/);
+ assert.equal(late.body.sections.length,2,'its text is shown so it is not lost');
+ assert.equal(w.row.writing_token,tokenB,'B still holds the lock');assert.equal(w.row.written,undefined,'A stored nothing');
+ w.gates[1]();const won=await b;
+ assert.equal(won.status,200);assert.equal(won.body.stored,true);assert.equal(w.row.written.runs.length,1);assert.equal(w.row.writing_token,null);
 });

@@ -113,17 +113,21 @@ function planBatch(items,doneIds=[]){
  return {batch:open.slice(0,MAX_ITEMS),pending:open.slice(MAX_ITEMS),already_written:(items||[]).filter(x=>x&&x.writable&&done.has(String(x.id))).map(x=>x.id)};
 }
 
-// The open part of an earlier selection against a NEW research run: an item is carried over (ticked again) only when the
-// same id still names the same need: the same title, or at least one of the same competitor sections. Otherwise it is
-// listed as needing remapping, with the new items that use its sections, and is not ticked; nothing is guessed.
+// The open part of an earlier selection against a NEW research run. Ticked again (carried) only when the same id still
+// has the same title AND at least one of the same competitor sections. Partial agreement (same id but another title, or
+// the same title without a shared section: a section can be regrouped into another topic) asks the owner to confirm the
+// match; not ticked. Another id using its sections: needs remapping, with the candidates. Nothing is guessed.
 function remapSelection(pendingItems=[],newItems=[]){
  const norm=t=>String(t||'').toLowerCase().replace(/\s+/g,' ').trim();
  const keys=it=>new Set((it.examples||[]).map(e=>String(e.site||'')+'|'+String(e.heading||'').toLowerCase()));
  const byId=new Map(newItems.filter(x=>x&&x.writable).map(x=>[String(x.id),x]));
- const out={carried:[],needs_remapping:[],no_longer_found:[]};
+ const out={carried:[],needs_confirmation:[],needs_remapping:[],no_longer_found:[]};
  for(const old of pendingItems){
   const now=byId.get(String(old.id)),src=new Set(old.sources||[]);
-  if(now&&(norm(now.title)===norm(old.title)||[...keys(now)].some(k=>src.has(k)))){out.carried.push(now.id);continue}
+  const sameTitle=now&&norm(now.title)===norm(old.title),shared=now&&([...keys(now)].some(k=>src.has(k))||!src.size);
+  if(sameTitle&&shared){out.carried.push(now.id);continue}
+  if(now&&(sameTitle||shared)){out.needs_confirmation.push({old_id:old.id,title:old.title,candidate:{id:now.id,title:now.title},
+   reason:sameTitle?'Same title, but none of the same competitor sections.':'Same item, but its title changed.'});continue}
   const candidates=[...byId.values()].filter(x=>[...keys(x)].some(k=>src.has(k))).map(x=>({id:x.id,title:x.title}));
   if(candidates.length)out.needs_remapping.push({old_id:old.id,title:old.title,candidates});
   else out.no_longer_found.push({old_id:old.id,title:old.title});

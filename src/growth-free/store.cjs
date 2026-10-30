@@ -29,6 +29,7 @@ function ensureTables(pool){
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS written JSONB');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS write_count INTEGER NOT NULL DEFAULT 0');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_since TIMESTAMPTZ');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_token TEXT');
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
@@ -114,15 +115,24 @@ async function getCheck(pool,publicId,key){
 }
 
 // Counts one writing run and keeps its result; refuses when the limit is reached (atomic).
-// One writing run per check at a time (a run that never finished gives way after ten minutes). The concept and the items
-// it completes are stored in one UPDATE, which also ends the run; a failed run only ends it.
+// One writing run per check at a time, fenced by a token: claiming returns a new token (a run that never finished gives
+// way after ten minutes, and its token stops counting). Storing and releasing only work with the token of the ACTIVE
+// run, so a late run can neither store its result nor clear the lock of the run that took over.
 async function claimWriting(pool,{checkId}){
- return !!(await pool.query(`UPDATE growth_free_checks SET writing_since=NOW() WHERE id=$1 AND (writing_since IS NULL OR writing_since<NOW()-INTERVAL '10 minutes') RETURNING id`,[checkId])).rows[0];
+ const token=require('node:crypto').randomUUID();
+ const row=(await pool.query(`UPDATE growth_free_checks SET writing_since=NOW(),writing_token=$2 WHERE id=$1 AND (writing_since IS NULL OR writing_since<NOW()-INTERVAL '10 minutes') RETURNING id`,[checkId,token])).rows[0];
+ return row?token:null;
 }
-async function releaseWriting(pool,{checkId}){await pool.query('UPDATE growth_free_checks SET writing_since=NULL WHERE id=$1',[checkId])}
-async function recordWriting(pool,{checkId,written,limit}){
- return (await pool.query('UPDATE growth_free_checks SET written=$2::jsonb,write_count=write_count+1,writing_since=NULL WHERE id=$1 AND write_count<$3 RETURNING write_count',
-  [checkId,JSON.stringify(written),limit])).rows[0]||null;
+async function releaseWriting(pool,{checkId,token}){
+ await pool.query('UPDATE growth_free_checks SET writing_since=NULL,writing_token=NULL WHERE id=$1 AND writing_token=$2',[checkId,String(token||'')]);
+}
+// Returns {write_count}, or {superseded:true} when this run no longer holds the lock, or null when the limit is reached.
+async function recordWriting(pool,{checkId,written,limit,token=null}){
+ const row=(await pool.query(`UPDATE growth_free_checks SET written=$2::jsonb,write_count=write_count+1,writing_since=NULL,writing_token=NULL
+   WHERE id=$1 AND write_count<$3 AND ($4::text IS NULL OR writing_token=$4) RETURNING write_count`,[checkId,JSON.stringify(written),limit,token])).rows[0];
+ if(row)return row;
+ if(token){const now=(await pool.query('SELECT writing_token FROM growth_free_checks WHERE id=$1',[checkId])).rows[0];if(!now||now.writing_token!==token)return {superseded:true}}
+ return null;
 }
 async function createHireRequest(pool,{checkId,name,email,company,phone,message}){
  return (await pool.query(`INSERT INTO growth_free_hire_requests(check_id,name,email,company,phone,message)
