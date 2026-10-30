@@ -11,6 +11,7 @@ const {compareFullSections}=require('./growth-full-section-comparison.cjs');
 const {decideGrowthEditorialAction}=require('./growth-editorial-decision-gate.cjs');
 const {buildGrowthEvidenceExample}=require('./growth-evidence-bound-example.cjs');
 const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.cjs');
+const {readRankingPages}=require('./growth-ranking-page-reader.cjs');
 const {decideOwnerGrowthEdit}=require('./growth-owner-edit-decision.cjs');
 const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
@@ -138,78 +139,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url,market,locale}))
    .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',
     reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
-  // Discussion listings remain in SERP evidence but should not displace readable
-  // long-form articles in the limited content-comparison budget.
-  const editorialHost=url=>{try{const host=new URL(url).hostname.toLowerCase();
-   return !/(^|\.)(?:reddit\.com|quora\.com)$/.test(host)}
-   catch{return false}};
-  // Same-market pages are read first; general sources that name no place follow (stable within each group).
-  const marketRank=x=>x.market_relevance==='SAME_MARKET'?0:1;
-  const fresh=(Array.isArray(discovery.leads)?discovery.leads:[])
-   .filter(x=>x.url&&editorialHost(x.url)).map((x,i)=>({x,i})).sort((a,b)=>marketRank(a.x)-marketRank(b.x)||a.i-b.i).map(o=>o.x).slice(0,10);
-  const candidates=[...fresh.map(x=>({...x,search_source:x.source==='SERPAPI_GOOGLE_ORGANIC'?'SERPAPI_GOOGLE_ORGANIC':x.source==='SERPER_GOOGLE_ORGANIC'?'SERPER_GOOGLE_ORGANIC':'BING_PUBLIC_RSS'})),
-   ...historical.filter(x=>editorialHost(x.url)&&!fresh.some(y=>y.url===x.url)&&queryFit(x.serp_title||'',{title:targetQuery,h1:[],h2:[]}).fit)
-    .map(x=>({...x,search_source:'HISTORICAL_SERP_TOPIC_MATCH'}))].slice(0,10);
-  const fetchCompetitorOnce=async lead=>{
-   try{const live=await fetchLive(lead.url,RESEARCH_FETCH);
-    return {url:lead.url,live,quality:assessGrowthCompetitorContent({html:live.html,query:targetQuery,truncated:live.truncated}),
-     search_source:lead.search_source,search_query:targetQuery}}
-   catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70),search_source:lead.search_source}}
-  };
-  // HTTP 202 means 'accepted, not ready yet' (seen on a real competitor). Retry exactly once, then report it as unavailable.
-  const fetchCompetitor=async lead=>{
-   const first=await fetchCompetitorOnce(lead);
-   if(first.reason!=='HTTP_202')return first;
-   await new Promise(done=>setTimeout(done,Math.max(0,retryDelayMs)));
-   const second=await fetchCompetitorOnce(lead);
-   return {...second,retried_after_http_202:true};
-  };
-  // A site that refuses automated access (401/403/406/429) is respected, not bypassed: the next candidate is tried.
-  const explain=code=>/^HTTP_(401|403|406|429)$/.test(code)?'BLOCKED_BY_SITE_RESPECTED':/^HTTP_(404|410)$/.test(code)?'PAGE_NOT_FOUND':/^HTTP_5/.test(code)?'SITE_ERROR':
-   /TIMEOUT/.test(code)?'TIMEOUT':/^HTTP_202$/.test(code)?'NOT_READY_AFTER_ONE_RETRY':'FETCH_FAILED';
-  const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch{return ''}};
-  // Candidates are tried in batches of three, one page per site first, until three readable articles exist or the list is exhausted.
-  const candidatePool=[];const seenHosts=new Set();
-  for(const c of candidates){const h=hostOf(c.url);if(seenHosts.has(h))continue;seenHosts.add(h);candidatePool.push(c)}
-  for(const c of candidates)if(!candidatePool.includes(c))candidatePool.push(c);
-  let attempted=[];const fetchLog=[];
-  // A page that answered (HTTP 200) but holds no static text is rendered in the restricted browser, at most three per run and
-  // only while fewer than three readable articles exist. A page that REFUSED access (403 etc.) is never rendered: that would bypass the block.
-  let renderBudget=3;const renderNotes={};
-  const canRender=fetchLive===fetchPublicGrowthHtml||renderOwn!==renderPublicGrowthPage;
-  const eligible=items=>items.filter(x=>x.live&&x.quality?.eligible).slice(0,3);
-  let comparisons=[];let cursor=0;
-  while(cursor<candidatePool.length&&comparisons.length<3){
-   const batch=candidatePool.slice(cursor,cursor+3);cursor+=3;
-   const results=await Promise.all(batch.map(fetchCompetitor));
-   for(let i=0;i<results.length;i++){const x=results[i];
-    const have=comparisons.length+results.filter(y=>y.live&&y.quality?.eligible).length;
-    if(canRender&&renderBudget>0&&have<3&&x.live&&!x.quality?.eligible&&['JS_RENDERED_PAGE_NO_STATIC_TEXT','NO_PARAGRAPH_TEXT'].includes(x.quality?.reason_code)){
-     renderBudget--;const rendered=await Promise.resolve().then(()=>renderOwn(x.url)).catch(()=>({status:'RENDER_UNAVAILABLE'}));
-     renderNotes[x.url]=rendered?.status||'RENDER_UNAVAILABLE';
-     if(rendered?.live?.html){const q=assessGrowthCompetitorContent({html:rendered.live.html,query:targetQuery,truncated:rendered.live.truncated});
-      if(q.eligible)results[i]={...x,live:rendered.live,quality:q,rendered_fallback:true}}
-    }
-   }
-   results.forEach((x,i)=>logFetch(x,batch[i]));
-   attempted=attempted.concat(results);comparisons=eligible(attempted);
-  }
-  function logFetch(x,lead){
-    fetchLog.push({url:x.url,host:hostOf(x.url),serp_position:lead.serp_position??null,source:lead.search_source,
-     outcome:x.live?(x.quality?.eligible?'READABLE':'NOT_READABLE'):'FETCH_FAILED',
-     code:x.live?(x.quality?.reason_code||null):(x.reason||'FETCH_FAILED'),
-     explanation:x.live?(x.quality?.eligible?null:x.quality?.reason_code):explain(x.reason||''),
-     partial_capture:x.live?.truncated===true,retried_after_http_202:x.retried_after_http_202===true,
-     rendered_fallback:x.rendered_fallback===true,render_status:renderNotes[x.url]||null,
-     readable_words:x.quality?.readable_words??null});
-  }
-  const fetchSummaryNow=()=>{const c=k=>fetchLog.filter(x=>x.outcome===k).length;
-   const blocked=fetchLog.filter(x=>x.explanation==='BLOCKED_BY_SITE_RESPECTED').length,timeouts=fetchLog.filter(x=>x.explanation==='TIMEOUT').length;
-   return fetchLog.length+' tried: '+c('READABLE')+' readable, '+blocked+' blocked by the site (respected), '+timeouts+' timed out, '+c('NOT_READABLE')+' fetched but not readable'+
-    (fetchLog.filter(x=>x.outcome==='NOT_READABLE').length?' ('+[...new Set(fetchLog.filter(x=>x.outcome==='NOT_READABLE').map(x=>x.code))].join(', ')+')':'')+
-    (fetchLog.some(x=>x.rendered_fallback)?'; '+fetchLog.filter(x=>x.rendered_fallback).length+' read after rendering in the restricted browser':'')+
-    '; '+Math.max(0,candidatePool.length-cursor)+' further candidate(s) untried'};
-  let fetchSummary=fetchSummaryNow();
+  // The ranking pages are read by the shared reader (also used for new pages).
+  const reader=await readRankingPages({query:targetQuery,discovery,historical,fetchLive,renderOwn,retryDelayMs});
+  let comparisons=reader.comparisons,attempted=reader.attempted;const fetchLog=reader.fetchLog,fetchSummaryNow=reader.summary;
+  let fetchSummary=reader.fetchSummary;
   const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
   report.intent_resolution=intentResolution;
@@ -339,8 +272,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     let scoped=comparisons.filter(inScope);
     if(scoped.length<2){
      const tried=new Set(attempted.map(x=>x.url));
-     const extra=candidatePool.filter(c=>inScope(c)&&!tried.has(c.url)).slice(0,3);
-     if(extra.length){const results=await Promise.all(extra.map(fetchCompetitor));results.forEach((x,i)=>logFetch(x,extra[i]));attempted=attempted.concat(results)}
+     const extra=reader.candidatePool.filter(c=>inScope(c)&&!tried.has(c.url)).slice(0,3);
+     if(extra.length){await reader.readThese(extra);attempted=reader.attempted}
      scoped=attempted.filter(x=>inScope(x)&&x.live&&x.quality?.eligible).slice(0,6);
     }
     comparisons=scoped;
@@ -402,11 +335,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   let coverage=coverageFor(competitorPages);
   // "No shared reader task" is only concluded after the candidates Google already returned are used: when the pages
   // read so far share none and unread candidates remain, one more batch (max three, no new search) is read first.
-  if(selectedSource&&!(coverage.supported_task_codes||[]).length&&cursor<candidatePool.length){
-   const batch=candidatePool.slice(cursor,cursor+3);cursor+=3;
-   const results=await Promise.all(batch.map(fetchCompetitor));
-   results.forEach((x,i)=>logFetch(x,batch[i]));
-   attempted=attempted.concat(results);
+  if(selectedSource&&!(coverage.supported_task_codes||[]).length&&reader.hasMore()){
+   const batch={length:await reader.readMore()};
+   attempted=reader.attempted;
    const before=comparisons.length;
    comparisons=attempted.filter(x=>x.live&&x.quality?.eligible).slice(0,6);
    const searchPages=comparisons.filter(x=>['SERPER_GOOGLE_ORGANIC','SERPAPI_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(x.search_source));
