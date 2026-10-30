@@ -115,6 +115,12 @@ Growth no longer writes text by itself. One flow serves the Tracker and the stan
 
 The claim check ignores technical notation when it looks for unsourced figures: HTTP status codes ("non-200", "301 redirects", "4xx/404 pages"), language/region codes and tokens such as `en-GB`, `ISO-3166`, `h2`. Real figures stay checked: "68%", "In 2025, 40 markets", "a 200 page site" are still flagged without a source.
 
+### Search market (report 56)
+
+Competitor research searches where the page competes, from what the page itself states (`src/growth-search-locale.cjs`), in this order: a country-code domain (`.nl`, `.co.uk`); countries named in the title and headings (most named first); the region of its own hreflang; the region of `<html lang>`. A US-state market from the query/keyword/URL keeps the US lookup with its location. Without any signal the default stays US / English and the report says so.
+
+Serper gets `gl`/`hl` for that market; Bing RSS gets `cc`/`setlang`. A page that names several markets spends the one allowed extra paid call on its second market (instead of result page 2); further markets are listed as `target_markets_not_searched`. Never more than two paid calls per run.
+
 ### One leading decision
 
 When the editorial decision gate decides, the earlier automatic opportunity (e.g. `DISTINCT_SPOKE_RESEARCH_REQUIRED`) is kept for traceability but marked `stage: EARLIER_RESEARCH_STEP`, `superseded_by: editorial_decision_gate`, and shown as "Earlier research step (replaced by the decision at the top)".

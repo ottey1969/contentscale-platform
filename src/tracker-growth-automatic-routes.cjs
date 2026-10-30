@@ -23,6 +23,7 @@ const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
+const {deriveSearchLocale}=require('./growth-search-locale.cjs');
 const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const {identityFromFetch,identityAdvice}=require('./growth-url-identity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
@@ -114,10 +115,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Market = the place the SOURCE page serves (its tracked keyword and URL), so a shorter GSC query keeps its locality.
   const market=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
    pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
+  // The country (and language) the page itself states, for pages outside a US-state market; reported with the research.
+  const locale=targetQuery&&!market?deriveSearchLocale({html:own.live?.html||page.saved_html||'',url:page.url}):null;
   const discovery=!targetQuery?{
    status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
    reason:intentResolution.warning||'No search phrase is justified by observed page content.'
-  }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url,market}))
+  }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url,market,locale}))
    .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',
     reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
   // Discussion listings remain in SERP evidence but should not displace readable
@@ -210,7 +213,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    report.growth_decision.primary_next_action.query=null;
    report.search.focus_query=null;
   }
-  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:targetQuery,market,
+  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:targetQuery,market,search_locale:locale,
    fetched_competitor_urls:comparisons.filter(x=>x.live).map(x=>x.url),competitor_fetch_log:fetchLog,competitor_fetch_summary:fetchSummary,
    discarded_unreadable_article_count:attempted.filter(x=>x.live&&!x.quality?.eligible).length};
   report.evidence_warnings=[

@@ -274,8 +274,13 @@
    ' · Source: '+(googleSource?'Google organic (optional provider)':'Public Bing RSS')+
    ' · Status: '+(discovery.status||'NOT_CHECKED')+
    ' · '+liveRivals.length+' competitor HTML pages retrieved.',s);
-  node('small',googleSource?'Google organic listings observed through the configured optional Serper.dev (US / English). These are search-result observations, not verified target-page GSC rankings or traffic.':
+  var sc=discovery.scope||{},loc=discovery.search_locale||{};
+  var marketText=(sc.searched_markets||[]).length?sc.searched_markets.join(' + ').toUpperCase()+' / '+String(sc.language||'en'):'US / English';
+  node('small',googleSource?'Google organic listings observed through the configured optional Serper.dev ('+marketText+'). These are search-result observations, not verified target-page GSC rankings or traffic.':
     'Free public Bing RSS discovery is optional and may be blocked. This source does not verify Google rankings; an optional configured Google lookup is tried only when free discovery returns no relevant leads.',s);
+  if(loc.source)node('small','Search market: '+(loc.country||'US (default)')+' · from '+String(loc.source).toLowerCase().replace(/_/g,' ')+
+   ((sc.target_markets_not_searched||[]).length?' · not searched: '+sc.target_markets_not_searched.map(function(x){return x.name||x.country}).join(', '):
+    (loc.other_countries||[]).length&&!googleSource?' · other markets on the page: '+loc.other_countries.join(', '):''),s);
   if(discovery.free_discovery_status)node('small','Free search: '+discovery.free_discovery_status,s);
   if(discovery.optional_google_status)node('small','Optional Google search: '+discovery.optional_google_status,s);
   if(discovery.reason)node('small','Source status: '+discovery.reason,s);
