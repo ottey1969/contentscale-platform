@@ -170,6 +170,13 @@ For a page that does not exist yet, Growth starts from a Pre-Write brief instead
 - **Storage:** gap lists of new pages have no tracked page (`target_page_id` NULL) and belong to the brief (`prewrite_brief_id`, `page_kind: NEW_PAGE`); the market setting of a brief is kept with page id `-brief_id`.
 - **After publication** the URL is added to the Tracker and continues in the existing-page research and measurement.
 
+### Relevance and evidence before any proposal (report 61 and a Free Growth check)
+
+- **Google redirect links.** Outside the US, Google (through Serper) can return organic results as its own redirect links (`google.com/goto?url=…`, `/url?q=…`). They are real results: a plain target is taken from the link, otherwise the redirect is followed once (Location header only). A link that cannot be resolved is reported as `GOOGLE_REDIRECT_LINK_NOT_RESOLVED` and counted in `google_redirect_links` and the market note; it is never called search infrastructure (in report 61, 12 relevant articles had been lost that way).
+- **Evidence threshold.** With fewer than two readable ranking pages, or when the research decision is "data blocked", the gap list has `evidence.status: INSUFFICIENT_EVIDENCE` and `writing_allowed: false`: nothing is recommended, every item says "No section proposed" with the reason, the writer is not offered and the write routes (Tracker, new page, Free check) refuse with `NOT_ENOUGH_EVIDENCE_TO_WRITE`. The list stays visible and the editor brief can still be downloaded.
+- **Relevance.** The topic grouping also asks the AI whether each topic serves someone searching the term (`fits_search`). A topic judged NO goes to "Probably not relevant to this search": shown, no section proposed, not written. Word overlap alone never marks a topic irrelevant (it is too crude), but one ranking page with no word in common with the search term is weak evidence: no section proposed, not recommended, still choosable.
+- **Free check = Tracker research.** The Free check runs the same research engine; it now also takes target market(s) and language (same lists as the Pre-Write brief; cached per market). The AI part is labelled as checked by the visitor with pasted answers, not queried automatically.
+
 ### One leading decision
 
 When the editorial decision gate decides, the earlier automatic opportunity (e.g. `DISTINCT_SPOKE_RESEARCH_REQUIRED`) is kept for traceability but marked `stage: EARLIER_RESEARCH_STEP`, `superseded_by: editorial_decision_gate`, and shown as "Earlier research step (replaced by the decision at the top)".

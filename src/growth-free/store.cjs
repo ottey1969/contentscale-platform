@@ -30,6 +30,8 @@ function ensureTables(pool){
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS write_count INTEGER NOT NULL DEFAULT 0');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_since TIMESTAMPTZ');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_token TEXT');
+  // Target market and language chosen by the visitor (as in the Tracker); null = derived from the page.
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS market JSONB');
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
@@ -81,18 +83,18 @@ async function usage(pool,{email,ipHash,accessLabel=null}){
  return {by_email:Number(r.by_email)||0,by_ip:Number(r.by_ip)||0,total:Number(r.total)||0,by_key:Number(r.by_key)||0};
 }
 
-async function recentResult(pool,{url,query}){
+async function recentResult(pool,{url,query,market=null}){
  return (await pool.query(`SELECT id,decision,summary,report FROM growth_free_checks
-   WHERE url=$1 AND query=$2 AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query])).rows[0]||null;
+   WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null)])).rows[0]||null;
 }
 
-async function createCheck(pool,{email,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null}){
+async function createCheck(pool,{email,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null}){
  const row=(await pool.query(`INSERT INTO growth_free_checks
-   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id)
-   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16)
+   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market)
+   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb)
    RETURNING id,public_id,access_key,status`,
   [token(9),token(18),email,ipHash,url,host,query,cached?'DONE':'QUEUED',cached?cached.decision:null,
-   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId])).rows[0];
+   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null)])).rows[0];
  return row;
 }
 

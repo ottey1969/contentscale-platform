@@ -32,11 +32,13 @@ function readOnlySource(page){
  }};
 }
 
-async function runFreeGrowthResearch({url,query},deps={}){
+// market: {countries,language} chosen by the visitor, used exactly like a market set in the Tracker (else derived).
+async function runFreeGrowthResearch({url,query,market=null},deps={}){
  const page={id:FREE_PAGE_ID,url,keyword:String(query||'').trim().slice(0,120),case_study_active:false};
  const route={};
  const options={retryDelayMs:deps.retryDelayMs??1500};
- for(const k of ['fetchLive','searchLive','renderOwn','judgeTasks'])if(typeof deps[k]==='function')options[k]=deps[k];
+ for(const k of ['fetchLive','searchLive','renderOwn','judgeTasks','buildOverview'])if(typeof deps[k]==='function')options[k]=deps[k];
+ if(market&&(market.countries?.length||market.language))options.loadPageMarkets=async()=>market;
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h}},readOnlySource(page),(req,res,next)=>{
   req.growthTrackerClientId=FREE_CLIENT_ID;req.growth={can_edit:false,pages:[page]};next();
  },options);

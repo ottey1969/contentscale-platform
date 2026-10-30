@@ -24,11 +24,8 @@ const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
-const {deriveSearchLocale,validCountries,validLanguage,countryName,languageName}=require('./growth-search-locale.cjs');
+const {deriveSearchLocale,validCountries,validLanguage,countryName,languageName,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('./growth-search-locale.cjs');
 const {resolveMarketSetting}=require('./growth-market-store.cjs');
-// The Pre-Write brief's region and language lists (src/index.js CS_COMBO_DATA), so both screens offer the same choices.
-const PREWRITE_REGIONS=['us — United States','gb — United Kingdom','ca — Canada','au — Australia','ie — Ireland','nl — Netherlands','be — Belgium','de — Germany','at — Austria','ch — Switzerland','fr — France','es — Spain','it — Italy','pt — Portugal','pl — Poland','se — Sweden','dk — Denmark','no — Norway','fi — Finland','tr — Turkey','ru — Russia','ae — United Arab Emirates','sa — Saudi Arabia','qa — Qatar','kw — Kuwait','bh — Bahrain','om — Oman','eg — Egypt','ma — Morocco','za — South Africa','in — India','cn — China','hk — Hong Kong','tw — Taiwan','jp — Japan','kr — South Korea','sg — Singapore','my — Malaysia','id — Indonesia','ph — Philippines','th — Thailand','vn — Vietnam','br — Brazil','mx — Mexico','ar — Argentina','cl — Chile','co — Colombia','lu — Luxembourg'];
-const PREWRITE_LANGUAGES=['English','Dutch','German','French','Spanish','Italian','Portuguese','Polish','Swedish','Danish','Norwegian','Finnish','Turkish','Russian','Chinese (Simplified)','Chinese (Traditional)','Japanese','Korean','Hindi','Arabic'];
 const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const {identityFromFetch,identityAdvice}=require('./growth-url-identity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
@@ -705,6 +702,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const items=(list.items||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return no(400,'SELECTION_NOT_IN_GAP_LIST');
   if(!items.some(x=>x.writable))return no(400,'ONLY_PAGE_ELEMENTS_SELECTED');
+  // One outcome: research without enough evidence proposes nothing, so nothing is written from it either.
+  if(list.research?.evidence_status==='INSUFFICIENT_EVIDENCE')return no(409,'NOT_ENOUGH_EVIDENCE_TO_WRITE');
   // The list belongs to the page as researched: a changed page needs new research, never old advice (checked before any AI call).
   if(list.source_fingerprint){
    let live=null;try{live=await fetchLive(list.target_url)}catch{}
