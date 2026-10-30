@@ -61,9 +61,10 @@ CREATE TABLE tracker_case_studies(id BIGSERIAL PRIMARY KEY,tracker_client_id BIG
 CREATE TABLE tracker_gsc_queries(id BIGSERIAL PRIMARY KEY,tracker_client_id BIGINT,page_id BIGINT,source_page_url TEXT,evidence_scope TEXT,query TEXT,
  clicks INTEGER,impressions INTEGER,position NUMERIC,imported_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE tracker_snapshots(id BIGSERIAL PRIMARY KEY,page_id BIGINT,checked_at TIMESTAMPTZ,google_competitors JSONB,ai_perplexity_competitors JSONB);
+CREATE TABLE prewrite_briefs(id SERIAL PRIMARY KEY,client_id INTEGER,keyword TEXT,working_title TEXT,language TEXT,region TEXT,brief_json JSONB,competitors_scraped INTEGER,created_at TIMESTAMPTZ DEFAULT NOW());
 CREATE TABLE tracker_ai_evidence(id BIGSERIAL PRIMARY KEY,page_id BIGINT,tracker_client_id BIGINT,engine TEXT,evidence_method TEXT,brand_recommended BOOLEAN,
  domain_cited BOOLEAN,exact_page_cited BOOLEAN,citation_urls JSONB,verified_at TIMESTAMPTZ,revision_cycle INTEGER,is_cleared BOOLEAN);`;
-const TABLES=['tracker_clients','tracker_pages','tracker_case_studies','tracker_gsc_queries','tracker_snapshots','tracker_ai_evidence',
+const TABLES=['prewrite_briefs','tracker_clients','tracker_pages','tracker_case_studies','tracker_gsc_queries','tracker_snapshots','tracker_ai_evidence',
  'tracker_growth_proposals','tracker_growth_publications','tracker_growth_gsc_windows','tracker_growth_recommendations','tracker_growth_gap_lists','tracker_growth_page_markets','tracker_growth_writing_runs'];
 
 test.before(async()=>{
@@ -337,24 +338,31 @@ test('11. writing rounds are reliable: interrupted, failed storage, parallel cli
  assert.equal((await pool.query('SELECT selected FROM tracker_growth_gap_lists WHERE id=$1',[r3.body.gap_list.id])).rows[0].selected,null,'carried over, not selected by itself');
 });
 
-test('12. target markets: set at the top of the research page before research; the owner setting wins over a derived US state',async()=>{
- const page=await api('GET','/track/owner-tok/growth/auto-research?page_id='+ids.page);
- assert.match(page.body,/id="marketSetting"/);assert.match(page.body,/Not set: the market is derived from the page/);
- assert.doesNotMatch((await api('GET','/track/share-tok/growth/auto-research?page_id='+ids.page)).body,/id="marketSetting"/,'owner only');
+test('12. target market and language: the Pre-Write brief of the keyword, or the Growth setting at the top of the page; both win over a derived US state',async()=>{
  const url='/api/tracker-client/owner-tok/growth/markets?page_id='+ids.page;
+ // Research results are cached for five minutes; saving the market setting clears that cache (an empty setting = none).
+ const fresh=()=>api('POST',url,{countries:''});
+ const research=async()=>{const b=searches.length;await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});return searches.slice(b).pop()};
+ const page=async(tok='owner-tok')=>(await api('GET','/track/'+tok+'/growth/auto-research?page_id='+ids.page)).body;
+ // Nothing set, no Pre-Write brief: the synthetic keyword names a US state (Lodi, NJ), so the derived US market is used.
+ assert.match(await page(),/id="marketSetting"/);assert.match(await page(),/Not set: the market is derived from the page/);
+ assert.doesNotMatch(await page('share-tok'),/id="marketSetting"/,'owner only');
+ await fresh();assert.deepEqual((await research()).market.states,['NJ']);
+ // A Pre-Write brief for the same keyword (SYNTHETIC row, as the Pre-Write screen stores it: region code, language name).
+ await pool.query("INSERT INTO prewrite_briefs(client_id,keyword,language,region,brief_json) VALUES ($1,'Roof Repair Lodi NJ','Dutch','nl','{}')",[ids.client]);
+ assert.match(await page(),/From the Pre-Write brief for “Roof Repair Lodi NJ”: nl — Netherlands · Dutch/);
+ await fresh();const fromBrief=await research();
+ assert.equal(fromBrief.market,null);assert.deepEqual([fromBrief.locale.country,fromBrief.locale.hl,fromBrief.locale.source],['NL','nl','FROM_PREWRITE_BRIEF']);
+ // Set in Growth (as the Pre-Write picker writes it): wins over the brief.
  assert.equal((await api('POST',url.replace('owner-tok','share-tok'),{countries:'NL'})).status,403);
- const saved=await api('POST',url,{countries:'nl, uk, be, lu'});
- assert.deepEqual(saved.body.markets.countries,['NL','GB','BE','LU']);
- assert.match((await api('GET','/track/owner-tok/growth/auto-research?page_id='+ids.page)).body,/value="NL, GB, BE, LU"/);
- // The synthetic page's keyword names a US state (Lodi, NJ); the owner's setting still decides the research market.
- const before=searches.length;
- await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
- const used=searches.slice(before).pop();
- assert.equal(used.market,null);assert.deepEqual([used.locale.country,used.locale.other_countries,used.locale.source],['NL',['GB','BE','LU'],'SET_IN_TRACKER']);
- // Removing the setting brings back the derived market.
+ const saved=await api('POST',url,{countries:'nl — Netherlands, gb — United Kingdom, be, Luxembourg',language:'English'});
+ assert.deepEqual([saved.body.markets.countries,saved.body.markets.language],[['NL','GB','BE','LU'],'en']);
+ assert.match(await page(),/value="nl — Netherlands, gb — United Kingdom, be — Belgium, lu — Luxembourg"/);assert.match(await page(),/value="English"/);
+ const set=await research();
+ assert.deepEqual([set.locale.country,set.locale.other_countries,set.locale.hl,set.locale.source],['NL',['GB','BE','LU'],'en','SET_IN_TRACKER']);
+ // Removing the Growth setting brings the Pre-Write brief back.
  await api('POST',url,{countries:''});
- const b2=searches.length;await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
- assert.deepEqual(searches.slice(b2).pop().market.states,['NJ']);
+ assert.equal((await research()).locale.source,'FROM_PREWRITE_BRIEF');
 });
 
 test('9. nothing outside the Growth tables was written',async()=>{

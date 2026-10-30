@@ -28,4 +28,14 @@ async function setPageMarkets(pool,{clientId,pageId,countries,language}){
   ON CONFLICT (tracker_client_id,page_id) DO UPDATE SET countries=EXCLUDED.countries,language=EXCLUDED.language,updated_at=NOW()`,[clientId,Number(pageId),JSON.stringify(list),lang]);
  return {countries:list,language:lang};
 }
-module.exports={getPageMarkets,setPageMarkets,ensureTable};
+// The target market and language of the client's latest Pre-Write brief for the same keyword (the Tracker already asks
+// for both there). Used when nothing is set for the page in Growth. Read only; the Pre-Write table is not changed.
+async function getPrewriteMarket(pool,{clientId,keywords=[]}){
+ const list=[...new Set(keywords.map(k=>String(k||'').trim().toLowerCase()).filter(Boolean))];
+ if(!list.length)return null;
+ try{const row=(await pool.query(`SELECT id,keyword,language,region,created_at FROM prewrite_briefs WHERE client_id=$1 AND LOWER(TRIM(keyword))=ANY($2::text[]) ORDER BY created_at DESC,id DESC LIMIT 1`,[clientId,list])).rows[0];
+  if(!row)return null;const countries=validCountries([row.region]);if(!countries.length)return null;
+  return {countries,language:validLanguage(row.language),source:'FROM_PREWRITE_BRIEF',brief_id:Number(row.id),keyword:row.keyword,created_at:row.created_at}}
+ catch(e){if(e.code==='42P01'||e.code==='42703')return null;throw e}
+}
+module.exports={getPageMarkets,setPageMarkets,getPrewriteMarket,ensureTable};

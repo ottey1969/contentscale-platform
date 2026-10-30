@@ -23,7 +23,10 @@ const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
-const {deriveSearchLocale,validCountries}=require('./growth-search-locale.cjs');
+const {deriveSearchLocale,validCountries,validLanguage,countryName,languageName}=require('./growth-search-locale.cjs');
+// The Pre-Write brief's region and language lists (src/index.js CS_COMBO_DATA), so both screens offer the same choices.
+const PREWRITE_REGIONS=['us — United States','gb — United Kingdom','ca — Canada','au — Australia','ie — Ireland','nl — Netherlands','be — Belgium','de — Germany','at — Austria','ch — Switzerland','fr — France','es — Spain','it — Italy','pt — Portugal','pl — Poland','se — Sweden','dk — Denmark','no — Norway','fi — Finland','tr — Turkey','ru — Russia','ae — United Arab Emirates','sa — Saudi Arabia','qa — Qatar','kw — Kuwait','bh — Bahrain','om — Oman','eg — Egypt','ma — Morocco','za — South Africa','in — India','cn — China','hk — Hong Kong','tw — Taiwan','jp — Japan','kr — South Korea','sg — Singapore','my — Malaysia','id — Indonesia','ph — Philippines','th — Thailand','vn — Vietnam','br — Brazil','mx — Mexico','ar — Argentina','cl — Chile','co — Colombia','lu — Luxembourg'];
+const PREWRITE_LANGUAGES=['English','Dutch','German','French','Spanish','Italian','Portuguese','Polish','Swedish','Danish','Norwegian','Finnish','Turkish','Russian','Chinese (Simplified)','Chinese (Traditional)','Japanese','Korean','Hindi','Arabic'];
 const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const {identityFromFetch,identityAdvice}=require('./growth-url-identity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
@@ -54,7 +57,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -115,8 +118,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Market = the place the SOURCE page serves (its tracked keyword and URL), so a shorter GSC query keeps its locality.
   // Markets the owner set for this page win over anything derived. A US-state market derived from the query, keyword or
   // URL is kept only when there is no setting or the owner's main market is the US (it then adds the state's location).
+  // Without a Growth setting, the target market and language of the Pre-Write brief for the same keyword are used.
   let configured=null;
   if(targetQuery&&typeof loadPageMarkets==='function')configured=await Promise.resolve(loadPageMarkets({clientId:cid,pageId:pid})).catch(()=>null);
+  if(targetQuery&&!configured&&typeof loadPrewriteMarket==='function')
+   configured=await Promise.resolve(loadPrewriteMarket({clientId:cid,keywords:[page.keyword,targetQuery]})).catch(()=>null);
   const derivedMarket=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
    pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
   const market=derivedMarket&&(!configured?.countries?.length||configured.countries[0]==='US')?derivedMarket:null;
@@ -721,9 +727,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const v=check(req,res);if(!v)return;
   const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
   if(req.growth?.can_edit!==true||typeof savePageMarkets!=='function')return no(403,'OWNER_ONLY_MARKET_SETTING');
-  const raw=Array.isArray(req.body?.countries)?req.body.countries:String(req.body?.countries||'').split(/[\s,;]+/);
-  const countries=validCountries(raw.filter(Boolean));
-  if(raw.filter(Boolean).length&&!countries.length)return no(400,'USE_TWO_LETTER_COUNTRY_CODES');
+  // Each entry like the Pre-Write region picker ("nl — Netherlands"), a code or a country name; split on commas only.
+  const entries=(Array.isArray(req.body?.countries)?req.body.countries:String(req.body?.countries||'').split(/[,;]+/)).map(x=>String(x).trim()).filter(Boolean);
+  const countries=validCountries(entries);
+  if(entries.length&&countries.length<entries.filter(x=>x).length)return no(400,'UNKNOWN_COUNTRY');
+  if(String(req.body?.language||'').trim()&&!validLanguage(req.body.language))return no(400,'UNKNOWN_LANGUAGE');
   let saved;
   try{saved=await savePageMarkets({clientId:v.clientId,pageId:v.id,countries,language:req.body?.language})}catch{return no(503,'MARKET_SETTING_NOT_SAVED')}
   // The next research run uses the new markets.
@@ -831,16 +839,27 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  });
  app.get('/track/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
-  // Target markets at the top, before the research runs (owner only): the research uses them.
+  // Target market(s) and language at the top, before the research runs (owner only). Same lists as the Pre-Write brief;
+  // without a Growth setting, the Pre-Write brief of the same keyword is shown and used.
   let marketBox='';
   if(req.growth?.can_edit===true&&typeof savePageMarkets==='function'){
-   let current=null;if(typeof loadPageMarkets==='function')current=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
+   let current=null,prewrite=null;
+   if(typeof loadPageMarkets==='function')current=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
+   if(!current&&typeof loadPrewriteMarket==='function'){
+    const kw=await pool.query('SELECT keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id]).then(r=>r.rows[0]?.keyword).catch(()=>null);
+    prewrite=await Promise.resolve(loadPrewriteMarket({clientId:v.clientId,keywords:[kw]})).catch(()=>null);
+   }
    const url='/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id);
-   marketBox='<section id="marketSetting" data-url="'+sHtml(url)+'"><h2>Target markets</h2>'+
-    '<p class="info">Two-letter country codes, main market first (for example <strong>NL, UK, BE, LU</strong>). Growth searches the main market and the next one; the others are reported as not researched. Leave empty to let Growth derive the market from the page (shown as not confirmed).</p>'+
-    '<p><label for="marketInput">Markets for this page: </label><input id="marketInput" type="text" size="24" value="'+sHtml(current?current.countries.join(', '):'')+'" placeholder="NL, UK, BE, LU"> '+
-    '<button id="marketSave" type="button">Save and run the research again</button></p><small id="marketSaid">'+
-    (current?'Set in the Tracker: '+sHtml(current.countries.join(', '))+'.':'Not set: the market is derived from the page.')+'</small></section>';
+   const regionLabel=c=>c.toLowerCase()+' — '+countryName(c);
+   const opts=(id,list)=>'<datalist id="'+id+'">'+list.map(x=>'<option value="'+sHtml(x)+'">').join('')+'</datalist>';
+   marketBox='<section id="marketSetting" data-url="'+sHtml(url)+'"><h2>Target market and language</h2>'+
+    '<p class="info">As in the Pre-Write brief. Main market first; add more markets separated by commas (for example <strong>nl — Netherlands, gb — United Kingdom</strong>). Growth searches the main market and the next one; the others are reported as not researched. Leave empty to use the Pre-Write brief of this keyword, or to let Growth derive the market from the page (shown as not confirmed).</p>'+
+    '<p><label for="marketInput">Target market(s): </label><input id="marketInput" type="text" list="marketRegions" value="'+sHtml(current?current.countries.map(regionLabel).join(', '):'')+'" placeholder="'+sHtml(prewrite?prewrite.countries.map(regionLabel).join(', '):'nl — Netherlands')+'"> '+
+    '<label for="marketLanguage">Language: </label><input id="marketLanguage" type="text" list="marketLanguages" value="'+sHtml(current&&current.language?languageName(current.language):'')+'" placeholder="'+sHtml(prewrite&&prewrite.language?languageName(prewrite.language):'English')+'"> '+
+    '<button id="marketSave" type="button">Save and run the research again</button></p>'+opts('marketRegions',PREWRITE_REGIONS)+opts('marketLanguages',PREWRITE_LANGUAGES)+
+    '<small id="marketSaid">'+(current?'Set in Growth: '+sHtml(current.countries.map(regionLabel).join(', '))+(current.language?' · '+sHtml(languageName(current.language)):'')+'.':
+     prewrite?'From the Pre-Write brief for “'+sHtml(prewrite.keyword)+'”: '+sHtml(prewrite.countries.map(regionLabel).join(', '))+(prewrite.language?' · '+sHtml(languageName(prewrite.language)):'')+'. Used unless you set markets here.':
+     'Not set: the market is derived from the page.')+'</small></section>';
   }
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const base='/track/'+encodeURIComponent(req.params.token)+'/growth';
@@ -857,6 +876,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    'button{background:#1d4ed8;color:white;border:0;padding:10px 14px;border-radius:8px;font:inherit;cursor:pointer}',
    'button:disabled{opacity:.5}.info{color:#5b6475;font-size:13px}.error{color:#b42318}',
    'pre{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:8px 0}@media(max-width:600px){body{padding:12px}section{padding:12px}}',
+   '#marketSetting input{font:inherit;padding:6px 8px;border:1px solid #c8d2e0;border-radius:6px;margin:4px 0;box-sizing:border-box}#marketInput{width:min(100%,560px)}#marketLanguage{width:min(100%,200px)}',
    '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-competitor-overview.js"></script><script defer src="/growth-gap-checklist.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',

@@ -125,17 +125,21 @@ test('research per market whichever source answers: free Bing results cover two 
  assert.equal(r.market_coverage.confirmed,false);
 });
 
-test('the market setting route: owner only, two-letter codes, and the next research uses it',async()=>{
+test('the market setting route: owner only, the Pre-Write choices (region and language), and the next research uses it',async()=>{
  const route={},saved=[];
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},{query:async()=>({rows:[]})},(req,res,next)=>{
   req.growthTrackerClientId=4;req.growth={can_edit:req.query.owner==='1',pages:[{id:2324,url:'https://contentscale.site/international-seo',case_study_active:false}]};next()},
-  {savePageMarkets:async a=>{saved.push(a);return {countries:validCountries(a.countries),language:null}}});
+  {savePageMarkets:async a=>{saved.push(a);return {countries:validCountries(a.countries),language:a.language||null}}});
  const post=async(body,owner='1')=>{const req={params:{token:'t'},query:{page_id:'2324',owner},body},
   res={statusCode:200,status(x){this.statusCode=x;return this},set(){return this},json(x){this.body=x;return this}};
   const stack=route['/api/tracker-client/:token/growth/markets'];
   await new Promise(ok=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()})};at(0)});return res};
  assert.equal((await post({countries:'NL, UK'},'0')).statusCode,403);
- assert.equal((await post({countries:'Netherlands'})).body.code,'USE_TWO_LETTER_COUNTRY_CODES');
+ assert.equal((await post({countries:'NL, Narnia'})).body.code,'UNKNOWN_COUNTRY','one unknown market refuses the whole setting');
+ assert.equal((await post({countries:'NL',language:'Klingon'})).body.code,'UNKNOWN_LANGUAGE');
+ const prewrite=await post({countries:'nl — Netherlands, gb — United Kingdom, Belgium, lu',language:'Dutch'});
+ assert.deepEqual(prewrite.body.markets.countries,['NL','GB','BE','LU'],'the Pre-Write picker format, codes and names');
+ assert.equal(saved.at(-1).language,'Dutch');
  const ok=await post({countries:'NL, UK, BE, LU'});
  assert.equal(ok.statusCode,200);assert.deepEqual(ok.body.markets.countries,['NL','GB','BE','LU']);assert.equal(ok.body.research_rerun_required,true);
  assert.deepEqual(saved.at(-1).countries,['NL','GB','BE','LU']);
