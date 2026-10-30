@@ -107,7 +107,8 @@ function buildGapList(report={}){
  const readable=ov?.ranking_pages_read??0;
  // One outcome for the whole report: when the research decision itself is "data blocked", the list proposes nothing either.
  const gateBlocked=report.editorial_decision_gate?.decision==='DATA_BLOCKED';
- const insufficient=(ov?.status==='OBSERVED'&&readable<MIN_READABLE_PAGES)||(gateBlocked&&items.some(x=>x.writable));
+ // No comparison (no overview, or not enough readable pages for one) is not evidence either.
+ const insufficient=gateBlocked||ov?.status!=='OBSERVED'||readable<MIN_READABLE_PAGES;
  prioritise(items,focus,{newPage,insufficient,readable,gateBlocked});
  growthPotential(items,report,qWords);
  const status=items.length||ov?.status==='OBSERVED'?'OBSERVED':(ov?.status||'NOT_AVAILABLE');
@@ -115,7 +116,8 @@ function buildGapList(report={}){
  return {status,page_kind:newPage?'NEW_PAGE':'EXISTING_PAGE',
   // One outcome: without enough evidence nothing is proposed and the writer is not offered (the brief still is).
   evidence:insufficient?{status:'INSUFFICIENT_EVIDENCE',readable_ranking_pages:readable,
-   reason:readable<MIN_READABLE_PAGES?'Only '+readable+' readable ranking page'+(readable===1?'':'s')+': not enough evidence to propose or write a section. The list is shown for information.':
+   reason:!gateBlocked&&ov?.status!=='OBSERVED'&&!readable?'No readable ranking page could be compared: not enough evidence to propose or write a section.':
+    readable<MIN_READABLE_PAGES&&!gateBlocked?'Only '+readable+' readable ranking page'+(readable===1?'':'s')+': not enough evidence to propose or write a section. The list is shown for information.':
     'The research decision is "data blocked"'+(report.editorial_decision_gate?.blocker_code?' ('+String(report.editorial_decision_gate.blocker_code).toLowerCase().replace(/_/g,' ')+')':'')+': no section is proposed or written. The list is shown for information.'}:
    {status:'ENOUGH_EVIDENCE',readable_ranking_pages:readable},
   writing_allowed:!insufficient,groups:GROUPS.map(([id,label])=>({id,label:newPage&&NEW_LABEL[id]||label})),items,

@@ -580,7 +580,7 @@
   list(competitors.topic_candidates||[],s,x=>x.heading+' — source: '+x.source_url+' (not a proven content gap)');
   var ai=d.ai_visibility||{};
   node('h3','Saved AI visibility observations (not a new automated AI test)',s);
-  list(ai.engines||[],s,e=>e.engine+' ('+(e.method||'historical')+'): recommended '+(e.recommended?'Yes':'Not observed')+
+  list(ai.engines||[],s,e=>e.engine+' ('+(e.method==='manual'?'collected by hand, not an automatic check':(e.method||'historical'))+'): recommended '+(e.recommended?'Yes':'Not observed')+
    '; domain cited '+(e.domain_cited?'Yes':'Not observed')+
    '; exact page cited '+(e.exact_page_cited?'Yes':'Not observed')+
    '; checked '+(e.verified_at||'date unknown'));
