@@ -337,6 +337,26 @@ test('11. writing rounds are reliable: interrupted, failed storage, parallel cli
  assert.equal((await pool.query('SELECT selected FROM tracker_growth_gap_lists WHERE id=$1',[r3.body.gap_list.id])).rows[0].selected,null,'carried over, not selected by itself');
 });
 
+test('12. target markets: set at the top of the research page before research; the owner setting wins over a derived US state',async()=>{
+ const page=await api('GET','/track/owner-tok/growth/auto-research?page_id='+ids.page);
+ assert.match(page.body,/id="marketSetting"/);assert.match(page.body,/Not set: the market is derived from the page/);
+ assert.doesNotMatch((await api('GET','/track/share-tok/growth/auto-research?page_id='+ids.page)).body,/id="marketSetting"/,'owner only');
+ const url='/api/tracker-client/owner-tok/growth/markets?page_id='+ids.page;
+ assert.equal((await api('POST',url.replace('owner-tok','share-tok'),{countries:'NL'})).status,403);
+ const saved=await api('POST',url,{countries:'nl, uk, be, lu'});
+ assert.deepEqual(saved.body.markets.countries,['NL','GB','BE','LU']);
+ assert.match((await api('GET','/track/owner-tok/growth/auto-research?page_id='+ids.page)).body,/value="NL, GB, BE, LU"/);
+ // The synthetic page's keyword names a US state (Lodi, NJ); the owner's setting still decides the research market.
+ const before=searches.length;
+ await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
+ const used=searches.slice(before).pop();
+ assert.equal(used.market,null);assert.deepEqual([used.locale.country,used.locale.other_countries,used.locale.source],['NL',['GB','BE','LU'],'SET_IN_TRACKER']);
+ // Removing the setting brings back the derived market.
+ await api('POST',url,{countries:''});
+ const b2=searches.length;await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
+ assert.deepEqual(searches.slice(b2).pop().market.states,['NJ']);
+});
+
 test('9. nothing outside the Growth tables was written',async()=>{
  assert.equal(await pageHtml(ids.page),OWN);assert.equal(await pageHtml(ids.locked),LOCKED);
  assert.equal((await pool.query("SELECT count(*)::int n FROM tracker_case_studies WHERE status='active'")).rows[0].n,1);

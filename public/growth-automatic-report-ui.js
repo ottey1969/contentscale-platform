@@ -289,16 +289,7 @@
     (loc.priority_confirmed===false?' · the order of the markets is a guess from how often the headings name them':''),mk);
    (cov.markets||[]).forEach(function(m){node('small',' '+m.name+': '+(m.researched?'researched ('+(m.provider||'search')+', '+m.usable_results+' usable result(s))':'not researched'),node('div',null,mk))});
    if(cov.note)node('small',cov.note,node('div',null,mk));
-   if(d.market_setting_url){
-    var form=node('p',null,mk);node('small','Target markets for this page (two-letter codes, main market first): ',form);
-    var inp=node('input',null,form);inp.type='text';inp.size=18;inp.placeholder='e.g. '+[loc.country].concat(loc.other_countries||[]).filter(Boolean).join(', ');
-    if(loc.source==='SET_IN_TRACKER')inp.value=[loc.country].concat(loc.other_countries||[]).join(', ');
-    var save=node('button','Save markets',form);save.type='button';var said=node('small','',form);
-    save.addEventListener('click',async function(){save.disabled=true;
-     try{var r=await fetch(d.market_setting_url,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:inp.value})});
-      var j=await r.json();said.textContent=j.success?' Saved'+(j.markets?': '+j.markets.countries.join(', '):' (removed; derived from the page again)')+'. Run the research again to use it.':' Not saved: '+(j.code||r.status);}
-     catch(e){said.textContent=' Not saved.'}finally{save.disabled=false}});
-   }
+   if(d.market_setting_url&&loc.source!=='SET_IN_TRACKER')node('small','Set the target markets at the top of this page to research the right countries.',mk);
   }
   if(discovery.free_discovery_status)node('small','Free search: '+discovery.free_discovery_status,s);
   if(discovery.optional_google_status)node('small','Optional Google search: '+discovery.optional_google_status,s);
@@ -652,6 +643,18 @@
   }finally{document.getElementById('retryResearch').disabled=false}
  }
  document.getElementById('retryResearch').addEventListener('click',run);
+ // Target markets (top of the page): saving runs the research again with them.
+ var marketBox=document.getElementById('marketSetting');
+ if(marketBox){var mSave=document.getElementById('marketSave'),mSaid=document.getElementById('marketSaid'),mInput=document.getElementById('marketInput');
+  mSave.addEventListener('click',async function(){mSave.disabled=true;mSaid.textContent='Saving…';
+   try{var r=await fetch(marketBox.getAttribute('data-url'),{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:mInput.value})});
+    var j=await r.json();
+    if(!j.success){mSaid.textContent='Not saved: '+(j.code==='USE_TWO_LETTER_COUNTRY_CODES'?'use two-letter country codes, for example NL, UK, BE, LU':(j.code||r.status));return}
+    mInput.value=j.markets?j.markets.countries.join(', '):'';
+    mSaid.textContent=(j.markets?'Saved: '+j.markets.countries.join(', '):'Removed: the market is derived from the page again')+'. Running the research again…';
+    container.textContent='';await run();mSaid.textContent=(j.markets?'Set in the Tracker: '+j.markets.countries.join(', '):'Not set: the market is derived from the page')+'. Research updated.';
+   }catch(e){mSaid.textContent='Not saved.'}finally{mSave.disabled=false}});
+ }
  document.getElementById('downloadResearch').addEventListener('click',function(){
   if(!last)return;
   var blob=new Blob([JSON.stringify(last,null,2)],{type:'application/json'});

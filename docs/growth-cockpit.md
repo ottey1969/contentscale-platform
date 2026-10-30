@@ -119,9 +119,9 @@ The claim check ignores technical notation when it looks for unsourced figures: 
 
 The owner decides the market; page signals are evidence.
 
-- **Set in the Tracker** (`POST /api/tracker-client/:token/growth/markets?page_id=`, owner only): ordered two-letter country codes, main market first (`NL, UK, BE, LU`); an empty list removes the setting. Stored in the additive table `tracker_growth_page_markets`. Source `SET_IN_TRACKER`, `confirmed: true`.
+- **Set in the Tracker**: at the top of the research page ("Target markets", owner only, visible before the research runs; saving runs the research again). API: `POST /api/tracker-client/:token/growth/markets?page_id=`: ordered two-letter country codes, main market first (`NL, UK, BE, LU`); an empty list removes the setting. Stored in the additive table `tracker_growth_page_markets`. Source `SET_IN_TRACKER`, `confirmed: true`.
 - **Derived when nothing is set** (`src/growth-search-locale.cjs`), in this order: a country-code domain (`.nl`, `.co.uk`, `.it`, `.in`; Google's generic ccTLDs such as `.io`, `.co`, `.me` are not countries); countries named in the title and headings; the region of its own hreflang; the region of `<html lang>`. Labelled `confirmed: false`; when several countries are named, their order is marked `priority_confirmed: false`. What the page suggests stays visible next to a Tracker setting.
-- A US-state market from the query/keyword/URL keeps the US lookup with its location. Without any signal the default stays US / English and the report says so.
+- A US-state market derived from the query/keyword/URL is used only when nothing is set or the owner's main market is the US (it then adds the state's location); the owner's setting always wins. Without any signal the default stays US / English and the report says so.
 
 Searching: Serper gets `gl`/`hl`, Bing RSS `cc`/`setlang`. A page with several markets gets its second market searched too: with the free source by one more free lookup, with Serper by the one allowed extra paid call. Never more than two paid calls per run.
 

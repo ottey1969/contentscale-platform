@@ -113,12 +113,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(intentResolution.source==='TRACKER_KEYWORD'&&selectionSource&&selectionSource!=='TRACKER_KEYWORD')intentResolution.source=selectionSource;
   const targetQuery=intentResolution.query||'';
   // Market = the place the SOURCE page serves (its tracked keyword and URL), so a shorter GSC query keeps its locality.
-  const market=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
+  // Markets the owner set for this page win over anything derived. A US-state market derived from the query, keyword or
+  // URL is kept only when there is no setting or the owner's main market is the US (it then adds the state's location).
+  let configured=null;
+  if(targetQuery&&typeof loadPageMarkets==='function')configured=await Promise.resolve(loadPageMarkets({clientId:cid,pageId:pid})).catch(()=>null);
+  const derivedMarket=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
    pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
+  const market=derivedMarket&&(!configured?.countries?.length||configured.countries[0]==='US')?derivedMarket:null;
   // The country (and language) the page itself states, for pages outside a US-state market; reported with the research.
   // A market the owner set for this page in the Tracker wins; headings, domain and hreflang are evidence only.
-  let configured=null;
-  if(targetQuery&&!market&&typeof loadPageMarkets==='function')configured=await Promise.resolve(loadPageMarkets({clientId:cid,pageId:pid})).catch(()=>null);
   const locale=targetQuery&&!market?deriveSearchLocale({html:own.live?.html||page.saved_html||'',url:page.url,configured}):null;
   const discovery=!targetQuery?{
    status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
@@ -826,8 +829,19 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:Number(list.target_page_id),
     url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)}:null});
  });
- app.get('/track/:token/growth/auto-research',data,(req,res)=>{
+ app.get('/track/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
+  // Target markets at the top, before the research runs (owner only): the research uses them.
+  let marketBox='';
+  if(req.growth?.can_edit===true&&typeof savePageMarkets==='function'){
+   let current=null;if(typeof loadPageMarkets==='function')current=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
+   const url='/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id);
+   marketBox='<section id="marketSetting" data-url="'+sHtml(url)+'"><h2>Target markets</h2>'+
+    '<p class="info">Two-letter country codes, main market first (for example <strong>NL, UK, BE, LU</strong>). Growth searches the main market and the next one; the others are reported as not researched. Leave empty to let Growth derive the market from the page (shown as not confirmed).</p>'+
+    '<p><label for="marketInput">Markets for this page: </label><input id="marketInput" type="text" size="24" value="'+sHtml(current?current.countries.join(', '):'')+'" placeholder="NL, UK, BE, LU"> '+
+    '<button id="marketSave" type="button">Save and run the research again</button></p><small id="marketSaid">'+
+    (current?'Set in the Tracker: '+sHtml(current.countries.join(', '))+'.':'Not set: the market is derived from the page.')+'</small></section>';
+  }
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const base='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const allowHandoff=req.growth?.can_edit===true&&!v.page.case_study_active;
@@ -847,6 +861,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
+   marketBox,
    '<section><div role="status" id="researchStatus">Analyzing the URL and observed competitor evidence…</div>',
    '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
    '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?
