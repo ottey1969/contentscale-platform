@@ -260,7 +260,7 @@ function registerGrowthCockpit(app,pool,deps={}){
   // One visible next action. This is a navigation guide, not a claim that downstream work was completed.
   // The existing server-side research, selection, writing, evidence and publication gates remain authoritative.
   const guidedSteps=['Choose a page','Confirm market and language','Research competitors','Select improvements','Write selected topics','Review the evidence','Prepare CMS package','Record publication','Measure results'];
-  const guidedRows=guidedSteps.map((label,i)=>'<li class="'+(i===0?'guide-done':i===1?'guide-next':'guide-wait')+'"><span aria-hidden="true">'+(i===0?'✓':i===1?'→':'○')+'</span> '+escapeHtml(label)+(i===0?' — page identified':i===1?' — review on the research screen':' — not verified here')+'</li>').join('');
+  const guidedRows=guidedSteps.map((label,i)=>'<li class="'+(b&&i===0?'guide-done':i===(b?1:0)?'guide-next':'guide-wait')+'"><span aria-hidden="true">'+(b&&i===0?'✓':i===(b?1:0)?'→':'○')+'</span> '+escapeHtml(label)+(b&&i===0?' — page identified':i===(b?1:0)?' — next action':' — not verified here')+'</li>').join('');
   const guidedNext=b?startLink(b.page_id,b.query,'Continue with this page →','guide-primary'):null;
   const guide='<section class="growth-guide" aria-labelledby="guideTitle"><p class="kicker">Your next action</p>'+
    '<h2 id="guideTitle">'+(b?'Continue Growth for '+escapeHtml(b.query||b.label||b.url):'Choose what to work on')+'</h2>'+
