@@ -17,6 +17,8 @@ const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-
 const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageTypeScope,blocks:pageBlocks,groupSections}=require('./growth-reader-task-coverage.cjs');
 const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-task-meaning.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
+const {buildGapList}=require('./growth-gap-list.cjs');
+const {writeForSelection}=require('./growth-selected-writing.cjs');
 const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
@@ -47,7 +49,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -536,6 +538,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    completion={...base,status:'OWNER_PRODUCT_FACTS_REQUIRED',decision:gateDecision,draft:null,error_code:null};
   }else if(!Number.isSafeInteger(targetId)||targetId<1){
    completion={...base,status:'DESTINATION_TRACKER_PAGE_REQUIRED',draft:null};
+  }else if(req.body?.write===false){
+   // Hybrid flow: research and the full gap list first; text is written only for what the owner selects (/write).
+   completion={...base,status:'WRITING_ON_SELECTION',decision:gateDecision,draft:null,error_code:null};
   }else if(String(process.env.GROWTH_AI_DRAFTS||'').toLowerCase()==='off'){
    // Owner setting: research and confirmed reader questions only; the editor writes the text (CMS handoff takes own text).
    completion={...base,status:'EDITOR_WRITES',decision:gateDecision,draft:null,error_code:null};
@@ -656,7 +661,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    try{proposalRef=await recordProposal({clientId:v.clientId,researchPageId:v.id,targetPageId:targetId,decision:completeDecision})}
    catch(e){console.warn('[growth-auto-research] proposal not saved',String(e?.code||'unknown'))}
   }
+  // Every difference with the ranking pages, stored so a later selection writes from exactly this research.
+  const gapList=buildGapList(report);
+  let gapRef=null;
+  if(typeof recordGapList==='function'&&Number.isSafeInteger(targetId)&&targetId>0&&!(v.lockedPages||[]).some(x=>x.id===targetId||x.url===targetUrl)){
+   try{gapRef=await recordGapList({clientId:v.clientId,targetPageId:targetId,targetUrl,focusQuery:gapList.focus_query,list:gapList})}
+   catch(e){console.warn('[growth-auto-research] gap list not saved',String(e?.code||'unknown'))}
+  }
   return res.set('Cache-Control','private, no-store').json({...report,
+   gap_list:{...gapList,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
     url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(targetId)}:null,
    editorial_decision_gate:completeDecision,
@@ -676,6 +689,42 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     draft_provider_status:completion.status,evidence_status:evidenceStatus,
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
  });
+ // Writing for the owner's selection only: items come from the stored gap list (never from the browser), at most four per
+ // call, one repair attempt, then a marked concept. The result is stored as a proposal for the CMS handoff. Nothing is published.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/auto-research/write',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof completeOwnerDraft!=='function'||typeof loadGapList!=='function')return no(403,'OWNER_ONLY_WRITING');
+  const ids=Array.isArray(req.body?.item_ids)?[...new Set(req.body.item_ids.map(String))].slice(0,20):[];
+  if(!ids.length)return no(400,'SELECT_AT_LEAST_ONE_ITEM');
+  let list;
+  try{list=await loadGapList({clientId:v.clientId,id:req.body?.gap_list_id})}catch{return no(503,'GAP_LIST_UNAVAILABLE')}
+  if(!list)return no(404,'GAP_LIST_NOT_FOUND');
+  const target=(req.growth?.pages||[]).find(p=>Number(p.id)===Number(list.target_page_id));
+  if(!target||target.url!==list.target_url)return no(409,'GAP_LIST_PAGE_CHANGED');
+  if(target.case_study_active===true)return no(409,'CASE_STUDY_BASELINE_LOCKED');
+  const items=(list.items||[]).filter(x=>ids.includes(String(x.id)));
+  if(!items.length)return no(400,'SELECTION_NOT_IN_GAP_LIST');
+  if(typeof recordSelection==='function')await Promise.resolve(recordSelection({clientId:v.clientId,id:list.id,itemIds:items.map(x=>x.id)})).catch(()=>{});
+  const generate=async research_context=>{
+   const outcome=await completeOwnerDraft({token:req.params.token,body:{page_id:Number(list.target_page_id),focus_query:list.focus_query||'',
+    growth_source_page_id:v.id,research_context,flag_fallback:true}});
+   const d=outcome?.body||{};
+   if(outcome.statusCode!==200||d.success!==true||d.canonical_url!==list.target_url||Number(d.page_id)!==Number(list.target_page_id))
+    return {status:d.code||'WRITER_UNAVAILABLE'};
+   return {status:d.status,draft:d.draft||null,flags:d.flags||[],source_text:d.source_text||''};
+  };
+  const written=await writeForSelection({items,targetUrl:list.target_url,focusQuery:list.focus_query||'',generate});
+  let proposalRef=null;
+  if(written.sections?.length&&typeof recordSelectionProposal==='function'){
+   try{proposalRef=await recordSelectionProposal({clientId:v.clientId,researchPageId:v.id,targetPageId:Number(list.target_page_id),targetUrl:list.target_url,focusQuery:list.focus_query,written})}
+   catch(e){console.warn('[growth-auto-research] selection concept not saved',String(e?.code||'unknown'))}
+  }
+  res.set('Cache-Control','private, no-store').json({success:true,...written,gap_list_id:Number(list.id),selected:items.map(x=>x.id),
+   published:false,copy_ready:false,
+   cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:Number(list.target_page_id),
+    url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)}:null});
+ });
  app.get('/track/:token/growth/auto-research',data,(req,res)=>{
   const v=check(req,res);if(!v)return;
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
@@ -693,7 +742,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    'button{background:#1d4ed8;color:white;border:0;padding:10px 14px;border-radius:8px;font:inherit;cursor:pointer}',
    'button:disabled{opacity:.5}.info{color:#5b6475;font-size:13px}.error{color:#b42318}',
    'pre{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:8px 0}@media(max-width:600px){body{padding:12px}section{padding:12px}}',
-   '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-competitor-overview.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
+   '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-competitor-overview.js"></script><script defer src="/growth-gap-checklist.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',

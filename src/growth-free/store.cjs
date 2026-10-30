@@ -25,6 +25,9 @@ function ensureTables(pool){
     finished_at TIMESTAMPTZ)`);
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS access_label TEXT');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS invite_id BIGINT');
+  // Optional writing for the visitor's selection: the last result and how many times it was used for this check.
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS written JSONB');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS write_count INTEGER NOT NULL DEFAULT 0');
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
@@ -100,7 +103,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,write_count FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
@@ -109,6 +112,11 @@ async function getCheck(pool,publicId,key){
  return row;
 }
 
+// Counts one writing run and keeps its result; refuses when the limit is reached (atomic).
+async function recordWriting(pool,{checkId,written,limit}){
+ return (await pool.query('UPDATE growth_free_checks SET written=$2::jsonb,write_count=write_count+1 WHERE id=$1 AND write_count<$3 RETURNING write_count',
+  [checkId,JSON.stringify(written),limit])).rows[0]||null;
+}
 async function createHireRequest(pool,{checkId,name,email,company,phone,message}){
  return (await pool.query(`INSERT INTO growth_free_hire_requests(check_id,name,email,company,phone,message)
    VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,created_at`,[checkId,name,email,company||null,phone||null,message||null])).rows[0];
@@ -170,4 +178,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

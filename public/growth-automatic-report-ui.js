@@ -257,6 +257,14 @@
   if(d.competitor_overview&&typeof renderOverview==='function'){
    try{renderOverview(d.competitor_overview,node('section',null,researchDetails||container))}catch(e){}
   }
+  // The editor's choice: every difference, ticked by the owner; text is written only for the selection.
+  var renderChecklist=typeof window!=='undefined'&&window.renderGrowthGapChecklist;
+  if(d.gap_list&&typeof renderChecklist==='function'){
+   var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
+   try{renderChecklist({...gl,target_url:d.url},node('section',null,researchDetails||container),{write:writeUrl?async function(ids){
+    var r=await fetch(writeUrl,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({gap_list_id:gl.id,item_ids:ids})});
+    return r.json()}:null})}catch(e){}
+  }
   s=section('Search competitors for this Growth query');
   var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>
    x.discovery_source==='BING_PUBLIC_RSS'||x.discovery_source==='SERPER_GOOGLE_ORGANIC');
@@ -365,6 +373,10 @@
      draftStatus.textContent='Draft URL mismatch · no text displayed.';
      return;
     }
+    if(result.status==='WRITING_ON_SELECTION'){
+     draftStatus.textContent='No text written yet. Choose what goes on your site in the list above and write only those, or prepare a draft for the automatic plan with the button.';
+     return;
+    }
     if(result.status!=='AI_DRAFT_REVIEW_REQUIRED'||!result.draft?.sections?.length){
      draftStatus.textContent='Detailed draft status: '+String(result.status||'NO_DRAFT')+
       (result.error_code?' ('+String(result.error_code).slice(0,110)+')':'')+
@@ -468,7 +480,7 @@
    // the optional second step automatically; do not require another button press.
    // Non-owner sessions and untracked destinations never invoke the AI endpoint.
    if(validDraftPage&&d.report_completion)showDraftResult(d.editorial_review_draft||{status:'NO_DRAFT_RESULT',target_url:draftSourceUrl});
-   else if(validDraftPage)void prepareDraft();
+   // No automatic writing: the owner chooses (selection above, or this button for the automatic plan).
   }
   s=section('What happened to the other research?');
   var rows=plan.classifications||[],categories=plan.query_categories||{};
@@ -605,7 +617,7 @@
     '/growth/auto-research/complete?page_id='+encodeURIComponent(id);
    var response=await fetch(owner?completeEndpoint:endpoint,{
     method:owner?'POST':'GET',credentials:'same-origin',cache:'no-store',
-    ...(owner?{headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(id)})}:{})
+    ...(owner?{headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(id),write:false})}:{})
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');

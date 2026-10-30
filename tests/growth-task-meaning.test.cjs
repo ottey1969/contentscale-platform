@@ -62,20 +62,25 @@ test('an answer is only accepted when it stands on the input: invented hosts, he
  assert.equal(validateTaskVerdicts('not json',input).status,'INVALID_JUDGEMENT');
 });
 
-test('fail closed: without a usable judgement nothing is confirmed and the gate says TASK_MEANING_NOT_VERIFIED',async()=>{
+test('advice, not a gate: without a usable judgement the research still yields a plan, labelled as not verified',async()=>{
+ const evidence=g=>g.evidence_status;
  for(const model of [null,{model:'t',call:async()=>{throw Object.assign(Error('x'),{code:'JUDGE_HTTP_503'})}},modelSaying('garbage')]){
   const cov=fresh();
   const j=await judgeTaskMeaning({query:'ai citation tracker',coverage:cov,pageSections,model});
   applyTaskMeaning(cov,j);
-  assert.equal(cov.tasks.filter(t=>t.supported_by_competitors).length,0,j.status);
+  const candidates=cov.tasks.filter(t=>t.word_match_supported);
+  assert(candidates.length>0&&candidates.every(t=>t.supported_by_competitors&&t.meaning.status==='NOT_VERIFIED'),j.status);
   const g=gate(cov);
-  assert.equal(g.decision,'DATA_BLOCKED',j.status);assert.equal(g.blocker_code,'TASK_MEANING_NOT_VERIFIED',j.status);
+  assert.equal(g.decision,'IMPROVE_EXISTING',j.status);
+  assert.equal(evidence(g).meaning_verified,false);assert.equal(evidence(g).label,'CANDIDATE_GAP_MEANING_NOT_VERIFIED');
+  assert(!g.improvement_plan.tasks.some(t=>t.reader_question),'no reader question is invented without a judgement');
  }
- // A judgement whose every answer fails validation confirms nothing either.
+ // Answers that fail validation confirm nothing and drop nothing either.
  const cov=fresh();
  applyTaskMeaning(cov,await judgeTaskMeaning({query:'ai citation tracker',coverage:cov,pageSections,
   model:modelSaying({tasks:cov.tasks.filter(t=>t.supported_by_competitors).map(t=>({code:t.code,same_question:true,reader_question:'Some question here?',supporting_hosts:['invented.example','other.example'],page_answers:'NO',page_heading:null}))})}));
- assert.equal(gate(cov).blocker_code,'TASK_MEANING_NOT_VERIFIED');
+ assert(cov.tasks.filter(t=>t.word_match_supported).every(t=>t.meaning.status==='NOT_VERIFIED'&&t.supported_by_competitors));
+ assert.equal(gate(cov).evidence_status.meaning_verified,false,'unusable answers verify nothing');
  assert.equal(geminiModel({apiKey:''}),null,'no key configured means no judge, never a guess');
 });
 
@@ -88,14 +93,15 @@ test('when every candidate turns out to be two different questions, Growth says 
  assert.match(g.missing_evidence[0].detail,/answered different reader questions/);
 });
 
-test('draft answer check: report 55\'s "prioritize" text under a manual-audit question is rejected; unchecked is not accepted',async()=>{
+test('draft answer check: report 55\'s "prioritize" text under a manual-audit question is rejected; an unavailable check does not block',async()=>{
  const task={code:'task_manual',reader_question:'How do I check AI citations for my keywords manually?'};
  const section={h2:'How to Prioritize Content Using Domain Authority and Organic Traffic Metrics',paragraphs:['To prioritize optimization tasks effectively, evaluate your content assets using domain authority metrics and existing organic traffic levels.']};
  // MODEL_ANSWER
  const ac=await judgeDraftAnswers({sections:[section],tasks:[task],model:modelSaying({sections:[{id:answerKey(section.h2,'task_manual'),answers:false,reason:'It is about prioritizing pages by SEO metrics, not a manual audit.'}]})});
  assert.equal(answerCheckFor(task,ac,section.h2).code,'DRAFT_DOES_NOT_ANSWER_QUESTION');
- assert.equal(answerCheckFor(task,{status:'JUDGE_UNAVAILABLE',verdicts:{}},section.h2).code,'DRAFT_ANSWER_NOT_VERIFIED');
- assert.equal(answerCheckFor(task,await judgeDraftAnswers({sections:[section],tasks:[task],model:null}),section.h2).code,'DRAFT_ANSWER_NOT_VERIFIED');
+ // An unavailable answer check is missing advice, not a rejection.
+ assert.equal(answerCheckFor(task,{status:'JUDGE_UNAVAILABLE',verdicts:{}},section.h2),null);
+ assert.equal(answerCheckFor(task,await judgeDraftAnswers({sections:[section],tasks:[task],model:null}),section.h2),null);
  const ok=await judgeDraftAnswers({sections:[section],tasks:[task],model:modelSaying({sections:[{id:answerKey(section.h2,'task_manual'),answers:true,reason:'r'}]})});
  assert.equal(answerCheckFor(task,ok,section.h2),null);
  assert.equal(answerCheckFor({code:'task_x'},ac,section.h2),null,'a task without a reader question (no meaning check) is not affected');

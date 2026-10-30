@@ -21,14 +21,16 @@ function normalizeGrowthResearchContext(payload,{targetUrl='',focusQuery=''}={})
   seen.add(parsed.origin+'|'+heading.toLowerCase());
   observations.push({competitor_url:parsed.origin+parsed.pathname,competitor_heading:heading,
    competitor_excerpt:excerpt,evidence_scope:'UNTRUSTED_PUBLIC_HTML_OBSERVATION_NOT_A_PROVEN_GAP'});
-  if(observations.length>=3)break;
+  if(observations.length>=6)break;
  }
  let reader_task=null;
  const rt=payload.reader_task;
  if(rt&&typeof rt==='object'&&['SECTION_IMPROVEMENT','NEW_DISTINCT_PAGE'].includes(rt.mode)){
   const list=v=>(Array.isArray(v)?v:[]);
   reader_task={mode:rt.mode,
-   tasks:list(rt.tasks).slice(0,2).map(t=>({code:clean(t?.code).slice(0,40),label:clean(t?.label).slice(0,140),
+   // Up to four tasks (an owner selection); the confirmed reader question must reach the writer.
+   tasks:list(rt.tasks).slice(0,4).map(t=>({code:clean(t?.code).slice(0,40),label:clean(t?.label).slice(0,140),
+    ...(clean(t?.reader_question)?{reader_question:clean(t.reader_question).slice(0,200)}:{}),
     placement_mode:clean(t?.placement_mode).slice(0,30),placement_heading:clean(t?.placement_heading).slice(0,180),
     destination_status:clean(t?.destination_status).slice(0,20),
     core_words:(Array.isArray(t?.core_words)?t.core_words:[]).slice(0,5).map(w=>String(w).toLowerCase().replace(/[^a-z]/g,'').slice(0,24)).filter(Boolean)})).filter(t=>t.code&&t.label),

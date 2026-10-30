@@ -65,7 +65,10 @@ test('standalone check: every difference becomes one choosable item, grouped by 
   elements_they_have_and_this_page_lacks:[{key:'tables',label:'A table (comparison or overview)',ranking_pages_with_it:2,of:2}],structured_data_they_have_and_this_page_lacks:[],
   length:{this_page_words:4301,ranking_pages_median_words:2900},ranking_pages:[]};
  const g=gapList(ov);
- assert.deepEqual(g.items.map(x=>x.group),['MISSING_TOPIC','PARTIAL_TOPIC','PAGE_ELEMENT'],'a covered topic is not a gap; no length gap when this page is longer');
+ const groups=g.items.map(x=>x.group);
+ assert.deepEqual([...new Set(groups)],['MISSING_TOPIC','PARTIAL_TOPIC','COMPETITOR_SECTION','PAGE_ELEMENT'],'a covered topic is not a gap; no length gap when this page is longer');
+ assert.equal(groups.filter(x=>x==='COMPETITOR_SECTION').length,v.ungrouped_sections.length,'sections the AI did not place in a topic stay choosable');
+ assert(g.items.filter(x=>x.group==='PAGE_ELEMENT').every(x=>x.writable===false),'page elements are added by the editor, not written');
  assert.equal(g.items[1].your_section,'🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)');
  assert(new Set(g.items.map(x=>x.id)).size===g.items.length,'ids are unique');
  assert.equal(gapList(null).items.length,0);

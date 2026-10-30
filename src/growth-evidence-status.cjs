@@ -14,6 +14,8 @@ function deriveEvidenceStatus({decision={},serpIntent=null,coverage=null}={}){
   destination_fully_examined:destinationRead&&coverage.destination_truncated!==true,
   // A missing tool page is a missing page type, not a missing reader task.
   missing_task_established:EDIT_DECISIONS.includes(d)&&decision.gap_observed===true&&decision.gap_basis!=='TOOL_SEARCH_AND_NO_TOOL_PAGE_ON_SITE',
+  // The meaning check advises: when it did not run or failed, the gap rests on shared words only and is a candidate.
+  meaning_verified:!coverage?.meaning_check||(coverage.tasks||[]).filter(t=>t.supported_by_competitors).every(t=>t.meaning?.status==='SAME_QUESTION'),
   draft_checked:EDIT_DECISIONS.includes(d)&&decision.copy_ready===true&&decision.verified_gap===true,
   // Truth of individual statements and publication are owner actions; the system never sets them.
   factual_claims_confirmed:false,
@@ -23,7 +25,8 @@ function deriveEvidenceStatus({decision={},serpIntent=null,coverage=null}={}){
  status.verified_gap=status.draft_checked;
  status.label=decision.blocker_code==='DESTINATION_IS_PROTECTED_CASE_STUDY'?'CASE_STUDY_PROTECTED_NO_CHANGE_REQUIRED':
   decision.blocker_code==='QUERY_MEANS_SOMETHING_ELSE'?'SEARCH_TERM_HAS_ANOTHER_MEANING_NO_COMPARISON':
-  decision.gap_basis==='TOOL_SEARCH_AND_NO_TOOL_PAGE_ON_SITE'?'TOOL_PAGE_MISSING_OWNER_PRODUCT_FACTS_REQUIRED':status.draft_checked?'TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW':status.missing_task_established?'TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED':
+  decision.gap_basis==='TOOL_SEARCH_AND_NO_TOOL_PAGE_ON_SITE'?'TOOL_PAGE_MISSING_OWNER_PRODUCT_FACTS_REQUIRED':
+  status.missing_task_established&&!status.meaning_verified?'CANDIDATE_GAP_MEANING_NOT_VERIFIED':status.draft_checked?'TASK_GAP_AND_DRAFT_VERIFIED_FOR_REVIEW':status.missing_task_established?'TASK_GAP_OBSERVED_DRAFT_NOT_VERIFIED':
   d==='NO_CHANGE'?'NO_GAP_ALL_SHARED_TASKS_COVERED':d==='DATA_BLOCKED'?'EVIDENCE_INCOMPLETE':'NO_VERIFIED_GAP';
  return status;
 }

@@ -38,7 +38,12 @@ const fetchLive=async(url,opts)=>{outbound.push({url,method:(opts&&opts.method)|
  if(!html)throw Object.assign(Error('unavailable'),{code:'PUBLIC_HTML_UNAVAILABLE'});
  return {html,final_url:url,retrieved_at:new Date().toISOString(),truncated:false,source:'LIVE_PUBLIC_HTTPS'}};
 const searchLive=async(args)=>{searches.push(args);return {status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:'roof repair lodi nj',leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:new Date().toISOString()}};
-const generateDraft=async(args)=>{aiCalls.push(args.pageUrl);return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:null,meta_description:null,sections:[DRAFT]}}};
+const generateDraft=async(args)=>{aiCalls.push(args.pageUrl);
+ // Writing for an owner selection (fallbackFlagged): one section per selected task, one sentence with an unsourced figure.
+ if(args.fallbackFlagged)return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:null,meta_description:null,sections:(args.readerTask?.tasks||[]).map(t=>({task_code:t.code,
+  h2:'How to read a repair estimate before you sign',paragraphs:['Ask for a written estimate that lists materials, labour and access separately, and ask what changes if hidden damage is found once work starts.',
+  'About 68% of homeowners never compare two estimates, so ask a second crew for a written quote before you approve the work.']}))}};
+ return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:null,meta_description:null,sections:[DRAFT]}}};
 
 let pool,server,base,ids={};
 const SCHEMA=`
@@ -208,6 +213,45 @@ test('8. measurement: no number until both 28-day Search Console windows exist, 
  assert.match(rec.reason,/not proven/);
  const g=await api('GET','/api/tracker-client/owner-tok/growth');
  assert.equal(g.body.measurement_summary.measured,1);assert.equal(g.body.measurement_summary.measured_click_change,7);
+});
+
+test('10. hybrid: research without writing gives the full gap list; text only for the owner selection, flagged, to the CMS',async()=>{
+ const before=aiCalls.length;
+ const r=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
+ assert.equal(r.status,200);
+ assert.equal(aiCalls.length,before,'opening the research writes nothing');
+ assert.equal(r.body.editorial_review_draft.status,'WRITING_ON_SELECTION');
+ const gl=r.body.gap_list;
+ assert(gl.id>0&&gl.items.length>0,JSON.stringify(gl).slice(0,300));
+ const stored=(await pool.query('SELECT items,selected FROM tracker_growth_gap_lists WHERE id=$1',[gl.id])).rows[0];
+ assert.equal(stored.items.length,gl.items.length);assert.equal(stored.selected,null);
+ const pick=gl.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
+ // Only the owner, only ids from the stored list, never a locked page.
+ assert.equal((await api('POST',gl.write_url.replace('owner-tok','share-tok'),{gap_list_id:gl.id,item_ids:pick})).status,403);
+ assert.equal((await api('POST',gl.write_url,{gap_list_id:gl.id,item_ids:['invented-id']})).status,400);
+ const w=await api('POST',gl.write_url,{gap_list_id:gl.id,item_ids:pick});
+ assert.equal(w.status,200,JSON.stringify(w.body).slice(0,300));
+ assert.equal(w.body.copy_ready,false);assert.equal(w.body.published,false);
+ assert.equal(w.body.sections.length,1);assert.equal(w.body.sections[0].item_id,pick[0]);
+ const flags=w.body.sections[0].flags;
+ assert(flags.some(f=>f.code==='UNSOURCED_NUMBER'&&/68%/.test(f.sentence)),JSON.stringify(flags));
+ assert.equal(w.body.sections[0].status,'FLAGGED_FOR_EDITOR');
+ assert.deepEqual((await pool.query('SELECT selected FROM tracker_growth_gap_lists WHERE id=$1',[gl.id])).rows[0].selected,pick);
+ // The concept is the newest proposal for the CMS page, with the flagged sentence as a must-rewrite item.
+ const prop=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body.proposal;
+ assert.equal(prop.id,w.body.cms_handoff.proposal_id);assert.equal(prop.evidence_label,'SELECTION_CONCEPT_WITH_FLAGGED_SENTENCES');
+ assert(prop.review.flagged.some(f=>/68%/.test(f.sentence)));
+ const pack=await api('POST','/api/tracker-client/owner-tok/growth/cms-export',{page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
+  focus_query:prop.focus_query||'roof repair lodi nj',seo_title:'Roof Repair in Lodi, NJ',meta_description:'Roof repair in Lodi, NJ: how to read the estimate.',growth_proposal_id:prop.id,review_notes:prop.review,
+  approved_changes:prop.sections.map(x=>({approved:true,evidence_ref:'growth_proposal:'+prop.id,html:sectionHtml(x),placement:x.placement})),format:'json'});
+ assert.equal(pack.status,200,JSON.stringify(pack.body).slice(0,300));
+ const facts=pack.body.files.find(f=>f.name==='06-fact-check-before-publishing.md').content;
+ assert.match(facts,/Flagged by Growth: rewrite or remove[\s\S]*68%/);
+ assert.equal(pack.body.manifest.review_items.flagged,1);
+ // The protected Case Study page never gets a gap list to write from.
+ const locked=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.locked,{page_id:ids.locked,write:false});
+ assert(locked.body.gap_list.id===null||locked.body.gap_list.target_page_id!==ids.locked);
+ assert.equal(await pageHtml(ids.page),OWN,'writing never changes the stored page');
 });
 
 test('9. nothing outside the Growth tables was written',async()=>{

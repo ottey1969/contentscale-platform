@@ -91,6 +91,7 @@ function memoryStore(){
    cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
   async getCheck(_p,pid,key){const c=checks.find(c=>c.public_id===pid);return c&&c.access_key===key?c:null},
+  async recordWriting(_p,{checkId,written,limit}){const c=checks.find(x=>x.id===checkId);if((c.write_count||0)>=limit)return null;c.written=written;c.write_count=(c.write_count||0)+1;return {write_count:c.write_count}},
   async createHireRequest(_p,o){const h={id:hires.length+1,...o};hires.push(h);return h},
   async listLeads(){return {checks,hires}},
   async forgetEmail(_p,e){const n=checks.length;for(let i=checks.length-1;i>=0;i--)if(checks[i].email===e)checks.splice(i,1);return {checks:n-checks.length,hire_requests:0}}
@@ -454,4 +455,33 @@ test('review: only an explicit RESOURCES section counts as AI sources',()=>{
  // Stored answers are re-read with the current rules (raw_text wins over an old parsed result).
  const stale=ai.summarizeAiAnswers([{engine:'claude',raw_text:'mention https://acme-roofing.example/roof-repair-lodi-nj/',parsed:{sources:['https://acme-roofing.example/roof-repair-lodi-nj/'],own_site_cited:true,exact_page_cited:true,source_sites:['acme-roofing.example']}}],{pageUrl:page});
  assert.equal(stale.cited_by,0);
+});
+
+test('writing for a selection is optional: only where allowed, only the selected items, flagged, limited',async t=>{
+ const calls=[];
+ // SYNTHETIC writer stand-in: one section per selected task, one sentence with a figure the page does not contain.
+ engineDeps.generateDraft=async args=>{calls.push(args);return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:(args.readerTask?.tasks||[]).map(x=>({task_code:x.code,h2:'How to read a repair estimate',
+  paragraphs:['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.','About 68% of homeowners never compare two estimates before they sign.']}))}}};
+ t.after(()=>{delete engineDeps.generateDraft});
+ const open=await server();t.after(()=>open.srv.close());
+ const idk=u=>{const m=/\/r\/([^?]+)\?k=(.+)$/.exec(u);return {id:m[1],k:m[2]}};
+ const a=await open.post('/api/free-growth/checks',ok);await open.service.idle();const A=idk(a.body.result_url);
+ const res=await open.get('/api/free-growth/checks/'+A.id+'?k='+A.k);
+ assert.equal(res.body.writing.allowed,false,'default: only the owner (admin) may write');
+ const pick=res.body.summary.gaps.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
+ const path='/api/free-growth/checks/'+A.id+'/write?k='+A.k;
+ assert.equal((await open.post(path,{item_ids:pick})).status,403);assert.equal(calls.length,0);
+ const all=await server({config:{writing:'all',writeLimit:2}});t.after(()=>all.srv.close());
+ const b=await all.post('/api/free-growth/checks',ok);await all.service.idle();const B=idk(b.body.result_url);
+ const p2='/api/free-growth/checks/'+B.id+'/write?k='+B.k;
+ assert.equal((await all.post(p2,{item_ids:['not-in-list']})).status,400);
+ const w=await all.post(p2,{item_ids:pick});
+ assert.equal(w.status,200,JSON.stringify(w.body));assert.equal(w.body.published,false);assert.equal(w.body.remaining,1);
+ assert.equal(calls.length,1);assert.equal(calls[0].fallbackFlagged,true);assert.equal(calls[0].readerTask.tasks.length,1,'only the selected item');
+ assert(w.body.sections[0].flags.some(f=>f.code==='UNSOURCED_NUMBER'&&/68%/.test(f.sentence)));
+ const after=await all.get('/api/free-growth/checks/'+B.id+'?k='+B.k);
+ assert.equal(after.body.writing.last.sections.length,1,'the last concepts stay on the result page');
+ assert.equal((await all.post(p2,{item_ids:pick})).status,200);
+ assert.equal((await all.post(p2,{item_ids:pick})).status,429,'limit per check');
+ const page=await all.get(b.body.result_url);assert.match(page.body,/Write selected with AI/);
 });

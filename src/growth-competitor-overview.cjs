@@ -86,7 +86,7 @@ function topicPrompt({query,competitors,page}){
 function validateTopics(raw,competitors,page){
  let obj;try{obj=JSON.parse(String(raw||'').replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim())}catch{return null}
  if(!obj||!Array.isArray(obj.topics))return null;
- const known=new Map();for(const c of competitors)for(const s of c.sections)known.set(c.host+'\u0000'+s.heading,{host:c.host,position:c.serp_position,heading:s.heading,excerpt:s.excerpt});
+ const known=new Map();for(const c of competitors)for(const s of c.sections)known.set(c.host+'\u0000'+s.heading,{host:c.host,url:c.url||null,position:c.serp_position,heading:s.heading,excerpt:s.excerpt});
  const ownHeadings=new Set(page.map(s=>s.heading)),used=new Set(),topics=[];
  for(const t of obj.topics){
   const secs=(Array.isArray(t?.sections)?t.sections:[]).map(s=>known.get(String(s?.host)+'\u0000'+clip(s?.heading,160))).filter(s=>s&&!used.has(s.host+'\u0000'+s.heading));
@@ -127,7 +127,7 @@ async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitor
   topics:grouped?grouped.topics:null,
   topics_this_page_lacks:grouped?grouped.topics.filter(t=>t.this_page==='NO').map(t=>({topic:t.topic,ranking_pages:t.ranking_pages,
    examples:t.sections.slice(0,3).map(s=>({host:s.host,heading:s.heading}))})):null,
-  ungrouped_sections:grouped?grouped.ungrouped_sections:pages.flatMap(p=>p.sections.map(s=>({host:p.host,position:p.serp_position,heading:s.heading,excerpt:s.excerpt})))};
+  ungrouped_sections:grouped?grouped.ungrouped_sections:pages.flatMap(p=>p.sections.map(s=>({host:p.host,url:p.url,position:p.serp_position,heading:s.heading,excerpt:s.excerpt})))};
 }
 
 module.exports={buildCompetitorOverview,pageElements,compareElements,validateTopics,contentSections};

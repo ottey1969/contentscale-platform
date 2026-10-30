@@ -102,9 +102,12 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  const approvedText=norm(approved.map(x=>x.html).join(' '));
  const listOf=k=>(reviewNotes&&Array.isArray(reviewNotes[k])?reviewNotes[k]:[]).map(x=>clean(x).slice(0,400)).filter(Boolean)
   .filter(x=>approvedText.includes(norm(x))).slice(0,20);
- const review={fact_check:listOf('needs_fact_check'),owner_confirmation:listOf('needs_owner_confirmation'),safety_review:listOf('needs_safety_review')};
+ const review={fact_check:listOf('needs_fact_check'),owner_confirmation:listOf('needs_owner_confirmation'),safety_review:listOf('needs_safety_review'),
+  // Sentences Growth flagged in a selection concept; listed while they are still in the approved text (section-level flags always).
+  flagged:(reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged:[]).filter(f=>f&&(!f.sentence||approvedText.includes(norm(f.sentence))))
+   .slice(0,30).map(f=>(f.sentence?'“'+clean(f.sentence).slice(0,300)+'” — ':'“'+clean(f.h2).slice(0,140)+'” (whole section) — ')+clean(f.reason).slice(0,200))};
  const editorText=proposal&&proposal.editor_changed_text;
- const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length>0;
+ const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length>0;
  const delivery='CMS-independent handoff for existing page '+canonicalUrl+'\n'+
  'No autopublishing. Implement in your normal website editor using native, indexable text components.\n'+
  'Platform: '+cms+'. Keep original URL, navigation, design, existing text and images unless explicitly reviewed.\n'+
@@ -127,7 +130,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   language:clean(language)||'en',change_count:approved.length,
   change_evidence:approved.map(x=>x.evidence_ref),
   change_placements:approved.map(x=>x.placement||null),
-  growth_proposal:proposal,editor_text_unchecked_by_growth:!!editorText,review_items:{fact_check:review.fact_check.length,owner_confirmation:review.owner_confirmation.length,safety_review:review.safety_review.length},
+  growth_proposal:proposal,editor_text_unchecked_by_growth:!!editorText,review_items:{fact_check:review.fact_check.length,owner_confirmation:review.owner_confirmation.length,safety_review:review.safety_review.length,flagged:review.flagged.length},
   links,images:captions,warnings:[...new Set(warnings)]
  };
  const files=[
@@ -143,6 +146,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    'GBP phone-button taps are not answered calls; call logs, quotes, won jobs require independent information.\n'+
    'Review any real project photos/reviews with the owner; never invent customer experiences.\n'},
   ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
+   (review.flagged.length?'\n## Flagged by Growth: rewrite or remove\n\n'+review.flagged.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.fact_check.length?'\n## Fact-check\n\n'+review.fact_check.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.owner_confirmation.length?'\n## Confirm with the business\n\n'+review.owner_confirmation.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.safety_review.length?'\n## Safety review by a qualified professional\n\n'+review.safety_review.map(x=>'- [ ] '+x).join('\n')+'\n':'')+

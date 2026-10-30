@@ -3,8 +3,11 @@ const assert=require('node:assert/strict'),fs=require('node:fs');
 const code=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
 assert.match(code,/if\(main\.getAttribute\('data-owner-draft'\)==='true'\)/,
  'Only the authenticated owner view may automatically request the draft');
-assert.match(code,/if\(validDraftPage\)void prepareDraft\(\)/,
- 'A validated existing page must start the optional editorial draft after research');
+// Hybrid flow (owner decision): research and the checklist load automatically, text is written only on the owner's choice.
+assert.doesNotMatch(code,/if\(validDraftPage\)void prepareDraft\(\)/,'Opening the page never starts writing by itself');
+assert.match(code,/write:false\}/,'The owner research request asks for research and the gap list only');
+assert.match(code,/prepare\.addEventListener\('click',prepareDraft\)/,'Writing the automatic plan stays available on an explicit click');
+assert.match(code,/renderGrowthGapChecklist/,'The owner gets the choose-what-goes-on-your-site list');
 assert.match(code,/if\(!validDraftPage\)\{/,
  'Unknown destination identity must prevent draft generation');
 assert.match(code,/last===d/,

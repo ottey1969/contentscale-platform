@@ -126,3 +126,14 @@ The standalone check never writes text. Each result has a **Choose what goes on 
 - topics that could not be matched to the page.
 
 Each item names the ranking pages and their Google positions. Tick what should go on the site, then **Download selection as editor brief** (Markdown checklist) or **Copy**. Grouping by topic needs `GEMINI_API_KEY`. Without it, every section of every ranking page is listed separately ("not grouped"). It is an observation, not a fact check.
+
+### Optional writing for the selection
+
+`GROWTH_FREE_WRITING` decides who may let Growth write concepts for selected items:
+
+- `off`;
+- `admin` (default: only you, via the admin page);
+- `invited` (you and invited people);
+- `all`.
+
+`GROWTH_FREE_WRITES_PER_CHECK` is the limit per check (default 3). The page is read again publicly, the text is checked against it, and failing sentences are marked for the editor. The last result stays on the result page. Nothing is published.

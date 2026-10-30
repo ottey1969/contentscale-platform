@@ -61,7 +61,7 @@ Word overlap between two competitor pages only proposes *candidate* tasks. Produ
    Every answer is validated against the input: only known task codes, only hosts that support the task, at least two hosts, and only exact page headings. Anything else confirms nothing.
 2. **One call per owner draft.** It checks whether each drafted section answers its confirmed question. A section that does not (or cannot be checked) is rejected like any other failed section.
 
-**Fail closed.** If there is no key, the call fails or the answer is invalid, no task is confirmed. The gate reports `TASK_MEANING_NOT_VERIFIED`, and the editor writes from the candidate topics.
+**Advice, not a gate.** If there is no key, the call fails or the answer is invalid, the word-matched candidates stay, labelled `NOT_VERIFIED`. The evidence status then reads `CANDIDATE_GAP_MEANING_NOT_VERIFIED`. Only an actual "different questions" judgement removes a candidate from the automatic plan; the editor's list still shows its topics. An unavailable answer check never rejects a section.
 
 **Editor writes.** Set `GROWTH_AI_DRAFTS=off` to keep the research and the confirmed reader questions but generate no AI text. The CMS handoff takes the editor's own text.
 
@@ -73,3 +73,26 @@ Every research run with a readable page adds `competitor_overview`: what the rea
 - **Topics.** All content headings of every ranking page; furniture and the competitor's own sales sections are left out. They are grouped by meaning in one model call, with per topic whether this page covers it (YES / PARTLY / NO with an existing heading). Invented hosts or headings are dropped, an invented page heading never counts as covered, and headings the model leaves out are still listed. Without the model, the full heading list per ranking page is delivered, marked as not grouped.
 
 The overview is shown on the research page and on the CMS handoff page, and is included in the owner package (Markdown).
+
+## Hybrid flow: research → AI labels → owner selection → writing for the selection
+
+Growth no longer writes text by itself. One flow serves the Tracker and the standalone check:
+
+1. **Research (automatic, no AI required).** Serper.dev results, competitor pages read, page elements compared, evidence kept. It always yields a result.
+2. **Intelligence (AI advises).** The meaning check labels candidate reader questions (same question / not judged), and the overview groups topics. An AI failure never blocks: items stay, labelled "not judged" or "not grouped". Only an actual "different questions" judgement takes a pair out of the automatic plan, and its topics stay in the list.
+3. **Editor (owner chooses).** `buildGapList` (`src/growth-gap-list.cjs`) lists every difference:
+   - questions two ranking pages answer;
+   - topics not on the page, or only partly;
+   - topics not matched to the page;
+   - ungrouped competitor sections;
+   - page elements.
+
+   Each item carries its AI label and competitor examples. In the Tracker the list is stored per research run (`tracker_growth_gap_lists`); the owner ticks items, downloads an editor brief, or asks for concepts. Opening the research page writes nothing (`POST …/complete` with `write:false`); the automatic-plan draft stays available on an explicit click.
+4. **Writing (only the selection).** `POST …/auto-research/write` with `gap_list_id` and `item_ids`.
+   - Items are read from the stored list, never from the browser; at most four per run; page elements are not written.
+   - The writer gets each item's reader question and competitor sections, plus one repair attempt.
+   - If doubt remains, the result is a **marked concept**: failing sentences are flagged with the reason, never withheld or silently edited.
+   - The concept is stored as the newest proposal (`SELECTION_CONCEPT…`), so the CMS handoff picks it up. Flagged sentences become a "Flagged by Growth: rewrite or remove" checklist that must be ticked.
+5. **Tracker (measure after real publication).** Unchanged: publication is recorded with GSC optional, then measured over two equal 28-day windows.
+
+`copy_ready` and every concept mean "ready for human review", never "facts verified" or "publication approved".

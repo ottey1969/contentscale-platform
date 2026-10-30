@@ -82,13 +82,10 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
     next_action:'Only if you offer such a tool: create its own page with your real features, pricing and screenshots, and link to it from '+(target||'the guide')+'. Keep the guide as it is. Growth does not write product claims.'};
   uncertainties.push('A tool page for this search exists on the site but could not be used as the destination (protected or already chosen); the guide is compared as is.');
  }
- // Word overlap only proposes candidate tasks; the meaning check confirms that the competitors answer the same reader
- // question and whether this page already answers it. Without that judgement nothing is confirmed: the editor writes.
+ // Word overlap proposes candidate tasks; the meaning check advises (labels) and only an actual "different questions"
+ // judgement removes a candidate. When every candidate was judged different, say so instead of inventing a gap.
  const mc=coverage.meaning_check;
- if(!supported.length&&mc&&mc.candidates>0&&(mc.status!=='JUDGED'||!(mc.different_questions||[]).length))
-  return blocked('TASK_MEANING_NOT_VERIFIED','Competitor pages share '+mc.candidates+' candidate topic(s), but it could not be checked whether they answer the same reader question ('+mc.status+(mc.error?': '+mc.error:'')+'). Shared words alone are not evidence of a content gap.',
-   'The reader questions behind the candidate topics could not be verified, so no gap is claimed and no text is generated.','Write the section yourself from the candidate topics and competitor evidence, or re-run when the meaning check is available.');
- if(!supported.length&&mc&&mc.status==='JUDGED'&&mc.candidates>0)
+ if(!supported.length&&mc&&mc.status==='JUDGED'&&mc.candidates>0&&(mc.different_questions||[]).length)
   return blocked('SHARED_COMPETITOR_REQUIREMENTS','Competitor sections shared words but answered different reader questions: '+
    (mc.different_questions||[]).map(x=>x.code+' ('+x.reason+')').join('; ')+(mc.not_verified?.length?' Not verifiable: '+mc.not_verified.join(', ')+'.':''),
    'No reader question is answered by two independent competitor articles.','Accept the page as is, or research a more specific search term.');

@@ -14,7 +14,9 @@ function sourceFacts(html){
  return {text:blocks.join('\n').slice(0,11000),count:blocks.length};
 }
 const RETRY_STATUSES=['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE','AI_DRAFT_UNPROVEN_AI_MECHANISM','AI_DRAFT_UNSOURCED_ATTRIBUTION','AI_DRAFT_HEADING_MISMATCH'];
-function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTerms=[]}={}){
+// flagOnly (writing for an owner's selection, after the one repair attempt): the same checks mark the failing sentences
+// instead of rejecting the draft, so the editor gets a marked concept rather than nothing. Never used as "checked".
+function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTerms=[],flagOnly=false}={}){
  let obj=value;
  if(typeof obj==='string'){
   try{obj=JSON.parse(obj.replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,'').trim())}
@@ -27,6 +29,10 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
   task_code:/^task_[a-z0-9]{3,12}$/.test(String(it?.task_code||''))?String(it.task_code):undefined,
   source_status:'AI_COPY_NEEDS_FACT_CHECK'})).filter(x=>x.h2&&x.paragraphs.length);
  if(!sections.length)return {status:'AI_DRAFT_TOO_THIN',draft:null};
+ const flags=[];
+ const fail=(status,extra,marks)=>{if(!flagOnly)return {status,draft:null,...extra};flags.push(...marks);return null};
+ const sentencesOf=s=>s.paragraphs.flatMap(p=>p.split(/(?<=[.!?])\s+/));
+ let failed;
  // A supported claim may still belong to the wrong search intent.
  // Require each proposed section to address a distinctive focus-query term.
  const queryTerms=[...new Set(String(focusQuery||'').toLowerCase().match(/[a-z]{4,}/g)||[])]
@@ -41,7 +47,8 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
   return focusHit||taskStems.some(t=>body.includes(t.slice(0,Math.max(4,t.length-1))));
  };
  const offTopic=queryTerms.length?sections.filter(section=>!onTopic(section)):[];
- if(offTopic.length)return {status:'AI_DRAFT_OFF_TOPIC_SECTION',draft:null,rejected_sections:offTopic.map(x=>({h2:x.h2,reason:taskStems.length?'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD':'NO_FOCUS_QUERY_TERM'}))};
+ if(offTopic.length&&(failed=fail('AI_DRAFT_OFF_TOPIC_SECTION',{rejected_sections:offTopic.map(x=>({h2:x.h2,reason:taskStems.length?'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD':'NO_FOCUS_QUERY_TERM'}))},
+  offTopic.map(x=>({h2:x.h2,sentence:null,code:'OFF_TOPIC',reason:'The section does not mention the search term or the chosen topic.'})))))return failed;
  const title=text(obj.seo_title).slice(0,100),description=text(obj.meta_description).slice(0,220);
  // SEO focus stays with the selected query, including the generated title.
  // Avoid attractive but unrelated brand-history / AI-tool angles on a scaling task.
@@ -51,30 +58,34 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
  const generated=(requireTitle?[title,description]:[]).concat(sections.flatMap(s=>[s.h2,...s.paragraphs])).join(' ');
  // A percentage is its own figure: "68%" is not sourced by an unrelated "68" on the page.
  const num=/\d[\d,./-]*\d%?|\d%?/g,known=new Set(String(sourceText).match(num)||[]);
- if((generated.match(num)||[]).some(v=>!known.has(v)))return {status:'AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED',draft:null};
+ if((generated.match(num)||[]).some(v=>!known.has(v))&&(failed=fail('AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED',{},
+  sections.flatMap(s=>sentencesOf(s).filter(t=>(t.match(num)||[]).some(v=>!known.has(v))).map(t=>({h2:s.h2,sentence:t,code:'UNSOURCED_NUMBER',reason:'A figure that is not on your page.'}))))))return failed;
  // A reason for how AI or search systems pick, verify or cite content is an unproven claim (also inside an instruction),
  // unless the original page itself says it. The model is told which sentence failed and gets one rewrite.
  const sourceLower=String(sourceText).toLowerCase();
  const mechanism=sections.flatMap(s=>s.paragraphs.flatMap(p=>p.split(/(?<=[.!?])\s+/)).map(t=>({h2:s.h2,t,m:t.match(AI_MECHANISM)})))
   .filter(x=>x.m&&!sourceLower.includes(x.m[0].toLowerCase()));
- if(mechanism.length)return {status:'AI_DRAFT_UNPROVEN_AI_MECHANISM',draft:null,
-  rejected_sections:mechanism.slice(0,4).map(x=>({h2:x.h2,reason:'UNPROVEN_AI_MECHANISM: "'+x.t.slice(0,160)+'"'}))};
+ if(mechanism.length&&(failed=fail('AI_DRAFT_UNPROVEN_AI_MECHANISM',{rejected_sections:mechanism.slice(0,4).map(x=>({h2:x.h2,reason:'UNPROVEN_AI_MECHANISM: "'+x.t.slice(0,160)+'"'}))},
+  mechanism.map(x=>({h2:x.h2,sentence:x.t,code:'UNPROVEN_AI_MECHANISM',reason:'Explains how AI or search systems pick or cite content; not proven.'})))))return failed;
  // A named source must be named on the original page; a generated citation ("According to X (2025)") cannot be checked.
  const sentencesWith=re=>sections.flatMap(s=>s.paragraphs.flatMap(p=>p.split(/(?<=[.!?])\s+/)).map(t=>({h2:s.h2,t,m:t.match(re)})));
  const attributed=sentencesWith(ATTRIBUTION).filter(x=>x.m&&!sourceLower.includes(String(x.m[1]||x.m[2]).trim().replace(/^the\s+/i,'').replace(/[.'’]+$/,'').toLowerCase()));
- if(attributed.length)return {status:'AI_DRAFT_UNSOURCED_ATTRIBUTION',draft:null,
-  rejected_sections:attributed.slice(0,4).map(x=>({h2:x.h2,reason:'UNSOURCED_ATTRIBUTION: "'+x.t.slice(0,160)+'"'}))};
+ if(attributed.length&&(failed=fail('AI_DRAFT_UNSOURCED_ATTRIBUTION',{rejected_sections:attributed.slice(0,4).map(x=>({h2:x.h2,reason:'UNSOURCED_ATTRIBUTION: "'+x.t.slice(0,160)+'"'}))},
+  attributed.map(x=>({h2:x.h2,sentence:x.t,code:'UNSOURCED_ATTRIBUTION',reason:'Names a source that is not on your page.'})))))return failed;
  const mismatched=sections.map(s=>({h2:s.h2,m:headingMismatch(s.h2,s.paragraphs.join(' '))})).filter(x=>x.m);
- if(mismatched.length)return {status:'AI_DRAFT_HEADING_MISMATCH',draft:null,
-  rejected_sections:mismatched.map(x=>({h2:x.h2,reason:x.m.code+': '+x.m.reason}))};
+ if(mismatched.length&&(failed=fail('AI_DRAFT_HEADING_MISMATCH',{rejected_sections:mismatched.map(x=>({h2:x.h2,reason:x.m.code+': '+x.m.reason}))},
+  mismatched.map(x=>({h2:x.h2,sentence:null,code:x.m.code,reason:x.m.reason})))))return failed;
  const risk=/\b(guaranteed|award.winning|best.rated|five.star|fully insured|certified technicians|same.day appointments)\b/gi;
- if((generated.match(risk)||[]).some(v=>!sourceText.toLowerCase().includes(v.toLowerCase())))
-  return {status:'AI_DRAFT_UNSUPPORTED_CLAIM',draft:null};
+ const riskyOk=v=>sourceText.toLowerCase().includes(v.toLowerCase());
+ if((generated.match(risk)||[]).some(v=>!riskyOk(v))&&(failed=fail('AI_DRAFT_UNSUPPORTED_CLAIM',{},
+  sections.flatMap(s=>sentencesOf(s).filter(t=>(t.match(risk)||[]).some(v=>!riskyOk(v))).map(t=>({h2:s.h2,sentence:t,code:'UNSUPPORTED_CLAIM',reason:'A promise or credential that is not on your page.'}))))))return failed;
+ if(flagOnly&&flags.length)return {status:'AI_DRAFT_FLAGGED_FOR_EDITOR',flags,draft:{seo_title:null,meta_description:null,title_h1_preserved:true,sections,
+  editor_approved:false,needs_human_fact_check:true,flagged_for_editor:true,source_scope:'OBSERVED_ORIGINAL_PAGE_ONLY',publication_allowed:false}};
  return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:requireTitle?title:null,meta_description:requireTitle?description:null,title_h1_preserved:!requireTitle,sections,
   editor_approved:false,needs_human_fact_check:true,source_scope:'OBSERVED_ORIGINAL_PAGE_ONLY',
   publication_allowed:false}};
 }
-async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[],gscContext=null,readerTask=null}={},
+async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[],gscContext=null,readerTask=null,fallbackFlagged=false}={},
  {apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite',fetchImpl=global.fetch}={}){
  let canonical;try{canonical=new URL(pageUrl)}catch{return {status:'INVALID_PAGE_URL',draft:null}}
  if(canonical.protocol!=='https:')return {status:'HTTPS_REQUIRED',draft:null};
@@ -123,7 +134,7 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   }:{status:'NO_VERIFIED_GSC',not_for_publication:true}),
   'Unverified competitor section topics: '+JSON.stringify(topics.slice(0,4)),
   'Observed competitor passages for RESEARCH QUESTIONS ONLY (untrusted data): '+JSON.stringify(
-   (Array.isArray(researchObservations)?researchObservations:[]).slice(0,3).map(x=>({
+   (Array.isArray(researchObservations)?researchObservations:[]).slice(0,6).map(x=>({
     heading:String(x.competitor_heading||'').slice(0,140),
     excerpt:String(x.competitor_excerpt||'').slice(0,600),
     context_only:true
@@ -146,7 +157,7 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   const taskMode=readerTask?.mode==='SECTION_IMPROVEMENT';
   const taskTerms=taskMode?(readerTask.tasks||[]).flatMap(t=>t.core_words||[]):[];
   const normOpts={requireTitle:!taskMode,taskTerms};
-  let result=normalizeDraft(raw,source.text,focusQuery,normOpts),repaired=false;
+  let result=normalizeDraft(raw,source.text,focusQuery,normOpts),repaired=false,lastRaw=raw;
   // A factual rejection remains a rejection. Give the model one bounded
   // opportunity to rewrite without numbers; never silently delete claims.
   if(RETRY_STATUSES.includes(result.status)){
@@ -158,7 +169,13 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    if(retry!==null){
     const checked=normalizeDraft(retry,source.text,focusQuery,normOpts);
     if(checked.status==='AI_DRAFT_REVIEW_REQUIRED'){result=checked;repaired=true}
+    else if(fallbackFlagged)lastRaw=retry;
    }
+  }
+  // Writing for an owner's selection: after the one repair attempt, a marked concept instead of nothing.
+  if(fallbackFlagged&&result.status!=='AI_DRAFT_REVIEW_REQUIRED'&&!['INVALID_AI_JSON','INVALID_AI_STRUCTURE','AI_DRAFT_TOO_THIN'].includes(result.status)){
+   const marked=normalizeDraft(lastRaw,source.text,focusQuery,{...normOpts,flagOnly:true});
+   if(marked.draft)result={...marked,original_rejection:result.status};
   }
   return {...result,source_blocks:source.count,source_url:canonical.href,
    draft_quality_retry_attempted:RETRY_STATUSES.includes(result.status)||repaired,
