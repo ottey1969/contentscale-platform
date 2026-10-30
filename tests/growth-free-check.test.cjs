@@ -481,6 +481,10 @@ test('writing for a selection is optional: only where allowed, only the selected
  assert(w.body.sections[0].flags.some(f=>f.code==='UNSOURCED_NUMBER'&&/68%/.test(f.sentence)));
  const after=await all.get('/api/free-growth/checks/'+B.id+'?k='+B.k);
  assert.equal(after.body.writing.last.sections.length,1,'the last concepts stay on the result page');
+ // The visitor's page changed after the check: refused before any AI call, with the advice to run a new check.
+ const original=pages[URL_];pages[URL_]=original.replace('</body>','<p>A paragraph the owner added after the check ran, long enough to count as text.</p></body>');
+ const stale=await all.post(p2,{item_ids:pick});pages[URL_]=original;
+ assert.equal(stale.status,409);assert.match(stale.body.error,/changed since this check/);assert.equal(calls.length,1);
  assert.equal((await all.post(p2,{item_ids:pick})).status,200);
  assert.equal((await all.post(p2,{item_ids:pick})).status,429,'limit per check');
  const page=await all.get(b.body.result_url);assert.match(page.body,/Write selected with AI/);

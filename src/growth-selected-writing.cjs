@@ -4,6 +4,14 @@
 // repair attempt, and then a MARKED concept instead of nothing: sentences that fail a check are flagged for the editor
 // to rewrite or remove. A written section is a concept for human review; it is never "checked" or publication-ready.
 const {assessDraftClaims,headingMismatch}=require('./growth-draft-claim-guard.cjs');
+const {createHash}=require('node:crypto');
+// Fingerprint of ALL readable text of a page (headings, paragraphs, list items, table cells), not its raw HTML and not
+// capped: scripts, styles or tracking markup changing do not count as a content change; any changed sentence does.
+function pageFingerprint(html){
+ const body=String(html||'').replace(/<(script|style|noscript|template|svg)\b[\s\S]*?<\/\1\s*>/gi,' ');
+ const text=[...body.matchAll(/<(h[1-6]|p|li|td|th)\b[^>]*>([\s\S]*?)<\/\1\s*>/gi)].map(m=>m[2].replace(/<[^>]+>/g,' ').replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim()).filter(Boolean).join('\n');
+ return createHash('sha256').update(text).digest('hex');
+}
 const clip=(x,n)=>String(x==null?'':x).replace(/\s+/g,' ').trim().slice(0,n);
 const MAX_ITEMS=4;
 const STOP=new Set('about after again also because being between could does each from have into more most other over same some such than that their them then there these they this through very what when where which while with would your yours page pages ranking'.split(' '));
@@ -23,13 +31,17 @@ function writingRequest(items,{targetUrl,focusQuery,existingHeadings=[]}={}){
 }
 
 // Checks every written section against the page the writer used; failing sentences become flags, never silent edits.
+// A section is linked to a selected item ONLY by the exact task code the writer was given, once per item. A section with
+// a missing, unknown or repeated code is reported as not linked (never guessed onto another item or placement).
 function reviewWritten({draft,flags=[]},request,{sourceText='',focusQuery=''}={}){
  const sections=(draft?.sections||[]).filter(s=>s&&s.h2&&(s.paragraphs||[]).length);
- const used=new Set();
- const out=sections.map((s,i)=>{
-  let item=request.codeOf.get(s.task_code);
-  if(!item){item=request.items.find(x=>!used.has(x.id))||null}
-  if(item)used.add(item.id);
+ const used=new Set(),unlinked=[];
+ const linked=sections.filter(s=>{const item=request.codeOf.get(s.task_code);
+  if(!item||used.has(item.id)){unlinked.push({h2:s.h2,paragraphs:s.paragraphs,task_code:s.task_code||null,
+   reason:!s.task_code?'The writer did not say which selected item this section is for.':!item?'The writer returned an unknown item code.':'A second section for the same item.'});return false}
+  used.add(item.id);return true});
+ const out=linked.map(s=>{
+  const item=request.codeOf.get(s.task_code);
   const text=s.paragraphs.join(' ');
   const claims=assessDraftClaims({text,destinationText:sourceText,query:focusQuery});
   const marks=[...flags.filter(f=>f.h2===s.h2).map(f=>({sentence:f.sentence||null,code:f.code,reason:f.reason})),
@@ -38,13 +50,13 @@ function reviewWritten({draft,flags=[]},request,{sourceText='',focusQuery=''}={}
   if(heading&&!marks.some(m=>m.code===heading.code))marks.push({sentence:null,code:heading.code,reason:heading.reason});
   const seen=new Set();
   const unique=marks.filter(m=>{const k=m.code+'|'+(m.sentence||'');if(seen.has(k))return false;seen.add(k);return true});
-  return {item_id:item?.id||null,item_title:item?.title||null,h2:s.h2,paragraphs:s.paragraphs,placement:item?.placement||null,
+  return {item_id:item.id,item_title:item.title,h2:s.h2,paragraphs:s.paragraphs,placement:item.placement||null,
    status:unique.length?'FLAGGED_FOR_EDITOR':'CONCEPT_FOR_REVIEW',flags:unique,
    needs_fact_check:(claims.claim_review||[]).filter(r=>r.class==='GENERAL_STATEMENT_UNVERIFIED').map(r=>r.sentence),
    needs_owner_confirmation:(claims.claim_review||[]).filter(r=>r.confirm_with_owner).map(r=>r.sentence),
    needs_safety_review:(claims.claim_review||[]).filter(r=>r.safety_review).map(r=>r.sentence)};
  });
- return {status:out.length?'WRITTEN_FOR_REVIEW':'NOT_WRITTEN',sections:out,
+ return {status:out.length?'WRITTEN_FOR_REVIEW':'NOT_WRITTEN',sections:out,unlinked_sections:unlinked,
   not_written:request.items.filter(x=>!used.has(x.id)).map(x=>({item_id:x.id,title:x.title})),
   note:'Concepts for the selected items. Every statement still needs your check; flagged sentences must be rewritten or removed. Nothing is published.'};
 }
@@ -61,4 +73,4 @@ async function writeForSelection({items,targetUrl,focusQuery,existingHeadings,ge
  return {...reviewWritten(out,request,{sourceText:out.source_text||'',focusQuery}),writer_status:out.status};
 }
 
-module.exports={writeForSelection,writingRequest,reviewWritten,MAX_ITEMS};
+module.exports={writeForSelection,writingRequest,reviewWritten,pageFingerprint,MAX_ITEMS};

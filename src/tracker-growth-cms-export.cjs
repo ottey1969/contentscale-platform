@@ -229,7 +229,8 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     language:req.body?.language||'en'
    });
    if(result.status!=='HANDOFF_READY_FOR_EDITOR')
-    return res.status(409).set('Cache-Control','no-store').json({success:false,code:'EDITOR_REVIEW_REQUIRED',issues:result.issues,warnings:result.warnings,publication_allowed:false});
+    return res.status(409).set('Cache-Control','no-store').json({success:false,code:'EDITOR_REVIEW_REQUIRED',issues:result.issues,warnings:result.warnings,
+     ...(result.blocked_details?{blocked_details:result.blocked_details}:{}),publication_allowed:false});
    if(manualSource){
     result.manifest.source_provenance='OWNER_SUPPLIED_UNVERIFIED';
     result.manifest.source_snapshot_preserved=false;

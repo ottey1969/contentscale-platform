@@ -96,3 +96,15 @@ Growth no longer writes text by itself. One flow serves the Tracker and the stan
 5. **Tracker (measure after real publication).** Unchanged: publication is recorded with GSC optional, then measured over two equal 28-day windows.
 
 `copy_ready` and every concept mean "ready for human review", never "facts verified" or "publication approved".
+
+### Guarantees of the writing step (review of PR #221)
+
+1. **No silent cuts.** More than four writable items in one run is refused (`SELECT_AT_MOST_4_TO_WRITE`); the UI says so before sending. The brief can hold any number of items.
+2. **No stale advice.** The gap list stores a fingerprint of all readable text of the page as researched; scripts and styles don't count. Before any AI call the live page is read again; a different fingerprint is refused (`PAGE_CHANGED_SINCE_RESEARCH_RERUN_RESEARCH`).
+3. **Strict linking.** A written section belongs to a selected item only through the exact task code the writer was given, once per item. Missing, unknown or repeated codes are listed as `unlinked_sections`, never placed and never stored in the proposal; the item is reported as not written.
+4. **Proof, not ticks.** For a concept with flagged sentences, the CMS package is refused (`FLAGGED_CONTENT_NOT_RESOLVED`, with `blocked_details` naming each sentence) when any of these holds:
+   - a flagged sentence is still in the final text;
+   - the final text fails the claim checks again against the original page;
+   - a heading still promises reasons but gives steps.
+
+   Only a resolved text is packaged; `06-fact-check-before-publishing.md` then records what was resolved.

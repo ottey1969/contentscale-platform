@@ -18,7 +18,7 @@ const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageT
 const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-task-meaning.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
 const {buildGapList}=require('./growth-gap-list.cjs');
-const {writeForSelection}=require('./growth-selected-writing.cjs');
+const {writeForSelection,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('./growth-selected-writing.cjs');
 const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
@@ -705,6 +705,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(target.case_study_active===true)return no(409,'CASE_STUDY_BASELINE_LOCKED');
   const items=(list.items||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return no(400,'SELECTION_NOT_IN_GAP_LIST');
+  // Never write fewer items than selected without saying so: more than four is refused, not silently cut.
+  if(items.filter(x=>x.writable).length>MAX_WRITE_ITEMS)return no(400,'SELECT_AT_MOST_'+MAX_WRITE_ITEMS+'_TO_WRITE');
+  if(!items.some(x=>x.writable))return no(400,'ONLY_PAGE_ELEMENTS_SELECTED');
+  // The list belongs to the page as researched: a changed page needs new research, never old advice (checked before any AI call).
+  if(list.source_fingerprint){
+   let live=null;try{live=await fetchLive(list.target_url)}catch{}
+   if(!live||typeof live.html!=='string')return no(409,'PAGE_NOT_READABLE_NOW_RERUN_RESEARCH');
+   if(pageFingerprint(live.html)!==list.source_fingerprint)return no(409,'PAGE_CHANGED_SINCE_RESEARCH_RERUN_RESEARCH');
+  }
   if(typeof recordSelection==='function')await Promise.resolve(recordSelection({clientId:v.clientId,id:list.id,itemIds:items.map(x=>x.id)})).catch(()=>{});
   const generate=async research_context=>{
    const outcome=await completeOwnerDraft({token:req.params.token,body:{page_id:Number(list.target_page_id),focus_query:list.focus_query||'',

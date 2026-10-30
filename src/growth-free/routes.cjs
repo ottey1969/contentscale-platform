@@ -7,7 +7,7 @@ const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
-const {writeForSelection}=require('../growth-selected-writing.cjs');
+const {writeForSelection,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded-editor.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 
@@ -169,6 +169,7 @@ function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</
   if((x.flags||[]).length)h+='<ul>'+x.flags.map(function(f){return '<li>'+(f.sentence?'“'+esc(f.sentence)+'” — ':'Whole section — ')+esc(f.reason)+'</li>'}).join('')+'</ul>';
   h+='</div>'});
  (r.not_written||[]).forEach(function(x){h+='<p class="muted">Not written: '+esc(x.title)+' — write this one yourself.</p>'});
+ (r.unlinked_sections||[]).forEach(function(x){h+='<p class="muted">Not linked to a selected item and not used: “'+esc(x.h2)+'” — '+esc(x.reason)+'</p>'});
  if(r.reason&&!(r.sections||[]).length)h+='<p class="muted">'+esc(r.reason)+'</p>';
  return h}
 function gapBrief(g,s){var picked={};document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
@@ -184,6 +185,8 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
  var wb=document.getElementById('gapWrite');
  if(wb)wb.onclick=async function(){var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});var st=document.getElementById('gapStatus');
   if(!ids.length){st.textContent='Select at least one topic or question.';return}
+  var writable=g.items.filter(function(x){return x.writable&&ids.indexOf(x.id)>=0}).length;
+  if(writable>4){st.textContent='You selected '+writable+' topics: write at most 4 per run (untick some), or download the brief for all of them.';return}
   wb.disabled=true;st.textContent='Writing concepts…';
   try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});var x=await r.json();if(!x.success)throw Error(x.error||'Not written');
    wr.innerHTML=writtenHtml(x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
@@ -463,9 +466,13 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const ids=Array.isArray(req.body&&req.body.item_ids)?[...new Set(req.body.item_ids.map(String))].slice(0,20):[];
   const items=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return res.status(400).json({success:false,error:'Select at least one topic or question first.'});
+  if(items.filter(x=>x.writable).length>MAX_WRITE_ITEMS)return res.status(400).json({success:false,error:'Select at most '+MAX_WRITE_ITEMS+' topics or questions per writing run.'});
+  if(!items.some(x=>x.writable))return res.status(400).json({success:false,error:'Page elements are added by the editor; select a topic or question to write.'});
   try{
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
    const html=String(live&&live.html||'');
+   const researched=row.summary&&row.summary.gaps&&row.summary.gaps.source_fingerprint;
+   if(researched&&pageFingerprint(html)!==researched)return res.status(409).json({success:false,error:'Your page changed since this check. Run a new check so the advice matches the page.'});
    const write=engineDeps.generateDraft||generateGrowthEditorDraft;
    const focusQuery=row.query||(row.summary&&row.summary.checked&&row.summary.checked.search_term)||'';
    const written=await writeForSelection({items,targetUrl:row.url,focusQuery,

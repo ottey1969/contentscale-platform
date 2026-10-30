@@ -114,7 +114,7 @@ async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitor
   scope:'What the readable ranking pages contain compared with this page. Observation only: no fact check, no ranking promise; the editor decides what to add.',
   ranking_pages:pages.map(p=>({url:p.url,host:p.host,serp_position:p.serp_position,partial_capture:p.partial_capture,elements:p.elements,
    content_headings:p.sections.map(s=>s.heading)})),
-  this_page_elements:own,...compareElements(own,pages)};
+  this_page_elements:own,this_page_fingerprint:require('./growth-selected-writing.cjs').pageFingerprint(ownHtml),...compareElements(own,pages)};
  let grouped=null,topicStatus='NOT_GROUPED_NO_MODEL';
  if(model){
   try{

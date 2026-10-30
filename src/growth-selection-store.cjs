@@ -13,18 +13,20 @@ function ensureTable(pool){
    items JSONB NOT NULL,
    selected JSONB,
    selected_at TIMESTAMPTZ,
-   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`).catch(e=>{ensured=null;throw e});
+   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`)
+  .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS source_fingerprint TEXT'))
+  .catch(e=>{ensured=null;throw e});
  return ensured;
 }
 async function saveGapList(pool,{clientId,targetPageId,targetUrl,focusQuery,list}){
  if(!list||!Array.isArray(list.items)||!Number.isSafeInteger(Number(targetPageId)))return null;
  await ensureTable(pool);
- return (await pool.query(`INSERT INTO tracker_growth_gap_lists (tracker_client_id,target_page_id,target_url,focus_query,items)
-   VALUES ($1,$2,$3,$4,$5::jsonb) RETURNING id,created_at`,[clientId,Number(targetPageId),targetUrl,focusQuery||null,JSON.stringify(list.items)])).rows[0];
+ return (await pool.query(`INSERT INTO tracker_growth_gap_lists (tracker_client_id,target_page_id,target_url,focus_query,items
+   ,source_fingerprint) VALUES ($1,$2,$3,$4,$5::jsonb,$6) RETURNING id,created_at`,[clientId,Number(targetPageId),targetUrl,focusQuery||null,JSON.stringify(list.items),list.source_fingerprint||null])).rows[0];
 }
 async function getGapList(pool,{clientId,id}){
  if(!Number.isSafeInteger(Number(id))||Number(id)<1)return null;
- try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,items,selected,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
+ try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,items,selected,source_fingerprint,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
  catch(e){if(e.code==='42P01')return null;throw e}
 }
 async function saveSelection(pool,{clientId,id,itemIds}){

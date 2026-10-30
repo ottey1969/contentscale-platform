@@ -39,7 +39,8 @@
    el('small',' At most 4 topics per run. Page elements are added by the editor. Nothing is published.',actions);
    w.addEventListener('click',async function(){
     var p=picked().filter(function(x){return x.writable});if(!p.length){status.textContent='Select at least one topic or question.';return}
-    w.disabled=true;status.textContent='Writing concepts for '+Math.min(p.length,4)+' item(s)…';out.textContent='';
+    if(p.length>4){status.textContent='You selected '+p.length+' topics: write at most 4 per run (untick some), or download the brief for all of them.';return}
+    w.disabled=true;status.textContent='Writing concepts for '+p.length+' item(s)…';out.textContent='';
     try{var r=await options.write(p.map(function(x){return x.id}));
      if(!r||r.success===false)throw Error((r&&(r.code||r.reason))||'Writing not available');
      status.textContent=r.sections&&r.sections.length?'Concepts written. Flagged sentences must be rewritten or removed; every statement still needs your check. Nothing is published.':(r.reason||'No text was written. Write these items yourself; your selection is kept.');
@@ -50,6 +51,7 @@
        para.split(/(?<=[.!?])\s+/).forEach(function(sentence){var span=el('span',sentence+' ',pnode);if(flagged.indexOf(sentence)>=0){span.style.background='#fde68a';span.title='Flagged: rewrite or remove'}})});
       if((s.flags||[]).length){var ul=el('ul',null,card);s.flags.forEach(function(f){el('li',(f.sentence?'“'+f.sentence+'” — ':'Whole section — ')+f.reason,ul)})}});
      (r.not_written||[]).forEach(function(x){el('p','Not written: '+x.title+' — write this one yourself.',out,'small')});
+     (r.unlinked_sections||[]).forEach(function(x){el('p','Not linked to a selected item and not used: “'+x.h2+'” — '+x.reason,out,'small')});
      if(r.cms_handoff&&r.cms_handoff.url){var a=el('a','Prepare the CMS package with these concepts',el('p',null,out));a.href=r.cms_handoff.url}
     }catch(e){status.textContent='Not written: '+String(e.message||e)+'. Your selection and the research are kept; you can download the brief.'}
     finally{w.disabled=false}

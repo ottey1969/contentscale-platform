@@ -52,6 +52,8 @@ function buildGapList(report={}){
  return {status,groups:GROUPS.map(([id,label])=>({id,label})),items,
   ranking_pages_read:ov?.ranking_pages_read??(coverage.competitors_considered||[]).length,
   ranking_pages:(ov?.ranking_pages||[]).map(p=>({url:p.url,position:p.serp_position??null})),
+  // The page as researched: writing refuses when the live page no longer matches (re-run the research instead).
+  source_fingerprint:ov?.this_page_fingerprint||null,
   focus_query:clip(report.editorial_decision_gate?.focus_query||report.search_discovery?.target_query||'',160)||null,
   note:'What the readable ranking pages contain and your page does not. Not a fact check and not a ranking promise: you choose what goes on your site; text is only written for what you select.'};
 }

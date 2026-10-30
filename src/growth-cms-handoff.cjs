@@ -5,6 +5,7 @@
 // or a custom CMS using native SEO-indexable text components.
 const {createHash}=require('node:crypto');
 const {deflateRawSync}=require('node:zlib');
+const {assessDraftClaims,headingMismatch}=require('./growth-draft-claim-guard.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 const clean=x=>String(x==null?'':x).trim();
 const asText=html=>String(html).replace(/<!--[\s\S]*?-->/g,'').replace(/<[^>]*>/g,' ')
@@ -84,7 +85,25 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  if(evidenceScope!=='verified')warnings.push('NO_VERIFIED_PAGE_GSC_BASELINE');
  if(!links.some(x=>x.type==='same_domain'))warnings.push('CONTEXTUAL_INTERNAL_LINK_REVIEW');
  if(captions.length===0)warnings.push('IMAGES_OPTIONAL_REAL_IMAGE_EVIDENCE_IF_AVAILABLE');
- if(issues.length)return {status:'BLOCKED',issues:[...new Set(issues)],warnings:[...new Set(warnings)],files:[],publication_allowed:false};
+ const norm=t=>asText(t).toLowerCase().replace(/\s+/g,' ').trim();
+ // A concept with sentences Growth flagged is only packaged when the final text PROVES they were resolved: no flagged
+ // sentence is still in it, the text passes the same claim checks against the original page, and no heading still
+ // promises reasons while giving steps. A tick in the UI is not proof; this is.
+ const flaggedNotes=reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged.filter(Boolean):[];
+ const blockedDetails=[];
+ if(flaggedNotes.length&&approved.length){
+  const finalText=norm(approved.map(x=>String(x.html||'')).join(' '));
+  for(const f of flaggedNotes)if(f.sentence&&finalText.includes(norm(f.sentence)))blockedDetails.push({code:'FLAGGED_SENTENCE_STILL_IN_TEXT',sentence:clean(f.sentence).slice(0,300),reason:clean(f.reason).slice(0,200)});
+  const recheck=assessDraftClaims({text:approved.map(x=>asText(x.html)).join(' '),destinationText:asText(String(originalHtml||''))});
+  for(const v of recheck.violations)if(!blockedDetails.some(b=>b.sentence&&norm(b.sentence)===norm(v.sentence)))
+   blockedDetails.push({code:'UNRESOLVED_'+v.code,sentence:clean(v.sentence).slice(0,300),reason:clean(v.reason).slice(0,200)});
+  for(const x of approved){const h=(String(x.html||'').match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/i)||[])[1];
+   const mm=h&&headingMismatch(asText(h),asText(String(x.html).replace(/<h2\b[^>]*>[\s\S]*?<\/h2>/i,' ')));
+   if(mm)blockedDetails.push({code:'UNRESOLVED_'+mm.code,sentence:null,reason:'“'+asText(h)+'”: '+mm.reason})}
+  if(blockedDetails.length)issues.push('FLAGGED_CONTENT_NOT_RESOLVED');
+ }
+ if(issues.length)return {status:'BLOCKED',issues:[...new Set(issues)],warnings:[...new Set(warnings)],files:[],publication_allowed:false,
+  ...(blockedDetails.length?{blocked_details:blockedDetails.slice(0,20)}:{})};
  const fragments=approved.map(x=>x.html.trim()).join('\n\n');
  // New sections that share one anchor are a chain in package order: the second goes directly after the first, never
  // also "directly after" the same existing heading (which would reverse or interleave them).
@@ -94,7 +113,6 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  const allMarkdown=approved.map((x,i)=>'### Approved change '+(i+1)+'\nEvidence: '+x.evidence_ref+'\nPlacement: '+where(x,i)+'\n\n'+renderChangeMarkdown(x.html)).join('\n\n');
  const placementSteps=approved.map((x,i)=>'   - Change '+(i+1)+': '+where(x,i)+'.').join('\n');
  // Audit trail: was the checked Growth text published as proposed, or edited by the editor?
- const norm=t=>asText(t).toLowerCase().replace(/\s+/g,' ').trim();
  const proposal=growthProposal&&Array.isArray(growthProposal.sections)?{id:growthProposal.id,
   editor_changed_text:approved.length!==growthProposal.sections.length||approved.some((x,i)=>{const s=growthProposal.sections[i]||{};return norm(x.html)!==norm('<h2>'+s.h2+'</h2>'+String(s.text||''))})}:null;
  // Review notes belong to the Growth text: a sentence the editor removed or rewrote is no longer listed, and new
@@ -103,8 +121,9 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  const listOf=k=>(reviewNotes&&Array.isArray(reviewNotes[k])?reviewNotes[k]:[]).map(x=>clean(x).slice(0,400)).filter(Boolean)
   .filter(x=>approvedText.includes(norm(x))).slice(0,20);
  const review={fact_check:listOf('needs_fact_check'),owner_confirmation:listOf('needs_owner_confirmation'),safety_review:listOf('needs_safety_review'),
-  // Sentences Growth flagged in a selection concept; listed while they are still in the approved text (section-level flags always).
-  flagged:(reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged:[]).filter(f=>f&&(!f.sentence||approvedText.includes(norm(f.sentence))))
+  // Sentences Growth flagged in a selection concept: the package exists only when they are resolved (checked above), so
+  // they are listed as a record of what was removed or rewritten, not as open items.
+  flagged:(reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged:[]).filter(Boolean)
    .slice(0,30).map(f=>(f.sentence?'“'+clean(f.sentence).slice(0,300)+'” — ':'“'+clean(f.h2).slice(0,140)+'” (whole section) — ')+clean(f.reason).slice(0,200))};
  const editorText=proposal&&proposal.editor_changed_text;
  const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length>0;
@@ -146,7 +165,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    'GBP phone-button taps are not answered calls; call logs, quotes, won jobs require independent information.\n'+
    'Review any real project photos/reviews with the owner; never invent customer experiences.\n'},
   ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
-   (review.flagged.length?'\n## Flagged by Growth: rewrite or remove\n\n'+review.flagged.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
+   (review.flagged.length?'\n## Flagged by Growth — resolved in this text (checked)\n\nThese sentences were flagged in the concept. The package was only made because none of them is still in the approved text and the text passes the same checks again.\n\n'+review.flagged.map(x=>'- '+x).join('\n')+'\n':'')+
    (review.fact_check.length?'\n## Fact-check\n\n'+review.fact_check.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.owner_confirmation.length?'\n## Confirm with the business\n\n'+review.owner_confirmation.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.safety_review.length?'\n## Safety review by a qualified professional\n\n'+review.safety_review.map(x=>'- [ ] '+x).join('\n')+'\n':'')+

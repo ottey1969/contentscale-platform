@@ -241,12 +241,23 @@ test('10. hybrid: research without writing gives the full gap list; text only fo
  const prop=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body.proposal;
  assert.equal(prop.id,w.body.cms_handoff.proposal_id);assert.equal(prop.evidence_label,'SELECTION_CONCEPT_WITH_FLAGGED_SENTENCES');
  assert(prop.review.flagged.some(f=>/68%/.test(f.sentence)));
- const pack=await api('POST','/api/tracker-client/owner-tok/growth/cms-export',{page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
+ const exportWith=sections=>api('POST','/api/tracker-client/owner-tok/growth/cms-export',{page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
   focus_query:prop.focus_query||'roof repair lodi nj',seo_title:'Roof Repair in Lodi, NJ',meta_description:'Roof repair in Lodi, NJ: how to read the estimate.',growth_proposal_id:prop.id,review_notes:prop.review,
-  approved_changes:prop.sections.map(x=>({approved:true,evidence_ref:'growth_proposal:'+prop.id,html:sectionHtml(x),placement:x.placement})),format:'json'});
+  approved_changes:sections.map(x=>({approved:true,evidence_ref:'growth_proposal:'+prop.id,html:sectionHtml(x),placement:x.placement})),format:'json'});
+ // A tick is not proof: the flagged sentence still in the text refuses the package and names it.
+ const unchanged=await exportWith(prop.sections);
+ assert.equal(unchanged.status,409);assert.deepEqual(unchanged.body.issues,['FLAGGED_CONTENT_NOT_RESOLVED']);
+ assert(unchanged.body.blocked_details.some(b=>b.code==='FLAGGED_SENTENCE_STILL_IN_TEXT'&&/68%/.test(b.sentence)));
+ // Rewriting it into another unsourced figure is caught by the same checks again.
+ const reworded=prop.sections.map(x=>({...x,text:x.text.replace(/About 68% of homeowners[^.]*\./,'Around 70% of homeowners skip a second quote, so ask for one before you approve the work.')}));
+ const again=await exportWith(reworded);
+ assert.equal(again.status,409);assert(again.body.blocked_details.some(b=>b.code==='UNRESOLVED_UNSOURCED_NUMBER'&&/70%/.test(b.sentence)),JSON.stringify(again.body));
+ // Resolved: the flagged sentence removed. Only now the package is made, recording what was resolved.
+ const resolved=prop.sections.map(x=>({...x,text:x.text.replace(/\s*About 68% of homeowners[^.]*\./,'').trim()+' Ask a second crew for a written quote before you approve the work.'}));
+ const pack=await exportWith(resolved);
  assert.equal(pack.status,200,JSON.stringify(pack.body).slice(0,300));
  const facts=pack.body.files.find(f=>f.name==='06-fact-check-before-publishing.md').content;
- assert.match(facts,/Flagged by Growth: rewrite or remove[\s\S]*68%/);
+ assert.match(facts,/Flagged by Growth — resolved in this text \(checked\)[\s\S]*68%/);
  assert.equal(pack.body.manifest.review_items.flagged,1);
  // The protected Case Study page never gets a gap list to write from.
  const locked=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.locked,{page_id:ids.locked,write:false});
