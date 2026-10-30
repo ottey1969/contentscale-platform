@@ -59,6 +59,9 @@ async function saveSelectionProposal(pool,{clientId,researchPageId=null,targetPa
  const all=k=>[...new Set((written.sections||[]).flatMap(s=>s[k]||[]))].slice(0,20).map(v=>clip(v,400));
  const review={needs_fact_check:all('needs_fact_check'),needs_owner_confirmation:all('needs_owner_confirmation'),needs_safety_review:all('needs_safety_review'),
   flagged:(written.sections||[]).flatMap(s=>(s.flags||[]).map(f=>({h2:clip(s.h2,200),sentence:f.sentence?clip(f.sentence,400):null,code:clip(f.code,60),reason:clip(f.reason,300)}))).slice(0,30),
+  // What each section rests on (question, competitor sources, warning when only headings were behind it).
+  basis:(written.sections||[]).filter(s=>s.basis).map(s=>({h2:clip(s.h2,200),answers:clip(s.basis.answers,200),evidence_level:clip(s.basis.evidence_level,40),
+   sources:(s.basis.competitor_evidence||[]).slice(0,8).map(e=>clip(e.site+(e.heading?': “'+e.heading+'”':''),220)),warning:s.basis.warning?clip(s.basis.warning,300):null})).slice(0,10),
   requirements:['Rewrite or remove every flagged sentence.','Fact-check every statement against your own knowledge and sources before publishing.','Owner approval is required; nothing is published automatically.'],
   competitor_sources:[]};
  await ensureTable(pool);

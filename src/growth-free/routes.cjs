@@ -152,10 +152,14 @@ var GAPS=null;
 var GAP_GROUPS=[];
 function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.groups||[]).map(function(x){return [x.id,x.label]});
  var h='<h2 id="gaps">Choose what goes on your site</h2><p class="lead">'+esc(g.note)+'</p><p class="muted">Compared with '+esc(g.ranking_pages_read)+' readable ranking page(s). '+(g.items.length?g.items.length+' difference(s) found.':'No difference found.')+'</p>';
+ var rec=(g.items||[]).filter(function(x){return x.recommended});
+ if(rec.length)h+='<p class="note">Recommended first ('+rec.length+'): '+rec.map(function(x){return esc(x.title)}).join(' · ')+'. Supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI. You decide.</p>';
+ if((g.strengths||[]).length)h+='<h3>Keep: your page has this, the ranking pages read do not ('+g.strengths.length+')</h3><ul>'+g.strengths.map(function(s){return '<li>'+esc(s.heading)+'</li>'}).join('')+'</ul><p class="muted">These are not gaps and are not rewritten.</p>';
  if(!g.items.length)return h;
  GAP_GROUPS.forEach(function(gr){var list=g.items.filter(function(x){return x.group===gr[0]});if(!list.length)return;
   h+='<h3>'+esc(gr[1])+' ('+list.length+')</h3>';
-  list.forEach(function(x){h+='<label class="check card gap"><input type="checkbox" class="gapPick" value="'+esc(x.id)+'"><span><strong>'+esc(x.title)+'</strong> <small>'+esc(x.status)+(x.ranking_pages?' · on '+esc(x.ranking_pages)+(x.of?' of '+esc(x.of):'')+' ranking page(s)':'')+(x.your_section?' · closest on your page: “'+esc(x.your_section)+'”':'')+'</small>'+
+  list.forEach(function(x){h+='<label class="check card gap"><input type="checkbox" class="gapPick" value="'+esc(x.id)+'"><span>'+(x.recommended?'<mark>Recommended</mark> ':'')+'<strong>'+esc(x.title)+'</strong> <small>'+esc(x.status)+(x.ranking_pages?' · on '+esc(x.ranking_pages)+(x.of?' of '+esc(x.of):'')+' ranking page(s)':'')+(x.your_section?' · closest on your page: “'+esc(x.your_section)+'”':'')+'</small>'+
+   (x.priority&&x.priority.suggested_action?'<br><small>Action: '+esc(x.priority.suggested_action)+'</small>':'')+(x.priority&&x.priority.why?'<br><small>Why: '+esc(x.priority.why.join(' · '))+'</small>':'')+
    (x.examples.length?'<br><small>'+x.examples.map(function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}).join(' · ')+'</small>':'')+'</span></label>'})});
  h+='<p><strong id="gapCount">0 selected</strong></p><p><button type="button" id="gapAll" class="ghost">Select all</button> <button type="button" id="gapNone" class="ghost">Clear</button></p>';
  h+='<p><button type="button" id="gapDownload">Download selection as editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p>';
@@ -164,7 +168,8 @@ function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.grou
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
  (r.sections||[]).forEach(function(x){var fl=(x.flags||[]).filter(function(f){return f.sentence}).map(function(f){return f.sentence});
-  h+='<div class="card"><strong>'+esc(x.h2)+'</strong><br><small>'+(x.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+x.flags.length+' item(s) to rewrite or remove':'Concept for review')+(x.item_title?' · for “'+esc(x.item_title)+'”':'')+(x.placement&&x.placement.section_heading?' · place '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':' · you choose the place')+'</small>';
+  h+='<div class="card"><strong>'+esc(x.h2)+'</strong><br><small>'+(x.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+x.flags.length+' item(s) to rewrite or remove':x.status==='MARKED_NO_SOURCE_TEXT'?'Marked: no competitor text behind it':'Concept for review')+(x.item_title?' · for “'+esc(x.item_title)+'”':'')+(x.placement&&x.placement.section_heading?' · place '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':' · you choose the place')+'</small>';
+  if(x.basis)h+='<br><small>Answers: “'+esc(x.basis.answers)+'” · basis: '+esc(String(x.basis.evidence_level||'').toLowerCase().split('_').join(' '))+((x.basis.competitor_evidence||[]).length?' · sources: '+x.basis.competitor_evidence.map(function(e){return esc(e.site)}).join(', '):'')+'</small>'+(x.basis.warning?'<p class="note">'+esc(x.basis.warning)+'</p>':'');
   (x.paragraphs||[]).forEach(function(p){var out=esc(p);fl.forEach(function(f){out=out.split(esc(f)).join('<mark title="Flagged: rewrite or remove">'+esc(f)+'</mark>')});h+='<p>'+out+'</p>'});
   if((x.flags||[]).length)h+='<ul>'+x.flags.map(function(f){return '<li>'+(f.sentence?'“'+esc(f.sentence)+'” — ':'Whole section — ')+esc(f.reason)+'</li>'}).join('')+'</ul>';
   h+='</div>'});
@@ -176,8 +181,10 @@ function gapBrief(g,s){var picked={};document.querySelectorAll('.gapPick:checked
  var items=g.items.filter(function(x){return picked[x.id]});
  var L=['# Editor brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Chosen from the comparison with '+g.ranking_pages_read+' ranking page(s). Write in your own words with facts you can stand behind; do not copy the ranking pages.',''];
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
-  list.forEach(function(x){L.push('- [ ] **'+x.title+'** ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
+  list.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
+   if(x.priority&&x.priority.suggested_action)L.push('  - Action: '+x.priority.suggested_action);
    x.examples.forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))})});L.push('')});
+ if((g.strengths||[]).length){L.push('## Keep: your page has this, the ranking pages read do not','');g.strengths.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
  return {count:items.length,text:L.join('\\n')}}
 function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)return;
@@ -209,7 +216,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  h+='<h3>What to do</h3><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
  h+=gapsHtml(s.gaps,d.writing);
- var c=s.checked;h+='<h2>What was checked</h2><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small></div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong></div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div>'+(c.search_market?'<div><small>Searched in</small><strong>'+esc(c.search_market.join(' + '))+'</strong>'+(c.markets_not_searched&&c.markets_not_searched.length?'<small>not searched: '+esc(c.markets_not_searched.join(', '))+'</small>':'')+'</div>':'')+'</div>';
+ var c=s.checked;h+='<h2>What was checked</h2><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small></div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong></div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div>'+(c.search_market?'<div><small>Searched in</small><strong>'+esc(c.search_market.join(' + '))+'</strong>'+(c.markets_not_searched&&c.markets_not_searched.length?'<small>not researched: '+esc(c.markets_not_searched.join(', '))+' (partial market research)</small>':'')+(c.market_derived_not_confirmed?'<small>market derived from your page, not confirmed</small>':'')+'</div>':'')+'</div>';
  if(a)h+=aiHtml(a);
  h+='<h2>Limits of this free check</h2><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p>';
  h+='<h2>Do it yourself</h2><p>Download the complete research data and process it yourself or with your own tools.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p>';

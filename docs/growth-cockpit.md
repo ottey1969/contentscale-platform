@@ -115,11 +115,28 @@ Growth no longer writes text by itself. One flow serves the Tracker and the stan
 
 The claim check ignores technical notation when it looks for unsourced figures: HTTP status codes ("non-200", "301 redirects", "4xx/404 pages"), language/region codes and tokens such as `en-GB`, `ISO-3166`, `h2`. Real figures stay checked: "68%", "In 2025, 40 markets", "a 200 page site" are still flagged without a source.
 
-### Search market (report 56)
+### Search market (report 56, design review)
 
-Competitor research searches where the page competes, from what the page itself states (`src/growth-search-locale.cjs`), in this order: a country-code domain (`.nl`, `.co.uk`); countries named in the title and headings (most named first); the region of its own hreflang; the region of `<html lang>`. A US-state market from the query/keyword/URL keeps the US lookup with its location. Without any signal the default stays US / English and the report says so.
+The owner decides the market; page signals are evidence.
 
-Serper gets `gl`/`hl` for that market; Bing RSS gets `cc`/`setlang`. A page that names several markets spends the one allowed extra paid call on its second market (instead of result page 2); further markets are listed as `target_markets_not_searched`. Never more than two paid calls per run.
+- **Set in the Tracker** (`POST /api/tracker-client/:token/growth/markets?page_id=`, owner only): ordered two-letter country codes, main market first (`NL, UK, BE, LU`); an empty list removes the setting. Stored in the additive table `tracker_growth_page_markets`. Source `SET_IN_TRACKER`, `confirmed: true`.
+- **Derived when nothing is set** (`src/growth-search-locale.cjs`), in this order: a country-code domain (`.nl`, `.co.uk`, `.it`, `.in`; Google's generic ccTLDs such as `.io`, `.co`, `.me` are not countries); countries named in the title and headings; the region of its own hreflang; the region of `<html lang>`. Labelled `confirmed: false`; when several countries are named, their order is marked `priority_confirmed: false`. What the page suggests stays visible next to a Tracker setting.
+- A US-state market from the query/keyword/URL keeps the US lookup with its location. Without any signal the default stays US / English and the report says so.
+
+Searching: Serper gets `gl`/`hl`, Bing RSS `cc`/`setlang`. A page with several markets gets its second market searched too: with the free source by one more free lookup, with Serper by the one allowed extra paid call. Never more than two paid calls per run.
+
+`market_coverage` reports per target market whether it was researched, by which source and with how many usable results, whichever provider answered. Research that misses markets is `PARTIAL_MARKET_RESEARCH` and says which markets were not researched; it is never presented as complete market research.
+
+### One list, one item per need (design review)
+
+- Competitor sections the AI grouped into one topic, that a reader question already covers, or (without AI) that share their core words beyond the search term, become ONE item. Every supporting page and its original fragment is kept under it (`examples`, `more_examples`, `merged` says how). The search term's own words never join sections.
+- Every writable item has `priority`: number of ranking pages behind it, coverage (missing / partial / not compared), link with the search term (word-based, so it orders but never excludes), confidence (AI-confirmed question, AI topic, shared words, single section, AI says different questions), how many competitor text fragments there are, the reasons in words (`why`) and a `suggested_action` ("Extend your section …", "Add a new section after …"). No score is shown and nothing is estimated.
+- Up to four items are `recommended`: at least two ranking pages, missing or partly on the page, not contradicted by the AI. All items stay choosable.
+- `strengths`: sections of this page with no counterpart on the ranking pages read (none of the heading's own words in any ranking-page heading or fragment, no gap pointing at it; navigation and FAQ blocks excluded). Listed to keep, never written. Word-based: it says what was compared, not that the section is good.
+
+### What each concept rests on (design review)
+
+Every written section carries `basis`: the question it answers, the evidence level (`READER_QUESTION_CONFIRMED_BY_AI`, `COMPETITOR_TEXT`, `COMPETITOR_HEADINGS_ONLY`), the competitor sources, where it goes and why the item was in the list. A section with only competitor headings behind it is `MARKED_NO_SOURCE_TEXT`, with a whole-section fact-check note. The basis travels to the CMS package (`06-fact-check-before-publishing.md`, "What each section rests on") for every section still in the approved text.
 
 ### One leading decision
 

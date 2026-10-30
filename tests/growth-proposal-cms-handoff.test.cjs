@@ -89,3 +89,14 @@ test('without review notes there is no fact-check file; earlier handoffs keep wo
  assert.equal(out.manifest.growth_proposal,null);
  assert.equal(out.files.some(f=>f.name.startsWith('06-')),false);
 });
+
+test('the basis of each Growth section travels to the fact-check file, only while that section is in the approved text',()=>{
+ const p=proposalFromDecision(gate);
+ const basis=[{h2:p.sections[0].h2,answers:'How do I check AI citations manually?',evidence_level:'COMPETITOR_HEADINGS_ONLY',sources:['blog.hubspot.com: “Manually search your most important keywords.”'],warning:'Only competitor headings are behind this section.'},
+  {h2:'A section the editor removed',answers:'x',evidence_level:'COMPETITOR_TEXT',sources:[],warning:null}];
+ const out=handoff({...p,review:{...p.review,basis}});
+ const facts=out.files.find(f=>f.name==='06-fact-check-before-publishing.md').content;
+ assert.match(facts,/## What each section rests on/);
+ assert.match(facts,/answers “How do I check AI citations manually\?”\. Sources: blog\.hubspot\.com.*⚠ Only competitor headings/);
+ assert(!facts.includes('A section the editor removed'));
+});

@@ -30,6 +30,18 @@ function writingRequest(items,{targetUrl,focusQuery,existingHeadings=[]}={}){
    reader_task:{mode:'SECTION_IMPROVEMENT',tasks,existing_headings:existingHeadings.slice(0,30)}}};
 }
 
+// What a written section rests on, shown with it: the question it answers, the competitor fragments behind it, where it
+// goes and why the item was in the list. A section behind which there is no competitor TEXT (headings only) and no
+// confirmed reader question stays a marked concept: every statement in it is the writer's and must be checked.
+function basisOf(item){
+ const examples=(item.examples||[]).filter(e=>e&&e.site);
+ const level=item.reader_question?'READER_QUESTION_CONFIRMED_BY_AI':examples.some(e=>String(e.excerpt||'').length>=75)?'COMPETITOR_TEXT':'COMPETITOR_HEADINGS_ONLY';
+ return {answers:clip(item.reader_question||item.title,200),evidence_level:level,
+  competitor_evidence:examples.slice(0,8).map(e=>({site:e.site,url:e.url||null,heading:clip(e.heading,160),has_text:String(e.excerpt||'').length>=75})),
+  extends:item.placement?.section_heading||item.your_section||null,why_in_list:item.priority?.why||[],
+  ...(level==='COMPETITOR_HEADINGS_ONLY'?{warning:'Only competitor headings are behind this section, no competitor text and no confirmed reader question: every statement in it comes from the writer. Check each one, or write it from your own knowledge.'}:{})};
+}
+
 // Checks every written section against the page the writer used; failing sentences become flags, never silent edits.
 // A section is linked to a selected item ONLY by the exact task code the writer was given, once per item. A section with
 // a missing, unknown or repeated code is reported as not linked (never guessed onto another item or placement).
@@ -48,11 +60,12 @@ function reviewWritten({draft,flags=[]},request,{sourceText='',focusQuery=''}={}
    ...claims.violations.map(v=>({sentence:v.sentence,code:v.code,reason:v.reason}))];
   const heading=headingMismatch(s.h2,text);
   if(heading&&!marks.some(m=>m.code===heading.code))marks.push({sentence:null,code:heading.code,reason:heading.reason});
+  const basis=basisOf(item);
   const seen=new Set();
   const unique=marks.filter(m=>{const k=m.code+'|'+(m.sentence||'');if(seen.has(k))return false;seen.add(k);return true});
   return {item_id:item.id,item_title:item.title,h2:s.h2,paragraphs:s.paragraphs,placement:item.placement||null,
-   status:unique.length?'FLAGGED_FOR_EDITOR':'CONCEPT_FOR_REVIEW',flags:unique,
-   needs_fact_check:(claims.claim_review||[]).filter(r=>r.class==='GENERAL_STATEMENT_UNVERIFIED').map(r=>r.sentence),
+   status:unique.length?'FLAGGED_FOR_EDITOR':basis.warning?'MARKED_NO_SOURCE_TEXT':'CONCEPT_FOR_REVIEW',flags:unique,basis,
+   needs_fact_check:[...(basis.warning?['“'+s.h2+'” (whole section): '+basis.warning]:[]),...(claims.claim_review||[]).filter(r=>r.class==='GENERAL_STATEMENT_UNVERIFIED').map(r=>r.sentence)],
    needs_owner_confirmation:(claims.claim_review||[]).filter(r=>r.confirm_with_owner).map(r=>r.sentence),
    needs_safety_review:(claims.claim_review||[]).filter(r=>r.safety_review).map(r=>r.sentence)};
  });
@@ -73,4 +86,4 @@ async function writeForSelection({items,targetUrl,focusQuery,existingHeadings,ge
  return {...reviewWritten(out,request,{sourceText:out.source_text||'',focusQuery}),writer_status:out.status};
 }
 
-module.exports={writeForSelection,writingRequest,reviewWritten,pageFingerprint,MAX_ITEMS};
+module.exports={writeForSelection,writingRequest,reviewWritten,pageFingerprint,basisOf,MAX_ITEMS};

@@ -8,8 +8,11 @@
   var L=['# Editor brief: '+(list.target_url||''),'','Search term: '+(list.focus_query||'—'),
    'Chosen from the comparison with '+(list.ranking_pages_read||0)+' ranking page(s). Write in your own words with facts you can stand behind; do not copy the ranking pages.',''];
   (list.groups||[]).forEach(function(g){var sel=items.filter(function(x){return x.group===g.id});if(!sel.length)return;L.push('## '+g.label,'');
-   sel.forEach(function(x){L.push('- [ ] **'+x.title+'** ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+(x.ai?'; '+x.ai:'')+')');
+   sel.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+(x.ai?'; '+x.ai:'')+')');
+    if(x.priority&&x.priority.suggested_action)L.push('  - Action: '+x.priority.suggested_action);
+    if(x.priority&&x.priority.why)L.push('  - Why: '+x.priority.why.join('; '));
     (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))})});L.push('')});
+  if((list.strengths||[]).length){L.push('## Keep: your page has this, the ranking pages read do not','');list.strengths.forEach(function(s){L.push('- '+s.heading)});L.push('')}
   return L.join('\n');
  }
  function save(name,text){var url=URL.createObjectURL(new Blob([text],{type:'text/markdown'})),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000)}
@@ -21,13 +24,21 @@
   el('p',list.note||'',box,'small');
   if(list.status!=='OBSERVED'||!(list.items||[]).length){el('p','No difference with the readable ranking pages was found.',box);return true}
   el('p',list.items.length+' difference(s) with '+(list.ranking_pages_read||0)+' readable ranking page(s).',box);
+  var rec=list.items.filter(function(x){return x.recommended});
+  if(rec.length)el('p','Recommended first ('+rec.length+'): '+rec.map(function(x){return x.title}).join(' · ')+'. Supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI. You decide.',box,'small');
+  else el('p','No item is recommended: none is supported by two ranking pages and missing on your page. You can still choose any item.',box,'small');
   var boxes=[];
   (list.groups||[]).forEach(function(g){var items=list.items.filter(function(x){return x.group===g.id});if(!items.length)return;
    el('h3',g.label+' ('+items.length+')',box);
    items.forEach(function(x){var row=el('label',null,box,'check');var c=el('input',null,row);c.type='checkbox';c.value=x.id;boxes.push({c:c,x:x});
-    var t=el('span',null,row);el('strong',x.title,t);
+    var t=el('span',null,row);if(x.recommended)el('mark','Recommended ',t);el('strong',x.title,t);
     el('small',' — '+x.status+(x.ranking_pages?' · '+x.ranking_pages+(x.of?' of '+x.of:'')+' ranking page(s)':'')+(x.your_section?' · closest here: “'+x.your_section+'”':'')+(x.ai?' · '+x.ai:'')+(x.writable?'':' · added by the editor, not written'),t);
-    (x.examples||[]).slice(0,3).forEach(function(e){el('small',(e.position?'#'+e.position+' ':'')+e.site+(e.heading&&e.heading!==x.title?': “'+e.heading+'”':''),el('div',null,t))})})});
+    if(x.priority&&x.priority.suggested_action)el('small','Action: '+x.priority.suggested_action,el('div',null,t));
+    if(x.priority&&x.priority.why)el('small','Why: '+x.priority.why.join(' · '),el('div',null,t));
+    (x.examples||[]).forEach(function(e){el('small',(e.position?'#'+e.position+' ':'')+e.site+(e.heading&&e.heading!==x.title?': “'+e.heading+'”':''),el('div',null,t))});
+    if(x.more_examples)el('small','+ '+x.more_examples+' more section(s) with the same need',el('div',null,t))})});
+  if((list.strengths||[]).length){el('h3','Keep: your page has this, the ranking pages read do not ('+list.strengths.length+')',box);
+   var ks=el('ul',null,box);list.strengths.forEach(function(s){el('li',s.heading,ks)});el('p','These are not gaps and are not rewritten. Keep them when you add anything.',box,'small')}
   var count=el('p','0 selected',box);
   var picked=function(){return boxes.filter(function(b){return b.c.checked}).map(function(b){return b.x})};
   boxes.forEach(function(b){b.c.addEventListener('change',function(){var p=picked();count.textContent=p.length+' selected'+(p.length&&!p.some(function(x){return x.writable})?' (page elements only: nothing to write)':'')})});
@@ -45,7 +56,9 @@
      if(!r||r.success===false)throw Error((r&&(r.code||r.reason))||'Writing not available');
      status.textContent=r.sections&&r.sections.length?'Concepts written. Flagged sentences must be rewritten or removed; every statement still needs your check. Nothing is published.':(r.reason||'No text was written. Write these items yourself; your selection is kept.');
      (r.sections||[]).forEach(function(s){var card=el('div',null,out,'note');el('h3',s.h2,card);
-      el('small',(s.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+s.flags.length+' item(s) to rewrite or remove':'Concept for review')+(s.item_title?' · for “'+s.item_title+'”':'')+(s.placement&&s.placement.section_heading?' · place '+(s.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+s.placement.section_heading+'”':' · editor chooses the place'),card);
+      el('small',(s.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+s.flags.length+' item(s) to rewrite or remove':s.status==='MARKED_NO_SOURCE_TEXT'?'Marked: no competitor text behind it':'Concept for review')+(s.item_title?' · for “'+s.item_title+'”':'')+(s.placement&&s.placement.section_heading?' · place '+(s.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+s.placement.section_heading+'”':' · editor chooses the place'),card);
+      if(s.basis){var bs=el('div',null,card,'small');el('small','Answers: “'+s.basis.answers+'” · basis: '+String(s.basis.evidence_level||'').toLowerCase().replace(/_/g,' ')+((s.basis.competitor_evidence||[]).length?' · sources: '+s.basis.competitor_evidence.map(function(e){return e.site+(e.heading?' (“'+e.heading+'”)':'')}).join(', '):''),bs);
+       if(s.basis.warning)el('p',s.basis.warning,card,'small')}
       var flagged=(s.flags||[]).map(function(f){return f.sentence}).filter(Boolean);
       (s.paragraphs||[]).forEach(function(para){var pnode=el('p',null,card);
        para.split(/(?<=[.!?])\s+/).forEach(function(sentence){var span=el('span',sentence+' ',pnode);if(flagged.indexOf(sentence)>=0){span.style.background='#fde68a';span.title='Flagged: rewrite or remove'}})});

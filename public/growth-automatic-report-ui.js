@@ -278,9 +278,25 @@
   var marketText=(sc.searched_markets||[]).length?sc.searched_markets.join(' + ').toUpperCase()+' / '+String(sc.language||'en'):'US / English';
   node('small',googleSource?'Google organic listings observed through the configured optional Serper.dev ('+marketText+'). These are search-result observations, not verified target-page GSC rankings or traffic.':
     'Free public Bing RSS discovery is optional and may be blocked. This source does not verify Google rankings; an optional configured Google lookup is tried only when free discovery returns no relevant leads.',s);
-  if(loc.source)node('small','Search market: '+(loc.country||'US (default)')+' · from '+String(loc.source).toLowerCase().replace(/_/g,' ')+
-   ((sc.target_markets_not_searched||[]).length?' · not searched: '+sc.target_markets_not_searched.map(function(x){return x.name||x.country}).join(', '):
-    (loc.other_countries||[]).length&&!googleSource?' · other markets on the page: '+loc.other_countries.join(', '):''),s);
+  // Research per target market: which markets were researched, whether the market was set by the owner or derived.
+  var cov=discovery.market_coverage||{};
+  if(loc.source||cov.status){
+   var mk=node('div',null,s);
+   node('small','Search market: '+(loc.country||'US (default)')+' · '+(loc.source==='SET_IN_TRACKER'?'set in the Tracker':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
+    (loc.priority_confirmed===false?' · the order of the markets is a guess from how often the headings name them':''),mk);
+   (cov.markets||[]).forEach(function(m){node('small',' '+m.name+': '+(m.researched?'researched ('+(m.provider||'search')+', '+m.usable_results+' usable result(s))':'not researched'),node('div',null,mk))});
+   if(cov.note)node('small',cov.note,node('div',null,mk));
+   if(d.market_setting_url){
+    var form=node('p',null,mk);node('small','Target markets for this page (two-letter codes, main market first): ',form);
+    var inp=node('input',null,form);inp.type='text';inp.size=18;inp.placeholder='e.g. '+[loc.country].concat(loc.other_countries||[]).filter(Boolean).join(', ');
+    if(loc.source==='SET_IN_TRACKER')inp.value=[loc.country].concat(loc.other_countries||[]).join(', ');
+    var save=node('button','Save markets',form);save.type='button';var said=node('small','',form);
+    save.addEventListener('click',async function(){save.disabled=true;
+     try{var r=await fetch(d.market_setting_url,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:inp.value})});
+      var j=await r.json();said.textContent=j.success?' Saved'+(j.markets?': '+j.markets.countries.join(', '):' (removed; derived from the page again)')+'. Run the research again to use it.':' Not saved: '+(j.code||r.status);}
+     catch(e){said.textContent=' Not saved.'}finally{save.disabled=false}});
+   }
+  }
   if(discovery.free_discovery_status)node('small','Free search: '+discovery.free_discovery_status,s);
   if(discovery.optional_google_status)node('small','Optional Google search: '+discovery.optional_google_status,s);
   if(discovery.reason)node('small','Source status: '+discovery.reason,s);

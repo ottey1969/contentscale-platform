@@ -75,7 +75,7 @@ function contentSections(url,html){
 }
 function topicPrompt({query,competitors,page}){
  return ['You compare web pages that rank on Google with one page that should rank. Return JSON only.',
-  'Group the ranking pages\' section headings into topics: one topic = one thing a reader wants to know or do. Sections that only share a word are different topics.',
+  'Group the ranking pages\' section headings into topics: one topic = one thing a reader wants to know or do. Headings worded differently that serve the same information need belong to ONE topic; sections that only share a word are different topics.',
   'For every topic list the sections in it (host and the exact heading), and decide whether the page already covers it: YES (a section covers it), PARTLY (touches it, leaves it open), NO.',
   'For YES or PARTLY copy one heading EXACTLY from page_sections as page_heading, otherwise null. Do not judge whether statements are true.',
   'JSON: {"topics":[{"topic":"short description","sections":[{"host":"...","heading":"..."}],"page_covers":"YES|PARTLY|NO","page_heading":"...|null"}]}',
@@ -109,12 +109,12 @@ async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitor
  const own=pageElements(ownHtml);
  const pages=readable.map(c=>({url:c.url,host:hostOf(c.url),serp_position:c.serp_position??null,partial_capture:c.truncated===true,
   elements:pageElements(c.html),sections:contentSections(c.url,c.html)}));
- const page=groupSections(blocks(ownHtml)).filter(s=>s.heading&&s.heading!=='(introduction)').slice(0,45).map(s=>({heading:clip(s.heading,180),excerpt:clip(s.text,200)}));
+ const page=groupSections(blocks(ownHtml)).filter(s=>s.heading&&s.heading!=='(introduction)').slice(0,45).map(s=>({heading:clip(s.heading,180),excerpt:clip(s.text,200),words:s.words}));
  const base={status:'OBSERVED',query:clip(query,160),this_page:ownUrl,ranking_pages_read:pages.length,
   scope:'What the readable ranking pages contain compared with this page. Observation only: no fact check, no ranking promise; the editor decides what to add.',
   ranking_pages:pages.map(p=>({url:p.url,host:p.host,serp_position:p.serp_position,partial_capture:p.partial_capture,elements:p.elements,
    content_headings:p.sections.map(s=>s.heading)})),
-  this_page_elements:own,this_page_fingerprint:require('./growth-selected-writing.cjs').pageFingerprint(ownHtml),...compareElements(own,pages)};
+  this_page_elements:own,this_page_sections:page.map(s=>({heading:s.heading,excerpt:s.excerpt,words:s.words,furniture:isFurnitureHeading(s.heading)})),this_page_fingerprint:require('./growth-selected-writing.cjs').pageFingerprint(ownHtml),...compareElements(own,pages)};
  let grouped=null,topicStatus='NOT_GROUPED_NO_MODEL';
  if(model){
   try{

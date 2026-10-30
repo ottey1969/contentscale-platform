@@ -55,8 +55,11 @@ function summarizeFreeGrowth(report,{url,query}={}){
   what_google_shows:serp.intent?(INTENT_TEXT[serp.intent]||String(serp.intent).toLowerCase().replace(/_/g,' ')):null,
   ranking_results_considered:Number(serp.organic_leads_considered)||((discovery.leads||[]).length)||0,
   ranking_pages_read:read||Number(coverage.competitors_considered)||0,
-  search_market:discovery.scope?.searched_markets?.length?discovery.scope.searched_markets.map(x=>x.toUpperCase()):discovery.search_locale?.country?[discovery.search_locale.country]:null,
-  markets_not_searched:(discovery.scope?.target_markets_not_searched||[]).map(x=>x.name||x.country),
+  // Per target market, whichever source answered; a derived market is labelled as not confirmed.
+  search_market:(discovery.market_coverage?.markets||[]).some(m=>m.researched)?
+   discovery.market_coverage.markets.filter(m=>m.researched).map(m=>m.country):null,
+  markets_not_searched:(discovery.market_coverage?.markets||[]).filter(m=>!m.researched).map(m=>m.name),
+  market_derived_not_confirmed:discovery.search_locale?discovery.search_locale.confirmed!==true:null,
   checked_at:report?.generated_at||null
  };
  let headline,explanation,steps=[],tasks=[];

@@ -191,14 +191,49 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
    source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  }
 }
-async function discoverGrowthCompetitorsWithFallback({query,ownUrl,market=null,locale=null,
+// Which of the page's target markets were actually researched, whichever provider answered. Research that covers only
+// some markets is reported as partial, never as complete market research.
+function marketCoverage({market,locale,result}){
+ const targets=market?['US']:locale?.country?[locale.country,...(locale.other_countries||[])]:[];
+ if(!targets.length)return {status:'NO_TARGET_MARKET_STATED',markets:[],note:'The page states no market; the lookup used the default (US / English).'};
+ const leads=result?.leads||[],provider=result?.source||null;
+ const counted=c=>leads.filter(l=>String(l.search_market||l.geographic_scope||'').toUpperCase()===c||(c==='GB'&&String(l.geographic_scope||'').toUpperCase()==='UK')||
+  (c==='US'&&market&&l.geographic_scope===market.location)).length;
+ // A lookup that answered with nothing usable still researched its market; an unavailable source did not.
+ const listed=result?.searched_markets||result?.scope?.searched_markets||(/^NO_RELEVANT/.test(String(result?.status||''))?[targets[0]]:[]);
+ const asked=new Set(listed.map(x=>String(x).toUpperCase()==='UK'?'GB':String(x).toUpperCase()));
+ const markets=targets.map(c=>({country:c,name:countryName(c),researched:asked.has(c),provider:asked.has(c)?provider:null,usable_results:asked.has(c)?counted(c):0}));
+ const done=markets.filter(m=>m.researched).length;
+ return {status:!done?'NOT_RESEARCHED':done<markets.length?'PARTIAL_MARKET_RESEARCH':'ALL_TARGET_MARKETS_RESEARCHED',
+  markets,confirmed:market?false:locale?.confirmed===true,priority_confirmed:market?true:locale?.priority_confirmed!==false,
+  note:done<markets.length?'Researched: '+markets.filter(m=>m.researched).map(m=>m.name).join(', ')+'. Not researched: '+markets.filter(m=>!m.researched).map(m=>m.name).join(', ')+'. This is partial market research.':
+   'Every target market was researched once; this is an observation of search results, not a ranking.'};
+}
+async function discoverGrowthCompetitorsWithFallback(args={}){
+ const out=await discoverWithFallback(args);
+ return {...out,market_coverage:marketCoverage({market:args.market,locale:args.locale,result:out})};
+}
+// Free first. A page with several target markets gets one more FREE lookup in its second market, so a free answer is not
+// one market only. Paid calls stay as before (Serper only when the free source has nothing, at most two).
+async function discoverWithFallback({query,ownUrl,market=null,locale=null,
  fetchFree=discoverGrowthCompetitors,fetchGoogle=optionalGoogleOrganicDiscovery,now=new Date()}={}){
  // Avoid a paid provider call whenever the free public feed returned relevant
  // leads. If it fails and an existing key is configured, use at most one query.
  const publicResult=await Promise.resolve().then(()=>fetchFree({query,ownUrl,market,locale,now}))
   .catch(()=>({status:'PUBLIC_SEARCH_UNAVAILABLE',source:'BING_PUBLIC_RSS',leads:[],query,reason:'FETCH_FAILED'}));
- if(Array.isArray(publicResult.leads)&&publicResult.leads.length)
-  return {...publicResult,provider_attempts:['BING_PUBLIC_RSS'],fallback_used:false};
+ if(Array.isArray(publicResult.leads)&&publicResult.leads.length){
+  const primary=!market&&locale?.country?locale.country:null,second=!market&&primary?(locale.other_countries||[])[0]:null;
+  const tag=(rows,c)=>c?rows.map(l=>({...l,search_market:c})):rows;
+  let leads=tag(publicResult.leads,primary),searched=primary?[primary]:[],second_market=null;
+  if(second){
+   const r=await Promise.resolve().then(()=>fetchFree({query,ownUrl,market,locale:{...locale,country:second,other_countries:[]},now})).catch(()=>null);
+   const extra=tag((r?.leads||[]).filter(l=>!leads.some(x=>x.url===l.url)),second);
+   const mixed=[];for(let i=0;i<Math.max(leads.length,extra.length);i++){if(leads[i])mixed.push(leads[i]);if(extra[i])mixed.push(extra[i])}
+   leads=mixed.slice(0,10);if(r&&!/UNAVAILABLE|NOT_SAFE/.test(String(r.status||'')))searched.push(second);
+   second_market={country:second,added_leads:extra.length,status:r?.status||'PUBLIC_SEARCH_UNAVAILABLE'};
+  }
+  return {...publicResult,leads,searched_markets:searched,second_market,provider_attempts:['BING_PUBLIC_RSS'],fallback_used:false};
+ }
  if(publicResult.status==='QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH')
   return {...publicResult,provider_attempts:[],fallback_used:false};
  const google=await Promise.resolve().then(()=>fetchGoogle({query,ownUrl,market,locale,now}))
@@ -212,6 +247,6 @@ async function discoverGrowthCompetitorsWithFallback({query,ownUrl,market=null,l
   warning:(publicResult.warning||'Free public search may be unavailable.')+
    ' Optional Google organic lookup: '+google.status+'. No competitor ranking or content gap is inferred from a missing response.'};
 }
-module.exports={discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,
+module.exports={discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,marketCoverage,
  optionalGoogleOrganicDiscovery,parseSerperGoogleOrganic,parseBingRss,clean};
 

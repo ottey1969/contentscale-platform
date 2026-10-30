@@ -125,8 +125,11 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   // they are listed as a record of what was removed or rewritten, not as open items.
   flagged:(reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged:[]).filter(Boolean)
    .slice(0,30).map(f=>(f.sentence?'“'+clean(f.sentence).slice(0,300)+'” — ':'“'+clean(f.h2).slice(0,140)+'” (whole section) — ')+clean(f.reason).slice(0,200))};
+ // What each approved Growth section rests on; a section the editor removed is no longer listed.
+ review.basis=(reviewNotes&&Array.isArray(reviewNotes.basis)?reviewNotes.basis:[]).filter(b=>b&&b.h2&&approvedText.includes(norm(b.h2))).slice(0,10)
+  .map(b=>'**'+clean(b.h2).slice(0,200)+'** answers “'+clean(b.answers).slice(0,200)+'”. Sources: '+((b.sources||[]).map(x=>clean(x).slice(0,220)).join('; ')||'none')+'.'+(b.warning?' ⚠ '+clean(b.warning).slice(0,300):''));
  const editorText=proposal&&proposal.editor_changed_text;
- const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length>0;
+ const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length+review.basis.length>0;
  const delivery='CMS-independent handoff for existing page '+canonicalUrl+'\n'+
  'No autopublishing. Implement in your normal website editor using native, indexable text components.\n'+
  'Platform: '+cms+'. Keep original URL, navigation, design, existing text and images unless explicitly reviewed.\n'+
@@ -166,6 +169,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    'Review any real project photos/reviews with the owner; never invent customer experiences.\n'},
   ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
    (review.flagged.length?'\n## Flagged by Growth — resolved in this text (checked)\n\nThese sentences were flagged in the concept. The package was only made because none of them is still in the approved text and the text passes the same checks again.\n\n'+review.flagged.map(x=>'- '+x).join('\n')+'\n':'')+
+   (review.basis.length?'\n## What each section rests on\n\n'+review.basis.map(x=>'- '+x).join('\n')+'\n':'')+
    (review.fact_check.length?'\n## Fact-check\n\n'+review.fact_check.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.owner_confirmation.length?'\n## Confirm with the business\n\n'+review.owner_confirmation.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.safety_review.length?'\n## Safety review by a qualified professional\n\n'+review.safety_review.map(x=>'- [ ] '+x).join('\n')+'\n':'')+

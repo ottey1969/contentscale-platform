@@ -7,6 +7,7 @@ const {assessGrowthCandidates}=require('./tracker-growth-best-candidate.cjs');
 const {loadMemory,recordAction,recordResearchOutcome}=require('./tracker-growth-recommendation-memory.cjs');
 const {saveProposal,saveSelectionProposal}=require('./growth-proposal-store.cjs');
 const {saveGapList,getGapList,saveSelection}=require('./growth-selection-store.cjs');
+const {getPageMarkets,setPageMarkets}=require('./growth-market-store.cjs');
 const escapeHtml=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 function bucket(q,brand){
@@ -125,7 +126,8 @@ function registerGrowthCockpit(app,pool,deps={}){
   recordResearchOutcome:args=>recordResearchOutcome(pool,args),
   recordProposal:args=>saveProposal(pool,args),
   recordGapList:args=>saveGapList(pool,args),loadGapList:args=>getGapList(pool,args),
-  recordSelection:args=>saveSelection(pool,args),recordSelectionProposal:args=>saveSelectionProposal(pool,args),...(deps.research||{})});
+  recordSelection:args=>saveSelection(pool,args),recordSelectionProposal:args=>saveSelectionProposal(pool,args),
+  loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),...(deps.research||{})});
  // Owner-only memory of the Cockpit's advice: started, skipped or restored.
  // The snapshot is taken from server-side evidence, never from the browser.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/recommendation',data,async(req,res)=>{

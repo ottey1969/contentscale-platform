@@ -23,7 +23,7 @@ const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
-const {deriveSearchLocale}=require('./growth-search-locale.cjs');
+const {deriveSearchLocale,validCountries}=require('./growth-search-locale.cjs');
 const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const {identityFromFetch,identityAdvice}=require('./growth-url-identity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
@@ -54,7 +54,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -116,7 +116,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const market=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
    pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
   // The country (and language) the page itself states, for pages outside a US-state market; reported with the research.
-  const locale=targetQuery&&!market?deriveSearchLocale({html:own.live?.html||page.saved_html||'',url:page.url}):null;
+  // A market the owner set for this page in the Tracker wins; headings, domain and hreflang are evidence only.
+  let configured=null;
+  if(targetQuery&&!market&&typeof loadPageMarkets==='function')configured=await Promise.resolve(loadPageMarkets({clientId:cid,pageId:pid})).catch(()=>null);
+  const locale=targetQuery&&!market?deriveSearchLocale({html:own.live?.html||page.saved_html||'',url:page.url,configured}):null;
   const discovery=!targetQuery?{
    status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
    reason:intentResolution.warning||'No search phrase is justified by observed page content.'
@@ -676,6 +679,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    catch(e){console.warn('[growth-auto-research] gap list not saved',String(e?.code||'unknown'))}
   }
   return res.set('Cache-Control','private, no-store').json({...report,
+   market_setting_url:typeof savePageMarkets==='function'?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id):null,
    gap_list:{...gapList,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
     url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(targetId)}:null,
@@ -695,6 +699,20 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     copy_ready:completeDecision.copy_ready===true,
     draft_provider_status:completion.status,evidence_status:evidenceStatus,
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
+ });
+ // The owner sets the page's target markets (ordered, the first is the main one). An empty list removes the setting.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/markets',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof savePageMarkets!=='function')return no(403,'OWNER_ONLY_MARKET_SETTING');
+  const raw=Array.isArray(req.body?.countries)?req.body.countries:String(req.body?.countries||'').split(/[\s,;]+/);
+  const countries=validCountries(raw.filter(Boolean));
+  if(raw.filter(Boolean).length&&!countries.length)return no(400,'USE_TWO_LETTER_COUNTRY_CODES');
+  let saved;
+  try{saved=await savePageMarkets({clientId:v.clientId,pageId:v.id,countries,language:req.body?.language})}catch{return no(503,'MARKET_SETTING_NOT_SAVED')}
+  // The next research run uses the new markets.
+  for(const k of [...cache.keys()])if(k.startsWith(v.clientId+':'+v.id+':'))cache.delete(k);
+  res.set('Cache-Control','private, no-store').json({success:true,markets:saved,research_rerun_required:true});
  });
  // Writing for the owner's selection only: items come from the stored gap list (never from the browser), at most four per
  // call, one repair attempt, then a marked concept. The result is stored as a proposal for the CMS handoff. Nothing is published.

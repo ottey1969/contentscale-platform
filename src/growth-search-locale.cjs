@@ -5,11 +5,15 @@
 //     Netherlands, the UK, Belgium and Luxembourg"); the most-named one first, the others listed as further markets;
 //  3. the region of its own hreflang alternate;
 //  4. the region of <html lang="en-GB">.
+// These signals are EVIDENCE, not a business decision: which market matters most is the owner's call. A market set in the
+// Tracker for the page (configured) always wins and is the only "confirmed" market; a derived market is labelled
+// unconfirmed, and when a page names several countries their order is marked as not confirmed either.
 // Country names come from the platform's region data (Intl.DisplayNames, English and the page language), so every
 // country is treated alike. Without any signal the lookup stays the documented default (US, English) and says so.
 const SKIP=new Set(['EU','EZ','UN','QO','XA','XB','ZZ','AQ']);
-// Two-letter domains that are used as generic names, not as a country.
-const GENERIC_TLD=new Set(['io','co','ai','me','tv','fm','cc','ws','to','ly','gg','am','la','so','sh','ac','vc','st','is','it','in','nu','tk','ms','gs','ag','sc']);
+// Country-code domains Google treats as generic (Search Central, "generic country code top-level domains"); every other
+// two-letter domain, such as .it or .in, is a country signal.
+const GENERIC_TLD=new Set(['ad','as','bz','cc','cd','co','dj','fm','io','la','me','ms','nu','sc','sr','su','tv','tk','ws']);
 const CODES=(()=>{const out=[];for(let a=65;a<=90;a++)for(let b=65;b<=90;b++)out.push(String.fromCharCode(a,b));return out})();
 const namesFor=lang=>{let d;try{d=new Intl.DisplayNames([lang],{type:'region',fallback:'none'})}catch{return []}
  return CODES.filter(c=>!SKIP.has(c)).map(c=>{let n;try{n=d.of(c)}catch{n=null}return n&&n!==c?[n,c]:null}).filter(Boolean)};
@@ -28,7 +32,7 @@ const regionOf=tag=>{const m=String(tag||'').match(/^[a-z]{2,3}[-_]([a-z]{2})$/i
 // Google's gl value for the United Kingdom is "uk"; every other country uses its ISO code.
 const glOf=code=>code==='GB'?'uk':code.toLowerCase();
 
-function deriveSearchLocale({html='',url='',headings=[]}={}){
+function deriveSearchLocale({html='',url='',headings=[],configured=null}={}){
  const raw=String(html||'');
  const lang=(attr((raw.match(/<html\b[^>]*>/i)||[''])[0],'lang')||'').trim();
  const language=(lang.match(/^([a-z]{2,3})\b/i)||[])[1]?.toLowerCase()||null;
@@ -47,8 +51,22 @@ function deriveSearchLocale({html='',url='',headings=[]}={}){
  const [country,source]=tldCountry?[tldCountry,'COUNTRY_CODE_DOMAIN']:named.length?[named[0],'COUNTRIES_NAMED_IN_PAGE_HEADINGS']:
   self?[self,'HREFLANG_OF_THIS_PAGE']:regionOf(lang)?[regionOf(lang),'HTML_LANG_REGION']:[null,'NO_MARKET_SIGNAL_ON_PAGE'];
  const others=[...new Set([...named,...alternates.map(a=>a.region)])].filter(c=>c!==country);
- return {country,gl:country?glOf(country):'us',hl:language||'en',other_countries:others,source,
-  signals:{html_lang:lang||null,domain_country:tldCountry,countries_named_in_headings:named,hreflang_regions:[...new Set(alternates.map(a=>a.region))]}};
+ const signals={html_lang:lang||null,domain_country:tldCountry,countries_named_in_headings:named,hreflang_regions:[...new Set(alternates.map(a=>a.region))]};
+ const set=validCountries(configured?.countries);
+ if(set.length)return {country:set[0],gl:glOf(set[0]),hl:validLanguage(configured.language)||language||'en',other_countries:set.slice(1),
+  source:'SET_IN_TRACKER',confirmed:true,priority_confirmed:true,suggested:[country,...others].filter(Boolean),signals};
+ return {country,gl:country?glOf(country):'us',hl:language||'en',other_countries:others,source,confirmed:false,
+  // Several countries named: the most-named first is a guess at priority, never a decision.
+  priority_confirmed:!others.length,signals:{html_lang:lang||null,domain_country:tldCountry,countries_named_in_headings:named,hreflang_regions:[...new Set(alternates.map(a=>a.region))]}};
 }
+// Owner input: ISO 3166 two-letter codes the platform knows (UK accepted for GB), order kept, at most six.
+const REGION=new Intl.DisplayNames(['en'],{type:'region',fallback:'none'});
+function validCountries(list){
+ const out=[];for(const raw of Array.isArray(list)?list:[]){let c=String(raw||'').trim().toUpperCase();if(c==='UK')c='GB';
+  let ok=false;try{ok=/^[A-Z]{2}$/.test(c)&&!SKIP.has(c)&&!!REGION.of(c)}catch{}
+  if(ok&&!out.includes(c))out.push(c)}
+ return out.slice(0,6);
+}
+const validLanguage=l=>{const x=String(l||'').trim().toLowerCase();try{return /^[a-z]{2,3}$/.test(x)&&new Intl.DisplayNames(['en'],{type:'language',fallback:'none'}).of(x)?x:null}catch{return null}};
 const countryName=code=>{try{return new Intl.DisplayNames(['en'],{type:'region'}).of(code)}catch{return code}};
-module.exports={deriveSearchLocale,glOf,countryName};
+module.exports={deriveSearchLocale,glOf,countryName,validCountries,validLanguage};
