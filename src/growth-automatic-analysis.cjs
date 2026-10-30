@@ -145,7 +145,8 @@ function analyzeGrowthEvidence({page={},savedHtml=null,live=null,snapshot=null,a
    nonmatching_topic_observations:comparative.filter(x=>!subjectMatchedTopics.includes(x)).slice(0,10).map(x=>({...x,status:'OTHER_INTENT_RESEARCH_ONLY_NOT_CONTENT_GAP'})), 
    excluded_unaligned_topics:comparative.length-subjectMatchedTopics.length,
    caution:'Historical SERP leads are not current rankings. Live page headings only show topics, not proven factual differences.'},
-  ai_visibility:ai,site_architecture:siteGraph,growth_decision:decision,practical_growth_plan:practical,visitor_journey,previous_brief:previousGrowthBrief(previousBrief),findings:priorities,editorial,
+  // Saved observations (collected by hand or earlier), never an AI check run by this research.
+  ai_visibility:ai&&typeof ai==='object'?{...ai,automated_check_in_this_research:false}:ai,site_architecture:siteGraph,growth_decision:decision,practical_growth_plan:practical,visitor_journey,previous_brief:previousGrowthBrief(previousBrief),findings:priorities,editorial,
   protection:'No GSC requirement, no scan scheduler change, no content/Case Study writes, no automatic publication.'
  };
 }

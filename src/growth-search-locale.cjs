@@ -83,4 +83,7 @@ const validLanguage=l=>{const x=String(l||'').trim().toLowerCase();if(!x)return 
  return LANGUAGE_BY_NAME.get(x.replace(/\s*[—–-].*$/,'').replace(/\s*\(.*\)\s*$/,'').trim())||null};
 const languageName=code=>{try{return code?LANG.of(code):null}catch{return null}};
 const countryName=code=>{try{return new Intl.DisplayNames(['en'],{type:'region'}).of(code)}catch{return code}};
-module.exports={deriveSearchLocale,glOf,countryName,validCountries,validLanguage,languageName};
+// The Pre-Write brief's region and language lists (src/index.js CS_COMBO_DATA), so every screen offers the same choices.
+const PREWRITE_REGIONS=['us — United States','gb — United Kingdom','ca — Canada','au — Australia','ie — Ireland','nl — Netherlands','be — Belgium','de — Germany','at — Austria','ch — Switzerland','fr — France','es — Spain','it — Italy','pt — Portugal','pl — Poland','se — Sweden','dk — Denmark','no — Norway','fi — Finland','tr — Turkey','ru — Russia','ae — United Arab Emirates','sa — Saudi Arabia','qa — Qatar','kw — Kuwait','bh — Bahrain','om — Oman','eg — Egypt','ma — Morocco','za — South Africa','in — India','cn — China','hk — Hong Kong','tw — Taiwan','jp — Japan','kr — South Korea','sg — Singapore','my — Malaysia','id — Indonesia','ph — Philippines','th — Thailand','vn — Vietnam','br — Brazil','mx — Mexico','ar — Argentina','cl — Chile','co — Colombia','lu — Luxembourg'];
+const PREWRITE_LANGUAGES=['English','Dutch','German','French','Spanish','Italian','Portuguese','Polish','Swedish','Danish','Norwegian','Finnish','Turkish','Russian','Chinese (Simplified)','Chinese (Traditional)','Japanese','Korean','Hindi','Arabic'];
+module.exports={PREWRITE_REGIONS,PREWRITE_LANGUAGES,deriveSearchLocale,glOf,countryName,validCountries,validLanguage,languageName};

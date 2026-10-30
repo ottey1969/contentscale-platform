@@ -20,7 +20,10 @@ const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch{retur
 const PAGE={NOT_OBSERVED:'Not on your page',PARTIAL:'Partly on your page'};
 const TOPIC={NO:'Not on your page',PARTLY:'Partly on your page',UNKNOWN:'Not matched to your page'};
 const GROUPS=[['QUESTION','Questions two ranking pages answer'],['MISSING_TOPIC','Not on your page'],['PARTIAL_TOPIC','Partly on your page'],
- ['PAGE_ELEMENT','Page elements the ranking pages have'],['UNMATCHED_TOPIC','Could not be matched to your page'],['COMPETITOR_SECTION','Sections on the ranking pages (not grouped)']];
+ ['PAGE_ELEMENT','Page elements the ranking pages have'],['UNMATCHED_TOPIC','Could not be matched to your page'],['COMPETITOR_SECTION','Sections on the ranking pages (not grouped)'],
+ ['NOT_RELEVANT','Probably not relevant to this search (no section proposed, not written)']];
+// Evidence threshold: fewer readable ranking pages than this and no section is proposed, recommended or written.
+const MIN_READABLE_PAGES=2;
 const MAX_RECOMMENDED=4;
 const stableId=(prefix,parts)=>prefix+createHash('sha256').update(parts.join('\u0000')).digest('hex').slice(0,10);
 // The owner always sees EVERY difference, verified or not: a "different questions" judgement only labels it. What the
@@ -72,7 +75,7 @@ function buildGapList(report={}){
     const it={id:stableId('t-',['topic',...secs.map(x=>key(x.host,x.heading))]),need:{status:'AI_TOPIC'},group:t.this_page==='NO'?'MISSING_TOPIC':t.this_page==='PARTLY'?'PARTIAL_TOPIC':'UNMATCHED_TOPIC',writable:true,
      title:clip(t.topic,200),reader_question:null,status:TOPIC[t.this_page]||TOPIC.UNKNOWN,
      coverage:t.this_page==='NO'?'MISSING':t.this_page==='PARTLY'?'PARTIAL':'NOT_COMPARED',confidence:'AI_GROUPED',ai:'AI-grouped topic',
-     your_section:t.this_page_heading||null,
+     your_section:t.this_page_heading||null,...(t.fits_search?{fits_search:t.fits_search}:{}),...(t.fits_reason?{fits_reason:t.fits_reason}:{}),
      placement:t.this_page==='PARTLY'&&t.this_page_heading?{mode:'EXTEND_SECTION',section_heading:t.this_page_heading}:null,examples:[],merged:[]};
     if(addEvidence(it,secs))items.push(it);
    });
@@ -101,11 +104,23 @@ function buildGapList(report={}){
  }
  if(newPage)for(const it of items){if(it.status==='Not on your page'||it.status==='Not compared with your page'||it.status==='Not matched to your page')it.status='To cover on the new page';
   if(it.coverage==='NOT_COMPARED')it.coverage='MISSING'}
- prioritise(items,focus,{newPage});
+ const readable=ov?.ranking_pages_read??0;
+ // One outcome for the whole report: when the research decision itself is "data blocked", the list proposes nothing either.
+ const gateBlocked=report.editorial_decision_gate?.decision==='DATA_BLOCKED';
+ // No comparison (no overview, or not enough readable pages for one) is not evidence either.
+ const insufficient=gateBlocked||ov?.status!=='OBSERVED'||readable<MIN_READABLE_PAGES;
+ prioritise(items,focus,{newPage,insufficient,readable,gateBlocked});
  growthPotential(items,report,qWords);
  const status=items.length||ov?.status==='OBSERVED'?'OBSERVED':(ov?.status||'NOT_AVAILABLE');
  const NEW_LABEL={MISSING_TOPIC:'Topics the ranking pages cover',UNMATCHED_TOPIC:'Other topics the ranking pages cover'};
- return {status,page_kind:newPage?'NEW_PAGE':'EXISTING_PAGE',groups:GROUPS.map(([id,label])=>({id,label:newPage&&NEW_LABEL[id]||label})),items,
+ return {status,page_kind:newPage?'NEW_PAGE':'EXISTING_PAGE',
+  // One outcome: without enough evidence nothing is proposed and the writer is not offered (the brief still is).
+  evidence:insufficient?{status:'INSUFFICIENT_EVIDENCE',readable_ranking_pages:readable,
+   reason:!gateBlocked&&ov?.status!=='OBSERVED'&&!readable?'No readable ranking page could be compared: not enough evidence to propose or write a section.':
+    readable<MIN_READABLE_PAGES&&!gateBlocked?'Only '+readable+' readable ranking page'+(readable===1?'':'s')+': not enough evidence to propose or write a section. The list is shown for information.':
+    'The research decision is "data blocked"'+(report.editorial_decision_gate?.blocker_code?' ('+String(report.editorial_decision_gate.blocker_code).toLowerCase().replace(/_/g,' ')+')':'')+': no section is proposed or written. The list is shown for information.'}:
+   {status:'ENOUGH_EVIDENCE',readable_ranking_pages:readable},
+  writing_allowed:!insufficient,groups:GROUPS.map(([id,label])=>({id,label:newPage&&NEW_LABEL[id]||label})),items,
   recommended:items.filter(x=>x.recommended).map(x=>x.id),
   recommendation_basis:'RESEARCH_PRIORITY_NOT_A_GROWTH_FORECAST',
   // Unique content to review and preserve (see uniqueContent): never written, never a gap.
@@ -116,7 +131,7 @@ function buildGapList(report={}){
   source_fingerprint:ov?.this_page_fingerprint||null,
   focus_query:focus,
   // What this research rested on, kept with the list so a later concept can show it (evidence dossier).
-  research:{focus_query:focus,researched_at:report.generated_at||null,page_url:report.url||null,
+  research:{evidence_status:insufficient?'INSUFFICIENT_EVIDENCE':'ENOUGH_EVIDENCE',focus_query:focus,researched_at:report.generated_at||null,page_url:report.url||null,
    market:report.search_discovery?.search_locale?{country:report.search_discovery.search_locale.country,language:report.search_discovery.search_locale.hl,
     source:report.search_discovery.search_locale.source,confirmed:report.search_discovery.search_locale.confirmed===true}:null,
    market_coverage:report.search_discovery?.market_coverage||null,search_source:report.search_discovery?.source||null,
@@ -126,7 +141,7 @@ function buildGapList(report={}){
 }
 
 // Why an item is in the list, from what the research observed; no score is shown and nothing is estimated.
-function prioritise(items,focus,{newPage=false}={}){
+function prioritise(items,focus,{newPage=false,insufficient=false,readable=0,gateBlocked=false}={}){
  const q=words(focus||'');
  const CONF={AI_CONFIRMED_SAME_QUESTION:2,AI_GROUPED:1,SHARED_WORDS_ONLY:0,NOT_GROUPED:0,AI_SAYS_DIFFERENT_QUESTIONS:-3};
  for(const it of items){
@@ -149,9 +164,32 @@ function prioritise(items,focus,{newPage=false}={}){
    confidence:it.confidence,competitor_text_fragments:text,why,suggested_action:action,
    rank:sources*3+(it.coverage==='NOT_COMPARED'?0:2)+(related===false?-1:related?1:0)+CONF[it.confidence]+(text?1:0)};
  }
+ // Relevance. Word overlap is too crude to call a topic irrelevant (on report 55, "Understand the Attribution Gaps"
+ // shares no word with "ai citation tracker" and still belongs to it), so:
+ //  - the AI meaning check judging that a topic does not serve this search: "probably not relevant", not written;
+ //  - one ranking page only and no word in common with the search term: weak evidence, no section proposed and not
+ //    recommended; it stays choosable (the owner sees and may choose every difference).
+ for(const it of items){
+  if(!it.writable)continue;
+  if(it.fits_search==='NO'){
+   const reason='the AI judged that this topic does not serve someone searching this term'+(it.fits_reason?' ('+clip(it.fits_reason,140)+')':'');
+   it.group='NOT_RELEVANT';it.writable=false;it.relevance={status:'PROBABLY_NOT_RELEVANT',reason};
+   it.priority.suggested_action='No section proposed: '+reason+'. Add it yourself only if you know it belongs on this page.';
+   continue;
+  }
+  if(it.priority.sources<=1&&it.priority.search_relevance==='NO_WORD_IN_COMMON'&&it.confidence!=='AI_CONFIRMED_SAME_QUESTION'){
+   it.relevance={status:'WEAK_EVIDENCE',reason:'only one ranking page covers it and it shares no word with the search term'};
+   it.priority.suggested_action='No section proposed: only one ranking page covers it and it shares no word with the search term. Choose it only if you know it belongs on this page.';
+  }
+ }
+ // Too little evidence (fewer than two readable ranking pages): nothing is recommended or written; the list stays visible.
+ if(insufficient)for(const it of items)if(it.writable){
+  it.priority.suggested_action=readable<MIN_READABLE_PAGES?'No section proposed: only '+readable+' readable ranking page'+(readable===1?'':'s')+', not enough evidence. Run the research again later.':
+   'No section proposed: the research decision is "data blocked" (see the decision at the top).';
+ }
  // Recommended: supported by at least two ranking pages, missing or partial, not contradicted by the AI. The link with the
  // search term is word-based, so it orders but never excludes.
- items.filter(it=>it.writable&&it.priority.sources>=2&&it.coverage!=='NOT_COMPARED'&&it.confidence!=='AI_SAYS_DIFFERENT_QUESTIONS')
+ if(!insufficient)items.filter(it=>it.writable&&!it.relevance&&it.priority.sources>=2&&it.coverage!=='NOT_COMPARED'&&it.confidence!=='AI_SAYS_DIFFERENT_QUESTIONS')
   .sort((a,b)=>b.priority.rank-a.priority.rank).forEach(it=>{
    // Two items that may describe the same need are not both recommended: the better-supported one is.
    const n=items.filter(x=>x.recommended).length;

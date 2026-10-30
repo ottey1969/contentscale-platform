@@ -20,7 +20,10 @@ test('overview and gap list in new-page mode: no page needed, every topic is to 
  assert.equal(g.page_kind,'NEW_PAGE');
  const w=g.items.filter(x=>x.writable);
  assert(w.length>=10,'the real headings of both ranking pages');
- assert(w.every(x=>x.status==='To cover on the new page'&&x.priority.suggested_action==='Write a section for the new page.'));
+ assert(w.every(x=>x.status==='To cover on the new page'));
+ // A single ranking-page heading sharing no word with the search term is weak evidence: no section proposed.
+ assert(w.every(x=>x.relevance?.status==='WEAK_EVIDENCE'?/^No section proposed: only one ranking page/.test(x.priority.suggested_action):x.priority.suggested_action==='Write a section for the new page.'));
+ assert(w.some(x=>x.relevance?.status==='WEAK_EVIDENCE')&&w.some(x=>!x.relevance));
  assert.deepEqual(g.unique_content,[],'no page, no unique content');
  assert.equal(g.groups.find(x=>x.id==='MISSING_TOPIC').label,'Topics the ranking pages cover');
 });

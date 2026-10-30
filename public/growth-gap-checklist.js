@@ -28,6 +28,7 @@
   if(list.status!=='OBSERVED'||!(list.items||[]).length){el('p','No difference with the readable ranking pages was found.',box);return true}
   var np=list.page_kind==='NEW_PAGE',here=np?'missing on the new page':'missing or partly on your page';
   el('p',list.items.length+(np?' topic(s) and element(s) from ':' difference(s) with ')+(list.ranking_pages_read||0)+' readable ranking page(s).',box);
+  if(list.writing_allowed===false&&list.evidence)el('p',list.evidence.reason,box,'error');
   var rec=list.items.filter(function(x){return x.recommended});
   if(rec.length)el('p','Recommended first ('+rec.length+'): '+rec.map(function(x){return x.title}).join(' · ')+'. A research priority (supported by at least two ranking pages, '+here+', not contradicted by the AI), not a growth forecast. You decide; you can select more.',box,'small');
   else el('p','No item is recommended: none is supported by two ranking pages'+(np?'':' and missing on your page')+'. You can still choose any item.',box,'small');
@@ -57,19 +58,21 @@
   // Owner guidance follows actual checklist state; no synthetic completion badges.
   var guide=el('section',null,box,'growth-selection-guide');
   guide.style.cssText='border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;padding:14px;margin:14px 0';
-  var guideTitle=el('strong','Next action: choose the improvements you want',guide);
-  var guideHelp=el('p','Tick one or more topics above. Growth writes only what you select, in rounds of four. Nothing is published.',guide);
+  var noEvidence=list.writing_allowed===false;
+  var guideTitle=el('strong',noEvidence?'Next action: none to write — not enough evidence':'Next action: choose the improvements you want',guide);
+  var guideHelp=el('p',noEvidence?(list.evidence&&list.evidence.reason||'Not enough evidence.')+' You can still download the selection as an editor brief.':'Tick one or more topics above. Growth writes only what you select, in rounds of four. Nothing is published.',guide);
   guideHelp.style.margin='6px 0';
   var count=el('p',(carried.length?carried.length:0)+' selected',box);
   var picked=function(){return boxes.filter(function(b){return b.c.checked}).map(function(b){return b.x})};
   boxes.forEach(function(b){b.c.addEventListener('change',function(){var p=picked();count.textContent=p.length+' selected'+(p.length&&!p.some(function(x){return x.writable})?' (page elements only: nothing to write)':'');
+    if(noEvidence)return;
     guideTitle.textContent=p.some(function(x){return x.writable})?'Next action: write selected topics':'Next action: choose at least one writable topic';
     guideHelp.textContent=p.some(function(x){return x.writable})?'Your selection contains '+p.filter(function(x){return x.writable}).length+' topic(s). Writing saves concepts for review; it never publishes.':'Choose a topic or question first. Page elements cannot be AI-written.';})});
   var actions=el('p',null,box),status=el('p',null,box,'small'),out=el('div',null,box);
   var dl=el('button','Download selection as editor brief',actions);dl.type='button';
   dl.style.cssText='background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;margin-right:8px';
   dl.addEventListener('click',function(){var p=picked();if(!p.length){status.textContent='Select at least one item.';return}save('editor-brief.md',brief(list,p));status.textContent=p.length+' item(s) in the brief.'});
-  if(typeof options.write==='function'){
+  if(typeof options.write==='function'&&list.writing_allowed!==false){
    var w=el('button','Write selected with AI (concepts for review)',actions);w.type='button';w.style.cssText='background:#2563eb;color:white;font-weight:700';
    el('small',' Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.',actions);
    w.addEventListener('click',async function(){

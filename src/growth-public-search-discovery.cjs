@@ -72,6 +72,27 @@ async function discoverGrowthCompetitors({query,ownUrl,market=null,locale=null,f
 const lookupLabel=(primary,market,locale)=>market?.location?'US English lookup localised to '+market.location:
  locale?.country?countryName(locale.country)+' lookup (language '+primary.hl+', from '+String(locale.source||'').toLowerCase().replace(/_/g,' ')+')':
  'US English lookup (default: the page states no market)';
+// Google sometimes returns organic results as its own redirect links (google.com/goto?url=… or /url?q=…), seen for
+// lookups outside the US. They are the real results, not Google pages: the target is taken from the link when it is
+// plain, otherwise the redirect is followed once (Location header only, no page body read). A link that cannot be
+// resolved is reported as such, never mistaken for search infrastructure.
+const isWrapped=u=>{try{const x=new URL(u);return /(^|\.)google\.[a-z.]+$/i.test(x.hostname)&&/^\/(goto|url)$/.test(x.pathname)}catch{return false}};
+const plainTarget=u=>{try{const x=new URL(u);for(const k of ['url','q','u']){const v=x.searchParams.get(k);if(v&&/^https?:\/\//i.test(v))return v}}catch{}return null};
+const notGoogle=v=>{try{const x=new URL(v);return /^https?:$/.test(x.protocol)&&!/(^|\.)google\.[a-z.]+$/i.test(x.hostname)}catch{return false}};
+async function unwrapGoogleLinks(payload,{fetchImpl,max=12}={}){
+ const items=Array.isArray(payload?.organic)?payload.organic.filter(i=>i&&typeof i.link==='string'&&isWrapped(i.link)):[];
+ const stats={received:items.length,resolved:0,unresolved:0};
+ await Promise.all(items.slice(0,max).map(async item=>{
+  let target=plainTarget(item.link);
+  if(!target&&typeof fetchImpl==='function'){
+   try{const r=await fetchImpl(item.link,{method:'GET',redirect:'manual',signal:AbortSignal.timeout(4000)});
+    const loc=r?.headers?.get?.('location');if(r&&r.status>=300&&r.status<400&&loc)target=new URL(loc,item.link).href}catch{}
+  }
+  if(target&&notGoogle(target)){item.wrapped_link=item.link;item.link=target;stats.resolved++}
+ }));
+ stats.unresolved=stats.received-stats.resolved;
+ return stats;
+}
 function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLog=null,market=null,searched={gl:'us',hl:'en'}}={}){
  const marketStates=market?.states||[];
  const results=Array.isArray(payload?.organic)?payload.organic:[];
@@ -85,6 +106,7 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLo
   const title=clean(item.title).slice(0,180),snippet=clean(item.snippet||'').slice(0,400);
   // Every organic result that is not used is logged with its reason, so a thin SERP can be explained from the report.
   const drop=reason=>{(rejectedLog||[]).push({url:parsed.href,title:title.slice(0,100),reason})};
+  if(isWrapped(parsed.href)){drop('GOOGLE_REDIRECT_LINK_NOT_RESOLVED');continue}
   if(hostname===own){drop('OWN_SITE');continue}
   if(infrastructure.test(hostname)){drop('SEARCH_OR_SOCIAL_INFRASTRUCTURE');continue}
   const matched=matchedTerms(needle,terms(title));
@@ -115,6 +137,7 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
  // Serper.dev accepts POST JSON; never put API credentials into URL or logs.
  // The market the page states (growth-search-locale); a US-state market keeps the US lookup with its location.
  const primary=market?{gl:'us',hl:'en'}:{gl:locale?.gl||'us',hl:locale?.hl||'en'};
+ const wrapped={received:0,resolved:0,unresolved:0};
  const ask=async(q,page=1,where=primary)=>{
   const response=await fetchImpl('https://google.serper.dev/search',{
    method:'POST',headers:{'X-API-KEY':available,'Content-Type':'application/json'},
@@ -125,6 +148,8 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
   if(!response.ok)return {failure:'HTTP_'+response.status};
   const payload=await response.json();
   if(payload?.error||!Array.isArray(payload?.organic))return {failure:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR'};
+  const w=await unwrapGoogleLinks(payload,{fetchImpl});
+  for(const k of Object.keys(wrapped))wrapped[k]+=w[k];
   return {payload};
  };
  try{
@@ -176,6 +201,7 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
    organic_results_received:first.payload.organic.length,
    source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,20),query:term,checked_at:new Date(now).toISOString(),
    second_market,
+   ...(wrapped.received?{google_redirect_links:wrapped}:{}),
    scope:{country:primary.gl,language:primary.hl,location:market?.location||null,market_states:market?.states||[],
     market_source:market?'US_STATE_IN_QUERY_KEYWORD_OR_URL':locale?.source||'NO_MARKET_SIGNAL_ON_PAGE',
     searched_markets:[primary.gl,...(second_market&&!second_market.failure?[second_market.gl]:[])],
@@ -204,10 +230,12 @@ function marketCoverage({market,locale,result}){
  const asked=new Set(listed.map(x=>String(x).toUpperCase()==='UK'?'GB':String(x).toUpperCase()));
  const markets=targets.map(c=>({country:c,name:countryName(c),researched:asked.has(c),provider:asked.has(c)?provider:null,usable_results:asked.has(c)?counted(c):0}));
  const done=markets.filter(m=>m.researched).length;
+ const lost=result?.google_redirect_links?.unresolved||0;
  return {status:!done?'NOT_RESEARCHED':done<markets.length?'PARTIAL_MARKET_RESEARCH':'ALL_TARGET_MARKETS_RESEARCHED',
   markets,confirmed:market?false:locale?.confirmed===true,priority_confirmed:market?true:locale?.priority_confirmed!==false,
-  note:done<markets.length?'Researched: '+markets.filter(m=>m.researched).map(m=>m.name).join(', ')+'. Not researched: '+markets.filter(m=>!m.researched).map(m=>m.name).join(', ')+'. This is partial market research.':
-   'Every target market was researched once; this is an observation of search results, not a ranking.'};
+  ...(lost?{google_redirect_links_not_resolved:lost}:{}),
+  note:(lost?lost+' result(s) came as Google redirect links that could not be opened; they are missing from this research. ':'')+(done<markets.length?'Researched: '+markets.filter(m=>m.researched).map(m=>m.name).join(', ')+'. Not researched: '+markets.filter(m=>!m.researched).map(m=>m.name).join(', ')+'. This is partial market research.':
+   'Every target market was researched once; this is an observation of search results, not a ranking.')};
 }
 async function discoverGrowthCompetitorsWithFallback(args={}){
  const out=await discoverWithFallback(args);
@@ -247,6 +275,6 @@ async function discoverWithFallback({query,ownUrl,market=null,locale=null,
   warning:(publicResult.warning||'Free public search may be unavailable.')+
    ' Optional Google organic lookup: '+google.status+'. No competitor ranking or content gap is inferred from a missing response.'};
 }
-module.exports={discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,marketCoverage,
+module.exports={discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,marketCoverage,unwrapGoogleLinks,
  optionalGoogleOrganicDiscovery,parseSerperGoogleOrganic,parseBingRss,clean};
 
