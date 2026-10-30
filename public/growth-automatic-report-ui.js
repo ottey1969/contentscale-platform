@@ -285,20 +285,11 @@
   var cov=discovery.market_coverage||{};
   if(loc.source||cov.status){
    var mk=node('div',null,s);
-   node('small','Search market: '+(loc.country||'US (default)')+' · '+(loc.source==='SET_IN_TRACKER'?'set in the Tracker':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
+   node('small','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl+(loc.language_source==='SET_IN_TRACKER'?' (set in Growth)':loc.language_source==='FROM_PREWRITE_BRIEF'?' (from the Pre-Write brief)':''):'')+(loc.brief?' · Pre-Write brief #'+loc.brief.id:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
     (loc.priority_confirmed===false?' · the order of the markets is a guess from how often the headings name them':''),mk);
    (cov.markets||[]).forEach(function(m){node('small',' '+m.name+': '+(m.researched?'researched ('+(m.provider||'search')+', '+m.usable_results+' usable result(s))':'not researched'),node('div',null,mk))});
    if(cov.note)node('small',cov.note,node('div',null,mk));
-   if(d.market_setting_url){
-    var form=node('p',null,mk);node('small','Target markets for this page (two-letter codes, main market first): ',form);
-    var inp=node('input',null,form);inp.type='text';inp.size=18;inp.placeholder='e.g. '+[loc.country].concat(loc.other_countries||[]).filter(Boolean).join(', ');
-    if(loc.source==='SET_IN_TRACKER')inp.value=[loc.country].concat(loc.other_countries||[]).join(', ');
-    var save=node('button','Save markets',form);save.type='button';var said=node('small','',form);
-    save.addEventListener('click',async function(){save.disabled=true;
-     try{var r=await fetch(d.market_setting_url,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:inp.value})});
-      var j=await r.json();said.textContent=j.success?' Saved'+(j.markets?': '+j.markets.countries.join(', '):' (removed; derived from the page again)')+'. Run the research again to use it.':' Not saved: '+(j.code||r.status);}
-     catch(e){said.textContent=' Not saved.'}finally{save.disabled=false}});
-   }
+   if(d.market_setting_url&&loc.source!=='SET_IN_TRACKER'&&loc.source!=='FROM_PREWRITE_BRIEF')node('small','Set the target markets at the top of this page to research the right countries.',mk);
   }
   if(discovery.free_discovery_status)node('small','Free search: '+discovery.free_discovery_status,s);
   if(discovery.optional_google_status)node('small','Optional Google search: '+discovery.optional_google_status,s);
@@ -652,6 +643,17 @@
   }finally{document.getElementById('retryResearch').disabled=false}
  }
  document.getElementById('retryResearch').addEventListener('click',run);
+ // Target market(s) and language (top of the page, as in the Pre-Write brief): saving reloads the page, which runs the research again.
+ var marketBox=document.getElementById('marketSetting');
+ if(marketBox){var mSave=document.getElementById('marketSave'),mSaid=document.getElementById('marketSaid'),mInput=document.getElementById('marketInput'),mLang=document.getElementById('marketLanguage');
+  mSave.addEventListener('click',async function(){mSave.disabled=true;mSaid.textContent='Saving…';
+   try{var r=await fetch(marketBox.getAttribute('data-url'),{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:mInput.value,language:mLang?mLang.value:''})});
+    var j=await r.json();
+    if(!j.success){mSaid.textContent='Not saved: '+(j.code==='UNKNOWN_COUNTRY'?'choose markets from the list (for example nl — Netherlands), separated by commas':j.code==='UNKNOWN_LANGUAGE'?'choose a language from the list (for example Dutch)':(j.code||r.status));return}
+    // Reload: the page shows where each field comes from (Growth, Pre-Write brief or the page) and runs the research again.
+    mSaid.textContent='Saved. Running the research again…';location.reload();
+   }catch(e){mSaid.textContent='Not saved.'}finally{mSave.disabled=false}});
+ }
  document.getElementById('downloadResearch').addEventListener('click',function(){
   if(!last)return;
   var blob=new Blob([JSON.stringify(last,null,2)],{type:'application/json'});

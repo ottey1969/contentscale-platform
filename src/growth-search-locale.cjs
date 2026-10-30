@@ -53,20 +53,34 @@ function deriveSearchLocale({html='',url='',headings=[],configured=null}={}){
  const others=[...new Set([...named,...alternates.map(a=>a.region)])].filter(c=>c!==country);
  const signals={html_lang:lang||null,domain_country:tldCountry,countries_named_in_headings:named,hreflang_regions:[...new Set(alternates.map(a=>a.region))]};
  const set=validCountries(configured?.countries);
- if(set.length)return {country:set[0],gl:glOf(set[0]),hl:validLanguage(configured.language)||language||'en',other_countries:set.slice(1),
-  source:'SET_IN_TRACKER',confirmed:true,priority_confirmed:true,suggested:[country,...others].filter(Boolean),signals};
- return {country,gl:country?glOf(country):'us',hl:language||'en',other_countries:others,source,confirmed:false,
+ // Market and language are inherited separately: a set language applies even when the market is derived, and the other way round.
+ const setLanguage=validLanguage(configured?.language);
+ const languageSource=setLanguage?(configured.language_source||configured.source||'SET_IN_TRACKER'):language?'HTML_LANG':'DEFAULT_ENGLISH';
+ if(set.length)return {country:set[0],gl:glOf(set[0]),hl:setLanguage||language||'en',language_source:languageSource,other_countries:set.slice(1),
+  source:configured.source||'SET_IN_TRACKER',confirmed:true,priority_confirmed:true,suggested:[country,...others].filter(Boolean),
+  ...(configured.brief?{brief:configured.brief}:{}),signals};
+ return {country,gl:country?glOf(country):'us',hl:setLanguage||language||'en',language_source:languageSource,other_countries:others,source,confirmed:false,
   // Several countries named: the most-named first is a guess at priority, never a decision.
   priority_confirmed:!others.length,signals:{html_lang:lang||null,domain_country:tldCountry,countries_named_in_headings:named,hreflang_regions:[...new Set(alternates.map(a=>a.region))]}};
 }
 // Owner input: ISO 3166 two-letter codes the platform knows (UK accepted for GB), order kept, at most six.
 const REGION=new Intl.DisplayNames(['en'],{type:'region',fallback:'none'});
+// Accepts what the Pre-Write brief's region picker produces ("nl — Netherlands"), a plain code ("nl", "UK") or an English
+// country name ("Netherlands").
+const REGION_BY_NAME=new Map(namesFor('en').map(([n,c])=>[n.toLowerCase(),c]));
 function validCountries(list){
- const out=[];for(const raw of Array.isArray(list)?list:[]){let c=String(raw||'').trim().toUpperCase();if(c==='UK')c='GB';
+ const out=[];for(const raw of Array.isArray(list)?list:[]){const t=String(raw||'').trim(),lead=(t.match(/^([a-z]{2})\s*[—–-]\s*\S/i)||[])[1];
+  let c=(lead||t).toUpperCase();if(c==='UK')c='GB';if(!/^[A-Z]{2}$/.test(c))c=REGION_BY_NAME.get(t.toLowerCase())||c;
   let ok=false;try{ok=/^[A-Z]{2}$/.test(c)&&!SKIP.has(c)&&!!REGION.of(c)}catch{}
   if(ok&&!out.includes(c))out.push(c)}
  return out.slice(0,6);
 }
-const validLanguage=l=>{const x=String(l||'').trim().toLowerCase();try{return /^[a-z]{2,3}$/.test(x)&&new Intl.DisplayNames(['en'],{type:'language',fallback:'none'}).of(x)?x:null}catch{return null}};
+// A language as the Pre-Write brief names it ("Dutch", "Chinese (Simplified)", "Arabic — Gulf") or as a code ("nl").
+const LANG=new Intl.DisplayNames(['en'],{type:'language',fallback:'none'});
+const LANGUAGE_BY_NAME=(()=>{const m=new Map();for(let a=97;a<=122;a++)for(let b=97;b<=122;b++){const c=String.fromCharCode(a,b);let n=null;try{n=LANG.of(c)}catch{}if(n&&n!==c&&!m.has(n.toLowerCase()))m.set(n.toLowerCase(),c)}return m})();
+const validLanguage=l=>{const x=String(l||'').trim().toLowerCase();if(!x)return null;
+ try{if(/^[a-z]{2,3}$/.test(x)&&LANG.of(x)&&LANG.of(x)!==x)return x}catch{}
+ return LANGUAGE_BY_NAME.get(x.replace(/\s*[—–-].*$/,'').replace(/\s*\(.*\)\s*$/,'').trim())||null};
+const languageName=code=>{try{return code?LANG.of(code):null}catch{return null}};
 const countryName=code=>{try{return new Intl.DisplayNames(['en'],{type:'region'}).of(code)}catch{return code}};
-module.exports={deriveSearchLocale,glOf,countryName,validCountries,validLanguage};
+module.exports={deriveSearchLocale,glOf,countryName,validCountries,validLanguage,languageName};

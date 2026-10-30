@@ -38,6 +38,8 @@ const mayOverlap=(a,b,q=[])=>{const A=words(a),B=words(b);if(matchedTerms(A,B).l
 
 function buildGapList(report={}){
  const ov=report.competitor_overview,coverage=report.reader_task_coverage||{};
+ // A new page (from a Pre-Write brief): nothing is on the page yet, so every item is something to cover on it.
+ const newPage=report.new_page===true||ov?.new_page===true;
  const positions=new Map((report.search_discovery?.competitor_fetch_log||[]).map(x=>[x.url,x.serp_position]));
  const focus=clip(report.editorial_decision_gate?.focus_query||report.search_discovery?.target_query||'',160)||null,qWords=words(focus||'');
  const items=[],seen=new Set(),key=(host,heading)=>String(host||'')+'\u0000'+clip(heading,160).toLowerCase();
@@ -92,13 +94,18 @@ function buildGapList(report={}){
   for(const f of ov.structured_data_they_have_and_this_page_lacks||[])
    items.push({id:'e-schema-'+f.type,group:'PAGE_ELEMENT',writable:false,title:'Structured data: '+f.type,status:'Not on your page',ai:null,ranking_pages:f.ranking_pages_with_it,of:f.of,examples:[]});
   const L=ov.length||{};
-  if(L.ranking_pages_median_words&&L.this_page_words<L.ranking_pages_median_words*0.6)
+  if(newPage&&L.ranking_pages_median_words)
+   items.push({id:'e-length',group:'PAGE_ELEMENT',writable:false,title:'Length',status:'The ranking pages have about '+L.ranking_pages_median_words+' words',ai:null,ranking_pages:null,examples:[]});
+  else if(L.ranking_pages_median_words&&L.this_page_words<L.ranking_pages_median_words*0.6)
    items.push({id:'e-length',group:'PAGE_ELEMENT',writable:false,title:'Length',status:'Your page has '+L.this_page_words+' words; ranking pages have about '+L.ranking_pages_median_words,ai:null,ranking_pages:null,examples:[]});
  }
- prioritise(items,focus);
+ if(newPage)for(const it of items){if(it.status==='Not on your page'||it.status==='Not compared with your page'||it.status==='Not matched to your page')it.status='To cover on the new page';
+  if(it.coverage==='NOT_COMPARED')it.coverage='MISSING'}
+ prioritise(items,focus,{newPage});
  growthPotential(items,report,qWords);
  const status=items.length||ov?.status==='OBSERVED'?'OBSERVED':(ov?.status||'NOT_AVAILABLE');
- return {status,groups:GROUPS.map(([id,label])=>({id,label})),items,
+ const NEW_LABEL={MISSING_TOPIC:'Topics the ranking pages cover',UNMATCHED_TOPIC:'Other topics the ranking pages cover'};
+ return {status,page_kind:newPage?'NEW_PAGE':'EXISTING_PAGE',groups:GROUPS.map(([id,label])=>({id,label:newPage&&NEW_LABEL[id]||label})),items,
   recommended:items.filter(x=>x.recommended).map(x=>x.id),
   recommendation_basis:'RESEARCH_PRIORITY_NOT_A_GROWTH_FORECAST',
   // Unique content to review and preserve (see uniqueContent): never written, never a gap.
@@ -114,11 +121,12 @@ function buildGapList(report={}){
     source:report.search_discovery.search_locale.source,confirmed:report.search_discovery.search_locale.confirmed===true}:null,
    market_coverage:report.search_discovery?.market_coverage||null,search_source:report.search_discovery?.source||null,
    ranking_pages:(ov?.ranking_pages||[]).map(p=>({url:p.url,position:p.serp_position??null})),page_fingerprint:ov?.this_page_fingerprint||null},
-  note:'What the readable ranking pages contain and your page does not. Not a fact check and not a ranking promise: you choose what goes on your site; text is only written for what you select.'};
+  note:newPage?'What the readable ranking pages contain, to choose from for the new page. Not a fact check and not a ranking promise: you choose what goes on the new page; text is only written for what you select.':
+   'What the readable ranking pages contain and your page does not. Not a fact check and not a ranking promise: you choose what goes on your site; text is only written for what you select.'};
 }
 
 // Why an item is in the list, from what the research observed; no score is shown and nothing is estimated.
-function prioritise(items,focus){
+function prioritise(items,focus,{newPage=false}={}){
  const q=words(focus||'');
  const CONF={AI_CONFIRMED_SAME_QUESTION:2,AI_GROUPED:1,SHARED_WORDS_ONLY:0,NOT_GROUPED:0,AI_SAYS_DIFFERENT_QUESTIONS:-3};
  for(const it of items){
@@ -127,12 +135,12 @@ function prioritise(items,focus){
   const text=it.examples.filter(e=>String(e.excerpt||'').length>=75).length;
   const related=q.length?matchedTerms(q,words([it.title,it.reader_question,...it.examples.map(e=>e.heading)].join(' '))).length>0:null;
   it.ranking_pages=sources;
-  const action=it.coverage==='PARTIAL'&&it.your_section?'Extend your section “'+it.your_section+'”.':
+  const action=newPage?'Write a section for the new page.':it.coverage==='PARTIAL'&&it.your_section?'Extend your section “'+it.your_section+'”.':
    it.placement?.mode==='EXTEND_SECTION'&&it.placement.section_heading?'Extend your section “'+it.placement.section_heading+'”.':
    it.placement?.section_heading?'Add a new section after “'+it.placement.section_heading+'”.':
    it.coverage==='NOT_COMPARED'?'Check your page first: this section was not compared with it.':'Add a new section; you choose where.';
   const why=[sources+' ranking page'+(sources===1?'':'s')+' cover'+(sources===1?'s':'')+' it',
-   it.coverage==='MISSING'?'not on your page':it.coverage==='PARTIAL'?'only partly on your page':'not compared with your page',
+   newPage?'not on the new page yet':it.coverage==='MISSING'?'not on your page':it.coverage==='PARTIAL'?'only partly on your page':'not compared with your page',
    related===true?'shares words with the search term':related===false?'no word in common with the search term':null,
    it.confidence==='AI_CONFIRMED_SAME_QUESTION'?'AI confirmed the same reader question':it.confidence==='AI_GROUPED'?'AI grouped these sections as one topic':
     it.confidence==='AI_SAYS_DIFFERENT_QUESTIONS'?'AI says the pages answer different questions':it.confidence==='NOT_GROUPED'?'a single competitor section, not grouped':'matched by shared words only, meaning not confirmed',

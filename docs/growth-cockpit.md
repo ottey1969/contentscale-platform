@@ -119,9 +119,11 @@ The claim check ignores technical notation when it looks for unsourced figures: 
 
 The owner decides the market; page signals are evidence.
 
-- **Set in the Tracker** (`POST /api/tracker-client/:token/growth/markets?page_id=`, owner only): ordered two-letter country codes, main market first (`NL, UK, BE, LU`); an empty list removes the setting. Stored in the additive table `tracker_growth_page_markets`. Source `SET_IN_TRACKER`, `confirmed: true`.
+- **Set in Growth**: at the top of the research page ("Target market and language", owner only, visible before the research runs; saving runs the research again). Same region and language lists as the Pre-Write brief; markets in the picker format (`nl — Netherlands`), as codes or as English country names, separated by commas; language as named in Pre-Write (`Dutch`) or as a code. API: `POST /api/tracker-client/:token/growth/markets?page_id=` with `countries` and `language`: ordered two-letter country codes, main market first (`NL, UK, BE, LU`); an empty list removes the setting. Stored in the additive table `tracker_growth_page_markets`. Source `SET_IN_TRACKER`, `confirmed: true`.
+- **From the Pre-Write brief** when not set in Growth: the region and language of the client's latest Pre-Write brief for the same keyword (`prewrite_briefs`, read only). Source `FROM_PREWRITE_BRIEF`, `confirmed: true`; the research page names the brief (number, keyword, date). Other briefs for the same keyword with another market or language are listed as a warning (the newest is used; set the market in Growth to choose); the report carries them as `search_locale.prewrite_alternatives`.
+- **Market and language are inherited separately**: a field left empty in Growth comes from the Pre-Write brief (then from the page). Setting only markets keeps the brief's language (`language_source: FROM_PREWRITE_BRIEF`); setting only a language keeps the brief's market. Both fields empty removes the Growth setting.
 - **Derived when nothing is set** (`src/growth-search-locale.cjs`), in this order: a country-code domain (`.nl`, `.co.uk`, `.it`, `.in`; Google's generic ccTLDs such as `.io`, `.co`, `.me` are not countries); countries named in the title and headings; the region of its own hreflang; the region of `<html lang>`. Labelled `confirmed: false`; when several countries are named, their order is marked `priority_confirmed: false`. What the page suggests stays visible next to a Tracker setting.
-- A US-state market from the query/keyword/URL keeps the US lookup with its location. Without any signal the default stays US / English and the report says so.
+- A US-state market derived from the query/keyword/URL is used only when nothing is set or the owner's main market is the US (it then adds the state's location); the owner's setting always wins. Without any signal the default stays US / English and the report says so.
 
 Searching: Serper gets `gl`/`hl`, Bing RSS `cc`/`setlang`. A page with several markets gets its second market searched too: with the free source by one more free lookup, with Serper by the one allowed extra paid call. Never more than two paid calls per run.
 
@@ -156,6 +158,17 @@ Every writing run produces `dossier` (version 1): search term, research date, pa
 ### What each concept rests on (design review)
 
 Every written section carries `basis`: the question it answers, the evidence level (`READER_QUESTION_CONFIRMED_BY_AI`, `COMPETITOR_TEXT`, `COMPETITOR_HEADINGS_ONLY`), the competitor sources, where it goes and why the item was in the list. A section with only competitor headings behind it is `MARKED_NO_SOURCE_TEXT`, with a whole-section fact-check note. The basis travels to the CMS package (`06-fact-check-before-publishing.md`, "What each section rests on") for every section still in the approved text.
+
+### New pages from a Pre-Write brief (one Growth system)
+
+For a page that does not exist yet, Growth starts from a Pre-Write brief instead of a tracked URL: `/track/:token/growth/new-page` (owner only; linked from the Growth Cockpit) lists the client's briefs; "Research as a new page" opens the research for one.
+
+- **Same parts as the existing-page research:** market and language (Growth setting per brief, field by field, else the brief), the same search and ranking-page reading (`growth-ranking-page-reader.cjs`, shared), the same competitor overview and gap list in new-page mode (every topic "to cover on the new page"), the same selection, writing rounds of four, one run at a time, claim checks, flags, evidence dossier and transactional storage.
+- **Overlap with the site (cannibalisation):** the brief's keyword is compared with the tracked pages (keyword and URL words). A tracked page with the same keyword: the existing page should be improved instead, and writing a new page needs the owner's explicit confirmation (`EXISTING_PAGE_TARGETS_THIS_KEYWORD`). Most of the keyword in a tracked page, or one keyword inside the other: a warning. Per topic: a tracked page holding the topic's own words marks the topic and keeps it from being recommended.
+- **Facts about the business** come from the site's homepage, never from the competitors; the sections are checked against it.
+- **Result:** a new-page concept (`tracker_growth_new_page_concepts`, additive) and a package for the editor (`GET …/growth/new-page/package?gap_list_id=`, Markdown or `format=json`): title, planned URL (`https://domain/<keyword-slug>/`, flagged when it is already tracked), sections with their basis, flagged sentences, fact-check list, next steps and the evidence dossiers. Nothing is published and no existing page is changed.
+- **Storage:** gap lists of new pages have no tracked page (`target_page_id` NULL) and belong to the brief (`prewrite_brief_id`, `page_kind: NEW_PAGE`); the market setting of a brief is kept with page id `-brief_id`.
+- **After publication** the URL is added to the Tracker and continues in the existing-page research and measurement.
 
 ### One leading decision
 

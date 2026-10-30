@@ -75,6 +75,9 @@ test('standalone writing lock: a late run (lease expired) can neither store nor 
 test('markets: set in order, invalid codes dropped, an empty list removes the setting',async()=>{
  assert.deepEqual(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:['nl','UK','xx','be'],language:'en'}),{countries:['NL','GB','BE'],language:'en'});
  assert.deepEqual((await markets.getPageMarkets(pool,{clientId:client,pageId:page})).countries,['NL','GB','BE']);
+ // Language only (markets inherited from the Pre-Write brief or the page).
+ assert.deepEqual(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:[],language:'English'}),{countries:[],language:'en'});
+ assert.deepEqual((await markets.getPageMarkets(pool,{clientId:client,pageId:page})).countries,[]);
  assert.equal(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:[]}),null);
  assert.equal(await markets.getPageMarkets(pool,{clientId:client,pageId:page}),null);
 });

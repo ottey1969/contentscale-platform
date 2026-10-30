@@ -15,12 +15,14 @@ const STATUS_FOR={YES:'COVERED',PARTLY:'PARTIAL',NO:'NOT_OBSERVED'};
 
 function geminiModel({apiKey=process.env.GEMINI_API_KEY,model=process.env.GROWTH_JUDGE_MODEL||process.env.GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite',fetchImpl=global.fetch}={}){
  if(!apiKey||!/^[a-zA-Z0-9._-]{5,80}$/.test(model)||typeof fetchImpl!=='function')return null;
- return {model,call:async prompt=>{
+ // A cut-off answer (output limit reached) is reported as such, never parsed as if it were complete.
+ return {model,call:async(prompt,{maxOutputTokens=4000}={})=>{
   const res=await fetchImpl('https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(apiKey),
    {method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(35000),
-    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens:4000,responseMimeType:'application/json'}})});
+    body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0,maxOutputTokens,responseMimeType:'application/json'}})});
   if(!res.ok)throw Object.assign(Error('JUDGE_HTTP_'+res.status),{code:'JUDGE_HTTP_'+res.status});
   const json=await res.json();
+  if(json.candidates?.[0]?.finishReason==='MAX_TOKENS')throw Object.assign(Error('ANSWER_TRUNCATED'),{code:'ANSWER_TRUNCATED'});
   return json.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'';
  }};
 }

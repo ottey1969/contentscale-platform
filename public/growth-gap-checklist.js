@@ -23,13 +23,14 @@
  window.renderGrowthGapChecklist=function(list,parent,options){
   if(!list||!parent)return false;options=options||{};
   var box=el('div',null,parent,'growth-gap-checklist');
-  el('h2','Choose what goes on your site',box);
+  el('h2',list.page_kind==='NEW_PAGE'?'Choose what goes on the new page':'Choose what goes on your site',box);
   el('p',list.note||'',box,'small');
   if(list.status!=='OBSERVED'||!(list.items||[]).length){el('p','No difference with the readable ranking pages was found.',box);return true}
-  el('p',list.items.length+' difference(s) with '+(list.ranking_pages_read||0)+' readable ranking page(s).',box);
+  var np=list.page_kind==='NEW_PAGE',here=np?'missing on the new page':'missing or partly on your page';
+  el('p',list.items.length+(np?' topic(s) and element(s) from ':' difference(s) with ')+(list.ranking_pages_read||0)+' readable ranking page(s).',box);
   var rec=list.items.filter(function(x){return x.recommended});
-  if(rec.length)el('p','Recommended first ('+rec.length+'): '+rec.map(function(x){return x.title}).join(' · ')+'. A research priority (supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI), not a growth forecast. You decide; you can select more.',box,'small');
-  else el('p','No item is recommended: none is supported by two ranking pages and missing on your page. You can still choose any item.',box,'small');
+  if(rec.length)el('p','Recommended first ('+rec.length+'): '+rec.map(function(x){return x.title}).join(' · ')+'. A research priority (supported by at least two ranking pages, '+here+', not contradicted by the AI), not a growth forecast. You decide; you can select more.',box,'small');
+  else el('p','No item is recommended: none is supported by two ranking pages'+(np?'':' and missing on your page')+'. You can still choose any item.',box,'small');
   var carried=list.carried_over&&list.carried_over.pending_ids||[];
   var co=list.carried_over||{};
   if(carried.length)el('p',carried.length+' item(s) from your earlier selection are not written yet and are ticked again (the new research still shows the same need).',box,'small');
@@ -82,6 +83,7 @@
      (r.not_written||[]).forEach(function(x){el('p','Not written: '+x.title+' — kept for the next run, or write it yourself.',out,'small')});
      if((r.pending||[]).length)el('p','Still to write from your selection ('+r.pending.length+'): '+r.pending.map(function(x){return x.title}).join(' · ')+'. Click again to write the next ones.',out,'small');
      (r.unlinked_sections||[]).forEach(function(x){el('p','Not linked to a selected item and not used: “'+x.h2+'” — '+x.reason,out,'small')});
+     if(r.new_page_package&&r.new_page_package.url){var np=el('a','Download the new page package (Markdown with the evidence dossier)',el('p',null,out));np.href=r.new_page_package.url}
      if(r.cms_handoff&&r.cms_handoff.url){var a=el('a','Prepare the CMS package with these concepts',el('p',null,out));a.href=r.cms_handoff.url}
     }catch(e){status.textContent='Not written: '+String(e.message||e)+'. Your selection and the research are kept; you can download the brief.'}
     finally{w.disabled=false}

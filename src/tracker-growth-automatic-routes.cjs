@@ -11,6 +11,7 @@ const {compareFullSections}=require('./growth-full-section-comparison.cjs');
 const {decideGrowthEditorialAction}=require('./growth-editorial-decision-gate.cjs');
 const {buildGrowthEvidenceExample}=require('./growth-evidence-bound-example.cjs');
 const {assessGrowthCompetitorContent}=require('./growth-competitor-quality-gate.cjs');
+const {readRankingPages}=require('./growth-ranking-page-reader.cjs');
 const {decideOwnerGrowthEdit}=require('./growth-owner-edit-decision.cjs');
 const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
@@ -23,7 +24,11 @@ const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
-const {deriveSearchLocale,validCountries}=require('./growth-search-locale.cjs');
+const {deriveSearchLocale,validCountries,validLanguage,countryName,languageName}=require('./growth-search-locale.cjs');
+const {resolveMarketSetting}=require('./growth-market-store.cjs');
+// The Pre-Write brief's region and language lists (src/index.js CS_COMBO_DATA), so both screens offer the same choices.
+const PREWRITE_REGIONS=['us — United States','gb — United Kingdom','ca — Canada','au — Australia','ie — Ireland','nl — Netherlands','be — Belgium','de — Germany','at — Austria','ch — Switzerland','fr — France','es — Spain','it — Italy','pt — Portugal','pl — Poland','se — Sweden','dk — Denmark','no — Norway','fi — Finland','tr — Turkey','ru — Russia','ae — United Arab Emirates','sa — Saudi Arabia','qa — Qatar','kw — Kuwait','bh — Bahrain','om — Oman','eg — Egypt','ma — Morocco','za — South Africa','in — India','cn — China','hk — Hong Kong','tw — Taiwan','jp — Japan','kr — South Korea','sg — Singapore','my — Malaysia','id — Indonesia','ph — Philippines','th — Thailand','vn — Vietnam','br — Brazil','mx — Mexico','ar — Argentina','cl — Chile','co — Colombia','lu — Luxembourg'];
+const PREWRITE_LANGUAGES=['English','Dutch','German','French','Spanish','Italian','Portuguese','Polish','Swedish','Danish','Norwegian','Finnish','Turkish','Russian','Chinese (Simplified)','Chinese (Traditional)','Japanese','Korean','Hindi','Arabic'];
 const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const {identityFromFetch,identityAdvice}=require('./growth-url-identity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
@@ -54,7 +59,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -113,12 +118,20 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(intentResolution.source==='TRACKER_KEYWORD'&&selectionSource&&selectionSource!=='TRACKER_KEYWORD')intentResolution.source=selectionSource;
   const targetQuery=intentResolution.query||'';
   // Market = the place the SOURCE page serves (its tracked keyword and URL), so a shorter GSC query keeps its locality.
-  const market=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
+  // Markets the owner set for this page win over anything derived. A US-state market derived from the query, keyword or
+  // URL is kept only when there is no setting or the owner's main market is the US (it then adds the state's location).
+  // Without a Growth setting, the target market and language of the Pre-Write brief for the same keyword are used.
+  // Market and language are inherited separately (an empty Growth field takes the Pre-Write value).
+  let growthSet=null,prewrite=null;
+  if(targetQuery&&typeof loadPageMarkets==='function')growthSet=await Promise.resolve(loadPageMarkets({clientId:cid,pageId:pid})).catch(()=>null);
+  if(targetQuery&&!(growthSet?.countries?.length&&growthSet?.language)&&typeof loadPrewriteMarket==='function')
+   prewrite=await Promise.resolve(loadPrewriteMarket({clientId:cid,keywords:[page.keyword,targetQuery]})).catch(()=>null);
+  const configured=resolveMarketSetting(growthSet,prewrite);
+  const derivedMarket=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
    pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
+  const market=derivedMarket&&(!configured?.countries?.length||configured.countries[0]==='US')?derivedMarket:null;
   // The country (and language) the page itself states, for pages outside a US-state market; reported with the research.
   // A market the owner set for this page in the Tracker wins; headings, domain and hreflang are evidence only.
-  let configured=null;
-  if(targetQuery&&!market&&typeof loadPageMarkets==='function')configured=await Promise.resolve(loadPageMarkets({clientId:cid,pageId:pid})).catch(()=>null);
   const locale=targetQuery&&!market?deriveSearchLocale({html:own.live?.html||page.saved_html||'',url:page.url,configured}):null;
   const discovery=!targetQuery?{
    status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
@@ -126,78 +139,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url,market,locale}))
    .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',
     reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
-  // Discussion listings remain in SERP evidence but should not displace readable
-  // long-form articles in the limited content-comparison budget.
-  const editorialHost=url=>{try{const host=new URL(url).hostname.toLowerCase();
-   return !/(^|\.)(?:reddit\.com|quora\.com)$/.test(host)}
-   catch{return false}};
-  // Same-market pages are read first; general sources that name no place follow (stable within each group).
-  const marketRank=x=>x.market_relevance==='SAME_MARKET'?0:1;
-  const fresh=(Array.isArray(discovery.leads)?discovery.leads:[])
-   .filter(x=>x.url&&editorialHost(x.url)).map((x,i)=>({x,i})).sort((a,b)=>marketRank(a.x)-marketRank(b.x)||a.i-b.i).map(o=>o.x).slice(0,10);
-  const candidates=[...fresh.map(x=>({...x,search_source:x.source==='SERPAPI_GOOGLE_ORGANIC'?'SERPAPI_GOOGLE_ORGANIC':x.source==='SERPER_GOOGLE_ORGANIC'?'SERPER_GOOGLE_ORGANIC':'BING_PUBLIC_RSS'})),
-   ...historical.filter(x=>editorialHost(x.url)&&!fresh.some(y=>y.url===x.url)&&queryFit(x.serp_title||'',{title:targetQuery,h1:[],h2:[]}).fit)
-    .map(x=>({...x,search_source:'HISTORICAL_SERP_TOPIC_MATCH'}))].slice(0,10);
-  const fetchCompetitorOnce=async lead=>{
-   try{const live=await fetchLive(lead.url,RESEARCH_FETCH);
-    return {url:lead.url,live,quality:assessGrowthCompetitorContent({html:live.html,query:targetQuery,truncated:live.truncated}),
-     search_source:lead.search_source,search_query:targetQuery}}
-   catch(e){return {url:lead.url,status:'LIVE_COMPARISON_UNAVAILABLE',reason:String(e?.code||'FETCH_FAILED').slice(0,70),search_source:lead.search_source}}
-  };
-  // HTTP 202 means 'accepted, not ready yet' (seen on a real competitor). Retry exactly once, then report it as unavailable.
-  const fetchCompetitor=async lead=>{
-   const first=await fetchCompetitorOnce(lead);
-   if(first.reason!=='HTTP_202')return first;
-   await new Promise(done=>setTimeout(done,Math.max(0,retryDelayMs)));
-   const second=await fetchCompetitorOnce(lead);
-   return {...second,retried_after_http_202:true};
-  };
-  // A site that refuses automated access (401/403/406/429) is respected, not bypassed: the next candidate is tried.
-  const explain=code=>/^HTTP_(401|403|406|429)$/.test(code)?'BLOCKED_BY_SITE_RESPECTED':/^HTTP_(404|410)$/.test(code)?'PAGE_NOT_FOUND':/^HTTP_5/.test(code)?'SITE_ERROR':
-   /TIMEOUT/.test(code)?'TIMEOUT':/^HTTP_202$/.test(code)?'NOT_READY_AFTER_ONE_RETRY':'FETCH_FAILED';
-  const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch{return ''}};
-  // Candidates are tried in batches of three, one page per site first, until three readable articles exist or the list is exhausted.
-  const candidatePool=[];const seenHosts=new Set();
-  for(const c of candidates){const h=hostOf(c.url);if(seenHosts.has(h))continue;seenHosts.add(h);candidatePool.push(c)}
-  for(const c of candidates)if(!candidatePool.includes(c))candidatePool.push(c);
-  let attempted=[];const fetchLog=[];
-  // A page that answered (HTTP 200) but holds no static text is rendered in the restricted browser, at most three per run and
-  // only while fewer than three readable articles exist. A page that REFUSED access (403 etc.) is never rendered: that would bypass the block.
-  let renderBudget=3;const renderNotes={};
-  const canRender=fetchLive===fetchPublicGrowthHtml||renderOwn!==renderPublicGrowthPage;
-  const eligible=items=>items.filter(x=>x.live&&x.quality?.eligible).slice(0,3);
-  let comparisons=[];let cursor=0;
-  while(cursor<candidatePool.length&&comparisons.length<3){
-   const batch=candidatePool.slice(cursor,cursor+3);cursor+=3;
-   const results=await Promise.all(batch.map(fetchCompetitor));
-   for(let i=0;i<results.length;i++){const x=results[i];
-    const have=comparisons.length+results.filter(y=>y.live&&y.quality?.eligible).length;
-    if(canRender&&renderBudget>0&&have<3&&x.live&&!x.quality?.eligible&&['JS_RENDERED_PAGE_NO_STATIC_TEXT','NO_PARAGRAPH_TEXT'].includes(x.quality?.reason_code)){
-     renderBudget--;const rendered=await Promise.resolve().then(()=>renderOwn(x.url)).catch(()=>({status:'RENDER_UNAVAILABLE'}));
-     renderNotes[x.url]=rendered?.status||'RENDER_UNAVAILABLE';
-     if(rendered?.live?.html){const q=assessGrowthCompetitorContent({html:rendered.live.html,query:targetQuery,truncated:rendered.live.truncated});
-      if(q.eligible)results[i]={...x,live:rendered.live,quality:q,rendered_fallback:true}}
-    }
-   }
-   results.forEach((x,i)=>logFetch(x,batch[i]));
-   attempted=attempted.concat(results);comparisons=eligible(attempted);
-  }
-  function logFetch(x,lead){
-    fetchLog.push({url:x.url,host:hostOf(x.url),serp_position:lead.serp_position??null,source:lead.search_source,
-     outcome:x.live?(x.quality?.eligible?'READABLE':'NOT_READABLE'):'FETCH_FAILED',
-     code:x.live?(x.quality?.reason_code||null):(x.reason||'FETCH_FAILED'),
-     explanation:x.live?(x.quality?.eligible?null:x.quality?.reason_code):explain(x.reason||''),
-     partial_capture:x.live?.truncated===true,retried_after_http_202:x.retried_after_http_202===true,
-     rendered_fallback:x.rendered_fallback===true,render_status:renderNotes[x.url]||null,
-     readable_words:x.quality?.readable_words??null});
-  }
-  const fetchSummaryNow=()=>{const c=k=>fetchLog.filter(x=>x.outcome===k).length;
-   const blocked=fetchLog.filter(x=>x.explanation==='BLOCKED_BY_SITE_RESPECTED').length,timeouts=fetchLog.filter(x=>x.explanation==='TIMEOUT').length;
-   return fetchLog.length+' tried: '+c('READABLE')+' readable, '+blocked+' blocked by the site (respected), '+timeouts+' timed out, '+c('NOT_READABLE')+' fetched but not readable'+
-    (fetchLog.filter(x=>x.outcome==='NOT_READABLE').length?' ('+[...new Set(fetchLog.filter(x=>x.outcome==='NOT_READABLE').map(x=>x.code))].join(', ')+')':'')+
-    (fetchLog.some(x=>x.rendered_fallback)?'; '+fetchLog.filter(x=>x.rendered_fallback).length+' read after rendering in the restricted browser':'')+
-    '; '+Math.max(0,candidatePool.length-cursor)+' further candidate(s) untried'};
-  let fetchSummary=fetchSummaryNow();
+  // The ranking pages are read by the shared reader (also used for new pages).
+  const reader=await readRankingPages({query:targetQuery,discovery,historical,fetchLive,renderOwn,retryDelayMs});
+  let comparisons=reader.comparisons,attempted=reader.attempted;const fetchLog=reader.fetchLog,fetchSummaryNow=reader.summary;
+  let fetchSummary=reader.fetchSummary;
   const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
   report.intent_resolution=intentResolution;
@@ -216,7 +161,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    report.growth_decision.primary_next_action.query=null;
    report.search.focus_query=null;
   }
-  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:targetQuery,market,search_locale:locale,
+  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:targetQuery,market,
+   search_locale:locale?{...locale,...(configured?.alternatives?.length?{prewrite_alternatives:configured.alternatives}:{})}:locale,
    fetched_competitor_urls:comparisons.filter(x=>x.live).map(x=>x.url),competitor_fetch_log:fetchLog,competitor_fetch_summary:fetchSummary,
    discarded_unreadable_article_count:attempted.filter(x=>x.live&&!x.quality?.eligible).length};
   report.evidence_warnings=[
@@ -326,8 +272,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     let scoped=comparisons.filter(inScope);
     if(scoped.length<2){
      const tried=new Set(attempted.map(x=>x.url));
-     const extra=candidatePool.filter(c=>inScope(c)&&!tried.has(c.url)).slice(0,3);
-     if(extra.length){const results=await Promise.all(extra.map(fetchCompetitor));results.forEach((x,i)=>logFetch(x,extra[i]));attempted=attempted.concat(results)}
+     const extra=reader.candidatePool.filter(c=>inScope(c)&&!tried.has(c.url)).slice(0,3);
+     if(extra.length){await reader.readThese(extra);attempted=reader.attempted}
      scoped=attempted.filter(x=>inScope(x)&&x.live&&x.quality?.eligible).slice(0,6);
     }
     comparisons=scoped;
@@ -389,11 +335,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   let coverage=coverageFor(competitorPages);
   // "No shared reader task" is only concluded after the candidates Google already returned are used: when the pages
   // read so far share none and unread candidates remain, one more batch (max three, no new search) is read first.
-  if(selectedSource&&!(coverage.supported_task_codes||[]).length&&cursor<candidatePool.length){
-   const batch=candidatePool.slice(cursor,cursor+3);cursor+=3;
-   const results=await Promise.all(batch.map(fetchCompetitor));
-   results.forEach((x,i)=>logFetch(x,batch[i]));
-   attempted=attempted.concat(results);
+  if(selectedSource&&!(coverage.supported_task_codes||[]).length&&reader.hasMore()){
+   const batch={length:await reader.readMore()};
+   attempted=reader.attempted;
    const before=comparisons.length;
    comparisons=attempted.filter(x=>x.live&&x.quality?.eligible).slice(0,6);
    const searchPages=comparisons.filter(x=>['SERPER_GOOGLE_ORGANIC','SERPAPI_GOOGLE_ORGANIC','BING_PUBLIC_RSS'].includes(x.search_source));
@@ -718,9 +662,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const v=check(req,res);if(!v)return;
   const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
   if(req.growth?.can_edit!==true||typeof savePageMarkets!=='function')return no(403,'OWNER_ONLY_MARKET_SETTING');
-  const raw=Array.isArray(req.body?.countries)?req.body.countries:String(req.body?.countries||'').split(/[\s,;]+/);
-  const countries=validCountries(raw.filter(Boolean));
-  if(raw.filter(Boolean).length&&!countries.length)return no(400,'USE_TWO_LETTER_COUNTRY_CODES');
+  // Each entry like the Pre-Write region picker ("nl — Netherlands"), a code or a country name; split on commas only.
+  const entries=(Array.isArray(req.body?.countries)?req.body.countries:String(req.body?.countries||'').split(/[,;]+/)).map(x=>String(x).trim()).filter(Boolean);
+  const countries=validCountries(entries);
+  if(entries.length&&countries.length<entries.filter(x=>x).length)return no(400,'UNKNOWN_COUNTRY');
+  if(String(req.body?.language||'').trim()&&!validLanguage(req.body.language))return no(400,'UNKNOWN_LANGUAGE');
   let saved;
   try{saved=await savePageMarkets({clientId:v.clientId,pageId:v.id,countries,language:req.body?.language})}catch{return no(503,'MARKET_SETTING_NOT_SAVED')}
   // The next research run uses the new markets.
@@ -826,8 +772,37 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:Number(list.target_page_id),
     url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)}:null});
  });
- app.get('/track/:token/growth/auto-research',data,(req,res)=>{
+ app.get('/track/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
+  // Target market(s) and language at the top, before the research runs (owner only). Same lists as the Pre-Write brief;
+  // without a Growth setting, the Pre-Write brief of the same keyword is shown and used.
+  let marketBox='';
+  if(req.growth?.can_edit===true&&typeof savePageMarkets==='function'){
+   let current=null,prewrite=null;
+   if(typeof loadPageMarkets==='function')current=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
+   if(!(current?.countries?.length&&current?.language)&&typeof loadPrewriteMarket==='function'){
+    const kw=await pool.query('SELECT keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id]).then(r=>r.rows[0]?.keyword).catch(()=>null);
+    prewrite=await Promise.resolve(loadPrewriteMarket({clientId:v.clientId,keywords:[kw]})).catch(()=>null);
+   }
+   const url='/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id);
+   const regionLabel=c=>c.toLowerCase()+' — '+countryName(c);
+   const day=d=>{try{return new Date(d).toISOString().slice(0,10)}catch{return ''}};
+   const opts=(id,list)=>'<datalist id="'+id+'">'+list.map(x=>'<option value="'+sHtml(x)+'">').join('')+'</datalist>';
+   const briefRef=prewrite?'Pre-Write brief #'+prewrite.brief_id+' (“'+sHtml(prewrite.keyword)+'”, '+day(prewrite.created_at)+')':'';
+   const fieldSource=(own,fromBrief,label)=>own?'set in Growth':fromBrief?'from '+briefRef:label;
+   const marketLine='Market: '+(current?.countries?.length?sHtml(current.countries.map(regionLabel).join(', ')):prewrite?sHtml(prewrite.countries.map(regionLabel).join(', ')):'derived from the page')+
+    ' — '+fieldSource(current?.countries?.length,prewrite&&!current?.countries?.length,'not confirmed');
+   const languageLine='Language: '+(current?.language?sHtml(languageName(current.language)):prewrite?.language?sHtml(languageName(prewrite.language)):'from the page (html lang)')+
+    ' — '+fieldSource(current?.language,prewrite?.language&&!current?.language,'not set');
+   const alternatives=(prewrite?.alternatives||[]).length?'<p class="error">There are other Pre-Write briefs for this keyword with another market or language: '+
+    prewrite.alternatives.map(a=>'#'+a.brief_id+' '+sHtml(regionLabel(a.country))+(a.language?' · '+sHtml(languageName(a.language)):'')+' ('+day(a.created_at)+')').join('; ')+'. The newest is used; set the market here to choose.</p>':'';
+   marketBox='<section id="marketSetting" data-url="'+sHtml(url)+'"><h2>Target market and language</h2>'+
+    '<p class="info">As in the Pre-Write brief. Main market first; add more markets separated by commas (for example <strong>nl — Netherlands, gb — United Kingdom</strong>). Growth searches the main market and the next one; the others are reported as not researched. Each field is separate: leave one empty and it comes from the Pre-Write brief of this keyword, or from the page.</p>'+
+    '<p><label for="marketInput">Target market(s): </label><input id="marketInput" type="text" list="marketRegions" value="'+sHtml(current?.countries?.length?current.countries.map(regionLabel).join(', '):'')+'" placeholder="'+sHtml(prewrite?prewrite.countries.map(regionLabel).join(', '):'nl — Netherlands')+'"> '+
+    '<label for="marketLanguage">Language: </label><input id="marketLanguage" type="text" list="marketLanguages" value="'+sHtml(current?.language?languageName(current.language):'')+'" placeholder="'+sHtml(prewrite?.language?languageName(prewrite.language):'English')+'"> '+
+    '<button id="marketSave" type="button">Save and run the research again</button></p>'+opts('marketRegions',PREWRITE_REGIONS)+opts('marketLanguages',PREWRITE_LANGUAGES)+
+    '<small id="marketSaid">'+marketLine+'<br>'+languageLine+'</small>'+alternatives+'</section>';
+  }
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const base='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const allowHandoff=req.growth?.can_edit===true&&!v.page.case_study_active;
@@ -843,10 +818,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    'button{background:#1d4ed8;color:white;border:0;padding:10px 14px;border-radius:8px;font:inherit;cursor:pointer}',
    'button:disabled{opacity:.5}.info{color:#5b6475;font-size:13px}.error{color:#b42318}',
    'pre{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:8px 0}@media(max-width:600px){body{padding:12px}section{padding:12px}}',
+   '#marketSetting input{font:inherit;padding:6px 8px;border:1px solid #c8d2e0;border-radius:6px;margin:4px 0;box-sizing:border-box}#marketInput{width:min(100%,560px)}#marketLanguage{width:min(100%,200px)}',
    '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-competitor-overview.js"></script><script defer src="/growth-gap-checklist.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
+   marketBox,
    '<section><div role="status" id="researchStatus">Analyzing the URL and observed competitor evidence…</div>',
    '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
    '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?
