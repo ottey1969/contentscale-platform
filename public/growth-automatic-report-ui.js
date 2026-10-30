@@ -643,17 +643,7 @@
   }finally{document.getElementById('retryResearch').disabled=false}
  }
  document.getElementById('retryResearch').addEventListener('click',run);
- // Target market(s) and language (top of the page, as in the Pre-Write brief): saving reloads the page, which runs the research again.
- var marketBox=document.getElementById('marketSetting');
- if(marketBox){var mSave=document.getElementById('marketSave'),mSaid=document.getElementById('marketSaid'),mInput=document.getElementById('marketInput'),mLang=document.getElementById('marketLanguage');
-  mSave.addEventListener('click',async function(){mSave.disabled=true;mSaid.textContent='Saving…';
-   try{var r=await fetch(marketBox.getAttribute('data-url'),{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:mInput.value,language:mLang?mLang.value:''})});
-    var j=await r.json();
-    if(!j.success){mSaid.textContent='Not saved: '+(j.code==='UNKNOWN_COUNTRY'?'choose markets from the list (for example nl — Netherlands), separated by commas':j.code==='UNKNOWN_LANGUAGE'?'choose a language from the list (for example Dutch)':(j.code||r.status));return}
-    // Reload: the page shows where each field comes from (Growth, Pre-Write brief or the page) and runs the research again.
-    mSaid.textContent='Saved. Running the research again…';location.reload();
-   }catch(e){mSaid.textContent='Not saved.'}finally{mSave.disabled=false}});
- }
+ // Market save is isolated in /growth-market-controls.js so a report-rendering failure cannot disable it.
  document.getElementById('downloadResearch').addEventListener('click',function(){
   if(!last)return;
   var blob=new Blob([JSON.stringify(last,null,2)],{type:'application/json'});
