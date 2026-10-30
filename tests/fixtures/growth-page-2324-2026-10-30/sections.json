@@ -1,0 +1,88 @@
+{
+ "_note": "Real production data: owner review package of page 2324 (https://contentscale.site/international-seo/), generated 2026-10-30T09:47:19Z, uploaded by the owner. Section headings of the three readable ranking pages exactly as listed in the package; topic grouping had failed (NOT_GROUPED_INVALID_ANSWER).",
+ "page_url": "https://contentscale.site/international-seo/",
+ "focus_query": "international seo",
+ "page_section_example": "What Is International SEO & Why It Matters for NL, UK, BE & LU",
+ "ranking_pages": [
+  {
+   "host": "moz.com",
+   "serp_position": 1,
+   "headings": [
+    "What is international SEO?",
+    "Do you need to go international?",
+    "Developing an international SEO strategy",
+    "URL structures for international sites",
+    "Language-target your website (or website pages)",
+    "Tailor your content to your target user's language and culture",
+    "Keyword research for international SEO",
+    "Technical considerations for international SEO",
+    "Other SEO signals for local search engines",
+    "Measuring and analyzing international SEO performance",
+    "Avoiding common international SEO mistakes",
+    "International targeting in a nutshell: target countries",
+    "Keep learning",
+    "Put your skills to work"
+   ],
+   "url": "https://moz.com/learn/seo/international-seo"
+  },
+  {
+   "host": "semrush.com",
+   "serp_position": 2,
+   "headings": [
+    "What Is International SEO?",
+    "Should You Do International SEO?",
+    "Analyze Your Current Traffic",
+    "Assess Market Viability",
+    "Review International SEO Resource Requirements",
+    "4 Best Practices for International SEO Success",
+    "Conduct Thorough Market Research for Different Regions",
+    "Adapt Your Content for Cultural and Regional Preferences",
+    "Build Relevant Backlinks",
+    "Technical Considerations for International SEO",
+    "Implement Region-Specific URLs",
+    "Implement Hreflang Tags",
+    "Handle Duplicate Content and Canonicalization Issues",
+    "How to Track Your International SEO Performance",
+    "Expand to New Markets with International SEO"
+   ],
+   "url": "https://www.semrush.com/blog/international-seo/"
+  },
+  {
+   "host": "phrase.com",
+   "serp_position": 3,
+   "headings": [
+    "International SEO: Best Practices to Optimize Your Website for Global Reach",
+    "What is international SEO?",
+    "How does international SEO work?",
+    "How is international SEO different from local SEO?",
+    "Why international SEO is important for global business",
+    "Reach a wider audience",
+    "Increase organic traffic, conversions, and revenue",
+    "Improve global brand visibility",
+    "How to create an effective international SEO strategy",
+    "Map out your international SEO goals",
+    "Perform market and competitor analysis",
+    "Conduct keyword research for each target market",
+    "Keywords should be transcreated—not just translated",
+    "Decide between language or country targeting",
+    "Choose the right URL structure for your international site",
+    "Country code top-level domains (ccTLDs)",
+    "Global top-level domains (gTLDs) in combination with subdomains",
+    "gTLDs in combination with subfolders",
+    "gTLDs with a combination of subdomains and subfolders",
+    "Use the hreflang attribute",
+    "Include a navigation menu and language switcher",
+    "Avoid automatically redirecting users to a different language based on location",
+    "Adapt content to local culture and regional preferences",
+    "Use a content delivery network",
+    "Build local links to your website",
+    "Leverage social media and user reviews",
+    "How to measure your international SEO performance",
+    "Expand your reach with international SEO",
+    "Build or buy? The discipline of knowing where to invest",
+    "Are your customers in love, or is breaking up just too much effort?"
+   ],
+   "url": "https://phrase.com/blog/posts/international-seo/"
+  }
+ ]
+}

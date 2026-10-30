@@ -72,7 +72,18 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
  }
  if((report.search_discovery?.rejected_leads||[]).length){
   L.push('## Search results filtered out','');
-  for(const x of report.search_discovery.rejected_leads.slice(0,8))L.push('- '+clip(x.title,80)+' — '+x.reason);
+  // The site is named so the owner sees why a result was left out (a video or social site is not a comparable page).
+  for(const x of report.search_discovery.rejected_leads.slice(0,8)){let h='';try{h=new URL(x.url).hostname.replace(/^www\./,'')}catch{}
+   L.push('- '+clip(x.title,80)+(h?' ('+h+')':'')+' — '+x.reason)}
+  L.push('');
+ }
+ // Where the research searched: market and language, where they came from, and which target markets were researched.
+ const loc=report.search_discovery?.search_locale,mcov=report.search_discovery?.market_coverage;
+ if(loc||mcov){
+  const src=x=>({SET_IN_TRACKER:'set in Growth',FROM_PREWRITE_BRIEF:'from Pre-Write brief'+(loc?.brief?' #'+loc.brief.id:''),HTML_LANG:'from the page',DEFAULT_ENGLISH:'default'}[x]||(x?String(x).toLowerCase().replace(/_/g,' ')+' (not confirmed)':'not stated'));
+  L.push('## Search market','','- Market: '+(loc?.country||'US (default)')+' — '+src(loc?.source),'- Language: '+(loc?.hl||'en')+' — '+src(loc?.language_source));
+  for(const m of mcov?.markets||[])L.push('- '+m.name+': '+(m.researched?'researched ('+(m.provider||'search')+', '+m.usable_results+' usable result(s))':'not researched'));
+  if(mcov?.note)L.push('',mcov.note);
   L.push('');
  }
  if((report.search_discovery?.competitor_fetch_log||[]).length){
