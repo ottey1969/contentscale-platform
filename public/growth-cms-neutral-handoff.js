@@ -58,7 +58,8 @@
    box.appendChild(intro);box.appendChild(scope);
    if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent='Evidence: '+p.evidence_label;box.appendChild(ev)}
    if(p.intent_note){var inote=document.createElement('p');inote.className='small';inote.textContent=p.intent_note;box.appendChild(inote)}
-   var r=p.review||{},groups=[['needs_fact_check','Check that these sentences are true'],['needs_owner_confirmation','Confirm with the business'],['needs_safety_review','Safety review by a qualified professional']];
+   var r=p.review||{},groups=[['flagged_text','Flagged by Growth: rewrite or remove these sentences (the package is refused while one is still in your text)'],['needs_fact_check','Check that these sentences are true'],['needs_owner_confirmation','Confirm with the business'],['needs_safety_review','Safety review by a qualified professional']];
+   r.flagged_text=(r.flagged||[]).map(function(f){return (f.sentence?'“'+f.sentence+'”':'Section “'+f.h2+'”')+' — '+f.reason});
    var seen=new Set();
    groups.forEach(function(g){
     // One tick per sentence, under the first (strictest-listed) check that names it.
@@ -246,7 +247,10 @@
  async function post(body,format){
   const response=await fetch(base,{method:'POST',cache:'no-store',credentials:'same-origin',
    headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,format})});
-  if(!response.ok){const d=await response.json().catch(()=>({}));throw Error((d.issues||[]).join(', ')||d.code||'Export failed')}
+  if(!response.ok){const d=await response.json().catch(()=>({}));
+   // Flagged content still in the text: name each sentence so the editor knows exactly what to rewrite or remove.
+   if((d.blocked_details||[]).length)throw Error('Not packaged — still in your text: '+d.blocked_details.map(function(b){return (b.sentence?'“'+b.sentence+'”':'')+' ('+b.reason+')'}).join(' · '));
+   throw Error((d.issues||[]).join(', ')||d.code||'Export failed')}
   return format==='zip'?response.blob():response.json();
  }
  $('handoffForm').addEventListener('submit',async function(ev){

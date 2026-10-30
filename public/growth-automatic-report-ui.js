@@ -152,7 +152,8 @@
   }else node('p','A single actionable recommendation is not yet available. See supporting evidence.',s);
   var opportunity=d.autonomous_growth_opportunity||{};
   if(opportunity.primary_opportunity){
-   s=section('Additional search growth opportunity — evidence led');
+   s=section(opportunity.superseded_by?'Earlier research step (replaced by the decision at the top)':'Additional search growth opportunity — evidence led');
+   if(opportunity.superseded_by)node('p','Kept for traceability only. The leading decision is the one at the top of this report ('+String(opportunity.leading_decision||'').replace(/_/g,' ').toLowerCase()+'); any different advice in this step no longer applies.',s);
    var op=opportunity.primary_opportunity;
    node('h3',op.query,s);
    node('p','Observed exact-page GSC: '+op.observed_impressions+' impressions, '+op.observed_clicks+' clicks, '+op.observed_ctr_pct+'% CTR, average position '+op.observed_average_position+'.',s);
@@ -257,6 +258,17 @@
   if(d.competitor_overview&&typeof renderOverview==='function'){
    try{renderOverview(d.competitor_overview,node('section',null,researchDetails||container))}catch(e){}
   }
+  // The editor's choice: every difference, ticked by the owner; text is written only for the selection.
+  var renderChecklist=typeof window!=='undefined'&&window.renderGrowthGapChecklist;
+  if(d.gap_list&&typeof renderChecklist==='function'){
+   var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
+   try{renderChecklist({...gl,target_url:d.url},node('section',null,researchDetails||container),{write:writeUrl?async function(ids){
+    // The ticks are the owner's selection (saved deliberately first); writing then takes the next items from it.
+    var post=function(u,b){return fetch(u,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()})};
+    var sel=await post(writeUrl.replace('/auto-research/write','/auto-research/selection'),{gap_list_id:gl.id,item_ids:ids});
+    if(!sel||sel.success===false)return sel;
+    return post(writeUrl,{gap_list_id:gl.id,item_ids:ids})}:null})}catch(e){}
+  }
   s=section('Search competitors for this Growth query');
   var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>
    x.discovery_source==='BING_PUBLIC_RSS'||x.discovery_source==='SERPER_GOOGLE_ORGANIC');
@@ -265,8 +277,29 @@
    ' · Source: '+(googleSource?'Google organic (optional provider)':'Public Bing RSS')+
    ' · Status: '+(discovery.status||'NOT_CHECKED')+
    ' · '+liveRivals.length+' competitor HTML pages retrieved.',s);
-  node('small',googleSource?'Google organic listings observed through the configured optional Serper.dev (US / English). These are search-result observations, not verified target-page GSC rankings or traffic.':
+  var sc=discovery.scope||{},loc=discovery.search_locale||{};
+  var marketText=(sc.searched_markets||[]).length?sc.searched_markets.join(' + ').toUpperCase()+' / '+String(sc.language||'en'):'US / English';
+  node('small',googleSource?'Google organic listings observed through the configured optional Serper.dev ('+marketText+'). These are search-result observations, not verified target-page GSC rankings or traffic.':
     'Free public Bing RSS discovery is optional and may be blocked. This source does not verify Google rankings; an optional configured Google lookup is tried only when free discovery returns no relevant leads.',s);
+  // Research per target market: which markets were researched, whether the market was set by the owner or derived.
+  var cov=discovery.market_coverage||{};
+  if(loc.source||cov.status){
+   var mk=node('div',null,s);
+   node('small','Search market: '+(loc.country||'US (default)')+' · '+(loc.source==='SET_IN_TRACKER'?'set in the Tracker':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
+    (loc.priority_confirmed===false?' · the order of the markets is a guess from how often the headings name them':''),mk);
+   (cov.markets||[]).forEach(function(m){node('small',' '+m.name+': '+(m.researched?'researched ('+(m.provider||'search')+', '+m.usable_results+' usable result(s))':'not researched'),node('div',null,mk))});
+   if(cov.note)node('small',cov.note,node('div',null,mk));
+   if(d.market_setting_url){
+    var form=node('p',null,mk);node('small','Target markets for this page (two-letter codes, main market first): ',form);
+    var inp=node('input',null,form);inp.type='text';inp.size=18;inp.placeholder='e.g. '+[loc.country].concat(loc.other_countries||[]).filter(Boolean).join(', ');
+    if(loc.source==='SET_IN_TRACKER')inp.value=[loc.country].concat(loc.other_countries||[]).join(', ');
+    var save=node('button','Save markets',form);save.type='button';var said=node('small','',form);
+    save.addEventListener('click',async function(){save.disabled=true;
+     try{var r=await fetch(d.market_setting_url,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:inp.value})});
+      var j=await r.json();said.textContent=j.success?' Saved'+(j.markets?': '+j.markets.countries.join(', '):' (removed; derived from the page again)')+'. Run the research again to use it.':' Not saved: '+(j.code||r.status);}
+     catch(e){said.textContent=' Not saved.'}finally{save.disabled=false}});
+   }
+  }
   if(discovery.free_discovery_status)node('small','Free search: '+discovery.free_discovery_status,s);
   if(discovery.optional_google_status)node('small','Optional Google search: '+discovery.optional_google_status,s);
   if(discovery.reason)node('small','Source status: '+discovery.reason,s);
@@ -363,6 +396,10 @@
     output.textContent='';
     if(String(result.target_url||'')!==String(draftSourceUrl||'')){
      draftStatus.textContent='Draft URL mismatch · no text displayed.';
+     return;
+    }
+    if(result.status==='WRITING_ON_SELECTION'){
+     draftStatus.textContent='No text written yet. Choose what goes on your site in the list above and write only those, or prepare a draft for the automatic plan with the button.';
      return;
     }
     if(result.status!=='AI_DRAFT_REVIEW_REQUIRED'||!result.draft?.sections?.length){
@@ -468,7 +505,7 @@
    // the optional second step automatically; do not require another button press.
    // Non-owner sessions and untracked destinations never invoke the AI endpoint.
    if(validDraftPage&&d.report_completion)showDraftResult(d.editorial_review_draft||{status:'NO_DRAFT_RESULT',target_url:draftSourceUrl});
-   else if(validDraftPage)void prepareDraft();
+   // No automatic writing: the owner chooses (selection above, or this button for the automatic plan).
   }
   s=section('What happened to the other research?');
   var rows=plan.classifications||[],categories=plan.query_categories||{};
@@ -605,7 +642,7 @@
     '/growth/auto-research/complete?page_id='+encodeURIComponent(id);
    var response=await fetch(owner?completeEndpoint:endpoint,{
     method:owner?'POST':'GET',credentials:'same-origin',cache:'no-store',
-    ...(owner?{headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(id)})}:{})
+    ...(owner?{headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(id),write:false})}:{})
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');

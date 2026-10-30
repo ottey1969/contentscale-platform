@@ -78,3 +78,6 @@ build/
  
 "# Test files organization" 
 "test-*.js" 
+
+# test output written by mistake to an unset path
+undefined/

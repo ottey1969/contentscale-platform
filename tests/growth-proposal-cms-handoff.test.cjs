@@ -49,7 +49,7 @@ test('handoff carries the proposal unchanged, with placement and a fact-check fi
  assert.equal(out.publication_allowed,false);
  assert.deepEqual(out.manifest.growth_proposal,{id:41,editor_changed_text:false});
  assert.deepEqual(out.manifest.change_placements,[p.sections[0].placement]);
- assert.deepEqual(out.manifest.review_items,{fact_check:5,owner_confirmation:0,safety_review:1});
+ assert.deepEqual(out.manifest.review_items,{fact_check:5,owner_confirmation:0,safety_review:1,flagged:0});
  const file=n=>out.files.find(f=>f.name===n)?.content||'';
  assert.match(file('01-implementation.md'),/Change 1: Extend the existing section “1\. It Eliminates the “Manual Entry” Friction”/);
  assert.match(file('02-approved-copy.md'),/Placement: Extend the existing section/);
@@ -88,4 +88,24 @@ test('without review notes there is no fact-check file; earlier handoffs keep wo
  assert.equal(out.status,'HANDOFF_READY_FOR_EDITOR');
  assert.equal(out.manifest.growth_proposal,null);
  assert.equal(out.files.some(f=>f.name.startsWith('06-')),false);
+});
+
+test('the basis of each Growth section travels to the fact-check file, only while that section is in the approved text',()=>{
+ const p=proposalFromDecision(gate);
+ const basis=[{h2:p.sections[0].h2,answers:'How do I check AI citations manually?',evidence_level:'COMPETITOR_HEADINGS_ONLY',sources:['blog.hubspot.com: “Manually search your most important keywords.”'],warning:'Only competitor headings are behind this section.'},
+  {h2:'A section the editor removed',answers:'x',evidence_level:'COMPETITOR_TEXT',sources:[],warning:null}];
+ const out=handoff({...p,review:{...p.review,basis}});
+ const facts=out.files.find(f=>f.name==='06-fact-check-before-publishing.md').content;
+ assert.match(facts,/## What each section rests on/);
+ assert.match(facts,/answers “How do I check AI citations manually\?”\. Sources: blog\.hubspot\.com.*⚠ Only competitor headings/);
+ assert(!facts.includes('A section the editor removed'));
+});
+
+test('the evidence record of the writing run is part of the CMS package (07-evidence-dossier.json)',()=>{
+ const p=proposalFromDecision(gate);
+ const dossier={version:1,research:{focus_query:p.focus_query,researched_at:'2026-10-29T10:00:00.000Z',page_fingerprint:'abc'},items:[{item_id:'q-task_manual',sources:[{site:'blog.hubspot.com',url:'https://blog.hubspot.com/',passage:'p'}]}]};
+ const out=handoff({...p,review:{...p.review,dossier}});
+ const f=out.files.find(x=>x.name==='07-evidence-dossier.json');
+ assert(f,'dossier file present');assert.deepEqual(JSON.parse(f.content),dossier);
+ assert(!handoff(p).files.some(x=>x.name==='07-evidence-dossier.json'),'no dossier, no file');
 });

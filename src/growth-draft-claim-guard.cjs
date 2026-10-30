@@ -69,7 +69,14 @@ const CREDENTIAL=/\b(licen[sc]ed|insured|bonded|certified|accredited|warrant(?:y
 const FIRST_PERSON=/\b(we|our|ours|us|we're|we've|i|my)\b/i;
 const CLAIM_VERB=/\b(is|are|was|were|has|have|had|offers?|provides?|uses?|supports?|detects?|scores?|ranks?|guarantees?|delivers?|includes?|serves?|covers?|specializ\w+|works? with|installs?|repairs?|charges?|costs?|lasts?)\b/i;
 
-function numbersIn(text){return (String(text||'').match(/[$€£]\s?\d[\d,.]*|\d[\d,.]*\s?%|\b\d[\d,.]*\b/g)||[]).map(x=>x.replace(/[\s,]/g,'').replace(/\.$/,''))}
+// Technical notation is not a statistic: HTTP status codes in their context ("non-200", "HTTP 404", "301 redirects",
+// "status code 503") and tokens where letters and digits form one name (UTF-8, IPv4, H2, ISO-3166). Percentages, money,
+// counts and years stay checked: a year next to a figure is a source claim ("(March 2025), 68% ...").
+const TECHNICAL_NUMBER=[/\bnon-?[1-5]\d\d\b/gi,/\b(?:HTTP|status(?:\s+codes?)?|response(?:\s+codes?)?|error(?:\s+codes?)?)\s+[1-5]\d\d\b/gi,
+ /\b[1-5]\d\d(?:s|\s*(?:\/|or|and|,)\s*[1-5]\d\d)*\s+(?:status(?:\s+codes?)?|redirects?|errors?|responses?|codes?)\b/gi,/\b[45]\d\d\s+pages?\b/gi,
+ /\b[A-Za-z]+(?:-[A-Za-z]+)*-?\d+[A-Za-z]*\b/g];
+const withoutTechnicalNumbers=t=>TECHNICAL_NUMBER.reduce((x,re)=>x.replace(re,' '),String(t||''));
+function numbersIn(text){text=withoutTechnicalNumbers(text);return (String(text||'').match(/[$€£]\s?\d[\d,.]*|\d[\d,.]*\s?%|\b\d[\d,.]*\b/g)||[]).map(x=>x.replace(/[\s,]/g,'').replace(/\.$/,''))}
 function entitiesIn(sentence){
  // Capitalised words/phrases that are not the first word of the sentence.
  const out=[],words=sentence.split(/\s+/);
@@ -188,4 +195,4 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
  }
  return {ok:violations.length===0,violations,safe_rewrites:rewrites,safe_text:kept.join(' '),claim_review:review};
 }
-module.exports={assessDraftClaims,sentencesOf,contentRoots,numbersIn,AI_MECHANISM,ATTRIBUTION,headingMismatch};
+module.exports={withoutTechnicalNumbers,assessDraftClaims,sentencesOf,contentRoots,numbersIn,AI_MECHANISM,ATTRIBUTION,headingMismatch};

@@ -49,6 +49,30 @@ function proposalFromDecision(d){
   evidence_label:d.evidence_status?.label||null,intent_note:d.intent_scope?.note||null};
 }
 
+// A concept written for the owner's selection: stored like a checked proposal so the CMS handoff uses it unchanged,
+// but labelled as a selection concept and carrying the flagged sentences the editor must rewrite or remove.
+async function saveSelectionProposal(pool,{clientId,researchPageId=null,targetPageId,targetUrl,focusQuery,written}){
+ const sections=(written?.sections||[]).map(s=>({h2:clip(s.h2,200),text:clip((s.paragraphs||[]).join('\n\n'),8000),
+  placement:s.placement&&s.placement.section_heading?{mode:s.placement.mode==='EXTEND_SECTION'?'EXTEND_SECTION':'ADD_AFTER_SECTION',section_heading:clip(s.placement.section_heading,200)}:null,
+  task:clip(s.item_title,200)||null,item_id:s.item_id||null})).filter(s=>s.h2&&s.text);
+ if(!sections.length||!Number.isSafeInteger(Number(targetPageId)))return null;
+ const all=k=>[...new Set((written.sections||[]).flatMap(s=>s[k]||[]))].slice(0,20).map(v=>clip(v,400));
+ const review={needs_fact_check:all('needs_fact_check'),needs_owner_confirmation:all('needs_owner_confirmation'),needs_safety_review:all('needs_safety_review'),
+  flagged:(written.sections||[]).flatMap(s=>(s.flags||[]).map(f=>({h2:clip(s.h2,200),sentence:f.sentence?clip(f.sentence,400):null,code:clip(f.code,60),reason:clip(f.reason,300)}))).slice(0,30),
+  // What each section rests on (question, competitor sources, warning when only headings were behind it).
+  basis:(written.sections||[]).filter(s=>s.basis).map(s=>({h2:clip(s.h2,200),answers:clip(s.basis.answers,200),evidence_level:clip(s.basis.evidence_level,40),
+   sources:(s.basis.competitor_evidence||[]).slice(0,8).map(e=>clip(e.site+(e.heading?': “'+e.heading+'”':''),220)),warning:s.basis.warning?clip(s.basis.warning,300):null})).slice(0,10),
+  // The versioned evidence record of this run (growth-selected-writing evidenceDossier).
+  dossier:written.dossier&&typeof written.dossier==='object'?written.dossier:null,
+  requirements:['Rewrite or remove every flagged sentence.','Fact-check every statement against your own knowledge and sources before publishing.','Owner approval is required; nothing is published automatically.'],
+  competitor_sources:[]};
+ await ensureTable(pool);
+ return (await pool.query(`INSERT INTO tracker_growth_proposals
+   (tracker_client_id,research_page_id,target_page_id,target_url,focus_query,decision,sections,review,evidence_label,intent_note)
+   VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9,$10) RETURNING id,created_at`,
+  [clientId,researchPageId,Number(targetPageId),targetUrl,clip(focusQuery,200)||null,'IMPROVE_EXISTING',JSON.stringify(sections),JSON.stringify(review),
+   review.flagged.length?'SELECTION_CONCEPT_WITH_FLAGGED_SENTENCES':'SELECTION_CONCEPT_FOR_REVIEW',null])).rows[0];
+}
 async function saveProposal(pool,{clientId,researchPageId=null,targetPageId,decision}){
  const p=proposalFromDecision(decision);
  if(!p||!Number.isSafeInteger(Number(targetPageId))||Number(targetPageId)<1)return null;
@@ -72,4 +96,4 @@ async function proposalById(pool,{clientId,id}){
  catch(e){if(e.code==='42P01')return null;throw e}
 }
 
-module.exports={proposalFromDecision,saveProposal,latestProposal,proposalById,ensureTable};
+module.exports={proposalFromDecision,saveProposal,saveSelectionProposal,latestProposal,proposalById,ensureTable};

@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/growth-*.cjs'
       - 'src/tracker-growth-*.cjs'
+      - 'src/growth-free/store.cjs'
       - 'public/growth-cms-neutral-handoff.*'
       - 'public/growth-automatic-report-ui.js'
       - 'tests/growth-proposal-cms-handoff.test.cjs'
@@ -18,11 +19,18 @@ on:
       - 'tests/growth-report-54-regression.test.cjs'
       - 'tests/growth-task-meaning.test.cjs'
       - 'tests/growth-competitor-overview.test.cjs'
+      - 'tests/growth-selected-writing.test.cjs'
+      - 'tests/growth-selection-write-route.test.cjs'
+      - 'public/growth-gap-checklist.js'
       - 'public/growth-competitor-overview.js'
       - 'tests/helpers/**'
       - 'tests/fixtures/growth-report-55/**'
       - 'tests/fixtures/growth-report-54/**'
       - 'tests/growth-report-55-regression.test.cjs'
+      - 'tests/growth-report-56-regression.test.cjs'
+      - 'tests/growth-search-market.test.cjs'
+      - 'tests/growth-review-221-design.test.cjs'
+      - 'tests/growth-selection-store-postgres.test.cjs'
       - 'tests/fixtures/growth-report-55/**'
       - 'package.json'
       - '.github/workflows/growth-cms-handoff-chain.yml'
@@ -56,13 +64,17 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci --ignore-scripts
       - name: UI scripts parse
-        run: node --check public/growth-cms-neutral-handoff.js && node --check public/growth-automatic-report-ui.js && node --check public/growth-competitor-overview.js
+        run: node --check public/growth-cms-neutral-handoff.js && node --check public/growth-automatic-report-ui.js && node --check public/growth-competitor-overview.js && node --check public/growth-gap-checklist.js
       - name: Proposal store and CMS package (report 50)
-        run: node --test tests/growth-proposal-cms-handoff.test.cjs tests/growth-report-51-review-regression.test.cjs tests/growth-report-52-regression.test.cjs tests/growth-report-53-regression.test.cjs tests/growth-report-54-regression.test.cjs tests/growth-report-55-regression.test.cjs tests/growth-task-meaning.test.cjs tests/growth-competitor-overview.test.cjs
+        run: node --test tests/growth-proposal-cms-handoff.test.cjs tests/growth-report-51-review-regression.test.cjs tests/growth-report-52-regression.test.cjs tests/growth-report-53-regression.test.cjs tests/growth-report-54-regression.test.cjs tests/growth-report-55-regression.test.cjs tests/growth-report-56-regression.test.cjs tests/growth-search-market.test.cjs tests/growth-review-221-design.test.cjs tests/growth-task-meaning.test.cjs tests/growth-competitor-overview.test.cjs tests/growth-selected-writing.test.cjs tests/growth-selection-write-route.test.cjs
       - name: Research -> proposal -> CMS package -> publication without GSC -> Cockpit -> measurement (real PostgreSQL)
         env:
           GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e
         run: node --test tests/growth-cms-chain-postgres.test.cjs
+      - name: Selection and market stores (real PostgreSQL)
+        env:
+          GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e
+        run: node --test tests/growth-selection-store-postgres.test.cjs
       - name: Existing publication, export and Cockpit tests
         run: |
           node tests/tracker-growth-execution.test.cjs

@@ -17,10 +17,13 @@ const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-
 const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageTypeScope,blocks:pageBlocks,groupSections}=require('./growth-reader-task-coverage.cjs');
 const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-task-meaning.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
+const {buildGapList}=require('./growth-gap-list.cjs');
+const {writeForSelection,planBatch,remapSelection,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('./growth-selected-writing.cjs');
 const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
+const {deriveSearchLocale,validCountries}=require('./growth-search-locale.cjs');
 const {deriveEvidenceStatus}=require('./growth-evidence-status.cjs');
 const {identityFromFetch,identityAdvice}=require('./growth-url-identity.cjs');
 const excerptOf=html=>require('./growth-automatic-analysis.cjs').excerpt(html||'');
@@ -34,6 +37,10 @@ function markFinalDecision(report,decision){
  gd.final_decision={decision:decision.decision||null,blocker_code:decision.blocker_code||null,target_url:decision.target_url||null,
   copy_ready:decision.copy_ready===true,reason:decision.reason||null,next_action:decision.next_action||null};
  if(gd.primary_next_action)gd.primary_next_action={...gd.primary_next_action,stage:'RESEARCH_STARTING_POINT',superseded_by:'editorial_decision_gate'};
+ // One leading decision: earlier interim advice (e.g. DISTINCT_SPOKE_RESEARCH_REQUIRED) is kept for traceability, labelled.
+ const ag=report.autonomous_growth_opportunity;
+ if(ag&&typeof ag==='object')report.autonomous_growth_opportunity={...ag,stage:'EARLIER_RESEARCH_STEP',superseded_by:'editorial_decision_gate',
+  leading_decision:decision.decision||null};
 }
 // Signals WITHOUT a proven permanent redirect (status unknown, canonical, identical title/H1). They protect a locked source
 // page but are never reported as a 301.
@@ -47,7 +54,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -108,10 +115,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Market = the place the SOURCE page serves (its tracked keyword and URL), so a shorter GSC query keeps its locality.
   const market=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
    pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
+  // The country (and language) the page itself states, for pages outside a US-state market; reported with the research.
+  // A market the owner set for this page in the Tracker wins; headings, domain and hreflang are evidence only.
+  let configured=null;
+  if(targetQuery&&!market&&typeof loadPageMarkets==='function')configured=await Promise.resolve(loadPageMarkets({clientId:cid,pageId:pid})).catch(()=>null);
+  const locale=targetQuery&&!market?deriveSearchLocale({html:own.live?.html||page.saved_html||'',url:page.url,configured}):null;
   const discovery=!targetQuery?{
    status:'AMBIGUOUS_SITE_NAVIGATION_INTENT',source:'NONE',query:rawFocus,leads:[],
    reason:intentResolution.warning||'No search phrase is justified by observed page content.'
-  }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url,market}))
+  }:await Promise.resolve().then(()=>searchLive({query:targetQuery,ownUrl:page.url,market,locale}))
    .catch(e=>({source:'BING_PUBLIC_RSS',query:targetQuery,leads:[],status:'PUBLIC_SEARCH_UNAVAILABLE',
     reason:String(e?.code||'SEARCH_FAILED').slice(0,60)}));
   // Discussion listings remain in SERP evidence but should not displace readable
@@ -204,7 +216,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    report.growth_decision.primary_next_action.query=null;
    report.search.focus_query=null;
   }
-  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:targetQuery,market,
+  report.search_discovery={...discovery,leads:(discovery.leads||[]).slice(0,10),target_query:targetQuery,market,search_locale:locale,
    fetched_competitor_urls:comparisons.filter(x=>x.live).map(x=>x.url),competitor_fetch_log:fetchLog,competitor_fetch_summary:fetchSummary,
    discarded_unreadable_article_count:attempted.filter(x=>x.live&&!x.quality?.eligible).length};
   report.evidence_warnings=[
@@ -463,6 +475,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     average_position:Number(exactTargetRow.position),imported_at:exactTargetRow.imported_at||null,
     measurement_window:'UNKNOWN',source_url:proposed}:null
   };
+  // Page-verified Search Console queries of the destination, for the growth-potential view of the gap list (optional).
+  report.destination_gsc_queries=destinationGscRows.slice(0,150).map(x=>({query:String(x.query||'').slice(0,160),impressions:Number(x.impressions)||0,
+   clicks:Number(x.clicks)||0,position:Number(x.position)||null,imported_at:x.imported_at||null}));
   report.evidence_bound_example=buildGrowthEvidenceExample({report,decision:report.editorial_decision_gate,destinationGscRows});
   report.summary.live_checked=!!own.live;
   report.summary.competitor_fetch_attempts=attempted.length;
@@ -536,6 +551,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    completion={...base,status:'OWNER_PRODUCT_FACTS_REQUIRED',decision:gateDecision,draft:null,error_code:null};
   }else if(!Number.isSafeInteger(targetId)||targetId<1){
    completion={...base,status:'DESTINATION_TRACKER_PAGE_REQUIRED',draft:null};
+  }else if(req.body?.write===false){
+   // Hybrid flow: research and the full gap list first; text is written only for what the owner selects (/write).
+   completion={...base,status:'WRITING_ON_SELECTION',decision:gateDecision,draft:null,error_code:null};
   }else if(String(process.env.GROWTH_AI_DRAFTS||'').toLowerCase()==='off'){
    // Owner setting: research and confirmed reader questions only; the editor writes the text (CMS handoff takes own text).
    completion={...base,status:'EDITOR_WRITES',decision:gateDecision,draft:null,error_code:null};
@@ -656,7 +674,26 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    try{proposalRef=await recordProposal({clientId:v.clientId,researchPageId:v.id,targetPageId:targetId,decision:completeDecision})}
    catch(e){console.warn('[growth-auto-research] proposal not saved',String(e?.code||'unknown'))}
   }
+  // Every difference with the ranking pages, stored so a later selection writes from exactly this research.
+  const gapList=buildGapList(report);
+  let gapRef=null;
+  if(typeof recordGapList==='function'&&Number.isSafeInteger(targetId)&&targetId>0&&!(v.lockedPages||[]).some(x=>x.id===targetId||x.url===targetUrl)){
+   try{gapRef=await recordGapList({clientId:v.clientId,targetPageId:targetId,targetUrl,focusQuery:gapList.focus_query,list:gapList})}
+   catch(e){console.warn('[growth-auto-research] gap list not saved',String(e?.code||'unknown'))}
+  }
+  // The open part of this page's previous selection is carried over by stable item id (pre-ticked, never written by itself).
+  let carried=null;
+  if(gapRef&&typeof loadOpenSelection==='function'){
+   try{const open=await loadOpenSelection({clientId:v.clientId,targetPageId:targetId,beforeId:Number(gapRef.id)});
+    if(open&&open.pending.length){const m=remapSelection(open.pending_items||[],gapList.items);
+     // Shown ticked only; it becomes the new list's selection when the owner confirms it (the selection is never implied).
+     carried={from_gap_list_id:open.gap_list_id,pending_ids:m.carried,needs_confirmation:m.needs_confirmation,needs_remapping:m.needs_remapping,no_longer_found:m.no_longer_found,
+      note:'Items you selected earlier and that were not written yet. Ticked again only when the new research still shows the same need; nothing is written until you click.'};}}
+   catch(e){console.warn('[growth-auto-research] open selection not loaded',String(e?.code||'unknown'))}
+  }
   return res.set('Cache-Control','private, no-store').json({...report,
+   market_setting_url:typeof savePageMarkets==='function'?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id):null,
+   gap_list:{...gapList,carried_over:carried,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
     url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(targetId)}:null,
    editorial_decision_gate:completeDecision,
@@ -676,6 +713,119 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     draft_provider_status:completion.status,evidence_status:evidenceStatus,
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
  });
+ // The owner sets the page's target markets (ordered, the first is the main one). An empty list removes the setting.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/markets',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof savePageMarkets!=='function')return no(403,'OWNER_ONLY_MARKET_SETTING');
+  const raw=Array.isArray(req.body?.countries)?req.body.countries:String(req.body?.countries||'').split(/[\s,;]+/);
+  const countries=validCountries(raw.filter(Boolean));
+  if(raw.filter(Boolean).length&&!countries.length)return no(400,'USE_TWO_LETTER_COUNTRY_CODES');
+  let saved;
+  try{saved=await savePageMarkets({clientId:v.clientId,pageId:v.id,countries,language:req.body?.language})}catch{return no(503,'MARKET_SETTING_NOT_SAVED')}
+  // The next research run uses the new markets.
+  for(const k of [...cache.keys()])if(k.startsWith(v.clientId+':'+v.id+':'))cache.delete(k);
+  res.set('Cache-Control','private, no-store').json({success:true,markets:saved,research_rerun_required:true});
+ });
+ // The owner's deliberate selection (the ticks): the only call that replaces the selected items. Written items stay written.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/auto-research/selection',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof loadGapList!=='function'||typeof recordSelection!=='function')return no(403,'OWNER_ONLY_SELECTION');
+  let list;try{list=await loadGapList({clientId:v.clientId,id:req.body?.gap_list_id})}catch{return no(503,'GAP_LIST_UNAVAILABLE')}
+  if(!list)return no(404,'GAP_LIST_NOT_FOUND');
+  const ids=Array.isArray(req.body?.item_ids)?[...new Set(req.body.item_ids.map(String))]:[];
+  const known=(list.items||[]).filter(x=>ids.includes(String(x.id))).map(x=>x.id);
+  if(ids.length&&!known.length)return no(400,'SELECTION_NOT_IN_GAP_LIST');
+  try{await recordSelection({clientId:v.clientId,id:list.id,itemIds:known})}catch{return no(503,'SELECTION_NOT_SAVED')}
+  const done=new Set((list.written_ids||[]).map(String));
+  res.set('Cache-Control','private, no-store').json({success:true,gap_list_id:Number(list.id),selected:known,
+   written:known.filter(x=>done.has(String(x))),pending:known.filter(x=>!done.has(String(x)))});
+ });
+ // Writing for the owner's selection only: items come from the stored gap list (never from the browser), at most four per
+ // call, one repair attempt, then a marked concept. The result is stored as a proposal for the CMS handoff. Nothing is published.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/auto-research/write',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof completeOwnerDraft!=='function'||typeof loadGapList!=='function')return no(403,'OWNER_ONLY_WRITING');
+  const ids=Array.isArray(req.body?.item_ids)?[...new Set(req.body.item_ids.map(String))].slice(0,200):[];
+  if(!ids.length)return no(400,'SELECT_AT_LEAST_ONE_ITEM');
+  let list;
+  try{list=await loadGapList({clientId:v.clientId,id:req.body?.gap_list_id})}catch{return no(503,'GAP_LIST_UNAVAILABLE')}
+  if(!list)return no(404,'GAP_LIST_NOT_FOUND');
+  const target=(req.growth?.pages||[]).find(p=>Number(p.id)===Number(list.target_page_id));
+  if(!target||target.url!==list.target_url)return no(409,'GAP_LIST_PAGE_CHANGED');
+  if(target.case_study_active===true)return no(409,'CASE_STUDY_BASELINE_LOCKED');
+  const items=(list.items||[]).filter(x=>ids.includes(String(x.id)));
+  if(!items.length)return no(400,'SELECTION_NOT_IN_GAP_LIST');
+  if(!items.some(x=>x.writable))return no(400,'ONLY_PAGE_ELEMENTS_SELECTED');
+  // The list belongs to the page as researched: a changed page needs new research, never old advice (checked before any AI call).
+  if(list.source_fingerprint){
+   let live=null;try{live=await fetchLive(list.target_url)}catch{}
+   if(!live||typeof live.html!=='string')return no(409,'PAGE_NOT_READABLE_NOW_RERUN_RESEARCH');
+   if(pageFingerprint(live.html)!==list.source_fingerprint)return no(409,'PAGE_CHANGED_SINCE_RESEARCH_RERUN_RESEARCH');
+  }
+  // Writing never removes anything from the owner's selection: items it names are added (a deliberate change of the
+  // selection goes through the selection endpoint). The stored selection is what is written, in list order.
+  const stored=new Set((list.selected||[]).map(String));
+  if(typeof addToSelection==='function')await Promise.resolve(addToSelection({clientId:v.clientId,id:list.id,itemIds:items.map(x=>x.id)})).catch(()=>{});
+  else if(typeof recordSelection==='function'&&!stored.size)await Promise.resolve(recordSelection({clientId:v.clientId,id:list.id,itemIds:items.map(x=>x.id)})).catch(()=>{});
+  const selectedItems=(list.items||[]).filter(x=>stored.has(String(x.id))||ids.includes(String(x.id)));
+  // The whole selection is kept; this run writes the next four not yet written, the rest stays pending (said, not cut).
+  const plan=planBatch(selectedItems,req.body?.rewrite===true?[]:list.written_ids||[]);
+  if(!plan.batch.length){
+   const last=typeof lastStoredRun==='function'?await Promise.resolve(lastStoredRun({gapListId:list.id})).catch(()=>null):null;
+   return res.status(409).set('Cache-Control','private, no-store').json({success:false,code:'SELECTION_ALREADY_WRITTEN',
+    last_run:last?{run_id:Number(last.id),proposal_id:last.proposal_id?Number(last.proposal_id):null,
+     cms_url:last.proposal_id?'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id):null}:null});
+  }
+  // One active run per list: a repeated or parallel request gets the running one back, no second AI call.
+  let run=null;
+  if(typeof claimWritingRun==='function'){
+   let claim;try{claim=await claimWritingRun({clientId:v.clientId,gapListId:list.id,itemIds:plan.batch.map(x=>x.id)})}catch{return no(503,'WRITING_RUN_NOT_STARTED')}
+   if(claim.conflict)return res.status(409).set('Cache-Control','private, no-store').json({success:false,code:'WRITING_IN_PROGRESS',
+    run:{run_id:Number(claim.conflict.id),item_ids:claim.conflict.item_ids,started_at:claim.conflict.started_at}});
+   run=claim.run;
+  }
+  const generate=async research_context=>{
+   const outcome=await completeOwnerDraft({token:req.params.token,body:{page_id:Number(list.target_page_id),focus_query:list.focus_query||'',
+    growth_source_page_id:v.id,research_context,flag_fallback:true}});
+   const d=outcome?.body||{};
+   if(outcome.statusCode!==200||d.success!==true||d.canonical_url!==list.target_url||Number(d.page_id)!==Number(list.target_page_id))
+    return {status:d.code||'WRITER_UNAVAILABLE'};
+   return {status:d.status,draft:d.draft||null,flags:d.flags||[],source_text:d.source_text||''};
+  };
+  let written;
+  try{written=await writeForSelection({items:plan.batch,targetUrl:list.target_url,focusQuery:list.focus_query||'',generate,
+   research:list.research||null,sourceFingerprint:list.source_fingerprint||null})}
+  catch(e){if(run&&typeof failWritingRun==='function')await Promise.resolve(failWritingRun({runId:run.id,error:'WRITER_ERROR'})).catch(()=>{});throw e}
+  // An item is done only when its concept AND evidence dossier are stored as a proposal, in the same transaction.
+  const linked=(written.sections||[]).map(s=>s.item_id);
+  let proposalRef=null,storageError=null;
+  if(linked.length){
+   const proposal={researchPageId:v.id,targetPageId:Number(list.target_page_id),targetUrl:list.target_url,focusQuery:list.focus_query,written};
+   if(typeof storeWritingRun==='function'){
+    try{proposalRef=(await storeWritingRun({clientId:v.clientId,runId:run?.id||null,gapListId:list.id,itemIds:linked,proposal})).proposal}
+    catch(e){storageError=String(e?.code||'STORE_FAILED').slice(0,60);console.warn('[growth-auto-research] selection concept not stored',storageError)}
+   }else if(typeof recordSelectionProposal==='function'){
+    // Without the transactional store (tests, older wiring): store first, mark written only after it succeeded.
+    try{proposalRef=await recordSelectionProposal({clientId:v.clientId,...proposal});
+     if(proposalRef&&typeof recordWritten==='function')await recordWritten({clientId:v.clientId,id:list.id,itemIds:linked})}
+    catch(e){storageError=String(e?.code||'STORE_FAILED').slice(0,60);console.warn('[growth-auto-research] selection concept not stored',storageError)}
+   }
+  }
+  if(run&&!proposalRef&&typeof failWritingRun==='function')await Promise.resolve(failWritingRun({runId:run.id,error:storageError||written.writer_status||'NOT_WRITTEN'})).catch(()=>{});
+  const done=proposalRef?linked:[];
+  const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));
+  if(storageError)written.storage_error='CONCEPT_NOT_STORED_NOTHING_MARKED_WRITTEN';
+  res.set('Cache-Control','private, no-store').json({success:true,...written,gap_list_id:Number(list.id),selected:selectedItems.map(x=>x.id),
+   run_id:run?Number(run.id):null,stored:!!proposalRef,
+   batch:plan.batch.map(x=>x.id),already_written:plan.already_written,pending,
+   batch_note:pending.length?pending.length+' selected item(s) are kept for the next run (at most '+MAX_WRITE_ITEMS+' per run).':null,
+   published:false,copy_ready:false,
+   cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:Number(list.target_page_id),
+    url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)}:null});
+ });
  app.get('/track/:token/growth/auto-research',data,(req,res)=>{
   const v=check(req,res);if(!v)return;
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
@@ -693,7 +843,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    'button{background:#1d4ed8;color:white;border:0;padding:10px 14px;border-radius:8px;font:inherit;cursor:pointer}',
    'button:disabled{opacity:.5}.info{color:#5b6475;font-size:13px}.error{color:#b42318}',
    'pre{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:8px 0}@media(max-width:600px){body{padding:12px}section{padding:12px}}',
-   '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-competitor-overview.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
+   '</style><script defer src="/tracker-growth-ui.js"></script><script defer src="/growth-competitor-overview.js"></script><script defer src="/growth-gap-checklist.js"></script><script defer src="/growth-automatic-report-ui.js"></script></head>',
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',

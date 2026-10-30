@@ -140,13 +140,14 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    }catch(_err){topics=[];}
    const draftKey=[v.client.id,v.page.id,sourceOrigin,v.page.case_study_active?'locked':'unlocked',
     sha(String(original||'')),focus,topics.join('|'),sha(JSON.stringify(liveResearch.observations)),sha(JSON.stringify(liveResearch.reader_task||null)),
-    sha(JSON.stringify(gscContext))].join(':');
+    sha(JSON.stringify(gscContext)),req.body?.flag_fallback===true?'flag':'strict'].join(':');
    const cached=draftCache.get(draftKey);
    let out;
    if(cached&&Date.now()-cached.created<DRAFT_TTL)out=await cached.promise;
    else{
     const promise=Promise.resolve().then(()=>generateDraft({sourceHtml:original,pageUrl:v.page.url,focusQuery:focus,topics,
-     researchObservations:liveResearch.observations,gscContext,readerTask:liveResearch.reader_task||null}));
+     researchObservations:liveResearch.observations,gscContext,readerTask:liveResearch.reader_task||null,
+     fallbackFlagged:req.body?.flag_fallback===true}));
     draftCache.set(draftKey,{created:Date.now(),promise});
     try{out=await promise;
      if(out?.status!=='AI_DRAFT_REVIEW_REQUIRED')draftCache.delete(draftKey);
@@ -162,7 +163,9 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     historical_snapshot_checked_at:snapshotCheckedAt,
     live_competitor_observations_used:liveResearch.observations.length,
     research_context_scope:liveResearch.scope,
-    research_context_status:liveResearch.status,gsc_context:gscContext});
+    research_context_status:liveResearch.status,gsc_context:gscContext,
+    // Writing for an owner selection checks the text against the same page source the writer used.
+    ...(req.body?.flag_fallback===true?{source_text:sourceFacts(original).text}:{})});
   }catch(e){console.warn('[growth-editor-draft]',String(e?.code||'UNAVAILABLE'));
    return res.status(503).json({success:false,code:'EDITOR_DRAFT_TEMPORARILY_UNAVAILABLE'});}
  };
@@ -226,7 +229,8 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     language:req.body?.language||'en'
    });
    if(result.status!=='HANDOFF_READY_FOR_EDITOR')
-    return res.status(409).set('Cache-Control','no-store').json({success:false,code:'EDITOR_REVIEW_REQUIRED',issues:result.issues,warnings:result.warnings,publication_allowed:false});
+    return res.status(409).set('Cache-Control','no-store').json({success:false,code:'EDITOR_REVIEW_REQUIRED',issues:result.issues,warnings:result.warnings,
+     ...(result.blocked_details?{blocked_details:result.blocked_details}:{}),publication_allowed:false});
    if(manualSource){
     result.manifest.source_provenance='OWNER_SUPPLIED_UNVERIFIED';
     result.manifest.source_snapshot_preserved=false;

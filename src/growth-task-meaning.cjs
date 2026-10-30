@@ -6,8 +6,9 @@
 // model in ONE call per research run, and a second call per owner draft (does each section answer its question).
 //
 // Every judgement is checked against the input: only known task codes, only hosts that support the task, only exact
-// page headings. Anything missing, invalid or unavailable is NOT a confirmation: tasks stay unverified (fail closed),
-// and the gate then reports TASK_MEANING_NOT_VERIFIED so the editor writes the text.
+// page headings. The judgement ADVISES: a missing, invalid or unavailable judgement never blocks research; the
+// word-matched candidates stay, labelled NOT_VERIFIED, and the evidence status says the meaning was not verified.
+// Only an actual judgement "different questions" removes a candidate from the automatic plan (the editor list keeps it).
 const clip=(x,n)=>String(x==null?'':x).replace(/\s+/g,' ').trim().slice(0,n);
 const PAGE_ANSWERS=new Set(['YES','PARTLY','NO']);
 const STATUS_FOR={YES:'COVERED',PARTLY:'PARTIAL',NO:'NOT_OBSERVED'};
@@ -77,15 +78,15 @@ async function judgeTaskMeaning({query,coverage,pageSections,model=geminiModel()
   return {...validateTaskVerdicts(raw,input),model:model.model||null};
  }catch(e){return {status:'JUDGE_UNAVAILABLE',error:String(e?.code||'JUDGE_FAILED').slice(0,40),verdicts:{}}}
 }
-// Writes the judgement into the coverage the gate reads. Only a confirmed same question keeps a task supported; the
-// page verdict replaces the word-based destination status. Without a judgement nothing is confirmed.
+// Writes the judgement into the coverage the gate reads. A confirmed same question carries its reader question and the
+// page verdict; "different questions" drops the candidate; without a usable verdict the candidate stays, NOT_VERIFIED.
 function applyTaskMeaning(coverage,judgement){
  if(!coverage||!Array.isArray(coverage.tasks))return coverage;
  const candidates=coverage.tasks.filter(t=>t.supported_by_competitors);
  for(const t of candidates){
   t.word_match_supported=true;
   const v=judgement.status==='JUDGED'?judgement.verdicts[t.code]:null;
-  if(!v){t.supported_by_competitors=false;t.meaning={status:'NOT_VERIFIED'};continue}
+  if(!v){t.meaning={status:'NOT_VERIFIED'};continue}
   if(!v.same_question){t.supported_by_competitors=false;t.meaning={status:'DIFFERENT_QUESTIONS',reason:v.reason};continue}
   t.meaning={status:'SAME_QUESTION',reader_question:v.reader_question,supporting_hosts:v.supporting_hosts,reason:v.reason};
   t.reader_question=v.reader_question;
@@ -130,13 +131,13 @@ async function judgeDraftAnswers({sections,tasks,model=geminiModel()}={}){
   return {status:'JUDGED',verdicts,model:model.model||null};
  }catch(e){return {status:'JUDGE_UNAVAILABLE',error:String(e?.code||'JUDGE_FAILED').slice(0,40),verdicts:{}}}
 }
-// For a task confirmed by the meaning check, a section only passes when the answer check says it answers the question.
+// For a task confirmed by the meaning check, a section is rejected only when the answer check actually judged that it
+// does not answer the question. An unavailable check is advice that is missing, not a reason to block (no rejection).
 function answerCheckFor(task,answerCheck,h2){
  if(!task?.reader_question)return null;
  const v=answerCheck?.status==='JUDGED'?answerCheck.verdicts?.[answerKey(h2,task.code)]:null;
- if(v&&v.answers===true)return null;
- return v?{code:'DRAFT_DOES_NOT_ANSWER_QUESTION',reason:'The section does not answer the reader question “'+task.reader_question+'”: '+v.reason}
-  :{code:'DRAFT_ANSWER_NOT_VERIFIED',reason:'It could not be checked whether the section answers “'+task.reader_question+'” ('+(answerCheck?.status||'NOT_RUN')+').'};
+ if(!v||v.answers===true)return null;
+ return {code:'DRAFT_DOES_NOT_ANSWER_QUESTION',reason:'The section does not answer the reader question “'+task.reader_question+'”: '+v.reason};
 }
 
 module.exports={answerKey,geminiModel,judgeTaskMeaning,applyTaskMeaning,validateTaskVerdicts,taskJudgeInput,judgeDraftAnswers,answerCheckFor,STATUS_FOR};

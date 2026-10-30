@@ -25,8 +25,10 @@ const OWN=ownHtml('Roof Repair in Lodi, NJ'),LOCKED=ownHtml('Roof Repair in Lodi
 const comp=(h,rows)=>'<html><body><article><h1>'+h+'</h1>'+rows.map(([a,b])=>'<h2>'+a+'</h2><p>'+b+'</p>').join('')+'</article></body></html>';
 const estimateA='A repair estimate lists materials, labour and access. The estimate should explain how hidden decking damage changes the estimate, and a written estimate lets you compare quotes from different crews before you approve any work on the property, which is why each estimate should be itemised clearly.';
 const estimateB='Ask the contractor for a written estimate that separates materials from labour. A clear estimate also states what happens if hidden damage appears, so the final invoice never surprises you after the old layer is removed from the roof, and an itemised estimate makes that comparison easy.';
+// SYNTHETIC second section (step 11 needs two writable items).
+const flashingA='Flashing seals the joints around chimneys, vents and skylights. When flashing cracks or lifts, water runs behind it and the decking rots slowly, so a crew should check every joint and reseal or replace the flashing before the leak spreads inside the house.';
 const pages={[URL_]:OWN,[LOCKED_URL]:LOCKED,
- 'https://roofer-a.example/roof-repair-nj/':comp('Roof repair in Paterson, NJ',[['How a repair estimate is built',estimateA]]),
+ 'https://roofer-a.example/roof-repair-nj/':comp('Roof repair in Paterson, NJ',[['How a repair estimate is built',estimateA],['When a roof needs flashing work',flashingA]]),
  'https://roofer-b.example/services/roof-repair/':comp('Roof repairs in Bergen County, NJ',[['What goes into an estimate',estimateB]])};
 const leads=[['https://roofer-a.example/roof-repair-nj/','Roof Repair in Paterson, NJ | Roofer A'],['https://roofer-b.example/services/roof-repair/','Roof Repairs in Bergen County NJ - Roofer B'],
  ['https://roofer-c.example/near-me/','Emergency Roof Repair Near Me | Roofer C'],['https://roofer-d.example/hackensack/','Roof Repair Contractors in Hackensack, NJ']]
@@ -38,7 +40,17 @@ const fetchLive=async(url,opts)=>{outbound.push({url,method:(opts&&opts.method)|
  if(!html)throw Object.assign(Error('unavailable'),{code:'PUBLIC_HTML_UNAVAILABLE'});
  return {html,final_url:url,retrieved_at:new Date().toISOString(),truncated:false,source:'LIVE_PUBLIC_HTTPS'}};
 const searchLive=async(args)=>{searches.push(args);return {status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query:'roof repair lodi nj',leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:new Date().toISOString()}};
-const generateDraft=async(args)=>{aiCalls.push(args.pageUrl);return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:null,meta_description:null,sections:[DRAFT]}}};
+// Writer behaviour for step 11 (interrupted and slow runs): normal unless a test sets it.
+const writer={mode:'normal',gate:null};
+const generateDraft=async(args)=>{aiCalls.push(args.pageUrl);
+ if(args.fallbackFlagged&&writer.mode==='fail')throw Object.assign(Error('writer down'),{code:'WRITER_DOWN'});
+ if(args.fallbackFlagged&&writer.mode==='slow')await writer.gate;
+
+ // Writing for an owner selection (fallbackFlagged): one section per selected task, one sentence with an unsourced figure.
+ if(args.fallbackFlagged)return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:null,meta_description:null,sections:(args.readerTask?.tasks||[]).map(t=>({task_code:t.code,
+  h2:'How to read a repair estimate before you sign',paragraphs:['Ask for a written estimate that lists materials, labour and access separately, and ask what changes if hidden damage is found once work starts.',
+  'About 68% of homeowners never compare two estimates, so ask a second crew for a written quote before you approve the work.']}))}};
+ return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{seo_title:null,meta_description:null,sections:[DRAFT]}}};
 
 let pool,server,base,ids={};
 const SCHEMA=`
@@ -52,7 +64,7 @@ CREATE TABLE tracker_snapshots(id BIGSERIAL PRIMARY KEY,page_id BIGINT,checked_a
 CREATE TABLE tracker_ai_evidence(id BIGSERIAL PRIMARY KEY,page_id BIGINT,tracker_client_id BIGINT,engine TEXT,evidence_method TEXT,brand_recommended BOOLEAN,
  domain_cited BOOLEAN,exact_page_cited BOOLEAN,citation_urls JSONB,verified_at TIMESTAMPTZ,revision_cycle INTEGER,is_cleared BOOLEAN);`;
 const TABLES=['tracker_clients','tracker_pages','tracker_case_studies','tracker_gsc_queries','tracker_snapshots','tracker_ai_evidence',
- 'tracker_growth_proposals','tracker_growth_publications','tracker_growth_gsc_windows','tracker_growth_recommendations'];
+ 'tracker_growth_proposals','tracker_growth_publications','tracker_growth_gsc_windows','tracker_growth_recommendations','tracker_growth_gap_lists','tracker_growth_page_markets','tracker_growth_writing_runs'];
 
 test.before(async()=>{
  pool=new Pool({connectionString:DB});
@@ -208,6 +220,121 @@ test('8. measurement: no number until both 28-day Search Console windows exist, 
  assert.match(rec.reason,/not proven/);
  const g=await api('GET','/api/tracker-client/owner-tok/growth');
  assert.equal(g.body.measurement_summary.measured,1);assert.equal(g.body.measurement_summary.measured_click_change,7);
+});
+
+test('10. hybrid: research without writing gives the full gap list; text only for the owner selection, flagged, to the CMS',async()=>{
+ const before=aiCalls.length;
+ const r=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
+ assert.equal(r.status,200);
+ assert.equal(aiCalls.length,before,'opening the research writes nothing');
+ assert.equal(r.body.editorial_review_draft.status,'WRITING_ON_SELECTION');
+ const gl=r.body.gap_list;
+ assert(gl.id>0&&gl.items.length>0,JSON.stringify(gl).slice(0,300));
+ const stored=(await pool.query('SELECT items,selected FROM tracker_growth_gap_lists WHERE id=$1',[gl.id])).rows[0];
+ assert.equal(stored.items.length,gl.items.length);assert.equal(stored.selected,null);
+ const pick=gl.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
+ // Only the owner, only ids from the stored list, never a locked page.
+ assert.equal((await api('POST',gl.write_url.replace('owner-tok','share-tok'),{gap_list_id:gl.id,item_ids:pick})).status,403);
+ assert.equal((await api('POST',gl.write_url,{gap_list_id:gl.id,item_ids:['invented-id']})).status,400);
+ const w=await api('POST',gl.write_url,{gap_list_id:gl.id,item_ids:pick});
+ assert.equal(w.status,200,JSON.stringify(w.body).slice(0,300));
+ assert.equal(w.body.copy_ready,false);assert.equal(w.body.published,false);
+ assert.equal(w.body.sections.length,1);assert.equal(w.body.sections[0].item_id,pick[0]);
+ const flags=w.body.sections[0].flags;
+ assert(flags.some(f=>f.code==='UNSOURCED_NUMBER'&&/68%/.test(f.sentence)),JSON.stringify(flags));
+ assert.equal(w.body.sections[0].status,'FLAGGED_FOR_EDITOR');
+ assert.deepEqual((await pool.query('SELECT selected FROM tracker_growth_gap_lists WHERE id=$1',[gl.id])).rows[0].selected,pick);
+ // The concept is the newest proposal for the CMS page, with the flagged sentence as a must-rewrite item.
+ const prop=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body.proposal;
+ assert.equal(prop.id,w.body.cms_handoff.proposal_id);assert.equal(prop.evidence_label,'SELECTION_CONCEPT_WITH_FLAGGED_SENTENCES');
+ assert(prop.review.flagged.some(f=>/68%/.test(f.sentence)));
+ const exportWith=sections=>api('POST','/api/tracker-client/owner-tok/growth/cms-export',{page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
+  focus_query:prop.focus_query||'roof repair lodi nj',seo_title:'Roof Repair in Lodi, NJ',meta_description:'Roof repair in Lodi, NJ: how to read the estimate.',growth_proposal_id:prop.id,review_notes:prop.review,
+  approved_changes:sections.map(x=>({approved:true,evidence_ref:'growth_proposal:'+prop.id,html:sectionHtml(x),placement:x.placement})),format:'json'});
+ // A tick is not proof: the flagged sentence still in the text refuses the package and names it.
+ const unchanged=await exportWith(prop.sections);
+ assert.equal(unchanged.status,409);assert.deepEqual(unchanged.body.issues,['FLAGGED_CONTENT_NOT_RESOLVED']);
+ assert(unchanged.body.blocked_details.some(b=>b.code==='FLAGGED_SENTENCE_STILL_IN_TEXT'&&/68%/.test(b.sentence)));
+ // Rewriting it into another unsourced figure is caught by the same checks again.
+ const reworded=prop.sections.map(x=>({...x,text:x.text.replace(/About 68% of homeowners[^.]*\./,'Around 70% of homeowners skip a second quote, so ask for one before you approve the work.')}));
+ const again=await exportWith(reworded);
+ assert.equal(again.status,409);assert(again.body.blocked_details.some(b=>b.code==='UNRESOLVED_UNSOURCED_NUMBER'&&/70%/.test(b.sentence)),JSON.stringify(again.body));
+ // Resolved: the flagged sentence removed. Only now the package is made, recording what was resolved.
+ const resolved=prop.sections.map(x=>({...x,text:x.text.replace(/\s*About 68% of homeowners[^.]*\./,'').trim()+' Ask a second crew for a written quote before you approve the work.'}));
+ const pack=await exportWith(resolved);
+ assert.equal(pack.status,200,JSON.stringify(pack.body).slice(0,300));
+ const facts=pack.body.files.find(f=>f.name==='06-fact-check-before-publishing.md').content;
+ assert.match(facts,/Flagged by Growth — resolved in this text \(checked\)[\s\S]*68%/);
+ assert.equal(pack.body.manifest.review_items.flagged,1);
+ // The protected Case Study page never gets a gap list to write from.
+ const locked=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.locked,{page_id:ids.locked,write:false});
+ assert(locked.body.gap_list.id===null||locked.body.gap_list.target_page_id!==ids.locked);
+ assert.equal(await pageHtml(ids.page),OWN,'writing never changes the stored page');
+});
+
+test('11. writing rounds are reliable: interrupted, failed storage, parallel clicks, partial runs, retry, new research',async()=>{
+ const r=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
+ const gl=r.body.gap_list,sel=gl.write_url.replace('/auto-research/write','/auto-research/selection');
+ const picks=gl.items.filter(x=>x.writable).slice(0,2).map(x=>x.id);
+ assert.equal(picks.length,2,'the synthetic research has two writable items');
+ const state=async()=>(await pool.query('SELECT selected,written_ids FROM tracker_growth_gap_lists WHERE id=$1',[gl.id])).rows[0];
+ const runs=async()=>(await pool.query('SELECT status,error,proposal_id FROM tracker_growth_writing_runs WHERE gap_list_id=$1 ORDER BY id',[gl.id])).rows;
+ const proposals=async()=>(await pool.query('SELECT count(*)::int n FROM tracker_growth_proposals')).rows[0].n;
+ const write=body=>api('POST',gl.write_url,{gap_list_id:gl.id,...body});
+ // The deliberate selection: both items.
+ assert.equal((await api('POST',sel,{gap_list_id:gl.id,item_ids:picks})).status,200);
+ // a. The writer fails: nothing is written or marked done; the run is FAILED; the whole batch stays pending.
+ writer.mode='fail';
+ const failed=await write({item_ids:picks});
+ assert.equal(failed.status,200);assert.equal(failed.body.status,'NOT_WRITTEN');assert.deepEqual(failed.body.pending.map(x=>x.item_id),picks);
+ assert.equal((await state()).written_ids,null);assert.equal((await runs()).at(-1).status,'FAILED');
+ // b. Storage fails after the AI wrote: the transaction rolls back; nothing is marked written; the items stay pending.
+ writer.mode='normal';const before=await proposals();
+ await pool.query('ALTER TABLE tracker_growth_proposals RENAME TO tracker_growth_proposals_off');
+ await pool.query('CREATE TABLE tracker_growth_proposals (id BIGSERIAL PRIMARY KEY)');
+ const lost=await write({item_ids:picks});
+ await pool.query('DROP TABLE tracker_growth_proposals');await pool.query('ALTER TABLE tracker_growth_proposals_off RENAME TO tracker_growth_proposals');
+ assert.equal(lost.body.stored,false);assert.equal(lost.body.storage_error,'CONCEPT_NOT_STORED_NOTHING_MARKED_WRITTEN');assert.equal(lost.body.cms_handoff,null);
+ assert.deepEqual(lost.body.pending.map(x=>x.item_id),picks);assert.equal((await state()).written_ids,null);assert.equal(await proposals(),before);
+ assert.equal((await runs()).at(-1).status,'FAILED');
+ // c. Retry after the storage failure: stored now, with no new AI call (the identical draft is reused).
+ const callsBefore=aiCalls.length;
+ const retry=await write({item_ids:picks});
+ assert.equal(retry.status,200);assert.equal(retry.body.stored,true);assert.equal(aiCalls.length,callsBefore,'no second AI call for the same draft');
+ assert.deepEqual([...(await state()).written_ids].sort(),[...picks].sort());assert.equal(await proposals(),before+1);
+ assert.equal((await runs()).at(-1).status,'STORED');assert.equal(Number((await runs()).at(-1).proposal_id),retry.body.cms_handoff.proposal_id);
+ // d. Again: nothing is written twice; the stored run and its CMS package are returned.
+ const again=await write({item_ids:picks});
+ assert.equal(again.status,409);assert.equal(again.body.code,'SELECTION_ALREADY_WRITTEN');assert.equal(again.body.last_run.proposal_id,retry.body.cms_handoff.proposal_id);
+ // e. A writing request naming fewer items never removes any from the selection.
+ await write({item_ids:[picks[0]]});
+ assert.deepEqual((await state()).selected,picks);
+ // f. New research of the page: nothing open is carried over (everything was written).
+ const r2=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
+ const g2=r2.body.gap_list,write2=body=>api('POST',g2.write_url,{gap_list_id:g2.id,...body});
+ assert.equal(g2.carried_over,null);
+ // g. Two clicks at once on the new list: one run writes, the other gets that run back; one AI call. (The first item
+ //    alone was drafted in step 10 and would come from the draft cache, so the second item is used.)
+ await api('POST',sel,{gap_list_id:g2.id,item_ids:[picks[1]]});
+ writer.mode='slow';let open;writer.gate=new Promise(ok=>{open=ok});const calls=aiCalls.length;
+ const first=write2({item_ids:[picks[1]]});
+ for(let i=0;i<100&&aiCalls.length===calls;i++)await new Promise(ok=>setTimeout(ok,20));
+ assert.equal(aiCalls.length,calls+1,'the first run is writing');
+ const second=await write2({item_ids:[picks[1]]});
+ assert.equal(second.status,409);assert.equal(second.body.code,'WRITING_IN_PROGRESS');assert.deepEqual(second.body.run.item_ids,[picks[1]]);
+ open();const done=await first;writer.mode='normal';
+ assert.equal(done.status,200);assert.equal(done.body.stored,true);assert.equal(aiCalls.length,calls+1,'one AI call');
+ // h. The owner adds the other item; that run is interrupted (storage fails): the second stays written, the first pending.
+ await api('POST',sel,{gap_list_id:g2.id,item_ids:picks});
+ await pool.query('ALTER TABLE tracker_growth_proposals RENAME TO tracker_growth_proposals_off');
+ await pool.query('CREATE TABLE tracker_growth_proposals (id BIGSERIAL PRIMARY KEY)');
+ const cut=await write2({item_ids:picks});
+ await pool.query('DROP TABLE tracker_growth_proposals');await pool.query('ALTER TABLE tracker_growth_proposals_off RENAME TO tracker_growth_proposals');
+ assert.deepEqual(cut.body.batch,[picks[0]]);assert.equal(cut.body.stored,false);assert.deepEqual(cut.body.pending.map(x=>x.item_id),[picks[0]]);
+ // i. The next research run carries the open item over (same need: ticked again), without selecting it by itself.
+ const r3=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
+ assert.deepEqual(r3.body.gap_list.carried_over.pending_ids,[picks[0]]);assert.deepEqual(r3.body.gap_list.carried_over.needs_remapping,[]);
+ assert.equal((await pool.query('SELECT selected FROM tracker_growth_gap_lists WHERE id=$1',[r3.body.gap_list.id])).rows[0].selected,null,'carried over, not selected by itself');
 });
 
 test('9. nothing outside the Growth tables was written',async()=>{

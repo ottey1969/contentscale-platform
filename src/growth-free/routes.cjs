@@ -7,6 +7,10 @@ const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
+const {writeForSelection,planBatch,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
+const {mergeWritten,viewOf}=require('./written.cjs');
+const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded-editor.cjs');
+const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -53,6 +57,9 @@ function freeGrowthDefaults(env){
   contactUrl:/^https:\/\//.test(env.GROWTH_FREE_CONTACT_URL||'')?env.GROWTH_FREE_CONTACT_URL:'',
   privacyUrl:/^https?:\/\//.test(env.GROWTH_FREE_PRIVACY_URL||'')?env.GROWTH_FREE_PRIVACY_URL:'',
   hireWebhook:/^https:\/\//.test(env.GROWTH_FREE_HIRE_WEBHOOK_URL||'')?env.GROWTH_FREE_HIRE_WEBHOOK_URL:'',
+  // Writing concepts for a selection costs an AI call: off | admin (only you) | invited (you + invited people) | all.
+  writing:['off','admin','invited','all'].includes(String(env.GROWTH_FREE_WRITING||'').toLowerCase())?String(env.GROWTH_FREE_WRITING).toLowerCase():'admin',
+  writeLimit:Math.max(1,int(env.GROWTH_FREE_WRITES_PER_CHECK,3)),
   serviceText:env.GROWTH_FREE_SERVICE_TEXT||'I write the missing sections in your voice, check every fact with you, publish nothing without your approval and measure the result in Search Console after 28 days.'
  };
 }
@@ -143,26 +150,57 @@ function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
   try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();render(d);var el=document.getElementById('ai');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
 var GAPS=null;
-var GAP_GROUPS=[['MISSING_TOPIC','Not on your page'],['PARTIAL_TOPIC','Partly on your page'],['PAGE_ELEMENT','Page elements the ranking pages have'],['UNMATCHED_TOPIC','Could not be matched to your page'],['COMPETITOR_SECTION','Sections on the ranking pages (not grouped)']];
-function gapsHtml(g){if(!g||g.status!=='OBSERVED')return '';
+var GAP_GROUPS=[];
+function exampleText(x){return function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}}
+function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.groups||[]).map(function(x){return [x.id,x.label]});
  var h='<h2 id="gaps">Choose what goes on your site</h2><p class="lead">'+esc(g.note)+'</p><p class="muted">Compared with '+esc(g.ranking_pages_read)+' readable ranking page(s). '+(g.items.length?g.items.length+' difference(s) found.':'No difference found.')+'</p>';
+ var rec=(g.items||[]).filter(function(x){return x.recommended});
+ if(rec.length)h+='<p class="note">Recommended first ('+rec.length+'): '+rec.map(function(x){return esc(x.title)}).join(' · ')+'. A research priority (supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI), not a growth forecast. You decide; you can select more.</p>';
+ if((g.unique_content||[]).length)h+='<h3>Unique content worth reviewing and preserving ('+g.unique_content.length+')</h3><ul>'+g.unique_content.map(function(s){return '<li>'+esc(s.heading)+'</li>'}).join('')+'</ul><p class="muted">Only on your page among the ranking pages read (compared by heading words). Unique is not proof that it is correct, current or strong. It is not rewritten.</p>';
  if(!g.items.length)return h;
  GAP_GROUPS.forEach(function(gr){var list=g.items.filter(function(x){return x.group===gr[0]});if(!list.length)return;
   h+='<h3>'+esc(gr[1])+' ('+list.length+')</h3>';
-  list.forEach(function(x){h+='<label class="check card gap"><input type="checkbox" class="gapPick" value="'+esc(x.id)+'"><span><strong>'+esc(x.title)+'</strong> <small>'+esc(x.status)+(x.ranking_pages?' · on '+esc(x.ranking_pages)+(x.of?' of '+esc(x.of):'')+' ranking page(s)':'')+(x.your_section?' · closest on your page: “'+esc(x.your_section)+'”':'')+'</small>'+
-   (x.examples.length?'<br><small>'+x.examples.map(function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}).join(' · ')+'</small>':'')+'</span></label>'})});
+  list.forEach(function(x){h+='<label class="check card gap"><input type="checkbox" class="gapPick" value="'+esc(x.id)+'"><span>'+(x.recommended?'<mark>Recommended</mark> ':'')+'<strong>'+esc(x.title)+'</strong> <small>'+esc(x.status)+(x.ranking_pages?' · on '+esc(x.ranking_pages)+(x.of?' of '+esc(x.of):'')+' ranking page(s)':'')+(x.your_section?' · closest on your page: “'+esc(x.your_section)+'”':'')+'</small>'+
+   (x.priority&&x.priority.suggested_action?'<br><small>Action: '+esc(x.priority.suggested_action)+'</small>':'')+(x.priority&&x.priority.why?'<br><small>Why: '+esc(x.priority.why.join(' · '))+'</small>':'')+
+   (x.growth_potential&&x.growth_potential.search_demand?'<br><small>'+(x.growth_potential.search_demand.status==='NOT_MEASURED'?'Search demand: not measured (not low)':esc(x.growth_potential.search_demand.note))+' · business fit: your decision</small>':'')+
+   (x.possible_overlap||[]).map(function(o){return '<br><small>May overlap with “'+esc(o.title)+'” (shared words, not confirmed)</small>'}).join('')+
+   (x.examples.length?'<br><small>'+x.examples.slice(0,3).map(exampleText(x)).join(' · ')+'</small>'+(x.examples.length>3?'<details><summary><small>'+(x.examples.length-3)+' more source(s)</small></summary><small>'+x.examples.slice(3).map(exampleText(x)).join(' · ')+'</small></details>':''):'')+'</span></label>'})});
  h+='<p><strong id="gapCount">0 selected</strong></p><p><button type="button" id="gapAll" class="ghost">Select all</button> <button type="button" id="gapNone" class="ghost">Clear</button></p>';
  h+='<p><button type="button" id="gapDownload">Download selection as editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p>';
+ if(w&&w.allowed)h+='<p><button type="button" id="gapWrite">Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only. Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.</small></p>';
+ h+='<div id="gapWritten"></div>';
+ return h}
+function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
+ (r.sections||[]).forEach(function(x){var fl=(x.flags||[]).filter(function(f){return f.sentence}).map(function(f){return f.sentence});
+  h+='<div class="card"><strong>'+esc(x.h2)+'</strong><br><small>'+(x.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+x.flags.length+' item(s) to rewrite or remove':x.status==='MARKED_NO_SOURCE_TEXT'?'Marked: no competitor text behind it':'Concept for review')+(x.item_title?' · for “'+esc(x.item_title)+'”':'')+(x.run?' · run '+esc(x.run):'')+(x.placement&&x.placement.section_heading?' · place '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':' · you choose the place')+'</small>';
+  if(x.basis)h+='<br><small>Answers: “'+esc(x.basis.answers)+'” · basis: '+esc(String(x.basis.evidence_level||'').toLowerCase().split('_').join(' '))+((x.basis.competitor_evidence||[]).length?' · sources: '+x.basis.competitor_evidence.map(function(e){return esc(e.site)}).join(', '):'')+'</small>'+(x.basis.warning?'<p class="note">'+esc(x.basis.warning)+'</p>':'');
+  (x.paragraphs||[]).forEach(function(p){var out=esc(p);fl.forEach(function(f){out=out.split(esc(f)).join('<mark title="Flagged: rewrite or remove">'+esc(f)+'</mark>')});h+='<p>'+out+'</p>'});
+  if((x.flags||[]).length)h+='<ul>'+x.flags.map(function(f){return '<li>'+(f.sentence?'“'+esc(f.sentence)+'” — ':'Whole section — ')+esc(f.reason)+'</li>'}).join('')+'</ul>';
+  h+='</div>'});
+ (r.not_written||[]).forEach(function(x){h+='<p class="muted">Not written: '+esc(x.title)+' — kept for the next run, or write it yourself.</p>'});
+ if((r.pending||[]).length)h+='<p class="note">Still to write from your selection ('+r.pending.length+'): '+r.pending.map(function(x){return esc(x.title)}).join(' · ')+'. Click write again for the next ones.</p>';
+ (r.unlinked_sections||[]).forEach(function(x){h+='<p class="muted">Not linked to a selected item and not used: “'+esc(x.h2)+'” — '+esc(x.reason)+'</p>'});
+ if(r.reason&&!(r.sections||[]).length)h+='<p class="muted">'+esc(r.reason)+'</p>';
  return h}
 function gapBrief(g,s){var picked={};document.querySelectorAll('.gapPick:checked').forEach(function(c){picked[c.value]=1});
  var items=g.items.filter(function(x){return picked[x.id]});
  var L=['# Editor brief: '+s.url,'','Search term: '+(s.checked.search_term||'—'),'Chosen from the comparison with '+g.ranking_pages_read+' ranking page(s). Write in your own words with facts you can stand behind; do not copy the ranking pages.',''];
  GAP_GROUPS.forEach(function(gr){var list=items.filter(function(x){return x.group===gr[0]});if(!list.length)return;L.push('## '+gr[1],'');
-  list.forEach(function(x){L.push('- [ ] **'+x.title+'** ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
+  list.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
+   if(x.priority&&x.priority.suggested_action)L.push('  - Action: '+x.priority.suggested_action);
    x.examples.forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))})});L.push('')});
+ if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
  return {count:items.length,text:L.join('\\n')}}
-function wireGaps(g,s){var box=document.getElementById('gapDownload');if(!box)return;
+function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)return;
+ var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last)wr.innerHTML=writtenHtml(d.writing.last);
+ var wb=document.getElementById('gapWrite');
+ if(wb)wb.onclick=async function(){var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});var st=document.getElementById('gapStatus');
+  if(!ids.length){st.textContent='Select at least one topic or question.';return}
+  wb.disabled=true;st.textContent='Writing concepts…';
+  try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});var x=await r.json();if(x.stored===false&&(x.sections||[]).length){wr.innerHTML=writtenHtml(x);st.textContent=x.error;wb.disabled=false;return}if(!x.success)throw Error(x.error||'Not written');
+   wr.innerHTML=writtenHtml(x.all_written||x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
+  catch(err){st.textContent=err.message;wb.disabled=false}};
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected'};
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',count)});
  document.getElementById('gapAll').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=true});count()};
@@ -180,14 +218,14 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  h+='<h2 id="google">Google search (blue links)</h2><p class="lead"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
  h+='<h3>What to do</h3><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
- h+=gapsHtml(s.gaps);
- var c=s.checked;h+='<h2>What was checked</h2><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small></div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong></div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div></div>';
+ h+=gapsHtml(s.gaps,d.writing);
+ var c=s.checked;h+='<h2>What was checked</h2><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small></div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong></div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div>'+(c.search_market?'<div><small>Searched in</small><strong>'+esc(c.search_market.join(' + '))+'</strong>'+(c.markets_not_searched&&c.markets_not_searched.length?'<small>not researched: '+esc(c.markets_not_searched.join(', '))+' (partial market research)</small>':'')+(c.market_derived_not_confirmed?'<small>market derived from your page, not confirmed</small>':'')+'</div>':'')+'</div>';
  if(a)h+=aiHtml(a);
  h+='<h2>Limits of this free check</h2><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p>';
  h+='<h2>Do it yourself</h2><p>Download the complete research data and process it yourself or with your own tools.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;wireAi();wireGaps(s.gaps,s);
+ o.innerHTML=h;wireAi();wireGaps(s.gaps,s,d);
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
@@ -399,12 +437,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(!summary||!aiPart||!aiPart.summary.checked)return summary;
   return {...summary,limitations:[...summary.limitations.filter(x=>!/AI answers .* were not checked/.test(x)),aiPart.summary.caveat]};
  }
+ const writingAllowed=row=>config.writing==='all'||(config.writing!=='off'&&row.access_label==='admin')||(config.writing==='invited'&&!!row.invite_id);
+ const writingInfo=row=>({allowed:writingAllowed(row),remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:viewOf(row.written)});
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   const aiPart=await aiFor(row);
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
    summary:withAiLimits(row.summary,aiPart)||null,cached:!!row.cached_from,error_code:row.error_code||null,
+   writing:row.status==='DONE'?writingInfo(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -424,6 +465,55 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     ai_answers:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,summary:aiPart.summary,
      answers:aiPart.answers.map(a=>({engine:a.engine,pasted_at:a.created_at,parsed:a.parsed,raw_text:a.raw_text}))}:null,
     report:row.report});
+ });
+ // Optional: concepts only for the items the visitor selected (never automatic). The page is read again, publicly; the
+ // text is checked against it and failing sentences are flagged. Nothing is published or stored on the visitor's site.
+ app.post(apiPath+'/checks/:id/write',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  if(!writingAllowed(row))return res.status(403).json({success:false,error:'Writing is not available for this check. Download the editor brief instead.'});
+  if(Number(row.write_count||0)>=(config.writeLimit||3))return res.status(429).json({success:false,error:'The writing limit for this check is reached. Download the editor brief instead.'});
+  const ids=Array.isArray(req.body&&req.body.item_ids)?[...new Set(req.body.item_ids.map(String))].slice(0,200):[];
+  const items=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>ids.includes(String(x.id)));
+  if(!items.length)return res.status(400).json({success:false,error:'Select at least one topic or question first.'});
+  if(!items.some(x=>x.writable))return res.status(400).json({success:false,error:'Page elements are added by the editor; select a topic or question to write.'});
+  let token=null;
+  try{
+   const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
+   const html=String(live&&live.html||'');
+   const researched=row.summary&&row.summary.gaps&&row.summary.gaps.source_fingerprint;
+   if(researched&&pageFingerprint(html)!==researched)return res.status(409).json({success:false,error:'Your page changed since this check. Run a new check so the advice matches the page.'});
+   // One run at a time per check: a parallel or repeated click gets "in progress", never a second AI call.
+   if(typeof storage.claimWriting==='function'){token=await storage.claimWriting(pool,{checkId:row.id});
+    if(!token)return res.status(409).json({success:false,error:'Concepts for this check are being written right now. Wait a moment and reload.'})}
+   // What is written already is read AFTER the claim, so a run that just finished is never written again.
+   const fresh=token?(await storage.getCheck(pool,req.params.id,req.query.k))||row:row;
+   const doneBefore=(fresh.written&&fresh.written.done_item_ids)||[];
+   // The whole selection is kept: this run writes the next four not written yet; the rest stays for the next run.
+   const plan=planBatch(items,req.body&&req.body.rewrite===true?[]:doneBefore);
+   if(!plan.batch.length){if(token)await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});token=null;
+    return res.status(409).json({success:false,error:'Every selected item has been written already. Select other items, or download the editor brief.'})}
+   const write=engineDeps.generateDraft||generateGrowthEditorDraft;
+   const focusQuery=row.query||(row.summary&&row.summary.checked&&row.summary.checked.search_term)||'';
+   const gaps=row.summary&&row.summary.gaps||{};
+   const written=await writeForSelection({items:plan.batch,targetUrl:row.url,focusQuery,research:gaps.research||null,sourceFingerprint:gaps.source_fingerprint||null,
+    generate:async ctx=>({...(await write({sourceHtml:html,pageUrl:row.url,focusQuery,readerTask:ctx.reader_task,researchObservations:ctx.observations,fallbackFlagged:true})),source_text:sourceFacts(html).text})});
+   const done=(written.sections||[]).map(s=>s.item_id);
+   const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));
+   written.pending=pending;
+   // Every run is kept (with its dossier); the earlier runs' concepts stay available after reload.
+   const doc=mergeWritten(fresh.written,written);
+   const counted=await storage.recordWriting(pool,{checkId:row.id,written:doc,limit:config.writeLimit||3,token});
+   const mine=token;token=null;
+   if(counted&&counted.superseded)return res.status(409).json({success:false,stored:false,sections:written.sections||[],
+    error:'This writing run took too long and another run took over, so this text was not stored. It is shown here so it is not lost.'});
+   if(!counted){if(mine&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token:mine}).catch(()=>{});
+    return res.status(429).json({success:false,error:'The writing limit for this check is reached.'})}
+   res.set('Cache-Control','no-store').json({success:true,...written,done_item_ids:doc.done_item_ids,all_written:viewOf(doc),stored:true,
+    remaining:Math.max(0,(config.writeLimit||3)-counted.write_count),published:false});
+  }catch(e){console.error('[free-growth] writing failed',String(e.code||e.message).slice(0,80));
+   if(token&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});
+   res.status(503).json({success:false,error:'Writing is not available right now. Your selection works with the editor brief.'})}
  });
  app.post(apiPath+'/checks/:id/ai',async(req,res)=>{
   const row=await load(req,res);if(!row)return;

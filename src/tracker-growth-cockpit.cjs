@@ -5,7 +5,10 @@ const {registerTrackerGrowthCmsExport}=require('./tracker-growth-cms-export.cjs'
 const {registerGrowthAutomaticResearch}=require('./tracker-growth-automatic-routes.cjs');
 const {assessGrowthCandidates}=require('./tracker-growth-best-candidate.cjs');
 const {loadMemory,recordAction,recordResearchOutcome}=require('./tracker-growth-recommendation-memory.cjs');
-const {saveProposal}=require('./growth-proposal-store.cjs');
+const {saveProposal,saveSelectionProposal}=require('./growth-proposal-store.cjs');
+const {saveGapList,getGapList,saveSelection,addToSelection,saveWritten,getOpenSelection}=require('./growth-selection-store.cjs');
+const writingRuns=require('./growth-writing-runs.cjs');
+const {getPageMarkets,setPageMarkets}=require('./growth-market-store.cjs');
 const escapeHtml=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 function bucket(q,brand){
@@ -122,7 +125,13 @@ function registerGrowthCockpit(app,pool,deps={}){
  }
  registerGrowthAutomaticResearch(app,pool,data,{completeOwnerDraft:ownerDraftService?.completeOwnerDraft,
   recordResearchOutcome:args=>recordResearchOutcome(pool,args),
-  recordProposal:args=>saveProposal(pool,args),...(deps.research||{})});
+  recordProposal:args=>saveProposal(pool,args),
+  recordGapList:args=>saveGapList(pool,args),loadGapList:args=>getGapList(pool,args),
+  recordSelection:args=>saveSelection(pool,args),recordSelectionProposal:args=>saveSelectionProposal(pool,args),
+  recordWritten:args=>saveWritten(pool,args),loadOpenSelection:args=>getOpenSelection(pool,args),addToSelection:args=>addToSelection(pool,args),
+  claimWritingRun:args=>writingRuns.claimRun(pool,args),storeWritingRun:args=>writingRuns.storeRun(pool,args),
+  failWritingRun:args=>writingRuns.failRun(pool,args),lastStoredRun:args=>writingRuns.lastStoredRun(pool,args),
+  loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),...(deps.research||{})});
  // Owner-only memory of the Cockpit's advice: started, skipped or restored.
  // The snapshot is taken from server-side evidence, never from the browser.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/recommendation',data,async(req,res)=>{
