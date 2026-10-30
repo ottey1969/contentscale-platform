@@ -18,7 +18,7 @@ const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageT
 const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-task-meaning.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
 const {buildGapList}=require('./growth-gap-list.cjs');
-const {writeForSelection,planBatch,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('./growth-selected-writing.cjs');
+const {writeForSelection,planBatch,remapSelection,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('./growth-selected-writing.cjs');
 const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
@@ -54,7 +54,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,recordWritten=null,loadOpenSelection=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -685,11 +685,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   let carried=null;
   if(gapRef&&typeof loadOpenSelection==='function'){
    try{const open=await loadOpenSelection({clientId:v.clientId,targetPageId:targetId,beforeId:Number(gapRef.id)});
-    if(open&&open.pending.length){const here=new Set(gapList.items.map(x=>String(x.id)));
-     carried={from_gap_list_id:open.gap_list_id,pending_ids:open.pending.filter(x=>here.has(x)),
-      no_longer_found:open.pending.filter(x=>!here.has(x)).length,
-      note:'Items you selected earlier and that were not written yet. They are ticked again; nothing is written until you click.'};
-     if(carried.pending_ids.length&&typeof recordSelection==='function')await Promise.resolve(recordSelection({clientId:v.clientId,id:gapRef.id,itemIds:carried.pending_ids})).catch(()=>{});}}
+    if(open&&open.pending.length){const m=remapSelection(open.pending_items||[],gapList.items);
+     // Shown ticked only; it becomes the new list's selection when the owner confirms it (the selection is never implied).
+     carried={from_gap_list_id:open.gap_list_id,pending_ids:m.carried,needs_remapping:m.needs_remapping,no_longer_found:m.no_longer_found,
+      note:'Items you selected earlier and that were not written yet. Ticked again only when the new research still shows the same need; nothing is written until you click.'};}}
    catch(e){console.warn('[growth-auto-research] open selection not loaded',String(e?.code||'unknown'))}
   }
   return res.set('Cache-Control','private, no-store').json({...report,
@@ -728,6 +727,21 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   for(const k of [...cache.keys()])if(k.startsWith(v.clientId+':'+v.id+':'))cache.delete(k);
   res.set('Cache-Control','private, no-store').json({success:true,markets:saved,research_rerun_required:true});
  });
+ // The owner's deliberate selection (the ticks): the only call that replaces the selected items. Written items stay written.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/auto-research/selection',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof loadGapList!=='function'||typeof recordSelection!=='function')return no(403,'OWNER_ONLY_SELECTION');
+  let list;try{list=await loadGapList({clientId:v.clientId,id:req.body?.gap_list_id})}catch{return no(503,'GAP_LIST_UNAVAILABLE')}
+  if(!list)return no(404,'GAP_LIST_NOT_FOUND');
+  const ids=Array.isArray(req.body?.item_ids)?[...new Set(req.body.item_ids.map(String))]:[];
+  const known=(list.items||[]).filter(x=>ids.includes(String(x.id))).map(x=>x.id);
+  if(ids.length&&!known.length)return no(400,'SELECTION_NOT_IN_GAP_LIST');
+  try{await recordSelection({clientId:v.clientId,id:list.id,itemIds:known})}catch{return no(503,'SELECTION_NOT_SAVED')}
+  const done=new Set((list.written_ids||[]).map(String));
+  res.set('Cache-Control','private, no-store').json({success:true,gap_list_id:Number(list.id),selected:known,
+   written:known.filter(x=>done.has(String(x))),pending:known.filter(x=>!done.has(String(x)))});
+ });
  // Writing for the owner's selection only: items come from the stored gap list (never from the browser), at most four per
  // call, one repair attempt, then a marked concept. The result is stored as a proposal for the CMS handoff. Nothing is published.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/auto-research/write',data,async(req,res)=>{
@@ -745,16 +759,34 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const items=(list.items||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return no(400,'SELECTION_NOT_IN_GAP_LIST');
   if(!items.some(x=>x.writable))return no(400,'ONLY_PAGE_ELEMENTS_SELECTED');
-  // The whole selection is kept; this run writes the next four not yet written, the rest stays pending (said, not cut).
-  const plan=planBatch(items,req.body?.rewrite===true?[]:list.written_ids||[]);
-  if(!plan.batch.length)return no(409,'SELECTION_ALREADY_WRITTEN');
   // The list belongs to the page as researched: a changed page needs new research, never old advice (checked before any AI call).
   if(list.source_fingerprint){
    let live=null;try{live=await fetchLive(list.target_url)}catch{}
    if(!live||typeof live.html!=='string')return no(409,'PAGE_NOT_READABLE_NOW_RERUN_RESEARCH');
    if(pageFingerprint(live.html)!==list.source_fingerprint)return no(409,'PAGE_CHANGED_SINCE_RESEARCH_RERUN_RESEARCH');
   }
-  if(typeof recordSelection==='function')await Promise.resolve(recordSelection({clientId:v.clientId,id:list.id,itemIds:items.map(x=>x.id)})).catch(()=>{});
+  // Writing never removes anything from the owner's selection: items it names are added (a deliberate change of the
+  // selection goes through the selection endpoint). The stored selection is what is written, in list order.
+  const stored=new Set((list.selected||[]).map(String));
+  if(typeof addToSelection==='function')await Promise.resolve(addToSelection({clientId:v.clientId,id:list.id,itemIds:items.map(x=>x.id)})).catch(()=>{});
+  else if(typeof recordSelection==='function'&&!stored.size)await Promise.resolve(recordSelection({clientId:v.clientId,id:list.id,itemIds:items.map(x=>x.id)})).catch(()=>{});
+  const selectedItems=(list.items||[]).filter(x=>stored.has(String(x.id))||ids.includes(String(x.id)));
+  // The whole selection is kept; this run writes the next four not yet written, the rest stays pending (said, not cut).
+  const plan=planBatch(selectedItems,req.body?.rewrite===true?[]:list.written_ids||[]);
+  if(!plan.batch.length){
+   const last=typeof lastStoredRun==='function'?await Promise.resolve(lastStoredRun({gapListId:list.id})).catch(()=>null):null;
+   return res.status(409).set('Cache-Control','private, no-store').json({success:false,code:'SELECTION_ALREADY_WRITTEN',
+    last_run:last?{run_id:Number(last.id),proposal_id:last.proposal_id?Number(last.proposal_id):null,
+     cms_url:last.proposal_id?'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id):null}:null});
+  }
+  // One active run per list: a repeated or parallel request gets the running one back, no second AI call.
+  let run=null;
+  if(typeof claimWritingRun==='function'){
+   let claim;try{claim=await claimWritingRun({clientId:v.clientId,gapListId:list.id,itemIds:plan.batch.map(x=>x.id)})}catch{return no(503,'WRITING_RUN_NOT_STARTED')}
+   if(claim.conflict)return res.status(409).set('Cache-Control','private, no-store').json({success:false,code:'WRITING_IN_PROGRESS',
+    run:{run_id:Number(claim.conflict.id),item_ids:claim.conflict.item_ids,started_at:claim.conflict.started_at}});
+   run=claim.run;
+  }
   const generate=async research_context=>{
    const outcome=await completeOwnerDraft({token:req.params.token,body:{page_id:Number(list.target_page_id),focus_query:list.focus_query||'',
     growth_source_page_id:v.id,research_context,flag_fallback:true}});
@@ -763,18 +795,31 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     return {status:d.code||'WRITER_UNAVAILABLE'};
    return {status:d.status,draft:d.draft||null,flags:d.flags||[],source_text:d.source_text||''};
   };
-  const written=await writeForSelection({items:plan.batch,targetUrl:list.target_url,focusQuery:list.focus_query||'',generate,
-   research:list.research||null,sourceFingerprint:list.source_fingerprint||null});
-  // Only sections actually written count as done; a failed or partial run leaves its items pending.
-  const done=(written.sections||[]).map(s=>s.item_id);
-  if(done.length&&typeof recordWritten==='function')await Promise.resolve(recordWritten({clientId:v.clientId,id:list.id,itemIds:done})).catch(()=>{});
-  const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));
-  let proposalRef=null;
-  if(written.sections?.length&&typeof recordSelectionProposal==='function'){
-   try{proposalRef=await recordSelectionProposal({clientId:v.clientId,researchPageId:v.id,targetPageId:Number(list.target_page_id),targetUrl:list.target_url,focusQuery:list.focus_query,written})}
-   catch(e){console.warn('[growth-auto-research] selection concept not saved',String(e?.code||'unknown'))}
+  let written;
+  try{written=await writeForSelection({items:plan.batch,targetUrl:list.target_url,focusQuery:list.focus_query||'',generate,
+   research:list.research||null,sourceFingerprint:list.source_fingerprint||null})}
+  catch(e){if(run&&typeof failWritingRun==='function')await Promise.resolve(failWritingRun({runId:run.id,error:'WRITER_ERROR'})).catch(()=>{});throw e}
+  // An item is done only when its concept AND evidence dossier are stored as a proposal, in the same transaction.
+  const linked=(written.sections||[]).map(s=>s.item_id);
+  let proposalRef=null,storageError=null;
+  if(linked.length){
+   const proposal={researchPageId:v.id,targetPageId:Number(list.target_page_id),targetUrl:list.target_url,focusQuery:list.focus_query,written};
+   if(typeof storeWritingRun==='function'){
+    try{proposalRef=(await storeWritingRun({clientId:v.clientId,runId:run?.id||null,gapListId:list.id,itemIds:linked,proposal})).proposal}
+    catch(e){storageError=String(e?.code||'STORE_FAILED').slice(0,60);console.warn('[growth-auto-research] selection concept not stored',storageError)}
+   }else if(typeof recordSelectionProposal==='function'){
+    // Without the transactional store (tests, older wiring): store first, mark written only after it succeeded.
+    try{proposalRef=await recordSelectionProposal({clientId:v.clientId,...proposal});
+     if(proposalRef&&typeof recordWritten==='function')await recordWritten({clientId:v.clientId,id:list.id,itemIds:linked})}
+    catch(e){storageError=String(e?.code||'STORE_FAILED').slice(0,60);console.warn('[growth-auto-research] selection concept not stored',storageError)}
+   }
   }
-  res.set('Cache-Control','private, no-store').json({success:true,...written,gap_list_id:Number(list.id),selected:items.map(x=>x.id),
+  if(run&&!proposalRef&&typeof failWritingRun==='function')await Promise.resolve(failWritingRun({runId:run.id,error:storageError||written.writer_status||'NOT_WRITTEN'})).catch(()=>{});
+  const done=proposalRef?linked:[];
+  const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));
+  if(storageError)written.storage_error='CONCEPT_NOT_STORED_NOTHING_MARKED_WRITTEN';
+  res.set('Cache-Control','private, no-store').json({success:true,...written,gap_list_id:Number(list.id),selected:selectedItems.map(x=>x.id),
+   run_id:run?Number(run.id):null,stored:!!proposalRef,
    batch:plan.batch.map(x=>x.id),already_written:plan.already_written,pending,
    batch_note:pending.length?pending.length+' selected item(s) are kept for the next run (at most '+MAX_WRITE_ITEMS+' per run).':null,
    published:false,copy_ready:false,

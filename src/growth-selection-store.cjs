@@ -31,19 +31,31 @@ async function getGapList(pool,{clientId,id}){
  try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,items,selected,written_ids,research,source_fingerprint,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
  catch(e){if(e.code==='42P01')return null;throw e}
 }
+// A deliberate selection by the owner (the selection endpoint): replaces the selected ids. Writing never calls this.
 async function saveSelection(pool,{clientId,id,itemIds}){
  await pool.query('UPDATE tracker_growth_gap_lists SET selected=$3::jsonb,selected_at=NOW() WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id),JSON.stringify(itemIds)]);
+}
+// Items a writing request names that are not selected yet are ADDED; nothing is ever removed by writing.
+async function addToSelection(pool,{clientId,id,itemIds}){
+ await pool.query(`UPDATE tracker_growth_gap_lists SET selected=(SELECT to_jsonb(ARRAY(SELECT x FROM (SELECT x,MIN(o) o FROM (
+   SELECT x,o FROM jsonb_array_elements_text(COALESCE(selected,'[]'::jsonb)) WITH ORDINALITY t(x,o)
+   UNION ALL SELECT x,1000000+o FROM jsonb_array_elements_text($3::jsonb) WITH ORDINALITY u(x,o)) a GROUP BY x) b ORDER BY o))),selected_at=NOW()
+  WHERE tracker_client_id=$1 AND id=$2`,[clientId,Number(id),JSON.stringify((itemIds||[]).map(String))]);
 }
 // Items written successfully from this list (added to, never replaced): the rest of the selection stays pending.
 async function saveWritten(pool,{clientId,id,itemIds}){
  await pool.query(`UPDATE tracker_growth_gap_lists SET written_ids=(SELECT to_jsonb(ARRAY(SELECT DISTINCT x FROM jsonb_array_elements_text(COALESCE(written_ids,'[]'::jsonb)||$3::jsonb) x)))
   WHERE tracker_client_id=$1 AND id=$2`,[clientId,Number(id),JSON.stringify((itemIds||[]).map(String))]);
 }
-// The open part of the page's latest selection, for a new research run of the same page (carried over by stable item id).
+// The open part of the page's latest selection, for a new research run of the same page. Each pending item comes with
+// its identity (title and competitor sections) so the new research can check it is still the same need.
 async function getOpenSelection(pool,{clientId,targetPageId,beforeId=null}){
- try{const row=(await pool.query(`SELECT id,selected,written_ids,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND target_page_id=$2 AND selected IS NOT NULL AND ($3::bigint IS NULL OR id<$3) ORDER BY id DESC LIMIT 1`,[clientId,Number(targetPageId),beforeId])).rows[0];
+ try{const row=(await pool.query(`SELECT id,items,selected,written_ids,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND target_page_id=$2 AND selected IS NOT NULL AND ($3::bigint IS NULL OR id<$3) ORDER BY id DESC LIMIT 1`,[clientId,Number(targetPageId),beforeId])).rows[0];
   if(!row)return null;const done=new Set((row.written_ids||[]).map(String));
-  return {gap_list_id:Number(row.id),selected:(row.selected||[]).map(String),pending:(row.selected||[]).map(String).filter(x=>!done.has(x)),selected_at:row.created_at}}
+  const byId=new Map((row.items||[]).map(x=>[String(x.id),x]));
+  const pending=(row.selected||[]).map(String).filter(x=>!done.has(x)&&byId.get(x)?.writable);
+  return {gap_list_id:Number(row.id),selected:(row.selected||[]).map(String),pending,
+   pending_items:pending.map(id=>{const it=byId.get(id);return {id,title:it.title,sources:(it.examples||[]).map(e=>String(e.site||'')+'|'+String(e.heading||'').toLowerCase())}}),selected_at:row.created_at}}
  catch(e){if(e.code==='42P01'||e.code==='42703')return null;throw e}
 }
-module.exports={saveGapList,getGapList,saveSelection,saveWritten,getOpenSelection,ensureTable};
+module.exports={saveGapList,getGapList,saveSelection,addToSelection,saveWritten,getOpenSelection,ensureTable};

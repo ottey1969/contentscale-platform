@@ -82,3 +82,43 @@ test('only page elements selected: nothing to write',async()=>{
  assert.equal(r.statusCode,400);assert.equal(r.body.code,'ONLY_PAGE_ELEMENTS_SELECTED');assert.equal(h.calls.generate,0);
  items.pop();
 });
+
+// Code audit of 95e576c: an item is written only when its concept is stored; writing never shrinks the selection.
+test('storage fails after the AI wrote: nothing is marked written, the items stay pending, the text is not lost',async()=>{
+ const route={},written=[];
+ const list={id:7,target_page_id:2294,target_url:URL_,focus_query:'ai citation tracker',items,source_fingerprint:pageFingerprint(researched)};
+ registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},{query:async()=>({rows:[]})},(req,res,next)=>{
+  req.growthTrackerClientId=4;req.growth={can_edit:true,pages:[{id:2294,url:URL_,case_study_active:false}]};next()},{
+  fetchLive:async()=>({html:researched,final_url:URL_}),
+  completeOwnerDraft:async({body})=>({statusCode:200,body:{success:true,page_id:2294,canonical_url:URL_,status:'AI_DRAFT_REVIEW_REQUIRED',source_text:'',
+   draft:{sections:body.research_context.reader_task.tasks.map(t=>({task_code:t.code,h2:'About '+t.label,paragraphs:['A concept paragraph about '+t.label+' for the editor to review and rewrite where needed.']}))}}}),
+  loadGapList:async()=>list,recordSelection:async()=>{},recordWritten:async a=>{written.push(a)},
+  recordSelectionProposal:async()=>{throw Object.assign(Error('db down'),{code:'ECONNRESET'})}});
+ const req={params:{token:'owner'},query:{page_id:'2294'},body:{gap_list_id:7,item_ids:[items[0].id,items[1].id]}},
+  res={statusCode:200,status(x){this.statusCode=x;return this},set(){return this},json(x){this.body=x;return this}};
+ const stack=route['/api/tracker-client/:token/growth/auto-research/write'];
+ await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});
+ assert.equal(res.body.stored,false);assert.equal(res.body.storage_error,'CONCEPT_NOT_STORED_NOTHING_MARKED_WRITTEN');
+ assert.deepEqual(written,[],'never marked written without a stored concept');
+ assert.deepEqual(res.body.pending.map(x=>x.item_id),[items[0].id,items[1].id]);
+ assert.equal(res.body.sections.length,2,'the text is returned so it is not lost');assert.equal(res.body.cms_handoff,null);
+});
+
+test('a writing request adds to the selection and never removes from it',async()=>{
+ const route2={};let selection=[items[0].id,items[1].id,items[2].id];
+ const list={id:8,target_page_id:2294,target_url:URL_,focus_query:'q',items,selected:selection,source_fingerprint:pageFingerprint(researched)};
+ registerGrowthAutomaticResearch({get(p,...x){route2[p]=x},post(p,...x){route2[p]=x}},{query:async()=>({rows:[]})},(req,res,next)=>{
+  req.growthTrackerClientId=4;req.growth={can_edit:true,pages:[{id:2294,url:URL_,case_study_active:false}]};next()},{
+  fetchLive:async()=>({html:researched,final_url:URL_}),
+  completeOwnerDraft:async({body})=>({statusCode:200,body:{success:true,page_id:2294,canonical_url:URL_,status:'AI_DRAFT_REVIEW_REQUIRED',source_text:'',
+   draft:{sections:body.research_context.reader_task.tasks.map(t=>({task_code:t.code,h2:'About '+t.label,paragraphs:['A concept paragraph about '+t.label+' for the editor to review and rewrite where needed.']}))}}}),
+  loadGapList:async()=>list,recordSelection:async({itemIds})=>{selection=itemIds},
+  addToSelection:async({itemIds})=>{selection=[...selection,...itemIds.filter(x=>!selection.includes(x))]},
+  recordSelectionProposal:async()=>({id:1}),recordWritten:async()=>{}});
+ const req={params:{token:'owner'},query:{page_id:'2294'},body:{gap_list_id:8,item_ids:[items[0].id,items[5].id]}},
+  res={statusCode:200,status(x){this.statusCode=x;return this},set(){return this},json(x){this.body=x;return this}};
+ const stack=route2['/api/tracker-client/:token/growth/auto-research/write'];
+ await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});
+ assert.deepEqual(selection,[items[0].id,items[1].id,items[2].id,items[5].id],'items 1 and 2 stay selected');
+ assert.deepEqual(res.body.batch.sort(),[items[0].id,items[1].id,items[2].id,items[5].id].sort(),'the stored selection is written');
+});

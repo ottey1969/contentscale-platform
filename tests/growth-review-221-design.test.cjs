@@ -185,3 +185,19 @@ test('evidence record per writing run: research, market, date, page version, AI 
  assert.deepEqual(d.items[0].sources.map(s=>s.url),item.examples.map(e=>e.url));
  assert(d.items[0].sources.every(s=>s.passage&&s.passage.length>=75),'the real competitor passages of report 55');
 });
+
+// Code audit of 95e576c: an earlier selection is carried over only when the new research shows the same need.
+test('carry-over checks identity: same id and same need is ticked; same id with other content needs remapping; gone is listed',()=>{
+ const {remapSelection}=require('../src/growth-selected-writing.cjs');
+ const g=list(fresh(),overview());
+ const a=g.items.find(x=>x.title==='Understand the Attribution Gaps'),b=g.items.find(x=>x.title==='Extract AI-Relevant Queries');
+ const src=it=>it.examples.map(e=>e.site+'|'+e.heading.toLowerCase());
+ const out=remapSelection([
+  {id:a.id,title:a.title,sources:src(a)},
+  // The same id now names another need (e.g. an id scheme or grouping changed): not ticked, the candidate is named.
+  {id:b.id,title:'A different need',sources:src(a)},
+  {id:'s-gone',title:'A section no ranking page has any more',sources:['gone.example|x']}],g.items);
+ assert.deepEqual(out.carried,[a.id]);
+ assert.deepEqual(out.needs_remapping.map(x=>[x.old_id,x.candidates.map(c=>c.id)]),[[b.id,[a.id]]]);
+ assert.deepEqual(out.no_longer_found.map(x=>x.old_id),['s-gone']);
+});

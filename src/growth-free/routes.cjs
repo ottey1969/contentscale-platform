@@ -476,15 +476,23 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const items=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return res.status(400).json({success:false,error:'Select at least one topic or question first.'});
   if(!items.some(x=>x.writable))return res.status(400).json({success:false,error:'Page elements are added by the editor; select a topic or question to write.'});
+  let claimed=false;
   try{
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
    const html=String(live&&live.html||'');
    const researched=row.summary&&row.summary.gaps&&row.summary.gaps.source_fingerprint;
    if(researched&&pageFingerprint(html)!==researched)return res.status(409).json({success:false,error:'Your page changed since this check. Run a new check so the advice matches the page.'});
+   // One run at a time per check: a parallel or repeated click gets "in progress", never a second AI call.
+   if(typeof storage.claimWriting==='function'&&!(await storage.claimWriting(pool,{checkId:row.id})))
+    return res.status(409).json({success:false,error:'Concepts for this check are being written right now. Wait a moment and reload.'});
+   claimed=typeof storage.claimWriting==='function';
+   // What is written already is read AFTER the claim, so a run that just finished is never written again.
+   const fresh=claimed?(await storage.getCheck(pool,req.params.id,req.query.k))||row:row;
+   const doneBefore=(fresh.written&&fresh.written.done_item_ids)||[];
    // The whole selection is kept: this run writes the next four not written yet; the rest stays for the next run.
-   const doneBefore=(row.written&&row.written.done_item_ids)||[];
    const plan=planBatch(items,req.body&&req.body.rewrite===true?[]:doneBefore);
-   if(!plan.batch.length)return res.status(409).json({success:false,error:'Every selected item has been written already. Select other items, or download the editor brief.'});
+   if(!plan.batch.length){if(claimed)await storage.releaseWriting(pool,{checkId:row.id}).catch(()=>{});claimed=false;
+    return res.status(409).json({success:false,error:'Every selected item has been written already. Select other items, or download the editor brief.'})}
    const write=engineDeps.generateDraft||generateGrowthEditorDraft;
    const focusQuery=row.query||(row.summary&&row.summary.checked&&row.summary.checked.search_term)||'';
    const gaps=row.summary&&row.summary.gaps||{};
@@ -493,10 +501,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const done=(written.sections||[]).map(s=>s.item_id);
    const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));
    written.done_item_ids=[...new Set([...doneBefore,...done])];written.pending=pending;
-   const counted=await storage.recordWriting(pool,{checkId:row.id,written,limit:config.writeLimit||3});
-   if(!counted)return res.status(429).json({success:false,error:'The writing limit for this check is reached.'});
+   const counted=await storage.recordWriting(pool,{checkId:row.id,written,limit:config.writeLimit||3});claimed=false;
+   if(!counted){if(typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id}).catch(()=>{});
+    return res.status(429).json({success:false,error:'The writing limit for this check is reached.'})}
    res.set('Cache-Control','no-store').json({success:true,...written,remaining:Math.max(0,(config.writeLimit||3)-counted.write_count),published:false});
   }catch(e){console.error('[free-growth] writing failed',String(e.code||e.message).slice(0,80));
+   if(claimed&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id}).catch(()=>{});
    res.status(503).json({success:false,error:'Writing is not available right now. Your selection works with the editor brief.'})}
  });
  app.post(apiPath+'/checks/:id/ai',async(req,res)=>{

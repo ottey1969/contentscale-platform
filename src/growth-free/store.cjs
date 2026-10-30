@@ -28,6 +28,7 @@ function ensureTables(pool){
   // Optional writing for the visitor's selection: the last result and how many times it was used for this check.
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS written JSONB');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS write_count INTEGER NOT NULL DEFAULT 0');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_since TIMESTAMPTZ');
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
@@ -113,8 +114,14 @@ async function getCheck(pool,publicId,key){
 }
 
 // Counts one writing run and keeps its result; refuses when the limit is reached (atomic).
+// One writing run per check at a time (a run that never finished gives way after ten minutes). The concept and the items
+// it completes are stored in one UPDATE, which also ends the run; a failed run only ends it.
+async function claimWriting(pool,{checkId}){
+ return !!(await pool.query(`UPDATE growth_free_checks SET writing_since=NOW() WHERE id=$1 AND (writing_since IS NULL OR writing_since<NOW()-INTERVAL '10 minutes') RETURNING id`,[checkId])).rows[0];
+}
+async function releaseWriting(pool,{checkId}){await pool.query('UPDATE growth_free_checks SET writing_since=NULL WHERE id=$1',[checkId])}
 async function recordWriting(pool,{checkId,written,limit}){
- return (await pool.query('UPDATE growth_free_checks SET written=$2::jsonb,write_count=write_count+1 WHERE id=$1 AND write_count<$3 RETURNING write_count',
+ return (await pool.query('UPDATE growth_free_checks SET written=$2::jsonb,write_count=write_count+1,writing_since=NULL WHERE id=$1 AND write_count<$3 RETURNING write_count',
   [checkId,JSON.stringify(written),limit])).rows[0]||null;
 }
 async function createHireRequest(pool,{checkId,name,email,company,phone,message}){
@@ -178,4 +185,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

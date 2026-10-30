@@ -31,7 +31,10 @@
   if(rec.length)el('p','Recommended first ('+rec.length+'): '+rec.map(function(x){return x.title}).join(' · ')+'. A research priority (supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI), not a growth forecast. You decide; you can select more.',box,'small');
   else el('p','No item is recommended: none is supported by two ranking pages and missing on your page. You can still choose any item.',box,'small');
   var carried=list.carried_over&&list.carried_over.pending_ids||[];
-  if(carried.length)el('p',carried.length+' item(s) from your earlier selection are not written yet and are ticked again. '+(list.carried_over.no_longer_found?list.carried_over.no_longer_found+' earlier item(s) are no longer in this research.':''),box,'small');
+  var co=list.carried_over||{};
+  if(carried.length)el('p',carried.length+' item(s) from your earlier selection are not written yet and are ticked again (the new research still shows the same need).',box,'small');
+  (co.needs_remapping||[]).forEach(function(x){el('p','Check the link: your earlier item “'+x.title+'” is not clearly the same need in this research. Possibly: '+x.candidates.map(function(c){return '“'+c.title+'”'}).join(', ')+'. Not ticked.',box,'small')});
+  if((co.no_longer_found||[]).length)el('p','No longer in this research: '+co.no_longer_found.map(function(x){return '“'+x.title+'”'}).join(', ')+'.',box,'small');
   var boxes=[];
   (list.groups||[]).forEach(function(g){var items=list.items.filter(function(x){return x.group===g.id});if(!items.length)return;
    el('h3',g.label+' ('+items.length+')',box);
@@ -62,7 +65,10 @@
     var p=picked().filter(function(x){return x.writable});if(!p.length){status.textContent='Select at least one topic or question.';return}
     w.disabled=true;status.textContent='Writing concepts for '+Math.min(4,p.length)+' item(s)'+(p.length>4?' (the other '+(p.length-4)+' are kept for the next run)':'')+'…';out.textContent='';
     try{var r=await options.write(p.map(function(x){return x.id}));
+     if(r&&r.code==='WRITING_IN_PROGRESS'){status.textContent='Concepts for this list are being written right now (started '+(r.run&&r.run.started_at||'')+'). Wait a moment and reload; nothing is written twice.';return}
+     if(r&&r.code==='SELECTION_ALREADY_WRITTEN'){status.textContent='Everything you selected has been written already.'+(r.last_run&&r.last_run.cms_url?' The latest concepts are in the CMS package.':'');if(r.last_run&&r.last_run.cms_url){var l=el('a','Open the CMS package',el('p',null,out));l.href=r.last_run.cms_url}return}
      if(!r||r.success===false)throw Error((r&&(r.code||r.reason))||'Writing not available');
+     if(r.storage_error)el('p','These concepts could not be stored, so nothing is marked as written and the items stay selected. Copy what you need and try again.',out,'error');
      status.textContent=r.sections&&r.sections.length?'Concepts written. Flagged sentences must be rewritten or removed; every statement still needs your check. Nothing is published.':(r.reason||'No text was written. Write these items yourself; your selection is kept.');
      (r.sections||[]).forEach(function(s){var card=el('div',null,out,'note');el('h3',s.h2,card);
       el('small',(s.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+s.flags.length+' item(s) to rewrite or remove':s.status==='MARKED_NO_SOURCE_TEXT'?'Marked: no competitor text behind it':'Concept for review')+(s.item_title?' · for “'+s.item_title+'”':'')+(s.placement&&s.placement.section_heading?' · place '+(s.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+s.placement.section_heading+'”':' · editor chooses the place'),card);

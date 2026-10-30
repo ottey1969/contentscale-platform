@@ -263,8 +263,11 @@
   if(d.gap_list&&typeof renderChecklist==='function'){
    var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
    try{renderChecklist({...gl,target_url:d.url},node('section',null,researchDetails||container),{write:writeUrl?async function(ids){
-    var r=await fetch(writeUrl,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({gap_list_id:gl.id,item_ids:ids})});
-    return r.json()}:null})}catch(e){}
+    // The ticks are the owner's selection (saved deliberately first); writing then takes the next items from it.
+    var post=function(u,b){return fetch(u,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()})};
+    var sel=await post(writeUrl.replace('/auto-research/write','/auto-research/selection'),{gap_list_id:gl.id,item_ids:ids});
+    if(!sel||sel.success===false)return sel;
+    return post(writeUrl,{gap_list_id:gl.id,item_ids:ids})}:null})}catch(e){}
   }
   s=section('Search competitors for this Growth query');
   var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>

@@ -137,9 +137,16 @@ Searching: Serper gets `gl`/`hl`, Bing RSS `cc`/`setlang`. A page with several m
 - Up to four items are `recommended` (`recommendation_basis: RESEARCH_PRIORITY_NOT_A_GROWTH_FORECAST`): at least two ranking pages, missing or partly on the page, not contradicted by the AI. That is advice, not the writing limit.
 - `unique_content`: sections of this page with no counterpart on the ranking pages read (by heading words; navigation and FAQ excluded; no gap pointing at it), shown as "Unique content worth reviewing and preserving", with `uniqueness: UNIQUE_BY_HEADING_WORDS`, `value: NOT_ASSESSED` and `proven_strength: NOT_MEASURED`. Unique is not proof that it is correct, current or strong. Never written.
 
-### Writing in rounds (independent review of 382f31e)
+### Writing in rounds, reliably (code audit of 95e576c)
 
-The whole selection is kept. Each run writes the next four selected writable items not written yet, in list order; the response lists `batch`, `already_written` and `pending`. Only sections actually written count as done (`tracker_growth_gap_lists.written_ids`), so a failed or partial run leaves its items pending. A new research run of the same page carries the open part of the previous selection over by stable id (`gap_list.carried_over`): ticked again, never written by itself. Writing an item again needs `rewrite: true`. The standalone check works the same within one check.
+Statuses per item: selected → writing → stored (written) → editor review; publication stays a separate, explicitly approved step.
+
+- **Selection is deliberate.** `POST …/auto-research/selection` (the ticks) is the only call that replaces the selected items. A writing request only adds items it names and never removes any; the stored selection is what is written, in list order.
+- **Rounds.** Each run writes the next four selected writable items not written yet; the response lists `batch`, `already_written` and `pending`. Writing an item again needs `rewrite: true`; otherwise `SELECTION_ALREADY_WRITTEN` returns the last stored run and its CMS package.
+- **One run at a time.** `tracker_growth_writing_runs` (additive): `WRITING → STORED | FAILED`, with a unique index allowing one `WRITING` run per gap list. A parallel or repeated click gets `WRITING_IN_PROGRESS` with the running run, and no second AI call. A run that never finished (crashed process) gives way after a ten-minute lease (`ABANDONED_AFTER_LEASE`) and can no longer complete afterwards.
+- **Done only when stored.** The concept with its evidence dossier is stored as a proposal, the items are marked written and the run is set `STORED` in ONE PostgreSQL transaction. If storing fails, everything rolls back: nothing is marked written, the run is `FAILED`, the response says `stored: false` / `CONCEPT_NOT_STORED_NOTHING_MARKED_WRITTEN`, returns the text so it is not lost, and the items stay pending. A writer failure also leaves the whole batch pending. A retry of an identical draft reuses it (no second AI cost).
+- **Carry-over checks identity.** A new research run of the page shows the open items of the previous selection ticked again only when the same id still names the same need (same title, or at least one of the same competitor sections). Otherwise the item is listed as needing remapping with its candidates, not ticked; items no ranking page has any more are listed as gone. Carried items become the new list's selection only when the owner confirms the ticks.
+- **Standalone check:** one writing run per check at a time (`writing_since`, same ten-minute lease); what is written already is read after the claim; the concept and the items it completes are stored in one UPDATE that also ends the run.
 
 ### Evidence record (independent review of 382f31e)
 

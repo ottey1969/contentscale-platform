@@ -91,7 +91,9 @@ function memoryStore(){
    cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
   async getCheck(_p,pid,key){const c=checks.find(c=>c.public_id===pid);return c&&c.access_key===key?c:null},
-  async recordWriting(_p,{checkId,written,limit}){const c=checks.find(x=>x.id===checkId);if((c.write_count||0)>=limit)return null;c.written=written;c.write_count=(c.write_count||0)+1;return {write_count:c.write_count}},
+  async claimWriting(_p,{checkId}){const c=checks.find(x=>x.id===checkId);if(c.writing)return false;c.writing=true;return true},
+  async releaseWriting(_p,{checkId}){checks.find(x=>x.id===checkId).writing=false},
+  async recordWriting(_p,{checkId,written,limit}){const c=checks.find(x=>x.id===checkId);c.writing=false;if((c.write_count||0)>=limit)return null;c.written=written;c.write_count=(c.write_count||0)+1;return {write_count:c.write_count}},
   async createHireRequest(_p,o){const h={id:hires.length+1,...o};hires.push(h);return h},
   async listLeads(){return {checks,hires}},
   async forgetEmail(_p,e){const n=checks.length;for(let i=checks.length-1;i>=0;i--)if(checks[i].email===e)checks.splice(i,1);return {checks:n-checks.length,hire_requests:0}}
@@ -485,6 +487,11 @@ test('writing for a selection is optional: only where allowed, only the selected
  const original=pages[URL_];pages[URL_]=original.replace('</body>','<p>A paragraph the owner added after the check ran, long enough to count as text.</p></body>');
  const stale=await all.post(p2,{item_ids:pick});pages[URL_]=original;
  assert.equal(stale.status,409);assert.match(stale.body.error,/changed since this check/);assert.equal(calls.length,1);
+ // A run in progress (another click): the second request is told so, with no AI call; afterwards it works again.
+ const rowB=await all.storage.getCheck(null,B.id,B.k);assert.equal(await all.storage.claimWriting(null,{checkId:rowB.id}),true);
+ const busy=await all.post(p2,{item_ids:pick,rewrite:true});
+ assert.equal(busy.status,409);assert.match(busy.body.error,/being written right now/);assert.equal(calls.length,1);
+ await all.storage.releaseWriting(null,{checkId:rowB.id});
  // A written item is not written again by accident; asking explicitly rewrites it.
  const again=await all.post(p2,{item_ids:pick});assert.equal(again.status,409);assert.match(again.body.error,/written already/);assert.equal(calls.length,1);
  assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,200);
