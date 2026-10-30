@@ -85,8 +85,8 @@ function memoryStore(){
   async revokeInvite(_p,i){const v=inv(i);if(!v||v.revoked_at)return null;v.revoked_at=new Date();return {id:i}},
   async ensureTables(){},
   async usage(_p,{email,ipHash,accessLabel}){const d=checks.filter(c=>!c.cached_from);return {by_email:d.filter(c=>c.email===email).length,by_ip:d.filter(c=>c.ip_hash===ipHash).length,total:d.length,by_key:d.filter(c=>c.access_label===accessLabel).length}},
-  async recentResult(_p,{url,query}){return [...checks].reverse().find(c=>c.url===url&&c.query===query&&c.status==='DONE')||null},
-  async createCheck(_p,o){const c={id:++id,public_id:'pub'+id,access_key:'key'+id+'abcdefgh',email:o.email,ip_hash:o.ipHash,url:o.url,query:o.query,
+  async recentResult(_p,{url,query,market=null}){return [...checks].reverse().find(c=>c.url===url&&c.query===query&&JSON.stringify(c.market||null)===JSON.stringify(market||null)&&c.status==='DONE')||null},
+  async createCheck(_p,o){const c={id:++id,public_id:'pub'+id,access_key:'key'+id+'abcdefgh',email:o.email,ip_hash:o.ipHash,url:o.url,query:o.query,market:o.market||null,
    status:o.cached?'DONE':'QUEUED',decision:o.cached?o.cached.decision:null,summary:o.cached?o.cached.summary:null,report:o.cached?o.cached.report:null,
    cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
@@ -544,4 +544,32 @@ test('standalone: a run that outlives its lease can neither store its text nor c
  assert.equal(w.row.writing_token,tokenB,'B still holds the lock');assert.equal(w.row.written,undefined,'A stored nothing');
  w.gates[1]();const won=await b;
  assert.equal(won.status,200);assert.equal(won.body.stored,true);assert.equal(w.row.written.runs.length,1);assert.equal(w.row.writing_token,null);
+});
+
+// Owner review of a Free Growth check: target market and language as in the Tracker; no writing without evidence.
+test('free check: target market and language like the Tracker (choice, validation, cache per market, used by the research)',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ assert.match((await s.get('/free-growth?key=open-key-12345')).body,/id="market"[\s\S]*list="marketRegions"[\s\S]*nl — Netherlands/);
+ assert.match((await s.post('/api/free-growth/checks',{...ok,market:'Narnia'})).body.error,/Choose the market from the list/);
+ assert.match((await s.post('/api/free-growth/checks',{...ok,language:'Klingon'})).body.error,/Choose the language from the list/);
+ const a=await s.post('/api/free-growth/checks',{...ok,market:'nl — Netherlands, be — Belgium',language:'Dutch'});await s.service.idle();
+ assert.equal(a.status,202);
+ assert.deepEqual(s.calls.at(-1).market,{countries:['NL','BE'],language:'nl'},'the research receives the chosen market');
+ // The same page and search term in another market is a new check, not the cached one.
+ const n=s.calls.length;await s.post('/api/free-growth/checks',{...ok,market:'gb — United Kingdom'});await s.service.idle();
+ assert.equal(s.calls.length,n+1);
+ const again=await s.post('/api/free-growth/checks',{...ok,market:'nl — Netherlands, be — Belgium',language:'Dutch'});await s.service.idle();
+ assert.equal(s.calls.length,n+1,'same market: cached');assert.equal(again.status,202);
+});
+
+test('free check: no writing when the check has too little evidence',async t=>{
+ const s=await server({config:{writing:'all',writeLimit:3}});t.after(()=>s.srv.close());
+ const b=await s.post('/api/free-growth/checks',ok);await s.service.idle();
+ const m=/\/r\/([^?]+)\?k=(.+)$/.exec(b.body.result_url),row=await s.storage.getCheck(null,m[1],m[2]);
+ // SYNTHETIC: the stored check is marked as having one readable ranking page.
+ row.summary.gaps.evidence={status:'INSUFFICIENT_EVIDENCE',reason:'Only 1 readable ranking page: not enough evidence to propose or write a section.'};row.summary.gaps.writing_allowed=false;
+ const id=row.summary.gaps.items.find(x=>x.writable)?.id||'x';
+ const w=await s.post('/api/free-growth/checks/'+m[1]+'/write?k='+m[2],{item_ids:[id]});
+ assert.equal(w.status,409);assert.match(w.body.error,/Not enough evidence in this check to write: Only 1 readable ranking page/);
+ const page=await s.get(b.body.result_url);assert.match(page.body,/writing_allowed/,'the page script reads the evidence flag');
 });

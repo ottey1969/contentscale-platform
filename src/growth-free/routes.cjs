@@ -5,6 +5,7 @@
 const crypto=require('node:crypto');
 const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
+const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const {writeForSelection,planBatch,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
@@ -102,6 +103,10 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
  <label for="query">Search term (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. roof repair lodi nj">
  <small>The words your customers type into Google. Leave empty to let the check derive it from your page.</small>
+ <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
+ <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
+ <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
+ <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
  <label for="email">Your email</label><input id="email" name="email" type="email" required maxlength="200" placeholder="you@company.com">
  <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` Max ${cfg.perEmail} free checks per day.`}</span></label>
  <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
@@ -117,7 +122,7 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
 b.disabled=true;s.textContent='Starting…';
-try{var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked})});
+try{var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err.message;s.className='error';b.disabled=false}});
 </script>`,cfg);
@@ -154,6 +159,7 @@ var GAP_GROUPS=[];
 function exampleText(x){return function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}}
 function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.groups||[]).map(function(x){return [x.id,x.label]});
  var h='<h2 id="gaps">Choose what goes on your site</h2><p class="lead">'+esc(g.note)+'</p><p class="muted">Compared with '+esc(g.ranking_pages_read)+' readable ranking page(s). '+(g.items.length?g.items.length+' difference(s) found.':'No difference found.')+'</p>';
+ if(g.writing_allowed===false&&g.evidence)h+='<p class="note"><strong>No section is proposed or written:</strong> '+esc(g.evidence.reason)+'</p>';
  var rec=(g.items||[]).filter(function(x){return x.recommended});
  if(rec.length)h+='<p class="note">Recommended first ('+rec.length+'): '+rec.map(function(x){return esc(x.title)}).join(' · ')+'. A research priority (supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI), not a growth forecast. You decide; you can select more.</p>';
  if((g.unique_content||[]).length)h+='<h3>Unique content worth reviewing and preserving ('+g.unique_content.length+')</h3><ul>'+g.unique_content.map(function(s){return '<li>'+esc(s.heading)+'</li>'}).join('')+'</ul><p class="muted">Only on your page among the ranking pages read (compared by heading words). Unique is not proof that it is correct, current or strong. It is not rewritten.</p>';
@@ -167,7 +173,7 @@ function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.grou
    (x.examples.length?'<br><small>'+x.examples.slice(0,3).map(exampleText(x)).join(' · ')+'</small>'+(x.examples.length>3?'<details><summary><small>'+(x.examples.length-3)+' more source(s)</small></summary><small>'+x.examples.slice(3).map(exampleText(x)).join(' · ')+'</small></details>':''):'')+'</span></label>'})});
  h+='<p><strong id="gapCount">0 selected</strong></p><p><button type="button" id="gapAll" class="ghost">Select all</button> <button type="button" id="gapNone" class="ghost">Clear</button></p>';
  h+='<p><button type="button" id="gapDownload">Download selection as editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p>';
- if(w&&w.allowed)h+='<p><button type="button" id="gapWrite">Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only. Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.</small></p>';
+ if(w&&w.allowed&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite">Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only. Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.</small></p>';
  h+='<div id="gapWritten"></div>';
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
@@ -214,7 +220,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  var a=d.ai,as=a&&a.summary;
  var h='<p class="kicker">Result · Google + AI'+(d.cached?' · Google part from a check of this page in the last 24 hours':'')+'</p><h1>Your page in Google and in AI answers</h1>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
- h+='<div class="grid two"><div><small>Google search (blue links)</small><strong>'+esc(s.headline)+'</strong><a href="#google">Details ↓</a></div><div><small>AI answers ('+(as?as.checked:0)+' of 5 AI systems checked)</small><strong>'+esc(as?as.headline:'AI answers not available')+'</strong><a href="#ai">'+(as&&as.checked?'Details ↓':'Check AI now ↓')+'</a></div></div>';
+ h+='<div class="grid two"><div><small>Google search (blue links)</small><strong>'+esc(s.headline)+'</strong><a href="#google">Details ↓</a></div><div><small>AI answers ('+(as?as.checked:0)+' of 5 AI systems — checked by you with pasted answers, not queried automatically)</small><strong>'+esc(as?as.headline:'AI answers not available')+'</strong><a href="#ai">'+(as&&as.checked?'Details ↓':'Check AI now ↓')+'</a></div></div>';
  h+='<h2 id="google">Google search (blue links)</h2><p class="lead"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
  h+='<h3>What to do</h3><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
@@ -314,7 +320,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const p=(async()=>{
     try{
      await storage.setStatus(pool,job.id,{status:'RUNNING'});
-     const out=await engine({url:job.url,query:job.query},engineDeps);
+     const out=await engine({url:job.url,query:job.query,market:job.market||null},engineDeps);
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
       if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
@@ -370,35 +376,45 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(b.consent!==true)return res.status(400).json({success:false,error:'Please accept the storage notice'});
    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
    const query=clean(b.query,120);
+   const market=readMarket(b,res);if(market===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
-   const cached=await storage.recentResult(pool,{url:v.url,query});
+   const cached=await storage.recentResult(pool,{url:v.url,query,market});
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label});
-   if(!cached){queue.push({id:row.id,url:v.url,query});pump()}
+   const row=await storage.createCheck(pool,{email,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label,market});
+   if(!cached){queue.push({id:row.id,url:v.url,query,market});pump()}
    res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
   }catch(e){console.error('[free-growth] start failed',e.message);res.status(503).json({success:false,error:'The free check is temporarily unavailable'})}
  });
 
+ // Target market(s) and language, as in the Tracker and the Pre-Write brief (optional; empty = derived from the page).
+ function readMarket(b,res){
+  const entries=String(b.market||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean);
+  const countries=validCountries(entries),language=String(b.language||'').trim()?validLanguage(b.language):null;
+  if(entries.length&&countries.length<entries.length){res.status(400).json({success:false,error:'Choose the market from the list, for example nl — Netherlands (several separated by commas).'});return undefined}
+  if(String(b.language||'').trim()&&!language){res.status(400).json({success:false,error:'Choose the language from the list, for example Dutch.'});return undefined}
+  return countries.length||language?{countries,language}:null;
+ }
  // Shared input checks for every way of starting a check.
  function readInput(b,res){
   const email=clean(b.email,200).toLowerCase();
   if(!EMAIL.test(email)){res.status(400).json({success:false,error:'Enter a valid email address'});return null}
   if(b.consent!==true){res.status(400).json({success:false,error:'Please accept the storage notice'});return null}
   const v=validatePublicUrl(b.url);if(v.error){res.status(400).json({success:false,error:v.error});return null}
-  return {email,url:v.url,host:v.host,query:clean(b.query,120)};
+  const market=readMarket(b,res);if(market===undefined)return null;
+  return {email,url:v.url,host:v.host,query:clean(b.query,120),market};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null}){
-  const cached=await storage.recentResult(pool,{url:input.url,query:input.query});
+  const cached=await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
-  const row=await storage.createCheck(pool,{email:input.email,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId});
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,inviteId:cached?null:inviteId});pump()}
+  const row=await storage.createCheck(pool,{email:input.email,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,market:input.market,inviteId:cached?null:inviteId});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  async function startInviteCheck(req,res,b){
@@ -477,6 +493,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const items=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return res.status(400).json({success:false,error:'Select at least one topic or question first.'});
   if(!items.some(x=>x.writable))return res.status(400).json({success:false,error:'Page elements are added by the editor; select a topic or question to write.'});
+  // One outcome: a check without enough evidence proposes nothing, so nothing is written from it either.
+  if(row.summary?.gaps?.evidence?.status==='INSUFFICIENT_EVIDENCE')return res.status(409).json({success:false,error:'Not enough evidence in this check to write: '+row.summary.gaps.evidence.reason+' Download the editor brief instead.'});
   let token=null;
   try{
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);

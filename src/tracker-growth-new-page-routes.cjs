@@ -124,6 +124,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
   const list=await ownList(req,res);if(!list)return;
   const cid=req.growthTrackerClientId,b=await brief(cid,list.prewrite_brief_id).catch(()=>null);
   if(!b)return no(res,404,'PREWRITE_BRIEF_NOT_FOUND');
+  if(list.research?.evidence_status==='INSUFFICIENT_EVIDENCE')return no(res,409,'NOT_ENOUGH_EVIDENCE_TO_WRITE');
   const ov=list.research?.overlap;
   if(ov?.status==='EXISTING_PAGE_TARGETS_THIS_KEYWORD'&&req.body?.confirm_new_page!==true)
    return no(res,409,'EXISTING_PAGE_TARGETS_THIS_KEYWORD',{existing_pages:ov.exact||[],note:'Improve the existing page instead, or confirm that a separate new page is intended (confirm_new_page).'});

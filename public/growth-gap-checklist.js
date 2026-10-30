@@ -28,6 +28,7 @@
   if(list.status!=='OBSERVED'||!(list.items||[]).length){el('p','No difference with the readable ranking pages was found.',box);return true}
   var np=list.page_kind==='NEW_PAGE',here=np?'missing on the new page':'missing or partly on your page';
   el('p',list.items.length+(np?' topic(s) and element(s) from ':' difference(s) with ')+(list.ranking_pages_read||0)+' readable ranking page(s).',box);
+  if(list.writing_allowed===false&&list.evidence)el('p',list.evidence.reason,box,'error');
   var rec=list.items.filter(function(x){return x.recommended});
   if(rec.length)el('p','Recommended first ('+rec.length+'): '+rec.map(function(x){return x.title}).join(' · ')+'. A research priority (supported by at least two ranking pages, '+here+', not contradicted by the AI), not a growth forecast. You decide; you can select more.',box,'small');
   else el('p','No item is recommended: none is supported by two ranking pages'+(np?'':' and missing on your page')+'. You can still choose any item.',box,'small');
@@ -60,7 +61,7 @@
   var actions=el('p',null,box),status=el('p',null,box,'small'),out=el('div',null,box);
   var dl=el('button','Download selection as editor brief',actions);dl.type='button';
   dl.addEventListener('click',function(){var p=picked();if(!p.length){status.textContent='Select at least one item.';return}save('editor-brief.md',brief(list,p));status.textContent=p.length+' item(s) in the brief.'});
-  if(typeof options.write==='function'){
+  if(typeof options.write==='function'&&list.writing_allowed!==false){
    var w=el('button','Write selected with AI (concepts for review)',actions);w.type='button';
    el('small',' Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.',actions);
    w.addEventListener('click',async function(){
