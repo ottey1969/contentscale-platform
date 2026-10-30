@@ -152,7 +152,8 @@
   }else node('p','A single actionable recommendation is not yet available. See supporting evidence.',s);
   var opportunity=d.autonomous_growth_opportunity||{};
   if(opportunity.primary_opportunity){
-   s=section('Additional search growth opportunity — evidence led');
+   s=section(opportunity.superseded_by?'Earlier research step (replaced by the decision at the top)':'Additional search growth opportunity — evidence led');
+   if(opportunity.superseded_by)node('p','Kept for traceability only. The leading decision is the one at the top of this report ('+String(opportunity.leading_decision||'').replace(/_/g,' ').toLowerCase()+'); any different advice in this step no longer applies.',s);
    var op=opportunity.primary_opportunity;
    node('h3',op.query,s);
    node('p','Observed exact-page GSC: '+op.observed_impressions+' impressions, '+op.observed_clicks+' clicks, '+op.observed_ctr_pct+'% CTR, average position '+op.observed_average_position+'.',s);

@@ -1,6 +1,6 @@
 'use strict';
 // Optional, owner-reviewed writing from the observed original page. Never publish.
-const {AI_MECHANISM,ATTRIBUTION,headingMismatch}=require('./growth-draft-claim-guard.cjs');
+const {AI_MECHANISM,ATTRIBUTION,headingMismatch,withoutTechnicalNumbers}=require('./growth-draft-claim-guard.cjs');
 const plain=x=>String(x||'').replace(/<(?:script|style|template)\b[^>]*>[\s\S]*?<\/(?:script|style|template)>/gi,' ')
  .replace(/<[^>]+>/g,' ').replace(/&(?:nbsp|amp|quot|lt|gt|#39);/gi,' ').replace(/\s+/g,' ').trim();
 function sourceFacts(html){
@@ -57,9 +57,10 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
   return {status:'AI_DRAFT_FOCUS_QUERY_MISSING_TITLE',draft:null};
  const generated=(requireTitle?[title,description]:[]).concat(sections.flatMap(s=>[s.h2,...s.paragraphs])).join(' ');
  // A percentage is its own figure: "68%" is not sourced by an unrelated "68" on the page.
- const num=/\d[\d,./-]*\d%?|\d%?/g,known=new Set(String(sourceText).match(num)||[]);
- if((generated.match(num)||[]).some(v=>!known.has(v))&&(failed=fail('AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED',{},
-  sections.flatMap(s=>sentencesOf(s).filter(t=>(t.match(num)||[]).some(v=>!known.has(v))).map(t=>({h2:s.h2,sentence:t,code:'UNSOURCED_NUMBER',reason:'A figure that is not on your page.'}))))))return failed;
+ const num=/\d[\d,./-]*\d%?|\d%?/g,known=new Set(withoutTechnicalNumbers(sourceText).match(num)||[]);
+ const figures=t=>withoutTechnicalNumbers(t).match(num)||[];
+ if(figures(generated).some(v=>!known.has(v))&&(failed=fail('AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED',{},
+  sections.flatMap(s=>sentencesOf(s).filter(t=>figures(t).some(v=>!known.has(v))).map(t=>({h2:s.h2,sentence:t,code:'UNSOURCED_NUMBER',reason:'A figure that is not on your page.'}))))))return failed;
  // A reason for how AI or search systems pick, verify or cite content is an unproven claim (also inside an instruction),
  // unless the original page itself says it. The model is told which sentence failed and gets one rewrite.
  const sourceLower=String(sourceText).toLowerCase();

@@ -19,10 +19,10 @@ test('without any AI the research still gives the full list, labelled "shared wo
  const questions=list.items.filter(x=>x.group==='QUESTION');
  assert.deepEqual(questions.map(x=>x.id).sort(),['q-task_dashbo','q-task_manual','q-task_priori'],'every candidate the page does not cover, nothing dropped');
  assert(questions.every(x=>x.ai==='AI: not judged (shared words only)'&&x.reader_question===null&&x.writable));
- assert.equal(list.items.some(x=>x.id==='q-task_traffi'),false,'word matching says the page covers it; it is not listed as missing');
+ assert.equal(list.items.some(x=>x.id==='q-task_traffi'),false,'what the check finds already on the page is not listed again (owner decision)');
 });
 
-test('an AI judgement labels; "different questions" leaves the pair out of the questions, the rest stays choosable',()=>{
+test('an AI judgement only labels: "different questions" stays visible and choosable, with the reason',()=>{
  const report=fresh();
  // MODEL_ANSWER (validated earlier in growth-task-meaning.test.cjs): manual confirmed, prioritize two different questions.
  applyTaskMeaning(report.reader_task_coverage,{status:'JUDGED',verdicts:{
@@ -31,7 +31,8 @@ test('an AI judgement labels; "different questions" leaves the pair out of the q
  const q=buildGapList(report).items.filter(x=>x.group==='QUESTION');
  assert.deepEqual(q.find(x=>x.id==='q-task_manual').title,'How do I check AI citations for my keywords manually?');
  assert.match(q.find(x=>x.id==='q-task_manual').ai,/same reader question/);
- assert.equal(q.some(x=>x.id==='q-task_priori'),false);
+ const priori=q.find(x=>x.id==='q-task_priori');
+ assert(priori&&priori.writable,'the owner can still choose it');assert.match(priori.ai,/different questions here \(different questions\)/);
  assert.equal(q.find(x=>x.id==='q-task_dashbo').ai,'AI: not judged (shared words only)','no verdict is not a rejection');
 });
 
@@ -72,4 +73,19 @@ test('a writer failure keeps the selection and says what to do; nothing to write
  assert.equal(down.status,'NOT_WRITTEN');assert.match(down.reason,/Write these items yourself/);
  assert.deepEqual(down.not_written,[{item_id:'q-task_manual',title:'How do I check AI citations manually?'}]);
  assert.equal((await writeForSelection({items:[{id:'e-tables',writable:false,title:'A table'}],generate:async()=>({})})).status,'NOTHING_TO_WRITE');
+});
+
+test('each competitor section appears once: a section already under a question is not listed again on its own',()=>{
+ const report=fresh();
+ applyTaskMeaning(report.reader_task_coverage,{status:'JUDGE_NOT_CONFIGURED',verdicts:{}});
+ const manual=report.reader_task_coverage.tasks.find(t=>t.code==='task_manual');
+ // The overview (no AI grouping) lists every ranking-page section; two of them are the manual question's own sections.
+ report.competitor_overview={status:'OBSERVED',ranking_pages_read:2,topics_status:'NOT_GROUPED_NO_MODEL',topics:null,
+  ungrouped_sections:[...manual.competitor_support.map(s=>({host:s.host,heading:s.heading,excerpt:s.excerpt})),{host:'otterly.ai',heading:'The Reporting Dashboard',excerpt:''}],
+  elements_they_have_and_this_page_lacks:[],structured_data_they_have_and_this_page_lacks:[],length:{},ranking_pages:[]};
+ const list=buildGapList(report);
+ const sections=list.items.filter(x=>x.group==='COMPETITOR_SECTION').map(x=>x.title);
+ assert(!sections.includes(manual.competitor_support[0].heading),'already listed under the question');
+ const keys=list.items.flatMap(x=>(x.examples||[]).map(e=>e.site+'|'+e.heading));
+ assert.equal(new Set(keys).size,keys.length,'no competitor section twice');
 });

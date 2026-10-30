@@ -9,34 +9,40 @@ const PAGE={NOT_OBSERVED:'Not on your page',PARTIAL:'Partly on your page'};
 const TOPIC={NO:'Not on your page',PARTLY:'Partly on your page',UNKNOWN:'Not matched to your page'};
 const GROUPS=[['QUESTION','Questions two ranking pages answer'],['MISSING_TOPIC','Not on your page'],['PARTIAL_TOPIC','Partly on your page'],
  ['PAGE_ELEMENT','Page elements the ranking pages have'],['UNMATCHED_TOPIC','Could not be matched to your page'],['COMPETITOR_SECTION','Sections on the ranking pages (not grouped)']];
+// The owner always sees EVERY difference, verified or not: a "different questions" judgement only labels it. What the
+// check finds already on the page is not listed (no duplicate content), and each competitor section appears only once.
 
 function buildGapList(report={}){
  const ov=report.competitor_overview,coverage=report.reader_task_coverage||{};
  const positions=new Map((report.search_discovery?.competitor_fetch_log||[]).map(x=>[x.url,x.serp_position]));
- const items=[];
+ const items=[],seen=new Set(),key=(host,heading)=>String(host||'')+'\u0000'+clip(heading,160).toLowerCase();
  // 1. Reader questions two ranking pages answer (word-matched candidates; AI label says whether the meaning was confirmed).
  for(const t of coverage.tasks||[]){
-  if(!t.supported_by_competitors||t.destination?.status==='COVERED')continue;
-  const confirmed=t.meaning?.status==='SAME_QUESTION';
+  if((!t.supported_by_competitors&&!t.word_match_supported)||t.destination?.status==='COVERED')continue;
+  const confirmed=t.meaning?.status==='SAME_QUESTION',different=t.meaning?.status==='DIFFERENT_QUESTIONS';
   items.push({id:'q-'+t.code,group:'QUESTION',writable:true,
    title:confirmed?t.reader_question:clip(String(t.label||'').replace(/^Competitors teach\s*/i,'').replace(/^[“"]|[”"]$/g,''),200),
    reader_question:confirmed?t.reader_question:null,
    status:PAGE[t.destination?.status]||'Not on your page',
-   ai:confirmed?'AI: same reader question on '+t.independent_sources+' ranking pages':t.meaning?'AI: not judged (shared words only)':'Shared words only (no AI check)',
+   ai:confirmed?'AI: same reader question on '+t.independent_sources+' ranking pages':different?'AI: the ranking pages answer different questions here ('+clip(t.meaning.reason,140)+')':t.meaning?'AI: not judged (shared words only)':'Shared words only (no AI check)',
    your_section:t.destination?.judged_heading||null,placement:t.placement||null,ranking_pages:t.independent_sources||null,
    examples:(t.competitor_support||[]).slice(0,4).map(s=>({site:s.host,url:s.url||null,heading:clip(s.heading,160),excerpt:clip(s.excerpt,400),position:positions.get(s.url)??null}))});
  }
+ for(const it of items)for(const e of it.examples||[])seen.add(key(e.site,e.heading));
  if(ov&&ov.status==='OBSERVED'){
   // 2. Topics of the ranking pages, grouped by AI when available; without it every section is listed on its own.
   if(ov.topics_status==='GROUPED'){
    (ov.topics||[]).forEach((t,i)=>{if(t.this_page==='YES')return;
+    // A topic whose sections are all already listed under a question is the same gap: not listed twice.
+    if((t.sections||[]).length&&t.sections.every(x=>seen.has(key(x.host,x.heading))))return;
     items.push({id:'t-'+i,group:t.this_page==='NO'?'MISSING_TOPIC':t.this_page==='PARTLY'?'PARTIAL_TOPIC':'UNMATCHED_TOPIC',writable:true,
      title:clip(t.topic,200),reader_question:null,status:TOPIC[t.this_page]||TOPIC.UNKNOWN,ai:'AI-grouped topic',
      your_section:t.this_page_heading||null,ranking_pages:t.ranking_pages,
      placement:t.this_page==='PARTLY'&&t.this_page_heading?{mode:'EXTEND_SECTION',section_heading:t.this_page_heading}:null,
      examples:(t.sections||[]).slice(0,4).map(s=>({site:s.host,url:s.url||null,heading:s.heading,excerpt:clip(s.excerpt,400),position:s.position??null}))})});
   }
-  (ov.ungrouped_sections||[]).forEach((x,i)=>items.push({id:'s-'+i,group:'COMPETITOR_SECTION',writable:true,
+  for(const it of items)for(const e of it.examples||[])seen.add(key(e.site,e.heading));
+  (ov.ungrouped_sections||[]).filter(x=>!seen.has(key(x.host,x.heading))).forEach((x,i)=>items.push({id:'s-'+i,group:'COMPETITOR_SECTION',writable:true,
    title:clip(x.heading,200),reader_question:null,status:'Not compared with your page',ai:ov.topics_status==='GROUPED'?'Not placed in a topic by AI':'Not grouped ('+String(ov.topics_status||'').toLowerCase().replace(/_/g,' ')+')',
    your_section:null,placement:null,ranking_pages:1,examples:[{site:x.host,url:x.url||null,heading:x.heading,excerpt:clip(x.excerpt,400),position:x.position??null}]}));
   // 3. Page elements most ranking pages have (deterministic); the editor adds these, they are not written.

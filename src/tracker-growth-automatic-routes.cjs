@@ -36,6 +36,10 @@ function markFinalDecision(report,decision){
  gd.final_decision={decision:decision.decision||null,blocker_code:decision.blocker_code||null,target_url:decision.target_url||null,
   copy_ready:decision.copy_ready===true,reason:decision.reason||null,next_action:decision.next_action||null};
  if(gd.primary_next_action)gd.primary_next_action={...gd.primary_next_action,stage:'RESEARCH_STARTING_POINT',superseded_by:'editorial_decision_gate'};
+ // One leading decision: earlier interim advice (e.g. DISTINCT_SPOKE_RESEARCH_REQUIRED) is kept for traceability, labelled.
+ const ag=report.autonomous_growth_opportunity;
+ if(ag&&typeof ag==='object')report.autonomous_growth_opportunity={...ag,stage:'EARLIER_RESEARCH_STEP',superseded_by:'editorial_decision_gate',
+  leading_decision:decision.decision||null};
 }
 // Signals WITHOUT a proven permanent redirect (status unknown, canonical, identical title/H1). They protect a locked source
 // page but are never reported as a 301.

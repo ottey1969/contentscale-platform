@@ -87,6 +87,8 @@ Growth no longer writes text by itself. One flow serves the Tracker and the stan
    - ungrouped competitor sections;
    - page elements.
 
+   Every difference is listed, verified or not: a "different questions" judgement only adds a label with its reason, and the owner can still choose the item. What the check already finds on the page (covered questions, topics the page has) is not listed, and each competitor section appears once (no duplicates).
+
    Each item carries its AI label and competitor examples. In the Tracker the list is stored per research run (`tracker_growth_gap_lists`); the owner ticks items, downloads an editor brief, or asks for concepts. Opening the research page writes nothing (`POST …/complete` with `write:false`); the automatic-plan draft stays available on an explicit click.
 4. **Writing (only the selection).** `POST …/auto-research/write` with `gap_list_id` and `item_ids`.
    - Items are read from the stored list, never from the browser; at most four per run; page elements are not written.
@@ -108,3 +110,11 @@ Growth no longer writes text by itself. One flow serves the Tracker and the stan
    - a heading still promises reasons but gives steps.
 
    Only a resolved text is packaged; `06-fact-check-before-publishing.md` then records what was resolved.
+
+### Technical notation is not a statistic (report 56)
+
+The claim check ignores technical notation when it looks for unsourced figures: HTTP status codes ("non-200", "301 redirects", "4xx/404 pages"), language/region codes and tokens such as `en-GB`, `ISO-3166`, `h2`. Real figures stay checked: "68%", "In 2025, 40 markets", "a 200 page site" are still flagged without a source.
+
+### One leading decision
+
+When the editorial decision gate decides, the earlier automatic opportunity (e.g. `DISTINCT_SPOKE_RESEARCH_REQUIRED`) is kept for traceability but marked `stage: EARLIER_RESEARCH_STEP`, `superseded_by: editorial_decision_gate`, and shown as "Earlier research step (replaced by the decision at the top)".
