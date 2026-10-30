@@ -54,14 +54,23 @@
   if((list.unique_content||[]).length){el('h3','Unique content worth reviewing and preserving ('+list.unique_content.length+')',box);
    var ks=el('ul',null,box);list.unique_content.forEach(function(s){el('li',s.heading,ks)});
    el('p','Only on your page among the ranking pages read (compared by heading words). Unique is not proof that it is correct, current or strong: value not assessed, strength not measured. It is not rewritten.',box,'small')}
+  // Owner guidance follows actual checklist state; no synthetic completion badges.
+  var guide=el('section',null,box,'growth-selection-guide');
+  guide.style.cssText='border:1px solid #bfdbfe;background:#eff6ff;border-radius:10px;padding:14px;margin:14px 0';
+  var guideTitle=el('strong','Next action: choose the improvements you want',guide);
+  var guideHelp=el('p','Tick one or more topics above. Growth writes only what you select, in rounds of four. Nothing is published.',guide);
+  guideHelp.style.margin='6px 0';
   var count=el('p',(carried.length?carried.length:0)+' selected',box);
   var picked=function(){return boxes.filter(function(b){return b.c.checked}).map(function(b){return b.x})};
-  boxes.forEach(function(b){b.c.addEventListener('change',function(){var p=picked();count.textContent=p.length+' selected'+(p.length&&!p.some(function(x){return x.writable})?' (page elements only: nothing to write)':'')})});
+  boxes.forEach(function(b){b.c.addEventListener('change',function(){var p=picked();count.textContent=p.length+' selected'+(p.length&&!p.some(function(x){return x.writable})?' (page elements only: nothing to write)':'');
+    guideTitle.textContent=p.some(function(x){return x.writable})?'Next action: write selected topics':'Next action: choose at least one writable topic';
+    guideHelp.textContent=p.some(function(x){return x.writable})?'Your selection contains '+p.filter(function(x){return x.writable}).length+' topic(s). Writing saves concepts for review; it never publishes.':'Choose a topic or question first. Page elements cannot be AI-written.';})});
   var actions=el('p',null,box),status=el('p',null,box,'small'),out=el('div',null,box);
   var dl=el('button','Download selection as editor brief',actions);dl.type='button';
+  dl.style.cssText='background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;margin-right:8px';
   dl.addEventListener('click',function(){var p=picked();if(!p.length){status.textContent='Select at least one item.';return}save('editor-brief.md',brief(list,p));status.textContent=p.length+' item(s) in the brief.'});
   if(typeof options.write==='function'){
-   var w=el('button','Write selected with AI (concepts for review)',actions);w.type='button';
+   var w=el('button','Write selected with AI (concepts for review)',actions);w.type='button';w.style.cssText='background:#2563eb;color:white;font-weight:700';
    el('small',' Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.',actions);
    w.addEventListener('click',async function(){
     var p=picked().filter(function(x){return x.writable});if(!p.length){status.textContent='Select at least one topic or question.';return}
