@@ -345,12 +345,14 @@ test('12. target market and language: the Pre-Write brief of the keyword, or the
  const research=async()=>{const b=searches.length;await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});return searches.slice(b).pop()};
  const page=async(tok='owner-tok')=>(await api('GET','/track/'+tok+'/growth/auto-research?page_id='+ids.page)).body;
  // Nothing set, no Pre-Write brief: the synthetic keyword names a US state (Lodi, NJ), so the derived US market is used.
- assert.match(await page(),/id="marketSetting"/);assert.match(await page(),/Not set: the market is derived from the page/);
+ assert.match(await page(),/id="marketSetting"/);assert.match(await page(),/Market: derived from the page — not confirmed/);
  assert.doesNotMatch(await page('share-tok'),/id="marketSetting"/,'owner only');
  await fresh();assert.deepEqual((await research()).market.states,['NJ']);
  // A Pre-Write brief for the same keyword (SYNTHETIC row, as the Pre-Write screen stores it: region code, language name).
  await pool.query("INSERT INTO prewrite_briefs(client_id,keyword,language,region,brief_json) VALUES ($1,'Roof Repair Lodi NJ','Dutch','nl','{}')",[ids.client]);
- assert.match(await page(),/From the Pre-Write brief for “Roof Repair Lodi NJ”: nl — Netherlands · Dutch/);
+ const briefId=(await pool.query("SELECT id FROM prewrite_briefs WHERE keyword='Roof Repair Lodi NJ'")).rows[0].id;
+ assert.match(await page(),new RegExp('Market: nl — Netherlands — from Pre-Write brief #'+briefId+' \\(“Roof Repair Lodi NJ”, \\d{4}-\\d\\d-\\d\\d\\)'));
+ assert.match(await page(),/Language: Dutch — from Pre-Write brief/);
  await fresh();const fromBrief=await research();
  assert.equal(fromBrief.market,null);assert.deepEqual([fromBrief.locale.country,fromBrief.locale.hl,fromBrief.locale.source],['NL','nl','FROM_PREWRITE_BRIEF']);
  // Set in Growth (as the Pre-Write picker writes it): wins over the brief.
@@ -360,9 +362,23 @@ test('12. target market and language: the Pre-Write brief of the keyword, or the
  assert.match(await page(),/value="nl — Netherlands, gb — United Kingdom, be — Belgium, lu — Luxembourg"/);assert.match(await page(),/value="English"/);
  const set=await research();
  assert.deepEqual([set.locale.country,set.locale.other_countries,set.locale.hl,set.locale.source],['NL',['GB','BE','LU'],'en','SET_IN_TRACKER']);
- // Removing the Growth setting brings the Pre-Write brief back.
- await api('POST',url,{countries:''});
- assert.equal((await research()).locale.source,'FROM_PREWRITE_BRIEF');
+ // Each field is inherited separately: markets set in Growth, language left empty -> the language of the brief.
+ await api('POST',url,{countries:'nl — Netherlands, gb — United Kingdom',language:''});
+ const marketsOnly=await research();
+ assert.deepEqual([marketsOnly.locale.country,marketsOnly.locale.other_countries,marketsOnly.locale.source,marketsOnly.locale.hl,marketsOnly.locale.language_source],['NL',['GB'],'SET_IN_TRACKER','nl','FROM_PREWRITE_BRIEF']);
+ assert.match(await page(),/Market: nl — Netherlands, gb — United Kingdom — set in Growth/);assert.match(await page(),/Language: Dutch — from Pre-Write brief/);
+ // Language only set in Growth: the market still comes from the brief.
+ await api('POST',url,{countries:'',language:'English'});
+ const languageOnly=await research();
+ assert.deepEqual([languageOnly.locale.country,languageOnly.locale.source,languageOnly.locale.hl,languageOnly.locale.language_source],['NL','FROM_PREWRITE_BRIEF','en','SET_IN_TRACKER']);
+ // Another brief for the same keyword with another market: the newest is used and the other is named.
+ await pool.query("INSERT INTO prewrite_briefs(client_id,keyword,language,region,brief_json,created_at) VALUES ($1,'roof repair lodi nj','English','gb','{}',NOW()-INTERVAL '2 days')",[ids.client]);
+ assert.match(await page(),/other Pre-Write briefs for this keyword with another market or language: #\d+ gb — United Kingdom · English/);
+ // Both fields empty removes the setting: the brief decides both again.
+ await api('POST',url,{countries:'',language:''});
+ const report=(await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false})).body;
+ const used=report.search_discovery.search_locale;
+ assert.deepEqual([used.source,used.language_source,used.brief.id,used.prewrite_alternatives.map(x=>x.country)],['FROM_PREWRITE_BRIEF','FROM_PREWRITE_BRIEF',briefId,['GB']]);
 });
 
 test('9. nothing outside the Growth tables was written',async()=>{

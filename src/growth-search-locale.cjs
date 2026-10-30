@@ -53,9 +53,13 @@ function deriveSearchLocale({html='',url='',headings=[],configured=null}={}){
  const others=[...new Set([...named,...alternates.map(a=>a.region)])].filter(c=>c!==country);
  const signals={html_lang:lang||null,domain_country:tldCountry,countries_named_in_headings:named,hreflang_regions:[...new Set(alternates.map(a=>a.region))]};
  const set=validCountries(configured?.countries);
- if(set.length)return {country:set[0],gl:glOf(set[0]),hl:validLanguage(configured.language)||language||'en',other_countries:set.slice(1),
-  source:configured.source||'SET_IN_TRACKER',confirmed:true,priority_confirmed:true,suggested:[country,...others].filter(Boolean),signals};
- return {country,gl:country?glOf(country):'us',hl:language||'en',other_countries:others,source,confirmed:false,
+ // Market and language are inherited separately: a set language applies even when the market is derived, and the other way round.
+ const setLanguage=validLanguage(configured?.language);
+ const languageSource=setLanguage?(configured.language_source||configured.source||'SET_IN_TRACKER'):language?'HTML_LANG':'DEFAULT_ENGLISH';
+ if(set.length)return {country:set[0],gl:glOf(set[0]),hl:setLanguage||language||'en',language_source:languageSource,other_countries:set.slice(1),
+  source:configured.source||'SET_IN_TRACKER',confirmed:true,priority_confirmed:true,suggested:[country,...others].filter(Boolean),
+  ...(configured.brief?{brief:configured.brief}:{}),signals};
+ return {country,gl:country?glOf(country):'us',hl:setLanguage||language||'en',language_source:languageSource,other_countries:others,source,confirmed:false,
   // Several countries named: the most-named first is a guess at priority, never a decision.
   priority_confirmed:!others.length,signals:{html_lang:lang||null,domain_country:tldCountry,countries_named_in_headings:named,hreflang_regions:[...new Set(alternates.map(a=>a.region))]}};
 }

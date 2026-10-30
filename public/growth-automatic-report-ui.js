@@ -285,7 +285,7 @@
   var cov=discovery.market_coverage||{};
   if(loc.source||cov.status){
    var mk=node('div',null,s);
-   node('small','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
+   node('small','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl+(loc.language_source==='SET_IN_TRACKER'?' (set in Growth)':loc.language_source==='FROM_PREWRITE_BRIEF'?' (from the Pre-Write brief)':''):'')+(loc.brief?' · Pre-Write brief #'+loc.brief.id:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
     (loc.priority_confirmed===false?' · the order of the markets is a guess from how often the headings name them':''),mk);
    (cov.markets||[]).forEach(function(m){node('small',' '+m.name+': '+(m.researched?'researched ('+(m.provider||'search')+', '+m.usable_results+' usable result(s))':'not researched'),node('div',null,mk))});
    if(cov.note)node('small',cov.note,node('div',null,mk));
@@ -643,19 +643,15 @@
   }finally{document.getElementById('retryResearch').disabled=false}
  }
  document.getElementById('retryResearch').addEventListener('click',run);
- // Target market(s) and language (top of the page, as in the Pre-Write brief): saving runs the research again with them.
+ // Target market(s) and language (top of the page, as in the Pre-Write brief): saving reloads the page, which runs the research again.
  var marketBox=document.getElementById('marketSetting');
  if(marketBox){var mSave=document.getElementById('marketSave'),mSaid=document.getElementById('marketSaid'),mInput=document.getElementById('marketInput'),mLang=document.getElementById('marketLanguage');
-  var regionText=function(c){var n=c;try{n=new Intl.DisplayNames(['en'],{type:'region'}).of(c)}catch(e){}return c.toLowerCase()+' — '+n};
-  var langText=function(c){try{return c?new Intl.DisplayNames(['en'],{type:'language'}).of(c):''}catch(e){return c||''}};
   mSave.addEventListener('click',async function(){mSave.disabled=true;mSaid.textContent='Saving…';
    try{var r=await fetch(marketBox.getAttribute('data-url'),{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({countries:mInput.value,language:mLang?mLang.value:''})});
     var j=await r.json();
     if(!j.success){mSaid.textContent='Not saved: '+(j.code==='UNKNOWN_COUNTRY'?'choose markets from the list (for example nl — Netherlands), separated by commas':j.code==='UNKNOWN_LANGUAGE'?'choose a language from the list (for example Dutch)':(j.code||r.status));return}
-    var label=j.markets?j.markets.countries.map(regionText).join(', ')+(j.markets.language?' · '+langText(j.markets.language):''):'';
-    mInput.value=j.markets?j.markets.countries.map(regionText).join(', '):'';if(mLang)mLang.value=j.markets&&j.markets.language?langText(j.markets.language):'';
-    mSaid.textContent=(j.markets?'Saved: '+label:'Removed: the Pre-Write brief or the page decides again')+'. Running the research again…';
-    container.textContent='';await run();mSaid.textContent=(j.markets?'Set in Growth: '+label:'Not set in Growth')+'. Research updated.';
+    // Reload: the page shows where each field comes from (Growth, Pre-Write brief or the page) and runs the research again.
+    mSaid.textContent='Saved. Running the research again…';location.reload();
    }catch(e){mSaid.textContent='Not saved.'}finally{mSave.disabled=false}});
  }
  document.getElementById('downloadResearch').addEventListener('click',function(){
