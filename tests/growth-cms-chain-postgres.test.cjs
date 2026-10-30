@@ -57,7 +57,7 @@ CREATE TABLE tracker_snapshots(id BIGSERIAL PRIMARY KEY,page_id BIGINT,checked_a
 CREATE TABLE tracker_ai_evidence(id BIGSERIAL PRIMARY KEY,page_id BIGINT,tracker_client_id BIGINT,engine TEXT,evidence_method TEXT,brand_recommended BOOLEAN,
  domain_cited BOOLEAN,exact_page_cited BOOLEAN,citation_urls JSONB,verified_at TIMESTAMPTZ,revision_cycle INTEGER,is_cleared BOOLEAN);`;
 const TABLES=['tracker_clients','tracker_pages','tracker_case_studies','tracker_gsc_queries','tracker_snapshots','tracker_ai_evidence',
- 'tracker_growth_proposals','tracker_growth_publications','tracker_growth_gsc_windows','tracker_growth_recommendations'];
+ 'tracker_growth_proposals','tracker_growth_publications','tracker_growth_gsc_windows','tracker_growth_recommendations','tracker_growth_gap_lists','tracker_growth_page_markets'];
 
 test.before(async()=>{
  pool=new Pool({connectionString:DB});

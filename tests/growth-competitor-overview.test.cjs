@@ -70,9 +70,10 @@ test('standalone check: every difference becomes one choosable item, grouped by 
  const listed=g.items.flatMap(x=>x.examples||[]).map(e=>e.site+'|'+e.heading);
  assert.deepEqual(v.ungrouped_sections.map(x=>x.host+'|'+x.heading).filter(k=>!listed.includes(k)),[],'sections the AI did not place in a topic stay choosable');
  assert.equal(new Set(listed).size,listed.length,'each section once');
- // The two "How to Track … Citations" sections of HubSpot and Otterly are one need (same words beyond the search term).
- const track=g.items.find(x=>x.examples.some(e=>e.heading==='How to Track AI Engine Citations'));
- assert.deepEqual(track.examples.map(e=>e.site),['blog.hubspot.com','otterly.ai']);assert.equal(track.ranking_pages,2);
+ // The two "How to Track … Citations" sections of HubSpot and Otterly share words beyond the search term: marked as a
+ // possible overlap, not merged (shared words are not proof of the same need).
+ const a=g.items.find(x=>x.title==='How to Track AI Engine Citations'),b=g.items.find(x=>/^How to Track AI Search Engine Citations/.test(x.title));
+ assert(a&&b&&a!==b);assert.deepEqual(a.possible_overlap.map(o=>o.id),[b.id]);assert.deepEqual(b.possible_overlap.map(o=>o.id),[a.id]);
  assert(g.items.find(x=>x.title==='Why tracking AI citations matters now').examples.length===1,'search-term words alone never join sections');
  assert(g.items.filter(x=>x.group==='PAGE_ELEMENT').every(x=>x.writable===false),'page elements are added by the editor, not written');
  assert.equal(g.items[1].your_section,'🔍 What Is an AI Citation Tracker? (Beyond Basic Monitoring)');

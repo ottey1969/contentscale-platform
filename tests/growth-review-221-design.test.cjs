@@ -1,6 +1,6 @@
 'use strict';
 // Design review of PR #221 (after report 56): one item per information need, priorities with their reasons, the page's
-// own strengths kept, the basis of every concept shown, the target market set by the owner and research per market.
+// own unique content to review, the basis of every concept shown, the target market set by the owner and research per market.
 // Real data: the research of production report 55 (HubSpot and Otterly vs page 2294: real headings, real reader tasks,
 // real page sections). LABELLED SYNTHETIC: the market tests use minimal hand-written HTML and empty search responses
 // (report 56's page HTML was not available); the AI topic answer is a hand-written MODEL_ANSWER that tests merging,
@@ -39,12 +39,14 @@ test('one item per need: an AI topic that shares a section with a question is me
  assert.match(q.merged.join(' '),/AI topic “Checking AI citations by hand”/);
 });
 
-test('without AI: sections with the same words beyond the search term become one item; the search term alone never joins',()=>{
+test('without AI: shared words are not proof; the items stay separate, marked as possibly overlapping, and only one is recommended',()=>{
  const g=list(fresh(),overview());
- const track=g.items.find(x=>x.examples.some(e=>e.heading==='How to Track AI Engine Citations'));
- assert.deepEqual(track.examples.map(e=>e.site).sort(),['blog.hubspot.com','otterly.ai']);
- assert.equal(track.priority.sources,2);
- assert.equal(g.items.find(x=>x.title==='Why AI Citation Tracking Matters Now').examples.length,1);
+ const a=g.items.find(x=>x.title==='How to Track AI Engine Citations'),b=g.items.find(x=>/^How to Track AI Search Engine Citations/.test(x.title));
+ assert(a&&b&&a!==b,'two items');
+ assert.deepEqual([a.need.status,b.need.status],['SINGLE_SECTION','SINGLE_SECTION']);
+ assert.equal(a.possible_overlap[0].id,b.id);assert.match(a.possible_overlap[0].reason,/not confirmed as the same need/);
+ assert(!(a.recommended&&b.recommended));
+ assert.equal(g.items.find(x=>x.title==='Why AI Citation Tracking Matters Now').possible_overlap,undefined,'search-term words alone never mark an overlap');
  const keys=g.items.flatMap(x=>x.examples||[]).map(e=>e.site+'|'+e.heading);
  assert.equal(new Set(keys).size,keys.length,'every competitor section once');
 });
@@ -66,13 +68,15 @@ test('priorities: each item says why and what to do; at most four recommended, n
  if(partial)assert.match(partial.priority.suggested_action,/^Extend your section/);
 });
 
-test('the page\'s own strengths: real sections of page 2294 no ranking page has are listed to keep, furniture is not',()=>{
+test('unique content: real sections of page 2294 no ranking page has are listed to review and preserve, not as proven strong',()=>{
  const g=list(fresh(),overview());
- const kept=g.strengths.map(s=>s.heading);
+ const kept=g.unique_content.map(s=>s.heading);
+ assert(g.unique_content.every(s=>s.uniqueness==='UNIQUE_BY_HEADING_WORDS'&&s.value==='NOT_ASSESSED'&&s.proven_strength==='NOT_MEASURED'));
+ assert(g.unique_content.every(s=>/unique is not proof/i.test(s.note)));
  assert(kept.includes('Case Study: Local Service (NL Market)'),'its own case study');
- assert(!kept.some(h=>/Table of Contents|Frequently Asked|People Also Ask/i.test(h)),'navigation and FAQ blocks are not strengths');
+ assert(!kept.some(h=>/Table of Contents|Frequently Asked|People Also Ask/i.test(h)),'navigation and FAQ blocks are not listed');
  assert(!kept.includes('⚙️ How AI Citation Trackers Actually Work'),'a section the ranking pages also have (beyond the search term) is not');
- assert(!g.items.some(x=>kept.includes(x.title)),'a strength is never a gap');
+ assert(!g.items.some(x=>kept.includes(x.title)),'unique content is never a gap');
 });
 
 test('every concept shows its basis; competitor headings only = a marked concept with a fact-check note',()=>{
@@ -135,4 +139,49 @@ test('the market setting route: owner only, two-letter codes, and the next resea
  const ok=await post({countries:'NL, UK, BE, LU'});
  assert.equal(ok.statusCode,200);assert.deepEqual(ok.body.markets.countries,['NL','GB','BE','LU']);assert.equal(ok.body.research_rerun_required,true);
  assert.deepEqual(saved.at(-1).countries,['NL','GB','BE','LU']);
+});
+
+// Independent review of 382f31e: evidence kept whole, growth potential apart from research priority, a reproducible
+// evidence record per writing run.
+test('every source stays with its item: none is dropped from the stored list, however many there are',()=>{
+ const report=fresh();
+ // MODEL_ANSWER: the AI grouped ALL 16 real ranking-page headings of report 55 into one topic.
+ const all=td.hosts.flatMap(h=>h.headings.map(x=>({host:h.host,heading:x,excerpt:''})));
+ const g=list(report,overview({topics_status:'GROUPED',topics:[{topic:'Tracking AI citations',this_page:'NO',this_page_heading:null,ranking_pages:2,sections:all}],ungrouped_sections:[]}));
+ const keys=g.items.flatMap(x=>x.examples).map(e=>e.site+'|'+e.heading);
+ assert.deepEqual(all.map(x=>x.host+'|'+x.heading).filter(k=>!keys.includes(k)),[],'all 16 sections are in the list');
+ assert(g.items.some(x=>x.examples.length>8),'more than eight sources on one item are kept, not counted away');
+ assert(!g.items.some(x=>'more_examples' in x));
+});
+
+test('growth potential is separate from research priority: without Search Console it is "not measured", never low',()=>{
+ const g=list(fresh(),overview());
+ const it=g.items.find(x=>x.writable);
+ assert.equal(it.growth_potential.search_demand.status,'NOT_MEASURED');
+ assert.equal(it.growth_potential.business_fit,'YOUR_DECISION');
+ assert.equal(g.recommendation_basis,'RESEARCH_PRIORITY_NOT_A_GROWTH_FORECAST');
+ // LABELLED SYNTHETIC Search Console rows (report 55 has none): only page-verified rows sharing the item's own words count.
+ const report={...fresh(),destination_gsc_queries:[{query:'how to manually search keywords in chatgpt',impressions:40,clicks:1},{query:'unrelated query',impressions:900,clicks:9}]};
+ applyTaskMeaning(report.reader_task_coverage,{status:'JUDGE_NOT_CONFIGURED',verdicts:{}});
+ const q=list(report,overview()).items.find(x=>x.id==='q-task_manual');
+ assert.equal(q.growth_potential.search_demand.status,'GSC_QUERIES_OBSERVED');
+ assert.equal(q.growth_potential.search_demand.impressions,40,'only the matching query, observed, not a forecast');
+});
+
+test('evidence record per writing run: research, market, date, page version, AI judgement and every source passage',async()=>{
+ const {writeForSelection}=require('../src/growth-selected-writing.cjs');
+ const report=fresh();applyTaskMeaning(report.reader_task_coverage,{status:'JUDGE_NOT_CONFIGURED',verdicts:{}});
+ report.search_discovery={...report.search_discovery,target_query:'ai citation tracker',search_locale:{country:'NL',hl:'en',source:'SET_IN_TRACKER',confirmed:true},
+  market_coverage:{status:'ALL_TARGET_MARKETS_RESEARCHED',markets:[{country:'NL',researched:true,provider:'BING_PUBLIC_RSS',usable_results:6}]}};
+ const g=buildGapList({...report,competitor_overview:overview({this_page_fingerprint:'abc123'})});
+ const item=g.items.find(x=>x.id==='q-task_manual');
+ const out=await writeForSelection({items:[item],targetUrl:r55.url,focusQuery:'ai citation tracker',research:g.research,sourceFingerprint:g.source_fingerprint,
+  generate:async ctx=>({status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:[{task_code:ctx.reader_task.tasks[0].code,h2:'Check citations by hand',paragraphs:['A concept paragraph that the editor reviews and rewrites in their own words before anything is used.']}]}})});
+ const d=out.dossier;
+ assert.equal(d.version,1);assert.equal(d.research.focus_query,'ai citation tracker');assert.equal(d.research.researched_at,r55.generated_at);
+ assert.deepEqual(d.research.market,{country:'NL',language:'en',source:'SET_IN_TRACKER',confirmed:true});
+ assert.equal(d.research.market_coverage.status,'ALL_TARGET_MARKETS_RESEARCHED');assert.equal(d.research.page_fingerprint,'abc123');
+ assert.equal(d.items[0].item_id,'q-task_manual');assert.match(d.items[0].ai_judgement,/not judged|Shared words/);
+ assert.deepEqual(d.items[0].sources.map(s=>s.url),item.examples.map(e=>e.url));
+ assert(d.items[0].sources.every(s=>s.passage&&s.passage.length>=75),'the real competitor passages of report 55');
 });

@@ -7,7 +7,7 @@ const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
-const {writeForSelection,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
+const {writeForSelection,planBatch,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded-editor.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 
@@ -150,20 +150,23 @@ function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();render(d);var el=document.getElementById('ai');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
 var GAPS=null;
 var GAP_GROUPS=[];
+function exampleText(x){return function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}}
 function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.groups||[]).map(function(x){return [x.id,x.label]});
  var h='<h2 id="gaps">Choose what goes on your site</h2><p class="lead">'+esc(g.note)+'</p><p class="muted">Compared with '+esc(g.ranking_pages_read)+' readable ranking page(s). '+(g.items.length?g.items.length+' difference(s) found.':'No difference found.')+'</p>';
  var rec=(g.items||[]).filter(function(x){return x.recommended});
- if(rec.length)h+='<p class="note">Recommended first ('+rec.length+'): '+rec.map(function(x){return esc(x.title)}).join(' · ')+'. Supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI. You decide.</p>';
- if((g.strengths||[]).length)h+='<h3>Keep: your page has this, the ranking pages read do not ('+g.strengths.length+')</h3><ul>'+g.strengths.map(function(s){return '<li>'+esc(s.heading)+'</li>'}).join('')+'</ul><p class="muted">These are not gaps and are not rewritten.</p>';
+ if(rec.length)h+='<p class="note">Recommended first ('+rec.length+'): '+rec.map(function(x){return esc(x.title)}).join(' · ')+'. A research priority (supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI), not a growth forecast. You decide; you can select more.</p>';
+ if((g.unique_content||[]).length)h+='<h3>Unique content worth reviewing and preserving ('+g.unique_content.length+')</h3><ul>'+g.unique_content.map(function(s){return '<li>'+esc(s.heading)+'</li>'}).join('')+'</ul><p class="muted">Only on your page among the ranking pages read (compared by heading words). Unique is not proof that it is correct, current or strong. It is not rewritten.</p>';
  if(!g.items.length)return h;
  GAP_GROUPS.forEach(function(gr){var list=g.items.filter(function(x){return x.group===gr[0]});if(!list.length)return;
   h+='<h3>'+esc(gr[1])+' ('+list.length+')</h3>';
   list.forEach(function(x){h+='<label class="check card gap"><input type="checkbox" class="gapPick" value="'+esc(x.id)+'"><span>'+(x.recommended?'<mark>Recommended</mark> ':'')+'<strong>'+esc(x.title)+'</strong> <small>'+esc(x.status)+(x.ranking_pages?' · on '+esc(x.ranking_pages)+(x.of?' of '+esc(x.of):'')+' ranking page(s)':'')+(x.your_section?' · closest on your page: “'+esc(x.your_section)+'”':'')+'</small>'+
    (x.priority&&x.priority.suggested_action?'<br><small>Action: '+esc(x.priority.suggested_action)+'</small>':'')+(x.priority&&x.priority.why?'<br><small>Why: '+esc(x.priority.why.join(' · '))+'</small>':'')+
-   (x.examples.length?'<br><small>'+x.examples.map(function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}).join(' · ')+'</small>':'')+'</span></label>'})});
+   (x.growth_potential&&x.growth_potential.search_demand?'<br><small>'+(x.growth_potential.search_demand.status==='NOT_MEASURED'?'Search demand: not measured (not low)':esc(x.growth_potential.search_demand.note))+' · business fit: your decision</small>':'')+
+   (x.possible_overlap||[]).map(function(o){return '<br><small>May overlap with “'+esc(o.title)+'” (shared words, not confirmed)</small>'}).join('')+
+   (x.examples.length?'<br><small>'+x.examples.slice(0,3).map(exampleText(x)).join(' · ')+'</small>'+(x.examples.length>3?'<details><summary><small>'+(x.examples.length-3)+' more source(s)</small></summary><small>'+x.examples.slice(3).map(exampleText(x)).join(' · ')+'</small></details>':''):'')+'</span></label>'})});
  h+='<p><strong id="gapCount">0 selected</strong></p><p><button type="button" id="gapAll" class="ghost">Select all</button> <button type="button" id="gapNone" class="ghost">Clear</button></p>';
  h+='<p><button type="button" id="gapDownload">Download selection as editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p>';
- if(w&&w.allowed)h+='<p><button type="button" id="gapWrite">Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only, at most 4 topics per run; page elements are added by the editor. Nothing is published.</small></p>';
+ if(w&&w.allowed)h+='<p><button type="button" id="gapWrite">Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only. Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.</small></p>';
  h+='<div id="gapWritten"></div>';
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
@@ -173,7 +176,8 @@ function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</
   (x.paragraphs||[]).forEach(function(p){var out=esc(p);fl.forEach(function(f){out=out.split(esc(f)).join('<mark title="Flagged: rewrite or remove">'+esc(f)+'</mark>')});h+='<p>'+out+'</p>'});
   if((x.flags||[]).length)h+='<ul>'+x.flags.map(function(f){return '<li>'+(f.sentence?'“'+esc(f.sentence)+'” — ':'Whole section — ')+esc(f.reason)+'</li>'}).join('')+'</ul>';
   h+='</div>'});
- (r.not_written||[]).forEach(function(x){h+='<p class="muted">Not written: '+esc(x.title)+' — write this one yourself.</p>'});
+ (r.not_written||[]).forEach(function(x){h+='<p class="muted">Not written: '+esc(x.title)+' — kept for the next run, or write it yourself.</p>'});
+ if((r.pending||[]).length)h+='<p class="note">Still to write from your selection ('+r.pending.length+'): '+r.pending.map(function(x){return esc(x.title)}).join(' · ')+'. Click write again for the next ones.</p>';
  (r.unlinked_sections||[]).forEach(function(x){h+='<p class="muted">Not linked to a selected item and not used: “'+esc(x.h2)+'” — '+esc(x.reason)+'</p>'});
  if(r.reason&&!(r.sections||[]).length)h+='<p class="muted">'+esc(r.reason)+'</p>';
  return h}
@@ -184,7 +188,7 @@ function gapBrief(g,s){var picked={};document.querySelectorAll('.gapPick:checked
   list.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+')');
    if(x.priority&&x.priority.suggested_action)L.push('  - Action: '+x.priority.suggested_action);
    x.examples.forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))})});L.push('')});
- if((g.strengths||[]).length){L.push('## Keep: your page has this, the ranking pages read do not','');g.strengths.forEach(function(x){L.push('- '+x.heading)});L.push('')}
+ if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
  return {count:items.length,text:L.join('\\n')}}
 function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)return;
@@ -192,8 +196,6 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
  var wb=document.getElementById('gapWrite');
  if(wb)wb.onclick=async function(){var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});var st=document.getElementById('gapStatus');
   if(!ids.length){st.textContent='Select at least one topic or question.';return}
-  var writable=g.items.filter(function(x){return x.writable&&ids.indexOf(x.id)>=0}).length;
-  if(writable>4){st.textContent='You selected '+writable+' topics: write at most 4 per run (untick some), or download the brief for all of them.';return}
   wb.disabled=true;st.textContent='Writing concepts…';
   try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});var x=await r.json();if(!x.success)throw Error(x.error||'Not written');
    wr.innerHTML=writtenHtml(x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
@@ -470,20 +472,27 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
   if(!writingAllowed(row))return res.status(403).json({success:false,error:'Writing is not available for this check. Download the editor brief instead.'});
   if(Number(row.write_count||0)>=(config.writeLimit||3))return res.status(429).json({success:false,error:'The writing limit for this check is reached. Download the editor brief instead.'});
-  const ids=Array.isArray(req.body&&req.body.item_ids)?[...new Set(req.body.item_ids.map(String))].slice(0,20):[];
+  const ids=Array.isArray(req.body&&req.body.item_ids)?[...new Set(req.body.item_ids.map(String))].slice(0,200):[];
   const items=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return res.status(400).json({success:false,error:'Select at least one topic or question first.'});
-  if(items.filter(x=>x.writable).length>MAX_WRITE_ITEMS)return res.status(400).json({success:false,error:'Select at most '+MAX_WRITE_ITEMS+' topics or questions per writing run.'});
   if(!items.some(x=>x.writable))return res.status(400).json({success:false,error:'Page elements are added by the editor; select a topic or question to write.'});
   try{
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
    const html=String(live&&live.html||'');
    const researched=row.summary&&row.summary.gaps&&row.summary.gaps.source_fingerprint;
    if(researched&&pageFingerprint(html)!==researched)return res.status(409).json({success:false,error:'Your page changed since this check. Run a new check so the advice matches the page.'});
+   // The whole selection is kept: this run writes the next four not written yet; the rest stays for the next run.
+   const doneBefore=(row.written&&row.written.done_item_ids)||[];
+   const plan=planBatch(items,req.body&&req.body.rewrite===true?[]:doneBefore);
+   if(!plan.batch.length)return res.status(409).json({success:false,error:'Every selected item has been written already. Select other items, or download the editor brief.'});
    const write=engineDeps.generateDraft||generateGrowthEditorDraft;
    const focusQuery=row.query||(row.summary&&row.summary.checked&&row.summary.checked.search_term)||'';
-   const written=await writeForSelection({items,targetUrl:row.url,focusQuery,
+   const gaps=row.summary&&row.summary.gaps||{};
+   const written=await writeForSelection({items:plan.batch,targetUrl:row.url,focusQuery,research:gaps.research||null,sourceFingerprint:gaps.source_fingerprint||null,
     generate:async ctx=>({...(await write({sourceHtml:html,pageUrl:row.url,focusQuery,readerTask:ctx.reader_task,researchObservations:ctx.observations,fallbackFlagged:true})),source_text:sourceFacts(html).text})});
+   const done=(written.sections||[]).map(s=>s.item_id);
+   const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));
+   written.done_item_ids=[...new Set([...doneBefore,...done])];written.pending=pending;
    const counted=await storage.recordWriting(pool,{checkId:row.id,written,limit:config.writeLimit||3});
    if(!counted)return res.status(429).json({success:false,error:'The writing limit for this check is reached.'});
    res.set('Cache-Control','no-store').json({success:true,...written,remaining:Math.max(0,(config.writeLimit||3)-counted.write_count),published:false});

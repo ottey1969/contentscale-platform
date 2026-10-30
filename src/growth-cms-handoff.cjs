@@ -167,6 +167,8 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    'Without Search Console access, label metrics NEEDS ACCESS. Do not insert zeros.\n'+
    'GBP phone-button taps are not answered calls; call logs, quotes, won jobs require independent information.\n'+
    'Review any real project photos/reviews with the owner; never invent customer experiences.\n'},
+  // Why these changes were proposed: the research and sources they rest on, as recorded when the concept was written.
+  ...(reviewNotes&&reviewNotes.dossier&&typeof reviewNotes.dossier==='object'?[{name:'07-evidence-dossier.json',content:JSON.stringify(reviewNotes.dossier,null,2)+'\n'}]:[]),
   ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
    (review.flagged.length?'\n## Flagged by Growth — resolved in this text (checked)\n\nThese sentences were flagged in the concept. The package was only made because none of them is still in the approved text and the text passes the same checks again.\n\n'+review.flagged.map(x=>'- '+x).join('\n')+'\n':'')+
    (review.basis.length?'\n## What each section rests on\n\n'+review.basis.map(x=>'- '+x).join('\n')+'\n':'')+

@@ -29,6 +29,7 @@ on:
       - 'tests/growth-report-56-regression.test.cjs'
       - 'tests/growth-search-market.test.cjs'
       - 'tests/growth-review-221-design.test.cjs'
+      - 'tests/growth-selection-store-postgres.test.cjs'
       - 'tests/fixtures/growth-report-55/**'
       - 'package.json'
       - '.github/workflows/growth-cms-handoff-chain.yml'
@@ -69,6 +70,10 @@ jobs:
         env:
           GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e
         run: node --test tests/growth-cms-chain-postgres.test.cjs
+      - name: Selection and market stores (real PostgreSQL)
+        env:
+          GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e
+        run: node --test tests/growth-selection-store-postgres.test.cjs
       - name: Existing publication, export and Cockpit tests
         run: |
           node tests/tracker-growth-execution.test.cjs

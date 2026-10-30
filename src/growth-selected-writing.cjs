@@ -74,16 +74,43 @@ function reviewWritten({draft,flags=[]},request,{sourceText='',focusQuery=''}={}
   note:'Concepts for the selected items. Every statement still needs your check; flagged sentences must be rewritten or removed. Nothing is published.'};
 }
 
+// One versioned evidence record per writing run: what the research was (search term, market and coverage, date, ranking
+// pages, the fingerprint of this page as researched) and, per selected item, the AI judgement and every competitor
+// source with its passage. It lets Growth show later why a change was proposed, even after a competitor edits its page.
+function evidenceDossier({items=[],research=null,sourceFingerprint=null,writerStatus=null,now=new Date()}={}){
+ const r=research||{};
+ return {version:1,created_at:new Date(now).toISOString(),
+  research:{focus_query:r.focus_query||null,researched_at:r.researched_at||null,page_url:r.page_url||null,market:r.market||null,
+   market_coverage:r.market_coverage?{status:r.market_coverage.status,markets:(r.market_coverage.markets||[]).map(m=>({country:m.country,researched:m.researched,provider:m.provider||null,usable_results:m.usable_results??null}))}:null,
+   search_source:r.search_source||null,ranking_pages:(r.ranking_pages||[]).slice(0,10),page_fingerprint:sourceFingerprint||r.page_fingerprint||null},
+  items:items.map(it=>({item_id:it.id,title:clip(it.title,200),reader_question:it.reader_question||null,group:it.group||null,
+   need_status:it.need?.status||null,ai_judgement:it.ai||null,coverage:it.coverage||null,your_section:it.your_section||null,
+   possible_overlap:(it.possible_overlap||[]).map(o=>o.id),
+   sources:(it.examples||[]).map(e=>({site:e.site,url:e.url||null,heading:clip(e.heading,160),passage:clip(e.excerpt,400)||null,position:e.position??null}))})),
+  writer_status:writerStatus};
+}
+
 // generate(researchContext) -> {status, draft, flags, source_text}: the Tracker passes the owner draft handler (live page,
 // identity checks), the standalone passes the generator with the public page it already read.
-async function writeForSelection({items,targetUrl,focusQuery,existingHeadings,generate}){
+async function writeForSelection({items,targetUrl,focusQuery,existingHeadings,generate,research=null,sourceFingerprint=null}){
  const request=writingRequest(items||[],{targetUrl,focusQuery,existingHeadings});
  if(!request.items.length)return {status:'NOTHING_TO_WRITE',sections:[],not_written:[],reason:'Select at least one topic or question (page elements are added by the editor, not written).'};
  let out;
  try{out=await generate(request.research_context)}catch(e){out={status:'WRITER_UNAVAILABLE'}}
  if(!out||!out.draft)return {status:'NOT_WRITTEN',writer_status:out?.status||'WRITER_UNAVAILABLE',sections:[],
-  not_written:request.items.map(x=>({item_id:x.id,title:x.title})),reason:'The writer returned no usable text ('+(out?.status||'unavailable')+'). Write these items yourself; the research and your selection are kept.'};
- return {...reviewWritten(out,request,{sourceText:out.source_text||'',focusQuery}),writer_status:out.status};
+  not_written:request.items.map(x=>({item_id:x.id,title:x.title})),reason:'The writer returned no usable text ('+(out?.status||'unavailable')+'). Write these items yourself; the research and your selection are kept.',
+  dossier:evidenceDossier({items:request.items,research,sourceFingerprint,writerStatus:out?.status||'WRITER_UNAVAILABLE'})};
+ return {...reviewWritten(out,request,{sourceText:out.source_text||'',focusQuery}),writer_status:out.status,
+  dossier:evidenceDossier({items:request.items,research,sourceFingerprint,writerStatus:out.status})};
 }
 
-module.exports={writeForSelection,writingRequest,reviewWritten,pageFingerprint,basisOf,MAX_ITEMS};
+// The owner's selection is kept whole: recommendation (what matters most) and the writer's limit per run (four) are
+// different things. Each run writes the next four selected writable items that are not written yet, in list order; the
+// rest stays pending for the next run, also after a new session or a failed run (only written sections count as done).
+function planBatch(items,doneIds=[]){
+ const done=new Set((doneIds||[]).map(String));
+ const open=(items||[]).filter(x=>x&&x.writable&&!done.has(String(x.id)));
+ return {batch:open.slice(0,MAX_ITEMS),pending:open.slice(MAX_ITEMS),already_written:(items||[]).filter(x=>x&&x.writable&&done.has(String(x.id))).map(x=>x.id)};
+}
+
+module.exports={planBatch,evidenceDossier,writeForSelection,writingRequest,reviewWritten,pageFingerprint,basisOf,MAX_ITEMS};

@@ -485,7 +485,9 @@ test('writing for a selection is optional: only where allowed, only the selected
  const original=pages[URL_];pages[URL_]=original.replace('</body>','<p>A paragraph the owner added after the check ran, long enough to count as text.</p></body>');
  const stale=await all.post(p2,{item_ids:pick});pages[URL_]=original;
  assert.equal(stale.status,409);assert.match(stale.body.error,/changed since this check/);assert.equal(calls.length,1);
- assert.equal((await all.post(p2,{item_ids:pick})).status,200);
- assert.equal((await all.post(p2,{item_ids:pick})).status,429,'limit per check');
+ // A written item is not written again by accident; asking explicitly rewrites it.
+ const again=await all.post(p2,{item_ids:pick});assert.equal(again.status,409);assert.match(again.body.error,/written already/);assert.equal(calls.length,1);
+ assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,200);
+ assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,429,'limit per check');
  const page=await all.get(b.body.result_url);assert.match(page.body,/Write selected with AI/);
 });

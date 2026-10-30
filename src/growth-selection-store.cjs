@@ -15,6 +15,8 @@ function ensureTable(pool){
    selected_at TIMESTAMPTZ,
    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`)
   .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS source_fingerprint TEXT'))
+  .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS written_ids JSONB'))
+  .then(()=>pool.query('ALTER TABLE tracker_growth_gap_lists ADD COLUMN IF NOT EXISTS research JSONB'))
   .catch(e=>{ensured=null;throw e});
  return ensured;
 }
@@ -22,14 +24,26 @@ async function saveGapList(pool,{clientId,targetPageId,targetUrl,focusQuery,list
  if(!list||!Array.isArray(list.items)||!Number.isSafeInteger(Number(targetPageId)))return null;
  await ensureTable(pool);
  return (await pool.query(`INSERT INTO tracker_growth_gap_lists (tracker_client_id,target_page_id,target_url,focus_query,items
-   ,source_fingerprint) VALUES ($1,$2,$3,$4,$5::jsonb,$6) RETURNING id,created_at`,[clientId,Number(targetPageId),targetUrl,focusQuery||null,JSON.stringify(list.items),list.source_fingerprint||null])).rows[0];
+   ,source_fingerprint,research) VALUES ($1,$2,$3,$4,$5::jsonb,$6,$7::jsonb) RETURNING id,created_at`,[clientId,Number(targetPageId),targetUrl,focusQuery||null,JSON.stringify(list.items),list.source_fingerprint||null,JSON.stringify(list.research||null)])).rows[0];
 }
 async function getGapList(pool,{clientId,id}){
  if(!Number.isSafeInteger(Number(id))||Number(id)<1)return null;
- try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,items,selected,source_fingerprint,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
+ try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,items,selected,written_ids,research,source_fingerprint,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
  catch(e){if(e.code==='42P01')return null;throw e}
 }
 async function saveSelection(pool,{clientId,id,itemIds}){
  await pool.query('UPDATE tracker_growth_gap_lists SET selected=$3::jsonb,selected_at=NOW() WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id),JSON.stringify(itemIds)]);
 }
-module.exports={saveGapList,getGapList,saveSelection,ensureTable};
+// Items written successfully from this list (added to, never replaced): the rest of the selection stays pending.
+async function saveWritten(pool,{clientId,id,itemIds}){
+ await pool.query(`UPDATE tracker_growth_gap_lists SET written_ids=(SELECT to_jsonb(ARRAY(SELECT DISTINCT x FROM jsonb_array_elements_text(COALESCE(written_ids,'[]'::jsonb)||$3::jsonb) x)))
+  WHERE tracker_client_id=$1 AND id=$2`,[clientId,Number(id),JSON.stringify((itemIds||[]).map(String))]);
+}
+// The open part of the page's latest selection, for a new research run of the same page (carried over by stable item id).
+async function getOpenSelection(pool,{clientId,targetPageId,beforeId=null}){
+ try{const row=(await pool.query(`SELECT id,selected,written_ids,created_at FROM tracker_growth_gap_lists WHERE tracker_client_id=$1 AND target_page_id=$2 AND selected IS NOT NULL AND ($3::bigint IS NULL OR id<$3) ORDER BY id DESC LIMIT 1`,[clientId,Number(targetPageId),beforeId])).rows[0];
+  if(!row)return null;const done=new Set((row.written_ids||[]).map(String));
+  return {gap_list_id:Number(row.id),selected:(row.selected||[]).map(String),pending:(row.selected||[]).map(String).filter(x=>!done.has(x)),selected_at:row.created_at}}
+ catch(e){if(e.code==='42P01'||e.code==='42703')return null;throw e}
+}
+module.exports={saveGapList,getGapList,saveSelection,saveWritten,getOpenSelection,ensureTable};

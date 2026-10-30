@@ -127,12 +127,23 @@ Searching: Serper gets `gl`/`hl`, Bing RSS `cc`/`setlang`. A page with several m
 
 `market_coverage` reports per target market whether it was researched, by which source and with how many usable results, whichever provider answered. Research that misses markets is `PARTIAL_MARKET_RESEARCH` and says which markets were not researched; it is never presented as complete market research.
 
-### One list, one item per need (design review)
+### One list, one item per need (design review, independent review of 382f31e)
 
-- Competitor sections the AI grouped into one topic, that a reader question already covers, or (without AI) that share their core words beyond the search term, become ONE item. Every supporting page and its original fragment is kept under it (`examples`, `more_examples`, `merged` says how). The search term's own words never join sections.
-- Every writable item has `priority`: number of ranking pages behind it, coverage (missing / partial / not compared), link with the search term (word-based, so it orders but never excludes), confidence (AI-confirmed question, AI topic, shared words, single section, AI says different questions), how many competitor text fragments there are, the reasons in words (`why`) and a `suggested_action` ("Extend your section …", "Add a new section after …"). No score is shown and nothing is estimated.
-- Up to four items are `recommended`: at least two ranking pages, missing or partly on the page, not contradicted by the AI. All items stay choosable.
-- `strengths`: sections of this page with no counterpart on the ranking pages read (none of the heading's own words in any ranking-page heading or fragment, no gap pointing at it; navigation and FAQ blocks excluded). Listed to keep, never written. Word-based: it says what was compared, not that the section is good.
+- Items are merged only on proof: competitor sections the AI grouped into one topic, or a topic that uses the very same competitor section as a reader question. Shared words are not proof: such items stay separate and carry `possible_overlap` both ways ("not confirmed as the same need; check before writing both"), and only the better-supported one of an overlapping pair is recommended. Better two items than one wrong merge. Each item has `need.status` (`AI_CONFIRMED_SAME_QUESTION`, `AI_TOPIC`, `WORD_MATCHED_NOT_CONFIRMED`, `SINGLE_SECTION`, `AI_SAYS_DIFFERENT_QUESTIONS`). Topic and section ids are stable (hash of their sections), so a selection survives a new research run.
+- Every source is kept with its item, without a cap; the screen shows three and folds out the rest.
+- Two separate assessments per writable item:
+  - `priority` (research priority): ranking pages behind it, coverage (missing / partial / not compared), word link with the search term (orders, never excludes), confidence, competitor text fragments, the reasons in words (`why`) and a `suggested_action`. No score is shown.
+  - `growth_potential`: search demand only from page-verified Search Console rows of the destination that share the item's own words (`GSC_QUERIES_OBSERVED` with the queries and impressions, observed and not a forecast; `NO_MATCHING_GSC_QUERY`; or `NOT_MEASURED` without Search Console, never "low"), whether it adds to the page without overlap, and `business_fit: YOUR_DECISION`.
+- Up to four items are `recommended` (`recommendation_basis: RESEARCH_PRIORITY_NOT_A_GROWTH_FORECAST`): at least two ranking pages, missing or partly on the page, not contradicted by the AI. That is advice, not the writing limit.
+- `unique_content`: sections of this page with no counterpart on the ranking pages read (by heading words; navigation and FAQ excluded; no gap pointing at it), shown as "Unique content worth reviewing and preserving", with `uniqueness: UNIQUE_BY_HEADING_WORDS`, `value: NOT_ASSESSED` and `proven_strength: NOT_MEASURED`. Unique is not proof that it is correct, current or strong. Never written.
+
+### Writing in rounds (independent review of 382f31e)
+
+The whole selection is kept. Each run writes the next four selected writable items not written yet, in list order; the response lists `batch`, `already_written` and `pending`. Only sections actually written count as done (`tracker_growth_gap_lists.written_ids`), so a failed or partial run leaves its items pending. A new research run of the same page carries the open part of the previous selection over by stable id (`gap_list.carried_over`): ticked again, never written by itself. Writing an item again needs `rewrite: true`. The standalone check works the same within one check.
+
+### Evidence record (independent review of 382f31e)
+
+Every writing run produces `dossier` (version 1): search term, research date, page URL, market and per-market coverage, search source, ranking pages, the fingerprint of the page as researched, and per selected item its need status, AI judgement, coverage, possible overlaps and every competitor source with URL, heading, passage and position, plus the writer status. It is stored with the selection concept and delivered in the CMS package as `07-evidence-dossier.json`, so Growth can show later why a change was proposed, even after a competitor changes its page.
 
 ### What each concept rests on (design review)
 

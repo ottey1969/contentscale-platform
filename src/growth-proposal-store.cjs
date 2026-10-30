@@ -62,6 +62,8 @@ async function saveSelectionProposal(pool,{clientId,researchPageId=null,targetPa
   // What each section rests on (question, competitor sources, warning when only headings were behind it).
   basis:(written.sections||[]).filter(s=>s.basis).map(s=>({h2:clip(s.h2,200),answers:clip(s.basis.answers,200),evidence_level:clip(s.basis.evidence_level,40),
    sources:(s.basis.competitor_evidence||[]).slice(0,8).map(e=>clip(e.site+(e.heading?': “'+e.heading+'”':''),220)),warning:s.basis.warning?clip(s.basis.warning,300):null})).slice(0,10),
+  // The versioned evidence record of this run (growth-selected-writing evidenceDossier).
+  dossier:written.dossier&&typeof written.dossier==='object'?written.dossier:null,
   requirements:['Rewrite or remove every flagged sentence.','Fact-check every statement against your own knowledge and sources before publishing.','Owner approval is required; nothing is published automatically.'],
   competitor_sources:[]};
  await ensureTable(pool);

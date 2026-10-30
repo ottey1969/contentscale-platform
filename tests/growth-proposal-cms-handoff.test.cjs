@@ -100,3 +100,12 @@ test('the basis of each Growth section travels to the fact-check file, only whil
  assert.match(facts,/answers “How do I check AI citations manually\?”\. Sources: blog\.hubspot\.com.*⚠ Only competitor headings/);
  assert(!facts.includes('A section the editor removed'));
 });
+
+test('the evidence record of the writing run is part of the CMS package (07-evidence-dossier.json)',()=>{
+ const p=proposalFromDecision(gate);
+ const dossier={version:1,research:{focus_query:p.focus_query,researched_at:'2026-10-29T10:00:00.000Z',page_fingerprint:'abc'},items:[{item_id:'q-task_manual',sources:[{site:'blog.hubspot.com',url:'https://blog.hubspot.com/',passage:'p'}]}]};
+ const out=handoff({...p,review:{...p.review,dossier}});
+ const f=out.files.find(x=>x.name==='07-evidence-dossier.json');
+ assert(f,'dossier file present');assert.deepEqual(JSON.parse(f.content),dossier);
+ assert(!handoff(p).files.some(x=>x.name==='07-evidence-dossier.json'),'no dossier, no file');
+});

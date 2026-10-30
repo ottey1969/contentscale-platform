@@ -1,6 +1,7 @@
 'use strict';
 // The owner's writing route (POST /auto-research/write) after the PR #221 review: the four guarantees.
-//  1. More than four writable items is refused (never silently cut).  2. A page changed since the research is refused
+//  1. A selection of more than four is kept whole: each run writes the next four, the rest stays pending (never cut).
+//     (Design review after report 56: recommendation and the writer's per-run limit are different things.)  2. A page changed since the research is refused
 //  before any AI call.  3. A written section is linked to an item only by its exact task code; anything else is reported
 //  as not linked and never stored.  4. (CMS) flagged content must be gone from the final text: see growth-cms-handoff.
 // The selectable items are the REAL competitor headings of production report 55 (HubSpot and Otterly vs page 2294).
@@ -16,16 +17,16 @@ const items=r55.reader_task_coverage.task_derivation.hosts.flatMap(h=>h.headings
  .map((x,i)=>({id:'s-'+i,group:'COMPETITOR_SECTION',writable:true,title:x.heading,status:'Not compared with your page',
   examples:[{site:x.host,url:'https://'+x.host+'/',heading:x.heading,excerpt:''}],placement:null}));
 
-function harness({live=researched,draft=null}={}){
+function harness({live=researched,draft=null,fail=false}={}){
  const route={},calls={generate:0,proposals:[]};
  const list={id:7,target_page_id:2294,target_url:URL_,focus_query:'ai citation tracker',items,source_fingerprint:pageFingerprint(researched)};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},{query:async()=>({rows:[]})},(req,res,next)=>{
   req.growthTrackerClientId=4;req.growth={can_edit:true,pages:[{id:2294,url:URL_,case_study_active:false}]};next()},{
   fetchLive:async()=>({html:live,final_url:URL_}),
-  completeOwnerDraft:async({body})=>{calls.generate++;const tasks=body.research_context.reader_task.tasks;
+  completeOwnerDraft:async({body})=>{calls.generate++;const tasks=body.research_context.reader_task.tasks;if(fail)return {statusCode:503,body:{success:false,code:'WRITER_DOWN'}};
    return {statusCode:200,body:{success:true,page_id:2294,canonical_url:URL_,status:'AI_DRAFT_REVIEW_REQUIRED',source_text:'',
     draft:draft?draft(tasks):{sections:tasks.map(t=>({task_code:t.code,h2:'About '+t.label,paragraphs:['A concept paragraph about '+t.label+' for the editor to review and rewrite where needed.']}))}}}},
-  loadGapList:async()=>list,recordSelection:async()=>{},recordSelectionProposal:async a=>{calls.proposals.push(a);return {id:99}}});
+  loadGapList:async()=>list,recordSelection:async()=>{},recordWritten:async({itemIds})=>{list.written_ids=[...new Set([...(list.written_ids||[]),...itemIds])]},recordSelectionProposal:async a=>{calls.proposals.push(a);return {id:99}}});
  const post=async ids=>{const req={params:{token:'owner'},query:{page_id:'2294'},body:{gap_list_id:7,item_ids:ids}},
   res={statusCode:200,status(x){this.statusCode=x;return this},set(){return this},json(x){this.body=x;return this}};
   const stack=route['/api/tracker-client/:token/growth/auto-research/write'];
@@ -33,12 +34,22 @@ function harness({live=researched,draft=null}={}){
  return {post,calls};
 }
 
-test('1. more than four selected topics is refused, not silently cut; four is written in full',async()=>{
- const h=harness();
- const five=await h.post(items.slice(0,5).map(x=>x.id));
- assert.equal(five.statusCode,400);assert.equal(five.body.code,'SELECT_AT_MOST_4_TO_WRITE');assert.equal(h.calls.generate,0);
- const four=await h.post(items.slice(0,4).map(x=>x.id));
- assert.equal(four.statusCode,200);assert.equal(four.body.sections.length,4);assert.deepEqual(four.body.not_written,[]);
+test('1. six selected: four written now, two kept and written in the next run; nothing is cut or written twice',async()=>{
+ const h=harness(),six=items.slice(0,6).map(x=>x.id);
+ const first=await h.post(six);
+ assert.equal(first.statusCode,200);assert.equal(first.body.sections.length,4);assert.deepEqual(first.body.batch,six.slice(0,4));
+ assert.deepEqual(first.body.pending.map(x=>x.item_id),six.slice(4));assert.match(first.body.batch_note,/2 selected item\(s\) are kept for the next run/);
+ const second=await h.post(six);
+ assert.deepEqual(second.body.batch,six.slice(4));assert.deepEqual(second.body.already_written,six.slice(0,4));assert.deepEqual(second.body.pending,[]);
+ const third=await h.post(six);
+ assert.equal(third.statusCode,409);assert.equal(third.body.code,'SELECTION_ALREADY_WRITTEN');assert.equal(h.calls.generate,2);
+});
+
+test('1b. a failed run writes nothing as done: the whole batch stays pending for the next run',async()=>{
+ const h=harness({fail:true}),ids=items.slice(0,3).map(x=>x.id);
+ const r=await h.post(ids);
+ assert.equal(r.statusCode,200);assert.equal(r.body.status,'NOT_WRITTEN');assert.deepEqual(r.body.pending.map(x=>x.item_id),ids);
+ assert.equal(r.body.dossier.writer_status,'WRITER_DOWN','the evidence record says what happened');
 });
 
 test('2. a page that changed since the research is refused before any AI call',async()=>{
