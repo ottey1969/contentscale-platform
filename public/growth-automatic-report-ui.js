@@ -101,19 +101,25 @@
    node('p','Existing section: '+String(outcome.target_section||'unspecified'),primary);
    if(outcome.placement)node('p','Placement: '+String(outcome.placement.mode||'').replace(/_/g,' ').toLowerCase()+' — '+String(outcome.placement.reason||''),primary);
    if(outcome.existing_passage){node('strong','Existing observed passage',primary);node('pre',outcome.existing_passage,primary)}
-   node('strong','Proposed replacement/addition — fact-check before approval',primary);
+   var extra=outcome.additional_sections||[];
+   node('strong','Change 1 of '+(1+extra.length)+' — proposed replacement/addition, fact-check before approval',primary);
+   if(outcome.draft_heading)node('p','New H2: '+String(outcome.draft_heading),primary);
    node('pre',outcome.proposed_text,primary);
+   extra.forEach(function(a,i){
+    node('strong','Change '+(i+2)+' of '+(1+extra.length)+' — fact-check before approval',primary);
+    if(a.placement)node('p','Placement: '+String(a.placement.mode||'').replace(/_/g,' ').toLowerCase()+' “'+String(a.placement.section_heading||'')+'” — '+String(a.placement.reason||''),primary);
+    if(a.heading)node('p','New H2: '+String(a.heading),primary);
+    node('pre',String(a.text||''),primary);
+   });
    if(outcome.source_comparison?.competitor_url){
     var competitor=node('p','Compared with: ',primary);
     link(outcome.source_comparison.competitor_url,outcome.source_comparison.competitor_heading||outcome.source_comparison.competitor_url,competitor);
     if(outcome.source_comparison.competitor_passage)node('pre',outcome.source_comparison.competitor_passage,primary);
    }
    node('p','This is a reviewable proposal, NOT a proven ranking gain or automatically verified missing answer.',primary);
-   var copyEdit=node('button','Copy proposed Growth edit',primary);copyEdit.type='button';
+   var copyEdit=node('button','Copy proposed Growth edit'+((outcome.additional_sections||[]).length?' (all '+(1+outcome.additional_sections.length)+' changes)':''),primary);copyEdit.type='button';
    copyEdit.addEventListener('click',async function(){
-    var material=['Target: '+String(outcome.target_url||''),'Section: '+String(outcome.target_section||''),
-     'Existing passage: '+String(outcome.existing_passage||''),'Proposed text:',outcome.proposed_text,
-     'Source: '+String(outcome.source_comparison?.competitor_url||''),'Editor approval required. No automatic publication.'].join('\\n\\n');
+    var material=window.growthEditCopyText(outcome);
     try{await navigator.clipboard.writeText(material);copyEdit.textContent='Copied'}
     catch(_){copyEdit.textContent='Copy unavailable'}
    });
