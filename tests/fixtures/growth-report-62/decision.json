@@ -55,6 +55,17 @@
     "Owner approval is required; nothing is published automatically."
    ]
   },
-  "copy_ready": true
+  "copy_ready": true,
+  "focus_query": "content scaling",
+  "protected_url": "https://contentscale.site/",
+  "case_study_locked": true
+ },
+ "destination_gsc_evidence": {
+  "status": "NO_VERIFIED_DESTINATION_ROWS",
+  "target_url": "https://contentscale.site/content-scaling/",
+  "target_page_id": 2295,
+  "focus_query": "content scaling",
+  "exact_query_verified": false,
+  "metrics": null
  }
 }

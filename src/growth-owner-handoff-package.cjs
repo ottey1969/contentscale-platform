@@ -52,6 +52,13 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   for(const [k,label] of LADDER_LABELS)L.push('| '+label+' | '+(decision.evidence_status[k]===true?'yes':'no')+' |');
   L.push('');
  }
+ // Reviewable is not publishable (copy_ready means ready for human review).
+ const ready=decision.publication_readiness;
+ if(ready&&(ready.blockers||[]).length){
+  L.push('## Publication readiness','','**'+(ready.status==='NOT_READY_FOR_PUBLICATION'?'Draft for review — not ready for publication.':'Ready for your approval, with notes.')+'**','');
+  for(const b of ready.blockers)L.push('- '+(b.required?'Required':'Recommended')+': '+b.detail+' What to do: '+b.action);
+  L.push('',ready.note,'');
+ }
  // URL identity (redirects, canonicals): shown before anything else about the destination, in the same words as the UI.
  const idNotes=[...new Set([report.destination_identity?.advice,...(report.url_identities||[]).map(x=>x.advice)].filter(Boolean))];
  if(idNotes.length||report.destination_identity?.resolves_to_source){

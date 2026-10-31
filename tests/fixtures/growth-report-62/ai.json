@@ -1,0 +1,51 @@
+{
+ "_note": "Real Growth report 62 (2026-10-31): the saved AI observations of the homepage as listed in the report (citation lists left out). The report holds no pasted text, so the search term of each observation is unknown.",
+ "generated_at": "2026-10-31T04:45:14.717Z",
+ "engines": [
+  {
+   "engine": "chatgpt",
+   "method": "manual",
+   "recommended": false,
+   "domain_cited": false,
+   "exact_page_cited": false,
+   "revision_cycle": 2,
+   "verified_at": "2026-10-11T11:40:33.000Z"
+  },
+  {
+   "engine": "claude",
+   "method": "manual",
+   "recommended": false,
+   "domain_cited": false,
+   "exact_page_cited": false,
+   "revision_cycle": 2,
+   "verified_at": "2026-10-11T11:42:42.000Z"
+  },
+  {
+   "engine": "copilot",
+   "method": "manual",
+   "recommended": false,
+   "domain_cited": false,
+   "exact_page_cited": false,
+   "revision_cycle": 2,
+   "verified_at": "2026-10-11T11:40:15.000Z"
+  },
+  {
+   "engine": "google_aio",
+   "method": "manual",
+   "recommended": false,
+   "domain_cited": false,
+   "exact_page_cited": false,
+   "revision_cycle": 2,
+   "verified_at": "2026-10-11T11:37:01.000Z"
+  },
+  {
+   "engine": "perplexity",
+   "method": "manual",
+   "recommended": false,
+   "domain_cited": false,
+   "exact_page_cited": false,
+   "revision_cycle": 2,
+   "verified_at": "2026-10-11T11:40:51.000Z"
+  }
+ ]
+}

@@ -6,6 +6,7 @@
 //    learned, with a link only where a paragraph already uses those words. Nothing is written or published.
 const {queryRoots,classifyTitle}=require('./growth-reader-task-coverage.cjs');
 const {planInternalLinks}=require('./growth-owner-handoff-package.cjs');
+const {statesIn}=require('./growth-serp-quality.cjs');
 
 const MIN_IMPRESSIONS=10,DEEP_POSITION=10,MAX_CANDIDATES=8;
 const rootsOf=t=>queryRoots(String(t||'')).all;
@@ -21,23 +22,41 @@ function latestByQuery(rows){
  return out;
 }
 
-function spokeCandidates({pageUrl='',focusQuery='',gscRows=[],sitePages=[],siteGsc=[]}={}){
+// Words that say WHAT KIND of result someone wants about a topic (a review, a price, a tool, a place), not the topic itself.
+// A term is compared with the site's pages on its topic words; any industry, English.
+const MODIFIERS=new Set(rootsOf('review reviews pricing price prices cost costs login alternative alternatives versus coupon discount trial nearby near detector detection checker tool tools software app free best top'));
+const placeIn=q=>statesIn(q,{queryMode:true}).length>0||/\b(near me|nearby|in my area)\b/i.test(q);
+const PLACE_ROOTS=q=>{const states=statesIn(q,{queryMode:true});if(!states.length)return [];
+ // The words of the place itself (the state, and the city written before it): "los angeles, california".
+ const m=String(q).toLowerCase().match(/(?:\bin\s+)?([a-z .'-]+),\s*([a-z ]+)$/);return rootsOf(m?m[1].replace(/^.*\bin\s+/,'')+' '+m[2]:'')};
+const topicOf=q=>{const place=new Set(PLACE_ROOTS(q));return rootsOf(q).filter(r=>!MODIFIERS.has(r)&&!place.has(r))};
+const pageTopic=p=>[...new Set([...rootsOf(p.keyword),...rootsOf(pathWords(p.url))])];
+
+// localMarket: the page serves a place (a US-state market derived from its query, keyword or URL). Without it, a term that
+// names a place or "near me" is not a growth term for this site.
+function spokeCandidates({pageUrl='',focusQuery='',gscRows=[],sitePages=[],siteGsc=[],localMarket=false}={}){
  const own=latestByQuery(gscRows);
- if(!own.size)return {status:'NO_SEARCH_CONSOLE_ROWS',candidates:[],belongs_elsewhere:[],
+ if(!own.size)return {status:'NO_SEARCH_CONSOLE_ROWS',candidates:[],belongs_elsewhere:[],excluded:[],
   note:'No Search Console rows for this page: possible new pages are suggested only from search terms the page already appears for.'};
  const brand=compact(hostLabel(pageUrl)),focus=rootsOf(focusQuery);
  const others=latestByQueryPerPage(siteGsc);
- const groups=new Map(),elsewhere=[];
+ const groups=new Map(),elsewhere=[],excluded=[];
+ const skip=(q,r,reason)=>excluded.push({query:q,impressions:Number(r.impressions)||0,position:Math.round((Number(r.position)||0)*10)/10,reason});
  for(const [q,r] of own){
   const impressions=Number(r.impressions)||0,position=Number(r.position)||0,clicks=Number(r.clicks)||0;
   if(impressions<MIN_IMPRESSIONS||!(position>DEEP_POSITION))continue;
-  if(brand.length>=4&&compact(q).includes(brand))continue;
-  const roots=rootsOf(q);if(!roots.length||covers(focus,roots))continue;
-  // Another tracked page already answers it: better position there, or its keyword covers the term.
+  if(brand.length>=4&&compact(q).includes(brand)){skip(q,r,'OWN_BRAND_TERM');continue}
+  if(placeIn(q)&&!localMarket){skip(q,r,'NAMES_A_PLACE_THIS_SITE_DOES_NOT_SERVE');continue}
+  const roots=rootsOf(q),topic=topicOf(q);if(!topic.length){skip(q,r,'NO_TOPIC_WORDS');continue}
+  // Another tracked page already answers it: better position there, or its keyword or URL covers the topic of the term
+  // (so a review or price question about a topic goes to the page about that topic). The closest page wins.
   const better=(others.get(q)||[]).filter(o=>Number(o.position)>0&&Number(o.position)<position).sort((a,b)=>a.position-b.position)[0];
-  const page=better?sitePages.find(p=>String(p.id)===String(better.page_id)):sitePages.find(p=>covers(rootsOf(p.keyword),roots));
+  const covering=sitePages.filter(p=>p&&p.url&&p.url!==pageUrl&&covers(pageTopic(p),topic))
+   .sort((a,b)=>pageTopic(a).length-pageTopic(b).length)[0];
+  const page=better?sitePages.find(p=>String(p.id)===String(better.page_id)):covering;
   if(page&&page.url&&page.url!==pageUrl){elsewhere.push({query:q,impressions,position:Math.round(position*10)/10,url:page.url,
-   basis:better?'BETTER_POSITION_ON_THAT_PAGE':'TRACKED_KEYWORD_OF_THAT_PAGE',action:'Improve that page for this term; no new page.'});continue}
+   basis:better?'BETTER_POSITION_ON_THAT_PAGE':'THAT_PAGE_COVERS_THE_TOPIC',action:'Improve that page for this term; no new page.'});continue}
+  if(covers(focus,topic)){skip(q,r,'VARIANT_OF_THIS_PAGE_FOCUS_TERM');continue}
   const key=[...new Set(roots)].sort().join(' ');
   const g=groups.get(key)||{query:q,variants:[],impressions:0,clicks:0,best_position:position};
   g.variants.push(q);g.impressions+=impressions;g.clicks+=clicks;
@@ -51,9 +70,9 @@ function spokeCandidates({pageUrl='',focusQuery='',gscRows=[],sitePages=[],siteG
   why:'Google shows '+pageUrl+' for this term ('+g.impressions+' impressions, best position '+Math.round(g.best_position*10)/10+'), but deep in the results, and no other tracked page covers it.',
   next:'Start a Pre-Write brief with this term; the New Page route reads the live results and checks overlap with your tracked pages before anything is written.',
   link_back_to:pageUrl}));
- return {status:candidates.length?'CANDIDATES_FROM_SEARCH_CONSOLE':'NO_CANDIDATES',candidates,belongs_elsewhere:elsewhere.slice(0,8),
-  rule:'Terms this page appears for with at least '+MIN_IMPRESSIONS+' impressions beyond position '+DEEP_POSITION+', not a brand term, not the page\'s own focus term and not covered by another tracked page. A candidate is a research question, not a decision; no impressions or clicks are forecast.',
-  note:candidates.length?null:'No term qualifies: every term with impressions is the page\'s own focus, a brand term, already on page one, or covered by another tracked page.'};
+ return {status:candidates.length?'CANDIDATES_FROM_SEARCH_CONSOLE':'NO_CANDIDATES',candidates,belongs_elsewhere:elsewhere.slice(0,8),excluded:excluded.slice(0,12),
+  rule:'Terms this page appears for with at least '+MIN_IMPRESSIONS+' impressions beyond position '+DEEP_POSITION+'. Left out: brand terms, places this site does not serve, variants of the page\'s own focus term, and terms whose topic another tracked page covers (a review, price or tool question goes to the page about that topic). A candidate is a research question, not a decision; no impressions or clicks are forecast.',
+  note:candidates.length?null:'No term qualifies: every term with impressions is a brand term, a place this site does not serve, a variant of the page\'s focus, already on page one, or covered by another tracked page.'};
 }
 function latestByQueryPerPage(rows){
  const out=new Map(),seen=new Set();
