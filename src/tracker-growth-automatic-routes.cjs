@@ -1,5 +1,6 @@
 'use strict';
 const {observeSerpTitles}=require('./growth-serp-titles.cjs');
+const {spokeCandidates,readerFunnel}=require('./growth-next-pages.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
@@ -80,10 +81,12 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    pool.query("SELECT page_id,checked_at,google_competitors,ai_perplexity_competitors FROM tracker_snapshots WHERE page_id=$1 AND (google_competitors IS NOT NULL OR ai_perplexity_competitors IS NOT NULL) ORDER BY checked_at DESC,id DESC LIMIT 1",[pid]),
    pool.query("SELECT page_id,tracker_client_id,engine,evidence_method,brand_recommended,domain_cited,exact_page_cited,citation_urls,verified_at,revision_cycle FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND is_cleared IS NOT TRUE ORDER BY verified_at DESC NULLS LAST LIMIT 60",[cid,pid]),
    pool.query("SELECT page_id,tracker_client_id,source_page_url,evidence_scope,query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND source_page_url=$3 AND evidence_scope='page_verified' ORDER BY imported_at DESC LIMIT 150",[cid,pid,page.url]),
-   pool.query("SELECT id,tracker_client_id,url,keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 ORDER BY id LIMIT 500",[cid,pid])
+   pool.query("SELECT id,tracker_client_id,url,keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 ORDER BY id LIMIT 500",[cid,pid]),
+   // Search Console rows of the other tracked pages: a term another page already answers is not a new page.
+   pool.query("SELECT page_id,query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id<>$2 AND evidence_scope='page_verified' ORDER BY imported_at DESC LIMIT 3000",[cid,pid])
   ]);
   const rows=i=>optional[i].status==='fulfilled'?optional[i].value.rows||[]:[];
-  const unavailable=optional.map((x,i)=>x.status==='rejected'?['competitor_snapshots','ai_evidence','gsc_queries','site_inventory'][i]:null).filter(Boolean);
+  const unavailable=optional.map((x,i)=>x.status==='rejected'?['competitor_snapshots','ai_evidence','gsc_queries','site_inventory','site_gsc_queries'][i]:null).filter(Boolean);
   const snapshot=rows(0)[0]||null,historical=snapshotCompetitorLeads({page,snapshot}).leads;
   const own=await fetchLive(page.url,RESEARCH_FETCH).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
   // Only use the browser if the static public source is too thin to assess.
@@ -310,6 +313,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    for(const q of report.growth_decision?.other_reviewable_queries||[])q.destination=toFinal(q.destination);
   }
   report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
+  // Beyond the page itself, from the owner's own data: possible new pages and the route from information to action.
+  report.spoke_candidates=spokeCandidates({pageUrl:page.url,focusQuery:targetQuery,gscRows:rows(2),sitePages:rows(3),siteGsc:rows(4)});
+  report.reader_funnel=readerFunnel({pageUrl:page.url,focusQuery:targetQuery,pageIntent:proposed===page.url?destinationIntent?.class||null:null,
+   pageHtml:own.live?.html||page.saved_html||'',sitePages:rows(3)});
   // What Google shows by title, including results whose page could not be opened (explanation only, never evidence).
   if(Array.isArray(discovery.organic_titles)){const read=new Set(comparisons.filter(x=>x.live?.html).map(x=>x.url));
    report.serp_titles=observeSerpTitles({query:targetQuery,titles:discovery.organic_titles.map(t=>({...t,page_read:!!t.url&&read.has(t.url)}))})}

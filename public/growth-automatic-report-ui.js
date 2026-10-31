@@ -516,6 +516,31 @@
   var rivals=node('details',null,s);node('summary','See inspected competitor pages and relevance',rivals);
   (rival.classification||[]).forEach(c=>{var item=node('div',null,rivals);link(c.url,c.title||c.url,item);
    node('small',c.category+' — '+c.reason,item)});
+  // Beyond this page: possible new pages from Search Console and the route from information to action (proposals only).
+  var sc=d.spoke_candidates,fn=d.reader_funnel;
+  if(sc||fn){
+   var beyond=section('Beyond this page · possible new pages and the next step for the reader');
+   if(sc){
+    node('h3','Possible new pages (research first)',beyond);
+    if((sc.candidates||[]).length){
+     table(['Search term','Impressions','Clicks','Best position','Next step'],sc.candidates.map(function(c){return [c.query+(c.variants.length>1?' (+'+(c.variants.length-1)+' variant'+(c.variants.length>2?'s':'')+')':''),String(c.impressions),String(c.clicks),String(c.best_position),c.next]}),beyond);
+    }else node('p',String(sc.note||'No candidates.'),beyond);
+    if((sc.belongs_elsewhere||[]).length){node('p','Terms another tracked page already answers (improve that page, no new page):',beyond);
+     var be=node('ul',null,beyond);sc.belongs_elsewhere.forEach(function(x){var li=node('li',x.query+' → ',be);link(x.url,x.url,li)})}
+    if(sc.rule)node('small',sc.rule,beyond);
+   }
+   if(fn){
+    node('h3','From information to action',beyond);
+    if(fn.status==='FUNNEL_PROPOSAL'){
+     var ol=node('ol',null,beyond);
+     fn.stages.forEach(function(st){var li=node('li',st.stage==='INFORMATION'?'Information: ':'Action: ',ol);link(st.url,st.url,li);
+      if(st.role)node('small',' — '+st.role,li);
+      if(st.topic_match)node('small',' — '+st.topic_match,li);
+      if(st.link)node('div',st.link.status==='LINK_CANDIDATE_FOR_REVIEW'?'Link from the paragraph under “'+String(st.link.under_heading||'')+'” on the words “'+String(st.link.anchor_text||'')+'”. '+String(st.link.action||''):String(st.link.action||st.link.status),li)});
+     var rl=node('ul',null,beyond);(fn.rules||[]).forEach(function(r){node('li',r,rl)});
+    }else node('p',String(fn.note||fn.status),beyond);
+   }
+  }
   researchDetails=node('details',null,container);
   node('summary','Show full technical evidence, Search and AI observations',researchDetails);
   s=section('Automatic research evidence');
