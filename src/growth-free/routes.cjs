@@ -93,6 +93,22 @@ select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;fo
 </style></head><body><main>${body}<p class="muted" style="margin-top:40px">${esc(cfg.brand)} · Free Growth check${cfg.privacyUrl?` · <a href="${esc(cfg.privacyUrl)}">Privacy</a>`:''}</p></main></body></html>`;
 }
 
+// The AI check is offered before the start: the prompt is built from the search term as it is typed, and the answers
+// pasted here are stored with the check (same validation as pasting them on the result page).
+function aiStartBlock(){
+ return `<div class="card" id="aiStart"><h2 style="margin-top:0">AI answers first (optional)</h2>
+ <ol><li>Enter the search term above.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong> (ChatGPT, Perplexity, Gemini, Claude or Copilot).</li><li>Paste the complete answer, including RESOURCES, at the AI system you used. You can also do this later on the result page.</li></ol>
+ <label for="aiStartPrompt">Prompt (the same for every AI system)</label><textarea id="aiStartPrompt" rows="6" readonly></textarea><p><button type="button" class="ghost" id="aiStartCopy">Copy prompt</button></p>
+ ${ai.ENGINES.map(e=>`<label>${esc(e.label)} — answer (optional)<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="Paste the complete answer here"></textarea></label>`).join('')}</div>`;
+}
+function aiStartScript(){
+ return `(function(){var LINES=${js(ai.DIRECT_PROMPT_LINES)},SLOT=${js(ai.QUERY_SLOT)},q=document.querySelector('[name=query]'),p=document.getElementById('aiStartPrompt');if(!q||!p)return;
+ var upd=function(){var t=q.value.trim();p.value=t?LINES.map(function(l){return l===SLOT?t:l}).join(String.fromCharCode(10,10)):'Enter the search term above first: the prompt uses it exactly.';document.getElementById('aiStartCopy').disabled=!t};
+ q.addEventListener('input',upd);upd();
+ document.getElementById('aiStartCopy').onclick=function(){p.select();if(navigator.clipboard)navigator.clipboard.writeText(p.value);this.textContent='Copied ✓'}})();
+function aiStartAnswers(){return Array.prototype.slice.call(document.querySelectorAll('textarea[data-engine]')).filter(function(t){return t.value.trim()}).map(function(t){return {engine:t.getAttribute('data-engine'),text:t.value}})}`;
+}
+
 function formPage(cfg,api,base,accessKey,invite=null){
  return page('Free Growth check — what is your page missing?',`
 <p class="kicker">Free · no account needed</p>
@@ -107,6 +123,7 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
  <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
  <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
+${aiStartBlock()}
  <label for="email">Your email</label><input id="email" name="email" type="email" required maxlength="200" placeholder="you@company.com">
  <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` Max ${cfg.perEmail} free checks per day.`}</span></label>
  <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
@@ -119,10 +136,11 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
 <li>The full research as JSON, to process yourself or with your own tools.</li></ul>
 <p class="muted">No ranking promises. Nothing is changed on your website. Takes about one minute.</p></div>
 <script>
+${aiStartScript()}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
 b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent='Starting…';
-try{var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked})});
+try{var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -153,7 +171,7 @@ function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
  document.getElementById('aiCopy').onclick=function(){var t=document.getElementById('aiPrompt');t.select();if(navigator.clipboard)navigator.clipboard.writeText(t.value);this.textContent='Copied ✓'};
  b.onclick=async function(){var st=document.getElementById('aiStatus'),eng=document.getElementById('aiEngine').value,txt=document.getElementById('aiText').value;if(!txt.trim()){st.textContent='Paste the answer first.';return}b.disabled=true;st.textContent='Analysing…';
   try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
-   var d=await (await fetch(API+Q,{cache:'no-store'})).json();render(d);var el=document.getElementById('ai');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
+   var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE')render(d);else showAiFirst(d,true);var el=document.getElementById('ai');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
 var GAPS=null;
 var GAP_GROUPS=[];
 function exampleText(x){return function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}}
@@ -222,7 +240,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  if(d.cached)h+='<p class="note"><strong>Stored result.</strong> The Google research was not run again: this is the result of a check of the same page, search term and market'+(s.checked&&s.checked.checked_at?' on '+esc(new Date(s.checked.checked_at).toLocaleString())+' (UTC '+esc(String(s.checked.checked_at).slice(0,16).replace('T',' '))+')':' in the last 24 hours')+', made by the same version of the research. A new check of this page is possible after 24 hours or after an update of the research.</p>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
  var canWrite=!!(s.gaps&&s.gaps.status==='OBSERVED'&&s.gaps.writing_allowed!==false&&d.writing&&d.writing.allowed);
- h+='<div class="step-strip" aria-label="Your next steps"><div class="step-chip done"><span class="symbol">✓</span>1. Page and search settings entered</div><div class="step-chip done"><span class="symbol">✓</span>2. Research result available</div><a class="step-chip" href="#ai"><span class="symbol">○</span>Optional: check AI answers</a><div id="freeStepSelect" class="step-chip '+(canWrite?'current':'blocked')+'"><span class="symbol">'+(canWrite?'→':'!')+'</span>3. '+(canWrite?'Choose a relevant improvement':'No supported writing recommendation')+'</div><div id="freeStepWrite" class="step-chip '+(canWrite?'':'blocked')+'"><span class="symbol">'+(canWrite?'○':'!')+'</span>4. '+(canWrite?'Write selected concepts':'Writing blocked: insufficient evidence')+'</div><div class="step-chip"><span class="symbol">○</span>5. Download the brief or ask for help</div></div><p class="step-help">Blue = next action · Green = completed · Grey = later or optional · Red = blocked. No page is published or added to Tracker.</p>';
+ h+='<div class="step-strip" aria-label="Your next steps"><div class="step-chip done"><span class="symbol">✓</span>1. Page and search settings entered</div>'+(as&&as.checked?'<a class="step-chip done" href="#ai"><span class="symbol">✓</span>AI answers checked ('+esc(as.checked)+' of 5)</a>':'<a class="step-chip" href="#ai"><span class="symbol">○</span>Optional: check AI answers</a>')+'<div class="step-chip done"><span class="symbol">✓</span>2. Research result available</div><div id="freeStepSelect" class="step-chip '+(canWrite?'current':'blocked')+'"><span class="symbol">'+(canWrite?'→':'!')+'</span>3. '+(canWrite?'Choose a relevant improvement':'No supported writing recommendation')+'</div><div id="freeStepWrite" class="step-chip '+(canWrite?'':'blocked')+'"><span class="symbol">'+(canWrite?'○':'!')+'</span>4. '+(canWrite?'Write selected concepts':'Writing blocked: insufficient evidence')+'</div><div class="step-chip"><span class="symbol">○</span>5. Download the brief or ask for help</div></div><p class="step-help">Blue = next action · Green = completed · Grey = later or optional · Red = blocked. No page is published or added to Tracker.</p>';
  h+='<div class="grid two"><div><small>Google search (blue links)</small><strong>'+esc(s.headline)+'</strong><a href="#google">Details ↓</a></div><div><small>AI answers ('+(as?as.checked:0)+' of 5 AI systems — checked by you with pasted answers, not queried automatically)</small><strong>'+esc(as?as.headline:'AI answers not available')+'</strong><a href="#ai">'+(as&&as.checked?'Details ↓':'Check AI now ↓')+'</a></div></div>';
  // The AI check is an option at the start of the result, not something found at the end.
  if(a)h+=aiHtml(a);
@@ -239,8 +257,15 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
+// While Google is researched, the AI check is offered first (it needs only the search term). Shown once, so a pasted
+// answer is not wiped by the next poll.
+function showAiFirst(d,again){if(!d.ai)return;var box=document.getElementById('aiFirst');
+ if(!box){box=document.createElement('div');box.id='aiFirst';document.getElementById('out').appendChild(box)}else if(!again)return;
+ box.innerHTML='<p class="note"><strong>Step 2 — while Google is being researched:</strong> check the AI answers now. Your answers are kept with this check.</p>'+aiHtml(d.ai);wireAi()}
 async function poll(n){try{var r=await fetch(API+Q,{cache:'no-store'});var d=await r.json();if(!d.success)throw Error(d.error||'Not found');
- if(d.status==='DONE'||d.status==='FAILED')return render(d);}catch(e){document.getElementById('out').innerHTML='<h1>Result not available</h1><p>'+esc(e.message)+'</p>';return}
+ if(d.status==='DONE'||d.status==='FAILED'){var t=document.getElementById('aiText'),e=document.getElementById('aiEngine'),keep=t&&t.value,eng=e&&e.value;render(d);
+  if(keep){var t2=document.getElementById('aiText'),e2=document.getElementById('aiEngine');if(t2)t2.value=keep;if(e2&&eng)e2.value=eng}return}
+ showAiFirst(d);}catch(e){document.getElementById('out').innerHTML='<h1>Result not available</h1><p>'+esc(e.message)+'</p>';return}
  setTimeout(function(){poll(n+1)},n<20?3000:8000)}
 poll(0);
 </script>`,cfg);
@@ -275,6 +300,7 @@ function adminPage(cfg,api,base,loggedIn){
   <form id="rf"><label>Page address<input name="url" type="url" required maxlength="500" placeholder="https://..."></label><label>Search term (optional)<input name="query" maxlength="120"></label>
   <label>Target market (optional)<input name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands"></label><label>Language (optional)<input name="language" list="marketLanguages" maxlength="40" placeholder="Dutch"></label>
   <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
+  ${aiStartBlock()}
   <label class="check"><input type="checkbox" name="fresh"> <span>Fresh research: ignore a stored result (uses 1–2 Serper searches)</span></label><p><button>Run check</button> <small role="status" id="rs"></small></p></form></div>
  <div class="card"><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
   <form id="if"><label>For whom? (name or company)<input name="label" required maxlength="80"></label>
@@ -287,6 +313,7 @@ function adminPage(cfg,api,base,loggedIn){
  <div class="card"><h2 style="margin-top:0">Delete someone's data</h2><form id="ff"><label>Email address<input name="email" type="email" required></label><p><button>Delete everything for this email</button> <small role="status" id="fs"></small></p></form></div>
 </div>
 <script>
+${aiStartScript()}
 var API=${js(api)},H={'Content-Type':'application/json','X-Requested-With':'growth-free-admin'};
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function day(x){return String(x||'').slice(0,10)}
@@ -301,7 +328,7 @@ async function load(){
  '<h3>Checks ('+d.checks.length+')</h3>'+d.checks.map(function(c){return '<div class="card"><strong>'+esc(c.email)+'</strong>'+(c.marketing_consent?' · may be emailed':'')+'<br><small>'+esc(c.access_label||'')+' · '+esc(c.created_at)+' · '+esc(c.status)+' · '+esc(c.decision||c.error_code||'')+(c.cached?' · cached':'')+'</small><br><a href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">'+esc(c.url)+'</a> '+esc(c.query||'')+'</div>'}).join('')}
 document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load()});
 document.getElementById('logout').addEventListener('click',async function(){await post('/admin/logout');location.reload()});
-document.getElementById('rf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
+document.getElementById('rf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked,ai_answers:aiStartAnswers()});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
 document.getElementById('if').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('is');var d=await post('/admin/invites',{label:f.label.value,email_lock:f.email_lock.value,max_checks:Number(f.max_checks.value),days:Number(f.days.value)});if(!d.success){st.textContent=d.error;return}st.textContent='';f.reset();f.max_checks.value=3;f.days.value=7;
  document.getElementById('newlink').innerHTML='<p class="note"><strong>Copy this link now</strong> — it cannot be shown again.<br><input readonly id="lnk" value="'+esc(d.link)+'"> <button type="button" id="cp">Copy</button></p>';document.getElementById('cp').onclick=function(){var x=document.getElementById('lnk');x.select();navigator.clipboard&&navigator.clipboard.writeText(x.value);this.textContent='Copied'};load()});
 document.addEventListener('click',async function(e){var b=e.target.closest('button.revoke');if(!b)return;if(!confirm('Withdraw this invitation? The link stops working immediately.'))return;var d=await post('/admin/invites/'+b.dataset.id+'/revoke');if(!d.success)alert(d.error);load()});
@@ -386,6 +413,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
    const query=clean(b.query,120);
    const market=readMarket(b,res);if(market===undefined)return;
+   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
    const cached=await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
@@ -396,6 +424,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
    const row=await storage.createCheck(pool,{email,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label,market});
+   await saveStartAnswers(row,v.url,aiAnswers);
    if(!cached){queue.push({id:row.id,url:v.url,query,market});pump()}
    res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
   }catch(e){console.error('[free-growth] start failed',e.message);res.status(503).json({success:false,error:'The free check is temporarily unavailable'})}
@@ -409,6 +438,24 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(String(b.language||'').trim()&&!language){res.status(400).json({success:false,error:'Choose the language from the list, for example Dutch.'});return undefined}
   return countries.length||language?{countries,language}:null;
  }
+ // AI answers pasted before the start: at most one per AI system, checked like a paste on the result page.
+ function readAiAnswers(b,res){
+  const list=Array.isArray(b.ai_answers)?b.ai_answers.filter(x=>x&&String(x.text||'').trim()):[];
+  const seen=new Set();
+  for(const x of list){
+   const engine=String(x.engine||''),text=String(x.text);
+   if(!ai.ENGINE_IDS.has(engine)||seen.has(engine)){res.status(400).json({success:false,error:'Paste each AI answer at the AI system you used (one answer per system).'});return undefined}
+   seen.add(engine);
+   const label=(ai.ENGINES.find(e=>e.id===engine)||{}).label;
+   if(text.length>ai.MAX_PASTE){res.status(413).json({success:false,error:label+': this answer is too long; paste only the answer and its sources'});return undefined}
+   if(ai.otherPrompt(text)){res.status(400).json({success:false,error:label+': this is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here and paste that answer.'});return undefined}
+  }
+  if(list.length&&!clean(b.query,120)){res.status(400).json({success:false,error:'Enter the search term first: the AI prompt uses it exactly.'});return undefined}
+  return list.map(x=>({engine:String(x.engine),text:String(x.text)}));
+ }
+ async function saveStartAnswers(row,url,answers){
+  for(const x of answers||[])await storage.saveAiAnswer(pool,{checkId:row.id,engine:x.engine,rawText:x.text,parsed:ai.parseAiAnswer(x.text,{pageUrl:url})});
+ }
  // Shared input checks for every way of starting a check.
  function readInput(b,res){
   const email=clean(b.email,200).toLowerCase();
@@ -416,7 +463,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(b.consent!==true){res.status(400).json({success:false,error:'Please accept the storage notice'});return null}
   const v=validatePublicUrl(b.url);if(v.error){res.status(400).json({success:false,error:v.error});return null}
   const market=readMarket(b,res);if(market===undefined)return null;
-  return {email,url:v.url,host:v.host,query:clean(b.query,120),market};
+  const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
+  return {email,url:v.url,host:v.host,query:clean(b.query,120),market,aiAnswers};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
@@ -424,6 +472,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
+  await saveStartAnswers(row,input.url,input.aiAnswers);
   if(!cached){queue.push({id:row.id,url:input.url,query:input.query,market:input.market,inviteId:cached?null:inviteId});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
@@ -451,8 +500,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const searchTermOf=row=>String(row.query||row.summary&&row.summary.checked&&row.summary.checked.search_term||'').trim();
  const googleUrlsOf=row=>((row.report&&row.report.search_discovery&&row.report.search_discovery.leads)||[]).map(l=>l&&l.url).filter(Boolean);
  async function aiFor(row){
+  // The AI check needs only the search term: with an entered term it is available at once, before the Google part.
   const term=searchTermOf(row);
-  if(row.status!=='DONE'||!term)return null;
+  if(row.status==='FAILED'||!term)return null;
   let answers=[];
   try{answers=await storage.listAiAnswers(pool,row.id)}catch(e){console.warn('[free-growth] AI answers unavailable',String(e&&e.code||'unknown'))}
   return {search_term:term,prompt:ai.directPrompt(term),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,
@@ -547,7 +597,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const row=await load(req,res);if(!row)return;
   try{
    const b=req.body||{},engine=String(b.engine||''),text=String(b.text||'');
-   if(row.status!=='DONE'||!searchTermOf(row))return res.status(409).json({success:false,error:'The Google part of the check must finish first'});
+   if(row.status==='FAILED'||!searchTermOf(row))return res.status(409).json({success:false,error:row.status==='FAILED'?'This check could not finish':'The search term is derived from your page: the AI check is available when the Google part has finished'});
    if(!ai.ENGINE_IDS.has(engine))return res.status(400).json({success:false,error:'Choose the AI system you used'});
    if(!text.trim())return res.status(400).json({success:false,error:'Paste the complete answer first'});
    if(text.length>ai.MAX_PASTE)return res.status(413).json({success:false,error:'This answer is too long; paste only the answer and its sources'});
@@ -621,7 +671,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
     await storage.ensureTables(pool);
     const market=readMarket(b,res);if(market===undefined)return;
-    await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,120),market},{accessLabel:'admin',fresh:b.fresh===true});
+    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
+    await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,120),market,aiAnswers},{accessLabel:'admin',fresh:b.fresh===true});
    }catch(e){console.error('[free-growth] admin run failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'})}
   });
   app.post(apiPath+'/admin/invites',async(req,res)=>{
