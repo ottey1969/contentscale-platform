@@ -64,6 +64,8 @@ async function saveSelectionProposal(pool,{clientId,researchPageId=null,targetPa
    sources:(s.basis.competitor_evidence||[]).slice(0,8).map(e=>clip(e.site+(e.heading?': “'+e.heading+'”':''),220)),warning:s.basis.warning?clip(s.basis.warning,300):null})).slice(0,10),
   // The versioned evidence record of this run (growth-selected-writing evidenceDossier).
   dossier:written.dossier&&typeof written.dossier==='object'?written.dossier:null,
+  // Whether current AI answers for the search term were there when this was written, or the editor chose to go on without.
+  ai_check:written.ai_check&&typeof written.ai_check==='object'?{choice:clip(written.ai_check.choice,40),answers_counted:Number(written.ai_check.answers_counted)||0}:null,
   requirements:['Rewrite or remove every flagged sentence.','Fact-check every statement against your own knowledge and sources before publishing.','Owner approval is required; nothing is published automatically.'],
   competitor_sources:[]};
  await ensureTable(pool);

@@ -2,7 +2,8 @@
 const {observeSerpTitles}=require('./growth-serp-titles.cjs');
 const {spokeCandidates,readerFunnel}=require('./growth-next-pages.cjs');
 const {publicationReadiness}=require('./growth-publication-readiness.cjs');
-const {annotateAiVisibility}=require('./growth-ai-relevance.cjs');
+const {annotateAiVisibility,MAX_AGE_DAYS:AI_MAX_AGE_DAYS}=require('./growth-ai-relevance.cjs');
+const aiAnswers=require('./growth-free/ai-answers.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
@@ -60,7 +61,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -71,7 +72,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(!page){res.status(404).json({success:false,code:'TRACKER_PAGE_NOT_FOUND'});return null}
   // Every locked Case Study of this client, not only the source page: a destination elsewhere on the site can be locked too.
   const lockedPages=(req.growth?.pages||[]).filter(x=>x&&x.case_study_active===true&&x.url).map(x=>({id:Number(x.id),url:String(x.url)}));
-  return {id:Number(raw),page,clientId:req.growthTrackerClientId,lockedPages};
+  return {id:Number(raw),page,clientId:req.growthTrackerClientId,lockedPages,canEdit:req.growth?.can_edit===true};
  };
  async function analyze(v){
   const cid=v.clientId,pid=v.id;
@@ -319,8 +320,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   report.ai_visibility=annotateAiVisibility(report.ai_visibility,{rows:rows(1),query:targetQuery});
   // Beyond the page itself, from the owner's own data: possible new pages and the route from information to action.
   report.spoke_candidates=spokeCandidates({pageUrl:page.url,focusQuery:targetQuery,gscRows:rows(2),sitePages:rows(3),siteGsc:rows(4),localMarket:!!market});
-  report.reader_funnel=readerFunnel({pageUrl:page.url,focusQuery:targetQuery,pageIntent:proposed===page.url?destinationIntent?.class||null:null,
-   pageHtml:own.live?.html||page.saved_html||'',sitePages:rows(3)});
+  // The route from information to action is judged for the page that answers the search (the destination, e.g.
+  // /content-scaling/ for a homepage), with its own HTML; the tracked page itself is one of the site's pages then.
+  const funnelUrl=proposed||page.url,funnelHtml=proposed&&proposed!==page.url?selectedSource?.html||'':own.live?.html||page.saved_html||'';
+  report.reader_funnel={...readerFunnel({pageUrl:funnelUrl,focusQuery:targetQuery,pageIntent:destinationIntent?.class||null,pageHtml:funnelHtml,
+   sitePages:[...rows(3),...(funnelUrl!==page.url?[{id:page.id,url:page.url,keyword:page.keyword}]:[])]}),for_url:funnelUrl};
   // What Google shows by title, including results whose page could not be opened (explanation only, never evidence).
   if(Array.isArray(discovery.organic_titles)){const read=new Set(comparisons.filter(x=>x.live?.html).map(x=>x.url));
    report.serp_titles=observeSerpTitles({query:targetQuery,titles:discovery.organic_titles.map(t=>({...t,page_read:!!t.url&&read.has(t.url)}))})}
@@ -452,14 +456,34 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    owner_only_completion_route_required:true};
   return report;
  }
+ // The AI check for the research's search term, read fresh on every response (pasting an answer never re-runs the paid
+ // Google research). Answers count as AI visibility for this search only when at most 14 days old.
+ async function withAiCheck(result,v){
+  const term=String(result?.editorial_decision_gate?.focus_query||result?.intent_resolution?.query||'').trim();
+  if(!result||result.success===false||!term||typeof loadAiAnswers!=='function')return result;
+  const check=await aiCheckFor({v,term,target:result.destination_gsc_evidence?.target_url||result.url,
+   googleUrls:(result.search_discovery?.leads||[]).map(l=>l&&l.url).filter(Boolean)}).catch(()=>null);
+  if(!check)return result;
+  const ai=result.ai_visibility&&typeof result.ai_visibility==='object'?{...result.ai_visibility,
+   usable_for_this_search:(Number(result.ai_visibility.usable_for_this_search)||0)+check.summary.checked,
+   pasted_for_this_search:check.summary.checked}:result.ai_visibility;
+  return {...result,ai_visibility:ai,ai_check:check};
+ }
+ async function aiCheckFor({v,term,target,googleUrls=[]}){
+  const answers=await loadAiAnswers({clientId:v.clientId,pageId:v.id,query:term});
+  const fresh=answers.filter(a=>Date.now()-Date.parse(a.created_at)<=AI_MAX_AGE_DAYS*86400000);
+  return {search_term:term,page_url:target,prompt:aiAnswers.directPrompt(term),engines:aiAnswers.ENGINES,max_paste:aiAnswers.MAX_PASTE,
+   can_paste:v.canEdit===true,older_answers_not_counted:answers.length-fresh.length,max_age_days:AI_MAX_AGE_DAYS,
+   summary:aiAnswers.summarizeAiAnswers(fresh,{pageUrl:target,googleUrls})};
+ }
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   // Never serve a recently cached unlocked result after Case Study activation.
   const key=v.clientId+':'+v.id+':'+(v.page.case_study_active?'locked':'unlocked')+':'+v.page.url,stored=cache.get(key);
   if(stored?.result&&Date.now()-stored.created<TTL)
-   return res.set('Cache-Control','private, no-store').json(stored.result);
+   return res.set('Cache-Control','private, no-store').json(await withAiCheck(stored.result,v));
   if(stored?.promise){
-   try{return res.set('Cache-Control','private, no-store').json(await stored.promise)}
+   try{return res.set('Cache-Control','private, no-store').json(await withAiCheck(await stored.promise,v))}
    catch{return res.status(503).json({success:false,code:'AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE'})}
   }
   const promise=analyze(v);cache.set(key,{created:Date.now(),promise});
@@ -467,7 +491,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    const result=await promise;
    cache.set(key,{created:Date.now(),result});
    while(cache.size>LIMIT)cache.delete(cache.keys().next().value);
-   return res.set('Cache-Control','private, no-store').json(result);
+   return res.set('Cache-Control','private, no-store').json(await withAiCheck(result,v));
   }catch(e){
    cache.delete(key);console.warn('[growth-auto-research]',String(e?.code||'RESEARCH_ERROR'),e&&e.stack?String(e.stack).split('\n').slice(0,3).join(' | '):'');
    return res.status(503).json({success:false,code:'AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE'});
@@ -651,7 +675,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
       note:'Items you selected earlier and that were not written yet. Ticked again only when the new research still shows the same need; nothing is written until you click.'};}}
    catch(e){console.warn('[growth-auto-research] open selection not loaded',String(e?.code||'unknown'))}
   }
-  return res.set('Cache-Control','private, no-store').json({...report,
+  return res.set('Cache-Control','private, no-store').json({...(await withAiCheck(report,v)),
    market_setting_url:typeof savePageMarkets==='function'?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id):null,
    gap_list:{...gapList,carried_over:carried,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
@@ -688,6 +712,27 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // The next research run uses the new markets.
   for(const k of [...cache.keys()])if(k.startsWith(v.clientId+':'+v.id+':'))cache.delete(k);
   res.set('Cache-Control','private, no-store').json({success:true,markets:saved,research_rerun_required:true});
+ });
+ // An AI answer for the research's search term, pasted by the owner (same prompt, checks and parser as the Free check).
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/ai-answer',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const no=(status,code,error)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code,error});
+  if(req.growth?.can_edit!==true||typeof saveAiAnswer!=='function')return no(403,'OWNER_ONLY_AI_ANSWER','Only the Tracker owner can add AI answers.');
+  const b=req.body||{},engine=String(b.engine||''),text=String(b.text||''),query=String(b.query||'').trim();
+  if(!query||query.length>120)return no(400,'SEARCH_TERM_REQUIRED','The search term of the research is missing.');
+  if(!aiAnswers.ENGINE_IDS.has(engine))return no(400,'UNKNOWN_AI_SYSTEM','Choose the AI system you used.');
+  if(!text.trim())return no(400,'ANSWER_REQUIRED','Paste the complete answer first.');
+  if(text.length>aiAnswers.MAX_PASTE)return no(413,'ANSWER_TOO_LONG','This answer is too long; paste only the answer and its sources.');
+  if(aiAnswers.otherPrompt(text))return no(400,'ANSWER_TO_ANOTHER_PROMPT','This is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here and paste that answer.');
+  // The page the research targets (a destination on the same site), else the tracked page itself.
+  const sameSite=u=>{try{return new URL(u).hostname===new URL(v.page.url).hostname}catch{return false}};
+  b.page_url=sameSite(b.page_url)?String(b.page_url):v.page.url;
+  const parsed=aiAnswers.parseAiAnswer(text,{pageUrl:b.page_url});
+  try{await saveAiAnswer({clientId:v.clientId,pageId:v.id,query,engine,rawText:text,parsed})}catch{return no(503,'AI_ANSWER_NOT_SAVED','The answer could not be saved. Please try again.')}
+  // The updated AI check comes back directly, so the page never re-runs the (paid) Google research for it.
+  const urls=(Array.isArray(b.google_urls)?b.google_urls:[]).map(String).filter(u=>/^https?:\/\//.test(u)).slice(0,20);
+  const ai_check=typeof loadAiAnswers==='function'?await aiCheckFor({v,term:query,target:String(b.page_url||v.page.url),googleUrls:urls}).catch(()=>null):null;
+  res.set('Cache-Control','private, no-store').json({success:true,engine,query,sources:parsed.sources.length,resources_status:parsed.resources_status,own_site_cited:parsed.own_site_cited,ai_check});
  });
  // The owner's deliberate selection (the ticks): the only call that replaces the selected items. Written items stay written.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/auto-research/selection',data,async(req,res)=>{
@@ -763,6 +808,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   try{written=await writeForSelection({items:plan.batch,targetUrl:list.target_url,focusQuery:list.focus_query||'',generate,
    research:list.research||null,sourceFingerprint:list.source_fingerprint||null})}
   catch(e){if(run&&typeof failWritingRun==='function')await Promise.resolve(failWritingRun({runId:run.id,error:'WRITER_ERROR'})).catch(()=>{});throw e}
+  // The editor's choice in the AI pop-up (no current AI answers: continue without), kept with the concepts.
+  const aiChoice=['WITH_AI','WITHOUT_AI'].includes(String(req.body?.ai_check_choice||''))?String(req.body.ai_check_choice):'NOT_ASKED';
+  let aiCounted=0;if(typeof loadAiAnswers==='function'&&list.focus_query){try{aiCounted=(await loadAiAnswers({clientId:v.clientId,pageId:v.id,query:list.focus_query})).filter(a=>Date.now()-Date.parse(a.created_at)<=AI_MAX_AGE_DAYS*86400000).length}catch{}}
+  written.ai_check={choice:aiCounted?'WITH_AI':aiChoice,answers_counted:aiCounted};
   // An item is done only when its concept AND evidence dossier are stored as a proposal, in the same transaction.
   const linked=(written.sections||[]).map(s=>s.item_id);
   let proposalRef=null,storageError=null;

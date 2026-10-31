@@ -216,13 +216,22 @@ function gapBrief(g,s){var picked={};document.querySelectorAll('.gapPick:checked
  if((g.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','');g.unique_content.forEach(function(x){L.push('- '+x.heading)});L.push('')}
  L.push('Ranking pages compared:');(g.ranking_pages||[]).forEach(function(p){L.push('- '+(p.position?'#'+p.position+' ':'')+p.url)});
  return {count:items.length,text:L.join('\\n')}}
+// Pop-up before writing when no AI answer was analysed for this check: the editor checks AI first or continues without.
+function freeAiGate(d){var a=d&&d.ai;if(!a||(a.summary&&a.summary.checked>0))return Promise.resolve('WITH_AI');
+ return new Promise(function(resolve){var dlg=document.createElement('dialog');dlg.className='growth-ai-gate';
+  dlg.innerHTML='<h2>No AI answers for “'+esc(a.search_term)+'”</h2><p>No AI answer was analysed for this check. Without one, the concepts rest on Google and the ranking pages only; whether AI systems cite your page for this search is unknown.</p><p><button type="button" data-v="first">Check AI answers first</button> <button type="button" class="ghost" data-v="without">Continue without AI check</button></p>';
+  var done=function(v){try{dlg.close()}catch(e){}dlg.remove();resolve(v)};
+  dlg.addEventListener('click',function(e){var b=e.target.closest('button[data-v]');if(!b)return;if(b.getAttribute('data-v')==='first'){done(null);var el=document.getElementById('ai');if(el)el.scrollIntoView()}else done('WITHOUT_AI')});
+  dlg.addEventListener('cancel',function(e){e.preventDefault();done(null)});
+  document.body.appendChild(dlg);if(typeof dlg.showModal==='function')dlg.showModal();else dlg.setAttribute('open','');dlg.querySelector('button').focus()})}
 function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)return;
  var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last)wr.innerHTML=writtenHtml(d.writing.last);
  var wb=document.getElementById('gapWrite');
  if(wb)wb.onclick=async function(){var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});var st=document.getElementById('gapStatus');
   if(!ids.length){st.textContent='Select at least one topic or question.';return}
+  var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Check the AI answers first (above); your selection is kept.';return}
   wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');st.textContent='Writing concepts…';
-  try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});var x=await r.json();if(x.stored===false&&(x.sections||[]).length){wr.innerHTML=writtenHtml(x);st.textContent=x.error;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');return}if(!x.success)throw Error(x.error||'Not written');
+  try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids,ai_check_choice:aiChoice})});var x=await r.json();if(x.stored===false&&(x.sections||[]).length){wr.innerHTML=writtenHtml(x);st.textContent=x.error;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');return}if(!x.success)throw Error(x.error||'Not written');
    wr.innerHTML=writtenHtml(x.all_written||x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;wb.dataset.exhausted=!x.remaining?'yes':'';wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-green');var ws=document.getElementById('freeStepWrite');if(ws){ws.className='step-chip done';ws.querySelector('.symbol').textContent='✓'}st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
   catch(err){st.textContent=err.message;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-red')}};
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected';if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};

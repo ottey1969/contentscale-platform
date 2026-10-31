@@ -10,6 +10,7 @@ const {saveProposal,saveSelectionProposal}=require('./growth-proposal-store.cjs'
 const {saveGapList,getGapList,saveSelection,addToSelection,saveWritten,getOpenSelection}=require('./growth-selection-store.cjs');
 const writingRuns=require('./growth-writing-runs.cjs');
 const {getPageMarkets,setPageMarkets,getPrewriteMarket}=require('./growth-market-store.cjs');
+const {saveGrowthAiAnswer,listGrowthAiAnswers}=require('./growth-ai-answers-store.cjs');
 const escapeHtml=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
 function bucket(q,brand){
@@ -132,6 +133,7 @@ function registerGrowthCockpit(app,pool,deps={}){
   recordWritten:args=>saveWritten(pool,args),loadOpenSelection:args=>getOpenSelection(pool,args),addToSelection:args=>addToSelection(pool,args),
   claimWritingRun:args=>writingRuns.claimRun(pool,args),storeWritingRun:args=>writingRuns.storeRun(pool,args),
   failWritingRun:args=>writingRuns.failRun(pool,args),lastStoredRun:args=>writingRuns.lastStoredRun(pool,args),
+  saveAiAnswer:args=>saveGrowthAiAnswer(pool,args),loadAiAnswers:args=>listGrowthAiAnswers(pool,args),
   loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),loadPrewriteMarket:args=>getPrewriteMarket(pool,args),...(deps.research||{})});
  // New pages from a Pre-Write brief: the same research, selection, writing and storage, without a tracked URL.
  const r=deps.research||{};
@@ -267,7 +269,13 @@ function registerGrowthCockpit(app,pool,deps={}){
    '<p>Growth takes you through one step at a time. Green means confirmed; blue means the next action. Other steps are not marked complete until the underlying work is saved.</p>'+
    '<ol class="guide-steps">'+guidedRows+'</ol>'+
    (guidedNext?'<p>'+guidedNext+'</p>':'<p>No existing page needs work first right now. Open the page list in Details or start from a Pre-Write brief.</p>')+
-   '<details><summary>Start a different project</summary><p><a href="/track/'+tok+'/growth/new-page">New page from a Pre-Write brief</a></p><p>Or choose a tracked page in Detailed opportunities below.</p></details>'+
+   // An existing page is chosen here directly (any tracked page, protected ones included: research never changes them);
+   // a page that does not exist yet starts from a Pre-Write brief.
+   '<details'+(b?'':' open')+'><summary>Start a different project</summary>'+
+   '<form class="pick-page" method="get" action="/track/'+tok+'/growth/auto-research"><label for="pickPage"><strong>An existing page</strong></label> '+
+   '<select id="pickPage" name="page_id">'+g.pages.map(x=>'<option value="'+escapeHtml(x.id)+'">'+escapeHtml(x.url)+(x.keyword?' — '+escapeHtml(x.keyword):'')+(x.eligibility&&x.eligibility.status==='PROTECTED'?' (protected: research only)':'')+'</option>').join('')+'</select> '+
+   '<button type="submit">Research this page →</button></form>'+
+   '<p><strong>A page that does not exist yet:</strong> <a href="/track/'+tok+'/growth/new-page">New page from a Pre-Write brief</a></p></details>'+
    '<p class="info">Research, writing and CMS export never publish to your website. Case Study locks remain in force.</p></section>';
   const memorySection=`<h2>What the system remembers</h2><p>Every suggestion you start or skip, what the research concluded and what was measured afterwards is saved on the server, so the Cockpit does not suggest the same work twice and can show whether its advice paid off.</p><div class="stats"><section>Research started<strong>${tr.started||0}</strong><small>${tr.system_choices_started||0} chosen by the system</small></section><section>Improvement found<strong>${tr.improvement_found||0}</strong><small>${tr.no_change||0} researched with no change needed</small></section><section>Published<strong>${tr.published||0}</strong><small>${tr.skipped||0} skipped by you</small></section><section>System's choices measured<strong>${tr.system_choices_measured||0}</strong><small>${tr.system_choices_measured?(tr.system_choices_click_change>=0?'+':'')+tr.system_choices_click_change+' clicks, 28 days before vs after':'Needs 28 days after publication and before/after numbers'}</small></section></div>${(g.history||[]).length?`<table><thead><tr><th>Page / query</th><th>Chosen by</th><th>Started</th><th>What happened</th></tr></thead><tbody>${g.history.slice(0,25).map(h=>`<tr><td>${h.query?'<strong>'+escapeHtml(h.query)+'</strong>':''}<small><a href="${escapeHtml(h.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(h.url)}</a></small></td><td>${h.system_choice?'System':'You'}</td><td>${escapeHtml(h.date)}${h.snapshot&&h.snapshot.impressions!=null?`<small>then: ${escapeHtml(h.snapshot.impressions)} impressions, ${escapeHtml(h.snapshot.clicks)} clicks${h.snapshot.position?', position '+escapeHtml(h.snapshot.position):''}</small>`:''}</td><td>${escapeHtml(h.outcome)}</td></tr>`).join('')}</tbody></table>`:'<p class="note">Nothing remembered yet. Start the suggested research above; the outcome is saved automatically.</p>'}`;
   const skippedText=Object.entries(g.skipped||{}).map(([k,n])=>n+' '+({PROTECTED:'protected Case Study',OLD_ADDRESS:'old redirected address',PAGE_GONE:'missing page',JUST_CHANGED:'recently changed',WORKING:'already working',SKIPPED_BY_OWNER:'skipped by you',NO_CHANGE_FOUND:'researched, no change needed',RESEARCH_BLOCKED:'research blocked',IMPROVEMENT_FOUND:'improvement waiting for publication'}[k]||k)+(n===1?' row':' rows')).join(', ');

@@ -27,7 +27,7 @@ function harness({live=researched,draft=null,fail=false}={}){
    return {statusCode:200,body:{success:true,page_id:2294,canonical_url:URL_,status:'AI_DRAFT_REVIEW_REQUIRED',source_text:'',
     draft:draft?draft(tasks):{sections:tasks.map(t=>({task_code:t.code,h2:'About '+t.label,paragraphs:['A concept paragraph about '+t.label+' for the editor to review and rewrite where needed.']}))}}}},
   loadGapList:async()=>list,recordSelection:async()=>{},recordWritten:async({itemIds})=>{list.written_ids=[...new Set([...(list.written_ids||[]),...itemIds])]},recordSelectionProposal:async a=>{calls.proposals.push(a);return {id:99}}});
- const post=async ids=>{const req={params:{token:'owner'},query:{page_id:'2294'},body:{gap_list_id:7,item_ids:ids}},
+ const post=async(ids,extra={})=>{const req={params:{token:'owner'},query:{page_id:'2294'},body:{gap_list_id:7,item_ids:ids,...extra}},
   res={statusCode:200,status(x){this.statusCode=x;return this},set(){return this},json(x){this.body=x;return this}};
   const stack=route['/api/tracker-client/:token/growth/auto-research/write'];
   await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});return res};
@@ -121,4 +121,12 @@ test('a writing request adds to the selection and never removes from it',async()
  await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});
  assert.deepEqual(selection,[items[0].id,items[1].id,items[2].id,items[5].id],'items 1 and 2 stay selected');
  assert.deepEqual(res.body.batch.sort(),[items[0].id,items[1].id,items[2].id,items[5].id].sort(),'the stored selection is written');
+});
+
+test('the editor\'s choice in the AI pop-up is kept with the concepts (continue without AI check)',async()=>{
+ const h=harness();
+ const r=await h.post([items[0].id],{ai_check_choice:'WITHOUT_AI'});
+ assert.equal(r.statusCode,200);assert.deepEqual(r.body.ai_check,{choice:'WITHOUT_AI',answers_counted:0});
+ assert.deepEqual(h.calls.proposals[0].written.ai_check,{choice:'WITHOUT_AI',answers_counted:0},'stored with the proposal');
+ const odd=await harness().post([items[0].id],{ai_check_choice:'<script>'});assert.equal(odd.body.ai_check.choice,'NOT_ASKED');
 });
