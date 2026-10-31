@@ -1,4 +1,5 @@
 'use strict';
+const {openChecks}=require('./growth-outcome.cjs');
 // CMS-neutral owner package (Markdown + structured JSON). WordPress/Wix/other CMS stay optional.
 // Describes what changes on which existing URL and where. Never publishes, never touches a Case Study.
 const {blocks,queryRoots,STEMS}=require('./growth-reader-task-coverage.cjs');
@@ -52,6 +53,10 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   for(const [k,label] of LADDER_LABELS)L.push('| '+label+' | '+(decision.evidence_status[k]===true?'yes':'no')+' |');
   L.push('');
  }
+ // No content gap is not "nothing to improve": the Search Console signals that stay unexplained are listed.
+ if(decision.decision==='NO_CHANGE'){const open=openChecks({decision,report});
+  if(open.length){L.push('## Still open — not a content question','','No content gap was found, but that is not the same as no improvement needed:','');
+   open.forEach((c,i)=>L.push((i+1)+'. '+c.detail+' What to do: '+c.action));L.push('')}}
  // Reviewable is not publishable (copy_ready means ready for human review).
  const ready=decision.publication_readiness;
  if(ready&&(ready.blockers||[]).length){

@@ -57,6 +57,7 @@ function evidenceOf(list){
 
 // Every difference with the ranking pages, one list for the owner to choose from (shared with the Tracker).
 const {buildGapList}=require('../growth-gap-list.cjs');
+const {reconcileOutcome}=require('../growth-outcome.cjs');
 const gapList=ov=>buildGapList({competitor_overview:ov});
 
 function summarizeFreeGrowth(report,{url,query}={}){
@@ -153,7 +154,13 @@ function summarizeFreeGrowth(report,{url,query}={}){
   ...(gate.research_limitations||[]).slice(0,3).map(x=>typeof x==='string'?x:(x.detail||x.message||x.code||'')).filter(Boolean)
  ];
  if(scopeNote)limitations.push('Google shows more than one kind of page for this search. Your page was compared only with the '+gate.intent_scope.compared_with+' ('+gate.intent_scope.results_of_this_type+' of '+gate.intent_scope.of+'). '+scopeNote);
- return {decision,headline,explanation,steps,tasks,checked,limitations,gaps:buildGapList(report||{}),
+ const gaps=buildGapList(report||{});
+ // One outcome: no required change, but topics on 2+ ranking pages missing here are named, not hidden behind "no change".
+ const context=reconcileOutcome({decision:gate,gapList:gaps});
+ if(context){headline=context.headline;explanation=context.note;
+  steps=['Look at the topics in the list below and choose only what belongs on your page; nothing is written by itself.','Leave the rest of the page as it is.',
+   'Check again in about three months, or when your Search Console clicks for this search drop.']}
+ return {decision,headline,explanation,steps,tasks,checked,limitations,gaps,outcome_context:context,
   url:url||report?.url||null,
   promises:'No ranking or traffic increase is promised. Nothing was changed on your website.'};
 }
