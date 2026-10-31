@@ -29,6 +29,26 @@
   var ul=node('ul',null,parent);
   data.forEach(item=>node('li',display(item),ul));
  }
+ // Pop-up before writing when no AI answer for this search term is at most 14 days old: the editor chooses.
+ // Resolves 'WITH_AI' (answers present), 'WITHOUT_AI' (editor continues) or null (editor checks AI first).
+ function aiGate(d){
+  var c=d.ai_check;if(!c||(c.summary&&c.summary.checked>0))return Promise.resolve('WITH_AI');
+  return new Promise(function(resolve){
+   var dlg=document.createElement('dialog');dlg.className='growth-ai-gate';dlg.setAttribute('aria-labelledby','aiGateTitle');
+   node('h2','No current AI answers for “'+c.search_term+'”',dlg).id='aiGateTitle';
+   node('p',(c.older_answers_not_counted?c.older_answers_not_counted+' AI answer(s) are older than '+c.max_age_days+' days and no longer count. ':'No AI answer was pasted for this search term. ')+
+    'Without them, the concepts are based on Google and the ranking pages only; whether AI systems cite your page for this search is unknown.',dlg);
+   var row=node('p',null,dlg);
+   var first=node('button','Check AI answers first',row);first.type='button';
+   var without=node('button','Continue without AI check',row);without.type='button';without.style.marginLeft='8px';without.style.background='#475569';
+   var done=function(v){try{dlg.close()}catch(e){}dlg.remove();resolve(v)};
+   first.addEventListener('click',function(){done(null);var box=document.getElementById('growthAiCheck');if(box)box.scrollIntoView({behavior:'smooth'})});
+   without.addEventListener('click',function(){done('WITHOUT_AI')});
+   dlg.addEventListener('cancel',function(e){e.preventDefault();done(null)});
+   document.body.appendChild(dlg);if(typeof dlg.showModal==='function')dlg.showModal();else dlg.setAttribute('open','');
+   first.focus();
+  });
+ }
  function renderAiCheck(box,d){
   var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
@@ -120,6 +140,7 @@
    node('p','Search intent: '+String(d.intent_resolution.status)+
     (d.intent_resolution.original_keyword?' · Original tracked term: '+d.intent_resolution.original_keyword:''),primary);
   if(ownerReport&&outcome.decision==='IMPROVE_EXISTING'&&outcome.proposed_text){
+   if(d.gap_list)node('p','This is Growth\'s suggestion. You can also choose yourself what goes on the page in “Choose what goes on your site” below.',primary);
    node('h3','Concrete improvement for editorial review'+(outcome.publication_readiness&&outcome.publication_readiness.status==='NOT_READY_FOR_PUBLICATION'?' — draft, not ready for publication':''),primary);
    // Reviewable is not publishable: say what still stands between this proposal and publication.
    var ready=outcome.publication_readiness;
@@ -166,6 +187,21 @@
   }
   // AI answers for this search term: offered right after the decision, read fresh on every load, never re-running research.
   if(d.ai_check){var aiBox=section('AI answers for “'+d.ai_check.search_term+'”');aiBox.id='growthAiCheck';renderAiCheck(aiBox,d)}
+  // What the ranking pages have and this page does not: the editor chooses what goes on the page (Growth's own proposal
+  // above is one suggestion; any item can be ticked here).
+  // The editor's choice: every difference, ticked by the owner; text is written only for the selection.
+  var renderChecklist=typeof window!=='undefined'&&window.renderGrowthGapChecklist;
+  if(d.gap_list&&typeof renderChecklist==='function'){
+   var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
+   try{renderChecklist({...gl,target_url:d.url},node('section',null,container),{write:writeUrl?async function(ids){
+    // Without AI answers of the last 14 days the editor decides first: check AI, or continue without it.
+    var choice=await aiGate(d);if(!choice)return {success:false,code:'Check the AI answers first (see “AI answers for …” above); your selection is kept.'};
+    // The ticks are the owner's selection (saved deliberately first); writing then takes the next items from it.
+    var post=function(u,b){return fetch(u,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()})};
+    var sel=await post(writeUrl.replace('/auto-research/write','/auto-research/selection'),{gap_list_id:gl.id,item_ids:ids});
+    if(!sel||sel.success===false)return sel;
+    return post(writeUrl,{gap_list_id:gl.id,item_ids:ids,ai_check_choice:choice})}:null})}catch(e){}
+  }
   var superseded=!!(decision.final_decision&&recommendation&&recommendation.stage==='RESEARCH_STARTING_POINT');
   var s=superseded?section('How the research started'):section('Research context and next check');
   if(superseded)node('p','Starting point only. The decision at the top of this report ('+String(decision.final_decision.decision||'').replace(/_/g,' ')+') replaces this step.',s);
@@ -300,17 +336,6 @@
   var renderOverview=typeof window!=='undefined'&&window.renderGrowthCompetitorOverview;
   if(d.competitor_overview&&typeof renderOverview==='function'){
    try{renderOverview(d.competitor_overview,node('section',null,researchDetails||container))}catch(e){}
-  }
-  // The editor's choice: every difference, ticked by the owner; text is written only for the selection.
-  var renderChecklist=typeof window!=='undefined'&&window.renderGrowthGapChecklist;
-  if(d.gap_list&&typeof renderChecklist==='function'){
-   var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
-   try{renderChecklist({...gl,target_url:d.url},node('section',null,researchDetails||container),{write:writeUrl?async function(ids){
-    // The ticks are the owner's selection (saved deliberately first); writing then takes the next items from it.
-    var post=function(u,b){return fetch(u,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()})};
-    var sel=await post(writeUrl.replace('/auto-research/write','/auto-research/selection'),{gap_list_id:gl.id,item_ids:ids});
-    if(!sel||sel.success===false)return sel;
-    return post(writeUrl,{gap_list_id:gl.id,item_ids:ids})}:null})}catch(e){}
   }
   s=section('Search competitors for this Growth query');
   var liveRivals=(d.competitors?.live_reviewed||[]).filter(x=>

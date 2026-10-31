@@ -808,6 +808,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   try{written=await writeForSelection({items:plan.batch,targetUrl:list.target_url,focusQuery:list.focus_query||'',generate,
    research:list.research||null,sourceFingerprint:list.source_fingerprint||null})}
   catch(e){if(run&&typeof failWritingRun==='function')await Promise.resolve(failWritingRun({runId:run.id,error:'WRITER_ERROR'})).catch(()=>{});throw e}
+  // The editor's choice in the AI pop-up (no current AI answers: continue without), kept with the concepts.
+  const aiChoice=['WITH_AI','WITHOUT_AI'].includes(String(req.body?.ai_check_choice||''))?String(req.body.ai_check_choice):'NOT_ASKED';
+  let aiCounted=0;if(typeof loadAiAnswers==='function'&&list.focus_query){try{aiCounted=(await loadAiAnswers({clientId:v.clientId,pageId:v.id,query:list.focus_query})).filter(a=>Date.now()-Date.parse(a.created_at)<=AI_MAX_AGE_DAYS*86400000).length}catch{}}
+  written.ai_check={choice:aiCounted?'WITH_AI':aiChoice,answers_counted:aiCounted};
   // An item is done only when its concept AND evidence dossier are stored as a proposal, in the same transaction.
   const linked=(written.sections||[]).map(s=>s.item_id);
   let proposalRef=null,storageError=null;
