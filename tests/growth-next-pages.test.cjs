@@ -60,3 +60,13 @@ test('a site that serves a place keeps its place terms (LABELLED SYNTHETIC)',()=
  assert.equal(spokeCandidates({pageUrl:'https://acme-roofing.example/',focusQuery:'roof repair',gscRows:rows,sitePages:[],localMarket:true}).candidates.length,1);
  assert.equal(spokeCandidates({pageUrl:'https://acme-roofing.example/',focusQuery:'roof repair',gscRows:rows,sitePages:[]}).excluded[0].reason,'NAMES_A_PLACE_THIS_SITE_DOES_NOT_SERVE');
 });
+
+test('report 63 (real terms): questions about the product "Content at Scale" go to /content-at-scale/, not to /content-scaling/',()=>{
+ const f=require('./fixtures/growth-report-63/spokes.json');
+ // A focus term that covers nothing here, so every term is matched against the site's pages.
+ const r=spokeCandidates({pageUrl:f.page_url,focusQuery:'quality score',gscRows:f.gsc_rows,sitePages:f.site_pages});
+ const to=Object.fromEntries(r.belongs_elsewhere.map(x=>[x.query,x.url]));
+ for(const q of ['content at scale review','content at scale ai review','content at scale pricing','content at scale ai content detection'])
+  assert.equal(to[q],'https://contentscale.site/content-at-scale/',q);
+ for(const q of ['content scaling','scaling content','scaled content'])assert.equal(to[q],'https://contentscale.site/content-scaling/',q);
+});

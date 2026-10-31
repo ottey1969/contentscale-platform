@@ -30,6 +30,10 @@ const PLACE_ROOTS=q=>{const states=statesIn(q,{queryMode:true});if(!states.lengt
  // The words of the place itself (the state, and the city written before it): "los angeles, california".
  const m=String(q).toLowerCase().match(/(?:\bin\s+)?([a-z .'-]+),\s*([a-z ]+)$/);return rootsOf(m?m[1].replace(/^.*\bin\s+/,'')+' '+m[2]:'')};
 const topicOf=q=>{const place=new Set(PLACE_ROOTS(q));return rootsOf(q).filter(r=>!MODIFIERS.has(r)&&!place.has(r))};
+const words=t=>String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+// Longest run of the term's words, in order, that the page's keyword or URL also has ("content at scale" -> 3 words).
+const run=(a,b)=>{let best=0;for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++){let k=0;while(a[i+k]&&a[i+k]===b[j+k])k++;if(k>best)best=k}return best};
+const phraseScore=(p,q)=>{const t=words(q).split(' ');return Math.max(run(t,words(p.keyword).split(' ')),run(t,words(pathWords(p.url)).split(' ')))};
 const pageTopic=p=>[...new Set([...rootsOf(p.keyword),...rootsOf(pathWords(p.url))])];
 
 // localMarket: the page serves a place (a US-state market derived from its query, keyword or URL). Without it, a term that
@@ -51,8 +55,10 @@ function spokeCandidates({pageUrl='',focusQuery='',gscRows=[],sitePages=[],siteG
   // Another tracked page already answers it: better position there, or its keyword or URL covers the topic of the term
   // (so a review or price question about a topic goes to the page about that topic). The closest page wins.
   const better=(others.get(q)||[]).filter(o=>Number(o.position)>0&&Number(o.position)<position).sort((a,b)=>a.position-b.position)[0];
+  // Word stems make "scale" and "scaling" equal; the page that has the term's own words in the same order
+  // ("content at scale" in /content-at-scale/) is closer than one that only shares stems (/content-scaling/).
   const covering=sitePages.filter(p=>p&&p.url&&p.url!==pageUrl&&covers(pageTopic(p),topic))
-   .sort((a,b)=>pageTopic(a).length-pageTopic(b).length)[0];
+   .sort((a,b)=>(phraseScore(b,q)-phraseScore(a,q))||(pageTopic(a).length-pageTopic(b).length))[0];
   const page=better?sitePages.find(p=>String(p.id)===String(better.page_id)):covering;
   if(page&&page.url&&page.url!==pageUrl){elsewhere.push({query:q,impressions,position:Math.round(position*10)/10,url:page.url,
    basis:better?'BETTER_POSITION_ON_THAT_PAGE':'THAT_PAGE_COVERS_THE_TOPIC',action:'Improve that page for this term; no new page.'});continue}
