@@ -38,6 +38,8 @@ function resultsNotUsed(discovery){
  const counts=discovery.rejected_reasons||[...new Map((discovery.rejected_leads||[]).map(x=>[x.url,x.reason])).values()].reduce((n,r)=>(n[r]=(n[r]||0)+1,n),{});
  return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([code,count])=>({code,count,text:NOT_USED_TEXT[code]||code.toLowerCase().replace(/_/g,' ')}));
 }
+// Without Search Console the free check has to guess the search term; the Tracker starts from real data.
+const TRACKER_STEP='Use the ContentScale Tracker with Google Search Console: it shows which search terms this page already gets impressions and clicks for, and at which position. Research those terms instead of guessing one.';
 const INTENT_TEXT={LOCAL_SERVICE:'local service pages',INFORMATIONAL:'guides and explanations',COMMERCIAL:'comparison and buying pages',
  TRANSACTIONAL:'pages where people buy or book',NAVIGATIONAL:'specific brand or login pages'};
 
@@ -69,6 +71,9 @@ function summarizeFreeGrowth(report,{url,query}={}){
   search_term:searched,
   search_term_source:query?'YOU_ENTERED_IT':'DERIVED_FROM_THE_PAGE',
   what_google_shows:serp.intent?(INTENT_TEXT[serp.intent]||String(serp.intent).toLowerCase().replace(/_/g,' ')):null,
+  // By title, over all results incl. those that could not be opened (explanation only, never evidence for a gap).
+  google_titles:report?.serp_titles?.status==='OBSERVED_FROM_TITLES'?{seen:report.serp_titles.titles_seen,not_read:report.serp_titles.pages_not_read,
+   product_named_like_search_term:report.serp_titles.product_named_like_search_term,examples:report.serp_titles.examples,note:report.serp_titles.note}:null,
   ranking_results_considered:Number(serp.organic_leads_considered)||((discovery.leads||[]).length)||0,
   google_results_received:Number.isFinite(discovery.organic_results_received)?discovery.organic_results_received:null,
   results_not_used:resultsNotUsed(discovery),
@@ -122,11 +127,17 @@ function summarizeFreeGrowth(report,{url,query}={}){
    explanation='Only '+usable+' Google result(s) could be used'+(checked.google_results_received!=null?' (of '+checked.google_results_received+' received)':'')+
     '; at least three are needed to tell what people searching for this want, so no safe advice can be given.'+(why?' Not used: '+why+'.':'');
   }
+  const titlesNote=checked.google_titles&&checked.google_titles.note;
+  if(titlesNote)explanation+=' What Google shows, read from the titles of all '+checked.google_titles.seen+' results (titles only, not evidence for a change): '+titlesNote;
   steps=thin?[...(lost?[lost+' result(s) came as Google redirect links that the research could not open. That is a limit of this research, not of your page; running the check again later can give a different result.']:[]),
    'Try again with the exact search term your customers type into Google; a longer, more specific term gives more comparable results.',
    'If the problem stays, the research needs a manual comparison — that is part of the paid service.']:
    code==='QUERY_MEANS_SOMETHING_ELSE'?['Keep your page as it is: do not rewrite it toward the other meaning.',
    'Check again with a more specific search term that includes words from your own page.']:(NO_SHARED_ANSWER.has(code)?DIY_COMPARE:DIY_BLOCKED);
+  steps=[...steps];
+  if(checked.google_titles&&checked.google_titles.product_named_like_search_term/Math.max(1,checked.google_titles.seen)>=0.3)
+   steps.unshift('This search term is largely used for a product or brand with the same name. Choose a search term that describes what your page offers, in your customers\' words.');
+  steps.splice(Math.max(0,steps.length-1),0,TRACKER_STEP);
   if(code==='QUERY_MEANS_SOMETHING_ELSE'){
    const other=((gate.missing_evidence||[]).find(m=>m.code===code)||{}).observed;
    const w=other&&other.absent_on_page?other.absent_on_page.map(x=>'“'+x.word+'”').join(', '):'';

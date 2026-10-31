@@ -1,0 +1,167 @@
+{
+ "_note": "Real Free Growth check VXX4OBTnFHi2 (contentscale.site, \"content at scale\", NL, 2026-10-31). organic_titles is rebuilt from the stored leads and rejected results of that run (own site left out); titles are the real ones Google returned.",
+ "query": "content at scale",
+ "url": "https://contentscale.site/",
+ "report": {
+  "serp_intent": {
+   "intent": "MIXED_OR_INSUFFICIENT",
+   "status": "SERP_INTENT_NOT_ESTABLISHED",
+   "reason": "Only 1 usable organic result(s) after excluding discussion sites; at least 3 are needed to read an intent.",
+   "organic_leads_considered": 1
+  },
+  "editorial_decision_gate": {
+   "decision": "DATA_BLOCKED",
+   "blocker_code": "SERP_INTENT_EVIDENCE",
+   "missing_evidence": [
+    {
+     "code": "SERP_INTENT_EVIDENCE",
+     "detail": "Only 1 usable organic result(s) after excluding discussion sites; at least 3 are needed to read an intent.",
+     "observed": {
+      "method": "TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES",
+      "agreeing": 0,
+      "considered": 1,
+      "class_counts": {
+       "UNCLASSIFIED": 1
+      }
+     }
+    },
+    {
+     "code": "READABLE_COMPETITOR_ARTICLES",
+     "detail": "Fewer than two competitor articles on different sites yielded readable sections. Diagnostics: received 1, without HTML 0, no readable sections 0, used 1 (0 cut at the fetch limit, which still counts as evidence of what they teach), distinct sites 1."
+    }
+   ]
+  },
+  "search_discovery": {
+   "organic_results_received": 9,
+   "google_redirect_links": {
+    "received": 13,
+    "resolved": 2,
+    "unresolved": 11,
+    "google_page_sample": {
+     "bytes": 15203,
+     "title": "Google",
+     "status": 200,
+     "consent": false,
+     "has_script": true,
+     "unusual_traffic": false
+    },
+    "unresolved_reasons": {
+     "NO_TARGET_ON_GOOGLE_PAGE": 11
+    }
+   },
+   "rejected_reasons": {
+    "OWN_SITE": 1,
+    "QUERY_TERMS_NOT_IN_TITLE": 3,
+    "SEARCH_OR_SOCIAL_INFRASTRUCTURE": 1,
+    "GOOGLE_REDIRECT_LINK_NOT_RESOLVED": 11,
+    "DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT": 2
+   },
+   "leads": [
+    {
+     "url": "https://choose-your-ai.com/ai-tools/content-at-scale-ai-detector/",
+     "query": "content at scale",
+     "title": "Content at Scale AI Detector - Comparateur-IA - AI Comparator",
+     "source": "SERPER_GOOGLE_ORGANIC",
+     "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+     "snippet": "Content at Scale AI Detector is a AI content detection tool that helps users speed up their tasks in the AI content detection category, with a simple promise: ...",
+     "serp_position": 3,
+     "search_language": "en",
+     "geographic_scope": "NL",
+     "market_relevance": "NO_MARKET_SCOPE"
+    }
+   ],
+   "organic_titles": [
+    {
+     "title": "Content at Scale AI Detector - Comparateur-IA - AI Comparator",
+     "host": "choose-your-ai.com",
+     "url": "https://choose-your-ai.com/ai-tools/content-at-scale-ai-detector/"
+    },
+    {
+     "title": "Content at Scale AI Detector: Free Tool Review & Accuracy ...",
+     "host": "eyesift.com",
+     "url": "https://www.eyesift.com/blog/content-at-scale-ai-detector/"
+    },
+    {
+     "title": "What is content at scale? | Glossary",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "Content at Scale Review - Does their AI Detection Tool ...",
+     "host": "gowinston.ai",
+     "url": "https://gowinston.ai/content-at-scale-review/"
+    },
+    {
+     "title": "What is Content At Scale? An Overview",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "Content at Scale: free AI content creation tool",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "BrandWell (Previously ContentAtScale) AI Content ...",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "Content Scaling: 7 Tips for Creating More High-Quality ...",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "Scale: Reliable AI Systems for Critical Decisions",
+     "host": "scale.com",
+     "url": "https://scale.com/"
+    },
+    {
+     "title": "Content at Scale: How to Train AI to Create Great Content",
+     "host": "youtube.com",
+     "url": "https://www.youtube.com/watch?v=4I7ddiF4USw"
+    },
+    {
+     "title": "What's up with Contentatscale? : r/freelanceWriters",
+     "host": "reddit.com",
+     "url": "https://www.reddit.com/r/freelanceWriters/comments/15e4fpn/whats_up_with_contentatscale/"
+    },
+    {
+     "title": "Content at Scale Meaning Explained for Modern Marketing ...",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "Why Content at Scale Doesn't Work \u2013 and How AI Made It ...",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "The Key to Content at Scale: AI + Strategy",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "ContentAtScale AI Detector: Is it really accurate enough?",
+     "host": "quetext.com",
+     "url": "https://www.quetext.com/blog/contentatscale-ai-detector-honest-review-for-2025"
+    },
+    {
+     "title": "What Is Content At Scale In 2026? The New Definition",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "Content At Scale Pricing & Plans (2024)",
+     "host": null,
+     "url": null
+    },
+    {
+     "title": "The content scaling paradox facing modern marketers",
+     "host": null,
+     "url": null
+    }
+   ]
+  }
+ }
+}

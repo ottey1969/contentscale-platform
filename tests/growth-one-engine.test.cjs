@@ -21,7 +21,7 @@ const leads=[['https://roofer-a.example/roof-repair-nj/','Roof Repair in Paterso
  ['https://roofer-c.example/near-me/','Emergency Roof Repair Near Me | Roofer C']].map(([url,title],i)=>({url,title,snippet:'Local roof repair',source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}));
 const deps=pages=>({retryDelayMs:0,judgeTasks:require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
  fetchLive:async url=>{const html=pages[url];if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});return {html,final_url:url,retrieved_at:'2026-10-30T10:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
- searchLive:async({query})=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query,leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-30T10:00:00Z'})});
+ searchLive:async({query})=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query,leads,organic_titles:leads.map(l=>({title:l.title,host:new URL(l.url).hostname,url:l.url})),provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-30T10:00:00Z'})});
 
 // The Tracker research for the same page: a Tracker client that has only this page (no GSC, history or AI evidence).
 async function trackerResearch(d){
@@ -46,6 +46,7 @@ test('same page, search term and results: the Free check and the Tracker researc
  assert.equal(free.statusCode,200);
  const tracker=await trackerResearch(deps(allPages));
  assert.deepEqual(core(free.report),core(tracker.report));
+ assert.deepEqual(free.report.serp_titles,tracker.report.serp_titles,'what Google shows by title is the same in both');assert.equal(free.report.serp_titles.titles_seen,3);
  assert.equal(core(free.report).evidence,'ENOUGH_EVIDENCE');assert(core(free.report).gaps.length>0,'a real comparison, not two empty results');assert.equal(core(free.report).read.filter(x=>/READABLE$/.test(x)&&!/NOT_READABLE/.test(x)).length,2);
  assert(!tracker.sql.some(q=>/^\s*(INSERT|UPDATE|DELETE)/i.test(q)),'the research itself writes nothing');
 });
