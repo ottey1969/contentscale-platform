@@ -23,10 +23,11 @@ function band(p){
  return {kind:'BIGGER_EFFORT',weight:0.15,effort:'large',label:'beyond page 4'};
 }
 
-function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null}={}){
+function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null,customerCountries=[]}={}){
  const brand=compact(String(domain).replace(/^https?:\/\//,'').split('.')[0]);
  const tracked=new Map(pages.filter(p=>p&&p.url).map(p=>[norm(p.url),p]));
- const excluded={brand:0,outside_service_area:0,untracked_page:0,too_few_impressions:0,protected_page:0,already_top_with_clicks:0};
+ const customers=new Set((customerCountries||[]).map(c=>String(c).toUpperCase()));
+ const excluded={brand:0,outside_service_area:0,outside_customer_countries:0,untracked_page:0,too_few_impressions:0,protected_page:0,already_top_with_clicks:0};
  if(!rows.length)return {status:'INSUFFICIENT_DATA',reason:'No Search Console rows per country have been imported for this site. Import them in the Growth Cockpit (Search Console access is needed); without them Growth does not guess where the best opportunity is.',
   best:null,runners_up:[],by_country:[],excluded};
  const period=rows[0]&&rows[0].start_date?{start:rows[0].start_date,end:rows[0].end_date}:null;
@@ -45,8 +46,11 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  for(const [k,g] of groups){
   const impressions=g.reduce((n,x)=>n+x.impressions,0),clicks=g.reduce((n,x)=>n+x.clicks,0);
   const lead=g.slice().sort((a,b)=>a.position-b.position||b.impressions-a.impressions)[0];
-  const c=byCountry.get(lead.country)||{country:lead.country,name:countryName(lead.country),impressions:0,clicks:0,opportunities:0};
+  const c=byCountry.get(lead.country)||{country:lead.country,name:countryName(lead.country),impressions:0,clicks:0,opportunities:0,
+   customer_country:customers.size?customers.has(lead.country):null};
   c.impressions+=impressions;c.clicks+=clicks;byCountry.set(lead.country,c);
+  // Outside the countries where the owner wants customers: visible in the per-country overview, never the best opportunity.
+  if(customers.size&&!customers.has(lead.country)){excluded.outside_customer_countries++;continue}
   if(impressions<MIN_IMPRESSIONS){excluded.too_few_impressions++;continue}
   const b=band(lead.position),ctr=impressions?clicks/impressions:0;
   if(b.kind==='SNIPPET'&&ctr>=LOW_CTR_TOP){excluded.already_top_with_clicks++;continue}
@@ -69,13 +73,21 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  }
  list.sort((a,b)=>b.priority-a.priority||b.impressions-a.impressions);
  const countries=[...byCountry.values()].sort((a,b)=>b.impressions-a.impressions);
- if(!list.length)return {status:'INSUFFICIENT_DATA',period,
+ if(!list.length)return {status:'INSUFFICIENT_DATA',period,customer_countries:customerScope(customers,countries),
   reason:'No search term in any country has at least '+MIN_IMPRESSIONS+' impressions on a tracked, changeable page outside the top 3 (or with few clicks in the top 3). Growth does not invent an opportunity; add pages to the Tracker or import again later.',
   best:null,runners_up:[],by_country:countries,excluded};
  const best=withPlan(list[0],siteMarkets);
- return {status:'OPPORTUNITY_FOUND',period,best,runners_up:list.slice(1,5).map(x=>withPlan(x,siteMarkets)),by_country:countries,excluded,
+ const scope=customerScope(customers,countries);
+ return {status:'OPPORTUNITY_FOUND',period,customer_countries:scope,best,runners_up:list.slice(1,5).map(x=>withPlan(x,siteMarkets)),by_country:countries,excluded,
   method:'Search Console per country: priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). An order, not a click forecast.',
   not_yet_known:'How strong the ranking pages are in that country, and whether this page can give a better answer: the Growth research in that country reads them before anything is proposed.'};
+}
+function customerScope(customers,countries){
+ const outside=countries.filter(c=>customers.size&&!customers.has(c.country));
+ return customers.size?{set:true,countries:[...customers],
+  outside:outside.slice(0,6).map(c=>({country:c.country,name:c.name,impressions:c.impressions,clicks:c.clicks})),
+  note:'Only the countries you chose count for the best opportunity'+(outside.length?'; '+outside.length+' other countr'+(outside.length===1?'y':'ies')+' with impressions are shown for information':'')+'.'}:
+  {set:false,countries:[],outside:[],note:'Every country counts until you choose the countries where your customers are. Impressions are not customers: set them so the finder only picks opportunities you can serve.'};
 }
 function withPlan(o,siteMarkets){
  const where=o.country_name+' ('+o.country.toLowerCase()+')';

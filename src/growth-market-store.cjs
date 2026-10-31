@@ -70,6 +70,30 @@ async function setSiteMarkets(pool,{clientId,countries,language}){
   ON CONFLICT (tracker_client_id) DO UPDATE SET countries=EXCLUDED.countries,language=EXCLUDED.language,updated_at=NOW()`,[clientId,JSON.stringify(list),lang]);
  return {countries:list,language:lang};
 }
+// The countries where the owner wants customers (for example where they can sell, deliver or charge their prices). The
+// Opportunity Finder chooses its best opportunity only there; traffic from other countries stays visible. The owner
+// decides this; Growth never rates countries by itself. One row per Tracker client, additive table.
+let customerEnsured=null;
+function ensureCustomerTable(pool){
+ if(!customerEnsured)customerEnsured=pool.query(`CREATE TABLE IF NOT EXISTS tracker_growth_customer_countries(
+   tracker_client_id BIGINT PRIMARY KEY,
+   countries JSONB NOT NULL,
+   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`).catch(e=>{customerEnsured=null;throw e});
+ return customerEnsured;
+}
+async function getCustomerCountries(pool,{clientId}){
+ try{const row=(await pool.query('SELECT countries FROM tracker_growth_customer_countries WHERE tracker_client_id=$1',[clientId])).rows[0];
+  return row?validCountries(row.countries):[]}
+ catch(e){if(e.code==='42P01')return [];throw e}
+}
+async function setCustomerCountries(pool,{clientId,countries}){
+ await ensureCustomerTable(pool);
+ const list=validCountries(countries);
+ if(!list.length){await pool.query('DELETE FROM tracker_growth_customer_countries WHERE tracker_client_id=$1',[clientId]);return []}
+ await pool.query(`INSERT INTO tracker_growth_customer_countries(tracker_client_id,countries,updated_at) VALUES($1,$2::jsonb,NOW())
+  ON CONFLICT (tracker_client_id) DO UPDATE SET countries=EXCLUDED.countries,updated_at=NOW()`,[clientId,JSON.stringify(list)]);
+ return list;
+}
 // Order, field by field: the page's Growth setting, then the Pre-Write brief of its keyword, then the site default.
 function resolveMarketSetting(growth,prewrite,siteDefault=null){
  const g=growth||{},p=prewrite||{},d=siteDefault||{};
@@ -81,4 +105,4 @@ function resolveMarketSetting(growth,prewrite,siteDefault=null){
   language_source:g.language?'SET_IN_TRACKER':p.language?'FROM_PREWRITE_BRIEF':d.language?'SITE_DEFAULT':null,
   brief:p.brief&&(!g.countries?.length||!g.language)?p.brief:null,alternatives:p.alternatives||[]};
 }
-module.exports={getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets,resolveMarketSetting,ensureTable};
+module.exports={getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets,getCustomerCountries,setCustomerCountries,resolveMarketSetting,ensureTable};
