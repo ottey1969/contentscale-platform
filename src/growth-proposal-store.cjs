@@ -93,9 +93,26 @@ async function latestProposal(pool,{clientId,targetPageId,targetUrl,maxDays=30})
     AND created_at>NOW()-make_interval(days=>$4) ORDER BY id DESC LIMIT 1`,[clientId,Number(targetPageId),targetUrl,maxDays])).rows[0]||null;
  }catch(e){if(e.code==='42P01')return null;throw e}
 }
+// Every proposal for this page and URL in the window, newest first: the main research proposal and each concept the owner
+// had written for a chosen improvement are separate rows, and the CMS handoff lets the editor combine them.
+async function recentProposals(pool,{clientId,targetPageId,targetUrl,maxDays=30,limit=10}){
+ try{
+  return (await pool.query(`SELECT id,target_page_id,target_url,focus_query,decision,sections,review,evidence_label,intent_note,created_at
+    FROM tracker_growth_proposals WHERE tracker_client_id=$1 AND target_page_id=$2 AND target_url=$3
+    AND created_at>NOW()-make_interval(days=>$4) ORDER BY id DESC LIMIT $5`,[clientId,Number(targetPageId),targetUrl,maxDays,limit])).rows;
+ }catch(e){if(e.code==='42P01')return [];throw e}
+}
+// The newest proposal plus the other stored ones, each reduced to the sections whose H2 is not already in a newer one.
+function combineProposals(rows){
+ const key=h=>String(h||'').toLowerCase().replace(/\s+/g,' ').trim(),seen=new Set(),out=[];
+ for(const r of rows||[]){const sections=(r.sections||[]).filter(s=>s&&s.h2&&!seen.has(key(s.h2)));
+  (r.sections||[]).forEach(s=>s&&s.h2&&seen.add(key(s.h2)));
+  if(sections.length||!out.length)out.push({...r,sections:out.length?sections:r.sections||[]})}
+ return {latest:out[0]||null,earlier:out.slice(1)};
+}
 async function proposalById(pool,{clientId,id}){
  try{return (await pool.query('SELECT id,target_page_id,target_url,focus_query,sections FROM tracker_growth_proposals WHERE tracker_client_id=$1 AND id=$2',[clientId,Number(id)])).rows[0]||null}
  catch(e){if(e.code==='42P01')return null;throw e}
 }
 
-module.exports={proposalFromDecision,saveProposal,saveSelectionProposal,latestProposal,proposalById,ensureTable};
+module.exports={proposalFromDecision,saveProposal,saveSelectionProposal,latestProposal,recentProposals,combineProposals,proposalById,ensureTable};

@@ -3,7 +3,7 @@ const test=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs');
 const ui=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
 test('owner report shows concrete decision ahead of generic research',()=>{
- const result=ui.indexOf("section('Growth result · decision and evidence')");
+ const result=ui.indexOf("section('Step 1 · What Growth found and proposes')");
  const research=ui.indexOf("section('Research context and next check')");
  assert(result>0&&research>result);
  assert.match(ui,/outcome\.decision==='IMPROVE_EXISTING'/);

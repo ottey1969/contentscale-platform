@@ -25,7 +25,7 @@ const placementText=p=>p?PLACEMENT_MODES[p.mode]+' “'+p.section_heading+'”':
 // reviewNotes: {needs_fact_check, needs_owner_confirmation, needs_safety_review} — sentences the owner must check before publishing.
 function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApproved=false,
  cms='generic',pageTitle,metaDescription,focusQuery='',evidenceScope='needs_access',
- caseStudyLocked=false,sourceExpectedSha256,language='en',growthProposal=null,reviewNotes=null}={}){
+ caseStudyLocked=false,sourceExpectedSha256,language='en',growthProposal=null,reviewNotes=null,addedProposalIds=[]}={}){
  const issues=[],warnings=[];
  let url;
  try{url=new URL(canonicalUrl)}catch{}
@@ -114,7 +114,9 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  const placementSteps=approved.map((x,i)=>'   - Change '+(i+1)+': '+where(x,i)+'.').join('\n');
  // Audit trail: was the checked Growth text published as proposed, or edited by the editor?
  const proposal=growthProposal&&Array.isArray(growthProposal.sections)?{id:growthProposal.id,
-  editor_changed_text:approved.length!==growthProposal.sections.length||approved.some((x,i)=>{const s=growthProposal.sections[i]||{};return norm(x.html)!==norm('<h2>'+s.h2+'</h2>'+String(s.text||''))})}:null;
+  // Sections the editor added from an earlier stored concept carry that concept's evidence_ref and are compared there.
+  editor_changed_text:(own=>own.length!==growthProposal.sections.length||own.some((x,i)=>{const s=growthProposal.sections[i]||{};return norm(x.html)!==norm('<h2>'+s.h2+'</h2>'+String(s.text||''))}))
+   (approved.filter(x=>!/^growth_proposal:\d+$/.test(String(x.evidence_ref||''))||x.evidence_ref==='growth_proposal:'+growthProposal.id))}:null;
  // Review notes belong to the Growth text: a sentence the editor removed or rewrote is no longer listed, and new
  // editor text is marked as not checked by Growth instead of inheriting checks written for other sentences.
  const approvedText=norm(approved.map(x=>x.html).join(' '));
@@ -152,7 +154,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   language:clean(language)||'en',change_count:approved.length,
   change_evidence:approved.map(x=>x.evidence_ref),
   change_placements:approved.map(x=>x.placement||null),
-  growth_proposal:proposal,editor_text_unchecked_by_growth:!!editorText,review_items:{fact_check:review.fact_check.length,owner_confirmation:review.owner_confirmation.length,safety_review:review.safety_review.length,flagged:review.flagged.length},
+  growth_proposal:proposal,growth_proposals_added:(Array.isArray(addedProposalIds)?addedProposalIds:[]).filter(Number.isSafeInteger).slice(0,10),editor_text_unchecked_by_growth:!!editorText,review_items:{fact_check:review.fact_check.length,owner_confirmation:review.owner_confirmation.length,safety_review:review.safety_review.length,flagged:review.flagged.length},
   links,images:captions,warnings:[...new Set(warnings)]
  };
  const files=[

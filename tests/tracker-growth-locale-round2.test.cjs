@@ -2,7 +2,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const code=fs.readFileSync(path.resolve(__dirname,'../public/tracker-growth-ui.js'),'utf8');
 const measurement=fs.readFileSync(path.resolve(__dirname,'../src/tracker-growth-measurement.cjs'),'utf8');
-assert(measurement.includes('defer src="/tracker-growth-ui.js"'),'Measurement must share Tracker locale asset');
+assert(/defer src="\/tracker-growth-ui\.js(\?v=[^"]*)?"/.test(measurement),'Measurement must share Tracker locale asset');
 const storage={cs_ui_language:'nl'},elements={},nodes=[];
 function textNode(value,protectedData=false){
  const n={nodeValue:value,parentElement:{closest(){return protectedData?{}:null}}};nodes.push(n);return n;

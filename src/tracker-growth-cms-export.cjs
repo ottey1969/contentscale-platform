@@ -5,7 +5,7 @@ const {fetchPublicGrowthHtml}=require('./growth-public-html-reader.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('./growth-source-grounded-editor.cjs');
 const {normalizeGrowthResearchContext}=require('./growth-editorial-research-context.cjs');
 const {loadGrowthOptionalGsc}=require('./growth-optional-gsc-draft-evidence.cjs');
-const {latestProposal,proposalById}=require('./growth-proposal-store.cjs');
+const {recentProposals,combineProposals,proposalById}=require('./growth-proposal-store.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowLockedResearchDraft=false}={}){
  const id=Number(pageId);
@@ -54,7 +54,7 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
      .set('X-Robots-Tag','noindex, nofollow').set('Referrer-Policy','no-referrer')
      .type('html').send('<!doctype html><html lang="en"><meta charset="utf-8"><meta name="robots" content="noindex"><title>Growth handoff status</title><body style="max-width:700px;margin:50px auto;font:16px/1.55 system-ui;padding:20px"><h1>CMS handoff is not available for this page</h1><p>'+msg+'</p><p>Reason: <code>'+v.code+'</code></p><p><a href="'+back+'">← Return to Growth research</a></p><p>No scan, GSC connection or website change was started.</p></body></html>');
    }
-   const html=fs.readFileSync(path.resolve(__dirname,'../public/growth-cms-neutral-handoff.html'),'utf8');
+   const html=require('./growth-asset-version.cjs').versioned(fs.readFileSync(path.resolve(__dirname,'../public/growth-cms-neutral-handoff.html'),'utf8'));
    return res.set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex, nofollow')
     .set('Referrer-Policy','no-referrer').type('html').send(html);
   }catch(e){return res.status(503).type('text').send('CMS handoff temporarily unavailable')}
@@ -175,9 +175,11 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
   try{
    const v=await loadEditablePage(pool,req.params.token,req.query?.page_id,{allowMissingHtml:true});
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
-   const p=await latestProposal(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url});
-   res.set('Cache-Control','private, no-store').json({success:true,proposal:p?{id:Number(p.id),created_at:p.created_at,focus_query:p.focus_query,
-    sections:p.sections,review:p.review,evidence_label:p.evidence_label,intent_note:p.intent_note}:null});
+   const {latest:p,earlier}=combineProposals(await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url}));
+   const shape=x=>({id:Number(x.id),created_at:x.created_at,focus_query:x.focus_query,sections:x.sections,review:x.review,evidence_label:x.evidence_label,intent_note:x.intent_note});
+   // earlier: the other proposals and written concepts for this page (last 30 days), with only the sections that a newer
+   // one does not already contain. The editor adds them to the same package; nothing is merged without that choice.
+   res.set('Cache-Control','private, no-store').json({success:true,proposal:p?shape(p):null,earlier:earlier.map(shape)});
   }catch(e){console.warn('[growth-cms-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'GROWTH_PROPOSAL_UNAVAILABLE'})}
  });
  app.post('/api/tracker-client/:token/growth/cms-export',async(req,res)=>{
@@ -220,7 +222,15 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
      return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
     growthProposal={id:Number(p.id),sections:p.sections};
    }
-   const result=prepareGrowthCmsHandoff({growthProposal,reviewNotes:req.body?.review_notes||null,
+   // Earlier concepts the editor added to this package: each must belong to this page and URL.
+   const added=Array.isArray(req.body?.added_growth_proposal_ids)?[...new Set(req.body.added_growth_proposal_ids.map(Number))].slice(0,10):[];
+   for(const id of added){
+    if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({success:false,code:'GROWTH_PROPOSAL_ID_INVALID'});
+    const p=await proposalById(pool,{clientId:v.client.id,id});
+    if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
+     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
+   }
+   const result=prepareGrowthCmsHandoff({growthProposal,reviewNotes:req.body?.review_notes||null,addedProposalIds:added,
     canonicalUrl:v.page.url,originalHtml,sourceExpectedSha256:originalHash,
     caseStudyLocked:v.page.case_study_active,editorApproved:req.body?.editor_approved===true,
     cms:req.body?.cms||'generic',pageTitle:req.body?.seo_title,

@@ -269,6 +269,23 @@ test('10. hybrid: research without writing gives the full gap list; text only fo
  const facts=pack.body.files.find(f=>f.name==='06-fact-check-before-publishing.md').content;
  assert.match(facts,/Flagged by Growth — resolved in this text \(checked\)[\s\S]*68%/);
  assert.equal(pack.body.manifest.review_items.flagged,1);
+ // Nothing is lost by writing a concept: the main research proposal for the page stays listed as an earlier concept,
+ // and the editor can add its sections to the same package (recorded per section and in the manifest).
+ const listed=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body;
+ const main=listed.earlier.find(x=>x.id===proposal.id);
+ assert(main,'the earlier main proposal is offered: '+JSON.stringify(listed.earlier.map(x=>x.id)));
+ assert(main.sections.length>0&&main.sections.every(x=>!prop.sections.some(y=>y.h2.toLowerCase()===x.h2.toLowerCase())),'only sections not already in the newer concept');
+ const combinedBody=extra=>({page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
+  focus_query:prop.focus_query||'roof repair lodi nj',seo_title:'Roof Repair in Lodi, NJ',meta_description:'Roof repair in Lodi, NJ: how to read the estimate.',growth_proposal_id:prop.id,
+  review_notes:{...prop.review,needs_fact_check:[...(prop.review.needs_fact_check||[]),...(main.review.needs_fact_check||[])]},
+  approved_changes:[...resolved.map(x=>({approved:true,evidence_ref:'growth_proposal:'+prop.id,html:sectionHtml(x),placement:x.placement})),
+   ...main.sections.map(x=>({approved:true,evidence_ref:'growth_proposal:'+main.id,html:sectionHtml(x),placement:x.placement}))],format:'json',...extra});
+ assert.equal((await api('POST','/api/tracker-client/owner-tok/growth/cms-export',combinedBody({added_growth_proposal_ids:[main.id+999]}))).status,409,'another page’s or an invented concept is refused');
+ const both=await api('POST','/api/tracker-client/owner-tok/growth/cms-export',combinedBody({added_growth_proposal_ids:[main.id]}));
+ assert.equal(both.status,200,JSON.stringify(both.body).slice(0,300));
+ assert.deepEqual(both.body.manifest.growth_proposals_added,[main.id]);
+ assert(both.body.manifest.change_evidence.includes('growth_proposal:'+main.id));
+ assert.equal(both.body.manifest.change_evidence.length,resolved.length+main.sections.length);
  // The protected Case Study page never gets a gap list to write from.
  const locked=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.locked,{page_id:ids.locked,write:false});
  assert(locked.body.gap_list.id===null||locked.body.gap_list.target_page_id!==ids.locked);
