@@ -46,14 +46,39 @@ async function getPrewriteMarket(pool,{clientId,keywords=[]}){
  catch(e){if(e.code==='42P01'||e.code==='42703')return null;throw e}
 }
 // What the research uses: the Growth setting, field by field, with the Pre-Write brief filling what is not set there.
-function resolveMarketSetting(growth,prewrite){
- const g=growth||{},p=prewrite||{};
- const countries=g.countries?.length?g.countries:p.countries||[];
- const language=g.language||p.language||null;
+// The site's default market(s) and language: used for every page that has no Growth setting and no Pre-Write brief
+// (field by field). Additive table, one row per Tracker client.
+let siteEnsured=null;
+function ensureSiteTable(pool){
+ if(!siteEnsured)siteEnsured=pool.query(`CREATE TABLE IF NOT EXISTS tracker_growth_site_markets(
+   tracker_client_id BIGINT PRIMARY KEY,
+   countries JSONB NOT NULL,
+   language TEXT,
+   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`).catch(e=>{siteEnsured=null;throw e});
+ return siteEnsured;
+}
+async function getSiteMarkets(pool,{clientId}){
+ try{const row=(await pool.query('SELECT countries,language,updated_at FROM tracker_growth_site_markets WHERE tracker_client_id=$1',[clientId])).rows[0];
+  return row?{countries:validCountries(row.countries),language:validLanguage(row.language),updated_at:row.updated_at}:null}
+ catch(e){if(e.code==='42P01')return null;throw e}
+}
+async function setSiteMarkets(pool,{clientId,countries,language}){
+ await ensureSiteTable(pool);
+ const list=validCountries(countries),lang=validLanguage(language);
+ if(!list.length&&!lang){await pool.query('DELETE FROM tracker_growth_site_markets WHERE tracker_client_id=$1',[clientId]);return null}
+ await pool.query(`INSERT INTO tracker_growth_site_markets(tracker_client_id,countries,language,updated_at) VALUES($1,$2::jsonb,$3,NOW())
+  ON CONFLICT (tracker_client_id) DO UPDATE SET countries=EXCLUDED.countries,language=EXCLUDED.language,updated_at=NOW()`,[clientId,JSON.stringify(list),lang]);
+ return {countries:list,language:lang};
+}
+// Order, field by field: the page's Growth setting, then the Pre-Write brief of its keyword, then the site default.
+function resolveMarketSetting(growth,prewrite,siteDefault=null){
+ const g=growth||{},p=prewrite||{},d=siteDefault||{};
+ const countries=g.countries?.length?g.countries:p.countries?.length?p.countries:d.countries||[];
+ const language=g.language||p.language||d.language||null;
  if(!countries.length&&!language)return null;
  return {countries,language,
-  source:g.countries?.length?'SET_IN_TRACKER':p.countries?.length?'FROM_PREWRITE_BRIEF':null,
-  language_source:g.language?'SET_IN_TRACKER':p.language?'FROM_PREWRITE_BRIEF':null,
+  source:g.countries?.length?'SET_IN_TRACKER':p.countries?.length?'FROM_PREWRITE_BRIEF':d.countries?.length?'SITE_DEFAULT':null,
+  language_source:g.language?'SET_IN_TRACKER':p.language?'FROM_PREWRITE_BRIEF':d.language?'SITE_DEFAULT':null,
   brief:p.brief&&(!g.countries?.length||!g.language)?p.brief:null,alternatives:p.alternatives||[]};
 }
-module.exports={getPageMarkets,setPageMarkets,getPrewriteMarket,resolveMarketSetting,ensureTable};
+module.exports={getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets,resolveMarketSetting,ensureTable};

@@ -363,11 +363,11 @@
   var cov=discovery.market_coverage||{};
   if(loc.source||cov.status){
    var mk=node('div',null,s);
-   node('small','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl+(loc.language_source==='SET_IN_TRACKER'?' (set in Growth)':loc.language_source==='FROM_PREWRITE_BRIEF'?' (from the Pre-Write brief)':''):'')+(loc.brief?' · Pre-Write brief #'+loc.brief.id:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
+   node('small','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl+(loc.language_source==='SET_IN_TRACKER'?' (set in Growth)':loc.language_source==='FROM_PREWRITE_BRIEF'?' (from the Pre-Write brief)':loc.language_source==='SITE_DEFAULT'?' (site default)':''):'')+(loc.brief?' · Pre-Write brief #'+loc.brief.id:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':loc.source==='SITE_DEFAULT'?'site default (Growth Cockpit)':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
     (loc.priority_confirmed===false?' · the order of the markets is a guess from how often the headings name them':''),mk);
    (cov.markets||[]).forEach(function(m){node('small',' '+m.name+': '+(m.researched?'researched ('+(m.provider||'search')+', '+m.usable_results+' usable result(s))':'not researched'),node('div',null,mk))});
    if(cov.note)node('small',cov.note,node('div',null,mk));
-   if(d.market_setting_url&&loc.source!=='SET_IN_TRACKER'&&loc.source!=='FROM_PREWRITE_BRIEF')node('small','Set the target markets at the top of this page to research the right countries.',mk);
+   if(d.market_setting_url&&loc.source!=='SET_IN_TRACKER'&&loc.source!=='FROM_PREWRITE_BRIEF'&&loc.source!=='SITE_DEFAULT')node('small','Set the target markets at the top of this page to research the right countries.',mk);
   }
   if(discovery.free_discovery_status)node('small','Free search: '+discovery.free_discovery_status,s);
   if(discovery.optional_google_status)node('small','Optional Google search: '+discovery.optional_google_status,s);

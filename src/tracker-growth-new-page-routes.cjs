@@ -29,7 +29,7 @@ const slugOf=t=>String(t||'').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g
 function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,renderOwn=renderPublicGrowthPage,
  retryDelayMs=1500,buildOverview=buildCompetitorOverview,generateDraft=generateGrowthEditorDraft,
  recordGapList=null,loadGapList=null,recordSelection=null,addToSelection=null,loadOpenSelection=null,
- claimWritingRun=null,storeWritingRun=null,failWritingRun=null,loadConcepts=null,loadPageMarkets=null,savePageMarkets=null}={}){
+ claimWritingRun=null,storeWritingRun=null,failWritingRun=null,loadConcepts=null,loadPageMarkets=null,savePageMarkets=null,loadSiteMarkets=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')throw Error('GROWTH_NEW_PAGE_DEPENDENCIES_REQUIRED');
  const api=t=>'/api/tracker-client/'+encodeURIComponent(t)+'/growth/new-page';
  const no=(res,status,code,extra={})=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code,...extra});
@@ -53,7 +53,10 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
  async function marketFor(clientId,b){
   const own=typeof loadPageMarkets==='function'?await Promise.resolve(loadPageMarkets({clientId,pageId:briefKey(b.id)})).catch(()=>null):null;
   const fromBrief={countries:validCountries([b.region]),language:validLanguage(b.language),brief:{id:Number(b.id),keyword:b.keyword,created_at:b.created_at}};
-  return {own,configured:resolveMarketSetting(own,fromBrief.countries.length||fromBrief.language?fromBrief:null)};
+  // Then the site default, field by field (a brief normally names both).
+  const site=typeof loadSiteMarkets==='function'&&!((own?.countries?.length||fromBrief.countries.length)&&(own?.language||fromBrief.language))?
+   await Promise.resolve(loadSiteMarkets({clientId})).catch(()=>null):null;
+  return {own,configured:resolveMarketSetting(own,fromBrief.countries.length||fromBrief.language?fromBrief:null,site)};
  }
  const plannedUrl=(home,b,pages)=>{if(!home)return null;let u=home+(slugOf(b.keyword)||'new-page')+'/';
   return {url:u,taken:pages.some(p=>String(p.url).replace(/\/$/,'')===u.replace(/\/$/,''))}};

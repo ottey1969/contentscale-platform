@@ -33,7 +33,7 @@
   if(r.planned_url)el('p','Planned URL: '+r.planned_url+(r.planned_url_taken?' — already a tracked URL: choose another one.':' (you can choose another one when publishing)'),s,r.planned_url_taken?'error':'');
   var cov=disc.market_coverage||{},loc=disc.search_locale||{};
   var m=el('section',null,out);el('h2','Research per market',m);
-  el('p','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':'not confirmed'),m);
+  el('p','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':loc.source==='SITE_DEFAULT'?'site default (Growth Cockpit)':'not confirmed'),m);
   (cov.markets||[]).forEach(function(x){el('small',x.name+': '+(x.researched?'researched ('+(x.provider||'search')+', '+x.usable_results+' usable result(s))':'not researched'),m)});
   if(cov.note)el('small',cov.note,m);if(disc.fetch_summary)el('small','Ranking pages: '+disc.fetch_summary,m);
   var exact=(ov.exact||[]).length>0;

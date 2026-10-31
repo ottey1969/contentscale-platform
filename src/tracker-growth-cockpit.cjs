@@ -9,7 +9,8 @@ const {loadMemory,recordAction,recordResearchOutcome}=require('./tracker-growth-
 const {saveProposal,saveSelectionProposal}=require('./growth-proposal-store.cjs');
 const {saveGapList,getGapList,saveSelection,addToSelection,saveWritten,getOpenSelection}=require('./growth-selection-store.cjs');
 const writingRuns=require('./growth-writing-runs.cjs');
-const {getPageMarkets,setPageMarkets,getPrewriteMarket}=require('./growth-market-store.cjs');
+const {getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets}=require('./growth-market-store.cjs');
+const {PREWRITE_REGIONS,PREWRITE_LANGUAGES,countryName,languageName}=require('./growth-search-locale.cjs');
 const {saveGrowthAiAnswer,listGrowthAiAnswers}=require('./growth-ai-answers-store.cjs');
 const escapeHtml=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -121,6 +122,8 @@ function registerGrowthCockpit(app,pool,deps={}){
    req.growth.gsc_evidence_status=gscAvailable?(evidenceRows.length?'AVAILABLE':'NEEDS_ACCESS'):'UNAVAILABLE';
    req.growth.gsc_connected_required_for_access=false;
    req.growth.can_edit=client.token===req.params.token;
+   // The site's default target market (owner view of the Cockpit); optional, never blocks the Cockpit.
+   if(req.growth.can_edit)req.growth.site_markets=await getSiteMarkets(pool,{clientId:client.id}).catch(()=>null);
    req.growthTrackerClientId=client.id;
    next();
   }catch(e){res.status(503).json({success:false,error:'Verified growth evidence temporarily unavailable'})}
@@ -133,7 +136,7 @@ function registerGrowthCockpit(app,pool,deps={}){
   recordWritten:args=>saveWritten(pool,args),loadOpenSelection:args=>getOpenSelection(pool,args),addToSelection:args=>addToSelection(pool,args),
   claimWritingRun:args=>writingRuns.claimRun(pool,args),storeWritingRun:args=>writingRuns.storeRun(pool,args),
   failWritingRun:args=>writingRuns.failRun(pool,args),lastStoredRun:args=>writingRuns.lastStoredRun(pool,args),
-  saveAiAnswer:args=>saveGrowthAiAnswer(pool,args),loadAiAnswers:args=>listGrowthAiAnswers(pool,args),
+  saveAiAnswer:args=>saveGrowthAiAnswer(pool,args),loadSiteMarkets:args=>getSiteMarkets(pool,args),saveSiteMarkets:args=>setSiteMarkets(pool,args),loadAiAnswers:args=>listGrowthAiAnswers(pool,args),
   loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),loadPrewriteMarket:args=>getPrewriteMarket(pool,args),...(deps.research||{})});
  // New pages from a Pre-Write brief: the same research, selection, writing and storage, without a tracked URL.
  const r=deps.research||{};
@@ -142,7 +145,7 @@ function registerGrowthCockpit(app,pool,deps={}){
   recordGapList:args=>saveGapList(pool,args),loadGapList:args=>getGapList(pool,args),recordSelection:args=>saveSelection(pool,args),
   addToSelection:args=>addToSelection(pool,args),loadOpenSelection:args=>getOpenSelection(pool,args),
   claimWritingRun:args=>writingRuns.claimRun(pool,args),storeWritingRun:args=>writingRuns.storeRun(pool,args),failWritingRun:args=>writingRuns.failRun(pool,args),
-  loadConcepts:args=>writingRuns.getNewPageConcepts(pool,args),loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),...(deps.newPage||{})});
+  loadConcepts:args=>writingRuns.getNewPageConcepts(pool,args),loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),loadSiteMarkets:args=>getSiteMarkets(pool,args),...(deps.newPage||{})});
  // Owner-only memory of the Cockpit's advice: started, skipped or restored.
  // The snapshot is taken from server-side evidence, never from the browser.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/recommendation',data,async(req,res)=>{
@@ -264,6 +267,18 @@ function registerGrowthCockpit(app,pool,deps={}){
   const guidedSteps=['Choose a page','Confirm market and language','Research competitors','Select improvements','Write selected topics','Review the evidence','Prepare CMS package','Record publication','Measure results'];
   const guidedRows=guidedSteps.map((label,i)=>'<li class="'+(b&&i===0?'guide-done':i===(b?1:0)?'guide-next':'guide-wait')+'"><span aria-hidden="true">'+(b&&i===0?'✓':i===(b?1:0)?'→':'○')+'</span> '+escapeHtml(label)+(b&&i===0?' — page identified':i===(b?1:0)?' — next action':' — not verified here')+'</li>').join('');
   const guidedNext=b?startLink(b.page_id,b.query,'Continue with this page →','guide-primary'):null;
+  // The site's default target market(s) and language (owner): every page without its own setting or Pre-Write brief uses it.
+  const siteMarkets=g.can_edit?g.site_markets||null:null;
+  const regionLabel=c=>c.toLowerCase()+' — '+countryName(c);
+  const siteMarketBox=g.can_edit?'<section class="growth-guide" id="siteMarkets"><h2>Default target market for this site</h2>'+
+   '<p>Used by every page that has no market of its own and no Pre-Write brief. A market you set on a page (for example nl — Netherlands, English) always wins. Main market first; Growth searches the first two.</p>'+
+   '<form id="siteMarketForm"><label>Target market(s) <input name="countries" list="siteRegions" value="'+escapeHtml((siteMarkets?.countries||[]).map(regionLabel).join(', '))+'" placeholder="us — United States, gb — United Kingdom"></label>'+
+   '<label>Language <input name="language" list="siteLanguages" value="'+escapeHtml(siteMarkets?.language?languageName(siteMarkets.language):'')+'" placeholder="English"></label>'+
+   '<button type="submit">Save the site default</button> <small role="status" id="siteMarketStatus">'+(siteMarkets?'Current: '+escapeHtml((siteMarkets.countries||[]).map(regionLabel).join(', ')||'no market')+' · '+escapeHtml(siteMarkets.language?languageName(siteMarkets.language):'no language'):'No site default yet: pages use their own setting, their Pre-Write brief or what the page states.')+'</small></form>'+
+   '<datalist id="siteRegions">'+PREWRITE_REGIONS.map(x=>'<option value="'+escapeHtml(x)+'">').join('')+'</datalist><datalist id="siteLanguages">'+PREWRITE_LANGUAGES.map(x=>'<option value="'+escapeHtml(x)+'">').join('')+'</datalist>'+
+   '<script>document.getElementById("siteMarketForm").addEventListener("submit",async function(e){e.preventDefault();var f=e.target,st=document.getElementById("siteMarketStatus");st.textContent="Saving…";'+
+   'try{var r=await fetch("/api/tracker-client/'+tok+'/growth/site-markets",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({countries:f.countries.value,language:f.language.value})});var d=await r.json();'+
+   'st.textContent=d.success?(d.site_markets?"Saved. Every page without its own market uses this on its next research.":"Removed: pages use their own setting, their Pre-Write brief or the page."):({UNKNOWN_COUNTRY:"Choose the market from the list, for example us — United States.",UNKNOWN_LANGUAGE:"Choose the language from the list, for example English."}[d.code]||"Not saved.")}catch(err){st.textContent="Not saved."}});</script></section>':'';
   const guide='<section class="growth-guide" aria-labelledby="guideTitle"><p class="kicker">Your next action</p>'+
    '<h2 id="guideTitle">'+(b?'Continue Growth for '+escapeHtml(b.query||b.label||b.url):'Choose what to work on')+'</h2>'+
    '<p>Growth takes you through one step at a time. Green means confirmed; blue means the next action. Other steps are not marked complete until the underlying work is saved.</p>'+
@@ -276,7 +291,7 @@ function registerGrowthCockpit(app,pool,deps={}){
    '<select id="pickPage" name="page_id">'+g.pages.map(x=>'<option value="'+escapeHtml(x.id)+'">'+escapeHtml(x.url)+(x.keyword?' — '+escapeHtml(x.keyword):'')+(x.eligibility&&x.eligibility.status==='PROTECTED'?' (protected: research only)':'')+'</option>').join('')+'</select> '+
    '<button type="submit">Research this page →</button></form>'+
    '<p><strong>A page that does not exist yet:</strong> <a href="/track/'+tok+'/growth/new-page">New page from a Pre-Write brief</a></p></details>'+
-   '<p class="info">Research, writing and CMS export never publish to your website. Case Study locks remain in force.</p></section>';
+   '<p class="info">Research, writing and CMS export never publish to your website. Case Study locks remain in force.</p></section>'+siteMarketBox;
   const memorySection=`<h2>What the system remembers</h2><p>Every suggestion you start or skip, what the research concluded and what was measured afterwards is saved on the server, so the Cockpit does not suggest the same work twice and can show whether its advice paid off.</p><div class="stats"><section>Research started<strong>${tr.started||0}</strong><small>${tr.system_choices_started||0} chosen by the system</small></section><section>Improvement found<strong>${tr.improvement_found||0}</strong><small>${tr.no_change||0} researched with no change needed</small></section><section>Published<strong>${tr.published||0}</strong><small>${tr.skipped||0} skipped by you</small></section><section>System's choices measured<strong>${tr.system_choices_measured||0}</strong><small>${tr.system_choices_measured?(tr.system_choices_click_change>=0?'+':'')+tr.system_choices_click_change+' clicks, 28 days before vs after':'Needs 28 days after publication and before/after numbers'}</small></section></div>${(g.history||[]).length?`<table><thead><tr><th>Page / query</th><th>Chosen by</th><th>Started</th><th>What happened</th></tr></thead><tbody>${g.history.slice(0,25).map(h=>`<tr><td>${h.query?'<strong>'+escapeHtml(h.query)+'</strong>':''}<small><a href="${escapeHtml(h.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(h.url)}</a></small></td><td>${h.system_choice?'System':'You'}</td><td>${escapeHtml(h.date)}${h.snapshot&&h.snapshot.impressions!=null?`<small>then: ${escapeHtml(h.snapshot.impressions)} impressions, ${escapeHtml(h.snapshot.clicks)} clicks${h.snapshot.position?', position '+escapeHtml(h.snapshot.position):''}</small>`:''}</td><td>${escapeHtml(h.outcome)}</td></tr>`).join('')}</tbody></table>`:'<p class="note">Nothing remembered yet. Start the suggested research above; the outcome is saved automatically.</p>'}`;
   const skippedText=Object.entries(g.skipped||{}).map(([k,n])=>n+' '+({PROTECTED:'protected Case Study',OLD_ADDRESS:'old redirected address',PAGE_GONE:'missing page',JUST_CHANGED:'recently changed',WORKING:'already working',SKIPPED_BY_OWNER:'skipped by you',NO_CHANGE_FOUND:'researched, no change needed',RESEARCH_BLOCKED:'research blocked',IMPROVEMENT_FOUND:'improvement waiting for publication'}[k]||k)+(n===1?' row':' rows')).join(', ');
   const row=x=>`<tr${b&&String(b.page_id)===String(x.id)&&!b.query?' class="best"':''}><td><a href="${escapeHtml(x.url)}" rel="noopener noreferrer" target="_blank">${escapeHtml(x.url)}</a><small>${escapeHtml(x.keyword)}</small></td><td>${x.gsc_present?x.impressions.toLocaleString():'Needs access'}</td><td>${x.gsc_present?x.clicks:'—'}</td><td>${x.gsc_present?x.ctr.toFixed(2)+'%':'—'}</td><td>${x.gsc_present?x.position.toFixed(1):'—'}</td><td>${badge(x.eligibility)}${x.eligibility.status==='SKIPPED_BY_OWNER'?restoreForm(x.id,''):''}${measureNote(x.measurement)}<small>${escapeHtml(x.opportunity)}${x.case_study_active?' · Case Study locked':''}</small><small>${escapeHtml(x.next_action)}</small><small><a href="/track/${encodeURIComponent(req.params.token)}/growth/auto-research?page_id=${encodeURIComponent(x.id)}">Run automatic Growth research · Search / AI / Content</a></small><small><a href="/api/tracker-client/${encodeURIComponent(req.params.token)}/growth/research-brief?page_id=${encodeURIComponent(x.id)}" target="_blank" rel="noopener noreferrer">Open research brief · no GSC required</a></small>${g.can_edit?(x.case_study_active?`<small>Case Study protected — research is available; CMS export remains locked during the active baseline.</small>`:`<small><a href="/track/${encodeURIComponent(req.params.token)}/growth/cms-export?page_id=${encodeURIComponent(x.id)}">Prepare reviewed CMS handoff · Wix / WordPress / other</a></small>`):''}</td></tr>`;

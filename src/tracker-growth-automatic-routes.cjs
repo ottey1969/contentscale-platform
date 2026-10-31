@@ -62,7 +62,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -131,7 +131,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(targetQuery&&typeof loadPageMarkets==='function')growthSet=await Promise.resolve(loadPageMarkets({clientId:cid,pageId:pid})).catch(()=>null);
   if(targetQuery&&!(growthSet?.countries?.length&&growthSet?.language)&&typeof loadPrewriteMarket==='function')
    prewrite=await Promise.resolve(loadPrewriteMarket({clientId:cid,keywords:[page.keyword,targetQuery]})).catch(()=>null);
-  const configured=resolveMarketSetting(growthSet,prewrite);
+  // Still incomplete: the site's default market and language (set once for the whole site in the Cockpit).
+  let siteSet=null;
+  if(targetQuery&&!((growthSet?.countries?.length||prewrite?.countries?.length)&&(growthSet?.language||prewrite?.language))&&typeof loadSiteMarkets==='function')
+   siteSet=await Promise.resolve(loadSiteMarkets({clientId:cid})).catch(()=>null);
+  const configured=resolveMarketSetting(growthSet,prewrite,siteSet);
   const derivedMarket=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
    pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
   const market=derivedMarket&&(!configured?.countries?.length||configured.countries[0]==='US')?derivedMarket:null;
@@ -725,6 +729,20 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   for(const k of [...cache.keys()])if(k.startsWith(v.clientId+':'+v.id+':'))cache.delete(k);
   res.set('Cache-Control','private, no-store').json({success:true,markets:saved,research_rerun_required:true});
  });
+ // The site's default target market(s) and language (owner): every page without its own setting or Pre-Write brief.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/site-markets',data,async(req,res)=>{
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof saveSiteMarkets!=='function')return no(403,'OWNER_ONLY_MARKET_SETTING');
+  const entries=(Array.isArray(req.body?.countries)?req.body.countries:String(req.body?.countries||'').split(/[,;]+/)).map(x=>String(x).trim()).filter(Boolean);
+  const countries=validCountries(entries);
+  if(entries.length&&countries.length<entries.length)return no(400,'UNKNOWN_COUNTRY');
+  if(String(req.body?.language||'').trim()&&!validLanguage(req.body.language))return no(400,'UNKNOWN_LANGUAGE');
+  let saved;
+  try{saved=await saveSiteMarkets({clientId:req.growthTrackerClientId,countries,language:req.body?.language})}catch{return no(503,'MARKET_SETTING_NOT_SAVED')}
+  // Every page of this site researches with the new default on its next run.
+  for(const k of [...cache.keys()])if(k.startsWith(req.growthTrackerClientId+':'))cache.delete(k);
+  res.set('Cache-Control','private, no-store').json({success:true,site_markets:saved,research_rerun_required:true});
+ });
  // An AI answer for the research's search term, pasted by the owner (same prompt, checks and parser as the Free check).
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/ai-answer',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
@@ -863,22 +881,25 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     const kw=await pool.query('SELECT keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id]).then(r=>r.rows[0]?.keyword).catch(()=>null);
     prewrite=await Promise.resolve(loadPrewriteMarket({clientId:v.clientId,keywords:[kw]})).catch(()=>null);
    }
+   let siteDefault=null;
+   if(typeof loadSiteMarkets==='function')siteDefault=await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null);
    const url='/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id);
    const regionLabel=c=>c.toLowerCase()+' — '+countryName(c);
    const day=d=>{try{return new Date(d).toISOString().slice(0,10)}catch{return ''}};
    const opts=(id,list)=>'<datalist id="'+id+'">'+list.map(x=>'<option value="'+sHtml(x)+'">').join('')+'</datalist>';
    const briefRef=prewrite?'Pre-Write brief #'+prewrite.brief_id+' (“'+sHtml(prewrite.keyword)+'”, '+day(prewrite.created_at)+')':'';
    const fieldSource=(own,fromBrief,label)=>own?'set in Growth':fromBrief?'from '+briefRef:label;
-   const marketLine='Market: '+(current?.countries?.length?sHtml(current.countries.map(regionLabel).join(', ')):prewrite?sHtml(prewrite.countries.map(regionLabel).join(', ')):'derived from the page')+
-    ' — '+fieldSource(current?.countries?.length,prewrite&&!current?.countries?.length,'not confirmed');
-   const languageLine='Language: '+(current?.language?sHtml(languageName(current.language)):prewrite?.language?sHtml(languageName(prewrite.language)):'from the page (html lang)')+
-    ' — '+fieldSource(current?.language,prewrite?.language&&!current?.language,'not set');
+   const siteC=siteDefault?.countries?.length?siteDefault.countries:null,siteL=siteDefault?.language||null;
+   const marketLine='Market: '+(current?.countries?.length?sHtml(current.countries.map(regionLabel).join(', ')):prewrite?sHtml(prewrite.countries.map(regionLabel).join(', ')):siteC?sHtml(siteC.map(regionLabel).join(', ')):'derived from the page')+
+    ' — '+fieldSource(current?.countries?.length,prewrite&&!current?.countries?.length,siteC?'site default (set in the Growth Cockpit)':'not confirmed');
+   const languageLine='Language: '+(current?.language?sHtml(languageName(current.language)):prewrite?.language?sHtml(languageName(prewrite.language)):siteL?sHtml(languageName(siteL)):'from the page (html lang)')+
+    ' — '+fieldSource(current?.language,prewrite?.language&&!current?.language,siteL?'site default (set in the Growth Cockpit)':'not set');
    const alternatives=(prewrite?.alternatives||[]).length?'<p class="error">There are other Pre-Write briefs for this keyword with another market or language: '+
     prewrite.alternatives.map(a=>'#'+a.brief_id+' '+sHtml(regionLabel(a.country))+(a.language?' · '+sHtml(languageName(a.language)):'')+' ('+day(a.created_at)+')').join('; ')+'. The newest is used; set the market here to choose.</p>':'';
    marketBox='<section id="marketSetting" data-url="'+sHtml(url)+'"><h2>Target market and language</h2>'+
-    '<p class="info">As in the Pre-Write brief. Main market first; add more markets separated by commas (for example <strong>nl — Netherlands, gb — United Kingdom</strong>). Growth searches the main market and the next one; the others are reported as not researched. Each field is separate: leave one empty and it comes from the Pre-Write brief of this keyword, or from the page.</p>'+
-    '<p><label for="marketInput">Target market(s): </label><input id="marketInput" type="text" list="marketRegions" value="'+sHtml(current?.countries?.length?current.countries.map(regionLabel).join(', '):'')+'" placeholder="'+sHtml(prewrite?prewrite.countries.map(regionLabel).join(', '):'nl — Netherlands')+'"> '+
-    '<label for="marketLanguage">Language: </label><input id="marketLanguage" type="text" list="marketLanguages" value="'+sHtml(current?.language?languageName(current.language):'')+'" placeholder="'+sHtml(prewrite?.language?languageName(prewrite.language):'English')+'"> '+
+    '<p class="info">As in the Pre-Write brief. Main market first; add more markets separated by commas (for example <strong>nl — Netherlands, gb — United Kingdom</strong>). Growth searches the main market and the next one; the others are reported as not researched. Each field is separate: leave one empty and it comes from the Pre-Write brief of this keyword, then from the site default (Growth Cockpit), then from the page.</p>'+
+    '<p><label for="marketInput">Target market(s): </label><input id="marketInput" type="text" list="marketRegions" value="'+sHtml(current?.countries?.length?current.countries.map(regionLabel).join(', '):'')+'" placeholder="'+sHtml(prewrite?prewrite.countries.map(regionLabel).join(', '):siteC?siteC.map(regionLabel).join(', '):'nl — Netherlands')+'"> '+
+    '<label for="marketLanguage">Language: </label><input id="marketLanguage" type="text" list="marketLanguages" value="'+sHtml(current?.language?languageName(current.language):'')+'" placeholder="'+sHtml(prewrite?.language?languageName(prewrite.language):siteL?languageName(siteL):'English')+'"> '+
     '<button id="marketSave" type="button">Save and run the research again</button></p>'+opts('marketRegions',PREWRITE_REGIONS)+opts('marketLanguages',PREWRITE_LANGUAGES)+
     '<small id="marketSaid">'+marketLine+'<br>'+languageLine+'</small>'+alternatives+'</section>';
   }
