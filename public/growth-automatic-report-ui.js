@@ -74,6 +74,9 @@
  }
  function render(d){
   container.textContent='';researchDetails=null;
+  // An answer typed in the early AI box (not analysed yet) moves into the report's AI section.
+  var earlyBox=document.getElementById('growthAiEarly'),earlyTa=earlyBox&&earlyBox.querySelector('textarea:not([readonly])'),earlySel=earlyBox&&earlyBox.querySelector('select');
+  var keepText=earlyTa&&earlyTa.value,keepEngine=earlySel&&earlySel.value;if(earlyBox)earlyBox.textContent='';
   var decision=d.growth_decision||{},recommendation=decision.primary_next_action;
   var ownerReport=main.getAttribute('data-owner-draft')==='true'&&d.access?.owner_report===true;
   var outcome=ownerReport&&d.editorial_work_packet?.editorial_decision?
@@ -191,7 +194,8 @@
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
   // AI answers for this search term: offered right after the decision, read fresh on every load, never re-running research.
-  if(d.ai_check){var aiBox=section('AI answers for “'+d.ai_check.search_term+'”');aiBox.id='growthAiCheck';renderAiCheck(aiBox,d)}
+  if(d.ai_check){var aiBox=section('AI answers for “'+d.ai_check.search_term+'” — optional');aiBox.id='growthAiCheck';renderAiCheck(aiBox,d);
+   if(keepText){var t2=aiBox.querySelector('textarea:not([readonly])'),s2=aiBox.querySelector('select');if(t2)t2.value=keepText;if(s2&&keepEngine)s2.value=keepEngine}}
   // What the ranking pages have and this page does not: the editor chooses what goes on the page (Growth's own proposal
   // above is one suggestion; any item can be ticked here).
   // The editor's choice: every difference, ticked by the owner; text is written only for the selection.
@@ -774,9 +778,19 @@
   if(!a||!h||typeof h.url!=='string'||h.url.indexOf('/track/')!==0)return;
   a.href=h.url;a.textContent='Prepare the CMS package with the checked Growth text';
  }
+ // While the research runs, the optional AI check for the page's keyword (no research is started for it).
+ async function showAiEarly(){
+  var early=document.getElementById('growthAiEarly');if(!early||early.childNodes.length)return;
+  try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-check?page_id='+encodeURIComponent(id),{credentials:'same-origin',cache:'no-store'});
+   var j=await r.json();if(!j.success||!j.ai_check||container.childNodes.length)return;
+   var box=node('section',null,early);node('h2','AI answers for “'+j.ai_check.search_term+'” — optional',box);
+   renderAiCheck(box,{ai_check:j.ai_check});
+  }catch(e){}
+ }
  async function run(){
   var status=document.getElementById('researchStatus');
-  status.className='';status.textContent='Analyzing page HTML, verified queries, historical search competitors and AI evidence…';
+  status.className='';status.textContent='Analyzing the page, Search Console queries and the ranking pages… AI answers are optional: you can paste them below while this runs.';
+  showAiEarly();
   document.getElementById('retryResearch').disabled=true;
   try{
    var owner=main.getAttribute('data-owner-draft')==='true';
