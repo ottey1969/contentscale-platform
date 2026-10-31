@@ -43,6 +43,7 @@ on:
       - 'src/growth-ai-relevance.cjs'
       - 'public/growth-edit-copy.js'
       - 'tests/fixtures/growth-report-62/**'
+      - 'tests/fixtures/growth-report-63/**'
       - 'src/growth-next-pages.cjs'
       - 'src/growth-serp-titles.cjs'
       - 'tests/fixtures/growth-free-VXX4OBTnFHi2/**'
