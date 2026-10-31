@@ -113,6 +113,18 @@ test('site default markets: one row per client; both empty removes it',async()=>
  }finally{await pool.query('DELETE FROM tracker_growth_site_markets WHERE tracker_client_id=$1',[client]).catch(()=>{})}
 });
 
+test('Search Console per country: one import replaces the previous one for the client',async()=>{
+ const st=require('../src/growth-gsc-country.cjs');
+ const row=(q,c,i)=>({page_url:'https://contentscale.site/content-scaling/',query:q,country:c,clicks:1,impressions:i,position:8.5});
+ try{
+  await st.saveCountryRows(pool,{clientId:client,startDate:'2026-09-30',endDate:'2026-10-27',rows:[row('content scaling','GB',300),row('content scaling','US',900)]});
+  await st.saveCountryRows(pool,{clientId:client,startDate:'2026-10-01',endDate:'2026-10-28',rows:[row('content scaling','NL',120)]});
+  const rows=await st.loadCountryRows(pool,{clientId:client});
+  assert.deepEqual(rows.map(r=>[r.country,r.impressions,r.position,r.start_date]),[['NL',120,8.5,'2026-10-01']]);
+  assert.equal(st.alpha2('gbr'),'GB');assert.equal(st.alpha2('usa'),'US');assert.equal(st.alpha2('xyz'),null);
+ }finally{await pool.query('DELETE FROM tracker_growth_gsc_country WHERE tracker_client_id=$1',[client]).catch(()=>{})}
+});
+
 test('markets: set in order, invalid codes dropped, an empty list removes the setting',async()=>{
  assert.deepEqual(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:['nl','UK','xx','be'],language:'en'}),{countries:['NL','GB','BE'],language:'en'});
  assert.deepEqual((await markets.getPageMarkets(pool,{clientId:client,pageId:page})).countries,['NL','GB','BE']);

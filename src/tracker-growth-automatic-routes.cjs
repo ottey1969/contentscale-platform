@@ -73,7 +73,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(!page){res.status(404).json({success:false,code:'TRACKER_PAGE_NOT_FOUND'});return null}
   // Every locked Case Study of this client, not only the source page: a destination elsewhere on the site can be locked too.
   const lockedPages=(req.growth?.pages||[]).filter(x=>x&&x.case_study_active===true&&x.url).map(x=>({id:Number(x.id),url:String(x.url)}));
-  return {id:Number(raw),page,clientId:req.growthTrackerClientId,lockedPages,canEdit:req.growth?.can_edit===true};
+  // One run in another market or for another term, chosen by the Opportunity Finder: the page's own setting is not changed.
+  const marketOverride=validCountries([String(req.query?.market||'')])[0]||null;
+  const queryOverride=String(req.query?.query||'').replace(/[\u0000-\u001f<>]/g,' ').replace(/\s+/g,' ').trim().slice(0,120)||null;
+  return {id:Number(raw),page,clientId:req.growthTrackerClientId,lockedPages,canEdit:req.growth?.can_edit===true,marketOverride,queryOverride};
  };
  async function analyze(v){
   const cid=v.clientId,pid=v.id;
@@ -113,7 +116,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Historical SERPs may be about another brand/product even on the same URL.
   const seed=analyzeGrowthEvidence({page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:[],sitePages:rows(3),previousBrief:page.brief_content});
-  const rawFocus=seed.growth_decision?.primary_next_action?.query||String(page.keyword||'').trim()||seed.search?.focus_query||'';
+  const rawFocus=v.queryOverride||seed.growth_decision?.primary_next_action?.query||String(page.keyword||'').trim()||seed.search?.focus_query||'';
   const intentResolution=resolveGrowthPageIntent({keyword:rawFocus,
    title:seed.page_content?.headings?.title||'',
    h1:seed.page_content?.headings?.h1||[],
@@ -135,7 +138,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   let siteSet=null;
   if(targetQuery&&!((growthSet?.countries?.length||prewrite?.countries?.length)&&(growthSet?.language||prewrite?.language))&&typeof loadSiteMarkets==='function')
    siteSet=await Promise.resolve(loadSiteMarkets({clientId:cid})).catch(()=>null);
-  const configured=resolveMarketSetting(growthSet,prewrite,siteSet);
+  let configured=resolveMarketSetting(growthSet,prewrite,siteSet);
+  if(v.marketOverride)configured={...(configured||{}),countries:[v.marketOverride],language:configured?.language||'en',source:'OPPORTUNITY_FINDER',
+   language_source:configured?.language_source||'DEFAULT_ENGLISH',brief:null,alternatives:[]};
   const derivedMarket=targetQuery?deriveMarket({query:targetQuery,keyword:page.keyword,url:page.url,
    pageHeadings:[...(seed.page_content?.headings?.h1||[]),...(seed.page_content?.headings?.h2||[])]}):null;
   const market=derivedMarket&&(!configured?.countries?.length||configured.countries[0]==='US')?derivedMarket:null;
@@ -492,7 +497,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  // The AI check before the research has finished: for the page's tracked keyword, optional, never running research.
  app.get('/api/tracker-client/:token/growth/ai-check',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
-  const term=String(v.page.keyword||'').trim();
+  const term=String(v.queryOverride||v.page.keyword||'').trim();
   if(!term||typeof loadAiAnswers!=='function')return res.set('Cache-Control','private, no-store').json({success:true,ai_check:null});
   try{res.set('Cache-Control','private, no-store').json({success:true,ai_check:{...(await aiCheckFor({v,term,target:v.page.url})),basis:'TRACKED_KEYWORD_BEFORE_RESEARCH'}})}
   catch{res.status(503).json({success:false,code:'AI_CHECK_UNAVAILABLE'})}
@@ -500,7 +505,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   // Never serve a recently cached unlocked result after Case Study activation.
-  const key=v.clientId+':'+v.id+':'+(v.page.case_study_active?'locked':'unlocked')+':'+v.page.url,stored=cache.get(key);
+  const key=v.clientId+':'+v.id+':'+(v.page.case_study_active?'locked':'unlocked')+':'+v.page.url+':'+(v.marketOverride||'')+':'+(v.queryOverride||''),stored=cache.get(key);
   if(stored?.result&&Date.now()-stored.created<TTL)
    return res.set('Cache-Control','private, no-store').json(await withAiCheck(stored.result,v));
   if(stored?.promise){
@@ -526,7 +531,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(req.growth?.can_edit!==true||typeof completeOwnerDraft!=='function')
    return res.status(403).set('Cache-Control','private, no-store')
     .json({success:false,code:'OWNER_ONLY_COMPLETION_REQUIRED'});
-  const key=v.clientId+':'+v.id+':'+(v.page.case_study_active?'locked':'unlocked')+':'+v.page.url;
+  const key=v.clientId+':'+v.id+':'+(v.page.case_study_active?'locked':'unlocked')+':'+v.page.url+':'+(v.marketOverride||'')+':'+(v.queryOverride||'');
   let report;
   try{
    const stored=cache.get(key);

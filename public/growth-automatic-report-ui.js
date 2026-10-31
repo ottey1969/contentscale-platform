@@ -3,7 +3,11 @@
  var main=document.querySelector('main[data-page-id]'),container=document.getElementById('growthAutomaticReport');
  if(!main||!container)return;
  var id=main.getAttribute('data-page-id'),token=location.pathname.split('/')[2];
- var endpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(id);
+ // A run chosen by the Opportunity Finder carries its market and search term; the page's own setting is not changed.
+ var param=function(n){var m=String(location.search||'').match(new RegExp('[?&]'+n+'=([^&]*)'));try{return m?decodeURIComponent(m[1].replace(/\+/g,' ')):''}catch(e){return ''}};
+ var runMarket=param('market'),runQuery=param('query');
+ var runParams=(runMarket?'&market='+encodeURIComponent(runMarket):'')+(runQuery?'&query='+encodeURIComponent(runQuery):'');
+ var endpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(id)+runParams;
  var last=null;
  var trackerGrowthStyle=document.createElement('style');trackerGrowthStyle.textContent="\n/* Tracker Growth guided actions */\n.cs-growth-guidance{padding:12px 14px;border-left:4px solid #2563eb;background:rgba(37,99,235,.06);border-radius:6px}\n.cs-growth-action-list{display:grid;gap:12px;margin:12px 0 18px}.cs-growth-action{border:1px solid #cbd5e1;border-radius:12px;padding:16px;transition:border-color .2s ease,box-shadow .2s ease,opacity .2s ease}.cs-growth-action-head{display:flex;gap:12px;align-items:flex-start}.cs-growth-state{font-size:22px;font-weight:700;line-height:1.2}.cs-growth-action-copy{flex:1}.cs-growth-action-copy p{margin:4px 0 12px}.cs-growth-action-button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;transition:transform .15s ease,background .2s ease}.cs-growth-action-button:focus-visible{outline:3px solid #1d4ed8;outline-offset:3px}.cs-growth-action-button:active{transform:scale(.98)}.cs-growth-current{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb}.cs-growth-current .cs-growth-state{color:#2563eb}.cs-growth-current .cs-growth-action-button{background:#2563eb;color:white}.cs-growth-done{border-color:#15803d}.cs-growth-done .cs-growth-state{color:#15803d}.cs-growth-done .cs-growth-action-button{background:#15803d;color:white}.cs-growth-future{opacity:.73}.cs-growth-future .cs-growth-action-button{background:#e2e8f0;color:#475569;cursor:not-allowed}.cs-growth-action-detail{border-top:1px solid #cbd5e1;padding-top:10px;margin-top:12px;animation:csGrowthReveal .24s ease-out}.cs-growth-action-detail[hidden]{display:none}@keyframes csGrowthReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.cs-growth-action,.cs-growth-action-button,.cs-growth-action-detail{animation:none;transition:none}}\n";(document.head||main).appendChild(trackerGrowthStyle);
  function node(tag,text,parent){
@@ -363,7 +367,7 @@
   var cov=discovery.market_coverage||{};
   if(loc.source||cov.status){
    var mk=node('div',null,s);
-   node('small','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl+(loc.language_source==='SET_IN_TRACKER'?' (set in Growth)':loc.language_source==='FROM_PREWRITE_BRIEF'?' (from the Pre-Write brief)':loc.language_source==='SITE_DEFAULT'?' (site default)':''):'')+(loc.brief?' · Pre-Write brief #'+loc.brief.id:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':loc.source==='SITE_DEFAULT'?'site default (Growth Cockpit)':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
+   node('small','Search market: '+(loc.country||'US (default)')+(loc.hl?' · language '+loc.hl+(loc.language_source==='SET_IN_TRACKER'?' (set in Growth)':loc.language_source==='FROM_PREWRITE_BRIEF'?' (from the Pre-Write brief)':loc.language_source==='SITE_DEFAULT'?' (site default)':''):'')+(loc.brief?' · Pre-Write brief #'+loc.brief.id:'')+' · '+(loc.source==='SET_IN_TRACKER'?'set in Growth':loc.source==='FROM_PREWRITE_BRIEF'?'from the Pre-Write brief':loc.source==='SITE_DEFAULT'?'site default (Growth Cockpit)':loc.source==='OPPORTUNITY_FINDER'?'this run only (Opportunity Finder)':'derived from the page ('+String(loc.source||'').toLowerCase().replace(/_/g,' ')+'), not confirmed')+
     (loc.priority_confirmed===false?' · the order of the markets is a guess from how often the headings name them':''),mk);
    (cov.markets||[]).forEach(function(m){node('small',' '+m.name+': '+(m.researched?'researched ('+(m.provider||'search')+', '+m.usable_results+' usable result(s))':'not researched'),node('div',null,mk))});
    if(cov.note)node('small',cov.note,node('div',null,mk));
@@ -781,7 +785,7 @@
  // While the research runs, the optional AI check for the page's keyword (no research is started for it).
  async function showAiEarly(){
   var early=document.getElementById('growthAiEarly');if(!early||early.childNodes.length)return;
-  try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-check?page_id='+encodeURIComponent(id),{credentials:'same-origin',cache:'no-store'});
+  try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-check?page_id='+encodeURIComponent(id)+runParams,{credentials:'same-origin',cache:'no-store'});
    var j=await r.json();if(!j.success||!j.ai_check||container.childNodes.length)return;
    var box=node('section',null,early);node('h2','AI answers for “'+j.ai_check.search_term+'” — optional',box);
    renderAiCheck(box,{ai_check:j.ai_check});
@@ -789,13 +793,13 @@
  }
  async function run(){
   var status=document.getElementById('researchStatus');
-  status.className='';status.textContent='Analyzing the page, Search Console queries and the ranking pages… AI answers are optional: you can paste them below while this runs.';
+  status.className='';status.textContent=(runMarket||runQuery?'This run, chosen by the Opportunity Finder: '+(runQuery?'“'+runQuery+'”':'')+(runMarket?' in '+runMarket.toUpperCase():'')+' (your page setting is not changed). ':'')+'Analyzing the page, Search Console queries and the ranking pages… AI answers are optional: you can paste them below while this runs.';
   showAiEarly();
   document.getElementById('retryResearch').disabled=true;
   try{
    var owner=main.getAttribute('data-owner-draft')==='true';
    var completeEndpoint='/api/tracker-client/'+encodeURIComponent(token)+
-    '/growth/auto-research/complete?page_id='+encodeURIComponent(id);
+    '/growth/auto-research/complete?page_id='+encodeURIComponent(id)+runParams;
    var response=await fetch(owner?completeEndpoint:endpoint,{
     method:owner?'POST':'GET',credentials:'same-origin',cache:'no-store',
     ...(owner?{headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(id),write:false})}:{})
