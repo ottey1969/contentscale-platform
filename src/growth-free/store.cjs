@@ -83,9 +83,11 @@ async function usage(pool,{email,ipHash,accessLabel=null}){
  return {by_email:Number(r.by_email)||0,by_ip:Number(r.by_ip)||0,total:Number(r.total)||0,by_key:Number(r.by_key)||0};
 }
 
-async function recentResult(pool,{url,query,market=null}){
+// Only a result made by the same research code (engineVersion) is reused; older results are researched again.
+async function recentResult(pool,{url,query,market=null,engineVersion=null}){
+ if(!engineVersion)return null;
  return (await pool.query(`SELECT id,decision,summary,report FROM growth_free_checks
-   WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null)])).rows[0]||null;
+   WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND report->>'engine_version'=$4 AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null),engineVersion])).rows[0]||null;
 }
 
 async function createCheck(pool,{email,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null}){

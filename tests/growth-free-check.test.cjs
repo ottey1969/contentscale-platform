@@ -85,7 +85,7 @@ function memoryStore(){
   async revokeInvite(_p,i){const v=inv(i);if(!v||v.revoked_at)return null;v.revoked_at=new Date();return {id:i}},
   async ensureTables(){},
   async usage(_p,{email,ipHash,accessLabel}){const d=checks.filter(c=>!c.cached_from);return {by_email:d.filter(c=>c.email===email).length,by_ip:d.filter(c=>c.ip_hash===ipHash).length,total:d.length,by_key:d.filter(c=>c.access_label===accessLabel).length}},
-  async recentResult(_p,{url,query,market=null}){return [...checks].reverse().find(c=>c.url===url&&c.query===query&&JSON.stringify(c.market||null)===JSON.stringify(market||null)&&c.status==='DONE')||null},
+  async recentResult(_p,{url,query,market=null,engineVersion=null}){return engineVersion&&[...checks].reverse().find(c=>c.url===url&&c.query===query&&JSON.stringify(c.market||null)===JSON.stringify(market||null)&&c.status==='DONE'&&c.report?.engine_version===engineVersion)||null},
   async createCheck(_p,o){const c={id:++id,public_id:'pub'+id,access_key:'key'+id+'abcdefgh',email:o.email,ip_hash:o.ipHash,url:o.url,query:o.query,market:o.market||null,
    status:o.cached?'DONE':'QUEUED',decision:o.cached?o.cached.decision:null,summary:o.cached?o.cached.summary:null,report:o.cached?o.cached.report:null,
    cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null};checks.push(c);return c},
@@ -560,6 +560,37 @@ test('free check: target market and language like the Tracker (choice, validatio
  assert.equal(s.calls.length,n+1);
  const again=await s.post('/api/free-growth/checks',{...ok,market:'nl — Netherlands, be — Belgium',language:'Dutch'});await s.service.idle();
  assert.equal(s.calls.length,n+1,'same market: cached');assert.equal(again.status,202);
+});
+
+test('free check: a cached result made by older research code is not reused (a fix shows on the next check)',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ const a=await s.post('/api/free-growth/checks',ok);await s.service.idle();assert.equal(a.status,202);
+ const n=s.calls.length;
+ const again=await s.post('/api/free-growth/checks',{...ok,email:'other@x.example'});await s.service.idle();
+ assert.equal(s.calls.length,n,'same code: the cached result is reused');assert.equal(again.body.status,'DONE');
+ // The stored result came from code that has since changed (deploy).
+ for(const c of s.storage.checks)if(c.report)c.report.engine_version='older-code';
+ const fresh=await s.post('/api/free-growth/checks',{...ok,email:'third@x.example'});await s.service.idle();
+ assert.notEqual(fresh.body.status,'DONE');assert.equal(s.calls.length,n+1,'researched again with the current code');
+});
+
+test('admin: market and language like the public form; fresh research ignores a stored result; a stored result says so',async t=>{
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
+ const A={'x-admin-key':'admin-secret-0123456789'},run=b=>s.post('/api/free-growth/admin/run',{url:'https://acme-roofing.example/roof-repair-lodi-nj/',query:'roof repair lodi nj',...b},A);
+ assert.match((await s.get('/free-growth/admin')).body,/name="market" list="marketRegions"[\s\S]*name="fresh"/);
+ assert.match((await run({market:'Narnia'})).body.error,/Choose the market from the list/);
+ assert.equal((await run({market:'nl — Netherlands',language:'Dutch'})).status,202);await s.service.idle();
+ assert.deepEqual(s.calls.at(-1).market,{countries:['NL'],language:'nl'});
+ const n=s.calls.length;
+ const stored=await run({market:'nl — Netherlands',language:'Dutch'});await s.service.idle();
+ assert.equal(s.calls.length,n,'stored result reused');assert.equal(stored.body.status,'DONE');
+ const view=await s.get('/api/free-growth/checks/'+stored.body.id+'?k='+stored.body.key);assert.equal(view.body.cached,true);
+ assert.match((await s.get('/free-growth/r/'+stored.body.id+'?k='+stored.body.key)).body,/Stored result\.<\/strong> The Google research was not run again/);
+ await run({market:'nl — Netherlands',language:'Dutch',fresh:true});await s.service.idle();
+ assert.equal(s.calls.length,n+1,'fresh research runs again');
+ // Fresh is admin only: the public form ignores it.
+ await s.post('/api/free-growth/checks',{...ok,email:'pub@x.example',fresh:true});await s.service.idle();const m=s.calls.length;
+ await s.post('/api/free-growth/checks',{...ok,email:'pub2@x.example',fresh:true});await s.service.idle();assert.equal(s.calls.length,m);
 });
 
 test('free check: no writing when the check has too little evidence',async t=>{

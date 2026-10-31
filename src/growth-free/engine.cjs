@@ -6,6 +6,20 @@ const {registerGrowthAutomaticResearch}=require('../tracker-growth-automatic-rou
 
 const FREE_PAGE_ID=1,FREE_CLIENT_ID=0;
 
+// Fingerprint of the research code that is running. A cached result is reused only when it was made by the same code,
+// so a fix is visible on the next check instead of after 24 hours.
+let version=null;
+function engineVersion(){
+ if(version)return version;
+ const fs=require('fs'),path=require('path'),h=require('crypto').createHash('sha256');
+ const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name)).forEach(e=>{
+  const f=path.join(dir,e.name);
+  if(e.isDirectory())walk(f);else if(/\.(cjs|js)$/.test(e.name)&&!/\.test\.(cjs|js)$/.test(e.name)){h.update(path.relative(dir,f));h.update(fs.readFileSync(f))}
+ });
+ walk(path.join(__dirname,'..'));
+ return version=h.digest('hex').slice(0,16);
+}
+
 function validatePublicUrl(raw){
  let u;
  try{u=new URL(String(raw||'').trim())}catch{return {error:'Enter a full web address, e.g. https://example.com/page/'}}
@@ -52,4 +66,4 @@ async function runFreeGrowthResearch({url,query,market=null},deps={}){
  return {statusCode:res.statusCode,report:res.body};
 }
 
-module.exports={runFreeGrowthResearch,validatePublicUrl,readOnlySource};
+module.exports={runFreeGrowthResearch,engineVersion,validatePublicUrl,readOnlySource};

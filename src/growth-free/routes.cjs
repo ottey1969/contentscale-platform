@@ -4,7 +4,7 @@
 // in the main app or run on its own domain with server.cjs.
 const crypto=require('node:crypto');
 const store=require('./store.cjs');
-const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
+const {runFreeGrowthResearch,validatePublicUrl,engineVersion}=require('./engine.cjs');
 const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
@@ -218,7 +218,8 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
 function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
- var h='<p class="kicker">Result · Google + AI'+(d.cached?' · Google part from a check of this page in the last 24 hours':'')+'</p><h1>Your page in Google and in AI answers</h1>';
+ var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
+ if(d.cached)h+='<p class="note"><strong>Stored result.</strong> The Google research was not run again: this is the result of a check of the same page, search term and market'+(s.checked&&s.checked.checked_at?' on '+esc(new Date(s.checked.checked_at).toLocaleString())+' (UTC '+esc(String(s.checked.checked_at).slice(0,16).replace('T',' '))+')':' in the last 24 hours')+', made by the same version of the research. A new check of this page is possible after 24 hours or after an update of the research.</p>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
  var canWrite=!!(s.gaps&&s.gaps.status==='OBSERVED'&&s.gaps.writing_allowed!==false&&d.writing&&d.writing.allowed);
  h+='<div class="step-strip" aria-label="Your next steps"><div class="step-chip done"><span class="symbol">✓</span>1. Page and search settings entered</div><div class="step-chip done"><span class="symbol">✓</span>2. Research result available</div><a class="step-chip" href="#ai"><span class="symbol">○</span>Optional: check AI answers</a><div id="freeStepSelect" class="step-chip '+(canWrite?'current':'blocked')+'"><span class="symbol">'+(canWrite?'→':'!')+'</span>3. '+(canWrite?'Choose a relevant improvement':'No supported writing recommendation')+'</div><div id="freeStepWrite" class="step-chip '+(canWrite?'':'blocked')+'"><span class="symbol">'+(canWrite?'○':'!')+'</span>4. '+(canWrite?'Write selected concepts':'Writing blocked: insufficient evidence')+'</div><div class="step-chip"><span class="symbol">○</span>5. Download the brief or ask for help</div></div><p class="step-help">Blue = next action · Green = completed · Grey = later or optional · Red = blocked. No page is published or added to Tracker.</p>';
@@ -270,8 +271,11 @@ function adminPage(cfg,api,base,loggedIn){
 <div id="login" class="card"${loggedIn?' hidden':''}><form id="lf"><label>Admin key<input name="key" type="password" autocomplete="current-password" required></label><p><button>Log in</button> <small id="ls" role="status"></small></p></form><p class="muted">The session lasts 12 hours on this browser only.</p></div>
 <div id="app"${loggedIn?'':' hidden'}>
  <p><button class="ghost" id="logout" type="button">Log out</button></p>
- <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">No limits for you. The same page and search term within 24 hours comes from the stored result.</p>
-  <form id="rf"><label>Page address<input name="url" type="url" required maxlength="500" placeholder="https://..."></label><label>Search term (optional)<input name="query" maxlength="120"></label><p><button>Run check</button> <small role="status" id="rs"></small></p></form></div>
+ <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">No limits for you. The same page, search term and market within 24 hours comes from the stored result, unless you choose fresh research.</p>
+  <form id="rf"><label>Page address<input name="url" type="url" required maxlength="500" placeholder="https://..."></label><label>Search term (optional)<input name="query" maxlength="120"></label>
+  <label>Target market (optional)<input name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands"></label><label>Language (optional)<input name="language" list="marketLanguages" maxlength="40" placeholder="Dutch"></label>
+  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
+  <label class="check"><input type="checkbox" name="fresh"> <span>Fresh research: ignore a stored result (uses 1–2 Serper searches)</span></label><p><button>Run check</button> <small role="status" id="rs"></small></p></form></div>
  <div class="card"><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
   <form id="if"><label>For whom? (name or company)<input name="label" required maxlength="80"></label>
   <label>Only for this email address (recommended)<input name="email_lock" type="email" maxlength="200" placeholder="name@company.com"></label>
@@ -297,7 +301,7 @@ async function load(){
  '<h3>Checks ('+d.checks.length+')</h3>'+d.checks.map(function(c){return '<div class="card"><strong>'+esc(c.email)+'</strong>'+(c.marketing_consent?' · may be emailed':'')+'<br><small>'+esc(c.access_label||'')+' · '+esc(c.created_at)+' · '+esc(c.status)+' · '+esc(c.decision||c.error_code||'')+(c.cached?' · cached':'')+'</small><br><a href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">'+esc(c.url)+'</a> '+esc(c.query||'')+'</div>'}).join('')}
 document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load()});
 document.getElementById('logout').addEventListener('click',async function(){await post('/admin/logout');location.reload()});
-document.getElementById('rf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
+document.getElementById('rf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
 document.getElementById('if').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('is');var d=await post('/admin/invites',{label:f.label.value,email_lock:f.email_lock.value,max_checks:Number(f.max_checks.value),days:Number(f.days.value)});if(!d.success){st.textContent=d.error;return}st.textContent='';f.reset();f.max_checks.value=3;f.days.value=7;
  document.getElementById('newlink').innerHTML='<p class="note"><strong>Copy this link now</strong> — it cannot be shown again.<br><input readonly id="lnk" value="'+esc(d.link)+'"> <button type="button" id="cp">Copy</button></p>';document.getElementById('cp').onclick=function(){var x=document.getElementById('lnk');x.select();navigator.clipboard&&navigator.clipboard.writeText(x.value);this.textContent='Copied'};load()});
 document.addEventListener('click',async function(e){var b=e.target.closest('button.revoke');if(!b)return;if(!confirm('Withdraw this invitation? The link stops working immediately.'))return;var d=await post('/admin/invites/'+b.dataset.id+'/revoke');if(!d.success)alert(d.error);load()});
@@ -328,6 +332,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
       if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
      }else{
+      // Marks which research code made this result; the cache reuses only results of the running code.
+      out.report.engine_version=engineVersion();
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
       await storage.setStatus(pool,job.id,{status:'DONE',decision:summary.decision,summary,report:out.report});
      }
@@ -382,7 +388,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const market=readMarket(b,res);if(market===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
-   const cached=await storage.recentResult(pool,{url:v.url,query,market});
+   const cached=await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
@@ -412,8 +418,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const market=readMarket(b,res);if(market===undefined)return null;
   return {email,url:v.url,host:v.host,query:clean(b.query,120),market};
  }
- async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null}){
-  const cached=await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market});
+ async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
+  // fresh: admin only, researches again even when a stored result exists.
+  const cached=fresh?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
@@ -612,7 +619,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     const b=req.body||{};
     const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
     await storage.ensureTables(pool);
-    await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,120)},{accessLabel:'admin'});
+    const market=readMarket(b,res);if(market===undefined)return;
+    await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,120),market},{accessLabel:'admin',fresh:b.fresh===true});
    }catch(e){console.error('[free-growth] admin run failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'})}
   });
   app.post(apiPath+'/admin/invites',async(req,res)=>{

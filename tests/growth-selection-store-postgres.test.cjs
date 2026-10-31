@@ -72,6 +72,22 @@ test('standalone writing lock: a late run (lease expired) can neither store nor 
  }finally{await pool.query('DELETE FROM growth_free_checks WHERE id=$1',[id])}
 });
 
+test('Free check cache: reused only for the same market and the same research code',async()=>{
+ const free=require('../src/growth-free/store.cjs');await free.ensureTables(pool);
+ const url='https://cache-'+Date.now()+'.example.test/',market={countries:['NL'],language:'en'};
+ const ins=v=>pool.query("INSERT INTO growth_free_checks(public_id,access_key,email,url,host,query,status,decision,summary,report,market) VALUES('pg-'||floor(random()*1e9),'k','o@example.test',$1,'x','content at scale','DONE','DATA_BLOCKED','{}',$2::jsonb,$3::jsonb) RETURNING id",
+  [url,JSON.stringify({engine_version:v}),JSON.stringify(market)]);
+ try{
+  const old=(await ins('older-code')).rows[0].id;
+  assert.equal(await free.recentResult(pool,{url,query:'content at scale',market,engineVersion:'current-code'}),null,'older code: researched again');
+  const cur=(await ins('current-code')).rows[0].id;
+  assert.equal((await free.recentResult(pool,{url,query:'content at scale',market,engineVersion:'current-code'})).id,cur);
+  assert.equal(await free.recentResult(pool,{url,query:'content at scale',market:{countries:['GB'],language:'en'},engineVersion:'current-code'}),null,'other market');
+  assert.equal(await free.recentResult(pool,{url,query:'content at scale',market}),null,'no version: never cached');
+  assert(old);
+ }finally{await pool.query('DELETE FROM growth_free_checks WHERE url=$1',[url])}
+});
+
 test('markets: set in order, invalid codes dropped, an empty list removes the setting',async()=>{
  assert.deepEqual(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:['nl','UK','xx','be'],language:'en'}),{countries:['NL','GB','BE'],language:'en'});
  assert.deepEqual((await markets.getPageMarkets(pool,{clientId:client,pageId:page})).countries,['NL','GB','BE']);
