@@ -137,6 +137,19 @@ test('customer countries: one list per client; empty removes it',async()=>{
  }finally{await pool.query('DELETE FROM tracker_growth_customer_countries WHERE tracker_client_id=$1',[client]).catch(()=>{})}
 });
 
+test('claim reviews: one decision per statement and target page; undo removes it',async()=>{
+ const st=require('../src/growth-claim-review-store.cjs');
+ const sTxt='Content repurposing gives editorial teams a clear method to recycle published articles into new formats.';
+ try{
+  await st.saveClaimReview(pool,{clientId:client,targetPageId:page,statement:sTxt,decision:'KEEP'});
+  await st.saveClaimReview(pool,{clientId:client,targetPageId:page,statement:'  '+sTxt.toUpperCase(),decision:'REMOVE'});
+  let rows=await st.loadClaimReviews(pool,{clientId:client,targetPageId:page});
+  assert.equal(rows.length,1);assert.equal(rows[0].decision,'REMOVE');assert.equal(rows[0].statement_hash,st.hashOf(sTxt));
+  await st.saveClaimReview(pool,{clientId:client,targetPageId:page,statement:sTxt,decision:'UNDECIDED'});
+  rows=await st.loadClaimReviews(pool,{clientId:client,targetPageId:page});assert.equal(rows.length,0);
+ }finally{await pool.query('DELETE FROM tracker_growth_claim_reviews WHERE tracker_client_id=$1',[client]).catch(()=>{})}
+});
+
 test('markets: set in order, invalid codes dropped, an empty list removes the setting',async()=>{
  assert.deepEqual(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:['nl','UK','xx','be'],language:'en'}),{countries:['NL','GB','BE'],language:'en'});
  assert.deepEqual((await markets.getPageMarkets(pool,{clientId:client,pageId:page})).countries,['NL','GB','BE']);

@@ -11,6 +11,7 @@ const {saveGapList,getGapList,saveSelection,addToSelection,saveWritten,getOpenSe
 const writingRuns=require('./growth-writing-runs.cjs');
 const {getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets,getCustomerCountries,setCustomerCountries}=require('./growth-market-store.cjs');
 const {findOpportunities,serviceAreaOf}=require('./growth-opportunity-finder.cjs');
+const {loadClaimReviews,saveClaimReview}=require('./growth-claim-review-store.cjs');
 const {pullCountryRows,saveCountryRows,loadCountryRows,loadCountryImport}=require('./growth-gsc-country.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
 const {PREWRITE_REGIONS,PREWRITE_LANGUAGES,countryName,languageName,validCountries}=require('./growth-search-locale.cjs');
@@ -149,6 +150,7 @@ function registerGrowthCockpit(app,pool,deps={}){
   claimWritingRun:args=>writingRuns.claimRun(pool,args),storeWritingRun:args=>writingRuns.storeRun(pool,args),
   failWritingRun:args=>writingRuns.failRun(pool,args),lastStoredRun:args=>writingRuns.lastStoredRun(pool,args),
   loadCountryRows:args=>loadCountryRows(pool,args),
+  loadClaimReviews:args=>loadClaimReviews(pool,args),saveClaimReview:args=>saveClaimReview(pool,args),
   saveAiAnswer:args=>saveGrowthAiAnswer(pool,args),loadSiteMarkets:args=>getSiteMarkets(pool,args),saveSiteMarkets:args=>setSiteMarkets(pool,args),loadAiAnswers:args=>listGrowthAiAnswers(pool,args),
   loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),loadPrewriteMarket:args=>getPrewriteMarket(pool,args),...(deps.research||{})});
  // New pages from a Pre-Write brief: the same research, selection, writing and storage, without a tracked URL.
