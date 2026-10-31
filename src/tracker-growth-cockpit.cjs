@@ -181,7 +181,7 @@ function registerGrowthCockpit(app,pool,deps={}){
    const client=(await pool.query('SELECT domain FROM tracker_clients WHERE id=$1',[req.growthTrackerClientId])).rows[0]||{};
    const domain=String(client.domain||'').replace(/^https?:\/\//,'').split('/')[0];
    const siteUrl=String(process.env.GSC_GROWTH_SITE_URL||('sc-domain:'+domain));
-   const pulled=await (gc.pull||pullCountryRows)({siteUrl,token});
+   let pulled;try{pulled=await (gc.pull||pullCountryRows)({siteUrl,token})}catch(e){const permission=/\b403\b|insufficient permission|permission denied|forbidden/i.test(String(e.message||''));const prefix='https://'+domain+'/';if(!permission||!siteUrl.startsWith('sc-domain:')||process.env.GSC_GROWTH_SITE_URL)throw e;console.warn('[growth-gsc-country] Domain property denied; trying URL-prefix property for same verified domain');pulled=await (gc.pull||pullCountryRows)({siteUrl:prefix,token})}
    const saved=await saveCountryRows(pool,{clientId:req.growthTrackerClientId,startDate:pulled.startDate,endDate:pulled.endDate,rows:pulled.rows,received:pulled.received,capped:pulled.capped});
    res.set('Cache-Control','private, no-store').json({success:true,...saved,countries:[...new Set(pulled.rows.map(r=>r.country))].length});
   }catch(e){console.warn('[growth-gsc-country]',String(e.message||'').slice(0,160));no(503,'GSC_IMPORT_FAILED','Search Console could not be read; nothing was changed.')}
