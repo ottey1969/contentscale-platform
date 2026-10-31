@@ -59,6 +59,7 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
    open.forEach((c,i)=>L.push((i+1)+'. '+c.detail+' What to do: '+c.action));L.push('')}}
  // Reviewable is not publishable (copy_ready means ready for human review).
  const ready=decision.publication_readiness;
+ if(ready&&ready.baseline)L.push('## Starting point','',ready.baseline.note,'',...(ready.baseline.countries||[]).map(c=>'- '+c.country+': '+c.impressions+' impressions, '+c.clicks+' clicks, position '+c.position),'');
  if(ready&&(ready.blockers||[]).length){
   L.push('## Publication readiness','','**'+(ready.status==='NOT_READY_FOR_PUBLICATION'?'Draft for review — not ready for publication.':'Ready for your approval, with notes.')+'**','');
   for(const b of ready.blockers)L.push('- '+(b.required?'Required':'Recommended')+': '+b.detail+' What to do: '+b.action);

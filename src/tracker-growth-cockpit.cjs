@@ -148,6 +148,7 @@ function registerGrowthCockpit(app,pool,deps={}){
   recordWritten:args=>saveWritten(pool,args),loadOpenSelection:args=>getOpenSelection(pool,args),addToSelection:args=>addToSelection(pool,args),
   claimWritingRun:args=>writingRuns.claimRun(pool,args),storeWritingRun:args=>writingRuns.storeRun(pool,args),
   failWritingRun:args=>writingRuns.failRun(pool,args),lastStoredRun:args=>writingRuns.lastStoredRun(pool,args),
+  loadCountryRows:args=>loadCountryRows(pool,args),
   saveAiAnswer:args=>saveGrowthAiAnswer(pool,args),loadSiteMarkets:args=>getSiteMarkets(pool,args),saveSiteMarkets:args=>setSiteMarkets(pool,args),loadAiAnswers:args=>listGrowthAiAnswers(pool,args),
   loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),loadPrewriteMarket:args=>getPrewriteMarket(pool,args),...(deps.research||{})});
  // New pages from a Pre-Write brief: the same research, selection, writing and storage, without a tracked URL.

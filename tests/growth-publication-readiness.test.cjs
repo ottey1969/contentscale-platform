@@ -25,3 +25,17 @@ test('checked text with a baseline: ready for the owner\'s approval, never publi
  assert.equal(r.status,'READY_FOR_OWNER_APPROVAL');assert.equal(r.ready_for_publication,false);assert.match(r.note,/nothing is published automatically/);
  assert.equal(publicationReadiness({decision:{}}).status,'NO_PROPOSAL');
 });
+
+test('report 62 (real decision): the Search Console import per country is the target page own starting point',()=>{
+ // LABELLED SYNTHETIC country rows for /content-scaling/ (the real import has rows per page, term and country).
+ const rows=[{page_url:'https://contentscale.site/content-scaling/',query:'content scaling',country:'US',impressions:146,clicks:0,position:18,start_date:'2026-09-30',end_date:'2026-10-28'},
+  {page_url:'https://contentscale.site/content-scaling/',query:'content scaling',country:'GB',impressions:40,clicks:1,position:12,start_date:'2026-09-30',end_date:'2026-10-28'},
+  {page_url:'https://contentscale.site/',query:'content scaling',country:'US',impressions:900,clicks:0,position:9,start_date:'2026-09-30',end_date:'2026-10-28'}];
+ const g=f.editorial_decision_gate,r=publicationReadiness({decision:g,destinationGsc:f.destination_gsc_evidence,countryRows:rows});
+ assert(!r.blockers.some(b=>b.code==='NO_TARGET_PAGE_BASELINE'),'the page has its own dated numbers');
+ assert.equal(r.baseline.impressions,186,'only /content-scaling/, never the homepage rows');
+ assert.match(r.baseline.note,/content-scaling\/ for “content scaling” from the Search Console import per country \(2026-09-30 – 2026-10-28\): 186 impressions, 1 clicks/);
+ assert.equal(r.status,'NOT_READY_FOR_PUBLICATION','the 10 unverified statements still block');
+ const pkg=buildOwnerHandoffPackage({report:{},decision:{...g,decision:'IMPROVE_EXISTING',evidence_status:{},publication_readiness:r}}).markdown;
+ assert.match(pkg,/## Starting point\n\n.*186 impressions[\s\S]*- US: 146 impressions, 0 clicks, position 18/);
+});
