@@ -574,6 +574,25 @@ test('free check: a cached result made by older research code is not reused (a f
  assert.notEqual(fresh.body.status,'DONE');assert.equal(s.calls.length,n+1,'researched again with the current code');
 });
 
+test('admin: market and language like the public form; fresh research ignores a stored result; a stored result says so',async t=>{
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
+ const A={'x-admin-key':'admin-secret-0123456789'},run=b=>s.post('/api/free-growth/admin/run',{url:'https://acme-roofing.example/roof-repair-lodi-nj/',query:'roof repair lodi nj',...b},A);
+ assert.match((await s.get('/free-growth/admin')).body,/name="market" list="marketRegions"[\s\S]*name="fresh"/);
+ assert.match((await run({market:'Narnia'})).body.error,/Choose the market from the list/);
+ assert.equal((await run({market:'nl — Netherlands',language:'Dutch'})).status,202);await s.service.idle();
+ assert.deepEqual(s.calls.at(-1).market,{countries:['NL'],language:'nl'});
+ const n=s.calls.length;
+ const stored=await run({market:'nl — Netherlands',language:'Dutch'});await s.service.idle();
+ assert.equal(s.calls.length,n,'stored result reused');assert.equal(stored.body.status,'DONE');
+ const view=await s.get('/api/free-growth/checks/'+stored.body.id+'?k='+stored.body.key);assert.equal(view.body.cached,true);
+ assert.match((await s.get('/free-growth/r/'+stored.body.id+'?k='+stored.body.key)).body,/Stored result\.<\/strong> The Google research was not run again/);
+ await run({market:'nl — Netherlands',language:'Dutch',fresh:true});await s.service.idle();
+ assert.equal(s.calls.length,n+1,'fresh research runs again');
+ // Fresh is admin only: the public form ignores it.
+ await s.post('/api/free-growth/checks',{...ok,email:'pub@x.example',fresh:true});await s.service.idle();const m=s.calls.length;
+ await s.post('/api/free-growth/checks',{...ok,email:'pub2@x.example',fresh:true});await s.service.idle();assert.equal(s.calls.length,m);
+});
+
 test('free check: no writing when the check has too little evidence',async t=>{
  const s=await server({config:{writing:'all',writeLimit:3}});t.after(()=>s.srv.close());
  const b=await s.post('/api/free-growth/checks',ok);await s.service.idle();
