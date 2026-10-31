@@ -64,6 +64,9 @@ registerGrowthCockpit({get(path,...handlers){routes[path]=handlers}},{
  }});
  const ownerRes={set(){return this},type(){return this},send(x){this.html=x;return x}},ownerReq={params:{token:'owner-tok'}};
  const oh=ownerRoutes['/track/:token/growth'];await oh[0](ownerReq,ownerRes,()=>oh[1](ownerReq,ownerRes));
+ // The owner view also reads the site's default market (async); wait for the page.
+ for(let i=0;i<100&&!ownerRes.html;i++)await new Promise(r=>setTimeout(r,5));
+ assert.match(ownerRes.html,/<h2>Default target market for this site<\/h2>/);assert.match(ownerRes.html,/A market you set on a page \(for example nl — Netherlands, English\) always wins/);
  // An existing page (the protected homepage too: research only) is chosen directly; a new page starts from Pre-Write.
  assert.match(ownerRes.html,/<form class="pick-page" method="get" action="\/track\/owner-tok\/growth\/auto-research">/);
  assert.match(ownerRes.html,/<option value="1">https:\/\/contentscale\.site\/ — content at scale \(protected: research only\)<\/option>/);
