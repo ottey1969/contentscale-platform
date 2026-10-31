@@ -386,6 +386,14 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     .map(x=>({url:x.url,html:x.live.html,truncated:x.live.truncated===true,serp_position:position.get(x.url)??null}));
    try{report.competitor_overview=await buildOverview({query:targetQuery,ownUrl:proposed,ownHtml:selectedSource.html,competitors:ranking})}
    catch{report.competitor_overview={status:'OVERVIEW_UNAVAILABLE'}}
+   // The comparison read the ranking pages and found most of them about another subject: the search term means something
+   // else there, even when the result titles did not show it (titles of firms are often just names).
+   const sc=report.competitor_overview?.subject_check;
+   if(sc?.status==='DIFFERENT_SUBJECT'&&report.serp_meaning?.status!=='DIFFERENT_MEANING'){
+    report.serp_meaning={status:'DIFFERENT_MEANING',query:targetQuery,results_considered:sc.of,basis:'AI_SUBJECT_CHECK_OF_READ_RANKING_PAGES',
+     absent_on_page:sc.pages.filter(p=>p.same_subject==='NO').map(p=>({word:p.host+(p.reason?' — '+p.reason:''),in_titles:1})),
+     note:sc.different+' of '+sc.of+' ranking pages that were read are about another subject than this page.'};
+   }
   }
   const attempts=[
    {source:'TARGET_STATIC_HTML',status:renderStatus,detail:own.code||null},
