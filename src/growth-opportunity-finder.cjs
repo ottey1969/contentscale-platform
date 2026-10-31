@@ -54,21 +54,28 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
   if(impressions<MIN_IMPRESSIONS){excluded.too_few_impressions++;continue}
   const b=band(lead.position),ctr=impressions?clicks/impressions:0;
   if(b.kind==='SNIPPET'&&ctr>=LOW_CTR_TOP){excluded.already_top_with_clicks++;continue}
-  // Does the page Google shows cover the term's topic? If not, the term asks for its own page (research first).
-  // The distinctive words count ("content" alone does not make a grader page out of a quality checker).
-  const dq=queryRoots(lead.query).distinct,topic=dq.length?dq:rootsOf(lead.query),pageTopic=new Set([...rootsOf(lead.page.keyword),...rootsOf(pathWords(lead.page.url))]);
-  const covered=!topic.length||topic.filter(r=>pageTopic.has(r)).length>=Math.ceil(topic.length/2);
-  const isProtected=lead.page.case_study_active===true||lead.page.eligibility?.status==='PROTECTED';
-  const kind=!covered?'NEW_PAGE':b.kind;
-  if(isProtected&&kind!=='NEW_PAGE'){excluded.protected_page++;continue}
+  // Which existing page is about this term? First the page Google shows, then any other tracked page; a different word
+  // is no reason for a new page. Only when no tracked page covers it is a new page POSSIBLE, and even then the research of
+  // the page Google shows decides (it can serve the intent, or the research advises a separate page).
+  const dq=queryRoots(lead.query).distinct,topic=dq.length?dq:rootsOf(lead.query);
+  const covers=p=>{const t=new Set([...rootsOf(p.keyword),...rootsOf(pathWords(p.url))]);return !topic.length||topic.filter(r=>t.has(r)).length>=Math.ceil(topic.length/2)};
+  const isProtectedPage=p=>p.case_study_active===true||p.eligibility?.status==='PROTECTED';
+  const other=covers(lead.page)?null:pages.filter(p=>p&&p.url&&norm(p.url)!==norm(lead.page.url)&&covers(p)&&!isProtectedPage(p))
+   .sort((a,b2)=>rootsOf(a.keyword).length-rootsOf(b2.keyword).length)[0]||null;
+  const kind=covers(lead.page)?b.kind:other?'OTHER_EXISTING_PAGE':'POSSIBLE_NEW_PAGE';
+  const target=kind==='OTHER_EXISTING_PAGE'?other:lead.page;
+  if(isProtectedPage(target)&&kind!=='POSSIBLE_NEW_PAGE'){excluded.protected_page++;continue}
   c.opportunities++;
-  list.push({query:lead.query,country:lead.country,country_name:countryName(lead.country),page_id:lead.page.id??null,page_url:lead.page.url,
-   impressions,clicks,ctr_pct:Math.round(ctr*1000)/10,position:Math.round(lead.position*10)/10,kind,effort:kind==='NEW_PAGE'?'large (a new page)':b.effort,
+  list.push({query:lead.query,country:lead.country,country_name:countryName(lead.country),page_id:target.id??null,page_url:target.url,
+   shown_page_url:lead.page.url,shown_page_protected:isProtectedPage(lead.page),
+   impressions,clicks,ctr_pct:Math.round(ctr*1000)/10,position:Math.round(lead.position*10)/10,kind,
+   effort:kind==='POSSIBLE_NEW_PAGE'?'unknown until researched (possibly a new page)':kind==='OTHER_EXISTING_PAGE'?b.effort+', plus a link from the page Google shows':b.effort,
    other_pages:g.filter(x=>x!==lead).map(x=>({url:x.page.url,impressions:x.impressions,position:Math.round(x.position*10)/10})),
-   priority:Math.round(impressions*(kind==='NEW_PAGE'?0.3:b.weight)),
+   priority:Math.round(impressions*(kind==='POSSIBLE_NEW_PAGE'?0.3:b.weight)),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
    why:impressions+' impressions and '+clicks+' clicks in '+countryName(lead.country)+(period?' ('+period.start+' – '+period.end+')':'')+', average position '+Math.round(lead.position*10)/10+' ('+b.label+')'+
     (kind==='SNIPPET'?'; only '+Math.round(ctr*1000)/10+'% of searchers click':'')+
-    (kind==='NEW_PAGE'?'; '+lead.page.url+' does not cover this topic, so the term asks for its own page':'')+
+    (kind==='OTHER_EXISTING_PAGE'?'; Google shows '+lead.page.url+', but '+other.url+' is the tracked page about this term':'')+
+    (kind==='POSSIBLE_NEW_PAGE'?'; no tracked page names this topic ('+lead.page.url+' is shown for it), so a separate page may be needed — the research decides':'')+
     (g.length>1?'; '+(g.length-1)+' other page(s) of the site also appear for it':'')+'.'});
  }
  list.sort((a,b)=>b.priority-a.priority||b.impressions-a.impressions);
@@ -79,7 +86,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  const best=withPlan(list[0],siteMarkets);
  const scope=customerScope(customers,countries);
  return {status:'OPPORTUNITY_FOUND',period,customer_countries:scope,best,runners_up:list.slice(1,5).map(x=>withPlan(x,siteMarkets)),by_country:countries,excluded,
-  method:'Search Console per country: priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). An order, not a click forecast.',
+  method:'Research priority, not a forecast. Search Console per country: priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). An order, not a click forecast.',
   not_yet_known:'How strong the ranking pages are in that country, and whether this page can give a better answer: the Growth research in that country reads them before anything is proposed.'};
 }
 function customerScope(customers,countries){
@@ -91,13 +98,16 @@ function customerScope(customers,countries){
 }
 function withPlan(o,siteMarkets){
  const where=o.country_name+' ('+o.country.toLowerCase()+')';
- const action=o.kind==='NEW_PAGE'?
-  'Start a Pre-Write brief for “'+o.query+'” with target market '+where+'; the New Page route reads the ranking pages there and checks overlap before anything is written.':
+ const action=o.kind==='POSSIBLE_NEW_PAGE'?(o.shown_page_protected?
+  'The page Google shows is protected; start a Pre-Write brief for “'+o.query+'” with target market '+where+'. The New Page route reads the ranking pages there and checks overlap with your tracked pages before anything is written.':
+  'First research '+o.page_url+' for “'+o.query+'” in '+where+': the research decides whether this existing page can serve the search, or advises a separate page. Only then a Pre-Write brief.'):
+  o.kind==='OTHER_EXISTING_PAGE'?
+  'Run the Growth research for '+o.page_url+' and “'+o.query+'” in '+where+'; Google now shows '+o.shown_page_url+' for it, so also check the link from that page to '+o.page_url+'.':
   o.kind==='SNIPPET'?
   'Run the Growth research for '+o.page_url+' and “'+o.query+'” in '+where+'; then compare your title and description with the results around you — the page is already in the top 3.':
   'Run the Growth research for '+o.page_url+' and “'+o.query+'” in '+where+'; it reads the pages that rank there and proposes the exact change, or says why none is supported.';
  return {...o,action,
-  research:o.kind==='NEW_PAGE'?{type:'NEW_PAGE',query:o.query,market:o.country}:{type:'EXISTING_PAGE',page_id:o.page_id,query:o.query,market:o.country},
+  research:o.kind==='POSSIBLE_NEW_PAGE'&&o.shown_page_protected?{type:'NEW_PAGE',query:o.query,market:o.country}:{type:'EXISTING_PAGE',page_id:o.page_id,query:o.query,market:o.country},
   measurement:'After publishing, record the publication in Growth measurement. Compare the 28 days before and after in Search Console for '+o.page_url+' and “'+o.query+'”; for '+where+' the country split comes from this import ('+o.impressions+' impressions, '+o.clicks+' clicks now). No result is promised.',
   site_default_note:siteMarkets&&siteMarkets.countries&&siteMarkets.countries.length&&!siteMarkets.countries.includes(o.country)?'This opportunity is outside the site default market ('+siteMarkets.countries.join(', ')+'); the research runs in '+o.country+' for this run only.':null};
 }

@@ -11,7 +11,7 @@ const {saveGapList,getGapList,saveSelection,addToSelection,saveWritten,getOpenSe
 const writingRuns=require('./growth-writing-runs.cjs');
 const {getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets,getCustomerCountries,setCustomerCountries}=require('./growth-market-store.cjs');
 const {findOpportunities,serviceAreaOf}=require('./growth-opportunity-finder.cjs');
-const {pullCountryRows,saveCountryRows,loadCountryRows}=require('./growth-gsc-country.cjs');
+const {pullCountryRows,saveCountryRows,loadCountryRows,loadCountryImport}=require('./growth-gsc-country.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
 const {PREWRITE_REGIONS,PREWRITE_LANGUAGES,countryName,languageName,validCountries}=require('./growth-search-locale.cjs');
 const {saveGrowthAiAnswer,listGrowthAiAnswers}=require('./growth-ai-answers-store.cjs');
@@ -134,6 +134,7 @@ function registerGrowthCockpit(app,pool,deps={}){
     req.growth.opportunities=findOpportunities({rows:countryRows,pages:req.growth.pages,domain:client.domain,
      serviceArea:serviceAreaOf({pages:p.rows,deriveMarket}),siteMarkets:req.growth.site_markets,customerCountries:req.growth.customer_countries});
     req.growth.opportunities.imported_at=countryRows[0]?.imported_at||null;
+    req.growth.opportunities.import=await loadCountryImport(pool,{clientId:client.id}).catch(()=>null);
    }
    req.growthTrackerClientId=client.id;
    next();
@@ -181,7 +182,7 @@ function registerGrowthCockpit(app,pool,deps={}){
    const domain=String(client.domain||'').replace(/^https?:\/\//,'').split('/')[0];
    const siteUrl=String(process.env.GSC_GROWTH_SITE_URL||('sc-domain:'+domain));
    const pulled=await (gc.pull||pullCountryRows)({siteUrl,token});
-   const saved=await saveCountryRows(pool,{clientId:req.growthTrackerClientId,startDate:pulled.startDate,endDate:pulled.endDate,rows:pulled.rows});
+   const saved=await saveCountryRows(pool,{clientId:req.growthTrackerClientId,startDate:pulled.startDate,endDate:pulled.endDate,rows:pulled.rows,received:pulled.received,capped:pulled.capped});
    res.set('Cache-Control','private, no-store').json({success:true,...saved,countries:[...new Set(pulled.rows.map(r=>r.country))].length});
   }catch(e){console.warn('[growth-gsc-country]',String(e.message||'').slice(0,160));no(503,'GSC_IMPORT_FAILED','Search Console could not be read; nothing was changed.')}
  });
@@ -320,14 +321,14 @@ function registerGrowthCockpit(app,pool,deps={}){
   // the action and the measurement plan; or, without enough data, it says so.
   const op=g.can_edit?g.opportunities:null;
   const oppLink=o=>o.research.type==='NEW_PAGE'?'/track/'+tok+'/growth/new-page':research(o.page_id)+'&market='+encodeURIComponent(o.country)+'&query='+encodeURIComponent(o.query);
-  const oppBox=!op?'':'<section class="growth-guide" id="opportunity"><p class="kicker">Best opportunity — Opportunity Finder</p>'+
+  const oppBox=!op?'':'<section class="growth-guide" id="opportunity"><p class="kicker">Best opportunity — Opportunity Finder (research priority, not a prediction)</p>'+
    (op.status==='OPPORTUNITY_FOUND'?
     '<h2>“'+escapeHtml(op.best.query)+'” in '+escapeHtml(op.best.country_name)+' → '+escapeHtml(op.best.page_url)+'</h2>'+
-    '<p><strong>Why:</strong> '+escapeHtml(op.best.why)+'</p><p><strong>Kind:</strong> '+escapeHtml({QUICK_IMPROVEMENT:'quick improvement of an existing page',BIGGER_EFFORT:'bigger opportunity, more work',NEW_PAGE:'a new page for another search intent',SNIPPET:'title and description (already in the top 3)'}[op.best.kind])+' · effort '+escapeHtml(op.best.effort)+'</p>'+
-    '<p><strong>Action:</strong> '+escapeHtml(op.best.action)+'</p><p><a class="guide-primary" href="'+escapeHtml(oppLink(op.best))+'">'+(op.best.kind==='NEW_PAGE'?'Start from a Pre-Write brief →':'Research this in '+escapeHtml(op.best.country_name)+' →')+'</a></p>'+
+    '<p><strong>Why:</strong> '+escapeHtml(op.best.why)+'</p><p><strong>Kind:</strong> '+escapeHtml({QUICK_IMPROVEMENT:'quick improvement of an existing page',BIGGER_EFFORT:'bigger opportunity, more work',OTHER_EXISTING_PAGE:'another existing page of yours is about this term',POSSIBLE_NEW_PAGE:'possibly a new page — the research of the existing page decides first',SNIPPET:'title and description (already in the top 3)'}[op.best.kind])+' · effort '+escapeHtml(op.best.effort)+'</p>'+
+    '<p><strong>Action:</strong> '+escapeHtml(op.best.action)+'</p><p><a class="guide-primary" href="'+escapeHtml(oppLink(op.best))+'">'+(op.best.research.type==='NEW_PAGE'?'Start from a Pre-Write brief →':'Research this in '+escapeHtml(op.best.country_name)+' →')+'</a></p>'+
     '<p><strong>Measurement:</strong> '+escapeHtml(op.best.measurement)+'</p>'+(op.best.site_default_note?'<p class="info">'+escapeHtml(op.best.site_default_note)+'</p>':'')+
     '<p class="info"><strong>Not yet known:</strong> '+escapeHtml(op.not_yet_known)+'</p>'+
-    (op.runners_up.length?'<details><summary>Next opportunities ('+op.runners_up.length+')</summary><ol>'+op.runners_up.map(o=>'<li>“'+escapeHtml(o.query)+'” in '+escapeHtml(o.country_name)+' → '+escapeHtml(o.page_url)+' — '+escapeHtml(o.why)+' <a href="'+escapeHtml(oppLink(o))+'">'+(o.kind==='NEW_PAGE'?'Pre-Write brief':'Research')+'</a></li>').join('')+'</ol></details>':'')+
+    (op.runners_up.length?'<details><summary>Next opportunities ('+op.runners_up.length+')</summary><ol>'+op.runners_up.map(o=>'<li>“'+escapeHtml(o.query)+'” in '+escapeHtml(o.country_name)+' → '+escapeHtml(o.page_url)+' — '+escapeHtml(o.why)+' <a href="'+escapeHtml(oppLink(o))+'">'+(o.research.type==='NEW_PAGE'?'Pre-Write brief':'Research')+'</a></li>').join('')+'</ol></details>':'')+
     '<details><summary>Per country and how the order is made</summary><ul>'+op.by_country.slice(0,8).map(c=>'<li>'+escapeHtml(c.name)+': '+c.impressions+' impressions, '+c.clicks+' clicks, '+c.opportunities+' opportunit'+(c.opportunities===1?'y':'ies')+'</li>').join('')+'</ul><p class="info">'+escapeHtml(op.method)+'</p></details>':
     '<h2>Not enough data to choose an opportunity</h2><p>'+escapeHtml(op.reason)+'</p>')+
    // Impressions are not customers: the owner chooses where customers can buy; other countries stay visible, never chosen.
@@ -338,6 +339,7 @@ function registerGrowthCockpit(app,pool,deps={}){
    '<script>document.getElementById("customerCountryForm").addEventListener("submit",async function(e){e.preventDefault();var st=document.getElementById("customerCountryStatus");st.textContent="Saving…";'+
    'try{var r=await fetch("/api/tracker-client/'+tok+'/growth/customer-countries",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({countries:e.target.countries.value})});var d=await r.json();'+
    'if(d.success){st.textContent="Saved. Reloading…";location.reload()}else st.textContent=d.code==="UNKNOWN_COUNTRY"?"Choose the countries from the list, for example us — United States.":"Not saved."}catch(err){st.textContent="Not saved."}});</script>'+
+   (op.import&&op.import.capped?'<p class="info"><strong>Not all Search Console data was read:</strong> the import reached the maximum of '+Number(op.import.rows_received).toLocaleString()+' rows, so search terms with few impressions may be missing. The opportunities shown come from the rows that were read.</p>':'')+
    '<p><button type="button" id="gscCountryImport">'+(op.imported_at?'Import Search Console per country again':'Import Search Console per country')+'</button> <small role="status" id="gscCountryStatus">'+(op.imported_at?'Last import: '+escapeHtml(String(op.imported_at).slice(0,10))+(op.period?' (data '+escapeHtml(op.period.start)+' – '+escapeHtml(op.period.end)+')':''):'Not imported yet. Search Console access on the server is needed; Growth works without it.')+'</small></p>'+
    '<script>document.getElementById("gscCountryImport").addEventListener("click",async function(){var b=this,st=document.getElementById("gscCountryStatus");b.disabled=true;st.textContent="Reading Search Console…";'+
    'try{var r=await fetch("/api/tracker-client/'+tok+'/growth/gsc-country-import",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:"{}"});var d=await r.json();'+
