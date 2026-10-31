@@ -20,7 +20,9 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
  // Google uses the term for another subject than this page: nothing comparable exists, and the page is never rewritten toward it.
  const meaning=report?.serp_meaning;
  if(meaning?.status==='DIFFERENT_MEANING'){
-  const w=meaning.absent_on_page.map(x=>'"'+x.word+'" ('+x.in_titles+' of '+meaning.results_considered+' titles)').join(', ');
+  const w=meaning.basis==='AI_SUBJECT_CHECK_OF_READ_RANKING_PAGES'?
+   'another subject: '+meaning.absent_on_page.map(x=>x.word).join('; ')+' ('+meaning.note+')':
+   meaning.absent_on_page.map(x=>'"'+x.word+'" ('+x.in_titles+' of '+meaning.results_considered+' titles)').join(', ');
   missing.push({code:'QUERY_MEANS_SOMETHING_ELSE',detail:'Google\'s results for "'+query+'" are about '+w+', which is not the subject of this page (not in its title or headings, and at most a passing mention). The search term means something else there, so those results are not comparable with this page.',
    observed:{absent_on_page:meaning.absent_on_page,results_considered:meaning.results_considered}});
  }

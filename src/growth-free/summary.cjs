@@ -143,7 +143,9 @@ function summarizeFreeGrowth(report,{url,query}={}){
    const other=((gate.missing_evidence||[]).find(m=>m.code===code)||{}).observed;
    const w=other&&other.absent_on_page?other.absent_on_page.map(x=>'“'+x.word+'”').join(', '):'';
    headline='Google means something else by this search term';
-   if(w)explanation='Most Google results for this term are about '+w+', which is not what your page is about. Comparing your page with them would give wrong advice.';
+   const byReading=report?.serp_meaning?.basis==='AI_SUBJECT_CHECK_OF_READ_RANKING_PAGES';
+   if(byReading)explanation='The ranking pages that were read are about another subject than your page ('+report.serp_meaning.note.replace(/\.$/,'')+': '+other.absent_on_page.map(x=>x.word).join('; ')+'). Comparing your page with them would give wrong advice.';
+   else if(w)explanation='Most Google results for this term are about '+w+', which is not what your page is about. Comparing your page with them would give wrong advice.';
   }
  }
  const scopeNote=gate.intent_scope&&gate.intent_scope.note;

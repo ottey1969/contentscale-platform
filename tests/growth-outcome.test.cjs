@@ -67,3 +67,23 @@ test('report 64 (real): the owner package lists the open checks under a NO_CHANG
  assert.match(m,/## Still open — not a content question\n\nNo content gap was found, but that is not the same as no improvement needed:\n\n1\. Search Console \(imported 2026-10-11\) shows https:\/\/contentscale\.site\/ for “content scaling”/);
  assert.match(m,/2\. The average position is 12\.7: most impressions are beyond page one/);
 });
+
+test('report 67 (real): a block by the word-based task check after three pages were read does not block the topic list',()=>{
+ const r=require('./fixtures/growth-report-67/report.json').report;
+ const {buildGapList}=require('../src/growth-gap-list.cjs');
+ const gl=buildGapList(r);
+ assert.equal(r.editorial_decision_gate.blocker_code,'SHARED_COMPETITOR_REQUIREMENTS');
+ assert.equal(gl.evidence.status,'ENOUGH_EVIDENCE');assert.equal(gl.writing_allowed,true);
+ assert.deepEqual(gl.items.filter(x=>x.recommended).map(x=>x.title),['Definition of content scaling','Why content scaling matters and its benefits']);
+ const o=reconcileOutcome({decision:r.editorial_decision_gate,gapList:gl,report:r,aiCheck:{max_age_days:14,summary:{checked:0}},now:'2026-10-31T12:47:17Z'});
+ assert.equal(o.status,'NO_SHARED_TASK_TOPICS_TO_CONSIDER');
+ assert.equal(o.headline,'No reader task shared by two ranking pages — 2 performance checks still open · 2 topics to consider');
+ assert.deepEqual(o.open_checks.map(c=>c.code),['TARGET_PAGE_NOT_MEASURED','AI_NOT_CHECKED']);
+ const s=summarizeFreeGrowth(r,{query:'content scaling'});
+ assert.equal(s.headline,'No reader task shared by two ranking pages — 2 topics to consider');
+ // A block for missing data (no readable pages) still blocks the list.
+ const thin=buildGapList({...r,competitor_overview:{...r.competitor_overview,ranking_pages_read:1}});
+ assert.equal(thin.evidence.status,'INSUFFICIENT_EVIDENCE');assert.equal(thin.writing_allowed,false);
+ const data=buildGapList({...r,editorial_decision_gate:{...r.editorial_decision_gate,blocker_code:'SERP_INTENT_EVIDENCE'}});
+ assert.equal(data.writing_allowed,false,'an unclear search intent still blocks');
+});

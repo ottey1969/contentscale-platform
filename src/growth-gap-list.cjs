@@ -106,7 +106,12 @@ function buildGapList(report={}){
   if(it.coverage==='NOT_COMPARED')it.coverage='MISSING'}
  const readable=ov?.ranking_pages_read??0;
  // One outcome for the whole report: when the research decision itself is "data blocked", the list proposes nothing either.
- const gateBlocked=report.editorial_decision_gate?.decision==='DATA_BLOCKED';
+ // Except when the pages were read and the block only says that the word-based task check found no task two pages share
+ // (report 67): that is a method's result, not missing data. The topic comparison then stands on its own evidence
+ // (2+ readable pages; a topic is recommended only when two ranking pages have it) and the outcome names both.
+ const gate=report.editorial_decision_gate||{};
+ const taskCheckOnly=TASK_CHECK_BLOCKERS.has(gate.blocker_code)&&ov?.status==='OBSERVED'&&readable>=MIN_READABLE_PAGES;
+ const gateBlocked=gate.decision==='DATA_BLOCKED'&&!taskCheckOnly;
  // No comparison (no overview, or not enough readable pages for one) is not evidence either.
  const insufficient=gateBlocked||ov?.status!=='OBSERVED'||readable<MIN_READABLE_PAGES;
  prioritise(items,focus,{newPage,insufficient,readable,gateBlocked});
@@ -141,6 +146,8 @@ function buildGapList(report={}){
 }
 
 // Why an item is in the list, from what the research observed; no score is shown and nothing is estimated.
+// Blocks that come from the word-based task check after the ranking pages were read, not from missing data.
+const TASK_CHECK_BLOCKERS=new Set(['SHARED_COMPETITOR_REQUIREMENTS','TASK_MEANING_NOT_VERIFIED','SUBSTANTIVE_GAP_NOT_VERIFIED']);
 function prioritise(items,focus,{newPage=false,insufficient=false,readable=0,gateBlocked=false}={}){
  const q=words(focus||'');
  const CONF={AI_CONFIRMED_SAME_QUESTION:2,AI_GROUPED:1,SHARED_WORDS_ONLY:0,NOT_GROUPED:0,AI_SAYS_DIFFERENT_QUESTIONS:-3};
@@ -250,4 +257,4 @@ function uniqueContent(ov,q=[],items=[]){
    note:'No ranking page read ('+ov.ranking_pages_read+') has a heading or fragment with these words. Review it: unique is not proof that it is correct, current or strong. It is not rewritten.'}));
 }
 
-module.exports={buildGapList,GROUPS,hostOf};
+module.exports={buildGapList,GROUPS,hostOf,TASK_CHECK_BLOCKERS};

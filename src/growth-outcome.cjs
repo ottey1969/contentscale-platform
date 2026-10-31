@@ -23,19 +23,25 @@ function openChecks({decision={},report=null,aiCheck=null,now=Date.now()}={}){
  if(aiCheck&&aiCheck.summary&&!aiCheck.summary.checked)out.push({code:'AI_NOT_CHECKED',detail:'No AI answer for “'+decision.focus_query+'” from the last '+(aiCheck.max_age_days||14)+' days.',action:'Paste AI answers in “AI answers for …” above.'});
  return out;
 }
+// The word-based task check closed the research (NO_CHANGE) or found no task two pages share (a task-check block after the
+// pages were read): the topic comparison and the open performance checks are then the rest of the one outcome.
+const TASK_CHECK_BLOCKERS=new Set(['SHARED_COMPETITOR_REQUIREMENTS','TASK_MEANING_NOT_VERIFIED','SUBSTANTIVE_GAP_NOT_VERIFIED']);
 function reconcileOutcome({decision={},gapList=null,report=null,aiCheck=null,now=Date.now()}={}){
- if(decision.decision!=='NO_CHANGE')return null;
+ const taskBlock=decision.decision==='DATA_BLOCKED'&&TASK_CHECK_BLOCKERS.has(decision.blocker_code);
+ if(decision.decision!=='NO_CHANGE'&&!taskBlock)return null;
  const topics=gapList&&gapList.writing_allowed!==false?(gapList.items||[]).filter(x=>x.recommended&&x.writable!==false&&Number(x.priority?.sources)>=2):[];
  const open=openChecks({decision,report,aiCheck,now});
  if(!topics.length&&!open.length)return null;
  const checked=(decision.closure_report?.tasks_checked||[]).length;
  const topicNote=topics.length?'The topic comparison found '+topics.length+' topic'+(topics.length===1?'':'s')+' on two or more ranking pages that '+(topics.length===1?'is':'are')+' missing or only partly on this page: '+
    topics.slice(0,5).map(x=>'“'+x.title+'”').join(', ')+'. Growth writes no proposal by itself; choose them in the list only if they belong on your page.':'';
- return {status:open.length?'NO_CONTENT_GAP_PERFORMANCE_OPEN':'NO_REQUIRED_CHANGE_TOPICS_TO_CONSIDER',count:topics.length,
+ return {status:taskBlock?'NO_SHARED_TASK_TOPICS_TO_CONSIDER':open.length?'NO_CONTENT_GAP_PERFORMANCE_OPEN':'NO_REQUIRED_CHANGE_TOPICS_TO_CONSIDER',count:topics.length,
   topics:topics.map(x=>({id:x.id,title:x.title,coverage:x.coverage,sources:Number(x.priority.sources)})),open_checks:open,
-  headline:open.length?'No content gap found — '+open.length+' performance check'+(open.length===1?'':'s')+' still open'+(topics.length?' · '+topics.length+' topic'+(topics.length===1?'':'s')+' to consider':''):
+  headline:taskBlock?'No reader task shared by two ranking pages'+[open.length?open.length+' performance check'+(open.length===1?'':'s')+' still open':'',topics.length?topics.length+' topic'+(topics.length===1?'':'s')+' to consider':''].filter(Boolean).map((x,i)=>(i?' · ':' — ')+x).join(''):
+   open.length?'No content gap found — '+open.length+' performance check'+(open.length===1?'':'s')+' still open'+(topics.length?' · '+topics.length+' topic'+(topics.length===1?'':'s')+' to consider':''):
    'No change required — '+topics.length+' topic'+(topics.length===1?'':'s')+' from the ranking pages to consider',
   distinction:'No content gap (the ranking pages teach nothing this page lacks) is not the same as no improvement needed: the open checks below explain why the page gets few clicks.',
-  note:'The reader-task check found no missing task shared by two or more ranking pages (it checked '+checked+' task'+(checked===1?'':'s')+'). '+topicNote};
+  note:(taskBlock?'The word-based task check found no reader task taught by two of the ranking pages it read. ':
+   'The reader-task check found no missing task shared by two or more ranking pages (it checked '+checked+' task'+(checked===1?'':'s')+'). ')+topicNote};
 }
 module.exports={reconcileOutcome,openChecks};
