@@ -163,6 +163,8 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
  // The market the page states (growth-search-locale); a US-state market keeps the US lookup with its location.
  const primary=market?{gl:'us',hl:'en'}:{gl:locale?.gl||'us',hl:locale?.hl||'en'};
  const wrapped={received:0,resolved:0,unresolved:0};const wrappedWhy={};let wrappedSample=null;
+ // Every organic title Google returned (own site excluded), also of results that could not be opened: what Google shows.
+ const titles=[],ownHost=(()=>{try{return new URL(ownUrl).hostname.replace(/^www\./,'').toLowerCase()}catch{return ''}})();
  const ask=async(q,page=1,where=primary)=>{
   const response=await fetchImpl('https://google.serper.dev/search',{
    method:'POST',headers:{'X-API-KEY':available,'Content-Type':'application/json'},
@@ -177,6 +179,8 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
   for(const k of Object.keys(wrapped))wrapped[k]+=w[k];
   for(const [k,n] of Object.entries(w.unresolved_reasons||{}))wrappedWhy[k]=(wrappedWhy[k]||0)+n;
   if(w.sample&&!wrappedSample)wrappedSample=w.sample;
+  for(const item of payload.organic){if(!item||typeof item.title!=='string')continue;let h=null;try{h=new URL(item.link).hostname.replace(/^www\./,'').toLowerCase()}catch{}
+   if(h&&h===ownHost)continue;titles.push({title:clean(item.title).slice(0,180),host:h&&!isWrapped(item.link)?h:null,url:isWrapped(item.link)?null:item.link})}
   return {payload};
  };
  try{
@@ -228,6 +232,7 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
    organic_results_received:first.payload.organic.length,
    source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,20),
    // Per reason, each result counted once (a second lookup can return the same result again).
+   organic_titles:titles.slice(0,40),
    rejected_reasons:[...new Map(rejected_leads.map(x=>[x.url,x.reason])).values()].reduce((n,r)=>(n[r]=(n[r]||0)+1,n),{}),query:term,checked_at:new Date(now).toISOString(),
    second_market,
    ...(wrapped.received?{google_redirect_links:{...wrapped,...(wrapped.unresolved?{unresolved_reasons:wrappedWhy}:{}),...(wrappedSample?{google_page_sample:wrappedSample}:{})}}:{}),

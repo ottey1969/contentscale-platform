@@ -1,4 +1,5 @@
 'use strict';
+const {observeSerpTitles}=require('./growth-serp-titles.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
@@ -309,6 +310,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    for(const q of report.growth_decision?.other_reviewable_queries||[])q.destination=toFinal(q.destination);
   }
   report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
+  // What Google shows by title, including results whose page could not be opened (explanation only, never evidence).
+  if(Array.isArray(discovery.organic_titles)){const read=new Set(comparisons.filter(x=>x.live?.html).map(x=>x.url));
+   report.serp_titles=observeSerpTitles({query:targetQuery,titles:discovery.organic_titles.map(t=>({...t,page_read:!!t.url&&read.has(t.url)}))})}
   // Checked on the page that will actually be compared (after any retarget).
   report.serp_meaning=checkQueryMeaning({query:targetQuery,leads:discovery.leads,destinationHtml:selectedSource?.html||''});
   report.destination_section_comparison=selectedSource?compareFullSections({

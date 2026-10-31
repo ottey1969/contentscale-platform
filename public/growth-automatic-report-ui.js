@@ -61,6 +61,8 @@
     var tried=node('ul',null,primary);
     outcome.attempted_sources.forEach(function(a){node('li',String(a.source)+': '+String(a.status)+(a.detail?' ('+String(a.detail)+')':''),tried)});
    }
+   // What Google shows by title (all results, also those that could not be opened); explanation only, never evidence.
+   if(d.serp_titles&&d.serp_titles.note)node('p','What Google shows, from the titles of '+String(d.serp_titles.titles_seen)+' results (titles only, not evidence for a change): '+String(d.serp_titles.note),primary);
   }
   if(outcome.decision==='NO_CHANGE'&&outcome.closure_report){
    node('p','Closure report — nothing needs to change for the checked reader tasks:',primary);
