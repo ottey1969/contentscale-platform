@@ -31,7 +31,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  if(!rows.length)return {status:'INSUFFICIENT_DATA',reason:'No Search Console rows per country have been imported for this site. Import them in the Growth Cockpit (Search Console access is needed); without them Growth does not guess where the best opportunity is.',
   best:null,runners_up:[],by_country:[],excluded};
  const period=rows[0]&&rows[0].start_date?{start:rows[0].start_date,end:rows[0].end_date}:null;
- // Per search term and country: the page Google shows most (the best position), and every other page that also got impressions.
+ // Per search term and country: prefer the page with the most impressions (not the best average position); keep each URL's metrics separate.
  const groups=new Map();
  for(const r of rows){
   const page=tracked.get(norm(r.page_url));
@@ -45,14 +45,14 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  const byCountry=new Map(),list=[];
  for(const [k,g] of groups){
   const impressions=g.reduce((n,x)=>n+x.impressions,0),clicks=g.reduce((n,x)=>n+x.clicks,0);
-  const lead=g.slice().sort((a,b)=>a.position-b.position||b.impressions-a.impressions)[0];
+  const lead=g.slice().sort((a,b)=>b.impressions-a.impressions||a.position-b.position)[0];
   const c=byCountry.get(lead.country)||{country:lead.country,name:countryName(lead.country),impressions:0,clicks:0,opportunities:0,
    customer_country:customers.size?customers.has(lead.country):null};
   c.impressions+=impressions;c.clicks+=clicks;byCountry.set(lead.country,c);
   // Outside the countries where the owner wants customers: visible in the per-country overview, never the best opportunity.
   if(customers.size&&!customers.has(lead.country)){excluded.outside_customer_countries++;continue}
   if(impressions<MIN_IMPRESSIONS){excluded.too_few_impressions++;continue}
-  const b=band(lead.position),ctr=impressions?clicks/impressions:0;
+  const b=band(lead.position),ctr=lead.impressions?lead.clicks/lead.impressions:0;
   if(b.kind==='SNIPPET'&&ctr>=LOW_CTR_TOP){excluded.already_top_with_clicks++;continue}
   // Which existing page is about this term? First the page Google shows, then any other tracked page; a different word
   // is no reason for a new page. Only when no tracked page covers it is a new page POSSIBLE, and even then the research of
