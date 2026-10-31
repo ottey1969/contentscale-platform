@@ -125,6 +125,16 @@ test('Search Console per country: one import replaces the previous one for the c
  }finally{await pool.query('DELETE FROM tracker_growth_gsc_country WHERE tracker_client_id=$1',[client]).catch(()=>{})}
 });
 
+test('customer countries: one list per client; empty removes it',async()=>{
+ const st=require('../src/growth-market-store.cjs');
+ try{
+  assert.deepEqual(await st.setCustomerCountries(pool,{clientId:client,countries:['us','UK','nl']}),['US','GB','NL']);
+  assert.deepEqual(await st.getCustomerCountries(pool,{clientId:client}),['US','GB','NL']);
+  assert.deepEqual(await st.setCustomerCountries(pool,{clientId:client,countries:[]}),[]);
+  assert.deepEqual(await st.getCustomerCountries(pool,{clientId:client}),[]);
+ }finally{await pool.query('DELETE FROM tracker_growth_customer_countries WHERE tracker_client_id=$1',[client]).catch(()=>{})}
+});
+
 test('markets: set in order, invalid codes dropped, an empty list removes the setting',async()=>{
  assert.deepEqual(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:['nl','UK','xx','be'],language:'en'}),{countries:['NL','GB','BE'],language:'en'});
  assert.deepEqual((await markets.getPageMarkets(pool,{clientId:client,pageId:page})).countries,['NL','GB','BE']);

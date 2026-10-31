@@ -97,3 +97,30 @@ test('the Search Console pull asks for page × query × country and turns GSC co
  assert.deepEqual(body.dimensions,['page','query','country']);
  assert.deepEqual(r.rows,[{page_url:'https://contentscale.site/content-scaling/',query:'content scaling',country:'GB',clicks:2,impressions:300,position:8.5}]);
 });
+
+test('impressions are not customers: with the countries the owner chose, other countries stay visible but are never chosen',()=>{
+ const rows=[R('https://contentscale.site/content-scaling/','content scaling','IN',3000,6,9),R('https://contentscale.site/content-scaling/','content scaling','PK',800,1,8),
+  R('https://contentscale.site/content-scaling/','content scaling','US',300,2,12),R('https://contentscale.site/content-scaling/','content scaling','GB',150,1,15)];
+ const open=findOpportunities({rows,pages,domain:'contentscale.site'});
+ assert.equal(open.best.country,'IN','without a choice every country counts');assert.equal(open.customer_countries.set,false);
+ assert.match(open.customer_countries.note,/Impressions are not customers/);
+ const chosen=findOpportunities({rows,pages,domain:'contentscale.site',customerCountries:['US','GB']});
+ assert.equal(chosen.best.country,'US');assert.equal(chosen.runners_up[0].country,'GB');assert.equal(chosen.excluded.outside_customer_countries,2);
+ assert.deepEqual(chosen.customer_countries.outside.map(c=>c.country),['IN','PK'],'shown for information');
+ assert.equal(chosen.by_country.find(c=>c.country==='IN').customer_country,false);
+ const none=findOpportunities({rows:rows.slice(0,2),pages,domain:'contentscale.site',customerCountries:['US']});
+ assert.equal(none.status,'INSUFFICIENT_DATA');assert.equal(none.customer_countries.outside.length,2);
+});
+
+test('Cockpit: the owner saves the countries where customers are; unknown entries are refused',async()=>{
+ const {registerGrowthCockpit}=require('../src/tracker-growth-cockpit.cjs');let saved=null;const posts={};
+ registerGrowthCockpit({get(){},post(p,...h){posts[p]=h}},{query:async(sql,args)=>{
+  if(sql.includes('FROM tracker_clients'))return {rows:[{id:10,domain:'contentscale.site',token:'owner-tok'}]};
+  if(/INSERT INTO tracker_growth_customer_countries/.test(sql)){saved=JSON.parse(args[1]);return {rows:[]}}
+  return {rows:[]}}});
+ const call=async(body)=>{const stack=posts['/api/tracker-client/:token/growth/customer-countries'],req={params:{token:'owner-tok'},body},res={statusCode:200,status(c){this.statusCode=c;return this},set(){return this},json(b){this.body=b;return this}};
+  await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});return res};
+ assert.equal((await call({countries:'us — United States, Narnia'})).body.code,'UNKNOWN_COUNTRY');
+ const ok=await call({countries:'us — United States, gb — United Kingdom, nl — Netherlands'});
+ assert.deepEqual(ok.body.countries,['US','GB','NL']);assert.deepEqual(saved,['US','GB','NL']);
+});
