@@ -22,3 +22,10 @@ test('a replacement keeps its existing passage; no placement says so instead of 
  assert.match(t,/Expand the existing section “Pricing”\nExisting passage:\nOld text\.\nProposed text:\nNew text\./);
  assert.match(growthEditCopyText({proposed_text:'x'}),/Placement: where it fits best \(choose yourself\)/);
 });
+
+test('report 62 (real): a draft that is not ready for publication says so first in the copied text',()=>{
+ const {publicationReadiness}=require('../src/growth-publication-readiness.cjs');
+ const t=growthEditCopyText({...g,publication_readiness:publicationReadiness({decision:g,destinationGsc:require('./fixtures/growth-report-62/decision.json').destination_gsc_evidence})});
+ assert.match(t,/^DRAFT FOR REVIEW — NOT READY FOR PUBLICATION\nRequired: 10 statement\(s\)/);
+ assert.match(t,/\nRecommended: There are no verified Search Console rows for https:\/\/contentscale\.site\/content-scaling\//);
+});

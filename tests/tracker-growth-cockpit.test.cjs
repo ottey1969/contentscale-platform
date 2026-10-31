@@ -54,6 +54,20 @@ registerGrowthCockpit({get(path,...handlers){routes[path]=handlers}},{
  const htmlReq={params:{token:'synthetic'}};
  await pageHandlers[0](htmlReq,htmlRes,()=>pageHandlers[1](htmlReq,htmlRes));
  assert.match(htmlRes.html,/Growth Cockpit/);
+ // Owner view: an existing page (the protected homepage too: research only) is chosen directly; a new page starts from Pre-Write.
+ const ownerRoutes={};
+ registerGrowthCockpit({get(path,...h){ownerRoutes[path]=h}},{query:async sql=>{
+  if(sql.includes('FROM tracker_clients'))return {rows:[{id:10,domain:'contentscale.site',token:'owner-tok'}]};
+  if(sql.includes('FROM tracker_pages p'))return {rows:pages};
+  if(sql.includes('FROM tracker_gsc_queries q'))return {rows:queries};
+  return {rows:[]};
+ }});
+ const ownerRes={set(){return this},type(){return this},send(x){this.html=x;return x}},ownerReq={params:{token:'owner-tok'}};
+ const oh=ownerRoutes['/track/:token/growth'];await oh[0](ownerReq,ownerRes,()=>oh[1](ownerReq,ownerRes));
+ // An existing page (the protected homepage too: research only) is chosen directly; a new page starts from Pre-Write.
+ assert.match(ownerRes.html,/<form class="pick-page" method="get" action="\/track\/owner-tok\/growth\/auto-research">/);
+ assert.match(ownerRes.html,/<option value="1">https:\/\/contentscale\.site\/ — content at scale \(protected: research only\)<\/option>/);
+ assert.match(ownerRes.html,/A page that does not exist yet:<\/strong> <a href="\/track\/owner-tok\/growth\/new-page">/);
  assert.match(htmlRes.html,/Top click opportunities/);
  assert.match(htmlRes.html,/Action plan · 4 steps/);
  assert.match(htmlRes.html,/Open \/ copy execution brief/);

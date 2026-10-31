@@ -70,3 +70,15 @@ test('report 63 (real terms): questions about the product "Content at Scale" go 
   assert.equal(to[q],'https://contentscale.site/content-at-scale/',q);
  for(const q of ['content scaling','scaling content','scaled content'])assert.equal(to[q],'https://contentscale.site/content-scaling/',q);
 });
+
+test('report 63: the route to action is judged for /content-scaling/ (informational), with the tool pages of the site',()=>{
+ // Page HTML LABELLED SYNTHETIC (one paragraph); the URLs and keywords are the tracked pages of report 62/63.
+ const html='<article><h1>Content Scaling</h1><h2>How to Audit Your Content Before You Scale</h2><p>Before you scale, check every page with an ai content quality checker so weak pages are fixed first.</p></article>';
+ const r=readerFunnel({pageUrl:'https://contentscale.site/content-scaling/',focusQuery:'content scaling',pageIntent:'INFORMATIONAL_GUIDE',pageHtml:html,
+  sitePages:[{id:1,url:'https://contentscale.site/content-at-scale/',keyword:'content at scale'},{id:5,url:'https://contentscale.site/ai-content-quality-checker/',keyword:'content quality'},
+   {id:9,url:'https://contentscale.site/',keyword:'content at scale'}]});
+ assert.equal(r.status,'FUNNEL_PROPOSAL');
+ assert.equal(r.stages[1].url,'https://contentscale.site/ai-content-quality-checker/');assert.equal(r.stages[1].basis,'ACTION_PATH_NAMES_A_TOOL_OR_SERVICE');
+ assert.equal(r.stages[1].link.status,'LINK_CANDIDATE_FOR_REVIEW');assert.equal(r.stages[1].link.under_heading,'How to Audit Your Content Before You Scale');
+ assert(!r.stages.some(s=>s.url==='https://contentscale.site/content-at-scale/'),'a guide is not an action page');
+});

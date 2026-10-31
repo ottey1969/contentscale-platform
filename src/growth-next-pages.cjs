@@ -95,7 +95,10 @@ function actionKind(p){
  let path='';try{path=new URL(p.url).pathname.toLowerCase()}catch{return null}
  if(ACTION_PATH.test(path))return 'ACTION_PATH';
  const c=classifyTitle(String(p.keyword||''),'');
- return c==='PRODUCT_TOOL'||c==='LOCAL_SERVICE'?'ACTION_KEYWORD':null;
+ if(c==='PRODUCT_TOOL'||c==='LOCAL_SERVICE')return 'ACTION_KEYWORD';
+ // A tool or service named in the URL itself (/ai-content-quality-checker/) is a place to act as well.
+ const fromPath=classifyTitle(pathWords(p.url),'');
+ return fromPath==='PRODUCT_TOOL'||fromPath==='LOCAL_SERVICE'?'ACTION_PATH_NAMES_A_TOOL_OR_SERVICE':null;
 }
 
 function readerFunnel({pageUrl='',focusQuery='',pageIntent=null,pageHtml='',sitePages=[]}={}){

@@ -88,6 +88,19 @@ test('Free check cache: reused only for the same market and the same research co
  }finally{await pool.query('DELETE FROM growth_free_checks WHERE url=$1',[url])}
 });
 
+test('Growth AI answers: one per AI system per page and search term; a new paste replaces it',async()=>{
+ const st=require('../src/growth-ai-answers-store.cjs');
+ const term='Content Scaling '+Date.now();
+ try{
+  await st.saveGrowthAiAnswer(pool,{clientId:client,pageId:page,query:term,engine:'claude',rawText:'first',parsed:{sources:[]}});
+  await st.saveGrowthAiAnswer(pool,{clientId:client,pageId:page,query:term.toLowerCase(),engine:'claude',rawText:'second',parsed:{sources:['https://a.example/']}});
+  await st.saveGrowthAiAnswer(pool,{clientId:client,pageId:page,query:term,engine:'perplexity',rawText:'p',parsed:{sources:[]}});
+  const rows=await st.listGrowthAiAnswers(pool,{clientId:client,pageId:page,query:'  '+term.toUpperCase()+' '});
+  assert.deepEqual(rows.map(r=>[r.engine,r.raw_text]),[['claude','second'],['perplexity','p']]);
+  assert.equal((await st.listGrowthAiAnswers(pool,{clientId:client,pageId:page,query:'another term'})).length,0);
+ }finally{await pool.query('DELETE FROM tracker_growth_ai_answers WHERE tracker_client_id=$1',[client])}
+});
+
 test('markets: set in order, invalid codes dropped, an empty list removes the setting',async()=>{
  assert.deepEqual(await markets.setPageMarkets(pool,{clientId:client,pageId:page,countries:['nl','UK','xx','be'],language:'en'}),{countries:['NL','GB','BE'],language:'en'});
  assert.deepEqual((await markets.getPageMarkets(pool,{clientId:client,pageId:page})).countries,['NL','GB','BE']);

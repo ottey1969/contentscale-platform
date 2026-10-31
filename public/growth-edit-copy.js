@@ -12,7 +12,11 @@
   o=o||{};
   var changes=[{placement:o.placement,section:o.target_section,heading:o.draft_heading,text:o.proposed_text,existing:o.existing_passage}]
    .concat((o.additional_sections||[]).map(function(a){return {placement:a.placement,heading:a.heading,text:a.text}}));
-  var out=['Target page: '+String(o.target_url||'')];
+  var ready=o.publication_readiness,blockers=(ready&&ready.blockers)||[];
+  var out=[];
+  // Reviewable is not publishable: the copied text says so first, with what is still required.
+  if(ready&&ready.status==='NOT_READY_FOR_PUBLICATION')out.push('DRAFT FOR REVIEW — NOT READY FOR PUBLICATION\n'+blockers.map(function(b){return (b.required?'Required: ':'Recommended: ')+b.detail}).join('\n'));
+  out.push('Target page: '+String(o.target_url||''));
   changes.forEach(function(c,i){
    if(!c.text)return;
    var part=['— Change '+(i+1)+' of '+changes.length+' —',placementLine(c.placement,c.section)];

@@ -29,6 +29,29 @@
   var ul=node('ul',null,parent);
   data.forEach(item=>node('li',display(item),ul));
  }
+ function renderAiCheck(box,d){
+  var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
+  node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
+  var ul=node('ul',null,box);(x.engines||[]).forEach(function(e){node('li',e.label+': '+(!e.checked?'not checked':!e.verifiable?'no RESOURCES list — not verified':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you')+(e.checked&&e.verifiable?' ('+e.sources+' sources)':''),ul)});
+  if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
+  if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
+  var form=node('div',null,box);
+  node('p','Copy the prompt, paste it into a new chat with web search on, then paste the complete answer (including RESOURCES) at the AI system you used.',form);
+  var pr=node('textarea',null,form);pr.rows=5;pr.readOnly=true;pr.value=c.prompt;pr.style.width='100%';
+  var cp=node('button','Copy prompt',form);cp.type='button';cp.addEventListener('click',function(){pr.select();if(navigator.clipboard)navigator.clipboard.writeText(pr.value);cp.textContent='Copied ✓'});
+  var sel=node('select',null,form);(c.engines||[]).forEach(function(e){var o=node('option',e.label,sel);o.value=e.id});
+  var ta=node('textarea',null,form);ta.rows=6;ta.style.width='100%';ta.placeholder='Paste the complete AI answer here';ta.maxLength=c.max_paste||20000;
+  var go=node('button','Analyse answer',form);go.type='button';var st=node('small',null,form);st.setAttribute('role','status');
+  go.addEventListener('click',async function(){
+   if(!ta.value.trim()){st.textContent='Paste the answer first.';return}
+   go.disabled=true;st.textContent='Analysing…';
+   try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-answer?page_id='+encodeURIComponent(id),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({engine:sel.value,text:ta.value,query:c.search_term,page_url:c.page_url,google_urls:((d.search_discovery&&d.search_discovery.leads)||[]).map(function(l){return l.url})})});
+    var j=await r.json();if(!j.success)throw Error(j.error||j.code||'Not analysed');
+    if(j.ai_check){d.ai_check=j.ai_check;if(last)last.ai_check=j.ai_check;renderAiCheck(box,d)}
+   }catch(e){st.textContent=String(e.message||e);go.disabled=false}
+  });
+ }
  function render(d){
   container.textContent='';researchDetails=null;
   var decision=d.growth_decision||{},recommendation=decision.primary_next_action;
@@ -97,7 +120,7 @@
    node('p','Search intent: '+String(d.intent_resolution.status)+
     (d.intent_resolution.original_keyword?' · Original tracked term: '+d.intent_resolution.original_keyword:''),primary);
   if(ownerReport&&outcome.decision==='IMPROVE_EXISTING'&&outcome.proposed_text){
-   node('h3','Concrete improvement for editorial review',primary);
+   node('h3','Concrete improvement for editorial review'+(outcome.publication_readiness&&outcome.publication_readiness.status==='NOT_READY_FOR_PUBLICATION'?' — draft, not ready for publication':''),primary);
    // Reviewable is not publishable: say what still stands between this proposal and publication.
    var ready=outcome.publication_readiness;
    if(ready&&(ready.blockers||[]).length){
@@ -125,7 +148,8 @@
     if(outcome.source_comparison.competitor_passage)node('pre',outcome.source_comparison.competitor_passage,primary);
    }
    node('p','This is a reviewable proposal, NOT a proven ranking gain or automatically verified missing answer.',primary);
-   var copyEdit=node('button','Copy proposed Growth edit'+((outcome.additional_sections||[]).length?' (all '+(1+outcome.additional_sections.length)+' changes)':''),primary);copyEdit.type='button';
+   var notReady=!!(outcome.publication_readiness&&outcome.publication_readiness.status==='NOT_READY_FOR_PUBLICATION');
+   var copyEdit=node('button',(notReady?'Copy draft for review — not for publication':'Copy proposed Growth edit')+((outcome.additional_sections||[]).length?' (all '+(1+outcome.additional_sections.length)+' changes)':''),primary);copyEdit.type='button';
    copyEdit.addEventListener('click',async function(){
     var material=window.growthEditCopyText(outcome);
     try{await navigator.clipboard.writeText(material);copyEdit.textContent='Copied'}
@@ -140,6 +164,8 @@
   }else if(ownerReport&&d.editorial_review_draft?.draft?.sections?.length){
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
+  // AI answers for this search term: offered right after the decision, read fresh on every load, never re-running research.
+  if(d.ai_check){var aiBox=section('AI answers for “'+d.ai_check.search_term+'”');aiBox.id='growthAiCheck';renderAiCheck(aiBox,d)}
   var superseded=!!(decision.final_decision&&recommendation&&recommendation.stage==='RESEARCH_STARTING_POINT');
   var s=superseded?section('How the research started'):section('Research context and next check');
   if(superseded)node('p','Starting point only. The decision at the top of this report ('+String(decision.final_decision.decision||'').replace(/_/g,' ')+') replaces this step.',s);
@@ -591,6 +617,7 @@
    }
    if(fn){
     node('h3','From information to action',beyond);
+    if(fn.for_url){var fu=node('p','For the page that answers this search: ',beyond);link(fn.for_url,fn.for_url,fu)}
     if(fn.status==='FUNNEL_PROPOSAL'){
      var steps=(fn.stages||[]),actionStages=steps.filter(function(st){return st.stage!=='INFORMATION'});
      actionStages.forEach(function(st){
