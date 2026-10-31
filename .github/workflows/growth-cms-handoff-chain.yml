@@ -40,6 +40,9 @@ on:
       - 'tests/growth-publication-readiness.test.cjs'
       - 'tests/growth-ai-relevance.test.cjs'
       - 'tests/growth-tracker-ai-check.test.cjs'
+      - 'tests/growth-outcome.test.cjs'
+      - 'src/growth-outcome.cjs'
+      - 'tests/fixtures/growth-report-64/**'
       - 'src/growth-ai-answers-store.cjs'
       - 'src/growth-publication-readiness.cjs'
       - 'src/growth-ai-relevance.cjs'
@@ -91,7 +94,7 @@ jobs:
       - name: UI scripts parse
         run: node --check public/growth-cms-neutral-handoff.js && node --check public/growth-automatic-report-ui.js && node --check public/growth-edit-copy.js && node --check public/growth-competitor-overview.js && node --check public/growth-gap-checklist.js && node --check public/growth-new-page-ui.js
       - name: Proposal store and CMS package (report 50)
-        run: node --test tests/growth-proposal-cms-handoff.test.cjs tests/growth-report-51-review-regression.test.cjs tests/growth-report-52-regression.test.cjs tests/growth-report-53-regression.test.cjs tests/growth-report-54-regression.test.cjs tests/growth-report-55-regression.test.cjs tests/growth-report-56-regression.test.cjs tests/growth-search-market.test.cjs tests/growth-review-221-design.test.cjs tests/growth-new-page.test.cjs tests/growth-page-2324-grouping.test.cjs tests/growth-relevance-and-evidence.test.cjs tests/growth-one-engine.test.cjs tests/growth-serp-titles.test.cjs tests/growth-next-pages.test.cjs tests/growth-edit-copy.test.cjs tests/growth-publication-readiness.test.cjs tests/growth-ai-relevance.test.cjs tests/growth-tracker-ai-check.test.cjs tests/growth-task-meaning.test.cjs tests/growth-competitor-overview.test.cjs tests/growth-selected-writing.test.cjs tests/growth-selection-write-route.test.cjs
+        run: node --test tests/growth-proposal-cms-handoff.test.cjs tests/growth-report-51-review-regression.test.cjs tests/growth-report-52-regression.test.cjs tests/growth-report-53-regression.test.cjs tests/growth-report-54-regression.test.cjs tests/growth-report-55-regression.test.cjs tests/growth-report-56-regression.test.cjs tests/growth-search-market.test.cjs tests/growth-review-221-design.test.cjs tests/growth-new-page.test.cjs tests/growth-page-2324-grouping.test.cjs tests/growth-relevance-and-evidence.test.cjs tests/growth-one-engine.test.cjs tests/growth-serp-titles.test.cjs tests/growth-next-pages.test.cjs tests/growth-edit-copy.test.cjs tests/growth-publication-readiness.test.cjs tests/growth-ai-relevance.test.cjs tests/growth-tracker-ai-check.test.cjs tests/growth-outcome.test.cjs tests/growth-task-meaning.test.cjs tests/growth-competitor-overview.test.cjs tests/growth-selected-writing.test.cjs tests/growth-selection-write-route.test.cjs
       - name: Research -> proposal -> CMS package -> publication without GSC -> Cockpit -> measurement (real PostgreSQL)
         env:
           GROWTH_E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/growth_e2e

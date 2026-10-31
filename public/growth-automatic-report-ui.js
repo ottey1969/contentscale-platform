@@ -79,7 +79,8 @@
   var outcome=ownerReport&&d.editorial_work_packet?.editorial_decision?
    d.editorial_work_packet.editorial_decision:(d.editorial_decision_gate||{});
   var primary=section('Growth result · decision and evidence');
-  node('h3',String(outcome.decision||'DATA_BLOCKED').replace(/_/g,' '),primary);
+  node('h3',d.outcome_context?d.outcome_context.headline:String(outcome.decision||'DATA_BLOCKED').replace(/_/g,' '),primary);
+  if(d.outcome_context){var oc=node('p',d.outcome_context.note+' ',primary);var go=node('a','Go to the list ↓',oc);go.href='#growthGapChoice'}
   node('p',String(outcome.reason||outcome.next_action||'A verified editorial decision was not available.'),primary);
   if(outcome.target_url){var chosen=node('p','Target page: ',primary);link(outcome.target_url,outcome.target_url,chosen)}
   node('p','Focus query: '+String(outcome.focus_query||d.intent_resolution?.query||d.search?.focus_query||'not verified'),primary);
@@ -193,7 +194,8 @@
   var renderChecklist=typeof window!=='undefined'&&window.renderGrowthGapChecklist;
   if(d.gap_list&&typeof renderChecklist==='function'){
    var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
-   try{renderChecklist({...gl,target_url:d.url},node('section',null,container),{write:writeUrl?async function(ids){
+   var choiceBox=node('section',null,container);choiceBox.id='growthGapChoice';
+   try{renderChecklist({...gl,target_url:d.url},choiceBox,{write:writeUrl?async function(ids){
     // Without AI answers of the last 14 days the editor decides first: check AI, or continue without it.
     var choice=await aiGate(d);if(!choice)return {success:false,code:'Check the AI answers first (see “AI answers for …” above); your selection is kept.'};
     // The ticks are the owner's selection (saved deliberately first); writing then takes the next items from it.

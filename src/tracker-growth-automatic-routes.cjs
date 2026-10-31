@@ -2,6 +2,7 @@
 const {observeSerpTitles}=require('./growth-serp-titles.cjs');
 const {spokeCandidates,readerFunnel}=require('./growth-next-pages.cjs');
 const {publicationReadiness}=require('./growth-publication-readiness.cjs');
+const {reconcileOutcome}=require('./growth-outcome.cjs');
 const {annotateAiVisibility,MAX_AGE_DAYS:AI_MAX_AGE_DAYS}=require('./growth-ai-relevance.cjs');
 const aiAnswers=require('./growth-free/ai-answers.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
@@ -681,6 +682,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
     url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(targetId)}:null,
    editorial_decision_gate:completeDecision,
+   // One outcome when the task check says NO_CHANGE but the topic comparison has topics on 2+ ranking pages.
+   outcome_context:reconcileOutcome({decision:completeDecision,gapList}),
    access:{can_edit:true,read_only_analysis:false,owner_report:true},
    editorial_review_draft:completionOut,
    editorial_work_packet:workPacket,

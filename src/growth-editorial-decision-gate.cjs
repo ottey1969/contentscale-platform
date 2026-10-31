@@ -122,7 +122,9 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
    'Required evidence was not accessible: COMPLETE_COMPETITOR_HTML.','Re-run with complete competitor captures before closing this query as NO_CHANGE.');
  if(!gaps.length)
   return {...base,decision:'NO_CHANGE',decision_scope:'DESTINATION_TEACHES_SHARED_TASKS',verified_gap:false,gap_basis:null,
-   reason:'Every reader task taught by two or more independent competitors is already taught on the destination or on another same-site page.'+
+   // The claim is only as wide as the task check: name how many shared tasks it found (report 64: one, "templates").
+   reason:'Every reader task taught by two or more independent competitors is already taught on the destination or on another same-site page'+
+    ' (the task check found '+supported.length+' such task'+(supported.length===1?'':'s')+': '+supported.slice(0,5).map(t=>String(t.label||t.code).replace(/^Competitors teach\s*/,'')).join(', ')+').'+
     (destinationTruncated?' The destination capture was cut at the readable-HTML limit; every task was found before the cut.':''),
    closure_report:{destination:target,tasks_checked:supported.map(t=>({code:t.code,label:t.label,destination_status:t.destination.status,
      destination_passages:t.destination.passages,covered_elsewhere:t.covered_elsewhere_on_site||[]})),

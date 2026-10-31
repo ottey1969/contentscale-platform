@@ -101,6 +101,18 @@ function actionKind(p){
  return fromPath==='PRODUCT_TOOL'||fromPath==='LOCAL_SERVICE'?'ACTION_PATH_NAMES_A_TOOL_OR_SERVICE':null;
 }
 
+// A link on one loose word ("quality") or in a table of contents does not tell the reader where it goes: then the owner
+// writes one descriptive link at the end of the answer instead.
+const NAVIGATION_HEADING=/\b(table of contents|contents|on this page|inhoud(?:sopgave)?|in this article)\b/i;
+function linkOf(plan,page){
+ const base={status:plan.status,under_heading:plan.under_heading||null,anchor_text:plan.anchor_text||null,paragraph_excerpt:plan.paragraph_excerpt||null,action:plan.action};
+ if(plan.status!=='LINK_CANDIDATE_FOR_REVIEW')return base;
+ const words=String(plan.anchor_text||'').trim().split(/\s+/).filter(w=>/[a-z0-9]/i.test(w)).length;
+ if(words>=2&&!NAVIGATION_HEADING.test(String(plan.under_heading||'')))return base;
+ return {...base,status:'WRITE_OWN_LINK_TEXT',weak_reason:words<2?'ONE_WORD_ANCHOR':'TABLE_OF_CONTENTS',
+  action:'No paragraph names this page clearly'+(words<2?' (the only match is the single word “'+String(plan.anchor_text||'')+'”)':' outside the table of contents')+
+   '. Add one link at the end of your answer with text that says where it goes, for example “'+String(page.keyword||'the next step')+'”.'};
+}
 function readerFunnel({pageUrl='',focusQuery='',pageIntent=null,pageHtml='',sitePages=[]}={}){
  if(pageIntent!=='INFORMATIONAL_GUIDE')return {status:'NOT_AN_INFORMATIONAL_PAGE',stages:[],
   note:'A route from information to action is proposed for informational pages only.'};
@@ -116,8 +128,7 @@ function readerFunnel({pageUrl='',focusQuery='',pageIntent=null,pageHtml='',site
   const plan=pageHtml?planInternalLinks({targetUrl:x.p.url,focusQuery:x.p.keyword||pathWords(x.p.url),pages:[{url:pageUrl,html:pageHtml}]})[0]||null:null;
   return {stage:'ACTION',url:x.p.url,keyword:x.p.keyword||null,basis:x.kind,
    topic_match:x.shared.length?'shares '+x.shared.join(', ')+' with this page':'no shared topic words: a general next step only',
-   link:plan?{status:plan.status,under_heading:plan.under_heading||null,anchor_text:plan.anchor_text||null,paragraph_excerpt:plan.paragraph_excerpt||null,action:plan.action}:
-    {status:'PAGE_NOT_READ',action:'Read this page before placing a link.'}};
+   link:plan?linkOf(plan,x.p):{status:'PAGE_NOT_READ',action:'Read this page before placing a link.'}};
  });
  return {status:'FUNNEL_PROPOSAL',stages:[{stage:'INFORMATION',url:pageUrl,role:'Answer the question completely and usefully on its own, before any offer.'},...steps],
   rules:['The information stays complete without the offer; the reader is never pushed before the question is answered.',
@@ -126,4 +137,4 @@ function readerFunnel({pageUrl='',focusQuery='',pageIntent=null,pageHtml='',site
   note:'Proposal for the owner; nothing is written or published.'};
 }
 
-module.exports={spokeCandidates,readerFunnel,MIN_IMPRESSIONS,DEEP_POSITION};
+module.exports={spokeCandidates,readerFunnel,linkOf,MIN_IMPRESSIONS,DEEP_POSITION};

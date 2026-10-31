@@ -1,0 +1,736 @@
+{
+ "_note": "Real Growth report 64 (contentscale.site → /content-scaling/, \"content scaling\", 2026-10-31 09:53): the NO_CHANGE decision with its closure report, the choice list (titles, coverage, sources) and the proposed link of the route to action.",
+ "editorial_decision_gate": {
+  "decision": "NO_CHANGE",
+  "reason": "Every reader task taught by two or more independent competitors is already taught on the destination or on another same-site page.",
+  "closure_report": {
+   "destination": "https://contentscale.site/content-scaling/",
+   "tasks_checked": [
+    {
+     "code": "task_templa",
+     "label": "Competitors teach “4. Leverage templates”",
+     "destination_status": "COVERED",
+     "destination_passages": [],
+     "covered_elsewhere": []
+    }
+   ],
+   "competitors": [
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+     "host": "aprimo.com",
+     "partial": false,
+     "sections": 9
+    },
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling",
+     "host": "jasper.ai",
+     "partial": false,
+     "sections": 13
+    },
+    {
+     "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation",
+     "host": "optimizely.com",
+     "partial": false,
+     "sections": 3
+    }
+   ],
+   "limit": "Lexical concept groups on captured HTML; no ranking or quality claim."
+  },
+  "target_url": "https://contentscale.site/content-scaling/",
+  "focus_query": "content scaling"
+ },
+ "gap_list": {
+  "status": "OBSERVED",
+  "writing_allowed": true,
+  "evidence": {
+   "status": "ENOUGH_EVIDENCE",
+   "readable_ranking_pages": 3
+  },
+  "items": [
+   {
+    "id": "t-1a5bf8c49d",
+    "group": "MISSING_TOPIC",
+    "title": "Definition of content scaling",
+    "coverage": "MISSING",
+    "recommended": true,
+    "writable": true,
+    "priority": {
+     "sources": 2,
+     "suggested_action": "Add a new section; you choose where."
+    }
+   },
+   {
+    "id": "t-687ac1a85b",
+    "group": "MISSING_TOPIC",
+    "title": "Outsourcing and collaborative content creation",
+    "coverage": "MISSING",
+    "recommended": true,
+    "writable": true,
+    "priority": {
+     "sources": 2,
+     "suggested_action": "Add a new section; you choose where."
+    }
+   },
+   {
+    "id": "t-800f1532f0",
+    "group": "MISSING_TOPIC",
+    "title": "Content repurposing",
+    "coverage": "MISSING",
+    "recommended": null,
+    "writable": true,
+    "priority": {
+     "sources": 1,
+     "suggested_action": "Add a new section; you choose where."
+    }
+   },
+   {
+    "id": "t-5444e32e04",
+    "group": "MISSING_TOPIC",
+    "title": "Style guides and content personalization across audience segments",
+    "coverage": "MISSING",
+    "recommended": null,
+    "writable": true,
+    "priority": {
+     "sources": 1,
+     "suggested_action": "Add a new section; you choose where."
+    }
+   },
+   {
+    "id": "t-a33173007d",
+    "group": "MISSING_TOPIC",
+    "title": "Measuring content scaling success and ROI",
+    "coverage": "MISSING",
+    "recommended": null,
+    "writable": true,
+    "priority": {
+     "sources": 1,
+     "suggested_action": "Add a new section; you choose where."
+    }
+   },
+   {
+    "id": "t-e3d085ba62",
+    "group": "NOT_RELEVANT",
+    "title": "Author biography",
+    "coverage": "MISSING",
+    "recommended": null,
+    "writable": false,
+    "priority": {
+     "sources": 1,
+     "suggested_action": "No section proposed: the AI judged that this topic does not serve someone searching this term (Author biography section does not answer the user's search intent about content scaling concepts or methods.). Add it yourself only if you know it belongs on this page."
+    }
+   },
+   {
+    "id": "t-db56106867",
+    "group": "PARTIAL_TOPIC",
+    "title": "Importance and benefits of scaling content",
+    "coverage": "PARTIAL",
+    "recommended": true,
+    "writable": true,
+    "priority": {
+     "sources": 2,
+     "suggested_action": "Extend your section “Content Scaling Statistics — 2024–2026”."
+    }
+   },
+   {
+    "id": "t-ee3f0f038f",
+    "group": "PARTIAL_TOPIC",
+    "title": "Using AI and automation tools for content scaling",
+    "coverage": "PARTIAL",
+    "recommended": true,
+    "writable": true,
+    "priority": {
+     "sources": 2,
+     "suggested_action": "Extend your section “🔑 The 5-Step GRAAF Workflow”."
+    }
+   }
+  ]
+ },
+ "funnel_action": {
+  "url": "https://contentscale.site/ai-content-quality-checker/",
+  "keyword": "ai content quality checker",
+  "link": {
+   "status": "LINK_CANDIDATE_FOR_REVIEW",
+   "under_heading": "📑 Table of Contents",
+   "anchor_text": "quality",
+   "paragraph_excerpt": "Content scaling is no longer about publishing more — it is about publishing more without losing quality. According to Google’s helpful-content guidance , people-first content is what survives core updates, while thin, mass-produced pages get filtered out. This",
+   "action": "Wrap the anchor words that already exist in this paragraph; do not rewrite the paragraph. Verify both pages are live first."
+  }
+ },
+ "competitor_overview": {
+  "status": "OBSERVED",
+  "query": "content scaling",
+  "this_page": "https://contentscale.site/content-scaling/",
+  "ranking_pages_read": 3,
+  "scope": "What the readable ranking pages contain compared with this page. Observation only: no fact check, no ranking promise; the editor decides what to add.",
+  "ranking_pages": [
+   {
+    "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+    "host": "aprimo.com",
+    "serp_position": 1,
+    "partial_capture": false,
+    "elements": {
+     "words": 1570,
+     "h2": 10,
+     "h3": 32,
+     "faq": true,
+     "question_headings": 1,
+     "tables": 0,
+     "lists": 23,
+     "images": 9,
+     "video": false,
+     "structured_data": [],
+     "author": false,
+     "date": false
+    },
+    "content_headings": [
+     "Content Scaling: Everything You Need To Know",
+     "What is Content Scaling?",
+     "Why Content Scaling Matters",
+     "Strategies for Content Scaling",
+     "Content Repurposing",
+     "Automation and AI Tools",
+     "Collaborative Content Creation",
+     "Agile Content Planning",
+     "Measuring Content Scaling Success and ROI"
+    ]
+   },
+   {
+    "url": "https://www.jasper.ai/blog/content-scaling",
+    "host": "jasper.ai",
+    "serp_position": 2,
+    "partial_capture": false,
+    "elements": {
+     "words": 2624,
+     "h2": 12,
+     "h3": 8,
+     "faq": false,
+     "question_headings": 2,
+     "tables": 0,
+     "lists": 15,
+     "images": 31,
+     "video": false,
+     "structured_data": [
+      "Article",
+      "Person",
+      "WebPage",
+      "Organization",
+      "WebSite",
+      "BreadcrumbList",
+      "ListItem"
+     ],
+     "author": true,
+     "date": true
+    },
+    "content_headings": [
+     "Content Scaling: 7 Tips for Creating More High-Quality Content",
+     "What is content scaling?",
+     "When is scaling content creation important?",
+     "7 tips you need to know for scaling content",
+     "1. Create a style guide",
+     "2. Outsource content or parts of the content creation process",
+     "3. Use an AI tool",
+     "4. Leverage templates",
+     "5. Create similar content for different audience segments",
+     "6. Use repetitive processes and workflows",
+     "7. Batch tasks together",
+     "Content scaling doesn’t have to be overwhelming",
+     "Dave Rogenmoser"
+    ]
+   },
+   {
+    "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation",
+    "host": "optimizely.com",
+    "serp_position": 6,
+    "partial_capture": false,
+    "elements": {
+     "words": 1239,
+     "h2": 2,
+     "h3": 11,
+     "faq": false,
+     "question_headings": 0,
+     "tables": 0,
+     "lists": 3,
+     "images": 1,
+     "video": false,
+     "structured_data": [
+      "Organization",
+      "ImageObject",
+      "WebSite"
+     ],
+     "author": false,
+     "date": true
+    },
+    "content_headings": [
+     "Content scaling: 8 ways to create better content, (way) faster",
+     "How to scale your content creation"
+    ]
+   }
+  ],
+  "this_page_elements": {
+   "words": 2606,
+   "h2": 10,
+   "h3": 5,
+   "faq": true,
+   "question_headings": 2,
+   "tables": 1,
+   "lists": 5,
+   "images": 7,
+   "video": false,
+   "structured_data": [
+    "Organization",
+    "Person",
+    "PostalAddress",
+    "ImageObject",
+    "WebSite",
+    "WebPage",
+    "BlogPosting",
+    "FAQPage",
+    "Question",
+    "Answer"
+   ],
+   "author": true,
+   "date": true
+  },
+  "this_page_sections": [
+   {
+    "heading": "Content Scaling in 2026: A Quality-First Guide to Sustainable Growth",
+    "excerpt": "Audit first: Never scale a broken process — use Search Console data to find your real gaps before adding volume. ( Google Search Central, 2024 ) Set a quality gate: Hold every page to a minimum 85/100",
+    "words": 116,
+    "furniture": false
+   },
+   {
+    "heading": "📑 Table of Contents",
+    "excerpt": "How to Audit Your Content Before You Scale What Is the GRAAF Framework for Content Scaling? How the GRAAF Workflow Works (Brief → Publish) How to Start Scaling Content the Right Way Content scaling is",
+    "words": 101,
+    "furniture": false
+   },
+   {
+    "heading": "How to Audit Your Content Before You Scale",
+    "excerpt": "Content scaling starts with an honest audit, not a content calendar. Before you add a single new article, you need to know which pages earn traffic, which dilute your topical authority, and which are ",
+    "words": 233,
+    "furniture": false
+   },
+   {
+    "heading": "What Is the GRAAF Framework for Content Scaling?",
+    "excerpt": "The GRAAF Framework is a quality-first methodology for content scaling, built on five signals: Genuinely Credible, Relevant, Actionable, Accurate, and Fresh . It turns the vague idea of “quality” into",
+    "words": 147,
+    "furniture": false
+   },
+   {
+    "heading": "⚠️ Common Mistake",
+    "excerpt": "Scaling without E-E-A-T. Mass-producing pages with no named author, no sources, and no real experience produces low-trust content that Google may de-index during a core update — the exact opposite of ",
+    "words": 83,
+    "furniture": false
+   },
+   {
+    "heading": "Quality-First vs Volume-First Content Scaling",
+    "excerpt": "Not all content scaling strategies carry the same risk. The table below compares three common approaches on the factors that actually decide whether scaled content ranks, gets cited, and survives core",
+    "words": 89,
+    "furniture": false
+   },
+   {
+    "heading": "How the GRAAF Workflow Works (Brief → Publish)",
+    "excerpt": "Understanding the theory is useful; seeing the operational workflow is what lets you replicate it. Content scaling works when every piece moves through the same gated path, so quality never depends on",
+    "words": 84,
+    "furniture": false
+   },
+   {
+    "heading": "🔑 The 5-Step GRAAF Workflow",
+    "excerpt": "Brief & intent mapping: map the primary keyword to one specific search intent before writing. AI-assisted research & draft: let AI handle structure-pulling and first drafts; reserve human time for jud",
+    "words": 151,
+    "furniture": false
+   },
+   {
+    "heading": "How to Start Scaling Content the Right Way",
+    "excerpt": "Here is what to do first. Content scaling is a sequence, not a switch — rushing volume before the foundation is ready is the most expensive mistake you can make. Start small, prove the system, then ex",
+    "words": 191,
+    "furniture": false
+   },
+   {
+    "heading": "Content Scaling Statistics — 2024–2026",
+    "excerpt": "1,890 words — the average length of page-one Google results, underlining that comprehensive beats thin when scaling. ( Backlinko, 2023 ) 3× more backlinks — data-backed content earns roughly three tim",
+    "words": 115,
+    "furniture": false
+   },
+   {
+    "heading": "What Google’s Guidelines and the Data Show",
+    "excerpt": "Google’s helpful-content guidance is explicit that content should be created for people first, with demonstrable expertise and real value — not produced primarily to rank. Scaled content that ignores ",
+    "words": 98,
+    "furniture": false
+   },
+   {
+    "heading": "E-commerce Blog (Home Goods, US): 78% Traffic Recovery in 90 Days",
+    "excerpt": "Challenge: An online home-goods retailer lost 65% of organic traffic after Google’s March 2024 Core Update. Content averaged a 52/100 ContentScore, with zero expert citations and no structured data. S",
+    "words": 77,
+    "furniture": false
+   },
+   {
+    "heading": "Want to Scale Content Without Losing Quality?",
+    "excerpt": "Run any page through the GRAAF scoring engine and see exactly where it stands — before you scale. No jargon, no hidden fees, just a score and a fix list. Or connect with Ottmar: WhatsApp +31628073996 ",
+    "words": 39,
+    "furniture": false
+   },
+   {
+    "heading": "Content Scaling — 8 Questions People Ask",
+    "excerpt": "Start with an audit, not a content calendar. Use Google Search Console data and the GRAAF Scorecard to find which pages earn traffic, which dilute authority, and which are liabilities. Fix the foundat",
+    "words": 414,
+    "furniture": false
+   },
+   {
+    "heading": "📚 Related Articles",
+    "excerpt": "The GRAAF Framework — the 100-point quality methodology behind every step in this guide. Free AI Citations Tracker — see when and where AI engines cite your content. Google Penalty Recovery — what to ",
+    "words": 223,
+    "furniture": true
+   }
+  ],
+  "this_page_fingerprint": "f0456411147eda2ef555832b64beb8990cf2422faf5ec18a008db999bc420824",
+  "elements_they_have_and_this_page_lacks": [],
+  "structured_data_they_have_and_this_page_lacks": [],
+  "length": {
+   "this_page_words": 2606,
+   "ranking_pages_median_words": 1570,
+   "this_page_h2": 10,
+   "ranking_pages_median_h2": 10
+  },
+  "topics_status": "GROUPED",
+  "topics": [
+   {
+    "topic": "Definition of content scaling",
+    "ranking_pages": 2,
+    "sections": [
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "What is Content Scaling?",
+      "excerpt": "Content scaling is the shift away from a traditional, singular-purpose content creation strategy . A scaled content approach lets an organization produce high-quality, audience-targeted pieces at high volume without sacr"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "What is content scaling?",
+      "excerpt": "Content scaling refers to expanding your content creation process to produce high-quality content pieces quickly and efficiently. It’s not a simple case of churning out more pieces just because you can, it’s about increa"
+     }
+    ],
+    "this_page": "NO",
+    "this_page_heading": null,
+    "fits_search": "YES"
+   },
+   {
+    "topic": "Outsourcing and collaborative content creation",
+    "ranking_pages": 2,
+    "sections": [
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "Collaborative Content Creation",
+      "excerpt": "Creative collaboration makes all content operations more scalable. Expanding strategies and growth-focused projects can only succeed if all team members are on the same page, both logistically and creatively. The first s"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "2. Outsource content or parts of the content creation process",
+      "excerpt": "Chances are, you have a limited number of people in your content team and there are only so many hours in a day. It’s difficult to scale content creation efforts if you only have three people writing, editing, and publis"
+     }
+    ],
+    "this_page": "NO",
+    "this_page_heading": null,
+    "fits_search": "YES"
+   },
+   {
+    "topic": "Content repurposing",
+    "ranking_pages": 1,
+    "sections": [
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "Content Repurposing",
+      "excerpt": "Reusing and repurposing improves content return on investment (ROI) and expedites the scaling process. Traditional content distribution is linear, creating customized material for each platform and campaign. A repurposin"
+     }
+    ],
+    "this_page": "NO",
+    "this_page_heading": null,
+    "fits_search": "YES"
+   },
+   {
+    "topic": "Style guides and content personalization across audience segments",
+    "ranking_pages": 1,
+    "sections": [
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "1. Create a style guide",
+      "excerpt": "Consistency is important for content; it ensures your brand is recognizable and you’re sending out the same message with every piece you publish. This helps increase brand awareness and solidify your expertise in your in"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "5. Create similar content for different audience segments",
+      "excerpt": "Not all your customers will need the same information at the same time–but they also don’t need wildly different content. Let’s say you’re launching a new time management tool that has a variety of different use cases an"
+     }
+    ],
+    "this_page": "NO",
+    "this_page_heading": null,
+    "fits_search": "YES"
+   },
+   {
+    "topic": "Measuring content scaling success and ROI",
+    "ranking_pages": 1,
+    "sections": [
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "Measuring Content Scaling Success and ROI",
+      "excerpt": "Organizations must track the success of content-related campaigns from day one, using key performance indicators (KPIs) that show revenue and engagement effects ? not just the number of eyes on the page. Here are some co"
+     }
+    ],
+    "this_page": "NO",
+    "this_page_heading": null,
+    "fits_search": "YES"
+   },
+   {
+    "topic": "Author biography",
+    "ranking_pages": 1,
+    "sections": [
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "Dave Rogenmoser",
+      "excerpt": "Dave is the Co-Founder Jasper , a Y Combinator-backed tech company based in Austin, Texas. He is also a husband and father of 3 boys."
+     }
+    ],
+    "this_page": "NO",
+    "this_page_heading": null,
+    "fits_search": "NO",
+    "fits_reason": "Author biography section does not answer the user's search intent about content scaling concepts or methods."
+   },
+   {
+    "topic": "Importance and benefits of scaling content",
+    "ranking_pages": 2,
+    "sections": [
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "Why Content Scaling Matters",
+      "excerpt": "Content scaling allows an organization to reach more consumers at every stage of the sales funnel without sacrificing personalization. McKinsey research shows that 71% of consumers expect personalized experiences, and 76"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "When is scaling content creation important?",
+      "excerpt": "Scaling content creation becomes important when you want to widen your reach. Producing content in bulk that targets consumers at different stages of the sales cycle will create a slicker funnel, while the cost of acquis"
+     }
+    ],
+    "this_page": "PARTLY",
+    "this_page_heading": "Content Scaling Statistics — 2024–2026",
+    "fits_search": "YES"
+   },
+   {
+    "topic": "Using AI and automation tools for content scaling",
+    "ranking_pages": 2,
+    "sections": [
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "Automation and AI Tools",
+      "excerpt": "Automation and artificial intelligence (AI) allow brands to meet content scaling’s intense logistical demands. As the workload expands, AI-powered automation tools find new ways of streamlining the content creation proce"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "3. Use an AI tool",
+      "excerpt": "There’s a lot of talk about AI stealing jobs from people. But not unlike many platforms for content marketing , it can be a really useful companion for content scaling. Instead of creating each piece from scratch, you ca"
+     }
+    ],
+    "this_page": "PARTLY",
+    "this_page_heading": "🔑 The 5-Step GRAAF Workflow",
+    "fits_search": "YES"
+   },
+   {
+    "topic": "General strategies and tips for scaling content creation",
+    "ranking_pages": 3,
+    "sections": [
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "Content Scaling: Everything You Need To Know",
+      "excerpt": "The best modern digital marketers are everywhere at once, reaching buyers with a meaningful personal touch. Content scaling puts this goal within reach. Here, we’ll discuss the benefits and how-to’s of content scaling, i"
+     },
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "Strategies for Content Scaling",
+      "excerpt": "Producing content at scale requires a big-picture approach and the tools to handle high volumes of material. Here are the four most important strategies to apply."
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "Content Scaling: 7 Tips for Creating More High-Quality Content",
+      "excerpt": "Need to improve your content scaling efforts but don’t know how to get started? Use these 7 easy tips to create more high-quality content at scale. Content is one of the most powerful ways to reach new audiences and prom"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "7 tips you need to know for scaling content",
+      "excerpt": "Before you begin scaling your content, it’s important to make sure you get it right. Writing hundreds of short, 300-word pieces no longer cuts it in the content world, which means your scaling strategy needs to be well-t"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "Content scaling doesn’t have to be overwhelming",
+      "excerpt": "Content scaling is crucial if you want to start producing more high-quality content. Pumping out post after post can be overwhelming, especially if you have a small team, but these tips will help speed up the process and"
+     },
+     {
+      "host": "optimizely.com",
+      "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation",
+      "position": 6,
+      "heading": "Content scaling: 8 ways to create better content, (way) faster",
+      "excerpt": "Wondering how to scale content creation but not sure where to start? Here's our guide to content scaling, complete with 8 simple tips to get your content seen. Traits of content marketers or marketing leaders who might b"
+     }
+    ],
+    "this_page": "YES",
+    "this_page_heading": "How to Start Scaling Content the Right Way",
+    "fits_search": "YES"
+   },
+   {
+    "topic": "Standardized workflows, templates, agile planning, and task batching",
+    "ranking_pages": 3,
+    "sections": [
+     {
+      "host": "aprimo.com",
+      "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+      "position": 1,
+      "heading": "Agile Content Planning",
+      "excerpt": "Being agile is a project management methodology focusing on time-limited action phases, frequent hypothesis testing, and incremental improvements. Agile marketing has taken off among scalability-focused strategists, incl"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "4. Leverage templates",
+      "excerpt": "Templates are your greatest aide when producing content at scale. Having a structure already in place that you can drag and drop new information into can save a ton of time. Imagine you’re writing a series of service pag"
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "6. Use repetitive processes and workflows",
+      "excerpt": "Creating repetitive processes and workflows can really speed things up over time with content production. Start by making a content marketing plan that includes what pieces you need to create, how you’re going to create "
+     },
+     {
+      "host": "jasper.ai",
+      "url": "https://www.jasper.ai/blog/content-scaling",
+      "position": 2,
+      "heading": "7. Batch tasks together",
+      "excerpt": "We touched briefly on batching tasks earlier. When you’re using an AI tool like Jasper, instead of going through the entire content creation process for one piece before going back to the beginning and starting again on "
+     },
+     {
+      "host": "optimizely.com",
+      "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation",
+      "position": 6,
+      "heading": "How to scale your content creation",
+      "excerpt": "Create repeatable workflows There's a lot about the content creation process that can—and should be—standardized. Why? Because it makes everyone's lives easier... and gets content out faster. By creating repeatable workf"
+     }
+    ],
+    "this_page": "YES",
+    "this_page_heading": "How the GRAAF Workflow Works (Brief → Publish)",
+    "fits_search": "YES"
+   }
+  ],
+  "topics_this_page_lacks": [
+   {
+    "topic": "Definition of content scaling",
+    "ranking_pages": 2,
+    "examples": [
+     {
+      "host": "aprimo.com",
+      "heading": "What is Content Scaling?"
+     },
+     {
+      "host": "jasper.ai",
+      "heading": "What is content scaling?"
+     }
+    ]
+   },
+   {
+    "topic": "Outsourcing and collaborative content creation",
+    "ranking_pages": 2,
+    "examples": [
+     {
+      "host": "aprimo.com",
+      "heading": "Collaborative Content Creation"
+     },
+     {
+      "host": "jasper.ai",
+      "heading": "2. Outsource content or parts of the content creation process"
+     }
+    ]
+   },
+   {
+    "topic": "Content repurposing",
+    "ranking_pages": 1,
+    "examples": [
+     {
+      "host": "aprimo.com",
+      "heading": "Content Repurposing"
+     }
+    ]
+   },
+   {
+    "topic": "Style guides and content personalization across audience segments",
+    "ranking_pages": 1,
+    "examples": [
+     {
+      "host": "jasper.ai",
+      "heading": "1. Create a style guide"
+     },
+     {
+      "host": "jasper.ai",
+      "heading": "5. Create similar content for different audience segments"
+     }
+    ]
+   },
+   {
+    "topic": "Measuring content scaling success and ROI",
+    "ranking_pages": 1,
+    "examples": [
+     {
+      "host": "aprimo.com",
+      "heading": "Measuring Content Scaling Success and ROI"
+     }
+    ]
+   },
+   {
+    "topic": "Author biography",
+    "ranking_pages": 1,
+    "examples": [
+     {
+      "host": "jasper.ai",
+      "heading": "Dave Rogenmoser"
+     }
+    ]
+   }
+  ],
+  "ungrouped_sections": []
+ },
+ "editorial_decision_gate_full_for_gap_list": {
+  "decision": "NO_CHANGE"
+ }
+}
