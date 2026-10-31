@@ -1,0 +1,60 @@
+{
+ "_note": "Real Growth report 62 (contentscale.site → /content-scaling/, \"content scaling\", NL, 2026-10-31): the editorial decision as stored.",
+ "editorial_decision_gate": {
+  "decision": "IMPROVE_EXISTING",
+  "target_url": "https://contentscale.site/content-scaling/",
+  "target_section": "🔑 The 5-Step GRAAF Workflow",
+  "placement": {
+   "mode": "ADD_AFTER_SECTION",
+   "section_heading": "🔑 The 5-Step GRAAF Workflow",
+   "reason": "Closest existing section by shared concepts (specif, clear, publis, intern); the new section continues that explanation."
+  },
+  "draft_heading": "How Creating a Style Guide Helps Maintain Consistency When Scaling Content",
+  "proposed_text": "Creating a style guide establishes clear formatting, voice, and structural requirements before expanding publishing volume. Content managers draft guidelines covering tone of voice, heading hierarchy, citation standards, and terminology rules. Writers and editors consult this foundational document to align every draft with team standards, helping individual contributors maintain cohesive messaging across all assets.\n\nTeams maintain consistency by integrating the style document directly into production workflows. Editors evaluate drafts against explicit criteria, verifying proper attribution, formatting, and structural organization prior to publishing. Defining voice and formatting standards reduces subjective editorial decisions, allowing multiple contributors to produce uniform work as output increases.",
+  "existing_passage": null,
+  "additional_sections": [
+   {
+    "task": "task_outsou",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "How to Audit Your Content Before You Scale",
+     "reason": "Closest existing section by shared concepts (honest, expand, publis, thre); the new section continues that explanation."
+    },
+    "heading": "How to Outsource Content Creation and Delegate Parts of Production to Freelancers",
+    "text": "Organizations can outsource specific parts of content creation to external freelancers to expand production capacity without overburdening internal staff. Content managers first segment the workflow into discrete roles—such as outline creation, initial drafting, or proofreading—and delegate distinct responsibilities to specialized contractors while retaining strategic editorial control.\n\nTo manage external production effectively, internal teams provide structured briefs and defined quality criteria for each task. Freelancers receive explicit instructions detailing intent mapping, structural requirements, and formatting rules. Internal editors review submitted deliverables, execute required quality checks, and handle final revisions before publishing to preserve high standards across all outsourced pieces."
+   }
+  ],
+  "source_comparison": {
+   "competitor_url": "https://www.jasper.ai/blog/content-scaling",
+   "competitor_heading": "1. Create a style guide",
+   "competitor_passage": "Consistency is important for content; it ensures your brand is recognizable and you’re sending out the same message with every piece you publish. This helps increase brand awareness and solidify your expertise in your industry. There’s a good chance you’ll be working with a variety of different content writers and stakeholders when scaling content, and keeping them all on the same page can be difficult. Style guides "
+  },
+  "claim_review": {
+   "counts": {
+    "sourced_from_page": 0,
+    "general_advice": 1,
+    "general_statement_unverified": 10
+   },
+   "needs_fact_check": [
+    "Creating a style guide establishes clear formatting, voice, and structural requirements before expanding publishing volume.",
+    "Content managers draft guidelines covering tone of voice, heading hierarchy, citation standards, and terminology rules.",
+    "Writers and editors consult this foundational document to align every draft with team standards, helping individual contributors maintain cohesive messaging across all assets.",
+    "Teams maintain consistency by integrating the style document directly into production workflows.",
+    "Editors evaluate drafts against explicit criteria, verifying proper attribution, formatting, and structural organization prior to publishing.",
+    "Defining voice and formatting standards reduces subjective editorial decisions, allowing multiple contributors to produce uniform work as output increases.",
+    "Content managers first segment the workflow into discrete roles—such as outline creation, initial drafting, or proofreading—and delegate distinct responsibilities to specialized contractors while retaining strategic editorial control.",
+    "To manage external production effectively, internal teams provide structured briefs and defined quality criteria for each task.",
+    "Freelancers receive explicit instructions detailing intent mapping, structural requirements, and formatting rules.",
+    "Internal editors review submitted deliverables, execute required quality checks, and handle final revisions before publishing to preserve high standards across all outsourced pieces."
+   ],
+   "needs_owner_confirmation": [],
+   "needs_safety_review": [],
+   "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+   "requirements": [
+    "Fact-check every statement against your own knowledge and sources before publishing.",
+    "Owner approval is required; nothing is published automatically."
+   ]
+  },
+  "copy_ready": true
+ }
+}

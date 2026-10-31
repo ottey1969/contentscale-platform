@@ -1,0 +1,33 @@
+// The text the editor copies from a Growth proposal: every change with its placement, its new H2 and its text, the pages
+// it was compared with (not a factual source) and what still needs a fact check. Shared by the browser and the tests.
+(function(root){
+ 'use strict';
+ var PLACE={ADD_AFTER_SECTION:'Add as a new section directly after',EXTEND_SECTION:'Expand the existing section',REPLACE_PASSAGE:'Replace a passage in'};
+ function placementLine(p,fallback){
+  var mode=p&&p.mode,h=(p&&p.section_heading)||fallback||'';
+  if(PLACE[mode]&&h)return PLACE[mode]+' “'+h+'”';
+  return h?'Section: “'+h+'”':'Placement: where it fits best (choose yourself)';
+ }
+ function growthEditCopyText(o){
+  o=o||{};
+  var changes=[{placement:o.placement,section:o.target_section,heading:o.draft_heading,text:o.proposed_text,existing:o.existing_passage}]
+   .concat((o.additional_sections||[]).map(function(a){return {placement:a.placement,heading:a.heading,text:a.text}}));
+  var out=['Target page: '+String(o.target_url||'')];
+  changes.forEach(function(c,i){
+   if(!c.text)return;
+   var part=['— Change '+(i+1)+' of '+changes.length+' —',placementLine(c.placement,c.section)];
+   if(c.heading)part.push('New H2: '+c.heading);
+   if(c.existing)part.push('Existing passage:\n'+c.existing);
+   part.push('Proposed text:\n'+c.text);
+   out.push(part.join('\n'));
+  });
+  var cmp=o.source_comparison&&o.source_comparison.competitor_url;
+  if(cmp)out.push('Compared with (a ranking page, not a factual source): '+cmp);
+  var n=o.claim_review&&o.claim_review.counts&&o.claim_review.counts.general_statement_unverified;
+  if(n)out.push('Fact-check: '+n+' statement(s) are not verified by any source. Check each before publishing.');
+  out.push('Editor approval required. No automatic publication.');
+  return out.join('\n\n');
+ }
+ if(typeof module==='object'&&module.exports)module.exports={growthEditCopyText:growthEditCopyText};
+ else root.growthEditCopyText=growthEditCopyText;
+})(this);
