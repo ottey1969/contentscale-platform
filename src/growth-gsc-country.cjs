@@ -27,16 +27,21 @@ const ALPHA3={usa:'US',gbr:'GB',can:'CA',aus:'AU',irl:'IE',nzl:'NZ',nld:'NL',bel
  col:'CO',lux:'LU',pak:'PK',nga:'NG',ken:'KE',isr:'IL',grc:'GR',cze:'CZ',hun:'HU',rou:'RO',ukr:'UA'};
 const alpha2=c=>ALPHA3[String(c||'').toLowerCase()]||(/^[a-z]{2}$/i.test(String(c||''))?String(c).toUpperCase():null);
 
+// searchAnalytics pages through at most 5 × 25,000 rows. A site that reaches that limit has more rows than were read:
+// the import says so, and the Cockpit shows that terms with few impressions may be missing.
+const MAX_ROWS=5*25000;
 async function pullCountryRows({siteUrl,token,fetchImpl=fetch,days=28}){
  const {startDate,endDate}=defaultRange(days);
  const rows=await searchAnalytics(siteUrl,{startDate,endDate,dimensions:['page','query','country'],rowLimit:25000},token,fetchImpl);
- return {startDate,endDate,rows:rows.map(r=>({page_url:r.keys[0],query:String(r.keys[1]||'').trim().toLowerCase(),country:alpha2(r.keys[2]),
+ return {startDate,endDate,received:rows.length,capped:rows.length>=MAX_ROWS,rows:rows.map(r=>({page_url:r.keys[0],query:String(r.keys[1]||'').trim().toLowerCase(),country:alpha2(r.keys[2]),
   clicks:Math.round(Number(r.clicks)||0),impressions:Math.round(Number(r.impressions)||0),position:Number(r.position)||0}))
   .filter(r=>r.page_url&&r.query&&r.country&&r.impressions>0)};
 }
 // Replaces the client's rows in one transaction, so the finder never mixes two imports.
-async function saveCountryRows(pool,{clientId,startDate,endDate,rows}){
+async function saveCountryRows(pool,{clientId,startDate,endDate,rows,received=null,capped=false}){
  await ensureTable(pool);
+ await pool.query(`CREATE TABLE IF NOT EXISTS tracker_growth_gsc_country_imports(tracker_client_id BIGINT PRIMARY KEY,rows_received INTEGER NOT NULL,
+   rows_kept INTEGER NOT NULL,capped BOOLEAN NOT NULL,start_date DATE NOT NULL,end_date DATE NOT NULL,imported_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
  const client=typeof pool.connect==='function'?await pool.connect():null,q=client||pool;
  try{
   await q.query('BEGIN');
@@ -48,13 +53,20 @@ async function saveCountryRows(pool,{clientId,startDate,endDate,rows}){
    await q.query('INSERT INTO tracker_growth_gsc_country(tracker_client_id,page_url,query,country,clicks,impressions,position,start_date,end_date) VALUES '+vals.join(',')+
     ' ON CONFLICT (tracker_client_id,page_url,query,country) DO UPDATE SET clicks=EXCLUDED.clicks,impressions=EXCLUDED.impressions,position=EXCLUDED.position,start_date=EXCLUDED.start_date,end_date=EXCLUDED.end_date,imported_at=NOW()',args);
   }
+  await q.query(`INSERT INTO tracker_growth_gsc_country_imports(tracker_client_id,rows_received,rows_kept,capped,start_date,end_date) VALUES($1,$2,$3,$4,$5,$6)
+   ON CONFLICT (tracker_client_id) DO UPDATE SET rows_received=EXCLUDED.rows_received,rows_kept=EXCLUDED.rows_kept,capped=EXCLUDED.capped,start_date=EXCLUDED.start_date,end_date=EXCLUDED.end_date,imported_at=NOW()`,
+   [clientId,received??rows.length,rows.length,capped===true,startDate,endDate]);
   await q.query('COMMIT');
  }catch(e){await q.query('ROLLBACK').catch(()=>{});throw e}
  finally{if(client)client.release()}
- return {rows:rows.length,start_date:startDate,end_date:endDate};
+ return {rows:rows.length,received:received??rows.length,capped:capped===true,start_date:startDate,end_date:endDate};
 }
 async function loadCountryRows(pool,{clientId}){
  try{return (await pool.query('SELECT page_url,query,country,clicks,impressions,position::float AS position,start_date::text,end_date::text,imported_at FROM tracker_growth_gsc_country WHERE tracker_client_id=$1',[clientId])).rows}
  catch(e){if(e.code==='42P01')return [];throw e}
 }
-module.exports={pullCountryRows,saveCountryRows,loadCountryRows,alpha2,ensureTable};
+async function loadCountryImport(pool,{clientId}){
+ try{return (await pool.query('SELECT rows_received,rows_kept,capped,start_date::text,end_date::text,imported_at FROM tracker_growth_gsc_country_imports WHERE tracker_client_id=$1',[clientId])).rows[0]||null}
+ catch(e){if(e.code==='42P01')return null;throw e}
+}
+module.exports={pullCountryRows,saveCountryRows,loadCountryRows,loadCountryImport,alpha2,ensureTable,MAX_ROWS};

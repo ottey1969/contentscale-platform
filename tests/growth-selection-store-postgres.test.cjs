@@ -121,8 +121,10 @@ test('Search Console per country: one import replaces the previous one for the c
   await st.saveCountryRows(pool,{clientId:client,startDate:'2026-10-01',endDate:'2026-10-28',rows:[row('content scaling','NL',120)]});
   const rows=await st.loadCountryRows(pool,{clientId:client});
   assert.deepEqual(rows.map(r=>[r.country,r.impressions,r.position,r.start_date]),[['NL',120,8.5,'2026-10-01']]);
+  await st.saveCountryRows(pool,{clientId:client,startDate:'2026-10-01',endDate:'2026-10-28',rows:[row('content scaling','NL',120)],received:125000,capped:true});
+  const meta=await st.loadCountryImport(pool,{clientId:client});assert.deepEqual([meta.rows_received,meta.rows_kept,meta.capped],[125000,1,true]);
   assert.equal(st.alpha2('gbr'),'GB');assert.equal(st.alpha2('usa'),'US');assert.equal(st.alpha2('xyz'),null);
- }finally{await pool.query('DELETE FROM tracker_growth_gsc_country WHERE tracker_client_id=$1',[client]).catch(()=>{})}
+ }finally{await pool.query('DELETE FROM tracker_growth_gsc_country WHERE tracker_client_id=$1',[client]).catch(()=>{});await pool.query('DELETE FROM tracker_growth_gsc_country_imports WHERE tracker_client_id=$1',[client]).catch(()=>{})}
 });
 
 test('customer countries: one list per client; empty removes it',async()=>{
