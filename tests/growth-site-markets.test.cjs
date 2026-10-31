@@ -29,7 +29,7 @@ function setup({pageMarkets=null}={}){
   await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});return res};
  return {asked,
   setSite:body=>call(post['/api/tracker-client/:token/growth/site-markets'],{params:{token:'t'},body}),
-  research:()=>call(route['/api/tracker-client/:token/growth/auto-research'],{params:{token:'t'},query:{page_id:'9'}})};
+  research:(extra={})=>call(route['/api/tracker-client/:token/growth/auto-research'],{params:{token:'t'},query:{page_id:'9',...extra}})};
 }
 
 test('a page without its own market is researched in the site default (United States, English); a page setting wins',async()=>{
@@ -41,4 +41,13 @@ test('a page without its own market is researched in the site default (United St
  assert.equal(s.asked.at(-1).locale.country,'US');assert.deepEqual(s.asked.at(-1).locale.other_countries,['GB']);assert.equal(s.asked.at(-1).locale.source,'SITE_DEFAULT');
  const nl=setup({pageMarkets:{countries:['NL'],language:'en'}});await nl.setSite({countries:'us — United States',language:'English'});await nl.research();
  assert.equal(nl.asked.at(-1).locale.country,'NL','the market set on the page wins');
+});
+
+test('the Opportunity Finder runs one research in its country and term; the page setting stays as it is',async()=>{
+ const s=setup({pageMarkets:{countries:['NL'],language:'en'}});
+ await s.research({market:'gb',query:'geo consultant services'});
+ assert.equal(s.asked.at(-1).locale.country,'GB');assert.equal(s.asked.at(-1).locale.source,'OPPORTUNITY_FINDER');
+ assert.equal(s.asked.at(-1).query,'geo consultant services');
+ await s.research();assert.equal(s.asked.at(-1).locale.country,'NL','without the override the page setting applies again');
+ await s.research({market:'Narnia'});assert.equal(s.asked.at(-1).locale.country,'NL','an unknown market is ignored');
 });
