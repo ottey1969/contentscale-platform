@@ -396,7 +396,6 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  let release;const gate=new Promise(r=>release=r);
  const s=await server({engine:async(input,deps)=>{await gate;return runFreeGrowthResearch(input,deps)}});t.after(()=>s.srv.close());
  await s.post('/api/free-growth/checks',ok);
- assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'x'})).status,409,'Google part first');
  release();
  await s.service.idle();
  let r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
@@ -406,6 +405,11 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'  '})).status,400);
  assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'x'.repeat(ai.MAX_PASTE+1)})).status,413);
  assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=wrong',{engine:'perplexity',text:'x'})).status,404);
+ // Real paste from check 5M0tfxjeQawH: an answer to the company quick-scan prompt (QUESTION 1–4), not to this prompt.
+ const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
+ const refused=await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'claude',text:quick});
+ assert.equal(refused.status,400);assert.match(refused.body.error,/company quick-scan prompt[\s\S]*Copy the prompt shown here/);
+ assert.equal(s.storage.aiRows.filter(r=>r.engine==='claude').length,0,'not stored as a checked AI system');
  const saved=await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: Roofer A explains estimates.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://roofer-b.example/services/roof-repair/'});
  assert.equal(saved.status,200);assert.equal(saved.body.parsed.sources,2);assert.equal(saved.body.parsed.own_site_cited,false);
  // Pasting again for the same AI system replaces the earlier answer.
@@ -421,6 +425,49 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  for(const m of page.body.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
  assert.match(page.body,/Your page in Google and in AI answers/);
  await s.service.idle();
+});
+
+test('the AI check comes first: with an entered search term it is available while Google is still being researched',async t=>{
+ let release;const gate=new Promise(r=>release=r);
+ const s=await server({engine:async(input,deps)=>{await gate;return runFreeGrowthResearch(input,deps)}});t.after(()=>s.srv.close());
+ await s.post('/api/free-growth/checks',ok);
+ const pending=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
+ assert.notEqual(pending.body.status,'DONE');assert.match(pending.body.ai.prompt,/QUERY:\s*roof repair lodi nj/);
+ assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'copilot',text:'ANSWER: early.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/'})).status,200);
+ release();await s.service.idle();
+ const done=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
+ assert.equal(done.body.status,'DONE');assert.equal(done.body.ai.summary.checked,1,'the early answer is kept with the check');
+ assert.deepEqual(done.body.ai.summary.also_in_google,['roofer-a.example'],'and compared with the Google results once they are there');
+ // Without an entered search term the prompt needs the derived term, so the AI check waits for the Google part.
+ let release2;const gate2=new Promise(r=>release2=r);
+ const s2=await server({engine:async(input,deps)=>{await gate2;return runFreeGrowthResearch(input,deps)}});t.after(()=>s2.srv.close());
+ const started=await s2.post('/api/free-growth/checks',{...ok,query:''});
+ const r2=await s2.post('/api/free-growth/checks/'+started.body.id+'/ai?k='+started.body.key,{engine:'copilot',text:'x'});
+ assert.equal(r2.status,409);assert.match(r2.body.error,/derived from your page/);
+ release2();await s2.service.idle();
+});
+
+test('AI answers before the start: the prompt is on the form, up to 5 answers (one per AI system) are stored with the check',async t=>{
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
+ const form=(await s.get('/free-growth?key=open-key-12345')).body;
+ assert(form.indexOf('id="aiStartPrompt"')<form.indexOf('type="submit"'),'the AI prompt comes before the start button');
+ for(const e of ai.ENGINES)assert.match(form,new RegExp('data-engine="'+e.id+'"'));
+ const ans=(src)=>'ANSWER: Estimates explained.\nRESOURCES:\n'+src;
+ const five=ai.ENGINES.map((e,i)=>({engine:e.id,text:ans(i===0?'https://acme-roofing.example/roof-repair-lodi-nj/':'https://roofer-a.example/roof-repair-nj/')}));
+ const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
+ assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[{engine:'claude',text:quick}]})).body.error,/Claude: this is an answer to the company quick-scan prompt/);
+ assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[five[0],five[0]]})).body.error,/one answer per system/);
+ assert.match((await s.post('/api/free-growth/checks',{...ok,query:'',ai_answers:[five[1]]})).body.error,/Enter the search term first/);
+ assert.equal(s.storage.checks.length,0,'a refused start creates no check');
+ const started=await s.post('/api/free-growth/checks',{...ok,ai_answers:five});
+ assert.equal(started.status,202);await s.service.idle();
+ assert.equal(s.storage.aiRows.length,5,'one stored answer per AI system');
+ const r=await s.get('/api/free-growth/checks/'+started.body.id+'?k='+started.body.key);
+ assert.equal(r.body.ai.summary.checked,5);assert.equal(r.body.ai.summary.cited_by,1);
+ // Admin start takes them too.
+ const adm=await s.post('/api/free-growth/admin/run',{url:'https://acme-roofing.example/b/',query:'roof repair lodi nj',ai_answers:[five[2]]},{'x-admin-key':'admin-secret-0123456789'});
+ assert.equal(adm.status,202);await s.service.idle();assert.equal(s.storage.aiRows.length,6);
+ assert.match((await s.get('/free-growth/admin')).body,/id="aiStartPrompt"[\s\S]*name="fresh"/);
 });
 
 test('review: only an explicit RESOURCES section counts as AI sources',()=>{

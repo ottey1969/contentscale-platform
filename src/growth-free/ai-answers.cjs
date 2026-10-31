@@ -83,6 +83,15 @@ const RESOURCES_HEADING=/^[ \t>*_#-]*RESOURCES[ \t*_]*:?[ \t*_]*/gim;
 const NONE_DECLARED=/^\W*(?:NO VERIFIED RESOURCES|NONE|N\/A|NO SOURCES?)\W*$/i;
 
 // Only links listed under an explicit RESOURCES section count as sources.
+// An answer to another ContentScale prompt (the company quick scan: profile, four customer questions) has no RESOURCES
+// list for this search term; it is refused with a clear reason instead of being stored as "no sources".
+const OTHER_PROMPT_MARKS=[/^[\s#*>_-]*QUESTION\s*1\b/im,/^[\s#*>_-]*QUESTION\s*2\b/im,/AI SEARCH QUESTIONS\s*:/i,/COMPANY NAMES\s*:/i,/BUSINESS PROFILE\s*:/i,/FINAL CROSS-QUESTION SUMMARY/i];
+function otherPrompt(raw){
+ const text=String(raw||'');RESOURCES_HEADING.lastIndex=0;
+ if(RESOURCES_HEADING.test(text)){RESOURCES_HEADING.lastIndex=0;return null}
+ RESOURCES_HEADING.lastIndex=0;
+ return OTHER_PROMPT_MARKS.filter(r=>r.test(text)).length>=2?'QUICK_SCAN_PROMPT':null;
+}
 // A URL mentioned in the answer text is never a citation.
 function parseAiAnswer(raw,{pageUrl}={}){
  const text=cleanAiPaste(String(raw||'').slice(0,MAX_PASTE));
@@ -163,4 +172,4 @@ function summarizeAiAnswers(rows,{pageUrl,googleUrls=[]}={}){
   caveat:'AI answers differ per user, location, account and time. This shows only the answers you pasted, at the moment you ran them.'};
 }
 
-module.exports={ENGINES,ENGINE_IDS,MAX_PASTE,DIRECT_PROMPT_LINES,QUERY_SLOT,directPrompt,cleanAiPaste,parseAiAnswer,summarizeAiAnswers,rootOf};
+module.exports={otherPrompt,ENGINES,ENGINE_IDS,MAX_PASTE,DIRECT_PROMPT_LINES,QUERY_SLOT,directPrompt,cleanAiPaste,parseAiAnswer,summarizeAiAnswers,rootOf};
