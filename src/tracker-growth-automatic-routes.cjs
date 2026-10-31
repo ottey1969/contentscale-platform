@@ -676,14 +676,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
       note:'Items you selected earlier and that were not written yet. Ticked again only when the new research still shows the same need; nothing is written until you click.'};}}
    catch(e){console.warn('[growth-auto-research] open selection not loaded',String(e?.code||'unknown'))}
   }
-  return res.set('Cache-Control','private, no-store').json({...(await withAiCheck(report,v)),
+  const enriched=await withAiCheck(report,v);
+  return res.set('Cache-Control','private, no-store').json({...enriched,
    market_setting_url:typeof savePageMarkets==='function'?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id):null,
    gap_list:{...gapList,carried_over:carried,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
     url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(targetId)}:null,
    editorial_decision_gate:completeDecision,
    // One outcome when the task check says NO_CHANGE but the topic comparison has topics on 2+ ranking pages.
-   outcome_context:reconcileOutcome({decision:completeDecision,gapList}),
+   outcome_context:reconcileOutcome({decision:completeDecision,gapList,report,aiCheck:enriched.ai_check||null}),
    access:{can_edit:true,read_only_analysis:false,owner_report:true},
    editorial_review_draft:completionOut,
    editorial_work_packet:workPacket,

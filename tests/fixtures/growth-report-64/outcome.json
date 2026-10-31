@@ -732,5 +732,48 @@
  },
  "editorial_decision_gate_full_for_gap_list": {
   "decision": "NO_CHANGE"
+ },
+ "report": {
+  "url": "https://contentscale.site/",
+  "growth_decision": {
+   "primary_next_action": {
+    "query": "content scaling",
+    "metrics": {
+     "impressions": 3943,
+     "clicks": 2,
+     "ctr_pct": 0.05,
+     "average_position": 12.724828810550342,
+     "imported_at": "2026-10-11T11:34:03.167Z"
+    }
+   }
+  },
+  "destination_gsc_evidence": {
+   "status": "NO_VERIFIED_DESTINATION_ROWS",
+   "target_url": "https://contentscale.site/content-scaling/",
+   "target_page_id": 2295,
+   "focus_query": "content scaling",
+   "exact_query_verified": false,
+   "metrics": null
+  }
+ },
+ "funnel_site_pages": [
+  {
+   "url": "https://contentscale.site/ai-content-quality-checker/",
+   "keyword": "ai content quality checker"
+  },
+  {
+   "url": "https://contentscale.site/what-is-ai-citation-tracker/",
+   "keyword": "ai citation tracker"
+  },
+  {
+   "url": "https://contentscale.site/free-ai-citations-tracker/",
+   "keyword": "free ai citation tracker"
+  }
+ ],
+ "ai_check": {
+  "max_age_days": 14,
+  "summary": {
+   "checked": 0
+  }
  }
 }

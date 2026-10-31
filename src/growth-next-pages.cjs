@@ -124,7 +124,10 @@ function readerFunnel({pageUrl='',focusQuery='',pageIntent=null,pageHtml='',site
  }).filter(Boolean).sort((a,b)=>b.shared.length-a.shared.length);
  if(!scored.length)return {status:'NO_ACTION_PAGE_FOUND',stages:[{stage:'INFORMATION',url:pageUrl,role:'Answer the question completely before any offer.'}],
   note:'No tracked page looks like a page where a reader acts (service, product, pricing, contact, booking). Add that page to the Tracker first.'};
- const steps=scored.slice(0,3).map(x=>{
+ // Only action pages on the same topic; a page without shared topic words is offered once, as a general next step,
+ // and only when no page on the topic exists.
+ const onTopic=scored.filter(x=>x.shared.length>0);
+ const steps=(onTopic.length?onTopic.slice(0,3):scored.slice(0,1)).map(x=>{
   const plan=pageHtml?planInternalLinks({targetUrl:x.p.url,focusQuery:x.p.keyword||pathWords(x.p.url),pages:[{url:pageUrl,html:pageHtml}]})[0]||null:null;
   return {stage:'ACTION',url:x.p.url,keyword:x.p.keyword||null,basis:x.kind,
    topic_match:x.shared.length?'shares '+x.shared.join(', ')+' with this page':'no shared topic words: a general next step only',

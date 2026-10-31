@@ -36,3 +36,34 @@ test('report 64 (real): a link on the single word "quality" under the table of c
  const ok=linkOf({status:'LINK_CANDIDATE_FOR_REVIEW',anchor_text:'content quality checker',under_heading:'How to Audit Your Content Before You Scale'},{keyword:'x'});
  assert.equal(ok.status,'LINK_CANDIDATE_FOR_REVIEW');
 });
+
+test('report 64 (real): "no content gap" keeps the performance checks open instead of closing Growth',()=>{
+ const o=reconcileOutcome({decision:f.editorial_decision_gate,gapList:f.gap_list,report:f.report,aiCheck:f.ai_check,now:'2026-10-31T09:53:18Z'});
+ assert.equal(o.status,'NO_CONTENT_GAP_PERFORMANCE_OPEN');
+ assert.equal(o.headline,'No content gap found — 3 performance checks still open · 4 topics to consider');
+ assert.match(o.distinction,/is not the same as no improvement needed/);
+ const codes=o.open_checks.map(c=>c.code);
+ assert.deepEqual(codes.slice(0,2),['GOOGLE_SHOWS_ANOTHER_PAGE','MOSTLY_BEYOND_PAGE_ONE']);
+ assert(codes.includes('AI_NOT_CHECKED'));
+ assert(!codes.includes('SEARCH_CONSOLE_DATA_OLD'),'imported on 2026-10-11: 20 days before the report, within 28 days');
+ assert.match(o.open_checks[0].detail,/shows https:\/\/contentscale\.site\/ for “content scaling”: 3943 impressions, 2 clicks, average position 12\.7\. The page meant for this search is https:\/\/contentscale\.site\/content-scaling\/, which has no Search Console rows of its own\./);
+ assert.match(o.open_checks[1].action,/a new title alone will not bring these clicks/);
+});
+
+test('report 64 (real): the route to action offers only the action page on the topic, not the AI citation tracker pages',()=>{
+ const {readerFunnel}=require('../src/growth-next-pages.cjs');
+ const r=readerFunnel({pageUrl:'https://contentscale.site/content-scaling/',focusQuery:'content scaling',pageIntent:'INFORMATIONAL_GUIDE',pageHtml:'',sitePages:f.funnel_site_pages});
+ assert.deepEqual(r.stages.slice(1).map(s=>s.url),['https://contentscale.site/ai-content-quality-checker/']);
+});
+
+test('Search Console rows older than 28 days at research time are an open check too',()=>{
+ const o=reconcileOutcome({decision:f.editorial_decision_gate,gapList:f.gap_list,report:f.report,aiCheck:f.ai_check,now:'2026-11-20T00:00:00Z'});
+ assert(o.open_checks.some(c=>c.code==='SEARCH_CONSOLE_DATA_OLD'&&/imported on 2026-10-11/.test(c.detail)));
+});
+
+test('report 64 (real): the owner package lists the open checks under a NO_CHANGE decision',()=>{
+ const {buildOwnerHandoffPackage}=require('../src/growth-owner-handoff-package.cjs');
+ const m=buildOwnerHandoffPackage({report:f.report,decision:{...f.editorial_decision_gate,evidence_status:{}}}).markdown;
+ assert.match(m,/## Still open — not a content question\n\nNo content gap was found, but that is not the same as no improvement needed:\n\n1\. Search Console \(imported 2026-10-11\) shows https:\/\/contentscale\.site\/ for “content scaling”/);
+ assert.match(m,/2\. The average position is 12\.7: most impressions are beyond page one/);
+});

@@ -80,7 +80,11 @@
    d.editorial_work_packet.editorial_decision:(d.editorial_decision_gate||{});
   var primary=section('Growth result · decision and evidence');
   node('h3',d.outcome_context?d.outcome_context.headline:String(outcome.decision||'DATA_BLOCKED').replace(/_/g,' '),primary);
-  if(d.outcome_context){var oc=node('p',d.outcome_context.note+' ',primary);var go=node('a','Go to the list ↓',oc);go.href='#growthGapChoice'}
+  if(d.outcome_context){var ocx=d.outcome_context;
+   if(ocx.distinction)node('p',ocx.distinction,primary);
+   if((ocx.open_checks||[]).length){node('strong','Still open — not a content question',primary);var olist=node('ol',null,primary);
+    ocx.open_checks.forEach(function(c){var li=node('li',c.detail,olist);node('div','What to do: '+c.action,li)})}
+   var oc=node('p',ocx.note+' ',primary);if((ocx.topics||[]).length){var go=node('a','Go to the list ↓',oc);go.href='#growthGapChoice'}}
   node('p',String(outcome.reason||outcome.next_action||'A verified editorial decision was not available.'),primary);
   if(outcome.target_url){var chosen=node('p','Target page: ',primary);link(outcome.target_url,outcome.target_url,chosen)}
   node('p','Focus query: '+String(outcome.focus_query||d.intent_resolution?.query||d.search?.focus_query||'not verified'),primary);
