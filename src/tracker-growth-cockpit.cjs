@@ -9,11 +9,11 @@ const {loadMemory,recordAction,recordResearchOutcome}=require('./tracker-growth-
 const {saveProposal,saveSelectionProposal}=require('./growth-proposal-store.cjs');
 const {saveGapList,getGapList,saveSelection,addToSelection,saveWritten,getOpenSelection}=require('./growth-selection-store.cjs');
 const writingRuns=require('./growth-writing-runs.cjs');
-const {getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets}=require('./growth-market-store.cjs');
+const {getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets,getCustomerCountries,setCustomerCountries}=require('./growth-market-store.cjs');
 const {findOpportunities,serviceAreaOf}=require('./growth-opportunity-finder.cjs');
 const {pullCountryRows,saveCountryRows,loadCountryRows}=require('./growth-gsc-country.cjs');
 const {deriveMarket}=require('./growth-serp-quality.cjs');
-const {PREWRITE_REGIONS,PREWRITE_LANGUAGES,countryName,languageName}=require('./growth-search-locale.cjs');
+const {PREWRITE_REGIONS,PREWRITE_LANGUAGES,countryName,languageName,validCountries}=require('./growth-search-locale.cjs');
 const {saveGrowthAiAnswer,listGrowthAiAnswers}=require('./growth-ai-answers-store.cjs');
 const escapeHtml=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
 const norm=x=>String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
@@ -130,8 +130,9 @@ function registerGrowthCockpit(app,pool,deps={}){
    // The Opportunity Finder (owner): the best search term × country × page from Search Console per country.
    if(req.growth.can_edit){
     const countryRows=await loadCountryRows(pool,{clientId:client.id}).catch(()=>[]);
+    req.growth.customer_countries=await getCustomerCountries(pool,{clientId:client.id}).catch(()=>[]);
     req.growth.opportunities=findOpportunities({rows:countryRows,pages:req.growth.pages,domain:client.domain,
-     serviceArea:serviceAreaOf({pages:p.rows,deriveMarket}),siteMarkets:req.growth.site_markets});
+     serviceArea:serviceAreaOf({pages:p.rows,deriveMarket}),siteMarkets:req.growth.site_markets,customerCountries:req.growth.customer_countries});
     req.growth.opportunities.imported_at=countryRows[0]?.imported_at||null;
    }
    req.growthTrackerClientId=client.id;
@@ -158,6 +159,16 @@ function registerGrowthCockpit(app,pool,deps={}){
   loadConcepts:args=>writingRuns.getNewPageConcepts(pool,args),loadPageMarkets:args=>getPageMarkets(pool,args),savePageMarkets:args=>setPageMarkets(pool,args),loadSiteMarkets:args=>getSiteMarkets(pool,args),...(deps.newPage||{})});
  // Owner-only memory of the Cockpit's advice: started, skipped or restored.
  // The snapshot is taken from server-side evidence, never from the browser.
+ // The countries where the owner wants customers (owner): the finder chooses its best opportunity only there.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/customer-countries',data,async(req,res)=>{
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true)return no(403,'OWNER_ONLY');
+  const entries=(Array.isArray(req.body?.countries)?req.body.countries:String(req.body?.countries||'').split(/[,;]+/)).map(x=>String(x).trim()).filter(Boolean);
+  const list=validCountries(entries);
+  if(entries.length&&list.length<entries.length)return no(400,'UNKNOWN_COUNTRY');
+  try{res.set('Cache-Control','private, no-store').json({success:true,countries:await setCustomerCountries(pool,{clientId:req.growthTrackerClientId,countries:list})})}
+  catch{no(503,'NOT_SAVED')}
+ });
  // Search Console per country for the Opportunity Finder (owner, server-side credentials; optional).
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/gsc-country-import',data,async(req,res)=>{
   const no=(status,code,error)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code,error});
@@ -319,6 +330,14 @@ function registerGrowthCockpit(app,pool,deps={}){
     (op.runners_up.length?'<details><summary>Next opportunities ('+op.runners_up.length+')</summary><ol>'+op.runners_up.map(o=>'<li>“'+escapeHtml(o.query)+'” in '+escapeHtml(o.country_name)+' → '+escapeHtml(o.page_url)+' — '+escapeHtml(o.why)+' <a href="'+escapeHtml(oppLink(o))+'">'+(o.kind==='NEW_PAGE'?'Pre-Write brief':'Research')+'</a></li>').join('')+'</ol></details>':'')+
     '<details><summary>Per country and how the order is made</summary><ul>'+op.by_country.slice(0,8).map(c=>'<li>'+escapeHtml(c.name)+': '+c.impressions+' impressions, '+c.clicks+' clicks, '+c.opportunities+' opportunit'+(c.opportunities===1?'y':'ies')+'</li>').join('')+'</ul><p class="info">'+escapeHtml(op.method)+'</p></details>':
     '<h2>Not enough data to choose an opportunity</h2><p>'+escapeHtml(op.reason)+'</p>')+
+   // Impressions are not customers: the owner chooses where customers can buy; other countries stay visible, never chosen.
+   '<form id="customerCountryForm"><label><strong>Countries where you want customers</strong> (optional) <input name="countries" list="customerRegions" value="'+escapeHtml((g.customer_countries||[]).map(c=>c.toLowerCase()+' — '+countryName(c)).join(', '))+'" placeholder="us — United States, gb — United Kingdom, nl — Netherlands"></label> '+
+   '<button type="submit">Save</button> <small role="status" id="customerCountryStatus">'+escapeHtml(op.customer_countries?op.customer_countries.note:'')+'</small></form>'+
+   ((op.customer_countries&&op.customer_countries.outside||[]).length?'<p class="info">Shown for information, not chosen: '+op.customer_countries.outside.map(c=>escapeHtml(c.name)+' ('+c.impressions+' impressions, '+c.clicks+' clicks)').join(', ')+'.</p>':'')+
+   '<datalist id="customerRegions">'+PREWRITE_REGIONS.map(x=>'<option value="'+escapeHtml(x)+'">').join('')+'</datalist>'+
+   '<script>document.getElementById("customerCountryForm").addEventListener("submit",async function(e){e.preventDefault();var st=document.getElementById("customerCountryStatus");st.textContent="Saving…";'+
+   'try{var r=await fetch("/api/tracker-client/'+tok+'/growth/customer-countries",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({countries:e.target.countries.value})});var d=await r.json();'+
+   'if(d.success){st.textContent="Saved. Reloading…";location.reload()}else st.textContent=d.code==="UNKNOWN_COUNTRY"?"Choose the countries from the list, for example us — United States.":"Not saved."}catch(err){st.textContent="Not saved."}});</script>'+
    '<p><button type="button" id="gscCountryImport">'+(op.imported_at?'Import Search Console per country again':'Import Search Console per country')+'</button> <small role="status" id="gscCountryStatus">'+(op.imported_at?'Last import: '+escapeHtml(String(op.imported_at).slice(0,10))+(op.period?' (data '+escapeHtml(op.period.start)+' – '+escapeHtml(op.period.end)+')':''):'Not imported yet. Search Console access on the server is needed; Growth works without it.')+'</small></p>'+
    '<script>document.getElementById("gscCountryImport").addEventListener("click",async function(){var b=this,st=document.getElementById("gscCountryStatus");b.disabled=true;st.textContent="Reading Search Console…";'+
    'try{var r=await fetch("/api/tracker-client/'+tok+'/growth/gsc-country-import",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:"{}"});var d=await r.json();'+
