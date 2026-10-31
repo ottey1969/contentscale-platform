@@ -22,6 +22,13 @@ const DIY_BLOCKED=[
  'Try again with the exact search term your customers type into Google.',
  'If the problem stays, the research needs a manual comparison — that is part of the paid service.'
 ];
+// When the page could be read but the ranking pages give no shared answer, checking access is not the next step.
+const NO_SHARED_ANSWER=new Set(['SHARED_COMPETITOR_REQUIREMENTS','TASK_MEANING_NOT_VERIFIED','SUBSTANTIVE_GAP_NOT_VERIFIED','SERP_INTENT_EVIDENCE','SERP_INTENT']);
+const DIY_COMPARE=[
+ 'Look at the list below: it shows what each ranking page covers that your page does not. Nothing is proposed, because no point is supported by two or more ranking pages; you decide yourself whether something fits your page.',
+ 'Try again with a more specific search term (for example with the words your customers add), so the ranking pages answer the same question.',
+ 'If the problem stays, the research needs a manual comparison — that is part of the paid service.'
+];
 // Why Google results were not used, in plain words (codes from the search discovery).
 const NOT_USED_TEXT={GOOGLE_REDIRECT_LINK_NOT_RESOLVED:'Google link that could not be opened',OWN_SITE:'your own website',
  SEARCH_OR_SOCIAL_INFRASTRUCTURE:'Google, social media or video page',QUERY_TERMS_NOT_IN_TITLE:'the title does not contain the search words',
@@ -119,7 +126,7 @@ function summarizeFreeGrowth(report,{url,query}={}){
    'Try again with the exact search term your customers type into Google; a longer, more specific term gives more comparable results.',
    'If the problem stays, the research needs a manual comparison — that is part of the paid service.']:
    code==='QUERY_MEANS_SOMETHING_ELSE'?['Keep your page as it is: do not rewrite it toward the other meaning.',
-   'Check again with a more specific search term that includes words from your own page.']:DIY_BLOCKED;
+   'Check again with a more specific search term that includes words from your own page.']:(NO_SHARED_ANSWER.has(code)?DIY_COMPARE:DIY_BLOCKED);
   if(code==='QUERY_MEANS_SOMETHING_ELSE'){
    const other=((gate.missing_evidence||[]).find(m=>m.code===code)||{}).observed;
    const w=other&&other.absent_on_page?other.absent_on_page.map(x=>'“'+x.word+'”').join(', '):'';

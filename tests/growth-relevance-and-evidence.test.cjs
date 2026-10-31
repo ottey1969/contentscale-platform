@@ -132,3 +132,30 @@ test('Free check mAOlLCrU07Jv (real): only 2 usable Google results; the result s
   ['GOOGLE_REDIRECT_LINK_NOT_RESOLVED:11','QUERY_TERMS_NOT_IN_TITLE:2','SEARCH_OR_SOCIAL_INFRASTRUCTURE:2','OWN_SITE:1','DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT:1']);
  assert(s.limitations.some(x=>/only answers you paste below are analysed/.test(x)));
 });
+
+test('Free check 5M0tfxjeQawH (real): ranking pages that do not agree get comparison steps, not "check that your page opens"',()=>{
+ const {summarizeFreeGrowth}=require('../src/growth-free/summary.cjs');
+ const live=require('./fixtures/growth-free-5M0tfxjeQawH/check.json');
+ const s=summarizeFreeGrowth(live.report,{query:live.query,url:live.url});
+ assert.equal(s.decision,'DATA_BLOCKED');assert.match(s.explanation,/do not agree on what a good answer needs/);
+ assert.match(s.steps[0],/what each ranking page covers/);assert(!s.steps.some(x=>/private browser window/.test(x)));
+ assert.equal(s.checked.google_redirect_links.unresolved_reasons.NO_TARGET_ON_GOOGLE_PAGE,11);
+ // A page that cannot be opened keeps the access steps.
+ const own=summarizeFreeGrowth({editorial_decision_gate:{decision:'DATA_BLOCKED',blocker_code:'TARGET_HTML_UNAVAILABLE'}},{query:'x'});
+ assert.match(own.steps[0],/private browser window/);
+ const {otherPrompt}=require('../src/growth-free/ai-answers.cjs');
+ assert.equal(otherPrompt(live.ai_paste_claude),'QUICK_SCAN_PROMPT');
+ assert.equal(otherPrompt('ANSWER: QUESTION 1 is about scale. QUESTION 2 too.\nRESOURCES:\nhttps://example.org/a'),null,'an answer with a RESOURCES list is analysed normally');
+});
+
+test('Google redirect page: a script redirect with escapes is read; otherwise the report gets a sample of what the page was',async()=>{
+ const link=real.wrapped[0].link,page=html=>async()=>({status:200,headers:{get:()=>null},text:async()=>html});
+ // SYNTHETIC page bodies (the production pages for 5M0tfxjeQawH had no target in a link or meta refresh).
+ const p1={organic:[{title:'t',link}]};
+ const s1=await unwrapGoogleLinks(p1,{fetchImpl:page('<script>window.location.replace("https:\\/\\/www.vectoron.ai\\/blog\\/content-scaling\\/content-at-scale-meaning?a\\x3d1\\x26b\\x3d2")</script>')});
+ assert.equal(p1.organic[0].link,'https://www.vectoron.ai/blog/content-scaling/content-at-scale-meaning?a=1&b=2');assert.equal(s1.resolved,1);
+ const p2={organic:[{title:'t',link}]};
+ const s2=await unwrapGoogleLinks(p2,{fetchImpl:page('<html><head><title>Before you continue to Google</title></head><body><script>x()</script><a href="https://policies.google.com/">p</a><svg xmlns="http://www.w3.org/2000/svg"></svg></body></html>')});
+ assert.equal(s2.resolved,0,'a URL outside a redirect construct is never taken as the target');
+ assert.deepEqual(s2.sample,{status:200,bytes:s2.sample.bytes,title:'Before you continue to Google',has_script:true,consent:true,unusual_traffic:false});
+});

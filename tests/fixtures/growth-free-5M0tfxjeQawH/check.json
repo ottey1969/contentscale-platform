@@ -1,0 +1,168 @@
+{
+ "_note": "Real Free Growth check 5M0tfxjeQawH (contentscale.site, \"content at scale\", NL, fresh admin research 2026-10-31): search discovery, SERP intent, decision, and the AI answer pasted for Claude (an answer to the company quick-scan prompt, not to the search-term prompt).",
+ "query": "content at scale",
+ "url": "https://contentscale.site/",
+ "report": {
+  "serp_intent": {
+   "intent": "INFORMATIONAL_GUIDE",
+   "status": "SERP_INTENT_OBSERVED",
+   "reason": null,
+   "organic_leads_considered": 3
+  },
+  "editorial_decision_gate": {
+   "decision": "DATA_BLOCKED",
+   "blocker_code": "SHARED_COMPETITOR_REQUIREMENTS",
+   "missing_evidence": [
+    {
+     "code": "SHARED_COMPETITOR_REQUIREMENTS",
+     "detail": "Competitor sections shared words but answered different reader questions: task_featur (The competitor sections do not answer the same question, as one lists specific features of an AI detection tool while the other explains why scaling content volume benefits growth teams.)"
+    }
+   ]
+  },
+  "search_discovery": {
+   "organic_results_received": 9,
+   "google_redirect_links": {
+    "received": 13,
+    "resolved": 2,
+    "unresolved": 11,
+    "unresolved_reasons": {
+     "NO_TARGET_ON_GOOGLE_PAGE": 11
+    }
+   },
+   "rejected_reasons": {
+    "OWN_SITE": 1,
+    "QUERY_TERMS_NOT_IN_TITLE": 2,
+    "SEARCH_OR_SOCIAL_INFRASTRUCTURE": 1,
+    "GOOGLE_REDIRECT_LINK_NOT_RESOLVED": 11,
+    "DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT": 1
+   },
+   "next_page_retry": {
+    "page": 2,
+    "added_leads": 1,
+    "organic_results_received": 10
+   },
+   "rejected_leads": [
+    {
+     "url": "https://contentscale.site/",
+     "title": "Content At Scale, Done Right \u2014 Free Quality Score & Tracker",
+     "reason": "OWN_SITE"
+    },
+    {
+     "url": "https://www.eyesift.com/blog/content-at-scale-ai-detector/",
+     "title": "Content at Scale AI Detector: Free Tool Review & Accuracy ...",
+     "reason": "DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESaAHrOzAViru1ZWyhtQjeE-TM-XEoXfelKpQ5kvlAa68tSZZFUOLyF4es60fNeTYwvv52Dx7f_cvvPutgRRTDI7dWUuI_tyG-lpmMlODIKR4G9yiGFzNeQXNTdWnl8tBcH6lEUHFcxEzL",
+     "title": "Content at Scale Review - Does their AI Detection Tool ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESlgEB6zswFa23eFPW8mNecUoREgj8uNpN5FEAsy1vryrsDELaMKmspIvM1eNLyW4P1KnxK1EvpyK8sdg4AG49McMJIYZZXYnRiMpcvUR5zHyzqnjeeBZElg7xnHp7OW48kqrUr3C-iuSLDkClaCK4Lhr7ExnfV94a-S3WO4Ji_vz6HtA_QeZ9S0XSyTZu0ebdXhhfyjioHZc",
+     "title": "What is Content At Scale? An Overview",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAEScwHrOzAVvpSJUJFWj9iAm9Iu1mr2tZ_l4Xru1vmwBxsGS-PtOKAUZnv85uCB9kbUtOs2FPOPK7QaQyX5qF4WXqaRl1Ee31yw1csJRXUmLHqeyxnXb7BoZH8E7GLYqUCqpkV934bKUxfGc2vkdCng2zfTVHQ",
+     "title": "Content at Scale: free AI content creation tool",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESgQEB6zswFeBRwsiwMm2EJUxcnxYc4B8SPa_fyv1dn_3wZv-zPfwaF-r93-iVAy7PK1TwxwhHnSjjb5k4yBgcP-YBGDqANhdZEyN7xgRB6ognNoJWPGRPT76UtN_aLtWLJr-w5mEDWuiBRqNYSSmYXhW90Pmskp3nYpPPjBj6cv4ZDog",
+     "title": "BrandWell (Previously ContentAtScale) AI Content ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESZQHrOzAVi0ty3lH8gFU2Qh4ktKvWzONGIILybfC2gcmIhNgiYkkUg5ZUvDySwAu1NP2_WDzQGRe38RrBeCGx1WEyePh_avTUUiDmPsvLd9RZBd3bkyNgRbu61gzoLPgd38DCQ6Mo",
+     "title": "Content Scaling: 7 Tips for Creating More High-Quality ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://scale.com/",
+     "title": "Scale: Reliable AI Systems for Critical Decisions",
+     "reason": "QUERY_TERMS_NOT_IN_TITLE"
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=4I7ddiF4USw",
+     "title": "Content at Scale: How to Train AI to Create Great Content",
+     "reason": "SEARCH_OR_SOCIAL_INFRASTRUCTURE"
+    },
+    {
+     "url": "https://www.reddit.com/r/freelanceWriters/comments/15e4fpn/whats_up_with_contentatscale/",
+     "title": "What's up with Contentatscale? : r/freelanceWriters",
+     "reason": "QUERY_TERMS_NOT_IN_TITLE"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESaAHrOzAVnwI-fNzhqYMqc3MIY4i94cpm2mIuPEJjt7f-DdF5JyXa3D3KOOZqExCqMIwbfK8bbUKB81PWSFw7jqH9TO8pEiAjPBffgUuyqhIDJ6m9aWv-XBFFwBcoqfVlveic-Dq9vm2N",
+     "title": "Why Content at Scale Doesn't Work \u2013 and How AI Made It ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESjgEB6zswFS_S48glySO4qfqTkhGUt866NKZgMHZlZLQUe1EF_dHQH_XN9pp1x8PXvXmEiqWII7IfOwzV00LXwGEiLxGToqSyp9ii02Lo_wjDtLcD0SQpWQeRt4DSwslqlvWfcHirPwyxM3_gffGdrqKGRVfc61ybMqTeMyVxZYN8F50ihquXSuys6wkzJYQh",
+     "title": "The Key to Content at Scale: AI + Strategy",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESiQEB6zswFVs2fMfPXo7zhm6KCPxpEoff4A04kep2ARf_SzojqqkUzA_2EehQs6_n-NQ69cKfXeCCHPvRK2eBIQ_8AsRgk4LET-S_VaIl9E2L8od-IWeVqVgUkdTlyR-Cfdx20Z8bsHNr0URLM5YM_LwZU0LwluzknaSynzWK5TA59LtH_Wn49UIP0Q",
+     "title": "ContentAtScale AI Detector: Is it really accurate enough?",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESZgHrOzAVnqx8j1mw_RR-C7gbqMn38NaXvWQ4D5TSkYvPOj4-VOE00FP3HPn-LBlUat3HDq6kKLTXRKTN2NqCbiuUdGsK6HVaK6gmqSvgsk5qqyrdGy1hZ46DHKudp5wuTS0zRc0lEg",
+     "title": "What Is Content At Scale In 2026? The New Definition",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESfwHrOzAVaOqaVBvJvN5FADRZxXwsb-PJunDcbb9ZmhKd-xGVewEA3Nql_7xDUWz0bQ6b6ToMoo_tWT0DeVyvZR_ZN5s6ycWrvgLc0kct7VRMaPYxZiybMj_BaSgD_a-YY2fBLB9YescD164DiJ1fCuCalahilAXWQd8yKguEL-8",
+     "title": "Content At Scale Pricing & Plans (2024)",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESbAHrOzAVyjViwm3kyiRgJWHm-aZ37aGcDsLDSta0_w76G8dAxo0SXQMWKgG_tLokgccAGVMiNLSo3bW4xMqrrx8y6uyRwrzTphRMv4Md609mFaJ8wzj5COjXhDP2sOfDknb7q0lBoAIse4WulQ",
+     "title": "The content scaling paradox facing modern marketers",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    }
+   ],
+   "leads": [
+    {
+     "url": "https://choose-your-ai.com/ai-tools/content-at-scale-ai-detector/",
+     "query": "content at scale",
+     "title": "Content at Scale AI Detector - Comparateur-IA - AI Comparator",
+     "source": "SERPER_GOOGLE_ORGANIC",
+     "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+     "snippet": "Content at Scale AI Detector is a AI content detection tool that helps users speed up their tasks in the AI content detection category, with a simple promise: ...",
+     "serp_position": 3,
+     "search_language": "en",
+     "geographic_scope": "NL",
+     "market_relevance": "NO_MARKET_SCOPE"
+    },
+    {
+     "url": "https://www.bynder.com/en/glossary/content-at-scale/",
+     "query": "content at scale",
+     "title": "What is content at scale? | Glossary",
+     "source": "SERPER_GOOGLE_ORGANIC",
+     "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+     "snippet": "Content at scale means producing high volumes of high-quality content quickly and efficiently\u2014while always maintaining focus on quality rather than quantity.",
+     "serp_position": 4,
+     "search_language": "en",
+     "geographic_scope": "NL",
+     "market_relevance": "NO_MARKET_SCOPE"
+    },
+    {
+     "url": "https://www.vectoron.ai/blog/content-scaling/content-at-scale-meaning",
+     "query": "content at scale",
+     "title": "Content at Scale Meaning Explained for Modern Marketing ...",
+     "source": "SERPER_GOOGLE_ORGANIC",
+     "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+     "snippet": "Content at scale transforms content creation into a repeatable, measurable process that supports both speed and governance. As workflows become ...",
+     "result_page": 2,
+     "serp_position": 4,
+     "search_language": "en",
+     "geographic_scope": "NL",
+     "market_relevance": "NO_MARKET_SCOPE"
+    }
+   ]
+  }
+ },
+ "ai_paste_claude": "Limits first. I can't open a new chat, so I ran this as four separate research passes inside this session. I didn't use any company profile or earlier answer. Prices come from third-party roundups dated 2026 and change often. Several of those roundups are published by vendors that sell the thing they rank. I mark that where it applies.\n\n## QUESTION 1: Tools or consultants to measure content quality and track AI citations\n\n**Short answer:** AI-citation tracking is a crowded tool category. Only some tools also check content quality. I found no independently verified consultant for this question.\n\n| Company | Recommended | Why recommended | Official website | Exact cited page | Supporting source URLs |\n|---|---|---|---|---|---|\n| HubSpot AI Search Grader / HubSpot AEO | Yes | The grader is free with no usage limits and covers ChatGPT, Perplexity and Gemini. AEO costs $50/month. | https://www.hubspot.com/ai-search-grader | https://blog.hubspot.com/marketing/ai-citation-tracking-tools | Not verified |\n| Otterly.ai | Yes | Covers ChatGPT, Google AI Overviews, Perplexity and Copilot. Lite plan is $29/month. Free trial. | http://otterly.ai | https://blog.hubspot.com/marketing/ai-citation-tracking-tools | https://visible.seranking.com/blog/best-ai-visibility-tools/ |\n| Peec AI | Yes | Covers ChatGPT, Perplexity, Google AI Overviews, Copilot, Gemini and AI Mode. Free trial. | http://peec.ai | https://blog.hubspot.com/marketing/ai-citation-tracking-tools | https://visible.seranking.com/blog/best-ai-visibility-tools/ |\n| Profound | Yes (larger teams) | Broadest platform coverage, up to 9 on Enterprise. Starter is $99/month. | https://www.tryprofound.com/ | https://blog.hubspot.com/marketing/ai-citation-tracking-tools | https://www.rubikdigital.co.uk/insights/ai-visibility-tools |\n| Ahrefs Brand Radar | Yes (existing Ahrefs users) | Covers AI Overviews, AI Mode, ChatGPT, Perplexity, Gemini and Copilot. Needs an Ahrefs plan. | Not verified | https://www.rubikdigital.co.uk/insights/ai-visibility-tools | https://visible.seranking.com/blog/best-ai-visibility-tools/ |\n| Semrush AI Visibility Toolkit | Yes | Covers ChatGPT, Gemini, AI Overviews and AI Mode. $99/month, no free trial. | Not verified | https://www.rubikdigital.co.uk/insights/ai-visibility-tools | https://visible.seranking.com/blog/best-ai-visibility-tools/ |\n\n- **Content quality:** none of the sources shows a tool that scores page quality and tracks AI citations together. Rankshift's page notes Rankscale offers \"page audits and recommendations\", but I didn't verify that further.\n- **Consultants:** Not verified. The agencies in Question 2 were listed by vendor-published roundups only.\n\n## QUESTION 2: Trustworthy SEO/GEO consultants in the Netherlands or Europe\n\n**Short answer:** I found a shortlist, not a verified \"most trustworthy\" provider. Both lists were published by companies that sell GEO services or software, so treat them as leads to vet. I did not independently verify reviews, case results or client references.\n\n| Company | Recommended | Why recommended | Official website | Exact cited page | Supporting source URLs |\n|---|---|---|---|---|---|\n| Onder (Zwolle, NL) | Yes (shortlist only) | SEO, AI SEO, CRO and training for Dutch firms | onder.nl (domain as listed, not opened) | https://www.rankshift.ai/blog/best-geo-agencies/ | Not verified |\n| Maatwerk Online (Rotterdam, NL) | Yes (shortlist only) | SEO, GEO, SEA and CRO for Benelux firms | maatwerkonline.nl (domain as listed, not opened) | https://www.rankshift.ai/blog/best-geo-agencies/ | Not verified |\n| Doublesmart (Gouda, NL) | Yes (shortlist only) | GEO and growth consulting for Dutch mid-market firms | doublesmart.nl (domain as listed, not opened) | https://www.rankshift.ai/blog/best-geo-agencies/ | Not verified |\n| Position Digital (London, UK) | Yes (shortlist only) | GEO audits and AI-citation outreach for B2B SaaS | position.digital (domain as listed, not opened) | https://www.rankshift.ai/blog/best-geo-agencies/ | Not verified |\n| Brazen (Amsterdam) | Yes (shortlist only) | GEO and SEO agency with its own GEOlab analysis tool | Not verified | https://wpseoai.com/blog/best-geo-agencies-netherlands/ | Not verified |\n| PromptMarketing (Amsterdam) | Yes (shortlist only) | Measures AI mentions, citations and share of voice. Offers diagnosis-only engagements. | Not verified | https://wpseoai.com/blog/best-geo-agencies-netherlands/ | Not verified |\n| Citeerbaar (Diemen) | Yes (shortlist only) | GEO specialist for the Netherlands and Belgium, with a quick-scan entry step | Not verified | https://wpseoai.com/blog/best-geo-agencies-netherlands/ | Not verified |\n| WP SEO AI (Amsterdam) | No | It ranks itself first in its own article, so I could not treat it as an independent recommendation | https://wpseoai.com | https://wpseoai.com/blog/best-geo-agencies-netherlands/ | Not verified |\n\n- **Source conflict:** Rankshift sells AI visibility software and its author co-founded an agency it recommends. WP SEO AI is the publisher and the top-ranked entry on its own list.\n- **Neutral basis:** neither list gives a neutral basis for trust.\n\n## QUESTION 3: Traffic dropped after a core update and no AI-answer visibility\n\n**Short answer:** Diagnose first, then rebuild existing content. Don't mass-publish AI articles.\n\n- **Source of the method:** Search Engine Land describes this process. It is a general method, not a recommendation of any one vendor.\n- **Diagnose (days 1\u201330):**\n  - Confirm the update dates on Google's Search Status Dashboard.\n  - Compare traffic before and after in Search Console, segmented by page, query, device and country.\n  - Check the search results for new AI Overviews or lost featured snippets.\n  - Check whether the volatility is industry-wide (Semrush Sensor, Sistrix Visibility Index).\n  - Treat small drops as noise. A major drop calls for a content-quality review.\n- **Rebuild (days 31\u201390):**\n  - Add original insight and fuller topic coverage.\n  - Consolidate overlapping pages with 301 redirects.\n  - Show authorship and cite sources.\n  - Remove search-engine-first tactics.\n- **Reassess (days 91\u2013180+):** expect gradual gains, possibly across several core updates.\n- **AI-generated content:** the guide cites no specific Google policy. It says automation without meaningful value is a search-engine-first signal to avoid, and that automated text should be enhanced rather than published as-is.\n\n| Company or tool | Recommended | Why | Official website | Exact cited page | Supporting source URLs |\n|---|---|---|---|---|---|\n| Google Search Console | Yes (diagnosis) | The baseline data source named for diagnosing and tracking recovery | Not verified | https://searchengineland.com/guide/google-core-updates | Not verified |\n| Semrush Sensor, Sistrix Visibility Index, Screaming Frog, Ahrefs | No (mentioned only) | Named as supporting diagnostic tools. A mention is not a recommendation. | Not verified | https://searchengineland.com/guide/google-core-updates | Not verified |\n| Done-for-you recovery service | Not verified | I found no independently verified provider for core-update recovery | Not verified | Not verified | Not verified |\n\n## QUESTION 4: Comparing scoring and AI-citation tools for a small marketing team\n\n**Short answer:** Free tiers are rare and platform coverage varies widely. Search Console integration is rarely documented, and done-for-you help is mostly limited to onboarding. Most data below comes from SE Ranking's roundup (SE Ranking sells SE Visible), cross-checked against the HubSpot and Rubik Digital pages (Rubik Digital is an agency that sells AI search services). \"Not stated\" means the sources say nothing.\n\n| Tool | Free tier / trial | Search Console integration | AI platforms tracked | Done-for-you support |\n|---|---|---|---|---|\n| AthenaHQ | Free Essential tier (300 credits) | Yes (also GA4) | 5 on free, 11 on Starter ($295/month) | Not stated |\n| AirOps | 14-day trial | Yes (per HubSpot) | ChatGPT, Perplexity, Gemini, AI Mode | Not stated |\n| Otterly AI | Free trial | Not stated | ChatGPT, Perplexity, AI Overviews, Copilot, plus add-ons | Not stated |\n| Peec AI | Free trial | Not stated | Choose 3 on paid plans (Rubik Digital); more on Enterprise | Live onboarding and prioritized recommendations |\n| Profound | 7-day trial, 50 daily prompts | Not stated (offers CDN integrations) | 3 on trial, up to 9 on Enterprise | Dedicated specialist on Enterprise |\n| SE Visible | 10-day trial | Not stated | ChatGPT, Gemini, AI Mode, AI Overviews | Not stated |\n| Ahrefs Brand Radar | 5 daily prompts with any paid Ahrefs plan | Not stated | AI Overviews, AI Mode, ChatGPT, Perplexity, Gemini, Copilot | Not stated |\n| Semrush AI Visibility Toolkit | No free trial | Not stated | ChatGPT, Gemini, AI Overviews, AI Mode | Not stated |\n| Writesonic GEO | Not stated | Not stated | ChatGPT, AI Overviews, Claude, Gemini, Perplexity | Customer success and tutorials, not a managed service |\n\n- **Best fit for a small team:** AthenaHQ is the only tool with both a free tier and documented Search Console integration.\n- **Paid starting points:** Peec AI has the most documented onboarding support among paid options. Otterly has the lowest entry price ($29/month).\n- **Done-for-you:** none of these tools offers true managed service at small-team pricing, based on the sources.\n- **Content quality:** these are tracking tools. Only AirOps and Writesonic are described as helping with content work, and I did not verify this.\n\nExact cited pages for this question: https://visible.seranking.com/blog/best-ai-visibility-tools/ , https://www.rubikdigital.co.uk/insights/ai-visibility-tools , https://blog.hubspot.com/marketing/ai-citation-tracking-tools\n\n## FINAL CROSS-QUESTION SUMMARY\n\n**Recommendation frequency** (questions where recommended Yes)\n\n| Company or tool | Questions | Count |\n|---|---|---|\n| Otterly.ai | Q1, Q4 | 2 |\n| Peec AI | Q1, Q4 | 2 |\n| Profound | Q1, Q4 | 2 |\n| Ahrefs Brand Radar | Q1, Q4 | 2 |\n| Semrush AI Visibility Toolkit | Q1, Q4 | 2 |\n| AthenaHQ | Q4 | 1 |\n| AirOps | Q4 | 1 |\n| HubSpot AI Search Grader / AEO | Q1 | 1 |\n| Onder, Maatwerk Online, Doublesmart, Position Digital, Brazen, PromptMarketing, Citeerbaar | Q2 | 1 each |\n| Google Search Console | Q3 | 1 |\n\nThe consistency of the Q1/Q4 tools comes from using the same source set in both questions. It is not independent confirmation.\n\n**Cited-domain frequency** (exact pages used as sources)\n\n| Domain | Questions | Count |\n|---|---|---|\n| blog.hubspot.com | Q1, Q4 | 2 |\n| visible.seranking.com | Q1, Q4 | 2 |\n| www.rubikdigital.co.uk | Q1, Q4 | 2 |\n| www.rankshift.ai | Q2 | 1 |\n| wpseoai.com | Q2 | 1 |\n| searchengineland.com | Q3 | 1 |\n\nSources: https://blog.hubspot.com/marketing/ai-citation-tracking-tools , https://visible.seranking.com/blog/best-ai-visibility-tools/ , https://www.rubikdigital.co.uk/insights/ai-visibility-tools , https://www.rankshift.ai/blog/best-geo-agencies/ , https://wpseoai.com/blog/best-geo-agencies-netherlands/ , https://searchengineland.com/guide/google-core-updates"
+}

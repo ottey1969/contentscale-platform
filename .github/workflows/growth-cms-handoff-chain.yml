@@ -37,6 +37,7 @@ on:
       - 'src/growth-free/**'
       - 'tests/fixtures/growth-report-61/**'
       - 'tests/fixtures/growth-free-mAOlLCrU07Jv/**'
+      - 'tests/fixtures/growth-free-5M0tfxjeQawH/**'
       - 'tests/fixtures/growth-page-2324-2026-10-30/**'
       - 'public/growth-new-page-ui.js'
       - 'tests/growth-selection-store-postgres.test.cjs'

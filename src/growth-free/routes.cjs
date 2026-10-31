@@ -551,6 +551,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(!ai.ENGINE_IDS.has(engine))return res.status(400).json({success:false,error:'Choose the AI system you used'});
    if(!text.trim())return res.status(400).json({success:false,error:'Paste the complete answer first'});
    if(text.length>ai.MAX_PASTE)return res.status(413).json({success:false,error:'This answer is too long; paste only the answer and its sources'});
+   if(ai.otherPrompt(text))return res.status(400).json({success:false,error:'This is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here, paste it into a new chat with web search on, and paste that answer.'});
    const parsed=ai.parseAiAnswer(text,{pageUrl:row.url});
    await storage.saveAiAnswer(pool,{checkId:row.id,engine,rawText:text,parsed});
    const aiPart=await aiFor(row);

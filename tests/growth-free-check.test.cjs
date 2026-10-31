@@ -406,6 +406,11 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'  '})).status,400);
  assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'x'.repeat(ai.MAX_PASTE+1)})).status,413);
  assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=wrong',{engine:'perplexity',text:'x'})).status,404);
+ // Real paste from check 5M0tfxjeQawH: an answer to the company quick-scan prompt (QUESTION 1–4), not to this prompt.
+ const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
+ const refused=await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'claude',text:quick});
+ assert.equal(refused.status,400);assert.match(refused.body.error,/company quick-scan prompt[\s\S]*Copy the prompt shown here/);
+ assert.equal(s.storage.aiRows.filter(r=>r.engine==='claude').length,0,'not stored as a checked AI system');
  const saved=await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: Roofer A explains estimates.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://roofer-b.example/services/roof-repair/'});
  assert.equal(saved.status,200);assert.equal(saved.body.parsed.sources,2);assert.equal(saved.body.parsed.own_site_cited,false);
  // Pasting again for the same AI system replaces the earlier answer.
