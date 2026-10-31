@@ -4,7 +4,7 @@
 // in the main app or run on its own domain with server.cjs.
 const crypto=require('node:crypto');
 const store=require('./store.cjs');
-const {runFreeGrowthResearch,validatePublicUrl}=require('./engine.cjs');
+const {runFreeGrowthResearch,validatePublicUrl,engineVersion}=require('./engine.cjs');
 const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
 const {summarizeFreeGrowth}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
@@ -328,6 +328,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
       if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
      }else{
+      // Marks which research code made this result; the cache reuses only results of the running code.
+      out.report.engine_version=engineVersion();
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
       await storage.setStatus(pool,job.id,{status:'DONE',decision:summary.decision,summary,report:out.report});
      }
@@ -382,7 +384,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const market=readMarket(b,res);if(market===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
-   const cached=await storage.recentResult(pool,{url:v.url,query,market});
+   const cached=await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
@@ -413,7 +415,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return {email,url:v.url,host:v.host,query:clean(b.query,120),market};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null}){
-  const cached=await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market});
+  const cached=await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
