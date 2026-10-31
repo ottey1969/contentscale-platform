@@ -1,0 +1,143 @@
+{
+ "_note": "Real Free Growth check mAOlLCrU07Jv (contentscale.site, \"content at scale\", market NL), 2026-10-30: search discovery, SERP intent and decision as stored by production.",
+ "query": "content at scale",
+ "url": "https://contentscale.site/",
+ "report": {
+  "serp_intent": {
+   "intent": "MIXED_OR_INSUFFICIENT",
+   "status": "SERP_INTENT_NOT_ESTABLISHED",
+   "reason": "Only 2 usable organic result(s) after excluding discussion sites; at least 3 are needed to read an intent.",
+   "organic_leads_considered": 2
+  },
+  "editorial_decision_gate": {
+   "decision": "DATA_BLOCKED",
+   "blocker_code": "SERP_INTENT_EVIDENCE"
+  },
+  "search_discovery": {
+   "organic_results_received": 9,
+   "google_redirect_links": {
+    "received": 13,
+    "resolved": 2,
+    "unresolved": 11
+   },
+   "next_page_retry": {
+    "page": 2,
+    "added_leads": 0,
+    "organic_results_received": 10
+   },
+   "rejected_leads": [
+    {
+     "url": "https://contentscale.site/",
+     "title": "Content At Scale, Done Right \u2014 Free Quality Score & Tracker",
+     "reason": "OWN_SITE"
+    },
+    {
+     "url": "https://www.eyesift.com/blog/content-at-scale-ai-detector/",
+     "title": "Content at Scale AI Detector: Free Tool Review & Accuracy ...",
+     "reason": "DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESaAHrOzAVpsyNcm9xvLKYYHszmMTX5s39rxh9iI_kv1lRQ2r4sokYduTa_F0O8xsrpzxnUVFNtEHUPaSH5_HdnoEaV81cIo1GrIZFopyqESXCyCrHVAcMdLlo4EN8fK84Q9B8YdjJWhvF",
+     "title": "Content at Scale Review - Does their AI Detection Tool ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESlgEB6zswFf7nl8xTl7GqtjuAMNAH9F6CjE-eE0FqqmRMW0zLoNbCNeCCiEwsMiP7ca0ORYsrc_XQbsEadi0SSYQ8cHLGJzQ6ykSpURTrjexYWlf-kvUHTkBsO3Bua134qOtgqY_yrMGjTocCJbTqvvumo7JpOilsXOrtMabKh9UDsJneqUciZDSGyhizTAoqyP40y_R8hKk",
+     "title": "What is Content At Scale? An Overview",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAEScwHrOzAVAuMkmhYNV3QtjLBBTBLatqeru8G0NfgMFPAHVxtbjEV1ex7VctcYbxH2DaWSlXA_KEu5YODNRy5s7V4DJTlgwqk2UAM4k--3l5zb1qnBe5TrvbzaawRl6yJVMwEO9gbsu-LPkUA3v5NZAwSR4nI",
+     "title": "Content at Scale: free AI content creation tool",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESgQEB6zswFYaMIpoC9RL5Pya1o14AREwxMC4sO2_ulHvseo8LNCvxL_fy0RSoDJCYf5vFUKiyQuXUCb9weWbNTfILUZlkfHIXt1S7VX2MhHUpzcZZEicBCV6rnzQ4SKgPFEZiCsjikbT2i3p8pbt02-Lo2jy-bLTJzMIHMwrHuM18CP8",
+     "title": "BrandWell (Previously ContentAtScale) AI Content ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESZQHrOzAV4HmGH0rXvfAQCBmIRjOvowDVVXZLMLz9M8ZPWsVQBbp742AG93fY9nZ7osMYb2pN508FhMyFh6yNLyyD1XMysg58WvfxiyYS6WJqsPCGbHSm0wRnG8cHj-9BXjyskFk-",
+     "title": "Content Scaling: 7 Tips for Creating More High-Quality ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://scale.com/",
+     "title": "Scale: Reliable AI Systems for Critical Decisions",
+     "reason": "QUERY_TERMS_NOT_IN_TITLE"
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=4I7ddiF4USw",
+     "title": "Content at Scale: How to Train AI to Create Great Content",
+     "reason": "SEARCH_OR_SOCIAL_INFRASTRUCTURE"
+    },
+    {
+     "url": "https://www.reddit.com/r/freelanceWriters/comments/15e4fpn/whats_up_with_contentatscale/",
+     "title": "What's up with Contentatscale? : r/freelanceWriters",
+     "reason": "QUERY_TERMS_NOT_IN_TITLE"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESgAEB6zswFRLgENlqQXxjVasLoH0bjYsteeZ64wS0VCT6oDB5IzfeNm8zJLSlpWmx1OqUpoFQy94KlnxvoCHT-LeuQiIyqIfho_JRA6hR8F6MMH_c_Fb66CLifb_Aoy5UntygYBYcDYAlTth57sx6MLlYrOwHPl4RWKPjIcW6TxJOeQ",
+     "title": "Content at Scale Meaning Explained for Modern Marketing ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESaAHrOzAV_1pT7AfKIiYrYGjTdNyQnw_qTBvI7gO-_TD_UJt8m24JiXECnCMDVxa5bHeL2QesvemN8rFYYmpkwr4U_CU99bL6B8Sc-vuWUFdFU1A7fFtS8j1fPSqJopgJRoLwBEsDhHPS",
+     "title": "Why Content at Scale Doesn't Work \u2013 and How AI Made It ...",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.linkedin.com/pulse/key-content-scale-ai-strategy-andrew-c-wheeler-xqn7e",
+     "title": "The Key to Content at Scale: AI + Strategy",
+     "reason": "SEARCH_OR_SOCIAL_INFRASTRUCTURE"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESiQEB6zswFYGWMEv0QfOFwVweoaJhXwuDbbiOtzdV-s57mi37TJ0Nj6mb-ySCFbZEtTmJzNFe26S_oC0bcP4_uJEGmDMle4n7neyrbNeHZ8gjkp-n0l_CoDJQfXK07zkcduOPIZyM1ng7tZ5h6u1pxHtHTxzZJvyYMUlSq-5fQmWorrJmOJA05LqagQ",
+     "title": "ContentAtScale AI Detector: Is it really accurate enough?",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESZgHrOzAVRYj1MIsfqn4hKrs9WhUhTu4fDvZ8VT0yWhe5Otuq051jcPly1l8rxfyX7IU04uXBeqGmohHdrBPshArJ-I8V1Ph6GUu17RfZnsfC51FPsWa4rji_yN2kfT7ArCv36XwPvA",
+     "title": "What Is Content At Scale In 2026? The New Definition",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESfwHrOzAVeox7IStBs5Nq9SXh6t_DWjpHrVlkouKKffx8PiC_CD4WKhqZqsaAB1-uVnnoW1riB-f93d6hYKyL19Afl610NEOCRYmcwm-yi0CqrC9ysYlR8zfdA3_wOI76Nly1ovti5gTvZ_qJH6Jzee8rimdeOwxwHoDpYCM_h7k",
+     "title": "Content At Scale Pricing & Plans (2024)",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    },
+    {
+     "url": "https://www.google.com/goto?url=CAESbAHrOzAV6v23mshgPjEeF5Qt872XgUqpF-nqGv14MM2UugDK729z9L6-5-LqoMET6vBIACdc6p2mq0Ii_fnVvsJoxF6fpXacqKLqUn6iTAJUf3CHncEFYHZkTIDvidf0wEIsfXXN5-DHtI05Mw",
+     "title": "The content scaling paradox facing modern marketers",
+     "reason": "GOOGLE_REDIRECT_LINK_NOT_RESOLVED"
+    }
+   ],
+   "leads": [
+    {
+     "url": "https://choose-your-ai.com/ai-tools/content-at-scale-ai-detector/",
+     "query": "content at scale",
+     "title": "Content at Scale AI Detector - Comparateur-IA - AI Comparator",
+     "source": "SERPER_GOOGLE_ORGANIC",
+     "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+     "snippet": "In a AI content detection market crowded with tools, Content at Scale AI Detector stands out with its pragmatic approach to AI content detection.",
+     "serp_position": 3,
+     "search_language": "en",
+     "geographic_scope": "NL",
+     "market_relevance": "NO_MARKET_SCOPE"
+    },
+    {
+     "url": "https://www.bynder.com/en/glossary/content-at-scale/",
+     "query": "content at scale",
+     "title": "What is content at scale? | Glossary",
+     "source": "SERPER_GOOGLE_ORGANIC",
+     "status": "GOOGLE_SERP_OBSERVATION_NOT_TRACKED_PAGE_POSITION",
+     "snippet": "Content at scale means producing high volumes of high-quality content quickly and efficiently\u2014while always maintaining focus on quality rather than quantity ...",
+     "serp_position": 4,
+     "search_language": "en",
+     "geographic_scope": "NL",
+     "market_relevance": "NO_MARKET_SCOPE"
+    }
+   ]
+  }
+ }
+}

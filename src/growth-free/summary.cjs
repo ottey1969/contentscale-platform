@@ -22,6 +22,15 @@ const DIY_BLOCKED=[
  'Try again with the exact search term your customers type into Google.',
  'If the problem stays, the research needs a manual comparison — that is part of the paid service.'
 ];
+// Why Google results were not used, in plain words (codes from the search discovery).
+const NOT_USED_TEXT={GOOGLE_REDIRECT_LINK_NOT_RESOLVED:'Google link that could not be opened',OWN_SITE:'your own website',
+ SEARCH_OR_SOCIAL_INFRASTRUCTURE:'Google, social media or video page',QUERY_TERMS_NOT_IN_TITLE:'the title does not contain the search words',
+ DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT:'about another product, or a login page',NON_CONTENT_PATH:'login, privacy or category page'};
+function resultsNotUsed(discovery){
+ // Older reports have only the logged examples: each result counted once.
+ const counts=discovery.rejected_reasons||[...new Map((discovery.rejected_leads||[]).map(x=>[x.url,x.reason])).values()].reduce((n,r)=>(n[r]=(n[r]||0)+1,n),{});
+ return Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([code,count])=>({code,count,text:NOT_USED_TEXT[code]||code.toLowerCase().replace(/_/g,' ')}));
+}
 const INTENT_TEXT={LOCAL_SERVICE:'local service pages',INFORMATIONAL:'guides and explanations',COMMERCIAL:'comparison and buying pages',
  TRANSACTIONAL:'pages where people buy or book',NAVIGATIONAL:'specific brand or login pages'};
 
@@ -54,6 +63,9 @@ function summarizeFreeGrowth(report,{url,query}={}){
   search_term_source:query?'YOU_ENTERED_IT':'DERIVED_FROM_THE_PAGE',
   what_google_shows:serp.intent?(INTENT_TEXT[serp.intent]||String(serp.intent).toLowerCase().replace(/_/g,' ')):null,
   ranking_results_considered:Number(serp.organic_leads_considered)||((discovery.leads||[]).length)||0,
+  google_results_received:Number.isFinite(discovery.organic_results_received)?discovery.organic_results_received:null,
+  results_not_used:resultsNotUsed(discovery),
+  google_redirect_links:discovery.google_redirect_links||null,
   ranking_pages_read:read||Number(coverage.competitors_considered)||0,
   // Per target market, whichever source answered; a derived market is labelled as not confirmed.
   search_market:(discovery.market_coverage?.markets||[]).some(m=>m.researched)?
@@ -95,7 +107,18 @@ function summarizeFreeGrowth(report,{url,query}={}){
   const code=gate.blocker_code||(gate.missing_evidence&&gate.missing_evidence[0]&&gate.missing_evidence[0].code)||null;
   headline='Not enough reliable evidence for advice';
   explanation=BLOCKER_TEXT[code]||'The research could not collect enough reliable evidence. We do not guess.';
-  steps=code==='QUERY_MEANS_SOMETHING_ELSE'?['Keep your page as it is: do not rewrite it toward the other meaning.',
+  // Too few usable Google results to tell what people want: say how many, and why the others were not used.
+  const usable=checked.ranking_results_considered,lost=checked.google_redirect_links?.unresolved||0;
+  const thin=/^SERP_INTENT/.test(String(code))&&usable<3;
+  if(thin){
+   const why=checked.results_not_used.slice(0,3).map(x=>x.count+' × '+x.text).join(', ');
+   explanation='Only '+usable+' Google result(s) could be used'+(checked.google_results_received!=null?' (of '+checked.google_results_received+' received)':'')+
+    '; at least three are needed to tell what people searching for this want, so no safe advice can be given.'+(why?' Not used: '+why+'.':'');
+  }
+  steps=thin?[...(lost?[lost+' result(s) came as Google redirect links that the research could not open. That is a limit of this research, not of your page; running the check again later can give a different result.']:[]),
+   'Try again with the exact search term your customers type into Google; a longer, more specific term gives more comparable results.',
+   'If the problem stays, the research needs a manual comparison — that is part of the paid service.']:
+   code==='QUERY_MEANS_SOMETHING_ELSE'?['Keep your page as it is: do not rewrite it toward the other meaning.',
    'Check again with a more specific search term that includes words from your own page.']:DIY_BLOCKED;
   if(code==='QUERY_MEANS_SOMETHING_ELSE'){
    const other=((gate.missing_evidence||[]).find(m=>m.code===code)||{}).observed;
@@ -108,7 +131,7 @@ function summarizeFreeGrowth(report,{url,query}={}){
  const limitations=[
   'Google Search Console was not used: clicks, impressions and positions of your site are unknown in this free check.',
   'Only this one page was checked, not the rest of your website.',
-  'Only Google\'s normal search results were compared. AI answers (ChatGPT, Perplexity, Google AI Overviews) were not checked in this free check.',
+  'Only Google\'s normal search results were compared. AI answers (ChatGPT, Perplexity, Google AI Overviews) were not checked automatically; only answers you paste below are analysed.',
   ...(gate.research_limitations||[]).slice(0,3).map(x=>typeof x==='string'?x:(x.detail||x.message||x.code||'')).filter(Boolean)
  ];
  if(scopeNote)limitations.push('Google shows more than one kind of page for this search. Your page was compared only with the '+gate.intent_scope.compared_with+' ('+gate.intent_scope.results_of_this_type+' of '+gate.intent_scope.of+'). '+scopeNote);
