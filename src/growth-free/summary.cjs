@@ -40,7 +40,7 @@ function resultsNotUsed(discovery){
 }
 // Without Search Console the free check has to guess the search term; the Tracker starts from real data.
 const TRACKER_STEP='Use the ContentScale Tracker with Google Search Console: it shows which search terms this page already gets impressions and clicks for, and at which position. Research those terms instead of guessing one.';
-const INTENT_TEXT={LOCAL_SERVICE:'local service pages',INFORMATIONAL:'guides and explanations',COMMERCIAL:'comparison and buying pages',
+const INTENT_TEXT={SERVICE_PROVIDER:'providers offering this service',PROVIDER_LIST:'lists of providers to choose from',LOCAL_SERVICE:'local service pages',INFORMATIONAL:'guides and explanations',COMMERCIAL:'comparison and buying pages',
  TRANSACTIONAL:'pages where people buy or book',NAVIGATIONAL:'specific brand or login pages'};
 
 function placementText(p){
