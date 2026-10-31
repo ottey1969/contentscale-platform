@@ -12,6 +12,8 @@ const LOW_CTR_TOP=0.02;              // on positions 1–3 fewer than 2% clicks:
 const rootsOf=t=>queryRoots(String(t||'')).all;
 const compact=t=>String(t||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const norm=u=>{try{const x=new URL(u);x.hash='';x.search='';return x.href.replace(/\/$/,'')}catch{return String(u||'').replace(/\/$/,'')}};
+const words=t=>String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);
+const run=(a,b)=>{let best=0;for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++){let k=0;while(a[i+k]&&a[i+k]===b[j+k])k++;if(k>best)best=k}return best};
 const pathWords=u=>{try{return decodeURIComponent(new URL(u).pathname).replace(/[^a-z0-9]+/gi,' ')}catch{return ''}};
 
 // Position decides the kind of work and how much an improvement can move: page one but not top three is the quickest.
@@ -60,10 +62,20 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
   const dq=queryRoots(lead.query).distinct,topic=dq.length?dq:rootsOf(lead.query);
   const covers=p=>{const t=new Set([...rootsOf(p.keyword),...rootsOf(pathWords(p.url))]);return !topic.length||topic.filter(r=>t.has(r)).length>=Math.ceil(topic.length/2)};
   const isProtectedPage=p=>p.case_study_active===true||p.eligibility?.status==='PROTECTED';
-  const other=covers(lead.page)?null:pages.filter(p=>p&&p.url&&norm(p.url)!==norm(lead.page.url)&&covers(p)&&!isProtectedPage(p))
-   .sort((a,b2)=>rootsOf(a.keyword).length-rootsOf(b2.keyword).length)[0]||null;
-  const kind=covers(lead.page)?b.kind:other?'OTHER_EXISTING_PAGE':'POSSIBLE_NEW_PAGE';
+  // The page about the term, in this order: the page whose keyword or URL has the term's own words in order (the
+  // dedicated page: "content scaling" → /content-scaling/, not /content-at-scale/, which only shares a word stem), then a
+  // page Google already shows for the term, then the page with fewest other words. Word stems alone never decide.
+  const fit=p=>{const q=words(lead.query),k=words(p.keyword),u=words(pathWords(p.url));
+   return {exact:k.join(' ')===q.join(' ')||u.join(' ')===q.join(' '),run:Math.max(run(q,k),run(q,u)),shown:g.some(x=>norm(x.page.url)===norm(p.url)),extra:rootsOf(p.keyword).length}};
+  const rank=(a,b2)=>{const x=fit(a),y=fit(b2);return (y.exact-x.exact)||(y.run-x.run)||(y.shown-x.shown)||(x.extra-y.extra)};
+  const candidates=pages.filter(p=>p&&p.url&&covers(p)&&!isProtectedPage(p)).sort(rank);
+  const dedicated=candidates[0]||null;
+  // The page Google shows stays the target when it covers the term at least as well as the best other page.
+  const leadFits=covers(lead.page)&&!isProtectedPage(lead.page)&&(!dedicated||norm(dedicated.url)===norm(lead.page.url)||rank(lead.page,dedicated)<=0);
+  const other=leadFits?null:dedicated&&norm(dedicated.url)!==norm(lead.page.url)?dedicated:null;
+  const kind=leadFits?b.kind:other?'OTHER_EXISTING_PAGE':covers(lead.page)?b.kind:'POSSIBLE_NEW_PAGE';
   const target=kind==='OTHER_EXISTING_PAGE'?other:lead.page;
+  const otherShown=other?g.find(x=>norm(x.page.url)===norm(other.url)):null;
   if(isProtectedPage(target)&&kind!=='POSSIBLE_NEW_PAGE'){excluded.protected_page++;continue}
   c.opportunities++;
   list.push({query:lead.query,country:lead.country,country_name:countryName(lead.country),page_id:target.id??null,page_url:target.url,
@@ -74,7 +86,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
    priority:Math.round(impressions*(kind==='POSSIBLE_NEW_PAGE'?0.3:b.weight)),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
    why:impressions+' impressions and '+clicks+' clicks in '+countryName(lead.country)+(period?' ('+period.start+' – '+period.end+')':'')+', average position '+Math.round(lead.position*10)/10+' ('+b.label+')'+
     (kind==='SNIPPET'?'; only '+Math.round(ctr*1000)/10+'% of searchers click':'')+
-    (kind==='OTHER_EXISTING_PAGE'?'; Google shows '+lead.page.url+', but '+other.url+' is the tracked page about this term':'')+
+    (kind==='OTHER_EXISTING_PAGE'?'; Google shows '+lead.page.url+' first, but '+other.url+' is the tracked page about this term'+(otherShown?' (Google shows it too, at position '+Math.round(otherShown.position*10)/10+')':''):'')+
     (kind==='POSSIBLE_NEW_PAGE'?'; no tracked page names this topic ('+lead.page.url+' is shown for it), so a separate page may be needed — the research decides':'')+
     (g.length>1?'; '+(g.length-1)+' other page(s) of the site also appear for it':'')+'.'});
  }
