@@ -62,7 +62,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -640,7 +640,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // publishing without one). Rows of the tracked page are never used as the target page's baseline.
   // The Search Console import per country also gives the target page's own starting point (dated, this page only).
   let countryRows=[];if(typeof loadCountryRows==='function'){try{countryRows=await loadCountryRows({clientId:v.clientId})}catch{}}
-  completeDecision.publication_readiness=publicationReadiness({decision:completeDecision,destinationGsc:report.destination_gsc_evidence,countryRows});
+  // The owner's KEEP/REMOVE per unverified statement of this target page (read only here).
+  let claimReviews=[];if(typeof loadClaimReviews==='function'&&Number.isSafeInteger(targetId)){try{claimReviews=await loadClaimReviews({clientId:v.clientId,targetPageId:targetId})}catch{}}
+  completeDecision.publication_readiness=publicationReadiness({decision:completeDecision,destinationGsc:report.destination_gsc_evidence,countryRows,claimReviews});
+  completeDecision.publication_readiness.target_page_id=Number.isSafeInteger(targetId)?targetId:null;
   const handoffPackage=buildOwnerHandoffPackage({report,decision:completeDecision,completion:completionOut,linkPlan:report.internal_link_plan||[]});
   // Package the actual observed passages with the draft. A reader can now
   // inspect precisely which source supports each proposed editorial review.
@@ -757,6 +760,18 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Every page of this site researches with the new default on its next run.
   for(const k of [...cache.keys()])if(k.startsWith(req.growthTrackerClientId+':'))cache.delete(k);
   res.set('Cache-Control','private, no-store').json({success:true,site_markets:saved,research_rerun_required:true});
+ });
+ // The owner's decision on one unverified statement: KEEP (confirmed for their business) or REMOVE (leaves the text).
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/claim-review',data,async(req,res)=>{
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof saveClaimReview!=='function')return no(403,'OWNER_ONLY_CLAIM_REVIEW');
+  const b=req.body||{},pid=Number(b.target_page_id),statement=String(b.statement||'').replace(/\s+/g,' ').trim(),decision=String(b.decision||'');
+  if(!(req.growth.pages||[]).some(p=>Number(p.id)===pid))return no(404,'TARGET_PAGE_NOT_FOUND');
+  if(statement.length<8||statement.length>600)return no(400,'STATEMENT_REQUIRED');
+  if(!['KEEP','REMOVE','UNDECIDED'].includes(decision))return no(400,'DECISION_KEEP_OR_REMOVE');
+  try{await saveClaimReview({clientId:req.growthTrackerClientId,targetPageId:pid,statement,decision})}catch{return no(503,'NOT_SAVED')}
+  // The next report of this page shows the decision; cached research is unaffected (the review is read on every complete run).
+  res.set('Cache-Control','private, no-store').json({success:true,statement,decision});
  });
  // An AI answer for the research's search term, pasted by the owner (same prompt, checks and parser as the Free check).
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/ai-answer',data,async(req,res)=>{

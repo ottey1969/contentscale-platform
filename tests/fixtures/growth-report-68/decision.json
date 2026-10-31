@@ -1,0 +1,63 @@
+{
+ "_note": "Real Growth report 68 (contentscale.site/content-scaling/, \"content scaling\", US, 2026-10-31 22:32): the editorial decision with its 5 unverified statements, and the destination Search Console status.",
+ "editorial_decision_gate": {
+  "decision": "IMPROVE_EXISTING",
+  "target_url": "https://contentscale.site/content-scaling/",
+  "focus_query": "content scaling",
+  "target_section": "How to Audit Your Content Before You Scale",
+  "placement": {
+   "mode": "ADD_AFTER_SECTION",
+   "section_heading": "How to Audit Your Content Before You Scale",
+   "reason": "Closest existing section by shared concepts (updat, improv, exist); the new section continues that explanation."
+  },
+  "draft_heading": "How Content Repurposing to Recycle Assets Scales Your Strategy",
+  "proposed_text": "Content repurposing gives editorial teams a clear method to recycle published articles into new formats. Begin by identifying top-performing pages that passed your audit. Extract key takeaways, core findings, and actionable steps from these existing articles to prepare them for transformation.\n\nNext, set up a step-by-step editorial process to convert the primary text into secondary assets like summary guides or newsletters. Writers outline the core points from the original piece, and editors check that the newly adapted content remains accurate before publication.",
+  "additional_sections": [
+   {
+    "task": "task_styl",
+    "placement": {
+     "mode": "ADD_AFTER_SECTION",
+     "section_heading": "How the GRAAF Workflow Works (Brief → Publish)",
+     "reason": "Closest existing section by shared concepts (publis, piec, acros); the new section continues that explanation."
+    },
+    "heading": "How Writers Maintain Style and Consistency for Every Buyer",
+    "text": "To protect style and consistency across all writers, create editorial guidelines focused on the buyer. First, document specific rules for tone, formatting, word choice, and technical terminology in a single shared style sheet. Walk every team member through these guidelines prior to writing.\n\nNext, incorporate a style review step into your standard assignment process. Editors check incoming drafts against the documented tone and structural guidelines before final approval, confirming that tone and formatting remain uniform across every published asset."
+   }
+  ],
+  "claim_review": {
+   "counts": {
+    "sourced_from_page": 0,
+    "general_advice": 5,
+    "general_statement_unverified": 5
+   },
+   "needs_fact_check": [
+    "Content repurposing gives editorial teams a clear method to recycle published articles into new formats.",
+    "Writers outline the core points from the original piece, and editors check that the newly adapted content remains accurate before publication.",
+    "To protect style and consistency across all writers, create editorial guidelines focused on the buyer.",
+    "Walk every team member through these guidelines prior to writing.",
+    "Editors check incoming drafts against the documented tone and structural guidelines before final approval, confirming that tone and formatting remain uniform across every published asset."
+   ],
+   "needs_owner_confirmation": [],
+   "needs_safety_review": [],
+   "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+   "requirements": [
+    "Fact-check every statement against your own knowledge and sources before publishing.",
+    "Owner approval is required; nothing is published automatically."
+   ]
+  },
+  "source_comparison": {
+   "competitor_url": "https://www.aprimo.com/resource-library/article/content-scaling",
+   "competitor_heading": "Content Repurposing",
+   "competitor_passage": "Reusing and repurposing improves content return on investment (ROI) and expedites the scaling process. Traditional content distribution is linear, creating customized material for each platform and campaign. A repurposing strategy breaks down content into its components. Each piece combines content blocks marketers can reclaim, redesign, and compile for another campaign or channel."
+  },
+  "copy_ready": true
+ },
+ "destination_gsc_evidence": {
+  "status": "NO_VERIFIED_DESTINATION_ROWS",
+  "target_url": "https://contentscale.site/content-scaling/",
+  "target_page_id": 2295,
+  "focus_query": "content scaling",
+  "exact_query_verified": false,
+  "metrics": null
+ }
+}

@@ -53,6 +53,16 @@
    first.focus();
   });
  }
+ // After a keep/remove, the readiness is recomputed the same way as on the server (only undecided statements block).
+ function applyClaimReviews(ready){
+  var total=Math.max(ready.statements.length,Number(ready.total_statements)||0);
+  var open=total-ready.statements.filter(function(x){return x.decision!=='UNDECIDED'}).length;
+  ready.blockers=(ready.blockers||[]).filter(function(b){return b.code!=='UNVERIFIED_STATEMENTS'});
+  if(open>0)ready.blockers.unshift({code:'UNVERIFIED_STATEMENTS',count:open,required:true,detail:open+' statement(s) in the proposed text are not verified by any source and not yet reviewed by you.',action:'Read each statement: keep it when you confirm it is correct for your business, or remove it from the text.'});
+  ready.kept=ready.statements.filter(function(x){return x.decision==='KEEP'}).length;ready.removed=ready.statements.filter(function(x){return x.decision==='REMOVE'}).length;
+  var req=ready.blockers.some(function(b){return b.required});
+  ready.status=req?'NOT_READY_FOR_PUBLICATION':ready.blockers.length?'READY_FOR_OWNER_APPROVAL_WITH_NOTES':'READY_FOR_OWNER_APPROVAL';
+ }
  function renderAiCheck(box,d){
   var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
@@ -162,6 +172,29 @@
     node('strong',ready.status==='NOT_READY_FOR_PUBLICATION'?'Draft for review — not ready for publication':'Ready for your approval, with notes',rb);
     var bl=node('ul',null,rb);ready.blockers.forEach(function(b){var li=node('li',(b.required?'Required: ':'Recommended: ')+String(b.detail||b.code),bl);node('div','What to do: '+String(b.action||''),li)});
     node('small',String(ready.note||''),rb);
+   }
+   // Every unverified statement, for the owner to read: keep it (confirmed for your business) or remove it from the text.
+   if(ready&&(ready.statements||[]).length&&main.getAttribute('data-owner-draft')==='true'){
+    var sb=node('div',null,primary);sb.className='growth-claim-review';
+    node('strong','Statements to check before publishing ('+ready.statements.length+')',sb);
+    node('p','Growth found no source for these. Keep a statement when you confirm it is correct for your business (it may add useful information for readers); remove it when you cannot stand behind it. Removed statements leave the copied text.',sb);
+    var sl=node('ol',null,sb);
+    ready.statements.forEach(function(st){
+     var li=node('li',null,sl);node('span','“'+st.text+'” ',li);
+     var state=node('strong',st.decision==='KEEP'?'Kept — confirmed by you':st.decision==='REMOVE'?'Removed from the text':'Not reviewed yet',li);
+     var row=node('div',null,li);
+     [['KEEP','Keep (I confirm this)'],['REMOVE','Remove from the text'],['UNDECIDED','Undo']].forEach(function(a){
+      if(a[0]==='UNDECIDED'&&st.decision==='UNDECIDED')return;
+      var btn=node('button',a[1],row);btn.type='button';if(a[0]!=='KEEP'&&btn.style)btn.style.marginLeft='6px';if(a[0]===st.decision)btn.disabled=true;
+      btn.addEventListener('click',async function(){
+       btn.disabled=true;state.textContent='Saving…';
+       try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/claim-review?page_id='+encodeURIComponent(id),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+         body:JSON.stringify({target_page_id:ready.target_page_id,statement:st.text,decision:a[0]})});var j=await r.json();if(!j.success)throw Error(j.code||'Not saved');
+        st.decision=a[0];applyClaimReviews(ready);if(last)render(last);
+       }catch(e){state.textContent='Not saved: '+String(e.message||e);btn.disabled=false}
+      });
+     });
+    });
    }
    node('p','Existing section: '+String(outcome.target_section||'unspecified'),primary);
    if(outcome.placement)node('p','Placement: '+String(outcome.placement.mode||'').replace(/_/g,' ').toLowerCase()+' — '+String(outcome.placement.reason||''),primary);

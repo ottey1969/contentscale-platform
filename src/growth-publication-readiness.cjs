@@ -1,15 +1,23 @@
 'use strict';
+const {hashOf,normStatement}=require('./growth-claim-review-store.cjs');
 // What stands between a reviewable Growth proposal and publication. copy_ready only means "ready for human review".
 // Nothing here publishes; the owner approves, and every blocker says what to do.
 // countryRows: the Search Console import per country (page × query × country, one dated period). Rows of the target page
 // itself for the search term are a starting point too: the page's own numbers, never another page's.
-function publicationReadiness({decision={},destinationGsc=null,countryRows=[]}={}){
+// claimReviews: the owner's KEEP/REMOVE per unverified statement (growth-claim-review-store). A kept statement is
+// confirmed by the owner; a removed one leaves the copied text. Only statements without a decision still block.
+function publicationReadiness({decision={},destinationGsc=null,countryRows=[],claimReviews=[]}={}){
  const blockers=[];
  if(!decision.proposed_text)return {status:'NO_PROPOSAL',ready_for_publication:false,blockers};
- const unverified=Number(decision.claim_review?.counts?.general_statement_unverified)||0;
+ const listed=(decision.claim_review?.needs_fact_check||[]).map(normStatement).filter(Boolean);
+ const byHash=new Map((claimReviews||[]).map(r=>[r.statement_hash||hashOf(r.statement),r.decision]));
+ const statements=listed.map(t=>({text:t,decision:byHash.get(hashOf(t))||'UNDECIDED'}));
+ // When the list is shorter than the count (older reports), the statements not listed stay undecided.
+ const total=Math.max(Number(decision.claim_review?.counts?.general_statement_unverified)||0,listed.length);
+ const unverified=total-statements.filter(x=>x.decision!=='UNDECIDED').length;
  if(unverified)blockers.push({code:'UNVERIFIED_STATEMENTS',count:unverified,required:true,
-  detail:unverified+' statement(s) in the proposed text are not verified by any source.',
-  action:'Check each statement against your own knowledge and sources; remove or rewrite what you cannot stand behind.'});
+  detail:unverified+' statement(s) in the proposed text are not verified by any source'+(statements.some(x=>x.decision!=='UNDECIDED')?' and not yet reviewed by you':'')+'.',
+  action:'Read each statement: keep it when you confirm it is correct for your business, or remove it from the text.'});
  const baseline=destinationGsc&&(destinationGsc.status==='EXACT_QUERY_VERIFIED'||destinationGsc.metrics);
  const target=norm(destinationGsc?.target_url||decision.target_url),term=String(destinationGsc?.focus_query||decision.focus_query||'').trim().toLowerCase();
  const own=(countryRows||[]).filter(r=>norm(r.page_url)===target&&String(r.query||'').trim().toLowerCase()===term).sort((a,b)=>b.impressions-a.impressions);
@@ -22,7 +30,8 @@ function publicationReadiness({decision={},destinationGsc=null,countryRows=[]}={
  if(decision.case_study_locked===true&&decision.target_url&&decision.protected_url===decision.target_url)
   blockers.push({code:'CASE_STUDY_LOCKED',required:true,detail:'The target page is a locked Case Study.',action:'Do not change it while the Case Study runs.'});
  const required=blockers.filter(b=>b.required);
- return {...(country_baseline?{baseline:{...country_baseline,
+ return {statements,total_statements:total,kept:statements.filter(x=>x.decision==='KEEP').length,removed:statements.filter(x=>x.decision==='REMOVE').length,
+  ...(country_baseline?{baseline:{...country_baseline,
    note:'Starting point of '+(destinationGsc?.target_url||decision.target_url)+' for “'+term+'” from the Search Console import per country ('+(country_baseline.period.start||'?')+' – '+(country_baseline.period.end||'?')+'): '+
     country_baseline.impressions+' impressions, '+country_baseline.clicks+' clicks. After publishing, register the publication in Growth measurement for the 28-day comparison.'}}:{}),
   status:required.length?'NOT_READY_FOR_PUBLICATION':blockers.length?'READY_FOR_OWNER_APPROVAL_WITH_NOTES':'READY_FOR_OWNER_APPROVAL',
