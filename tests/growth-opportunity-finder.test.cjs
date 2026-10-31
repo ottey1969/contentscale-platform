@@ -150,11 +150,11 @@ test('a site that reaches the Search Console row limit is told that terms with f
 });
 
 test('page and query country totals are never attributed to a different URL',()=>{
- const rows=[R('https://contentscale.site/ai-content-quality-checker/','content scaling tips','US',50,0,7),R('https://contentscale.site/content-scaling/','content scaling tips','US',450,8,12)];
+ const rows=[R('https://contentscale.site/ai-content-quality-checker/','content scaling tips','US',450,0,7),R('https://contentscale.site/content-scaling/','content scaling tips','US',50,8,12)];
  const f=findOpportunities({rows,pages,domain:'contentscale.site'});
  assert.equal(f.best.kind,'OTHER_EXISTING_PAGE');
  assert.equal(f.best.page_url,'https://contentscale.site/ai-content-quality-checker/');
- assert.equal(f.best.impressions,50);assert.equal(f.best.clicks,0);
+ assert.equal(f.best.impressions,450);assert.equal(f.best.clicks,0);
  assert.equal(f.best.query_country_total_impressions,500);assert.equal(f.best.query_country_total_clicks,8);
  assert.equal(f.best.research.page_id,5);
  assert.match(f.best.why,/these pages together have 500 impressions and 8 clicks/);
