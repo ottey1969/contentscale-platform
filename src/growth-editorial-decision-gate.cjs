@@ -51,7 +51,7 @@ function decideFromCoveragePlan({base,report,destination,coverage,serpIntent,des
   next_action:'Keep the page as it is; do not rewrite it toward the other meaning. To grow this page, research a more specific search term that includes words from the page itself.'};
  if(missing.length)return {...base,decision:'DATA_BLOCKED',blocker_code:missing[0].code,missing_evidence:missing,
   attempted_sources:attempts,reason:'Required evidence was not accessible: '+missing.map(x=>x.code).join(', ')+'.',
-  next_action:'Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.'};
+  next_action:nextStepFor(missing[0].code,report)};
  if((coverage.unverifiable_site_pages||[]).length)uncertainties.push('Same-site pages not fully readable ('+coverage.unverifiable_site_pages.length+'): a task could already be taught there beyond the captured part, so verify before publishing.');
  const supported=(coverage.tasks||[]).filter(t=>t.supported_by_competitors);
  facts.push({code:'SERP_INTENT',value:serpIntent.intent,agreeing_leads:serpIntent.agreeing_leads,of:serpIntent.organic_leads_considered,
@@ -200,6 +200,20 @@ function intentScopeNote(scope){
  return {compared_with:own,results_of_this_type:scope.results_of_this_type,of:scope.of,overall_intent:scope.overall_intent,
   other_intent_served_by:scope.other_intent_served_by||[],note};
 }
+// What the owner can do for each missing piece of evidence (acceptance criterion 5: a clear next step, not "resolve it").
+function nextStepFor(code,report){
+ const sd=report?.search_discovery||{},lost=Number(sd.google_redirect_links?.unresolved)||0,usable=(sd.leads||[]).length;
+ const market=(sd.scope?.searched_markets||[]).map(x=>String(x).toUpperCase()).join(', ');
+ const lostNote=lost?' '+lost+' Google result(s)'+(market?' in '+market:'')+' could not be opened and are missing from this research'+(lost>=usable?' (more than the usable ones)':'')+'; searching the market where your customers are, set in the Growth Cockpit or on this page, can give comparable results.':'';
+ const steps={
+  SERP_INTENT_EVIDENCE:'Google shows too few or too different kinds of pages for this term to tell what searchers want. Run it again with the target market where your customers search, or with a more specific search term from your page.'+lostNote,
+  READABLE_COMPETITOR_ARTICLES:'Fewer than two ranking pages could be read as articles (blocked, timed out or not articles). Run the research again later, or use a more specific search term for which comparable articles rank.'+lostNote,
+  COMPLETE_COMPETITOR_HTML:'The ranking pages could not be read completely. Run the research again later; until then no gap is claimed.',
+  TARGET_HTML_UNAVAILABLE:'Your page could not be read. Check that it opens publicly without a login and is not blocked for automated visitors, then run the research again.',
+  COMPLETE_DESTINATION_HTML:'Your page could not be read completely. Check that it opens publicly and loads its text without a login, then run the research again.',
+  TOPIC_NOT_RESOLVED:'No search term could be determined for this page. Set its keyword in the Tracker, then run the research again.'};
+ return steps[code]||'Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.';
+}
 function decideGrowthEditorialAction(args={}){
  const core=decideGrowthEditorialActionCore(args);
  const scope=intentScopeNote(args.serpIntent?.page_type_scope);
@@ -271,4 +285,4 @@ function decideGrowthEditorialActionCore({report={},destination={},coverage=null
   strongest_comparison:{own_heading:reliable[0].nearest_existing_section.heading,
    competitor_heading:reliable[0].competitor_heading,competitor_url:reliable[0].competitor_url}};
 }
-module.exports={decideGrowthEditorialAction};
+module.exports={nextStepFor,decideGrowthEditorialAction};

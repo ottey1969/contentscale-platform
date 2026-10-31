@@ -1,0 +1,673 @@
+{
+ "_note": "Real Growth reports 62, 63, 64, 66 and 67 (contentscale.site, 2026-10-31), reduced to the fields the acceptance check reads: the decision, meaning, competitor overview status, search discovery (markets, usable results, redirect losses, pages read), the choice list and the one-outcome text.",
+ "62": {
+  "url": "https://contentscale.site/",
+  "editorial_decision_gate": {
+   "decision": "IMPROVE_EXISTING",
+   "blocker_code": null,
+   "next_action": "Review the proposed text at the stated placement; approve before any CMS handoff. Nothing is published.",
+   "missing_evidence": null,
+   "proposed_text": "Creating a style guide establishes clear formatting, voice, and structural requirements before expanding publishing volume. Content managers draft guidelines covering tone of voice, heading hierarchy, citation standards, and terminology rules. Writers and editors consult this foundational document to align every draft with team standards, helping individual contributors maintain cohesive messaging across all assets.\n\nTeams maintain consistency by integrating the style document directly into production workflows. Editors evaluate drafts against explicit criteria, verifying proper attribution, formatting, and structural organization prior to publishing. Defining voice and formatting standards reduces subjective editorial decisions, allowing multiple contributors to produce uniform work as output increases.",
+   "draft_heading": "How Creating a Style Guide Helps Maintain Consistency When Scaling Content",
+   "placement": {
+    "mode": "ADD_AFTER_SECTION",
+    "section_heading": "🔑 The 5-Step GRAAF Workflow",
+    "reason": "Closest existing section by shared concepts (specif, clear, publis, intern); the new section continues that explanation."
+   },
+   "target_section": "🔑 The 5-Step GRAAF Workflow",
+   "target_url": "https://contentscale.site/content-scaling/",
+   "focus_query": "content scaling",
+   "claim_review": {
+    "counts": {
+     "sourced_from_page": 0,
+     "general_advice": 1,
+     "general_statement_unverified": 10
+    },
+    "needs_fact_check": [
+     "Creating a style guide establishes clear formatting, voice, and structural requirements before expanding publishing volume.",
+     "Content managers draft guidelines covering tone of voice, heading hierarchy, citation standards, and terminology rules.",
+     "Writers and editors consult this foundational document to align every draft with team standards, helping individual contributors maintain cohesive messaging across all assets.",
+     "Teams maintain consistency by integrating the style document directly into production workflows.",
+     "Editors evaluate drafts against explicit criteria, verifying proper attribution, formatting, and structural organization prior to publishing.",
+     "Defining voice and formatting standards reduces subjective editorial decisions, allowing multiple contributors to produce uniform work as output increases.",
+     "Content managers first segment the workflow into discrete roles—such as outline creation, initial drafting, or proofreading—and delegate distinct responsibilities to specialized contractors while retaining strategic editorial control.",
+     "To manage external production effectively, internal teams provide structured briefs and defined quality criteria for each task.",
+     "Freelancers receive explicit instructions detailing intent mapping, structural requirements, and formatting rules.",
+     "Internal editors review submitted deliverables, execute required quality checks, and handle final revisions before publishing to preserve high standards across all outsourced pieces."
+    ],
+    "needs_owner_confirmation": [],
+    "needs_safety_review": [],
+    "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+    "requirements": [
+     "Fact-check every statement against your own knowledge and sources before publishing.",
+     "Owner approval is required; nothing is published automatically."
+    ]
+   },
+   "publication_readiness": null,
+   "publish_allowed": false,
+   "additional_sections": [
+    {
+     "task": "task_outsou",
+     "placement": {
+      "mode": "ADD_AFTER_SECTION",
+      "section_heading": "How to Audit Your Content Before You Scale",
+      "reason": "Closest existing section by shared concepts (honest, expand, publis, thre); the new section continues that explanation."
+     },
+     "heading": "How to Outsource Content Creation and Delegate Parts of Production to Freelancers",
+     "text": "Organizations can outsource specific parts of content creation to external freelancers to expand production capacity without overburdening internal staff. Content managers first segment the workflow into discrete roles—such as outline creation, initial drafting, or proofreading—and delegate distinct responsibilities to specialized contractors while retaining strategic editorial control.\n\nTo manage external production effectively, internal teams provide structured briefs and defined quality criteria for each task. Freelancers receive explicit instructions detailing intent mapping, structural requirements, and formatting rules. Internal editors review submitted deliverables, execute required quality checks, and handle final revisions before publishing to preserve high standards across all outsourced pieces."
+    }
+   ]
+  },
+  "serp_meaning": {
+   "status": "SAME_MEANING",
+   "query": "content scaling",
+   "results_considered": 6,
+   "dominant_words": [],
+   "absent_on_page": [],
+   "basis": "Words in at least 60% of result titles (min. 3) that are not part of the page's subject: not in its title or headings, and not frequent in its text."
+  },
+  "competitor_overview": {
+   "status": "OBSERVED",
+   "ranking_pages_read": 5,
+   "topics_status": "GROUPED",
+   "subject_check": null
+  },
+  "search_discovery": {
+   "query": "content scaling",
+   "scope": {
+    "country": "nl",
+    "language": "en",
+    "location": null,
+    "market_states": [],
+    "market_source": "SET_IN_TRACKER",
+    "searched_markets": [
+     "nl"
+    ],
+    "target_markets_not_searched": [],
+    "source": "Google organic results through optional configured Serper.dev"
+   },
+   "leads": [
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling"
+    },
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling"
+    },
+    {
+     "url": "https://thecontentmarketingteam.co.uk/2026/07/01/ai-content-scaling-what-it-is-and-whether-you-should-do-it/"
+    },
+    {
+     "url": "https://www.bynder.com/en/glossary/content-at-scale/"
+    },
+    {
+     "url": "https://www.contentoo.com/blog/actionable-tips-on-content-scaling"
+    },
+    {
+     "url": "https://business.adobe.com/industries/media-and-entertainment/scale-content-creation.html"
+    }
+   ],
+   "google_redirect_links": {
+    "received": 11,
+    "resolved": 2,
+    "unresolved": 9,
+    "unresolved_reasons": {
+     "NO_TARGET_ON_GOOGLE_PAGE": 9
+    },
+    "google_page_sample": {
+     "status": 200,
+     "bytes": 15073,
+     "title": "Google",
+     "has_script": true,
+     "consent": false,
+     "unusual_traffic": false
+    }
+   },
+   "competitor_fetch_log": [
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://thecontentmarketingteam.co.uk/2026/07/01/ai-content-scaling-what-it-is-and-whether-you-should-do-it/",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://www.bynder.com/en/glossary/content-at-scale/",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://www.contentoo.com/blog/actionable-tips-on-content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://business.adobe.com/industries/media-and-entertainment/scale-content-creation.html",
+     "outcome": "FETCH_FAILED"
+    }
+   ]
+  },
+  "gap_list": {
+   "writing_allowed": true,
+   "recommended": [
+    "q-task_styl",
+    "q-task_outsou",
+    "q-task_repurp",
+    "t-434fb0f3bf"
+   ]
+  },
+  "outcome_context": null,
+  "editorial_work_packet": {
+   "publication_allowed": false
+  }
+ },
+ "63": {
+  "url": "https://contentscale.site/",
+  "editorial_decision_gate": {
+   "decision": "IMPROVE_EXISTING",
+   "blocker_code": null,
+   "next_action": "Review the proposed text at the stated placement; approve before any CMS handoff. Nothing is published.",
+   "missing_evidence": null,
+   "proposed_text": "Using a content style guide helps teams minimize voice drift and formatting errors when expanding publishing efforts. When multiple contributors produce drafts, centralizing rules for tone, formatting, terminology, and citation standards gives everyone a shared baseline. This reduces editing rounds and keeps brand messaging cohesive across published pieces.\n\nTo implement a style guide effectively, document your baseline requirements in an accessible document for all writers and editors. Define specific rules for heading structure, brand tone, internal link placement, and source attribution. Review incoming drafts directly against these standardized rules during the editorial phase before passing content to final publishing gates.",
+   "draft_heading": "How to Use a Content Style Guide When Scaling Content",
+   "placement": {
+    "mode": "ADD_AFTER_SECTION",
+    "section_heading": "🔑 The 5-Step GRAAF Workflow",
+    "reason": "Closest existing section by shared concepts (specif, clear, publis, intern); the new section continues that explanation."
+   },
+   "target_section": "🔑 The 5-Step GRAAF Workflow",
+   "target_url": "https://contentscale.site/content-scaling/",
+   "focus_query": "content scaling",
+   "claim_review": {
+    "counts": {
+     "sourced_from_page": 0,
+     "general_advice": 7,
+     "general_statement_unverified": 5
+    },
+    "needs_fact_check": [
+     "When multiple contributors produce drafts, centralizing rules for tone, formatting, terminology, and citation standards gives everyone a shared baseline.",
+     "This reduces editing rounds and keeps brand messaging cohesive across published pieces.",
+     "To implement a style guide effectively, document your baseline requirements in an accessible document for all writers and editors.",
+     "To manage this process, create structured assignments that define the scope, target intent, and required sources for each task.",
+     "Provide external contributors with detailed briefs and clear quality criteria before drafting begins."
+    ],
+    "needs_owner_confirmation": [],
+    "needs_safety_review": [],
+    "confidence": "REVIEWABLE_WITH_UNVERIFIED_STATEMENTS",
+    "requirements": [
+     "Fact-check every statement against your own knowledge and sources before publishing.",
+     "Owner approval is required; nothing is published automatically."
+    ]
+   },
+   "publication_readiness": {
+    "status": "NOT_READY_FOR_PUBLICATION",
+    "ready_for_publication": false,
+    "blockers": [
+     {
+      "code": "UNVERIFIED_STATEMENTS",
+      "count": 5,
+      "required": true,
+      "detail": "5 statement(s) in the proposed text are not verified by any source.",
+      "action": "Check each statement against your own knowledge and sources; remove or rewrite what you cannot stand behind."
+     },
+     {
+      "code": "NO_TARGET_PAGE_BASELINE",
+      "required": false,
+      "detail": "There are no verified Search Console rows for https://contentscale.site/content-scaling/ and \"content scaling\". Rows of another page are never used for it, so the effect of the change cannot be measured against the page's own starting point.",
+      "action": "Import Search Console for the target page in the Tracker before publishing (28 days), then register the publication in Growth measurement. Search Console is optional: without it, confirm that you publish without a baseline."
+     }
+    ],
+    "note": "copy_ready means ready for human review, not ready for publication. Publication always needs the owner's approval; nothing is published automatically."
+   },
+   "publish_allowed": false,
+   "additional_sections": [
+    {
+     "task": "task_outsou",
+     "placement": {
+      "mode": "ADD_AFTER_SECTION",
+      "section_heading": "How to Audit Your Content Before You Scale",
+      "reason": "Closest existing section by shared concepts (honest, expand, publis, thre); the new section continues that explanation."
+     },
+     "heading": "How to Outsource Parts of Content Creation to Freelancers",
+     "text": "Teams can outsource specific parts of content creation to external freelancers to increase production capacity without sacrificing quality control. Instead of relying on a single writer to handle research, drafting, and editing, dividing responsibilities lets specialized contributors focus on distinct phases. External talent can handle initial drafting or research gathering, while internal editors retain strategic alignment and review tasks.\n\nTo manage this process, create structured assignments that define the scope, target intent, and required sources for each task. Provide external contributors with detailed briefs and clear quality criteria before drafting begins. After drafts are submitted, conduct internal reviews to check accuracy and alignment before moving pieces to the final publication stage."
+    }
+   ]
+  },
+  "serp_meaning": {
+   "status": "SAME_MEANING",
+   "query": "content scaling",
+   "results_considered": 4,
+   "dominant_words": [],
+   "absent_on_page": [],
+   "basis": "Words in at least 60% of result titles (min. 3) that are not part of the page's subject: not in its title or headings, and not frequent in its text."
+  },
+  "competitor_overview": {
+   "status": "OBSERVED",
+   "ranking_pages_read": 4,
+   "topics_status": "GROUPED",
+   "subject_check": null
+  },
+  "search_discovery": {
+   "query": "content scaling",
+   "scope": {
+    "country": "nl",
+    "language": "en",
+    "location": null,
+    "market_states": [],
+    "market_source": "SET_IN_TRACKER",
+    "searched_markets": [
+     "nl"
+    ],
+    "target_markets_not_searched": [],
+    "source": "Google organic results through optional configured Serper.dev"
+   },
+   "leads": [
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling"
+    },
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling"
+    },
+    {
+     "url": "https://thecontentmarketingteam.co.uk/2026/07/01/ai-content-scaling-what-it-is-and-whether-you-should-do-it/"
+    },
+    {
+     "url": "https://www.contentoo.com/blog/actionable-tips-on-content-scaling"
+    }
+   ],
+   "google_redirect_links": {
+    "received": 13,
+    "resolved": 1,
+    "unresolved": 12,
+    "unresolved_reasons": {
+     "NO_TARGET_ON_GOOGLE_PAGE": 12
+    },
+    "google_page_sample": {
+     "status": 200,
+     "bytes": 15072,
+     "title": "Google",
+     "has_script": true,
+     "consent": false,
+     "unusual_traffic": false
+    }
+   },
+   "competitor_fetch_log": [
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://thecontentmarketingteam.co.uk/2026/07/01/ai-content-scaling-what-it-is-and-whether-you-should-do-it/",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://www.contentoo.com/blog/actionable-tips-on-content-scaling",
+     "outcome": "READABLE"
+    }
+   ]
+  },
+  "gap_list": {
+   "writing_allowed": true,
+   "recommended": [
+    "q-task_styl",
+    "q-task_outsou",
+    "q-task_repurp",
+    "t-434fb0f3bf"
+   ]
+  },
+  "outcome_context": null,
+  "editorial_work_packet": {
+   "publication_allowed": false
+  }
+ },
+ "64": {
+  "url": "https://contentscale.site/",
+  "editorial_decision_gate": {
+   "decision": "NO_CHANGE",
+   "blocker_code": null,
+   "next_action": "Keep the page unchanged; revisit only if live results or the page change.",
+   "missing_evidence": null,
+   "proposed_text": null,
+   "draft_heading": null,
+   "placement": null,
+   "target_section": null,
+   "target_url": "https://contentscale.site/content-scaling/",
+   "focus_query": "content scaling",
+   "claim_review": null,
+   "publication_readiness": {
+    "status": "NO_PROPOSAL",
+    "ready_for_publication": false,
+    "blockers": []
+   },
+   "publish_allowed": false,
+   "additional_sections": null
+  },
+  "serp_meaning": {
+   "status": "SAME_MEANING",
+   "query": "content scaling",
+   "results_considered": 4,
+   "dominant_words": [],
+   "absent_on_page": [],
+   "basis": "Words in at least 60% of result titles (min. 3) that are not part of the page's subject: not in its title or headings, and not frequent in its text."
+  },
+  "competitor_overview": {
+   "status": "OBSERVED",
+   "ranking_pages_read": 3,
+   "topics_status": "GROUPED",
+   "subject_check": null
+  },
+  "search_discovery": {
+   "query": "content scaling",
+   "scope": {
+    "country": "nl",
+    "language": "en",
+    "location": null,
+    "market_states": [],
+    "market_source": "SET_IN_TRACKER",
+    "searched_markets": [
+     "nl"
+    ],
+    "target_markets_not_searched": [],
+    "source": "Google organic results through optional configured Serper.dev"
+   },
+   "leads": [
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling"
+    },
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling"
+    },
+    {
+     "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation"
+    },
+    {
+     "url": "https://www.stellarcontent.com/blog/content-marketing/content-scaling/"
+    }
+   ],
+   "google_redirect_links": {
+    "received": 4,
+    "resolved": 1,
+    "unresolved": 3,
+    "unresolved_reasons": {
+     "NO_TARGET_ON_GOOGLE_PAGE": 3
+    },
+    "google_page_sample": {
+     "status": 200,
+     "bytes": 15073,
+     "title": "Google",
+     "has_script": true,
+     "consent": false,
+     "unusual_traffic": false
+    }
+   },
+   "competitor_fetch_log": [
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://www.optimizely.com/field-notes/articles/how-to-scale-content-creation",
+     "outcome": "READABLE"
+    }
+   ]
+  },
+  "gap_list": {
+   "writing_allowed": true,
+   "recommended": [
+    "t-1a5bf8c49d",
+    "t-687ac1a85b",
+    "t-db56106867",
+    "t-ee3f0f038f"
+   ]
+  },
+  "outcome_context": null,
+  "editorial_work_packet": {
+   "publication_allowed": false
+  }
+ },
+ "66": {
+  "url": "https://contentscale.site/generative-engine-optimization-consultant/",
+  "editorial_decision_gate": {
+   "decision": "DATA_BLOCKED",
+   "blocker_code": "SERP_INTENT_EVIDENCE",
+   "next_action": "Resolve the named blocker; every automatic alternative listed under attempted_sources was already tried.",
+   "missing_evidence": [
+    {
+     "code": "SERP_INTENT_EVIDENCE",
+     "detail": "No intent reaches 60% of 5 usable organic results (classes: UNCLASSIFIED 3, COMMERCIAL_COMPARISON 2).",
+     "observed": {
+      "considered": 5,
+      "agreeing": 2,
+      "class_counts": {
+       "UNCLASSIFIED": 3,
+       "COMMERCIAL_COMPARISON": 2
+      },
+      "method": "TITLE_AND_SNIPPET_PATTERNS_PLUS_H1_OF_READ_PAGES"
+     }
+    }
+   ],
+   "proposed_text": null,
+   "draft_heading": null,
+   "placement": null,
+   "target_section": null,
+   "target_url": "https://contentscale.site/generative-engine-optimization-consultant/",
+   "focus_query": "generative engine optimization consultant",
+   "claim_review": null,
+   "publication_readiness": {
+    "status": "NO_PROPOSAL",
+    "ready_for_publication": false,
+    "blockers": []
+   },
+   "publish_allowed": false,
+   "additional_sections": null
+  },
+  "serp_meaning": {
+   "status": "SAME_MEANING",
+   "query": "generative engine optimization consultant",
+   "results_considered": 5,
+   "dominant_words": [],
+   "absent_on_page": [],
+   "basis": "Words in at least 60% of result titles (min. 3) that are not part of the page's subject: not in its title or headings, and not frequent in its text."
+  },
+  "competitor_overview": {
+   "status": "OBSERVED",
+   "ranking_pages_read": 3,
+   "topics_status": "GROUPED",
+   "subject_check": null
+  },
+  "search_discovery": {
+   "query": "generative engine optimization consultant",
+   "scope": {
+    "country": "nl",
+    "language": "en",
+    "location": null,
+    "market_states": [],
+    "market_source": "SET_IN_TRACKER",
+    "searched_markets": [
+     "nl"
+    ],
+    "target_markets_not_searched": [],
+    "source": "Google organic results through optional configured Serper.dev"
+   },
+   "leads": [
+    {
+     "url": "https://spendima.nl/diensten/generative-engine-optimization/"
+    },
+    {
+     "url": "https://brilliantseo.art/articles/top-10-experts-igenerative-engine-optimization-geo-2025/"
+    },
+    {
+     "url": "https://apiarydigital.com/expertise/generative-engine-optimization/"
+    },
+    {
+     "url": "https://concurate.com/generative-engine-optimization-agencies-for-b2b-businesses/"
+    },
+    {
+     "url": "https://brandify.io/blog/best-generative-engine-optimization-agencies/"
+    }
+   ],
+   "google_redirect_links": {
+    "received": 14,
+    "resolved": 2,
+    "unresolved": 12,
+    "unresolved_reasons": {
+     "NO_TARGET_ON_GOOGLE_PAGE": 12
+    },
+    "google_page_sample": {
+     "status": 200,
+     "bytes": 15075,
+     "title": "Google",
+     "has_script": true,
+     "consent": false,
+     "unusual_traffic": false
+    }
+   },
+   "competitor_fetch_log": [
+    {
+     "url": "https://spendima.nl/diensten/generative-engine-optimization/",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://brilliantseo.art/articles/top-10-experts-igenerative-engine-optimization-geo-2025/",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://apiarydigital.com/expertise/generative-engine-optimization/",
+     "outcome": "FETCH_FAILED"
+    },
+    {
+     "url": "https://concurate.com/generative-engine-optimization-agencies-for-b2b-businesses/",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://brandify.io/blog/best-generative-engine-optimization-agencies/",
+     "outcome": "FETCH_FAILED"
+    }
+   ]
+  },
+  "gap_list": {
+   "writing_allowed": false,
+   "recommended": []
+  },
+  "outcome_context": null,
+  "editorial_work_packet": {
+   "publication_allowed": false
+  }
+ },
+ "67": {
+  "url": "https://contentscale.site/content-scaling/",
+  "editorial_decision_gate": {
+   "decision": "DATA_BLOCKED",
+   "blocker_code": "SHARED_COMPETITOR_REQUIREMENTS",
+   "next_action": "Add more readable competitor articles for the same query, or accept the page as is.",
+   "missing_evidence": [
+    {
+     "code": "SHARED_COMPETITOR_REQUIREMENTS",
+     "detail": "No reader task was taught by two independent competitor articles, so there is no shared requirement to compare. Sites read — jasper.ai: 13 of 13 sections used; aprimo.com: 8 of 9 sections used (1 promotional excluded); thecontentmarketingteam.co.uk: 9 of 9 sections used. Concepts taught on only one site: differ (jasper.ai), collab (aprimo.com), agil (aprimo.com), duplic (thecontentmarketingteam.co.uk), styl (jasper.ai). Topic-wide words ignored: brand, piec, creati, genera, tool, asset, human, publis."
+    }
+   ],
+   "proposed_text": null,
+   "draft_heading": null,
+   "placement": null,
+   "target_section": null,
+   "target_url": "https://contentscale.site/content-scaling/",
+   "focus_query": "content scaling",
+   "claim_review": null,
+   "publication_readiness": {
+    "status": "NO_PROPOSAL",
+    "ready_for_publication": false,
+    "blockers": []
+   },
+   "publish_allowed": false,
+   "additional_sections": null
+  },
+  "serp_meaning": {
+   "status": "SAME_MEANING",
+   "query": "content scaling",
+   "results_considered": 3,
+   "dominant_words": [],
+   "absent_on_page": [],
+   "basis": "Words in at least 60% of result titles (min. 3) that are not part of the page's subject: not in its title or headings, and not frequent in its text."
+  },
+  "competitor_overview": {
+   "status": "OBSERVED",
+   "ranking_pages_read": 3,
+   "topics_status": "GROUPED",
+   "subject_check": null
+  },
+  "search_discovery": {
+   "query": "content scaling",
+   "scope": {
+    "country": "nl",
+    "language": "en",
+    "location": null,
+    "market_states": [],
+    "market_source": "SET_IN_TRACKER",
+    "searched_markets": [
+     "nl"
+    ],
+    "target_markets_not_searched": [],
+    "source": "Google organic results through optional configured Serper.dev"
+   },
+   "leads": [
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling"
+    },
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling"
+    },
+    {
+     "url": "https://thecontentmarketingteam.co.uk/2026/07/01/ai-content-scaling-what-it-is-and-whether-you-should-do-it/"
+    }
+   ],
+   "google_redirect_links": {
+    "received": 6,
+    "resolved": 1,
+    "unresolved": 5,
+    "unresolved_reasons": {
+     "NO_TARGET_ON_GOOGLE_PAGE": 5
+    },
+    "google_page_sample": {
+     "status": 200,
+     "bytes": 15064,
+     "title": "Google",
+     "has_script": true,
+     "consent": false,
+     "unusual_traffic": false
+    }
+   },
+   "competitor_fetch_log": [
+    {
+     "url": "https://www.jasper.ai/blog/content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://www.aprimo.com/resource-library/article/content-scaling",
+     "outcome": "READABLE"
+    },
+    {
+     "url": "https://thecontentmarketingteam.co.uk/2026/07/01/ai-content-scaling-what-it-is-and-whether-you-should-do-it/",
+     "outcome": "READABLE"
+    }
+   ]
+  },
+  "gap_list": {
+   "writing_allowed": false,
+   "recommended": []
+  },
+  "outcome_context": null,
+  "editorial_work_packet": {
+   "publication_allowed": false
+  }
+ }
+}
