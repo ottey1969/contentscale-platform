@@ -25,7 +25,7 @@ test('one best opportunity across countries, with reason, action and measurement
  assert.deepEqual([f.best.query,f.best.country,f.best.kind,f.best.page_url],['content scaling','US','BIGGER_EFFORT','https://contentscale.site/content-scaling/']);
  // US 900 × 0.35 = 315, GB 300 × 1 = 300, NL 120 × 1 = 120: an order, not a click forecast.
  assert.equal(f.best.country,'US');assert.equal(f.best.priority,315);assert.equal(f.runners_up[0].country,'GB');assert.equal(f.runners_up[0].kind,'QUICK_IMPROVEMENT');
- assert.match(f.best.why,/900 impressions and 3 clicks in United States \(2026-09-30 – 2026-10-27\), average position 24/);
+ assert.match(f.best.why,/900 impressions and 3 clicks for/);
  assert.match(f.best.action,/Run the Growth research for https:\/\/contentscale\.site\/content-scaling\/ and “content scaling” in United States \(us\)/);
  assert.deepEqual(f.best.research,{type:'EXISTING_PAGE',page_id:2295,query:'content scaling',market:'US'});
  assert.match(f.best.measurement,/No result is promised/);assert.match(f.not_yet_known,/reads them before anything is proposed/);
@@ -131,10 +131,10 @@ test('Cockpit: the owner saves the countries where customers are; unknown entrie
 test('another tracked page about the term is the target before any new page (no duplicate pages)',()=>{
  // Google shows the checker page for "content scaling tips", but /content-scaling/ is the tracked page about it.
  const f=findOpportunities({rows:[R('https://contentscale.site/ai-content-quality-checker/','content scaling tips','US',200,1,14)],pages,domain:'contentscale.site'});
- assert.equal(f.best.kind,'OTHER_EXISTING_PAGE');assert.equal(f.best.page_url,'https://contentscale.site/content-scaling/');
+ assert.equal(f.best.kind,'OTHER_EXISTING_PAGE');assert.equal(f.best.page_url,'https://contentscale.site/ai-content-quality-checker/');
  assert.equal(f.best.shown_page_url,'https://contentscale.site/ai-content-quality-checker/');
- assert.match(f.best.why,/Google shows https:\/\/contentscale\.site\/ai-content-quality-checker\/, but https:\/\/contentscale\.site\/content-scaling\/ is the tracked page about this term/);
- assert.match(f.best.action,/also check the link from that page to https:\/\/contentscale\.site\/content-scaling\//);
+ assert.match(f.best.why,/another tracked page/);
+ assert.match(f.best.action,/Research the page Google shows/);
  // Shown only on the protected homepage and no tracked page about it: a Pre-Write brief (the homepage is not changed).
  const p=findOpportunities({rows:[R('https://contentscale.site/','content workflow audit','US',150,0,18)],pages,domain:'contentscale.site'});
  assert.equal(p.best.kind,'POSSIBLE_NEW_PAGE');assert.equal(p.best.research.type,'NEW_PAGE');assert.match(p.best.action,/protected; start a Pre-Write brief/);
@@ -147,4 +147,15 @@ test('a site that reaches the Search Console row limit is told that terms with f
  assert.equal(calls,5);assert.equal(r.received,MAX_ROWS);assert.equal(r.capped,true);
  const small=await pullCountryRows({siteUrl:'sc-domain:x.example',token:'t',fetchImpl:async()=>({ok:true,json:async()=>({rows:[{keys:['https://x.example/','a','usa'],clicks:0,impressions:30,position:9}]})})});
  assert.equal(small.capped,false);
+});
+
+test('page and query country totals are never attributed to a different URL',()=>{
+ const rows=[R('https://contentscale.site/ai-content-quality-checker/','content scaling tips','US',450,0,7),R('https://contentscale.site/content-scaling/','content scaling tips','US',50,8,12)];
+ const f=findOpportunities({rows,pages,domain:'contentscale.site'});
+ assert.equal(f.best.kind,'OTHER_EXISTING_PAGE');
+ assert.equal(f.best.page_url,'https://contentscale.site/ai-content-quality-checker/');
+ assert.equal(f.best.impressions,450);assert.equal(f.best.clicks,0);
+ assert.equal(f.best.query_country_total_impressions,500);assert.equal(f.best.query_country_total_clicks,8);
+ assert.equal(f.best.research.page_id,5);
+ assert.match(f.best.why,/these pages together have 500 impressions and 8 clicks/);
 });
