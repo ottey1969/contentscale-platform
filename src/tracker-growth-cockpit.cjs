@@ -184,7 +184,7 @@ function registerGrowthCockpit(app,pool,deps={}){
    const pulled=await (gc.pull||pullCountryRows)({siteUrl,token});
    const saved=await saveCountryRows(pool,{clientId:req.growthTrackerClientId,startDate:pulled.startDate,endDate:pulled.endDate,rows:pulled.rows,received:pulled.received,capped:pulled.capped});
    res.set('Cache-Control','private, no-store').json({success:true,...saved,countries:[...new Set(pulled.rows.map(r=>r.country))].length});
-  }catch(e){console.warn('[growth-gsc-country]',String(e.message||'').slice(0,160));no(503,'GSC_IMPORT_FAILED','Search Console could not be read; nothing was changed.')}
+  }catch(e){const msg=String(e.message||'');console.warn('[growth-gsc-country]',msg.slice(0,160));const denied=/\b403\b|insufficient permission|permission denied|forbidden|not authorized/i.test(msg);no(503,denied?'GSC_PROPERTY_ACCESS_DENIED':'GSC_IMPORT_FAILED',denied?'Google Search Console denied access to this website. In Search Console, open the website property, go to Settings → Users and permissions, and grant access to the Google account or service account connected to ContentScale. Then try Import again. No data was changed.':'Search Console could not be read; nothing was changed.')}
  });
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/recommendation',data,async(req,res)=>{
   try{
