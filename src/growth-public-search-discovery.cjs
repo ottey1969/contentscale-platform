@@ -79,18 +79,33 @@ const lookupLabel=(primary,market,locale)=>market?.location?'US English lookup l
 const isWrapped=u=>{try{const x=new URL(u);return /(^|\.)google\.[a-z.]+$/i.test(x.hostname)&&/^\/(goto|url)$/.test(x.pathname)}catch{return false}};
 const plainTarget=u=>{try{const x=new URL(u);for(const k of ['url','q','u']){const v=x.searchParams.get(k);if(v&&/^https?:\/\//i.test(v))return v}}catch{}return null};
 const notGoogle=v=>{try{const x=new URL(v);return /^https?:$/.test(x.protocol)&&!/(^|\.)google\.[a-z.]+$/i.test(x.hostname)}catch{return false}};
+// Google's redirect notice page (HTTP 200) names the target as a link or a meta refresh; only that is read, at most 64 KB.
+const targetInNotice=html=>{
+ const found=[...String(html).matchAll(/http-equiv=["']?refresh["']?[^>]*content=["'][^"']*url=([^"'>\s]+)/gi),
+  ...String(html).matchAll(/<a\s[^>]*href=["'](https?:\/\/[^"']+)["']/gi)].map(m=>m[1].replace(/&amp;/g,'&'));
+ return found.find(notGoogle)||null;
+};
 async function unwrapGoogleLinks(payload,{fetchImpl,max=12}={}){
  const items=Array.isArray(payload?.organic)?payload.organic.filter(i=>i&&typeof i.link==='string'&&isWrapped(i.link)):[];
- const stats={received:items.length,resolved:0,unresolved:0};
- await Promise.all(items.slice(0,max).map(async item=>{
-  let target=plainTarget(item.link);
-  if(!target&&typeof fetchImpl==='function'){
+ // Why a link stayed unresolved, counted per reason, so a thin research can be explained from the report.
+ const stats={received:items.length,resolved:0,unresolved:0},why={};
+ await Promise.all(items.map(async(item,i)=>{
+  let target=plainTarget(item.link),failure=null;
+  if(!target&&i>=max)failure='NOT_TRIED_LIMIT';
+  else if(!target&&typeof fetchImpl!=='function')failure='NO_HTTP_CLIENT';
+  else if(!target){
    try{const r=await fetchImpl(item.link,{method:'GET',redirect:'manual',signal:AbortSignal.timeout(4000)});
-    const loc=r?.headers?.get?.('location');if(r&&r.status>=300&&r.status<400&&loc)target=new URL(loc,item.link).href}catch{}
+    const loc=r?.headers?.get?.('location'),status=Number(r?.status)||0;
+    if(status>=300&&status<400&&loc){target=new URL(loc,item.link).href;if(!notGoogle(target))failure=/consent\./i.test(target)?'REDIRECTED_TO_GOOGLE_CONSENT':'REDIRECTED_TO_GOOGLE'}
+    else if(status===200&&typeof r.text==='function'){target=targetInNotice((await r.text()).slice(0,65536));if(!target)failure='NO_TARGET_ON_GOOGLE_PAGE'}
+    else failure='HTTP_'+(status||'NO_STATUS');
+   }catch(e){failure=e?.name==='TimeoutError'?'TIMEOUT':'REQUEST_FAILED'}
   }
   if(target&&notGoogle(target)){item.wrapped_link=item.link;item.link=target;stats.resolved++}
+  else why[failure||'TARGET_IS_GOOGLE']=(why[failure||'TARGET_IS_GOOGLE']||0)+1;
  }));
  stats.unresolved=stats.received-stats.resolved;
+ if(stats.unresolved)stats.unresolved_reasons=why;
  return stats;
 }
 function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLog=null,market=null,searched={gl:'us',hl:'en'}}={}){
@@ -137,7 +152,7 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
  // Serper.dev accepts POST JSON; never put API credentials into URL or logs.
  // The market the page states (growth-search-locale); a US-state market keeps the US lookup with its location.
  const primary=market?{gl:'us',hl:'en'}:{gl:locale?.gl||'us',hl:locale?.hl||'en'};
- const wrapped={received:0,resolved:0,unresolved:0};
+ const wrapped={received:0,resolved:0,unresolved:0};const wrappedWhy={};
  const ask=async(q,page=1,where=primary)=>{
   const response=await fetchImpl('https://google.serper.dev/search',{
    method:'POST',headers:{'X-API-KEY':available,'Content-Type':'application/json'},
@@ -150,6 +165,7 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
   if(payload?.error||!Array.isArray(payload?.organic))return {failure:'ORGANIC_RESULTS_MISSING_OR_PROVIDER_ERROR'};
   const w=await unwrapGoogleLinks(payload,{fetchImpl});
   for(const k of Object.keys(wrapped))wrapped[k]+=w[k];
+  for(const [k,n] of Object.entries(w.unresolved_reasons||{}))wrappedWhy[k]=(wrappedWhy[k]||0)+n;
   return {payload};
  };
  try{
@@ -199,9 +215,11 @@ async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=n
   }
   return {status:leads.length?'FRESH_GOOGLE_ORGANIC_LEADS':'NO_RELEVANT_GOOGLE_ORGANIC_LEADS',market_query_retry,next_page_retry,
    organic_results_received:first.payload.organic.length,
-   source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,20),query:term,checked_at:new Date(now).toISOString(),
+   source:'SERPER_GOOGLE_ORGANIC',leads,rejected_leads:rejected_leads.slice(0,20),
+   // Per reason, each result counted once (a second lookup can return the same result again).
+   rejected_reasons:[...new Map(rejected_leads.map(x=>[x.url,x.reason])).values()].reduce((n,r)=>(n[r]=(n[r]||0)+1,n),{}),query:term,checked_at:new Date(now).toISOString(),
    second_market,
-   ...(wrapped.received?{google_redirect_links:wrapped}:{}),
+   ...(wrapped.received?{google_redirect_links:{...wrapped,...(wrapped.unresolved?{unresolved_reasons:wrappedWhy}:{})}}:{}),
    scope:{country:primary.gl,language:primary.hl,location:market?.location||null,market_states:market?.states||[],
     market_source:market?'US_STATE_IN_QUERY_KEYWORD_OR_URL':locale?.source||'NO_MARKET_SIGNAL_ON_PAGE',
     searched_markets:[primary.gl,...(second_market&&!second_market.failure?[second_market.gl]:[])],

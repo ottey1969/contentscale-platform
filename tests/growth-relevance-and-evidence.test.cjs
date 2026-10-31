@@ -28,7 +28,7 @@ test('Google redirect links are real results: resolved when Google forwards them
   throw Object.assign(Error('timeout'),{code:'TIMEOUT'});
  };
  const r=await optionalGoogleOrganicDiscovery({query:real.query,ownUrl:real.own_url,locale:{country:'NL',gl:'nl',hl:'en'},key:'k',fetchImpl});
- assert.deepEqual(r.google_redirect_links,{received:12,resolved:8,unresolved:4});
+ assert.deepEqual(r.google_redirect_links,{received:12,resolved:8,unresolved:4,unresolved_reasons:{REQUEST_FAILED:4}});
  assert(asked.every(u=>/^https:\/\/www\.google\.com\/goto\?url=/.test(u)),'only the redirect links are followed');
  assert(r.leads.some(l=>/scaling-guide-\d\.example/.test(l.url)),'resolved results become usable leads');
  assert(!r.rejected_leads.some(x=>x.reason==='SEARCH_OR_SOCIAL_INFRASTRUCTURE'&&/google\.com\/goto/.test(x.url)),'never called infrastructure again');
@@ -38,6 +38,7 @@ test('Google redirect links are real results: resolved when Google forwards them
   if(String(url).startsWith('https://google.serper.dev/'))return {ok:true,json:async()=>({organic:real.wrapped.map(w=>({title:w.title,link:w.link}))})};
   throw Error('no answer')}});
  assert.equal(only.rejected_leads.filter(x=>x.reason==='GOOGLE_REDIRECT_LINK_NOT_RESOLVED').length>=12,true);assert.equal(only.leads.length,0);
+ assert.equal(only.rejected_reasons.GOOGLE_REDIRECT_LINK_NOT_RESOLVED,12,'counted per reason, also beyond the 20 logged examples');
 });
 
 test('a plain redirect link (/url?q=) is unwrapped without any request',async()=>{
@@ -104,4 +105,30 @@ test('the Tracker writing route refuses research without enough evidence',async(
  const stack=route['/api/tracker-client/:token/growth/auto-research/write'];
  await new Promise(ok=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()})};at(0)});
  assert.equal(res.statusCode,409);assert.equal(res.body.code,'NOT_ENOUGH_EVIDENCE_TO_WRITE');assert.equal(calls,0);
+});
+
+test('a Google redirect notice page (HTTP 200) is read for its target; a consent redirect is reported as such',async()=>{
+ const [a,b,c]=real.wrapped;
+ const p={organic:[a,b,c].map(w=>({title:w.title,link:w.link}))};
+ // SYNTHETIC answers: a notice page with the target link, an EU consent redirect, and a refusal.
+ const s=await unwrapGoogleLinks(p,{fetchImpl:async url=>{
+  if(url===a.link)return {status:200,headers:{get:()=>null},text:async()=>'<html><body>Redirect Notice <a href="https://www.google.com/">Google</a> <a href="https://guide.example/content-scaling/?a=1&amp;b=2">guide</a></body></html>'};
+  if(url===b.link)return {status:302,headers:{get:k=>k==='location'?'https://consent.google.com/ml?continue=x':null}};
+  return {status:429,headers:{get:()=>null}};
+ }});
+ assert.equal(p.organic[0].link,'https://guide.example/content-scaling/?a=1&b=2');
+ assert.deepEqual(s,{received:3,resolved:1,unresolved:2,unresolved_reasons:{REDIRECTED_TO_GOOGLE_CONSENT:1,HTTP_429:1}});
+});
+
+test('Free check mAOlLCrU07Jv (real): only 2 usable Google results; the result says of how many and why the rest was not used',()=>{
+ const {summarizeFreeGrowth}=require('../src/growth-free/summary.cjs');
+ const live=require('./fixtures/growth-free-mAOlLCrU07Jv/search.json');
+ const s=summarizeFreeGrowth(live.report,{query:live.query,url:live.url});
+ assert.equal(s.decision,'DATA_BLOCKED');
+ assert.match(s.explanation,/Only 2 Google result\(s\) could be used \(of 9 received\)/);
+ assert.match(s.explanation,/11 × Google link that could not be opened/);
+ assert.match(s.steps[0],/11 result\(s\) came as Google redirect links/);
+ assert.deepEqual(s.checked.results_not_used.map(x=>x.code+':'+x.count),
+  ['GOOGLE_REDIRECT_LINK_NOT_RESOLVED:11','QUERY_TERMS_NOT_IN_TITLE:2','SEARCH_OR_SOCIAL_INFRASTRUCTURE:2','OWN_SITE:1','DIFFERENT_PRODUCT_OR_NAVIGATION_INTENT:1']);
+ assert(s.limitations.some(x=>/only answers you paste below are analysed/.test(x)));
 });
