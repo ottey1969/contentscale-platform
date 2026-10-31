@@ -30,8 +30,10 @@ test('one best opportunity across countries, with reason, action and measurement
  assert.deepEqual(f.best.research,{type:'EXISTING_PAGE',page_id:2295,query:'content scaling',market:'US'});
  assert.match(f.best.measurement,/No result is promised/);assert.match(f.not_yet_known,/reads them before anything is proposed/);
  assert.equal(f.excluded.brand,1,'the brand term is not a growth opportunity');
- assert.equal(f.excluded.protected_page,1,'the protected homepage is not changed');assert.equal(f.excluded.already_top_with_clicks,1);
- const grader=[f.best,...f.runners_up].find(x=>x.query==='content grader');
+ const ie=findOpportunities({rows:rows.filter(r=>r.country==='IE'),pages,domain:'contentscale.site'}).best;
+ assert.equal(ie.kind,'DEDICATED_PAGE_FOR_PROTECTED','Google shows the protected homepage; /content-scaling/ is the target, the homepage is not changed');
+ assert.equal(ie.page_url,'https://contentscale.site/content-scaling/');assert.equal(ie.shown_page_url,'https://contentscale.site/');assert.equal(f.excluded.already_top_with_clicks,1);
+ const grader=findOpportunities({rows:rows.filter(r=>r.query==='content grader'),pages,domain:'contentscale.site'}).best;
  assert.equal(grader.kind,'POSSIBLE_NEW_PAGE','no tracked page names "grader": possibly a new page, not decided by word overlap');
  assert.match(grader.action,/^First research https:\/\/contentscale\.site\/ai-content-quality-checker\/ for “content grader” in United States \(us\): the research decides whether this existing page can serve the search/);
  assert.deepEqual(grader.research,{type:'EXISTING_PAGE',page_id:5,query:'content grader',market:'US'});
@@ -158,4 +160,27 @@ test('page and query country totals are never attributed to a different URL',()=
  assert.equal(f.best.query_country_total_impressions,500);assert.equal(f.best.query_country_total_clicks,8);
  assert.equal(f.best.research.page_id,5);
  assert.match(f.best.why,/these pages together have 500 impressions and 8 clicks/);
+});
+
+test('owner Cockpit 2026-10-31: "content scaling" in the US is not dropped because Google shows the protected homepage',()=>{
+ // Real: the tracked pages, the protected homepage, and that "content scaling" vanished as best opportunity after #250 while
+ // "gsc hidden terms" (115 impressions, position 20.4) became the best. The split over the pages is LABELLED SYNTHETIC.
+ const site=[{id:2320,url:'https://contentscale.site/',keyword:'content at scale',case_study_active:true},
+  {id:2298,url:'https://contentscale.site/content-at-scale/',keyword:'content at scale'},
+  {id:2295,url:'https://contentscale.site/content-scaling/',keyword:'content scaling'},
+  {id:2290,url:'https://contentscale.site/free-ai-citations-tracker/',keyword:'free ai citations tracker'},
+  {id:2400,url:'https://contentscale.site/gsc-hidden-metrics/',keyword:'gsc hidden metrics'}];
+ const rows=[R('https://contentscale.site/','content scaling','US',900,0,9),R('https://contentscale.site/free-ai-citations-tracker/','content scaling','US',300,0,7.5),
+  R('https://contentscale.site/content-scaling/','content scaling','US',146,0,18),R('https://contentscale.site/gsc-hidden-metrics/','gsc hidden terms','US',115,0,20.4)];
+ const f=findOpportunities({rows,pages:site,domain:'contentscale.site'});
+ assert.equal(f.best.query,'content scaling');assert.equal(f.best.kind,'DEDICATED_PAGE_FOR_PROTECTED');
+ assert.equal(f.best.page_url,'https://contentscale.site/content-scaling/','not /content-at-scale/, which only shares the stem');
+ assert.match(f.best.why,/Google shows the protected page https:\/\/contentscale\.site\/ most for this term: 900 impressions and 0 clicks/);
+ assert.match(f.best.why,/content-scaling\/ \(146 impressions, 0 clicks, position 18\)\. These numbers belong to the pages named/);
+ assert.match(f.best.action,/The protected page https:\/\/contentscale\.site\/ is not changed; check that it links to/);
+ assert.deepEqual(f.best.research,{type:'EXISTING_PAGE',page_id:2295,query:'content scaling',market:'US'});
+ assert.equal(f.runners_up.find(x=>x.query==='gsc hidden terms').page_url,'https://contentscale.site/gsc-hidden-metrics/');
+ // Without a dedicated page (only a page sharing the stem), the protected page is still left out.
+ const none=findOpportunities({rows:rows.slice(0,1),pages:site.filter(p=>p.id!==2295),domain:'contentscale.site'});
+ assert.equal(none.status,'INSUFFICIENT_DATA');assert.equal(none.excluded.protected_page,1);
 });

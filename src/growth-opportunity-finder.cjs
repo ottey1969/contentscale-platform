@@ -12,6 +12,8 @@ const LOW_CTR_TOP=0.02;              // on positions 1–3 fewer than 2% clicks:
 const rootsOf=t=>queryRoots(String(t||'')).all;
 const compact=t=>String(t||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const norm=u=>{try{const x=new URL(u);x.hash='';x.search='';return x.href.replace(/\/$/,'')}catch{return String(u||'').replace(/\/$/,'')}};
+const words=t=>String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim().split(' ').filter(Boolean);
+const run=(a,b)=>{let best=0;for(let i=0;i<a.length;i++)for(let j=0;j<b.length;j++){let k=0;while(a[i+k]&&a[i+k]===b[j+k])k++;if(k>best)best=k}return best};
 const pathWords=u=>{try{return decodeURIComponent(new URL(u).pathname).replace(/[^a-z0-9]+/gi,' ')}catch{return ''}};
 
 // Position decides the kind of work and how much an improvement can move: page one but not top three is the quickest.
@@ -60,8 +62,32 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
   const dq=queryRoots(lead.query).distinct,topic=dq.length?dq:rootsOf(lead.query);
   const covers=p=>{const t=new Set([...rootsOf(p.keyword),...rootsOf(pathWords(p.url))]);return !topic.length||topic.filter(r=>t.has(r)).length>=Math.ceil(topic.length/2)};
   const isProtectedPage=p=>p.case_study_active===true||p.eligibility?.status==='PROTECTED';
-  const other=covers(lead.page)?null:pages.filter(p=>p&&p.url&&norm(p.url)!==norm(lead.page.url)&&covers(p)&&!isProtectedPage(p))
-   .sort((a,b2)=>rootsOf(a.keyword).length-rootsOf(b2.keyword).length)[0]||null;
+  // Another tracked page about the term: the one with the term's own words exactly or in the longest run in its keyword or
+  // URL ("content scaling" → /content-scaling/, not /content-at-scale/ which only shares the stem), then one Google also
+  // shows, then fewest other words. Word stems alone never decide.
+  const fit=p=>{const q=words(lead.query),kw=words(p.keyword),u=words(pathWords(p.url));
+   return {exact:kw.join(' ')===q.join(' ')||u.join(' ')===q.join(' '),run:Math.max(run(q,kw),run(q,u)),shown:g.some(x=>norm(x.page.url)===norm(p.url)),extra:rootsOf(p.keyword).length}};
+  const rank=(a,b2)=>{const x=fit(a),y=fit(b2);return (y.exact-x.exact)||(y.run-x.run)||(y.shown-x.shown)||(x.extra-y.extra)};
+  const candidates=pages.filter(p=>p&&p.url&&norm(p.url)!==norm(lead.page.url)&&covers(p)&&!isProtectedPage(p)).sort(rank);
+  // The page Google shows most is protected (a Case Study): it is not changed, but the opportunity stays when the site has
+  // a dedicated page for the term — that page becomes the target, and the numbers say which page they belong to.
+  const dedicated=candidates.find(p=>{const f=fit(p);return f.exact||f.run>=words(lead.query).length})||null;
+  if(isProtectedPage(lead.page)&&dedicated){
+   const own=g.find(x=>norm(x.page.url)===norm(dedicated.url));
+   c.opportunities++;
+   list.push({query:lead.query,country:lead.country,country_name:countryName(lead.country),page_id:dedicated.id??null,page_url:dedicated.url,
+    shown_page_url:lead.page.url,shown_page_protected:true,
+    impressions:lead.impressions,clicks:lead.clicks,query_country_total_impressions:impressions,query_country_total_clicks:clicks,ctr_pct:Math.round(1000*lead.clicks/Math.max(1,lead.impressions))/10,position:Math.round(lead.position*10)/10,
+    dedicated_page:{url:dedicated.url,impressions:own?own.impressions:0,clicks:own?own.clicks:0,position:own?Math.round(own.position*10)/10:null},
+    kind:'DEDICATED_PAGE_FOR_PROTECTED',effort:'medium (the dedicated page must become the one Google shows)',
+    other_pages:g.filter(x=>x!==lead).map(x=>({url:x.page.url,impressions:x.impressions,position:Math.round(x.position*10)/10})),
+    priority:Math.round(lead.impressions*b.weight*0.7),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
+    why:'Google shows the protected page '+lead.page.url+' most for this term: '+lead.impressions+' impressions and '+lead.clicks+' clicks in '+countryName(lead.country)+(period?' ('+period.start+' – '+period.end+')':'')+', average position '+Math.round(lead.position*10)/10+
+     '. The site\'s own page about the term is '+dedicated.url+(own?' ('+own.impressions+' impressions, '+own.clicks+' clicks, position '+Math.round(own.position*10)/10+')':' (no impressions for it in this import)')+
+     '. These numbers belong to the pages named; none is attributed to the other.'});
+   continue;
+  }
+  const other=covers(lead.page)?null:candidates[0]||null;
   const kind=covers(lead.page)?b.kind:other?'OTHER_EXISTING_PAGE':'POSSIBLE_NEW_PAGE';
   const target=lead.page; // Evidence belongs to the observed URL; a different page is only a candidate.
   if(isProtectedPage(target)&&kind!=='POSSIBLE_NEW_PAGE'){excluded.protected_page++;continue}
@@ -98,7 +124,9 @@ function customerScope(customers,countries){
 }
 function withPlan(o,siteMarkets){
  const where=o.country_name+' ('+o.country.toLowerCase()+')';
- const action=o.kind==='POSSIBLE_NEW_PAGE'?(o.shown_page_protected?
+ const action=o.kind==='DEDICATED_PAGE_FOR_PROTECTED'?
+  'Run the Growth research for '+o.page_url+' and “'+o.query+'” in '+where+'. The protected page '+o.shown_page_url+' is not changed; check that it links to '+o.page_url+' with words that name the term, so Google can show the dedicated page.':
+  o.kind==='POSSIBLE_NEW_PAGE'?(o.shown_page_protected?
   'The page Google shows is protected; start a Pre-Write brief for “'+o.query+'” with target market '+where+'. The New Page route reads the ranking pages there and checks overlap with your tracked pages before anything is written.':
   'First research '+o.page_url+' for “'+o.query+'” in '+where+': the research decides whether this existing page can serve the search, or advises a separate page. Only then a Pre-Write brief.'):
   o.kind==='OTHER_EXISTING_PAGE'?
