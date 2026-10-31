@@ -45,6 +45,7 @@ on:
       - 'tests/growth-site-markets.test.cjs'
       - 'src/growth-market-store.cjs'
       - 'tests/fixtures/growth-report-66/**'
+      - 'tests/fixtures/growth-report-67/**'
       - 'src/growth-reader-task-coverage.cjs'
       - 'src/growth-outcome.cjs'
       - 'tests/fixtures/growth-report-64/**'
