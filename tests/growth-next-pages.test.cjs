@@ -42,3 +42,21 @@ test('information to action: an informational page gets the action page on the s
  assert.equal(readerFunnel({pageUrl:HOME,pageIntent:'PRODUCT_TOOL',sitePages:site}).status,'NOT_AN_INFORMATIONAL_PAGE');
  assert.equal(readerFunnel({pageUrl:'https://x.example/guide/',pageIntent:'INFORMATIONAL_GUIDE',sitePages:[{url:'https://x.example/blog/other/',keyword:'other guide'}]}).status,'NO_ACTION_PAGE_FOUND');
 });
+
+test('report 62 (real terms): reviews of another product and places the site does not serve are no new pages',()=>{
+ const f=require('./fixtures/growth-report-62/spokes.json');
+ const r=spokeCandidates({pageUrl:f.page_url,focusQuery:f.focus_query,gscRows:f.gsc_rows,sitePages:f.site_pages});
+ assert.deepEqual(r.candidates.map(c=>c.query),['content at scale marketing','content evaluation','content grader','content management at scale']);
+ assert.deepEqual(r.excluded.map(x=>x.reason),['NAMES_A_PLACE_THIS_SITE_DOES_NOT_SERVE','NAMES_A_PLACE_THIS_SITE_DOES_NOT_SERVE']);
+ assert(r.excluded.every(x=>/los angeles, california/.test(x.query)));
+ const to=Object.fromEntries(r.belongs_elsewhere.map(x=>[x.query,x.url]));
+ assert.equal(to['content at scale review'],'https://contentscale.site/content-at-scale/','a review question goes to the page about that topic');
+ assert.equal(to['content at scale ai content detection'],'https://contentscale.site/content-at-scale/');
+ assert.equal(r.belongs_elsewhere.find(x=>x.query==='content at scale review').basis,'THAT_PAGE_COVERS_THE_TOPIC');
+});
+
+test('a site that serves a place keeps its place terms (LABELLED SYNTHETIC)',()=>{
+ const rows=[{query:'roof repair paterson nj',impressions:40,position:19,clicks:0}];
+ assert.equal(spokeCandidates({pageUrl:'https://acme-roofing.example/',focusQuery:'roof repair',gscRows:rows,sitePages:[],localMarket:true}).candidates.length,1);
+ assert.equal(spokeCandidates({pageUrl:'https://acme-roofing.example/',focusQuery:'roof repair',gscRows:rows,sitePages:[]}).excluded[0].reason,'NAMES_A_PLACE_THIS_SITE_DOES_NOT_SERVE');
+});

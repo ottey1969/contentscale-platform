@@ -1,6 +1,8 @@
 'use strict';
 const {observeSerpTitles}=require('./growth-serp-titles.cjs');
 const {spokeCandidates,readerFunnel}=require('./growth-next-pages.cjs');
+const {publicationReadiness}=require('./growth-publication-readiness.cjs');
+const {annotateAiVisibility}=require('./growth-ai-relevance.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
@@ -79,7 +81,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   page.case_study_active=v.page.case_study_active;
   const optional=await Promise.allSettled([
    pool.query("SELECT page_id,checked_at,google_competitors,ai_perplexity_competitors FROM tracker_snapshots WHERE page_id=$1 AND (google_competitors IS NOT NULL OR ai_perplexity_competitors IS NOT NULL) ORDER BY checked_at DESC,id DESC LIMIT 1",[pid]),
-   pool.query("SELECT page_id,tracker_client_id,engine,evidence_method,brand_recommended,domain_cited,exact_page_cited,citation_urls,verified_at,revision_cycle FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND is_cleared IS NOT TRUE ORDER BY verified_at DESC NULLS LAST LIMIT 60",[cid,pid]),
+   pool.query("SELECT page_id,tracker_client_id,engine,evidence_method,brand_recommended,domain_cited,exact_page_cited,citation_urls,verified_at,revision_cycle,LEFT(raw_text,4000) AS raw_text FROM tracker_ai_evidence WHERE tracker_client_id=$1 AND page_id=$2 AND is_cleared IS NOT TRUE ORDER BY verified_at DESC NULLS LAST LIMIT 60",[cid,pid]),
    pool.query("SELECT page_id,tracker_client_id,source_page_url,evidence_scope,query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND source_page_url=$3 AND evidence_scope='page_verified' ORDER BY imported_at DESC LIMIT 150",[cid,pid,page.url]),
    pool.query("SELECT id,tracker_client_id,url,keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 ORDER BY id LIMIT 500",[cid,pid]),
    // Search Console rows of the other tracked pages: a term another page already answers is not a new page.
@@ -313,8 +315,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    for(const q of report.growth_decision?.other_reviewable_queries||[])q.destination=toFinal(q.destination);
   }
   report.serp_intent=serpIntent;report.destination_intent=destinationIntent;
+  // Saved AI observations count only for the same search term and when recent; others stay visible, labelled.
+  report.ai_visibility=annotateAiVisibility(report.ai_visibility,{rows:rows(1),query:targetQuery});
   // Beyond the page itself, from the owner's own data: possible new pages and the route from information to action.
-  report.spoke_candidates=spokeCandidates({pageUrl:page.url,focusQuery:targetQuery,gscRows:rows(2),sitePages:rows(3),siteGsc:rows(4)});
+  report.spoke_candidates=spokeCandidates({pageUrl:page.url,focusQuery:targetQuery,gscRows:rows(2),sitePages:rows(3),siteGsc:rows(4),localMarket:!!market});
   report.reader_funnel=readerFunnel({pageUrl:page.url,focusQuery:targetQuery,pageIntent:proposed===page.url?destinationIntent?.class||null:null,
    pageHtml:own.live?.html||page.saved_html||'',sitePages:rows(3)});
   // What Google shows by title, including results whose page could not be opened (explanation only, never evidence).
@@ -581,6 +585,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // The final decision's evidence ladder is the single source for every output below (packet, package, completion, UI).
   const evidenceStatus=deriveEvidenceStatus({decision:ownerDecision,serpIntent:report.serp_intent,coverage:report.reader_task_coverage});
   const completeDecision={...ownerDecision,verified_gap:evidenceStatus.verified_gap,copy_ready:evidenceStatus.copy_ready,evidence_status:evidenceStatus};
+  // copy_ready means "ready for human review". Publication needs more: every unverified statement checked by the owner and,
+  // where Search Console is available, a baseline of the target page itself (GSC stays optional: the owner can confirm
+  // publishing without one). Rows of the tracked page are never used as the target page's baseline.
+  completeDecision.publication_readiness=publicationReadiness({decision:completeDecision,destinationGsc:report.destination_gsc_evidence});
   const handoffPackage=buildOwnerHandoffPackage({report,decision:completeDecision,completion:completionOut,linkPlan:report.internal_link_plan||[]});
   // Package the actual observed passages with the draft. A reader can now
   // inspect precisely which source supports each proposed editorial review.

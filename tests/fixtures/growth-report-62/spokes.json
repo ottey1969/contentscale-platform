@@ -1,0 +1,88 @@
+{
+ "_note": "Real Growth report 62 (contentscale.site homepage, 2026-10-31). gsc_rows: the Search Console terms of the homepage as listed in that report (variants of one term are one row with their summed impressions and best position). site_pages: tracked URLs from that report; keywords of /content-at-scale/, /content-scale-vs-content-at-scale/ and /content-scaling/ are from the report, the keyword of /ai-content-quality-checker/ is inferred from its \"tracked keyword\" match and the BrandWell page keyword is unknown (null).",
+ "page_url": "https://contentscale.site/",
+ "focus_query": "content scaling",
+ "gsc_rows": [
+  {
+   "query": "content at scale review",
+   "impressions": 655,
+   "clicks": 0,
+   "position": 11.9
+  },
+  {
+   "query": "content at scale review in los angeles, california near me",
+   "impressions": 120,
+   "clicks": 0,
+   "position": 32.1
+  },
+  {
+   "query": "content at scale ai content detection",
+   "impressions": 99,
+   "clicks": 0,
+   "position": 20.4
+  },
+  {
+   "query": "content at scale marketing",
+   "impressions": 82,
+   "clicks": 0,
+   "position": 30
+  },
+  {
+   "query": "content at scale review in los angeles, california",
+   "impressions": 79,
+   "clicks": 0,
+   "position": 31.4
+  },
+  {
+   "query": "content evaluation",
+   "impressions": 68,
+   "clicks": 0,
+   "position": 69.1
+  },
+  {
+   "query": "content grader",
+   "impressions": 66,
+   "clicks": 0,
+   "position": 56.4
+  },
+  {
+   "query": "content management at scale",
+   "impressions": 56,
+   "clicks": 0,
+   "position": 59.9
+  },
+  {
+   "query": "content quality",
+   "impressions": 47,
+   "clicks": 0,
+   "position": 58.7
+  }
+ ],
+ "site_pages": [
+  {
+   "id": 1,
+   "url": "https://contentscale.site/content-at-scale/",
+   "keyword": "content at scale"
+  },
+  {
+   "id": 2,
+   "url": "https://contentscale.site/content-scale-vs-content-at-scale/",
+   "keyword": "content scale vs content at scale"
+  },
+  {
+   "id": 3,
+   "url": "https://contentscale.site/content-at-scale-is-now-brandwell/",
+   "keyword": null
+  },
+  {
+   "id": 2295,
+   "url": "https://contentscale.site/content-scaling/",
+   "keyword": "content scaling"
+  },
+  {
+   "id": 5,
+   "url": "https://contentscale.site/ai-content-quality-checker/",
+   "keyword": "content quality"
+  }
+ ]
+}

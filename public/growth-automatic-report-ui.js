@@ -98,6 +98,14 @@
     (d.intent_resolution.original_keyword?' · Original tracked term: '+d.intent_resolution.original_keyword:''),primary);
   if(ownerReport&&outcome.decision==='IMPROVE_EXISTING'&&outcome.proposed_text){
    node('h3','Concrete improvement for editorial review',primary);
+   // Reviewable is not publishable: say what still stands between this proposal and publication.
+   var ready=outcome.publication_readiness;
+   if(ready&&(ready.blockers||[]).length){
+    var rb=node('div',null,primary);rb.className='growth-publication-blockers';
+    node('strong',ready.status==='NOT_READY_FOR_PUBLICATION'?'Draft for review — not ready for publication':'Ready for your approval, with notes',rb);
+    var bl=node('ul',null,rb);ready.blockers.forEach(function(b){var li=node('li',(b.required?'Required: ':'Recommended: ')+String(b.detail||b.code),bl);node('div','What to do: '+String(b.action||''),li)});
+    node('small',String(ready.note||''),rb);
+   }
    node('p','Existing section: '+String(outcome.target_section||'unspecified'),primary);
    if(outcome.placement)node('p','Placement: '+String(outcome.placement.mode||'').replace(/_/g,' ').toLowerCase()+' — '+String(outcome.placement.reason||''),primary);
    if(outcome.existing_passage){node('strong','Existing observed passage',primary);node('pre',outcome.existing_passage,primary)}
@@ -573,6 +581,12 @@
      var other=node('details',null,beyond);node('summary','Queries already served by tracked pages',other);
      (sc.belongs_elsewhere||[]).forEach(function(x){var item=node('p',x.query+' → ',other);link(x.url,x.url,item)});
     }
+    if((sc.excluded||[]).length){
+     var REASON={OWN_BRAND_TERM:'your own brand',NAMES_A_PLACE_THIS_SITE_DOES_NOT_SERVE:'names a place this site does not serve',
+      VARIANT_OF_THIS_PAGE_FOCUS_TERM:'a variant of this page\'s own focus term',NO_TOPIC_WORDS:'no topic words'};
+     var ex=node('details',null,beyond);node('summary','Search terms left out, with the reason ('+sc.excluded.length+')',ex);
+     sc.excluded.forEach(function(x){node('p',x.query+' — '+(REASON[x.reason]||x.reason)+' ('+x.impressions+' impressions, position '+x.position+')',ex)});
+    }
     if(sc.rule)node('small',sc.rule,beyond);
    }
    if(fn){
@@ -661,7 +675,8 @@
   list(ai.engines||[],s,e=>e.engine+' ('+(e.method==='manual'?'collected by hand, not an automatic check':(e.method||'historical'))+'): recommended '+(e.recommended?'Yes':'Not observed')+
    '; domain cited '+(e.domain_cited?'Yes':'Not observed')+
    '; exact page cited '+(e.exact_page_cited?'Yes':'Not observed')+
-   '; checked '+(e.verified_at||'date unknown'));
+   '; checked '+(e.verified_at||'date unknown')+(e.relevance?' — '+e.relevance.text+(e.relevance.usable?'':' Not used for this research.'):''));
+  if(ai.relevance_note)node('p',ai.relevance_note,s);
   var past=d.previous_brief||{};
   if(past.status==='HISTORICAL_BRIEF_NOT_CURRENT_LIVE_EVIDENCE'){
    s=section('Previously saved Tracker Brief — historical context');
