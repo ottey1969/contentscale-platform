@@ -156,6 +156,7 @@
    node('h3','Concrete improvement for editorial review'+(outcome.publication_readiness&&outcome.publication_readiness.status==='NOT_READY_FOR_PUBLICATION'?' — draft, not ready for publication':''),primary);
    // Reviewable is not publishable: say what still stands between this proposal and publication.
    var ready=outcome.publication_readiness;
+   if(ready&&ready.baseline)node('p','Starting point: '+String(ready.baseline.note||''),primary);
    if(ready&&(ready.blockers||[]).length){
     var rb=node('div',null,primary);rb.className='growth-publication-blockers';
     node('strong',ready.status==='NOT_READY_FOR_PUBLICATION'?'Draft for review — not ready for publication':'Ready for your approval, with notes',rb);
