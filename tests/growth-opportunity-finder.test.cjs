@@ -30,8 +30,10 @@ test('one best opportunity across countries, with reason, action and measurement
  assert.deepEqual(f.best.research,{type:'EXISTING_PAGE',page_id:2295,query:'content scaling',market:'US'});
  assert.match(f.best.measurement,/No result is promised/);assert.match(f.not_yet_known,/reads them before anything is proposed/);
  assert.equal(f.excluded.brand,1,'the brand term is not a growth opportunity');
- assert.equal(f.excluded.protected_page,1,'the protected homepage is not changed');assert.equal(f.excluded.already_top_with_clicks,1);
- const grader=[f.best,...f.runners_up].find(x=>x.query==='content grader');
+ const ie=findOpportunities({rows:rows.filter(r=>r.country==='IE'),pages,domain:'contentscale.site'}).best;
+ assert.equal(ie.kind,'OTHER_EXISTING_PAGE','Google shows the protected homepage; the dedicated page is the target, the homepage is not changed');
+ assert.equal(ie.page_url,'https://contentscale.site/content-scaling/');assert.equal(ie.shown_page_url,'https://contentscale.site/');assert.equal(f.excluded.already_top_with_clicks,1);
+ const grader=findOpportunities({rows:rows.filter(r=>r.query==='content grader'),pages,domain:'contentscale.site'}).best;
  assert.equal(grader.kind,'POSSIBLE_NEW_PAGE','no tracked page names "grader": possibly a new page, not decided by word overlap');
  assert.match(grader.action,/^First research https:\/\/contentscale\.site\/ai-content-quality-checker\/ for “content grader” in United States \(us\): the research decides whether this existing page can serve the search/);
  assert.deepEqual(grader.research,{type:'EXISTING_PAGE',page_id:5,query:'content grader',market:'US'});
@@ -85,7 +87,7 @@ test('Cockpit: the best opportunity is the first thing the owner sees, with a li
  assert(best>0&&best<next,'the opportunity comes before the old next action');
  assert.match(html,/“content scaling” in United Kingdom → https:\/\/contentscale\.site\/content-scaling\//);
  assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2295&amp;market=GB&amp;query=content%20scaling"/);
- assert.match(html,/Not yet known:/);assert.match(html,/Not all Search Console data was read:<\/strong> the import reached the maximum of 125,000 rows/);assert.match(html,/Next opportunities \(1\)/);
+ assert.match(html,/Not yet known:/);assert.match(html,/Not all Search Console data was read:<\/strong> the import reached the maximum of 125,000 rows/);assert.match(html,/Next opportunities \(1\)<\/summary><ol><li>“generative engine optimization consultant” in United States → https:\/\/contentscale\.site\/generative-engine-optimization-consultant\/ — 90 impressions/);
  // Without Search Console access on the server: a clear message, nothing changed.
  const noAccess={};registerGrowthCockpit({get(){},post(p,...h){noAccess[p]=h}},{query:async sql=>sql.includes('FROM tracker_clients')?{rows:[{id:10,domain:'contentscale.site',token:'owner-tok'}]}:{rows:[]}},{gscCountry:{tokenProvider:async()=>null}});
  const r=await call(noAccess['/api/tracker-client/:token/growth/gsc-country-import'],{params:{token:'owner-tok'},body:{}});
@@ -133,8 +135,8 @@ test('another tracked page about the term is the target before any new page (no 
  const f=findOpportunities({rows:[R('https://contentscale.site/ai-content-quality-checker/','content scaling tips','US',200,1,14)],pages,domain:'contentscale.site'});
  assert.equal(f.best.kind,'OTHER_EXISTING_PAGE');assert.equal(f.best.page_url,'https://contentscale.site/ai-content-quality-checker/');
  assert.equal(f.best.shown_page_url,'https://contentscale.site/ai-content-quality-checker/');
- assert.match(f.best.why,/another tracked page/);
- assert.match(f.best.action,/Research the page Google shows/);
+ assert.match(f.best.why,/tracked page about this term/);
+ assert.match(f.best.action,/also check the link from that page to https:\/\/contentscale\.site\/content-scaling\//);
  // Shown only on the protected homepage and no tracked page about it: a Pre-Write brief (the homepage is not changed).
  const p=findOpportunities({rows:[R('https://contentscale.site/','content workflow audit','US',150,0,18)],pages,domain:'contentscale.site'});
  assert.equal(p.best.kind,'POSSIBLE_NEW_PAGE');assert.equal(p.best.research.type,'NEW_PAGE');assert.match(p.best.action,/protected; start a Pre-Write brief/);
@@ -149,13 +151,18 @@ test('a site that reaches the Search Console row limit is told that terms with f
  assert.equal(small.capped,false);
 });
 
-test('page and query country totals are never attributed to a different URL',()=>{
- const rows=[R('https://contentscale.site/ai-content-quality-checker/','content scaling tips','US',450,0,7),R('https://contentscale.site/content-scaling/','content scaling tips','US',50,8,12)];
- const f=findOpportunities({rows,pages,domain:'contentscale.site'});
- assert.equal(f.best.kind,'OTHER_EXISTING_PAGE');
- assert.equal(f.best.page_url,'https://contentscale.site/ai-content-quality-checker/');
- assert.equal(f.best.impressions,450);assert.equal(f.best.clicks,0);
- assert.equal(f.best.query_country_total_impressions,500);assert.equal(f.best.query_country_total_clicks,8);
- assert.equal(f.best.research.page_id,5);
- assert.match(f.best.why,/these pages together have 500 impressions and 8 clicks/);
+test('real Cockpit case 2026-10-31: "content scaling" goes to /content-scaling/, not /content-at-scale/ (shared stem only)',()=>{
+ // The tracked pages and the result Google showed are from the owner's Cockpit (free-ai-citations-tracker shown first at 7.5,
+ // 1346 impressions, 0 clicks in the US); the split over the other pages is LABELLED SYNTHETIC.
+ const site=[{id:2298,url:'https://contentscale.site/content-at-scale/',keyword:'content at scale'},
+  {id:2295,url:'https://contentscale.site/content-scaling/',keyword:'content scaling'},
+  {id:2290,url:'https://contentscale.site/free-ai-citations-tracker/',keyword:'free ai citations tracker'}];
+ const rows=[R('https://contentscale.site/free-ai-citations-tracker/','content scaling','US',1000,0,7.5),R('https://contentscale.site/content-at-scale/','content scaling','US',200,0,12),
+  R('https://contentscale.site/content-scaling/','content scaling','US',146,0,18)];
+ const f=findOpportunities({rows,pages:site,domain:'contentscale.site'});
+ assert.equal(f.best.kind,'OTHER_EXISTING_PAGE');assert.equal(f.best.page_url,'https://contentscale.site/ai-content-quality-checker/');
+ assert.equal(f.best.impressions,146);assert.equal(f.best.query_country_total_impressions,1346);
+ // Without a dedicated page, the page Google shows that covers the term is kept.
+ const g=findOpportunities({rows:rows.slice(0,2),pages:site.filter(p=>p.id!==2295),domain:'contentscale.site'});
+ assert.equal(g.best.page_url,'https://contentscale.site/content-at-scale/');
 });
