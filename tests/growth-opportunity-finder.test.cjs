@@ -32,8 +32,10 @@ test('one best opportunity across countries, with reason, action and measurement
  assert.equal(f.excluded.brand,1,'the brand term is not a growth opportunity');
  assert.equal(f.excluded.protected_page,1,'the protected homepage is not changed');assert.equal(f.excluded.already_top_with_clicks,1);
  const grader=[f.best,...f.runners_up].find(x=>x.query==='content grader');
- assert.equal(grader.kind,'NEW_PAGE','the checker page does not cover "grader": its own page, research first');
- assert.match(grader.action,/Pre-Write brief for “content grader” with target market United States/);
+ assert.equal(grader.kind,'POSSIBLE_NEW_PAGE','no tracked page names "grader": possibly a new page, not decided by word overlap');
+ assert.match(grader.action,/^First research https:\/\/contentscale\.site\/ai-content-quality-checker\/ for “content grader” in United States \(us\): the research decides whether this existing page can serve the search/);
+ assert.deepEqual(grader.research,{type:'EXISTING_PAGE',page_id:5,query:'content grader',market:'US'});
+ assert.equal(grader.priority_basis,'RESEARCH_PRIORITY_NOT_A_FORECAST');
  assert(!JSON.stringify(f).match(/forecast(ed)? clicks|expected clicks|\+\d+ clicks/i));
 });
 
@@ -69,8 +71,9 @@ test('Cockpit: the best opportunity is the first thing the owner sees, with a li
  registerGrowthCockpit({get(p,...h){routes[p]=h},post(p,...h){posts[p]=h}},{query:async(sql,args)=>{
   if(sql.includes('FROM tracker_clients'))return {rows:[{id:10,domain:'contentscale.site',token:'owner-tok'}]};
   if(sql.includes('FROM tracker_pages p'))return {rows:trackedPages};
+  if(sql.includes('FROM tracker_growth_gsc_country_imports'))return {rows:[{rows_received:125000,rows_kept:2,capped:true,start_date:'2026-09-30',end_date:'2026-10-27'}]};
   if(sql.includes('FROM tracker_growth_gsc_country'))return {rows:imported?imported:country.map(r=>({...r,imported_at:'2026-10-31T10:00:00Z'}))};
-  if(/INSERT INTO tracker_growth_gsc_country/.test(sql)){imported=[];for(let i=0;i<args.length;i+=9)imported.push({page_url:args[i+1],query:args[i+2],country:args[i+3],clicks:args[i+4],impressions:args[i+5],position:args[i+6],start_date:args[i+7],end_date:args[i+8]});return {rows:[]}}
+  if(/INSERT INTO tracker_growth_gsc_country\(/.test(sql)){imported=[];for(let i=0;i<args.length;i+=9)imported.push({page_url:args[i+1],query:args[i+2],country:args[i+3],clicks:args[i+4],impressions:args[i+5],position:args[i+6],start_date:args[i+7],end_date:args[i+8]});return {rows:[]}}
   return {rows:[]};
  }},{gscCountry:{tokenProvider:async()=>'t',pull:async({siteUrl})=>{assert.equal(siteUrl,'sc-domain:contentscale.site');return {startDate:'2026-09-30',endDate:'2026-10-27',rows:country}}}});
  const call=async(stack,req)=>{const res={statusCode:200,status(c){this.statusCode=c;return this},set(){return this},type(){return this},json(b){this.body=b;return this},send(x){this.html=x;return this}};
@@ -78,11 +81,11 @@ test('Cockpit: the best opportunity is the first thing the owner sees, with a li
  const imp=await call(posts['/api/tracker-client/:token/growth/gsc-country-import'],{params:{token:'owner-tok'},body:{}});
  assert.equal(imp.body.success,true);assert.equal(imp.body.rows,2);assert.equal(imp.body.countries,2);
  const page=await call(routes['/track/:token/growth'],{params:{token:'owner-tok'},query:{}});
- const html=page.html,best=html.indexOf('Best opportunity — Opportunity Finder'),next=html.indexOf('Your next action');
+ const html=page.html,best=html.indexOf('Best opportunity — Opportunity Finder (research priority, not a prediction)'),next=html.indexOf('Your next action');
  assert(best>0&&best<next,'the opportunity comes before the old next action');
  assert.match(html,/“content scaling” in United Kingdom → https:\/\/contentscale\.site\/content-scaling\//);
  assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2295&amp;market=GB&amp;query=content%20scaling"/);
- assert.match(html,/Not yet known:/);assert.match(html,/Next opportunities \(1\)/);
+ assert.match(html,/Not yet known:/);assert.match(html,/Not all Search Console data was read:<\/strong> the import reached the maximum of 125,000 rows/);assert.match(html,/Next opportunities \(1\)/);
  // Without Search Console access on the server: a clear message, nothing changed.
  const noAccess={};registerGrowthCockpit({get(){},post(p,...h){noAccess[p]=h}},{query:async sql=>sql.includes('FROM tracker_clients')?{rows:[{id:10,domain:'contentscale.site',token:'owner-tok'}]}:{rows:[]}},{gscCountry:{tokenProvider:async()=>null}});
  const r=await call(noAccess['/api/tracker-client/:token/growth/gsc-country-import'],{params:{token:'owner-tok'},body:{}});
@@ -123,4 +126,25 @@ test('Cockpit: the owner saves the countries where customers are; unknown entrie
  assert.equal((await call({countries:'us — United States, Narnia'})).body.code,'UNKNOWN_COUNTRY');
  const ok=await call({countries:'us — United States, gb — United Kingdom, nl — Netherlands'});
  assert.deepEqual(ok.body.countries,['US','GB','NL']);assert.deepEqual(saved,['US','GB','NL']);
+});
+
+test('another tracked page about the term is the target before any new page (no duplicate pages)',()=>{
+ // Google shows the checker page for "content scaling tips", but /content-scaling/ is the tracked page about it.
+ const f=findOpportunities({rows:[R('https://contentscale.site/ai-content-quality-checker/','content scaling tips','US',200,1,14)],pages,domain:'contentscale.site'});
+ assert.equal(f.best.kind,'OTHER_EXISTING_PAGE');assert.equal(f.best.page_url,'https://contentscale.site/content-scaling/');
+ assert.equal(f.best.shown_page_url,'https://contentscale.site/ai-content-quality-checker/');
+ assert.match(f.best.why,/Google shows https:\/\/contentscale\.site\/ai-content-quality-checker\/, but https:\/\/contentscale\.site\/content-scaling\/ is the tracked page about this term/);
+ assert.match(f.best.action,/also check the link from that page to https:\/\/contentscale\.site\/content-scaling\//);
+ // Shown only on the protected homepage and no tracked page about it: a Pre-Write brief (the homepage is not changed).
+ const p=findOpportunities({rows:[R('https://contentscale.site/','content workflow audit','US',150,0,18)],pages,domain:'contentscale.site'});
+ assert.equal(p.best.kind,'POSSIBLE_NEW_PAGE');assert.equal(p.best.research.type,'NEW_PAGE');assert.match(p.best.action,/protected; start a Pre-Write brief/);
+});
+
+test('a site that reaches the Search Console row limit is told that terms with few impressions may be missing',async()=>{
+ const {pullCountryRows,MAX_ROWS}=require('../src/growth-gsc-country.cjs');let calls=0;
+ // LABELLED SYNTHETIC: 5 full pages of 25,000 rows.
+ const r=await pullCountryRows({siteUrl:'sc-domain:big.example',token:'t',fetchImpl:async()=>{calls++;return {ok:true,json:async()=>({rows:Array.from({length:25000},(_,i)=>({keys:['https://big.example/p'+calls+'-'+i,'term '+i,'usa'],clicks:0,impressions:1,position:30}))})}}});
+ assert.equal(calls,5);assert.equal(r.received,MAX_ROWS);assert.equal(r.capped,true);
+ const small=await pullCountryRows({siteUrl:'sc-domain:x.example',token:'t',fetchImpl:async()=>({ok:true,json:async()=>({rows:[{keys:['https://x.example/','a','usa'],clicks:0,impressions:30,position:9}]})})});
+ assert.equal(small.capped,false);
 });
