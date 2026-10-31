@@ -477,6 +477,14 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    can_paste:v.canEdit===true,older_answers_not_counted:answers.length-fresh.length,max_age_days:AI_MAX_AGE_DAYS,
    summary:aiAnswers.summarizeAiAnswers(fresh,{pageUrl:target,googleUrls})};
  }
+ // The AI check before the research has finished: for the page's tracked keyword, optional, never running research.
+ app.get('/api/tracker-client/:token/growth/ai-check',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const term=String(v.page.keyword||'').trim();
+  if(!term||typeof loadAiAnswers!=='function')return res.set('Cache-Control','private, no-store').json({success:true,ai_check:null});
+  try{res.set('Cache-Control','private, no-store').json({success:true,ai_check:{...(await aiCheckFor({v,term,target:v.page.url})),basis:'TRACKED_KEYWORD_BEFORE_RESEARCH'}})}
+  catch{res.status(503).json({success:false,code:'AI_CHECK_UNAVAILABLE'})}
+ });
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   // Never serve a recently cached unlocked result after Case Study activation.
@@ -900,7 +908,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
    '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?
     'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button></section>',
-   '<div id="growthAutomaticReport"></div>',
+   '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',
    '<details id="growthNextAction"><summary>Later: reviewed CMS handoff and measurement</summary>',
    allowHandoff?'<p><a id="growthEditorHandoff" href="'+handoff+'">Prepare reviewed Wix / WordPress / other CMS package</a> — original URL preserved, editor approval required.</p>':
     v.page.case_study_active?'<p>Active Case Study baseline is protected. Research and measurement remain available; no publishing package until unlocked.</p>':

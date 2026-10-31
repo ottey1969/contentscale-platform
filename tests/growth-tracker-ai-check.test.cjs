@@ -25,7 +25,8 @@ function setup({owner=true}={}){
   await new Promise((ok,bad)=>{const at=i=>{if(i>=stack.length)return ok();Promise.resolve(stack[i](req,res,()=>at(i+1))).then(()=>{if(i===stack.length-1)ok()},bad)};at(0)});return res};
  const get=()=>call(route['/api/tracker-client/:token/growth/auto-research'],{params:{token:'t'},query:{page_id:'7'}});
  const paste=body=>call(post['/api/tracker-client/:token/growth/ai-answer'],{params:{token:'t'},query:{page_id:'7'},body});
- return {get,paste,stored,searches:()=>searches};
+ const early=()=>call(route['/api/tracker-client/:token/growth/ai-check'],{params:{token:'t'},query:{page_id:'7'}});
+ return {get,paste,early,stored,searches:()=>searches};
 }
 
 test('the research offers the AI prompt for its own search term; a pasted answer counts at once without a new Google research',async()=>{
@@ -51,4 +52,13 @@ test('answers to another prompt, other AI systems and non-owners are refused; ol
  await s.paste({engine:'copilot',query:QUERY,text:'ANSWER: x\nRESOURCES:\nhttps://a.example/'});
  s.stored[0].created_at=new Date(Date.now()-20*86400000).toISOString();
  const r=await s.get();assert.equal(r.body.ai_check.summary.checked,0);assert.equal(r.body.ai_check.older_answers_not_counted,1);
+});
+
+test('the AI check is optional and available before the research has finished (tracked keyword), without running research',async()=>{
+ const s=setup();
+ const e=await s.early();assert.equal(e.statusCode,200);
+ assert.equal(e.body.ai_check.search_term,QUERY);assert.equal(e.body.ai_check.basis,'TRACKED_KEYWORD_BEFORE_RESEARCH');assert.match(e.body.ai_check.prompt,/QUERY:\s*roof repair lodi nj/);
+ assert.equal(s.searches(),0,'no Google research for the AI check');
+ await s.paste({engine:'chatgpt',query:QUERY,text:'ANSWER: x\nRESOURCES:\nhttps://roofer-b.example/services/roof-repair/'});
+ const r=await s.get();assert.equal(r.body.ai_check.summary.checked,1,'the early answer counts in the finished research');
 });
