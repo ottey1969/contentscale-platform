@@ -4,7 +4,7 @@
  if(!main||!container)return;
  var id=main.getAttribute('data-page-id'),token=location.pathname.split('/')[2];
  var endpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(id);
- var last=null;
+ var last=null;\n var trackerGrowthStyle=document.createElement('style');trackerGrowthStyle.textContent="\\n/* Tracker Growth guided actions */\\n.cs-growth-guidance{padding:12px 14px;border-left:4px solid #2563eb;background:rgba(37,99,235,.06);border-radius:6px}\\n.cs-growth-action-list{display:grid;gap:12px;margin:12px 0 18px}.cs-growth-action{border:1px solid #cbd5e1;border-radius:12px;padding:16px;transition:border-color .2s ease,box-shadow .2s ease,opacity .2s ease}.cs-growth-action-head{display:flex;gap:12px;align-items:flex-start}.cs-growth-state{font-size:22px;font-weight:700;line-height:1.2}.cs-growth-action-copy{flex:1}.cs-growth-action-copy p{margin:4px 0 12px}.cs-growth-action-button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;transition:transform .15s ease,background .2s ease}.cs-growth-action-button:focus-visible{outline:3px solid #1d4ed8;outline-offset:3px}.cs-growth-action-button:active{transform:scale(.98)}.cs-growth-current{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb}.cs-growth-current .cs-growth-state{color:#2563eb}.cs-growth-current .cs-growth-action-button{background:#2563eb;color:white}.cs-growth-done{border-color:#15803d}.cs-growth-done .cs-growth-state{color:#15803d}.cs-growth-done .cs-growth-action-button{background:#15803d;color:white}.cs-growth-future{opacity:.73}.cs-growth-future .cs-growth-action-button{background:#e2e8f0;color:#475569;cursor:not-allowed}.cs-growth-action-detail{border-top:1px solid #cbd5e1;padding-top:10px;margin-top:12px;animation:csGrowthReveal .24s ease-out}.cs-growth-action-detail[hidden]{display:none}@keyframes csGrowthReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.cs-growth-action,.cs-growth-action-button,.cs-growth-action-detail{animation:none;transition:none}}\\n";document.head.appendChild(trackerGrowthStyle);
  function node(tag,text,parent){
   var n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);
   if(parent)parent.appendChild(n);return n;
@@ -516,30 +516,74 @@
   var rivals=node('details',null,s);node('summary','See inspected competitor pages and relevance',rivals);
   (rival.classification||[]).forEach(c=>{var item=node('div',null,rivals);link(c.url,c.title||c.url,item);
    node('small',c.category+' — '+c.reason,item)});
-  // Beyond this page: possible new pages from Search Console and the route from information to action (proposals only).
+  // Guided Tracker Growth actions: one blue next step; reviewed actions green; future steps neutral.
   var sc=d.spoke_candidates,fn=d.reader_funnel;
   if(sc||fn){
-   var beyond=section('Beyond this page · possible new pages and the next step for the reader');
+   var beyond=section('Beyond this page · opportunities and next actions');
+   var guidance=node('p','Review one evidence-backed opportunity at a time. Nothing is published automatically.',beyond);
+   guidance.className='cs-growth-guidance';
+   var actionList=node('div',null,beyond);actionList.className='cs-growth-action-list';
+   var actions=[];
+   function addAction(title,desc,detailLines){
+    var card=node('div',null,actionList);card.className='cs-growth-action';
+    var head=node('div',null,card);head.className='cs-growth-action-head';
+    var state=node('span','○',head);state.className='cs-growth-state';
+    var body=node('div',null,head);body.className='cs-growth-action-copy';
+    node('strong',title,body);node('p',desc,body);
+    var action=node('button','Review evidence',card);action.type='button';action.className='cs-growth-action-button';
+    var detail=node('div',null,card);detail.className='cs-growth-action-detail';detail.hidden=true;
+    detailLines.forEach(function(line){node('p',line,detail)});
+    var status=node('small','Not reviewed',card);status.setAttribute('role','status');
+    var item={card:card,state:state,button:action,detail:detail,status:status,reviewed:false};
+    actions.push(item);
+    action.addEventListener('click',function(){
+     if(item.reviewed){item.detail.hidden=!item.detail.hidden;action.textContent=item.detail.hidden?'Show evidence':'Hide evidence';return}
+     item.reviewed=true;item.detail.hidden=false;action.textContent='Hide evidence';status.textContent='Reviewed — proposal only. Confirm intent and evidence before making changes.';
+     refreshActions();
+    });
+   }
+   function refreshActions(){
+    var next=actions.findIndex(function(a){return !a.reviewed});
+    actions.forEach(function(a,i){
+     a.card.classList.toggle('cs-growth-done',a.reviewed);
+     a.card.classList.toggle('cs-growth-current',!a.reviewed&&i===next);
+     a.card.classList.toggle('cs-growth-future',!a.reviewed&&i!==next);
+     a.state.textContent=a.reviewed?'✓':i===next?'→':'○';
+     a.button.disabled=!a.reviewed&&i!==next;
+     if(!a.reviewed){a.button.textContent=i===next?'Review next opportunity':'Complete previous step first';a.status.textContent=i===next?'Next action':'Available after the previous step'}
+    });
+    guidance.textContent=next<0?'All listed opportunities reviewed. No changes have been published.':'Next: review opportunity '+(next+1)+' of '+actions.length+'. Nothing is published automatically.';
+   }
    if(sc){
     node('h3','Possible new pages (research first)',beyond);
     if((sc.candidates||[]).length){
-     table(['Search term','Impressions','Clicks','Best position','Next step'],sc.candidates.map(function(c){return [c.query+(c.variants.length>1?' (+'+(c.variants.length-1)+' variant'+(c.variants.length>2?'s':'')+')':''),String(c.impressions),String(c.clicks),String(c.best_position),c.next]}),beyond);
+     sc.candidates.forEach(function(c){
+      addAction('Research: '+c.query, String(c.impressions)+' impressions · '+String(c.clicks)+' clicks · position '+String(c.best_position),
+       ['Next step: '+String(c.next||'Start a Pre-Write brief and verify live SERP intent and overlap.'),'Related terms: '+String((c.variants||[]).join(', ')||c.query),'This is a candidate, not approval to publish.']);
+     });
     }else node('p',String(sc.note||'No candidates.'),beyond);
-    if((sc.belongs_elsewhere||[]).length){node('p','Terms another tracked page already answers (improve that page, no new page):',beyond);
-     var be=node('ul',null,beyond);sc.belongs_elsewhere.forEach(function(x){var li=node('li',x.query+' → ',be);link(x.url,x.url,li)})}
+    if((sc.belongs_elsewhere||[]).length){
+     var other=node('details',null,beyond);node('summary','Queries already served by tracked pages',other);
+     (sc.belongs_elsewhere||[]).forEach(function(x){var item=node('p',x.query+' → ',other);link(x.url,x.url,item)});
+    }
     if(sc.rule)node('small',sc.rule,beyond);
    }
    if(fn){
     node('h3','From information to action',beyond);
     if(fn.status==='FUNNEL_PROPOSAL'){
-     var ol=node('ol',null,beyond);
-     fn.stages.forEach(function(st){var li=node('li',st.stage==='INFORMATION'?'Information: ':'Action: ',ol);link(st.url,st.url,li);
-      if(st.role)node('small',' — '+st.role,li);
-      if(st.topic_match)node('small',' — '+st.topic_match,li);
-      if(st.link)node('div',st.link.status==='LINK_CANDIDATE_FOR_REVIEW'?'Link from the paragraph under “'+String(st.link.under_heading||'')+'” on the words “'+String(st.link.anchor_text||'')+'”. '+String(st.link.action||''):String(st.link.action||st.link.status),li)});
-     var rl=node('ul',null,beyond);(fn.rules||[]).forEach(function(r){node('li',r,rl)});
+     var steps=(fn.stages||[]),actionStages=steps.filter(function(st){return st.stage!=='INFORMATION'});
+     actionStages.forEach(function(st){
+      addAction('Review a relevant next step',String(st.role||st.url||'Relevant page'),
+       ['Destination: '+String(st.url||'Not established'),'Topic match: '+String(st.topic_match||'Not established'),
+        st.link&&st.link.status==='LINK_CANDIDATE_FOR_REVIEW'?'Suggested context: '+String(st.link.under_heading||'')+' — anchor: '+String(st.link.anchor_text||''):String(st.link&&st.link.action||'Verify a contextual link before editing.'),
+        'The informational answer must remain complete; no promotional claims are added.']);
+     });
+     var rules=node('details',null,beyond);node('summary','Editorial safeguards',rules);
+     (fn.rules||[]).forEach(function(rule){node('p',rule,rules)});
     }else node('p',String(fn.note||fn.status),beyond);
    }
+   if(actions.length)refreshActions();
+   else node('p','No actionable evidence-backed opportunities were found for this page.',beyond);
   }
   researchDetails=node('details',null,container);
   node('summary','Show full technical evidence, Search and AI observations',researchDetails);
