@@ -74,15 +74,15 @@ const clean=(x,n)=>String(x==null?'':x).replace(/[\u0000-\u001f\u007f]/g,' ').tr
 
 function page(title,body,cfg){
  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')?'index,follow':'noindex'}"><style>
-:root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#168347;--accent-ink:#fff;--warn:#fff7ed;--warn-line:#fed7aa}
-@media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#2fa866;--accent-ink:#06130b;--warn:#2a2116;--warn-line:#6b4a1f}}
+:root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#2563eb;--accent-ink:#fff;--done:#15803d;--blocked:#b42318;--pending:#64748b;--warn:#fff7ed;--warn-line:#fed7aa}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#60a5fa;--accent-ink:#0b1220;--done:#4ade80;--blocked:#fb7185;--pending:#9fb0c7;--warn:#2a2116;--warn-line:#6b4a1f}}
 *{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 main{max-width:860px;margin:0 auto;padding:24px 16px 60px}h1{font-size:30px;line-height:1.2;margin:.4em 0}h2{font-size:21px;margin:1.6em 0 .5em}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin:16px 0}.lead{font-size:18px;color:var(--muted)}
 label{display:block;margin:12px 0 4px;font-weight:600}input,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
 .check{display:flex;gap:8px;align-items:flex-start;font-weight:400}.check input{width:auto;margin-top:5px}
 button,.btn{display:inline-block;background:var(--accent);color:var(--accent-ink);border:0;border-radius:9px;padding:12px 18px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none}
-button:disabled{opacity:.6;cursor:wait}.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+button:disabled{opacity:.65;cursor:not-allowed}.step-strip{display:grid;gap:8px;margin:16px 0}.step-chip{display:flex;gap:10px;align-items:center;padding:11px 14px;border:1px solid var(--line);border-radius:10px;font-size:14px;font-weight:650;background:var(--card);color:var(--pending)}.step-chip.done{border-color:var(--done);color:var(--done)}.step-chip.current{border-color:var(--accent);color:var(--accent);box-shadow:inset 3px 0 var(--accent)}.step-chip.blocked{border-color:var(--blocked);color:var(--blocked)}.step-chip .symbol{font-size:18px}.action-blue{background:var(--accent);color:var(--accent-ink)}.action-green{background:var(--done);color:#fff}.action-muted{background:transparent;color:var(--muted);border:1px solid var(--line)}.action-red{background:var(--blocked);color:#fff}.step-help{color:var(--muted);font-size:13px;margin:4px 0 16px}.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
 small,.muted{color:var(--muted)}a{color:var(--accent);overflow-wrap:anywhere}.note{background:var(--warn);border:1px solid var(--warn-line);border-radius:10px;padding:12px 14px}
 .kicker{text-transform:uppercase;font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.03em;margin:0}
 blockquote{margin:8px 0;padding:8px 12px;border-left:3px solid var(--line);color:var(--muted)}ol li,ul li{margin:6px 0}
@@ -172,8 +172,8 @@ function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.grou
    (x.possible_overlap||[]).map(function(o){return '<br><small>May overlap with “'+esc(o.title)+'” (shared words, not confirmed)</small>'}).join('')+
    (x.examples.length?'<br><small>'+x.examples.slice(0,3).map(exampleText(x)).join(' · ')+'</small>'+(x.examples.length>3?'<details><summary><small>'+(x.examples.length-3)+' more source(s)</small></summary><small>'+x.examples.slice(3).map(exampleText(x)).join(' · ')+'</small></details>':''):'')+'</span></label>'})});
  h+='<p><strong id="gapCount">0 selected</strong></p><p><button type="button" id="gapAll" class="ghost">Select all</button> <button type="button" id="gapNone" class="ghost">Clear</button></p>';
- h+='<p><button type="button" id="gapDownload">Download selection as editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p>';
- if(w&&w.allowed&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite">Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only. Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.</small></p>';
+ h+='<p><button type="button" id="gapDownload" class="action-muted">Download selection as editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p>';
+ if(w&&w.allowed&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite" class="action-blue" disabled>Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only. Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.</small></p>';
  h+='<div id="gapWritten"></div>';
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
@@ -205,9 +205,9 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   if(!ids.length){st.textContent='Select at least one topic or question.';return}
   wb.disabled=true;st.textContent='Writing concepts…';
   try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});var x=await r.json();if(x.stored===false&&(x.sections||[]).length){wr.innerHTML=writtenHtml(x);st.textContent=x.error;wb.disabled=false;return}if(!x.success)throw Error(x.error||'Not written');
-   wr.innerHTML=writtenHtml(x.all_written||x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
+   wr.innerHTML=writtenHtml(x.all_written||x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;wb.dataset.exhausted=!x.remaining?'yes':'';var ws=document.getElementById('freeStepWrite');if(ws){ws.className='step-chip done';ws.querySelector('.symbol').textContent='✓'}st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
   catch(err){st.textContent=err.message;wb.disabled=false}};
- var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected'};
+ var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected';if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}var step=document.getElementById('freeStepSelect');if(step){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',count)});
  document.getElementById('gapAll').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=true});count()};
  document.getElementById('gapNone').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=false});count()};
@@ -220,6 +220,8 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  var a=d.ai,as=a&&a.summary;
  var h='<p class="kicker">Result · Google + AI'+(d.cached?' · Google part from a check of this page in the last 24 hours':'')+'</p><h1>Your page in Google and in AI answers</h1>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
+ var canWrite=!!(d.gaps&&d.gaps.writing&&d.gaps.writing.allowed);
+ h+='<div class="step-strip" aria-label="Your next steps"><div class="step-chip done"><span class="symbol">✓</span>1. Page and search settings entered</div><div class="step-chip done"><span class="symbol">✓</span>2. Research result available</div><div id="freeStepSelect" class="step-chip '+(canWrite?'current':'blocked')+'"><span class="symbol">'+(canWrite?'→':'!')+'</span>3. '+(canWrite?'Choose a relevant improvement':'No supported writing recommendation')+'</div><div id="freeStepWrite" class="step-chip '+(canWrite?'':'blocked')+'"><span class="symbol">'+(canWrite?'○':'!')+'</span>4. '+(canWrite?'Write selected concepts':'Writing blocked: insufficient evidence')+'</div><div class="step-chip"><span class="symbol">○</span>5. Download the brief or ask for help</div></div><p class="step-help">Blue = next action · Green = completed · Grey = later or optional · Red = blocked. No page is published or added to Tracker.</p>';
  h+='<div class="grid two"><div><small>Google search (blue links)</small><strong>'+esc(s.headline)+'</strong><a href="#google">Details ↓</a></div><div><small>AI answers ('+(as?as.checked:0)+' of 5 AI systems — checked by you with pasted answers, not queried automatically)</small><strong>'+esc(as?as.headline:'AI answers not available')+'</strong><a href="#ai">'+(as&&as.checked?'Details ↓':'Check AI now ↓')+'</a></div></div>';
  h+='<h2 id="google">Google search (blue links)</h2><p class="lead"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
  h+='<h3>What to do</h3><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
