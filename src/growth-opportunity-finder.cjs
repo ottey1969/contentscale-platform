@@ -25,7 +25,16 @@ function band(p){
  return {kind:'BIGGER_EFFORT',weight:0.15,effort:'large',label:'beyond page 4'};
 }
 
-function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null,customerCountries=[]}={}){
+function buyerIntent(query){
+ const q=' '+String(query||'').toLowerCase().replace(/[^a-z0-9]+/g,' ')+' ';
+ const match=terms=>terms.some(t=>q.includes(' '+t+' '));
+ if(match(['hire','hiring','quote','quotes','pricing','book','booking','near me']))return {label:'TRANSACTIONAL_QUERY_SIGNAL',weight:3};
+ if(match(['consultant','consultancy','agency','agencies','freelancer','specialist','contractor','services','service','repair','installation']))return {label:'SERVICE_QUERY_SIGNAL',weight:2.5};
+ if(['what is','how to','guide','explained','examples','tutorial','meaning','statistics'].some(t=>q.includes(' '+t+' ')))return {label:'INFORMATIONAL_QUERY_SIGNAL',weight:0.55};
+ return {label:'UNCLASSIFIED_QUERY',weight:0.8};
+}
+function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null,customerCountries=[],goal='RELEVANT_CLICKS'}={}){
+ const leadsGoal=goal==='QUALIFIED_LEADS';
  const brand=compact(String(domain).replace(/^https?:\/\//,'').split('.')[0]);
  const tracked=new Map(pages.filter(p=>p&&p.url).map(p=>[norm(p.url),p]));
  const customers=new Set((customerCountries||[]).map(c=>String(c).toUpperCase()));
@@ -44,6 +53,8 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
   if(!groups.has(k))groups.set(k,[]);
   groups.get(k).push({...r,page});
  }
+ const priority=(base,query)=>Math.round(base*(leadsGoal?buyerIntent(query).weight:1));
+ const leadEvidence=query=>leadsGoal?{goal:'QUALIFIED_LEADS',buyer_intent:buyerIntent(query).label,lead_priority_unverified:true}:{};
  const byCountry=new Map(),list=[];
  for(const [k,g] of groups){
   const impressions=g.reduce((n,x)=>n+x.impressions,0),clicks=g.reduce((n,x)=>n+x.clicks,0);
@@ -81,7 +92,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
     dedicated_page:{url:dedicated.url,impressions:own?own.impressions:0,clicks:own?own.clicks:0,position:own?Math.round(own.position*10)/10:null},
     kind:'DEDICATED_PAGE_FOR_PROTECTED',effort:'medium (the dedicated page must become the one Google shows)',
     other_pages:g.filter(x=>x!==lead).map(x=>({url:x.page.url,impressions:x.impressions,position:Math.round(x.position*10)/10})),
-    priority:Math.round(lead.impressions*b.weight*0.7),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
+    priority:priority(lead.impressions*b.weight*0.7,lead.query),...leadEvidence(lead.query),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
     why:'Google shows the protected page '+lead.page.url+' most for this term: '+lead.impressions+' impressions and '+lead.clicks+' clicks in '+countryName(lead.country)+(period?' ('+period.start+' – '+period.end+')':'')+', average position '+Math.round(lead.position*10)/10+
      '. The site\'s own page about the term is '+dedicated.url+(own?' ('+own.impressions+' impressions, '+own.clicks+' clicks, position '+Math.round(own.position*10)/10+')':' (no impressions for it in this import)')+
      '. These numbers belong to the pages named; none is attributed to the other.'});
@@ -97,7 +108,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
    impressions:lead.impressions,clicks:lead.clicks,query_country_total_impressions:impressions,query_country_total_clicks:clicks,ctr_pct:Math.round(1000*lead.clicks/Math.max(1,lead.impressions))/10,position:Math.round(lead.position*10)/10,kind,
    effort:kind==='POSSIBLE_NEW_PAGE'?'unknown until researched (possibly a new page)':kind==='OTHER_EXISTING_PAGE'?b.effort+', plus a link from the page Google shows':b.effort,
    other_pages:g.filter(x=>x!==lead).map(x=>({url:x.page.url,impressions:x.impressions,position:Math.round(x.position*10)/10})),
-   priority:Math.round(lead.impressions*(kind==='POSSIBLE_NEW_PAGE'?0.3:b.weight)),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
+   priority:priority(lead.impressions*(kind==='POSSIBLE_NEW_PAGE'?0.3:b.weight),lead.query),...leadEvidence(lead.query),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
    why:lead.impressions+' impressions and '+lead.clicks+' clicks for '+lead.page.url+' in '+countryName(lead.country)+(period?' ('+period.start+' – '+period.end+')':'')+', average position '+Math.round(lead.position*10)/10+' ('+b.label+')'+
     (kind==='SNIPPET'?'; only '+Math.round(ctr*1000)/10+'% of searchers click':'')+
     (kind==='OTHER_EXISTING_PAGE'?'; another tracked page ('+other.url+') may also serve this term; verify intent before choosing a destination':'')+
@@ -112,7 +123,8 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  const best=withPlan(list[0],siteMarkets);
  const scope=customerScope(customers,countries);
  return {status:'OPPORTUNITY_FOUND',period,customer_countries:scope,best,runners_up:list.slice(1,5).map(x=>withPlan(x,siteMarkets)),by_country:countries,excluded,
-  method:'Research priority, not a forecast. Search Console per country: priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). An order, not a click forecast.',
+  goal:leadsGoal?'QUALIFIED_LEADS':'RELEVANT_CLICKS',
+  method:leadsGoal?'Qualified-lead research priority, not measured conversions. Search Console visibility and position weighted by query intent signals; no leads or sales are inferred.': 'Research priority, not a forecast. Search Console per country: priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). An order, not a click forecast.',
   not_yet_known:'How strong the ranking pages are in that country, and whether this page can give a better answer: the Growth research in that country reads them before anything is proposed.'};
 }
 function customerScope(customers,countries){
@@ -145,4 +157,4 @@ function serviceAreaOf({pages=[],deriveMarket}){
  const local=pages.filter(p=>{try{return !!deriveMarket({query:p.keyword||'',keyword:p.keyword||'',url:p.url})}catch{return false}}).length;
  return local*2>=pages.length&&local>0?{countries:['US'],basis:local+' of '+pages.length+' tracked pages name a US state'}:null;
 }
-module.exports={findOpportunities,serviceAreaOf,MIN_IMPRESSIONS};
+module.exports={findOpportunities,serviceAreaOf,MIN_IMPRESSIONS,buyerIntent};
