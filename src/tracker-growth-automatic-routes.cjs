@@ -512,6 +512,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   try{const row=await (typeof loadCompletedReport==='function'?loadCompletedReport({v}):storedResearch.load(pool,v));
    if(!row)return res.set('Cache-Control','private, no-store').json({success:true,found:false});
    const report={...row.report,restored_from_database:true,saved_at:row.saved_at};
+   // The saved report is the research as it was; the owner's selection and what was written since come from the store,
+   // so a reload shows the ticks, the written items and the CMS package instead of an empty list.
+   if(report.gap_list&&report.gap_list.id&&typeof loadGapList==='function'){
+    try{const list=await loadGapList({clientId:v.clientId,id:report.gap_list.id});
+     if(list){const last=typeof lastStoredRun==='function'?await Promise.resolve(lastStoredRun({gapListId:list.id})).catch(()=>null):null;
+      report.gap_list={...report.gap_list,selected:(list.selected||[]).map(String),written_ids:(list.written_ids||[]).map(String),
+       cms_url:last&&last.proposal_id?'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id):null}}}
+    catch{}
+   }
    if(typeof loadAiAnswers==='function'){const term=String(v.queryOverride||v.page.keyword||'').trim();
     if(term)report.ai_check=await aiCheckFor({v,term,target:v.page.url}).catch(()=>report.ai_check)}
    return res.set('Cache-Control','private, no-store').json({success:true,found:true,report});

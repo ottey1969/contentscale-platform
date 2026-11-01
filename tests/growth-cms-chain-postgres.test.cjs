@@ -247,6 +247,13 @@ test('10. hybrid: research without writing gives the full gap list; text only fo
  assert(flags.some(f=>f.code==='UNSOURCED_NUMBER'&&/68%/.test(f.sentence)),JSON.stringify(flags));
  assert.equal(w.body.sections[0].status,'FLAGGED_FOR_EDITOR');
  assert.deepEqual((await pool.query('SELECT selected FROM tracker_growth_gap_lists WHERE id=$1',[gl.id])).rows[0].selected,pick);
+ // Owner report 2026-11-01: after a reload the page must show what was selected and written, with the CMS package
+ // (the saved report is the research as it was; the selection state comes from the store).
+ const saved=await api('GET','/api/tracker-client/owner-tok/growth/auto-research/saved?page_id='+ids.page);
+ assert.equal(saved.status,200);assert.equal(saved.body.found,true,JSON.stringify(saved.body).slice(0,200));
+ assert.equal(saved.body.report.gap_list.id,gl.id);
+ assert.deepEqual(saved.body.report.gap_list.selected,pick.map(String));assert.deepEqual(saved.body.report.gap_list.written_ids,pick.map(String));
+ assert.equal(saved.body.report.gap_list.cms_url,'/track/owner-tok/growth/cms-export?page_id='+ids.page);
  // The concept is the newest proposal for the CMS page, with the flagged sentence as a must-rewrite item.
  const prop=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body.proposal;
  assert.equal(prop.id,w.body.cms_handoff.proposal_id);assert.equal(prop.evidence_label,'SELECTION_CONCEPT_WITH_FLAGGED_SENTENCES');
