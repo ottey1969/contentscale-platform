@@ -141,7 +141,9 @@
    if(!$('query').value&&x.query)$('query').value=x.query;
    if(!$('title').value&&x.title)$('title').value=x.title;
    if(!$('meta').value&&x.meta)$('meta').value=x.meta;
-   if(x.verified_query&&$('evidence').value==='needs_access')$('evidence').value='verified';
+   // "Verified" only when Search Console has a verified row for the working query in the field (not for any query).
+   var wq=$('query').value.trim().toLowerCase();
+   if((x.verified_queries?x.verified_queries.indexOf(wq)>=0:x.verified_query)&&$('evidence').value==='needs_access')$('evidence').value='verified';
    else if(x.source_type!=='NO_PAGE_HTML'&&$('evidence').value==='needs_access')$('evidence').value='observed';
    target.hidden=false;target.textContent='';
    var label=document.createElement('strong');label.textContent='Automatic Growth research: editor review';target.appendChild(label);
@@ -302,15 +304,21 @@
   if(!response.ok){const d=await response.json().catch(()=>({}));
    // Flagged content still in the text: name each sentence so the editor knows exactly what to rewrite or remove.
    if((d.blocked_details||[]).length)throw Error('Not packaged — still in your text: '+d.blocked_details.map(function(b){return (b.sentence?'“'+b.sentence+'”':'')+' ('+b.reason+')'}).join(' · '));
-   throw Error((d.issues||[]).join(', ')||d.code||'Export failed')}
+   throw Object.assign(Error((d.issues||[]).join(', ')||d.code||'Export failed'),{code:d.code||null})}
   return format==='zip'?response.blob():response.json();
  }
  $('handoffForm').addEventListener('submit',async function(ev){
   ev.preventDefault();const btn=$('download');btn.disabled=true;
   status('downloadStatus','Validating evidence and approved content…',false);
   try{
-   const payload=build();
-   const preview=await post(payload,'json');
+   let payload=build(),preview,downgraded=false;
+   try{preview=await post(payload,'json')}
+   catch(e){
+    // No Search Console row for this exact page and search term: package it as "Observed" instead (a smaller claim),
+    // and say so; never as verified.
+    if(!['VERIFIED_GSC_EVIDENCE_NOT_FOUND','VERIFIED_PAGE_QUERY_REQUIRED','VERIFIED_GSC_EVIDENCE_UNAVAILABLE'].includes(e.code))throw e;
+    $('evidence').value='observed';payload=build();downgraded=true;preview=await post(payload,'json');
+   }
    if(!preview.success||preview.manifest?.publication_allowed!==false)throw Error('Editor safety check failed');
    const zip=await post(payload,'zip');
    const file=new Blob([zip],{type:'application/zip'});
@@ -318,6 +326,7 @@
    a.href=href;a.download='contentscale-growth-cms-neutral.zip';document.body.appendChild(a);a.click();a.remove();
    setTimeout(()=>URL.revokeObjectURL(href),3000);
    status('downloadStatus','ZIP ready. No site change or publication performed.'+
+    (downgraded?' Research evidence set to “Observed”: Search Console has no verified row for this page and “'+payload.focus_query+'”, so the package makes no Search Console claim.':'')+
     (preview.manifest?.growth_proposal?(preview.manifest.growth_proposal.editor_changed_text?' The text differs from Growth proposal #'+preview.manifest.growth_proposal.id+' (recorded in the package).':' Text exactly as in Growth proposal #'+preview.manifest.growth_proposal.id+'.'):'')+
     ((preview.warnings||[]).length?' Review: '+preview.warnings.join(', '):''),false);
    showPublicationForm(payload);
