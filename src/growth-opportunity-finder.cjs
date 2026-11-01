@@ -43,7 +43,8 @@ function buyerIntent(query){
 }
 // goal RELEVANT_CLICKS (default): the research priority order. goal QUALIFIED_LEADS (the Cockpit): potential customers first.
 function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null,customerCountries=[],evidenceCountries=[],contactPaths=null,goal='RELEVANT_CLICKS'}={}){
- const leadsGoal=goal==='QUALIFIED_LEADS';
+ const autoGoal=goal==='AUTO_BEST_OPPORTUNITY';
+ const leadsGoal=goal==='QUALIFIED_LEADS'||autoGoal;
  const brand=compact(String(domain).replace(/^https?:\/\//,'').split('.')[0]);
  const tracked=new Map(pages.filter(p=>p&&p.url).map(p=>[norm(p.url),p]));
  const customers=new Set((customerCountries||[]).map(c=>String(c).toUpperCase()));
@@ -145,7 +146,19 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
    if(service)o.lead_page={page_id:service.id??null,url:service.url,contact_path:contactOf(service)};
   }
  }
- list.sort((a,b)=>(leadsGoal?b.lead_priority-a.lead_priority:0)||b.priority-a.priority||b.impressions-a.impressions);
+ // Automatic mode compares BOTH opportunities on the same 0–1 scale. Commercial intent cannot
+ // erase an exceptional traffic opportunity, and raw clicks alone cannot dominate buyer intent.
+ if(autoGoal&&list.length){
+  const maxLead=Math.max(...list.map(o=>o.lead_priority),0.01);
+  const maxTraffic=Math.max(...list.map(o=>Math.log10(1+Math.max(0,o.priority))),0.01);
+  for(const o of list){
+   const buyer=o.lead_priority/maxLead,traffic=Math.log10(1+Math.max(0,o.priority))/maxTraffic;
+   o.automatic_priority=Math.round(1000*(0.6*buyer+0.4*traffic))/1000;
+   o.automatic_basis={buyer_signal:Math.round(buyer*100)/100,search_opportunity:Math.round(traffic*100)/100,
+    note:'Relative research priority, not predicted leads or clicks; both opportunities remain visible.'};
+  }
+ }
+ list.sort((a,b)=>(autoGoal?b.automatic_priority-a.automatic_priority:leadsGoal?b.lead_priority-a.lead_priority:0)||b.priority-a.priority||b.impressions-a.impressions);
  const countries=[...byCountry.values()].sort((a,b)=>b.impressions-a.impressions);
  if(!list.length)return {status:'INSUFFICIENT_DATA',period,customer_countries:customerScope(customers,countries),
   reason:'No search term in any country has at least '+MIN_IMPRESSIONS+' impressions on a tracked, changeable page outside the top 3 (or with few clicks in the top 3). Growth does not invent an opportunity; add pages to the Tracker or import again later.',
@@ -155,11 +168,11 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  // The opportunity with the most search traffic, shown when the lead order chose another one, so nothing is hidden.
  const byTraffic=list.slice().sort((a,b)=>b.priority-a.priority||b.impressions-a.impressions)[0];
  return {status:'OPPORTUNITY_FOUND',period,customer_countries:scope,best,runners_up:list.slice(1,5).map(x=>withPlan(x,siteMarkets)),by_country:countries,excluded,
-  goal:leadsGoal?'QUALIFIED_LEADS':'RELEVANT_CLICKS',
+  goal:autoGoal?'AUTO_BEST_OPPORTUNITY':leadsGoal?'QUALIFIED_LEADS':'RELEVANT_CLICKS',
   most_search_traffic:leadsGoal&&byTraffic!==list[0]?{query:byTraffic.query,country:byTraffic.country,page_url:byTraffic.page_url,impressions:byTraffic.impressions,
    lead_intent:byTraffic.lead_intent.class,why_not_first:'More search traffic, but '+byTraffic.lead_intent.label+(byTraffic.market==='ON_EVIDENCE'?' in a market you count on evidence':'')+
     '; “'+list[0].query+'” is closer to a customer ('+list[0].lead_intent.label+').'}:null,
-  method:leadsGoal?'Qualified-lead research priority, not measured conversions. Lead priority = intent weight (wants to hire 1, compares providers 0.8, not clear 0.5, wants information 0.35) × market weight (primary 1, on evidence 0.6) × log10(1 + research priority). Research priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). Intent is read from the words of the search term only; no conversion rate is assumed and no leads or sales are inferred.':
+  method:autoGoal?'Automatic priority blends relative commercial-search intent (60%) and relative GSC traffic opportunity (40%); all candidates are compared within the selected markets. This is research ordering, never a prediction of leads or clicks. Both underlying signals remain visible.':leadsGoal?'Qualified-lead research priority, not measured conversions. Lead priority = intent weight (wants to hire 1, compares providers 0.8, not clear 0.5, wants information 0.35) × market weight (primary 1, on evidence 0.6) × log10(1 + research priority). Research priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). Intent is read from the words of the search term only; no conversion rate is assumed and no leads or sales are inferred.':
    'Research priority, not a forecast. Search Console per country: priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). An order, not a click forecast.',
   not_yet_known:'How strong the ranking pages are in that country, and whether this page can give a better answer: the Growth research in that country reads them before anything is proposed.'};
 }
