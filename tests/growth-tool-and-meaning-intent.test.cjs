@@ -23,6 +23,7 @@ function harness({query,pageUrl,pageHtml,leads,pages,inventory=[],lockedUrls=[]}
   if(sql.includes('FROM tracker_pages WHERE tracker_client_id'))return {rows:inventory};
   return {rows:[]};
  }},(req,res,next)=>{req.growthTrackerClientId=4;req.growth={can_edit:req.params.token==='owner',pages:[{id:5,url:pageUrl,keyword:query,case_study_active:false},...inventory.map(r=>({...r,case_study_active:lockedUrls.includes(r.url)}))]};next()},{
+  saveCompletedReport:async()=>{},loadCompletedReport:async()=>null,
   retryDelayMs:0,
   fetchLive:async url=>{const h=url===pageUrl?pageHtml:pages[url];if(!h)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
    return {html:h,final_url:url,retrieved_at:'2026-10-29T08:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
