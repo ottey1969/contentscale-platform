@@ -72,12 +72,14 @@
   if(typeof options.write==='function'&&list.writing_allowed!==false){
    var w=el('button','Write selected with AI (concepts for review)',actions);w.type='button';w.style.cssText='background:#2563eb;color:white;font-weight:700';
    el('small',' Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.',actions);
+   var finish=el('a','Continue to CMS package',actions);finish.hidden=true;finish.style.cssText='display:none;background:#2563eb;color:white;font-weight:700;padding:10px 14px;border-radius:6px;text-decoration:none;margin-left:8px';
+   var ready=function(url){if(url){finish.href=url;finish.hidden=false;finish.style.display='inline-block';dl.hidden=false;dl.style.background='#2563eb';dl.style.color='white'}};
    w.addEventListener('click',async function(){
     var p=picked().filter(function(x){return x.writable});if(!p.length){status.textContent='Select at least one topic or question.';return}
-    w.disabled=true;status.textContent='Writing concepts for '+Math.min(4,p.length)+' item(s)'+(p.length>4?' (the other '+(p.length-4)+' are kept for the next run)':'')+'…';out.textContent='';
+    w.disabled=true;w.style.background='#94a3b8';w.textContent='Writing concepts…';w.setAttribute('aria-busy','true');status.textContent='Writing concepts for '+Math.min(4,p.length)+' item(s)'+(p.length>4?' (the other '+(p.length-4)+' are kept for the next run)':'')+'…';out.textContent='';
     try{var r=await options.write(p.map(function(x){return x.id}));
      if(r&&r.code==='WRITING_IN_PROGRESS'){status.textContent='Concepts for this list are being written right now (started '+(r.run&&r.run.started_at||'')+'). Wait a moment and reload; nothing is written twice.';return}
-     if(r&&r.code==='SELECTION_ALREADY_WRITTEN'){dl.hidden=false;status.textContent='Everything you selected has been written already.'+(r.last_run&&r.last_run.cms_url?' The latest concepts are in the CMS package.':'');if(r.last_run&&r.last_run.cms_url){var l=el('a','Open the CMS package',el('p',null,out));l.href=r.last_run.cms_url}return}
+     if(r&&r.code==='SELECTION_ALREADY_WRITTEN'){w.textContent='Already written';w.disabled=true;ready(r.last_run&&r.last_run.cms_url);status.textContent='Everything you selected has been written already.'+(r.last_run&&r.last_run.cms_url?' The latest concepts are in the CMS package.':'');if(r.last_run&&r.last_run.cms_url){var l=el('a','Open the CMS package',el('p',null,out));l.href=r.last_run.cms_url}return}
      if(!r||r.success===false)throw Error((r&&(r.code||r.reason))||'Writing not available');
      if(r.stored===true&&!r.storage_error)dl.hidden=false;
      if(r.storage_error)el('p','These concepts could not be stored, so nothing is marked as written and the items stay selected. Copy what you need and try again.',out,'error');
@@ -91,12 +93,14 @@
        para.split(/(?<=[.!?])\s+/).forEach(function(sentence){var span=el('span',sentence+' ',pnode);if(flagged.indexOf(sentence)>=0){span.style.background='#fde68a';span.title='Flagged: rewrite or remove'}})});
       if((s.flags||[]).length){var ul=el('ul',null,card);s.flags.forEach(function(f){el('li',(f.sentence?'“'+f.sentence+'” — ':'Whole section — ')+f.reason,ul)})}});
      (r.not_written||[]).forEach(function(x){el('p','Not written: '+x.title+' — kept for the next run, or write it yourself.',out,'small')});
-     if((r.pending||[]).length)el('p','Still to write from your selection ('+r.pending.length+'): '+r.pending.map(function(x){return x.title}).join(' · ')+'. Click again to write the next ones.',out,'small');
+     var pending=(r.pending||[]).length;
+     if(r.stored===true&&!r.storage_error&&!pending){w.textContent='Writing complete';w.disabled=true;ready(r.cms_handoff&&r.cms_handoff.url)}
+     if(pending)el('p','Still to write from your selection ('+r.pending.length+'): '+r.pending.map(function(x){return x.title}).join(' · ')+'. Click again to write the next ones.',out,'small');
      (r.unlinked_sections||[]).forEach(function(x){el('p','Not linked to a selected item and not used: “'+x.h2+'” — '+x.reason,out,'small')});
      if(r.new_page_package&&r.new_page_package.url){var np=el('a','Download the new page package (Markdown with the evidence dossier)',el('p',null,out));np.href=r.new_page_package.url}
      if(r.cms_handoff&&r.cms_handoff.url){var a=el('a','Prepare the CMS package with these concepts',el('p',null,out));a.href=r.cms_handoff.url}
     }catch(e){status.textContent='Not written: '+String(e.message||e)+'. Your selection and the research are kept; you can download the brief.'}
-    finally{w.disabled=false}
+    finally{w.removeAttribute('aria-busy');if(w.textContent!=='Writing complete'&&w.textContent!=='Already written'){w.disabled=false;w.textContent='Write next selected topics';w.style.background='#2563eb'}}
    });
   }
   // The editor's first action is writing. The brief is a secondary artifact, available only after
