@@ -4,14 +4,27 @@
 (function(){
  'use strict';
  function el(tag,text,parent,cls){var n=document.createElement(tag);if(text!=null)n.textContent=String(text);if(cls)n.className=cls;if(parent)parent.appendChild(n);return n}
- function brief(list,items){
+ // written: {ids: Set of written item ids, sections: {item_id: [section]} from this session, cms_url}
+ function brief(list,items,written){
+  written=written||{ids:new Set(),sections:{}};
+  var done=items.filter(function(x){return written.ids.has(String(x.id))}),open=items.filter(function(x){return x.writable&&!written.ids.has(String(x.id))});
   var L=['# Editor brief: '+(list.target_url||''),'','Search term: '+(list.focus_query||'—'),
    'Chosen from the comparison with '+(list.ranking_pages_read||0)+' ranking page(s). Write in your own words with facts you can stand behind; do not copy the ranking pages.',''];
+  // What happened to the selection: written concepts are stored for the CMS package; nothing is published.
+  L.push('Selected: '+items.length+' · concepts written by Growth: '+done.length+(open.length?' · not written yet: '+open.length:'')+' · page elements: '+items.filter(function(x){return !x.writable}).length+'.');
+  if(done.length)L.push('Written concepts are stored for this page'+(written.cms_url?' and are in the CMS package: '+(typeof location!=='undefined'&&location.origin&&location.origin!=='null'?location.origin:'')+written.cms_url:' and appear in the CMS package')+'. They are drafts for review: rewrite or remove flagged sentences and check every statement. Nothing is published.');
+  L.push('');
   (list.groups||[]).forEach(function(g){var sel=items.filter(function(x){return x.group===g.id});if(!sel.length)return;L.push('## '+g.label,'');
-   sel.forEach(function(x){L.push('- [ ] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+(x.ai?'; '+x.ai:'')+')');
+   sel.forEach(function(x){var isDone=written.ids.has(String(x.id));
+    L.push('- ['+(isDone?'x':' ')+'] **'+x.title+'**'+(x.recommended?' (recommended)':'')+' ('+x.status+(x.your_section?'; closest on the page: “'+x.your_section+'”':'')+(x.ai?'; '+x.ai:'')+')'+
+     (isDone?' — concept written by Growth':x.writable?' — not written yet':' — add it yourself'));
     if(x.priority&&x.priority.suggested_action)L.push('  - Action: '+x.priority.suggested_action);
     if(x.priority&&x.priority.why)L.push('  - Why: '+x.priority.why.join('; '));
-    (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))})});L.push('')});
+    (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))});
+    // The concept text written in this session (after a reload the text is in the CMS package, not repeated here).
+    (written.sections[String(x.id)]||[]).forEach(function(sec){L.push('','  ### Concept: '+sec.h2,'');
+     (sec.paragraphs||[]).forEach(function(p){L.push('  '+p,'')});
+     (sec.flags||[]).forEach(function(f){L.push('  - ⚠ Rewrite or remove: '+(f.sentence?'“'+f.sentence+'” — ':'')+f.reason)})})});L.push('')});
   if((list.unique_content||[]).length){L.push('## Unique content worth reviewing and preserving','','Only on your page among the ranking pages read. Unique is not proof that it is correct, current or strong: review it.','');list.unique_content.forEach(function(s){L.push('- '+s.heading)});L.push('')}
   return L.join('\n');
  }
@@ -32,7 +45,8 @@
   var rec=list.items.filter(function(x){return x.recommended});
   if(rec.length)el('p','Recommended first ('+rec.length+'): '+rec.map(function(x){return x.title}).join(' · ')+'. A research priority (supported by at least two ranking pages, '+here+', not contradicted by the AI), not a growth forecast. You decide; you can select more.',box,'small');
   else el('p','No item is recommended: none is supported by two ranking pages'+(np?'':' and missing on your page')+'. You can still choose any item.',box,'small');
-  var carried=list.carried_over&&list.carried_over.pending_ids||[];
+  var carried=(list.carried_over&&list.carried_over.pending_ids||[]).concat((list.selected||[]).map(String)).filter(function(x,i,a){return a.indexOf(x)===i});
+  var b0={},written={ids:new Set((list.written_ids||[]).map(String)),sections:{},cms_url:list.cms_url||null};
   var co=list.carried_over||{};
   if(carried.length)el('p',carried.length+' item(s) from your earlier selection are not written yet and are ticked again (the new research still shows the same need).',box,'small');
   (co.needs_confirmation||[]).forEach(function(x){el('p','Confirm topic match: your earlier item “'+x.title+'” may be “'+x.candidate.title+'” now ('+x.reason+') Tick it yourself if it is the same.',box,'small')});
@@ -43,6 +57,7 @@
    el('h3',g.label+' ('+items.length+')',box);
    items.forEach(function(x){var row=el('label',null,box,'check');var c=el('input',null,row);c.type='checkbox';c.value=x.id;if(carried.indexOf(x.id)>=0)c.checked=true;boxes.push({c:c,x:x});
     var t=el('span',null,row);if(x.recommended)el('mark','Recommended ',t);el('strong',x.title,t);
+    var wb=el('small',written.ids.has(String(x.id))?' ✓ Written':'',t,'written-badge');b0[String(x.id)]=wb;
     el('small',' — '+x.status+(x.ranking_pages?' · '+x.ranking_pages+(x.of?' of '+x.of:'')+' ranking page(s)':'')+(x.your_section?' · closest here: “'+x.your_section+'”':'')+(x.ai?' · '+x.ai:'')+(x.writable?'':' · added by the editor, not written'),t);
     if(x.priority&&x.priority.suggested_action)el('small','Action: '+x.priority.suggested_action,el('div',null,t));
     if(x.priority&&x.priority.why)el('small','Why: '+x.priority.why.join(' · '),el('div',null,t));
@@ -74,7 +89,8 @@
    if(!document.getElementById('growthWriteAnimation')){var css=el('style',null,document.head);css.id='growthWriteAnimation';css.textContent='@keyframes growthWritePulse{0%,100%{opacity:1}50%{opacity:.55}}button[aria-busy="true"]{animation:growthWritePulse 1s ease-in-out infinite;cursor:progress}@media(prefers-reduced-motion:reduce){button[aria-busy="true"]{animation:none}}'}
    el('small',' Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.',actions);
    var finish=el('a','Continue to CMS package',actions);finish.hidden=true;finish.style.cssText='display:none;background:#2563eb;color:white;font-weight:700;padding:10px 14px;border-radius:6px;text-decoration:none;margin-left:8px';
-   var ready=function(url){if(url){finish.href=url;finish.hidden=false;finish.style.display='inline-block';dl.hidden=false;dl.style.background='#2563eb';dl.style.color='white'}};
+   var ready=function(url){if(url){written.cms_url=url;finish.href=url;finish.hidden=false;finish.style.display='inline-block';dl.hidden=false;dl.style.background='#2563eb';dl.style.color='white'}};
+   var mark=function(){boxes.forEach(function(b){var n=b0[String(b.x.id)];if(n)n.textContent=written.ids.has(String(b.x.id))?' ✓ Written':''})};
    w.addEventListener('click',async function(){
     var p=picked().filter(function(x){return x.writable});if(!p.length){status.textContent='Select at least one topic or question.';return}
     w.disabled=true;w.style.background='#94a3b8';w.textContent='Writing concepts…';w.setAttribute('aria-busy','true');status.textContent='Writing concepts for '+Math.min(4,p.length)+' item(s)'+(p.length>4?' (the other '+(p.length-4)+' are kept for the next run)':'')+'…';out.textContent='';
@@ -82,7 +98,8 @@
      if(r&&r.code==='WRITING_IN_PROGRESS'){status.textContent='Concepts for this list are being written right now (started '+(r.run&&r.run.started_at||'')+'). Wait a moment and reload; nothing is written twice.';return}
      if(r&&r.code==='SELECTION_ALREADY_WRITTEN'){w.textContent='Already written';w.disabled=true;ready(r.last_run&&r.last_run.cms_url);status.textContent='Everything you selected has been written already.'+(r.last_run&&r.last_run.cms_url?' The latest concepts are in the CMS package.':'');if(r.last_run&&r.last_run.cms_url){var l=el('a','Open the CMS package',el('p',null,out));l.href=r.last_run.cms_url}return}
      if(!r||r.success===false)throw Error((r&&(r.code||r.reason))||'Writing not available');
-     if(r.stored===true&&!r.storage_error)dl.hidden=false;
+     if(r.stored===true&&!r.storage_error){dl.hidden=false;
+      (r.sections||[]).forEach(function(s){if(s.item_id){written.ids.add(String(s.item_id));(written.sections[String(s.item_id)]=written.sections[String(s.item_id)]||[]).push(s)}});mark()}
      if(r.storage_error)el('p','These concepts could not be stored, so nothing is marked as written and the items stay selected. Copy what you need and try again.',out,'error');
      status.textContent=r.sections&&r.sections.length?'Concepts written. Flagged sentences must be rewritten or removed; every statement still needs your check. Nothing is published.':(r.reason||'No text was written. Write these items yourself; your selection is kept.');
      (r.sections||[]).forEach(function(s){var card=el('div',null,out,'note');el('h3',s.h2,card);
@@ -108,7 +125,14 @@
   // a successful stored writing run (or an already-written selection); never imply a failed draft is ready.
   var dl=el('button','Download selection brief',actions);dl.type='button';dl.hidden=true;
   dl.style.cssText='background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;margin-left:8px';
-  dl.addEventListener('click',function(){var p=picked();if(!p.length){status.textContent='Select at least one item.';return}save('editor-brief.md',brief(list,p));status.textContent=p.length+' selected item(s) in the brief. This is not the final CMS package.'});
+  dl.addEventListener('click',function(){var p=picked();if(!p.length){status.textContent='Select at least one item.';return}save('editor-brief.md',brief(list,p,written));
+   var n=p.filter(function(x){return written.ids.has(String(x.id))}).length;
+   status.textContent=p.length+' selected item(s) in the brief, '+n+' with a written concept. This is not the final CMS package.'});
+  // After a reload: what was written already is shown, with the brief and the CMS package (nothing is written again).
+  var sel=picked().filter(function(x){return x.writable});
+  if(written.ids.size){dl.hidden=false;
+   if(typeof w!=='undefined'&&w&&sel.length&&sel.every(function(x){return written.ids.has(String(x.id))})){w.textContent='Writing complete';w.disabled=true;if(typeof ready==='function')ready(written.cms_url)}
+   status.textContent=written.ids.size+' item(s) already written for this research'+(sel.some(function(x){return !written.ids.has(String(x.id))})?'; the rest of your selection can be written next.':'.')+(written.cms_url?' The concepts are in the CMS package.':'')}
   // The download is explicitly secondary and does not appear before the writing action is complete.
   return true;
  };
