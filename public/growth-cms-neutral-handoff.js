@@ -130,6 +130,7 @@
    var d=await res.json(),x=d.handoff_suggestions||{};
    if(d.success!==true||Number(d.page_id)!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
    if(d.competitor_overview&&typeof window.renderGrowthCompetitorOverview==='function'){var ov=$('growthCompetitorOverview');ov.textContent='';try{ov.hidden=!window.renderGrowthCompetitorOverview(d.competitor_overview,ov)}catch(e){ov.hidden=true}}
+   try{$('linkUrl').placeholder=new URL(src.canonical_url).origin+'/a-related-page/';$('linkText').placeholder='Words that say where the link goes'}catch(e){}
    if(!$('query').value&&x.query)$('query').value=x.query;
    if(!$('title').value&&x.title)$('title').value=x.title;
    if(!$('meta').value&&x.meta)$('meta').value=x.meta;
@@ -149,8 +150,10 @@
     target.appendChild(topics);
    }
    if(x.internal_url){
+    // The suggested link is shown, not filled in silently: the editor reviews it and fills it with one click.
+    var sug=document.createElement('p');sug.textContent='Suggested internal link: '+x.internal_url+(x.internal_label?' with the text “'+x.internal_label+'”':'')+(x.internal_reason?'. '+x.internal_reason:'');target.appendChild(sug);
     var use=document.createElement('button');use.type='button';
-    use.textContent='Review contextual same-site link';
+    use.textContent='Use this link';
     use.addEventListener('click',function(){
      if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
      if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
@@ -160,6 +163,7 @@
     });
     target.appendChild(use);
    }
+   else{var none=document.createElement('p');none.textContent='No internal link suggested by the research. The link is optional: leave both fields empty, or add a page of your own site that helps this reader next.';target.appendChild(none)}
    if(!x.meta||!x.title){
     var missing=document.createElement('p');
     missing.textContent='Missing SEO metadata requires an editor-written, source-checked proposal.';
