@@ -38,7 +38,10 @@ function proposeHandoffFromResearch(report,canonicalUrl){
    source_url:x.derived_from,requires_editor_verification:true})),
   findings:findings.map(x=>({priority:x.priority,code:x.code,action:clean(x.action).slice(0,420)})),
   source_type:report.summary?.primary_source||'UNKNOWN',
-  verified_query:verified.length>0,
+  // Only a verified Search Console row for THIS working query counts (the package checks exactly that); a row for
+  // another query of the page does not (owner 2026-11-01: VERIFIED_GSC_EVIDENCE_NOT_FOUND after an automatic "Verified").
+  verified_queries:verified.map(v=>typeof v.query==='string'?v.query.trim().toLowerCase():'').filter(Boolean).slice(0,50),
+  verified_query:verified.some(v=>typeof v.query==='string'&&v.query.trim().toLowerCase()===clean(phrase).toLowerCase()),
   editor_approval_required:true,
   copy_requires_real_checked_facts:true,
   publication_allowed:false
