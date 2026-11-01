@@ -297,7 +297,7 @@
     status('sourceStatus','Saved original Tracker source verified. Review content before preparing the handoff.',false);
    }
   }catch(err){status('sourceStatus',err.message||'Could not verify original source',true)}
-  finally{buttonProgress(this,false,!!safe.source);this.disabled=false;ready()}
+  finally{var verified=!!safe.source;buttonProgress(this,false,verified);this.disabled=verified;this.textContent=verified?'1. Original Tracker page checked':'1. Check original Tracker page';if(verified){this.style.background='#94a3b8';this.style.color='#fff'}else{this.style.background='';this.style.color=''}ready()}
  });
  $('generateEditorialDraft').addEventListener('click',async function(){
   if(!safe.source)return;
