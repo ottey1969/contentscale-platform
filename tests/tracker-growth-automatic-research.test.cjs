@@ -64,7 +64,7 @@ async function testRoutes(){
  registerGrowthAutomaticResearch({
   get(path,...handlers){route[path]=handlers},
   post(path,...handlers){route[path]=handlers}
- },db,middleware,{fetchLive,
+ },db,middleware,{fetchLive,saveCompletedReport:async()=>{},loadCompletedReport:async()=>null,
   completeOwnerDraft:async({token,body})=>{
    ownerDraftCalls++;
    assert.equal(token,'owner-token');
