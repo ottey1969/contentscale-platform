@@ -10,6 +10,19 @@
  function status(id,msg,error){
   const el=$(id);el.textContent=msg;el.style.color=error?'#b91c1c':'#166534';
  }
+ function buttonProgress(button,on,successful){
+  if(!button)return;
+  if(on){button.dataset.busy='true';button.setAttribute('aria-busy','true');delete button.dataset.done;return}
+  delete button.dataset.busy;button.removeAttribute('aria-busy');
+  if(successful){button.dataset.done='true';setTimeout(function(){delete button.dataset.done},1800)}
+ }
+ // A pressed state applies to optional synchronous actions too; async tasks hold a spinner until they finish.
+ document.addEventListener('click',function(event){
+  var button=event.target.closest&&event.target.closest('button');
+  if(!button||button.disabled)return;
+  button.classList.add('growth-pressed');
+  setTimeout(function(){button.classList.remove('growth-pressed')},350);
+ },true);
  function ready(){
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
@@ -242,7 +255,7 @@
  $('manualAcknowledged').addEventListener('change',ready);
  $('manualOriginalHtml').addEventListener('input',ready);
  $('checkSource').addEventListener('click',async function(){
-  this.disabled=true;safe.source=null;ready();status('sourceStatus','Checking the saved original page…',false);
+  this.disabled=true;buttonProgress(this,true);safe.source=null;ready();status('sourceStatus','Checking the saved original page…',false);
   try{
    const response=await fetch(base+'/source?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
    const data=await response.json();
@@ -282,11 +295,11 @@
     status('sourceStatus','Saved original Tracker source verified. Review content before preparing the handoff.',false);
    }
   }catch(err){status('sourceStatus',err.message||'Could not verify original source',true)}
-  finally{this.disabled=false;ready()}
+  finally{buttonProgress(this,false,!!safe.source);this.disabled=false;ready()}
  });
  $('generateEditorialDraft').addEventListener('click',async function(){
   if(!safe.source)return;
-  var btn=this;btn.disabled=true;status('aiDraftStatus','Preparing a source-bounded editorial draft…',false);
+  var btn=this;btn.disabled=true;buttonProgress(btn,true);status('aiDraftStatus','Preparing a source-bounded editorial draft…',false);
   try{
    var r=await fetch(base+'/editor-draft',{method:'POST',credentials:'same-origin',
     cache:'no-store',headers:{'Content-Type':'application/json'},
@@ -314,7 +327,7 @@
    $('approved').checked=false;ready();
    status('aiDraftStatus','Editable AI draft prepared from the original page. All claims and each section still require your review and explicit approval.',false);
   }catch(err){status('aiDraftStatus',String(err.message||err),true)}
-  finally{btn.disabled=!safe.source}
+  finally{buttonProgress(btn,false,false);btn.disabled=!safe.source}
  });
  function build(){
   const src=safe.source;if(!src)throw Error('Check the saved original page first');
@@ -376,7 +389,7 @@
   return format==='zip'?response.blob():response.json();
  }
  $('handoffForm').addEventListener('submit',async function(ev){
-  ev.preventDefault();const btn=$('download');btn.disabled=true;
+  ev.preventDefault();const btn=$('download');btn.disabled=true;buttonProgress(btn,true);
   status('downloadStatus','Validating evidence and approved content…',false);
   try{
    let payload=build(),preview,downgraded=false;
@@ -399,7 +412,7 @@
     ((preview.warnings||[]).length?' Review: '+preview.warnings.join(', '):''),false);
    showPublicationForm(payload);
   }catch(err){status('downloadStatus',err.message||'Download failed',true)}
-  finally{ready()}
+  finally{buttonProgress(btn,false,false);ready()}
  });
  // Only after the package exists: the owner records when the editor actually published it (starts the 28-day measurement).
  function showPublicationForm(payload){
@@ -409,7 +422,7 @@
   $('publicationWrap').hidden=false;
  }
  $('publicationForm').addEventListener('submit',async function(ev){
-  ev.preventDefault();var btn=$('recordPublication');btn.disabled=true;
+  ev.preventDefault();var btn=$('recordPublication');btn.disabled=true;buttonProgress(btn,true);
   try{
    if(!safe.published)throw Error('Download the reviewed package first');
    if(!safe.published.query)throw Error('A working query is required to measure the change');
@@ -421,7 +434,7 @@
    status('publicationStatus',d.gsc_evidence==='VERIFIED'?'Recorded. Measurement compares the 28 days before and after publication with Search Console data.':
     'Recorded. Without Search Console access the result is not measured yet: add the 28-day before/after numbers from Search Console on the measurement page.',false);
   }catch(err){status('publicationStatus',err.message||'Not saved',true)}
-  finally{btn.disabled=false}
+  finally{buttonProgress(btn,false,false);btn.disabled=false}
  });
  // Direct from Growth: verify owner, source and research automatically; never approve or publish.
  if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(()=>{if(!$('checkSource').disabled)$('checkSource').click()});
