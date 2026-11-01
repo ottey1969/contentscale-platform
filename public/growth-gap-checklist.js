@@ -71,6 +71,7 @@
   var actions=el('p',null,box),status=el('p',null,box,'small'),out=el('div',null,box);
   if(typeof options.write==='function'&&list.writing_allowed!==false){
    var w=el('button','Write selected with AI (concepts for review)',actions);w.type='button';w.style.cssText='background:#2563eb;color:white;font-weight:700';
+   if(!document.getElementById('growthWriteAnimation')){var css=el('style',null,document.head);css.id='growthWriteAnimation';css.textContent='@keyframes growthWritePulse{0%,100%{opacity:1}50%{opacity:.55}}button[aria-busy="true"]{animation:growthWritePulse 1s ease-in-out infinite;cursor:progress}@media(prefers-reduced-motion:reduce){button[aria-busy="true"]{animation:none}}'}
    el('small',' Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.',actions);
    var finish=el('a','Continue to CMS package',actions);finish.hidden=true;finish.style.cssText='display:none;background:#2563eb;color:white;font-weight:700;padding:10px 14px;border-radius:6px;text-decoration:none;margin-left:8px';
    var ready=function(url){if(url){finish.href=url;finish.hidden=false;finish.style.display='inline-block';dl.hidden=false;dl.style.background='#2563eb';dl.style.color='white'}};
