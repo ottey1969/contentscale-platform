@@ -985,7 +985,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    marketBox,
    '<section><div role="status" id="researchStatus">Loading saved research…</div></section>',
    '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',
-   '<section id="growthFinalActions"><h2>Finish · Prepare your CMS package</h2><p class="info">After Step 3, review and combine written concepts in the CMS package. Nothing is published automatically.</p>',
+   '<section id="growthFinalActions"><h2>Finish · Your next action</h2><p class="info growth-finish-note">Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.</p>',
    allowHandoff?'<p><a id="growthEditorHandoff" class="growth-primary-finish" href="'+handoff+'">Prepare CMS package</a></p>':
     '<p class="info">CMS handoff requires Tracker owner access and an unlocked page.</p>',
    '<details id="growthTechnicalExport"><summary>Advanced · Technical report and research controls</summary><p class="info">JSON is for audits and troubleshooting, not required for publication.</p>',
