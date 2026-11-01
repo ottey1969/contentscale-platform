@@ -12,6 +12,12 @@ const asText=html=>String(html).replace(/<!--[\s\S]*?-->/g,'').replace(/<[^>]*>/
  .replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
  .replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/\s+/g,' ').trim();
 const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function isLocalBusiness(html){
+ const h=String(html||'');
+ return /"@type"\s*:\s*(?:\[[^\]]*)?"[A-Za-z]*LocalBusiness"/.test(h)||
+  (/"(?:openingHours|openingHoursSpecification|geo)"\s*:/.test(h)&&/"streetAddress"\s*:/.test(h))||
+  (/href=["']tel:/i.test(h)&&/"streetAddress"\s*:|<address\b/i.test(h));
+}
 function renderChangeMarkdown(html){
  return String(html).replace(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi,(_,n,x)=>'\n'+'#'.repeat(Number(n))+' '+asText(x)+'\n\n')
  .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,(_,url,text)=>'['+asText(text)+']('+url+')')
@@ -37,7 +43,12 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  if(caseStudyLocked)issues.push('CASE_STUDY_BASELINE_LOCKED');
  if(editorApproved!==true)issues.push('EDITOR_APPROVAL_REQUIRED');
  if(!Array.isArray(changes)||changes.length<1||changes.length>12)issues.push('APPROVED_SECTION_COUNT_REQUIRED');
- const approved=Array.isArray(changes)?changes:[];
+ // A section that extends an existing section is a sub-section of it: its heading becomes H3 (an H2 would start a new
+ // section on the page). Owner 2026-11-01 package: "Extend the existing section" with an H2.
+ const approved=(Array.isArray(changes)?changes:[]).map(x=>x&&x.placement&&x.placement.mode==='EXTEND_SECTION'&&typeof x.html==='string'?{...x,html:x.html.replace(/<(\/?)h2\b/gi,'<$1h3')}:x);
+ // Local business (address, phone, opening hours or a LocalBusiness type on the page): only then the package speaks of
+ // calls, Google Business Profile, jobs and project photos. Read from the original page, never assumed.
+ const localBusiness=isLocalBusiness(originalHtml);
  if(!['wix','wordpress','webflow','squarespace','custom','generic'].includes(cms))issues.push('CMS_SELECTION_INVALID');
  if(typeof pageTitle!=='string'||!clean(pageTitle)||pageTitle.length>100)issues.push('META_TITLE_REQUIRED');
  if(typeof metaDescription!=='string'||!clean(metaDescription)||metaDescription.length>220)issues.push('META_DESCRIPTION_REQUIRED');
@@ -97,8 +108,8 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   const recheck=assessDraftClaims({text:approved.map(x=>asText(x.html)).join(' '),destinationText:asText(String(originalHtml||''))});
   for(const v of recheck.violations)if(!blockedDetails.some(b=>b.sentence&&norm(b.sentence)===norm(v.sentence)))
    blockedDetails.push({code:'UNRESOLVED_'+v.code,sentence:clean(v.sentence).slice(0,300),reason:clean(v.reason).slice(0,200)});
-  for(const x of approved){const h=(String(x.html||'').match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/i)||[])[1];
-   const mm=h&&headingMismatch(asText(h),asText(String(x.html).replace(/<h2\b[^>]*>[\s\S]*?<\/h2>/i,' ')));
+  for(const x of approved){const h=(String(x.html||'').match(/<h([23])\b[^>]*>([\s\S]*?)<\/h\1>/i)||[])[2];
+   const mm=h&&headingMismatch(asText(h),asText(String(x.html).replace(/<h([23])\b[^>]*>[\s\S]*?<\/h\1>/i,' ')));
    if(mm)blockedDetails.push({code:'UNRESOLVED_'+mm.code,sentence:null,reason:'“'+asText(h)+'”: '+mm.reason})}
   if(blockedDetails.length)issues.push('FLAGGED_CONTENT_NOT_RESOLVED');
  }
@@ -138,12 +149,13 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  '1. Open the ORIGINAL page in the CMS, not a new duplicate URL.\n'+
  '2. Place each approved section exactly as stated, and preserve the existing H1, template, images, mobile styling, and content:\n'+placementSteps+'\n'+
  '3. Set page SEO title and meta description only if the editor supports them; do not paste meta tags into the page body.\n'+
- '4. Insert and test contextual internal/external links and click-to-call controls.\n'+
+ (localBusiness?'4. Insert and test contextual internal/external links and click-to-call controls.\n':'4. Insert and test the contextual internal link(s) and the way visitors contact you (contact form, booking or contact page link).\n')+
  '5. Use native Wix text elements for SEO (when CMS is Wix); do not treat an HTML iframe/embed as the page content.\n'+
  '6. Check desktop/mobile rendering, H2 answers, duplicate imagery, credibility claims, contact actions, and live canonical URL.\n'+
  '7. Publish only after the website owner/editor approves the final rendered page and documents the actual publication date.\n'+
- '8. Compare Search Console page-specific equivalent non-overlapping dates when accessible; otherwise label visibility as unverified. Track GBP call-button actions separately from connected calls.\n'+
- 'This delivery is not proof of rankings, calls, jobs or paid revenue.\n';
+ '8. Compare Search Console page-specific equivalent non-overlapping dates when accessible; otherwise label visibility as unverified. '+
+  (localBusiness?'Track GBP call-button actions separately from connected calls.\n':'Count enquiries from your own contact form, e-mail or CRM for the same periods (Growth measurement page).\n')+
+ (localBusiness?'This delivery is not proof of rankings, calls, jobs or paid revenue.\n':'This delivery is not proof of rankings, enquiries or revenue.\n');
  const manifest={
   format:'contentscale-growth-cms-handoff/v1',delivery:'reviewed_manual_changes',cms,
   existing_url:canonicalUrl,source_sha256:sha(originalHtml),focus_query:clean(focusQuery)||null,
@@ -164,11 +176,13 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   {name:'03-content-fragments.html',content:'<!-- Paste sections into native SEO-indexable CMS content, not an iframe -->\n'+fragments+'\n'},
   {name:'04-seo-metadata.json',content:JSON.stringify({existing_page_url:canonicalUrl,title:pageTitle.trim(),description:metaDescription.trim(),new_page_required:false},null,2)+'\n'},
   {name:'05-measurement-plan.md',content:'# Baseline and outcome measurement\n\nEvidence: '+evidenceScope+
-   '\nBefore publication: capture URL, 28-day page-scoped GSC impressions, clicks, CTR, position (if available), and current GBP interactions independently.\n'+
+   '\nBefore publication: capture URL, 28-day page-scoped GSC impressions, clicks, CTR, position (if available)'+(localBusiness?', and current GBP interactions independently':'')+'.\n'+
    'After publication: compare equal, non-overlapping page periods at 14/30/60 days; attribute causality cautiously.\n'+
    'Without Search Console access, label metrics NEEDS ACCESS. Do not insert zeros.\n'+
-   'GBP phone-button taps are not answered calls; call logs, quotes, won jobs require independent information.\n'+
-   'Review any real project photos/reviews with the owner; never invent customer experiences.\n'},
+   (localBusiness?'GBP phone-button taps are not answered calls; call logs, quotes, won jobs require independent information.\n'+
+   'Review any real project photos/reviews with the owner; never invent customer experiences.\n':
+   'Enquiries: count contact requests for this page from your own form, e-mail or CRM for the same two periods; Growth never estimates them.\n'+
+   'Never invent customer experiences, reviews or results.\n')},
   // Why these changes were proposed: the research and sources they rest on, as recorded when the concept was written.
   ...(reviewNotes&&reviewNotes.dossier&&typeof reviewNotes.dossier==='object'?[{name:'07-evidence-dossier.json',content:JSON.stringify(reviewNotes.dossier,null,2)+'\n'}]:[]),
   ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
@@ -206,4 +220,4 @@ function packageGrowthZip(files){
  end.writeUInt32LE(table.length,12);end.writeUInt32LE(offset,16);
  return Buffer.concat([...chunks,table,end]);
 }
-module.exports={prepareGrowthCmsHandoff,packageGrowthZip,renderChangeMarkdown};
+module.exports={prepareGrowthCmsHandoff,packageGrowthZip,renderChangeMarkdown,isLocalBusiness};

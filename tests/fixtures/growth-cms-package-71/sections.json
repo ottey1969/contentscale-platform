@@ -1,0 +1,27 @@
+{
+ "_note": "Real CMS package of the owner, 2026-11-01 (contentscale.site/content-scaling/, Growth proposal #26): the four approved sections and their placements as packaged. The internal link paragraph sat under section 1.",
+ "sections": [
+  "<section><h2>How Repurposing Existing Content Helps Scale Content Production</h2><p>Repurposing existing content can help scale content production by taking audited high-performing pages and adapting them into new formats or targeted assets. Rather than starting every draft from scratch, review URLs categorized for updates and identify core concepts that can be reformatted across different channels.</p>\n<p>The writer then formats these extracted insights into dedicated briefs for companion guides, channel updates, or summary overviews, ensuring that core message points remain grounded in verified information.</p>\n<p>Next, pass each repurposed draft through the established review gate to verify accuracy and search alignment before publishing. By systematically reformatting validated existing material, teams increase production volume while maintaining established quality standards across all output.</p><p><a href=\"https://contentscale.site/ai-content-quality-checker/\">ai content quality checker</a></p></section>",
+  "<section><h2>How to Maintain Brand Voice and Style Consistency When Scaling Content</h2><p>To maintain brand voice and style consistency when scaling content across multiple writers, establish clear editorial rules and standard criteria for every piece before drafting begins. Document specific guidelines regarding tone, formatting, terminology, and structural requirements so all contributors follow the same standard.</p>\n<p>Provide writers with structured briefs mapped to specific intent requirements, alongside a documented checklist based on quality evaluation criteria. Assign a managing editor to review incoming drafts against these guidelines to verify that tone, formatting, and source requirements match expected standards.</p>\n<p>Finally, require each draft to clear a standardized quality gate before moving to publication. If a draft falls short on specific guidelines, return it to the contributor with documented feedback targeting the exact areas that require alignment.</p></section>",
+  "<section><h2>Leveraging AI and Automation Tools for Content Scaling</h2><p>Leveraging AI and automation tools for scaling content requires integrating technology into specific steps of the editorial workflow while retaining human oversight. Use automated tools to support initial outline building, structure generation, and initial drafting tasks so writers can focus on subject-matter verification.</p>\n<p>Set up automated checks to evaluate drafts against pre-established quality scoring metrics and technical publishing requirements like schema, alt text, and internal link structures. This allows team members to quickly identify missing elements or structural gaps before manual editing begins.</p>\n<p>Route all automated outputs directly to subject-matter experts for factual review and nuance checks. By pairing automated speed with expert verification, teams manage increased production demands without relying solely on unverified automated drafts.</p></section>",
+  "<section><h2>Team Collaboration, Agile Planning, and Workflow Batching for Content Scaling</h2><p>Improving team collaboration, agile planning, and workflow batching helps streamline content scaling across each stage of production. Organize the publishing pipeline into discrete operational batches, grouping research, outline creation, expert review, and technical checks into scheduled sprint cycles.</p>\n<p>During agile planning sessions, assign clear roles for each stage of the brief-to-publish process, designating specific team members for intent mapping, drafting, expert review, and final quality gate checks. Batching similar tasks together reduces transition delays between brief creation, review gates, and technical updates.</p>\n<p>Establish a centralized tracking system where team members report task handoffs and track quality gate scores in real time. This shared visibility keeps collaborative workflows moving predictably through the editorial pipeline without skipping quality controls.</p></section>"
+ ],
+ "placements": [
+  {
+   "mode": "ADD_AFTER_SECTION",
+   "section_heading": "How to Audit Your Content Before You Scale"
+  },
+  {
+   "mode": "ADD_AFTER_SECTION",
+   "section_heading": "How the GRAAF Workflow Works (Brief → Publish)"
+  },
+  {
+   "mode": "EXTEND_SECTION",
+   "section_heading": "🔑 The 5-Step GRAAF Workflow"
+  },
+  {
+   "mode": "EXTEND_SECTION",
+   "section_heading": "How the GRAAF Workflow Works (Brief → Publish)"
+  }
+ ]
+}
