@@ -68,7 +68,8 @@
  function renderAiCheck(box,d){
   var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
   var recent=(x.engines||[]).filter(function(e){return e.checked}).length;
-  node('p','AI-system checks for this exact search: '+recent+' of '+(x.total||x.engines&&x.engines.length||0)+' current (within '+(c.max_age_days||14)+' days). This is saved check evidence, not a new live AI scan.',box);
+  var total=x.total||(x.engines||[]).length,complete=total>0&&recent===total&&(x.engines||[]).every(function(e){return e.verifiable});
+  node('p',complete?'AI research complete — '+recent+'/'+total+' checked. No additional AI answers required.':'AI-system checks for this exact search: '+recent+' of '+total+' current (within '+(c.max_age_days||14)+' days). This is saved check evidence, not a new live AI scan.',box);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
   var history=new Map((c.prior_checks||[]).map(function(e){return [e.id,e.checked_at]}));
   var ul=node('ul',null,box);(x.engines||[]).forEach(function(e){
@@ -77,8 +78,10 @@
    node('li',e.label+': '+label+(when?' · '+String(when).slice(0,10):'')+(e.checked&&e.verifiable?' · '+e.sources+' cited sources':''),ul);
   });
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
+  if(complete){var goStep=node('p',null,box),continueLink=node('a','Continue to Step 3 · Write selected improvements',goStep);continueLink.href='#growthGapChoice';}
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
-  var form=node('div',null,box);
+  var form=complete?node('details',null,box):node('div',null,box);
+  if(complete)node('summary','Optional · Recheck or replace an AI answer',form);
   node('p','Copy the prompt, paste it into a new chat with web search on, then paste the complete answer (including RESOURCES) at the AI system you used.',form);
   var pr=node('textarea',null,form);pr.rows=5;pr.readOnly=true;pr.value=c.prompt;pr.style.width='100%';
   var cp=node('button','Copy prompt',form);cp.type='button';cp.addEventListener('click',function(){pr.select();if(navigator.clipboard)navigator.clipboard.writeText(pr.value);cp.textContent='Copied ✓'});
@@ -241,7 +244,8 @@
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
   // One clear next step: AI answers only when needed, otherwise continue with selection.
-  var aiDone=!!(d.ai_check&&d.ai_check.summary&&d.ai_check.summary.checked>0);
+  var aiSummary=d.ai_check&&d.ai_check.summary;
+  var aiDone=!!(aiSummary&&aiSummary.total>0&&aiSummary.checked===aiSummary.total&&aiSummary.verifiable===aiSummary.total);
   var nav=node('p',null,primary),next=node('a',aiDone?'Continue to Step 3 · Write selected improvements':'Go to Step 2 · Check AI answers',nav);
   next.href=aiDone?'#growthGapChoice':'#growthAiCheck';
   if(aiDone)node('small','AI answers have been saved for this query. You can continue with the selected improvements.',nav);
