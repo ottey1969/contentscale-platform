@@ -13,8 +13,16 @@
  function ready(){
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
-  var factsChecked=[...document.querySelectorAll('.fact-item')].every(x=>x.checked);
+  var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
   $('download').disabled=!(safe.source&&$('approved').checked&&manualReady&&factsChecked);
+  // Owner 2026-11-01: a grey button without a reason. Say exactly what is still missing.
+  var missing=[];
+  if(!safe.source)missing.push('check the original page first (step 1)');
+  if(hasManual&&!manualReady)missing.push('paste the original page HTML and tick that it is not live-verified');
+  if(open.length)missing.push(open.length+' of '+facts.length+' check'+(facts.length===1?'':'s')+' still to tick (marked in yellow)');
+  if(!$('approved').checked)missing.push('tick “I reviewed the actual page…” at the end of step 3');
+  facts.forEach(function(x){var l=x.closest&&x.closest('label');if(l)l.style.background=x.checked?'':'#fef9c3'});
+  var why=$('downloadWhy');if(why){why.textContent=missing.length?'To download: '+missing.join('; ')+'.':'';why.hidden=!missing.length}
  }
  // Placement of a section on the existing page: proposed by Growth, adjustable by the owner, never guessed.
  function placementSelect(p){
