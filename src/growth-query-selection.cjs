@@ -133,7 +133,18 @@ function selectGrowthQuery({page={},queries=[],headings={},inventory=[],now=new 
  const kw=String(page.keyword||'').trim(),generic=new Set(['services','service','products','solutions','about','contact','home','index','pricing','offers']);
  if(kw&&!generic.has(kw.toLowerCase())&&!isBrandQuery(kw,brand)){
   const site=matchSiteDestination(kw,inventory,page.url);
-  return {status:'QUERY_FROM_TRACKED_KEYWORD',query:kw,source:'TRACKER_KEYWORD',destination:site&&site.best.exact?{url:site.best.url,page_id:site.best.page_id,basis:'DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY',coverage:1}:{url:page.url,page_id:page.id??null,basis:'TRACKED_KEYWORD_OF_THIS_PAGE',coverage:null},
+  // This keyword is the page's own tracked keyword. A topical page (not the homepage, not a locked Case Study) is then
+  // itself the dedicated page; another page tracked with the same keyword competes with it, it does not replace it
+  // (owner report 70: /content-scaling/ and the homepage both carry "content scaling"; the package named the homepage).
+  // Both pages carry the keyword: the one whose URL names the term most directly is the dedicated page (report 39: the
+  // tool page /ai-citation-tracker/ beats the guide /what-is-ai-citation-tracker/; report 70: /content-scaling/ beats /).
+  const q=tok(kw),slugFit=u=>{const st=slugTokens(u);if(!q.every(t=>st.includes(t)))return Infinity;
+   try{return new URL(u).pathname.split(/[-_/]+/).filter(Boolean).length}catch{return Infinity}};
+  const ownsIt=topical&&page.case_study_active!==true&&(!site||!site.best.exact||(slugFit(page.url)<Infinity&&slugFit(page.url)<=slugFit(site.best.url)));
+  const destination=site&&site.best.exact&&!ownsIt?{url:site.best.url,page_id:site.best.page_id,basis:'DEDICATED_TRACKED_PAGE_FOR_THIS_QUERY',coverage:1}:
+   {url:page.url,page_id:page.id??null,basis:'TRACKED_KEYWORD_OF_THIS_PAGE',coverage:null,
+    ...(site&&site.best.exact&&ownsIt?{competing_same_site_pages:[site.best,...site.others].filter(x=>x.exact).map(x=>x.url).slice(0,4)}:{})};
+  return {status:'QUERY_FROM_TRACKED_KEYWORD',query:kw,source:'TRACKER_KEYWORD',destination,
    protected:protect.slice(0,5),excluded:excluded.slice(0,12),brand_queries:brandQueries.slice(0,6),brand:{label:brand.label}};
  }
  const derived=deriveTopicQuery(headings,brand);

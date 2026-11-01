@@ -25,10 +25,27 @@ function planInternalLinks({targetUrl='',focusQuery='',pages=[]}={}){
   const top=scored[0],text=top.b.text;
   const exact=text.toLowerCase().indexOf(String(focusQuery).toLowerCase());
   let anchor=exact>=0?text.slice(exact,exact+focusQuery.length):null;
-  if(!anchor){const m=text.match(new RegExp('\\b\\w*'+esc(top.hit[0])+'\\w*(?:\\s+\\w+)?','i'));anchor=m?m[0]:null}
+  // Without the exact term: the shortest run of words (at most 5) that holds every word of the term. A fragment such as
+  // “scale means” (owner report 70) is no link text; then the editor writes one.
+  const qr=queryRoots(focusQuery),ws=text.split(/\s+/),root=w=>{const m=w.toLowerCase().match(/[a-z]{4,}/);return m?STEMS(m[0]):null};
+  // All words of the term first, else its distinctive words; a single word is never link text.
+  for(const every of [qr.all,qr.distinct]){
+   if(anchor||!every.length)continue;
+   let best=null;
+   for(let i=0;i<ws.length;i++){const need=new Set(every);
+    for(let j=i;j<Math.min(ws.length,i+5);j++){need.delete(root(ws[j]));
+     if(!need.size){if(every.includes(root(ws[i]))&&(!best||j-i<best[1]-best[0]))best=[i,j];break}}}
+   if(best&&best[1]>best[0])anchor=ws.slice(best[0],best[1]+1).join(' ').replace(/^[^\w]+|[^\w]+$/g,'');
+  }
+  // Else the longest run of 2+ consecutive words of the term (“citation tracker” for “ai citation tracker tool”).
+  if(!anchor){let run=[],best=[];
+   for(const w of ws){if(qr.all.includes(root(w))&&!/[.,;:!?]$/.test(run.at(-1)||'')){run.push(w);if(run.length>best.length)best=[...run]}
+    else run=qr.all.includes(root(w))?[w]:[]}
+   if(best.length>=2)anchor=best.join(' ').replace(/^[^\w]+|[^\w]+$/g,'');
+  }
   plan.push({from_url:p.url,to_url:targetUrl,status:'LINK_CANDIDATE_FOR_REVIEW',
-   under_heading:top.b.heading||null,paragraph_excerpt:clip(text,260),anchor_text:anchor,
-   anchor_source:exact>=0?'EXACT_QUERY_ALREADY_IN_PARAGRAPH':'WORDS_ALREADY_IN_PARAGRAPH',
+   under_heading:top.b.heading||null,paragraph_excerpt:clip(text,260),anchor_text:anchor||null,
+   anchor_source:exact>=0?'EXACT_QUERY_ALREADY_IN_PARAGRAPH':anchor?'TERM_WORDS_ALREADY_IN_PARAGRAPH':'WRITE_OWN_LINK_TEXT',
    action:'Wrap the anchor words that already exist in this paragraph; do not rewrite the paragraph. Verify both pages are live first.'});
  }
  return plan;
@@ -77,7 +94,10 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
  const qs=report.query_selection;
  if(qs?.query){
   L.push('## Query and destination','','- Working query: **'+qs.query+'** ('+String(qs.source||'').toLowerCase().replace(/_/g,' ')+')');
-  if(qs.destination?.url)L.push('- Destination page: '+qs.destination.url+' — '+String(qs.destination.basis||'').toLowerCase().replace(/_/g,' '));
+  // The page the search-term selection pointed at; when the decision targets another page, both are named, never only one.
+  if(qs.destination?.url)L.push(qs.destination.url!==decision.target_url&&decision.target_url?
+   '- Page the search term points to: '+qs.destination.url+' ('+String(qs.destination.basis||'').toLowerCase().replace(/_/g,' ')+'). This package is for the target page '+decision.target_url+'; check which of the two should own the term.':
+   '- Destination page: '+qs.destination.url+' — '+String(qs.destination.basis||'').toLowerCase().replace(/_/g,' '));
   for(const u of qs.destination?.competing_same_site_pages||[])L.push('- Also close to this query (possible overlap, review): '+u);
   if(qs.source_page_signal)L.push('- '+qs.source_page_signal.note+' Source page: '+qs.source_page_signal.source_page_url);
   if((qs.brand_queries_excluded||[]).length)L.push('- Brand or navigational queries kept out of competitor research: '+qs.brand_queries_excluded.join(', '));
@@ -113,9 +133,12 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
  if(cov?.tasks?.length){
   L.push('## Reader-task comparison','','Competitor pages read: '+(cov.competitors_considered||[]).map(c=>c.url+(c.partial?' (captured partially, cut at the fetch limit; text before the cut is evidence, nothing after it is assumed)':' (captured completely)')).join('; ')+'.','',
    '| Reader task | Independent competitor sources | Your target page |','|---|---:|---|');
-  const verified=new Set((decision.improvement_plan?.tasks||[]).map(t=>t.code));
+  // “draft verified” only for a task whose draft passed the checks; a planned task without text is “planned, no text yet”
+  // (owner report 70: the table said verified while no draft existed).
+  const planned=new Set((decision.improvement_plan?.tasks||[]).map(t=>t.code));
+  const verified=new Set(decision.verified_gap===true||decision.copy_ready===true?(decision.draft_validation||[]).map(v=>v.task).filter(c=>planned.has(c)):[]);
   for(const t of cov.tasks.filter(x=>x.independent_sources>0))
-   L.push('| '+t.label+(verified.has(t.code)?' — **draft verified**':'')+' | '+t.independent_sources+' | '+t.destination.status.replace(/_/g,' ').toLowerCase()+(t.covered_elsewhere_on_site?.length?' (taught on '+t.covered_elsewhere_on_site[0].url+')':'')+' |');
+   L.push('| '+t.label+(verified.has(t.code)?' — **draft verified**':planned.has(t.code)?' — planned, no text yet':'')+' | '+t.independent_sources+' | '+t.destination.status.replace(/_/g,' ').toLowerCase()+(t.covered_elsewhere_on_site?.length?' (taught on '+t.covered_elsewhere_on_site[0].url+')':'')+' |');
   L.push('','Method: '+cov.method+'. A concept match is an observation, not proof of quality or ranking.','');
  }
  const ov=report.competitor_overview;
@@ -226,7 +249,8 @@ function buildOwnerHandoffPackage({report={},decision={},completion={},linkPlan=
   L.push('## Internal links (review each)','');
   for(const k of linkPlan){
    L.push('- From '+k.from_url+' → '+k.to_url+' — '+k.status.replace(/_/g,' ').toLowerCase()+
-    (k.anchor_text?' — anchor “'+k.anchor_text+'” in the paragraph “'+clip(k.paragraph_excerpt,140)+'…”':''));
+    (k.anchor_text?' — anchor “'+k.anchor_text+'” in the paragraph “'+clip(k.paragraph_excerpt,140)+'…”':
+     k.anchor_source==='WRITE_OWN_LINK_TEXT'?' — the paragraph “'+clip(k.paragraph_excerpt,140)+'…” fits, but does not hold the search term: write your own link text':''));
   }
   L.push('');
  }

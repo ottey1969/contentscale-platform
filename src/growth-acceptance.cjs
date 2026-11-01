@@ -28,7 +28,13 @@ function checkReport(raw,{expectMarkets=null}={}){
  else if((r.competitor_overview?.ranking_pages_read||0)>0)add('1_NO_CROSS_FIELD','NOT_SHOWN','The AI subject check gave no answer for the read pages (topics '+(r.competitor_overview?.topics_status||'unknown')+'): the field check rests on titles only.');
  else add('1_NO_CROSS_FIELD','NOT_SHOWN','No ranking page was read, so nothing was compared.');
  // 3. A concrete proposal for a verified gap.
- if(g.decision==='IMPROVE_EXISTING'){
+ const waiting=r.editorial_review_draft?.status==='WRITING_ON_SELECTION'&&!g.proposed_text;
+ if(g.decision==='IMPROVE_EXISTING'&&waiting){
+  // Hybrid flow: research only; text is written for what the owner chooses. The plan can be shown, the text cannot.
+  const tasks=(g.improvement_plan?.tasks||[]),placed=tasks.filter(t=>t.placement?.section_heading||t.placement?.mode);
+  add('3_CONCRETE_PROPOSAL',tasks.length&&placed.length===tasks.length?'NOT_SHOWN':'FAIL',
+   tasks.length?placed.length+' of '+tasks.length+' planned task(s) have a placement; no text yet: writing waits for the owner\'s choice. Choose an improvement (or prepare the draft) and download again to check the text.':'Decision IMPROVE_EXISTING without a planned task.');
+ }else if(g.decision==='IMPROVE_EXISTING'){
   const parts=[g.proposed_text&&'text',g.draft_heading&&'heading',(g.placement?.section_heading||g.target_section)&&'placement',g.target_url&&'target'].filter(Boolean);
   add('3_CONCRETE_PROPOSAL',parts.length===4?'PASS':'FAIL',parts.length===4?'Proposal for '+g.target_url+': “'+g.draft_heading+'” at “'+(g.placement?.section_heading||g.target_section)+'”'+((g.additional_sections||[]).length?' + '+g.additional_sections.length+' more':'')+'.':'Proposal incomplete: has '+(parts.join(', ')||'nothing')+'.');
  }else add('3_CONCRETE_PROPOSAL','NOT_APPLICABLE','Decision '+g.decision+': no verified gap claimed.');
