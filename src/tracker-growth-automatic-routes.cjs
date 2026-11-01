@@ -6,6 +6,7 @@ const {publicationReadiness}=require('./growth-publication-readiness.cjs');
 const {reconcileOutcome}=require('./growth-outcome.cjs');
 const {annotateAiVisibility,MAX_AGE_DAYS:AI_MAX_AGE_DAYS}=require('./growth-ai-relevance.cjs');
 const aiAnswers=require('./growth-free/ai-answers.cjs');
+const storedResearch=require('./growth-research-report-store.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
@@ -63,7 +64,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -503,6 +504,18 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   try{res.set('Cache-Control','private, no-store').json({success:true,ai_check:{...(await aiCheckFor({v,term,target:v.page.url})),basis:'TRACKED_KEYWORD_BEFORE_RESEARCH'}})}
   catch{res.status(503).json({success:false,code:'AI_CHECK_UNAVAILABLE'})}
  });
+ // Read-only resume: no Serper, browser fetch or editor writing; keyed to owner, page, URL, market and query.
+ app.get('/api/tracker-client/:token/growth/auto-research/saved',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY_SAVED_REPORT'});
+  try{const row=await (typeof loadCompletedReport==='function'?loadCompletedReport({v}):storedResearch.load(pool,v));
+   if(!row)return res.set('Cache-Control','private, no-store').json({success:true,found:false});
+   const report={...row.report,restored_from_database:true,saved_at:row.saved_at};
+   if(typeof loadAiAnswers==='function'){const term=String(v.queryOverride||v.page.keyword||'').trim();
+    if(term)report.ai_check=await aiCheckFor({v,term,target:v.page.url}).catch(()=>report.ai_check)}
+   return res.set('Cache-Control','private, no-store').json({success:true,found:true,report});
+  }catch(e){return res.status(503).json({success:false,code:'SAVED_REPORT_UNAVAILABLE'})}
+ });
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   // Never serve a recently cached unlocked result after Case Study activation.
@@ -708,7 +721,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    catch(e){console.warn('[growth-auto-research] open selection not loaded',String(e?.code||'unknown'))}
   }
   const enriched=await withAiCheck(report,v);
-  return res.set('Cache-Control','private, no-store').json({...enriched,
+  const completedReport={...enriched,
    market_setting_url:typeof savePageMarkets==='function'?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id):null,
    gap_list:{...gapList,carried_over:carried,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
@@ -730,7 +743,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     verified_gap:completeDecision.verified_gap===true,
     copy_ready:completeDecision.copy_ready===true,
     draft_provider_status:completion.status,evidence_status:evidenceStatus,
-    owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
+    owner_only:true,automatic_publishing:false,case_study_unchanged:true}};
+  // Persist before responding, so closing the browser never loses the completed owner report.
+  try{await (typeof saveCompletedReport==='function'?saveCompletedReport({v,report:completedReport}):storedResearch.save(pool,v,completedReport))}
+  catch(e){return res.status(503).set('Cache-Control','private, no-store').json({success:false,code:'GROWTH_REPORT_NOT_SAVED'})}
+  return res.set('Cache-Control','private, no-store').json(completedReport);
  });
  // The owner sets the page's target markets (ordered, the first is the main one). An empty list removes the setting.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/markets',data,async(req,res)=>{
@@ -956,8 +973,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
    marketBox,
-   '<section><div role="status" id="researchStatus">Analyzing the URL and observed competitor evidence…</div>',
-   '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
+   '<section><div role="status" id="researchStatus">Loading saved research…</div>',
+   '<button id="retryResearch" type="button" hidden>Run research again</button> ',
    '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?
     'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button></section>',
    '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',

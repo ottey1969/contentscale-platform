@@ -9,6 +9,7 @@
  var runParams=(runMarket?'&market='+encodeURIComponent(runMarket):'')+(runQuery?'&query='+encodeURIComponent(runQuery):'');
  var endpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(id)+runParams;
  var last=null;
+ var savedEndpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/saved?page_id='+encodeURIComponent(id)+runParams;
  var trackerGrowthStyle=document.createElement('style');trackerGrowthStyle.textContent="\n/* Tracker Growth guided actions */\n.cs-growth-guidance{padding:12px 14px;border-left:4px solid #2563eb;background:rgba(37,99,235,.06);border-radius:6px}\n.cs-growth-action-list{display:grid;gap:12px;margin:12px 0 18px}.cs-growth-action{border:1px solid #cbd5e1;border-radius:12px;padding:16px;transition:border-color .2s ease,box-shadow .2s ease,opacity .2s ease}.cs-growth-action-head{display:flex;gap:12px;align-items:flex-start}.cs-growth-state{font-size:22px;font-weight:700;line-height:1.2}.cs-growth-action-copy{flex:1}.cs-growth-action-copy p{margin:4px 0 12px}.cs-growth-action-button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;transition:transform .15s ease,background .2s ease}.cs-growth-action-button:focus-visible{outline:3px solid #1d4ed8;outline-offset:3px}.cs-growth-action-button:active{transform:scale(.98)}.cs-growth-current{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb}.cs-growth-current .cs-growth-state{color:#2563eb}.cs-growth-current .cs-growth-action-button{background:#2563eb;color:white}.cs-growth-done{border-color:#15803d}.cs-growth-done .cs-growth-state{color:#15803d}.cs-growth-done .cs-growth-action-button{background:#15803d;color:white}.cs-growth-future{opacity:.73}.cs-growth-future .cs-growth-action-button{background:#e2e8f0;color:#475569;cursor:not-allowed}.cs-growth-action-detail{border-top:1px solid #cbd5e1;padding-top:10px;margin-top:12px;animation:csGrowthReveal .24s ease-out}.cs-growth-action-detail[hidden]{display:none}@keyframes csGrowthReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.cs-growth-action,.cs-growth-action-button,.cs-growth-action-detail{animation:none;transition:none}}\n";(document.head||main).appendChild(trackerGrowthStyle);
  function node(tag,text,parent){
   var n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);
@@ -701,7 +702,7 @@
      actionStages.forEach(function(st){
       addAction('Review a relevant next step',String(st.role||st.url||'Relevant page'),
        ['Destination: '+String(st.url||'Not established'),'Topic match: '+String(st.topic_match||'Not established'),
-        st.link&&st.link.status==='LINK_CANDIDATE_FOR_REVIEW'?'Suggested context: '+String(st.link.under_heading||'')+' — anchor: '+String(st.link.anchor_text||''):String(st.link&&st.link.action||'Verify a contextual link before editing.'),
+        st.link&&st.link.status==='LINK_CANDIDATE_FOR_REVIEW'?'Suggested context: '+String(st.link.under_heading||'')+(st.link.anchor_text?' — anchor: '+String(st.link.anchor_text):' — write your own link text'):String(st.link&&st.link.action||'Verify a contextual link before editing.'),
         'The informational answer must remain complete; no promotional claims are added.']);
      });
      var rules=node('details',null,beyond);node('summary','Editorial safeguards',rules);
@@ -851,6 +852,25 @@
   }finally{document.getElementById('retryResearch').disabled=false;if(status.className==='working')status.className='';if(status.removeAttribute)status.removeAttribute('aria-busy')}
  }
  document.getElementById('retryResearch').addEventListener('click',run);
+ async function restore(){
+  var status=document.getElementById('researchStatus');
+  // Never expose a stale download control if this viewer cannot load the owner report.
+  document.getElementById('downloadResearch').hidden=true;
+  status.textContent='Loading the last saved research report…';
+  try{var response=await fetch(savedEndpoint,{credentials:'same-origin',cache:'no-store'});
+   var saved=await response.json();
+   if(!response.ok||saved.success!==true)throw Error(saved.code||'SAVED_REPORT_UNAVAILABLE');
+   if(saved.found&&saved.report&&saved.report.success===true){
+    last=saved.report;render(saved.report);pointHandoff(saved.report);
+    status.textContent='Saved research restored ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new scan was run.';
+    document.getElementById('retryResearch').hidden=false;
+    return;
+   }
+   status.textContent='No saved research report for this page, market and query. Run research to create one.';
+  }catch(e){status.textContent='Saved report could not be loaded: '+String(e.message||e)+'. No new scan was run.'}
+  document.getElementById('retryResearch').hidden=false;
+ }
+
  // Market save is isolated in /growth-market-controls.js so a report-rendering failure cannot disable it.
  document.getElementById('downloadResearch').addEventListener('click',function(){
   if(!last)return;
@@ -871,5 +891,5 @@
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(href),2000);
  });
- run();
+ restore();
 })();

@@ -26,6 +26,7 @@ function harness(drafts,{flaky={},extraPages={},fail={},leadList=null,renderOwn=
  }};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},db,(req,res,next)=>{req.growthTrackerClientId=4;
   req.growth={can_edit:req.params.token==='owner-token',pages:[{id:77,url:URL_,keyword:'roof repair lodi nj',case_study_active:true}]};next()},{
+  saveCompletedReport:async()=>{},loadCompletedReport:async()=>null,
   retryDelayMs:0,...require('./helpers/meaning-check-stand-in.cjs').meaningStandIn,...(renderOwn?{renderOwn}:{}),
   fetchLive:async url=>{fetchCalls[url]=(fetchCalls[url]||0)+1;if(flaky[url]>0){flaky[url]--;throw Object.assign(new Error('HTTP_202'),{code:'HTTP_202'})}
    if(fail[url])throw Object.assign(new Error(fail[url]),{code:fail[url]});

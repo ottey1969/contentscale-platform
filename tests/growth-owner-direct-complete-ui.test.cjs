@@ -52,17 +52,17 @@ async function check(owner){
   navigator:{clipboard:{writeText:async()=>{}}},
   fetch:async(url,opts)=>{
    requests.push({url,method:opts.method||'GET'});
-   return {ok:true,json:async()=>response};
+   return {ok:true,json:async()=>({success:true,found:true,report:response})};
   }
  };
  vm.runInNewContext(code,context,{timeout:1500});
  await wait();await wait();await wait();
  assert.equal(requests.length,1,'Initial Growth page must make exactly one report request');
- assert.equal(requests[0].method,owner?'POST':'GET');
- assert.equal(requests[0].url.includes('/auto-research/complete?'),owner);
+ assert.equal(requests[0].method,'GET','Opening the page must only load saved research');
+ assert(requests[0].url.includes('/auto-research/saved?'),'Never start research on browser load');
  assert.equal(elements.downloadResearch.hidden,false,'Finished report can be exported');
  assert.equal(elements.downloadResearch.disabled,false,'Download is not held after full report');
- assert.match(elements.researchStatus.textContent,owner?/Owner Growth report/:/Research-only report/);
+ assert.match(elements.researchStatus.textContent,/Saved research restored/);
  elements.downloadResearch.click();
  assert(downloadedBlob,'Export must create a JSON Blob from the displayed result');
  const exported=JSON.parse(await downloadedBlob.text());

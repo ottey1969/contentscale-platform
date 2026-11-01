@@ -34,7 +34,16 @@ function band(p){
  return {kind:'BIGGER_EFFORT',weight:0.15,effort:'large',label:'beyond page 4'};
 }
 
-function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null,customerCountries=[],evidenceCountries=[],contactPaths=null}={}){
+// The buyer-intent signal of a search term (one classifier: growth-lead-intent), with the labels the Cockpit reports.
+function buyerIntent(query){
+ const i=leadIntentOf(query);
+ const label=i.class==='HIRE'?(i.signals.hire?'TRANSACTIONAL_QUERY_SIGNAL':'SERVICE_QUERY_SIGNAL'):i.class==='COMPARE'?'COMPARISON_QUERY_SIGNAL':
+  i.class==='INFORMATION'?'INFORMATIONAL_QUERY_SIGNAL':'UNCLASSIFIED_QUERY';
+ return {label,weight:i.weight,intent:i};
+}
+// goal RELEVANT_CLICKS (default): the research priority order. goal QUALIFIED_LEADS (the Cockpit): potential customers first.
+function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null,customerCountries=[],evidenceCountries=[],contactPaths=null,goal='RELEVANT_CLICKS'}={}){
+ const leadsGoal=goal==='QUALIFIED_LEADS';
  const brand=compact(String(domain).replace(/^https?:\/\//,'').split('.')[0]);
  const tracked=new Map(pages.filter(p=>p&&p.url).map(p=>[norm(p.url),p]));
  const customers=new Set((customerCountries||[]).map(c=>String(c).toUpperCase()));
@@ -55,6 +64,8 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
   if(!groups.has(k))groups.set(k,[]);
   groups.get(k).push({...r,page});
  }
+ const priority=base=>Math.round(base);
+ const leadEvidence=query=>leadsGoal?{goal:'QUALIFIED_LEADS',buyer_intent:buyerIntent(query).label,lead_priority_unverified:true}:{};
  const byCountry=new Map(),list=[];
  for(const [k,g] of groups){
   const impressions=g.reduce((n,x)=>n+x.impressions,0),clicks=g.reduce((n,x)=>n+x.clicks,0);
@@ -94,7 +105,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
     dedicated_page:{url:dedicated.url,impressions:own?own.impressions:0,clicks:own?own.clicks:0,position:own?Math.round(own.position*10)/10:null},
     kind:'DEDICATED_PAGE_FOR_PROTECTED',effort:'medium (the dedicated page must become the one Google shows)',
     other_pages:g.filter(x=>x!==lead).map(x=>({url:x.page.url,impressions:x.impressions,position:Math.round(x.position*10)/10})),
-    priority:Math.round(lead.impressions*b.weight*0.7),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
+    priority:priority(lead.impressions*b.weight*0.7),...leadEvidence(lead.query),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
     why:'Google shows the protected page '+lead.page.url+' most for this term: '+lead.impressions+' impressions and '+lead.clicks+' clicks in '+countryName(lead.country)+(period?' ('+period.start+' – '+period.end+')':'')+', average position '+Math.round(lead.position*10)/10+
      '. The site\'s own page about the term is '+dedicated.url+(own?' ('+own.impressions+' impressions, '+own.clicks+' clicks, position '+Math.round(own.position*10)/10+')':' (no impressions for it in this import)')+
      '. These numbers belong to the pages named; none is attributed to the other.'});
@@ -110,7 +121,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
    impressions:lead.impressions,clicks:lead.clicks,query_country_total_impressions:impressions,query_country_total_clicks:clicks,ctr_pct:Math.round(1000*lead.clicks/Math.max(1,lead.impressions))/10,position:Math.round(lead.position*10)/10,kind,
    effort:kind==='POSSIBLE_NEW_PAGE'?'unknown until researched (possibly a new page)':kind==='OTHER_EXISTING_PAGE'?b.effort+', plus a link from the page Google shows':b.effort,
    other_pages:g.filter(x=>x!==lead).map(x=>({url:x.page.url,impressions:x.impressions,position:Math.round(x.position*10)/10})),
-   priority:Math.round(lead.impressions*(kind==='POSSIBLE_NEW_PAGE'?0.3:b.weight)),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
+   priority:priority(lead.impressions*(kind==='POSSIBLE_NEW_PAGE'?0.3:b.weight)),...leadEvidence(lead.query),priority_basis:'RESEARCH_PRIORITY_NOT_A_FORECAST',
    why:lead.impressions+' impressions and '+lead.clicks+' clicks for '+lead.page.url+' in '+countryName(lead.country)+(period?' ('+period.start+' – '+period.end+')':'')+', average position '+Math.round(lead.position*10)/10+' ('+b.label+')'+
     (kind==='SNIPPET'?'; only '+Math.round(ctr*1000)/10+'% of searchers click':'')+
     (kind==='OTHER_EXISTING_PAGE'?'; another tracked page ('+other.url+') may also serve this term; verify intent before choosing a destination':'')+
@@ -119,7 +130,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  }
  // Qualified Leads order: commercial intent × market × damped research priority. The contact path does not change the
  // order (a commercial page without one is an opportunity, not a worse page); it decides the first action.
- for(const o of list){
+ for(const o of leadsGoal?list:[]){
   const market=byCountry.get(o.country)?.market||'ANY',intent=leadIntentOf(o.query);
   const page=pages.find(p=>String(p.id)===String(o.page_id))||{id:o.page_id,url:o.page_url};
   o.lead_intent=intent;o.market=market;o.contact_path=contactOf(page);
@@ -134,7 +145,7 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
    if(service)o.lead_page={page_id:service.id??null,url:service.url,contact_path:contactOf(service)};
   }
  }
- list.sort((a,b)=>b.lead_priority-a.lead_priority||b.priority-a.priority||b.impressions-a.impressions);
+ list.sort((a,b)=>(leadsGoal?b.lead_priority-a.lead_priority:0)||b.priority-a.priority||b.impressions-a.impressions);
  const countries=[...byCountry.values()].sort((a,b)=>b.impressions-a.impressions);
  if(!list.length)return {status:'INSUFFICIENT_DATA',period,customer_countries:customerScope(customers,countries),
   reason:'No search term in any country has at least '+MIN_IMPRESSIONS+' impressions on a tracked, changeable page outside the top 3 (or with few clicks in the top 3). Growth does not invent an opportunity; add pages to the Tracker or import again later.',
@@ -144,10 +155,12 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
  // The opportunity with the most search traffic, shown when the lead order chose another one, so nothing is hidden.
  const byTraffic=list.slice().sort((a,b)=>b.priority-a.priority||b.impressions-a.impressions)[0];
  return {status:'OPPORTUNITY_FOUND',period,customer_countries:scope,best,runners_up:list.slice(1,5).map(x=>withPlan(x,siteMarkets)),by_country:countries,excluded,
-  most_search_traffic:byTraffic!==list[0]?{query:byTraffic.query,country:byTraffic.country,page_url:byTraffic.page_url,impressions:byTraffic.impressions,
+  goal:leadsGoal?'QUALIFIED_LEADS':'RELEVANT_CLICKS',
+  most_search_traffic:leadsGoal&&byTraffic!==list[0]?{query:byTraffic.query,country:byTraffic.country,page_url:byTraffic.page_url,impressions:byTraffic.impressions,
    lead_intent:byTraffic.lead_intent.class,why_not_first:'More search traffic, but '+byTraffic.lead_intent.label+(byTraffic.market==='ON_EVIDENCE'?' in a market you count on evidence':'')+
     '; “'+list[0].query+'” is closer to a customer ('+list[0].lead_intent.label+').'}:null,
-  method:'Qualified Leads order, not a forecast. Lead priority = intent weight (wants to hire 1, compares providers 0.8, not clear 0.5, wants information 0.35) × market weight (primary 1, on evidence 0.6) × log10(1 + research priority). Research priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). Intent is read from the words of the search term only; no conversion rate is assumed.',
+  method:leadsGoal?'Qualified-lead research priority, not measured conversions. Lead priority = intent weight (wants to hire 1, compares providers 0.8, not clear 0.5, wants information 0.35) × market weight (primary 1, on evidence 0.6) × log10(1 + research priority). Research priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). Intent is read from the words of the search term only; no conversion rate is assumed and no leads or sales are inferred.':
+   'Research priority, not a forecast. Search Console per country: priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). An order, not a click forecast.',
   not_yet_known:'How strong the ranking pages are in that country, and whether this page can give a better answer: the Growth research in that country reads them before anything is proposed.'};
 }
 function customerScope(customers,countries){
@@ -169,8 +182,8 @@ function withPlan(o,siteMarkets){
   o.kind==='SNIPPET'?
   'Run the Growth research for '+o.page_url+' and “'+o.query+'” in '+where+'; then compare your title and description with the results around you — the page is already in the top 3.':
   'Run the Growth research for '+o.page_url+' and “'+o.query+'” in '+where+'; it reads the pages that rank there and proposes the exact change, or says why none is supported.';
- const next=nextActionOf(o,where,action);
- return {...o,action:next.text,research_action:action,next_action:next,
+ const next=o.lead_intent?nextActionOf(o,where,action):null;
+ return {...o,action:next?next.text:action,research_action:action,next_action:next,
   research:o.kind==='POSSIBLE_NEW_PAGE'&&o.shown_page_protected?{type:'NEW_PAGE',query:o.query,market:o.country}:{type:'EXISTING_PAGE',page_id:o.page_id,query:o.query,market:o.country},
   measurement:'After publishing, record the publication in Growth measurement. Visibility and clicks: compare the 28 days before and after in Search Console for '+o.page_url+' and “'+o.query+'”; for '+where+' the country split comes from this import ('+o.impressions+' impressions, '+o.clicks+' clicks now). Enquiries: enter the contact requests from your own form, e-mail or CRM for the same two periods; Growth does not estimate them. No result is promised.',
   site_default_note:siteMarkets&&siteMarkets.countries&&siteMarkets.countries.length&&!siteMarkets.countries.includes(o.country)?'This opportunity is outside the site default market ('+siteMarkets.countries.join(', ')+'); the research runs in '+o.country+' for this run only.':null};
@@ -196,4 +209,4 @@ function serviceAreaOf({pages=[],deriveMarket}){
  const local=pages.filter(p=>{try{return !!deriveMarket({query:p.keyword||'',keyword:p.keyword||'',url:p.url})}catch{return false}}).length;
  return local*2>=pages.length&&local>0?{countries:['US'],basis:local+' of '+pages.length+' tracked pages name a US state'}:null;
 }
-module.exports={findOpportunities,serviceAreaOf,nextActionOf,MIN_IMPRESSIONS};
+module.exports={findOpportunities,serviceAreaOf,nextActionOf,MIN_IMPRESSIONS,buyerIntent};

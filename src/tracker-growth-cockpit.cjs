@@ -146,7 +146,7 @@ function registerGrowthCockpit(app,pool,deps={}){
     }catch(e){contactPaths=new Map()}
     req.growth.opportunities=findOpportunities({rows:countryRows,pages:req.growth.pages,domain:client.domain,
      serviceArea:serviceAreaOf({pages:p.rows,deriveMarket}),siteMarkets:req.growth.site_markets,customerCountries:req.growth.customer_countries,
-     evidenceCountries:req.growth.evidence_countries,contactPaths});
+     evidenceCountries:req.growth.evidence_countries,contactPaths,goal:'QUALIFIED_LEADS'});
     req.growth.opportunities.imported_at=countryRows[0]?.imported_at||null;
     req.growth.opportunities.import=await loadCountryImport(pool,{clientId:client.id}).catch(()=>null);
    }

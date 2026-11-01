@@ -38,18 +38,22 @@ const primary=['NL','BE','LU','GB'];
 
 test('a commercial term with less traffic comes before an informational term with much more; nothing is dropped',()=>{
  const rows=[R(2,'what is seo','GB',5000,40,9),R(1,'seo consultant','NL',45,1,12)];
- const f=findOpportunities({rows,pages,domain:'example-seo.test',customerCountries:primary,contactPaths:contact});
+ const f=findOpportunities({rows,pages,domain:'example-seo.test',goal:'QUALIFIED_LEADS',customerCountries:primary,contactPaths:contact});
  assert.equal(f.best.query,'seo consultant');assert.equal(f.best.lead_intent.class,'HIRE');assert.equal(f.best.market,'PRIMARY');
  assert.equal(f.best.next_action.code,'IMPROVE_SERVICE_PAGE');assert.match(f.best.next_action.why,/wants to hire or buy .*in a primary market \(Netherlands \(nl\)\)/);
  assert.equal(f.runners_up[0].query,'what is seo','the informational opportunity stays in the list');
  assert.equal(f.most_search_traffic.query,'what is seo');assert.match(f.most_search_traffic.why_not_first,/wants information/);
  assert(f.best.priority<f.runners_up[0].priority,'the research priority (traffic) is kept next to the lead order');
- assert.match(f.method,/no conversion rate is assumed/);
+ assert.match(f.method,/no conversion rate is assumed/);assert.match(f.method,/not measured conversions/);assert.equal(f.goal,'QUALIFIED_LEADS');
+ assert.equal(f.best.buyer_intent,'SERVICE_QUERY_SIGNAL');assert.equal(f.best.lead_priority_unverified,true);
+ // Without the leads goal the finder keeps its research-priority order (traffic first) and adds no lead fields.
+ const clicks=findOpportunities({rows,pages,domain:'example-seo.test',customerCountries:primary,contactPaths:contact});
+ assert.equal(clicks.best.query,'what is seo');assert.equal(clicks.goal,'RELEVANT_CLICKS');assert.equal(clicks.best.next_action,null);assert.equal(clicks.most_search_traffic,null);
 });
 
 test('markets: primary count fully; "on evidence" needs demand in its own data and counts 0.6; others never chosen',()=>{
  const rows=[R(1,'seo consultant','US',30,0,14),R(1,'seo consultant','IN',900,2,8),R(1,'hire seo consultant','US',120,1,15),R(1,'seo consultant','BE',50,0,16)];
- const f=findOpportunities({rows,pages,domain:'example-seo.test',customerCountries:primary,evidenceCountries:['US'],contactPaths:contact});
+ const f=findOpportunities({rows,pages,domain:'example-seo.test',goal:'QUALIFIED_LEADS',customerCountries:primary,evidenceCountries:['US'],contactPaths:contact});
  const all=[f.best,...f.runners_up];
  assert(!all.some(x=>x.country==='IN'),'a country outside both lists is shown per country, never chosen');
  assert(!all.some(x=>x.country==='US'&&x.query==='seo consultant'),'30 US impressions are not enough evidence (twice the minimum is needed)');
@@ -58,19 +62,19 @@ test('markets: primary count fully; "on evidence" needs demand in its own data a
  assert.equal(f.best.country,'BE','a primary market beats the same intent in a market counted on evidence');
  assert.deepEqual(f.customer_countries.on_evidence,['US']);
  // Without primary markets every country counts the same: no market is rated by itself.
- const open=findOpportunities({rows,pages,domain:'example-seo.test',contactPaths:contact});
+ const open=findOpportunities({rows,pages,domain:'example-seo.test',goal:'QUALIFIED_LEADS',contactPaths:contact});
  assert([open.best,...open.runners_up].every(x=>x.market==='ANY'));
 });
 
 test('one next action: add a contact path, add an internal link, research a commercial search',()=>{
- const noContact=findOpportunities({rows:[R(3,'seo audit services','NL',80,0,11)],pages,domain:'example-seo.test',customerCountries:primary,contactPaths:contact}).best;
+ const noContact=findOpportunities({rows:[R(3,'seo audit services','NL',80,0,11)],pages,domain:'example-seo.test',goal:'QUALIFIED_LEADS',customerCountries:primary,contactPaths:contact}).best;
  assert.equal(noContact.next_action.code,'ADD_CONTACT_PATH');assert.match(noContact.action,/^First give visitors of https:\/\/example-seo\.test\/seo-audit-services\/ a way to contact you/);
- const info=findOpportunities({rows:[R(4,'seo checklist','GB',400,3,7)],pages,domain:'example-seo.test',customerCountries:primary,contactPaths:contact}).best;
+ const info=findOpportunities({rows:[R(4,'seo checklist','GB',400,3,7)],pages,domain:'example-seo.test',goal:'QUALIFIED_LEADS',customerCountries:primary,contactPaths:contact}).best;
  assert.equal(info.lead_intent.class,'INFORMATION');assert.equal(info.next_action.code,'ADD_INTERNAL_LINK');
  assert.equal(info.next_action.link_to,'https://example-seo.test/seo-consultant/','the service page with a contact form on the same topic');
- const fresh=findOpportunities({rows:[R(2,'seo agency rotterdam','NL',90,0,22)],pages,domain:'example-seo.test',customerCountries:primary,contactPaths:contact}).best;
+ const fresh=findOpportunities({rows:[R(2,'seo agency rotterdam','NL',90,0,22)],pages,domain:'example-seo.test',goal:'QUALIFIED_LEADS',customerCountries:primary,contactPaths:contact}).best;
  assert.equal(fresh.kind,'POSSIBLE_NEW_PAGE');assert.equal(fresh.next_action.code,'RESEARCH_COMMERCIAL_QUERY');
- const unknown=findOpportunities({rows:[R(1,'seo consultant','NL',45,1,12)],pages,domain:'example-seo.test',customerCountries:primary}).best;
+ const unknown=findOpportunities({rows:[R(1,'seo consultant','NL',45,1,12)],pages,domain:'example-seo.test',goal:'QUALIFIED_LEADS',customerCountries:primary}).best;
  assert.equal(unknown.contact_path.status,'UNKNOWN');assert.match(unknown.action,/check that the page shows how to contact you/);
 });
 

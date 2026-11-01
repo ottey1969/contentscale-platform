@@ -54,6 +54,8 @@ const FEATURES=[
  {key:'date',label:'A published or updated date',has:e=>e.date},
  {key:'question_headings',label:'Headings phrased as questions',has:e=>e.question_headings>=2}
 ];
+const PART_OF={ListItem:['BreadcrumbList','ItemList','HowTo'],Question:['FAQPage','QAPage'],Answer:['FAQPage','QAPage','Question'],
+ HowToStep:['HowTo'],HowToSection:['HowTo'],SiteNavigationElement:['WebPage','WebSite']};
 function compareElements(own,competitors){
  const n=competitors.length,median=xs=>{const s=[...xs].sort((a,b)=>a-b);return s.length?s[Math.floor(s.length/2)]:0};
  const theyHave=FEATURES.map(f=>({key:f.key,label:f.label,ranking_pages_with_it:competitors.filter(c=>f.has(c.elements)).length,of:n,this_page:f.has(own)}))
@@ -61,7 +63,9 @@ function compareElements(own,competitors){
  const schemaCounts={};
  for(const c of competitors)for(const t of new Set(c.elements.structured_data))schemaCounts[t]=(schemaCounts[t]||0)+1;
  const schemaMissing=Object.entries(schemaCounts).filter(([t,k])=>k>=Math.max(2,Math.ceil(n/2))&&!own.structured_data.includes(t))
-  .map(([type,k])=>({type,ranking_pages_with_it:k,of:n}));
+  .map(([type,k])=>({type,ranking_pages_with_it:k,of:n}))
+  // A schema.org part type only exists inside its container (ListItem in BreadcrumbList): it is not a second element to add.
+  .filter((f,_,all)=>!(PART_OF[f.type]||[]).some(c=>all.some(x=>x.type===c)||own.structured_data.includes(c)));
  return {elements_they_have_and_this_page_lacks:theyHave,structured_data_they_have_and_this_page_lacks:schemaMissing,
   length:{this_page_words:own.words,ranking_pages_median_words:median(competitors.map(c=>c.elements.words)),
    this_page_h2:own.h2,ranking_pages_median_h2:median(competitors.map(c=>c.elements.h2))}};

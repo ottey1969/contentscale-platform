@@ -24,7 +24,7 @@ function leadIntentOf(query){
  const hire=HIRE.test(q),compare=COMPARE.test(q),provider=PROVIDER.test(q),info=INFO.test(q);
  const cls=compare?'COMPARE':hire?'HIRE':provider?(info?'COMPARE':'HIRE'):info?'INFORMATION':'UNCLEAR';
  const basis=[hire&&'a price, quote or hiring word',compare&&'a comparison word',provider&&'a provider of the service',info&&'a question or learning word'].filter(Boolean);
- return {class:cls,weight:CLASSES[cls].weight,label:CLASSES[cls].label,
+ return {class:cls,weight:CLASSES[cls].weight,label:CLASSES[cls].label,signals:{hire,compare,provider,info},
   basis:basis.length?'The search term contains '+basis.join(' and ')+'.':'The search term names only the topic, so the words do not show whether the searcher wants to hire, compare or learn.'};
 }
 
