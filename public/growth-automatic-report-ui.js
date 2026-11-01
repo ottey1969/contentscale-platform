@@ -236,10 +236,15 @@
    node('h3','Improvement identified — no approved publication text yet',primary);
    var tasks=(outcome.improvement_plan?.tasks||[]).map(function(t){return String(t.label||t.code)});
    if(tasks.length)node('p','Missing on '+String(outcome.target_url||'the target page')+': '+tasks.join(' · '),primary);
-   node('p','Status: '+String(outcome.copy_status||'DRAFT_NOT_AVAILABLE').replace(/_/g,' ').toLowerCase()+'. '+String(outcome.next_action||'Regenerate the draft or write the missing section by hand; nothing is published.'),primary);
+   node('p','Status: '+String(outcome.copy_status||'DRAFT_NOT_AVAILABLE').replace(/_/g,' ').toLowerCase()+'. '+(String(outcome.copy_status||'').startsWith('DRAFT_REJECTED')?'The proposed draft did not pass review; do not copy it. Select verified gaps in Step 3 to prepare new concepts.':'Writing starts after you choose the sections in Step 3; nothing has been published.'),primary);
   }else if(ownerReport&&d.editorial_review_draft?.draft?.sections?.length){
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
+  // One clear next step: AI answers only when needed, otherwise continue with selection.
+  var aiDone=!!(d.ai_check&&d.ai_check.summary&&d.ai_check.summary.checked>0);
+  var nav=node('p',null,primary),next=node('a',aiDone?'Continue to Step 3 · Write selected improvements':'Go to Step 2 · Check AI answers',nav);
+  next.href=aiDone?'#growthGapChoice':'#growthAiCheck';
+  if(aiDone)node('small','AI answers have been saved for this query. You can continue with the selected improvements.',nav);
   // AI answers for this search term: offered right after the decision, read fresh on every load, never re-running research.
   if(d.ai_check){var aiBox=section('Step 2 · AI answers for “'+d.ai_check.search_term+'” — optional');aiBox.id='growthAiCheck';
    if(!d.ai_check.summary||!d.ai_check.summary.checked)node('p','No current AI-system answers available. When you choose Write selected with AI in Step 3, a pop-up will let you check AI systems first or continue using Google research only.',aiBox);
