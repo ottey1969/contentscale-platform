@@ -973,8 +973,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
    marketBox,
-   '<section><div role="status" id="researchStatus">Analyzing the URL and observed competitor evidence…</div>',
-   '<button id="retryResearch" type="button" hidden>Open cached analysis</button> ',
+   '<section><div role="status" id="researchStatus">Loading saved research…</div>',
+   '<button id="retryResearch" type="button" hidden>Run research again</button> ',
    '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?
     'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button></section>',
    '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',
