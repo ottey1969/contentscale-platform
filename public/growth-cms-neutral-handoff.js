@@ -4,7 +4,7 @@
  const token=String(location.pathname.split('/')[2]||'');
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null,proposal:null,added:[]};
+ const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false};
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
  $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
  function status(id,msg,error){
@@ -29,7 +29,9 @@
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
-  $('download').disabled=!(safe.source&&$('approved').checked&&manualReady&&factsChecked);
+  $('download').disabled=!!safe.exported||!(safe.source&&$('approved').checked&&manualReady&&factsChecked);
+  $('download').textContent=safe.exported?'4. CMS handoff ZIP downloaded':'4. Download reviewed CMS handoff ZIP';
+  $('download').style.background=safe.exported?'#94a3b8':'';
   // Owner 2026-11-01: a grey button without a reason. Say exactly what is still missing.
   var missing=[];
   if(!safe.source)missing.push('check the original page first (step 1)');
@@ -40,7 +42,7 @@
   // One confirmation for all statements (owner 2026-11-01): same meaning as ticking each one, one click.
   var all=$('confirmAll');if(all){$('confirmAllWrap').hidden=!facts.length;all.checked=facts.length>0&&!open.length;
    $('confirmAllText').textContent='I checked all '+facts.length+' statement'+(facts.length===1?'':'s')+' listed above: true, confirmed with the business and safety-reviewed where marked.'}
-  var why=$('downloadWhy');if(why){why.textContent=missing.length?'To download: '+missing.join('; ')+'.':'';why.hidden=!missing.length}
+  var why=$('downloadWhy');if(why){why.textContent=safe.exported?'ZIP prepared and downloaded. Next: publish the reviewed changes in your CMS, then record the actual publication.':missing.length?'To download: '+missing.join('; ')+'.':'';why.hidden=!!safe.exported?false:!missing.length}
  }
  // Placement of a section on the existing page: proposed by Growth, adjustable by the owner, never guessed.
  function placementSelect(p){
@@ -412,9 +414,9 @@
     (downgraded?' Research evidence set to “Observed”: Search Console has no verified row for this page and “'+payload.focus_query+'”, so the package makes no Search Console claim.':'')+
     (preview.manifest?.growth_proposal?(preview.manifest.growth_proposal.editor_changed_text?' The text differs from Growth proposal #'+preview.manifest.growth_proposal.id+' (recorded in the package).':' Text exactly as in Growth proposal #'+preview.manifest.growth_proposal.id+'.'):'')+
     ((preview.warnings||[]).length?' Review: '+preview.warnings.join(', '):''),false);
-   showPublicationForm(payload);
+   safe.exported=true;showPublicationForm(payload);
   }catch(err){status('downloadStatus',err.message||'Download failed',true)}
-  finally{buttonProgress(btn,false,false);ready()}
+  finally{buttonProgress(btn,false,!!safe.exported);ready()}
  });
  // Only after the package exists: the owner records when the editor actually published it (starts the 28-day measurement).
  function showPublicationForm(payload){
@@ -433,10 +435,20 @@
     headers:{'Content-Type':'application/json'},body:JSON.stringify({...safe.published,notes:$('publicationNotes').value.trim(),published_at:at.toISOString()})});
    var d=await r.json();
    if(!r.ok||d.success!==true)throw Error(d.error||'Not saved');
+   safe.publicationRecorded=true;btn.textContent='5. Publication recorded';btn.style.background='#94a3b8';
    status('publicationStatus',d.gsc_evidence==='VERIFIED'?'Recorded. Measurement compares the 28 days before and after publication with Search Console data.':
     'Recorded. Without Search Console access the result is not measured yet: add the 28-day before/after numbers from Search Console on the measurement page.',false);
   }catch(err){status('publicationStatus',err.message||'Not saved',true)}
-  finally{buttonProgress(btn,false,false);btn.disabled=false}
+  finally{buttonProgress(btn,false,safe.publicationRecorded);btn.disabled=!!safe.publicationRecorded}
+ });
+ // An edited package is a new candidate and can be exported again; no silent duplicate downloads.
+ $('handoffForm').addEventListener('input',function(ev){
+  if(!safe.exported)return;
+  if(ev.target&&ev.target.matches('input,textarea,select')){safe.exported=false;ready()}
+ });
+ $('handoffForm').addEventListener('change',function(ev){
+  if(!safe.exported)return;
+  if(ev.target&&ev.target.matches('input,textarea,select')){safe.exported=false;ready()}
  });
  // Direct from Growth: verify owner, source and research automatically; never approve or publish.
  if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(()=>{if(!$('checkSource').disabled)$('checkSource').click()});
