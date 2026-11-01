@@ -83,9 +83,14 @@ test('Cockpit: the best opportunity is the first thing the owner sees, with a li
  const imp=await call(posts['/api/tracker-client/:token/growth/gsc-country-import'],{params:{token:'owner-tok'},body:{}});
  assert.equal(imp.body.success,true);assert.equal(imp.body.rows,2);assert.equal(imp.body.countries,2);
  const page=await call(routes['/track/:token/growth'],{params:{token:'owner-tok'},query:{}});
- const html=page.html,best=html.indexOf('Best opportunity — Opportunity Finder (research priority, not a prediction)'),next=html.indexOf('Your next action');
+ const html=page.html,best=html.indexOf('Best opportunity for potential customers — Opportunity Finder (an order, not a prediction)'),next=html.indexOf('Your next action');
  assert(best>0&&best<next,'the opportunity comes before the old next action');
- assert.match(html,/“content scaling” in United Kingdom → https:\/\/contentscale\.site\/content-scaling\//);
+ // The Cockpit orders for qualified leads: the consultant term (wants to hire) comes first; the topic term with more
+ // impressions is named and stays listed.
+ assert.match(html,/“generative engine optimization consultant” in United States → https:\/\/contentscale\.site\/generative-engine-optimization-consultant\//);
+ assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2582&amp;market=US&amp;query=generative%20engine%20optimization%20consultant"/);
+ assert.match(html,/Next action:<\/strong> Improve this page for a commercial search/);assert.match(html,/Why it matters commercially:<\/strong> “generative engine optimization consultant”: wants to hire or buy/);
+ assert.match(html,/Most search traffic:<\/strong> “content scaling” in GB \(300 impressions\)/);
  assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2295&amp;market=GB&amp;query=content%20scaling"/);
  assert.match(html,/Not yet known:/);assert.match(html,/Not all Search Console data was read:<\/strong> the import reached the maximum of 125,000 rows/);assert.match(html,/Next opportunities \(1\)/);
  // Without Search Console access on the server: a clear message, nothing changed.

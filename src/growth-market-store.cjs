@@ -86,12 +86,21 @@ async function getCustomerCountries(pool,{clientId}){
   return row?validCountries(row.countries):[]}
  catch(e){if(e.code==='42P01')return [];throw e}
 }
-async function setCustomerCountries(pool,{clientId,countries}){
+// Markets counted "on evidence" (for example the US next to the primary markets NL, BE, LU and GB): they count only when
+// their own Search Console data shows demand, with a lower weight. Stored next to the primary countries (additive column).
+async function getEvidenceCountries(pool,{clientId}){
+ try{const row=(await pool.query('SELECT on_evidence FROM tracker_growth_customer_countries WHERE tracker_client_id=$1',[clientId])).rows[0];
+  return row&&row.on_evidence?validCountries(row.on_evidence):[]}
+ catch(e){if(e.code==='42P01'||e.code==='42703')return [];throw e}
+}
+async function setCustomerCountries(pool,{clientId,countries,onEvidence}){
  await ensureCustomerTable(pool);
- const list=validCountries(countries);
+ await pool.query('ALTER TABLE tracker_growth_customer_countries ADD COLUMN IF NOT EXISTS on_evidence JSONB');
+ const list=validCountries(countries),extra=onEvidence===undefined?null:validCountries(onEvidence).filter(c=>!list.includes(c));
  if(!list.length){await pool.query('DELETE FROM tracker_growth_customer_countries WHERE tracker_client_id=$1',[clientId]);return []}
- await pool.query(`INSERT INTO tracker_growth_customer_countries(tracker_client_id,countries,updated_at) VALUES($1,$2::jsonb,NOW())
-  ON CONFLICT (tracker_client_id) DO UPDATE SET countries=EXCLUDED.countries,updated_at=NOW()`,[clientId,JSON.stringify(list)]);
+ await pool.query(`INSERT INTO tracker_growth_customer_countries(tracker_client_id,countries,on_evidence,updated_at) VALUES($1,$2::jsonb,$3::jsonb,NOW())
+  ON CONFLICT (tracker_client_id) DO UPDATE SET countries=EXCLUDED.countries,on_evidence=COALESCE(EXCLUDED.on_evidence,tracker_growth_customer_countries.on_evidence),updated_at=NOW()`,
+  [clientId,JSON.stringify(list),extra===null?null:JSON.stringify(extra)]);
  return list;
 }
 // Order, field by field: the page's Growth setting, then the Pre-Write brief of its keyword, then the site default.
@@ -105,4 +114,4 @@ function resolveMarketSetting(growth,prewrite,siteDefault=null){
   language_source:g.language?'SET_IN_TRACKER':p.language?'FROM_PREWRITE_BRIEF':d.language?'SITE_DEFAULT':null,
   brief:p.brief&&(!g.countries?.length||!g.language)?p.brief:null,alternatives:p.alternatives||[]};
 }
-module.exports={getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets,getCustomerCountries,setCustomerCountries,resolveMarketSetting,ensureTable};
+module.exports={getPageMarkets,setPageMarkets,getPrewriteMarket,getSiteMarkets,setSiteMarkets,getCustomerCountries,setCustomerCountries,getEvidenceCountries,resolveMarketSetting,ensureTable};
