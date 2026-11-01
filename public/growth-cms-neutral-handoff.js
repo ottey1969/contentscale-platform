@@ -303,7 +303,17 @@
  });
  $('generateEditorialDraft').addEventListener('click',async function(){
   if(!safe.source)return;
-  var btn=this;btn.disabled=true;buttonProgress(btn,true);status('aiDraftStatus','Preparing a source-bounded editorial draft…',false);
+  var btn=this;
+  if(btn.dataset.requestPending==='true')return;
+  btn.dataset.requestPending='true';
+  var originalLabel=btn.textContent;
+  // Keep the running task unmistakable, and prevent competing actions or duplicate requests.
+  var lockedButtons=[...document.querySelectorAll('button')].filter(b=>b!==btn&&!b.disabled);
+  lockedButtons.forEach(b=>{b.disabled=true;b.dataset.growthDraftLocked='true'});
+  btn.disabled=true;
+  btn.textContent='⏳ Generating draft… please wait';
+  buttonProgress(btn,true);
+  status('aiDraftStatus','Generating your draft from the original page. Please wait; other actions are temporarily unavailable.',false);
   try{
    var r=await fetch(base+'/editor-draft',{method:'POST',credentials:'same-origin',
     cache:'no-store',headers:{'Content-Type':'application/json'},
@@ -331,7 +341,14 @@
    $('approved').checked=false;ready();
    status('aiDraftStatus','Editable AI draft prepared from the original page. All claims and each section still require your review and explicit approval.',false);
   }catch(err){status('aiDraftStatus',String(err.message||err),true)}
-  finally{buttonProgress(btn,false,false);btn.disabled=!safe.source}
+  finally{
+   buttonProgress(btn,false,false);
+   delete btn.dataset.requestPending;
+   btn.textContent=originalLabel;
+   btn.disabled=!safe.source;
+   lockedButtons.forEach(b=>{if(b.dataset.growthDraftLocked==='true'){b.disabled=false;delete b.dataset.growthDraftLocked}});
+   ready();
+  }
  });
  function build(){
   const src=safe.source;if(!src)throw Error('Check the saved original page first');
