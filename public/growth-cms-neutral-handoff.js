@@ -48,6 +48,31 @@
   $('growthAdditionalSections').appendChild(group);
   return group;
  }
+ // A review checkbox is not a removal action. Remove only an exact flagged sentence
+ // from editable proposed copy; never alter the original page, and never approve facts automatically.
+ function removeFlaggedSentence(sentence){
+  if(!sentence)return 0;
+  var fields=[$('copy')].concat([...document.querySelectorAll('.draft-copy')]);
+  var changed=0;
+  fields.forEach(function(field){if(!field||!field.value||!field.value.includes(sentence))return;
+   field.value=field.value.split(sentence).join('').replace(/ {2,}/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+   field.dispatchEvent(new Event('input',{bubbles:true}));changed++});
+  return changed;
+ }
+ function flaggedReviewAction(box,flag){
+  var sentence=String(flag&&flag.sentence||'').trim();
+  if(!sentence)return;
+  var row=document.createElement('div');row.className='growth-flagged-remove';
+  var action=document.createElement('button');action.type='button';
+  action.textContent='Remove this flagged sentence from draft';row.appendChild(action);
+  var result=document.createElement('small');result.setAttribute('role','status');row.appendChild(result);
+  action.addEventListener('click',function(){
+   var n=removeFlaggedSentence(sentence);
+   result.textContent=n?'Removed from '+n+' draft text field(s). Review the remaining paragraph before downloading.':'Sentence not found verbatim in the editable draft. Check the text before downloading.';
+   if(n){action.disabled=true;ready()}
+  });
+  box.appendChild(row);
+ }
  // One tickable line per sentence to check, in the proposal box (the download waits until each is ticked).
  function checkItem(box,item){
   var l=document.createElement('label');l.className='check';
@@ -74,7 +99,7 @@
     var r=p.review||{};safe.added.push({id:p.id,review:r});
     p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
     var seen=new Set();
-    (r.flagged||[]).forEach(function(f){checkItem(r0,'Rewrite or remove: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason)});
+    (r.flagged||[]).forEach(function(f){checkItem(r0,'Rewrite or remove: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason);flaggedReviewAction(r0,f)});
     ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){(r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(r0,'Check: '+item)})});
     b.disabled=true;b.textContent='Added — review the sections above';
     $('approved').checked=false;ready();
@@ -132,6 +157,7 @@
     var items=(r[g[0]]||[]).filter(function(x){if(seen.has(x))return false;seen.add(x);return true});if(!items.length)return;
     var t=document.createElement('p');t.textContent=g[1]+' (confirm them all at once at the end of step 3, or one by one):';box.appendChild(t);
     items.forEach(function(item){checkItem(box,item)});
+    if(g[0]==='flagged_text')(r.flagged||[]).forEach(function(f){flaggedReviewAction(box,f)});
    });
    if((r.competitor_sources||[]).length){
     var cs=document.createElement('p');cs.className='small';
