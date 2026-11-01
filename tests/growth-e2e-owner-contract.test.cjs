@@ -21,7 +21,7 @@ const gscRows=pageId=>fx.gsc_homepage_rows.map(r=>({page_id:pageId,tracker_clien
 
 function harness({pageId=fx.tracked_page.id,pageUrl=HOME,keyword='content at scale',saved=homepageHtml,withGsc=true,
  locked=true,inventory=fx.site_inventory_test_ids.rows,pages={},leads=fx.serp_leads,drafts=[],truncateCompetitors=false,truncateDestination=false,outcomes=null}={}){
- const route={},writes=[],providerCalls=[];
+ const route={},writes=[],providerCalls=[];let lastSaved=null;
  const html={[HOME]:homepageHtml,[DEST]:destHtml(),[BRAND]:brandHtml,...pages};
  const db={async query(sql,args){
   if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER)\b/i.test(sql)){writes.push(sql);throw Error('No writes permitted')}
@@ -43,6 +43,8 @@ function harness({pageId=fx.tracked_page.id,pageUrl=HOME,keyword='content at sca
   query:'content scaling',leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-21T10:00:00Z'});
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},db,middleware,{...require('./helpers/meaning-check-stand-in.cjs').meaningStandIn,fetchLive,searchLive,
   // ISOLATION_STUB_NOT_PRODUCTION_EVIDENCE: stands in for the AI provider only.
+  saveCompletedReport:async({report})=>{lastSaved={report,saved_at:'2026-11-01T00:00:00Z'}},
+  loadCompletedReport:async()=>lastSaved,
   completeOwnerDraft:async({token,body})=>{providerCalls.push({token,body});
    const next=drafts.shift();
    return {statusCode:200,body:next?{success:true,page_id:body.page_id,...next(body)}:{success:false,code:'NO_STUB'}}},
@@ -186,8 +188,11 @@ async function runUi(h,owner){
   location:{pathname:'/track/'+token+'/growth/auto-research'},URL:U,Blob,encodeURIComponent,console,setTimeout:()=>{},
   navigator:{clipboard:{writeText:async()=>{}}},
   fetch:async(url,opts={})=>{requests.push({url,method:opts.method||'GET'});
-   const path=url.includes('/complete')?h.POST:h.GET,res=await h.invoke(path,token);
+   const path=url.includes('/saved')?'/api/tracker-client/:token/growth/auto-research/saved':url.includes('/complete')?h.POST:h.GET;
+   const res=await h.invoke(path,token);
    return {ok:res.statusCode===200,json:async()=>res.body}}};
+ // Simulate the earlier explicit owner research run; loading this view must not run it again.
+ await h.invoke(owner?h.POST:h.GET,owner?'owner-token':'readonly-client-token');
  vm.runInNewContext(code,ctx,{timeout:3000});
  for(let i=0;i<30;i++)await new Promise(r=>setImmediate(r));
  return {el,blobs,requests};
@@ -195,7 +200,7 @@ async function runUi(h,owner){
 test('browser contract: owner sees decision, placement and proposed text; downloads equal the server result',async()=>{
  const h=harness({drafts:[draftFor('Repurpose what you already published',GOOD)]});
  const ui=await runUi(h,true);
- assert.equal(ui.requests.length,1);assert.equal(ui.requests[0].method,'POST','owner flow starts the completion route directly, no client-only completion');
+ assert.equal(ui.requests.length,1);assert.equal(ui.requests[0].method,'GET','reopening uses a saved report only');
  const shown=allText(ui.el.growthAutomaticReport);
  assert.match(shown,/IMPROVE EXISTING/);assert.match(shown,/Placement:/);assert.match(shown,/Repurpose what you already published|Before commissioning anything new/);
  assert.match(shown,/NOT a proven ranking gain/);
