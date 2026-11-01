@@ -236,7 +236,7 @@
    node('h3','Improvement identified — no approved publication text yet',primary);
    var tasks=(outcome.improvement_plan?.tasks||[]).map(function(t){return String(t.label||t.code)});
    if(tasks.length)node('p','Missing on '+String(outcome.target_url||'the target page')+': '+tasks.join(' · '),primary);
-   node('p','The improvement is identified. Writing starts after you choose the sections in Step 3; nothing has been published.',primary);
+   node('p','Status: '+String(outcome.copy_status||'DRAFT_NOT_AVAILABLE').replace(/_/g,' ').toLowerCase()+'. '+(String(outcome.copy_status||'').startsWith('DRAFT_REJECTED')?'The proposed draft did not pass review; do not copy it. Select verified gaps in Step 3 to prepare new concepts.':'Writing starts after you choose the sections in Step 3; nothing has been published.'),primary);
   }else if(ownerReport&&d.editorial_review_draft?.draft?.sections?.length){
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
