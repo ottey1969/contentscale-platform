@@ -213,9 +213,10 @@ test('browser contract: owner sees decision, placement and proposed text; downlo
  const dl=findAll(ui.el.growthAutomaticReport,n=>n.tagName==='button'&&/owner package/.test(n._text))[0];
  assert(dl,'owner package download exists');dl.click();
  assert.equal(await ui.blobs[1].text(),json.handoff_package.markdown,'markdown download equals the server package');
+ // Shared read-only access must never expose an owner's saved complete research package.
  const ro=await runUi(harness(),false);
- assert.equal(ro.requests[0].method,'GET');ro.el.downloadResearch.click();
- const roJson=JSON.parse(await ro.blobs[0].text());assert.equal(roJson.editorial_review_draft.draft,null,'read-only export never contains a draft');
+ assert.equal(ro.requests[0].method,'GET');
+ assert.equal(ro.el.downloadResearch.hidden,true,'read-only account cannot download owner-only saved report');
 });
 if(process.env.GROWTH_DUMP)test('dump (isolation-stub draft, offline fixture run)',async()=>{
  const h=harness({drafts:[draftFor('Repurpose what you already published',GOOD)]});
