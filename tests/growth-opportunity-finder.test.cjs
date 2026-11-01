@@ -184,3 +184,18 @@ test('owner Cockpit 2026-10-31: "content scaling" in the US is not dropped becau
  const none=findOpportunities({rows:rows.slice(0,1),pages:site.filter(p=>p.id!==2295),domain:'contentscale.site'});
  assert.equal(none.status,'INSUFFICIENT_DATA');assert.equal(none.excluded.protected_page,1);
 });
+
+test('qualified leads favors buyer-intent signals while keeping GSC numbers factual',()=>{
+ const rows=[
+  R('https://contentscale.site/content-scaling/','content scaling','NL',300,160,8),
+  R('https://contentscale.site/generative-engine-optimization-consultant/','generative engine optimization consultant','NL',110,2,8)
+ ];
+ const f=findOpportunities({rows,pages,domain:'contentscale.site',customerCountries:['NL'],goal:'QUALIFIED_LEADS'});
+ assert.equal(f.goal,'QUALIFIED_LEADS');
+ assert.equal(f.best.query,'generative engine optimization consultant');
+ assert.equal(f.best.buyer_intent,'SERVICE_QUERY_SIGNAL');
+ assert.equal(f.best.lead_priority_unverified,true);
+ assert.equal(f.best.clicks,2);
+ assert.equal(f.runners_up[0].clicks,160);
+ assert.match(f.method,/not measured conversions/);
+});
