@@ -325,6 +325,13 @@ function registerGrowthCockpit(app,pool,deps={}){
   // the action and the measurement plan; or, without enough data, it says so.
   const op=g.can_edit?g.opportunities:null;
   const oppLink=o=>o.research.type==='NEW_PAGE'?'/track/'+tok+'/growth/new-page':research(o.page_id)+'&market='+encodeURIComponent(o.country)+'&query='+encodeURIComponent(o.query);
+  // Search Console has its own 14-day refresh cadence; the date is the import timestamp, not the GSC data period.
+  const gscImportedAt=op&&op.imported_at?Date.parse(op.imported_at):NaN;
+  const gscDaysOld=Number.isFinite(gscImportedAt)?Math.max(0,Math.floor((Date.now()-gscImportedAt)/86400000)):null;
+  const gscRefreshDue=gscDaysOld===null||gscDaysOld>=14;
+  const gscRefreshLabel=gscDaysOld===null?'No import yet — import Search Console when available.':
+   gscRefreshDue?'Search Console refresh due: last imported '+gscDaysOld+' days ago (recommended every 14 days).':
+   'Search Console up to date: imported '+gscDaysOld+' day(s) ago; refresh in '+(14-gscDaysOld)+' day(s).';
   const oppBox=!op?'':'<section class="growth-guide growth-opportunity" id="opportunity" aria-label="Best research opportunity"><p class="growth-step-guide">STEP 1 OF 3 · Choose the research opportunity</p><p class="kicker">Best opportunity — Opportunity Finder (research priority, not a prediction)</p>'+
    (op.status==='OPPORTUNITY_FOUND'?
     '<h2>“'+escapeHtml(op.best.query)+'” in '+escapeHtml(op.best.country_name)+' → '+escapeHtml(op.best.page_url)+'</h2>'+
@@ -344,7 +351,7 @@ function registerGrowthCockpit(app,pool,deps={}){
    'try{var r=await fetch("/api/tracker-client/'+tok+'/growth/customer-countries",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({countries:e.target.countries.value})});var d=await r.json();'+
    'if(d.success){st.textContent="Saved. Reloading…";location.reload()}else st.textContent=d.code==="UNKNOWN_COUNTRY"?"Choose the countries from the list, for example us — United States.":"Not saved."}catch(err){st.textContent="Not saved."}});</script>'+
    (op.import&&op.import.capped?'<p class="info"><strong>Not all Search Console data was read:</strong> the import reached the maximum of '+Number(op.import.rows_received).toLocaleString()+' rows, so search terms with few impressions may be missing. The opportunities shown come from the rows that were read.</p>':'')+
-   '<p><button type="button" id="gscCountryImport">'+(op.imported_at?'Import Search Console per country again':'Import Search Console per country')+'</button> <small role="status" id="gscCountryStatus">'+(op.imported_at?'Last import: '+escapeHtml(String(op.imported_at).slice(0,10))+(op.period?' (data '+escapeHtml(op.period.start)+' – '+escapeHtml(op.period.end)+')':''):'Not imported yet. Search Console access on the server is needed; Growth works without it.')+'</small></p>'+
+   '<p><button type="button" id="gscCountryImport">'+(op.imported_at?'Import Search Console per country again':'Import Search Console per country')+'</button> <small role="status" id="gscCountryStatus">'+(op.imported_at?'Last import: '+escapeHtml(String(op.imported_at).slice(0,10))+(op.period?' (GSC data '+escapeHtml(op.period.start)+' – '+escapeHtml(op.period.end)+')':'')+'. '+escapeHtml(gscRefreshLabel):escapeHtml(gscRefreshLabel)+' Growth can still work without GSC.')+'</small></p>'+
    '<script>document.getElementById("gscCountryImport").addEventListener("click",async function(){var b=this,st=document.getElementById("gscCountryStatus");b.disabled=true;b.classList.add("is-loading");b.setAttribute("aria-busy","true");st.textContent="Reading Search Console… This can take a moment. You can leave the other settings alone.";'+
    'try{var r=await fetch("/api/tracker-client/'+tok+'/growth/gsc-country-import",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:"{}"});var d=await r.json();'+
    'if(d.success){st.textContent="Imported "+d.rows+" rows ("+d.countries+" countries). Reloading…";location.reload()}else{st.textContent=d.error||"Not imported.";b.disabled=false;b.classList.remove("is-loading");b.removeAttribute("aria-busy")}}catch(e){st.textContent="Not imported.";b.disabled=false;b.classList.remove("is-loading");b.removeAttribute("aria-busy")}});</script></section>';
