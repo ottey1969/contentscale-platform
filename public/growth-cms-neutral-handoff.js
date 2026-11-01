@@ -121,6 +121,25 @@
   }catch(e){/* no proposal: manual or AI-assisted text stays available */}
  }
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+ // AI proposal for title, meta description and link text: filled in for review; the current values stay one click away.
+ async function loadSeoProposal(target,linkUrl){
+  try{
+   var res=await fetch(base+'/seo-proposal?page_id='+encodeURIComponent(pageId)+(linkUrl?'&link='+encodeURIComponent(linkUrl):''),{cache:'no-store',credentials:'same-origin'});
+   var d=await res.json();if(!res.ok||d.success!==true)return;
+   var old=target.querySelector&&target.querySelector('.seo-proposal');if(old)old.remove();
+   var box=document.createElement('div');box.className='note seo-proposal';target.appendChild(box);
+   if(d.status!=='AI_PROPOSAL_FOR_REVIEW'){var n=document.createElement('p');n.textContent='No AI proposal for the title and description ('+String(d.status||'').toLowerCase().replace(/_/g,' ')+'): the current values are used; edit them if needed.';box.appendChild(n);return}
+   // The owner's own values are kept from the first time only (a second source check must not keep the AI text as "current").
+   if(!safe.seoOriginal)safe.seoOriginal={title:$('title').value,meta:$('meta').value,link:$('linkText').value};
+   var cur=d.current||{},prev=safe.seoOriginal;
+   $('title').value=d.title;$('meta').value=d.meta_description;if(d.link_text&&$('linkUrl').value)$('linkText').value=d.link_text;
+   var h=document.createElement('strong');h.textContent='SEO title, description'+(d.link_text?' and link text':'')+' proposed by AI — review before you download';box.appendChild(h);
+   var w=document.createElement('p');w.className='small';w.textContent=(d.why?d.why+' ':'')+'Checked: length, the search term in the title, no number, superlative or promise that is not already on your page. Current title: “'+(cur.title||prev.title)+'”.';box.appendChild(w);
+   var back=document.createElement('button');back.type='button';back.textContent='Use my current title and description';
+   back.addEventListener('click',function(){$('title').value=prev.title||cur.title||'';$('meta').value=prev.meta||cur.description||'';if(prev.link)$('linkText').value=prev.link;ready()});
+   box.appendChild(back);ready();
+  }catch(e){}
+ }
  async function loadResearchSuggestions(src){
   var target=$('growthResearchHints');
   try{
@@ -150,20 +169,13 @@
     target.appendChild(topics);
    }
    if(x.internal_url){
-    // The suggested link is shown, not filled in silently: the editor reviews it and fills it with one click.
-    var sug=document.createElement('p');sug.textContent='Suggested internal link: '+x.internal_url+(x.internal_label?' with the text “'+x.internal_label+'”':'')+(x.internal_reason?'. '+x.internal_reason:'');target.appendChild(sug);
-    var use=document.createElement('button');use.type='button';
-    use.textContent='Use this link';
-    use.addEventListener('click',function(){
-     if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
-     if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
-     var caution=document.createElement('p');
-     caution.textContent='Verify the destination and context before approving the handoff.';
-     target.appendChild(caution);
-    });
-    target.appendChild(use);
+    // Filled in automatically for review (the editor approves the whole package; the fields stay editable).
+    if(!$('linkUrl').value)$('linkUrl').value=x.internal_url;
+    if(!$('linkText').value&&x.internal_label)$('linkText').value=x.internal_label;
+    var sug=document.createElement('p');sug.textContent='Internal link filled in by Growth: '+x.internal_url+(x.internal_reason?'. '+x.internal_reason:'')+' Check it, change it or clear both fields.';target.appendChild(sug);
    }
    else{var none=document.createElement('p');none.textContent='No internal link suggested by the research. The link is optional: leave both fields empty, or add a page of your own site that helps this reader next.';target.appendChild(none)}
+   void loadSeoProposal(target,x.internal_url||'');
    if(!x.meta||!x.title){
     var missing=document.createElement('p');
     missing.textContent='Missing SEO metadata requires an editor-written, source-checked proposal.';

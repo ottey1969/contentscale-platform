@@ -141,6 +141,13 @@ function exportBody(extra={}){
   approved_changes:proposal.sections.map(s=>({approved:true,evidence_ref:'growth_proposal:'+proposal.id,html:sectionHtml(s),placement:s.placement})),...extra};
 }
 
+test('3b. the SEO proposal route answers for the owner only; without a model it proposes nothing and returns the current title',async()=>{
+ assert.equal((await api('GET','/api/tracker-client/share-tok/growth/cms-export/seo-proposal?page_id='+ids.page)).status,403);
+ const r=await api('GET','/api/tracker-client/owner-tok/growth/cms-export/seo-proposal?page_id='+ids.page+'&link='+encodeURIComponent('https://evil.example/x'));
+ assert.equal(r.status,200);assert.equal(r.body.success,true);assert.equal(r.body.published,false);
+ assert.equal(r.body.link_url,null,'a link to another site is never passed on');
+ assert(['NO_MODEL','MODEL_UNAVAILABLE','NOT_PROPOSED','AI_PROPOSAL_FOR_REVIEW'].includes(r.body.status));assert.equal(typeof r.body.current.title,'string');
+});
 test('4. the reviewed package carries the proposal text and placement; nothing is published',async()=>{
  const before=outbound.length;
  const j=await api('POST','/api/tracker-client/owner-tok/growth/cms-export',{...exportBody(),format:'json'});
