@@ -204,3 +204,18 @@ test('qualified leads favors buyer-intent signals while keeping GSC numbers fact
  assert.equal(f.runners_up[0].clicks,160);
  assert.match(f.method,/not measured conversions/);
 });
+
+test('automatic Growth picks one best next opportunity using both buyer signals and SEO traffic',()=>{
+ const cases=[
+  R('https://contentscale.site/content-scaling/','content scaling','NL',4000,180,8),
+  R('https://contentscale.site/generative-engine-optimization-consultant/','generative engine optimization consultant','NL',75,3,8)
+ ];
+ const auto=findOpportunities({rows:cases,pages,domain:'contentscale.site',customerCountries:['NL'],goal:'AUTO_BEST_OPPORTUNITY'});
+ const click=findOpportunities({rows:cases,pages,domain:'contentscale.site',customerCountries:['NL']});
+ assert.equal(auto.goal,'AUTO_BEST_OPPORTUNITY');
+ assert.equal(click.goal,'RELEVANT_CLICKS');
+ assert.equal(auto.best.query,'content scaling','an exceptional organic opportunity must still be allowed to win');
+ assert(auto.best.automatic_basis.search_opportunity>0);
+ assert(auto.runners_up[0].automatic_basis.buyer_signal>0);
+ assert.equal(auto.best.lead_priority_unverified,true,'do not claim measured conversions');
+});
