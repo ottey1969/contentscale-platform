@@ -701,7 +701,7 @@
      actionStages.forEach(function(st){
       addAction('Review a relevant next step',String(st.role||st.url||'Relevant page'),
        ['Destination: '+String(st.url||'Not established'),'Topic match: '+String(st.topic_match||'Not established'),
-        st.link&&st.link.status==='LINK_CANDIDATE_FOR_REVIEW'?'Suggested context: '+String(st.link.under_heading||'')+' — anchor: '+String(st.link.anchor_text||''):String(st.link&&st.link.action||'Verify a contextual link before editing.'),
+        st.link&&st.link.status==='LINK_CANDIDATE_FOR_REVIEW'?'Suggested context: '+String(st.link.under_heading||'')+(st.link.anchor_text?' — anchor: '+String(st.link.anchor_text):' — write your own link text'):String(st.link&&st.link.action||'Verify a contextual link before editing.'),
         'The informational answer must remain complete; no promotional claims are added.']);
      });
      var rules=node('details',null,beyond);node('summary','Editorial safeguards',rules);
