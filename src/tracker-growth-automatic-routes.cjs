@@ -968,7 +968,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    'button:disabled{opacity:.5}.info{color:#5b6475;font-size:13px}.error{color:#b42318}',
    'pre{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:8px 0}@media(max-width:600px){body{padding:12px}section{padding:12px}}',
    '#researchStatus.working{position:relative;padding-left:30px}#researchStatus.working::before{content:"";position:absolute;left:4px;top:50%;width:14px;height:14px;margin-top:-9px;border:2px solid #c7d2fe;border-top-color:#1d4ed8;border-radius:50%;animation:growthSpin .8s linear infinite}@media(prefers-reduced-motion:reduce){#researchStatus.working::before{animation:none;border-color:#1d4ed8}}#marketSave[data-state=working],#marketSave[data-state=saved]{background:#1d4ed8;position:relative;padding-right:42px}#marketSave[data-state=working]::after{content:\"\";position:absolute;right:15px;top:50%;width:13px;height:13px;margin-top:-8px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:growthSpin .7s linear infinite}#marketSave[data-state=saved]{background:#15803d}#marketSaid[data-state=saved]{color:#166534}#marketSaid[data-state=error]{color:#b42318}@keyframes growthSpin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#marketSave[data-state=working]::after{animation:none}}',
-   '#marketSetting input{font:inherit;padding:6px 8px;border:1px solid #c8d2e0;border-radius:6px;margin:4px 0;box-sizing:border-box}#marketInput{width:min(100%,560px)}#marketLanguage{width:min(100%,200px)}',
+   'a.growth-primary-finish{display:inline-block;background:#1d4ed8;color:white;padding:11px 16px;border-radius:8px;font-weight:700;text-decoration:none}#marketSetting input{font:inherit;padding:6px 8px;border:1px solid #c8d2e0;border-radius:6px;margin:4px 0;box-sizing:border-box}#marketInput{width:min(100%,560px)}#marketLanguage{width:min(100%,200px)}',
    '</style><script defer src="/tracker-growth-ui.js?v='+assetVersion()+'"></script><script defer src="/growth-competitor-overview.js?v='+assetVersion()+'"></script><script defer src="/growth-gap-checklist.js?v='+assetVersion()+'"></script><script defer src="/growth-market-controls.js?v='+assetVersion()+'"></script><script defer src="/growth-edit-copy.js?v='+assetVersion()+'"></script><script defer src="/growth-automatic-report-ui.js?v='+assetVersion()+'"></script></head>',
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
@@ -976,14 +976,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    marketBox,
    '<section><div role="status" id="researchStatus">Loading saved research…</div></section>',
    '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',
-   '<section id="growthFinalActions"><h2>Finish · Review and export</h2><p class="info">Complete the editorial review above before downloading. Rerun research only if you deliberately need new evidence.</p>',
-   '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?
-    'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button> ',
-   '<button id="retryResearch" type="button" hidden style="background:#64748b">Run research again</button></section>',
-   '<details id="growthNextAction"><summary>Later: reviewed CMS handoff and measurement</summary>',
-   allowHandoff?'<p><a id="growthEditorHandoff" href="'+handoff+'">Prepare reviewed Wix / WordPress / other CMS package</a> — original URL preserved, editor approval required.</p>':
-    v.page.case_study_active?'<p>Active Case Study baseline is protected. Research and measurement remain available; no publishing package until unlocked.</p>':
-    '<p>Shared read-only access: research and measurement only. The account owner approves a CMS package.</p>',
+   '<section id="growthFinalActions"><h2>Finish · Prepare your CMS package</h2><p class="info">After Step 3, review and combine written concepts in the CMS package. Nothing is published automatically.</p>',
+   allowHandoff?'<p><a id="growthEditorHandoff" class="growth-primary-finish" href="'+handoff+'">Prepare CMS package</a></p>':
+    '<p class="info">CMS handoff requires Tracker owner access and an unlocked page.</p>',
+   '<details id="growthTechnicalExport"><summary>Advanced · Technical report and research controls</summary><p class="info">JSON is for audits and troubleshooting, not required for publication.</p>',
+   '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button> ',
+   '<button id="retryResearch" type="button" hidden style="background:#64748b">Run research again</button></details></section>',
+   '<details id="growthNextAction"><summary>Measurement after publication</summary>',
    '<p><a id="growthMeasurementLink" href="'+base+'/measurement">Review publication measurement readiness</a> — GSC is optional for research and required only for verified Google measurements.</p></details>',
    '</main></body></html>'
   ].join('');
