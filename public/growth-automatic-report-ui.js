@@ -37,7 +37,8 @@
  // Pop-up before writing when no AI answer for this search term is at most 14 days old: the editor chooses.
  // Resolves 'WITH_AI' (answers present), 'WITHOUT_AI' (editor continues) or null (editor checks AI first).
  function aiGate(d){
-  var c=d.ai_check;if(!c||(c.summary&&c.summary.checked>0))return Promise.resolve('WITH_AI');
+  var c=d.ai_check;if(c&&c.summary&&c.summary.checked>0)return Promise.resolve('WITH_AI');
+  if(!c)c={search_term:runQuery||'this search',older_answers_not_counted:0,max_age_days:14};
   return new Promise(function(resolve){
    var dlg=document.createElement('dialog');dlg.className='growth-ai-gate';dlg.setAttribute('aria-labelledby','aiGateTitle');
    node('h2','No current AI answers for “'+c.search_term+'”',dlg).id='aiGateTitle';
@@ -233,7 +234,9 @@
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
   // AI answers for this search term: offered right after the decision, read fresh on every load, never re-running research.
-  if(d.ai_check){var aiBox=section('Step 2 · AI answers for “'+d.ai_check.search_term+'” — optional');aiBox.id='growthAiCheck';renderAiCheck(aiBox,d);
+  if(d.ai_check){var aiBox=section('Step 2 · AI answers for “'+d.ai_check.search_term+'” — optional');aiBox.id='growthAiCheck';
+   if(!d.ai_check.summary||!d.ai_check.summary.checked)node('p','No current AI-system answers available. When you choose Write selected with AI in Step 3, a pop-up will let you check AI systems first or continue using Google research only.',aiBox);
+   renderAiCheck(aiBox,d);
    if(keepText){var t2=aiBox.querySelector('textarea:not([readonly])'),s2=aiBox.querySelector('select');if(t2)t2.value=keepText;if(s2&&keepEngine)s2.value=keepEngine}}
   // What the ranking pages have and this page does not: the editor chooses what goes on the page (Growth's own proposal
   // above is one suggestion; any item can be ticked here).
