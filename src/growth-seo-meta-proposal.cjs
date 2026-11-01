@@ -19,6 +19,7 @@ function prompt({query,current,concepts,linkUrl}){
  return ['You write the SEO title, the meta description and one internal link text for an existing web page. Return JSON only.',
   'Goal: a searcher who sees the result understands exactly what the page answers and wants to click; no clickbait.',
   'Rules: title 35-60 characters and it contains the search term; meta description 110-155 characters, says what the reader learns or can do on the page, including the new sections; same language as the page.',
+  'Voice: the service speaks, never a person: no "I", "my", "me", "ik", "mijn" and no founder, even if the current description uses them.',
   'Use only what the page and its new sections cover. No numbers, years, prices, superlatives (best, #1, ultimate), promises or offers unless they appear word for word in the current title or description.',
   'link_text: 2-8 words for a link to the given page, saying where the link goes (not "click here", not a full sentence).',
   'JSON: {"title":"...","meta_description":"...","link_text":"...|null","why":"one sentence"}',
@@ -40,6 +41,7 @@ function validate(raw,{query,current,linkUrl}){
   for(const n of v.match(/\d[\d.,%]*/g)||[])if(!source.includes(n.toLowerCase()))problems.push(k+'_NUMBER_NOT_IN_PAGE');
   const m=v.match(PROMISE);if(m&&!source.includes(m[0].toLowerCase()))problems.push(k+'_PROMISE_NOT_IN_PAGE');
  }
+ if(/(?:^|[^A-Za-z'’])I(?:'m|’m|'ve|’ve)?(?![A-Za-z'’])|\b(my|me|mine|ik|mijn|mij|founder|oprichter)\b/i.test(title+' '+meta+' '+(link||'')))problems.push('PERSONAL_OR_FOUNDER_VOICE');
  const lw=link?link.split(/\s+/).length:0;
  const linkOk=!!(linkUrl&&link&&lw>=2&&lw<=8&&!/click here|klik hier/i.test(link));
  return problems.length?{ok:false,reason:[...new Set(problems)].join(',')}:{ok:true,title,meta,link_text:linkOk?link:null,why:clip(a.why,240)};

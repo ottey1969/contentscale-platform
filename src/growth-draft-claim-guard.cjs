@@ -13,6 +13,16 @@ const SOFTEN=[[/\b(?:completely|fully|totally|entirely)\s+eliminates\b/gi,'reduc
  [/\bdefinitely\b/gi,'often'],[/\bcertainly\b/gi,'often'],[/\bwill (?=(?:help|make|let|give|allow|save|reduce|improve)\b)/gi,'can '],
  [/\bmaximi[sz]es (?=(?:the |your |its |their )?(?:value|impact|reach|efficiency|output)\b)/gi,'can increase '],[/\bmaximi[sz]e (?=(?:the |your |its |their )?(?:value|impact|reach|efficiency|output)\b)/gi,'increase ']];
 const ABSOLUTE=/\b(guarantee[sd]?|guaranteeing|proven|prove[sn]?|100\s?%|foolproof|risk[- ]free|flawless|perfect results?|unmatched|unbeatable|number one|#\s?1|best[- ]in[- ]class|the best|only way|no risk|instantly|overnight|without fail|eliminates?|(?:the|a) complete (?:picture|context|view|solution|answer|performance \\w+)|completely (?:removes?|solves?|prevents?)|(?:exact|exactly|precisely)\s+(?:\w+\s+){0,2}(?:return|results?|impact|roi|numbers?|figures?|performance|value|gain)s?)\b/i;
+// 1a. Voice: the site speaks as the service, never as a person or founder (owner rule 2026-11-01). First person singular
+// in English, Dutch, French and German, and founder words, are flagged wherever they appear.
+const PERSONAL_VOICE=/(?:^|[^A-Za-z'’])(I|I'm|I’m|I've|I’ve|I'd|I’d|I'll|I’ll)(?![A-Za-z'’])|\b(me|my|mine|myself|ik|mijn|mij|mezelf|moi|mon|ma|mes|ich|mein|meine|meinen|mir|mich|founder|co-founder|oprichter|medeoprichter|fondateur|fondatrice|gründer|gründerin)\b/i;
+function personalVoice(sentence){
+ const m=String(sentence).match(PERSONAL_VOICE);if(!m)return null;
+ const w=m[1]||m[2];
+ // A lowercase "i" is not the pronoun; "me" and "ma" only as words (Dutch "me", French "ma"), checked case-insensitively.
+ if(m[1]&&!/^I/.test(m[1]))return null;
+ return w;
+}
 // 1b. Unsupported superlatives about a service or product (allowed only if the destination page uses the same word).
 const SUPERLATIVE=/\b(safest|fastest|cheapest|easiest|most (?:comfortable|effective|reliable|trusted|popular|affordable|durable|accurate|efficient|powerful)|best (?!practices?\b))\b/i;
 // 2. Outcome promises about rankings, traffic, leads or revenue.
@@ -149,6 +159,7 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
   for(const [re,to] of SOFTEN)softened=softened.replace(re,m=>{applied.push({from:m,to});return /^[A-Z]/.test(m)?to[0].toUpperCase()+to.slice(1):to});
   sentence=softened;
   const m1=affirmed(sentence,ABSOLUTE);if(m1)flag('ABSOLUTE_CLAIM','Contains the unqualified claim “'+m1[0]+'”; the sources do not prove it and it cannot be softened without changing its meaning.');
+  const pv=personalVoice(original);if(pv)flag('PERSONAL_OR_FOUNDER_VOICE','Written as a person (“'+pv+'”). The page speaks as the service: name the service or write without a person, never “I”, “my” or a founder.');
   const m1b=sentence.match(SUPERLATIVE);if(m1b&&!dest.includes(lower(m1b[0])))flag('UNSUPPORTED_SUPERLATIVE','Uses the comparative claim “'+m1b[0]+'” without support on the destination page.');
   const m2b=!MEASURING_ADVICE.test(sentence)&&sentence.match(COMPARATIVE);if(m2b)flag('UNPROVEN_OUTCOME_CLAIM','Asserts a comparative performance result (“'+m2b[0]+'”) that no measurement on the page or in the sources supports.');
   const m2=original.match(OUTCOME)||sentence.match(OUTCOME);if(m2)flag('UNPROVEN_OUTCOME_CLAIM','Promises a ranking, traffic, lead or revenue outcome (“'+m2[0]+'”). No measurement supports it.');
