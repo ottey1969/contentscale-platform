@@ -67,8 +67,15 @@
  }
  function renderAiCheck(box,d){
   var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
+  var recent=(x.engines||[]).filter(function(e){return e.checked}).length;
+  node('p','AI-system checks for this exact search: '+recent+' of '+(x.total||x.engines&&x.engines.length||0)+' current (within '+(c.max_age_days||14)+' days). This is saved check evidence, not a new live AI scan.',box);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
-  var ul=node('ul',null,box);(x.engines||[]).forEach(function(e){node('li',e.label+': '+(!e.checked?'not checked':!e.verifiable?'no RESOURCES list — not verified':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you')+(e.checked&&e.verifiable?' ('+e.sources+' sources)':''),ul)});
+  var history=new Map((c.prior_checks||[]).map(function(e){return [e.id,e.checked_at]}));
+  var ul=node('ul',null,box);(x.engines||[]).forEach(function(e){
+   var previous=history.get(e.id),when=e.checked_at||previous;
+   var label=e.checked?(!e.verifiable?'Checked, sources not verifiable':e.exact_page_cited?'Checked, cites this exact page':e.own_site_cited?'Checked, cites this website':'Checked, no citation to this website'):previous?'Previously checked, expired':'Not checked for this search';
+   node('li',e.label+': '+label+(when?' · '+String(when).slice(0,10):'')+(e.checked&&e.verifiable?' · '+e.sources+' cited sources':''),ul);
+  });
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
   var form=node('div',null,box);
