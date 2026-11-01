@@ -330,7 +330,7 @@
    linkHtml='<p><a href="'+esc(link)+'">'+esc(label)+'</a></p>';
   }
   const paragraphs=copy.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n');
-  const html='<section><h2>'+esc(heading)+'</h2>'+paragraphs+linkHtml+'</section>';
+  const html='<section><h2>'+esc(heading)+'</h2>'+paragraphs+'</section>';
   const proposal=safe.proposal;
   const reviewedSections=[{approved:true,evidence_ref:proposal?'growth_proposal:'+proposal.id:'editor_reviewed:'+($('query').value.trim()||'original_page'),
    html,placement:placementOf($('mainPlacement'))}];
@@ -342,6 +342,14 @@
    var ref=group.dataset.proposalId?'growth_proposal:'+group.dataset.proposalId:proposal?'growth_proposal:'+proposal.id:'editor_reviewed:AI_source_review';
    reviewedSections.push({approved:true,evidence_ref:ref,html:markup,placement:placementOf(group)});
   });
+  if(linkHtml){
+   var terms=(label+' '+new URL(link).pathname.replace(/[-_/]+/g,' ')).toLowerCase().split(/[^a-z0-9]+/).filter(function(w){return w.length>2&&!['content','page','with','the','and','for'].includes(w)});
+   var targets=[{index:0,title:heading}].concat([...document.querySelectorAll('[data-growth-draft-section]')].map(function(g,i){return {index:i+1,title:g.querySelector('.draft-h2').value}}));
+   var ranked=targets.map(function(t){var title=t.title.toLowerCase();return {index:t.index,score:terms.reduce(function(n,w){return n+(title.split(/[^a-z0-9]+/).includes(w)?1:0)},0)}}).sort(function(a,b){return b.score-a.score});
+   var target=ranked[0];
+   if(target&&target.score>0)reviewedSections[target.index].html=reviewedSections[target.index].html.replace('</section>',linkHtml+'</section>');
+   else reviewedSections[0].html=reviewedSections[0].html.replace('</section>',linkHtml+'</section>');
+  }
   var manual=src.manual_source_required===true;
   if(manual&&(!$('manualAcknowledged').checked||$('manualOriginalHtml').value.trim().length<120))
    throw Error('Provide historical original-page HTML and acknowledge that it is not live-verified');

@@ -132,18 +132,19 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   .map(b=>'**'+clean(b.h2).slice(0,200)+'** answers “'+clean(b.answers).slice(0,200)+'”. Sources: '+((b.sources||[]).map(x=>clean(x).slice(0,220)).join('; ')||'none')+'.'+(b.warning?' ⚠ '+clean(b.warning).slice(0,300):''));
  const editorText=proposal&&proposal.editor_changed_text;
  const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length+review.basis.length>0;
+ const localBusiness=/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?@[Tt]ype["']?\s*:\s*["'](?:LocalBusiness|RoofingContractor|GeneralContractor|HomeAndConstructionBusiness|Plumber|Electrician|HVACBusiness|Store|Restaurant)["']/i.test(originalHtml)||/https?:\/\/(?:www\.)?google\.[^\s"']+\/maps\/place\//i.test(originalHtml);
  const delivery='CMS-independent handoff for existing page '+canonicalUrl+'\n'+
  'No autopublishing. Implement in your normal website editor using native, indexable text components.\n'+
  'Platform: '+cms+'. Keep original URL, navigation, design, existing text and images unless explicitly reviewed.\n'+
  '1. Open the ORIGINAL page in the CMS, not a new duplicate URL.\n'+
  '2. Place each approved section exactly as stated, and preserve the existing H1, template, images, mobile styling, and content:\n'+placementSteps+'\n'+
  '3. Set page SEO title and meta description only if the editor supports them; do not paste meta tags into the page body.\n'+
- '4. Insert and test contextual internal/external links and click-to-call controls.\n'+
+ '4. Insert and test relevant contextual internal/external links and visitor contact paths.\n'+
  '5. Use native Wix text elements for SEO (when CMS is Wix); do not treat an HTML iframe/embed as the page content.\n'+
  '6. Check desktop/mobile rendering, H2 answers, duplicate imagery, credibility claims, contact actions, and live canonical URL.\n'+
  '7. Publish only after the website owner/editor approves the final rendered page and documents the actual publication date.\n'+
- '8. Compare Search Console page-specific equivalent non-overlapping dates when accessible; otherwise label visibility as unverified. Track GBP call-button actions separately from connected calls.\n'+
- 'This delivery is not proof of rankings, calls, jobs or paid revenue.\n';
+ '8. Compare Search Console page-specific equivalent non-overlapping dates when accessible; otherwise label visibility as unverified. '+(localBusiness?'For a verified local business, track GBP call-button actions separately from connected calls.':'Track relevant contact enquiries and qualified leads independently.')+'\n'+
+ 'This delivery is not proof of rankings, enquiries, customers or paid revenue.\n';
  const manifest={
   format:'contentscale-growth-cms-handoff/v1',delivery:'reviewed_manual_changes',cms,
   existing_url:canonicalUrl,source_sha256:sha(originalHtml),focus_query:clean(focusQuery)||null,
@@ -164,11 +165,10 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   {name:'03-content-fragments.html',content:'<!-- Paste sections into native SEO-indexable CMS content, not an iframe -->\n'+fragments+'\n'},
   {name:'04-seo-metadata.json',content:JSON.stringify({existing_page_url:canonicalUrl,title:pageTitle.trim(),description:metaDescription.trim(),new_page_required:false},null,2)+'\n'},
   {name:'05-measurement-plan.md',content:'# Baseline and outcome measurement\n\nEvidence: '+evidenceScope+
-   '\nBefore publication: capture URL, 28-day page-scoped GSC impressions, clicks, CTR, position (if available), and current GBP interactions independently.\n'+
+   '\nBefore publication: capture URL, 28-day page-scoped GSC impressions, clicks, CTR, position (if available), and qualified enquiries where recorded. '+(localBusiness?'For verified local businesses also record GBP interactions independently.':'')+'\n'+
    'After publication: compare equal, non-overlapping page periods at 14/30/60 days; attribute causality cautiously.\n'+
    'Without Search Console access, label metrics NEEDS ACCESS. Do not insert zeros.\n'+
-   'GBP phone-button taps are not answered calls; call logs, quotes, won jobs require independent information.\n'+
-   'Review any real project photos/reviews with the owner; never invent customer experiences.\n'},
+   (localBusiness?'GBP phone-button taps are not answered calls; call logs, quotes and won jobs require independent information.\nReview any real project photos/reviews with the owner; never invent customer experiences.\n':'Enquiry and qualified-lead counts require independent evidence such as form records, emails or a CRM. Do not invent customer outcomes.\n')},
   // Why these changes were proposed: the research and sources they rest on, as recorded when the concept was written.
   ...(reviewNotes&&reviewNotes.dossier&&typeof reviewNotes.dossier==='object'?[{name:'07-evidence-dossier.json',content:JSON.stringify(reviewNotes.dossier,null,2)+'\n'}]:[]),
   ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
