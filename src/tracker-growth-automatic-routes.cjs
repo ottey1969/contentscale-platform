@@ -494,6 +494,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const fresh=answers.filter(a=>Date.now()-Date.parse(a.created_at)<=AI_MAX_AGE_DAYS*86400000);
   return {search_term:term,page_url:target,prompt:aiAnswers.directPrompt(term),engines:aiAnswers.ENGINES,max_paste:aiAnswers.MAX_PASTE,
    can_paste:v.canEdit===true,older_answers_not_counted:answers.length-fresh.length,max_age_days:AI_MAX_AGE_DAYS,
+   prior_checks:aiAnswers.summarizeAiAnswers(answers,{pageUrl:target,googleUrls}).engines.map(e=>({id:e.id,checked_at:e.checked_at||null})),
    summary:aiAnswers.summarizeAiAnswers(fresh,{pageUrl:target,googleUrls})};
  }
  // The AI check before the research has finished: for the page's tracked keyword, optional, never running research.
