@@ -95,7 +95,7 @@
   var ownerReport=main.getAttribute('data-owner-draft')==='true'&&d.access?.owner_report===true;
   var outcome=ownerReport&&d.editorial_work_packet?.editorial_decision?
    d.editorial_work_packet.editorial_decision:(d.editorial_decision_gate||{});
-  var primary=section('Growth result · decision and evidence');
+  var primary=section('Step 1 · What Growth found and proposes');
   node('h3',d.outcome_context?d.outcome_context.headline:String(outcome.decision||'DATA_BLOCKED').replace(/_/g,' '),primary);
   if(d.outcome_context){var ocx=d.outcome_context;
    if(ocx.distinction)node('p',ocx.distinction,primary);
@@ -232,7 +232,7 @@
    node('p','A draft was generated but a distinct, paired content improvement is not verified. Review the draft and evidence below before approving any edit.',primary);
   }
   // AI answers for this search term: offered right after the decision, read fresh on every load, never re-running research.
-  if(d.ai_check){var aiBox=section('AI answers for “'+d.ai_check.search_term+'” — optional');aiBox.id='growthAiCheck';renderAiCheck(aiBox,d);
+  if(d.ai_check){var aiBox=section('Step 2 · AI answers for “'+d.ai_check.search_term+'” — optional');aiBox.id='growthAiCheck';renderAiCheck(aiBox,d);
    if(keepText){var t2=aiBox.querySelector('textarea:not([readonly])'),s2=aiBox.querySelector('select');if(t2)t2.value=keepText;if(s2&&keepEngine)s2.value=keepEngine}}
   // What the ranking pages have and this page does not: the editor chooses what goes on the page (Growth's own proposal
   // above is one suggestion; any item can be ticked here).
@@ -241,6 +241,8 @@
   if(d.gap_list&&typeof renderChecklist==='function'){
    var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
    var choiceBox=node('section',null,container);choiceBox.id='growthGapChoice';
+   node('h2','Step 3 · Choose more improvements from the ranking pages — optional',choiceBox);
+   node('p','Everything the ranking pages have and this page does not. Growth\'s proposal in step 1 is one suggestion; tick what you want on your page and Growth writes concepts only for that. Each written concept is stored for this page; the CMS package lists it so you can add it next to the proposal.',choiceBox);
    try{renderChecklist({...gl,target_url:d.url},choiceBox,{write:writeUrl?async function(ids){
     // Without AI answers of the last 14 days the editor decides first: check AI, or continue without it.
     var choice=await aiGate(d);if(!choice)return {success:false,code:'Check the AI answers first (see “AI answers for …” above); your selection is kept.'};
@@ -250,6 +252,9 @@
     if(!sel||sel.success===false)return sel;
     return post(writeUrl,{gap_list_id:gl.id,item_ids:ids,ai_check_choice:choice})}:null})}catch(e){}
   }
+  // Everything below is the evidence behind steps 1–3: collapsed, so the page shows the decisions first.
+  researchDetails=node('details',null,container);researchDetails.id='growthEvidence';
+  node('summary','Research details — the evidence behind this (search results, competitors, next pages, technical data)',researchDetails);
   var superseded=!!(decision.final_decision&&recommendation&&recommendation.stage==='RESEARCH_STARTING_POINT');
   var s=superseded?section('How the research started'):section('Research context and next check');
   if(superseded)node('p','Starting point only. The decision at the top of this report ('+String(decision.final_decision.decision||'').replace(/_/g,' ')+') replaces this step.',s);
@@ -706,8 +711,7 @@
    if(actions.length)refreshActions();
    else node('p','No actionable evidence-backed opportunities were found for this page.',beyond);
   }
-  researchDetails=node('details',null,container);
-  node('summary','Show full technical evidence, Search and AI observations',researchDetails);
+  node('h2','Technical evidence, Search and AI observations',researchDetails);
   s=section('Automatic research evidence');
   var summary=d.summary||{};
   node('p','Primary page: '+String(summary.primary_source||'UNKNOWN')+
@@ -827,7 +831,8 @@
  }
  async function run(){
   var status=document.getElementById('researchStatus');
-  status.className='';status.textContent=(runMarket||runQuery?'This run, chosen by the Opportunity Finder: '+(runQuery?'“'+runQuery+'”':'')+(runMarket?' in '+runMarket.toUpperCase():'')+' (your page setting is not changed). ':'')+'Analyzing the page, Search Console queries and the ranking pages… AI answers are optional: you can paste them below while this runs.';
+  // Visible activity while the research runs (a spinner; a still mark with reduced motion).
+  status.className='working';if(status.setAttribute)status.setAttribute('aria-busy','true');status.textContent=(runMarket||runQuery?'This run, chosen by the Opportunity Finder: '+(runQuery?'“'+runQuery+'”':'')+(runMarket?' in '+runMarket.toUpperCase():'')+' (your page setting is not changed). ':'')+'Analyzing the page, Search Console queries and the ranking pages… AI answers are optional: you can paste them below while this runs.';
   showAiEarly();
   document.getElementById('retryResearch').disabled=true;
   try{
@@ -843,12 +848,22 @@
    last=result;render(result);pointHandoff(result);
   }catch(e){status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false
-  }finally{document.getElementById('retryResearch').disabled=false}
+  }finally{document.getElementById('retryResearch').disabled=false;if(status.className==='working')status.className='';if(status.removeAttribute)status.removeAttribute('aria-busy')}
  }
  document.getElementById('retryResearch').addEventListener('click',run);
  // Market save is isolated in /growth-market-controls.js so a report-rendering failure cannot disable it.
  document.getElementById('downloadResearch').addEventListener('click',function(){
   if(!last)return;
+  // One file with everything on this page: the Google research, the AI check, the choice list, and what the owner chose
+  // here (ticked improvements, kept/removed statements). Concepts already written are in the CMS package.
+  var outcomeNow=(last.editorial_work_packet&&last.editorial_work_packet.editorial_decision)||last.editorial_decision_gate||{};
+  var ticked=[];try{Array.prototype.forEach.call(document.querySelectorAll('#growthGapChoice input[type=checkbox]'),function(c){if(c.checked)ticked.push(c.value)})}catch(e){}
+  var gapItems=(last.gap_list&&last.gap_list.items)||[];
+  last.owner_inputs={downloaded_at:new Date().toISOString(),
+   selected_improvements:ticked.map(function(id){var it=gapItems.filter(function(x){return x.id===id})[0];return {id:id,title:it?it.title:null}}),
+   statements:((outcomeNow.publication_readiness&&outcomeNow.publication_readiness.statements)||[]).map(function(x){return {text:x.text,decision:x.decision}}),
+   ai_answers_counted:(last.ai_check&&last.ai_check.summary&&last.ai_check.summary.checked)||0,
+   note:'Choices made on this page at the moment of download. Written concepts are stored separately and appear in the CMS package.'};
   var blob=new Blob([JSON.stringify(last,null,2)],{type:'application/json'});
   var href=URL.createObjectURL(blob),a=document.createElement('a');
   a.href=href;a.download=main.getAttribute('data-owner-draft')==='true'?

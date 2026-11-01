@@ -1,4 +1,5 @@
 'use strict';
+const {assetVersion}=require('./growth-asset-version.cjs');
 // Growth for a page that does not exist yet: research starts from a Pre-Write brief (keyword, target market, language)
 // instead of a tracked URL. One Growth system: the same market settings (Growth setting > Pre-Write brief), the same
 // search and ranking-page reading, the same competitor overview and gap list (in new-page mode), the same selection,
@@ -228,7 +229,7 @@ function registerGrowthNewPage(app,pool,data,{fetchLive=fetchPublicGrowthHtml,se
    'button{background:#1d4ed8;color:white;border:0;padding:10px 14px;border-radius:8px;font:inherit;cursor:pointer}button:disabled{opacity:.5}table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid #e5eaf2;padding:8px;text-align:left}'+
    '#marketSetting input{font:inherit;padding:6px 8px;border:1px solid #c8d2e0;border-radius:6px;margin:4px 0;box-sizing:border-box}#marketInput{width:min(100%,560px)}#marketLanguage{width:min(100%,200px)}'+
    '@media(max-width:600px){body{padding:12px}section{padding:12px}}</style>'+
-   '<script defer src="/growth-gap-checklist.js"></script><script defer src="/growth-new-page-ui.js"></script></head><body><main>';
+   '<script defer src="/growth-gap-checklist.js?v='+assetVersion()+'"></script><script defer src="/growth-new-page-ui.js?v='+assetVersion()+'"></script></head><body><main>';
   const send=html=>res.set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex,nofollow').set('Referrer-Policy','no-referrer').type('html').send(head+html+'</main></body></html>');
   if(!owner(req))return send('<p><a href="'+base+'">← Growth</a></p><h1>New page from a Pre-Write brief</h1><p>Only the account owner can research and write new pages.</p>');
   const cid=req.growthTrackerClientId;

@@ -4,7 +4,7 @@
  const token=String(location.pathname.split('/')[2]||'');
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null,proposal:null};
+ const safe={source:null,proposal:null,added:[]};
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
  $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
  function status(id,msg,error){
@@ -35,6 +35,51 @@
   var title=document.createElement('input');title.className='draft-h2';title.value=h2;title.setAttribute('aria-label','Reviewed H2: '+legendText);group.appendChild(title);
   var body=document.createElement('textarea');body.className='draft-copy';body.value=text;body.setAttribute('aria-label','Reviewed copy: '+legendText);group.appendChild(body);
   $('growthAdditionalSections').appendChild(group);
+  return group;
+ }
+ // One tickable line per sentence to check, in the proposal box (the download waits until each is ticked).
+ function checkItem(box,item){
+  var l=document.createElement('label');l.className='check';
+  var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
+  var sp=document.createElement('span');sp.textContent=item;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
+ }
+ // Other proposals and written concepts stored for this page (for example improvements the owner chose on the research
+ // page). Each one is added only when the editor clicks it; its checks come with it and the package records its id.
+ function renderEarlier(list){
+  var box=$('growthEarlier');if(!box)return;box.textContent='';
+  if(!list||!list.length){box.hidden=true;return}
+  box.hidden=false;
+  var h=document.createElement('strong');h.textContent='Also stored for this page: '+list.length+' other concept'+(list.length===1?'':'s');box.appendChild(h);
+  var intro=document.createElement('p');intro.className='small';
+  intro.textContent='Written in the last 30 days, for example for improvements you chose on the research page. Sections already in the text above are left out. Add the ones you want in this package; each still needs your review.';
+  box.appendChild(intro);
+  list.forEach(function(p){
+   var row=document.createElement('div');row.className='earlier-concept';
+   var t=document.createElement('p');
+   t.textContent='#'+p.id+' · '+String(p.created_at||'').slice(0,10)+(p.focus_query?' · “'+p.focus_query+'”':'')+(p.evidence_label?' · '+p.evidence_label:'')+': '+
+    p.sections.map(function(x){return '“'+x.h2+'”'}).join(', ');
+   row.appendChild(t);
+   var b=document.createElement('button');b.type='button';b.textContent='Add to this package';
+   b.addEventListener('click',function(){
+    if(safe.added.some(function(a){return a.id===p.id}))return;
+    var r=p.review||{};safe.added.push({id:p.id,review:r});
+    p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
+    var seen=new Set();
+    (r.flagged||[]).forEach(function(f){checkItem(row,'Rewrite or remove: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason)});
+    ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){(r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(row,'Check: '+item)})});
+    b.disabled=true;b.textContent='Added — review the sections above';
+    $('approved').checked=false;ready();
+   });
+   row.appendChild(b);box.appendChild(row);
+  });
+ }
+ // The review notes of the main proposal plus those of every added concept, so the package checks all flagged sentences.
+ function mergedReview(main){
+  var out={},keys=['needs_fact_check','needs_owner_confirmation','needs_safety_review','requirements','flagged','basis','competitor_sources'];
+  [main||{}].concat(safe.added.map(function(a){return a.review||{}})).forEach(function(r){
+   keys.forEach(function(k){if(Array.isArray(r[k]))out[k]=(out[k]||[]).concat(r[k])});
+   if(r.dossier&&!out.dossier)out.dossier=r.dossier});
+  return out;
  }
  // The checked Growth proposal for this page is used as-is: same H2s, text, placement and fact-check list.
  async function loadProposal(src){
@@ -65,16 +110,13 @@
     // One tick per sentence, under the first (strictest-listed) check that names it.
     var items=(r[g[0]]||[]).filter(function(x){if(seen.has(x))return false;seen.add(x);return true});if(!items.length)return;
     var t=document.createElement('p');t.textContent=g[1]+' (tick each one before downloading):';box.appendChild(t);
-    items.forEach(function(item){
-     var l=document.createElement('label');l.className='check';
-     var c=document.createElement('input');c.type='checkbox';c.className='fact-item';c.addEventListener('change',ready);
-     var sp=document.createElement('span');sp.textContent=item;l.appendChild(c);l.appendChild(sp);box.appendChild(l);
-    });
+    items.forEach(function(item){checkItem(box,item)});
    });
    if((r.competitor_sources||[]).length){
     var cs=document.createElement('p');cs.className='small';
     cs.textContent='Compared with: '+r.competitor_sources.map(x=>x.url).join(' · ');box.appendChild(cs);
    }
+   renderEarlier(d.earlier);
    $('approved').checked=false;ready();
   }catch(e){/* no proposal: manual or AI-assisted text stays available */}
  }
@@ -200,7 +242,7 @@
     $('copy').value=(parts[0].paragraphs||[]).join('\n\n');
    }
    // An AI draft replaces the checked Growth proposal; the package then no longer claims to come from it.
-   safe.proposal=null;$('growthProposal').hidden=true;$('growthProposal').textContent='';$('mainPlacement').textContent='';
+   safe.proposal=null;safe.added=[];if($('growthEarlier')){$('growthEarlier').hidden=true;$('growthEarlier').textContent=''}$('growthProposal').hidden=true;$('growthProposal').textContent='';$('mainPlacement').textContent='';
    $('growthAdditionalSections').textContent='';
    parts.slice(1,5).forEach(function(section,i){addSection(section.h2,(section.paragraphs||[]).join('\n\n'),'AI draft section '+(i+2)+' · verify facts',null)});
    $('approved').checked=false;ready();
@@ -231,7 +273,8 @@
    var body=group.querySelector('.draft-copy')?.value.trim()||'';
    if(!h2||body.length<30)throw Error('Review every AI section or remove empty suggestions');
    var markup='<section><h2>'+esc(h2)+'</h2>'+body.split(/\n\s*\n/).filter(Boolean).map(t=>'<p>'+esc(t.trim()).replace(/\n/g,' ')+'</p>').join('\n')+'</section>';
-   reviewedSections.push({approved:true,evidence_ref:proposal?'growth_proposal:'+proposal.id:'editor_reviewed:AI_source_review',html:markup,placement:placementOf(group)});
+   var ref=group.dataset.proposalId?'growth_proposal:'+group.dataset.proposalId:proposal?'growth_proposal:'+proposal.id:'editor_reviewed:AI_source_review';
+   reviewedSections.push({approved:true,evidence_ref:ref,html:markup,placement:placementOf(group)});
   });
   var manual=src.manual_source_required===true;
   if(manual&&(!$('manualAcknowledged').checked||$('manualOriginalHtml').value.trim().length<120))
@@ -241,7 +284,8 @@
     manual_source_acknowledged:true,source_provenance:'OWNER_SUPPLIED_UNVERIFIED'}:{}),
    cms:$('cms').value,evidence_scope:$('evidence').value,focus_query:$('query').value.trim(),
    seo_title:$('title').value.trim(),meta_description:$('meta').value.trim(),
-   ...(proposal?{growth_proposal_id:proposal.id,review_notes:proposal.review||null}:{}),
+   ...(proposal?{growth_proposal_id:proposal.id,review_notes:mergedReview(proposal.review)}:{}),
+   ...(proposal&&safe.added.length?{added_growth_proposal_ids:safe.added.map(function(a){return a.id})}:{}),
    approved_changes:reviewedSections};
  }
  async function post(body,format){
