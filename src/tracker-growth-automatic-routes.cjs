@@ -64,7 +64,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -508,7 +508,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  app.get('/api/tracker-client/:token/growth/auto-research/saved',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY_SAVED_REPORT'});
-  try{const row=await storedResearch.load(pool,v);
+  try{const row=await (typeof loadCompletedReport==='function'?loadCompletedReport({v}):storedResearch.load(pool,v));
    if(!row)return res.set('Cache-Control','private, no-store').json({success:true,found:false});
    const report={...row.report,restored_from_database:true,saved_at:row.saved_at};
    if(typeof loadAiAnswers==='function'){const term=String(v.queryOverride||v.page.keyword||'').trim();
@@ -745,7 +745,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     draft_provider_status:completion.status,evidence_status:evidenceStatus,
     owner_only:true,automatic_publishing:false,case_study_unchanged:true}};
   // Persist before responding, so closing the browser never loses the completed owner report.
-  try{await storedResearch.save(pool,v,completedReport)}
+  try{await (typeof saveCompletedReport==='function'?saveCompletedReport({v,report:completedReport}):storedResearch.save(pool,v,completedReport))}
   catch(e){return res.status(503).set('Cache-Control','private, no-store').json({success:false,code:'GROWTH_REPORT_NOT_SAVED'})}
   return res.set('Cache-Control','private, no-store').json(completedReport);
  });
