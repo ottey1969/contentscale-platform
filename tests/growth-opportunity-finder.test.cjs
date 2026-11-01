@@ -187,7 +187,7 @@ test('owner Cockpit 2026-10-31: "content scaling" in the US is not dropped becau
 
 test('qualified leads favors buyer-intent signals while keeping GSC numbers factual',()=>{
  const rows=[
-  R('https://contentscale.site/content-scaling/','content scaling','NL',420,160,8),
+  R('https://contentscale.site/content-scaling/','content scaling','NL',300,160,8),
   R('https://contentscale.site/generative-engine-optimization-consultant/','generative engine optimization consultant','NL',110,2,8)
  ];
  const f=findOpportunities({rows,pages,domain:'contentscale.site',customerCountries:['NL'],goal:'QUALIFIED_LEADS'});
