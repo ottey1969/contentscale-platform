@@ -24,13 +24,20 @@ function proposeHandoffFromResearch(report,canonicalUrl){
     !differentIntent.test(candidateIntent);
   }catch{return false}
  });
+ // No contextual candidate in the site inventory: the reader route of this research (information → action) names the
+ // next page for the reader; its own anchor when it is real link text, else the page's tracked keyword.
+ const step=!link&&report.reader_funnel?.for_url===canonicalUrl?(report.reader_funnel.stages||[]).find(x=>{
+  try{const u=new URL(x.url);return x.stage==='ACTION'&&ownOrigin&&u.protocol==='https:'&&u.origin===ownOrigin&&u.href!==canonicalUrl}catch{return false}}):null;
+ const stepLabel=step?(step.link&&step.link.status==='LINK_CANDIDATE_FOR_REVIEW'&&String(step.link.anchor_text||'').trim().split(/\s+/).length>=2?step.link.anchor_text:step.keyword):'';
  const candidates=(report.editorial?.candidate_sections||[]).filter(x=>x&&typeof x.proposed_topic==='string').slice(0,4);
  const findings=(report.findings||[]).filter(x=>x&&x.priority!=='INFO').slice(0,6);
  return {status:'SOURCE_BACKED_EDITOR_START',safe:true,
   query:clean(phrase).slice(0,300),title:clean(headings.title).slice(0,100),
   meta:clean(headings.description).slice(0,220),
-  internal_url:link?.url||null,
-  internal_label:clean(link?.tracked_keyword).slice(0,100),
+  internal_url:link?.url||step?.url||null,
+  internal_label:clean(link?link.tracked_keyword:stepLabel).slice(0,100),
+  internal_basis:link?'CONTEXTUAL_INTERNAL_LINK_CANDIDATE':step?'READER_ROUTE_NEXT_STEP':null,
+  internal_reason:link?null:step?clean('Next step for the reader after this page (information → action): '+step.url+(step.link&&step.link.action?'. '+step.link.action:'')).slice(0,400):null,
   existing_h1:(headings.h1||[]).filter(x=>typeof x==='string').slice(0,3),
   existing_h2:(headings.h2||[]).filter(x=>typeof x==='string').slice(0,8),
   existing_excerpt:(headings.paragraph_samples||[]).filter(x=>typeof x==='string').slice(0,2),

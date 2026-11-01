@@ -30,7 +30,7 @@ async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowL
   return {status:409,code:'DUPLICATE_CANONICAL_PAGE_IDENTITY'};
  return {status:200,client:c,page:p,source_sha256:String(p.html_content||'').trim()?sha(p.html_content):null,source_mode:String(p.html_content||'').trim()?'TRACKER_SAVED_HTML':'MANUAL_HTML_REQUIRED'};
 }
-function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtml,generateDraft=generateGrowthEditorDraft}={}){
+function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtml,generateDraft=generateGrowthEditorDraft,seoModel}={}){
  if(!app||typeof app.get!=='function'||typeof app.post!=='function'||!pool||typeof pool.query!=='function')
   throw Error('CMS_HANDOFF_DEPENDENCIES_REQUIRED');
  // Reuse source-identity-bound editorial drafts to avoid repeated optional AI charges.
@@ -181,6 +181,19 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    // one does not already contain. The editor adds them to the same package; nothing is merged without that choice.
    res.set('Cache-Control','private, no-store').json({success:true,proposal:p?shape(p):null,earlier:earlier.map(shape)});
   }catch(e){console.warn('[growth-cms-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'GROWTH_PROPOSAL_UNAVAILABLE'})}
+ });
+ // AI proposal for the SEO title, meta description and internal link text (owner link only; filled in for review).
+ app.get('/api/tracker-client/:token/growth/cms-export/seo-proposal',async(req,res)=>{
+  try{
+   const v=await loadEditablePage(pool,req.params.token,req.query?.page_id,{allowMissingHtml:true});
+   if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
+   let linkUrl=null;try{const u=new URL(String(req.query?.link||''));if(u.protocol==='https:'&&u.origin===new URL(v.page.url).origin)linkUrl=u.href}catch{}
+   const rows=await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url}).catch(()=>[]);
+   const concepts=[...new Set(rows.flatMap(r=>(r.sections||[]).map(x=>x.h2)).filter(Boolean))];
+   const model=seoModel===undefined?require('./growth-task-meaning.cjs').geminiModel():seoModel;
+   const out=await require('./growth-seo-meta-proposal.cjs').proposeSeoMeta({model,query:String(rows[0]?.focus_query||v.page.keyword||''),html:v.page.html_content,concepts,linkUrl});
+   res.set('Cache-Control','private, no-store').json({success:true,...out,link_url:linkUrl,published:false});
+  }catch(e){console.warn('[growth-seo-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'SEO_PROPOSAL_UNAVAILABLE'})}
  });
  app.post('/api/tracker-client/:token/growth/cms-export',async(req,res)=>{
   try{
