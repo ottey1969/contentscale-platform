@@ -19,12 +19,12 @@ test('a site without address or phone gets no calls, GBP, jobs or project photos
  const r=pack(SAAS);assert.equal(r.status,'HANDOFF_READY_FOR_EDITOR',JSON.stringify(r.issues));
  const text=file(r,'01-implementation.md')+file(r,'05-measurement-plan.md');
  assert.doesNotMatch(text,/click-to-call|GBP|won jobs|project photos/);
- assert.match(text,/contact form, booking or contact page link/);assert.match(text,/count contact requests for this page/i);
+ assert.match(text,/visitor contact paths/);assert.match(text,/Track relevant contact enquiries and qualified leads/);assert.match(text,/form records, emails or a CRM/);
 });
 test('a local business keeps the call and Google Business Profile lines',()=>{
  assert.equal(isLocalBusiness(LOCAL),true);
  const text=file(pack(LOCAL),'01-implementation.md')+file(pack(LOCAL),'05-measurement-plan.md');
- assert.match(text,/click-to-call/);assert.match(text,/GBP phone-button taps/);
+ assert.match(text,/track GBP call-button actions/);assert.match(text,/GBP phone-button taps/);
 });
 test('a section that extends an existing section gets an H3; a new section keeps its H2',()=>{
  const frag=file(pack(SAAS),'03-content-fragments.html');

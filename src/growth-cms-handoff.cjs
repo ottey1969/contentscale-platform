@@ -14,6 +14,8 @@ const asText=html=>String(html).replace(/<!--[\s\S]*?-->/g,'').replace(/<[^>]*>/
 const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function isLocalBusiness(html){
  const h=String(html||'');
+ // Schema.org local types or a Google Maps place link (from the merged local-site check), or address with phone/hours.
+ if(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?@[Tt]ype["']?\s*:\s*["'](?:LocalBusiness|RoofingContractor|GeneralContractor|HomeAndConstructionBusiness|Plumber|Electrician|HVACBusiness|Store|Restaurant)["']/i.test(h)||/https?:\/\/(?:www\.)?google\.[^\s"']+\/maps\/place\//i.test(h))return true;
  return /"@type"\s*:\s*(?:\[[^\]]*)?"[A-Za-z]*LocalBusiness"/.test(h)||
   (/"(?:openingHours|openingHoursSpecification|geo)"\s*:/.test(h)&&/"streetAddress"\s*:/.test(h))||
   (/href=["']tel:/i.test(h)&&/"streetAddress"\s*:|<address\b/i.test(h));
@@ -149,13 +151,12 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  '1. Open the ORIGINAL page in the CMS, not a new duplicate URL.\n'+
  '2. Place each approved section exactly as stated, and preserve the existing H1, template, images, mobile styling, and content:\n'+placementSteps+'\n'+
  '3. Set page SEO title and meta description only if the editor supports them; do not paste meta tags into the page body.\n'+
- (localBusiness?'4. Insert and test contextual internal/external links and click-to-call controls.\n':'4. Insert and test the contextual internal link(s) and the way visitors contact you (contact form, booking or contact page link).\n')+
+ '4. Insert and test relevant contextual internal/external links and visitor contact paths.\n'+
  '5. Use native Wix text elements for SEO (when CMS is Wix); do not treat an HTML iframe/embed as the page content.\n'+
  '6. Check desktop/mobile rendering, H2 answers, duplicate imagery, credibility claims, contact actions, and live canonical URL.\n'+
  '7. Publish only after the website owner/editor approves the final rendered page and documents the actual publication date.\n'+
- '8. Compare Search Console page-specific equivalent non-overlapping dates when accessible; otherwise label visibility as unverified. '+
-  (localBusiness?'Track GBP call-button actions separately from connected calls.\n':'Count enquiries from your own contact form, e-mail or CRM for the same periods (Growth measurement page).\n')+
- (localBusiness?'This delivery is not proof of rankings, calls, jobs or paid revenue.\n':'This delivery is not proof of rankings, enquiries or revenue.\n');
+ '8. Compare Search Console page-specific equivalent non-overlapping dates when accessible; otherwise label visibility as unverified. '+(localBusiness?'For a verified local business, track GBP call-button actions separately from connected calls.':'Track relevant contact enquiries and qualified leads independently.')+'\n'+
+ 'This delivery is not proof of rankings, enquiries, customers or paid revenue.\n';
  const manifest={
   format:'contentscale-growth-cms-handoff/v1',delivery:'reviewed_manual_changes',cms,
   existing_url:canonicalUrl,source_sha256:sha(originalHtml),focus_query:clean(focusQuery)||null,
@@ -176,13 +177,10 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   {name:'03-content-fragments.html',content:'<!-- Paste sections into native SEO-indexable CMS content, not an iframe -->\n'+fragments+'\n'},
   {name:'04-seo-metadata.json',content:JSON.stringify({existing_page_url:canonicalUrl,title:pageTitle.trim(),description:metaDescription.trim(),new_page_required:false},null,2)+'\n'},
   {name:'05-measurement-plan.md',content:'# Baseline and outcome measurement\n\nEvidence: '+evidenceScope+
-   '\nBefore publication: capture URL, 28-day page-scoped GSC impressions, clicks, CTR, position (if available)'+(localBusiness?', and current GBP interactions independently':'')+'.\n'+
+   '\nBefore publication: capture URL, 28-day page-scoped GSC impressions, clicks, CTR, position (if available), and qualified enquiries where recorded. '+(localBusiness?'For verified local businesses also record GBP interactions independently.':'')+'\n'+
    'After publication: compare equal, non-overlapping page periods at 14/30/60 days; attribute causality cautiously.\n'+
    'Without Search Console access, label metrics NEEDS ACCESS. Do not insert zeros.\n'+
-   (localBusiness?'GBP phone-button taps are not answered calls; call logs, quotes, won jobs require independent information.\n'+
-   'Review any real project photos/reviews with the owner; never invent customer experiences.\n':
-   'Enquiries: count contact requests for this page from your own form, e-mail or CRM for the same two periods; Growth never estimates them.\n'+
-   'Never invent customer experiences, reviews or results.\n')},
+   (localBusiness?'GBP phone-button taps are not answered calls; call logs, quotes and won jobs require independent information.\nReview any real project photos/reviews with the owner; never invent customer experiences.\n':'Enquiry and qualified-lead counts require independent evidence such as form records, emails or a CRM. Do not invent customer outcomes.\n')},
   // Why these changes were proposed: the research and sources they rest on, as recorded when the concept was written.
   ...(reviewNotes&&reviewNotes.dossier&&typeof reviewNotes.dossier==='object'?[{name:'07-evidence-dossier.json',content:JSON.stringify(reviewNotes.dossier,null,2)+'\n'}]:[]),
   ...(hasReview?[{name:'06-fact-check-before-publishing.md',content:'# Check before publishing\n\nThe automatic checks test task fit, duplication, wording reuse and claims; they do not prove that a sentence is true.\n'+
