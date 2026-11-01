@@ -1,11 +1,20 @@
 'use strict';
-// Growth Opportunity Finder: where can this site get the most extra RELEVANT clicks with the least responsible effort?
+// Growth Opportunity Finder: where can this site reach the most potential customers with the least responsible effort?
 // It ranks (search term, country, page) from the owner's own Search Console rows per country. Facts only: impressions,
 // clicks and positions as Search Console reports them; no search volume estimate, no click forecast. The priority is an
 // order, not a prediction. Whether the page can beat the ranking pages is unknown until the research in that country has
 // read them; the finder says so instead of scoring it. A local business stays inside its service area.
 const {queryRoots}=require('./growth-reader-task-coverage.cjs');
 const {countryName}=require('./growth-search-locale.cjs');
+const {leadIntentOf}=require('./growth-lead-intent.cjs');
+// Qualified Leads: the order puts potential customers first. Search Console still decides whether there is an opportunity
+// at all (impressions, position); the weight of that number is damped (log10), so a term with fewer impressions but a
+// stronger commercial intent can come first, and an informational term stays in the list. Primary markets count fully,
+// markets the owner marks "on evidence" need twice the minimum impressions and count 0.6. No market is rated by
+// conversions Growth does not have.
+const TOPIC_STOP=new Set(['what','how','why','when','which','the','and','for','with','guide','tips','examples','example','checklist','template','definition','meaning','best','top','free','wat','hoe','waarom','voor','met','een','het','van','les','des','pour','wie','was','und','der','die','das']);
+const MARKET_WEIGHT={PRIMARY:1,ON_EVIDENCE:0.6,ANY:1};
+const SERVICE_PAGE=/\b(services?|agency|consult(?:ing|ant|ants|ancy)|specialists?|experts?|hire|freelancers?|bureau|firm|diensten|specialisten|adviesbureau|pricing|prijzen|tarieven|offerte|contact|quote)\b/;
 
 const MIN_IMPRESSIONS=20;            // in the imported 28 days, per search term and country
 const LOW_CTR_TOP=0.02;              // on positions 1–3 fewer than 2% clicks: the title/description is the question
@@ -25,11 +34,13 @@ function band(p){
  return {kind:'BIGGER_EFFORT',weight:0.15,effort:'large',label:'beyond page 4'};
 }
 
-function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null,customerCountries=[]}={}){
+function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMarkets=null,customerCountries=[],evidenceCountries=[],contactPaths=null}={}){
  const brand=compact(String(domain).replace(/^https?:\/\//,'').split('.')[0]);
  const tracked=new Map(pages.filter(p=>p&&p.url).map(p=>[norm(p.url),p]));
  const customers=new Set((customerCountries||[]).map(c=>String(c).toUpperCase()));
- const excluded={brand:0,outside_service_area:0,outside_customer_countries:0,untracked_page:0,too_few_impressions:0,protected_page:0,already_top_with_clicks:0};
+ const onEvidence=new Set((evidenceCountries||[]).map(c=>String(c).toUpperCase()).filter(c=>!customers.has(c)));
+ const contactOf=p=>(contactPaths&&p&&(contactPaths.get?contactPaths.get(String(p.id)):contactPaths[String(p.id)]))||{status:'UNKNOWN',detail:'Not checked: the page HTML was not read for this list.'};
+ const excluded={brand:0,outside_service_area:0,outside_customer_countries:0,evidence_market_too_few_impressions:0,untracked_page:0,too_few_impressions:0,protected_page:0,already_top_with_clicks:0};
  if(!rows.length)return {status:'INSUFFICIENT_DATA',reason:'No Search Console rows per country have been imported for this site. Import them in the Growth Cockpit (Search Console access is needed); without them Growth does not guess where the best opportunity is.',
   best:null,runners_up:[],by_country:[],excluded};
  const period=rows[0]&&rows[0].start_date?{start:rows[0].start_date,end:rows[0].end_date}:null;
@@ -49,11 +60,13 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
   const impressions=g.reduce((n,x)=>n+x.impressions,0),clicks=g.reduce((n,x)=>n+x.clicks,0);
   const lead=g.slice().sort((a,b)=>b.impressions-a.impressions||a.position-b.position)[0];
   const c=byCountry.get(lead.country)||{country:lead.country,name:countryName(lead.country),impressions:0,clicks:0,opportunities:0,
-   customer_country:customers.size?customers.has(lead.country):null};
+   customer_country:customers.size?customers.has(lead.country):null,market:customers.has(lead.country)?'PRIMARY':onEvidence.has(lead.country)?'ON_EVIDENCE':customers.size?'OUTSIDE':'ANY'};
   c.impressions+=impressions;c.clicks+=clicks;byCountry.set(lead.country,c);
   // Outside the countries where the owner wants customers: visible in the per-country overview, never the best opportunity.
-  if(customers.size&&!customers.has(lead.country)){excluded.outside_customer_countries++;continue}
+  // A market marked "on evidence" (for example the US next to NL, BE, LU and GB) counts once its own data shows demand.
+  if(c.market==='OUTSIDE'){excluded.outside_customer_countries++;continue}
   if(impressions<MIN_IMPRESSIONS){excluded.too_few_impressions++;continue}
+  if(c.market==='ON_EVIDENCE'&&impressions<2*MIN_IMPRESSIONS){excluded.evidence_market_too_few_impressions++;continue}
   const b=band(lead.position),ctr=lead.impressions?lead.clicks/lead.impressions:0;
   if(b.kind==='SNIPPET'&&ctr>=LOW_CTR_TOP){excluded.already_top_with_clicks++;continue}
   // Which existing page is about this term? First the page Google shows, then any other tracked page; a different word
@@ -104,15 +117,37 @@ function findOpportunities({rows=[],pages=[],domain='',serviceArea=null,siteMark
     (kind==='POSSIBLE_NEW_PAGE'?'; no tracked page names this topic ('+lead.page.url+' is shown for it), so a separate page may be needed — the research decides':'')+
     (g.length>1?'; '+(g.length-1)+' other page(s) of the site also appear for it; these pages together have '+impressions+' impressions and '+clicks+' clicks':'')+'.'});
  }
- list.sort((a,b)=>b.priority-a.priority||b.impressions-a.impressions);
+ // Qualified Leads order: commercial intent × market × damped research priority. The contact path does not change the
+ // order (a commercial page without one is an opportunity, not a worse page); it decides the first action.
+ for(const o of list){
+  const market=byCountry.get(o.country)?.market||'ANY',intent=leadIntentOf(o.query);
+  const page=pages.find(p=>String(p.id)===String(o.page_id))||{id:o.page_id,url:o.page_url};
+  o.lead_intent=intent;o.market=market;o.contact_path=contactOf(page);
+  o.lead_priority=Math.round(100*intent.weight*MARKET_WEIGHT[market]*Math.log10(1+o.priority))/100;
+  // An informational term: a tracked page on the same topic where visitors can contact you is the next step for the reader.
+  if(intent.class==='INFORMATION'||intent.class==='UNCLEAR'){
+   // Topic words of 3+ letters (short subject words such as "seo" count), without question and learning words.
+   const topic=words(o.query).filter(w=>w.length>=3&&!TOPIC_STOP.has(w));
+   const service=pages.filter(p=>p&&p.url&&norm(p.url)!==norm(o.page_url)&&p.case_study_active!==true&&SERVICE_PAGE.test((String(p.keyword||'')+' '+pathWords(p.url)).toLowerCase())
+    &&/^CONTACT_/.test(contactOf(p).status)&&topic.some(w=>new Set([...words(p.keyword),...words(pathWords(p.url))]).has(w)))
+    .sort((a,b)=>String(a.url).length-String(b.url).length)[0];
+   if(service)o.lead_page={page_id:service.id??null,url:service.url,contact_path:contactOf(service)};
+  }
+ }
+ list.sort((a,b)=>b.lead_priority-a.lead_priority||b.priority-a.priority||b.impressions-a.impressions);
  const countries=[...byCountry.values()].sort((a,b)=>b.impressions-a.impressions);
  if(!list.length)return {status:'INSUFFICIENT_DATA',period,customer_countries:customerScope(customers,countries),
   reason:'No search term in any country has at least '+MIN_IMPRESSIONS+' impressions on a tracked, changeable page outside the top 3 (or with few clicks in the top 3). Growth does not invent an opportunity; add pages to the Tracker or import again later.',
   best:null,runners_up:[],by_country:countries,excluded};
  const best=withPlan(list[0],siteMarkets);
- const scope=customerScope(customers,countries);
+ const scope={...customerScope(customers,countries),on_evidence:[...onEvidence]};
+ // The opportunity with the most search traffic, shown when the lead order chose another one, so nothing is hidden.
+ const byTraffic=list.slice().sort((a,b)=>b.priority-a.priority||b.impressions-a.impressions)[0];
  return {status:'OPPORTUNITY_FOUND',period,customer_countries:scope,best,runners_up:list.slice(1,5).map(x=>withPlan(x,siteMarkets)),by_country:countries,excluded,
-  method:'Research priority, not a forecast. Search Console per country: priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). An order, not a click forecast.',
+  most_search_traffic:byTraffic!==list[0]?{query:byTraffic.query,country:byTraffic.country,page_url:byTraffic.page_url,impressions:byTraffic.impressions,
+   lead_intent:byTraffic.lead_intent.class,why_not_first:'More search traffic, but '+byTraffic.lead_intent.label+(byTraffic.market==='ON_EVIDENCE'?' in a market you count on evidence':'')+
+    '; “'+list[0].query+'” is closer to a customer ('+list[0].lead_intent.label+').'}:null,
+  method:'Qualified Leads order, not a forecast. Lead priority = intent weight (wants to hire 1, compares providers 0.8, not clear 0.5, wants information 0.35) × market weight (primary 1, on evidence 0.6) × log10(1 + research priority). Research priority = impressions × a weight for the position band (top 3 with few clicks 0.25, positions 4–10 1, 11–20 0.7, 21–40 0.35, further 0.15; a term that needs its own page 0.3). Intent is read from the words of the search term only; no conversion rate is assumed.',
   not_yet_known:'How strong the ranking pages are in that country, and whether this page can give a better answer: the Growth research in that country reads them before anything is proposed.'};
 }
 function customerScope(customers,countries){
@@ -134,10 +169,26 @@ function withPlan(o,siteMarkets){
   o.kind==='SNIPPET'?
   'Run the Growth research for '+o.page_url+' and “'+o.query+'” in '+where+'; then compare your title and description with the results around you — the page is already in the top 3.':
   'Run the Growth research for '+o.page_url+' and “'+o.query+'” in '+where+'; it reads the pages that rank there and proposes the exact change, or says why none is supported.';
- return {...o,action,
+ const next=nextActionOf(o,where,action);
+ return {...o,action:next.text,research_action:action,next_action:next,
   research:o.kind==='POSSIBLE_NEW_PAGE'&&o.shown_page_protected?{type:'NEW_PAGE',query:o.query,market:o.country}:{type:'EXISTING_PAGE',page_id:o.page_id,query:o.query,market:o.country},
-  measurement:'After publishing, record the publication in Growth measurement. Compare the 28 days before and after in Search Console for '+o.page_url+' and “'+o.query+'”; for '+where+' the country split comes from this import ('+o.impressions+' impressions, '+o.clicks+' clicks now). No result is promised.',
+  measurement:'After publishing, record the publication in Growth measurement. Visibility and clicks: compare the 28 days before and after in Search Console for '+o.page_url+' and “'+o.query+'”; for '+where+' the country split comes from this import ('+o.impressions+' impressions, '+o.clicks+' clicks now). Enquiries: enter the contact requests from your own form, e-mail or CRM for the same two periods; Growth does not estimate them. No result is promised.',
   site_default_note:siteMarkets&&siteMarkets.countries&&siteMarkets.countries.length&&!siteMarkets.countries.includes(o.country)?'This opportunity is outside the site default market ('+siteMarkets.countries.join(', ')+'); the research runs in '+o.country+' for this run only.':null};
+}
+// One next action for the editor: which page, why it matters commercially, and the first thing to do.
+function nextActionOf(o,where,researchAction){
+ const intent=o.lead_intent||leadIntentOf(o.query),cp=o.contact_path||{status:'UNKNOWN'},commercial=intent.class==='HIRE'||intent.class==='COMPARE';
+ const why='“'+o.query+'”: '+intent.label+' ('+intent.basis.replace(/\.$/,'').replace(/^The /,'the ')+')'+(o.market==='PRIMARY'?', in a primary market ('+where+')':o.market==='ON_EVIDENCE'?', in '+where+', a market you count when its data shows demand':'')+'.';
+ if(o.kind==='POSSIBLE_NEW_PAGE'&&commercial)
+  return {code:'RESEARCH_COMMERCIAL_QUERY',page_url:o.page_url,why,text:'Research the commercial search “'+o.query+'” in '+where+': no tracked page is about it yet. '+researchAction};
+ if(commercial&&cp.status==='NO_CONTACT_PATH')
+  return {code:'ADD_CONTACT_PATH',page_url:o.page_url,why,text:'First give visitors of '+o.page_url+' a way to contact you (a contact link, booking link or short form near the offer): '+cp.detail+' Then: '+researchAction};
+ if(commercial)
+  return {code:'IMPROVE_SERVICE_PAGE',page_url:o.page_url,why,text:'Improve '+o.page_url+' for “'+o.query+'”: someone searching this is close to an enquiry. '+researchAction+
+   (cp.status==='UNKNOWN'?' Also check that the page shows how to contact you (the Tracker has no saved HTML to check).':'')};
+ if(o.lead_page)
+  return {code:'ADD_INTERNAL_LINK',page_url:o.page_url,link_to:o.lead_page.url,why,text:'Add a link from '+o.page_url+' to '+o.lead_page.url+' where the answer naturally leads to working with you, so readers of “'+o.query+'” find the page where they can contact you. '+researchAction};
+ return {code:o.kind==='POSSIBLE_NEW_PAGE'?'RESEARCH_QUERY':'IMPROVE_PAGE',page_url:o.page_url,why,text:researchAction+(intent.class==='INFORMATION'?' This term is informational: no tracked page on the same topic with a contact path was found to link to.':'')};
 }
 // A local business: most tracked pages name a US state (or the site default is one), so its service area is a hard limit.
 function serviceAreaOf({pages=[],deriveMarket}){
@@ -145,4 +196,4 @@ function serviceAreaOf({pages=[],deriveMarket}){
  const local=pages.filter(p=>{try{return !!deriveMarket({query:p.keyword||'',keyword:p.keyword||'',url:p.url})}catch{return false}}).length;
  return local*2>=pages.length&&local>0?{countries:['US'],basis:local+' of '+pages.length+' tracked pages name a US state'}:null;
 }
-module.exports={findOpportunities,serviceAreaOf,MIN_IMPRESSIONS};
+module.exports={findOpportunities,serviceAreaOf,nextActionOf,MIN_IMPRESSIONS};

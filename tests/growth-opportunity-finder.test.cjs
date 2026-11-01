@@ -22,13 +22,20 @@ test('one best opportunity across countries, with reason, action and measurement
   R('https://contentscale.site/ai-content-quality-checker/','content grader','US',80,0,56)];
  const f=findOpportunities({rows,pages,domain:'contentscale.site',siteMarkets:{countries:['US'],language:'en'}});
  assert.equal(f.status,'OPPORTUNITY_FOUND');
- assert.deepEqual([f.best.query,f.best.country,f.best.kind,f.best.page_url],['content scaling','US','BIGGER_EFFORT','https://contentscale.site/content-scaling/']);
- // US 900 × 0.35 = 315, GB 300 × 1 = 300, NL 120 × 1 = 120: an order, not a click forecast.
- assert.equal(f.best.country,'US');assert.equal(f.best.priority,315);assert.equal(f.runners_up[0].country,'GB');assert.equal(f.runners_up[0].kind,'QUICK_IMPROVEMENT');
- assert.match(f.best.why,/900 impressions and 3 clicks for/);
- assert.match(f.best.action,/Run the Growth research for https:\/\/contentscale\.site\/content-scaling\/ and “content scaling” in United States \(us\)/);
- assert.deepEqual(f.best.research,{type:'EXISTING_PAGE',page_id:2295,query:'content scaling',market:'US'});
- assert.match(f.best.measurement,/No result is promised/);assert.match(f.not_yet_known,/reads them before anything is proposed/);
+ // Qualified Leads: the consultant term (wants to hire, 60 impressions) comes before the bare topic with 900 impressions.
+ // Lead priority: 1 × log10(1+42) = 1.63 against 0.5 × log10(1+315) = 1.25. The traffic leader is named, not hidden.
+ assert.deepEqual([f.best.query,f.best.country,f.best.lead_intent.class],['generative engine optimization consultant','NL','HIRE']);
+ assert.equal(f.best.next_action.code,'IMPROVE_SERVICE_PAGE');
+ assert.equal(f.most_search_traffic.query,'content scaling');assert.equal(f.most_search_traffic.country,'US');
+ assert.match(f.most_search_traffic.why_not_first,/More search traffic, but intent not clear from the words/);
+ const us=f.runners_up.find(x=>x.query==='content scaling'&&x.country==='US');
+ // US 900 × 0.35 = 315, GB 300 × 1 = 300: the research priority is kept next to the lead order.
+ assert.deepEqual([us.kind,us.page_url,us.priority],['BIGGER_EFFORT','https://contentscale.site/content-scaling/',315]);
+ assert.equal(f.runners_up.find(x=>x.country==='GB').kind,'QUICK_IMPROVEMENT');
+ assert.match(us.why,/900 impressions and 3 clicks for/);
+ assert.match(us.research_action,/Run the Growth research for https:\/\/contentscale\.site\/content-scaling\/ and “content scaling” in United States \(us\)/);
+ assert.deepEqual(us.research,{type:'EXISTING_PAGE',page_id:2295,query:'content scaling',market:'US'});
+ assert.match(us.measurement,/No result is promised/);assert.match(us.measurement,/Growth does not estimate them/);assert.match(f.not_yet_known,/reads them before anything is proposed/);
  assert.equal(f.excluded.brand,1,'the brand term is not a growth opportunity');
  const ie=findOpportunities({rows:rows.filter(r=>r.country==='IE'),pages,domain:'contentscale.site'}).best;
  assert.equal(ie.kind,'DEDICATED_PAGE_FOR_PROTECTED','Google shows the protected homepage; /content-scaling/ is the target, the homepage is not changed');
@@ -83,9 +90,13 @@ test('Cockpit: the best opportunity is the first thing the owner sees, with a li
  const imp=await call(posts['/api/tracker-client/:token/growth/gsc-country-import'],{params:{token:'owner-tok'},body:{}});
  assert.equal(imp.body.success,true);assert.equal(imp.body.rows,2);assert.equal(imp.body.countries,2);
  const page=await call(routes['/track/:token/growth'],{params:{token:'owner-tok'},query:{}});
- const html=page.html,best=html.indexOf('Best opportunity — Opportunity Finder (research priority, not a prediction)'),next=html.indexOf('Your next action');
+ const html=page.html,best=html.indexOf('Best opportunity for potential customers — Opportunity Finder (an order, not a prediction)'),next=html.indexOf('Your next action');
  assert(best>0&&best<next,'the opportunity comes before the old next action');
- assert.match(html,/“content scaling” in United Kingdom → https:\/\/contentscale\.site\/content-scaling\//);
+ // The consultant term (wants to hire) comes first; the topic term with more impressions is named and stays listed.
+ assert.match(html,/“generative engine optimization consultant” in United States → https:\/\/contentscale\.site\/generative-engine-optimization-consultant\//);
+ assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2582&amp;market=US&amp;query=generative%20engine%20optimization%20consultant"/);
+ assert.match(html,/Next action:<\/strong> Improve this page for a commercial search/);assert.match(html,/Why it matters commercially:<\/strong> “generative engine optimization consultant”: wants to hire or buy/);
+ assert.match(html,/Most search traffic:<\/strong> “content scaling” in GB \(300 impressions\)/);
  assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2295&amp;market=GB&amp;query=content%20scaling"/);
  assert.match(html,/Not yet known:/);assert.match(html,/Not all Search Console data was read:<\/strong> the import reached the maximum of 125,000 rows/);assert.match(html,/Next opportunities \(1\)/);
  // Without Search Console access on the server: a clear message, nothing changed.
