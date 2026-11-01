@@ -220,6 +220,9 @@
    if((x.verified_queries?x.verified_queries.indexOf(wq)>=0:x.verified_query)&&$('evidence').value==='needs_access')$('evidence').value='verified';
    else if(x.source_type!=='NO_PAGE_HTML'&&$('evidence').value==='needs_access')$('evidence').value='observed';
    target.hidden=false;target.textContent='';
+   // The site speaks as the service: a current title or description in the first person must be rewritten.
+   if(/(?:^|[^A-Za-z'’])I(?![A-Za-z'’])|\b(?:my|me|mine|ik|mijn|mij|founder|oprichter)\b/i.test($('title').value+' '+$('meta').value)){
+    var pvn=document.createElement('p');pvn.className='error';pvn.textContent='Your current SEO title or description is written as a person (I, my, founder). Write it as the service before you download; the package refuses it otherwise.';target.appendChild(pvn)}
    var label=document.createElement('strong');label.textContent='Automatic Growth research: editor review';target.appendChild(label);
    var note=document.createElement('p');
    note.textContent='Existing metadata and observed exact-page evidence were copied where available. New facts, content and publication approval are never invented.';
