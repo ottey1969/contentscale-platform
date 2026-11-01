@@ -19,9 +19,12 @@
   var missing=[];
   if(!safe.source)missing.push('check the original page first (step 1)');
   if(hasManual&&!manualReady)missing.push('paste the original page HTML and tick that it is not live-verified');
-  if(open.length)missing.push(open.length+' of '+facts.length+' check'+(facts.length===1?'':'s')+' still to tick (marked in yellow)');
+  if(open.length)missing.push('confirm the '+facts.length+' statement'+(facts.length===1?'':'s')+' (one tick “I checked all …” above, or each one; '+open.length+' open, marked in yellow)');
   if(!$('approved').checked)missing.push('tick “I reviewed the actual page…” at the end of step 3');
   facts.forEach(function(x){var l=x.closest&&x.closest('label');if(l)l.style.background=x.checked?'':'#fef9c3'});
+  // One confirmation for all statements (owner 2026-11-01): same meaning as ticking each one, one click.
+  var all=$('confirmAll');if(all){$('confirmAllWrap').hidden=!facts.length;all.checked=facts.length>0&&!open.length;
+   $('confirmAllText').textContent='I checked all '+facts.length+' statement'+(facts.length===1?'':'s')+' listed above: true, confirmed with the business and safety-reviewed where marked.'}
   var why=$('downloadWhy');if(why){why.textContent=missing.length?'To download: '+missing.join('; ')+'.':'';why.hidden=!missing.length}
  }
  // Placement of a section on the existing page: proposed by Growth, adjustable by the owner, never guessed.
@@ -117,7 +120,7 @@
    groups.forEach(function(g){
     // One tick per sentence, under the first (strictest-listed) check that names it.
     var items=(r[g[0]]||[]).filter(function(x){if(seen.has(x))return false;seen.add(x);return true});if(!items.length)return;
-    var t=document.createElement('p');t.textContent=g[1]+' (tick each one before downloading):';box.appendChild(t);
+    var t=document.createElement('p');t.textContent=g[1]+' (confirm them all at once at the end of step 3, or one by one):';box.appendChild(t);
     items.forEach(function(item){checkItem(box,item)});
    });
    if((r.competitor_sources||[]).length){
@@ -183,6 +186,7 @@
   $('checkSource').disabled=true;
  }
  $('approved').addEventListener('change',ready);
+ if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
  $('manualAcknowledged').addEventListener('change',ready);
  $('manualOriginalHtml').addEventListener('input',ready);
  $('checkSource').addEventListener('click',async function(){
