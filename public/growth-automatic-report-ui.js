@@ -854,6 +854,8 @@
  document.getElementById('retryResearch').addEventListener('click',run);
  async function restore(){
   var status=document.getElementById('researchStatus');
+  // Never expose a stale download control if this viewer cannot load the owner report.
+  document.getElementById('downloadResearch').hidden=true;
   status.textContent='Loading the last saved research report…';
   try{var response=await fetch(savedEndpoint,{credentials:'same-origin',cache:'no-store'});
    var saved=await response.json();
