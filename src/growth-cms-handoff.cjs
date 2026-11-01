@@ -12,6 +12,14 @@ const asText=html=>String(html).replace(/<!--[\s\S]*?-->/g,'').replace(/<[^>]*>/
  .replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
  .replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/\s+/g,' ').trim();
 const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function isLocalBusiness(html){
+ const h=String(html||'');
+ // Schema.org local types or a Google Maps place link (from the merged local-site check), or address with phone/hours.
+ if(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?@[Tt]ype["']?\s*:\s*["'](?:LocalBusiness|RoofingContractor|GeneralContractor|HomeAndConstructionBusiness|Plumber|Electrician|HVACBusiness|Store|Restaurant)["']/i.test(h)||/https?:\/\/(?:www\.)?google\.[^\s"']+\/maps\/place\//i.test(h))return true;
+ return /"@type"\s*:\s*(?:\[[^\]]*)?"[A-Za-z]*LocalBusiness"/.test(h)||
+  (/"(?:openingHours|openingHoursSpecification|geo)"\s*:/.test(h)&&/"streetAddress"\s*:/.test(h))||
+  (/href=["']tel:/i.test(h)&&/"streetAddress"\s*:|<address\b/i.test(h));
+}
 function renderChangeMarkdown(html){
  return String(html).replace(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi,(_,n,x)=>'\n'+'#'.repeat(Number(n))+' '+asText(x)+'\n\n')
  .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,(_,url,text)=>'['+asText(text)+']('+url+')')
@@ -37,7 +45,12 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  if(caseStudyLocked)issues.push('CASE_STUDY_BASELINE_LOCKED');
  if(editorApproved!==true)issues.push('EDITOR_APPROVAL_REQUIRED');
  if(!Array.isArray(changes)||changes.length<1||changes.length>12)issues.push('APPROVED_SECTION_COUNT_REQUIRED');
- const approved=Array.isArray(changes)?changes:[];
+ // A section that extends an existing section is a sub-section of it: its heading becomes H3 (an H2 would start a new
+ // section on the page). Owner 2026-11-01 package: "Extend the existing section" with an H2.
+ const approved=(Array.isArray(changes)?changes:[]).map(x=>x&&x.placement&&x.placement.mode==='EXTEND_SECTION'&&typeof x.html==='string'?{...x,html:x.html.replace(/<(\/?)h2\b/gi,'<$1h3')}:x);
+ // Local business (address, phone, opening hours or a LocalBusiness type on the page): only then the package speaks of
+ // calls, Google Business Profile, jobs and project photos. Read from the original page, never assumed.
+ const localBusiness=isLocalBusiness(originalHtml);
  if(!['wix','wordpress','webflow','squarespace','custom','generic'].includes(cms))issues.push('CMS_SELECTION_INVALID');
  if(typeof pageTitle!=='string'||!clean(pageTitle)||pageTitle.length>100)issues.push('META_TITLE_REQUIRED');
  if(typeof metaDescription!=='string'||!clean(metaDescription)||metaDescription.length>220)issues.push('META_DESCRIPTION_REQUIRED');
@@ -97,8 +110,8 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   const recheck=assessDraftClaims({text:approved.map(x=>asText(x.html)).join(' '),destinationText:asText(String(originalHtml||''))});
   for(const v of recheck.violations)if(!blockedDetails.some(b=>b.sentence&&norm(b.sentence)===norm(v.sentence)))
    blockedDetails.push({code:'UNRESOLVED_'+v.code,sentence:clean(v.sentence).slice(0,300),reason:clean(v.reason).slice(0,200)});
-  for(const x of approved){const h=(String(x.html||'').match(/<h2\b[^>]*>([\s\S]*?)<\/h2>/i)||[])[1];
-   const mm=h&&headingMismatch(asText(h),asText(String(x.html).replace(/<h2\b[^>]*>[\s\S]*?<\/h2>/i,' ')));
+  for(const x of approved){const h=(String(x.html||'').match(/<h([23])\b[^>]*>([\s\S]*?)<\/h\1>/i)||[])[2];
+   const mm=h&&headingMismatch(asText(h),asText(String(x.html).replace(/<h([23])\b[^>]*>[\s\S]*?<\/h\1>/i,' ')));
    if(mm)blockedDetails.push({code:'UNRESOLVED_'+mm.code,sentence:null,reason:'“'+asText(h)+'”: '+mm.reason})}
   if(blockedDetails.length)issues.push('FLAGGED_CONTENT_NOT_RESOLVED');
  }
@@ -132,7 +145,6 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   .map(b=>'**'+clean(b.h2).slice(0,200)+'** answers “'+clean(b.answers).slice(0,200)+'”. Sources: '+((b.sources||[]).map(x=>clean(x).slice(0,220)).join('; ')||'none')+'.'+(b.warning?' ⚠ '+clean(b.warning).slice(0,300):''));
  const editorText=proposal&&proposal.editor_changed_text;
  const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length+review.basis.length>0;
- const localBusiness=/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?@[Tt]ype["']?\s*:\s*["'](?:LocalBusiness|RoofingContractor|GeneralContractor|HomeAndConstructionBusiness|Plumber|Electrician|HVACBusiness|Store|Restaurant)["']/i.test(originalHtml)||/https?:\/\/(?:www\.)?google\.[^\s"']+\/maps\/place\//i.test(originalHtml);
  const delivery='CMS-independent handoff for existing page '+canonicalUrl+'\n'+
  'No autopublishing. Implement in your normal website editor using native, indexable text components.\n'+
  'Platform: '+cms+'. Keep original URL, navigation, design, existing text and images unless explicitly reviewed.\n'+
@@ -206,4 +218,4 @@ function packageGrowthZip(files){
  end.writeUInt32LE(table.length,12);end.writeUInt32LE(offset,16);
  return Buffer.concat([...chunks,table,end]);
 }
-module.exports={prepareGrowthCmsHandoff,packageGrowthZip,renderChangeMarkdown};
+module.exports={prepareGrowthCmsHandoff,packageGrowthZip,renderChangeMarkdown,isLocalBusiness};

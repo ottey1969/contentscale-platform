@@ -342,13 +342,17 @@
    var ref=group.dataset.proposalId?'growth_proposal:'+group.dataset.proposalId:proposal?'growth_proposal:'+proposal.id:'editor_reviewed:AI_source_review';
    reviewedSections.push({approved:true,evidence_ref:ref,html:markup,placement:placementOf(group)});
   });
+  // The internal link goes into the section that talks most about where it leads (words of its text and its address),
+  // not always into the first one (owner 2026-11-01: the quality-checker link landed under the repurposing section).
   if(linkHtml){
-   var terms=(label+' '+new URL(link).pathname.replace(/[-_/]+/g,' ')).toLowerCase().split(/[^a-z0-9]+/).filter(function(w){return w.length>2&&!['content','page','with','the','and','for'].includes(w)});
-   var targets=[{index:0,title:heading}].concat([...document.querySelectorAll('[data-growth-draft-section]')].map(function(g,i){return {index:i+1,title:g.querySelector('.draft-h2').value}}));
-   var ranked=targets.map(function(t){var title=t.title.toLowerCase();return {index:t.index,score:terms.reduce(function(n,w){return n+(title.split(/[^a-z0-9]+/).includes(w)?1:0)},0)}}).sort(function(a,b){return b.score-a.score});
-   var target=ranked[0];
-   if(target&&target.score>0)reviewedSections[target.index].html=reviewedSections[target.index].html.replace('</section>',linkHtml+'</section>');
-   else reviewedSections[0].html=reviewedSections[0].html.replace('</section>',linkHtml+'</section>');
+   var STOP={to:1,of:1,in:1,on:1,an:1,and:1,the:1,for:1,with:1,your:1,is:1,it:1,at:1,by:1,or:1,be:1,as:1,we:1,us:1,our:1};
+   var words=function(t){return new Set((String(t).toLowerCase().match(/[a-z]{2,}/g)||[]).filter(function(w){return !STOP[w]}).map(function(w){return w.slice(0,5)}))};
+   var texts=reviewedSections.map(function(x){return words(x.html.replace(/<[^>]+>/g,' '))});
+   // Words found in every section (the topic itself, such as "content") say nothing about where the link belongs.
+   var want=[...words(label+' '+new URL(link).pathname.replace(/[-_/]+/g,' '))].filter(function(w){return !texts.every(function(t){return t.has(w)})});
+   var best=0,score=0;
+   texts.forEach(function(t,i){var n=want.filter(function(w){return t.has(w)}).length;if(n>score){score=n;best=i}});
+   reviewedSections[best].html=reviewedSections[best].html.replace(/<\/section>$/,linkHtml+'</section>');
   }
   var manual=src.manual_source_required===true;
   if(manual&&(!$('manualAcknowledged').checked||$('manualOriginalHtml').value.trim().length<120))
