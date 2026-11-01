@@ -12,9 +12,11 @@
  }
  function buttonProgress(button,on,successful){
   if(!button)return;
-  if(on){button.dataset.busy='true';button.setAttribute('aria-busy','true');delete button.dataset.done;return}
-  delete button.dataset.busy;button.removeAttribute('aria-busy');
-  if(successful){button.dataset.done='true';setTimeout(function(){delete button.dataset.done},1800)}
+  if(on){button.dataset.busy='true';button.dataset.busyStarted=String(Date.now());button.setAttribute('aria-busy','true');delete button.dataset.done;return}
+  // Keep the busy indicator visible for at least one perceptible beat on quick cached checks.
+  var begun=Number(button.dataset.busyStarted||0);var elapsed=Date.now()-begun;
+  var finish=function(){delete button.dataset.busy;delete button.dataset.busyStarted;button.removeAttribute('aria-busy');if(successful){button.dataset.done='true';setTimeout(function(){delete button.dataset.done},1800)}};
+  if(begun&&elapsed<650)setTimeout(finish,650-elapsed);else finish();
  }
  // A pressed state applies to optional synchronous actions too; async tasks hold a spinner until they finish.
  document.addEventListener('click',function(event){
