@@ -69,9 +69,6 @@
     guideTitle.textContent=p.some(function(x){return x.writable})?'Next action: write selected topics':'Next action: choose at least one writable topic';
     guideHelp.textContent=p.some(function(x){return x.writable})?'Your selection contains '+p.filter(function(x){return x.writable}).length+' topic(s). Writing saves concepts for review; it never publishes.':'Choose a topic or question first. Page elements cannot be AI-written.';})});
   var actions=el('p',null,box),status=el('p',null,box,'small'),out=el('div',null,box);
-  var dl=el('button','Download selection as editor brief',actions);dl.type='button';
-  dl.style.cssText='background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;margin-right:8px';
-  dl.addEventListener('click',function(){var p=picked();if(!p.length){status.textContent='Select at least one item.';return}save('editor-brief.md',brief(list,p));status.textContent=p.length+' item(s) in the brief.'});
   if(typeof options.write==='function'&&list.writing_allowed!==false){
    var w=el('button','Write selected with AI (concepts for review)',actions);w.type='button';w.style.cssText='background:#2563eb;color:white;font-weight:700';
    el('small',' Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.',actions);
@@ -80,8 +77,9 @@
     w.disabled=true;status.textContent='Writing concepts for '+Math.min(4,p.length)+' item(s)'+(p.length>4?' (the other '+(p.length-4)+' are kept for the next run)':'')+'…';out.textContent='';
     try{var r=await options.write(p.map(function(x){return x.id}));
      if(r&&r.code==='WRITING_IN_PROGRESS'){status.textContent='Concepts for this list are being written right now (started '+(r.run&&r.run.started_at||'')+'). Wait a moment and reload; nothing is written twice.';return}
-     if(r&&r.code==='SELECTION_ALREADY_WRITTEN'){status.textContent='Everything you selected has been written already.'+(r.last_run&&r.last_run.cms_url?' The latest concepts are in the CMS package.':'');if(r.last_run&&r.last_run.cms_url){var l=el('a','Open the CMS package',el('p',null,out));l.href=r.last_run.cms_url}return}
+     if(r&&r.code==='SELECTION_ALREADY_WRITTEN'){dl.hidden=false;status.textContent='Everything you selected has been written already.'+(r.last_run&&r.last_run.cms_url?' The latest concepts are in the CMS package.':'');if(r.last_run&&r.last_run.cms_url){var l=el('a','Open the CMS package',el('p',null,out));l.href=r.last_run.cms_url}return}
      if(!r||r.success===false)throw Error((r&&(r.code||r.reason))||'Writing not available');
+     if(r.stored===true&&!r.storage_error)dl.hidden=false;
      if(r.storage_error)el('p','These concepts could not be stored, so nothing is marked as written and the items stay selected. Copy what you need and try again.',out,'error');
      status.textContent=r.sections&&r.sections.length?'Concepts written. Flagged sentences must be rewritten or removed; every statement still needs your check. Nothing is published.':(r.reason||'No text was written. Write these items yourself; your selection is kept.');
      (r.sections||[]).forEach(function(s){var card=el('div',null,out,'note');el('h3',s.h2,card);
@@ -101,6 +99,12 @@
     finally{w.disabled=false}
    });
   }
+  // The editor's first action is writing. The brief is a secondary artifact, available only after
+  // a successful stored writing run (or an already-written selection); never imply a failed draft is ready.
+  var dl=el('button','Download selection brief',actions);dl.type='button';dl.hidden=true;
+  dl.style.cssText='background:#e2e8f0;color:#334155;border:1px solid #cbd5e1;margin-left:8px';
+  dl.addEventListener('click',function(){var p=picked();if(!p.length){status.textContent='Select at least one item.';return}save('editor-brief.md',brief(list,p));status.textContent=p.length+' selected item(s) in the brief. This is not the final CMS package.'});
+  // The download is explicitly secondary and does not appear before the writing action is complete.
   return true;
  };
 })();
