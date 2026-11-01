@@ -13,7 +13,7 @@ const base={success:true,url:URL_,page_content:{headings:{title:'t',description:
 test('without a contextual candidate, the reader route names the internal link, with the reason',()=>{
  const x=proposeHandoffFromResearch(base,URL_);
  assert.equal(x.internal_url,'https://contentscale.site/ai-content-quality-checker/');
- assert.equal(x.internal_label,'ai content quality checker','a one-word anchor (“quality”) is not used as link text');
+ assert.equal(x.internal_label,'AI content quality checker','a one-word anchor (“quality”) is not used as link text; the keyword is written as link text');
  assert.equal(x.internal_basis,'READER_ROUTE_NEXT_STEP');assert.match(x.internal_reason,/information → action/);
 });
 test('a contextual candidate still wins; a route for another page or another site is never used',()=>{

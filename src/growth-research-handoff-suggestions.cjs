@@ -1,6 +1,10 @@
 'use strict';
 // Deterministic suggestions from an authenticated canonical Growth research result.
 // Never fabricate page facts, competitor advantages, rankings, or publication consent.
+// A tracked keyword ("ai content quality checker") as link text: first letter capital, two-letter abbreviations in
+// capitals ("AI content quality checker"); common two-letter words stay as they are.
+const SMALL=new Set(['of','in','on','to','at','by','or','an','as','is','it','be','we','us','my','me','no','so','up','de','en','op','te','je','ik','om','la','le','du','et','am','im','zu']);
+const labelCase=t=>String(t||'').split(' ').map((w,i)=>/^[a-z]{2}$/.test(w)&&!SMALL.has(w)?w.toUpperCase():i===0?w.charAt(0).toUpperCase()+w.slice(1):w).join(' ');
 function proposeHandoffFromResearch(report,canonicalUrl){
  if(!report||report.success!==true||report.url!==canonicalUrl)
   return {status:'RESEARCH_EVIDENCE_IDENTITY_MISMATCH',safe:false};
@@ -35,7 +39,8 @@ function proposeHandoffFromResearch(report,canonicalUrl){
   query:clean(phrase).slice(0,300),title:clean(headings.title).slice(0,100),
   meta:clean(headings.description).slice(0,220),
   internal_url:link?.url||step?.url||null,
-  internal_label:clean(link?link.tracked_keyword:stepLabel).slice(0,100),
+  // Words that already stand in a paragraph stay exactly as written (they are wrapped, not retyped); a keyword is written as link text.
+  internal_label:(link?labelCase(clean(link.tracked_keyword)):stepLabel===step?.keyword?labelCase(clean(stepLabel)):clean(stepLabel)).slice(0,100),
   internal_basis:link?'CONTEXTUAL_INTERNAL_LINK_CANDIDATE':step?'READER_ROUTE_NEXT_STEP':null,
   internal_reason:link?null:step?clean('Next step for the reader after this page (information → action): '+step.url+(step.link&&step.link.action?'. '+step.link.action:'')).slice(0,400):null,
   existing_h1:(headings.h1||[]).filter(x=>typeof x==='string').slice(0,3),
