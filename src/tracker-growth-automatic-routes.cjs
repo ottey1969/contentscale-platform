@@ -6,6 +6,7 @@ const {publicationReadiness}=require('./growth-publication-readiness.cjs');
 const {reconcileOutcome}=require('./growth-outcome.cjs');
 const {annotateAiVisibility,MAX_AGE_DAYS:AI_MAX_AGE_DAYS}=require('./growth-ai-relevance.cjs');
 const aiAnswers=require('./growth-free/ai-answers.cjs');
+const storedResearch=require('./growth-research-report-store.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
@@ -503,6 +504,18 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   try{res.set('Cache-Control','private, no-store').json({success:true,ai_check:{...(await aiCheckFor({v,term,target:v.page.url})),basis:'TRACKED_KEYWORD_BEFORE_RESEARCH'}})}
   catch{res.status(503).json({success:false,code:'AI_CHECK_UNAVAILABLE'})}
  });
+ // Read-only resume: no Serper, browser fetch or editor writing; keyed to owner, page, URL, market and query.
+ app.get('/api/tracker-client/:token/growth/auto-research/saved',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY_SAVED_REPORT'});
+  try{const row=await storedResearch.load(pool,v);
+   if(!row)return res.set('Cache-Control','private, no-store').json({success:true,found:false});
+   const report={...row.report,restored_from_database:true,saved_at:row.saved_at};
+   if(typeof loadAiAnswers==='function'){const term=String(v.queryOverride||v.page.keyword||'').trim();
+    if(term)report.ai_check=await aiCheckFor({v,term,target:v.page.url}).catch(()=>report.ai_check)}
+   return res.set('Cache-Control','private, no-store').json({success:true,found:true,report});
+  }catch(e){return res.status(503).json({success:false,code:'SAVED_REPORT_UNAVAILABLE'})}
+ });
  app.get('/api/tracker-client/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   // Never serve a recently cached unlocked result after Case Study activation.
@@ -708,7 +721,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    catch(e){console.warn('[growth-auto-research] open selection not loaded',String(e?.code||'unknown'))}
   }
   const enriched=await withAiCheck(report,v);
-  return res.set('Cache-Control','private, no-store').json({...enriched,
+  const completedReport={...enriched,
    market_setting_url:typeof savePageMarkets==='function'?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id):null,
    gap_list:{...gapList,carried_over:carried,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
@@ -730,7 +743,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     verified_gap:completeDecision.verified_gap===true,
     copy_ready:completeDecision.copy_ready===true,
     draft_provider_status:completion.status,evidence_status:evidenceStatus,
-    owner_only:true,automatic_publishing:false,case_study_unchanged:true}});
+    owner_only:true,automatic_publishing:false,case_study_unchanged:true}};
+  // Persist before responding, so closing the browser never loses the completed owner report.
+  try{await storedResearch.save(pool,v,completedReport)}
+  catch(e){return res.status(503).set('Cache-Control','private, no-store').json({success:false,code:'GROWTH_REPORT_NOT_SAVED'})}
+  return res.set('Cache-Control','private, no-store').json(completedReport);
  });
  // The owner sets the page's target markets (ordered, the first is the main one). An empty list removes the setting.
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/markets',data,async(req,res)=>{
