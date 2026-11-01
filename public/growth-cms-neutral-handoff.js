@@ -60,29 +60,39 @@
   var box=$('growthEarlier');if(!box)return;box.textContent='';
   if(!list||!list.length){box.hidden=true;return}
   box.hidden=false;
-  var h=document.createElement('strong');h.textContent='Also stored for this page: '+list.length+' other concept'+(list.length===1?'':'s');box.appendChild(h);
-  var intro=document.createElement('p');intro.className='small';
-  intro.textContent='Written in the last 30 days, for example for improvements you chose on the research page. Sections already in the text above are left out. Add the ones you want in this package; each still needs your review.';
-  box.appendChild(intro);
-  list.forEach(function(p){
-   var row=document.createElement('div');row.className='earlier-concept';
+  // Concepts the owner had written for a selection are offered; earlier research runs of the same page are older wordings
+  // of the same tasks and stay folded away (owner 2026-11-01: nine "other concepts" were mostly earlier versions).
+  var concepts=list.filter(function(p){return p.kind!=='EARLIER_RESEARCH_VERSION'}),older=list.filter(function(p){return p.kind==='EARLIER_RESEARCH_VERSION'});
+  var row=function(p,into){
+   var r0=document.createElement('div');r0.className='earlier-concept';
    var t=document.createElement('p');
-   t.textContent='#'+p.id+' · '+String(p.created_at||'').slice(0,10)+(p.focus_query?' · “'+p.focus_query+'”':'')+(p.evidence_label?' · '+p.evidence_label:'')+': '+
-    p.sections.map(function(x){return '“'+x.h2+'”'}).join(', ');
-   row.appendChild(t);
+   t.textContent='#'+p.id+' · '+String(p.created_at||'').slice(0,10)+(p.focus_query?' · “'+p.focus_query+'”':'')+': '+p.sections.map(function(x){return '“'+x.h2+'”'}).join(', ');
+   r0.appendChild(t);
    var b=document.createElement('button');b.type='button';b.textContent='Add to this package';
    b.addEventListener('click',function(){
     if(safe.added.some(function(a){return a.id===p.id}))return;
     var r=p.review||{};safe.added.push({id:p.id,review:r});
     p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
     var seen=new Set();
-    (r.flagged||[]).forEach(function(f){checkItem(row,'Rewrite or remove: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason)});
-    ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){(r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(row,'Check: '+item)})});
+    (r.flagged||[]).forEach(function(f){checkItem(r0,'Rewrite or remove: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason)});
+    ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){(r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(r0,'Check: '+item)})});
     b.disabled=true;b.textContent='Added — review the sections above';
     $('approved').checked=false;ready();
    });
-   row.appendChild(b);box.appendChild(row);
-  });
+   r0.appendChild(b);into.appendChild(r0);
+  };
+  if(concepts.length){
+   var h=document.createElement('strong');h.textContent='Also written for this page: '+concepts.length+' other concept'+(concepts.length===1?'':'s');box.appendChild(h);
+   var intro=document.createElement('p');intro.className='small';
+   intro.textContent='Written in the last 30 days for improvements you chose, on topics not already in the text above. Add the ones you want; each still needs your review.';
+   box.appendChild(intro);concepts.forEach(function(p){row(p,box)});
+  }
+  if(older.length){
+   var d=document.createElement('details');var sm=document.createElement('summary');
+   sm.textContent='Earlier versions from previous research runs ('+older.length+') — usually not needed';d.appendChild(sm);
+   var n=document.createElement('p');n.className='small';n.textContent='Each research run stores its own proposal. These are older wordings of the same or similar topics; the text above is the newest. Open only if you want an older wording.';
+   d.appendChild(n);older.forEach(function(p){row(p,d)});box.appendChild(d);
+  }
  }
  // The review notes of the main proposal plus those of every added concept, so the package checks all flagged sentences.
  function mergedReview(main){

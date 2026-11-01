@@ -269,23 +269,32 @@ test('10. hybrid: research without writing gives the full gap list; text only fo
  const facts=pack.body.files.find(f=>f.name==='06-fact-check-before-publishing.md').content;
  assert.match(facts,/Flagged by Growth — resolved in this text \(checked\)[\s\S]*68%/);
  assert.equal(pack.body.manifest.review_items.flagged,1);
- // Nothing is lost by writing a concept: the main research proposal for the page stays listed as an earlier concept,
- // and the editor can add its sections to the same package (recorded per section and in the manifest).
+ // The concept for the selected task replaces the research proposal for that same task: the older wording is not offered
+ // as another concept (owner 2026-11-01: nine "other concepts" were earlier versions of the same tasks).
  const listed=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body;
- const main=listed.earlier.find(x=>x.id===proposal.id);
- assert(main,'the earlier main proposal is offered: '+JSON.stringify(listed.earlier.map(x=>x.id)));
- assert(main.sections.length>0&&main.sections.every(x=>!prop.sections.some(y=>y.h2.toLowerCase()===x.h2.toLowerCase())),'only sections not already in the newer concept');
+ assert.equal(listed.proposal.id,prop.id);
+ assert(!listed.earlier.some(x=>x.id===proposal.id&&x.kind!=='EARLIER_RESEARCH_VERSION'),'the same task in older wording is not a separate concept');
+ // A concept written later on ANOTHER topic becomes the newest; the estimate concept stays offered and can be added to the
+ // same package (recorded per section and in the manifest).
+ const {saveSelectionProposal}=require('../src/growth-proposal-store.cjs');
+ const other=await saveSelectionProposal(pool,{clientId:ids.client,targetPageId:ids.page,targetUrl:URL_,focusQuery:prop.focus_query,
+  written:{sections:[{h2:'What to ask the crew before work starts',paragraphs:['Ask which parts of the roof they will inspect, what they will replace and how they will protect the gutters and the garden during the work.'],item_id:'q-task_crew_questions',item_title:'Questions for the crew'}]}});
+ const listed2=(await api('GET','/api/tracker-client/owner-tok/growth/cms-export/proposal?page_id='+ids.page)).body;
+ assert.equal(listed2.proposal.id,Number(other.id));
+ const main=listed2.earlier.find(x=>x.id===prop.id);
+ assert(main&&main.kind==='SELECTION_CONCEPT','the estimate concept is offered as another concept: '+JSON.stringify(listed2.earlier.map(x=>[x.id,x.kind])));
+ const newest=listed2.proposal;
  const combinedBody=extra=>({page_id:ids.page,source_sha256:sha(OWN),editor_approved:true,cms:'wordpress',evidence_scope:'needs_access',
-  focus_query:prop.focus_query||'roof repair lodi nj',seo_title:'Roof Repair in Lodi, NJ',meta_description:'Roof repair in Lodi, NJ: how to read the estimate.',growth_proposal_id:prop.id,
-  review_notes:{...prop.review,needs_fact_check:[...(prop.review.needs_fact_check||[]),...(main.review.needs_fact_check||[])]},
-  approved_changes:[...resolved.map(x=>({approved:true,evidence_ref:'growth_proposal:'+prop.id,html:sectionHtml(x),placement:x.placement})),
-   ...main.sections.map(x=>({approved:true,evidence_ref:'growth_proposal:'+main.id,html:sectionHtml(x),placement:x.placement}))],format:'json',...extra});
+  focus_query:prop.focus_query||'roof repair lodi nj',seo_title:'Roof Repair in Lodi, NJ',meta_description:'Roof repair in Lodi, NJ: how to read the estimate.',growth_proposal_id:newest.id,
+  review_notes:{...prop.review,needs_fact_check:[...(prop.review.needs_fact_check||[]),...(newest.review.needs_fact_check||[])]},
+  approved_changes:[...newest.sections.map(x=>({approved:true,evidence_ref:'growth_proposal:'+newest.id,html:sectionHtml(x),placement:x.placement})),
+   ...resolved.map(x=>({approved:true,evidence_ref:'growth_proposal:'+main.id,html:sectionHtml(x),placement:x.placement}))],format:'json',...extra});
  assert.equal((await api('POST','/api/tracker-client/owner-tok/growth/cms-export',combinedBody({added_growth_proposal_ids:[main.id+999]}))).status,409,'another page’s or an invented concept is refused');
  const both=await api('POST','/api/tracker-client/owner-tok/growth/cms-export',combinedBody({added_growth_proposal_ids:[main.id]}));
  assert.equal(both.status,200,JSON.stringify(both.body).slice(0,300));
  assert.deepEqual(both.body.manifest.growth_proposals_added,[main.id]);
  assert(both.body.manifest.change_evidence.includes('growth_proposal:'+main.id));
- assert.equal(both.body.manifest.change_evidence.length,resolved.length+main.sections.length);
+ assert.equal(both.body.manifest.change_evidence.length,newest.sections.length+resolved.length);
  // The protected Case Study page never gets a gap list to write from.
  const locked=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.locked,{page_id:ids.locked,write:false});
  assert(locked.body.gap_list.id===null||locked.body.gap_list.target_page_id!==ids.locked);

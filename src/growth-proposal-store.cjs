@@ -102,12 +102,24 @@ async function recentProposals(pool,{clientId,targetPageId,targetUrl,maxDays=30,
     AND created_at>NOW()-make_interval(days=>$4) ORDER BY id DESC LIMIT $5`,[clientId,Number(targetPageId),targetUrl,maxDays,limit])).rows;
  }catch(e){if(e.code==='42P01')return [];throw e}
 }
-// The newest proposal plus the other stored ones, each reduced to the sections whose H2 is not already in a newer one.
+// The newest proposal plus the other stored ones, each reduced to the sections that a newer one does not already contain.
+// "Already contains" is judged by the task (task code or selected item), the task label, and the heading's core words:
+// every research run stores a new proposal whose AI wording of the same heading differs (owner 2026-11-01: nine
+// "other concepts" that were the same four tasks). Older research proposals are marked as earlier versions; concepts
+// the owner had written for a selection stay concepts.
+const CORE_STOP=new Set(['how','what','why','when','with','your','that','this','from','into','helps','help','using','content','scale','scaling','scaled','production','produce','strategy','across','every','existing','parts','part','for','the','and','to','of','a','an','in','while','keeping']);
+function coreWords(h){return new Set(String(h||'').toLowerCase().replace(/[^a-z0-9 ]+/g,' ').split(/\s+/).filter(w=>w.length>=4&&!CORE_STOP.has(w)).map(w=>w.slice(0,6)))}
 function combineProposals(rows){
- const key=h=>String(h||'').toLowerCase().replace(/\s+/g,' ').trim(),seen=new Set(),out=[];
- for(const r of rows||[]){const sections=(r.sections||[]).filter(s=>s&&s.h2&&!seen.has(key(s.h2)));
-  (r.sections||[]).forEach(s=>s&&s.h2&&seen.add(key(s.h2)));
-  if(sections.length||!out.length)out.push({...r,sections:out.length?sections:r.sections||[]})}
+ const norm=h=>String(h||'').toLowerCase().replace(/\s+/g,' ').trim();
+ const taskKeys=x=>[x.task_code&&'t:'+String(x.task_code).replace(/^q-/,''),x.item_id&&'t:'+String(x.item_id).replace(/^q-/,''),x.task&&'l:'+norm(x.task),'h:'+norm(x.h2)].filter(Boolean);
+ const seenKeys=new Set(),seenCores=[],out=[];
+ const isSeen=x=>taskKeys(x).some(k=>seenKeys.has(k))||(()=>{const c=coreWords(x.h2);return c.size>0&&seenCores.some(o=>{let n=0;c.forEach(w=>{if(o.has(w))n++});return n/Math.min(c.size,o.size)>=0.5})})();
+ const remember=x=>{taskKeys(x).forEach(k=>seenKeys.add(k));seenCores.push(coreWords(x.h2))};
+ for(const r of rows||[]){
+  const all=(r.sections||[]).filter(x=>x&&x.h2),sections=out.length?all.filter(x=>!isSeen(x)):all;
+  all.forEach(remember);
+  if(sections.length||!out.length)out.push({...r,sections,kind:!out.length?'LATEST':/^SELECTION_CONCEPT/.test(String(r.evidence_label||''))?'SELECTION_CONCEPT':'EARLIER_RESEARCH_VERSION'});
+ }
  return {latest:out[0]||null,earlier:out.slice(1)};
 }
 async function proposalById(pool,{clientId,id}){

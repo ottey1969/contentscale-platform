@@ -176,7 +176,7 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    const v=await loadEditablePage(pool,req.params.token,req.query?.page_id,{allowMissingHtml:true});
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
    const {latest:p,earlier}=combineProposals(await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url}));
-   const shape=x=>({id:Number(x.id),created_at:x.created_at,focus_query:x.focus_query,sections:x.sections,review:x.review,evidence_label:x.evidence_label,intent_note:x.intent_note});
+   const shape=x=>({id:Number(x.id),created_at:x.created_at,focus_query:x.focus_query,kind:x.kind||null,sections:x.sections,review:x.review,evidence_label:x.evidence_label,intent_note:x.intent_note});
    // earlier: the other proposals and written concepts for this page (last 30 days), with only the sections that a newer
    // one does not already contain. The editor adds them to the same package; nothing is merged without that choice.
    res.set('Cache-Control','private, no-store').json({success:true,proposal:p?shape(p):null,earlier:earlier.map(shape)});
