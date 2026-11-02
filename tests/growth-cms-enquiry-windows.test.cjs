@@ -4,7 +4,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs');
 const {windowDates}=require('../src/tracker-growth-measurement.cjs');
 const js=fs.readFileSync(require.resolve('../public/growth-cms-neutral-handoff.js'),'utf8');
-const windowsOf=new Function('return '+js.match(/function windowsOf\(at\)\{[\s\S]*?\}\}/)[0])();
+const windowsOf=new Function('return '+js.match(/function windowsOf\(at\)\{[\s\S]*?after:\{[^}]*\}\}\}/)[0])();
 test('the page and the server use the same before/after windows',()=>{
  for(const iso of ['2026-11-02T01:43:00Z','2026-11-02T23:59:00Z','2026-03-29T00:30:00Z'])
   assert.deepEqual(windowsOf(new Date(iso)),windowDates(iso),iso);
