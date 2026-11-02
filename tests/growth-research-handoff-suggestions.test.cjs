@@ -21,7 +21,7 @@ assert.equal(proposeHandoffFromResearch(report,'https://wrong.example/').safe,fa
 p=proposeHandoffFromResearch({success:true,url,page_content:{headings:{}},search:{focus_query:'roof repair'}},url);
 assert.equal(p.safe,true);assert.equal(p.title,'');assert.equal(p.meta,'');assert.equal(p.verified_query,false);
 const ui=fs.readFileSync('public/growth-cms-neutral-handoff.js','utf8');
-assert(ui.includes('void loadResearchSuggestions(data)'));
+assert(/loadResearchSuggestions\(data\)/.test(ui),'the CMS page loads the research suggestions for the checked source');
 assert(ui.includes('handoff_suggestions'));
 assert(!ui.includes("$('approved').checked=true"));
 const html=fs.readFileSync('public/growth-cms-neutral-handoff.html','utf8');

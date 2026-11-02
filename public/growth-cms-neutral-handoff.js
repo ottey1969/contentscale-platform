@@ -7,12 +7,22 @@
  const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false,loadingSource:false};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
- function removedSentences(){try{var v=JSON.parse(localStorage.getItem(removalKey)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
- function saveRemoval(sentence){
-  try{var all=removedSentences();if(!all.includes(sentence)){all.push(sentence);localStorage.setItem(removalKey,JSON.stringify(all))}return true}
-  catch(e){status('sourceStatus','Removal could not be saved in this browser.',true);return false}
+ // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
+ var serverRemoved=[];
+ function removedSentences(){var local=[];try{var v=JSON.parse(localStorage.getItem(removalKey)||'[]');local=Array.isArray(v)?v:[]}catch(e){}
+  return local.concat(serverRemoved.filter(function(x){return local.indexOf(x)<0}))}
+ function saveRemoval(sentence,how){
+  try{var all=removedSentences();if(!all.includes(sentence)){all.push(sentence);localStorage.setItem(removalKey,JSON.stringify(all))}}catch(e){}
+  if(serverRemoved.indexOf(sentence)<0)serverRemoved.push(sentence);
+  return fetch(base+'/removals',{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({page_id:pageId,sentence:sentence,how:how||'REMOVED_BY_BUTTON'})}).then(function(r){return r.ok}).catch(function(){return false});
  }
- function reapplyRemovals(){removedSentences().forEach(removeFlaggedSentence)}
+ function loadServerRemovals(){
+  return fetch(base+'/removals?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json()})
+   .then(function(d){if(d&&d.success)serverRemoved=(d.removed||[]).map(function(x){return x.sentence});reapplyRemovals()}).catch(function(){});
+ }
+ var flagRows=[];
+ function reapplyRemovals(){removedSentences().forEach(removeFlaggedSentence);flagRows.forEach(function(f){f.refresh()})}
  var sourceButtonStates=[];
  function lockWhileLoading(on){
   safe.loadingSource=on;
@@ -22,9 +32,15 @@
    sourceButtonStates=[...document.querySelectorAll('button')].map(function(b){return {button:b,disabled:b.disabled}});
    sourceButtonStates.forEach(function(s){s.button.disabled=true});
   }else{
+   // Buttons that existed before loading get their state back; buttons created DURING loading (the flagged-sentence
+   // removal, "Add to this package") were switched off by ready() and must come back on too (owner 2026-11-02: the
+   // removal button stayed grey and did nothing). Their own state is then set by their refresh.
+   var known=new Set(sourceButtonStates.map(function(s){return s.button}));
    sourceButtonStates.forEach(function(s){s.button.disabled=s.disabled});
+   document.querySelectorAll('button').forEach(function(b){if(!known.has(b))b.disabled=false});
    sourceButtonStates=[];
    $('generateEditorialDraft').disabled=!safe.source;
+   flagRows.forEach(function(f){f.refresh()});
    ready();
   }
  }
@@ -118,6 +134,17 @@
   });
   return changed;
  }
+ // Draft text as sentences, to find a changed version of a flagged sentence (same words for the most part).
+ function draftSentences(){
+  return [$('copy')].concat([...document.querySelectorAll('.draft-copy')]).filter(Boolean).flatMap(function(f){
+   return (String(f.value||'').replace(/\s+/g,' ').match(/[^.!?]+[.!?]+["')\]]*|[^.!?]+$/g)||[]).map(function(x){return x.trim()})}).filter(Boolean)}
+ function wordsOf(t){return (String(t).toLowerCase().match(/[a-z0-9]{3,}/g)||[])}
+ function closestSentence(sentence){
+  var want=wordsOf(sentence),best=null,score=0;if(!want.length)return null;
+  draftSentences().forEach(function(x){var w=new Set(wordsOf(x)),n=want.filter(function(v){return w.has(v)}).length/want.length;if(n>score){score=n;best=x}});
+  return score>=0.6?{text:best,share:score}:null;
+ }
+ function inDraft(sentence){var t=String(sentence).replace(/\s+/g,' ').trim().toLowerCase();return draftSentences().some(function(x){return x.toLowerCase()===t})}
  function flaggedReviewAction(box,flag){
   var sentence=String(flag&&flag.sentence||'').trim();
   if(!sentence)return;
@@ -125,16 +152,31 @@
   var action=document.createElement('button');action.type='button';
   action.textContent='Remove this flagged sentence from draft';row.appendChild(action);
   var result=document.createElement('small');result.setAttribute('role','status');row.appendChild(result);
-  if(removedSentences().includes(sentence)){
-   action.disabled=true;action.textContent='Removed — saved';
-   result.textContent='Previously removed from this page draft.';
-  }
+  var alt=document.createElement('button');alt.type='button';alt.hidden=true;row.appendChild(alt);
+  var done=function(text,label){action.disabled=true;action.textContent=label||'Removed — saved';result.textContent=text;alt.hidden=true;ready()};
+  // State of this sentence in the draft right now: removed earlier, gone from the text, changed, or still there.
+  var refresh=function(){
+   if(removedSentences().includes(sentence)&&!inDraft(sentence))return done('Removed earlier — remembered for this page.');
+   if(inDraft(sentence)){action.disabled=false;action.textContent='Remove this flagged sentence from draft';alt.hidden=true;result.textContent='';return}
+   var near=closestSentence(sentence);
+   if(near){action.disabled=true;action.textContent='Not removed automatically';
+    result.textContent='Why not: your text no longer has this exact sentence, but a changed version of it ('+Math.round(near.share*100)+'% the same words): “'+near.text+'”. It can still carry the same problem.';
+    alt.hidden=false;alt.textContent='Remove the changed sentence';
+    alt.onclick=function(){var n=removeFlaggedSentence(near.text);if(n){saveRemoval(sentence,'REMOVED_BY_BUTTON');done('Changed version removed — remembered for this page.')}
+     else result.textContent='Why not: the changed sentence could not be found as one piece (it may run across lines). Delete it by hand in the text field.'};
+    return}
+   // Not in the text at all: nothing to remove, no click needed. Shown as resolved; only an owner's click is remembered,
+   // and the package itself still checks the final text.
+   done('Not in your text anymore — nothing to remove; the package checks the final text again.','Resolved — not in text');
+  };
   action.addEventListener('click',function(){
    var n=removeFlaggedSentence(sentence);
-   result.textContent=n?'Removed from '+n+' draft text field(s). Review the remaining paragraph before downloading.':'Sentence not found verbatim in the editable draft. Check the text before downloading.';
-   if(n){saveRemoval(sentence);action.disabled=true;action.textContent='Removed — saved';ready()}
+   if(n){saveRemoval(sentence,'REMOVED_BY_BUTTON');done('Removed from '+n+' draft text field(s) — remembered for this page. Review the remaining paragraph before downloading.')}
+   else refresh();
   });
+  flagRows.push({refresh:refresh});
   box.appendChild(row);
+  setTimeout(refresh,0);
  }
  // One tickable line per sentence to check, in the proposal box (the download waits until each is ticked).
  function checkItem(box,item){
@@ -313,7 +355,7 @@
    const data=await response.json();
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
-   await Promise.allSettled([loadResearchSuggestions(data),loadProposal(data)]);
+   await Promise.allSettled([loadResearchSuggestions(data),loadProposal(data),loadServerRemovals()]);reapplyRemovals();
    $('generateEditorialDraft').disabled=false;
    var needsManual=data.manual_source_required===true;
    $('manualSourceWrap').hidden=!needsManual;

@@ -195,6 +195,23 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    res.set('Cache-Control','private, no-store').json({success:true,...out,link_url:linkUrl,published:false});
   }catch(e){console.warn('[growth-seo-proposal]',String(e?.code||'UNAVAILABLE'));res.status(503).json({success:false,code:'SEO_PROPOSAL_UNAVAILABLE'})}
  });
+ // Flagged sentences the owner removed from this page's draft (owner link only), remembered on the server.
+ const removals=require('./growth-sentence-removal-store.cjs');
+ app.get('/api/tracker-client/:token/growth/cms-export/removals',async(req,res)=>{
+  try{const v=await loadEditablePage(pool,req.params.token,req.query?.page_id,{allowMissingHtml:true});
+   if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
+   res.set('Cache-Control','private, no-store').json({success:true,removed:(await removals.loadRemovals(pool,{clientId:v.client.id,pageId:v.page.id})).map(r=>({sentence:r.sentence,how:r.how,removed_at:r.removed_at}))});
+  }catch(e){res.status(503).json({success:false,code:'REMOVALS_UNAVAILABLE'})}
+ });
+ app.post('/api/tracker-client/:token/growth/cms-export/removals',async(req,res)=>{
+  try{const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true});
+   if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
+   const how=['REMOVED_BY_BUTTON','NOT_IN_TEXT_ANYMORE'].includes(req.body?.how)?req.body.how:'REMOVED_BY_BUTTON';
+   const saved=await removals.saveRemoval(pool,{clientId:v.client.id,pageId:v.page.id,sentence:req.body?.sentence,how});
+   if(!saved)return res.status(400).json({success:false,code:'SENTENCE_REQUIRED'});
+   res.set('Cache-Control','private, no-store').json({success:true,...saved,how,live_page_changed:false});
+  }catch(e){res.status(503).json({success:false,code:'REMOVAL_NOT_SAVED'})}
+ });
  app.post('/api/tracker-client/:token/growth/cms-export',async(req,res)=>{
   try{
    const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true});
