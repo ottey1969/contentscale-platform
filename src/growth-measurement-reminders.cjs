@@ -50,30 +50,50 @@ async function loadReminder(pool,{clientId,publicationId}){
  try{return (await pool.query('SELECT emails,due_at,sent_at FROM tracker_growth_reminders WHERE tracker_client_id=$1 AND publication_id=$2',[clientId,publicationId])).rows[0]||null}
  catch(e){if(e.code==='42P01')return null;throw e}
 }
-const GSC_NOTE={NO_GSC_ACCESS:'Growth has no Search Console access for this site, so it could not read the numbers. Enter them yourself, or give Growth access.',
- NO_ROW:'Search Console returned no row for this exact page and search term in one of the periods. Growth does not assume zero; check the page and term in Search Console.',
- GSC_ERROR:'Search Console could not be read just now. Use “Import both periods from GSC” on the measurement page, or enter the numbers yourself.',
- REJECTED:'The Search Console answer did not match the measurement periods, so nothing was stored. Enter the numbers yourself.',
- CASE_STUDY_LOCKED:'The page is a locked Case Study; no measurement numbers are stored for it.'};
-function message({url,query,publishedAt,link,gsc=null,leads=null}){
- const w=windowsOf(publishedAt),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
- const subject='Growth: 28 days after your change on '+url.replace(/^https?:\/\//,'')+' — '+(gsc&&gsc.status==='IMPORTED'?'Search Console filled in, add your enquiries':'enter the numbers');
- const per='before ('+w.before.start+' to '+w.before.end+') and after ('+w.after.start+' to '+w.after.end+')';
- const gscPart=gsc&&gsc.status==='IMPORTED'?
-  '<p><strong>Filled in automatically from Search Console</strong> for “'+esc(query)+'”: '+gsc.periods.map(p=>p.period+' '+p.clicks+' clicks, '+p.impressions+' impressions').join('; ')+'. These are Search Console numbers for the two periods, not a forecast; a difference is not proof that the change caused it.</p>':
-  '<p><strong>Search Console</strong>: '+esc(GSC_NOTE[gsc&&gsc.status]||('enter the clicks and impressions for “'+query+'” for '+per+', or use “Import both periods from GSC”.'))+'</p>';
+// The e-mails are written for a website owner without SEO knowledge (owner 2026-11-02: "give a non-expert owner the
+// status: briefly what we did, then what is still to come; transparent, not an e-mail they don't understand").
+// Plain words: "times shown in Google" instead of impressions; every number says where it comes from.
+const longDate=t=>new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+const shortDate=t=>new Date(t).toLocaleDateString('en-GB',{day:'numeric',month:'long',timeZone:'UTC'});
+const escH=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const page=url=>String(url||'').replace(/^https?:\/\//,'').replace(/\/$/,'');
+const span=(w,p)=>shortDate(w[p].start+'T00:00:00Z')+' – '+shortDate(w[p].end+'T00:00:00Z');
+const block=(title,body)=>'<h3 style="margin:18px 0 6px;font-size:16px">'+title+'</h3>'+body;
+const GSC_PLAIN={NO_GSC_ACCESS:'We could not read the Google numbers automatically, because Growth has no access to Google Search Console for this website yet. Ask your web contact to give access, or look the numbers up together.',
+ NO_ROW:'Google reports no numbers for this page and this search term in one of the two periods. That can mean the page was hardly shown for it. We do not fill in a zero ourselves; your web contact can check it in Google Search Console.',
+ GSC_ERROR:'Google could not be reached just now. We will show the numbers on the measurement page as soon as they can be read.',
+ REJECTED:'The numbers Google gave did not match the two periods exactly, so we did not use them.',
+ CASE_STUDY_LOCKED:'This page is a protected case study, so no measurement is stored for it.'};
+function whatWeDid(url,publishedAt,notes){
+ return block('Where we are','<p>On '+longDate(publishedAt)+' new content was published on your page <strong>'+escH(page(url))+'</strong>.'+
+  (notes?' What changed: '+escH(String(notes).slice(0,400))+(String(notes).length>400?'…':''):'')+'</p>');
+}
+function noPromise(){return block('What we do not promise','<p>More visitors or more customers are not guaranteed. Google and your market also change by themselves. We show you honestly what happened before and after, nothing more.</p>')}
+function message({url,query,publishedAt,link,gsc=null,leads=null,notes=''}){
+ const w=windowsOf(publishedAt);
+ const got=gsc&&gsc.status==='IMPORTED'?Object.fromEntries((gsc.periods||[]).map(p=>[p.period,p])):{};
  const need=['before','after'].filter(p=>!(leads&&leads[p]!=null));
- const leadPart=need.length?'<p><strong>Your enquiries</strong> (Growth cannot read these): enter the contact requests for this page '+need.map(p=>p==='before'?'before ('+w.before.start+' to '+w.before.end+')':'after ('+w.after.start+' to '+w.after.end+')').join(' and ')+', counted in your own contact form, mailbox or CRM.</p>':
-  '<p><strong>Your enquiries</strong> are already entered for both periods.</p>';
- const html='<p>The change you published on '+esc(url)+' on '+ymd(publishedAt)+' now has a full 28 days behind it.</p>'+gscPart+leadPart+
-  (link?'<p><a href="'+esc(link)+'">'+(need.length?'Enter your enquiries for this change':'Open the measurement of this change')+'</a></p>':'<p>Open the Growth measurement page from your Growth Cockpit.</p>');
+ const subject='4 weeks after the update of '+page(url)+': '+(need.length?'the results and one question':'the results');
+ let numbers;
+ if(got.before&&got.after){
+  const d=got.after.clicks-got.before.clicks;
+  numbers='<p>People searching for “'+escH(query)+'” in Google:</p><table style="border-collapse:collapse"><tr><td style="padding:4px 12px 4px 0"></td><td style="padding:4px 12px"><strong>4 weeks before</strong><br><small>'+span(w,'before')+'</small></td><td style="padding:4px 12px"><strong>4 weeks after</strong><br><small>'+span(w,'after')+'</small></td></tr>'+
+   '<tr><td style="padding:4px 12px 4px 0">Times your page was shown</td><td style="padding:4px 12px">'+got.before.impressions+'</td><td style="padding:4px 12px">'+got.after.impressions+'</td></tr>'+
+   '<tr><td style="padding:4px 12px 4px 0">Times someone clicked to your page</td><td style="padding:4px 12px">'+got.before.clicks+'</td><td style="padding:4px 12px">'+got.after.clicks+'</td></tr></table>'+
+   '<p>That is '+(d>0?d+' click'+(d===1?'':'s')+' more':d<0?(-d)+' click'+(d===-1?'':'s')+' fewer':'the same number of clicks')+' than before. These numbers come from Google Search Console. A difference is not proof that the update caused it.</p>';
+ }else numbers='<p>'+escH(GSC_PLAIN[gsc&&gsc.status]||'The Google numbers are not available yet; they appear on the measurement page as soon as they can be read.')+'</p>';
+ const question=need.length?block('One question for you','<p>Only you know how many people contacted you about this page (by your contact form, e-mail or phone). How many were there '+
+   need.map(p=>p==='before'?'in the 4 weeks before ('+span(w,'before')+')':'in the 4 weeks after ('+span(w,'after')+')').join(' and ')+'? Your answer takes about a minute.</p>'+
+   (link?'<p><a href="'+escH(link)+'" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">Enter your enquiries for this change</a></p>':'<p>You can enter it on the Growth measurement page; your website contact has the link.</p>')):'';
+ const next=block('What happens next','<p>'+(need.length?'After your answer, the measurement of this change is complete and Growth will suggest the next improvement.':'The measurement of this change is complete. Growth will suggest the next improvement.')+'</p>');
+ const html='<div style="font:15px/1.55 system-ui,sans-serif;color:#172337;max-width:620px"><p>Hello,</p><p>Here is the status of your page, in plain words. 28 days have passed since the update; this is the result we promised to show you.</p>'+whatWeDid(url,publishedAt,notes)+block('What we measured',numbers)+question+next+noPromise()+'<p>ContentScale Growth</p></div>';
  return {subject,html};
 }
 // Sends every due, unsent reminder once (at most 3 attempts). send({to:[emails],subject,html}) → true when accepted.
 async function sendDueReminders(pool,{send,now=new Date(),baseUrl=process.env.PUBLIC_APP_URL||'https://app.contentscale.site',importGsc=null}={}){
  const imp=importGsc||((o)=>require('./tracker-growth-gsc-direct.cjs').importGscWindows(pool,o));
  let rows;
- try{rows=(await pool.query(`SELECT r.id,r.tracker_client_id,r.publication_id,r.emails,g.published_at,g.query,p.url,c.token,to_jsonb(c)->>'email' AS client_email,to_jsonb(c)->>'cc_emails' AS cc_emails
+ try{rows=(await pool.query(`SELECT r.id,r.tracker_client_id,r.publication_id,r.emails,g.published_at,g.query,g.notes,p.url,c.token,to_jsonb(c)->>'email' AS client_email,to_jsonb(c)->>'cc_emails' AS cc_emails
    FROM tracker_growth_reminders r JOIN tracker_growth_publications g ON g.id=r.publication_id AND g.tracker_client_id=r.tracker_client_id
    JOIN tracker_pages p ON p.id=g.tracker_page_id AND p.tracker_client_id=g.tracker_client_id
    JOIN tracker_clients c ON c.id=r.tracker_client_id
@@ -90,7 +110,7 @@ async function sendDueReminders(pool,{send,now=new Date(),baseUrl=process.env.PU
    const gsc=await Promise.resolve(imp({clientId:r.tracker_client_id,publicationId:Number(r.publication_id),now})).catch(e=>({status:'GSC_ERROR',error:String(e.message||e)}));
    let leads=null;
    try{leads={};for(const x of (await pool.query('SELECT period,leads FROM tracker_growth_lead_windows WHERE tracker_client_id=$1 AND publication_id=$2',[r.tracker_client_id,r.publication_id])).rows)leads[x.period]=Number(x.leads)}catch(e){leads=null}
-   const base={url:r.url,query:r.query,publishedAt:r.published_at,gsc,leads};
+   const base={url:r.url,query:r.query,publishedAt:r.published_at,gsc,leads,notes:r.notes};
    let ok=true;
    if(withLink.length)ok=await send({to:withLink,...message({...base,link})})&&ok;
    if(without.length)ok=await send({to:without,...message({...base,link:null})})&&ok;
@@ -108,14 +128,18 @@ function brevoSend({to,subject,html}){
 }
 // Confirmation right after the reminder is set or changed (owner 2026-11-02: "it does not work" — nothing arrived, so
 // nothing showed that it was set). It states the date and the addresses; it contains no owner link.
-async function sendConfirmation({emails,url,publishedAt,send=brevoSend}){
+async function sendConfirmation({emails,url,publishedAt,notes='',send=brevoSend,
+ gscAvailable=!!(process.env.GSC_SERVICE_ACCOUNT_JSON||process.env.GSC_GROWTH_SERVICE_ACCOUNT_KEY_FILE||process.env.GSC_GROWTH_REFRESH_TOKEN)}){
  if(!emails.length)return {sent:false,reason:'NO_ADDRESSES'};
  if(send===brevoSend&&!process.env.BREVO_API_KEY)return {sent:false,reason:'EMAIL_NOT_CONFIGURED'};
- const due=dueAt(publishedAt),w=windowsOf(publishedAt),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
- const ok=await send({to:emails,subject:'Growth reminder set for '+due.toISOString().slice(0,10)+' — '+String(url).replace(/^https?:\/\//,''),
-  html:'<p>A reminder is set for the change published on '+esc(url)+' on '+ymd(publishedAt)+'.</p>'+
-   '<p>On '+due.toISOString().slice(0,10)+' Growth reads the Search Console numbers for before ('+w.before.start+' to '+w.before.end+') and after ('+w.after.start+' to '+w.after.end+') itself and e-mails '+emails.map(esc).join(', ')+' to enter the enquiries for both periods.</p>'+
-   '<p>Nothing else is needed now.</p>'}).catch(()=>false);
+ const due=dueAt(publishedAt),w=windowsOf(publishedAt);
+ const html='<div style="font:15px/1.55 system-ui,sans-serif;color:#172337;max-width:620px"><p>Hello,</p><p>A short update on your website, in plain words.</p>'+
+  whatWeDid(url,publishedAt,notes)+
+  block('What happens now','<p>For the next 4 weeks we give Google time to show the updated page. <strong>You do not need to do anything.</strong></p>')+
+  block('What we will check on '+longDate(due),'<ul style="padding-left:20px"><li>How often your page was shown in Google, and how often people clicked to it: the 4 weeks before the update ('+span(w,'before')+') compared with the 4 weeks after ('+span(w,'after')+'). '+(gscAvailable?'Growth reads these numbers from Google itself.':'Growth has no access to Google Search Console for your website yet, so these numbers have to be looked up by your web contact (or give Growth access, then it reads them itself).')+'</li>'+
+   '<li>How many people contacted you about this page in those same weeks. Only you know this, so on '+longDate(due)+' we will e-mail you and ask. It takes about a minute.</li></ul>')+
+  noPromise()+'<p>You receive this e-mail because these addresses were entered for the reminder: '+emails.map(escH).join(', ')+'.</p><p>ContentScale Growth</p></div>';
+ const ok=await send({to:emails,subject:'Your page update is live — we will show you the results on '+longDate(due),html}).catch(()=>false);
  return ok?{sent:true}:{sent:false,reason:'NOT_ACCEPTED'};
 }
 // Hourly check in the running app; off without an e-mail key or with GROWTH_REMINDERS=0.
