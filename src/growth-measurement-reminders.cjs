@@ -58,7 +58,15 @@ async function loadReminder(pool,{clientId,publicationId}){
 // and link must survive unchanged), otherwise the English e-mail is sent. See localize().
 const LOCALE={en:'en-GB',nl:'nl-NL'};
 const T={
- en:{hello:'Hello,',intro2:'Here is the status of your page, in plain words. 28 days have passed since the update; this is the result we promised to show you.',
+ en:{term:q=>'The search term we worked on: <strong>“'+q+'”</strong>.',added:'What was added to your page',
+  addedWhy:(a,h)=>(a?'Answers the question: “'+a+'”. ':'')+(h?'Pages that Google shows for this search answer it too: '+h+'.':''),
+  standing:'Where your page stands in Google now',
+  baseBefore:(c,i,p)=>'In the 4 weeks before the update ('+p+') your page was shown '+i+' times in Google for this search and clicked '+c+' times (Google Search Console).',
+  baseLatest:(c,i,pos,d)=>'The latest Google numbers we have for this search ('+d+'): shown '+i+' times, clicked '+c+' times'+(pos?', average position '+pos:'')+' (Google Search Console).',
+  baseCountry:(c,i,p)=>'In '+p+' your page was shown '+i+' times in Google for this search and clicked '+c+' times (Google Search Console).',
+  basePage:(c,i)=>'For all searches together, your page was shown '+i+' times in Google and clicked '+c+' times (latest numbers in your Tracker).',
+  baseNone:d=>'We do not have Google numbers for this page and search yet. They are read on '+d+' at the latest, for the 4 weeks before and after the update.',
+  hello:'Hello,',intro2:'Here is the status of your page, in plain words. 28 days have passed since the update; this is the result we promised to show you.',
   intro1:'A short update on your website, in plain words.',where:'Where we are',published:(d,p)=>'On '+d+' new content was published on your page <strong>'+p+'</strong>.',changed:'What changed: ',
   now:'What happens now',nowText:'For the next 4 weeks we give Google time to show the updated page. <strong>You do not need to do anything.</strong>',
   check:d=>'What we will check on '+d,
@@ -78,7 +86,15 @@ const T={
   askBefore:b=>'in the 4 weeks before ('+b+')',askAfter:a=>'in the 4 weeks after ('+a+')',and:' and ',askEnd:'? Your answer takes about a minute.',
   button:'Enter your enquiries for this change',noLink:'You can enter it on the Growth measurement page; your website contact has the link.',
   next:'What happens next',nextAsk:'After your answer, the measurement of this change is complete and Growth will suggest the next improvement.',nextDone:'The measurement of this change is complete. Growth will suggest the next improvement.'},
- nl:{hello:'Hallo,',intro2:'Hier is de stand van uw pagina, in gewone woorden. Er zijn 28 dagen voorbij sinds de aanpassing; dit is het resultaat dat we beloofden te laten zien.',
+ nl:{term:q=>'De zoekterm waaraan we werkten: <strong>“'+q+'”</strong>.',added:'Wat er aan uw pagina is toegevoegd',
+  addedWhy:(a,h)=>(a?'Beantwoordt de vraag: “'+a+'”. ':'')+(h?'Pagina’s die Google voor deze zoekopdracht toont, beantwoorden dit ook: '+h+'.':''),
+  standing:'Waar uw pagina nu staat in Google',
+  baseBefore:(c,i,p)=>'In de 4 weken vóór de aanpassing ('+p+') werd uw pagina '+i+' keer getoond in Google voor deze zoekopdracht en '+c+' keer aangeklikt (Google Search Console).',
+  baseLatest:(c,i,pos,d)=>'De laatste Google-cijfers die we voor deze zoekopdracht hebben ('+d+'): '+i+' keer getoond, '+c+' keer aangeklikt'+(pos?', gemiddelde positie '+pos:'')+' (Google Search Console).',
+  baseCountry:(c,i,p)=>'In '+p+' werd uw pagina '+i+' keer getoond in Google voor deze zoekopdracht en '+c+' keer aangeklikt (Google Search Console).',
+  basePage:(c,i)=>'Voor alle zoekopdrachten samen werd uw pagina '+i+' keer getoond in Google en '+c+' keer aangeklikt (laatste cijfers in uw Tracker).',
+  baseNone:d=>'We hebben nog geen Google-cijfers voor deze pagina en zoekopdracht. Ze worden uiterlijk op '+d+' gelezen, voor de 4 weken vóór en na de aanpassing.',
+  hello:'Hallo,',intro2:'Hier is de stand van uw pagina, in gewone woorden. Er zijn 28 dagen voorbij sinds de aanpassing; dit is het resultaat dat we beloofden te laten zien.',
   intro1:'Een korte update over uw website, in gewone woorden.',where:'Waar we staan',published:(d,p)=>'Op '+d+' is nieuwe inhoud gepubliceerd op uw pagina <strong>'+p+'</strong>.',changed:'Wat er veranderd is: ',
   now:'Wat er nu gebeurt',nowText:'De komende 4 weken geven we Google de tijd om de aangepaste pagina te tonen. <strong>U hoeft niets te doen.</strong>',
   check:d=>'Wat we op '+d+' bekijken',
@@ -106,10 +122,21 @@ const page=url=>String(url||'').replace(/^https?:\/\//,'').replace(/\/$/,'');
 const span=(w,p,lang)=>shortDate(w[p].start+'T00:00:00Z',lang)+' – '+shortDate(w[p].end+'T00:00:00Z',lang);
 const block=(title,body)=>'<h3 style="margin:18px 0 6px;font-size:16px">'+title+'</h3>'+body;
 const wrap=html=>'<div style="font:15px/1.55 system-ui,sans-serif;color:#172337;max-width:620px">'+html+'</div>';
-function whatWeDid(url,publishedAt,notes,lang){const t=tx(lang);
- return block(t.where,'<p>'+t.published(longDate(publishedAt,lang),escH(page(url)))+(notes?' '+t.changed+escH(String(notes).slice(0,400))+(String(notes).length>400?'…':''):'')+'</p>');
+function whatWeDid(url,publishedAt,notes,lang,ctx=null){const t=tx(lang);
+ // With the added sections listed below, the owner's note is only repeated when there is no section list.
+ const showNotes=notes&&!(ctx&&(ctx.sections||[]).length);
+ return block(t.where,'<p>'+t.published(longDate(publishedAt,lang),escH(page(url)))+(ctx&&ctx.query?' '+t.term(escH(ctx.query)):'')+(showNotes?' '+t.changed+escH(String(notes).slice(0,400))+(String(notes).length>400?'…':''):'')+'</p>');
 }
-function message({url,query,publishedAt,link,gsc=null,leads=null,notes='',lang='en'}){
+// The facts behind the change, for the owner: the search term, each added section with the question it answers and the
+// sites Google shows that answer it too, and where the page stands in Google now. Only data Growth has; nothing assumed.
+function addedBlock(ctx,lang){const t=tx(lang);if(!ctx||!(ctx.sections||[]).length)return '';
+ return block(t.added,'<ul style="padding-left:20px">'+ctx.sections.slice(0,8).map(x=>'<li><strong>'+escH(x.h2)+'</strong>'+((x.answers||(x.hosts||[]).length)?'<br><small>'+escH(t.addedWhy(x.answers,(x.hosts||[]).join(', ')))+'</small>':'')+'</li>').join('')+'</ul>');}
+function standingBlock(ctx,publishedAt,lang){const t=tx(lang),b=ctx&&ctx.baseline,fmt=d=>d?longDate(d,lang):'';
+ const line=!b?t.baseNone(longDate(dueAt(publishedAt),lang)):b.source==='BEFORE_PERIOD'?t.baseBefore(b.clicks,b.impressions,span(windowsOf(publishedAt),'before',lang)):
+  b.source==='TRACKER_QUERY'?t.baseLatest(b.clicks,b.impressions,b.position?Math.round(b.position*10)/10:null,fmt(b.date)):
+  b.source==='COUNTRY_IMPORT'?t.baseCountry(b.clicks,b.impressions,shortDate(b.start+'T00:00:00Z',lang)+' – '+shortDate(b.end+'T00:00:00Z',lang)):t.basePage(b.clicks,b.impressions);
+ return block(t.standing,'<p>'+escH(line)+'</p>');}
+function message({url,query,publishedAt,link,gsc=null,leads=null,notes='',lang='en',ctx=null}){
  const t=tx(lang),w=windowsOf(publishedAt);
  const got=gsc&&gsc.status==='IMPORTED'?Object.fromEntries((gsc.periods||[]).map(p=>[p.period,p])):{};
  const need=['before','after'].filter(p=>!(leads&&leads[p]!=null));
@@ -119,15 +146,41 @@ function message({url,query,publishedAt,link,gsc=null,leads=null,notes='',lang='
    '<p>'+t.diff(got.after.clicks-got.before.clicks)+'</p>':'<p>'+escH(t.gsc[gsc&&gsc.status]||t.gsc.DEFAULT)+'</p>';
  const question=need.length?block(t.question,'<p>'+t.ask+need.map(p=>p==='before'?t.askBefore(span(w,'before',lang)):t.askAfter(span(w,'after',lang))).join(t.and)+t.askEnd+'</p>'+
    (link?'<p><a href="'+escH(link)+'" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">'+t.button+'</a></p>':'<p>'+t.noLink+'</p>')):'';
- const html=wrap('<p>'+t.hello+'</p><p>'+t.intro2+'</p>'+whatWeDid(url,publishedAt,notes,lang)+block(t.measured,numbers)+question+block(t.next,'<p>'+(need.length?t.nextAsk:t.nextDone)+'</p>')+block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.sign+'</p>');
+ const html=wrap('<p>'+t.hello+'</p><p>'+t.intro2+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+addedBlock(ctx,lang)+block(t.measured,numbers)+question+block(t.next,'<p>'+(need.length?t.nextAsk:t.nextDone)+'</p>')+block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.sign+'</p>');
  return {subject:t.subjResult(page(url),need.length>0),html};
 }
-function confirmationMessage({emails,url,publishedAt,notes='',gscAvailable,lang='en'}){
+function confirmationMessage({emails,url,publishedAt,notes='',gscAvailable,lang='en',ctx=null}){
  const t=tx(lang),due=dueAt(publishedAt),w=windowsOf(publishedAt),d=longDate(due,lang);
- const html=wrap('<p>'+t.hello+'</p><p>'+t.intro1+'</p>'+whatWeDid(url,publishedAt,notes,lang)+block(t.now,'<p>'+t.nowText+'</p>')+
+ const html=wrap('<p>'+t.hello+'</p><p>'+t.intro1+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+addedBlock(ctx,lang)+standingBlock(ctx,publishedAt,lang)+block(t.now,'<p>'+t.nowText+'</p>')+
   block(t.check(d),'<ul style="padding-left:20px"><li>'+t.checkGoogle(span(w,'before',lang),span(w,'after',lang))+(gscAvailable?t.readsItself:t.noAccessYet)+'</li><li>'+t.checkLeads(d)+'</li></ul>')+
   block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.why(emails.map(escH).join(', '))+'</p><p>'+t.sign+'</p>');
  return {subject:t.subjConfirm(d),html};
+}
+// What Growth knows about a publication: search term, added sections (from the Growth proposal it came from) and the
+// best available current Google numbers for this page and term, in this order: the stored "before" period, the latest
+// Search Console row in the Tracker, the Search Console import per country, the page totals in the Tracker.
+async function publicationContext(pool,{clientId,publicationId}){
+ const q=(sql,args)=>pool.query(sql,args).then(r=>r.rows).catch(e=>{if(['42P01','42703'].includes(e.code))return [];throw e});
+ const pub=(await q(`SELECT g.id,g.query,g.published_at,to_jsonb(g)->>'growth_proposal_id' AS proposal_id,p.id AS page_id,p.url,
+   to_jsonb(p)->>'gsc_clicks' AS page_clicks,to_jsonb(p)->>'gsc_impressions' AS page_impressions
+   FROM tracker_growth_publications g JOIN tracker_pages p ON p.id=g.tracker_page_id AND p.tracker_client_id=g.tracker_client_id WHERE g.id=$1 AND g.tracker_client_id=$2`,[publicationId,clientId]))[0];
+ if(!pub)return null;
+ const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch{return String(u||'').split(':')[0].trim()}};
+ let sections=[];
+ if(pub.proposal_id){const pr=(await q('SELECT sections,review FROM tracker_growth_proposals WHERE id=$1 AND tracker_client_id=$2',[Number(pub.proposal_id),clientId]))[0];
+  if(pr){const basis=(pr.review&&pr.review.basis)||[],cs=(pr.review&&pr.review.competitor_sources)||[];
+   sections=(pr.sections||[]).filter(x=>x&&x.h2).map(x=>{const b=basis.find(y=>y&&y.h2===x.h2);
+    const hosts=b?[...new Set((b.sources||[]).map(s=>host(String(s).split(':')[0])))]:[...new Set(cs.map(c=>host(c.url)))];
+    return {h2:x.h2,answers:b&&b.answers||null,hosts:hosts.filter(Boolean).slice(0,4)}})}}
+ let baseline=null;
+ const before=(await q("SELECT clicks,impressions FROM tracker_growth_gsc_windows WHERE tracker_client_id=$1 AND publication_id=$2 AND period='before'",[clientId,publicationId]))[0];
+ if(before)baseline={source:'BEFORE_PERIOD',clicks:Number(before.clicks),impressions:Number(before.impressions)};
+ if(!baseline){const r=(await q("SELECT clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND LOWER(TRIM(query))=LOWER(TRIM($3)) ORDER BY imported_at DESC LIMIT 1",[clientId,pub.page_id,pub.query]))[0];
+  if(r)baseline={source:'TRACKER_QUERY',clicks:Number(r.clicks),impressions:Number(r.impressions),position:r.position!=null?Number(r.position):null,date:r.imported_at}}
+ if(!baseline){const r=(await q("SELECT SUM(clicks)::int clicks,SUM(impressions)::int impressions,MIN(start_date)::text start,MAX(end_date)::text \"end\" FROM tracker_growth_gsc_country WHERE tracker_client_id=$1 AND RTRIM(page_url,'/')=RTRIM($2,'/') AND LOWER(query)=LOWER($3)",[clientId,pub.url,pub.query]))[0];
+  if(r&&r.impressions)baseline={source:'COUNTRY_IMPORT',clicks:r.clicks,impressions:r.impressions,start:r.start,end:r.end}}
+ if(!baseline&&Number(pub.page_impressions)>0)baseline={source:'PAGE_TOTAL',clicks:Number(pub.page_clicks)||0,impressions:Number(pub.page_impressions)};
+ return {query:pub.query,sections,baseline};
 }
 // The page's language: <html lang="…"> of the saved page, else the Growth language setting, else English.
 function pageLanguage(html,fallback=null){const m=String(html||'').match(/<html\b[^>]*\blang=["']?([a-zA-Z]{2,3})/i);return (m?m[1]:fallback||'en').toLowerCase().slice(0,3)}
@@ -167,7 +220,8 @@ async function sendDueReminders(pool,{send,now=new Date(),baseUrl=process.env.PU
    const gsc=await Promise.resolve(imp({clientId:r.tracker_client_id,publicationId:Number(r.publication_id),now})).catch(e=>({status:'GSC_ERROR',error:String(e.message||e)}));
    let leads=null;
    try{leads={};for(const x of (await pool.query('SELECT period,leads FROM tracker_growth_lead_windows WHERE tracker_client_id=$1 AND publication_id=$2',[r.tracker_client_id,r.publication_id])).rows)leads[x.period]=Number(x.leads)}catch(e){leads=null}
-   const lang=pageLanguage(r.html),base={url:r.url,query:r.query,publishedAt:r.published_at,gsc,leads,notes:r.notes,lang:T[lang]?lang:'en'};
+   const ctx=await publicationContext(pool,{clientId:r.tracker_client_id,publicationId:Number(r.publication_id)}).catch(()=>null);
+   const lang=pageLanguage(r.html),base={url:r.url,query:r.query,publishedAt:r.published_at,gsc,leads,notes:r.notes,lang:T[lang]?lang:'en',ctx};
    const mdl=model===undefined?require('./growth-task-meaning.cjs').geminiModel():model;
    let ok=true;
    if(withLink.length){const m=await localize(message({...base,link}),lang,{model:mdl});ok=await send({to:withLink,subject:m.subject,html:m.html})&&ok}
@@ -186,11 +240,11 @@ function brevoSend({to,subject,html}){
 }
 // Confirmation right after the reminder is set or changed (owner 2026-11-02: "it does not work" — nothing arrived, so
 // nothing showed that it was set). It states the date and the addresses; it contains no owner link.
-async function sendConfirmation({emails,url,publishedAt,notes='',send=brevoSend,lang='en',model=undefined,
+async function sendConfirmation({emails,url,publishedAt,notes='',send=brevoSend,lang='en',model=undefined,ctx=null,
  gscAvailable=!!(process.env.GSC_SERVICE_ACCOUNT_JSON||process.env.GSC_GROWTH_SERVICE_ACCOUNT_KEY_FILE||process.env.GSC_GROWTH_REFRESH_TOKEN)}){
  if(!emails.length)return {sent:false,reason:'NO_ADDRESSES'};
  if(send===brevoSend&&!process.env.BREVO_API_KEY)return {sent:false,reason:'EMAIL_NOT_CONFIGURED'};
- const m=await localize(confirmationMessage({emails,url,publishedAt,notes,gscAvailable,lang:T[lang]?lang:'en'}),lang,{model:model===undefined?require('./growth-task-meaning.cjs').geminiModel():model});
+ const m=await localize(confirmationMessage({emails,url,publishedAt,notes,gscAvailable,lang:T[lang]?lang:'en',ctx}),lang,{model:model===undefined?require('./growth-task-meaning.cjs').geminiModel():model});
  const ok=await send({to:emails,subject:m.subject,html:m.html}).catch(()=>false);
  return ok?{sent:true,language:m.language,...(m.translation?{translation:m.translation}:{})}:{sent:false,reason:'NOT_ACCEPTED'};
 }
@@ -206,4 +260,4 @@ function startReminderLoop(pool,{intervalMs=3600000}={}){
  loop=setInterval(tick,intervalMs);if(loop.unref)loop.unref();setTimeout(tick,60000).unref?.();
  return loop;
 }
-module.exports={parseEmails,dueAt,windowsOf,setReminder,loadReminder,sendDueReminders,sendConfirmation,message,confirmationMessage,pageLanguage,localize,startReminderLoop,ensureTable};
+module.exports={parseEmails,dueAt,windowsOf,setReminder,loadReminder,sendDueReminders,sendConfirmation,message,confirmationMessage,pageLanguage,localize,publicationContext,startReminderLoop,ensureTable};
