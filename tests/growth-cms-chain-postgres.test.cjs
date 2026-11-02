@@ -216,6 +216,14 @@ test('6b. the publication can be corrected and sends one reminder e-mail around 
  assert.match(own.subject,/4 weeks after the update of/);assert.match(own.html,/Growth has no access to Google Search Console for this website yet|Times your page was shown/);assert.match(own.html,/Only you know how many people contacted you/);
  // Corrected after sending to another date: a new reminder for the new date.
 });
+test('6c. research of a page that is being measured says so before proposing (owner 2026-11-02)',async()=>{
+ const r=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
+ assert.equal(r.status,200);
+ assert.equal(r.body.measurement_window.status,'MEASURING');assert.equal(r.body.measurement_window.publication_id,Number(publication.id));
+ assert.match(r.body.measurement_window.note,/is being measured until \d{4}-\d{2}-\d{2}\. Another change now mixes the results/);
+ const saved=await api('GET','/api/tracker-client/owner-tok/growth/auto-research/saved?page_id='+ids.page);
+ assert.equal(saved.body.report.measurement_window.status,'MEASURING','the saved report reads it fresh');
+});
 test('7. the Cockpit marks the page as just changed and stops recommending it',async()=>{
  const g=await api('GET','/api/tracker-client/owner-tok/growth');
  assert.equal(g.status,200);
@@ -264,6 +272,7 @@ test('10. hybrid: research without writing gives the full gap list; text only fo
  const before=aiCalls.length;
  const r=await api('POST','/api/tracker-client/owner-tok/growth/auto-research/complete?page_id='+ids.page,{page_id:ids.page,write:false});
  assert.equal(r.status,200);
+ assert.equal(r.body.measurement_window,null,'after the 28 days (+4) the page is no longer being measured');
  assert.equal(aiCalls.length,before,'opening the research writes nothing');
  assert.equal(r.body.editorial_review_draft.status,'WRITING_ON_SELECTION');
  const gl=r.body.gap_list;
