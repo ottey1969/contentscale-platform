@@ -31,7 +31,10 @@
    $('checkSource').textContent='⏳ Loading… please wait';
    sourceButtonStates=[...document.querySelectorAll('button')].map(function(b){return {button:b,disabled:b.disabled}});
    sourceButtonStates.forEach(function(s){s.button.disabled=true});
+   // The download button tells the same story while loading (owner 2026-11-02): spinner and "Loading… please wait".
+   var dl=$('download');if(dl){dl.dataset.loadingText=dl.textContent;dl.textContent='⏳ Loading… please wait';dl.dataset.busy='true';dl.setAttribute('aria-busy','true')}
   }else{
+   var dl2=$('download');if(dl2&&dl2.dataset.loadingText!==undefined){delete dl2.dataset.busy;dl2.removeAttribute('aria-busy');delete dl2.dataset.loadingText}
    // Buttons that existed before loading get their state back; buttons created DURING loading (the flagged-sentence
    // removal, "Add to this package") were switched off by ready() and must come back on too (owner 2026-11-02: the
    // removal button stayed grey and did nothing). Their own state is then set by their refresh.
@@ -359,7 +362,7 @@
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
    await Promise.allSettled([loadResearchSuggestions(data),loadProposal(data),loadServerRemovals()]);reapplyRemovals();
-   $('generateEditorialDraft').disabled=false;
+   // Not enabled here: the AI-assisted draft becomes available only when loading has finished (lockWhileLoading(false)).
    var needsManual=data.manual_source_required===true;
    $('manualSourceWrap').hidden=!needsManual;
    $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
