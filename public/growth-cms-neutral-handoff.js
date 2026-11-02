@@ -526,7 +526,7 @@
    const href=URL.createObjectURL(file),a=document.createElement('a');
    a.href=href;a.download='contentscale-growth-cms-neutral.zip';document.body.appendChild(a);a.click();a.remove();
    setTimeout(()=>URL.revokeObjectURL(href),3000);
-   status('downloadStatus','ZIP ready. No site change or publication performed.'+
+   status('downloadStatus','ZIP ready. The ZIP download does not publish your page. If the change is already live, confirm its publication in step 5 below.'+
     (downgraded?' Research evidence set to “Observed”: Search Console has no verified row for this page and “'+payload.focus_query+'”, so the package makes no Search Console claim.':'')+
     (preview.manifest?.growth_proposal?(preview.manifest.growth_proposal.editor_changed_text?' The text differs from Growth proposal #'+preview.manifest.growth_proposal.id+' (recorded in the package).':' Text exactly as in Growth proposal #'+preview.manifest.growth_proposal.id+'.'):'')+
     ((preview.warnings||[]).length?' Review: '+preview.warnings.join(', '):''),false);
@@ -550,6 +550,7 @@
   var editing=!!safe.publicationId;
   try{
    if(!safe.published)throw Error('Download the reviewed package first');
+   if(!$('confirmPublished').checked)throw Error('Confirm that the change was actually published on the live website before recording its date.');
    if(!safe.published.query)throw Error('A working query is required to measure the change');
    var at=new Date($('publishedAt').value);if(!Number.isFinite(at.getTime()))throw Error('Enter the actual publication date and time');
    // A time later than now cannot be the publication time (owner 2026-11-02: an unclear refusal); say it in local time.
@@ -560,6 +561,7 @@
    var d=await r.json();
    if(!r.ok||d.success!==true)throw Error(d.error||'Not saved');
    safe.publicationRecorded=true;safe.publicationId=d.publication&&d.publication.id||safe.publicationId;
+   status('downloadStatus','Website publication recorded for this page. The ZIP itself did not publish the change; your confirmed live publication is saved separately.',false);
    var cf=d.reminder&&d.reminder.confirmation;
    var rem=d.reminder&&d.reminder.error?' The reminder could not be saved; try again.':d.reminder?' Reminder e-mail to '+d.reminder.emails.join(', ')+' on '+String(d.reminder.due_at).slice(0,10)+'.'+
     (cf?(cf.sent?' A confirmation e-mail was sent just now'+(cf.translation&&cf.translation!=='AI_CHECKED'?' in English (no checked translation into the page language was available)':cf.language&&cf.language!=='en'?' in the page language ('+cf.language+')':'')+'; check your inbox (and spam).':cf.reason==='EMAIL_NOT_CONFIGURED'?' Warning: e-mail sending is not configured on the server (BREVO_API_KEY), so no confirmation and no reminder can be sent.':' Warning: the confirmation e-mail was not accepted by the mail service; the reminder may not arrive.'):''):' No reminder e-mail set.';
