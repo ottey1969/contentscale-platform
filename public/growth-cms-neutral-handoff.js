@@ -4,7 +4,30 @@
  const token=String(location.pathname.split('/')[2]||'');
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false};
+ const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false,loadingSource:false};
+ // Local persistence per client/page; source text and approvals remain server-authoritative.
+ const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
+ function removedSentences(){try{var v=JSON.parse(localStorage.getItem(removalKey)||'[]');return Array.isArray(v)?v:[]}catch(e){return []}}
+ function saveRemoval(sentence){
+  try{var all=removedSentences();if(!all.includes(sentence)){all.push(sentence);localStorage.setItem(removalKey,JSON.stringify(all))}return true}
+  catch(e){status('sourceStatus','Removal could not be saved in this browser.',true);return false}
+ }
+ function reapplyRemovals(){removedSentences().forEach(removeFlaggedSentence)}
+ var sourceButtonStates=[];
+ function lockWhileLoading(on){
+  safe.loadingSource=on;
+  if(on){
+   status('sourceStatus','⏳ Loading original page, scanned text and Growth evidence… please wait.',false);
+   $('checkSource').textContent='⏳ Loading… please wait';
+   sourceButtonStates=[...document.querySelectorAll('button')].map(function(b){return {button:b,disabled:b.disabled}});
+   sourceButtonStates.forEach(function(s){s.button.disabled=true});
+  }else{
+   sourceButtonStates.forEach(function(s){s.button.disabled=s.disabled});
+   sourceButtonStates=[];
+   $('generateEditorialDraft').disabled=!safe.source;
+   ready();
+  }
+ }
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
  $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
  function status(id,msg,error){
@@ -26,6 +49,10 @@
   setTimeout(function(){button.classList.remove('growth-pressed')},350);
  },true);
  function ready(){
+  if(safe.loadingSource){
+   document.querySelectorAll('button').forEach(function(b){b.disabled=true});
+   return;
+  }
   var hasManual=safe.source&&safe.source.manual_source_required;
   var manualReady=!hasManual||($('manualAcknowledged').checked&&$('manualOriginalHtml').value.trim().length>=120);
   var facts=[...document.querySelectorAll('.fact-item')],open=facts.filter(x=>!x.checked),factsChecked=!open.length;
@@ -83,10 +110,14 @@
   var action=document.createElement('button');action.type='button';
   action.textContent='Remove this flagged sentence from draft';row.appendChild(action);
   var result=document.createElement('small');result.setAttribute('role','status');row.appendChild(result);
+  if(removedSentences().includes(sentence)){
+   action.disabled=true;action.textContent='Removed — saved';
+   result.textContent='Previously removed from this page draft.';
+  }
   action.addEventListener('click',function(){
    var n=removeFlaggedSentence(sentence);
    result.textContent=n?'Removed from '+n+' draft text field(s). Review the remaining paragraph before downloading.':'Sentence not found verbatim in the editable draft. Check the text before downloading.';
-   if(n){action.disabled=true;ready()}
+   if(n){saveRemoval(sentence);action.disabled=true;action.textContent='Removed — saved';ready()}
   });
   box.appendChild(row);
  }
@@ -115,6 +146,7 @@
     if(safe.added.some(function(a){return a.id===p.id}))return;
     var r=p.review||{};safe.added.push({id:p.id,review:r});
     p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
+    reapplyRemovals();
     var seen=new Set();
     (r.flagged||[]).forEach(function(f){checkItem(r0,'Rewrite or remove: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason);flaggedReviewAction(r0,f)});
     ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){(r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(r0,'Check: '+item)})});
@@ -181,6 +213,7 @@
     cs.textContent='Compared with: '+r.competitor_sources.map(x=>x.url).join(' · ');box.appendChild(cs);
    }
    renderEarlier(d.earlier);
+   reapplyRemovals();
    $('approved').checked=false;ready();
   }catch(e){/* no proposal: manual or AI-assisted text stays available */}
  }
@@ -259,14 +292,13 @@
  $('manualAcknowledged').addEventListener('change',ready);
  $('manualOriginalHtml').addEventListener('input',ready);
  $('checkSource').addEventListener('click',async function(){
-  this.disabled=true;buttonProgress(this,true);safe.source=null;ready();status('sourceStatus','Checking the saved original page…',false);
+  this.disabled=true;buttonProgress(this,true);safe.source=null;lockWhileLoading(true);
   try{
    const response=await fetch(base+'/source?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
    const data=await response.json();
    if(!response.ok||!data.success)throw Error(data.code||'Source unavailable');
    safe.source=data;
-   void loadResearchSuggestions(data);
-   void loadProposal(data);
+   await Promise.allSettled([loadResearchSuggestions(data),loadProposal(data)]);
    $('generateEditorialDraft').disabled=false;
    var needsManual=data.manual_source_required===true;
    $('manualSourceWrap').hidden=!needsManual;
@@ -299,7 +331,7 @@
     status('sourceStatus','Saved original Tracker source verified. Review content before preparing the handoff.',false);
    }
   }catch(err){status('sourceStatus',err.message||'Could not verify original source',true)}
-  finally{var verified=!!safe.source;buttonProgress(this,false,verified);this.disabled=verified;this.textContent=verified?'1. Original Tracker page checked':'1. Check original Tracker page';if(verified){this.style.background='#94a3b8';this.style.color='#fff'}else{this.style.background='';this.style.color=''}ready()}
+  finally{lockWhileLoading(false);var verified=!!safe.source;buttonProgress(this,false,verified);this.disabled=verified;this.textContent=verified?'1. Original Tracker page checked':'1. Check original Tracker page';if(verified){this.style.background='#94a3b8';this.style.color='#fff'}else{this.style.background='';this.style.color=''}ready()}
  });
  $('generateEditorialDraft').addEventListener('click',async function(){
   if(!safe.source)return;
@@ -339,6 +371,7 @@
    safe.proposal=null;safe.added=[];if($('growthEarlier')){$('growthEarlier').hidden=true;$('growthEarlier').textContent=''}$('growthProposal').hidden=true;$('growthProposal').textContent='';$('mainPlacement').textContent='';
    $('growthAdditionalSections').textContent='';
    parts.slice(1,5).forEach(function(section,i){addSection(section.h2,(section.paragraphs||[]).join('\n\n'),'AI draft section '+(i+2)+' · verify facts',null)});
+   reapplyRemovals();
    $('approved').checked=false;ready();
    status('aiDraftStatus','Editable AI draft prepared from the original page. All claims and each section still require your review and explicit approval.',false);
   }catch(err){status('aiDraftStatus',String(err.message||err),true)}
