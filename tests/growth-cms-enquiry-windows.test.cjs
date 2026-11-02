@@ -10,7 +10,7 @@ test('the page and the server use the same before/after windows',()=>{
   assert.deepEqual(windowsOf(new Date(iso)),windowDates(iso),iso);
 });
 test('the enquiry form appears after the publication is recorded and posts the "before" period',()=>{
- assert.match(js,/showEnquiryForm\(d\.publication&&d\.publication\.id,at\)/);
+ assert.match(js,/showEnquiryForm\(safe\.publicationId,at\)/);
  assert.match(js,/period:'before',start_date:w\.before\.start,end_date:w\.before\.end/);
  assert.match(js,/Growth does not estimate this number/);
 });

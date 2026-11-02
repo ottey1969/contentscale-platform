@@ -66,6 +66,8 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <form id="publicationForm">
 <label for="publishedAt">Publication date and time</label><input id="publishedAt" type="datetime-local" required>
 <label for="publicationNotes">What was actually published?</label><textarea id="publicationNotes" rows="3" maxlength="3000" required></textarea>
+<label for="reminderEmails">Remind me after 28 days by e-mail (optional, up to 5 addresses, separated by commas)</label><input id="reminderEmails" type="text" inputmode="email" autocomplete="email" placeholder="you@example.com, colleague@example.com">
+<p class="small">Around day 31 an e-mail asks you to enter the Search Console numbers and your enquiries. You can change the text, date and addresses later.</p>
 <div class="actions"><button type="submit" id="recordPublication">Save publication checkpoint</button><span id="publicationStatus" role="status"></span></div>
 </form>
 <div id="enquiryWrap" hidden>

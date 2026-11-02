@@ -538,22 +538,27 @@
   if(!$('publicationNotes').value)$('publicationNotes').value='Added to '+safe.source.canonical_url+': '+heads.join('; ')+(payload.growth_proposal_id?' (Growth proposal #'+payload.growth_proposal_id+')':'');
   $('publicationWrap').hidden=false;
  }
+ // Record the publication; afterwards the same form corrects it (text, date, reminder addresses), it never locks
+ // (owner 2026-11-02: "after the download I changed it, so I must be able to edit").
  $('publicationForm').addEventListener('submit',async function(ev){
   ev.preventDefault();var btn=$('recordPublication');btn.disabled=true;buttonProgress(btn,true);
+  var editing=!!safe.publicationId;
   try{
    if(!safe.published)throw Error('Download the reviewed package first');
    if(!safe.published.query)throw Error('A working query is required to measure the change');
    var at=new Date($('publishedAt').value);if(!Number.isFinite(at.getTime()))throw Error('Enter the actual publication date and time');
-   var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/publication',{method:'POST',cache:'no-store',credentials:'same-origin',
-    headers:{'Content-Type':'application/json'},body:JSON.stringify({...safe.published,notes:$('publicationNotes').value.trim(),published_at:at.toISOString()})});
+   var body={notes:$('publicationNotes').value.trim(),published_at:at.toISOString(),reminder_emails:$('reminderEmails')?$('reminderEmails').value:''};
+   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/publication'+(editing?'/'+encodeURIComponent(safe.publicationId):'');
+   var r=await fetch(url,{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(editing?body:{...safe.published,...body})});
    var d=await r.json();
    if(!r.ok||d.success!==true)throw Error(d.error||'Not saved');
-   safe.publicationRecorded=true;btn.textContent='5. Publication recorded';btn.style.background='#94a3b8';
-   showEnquiryForm(d.publication&&d.publication.id,at);
-   status('publicationStatus',d.gsc_evidence==='VERIFIED'?'Recorded. Measurement compares the 28 days before and after publication with Search Console data.':
-    'Recorded. Without Search Console access the result is not measured yet: add the 28-day before/after numbers from Search Console on the measurement page.',false);
+   safe.publicationRecorded=true;safe.publicationId=d.publication&&d.publication.id||safe.publicationId;
+   var rem=d.reminder?' Reminder e-mail to '+d.reminder.emails.join(', ')+' on '+String(d.reminder.due_at).slice(0,10)+'.':' No reminder e-mail set.';
+   status('publicationStatus',(editing?'Changes saved.':(d.gsc_evidence==='VERIFIED'?'Recorded. Measurement compares the 28 days before and after publication with Search Console data.':
+    'Recorded. Add the 28-day before/after Search Console numbers on the measurement page when the periods are complete.'))+rem+' You can still correct this record.',false);
+   showEnquiryForm(safe.publicationId,at);
   }catch(err){status('publicationStatus',err.message||'Not saved',true)}
-  finally{buttonProgress(btn,false,safe.publicationRecorded);btn.disabled=!!safe.publicationRecorded}
+  finally{buttonProgress(btn,false,false);btn.disabled=false;btn.textContent=safe.publicationId?'Save changes to this publication':'Save publication checkpoint'}
  });
  // Enquiries (owner 2026-11-02: "I don't see the e-mail input"): right after the publication is recorded, the number of
  // contact requests in the 28 days BEFORE it, from the owner's own records. Same windows as the measurement page; the

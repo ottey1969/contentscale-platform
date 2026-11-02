@@ -1,5 +1,6 @@
 'use strict';
 const {proposalById}=require('./growth-proposal-store.cjs');
+const reminders=require('./growth-measurement-reminders.cjs');
 function validPublish({url,query,notes,published_at}){
  const stamp=Date.parse(published_at||'');
  if(!url||!/^https:\/\//i.test(url)||!String(query||'').trim())return 'A verified HTTPS page and query are required';
@@ -46,6 +47,9 @@ function registerGrowthExecution(app,pool){
    let host,root;try{host=new URL(pg.url).hostname;root=new URL('https://'+String(c.domain).replace(/^https?:\/\//,'')).hostname}catch{return res.status(400).json({success:false,error:'Invalid domain'})}
    if(host!==root)return res.status(403).json({success:false,error:'Page belongs to another domain'});
    const err=validPublish({url:pg.url,query,notes,published_at:publishedAt});if(err)return res.status(400).json({success:false,error:err});
+   const mail=reminders.parseEmails(req.body&&req.body.reminder_emails);
+   if(mail.invalid.length)return res.status(400).json({success:false,error:'Not an e-mail address: '+mail.invalid.slice(0,3).join(', ')});
+   if(mail.too_many)return res.status(400).json({success:false,error:'At most 5 e-mail addresses for the reminder'});
    const locked=(await pool.query("SELECT 1 FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active' LIMIT 1",[c.id,pageId])).rows.length>0;
    if(locked)return res.status(409).json({success:false,case_study_locked:true,error:'Active Case Study: publication tracking is locked. Keep the baseline unchanged.'});
    const verified=(await pool.query("SELECT 1 FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND LOWER(query)=LOWER($3) AND evidence_scope='page_verified' LIMIT 1",[c.id,pageId,query])).rows.length>0;
@@ -67,9 +71,40 @@ function registerGrowthExecution(app,pool){
     ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS growth_proposal_id BIGINT`);
    const gscEvidence=verified?'VERIFIED':'NEEDS_ACCESS';
    const result=await pool.query("INSERT INTO tracker_growth_publications (tracker_client_id,tracker_page_id,query,notes,published_at,gsc_evidence,growth_proposal_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,published_at,recorded_at",[c.id,pageId,query,notes,publishedAt,gscEvidence,proposalId]);
-   res.json({success:true,publication:result.rows[0],gsc_evidence:gscEvidence,
+   const reminder=mail.emails.length?await reminders.setReminder(pool,{clientId:c.id,publicationId:Number(result.rows[0].id),emails:mail.emails,publishedAt}).catch(()=>null):null;
+   res.json({success:true,publication:result.rows[0],gsc_evidence:gscEvidence,reminder:reminder?{emails:reminder.emails,due_at:reminder.due_at}:null,
     state:verified?'PUBLISHED_AWAITING_GSC_COMPARISON':'PUBLISHED_NEEDS_SEARCH_CONSOLE_FOR_MEASUREMENT',measured_improvement:false});
   }catch(e){console.error('[growth-publication]',e.message);res.status(503).json({success:false,error:'Publication record unavailable; no claims were made'})}
  });
+
+ // Correct a recorded publication (owner 2026-11-02: "after the download I changed it, so I must be able to edit"):
+ // what was published, when, and who gets the reminder. The date can move only while no measurement period was entered,
+ // because entered numbers belong to the old periods.
+ app.post('/api/tracker-client/:token/growth/publication/:id',async(req,res)=>{
+  try{
+   const c=(await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted') LIMIT 1",[req.params.token])).rows[0];
+   if(!c)return res.status(404).json({success:false,error:'Tracker not found'});
+   const id=Number(req.params.id);if(!Number.isSafeInteger(id)||id<1)return res.status(400).json({success:false,error:'Invalid publication'});
+   const pub=(await pool.query('SELECT g.id,g.published_at,g.notes,g.query,p.url FROM tracker_growth_publications g JOIN tracker_pages p ON p.id=g.tracker_page_id AND p.tracker_client_id=g.tracker_client_id WHERE g.id=$1 AND g.tracker_client_id=$2',[id,c.id])).rows[0];
+   if(!pub)return res.status(404).json({success:false,error:'Publication not found'});
+   const notes=req.body&&req.body.notes!=null?String(req.body.notes).trim():pub.notes;
+   const publishedAt=req.body&&req.body.published_at?String(req.body.published_at):new Date(pub.published_at).toISOString();
+   const err=validPublish({url:pub.url,query:pub.query,notes,published_at:publishedAt});if(err)return res.status(400).json({success:false,error:err});
+   const moved=new Date(publishedAt).toISOString().slice(0,10)!==new Date(pub.published_at).toISOString().slice(0,10);
+   if(moved){
+    const has=async t=>{try{return (await pool.query('SELECT 1 FROM '+t+' WHERE tracker_client_id=$1 AND publication_id=$2 LIMIT 1',[c.id,id])).rows.length>0}catch(e){if(e.code==='42P01')return false;throw e}};
+    if(await has('tracker_growth_gsc_windows')||await has('tracker_growth_lead_windows'))
+     return res.status(409).json({success:false,error:'Numbers were already entered for the measurement periods of the old date. The date cannot move; correct the text only, or record a new publication.'});
+   }
+   const mail=reminders.parseEmails(req.body&&req.body.reminder_emails);
+   if(mail.invalid.length)return res.status(400).json({success:false,error:'Not an e-mail address: '+mail.invalid.slice(0,3).join(', ')});
+   if(mail.too_many)return res.status(400).json({success:false,error:'At most 5 e-mail addresses for the reminder'});
+   const row=(await pool.query('UPDATE tracker_growth_publications SET notes=$3,published_at=$4 WHERE id=$1 AND tracker_client_id=$2 RETURNING id,published_at,notes',[id,c.id,notes,publishedAt])).rows[0];
+   const reminder=req.body&&'reminder_emails' in req.body?await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:mail.emails,publishedAt}):await reminders.loadReminder(pool,{clientId:c.id,publicationId:id});
+   if(reminder&&moved&&!(req.body&&'reminder_emails' in req.body))await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:reminder.emails,publishedAt});
+   res.json({success:true,publication:row,reminder:reminder?{emails:reminder.emails,due_at:reminders.dueAt(publishedAt)}:null,live_page_changed:false});
+  }catch(e){console.error('[growth-publication-edit]',e.message);res.status(503).json({success:false,error:'Publication record unavailable'})}
+ });
+ reminders.startReminderLoop(pool);
 }
 module.exports={registerGrowthExecution,validPublish};
