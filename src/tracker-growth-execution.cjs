@@ -71,6 +71,10 @@ function registerGrowthExecution(app,pool){
     ALTER TABLE tracker_growth_publications ADD COLUMN IF NOT EXISTS growth_proposal_id BIGINT`);
    const gscEvidence=verified?'VERIFIED':'NEEDS_ACCESS';
    const result=await pool.query("INSERT INTO tracker_growth_publications (tracker_client_id,tracker_page_id,query,notes,published_at,gsc_evidence,growth_proposal_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id,published_at,recorded_at",[c.id,pageId,query,notes,publishedAt,gscEvidence,proposalId]);
+   // Baseline: if the 28 days before publication are already final in Search Console (a publication recorded a few days
+   // late), read them now; otherwise the hourly check reads them as soon as they are.
+   const pubId=Number(result.rows[0].id);
+   setImmediate(()=>require('./tracker-growth-gsc-direct.cjs').importGscWindows(pool,{clientId:c.id,publicationId:pubId,periods:['before']}).catch(()=>{}));
    const reminder=mail.emails.length?await reminders.setReminder(pool,{clientId:c.id,publicationId:Number(result.rows[0].id),emails:mail.emails,publishedAt}).catch(()=>null):null;
    res.json({success:true,publication:result.rows[0],gsc_evidence:gscEvidence,reminder:reminder?{emails:reminder.emails,due_at:reminder.due_at}:null,
     state:verified?'PUBLISHED_AWAITING_GSC_COMPARISON':'PUBLISHED_NEEDS_SEARCH_CONSOLE_FOR_MEASUREMENT',measured_improvement:false});

@@ -192,7 +192,7 @@ test('6. the actual publication is recorded without Search Console (GSC optional
  assert.equal(await pageHtml(ids.page),OWN,'recording a publication never edits the stored page or baseline');
 });
 
-test('6b. the publication can be corrected and sends one reminder e-mail around day 31 (owner 2026-11-02)',async()=>{
+test('6b. the publication can be corrected and sends one reminder e-mail around day 32, after reading Search Console itself (owner 2026-11-02)',async()=>{
  const reminders=require('../src/growth-measurement-reminders.cjs');
  await pool.query("ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email TEXT");
  await pool.query("UPDATE tracker_clients SET email='owner@acme-roofing.example' WHERE id=$1",[ids.client]);
@@ -204,7 +204,7 @@ test('6b. the publication can be corrected and sends one reminder e-mail around 
  assert.match(r.body.publication.notes,/edited one paragraph after the download/);
  assert.deepEqual(r.body.reminder.emails,['owner@acme-roofing.example','editor@agency.example']);
  const due=new Date(r.body.reminder.due_at);
- assert.equal(due.toISOString().slice(0,10),new Date(Date.parse(publishedAt.toISOString().slice(0,10)+'T00:00:00Z')+31*86400000).toISOString().slice(0,10));
+ assert.equal(due.toISOString().slice(0,10),new Date(Date.parse(publishedAt.toISOString().slice(0,10)+'T00:00:00Z')+32*86400000).toISOString().slice(0,10));
  const sent=[];const send=async m=>{sent.push(m);return true};
  assert.equal((await reminders.sendDueReminders(pool,{send,now:new Date(due.getTime()-3600000)})).sent,0,'not before it is due');
  assert.equal((await reminders.sendDueReminders(pool,{send,now:new Date(due.getTime()+3600000),baseUrl:'https://app.example'})).sent,1);
@@ -212,7 +212,7 @@ test('6b. the publication can be corrected and sends one reminder e-mail around 
  const own=sent.find(m=>m.to.includes('owner@acme-roofing.example')),other=sent.find(m=>m.to.includes('editor@agency.example'));
  assert.match(own.html,/https:\/\/app\.example\/track\/owner-tok\/growth\/measurement/,'the owner gets the measurement link');
  assert(!other.html.includes('owner-tok'),'another address never gets the owner link');
- assert.match(own.subject,/28 days after your change/);assert.match(own.html,/does not estimate enquiries/);
+ assert.match(own.subject,/28 days after your change/);assert.match(own.html,/Growth has no Search Console access for this site|Filled in automatically/);assert.match(own.html,/Growth cannot read these/);
  // Corrected after sending to another date: a new reminder for the new date.
 });
 test('7. the Cockpit marks the page as just changed and stops recommending it',async()=>{
