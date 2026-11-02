@@ -106,6 +106,18 @@ function brevoSend({to,subject,html}){
   body:JSON.stringify({to:to.map(email=>({email})),sender:{email:process.env.FROM_EMAIL||'info@contentscale.site',name:process.env.SENDER_NAME||'ContentScale Growth'},subject,htmlContent:html})})
   .then(r=>r.ok).catch(()=>false);
 }
+// Confirmation right after the reminder is set or changed (owner 2026-11-02: "it does not work" — nothing arrived, so
+// nothing showed that it was set). It states the date and the addresses; it contains no owner link.
+async function sendConfirmation({emails,url,publishedAt,send=brevoSend}){
+ if(!emails.length)return {sent:false,reason:'NO_ADDRESSES'};
+ if(send===brevoSend&&!process.env.BREVO_API_KEY)return {sent:false,reason:'EMAIL_NOT_CONFIGURED'};
+ const due=dueAt(publishedAt),w=windowsOf(publishedAt),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ const ok=await send({to:emails,subject:'Growth reminder set for '+due.toISOString().slice(0,10)+' — '+String(url).replace(/^https?:\/\//,''),
+  html:'<p>A reminder is set for the change published on '+esc(url)+' on '+ymd(publishedAt)+'.</p>'+
+   '<p>On '+due.toISOString().slice(0,10)+' Growth reads the Search Console numbers for before ('+w.before.start+' to '+w.before.end+') and after ('+w.after.start+' to '+w.after.end+') itself and e-mails '+emails.map(esc).join(', ')+' to enter the enquiries for both periods.</p>'+
+   '<p>Nothing else is needed now.</p>'}).catch(()=>false);
+ return ok?{sent:true}:{sent:false,reason:'NOT_ACCEPTED'};
+}
 // Hourly check in the running app; off without an e-mail key or with GROWTH_REMINDERS=0.
 let loop=null;
 function startReminderLoop(pool,{intervalMs=3600000}={}){
@@ -118,4 +130,4 @@ function startReminderLoop(pool,{intervalMs=3600000}={}){
  loop=setInterval(tick,intervalMs);if(loop.unref)loop.unref();setTimeout(tick,60000).unref?.();
  return loop;
 }
-module.exports={parseEmails,dueAt,windowsOf,setReminder,loadReminder,sendDueReminders,message,startReminderLoop,ensureTable};
+module.exports={parseEmails,dueAt,windowsOf,setReminder,loadReminder,sendDueReminders,sendConfirmation,message,startReminderLoop,ensureTable};

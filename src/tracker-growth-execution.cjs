@@ -8,7 +8,7 @@ function validPublish({url,query,notes,published_at}){
  if(!Number.isFinite(stamp)||stamp>Date.now()+300000||stamp<Date.now()-366*86400000)return 'Provide the actual publication time from the past year';
  return null;
 }
-function registerGrowthExecution(app,pool){
+function registerGrowthExecution(app,pool,deps={}){
  // Keep NJ lead discovery on the existing server and outside Network/CRM writes.
  try{
   require('./lead-crawler-serpapi.cjs').registerLeadCrawlerSerpApi(app,{pool});
@@ -76,7 +76,8 @@ function registerGrowthExecution(app,pool){
    const pubId=Number(result.rows[0].id);
    setImmediate(()=>require('./tracker-growth-gsc-direct.cjs').importGscWindows(pool,{clientId:c.id,publicationId:pubId,periods:['before']}).catch(()=>{}));
    const reminder=mail.emails.length?await reminders.setReminder(pool,{clientId:c.id,publicationId:Number(result.rows[0].id),emails:mail.emails,publishedAt}).catch(()=>null):null;
-   res.json({success:true,publication:result.rows[0],gsc_evidence:gscEvidence,reminder:reminder?{emails:reminder.emails,due_at:reminder.due_at}:null,
+   const confirmation=reminder?await reminders.sendConfirmation({emails:reminder.emails,url:pg.url,publishedAt,send:deps.send}):null;
+   res.json({success:true,publication:result.rows[0],gsc_evidence:gscEvidence,reminder:reminder?{emails:reminder.emails,due_at:reminder.due_at,confirmation}:mail.emails.length?{error:'NOT_SAVED'}:null,
     state:verified?'PUBLISHED_AWAITING_GSC_COMPARISON':'PUBLISHED_NEEDS_SEARCH_CONSOLE_FOR_MEASUREMENT',measured_improvement:false});
   }catch(e){console.error('[growth-publication]',e.message);res.status(503).json({success:false,error:'Publication record unavailable; no claims were made'})}
  });
@@ -106,7 +107,8 @@ function registerGrowthExecution(app,pool){
    const row=(await pool.query('UPDATE tracker_growth_publications SET notes=$3,published_at=$4 WHERE id=$1 AND tracker_client_id=$2 RETURNING id,published_at,notes',[id,c.id,notes,publishedAt])).rows[0];
    const reminder=req.body&&'reminder_emails' in req.body?await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:mail.emails,publishedAt}):await reminders.loadReminder(pool,{clientId:c.id,publicationId:id});
    if(reminder&&moved&&!(req.body&&'reminder_emails' in req.body))await reminders.setReminder(pool,{clientId:c.id,publicationId:id,emails:reminder.emails,publishedAt});
-   res.json({success:true,publication:row,reminder:reminder?{emails:reminder.emails,due_at:reminders.dueAt(publishedAt)}:null,live_page_changed:false});
+   const confirmation=reminder&&req.body&&'reminder_emails' in req.body?await reminders.sendConfirmation({emails:reminder.emails,url:pub.url,publishedAt,send:deps.send}):null;
+   res.json({success:true,publication:row,reminder:reminder?{emails:reminder.emails,due_at:reminders.dueAt(publishedAt),confirmation}:null,live_page_changed:false});
   }catch(e){console.error('[growth-publication-edit]',e.message);res.status(503).json({success:false,error:'Publication record unavailable'})}
  });
  reminders.startReminderLoop(pool);
