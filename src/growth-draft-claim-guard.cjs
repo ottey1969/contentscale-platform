@@ -206,4 +206,4 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
  }
  return {ok:violations.length===0,violations,safe_rewrites:rewrites,safe_text:kept.join(' '),claim_review:review};
 }
-module.exports={withoutTechnicalNumbers,assessDraftClaims,sentencesOf,contentRoots,numbersIn,AI_MECHANISM,ATTRIBUTION,headingMismatch};
+module.exports={personalVoice,withoutTechnicalNumbers,assessDraftClaims,sentencesOf,contentRoots,numbersIn,AI_MECHANISM,ATTRIBUTION,headingMismatch};

@@ -5,7 +5,7 @@
 // or a custom CMS using native SEO-indexable text components.
 const {createHash}=require('node:crypto');
 const {deflateRawSync}=require('node:zlib');
-const {assessDraftClaims,headingMismatch}=require('./growth-draft-claim-guard.cjs');
+const {assessDraftClaims,headingMismatch,personalVoice}=require('./growth-draft-claim-guard.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 const clean=x=>String(x==null?'':x).trim();
 const asText=html=>String(html).replace(/<!--[\s\S]*?-->/g,'').replace(/<[^>]*>/g,' ')
@@ -115,12 +115,19 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    if(mm)blockedDetails.push({code:'UNRESOLVED_'+mm.code,sentence:null,reason:'“'+asText(h)+'”: '+mm.reason})}
   if(blockedDetails.length)issues.push('FLAGGED_CONTENT_NOT_RESOLVED');
  }
+ // The site speaks as the service (owner rule 2026-11-01): the SEO title and description too, also when they are the
+ // page's current ones ("my step-by-step GRAAF Framework").
+ for(const [k,v] of [['SEO title',pageTitle],['Meta description',metaDescription]]){const pv=typeof v==='string'&&personalVoice(v);
+  if(pv){issues.push('META_PERSONAL_OR_FOUNDER_VOICE');blockedDetails.push({code:'META_PERSONAL_OR_FOUNDER_VOICE',sentence:clean(v).slice(0,300),reason:k+' is written as a person (“'+pv+'”): write it as the service, without “I”, “my” or a founder.'})}}
  if(issues.length)return {status:'BLOCKED',issues:[...new Set(issues)],warnings:[...new Set(warnings)],files:[],publication_allowed:false,
   ...(blockedDetails.length?{blocked_details:blockedDetails.slice(0,20)}:{})};
  const fragments=approved.map(x=>x.html.trim()).join('\n\n');
  // New sections that share one anchor are a chain in package order: the second goes directly after the first, never
  // also "directly after" the same existing heading (which would reverse or interleave them).
  const where=(x,i)=>{const prev=approved[i-1];
+  // A new section after X while another change extends X: the new one follows X including that extension.
+  const ext=x.placement&&x.placement.mode==='ADD_AFTER_SECTION'?approved.findIndex(y=>y!==x&&y.placement&&y.placement.mode==='EXTEND_SECTION'&&y.placement.section_heading===x.placement.section_heading):-1;
+  if(ext>=0)return 'Add as a new section directly after “'+x.placement.section_heading+'”, after the end of that section including Change '+(ext+1)+' (do Change '+(ext+1)+' first)';
   return prev&&x.placement&&prev.placement&&x.placement.mode==='ADD_AFTER_SECTION'&&prev.placement.mode==='ADD_AFTER_SECTION'&&
    x.placement.section_heading===prev.placement.section_heading?'Add as a new section directly after Change '+i+' (both follow “'+x.placement.section_heading+'”)':placementText(x.placement)};
  const allMarkdown=approved.map((x,i)=>'### Approved change '+(i+1)+'\nEvidence: '+x.evidence_ref+'\nPlacement: '+where(x,i)+'\n\n'+renderChangeMarkdown(x.html)).join('\n\n');
