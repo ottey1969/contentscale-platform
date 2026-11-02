@@ -308,7 +308,8 @@
   btn.dataset.requestPending='true';
   var originalLabel=btn.textContent;
   // Keep the running task unmistakable, and prevent competing actions or duplicate requests.
-  var lockedButtons=[...document.querySelectorAll('button')].filter(b=>b!==btn&&!b.disabled);
+  var lockedButtons=[...document.querySelectorAll('button')].filter(b=>b!==btn);
+  var previousButtonStates=lockedButtons.map(b=>({button:b,disabled:b.disabled}));
   lockedButtons.forEach(b=>{b.disabled=true;b.dataset.growthDraftLocked='true'});
   btn.disabled=true;
   btn.textContent='⏳ Generating draft… please wait';
@@ -346,7 +347,7 @@
    delete btn.dataset.requestPending;
    btn.textContent=originalLabel;
    btn.disabled=!safe.source;
-   lockedButtons.forEach(b=>{if(b.dataset.growthDraftLocked==='true'){b.disabled=false;delete b.dataset.growthDraftLocked}});
+   previousButtonStates.forEach(item=>{if(item.button.dataset.growthDraftLocked==='true'){item.button.disabled=item.disabled;delete item.button.dataset.growthDraftLocked}});
    ready();
   }
  });
