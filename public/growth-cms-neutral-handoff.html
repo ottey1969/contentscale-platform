@@ -63,7 +63,7 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <section id="publicationWrap" class="note" hidden aria-label="Record actual publication">
 <h2>5. After the change is live: record the publication</h2>
 <p>Only fill this in once the editor has actually published the change on the original page. This starts the 28-day measurement; it does not change the website.</p>
-<form id="publicationForm">
+<form id="publicationForm" novalidate>
 <label for="publishedAt">Publication date and time</label><input id="publishedAt" type="datetime-local" required>
 <label for="publicationNotes">What was actually published?</label><textarea id="publicationNotes" rows="3" maxlength="3000" required></textarea>
 <label for="reminderEmails">Remind me after 28 days by e-mail (optional, up to 5 addresses, separated by commas)</label><input id="reminderEmails" type="text" inputmode="email" autocomplete="email" placeholder="you@example.com, colleague@example.com">

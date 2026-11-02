@@ -535,7 +535,9 @@
   finally{buttonProgress(btn,false,!!safe.exported);ready()}
  });
  // Only after the package exists: the owner records when the editor actually published it (starts the 28-day measurement).
+ function localNow(){var d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16)}
  function showPublicationForm(payload){
+  try{var pa=$('publishedAt');pa.max=localNow();if(!pa.value)pa.value=localNow()}catch(e){}
   safe.published={page_id:pageId,query:payload.focus_query,growth_proposal_id:payload.growth_proposal_id};
   var heads=payload.approved_changes.map(c=>(/<h2>([\s\S]*?)<\/h2>/.exec(c.html)||[])[1]).filter(Boolean).map(h=>h.replace(/&[^;]+;/g,' ').trim());
   if(!$('publicationNotes').value)$('publicationNotes').value='Added to '+safe.source.canonical_url+': '+heads.join('; ')+(payload.growth_proposal_id?' (Growth proposal #'+payload.growth_proposal_id+')':'');
@@ -550,6 +552,8 @@
    if(!safe.published)throw Error('Download the reviewed package first');
    if(!safe.published.query)throw Error('A working query is required to measure the change');
    var at=new Date($('publishedAt').value);if(!Number.isFinite(at.getTime()))throw Error('Enter the actual publication date and time');
+   // A time later than now cannot be the publication time (owner 2026-11-02: an unclear refusal); say it in local time.
+   if(at.getTime()>Date.now()+300000)throw Error('This time ('+at.toLocaleString()+') is later than now ('+new Date().toLocaleString()+'). Enter when the change actually went live (check AM/PM).');
    var body={notes:$('publicationNotes').value.trim(),published_at:at.toISOString(),reminder_emails:$('reminderEmails')?$('reminderEmails').value:''};
    var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/publication'+(editing?'/'+encodeURIComponent(safe.publicationId):'');
    var r=await fetch(url,{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(editing?body:{...safe.published,...body})});

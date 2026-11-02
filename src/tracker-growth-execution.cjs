@@ -5,7 +5,10 @@ function validPublish({url,query,notes,published_at}){
  const stamp=Date.parse(published_at||'');
  if(!url||!/^https:\/\//i.test(url)||!String(query||'').trim())return 'A verified HTTPS page and query are required';
  if(!String(notes||'').trim()||String(notes).length>3000)return 'Describe what was actually changed (max 3000 characters)';
- if(!Number.isFinite(stamp)||stamp>Date.now()+300000||stamp<Date.now()-366*86400000)return 'Provide the actual publication time from the past year';
+ // Owner 2026-11-02: "Provide the actual publication time from the past year" did not say what was wrong.
+ if(!Number.isFinite(stamp))return 'Enter the date and time the change went live';
+ if(stamp>Date.now()+300000)return 'The publication time is in the future ('+new Date(stamp).toISOString().slice(0,16).replace('T',' ')+' UTC; now '+new Date().toISOString().slice(0,16).replace('T',' ')+' UTC). Enter when the change actually went live (check AM/PM), or save after publishing.';
+ if(stamp<Date.now()-366*86400000)return 'The publication time is more than a year ago; enter when the change actually went live';
  return null;
 }
 function registerGrowthExecution(app,pool,deps={}){
