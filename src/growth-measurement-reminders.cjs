@@ -61,6 +61,8 @@ const T={
  en:{term:q=>'The search term we worked on: <strong>“'+q+'”</strong>.',added:'What was added to your page',
   addedWhy:(a,h)=>(a?'Answers the question: “'+a+'”. ':'')+(h?'Pages that Google shows for this search answer it too: '+h+'.':''),
   standing:'Where your page stands in Google now',
+  purpose:'Why Growth recommended this change',purposeText:'Growth compares your page with pages appearing in Google for the same search. It looks for useful questions and topics that relevant competing pages address but your page does not cover sufficiently. These are opportunities to help visitors find clearer, more complete answers—not proof that Google rewards a particular section.',
+  method:'Where the information comes from',methodText:'The search term and proposed sections come from the saved Growth research and editorial proposal. The example websites listed under each section come from that research; they are not endorsements or proof of a ranking factor. Clicks, impressions and average position, when available, come from Google Search Console or the named Tracker data. We compare 28 days before and after publication, but changes cannot be attributed to the edit alone.',
   baseBefore:(c,i,p)=>'In the 4 weeks before the update ('+p+') your page was shown '+i+' times in Google for this search and clicked '+c+' times (Google Search Console).',
   baseLatest:(c,i,pos,d)=>'The latest Google numbers we have for this search ('+d+'): shown '+i+' times, clicked '+c+' times'+(pos?', average position '+pos:'')+' (Google Search Console).',
   baseCountry:(c,i,p)=>'In '+p+' your page was shown '+i+' times in Google for this search and clicked '+c+' times (Google Search Console).',
@@ -89,6 +91,8 @@ const T={
  nl:{term:q=>'De zoekterm waaraan we werkten: <strong>“'+q+'”</strong>.',added:'Wat er aan uw pagina is toegevoegd',
   addedWhy:(a,h)=>(a?'Beantwoordt de vraag: “'+a+'”. ':'')+(h?'Pagina’s die Google voor deze zoekopdracht toont, beantwoorden dit ook: '+h+'.':''),
   standing:'Waar uw pagina nu staat in Google',
+  purpose:'Waarom Growth deze aanpassing adviseerde',purposeText:'Growth vergelijkt uw pagina met pagina’s die Google voor dezelfde zoekopdracht toont. We zoeken nuttige vragen en onderwerpen die relevante concurrerende pagina’s behandelen maar op uw pagina ontbreken of onvoldoende worden uitgelegd. Dat kan bezoekers duidelijkere en completere antwoorden bieden; het bewijst niet dat Google een bepaalde sectie beloont.',
+  method:'Waar de informatie vandaan komt',methodText:'De zoekterm en voorgestelde secties komen uit het opgeslagen Growth-onderzoek en redactionele voorstel. De voorbeeldwebsites per sectie komen uit dat onderzoek; zij zijn geen aanbeveling of bewijs van een rankingfactor. Klikken, vertoningen en gemiddelde positie komen, wanneer beschikbaar, uit Google Search Console of de vermelde Tracker-gegevens. We vergelijken 28 dagen voor en na publicatie, maar kunnen een verandering niet uitsluitend aan deze aanpassing toeschrijven.',
   baseBefore:(c,i,p)=>'In de 4 weken vóór de aanpassing ('+p+') werd uw pagina '+i+' keer getoond in Google voor deze zoekopdracht en '+c+' keer aangeklikt (Google Search Console).',
   baseLatest:(c,i,pos,d)=>'De laatste Google-cijfers die we voor deze zoekopdracht hebben ('+d+'): '+i+' keer getoond, '+c+' keer aangeklikt'+(pos?', gemiddelde positie '+pos:'')+' (Google Search Console).',
   baseCountry:(c,i,p)=>'In '+p+' werd uw pagina '+i+' keer getoond in Google voor deze zoekopdracht en '+c+' keer aangeklikt (Google Search Console).',
@@ -129,6 +133,7 @@ function whatWeDid(url,publishedAt,notes,lang,ctx=null){const t=tx(lang);
 }
 // The facts behind the change, for the owner: the search term, each added section with the question it answers and the
 // sites Google shows that answer it too, and where the page stands in Google now. Only data Growth has; nothing assumed.
+function rationaleBlock(lang){const t=tx(lang);return block(t.purpose,'<p>'+t.purposeText+'</p>')+block(t.method,'<p>'+t.methodText+'</p>');}
 function addedBlock(ctx,lang){const t=tx(lang);if(!ctx||!(ctx.sections||[]).length)return '';
  return block(t.added,'<ul style="padding-left:20px">'+ctx.sections.slice(0,8).map(x=>'<li><strong>'+escH(x.h2)+'</strong>'+((x.answers||(x.hosts||[]).length)?'<br><small>'+escH(t.addedWhy(x.answers,(x.hosts||[]).join(', ')))+'</small>':'')+'</li>').join('')+'</ul>');}
 function standingBlock(ctx,publishedAt,lang){const t=tx(lang),b=ctx&&ctx.baseline,fmt=d=>d?longDate(d,lang):'';
@@ -146,12 +151,12 @@ function message({url,query,publishedAt,link,gsc=null,leads=null,notes='',lang='
    '<p>'+t.diff(got.after.clicks-got.before.clicks)+'</p>':'<p>'+escH(t.gsc[gsc&&gsc.status]||t.gsc.DEFAULT)+'</p>';
  const question=need.length?block(t.question,'<p>'+t.ask+need.map(p=>p==='before'?t.askBefore(span(w,'before',lang)):t.askAfter(span(w,'after',lang))).join(t.and)+t.askEnd+'</p>'+
    (link?'<p><a href="'+escH(link)+'" style="display:inline-block;background:#2563eb;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;font-weight:600">'+t.button+'</a></p>':'<p>'+t.noLink+'</p>')):'';
- const html=wrap('<p>'+t.hello+'</p><p>'+t.intro2+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+addedBlock(ctx,lang)+block(t.measured,numbers)+question+block(t.next,'<p>'+(need.length?t.nextAsk:t.nextDone)+'</p>')+block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.sign+'</p>');
+ const html=wrap('<p>'+t.hello+'</p><p>'+t.intro2+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+rationaleBlock(lang)+addedBlock(ctx,lang)+block(t.measured,numbers)+question+block(t.next,'<p>'+(need.length?t.nextAsk:t.nextDone)+'</p>')+block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.sign+'</p>');
  return {subject:t.subjResult(page(url),need.length>0),html};
 }
 function confirmationMessage({emails,url,publishedAt,notes='',gscAvailable,lang='en',ctx=null}){
  const t=tx(lang),due=dueAt(publishedAt),w=windowsOf(publishedAt),d=longDate(due,lang);
- const html=wrap('<p>'+t.hello+'</p><p>'+t.intro1+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+addedBlock(ctx,lang)+standingBlock(ctx,publishedAt,lang)+block(t.now,'<p>'+t.nowText+'</p>')+
+ const html=wrap('<p>'+t.hello+'</p><p>'+t.intro1+'</p>'+whatWeDid(url,publishedAt,notes,lang,ctx)+rationaleBlock(lang)+addedBlock(ctx,lang)+standingBlock(ctx,publishedAt,lang)+block(t.now,'<p>'+t.nowText+'</p>')+
   block(t.check(d),'<ul style="padding-left:20px"><li>'+t.checkGoogle(span(w,'before',lang),span(w,'after',lang))+(gscAvailable?t.readsItself:t.noAccessYet)+'</li><li>'+t.checkLeads(d)+'</li></ul>')+
   block(t.noPromise,'<p>'+t.noPromiseText+'</p>')+'<p>'+t.why(emails.map(escH).join(', '))+'</p><p>'+t.sign+'</p>');
  return {subject:t.subjConfirm(d),html};
