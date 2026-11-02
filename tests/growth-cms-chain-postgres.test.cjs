@@ -67,7 +67,7 @@ CREATE TABLE prewrite_briefs(id SERIAL PRIMARY KEY,client_id INTEGER,keyword TEX
 CREATE TABLE tracker_ai_evidence(id BIGSERIAL PRIMARY KEY,page_id BIGINT,tracker_client_id BIGINT,engine TEXT,evidence_method TEXT,brand_recommended BOOLEAN,
  domain_cited BOOLEAN,exact_page_cited BOOLEAN,citation_urls JSONB,verified_at TIMESTAMPTZ,revision_cycle INTEGER,is_cleared BOOLEAN);`;
 const TABLES=['tracker_growth_new_page_concepts','prewrite_briefs','tracker_clients','tracker_pages','tracker_case_studies','tracker_gsc_queries','tracker_snapshots','tracker_ai_evidence',
- 'tracker_growth_proposals','tracker_growth_publications','tracker_growth_gsc_windows','tracker_growth_recommendations','tracker_growth_gap_lists','tracker_growth_page_markets','tracker_growth_writing_runs','tracker_growth_site_markets','tracker_growth_ai_answers','tracker_growth_gsc_country','tracker_growth_customer_countries','tracker_growth_gsc_country_imports','tracker_growth_claim_reviews','tracker_growth_lead_windows','tracker_growth_sentence_removals'];
+ 'tracker_growth_proposals','tracker_growth_publications','tracker_growth_gsc_windows','tracker_growth_recommendations','tracker_growth_gap_lists','tracker_growth_page_markets','tracker_growth_writing_runs','tracker_growth_site_markets','tracker_growth_ai_answers','tracker_growth_gsc_country','tracker_growth_customer_countries','tracker_growth_gsc_country_imports','tracker_growth_claim_reviews','tracker_growth_lead_windows','tracker_growth_sentence_removals','tracker_growth_reminders'];
 
 test.before(async()=>{
  pool=new Pool({connectionString:DB});
@@ -192,6 +192,29 @@ test('6. the actual publication is recorded without Search Console (GSC optional
  assert.equal(await pageHtml(ids.page),OWN,'recording a publication never edits the stored page or baseline');
 });
 
+test('6b. the publication can be corrected and sends one reminder e-mail around day 32, after reading Search Console itself (owner 2026-11-02)',async()=>{
+ const reminders=require('../src/growth-measurement-reminders.cjs');
+ await pool.query("ALTER TABLE tracker_clients ADD COLUMN IF NOT EXISTS email TEXT");
+ await pool.query("UPDATE tracker_clients SET email='owner@acme-roofing.example' WHERE id=$1",[ids.client]);
+ const edit=body=>api('POST','/api/tracker-client/owner-tok/growth/publication/'+publication.id,body);
+ assert.equal((await edit({reminder_emails:'owner@acme-roofing.example, not-an-address'})).status,400,'a wrong address is named, nothing saved');
+ assert.equal((await api('POST','/api/tracker-client/share-tok/growth/publication/'+publication.id,{notes:'x'})).status,404,'the shared link cannot edit');
+ const r=await edit({notes:'Added the estimate section and edited one paragraph after the download.',reminder_emails:'owner@acme-roofing.example, editor@agency.example'});
+ assert.equal(r.status,200,JSON.stringify(r.body));assert.equal(r.body.live_page_changed,false);
+ assert.match(r.body.publication.notes,/edited one paragraph after the download/);
+ assert.deepEqual(r.body.reminder.emails,['owner@acme-roofing.example','editor@agency.example']);
+ const due=new Date(r.body.reminder.due_at);
+ assert.equal(due.toISOString().slice(0,10),new Date(Date.parse(publishedAt.toISOString().slice(0,10)+'T00:00:00Z')+32*86400000).toISOString().slice(0,10));
+ const sent=[];const send=async m=>{sent.push(m);return true};
+ assert.equal((await reminders.sendDueReminders(pool,{send,now:new Date(due.getTime()-3600000)})).sent,0,'not before it is due');
+ assert.equal((await reminders.sendDueReminders(pool,{send,now:new Date(due.getTime()+3600000),baseUrl:'https://app.example'})).sent,1);
+ assert.equal((await reminders.sendDueReminders(pool,{send,now:new Date(due.getTime()+7200000)})).sent,0,'sent once');
+ const own=sent.find(m=>m.to.includes('owner@acme-roofing.example')),other=sent.find(m=>m.to.includes('editor@agency.example'));
+ assert.match(own.html,/https:\/\/app\.example\/track\/owner-tok\/growth\/measurement/,'the owner gets the measurement link');
+ assert(!other.html.includes('owner-tok'),'another address never gets the owner link');
+ assert.match(own.subject,/28 days after your change/);assert.match(own.html,/Growth has no Search Console access for this site|Filled in automatically/);assert.match(own.html,/Growth cannot read these/);
+ // Corrected after sending to another date: a new reminder for the new date.
+});
 test('7. the Cockpit marks the page as just changed and stops recommending it',async()=>{
  const g=await api('GET','/api/tracker-client/owner-tok/growth');
  assert.equal(g.status,200);
@@ -230,6 +253,10 @@ test('8. measurement: no number until both 28-day Search Console windows exist, 
  assert.match(rec.reason,/not proven/);
  const g=await api('GET','/api/tracker-client/owner-tok/growth');
  assert.equal(g.body.measurement_summary.measured,1);assert.equal(g.body.measurement_summary.measured_click_change,7);
+ // Numbers were entered for the periods of this date: the date cannot move any more (the text still can).
+ const moved=await api('POST','/api/tracker-client/owner-tok/growth/publication/'+publication.id,{published_at:new Date(publishedAt.getTime()-86400000).toISOString()});
+ assert.equal(moved.status,409);assert.match(moved.body.error,/The date cannot move/);
+ assert.equal((await api('POST','/api/tracker-client/owner-tok/growth/publication/'+publication.id,{notes:'Text corrected after the measurement started.'})).status,200);
 });
 
 test('10. hybrid: research without writing gives the full gap list; text only for the owner selection, flagged, to the CMS',async()=>{
