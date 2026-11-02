@@ -96,11 +96,26 @@
  // from editable proposed copy; never alter the original page, and never approve facts automatically.
  function removeFlaggedSentence(sentence){
   if(!sentence)return 0;
+  // Scanner text and editor fields can differ in whitespace and typographic quotation marks.
+  // Remove the exact flagged sentence, not an entire section or unflagged neighboring claims.
+  var canonical=function(s){return String(s).replace(/[\u2018\u2019]/g,"'").replace(/[\u201c\u201d]/g,'"').replace(/\u00a0/g,' ')};
+  var target=canonical(sentence).trim().replace(/\s+/g,' ');
+  if(!target)return 0;
   var fields=[$('copy')].concat([...document.querySelectorAll('.draft-copy')]);
   var changed=0;
-  fields.forEach(function(field){if(!field||!field.value||!field.value.includes(sentence))return;
-   field.value=field.value.split(sentence).join('').replace(/ {2,}/g,' ').replace(/\n{3,}/g,'\n\n').trim();
-   field.dispatchEvent(new Event('input',{bubbles:true}));changed++});
+  fields.forEach(function(field){
+   if(!field||!field.value)return;
+   var original=field.value,normalized=canonical(original);
+   var words=target.split(' ').map(function(w){return w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')});
+   var pattern=new RegExp(words.join('\\s+'),'g');
+   var matches=[...normalized.matchAll(pattern)];
+   if(!matches.length)return;
+   // Identical code-point length after punctuation normalization lets us safely use match offsets.
+   var next=original;
+   for(var i=matches.length-1;i>=0;i--){var m=matches[i];next=next.slice(0,m.index)+next.slice(m.index+m[0].length)}
+   next=next.replace(/ {2,}/g,' ').replace(/\n{3,}/g,'\n\n').trim();
+   if(next!==original){field.value=next;field.dispatchEvent(new Event('input',{bubbles:true}));changed++}
+  });
   return changed;
  }
  function flaggedReviewAction(box,flag){
@@ -447,6 +462,8 @@
   ev.preventDefault();const btn=$('download');btn.disabled=true;buttonProgress(btn,true);
   status('downloadStatus','Validating evidence and approved content…',false);
   try{
+   // Owner removals must be applied to the actual export fields, even after an async proposal refill.
+   reapplyRemovals();
    let payload=build(),preview,downgraded=false;
    try{preview=await post(payload,'json')}
    catch(e){
