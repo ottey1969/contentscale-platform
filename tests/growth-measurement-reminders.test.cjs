@@ -39,7 +39,7 @@ test('a confirmation is sent when the reminder is set; without an e-mail key the
  const {sendConfirmation}=require('../src/growth-measurement-reminders.cjs');
  const sent=[];const send=async m=>{sent.push(m);return true};
  const emails=['ottmar.francisca1969@gmail.com','otteyfrancisca@gmail.com'];
- assert.deepEqual(await sendConfirmation({emails,url:'https://contentscale.site/content-scaling/',publishedAt:'2026-11-02T01:43:00Z',send}),{sent:true});
+ assert.equal((await sendConfirmation({emails,url:'https://contentscale.site/content-scaling/',publishedAt:'2026-11-02T01:43:00Z',send,model:null})).sent,true);
  assert.deepEqual(sent[0].to,emails);assert.match(sent[0].subject,/Your page update is live — we will show you the results on 4 December 2026/);
  assert.match(sent[0].html,/You do not need to do anything/);assert.match(sent[0].html,/the 4 weeks before the update \(5 October – 1 November\) compared with the 4 weeks after \(3 November – 30 November\)/);assert.doesNotMatch(sent[0].html,/href=|\/track\//,'no owner link in a confirmation');
  const key=process.env.BREVO_API_KEY;delete process.env.BREVO_API_KEY;
