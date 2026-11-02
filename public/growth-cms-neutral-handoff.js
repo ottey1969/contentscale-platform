@@ -13,17 +13,19 @@
   catch(e){status('sourceStatus','Removal could not be saved in this browser.',true);return false}
  }
  function reapplyRemovals(){removedSentences().forEach(removeFlaggedSentence)}
+ var sourceButtonStates=[];
  function lockWhileLoading(on){
   safe.loadingSource=on;
   if(on){
    status('sourceStatus','⏳ Loading original page, scanned text and Growth evidence… please wait.',false);
    $('checkSource').textContent='⏳ Loading… please wait';
+   sourceButtonStates=[...document.querySelectorAll('button')].map(function(b){return {button:b,disabled:b.disabled}});
+   sourceButtonStates.forEach(function(s){s.button.disabled=true});
+  }else{
+   sourceButtonStates.forEach(function(s){s.button.disabled=s.disabled});
+   sourceButtonStates=[];
+   ready();
   }
-  document.querySelectorAll('button').forEach(function(b){
-   if(on){b.dataset.growthLoading='1';b.disabled=true}
-   else if(b.dataset.growthLoading){delete b.dataset.growthLoading}
-  });
-  if(!on)ready();
  }
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
  $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
