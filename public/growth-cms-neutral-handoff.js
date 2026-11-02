@@ -24,6 +24,7 @@
   }else{
    sourceButtonStates.forEach(function(s){s.button.disabled=s.disabled});
    sourceButtonStates=[];
+   $('generateEditorialDraft').disabled=!safe.source;
    ready();
   }
  }
