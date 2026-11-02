@@ -211,6 +211,7 @@ test('6b. the publication can be corrected and sends one reminder e-mail around 
  assert.equal((await reminders.sendDueReminders(pool,{send,now:new Date(due.getTime()+7200000)})).sent,0,'sent once');
  const own=sent.find(m=>m.to.includes('owner@acme-roofing.example')),other=sent.find(m=>m.to.includes('editor@agency.example'));
  assert.match(own.html,/https:\/\/app\.example\/track\/owner-tok\/growth\/measurement/,'the owner gets the measurement link');
+ assert(own.html.includes('/growth/measurement#publication-'+publication.id+'">Enter your enquiries for this change'),'the link opens the enquiry form of this publication');
  assert(!other.html.includes('owner-tok'),'another address never gets the owner link');
  assert.match(own.subject,/28 days after your change/);assert.match(own.html,/Growth has no Search Console access for this site|Filled in automatically/);assert.match(own.html,/Growth cannot read these/);
  // Corrected after sending to another date: a new reminder for the new date.

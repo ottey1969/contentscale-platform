@@ -66,7 +66,7 @@ function message({url,query,publishedAt,link,gsc=null,leads=null}){
  const leadPart=need.length?'<p><strong>Your enquiries</strong> (Growth cannot read these): enter the contact requests for this page '+need.map(p=>p==='before'?'before ('+w.before.start+' to '+w.before.end+')':'after ('+w.after.start+' to '+w.after.end+')').join(' and ')+', counted in your own contact form, mailbox or CRM.</p>':
   '<p><strong>Your enquiries</strong> are already entered for both periods.</p>';
  const html='<p>The change you published on '+esc(url)+' on '+ymd(publishedAt)+' now has a full 28 days behind it.</p>'+gscPart+leadPart+
-  (link?'<p><a href="'+esc(link)+'">Open the Growth measurement page</a></p>':'<p>Open the Growth measurement page from your Growth Cockpit.</p>');
+  (link?'<p><a href="'+esc(link)+'">'+(need.length?'Enter your enquiries for this change':'Open the measurement of this change')+'</a></p>':'<p>Open the Growth measurement page from your Growth Cockpit.</p>');
  return {subject,html};
 }
 // Sends every due, unsent reminder once (at most 3 attempts). send({to:[emails],subject,html}) → true when accepted.
@@ -84,7 +84,7 @@ async function sendDueReminders(pool,{send,now=new Date(),baseUrl=process.env.PU
   const own=new Set([r.client_email,...String(r.cc_emails||'').split(',')].map(x=>String(x||'').trim().toLowerCase()).filter(Boolean));
   const to=(r.emails||[]).map(String);
   const withLink=to.filter(x=>own.has(x)),without=to.filter(x=>!own.has(x));
-  const link=String(baseUrl).replace(/\/$/,'')+'/track/'+encodeURIComponent(r.token)+'/growth/measurement';
+  const link=String(baseUrl).replace(/\/$/,'')+'/track/'+encodeURIComponent(r.token)+'/growth/measurement#publication-'+Number(r.publication_id);
   try{
    // First fill in what Growth can read itself; a failure is described in the e-mail, never hidden or guessed.
    const gsc=await Promise.resolve(imp({clientId:r.tracker_client_id,publicationId:Number(r.publication_id),now})).catch(e=>({status:'GSC_ERROR',error:String(e.message||e)}));
