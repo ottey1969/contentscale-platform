@@ -28,3 +28,18 @@ test('no reminder loop without an e-mail key',()=>{
  assert.equal(startReminderLoop({query:async()=>({rows:[]})}),null);
  if(key)process.env.BREVO_API_KEY=key;
 });
+
+// Owner 2026-11-02: "it does not work" — nothing arrived after setting the reminder. A confirmation is sent at once,
+// and the page is told honestly when e-mail is not configured. Addresses as the owner typed them; no e-mail is sent.
+test('a confirmation is sent when the reminder is set; without an e-mail key the page is told so',async()=>{
+ const {sendConfirmation}=require('../src/growth-measurement-reminders.cjs');
+ const sent=[];const send=async m=>{sent.push(m);return true};
+ const emails=['ottmar.francisca1969@gmail.com','otteyfrancisca@gmail.com'];
+ assert.deepEqual(await sendConfirmation({emails,url:'https://contentscale.site/content-scaling/',publishedAt:'2026-11-02T01:43:00Z',send}),{sent:true});
+ assert.deepEqual(sent[0].to,emails);assert.match(sent[0].subject,/Growth reminder set for 2026-12-04/);
+ assert.match(sent[0].html,/before \(2026-10-05 to 2026-11-01\) and after \(2026-11-03 to 2026-11-30\)/);assert.doesNotMatch(sent[0].html,/href=|\/track\//,'no owner link in a confirmation');
+ const key=process.env.BREVO_API_KEY;delete process.env.BREVO_API_KEY;
+ assert.deepEqual(await sendConfirmation({emails,url:'https://contentscale.site/x/',publishedAt:'2026-11-02T01:43:00Z'}),{sent:false,reason:'EMAIL_NOT_CONFIGURED'});
+ if(key)process.env.BREVO_API_KEY=key;
+ assert.deepEqual(await sendConfirmation({emails,url:'u',publishedAt:'2026-11-02T01:43:00Z',send:async()=>false}),{sent:false,reason:'NOT_ACCEPTED'});
+});
