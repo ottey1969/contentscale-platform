@@ -68,6 +68,16 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <label for="publicationNotes">What was actually published?</label><textarea id="publicationNotes" rows="3" maxlength="3000" required></textarea>
 <div class="actions"><button type="submit" id="recordPublication">Save publication checkpoint</button><span id="publicationStatus" role="status"></span></div>
 </form>
+<div id="enquiryWrap" hidden>
+<h2>6. Enquiries before the change (your own records)</h2>
+<p id="enquiryIntro" class="small"></p>
+<form id="enquiryForm">
+<label for="enquiriesBefore">Contact requests for this page in those 28 days</label><input id="enquiriesBefore" type="number" min="0" step="1" required>
+<label for="enquirySource">Counted from</label><select id="enquirySource"><option value="own_contact_form">Your contact form</option><option value="own_email_or_phone_log">Your e-mail or phone log</option><option value="own_crm">Your CRM</option></select>
+<div class="actions"><button type="submit" id="recordEnquiries">Save enquiries before the change</button><span id="enquiryStatus" role="status"></span></div>
+</form>
+<p id="enquiryAfter" class="small"></p>
+</div>
 </section>
 <p class="small">Includes editable Markdown, indexable HTML fragments, SEO metadata, a preservation checklist and an honest measurement plan. For Wix, use native heading/text elements, not an iframe.</p>
 </main></body></html>

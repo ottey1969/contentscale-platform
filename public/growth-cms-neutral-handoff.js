@@ -549,11 +549,30 @@
    var d=await r.json();
    if(!r.ok||d.success!==true)throw Error(d.error||'Not saved');
    safe.publicationRecorded=true;btn.textContent='5. Publication recorded';btn.style.background='#94a3b8';
+   showEnquiryForm(d.publication&&d.publication.id,at);
    status('publicationStatus',d.gsc_evidence==='VERIFIED'?'Recorded. Measurement compares the 28 days before and after publication with Search Console data.':
     'Recorded. Without Search Console access the result is not measured yet: add the 28-day before/after numbers from Search Console on the measurement page.',false);
   }catch(err){status('publicationStatus',err.message||'Not saved',true)}
   finally{buttonProgress(btn,false,safe.publicationRecorded);btn.disabled=!!safe.publicationRecorded}
  });
+ // Enquiries (owner 2026-11-02: "I don't see the e-mail input"): right after the publication is recorded, the number of
+ // contact requests in the 28 days BEFORE it, from the owner's own records. Same windows as the measurement page; the
+ // number after the change can be entered there once those 28 days have passed. Growth never estimates either number.
+ function windowsOf(at){var day=new Date(at.toISOString().slice(0,10)+'T00:00:00Z').getTime(),D=86400000,y=function(x){return new Date(x).toISOString().slice(0,10)};
+  return {before:{start:y(day-28*D),end:y(day-D)},after:{start:y(day+D),end:y(day+28*D)}}}
+ function showEnquiryForm(publicationId,at){
+  var wrap=$('enquiryWrap');if(!wrap||!publicationId)return;
+  var w=windowsOf(at);wrap.hidden=false;
+  $('enquiryIntro').textContent='How many people contacted you about this page from '+w.before.start+' to '+w.before.end+' (the 28 days before publication)? Count them in your own contact form, mailbox or CRM. Growth does not estimate this number.';
+  $('enquiryAfter').innerHTML='';var a=document.createElement('a');a.href='/track/'+encodeURIComponent(token)+'/growth/measurement';a.textContent='measurement page';
+  $('enquiryAfter').append('After the change: from '+new Date(Date.parse(w.after.end+'T00:00:00Z')+86400000).toISOString().slice(0,10)+' enter the enquiries of '+w.after.start+' to '+w.after.end+' on the ',a,', next to the Search Console numbers.');
+  $('enquiryForm').onsubmit=async function(ev){ev.preventDefault();var b=$('recordEnquiries');b.disabled=true;
+   try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/measurement/leads',{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({publication_id:Number(publicationId),period:'before',start_date:w.before.start,end_date:w.before.end,leads:$('enquiriesBefore').value,source:$('enquirySource').value})});
+    var d=await r.json();if(!r.ok||d.success!==true)throw Error(d.error||'Not saved');
+    status('enquiryStatus','Saved: '+Number($('enquiriesBefore').value)+' enquiries before the change. The comparison appears once the number after the change is entered.',false);b.textContent='Enquiries saved'}
+   catch(err){status('enquiryStatus',err.message||'Not saved',true);b.disabled=false}};
+ }
  // An edited package is a new candidate and can be exported again; no silent duplicate downloads.
  $('handoffForm').addEventListener('input',function(ev){
   if(!safe.exported)return;
