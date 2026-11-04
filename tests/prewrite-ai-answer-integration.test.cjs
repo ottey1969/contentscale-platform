@@ -49,12 +49,13 @@ test('canonical six-megabyte server compiles after AI-answer research integratio
  // missing-only merge. The saved research must then list all five, keep language/market and the automatic source.
  const R=require('../src/prewrite-ai-answer-research.cjs');
  const code=after.slice(after.indexOf('try{const _R='),after.indexOf('}catch(_e){}')+'}catch(_e){}'.length);
- const prev=R.makePrewriteAiAnswerResearch({query:'TEST content scaling',language:'Dutch',market:'nl',answers:[{engine:'google_aio',answer:'TEST google'},{engine:'perplexity',answer:'TEST automatic perplexity',source:'automatic fallback'}]});
+ const prev=R.makePrewriteAiAnswerResearch({query:'TEST content scaling',language:'Dutch',market:'nl',answers:[{engine:'google_aio',answer:'TEST google'},{engine:'perplexity',answer:'TEST automatic perplexity',source:'automatic fallback',sources:['https://example.org/prior']}]});
  const brief={prewrite_ai_answer_research:prev,ai_system_evidence:{google_aio:{text:'TEST google',checked:true},chatgpt:{text:'TEST chatgpt',checked:true},claude:{text:'TEST claude',checked:true},copilot:{text:'TEST copilot',checked:true}}};
  vm.runInNewContext(code,{require:m=>m==='./prewrite-ai-answer-research.cjs'?R:require(m),brief,srcKeyword:'TEST content scaling',requestedKeyword:'',srcReq:{},opts:{}});
  const r=brief.prewrite_ai_answer_research;
  assert.equal(r.systems_researched,5);assert.equal(r.language,'Dutch');assert.equal(r.market,'nl');
  assert.equal(r.observations.find(x=>x.engine==='perplexity').answer_source,'automatic fallback');
+ assert.deepEqual(Array.from(r.observations.find(x=>x.engine==='perplexity').source_urls),['https://example.org/prior']);
  assert.match(R.buildPrewriteResearchPrompt(r),/AI answers researched: 5\/5/);
  const os=require('node:os'),cp=require('node:child_process');
  const temp=path.join(os.tmpdir(),'prewrite-canonical-'+process.pid+'.js');
