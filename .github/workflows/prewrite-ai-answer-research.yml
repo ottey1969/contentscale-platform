@@ -5,6 +5,7 @@ on:
       - 'src/prewrite-ai-answer-research.cjs'
       - 'scripts/patch-prewrite-ai-answer-research.cjs'
       - 'scripts/prepare-canonical-production.cjs'
+      - 'package.json'
       - 'tests/prewrite-ai-answer-*.test.cjs'
       - '.github/workflows/prewrite-ai-answer-research.yml'
   push:
@@ -26,3 +27,5 @@ jobs:
         run: node --test tests/prewrite-ai-answer-research.test.cjs tests/prewrite-ai-answer-integration.test.cjs
       - name: Verify idempotent canonical build
         run: node scripts/prepare-canonical-production.cjs --verify-only
+      - name: Execute Railway Railpack build step and syntax-check built server
+        run: npm run build && node --check src/index.js
