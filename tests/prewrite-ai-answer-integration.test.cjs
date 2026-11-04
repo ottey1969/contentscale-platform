@@ -16,5 +16,8 @@ test('canonical six-megabyte server compiles after AI-answer research integratio
  assert.match(built,/const _pwbAiWritingPrompt=buildPrewriteResearchPrompt\(_pwbAiResearch\)/);
  assert.match(built,/PRE-PUBLICATION WRITING RESEARCH/);
  assert.match(built,/AI ANSWER RESEARCH FOR WRITING/);
- new vm.Script(built,{filename:'src/index.js'});
+ const os=require('node:os'),cp=require('node:child_process');
+ const temp=path.join(os.tmpdir(),'prewrite-canonical-'+process.pid+'.js');
+ fs.writeFileSync(temp,built);
+ try{const check=cp.spawnSync(process.execPath,['--check',temp],{encoding:'utf8'});assert.equal(check.status,0,String(check.stderr||'').slice(0,2200));}finally{fs.unlinkSync(temp);}
 });
