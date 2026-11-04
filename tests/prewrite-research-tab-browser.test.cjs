@@ -41,34 +41,53 @@ test('Research Prompt tab on the real Pre-Write Brief markup',{skip:!chromium&&'
   const fill=async f=>{for(const [k,id] of [['keyword','pwbKeyword'],['language','pwbLanguage'],['region','pwbRegion'],...Object.entries(IDS)])await p.fill('#'+id,f[k]||'')};
   const shown=async()=>p.inputValue('#cs-research-prompt-panel textarea'),status=async()=>p.textContent('#cs-research-prompt-panel .cs-rp-status');
   // 2. All five answers: the tab shows exactly the server's prompt for this request.
-  const f5={keyword:'  content scaling ',language:'English',region:'nl — Netherlands',aio:'TEST google answer https://example.org/guide',chatgpt:'TEST chatgpt answer',perplexity:'TEST perplexity answer',claude:'TEST claude answer',copilot:'TEST copilot answer'};
+  const f5={keyword:'  content scaling ',language:'English',region:'nl — Netherlands',aio:'TEST google answer on content scaling https://example.org/guide',chatgpt:'TEST chatgpt answer on content scaling',perplexity:'TEST perplexity answer on content scaling',claude:'TEST claude answer on content scaling',copilot:'TEST copilot answer on content scaling'};
   await fill(f5);await p.click('#cs-research-prompt-tab');
   assert.equal(await p.isVisible('#pwbAioText'),false,'inputs hidden while the prompt tab is open');
   assert.equal(await shown(),serverPrompt(f5));assert.match(await shown(),/Target query: content scaling\n\nLanguage: English · Market: nl/);
   assert.match(await status(),/All 5 AI answers captured/);
   // 3. Three answers, live update while the prompt tab is open.
   await p.click('#cs-research-inputs-tab');await p.fill('#pwbClaudeText','');await p.fill('#pwbCopilotText','');await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/3 of 5 AI answers captured\. Not checked: Claude, Microsoft Copilot/);
+  assert.match(await status(),/3 of 5 valid AI answers\. Not checked: Claude, Microsoft Copilot/);
   assert.equal(await shown(),serverPrompt({...f5,claude:'',copilot:''}));
   // 4. No answers.
   await p.click('#cs-research-inputs-tab');for(const id of Object.values(IDS))await p.fill('#'+id,'');await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/No AI answers captured yet/);assert.equal((await shown()).match(/— NOT CHECKED\. Do not invent results/g).length,5);
+  assert.match(await status(),/0 of 5 valid AI answers\. Paste them/);assert.equal((await shown()).match(/— NOT CHECKED\. Do not invent results/g).length,5);
   // 5. Missing keyword: said, prompt empty, copy disabled.
   await p.click('#cs-research-inputs-tab');await p.fill('#pwbKeyword','');await p.click('#cs-research-prompt-tab');
   assert.match(await status(),/Enter the target keyword first/);assert.equal(await shown(),'');assert.equal(await p.isDisabled('#cs-research-prompt-panel .cs-rp-actions button'),true);
   // 6. Long answers and unsafe URLs: identical to the server (12,000-character clip, then excerpt); no script runs.
-  const fl={...f5,claude:'L'.repeat(20000)+' javascript:alert(1) <img src=x onerror=alert(2)> https://ok.example/p',copilot:'TEST copilot <script>alert(3)</script>'};
+  const fl={...f5,claude:'L'.repeat(20000)+' javascript:alert(1) <img src=x onerror=alert(2)> https://ok.example/p',copilot:'TEST copilot content scaling <script>alert(3)</script>'};
   await p.click('#cs-research-inputs-tab');await fill(fl);await p.click('#cs-research-prompt-tab');
   assert.equal(await shown(),serverPrompt(fl));assert.equal(dialogs,0);assert.doesNotMatch(await shown(),/Candidate source URLs \(NOT verified\): [^\n]*javascript:/);
   // 7. Copy: the complete prompt is on the clipboard.
   await p.click('#cs-research-prompt-panel .cs-rp-actions button');
   assert.equal(await p.evaluate(()=>navigator.clipboard.readText()),await shown());assert.match(await p.textContent('#cs-research-prompt-panel .cs-rp-actions small'),/Copied/);
   // 8. Reopened Brief: the research saved with it (incl. an automatic Perplexity answer) shows the prompt the server used.
-  const saved=research.makePrewriteAiAnswerResearch({query:'content scaling',language:'English',market:'nl',answers:[{engine:'google_aio',answer:'TEST saved google'},{engine:'perplexity',answer:'TEST automatic perplexity',source:'automatic fallback'}]});
+  const saved=research.makePrewriteAiAnswerResearch({query:'content scaling',language:'English',market:'nl',answers:[{engine:'google_aio',answer:'TEST saved google answer'},{engine:'perplexity',answer:'TEST automatic perplexity answer',source:'automatic fallback'}]});
   await p.evaluate(r=>{window._pwbCurrentBrief={prewrite_ai_answer_research:r}},saved);
   await p.click('#cs-research-inputs-tab');await p.click('#cs-research-prompt-tab');
   await p.selectOption('#cs-research-prompt-panel select','saved');
   assert.equal(await shown(),research.buildPrewriteResearchPrompt(saved));assert.match(await status(),/^Saved with the generated Brief/);
+  // 8b. Validation contract: the Research Prompt pasted as the Gemini answer is flagged at the field and not counted.
+  await p.evaluate(()=>{window._pwbCurrentBrief=null});
+  await p.click('#cs-research-inputs-tab');await fill({...f5,keyword:'seo content optimalisatie',language:'Dutch',region:'nl — Netherlands',chatgpt:'',perplexity:'',claude:'',copilot:''});
+  await p.click('#cs-research-prompt-tab');const echo=await shown();
+  await p.click('#cs-research-inputs-tab');await p.fill('#pwbAioText',echo);
+  assert.match(await p.textContent('#pwbAioText-cs-invalid'),/^Not counted: This is the research instruction/);
+  assert.equal(await p.getAttribute('#pwbAioText','aria-invalid'),'true');
+  await p.click('#cs-research-prompt-tab');
+  assert.match(await status(),/^0 of 5 valid AI answers\. Invalid, not counted: Google AI Overviews \/ Gemini — This is the research instruction/);
+  assert.match(await shown(),/AI answers researched: 0\/5 .*invalid: Google AI Overviews \/ Gemini/);
+  assert.equal(await shown(),serverPrompt({...f5,keyword:'seo content optimalisatie',language:'Dutch',region:'nl — Netherlands',aio:echo,chatgpt:'',perplexity:'',claude:'',copilot:''}),'same as the server');
+  // A real answer clears the warning.
+  await p.click('#cs-research-inputs-tab');await p.fill('#pwbAioText','TEST: SEO-contentoptimalisatie is het verbeteren van webinhoud op zoekintentie.');
+  assert.equal(await p.$('#pwbAioText-cs-invalid'),null);
+  // 8c. "Copy search question" copies the keyword only; disabled without a keyword.
+  await p.click('#cs-research-ask-copy');
+  assert.equal(await p.evaluate(()=>navigator.clipboard.readText()),'seo content optimalisatie');
+  assert.match(await p.textContent('#cs-research-ask .cs-ask-note'),/^Copied: "seo content optimalisatie"/);
+  await p.fill('#pwbKeyword','');assert.equal(await p.isDisabled('#cs-research-ask-copy'),true);await p.fill('#pwbKeyword','content scaling');
   // 9. Keyboard: arrows switch tabs.
   await p.focus('#cs-research-prompt-tab');await p.keyboard.press('ArrowLeft');
   assert.equal(await p.getAttribute('#cs-research-inputs-tab','aria-selected'),'true');

@@ -23,10 +23,10 @@ function legacyMissingOnly(brief, ctx) {
 }
 const LONG = 'TEST long ' + 'L'.repeat(20000) + ' javascript:alert(1) <img src=x onerror=alert(2)> https://ok.example/p';
 const REQUESTS = {
-  'five manual answers': { keyword: 'TEST content scaling', language: 'English', region: 'nl', manual: { google_aio: 'TEST google https://example.org/guide', chatgpt: 'TEST chatgpt', perplexity: 'TEST perplexity', claude: 'TEST claude', copilot: 'TEST copilot' } },
-  'three answers, automatic Perplexity': { keyword: 'TEST content at scale', language: 'Dutch', region: 'be', manual: { google_aio: 'TEST google', chatgpt: 'TEST chatgpt' }, auto: 'TEST automatic perplexity https://example.org/p' },
+  'five manual answers': { keyword: 'TEST content scaling', language: 'English', region: 'nl', manual: { google_aio: 'TEST google https://example.org/guide', chatgpt: 'TEST chatgpt answer', perplexity: 'TEST perplexity answer', claude: 'TEST claude answer', copilot: 'TEST copilot answer' } },
+  'three answers, automatic Perplexity': { keyword: 'TEST content at scale', language: 'Dutch', region: 'be', manual: { google_aio: 'TEST google answer', chatgpt: 'TEST chatgpt answer' }, auto: 'TEST automatic perplexity https://example.org/p' },
   'no answers': { keyword: 'TEST seo', language: 'German', region: 'de', manual: {} },
-  'missing keyword': { keyword: '', language: 'English', region: 'us', manual: { chatgpt: 'TEST chatgpt' } },
+  'missing keyword': { keyword: '', language: 'English', region: 'us', manual: { chatgpt: 'TEST chatgpt answer' } },
   'long answer and unsafe URLs': { keyword: 'TEST long', language: 'English', region: 'gb', manual: { claude: LONG, copilot: 'TEST <script>alert(3)</script>' } },
   'Turkish market': { keyword: 'TEST içerik ölçekleme', language: 'Turkish', region: 'tr', manual: { google_aio: 'TEST türkçe yanıt' } }
 };
@@ -55,13 +55,13 @@ test('saved with the Brief: same as the legacy code, also for a missing Brief', 
 
 test('Complete missing only: the module refreshes the saved research exactly like the legacy code', () => {
   const prev = R.makePrewriteAiAnswerResearch({ query: 'TEST content scaling', language: 'Dutch', market: 'nl', answers: [
-    { engine: 'google_aio', answer: 'TEST google' }, { engine: 'perplexity', answer: 'TEST automatic perplexity ' + 'P'.repeat(4000), source: 'automatic fallback', sources: ['https://example.org/prior'] }] });
+    { engine: 'google_aio', answer: 'TEST google answer' }, { engine: 'perplexity', answer: 'TEST automatic perplexity ' + 'P'.repeat(4000), source: 'automatic fallback', sources: ['https://example.org/prior'] }] });
   const cases = {
-    'two saved + three merged': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { google_aio: { text: 'TEST google', checked: true }, chatgpt: { text: 'TEST chatgpt', checked: true }, claude: { text: 'TEST claude', checked: true }, copilot: { text: 'TEST copilot', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: {}, opts: {} } },
+    'two saved + three merged': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { google_aio: { text: 'TEST google answer', checked: true }, chatgpt: { text: 'TEST chatgpt answer', checked: true }, claude: { text: 'TEST claude answer', checked: true }, copilot: { text: 'TEST copilot answer', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: {}, opts: {} } },
     'merge replaces a saved answer': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { perplexity: { text: 'TEST new manual perplexity', checked: true, source: 'manual' } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: {}, opts: {} } },
-    'no earlier research (Brief saved before the research existed)': { brief: { ai_system_evidence: { chatgpt: { answer: 'TEST chatgpt', checked: true } } }, ctx: { srcKeyword: '', requestedKeyword: 'TEST keyword', srcReq: { language: 'English', region: 'us' }, opts: {} } },
+    'no earlier research (Brief saved before the research existed)': { brief: { ai_system_evidence: { chatgpt: { answer: 'TEST chatgpt answer', checked: true } } }, ctx: { srcKeyword: '', requestedKeyword: 'TEST keyword', srcReq: { language: 'English', region: 'us' }, opts: {} } },
     'evidence without a source label keeps the earlier label (the stored automatic Perplexity answer)': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { perplexity: { text: 'TEST automatic perplexity as stored in the evidence', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: {}, opts: {} } },
-    'earlier language and market win over the request': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { chatgpt: { text: 'TEST chatgpt', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: { language: 'English', region: 'us' }, opts: {} } },
+    'earlier language and market win over the request': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { chatgpt: { text: 'TEST chatgpt answer', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: { language: 'English', region: 'us' }, opts: {} } },
     'merged answer over 12,000 characters is clipped like the handler': { brief: { ai_system_evidence: { claude: { text: 'TEST ' + 'C'.repeat(13000) + ' https://late.example/after-the-clip', checked: true } } }, ctx: { srcKeyword: 'TEST q', requestedKeyword: '', srcReq: {}, opts: {} } },
     'language and market from the request options': { brief: { ai_system_evidence: {} }, ctx: { srcKeyword: 'TEST q', requestedKeyword: '', srcReq: {}, opts: { language: 'Turkish', region: 'tr' } } }
   };
@@ -106,9 +106,10 @@ test('a missing public script never stops the server from starting: logged, tab 
 test('src/index.js calls the module directly and holds the final Pre-Write text; no Pre-Write code is inserted at build time', () => {
   const once = (s, needle, what) => assert.equal(s.split(needle).length - 1, 1, what + ' appears exactly once');
   once(SRC, "const _prewriteBriefResearch = require('./prewrite-brief-research.cjs');", 'module require');
-  once(SRC, 'const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText});', 'request research');
+  once(SRC, 'const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected});', 'request research');
+  once(SRC, 'const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword);', 'answers screened before anything uses them');
   once(SRC, '_prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);', 'saved with the Brief');
-  once(SRC, "_prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||''});", 'missing-only refresh');
+  once(SRC, "_prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected});", 'missing-only refresh');
   once(SRC, '${_prewriteBriefResearch.scriptTags()}</head>', 'script tags');
   assert.doesNotMatch(SRC, /require\('\.\/prewrite-ai-answer-research\.cjs'\)/, 'no inline copy of the research code');
   // Order: the module is required before the Tracker page template is evaluated; the tags are in the page that holds the modal.

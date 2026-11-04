@@ -62,7 +62,8 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     await db.query("INSERT INTO prewrite_async_jobs(id,client_id,status,stage,request_json,error_json) VALUES ($1,$2,'failed','quality_gate',$3,$4)", [jobId, clientId, { keyword: 'TEST content scaling', language: 'English', region: 'us' }, { brief }]);
     const res = await fetch(base + '/api/tracker-client/' + token + '/prewrite-brief', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
       keyword: 'TEST content scaling', language: 'English', region: 'us', completionFromJobId: jobId,
-      manualAiEvidence: { chatgpt: 'TEST chatgpt answer', claude: 'TEST claude answer', copilot: 'TEST copilot answer https://example.org/copilot' } }) });
+      // The Research Prompt pasted into the Gemini field (validation contract): refused, the saved valid answer is kept.
+      manualAiEvidence: { google_aio: R.buildPrewriteResearchPrompt(prev), chatgpt: 'TEST chatgpt answer', claude: 'TEST claude answer', copilot: 'TEST copilot answer https://example.org/copilot' } }) });
     const out = await res.json();
     assert.equal(res.status, 200, JSON.stringify(out).slice(0, 600)); assert.equal(out.success, true);
     const saved = (await db.query('SELECT brief_json FROM prewrite_briefs WHERE id=$1 AND client_id=$2', [out.brief_id, clientId])).rows[0].brief_json.prewrite_ai_answer_research;
@@ -70,6 +71,10 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     assert.deepEqual(saved.observations.map(o => o.answer_source), ['manual', 'manual', 'automatic fallback', 'manual', 'manual']);
     assert.ok(saved.source_candidates.includes('https://example.org/prior') && saved.source_candidates.includes('https://example.org/copilot'));
     assert.deepEqual(out.brief.prewrite_ai_answer_research, saved, 'returned to the browser as saved');
+    const g = saved.observations.find(o => o.engine === 'google');
+    assert.equal(g.checked, true); assert.equal(g.answer_excerpt, 'TEST saved google answer', 'the echo did not replace the saved answer');
+    const ev = (await db.query('SELECT brief_json FROM prewrite_briefs WHERE id=$1', [out.brief_id])).rows[0].brief_json.ai_system_evidence;
+    assert.equal(ev.google_aio.text, 'TEST saved google answer'); assert.doesNotMatch(JSON.stringify(ev), /This is NOT citation tracking/);
     assert.match(R.buildPrewriteResearchPrompt(saved), /AI answers researched: 5\/5/);
 
     // 3. Reopen.

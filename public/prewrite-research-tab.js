@@ -23,15 +23,15 @@
   function lib() { return window.PrewriteAiAnswerResearch || null; }
   function savedResearch(query) {
     var b = window._pwbCurrentBrief, r = b && typeof b === 'object' ? b.prewrite_ai_answer_research : null;
-    if (!r || !/^prewrite_ai_answer_research_v[12]$/.test(r.contract)) return null;
+    if (!r || !/^prewrite_ai_answer_research_v[123]$/.test(r.contract)) return null;
     var norm = function (s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); };
-    return norm(r.query) && norm(r.query) === norm(query) ? r : null;
+    return norm(r.query) && norm(r.query) === norm(query) ? (lib() && lib().revalidate ? lib().revalidate(r) : r) : null;
   }
   function addStyles() {
     if ($('cs-research-tab-style')) return;
     var css = document.createElement('style');
     css.id = 'cs-research-tab-style';
-    css.textContent = '#cs-research-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cs-research-tabs button{border:1px solid #64748b;border-radius:7px;padding:9px 14px;background:transparent;color:inherit;cursor:pointer;font-weight:650;min-height:40px}#cs-research-tabs button[aria-selected="true"]{background:#2563eb;color:#fff;border-color:#2563eb}#cs-research-tabs button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}#cs-research-prompt-panel{border:1px solid #475569;border-radius:10px;padding:16px;margin:12px 0;background:rgba(15,23,42,.94);color:#e2e8f0;max-width:100%;box-sizing:border-box}#cs-research-prompt-panel textarea{display:block;width:100%;box-sizing:border-box;min-height:360px;padding:12px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;border-radius:7px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.55}#cs-research-prompt-panel p{margin:8px 0;color:#cbd5e1;overflow-wrap:anywhere}#cs-research-prompt-panel .cs-rp-status{font-weight:700}#cs-research-prompt-panel .cs-rp-status[data-state="complete"]{color:#86efac}#cs-research-prompt-panel .cs-rp-status[data-state="partial"]{color:#fbbf24}#cs-research-prompt-panel .cs-rp-status[data-state="none"],#cs-research-prompt-panel .cs-rp-status[data-state="error"]{color:#fca5a5}#cs-research-prompt-panel .cs-rp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}#cs-research-prompt-panel button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:6px;cursor:pointer;min-height:38px}#cs-research-prompt-panel button:disabled{opacity:.5;cursor:not-allowed}#cs-research-prompt-panel select{padding:7px;border-radius:6px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;max-width:100%}';
+    css.textContent = '#cs-research-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cs-research-tabs button{border:1px solid #64748b;border-radius:7px;padding:9px 14px;background:transparent;color:inherit;cursor:pointer;font-weight:650;min-height:40px}#cs-research-tabs button[aria-selected="true"]{background:#2563eb;color:#fff;border-color:#2563eb}#cs-research-tabs button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}#cs-research-prompt-panel{border:1px solid #475569;border-radius:10px;padding:16px;margin:12px 0;background:rgba(15,23,42,.94);color:#e2e8f0;max-width:100%;box-sizing:border-box}#cs-research-prompt-panel textarea{display:block;width:100%;box-sizing:border-box;min-height:360px;padding:12px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;border-radius:7px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.55}#cs-research-prompt-panel p{margin:8px 0;color:#cbd5e1;overflow-wrap:anywhere}#cs-research-prompt-panel .cs-rp-status{font-weight:700}#cs-research-prompt-panel .cs-rp-status[data-state="complete"]{color:#86efac}#cs-research-prompt-panel .cs-rp-status[data-state="partial"]{color:#fbbf24}#cs-research-prompt-panel .cs-rp-status[data-state="none"],#cs-research-prompt-panel .cs-rp-status[data-state="error"]{color:#fca5a5}#cs-research-prompt-panel .cs-rp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}#cs-research-prompt-panel button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:6px;cursor:pointer;min-height:38px}#cs-research-prompt-panel button:disabled{opacity:.5;cursor:not-allowed}#cs-research-ask{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:0 0 12px}#cs-research-ask button{border:1px solid #64748b;border-radius:7px;padding:8px 12px;background:transparent;color:inherit;cursor:pointer;font-weight:650;min-height:38px}#cs-research-ask button:disabled{opacity:.5;cursor:not-allowed}#cs-research-ask .cs-ask-note{flex:1 1 220px;margin:0}.cs-ai-invalid{margin-top:6px;padding:7px 9px;border:1px solid #f87171;border-radius:6px;background:rgba(127,29,29,.35);color:#fecaca;font-size:11px;line-height:1.45;overflow-wrap:anywhere}.cs-ask-note{font-size:11px;color:#94a3b8;margin:-4px 0 10px;overflow-wrap:anywhere}#cs-research-prompt-panel select{padding:7px;border-radius:6px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;max-width:100%}';
     document.head.appendChild(css);
   }
   function findHeading() {
@@ -68,6 +68,12 @@
     inputs.setAttribute('aria-controls', grid.id);
     prompt.setAttribute('aria-controls', panel.id);
     [inputs, prompt].forEach(function (el) { el.setAttribute('role', 'tab'); tabs.appendChild(el); });
+    // What to type in each AI system: the search query itself, nothing else. The Research Prompt is never pasted there.
+    var ask = document.createElement('button'); ask.type = 'button'; ask.className = 'cs-rp-ask'; ask.id = 'cs-research-ask-copy';
+    ask.textContent = 'Copy search question';
+    var askNote = document.createElement('p'); askNote.className = 'cs-ask-note'; askNote.setAttribute('role', 'status');
+    askNote.textContent = 'Ask each AI system only the search query, exactly as a reader would. Paste its full answer, with its sources, in the matching field. Never paste the Research Prompt into an AI system or into these fields.';
+    var askBox = document.createElement('div'); askBox.id = 'cs-research-ask'; askBox.append(ask, askNote);
     var status = document.createElement('p'); status.className = 'cs-rp-status'; status.setAttribute('role', 'status');
     var note = document.createElement('p');
     note.textContent = 'This is the prompt the Pre-Write Brief generator uses for the AI answer research: writing research for a clearer, better-sourced answer, not citation tracking. The fields under "AI Answer Inputs" stay the saved source of truth.';
@@ -79,8 +85,29 @@
     actions.append(copy, copied);
     panel.append(status, note, choice, editor, actions);
     heading.insertAdjacentElement('afterend', tabs);
+    tabs.insertAdjacentElement('afterend', askBox);
     grid.insertAdjacentElement('afterend', panel);
 
+    function syncAsk() { var q = val('pwbKeyword'); ask.disabled = !q; ask.title = q ? 'Copies: ' + q : 'Enter the target keyword first.'; }
+    ask.addEventListener('click', function () {
+      var q = val('pwbKeyword'); if (!q) return;
+      var done = function (ok) { askNote.textContent = ok ? 'Copied: "' + q + '". Paste it into Google, ChatGPT, Perplexity, Claude and Copilot, then paste each full answer back here.' : 'Copy this search question by hand: ' + q; };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(q).then(function () { done(true); }, function () { done(false); });
+      else done(false);
+    });
+    // Each answer field says at once when its text is not an answer to the keyword (same check the server applies).
+    function checkFields() {
+      var L = lib(), q = val('pwbKeyword');
+      FIELDS.forEach(function (f) {
+        var el = $(f[1]); if (!el) return;
+        var note = document.getElementById(f[1] + '-cs-invalid'), v = String(el.value || '').trim();
+        var chk = v && L && L.validateAnswer ? L.validateAnswer(v, q) : { valid: true };
+        if (chk.valid) { if (note) note.remove(); el.removeAttribute('aria-invalid'); el.style.borderColor = ''; return; }
+        if (!note) { note = document.createElement('div'); note.id = f[1] + '-cs-invalid'; note.className = 'cs-ai-invalid'; note.setAttribute('role', 'alert'); el.insertAdjacentElement('afterend', note); }
+        note.textContent = 'Not counted: ' + chk.message;
+        el.setAttribute('aria-invalid', 'true'); el.setAttribute('aria-describedby', note.id); el.style.borderColor = '#f87171';
+      });
+    }
     function render() {
       var L = lib(), input = currentInputs();
       copied.textContent = '';
@@ -95,12 +122,14 @@
         status.dataset.state = 'error'; status.textContent = 'Enter the target keyword first: the research prompt is built for that exact query.';
         editor.value = ''; copy.disabled = true; return;
       }
-      var n = research.systems_researched, missing = research.observations.filter(function (x) { return !x.checked; }).map(function (x) { return x.label; });
+      var n = research.systems_researched, invalid = research.observations.filter(function (x) { return x.validation_status === 'invalid'; }), missing = research.observations.filter(function (x) { return !x.checked && x.validation_status !== 'invalid'; }).map(function (x) { return x.label; });
       status.dataset.state = n === research.systems_total ? 'complete' : n ? 'partial' : 'none';
+      if (invalid.length) status.dataset.state = n ? 'partial' : 'error';
       status.textContent = (research === saved ? 'Saved with the generated Brief · ' : '') +
         (n === research.systems_total ? 'All 5 AI answers captured. Source URLs are leads; verify them before citing.' :
-         n ? n + ' of 5 AI answers captured. Not checked: ' + missing.join(', ') + '. These stay NOT CHECKED; nothing is filled in.' :
-         'No AI answers captured yet. Paste them under "AI Answer Inputs"; without them the prompt marks all five as NOT CHECKED.') +
+         n ? n + ' of 5 valid AI answers.' + (missing.length ? ' Not checked: ' + missing.join(', ') + '. These stay NOT CHECKED; nothing is filled in.' : '') :
+         '0 of 5 valid AI answers.' + (invalid.length ? '' : ' Paste them under "AI Answer Inputs"; without them the prompt marks all five as NOT CHECKED.')) +
+        (invalid.length ? ' Invalid, not counted: ' + invalid.map(function (x) { return x.label + ' — ' + (x.error_message || 'not an answer to the query'); }).join(' ') : '') +
         (research !== saved && !val('pwbPerplexityText') ? ' If Perplexity stays empty, the server may add an automatic Perplexity answer when the Brief is generated; the saved prompt then shows it.' : '');
       editor.value = L.buildPrewriteResearchPrompt(research);
       copy.disabled = false;
@@ -126,7 +155,7 @@
     choice.addEventListener('change', render);
     // Keep the prompt current while the owner edits the keyword, market, language or answers.
     ['pwbKeyword', 'pwbLanguage', 'pwbRegion'].concat(FIELDS.map(function (f) { return f[1]; })).forEach(function (id) {
-      var el = $(id); if (el) el.addEventListener('input', function () { if (!panel.hidden) render(); });
+      var el = $(id); if (el) el.addEventListener('input', function () { checkFields(); syncAsk(); if (!panel.hidden) render(); });
     });
     copy.addEventListener('click', function () {
       editor.focus(); editor.select();
@@ -134,7 +163,7 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(editor.value).then(function () { done(true); }, function () { done(false); });
       else { var ok = false; try { ok = document.execCommand('copy'); } catch (e) {} done(ok); }
     });
-    select(false);
+    select(false); checkFields(); syncAsk();
     return true;
   }
   function boot() {

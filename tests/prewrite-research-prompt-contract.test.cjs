@@ -6,14 +6,14 @@ const server=require('../src/prewrite-ai-answer-research.cjs');
 const browser=require('../public/prewrite-ai-answer-research.js');
 const A=(engine,answer,extra)=>({engine,answer,...extra});
 const five=[A('google_aio','TEST ANSWER google: content scaling means producing more pages without losing quality. See https://example.org/guide'),
- A('chatgpt','TEST ANSWER chatgpt: plan topics, templates and review.'),A('perplexity','TEST ANSWER perplexity: sources https://example.com/a and https://example.com/a'),
- A('claude','TEST ANSWER claude: quality gates matter.'),A('copilot','TEST ANSWER copilot: use editors.')];
+ A('chatgpt','TEST ANSWER chatgpt: for content scaling, plan topics, templates and review.'),A('perplexity','TEST ANSWER perplexity: content scaling sources https://example.com/a and https://example.com/a'),
+ A('claude','TEST ANSWER claude: quality gates matter when scaling content.'),A('copilot','TEST ANSWER copilot: use editors to scale content.')];
 test('server and browser use the same module (one prompt contract)',()=>{
  assert.equal(server,browser,'src/prewrite-ai-answer-research.cjs re-exports public/prewrite-ai-answer-research.js');
 });
 test('all five answers: complete, with the objective, query, language and market; no citation tracking or promise',()=>{
  const r=server.makePrewriteAiAnswerResearch({query:'content scaling',language:'English',market:'nl',answers:five});
- assert.equal(r.contract,'prewrite_ai_answer_research_v2');assert.equal(r.systems_researched,5);assert.equal(r.readiness,'RESEARCH_COMPLETE_VERIFY_SOURCES');
+ assert.equal(r.contract,'prewrite_ai_answer_research_v3');assert.equal(r.systems_researched,5);assert.equal(r.readiness,'RESEARCH_COMPLETE_VERIFY_SOURCES');
  const p=server.buildPrewriteResearchPrompt(r);
  assert.match(p,/^AI ANSWER RESEARCH — WRITE FOR CITATION POTENTIAL\. This is NOT citation tracking\./);
  assert.match(p,/Research the five answers to the target query\. Identify factual gaps, useful explanations, unanswered questions, original source leads and opportunities for a clearer, better-supported answer\. Use this research to produce original, accurate and useful content with stronger potential for AI citation\./);
@@ -45,7 +45,7 @@ test('long answers are cut to an excerpt and marked; unsafe URLs never become so
  assert.match(server.buildPrewriteResearchPrompt(r),/x \[…\]\nCandidate source URLs \(NOT verified\): https:\/\/ok\.example\/p/);
 });
 test('the automatic Perplexity answer is labelled; a research object saved before v2 still renders',()=>{
- const r=server.makePrewriteAiAnswerResearch({query:'q',answers:[A('perplexity','TEST automatic',{source:'automatic fallback'})]});
+ const r=server.makePrewriteAiAnswerResearch({query:'q',answers:[A('perplexity','TEST automatic perplexity answer',{source:'automatic fallback'})]});
  assert.match(server.buildPrewriteResearchPrompt(r),/SYSTEM: Perplexity \[automatic fallback\]/);
  const v1={...r,contract:'prewrite_ai_answer_research_v1'};
  assert.doesNotThrow(()=>server.buildPrewriteResearchPrompt(v1));assert.doesNotMatch(server.buildPrewriteResearchPrompt(v1),/Language:/);
@@ -54,7 +54,7 @@ test('the automatic Perplexity answer is labelled; a research object saved befor
 
 test('missing-only completion preserves checked observations and source leads absent from merge evidence',()=>{
  const original=server.makePrewriteAiAnswerResearch({query:'TEST example',language:'English',market:'nl',answers:[
-  {engine:'perplexity',answer:'TEST '+('a'.repeat(6000)),source:'automatic fallback',sources:['https://example.org/original']}
+  {engine:'perplexity',answer:'TEST example answer '+('a'.repeat(6000)),source:'automatic fallback',sources:['https://example.org/original']}
  ]});
  const old=original.observations.find(o=>o.engine==='perplexity');
  assert.equal(old.answer_truncated,true);

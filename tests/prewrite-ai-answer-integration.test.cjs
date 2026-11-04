@@ -23,7 +23,7 @@ test('canonical six-megabyte server compiles with the AI-answer research integra
  assert.ok(page.indexOf('${_prewriteBriefResearch.scriptTags()}')<page.indexOf('id="prewriteBriefModal"'),'loaded in the page that holds the Pre-Write Brief modal');
  assert.ok(page.indexOf('AI Answer Research — Write for Citation Potential')>page.indexOf('id="prewriteBriefModal"'));
  // The server builds the research with the request's keyword, language and region, the same inputs the tab uses.
- assert.match(built,/_prewriteBriefResearch\.researchForRequest\(\{keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText\}\)/);
+ assert.match(built,/_prewriteBriefResearch\.researchForRequest\(\{keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected\}\)/);
  assert.match(built,/_prewriteBriefResearch\.attachToBrief\(brief,_pwbAiResearch\)/);
  // The writing prompt reaches the final prompt and parts 1 and 3 of the generation.
  assert.match(built,/const finalPrompt = prompt \+ '\\n\\nPRE-PUBLICATION AI WRITING RESEARCH:\\n' \+ _pwbAiWritingPrompt/);

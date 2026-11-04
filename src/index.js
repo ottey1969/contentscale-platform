@@ -46697,15 +46697,18 @@ document.addEventListener('change',function(e){
 
 function _pwbAiFiveUiState(){
   var defs=[['google_aio','Google AIO / Gemini','pwbAioText'],['chatgpt','ChatGPT Search','pwbChatgptText'],['perplexity','Perplexity','pwbPerplexityText'],['claude','Claude','pwbClaudeText'],['copilot','Microsoft Copilot','pwbCopilotText']];
-  var present=[],missing=[];defs.forEach(function(x){var e=document.getElementById(x[2]),ok=!!(e&&String(e.value||'').trim());(ok?present:missing).push({key:x[0],label:x[1],id:x[2]});});
+  // Validation contract (public/prewrite-ai-answer-research.js): a field counts only when it holds an actual answer to the keyword.
+  var L=window.PrewriteAiAnswerResearch,kwEl=document.getElementById('pwbKeyword'),kw=kwEl?String(kwEl.value||'').trim():'';
+  var present=[],missing=[],invalid=[];defs.forEach(function(x){var e=document.getElementById(x[2]),v=e?String(e.value||'').trim():'',chk=v&&L&&L.validateAnswer?L.validateAnswer(v,kw):{valid:!!v},item={key:x[0],label:x[1],id:x[2]};if(chk.valid)present.push(item);else{missing.push(item);if(v){item.reason=chk.reason;item.message=chk.message;invalid.push(item);}}});
   var hardMissing=missing.filter(function(x){return x.key!=='perplexity';});
-  return {count:present.length,present:present,missing:missing,hard_missing:hardMissing,manual_ready:hardMissing.length===0,complete:present.length===5};
+  return {count:present.length,present:present,missing:missing,invalid:invalid,hard_missing:hardMissing,manual_ready:hardMissing.length===0,complete:present.length===5};
 }
 function _pwbUpdateAiFiveCount(){
   var st=_pwbAiFiveUiState();
-  var b=document.getElementById('pwbAiFiveCount');if(b){b.textContent=st.count+' / 5 AI answers researched'+(_NETWORK_PREWRITE_AUTHORIZED?' · required':'');b.style.color=st.complete?'#86efac':(st.manual_ready?'#fbbf24':'#fca5a5');b.title=st.complete?'All five AI answers captured for writing research; source verification is still required.':(st.manual_ready?'Perplexity may use the automatic fallback; the other four required manual evidence inputs are present.':'Missing required AI evidence: '+st.hard_missing.map(function(x){return x.label;}).join(', '));}
+  var b=document.getElementById('pwbAiFiveCount');if(b){b.textContent=st.count+' / 5 AI answers researched'+(st.invalid&&st.invalid.length?' · '+st.invalid.length+' invalid':'')+(_NETWORK_PREWRITE_AUTHORIZED?' · required':'');b.style.color=st.complete?'#86efac':(st.manual_ready?'#fbbf24':'#fca5a5');b.title=st.complete?'All five AI answers captured for writing research; source verification is still required.':(st.manual_ready?'Perplexity may use the automatic fallback; the other four required manual evidence inputs are present.':'Missing required AI evidence: '+st.hard_missing.map(function(x){return x.label;}).join(', '));}
 }
 document.addEventListener('input',function(e){if(e.target&&['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0){_pwbUpdateAiFiveCount();_pwbDraftSave();}});
+document.addEventListener('input',function(e){if(e.target&&e.target.id==='pwbKeyword')_pwbUpdateAiFiveCount();});
 function showPrewriteBriefModal() {
   document.getElementById('pwbResult').innerHTML = '';
   document.getElementById('pwbStatus').textContent = '';
@@ -47217,6 +47220,7 @@ async function generatePrewriteBrief() {
 
   if (!kw) { document.getElementById('pwbStatus').textContent = '\u26a0 Enter a keyword first.'; return; }
   var _aiUi=_pwbAiFiveUiState();
+  if(_aiUi.invalid&&_aiUi.invalid.length){document.getElementById('pwbStatus').textContent='✕ Not an AI answer to "'+kw+'": '+_aiUi.invalid.map(function(x){return x.label+' — '+x.message;}).join(' ')+' Correct or clear the field; nothing was sent.';var _f=document.getElementById(_aiUi.invalid[0].id);if(_f)_f.focus();return;}
   if(_NETWORK_PREWRITE_AUTHORIZED&&!_aiUi.manual_ready){document.getElementById('pwbStatus').textContent='✕ Research incomplete — add '+_aiUi.hard_missing.map(function(x){return x.label;}).join(', ')+'. ContentScale will not silently continue with only part of the promised five-system evidence. Existing research is not discarded.';_pwbUpdateAiFiveCount();return;}
 
   var btn = document.getElementById('pwbGenerateBtn');
@@ -59644,7 +59648,9 @@ function _pwbAiEvidenceStateV506(b){
   const c=b.research_contract&&typeof b.research_contract==='object'?b.research_contract:{};
   const required=Math.max(0,Number(c.ai_systems_required||0));
   const ae=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
-  const checked=_PWB_AI_ENGINES_V506.filter(k=>ae[k]&&ae[k].checked===true);
+  // Counted only when the stored text is an actual answer to the Brief keyword (validation contract); a prompt echo
+  // saved before the contract existed no longer counts towards 5/5.
+  const checked=_PWB_AI_ENGINES_V506.filter(k=>ae[k]&&ae[k].checked===true&&(!String(ae[k].text||'').trim()||_prewriteBriefResearch.isValidAnswer(ae[k].text,_pwbBriefQueryV506(b))));
   const missing=_PWB_AI_ENGINES_V506.filter(k=>!checked.includes(k));
   return {required,checked_count:checked.length,checked,missing,complete:required<=0||checked.length>=required};
 }
@@ -59682,13 +59688,14 @@ function _pwbCanonicalizeAiAnalysisV506(b){
   b.what_we_checked.ai_systems_missing=st.missing.slice();
   return b;
 }
-function _pwbMergeManualAiEvidenceV506(b,raw){
+function _pwbBriefQueryV506(b){return String(b&&(b.keyword||(b.prewrite_ai_answer_research&&b.prewrite_ai_answer_research.query))||'').trim();}
+function _pwbMergeManualAiEvidenceV506(b,raw,query){
   if(!b||typeof b!=='object')return {added:[],checked_count:0,missing:_PWB_AI_ENGINES_V506.slice()};
   raw=raw&&typeof raw==='object'?raw:{};b.ai_system_evidence=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
-  const added=[],now=new Date().toISOString();
-  _PWB_AI_ENGINES_V506.forEach(function(k){const v=String(raw[k]||'').trim();if(!v)return;const cur=b.ai_system_evidence[k]&&typeof b.ai_system_evidence[k]==='object'?b.ai_system_evidence[k]:{};if(String(cur.text||'').trim()!==v||cur.checked!==true)added.push(k);b.ai_system_evidence[k]=Object.assign({},cur,{checked:true,source:'manual',manual:true,text:v});});
+  const added=[],rejected={},now=new Date().toISOString();
+  _PWB_AI_ENGINES_V506.forEach(function(k){const v=String(raw[k]||'').trim();if(!v)return;const _chk=_prewriteBriefResearch.validateAnswer(v,query||_pwbBriefQueryV506(b));if(!_chk.valid){rejected[k]={answer:v,reason:_chk.reason,message:_chk.message};return;}const cur=b.ai_system_evidence[k]&&typeof b.ai_system_evidence[k]==='object'?b.ai_system_evidence[k]:{};if(String(cur.text||'').trim()!==v||cur.checked!==true)added.push(k);b.ai_system_evidence[k]=Object.assign({},cur,{checked:true,source:'manual',manual:true,text:v});});
   b.ai_system_evidence.checked_at=now;b.ai_system_evidence.checked_count=_PWB_AI_ENGINES_V506.filter(k=>b.ai_system_evidence[k]&&b.ai_system_evidence[k].checked===true).length;
-  _pwbCanonicalizeAiAnalysisV506(b);const st=_pwbAiEvidenceStateV506(b);return {added,checked_count:st.checked_count,missing:st.missing};
+  _pwbCanonicalizeAiAnalysisV506(b);const st=_pwbAiEvidenceStateV506(b);return {added,rejected,checked_count:st.checked_count,missing:st.missing};
 }
 function _pwbEvidenceBackedGapV506(b){
   if(!b||typeof b!=='object')return b;
@@ -60008,13 +60015,13 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
   let brief=JSON.parse(JSON.stringify(payload.brief));
   const _beforeMerge=_pwbReadiness(brief);
   if(placementId>0)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:opts.publisherDomain||''});
-  const _aiMerge=_pwbMergeManualAiEvidenceV506(brief,opts.manualAiEvidence||srcReq.manualAiEvidence||{});
-  _prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||''});
+  const _aiMerge=_pwbMergeManualAiEvidenceV506(brief,opts.manualAiEvidence||srcReq.manualAiEvidence||{},srcKeyword||requestedKeyword);
+  _prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected});
   if(placementId>0)_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:opts.publisherDomain||'',checked_url:opts.publisherCheckedUrl||''});
   _pwbEvidenceBackedGapV506(brief);
   const before=_pwbReadiness(brief),missingBefore=Array.isArray(before.missing)?before.missing.slice():[];
   const _aiGateBefore=before.details&&before.details.ai_evidence||{};
-  if(missingBefore.includes('ai_evidence_5of5'))return res.status(422).json({success:false,stage:'ai_evidence_gate',quality_status:'research_incomplete',completion_mode:'missing_only',research_reused:true,research_rerun:false,retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research is incomplete: '+Number(_aiGateBefore.checked||0)+'/5 AI systems are captured. Missing: '+(Array.isArray(_aiGateBefore.missing)?_aiGateBefore.missing.join(', '):'one or more AI systems')+'. Add the missing evidence; ContentScale will reuse the existing SERP, competitor and evidence research.',brief:brief,diagnostic:{ai_evidence:_aiGateBefore,research_reused:true,research_rerun:false}});
+  if(missingBefore.includes('ai_evidence_5of5'))return res.status(422).json({success:false,stage:'ai_evidence_gate',quality_status:'research_incomplete',completion_mode:'missing_only',research_reused:true,research_rerun:false,retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research is incomplete: '+Number(_aiGateBefore.checked||0)+'/5 AI systems are captured. Missing: '+(Array.isArray(_aiGateBefore.missing)?_aiGateBefore.missing.join(', '):'one or more AI systems')+'.'+(Object.keys(_aiMerge.rejected||{}).length?' Not accepted: '+Object.keys(_aiMerge.rejected).map(function(k){return (_PWB_AI_LABELS_V506[k]||k)+' — '+_aiMerge.rejected[k].message;}).join(' '):'')+' Add the missing evidence; ContentScale will reuse the existing SERP, competitor and evidence research.',brief:brief,ai_answers_rejected:_aiMerge.rejected||{},diagnostic:{ai_evidence:_aiGateBefore,research_reused:true,research_rerun:false}});
 
   // Deterministic/free completion first. These steps only reshape content already present.
   if(missingBefore.includes('quick_facts')){
@@ -60354,6 +60361,9 @@ async function _handlePrewriteBriefGeneration(req, res) {
     const _manualAiRaw=(manualAiEvidence&&typeof manualAiEvidence==='object')?manualAiEvidence:{};
     const _clipAi=v=>String(v||'').trim().slice(0,12000);
     const _manualAi={google_aio:_clipAi(_manualAiRaw.google_aio||aioManualText),chatgpt:_clipAi(_manualAiRaw.chatgpt),perplexity:_clipAi(_manualAiRaw.perplexity),claude:_clipAi(_manualAiRaw.claude),copilot:_clipAi(_manualAiRaw.copilot)};
+    // Validation contract: only an actual answer to this keyword is AI answer research. A prompt echo, placeholder or
+    // unrelated text is removed here, before anything counts or uses it, and reported in the saved research.
+    const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword);
     if (aioManualText) {
       aioDetected = true;
       console.log('[prewrite-brief] Using manual AIO text for:', keyword, '(' + aioManualText.length + ' chars)');
@@ -60623,7 +60633,7 @@ Every citation/source item should be represented as:
 `;
     // AI answer research for writing: the same prompt the Research Prompt tab shows (src/prewrite-brief-research.cjs).
     // Observed AI answers inform the writing; they never prove that this website is cited.
-    const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText});
+    const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected});
     const prompt = `You are an elite SEO and AEO strategist. A strategist requested a possible NEW page for this keyword. FIRST decide whether a new URL should actually be created or whether an existing client URL should be expanded instead. Do not create a new page when the sitemap shows a materially overlapping existing URL and doing so would create cannibalization. If CREATE is justified, specify what the brand-new page must contain to outrank and out-cite current results from the first draft. Every claim must be traceable to the inputs below; never invent a domain, URL, snippet, statistic, schema type or business fact.
 
 KEYWORD: "${keyword}"
