@@ -1,62 +1,43 @@
 'use strict';
+// The Pre-Write Brief server uses the AI answer research through src/prewrite-brief-research.cjs, called directly from
+// src/index.js. Since the Canonical Architecture Migration nothing of this is inserted at build time; these checks run on
+// the canonical build, which must leave the Pre-Write code as it is in the source.
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const path=require('node:path');
-const vm=require('node:vm');
-const {patch}=require('../scripts/patch-prewrite-ai-answer-research.cjs');
+const {prepare}=require('../scripts/prepare-canonical-production.cjs');
+const source=fs.readFileSync(path.join(__dirname,'../src/index.js'),'utf8');
 
-test('a second canonical build is identical; a stale unversioned tag fails the build',()=>{
- const {prepare}=require('../scripts/prepare-canonical-production.cjs');
- const source=fs.readFileSync(path.join(__dirname,'../src/index.js'),'utf8');
+test('a second canonical build is identical; no script tag is hardcoded, the version comes from the public files at start',()=>{
  const once=prepare(source);assert.equal(prepare(once),once);
- const stale=once.replace(/<script defer src="\/prewrite-ai-answer-research\.js\?v=[0-9a-f]+"><\/script>\\n<script defer src="\/prewrite-research-tab\.js\?v=[0-9a-f]+"><\/script>\\n/,'<script defer src="/prewrite-research-tab.js"></script>\\n');
- assert.notEqual(stale,once);assert.throws(()=>patch(stale),/PREWRITE_RESEARCH_TAB_SCRIPT_VERSION_CONFLICT/);
+ // A fixed tag in the source would keep an old tab in browsers that cached it for a year.
+ assert.doesNotMatch(once,/<script defer src="\/prewrite-(?:ai-answer-research|research-tab)\.js/);
+ assert.equal(once.split('${_prewriteBriefResearch.scriptTags()}').length-1,1);
 });
-test('canonical six-megabyte server compiles after AI-answer research integration and is idempotent',()=>{
- const source=fs.readFileSync(path.join(__dirname,'../src/index.js'),'utf8');
- const built=patch(source);
- assert.equal(patch(built),built,'no double injection on repeated builds');
+test('canonical six-megabyte server compiles with the AI-answer research integration',()=>{
+ const built=prepare(source);
  assert.match(built,/AI Answer Research — Write for Citation Potential/);
  assert.match(built,/AI answers researched/);
- // Both scripts are loaded once, in the Tracker page that holds the Pre-Write Brief, with a content version (public/ is
- // cached for a year), the shared prompt module before the tab.
- const tags=built.match(/<script defer src="\/prewrite-(ai-answer-research|research-tab)\.js\?v=[0-9a-f]{12}"><\/script>/g)||[];
- assert.deepEqual(tags.map(t=>t.match(/prewrite-[a-z-]+\.js/)[0]),['prewrite-ai-answer-research.js','prewrite-research-tab.js']);
- assert.equal(built.split('prewrite-research-tab.js').length - 1,1);assert.equal(built.split('src="/prewrite-ai-answer-research.js').length - 1,1);
  const page=built.slice(built.indexOf('const _CLIENT_TRACKER_HTML = `'));
- assert.ok(page.indexOf('prewrite-research-tab.js')<page.indexOf('id="prewriteBriefModal"'),'loaded in the page that holds the Pre-Write Brief modal');
+ assert.ok(page.indexOf('${_prewriteBriefResearch.scriptTags()}')<page.indexOf('id="prewriteBriefModal"'),'loaded in the page that holds the Pre-Write Brief modal');
  assert.ok(page.indexOf('AI Answer Research — Write for Citation Potential')>page.indexOf('id="prewriteBriefModal"'));
  // The server builds the research with the request's keyword, language and region, the same inputs the tab uses.
- assert.match(built,/makePrewriteAiAnswerResearch\(\{query:keyword,language:language,market:region,answers:\[/);
- assert.match(built,/\{engine:'perplexity',answer:_perplexityEvidenceText,source:_manualAi\.perplexity\?'manual':'automatic fallback'\}/);
- assert.match(built,/prewrite_ai_answer_research=_pwbAiResearch/);
- assert.match(built,/const _pwbAiWritingPrompt=buildPrewriteResearchPrompt\(_pwbAiResearch\)/);
- assert.match(built,/PRE-PUBLICATION WRITING RESEARCH/);
- assert.match(built,/AI ANSWER RESEARCH FOR WRITING/);
- // Defect 7: the per-system extraction is framed as writing research (entities, source leads), never as citation
- // monitoring of this website; the keys stay because the Brief and the Tracker evidence map read them.
+ assert.match(built,/_prewriteBriefResearch\.researchForRequest\(\{keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText\}\)/);
+ assert.match(built,/_prewriteBriefResearch\.attachToBrief\(brief,_pwbAiResearch\)/);
+ // The writing prompt reaches the final prompt and parts 1 and 3 of the generation.
+ assert.match(built,/const finalPrompt = prompt \+ '\\n\\nPRE-PUBLICATION AI WRITING RESEARCH:\\n' \+ _pwbAiWritingPrompt/);
+ assert.match(built,/PRE-PUBLICATION WRITING RESEARCH:\\n\$\{_pwbAiWritingPrompt\.slice\(0,7000\)\}/);
+ assert.match(built,/AI ANSWER RESEARCH FOR WRITING:\\n\$\{_pwbAiWritingPrompt\.slice\(0,9000\)\}/);
+ // The per-system extraction is framed as writing research (entities, source leads), never as citation monitoring of
+ // this website; the keys stay because the Brief and the Tracker evidence map read them.
  assert.match(built,/For EACH AI system, extract and retain as WRITING RESEARCH \(what the answer itself says; none of these fields says whether this website is or will be cited\)/);
  assert.match(built,/source leads listed in the answer, to verify independently before use\. Never read them as a measurement of this website\./);
  assert.doesNotMatch(built,/For EACH AI system, extract and retain:\n/);
- // Defect 8: "Complete missing only" rebuilds the research saved with the Brief from the merged evidence, right after the merge.
+ // "Complete missing only" refreshes the research saved with the Brief right after the merge (behaviour: migration test).
  const merge=built.indexOf('const _aiMerge=_pwbMergeManualAiEvidenceV506(');
- assert.ok(merge>0);
- const after=built.slice(merge,merge+1400);
- assert.match(after,/brief\.prewrite_ai_answer_research=_R\.makePrewriteAiAnswerResearch\(\{query:srcKeyword\|\|requestedKeyword/);
- assert.equal(built.split('const _aiMerge=_pwbMergeManualAiEvidenceV506(').length-1,1);
- // Run the inserted rebuild on a TEST brief: two answers saved earlier (one automatic Perplexity), three added by the
- // missing-only merge. The saved research must then list all five, keep language/market and the automatic source.
- const R=require('../src/prewrite-ai-answer-research.cjs');
- const code=after.slice(after.indexOf('try{const _R='),after.indexOf('}catch(_e){}')+'}catch(_e){}'.length);
- const prev=R.makePrewriteAiAnswerResearch({query:'TEST content scaling',language:'Dutch',market:'nl',answers:[{engine:'google_aio',answer:'TEST google'},{engine:'perplexity',answer:'TEST automatic perplexity',source:'automatic fallback',sources:['https://example.org/prior']}]});
- const brief={prewrite_ai_answer_research:prev,ai_system_evidence:{google_aio:{text:'TEST google',checked:true},chatgpt:{text:'TEST chatgpt',checked:true},claude:{text:'TEST claude',checked:true},copilot:{text:'TEST copilot',checked:true}}};
- vm.runInNewContext(code,{require:m=>m==='./prewrite-ai-answer-research.cjs'?R:require(m),brief,srcKeyword:'TEST content scaling',requestedKeyword:'',srcReq:{},opts:{}});
- const r=brief.prewrite_ai_answer_research;
- assert.equal(r.systems_researched,5);assert.equal(r.language,'Dutch');assert.equal(r.market,'nl');
- assert.equal(r.observations.find(x=>x.engine==='perplexity').answer_source,'automatic fallback');
- assert.deepEqual(Array.from(r.observations.find(x=>x.engine==='perplexity').source_urls),['https://example.org/prior']);
- assert.match(R.buildPrewriteResearchPrompt(r),/AI answers researched: 5\/5/);
+ assert.ok(merge>0);assert.equal(built.split('const _aiMerge=_pwbMergeManualAiEvidenceV506(').length-1,1);
+ assert.match(built.slice(merge,merge+600),/\n  _prewriteBriefResearch\.refreshAfterMissingOnly\(brief,\{query:srcKeyword\|\|requestedKeyword/);
  const os=require('node:os'),cp=require('node:child_process');
  const temp=path.join(os.tmpdir(),'prewrite-canonical-'+process.pid+'.js');
  fs.writeFileSync(temp,built);

@@ -3,11 +3,15 @@ on:
   pull_request:
     paths:
       - 'src/prewrite-ai-answer-research.cjs'
-      - 'scripts/patch-prewrite-ai-answer-research.cjs'
+      - 'src/prewrite-brief-research.cjs'
+      - 'src/index.js'
+      - 'tests/fixtures/prewrite-legacy-inline-*.cjs'
       - 'scripts/prepare-canonical-production.cjs'
       - 'package.json'
       - 'tests/prewrite-ai-answer-*.test.cjs'
       - 'tests/prewrite-research-*.test.cjs'
+      - 'tests/prewrite-brief-research-*.test.cjs'
+      - 'tests/staging-boot-no-egress.cjs'
       - 'public/prewrite-ai-answer-research.js'
       - 'public/prewrite-research-tab.js'
       - '.github/workflows/prewrite-ai-answer-research.yml'
@@ -15,10 +19,14 @@ on:
     branches: [ main ]
     paths:
       - 'src/prewrite-ai-answer-research.cjs'
-      - 'scripts/patch-prewrite-ai-answer-research.cjs'
+      - 'src/prewrite-brief-research.cjs'
+      - 'src/index.js'
+      - 'tests/fixtures/prewrite-legacy-inline-*.cjs'
       - 'scripts/prepare-canonical-production.cjs'
       - 'tests/prewrite-ai-answer-*.test.cjs'
       - 'tests/prewrite-research-*.test.cjs'
+      - 'tests/prewrite-brief-research-*.test.cjs'
+      - 'tests/staging-boot-no-egress.cjs'
       - 'public/prewrite-ai-answer-research.js'
       - 'public/prewrite-research-tab.js'
 jobs:
@@ -29,11 +37,40 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Validate 5-system writing research and canonical integration
-        run: node --test tests/prewrite-ai-answer-research.test.cjs tests/prewrite-ai-answer-integration.test.cjs tests/prewrite-research-prompt-contract.test.cjs
+      - name: Validate 5-system writing research, canonical integration and the migration reference
+        run: node --test tests/prewrite-ai-answer-research.test.cjs tests/prewrite-ai-answer-integration.test.cjs tests/prewrite-research-prompt-contract.test.cjs tests/prewrite-brief-research-migration.test.cjs
       - name: Research Prompt tab in a real browser (real Pre-Write markup from the canonical build)
         run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/prewrite-research-tab-browser.test.cjs
       - name: Verify idempotent canonical build
         run: node scripts/prepare-canonical-production.cjs --verify-only
       - name: Execute Railway Railpack build step and syntax-check built server
         run: npm run build && node --check src/index.js
+  prewrite-staging-e2e:
+    # Full canonical server on localhost, outside network denied, disposable PostgreSQL; TEST rows only. No deploy.
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: prewrite_e2e
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U test -d prewrite_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CI: 'true'
+      PREWRITE_E2E_DATABASE_URL: postgres://test:test@127.0.0.1:5432/prewrite_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies without scripts
+        run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
+      - name: Pre-Write research through the real server routes (Tracker page, Complete missing only, reopen)
+        run: node --test tests/prewrite-brief-research-e2e.test.cjs
