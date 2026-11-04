@@ -913,6 +913,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 const http   = require('http');
 const WebSocket = require('ws');
 const rewriterHelpers = require('./rewriter-helpers');
+// Pre-Write Brief AI answer research (server side of the shared prompt contract).
+const _prewriteBriefResearch = require('./prewrite-brief-research.cjs');
 
 // CONTENTSCALE NETWORK SAFE SHELL V1
 // Guarded require: a broken/missing Network module must never prevent the core platform from booting.
@@ -45100,7 +45102,7 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
 }
 </style>
 <script defer src="/tracker-growth-ui.js"></script>
-</head>
+${_prewriteBriefResearch.scriptTags()}</head>
 <body>
 
 <!-- &#x2550;&#x2550;&#x2550; Animated Welcome Screen &#x2550;&#x2550;&#x2550; -->
@@ -45475,16 +45477,16 @@ body { background:#0a0a0f; color:#f1f5f9; font-family:Verdana,Geneva,sans-serif;
     </details>
     <div style="margin-bottom:16px;background:#0b1220;border:1px solid #26364d;border-radius:10px;padding:12px 13px;">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
-        <div><div style="font-size:11px;color:#c4b5fd;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">5 AI systems evidence</div><div id="pwbNetworkAuthBadge" style="display:none;margin-top:6px;font-size:10px;color:#86efac;font-weight:800;">✓ Network Prewrite authorized · GSC is not required for this research workspace</div>
-        <div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:4px;">Add real evidence for the same keyword. Empty means not checked. This is research evidence — not ContentScore.</div><div style="font-size:10px;color:#86efac;margin-top:5px;">✓ Auto-saved per keyword · refresh-safe · switching keywords keeps each set separately</div></div>
-        <div id="pwbAiFiveCount" style="font-size:11px;color:#94a3b8;font-weight:800;">0 / 5 added</div>
+        <div><div style="font-size:11px;color:#c4b5fd;font-weight:800;text-transform:uppercase;letter-spacing:.06em;">AI Answer Research — Write for Citation Potential</div><div id="pwbNetworkAuthBadge" style="display:none;margin-top:6px;font-size:10px;color:#86efac;font-weight:800;">✓ Network Prewrite authorized · GSC is not required for this research workspace</div>
+        <div style="font-size:11px;color:#94a3b8;line-height:1.5;margin-top:4px;">Research the five answers to the target query. Identify factual gaps, useful explanations and original source leads to write a better answer. This is not citation tracking.</div><div style="font-size:10px;color:#86efac;margin-top:5px;">✓ Auto-saved per keyword · refresh-safe · switching keywords keeps each set separately</div></div>
+        <div id="pwbAiFiveCount" style="font-size:11px;color:#94a3b8;font-weight:800;">0 / 5 AI answers researched</div>
       </div>
       <div class="pwb-ai-five-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;">
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Google AIO / Gemini</label><textarea id="pwbAioText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real Google AIO / Gemini answer and citation evidence."></textarea></div>
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">ChatGPT Search</label><textarea id="pwbChatgptText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real ChatGPT Search answer and citation evidence."></textarea></div>
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Perplexity</label><textarea id="pwbPerplexityText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real Perplexity answer and citation evidence."></textarea><div style="font-size:9.5px;color:#64748b;margin-top:4px;">Manual evidence is primary. Automatic Perplexity is fallback only when this field is empty.</div></div>
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Claude</label><textarea id="pwbClaudeText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real Claude answer and citation evidence."></textarea></div>
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Microsoft Copilot</label><textarea id="pwbCopilotText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the real Microsoft Copilot answer and citation evidence."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Google AIO / Gemini</label><textarea id="pwbAioText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual Google AI Overview or Gemini answer for research and source verification."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">ChatGPT Search</label><textarea id="pwbChatgptText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual ChatGPT Search answer to identify missing information and questions."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Perplexity</label><textarea id="pwbPerplexityText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual Perplexity answer and sources for independent verification."></textarea><div style="font-size:9.5px;color:#64748b;margin-top:4px;">Manual evidence is primary. Automatic Perplexity is fallback only when this field is empty.</div></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Claude</label><textarea id="pwbClaudeText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual Claude answer to research missing context and useful explanations."></textarea></div>
+        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Microsoft Copilot</label><textarea id="pwbCopilotText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual Copilot answer and any original source leads."></textarea></div>
       </div>
     </div>
     <div style="display:flex;gap:8px;">
@@ -46701,7 +46703,7 @@ function _pwbAiFiveUiState(){
 }
 function _pwbUpdateAiFiveCount(){
   var st=_pwbAiFiveUiState();
-  var b=document.getElementById('pwbAiFiveCount');if(b){b.textContent=st.count+' / 5 added'+(_NETWORK_PREWRITE_AUTHORIZED?' · required':'');b.style.color=st.complete?'#86efac':(st.manual_ready?'#fbbf24':'#fca5a5');b.title=st.complete?'All five AI-system evidence inputs are present.':(st.manual_ready?'Perplexity may use the automatic fallback; the other four required manual evidence inputs are present.':'Missing required AI evidence: '+st.hard_missing.map(function(x){return x.label;}).join(', '));}
+  var b=document.getElementById('pwbAiFiveCount');if(b){b.textContent=st.count+' / 5 AI answers researched'+(_NETWORK_PREWRITE_AUTHORIZED?' · required':'');b.style.color=st.complete?'#86efac':(st.manual_ready?'#fbbf24':'#fca5a5');b.title=st.complete?'All five AI answers captured for writing research; source verification is still required.':(st.manual_ready?'Perplexity may use the automatic fallback; the other four required manual evidence inputs are present.':'Missing required AI evidence: '+st.hard_missing.map(function(x){return x.label;}).join(', '));}
 }
 document.addEventListener('input',function(e){if(e.target&&['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0){_pwbUpdateAiFiveCount();_pwbDraftSave();}});
 function showPrewriteBriefModal() {
@@ -47227,7 +47229,7 @@ async function generatePrewriteBrief() {
   ] : [
     {btnBase:'Analysing SERP', statBase:'Reading the live search results and search intent'},
     {btnBase:'Comparing ranking pages', statBase:'Fetching the strongest ranking pages and extracting content gaps'},
-    {btnBase:'Checking AI evidence', statBase:'Reviewing AI citations, entities, questions and source evidence'},
+    {btnBase:'Researching AI answers', statBase:'Comparing explanations and original source leads to improve the writing'},
     {btnBase:'Generating Pre-Write Brief', statBase:'Turning the research into the final SEO/AEO brief'}
   ];
   var _pwbProgressIx = 0, _pwbDotsIx = 0;
@@ -47582,15 +47584,15 @@ function renderPrewriteBrief(b) {
     var _ais=b.ai_systems_analysis;
     var _aiNames={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
     html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid #26364d;border-radius:8px;padding:10px 12px;">'
-      + '<div style="color:#c4b5fd;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700;">5 AI Systems Evidence</div>';
+      + '<div style="color:#c4b5fd;font-size:10px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;font-weight:700;">5 AI Answer Research — Writing Inputs</div>';
     ['google_aio','chatgpt','perplexity','claude','copilot'].forEach(function(k){
       var x=_ais[k]||{}, checked=!!x.checked, src=esc(x.evidence_source||'not_checked');
       html += '<div style="border-top:1px solid #1f2937;padding:8px 0;">'
-        + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;"><strong style="color:#e5e7eb;">'+esc(_aiNames[k])+'</strong><span style="font-size:10px;color:'+(checked?'#86efac':'#9ca3af')+';">'+(checked?'✓ Checked':'○ Not checked')+' · '+src+'</span></div>';
+        + '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;"><strong style="color:#e5e7eb;">'+esc(_aiNames[k])+'</strong><span style="font-size:10px;color:'+(checked?'#86efac':'#9ca3af')+';">'+(checked?'✓ Answer captured':'○ Not researched')+' · '+src+'</span></div>';
       if(x.answer_summary) html += '<div style="margin-top:4px;color:#cbd5e1;font-size:11px;">'+esc(x.answer_summary)+'</div>';
       var _sources=Array.isArray(x.citation_sources)?x.citation_sources:[];
       if(_sources.length){
-        html += '<div style="margin-top:6px;font-size:10.5px;color:#9ca3af;">Citation sources:</div>';
+        html += '<div style="margin-top:6px;font-size:10.5px;color:#9ca3af;">Source leads (verify independently):</div>';
         _sources.forEach(function(s){
           var u=String((s&&s.exact_url)||''), valid=/^https:\/\//i.test(u);
           html += '<div style="margin-top:3px;font-size:10.5px;">'
@@ -60007,6 +60009,7 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
   const _beforeMerge=_pwbReadiness(brief);
   if(placementId>0)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:opts.publisherDomain||''});
   const _aiMerge=_pwbMergeManualAiEvidenceV506(brief,opts.manualAiEvidence||srcReq.manualAiEvidence||{});
+  _prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||''});
   if(placementId>0)_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:opts.publisherDomain||'',checked_url:opts.publisherCheckedUrl||''});
   _pwbEvidenceBackedGapV506(brief);
   const before=_pwbReadiness(brief),missingBefore=Array.isArray(before.missing)?before.missing.slice():[];
@@ -60576,7 +60579,7 @@ async function _handlePrewriteBriefGeneration(req, res) {
       ? _manualAi.perplexity
       : (perplexity.checked ? perplexity.answer_excerpt : '');
     const _perplexityEvidenceSource = _manualAi.perplexity ? 'manual' : (perplexity.checked ? 'automatic fallback' : 'not checked');
-    const aiSystemsBlock = `5 AI SYSTEMS EVIDENCE — MANUAL INPUT IS PRIMARY. NEVER SIMULATE ANOTHER AI SYSTEM.
+    const aiSystemsBlock = `5 AI ANSWER RESEARCH — PRE-PUBLICATION WRITING INPUT. MANUAL INPUT IS PRIMARY. NEVER SIMULATE ANOTHER AI SYSTEM.
 Google AIO / Gemini [${_manualAi.google_aio ? 'manual' : 'NOT CHECKED'}]:
 ${_manualAi.google_aio || 'NOT CHECKED'}
 
@@ -60602,9 +60605,9 @@ RULES:
 - Never reduce an exact page URL to only the root domain when the exact page URL is visible.
 - Never invent, reconstruct, normalize, guess or "repair" a URL.
 - If a citation/source is mentioned but its exact URL is not present in the evidence, mark exact_url as "insufficient_data".
-- This evidence is research input, never a ContentScore.
+- Use observed AI answers to identify unanswered questions, factual qualifiers, original insight opportunities and concrete writing improvements.\n- URLs in AI answers are source leads, not verified references.\n- This research does NOT mean our domain is cited; that is the Tracker's job.\n- No promise of fast citations. This evidence is research input, never a ContentScore.
 
-For EACH AI system, extract and retain:
+For EACH AI system, extract and retain as WRITING RESEARCH (what the answer itself says; none of these fields says whether this website is or will be cited):
 - checked
 - evidence_source: manual | automatic_fallback | not_checked
 - answer_summary
@@ -60613,10 +60616,14 @@ For EACH AI system, extract and retain:
 - domain_citations
 - exact_page_citations
 - citation_sources
+Meaning of the fields: recommended_companies and mentioned_companies = the important entities the answer names (explain them where relevant); domain_citations, exact_page_citations and citation_sources = source leads listed in the answer, to verify independently before use. Never read them as a measurement of this website.
 
 Every citation/source item should be represented as:
 {"source_name":"<name if visible>","page_title":"<title if visible>","exact_url":"<exact https:// URL copied from the evidence or insufficient_data>"}
 `;
+    // AI answer research for writing: the same prompt the Research Prompt tab shows (src/prewrite-brief-research.cjs).
+    // Observed AI answers inform the writing; they never prove that this website is cited.
+    const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText});
     const prompt = `You are an elite SEO and AEO strategist. A strategist requested a possible NEW page for this keyword. FIRST decide whether a new URL should actually be created or whether an existing client URL should be expanded instead. Do not create a new page when the sitemap shows a materially overlapping existing URL and doing so would create cannibalization. If CREATE is justified, specify what the brand-new page must contain to outrank and out-cite current results from the first draft. Every claim must be traceable to the inputs below; never invent a domain, URL, snippet, statistic, schema type or business fact.
 
 KEYWORD: "${keyword}"
@@ -60656,13 +60663,13 @@ COMPETITOR ANALYSIS CONTRACT — TOP 10:
 - If the page scrape failed, preserve rank, page_title, domain and exact_url from the SERP, and set content-analysis fields to "insufficient_data".
 - Keep the competitor order aligned to the SERP rank.
 
-5 AI SYSTEMS EVIDENCE CONTRACT:
+5 AI ANSWER RESEARCH CONTRACT — WRITE BETTER CONTENT, NOT CITATION MONITORING:
 - Treat each system independently.
 - Manual evidence is primary.
 - Perplexity automatic evidence is fallback only when the manual Perplexity field is empty.
 - Never simulate ChatGPT Search, Claude, Microsoft Copilot, Google AIO/Gemini, or Perplexity.
 - For every system, preserve exact HTTPS citation/source URLs when present.
-- Distinguish: recommended company, mentioned company, domain cited, exact page cited, citation source.
+- Identify useful explanations, candidate source leads, missing questions and facts requiring independent verification. Historical citation fields are compatibility-only and do not measure an unpublished page.
 - Do not mark "exact page cited" unless the exact URL is visibly present in that system's evidence.
 - If the evidence does not contain an exact URL, use "insufficient_data".
 
@@ -60696,7 +60703,7 @@ PRECISION OVER FALSE COMPLETENESS: if the live data does not support a confident
 Return ONLY valid JSON, no markdown, no preamble.
 {"keyword":"${keyword}","search_intent":"informational|commercial|transactional","content_decision":{"recommended_treatment":"CREATE_NEW_PAGE|EXPAND_EXISTING_PAGE","cannibalization_risk":"low|medium|high","closest_existing_url":"<exact CLIENT SITEMAP URL or none>","reason":"<evidence-based decision>"},"fact_safety":{"verified_business_facts_used":["<only verified facts actually used>"],"verify_first":["<opportunity requiring owner confirmation; not used as asserted copy>"],"blocked_claims":["<relevant FALSE/NOT_APPLICABLE claims>"],"rule":"Only VERIFIED or owner-provided facts may be asserted as client facts."},"top10_gap":"<what none of the current top 10 cover well — the opening for a new page, or 'insufficient_data'>","ai_overview_status":"<synthesise only verified Google/manual evidence and the Google search direct-answer signal; do not treat other systems as Google AIO proof>","ai_systems_analysis":{"google_aio":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[{"source_name":"<visible source name>","page_title":"<visible page title>","exact_url":"<exact https:// URL or insufficient_data>"}]},"chatgpt":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"perplexity":{"checked":false,"evidence_source":"manual|automatic_fallback|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"claude":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]},"copilot":{"checked":false,"evidence_source":"manual|not_checked","answer_summary":"<summary or NOT CHECKED>","recommended_companies":[],"mentioned_companies":[],"domain_citations":[],"exact_page_citations":[],"citation_sources":[]}},"competitor_table":[{"rank":1,"company_or_publisher":"<company or publisher only if supported by the supplied title/domain/page; otherwise use the domain>","domain":"<real domain from the SERP data>","exact_url":"<exact HTTPS URL copied verbatim from the SERP data, or insufficient_data>","page_title":"<real title from the SERP data>","what_they_have":"<one concrete thing this competitor does well, grounded in their scraped content; insufficient_data if scrape failed>","the_gap":"<one concrete thing missing or weak in their content; insufficient_data if scrape failed>","what_to_add":"<what the new page should do instead/better; insufficient_data if scrape failed>"}],"recommended_title_h1":"<the strongest working title/H1 for this page, considering the supplied angle if any>","meta_package":{"seo_title":"<rank-ready title tag, max 60 chars, focus keyword near the front, compelling not stuffed>","meta_description":"<click-worthy meta description, 140-160 chars, aim for 150-159, includes the keyword and a reason to click>","h1":"<the on-page H1, distinct from the title tag, natural phrasing a human reads>","url_slug":"<short hyphenated slug from the keyword, no stopwords>"},"opening_passage":{"direct_answer":"<the literal first 40-60 words of the page: a self-contained, quotable answer to the primary intent that Google AI Overview and Perplexity can lift verbatim — lead with the answer, no throat-clearing>","why_it_wins":"<one sentence: what makes this opening extractable as a citation>"},"recommended_structure":{"format":"<content_page|comparison|how_to|tool_landing — from the SERP pattern>","recommended_word_count":2200,"must_have_h2s":["<specific headings needed to beat rank 1>"],"recommended_schema":["<schema types, e.g. FAQPage, Article, HowTo>"]},"page_blueprint":[{"h2":"<section heading in READING ORDER, top to bottom, forming a complete page from intro to conclusion>","purpose":"<one line: what this section accomplishes for the reader and for ranking/citation>","target_words":300,"cover":["<the sub-questions and entities this section must answer/include>"],"citation_hook":"<the one quotable sentence to write here if this section can earn an AI citation; else empty string>"}],"must_cover_entities":["<specific terms/entities present in 2+ competitors that this page must include>"],"faq_questions":["<real People-Also-Ask style questions this page should answer>"],"paa_questions":[{"q":"<real People-Also-Ask question for this keyword — provide EXACTLY 5>","a":"<self-contained 40-60 word answer, ready to paste as an FAQ answer — factual, no placeholders>"}],"internal_link_targets":[{"anchor_text":"<natural anchor text a reader would click>","link_to":"<exact URL copied verbatim from AUTO INTERNAL LINK RESEARCH; [] if none>","why":"<topical-authority or user-journey purpose>"}],"external_link_targets":[{"anchor_text":"<natural descriptive anchor>","source_name":"<real source/page name>","exact_url":"<exact https:// URL copied verbatim from AUTO EXTERNAL SOURCE RESEARCH>","why":"<why this source is useful/authoritative>","supports_claim":"<the specific fact, definition, statistic or section this source can support>"}],"citation_targets":[{"query_variant":"<a specific question Google AI Overview or Perplexity could cite this page for>","passage_to_write":"<exactly how that passage should read — length, direct-answer format>"}],"ai_answer":{"primary_question":"<the one question this page must own>","secondary_questions":["<4-7 real sub-questions under it>"],"direct_answer":"<40-60 words, self-contained, quotable verbatim>","why_it_matters":"<one sentence>","who_is_it_for":"<one sentence>","key_takeaways":["<3-5 short factual takeaways>"]},"quick_facts":[{"label":"<a fact label that fits this topic>","value":"<the value, verifiable from the data above>"}],"entity_strategy":{"primary":["<entities this page is about>"],"secondary":["<entities it must mention>"],"supporting":["<context entities>"],"relationships":[{"subject":"<entity>","relation":"<verb phrase, e.g. provides / is part of / competes with>","object":"<entity>"}]},"evidence":{"official_sources":["<sources visible in the data above, never invented>"],"statistics":["<a real figure with its source, or omit>"],"experience_to_include":"<what first-hand experience the writer must add, written as an instruction>","trust_signals":["<concrete signals this page must show>"]},"balance":{"limitations":["<real limitations or caveats>"],"who_should_not_use_it":["<reader types this is not for>"],"comparisons":[{"a":"<option A>","b":"<option B>","why_it_matters":"<why the reader cares>"}]},"use_cases":[{"audience":"<a distinct reader type>","scenario":"<their concrete situation>","benefit":"<what they get>"}],"conclusion":{"recap":"<2-3 sentence recap>","recommendation":"<the concrete recommendation>","outlook":"<what changes next in this space>"},"beat_number1_instructions":[{"topic":"<a topic rank-1 covers>","rank1_treats_it_as":"surface|moderate|deep","to_beat_write":"<concrete instruction — what to add, what depth, what evidence>"}],"action_plan":[{"step":1,"priority":"high|medium|low","action":"<specific action>"}],"confidence":"high|medium|low"}`;
 
-    const finalPrompt = prompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.'
+    const finalPrompt = prompt + '\n\nPRE-PUBLICATION AI WRITING RESEARCH:\n' + _pwbAiWritingPrompt + '\n\nFINAL TREATMENT CONTRACT (supersedes the narrower enum in the JSON example): content_decision.recommended_treatment MUST be one of OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_NEW_PAGE. For OPTIMIZE_EXISTING_PAGE also return preserve_sections and surgical_changes [{"where":"exact current location","change":"focused change","why":"evidence","complete_when":"observable result"}]. For EXPAND_EXISTING_PAGE return preserve_sections and use page_blueprint only for justified additions. Never turn either existing-page mode into a full rewrite.'
       + '\n\nFINAL URL VALIDATION — REQUIRED BEFORE YOU RETURN JSON:'
       + '\n- Every supplied competitor must be represented in competitor_table.'
       + '\n- Every competitor exact_url must be the exact https:// URL copied from the supplied SERP data, or "insufficient_data".'
@@ -60817,7 +60824,7 @@ ${raw.slice(0,16000)}`;
       };
       _pwbCompactCall=_compactCall;
 
-      const _decisionPrompt = `PART 1 OF 3 — DECISION & STRATEGY. Return ONLY compact valid JSON, no markdown.
+      const _decisionPrompt = `PART 1 OF 3 — DECISION & STRATEGY. Return ONLY compact valid JSON, no markdown.\nPRE-PUBLICATION WRITING RESEARCH:\n${_pwbAiWritingPrompt.slice(0,7000)}\nUse this to plan original and verified answers, never to score existing citations.
 KEYWORD: ${keyword}
 WORKING TITLE: ${workingTitle||'none'}
 SEARCH INTENT: primary=${_chosenIntent}; secondary=${_intentDir.secondary||'none'}; query_format=${_autoIntent.query_format||'standard'}; strategy=${_intentDir.strategy_label}\nINTENT BRIDGE: ${_intentDir.bridge||'none'}\nTOP RANKING EVIDENCE:\n${compSummary.slice(0,6500)}
@@ -60830,8 +60837,8 @@ Rules: treatment must be OPTIMIZE_EXISTING_PAGE, EXPAND_EXISTING_PAGE or CREATE_
 KEYWORD: ${keyword}
 LIVE TOP RESULTS:
 ${compSummary.slice(0,7200)}
-AI SYSTEM EVIDENCE:
-${aiSystemsBlock.slice(0,7600)}
+AI ANSWER RESEARCH — NOT CITATION TRACKING:
+${_pwbAiWritingPrompt.slice(0,7600)}
 FACT SAFETY:
 ${claimsBlock.slice(0,2800)}
 Return EXACTLY these top-level keys:
@@ -60842,7 +60849,7 @@ Return EXACTLY these top-level keys:
 - beat_number1_instructions: array
 - fact_safety: object with verified_business_facts_used, verify_first, blocked_claims, rule
 Rules: keep answers concise. Never invent facts/citations. NOT CHECKED stays not checked. Manual evidence wins. Do not output competitor URLs — ContentScale will attach exact server-owned URLs after validation.`;
-      const _implementationPrompt = `PART 3 OF 3 — IMPLEMENTATION. Return ONLY compact valid JSON, no markdown.
+      const _implementationPrompt = `PART 3 OF 3 — IMPLEMENTATION. Return ONLY compact valid JSON, no markdown.\nAI ANSWER RESEARCH FOR WRITING:\n${_pwbAiWritingPrompt.slice(0,9000)}\nCreate a useful original direct answer, specific headings and fact-checkable FAQ answers. Do not copy AI outputs or promise citations.
 KEYWORD: ${keyword}
 WORKING TITLE: ${workingTitle||'none'}
 SEARCH INTENT: primary=${_chosenIntent}; secondary=${_intentDir.secondary||'none'}; query_format=${_autoIntent.query_format||'standard'}; strategy=${_intentDir.strategy_label}\nINTENT BRIDGE: ${_intentDir.bridge||'none'}\nTOP RANKING EVIDENCE:\n${compSummary.slice(0,6000)}
@@ -61078,6 +61085,7 @@ ${claimsBlock.slice(0,2400)}`;
     });
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
+    _prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);
     if(!brief || typeof brief!=='object') return res.status(502).json({success:false,stage:'gemini_parse',retryable:true,error:'Generated Prewrite Brief was not a valid object.'});
     const _pwbText=function(v){if(typeof v==='string')return v.trim();if(v&&typeof v==='object'&&!Array.isArray(v)){for(const k of ['title','text','value','summary','answer','recommendation','reason','gap','name']){if(typeof v[k]==='string'&&v[k].trim())return v[k].trim();}}return '';};
     ['recommended_title_h1','top10_gap','ai_overview_status'].forEach(function(k){brief[k]=_pwbText(brief[k]);});
