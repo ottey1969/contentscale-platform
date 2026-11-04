@@ -5,11 +5,11 @@ const {makePrewriteAiAnswerResearch,buildPrewriteResearchPrompt,normalizeAnswer}
 
 test('all five systems are research inputs, not website citation checks',()=>{
  const r=makePrewriteAiAnswerResearch({query:'seo content optimization services',answers:[
- {engine:'google_aio',answer:'An illustrative answer about intent and page updates.',sources:['https://example.org/source']},
- {engine:'chatgpt_search',answer:'An alternate answer about useful content.'},
- {engine:'perplexity',answer:'A response explaining sources and intent.'},
- {engine:'claude',answer:'A response describing content accuracy.'},
- {engine:'microsoft_copilot',answer:'A response about structure.'}
+ {engine:'google_aio',answer:'An illustrative SEO answer about intent and page updates.',sources:['https://example.org/source']},
+ {engine:'chatgpt_search',answer:'An alternate answer about useful SEO content.'},
+ {engine:'perplexity',answer:'A response explaining content optimization sources and intent.'},
+ {engine:'claude',answer:'A response describing SEO content accuracy.'},
+ {engine:'microsoft_copilot',answer:'A response about content optimization structure.'}
  ]});
  assert.equal(r.systems_researched,5);
  assert.equal(r.research_complete,true);
@@ -21,7 +21,7 @@ test('all five systems are research inputs, not website citation checks',()=>{
  assert.ok(!buildPrewriteResearchPrompt(r).includes('is cited by'));
 });
 test('missing AI answers do not become fake citations or synthesized evidence',()=>{
- const r=makePrewriteAiAnswerResearch({query:'prewrite brief',answers:[{engine:'perplexity',answer:'Text without citations.'}]});
+ const r=makePrewriteAiAnswerResearch({query:'prewrite brief',answers:[{engine:'perplexity',answer:'A prewrite brief text without citations.'}]});
  assert.equal(r.systems_researched,1);
  assert.equal(r.research_complete,false);
  assert.equal(r.observations.filter(x=>!x.checked).length,4);
@@ -30,10 +30,10 @@ test('missing AI answers do not become fake citations or synthesized evidence',(
  assert.match(buildPrewriteResearchPrompt(r),/NOT CHECKED/);
 });
 test('unsafe or invalid URLs are excluded; aliases normalized and duplicate results deduplicated',()=>{
- const r=makePrewriteAiAnswerResearch({answers:[{engine:'gemini',answer:'First'},
- {engine:'google',answer:'Second',sources:['javascript:alert(1)','https://example.com/','https://example.com/']}]});
+ const r=makePrewriteAiAnswerResearch({answers:[{engine:'gemini',answer:'First answer text'},
+ {engine:'google',answer:'Second answer text',sources:['javascript:alert(1)','https://example.com/','https://example.com/']}]});
  assert.equal(r.systems_researched,1);
- assert.equal(r.observations[0].answer_excerpt,'Second');
+ assert.equal(r.observations[0].answer_excerpt,'Second answer text');
  assert.deepEqual(r.source_candidates,['https://example.com/']);
  assert.equal(normalizeAnswer({engine:'unknown',answer:'x'}),null);
 });

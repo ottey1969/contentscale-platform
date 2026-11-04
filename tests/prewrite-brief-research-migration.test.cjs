@@ -23,10 +23,10 @@ function legacyMissingOnly(brief, ctx) {
 }
 const LONG = 'TEST long ' + 'L'.repeat(20000) + ' javascript:alert(1) <img src=x onerror=alert(2)> https://ok.example/p';
 const REQUESTS = {
-  'five manual answers': { keyword: 'TEST content scaling', language: 'English', region: 'nl', manual: { google_aio: 'TEST google https://example.org/guide', chatgpt: 'TEST chatgpt', perplexity: 'TEST perplexity', claude: 'TEST claude', copilot: 'TEST copilot' } },
-  'three answers, automatic Perplexity': { keyword: 'TEST content at scale', language: 'Dutch', region: 'be', manual: { google_aio: 'TEST google', chatgpt: 'TEST chatgpt' }, auto: 'TEST automatic perplexity https://example.org/p' },
+  'five manual answers': { keyword: 'TEST content scaling', language: 'English', region: 'nl', manual: { google_aio: 'TEST google https://example.org/guide', chatgpt: 'TEST chatgpt answer', perplexity: 'TEST perplexity answer', claude: 'TEST claude answer', copilot: 'TEST copilot answer' } },
+  'three answers, automatic Perplexity': { keyword: 'TEST content at scale', language: 'Dutch', region: 'be', manual: { google_aio: 'TEST google answer', chatgpt: 'TEST chatgpt answer' }, auto: 'TEST automatic perplexity https://example.org/p' },
   'no answers': { keyword: 'TEST seo', language: 'German', region: 'de', manual: {} },
-  'missing keyword': { keyword: '', language: 'English', region: 'us', manual: { chatgpt: 'TEST chatgpt' } },
+  'missing keyword': { keyword: '', language: 'English', region: 'us', manual: { chatgpt: 'TEST chatgpt answer' } },
   'long answer and unsafe URLs': { keyword: 'TEST long', language: 'English', region: 'gb', manual: { claude: LONG, copilot: 'TEST <script>alert(3)</script>' } },
   'Turkish market': { keyword: 'TEST içerik ölçekleme', language: 'Turkish', region: 'tr', manual: { google_aio: 'TEST türkçe yanıt' } }
 };
@@ -39,10 +39,18 @@ test('new Brief request: the module gives the same research and prompt as the le
   for (const [name, q] of Object.entries(REQUESTS)) {
     const v = handlerVars(q);
     const legacy = legacyRequest(v);
-    const now = M.researchForRequest({ keyword: v.keyword, language: v.language, region: v.region, manualAi: v._manualAi, perplexityEvidenceText: v._perplexityEvidenceText });
-    assert.deepEqual(plain(now.research), plain(legacy.research), name + ': research object');
-    assert.equal(now.prompt, legacy.prompt, name + ': prompt text');
+    // Intended difference since the validation contract: a new Google answer names its source. The owner chose
+    // "Google AI Overview" here; the legacy glue had no source, so its Google entry reads "source not recorded".
+    const now = M.researchForRequest({ keyword: v.keyword, language: v.language, region: v.region, manualAi: v._manualAi, perplexityEvidenceText: v._perplexityEvidenceText, googleSource: 'ai_overview' });
+    const unify = x => { const c = plain(x); const g = c.observations.find(o => o.engine === 'google'); if (g && g.checked) { g.google_source = 'unrecorded'; g.researched_system = 'Google AI Overview or Gemini (source not recorded)'; } return c; };
+    assert.deepEqual(unify(now.research), plain(legacy.research), name + ': research object');
+    assert.equal(now.prompt.replace(' — researched: Google AI Overview [', ' — researched: Google AI Overview or Gemini (source not recorded) ['), legacy.prompt, name + ': prompt text');
   }
+  // Without a source, a new Google answer is INVALID (source not chosen) and not counted; the legacy code counted it.
+  const v = handlerVars(REQUESTS['five manual answers']);
+  const noSource = M.researchForRequest({ keyword: v.keyword, language: v.language, region: v.region, manualAi: v._manualAi, perplexityEvidenceText: v._perplexityEvidenceText }).research;
+  assert.equal(noSource.observations.find(o => o.engine === 'google').error_reason, 'source_not_chosen');
+  assert.equal(noSource.answers_valid, legacyRequest(v).research.answers_valid - 1);
 });
 
 test('saved with the Brief: same as the legacy code, also for a missing Brief', () => {
@@ -55,13 +63,13 @@ test('saved with the Brief: same as the legacy code, also for a missing Brief', 
 
 test('Complete missing only: the module refreshes the saved research exactly like the legacy code', () => {
   const prev = R.makePrewriteAiAnswerResearch({ query: 'TEST content scaling', language: 'Dutch', market: 'nl', answers: [
-    { engine: 'google_aio', answer: 'TEST google' }, { engine: 'perplexity', answer: 'TEST automatic perplexity ' + 'P'.repeat(4000), source: 'automatic fallback', sources: ['https://example.org/prior'] }] });
+    { engine: 'google_aio', answer: 'TEST google answer' }, { engine: 'perplexity', answer: 'TEST automatic perplexity ' + 'P'.repeat(4000), source: 'automatic fallback', sources: ['https://example.org/prior'] }] });
   const cases = {
-    'two saved + three merged': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { google_aio: { text: 'TEST google', checked: true }, chatgpt: { text: 'TEST chatgpt', checked: true }, claude: { text: 'TEST claude', checked: true }, copilot: { text: 'TEST copilot', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: {}, opts: {} } },
+    'two saved + three merged': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { google_aio: { text: 'TEST google answer', checked: true }, chatgpt: { text: 'TEST chatgpt answer', checked: true }, claude: { text: 'TEST claude answer', checked: true }, copilot: { text: 'TEST copilot answer', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: {}, opts: {} } },
     'merge replaces a saved answer': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { perplexity: { text: 'TEST new manual perplexity', checked: true, source: 'manual' } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: {}, opts: {} } },
-    'no earlier research (Brief saved before the research existed)': { brief: { ai_system_evidence: { chatgpt: { answer: 'TEST chatgpt', checked: true } } }, ctx: { srcKeyword: '', requestedKeyword: 'TEST keyword', srcReq: { language: 'English', region: 'us' }, opts: {} } },
+    'no earlier research (Brief saved before the research existed)': { brief: { ai_system_evidence: { chatgpt: { answer: 'TEST chatgpt answer', checked: true } } }, ctx: { srcKeyword: '', requestedKeyword: 'TEST keyword', srcReq: { language: 'English', region: 'us' }, opts: {} } },
     'evidence without a source label keeps the earlier label (the stored automatic Perplexity answer)': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { perplexity: { text: 'TEST automatic perplexity as stored in the evidence', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: {}, opts: {} } },
-    'earlier language and market win over the request': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { chatgpt: { text: 'TEST chatgpt', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: { language: 'English', region: 'us' }, opts: {} } },
+    'earlier language and market win over the request': { brief: { prewrite_ai_answer_research: prev, ai_system_evidence: { chatgpt: { text: 'TEST chatgpt answer', checked: true } } }, ctx: { srcKeyword: 'TEST content scaling', requestedKeyword: '', srcReq: { language: 'English', region: 'us' }, opts: {} } },
     'merged answer over 12,000 characters is clipped like the handler': { brief: { ai_system_evidence: { claude: { text: 'TEST ' + 'C'.repeat(13000) + ' https://late.example/after-the-clip', checked: true } } }, ctx: { srcKeyword: 'TEST q', requestedKeyword: '', srcReq: {}, opts: {} } },
     'language and market from the request options': { brief: { ai_system_evidence: {} }, ctx: { srcKeyword: 'TEST q', requestedKeyword: '', srcReq: {}, opts: { language: 'Turkish', region: 'tr' } } }
   };
@@ -106,9 +114,10 @@ test('a missing public script never stops the server from starting: logged, tab 
 test('src/index.js calls the module directly and holds the final Pre-Write text; no Pre-Write code is inserted at build time', () => {
   const once = (s, needle, what) => assert.equal(s.split(needle).length - 1, 1, what + ' appears exactly once');
   once(SRC, "const _prewriteBriefResearch = require('./prewrite-brief-research.cjs');", 'module require');
-  once(SRC, 'const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText});', 'request research');
+  once(SRC, 'const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected,googleSource:_manualAiGoogleSource});', 'request research');
+  once(SRC, 'const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword,_manualAiGoogleSource);', 'answers screened before anything uses them');
   once(SRC, '_prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);', 'saved with the Brief');
-  once(SRC, "_prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||''});", 'missing-only refresh');
+  once(SRC, "_prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected});", 'missing-only refresh');
   once(SRC, '${_prewriteBriefResearch.scriptTags()}</head>', 'script tags');
   assert.doesNotMatch(SRC, /require\('\.\/prewrite-ai-answer-research\.cjs'\)/, 'no inline copy of the research code');
   // Order: the module is required before the Tracker page template is evaluated; the tags are in the page that holds the modal.
@@ -120,8 +129,9 @@ test('src/index.js calls the module directly and holds the final Pre-Write text;
   const merge = SRC.indexOf('const _aiMerge=_pwbMergeManualAiEvidenceV506(');
   assert.ok(merge > 0 && SRC.indexOf('_prewriteBriefResearch.refreshAfterMissingOnly(', merge) - merge < 200);
   // Every text the build used to write is now in the source, once, and the old text is gone.
-  // (One entry is code, not text: saving the research with the Brief. That is now the attachToBrief call checked above.)
-  for (const [oldText, newText] of LEGACY.textChanges.filter(([, n]) => !n.includes('brief.prewrite_ai_answer_research=_pwbAiResearch'))) {
+  // (One entry is code, not text: saving the research with the Brief. That is now the attachToBrief call checked above.
+  // The counter text "st.count+' / 5 AI answers researched'" is superseded by the counter of the validation contract.)
+  for (const [oldText, newText] of LEGACY.textChanges.filter(([, n]) => !n.includes('brief.prewrite_ai_answer_research=_pwbAiResearch') && n !== "st.count+' / 5 AI answers researched'")) {
     assert.ok(SRC.includes(newText), 'final text present: ' + newText.slice(0, 70));
     if (!newText.includes(oldText)) assert.ok(!SRC.includes(oldText), 'old text gone: ' + oldText.slice(0, 70));
   }

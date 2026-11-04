@@ -45482,7 +45482,7 @@ ${_prewriteBriefResearch.scriptTags()}</head>
         <div id="pwbAiFiveCount" style="font-size:11px;color:#94a3b8;font-weight:800;">0 / 5 AI answers researched</div>
       </div>
       <div class="pwb-ai-five-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px;">
-        <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Google AIO / Gemini</label><textarea id="pwbAioText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual Google AI Overview or Gemini answer for research and source verification."></textarea></div>
+        <div><label for="pwbGoogleSource" style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Google AIO / Gemini</label><select id="pwbGoogleSource" class="cs-input" aria-label="Which Google source did you research?" style="margin-bottom:6px;font-size:12px;"><option value="">Which Google source? (required)</option><option value="ai_overview">Google AI Overview</option><option value="gemini">Gemini</option><option value="no_ai_overview">No AI Overview shown</option></select><textarea id="pwbAioText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual Google AI Overview or Gemini answer for research and source verification."></textarea></div>
         <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">ChatGPT Search</label><textarea id="pwbChatgptText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual ChatGPT Search answer to identify missing information and questions."></textarea></div>
         <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Perplexity</label><textarea id="pwbPerplexityText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual Perplexity answer and sources for independent verification."></textarea><div style="font-size:9.5px;color:#64748b;margin-top:4px;">Manual evidence is primary. Automatic Perplexity is fallback only when this field is empty.</div></div>
         <div><label style="font-size:10px;color:#9ca3af;display:block;margin-bottom:4px;text-transform:uppercase;">Claude</label><textarea id="pwbClaudeText" class="cs-input pwbAiEvidence" style="min-height:78px;resize:vertical;" placeholder="Paste the actual Claude answer to research missing context and useful explanations."></textarea></div>
@@ -46567,6 +46567,7 @@ function _pwbDraftSnapshot(){
     language:g('pwbLanguage'),
     region:g('pwbRegion'),
     google_aio:g('pwbAioText'),
+    google_source:g('pwbGoogleSource'),
     chatgpt:g('pwbChatgptText'),
     perplexity:g('pwbPerplexityText'),
     claude:g('pwbClaudeText'),
@@ -46597,6 +46598,7 @@ function _pwbDraftApply(d){
     set('pwbLanguage',d.language||'');
     set('pwbRegion',d.region||'');
     set('pwbAioText',d.google_aio||'');
+    set('pwbGoogleSource',d.google_source||'');
     set('pwbChatgptText',d.chatgpt||'');
     set('pwbPerplexityText',d.perplexity||'');
     set('pwbClaudeText',d.claude||'');
@@ -46626,7 +46628,7 @@ function _pwbDraftSwitchKeyword(nextKeyword){
   }else{
     _pwbDraftSwitching=true;
     try{
-      ['pwbTitle','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=''});
+      ['pwbTitle','pwbGoogleSource','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].forEach(function(id){var e=document.getElementById(id);if(e)e.value=''});
       var k=document.getElementById('pwbKeyword');if(k)k.value=nextKeyword;
     }finally{_pwbDraftSwitching=false}
     _pwbUpdateAiFiveCount();
@@ -46689,7 +46691,7 @@ window.addEventListener('message',function(e){
 document.addEventListener('input',function(e){
   if(!e.target)return;
   if(e.target.id==='pwbKeyword'){_networkPrewriteEmitState();return}
-  if(['pwbTitle','pwbLanguage','pwbRegion','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0)_pwbDraftSave();
+  if(['pwbTitle','pwbLanguage','pwbRegion','pwbGoogleSource','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0)_pwbDraftSave();
 });
 document.addEventListener('change',function(e){
   if(e.target&&e.target.id==='pwbKeyword')_pwbDraftSwitchKeyword(e.target.value);
@@ -46697,15 +46699,27 @@ document.addEventListener('change',function(e){
 
 function _pwbAiFiveUiState(){
   var defs=[['google_aio','Google AIO / Gemini','pwbAioText'],['chatgpt','ChatGPT Search','pwbChatgptText'],['perplexity','Perplexity','pwbPerplexityText'],['claude','Claude','pwbClaudeText'],['copilot','Microsoft Copilot','pwbCopilotText']];
-  var present=[],missing=[];defs.forEach(function(x){var e=document.getElementById(x[2]),ok=!!(e&&String(e.value||'').trim());(ok?present:missing).push({key:x[0],label:x[1],id:x[2]});});
+  // Validation contract (public/prewrite-ai-answer-research.js): a field counts only when it holds an actual answer to the keyword.
+  var L=window.PrewriteAiAnswerResearch,kwEl=document.getElementById('pwbKeyword'),kw=kwEl?String(kwEl.value||'').trim():'';
+  // Google needs its source; "No AI Overview shown" is recorded as checked but is not an AI answer.
+  var gsEl=document.getElementById('pwbGoogleSource'),gs=gsEl?String(gsEl.value||''):'',noOverview=false;
+  var present=[],missing=[],invalid=[],captured=0;defs.forEach(function(x){var e=document.getElementById(x[2]),v=e?String(e.value||'').trim():'',item={key:x[0],label:x[1],id:x[2]};
+    var chk=!L||!L.validateAnswer?{valid:!!v}:x[0]==='google_aio'?L.validateGoogle(v,gs,kw,true):(v?L.validateAnswer(v,kw):{valid:false,status:'not_checked'});
+    if(v)captured++;
+    if(chk.valid){present.push(item);return;}
+    if(chk.status==='no_ai_overview'){noOverview=true;item.label='Google (no AI Overview shown — add the Gemini answer)';missing.push(item);return;}
+    missing.push(item);if(chk.status==='invalid'){item.reason=chk.reason;item.message=chk.message;invalid.push(item);}});
   var hardMissing=missing.filter(function(x){return x.key!=='perplexity';});
-  return {count:present.length,present:present,missing:missing,hard_missing:hardMissing,manual_ready:hardMissing.length===0,complete:present.length===5};
+  var notChecked=5-present.length-invalid.length-(noOverview?1:0);
+  return {count:present.length,captured:captured,not_checked:notChecked,no_ai_overview:noOverview,present:present,missing:missing,invalid:invalid,hard_missing:hardMissing,manual_ready:hardMissing.length===0,complete:present.length===5};
 }
 function _pwbUpdateAiFiveCount(){
   var st=_pwbAiFiveUiState();
-  var b=document.getElementById('pwbAiFiveCount');if(b){b.textContent=st.count+' / 5 AI answers researched'+(_NETWORK_PREWRITE_AUTHORIZED?' · required':'');b.style.color=st.complete?'#86efac':(st.manual_ready?'#fbbf24':'#fca5a5');b.title=st.complete?'All five AI answers captured for writing research; source verification is still required.':(st.manual_ready?'Perplexity may use the automatic fallback; the other four required manual evidence inputs are present.':'Missing required AI evidence: '+st.hard_missing.map(function(x){return x.label;}).join(', '));}
+  var b=document.getElementById('pwbAiFiveCount');if(b){b.textContent=st.count+' / 5 valid AI answers · '+st.captured+' captured · '+st.invalid.length+' invalid · '+st.not_checked+' not checked'+(st.no_ai_overview?' · Google: no AI Overview shown':'')+(_NETWORK_PREWRITE_AUTHORIZED?' · required':'');b.style.color=st.complete?'#86efac':(st.manual_ready?'#fbbf24':'#fca5a5');b.title=st.complete?'All five AI answers captured for writing research; source verification is still required.':(st.manual_ready?'Perplexity may use the automatic fallback; the other four required manual evidence inputs are present.':'Missing required AI evidence: '+st.hard_missing.map(function(x){return x.label;}).join(', '));}
 }
 document.addEventListener('input',function(e){if(e.target&&['pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0){_pwbUpdateAiFiveCount();_pwbDraftSave();}});
+document.addEventListener('input',function(e){if(e.target&&(e.target.id==='pwbKeyword'||e.target.id==='pwbGoogleSource'))_pwbUpdateAiFiveCount();});
+document.addEventListener('change',function(e){if(e.target&&e.target.id==='pwbGoogleSource'){_pwbUpdateAiFiveCount();_pwbDraftSave();}});
 function showPrewriteBriefModal() {
   document.getElementById('pwbResult').innerHTML = '';
   document.getElementById('pwbStatus').textContent = '';
@@ -46811,7 +46825,7 @@ async function reopenPrewriteBrief(id) {
     }
     document.getElementById('pwbKeyword').value = data.keyword || '';
     document.getElementById('pwbTitle').value = data.working_title || '';
-    try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbDraftActiveKey=_pwbDraftNorm(data.keyword||'');_pwbUpdateAiFiveCount();_pwbDraftSave()}catch(e){}
+    try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';var _gsEl=document.getElementById('pwbGoogleSource');if(_gsEl){var _gs=ae.google_aio&&ae.google_aio.google_source;_gsEl.value=(_gs==='ai_overview'||_gs==='gemini'||_gs==='no_ai_overview')?_gs:'';}document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbDraftActiveKey=_pwbDraftNorm(data.keyword||'');_pwbUpdateAiFiveCount();_pwbDraftSave()}catch(e){}
     var d = new Date(data.created_at);
     stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString() + ' · deterministic QA refreshed';
     _pwbSetCurrentBrief(id,data.brief,!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),data.final_qa_persisted===true,data.share&&data.share.active?data.share.url:'');
@@ -47217,6 +47231,7 @@ async function generatePrewriteBrief() {
 
   if (!kw) { document.getElementById('pwbStatus').textContent = '\u26a0 Enter a keyword first.'; return; }
   var _aiUi=_pwbAiFiveUiState();
+  if(_aiUi.invalid&&_aiUi.invalid.length){document.getElementById('pwbStatus').textContent='✕ Not an AI answer to "'+kw+'": '+_aiUi.invalid.map(function(x){return x.label+' — '+x.message;}).join(' ')+' Correct or clear the field; nothing was sent.';var _f=document.getElementById(_aiUi.invalid[0].id);if(_f)_f.focus();return;}
   if(_NETWORK_PREWRITE_AUTHORIZED&&!_aiUi.manual_ready){document.getElementById('pwbStatus').textContent='✕ Research incomplete — add '+_aiUi.hard_missing.map(function(x){return x.label;}).join(', ')+'. ContentScale will not silently continue with only part of the promised five-system evidence. Existing research is not discarded.';_pwbUpdateAiFiveCount();return;}
 
   var btn = document.getElementById('pwbGenerateBtn');
@@ -47243,7 +47258,7 @@ async function generatePrewriteBrief() {
   try {
     var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext,
       existingSiteHtml:String((document.getElementById('pwbExistingHtml')||{}).value||'').slice(0,180000),
-      manualAiEvidence:{google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()},
+      manualAiEvidence:{google_source:String((document.getElementById('pwbGoogleSource')||{}).value||''),google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()},
       aiEvidenceExpectedCount:_NETWORK_PREWRITE_AUTHORIZED?5:0 };
     if(_pwbCompletionMode){_pwbBody.completionFromJobId=_pwbCompletionSource;_pwbBody.completionMode='missing_only';}
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
@@ -59644,9 +59659,12 @@ function _pwbAiEvidenceStateV506(b){
   const c=b.research_contract&&typeof b.research_contract==='object'?b.research_contract:{};
   const required=Math.max(0,Number(c.ai_systems_required||0));
   const ae=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
-  const checked=_PWB_AI_ENGINES_V506.filter(k=>ae[k]&&ae[k].checked===true);
+  // Counted only when the stored text is an actual answer to the Brief keyword (validation contract); a prompt echo
+  // saved before the contract existed no longer counts towards 5/5.
+  const checked=_PWB_AI_ENGINES_V506.filter(k=>ae[k]&&ae[k].checked===true&&(!String(ae[k].text||'').trim()||_prewriteBriefResearch.isValidAnswer(ae[k].text,_pwbBriefQueryV506(b))));
   const missing=_PWB_AI_ENGINES_V506.filter(k=>!checked.includes(k));
-  return {required,checked_count:checked.length,checked,missing,complete:required<=0||checked.length>=required};
+  const google_no_ai_overview=!checked.includes('google_aio')&&!!(ae.google_aio&&ae.google_aio.google_source==='no_ai_overview');
+  return {required,checked_count:checked.length,checked,missing,google_no_ai_overview,complete:required<=0||checked.length>=required};
 }
 function _pwbIsReaderPageUrlV506(raw,domain){
   try{const u=new URL(String(raw||'').trim()),h=u.hostname.replace(/^www\./,'').toLowerCase(),d=String(domain||'').replace(/^www\./,'').toLowerCase();if(!/^https?:$/.test(u.protocol)||!h||!d||h!==d)return false;const p=(u.pathname||'/').toLowerCase();if(/(?:^|\/)(?:sitemap(?:[_-]index)?|wp-sitemap|robots)(?:[._\/-]|$)/i.test(p)||/\.xml$/i.test(p)||/\/feed\/?$/i.test(p)||/\/wp-json(?:\/|$)/i.test(p))return false;return true;}catch(_e){return false;}
@@ -59682,13 +59700,18 @@ function _pwbCanonicalizeAiAnalysisV506(b){
   b.what_we_checked.ai_systems_missing=st.missing.slice();
   return b;
 }
-function _pwbMergeManualAiEvidenceV506(b,raw){
+function _pwbBriefQueryV506(b){return String(b&&(b.keyword||(b.prewrite_ai_answer_research&&b.prewrite_ai_answer_research.query))||'').trim();}
+function _pwbMergeManualAiEvidenceV506(b,raw,query){
   if(!b||typeof b!=='object')return {added:[],checked_count:0,missing:_PWB_AI_ENGINES_V506.slice()};
   raw=raw&&typeof raw==='object'?raw:{};b.ai_system_evidence=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
-  const added=[],now=new Date().toISOString();
-  _PWB_AI_ENGINES_V506.forEach(function(k){const v=String(raw[k]||'').trim();if(!v)return;const cur=b.ai_system_evidence[k]&&typeof b.ai_system_evidence[k]==='object'?b.ai_system_evidence[k]:{};if(String(cur.text||'').trim()!==v||cur.checked!==true)added.push(k);b.ai_system_evidence[k]=Object.assign({},cur,{checked:true,source:'manual',manual:true,text:v});});
+  const added=[],rejected={},now=new Date().toISOString();
+  // Google: the source is required (Google AI Overview or Gemini); "No AI Overview shown" is recorded, never counted, and
+  // never replaces an answer that is already there.
+  const _gs=_prewriteBriefResearch.googleSourceOf(raw.google_source);
+  if(!String(raw.google_aio||'').trim()&&_gs==='no_ai_overview'){const cur=b.ai_system_evidence.google_aio;if(!(cur&&cur.checked===true))b.ai_system_evidence.google_aio=Object.assign({},cur||{},{checked:false,source:'no_ai_overview',manual:true,text:'',google_source:'no_ai_overview',checked_at:now});}
+  _PWB_AI_ENGINES_V506.forEach(function(k){const v=String(raw[k]||'').trim();if(!v)return;const _q=query||_pwbBriefQueryV506(b),_chk=k==='google_aio'?_prewriteBriefResearch.validateGoogle(v,_gs,_q,true):_prewriteBriefResearch.validateAnswer(v,_q);if(!_chk.valid){rejected[k]={answer:v,reason:_chk.reason,message:_chk.message};return;}const cur=b.ai_system_evidence[k]&&typeof b.ai_system_evidence[k]==='object'?b.ai_system_evidence[k]:{};if(String(cur.text||'').trim()!==v||cur.checked!==true)added.push(k);b.ai_system_evidence[k]=Object.assign({},cur,{checked:true,source:'manual',manual:true,text:v,provenance:'manual_paste_unverified'},k==='google_aio'?{google_source:_gs}:{});});
   b.ai_system_evidence.checked_at=now;b.ai_system_evidence.checked_count=_PWB_AI_ENGINES_V506.filter(k=>b.ai_system_evidence[k]&&b.ai_system_evidence[k].checked===true).length;
-  _pwbCanonicalizeAiAnalysisV506(b);const st=_pwbAiEvidenceStateV506(b);return {added,checked_count:st.checked_count,missing:st.missing};
+  _pwbCanonicalizeAiAnalysisV506(b);const st=_pwbAiEvidenceStateV506(b);return {added,rejected,checked_count:st.checked_count,missing:st.missing};
 }
 function _pwbEvidenceBackedGapV506(b){
   if(!b||typeof b!=='object')return b;
@@ -59816,7 +59839,7 @@ function _pwbReadiness(b) {
       required_h2s:_mustH2s.length,
       issues:_outlineIssues
     },
-    ai_evidence:{required:_aiState.required,checked:_aiState.checked_count,missing:_aiState.missing.map(k=>_PWB_AI_LABELS_V506[k]||k)},
+    ai_evidence:{required:_aiState.required,checked:_aiState.checked_count,missing:_aiState.missing.map(k=>k==='google_aio'&&_aiState.google_no_ai_overview?'Google (no AI Overview shown — add the Gemini answer)':_PWB_AI_LABELS_V506[k]||k)},
     internal_destination:{required:_internalState.required,target_domain:_internalState.target_domain,selected_url:_internalState.selected_url,valid_count:_internalState.valid_count}
   };
   return checks;
@@ -60008,13 +60031,13 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
   let brief=JSON.parse(JSON.stringify(payload.brief));
   const _beforeMerge=_pwbReadiness(brief);
   if(placementId>0)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:opts.publisherDomain||''});
-  const _aiMerge=_pwbMergeManualAiEvidenceV506(brief,opts.manualAiEvidence||srcReq.manualAiEvidence||{});
-  _prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||''});
+  const _aiMerge=_pwbMergeManualAiEvidenceV506(brief,opts.manualAiEvidence||srcReq.manualAiEvidence||{},srcKeyword||requestedKeyword);
+  _prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected});
   if(placementId>0)_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:opts.publisherDomain||'',checked_url:opts.publisherCheckedUrl||''});
   _pwbEvidenceBackedGapV506(brief);
   const before=_pwbReadiness(brief),missingBefore=Array.isArray(before.missing)?before.missing.slice():[];
   const _aiGateBefore=before.details&&before.details.ai_evidence||{};
-  if(missingBefore.includes('ai_evidence_5of5'))return res.status(422).json({success:false,stage:'ai_evidence_gate',quality_status:'research_incomplete',completion_mode:'missing_only',research_reused:true,research_rerun:false,retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research is incomplete: '+Number(_aiGateBefore.checked||0)+'/5 AI systems are captured. Missing: '+(Array.isArray(_aiGateBefore.missing)?_aiGateBefore.missing.join(', '):'one or more AI systems')+'. Add the missing evidence; ContentScale will reuse the existing SERP, competitor and evidence research.',brief:brief,diagnostic:{ai_evidence:_aiGateBefore,research_reused:true,research_rerun:false}});
+  if(missingBefore.includes('ai_evidence_5of5'))return res.status(422).json({success:false,stage:'ai_evidence_gate',quality_status:'research_incomplete',completion_mode:'missing_only',research_reused:true,research_rerun:false,retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research is incomplete: '+Number(_aiGateBefore.checked||0)+'/5 AI systems are captured. Missing: '+(Array.isArray(_aiGateBefore.missing)?_aiGateBefore.missing.join(', '):'one or more AI systems')+'.'+(Object.keys(_aiMerge.rejected||{}).length?' Not accepted: '+Object.keys(_aiMerge.rejected).map(function(k){return (_PWB_AI_LABELS_V506[k]||k)+' — '+_aiMerge.rejected[k].message;}).join(' '):'')+' Add the missing evidence; ContentScale will reuse the existing SERP, competitor and evidence research.',brief:brief,ai_answers_rejected:_aiMerge.rejected||{},diagnostic:{ai_evidence:_aiGateBefore,research_reused:true,research_rerun:false}});
 
   // Deterministic/free completion first. These steps only reshape content already present.
   if(missingBefore.includes('quick_facts')){
@@ -60354,6 +60377,10 @@ async function _handlePrewriteBriefGeneration(req, res) {
     const _manualAiRaw=(manualAiEvidence&&typeof manualAiEvidence==='object')?manualAiEvidence:{};
     const _clipAi=v=>String(v||'').trim().slice(0,12000);
     const _manualAi={google_aio:_clipAi(_manualAiRaw.google_aio||aioManualText),chatgpt:_clipAi(_manualAiRaw.chatgpt),perplexity:_clipAi(_manualAiRaw.perplexity),claude:_clipAi(_manualAiRaw.claude),copilot:_clipAi(_manualAiRaw.copilot)};
+    // Validation contract: only an actual answer to this keyword is AI answer research. A prompt echo, placeholder or
+    // unrelated text is removed here, before anything counts or uses it, and reported in the saved research.
+    const _manualAiGoogleSource=_prewriteBriefResearch.googleSourceOf(_manualAiRaw.google_source);
+    const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword,_manualAiGoogleSource);
     if (aioManualText) {
       aioDetected = true;
       console.log('[prewrite-brief] Using manual AIO text for:', keyword, '(' + aioManualText.length + ' chars)');
@@ -60580,20 +60607,20 @@ async function _handlePrewriteBriefGeneration(req, res) {
       : (perplexity.checked ? perplexity.answer_excerpt : '');
     const _perplexityEvidenceSource = _manualAi.perplexity ? 'manual' : (perplexity.checked ? 'automatic fallback' : 'not checked');
     const aiSystemsBlock = `5 AI ANSWER RESEARCH — PRE-PUBLICATION WRITING INPUT. MANUAL INPUT IS PRIMARY. NEVER SIMULATE ANOTHER AI SYSTEM.
-Google AIO / Gemini [${_manualAi.google_aio ? 'manual' : 'NOT CHECKED'}]:
-${_manualAi.google_aio || 'NOT CHECKED'}
+Google AIO / Gemini [${_manualAi.google_aio ? 'manual paste, origin not verified · source: ' + (_manualAiGoogleSource==='gemini'?'Gemini':_manualAiGoogleSource==='ai_overview'?'Google AI Overview':'not recorded') : (_manualAiGoogleSource==='no_ai_overview' ? 'NO AI OVERVIEW SHOWN (checked; not an AI answer)' : 'NOT CHECKED')}]:
+${_manualAi.google_aio || (_manualAiGoogleSource==='no_ai_overview' ? 'No AI Overview was shown for this query. Gemini was not researched. Do not invent a Google answer.' : 'NOT CHECKED')}
 
-ChatGPT Search [${_manualAi.chatgpt ? 'manual' : 'NOT CHECKED'}]:
+ChatGPT Search [${_manualAi.chatgpt ? 'manual paste, origin not verified' : 'NOT CHECKED'}]:
 ${_manualAi.chatgpt || 'NOT CHECKED'}
 
-Perplexity [${_perplexityEvidenceSource}]:
+Perplexity [${_perplexityEvidenceSource==='manual'?'manual paste, origin not verified':_perplexityEvidenceSource==='automatic fallback'?'automatic fallback, fetched via API':_perplexityEvidenceSource}]:
 ${_perplexityEvidenceText || 'NOT CHECKED'}
 ${(!_manualAi.perplexity && perplexity.checked && Array.isArray(perplexity.cited_domains) && perplexity.cited_domains.length) ? 'Automatic fallback cited domains: ' + perplexity.cited_domains.join(', ') : ''}
 
-Claude [${_manualAi.claude ? 'manual' : 'NOT CHECKED'}]:
+Claude [${_manualAi.claude ? 'manual paste, origin not verified' : 'NOT CHECKED'}]:
 ${_manualAi.claude || 'NOT CHECKED'}
 
-Microsoft Copilot [${_manualAi.copilot ? 'manual' : 'NOT CHECKED'}]:
+Microsoft Copilot [${_manualAi.copilot ? 'manual paste, origin not verified' : 'NOT CHECKED'}]:
 ${_manualAi.copilot || 'NOT CHECKED'}
 
 RULES:
@@ -60623,7 +60650,7 @@ Every citation/source item should be represented as:
 `;
     // AI answer research for writing: the same prompt the Research Prompt tab shows (src/prewrite-brief-research.cjs).
     // Observed AI answers inform the writing; they never prove that this website is cited.
-    const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText});
+    const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected,googleSource:_manualAiGoogleSource});
     const prompt = `You are an elite SEO and AEO strategist. A strategist requested a possible NEW page for this keyword. FIRST decide whether a new URL should actually be created or whether an existing client URL should be expanded instead. Do not create a new page when the sitemap shows a materially overlapping existing URL and doing so would create cannibalization. If CREATE is justified, specify what the brand-new page must contain to outrank and out-cite current results from the first draft. Every claim must be traceable to the inputs below; never invent a domain, URL, snippet, statistic, schema type or business fact.
 
 KEYWORD: "${keyword}"
@@ -61815,7 +61842,7 @@ ${sourceText}`;
     const _pwbNow = new Date();
     brief.freshness = { last_updated: _pwbNow.toISOString().slice(0, 10), year: _pwbNow.getFullYear() };
     brief.ai_system_evidence={checked_at:checkedAt,
-      google_aio:{checked:!!_manualAi.google_aio,source:_manualAi.google_aio?'manual':'not_checked',manual:!!_manualAi.google_aio,text:_manualAi.google_aio},
+      google_aio:_prewriteBriefResearch.googleEvidence(_manualAi.google_aio,_manualAiGoogleSource),
       chatgpt:{checked:!!_manualAi.chatgpt,source:_manualAi.chatgpt?'manual':'not_checked',manual:!!_manualAi.chatgpt,text:_manualAi.chatgpt},
       perplexity:{checked:!!(_manualAi.perplexity||perplexity.checked),source:_manualAi.perplexity?'manual':(perplexity.checked?'automatic_fallback':'not_checked'),manual:!!_manualAi.perplexity,text:_manualAi.perplexity||perplexity.answer_excerpt||'',automatic_checked:!!perplexity.checked,automatic_answer_excerpt:perplexity.answer_excerpt||'',automatic_cited_domains:Array.isArray(perplexity.cited_domains)?perplexity.cited_domains:[]},
       claude:{checked:!!_manualAi.claude,source:_manualAi.claude?'manual':'not_checked',manual:!!_manualAi.claude,text:_manualAi.claude},
