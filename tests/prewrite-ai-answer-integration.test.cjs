@@ -12,6 +12,8 @@ test('canonical six-megabyte server compiles after AI-answer research integratio
  assert.equal(patch(built),built,'no double injection on repeated builds');
  assert.match(built,/AI Answer Research — Write for Citation Potential/);
  assert.match(built,/AI answers researched/);
+ assert.ok(built.includes('<script defer src="/prewrite-research-tab.js"></script>'));
+ assert.equal(built.split('prewrite-research-tab.js').length - 1,1);
  assert.match(built,/prewrite_ai_answer_research=_pwbAiResearch/);
  assert.match(built,/const _pwbAiWritingPrompt=buildPrewriteResearchPrompt\(_pwbAiResearch\)/);
  assert.match(built,/PRE-PUBLICATION WRITING RESEARCH/);
