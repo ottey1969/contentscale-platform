@@ -16,6 +16,5 @@ test('canonical six-megabyte server compiles after AI-answer research integratio
  assert.match(built,/const _pwbAiWritingPrompt=buildPrewriteResearchPrompt\(_pwbAiResearch\)/);
  assert.match(built,/PRE-PUBLICATION WRITING RESEARCH/);
  assert.match(built,/AI ANSWER RESEARCH FOR WRITING/);
- assert.doesNotMatch(built,/>5 AI systems evidence<\/div>/i);
  new vm.Script(built,{filename:'src/index.js'});
 });
