@@ -24,9 +24,9 @@ function normalizeAnswer(row){
   const engine=ALIASES[raw]||raw;
   if(!ENGINES.some(x=>x.id===engine))return null;
   const answer=cleanText(row?.answer||row?.text||row?.response);
-  const citations=Array.isArray(row?.sources||row?.citations)
-    ?[...new Set((row.sources||row.citations).map(x=>cleanUrl(typeof x==='string'?x:x?.url)).filter(Boolean))].slice(0,30)
-    :[];
+  const declared=Array.isArray(row?.sources||row?.citations)?(row.sources||row.citations):[];
+  const observed=(answer.match(/https?:\/\/[^\s<>\]\[()\"'`]+/gi)||[]);
+  const citations=[...new Set([...declared.map(x=>typeof x==='string'?x:x?.url),...observed].map(cleanUrl).filter(Boolean))].slice(0,30);
   return {engine,answer,citations,checked_at:cleanText(row?.checked_at||row?.checkedAt,50)||null};
 }
 function makePrewriteAiAnswerResearch({query,answers}={}){
