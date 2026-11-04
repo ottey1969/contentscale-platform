@@ -51,3 +51,23 @@ test('the automatic Perplexity answer is labelled; a research object saved befor
  assert.doesNotThrow(()=>server.buildPrewriteResearchPrompt(v1));assert.doesNotMatch(server.buildPrewriteResearchPrompt(v1),/Language:/);
  assert.throws(()=>server.buildPrewriteResearchPrompt({contract:'other'}),/invalid_prewrite_ai_answer_research/);
 });
+
+test('missing-only completion preserves checked observations and source leads absent from merge evidence',()=>{
+ const original=server.makePrewriteAiAnswerResearch({query:'TEST example',language:'English',market:'nl',answers:[
+  {engine:'perplexity',answer:'TEST '+('a'.repeat(6000)),source:'automatic fallback',sources:['https://example.org/original']}
+ ]});
+ const old=original.observations.find(o=>o.engine==='perplexity');
+ assert.equal(old.answer_truncated,true);
+ const next=server.makePrewriteAiAnswerResearch({query:'TEST example',language:'English',market:'nl',answers:[
+  {engine:'perplexity',answer:old.answer_excerpt,source:'automatic fallback'},
+  {engine:'chatgpt',answer:'TEST new answer'}
+ ]});
+ const merged=server.preserveResearchEvidence(next,original,{chatgpt:{text:'TEST new answer'}});
+ const saved=merged.observations.find(o=>o.engine==='perplexity');
+ assert.equal(saved.answer_truncated,true,'do not erase the previous truncation flag');
+ assert.deepEqual(saved.source_urls,['https://example.org/original'],'do not lose prior source leads');
+ assert.equal(saved.answer_source,'automatic fallback');
+ assert.equal(merged.systems_researched,2);
+ assert.deepEqual(merged.source_candidates,['https://example.org/original']);
+ assert.match(server.buildPrewriteResearchPrompt(merged),/https:\/\/example.org\/original/);
+});
