@@ -14,6 +14,18 @@ function patch(input){
  let source=String(input);
  for(const [oldText,newText] of changes)source=replaceOnce(source,oldText,newText);
  source=replaceOnce(source,marker,insertion+marker);
+ // Install the Research Prompt tab in the same HTML document as the existing
+ // five-answer inputs, not in the unrelated citation-monitoring Tracker page.
+ // Anchor on the already-normalized heading. Fail closed on template drift.
+ const heading='AI Answer Research — Write for Citation Potential';
+ const at=source.indexOf(heading);
+ if(at<0||source.indexOf(heading,at+heading.length)>=0)throw Error('PREWRITE_RESEARCH_TAB_HEADING_INVALID');
+ const open=source.lastIndexOf('<head',at);
+ const end=source.indexOf('</head>',open);
+ if(open<0||end<0||end>at)throw Error('PREWRITE_RESEARCH_TAB_HEAD_NOT_FOUND');
+ const tag='<script defer src="/prewrite-research-tab.js"></script>\\n';
+ const prior=source.slice(open,end);
+ if(!prior.includes(tag))source=source.slice(0,end)+tag+source.slice(end);
  return source;
 }
 module.exports={patch};
