@@ -1,123 +1,149 @@
-/* Pre-Write Brief: a discoverable, read-only research-prompt tab.
- * The existing AI-answer fields and server are the source of truth.
- * This UI never claims to check citations or fabricate AI answers.
+/* Pre-Write Brief — tabs "AI Answer Inputs | Research Prompt".
+ * The prompt is built by window.PrewriteAiAnswerResearch (public/prewrite-ai-answer-research.js), the same file the
+ * server's Pre-Write Brief generator requires, with the same inputs the "Analyse & create" button sends:
+ * #pwbKeyword, #pwbLanguage, #pwbRegion (code), and the five answer fields, trimmed and clipped like the server does.
+ * After a Brief is generated or reopened, the research object the server saved with it can be shown as well, so the
+ * owner sees the exact prompt that was used (including an automatic Perplexity answer, if the server added one).
+ * The existing fields and the server stay the source of truth; this tab saves nothing and checks no citations.
  */
 (function () {
   'use strict';
   var MARKER = 'AI Answer Research — Write for Citation Potential';
-  var SYSTEMS = [
-    ['Google AI Overviews / Gemini', /google.?aio|gemini|google.?ai.?overview/i],
-    ['ChatGPT Search', /chatgpt/i],
-    ['Perplexity', /perplexity/i],
-    ['Claude', /claude/i],
-    ['Microsoft Copilot', /copilot|bing.?chat/i]
-  ];
-  function visibleText(el) {
-    return [(el.getAttribute('aria-label') || ''), (el.getAttribute('placeholder') || ''),
-      (el.getAttribute('name') || ''), (el.id || ''), (el.closest('label')?.textContent || '')].join(' ');
+  var FIELDS = [['google_aio', 'pwbAioText'], ['chatgpt', 'pwbChatgptText'], ['perplexity', 'pwbPerplexityText'], ['claude', 'pwbClaudeText'], ['copilot', 'pwbCopilotText']];
+  var CLIP = 12000; // the server's _clipAi limit for each answer
+  function $(id) { return document.getElementById(id); }
+  function val(id) { var el = $(id); return el ? String(el.value || '').trim() : ''; }
+  // Exactly the server request: keyword, language, region code ("nl — Netherlands" → "nl"), answers.
+  function currentInputs() {
+    var regionRaw = val('pwbRegion');
+    var region = (regionRaw.match(/^([a-z]{2})\s*[—-]/i) || [null, regionRaw])[1] || regionRaw;
+    return { query: val('pwbKeyword'), language: val('pwbLanguage'), market: region,
+      answers: FIELDS.map(function (f) { return { engine: f[0], answer: val(f[1]).slice(0, CLIP) }; }) };
   }
-  function researchFields() {
-    var fields = Array.from(document.querySelectorAll('textarea,input[type="text"],input[type="search"],input:not([type])'));
-    return SYSTEMS.map(function (system) {
-      var matched = fields.find(function (el) { return system[1].test(visibleText(el)); });
-      return { name: system[0], text: matched && matched.value ? matched.value.trim().slice(0,16000) : '' };
-    });
-  }
-  function keyword() {
-    var fields = Array.from(document.querySelectorAll('input,textarea'));
-    var matched = fields.find(function (el) { return /seed.?keyword|target.?keyword|focus.?keyword|seed.?query/i.test(visibleText(el)); });
-    return matched && matched.value ? matched.value.trim().slice(0,350) : '[target query from Pre-Write Brief]';
-  }
-  function buildPrompt() {
-    var answers = researchFields(), completed = answers.filter(function (x) { return x.text; }).length;
-    return [
-      'AI ANSWER RESEARCH — WRITE FOR CITATION POTENTIAL',
-      'Target query: ' + keyword(),
-      'Research coverage: ' + completed + ' of 5 answers captured. Missing answers must remain NOT CHECKED.',
-      '',
-      'PURPOSE',
-      'Study the five available AI answers to write a clearer, original, independently sourced answer with citation potential. This is pre-publication research, NOT citation or ranking tracking.',
-      '',
-      'OBSERVED ANSWERS (UNVERIFIED)',
-      ...answers.map(function (x) { return x.name + ':\n' + (x.text || 'NOT CHECKED — do not invent an answer.'); }),
-      '',
-      'WRITING INSTRUCTIONS',
-      '1. Compare what each observed answer explains, omits, oversimplifies or gets wrong. Do not treat an AI answer as independent verification.',
-      '2. Identify unanswered user questions, useful factual qualifiers, original examples and evidence gaps.',
-      '3. Treat URLs found inside AI answers as source leads only. Independently open and verify original sources before citing.',
-      '4. Propose a direct answer, helpful outline, meaningful FAQ, original expert insights where evidenced, and a fact-check list.',
-      '5. Do not copy AI output. Clearly distinguish verified facts, editorial hypotheses and unknowns.',
-      '6. Respect search intent, existing target URLs and cannibalization checks; do not recommend duplicate pages.',
-      '7. Never claim the domain is cited, promise quick citations or confuse this writing research with the Tracker citation-monitoring step.',
-      '',
-      'REQUIRED OUTPUT: direct answer; missing questions; evidence/source verification tasks; distinctive insights; proposed outline; original examples; limitations; fact-check-before-publishing.'
-    ].join('\n');
+  function lib() { return window.PrewriteAiAnswerResearch || null; }
+  function savedResearch(query) {
+    var b = window._pwbCurrentBrief, r = b && typeof b === 'object' ? b.prewrite_ai_answer_research : null;
+    if (!r || !/^prewrite_ai_answer_research_v[12]$/.test(r.contract)) return null;
+    var norm = function (s) { return String(s || '').trim().toLowerCase().replace(/\s+/g, ' '); };
+    return norm(r.query) && norm(r.query) === norm(query) ? r : null;
   }
   function addStyles() {
-    if (document.getElementById('cs-research-tab-style')) return;
+    if ($('cs-research-tab-style')) return;
     var css = document.createElement('style');
     css.id = 'cs-research-tab-style';
-    css.textContent = '#cs-research-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cs-research-tabs button{border:1px solid #64748b;border-radius:7px;padding:9px 14px;background:transparent;color:inherit;cursor:pointer;font-weight:650}#cs-research-tabs button[aria-selected="true"]{background:#2563eb;color:#fff;border-color:#2563eb}#cs-research-prompt-panel{border:1px solid #475569;border-radius:10px;padding:16px;margin:12px 0;background:rgba(15,23,42,.94);color:#e2e8f0}#cs-research-prompt-panel textarea{display:block;width:100%;min-height:360px;padding:12px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;border-radius:7px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.55}#cs-research-prompt-panel p{margin:8px 0;color:#cbd5e1}#cs-research-prompt-panel button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:6px;cursor:pointer}';
+    css.textContent = '#cs-research-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cs-research-tabs button{border:1px solid #64748b;border-radius:7px;padding:9px 14px;background:transparent;color:inherit;cursor:pointer;font-weight:650;min-height:40px}#cs-research-tabs button[aria-selected="true"]{background:#2563eb;color:#fff;border-color:#2563eb}#cs-research-tabs button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}#cs-research-prompt-panel{border:1px solid #475569;border-radius:10px;padding:16px;margin:12px 0;background:rgba(15,23,42,.94);color:#e2e8f0;max-width:100%;box-sizing:border-box}#cs-research-prompt-panel textarea{display:block;width:100%;box-sizing:border-box;min-height:360px;padding:12px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;border-radius:7px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.55}#cs-research-prompt-panel p{margin:8px 0;color:#cbd5e1;overflow-wrap:anywhere}#cs-research-prompt-panel .cs-rp-status{font-weight:700}#cs-research-prompt-panel .cs-rp-status[data-state="complete"]{color:#86efac}#cs-research-prompt-panel .cs-rp-status[data-state="partial"]{color:#fbbf24}#cs-research-prompt-panel .cs-rp-status[data-state="none"],#cs-research-prompt-panel .cs-rp-status[data-state="error"]{color:#fca5a5}#cs-research-prompt-panel .cs-rp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}#cs-research-prompt-panel button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:6px;cursor:pointer;min-height:38px}#cs-research-prompt-panel button:disabled{opacity:.5;cursor:not-allowed}#cs-research-prompt-panel select{padding:7px;border-radius:6px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;max-width:100%}';
     document.head.appendChild(css);
   }
+  function findHeading() {
+    var nodes = document.querySelectorAll('div,h1,h2,h3,h4,h5,strong,legend,summary,label,span,p');
+    for (var i = 0; i < nodes.length; i++) {
+      var el = nodes[i];
+      if (el.children.length === 0 && el.textContent && el.textContent.trim() === MARKER) return el;
+    }
+    return null;
+  }
   function install() {
-    if (document.getElementById('cs-research-tabs')) return true;
-    var nodes = document.querySelectorAll('h1,h2,h3,h4,h5,strong,legend,summary,label,div,span,p');
-    var heading = Array.from(nodes).find(function (el) {
-      return el.children.length === 0 && el.textContent && el.textContent.trim() === MARKER;
-    });
-    if (!heading) return false;
+    if ($('cs-research-tabs')) return true;
+    var heading = findHeading(), grid = $('pwbAioText') && $('pwbAioText').closest('.pwb-ai-five-grid');
+    if (!heading || !grid) return false;
     addStyles();
     var tabs = document.createElement('div');
     tabs.id = 'cs-research-tabs';
     tabs.setAttribute('role', 'tablist');
-    tabs.setAttribute('aria-label', 'Pre-Write Brief AI research');
+    tabs.setAttribute('aria-label', 'Pre-Write Brief AI answer research');
     var inputs = document.createElement('button'), prompt = document.createElement('button');
     inputs.type = prompt.type = 'button';
     inputs.textContent = 'AI Answer Inputs';
     prompt.textContent = 'Research Prompt';
     inputs.id = 'cs-research-inputs-tab';
     prompt.id = 'cs-research-prompt-tab';
-    [inputs,prompt].forEach(function (el) { el.setAttribute('role','tab'); tabs.appendChild(el); });
+    if (!grid.id) grid.id = 'cs-research-inputs-panel';
     var panel = document.createElement('section');
     panel.id = 'cs-research-prompt-panel';
-    panel.setAttribute('role','tabpanel');
-    panel.setAttribute('aria-labelledby',prompt.id);
+    panel.setAttribute('role', 'tabpanel');
+    panel.setAttribute('aria-labelledby', prompt.id);
     panel.hidden = true;
-    var description = document.createElement('p');
-    description.textContent = 'The prompt uses available inputs for writing research, not citation tracking. Existing Pre-Write Brief fields remain the saved source of truth.';
-    var editor = document.createElement('textarea');
-    editor.readOnly = true;
-    editor.setAttribute('aria-label','Generated AI answer research prompt');
-    var copy = document.createElement('button');
-    copy.type = 'button';
-    copy.textContent = 'Copy Research Prompt';
-    copy.addEventListener('click',function () {
-      editor.select();
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(editor.value).then(function () { copy.textContent = 'Copied'; }, function () { copy.textContent = 'Select text to copy'; });
-      } else { copy.textContent = 'Select text to copy'; }
-    });
-    panel.append(description,editor,copy);
-    heading.insertAdjacentElement('afterend',tabs);
-    tabs.insertAdjacentElement('afterend',panel);
-    function toggle(show) {
-      inputs.setAttribute('aria-selected',String(!show));
-      prompt.setAttribute('aria-selected',String(show));
-      panel.hidden = !show;
-      if (show) editor.value = buildPrompt();
+    grid.setAttribute('role', 'tabpanel');
+    grid.setAttribute('aria-labelledby', inputs.id);
+    inputs.setAttribute('aria-controls', grid.id);
+    prompt.setAttribute('aria-controls', panel.id);
+    [inputs, prompt].forEach(function (el) { el.setAttribute('role', 'tab'); tabs.appendChild(el); });
+    var status = document.createElement('p'); status.className = 'cs-rp-status'; status.setAttribute('role', 'status');
+    var note = document.createElement('p');
+    note.textContent = 'This is the prompt the Pre-Write Brief generator uses for the AI answer research: writing research for a clearer, better-sourced answer, not citation tracking. The fields under "AI Answer Inputs" stay the saved source of truth.';
+    var choice = document.createElement('select'); choice.setAttribute('aria-label', 'Which research prompt to show'); choice.hidden = true;
+    var editor = document.createElement('textarea'); editor.readOnly = true; editor.setAttribute('aria-label', 'AI answer research prompt');
+    var actions = document.createElement('div'); actions.className = 'cs-rp-actions';
+    var copy = document.createElement('button'); copy.type = 'button'; copy.textContent = 'Copy Research Prompt';
+    var copied = document.createElement('small'); copied.setAttribute('role', 'status');
+    actions.append(copy, copied);
+    panel.append(status, note, choice, editor, actions);
+    heading.insertAdjacentElement('afterend', tabs);
+    grid.insertAdjacentElement('afterend', panel);
+
+    function render() {
+      var L = lib(), input = currentInputs();
+      copied.textContent = '';
+      if (!L) { status.dataset.state = 'error'; status.textContent = 'The research prompt could not be loaded. Reload the page.'; editor.value = ''; copy.disabled = true; return; }
+      var saved = savedResearch(input.query);
+      choice.hidden = !saved;
+      if (saved && !choice.options.length) {
+        choice.append(new Option('Prompt for the current inputs', 'current'), new Option('Prompt used for the generated Brief (saved)', 'saved'));
+      }
+      var research = saved && choice.value === 'saved' ? saved : L.makePrewriteAiAnswerResearch(input);
+      if (!research.query) {
+        status.dataset.state = 'error'; status.textContent = 'Enter the target keyword first: the research prompt is built for that exact query.';
+        editor.value = ''; copy.disabled = true; return;
+      }
+      var n = research.systems_researched, missing = research.observations.filter(function (x) { return !x.checked; }).map(function (x) { return x.label; });
+      status.dataset.state = n === research.systems_total ? 'complete' : n ? 'partial' : 'none';
+      status.textContent = (research === saved ? 'Saved with the generated Brief · ' : '') +
+        (n === research.systems_total ? 'All 5 AI answers captured. Source URLs are leads; verify them before citing.' :
+         n ? n + ' of 5 AI answers captured. Not checked: ' + missing.join(', ') + '. These stay NOT CHECKED; nothing is filled in.' :
+         'No AI answers captured yet. Paste them under "AI Answer Inputs"; without them the prompt marks all five as NOT CHECKED.') +
+        (research !== saved && !val('pwbPerplexityText') ? ' If Perplexity stays empty, the server may add an automatic Perplexity answer when the Brief is generated; the saved prompt then shows it.' : '');
+      editor.value = L.buildPrewriteResearchPrompt(research);
+      copy.disabled = false;
     }
-    inputs.addEventListener('click',function () { toggle(false); });
-    prompt.addEventListener('click',function () { toggle(true); });
-    toggle(false);
+    function select(showPrompt, focus) {
+      inputs.setAttribute('aria-selected', String(!showPrompt));
+      prompt.setAttribute('aria-selected', String(showPrompt));
+      inputs.tabIndex = showPrompt ? -1 : 0;
+      prompt.tabIndex = showPrompt ? 0 : -1;
+      // The grid has an inline display:grid that overrides [hidden]; hide it through its own style.
+      grid.hidden = showPrompt; grid.style.display = showPrompt ? 'none' : 'grid';
+      panel.hidden = !showPrompt;
+      if (showPrompt) render();
+      if (focus) (showPrompt ? prompt : inputs).focus();
+    }
+    inputs.addEventListener('click', function () { select(false); });
+    prompt.addEventListener('click', function () { select(true); });
+    tabs.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Home' || ev.key === 'End') {
+        ev.preventDefault(); select(ev.key === 'ArrowRight' || ev.key === 'End' ? true : false, true);
+      }
+    });
+    choice.addEventListener('change', render);
+    // Keep the prompt current while the owner edits the keyword, market, language or answers.
+    ['pwbKeyword', 'pwbLanguage', 'pwbRegion'].concat(FIELDS.map(function (f) { return f[1]; })).forEach(function (id) {
+      var el = $(id); if (el) el.addEventListener('input', function () { if (!panel.hidden) render(); });
+    });
+    copy.addEventListener('click', function () {
+      editor.focus(); editor.select();
+      var done = function (ok) { copied.textContent = ok ? 'Copied — the complete prompt is on your clipboard.' : 'Select the text and copy it with Ctrl+C / Cmd+C.'; };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(editor.value).then(function () { done(true); }, function () { done(false); });
+      else { var ok = false; try { ok = document.execCommand('copy'); } catch (e) {} done(ok); }
+    });
+    select(false);
     return true;
   }
   function boot() {
     if (install()) return;
+    // The inputs are part of the page's own HTML; a short, bounded wait covers late rendering only.
     var observer = new MutationObserver(function () { if (install()) observer.disconnect(); });
-    observer.observe(document.documentElement,{childList:true,subtree:true});
-    document.addEventListener('pagehide',function () { observer.disconnect(); },{once:true});
+    observer.observe(document.body || document.documentElement, { childList: true, subtree: true });
+    setTimeout(function () { observer.disconnect(); }, 15000);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
   else boot();
 })();
