@@ -39,10 +39,18 @@ test('new Brief request: the module gives the same research and prompt as the le
   for (const [name, q] of Object.entries(REQUESTS)) {
     const v = handlerVars(q);
     const legacy = legacyRequest(v);
-    const now = M.researchForRequest({ keyword: v.keyword, language: v.language, region: v.region, manualAi: v._manualAi, perplexityEvidenceText: v._perplexityEvidenceText });
-    assert.deepEqual(plain(now.research), plain(legacy.research), name + ': research object');
-    assert.equal(now.prompt, legacy.prompt, name + ': prompt text');
+    // Intended difference since the validation contract: a new Google answer names its source. The owner chose
+    // "Google AI Overview" here; the legacy glue had no source, so its Google entry reads "source not recorded".
+    const now = M.researchForRequest({ keyword: v.keyword, language: v.language, region: v.region, manualAi: v._manualAi, perplexityEvidenceText: v._perplexityEvidenceText, googleSource: 'ai_overview' });
+    const unify = x => { const c = plain(x); const g = c.observations.find(o => o.engine === 'google'); if (g && g.checked) { g.google_source = 'unrecorded'; g.researched_system = 'Google AI Overview or Gemini (source not recorded)'; } return c; };
+    assert.deepEqual(unify(now.research), plain(legacy.research), name + ': research object');
+    assert.equal(now.prompt.replace(' — researched: Google AI Overview [', ' — researched: Google AI Overview or Gemini (source not recorded) ['), legacy.prompt, name + ': prompt text');
   }
+  // Without a source, a new Google answer is INVALID (source not chosen) and not counted; the legacy code counted it.
+  const v = handlerVars(REQUESTS['five manual answers']);
+  const noSource = M.researchForRequest({ keyword: v.keyword, language: v.language, region: v.region, manualAi: v._manualAi, perplexityEvidenceText: v._perplexityEvidenceText }).research;
+  assert.equal(noSource.observations.find(o => o.engine === 'google').error_reason, 'source_not_chosen');
+  assert.equal(noSource.answers_valid, legacyRequest(v).research.answers_valid - 1);
 });
 
 test('saved with the Brief: same as the legacy code, also for a missing Brief', () => {
@@ -106,8 +114,8 @@ test('a missing public script never stops the server from starting: logged, tab 
 test('src/index.js calls the module directly and holds the final Pre-Write text; no Pre-Write code is inserted at build time', () => {
   const once = (s, needle, what) => assert.equal(s.split(needle).length - 1, 1, what + ' appears exactly once');
   once(SRC, "const _prewriteBriefResearch = require('./prewrite-brief-research.cjs');", 'module require');
-  once(SRC, 'const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected});', 'request research');
-  once(SRC, 'const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword);', 'answers screened before anything uses them');
+  once(SRC, 'const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected,googleSource:_manualAiGoogleSource});', 'request research');
+  once(SRC, 'const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword,_manualAiGoogleSource);', 'answers screened before anything uses them');
   once(SRC, '_prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);', 'saved with the Brief');
   once(SRC, "_prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected});", 'missing-only refresh');
   once(SRC, '${_prewriteBriefResearch.scriptTags()}</head>', 'script tags');
@@ -121,8 +129,9 @@ test('src/index.js calls the module directly and holds the final Pre-Write text;
   const merge = SRC.indexOf('const _aiMerge=_pwbMergeManualAiEvidenceV506(');
   assert.ok(merge > 0 && SRC.indexOf('_prewriteBriefResearch.refreshAfterMissingOnly(', merge) - merge < 200);
   // Every text the build used to write is now in the source, once, and the old text is gone.
-  // (One entry is code, not text: saving the research with the Brief. That is now the attachToBrief call checked above.)
-  for (const [oldText, newText] of LEGACY.textChanges.filter(([, n]) => !n.includes('brief.prewrite_ai_answer_research=_pwbAiResearch'))) {
+  // (One entry is code, not text: saving the research with the Brief. That is now the attachToBrief call checked above.
+  // The counter text "st.count+' / 5 AI answers researched'" is superseded by the counter of the validation contract.)
+  for (const [oldText, newText] of LEGACY.textChanges.filter(([, n]) => !n.includes('brief.prewrite_ai_answer_research=_pwbAiResearch') && n !== "st.count+' / 5 AI answers researched'")) {
     assert.ok(SRC.includes(newText), 'final text present: ' + newText.slice(0, 70));
     if (!newText.includes(oldText)) assert.ok(!SRC.includes(oldText), 'old text gone: ' + oldText.slice(0, 70));
   }

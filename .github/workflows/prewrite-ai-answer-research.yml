@@ -12,6 +12,7 @@ on:
       - 'tests/prewrite-research-*.test.cjs'
       - 'tests/prewrite-brief-research-*.test.cjs'
       - 'tests/staging-boot-no-egress.cjs'
+      - 'tests/prewrite-e2e-gemini-stub.cjs'
       - 'public/prewrite-ai-answer-research.js'
       - 'public/prewrite-research-tab.js'
       - '.github/workflows/prewrite-ai-answer-research.yml'
@@ -27,6 +28,7 @@ on:
       - 'tests/prewrite-research-*.test.cjs'
       - 'tests/prewrite-brief-research-*.test.cjs'
       - 'tests/staging-boot-no-egress.cjs'
+      - 'tests/prewrite-e2e-gemini-stub.cjs'
       - 'public/prewrite-ai-answer-research.js'
       - 'public/prewrite-research-tab.js'
 jobs:

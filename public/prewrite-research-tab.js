@@ -17,8 +17,9 @@
   function currentInputs() {
     var regionRaw = val('pwbRegion');
     var region = (regionRaw.match(/^([a-z]{2})\s*[—-]/i) || [null, regionRaw])[1] || regionRaw;
-    return { query: val('pwbKeyword'), language: val('pwbLanguage'), market: region,
-      answers: FIELDS.map(function (f) { return { engine: f[0], answer: val(f[1]).slice(0, CLIP) }; }) };
+    // Same as the server for a new request: the Google answer needs its source (#pwbGoogleSource).
+    return { query: val('pwbKeyword'), language: val('pwbLanguage'), market: region, require_google_source: true,
+      answers: FIELDS.map(function (f) { var a = { engine: f[0], answer: val(f[1]).slice(0, CLIP) }; if (f[0] === 'google_aio') a.google_source = val('pwbGoogleSource'); return a; }) };
   }
   function lib() { return window.PrewriteAiAnswerResearch || null; }
   function savedResearch(query) {
@@ -31,7 +32,7 @@
     if ($('cs-research-tab-style')) return;
     var css = document.createElement('style');
     css.id = 'cs-research-tab-style';
-    css.textContent = '#cs-research-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cs-research-tabs button{border:1px solid #64748b;border-radius:7px;padding:9px 14px;background:transparent;color:inherit;cursor:pointer;font-weight:650;min-height:40px}#cs-research-tabs button[aria-selected="true"]{background:#2563eb;color:#fff;border-color:#2563eb}#cs-research-tabs button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}#cs-research-prompt-panel{border:1px solid #475569;border-radius:10px;padding:16px;margin:12px 0;background:rgba(15,23,42,.94);color:#e2e8f0;max-width:100%;box-sizing:border-box}#cs-research-prompt-panel textarea{display:block;width:100%;box-sizing:border-box;min-height:360px;padding:12px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;border-radius:7px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.55}#cs-research-prompt-panel p{margin:8px 0;color:#cbd5e1;overflow-wrap:anywhere}#cs-research-prompt-panel .cs-rp-status{font-weight:700}#cs-research-prompt-panel .cs-rp-status[data-state="complete"]{color:#86efac}#cs-research-prompt-panel .cs-rp-status[data-state="partial"]{color:#fbbf24}#cs-research-prompt-panel .cs-rp-status[data-state="none"],#cs-research-prompt-panel .cs-rp-status[data-state="error"]{color:#fca5a5}#cs-research-prompt-panel .cs-rp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}#cs-research-prompt-panel button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:6px;cursor:pointer;min-height:38px}#cs-research-prompt-panel button:disabled{opacity:.5;cursor:not-allowed}#cs-research-ask{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:0 0 12px}#cs-research-ask button{border:1px solid #64748b;border-radius:7px;padding:8px 12px;background:transparent;color:inherit;cursor:pointer;font-weight:650;min-height:38px}#cs-research-ask button:disabled{opacity:.5;cursor:not-allowed}#cs-research-ask .cs-ask-note{flex:1 1 220px;margin:0}.cs-ai-invalid{margin-top:6px;padding:7px 9px;border:1px solid #f87171;border-radius:6px;background:rgba(127,29,29,.35);color:#fecaca;font-size:11px;line-height:1.45;overflow-wrap:anywhere}.cs-ask-note{font-size:11px;color:#94a3b8;margin:-4px 0 10px;overflow-wrap:anywhere}#cs-research-prompt-panel select{padding:7px;border-radius:6px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;max-width:100%}';
+    css.textContent = '#cs-research-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}#cs-research-tabs button{border:1px solid #64748b;border-radius:7px;padding:9px 14px;background:transparent;color:inherit;cursor:pointer;font-weight:650;min-height:40px}#cs-research-tabs button[aria-selected="true"]{background:#2563eb;color:#fff;border-color:#2563eb}#cs-research-tabs button:focus-visible{outline:2px solid #93c5fd;outline-offset:2px}#cs-research-prompt-panel{border:1px solid #475569;border-radius:10px;padding:16px;margin:12px 0;background:rgba(15,23,42,.94);color:#e2e8f0;max-width:100%;box-sizing:border-box}#cs-research-prompt-panel textarea{display:block;width:100%;box-sizing:border-box;min-height:360px;padding:12px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;border-radius:7px;font-family:ui-monospace,monospace;font-size:12px;line-height:1.55}#cs-research-prompt-panel p{margin:8px 0;color:#cbd5e1;overflow-wrap:anywhere}#cs-research-prompt-panel .cs-rp-status{font-weight:700}#cs-research-prompt-panel .cs-rp-status[data-state="complete"]{color:#86efac}#cs-research-prompt-panel .cs-rp-status[data-state="partial"]{color:#fbbf24}#cs-research-prompt-panel .cs-rp-status[data-state="none"],#cs-research-prompt-panel .cs-rp-status[data-state="error"]{color:#fca5a5}#cs-research-prompt-panel .cs-rp-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}#cs-research-prompt-panel button{padding:8px 14px;background:#2563eb;color:white;border:0;border-radius:6px;cursor:pointer;min-height:38px}#cs-research-prompt-panel button:disabled{opacity:.5;cursor:not-allowed}#cs-research-ask{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:0 0 12px}#cs-research-ask button{border:1px solid #64748b;border-radius:7px;padding:8px 12px;background:transparent;color:inherit;cursor:pointer;font-weight:650;min-height:38px}#cs-research-ask button:disabled{opacity:.5;cursor:not-allowed}#cs-research-ask .cs-ask-note{flex:1 1 220px;margin:0}.cs-ai-invalid{margin-top:6px;padding:7px 9px;border:1px solid #f87171;border-radius:6px;background:rgba(127,29,29,.35);color:#fecaca;font-size:11px;line-height:1.45;overflow-wrap:anywhere}.cs-ai-invalid.cs-ai-warn{border-color:#fbbf24;background:rgba(120,53,15,.35);color:#fde68a}.cs-ai-invalid.cs-ai-info{border-color:#60a5fa;background:rgba(30,58,138,.35);color:#bfdbfe}.cs-ask-note{font-size:11px;color:#94a3b8;margin:-4px 0 10px;overflow-wrap:anywhere}#cs-research-prompt-panel select{padding:7px;border-radius:6px;background:#090f1e;color:#e2e8f0;border:1px solid #64748b;max-width:100%}';
     document.head.appendChild(css);
   }
   function findHeading() {
@@ -101,11 +102,15 @@
       FIELDS.forEach(function (f) {
         var el = $(f[1]); if (!el) return;
         var note = document.getElementById(f[1] + '-cs-invalid'), v = String(el.value || '').trim();
-        var chk = v && L && L.validateAnswer ? L.validateAnswer(v, q) : { valid: true };
-        if (chk.valid) { if (note) note.remove(); el.removeAttribute('aria-invalid'); el.style.borderColor = ''; return; }
-        if (!note) { note = document.createElement('div'); note.id = f[1] + '-cs-invalid'; note.className = 'cs-ai-invalid'; note.setAttribute('role', 'alert'); el.insertAdjacentElement('afterend', note); }
-        note.textContent = 'Not counted: ' + chk.message;
-        el.setAttribute('aria-invalid', 'true'); el.setAttribute('aria-describedby', note.id); el.style.borderColor = '#f87171';
+        var chk = !L || !L.validateAnswer ? { valid: true } : f[0] === 'google_aio' ? L.validateGoogle(v, val('pwbGoogleSource'), q, true)
+          : v ? L.validateAnswer(v, q) : { valid: false, status: 'not_checked' };
+        var kind = chk.status === 'invalid' ? 'invalid' : chk.status === 'no_ai_overview' ? 'info' : chk.valid && chk.message ? 'warn' : '';
+        if (!kind) { if (note) note.remove(); el.removeAttribute('aria-invalid'); el.removeAttribute('aria-describedby'); el.style.borderColor = ''; return; }
+        if (!note) { note = document.createElement('div'); note.id = f[1] + '-cs-invalid'; el.insertAdjacentElement('afterend', note); }
+        note.className = 'cs-ai-invalid cs-ai-' + kind; note.setAttribute('role', kind === 'invalid' ? 'alert' : 'status');
+        note.textContent = (kind === 'invalid' ? 'INVALID, not counted: ' : kind === 'warn' ? 'Counted — check: ' : 'Recorded: ') + chk.message;
+        el.setAttribute('aria-describedby', note.id);
+        if (kind === 'invalid') { el.setAttribute('aria-invalid', 'true'); el.style.borderColor = '#f87171'; } else { el.removeAttribute('aria-invalid'); el.style.borderColor = kind === 'warn' ? '#fbbf24' : ''; }
       });
     }
     function render() {
@@ -122,14 +127,21 @@
         status.dataset.state = 'error'; status.textContent = 'Enter the target keyword first: the research prompt is built for that exact query.';
         editor.value = ''; copy.disabled = true; return;
       }
-      var n = research.systems_researched, invalid = research.observations.filter(function (x) { return x.validation_status === 'invalid'; }), missing = research.observations.filter(function (x) { return !x.checked && x.validation_status !== 'invalid'; }).map(function (x) { return x.label; });
+      var n = research.answers_valid, obs = research.observations;
+      var invalid = obs.filter(function (x) { return x.validation_status === 'invalid'; });
+      var notChecked = obs.filter(function (x) { return !x.checked && x.validation_status !== 'invalid' && x.validation_status !== 'no_ai_overview'; }).map(function (x) { return x.label; });
+      var warned = obs.filter(function (x) { return x.checked && (x.warnings || []).length; }).map(function (x) { return x.label; });
       status.dataset.state = n === research.systems_total ? 'complete' : n ? 'partial' : 'none';
       if (invalid.length) status.dataset.state = n ? 'partial' : 'error';
       status.textContent = (research === saved ? 'Saved with the generated Brief · ' : '') +
-        (n === research.systems_total ? 'All 5 AI answers captured. Source URLs are leads; verify them before citing.' :
-         n ? n + ' of 5 valid AI answers.' + (missing.length ? ' Not checked: ' + missing.join(', ') + '. These stay NOT CHECKED; nothing is filled in.' : '') :
-         '0 of 5 valid AI answers.' + (invalid.length ? '' : ' Paste them under "AI Answer Inputs"; without them the prompt marks all five as NOT CHECKED.')) +
-        (invalid.length ? ' Invalid, not counted: ' + invalid.map(function (x) { return x.label + ' — ' + (x.error_message || 'not an answer to the query'); }).join(' ') : '') +
+        n + ' of 5 valid AI answers · ' + research.answers_captured + ' captured · ' + research.answers_invalid + ' invalid · ' + research.systems_not_checked + ' not checked.' +
+        (n === research.systems_total ? ' Source URLs are leads; verify them before citing.' : '') +
+        (notChecked.length ? ' NOT CHECKED: ' + notChecked.join(', ') + '; nothing is filled in.' : '') +
+        (invalid.length ? ' INVALID, not counted: ' + invalid.map(function (x) { return x.label + ' — ' + (x.error_message || 'not an answer to the query'); }).join(' ') : '') +
+        (research.google_no_ai_overview ? ' Google: no AI Overview shown (recorded; not an AI answer, Gemini not researched).' : '') +
+        (warned.length ? ' Check the topic of: ' + warned.join(', ') + '.' : '') +
+        (n ? ' Pasted answers are your observations; their origin is not verified.' : '') +
+        (n === 0 && !invalid.length && !research.google_no_ai_overview ? ' Paste them under "AI Answer Inputs"; without them the prompt marks all five as NOT CHECKED.' : '') +
         (research !== saved && !val('pwbPerplexityText') ? ' If Perplexity stays empty, the server may add an automatic Perplexity answer when the Brief is generated; the saved prompt then shows it.' : '');
       editor.value = L.buildPrewriteResearchPrompt(research);
       copy.disabled = false;
@@ -154,8 +166,9 @@
     });
     choice.addEventListener('change', render);
     // Keep the prompt current while the owner edits the keyword, market, language or answers.
-    ['pwbKeyword', 'pwbLanguage', 'pwbRegion'].concat(FIELDS.map(function (f) { return f[1]; })).forEach(function (id) {
-      var el = $(id); if (el) el.addEventListener('input', function () { checkFields(); syncAsk(); if (!panel.hidden) render(); });
+    ['pwbKeyword', 'pwbLanguage', 'pwbRegion', 'pwbGoogleSource'].concat(FIELDS.map(function (f) { return f[1]; })).forEach(function (id) {
+      var el = $(id), onEdit = function () { checkFields(); syncAsk(); if (!panel.hidden) render(); };
+      if (el) { el.addEventListener('input', onEdit); if (el.tagName === 'SELECT') el.addEventListener('change', onEdit); }
     });
     copy.addEventListener('click', function () {
       editor.focus(); editor.select();

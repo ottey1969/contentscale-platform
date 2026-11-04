@@ -6,7 +6,10 @@
 //  2. "Complete missing only" on a TEST diagnostic Brief (2 answers saved earlier, 3 added now) saves research with
 //     all five answers, keeps the earlier language, market and automatic Perplexity label, and returns it;
 //  3. reopening the saved Brief returns that same research, so the Research Prompt tab shows the prompt that was used.
-// No Gemini or Serper call is made: the TEST Brief passes the quality gate without one. Runs only with
+// Gemini and Serper are answered by a local TEST stub (tests/prewrite-e2e-gemini-stub.cjs) that records the prompt the
+// generator really sent; the Complete-missing-only TEST Brief passes the quality gate without any provider call.
+//  4. a new Brief through the real generation route sends exactly the validated research to the generator;
+//  5. reopening a Brief saved before this contract leaves its stored research and evidence unchanged. Runs only with
 // PREWRITE_E2E_DATABASE_URL pointing at a local database; every row it writes is labelled TEST.
 const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), cp = require('node:child_process'), crypto = require('node:crypto');
 const DB = process.env.PREWRITE_E2E_DATABASE_URL || '';
@@ -21,8 +24,11 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
   fs.writeFileSync(built, prepare(fs.readFileSync(path.join(__dirname, '../src/index.js'), 'utf8')));
   const port = 18800 + (process.pid % 500), base = 'http://127.0.0.1:' + port;
   let log = '';
-  const app = cp.spawn(process.execPath, ['--require', path.join(__dirname, 'staging-boot-no-egress.cjs'), built], {
-    env: { ...process.env, PORT: String(port), DATABASE_URL: DB, GEMINI_API_KEY: 'TEST-not-a-real-key', ENABLE_TRACKER_SCHEDULER: '0', ENABLE_BULK_WORKER: '0', NODE_ENV: 'test' } });
+  // Gemini and Serper are answered by the TEST stub (tests/prewrite-e2e-gemini-stub.cjs); every other outside call is denied.
+  const capture = path.join(require('node:os').tmpdir(), 'prewrite-e2e-gemini-' + process.pid + '.jsonl');
+  fs.rmSync(capture, { force: true });
+  const app = cp.spawn(process.execPath, ['--require', path.join(__dirname, 'staging-boot-no-egress.cjs'), '--require', path.join(__dirname, 'prewrite-e2e-gemini-stub.cjs'), built], {
+    env: { ...process.env, PORT: String(port), DATABASE_URL: DB, GEMINI_API_KEY: 'TEST-not-a-real-key', SERPAPI_KEY: 'TEST-not-a-real-key', PREWRITE_E2E_CAPTURE: capture, ENABLE_TRACKER_SCHEDULER: '0', ENABLE_BULK_WORKER: '0', NODE_ENV: 'test' } });
   app.stdout.on('data', d => { log += d; }); app.stderr.on('data', d => { log += d; });
   const db = new pg.Client({ connectionString: DB });
   try {
@@ -82,7 +88,56 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     const rb = reopened.brief || reopened.brief_json || (reopened.data && reopened.data.brief) || {};
     assert.deepEqual(rb.prewrite_ai_answer_research, saved, 'reopened Brief carries the saved research');
     assert.doesNotMatch(log, /research refresh after missing-only completion failed/);
+
+    // 4. New Brief through the real generation route. Google: "No AI Overview shown"; Copilot: a placeholder (invalid);
+    // ChatGPT: an answer in other words (synonyms, counted with a topic check). The prompt the generator really
+    // received (captured by the stub) carries exactly this research; the invalid text is not in it as an answer.
+    const token2 = 'TEST-prewrite-gen-' + crypto.randomBytes(4).toString('hex');
+    await db.query("INSERT INTO tracker_clients(token,domain) VALUES ($1,'test-prewrite-gen.example')", [token2]);
+    const gen = await fetch(base + '/api/tracker-client/' + token2 + '/prewrite-brief', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+      keyword: 'seo content optimalisatie', language: 'Dutch', region: 'nl', manualAiEvidence: { google_source: 'no_ai_overview', google_aio: '',
+        chatgpt: 'TEST: Webteksten verbeteren voor zoekmachines begint bij de vraag van de lezer.', claude: 'TEST: SEO content optimalisatie begint bij zoekintentie en volledigheid.', copilot: 'n/a' } }) });
+    const gj = await gen.json();
+    // The TEST stub cannot pass source verification (outside pages are denied), so the gate says NOT PASSED and nothing is saved.
+    assert.equal(gj.stage, 'quality_gate', JSON.stringify(gj).slice(0, 400)); assert.equal(gj.saved, false);
+    const gr = gj.brief.prewrite_ai_answer_research;
+    assert.deepEqual([gr.answers_valid, gr.answers_captured, gr.answers_invalid, gr.systems_not_checked, gr.google_no_ai_overview], [2, 3, 1, 1, true]);
+    assert.deepEqual(gj.brief.ai_system_evidence.google_aio, { checked: false, source: 'no_ai_overview', manual: true, text: '', google_source: 'no_ai_overview' });
+    assert.equal(gj.brief.ai_system_evidence.copilot.checked, false, 'the placeholder is not stored as Copilot evidence');
+    const sent = fs.readFileSync(capture, 'utf8').trim().split('\n').map(l => JSON.parse(JSON.parse(l).body).contents[0].parts[0].text);
+    assert.ok(sent.length >= 1, 'the generator was called');
+    const p0 = sent[0];
+    assert.ok(p0.includes(R.buildPrewriteResearchPrompt(gr)), 'the generator received the saved research prompt verbatim');
+    assert.match(p0, /AI answers researched: 2\/5 valid · captured 3 · invalid 1 · not checked 1 · Google: no AI Overview shown/);
+    assert.match(p0, /SYSTEM: Google AI Overviews \/ Gemini — NO AI OVERVIEW SHOWN for this query/);
+    assert.match(p0, /SYSTEM: Microsoft Copilot — INVALID \(placeholder\)/);
+    assert.match(p0, /SYSTEM: ChatGPT Search \[manual paste · origin not verified\][^]*?Topic check: shares no word with the target query/);
+    assert.match(p0, /Google AIO \/ Gemini \[NO AI OVERVIEW SHOWN \(checked; not an AI answer\)\]/);
+    assert.match(p0, /Microsoft Copilot \[NOT CHECKED\]/);
+    // A Google answer without its source is refused for this request, with the reason.
+    const gen2 = await (await fetch(base + '/api/tracker-client/' + token2 + '/prewrite-brief', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+      keyword: 'seo content optimalisatie', language: 'Dutch', region: 'nl', manualAiEvidence: { google_aio: 'TEST: SEO content optimalisatie volgens een Google-antwoord zonder bronkeuze.' } }) })).json();
+    const gg = gen2.brief.prewrite_ai_answer_research.observations.find(o => o.engine === 'google');
+    assert.equal(gg.validation_status, 'invalid'); assert.equal(gg.error_reason, 'source_not_chosen');
+    assert.equal(gen2.brief.ai_system_evidence.google_aio.checked, false);
+
+    // 5. An existing Brief saved before this contract (v2 research, no Google source) is not changed by reopening.
+    const legacy = R.makePrewriteAiAnswerResearch({ query: 'TEST content scaling', language: 'English', market: 'us', answers: [{ engine: 'google_aio', answer: 'TEST legacy google answer about content scaling' }, { engine: 'chatgpt', answer: 'TEST legacy chatgpt answer about content scaling' }] });
+    const legacyV2 = JSON.parse(JSON.stringify(legacy)); legacyV2.contract = 'prewrite_ai_answer_research_v2';
+    legacyV2.observations.forEach(o => { for (const k of ['provenance', 'origin_verified', 'google_source', 'researched_system', 'validation_status', 'error_reason', 'error_message', 'warnings', 'topic_match', 'rejected_preview']) delete o[k]; });
+    const legacyBrief = { ...brief, keyword: 'TEST content scaling', ai_system_evidence: { google_aio: { checked: true, text: 'TEST legacy google answer about content scaling' }, chatgpt: { checked: true, text: 'TEST legacy chatgpt answer about content scaling' } }, prewrite_ai_answer_research: legacyV2 };
+    const cols = (await db.query("SELECT column_name FROM information_schema.columns WHERE table_name='prewrite_briefs'")).rows.map(r => r.column_name);
+    const ins = await db.query('INSERT INTO prewrite_briefs(client_id,keyword,brief_json' + (cols.includes('status') ? ',status' : '') + ') VALUES ($1,$2,$3' + (cols.includes('status') ? ",'ready'" : '') + ') RETURNING id', [clientId, 'TEST content scaling', legacyBrief]);
+    const before = (await db.query('SELECT brief_json FROM prewrite_briefs WHERE id=$1', [ins.rows[0].id])).rows[0].brief_json;
+    const re = await (await fetch(base + '/api/tracker-client/' + token + '/prewrite-briefs/' + ins.rows[0].id)).json();
+    const after = (await db.query('SELECT brief_json FROM prewrite_briefs WHERE id=$1', [ins.rows[0].id])).rows[0].brief_json;
+    assert.deepEqual(after.prewrite_ai_answer_research, before.prewrite_ai_answer_research, 'stored research unchanged');
+    assert.deepEqual(after.ai_system_evidence, before.ai_system_evidence, 'stored evidence unchanged');
+    const shownR = (re.brief || {}).prewrite_ai_answer_research;
+    assert.equal(shownR.contract, 'prewrite_ai_answer_research_v2');
+    assert.match(R.buildPrewriteResearchPrompt(shownR), /AI answers researched: 2\/5 valid/);
+    assert.match(R.buildPrewriteResearchPrompt(shownR), /researched: Google AI Overview or Gemini \(source not recorded\) \[manual paste · origin not verified\]/);
   } finally {
-    app.kill(); try { await db.end(); } catch (e) {} fs.rmSync(built, { force: true });
+    app.kill(); try { await db.end(); } catch (e) {} fs.rmSync(built, { force: true }); fs.rmSync(capture, { force: true });
   }
 });

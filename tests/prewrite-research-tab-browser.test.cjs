@@ -15,11 +15,14 @@ function realModalMarkup(){
  const block=page.slice(start,end);assert.doesNotMatch(block,/\$\{/,'static markup (no server interpolation)');
  return block.replace(/\\\\/g,'\\');
 }
-// What the server receives from the "Analyse & create" button for these field values (same trimming, region code, clip).
+// The prompt the server builds for these field values: the request handler's steps (trim, region code, clip, screening
+// with the Google source, research), through the real server module, without an automatic Perplexity answer.
+const serverModule=require('../src/prewrite-brief-research.cjs');
 function serverPrompt(f){
  const regionRaw=f.region.trim(),region=(regionRaw.match(/^([a-z]{2})\s*[—-]/i)||[null,regionRaw])[1]||regionRaw,clip=v=>String(v||'').trim().slice(0,12000);
- return research.buildPrewriteResearchPrompt(research.makePrewriteAiAnswerResearch({query:f.keyword.trim(),language:f.language.trim(),market:region,
-  answers:[['google_aio','aio'],['chatgpt','chatgpt'],['perplexity','perplexity'],['claude','claude'],['copilot','copilot']].map(([e,k])=>({engine:e,answer:clip(f[k])}))}));
+ const manualAi={google_aio:clip(f.aio),chatgpt:clip(f.chatgpt),perplexity:clip(f.perplexity),claude:clip(f.claude),copilot:clip(f.copilot)},keyword=f.keyword.trim(),gs=f.gsource||'';
+ const warn=console.warn;console.warn=()=>{};let rejected;try{rejected=serverModule.screenManualAnswers(manualAi,keyword,gs)}finally{console.warn=warn}
+ return serverModule.researchForRequest({keyword,language:f.language.trim(),region,manualAi,perplexityEvidenceText:manualAi.perplexity,rejected,googleSource:gs}).prompt;
 }
 const IDS={aio:'pwbAioText',chatgpt:'pwbChatgptText',perplexity:'pwbPerplexityText',claude:'pwbClaudeText',copilot:'pwbCopilotText'};
 
@@ -38,21 +41,22 @@ test('Research Prompt tab on the real Pre-Write Brief markup',{skip:!chromium&&'
   // 1. Visible, two clear options, inputs first.
   assert.deepEqual(await p.$$eval('#cs-research-tabs [role=tab]',l=>l.map(x=>[x.textContent,x.getAttribute('aria-selected')])),[['AI Answer Inputs','true'],['Research Prompt','false']]);
   assert.equal(await p.isVisible('#pwbAioText'),true);assert.equal(await p.isVisible('#cs-research-prompt-panel'),false);
-  const fill=async f=>{for(const [k,id] of [['keyword','pwbKeyword'],['language','pwbLanguage'],['region','pwbRegion'],...Object.entries(IDS)])await p.fill('#'+id,f[k]||'')};
+  const fill=async f=>{for(const [k,id] of [['keyword','pwbKeyword'],['language','pwbLanguage'],['region','pwbRegion'],...Object.entries(IDS)])await p.fill('#'+id,f[k]||'');await p.selectOption('#pwbGoogleSource',f.gsource||'')};
   const shown=async()=>p.inputValue('#cs-research-prompt-panel textarea'),status=async()=>p.textContent('#cs-research-prompt-panel .cs-rp-status');
   // 2. All five answers: the tab shows exactly the server's prompt for this request.
-  const f5={keyword:'  content scaling ',language:'English',region:'nl — Netherlands',aio:'TEST google answer on content scaling https://example.org/guide',chatgpt:'TEST chatgpt answer on content scaling',perplexity:'TEST perplexity answer on content scaling',claude:'TEST claude answer on content scaling',copilot:'TEST copilot answer on content scaling'};
+  const f5={keyword:'  content scaling ',language:'English',region:'nl — Netherlands',gsource:'ai_overview',aio:'TEST google answer on content scaling https://example.org/guide',chatgpt:'TEST chatgpt answer on content scaling',perplexity:'TEST perplexity answer on content scaling',claude:'TEST claude answer on content scaling',copilot:'TEST copilot answer on content scaling'};
   await fill(f5);await p.click('#cs-research-prompt-tab');
   assert.equal(await p.isVisible('#pwbAioText'),false,'inputs hidden while the prompt tab is open');
   assert.equal(await shown(),serverPrompt(f5));assert.match(await shown(),/Target query: content scaling\n\nLanguage: English · Market: nl/);
-  assert.match(await status(),/All 5 AI answers captured/);
+  assert.match(await status(),/^5 of 5 valid AI answers · 5 captured · 0 invalid · 0 not checked\. Source URLs are leads/);
+  assert.match(await shown(),/SYSTEM: Google AI Overviews \/ Gemini — researched: Google AI Overview \[manual paste · origin not verified\]/);
   // 3. Three answers, live update while the prompt tab is open.
   await p.click('#cs-research-inputs-tab');await p.fill('#pwbClaudeText','');await p.fill('#pwbCopilotText','');await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/3 of 5 valid AI answers\. Not checked: Claude, Microsoft Copilot/);
+  assert.match(await status(),/^3 of 5 valid AI answers · 3 captured · 0 invalid · 2 not checked\. NOT CHECKED: Claude, Microsoft Copilot/);
   assert.equal(await shown(),serverPrompt({...f5,claude:'',copilot:''}));
   // 4. No answers.
   await p.click('#cs-research-inputs-tab');for(const id of Object.values(IDS))await p.fill('#'+id,'');await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/0 of 5 valid AI answers\. Paste them/);assert.equal((await shown()).match(/— NOT CHECKED\. Do not invent results/g).length,5);
+  assert.match(await status(),/^0 of 5 valid AI answers · 0 captured · 0 invalid · 5 not checked\..* Paste them/);assert.equal((await shown()).match(/— NOT CHECKED\. Do not invent results/g).length,5);
   // 5. Missing keyword: said, prompt empty, copy disabled.
   await p.click('#cs-research-inputs-tab');await p.fill('#pwbKeyword','');await p.click('#cs-research-prompt-tab');
   assert.match(await status(),/Enter the target keyword first/);assert.equal(await shown(),'');assert.equal(await p.isDisabled('#cs-research-prompt-panel .cs-rp-actions button'),true);
@@ -74,15 +78,32 @@ test('Research Prompt tab on the real Pre-Write Brief markup',{skip:!chromium&&'
   await p.click('#cs-research-inputs-tab');await fill({...f5,keyword:'seo content optimalisatie',language:'Dutch',region:'nl — Netherlands',chatgpt:'',perplexity:'',claude:'',copilot:''});
   await p.click('#cs-research-prompt-tab');const echo=await shown();
   await p.click('#cs-research-inputs-tab');await p.fill('#pwbAioText',echo);
-  assert.match(await p.textContent('#pwbAioText-cs-invalid'),/^Not counted: This is the research instruction/);
+  assert.match(await p.textContent('#pwbAioText-cs-invalid'),/^INVALID, not counted: This is the research instruction/);
   assert.equal(await p.getAttribute('#pwbAioText','aria-invalid'),'true');
   await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/^0 of 5 valid AI answers\. Invalid, not counted: Google AI Overviews \/ Gemini — This is the research instruction/);
-  assert.match(await shown(),/AI answers researched: 0\/5 .*invalid: Google AI Overviews \/ Gemini/);
+  assert.match(await status(),/^0 of 5 valid AI answers · 1 captured · 1 invalid · 4 not checked\. NOT CHECKED: ChatGPT Search.* INVALID, not counted: Google AI Overviews \/ Gemini — This is the research instruction/);
+  assert.match(await shown(),/AI answers researched: 0\/5 valid · captured 1 · invalid 1 · not checked 4/);
   assert.equal(await shown(),serverPrompt({...f5,keyword:'seo content optimalisatie',language:'Dutch',region:'nl — Netherlands',aio:echo,chatgpt:'',perplexity:'',claude:'',copilot:''}),'same as the server');
   // A real answer clears the warning.
   await p.click('#cs-research-inputs-tab');await p.fill('#pwbAioText','TEST: SEO-contentoptimalisatie is het verbeteren van webinhoud op zoekintentie.');
   assert.equal(await p.$('#pwbAioText-cs-invalid'),null);
+  // 8d. Google source: required, and "No AI Overview shown" is recorded, not an invalid or failed answer.
+  await p.selectOption('#pwbGoogleSource','');
+  assert.match(await p.textContent('#pwbAioText-cs-invalid'),/^INVALID, not counted: Choose where this Google answer comes from/);
+  await p.selectOption('#pwbGoogleSource','gemini');assert.equal(await p.$('#pwbAioText-cs-invalid'),null);
+  await p.fill('#pwbAioText','');await p.selectOption('#pwbGoogleSource','no_ai_overview');
+  assert.match(await p.textContent('#pwbAioText-cs-invalid'),/^Recorded: Google showed no AI Overview for this query/);
+  assert.equal(await p.getAttribute('#pwbAioText','aria-invalid'),null);
+  await p.click('#cs-research-prompt-tab');
+  assert.match(await status(),/^0 of 5 valid AI answers · 0 captured · 0 invalid · 4 not checked\..* Google: no AI Overview shown \(recorded; not an AI answer, Gemini not researched\)/);
+  assert.match(await shown(),/SYSTEM: Google AI Overviews \/ Gemini — NO AI OVERVIEW SHOWN for this query/);
+  assert.equal(await shown(),serverPrompt({keyword:'seo content optimalisatie',language:'Dutch',region:'nl — Netherlands',gsource:'no_ai_overview',aio:'',chatgpt:'',perplexity:'',claude:'',copilot:''}),'same as the server');
+  // 8e. Synonyms: an answer in other words counts, with an amber topic check (not rejected).
+  await p.click('#cs-research-inputs-tab');await p.fill('#pwbChatgptText','TEST: Webteksten verbeteren voor zoekmachines begint bij de vraag van de lezer.');
+  assert.match(await p.textContent('#pwbChatgptText-cs-invalid'),/^Counted — check: This answer shares no word with the search query\. It still counts/);
+  assert.equal(await p.getAttribute('#pwbChatgptText','aria-invalid'),null);
+  await p.click('#cs-research-prompt-tab');assert.match(await status(),/^1 of 5 valid AI answers · 1 captured · 0 invalid/);assert.match(await status(),/Check the topic of: ChatGPT Search/);
+  await p.click('#cs-research-inputs-tab');await p.fill('#pwbChatgptText','');
   // 8c. "Copy search question" copies the keyword only; disabled without a keyword.
   await p.click('#cs-research-ask-copy');
   assert.equal(await p.evaluate(()=>navigator.clipboard.readText()),'seo content optimalisatie');

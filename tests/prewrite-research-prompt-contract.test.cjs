@@ -17,7 +17,7 @@ test('all five answers: complete, with the objective, query, language and market
  const p=server.buildPrewriteResearchPrompt(r);
  assert.match(p,/^AI ANSWER RESEARCH — WRITE FOR CITATION POTENTIAL\. This is NOT citation tracking\./);
  assert.match(p,/Research the five answers to the target query\. Identify factual gaps, useful explanations, unanswered questions, original source leads and opportunities for a clearer, better-supported answer\. Use this research to produce original, accurate and useful content with stronger potential for AI citation\./);
- assert.match(p,/Target query: content scaling/);assert.match(p,/Language: English · Market: nl/);assert.match(p,/AI answers researched: 5\/5\n/);
+ assert.match(p,/Target query: content scaling/);assert.match(p,/Language: English · Market: nl/);assert.match(p,/AI answers researched: 5\/5 valid · captured 5 · invalid 0 · not checked 0 · origin verified 0 \(via API\), manual pastes unverified\n/);
  assert.match(p,/Write in English for readers in nl/);assert.match(p,/Publishing does not guarantee that any AI system cites the page/);
  assert.match(p,/Produce: direct_answer, missing_questions, factual_gaps, important_entities, source_verification_tasks/);
  assert.deepEqual(r.source_candidates,['https://example.org/guide','https://example.com/a']);assert.deepEqual(r.verified_sources,[]);
@@ -27,7 +27,7 @@ test('three answers: partial, the two missing systems are named and stay NOT CHE
  const r=server.makePrewriteAiAnswerResearch({query:'content scaling',answers:five.slice(0,3)});
  assert.equal(r.readiness,'RESEARCH_PARTIAL_VERIFY_SOURCES');assert.deepEqual(r.missing_systems,['Claude','Microsoft Copilot']);
  const p=server.buildPrewriteResearchPrompt(r);
- assert.match(p,/AI answers researched: 3\/5 \(not checked: Claude, Microsoft Copilot\)/);
+ assert.match(p,/AI answers researched: 3\/5 valid · captured 3 · invalid 0 · not checked 2 · .*\nNot checked: Claude, Microsoft Copilot\./);
  assert.match(p,/SYSTEM: Claude — NOT CHECKED\. Do not invent results\./);assert.match(p,/Language: not set · Market: not set/);
 });
 test('no answers, and no keyword: nothing invented; the missing keyword is said, not replaced by a placeholder',()=>{
@@ -46,7 +46,7 @@ test('long answers are cut to an excerpt and marked; unsafe URLs never become so
 });
 test('the automatic Perplexity answer is labelled; a research object saved before v2 still renders',()=>{
  const r=server.makePrewriteAiAnswerResearch({query:'q',answers:[A('perplexity','TEST automatic perplexity answer',{source:'automatic fallback'})]});
- assert.match(server.buildPrewriteResearchPrompt(r),/SYSTEM: Perplexity \[automatic fallback\]/);
+ assert.match(server.buildPrewriteResearchPrompt(r),/SYSTEM: Perplexity \[automatic fallback · fetched via API, origin known\]/);
  const v1={...r,contract:'prewrite_ai_answer_research_v1'};
  assert.doesNotThrow(()=>server.buildPrewriteResearchPrompt(v1));assert.doesNotMatch(server.buildPrewriteResearchPrompt(v1),/Language:/);
  assert.throws(()=>server.buildPrewriteResearchPrompt({contract:'other'}),/invalid_prewrite_ai_answer_research/);
