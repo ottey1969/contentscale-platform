@@ -80,6 +80,34 @@
       readiness: !q ? 'TARGET_QUERY_MISSING' : checked.length ? (checked.length === ENGINES.length ? 'RESEARCH_COMPLETE_VERIFY_SOURCES' : 'RESEARCH_PARTIAL_VERIFY_SOURCES') : 'RESEARCH_NOT_CAPTURED'
     };
   }
+  // "Complete missing only" must not downgrade an older checked observation to a
+  // 2,800-character excerpt or discard its independently captured source leads.
+  // Keep the previous observation if the completion evidence has no full answer.
+  function preserveResearchEvidence(current, previous, mergedEvidence) {
+    if (!current || !Array.isArray(current.observations) || !previous || !Array.isArray(previous.observations)) return current;
+    var evidence = mergedEvidence && typeof mergedEvidence === 'object' ? mergedEvidence : {};
+    var oldByEngine = {};
+    previous.observations.forEach(function (o) { if (o && o.checked) oldByEngine[o.engine] = o; });
+    current.observations = current.observations.map(function (o) {
+      var old = oldByEngine[o.engine];
+      if (!old) return o;
+      var e = evidence[o.engine] || {};
+      var full = typeof e === 'string' ? e : e.text || e.answer || '';
+      // Only carry the original observation when no replacement answer exists.
+      if (typeof full !== 'string' || !full.trim()) {
+        return Object.assign({}, old, {engine: o.engine, label: o.label, checked: true});
+      }
+      return o;
+    });
+    var checked = current.observations.filter(function (o) { return o.checked; });
+    current.systems_researched = checked.length;
+    current.research_complete = checked.length === current.systems_total;
+    current.missing_systems = current.observations.filter(function (o) { return !o.checked; }).map(function (o) { return o.label; });
+    current.source_candidates = uniq([].concat.apply([], checked.map(function (o) { return Array.isArray(o.source_urls) ? o.source_urls : []; })));
+    current.readiness = !current.query ? 'TARGET_QUERY_MISSING' : checked.length ?
+      (current.research_complete ? 'RESEARCH_COMPLETE_VERIFY_SOURCES' : 'RESEARCH_PARTIAL_VERIFY_SOURCES') : 'RESEARCH_NOT_CAPTURED';
+    return current;
+  }
   function buildPrewriteResearchPrompt(research) {
     if (!research || !/^prewrite_ai_answer_research_v[12]$/.test(research.contract)) throw Error('invalid_prewrite_ai_answer_research');
     var missing = research.observations.filter(function (x) { return !x.checked; }).map(function (x) { return x.label; });
@@ -101,5 +129,5 @@
     ].filter(function (x) { return x != null; }).join('\n\n');
   }
   return { ENGINES: ENGINES, OBJECTIVE: OBJECTIVE, MISSION: MISSION, normalizeAnswer: normalizeAnswer,
-    makePrewriteAiAnswerResearch: makePrewriteAiAnswerResearch, buildPrewriteResearchPrompt: buildPrewriteResearchPrompt };
+    makePrewriteAiAnswerResearch: makePrewriteAiAnswerResearch, preserveResearchEvidence: preserveResearchEvidence, buildPrewriteResearchPrompt: buildPrewriteResearchPrompt };
 });
