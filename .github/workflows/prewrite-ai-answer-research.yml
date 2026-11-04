@@ -1,0 +1,28 @@
+name: Pre-Write AI Answer Research Contract
+on:
+  pull_request:
+    paths:
+      - 'src/prewrite-ai-answer-research.cjs'
+      - 'scripts/patch-prewrite-ai-answer-research.cjs'
+      - 'scripts/prepare-canonical-production.cjs'
+      - 'tests/prewrite-ai-answer-*.test.cjs'
+      - '.github/workflows/prewrite-ai-answer-research.yml'
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/prewrite-ai-answer-research.cjs'
+      - 'scripts/patch-prewrite-ai-answer-research.cjs'
+      - 'scripts/prepare-canonical-production.cjs'
+      - 'tests/prewrite-ai-answer-*.test.cjs'
+jobs:
+  prewrite-research:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Validate 5-system writing research and canonical integration
+        run: node --test tests/prewrite-ai-answer-research.test.cjs tests/prewrite-ai-answer-integration.test.cjs
+      - name: Verify idempotent canonical build
+        run: node scripts/prepare-canonical-production.cjs --verify-only
