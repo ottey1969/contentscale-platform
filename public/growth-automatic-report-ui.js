@@ -108,6 +108,9 @@
   var outcome=ownerReport&&d.editorial_work_packet?.editorial_decision?
    d.editorial_work_packet.editorial_decision:(d.editorial_decision_gate||{});
   var primary=section('Step 1 · What Growth found and proposes');
+  // The target page is still being measured after a recent change: say so before any proposal (owner 2026-11-02).
+  if(d.measurement_window&&d.measurement_window.status==='MEASURING'){var mw=node('p',null,primary);mw.className='error';if(mw.setAttribute)mw.setAttribute('role','note');
+   mw.textContent='Wait: '+d.measurement_window.note+' The research below is for reference.'}
   node('h3',d.outcome_context?d.outcome_context.headline:String(outcome.decision||'DATA_BLOCKED').replace(/_/g,' '),primary);
   if(d.outcome_context){var ocx=d.outcome_context;
    if(ocx.distinction)node('p',ocx.distinction,primary);

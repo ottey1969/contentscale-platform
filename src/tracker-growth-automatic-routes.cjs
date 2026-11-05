@@ -64,6 +64,18 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
+// The target page changed recently and its 28-day measurement is still running (owner 2026-11-02: research of the
+// homepage proposed new changes to /content-scaling/, published two days earlier). Read fresh on every response.
+async function measurementWindowFor(pool,{clientId,pageId,now=new Date()}){
+ if(!Number.isSafeInteger(Number(pageId)))return null;
+ try{const r=(await pool.query("SELECT id,published_at FROM tracker_growth_publications WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND published_at>$3 ORDER BY published_at DESC LIMIT 1",
+  [clientId,Number(pageId),new Date(now.getTime()-32*86400000)])).rows[0];
+  if(!r)return null;
+  const day=Date.parse(new Date(r.published_at).toISOString().slice(0,10)+'T00:00:00Z'),ends=new Date(day+32*86400000);
+  return {status:'MEASURING',publication_id:Number(r.id),published_at:r.published_at,measurement_complete_on:ends.toISOString().slice(0,10),
+   note:'This page was changed on '+new Date(r.published_at).toISOString().slice(0,10)+' and is being measured until '+ends.toISOString().slice(0,10)+'. Another change now mixes the results of both changes. Wait until then, or record that you changed it again.'};
+ }catch(e){if(e.code==='42P01')return null;throw e}
+}
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
@@ -512,6 +524,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   try{const row=await (typeof loadCompletedReport==='function'?loadCompletedReport({v}):storedResearch.load(pool,v));
    if(!row)return res.set('Cache-Control','private, no-store').json({success:true,found:false});
    const report={...row.report,restored_from_database:true,saved_at:row.saved_at};
+   report.measurement_window=await measurementWindowFor(pool,{clientId:v.clientId,pageId:report.gap_list?.target_page_id??report.destination_gsc_evidence?.target_page_id}).catch(()=>null);
    // The saved report is the research as it was; the owner's selection and what was written since come from the store,
    // so a reload shows the ticks, the written items and the CMS package instead of an empty list.
    if(report.gap_list&&report.gap_list.id&&typeof loadGapList==='function'){
@@ -731,7 +744,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    catch(e){console.warn('[growth-auto-research] open selection not loaded',String(e?.code||'unknown'))}
   }
   const enriched=await withAiCheck(report,v);
-  const completedReport={...enriched,
+  const measuring=await measurementWindowFor(pool,{clientId:v.clientId,pageId:targetId}).catch(()=>null);
+  const completedReport={...enriched,measurement_window:measuring,
    market_setting_url:typeof savePageMarkets==='function'?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id):null,
    gap_list:{...gapList,carried_over:carried,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
@@ -999,4 +1013,4 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    .set('Referrer-Policy','no-referrer').type('html').send(html);
  });
 }
-module.exports={registerGrowthAutomaticResearch};
+module.exports={measurementWindowFor,registerGrowthAutomaticResearch};
