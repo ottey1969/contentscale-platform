@@ -122,7 +122,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,write_count FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,write_count,market FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){

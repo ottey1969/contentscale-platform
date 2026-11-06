@@ -17,6 +17,11 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
   this page (`Filters.csv`, or a `Pages.csv` with only this page): then the research uses the search terms like the
   Tracker's page-verified Search Console data. Otherwise it is shown as "not verified for this page". Stored per check
   (`growth_free_gsc_uploads`), deleted with the check, never in the Tracker;
+* **CMS package (ZIP)**: the same package as the Tracker (`src/growth-cms-handoff.cjs`, unchanged), from the written
+  concepts: the editor edits the text, sets SEO title and description, an optional internal link (this website only) and
+  approves. The original page is read again publicly; the package is refused when the page changed in between, when a
+  flagged sentence is still in the text, or without approval, with the reason in plain language. Evidence is "verified"
+  when an export filtered on exactly this page contains the search term, otherwise "observed". Nothing is published;
 * the complete research as a JSON download, to process themselves;
 * a "done for you" offer (paid): booking link and/or a request form.
 
@@ -31,6 +36,7 @@ It reuses the existing Growth research engine unchanged
 | `engine.cjs` | Runs the Growth research for one public URL (URL validation, read-only data source) |
 | `summary.cjs` | Turns the Google report into plain language — change wording here |
 | `ai-answers.cjs` | AI prompt, reading pasted AI answers, AI summary |
+| `cms-package.cjs` | The CMS package from the concepts: original page, link placement, the Tracker's package builder |
 | `gsc-export.cjs` | Reading an uploaded Search Console export (ZIP/CSV), page verification, rows for the research |
 | `store.cjs` | Own tables `growth_free_checks`, `growth_free_ai_answers`, `growth_free_invites`, `growth_free_hire_requests` (created automatically) |
 | `routes.cjs` | Pages, API, limits, access keys, admin |

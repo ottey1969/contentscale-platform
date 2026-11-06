@@ -13,6 +13,7 @@ const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded-editor.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
+const cmsPackage=require('./cms-package.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -215,7 +216,7 @@ function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.grou
  h+='<p><strong id="gapCount">0 selected</strong></p><p><button type="button" id="gapAll" class="ghost">Select all</button> <button type="button" id="gapNone" class="ghost">Clear</button></p>';
  h+='<p><button type="button" id="gapDownload" class="action-muted">Download selection as editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p>';
  if(w&&w.allowed&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite" class="action-blue" disabled>Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only. Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.</small></p>';
- h+='<div id="gapWritten"></div>';
+ h+='<div id="gapWritten"></div><div id="pkgBox"></div>';
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
  (r.sections||[]).forEach(function(x){var fl=(x.flags||[]).filter(function(f){return f.sentence}).map(function(f){return f.sentence});
@@ -247,15 +248,50 @@ function freeAiGate(d){var a=d&&d.ai;if(!a||(a.summary&&a.summary.checked>0))ret
   dlg.addEventListener('click',function(e){var b=e.target.closest('button[data-v]');if(!b)return;if(b.getAttribute('data-v')==='first'){done(null);var el=document.getElementById('ai');if(el)el.scrollIntoView()}else done('WITHOUT_AI')});
   dlg.addEventListener('cancel',function(e){e.preventDefault();done(null)});
   document.body.appendChild(dlg);if(typeof dlg.showModal==='function')dlg.showModal();else dlg.setAttribute('open','');dlg.querySelector('button').focus()})}
+// Step 4: the same CMS package (ZIP) as the Tracker, from the concepts. The editor edits, approves and downloads; nothing is published.
+var PKG_SHA='';
+function pkgHtml(r){var list=(r&&r.sections)||[];if(!list.length)return '';
+ var h='<h2 id="pkg">CMS package for your editor</h2><p class="lead">The same package as the Tracker: approved text, exact placement on your page, SEO title and description, and a measurement plan. Edit the text, remove what you do not want, approve and download. Nothing is published.</p>';
+ h+='<p class="muted" id="pkgSource">Reading your page as it is live now…</p>';
+ list.forEach(function(x){var id=esc(x.item_id),fl=(x.flags||[]).filter(function(f){return f.sentence});
+  h+='<div class="card"><label class="check"><input type="checkbox" class="pkgUse" data-id="'+id+'" checked><span>Include this section</span></label>'+
+   '<label>Heading (H2)<input class="pkgH2" data-id="'+id+'" maxlength="200" value="'+esc(x.h2)+'"></label>'+
+   '<label>Text (an empty line starts a new paragraph)<textarea class="pkgText" data-id="'+id+'" rows="7">'+esc((x.paragraphs||[]).join('\\n\\n'))+'</textarea></label>'+
+   '<small class="muted">'+(x.placement&&x.placement.section_heading?'Placement: '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':'Placement: the editor chooses')+'</small>'+
+   (fl.length?'<p class="note"><strong>Rewrite or remove before downloading:</strong></p><ul>'+fl.map(function(f){return '<li><mark>'+esc(f.sentence)+'</mark> — '+esc(f.reason)+'</li>'}).join('')+'</ul>':'')+'</div>'});
+ h+='<label for="pkgTitle">SEO title</label><input id="pkgTitle" maxlength="100">';
+ h+='<label for="pkgMeta">Meta description</label><textarea id="pkgMeta" rows="2" maxlength="220"></textarea>';
+ h+='<label for="pkgCms">Website system (CMS)</label><select id="pkgCms"><option value="generic">Other / not sure</option><option value="wordpress">WordPress</option><option value="wix">Wix</option><option value="webflow">Webflow</option><option value="squarespace">Squarespace</option><option value="custom">Custom built</option></select>';
+ h+='<details><summary>Internal link (optional)</summary><label for="pkgLinkUrl">Page of this website to link to</label><input id="pkgLinkUrl" type="url" placeholder="https://"><label for="pkgLinkLabel">Link words (what the reader clicks)</label><input id="pkgLinkLabel" maxlength="120"></details>';
+ h+='<label class="check"><input type="checkbox" id="pkgApprove"><span>I reviewed the page, the sections and the link. Every statement is true for this business.</span></label>';
+ h+='<p><button type="button" id="pkgDownload" class="action-blue">Download CMS package (ZIP)</button> <span id="pkgStatus" class="muted"></span></p><div id="pkgIssues"></div>';
+ return h}
+function pkgInput(){var out=[];document.querySelectorAll('.pkgUse').forEach(function(c){if(!c.checked)return;var id=c.getAttribute('data-id');
+  var h2=document.querySelector('.pkgH2[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');out.push({item_id:id,h2:h2?h2.value:'',text:t?t.value:''})});
+ return {cms:document.getElementById('pkgCms').value,seo_title:document.getElementById('pkgTitle').value,meta_description:document.getElementById('pkgMeta').value,
+  sections:out,link:{url:document.getElementById('pkgLinkUrl').value,label:document.getElementById('pkgLinkLabel').value},editor_approved:document.getElementById('pkgApprove').checked,source_sha256:PKG_SHA}}
+async function pkgReadSource(){var el=document.getElementById('pkgSource');if(!el)return;
+ try{var r=await fetch(API+'/package-source'+Q,{cache:'no-store'});var x=await r.json();if(!x.success)throw Error(x.error||'Not read');PKG_SHA=x.source.source_sha256;
+  var t=document.getElementById('pkgTitle'),m=document.getElementById('pkgMeta');if(t&&!t.value)t.value=x.source.title||'';if(m&&!m.value)m.value=x.source.meta_description||'';
+  el.textContent='Original page read now: “'+(x.source.title||x.source.url)+'”, '+x.source.headings.length+' heading(s). The package is refused if the page changes before the download.'}
+ catch(err){el.innerHTML=esc(err.message)+' <button type="button" class="ghost" id="pkgReread">Read again</button>';var b=document.getElementById('pkgReread');if(b)b.onclick=pkgReadSource}}
+function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box.innerHTML=pkgHtml(r);var b=document.getElementById('pkgDownload');if(!b)return;pkgReadSource();
+ b.onclick=async function(){var st=document.getElementById('pkgStatus'),iss=document.getElementById('pkgIssues');iss.innerHTML='';st.textContent='Checking the package…';b.disabled=true;
+  try{var body=pkgInput();body.format='zip';var r=await fetch(API+'/package'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+   if(r.ok&&/zip/.test(r.headers.get('content-type')||'')){var blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='cms-package.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);st.textContent='Downloaded. Give the ZIP to whoever edits your website.';b.classList.add('action-green')}
+   else{var x=await r.json().catch(function(){return {messages:['Not ready.']}});st.textContent='Not ready yet:';
+    iss.innerHTML='<ul>'+(x.messages||[x.error||'Not ready.']).map(function(m){return '<li>'+esc(m)+'</li>'}).join('')+'</ul>'+((x.flagged||[]).length?'<p class="note">Still in the text: '+x.flagged.map(function(f){return '“'+esc(f.sentence)+'”'}).join(' · ')+'</p>':'');
+    if((x.issues||[]).indexOf('SOURCE_REVISION_CHANGED')>=0)pkgReadSource()}}
+  catch(err){st.textContent=err.message}b.disabled=false}}
 function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)return;
- var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last)wr.innerHTML=writtenHtml(d.writing.last);
+ var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last){wr.innerHTML=writtenHtml(d.writing.last);showPkg(d.writing.last)}
  var wb=document.getElementById('gapWrite');
  if(wb)wb.onclick=async function(){var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});var st=document.getElementById('gapStatus');
   if(!ids.length){st.textContent='Select at least one topic or question.';return}
   var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Check the AI answers first (above); your selection is kept.';return}
   wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');st.textContent='Writing concepts…';
   try{var r=await fetch(API+'/write'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids,ai_check_choice:aiChoice})});var x=await r.json();if(x.stored===false&&(x.sections||[]).length){wr.innerHTML=writtenHtml(x);st.textContent=x.error;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');return}if(!x.success)throw Error(x.error||'Not written');
-   wr.innerHTML=writtenHtml(x.all_written||x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;wb.dataset.exhausted=!x.remaining?'yes':'';wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-green');var ws=document.getElementById('freeStepWrite');if(ws){ws.className='step-chip done';ws.querySelector('.symbol').textContent='✓'}st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
+   wr.innerHTML=writtenHtml(x.all_written||x);showPkg(x.all_written||x);wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;wb.dataset.exhausted=!x.remaining?'yes':'';wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-green');var ws=document.getElementById('freeStepWrite');if(ws){ws.className='step-chip done';ws.querySelector('.symbol').textContent='✓'}st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
   catch(err){st.textContent=err.message;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-red')}};
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected';if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',count)});
@@ -671,6 +707,38 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   }catch(e){console.error('[free-growth] writing failed',String(e.code||e.message).slice(0,80));
    if(token&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});
    res.status(503).json({success:false,error:'Writing is not available right now. Your selection works with the editor brief.'})}
+ });
+ // CMS package (the same ZIP as the Tracker): step 1 reads the original page publicly; the download refuses the package
+ // when the page changed in between, when a flagged sentence is still in the text, or when the editor did not approve.
+ async function readOwnPage(row){
+  const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
+  return String(live&&live.html||'');
+ }
+ app.get(apiPath+'/checks/:id/package-source',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  try{const html=await readOwnPage(row);if(!html)throw Error('empty');
+   res.set('Cache-Control','no-store').json({success:true,source:cmsPackage.pageSource(html,{url:row.url}),cms:cmsPackage.CMS})}
+  catch(e){res.status(503).json({success:false,error:'Your page could not be read right now. Try again in a moment.'})}
+ });
+ app.post(apiPath+'/checks/:id/package',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  const b=req.body||{};
+  let html;try{html=await readOwnPage(row)}catch(e){html=''}
+  if(!html)return res.status(503).json({success:false,ready:false,messages:[cmsPackage.PLAIN.ORIGINAL_PAGE_SNAPSHOT_REQUIRED]});
+  const term=searchTermOf(row);
+  let gscVerifiedTerm=false;
+  try{const list=await storage.listGscUploads(pool,row.id),last=list[list.length-1];
+   gscVerifiedTerm=!!(last&&last.status==='VERIFIED_FOR_PAGE'&&gscExport.termInExport({queries:last.queries||[]},term))}catch(e){}
+  const language=(row.market&&row.market.language)||cmsPackage.pageSource(html).language||'en';
+  const out=cmsPackage.buildFreePackage({url:row.url,originalHtml:html,sourceSha256:clean(b.source_sha256,80),written:viewOf(row.written),
+   input:b,focusQuery:term,gscVerifiedTerm,language});
+  // Not ready is a normal answer (what is still to do), not a server error.
+  if(!out.ready)return res.set('Cache-Control','no-store').json({success:false,ready:false,issues:out.issues,messages:out.messages,flagged:out.flagged});
+  if(b.format==='zip'){const zip=out.zip();
+   return res.set('Cache-Control','no-store').set('Content-Type','application/zip').set('Content-Disposition','attachment; filename="cms-package.zip"').send(zip)}
+  res.set('Cache-Control','no-store').json({success:true,ready:true,files:out.files.map(f=>f.name),manifest:out.manifest,warnings:out.warnings,published:false});
  });
  app.post(apiPath+'/checks/:id/ai',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
