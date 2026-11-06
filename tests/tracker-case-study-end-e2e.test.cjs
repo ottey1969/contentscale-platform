@@ -2,7 +2,8 @@
 // "End case study": the owner ends the protected Case Study of a page in the Tracker. Boots the full canonical server on
 // localhost (outside network denied) against a disposable PostgreSQL. Checks: a typed confirmation is required; only the
 // owner token works; the status becomes completed with ended_at and the reason; a history event is written; the locked
-// baseline is not changed; Growth no longer sees the page as locked; the same URL cannot start a new Case Study.
+// baseline is not changed; Growth no longer sees the page as locked; a new Case Study for the same URL is possible later,
+// with its own baseline, while two active Case Studies for one URL never are.
 // Runs only with PREWRITE_E2E_DATABASE_URL pointing at a local database; every row is labelled TEST.
 const test = require('node:test'), assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path'), cp = require('node:child_process'), crypto = require('node:crypto');
 const DB = process.env.PREWRITE_E2E_DATABASE_URL || '';
@@ -13,7 +14,7 @@ const SRC = fs.readFileSync(path.join(__dirname, '../src/index.js'), 'utf8');
 
 test('Tracker: an End case study button and an explicit two-step confirmation; Growth explains the lock', () => {
   assert.match(SRC, /onclick="event\.stopPropagation\(\);endCaseStudy\(' \+ p\.id \+ '\)"[^>]*>End case study<\/button>/);
-  assert.match(SRC, /function endCaseStudy\(pageId\)\{[^]*?confirm\('End the Case Study for '[^]*?This cannot be undone, and this URL cannot start a new Case Study later\.'\)\)return;[^]*?api\('\/pages\/'\+pageId\+'\/case-study\/end','POST',\{confirm:'END_CASE_STUDY',reason:why\}\)/);
+  assert.match(SRC, /function endCaseStudy\(pageId\)\{[^]*?confirm\('End the Case Study for '[^]*?This cannot be undone\. You can start a new Case Study for this page later; it gets a new baseline\.'\)\)return;[^]*?api\('\/pages\/'\+pageId\+'\/case-study\/end','POST',\{confirm:'END_CASE_STUDY',reason:why\}\)/);
   const growth = fs.readFileSync(path.join(__dirname, '../src/tracker-growth-automatic-routes.cjs'), 'utf8');
   assert.match(growth, /This page is a protected Case Study\.<\/strong>[^]*?end the Case Study in the Tracker \(button <em>End case study<\/em> on this page\)/);
 });
@@ -59,13 +60,26 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     assert.equal(after.status, 'completed'); assert.ok(after.ended_at); assert.equal(after.ended_reason, 'TEST: the page needs an update');
     assert.deepEqual([after.baseline_at.toISOString(), after.baseline_data, after.baseline_locked], [before.baseline_at.toISOString(), before.baseline_data, true], 'baseline unchanged');
     const ev = (await db.query("SELECT event_data FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='case_study_ended'", [csId])).rows;
-    assert.equal(ev.length, 1); assert.equal(ev[0].event_data.baseline_preserved, true); assert.equal(ev[0].event_data.new_case_study_for_this_url, false);
+    assert.equal(ev.length, 1); assert.equal(ev[0].event_data.baseline_preserved, true); assert.equal(ev[0].event_data.new_case_study_needs_new_baseline, true);
     // Growth (and its CMS export) read the lock as an active row for the page: there is none now.
     assert.equal((await db.query("SELECT EXISTS(SELECT 1 FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active') AS locked", [clientId, pageId])).rows[0].locked, false);
-    // Ending again: nothing active. Starting a new Case Study for this URL: refused, the history stays protected.
+    // Ending again: nothing active.
     assert.equal((await end(token, { confirm: 'END_CASE_STUDY' })).status, 404);
+    // Starting again is no longer refused because of the history. (Here it stops at the normal baseline requirements:
+    // this TEST page has no scan; a real page needs scan, GSC and 5/5 AI evidence first.)
     const restart = await fetch(base + '/api/tracker-client/' + token + '/pages/' + pageId + '/case-study/start', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ primary_query: 'TEST geo' }) }).then(r => r.json());
-    assert.equal(restart.success, false);
+    assert.equal(restart.success, false); assert.notEqual(restart.protected_history, true, JSON.stringify(restart));
+    // Database: a new active Case Study for the URL is allowed next to the ended one (new baseline, link back);
+    // a second active one is refused; the ended row is untouched.
+    const ins = (prev) => db.query(`INSERT INTO tracker_case_studies(tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked,previous_case_study_id)
+      VALUES ($1,$2,'TEST client','test-cs.example','https://test-cs.example/test-geo-page','TEST geo','active',NOW(),'{"source":"TEST new baseline"}',true,$3) RETURNING id`, [clientId, pageId, prev]);
+    const second = (await ins(csId)).rows[0].id;
+    await assert.rejects(ins(csId), /tracker_case_studies_one_active_per_url|duplicate key/);
+    const rows = (await db.query('SELECT id,status,baseline_data FROM tracker_case_studies WHERE tracker_client_id=$1 ORDER BY id', [clientId])).rows;
+    assert.deepEqual(rows.map(r => [r.id, r.status]), [[csId, 'completed'], [second, 'active']]);
+    assert.deepEqual(rows[0].baseline_data, baseline, 'the ended baseline is untouched');
+    // History events go to the active Case Study first.
+    assert.match(SRC, /ORDER BY \(status=\\'active\\'\) DESC,id DESC LIMIT 1/);
     assert.doesNotMatch(log, /\[case-study-end\]/);
   } finally {
     app.kill(); try { await db.end(); } catch (e) {} fs.rmSync(built, { force: true });
