@@ -1,0 +1,26 @@
+name: Tracker workflow schema integrity
+on:
+  pull_request:
+    paths:
+      - 'migrations/20261106_tracker_workflow_schema_integrity.sql'
+      - 'tests/tracker-workflow-schema-integrity.test.cjs'
+      - '.github/workflows/tracker-workflow-schema-integrity.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'migrations/20261106_tracker_workflow_schema_integrity.sql'
+      - 'tests/tracker-workflow-schema-integrity.test.cjs'
+      - '.github/workflows/tracker-workflow-schema-integrity.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  schema-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate additive Tracker workflow schema
+        run: node --test tests/tracker-workflow-schema-integrity.test.cjs
