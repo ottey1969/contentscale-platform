@@ -53,7 +53,7 @@ test('Pre-Write AI collection is one visible action, prompt stays behind the sce
       await page.waitForFunction(() => {
         const status = document.querySelector('#cs-research-ask .cs-rp-status');
         return status && status.textContent.includes('0 of 5 AI answers ready.');
-      }, {timeout: 2500});
+      }, null, {timeout: 5000});
       assert.equal(await page.isDisabled('#cs-research-ask-copy'), false);
 
       assert.equal(await page.isVisible('#cs-research-tabs'), false, 'No two-tab choice');
