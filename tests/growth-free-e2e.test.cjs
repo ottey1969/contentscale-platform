@@ -61,6 +61,12 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await service.idle();
     await p.waitForSelector('#google', { timeout: 60000 });
     assert.match(await p.textContent('h1'), /Your page in Google and in AI answers/);
+    await p.waitForSelector('#freeNextAction .growth-next-btn');
+    assert.match(await p.textContent('#freeNextAction'), /FREE GROWTH · ACTION PLAN/);
+    assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 4);
+    assert.equal(await p.locator('#freeNextAction .growth-next-btn').isVisible(), true);
+    assert.ok((await p.locator('#freeNextAction .growth-next-btn').getAttribute('href')).startsWith('#'));
+
     // Search Console: verified for this page, used in the research, the search term found in it.
     assert.match(await p.textContent('#gsc + p'), /^Verified for this page\./);
     assert.match(await p.textContent('body'), /Your search term “roof repair lodi nj”: 310 impressions, 2 clicks, position 14\.2\./);
