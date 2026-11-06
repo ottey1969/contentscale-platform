@@ -2,7 +2,7 @@
 // Free Growth check, end to end: the real Free routes, the real Growth research engine, the real Postgres store and the
 // real result page in a browser. Only the outside world is replaced (TEST pages, TEST Google results, TEST writer).
 // A visitor: opens the form, enters page + search term + market + language + email, waits for the result, pastes an AI
-// answer, selects topics, lets AI write concepts, downloads the editor brief and the JSON. Checks: no browser error, the
+// answer, selects topics, lets AI write concepts, downloads the editor brief, the JSON and the CMS package (ZIP). Checks: no browser error, the
 // rows are in the Free tables only, and no Tracker table is created or written.
 // Runs only with PREWRITE_E2E_DATABASE_URL (a local, disposable PostgreSQL) and Playwright.
 const test = require('node:test'), assert = require('node:assert/strict'), crypto = require('node:crypto');
@@ -84,6 +84,19 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(report.search_console.latest.used_in_research, true);
     assert.match(report.disclaimer, /A Search Console export verified for this exact page was used/);
     assert.ok((report.report.destination_gsc_queries || []).some(q => q.query === 'roof repair lodi nj'), 'the research used the uploaded terms');
+    // 5b. The CMS package (same ZIP as the Tracker): the original page is read, the editor must approve, then the ZIP downloads.
+    await p.waitForFunction(() => /Original page read now: “Roof Repair in Lodi, NJ \| Acme Roofing”/.test(document.body.textContent), null, { timeout: 30000 });
+    assert.equal(await p.inputValue('#pkgTitle'), 'Roof Repair in Lodi, NJ | Acme Roofing');
+    await p.fill('#pkgMeta', 'Roof repair in Lodi, NJ: leaks, tiles and flashing, with a written estimate before any work starts.');
+    await p.selectOption('#pkgCms', 'wordpress');
+    await p.click('#pkgDownload');
+    await p.waitForFunction(() => /Tick that you reviewed the page/.test(document.getElementById('pkgIssues').textContent), null, { timeout: 30000 });
+    await p.check('#pkgApprove');
+    const [pkg] = await Promise.all([p.waitForEvent('download'), p.click('#pkgDownload')]);
+    assert.equal(pkg.suggestedFilename(), 'cms-package.zip');
+    const zipNames = [...require('node:fs').readFileSync(await pkg.path()).toString('latin1').matchAll(/(0\d-[a-z-]+\.(?:md|html|json)|manifest\.json)/g)].map(m => m[1]);
+    for (const n of ['manifest.json', '01-implementation.md', '02-approved-copy.md', '03-content-fragments.html', '04-seo-metadata.json', '05-measurement-plan.md']) assert.ok(zipNames.includes(n), n);
+    assert.match(require('node:fs').readFileSync(await pkg.path()).toString('utf8'), /Evidence: verified/);
     // 6. A later export (one CSV, not page-filtered): stored with the check, shown as not verified, research not re-run.
     await p.setInputFiles('#gscLater', { name: 'Queries.csv', mimeType: 'text/csv', buffer: Buffer.from('Top queries,Clicks,Impressions,CTR,Position\nroof repair lodi nj,3,340,0.9%,13.1\n') });
     await p.click('#gscSave');
