@@ -376,11 +376,12 @@ test('AI prompt is exactly the Quick Scan keyword/question prompt',()=>{
 test('pasted AI answers: sources, own site, exact page, escaped markdown, noise links',()=>{
  const page='https://acme-roofing.example/roof-repair-lodi-nj/';
  const p=ai.parseAiAnswer('**ANSWER:** Acme Roofing is one option.\nRESOURCES:\nhttps\\://www\\.acme-roofing\\.example/roof-repair-lodi-nj/\nhttps://roofer-a.example/roof-repair-nj/?utm_source=chatgpt.com\n[a](https://roofer-a.example/roof-repair-nj/).\nhttps://www.google.com/search?q=roof\nhttps://maps.app.goo.gl/abc',{pageUrl:page});
- assert.deepEqual(p.sources,['https://www.acme-roofing.example/roof-repair-lodi-nj/','https://roofer-a.example/roof-repair-nj/?utm_source=chatgpt.com']);
+ // Tracking parameters are removed from sources (the validation contract shared with the Pre-Write Brief).
+ assert.deepEqual(p.sources,['https://www.acme-roofing.example/roof-repair-lodi-nj/','https://roofer-a.example/roof-repair-nj/']);
  assert.equal(p.own_site_cited,true);assert.equal(p.exact_page_cited,true);assert.equal(p.site_name_mentioned,true);
- const other=ai.parseAiAnswer('ANSWER: x\nRESOURCES:\nhttps://blog.acme-roofing.example/other/',{pageUrl:page});
+ const other=ai.parseAiAnswer('ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://blog.acme-roofing.example/other/',{pageUrl:page});
  assert.equal(other.own_site_cited,true,'subdomain counts as your site');assert.equal(other.exact_page_cited,false);
- const none=ai.parseAiAnswer('ANSWER: x\nRESOURCES:\nNO VERIFIED RESOURCES',{pageUrl:page});
+ const none=ai.parseAiAnswer('ANSWER: TEST roof repair answer.\nRESOURCES:\nNO VERIFIED RESOURCES',{pageUrl:page});
  assert.equal(none.no_sources,true);assert.equal(none.own_site_cited,false);
  assert.equal(ai.rootOf('shop.example.co.uk'),'example.co.uk');
  const sum=ai.summarizeAiAnswers([{engine:'perplexity',parsed:other},{engine:'chatgpt',parsed:ai.parseAiAnswer('RESOURCES:\nhttps://roofer-a.example/x https://roofer-b.example/y',{pageUrl:page})}],
@@ -413,7 +414,7 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  const saved=await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: Roofer A explains estimates.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://roofer-b.example/services/roof-repair/'});
  assert.equal(saved.status,200);assert.equal(saved.body.parsed.sources,2);assert.equal(saved.body.parsed.own_site_cited,false);
  // Pasting again for the same AI system replaces the earlier answer.
- await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: x\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://acme-roofing.example/roof-repair-lodi-nj/'});
+ await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://acme-roofing.example/roof-repair-lodi-nj/'});
  assert.equal(s.storage.aiRows.length,1);
  r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
  assert.equal(r.body.ai.summary.headline,'Cited by 1 of 1 AI system with a source list');
@@ -433,7 +434,7 @@ test('the AI check comes first: with an entered search term it is available whil
  await s.post('/api/free-growth/checks',ok);
  const pending=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
  assert.notEqual(pending.body.status,'DONE');assert.match(pending.body.ai.prompt,/QUERY:\s*roof repair lodi nj/);
- assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'copilot',text:'ANSWER: early.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/'})).status,200);
+ assert.equal((await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'copilot',text:'ANSWER: TEST early roof repair answer.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/'})).status,200);
  release();await s.service.idle();
  const done=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
  assert.equal(done.body.status,'DONE');assert.equal(done.body.ai.summary.checked,1,'the early answer is kept with the check');
@@ -452,7 +453,7 @@ test('AI answers before the start: the prompt is on the form, up to 5 answers (o
  const form=(await s.get('/free-growth?key=open-key-12345')).body;
  assert(form.indexOf('id="aiStartPrompt"')<form.indexOf('type="submit"'),'the AI prompt comes before the start button');
  for(const e of ai.ENGINES)assert.match(form,new RegExp('data-engine="'+e.id+'"'));
- const ans=(src)=>'ANSWER: Estimates explained.\nRESOURCES:\n'+src;
+ const ans=(src)=>'ANSWER: TEST roof repair estimates explained.\nRESOURCES:\n'+src;
  const five=ai.ENGINES.map((e,i)=>({engine:e.id,text:ans(i===0?'https://acme-roofing.example/roof-repair-lodi-nj/':'https://roofer-a.example/roof-repair-nj/')}));
  const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
  assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[{engine:'claude',text:quick}]})).body.error,/Claude: this is an answer to the company quick-scan prompt/);
@@ -493,14 +494,14 @@ test('review: only an explicit RESOURCES section counts as AI sources',()=>{
  // (3) Missing or malformed RESOURCES: not verified, labelled honestly.
  const missing=ai.parseAiAnswer('Here is my answer with https://acme-roofing.example/roof-repair-lodi-nj/ and https://roofer-a.example/x',{pageUrl:page});
  assert.equal(missing.resources_status,'MISSING');assert.equal(missing.sources_verifiable,false);assert.deepEqual(missing.sources,[]);
- const malformed=ai.parseAiAnswer('ANSWER: x\nRESOURCES:\nsee the links above',{pageUrl:page});
+ const malformed=ai.parseAiAnswer('ANSWER: TEST roof repair answer.\nRESOURCES:\nsee the links above',{pageUrl:page});
  assert.equal(malformed.resources_status,'NO_VALID_URLS');assert.equal(malformed.sources_verifiable,false);
  const onlyBad=ai.summarizeAiAnswers([{engine:'chatgpt',raw_text:'Answer with https://acme-roofing.example/roof-repair-lodi-nj/'}],{pageUrl:page});
  assert.equal(onlyBad.headline,'Not verified: no source list in the pasted answers');assert.equal(onlyBad.cited_by,0);
  assert.equal(onlyBad.engines.find(e=>e.id==='chatgpt').verifiable,false);
  assert.ok(onlyBad.steps.some(x=>/again from a new chat/.test(x)));
  const mix=ai.summarizeAiAnswers([{engine:'chatgpt',raw_text:'no list https://acme-roofing.example/roof-repair-lodi-nj/'},
-  {engine:'perplexity',raw_text:'ANSWER: x\nRESOURCES:\nhttps://roofer-a.example/x'}],{pageUrl:page});
+  {engine:'perplexity',raw_text:'ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://roofer-a.example/x'}],{pageUrl:page});
  assert.equal(mix.headline,'Not cited by AI: 0 of 1 AI system with a source list');
  assert.match(mix.explanation,/ChatGPT Search: no RESOURCES section, not verified/);
  assert.deepEqual(mix.top_cited_sites,[{site:'roofer-a.example',ai_systems:1}],'unverified answers do not feed the site list');

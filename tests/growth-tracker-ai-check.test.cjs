@@ -48,8 +48,8 @@ test('answers to another prompt, other AI systems and non-owners are refused; ol
  assert.equal((await s.paste({engine:'bard',query:QUERY,text:'x'})).body.code,'UNKNOWN_AI_SYSTEM');
  assert.equal(s.stored.length,0);
  const viewer=setup({owner:false});await viewer.get();
- assert.equal((await viewer.paste({engine:'claude',query:QUERY,text:'ANSWER: x\nRESOURCES:\nhttps://a.example/'})).statusCode,403);
- await s.paste({engine:'copilot',query:QUERY,text:'ANSWER: x\nRESOURCES:\nhttps://a.example/'});
+ assert.equal((await viewer.paste({engine:'claude',query:QUERY,text:'ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://a.example/'})).statusCode,403);
+ await s.paste({engine:'copilot',query:QUERY,text:'ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://a.example/'});
  s.stored[0].created_at=new Date(Date.now()-20*86400000).toISOString();
  const r=await s.get();assert.equal(r.body.ai_check.summary.checked,0);assert.equal(r.body.ai_check.older_answers_not_counted,1);
 });
@@ -59,6 +59,6 @@ test('the AI check is optional and available before the research has finished (t
  const e=await s.early();assert.equal(e.statusCode,200);
  assert.equal(e.body.ai_check.search_term,QUERY);assert.equal(e.body.ai_check.basis,'TRACKED_KEYWORD_BEFORE_RESEARCH');assert.match(e.body.ai_check.prompt,/QUERY:\s*roof repair lodi nj/);
  assert.equal(s.searches(),0,'no Google research for the AI check');
- await s.paste({engine:'chatgpt',query:QUERY,text:'ANSWER: x\nRESOURCES:\nhttps://roofer-b.example/services/roof-repair/'});
+ await s.paste({engine:'chatgpt',query:QUERY,text:'ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://roofer-b.example/services/roof-repair/'});
  const r=await s.get();assert.equal(r.body.ai_check.summary.checked,1,'the early answer counts in the finished research');
 });

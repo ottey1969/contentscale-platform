@@ -74,8 +74,11 @@
   var history=new Map((c.prior_checks||[]).map(function(e){return [e.id,e.checked_at]}));
   var ul=node('ul',null,box);(x.engines||[]).forEach(function(e){
    var previous=history.get(e.id),when=e.checked_at||previous;
-   var label=e.checked?(!e.verifiable?'Checked, sources not verifiable':e.exact_page_cited?'Checked, cites this exact page':e.own_site_cited?'Checked, cites this website':'Checked, no citation to this website'):previous?'Previously checked, expired':'Not checked for this search';
-   node('li',e.label+': '+label+(when?' · '+String(when).slice(0,10):'')+(e.checked&&e.verifiable?' · '+e.sources+' cited sources':''),ul);
+   // Validation contract: an invalid answer is named with its reason and not counted; a topic warning is shown, not hidden.
+   var bad=(x.invalid_engines||[]).filter(function(i){return i.id===e.id})[0];
+   var label=e.checked?(!e.verifiable?'Checked, sources not verifiable':e.exact_page_cited?'Checked, cites this exact page':e.own_site_cited?'Checked, cites this website':'Checked, no citation to this website'):bad?'INVALID, not counted — '+String(bad.message||bad.reason||''):previous?'Previously checked, expired':'Not checked for this search';
+   var li=node('li',e.label+': '+label+(when?' · '+String(when).slice(0,10):'')+(e.checked&&e.verifiable?' · '+e.sources+' cited sources':'')+(e.topic_warning?' · Check the topic: this answer shares no word with “'+String(c.search_term||'')+'”. It counts (synonyms are fine); replace it if it answers another question.':''),ul);
+   if(bad||e.topic_warning)li.style.color=bad?'#b42318':'#92400e';
   });
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
   if(complete){var goStep=node('p',null,box),continueLink=node('a','Continue to Step 3 · Write selected improvements',goStep);continueLink.href='#growthGapChoice';}

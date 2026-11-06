@@ -157,7 +157,7 @@ var API=${js(api+'/checks/'+id)},Q=${js(q)},CONTACT=${js(cfg.contactUrl)},SERVIC
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var ENG_STATE={};
 function aiHtml(a){var x=a.summary,h='<h2 id="ai">AI answers</h2><p class="lead"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
- h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?'not checked':!e.verifiable?'no RESOURCES section — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
+ h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?(e.invalid?'INVALID, not counted':'not checked'):e.topic_warning?'check the topic (no shared word with the search term) — counted':!e.verifiable?'no RESOURCES section — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
   return '<div class="eng '+(e.checked&&e.verifiable?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked&&e.verifiable?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = links in the RESOURCES list of that AI answer. Links that appear only in the answer text do not count as sources.</p>';
  if(x.top_cited_sites.length)h+='<h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul>';
  if(x.steps.length)h+='<h3>What to do</h3><ol>'+x.steps.map(function(t){return '<li>'+esc(t)+'</li>'}).join('')+'</ol>';
@@ -457,6 +457,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    seen.add(engine);
    const label=(ai.ENGINES.find(e=>e.id===engine)||{}).label;
    if(text.length>ai.MAX_PASTE){res.status(413).json({success:false,error:label+': this answer is too long; paste only the answer and its sources'});return undefined}
+   {const v=ai.validateGrowthAnswer(ai.parseAiAnswer(text,{}).answer,clean(b.query,120));if(v.status==='invalid'){res.status(400).json({success:false,error:label+': '+v.message});return undefined}}
    if(ai.otherPrompt(text)){res.status(400).json({success:false,error:label+': this is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here and paste that answer.'});return undefined}
   }
   if(list.length&&!clean(b.query,120)){res.status(400).json({success:false,error:'Enter the search term first: the AI prompt uses it exactly.'});return undefined}
@@ -515,7 +516,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   let answers=[];
   try{answers=await storage.listAiAnswers(pool,row.id)}catch(e){console.warn('[free-growth] AI answers unavailable',String(e&&e.code||'unknown'))}
   return {search_term:term,prompt:ai.directPrompt(term),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,
-   summary:ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row)})};
+   summary:ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row),query:term})};
  }
  // Once AI answers are pasted, the "AI not checked" limitation is replaced by the AI caveat.
  function withAiLimits(summary,aiPart){
@@ -611,7 +612,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(!text.trim())return res.status(400).json({success:false,error:'Paste the complete answer first'});
    if(text.length>ai.MAX_PASTE)return res.status(413).json({success:false,error:'This answer is too long; paste only the answer and its sources'});
    if(ai.otherPrompt(text))return res.status(400).json({success:false,error:'This is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here, paste it into a new chat with web search on, and paste that answer.'});
-   const parsed=ai.parseAiAnswer(text,{pageUrl:row.url});
+   const parsed=ai.parseAiAnswer(text,{pageUrl:row.url,query:searchTermOf(row)});
+   if(parsed.validation_status==='invalid')return res.status(400).json({success:false,error:parsed.error_message||'This is not an answer to the search term.'});
    await storage.saveAiAnswer(pool,{checkId:row.id,engine,rawText:text,parsed});
    const aiPart=await aiFor(row);
    res.json({success:true,engine,parsed:{sources:parsed.sources.length,resources_status:parsed.resources_status,verifiable:parsed.sources_verifiable,own_site_cited:parsed.own_site_cited,exact_page_cited:parsed.exact_page_cited,own_url_mentioned_not_cited:parsed.own_url_mentioned_not_cited},
