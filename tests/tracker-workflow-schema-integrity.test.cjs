@@ -24,10 +24,10 @@ test('shared Tracker workflow event tables are provisioned as one additive migra
       assert.match(m[1], new RegExp('\\b' + col + '\\b'), table + '.' + col);
       assert.match(fixture.slice(fixtureStart, fixture.indexOf(');', fixtureStart)), new RegExp('"' + col + '"'), 'Fixture ' + table + '.' + col);
     }
-    assert.match(m[1], /UNIQUE\\s*\\(/, 'Idempotency unique key ' + table);
-    assert.match(m[1], /REFERENCES public\\.tracker_clients\\(id\\)/, 'Client FK ' + table);
+    assert.ok(m[1].includes('UNIQUE (' ) || m[1].includes('UNIQUE('), 'Idempotency unique key ' + table);
+    assert.ok(m[1].includes('REFERENCES public.tracker_clients(id)'), 'Client FK ' + table);
   }
-  assert.match(migration, /REFERENCES public\\.tracker_pages\\(id\\)/);
+  assert.ok(migration.includes('REFERENCES public.tracker_pages(id)'));
 });
 test('existing tables are never silently considered compatible', () => {
   for (const [table, cols] of Object.entries(required)) {
