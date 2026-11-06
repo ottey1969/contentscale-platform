@@ -27,6 +27,8 @@ function ensureTables(pool){
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS invite_id BIGINT');
   // Optional writing for the visitor's selection: the last result and how many times it was used for this check.
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS written JSONB');
+  // Persist the visitor's editorial choices across refreshes and device changes.
+  await pool.query("ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS selected_item_ids JSONB NOT NULL DEFAULT '[]'::jsonb");
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS write_count INTEGER NOT NULL DEFAULT 0');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_since TIMESTAMPTZ');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_token TEXT');
@@ -129,13 +131,19 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,write_count,market,email,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,selected_item_ids,write_count,market,email,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
   await setStatus(pool,row.id,{status:'FAILED',error_code:'INTERRUPTED'});row.status='FAILED';row.error_code='INTERRUPTED';
  }
  return row;
+}
+
+// Selection IDs are checked against the saved research by the route, not trusted from the browser.
+async function saveSelection(pool,{checkId,itemIds}){
+ const row=(await pool.query("UPDATE growth_free_checks SET selected_item_ids=$2::jsonb WHERE id=$1 AND status='DONE' RETURNING selected_item_ids",[checkId,JSON.stringify(itemIds)])).rows[0];
+ return row?row.selected_item_ids:null;
 }
 
 // Counts one writing run and keeps its result; refuses when the limit is reached (atomic).
@@ -247,4 +255,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
