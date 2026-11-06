@@ -45,6 +45,17 @@ test('Pre-Write AI collection is one visible action, prompt stays behind the sce
       page.on('pageerror', error => errors.push(error.message));
       await page.goto('http://127.0.0.1:' + server.address().port + '/');
       await page.waitForSelector('#cs-research-ask-copy');
+      // Simulate the Tracker restoring an existing keyword through .value after
+      // the research UI initialized. The parent app does not emit an input event.
+      await page.evaluate(() => {
+        document.getElementById('pwbKeyword').value = 'seo content optimalisatie';
+      });
+      await page.waitForFunction(() => {
+        const status = document.querySelector('#cs-research-ask .cs-rp-status');
+        return status && status.textContent.includes('0 of 5 AI answers ready.');
+      }, null, {timeout: 5000});
+      assert.equal(await page.isDisabled('#cs-research-ask-copy'), false);
+
       assert.equal(await page.isVisible('#cs-research-tabs'), false, 'No two-tab choice');
       assert.equal(await page.isVisible('#cs-research-prompt-panel'), false, 'Internal prompt not exposed');
       assert.equal(await page.isVisible('#pwbAioText'), true, 'Answer fields remain available');

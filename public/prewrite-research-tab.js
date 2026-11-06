@@ -179,6 +179,21 @@
       else { var ok = false; try { ok = document.execCommand('copy'); } catch (e) {} done(ok); }
     });
     select(false); checkFields(); syncAsk(); render();
+    // The parent Tracker fills the Brief's keyword and existing answers programmatically
+    // after the modal has been installed. Setting input.value does not dispatch an input
+    // event. Refresh the visible guidance when that canonical form state changes.
+    var lastFormState = '';
+    function refreshFromForm() {
+      var modal = $('prewriteBriefModal');
+      if (modal && !modal.getClientRects().length) return;
+      var state = JSON.stringify(currentInputs());
+      if (state === lastFormState) return;
+      lastFormState = state;
+      checkFields(); syncAsk(); render();
+    }
+    refreshFromForm();
+    var formSync = setInterval(refreshFromForm, 400);
+    window.addEventListener('pagehide', function () { clearInterval(formSync); }, { once: true });
     return true;
   }
   function boot() {
