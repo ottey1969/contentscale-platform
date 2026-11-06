@@ -3802,6 +3802,36 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res, next) => {
 });
 
 // Start a subsequent improvement cycle without deleting any earlier baseline, event or HTML version.
+// End a Case Study: an explicit owner decision (Tracker owner token, typed confirmation). The measurement and the page
+// lock stop; nothing is deleted: baseline, content versions, events and the report stay, and the baseline trigger keeps
+// them unchangeable. The same URL cannot start a new Case Study afterwards (its history stays protected).
+app.post('/api/tracker-client/:token/pages/:pageId/case-study/end',async(req,res)=>{try{
+  if(String(req.body&&req.body.confirm||'')!=='END_CASE_STUDY')return res.status(400).json({success:false,error:'Confirm that you want to end the Case Study.'});
+  const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
+  if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+  await _ensureCaseStudySchema();
+  await pool.query('ALTER TABLE tracker_case_studies ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ').catch(()=>{});
+  await pool.query('ALTER TABLE tracker_case_studies ADD COLUMN IF NOT EXISTS ended_reason TEXT').catch(()=>{});
+  const pr=await pool.query('SELECT id,url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
+  if(!pr.rows.length)return res.status(404).json({success:false,error:'Page not found'});
+  const page=pr.rows[0],norm=_caseStudyNormUrl(page.url);
+  // The lock is found by page id (Growth) and by URL (the Tracker list): end every active Case Study that matches either.
+  const act=(await pool.query("SELECT id,tracker_page_id,canonical_url FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'",[cr.rows[0].id])).rows
+    .filter(x=>Number(x.tracker_page_id)===Number(page.id)||_caseStudyNormUrl(x.canonical_url)===norm);
+  if(!act.length)return res.status(404).json({success:false,error:'This page has no active Case Study.'});
+  const reason=String(req.body&&req.body.reason||'').replace(/[\u0000-\u001f]/g,' ').trim().slice(0,500)||null;
+  const ids=act.map(x=>x.id);
+  // One transaction: the status and its history event are written together or not at all.
+  const conn=await pool.connect();
+  try{
+    await conn.query('BEGIN');
+    await conn.query("UPDATE tracker_case_studies SET status='completed',ended_at=NOW(),ended_reason=$2 WHERE id=ANY($1::int[]) AND status='active'",[ids,reason]);
+    for(const id of ids)await conn.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data) VALUES($1,$2,'case_study_ended','tracker_owner',$3::jsonb)`,
+      [id,page.id,JSON.stringify({url:page.url,reason,ended_by:'tracker_owner',baseline_preserved:true,history_preserved:true,new_case_study_for_this_url:false})]);
+    await conn.query('COMMIT');
+  }catch(e){await conn.query('ROLLBACK').catch(()=>{});throw e;}finally{conn.release();}
+  res.json({success:true,ended:ids.length,message:'Case Study ended. The baseline, evidence and report are kept. Growth can now prepare a CMS package for this page; nothing is published automatically.'});
+}catch(e){console.error('[case-study-end]',e.message);res.status(500).json({success:false,error:'The Case Study could not be ended. Nothing was changed.'});}});
 app.post('/api/tracker-client/:token/pages/:pageId/case-study/new-revision',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
@@ -45721,6 +45751,16 @@ function _csEscH(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/
 function _csTier(p){ return !p?'#6b7280':p<=3?'#4ade80':p<=10?'#a3e635':p<=20?'#fbbf24':'#f87171'; }
 function _csNum(p){ return (Math.round(p*10)/10); }
 function _csDateH(t){ try{ var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }catch(e){ return ''; } }
+// End the Case Study of a page: owner decision, two confirmations. Nothing is deleted; the lock and the measurement stop.
+function endCaseStudy(pageId){
+  var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
+  if(!confirm('End the Case Study for '+(pg.url||'this page')+'?\\n\\n- The measurement and the page lock stop. Growth can then prepare a CMS package for this page.\\n- Nothing is deleted: the baseline, the evidence and the report stay saved and unchangeable.\\n- This cannot be undone, and this URL cannot start a new Case Study later.'))return;
+  var why=prompt('Why do you end it? (optional, saved with the Case Study history)','');if(why===null)return;
+  api('/pages/'+pageId+'/case-study/end','POST',{confirm:'END_CASE_STUDY',reason:why}).then(function(d){
+    if(!d||!d.success)throw new Error((d&&d.error)||'Could not end the Case Study');
+    alert(d.message||'Case Study ended.');if(typeof loadPages==='function')loadPages();
+  }).catch(function(e){alert(e.message||'Could not end the Case Study');});
+}
 function startCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
   if(pg.case_study_active&&!pg.case_study_fresh_cycle_initialized){
@@ -49562,6 +49602,7 @@ function renderPages() {
         : '')
       + (p.case_study_active ? (p.prepublication_checkpoint_saved?'<button disabled style="background:#052e16;border:1px solid #16a34a;border-radius:7px;color:#86efac;font-size:10px;padding:5px 10px;font-weight:800;" title="The earlier live HTML is preserved in Proof & History. Publish on the website and use Check current live.">\u2713 Live version saved</button>':((_evidenceCheckpointLock||_nextLockContentChanges)?'<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:800;">Live HTML locked — not needed</button>':'<button onclick="event.stopPropagation();savePrePublicationCheckpoint(' + p.id + ')" style="background:#422006;border:1px solid #f59e0b;border-radius:7px;color:#fde68a;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;">1 · Save current live HTML</button>')) : '')
       + (p.case_study_active && p.prepublication_checkpoint_saved && !isDone && (_nextActionCode==='CASE_PUBLISH_VERIFY'||_nextActionCode==='VERIFY_LIVE_PENDING') ? '<button onclick="event.stopPropagation();verifyCurrentBriefLive(' + p.id + ',this)" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#bbf7d0;cursor:pointer;font-size:10px;padding:5px 11px;font-weight:900;box-shadow:0 0 0 1px rgba(34,197,94,.12);" title="Fetch the current live URL and verify only the existing open Brief actions. No normal scan and no new Brief.">Check current live</button>' : '')
+      + (p.case_study_active ? '<button onclick="event.stopPropagation();endCaseStudy(' + p.id + ')" style="background:#1f0a0a;border:1px solid #b91c1c;border-radius:7px;color:#fca5a5;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:800;" title="Stop the protected Case Study for this page. Baseline, evidence and report stay saved.">End case study</button>' : '')
       + (p.case_study_active ? '<button onclick="openCaseStudy(' + p.id + ')" style="background:#082f49;border:1px solid #0284c7;border-radius:7px;color:#7dd3fc;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;" title="Open protected baseline and proof history">Proof &amp; History</button>' : '')
       + (p.case_study_active && isDone ? (function(){var ae=p.ai_manual_evidence;if(typeof ae==='string'){try{ae=JSON.parse(ae);}catch(e){ae={};}}var n=['google_aio','chatgpt','perplexity','claude','copilot'].filter(function(k){return ae&&_aiEvidenceIsVerified(ae[k]);}).length;return '<button data-tour="ai-recheck" onclick="event.stopPropagation();openAiEvidence('+p.id+')" style="background:'+(n===5?'#052e16':'#451a03')+';border:1px solid '+(n===5?'#16a34a':'#f59e0b')+';border-radius:7px;color:'+(n===5?'#86efac':'#fde68a')+';cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="A fresh manual five-engine check is required after every published revision">'+(n===5?'\\u2713 AI rechecked 5/5':'3 \\u00b7 Recheck AI '+n+'/5')+'</button>';})() : '')
       + '<button onclick="deletePage(' + p.id + ')" style="background:#0d1117;border:1px solid #ef4444;border-radius:7px;color:#f87171;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Delete page">\\ud83d\\uddd1</button>'
