@@ -1,4 +1,5 @@
 'use strict';
+const {noiseUrl,withoutTracking}=require('./growth-free/ai-answers.cjs');
 // Summarize persisted manual AI visibility observations. Never infer competitor gaps.
 function summarizeGrowthAiVisibility({page={},rows=[]}={}){
  const pid=Number(page.id),cid=Number(page.tracker_client_id);
@@ -14,7 +15,8 @@ function summarizeGrowthAiVisibility({page={},rows=[]}={}){
    byEngine.set(engine,{engine,cycle,verifiedAt,
     method:String(r.evidence_method||'unknown'),recommended:r.brand_recommended===true,
     domain_cited:r.domain_cited===true,exact_page_cited:r.exact_page_cited===true,
-    citation_urls:Array.isArray(r.citation_urls)?r.citation_urls.filter(s=>typeof s==='string'&&/^https:\/\//.test(s)):[]});
+    // Favicons and image links copied along from a chat window are not sources; tracking parameters are removed.
+    citation_urls:Array.isArray(r.citation_urls)?[...new Set(r.citation_urls.filter(s=>typeof s==='string'&&/^https:\/\//.test(s)&&!noiseUrl(s)).map(withoutTracking))]:[]});
   }
  }
  return {status:byEngine.size?'OBSERVATIONS_AVAILABLE':'NO_AI_OBSERVATIONS',

@@ -495,8 +495,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const fresh=answers.filter(a=>Date.now()-Date.parse(a.created_at)<=AI_MAX_AGE_DAYS*86400000);
   return {search_term:term,page_url:target,prompt:aiAnswers.directPrompt(term),engines:aiAnswers.ENGINES,max_paste:aiAnswers.MAX_PASTE,
    can_paste:v.canEdit===true,older_answers_not_counted:answers.length-fresh.length,max_age_days:AI_MAX_AGE_DAYS,
-   prior_checks:aiAnswers.summarizeAiAnswers(answers,{pageUrl:target,googleUrls}).engines.map(e=>({id:e.id,checked_at:e.checked_at||null})),
-   summary:aiAnswers.summarizeAiAnswers(fresh,{pageUrl:target,googleUrls})};
+   prior_checks:aiAnswers.summarizeAiAnswers(answers,{pageUrl:target,googleUrls,query:term}).engines.map(e=>({id:e.id,checked_at:e.checked_at||null})),
+   summary:aiAnswers.summarizeAiAnswers(fresh,{pageUrl:target,googleUrls,query:term})};
  }
  // The AI check before the research has finished: for the page's tracked keyword, optional, never running research.
  app.get('/api/tracker-client/:token/growth/ai-check',data,async(req,res)=>{
@@ -816,7 +816,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // The page the research targets (a destination on the same site), else the tracked page itself.
   const sameSite=u=>{try{return new URL(u).hostname===new URL(v.page.url).hostname}catch{return false}};
   b.page_url=sameSite(b.page_url)?String(b.page_url):v.page.url;
-  const parsed=aiAnswers.parseAiAnswer(text,{pageUrl:b.page_url});
+  const parsed=aiAnswers.parseAiAnswer(text,{pageUrl:b.page_url,query});
+  // Validation contract: an answer that is not an answer (the prompt itself, a conversation that knew the task, a
+  // placeholder) is not stored; the owner sees why. A topic warning does not block saving.
+  if(parsed.validation_status==='invalid')return no(400,'AI_ANSWER_INVALID_'+String(parsed.error_reason||'').toUpperCase(),parsed.error_message||'This is not an answer to the search term.');
   try{await saveAiAnswer({clientId:v.clientId,pageId:v.id,query,engine,rawText:text,parsed})}catch{return no(503,'AI_ANSWER_NOT_SAVED','The answer could not be saved. Please try again.')}
   // The updated AI check comes back directly, so the page never re-runs the (paid) Google research for it.
   const urls=(Array.isArray(b.google_urls)?b.google_urls:[]).map(String).filter(u=>/^https?:\/\//.test(u)).slice(0,20);

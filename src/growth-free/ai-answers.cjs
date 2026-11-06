@@ -61,12 +61,16 @@ function normUrl(u){
  try{const x=new URL(u);x.hash='';for(const k of ['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid'])x.searchParams.delete(k);
   return x.hostname.toLowerCase().replace(/^www\./,'')+(x.pathname.replace(/\/+$/,'')||'/')+(x.search||'')}catch{return ''}
 }
-// Links that are interface plumbing, not sources (same idea as the Tracker parser).
+// Links that are interface plumbing, not sources (same idea as the Tracker parser): maps and search links, the favicon
+// service and image hosts that chat apps copy along (google.com/s2/favicons, images.openai.com), and image files.
 function noiseUrl(u){
  const h=hostOf(u);let p='';try{p=new URL(u).pathname.toLowerCase()}catch{}
- return h==='maps.app.goo.gl'||((h==='google.com'||h.endsWith('.google.com'))&&(p.startsWith('/maps')||p==='/goto'||p.startsWith('/search')||p.startsWith('/searchviewer')))||
-  h.endsWith('gstatic.com')||h.endsWith('googleusercontent.com')||h==='support.google.com'||h==='accounts.google.com'||h==='gemini.google.com';
+ return h==='maps.app.goo.gl'||((h==='google.com'||h.endsWith('.google.com'))&&(p.startsWith('/maps')||p==='/goto'||p==='/search'||p.startsWith('/search/')||p.startsWith('/searchviewer')||p.startsWith('/s2/')))||
+  h.endsWith('gstatic.com')||h.endsWith('googleusercontent.com')||h==='support.google.com'||h==='accounts.google.com'||h==='gemini.google.com'||
+  h==='images.openai.com'||h.endsWith('.oaiusercontent.com')||h==='cdn.openai.com'||/\.(?:png|jpe?g|gif|webp|svg|ico|avif)$/.test(p);
 }
+const TRACKING_PARAMS=['utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','fbclid','msclkid','srsltid'];
+function withoutTracking(href){try{const x=new URL(href);TRACKING_PARAMS.forEach(k=>x.searchParams.delete(k));return x.href}catch{return href}}
 
 function extractUrls(text){
  const out=[],seen=new Set(),re=/https?:\/\/[^\s<>\][()"']+/gi;let m;
@@ -74,7 +78,7 @@ function extractUrls(text){
   const u=m[0].replace(/[.,;:!?*_]+$/,'');
   let href;try{const p=new URL(u);if(!/^https?:$/.test(p.protocol))continue;href=p.href}catch{continue}
   if(noiseUrl(href))continue;
-  const key=normUrl(href);if(key&&!seen.has(key)){seen.add(key);out.push(href)}
+  const key=normUrl(href);if(key&&!seen.has(key)){seen.add(key);out.push(withoutTracking(href))}
  }
  return out;
 }
@@ -92,8 +96,20 @@ function otherPrompt(raw){
  RESOURCES_HEADING.lastIndex=0;
  return OTHER_PROMPT_MARKS.filter(r=>r.test(text)).length>=2?'QUICK_SCAN_PROMPT':null;
 }
+// Validation contract, shared with the Pre-Write Brief (public/prewrite-ai-answer-research.js): an answer counts only when
+// it is an actual answer. INVALID (not stored on paste, never counted when read): this prompt or another research prompt
+// pasted back, an answer written in a conversation that knew the ContentScale task, a placeholder, the search term alone,
+// fewer than three words. An answer that shares no word with the search term still counts (synonyms), with a warning.
+const contract=require('../prewrite-ai-answer-research.cjs');
+const GROWTH_ECHO=['answer this exact user query as a real user would receive the answer','use the query exactly as written',
+ 'return only these two sections','do not add mentioned, recommended','final validation: answer the query','actually answer the query. do not explain these instructions'];
+function validateGrowthAnswer(answerText,query){
+ const low=String(answerText||'').toLowerCase();
+ if(GROWTH_ECHO.filter(m=>low.includes(m)).length>=2)return {valid:false,status:'invalid',reason:'prompt_echo',message:'This is the prompt itself, not the answer of the AI system. Paste the prompt into the AI system and paste its answer here.',warnings:[]};
+ return contract.validateAnswer(answerText,query);
+}
 // A URL mentioned in the answer text is never a citation.
-function parseAiAnswer(raw,{pageUrl}={}){
+function parseAiAnswer(raw,{pageUrl,query}={}){
  const text=cleanAiPaste(String(raw||'').slice(0,MAX_PASTE));
  let last=null,m;RESOURCES_HEADING.lastIndex=0;
  while((m=RESOURCES_HEADING.exec(text)))last={index:m.index,end:m.index+m[0].length};
@@ -120,16 +136,21 @@ function parseAiAnswer(raw,{pageUrl}={}){
   mentioned_urls_not_sources:mentioned,
   own_url_mentioned_not_cited:mentioned.some(isOwn),
   site_name_mentioned:name.length>=4&&new RegExp('\\b'+name.replace(/[^a-z0-9]/g,'.?')+'\\b','i').test(answer),
-  no_sources:sources.length===0
+  no_sources:sources.length===0,
+  ...(()=>{const v=validateGrowthAnswer(answer,query);return {validation_status:v.status,error_reason:v.reason||null,error_message:v.message||null,warnings:v.warnings||[]}})()
  };
 }
 
-function summarizeAiAnswers(rows,{pageUrl,googleUrls=[]}={}){
- // Stored answers are re-read with the current rules, so a parser fix also corrects older pastes.
- rows=rows.map(r=>r&&typeof r.raw_text==='string'?{...r,parsed:parseAiAnswer(r.raw_text,{pageUrl})}:r);
+function summarizeAiAnswers(rows,{pageUrl,googleUrls=[],query}={}){
+ // Stored answers are re-read with the current rules, so a parser fix also corrects older pastes. An answer that fails
+ // the validation contract is reported as INVALID with its reason and is not counted anywhere.
+ rows=rows.map(r=>r&&typeof r.raw_text==='string'?{...r,parsed:parseAiAnswer(r.raw_text,{pageUrl,query:query||r.query})}:r);
+ const invalidRows=rows.filter(r=>r&&r.parsed&&r.parsed.validation_status==='invalid');
+ const invalid=ENGINES.filter(e=>invalidRows.some(r=>r.engine===e.id)).map(e=>{const r=invalidRows.find(x=>x.engine===e.id);return {id:e.id,label:e.label,reason:r.parsed.error_reason,message:r.parsed.error_message,checked_at:r.created_at||null}});
+ rows=rows.filter(r=>!(r&&r.parsed&&r.parsed.validation_status==='invalid'));
  const byEngine=new Map(rows.map(r=>[r.engine,r]));
  const engines=ENGINES.map(e=>{const r=byEngine.get(e.id);const p=r&&r.parsed;
-  return {id:e.id,label:e.label,checked:!!p,sources:p?p.sources.length:0,own_site_cited:!!(p&&p.own_site_cited),
+  return {id:e.id,label:e.label,checked:!!p,invalid:invalid.some(x=>x.id===e.id)&&!p,topic_warning:!!(p&&(p.warnings||[]).includes('topic_unconfirmed')),sources:p?p.sources.length:0,own_site_cited:!!(p&&p.own_site_cited),
    resources_status:p?p.resources_status||'LISTED':null,verifiable:!!(p&&p.sources_verifiable!==false),
    own_url_mentioned_not_cited:!!(p&&p.own_url_mentioned_not_cited),
    exact_page_cited:!!(p&&p.exact_page_cited),site_name_mentioned:!!(p&&p.site_name_mentioned),checked_at:r?r.created_at||null:null}});
@@ -160,6 +181,9 @@ function summarizeAiAnswers(rows,{pageUrl,googleUrls=[]}={}){
    :'AI lists your website as a source, but a different page than the one checked.';
  }
  if(unverified.length&&n)explanation+=` ${unverified.map(e=>e.label).join(', ')}: no RESOURCES section, not verified.`;
+ const warned=checked.filter(e=>e.topic_warning);
+ if(invalid.length)steps.unshift(`Not counted: ${invalid.map(x=>x.label+' — '+x.message).join(' ')}`);
+ if(warned.length)steps.push(`Check the topic of ${warned.map(e=>e.label).join(', ')}: ${warned.length===1?'this answer shares':'these answers share'} no word with “${String(query||'').trim()}”. ${warned.length===1?'It still counts':'They still count'} (synonyms are fine); remove ${warned.length===1?'it':'them'} if ${warned.length===1?'it answers':'they answer'} a different question.`);
  if(checked.length){
   if(unverified.length)steps.push(`Paste the answer of ${unverified.map(e=>e.label).join(', ')} again from a new chat, using the prompt unchanged, so the answer ends with a RESOURCES list.`);
   if(topSites.length)steps.push(`Open the sites AI cites most (${topSites.slice(0,3).map(t=>t.site).join(', ')}) and compare what they answer directly with your page.`);
@@ -167,9 +191,9 @@ function summarizeAiAnswers(rows,{pageUrl,googleUrls=[]}={}){
   if(cited.length&&!exact.length)steps.push('AI prefers another page of your site for this search. Check whether that page or this one should answer it, so they do not compete.');
   if(checked.length<ENGINES.length)steps.push(`Check the remaining AI systems too (${engines.filter(e=>!e.checked).map(e=>e.label).join(', ')}): answers differ per system.`);
  }
- return {checked:checked.length,verifiable:n,unverified:unverified.length,total:ENGINES.length,engines,cited_by:cited.length,exact_page_by:exact.length,
+ return {checked:checked.length,verifiable:n,unverified:unverified.length,total:ENGINES.length,invalid:invalid.length,invalid_engines:invalid,topic_warnings:warned.map(e=>e.label),engines,cited_by:cited.length,exact_page_by:exact.length,
   top_cited_sites:topSites,also_in_google:both,headline,explanation,steps,
   caveat:'AI answers differ per user, location, account and time. This shows only the answers you pasted, at the moment you ran them.'};
 }
 
-module.exports={otherPrompt,ENGINES,ENGINE_IDS,MAX_PASTE,DIRECT_PROMPT_LINES,QUERY_SLOT,directPrompt,cleanAiPaste,parseAiAnswer,summarizeAiAnswers,rootOf};
+module.exports={validateGrowthAnswer,noiseUrl,withoutTracking,otherPrompt,ENGINES,ENGINE_IDS,MAX_PASTE,DIRECT_PROMPT_LINES,QUERY_SLOT,directPrompt,cleanAiPaste,parseAiAnswer,summarizeAiAnswers,rootOf};
