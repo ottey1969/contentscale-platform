@@ -46996,7 +46996,13 @@ function _pwbApplyActionState(){
   // 1) Fresh analysis is only actionable when there is no current Brief or the user intentionally
   // changed an input. It must never compete visually with the next step of an existing workflow.
   if(fresh){
-    if(hasBrief&&!stale){
+    if(hasBrief&&!stale&&_pwbCurrentNotPassed&&!diag){
+      // NOT PASSED without a diagnostic to complete (a Brief from before diagnostics were kept for normal Trackers, or a
+      // diagnostic that expired): never a dead end. A fresh analysis is the only way forward; say what it costs.
+      fresh.disabled=!aiInputReady;
+      fresh.textContent=!aiInputReady?'Add required AI evidence first':'Analyse again · no diagnostic to complete';
+      fresh.title='There is no saved diagnostic for this NOT PASSED Brief, so missing-only completion is not possible. A fresh analysis runs the research again and may use paid API calls; a NOT PASSED result is not counted.';
+    }else if(hasBrief&&!stale){
       fresh.disabled=true;
       fresh.textContent=_pwbCurrentNotPassed?'Fresh re-analysis locked · complete missing first':'Re-analysis not needed · current Brief loaded';
       fresh.title='This Brief already has research. Change an input only if you intentionally want a fresh paid research run.';
@@ -47114,6 +47120,7 @@ function _pwbApplyActionState(){
     else if(!hasBrief)msg='<strong style="color:#93c5fd;">NEXT STEP:</strong> Analyse & create the Pre-Write Brief.';
     else if(!aiInputReady)msg='<strong style="color:#fca5a5;">RESEARCH INCOMPLETE:</strong> Add '+aiUi.hard_missing.map(function(x){return x.label;}).join(', ')+'. Existing SERP/evidence research stays intact; do not start over.';
     else if(stale)msg='<strong style="color:#fbbf24;">NEXT STEP:</strong> Inputs changed. Create a new Brief before completing, QA, approving, copying or sharing.';
+    else if(_pwbCurrentNotPassed&&!diag)msg='<strong style="color:#fbbf24;">NEXT STEP:</strong> Analyse again. This NOT PASSED Brief has no saved diagnostic, so missing-only completion is not possible; a NOT PASSED result is not counted.';
     else if(_pwbCurrentNotPassed)msg='<strong style="color:#fbbf24;">NEXT STEP:</strong> Complete missing only. Existing research is reused; do not start a fresh analysis.';
     else if(!pubReady&&metaBlocked)msg='<strong style="color:#fca5a5;">NEXT STEP:</strong> Edit title & description in the SEO Package. Title max 60; description 140-160 (ideal 150-159). No research or Gemini is needed.';
     else if(!pubReady&&!qaPersisted)msg='<strong style="color:#fca5a5;">NEXT STEP:</strong> Publication QA has a blocker. Run Final QA; it uses 0 research and 0 Gemini.';
@@ -47296,6 +47303,8 @@ async function generatePrewriteBrief() {
     clearInterval(_pwbStepTimer); clearInterval(_pwbDotsTimer);
     btn.disabled = false;
     var _notPassed=!!(data&&data.brief&&String(data.quality_status||data.stage||'')==='not_passed') || !!(data&&data.brief&&data.stage==='quality_gate'&&data.success===false);
+    // The server keeps the NOT PASSED diagnostic of a normal Tracker request too; remember it for Complete missing only.
+    if(_notPassed&&data.diagnostic_job_id&&!_pwbCompletionMode)_pwbRememberDiagnosticJob(String(data.diagnostic_job_id),kw);
     if (!data || !data.brief) {
       btn.textContent='Analyse & create Pre-Write Brief';
       stat.textContent = '\u274c ' + ((data && data.error) || 'Could not generate a brief. Try again.');
@@ -47680,6 +47689,11 @@ function renderPrewriteBrief(b) {
       b.evidence.official_sources.forEach(function(x){ if(x) lines.push('- ' + (typeof x==='string'?x:(x.name||x.url||x.value||''))); });
       lines.push('');
     }
+    if (Array.isArray(b.ai_source_leads) && b.ai_source_leads.length) {
+      lines.push('SOURCE LEADS FROM AI ANSWERS — NOT VERIFIED, CHECK BEFORE USE');
+      b.ai_source_leads.forEach(function(x){ if(x&&x.url) lines.push('- ' + x.url); });
+      lines.push('');
+    }
     if (Array.isArray(b.evidence.statistics) && b.evidence.statistics.length) {
       lines.push(_PLX.statsH.toUpperCase());
       b.evidence.statistics.forEach(function(x){ if(!x)return; if(typeof x==='string'){lines.push('- '+x);return;} var src=x.best_source_url||x.source_url||''; lines.push('- '+(x.evidence_text||x.value||x.name||'')+' ['+(x.quality_stage||'source_verified')+' · '+(x.authority_class||'ungraded')+']'+(src?' | '+src:'')); });
@@ -48014,7 +48028,9 @@ function renderPrewriteBrief(b) {
     if(Array.isArray(_ev.expert_insights)&&_ev.expert_insights.length){
       _insightHtml='<div style="margin-bottom:8px;">'+_pwxHead('Verified attributed expert insights · paraphrase only')+_ev.expert_insights.map(function(q){if(!q||!q.insight||!q.person)return '';var u=String(q.source_url||''),valid=u.toLowerCase().indexOf('https://')===0;return '<div style="margin:5px 0;padding:7px 10px;border-left:3px solid #38bdf8;background:#071521;color:#dbeafe;font-size:11px;line-height:1.55;">'+esc(q.insight)+'<div style="margin-top:4px;color:#93c5fd;font-size:10.5px;">Paraphrase attributed to '+esc(q.person)+(q.role?' · '+esc(q.role):'')+' · '+esc(q.authority_class||'ungraded')+(valid?' · <a href="'+esc(u)+'" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;">verified source</a>':'')+'</div></div>';}).join('')+'</div>';
     }
-    var _evH = _pwxList(_PLX.srcH, _ev.official_sources) + _statHtml + _quoteHtml + _insightHtml + _pwxList(_PLX.trustH, _ev.trust_signals)
+    var _leadsH={nl:'Bronnen uit AI-antwoorden \u2014 niet gecontroleerd, eerst verifiëren',en:'Source leads from AI answers \u2014 not verified, check before use',de:'Quellenhinweise aus KI-Antworten \u2014 nicht geprüft, vor Verwendung prüfen',es:'Fuentes citadas en respuestas de IA \u2014 sin verificar, compruébalas antes de usarlas',fr:'Sources citées dans les réponses IA \u2014 non vérifiées, à contrôler avant usage',pt:'Fontes citadas em respostas de IA \u2014 não verificadas, confirme antes de usar',it:'Fonti citate nelle risposte IA \u2014 non verificate, controllale prima dell\u2019uso'}[(b&&b.language?String(b.language).slice(0,2).toLowerCase():'en')]||'Source leads from AI answers \u2014 not verified, check before use';
+    var _leadsHtml=Array.isArray(b.ai_source_leads)&&b.ai_source_leads.length?_pwxList(_leadsH,b.ai_source_leads.map(function(x){return x&&x.url?x.url:'';}).filter(Boolean)):'';
+    var _evH = _pwxList(_PLX.srcH, _ev.official_sources) + _leadsHtml + _statHtml + _quoteHtml + _insightHtml + _pwxList(_PLX.trustH, _ev.trust_signals)
       + (_ev.experience_to_include ? '<div style="margin-bottom:4px;">' + _pwxHead(_PLX.expH) + '<div style="font-size:11.5px;color:#cbd5e1;line-height:1.55;">' + esc(_ev.experience_to_include) + '</div></div>' : '');
     if (_evH) html += '<div style="margin-bottom:12px;background:#0f1e14;border:1px solid #14532d;border-radius:8px;padding:10px 12px;">' + _pwxHead(_PLX.evidenceH) + _evH + '</div>';
   }
@@ -59803,7 +59819,8 @@ function _pwbReadiness(b) {
     definitive_outline: !!_outlineSynced,
     ai_answer: !!(b.ai_answer && _s(b.ai_answer.direct_answer) && Array.isArray(b.ai_answer.key_takeaways) && b.ai_answer.key_takeaways.filter(_s).length>=3),
     quick_facts: !!(Array.isArray(b.quick_facts) && b.quick_facts.filter(x=>x&&_s(x.label)&&_s(x.value)).length>=3),
-    entity_strategy: !!(b.entity_strategy && Array.isArray(b.entity_strategy.primary) && b.entity_strategy.primary.filter(_s).length>=2),
+    // One core entity is normal for a page; require at least one core entity and two entities in core + secondary.
+    entity_strategy: !!(b.entity_strategy && Array.isArray(b.entity_strategy.primary) && b.entity_strategy.primary.filter(_s).length>=1 && (b.entity_strategy.primary.filter(_s).length+(Array.isArray(b.entity_strategy.secondary)?b.entity_strategy.secondary.filter(_s).length:0))>=2),
     entity_relationships: !!(b.entity_strategy && Array.isArray(b.entity_strategy.relationships) && b.entity_strategy.relationships.filter(x=>x&&_s(x.subject)&&_s(x.relation)&&_s(x.object)).length>=2),
     evidence: !!(b.evidence && Array.isArray(b.evidence.trust_signals) && b.evidence.trust_signals.filter(_s).length>=2 && _s(b.evidence.experience_to_include)),
     official_sources: !!(b.evidence && Array.isArray(b.evidence.official_sources) && b.evidence.official_sources.filter(x=>typeof x==='string'?_s(x):!!(x&&(_s(x.url)||_s(x.value)||_s(x.name)))).length>=2),
@@ -59852,6 +59869,20 @@ function _pwbReadiness(b) {
 // Neon or an upstream provider is slow. Heavy work starts only after res.end().
 let _pwbAsyncTableReady = false;
 const _pwbBootstrapJobs = new Map();
+// A normal Tracker request runs synchronously. Keep its NOT PASSED diagnostic as a job row, exactly like a Network job,
+// so "Complete missing only" can reuse the research instead of leaving the owner without a next step. A background job
+// run already writes its own row. The request is stored without the optional HTML fallback.
+async function _pwbRetainSyncDiagnostic(req,client,payload){
+  if(String(req&&req.query&&req.query._pwbBackground||'')==='1'||!client||!client.id)return null;
+  try{
+    await _ensurePwbAsyncJobsTable();
+    const id=crypto.randomUUID(),body=Object.assign({},req.body||{});
+    delete body.existingSiteHtml;delete body.completionFromJobId;delete body.completionMode;
+    const placement=Number(req.query&&req.query.networkPlacement||0)||null;
+    await pool.query(`INSERT INTO prewrite_async_jobs(id,client_id,network_placement_id,status,stage,request_json,error_json,completed_at) VALUES($1,$2,$3,'failed','quality_gate',$4::jsonb,$5::jsonb,NOW())`,[id,client.id,placement,JSON.stringify(body),JSON.stringify(payload)]);
+    return id;
+  }catch(e){console.warn('[prewrite] NOT PASSED diagnostic could not be retained:',e&&e.message);return null;}
+}
 async function _ensurePwbAsyncJobsTable(){
   if(_pwbAsyncTableReady) return;
   await pool.query(`
@@ -60452,10 +60483,9 @@ async function _handlePrewriteBriefGeneration(req, res) {
       } catch(e) {}
     };
     serpUrls.forEach(r=>_pwbAddExternal(r.url,{title:r.title,snippet:r.snippet,source_type:'serp'}));
-    Object.keys(_manualAi).forEach(k=>{
-      const urls=(String(_manualAi[k]||'').match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]);
-      urls.forEach(u=>_pwbAddExternal(u,{source_type:'ai_'+k}));
-    });
+    // URLs inside pasted AI answers are leads, never verified sources: they stay out of the external whitelist and out of
+    // official sources, and are kept separately (tracking parameters removed) for the writer to verify.
+    const _pwbAiSourceLeads=_prewriteBriefResearch.aiSourceLeads(_manualAi);
     if (serperKey) {
       try {
         const _ec=new AbortController(); const _ect=setTimeout(()=>_ec.abort(),12000);
@@ -60925,7 +60955,7 @@ Rules: direct answers 40-60 words. Answer EVERY REAL PAA supplied above as {q,a}
           if(!_arrObjects(b.page_blueprint,5,['h2','purpose']))m.push('page_blueprint');
           if(!b.ai_answer||!_usable(b.ai_answer.direct_answer)||!Array.isArray(b.ai_answer.key_takeaways)||b.ai_answer.key_takeaways.filter(_usable).length<3)m.push('ai_answer');
           if(!_arrObjects(b.quick_facts,3,['label','value']))m.push('quick_facts');
-          if(!b.entity_strategy||!Array.isArray(b.entity_strategy.primary)||b.entity_strategy.primary.filter(_usable).length<2||!_arrObjects(b.entity_strategy.relationships,2,['subject','relation','object']))m.push('entity_strategy');
+          if(!b.entity_strategy||!Array.isArray(b.entity_strategy.primary)||b.entity_strategy.primary.filter(_usable).length<1||(b.entity_strategy.primary.filter(_usable).length+(Array.isArray(b.entity_strategy.secondary)?b.entity_strategy.secondary.filter(_usable).length:0))<2||!_arrObjects(b.entity_strategy.relationships,2,['subject','relation','object']))m.push('entity_strategy');
           if(!b.evidence||!Array.isArray(b.evidence.official_sources)||b.evidence.official_sources.filter(_usable).length<2||!Array.isArray(b.evidence.trust_signals)||b.evidence.trust_signals.filter(_usable).length<2||!_usable(b.evidence.experience_to_include))m.push('evidence');
           if(!b.balance||!Array.isArray(b.balance.limitations)||b.balance.limitations.filter(_usable).length<2||!_arrObjects(b.balance.comparisons,1,['a','b','why_it_matters']))m.push('balance');
           if(!_arrObjects(b.use_cases,2,['audience','scenario','benefit']))m.push('use_cases');
@@ -61293,6 +61323,8 @@ ${claimsBlock.slice(0,2400)}`;
       if(x&&typeof x==='object'){const n=String(x.name||x.source_name||x.title||'').trim(),u=String(x.url||x.exact_url||x.value||'').trim();return [n,u].filter(Boolean).join(' — ');}
       return '';
     }).filter(Boolean);
+    brief.evidence.official_sources=_prewriteBriefResearch.officialSourcesWithoutAiLeads(brief.evidence.official_sources,_pwbAiSourceLeads,(_pwbExternalCandidates||[]).map(function(x){return x.exact_url;}));
+    brief.ai_source_leads=_pwbAiSourceLeads;
     // E-E-A-T safety: "experience_to_include" is an instruction to the writer, never proof that
     // the author/client actually achieved a result. Rewrite suspicious implied case-study claims
     // into an explicit verify-first instruction rather than letting the model manufacture experience.
@@ -61864,7 +61896,10 @@ ${sourceText}`;
       const _outlineIssueText=_missingFinal.includes('definitive_outline')&&_outlineWhy&&Array.isArray(_outlineWhy.issues)&&_outlineWhy.issues.length?' Outline reason: '+_outlineWhy.issues.join(', ')+'.':'';
       const _aiWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.ai_evidence||{},_intWhy=brief.ai_quality_check&&brief.ai_quality_check.details&&brief.ai_quality_check.details.internal_destination||{};
       const _integrityText=(_missingFinal.includes('ai_evidence_5of5')?' AI research incomplete: '+Number(_aiWhy.checked||0)+'/5 checked; missing '+(Array.isArray(_aiWhy.missing)?_aiWhy.missing.join(', '):'AI evidence')+'.':'')+(_missingFinal.includes('internal_destination')?' Internal destination required for publisher domain '+String(_intWhy.target_domain||'')+'.':'');
-      return res.status(422).json({success:false,stage:_missingFinal.includes('ai_evidence_5of5')?'ai_evidence_gate':'quality_gate',quality_status:'not_passed',retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research completed. The Brief is shown as NOT PASSED because it did not meet the publication-quality gate. It was not saved as an approved Prewrite Brief and was not counted. A diagnostic preview is retained in this job.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':'')+_integrityText+_outlineIssueText,brief:brief,generation_usage:brief.generation_usage||null,search_intent:brief.search_intent||null,region:region||'us',competitors_scraped:(compScrapes||[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim().length>=250;}).length,diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check,ai_evidence:_aiWhy,internal_destination:_intWhy,outline:_outlineWhy||null,generation_usage:brief.generation_usage||null}});
+      const _pwbNotPassedPayload={success:false,stage:_missingFinal.includes('ai_evidence_5of5')?'ai_evidence_gate':'quality_gate',quality_status:'not_passed',retryable:true,can_generate:false,saved:false,counted:false,diagnostic_retained:true,error:'Research completed. The Brief is shown as NOT PASSED because it did not meet the publication-quality gate. It was not saved as an approved Prewrite Brief and was not counted. A diagnostic preview is retained in this job.'+(_missingFinal.length?' Missing: '+_missingFinal.join(', ')+'.':'')+_integrityText+_outlineIssueText,brief:brief,generation_usage:brief.generation_usage||null,search_intent:brief.search_intent||null,region:region||'us',competitors_scraped:(compScrapes||[]).filter(function(x){return x&&typeof x.text==='string'&&x.text.trim().length>=250;}).length,diagnostic:{readiness_score:brief.ai_quality_check.readiness_score,missing:_missingFinal,pre_normalization_missing:_pwbPreNormalizationMissing,checks:brief.ai_quality_check,ai_evidence:_aiWhy,internal_destination:_intWhy,outline:_outlineWhy||null,generation_usage:brief.generation_usage||null}};
+      const _pwbDiagJob=await _pwbRetainSyncDiagnostic(req,client,_pwbNotPassedPayload);
+      if(_pwbDiagJob){_pwbNotPassedPayload.job_id=_pwbDiagJob;_pwbNotPassedPayload.diagnostic_job_id=_pwbDiagJob;}
+      return res.status(422).json(_pwbNotPassedPayload);
     }
 
     // v492: persistence + allowance consumption are one transaction. A Brief is counted only

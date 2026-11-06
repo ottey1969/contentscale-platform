@@ -57,6 +57,18 @@
     'produce: direct_answer', 'source_verification_tasks', 'fact_check_before_publishing', 'distinctive_expert_insights',
     'pre-publication', 'manual input is primary', 'never simulate another ai system', 'return only compact valid json',
     'do not claim that any answer or source establishes', 'research the five answers to the target query'];
+  // Context contamination: the answer names ContentScale's own workflow, so it was written in a conversation that knew
+  // the task (a chat with memory or earlier context), not as a neutral answer to the search query. Product terms only;
+  // they appear in that form whatever the language of the answer.
+  var CONTEXT_MARKERS = ['pre-write brief', 'prewrite brief', 'pre-write-brief', 'ai answer inputs', 'copy search question', 'answer inputs-veld', 'answer inputs field'];
+  // A workflow term that is part of the search query itself (someone researching "pre-write brief") is not contamination.
+  function markerReason(low, query) {
+    var ql = fold(query || '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+    var hits = ECHO_MARKERS.filter(function (m) { return low.indexOf(m) >= 0; }).length;
+    if (hits >= 2 || low.indexOf(OBJECTIVE.toLowerCase()) >= 0 || low.indexOf(MISSION.toLowerCase().slice(0, 60)) >= 0) return 'prompt_echo';
+    if (CONTEXT_MARKERS.some(function (m) { return low.indexOf(m) >= 0 && (!ql || ql.indexOf(fold(m).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()) < 0); })) return 'context_contaminated';
+    return null;
+  }
   var PLACEHOLDERS = [/^paste the (actual|real)\b/i, /^\[?target query\b/i, /^(n\/?a|none|not checked|todo|tbd|-+|\.+|\?+)$/i, /lorem ipsum/i];
   var REASONS = {
     prompt_echo: 'This is the research instruction (or a reply to it), not an answer to the search query. Ask the AI system the search query itself and paste its answer.',
@@ -64,6 +76,7 @@
     query_only: 'This is only the search query, not the answer to it.',
     too_short: 'Too short to be an AI answer (fewer than three words).',
     source_not_chosen: 'Choose where this Google answer comes from: Google AI Overview or Gemini.',
+    context_contaminated: 'This answer refers to ContentScale\'s own workflow (Pre-Write Brief, AI Answer Inputs), so it was written in a conversation that knew the task, not as a neutral answer to the search query. Ask the query in a new, empty conversation (private window, no memory or earlier chats) and paste that answer.',
     source_conflict: '"No AI Overview shown" is selected, but there is text in the field. Choose Google AI Overview or Gemini, or clear the text.'
   };
   var TOPIC_WARNING = 'This answer shares no word with the search query. It still counts; check that it answers the query (synonyms are fine).';
@@ -73,9 +86,8 @@
   function validateAnswer(answer, query) {
     var a = cleanText(answer);
     if (!a) return { valid: false, status: 'not_checked', reason: null, message: null, warnings: [] };
-    var low = a.toLowerCase(), hits = ECHO_MARKERS.filter(function (m) { return low.indexOf(m) >= 0; }).length;
-    var reason = null, warnings = [];
-    if (hits >= 2 || low.indexOf(OBJECTIVE.toLowerCase()) >= 0 || low.indexOf(MISSION.toLowerCase().slice(0, 60)) >= 0) reason = 'prompt_echo';
+    var low = a.toLowerCase(), reason = markerReason(low, query), warnings = [];
+    if (reason) { /* prompt echo or context contamination */ }
     else if (PLACEHOLDERS.some(function (re) { return re.test(a); })) reason = 'placeholder';
     else if (query && words(a).join(' ') === words(query).join(' ')) reason = 'query_only';
     else if (words(a).length < 3) reason = 'too_short';
@@ -182,6 +194,12 @@
     r.observations = r.observations.map(function (o) {
       if (!o) return o;
       var c = Object.assign({}, o);
+      // A v3 answer was validated in full when it was made; the marker checks (echo, contamination) are re-applied to its
+      // excerpt, because answers saved before a marker existed may contain one.
+      var mr = c.checked && c.validation_status === 'valid' ? markerReason(String(c.answer_excerpt || '').toLowerCase(), r.query) : null;
+      if (mr) c = Object.assign(c, { checked: false, validation_status: 'invalid', error_reason: mr, error_message: REASONS[mr],
+        rejected_preview: String(c.answer_excerpt || '').slice(0, 160), answer_excerpt: null, answer_truncated: false, source_urls: [], warnings: [], topic_match: null,
+        editorial_use: 'Invalid: not an answer to the target query. Never use it as evidence; ask the AI system the query itself.' });
       if (c.checked && c.validation_status !== 'valid') {
         var v = validateAnswer(c.answer_excerpt || '', r.query);
         if (!v.valid) c = Object.assign(c, { checked: false, validation_status: 'invalid', error_reason: v.reason, error_message: v.message,

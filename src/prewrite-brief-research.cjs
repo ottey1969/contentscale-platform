@@ -92,6 +92,34 @@ function refreshAfterMissingOnly(brief, { query, language, region, rejected } = 
   return brief;
 }
 
+// URLs inside pasted AI answers are source leads: never official or verified sources. Tracking parameters (utm_*, gclid,
+// fbclid and similar) are removed so the same page is recognised and no tracking reaches the writer.
+const TRACKING = /^(utm_[a-z]+|gclid|fbclid|msclkid|mc_[a-z]+|igshid|ref_src|srsltid)$/i;
+function stripTracking(u) {
+  try { const x = new URL(String(u || '').trim().replace(/[)\]>,.;]+$/, '')); if (!/^https?:$/.test(x.protocol)) return null;
+    [...x.searchParams.keys()].forEach(k => { if (TRACKING.test(k)) x.searchParams.delete(k); }); x.hash = ''; return x.toString(); } catch (e) { return null; }
+}
+function aiSourceLeads(manualAi) {
+  const out = [], seen = new Set();
+  for (const k of ENGINE_KEYS) {
+    const urls = String(manualAi && manualAi[k] || '').match(/https?:\/\/[^\s<>\]\[()"'`]+/gi) || [];
+    for (const u of urls) { const c = stripTracking(u); if (c && !seen.has(c)) { seen.add(c); out.push({ url: c, system: k, status: 'not_verified', note: 'Mentioned in a pasted AI answer. Verify the page before citing it.' }); } }
+  }
+  return out.slice(0, 30);
+}
+// Official sources: an entry whose URL is only known from an AI answer is removed (it stays in ai_source_leads); an entry
+// whose URL was also found by the research itself (search results, verified pages) stays, with tracking removed.
+function officialSourcesWithoutAiLeads(list, leads, researchUrls) {
+  const leadSet = new Set((leads || []).map(x => x.url)), research = new Set((researchUrls || []).map(stripTracking).filter(Boolean));
+  return (Array.isArray(list) ? list : []).map(entry => {
+    const text = String(entry || ''), m = text.match(/https?:\/\/[^\s<>\]\[()"'`]+/i);
+    if (!m) return text;
+    const clean = stripTracking(m[0]);
+    if (clean && leadSet.has(clean) && !research.has(clean)) return null;
+    return clean ? text.replace(m[0], clean) : text;
+  }).filter(Boolean);
+}
+
 // Script tags for the Tracker page head. public/ is served with a one-year cache, so each URL carries a content
 // version: a changed prompt builder or tab reaches returning browsers. Computed once, when the server starts.
 let _tags = null;
@@ -115,4 +143,4 @@ function scriptTags() {
   return _tags;
 }
 
-module.exports = { ENGINE_KEYS, validateAnswer, validateGoogle, googleSourceOf, googleEvidence, screenManualAnswers, isValidAnswer, researchForRequest, attachToBrief, refreshAfterMissingOnly, scriptVersion, scriptTags };
+module.exports = { ENGINE_KEYS, stripTracking, aiSourceLeads, officialSourcesWithoutAiLeads, validateAnswer, validateGoogle, googleSourceOf, googleEvidence, screenManualAnswers, isValidAnswer, researchForRequest, attachToBrief, refreshAfterMissingOnly, scriptVersion, scriptTags };

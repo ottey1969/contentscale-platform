@@ -13,7 +13,7 @@ const TEST_BRIEF = { test_stub: 'TEST reply from the e2e Gemini stub; not a real
   definitive_outline: H2.map(h => ({ h2: h, purpose: 'TEST purpose', cover: ['TEST'] })), recommended_structure: { must_have_h2s: H2 },
   ai_answer: { direct_answer: 'TEST', key_takeaways: ['TEST a', 'TEST b', 'TEST c'] }, quick_facts: [1, 2, 3].map(i => ({ label: 'TEST ' + i, value: 'TEST value' })),
   entity_strategy: { primary: ['TEST e1', 'TEST e2'], relationships: [{ subject: 'TEST s', relation: 'TEST r', object: 'TEST o' }, { subject: 'TEST s2', relation: 'TEST r2', object: 'TEST o2' }] },
-  evidence: { trust_signals: ['TEST t1', 'TEST t2'], experience_to_include: 'TEST x', official_sources: ['https://example.org/a', 'https://example.org/b'] },
+  evidence: { trust_signals: ['TEST t1', 'TEST t2'], experience_to_include: 'TEST x', official_sources: ['https://example.org/a', 'https://example.org/b', 'TEST AI-only lead — https://example.com/ai-only-lead?utm_source=chatgpt.com'] },
   balance: { limitations: ['TEST limitation'] }, use_cases: [1, 2].map(i => ({ audience: 'TEST audience ' + i, scenario: 'TEST scenario', benefit: 'TEST benefit' })),
   conclusion: { recap: 'TEST recap', recommendation: 'TEST recommendation' }, action_plan: [1, 2, 3].map(i => ({ step: i, action: 'TEST action ' + i })) };
 globalThis.fetch = async function (url, init) {
