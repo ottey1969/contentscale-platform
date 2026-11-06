@@ -41,6 +41,8 @@ function ensureTables(pool){
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_attempts INTEGER NOT NULL DEFAULT 0');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_token TEXT');
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_opt_out_at TIMESTAMPTZ');
+  // The domain the visitor used (one of this app's domains), so the e-mail links open on the same domain.
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_base TEXT');
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
@@ -186,15 +188,15 @@ async function forgetEmail(pool,email){
 }
 
 // The publication date and the reminder. A changed date moves the reminder and sends it again; no reminder = cleared.
-async function setPublication(pool,{checkId,publishedOn,dueAt}){
+async function setPublication(pool,{checkId,publishedOn,dueAt,base=null}){
  return (await pool.query(`UPDATE growth_free_checks SET
     reminder_sent_at=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_sent_at ELSE NULL END,
     reminder_attempts=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_attempts ELSE 0 END,
-    published_on=$2::date,reminder_due_at=$3::timestamptz,reminder_token=COALESCE(reminder_token,$4),reminder_opt_out_at=CASE WHEN $3::timestamptz IS NULL THEN reminder_opt_out_at ELSE NULL END
-   WHERE id=$1 RETURNING published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_token,email`,[checkId,publishedOn||null,dueAt||null,token(18)])).rows[0]||null;
+    published_on=$2::date,reminder_due_at=$3::timestamptz,reminder_token=COALESCE(reminder_token,$4),reminder_opt_out_at=CASE WHEN $3::timestamptz IS NULL THEN reminder_opt_out_at ELSE NULL END,reminder_base=COALESCE($5,reminder_base)
+   WHERE id=$1 RETURNING published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base])).rows[0]||null;
 }
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
- return (await pool.query(`SELECT id,public_id,access_key,email,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token FROM growth_free_checks
+ return (await pool.query(`SELECT id,public_id,access_key,email,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token,reminder_base FROM growth_free_checks
    WHERE reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 AND status='DONE' ORDER BY reminder_due_at LIMIT $2`,[now,limit])).rows;
 }
 async function markReminder(pool,{id,sent}){
