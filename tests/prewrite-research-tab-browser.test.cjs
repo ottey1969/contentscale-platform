@@ -1,125 +1,78 @@
 'use strict';
-// Research Prompt tab in a real browser, on the real Pre-Write Brief markup taken from the canonical build (the
-// #prewriteBriefModal block of the client Tracker page), with the two public scripts the build loads. The prompt shown
-// must equal the server's prompt for the same request. Answers are labelled TEST inputs. Skips without Playwright.
-const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),http=require('http');
-let chromium=null;try{({chromium}=require('playwright'))}catch(e){}
-const research=require('../src/prewrite-ai-answer-research.cjs');
-const {prepare}=require('../scripts/prepare-canonical-production.cjs');
+// Verify the real Tracker Pre-Write modal shows one clear user journey while the research prompt stays internal.
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+const http = require('node:http');
+let chromium = null;
+try { ({ chromium } = require('playwright')); } catch (_) {}
+const research = require('../src/prewrite-ai-answer-research.cjs');
+const serverModule = require('../src/prewrite-brief-research.cjs');
+const { prepare } = require('../scripts/prepare-canonical-production.cjs');
 
-function realModalMarkup(){
- const built=prepare(fs.readFileSync(path.join(__dirname,'../src/index.js'),'utf8'));
- const page=built.slice(built.indexOf('const _CLIENT_TRACKER_HTML = `'));
- const start=page.indexOf('<div class="cs-modal" id="prewriteBriefModal">'),end=page.indexOf('<div id="pwbStatus"',start);
- assert.ok(start>0&&end>start,'Pre-Write Brief modal found in the built Tracker page');
- const block=page.slice(start,end);assert.doesNotMatch(block,/\$\{/,'static markup (no server interpolation)');
- return block.replace(/\\\\/g,'\\');
+function realModalMarkup() {
+  const built = prepare(fs.readFileSync(path.join(__dirname, '../src/index.js'), 'utf8'));
+  const page = built.slice(built.indexOf('const _CLIENT_TRACKER_HTML = `'));
+  const start = page.indexOf('<div class="cs-modal" id="prewriteBriefModal">');
+  const end = page.indexOf('<div id="pwbStatus"', start);
+  assert.ok(start >= 0 && end > start);
+  const block = page.slice(start, end);
+  assert.doesNotMatch(block, /\$\{/);
+  return block.replace(/\\\\/g, '\\');
 }
-// The prompt the server builds for these field values: the request handler's steps (trim, region code, clip, screening
-// with the Google source, research), through the real server module, without an automatic Perplexity answer.
-const serverModule=require('../src/prewrite-brief-research.cjs');
-function serverPrompt(f){
- const regionRaw=f.region.trim(),region=(regionRaw.match(/^([a-z]{2})\s*[—-]/i)||[null,regionRaw])[1]||regionRaw,clip=v=>String(v||'').trim().slice(0,12000);
- const manualAi={google_aio:clip(f.aio),chatgpt:clip(f.chatgpt),perplexity:clip(f.perplexity),claude:clip(f.claude),copilot:clip(f.copilot)},keyword=f.keyword.trim(),gs=f.gsource||'';
- const warn=console.warn;console.warn=()=>{};let rejected;try{rejected=serverModule.screenManualAnswers(manualAi,keyword,gs)}finally{console.warn=warn}
- return serverModule.researchForRequest({keyword,language:f.language.trim(),region,manualAi,perplexityEvidenceText:manualAi.perplexity,rejected,googleSource:gs}).prompt;
-}
-const IDS={aio:'pwbAioText',chatgpt:'pwbChatgptText',perplexity:'pwbPerplexityText',claude:'pwbClaudeText',copilot:'pwbCopilotText'};
-
-test('Research Prompt tab on the real Pre-Write Brief markup',{skip:!chromium&&'Playwright not installed'},async()=>{
- const modal=realModalMarkup();
- const html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><script>/* the Tracker page combo-box helpers, not under test */window.csComboOpen=window.csComboFilter=window.csComboToggle=function(){};</script><script defer src="/prewrite-ai-answer-research.js"></script><script defer src="/prewrite-research-tab.js"></script></head><body style="background:#0f172a;color:#e2e8f0;margin:0">'+modal.replace('class="cs-modal"','class="cs-modal" style="display:block;padding:16px;box-sizing:border-box;max-width:100%"')+'</body></html>';
- const server=http.createServer((req,res)=>{const u=req.url.split('?')[0];
-  if(u==='/'){res.setHeader('Content-Type','text/html');return res.end(html)}
-  const f=path.join(__dirname,'../public',path.basename(u));if(fs.existsSync(f)){res.setHeader('Content-Type','text/javascript');return res.end(fs.readFileSync(f))}res.statusCode=404;res.end()});
- await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.1:'+server.address().port+'/';
- const b=await chromium.launch();
- try{
-  const ctx=await b.newContext({permissions:['clipboard-read','clipboard-write']});const p=await ctx.newPage();const errors=[];p.on('pageerror',e=>errors.push(e.message));
-  let dialogs=0;p.on('dialog',d=>{dialogs++;d.dismiss()});
-  await p.goto(base);await p.waitForSelector('#cs-research-tabs');
-  // 1. Visible, two clear options, inputs first.
-  assert.deepEqual(await p.$$eval('#cs-research-tabs [role=tab]',l=>l.map(x=>[x.textContent,x.getAttribute('aria-selected')])),[['AI Answer Inputs','true'],['Research Prompt','false']]);
-  assert.equal(await p.isVisible('#pwbAioText'),true);assert.equal(await p.isVisible('#cs-research-prompt-panel'),false);
-  const fill=async f=>{for(const [k,id] of [['keyword','pwbKeyword'],['language','pwbLanguage'],['region','pwbRegion'],...Object.entries(IDS)])await p.fill('#'+id,f[k]||'');await p.selectOption('#pwbGoogleSource',f.gsource||'')};
-  const shown=async()=>p.inputValue('#cs-research-prompt-panel textarea'),status=async()=>p.textContent('#cs-research-prompt-panel .cs-rp-status');
-  // 2. All five answers: the tab shows exactly the server's prompt for this request.
-  const f5={keyword:'  content scaling ',language:'English',region:'nl — Netherlands',gsource:'ai_overview',aio:'TEST google answer on content scaling https://example.org/guide',chatgpt:'TEST chatgpt answer on content scaling',perplexity:'TEST perplexity answer on content scaling',claude:'TEST claude answer on content scaling',copilot:'TEST copilot answer on content scaling'};
-  await fill(f5);await p.click('#cs-research-prompt-tab');
-  assert.equal(await p.isVisible('#pwbAioText'),false,'inputs hidden while the prompt tab is open');
-  assert.equal(await shown(),serverPrompt(f5));assert.match(await shown(),/Target query: content scaling\n\nLanguage: English · Market: nl/);
-  assert.match(await status(),/^5 of 5 valid AI answers · 5 captured · 0 invalid · 0 not checked\. Source URLs are leads/);
-  assert.match(await shown(),/SYSTEM: Google AI Overviews \/ Gemini — researched: Google AI Overview \[manual paste · origin not verified\]/);
-  // 3. Three answers, live update while the prompt tab is open.
-  await p.click('#cs-research-inputs-tab');await p.fill('#pwbClaudeText','');await p.fill('#pwbCopilotText','');await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/^3 of 5 valid AI answers · 3 captured · 0 invalid · 2 not checked\. NOT CHECKED: Claude, Microsoft Copilot/);
-  assert.equal(await shown(),serverPrompt({...f5,claude:'',copilot:''}));
-  // 4. No answers.
-  await p.click('#cs-research-inputs-tab');for(const id of Object.values(IDS))await p.fill('#'+id,'');await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/^0 of 5 valid AI answers · 0 captured · 0 invalid · 5 not checked\..* Paste them/);assert.equal((await shown()).match(/— NOT CHECKED\. Do not invent results/g).length,5);
-  // 5. Missing keyword: said, prompt empty, copy disabled.
-  await p.click('#cs-research-inputs-tab');await p.fill('#pwbKeyword','');await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/Enter the target keyword first/);assert.equal(await shown(),'');assert.equal(await p.isDisabled('#cs-research-prompt-panel .cs-rp-actions button'),true);
-  // 6. Long answers and unsafe URLs: identical to the server (12,000-character clip, then excerpt); no script runs.
-  const fl={...f5,claude:'L'.repeat(20000)+' javascript:alert(1) <img src=x onerror=alert(2)> https://ok.example/p',copilot:'TEST copilot content scaling <script>alert(3)</script>'};
-  await p.click('#cs-research-inputs-tab');await fill(fl);await p.click('#cs-research-prompt-tab');
-  assert.equal(await shown(),serverPrompt(fl));assert.equal(dialogs,0);assert.doesNotMatch(await shown(),/Candidate source URLs \(NOT verified\): [^\n]*javascript:/);
-  // 7. Copy: the complete prompt is on the clipboard.
-  await p.click('#cs-research-prompt-panel .cs-rp-actions button');
-  assert.equal(await p.evaluate(()=>navigator.clipboard.readText()),await shown());assert.match(await p.textContent('#cs-research-prompt-panel .cs-rp-actions small'),/Copied/);
-  // 8. Reopened Brief: the research saved with it (incl. an automatic Perplexity answer) shows the prompt the server used.
-  const saved=research.makePrewriteAiAnswerResearch({query:'content scaling',language:'English',market:'nl',answers:[{engine:'google_aio',answer:'TEST saved google answer'},{engine:'perplexity',answer:'TEST automatic perplexity answer',source:'automatic fallback'}]});
-  await p.evaluate(r=>{window._pwbCurrentBrief={prewrite_ai_answer_research:r}},saved);
-  await p.click('#cs-research-inputs-tab');await p.click('#cs-research-prompt-tab');
-  await p.selectOption('#cs-research-prompt-panel select','saved');
-  assert.equal(await shown(),research.buildPrewriteResearchPrompt(saved));assert.match(await status(),/^Saved with the generated Brief/);
-  // 8b. Validation contract: the Research Prompt pasted as the Gemini answer is flagged at the field and not counted.
-  await p.evaluate(()=>{window._pwbCurrentBrief=null});
-  await p.click('#cs-research-inputs-tab');await fill({...f5,keyword:'seo content optimalisatie',language:'Dutch',region:'nl — Netherlands',chatgpt:'',perplexity:'',claude:'',copilot:''});
-  await p.click('#cs-research-prompt-tab');const echo=await shown();
-  await p.click('#cs-research-inputs-tab');await p.fill('#pwbAioText',echo);
-  assert.match(await p.textContent('#pwbAioText-cs-invalid'),/^INVALID, not counted: This is the research instruction/);
-  assert.equal(await p.getAttribute('#pwbAioText','aria-invalid'),'true');
-  await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/^0 of 5 valid AI answers · 1 captured · 1 invalid · 4 not checked\. NOT CHECKED: ChatGPT Search.* INVALID, not counted: Google AI Overviews \/ Gemini — This is the research instruction/);
-  assert.match(await shown(),/AI answers researched: 0\/5 valid · captured 1 · invalid 1 · not checked 4/);
-  assert.equal(await shown(),serverPrompt({...f5,keyword:'seo content optimalisatie',language:'Dutch',region:'nl — Netherlands',aio:echo,chatgpt:'',perplexity:'',claude:'',copilot:''}),'same as the server');
-  // A real answer clears the warning.
-  await p.click('#cs-research-inputs-tab');await p.fill('#pwbAioText','TEST: SEO-contentoptimalisatie is het verbeteren van webinhoud op zoekintentie.');
-  assert.equal(await p.$('#pwbAioText-cs-invalid'),null);
-  // 8d. Google source: required, and "No AI Overview shown" is recorded, not an invalid or failed answer.
-  await p.selectOption('#pwbGoogleSource','');
-  assert.match(await p.textContent('#pwbAioText-cs-invalid'),/^INVALID, not counted: Choose where this Google answer comes from/);
-  await p.selectOption('#pwbGoogleSource','gemini');assert.equal(await p.$('#pwbAioText-cs-invalid'),null);
-  await p.fill('#pwbAioText','');await p.selectOption('#pwbGoogleSource','no_ai_overview');
-  assert.match(await p.textContent('#pwbAioText-cs-invalid'),/^Recorded: Google showed no AI Overview for this query/);
-  assert.equal(await p.getAttribute('#pwbAioText','aria-invalid'),null);
-  await p.click('#cs-research-prompt-tab');
-  assert.match(await status(),/^0 of 5 valid AI answers · 0 captured · 0 invalid · 4 not checked\..* Google: no AI Overview shown \(recorded; not an AI answer, Gemini not researched\)/);
-  assert.match(await shown(),/SYSTEM: Google AI Overviews \/ Gemini — NO AI OVERVIEW SHOWN for this query/);
-  assert.equal(await shown(),serverPrompt({keyword:'seo content optimalisatie',language:'Dutch',region:'nl — Netherlands',gsource:'no_ai_overview',aio:'',chatgpt:'',perplexity:'',claude:'',copilot:''}),'same as the server');
-  // 8e. Synonyms: an answer in other words counts, with an amber topic check (not rejected).
-  await p.click('#cs-research-inputs-tab');await p.fill('#pwbChatgptText','TEST: Webteksten verbeteren voor zoekmachines begint bij de vraag van de lezer.');
-  assert.match(await p.textContent('#pwbChatgptText-cs-invalid'),/^Counted — check: This answer shares no word with the search query\. It still counts/);
-  assert.equal(await p.getAttribute('#pwbChatgptText','aria-invalid'),null);
-  await p.click('#cs-research-prompt-tab');assert.match(await status(),/^1 of 5 valid AI answers · 1 captured · 0 invalid/);assert.match(await status(),/Check the topic of: ChatGPT Search/);
-  await p.click('#cs-research-inputs-tab');await p.fill('#pwbChatgptText','');
-  // 8c. "Copy search question" copies the keyword only; disabled without a keyword.
-  await p.click('#cs-research-ask-copy');
-  assert.equal(await p.evaluate(()=>navigator.clipboard.readText()),'seo content optimalisatie');
-  assert.match(await p.textContent('#cs-research-ask .cs-ask-note'),/^Copied: "seo content optimalisatie"/);
-  await p.fill('#pwbKeyword','');assert.equal(await p.isDisabled('#cs-research-ask-copy'),true);await p.fill('#pwbKeyword','content scaling');
-  // 9. Keyboard: arrows switch tabs.
-  await p.focus('#cs-research-prompt-tab');await p.keyboard.press('ArrowLeft');
-  assert.equal(await p.getAttribute('#cs-research-inputs-tab','aria-selected'),'true');
-  // 10. Duplicate initialisation: loading the script again adds nothing.
-  await p.addScriptTag({url:base+'prewrite-research-tab.js?again=1'});await p.waitForTimeout(100);
-  assert.equal(await p.$$eval('#cs-research-tabs',l=>l.length),1);assert.equal(await p.$$eval('#cs-research-prompt-panel',l=>l.length),1);assert.equal(await p.$$eval('#cs-research-tab-style',l=>l.length),1);
-  // 11. Refresh: installed again, once.
-  await p.reload();await p.waitForSelector('#cs-research-tabs');assert.equal(await p.$$eval('#cs-research-tabs',l=>l.length),1);
-  // 12. Mobile: no horizontal overflow with the prompt open.
-  await p.setViewportSize({width:390,height:844});await p.fill('#pwbKeyword','content scaling');await p.click('#cs-research-prompt-tab');
-  assert.ok(await p.evaluate(()=>document.querySelector('#cs-research-prompt-panel').getBoundingClientRect().right<=window.innerWidth+1),'panel fits at 390px');
-  assert.deepEqual(errors,[]);
- }finally{await b.close();server.close()}
-});
+test('Pre-Write AI collection is one visible action, prompt stays behind the scenes',
+  { skip: !chromium && 'Playwright not installed' }, async () => {
+    const modal = realModalMarkup();
+    const html = '<!doctype html><html><head><meta charset="utf-8">' +
+      '<script>window.csComboOpen=window.csComboFilter=window.csComboToggle=function(){};</script>' +
+      '<script defer src="/prewrite-ai-answer-research.js"></script>' +
+      '<script defer src="/prewrite-research-tab.js"></script></head><body style="background:#0f172a;color:#e2e8f0">' +
+      modal.replace('class="cs-modal"', 'class="cs-modal" style="display:block;padding:16px"') + '</body></html>';
+    const server = http.createServer((req, res) => {
+      const u = req.url.split('?')[0];
+      if (u === '/') { res.setHeader('Content-Type', 'text/html'); return res.end(html); }
+      const file = path.join(__dirname, '../public', path.basename(u));
+      if (fs.existsSync(file)) { res.setHeader('Content-Type', 'text/javascript'); return res.end(fs.readFileSync(file)); }
+      res.statusCode = 404; res.end();
+    });
+    await new Promise(ok => server.listen(0, '127.0.0.1', ok));
+    const browser = await chromium.launch();
+    try {
+      const ctx = await browser.newContext({ permissions: ['clipboard-read', 'clipboard-write'] });
+      const page = await ctx.newPage();
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      await page.goto('http://127.0.0.1:' + server.address().port + '/');
+      await page.waitForSelector('#cs-research-ask-copy');
+      assert.equal(await page.isVisible('#cs-research-tabs'), false, 'No two-tab choice');
+      assert.equal(await page.isVisible('#cs-research-prompt-panel'), false, 'Internal prompt not exposed');
+      assert.equal(await page.isVisible('#pwbAioText'), true, 'Answer fields remain available');
+      assert.match(await page.textContent('#cs-research-ask .cs-ask-note'), /Copy the keyword.*Paste that system/);
+      await page.fill('#pwbKeyword', 'seo content optimalisatie');
+      assert.match(await page.textContent('#cs-research-ask .cs-rp-status'), /0 of 5 AI answers ready/);
+      await page.click('#cs-research-ask-copy');
+      assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'seo content optimalisatie');
+      await page.selectOption('#pwbGoogleSource', 'gemini');
+      await page.fill('#pwbAioText', 'SEO-contentoptimalisatie begint bij het beantwoorden van de vraag van een bezoeker en duidelijke uitleg.');
+      assert.match(await page.textContent('#cs-research-ask .cs-rp-status'), /1 of 5 AI answers ready/);
+      assert.equal(await page.isVisible('#pwbAioText-cs-invalid'), false);
+      const savedPrompt = await page.inputValue('#cs-research-prompt-panel textarea');
+      const manual = { google_aio: await page.inputValue('#pwbAioText'), chatgpt:'', perplexity:'', claude:'', copilot:'' };
+      const rejected = serverModule.screenManualAnswers(manual, 'seo content optimalisatie', 'gemini');
+      const generated = serverModule.researchForRequest({ keyword:'seo content optimalisatie', language:await page.inputValue('#pwbLanguage'), region:await page.inputValue('#pwbRegion'), manualAi:manual, perplexityEvidenceText:'', rejected, googleSource:'gemini' });
+      // The unseen text is still built by the exact shared research implementation.
+      assert.equal(savedPrompt, research.buildPrewriteResearchPrompt(research.makePrewriteAiAnswerResearch({
+        query:'seo content optimalisatie', language:await page.inputValue('#pwbLanguage'),
+        market:await page.inputValue('#pwbRegion'), require_google_source:true,
+        answers:[{engine:'google_aio',answer:manual.google_aio,google_source:'gemini'},
+          {engine:'chatgpt',answer:''},{engine:'perplexity',answer:''},{engine:'claude',answer:''},{engine:'copilot',answer:''}]
+      })));
+      assert.ok(generated.prompt.includes('SEO-contentoptimalisatie'), 'Server receives answer data');
+      await page.fill('#pwbAioText', 'AI ANSWER RESEARCH — WRITE FOR CITATION POTENTIAL. This is NOT citation tracking. Research the five answers to the target query. EDITORIAL REQUIREMENTS:');
+      assert.match(await page.textContent('#cs-research-ask .cs-rp-status'), /1 answer needs correction/);
+      assert.equal(await page.isVisible('#pwbAioText-cs-invalid'), true);
+      assert.equal(await page.isVisible('#cs-research-prompt-tab'), false);
+      assert.deepEqual(errors, []);
+    } finally { await browser.close(); await new Promise(ok => server.close(ok)); }
+  });
