@@ -73,6 +73,13 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     // 4. Select topics and let AI write concepts.
     const picks = await p.$$('.gapPick'); assert.ok(picks.length >= 1, 'at least one topic to select');
     await picks[0].check();
+    await p.waitForFunction(() => /selected · saved/.test(document.getElementById('gapStatus').textContent));
+    const chosenId = await picks[0].getAttribute('value');
+    await p.reload();
+    await p.waitForSelector('#gapWrite');
+    assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(), true, 'selection survives a page reload');
+    const storedSelection = await (await fetch(new URL((await p.getAttribute('a[download][href*="report.json"]', 'href')), base))).json();
+    assert.ok(storedSelection.selected_item_ids.includes(chosenId), 'selection is saved in the report');
     await p.click('#gapWrite');
     await p.waitForFunction(() => /How to read a repair estimate/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1);
@@ -118,6 +125,9 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       await p.click('#gscSave');
       await p.waitForFunction(k => new RegExp(k + ' exports uploaded').test(document.body.textContent), String(n), { timeout: 30000 });
     }
+    const latest = await (await fetch(new URL((await p.getAttribute('a[download][href*="report.json"]', 'href')), base))).json();
+    assert.equal(latest.search_console.latest.status, 'VERIFIED_FOR_PAGE');
+    assert.equal(latest.search_console.latest.used_in_research, false, 'a late verified GSC export is not falsely claimed as research evidence');
     const cmp = await p.textContent('#pubBox');
     assert.match(cmp, /Before and after in Google/); assert.doesNotMatch(cmp, /No export yet/);
     assert.match(cmp, /280 shown · 28 clicks[^]*560 shown · 28 clicks/); assert.doesNotMatch(cmp, /not exactly the 4 weeks/);
