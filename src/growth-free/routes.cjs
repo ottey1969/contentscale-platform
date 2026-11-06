@@ -574,7 +574,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const last=list[list.length-1];
   return {uploads:list.length,latest:{status:last.status,message:gscExport.MESSAGES[last.status]||'',file_name:last.file_name,uploaded_at:last.created_at,
    period:last.period_start?{start:last.period_start,end:last.period_end}:null,totals:last.totals,top_queries:(last.queries||[]).slice(0,10),
-   search_term:term||null,search_term_row:gscExport.termInExport({queries:last.queries||[]},term),used_in_research:last.status==='VERIFIED_FOR_PAGE'},
+   search_term:term||null,search_term_row:gscExport.termInExport({queries:last.queries||[]},term),used_in_research:last.status==='VERIFIED_FOR_PAGE'&&!row.cached_from&&!!row.finished_at&&new Date(last.created_at).getTime()<=new Date(row.finished_at).getTime()},
    history:list.map(x=>({status:x.status,uploaded_at:x.created_at,period:x.period_start?{start:x.period_start,end:x.period_end}:null,totals:x.totals})),comparison};
  }
  function readInput(b,res){
