@@ -181,7 +181,7 @@ function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE')render(d);else showAiFirst(d,true);var el=document.getElementById('ai');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
 function gscHtml(g){var h='<h2 id="gsc">Search Console (optional)</h2>';
  if(g&&g.latest){var L=g.latest,T=L.totals||{};
-  h+='<p class="lead"><strong>'+(L.used_in_research?'Verified for this page':L.status==='PAGE_TOTALS_ONLY'?'Totals of this page; search terms not page-filtered':'Not verified for this page')+'.</strong> '+esc(L.message)+'</p>';
+  h+='<p class="lead"><strong>'+(L.status==='VERIFIED_FOR_PAGE'?'Verified for this page':L.status==='PAGE_TOTALS_ONLY'?'Totals of this page; search terms not page-filtered':'Not verified for this page')+'.</strong> '+esc(L.message)+(L.status==='VERIFIED_FOR_PAGE'&&!L.used_in_research?' This export was uploaded after the research (or belongs to a reused result), so it was not used to decide the page improvements. Start a new check and upload it before research to include its search queries.':'')+'</p>';
   h+='<div class="grid"><div><small>Period</small><strong>'+(L.period?esc(L.period.start)+' – '+esc(L.period.end):'not in the export')+'</strong></div><div><small>Clicks</small><strong>'+esc(T.clicks)+'</strong></div><div><small>Impressions</small><strong>'+esc(T.impressions)+'</strong></div><div><small>Average position</small><strong>'+(T.position==null?'–':esc(T.position))+'</strong></div></div>';
   if(T.source==='QUERIES_SUM_UNDERCOUNTS')h+='<p class="muted">Totals are the sum of the search terms; Search Console leaves out rare terms, so the real totals are higher. The ZIP export includes the exact totals.</p>';
   if(L.search_term)h+='<p>'+(L.search_term_row?'Your search term “'+esc(L.search_term)+'”: '+esc(L.search_term_row.impressions)+' impressions, '+esc(L.search_term_row.clicks)+' clicks, position '+esc(L.search_term_row.position==null?'–':L.search_term_row.position)+'.':'Your search term “'+esc(L.search_term)+'” is not in this export (no impressions in this period, or too rare to be listed).')+'</p>';
@@ -193,10 +193,10 @@ function gscHtml(g){var h='<h2 id="gsc">Search Console (optional)</h2>';
 function wireGsc(){var b=document.getElementById('gscSave');if(!b)return;
  b.onclick=async function(){var st=document.getElementById('gscStatus'),f=document.getElementById('gscLater').files[0];if(!f){st.textContent='Choose the export file first.';return}
   if(f.size>3*1024*1024){st.textContent='The file is larger than 3 MB. Export only this page.';return}
-  b.disabled=true;st.textContent='Reading…';
+  b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');st.textContent='Reading…';
   try{var c=await new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(f)});
    var r=await fetch(API+'/gsc'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:{name:f.name,content_base64:c}})});var x=await r.json();if(!x.success)throw Error(x.error||'Not uploaded');
-   var d=await (await fetch(API+Q,{cache:'no-store'})).json();render(d);var el=document.getElementById('gsc');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
+   var d=await (await fetch(API+Q,{cache:'no-store'})).json();render(d);var el=document.getElementById('gsc');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-failed')}}}
 var GAPS=null;
 var GAP_GROUPS=[];
 function exampleText(x){return function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}}
