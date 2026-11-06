@@ -17,6 +17,9 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
   this page (`Filters.csv`, or a `Pages.csv` with only this page): then the research uses the search terms like the
   Tracker's page-verified Search Console data. Otherwise it is shown as "not verified for this page". Stored per check
   (`growth_free_gsc_uploads`), deleted with the check, never in the Tracker;
+* **Result page order**: one step bar — 1 Research (AI answers, Search Console, Google), 2 Choose, 3 Text (AI concepts
+  when writing is on, otherwise the editor writes), 4 CMS package, 5 Publish & measure (opens once the change is live).
+  The JSON is optional research data at the end, not a step.
 * **CMS package (ZIP)**: the same package as the Tracker (`src/growth-cms-handoff.cjs`, unchanged), from the written
   concepts: the editor edits the text, sets SEO title and description, an optional internal link (this website only) and
   approves. The original page is read again publicly; the package is refused when the page changed in between, when a
@@ -28,8 +31,9 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
   two periods to export (4 weeks before and after, filtered on exactly this page) and the link to the result page, where
   both exports are shown side by side. Only page-verified exports count; a missing period is named, never filled in. A
   confirmation is sent when the date is saved; every e-mail has a stop link (`/free-growth/stop/:token`). Sent hourly
-  when `BREVO_API_KEY` is set (`GROWTH_FREE_REMINDERS=0` turns it off); links use `GROWTH_FREE_PUBLIC_URL` or
-  `PUBLIC_APP_URL`. Stored in `growth_free_checks` (deleted with the check);
+  when `BREVO_API_KEY` is set (`GROWTH_FREE_REMINDERS=0` turns it off). The links open on the domain the visitor
+  used when it is one of the `hosts` of an access key (so several domains need no extra setting); otherwise
+  `GROWTH_FREE_PUBLIC_URL`, `PUBLIC_APP_URL` or https://app.contentscale.site. Stored in `growth_free_checks` (deleted with the check);
 * the complete research as a JSON download, to process themselves;
 * a "done for you" offer (paid): booking link and/or a request form.
 

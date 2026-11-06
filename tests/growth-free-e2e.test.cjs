@@ -37,7 +37,9 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     generateDraft: async args => { writes.push(args); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: (args.readerTask?.tasks || []).map(x => ({ task_code: x.code, h2: 'How to read a repair estimate',
       paragraphs: ['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.'] })) } }; } };
   const app = express(); app.use(express.json({ limit: '1mb' }));
-  const service = registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-1' }), writing: 'all', writeLimit: 2, perIp: 50, daily: 20, perEmail: 10 }, engineDeps, fetchImpl: async () => ({ ok: true }), sendEmail: async m => { mails.push(m); return true; } });
+  // The key's site domain (here 127.0.0.1): e-mail links open on the domain the visitor used, without extra settings.
+  const baseCfg = freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-1' });
+  const service = registerFreeGrowth(app, pool, { config: { ...baseCfg, accessKeys: baseCfg.accessKeys.map(k => ({ ...k, hosts: ['127.0.0.1'] })), writing: 'all', writeLimit: 2, perIp: 50, daily: 20, perEmail: 10 }, engineDeps, fetchImpl: async () => ({ ok: true }), sendEmail: async m => { mails.push(m); return true; } });
   const srv = app.listen(0); const base = 'http://127.0.0.1:' + srv.address().port;
   const browser = await chromium.launch();
   try {
@@ -63,7 +65,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await p.textContent('h1'), /Your page in Google and in AI answers/);
     await p.waitForSelector('#freeNextAction .growth-next-btn');
     assert.match(await p.textContent('#freeNextAction'), /FREE GROWTH · ACTION PLAN/);
-    assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 4);
+    assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 5);
     assert.equal(await p.locator('#freeNextAction .growth-next-btn').isVisible(), true);
     assert.ok((await p.locator('#freeNextAction .growth-next-btn').getAttribute('href')).startsWith('#'));
 
@@ -86,6 +88,11 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(), true, 'selection survives a page reload');
     const storedSelection = await (await fetch(new URL((await p.getAttribute('a[download][href*="report.json"]', 'href')), base))).json();
     assert.ok(storedSelection.selected_item_ids.includes(chosenId), 'selection is saved in the report');
+    // Step 4 works without AI writing: the chosen item is an empty section the editor writes.
+    await p.waitForFunction(() => /Open the package editor for your selection \(1\)/.test(document.getElementById('pkgOpen').textContent));
+    await p.click('#pkgOpen');
+    assert.match(await p.getAttribute('.pkgText', 'placeholder'), /Write this section yourself/);
+    assert.equal(await p.isChecked('.pkgUse'), false);
     await p.click('#gapWrite');
     await p.waitForFunction(() => /How to read a repair estimate/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1);
@@ -119,6 +126,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     // reminder e-mail with the result link, and the stop link.
     const { windowsOf } = require('../src/growth-free/reminders.cjs');
     const published = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10), w = windowsOf(published);
+    assert.equal(await p.isVisible('#pubDate'), false, 'step 5 waits until the change is live');
+    await p.click('#pubOpen summary');
     await p.fill('#pubDate', published); await p.click('#pubSave');
     await p.waitForFunction(() => /One e-mail on .* to t\*\*\*@acme-roofing\.example/i.test(document.getElementById('pubBox').textContent), null, { timeout: 30000 });
     assert.equal(mails.length, 1); assert.deepEqual(mails[0].to, [email.toLowerCase()]); assert.match(mails[0].subject, /Reminder set/);
@@ -142,6 +151,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     const reminder = mails[1]; assert.match(reminder.subject, /Four weeks after your update/); assert.deepEqual(reminder.to, [email.toLowerCase()]);
     const resultLink = /href="([^"]*\/free-growth\/r\/[^"]*)"/.exec(reminder.html)[1], stopLink = /href="([^"]*\/free-growth\/stop\/[^"]*)"/.exec(reminder.html)[1];
     assert.equal(new URL(resultLink).pathname, new URL(p.url()).pathname, 'the e-mail links to this result');
+    assert.equal(new URL(resultLink).origin, 'https://127.0.0.1', 'the link uses the domain the visitor used');
     assert.deepEqual(await service.sendDueReminders({ now: new Date() }), { sent: 0, failed: 0 }, 'sent once');
     assert.match(await (await fetch(base + new URL(stopLink).pathname)).text(), /Reminder stopped/);
     assert.deepEqual(errors, [], 'no browser error on the way');
