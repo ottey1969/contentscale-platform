@@ -86,6 +86,8 @@
   if(!$('approved').checked)missing.push('tick “I reviewed the actual page…” at the end of step 3');
   facts.forEach(function(x){var l=x.closest&&x.closest('label');if(l)l.style.background=x.checked?'':'#fef9c3'});
   // One confirmation for all statements (owner 2026-11-01): same meaning as ticking each one, one click.
+  // With no statement to confirm, the tick is hidden (an empty "I checked all 0" cannot be ticked) and the page says why.
+  var none=$('noStatementsNote');if(none)none.hidden=!!facts.length||!safe.source;
   var all=$('confirmAll');if(all){$('confirmAllWrap').hidden=!facts.length;all.checked=facts.length>0&&!open.length;
    $('confirmAllText').textContent='I checked all '+facts.length+' statement'+(facts.length===1?'':'s')+' listed above: true, confirmed with the business and safety-reviewed where marked.'}
   var why=$('downloadWhy');if(why){why.textContent=safe.exported?'ZIP prepared and downloaded. Next: publish the reviewed changes in your CMS, then record the actual publication.':missing.length?'To download: '+missing.join('; ')+'.':'';why.hidden=!!safe.exported?false:!missing.length}
