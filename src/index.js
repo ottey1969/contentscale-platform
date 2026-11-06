@@ -2741,6 +2741,15 @@ async function _ensureCaseStudySchema(){
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(tracker_client_id,canonical_url)
   )`);
+  // One ACTIVE Case Study per URL (was: one per URL ever). An ended Case Study stays as history and a new one for the
+  // same URL gets its own baseline. Only the uniqueness rule changes; no row is changed or removed.
+  await pool.query(`DO $$ DECLARE c record; BEGIN
+    FOR c IN SELECT con.conname FROM pg_constraint con JOIN pg_class t ON t.oid=con.conrelid
+      WHERE t.relname='tracker_case_studies' AND con.contype='u'
+        AND (SELECT array_agg(a.attname::text ORDER BY a.attname) FROM pg_attribute a WHERE a.attrelid=t.oid AND a.attnum=ANY(con.conkey))=ARRAY['canonical_url','tracker_client_id']
+    LOOP EXECUTE format('ALTER TABLE tracker_case_studies DROP CONSTRAINT %I', c.conname); END LOOP; END $$`).catch(e=>console.warn('[case-study-schema] uniqueness migration:',e.message));
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_case_studies_one_active_per_url ON tracker_case_studies(tracker_client_id,canonical_url) WHERE status='active'`);
+  await pool.query(`ALTER TABLE tracker_case_studies ADD COLUMN IF NOT EXISTS previous_case_study_id INTEGER`).catch(()=>{});
   await pool.query(`ALTER TABLE tracker_case_studies ADD COLUMN IF NOT EXISTS report_token TEXT`).catch(()=>{});
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS tracker_case_studies_report_token_idx ON tracker_case_studies(report_token) WHERE report_token IS NOT NULL`).catch(()=>{});
   await pool.query(`CREATE TABLE IF NOT EXISTS tracker_case_study_events (
@@ -2823,7 +2832,7 @@ async function _ensurePerfectRoofingCaseStudy(client,page){
   const ins=await pool.query(`INSERT INTO tracker_case_studies
     (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked)
     VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE)
-    ON CONFLICT(tracker_client_id,canonical_url) DO UPDATE SET tracker_page_id=EXCLUDED.tracker_page_id,updated_at=NOW()
+    ON CONFLICT(tracker_client_id,canonical_url) WHERE status='active' DO UPDATE SET tracker_page_id=EXCLUDED.tracker_page_id,updated_at=NOW()
     RETURNING *`,[client.id,page.id,client.name||'Perfect Roofing Team',client.domain||'perfectroofingteam.com',canonical,'24 hour emergency roof repair nj','2026-09-09T16:54:00Z',JSON.stringify(baseline)]);
   const cs=ins.rows[0];
   await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,event_at,source,event_data)
@@ -2860,7 +2869,8 @@ async function _ensurePerfectRoofingCaseStudy(client,page){
 }
 async function _caseStudyEventForPage(clientId,pageId,eventType,data,contentHash){
   await _ensureCaseStudySchema();
-  const cs=await pool.query('SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND (tracker_page_id=$2 OR tracker_page_id IS NULL) AND status<>\'deleted\' ORDER BY id LIMIT 1',[clientId,pageId]);
+  // The active Case Study of the page first; without one, the newest earlier one (its history).
+  const cs=await pool.query('SELECT id FROM tracker_case_studies WHERE tracker_client_id=$1 AND (tracker_page_id=$2 OR tracker_page_id IS NULL) AND status<>\'deleted\' ORDER BY (status=\'active\') DESC,id DESC LIMIT 1',[clientId,pageId]);
   if(!cs.rows.length)return;
   await pool.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data,content_hash)
     VALUES($1,$2,$3,'tracker',$4::jsonb,$5)`,[cs.rows[0].id,pageId,eventType,JSON.stringify(data||{}),contentHash||null]);
@@ -3010,8 +3020,10 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
       const _fresh=_needsCycleRepair?await _caseStudyOpenFreshStartCycle(client.id,page,existing.rows[0],'','case_study_baseline_copy','active_legacy_case_first_manual_scan_repair'):null;
       return res.json({success:true,already_active:true,case_study:existing.rows[0],fresh_cycle_repaired:!!(_fresh&&!_fresh.already_initialized),revision_cycle:_fresh&&_fresh.revision_cycle||Number(page.revision_cycle||1),message:_fresh&&!_fresh.already_initialized?'The case study was already active, but its older implementation status predated the baseline. That status is now history only. A fresh case-study revision has started; scan the current live page next.':'This case study is already active and its baseline remains protected.'});
     }
-    return res.status(409).json({success:false,protected_history:true,error:'This page already has protected case-study history. Its original baseline cannot be replaced. Continue that history or start a new revision cycle.'});
+    // An ended Case Study stays as history; a new Case Study for this URL gets its own baseline and points back to it.
+    if(existing.rows[0].status!=='completed')return res.status(409).json({success:false,protected_history:true,error:'This page already has protected case-study history. Its original baseline cannot be replaced. Continue that history or start a new revision cycle.'});
   }
+  const _previousCaseStudyId=existing.rows.length&&existing.rows[0].status==='completed'?existing.rows[0].id:null;
   const sr=await pool.query('SELECT * FROM tracker_snapshots WHERE page_id=$1 ORDER BY checked_at DESC,id DESC LIMIT 1',[page.id]);
   if(!sr.rows.length||!page.last_checked_at)return res.status(409).json({success:false,scan_required:true,error:'Scan this page first. The first real Tracker result is required before a case-study baseline can be locked.'});
   const snap=sr.rows[0];
@@ -3046,7 +3058,8 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
   if(baselineMissing.length)return res.status(409).json({success:false,baseline_not_ready:true,error:'Case-study baseline is not ready. Add: '+baselineMissing.join('; '),missing:baselineMissing,ai_checked:requiredEngines.length-missingEngines.length,ai_required:requiredEngines.length});
   const baselineAt=new Date();
   const baseline={schema_version:3,source:'ContentScale case-study start',metric_snapshot_at:snap.checked_at||page.last_checked_at,html_captured_at:baselineAt.toISOString(),primary_query:query,google_position:snap.google_position==null?null:Number(snap.google_position),gsc_clicks:page.gsc_clicks==null?null:Number(page.gsc_clicks),gsc_impressions:page.gsc_impressions==null?null:Number(page.gsc_impressions),gsc_position:page.gsc_position==null?null:Number(page.gsc_position),gsc_queries:queryEvidence.rows,gsc_query_evidence_status:verifiedZeroQueries?'exact_page_fetch_zero_queries':'page_verified_queries',gsc_query_fetch_at:verifiedZeroQueries?page.gsc_autofetch_checked_at:null,graaf_score:snap.score==null?(page.last_graaf_score==null?null:Number(page.last_graaf_score)):Number(snap.score),ai_evidence:engines,html_source:htmlSource,treatment_guardrail:'Preserve verified strengths; implement documented changes; compare only against this locked baseline.'};
-  const ins=await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline)]);
+  if(_previousCaseStudyId)baseline.previous_case_study_id=_previousCaseStudyId;
+  const ins=await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked,previous_case_study_id) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE,$9) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline),_previousCaseStudyId]);
   const cs=ins.rows[0];
   await pool.query(`UPDATE tracker_pages SET check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,
     next_check_at=CASE WHEN $4::int>0 THEN NOW()+($4::int * INTERVAL '1 day') ELSE NULL END,
@@ -3075,7 +3088,9 @@ app.post('/api/tracker-client/:token/pages/:pageId/baseline-gsc',async(req,res)=
   let page=pr.rows[0];
   // Protect any existing baseline: if a case study for this URL already exists, its baseline is locked.
   const existing=await pool.query("SELECT id,status,baseline_locked FROM tracker_case_studies WHERE tracker_client_id=$1 AND canonical_url=$2 ORDER BY id DESC LIMIT 1",[client.id,_caseStudyNormUrl(page.url)]).catch(()=>({rows:[]}));
-  if(existing.rows.length&&(existing.rows[0].status==='active'||existing.rows[0].baseline_locked))
+  // An active Case Study blocks this; an ended one is history (its baseline stays locked in its own row) and a new
+  // Case Study for this URL needs a fresh baseline prepared.
+  if(existing.rows.length&&existing.rows[0].status==='active')
     return res.status(409).json({success:false,baseline_locked:true,error:'A locked case-study baseline already exists for this URL. It cannot be overwritten. Use a new revision cycle instead.'});
   /* CONTENTSCALE-AI-HANDOFF-V143 — NEVER RESTORE THE OLD COPY FALLBACK.
    * The former code copied every site-wide query into this page and then the
@@ -3804,7 +3819,7 @@ app.get('/api/tracker-client/:token/pages/:pageId', async (req, res, next) => {
 // Start a subsequent improvement cycle without deleting any earlier baseline, event or HTML version.
 // End a Case Study: an explicit owner decision (Tracker owner token, typed confirmation). The measurement and the page
 // lock stop; nothing is deleted: baseline, content versions, events and the report stay, and the baseline trigger keeps
-// them unchangeable. The same URL cannot start a new Case Study afterwards (its history stays protected).
+// them unchangeable. A new Case Study for the same URL can be started later; it gets its own new baseline.
 app.post('/api/tracker-client/:token/pages/:pageId/case-study/end',async(req,res)=>{try{
   if(String(req.body&&req.body.confirm||'')!=='END_CASE_STUDY')return res.status(400).json({success:false,error:'Confirm that you want to end the Case Study.'});
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
@@ -3827,10 +3842,10 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/end',async(req,res
     await conn.query('BEGIN');
     await conn.query("UPDATE tracker_case_studies SET status='completed',ended_at=NOW(),ended_reason=$2 WHERE id=ANY($1::int[]) AND status='active'",[ids,reason]);
     for(const id of ids)await conn.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data) VALUES($1,$2,'case_study_ended','tracker_owner',$3::jsonb)`,
-      [id,page.id,JSON.stringify({url:page.url,reason,ended_by:'tracker_owner',baseline_preserved:true,history_preserved:true,new_case_study_for_this_url:false})]);
+      [id,page.id,JSON.stringify({url:page.url,reason,ended_by:'tracker_owner',baseline_preserved:true,history_preserved:true,new_case_study_needs_new_baseline:true})]);
     await conn.query('COMMIT');
   }catch(e){await conn.query('ROLLBACK').catch(()=>{});throw e;}finally{conn.release();}
-  res.json({success:true,ended:ids.length,message:'Case Study ended. The baseline, evidence and report are kept. Growth can now prepare a CMS package for this page; nothing is published automatically.'});
+  res.json({success:true,ended:ids.length,message:'Case Study ended. The baseline, evidence and report are kept. Growth can now prepare a CMS package for this page; nothing is published automatically. You can start a new Case Study for this page later; it gets a new baseline.'});
 }catch(e){console.error('[case-study-end]',e.message);res.status(500).json({success:false,error:'The Case Study could not be ended. Nothing was changed.'});}});
 app.post('/api/tracker-client/:token/pages/:pageId/case-study/new-revision',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
@@ -45754,7 +45769,7 @@ function _csDateH(t){ try{ var d=new Date(t); return d.toLocaleDateString('en-GB
 // End the Case Study of a page: owner decision, two confirmations. Nothing is deleted; the lock and the measurement stop.
 function endCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
-  if(!confirm('End the Case Study for '+(pg.url||'this page')+'?\\n\\n- The measurement and the page lock stop. Growth can then prepare a CMS package for this page.\\n- Nothing is deleted: the baseline, the evidence and the report stay saved and unchangeable.\\n- This cannot be undone, and this URL cannot start a new Case Study later.'))return;
+  if(!confirm('End the Case Study for '+(pg.url||'this page')+'?\\n\\n- The measurement and the page lock stop. Growth can then prepare a CMS package for this page.\\n- Nothing is deleted: the baseline, the evidence and the report stay saved and unchangeable.\\n- This cannot be undone. You can start a new Case Study for this page later; it gets a new baseline.'))return;
   var why=prompt('Why do you end it? (optional, saved with the Case Study history)','');if(why===null)return;
   api('/pages/'+pageId+'/case-study/end','POST',{confirm:'END_CASE_STUDY',reason:why}).then(function(d){
     if(!d||!d.success)throw new Error((d&&d.error)||'Could not end the Case Study');
