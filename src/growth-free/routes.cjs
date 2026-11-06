@@ -14,6 +14,7 @@ const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
 const cmsPackage=require('./cms-package.cjs');
+const reminders=require('./reminders.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -301,6 +302,29 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
  box.onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}
   var url=URL.createObjectURL(new Blob([b.text],{type:'text/markdown'})),a=document.createElement('a');a.href=url;a.download='editor-brief.md';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);st.textContent=b.count+' item(s) in the brief.'};
  document.getElementById('gapCopy').onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}if(navigator.clipboard)navigator.clipboard.writeText(b.text);st.textContent='Copied ('+b.count+' item(s)).'};count()}
+// After publication: the date, one e-mail about four weeks later, and the before/after comparison from two exports.
+function fmtD(x){try{return new Date(String(x).slice(0,10)+'T12:00:00Z').toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})}catch(e){return String(x)}}
+function sideHtml(label,w,x){if(!x)return '<div><small>'+label+'</small><strong>No export yet</strong><small>Upload an export for '+esc(fmtD(w.start))+' – '+esc(fmtD(w.end))+', filtered on exactly this page.</small></div>';
+ var T=x.totals||{};return '<div><small>'+label+' · '+esc(x.period.start)+' – '+esc(x.period.end)+'</small><strong>'+esc(T.impressions)+' shown · '+esc(T.clicks)+' clicks</strong><small>'+(T.position==null?'':'average position '+esc(T.position)+' · ')+(x.search_term_row?'your search term: '+esc(x.search_term_row.impressions)+' shown, '+esc(x.search_term_row.clicks)+' clicks':'your search term is not in this export')+(x.matches_window?'':' · not exactly the 4 weeks '+(label==='Before'?'before':'after')+' the update')+'</small></div>'}
+function pubHtml(p,g){if(!p)return '';var h='<h2 id="published">After you publish</h2>';
+ var today=new Date().toISOString().slice(0,10);
+ if(p.published_on){h+='<p class="lead"><strong>Published on '+esc(fmtD(p.published_on))+'.</strong> '+(p.stopped?'The reminder is stopped.':p.reminder_sent_at?'The reminder was sent on '+esc(fmtD(p.reminder_sent_at))+'.':p.reminder_due_at?'One e-mail on '+esc(fmtD(p.reminder_due_at))+' to '+esc(p.email_hint)+': which two periods to export from Search Console.':'No e-mail reminder.')+'</p>';
+  if(!p.email_configured&&p.reminder_due_at&&!p.reminder_sent_at)h+='<p class="note">E-mail is not set up on this server, so no e-mail will arrive. Come back to this page after '+esc(fmtD(p.reminder_due_at))+'; the steps below work without it.</p>';
+  var c=g&&g.comparison;if(c){h+='<h3>Before and after in Google (Search Console)</h3><div class="grid two">'+sideHtml('Before',c.windows.before,c.before)+sideHtml('After',c.windows.after,c.after)+'</div><p class="muted">'+esc(c.note)+'</p>';
+   if(!c.ready)h+='<p>Export from Search Console: Performance → filter Page → “Exact URL” → this page → Date → Custom → '+(c.before?'':'<strong>'+esc(fmtD(c.windows.before.start))+' – '+esc(fmtD(c.windows.before.end))+'</strong> (before)')+(!c.before&&!c.after?' and ':'')+(c.after?'':'<strong>'+esc(fmtD(c.windows.after.start))+' – '+esc(fmtD(c.windows.after.end))+'</strong> (after, once these 4 weeks have passed)')+' → Export → Download CSV. Upload it under Search Console above.</p>'}
+  h+='<p><button type="button" class="ghost" id="pubChange">Change the date</button> <button type="button" class="ghost" id="pubClear">Remove the date</button> <small role="status" id="pubStatus"></small></p>';
+  h+='<div id="pubForm" hidden>'}else{h+='<p>Changed your page? Enter the date it went live. About four weeks later you get one e-mail with the two periods to compare in Search Console, and this page shows them side by side.</p><div id="pubForm">'}
+ h+='<label for="pubDate">Date the change went live</label><input id="pubDate" type="date" max="'+today+'" value="'+esc(p.published_on||'')+'">';
+ h+='<label class="check"><input type="checkbox" id="pubRemind" checked><span>E-mail me ('+esc(p.email_hint)+') once, about four weeks later. You can stop it with the link in the e-mail.</span></label>';
+ h+='<p><button type="button" id="pubSave">Save the date</button> <small role="status" id="pubSaveStatus"></small></p></div>';
+ return h}
+function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
+ var reload=async function(){var d=await (await fetch(API+Q,{cache:'no-store'})).json();var box=document.getElementById('pubBox');if(box&&d.success){box.innerHTML=pubHtml(d.publication,d.gsc);wirePub()}var el=document.getElementById('published');if(el)el.scrollIntoView()};
+ var ch=document.getElementById('pubChange');if(ch)ch.onclick=function(){document.getElementById('pubForm').hidden=false};
+ var cl=document.getElementById('pubClear');if(cl)cl.onclick=async function(){if(!confirm('Remove the date and the reminder?'))return;await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({clear:true})});reload()};
+ save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;st.textContent='Saving…';
+  try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
+  catch(err){st.textContent=err.message;save.disabled=false}}}
 function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
@@ -316,13 +340,13 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  h+='<h2 id="google">Google search (blue links)</h2><p class="lead"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
  h+='<h3>What to do</h3><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
- h+=gapsHtml(s.gaps,d.writing);
+ h+=gapsHtml(s.gaps,d.writing);h+='<div id="pubBox">'+pubHtml(d.publication,d.gsc)+'</div>';
  var c=s.checked;h+='<h2>What was checked</h2><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small></div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong>'+(c.google_results_received!=null?'<small>of '+esc(c.google_results_received)+' Google results received</small>':'')+(c.results_not_used&&c.results_not_used.length?'<small>not used: '+esc(c.results_not_used.map(function(x){return x.count+' × '+x.text}).join(', '))+'</small>':'')+'</div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div>'+(c.search_market?'<div><small>Searched in</small><strong>'+esc(c.search_market.join(' + '))+'</strong>'+(c.markets_not_searched&&c.markets_not_searched.length?'<small>not researched: '+esc(c.markets_not_searched.join(', '))+' (partial market research)</small>':'')+(c.market_derived_not_confirmed?'<small>market derived from your page, not confirmed</small>':'')+'</div>':'')+'</div>';
  h+='<h2>Limits of this free check</h2><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p>';
  h+='<h2>Do it yourself</h2><p>Download the complete research data and process it yourself or with your own tools.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;wireAi();wireGsc();wireGaps(s.gaps,s,d);
+ o.innerHTML=h;wireAi();wireGsc();wireGaps(s.gaps,s,d);wirePub();
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
@@ -413,7 +437,7 @@ const FAIL_TEXT={
  PAGE_IDENTITY_CHANGED:'The page changed while it was being checked. Please try again.'
 };
 
-function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGrowthResearch,engineDeps={},basePath='/free-growth',apiPath='/api/free-growth',fetchImpl=global.fetch,storage=store}={}){
+function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGrowthResearch,engineDeps={},basePath='/free-growth',apiPath='/api/free-growth',fetchImpl=global.fetch,storage=store,sendEmail=null}={}){
  if(!config.enabled)return null;
  const queue=[];let running=0;
  const jobs=new Set();
@@ -542,12 +566,13 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  // The visitor's Search Console uploads for this check: the latest one is shown; all are kept for the 28-day comparison.
  async function gscFor(row){
   let list=[];try{list=await storage.listGscUploads(pool,row.id)}catch(e){console.warn('[free-growth] GSC uploads unavailable',String(e&&e.code||'unknown'))}
-  if(!list.length)return {uploads:0,latest:null};
-  const last=list[list.length-1],term=searchTermOf(row);
+  const term=searchTermOf(row),comparison=reminders.compareUploads(list,row.published_on||null,term);
+  if(!list.length)return {uploads:0,latest:null,comparison};
+  const last=list[list.length-1];
   return {uploads:list.length,latest:{status:last.status,message:gscExport.MESSAGES[last.status]||'',file_name:last.file_name,uploaded_at:last.created_at,
    period:last.period_start?{start:last.period_start,end:last.period_end}:null,totals:last.totals,top_queries:(last.queries||[]).slice(0,10),
    search_term:term||null,search_term_row:gscExport.termInExport({queries:last.queries||[]},term),used_in_research:last.status==='VERIFIED_FOR_PAGE'},
-   history:list.map(x=>({status:x.status,uploaded_at:x.created_at,period:x.period_start?{start:x.period_start,end:x.period_end}:null,totals:x.totals}))};
+   history:list.map(x=>({status:x.status,uploaded_at:x.created_at,period:x.period_start?{start:x.period_start,end:x.period_end}:null,totals:x.totals})),comparison};
  }
  function readInput(b,res){
   const email=clean(b.email,200).toLowerCase();
@@ -624,7 +649,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
    summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart)||null,cached:!!row.cached_from,error_code:row.error_code||null,
-   writing:row.status==='DONE'?writingInfo(row):null,
+   writing:row.status==='DONE'?writingInfo(row):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -708,6 +733,46 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(token&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});
    res.status(503).json({success:false,error:'Writing is not available right now. Your selection works with the editor brief.'})}
  });
+ // Measurement after publication: the date the change went live, one e-mail about four weeks later, unsubscribe.
+ const publicBase=()=>String(config.publicUrl||process.env.GROWTH_FREE_PUBLIC_URL||process.env.PUBLIC_APP_URL||'https://app.contentscale.site').replace(/\/+$/,'');
+ const links={result:row=>publicBase()+resultUrl(row),stop:t=>publicBase()+basePath+'/stop/'+encodeURIComponent(t||'')};
+ const send=sendEmail||reminders.brevo(fetchImpl);
+ const emailConfigured=()=>!!sendEmail||!!process.env.BREVO_API_KEY;
+ const publicationOf=row=>({published_on:row.published_on||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
+  stopped:!!row.reminder_opt_out_at,email_hint:maskEmail(row.email),email_configured:emailConfigured(),
+  windows:row.published_on?reminders.windowsOf(row.published_on):null});
+ app.post(apiPath+'/checks/:id/publication',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  if(typeof storage.setPublication!=='function')return res.status(503).json({success:false,error:'Temporarily unavailable'});
+  const b=req.body||{};
+  if(b.clear===true){await storage.setPublication(pool,{checkId:row.id,publishedOn:null,dueAt:null});
+   const fresh=await storage.getCheck(pool,req.params.id,req.query.k);return res.json({success:true,publication:publicationOf(fresh||row)})}
+  const d=reminders.readPublishedOn(b.published_on);if(d.error)return res.status(400).json({success:false,error:d.error});
+  const remind=b.remind!==false;
+  try{
+   const saved=await storage.setPublication(pool,{checkId:row.id,publishedOn:d.value,dueAt:remind?reminders.dueAt(d.value):null});
+   let confirmation=remind?(emailConfigured()?'NOT_ACCEPTED':'EMAIL_NOT_CONFIGURED'):'NO_REMINDER';
+   const fresh=await storage.getCheck(pool,req.params.id,req.query.k)||row;
+   if(remind&&emailConfigured()){
+    const lang=reminders.languageOf(fresh);
+    const m=await localizeMail(reminders.confirmationMessage({url:row.url,publishedOn:d.value,stopLink:links.stop(saved.reminder_token),lang:reminders.T[lang]?lang:'en'}),lang);
+    if(await Promise.resolve(send({to:[saved.email],subject:m.subject,html:m.html})).catch(()=>false))confirmation='SENT'}
+   res.set('Cache-Control','no-store').json({success:true,publication:publicationOf(fresh),confirmation,gsc:await gscFor(fresh)});
+  }catch(e){console.error('[free-growth] publication failed',e.message);res.status(503).json({success:false,error:'The date could not be saved. Please try again.'})}
+ });
+ const localizeMail=(mail,lang)=>require('../growth-measurement-reminders.cjs').localize(mail,lang,{model:reminders.modelFor(config.mailModel)});
+ app.get(basePath+'/stop/:token',async(req,res)=>{
+  let n=0;try{await storage.ensureTables(pool);n=typeof storage.optOutReminder==='function'?await storage.optOutReminder(pool,req.params.token):0}catch(e){}
+  res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html').send(page(n?'Reminder stopped':'Link not valid',
+   n?'<div class="card"><h1>Reminder stopped</h1><p>You will not get the e-mail about this check. Your result stays available with its link.</p></div>':'<div class="card"><h1>This link is not valid</h1><p>The reminder may already have been stopped, or the check was deleted.</p></div>',config));
+ });
+ // Hourly in the running app; off without an e-mail key, with GROWTH_FREE_REMINDERS=0, or in tests (they call it directly).
+ const sendDue=(o={})=>reminders.sendDueFreeReminders(pool,storage,{send,links,model:config.mailModel,...o});
+ if(config.reminders!==false&&!sendEmail&&process.env.BREVO_API_KEY&&process.env.GROWTH_FREE_REMINDERS!=='0'&&process.env.NODE_ENV!=='test'){
+  const tick=()=>storage.ensureTables(pool).then(()=>sendDue()).then(r=>{if(r.sent||r.failed)console.log('[free-growth] reminders',JSON.stringify(r))}).catch(e=>console.warn('[free-growth] reminders',String(e.code||e.message).slice(0,80)));
+  const t=setInterval(tick,3600000);if(t.unref)t.unref();const first=setTimeout(tick,90000);if(first.unref)first.unref();
+ }
  // CMS package (the same ZIP as the Tracker): step 1 reads the original page publicly; the download refuses the package
  // when the page changed in between, when a flagged sentence is still in the text, or when the editor did not approve.
  async function readOwnPage(row){
@@ -877,7 +942,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   try{await storage.ensureTables(pool);res.json({success:true,deleted:await storage.forgetEmail(pool,email)})}
   catch(e){res.status(503).json({success:false,error:e.message})}
  });
- return {config,idle:()=>Promise.all([...jobs]),queueLength:()=>queue.length};
+ return {config,idle:()=>Promise.all([...jobs]),queueLength:()=>queue.length,sendDueReminders:sendDue};
 }
 
 module.exports={registerFreeGrowth,freeGrowthConfig,parseAccessKeys};

@@ -32,6 +32,13 @@ function ensureTables(pool){
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_token TEXT');
   // Target market and language chosen by the visitor (as in the Tracker); null = derived from the page.
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS market JSONB');
+  // Measurement after publication (visitor's choice): the date the change went live and one e-mail about 4 weeks later.
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS published_on DATE');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_due_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_sent_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_attempts INTEGER NOT NULL DEFAULT 0');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_token TEXT');
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_opt_out_at TIMESTAMPTZ');
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
@@ -122,7 +129,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,write_count,market FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,write_count,market,email,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
@@ -170,6 +177,26 @@ async function forgetEmail(pool,email){
  return {checks:c.rowCount||0,hire_requests:h.rowCount||0};
 }
 
+// The publication date and the reminder. A changed date moves the reminder and sends it again; no reminder = cleared.
+async function setPublication(pool,{checkId,publishedOn,dueAt}){
+ return (await pool.query(`UPDATE growth_free_checks SET
+    reminder_sent_at=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_sent_at ELSE NULL END,
+    reminder_attempts=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_attempts ELSE 0 END,
+    published_on=$2::date,reminder_due_at=$3::timestamptz,reminder_token=COALESCE(reminder_token,$4),reminder_opt_out_at=CASE WHEN $3::timestamptz IS NULL THEN reminder_opt_out_at ELSE NULL END
+   WHERE id=$1 RETURNING published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_token,email`,[checkId,publishedOn||null,dueAt||null,token(18)])).rows[0]||null;
+}
+async function dueReminders(pool,{now=new Date(),limit=50}={}){
+ return (await pool.query(`SELECT id,public_id,access_key,email,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token FROM growth_free_checks
+   WHERE reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 AND status='DONE' ORDER BY reminder_due_at LIMIT $2`,[now,limit])).rows;
+}
+async function markReminder(pool,{id,sent}){
+ await pool.query('UPDATE growth_free_checks SET reminder_attempts=reminder_attempts+1,reminder_sent_at=CASE WHEN $2 THEN NOW() ELSE reminder_sent_at END WHERE id=$1',[id,!!sent]);
+}
+// Unsubscribe from the e-mail link: only the reminder stops; the check and its result stay.
+async function optOutReminder(pool,t){
+ const v=String(t||'');if(!/^[A-Za-z0-9_-]{16,64}$/.test(v))return 0;
+ return (await pool.query('UPDATE growth_free_checks SET reminder_opt_out_at=COALESCE(reminder_opt_out_at,NOW()) WHERE reminder_token=$1',[v])).rowCount||0;
+}
 async function saveGscUpload(pool,{checkId,fileName,upload}){
  return (await pool.query(`INSERT INTO growth_free_gsc_uploads(check_id,file_name,status,basis,period_start,period_end,totals,queries)
    VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb) RETURNING id,created_at`,[checkId,String(fileName||'').slice(0,200),upload.status,upload.basis||null,
@@ -220,4 +247,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

@@ -22,6 +22,14 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
   approves. The original page is read again publicly; the package is refused when the page changed in between, when a
   flagged sentence is still in the text, or without approval, with the reason in plain language. Evidence is "verified"
   when an export filtered on exactly this page contains the search term, otherwise "observed". Nothing is published;
+* **After publication (optional)**: the visitor enters the date the change went live. One e-mail goes to the address of
+  the check when Search Console has the full 4 weeks after it (the Tracker's date rule: publication + 32 days, 08:00 UTC),
+  in the language of the page (English and Dutch written; another language translated and checked, else English): which
+  two periods to export (4 weeks before and after, filtered on exactly this page) and the link to the result page, where
+  both exports are shown side by side. Only page-verified exports count; a missing period is named, never filled in. A
+  confirmation is sent when the date is saved; every e-mail has a stop link (`/free-growth/stop/:token`). Sent hourly
+  when `BREVO_API_KEY` is set (`GROWTH_FREE_REMINDERS=0` turns it off); links use `GROWTH_FREE_PUBLIC_URL` or
+  `PUBLIC_APP_URL`. Stored in `growth_free_checks` (deleted with the check);
 * the complete research as a JSON download, to process themselves;
 * a "done for you" offer (paid): booking link and/or a request form.
 
@@ -37,6 +45,7 @@ It reuses the existing Growth research engine unchanged
 | `summary.cjs` | Turns the Google report into plain language — change wording here |
 | `ai-answers.cjs` | AI prompt, reading pasted AI answers, AI summary |
 | `cms-package.cjs` | The CMS package from the concepts: original page, link placement, the Tracker's package builder |
+| `reminders.cjs` | Publication date, the e-mail about 4 weeks later, the before/after comparison |
 | `gsc-export.cjs` | Reading an uploaded Search Console export (ZIP/CSV), page verification, rows for the research |
 | `store.cjs` | Own tables `growth_free_checks`, `growth_free_ai_answers`, `growth_free_invites`, `growth_free_hire_requests` (created automatically) |
 | `routes.cjs` | Pages, API, limits, access keys, admin |

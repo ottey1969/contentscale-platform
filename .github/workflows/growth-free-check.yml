@@ -7,6 +7,8 @@ on:
       - 'tests/growth-ai-check-validation.test.cjs'
       - 'tests/growth-free-gsc-export.test.cjs'
       - 'tests/growth-free-cms-package.test.cjs'
+      - 'tests/growth-free-measurement.test.cjs'
+      - 'src/growth-measurement-reminders.cjs'
       - 'tests/helpers/zip.cjs'
       - 'public/prewrite-ai-answer-research.js'
       - 'src/prewrite-ai-answer-research.cjs'
@@ -22,6 +24,8 @@ on:
       - 'tests/growth-ai-check-validation.test.cjs'
       - 'tests/growth-free-gsc-export.test.cjs'
       - 'tests/growth-free-cms-package.test.cjs'
+      - 'tests/growth-free-measurement.test.cjs'
+      - 'src/growth-measurement-reminders.cjs'
       - 'tests/helpers/zip.cjs'
       - 'public/prewrite-ai-answer-research.js'
       - 'src/prewrite-ai-answer-research.cjs'
@@ -42,4 +46,4 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci --ignore-scripts
       - name: Access keys, limits, read-only engine, summary, public flow, admin, standalone server
-        run: node --test tests/growth-free-check.test.cjs tests/growth-ai-check-validation.test.cjs tests/growth-free-gsc-export.test.cjs tests/growth-free-cms-package.test.cjs
+        run: node --test tests/growth-free-check.test.cjs tests/growth-ai-check-validation.test.cjs tests/growth-free-gsc-export.test.cjs tests/growth-free-cms-package.test.cjs tests/growth-free-measurement.test.cjs
