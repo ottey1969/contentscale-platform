@@ -96,7 +96,7 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     await db.query("INSERT INTO tracker_clients(token,domain) VALUES ($1,'test-prewrite-gen.example')", [token2]);
     const gen = await fetch(base + '/api/tracker-client/' + token2 + '/prewrite-brief', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
       keyword: 'seo content optimalisatie', language: 'Dutch', region: 'nl', manualAiEvidence: { google_source: 'no_ai_overview', google_aio: '',
-        chatgpt: 'TEST: Webteksten verbeteren voor zoekmachines begint bij de vraag van de lezer.', claude: 'TEST: SEO content optimalisatie begint bij zoekintentie en volledigheid.', copilot: 'n/a' } }) });
+        chatgpt: 'TEST: Webteksten verbeteren voor zoekmachines begint bij de vraag van de lezer.', claude: 'TEST: SEO content optimalisatie begint bij zoekintentie en volledigheid. Bron: https://example.com/ai-only-lead?utm_source=chatgpt.com', copilot: 'n/a' } }) });
     const gj = await gen.json();
     // The TEST stub cannot pass source verification (outside pages are denied), so the gate says NOT PASSED and nothing is saved.
     assert.equal(gj.stage, 'quality_gate', JSON.stringify(gj).slice(0, 400)); assert.equal(gj.saved, false);
@@ -104,6 +104,19 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     assert.deepEqual([gr.answers_valid, gr.answers_captured, gr.answers_invalid, gr.systems_not_checked, gr.google_no_ai_overview], [2, 3, 1, 1, true]);
     assert.deepEqual(gj.brief.ai_system_evidence.google_aio, { checked: false, source: 'no_ai_overview', manual: true, text: '', google_source: 'no_ai_overview' });
     assert.equal(gj.brief.ai_system_evidence.copilot.checked, false, 'the placeholder is not stored as Copilot evidence');
+    // URLs from pasted AI answers are leads only: out of the official sources, kept separately without tracking.
+    assert.deepEqual(gj.brief.ai_source_leads.map(x => [x.url, x.system, x.status]), [['https://example.com/ai-only-lead', 'claude', 'not_verified']]);
+    assert.doesNotMatch(JSON.stringify(gj.brief.evidence.official_sources), /ai-only-lead|utm_source/);
+    // NOT PASSED on a normal Tracker keeps its diagnostic, and Complete missing only reuses it (no dead end).
+    assert.match(String(gj.diagnostic_job_id || ''), /^[0-9a-f-]{36}$/);
+    const diagRow = (await db.query('SELECT status, stage, error_json, request_json FROM prewrite_async_jobs WHERE id=$1', [gj.diagnostic_job_id])).rows[0];
+    assert.equal(diagRow.stage, 'quality_gate'); assert.equal(diagRow.error_json.brief.prewrite_ai_answer_research.answers_valid, 2);
+    assert.equal(diagRow.request_json.existingSiteHtml, undefined);
+    const calls = fs.readFileSync(capture, 'utf8').trim().split('\n').length;
+    const comp = await (await fetch(base + '/api/tracker-client/' + token2 + '/prewrite-brief', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+      keyword: 'seo content optimalisatie', language: 'Dutch', region: 'nl', completionFromJobId: gj.diagnostic_job_id, manualAiEvidence: { google_source: 'no_ai_overview' } }) })).json();
+    assert.equal(comp.completion_mode, 'missing_only', JSON.stringify(comp).slice(0, 300)); assert.equal(comp.research_reused, true); assert.equal(comp.research_rerun, false);
+    assert.ok(fs.readFileSync(capture, 'utf8').trim().split('\n').length - calls <= 1, 'at most one targeted completion call; no new research');
     const sent = fs.readFileSync(capture, 'utf8').trim().split('\n').map(l => JSON.parse(JSON.parse(l).body).contents[0].parts[0].text);
     assert.ok(sent.length >= 1, 'the generator was called');
     const p0 = sent[0];

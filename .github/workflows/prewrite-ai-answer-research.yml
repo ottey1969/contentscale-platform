@@ -11,6 +11,7 @@ on:
       - 'tests/prewrite-ai-answer-*.test.cjs'
       - 'tests/prewrite-research-*.test.cjs'
       - 'tests/prewrite-brief-research-*.test.cjs'
+      - 'tests/prewrite-production-findings.test.cjs'
       - 'tests/staging-boot-no-egress.cjs'
       - 'tests/prewrite-e2e-gemini-stub.cjs'
       - 'public/prewrite-ai-answer-research.js'
@@ -27,6 +28,7 @@ on:
       - 'tests/prewrite-ai-answer-*.test.cjs'
       - 'tests/prewrite-research-*.test.cjs'
       - 'tests/prewrite-brief-research-*.test.cjs'
+      - 'tests/prewrite-production-findings.test.cjs'
       - 'tests/staging-boot-no-egress.cjs'
       - 'tests/prewrite-e2e-gemini-stub.cjs'
       - 'public/prewrite-ai-answer-research.js'
@@ -40,7 +42,7 @@ jobs:
         with:
           node-version: '20'
       - name: Validate 5-system writing research, canonical integration and the migration reference
-        run: node --test tests/prewrite-ai-answer-research.test.cjs tests/prewrite-ai-answer-integration.test.cjs tests/prewrite-research-prompt-contract.test.cjs tests/prewrite-brief-research-migration.test.cjs tests/prewrite-ai-answer-validation.test.cjs
+        run: node --test tests/prewrite-ai-answer-research.test.cjs tests/prewrite-ai-answer-integration.test.cjs tests/prewrite-research-prompt-contract.test.cjs tests/prewrite-brief-research-migration.test.cjs tests/prewrite-ai-answer-validation.test.cjs tests/prewrite-production-findings.test.cjs
       - name: Research Prompt tab in a real browser (real Pre-Write markup from the canonical build)
         run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/prewrite-research-tab-browser.test.cjs
       - name: Verify idempotent canonical build
