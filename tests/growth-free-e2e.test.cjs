@@ -28,7 +28,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
   const express = require('express');
   const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
   const pool = new pg.Pool({ connectionString: DB });
-  const writes = [];
+  const writes = [], mails = [];
   const engineDeps = { retryDelayMs: 0, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
     fetchLive: async url => { const html = PAGES[url]; if (!html) throw Object.assign(Error('TEST page not available'), { code: 'PUBLIC_HTML_UNAVAILABLE' });
       return { html, final_url: url, retrieved_at: new Date().toISOString(), truncated: false, source: 'LIVE_PUBLIC_HTTPS' }; },
@@ -37,7 +37,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     generateDraft: async args => { writes.push(args); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: (args.readerTask?.tasks || []).map(x => ({ task_code: x.code, h2: 'How to read a repair estimate',
       paragraphs: ['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.'] })) } }; } };
   const app = express(); app.use(express.json({ limit: '1mb' }));
-  const service = registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-1' }), writing: 'all', writeLimit: 2, perIp: 50, daily: 20, perEmail: 10 }, engineDeps, fetchImpl: async () => ({ ok: true }) });
+  const service = registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-1' }), writing: 'all', writeLimit: 2, perIp: 50, daily: 20, perEmail: 10 }, engineDeps, fetchImpl: async () => ({ ok: true }), sendEmail: async m => { mails.push(m); return true; } });
   const srv = app.listen(0); const base = 'http://127.0.0.1:' + srv.address().port;
   const browser = await chromium.launch();
   try {
@@ -102,12 +102,39 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.click('#gscSave');
     await p.waitForFunction(() => /Not verified for this page\./.test(document.body.textContent), null, { timeout: 30000 });
     assert.match(await p.textContent('body'), /2 exports uploaded for this check/);
+    // 7. After publication: the date, a confirmation e-mail, two exports (4 weeks before and after) side by side, one
+    // reminder e-mail with the result link, and the stop link.
+    const { windowsOf } = require('../src/growth-free/reminders.cjs');
+    const published = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10), w = windowsOf(published);
+    await p.fill('#pubDate', published); await p.click('#pubSave');
+    await p.waitForFunction(() => /One e-mail on .* to t\*\*\*@acme-roofing\.example/i.test(document.getElementById('pubBox').textContent), null, { timeout: 30000 });
+    assert.equal(mails.length, 1); assert.deepEqual(mails[0].to, [email.toLowerCase()]); assert.match(mails[0].subject, /Reminder set/);
+    const days = (a, b) => { const out = []; for (let t = Date.parse(a + 'T00:00:00Z'); t <= Date.parse(b + 'T00:00:00Z'); t += 86400000) out.push(new Date(t).toISOString().slice(0, 10)); return out; };
+    const period = (win, imp) => zip({ 'Queries.csv': 'Top queries,Clicks,Impressions,CTR,Position\nroof repair lodi nj,2,' + imp + ',0.5%,12.0\n',
+      'Dates.csv': 'Date,Clicks,Impressions,CTR,Position\n' + days(win.start, win.end).map(d => d + ',1,' + Math.round(imp / 28) + ',0.5%,12.0').join('\n') + '\n',
+      'Filters.csv': 'Filter,Value\nPage,' + URL_ + '\n' });
+    for (const [win, imp, n] of [[w.before, 280, 3], [w.after, 560, 4]]) {
+      await p.setInputFiles('#gscLater', { name: 'Performance-' + win.start + '.zip', mimeType: 'application/zip', buffer: period(win, imp) });
+      await p.click('#gscSave');
+      await p.waitForFunction(k => new RegExp(k + ' exports uploaded').test(document.body.textContent), String(n), { timeout: 30000 });
+    }
+    const cmp = await p.textContent('#pubBox');
+    assert.match(cmp, /Before and after in Google/); assert.doesNotMatch(cmp, /No export yet/);
+    assert.match(cmp, /280 shown · 28 clicks[^]*560 shown · 28 clicks/); assert.doesNotMatch(cmp, /not exactly the 4 weeks/);
+    const due = await service.sendDueReminders({ now: new Date() });
+    assert.deepEqual(due, { sent: 1, failed: 0 });
+    const reminder = mails[1]; assert.match(reminder.subject, /Four weeks after your update/); assert.deepEqual(reminder.to, [email.toLowerCase()]);
+    const resultLink = /href="([^"]*\/free-growth\/r\/[^"]*)"/.exec(reminder.html)[1], stopLink = /href="([^"]*\/free-growth\/stop\/[^"]*)"/.exec(reminder.html)[1];
+    assert.equal(new URL(resultLink).pathname, new URL(p.url()).pathname, 'the e-mail links to this result');
+    assert.deepEqual(await service.sendDueReminders({ now: new Date() }), { sent: 0, failed: 0 }, 'sent once');
+    assert.match(await (await fetch(base + new URL(stopLink).pathname)).text(), /Reminder stopped/);
     assert.deepEqual(errors, [], 'no browser error on the way');
     // Database: the check and the AI answer are in the Free tables; no Tracker table was created or written.
     const row = (await pool.query('SELECT id,status,email FROM growth_free_checks WHERE lower(email)=lower($1)', [email])).rows[0];
     assert.equal(row.status, 'DONE');
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM growth_free_ai_answers WHERE check_id=$1', [row.id])).rows[0].n, 1);
-    assert.deepEqual((await pool.query('SELECT status FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY id', [row.id])).rows.map(r => r.status), ['VERIFIED_FOR_PAGE', 'NOT_VERIFIED_FOR_PAGE']);
+    assert.deepEqual((await pool.query('SELECT status FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY id', [row.id])).rows.map(r => r.status), ['VERIFIED_FOR_PAGE', 'NOT_VERIFIED_FOR_PAGE', 'VERIFIED_FOR_PAGE', 'VERIFIED_FOR_PAGE']);
+    assert.ok((await pool.query('SELECT reminder_opt_out_at FROM growth_free_checks WHERE id=$1', [row.id])).rows[0].reminder_opt_out_at, 'the stop link stopped the reminder');
     const after = (await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'tracker\\_%'")).rows.map(r => r.table_name).sort();
     assert.deepEqual(after, before, 'no Tracker table created');
   } finally { await browser.close(); srv.close(); await pool.end(); }
