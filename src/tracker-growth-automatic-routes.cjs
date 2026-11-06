@@ -1042,7 +1042,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',
    '<section id="growthFinalActions"><h2>Finish · Your next action</h2><p class="info growth-finish-note">Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.</p>',
    allowHandoff?'<p><a id="growthEditorHandoff" class="growth-primary-finish" href="'+handoff+'">Prepare CMS package</a></p>':
-    '<p class="info">CMS handoff requires Tracker owner access and an unlocked page.</p>',
+    // Say which of the two applies; a locked Case Study can be ended by the owner in the Tracker (nothing is deleted).
+    req.growth?.can_edit===true&&v.page.case_study_active
+     ?'<p class="info" id="growthCaseStudyLock"><strong>This page is a protected Case Study.</strong> Its baseline and measurement are locked, so no CMS package is prepared. To change the page, end the Case Study in the Tracker (button <em>End case study</em> on this page): the baseline, evidence and report stay saved. <a href="/track/'+encodeURIComponent(req.params.token)+'">Open the Tracker →</a></p>'
+     :'<p class="info">CMS handoff requires Tracker owner access and an unlocked page.</p>',
    '<details id="growthTechnicalExport"><summary>Advanced · Technical report and research controls</summary><p class="info">JSON is for audits and troubleshooting, not required for publication.</p>',
    '<button id="downloadResearch" type="button" hidden>'+(req.growth?.can_edit===true?'Download complete Growth report (JSON)':'Download research-only data (JSON)')+'</button> ',
    '<button id="retryResearch" type="button" hidden style="background:#64748b">Run research again</button></details></section>',

@@ -13,6 +13,7 @@ on:
       - 'tests/prewrite-brief-research-*.test.cjs'
       - 'tests/prewrite-production-findings.test.cjs'
       - 'tests/prewrite-expand-existing.test.cjs'
+      - 'tests/tracker-case-study-end-e2e.test.cjs'
       - 'src/prewrite-existing-page.cjs'
       - 'src/tracker-growth-automatic-routes.cjs'
       - 'tests/staging-boot-no-egress.cjs'
@@ -33,6 +34,7 @@ on:
       - 'tests/prewrite-brief-research-*.test.cjs'
       - 'tests/prewrite-production-findings.test.cjs'
       - 'tests/prewrite-expand-existing.test.cjs'
+      - 'tests/tracker-case-study-end-e2e.test.cjs'
       - 'src/prewrite-existing-page.cjs'
       - 'src/tracker-growth-automatic-routes.cjs'
       - 'tests/staging-boot-no-egress.cjs'
@@ -83,4 +85,4 @@ jobs:
       - name: Install dependencies without scripts
         run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
       - name: Pre-Write research through the real server routes (Tracker page, Complete missing only, reopen)
-        run: node --test tests/prewrite-brief-research-e2e.test.cjs
+        run: node --test tests/prewrite-brief-research-e2e.test.cjs tests/tracker-case-study-end-e2e.test.cjs
