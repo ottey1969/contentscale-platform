@@ -40,19 +40,19 @@ BEGIN
   SELECT count(*) INTO actual FROM information_schema.columns
   WHERE table_schema='public' AND table_name='tracker_workflow_client_events'
     AND is_nullable='NO';
-  IF actual <> 5 THEN
+  IF actual <> 6 THEN
     RAISE EXCEPTION 'tracker_workflow_client_events required columns mismatch: % not-null columns', actual;
   END IF;
   SELECT count(*) INTO actual FROM information_schema.columns
   WHERE table_schema='public' AND table_name='tracker_workflow_events'
     AND is_nullable='NO';
-  IF actual <> 6 THEN
+  IF actual <> 7 THEN
     RAISE EXCEPTION 'tracker_workflow_events required columns mismatch: % not-null columns', actual;
   END IF;
   SELECT count(*) INTO actual FROM information_schema.columns
   WHERE table_schema='public' AND table_name='tracker_workflow_sitemap_events'
     AND is_nullable='NO';
-  IF actual <> 5 THEN
+  IF actual <> 6 THEN
     RAISE EXCEPTION 'tracker_workflow_sitemap_events required columns mismatch: % not-null columns', actual;
   END IF;
 END $$;
