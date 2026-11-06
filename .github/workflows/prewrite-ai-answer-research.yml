@@ -15,6 +15,8 @@ on:
       - 'tests/prewrite-expand-existing.test.cjs'
       - 'tests/tracker-case-study-end-e2e.test.cjs'
       - 'tests/growth-cms-handoff-zero-statements.test.cjs'
+      - 'tests/growth-free-e2e.test.cjs'
+      - 'src/growth-free/**'
       - 'public/growth-cms-neutral-handoff.html'
       - 'public/growth-cms-neutral-handoff.js'
       - 'src/prewrite-existing-page.cjs'
@@ -39,6 +41,8 @@ on:
       - 'tests/prewrite-expand-existing.test.cjs'
       - 'tests/tracker-case-study-end-e2e.test.cjs'
       - 'tests/growth-cms-handoff-zero-statements.test.cjs'
+      - 'tests/growth-free-e2e.test.cjs'
+      - 'src/growth-free/**'
       - 'public/growth-cms-neutral-handoff.html'
       - 'public/growth-cms-neutral-handoff.js'
       - 'src/prewrite-existing-page.cjs'
@@ -92,3 +96,5 @@ jobs:
         run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
       - name: Pre-Write research through the real server routes (Tracker page, Complete missing only, reopen)
         run: node --test tests/prewrite-brief-research-e2e.test.cjs tests/tracker-case-study-end-e2e.test.cjs
+      - name: Free Growth end to end in a real browser against PostgreSQL (no Tracker writes)
+        run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/growth-free-e2e.test.cjs
