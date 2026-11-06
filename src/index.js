@@ -915,6 +915,8 @@ const WebSocket = require('ws');
 const rewriterHelpers = require('./rewriter-helpers');
 // Pre-Write Brief AI answer research (server side of the shared prompt contract).
 const _prewriteBriefResearch = require('./prewrite-brief-research.cjs');
+// Pre-Write Brief: same-intent page on this site (expand instead of a competing new URL) and findings for Growth.
+const _prewriteExistingPage = require('./prewrite-existing-page.cjs');
 
 // CONTENTSCALE NETWORK SAFE SHELL V1
 // Guarded require: a broken/missing Network module must never prevent the core platform from booting.
@@ -47519,6 +47521,13 @@ async function _pwbRegenWithIntent(intent) {
     loadRecentPrewriteBriefs();
   } catch(e) { if (stat) stat.textContent = '\u274c ' + e.message; }
 }
+// Opens Growth for the existing page named in the Brief: the saved Brief, or the NOT PASSED diagnostic of this keyword.
+function pwbOpenGrowthFromBrief(){
+  var kw=String((document.getElementById('pwbKeyword')||{}).value||'').trim(),id=Number(_pwbCurrentBriefId||0),job=id?'':_pwbRestoreDiagnosticJob(kw);
+  var st=document.getElementById('pwbStatus');
+  if(!id&&!job){if(st)st.textContent='⚠ Save or re-open this Brief first; Growth needs the saved Brief to take its findings along.';return;}
+  window.location.href='/track/'+encodeURIComponent(TOKEN)+'/growth/from-brief?'+(id?'brief_id='+encodeURIComponent(id):'job_id='+encodeURIComponent(job));
+}
 function renderPrewriteBrief(b) {
   var esc = function(s) { return (s == null ? '' : String(s)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); };
   // ── Pre-Write section labels per language (lek 2 — Pre-Write). Falls back to English. ──
@@ -47810,7 +47819,13 @@ function renderPrewriteBrief(b) {
       + '<div style="font-size:16px;font-weight:900;color:'+_tc+';margin-bottom:5px;">'+esc(_tr.replace(/_/g,' '))+'</div>'
       + '<div style="font-size:11px;color:#cbd5e1;"><strong>Cannibalization risk:</strong> '+esc(_cd.cannibalization_risk||'insufficient_data')+'</div>'
       + (_cd.closest_existing_url && _cd.closest_existing_url!=='none' ? '<div style="font-size:11px;color:#93c5fd;word-break:break-all;"><strong>Closest existing URL:</strong> '+esc(_cd.closest_existing_url)+'</div>' : '')
-      + (_cd.reason ? '<div style="font-size:11px;color:#9ca3af;margin-top:5px;line-height:1.55;">'+esc(_cd.reason)+'</div>' : '')+'</div>';
+      + (_cd.reason ? '<div style="font-size:11px;color:#9ca3af;margin-top:5px;line-height:1.55;">'+esc(_cd.reason)+'</div>' : '')
+      // Expanding an existing page happens in Growth: it reads the live page and the ranking pages and proposes only what
+      // is missing. The Brief's findings go along as reference (not as evidence).
+      + ((_tr==='EXPAND_EXISTING_PAGE'||_tr==='OPTIMIZE_EXISTING_PAGE')&&_cd.closest_existing_url&&_cd.closest_existing_url!=='none'
+        ? '<div style="margin-top:9px;"><button type="button" class="cs-btn" id="pwbExpandInGrowth" onclick="pwbOpenGrowthFromBrief()" style="border-color:#2563eb;color:#bfdbfe;background:#0b244d;font-weight:800;">Expand this page in Growth →</button>'
+          + '<div style="font-size:10.5px;color:#94a3b8;margin-top:4px;">Opens the Growth research for '+esc(_cd.closest_existing_url)+' with this keyword and market. The competitor gaps, sections and questions of this Brief go along as reference; statistics, quotes and AI-answer links do not.</div></div>' : '')
+      +'</div>';
   }
   if(b.hub_spoke_plan){
     var _hp=b.hub_spoke_plan;
@@ -60386,10 +60401,13 @@ async function _handlePrewriteBriefGeneration(req, res) {
         }
       }catch(_homeErr){console.warn('[prewrite-brief] homepage internal-link fallback failed:',String(_homeErr&&_homeErr.message||_homeErr).slice(0,220));}
     }
-    const _sitemapSample = clientSitemapUrls.slice(0,100);
-    const sitemapBlock = _sitemapSample.length
+    // A page of this site whose address contains every word of the keyword serves the same intent. It is always shown to
+    // the model (the sample holds 100 URLs) and checked again after generation.
+    const _pwbSameIntent=_prewriteExistingPage.findSameIntentPages(keyword,clientSitemapUrls,{region});
+    const _sitemapSample = Array.from(new Set(_pwbSameIntent.map(x=>x.url).concat(clientSitemapUrls))).slice(0,100);
+    const sitemapBlock = (_pwbSameIntent.some(x=>x.full)?'SAME-INTENT PAGE ALREADY ON THIS SITE (its address contains every word of the keyword): '+_pwbSameIntent.filter(x=>x.full).map(x=>x.url).join(', ')+'\nRecommend EXPAND_EXISTING_PAGE or OPTIMIZE_EXISTING_PAGE for it; a new URL for the same keyword would compete with it.\n\n':'')+(_sitemapSample.length
       ? 'AUTO INTERNAL LINK RESEARCH — VERIFIED CLIENT SITEMAP (' + clientSitemapUrls.length + ' URLs found; showing ' + _sitemapSample.length + '):\n' + _sitemapSample.join('\n') + '\nChoose 3-8 contextually relevant internal_link_targets ONLY from these exact URLs. Copy each link_to verbatim. Never invent, reconstruct or guess an internal URL.'
-      : 'AUTO INTERNAL LINK RESEARCH: no usable sitemap could be discovered. Return internal_link_targets as [] and never invent internal URLs.';
+      : 'AUTO INTERNAL LINK RESEARCH: no usable sitemap could be discovered. Return internal_link_targets as [] and never invent internal URLs.');
 
     // ── Owner-provided brand & author facts (CLAUDE-FIX-0808C) ──────────────
     // Same field the regular brief already respects (tracker_clients.brand_context,
@@ -61778,6 +61796,7 @@ ${sourceText}`;
       const _fallbackMode=_recSafe&&_recSafe.decision==='OPTIMIZE'?'OPTIMIZE_EXISTING_PAGE':_recSafe&&_recSafe.decision==='EXPAND_EXISTING'?'EXPAND_EXISTING_PAGE':'CREATE_NEW_PAGE';
       brief.content_decision = { recommended_treatment:_fallbackMode, cannibalization_risk:'insufficient_data', closest_existing_url:(_recSafe&&_recSafe.target)||'none', reason:'The saved Tracker recommendation is retained, but strategist review is required because the model returned no valid treatment.' };
     }
+    _prewriteExistingPage.applyExistingPageDecision(brief,_pwbSameIntent);
     const _finalTreatment=String(brief.content_decision.recommended_treatment||'').toUpperCase();
     if(_finalTreatment==='CREATE_NEW_PAGE'){
       brief.preserve_sections=[];brief.surgical_changes=[];

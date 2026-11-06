@@ -10,6 +10,7 @@ const storedResearch=require('./growth-research-report-store.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
 const {analyzeGrowthEvidence,sHtml}=require('./growth-automatic-analysis.cjs');
+const {briefFindingsForGrowth,sameUrl}=require('./prewrite-existing-page.cjs');
 const {proposeHandoffFromResearch}=require('./growth-research-handoff-suggestions.cjs');
 const {discoverGrowthCompetitorsWithFallback}=require('./growth-public-search-discovery.cjs');
 const {queryFit}=require('./growth-one-action-decision.cjs');
@@ -927,6 +928,43 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:Number(list.target_page_id),
     url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)}:null});
  });
+ // A Pre-Write Brief (saved, or its NOT PASSED diagnostic) that recommends expanding an existing page: load it for this
+ // client only. Owner data; never another client's Brief.
+ async function loadBriefForGrowth(clientId,{briefId,jobId}){
+  try{
+   if(/^[1-9][0-9]{0,12}$/.test(String(briefId||''))){
+    const r=(await pool.query('SELECT id,keyword,language,region,brief_json FROM prewrite_briefs WHERE client_id=$1 AND id=$2',[clientId,Number(briefId)])).rows[0];
+    return r?{ref:'brief_id='+r.id,label:'Pre-Write Brief #'+r.id,keyword:r.keyword,region:r.region,brief:r.brief_json||{}}:null;
+   }
+   if(/^[0-9a-f-]{36}$/i.test(String(jobId||''))){
+    const r=(await pool.query('SELECT id,request_json,error_json,result_json FROM prewrite_async_jobs WHERE client_id=$1 AND id=$2',[clientId,String(jobId)])).rows[0];
+    const brief=r&&((r.result_json&&r.result_json.brief)||(r.error_json&&r.error_json.brief));
+    return brief?{ref:'job_id='+r.id,label:'Pre-Write Brief (not passed, diagnostic)',keyword:(r.request_json&&r.request_json.keyword)||brief.keyword,region:r.request_json&&r.request_json.region,brief}:null;
+   }
+  }catch(e){if(e.code!=='42P01')throw e}
+  return null;
+ }
+ // "Expand this page in Growth" from the Pre-Write Brief: find the tracked page the Brief names and open its research
+ // with the Brief's keyword and market. A page that is not in the Tracker yet is said plainly; nothing is created.
+ app.get('/track/:token/growth/from-brief',data,async(req,res)=>{
+  const page=(t,body)=>res.status(t).set('Cache-Control','private, no-store').set('X-Robots-Tag','noindex,nofollow').type('html')
+   .send('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Growth · Expand an existing page</title>'+
+    '<style>body{font:15px/1.55 system-ui;color:#172337;background:#f6f8fc;margin:0;padding:24px}main{max-width:760px;margin:auto;background:white;border:1px solid #d9e1ec;border-radius:12px;padding:20px}a{color:#1d4ed8}</style></head><body><main>'+body+'</main></body></html>');
+  const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
+  if(req.growth?.can_edit!==true)return page(403,'<h1>Owner access needed</h1><p>Only the Tracker owner can open a Pre-Write Brief in Growth.</p><p><a href="'+back+'">← Growth</a></p>');
+  const b=await loadBriefForGrowth(req.growthTrackerClientId,{briefId:req.query?.brief_id,jobId:req.query?.job_id});
+  if(!b)return page(404,'<h1>Brief not found</h1><p>This Pre-Write Brief does not exist for this Tracker.</p><p><a href="'+back+'">← Growth</a></p>');
+  const target=String(b.brief.content_decision&&b.brief.content_decision.closest_existing_url||'');
+  const tracked=(req.growth?.pages||[]).find(x=>x&&x.url&&sameUrl(x.url,target));
+  if(!target||target==='none')return page(409,'<h1>No existing page in this Brief</h1><p>The Brief does not name an existing page to expand.</p><p><a href="'+back+'">← Growth</a></p>');
+  if(!tracked)return page(409,'<h1>This page is not in the Tracker yet</h1><p><strong>'+sHtml(target)+'</strong> is not one of the pages this Tracker follows. Add it as a page in the Tracker; then open the Brief again and choose <em>Expand this page in Growth</em>. Nothing was changed.</p><p><a href="'+back+'">← Growth</a></p>');
+  const market=String(b.region||'').trim().slice(0,2).toLowerCase();
+  const q=new URLSearchParams({page_id:String(tracked.id)});
+  if(b.keyword)q.set('query',String(b.keyword).slice(0,120));
+  if(/^[a-z]{2}$/.test(market))q.set('market',market);
+  q.set('from',b.ref);
+  return res.redirect(302,'/track/'+encodeURIComponent(req.params.token)+'/growth/auto-research?'+q.toString());
+ });
  app.get('/track/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   // Target market(s) and language at the top, before the research runs (owner only). Same lists as the Pre-Write brief;
@@ -961,6 +999,20 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     '<button id="marketSave" type="button">Save and run the research again</button></p>'+opts('marketRegions',PREWRITE_REGIONS)+opts('marketLanguages',PREWRITE_LANGUAGES)+
     '<small id="marketSaid">'+marketLine+'<br>'+languageLine+'</small>'+alternatives+'</section>';
   }
+  // Findings from the Pre-Write Brief this research was opened from (owner only): reference for what the page still misses.
+  let briefBox='';
+  const fromRef=String(req.query?.from||'');
+  if(req.growth?.can_edit===true&&/^(brief_id|job_id)=/.test(fromRef)){
+   const [k,val]=fromRef.split('=');
+   const fb=await loadBriefForGrowth(v.clientId,k==='brief_id'?{briefId:val}:{jobId:val}).catch(()=>null);
+   if(fb){
+    const f=briefFindingsForGrowth(fb.brief),li=x=>'<li>'+x+'</li>';
+    briefBox='<section id="briefFindings"><h2>From your '+sHtml(fb.label)+' — reference, not evidence</h2><p class="info">'+sHtml(f.note)+' Left out on purpose: '+sHtml(f.not_included.join(', '))+'.</p>'+
+     (f.competitor_gaps.length?'<h3>Gaps the ranking pages leave open</h3><ul>'+f.competitor_gaps.map(g=>li('<strong>'+sHtml(g.competitor)+'</strong>: '+sHtml(g.gap)+(g.to_add?' <small>Add: '+sHtml(g.to_add)+'</small>':''))).join('')+'</ul>':'')+
+     (f.outline.length?'<h3>Sections the Brief planned</h3><ol>'+f.outline.map(o=>li(sHtml(o.heading)+(o.covers.length?' <small>'+sHtml(o.covers.join(' · '))+'</small>':''))).join('')+'</ol>':'')+
+     (f.questions.length?'<h3>Questions to answer</h3><ul>'+f.questions.map(x=>li(sHtml(x))).join('')+'</ul>':'')+'</section>';
+   }
+  }
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const base='/track/'+encodeURIComponent(req.params.token)+'/growth';
   const allowHandoff=req.growth?.can_edit===true&&!v.page.case_study_active;
@@ -982,7 +1034,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
-   marketBox,
+   marketBox,briefBox,
    '<section><div role="status" id="researchStatus">Loading saved research…</div></section>',
    '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',
    '<section id="growthFinalActions"><h2>Finish · Your next action</h2><p class="info growth-finish-note">Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.</p>',
