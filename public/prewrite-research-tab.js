@@ -48,6 +48,7 @@
     var heading = findHeading(), grid = $('pwbAioText') && $('pwbAioText').closest('.pwb-ai-five-grid');
     if (!heading || !grid) return false;
     addStyles();
+    heading.textContent = 'Collect AI answers';
     var tabs = document.createElement('div');
     tabs.id = 'cs-research-tabs';
     tabs.setAttribute('role', 'tablist');
@@ -56,6 +57,10 @@
     inputs.type = prompt.type = 'button';
     inputs.textContent = 'AI Answer Inputs';
     prompt.textContent = 'Research Prompt';
+    // The research prompt is internal to Brief generation. Do not expose expert tooling to ordinary users.
+    tabs.hidden = true;
+    tabs.style.display = 'none';
+    tabs.setAttribute('aria-hidden', 'true');
     inputs.id = 'cs-research-inputs-tab';
     prompt.id = 'cs-research-prompt-tab';
     if (!grid.id) grid.id = 'cs-research-inputs-panel';
@@ -64,6 +69,7 @@
     panel.setAttribute('role', 'tabpanel');
     panel.setAttribute('aria-labelledby', prompt.id);
     panel.hidden = true;
+    panel.style.display = 'none';
     grid.setAttribute('role', 'tabpanel');
     grid.setAttribute('aria-labelledby', inputs.id);
     inputs.setAttribute('aria-controls', grid.id);
@@ -73,7 +79,7 @@
     var ask = document.createElement('button'); ask.type = 'button'; ask.className = 'cs-rp-ask'; ask.id = 'cs-research-ask-copy';
     ask.textContent = 'Copy search question';
     var askNote = document.createElement('p'); askNote.className = 'cs-ask-note'; askNote.setAttribute('role', 'status');
-    askNote.textContent = 'Ask each AI system only the search query, exactly as a reader would. Paste its full answer, with its sources, in the matching field. Never paste the Research Prompt into an AI system or into these fields.';
+    askNote.textContent = '1. Copy the keyword and search for it in an AI system. 2. Paste that system\'s actual answer in its field below. 3. Use Analyse & create when your answers are ready.';
     var askBox = document.createElement('div'); askBox.id = 'cs-research-ask'; askBox.append(ask, askNote);
     var status = document.createElement('p'); status.className = 'cs-rp-status'; status.setAttribute('role', 'status');
     var note = document.createElement('p');
@@ -84,7 +90,8 @@
     var copy = document.createElement('button'); copy.type = 'button'; copy.textContent = 'Copy Research Prompt';
     var copied = document.createElement('small'); copied.setAttribute('role', 'status');
     actions.append(copy, copied);
-    panel.append(status, note, choice, editor, actions);
+    panel.append(note, choice, editor, actions);
+    askBox.appendChild(status);
     heading.insertAdjacentElement('afterend', tabs);
     tabs.insertAdjacentElement('afterend', askBox);
     grid.insertAdjacentElement('afterend', panel);
@@ -116,7 +123,7 @@
     function render() {
       var L = lib(), input = currentInputs();
       copied.textContent = '';
-      if (!L) { status.dataset.state = 'error'; status.textContent = 'The research prompt could not be loaded. Reload the page.'; editor.value = ''; copy.disabled = true; return; }
+      if (!L) { status.dataset.state = 'error'; status.textContent = 'Answer validation is unavailable. Refresh the page before continuing.'; editor.value = ''; copy.disabled = true; return; }
       var saved = savedResearch(input.query);
       choice.hidden = !saved;
       if (saved && !choice.options.length) {
@@ -124,7 +131,7 @@
       }
       var research = saved && choice.value === 'saved' ? saved : L.makePrewriteAiAnswerResearch(input);
       if (!research.query) {
-        status.dataset.state = 'error'; status.textContent = 'Enter the target keyword first: the research prompt is built for that exact query.';
+        status.dataset.state = 'error'; status.textContent = 'Enter the target keyword above to start.';
         editor.value = ''; copy.disabled = true; return;
       }
       var n = research.answers_valid, obs = research.observations;
@@ -133,16 +140,11 @@
       var warned = obs.filter(function (x) { return x.checked && (x.warnings || []).length; }).map(function (x) { return x.label; });
       status.dataset.state = n === research.systems_total ? 'complete' : n ? 'partial' : 'none';
       if (invalid.length) status.dataset.state = n ? 'partial' : 'error';
-      status.textContent = (research === saved ? 'Saved with the generated Brief · ' : '') +
-        n + ' of 5 valid AI answers · ' + research.answers_captured + ' captured · ' + research.answers_invalid + ' invalid · ' + research.systems_not_checked + ' not checked.' +
-        (n === research.systems_total ? ' Source URLs are leads; verify them before citing.' : '') +
-        (notChecked.length ? ' NOT CHECKED: ' + notChecked.join(', ') + '; nothing is filled in.' : '') +
-        (invalid.length ? ' INVALID, not counted: ' + invalid.map(function (x) { return x.label + ' — ' + (x.error_message || 'not an answer to the query'); }).join(' ') : '') +
-        (research.google_no_ai_overview ? ' Google: no AI Overview shown (recorded; not an AI answer, Gemini not researched).' : '') +
-        (warned.length ? ' Check the topic of: ' + warned.join(', ') + '.' : '') +
-        (n ? ' Pasted answers are your observations; their origin is not verified.' : '') +
-        (n === 0 && !invalid.length && !research.google_no_ai_overview ? ' Paste them under "AI Answer Inputs"; without them the prompt marks all five as NOT CHECKED.' : '') +
-        (research !== saved && !val('pwbPerplexityText') ? ' If Perplexity stays empty, the server may add an automatic Perplexity answer when the Brief is generated; the saved prompt then shows it.' : '');
+      // Clear, task-based guidance for owners. Detailed observation metadata remains in saved research.
+      status.textContent = n + ' of 5 AI answers ready.' +
+        (invalid.length ? ' ' + invalid.length + ' answer' + (invalid.length === 1 ? ' needs' : 's need') + ' correction — see the message below the corresponding field.' : '') +
+        (research.google_no_ai_overview ? ' No Google AI Overview appeared; use a Gemini answer if you need the Google result.' : '') +
+        (n === research.systems_total ? ' Ready for Analyse & create.' : ' Add the remaining answers when available.');
       editor.value = L.buildPrewriteResearchPrompt(research);
       copy.disabled = false;
     }
@@ -167,7 +169,7 @@
     choice.addEventListener('change', render);
     // Keep the prompt current while the owner edits the keyword, market, language or answers.
     ['pwbKeyword', 'pwbLanguage', 'pwbRegion', 'pwbGoogleSource'].concat(FIELDS.map(function (f) { return f[1]; })).forEach(function (id) {
-      var el = $(id), onEdit = function () { checkFields(); syncAsk(); if (!panel.hidden) render(); };
+      var el = $(id), onEdit = function () { checkFields(); syncAsk(); render(); };
       if (el) { el.addEventListener('input', onEdit); if (el.tagName === 'SELECT') el.addEventListener('change', onEdit); }
     });
     copy.addEventListener('click', function () {
@@ -176,7 +178,7 @@
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(editor.value).then(function () { done(true); }, function () { done(false); });
       else { var ok = false; try { ok = document.execCommand('copy'); } catch (e) {} done(ok); }
     });
-    select(false); checkFields(); syncAsk();
+    select(false); checkFields(); syncAsk(); render();
     return true;
   }
   function boot() {
