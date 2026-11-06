@@ -11,6 +11,12 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
   or this exact page is cited, which sites AI cites instead, and which of those also rank in Google.
   No AI API is called (no cost); answers are stored per check (`growth_free_ai_answers`) and included in the JSON.
   A test keeps the prompt identical to the Quick Scan prompt in `src/index.js`;
+* **Search Console (optional, no Google sign-in)**: the visitor uploads the Search Console export (Performance →
+  filter Page → "Exact URL" → this page → Export → Download CSV, a ZIP) or one queries CSV, in the form or later on the
+  result. Read by `gsc-export.cjs` (any language, any number format). It counts as evidence only when filtered on exactly
+  this page (`Filters.csv`, or a `Pages.csv` with only this page): then the research uses the search terms like the
+  Tracker's page-verified Search Console data. Otherwise it is shown as "not verified for this page". Stored per check
+  (`growth_free_gsc_uploads`), deleted with the check, never in the Tracker;
 * the complete research as a JSON download, to process themselves;
 * a "done for you" offer (paid): booking link and/or a request form.
 
@@ -25,6 +31,7 @@ It reuses the existing Growth research engine unchanged
 | `engine.cjs` | Runs the Growth research for one public URL (URL validation, read-only data source) |
 | `summary.cjs` | Turns the Google report into plain language — change wording here |
 | `ai-answers.cjs` | AI prompt, reading pasted AI answers, AI summary |
+| `gsc-export.cjs` | Reading an uploaded Search Console export (ZIP/CSV), page verification, rows for the research |
 | `store.cjs` | Own tables `growth_free_checks`, `growth_free_ai_answers`, `growth_free_invites`, `growth_free_hire_requests` (created automatically) |
 | `routes.cjs` | Pages, API, limits, access keys, admin |
 | `server.cjs` | Runs the tool on its own (own domain / own Railway service) |

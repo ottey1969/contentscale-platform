@@ -12,6 +12,7 @@ const {writeForSelection,planBatch,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=re
 const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded-editor.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
+const gscExport=require('./gsc-export.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -124,6 +125,8 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
  <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
 ${aiStartBlock()}
+ <label for="gscFile">Search Console export (optional)</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
+ <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
  <label for="email">Your email</label><input id="email" name="email" type="email" required maxlength="200" placeholder="you@company.com">
  <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` Max ${cfg.perEmail} free checks per day.`}</span></label>
  <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
@@ -137,10 +140,12 @@ ${aiStartBlock()}
 <p class="muted">No ranking promises. Nothing is changed on your website. Takes about one minute.</p></div>
 <script>
 ${aiStartScript()}
+function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
 b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent='Starting…';
-try{var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
+try{var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
+var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -172,6 +177,24 @@ function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
  b.onclick=async function(){var st=document.getElementById('aiStatus'),eng=document.getElementById('aiEngine').value,txt=document.getElementById('aiText').value;if(!txt.trim()){st.textContent='Paste the answer first.';return}b.disabled=true;st.textContent='Analysing…';
   try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE')render(d);else showAiFirst(d,true);var el=document.getElementById('ai');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
+function gscHtml(g){var h='<h2 id="gsc">Search Console (optional)</h2>';
+ if(g&&g.latest){var L=g.latest,T=L.totals||{};
+  h+='<p class="lead"><strong>'+(L.used_in_research?'Verified for this page':L.status==='PAGE_TOTALS_ONLY'?'Totals of this page; search terms not page-filtered':'Not verified for this page')+'.</strong> '+esc(L.message)+'</p>';
+  h+='<div class="grid"><div><small>Period</small><strong>'+(L.period?esc(L.period.start)+' – '+esc(L.period.end):'not in the export')+'</strong></div><div><small>Clicks</small><strong>'+esc(T.clicks)+'</strong></div><div><small>Impressions</small><strong>'+esc(T.impressions)+'</strong></div><div><small>Average position</small><strong>'+(T.position==null?'–':esc(T.position))+'</strong></div></div>';
+  if(T.source==='QUERIES_SUM_UNDERCOUNTS')h+='<p class="muted">Totals are the sum of the search terms; Search Console leaves out rare terms, so the real totals are higher. The ZIP export includes the exact totals.</p>';
+  if(L.search_term)h+='<p>'+(L.search_term_row?'Your search term “'+esc(L.search_term)+'”: '+esc(L.search_term_row.impressions)+' impressions, '+esc(L.search_term_row.clicks)+' clicks, position '+esc(L.search_term_row.position==null?'–':L.search_term_row.position)+'.':'Your search term “'+esc(L.search_term)+'” is not in this export (no impressions in this period, or too rare to be listed).')+'</p>';
+  if((L.top_queries||[]).length)h+='<h3>Search terms with the most impressions</h3><ol>'+L.top_queries.map(function(q){return '<li>'+esc(q.query)+' <small>— '+esc(q.impressions)+' impressions, '+esc(q.clicks)+' clicks'+(q.position==null?'':', position '+esc(q.position))+'</small></li>'}).join('')+'</ol>';
+  if(g.uploads>1)h+='<p class="muted">'+esc(g.uploads)+' exports uploaded for this check; the latest is shown. All are kept for the comparison after publication.</p>';
+ }else h+='<p>No Search Console export uploaded. The check works without it; with an export filtered on exactly this page, the research also uses your real search terms.</p>';
+ h+='<div class="card"><label>Upload a Search Console export (ZIP or CSV)<input id="gscLater" type="file" accept=".zip,.csv,text/csv,application/zip"></label><p class="muted">Performance → filter Page → "Exact URL" → this page → Export → Download CSV. Stored with this check only. The Google research is not run again.</p><p><button type="button" id="gscSave">Upload export</button> <small role="status" id="gscStatus"></small></p></div>';
+ return h}
+function wireGsc(){var b=document.getElementById('gscSave');if(!b)return;
+ b.onclick=async function(){var st=document.getElementById('gscStatus'),f=document.getElementById('gscLater').files[0];if(!f){st.textContent='Choose the export file first.';return}
+  if(f.size>3*1024*1024){st.textContent='The file is larger than 3 MB. Export only this page.';return}
+  b.disabled=true;st.textContent='Reading…';
+  try{var c=await new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(f)});
+   var r=await fetch(API+'/gsc'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:{name:f.name,content_base64:c}})});var x=await r.json();if(!x.success)throw Error(x.error||'Not uploaded');
+   var d=await (await fetch(API+Q,{cache:'no-store'})).json();render(d);var el=document.getElementById('gsc');if(el)el.scrollIntoView()}catch(err){st.textContent=err.message;b.disabled=false}}}
 var GAPS=null;
 var GAP_GROUPS=[];
 function exampleText(x){return function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}}
@@ -253,6 +276,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  h+='<div class="grid two"><div><small>Google search (blue links)</small><strong>'+esc(s.headline)+'</strong><a href="#google">Details ↓</a></div><div><small>AI answers ('+(as?as.checked:0)+' of 5 AI systems — checked by you with pasted answers, not queried automatically)</small><strong>'+esc(as?as.headline:'AI answers not available')+'</strong><a href="#ai">'+(as&&as.checked?'Details ↓':'Check AI now ↓')+'</a></div></div>';
  // The AI check is an option at the start of the result, not something found at the end.
  if(a)h+=aiHtml(a);
+ h+=gscHtml(d.gsc);
  h+='<h2 id="google">Google search (blue links)</h2><p class="lead"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
  h+='<h3>What to do</h3><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
@@ -262,7 +286,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');if(d.new_che
  h+='<h2>Do it yourself</h2><p>Download the complete research data and process it yourself or with your own tools.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;wireAi();wireGaps(s.gaps,s,d);
+ o.innerHTML=h;wireAi();wireGsc();wireGaps(s.gaps,s,d);
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
@@ -363,7 +387,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const p=(async()=>{
     try{
      await storage.setStatus(pool,job.id,{status:'RUNNING'});
-     const out=await engine({url:job.url,query:job.query,market:job.market||null},engineDeps);
+     const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[]},engineDeps);
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
       if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
@@ -423,9 +447,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const query=clean(b.query,120);
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
+   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
-   const cached=await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
+   // A verified Search Console export changes the research, so a stored result without it is not reused.
+   const cached=gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE'?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
@@ -434,7 +460,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    }
    const row=await storage.createCheck(pool,{email,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label,market});
    await saveStartAnswers(row,v.url,aiAnswers);
-   if(!cached){queue.push({id:row.id,url:v.url,query,market});pump()}
+   if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
+   if(!cached){queue.push({id:row.id,url:v.url,query,market,gscRows:gscRowsOf(gsc,v.url)});pump()}
    res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
   }catch(e){console.error('[free-growth] start failed',e.message);res.status(503).json({success:false,error:'The free check is temporarily unavailable'})}
  });
@@ -467,6 +494,25 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   for(const x of answers||[])await storage.saveAiAnswer(pool,{checkId:row.id,engine:x.engine,rawText:x.text,parsed:ai.parseAiAnswer(x.text,{pageUrl:url})});
  }
  // Shared input checks for every way of starting a check.
+ // Optional Search Console export ({name, content_base64}). null: none; undefined: refused (response sent).
+ function readGscFile(b,url,res){
+  const f=b&&b.gsc_file;if(!f||!f.content_base64)return null;
+  if(String(f.content_base64).length>Math.ceil(gscExport.MAX_BYTES*4/3)+16){res.status(413).json({success:false,error:'The Search Console file is larger than 3 MB. Export only this page.'});return undefined}
+  const upload=gscExport.readGscExport({fileName:clean(f.name,200),content:Buffer.from(String(f.content_base64),'base64'),pageUrl:url});
+  if(upload.status==='INVALID'){res.status(400).json({success:false,error:'Search Console file: '+upload.message});return undefined}
+  return {fileName:clean(f.name,200),upload};
+ }
+ const gscRowsOf=(gsc,url)=>gsc?gscExport.engineRows(gsc.upload,{pageUrl:url}):[];
+ // The visitor's Search Console uploads for this check: the latest one is shown; all are kept for the 28-day comparison.
+ async function gscFor(row){
+  let list=[];try{list=await storage.listGscUploads(pool,row.id)}catch(e){console.warn('[free-growth] GSC uploads unavailable',String(e&&e.code||'unknown'))}
+  if(!list.length)return {uploads:0,latest:null};
+  const last=list[list.length-1],term=searchTermOf(row);
+  return {uploads:list.length,latest:{status:last.status,message:gscExport.MESSAGES[last.status]||'',file_name:last.file_name,uploaded_at:last.created_at,
+   period:last.period_start?{start:last.period_start,end:last.period_end}:null,totals:last.totals,top_queries:(last.queries||[]).slice(0,10),
+   search_term:term||null,search_term_row:gscExport.termInExport({queries:last.queries||[]},term),used_in_research:last.status==='VERIFIED_FOR_PAGE'},
+   history:list.map(x=>({status:x.status,uploaded_at:x.created_at,period:x.period_start?{start:x.period_start,end:x.period_end}:null,totals:x.totals}))};
+ }
  function readInput(b,res){
   const email=clean(b.email,200).toLowerCase();
   if(!EMAIL.test(email)){res.status(400).json({success:false,error:'Enter a valid email address'});return null}
@@ -474,16 +520,20 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const v=validatePublicUrl(b.url);if(v.error){res.status(400).json({success:false,error:v.error});return null}
   const market=readMarket(b,res);if(market===undefined)return null;
   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
-  return {email,url:v.url,host:v.host,query:clean(b.query,120),market,aiAnswers};
+  const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
+  return {email,url:v.url,host:v.host,query:clean(b.query,120),market,aiAnswers,gsc};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
-  const cached=fresh?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
+  // A verified Search Console export changes the research, so a stored result without it is not reused.
+  const withGsc=!!(input.gsc&&input.gsc.upload.status==='VERIFIED_FOR_PAGE');
+  const cached=fresh||withGsc?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
   await saveStartAnswers(row,input.url,input.aiAnswers);
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,market:input.market,inviteId:cached?null:inviteId});pump()}
+  if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,market:input.market,inviteId:cached?null:inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  async function startInviteCheck(req,res,b){
@@ -518,6 +568,13 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return {search_term:term,prompt:ai.directPrompt(term),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,
    summary:ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row),query:term})};
  }
+ // With an uploaded Search Console export, the "not used" limitation says what was actually used.
+ function withGscLimits(summary,gscPart){
+  if(!summary||!gscPart||!gscPart.latest)return summary;
+  const L=gscPart.latest,period=L.period?' ('+L.period.start+' – '+L.period.end+')':'';
+  const line=L.used_in_research?'Your Search Console export, filtered on exactly this page'+period+', was used in the research.':'A Search Console export was uploaded'+period+', but it is not filtered on exactly this page, so it was shown and not used as evidence.';
+  return {...summary,limitations:[...(summary.limitations||[]).filter(x=>!/^Google Search Console was not used/.test(x)),line]};
+ }
  // Once AI answers are pasted, the "AI not checked" limitation is replaced by the AI caveat.
  function withAiLimits(summary,aiPart){
   if(!summary||!aiPart||!aiPart.summary.checked)return summary;
@@ -527,10 +584,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const writingInfo=row=>({allowed:writingAllowed(row),remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:viewOf(row.written)});
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
-  const aiPart=await aiFor(row);
-  res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,
+  const aiPart=await aiFor(row),gscPart=await gscFor(row);
+  res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
-   summary:withAiLimits(row.summary,aiPart)||null,cached:!!row.cached_from,error_code:row.error_code||null,
+   summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    writing:row.status==='DONE'?writingInfo(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
@@ -543,14 +600,26 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.get(apiPath+'/checks/:id/report.json',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
-  const aiPart=await aiFor(row);
+  const aiPart=await aiFor(row),gscPart=await gscFor(row);
   res.set('Cache-Control','no-store').set('Content-Disposition',`attachment; filename="growth-check-${row.public_id}.json"`)
    .json({generated_by:config.brand+' free Growth check',url:row.url,search_term:row.query||null,checked_at:row.finished_at,
-    disclaimer:'Research data only. No ranking or traffic increase is promised. Google Search Console data was not used.',
-    summary:withAiLimits(row.summary,aiPart),
+    disclaimer:'Research data only. No ranking or traffic increase is promised. '+(gscPart.latest?(gscPart.latest.used_in_research?'A Search Console export verified for this exact page was used.':'A Search Console export was uploaded but is not verified for this exact page; it was not used as evidence.'):'Google Search Console data was not used.'),
+    search_console:gscPart,
+    summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart),
     ai_answers:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,summary:aiPart.summary,
      answers:aiPart.answers.map(a=>({engine:a.engine,pasted_at:a.created_at,parsed:a.parsed,raw_text:a.raw_text}))}:null,
     report:row.report});
+ });
+ // Optional Search Console export after the result (for example a newer period, or for the measurement after publication).
+ // Stored with this check only; the research is not run again.
+ app.post(apiPath+'/checks/:id/gsc',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  try{
+   const gsc=readGscFile(req.body||{},row.url,res);if(gsc===undefined)return;
+   if(!gsc)return res.status(400).json({success:false,error:'Choose the Search Console export (ZIP or CSV) first.'});
+   await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
+   res.json({success:true,gsc:await gscFor(row)});
+  }catch(e){console.error('[free-growth] GSC upload failed',e.message);res.status(503).json({success:false,error:'The Search Console file could not be saved. Please try again.'})}
  });
  // Optional: concepts only for the items the visitor selected (never automatic). The page is read again, publicly; the
  // text is checked against it and failing sentences are flagged. Nothing is published or stored on the visitor's site.

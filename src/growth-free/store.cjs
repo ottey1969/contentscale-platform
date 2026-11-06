@@ -65,6 +65,19 @@ function ensureTables(pool){
     parsed JSONB NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(check_id,engine))`);
+  // Optional Search Console exports uploaded by the visitor, per check (never in the Tracker). Removed with the check.
+  await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_gsc_uploads(
+    id BIGSERIAL PRIMARY KEY,
+    check_id BIGINT NOT NULL REFERENCES growth_free_checks(id) ON DELETE CASCADE,
+    file_name TEXT,
+    status TEXT NOT NULL,
+    basis TEXT,
+    period_start DATE,
+    period_end DATE,
+    totals JSONB,
+    queries JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  await pool.query('CREATE INDEX IF NOT EXISTS growth_free_gsc_uploads_check_idx ON growth_free_gsc_uploads(check_id,created_at)');
  })().catch(e=>{ensured=null;throw e});
  return ensured;
 }
@@ -157,6 +170,14 @@ async function forgetEmail(pool,email){
  return {checks:c.rowCount||0,hire_requests:h.rowCount||0};
 }
 
+async function saveGscUpload(pool,{checkId,fileName,upload}){
+ return (await pool.query(`INSERT INTO growth_free_gsc_uploads(check_id,file_name,status,basis,period_start,period_end,totals,queries)
+   VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb) RETURNING id,created_at`,[checkId,String(fileName||'').slice(0,200),upload.status,upload.basis||null,
+   upload.period&&upload.period.start||null,upload.period&&upload.period.end||null,JSON.stringify(upload.totals||null),JSON.stringify(upload.queries||[])])).rows[0];
+}
+async function listGscUploads(pool,checkId){
+ return (await pool.query("SELECT id,file_name,status,basis,period_start::text AS period_start,period_end::text AS period_end,totals,queries,created_at FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY created_at,id",[checkId])).rows;
+}
 async function saveAiAnswer(pool,{checkId,engine,rawText,parsed}){
  await pool.query(`INSERT INTO growth_free_ai_answers(check_id,engine,raw_text,parsed) VALUES ($1,$2,$3,$4::jsonb)
    ON CONFLICT (check_id,engine) DO UPDATE SET raw_text=EXCLUDED.raw_text,parsed=EXCLUDED.parsed,created_at=NOW()`,[checkId,engine,rawText,JSON.stringify(parsed)]);
@@ -199,4 +220,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

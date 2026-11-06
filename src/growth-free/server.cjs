@@ -10,7 +10,7 @@ function createFreeGrowthServer({pool,config=freeGrowthConfig(),...rest}={}){
  const app=express();
  app.set('trust proxy',1);
  app.disable('x-powered-by');
- app.use(express.json({limit:'64kb'}));
+ app.use(express.json({limit:'5mb'})); // an optional Search Console export (max 3 MB, base64)
  // Embedding is controlled per access key (CSP frame-ancestors on the pages), not globally.
  app.use((req,res,next)=>{res.set('X-Content-Type-Options','nosniff');next()});
  const service=registerFreeGrowth(app,pool,{config:{...config,enabled:true},...rest});

@@ -35,25 +35,28 @@ function validatePublicUrl(raw){
  return {url,host};
 }
 
-// The engine asks for a handful of Tracker tables. Only the page itself exists;
-// every optional source (GSC, snapshots, AI evidence, site inventory) is empty.
-function readOnlySource(page){
+// The engine asks for a handful of Tracker tables. Only the page itself exists; every optional source (snapshots, AI
+// evidence, site inventory) is empty. Search Console: only the rows of a visitor's export that is verified for exactly
+// this page (src/growth-free/gsc-export.cjs), answered as the Tracker's page-verified rows of this page.
+function readOnlySource(page,{gscRows=[]}={}){
  return {async query(sql){
   if(/^\s*(UPDATE|INSERT|DELETE|CREATE|ALTER|DROP|TRUNCATE)\b/i.test(sql))throw Error('FREE_GROWTH_ENGINE_IS_READ_ONLY');
   if(sql.includes('LEFT(html_content')&&/FROM tracker_pages\b/.test(sql))
    return {rows:[{id:FREE_PAGE_ID,tracker_client_id:FREE_CLIENT_ID,url:page.url,keyword:page.keyword,brief_content:null,saved_html:null}]};
+  if(/FROM tracker_gsc_queries\b/.test(sql)&&/page_id=\$2/.test(sql)&&/evidence_scope='page_verified'/.test(sql)&&!/page_id<>/.test(sql))
+   return {rows:gscRows.filter(r=>r&&r.source_page_url===page.url)};
   return {rows:[]};
  }};
 }
 
 // market: {countries,language} chosen by the visitor, used exactly like a market set in the Tracker (else derived).
-async function runFreeGrowthResearch({url,query,market=null},deps={}){
+async function runFreeGrowthResearch({url,query,market=null,gscRows=[]},deps={}){
  const page={id:FREE_PAGE_ID,url,keyword:String(query||'').trim().slice(0,120),case_study_active:false};
  const route={};
  const options={retryDelayMs:deps.retryDelayMs??1500};
  for(const k of ['fetchLive','searchLive','renderOwn','judgeTasks','buildOverview'])if(typeof deps[k]==='function')options[k]=deps[k];
  if(market&&(market.countries?.length||market.language))options.loadPageMarkets=async()=>market;
- registerGrowthAutomaticResearch({get(p,...h){route[p]=h}},readOnlySource(page),(req,res,next)=>{
+ registerGrowthAutomaticResearch({get(p,...h){route[p]=h}},readOnlySource(page,{gscRows}),(req,res,next)=>{
   req.growthTrackerClientId=FREE_CLIENT_ID;req.growth={can_edit:false,pages:[page]};next();
  },options);
  const stack=route['/api/tracker-client/:token/growth/auto-research'];
