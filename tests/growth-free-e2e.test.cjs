@@ -49,12 +49,21 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.fill('#url', URL_); await p.fill('#query', 'roof repair lodi nj'); await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
     const email = 'TEST-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example';
     await p.fill('#email', email); await p.check('input[name=consent]');
+    // Optional Search Console export (TEST data), filtered on exactly this page.
+    const { zip } = require('./helpers/zip.cjs');
+    await p.setInputFiles('#gscFile', { name: 'Performance-export.zip', mimeType: 'application/zip', buffer: zip({
+      'Queries.csv': 'Top queries,Clicks,Impressions,CTR,Position\nroof repair lodi nj,2,310,0.65%,14.2\nroof leak repair lodi,1,120,0.8%,9.5\n',
+      'Dates.csv': 'Date,Clicks,Impressions,CTR,Position\n2026-10-01,1,200,0.5%,13.0\n2026-10-02,2,230,0.9%,12.0\n',
+      'Filters.csv': 'Filter,Value\nSearch type,Web\nPage,' + URL_ + '\n' }) });
     await p.click('#f button[type=submit]');
     await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 });
     // 2. The result (Google research done by the real engine).
     await service.idle();
     await p.waitForSelector('#google', { timeout: 60000 });
     assert.match(await p.textContent('h1'), /Your page in Google and in AI answers/);
+    // Search Console: verified for this page, used in the research, the search term found in it.
+    assert.match(await p.textContent('#gsc + p'), /^Verified for this page\./);
+    assert.match(await p.textContent('body'), /Your search term “roof repair lodi nj”: 310 impressions, 2 clicks, position 14\.2\./);
     // 3. An AI answer for the exact search term (validated with the shared contract).
     const prompt = await p.inputValue('#aiPrompt'); assert.match(prompt, /roof repair lodi nj/);
     await p.selectOption('#aiEngine', 'perplexity');
@@ -72,12 +81,20 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(brief.suggestedFilename(), 'editor-brief.md');
     const jsonUrl = await p.getAttribute('a[download][href*="report.json"]', 'href');
     const report = await (await fetch(new URL(jsonUrl, base))).json();
-    assert.ok(report && typeof report === 'object');
+    assert.equal(report.search_console.latest.used_in_research, true);
+    assert.match(report.disclaimer, /A Search Console export verified for this exact page was used/);
+    assert.ok((report.report.destination_gsc_queries || []).some(q => q.query === 'roof repair lodi nj'), 'the research used the uploaded terms');
+    // 6. A later export (one CSV, not page-filtered): stored with the check, shown as not verified, research not re-run.
+    await p.setInputFiles('#gscLater', { name: 'Queries.csv', mimeType: 'text/csv', buffer: Buffer.from('Top queries,Clicks,Impressions,CTR,Position\nroof repair lodi nj,3,340,0.9%,13.1\n') });
+    await p.click('#gscSave');
+    await p.waitForFunction(() => /Not verified for this page\./.test(document.body.textContent), null, { timeout: 30000 });
+    assert.match(await p.textContent('body'), /2 exports uploaded for this check/);
     assert.deepEqual(errors, [], 'no browser error on the way');
     // Database: the check and the AI answer are in the Free tables; no Tracker table was created or written.
     const row = (await pool.query('SELECT id,status,email FROM growth_free_checks WHERE lower(email)=lower($1)', [email])).rows[0];
     assert.equal(row.status, 'DONE');
     assert.equal((await pool.query('SELECT count(*)::int AS n FROM growth_free_ai_answers WHERE check_id=$1', [row.id])).rows[0].n, 1);
+    assert.deepEqual((await pool.query('SELECT status FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY id', [row.id])).rows.map(r => r.status), ['VERIFIED_FOR_PAGE', 'NOT_VERIFIED_FOR_PAGE']);
     const after = (await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'tracker\\_%'")).rows.map(r => r.table_name).sort();
     assert.deepEqual(after, before, 'no Tracker table created');
   } finally { await browser.close(); srv.close(); await pool.end(); }
