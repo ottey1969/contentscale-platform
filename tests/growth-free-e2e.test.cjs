@@ -125,6 +125,9 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       await p.click('#gscSave');
       await p.waitForFunction(k => new RegExp(k + ' exports uploaded').test(document.body.textContent), String(n), { timeout: 30000 });
     }
+    const latest = await (await fetch(new URL((await p.getAttribute('a[download][href*="report.json"]', 'href')), base))).json();
+    assert.equal(latest.search_console.latest.status, 'VERIFIED_FOR_PAGE');
+    assert.equal(latest.search_console.latest.used_in_research, false, 'a late verified GSC export is not falsely claimed as research evidence');
     const cmp = await p.textContent('#pubBox');
     assert.match(cmp, /Before and after in Google/); assert.doesNotMatch(cmp, /No export yet/);
     assert.match(cmp, /280 shown · 28 clicks[^]*560 shown · 28 clicks/); assert.doesNotMatch(cmp, /not exactly the 4 weeks/);
