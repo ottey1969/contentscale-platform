@@ -1500,9 +1500,9 @@ function buildApprovedBriefContract(briefJson){
 
 
 function _networkAiEvidenceStateV500(b,keyword=''){return validateNetworkAi(b,keyword)}
-function _networkFiveAiResearchV500(b){
+function _networkFiveAiResearchV500(b,keyword=''){
   const keys=['google_aio','chatgpt','perplexity','claude','copilot'],labels={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'},ae=safeJsonObject(b&&b.ai_system_evidence),analysis=safeJsonObject(b&&b.ai_systems_analysis);
-  const systems={},state=_networkAiEvidenceStateV500(b||{});
+  const systems={},state=_networkAiEvidenceStateV500(b||{},keyword);
   for(const k of keys){
     const ev=safeJsonObject(ae[k]),an=safeJsonObject(analysis[k]),raw=String(ev.text||'').trim();
     let summary=cleanText(an.answer_summary||'',1200);
@@ -3393,7 +3393,7 @@ CURRENT ARTICLE: ${JSON.stringify({title:d.title,html,meta_title:evaluated.metaT
       const prewriteIntel=Object.assign({},approvalCtx.brief,{brief_json:approvalCtx.brief_snapshot});
       const seedKeyword=cleanText(prewriteIntel&&prewriteIntel.keyword||'',220);
       const prewriteText=JSON.stringify(approvalCtx.brief_snapshot||{}).slice(0,48000),prewriteHash=approvalCtx.brief_hash;
-      const fiveAiResearch=_networkFiveAiResearchV500(approvalCtx.brief_snapshot||{});
+      const fiveAiResearch=_networkFiveAiResearchV500(approvalCtx.brief_snapshot||{},seedKeyword);
       if(!fiveAiResearch.complete)throw new Error('Approved Brief lost five-system AI research integrity. Reopen the Brief and complete the missing AI evidence before generation.');
       const googleManual=safeJsonObject(snap.google_manual);
       const generationLinkIntel=linkIntelligenceFromSources({source_domain:x.owner_domain||'',publisher_domain:x.publisher_domain||''},prewriteIntel);
@@ -3720,8 +3720,8 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       evidence_research_complete:!!(_briefJson.evidence_research&&_briefJson.evidence_research.completed===true),
       evidence_quality_complete:!!(_briefJson.evidence_research&&_briefJson.evidence_research.quality_ladder&&_briefJson.evidence_research.quality_ladder.completed===true),
       evidence_approved_items:Number(_briefJson.evidence_research&&_briefJson.evidence_research.quality_ladder&&_briefJson.evidence_research.quality_ladder.approved_items||0),
-      ai_systems_checked:_networkAiEvidenceStateV500(_briefJson).checked_count,
-      ai_systems_missing:_networkAiEvidenceStateV500(_briefJson).missing_labels,
+      ai_systems_checked:_networkAiEvidenceStateV500(_briefJson,prewriteBrief.keyword).checked_count,
+      ai_systems_missing:_networkAiEvidenceStateV500(_briefJson,prewriteBrief.keyword).missing_labels,
       internal_link_targets:_arrCount(_briefJson.internal_link_targets,_briefJson.link_intelligence&&_briefJson.link_intelligence.internal),
       internal_selected_url:String(_briefJson.link_research&&_briefJson.link_research.internal&&_briefJson.link_research.internal.selected_url||(_briefJson.internal_link_targets&&_briefJson.internal_link_targets[0]&&_briefJson.internal_link_targets[0].link_to)||''),
       internal_link_research_status:cleanText(_briefJson.link_research&&_briefJson.link_research.internal&&_briefJson.link_research.internal.status||'',80),
@@ -3730,7 +3730,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     }:null;
     const _currentPrewriteHash=prewriteBrief?crypto.createHash('sha256').update(JSON.stringify(prewriteBrief.brief_json||{})).digest('hex'):'';
     const _generationPrewriteHash=cleanText(row.generation_input_snapshot&&row.generation_input_snapshot.prewrite_hash||'',128);
-    const _aiCov=_networkAiEvidenceStateV500(_briefJson),_intCov=_networkInternalDestinationStateV500(_briefJson,row.publisher_domain);
+    const _aiCov=_networkAiEvidenceStateV500(_briefJson,prewriteBrief&&prewriteBrief.keyword||''),_intCov=_networkInternalDestinationStateV500(_briefJson,row.publisher_domain);
     const prewriteEvidence=prewriteBrief?{id:prewriteBrief.id,keyword:prewriteBrief.keyword,working_title:prewriteBrief.working_title,language:prewriteBrief.language,region:prewriteBrief.region,competitors_scraped:prewriteBrief.competitors_scraped,created_at:prewriteBrief.created_at,link_source:row.current_prewrite_brief_id?'network_content':'generation_snapshot',hash:_currentPrewriteHash,generation_hash:_generationPrewriteHash,generation_match:_generationPrewriteHash===_currentPrewriteHash,requires_regeneration:(_generationPrewriteHash!==_currentPrewriteHash),ai_systems_checked:_aiCov.checked_count,ai_systems_missing:_aiCov.missing_labels,ai_complete:_aiCov.complete,internal_destination:_intCov.selected_url,internal_destination_ready:_intCov.complete,publisher_domain:normalizeHost(row.publisher_domain||''),internal_destination_auto_upgraded:!!(_internalAutoUpgrade&&_internalAutoUpgrade.changed),internal_destination_selection_source:_internalAutoUpgrade&&_internalAutoUpgrade.source||String(_briefJson.link_research&&_briefJson.link_research.internal&&_briefJson.link_research.internal.selection_source||'')}:null;
     const linkIntel=linkIntelligenceFromSources(row,prewriteBrief);
     const savedIntel=(row.generation_input_snapshot&&row.generation_input_snapshot.link_intelligence)||{};
@@ -3786,7 +3786,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     const briefId=Number(row.prewrite_brief_id||0);if(!briefId)return res.status(409).json({success:false,error:'A linked Prewrite Brief is required before fidelity repair.'});
     const snap=safeJsonObject(row.generation_input_snapshot),requestedApprovalId=Number(req.body&&req.body.approval_id||0),approvalId=requestedApprovalId||Number(snap.approved_prewrite_approval_id||0);
     let approvalCtx;try{approvalCtx=await _networkGetValidApproval(pool,briefId,approvalId)}catch(e){return res.status(Number(e.status)||409).json({success:false,error:e.message,code:e.code||'approval_invalid',details:e.details||null})}
-    const brief=safeJsonObject(approvalCtx.brief_snapshot),aiState=_networkAiEvidenceStateV500(brief),intState=_networkInternalDestinationStateV500(brief,row.publisher_domain);
+    const brief=safeJsonObject(approvalCtx.brief_snapshot),aiState=_networkAiEvidenceStateV500(brief,approvalCtx.brief.keyword),intState=_networkInternalDestinationStateV500(brief,row.publisher_domain);
     if(!aiState.complete)return res.status(409).json({success:false,error:'Research integrity is incomplete: '+aiState.checked_count+'/5 AI systems. Complete the missing AI evidence first; existing research is preserved.',missing_ai:aiState.missing_labels});
     if(!intState.complete)return res.status(409).json({success:false,error:'Choose the required publisher-domain internal destination before article repair. No research rerun is needed.'});
     const contract=(snap.approved_brief_contract&&Object.keys(safeJsonObject(snap.approved_brief_contract)).length)?safeJsonObject(snap.approved_brief_contract):buildApprovedBriefContract(brief);
@@ -4053,7 +4053,7 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
       brief.ai_system_evidence=ae;
       brief.research_contract=safeJsonObject(brief.research_contract);brief.research_contract.ai_systems_required=5;brief.research_contract.internal_destination_required=true;
       const wc=safeJsonObject(brief.what_we_checked);
-      wc.ai_systems_checked=checkedCount;wc.ai_systems_manual_checked=_five.filter(k=>ae[k]&&ae[k].manual===true).length;wc.ai_systems_status=Object.fromEntries(_five.map(k=>[k,_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:ae}),br.rows[0].keyword||'').details[k].checked]));wc.ai_systems_missing=_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:ae}),br.rows[0].keyword||'').missing;
+      wc.ai_systems_checked=checkedCount;wc.ai_systems_manual_checked=_five.filter(k=>ae[k]&&ae[k].manual===true&&_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:ae}),br.rows[0].keyword||'').details[k].checked).length;wc.ai_systems_status=Object.fromEntries(_five.map(k=>[k,_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:ae}),br.rows[0].keyword||'').details[k].checked]));wc.ai_systems_missing=_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:ae}),br.rows[0].keyword||'').missing;
       if(engine==='google_aio'){wc.google_direct_answer='manually captured by user ('+evidence.length+' chars)';wc.google_direct_answer_manual_text=evidence;}
       brief.what_we_checked=wc;
       const rawUrls=Array.from(new Set((evidence.match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]).map(u=>String(u).replace(/[)\]>,.;]+$/,''))));
@@ -5644,7 +5644,7 @@ button:disabled::after,.btn.busy::after{content:"";display:inline-block;width:11
   async function _networkResolvePublisherReadinessV527(row,images){
     const snap=safeJsonObject(row.generation_input_snapshot),prewriteId=Number(row.current_prewrite_brief_id||snap.prewrite_brief_id||0);
     let brief=null;if(prewriteId){const br=await pool.query('SELECT id,keyword,working_title,brief_json FROM prewrite_briefs WHERE id=$1 LIMIT 1',[prewriteId]);brief=br.rows[0]||null;}
-    const briefJson=safeJsonObject(brief&&brief.brief_json),ai=_networkAiEvidenceStateV500(briefJson),intState=_networkInternalDestinationStateV500(briefJson,row.publisher_domain);
+    const briefJson=safeJsonObject(brief&&brief.brief_json),ai=_networkAiEvidenceStateV500(briefJson,brief&&brief.keyword||''),intState=_networkInternalDestinationStateV500(briefJson,row.publisher_domain);
     const currentHash=brief?crypto.createHash('sha256').update(JSON.stringify(brief.brief_json||{})).digest('hex'):'';
     const generationHash=cleanText(snap.prewrite_hash||'',128),generationCurrent=!!(brief&&generationHash&&generationHash===currentHash&&!snap.prewrite_requires_regeneration);
     const standard=publicationStandardChecks(row.html||''),metaTitleLen=String(row.meta_title||'').trim().length,metaDescLen=String(row.meta_description||'').trim().length,metaReady=metaTitleLen>0&&metaTitleLen<=60&&metaDescLen>=140&&metaDescLen<=160;
