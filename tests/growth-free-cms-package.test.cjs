@@ -59,3 +59,18 @@ test('a page without a meta description gets one from its own first paragraph (n
   assert.equal(src.meta_description_source, 'PAGE');
   assert.equal(pageSource('<html><body><p>Hi</p></body></html>').meta_description_source, 'NONE');
 });
+
+test('a first-person title or description is rewritten by AI as the service, checked; otherwise nothing is suggested', async () => {
+  const { suggestServiceMeta, voiceOf } = require('../src/growth-free/cms-package.cjs');
+  assert.deepEqual(voiceOf({ title: 'My SEO framework | ContentScale', meta: 'TEST description of the service.' }), { title: 'My', meta: null });
+  assert.equal((await suggestServiceMeta({ title: 'SEO content | ContentScale', meta: 'TEST service description.' })).status, 'NOT_NEEDED');
+  assert.equal((await suggestServiceMeta({ title: 'My SEO framework', meta: '' })).status, 'AI_UNAVAILABLE');
+  const good = { call: async () => '{"title":"The SEO framework | ContentScale","description":"x"}' };
+  const r = await suggestServiceMeta({ title: 'My SEO framework | ContentScale', meta: 'TEST service description.', model: good });
+  assert.deepEqual([r.status, r.title, r.meta_description], ['SUGGESTED', 'The SEO framework | ContentScale', 'TEST service description.'], 'only the first-person field changes');
+  const stillI = { call: async () => '{"title":"My framework, rewritten","description":"x"}' };
+  assert.equal((await suggestServiceMeta({ title: 'My SEO framework', model: stillI })).status, 'REJECTED');
+  const addsNumber = { call: async () => '{"title":"The SEO framework: 300% more traffic","description":"x"}' };
+  assert.equal((await suggestServiceMeta({ title: 'My SEO framework', model: addsNumber })).status, 'REJECTED', 'no new number or claim');
+  assert.equal((await suggestServiceMeta({ title: 'My SEO framework', model: { call: async () => 'not json' } })).status, 'AI_FAILED');
+});

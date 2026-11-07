@@ -294,10 +294,19 @@ function pkgInput(){var out=[];document.querySelectorAll('.pkgUse').forEach(func
   var h2=document.querySelector('.pkgH2[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');out.push({item_id:id,h2:h2?h2.value:'',text:t?t.value:''})});
  return {cms:document.getElementById('pkgCms').value,seo_title:document.getElementById('pkgTitle').value,meta_description:document.getElementById('pkgMeta').value,
   sections:out,link:{url:document.getElementById('pkgLinkUrl').value,label:document.getElementById('pkgLinkLabel').value},editor_approved:document.getElementById('pkgApprove').checked,source_sha256:PKG_SHA}}
+// Title or description in the first person ("my", "I"): AI rewrites them as the service and says so; without AI the
+// field is marked with the exact word to change.
+function metaNote(id,text,bad){var f=document.getElementById(id);if(!f)return;var n=document.getElementById(id+'Voice');if(!n){n=document.createElement('small');n.id=id+'Voice';f.insertAdjacentElement('afterend',n)}n.textContent=text;n.className=bad?'error':'muted';f.style.borderColor=bad?'#ef4444':''}
+async function pkgFixVoice(hint){var t=document.getElementById('pkgTitle'),m=document.getElementById('pkgMeta');if(!t||!m||(hint&&!hint.title&&!hint.meta))return;
+ var x=null;try{x=await (await fetch(API+'/meta-suggest'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({seo_title:t.value,meta_description:m.value})})).json()}catch(e){}
+ var v=(x&&x.voice)||hint||{};if(!v.title&&!v.meta)return;
+ if(x&&x.status==='SUGGESTED'){if(v.title){t.value=x.title;metaNote('pkgTitle','Rewritten by AI as the service (your page said “'+v.title+'”). Check it.',false)}if(v.meta){m.value=x.meta_description;metaNote('pkgMeta','Rewritten by AI as the service (your page said “'+v.meta+'”). Check it.',false)}return}
+ if(v.title)metaNote('pkgTitle','Uses “'+v.title+'”. Write it as the service, without “I” or “my” — for example “… | Your company” instead of “my …”.',true);
+ if(v.meta)metaNote('pkgMeta','Uses “'+v.meta+'”. Write it as the service, without “I” or “my”.',true)}
 async function pkgReadSource(){var el=document.getElementById('pkgSource');if(!el)return;
  try{var r=await fetch(API+'/package-source'+Q,{cache:'no-store'});var x=await r.json();if(!x.success)throw Error(x.error||'Not read');PKG_SHA=x.source.source_sha256;
   var t=document.getElementById('pkgTitle'),m=document.getElementById('pkgMeta');if(t&&!t.value)t.value=x.source.title||'';if(m&&!m.value){m.value=x.source.meta_description||'';if(x.source.meta_description_source==='FIRST_PARAGRAPH'&&m.value){var mh=document.getElementById('pkgMetaHelp');if(!mh){mh=document.createElement('small');mh.id='pkgMetaHelp';mh.className='muted';m.insertAdjacentElement('afterend',mh)}mh.textContent='Your page has no meta description; this one is taken from its first paragraph. Check it.'}}
-  el.textContent='Original page read now: “'+(x.source.title||x.source.url)+'”, '+x.source.headings.length+' heading(s). The package is refused if the page changes before the download.'}
+  el.textContent='Original page read now: “'+(x.source.title||x.source.url)+'”, '+x.source.headings.length+' heading(s). The package is refused if the page changes before the download.';pkgFixVoice(x.voice)}
  catch(err){el.innerHTML=esc(err.message)+' <button type="button" class="ghost" id="pkgReread">Read again</button>';var b=document.getElementById('pkgReread');if(b)b.onclick=pkgReadSource}}
 function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box.innerHTML=pkgHtml(r);var b=document.getElementById('pkgDownload');if(!b)return;pkgReadSource();
  var bulk=document.getElementById('pkgIncludeAll'),exclude=document.getElementById('pkgExcludeAll'),bulkSt=document.getElementById('pkgBulkStatus');
@@ -321,7 +330,8 @@ function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box
   try{var body=pkgInput();body.format='zip';var r=await fetch(API+'/package'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
    if(r.ok&&/zip/.test(r.headers.get('content-type')||'')){var blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='cms-package.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);st.textContent='Downloaded. Give the ZIP to whoever edits your website.';b.classList.add('action-done');var next=document.getElementById('freeStepExport');if(next){next.className='step-chip done';next.querySelector('.symbol').textContent='✓'}}
    else{var x=await r.json().catch(function(){return {messages:['Not ready.']}});st.textContent='Not ready yet:';
-    iss.innerHTML='<ul>'+(x.messages||[x.error||'Not ready.']).map(function(m){return '<li>'+esc(m)+'</li>'}).join('')+'</ul>'+((x.flagged||[]).length?'<p class="note">Still in the text: '+x.flagged.map(function(f){return '“'+esc(f.sentence)+'”'}).join(' · ')+'</p>':'');
+    var meta=(x.details||[]).filter(function(dd){return dd.code==='META_PERSONAL_OR_FOUNDER_VOICE'});if(meta.length)pkgFixVoice(null);
+    iss.innerHTML='<ul>'+(x.messages||[x.error||'Not ready.']).map(function(m){return '<li>'+esc(m)+'</li>'}).join('')+meta.map(function(dd){return '<li>'+esc(dd.reason)+'</li>'}).join('')+'</ul>'+((x.flagged||[]).length?'<p class="note">Still in the text: '+x.flagged.map(function(f){return '“'+esc(f.sentence)+'”'}).join(' · ')+'</p>':'');
     if((x.issues||[]).indexOf('SOURCE_REVISION_CHANGED')>=0)pkgReadSource()}}
   catch(err){st.textContent=err.message;b.classList.add('action-failed')}b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy')}}
 // Step 4 is always reachable once something is chosen: AI concepts are prefilled; chosen items without a concept are
@@ -924,11 +934,20 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
   return String(live&&live.html||'');
  }
+ // Title and description in the first person: AI rewrites them as the service (checked; see suggestServiceMeta).
+ app.post(apiPath+'/checks/:id/meta-suggest',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  const b=req.body||{};
+  const model=engineDeps.metaModel!==undefined?engineDeps.metaModel:require('../growth-task-meaning.cjs').geminiModel();
+  const out=await cmsPackage.suggestServiceMeta({title:clean(b.seo_title,200),meta:clean(b.meta_description,400),language:(row.market&&row.market.language)||'en',url:row.url,model});
+  res.set('Cache-Control','no-store').json({success:out.status==='SUGGESTED'||out.status==='NOT_NEEDED',...out});
+ });
  app.get(apiPath+'/checks/:id/package-source',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
   try{const html=await readOwnPage(row);if(!html)throw Error('empty');
-   res.set('Cache-Control','no-store').json({success:true,source:cmsPackage.pageSource(html,{url:row.url}),cms:cmsPackage.CMS})}
+   const src=cmsPackage.pageSource(html,{url:row.url});res.set('Cache-Control','no-store').json({success:true,source:src,voice:cmsPackage.voiceOf({title:src.title,meta:src.meta_description}),cms:cmsPackage.CMS})}
   catch(e){res.status(503).json({success:false,error:'Your page could not be read right now. Try again in a moment.'})}
  });
  app.post(apiPath+'/checks/:id/package',async(req,res)=>{
@@ -945,7 +964,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const out=cmsPackage.buildFreePackage({url:row.url,originalHtml:html,sourceSha256:clean(b.source_sha256,80),written:viewOf(row.written),
    input:b,focusQuery:term,gscVerifiedTerm,language});
   // Not ready is a normal answer (what is still to do), not a server error.
-  if(!out.ready)return res.set('Cache-Control','no-store').json({success:false,ready:false,issues:out.issues,messages:out.messages,flagged:out.flagged});
+  if(!out.ready)return res.set('Cache-Control','no-store').json({success:false,ready:false,details:(out.blocked_details||[]).map(x=>({code:x.code,text:x.sentence||null,reason:x.reason||''})),issues:out.issues,messages:out.messages,flagged:out.flagged});
   if(b.format==='zip'){const zip=out.zip();
    return res.set('Cache-Control','no-store').set('Content-Type','application/zip').set('Content-Disposition','attachment; filename="cms-package.zip"').send(zip)}
   res.set('Cache-Control','no-store').json({success:true,ready:true,files:out.files.map(f=>f.name),manifest:out.manifest,warnings:out.warnings,published:false});
