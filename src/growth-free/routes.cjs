@@ -166,7 +166,7 @@ function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){retur
 var ENG_STATE={};
 function openJourney(id){var el=document.getElementById(id);if(!el)return;var root=el.closest('details.journey-section')||(el.matches('details.journey-section')?el:null);if(root){document.querySelectorAll('details.journey-section').forEach(function(x){if(x!==root)x.open=false});root.open=true}var inner=el.closest('details.research-details');if(inner)inner.open=true}
 document.addEventListener('click',function(e){var a=e.target.closest('a[href^="#"]');if(!a)return;var id=a.getAttribute('href').slice(1);if(!id)return;openJourney(id)});
-document.addEventListener('toggle',function(e){var el=e.target;if(el.matches&&el.matches('details.journey-section')&&el.open){document.querySelectorAll('details.journey-section').forEach(function(other){if(other!==el)other.open=false})}},true);
+// Native details toggles remain user-controlled; async toggle events must not close another step during button interactions.
 
 function aiHtml(a){var x=a.summary,h='<h3 id="ai">1B · AI answers <small>('+esc(x.checked)+' of 5 checked'+(x.checked===5?' · complete':'')+')</small></h3><p class="muted"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
  h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?(e.invalid?'INVALID, not counted':'not checked'):e.topic_warning?'check the topic (no shared word with the search term) — counted':!e.verifiable?'no RESOURCES section — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
