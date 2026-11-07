@@ -316,13 +316,38 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   document.querySelectorAll('.gapPick').forEach(function(el){el.checked=savedIds.has(el.value)});
  var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last){wr.innerHTML=writtenHtml(d.writing.last)}
  var wb=document.getElementById('gapWrite');
- if(wb)wb.onclick=async function(){var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});var st=document.getElementById('gapStatus');
-  if(!ids.length){st.textContent='Select at least one topic or question.';return}
-  var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Check the AI answers first (above); your selection is kept.';return}
-  wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');st.textContent='Writing concepts…';
-  try{var r=await fetch(API+'/write'+Q,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...(d&&d.writing&&d.writing.owner_unlocked?{'X-Requested-With':'growth-free-admin'}:{})},body:JSON.stringify({item_ids:ids,ai_check_choice:aiChoice})});var x=await r.json();if(x.stored===false&&(x.sections||[]).length){wr.innerHTML=writtenHtml(x);st.textContent=x.error;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');return}if(!x.success)throw Error(x.error||'Not written');
-   wr.innerHTML=writtenHtml(x.all_written||x);showPkg(pkgSections(g,x.all_written||x,false));wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;wb.dataset.exhausted=!x.remaining?'yes':'';wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-green');var ws=document.getElementById('freeStepWrite');if(ws){ws.className='step-chip done';ws.querySelector('.symbol').textContent='✓'}st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
-  catch(err){st.textContent=err.message;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-red')}};
+ if(wb)wb.onclick=async function(){
+  var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});
+  var st=document.getElementById('gapStatus'),available=Number(d.writing&&d.writing.remaining||0);
+  if(!ids.length){st.textContent='Select at least one topic or question in Step 2.';return}
+  var eligible=ids.filter(function(id){var it=(g.items||[]).find(function(x){return String(x.id)===id});return !!(it&&it.writable)});
+  if(!eligible.length){st.textContent='None of the selected headings is eligible for evidence-supported AI writing.';return}
+  var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Your selection is saved. Check AI answers or choose to continue without them.';return}
+  var capacity=Math.min(available*4,eligible.length),chosen=eligible.slice(0,capacity);
+  wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');
+  st.textContent='Preparing '+chosen.length+' eligible H2(s) automatically using '+Math.ceil(chosen.length/4)+' writing run(s)…';
+  var latest=null,completed=0;
+  try{
+   for(var run=0;run<Math.min(available,Math.ceil(chosen.length/4));run++){
+    st.textContent='Writing H2 batch '+(run+1)+' of '+Math.ceil(chosen.length/4)+'…';
+    var response=await fetch(API+'/write'+Q,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...(d&&d.writing&&d.writing.owner_unlocked?{'X-Requested-With':'growth-free-admin'}:{})},body:JSON.stringify({item_ids:chosen,ai_check_choice:aiChoice})});
+    var result=await response.json();
+    if(result.stored===false&&(result.sections||[]).length){wr.innerHTML=writtenHtml(result);throw Error(result.error||'The draft was not saved; reload to verify the status')}
+    if(!response.ok||!result.success)throw Error(result.error||'Writing could not finish');
+    latest=result;completed+=result.sections?.length||0;
+    wr.innerHTML=writtenHtml(result.all_written||result);
+    showPkg(pkgSections(g,result.all_written||result,false));
+    if(!(result.pending||[]).length||!result.remaining)break;
+   }
+   if(!latest)throw Error('No verified draft was generated');
+   var pending=latest.pending||[],outside=ids.length-chosen.length;
+   st.textContent=completed+' H2 draft(s) prepared automatically for review.'+(pending.length?' '+pending.length+' could not be completed with the available runs.':'')+(outside?' '+outside+' selected topic(s) were not processed because they are unsupported or exceed the remaining quota.':'')+' Review the prepared sections below; nothing is published.';
+   wb.textContent='Prepare remaining selected H2s with AI ('+latest.remaining+' run(s) left)';
+   wb.disabled=!latest.remaining;wb.dataset.exhausted=!latest.remaining?'yes':'';
+   wb.classList.add('action-green');openJourney('stepPrepare');
+  }catch(err){st.textContent='Automatic preparation stopped after '+completed+' draft(s): '+err.message+'. Saved drafts remain available below.';wb.disabled=false;wb.classList.add('action-red')}
+  finally{wb.classList.remove('is-working');wb.removeAttribute('aria-busy')}
+ };
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected';pkgCount(n);if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}if(count.initialized)queueSelectionSave();var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',count)});
  document.getElementById('gapAll').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=true});count()};
