@@ -6818,3 +6818,4 @@ api('/api/network/admin/status').then(()=>{gate.remove();main.style.display='blo
 
   return { registered: true, enabled: envEnabled(), schema_version: NETWORK_SCHEMA_VERSION };
 }
+module.exports = { registerNetwork, ensureNetworkTables, ensureNetworkDirectorySchema, inspectNetworkSchema, NETWORK_SCHEMA_VERSION, NETWORK_TABLES };
