@@ -106,7 +106,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.click('#gapWrite');
     await p.waitForFunction(() => /H2 draft\(s\) prepared automatically for review/.test(document.getElementById('gapStatus').textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1, 'one click starts the existing AI writer');
-    assert.match(await p.textContent('#pkgBox'), /How to read a repair estimate/);
+    assert.match(await p.inputValue('.pkgH2'), /How to read a repair estimate/);
     assert.equal(await p.locator('.pkgUse').count(), 1, 'only written H2 sections appear in the CMS editor');
     assert.equal(await p.locator('.pkgUse:checked').count(), 1, 'prepared copy is preselected');
     assert.match(await p.inputValue('.pkgText'), /Ask for a written estimate/);
