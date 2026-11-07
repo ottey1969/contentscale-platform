@@ -8,6 +8,7 @@
 const dns = require('dns').promises;
 const net = require('net');
 const crypto = require('crypto');
+const {validateNetworkAi} = require('./network-prewrite-contract.cjs');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
@@ -1497,22 +1498,17 @@ function buildApprovedBriefContract(briefJson){
 }
 
 
-function _networkAiEvidenceStateV500(b){
-  const ae=safeJsonObject(b&&b.ai_system_evidence),keys=['google_aio','chatgpt','perplexity','claude','copilot'],labels={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'};
-  const checked=keys.filter(k=>ae[k]&&ae[k].checked===true),missing=keys.filter(k=>!checked.includes(k));
-  return {checked_count:checked.length,checked,missing,missing_labels:missing.map(k=>labels[k]||k),complete:checked.length===5};
-}
+function _networkAiEvidenceStateV500(b,keyword=''){return validateNetworkAi(b,keyword)}
 function _networkFiveAiResearchV500(b){
   const keys=['google_aio','chatgpt','perplexity','claude','copilot'],labels={google_aio:'Google AIO / Gemini',chatgpt:'ChatGPT Search',perplexity:'Perplexity',claude:'Claude',copilot:'Microsoft Copilot'},ae=safeJsonObject(b&&b.ai_system_evidence),analysis=safeJsonObject(b&&b.ai_systems_analysis);
-  const systems={};
+  const systems={},state=_networkAiEvidenceStateV500(b||{});
   for(const k of keys){
     const ev=safeJsonObject(ae[k]),an=safeJsonObject(analysis[k]),raw=String(ev.text||'').trim();
     let summary=cleanText(an.answer_summary||'',1200);
     if((!summary||/^not checked$/i.test(summary))&&raw){let x=raw,at=x.toUpperCase().indexOf('RESOURCES:');if(at>=0)x=x.slice(0,at);summary=cleanText(x.replace(/^ANSWER:\s*/i,''),1200);}
     const urls=Array.from(new Set([].concat(Array.isArray(an.citation_sources)?an.citation_sources.map(x=>x&&x.exact_url||''):[],extractUrlsDeep(raw)).map(x=>cleanText(x,1600)).filter(x=>/^https:\/\//i.test(x)))).slice(0,10);
-    systems[k]={label:labels[k],checked:ev.checked===true,source:cleanText(ev.source||an.evidence_source||'',80),answer_summary:summary,citation_sources:urls};
+    systems[k]={label:labels[k],checked:state.details[k].checked,validation_status:state.details[k].status,validation_reason:state.details[k].reason,source:cleanText(ev.source||an.evidence_source||'',80),answer_summary:state.details[k].checked?summary:'',citation_sources:state.details[k].checked?urls:[]};
   }
-  const state=_networkAiEvidenceStateV500(b||{});
   return {required:5,checked:state.checked_count,complete:state.complete,missing:state.missing_labels,systems,rule:'Use these five saved AI-system answers as research evidence to strengthen coverage and source awareness. Do not merge systems into fake consensus and do not call non-Google evidence a Google AI Overview finding.'};
 }
 function _networkReaderInternalUrlV500(raw,publisherDomain){
@@ -1573,7 +1569,7 @@ function _networkAutoSelectInternalDestinationV502(b,publisherDomain){
 function _networkBriefHash(briefJson){  return crypto.createHash('sha256').update(JSON.stringify(safeJsonObject(briefJson))).digest('hex');
 }
 function _networkBriefApprovalReadiness(briefJson,opts={}){
-  const b=safeJsonObject(briefJson),q=safeJsonObject(b.ai_quality_check),contract=buildApprovedBriefContract(b),missing=[],aiState=_networkAiEvidenceStateV500(b),internalState=_networkInternalDestinationStateV500(b,opts.publisher_domain||'');
+  const b=safeJsonObject(briefJson),q=safeJsonObject(b.ai_quality_check),contract=buildApprovedBriefContract(b),missing=[],aiState=_networkAiEvidenceStateV500(b,opts.keyword||''),internalState=_networkInternalDestinationStateV500(b,opts.publisher_domain||'');
   if(q.ready_for_generation!==true)missing.push('ai_quality_check.ready_for_generation');
   if(Number(q.readiness_score||0)<90)missing.push('readiness_score_below_90');
   if(!contract||!Array.isArray(contract.planned_h2s)||contract.planned_h2s.length<3)missing.push('canonical_outline');
@@ -1589,7 +1585,7 @@ async function _networkApproveBriefSnapshot(pool,briefId,adminId,opts={}){
   await ensureNetworkPrewriteApprovalTable(pool);
   const r=await pool.query(`SELECT id,keyword,working_title,language,region,brief_json,competitors_scraped,created_at FROM prewrite_briefs WHERE id=$1 LIMIT 1`,[Number(briefId)]),brief=r.rows[0];
   if(!brief){const e=new Error('Prewrite Brief not found');e.status=404;throw e;}
-  const readiness=_networkBriefApprovalReadiness(brief.brief_json||{},opts);
+  const readiness=_networkBriefApprovalReadiness(brief.brief_json||{},Object.assign({},opts,{keyword:brief.keyword}));
   if(!readiness.passed){const e=new Error('Brief is not ready for approval. Complete the Brief first: '+readiness.missing.join(', '));e.status=409;e.details=readiness;throw e;}
   const hash=_networkBriefHash(brief.brief_json||{}),client=await pool.connect();
   try{
@@ -1617,6 +1613,8 @@ async function _networkGetValidApproval(pool,briefId,approvalId){
     const e=new Error('The Prewrite Brief changed after approval. Review it and approve the current version before generating.');e.status=409;e.code='approval_stale';e.details={approval_id:Number(approval.id),approved_hash:String(approval.brief_hash),current_hash:String(currentHash)};throw e;
   }
   const snapshot=safeJsonObject(approval.brief_snapshot),checkHash=_networkBriefHash(snapshot);
+  const aiValidation=_networkAiEvidenceStateV500(snapshot,brief.keyword);
+  if(!aiValidation.complete){const e=new Error('Approved Brief AI evidence is incomplete or invalid under the current Pre-Write validator. Recheck only invalid/missing answers before writing.');e.status=409;e.code='ai_evidence_invalid';e.details={missing:aiValidation.missing,invalid:aiValidation.invalid};throw e;}
   if(checkHash!==String(approval.brief_hash)){const e=new Error('Approved Brief snapshot failed integrity verification. Re-approve the Brief before generation.');e.status=409;e.code='approval_snapshot_integrity';e.details={approval_id:Number(approval.id),snapshot_hash:String(checkHash),approved_hash:String(approval.brief_hash)};throw e;}
   return {approval,brief,brief_hash:currentHash,brief_snapshot:snapshot,contract:safeJsonObject(approval.approved_contract)};
 }
@@ -3965,18 +3963,21 @@ ${JSON.stringify({title,html,plain_text:plain,meta_title:metaTitle,meta_descript
     let checkedCount=0,newHash='',requiresRegeneration=!!placement.publication_version_id,updatedBrief=null;
     try{
       await client.query('BEGIN');
-      const br=await client.query(`SELECT id,brief_json FROM prewrite_briefs WHERE id=$1 FOR UPDATE`,[briefId]);
+      const br=await client.query(`SELECT id,keyword,brief_json FROM prewrite_briefs WHERE id=$1 FOR UPDATE`,[briefId]);
       if(!br.rows[0]){await client.query('ROLLBACK');return res.status(404).json({success:false,error:'Linked Prewrite Brief not found'})}
       const brief=safeJsonObject(br.rows[0].brief_json),ae=safeJsonObject(brief.ai_system_evidence),existing=safeJsonObject(ae[engine]),now=new Date().toISOString();updatedBrief=brief;
-      ae[engine]=Object.assign({},existing,{checked:true,source:'manual',manual:true,text:evidence});
+      const candidate=Object.assign({},existing,{checked:true,source:'manual',manual:true,text:evidence});
+      const preview=_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:Object.assign({},ae,{[engine]:candidate})}),br.rows[0].keyword||'');
+      if(!preview.details[engine].checked){await client.query('ROLLBACK');return res.status(422).json({success:false,error:'Not a valid answer to the exact Pre-Write query. This answer was not saved.',engine,reason:preview.details[engine].reason,validation_status:preview.details[engine].status});}
+      ae[engine]=candidate;
       ae.checked_at=now;
       const _five=['google_aio','chatgpt','perplexity','claude','copilot'];
-      checkedCount=_five.filter(k=>ae[k]&&ae[k].checked).length;
+      checkedCount=_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:ae}),br.rows[0].keyword||'').checked_count;
       ae.checked_count=checkedCount;
       brief.ai_system_evidence=ae;
       brief.research_contract=safeJsonObject(brief.research_contract);brief.research_contract.ai_systems_required=5;brief.research_contract.internal_destination_required=true;
       const wc=safeJsonObject(brief.what_we_checked);
-      wc.ai_systems_checked=checkedCount;wc.ai_systems_manual_checked=_five.filter(k=>ae[k]&&ae[k].manual===true).length;wc.ai_systems_status=Object.fromEntries(_five.map(k=>[k,!!(ae[k]&&ae[k].checked)]));wc.ai_systems_missing=_five.filter(k=>!(ae[k]&&ae[k].checked));
+      wc.ai_systems_checked=checkedCount;wc.ai_systems_manual_checked=_five.filter(k=>ae[k]&&ae[k].manual===true).length;wc.ai_systems_status=Object.fromEntries(_five.map(k=>[k,_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:ae}),br.rows[0].keyword||'').details[k].checked]));wc.ai_systems_missing=_networkAiEvidenceStateV500(Object.assign({},brief,{ai_system_evidence:ae}),br.rows[0].keyword||'').missing;
       if(engine==='google_aio'){wc.google_direct_answer='manually captured by user ('+evidence.length+' chars)';wc.google_direct_answer_manual_text=evidence;}
       brief.what_we_checked=wc;
       const rawUrls=Array.from(new Set((evidence.match(/https:\/\/[^\s<>\]\[()"'`]+/gi)||[]).map(u=>String(u).replace(/[)\]>,.;]+$/,''))));
