@@ -673,15 +673,19 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(!summary||!aiPart||!aiPart.summary.checked)return summary;
   return {...summary,limitations:[...summary.limitations.filter(x=>!/AI answers .* were not checked/.test(x)),aiPart.summary.caveat]};
  }
- const writingAllowed=row=>config.writing==='all'||(config.writing!=='off'&&row.access_label==='admin')||(config.writing==='invited'&&!!row.invite_id);
- const writingInfo=row=>({allowed:writingAllowed(row),remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:viewOf(row.written)});
+ // A valid owner session unlocks old visitor results without modifying their ownership or public permissions.
+ const ordinaryWritingAllowed=row=>config.writing==='all'||(config.writing!=='off'&&row.access_label==='admin')||(config.writing==='invited'&&!!row.invite_id);
+ const writingAllowed=(row,req)=>ordinaryWritingAllowed(row)||(config.writing!=='off'&&sessionValid(req));
+ const writingInfo=(row,req)=>({allowed:writingAllowed(row,req),owner_unlocked:!!config.adminKey&&sessionValid(req),
+  owner_login_available:!!config.adminKey&&config.writing!=='off',
+  remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:viewOf(row.written)});
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   const aiPart=await aiFor(row),gscPart=await gscFor(row);
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
    summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart)||null,cached:!!row.cached_from,error_code:row.error_code||null,
-   selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row):null,publication:row.status==='DONE'?publicationOf(row):null,
+   selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
     const k=(config.accessKeys||[]).find(x=>x.label===row.access_label);
@@ -730,7 +734,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.post(apiPath+'/checks/:id/write',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
-  if(!writingAllowed(row))return res.status(403).json({success:false,error:'Writing is not available for this check. Download the editor brief instead.'});
+  if(!writingAllowed(row,req))return res.status(403).json({success:false,error:'Writing is not available for this check. Sign in as the owner, or download the editor brief.'});
+  // Cookie-based privileges require a non-simple same-origin header; ordinary visitor access does not.
+  if(!ordinaryWritingAllowed(row)&&sessionValid(req)&&req.get('x-requested-with')!=='growth-free-admin')
+   return res.status(403).json({success:false,error:'Owner request confirmation required.'});
   if(Number(row.write_count||0)>=(config.writeLimit||3))return res.status(429).json({success:false,error:'The writing limit for this check is reached. Download the editor brief instead.'});
   const ids=Array.isArray(req.body&&req.body.item_ids)?[...new Set(req.body.item_ids.map(String))].slice(0,200):[];
   const items=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>ids.includes(String(x.id)));
