@@ -266,7 +266,9 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     cms:req.body?.cms||'generic',pageTitle:req.body?.seo_title,
     metaDescription:req.body?.meta_description,changes:req.body?.approved_changes,
     focusQuery:req.body?.focus_query||'',evidenceScope:scope,
-    language:req.body?.language||'en'
+    language:req.body?.language||'en',
+    // The owner's choice for this package: the page presents a person ("I", "my" allowed). Default: the service speaks.
+    personalVoiceAllowed:req.body?.personal_voice===true
    });
    if(result.status!=='HANDOFF_READY_FOR_EDITOR')
     return res.status(409).set('Cache-Control','no-store').json({success:false,code:'EDITOR_REVIEW_REQUIRED',issues:result.issues,warnings:result.warnings,

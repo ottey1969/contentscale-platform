@@ -494,7 +494,7 @@
    ...(manual?{original_html_override:$('manualOriginalHtml').value,
     manual_source_acknowledged:true,source_provenance:'OWNER_SUPPLIED_UNVERIFIED'}:{}),
    cms:$('cms').value,evidence_scope:$('evidence').value,focus_query:$('query').value.trim(),
-   seo_title:$('title').value.trim(),meta_description:$('meta').value.trim(),
+   seo_title:$('title').value.trim(),meta_description:$('meta').value.trim(),personal_voice:$('personalVoice').checked===true,
    ...(proposal?{growth_proposal_id:proposal.id,review_notes:mergedReview(proposal.review)}:{}),
    ...(proposal&&safe.added.length?{added_growth_proposal_ids:safe.added.map(function(a){return a.id})}:{}),
    approved_changes:reviewedSections};
@@ -504,7 +504,7 @@
    headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,format})});
   if(!response.ok){const d=await response.json().catch(()=>({}));
    // Flagged content still in the text: name each sentence so the editor knows exactly what to rewrite or remove.
-   if((d.blocked_details||[]).length)throw Error('Not packaged — still in your text: '+d.blocked_details.map(function(b){return (b.sentence?'“'+b.sentence+'”':'')+' ('+b.reason+')'}).join(' · '));
+   if((d.blocked_details||[]).length)throw Error('Not packaged — still in your text: '+d.blocked_details.map(function(b){return (b.sentence?'“'+b.sentence+'”':'')+' ('+b.reason+')'}).join(' · ')+(d.blocked_details.some(function(b){return /PERSONAL_OR_FOUNDER_VOICE/.test(b.code||'')})?' If this page presents you as a person, tick “This page presents me as a person” and download again.':''));
    throw Object.assign(Error((d.issues||[]).join(', ')||d.code||'Export failed'),{code:d.code||null})}
   return format==='zip'?response.blob():response.json();
  }
