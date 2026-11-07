@@ -39,7 +39,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
   const app = express(); app.use(express.json({ limit: '1mb' }));
   // The key's site domain (here 127.0.0.1): e-mail links open on the domain the visitor used, without extra settings.
   const baseCfg = freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-1' });
-  const service = registerFreeGrowth(app, pool, { config: { ...baseCfg, accessKeys: baseCfg.accessKeys.map(k => ({ ...k, hosts: ['127.0.0.1'] })), writing: 'all', writeLimit: 2, perIp: 50, daily: 20, perEmail: 10 }, engineDeps, fetchImpl: async () => ({ ok: true }), sendEmail: async m => { mails.push(m); return true; } });
+  const service = registerFreeGrowth(app, pool, { config: { ...baseCfg, accessKeys: baseCfg.accessKeys.map(k => ({ ...k, hosts: ['127.0.0.1'] })), writing: 'admin', adminKey: 'e2e-owner-secret-0123456789', writeLimit: 2, perIp: 50, daily: 20, perEmail: 10 }, engineDeps, fetchImpl: async () => ({ ok: true }), sendEmail: async m => { mails.push(m); return true; } });
   const srv = app.listen(0); const base = 'http://127.0.0.1:' + srv.address().port;
   const browser = await chromium.launch();
   try {
@@ -88,8 +88,16 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForFunction(() => /selected · saved/.test(document.getElementById('gapStatus').textContent));
     const chosenId = await picks[0].getAttribute('value');
     await p.reload();
-    await p.waitForSelector('#gapWrite');
+    await p.waitForSelector('#ownerUnlockForm');
+    assert.equal(await p.locator('#gapWrite').count(),0,'ordinary visitors cannot use AI writing');
     assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(), true, 'selection survives a page reload');
+    await p.locator('#stepPrepare > summary').click();
+    await p.fill('#ownerUnlockKey','e2e-owner-secret-0123456789');
+    await p.click('#ownerUnlockButton');
+    await p.waitForSelector('#gapWrite');
+    assert.equal(await p.locator('#ownerUnlockKey').count(),0,'the owner password field disappears after login');
+    assert.match(await p.textContent('#stepPrepare'),/Owner mode enabled/);
+    assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(),true,'unlock preserves the original H2 selection');
     const storedSelection = await (await fetch(new URL((await p.getAttribute('a[download][href*="report.json"]', 'href')), base))).json();
     assert.ok(storedSelection.selected_item_ids.includes(chosenId), 'selection is saved in the report');
     // Step 4 works without AI writing: the chosen item is an empty section the editor writes.
