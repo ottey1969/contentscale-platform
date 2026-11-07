@@ -100,21 +100,17 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(),true,'unlock preserves the original H2 selection');
     const storedSelection = await (await fetch(new URL((await p.getAttribute('a[download][href*="report.json"]', 'href')), base))).json();
     assert.ok(storedSelection.selected_item_ids.includes(chosenId), 'selection is saved in the report');
-    // Step 4 works without AI writing: the chosen item is an empty section the editor writes.
-    await p.waitForFunction(() => /Open the package editor for your selection \(1\)/.test(document.getElementById('pkgOpen').textContent));
+    // The owner gets one automated preparation action instead of an empty manual package.
+    assert.equal(await p.locator('#pkgOpen').count(), 0, 'no blank CMS editor before automatic writing');
     if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
-    await p.click('#pkgOpen');
-    assert.match(await p.getAttribute('.pkgText', 'placeholder'), /Only enter/);
-    assert.equal(await p.locator('.pkg-edit').evaluate(el => el.open), false, 'unsupported text entry stays collapsed');
-    await p.click('#pkgIncludeAll');
-    assert.equal(await p.locator('.pkgUse:checked').count(), 0, 'no empty H2 gets included as invented copy');
-    assert.match(await p.textContent('#pkgBulkStatus'), /No H2 has prepared text yet/);
-    assert.equal(await p.isChecked('.pkgUse'), false);
     await p.click('#gapWrite');
-    await p.waitForFunction(() => /How to read a repair estimate/.test(document.body.textContent), null, { timeout: 30000 });
-    assert.equal(writes.length, 1);
+    await p.waitForFunction(() => /H2 draft\(s\) prepared automatically for review/.test(document.getElementById('gapStatus').textContent), null, { timeout: 30000 });
+    assert.equal(writes.length, 1, 'one click starts the existing AI writer');
+    assert.match(await p.textContent('#pkgBox'), /How to read a repair estimate/);
+    assert.equal(await p.locator('.pkgUse').count(), 1, 'only written H2 sections appear in the CMS editor');
+    assert.equal(await p.locator('.pkgUse:checked').count(), 1, 'prepared copy is preselected');
+    assert.match(await p.inputValue('.pkgText'), /Ask for a written estimate/);
     await p.click('#pkgIncludeAll');
-    assert.equal(await p.locator('.pkgUse:checked').count(), 1, 'one-click include all prepared H2s');
     assert.match(await p.textContent('#pkgBulkStatus'), /1 of 1 H2s included/);
     // 5. Downloads: the editor brief and the JSON.
     if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
