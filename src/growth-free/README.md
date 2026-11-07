@@ -18,7 +18,7 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
   Tracker's page-verified Search Console data. Otherwise it is shown as "not verified for this page". Stored per check
   (`growth_free_gsc_uploads`), deleted with the check, never in the Tracker;
 * **Result page order**: one step bar — 1 Research (AI answers, Search Console, Google), 2 Choose, 3 Text (AI concepts
-  when writing is on, otherwise the editor writes), 4 CMS package, 5 Publish & measure (opens once the change is live).
+  when writing is on — the default — otherwise the editor writes), 4 CMS package, 5 Publish & measure (opens once the change is live).
   The JSON is optional research data at the end, not a step.
 * **CMS package (ZIP)**: the same package as the Tracker (`src/growth-cms-handoff.cjs`, unchanged), from the written
   concepts: the editor edits the text, sets SEO title and description, an optional internal link (this website only) and
@@ -158,8 +158,8 @@ Each item names the ranking pages and their Google positions. Tick what should g
 `GROWTH_FREE_WRITING` decides who may let Growth write concepts for selected items:
 
 - `off`;
-- `admin` (default: only you, via the admin page);
+- `admin` (only you, via the admin page);
 - `invited` (you and invited people);
-- `all`.
+- `all` (default: every visitor; AI prepares the selected sections, at most `GROWTH_FREE_WRITES_PER_CHECK` runs of four).
 
 `GROWTH_FREE_WRITES_PER_CHECK` is the limit per check (default 3). The page is read again publicly, the text is checked against it, and failing sentences are marked for the editor. The last result stays on the result page. Nothing is published.

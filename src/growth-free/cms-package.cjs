@@ -14,11 +14,24 @@ const CMS = ['generic', 'wordpress', 'wix', 'webflow', 'squarespace', 'custom'];
 
 // Step 1: the original page as it is live now (title, meta description, headings), and its fingerprint. The package is
 // refused later when the page changed in between.
+// A page without a meta description gets a suggestion from its own first paragraph (whole sentences, at most 160
+// characters): taken from the page, never invented; the editor checks it before approving.
+function firstParagraphMeta(h) {
+  const body = String(h).replace(/<(script|style|nav|header|footer)\b[\s\S]*?<\/\1>/gi, ' ');
+  for (const m of body.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
+    const t = text(m[1]); if (t.length < 60) continue;
+    let out = ''; for (const sent of t.match(/[^.!?]+[.!?]+/g) || [t]) { if ((out + sent).trim().length > 160) break; out += sent; }
+    out = out.trim(); if (out.length >= 50) return out;
+    return t.slice(0, 157).replace(/\s+\S*$/, '') + '…';
+  }
+  return '';
+}
 function pageSource(html, { url } = {}) {
   const h = String(html || '');
   const meta = (/<meta\b[^>]*name=["']description["'][^>]*>/i.exec(h) || [''])[0];
+  const own = text((/content=["']([^"']*)["']/i.exec(meta) || [])[1]).slice(0, 300), suggested = own ? '' : firstParagraphMeta(h);
   return { url, source_sha256: sha(h), title: text((/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(h) || [])[1]).slice(0, 200),
-    meta_description: text((/content=["']([^"']*)["']/i.exec(meta) || [])[1]).slice(0, 300),
+    meta_description: own || suggested, meta_description_source: own ? 'PAGE' : suggested ? 'FIRST_PARAGRAPH' : 'NONE',
     language: ((/<html\b[^>]*\blang=["']([a-z]{2})/i.exec(h) || [])[1] || '').toLowerCase() || null,
     headings: [...h.matchAll(/<h([1-3])\b[^>]*>([\s\S]*?)<\/h\1>/gi)].map(m => ({ level: Number(m[1]), text: text(m[2]).slice(0, 200) })).filter(x => x.text).slice(0, 40) };
 }
