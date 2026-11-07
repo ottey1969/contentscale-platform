@@ -577,7 +577,7 @@ test('writing for a selection is optional: only where allowed, only the selected
  const again=await all.post(p2,{item_ids:pick});assert.equal(again.status,409);assert.match(again.body.error,/written already/);assert.equal(calls.length,1);
  assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,200);
  assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,429,'limit per check');
- const page=await all.get(b.body.result_url);assert.match(page.body,/Write selected with AI/);
+ const page=await all.get(b.body.result_url);assert.match(page.body,/Automatically prepare selected H2s with AI/);
 });
 
 // Code audit of e1869f2. SYNTHETIC: six hand-made gap items on a synthetic check (the synthetic pages above produce one).
