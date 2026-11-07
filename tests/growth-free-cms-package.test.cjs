@@ -82,3 +82,17 @@ test('page title and description: every HTML entity is decoded (pagina&#039;s �
   assert.equal(r.meta_description, "SEO content optimalisatie voor pagina's en pagina's. Ik gebruik Growth.");
   assert.deepEqual(voiceOf({ title: r.title, meta: r.meta_description }), { title: null, meta: 'Ik' });
 });
+
+test('"This page presents me as a person": I/my is allowed in title, description and text; the default still refuses it', () => {
+  const meta = 'Ik help bedrijven met SEO en GEO. Mijn aanpak: Growth en Pre-Write Brief, met zoekgegevens als basis.';
+  const personalText = text + ' I check every estimate with you before my crew starts.';
+  const sections = [{ item_id: 'g1', h2: 'How to read a repair estimate', text: personalText }];
+  const voiceFlag = { sections: [{ ...written.sections[0], flags: [{ sentence: 'I check every estimate with you before my crew starts.', code: 'PERSONAL_OR_FOUNDER_VOICE', reason: 'Written as a person (“I”).' }] }] };
+  const refused = buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: voiceFlag, input: input({ meta_description: meta, sections }) });
+  assert.equal(refused.ready, false); assert.ok(refused.issues.includes('META_PERSONAL_OR_FOUNDER_VOICE'));
+  assert.match(refused.messages.join(' '), /This page presents me as a person/);
+  const personal = buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: voiceFlag, input: input({ meta_description: meta, sections, personal_voice: true }) });
+  assert.equal(personal.ready, true, JSON.stringify(personal.messages));
+  assert.equal(personal.manifest.voice, 'PERSONAL_BRAND');
+  assert.match(personal.files.find(f => f.name === '04-seo-metadata.json').content, /Ik help bedrijven/);
+});

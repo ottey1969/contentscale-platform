@@ -33,7 +33,10 @@ const placementText=p=>p?PLACEMENT_MODES[p.mode]+' “'+p.section_heading+'”':
 // reviewNotes: {needs_fact_check, needs_owner_confirmation, needs_safety_review} — sentences the owner must check before publishing.
 function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApproved=false,
  cms='generic',pageTitle,metaDescription,focusQuery='',evidenceScope='needs_access',
- caseStudyLocked=false,sourceExpectedSha256,language='en',growthProposal=null,reviewNotes=null,addedProposalIds=[]}={}){
+ caseStudyLocked=false,sourceExpectedSha256,language='en',growthProposal=null,reviewNotes=null,addedProposalIds=[],personalVoiceAllowed=false}={}){
+ // personalVoiceAllowed: the page presents a person (a personal brand, owner choice per package in Free Growth); then
+ // "I"/"my" is the page's own voice and is not refused. Default false: the site speaks as the service.
+ const isVoice=x=>x&&(x.code==='PERSONAL_OR_FOUNDER_VOICE'||/^Written as a person/.test(String(x.reason||'')));
  const issues=[],warnings=[];
  let url;
  try{url=new URL(canonicalUrl)}catch{}
@@ -102,13 +105,13 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  // A concept with sentences Growth flagged is only packaged when the final text PROVES they were resolved: no flagged
  // sentence is still in it, the text passes the same claim checks against the original page, and no heading still
  // promises reasons while giving steps. A tick in the UI is not proof; this is.
- const flaggedNotes=reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged.filter(Boolean):[];
+ const flaggedNotes=reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged.filter(Boolean).filter(f=>!(personalVoiceAllowed&&isVoice(f))):[];
  const blockedDetails=[];
  if(flaggedNotes.length&&approved.length){
   const finalText=norm(approved.map(x=>String(x.html||'')).join(' '));
   for(const f of flaggedNotes)if(f.sentence&&finalText.includes(norm(f.sentence)))blockedDetails.push({code:'FLAGGED_SENTENCE_STILL_IN_TEXT',sentence:clean(f.sentence).slice(0,300),reason:clean(f.reason).slice(0,200)});
   const recheck=assessDraftClaims({text:approved.map(x=>asText(x.html)).join(' '),destinationText:asText(String(originalHtml||''))});
-  for(const v of recheck.violations)if(!blockedDetails.some(b=>b.sentence&&norm(b.sentence)===norm(v.sentence)))
+  for(const v of recheck.violations)if(!(personalVoiceAllowed&&isVoice(v))&&!blockedDetails.some(b=>b.sentence&&norm(b.sentence)===norm(v.sentence)))
    blockedDetails.push({code:'UNRESOLVED_'+v.code,sentence:clean(v.sentence).slice(0,300),reason:clean(v.reason).slice(0,200)});
   for(const x of approved){const h=(String(x.html||'').match(/<h([23])\b[^>]*>([\s\S]*?)<\/h\1>/i)||[])[2];
    const mm=h&&headingMismatch(asText(h),asText(String(x.html).replace(/<h([23])\b[^>]*>[\s\S]*?<\/h\1>/i,' ')));
@@ -117,7 +120,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  }
  // The site speaks as the service (owner rule 2026-11-01): the SEO title and description too, also when they are the
  // page's current ones ("my step-by-step GRAAF Framework").
- for(const [k,v] of [['SEO title',pageTitle],['Meta description',metaDescription]]){const pv=typeof v==='string'&&personalVoice(v);
+ for(const [k,v] of [['SEO title',pageTitle],['Meta description',metaDescription]]){const pv=!personalVoiceAllowed&&typeof v==='string'&&personalVoice(v);
   if(pv){issues.push('META_PERSONAL_OR_FOUNDER_VOICE');blockedDetails.push({code:'META_PERSONAL_OR_FOUNDER_VOICE',sentence:clean(v).slice(0,300),reason:k+' is written as a person (“'+pv+'”): write it as the service, without “I”, “my” or a founder.'})}}
  if(issues.length)return {status:'BLOCKED',issues:[...new Set(issues)],warnings:[...new Set(warnings)],files:[],publication_allowed:false,
   ...(blockedDetails.length?{blocked_details:blockedDetails.slice(0,20)}:{})};
@@ -166,6 +169,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  'This delivery is not proof of rankings, enquiries, customers or paid revenue.\n';
  const manifest={
   format:'contentscale-growth-cms-handoff/v1',delivery:'reviewed_manual_changes',cms,
+  voice:personalVoiceAllowed?'PERSONAL_BRAND':'SERVICE',
   existing_url:canonicalUrl,source_sha256:sha(originalHtml),focus_query:clean(focusQuery)||null,
   evidence_scope:evidenceScope,editor_approved:true,publication_allowed:false,
   automatic_publishing:false,no_paid_provider_required:true,

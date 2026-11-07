@@ -65,11 +65,11 @@ function placeLink(sections, link, pageUrl) {
 }
 
 // The same review notes as the Tracker: the flagged sentences (proved resolved by the builder) and what each section rests on.
-function reviewNotesOf(given, stored) {
+function reviewNotesOf(given, stored, personal = false) {
   const flagged = [], basis = [];
   for (const s of given) {
     const orig = stored.get(s.item_id); if (!orig) continue;
-    for (const f of orig.flags || []) if (f) flagged.push({ sentence: f.sentence || null, h2: orig.h2 || s.h2, reason: f.reason || '' });
+    for (const f of orig.flags || []) if (f && !(personal && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || ''))))) flagged.push({ sentence: f.sentence || null, h2: orig.h2 || s.h2, reason: f.reason || '' });
     const b = orig.basis;
     if (b) basis.push({ h2: s.h2, answers: b.answers || '', sources: (b.competitor_evidence || []).map(e => [e.site, e.heading].filter(Boolean).join(': ')), warning: b.warning || '' });
   }
@@ -84,7 +84,7 @@ const PLAIN = {
   EMPTY_HEADING: 'Every section needs a heading.',
   META_TITLE_REQUIRED: 'Enter the SEO title (at most 100 characters).',
   META_DESCRIPTION_REQUIRED: 'Enter the meta description (at most 220 characters).',
-  META_PERSONAL_OR_FOUNDER_VOICE: 'Write the title and description about the service, not in the first person ("I", "my").',
+  META_PERSONAL_OR_FOUNDER_VOICE: 'The title or description says "I" or "my". Does this page present you as a person? Tick "This page presents me as a person". Otherwise write it as the service.',
   SOURCE_REVISION_CHANGED: 'Your page changed since step 1. Read the original page again, then download.',
   ORIGINAL_PAGE_SNAPSHOT_REQUIRED: 'The original page could not be read. Read it again in step 1.',
   FLAGGED_CONTENT_NOT_RESOLVED: 'A flagged sentence is still in the text: rewrite or remove it.',
@@ -102,6 +102,8 @@ const PLAIN = {
 function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}, focusQuery = '', gscVerifiedTerm = false, language = 'en' }) {
   const stored = new Map(((written && written.sections) || []).map(s => [String(s.item_id), s]));
   const issues = [], flagged = [];
+  // The page presents a person (owner choice per package): "I"/"my" flags are the page's own voice, not errors.
+  const personal = input.personal_voice === true, isVoice = f => f && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')));
   const supplied = Array.isArray(input.sections) ? input.sections : [];
   if (supplied.length > 12) issues.push('TOO_MANY_SECTIONS');
   const given = supplied.slice(0, 12).map(s => ({ item_id: String(s && s.item_id || ''), h2: String(s && s.h2 || '').trim().slice(0, 200), text: String(s && s.text || '').trim().slice(0, 20000) }));
@@ -109,7 +111,7 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   // A flagged sentence of the written concept may not stay in the text (rewrite or remove it).
   for (const s of given) {
     const orig = stored.get(s.item_id);
-    for (const f of (orig && orig.flags) || []) if (f && f.sentence && s.text.includes(f.sentence)) flagged.push({ section: s.h2, sentence: f.sentence, reason: f.reason || '' });
+    for (const f of (orig && orig.flags) || []) if (f && f.sentence && !(personal && isVoice(f)) && s.text.includes(f.sentence)) flagged.push({ section: s.h2, sentence: f.sentence, reason: f.reason || '' });
   }
   if (flagged.length) issues.push('FLAGGED_TEXT_STILL_PRESENT');
   let sections = given.map(s => {
@@ -121,7 +123,7 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   const cms = CMS.includes(input.cms) ? input.cms : 'generic';
   const result = prepareGrowthCmsHandoff({ canonicalUrl: url, originalHtml, sourceExpectedSha256: sourceSha256, caseStudyLocked: false,
     editorApproved: input.editor_approved === true, cms, pageTitle: String(input.seo_title || '').trim(), metaDescription: String(input.meta_description || '').trim(),
-    changes: sections, focusQuery, evidenceScope: gscVerifiedTerm ? 'verified' : 'observed', language: language || 'en', reviewNotes: reviewNotesOf(given, stored) });
+    changes: sections, focusQuery, evidenceScope: gscVerifiedTerm ? 'verified' : 'observed', language: language || 'en', reviewNotes: reviewNotesOf(given, stored, personal), personalVoiceAllowed: personal });
   const all = [...new Set([...issues, ...(result.issues || [])])];
   if (all.length || result.status !== 'HANDOFF_READY_FOR_EDITOR')
     return { ready: false, issues: all, flagged, blocked_details: result.blocked_details || null, messages: [...new Set(all.map(c => PLAIN[c] || ('Not ready: ' + c.toLowerCase().replace(/_/g, ' ') + '.')))] };
