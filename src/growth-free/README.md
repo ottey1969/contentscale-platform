@@ -60,6 +60,7 @@ It reuses the existing Growth research engine unchanged
 | Who | How | Limits |
 |---|---|---|
 | **You** | `/free-growth/admin` → log in with `GROWTH_FREE_ADMIN_KEY` → "Run a check yourself" | None (24-hour cache still applies) |
+| **You, on the normal form** | "Owner? Sign in" under the form → `GROWTH_FREE_ADMIN_KEY` → the form runs owner checks (with Search Console upload) until you sign out | None; AI writing as for your own checks |
 | **Someone you invite** | Admin → "Invite someone" → send the personal link | Per link: number of checks (default 3), validity (default 7 days), optionally only one email address. Withdraw with one click; takes effect immediately. |
 | **The public on your own site** | An access key with `hosts` (below) — no code in the link | Per email, per IP, per key per day + total daily cap |
 

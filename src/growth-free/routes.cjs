@@ -113,7 +113,7 @@ function aiStartScript(){
 function aiStartAnswers(){return Array.prototype.slice.call(document.querySelectorAll('textarea[data-engine]')).filter(function(t){return t.value.trim()}).map(function(t){return {engine:t.getAttribute('data-engine'),text:t.value}})}`;
 }
 
-function formPage(cfg,api,base,accessKey,invite=null){
+function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,signedIn:false}){
  return page('Free Growth check — what is your page missing?',`
 <p class="kicker">Free · no account needed</p>
 <h1>Is your page found in Google — and in AI answers?</h1>
@@ -131,10 +131,11 @@ ${aiStartBlock()}
  <label for="gscFile">Search Console export (optional)</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
  <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
  <label for="email">Your email</label><input id="email" name="email" type="email" required maxlength="200" placeholder="you@company.com">
- <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` Max ${cfg.perEmail} free checks per day.`}</span></label>
+ <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day.`}`}</span></label>
  <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
- <p><button type="submit">Run the free check</button> <small id="s" role="status"></small></p>
+ <p><button type="submit">${owner.signedIn?'Run the check (owner)':'Run the free check'}</button> <small id="s" role="status"></small></p>
 </form>
+${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p class="muted">Signed in with your admin key: no daily limit, and AI writes the chosen H2s in your checks${cfg.writing==='off'?' (AI writing is switched off on the server: GROWTH_FREE_WRITING=off)':''}. Visitors keep their normal limits.</p><p><button type="button" class="ghost" id="ownerOut">Sign out</button></p></div>`:owner.available?`<details class="card" id="ownerBox"><summary><strong>Owner? Sign in</strong> <small class="muted">no daily limit, AI writing on</small></summary><form id="ownerIn" autocomplete="off"><label for="ownerKey">Admin key (GROWTH_FREE_ADMIN_KEY in Railway)</label><input id="ownerKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit">Sign in as owner</button> <small id="ownerSt" role="status"></small></p></form></details>`:''}
 <div class="card"><h2 style="margin-top:0">What you get</h2><ul>
 <li>One clear decision: <strong>leave it</strong>, <strong>add a missing answer</strong>, <strong>make a separate page</strong>, or <strong>not enough evidence</strong>.</li>
 <li>Where to add it on your page, with the ranking pages that support it.</li>
@@ -145,12 +146,16 @@ ${aiStartBlock()}
 ${aiStartScript()}
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
 (function(){try{var q=new URLSearchParams(location.search);['url','query','market','language'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,300)})}catch(e){}})();
+var OWNER=${js(!!owner.signedIn)};
+(function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
+  try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
+ var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
 b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent='Starting…';
 try{var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -587,7 +592,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
   res.set('Content-Security-Policy','frame-ancestors '+(entry.origins.length?"'self' "+entry.origins.join(' '):'*'));
-  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry},apiPath,basePath,req.query&&req.query.key?entry.key:''));
+  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)}));
  });
  app.get(basePath+'/r/:id',(req,res)=>res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html')
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())
@@ -597,6 +602,13 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   try{
    const b=req.body||{};
    if(b.invite)return await startInviteCheck(req,res,b);
+   // The owner, signed in with the admin key on this browser: no daily limits, AI writing as for the owner's checks.
+   // Cookie-based, so it needs the custom header another website cannot send (CSRF), as every owner action.
+   if(sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin'){
+    const input=readInput(b,res);if(!input)return;
+    await storage.ensureTables(pool);
+    return await start(res,input,{accessLabel:'admin',marketingConsent:b.marketing_consent===true});
+   }
    const entry=findKey(config,b.key,req);
    if(!entry)return res.status(403).json({success:false,error:'This free check is not activated here'});
    const origin=req.get&&req.get('origin');
