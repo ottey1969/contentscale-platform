@@ -3034,8 +3034,60 @@ ${html.slice(0,52000)}`;
         return res.status(422).json({success:false,error:'Standalone article did not fully execute the Approved Brief after one targeted repair. Nothing was saved.',stage:'brief_fidelity',missing:fidelity.missing,details:fidelity.groups,counts:fidelity.counts});
       }
     }
-    const words=htmlText(html).split(/\s+/).filter(Boolean).length;if(words<1200)throw new Error('Generated article is below the 1200 useful-word publication minimum');
-    const _standMeta=safeJsonObject(brief&&brief.brief_json&&brief.brief_json.meta_package),_standApprovedTitle=cleanText(_standMeta.seo_title||'',60),_standApprovedDesc=cleanText(_standMeta.meta_description||'',160);const metaTitle=_standApprovedTitle||cleanText(d.meta_title||d.title||title,60),metaDescription=(_standApprovedDesc.length>=140&&_standApprovedDesc.length<=160)?_standApprovedDesc:cleanText(d.meta_description||'',160);if(!metaTitle||metaTitle.length>60||metaDescription.length<140||metaDescription.length>160)throw new Error('SEO meta policy failed: title must be 1-60 characters and meta description 140-160 characters.');const slug=slugifyNetwork(d.suggested_slug||d.title||title),schema=(d.schema_json&&typeof d.schema_json==='object')?d.schema_json:{},scoreRow={html,meta_title:metaTitle,meta_description:metaDescription,suggested_slug:slug,schema_json:schema,source_domain:owner?.domain||'',source_link_required:false,generation_input_snapshot:{prewrite_used:true,prewrite_brief_id:prewriteId,approved_prewrite_approval_id:Number(approvalCtx.approval.id),approved_prewrite_hash:prewriteHash,approved_prewrite_at:approvalCtx.approval.approved_at||null,approved_brief_contract:approvedBriefContract||null,publication_settings:{author_name:brand||owner?.brand_name||'Content owner'}}},score=scorePublication(scoreRow,[]),standard=publicationStandardChecks(html),snapshot={network_kind:'standalone_content',market:locale.market||null,language:locale.language||null,niche_classification:cls,google_manual:{notes:manual,admin_only:true},prewrite_summary:{id:brief.id,keyword:brief.keyword,working_title:brief.working_title,created_at:brief.created_at,competitors_scraped:brief.competitors_scraped},approved_prewrite:{approval_id:Number(approvalCtx.approval.id),brief_hash:prewriteHash,approved_at:approvalCtx.approval.approved_at||null},approved_brief_fidelity:fidelity,standalone_output:{meta_title:metaTitle,meta_description:metaDescription,suggested_slug:slug,schema_json:schema,content_score:score.score,score_parts:score.parts,publication_standard:standard,prewrite_hash:prewriteHash,generation_model:ai.model}};
+    const _standMeta=safeJsonObject(brief&&brief.brief_json&&brief.brief_json.meta_package);
+    const _standApprovedTitle=cleanText(_standMeta.seo_title||'',60),_standApprovedDesc=cleanText(_standMeta.meta_description||'',160);
+    function evaluateStandaloneDraft(){
+      const metaTitle=_networkSeedMetaTitleV515(brief.keyword,_standApprovedTitle||cleanText(d.meta_title||d.title||title,60));
+      const metaDescription=_networkSeedMetaDescriptionV515(brief.keyword,(_standApprovedDesc.length>=140&&_standApprovedDesc.length<=160)?_standApprovedDesc:cleanText(d.meta_description||'',160));
+      const slug=slugifyNetwork(brief.keyword||title),schema=safeJsonObject(d.schema_json);
+      const scoreRow={html,meta_title:metaTitle,meta_description:metaDescription,suggested_slug:slug,schema_json:schema,
+        publisher_domain:owner.domain,source_domain:owner.domain,source_link_required:false,
+        generation_input_snapshot:{prewrite_used:true,prewrite_brief_id:prewriteId,
+          approved_prewrite_approval_id:Number(approvalCtx.approval.id),approved_prewrite_hash:prewriteHash,
+          approved_prewrite_at:approvalCtx.approval.approved_at||null,approved_brief_contract:approvedBriefContract,
+          publication_settings:{author_name:brand||owner.brand_name||'Content owner'}}};
+      const score=scorePublication(scoreRow,[]),standard=publicationStandardChecks(html),
+        seed=_networkSeedKeywordChecksV515(scoreRow,[],brief.keyword),
+        links=checkStandaloneLinks({html,ownerDomain:owner.domain,internalCandidates:verifiedInternal,externalCandidates:verifiedExternal});
+      const missing=[];
+      if(!standard.passed)missing.push('publication_standard');
+      if(score.score<80)missing.push('contentscore_below_80');
+      if(!seed.passed)missing.push('seed_keyword');
+      if(!links.passed)missing.push('verified_links');
+      if(!metaTitle||metaTitle.length>60||metaDescription.length<140||metaDescription.length>160)missing.push('seo_metadata');
+      if(!['Article','BlogPosting','NewsArticle'].includes(String(schema['@type']||'')))missing.push('article_schema');
+      return {passed:missing.length===0,missing,metaTitle,metaDescription,slug,schema,score,standard,seed,links};
+    }
+    let evaluated=evaluateStandaloneDraft();
+    if(!evaluated.passed){
+      const finalPrompt=`Repair this existing standalone article against its approved Prewrite Brief. Do not restart research, replace the approved H2 structure, fabricate facts or invent URLs.
+Return JSON only with title, html, plain_text, meta_title, meta_description, suggested_slug, schema_json.
+REMAINING PUBLICATION GATES: ${JSON.stringify({missing:evaluated.missing,standard:evaluated.standard,score:evaluated.score.score,seed:evaluated.seed,links:evaluated.links}).slice(0,15000)}
+APPROVED BRIEF CONTRACT: ${JSON.stringify(approvedBriefContract).slice(0,24000)}
+EXACT VERIFIED OWNER INTERNAL URLS: ${JSON.stringify(verifiedInternal)}
+EXACT VERIFIED EXTERNAL SOURCE URLS: ${JSON.stringify(verifiedExternal.map(x=>x.final_url))}
+RULES: one approved H1, all approved H2s in their original order, direct answer, TL;DR, linked TOC, factual table, approved FAQ only; at least one exact owner-domain link and three distinct verified external sources; exact seed phrase in early body, subheading, meta title, meta description and short slug; content must score at least 80 without filler. Schema JSON must use @type Article. Preserve approved evidence and original-source URLs.
+CURRENT ARTICLE: ${JSON.stringify({title:d.title,html,meta_title:evaluated.metaTitle,meta_description:evaluated.metaDescription,suggested_slug:evaluated.slug,schema_json:d.schema_json}).slice(0,52000)}`;
+      const repaired=await callNetworkGemini(finalPrompt);
+      if(repaired&&repaired.parsed&&typeof repaired.parsed.html==='string'&&repaired.parsed.html.trim()){
+        d=Object.assign({},d,repaired.parsed);html=String(d.html||'');
+      }
+      fidelity=checkApprovedBriefFidelity(html,brief.brief_json||{},fidelityOpts);
+      evaluated=evaluateStandaloneDraft();
+    }
+    if(!fidelity.passed||!evaluated.passed){
+      return res.status(422).json({success:false,error:'Standalone article failed the approved Prewrite and publication-quality gates after targeted repair. Nothing was saved.',
+        stage:'publication_readiness',missing_brief:fidelity.missing,missing_quality:evaluated.missing,
+        seed_keyword_policy:evaluated.seed,link_policy:evaluated.links,content_score:evaluated.score.score,
+        publication_standard:evaluated.standard,saved:false});
+    }
+    const {metaTitle,metaDescription,slug,schema,score,standard}=evaluated;
+    const snapshot={network_kind:'standalone_content',market:locale.market||null,language:locale.language||null,niche_classification:cls,
+      google_manual:{notes:manual,admin_only:true},prewrite_summary:{id:brief.id,keyword:brief.keyword,working_title:brief.working_title,created_at:brief.created_at,competitors_scraped:brief.competitors_scraped},
+      approved_prewrite:{approval_id:Number(approvalCtx.approval.id),brief_hash:prewriteHash,approved_at:approvalCtx.approval.approved_at||null},
+      approved_brief_fidelity:fidelity,standalone_output:{meta_title:metaTitle,meta_description:metaDescription,suggested_slug:slug,
+        schema_json:schema,content_score:score.score,score_parts:score.parts,publication_standard:standard,seed_keyword_policy:evaluated.seed,
+        verified_link_policy:evaluated.links,prewrite_hash:prewriteHash,generation_model:ai.model,ready:true}};
     const r=await pool.query(`INSERT INTO network_content (owner_website_id,prewrite_brief_id,title,source_type,primary_niche,brand_name,source_html,source_text,source_snapshot,publication_status,distribution_status,desired_placements,verified_placements,created_at,updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,'draft','standalone',1,0,NOW(),NOW()) RETURNING id,title,created_at`,[ownerWebsiteId,prewriteId,cleanText(d.title||title,300),prewriteId?'prewrite_brief':'original',primaryNiche,brand||null,html,cleanText(d.plain_text||htmlText(html),50000),JSON.stringify(snapshot)]);
     res.status(201).json({success:true,item:r.rows[0],content_score:score.score,score_parts:score.parts,publication_standard:standard,prewrite_hash:prewriteHash,marketplace:false});
   }));
