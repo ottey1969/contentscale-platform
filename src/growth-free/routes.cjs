@@ -225,7 +225,7 @@ function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.grou
  h+='<p><button type="button" id="gapDownload" class="action-muted">Download editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p></details></div></details><details id="stepPrepare" class="journey-section"><summary><span class="journey-num">3</span><span><strong>Prepare content</strong><small>Draft, review and export for your CMS</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="prepare">Prepare the text</h2><p class="muted">'+(g.writing_allowed===false?'Research did not establish enough evidence to safely draft new text. Your H2 selections are observations, not verified recommendations. Export the research brief in Step 2.':!w||!w.allowed?'Automatic writing is disabled for this Free Growth access link. This is an access restriction, not a request to manually write every H2. Export the research brief in Step 2; the CMS editor is optional.':w.remaining<=0?'The automatic writing limit for this check has been reached. Previously prepared copy remains available for review.':'Generate draft text for evidence-supported selected topics using AI, then review it before creating the CMS package.')+'</p>';
  if(w&&!w.allowed&&w.owner_login_available&&w.remaining>0&&g.writing_allowed!==false)h+='<div class="card" id="ownerUnlock"><strong>Owner access · Write with AI</strong><p class="muted">Sign in with your existing Free Growth admin key. No new password or check is required. Your selected H2s are kept.</p><form id="ownerUnlockForm" autocomplete="off"><label for="ownerUnlockKey">Admin key (stored in Railway)</label><input id="ownerUnlockKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit" id="ownerUnlockButton" class="action-blue">Unlock Write with AI</button> <small id="ownerUnlockStatus" role="status"></small></p></form></div>';
  if(w&&w.allowed&&w.owner_unlocked)h+='<p class="note"><strong>Owner mode enabled.</strong> Write with AI is unlocked for this check. No visitor permissions were changed.</p>';
- if(w&&w.allowed&&w.remaining>0&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite" class="action-blue" disabled>Write selected with AI ('+esc(w.remaining)+' run(s) left)</button> <small class="muted">Concepts for review only. Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.</small></p>';
+ if(w&&w.allowed&&w.remaining>0&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite" class="action-blue" disabled>Automatically prepare selected H2s with AI ('+esc(w.remaining)+' run(s) available)</button> <small class="muted">One click prepares up to four H2s per run, using available runs automatically. You review everything before download. Nothing is published.</small></p>';
  h+='<div id="gapWritten"></div><div id="pkgBox"></div></div></details>';
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
@@ -298,14 +298,15 @@ function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box
   catch(err){st.textContent=err.message;b.classList.add('action-failed')}b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy')}}
 // Step 4 is always reachable once something is chosen: AI concepts are prefilled; chosen items without a concept are
 // empty sections the editor writes. Without any writing by AI the package works the same way.
-function pkgSections(g,last){var have={},out=[];((last&&last.sections)||[]).forEach(function(x){have[x.item_id]=1;out.push(x)});
+function pkgSections(g,last,includeEmpty){var have={},out=[];((last&&last.sections)||[]).forEach(function(x){have[x.item_id]=1;out.push(x)});if(!includeEmpty)return {sections:out};
  document.querySelectorAll('.gapPick:checked').forEach(function(c){if(have[c.value])return;var it=((g&&g.items)||[]).filter(function(x){return String(x.id)===c.value})[0];
   if(it)out.push({item_id:String(it.id),h2:it.title,paragraphs:[],flags:[],empty:true,placement:null})});return {sections:out}}
 function pkgStart(g,last,canWrite){var box=document.getElementById('pkgBox');if(!box)return;
- if(last&&(last.sections||[]).length){showPkg(pkgSections(g,last));return}
+ if(last&&(last.sections||[]).length){showPkg(pkgSections(g,last,false));return}
+ if(canWrite){box.innerHTML='<h2 id="pkg">CMS package for your editor</h2><p class="muted">No AI text has been prepared yet. Use the blue automatic preparation button above; prepared H2 text appears here for your review. You do not have to write every paragraph yourself.</p>';return}
  var n=document.querySelectorAll('.gapPick:checked').length;
  box.innerHTML='<h2 id="pkg">CMS package for your editor</h2><p class="muted">A CMS package needs approved factual text, not H2 headings alone. Your research brief is in Step 2.</p>'+(canWrite?'':'<details class="research-details" id="pkgManual"><summary>Advanced: prepare a CMS package with your own verified text (optional)</summary>')+'<p><button type="button" id="pkgOpen" class="'+(canWrite?'action-blue':'ghost')+'"'+(n?'':' disabled')+'>Open the package editor for your selection ('+n+')</button> <small class="muted" id="pkgOpenHelp">'+(n?'Your selections are kept. No content is fabricated or published automatically.':'Choose at least one item in Step 2 first.')+'</small></p>'+(canWrite?'':'</details>');
- document.getElementById('pkgOpen').onclick=function(){showPkg(pkgSections(g,last));var el=document.getElementById('pkg');if(el){openJourney('stepPrepare');el.scrollIntoView()}}}
+ document.getElementById('pkgOpen').onclick=function(){showPkg(pkgSections(g,last,true));var el=document.getElementById('pkg');if(el){openJourney('stepPrepare');el.scrollIntoView()}}}
 function pkgCount(n){var b=document.getElementById('pkgOpen');if(!b)return;b.disabled=!n;b.textContent='Open the package editor for your selection ('+n+')';var h=document.getElementById('pkgOpenHelp');if(h)h.textContent=n?'You write or paste the text per section, then approve and download.':'Choose at least one item in step 2 first.'}
 function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)return;
  var unlock=document.getElementById('ownerUnlockForm');if(unlock)unlock.onsubmit=async function(e){e.preventDefault();var key=document.getElementById('ownerUnlockKey'),btn=document.getElementById('ownerUnlockButton'),st=document.getElementById('ownerUnlockStatus');btn.disabled=true;btn.classList.add('is-working');btn.setAttribute('aria-busy','true');st.textContent='Verifying owner access…';try{var res=await fetch('/api/free-growth/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key.value})});key.value='';var answer=await res.json();if(!answer.success)throw Error(answer.error||'Owner authentication failed');st.textContent='Owner access confirmed.';var state=await fetch(API+Q,{cache:'no-store',credentials:'same-origin'});var next=await state.json();if(!next.success||!next.writing||!next.writing.allowed)throw Error('Could not activate writing on this check');render(next);openJourney('stepPrepare')}catch(err){key.value='';st.textContent=err.message;st.className='error';btn.classList.add('action-failed')}finally{btn.disabled=false;btn.classList.remove('is-working');btn.removeAttribute('aria-busy')}};
@@ -315,13 +316,39 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   document.querySelectorAll('.gapPick').forEach(function(el){el.checked=savedIds.has(el.value)});
  var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last){wr.innerHTML=writtenHtml(d.writing.last)}
  var wb=document.getElementById('gapWrite');
- if(wb)wb.onclick=async function(){var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});var st=document.getElementById('gapStatus');
-  if(!ids.length){st.textContent='Select at least one topic or question.';return}
-  var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Check the AI answers first (above); your selection is kept.';return}
-  wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');st.textContent='Writing concepts…';
-  try{var r=await fetch(API+'/write'+Q,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...(d&&d.writing&&d.writing.owner_unlocked?{'X-Requested-With':'growth-free-admin'}:{})},body:JSON.stringify({item_ids:ids,ai_check_choice:aiChoice})});var x=await r.json();if(x.stored===false&&(x.sections||[]).length){wr.innerHTML=writtenHtml(x);st.textContent=x.error;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');return}if(!x.success)throw Error(x.error||'Not written');
-   wr.innerHTML=writtenHtml(x.all_written||x);showPkg(pkgSections(g,x.all_written||x));wb.textContent='Write selected with AI ('+x.remaining+' run(s) left)';wb.disabled=!x.remaining;wb.dataset.exhausted=!x.remaining?'yes':'';wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-green');var ws=document.getElementById('freeStepWrite');if(ws){ws.className='step-chip done';ws.querySelector('.symbol').textContent='✓'}st.textContent=(x.sections||[]).length?'Concepts written below.':'No text was written.'}
-  catch(err){st.textContent=err.message;wb.disabled=false;wb.classList.remove('is-working');wb.removeAttribute('aria-busy');wb.classList.add('action-red')}};
+ if(wb)wb.onclick=async function(){
+  var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});
+  var st=document.getElementById('gapStatus'),available=Number(d.writing&&d.writing.remaining||0);
+  if(!ids.length){st.textContent='Select at least one topic or question in Step 2.';return}
+  var doneIds=new Set(((d.writing&&d.writing.last&&d.writing.last.sections)||[]).map(function(x){return String(x.item_id)}));
+  var eligible=ids.filter(function(id){var it=(g.items||[]).find(function(x){return String(x.id)===id});return !!(it&&it.writable&&!doneIds.has(id))});
+  if(!eligible.length){st.textContent=doneIds.size?'Selected supported H2s already have saved drafts. Review the prepared copy below; headings without research evidence are excluded.':'None of the selected headings is eligible for evidence-supported AI writing.';return}
+  var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Your selection is saved. Check AI answers or choose to continue without them.';return}
+  var capacity=Math.min(available*4,eligible.length),chosen=eligible.slice(0,capacity);
+  wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');
+  st.textContent='Preparing '+chosen.length+' eligible H2(s) automatically using '+Math.ceil(chosen.length/4)+' writing run(s)…';
+  var latest=null,completed=0;
+  try{
+   for(var run=0;run<Math.min(available,Math.ceil(chosen.length/4));run++){
+    st.textContent='Writing H2 batch '+(run+1)+' of '+Math.ceil(chosen.length/4)+'…';
+    var response=await fetch(API+'/write'+Q,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...(d&&d.writing&&d.writing.owner_unlocked?{'X-Requested-With':'growth-free-admin'}:{})},body:JSON.stringify({item_ids:chosen,ai_check_choice:aiChoice})});
+    var result=await response.json();
+    if(result.stored===false&&(result.sections||[]).length){wr.innerHTML=writtenHtml(result);throw Error(result.error||'The draft was not saved; reload to verify the status')}
+    if(!response.ok||!result.success)throw Error(result.error||'Writing could not finish');
+    latest=result;completed+=result.sections?.length||0;
+    wr.innerHTML=writtenHtml(result.all_written||result);
+    showPkg(pkgSections(g,result.all_written||result,false));
+    if(!(result.pending||[]).length||!result.remaining)break;
+   }
+   if(!latest)throw Error('No verified draft was generated');
+   var pending=latest.pending||[],outside=ids.length-chosen.length-[...doneIds].filter(function(id){return ids.includes(id)}).length;
+   st.textContent=completed+' H2 draft(s) prepared automatically for review.'+(pending.length?' '+pending.length+' could not be completed with the available runs.':'')+(outside?' '+outside+' selected topic(s) were not processed because they are unsupported or exceed the remaining quota.':'')+' Review the prepared sections below; nothing is published.';
+   wb.textContent='Prepare remaining selected H2s with AI ('+latest.remaining+' run(s) left)';
+   wb.disabled=!latest.remaining;wb.dataset.exhausted=!latest.remaining?'yes':'';
+   wb.classList.add('action-green');openJourney('stepPrepare');
+  }catch(err){st.textContent='Automatic preparation stopped after '+completed+' draft(s): '+err.message+'. Saved drafts remain available below.';wb.disabled=false;wb.classList.add('action-red')}
+  finally{wb.classList.remove('is-working');wb.removeAttribute('aria-busy')}
+ };
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected';pkgCount(n);if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}if(count.initialized)queueSelectionSave();var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',count)});
  document.getElementById('gapAll').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=true});count()};
@@ -329,7 +356,7 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
  var st=document.getElementById('gapStatus');
  box.onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}
   var url=URL.createObjectURL(new Blob([b.text],{type:'text/markdown'})),a=document.createElement('a');a.href=url;a.download='editor-brief.md';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);st.textContent=b.count+' item(s) in the brief.';box.classList.add('action-done');var next=document.getElementById('freeStepExport');if(next){next.className='step-chip done';next.querySelector('.symbol').textContent='✓'}};
- document.getElementById('gapCopy').onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}if(navigator.clipboard)navigator.clipboard.writeText(b.text);st.textContent='Copied ('+b.count+' item(s)).'};count();count.initialized=true;pkgStart(g,d&&d.writing&&d.writing.last,!!(d&&d.writing&&d.writing.allowed&&g&&g.writing_allowed!==false))}
+ document.getElementById('gapCopy').onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}if(navigator.clipboard)navigator.clipboard.writeText(b.text);st.textContent='Copied ('+b.count+' item(s)).'};count();count.initialized=true;pkgStart(g,d&&d.writing&&d.writing.last,!!(d&&d.writing&&d.writing.allowed&&d.writing.remaining>0&&g&&g.writing_allowed!==false))}
 // After publication: the date, one e-mail about four weeks later, and the before/after comparison from two exports.
 function fmtD(x){try{return new Date(String(x).slice(0,10)+'T12:00:00Z').toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})}catch(e){return String(x)}}
 function sideHtml(label,w,x){if(!x)return '<div><small>'+label+'</small><strong>No export yet</strong><small>Upload an export for '+esc(fmtD(w.start))+' – '+esc(fmtD(w.end))+', filtered on exactly this page.</small></div>';
