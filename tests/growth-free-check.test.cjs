@@ -533,7 +533,7 @@ test('review: only an explicit RESOURCES section counts as AI sources',()=>{
  const mix=ai.summarizeAiAnswers([{engine:'chatgpt',raw_text:'no list https://acme-roofing.example/roof-repair-lodi-nj/'},
   {engine:'perplexity',raw_text:'ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://roofer-a.example/x'}],{pageUrl:page});
  assert.equal(mix.headline,'Not cited by AI: 0 of 1 AI system with a source list');
- assert.match(mix.explanation,/ChatGPT Search: no RESOURCES section, not verified/);
+ assert.match(mix.explanation,/ChatGPT Search: no source list in the pasted answer[^]*not verified/);
  assert.deepEqual(mix.top_cited_sites,[{site:'roofer-a.example',ai_systems:1}],'unverified answers do not feed the site list');
  // Stored answers are re-read with the current rules (raw_text wins over an old parsed result).
  const stale=ai.summarizeAiAnswers([{engine:'claude',raw_text:'mention https://acme-roofing.example/roof-repair-lodi-nj/',parsed:{sources:['https://acme-roofing.example/roof-repair-lodi-nj/'],own_site_cited:true,exact_page_cited:true,source_sites:['acme-roofing.example']}}],{pageUrl:page});
@@ -578,7 +578,7 @@ test('writing for a selection is optional: only where allowed, only the selected
  const again=await all.post(p2,{item_ids:pick});assert.equal(again.status,409);assert.match(again.body.error,/written already/);assert.equal(calls.length,1);
  assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,200);
  assert.equal((await all.post(p2,{item_ids:pick,rewrite:true})).status,429,'limit per check');
- const page=await all.get(b.body.result_url);assert.match(page.body,/Automatically prepare selected H2s with AI/);
+ const page=await all.get(b.body.result_url);assert.match(page.body,/Write the chosen H2s with AI \(up to/);
 });
 
 // Code audit of e1869f2. SYNTHETIC: six hand-made gap items on a synthetic check (the synthetic pages above produce one).
@@ -682,4 +682,24 @@ test('free check: no writing when the check has too little evidence',async t=>{
  const w=await s.post('/api/free-growth/checks/'+m[1]+'/write?k='+m[2],{item_ids:[id]});
  assert.equal(w.status,409);assert.match(w.body.error,/Not enough evidence in this check to write: Only 1 readable ranking page/);
  const page=await s.get(b.body.result_url);assert.match(page.body,/writing_allowed/,'the page script reads the evidence flag');
+});
+
+test('Copilot and others: a "Sources" heading or numbered link references count as the source list; links in the text do not',()=>{
+ const ai=require('../src/growth-free/ai-answers.cjs'),page='https://acme-roofing.example/roof-repair-lodi-nj/';
+ const copilot=ai.parseAiAnswer('TEST: for roof repair in Lodi ask Acme Roofing [1] or Roofer A [2] for a written estimate.\n\n[1]: https://acme-roofing.example/roof-repair-lodi-nj/ "Acme"\n[2]: https://roofer-a.example/roof-repair-nj/ "Roofer A"',{pageUrl:page,query:'roof repair lodi nj'});
+ assert.deepEqual([copilot.resources_status,copilot.resources_form,copilot.sources.length],['LISTED','NUMBERED_LINKS',2]);
+ const nl=ai.parseAiAnswer('TEST: voor dakreparatie in Lodi vraag je een offerte.\n\n**Bronnen:**\n- https://roofer-a.example/roof-repair-nj/',{pageUrl:page,query:'dakreparatie lodi'});
+ assert.deepEqual([nl.resources_status,nl.resources_form],['LISTED','SOURCES_HEADING']);
+ const inText=ai.parseAiAnswer('Sources say roof repair in Lodi https://roofer-a.example/x is cheap.',{pageUrl:page,query:'roof repair'});
+ assert.equal(inText.resources_status,'MISSING');assert.deepEqual(inText.sources,[]);
+});
+
+test('up to five e-mail addresses: the first counts for the limits, all are stored; six or an invalid one is refused',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ const two=await s.post('/api/free-growth/checks',{...ok,email:'TEST-a@acme-roofing.example, test-b@acme-roofing.example'});
+ assert.equal(two.status,202,JSON.stringify(two.body));
+ const six=await s.post('/api/free-growth/checks',{...ok,email:[1,2,3,4,5,6].map(i=>'test-'+i+'@acme-roofing.example').join(',')});
+ assert.equal(six.status,400);assert.match(six.body.error,/at most 5/);
+ const bad=await s.post('/api/free-growth/checks',{...ok,email:'test-a@acme-roofing.example, not-an-address'});
+ assert.equal(bad.status,400);assert.match(bad.body.error,/up to 5, separated by commas/);
 });

@@ -111,7 +111,7 @@ async function sendDueFreeReminders(pool, storage, { send, links, now = new Date
     const lang = languageOf(row);
     const m = await localize(reminderMessage({ url: row.url, query: String(row.query || (row.summary && row.summary.checked && row.summary.checked.search_term) || ''), publishedOn: row.published_on,
       resultLink: links.result(row), stopLink: links.stop(row.reminder_token, row), lang: T[lang] ? lang : 'en' }), lang, { model: modelFor(model) });
-    const ok = await Promise.resolve(send({ to: [row.email], subject: m.subject, html: m.html })).catch(() => false);
+    const ok = await Promise.resolve(send({ to: Array.isArray(row.emails) && row.emails.length ? row.emails : [row.email], subject: m.subject, html: m.html })).catch(() => false);
     await storage.markReminder(pool, { id: row.id, sent: ok });
     if (ok) sent++; else failed++;
   }

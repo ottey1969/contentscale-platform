@@ -33,7 +33,9 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     const errors = []; p.on('pageerror', e => errors.push(e.message));
     await p.goto(base + '/free-growth?key=e2e-open-key-2');
     await p.fill('#url', URL_); await p.fill('#query', 'roof repair lodi nj');
-    await p.fill('#email', 'TEST-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example'); await p.check('input[name=consent]');
+    // Two addresses (up to five are allowed).
+    const emails = 'test-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example, test-second@acme-roofing.example';
+    await p.fill('#email', emails); await p.check('input[name=consent]');
     await p.click('#f button[type=submit]');
     try { await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 }); } catch (e) { throw Error('form did not start: ' + (await p.textContent('#f'))); }
     await service.idle();
@@ -49,6 +51,10 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     const href = await p.getAttribute('#nextWriteNewCheck', 'href');
     await p.goto(new URL(href, base).href);
     assert.equal(await p.inputValue('#url'), URL_); assert.equal(await p.inputValue('#query'), 'roof repair lodi nj');
+    // This browser remembered the addresses, so the next check does not start from zero.
+    assert.equal((await p.inputValue('#email')).replace(/\s+/g, ''), emails.replace(/\s+/g, ''));
+    const stored = (await pool.query("SELECT email,emails FROM growth_free_checks WHERE url=$1 ORDER BY id DESC LIMIT 1", [URL_])).rows[0];
+    assert.equal(stored.email, emails.split(', ')[0]); assert.deepEqual(stored.emails, emails.split(', '));
     assert.equal(writes.length, 0, 'the writer was never called');
     assert.deepEqual(errors, []);
   } finally { await browser.close(); srv.close(); await pool.end(); }

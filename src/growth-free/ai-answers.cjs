@@ -91,8 +91,8 @@ const NONE_DECLARED=/^\W*(?:NO VERIFIED RESOURCES|NONE|N\/A|NO SOURCES?)\W*$/i;
 // list for this search term; it is refused with a clear reason instead of being stored as "no sources".
 const OTHER_PROMPT_MARKS=[/^[\s#*>_-]*QUESTION\s*1\b/im,/^[\s#*>_-]*QUESTION\s*2\b/im,/AI SEARCH QUESTIONS\s*:/i,/COMPANY NAMES\s*:/i,/BUSINESS PROFILE\s*:/i,/FINAL CROSS-QUESTION SUMMARY/i];
 function otherPrompt(raw){
- const text=String(raw||'');RESOURCES_HEADING.lastIndex=0;
- if(RESOURCES_HEADING.test(text)){RESOURCES_HEADING.lastIndex=0;return null}
+ const text=String(raw||'');
+ if(sourceListStart(text))return null;
  RESOURCES_HEADING.lastIndex=0;
  return OTHER_PROMPT_MARKS.filter(r=>r.test(text)).length>=2?'QUICK_SCAN_PROMPT':null;
 }
@@ -109,10 +109,24 @@ function validateGrowthAnswer(answerText,query){
  return contract.validateAnswer(answerText,query);
 }
 // A URL mentioned in the answer text is never a citation.
+// Copilot (and others when asked in another language) list their sources in their own way: a heading "Sources",
+// "Bronnen", "References", ... on its own line, or numbered link references at the end ("[1]: https://..."). Both are
+// an explicit source list of the AI system, so they count like RESOURCES. Links inside the answer text still never do.
+const OTHER_SOURCE_HEADING=/^[ \t>*_#-]*(?:SOURCES|BRONNEN|REFERENCES|CITATIONS|QUELLEN|FUENTES|SOURCES CITED|GERAADPLEEGDE BRONNEN)[ \t*_]*:?[ \t*_]*$/gim;
+const NUMBERED_LINK=/^[ \t]*\[\d{1,3}\][ \t]*:?[ \t]*<?https?:\/\//m;
+function sourceListStart(text){
+ let m,last=null;RESOURCES_HEADING.lastIndex=0;
+ while((m=RESOURCES_HEADING.exec(text)))last={index:m.index,end:m.index+m[0].length,form:'RESOURCES'};
+ RESOURCES_HEADING.lastIndex=0;if(last)return last;
+ OTHER_SOURCE_HEADING.lastIndex=0;
+ while((m=OTHER_SOURCE_HEADING.exec(text)))last={index:m.index,end:m.index+m[0].length,form:'SOURCES_HEADING'};
+ OTHER_SOURCE_HEADING.lastIndex=0;if(last)return last;
+ const n=NUMBERED_LINK.exec(text);
+ return n?{index:n.index,end:n.index,form:'NUMBERED_LINKS'}:null;
+}
 function parseAiAnswer(raw,{pageUrl,query}={}){
  const text=cleanAiPaste(String(raw||'').slice(0,MAX_PASTE));
- let last=null,m;RESOURCES_HEADING.lastIndex=0;
- while((m=RESOURCES_HEADING.exec(text)))last={index:m.index,end:m.index+m[0].length};
+ const last=sourceListStart(text);
  const answerPart=last?text.slice(0,last.index):text;
  const resourcesPart=last?text.slice(last.end):'';
  const listed=last?extractUrls(resourcesPart):[];
@@ -126,7 +140,7 @@ function parseAiAnswer(raw,{pageUrl,query}={}){
  const own=sources.filter(isOwn);
  const name=ownRoot.split('.')[0];
  return {
-  answer,sources,resources_status,
+  answer,sources,resources_status,resources_form:last?last.form:null,
   sources_verifiable:resources_status==='LISTED'||resources_status==='NONE_DECLARED',
   source_sites:[...new Set(sources.map(u=>rootOf(hostOf(u))).filter(Boolean))],
   own_site_cited:own.length>0,
@@ -171,7 +185,7 @@ function summarizeAiAnswers(rows,{pageUrl,googleUrls=[],query}={}){
   explanation='Paste the answer of at least one AI system below to see whether AI cites your site for this search.';
  }else if(!n){
   headline='Not verified: no source list in the pasted answers';
-  explanation='The answers you pasted have no RESOURCES section, so it cannot be verified which sources AI used. Links inside the answer text are not counted as sources.';
+  explanation='The answers you pasted have no source list (RESOURCES, Sources, or numbered links like [1]: https://...), so it cannot be verified which sources AI used. Links inside the answer text are not counted as sources. Copy the answer with the copy button of the AI system, so its source links come along.';
  }else if(!cited.length){
   headline=`Not cited by AI: 0 of ${n} ${sys(n)} with a source list`;
   explanation='None of the source lists you pasted contains a page of your website for this search.';
@@ -180,7 +194,7 @@ function summarizeAiAnswers(rows,{pageUrl,googleUrls=[],query}={}){
   explanation=exact.length?`${exact.map(e=>e.label).join(', ')} ${exact.length===1?'lists':'list'} exactly this page as a source.`
    :'AI lists your website as a source, but a different page than the one checked.';
  }
- if(unverified.length&&n)explanation+=` ${unverified.map(e=>e.label).join(', ')}: no RESOURCES section, not verified.`;
+ if(unverified.length&&n)explanation+=` ${unverified.map(e=>e.label).join(', ')}: no source list in the pasted answer (copy it with the AI system's copy button so the source links come along), not verified.`;
  const warned=checked.filter(e=>e.topic_warning);
  if(invalid.length)steps.unshift(`Not counted: ${invalid.map(x=>x.label+' — '+x.message).join(' ')}`);
  if(warned.length)steps.push(`Check the topic of ${warned.map(e=>e.label).join(', ')}: ${warned.length===1?'this answer shares':'these answers share'} no word with “${String(query||'').trim()}”. ${warned.length===1?'It still counts':'They still count'} (synonyms are fine); remove ${warned.length===1?'it':'them'} if ${warned.length===1?'it answers':'they answer'} a different question.`);
