@@ -6,7 +6,7 @@ const crypto=require('node:crypto');
 const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl,engineVersion}=require('./engine.cjs');
 const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
-const {summarizeFreeGrowth}=require('./summary.cjs');
+const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const {writeForSelection,planBatch,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {mergeWritten,viewOf}=require('./written.cjs');
@@ -143,6 +143,8 @@ ${aiStartBlock()}
 <p class="muted">No ranking promises. Nothing is changed on your website. Takes about one minute.</p></div>
 <script>
 ${aiStartScript()}
+// A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
+(function(){try{var q=new URLSearchParams(location.search);['url','query','market','language'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,300)})}catch(e){}})();
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
@@ -213,7 +215,7 @@ var GAP_GROUPS=[];
 function exampleText(x){return function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}}
 function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.groups||[]).map(function(x){return [x.id,x.label]});
  var h='<details id="stepReview" class="journey-section" open><summary><span class="journey-num">2</span><span><strong>Review improvements</strong><small>Choose changes supported by evidence</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="gaps">Choose what goes on your site</h2><p class="muted">'+esc(g.note)+'</p><p class="muted">Compared with '+esc(g.ranking_pages_read)+' readable ranking page(s). '+(g.items.length?g.items.length+' difference(s) observed. Observed does not mean verified or recommended.':'No difference found.')+'</p>';
- if(g.writing_allowed===false&&g.evidence)h+='<p class="note"><strong>No section is proposed or written:</strong> '+esc(g.evidence.reason)+'</p>';
+ if(g.writing_allowed===false&&g.evidence)h+='<p class="note"><strong>No section is proposed or written:</strong> '+esc(g.evidence.plain_reason||g.evidence.reason)+'</p>';
  var rec=(g.items||[]).filter(function(x){return x.recommended});
  if(rec.length)h+='<p class="note">Recommended first ('+rec.length+'): '+rec.map(function(x){return esc(x.title)}).join(' · ')+'. A research priority (supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI), not a growth forecast. You decide; you can select more.</p>';
  if((g.unique_content||[]).length)h+='<h3>Unique content worth reviewing and preserving ('+g.unique_content.length+')</h3><ul>'+g.unique_content.map(function(s){return '<li>'+esc(s.heading)+'</li>'}).join('')+'</ul><p class="muted">Only on your page among the ranking pages read (compared by heading words). Unique is not proof that it is correct, current or strong. It is not rewritten.</p>';
@@ -329,8 +331,14 @@ function pkgStart(g,last,canWrite){var box=document.getElementById('pkgBox');if(
  box.innerHTML='<h2 id="pkg">CMS package for your editor</h2><p class="muted">A CMS package needs approved factual text, not H2 headings alone. Your research brief is in Step 2.</p>'+(canWrite?'':'<details class="research-details" id="pkgManual"><summary>Advanced: prepare a CMS package with your own verified text (optional)</summary>')+'<p><button type="button" id="pkgOpen" class="'+(canWrite?'action-blue':'ghost')+'"'+(n?'':' disabled')+'>Open the package editor for your selection ('+n+')</button> <small class="muted" id="pkgOpenHelp">'+(n?'Your selections are kept. No content is fabricated or published automatically.':'Choose at least one item in Step 2 first.')+'</small></p>'+(canWrite?'':'</details>');
  document.getElementById('pkgOpen').onclick=function(){showPkg(pkgSections(g,last,true));showStep('stepPrepare','pkg')}}
 function pkgCount(n){var b=document.getElementById('pkgOpen');if(!b)return;b.disabled=!n;b.textContent='Open the package editor for your selection ('+n+')';var h=document.getElementById('pkgOpenHelp');if(h)h.textContent=n?'You write or paste the text per section, then approve and download.':'Choose at least one item in step 2 first.'}
-function nextWrite(g,w,n){var box=document.getElementById('nextWrite');if(!box)return;var r=null;
- if(g&&g.writing_allowed===false)r='AI does not write text for this check: the research found too little evidence to write new text safely. Use the editor brief instead (Export your selection, below).';
+function newCheckLink(d,s){var b=(d&&d.new_check_url)||${js(base)};if(b.slice(-6)==='/admin')b=${js(base)};var c=s&&s.checked||{};
+ return b+(b.indexOf('?')>=0?'&':'?')+'url='+encodeURIComponent(s&&s.url||'')+'&query='+encodeURIComponent(c.search_term||'')}
+function nextWrite(g,w,n,d){var box=document.getElementById('nextWrite');if(!box)return;var r=null;
+ if(g&&g.writing_allowed===false){var ev=g.evidence||{},read=Number(ev.readable_ranking_pages||0);
+  box.innerHTML='<strong>AI cannot write text for this check yet</strong><p>'+esc(ev.plain_reason||ev.reason||'The research found too little evidence to write new text safely.')+'</p>'+
+   '<p class="muted">AI only writes when at least 2 pages that Google ranks for your search term could be read and compared'+(read?' (here: '+read+')':'')+'. Otherwise the text would be guesswork about your business.</p>'+
+   '<p><strong>What you can do</strong></p><ol><li>Run a new check for this page with a more specific search term, the way a customer types it in Google (for example with your service and town), or with the right country and language.</li><li>Or download the editor brief (Export your selection, below) and let someone write from it.</li></ol>'+
+   '<p><a class="btn" id="nextWriteNewCheck" href="'+esc(newCheckLink(d,d&&d.summary))+'">New check for this page →</a></p>';return}
  else if(!w||!w.allowed)r='AI writing is switched off for this link'+(w&&w.owner_login_available?'. Owner: unlock it in step 3 (Prepare content) with your admin key.':' (Railway setting GROWTH_FREE_WRITING). Use the editor brief instead (Export your selection, below).');
  else if(w.remaining<=0)r='All AI writing runs for this check are used. Your prepared text is in step 3; a new check gives new runs.';
  if(r){box.innerHTML='<strong>Write with AI</strong><p class="muted">'+esc(r)+'</p>';return}
@@ -380,7 +388,7 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   }catch(err){st.textContent='Automatic preparation stopped after '+completed+' draft(s): '+err.message+'. Saved drafts remain available below.';wb.disabled=false;wb.classList.add('action-red')}
   finally{wb.classList.remove('is-working');wb.removeAttribute('aria-busy')}
  };
- var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected';nextWrite(g,d&&d.writing,n);pkgCount(n);if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}if(count.initialized)queueSelectionSave();var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
+ var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected';nextWrite(g,d&&d.writing,n,d);pkgCount(n);if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}if(count.initialized)queueSelectionSave();var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
  document.querySelectorAll('.gapPick').forEach(function(c){c.addEventListener('change',count)});
  document.getElementById('gapAll').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=true});count()};
  document.getElementById('gapNone').onclick=function(){document.querySelectorAll('.gapPick').forEach(function(c){c.checked=false});count()};
@@ -730,6 +738,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const line=L.used_in_research?'Your Search Console export, filtered on exactly this page'+period+', was used in the research.':L.status==='VERIFIED_FOR_PAGE'?'The latest Search Console export is verified for this page'+period+' but was not used in the original research; start a new check with this export to research its queries.':'A Search Console export was uploaded'+period+', but it is not filtered on exactly this page, so it was shown and not used as evidence.';
   return {...summary,limitations:[...(summary.limitations||[]).filter(x=>!/^Google Search Console was not used/.test(x)),line]};
  }
+ // Why AI cannot write, in plain words (also for checks stored before this text existed): the research blocker of the
+ // report, as the visitor reads it elsewhere on the result, instead of the internal code.
+ function withPlainEvidence(summary,row){
+  const ev=summary&&summary.gaps&&summary.gaps.evidence;if(!ev||ev.status!=='INSUFFICIENT_EVIDENCE')return summary;
+  const code=String(row.report&&row.report.editorial_decision_gate&&row.report.editorial_decision_gate.blocker_code||'').toUpperCase();
+  const plain=/data blocked/i.test(ev.reason||'')&&BLOCKER_TEXT[code]?BLOCKER_TEXT[code]:ev.reason;
+  return {...summary,gaps:{...summary.gaps,evidence:{...ev,plain_reason:plain}}};
+ }
  // Once AI answers are pasted, the "AI not checked" limitation is replaced by the AI caveat.
  function withAiLimits(summary,aiPart){
   if(!summary||!aiPart||!aiPart.summary.checked)return summary;
@@ -746,7 +762,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const aiPart=await aiFor(row),gscPart=await gscFor(row);
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
-   summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart)||null,cached:!!row.cached_from,error_code:row.error_code||null,
+   summary:withPlainEvidence(withGscLimits(withAiLimits(row.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
