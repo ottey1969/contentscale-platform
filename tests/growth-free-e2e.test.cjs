@@ -90,6 +90,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.reload();
     await p.waitForSelector('#ownerUnlockForm',{state:'attached'});
     assert.equal(await p.locator('#gapWrite').count(),0,'ordinary visitors cannot use AI writing');
+    assert.match(await p.textContent('#nextWrite'), /AI writing is switched off for this link\. Owner: unlock it in step 3/, 'the reason is shown right under the choice');
     assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(), true, 'selection survives a page reload');
     // Opening step 3 closes step 2 above it: the visitor stays at step 3 and does not have to scroll back up.
     await p.setViewportSize({ width: 900, height: 700 });
@@ -108,8 +109,10 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.ok(storedSelection.selected_item_ids.includes(chosenId), 'selection is saved in the report');
     // The owner gets one automated preparation action instead of an empty manual package.
     assert.equal(await p.locator('#pkgOpen').count(), 0, 'no blank CMS editor before automatic writing');
-    if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
-    await p.click('#gapWrite');
+    if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
+    // Writing starts right under the choice in step 2; step 3 opens and shows the progress.
+    assert.match(await p.textContent('#nextWriteBtn'), /Write the 1 chosen H2\(s\) with AI/);
+    await p.click('#nextWriteBtn');
     await p.waitForFunction(() => /H2 draft\(s\) prepared automatically for review/.test(document.getElementById('gapStatus').textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1, 'one click starts the existing AI writer');
     assert.match(await p.inputValue('.pkgH2'), /How to read a repair estimate/);
