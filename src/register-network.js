@@ -9,6 +9,7 @@ const dns = require('dns').promises;
 const net = require('net');
 const crypto = require('crypto');
 const {validateNetworkAi} = require('./network-prewrite-contract.cjs');
+const {checkStandaloneLinks} = require('./network-standalone-content-gate.cjs');
 const multer = require('multer');
 const networkImageUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } });
 
@@ -1652,8 +1653,9 @@ function checkApprovedBriefFidelity(html, briefJson, opts={}){
   const internalLinks=Array.from(new Set(links.filter(u=>{const h=normalizeHost(u);return publisherHost&&h&&(h===publisherHost||h.endsWith('.'+publisherHost))}).map(_briefUrlKey).filter(Boolean)));
   const requiredInternal=_briefUrlKey(opts.required_internal_url||'');
   const _missingRequired=requiredInternal&&!linkKeys.has(requiredInternal)?[opts.required_internal_url]:[];
-  const _needInternal=Math.max(0,2-internalLinks.length);
-  const _availableInternal=internalCandidates.filter(u=>!linkKeys.has(_briefUrlKey(u))).slice(0,Math.max(2,_needInternal));
+  const minimumInternal=opts.minimum_internal===1?1:2;
+   const _needInternal=Math.max(0,minimumInternal-internalLinks.length);
+  const _availableInternal=internalCandidates.filter(u=>!linkKeys.has(_briefUrlKey(u))).slice(0,Math.max(minimumInternal,_needInternal));
   const missingInternal=_missingRequired.length?_missingRequired:(_needInternal>0?(_availableInternal.length?_availableInternal:[`Need ${_needInternal} more unique publisher-domain internal link(s); add verified same-domain candidates first.`]):[]);
   const articleWords=articleText.split(/\s+/).filter(Boolean).length,minimumUsefulWords=Number(contract.minimum_useful_words||1200);
   const depthMissing=articleWords<minimumUsefulWords?[`Useful words ${articleWords}; minimum ${minimumUsefulWords}${contract.target_words?' toward Brief target '+contract.target_words:''}`]:[];
@@ -2966,7 +2968,18 @@ function registerNetwork({ app, pool, verifyAdmin, asyncHandler }) {
     let approvalCtx;try{approvalCtx=await _networkGetValidApproval(pool,prewriteId,Number(req.body&&req.body.approval_id||0)||0)}catch(e){return res.status(Number(e.status)||409).json({success:false,error:e.message});}
     const brief=Object.assign({},approvalCtx.brief,{brief_json:approvalCtx.brief_snapshot}),prewriteHash=approvalCtx.brief_hash,approvedBriefContract=(approvalCtx.contract&&Object.keys(approvalCtx.contract).length)?approvalCtx.contract:buildApprovedBriefContract(approvalCtx.brief_snapshot||{});
     const ownerWebsiteId=Number(req.body?.owner_website_id)||null;let owner=null;if(ownerWebsiteId){const ow=await pool.query(`SELECT id,domain,brand_name,primary_niche,sub_niche FROM network_websites WHERE id=$1 LIMIT 1`,[ownerWebsiteId]);owner=ow.rows[0]||null}
+     if(!owner||!normalizeHost(owner.domain))return res.status(409).json({success:false,stage:'website',error:'Choose an owner website before generating publication-grade content; internal links require a verifiable destination domain.'});
+     if(!Array.isArray(approvedBriefContract.planned_h2s)||approvedBriefContract.planned_h2s.length<5)return res.status(409).json({success:false,stage:'outline',error:'This approved Brief has fewer than five H2s, but the publication standard requires five. Expand the Brief outline and reapprove the current snapshot before generating.'});
     const locale=normalizeNetworkLocaleInput(req.body?.language||brief?.language||'',req.body?.country||brief?.region||''),cls=classifyNetworkNiche([owner?.primary_niche,owner?.sub_niche,title,brief?.keyword,brief?.working_title].filter(Boolean).join(' ')),primaryNiche=owner?.primary_niche||cls.main_niche||'Other',subNiche=owner?.sub_niche||cls.sub_niche||null,brand=cleanText(req.body?.brand_name||owner?.brand_name||'',200),ownerUrl=owner?.domain?`https://${owner.domain}`:'',prewriteText=brief?JSON.stringify(brief.brief_json||{}).slice(0,48000):'',manual=cleanText(req.body?.google_manual_notes,4000);
+    const sourceCandidates=linkIntelligenceFromSources({publisher_domain:owner.domain,source_domain:''},brief);
+    const discovered=await _networkDiscoverInternalCandidatesV523({publisher_domain:owner.domain,topic:[title,brief.keyword].filter(Boolean).join(' '),start_url:'https://'+normalizeHost(owner.domain)+'/'});
+    const verifiedInternal=discovered.candidates||[];
+    const verifiedExternal=await _networkVerifyExternalCandidatesV523(sourceCandidates.external||[],owner.domain,'',5);
+    if(verifiedInternal.length<1||verifiedExternal.length<3)return res.status(409).json({success:false,stage:'source_verification',
+      error:'Standalone publication needs one verified owner-domain page and three verified external sources. Complete Prewrite or website evidence before writing; no AI writing was attempted.',
+      internal_verified:verifiedInternal.length,external_verified:verifiedExternal.length});
+    const fidelityOpts={publisher_domain:owner.domain,internal_candidates:verifiedInternal,required_internal_url:verifiedInternal[0],
+      minimum_internal:1,approved_contract:approvedBriefContract};
     const prompt=`Create one publication-grade standalone ContentScale article. This is NOT a marketplace placement and is NOT tied to a publisher.
 Return JSON only with keys: title, html, plain_text, meta_title, meta_description, suggested_slug, schema_json.
 CONTENT STANDARD:
@@ -2986,7 +2999,14 @@ EVIDENCE:
 - FULL APPROVED CONTRACT.expert_insights contains source-verified PARAPHRASES. Attribute them in prose and link source_url, but NEVER place the insight inside quotation marks or present it as a direct quote.
 - Authority class matters: prefer primary_verified / provenance_resolved evidence over secondary evidence when both support the same point.
 - A researched zero means ContentScale performed the required search and verification depth. It is never permission to invent a substitute.
+SOURCE LINKS — VERIFIED FOR THIS OWNER WEBSITE:
+- At least one exact verified owner-domain URL from VERIFIED INTERNAL URLS, linked contextually.
+- At least three distinct exact verified external pages from VERIFIED EXTERNAL URLS, linked contextually.
+- Never invent, shorten or reconstruct source URLs.
+VERIFIED INTERNAL URLS: ${JSON.stringify(verifiedInternal)}
+VERIFIED EXTERNAL URLS: ${JSON.stringify(verifiedExternal.map(x=>x.final_url))}
 SEO:
+- Exact seed keyword in SEO title, description, slug, first 10% of body and at least one H2/H3. Cover it naturally in the body.
 - meta_title must be no longer than 60 characters. meta_description must be 140-160 characters; aim for 150-159 when natural. schema_json must be a valid Article object.
 - Language ${locale.language||'en-US'}; market ${locale.market||'not specified'}; topic ${title}; brand ${brand||'not specified'}; niche ${primaryNiche}${subNiche?' / '+subNiche:''}; source ${ownerUrl||'not linked'}.
 FULL APPROVED CONTRACT — EXECUTE WHEN PRESENT:
@@ -2996,10 +3016,12 @@ ${prewriteText||'No linked Prewrite Brief. Do not invent research or URLs.'}
 ADMIN MANUAL GOOGLE NOTES:
 ${manual||'No manual notes supplied.'}`;
     const ai=await callNetworkGemini(prompt);let d=ai.parsed||{},html=String(d.html||'');
-    let fidelity=brief?checkApprovedBriefFidelity(html,brief.brief_json||{},{publisher_domain:owner?.domain||'',internal_candidates:[]}):null;
+    let fidelity=brief?checkApprovedBriefFidelity(html,brief.brief_json||{},fidelityOpts):null;
     if(brief&&fidelity&&!fidelity.passed){
       const repairPrompt=`Repair this standalone article so it fully executes the Approved Brief Contract. Return JSON only with keys: title, html, plain_text, meta_title, meta_description, suggested_slug, schema_json.
 Do not restart research. Do not invent facts, statistics, quotes, people or URLs. Preserve correct existing content and repair only what the contract check says is missing.
+VERIFIED INTERNAL URLS: ${JSON.stringify(verifiedInternal)}
+VERIFIED EXTERNAL URLS: ${JSON.stringify(verifiedExternal.map(x=>x.final_url))}
 MISSING CONTRACT GROUPS: ${JSON.stringify(fidelity.missing)}
 DETAILS: ${JSON.stringify(fidelity.groups).slice(0,14000)}
 FULL APPROVED CONTRACT: ${JSON.stringify(approvedBriefContract).slice(0,30000)}
@@ -3007,7 +3029,7 @@ CURRENT ARTICLE HTML:
 ${html.slice(0,52000)}`;
       const repaired=await callNetworkGemini(repairPrompt);
       if(repaired&&repaired.parsed&&repaired.parsed.html){d=repaired.parsed;html=String(d.html||'');}
-      fidelity=checkApprovedBriefFidelity(html,brief.brief_json||{},{publisher_domain:owner?.domain||'',internal_candidates:[]});
+      fidelity=checkApprovedBriefFidelity(html,brief.brief_json||{},fidelityOpts);
       if(!fidelity.passed){
         return res.status(422).json({success:false,error:'Standalone article did not fully execute the Approved Brief after one targeted repair. Nothing was saved.',stage:'brief_fidelity',missing:fidelity.missing,details:fidelity.groups,counts:fidelity.counts});
       }
