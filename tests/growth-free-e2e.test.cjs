@@ -83,7 +83,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForFunction(() => /1 of 5/.test(document.body.textContent), null, { timeout: 30000 });
     // 4. Select topics and let AI write concepts.
     await p.locator('#stepReview > summary').click();
-    const picks = await p.$('.gapPick'); assert.ok(picks.length >= 1, 'at least one topic to select');
+    const picks = await p.$$('.gapPick'); assert.ok(picks.length >= 1, 'at least one topic to select');
     await picks[0].check();
     await p.waitForFunction(() => /selected · saved/.test(document.getElementById('gapStatus').textContent));
     const chosenId = await picks[0].getAttribute('value');
