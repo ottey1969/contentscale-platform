@@ -29,7 +29,7 @@ function fixture({valid=true,owner=false,outline=5}={}){
  const call=async (path,body)=>{
   const handler=routes.get('POST '+path);assert.ok(handler,'route registered '+path);
   const res={statusCode:200,status(n){this.statusCode=n;return this},json(v){this.body=v;return this},type(){return this},send(v){this.body=v;return this}};
-  await handler({body,params:{},query:{}},res);return res;
+  await handler({body,params:{placementId:1},query:{}},res);return res;
  };
  return {call,writes};
 }
