@@ -116,8 +116,20 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.locator('.pkgUse').count(), 1, 'only written H2 sections appear in the CMS editor');
     assert.equal(await p.locator('.pkgUse:checked').count(), 1, 'prepared copy is preselected');
     assert.match(await p.inputValue('.pkgText'), /Ask for a written estimate/);
+    assert.equal(await p.locator('#pkgIncludeAll').isDisabled(),true,'already-included H2s show a completed action');
+    assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-complete/,'green when all prepared H2s are included');
+    await p.click('#pkgExcludeAll');
+    assert.equal(await p.locator('#pkgIncludeAll').isEnabled(),true,'blue selection is available after excluding prepared text');
+    assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-ready/);
     await p.click('#pkgIncludeAll');
-    assert.match(await p.textContent('#pkgBulkStatus'), /1 of 1 H2s included/);
+    assert.match(await p.textContent('#pkgBulkStatus'), /prepared H2\(s\) included/);
+    assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-complete/);
+    const savedPrepared = await p.inputValue('.pkgText');
+    await p.fill('.pkgText','');
+    assert.equal(await p.locator('#pkgIncludeAll').isDisabled(),true,'bulk action must be gray when no prepared text exists');
+    assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-unavailable/);
+    await p.fill('.pkgText',savedPrepared);
+    assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-complete/);
     // 5. Downloads: the editor brief and the JSON.
     if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
     await p.locator('#gapDownload').locator('xpath=ancestor::details[1]/summary').click();
