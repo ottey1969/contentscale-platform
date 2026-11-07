@@ -94,7 +94,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.ok(storedSelection.selected_item_ids.includes(chosenId), 'selection is saved in the report');
     // Step 4 works without AI writing: the chosen item is an empty section the editor writes.
     await p.waitForFunction(() => /Open the package editor for your selection \(1\)/.test(document.getElementById('pkgOpen').textContent));
-    if (!(await p.locator('#stepPrepare').getAttribute('open'))) await p.locator('#stepPrepare > summary').click();
+    if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
     await p.click('#pkgOpen');
     assert.match(await p.getAttribute('.pkgText', 'placeholder'), /Write this section yourself/);
     assert.equal(await p.isChecked('.pkgUse'), false);
@@ -102,7 +102,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForFunction(() => /How to read a repair estimate/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1);
     // 5. Downloads: the editor brief and the JSON.
-    if (!(await p.locator('#stepReview').getAttribute('open'))) await p.locator('#stepReview > summary').click();
+    if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
     await p.locator('#gapDownload').locator('xpath=ancestor::details[1]/summary').click();
     const [brief] = await Promise.all([p.waitForEvent('download'), p.click('#gapDownload')]);
     assert.equal(brief.suggestedFilename(), 'editor-brief.md');
@@ -147,8 +147,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       'Dates.csv': 'Date,Clicks,Impressions,CTR,Position\n' + days(win.start, win.end).map(d => d + ',1,' + Math.round(imp / 28) + ',0.5%,12.0').join('\n') + '\n',
       'Filters.csv': 'Filter,Value\nPage,' + URL_ + '\n' });
     for (const [win, imp, n] of [[w.before, 280, 3], [w.after, 560, 4]]) {
-      if (!(await p.locator('#stepResearch').getAttribute('open'))) await p.locator('#stepResearch > summary').click();
-      if (!(await p.locator('#gscUpload').getAttribute('open'))) await p.locator('#gscUpload > summary').click();
+      if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click();
+      if (!(await p.locator('#gscUpload').evaluate(el => el.open))) await p.locator('#gscUpload > summary').click();
       await p.setInputFiles('#gscLater', { name: 'Performance-' + win.start + '.zip', mimeType: 'application/zip', buffer: period(win, imp) });
       await p.click('#gscSave');
       await p.waitForFunction(k => new RegExp(k + ' exports uploaded').test(document.body.textContent), String(n), { timeout: 30000 });
@@ -167,7 +167,21 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(new URL(resultLink).origin, 'https://127.0.0.1', 'the link uses the domain the visitor used');
     assert.deepEqual(await service.sendDueReminders({ now: new Date() }), { sent: 0, failed: 0 }, 'sent once');
     assert.match(await (await fetch(base + new URL(stopLink).pathname)).text(), /Reminder stopped/);
-    assert.deepEqual(errors, [], 'no browser error on the way');
+    // Completed AI research: five saved answers must not leave the large input form open.
+    for (const engine of ['google_aio', 'chatgpt', 'claude', 'copilot']) {
+      if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click();
+      if (!(await p.locator('#aiRecheck').evaluate(el => el.open))) await p.locator('#aiRecheck > summary').click();
+      await p.selectOption('#aiEngine', engine);
+      await p.fill('#aiText', 'ANSWER:\\nRoof repair Lodi NJ advice includes checking written estimates and leak repair procedures.\\n\\nRESOURCES:\\nhttps://roofer-a.example/roof-repair-nj/');
+      await p.click('#aiSave');
+      await p.waitForFunction(value => document.getElementById('ai').textContent.includes(value + ' of 5'), ['google_aio', 'chatgpt', 'claude', 'copilot'].indexOf(engine) + 2);
+    }
+    assert.equal(await p.locator('#aiRecheck').evaluate(el => el.open), false, 'five completed AI answers collapse the entry form');
+    assert.equal(await p.locator('#aiText').isVisible(), false);
+    assert.match(await p.textContent('#aiRecheck > summary'), /All five AI systems checked/);
+    await p.locator('#aiRecheck > summary').click();
+    assert.equal(await p.locator('#aiText').isVisible(), true, 'user can deliberately recheck an answer');
+        assert.deepEqual(errors, [], 'no browser error on the way');
     // Database: the check and the AI answer are in the Free tables; no Tracker table was created or written.
     const row = (await pool.query('SELECT id,status,email FROM growth_free_checks WHERE lower(email)=lower($1)', [email])).rows[0];
     assert.equal(row.status, 'DONE');
