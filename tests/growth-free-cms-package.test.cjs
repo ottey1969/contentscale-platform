@@ -74,3 +74,11 @@ test('a first-person title or description is rewritten by AI as the service, che
   assert.equal((await suggestServiceMeta({ title: 'My SEO framework', model: addsNumber })).status, 'REJECTED', 'no new number or claim');
   assert.equal((await suggestServiceMeta({ title: 'My SEO framework', model: { call: async () => 'not json' } })).status, 'AI_FAILED');
 });
+
+test('page title and description: every HTML entity is decoded (pagina&#039;s → pagina\'s); Dutch "Ik" is first person', () => {
+  const { voiceOf } = require('../src/growth-free/cms-package.cjs');
+  const r = pageSource('<html lang="nl"><head><title>SEO Content | A &amp; B</title><meta name="description" content="SEO content optimalisatie voor pagina&#039;s en pagina&#x27;s. Ik gebruik Growth."></head><body></body></html>');
+  assert.equal(r.title, 'SEO Content | A & B');
+  assert.equal(r.meta_description, "SEO content optimalisatie voor pagina's en pagina's. Ik gebruik Growth.");
+  assert.deepEqual(voiceOf({ title: r.title, meta: r.meta_description }), { title: null, meta: 'Ik' });
+});
