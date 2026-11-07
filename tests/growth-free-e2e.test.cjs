@@ -172,7 +172,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click();
       if (!(await p.locator('#aiRecheck').evaluate(el => el.open))) await p.locator('#aiRecheck > summary').click();
       await p.selectOption('#aiEngine', engine);
-      await p.fill('#aiText', 'ANSWER:\\nRoof repair Lodi NJ advice includes checking written estimates and leak repair procedures.\\n\\nRESOURCES:\\nhttps://roofer-a.example/roof-repair-nj/');
+      await p.fill('#aiText', 'ANSWER:\nRoof repair Lodi NJ advice includes checking written estimates and leak repair procedures.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
       await p.click('#aiSave');
       await p.waitForFunction(value => document.getElementById('ai').textContent.includes(value + ' of 5'), ['google_aio', 'chatgpt', 'claude', 'copilot'].indexOf(engine) + 2);
     }
@@ -181,11 +181,11 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await p.textContent('#aiRecheck > summary'), /All five AI systems checked/);
     await p.locator('#aiRecheck > summary').click();
     assert.equal(await p.locator('#aiText').isVisible(), true, 'user can deliberately recheck an answer');
-        assert.deepEqual(errors, [], 'no browser error on the way');
+    assert.deepEqual(errors, [], 'no browser error on the way');
     // Database: the check and the AI answer are in the Free tables; no Tracker table was created or written.
     const row = (await pool.query('SELECT id,status,email FROM growth_free_checks WHERE lower(email)=lower($1)', [email])).rows[0];
     assert.equal(row.status, 'DONE');
-    assert.equal((await pool.query('SELECT count(*)::int AS n FROM growth_free_ai_answers WHERE check_id=$1', [row.id])).rows[0].n, 1);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM growth_free_ai_answers WHERE check_id=$1', [row.id])).rows[0].n, 5);
     assert.deepEqual((await pool.query('SELECT status FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY id', [row.id])).rows.map(r => r.status), ['VERIFIED_FOR_PAGE', 'NOT_VERIFIED_FOR_PAGE', 'VERIFIED_FOR_PAGE', 'VERIFIED_FOR_PAGE']);
     assert.ok((await pool.query('SELECT reminder_opt_out_at FROM growth_free_checks WHERE id=$1', [row.id])).rows[0].reminder_opt_out_at, 'the stop link stopped the reminder');
     const after = (await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'tracker\\_%'")).rows.map(r => r.table_name).sort();
