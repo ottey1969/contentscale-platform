@@ -34,6 +34,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       return { html, final_url: url, retrieved_at: new Date().toISOString(), truncated: false, source: 'LIVE_PUBLIC_HTTPS' }; },
     searchLive: async ({ query }) => ({ status: 'FRESH_GOOGLE_ORGANIC_LEADS', source: 'SERPER_GOOGLE_ORGANIC', query, leads: LEADS, provider_attempts: ['SERPER_GOOGLE_ORGANIC'], checked_at: new Date().toISOString() }),
     // TEST writer stand-in: one section per selected task.
+    // TEST stand-in for the AI that rewrites a first-person title/description as the service.
+    metaModel: { call: async () => JSON.stringify({ title: 'Roof Repair in Lodi, NJ | Acme Roofing', description: 'Acme Roofing repairs leaking roofs in Lodi, NJ, with a written estimate before any work starts.' }) },
     generateDraft: async args => { writes.push(args); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: (args.readerTask?.tasks || []).map(x => ({ task_code: x.code, h2: 'How to read a repair estimate',
       paragraphs: ['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.'] })) } }; } };
   const app = express(); app.use(express.json({ limit: '1mb' }));
@@ -148,16 +150,32 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
     await p.waitForFunction(() => /Original page read now: “Roof Repair in Lodi, NJ \| Acme Roofing”/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(await p.inputValue('#pkgTitle'), 'Roof Repair in Lodi, NJ | Acme Roofing');
-    await p.fill('#pkgMeta', 'Roof repair in Lodi, NJ: leaks, tiles and flashing, with a written estimate before any work starts.');
+    // A description in the first person: the visitor chooses. First, AI rewrites it as the service on request...
+    const firstPerson = 'I repair leaking roofs in Lodi, NJ, and my crew gives a written estimate before any work starts.';
+    await p.fill('#pkgMeta', firstPerson);
     await p.selectOption('#pkgCms', 'wordpress');
+    await p.check('#pkgApprove');
+    await p.click('#pkgDownload');
+    await p.waitForFunction(() => /Does this page present you as a person/.test(document.getElementById('pkgIssues').textContent), null, { timeout: 30000 });
+    await p.waitForSelector('#pkgMetaVoice button');
+    assert.equal(await p.inputValue('#pkgMeta'), firstPerson, 'nothing is rewritten without the visitor asking');
+    await p.click('#pkgMetaVoice button');
+    await p.waitForFunction(() => /Rewritten by AI as the service/.test((document.getElementById('pkgMetaVoice') || {}).textContent || ''), null, { timeout: 30000 });
+    assert.equal(await p.inputValue('#pkgMeta'), 'Acme Roofing repairs leaking roofs in Lodi, NJ, with a written estimate before any work starts.');
+    // ...or the page presents a person: "I" and "my" stay, and the package is made.
+    await p.fill('#pkgMeta', firstPerson);
+    await p.check('#pkgPersonal');
+    await p.uncheck('#pkgApprove');
     await p.click('#pkgDownload');
     await p.waitForFunction(() => /Tick that you reviewed the page/.test(document.getElementById('pkgIssues').textContent), null, { timeout: 30000 });
+    assert.doesNotMatch(await p.textContent('#pkgIssues'), /as a person/);
     await p.check('#pkgApprove');
     const [pkg] = await Promise.all([p.waitForEvent('download'), p.click('#pkgDownload')]);
     assert.equal(pkg.suggestedFilename(), 'cms-package.zip');
     const zipNames = [...require('node:fs').readFileSync(await pkg.path()).toString('latin1').matchAll(/(0\d-[a-z-]+\.(?:md|html|json)|manifest\.json)/g)].map(m => m[1]);
     for (const n of ['manifest.json', '01-implementation.md', '02-approved-copy.md', '03-content-fragments.html', '04-seo-metadata.json', '05-measurement-plan.md']) assert.ok(zipNames.includes(n), n);
     assert.match(require('node:fs').readFileSync(await pkg.path()).toString('utf8'), /Evidence: verified/);
+    assert.match(require('node:fs').readFileSync(await pkg.path()).toString('utf8'), /"voice": "PERSONAL_BRAND"[^]*I repair leaking roofs/, 'the personal choice is recorded and the words kept');
     // 6. A later export (one CSV, not page-filtered): stored with the check, shown as not verified, research not re-run.
     await p.locator('#stepResearch > summary').click();
     await p.locator('#gscUpload > summary').click();

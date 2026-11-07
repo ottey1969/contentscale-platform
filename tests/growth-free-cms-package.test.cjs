@@ -59,3 +59,40 @@ test('a page without a meta description gets one from its own first paragraph (n
   assert.equal(src.meta_description_source, 'PAGE');
   assert.equal(pageSource('<html><body><p>Hi</p></body></html>').meta_description_source, 'NONE');
 });
+
+test('a first-person title or description is rewritten by AI as the service, checked; otherwise nothing is suggested', async () => {
+  const { suggestServiceMeta, voiceOf } = require('../src/growth-free/cms-package.cjs');
+  assert.deepEqual(voiceOf({ title: 'My SEO framework | ContentScale', meta: 'TEST description of the service.' }), { title: 'My', meta: null });
+  assert.equal((await suggestServiceMeta({ title: 'SEO content | ContentScale', meta: 'TEST service description.' })).status, 'NOT_NEEDED');
+  assert.equal((await suggestServiceMeta({ title: 'My SEO framework', meta: '' })).status, 'AI_UNAVAILABLE');
+  const good = { call: async () => '{"title":"The SEO framework | ContentScale","description":"x"}' };
+  const r = await suggestServiceMeta({ title: 'My SEO framework | ContentScale', meta: 'TEST service description.', model: good });
+  assert.deepEqual([r.status, r.title, r.meta_description], ['SUGGESTED', 'The SEO framework | ContentScale', 'TEST service description.'], 'only the first-person field changes');
+  const stillI = { call: async () => '{"title":"My framework, rewritten","description":"x"}' };
+  assert.equal((await suggestServiceMeta({ title: 'My SEO framework', model: stillI })).status, 'REJECTED');
+  const addsNumber = { call: async () => '{"title":"The SEO framework: 300% more traffic","description":"x"}' };
+  assert.equal((await suggestServiceMeta({ title: 'My SEO framework', model: addsNumber })).status, 'REJECTED', 'no new number or claim');
+  assert.equal((await suggestServiceMeta({ title: 'My SEO framework', model: { call: async () => 'not json' } })).status, 'AI_FAILED');
+});
+
+test('page title and description: every HTML entity is decoded (pagina&#039;s → pagina\'s); Dutch "Ik" is first person', () => {
+  const { voiceOf } = require('../src/growth-free/cms-package.cjs');
+  const r = pageSource('<html lang="nl"><head><title>SEO Content | A &amp; B</title><meta name="description" content="SEO content optimalisatie voor pagina&#039;s en pagina&#x27;s. Ik gebruik Growth."></head><body></body></html>');
+  assert.equal(r.title, 'SEO Content | A & B');
+  assert.equal(r.meta_description, "SEO content optimalisatie voor pagina's en pagina's. Ik gebruik Growth.");
+  assert.deepEqual(voiceOf({ title: r.title, meta: r.meta_description }), { title: null, meta: 'Ik' });
+});
+
+test('"This page presents me as a person": I/my is allowed in title, description and text; the default still refuses it', () => {
+  const meta = 'Ik help bedrijven met SEO en GEO. Mijn aanpak: Growth en Pre-Write Brief, met zoekgegevens als basis.';
+  const personalText = text + ' I check every estimate with you before my crew starts.';
+  const sections = [{ item_id: 'g1', h2: 'How to read a repair estimate', text: personalText }];
+  const voiceFlag = { sections: [{ ...written.sections[0], flags: [{ sentence: 'I check every estimate with you before my crew starts.', code: 'PERSONAL_OR_FOUNDER_VOICE', reason: 'Written as a person (“I”).' }] }] };
+  const refused = buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: voiceFlag, input: input({ meta_description: meta, sections }) });
+  assert.equal(refused.ready, false); assert.ok(refused.issues.includes('META_PERSONAL_OR_FOUNDER_VOICE'));
+  assert.match(refused.messages.join(' '), /This page presents me as a person/);
+  const personal = buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: voiceFlag, input: input({ meta_description: meta, sections, personal_voice: true }) });
+  assert.equal(personal.ready, true, JSON.stringify(personal.messages));
+  assert.equal(personal.manifest.voice, 'PERSONAL_BRAND');
+  assert.match(personal.files.find(f => f.name === '04-seo-metadata.json').content, /Ik help bedrijven/);
+});
