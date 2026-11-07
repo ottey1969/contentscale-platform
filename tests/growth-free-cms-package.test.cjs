@@ -51,3 +51,11 @@ test('the internal link goes into the section about where it leads; a verified S
   const v = buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written, input: input(), focusQuery: 'roof repair lodi nj', gscVerifiedTerm: true });
   assert.equal(v.ready, true); assert.match(v.files.find(f => f.name === '05-measurement-plan.md').content, /Evidence: verified/);
 });
+
+test('a page without a meta description gets one from its own first paragraph (never invented)', () => {
+  const none = pageSource('<html><head><title>TEST</title></head><body><nav><p>Menu link text that is long enough to be a paragraph here.</p></nav><p>Short.</p><p>Our crew repairs leaking roofs in Lodi. We explain every repair before we start. A third sentence that makes it far too long for a meta description anyway, with many more words added at the end.</p></body></html>', { url: URL_ });
+  assert.equal(none.meta_description_source, 'FIRST_PARAGRAPH');
+  assert.equal(none.meta_description, 'Our crew repairs leaking roofs in Lodi. We explain every repair before we start.');
+  assert.equal(src.meta_description_source, 'PAGE');
+  assert.equal(pageSource('<html><body><p>Hi</p></body></html>').meta_description_source, 'NONE');
+});

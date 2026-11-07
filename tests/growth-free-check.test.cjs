@@ -546,11 +546,12 @@ test('writing for a selection is optional: only where allowed, only the selected
  engineDeps.generateDraft=async args=>{calls.push(args);return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:(args.readerTask?.tasks||[]).map(x=>({task_code:x.code,h2:'How to read a repair estimate',
   paragraphs:['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.','About 68% of homeowners never compare two estimates before they sign.']}))}}};
  t.after(()=>{delete engineDeps.generateDraft});
- const open=await server();t.after(()=>open.srv.close());
+ assert.equal(freeGrowthConfig({}).writing,'all','default: AI prepares the selected sections for every visitor (owner 2026-11-07)');
+ const open=await server({config:{writing:'admin'}});t.after(()=>open.srv.close());
  const idk=u=>{const m=/\/r\/([^?]+)\?k=(.+)$/.exec(u);return {id:m[1],k:m[2]}};
  const a=await open.post('/api/free-growth/checks',ok);await open.service.idle();const A=idk(a.body.result_url);
  const res=await open.get('/api/free-growth/checks/'+A.id+'?k='+A.k);
- assert.equal(res.body.writing.allowed,false,'default: only the owner (admin) may write');
+ assert.equal(res.body.writing.allowed,false,'writing=admin: only the owner may write');
  const pick=res.body.summary.gaps.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
  const path='/api/free-growth/checks/'+A.id+'/write?k='+A.k;
  assert.equal((await open.post(path,{item_ids:pick})).status,403);assert.equal(calls.length,0);

@@ -91,7 +91,13 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForSelector('#ownerUnlockForm',{state:'attached'});
     assert.equal(await p.locator('#gapWrite').count(),0,'ordinary visitors cannot use AI writing');
     assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(), true, 'selection survives a page reload');
+    // Opening step 3 closes step 2 above it: the visitor stays at step 3 and does not have to scroll back up.
+    await p.setViewportSize({ width: 900, height: 700 });
+    await p.locator('#stepPrepare > summary').evaluate(el => el.scrollIntoView({ block: 'center' }));
     await p.locator('#stepPrepare > summary').click();
+    await p.waitForTimeout(150);
+    const top = await p.locator('#stepPrepare > summary').evaluate(el => el.getBoundingClientRect().top);
+    assert.ok(top >= 0 && top < 700 * 0.6, 'step 3 header stays in view after opening (top=' + top + ')');
     await p.fill('#ownerUnlockKey','e2e-owner-secret-0123456789');
     await p.click('#ownerUnlockButton');
     await p.waitForSelector('#gapWrite');
