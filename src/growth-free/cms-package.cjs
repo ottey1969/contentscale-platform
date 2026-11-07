@@ -60,6 +60,7 @@ function reviewNotesOf(given, stored) {
 const PLAIN = {
   EDITOR_APPROVAL_REQUIRED: 'Tick that you reviewed the page, the sections and the link.',
   APPROVED_SECTION_COUNT_REQUIRED: 'Keep at least one section (at most twelve).',
+  TOO_MANY_SECTIONS: 'This CMS package accepts at most 12 sections. Select 12 with verified text, or create a separate package for the remaining topics.',
   SUBSTANTIVE_SECTION_TEXT_REQUIRED: 'Every section needs a heading and at least 30 characters of text.',
   EMPTY_HEADING: 'Every section needs a heading.',
   META_TITLE_REQUIRED: 'Enter the SEO title (at most 100 characters).',
@@ -82,7 +83,9 @@ const PLAIN = {
 function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}, focusQuery = '', gscVerifiedTerm = false, language = 'en' }) {
   const stored = new Map(((written && written.sections) || []).map(s => [String(s.item_id), s]));
   const issues = [], flagged = [];
-  const given = (Array.isArray(input.sections) ? input.sections : []).slice(0, 12).map(s => ({ item_id: String(s && s.item_id || ''), h2: String(s && s.h2 || '').trim().slice(0, 200), text: String(s && s.text || '').trim().slice(0, 20000) }));
+  const supplied = Array.isArray(input.sections) ? input.sections : [];
+  if (supplied.length > 12) issues.push('TOO_MANY_SECTIONS');
+  const given = supplied.slice(0, 12).map(s => ({ item_id: String(s && s.item_id || ''), h2: String(s && s.h2 || '').trim().slice(0, 200), text: String(s && s.text || '').trim().slice(0, 20000) }));
   if (!given.length) issues.push('APPROVED_SECTION_COUNT_REQUIRED');
   // A flagged sentence of the written concept may not stay in the text (rewrite or remove it).
   for (const s of given) {

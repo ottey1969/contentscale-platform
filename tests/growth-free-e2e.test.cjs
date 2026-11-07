@@ -96,11 +96,18 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForFunction(() => /Open the package editor for your selection \(1\)/.test(document.getElementById('pkgOpen').textContent));
     if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
     await p.click('#pkgOpen');
-    assert.match(await p.getAttribute('.pkgText', 'placeholder'), /Write this section yourself/);
+    assert.match(await p.getAttribute('.pkgText', 'placeholder'), /Only enter/);
+    assert.equal(await p.locator('.pkg-edit').evaluate(el => el.open), false, 'unsupported text entry stays collapsed');
+    await p.click('#pkgIncludeAll');
+    assert.equal(await p.locator('.pkgUse:checked').count(), 0, 'no empty H2 gets included as invented copy');
+    assert.match(await p.textContent('#pkgBulkStatus'), /No H2 has prepared text yet/);
     assert.equal(await p.isChecked('.pkgUse'), false);
     await p.click('#gapWrite');
     await p.waitForFunction(() => /How to read a repair estimate/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1);
+    await p.click('#pkgIncludeAll');
+    assert.equal(await p.locator('.pkgUse:checked').count(), 1, 'one-click include all prepared H2s');
+    assert.match(await p.textContent('#pkgBulkStatus'), /1 of 1 H2s included/);
     // 5. Downloads: the editor brief and the JSON.
     if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
     await p.locator('#gapDownload').locator('xpath=ancestor::details[1]/summary').click();
