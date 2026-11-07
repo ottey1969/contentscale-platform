@@ -125,6 +125,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await p.textContent('#pkgBulkStatus'), /prepared H2\(s\) included/);
     assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-complete/);
     const savedPrepared = await p.inputValue('.pkgText');
+    await p.locator('.pkg-edit > summary').click();
     await p.fill('.pkgText','');
     assert.equal(await p.locator('#pkgIncludeAll').isDisabled(),true,'bulk action must be gray when no prepared text exists');
     assert.match(await p.getAttribute('#pkgIncludeAll','class'),/cms-action-unavailable/);
