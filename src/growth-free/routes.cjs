@@ -320,8 +320,9 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});
   var st=document.getElementById('gapStatus'),available=Number(d.writing&&d.writing.remaining||0);
   if(!ids.length){st.textContent='Select at least one topic or question in Step 2.';return}
-  var eligible=ids.filter(function(id){var it=(g.items||[]).find(function(x){return String(x.id)===id});return !!(it&&it.writable)});
-  if(!eligible.length){st.textContent='None of the selected headings is eligible for evidence-supported AI writing.';return}
+  var doneIds=new Set(((d.writing&&d.writing.last&&d.writing.last.sections)||[]).map(function(x){return String(x.item_id)}));
+  var eligible=ids.filter(function(id){var it=(g.items||[]).find(function(x){return String(x.id)===id});return !!(it&&it.writable&&!doneIds.has(id))});
+  if(!eligible.length){st.textContent=doneIds.size?'Selected supported H2s already have saved drafts. Review the prepared copy below; headings without research evidence are excluded.':'None of the selected headings is eligible for evidence-supported AI writing.';return}
   var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Your selection is saved. Check AI answers or choose to continue without them.';return}
   var capacity=Math.min(available*4,eligible.length),chosen=eligible.slice(0,capacity);
   wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');
@@ -340,7 +341,7 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
     if(!(result.pending||[]).length||!result.remaining)break;
    }
    if(!latest)throw Error('No verified draft was generated');
-   var pending=latest.pending||[],outside=ids.length-chosen.length;
+   var pending=latest.pending||[],outside=ids.length-chosen.length-[...doneIds].filter(function(id){return ids.includes(id)}).length;
    st.textContent=completed+' H2 draft(s) prepared automatically for review.'+(pending.length?' '+pending.length+' could not be completed with the available runs.':'')+(outside?' '+outside+' selected topic(s) were not processed because they are unsupported or exceed the remaining quota.':'')+' Review the prepared sections below; nothing is published.';
    wb.textContent='Prepare remaining selected H2s with AI ('+latest.remaining+' run(s) left)';
    wb.disabled=!latest.remaining;wb.dataset.exhausted=!latest.remaining?'yes':'';
