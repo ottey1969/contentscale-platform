@@ -88,7 +88,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForFunction(() => /selected · saved/.test(document.getElementById('gapStatus').textContent));
     const chosenId = await picks[0].getAttribute('value');
     await p.reload();
-    await p.waitForSelector('#ownerUnlockForm');
+    await p.waitForSelector('#ownerUnlockForm',{state:'attached'});
     assert.equal(await p.locator('#gapWrite').count(),0,'ordinary visitors cannot use AI writing');
     assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(), true, 'selection survives a page reload');
     await p.locator('#stepPrepare > summary').click();
