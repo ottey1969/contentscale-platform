@@ -61,11 +61,14 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 });
     // 2. The result (Google research done by the real engine).
     await service.idle();
+    await p.waitForSelector('#freeNextAction', { timeout: 60000 });
+    assert.equal(await p.locator('details.journey-section').count(), 4, 'four clear workflow steps');
+    await p.click('#stepResearch > summary');
     await p.waitForSelector('#google', { timeout: 60000 });
     assert.match(await p.textContent('h1'), /Your page in Google and in AI answers/);
     await p.waitForSelector('#freeNextAction .growth-next-btn');
     assert.match(await p.textContent('#freeNextAction'), /FREE GROWTH · ACTION PLAN/);
-    assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 5);
+    assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 4);
     assert.equal(await p.locator('#freeNextAction .growth-next-btn').isVisible(), true);
     assert.ok((await p.locator('#freeNextAction .growth-next-btn').getAttribute('href')).startsWith('#'));
 
@@ -79,6 +82,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.click('#aiSave');
     await p.waitForFunction(() => /1 of 5/.test(document.body.textContent), null, { timeout: 30000 });
     // 4. Select topics and let AI write concepts.
+    await p.locator('#stepReview > summary').click();
     const picks = await p.$$('.gapPick'); assert.ok(picks.length >= 1, 'at least one topic to select');
     await picks[0].check();
     await p.waitForFunction(() => /selected · saved/.test(document.getElementById('gapStatus').textContent));
@@ -90,6 +94,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.ok(storedSelection.selected_item_ids.includes(chosenId), 'selection is saved in the report');
     // Step 4 works without AI writing: the chosen item is an empty section the editor writes.
     await p.waitForFunction(() => /Open the package editor for your selection \(1\)/.test(document.getElementById('pkgOpen').textContent));
+    if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
     await p.click('#pkgOpen');
     assert.match(await p.getAttribute('.pkgText', 'placeholder'), /Write this section yourself/);
     assert.equal(await p.isChecked('.pkgUse'), false);
@@ -97,6 +102,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForFunction(() => /How to read a repair estimate/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1);
     // 5. Downloads: the editor brief and the JSON.
+    if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
+    await p.locator('#gapDownload').locator('xpath=ancestor::details[1]/summary').click();
     const [brief] = await Promise.all([p.waitForEvent('download'), p.click('#gapDownload')]);
     assert.equal(brief.suggestedFilename(), 'editor-brief.md');
     const jsonUrl = await p.getAttribute('a[download][href*="report.json"]', 'href');
@@ -105,6 +112,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(report.disclaimer, /A Search Console export verified for this exact page was used/);
     assert.ok((report.report.destination_gsc_queries || []).some(q => q.query === 'roof repair lodi nj'), 'the research used the uploaded terms');
     // 5b. The CMS package (same ZIP as the Tracker): the original page is read, the editor must approve, then the ZIP downloads.
+    if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
     await p.waitForFunction(() => /Original page read now: “Roof Repair in Lodi, NJ \| Acme Roofing”/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(await p.inputValue('#pkgTitle'), 'Roof Repair in Lodi, NJ | Acme Roofing');
     await p.fill('#pkgMeta', 'Roof repair in Lodi, NJ: leaks, tiles and flashing, with a written estimate before any work starts.');
@@ -118,6 +126,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     for (const n of ['manifest.json', '01-implementation.md', '02-approved-copy.md', '03-content-fragments.html', '04-seo-metadata.json', '05-measurement-plan.md']) assert.ok(zipNames.includes(n), n);
     assert.match(require('node:fs').readFileSync(await pkg.path()).toString('utf8'), /Evidence: verified/);
     // 6. A later export (one CSV, not page-filtered): stored with the check, shown as not verified, research not re-run.
+    await p.locator('#stepResearch > summary').click();
+    await p.locator('#gscUpload > summary').click();
     await p.setInputFiles('#gscLater', { name: 'Queries.csv', mimeType: 'text/csv', buffer: Buffer.from('Top queries,Clicks,Impressions,CTR,Position\nroof repair lodi nj,3,340,0.9%,13.1\n') });
     await p.click('#gscSave');
     await p.waitForFunction(() => /Not verified for this page\./.test(document.body.textContent), null, { timeout: 30000 });
@@ -127,6 +137,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     const { windowsOf } = require('../src/growth-free/reminders.cjs');
     const published = new Date(Date.now() - 40 * 86400000).toISOString().slice(0, 10), w = windowsOf(published);
     assert.equal(await p.isVisible('#pubDate'), false, 'step 5 waits until the change is live');
+    await p.locator('#stepPublish > summary').click();
     await p.click('#pubOpen summary');
     await p.fill('#pubDate', published); await p.click('#pubSave');
     await p.waitForFunction(() => /One e-mail on .* to t\*\*\*@acme-roofing\.example/i.test(document.getElementById('pubBox').textContent), null, { timeout: 30000 });
@@ -136,6 +147,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       'Dates.csv': 'Date,Clicks,Impressions,CTR,Position\n' + days(win.start, win.end).map(d => d + ',1,' + Math.round(imp / 28) + ',0.5%,12.0').join('\n') + '\n',
       'Filters.csv': 'Filter,Value\nPage,' + URL_ + '\n' });
     for (const [win, imp, n] of [[w.before, 280, 3], [w.after, 560, 4]]) {
+      if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click();
+      if (!(await p.locator('#gscUpload').evaluate(el => el.open))) await p.locator('#gscUpload > summary').click();
       await p.setInputFiles('#gscLater', { name: 'Performance-' + win.start + '.zip', mimeType: 'application/zip', buffer: period(win, imp) });
       await p.click('#gscSave');
       await p.waitForFunction(k => new RegExp(k + ' exports uploaded').test(document.body.textContent), String(n), { timeout: 30000 });
@@ -154,11 +167,25 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(new URL(resultLink).origin, 'https://127.0.0.1', 'the link uses the domain the visitor used');
     assert.deepEqual(await service.sendDueReminders({ now: new Date() }), { sent: 0, failed: 0 }, 'sent once');
     assert.match(await (await fetch(base + new URL(stopLink).pathname)).text(), /Reminder stopped/);
+    // Completed AI research: five saved answers must not leave the large input form open.
+    for (const engine of ['google_aio', 'chatgpt', 'claude', 'copilot']) {
+      if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click();
+      if (!(await p.locator('#aiRecheck').evaluate(el => el.open))) await p.locator('#aiRecheck > summary').click();
+      await p.selectOption('#aiEngine', engine);
+      await p.fill('#aiText', 'ANSWER:\nRoof repair Lodi NJ advice includes checking written estimates and leak repair procedures.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
+      await p.click('#aiSave');
+      await p.waitForFunction(value => document.getElementById('ai').textContent.includes(value + ' of 5'), ['google_aio', 'chatgpt', 'claude', 'copilot'].indexOf(engine) + 2);
+    }
+    assert.equal(await p.locator('#aiRecheck').evaluate(el => el.open), false, 'five completed AI answers collapse the entry form');
+    assert.equal(await p.locator('#aiText').isVisible(), false);
+    assert.match(await p.textContent('#aiRecheck > summary'), /All five AI systems checked/);
+    await p.locator('#aiRecheck > summary').click();
+    assert.equal(await p.locator('#aiText').isVisible(), true, 'user can deliberately recheck an answer');
     assert.deepEqual(errors, [], 'no browser error on the way');
     // Database: the check and the AI answer are in the Free tables; no Tracker table was created or written.
     const row = (await pool.query('SELECT id,status,email FROM growth_free_checks WHERE lower(email)=lower($1)', [email])).rows[0];
     assert.equal(row.status, 'DONE');
-    assert.equal((await pool.query('SELECT count(*)::int AS n FROM growth_free_ai_answers WHERE check_id=$1', [row.id])).rows[0].n, 1);
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM growth_free_ai_answers WHERE check_id=$1', [row.id])).rows[0].n, 5);
     assert.deepEqual((await pool.query('SELECT status FROM growth_free_gsc_uploads WHERE check_id=$1 ORDER BY id', [row.id])).rows.map(r => r.status), ['VERIFIED_FOR_PAGE', 'NOT_VERIFIED_FOR_PAGE', 'VERIFIED_FOR_PAGE', 'VERIFIED_FOR_PAGE']);
     assert.ok((await pool.query('SELECT reminder_opt_out_at FROM growth_free_checks WHERE id=$1', [row.id])).rows[0].reminder_opt_out_at, 'the stop link stopped the reminder');
     const after = (await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'tracker\\_%'")).rows.map(r => r.table_name).sort();
