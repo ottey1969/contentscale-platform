@@ -43,6 +43,8 @@ function ensureTables(pool){
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_opt_out_at TIMESTAMPTZ');
   // The domain the visitor used (one of this app's domains), so the e-mail links open on the same domain.
   await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_base TEXT');
+  // Up to five addresses entered for the check (the first is `email`, which the daily limits count).
+  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB');
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
@@ -114,13 +116,13 @@ async function recentResult(pool,{url,query,market=null,engineVersion=null}){
    WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND report->>'engine_version'=$4 AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null),engineVersion])).rows[0]||null;
 }
 
-async function createCheck(pool,{email,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null}){
+async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null}){
  const row=(await pool.query(`INSERT INTO growth_free_checks
-   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market)
-   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb)
+   (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market,emails)
+   VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb)
    RETURNING id,public_id,access_key,status`,
   [token(9),token(18),email,ipHash,url,host,query,cached?'DONE':'QUEUED',cached?cached.decision:null,
-   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null)])).rows[0];
+   cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null),JSON.stringify(emails&&emails.length>1?emails:null)])).rows[0];
  return row;
 }
 
@@ -133,7 +135,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,selected_item_ids,write_count,market,email,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
@@ -183,7 +185,7 @@ async function listLeads(pool,{limit=200}={}){
 
 async function forgetEmail(pool,email){
  const h=await pool.query('DELETE FROM growth_free_hire_requests WHERE email=$1',[email]);
- const c=await pool.query('DELETE FROM growth_free_checks WHERE email=$1',[email]);
+ const c=await pool.query("DELETE FROM growth_free_checks WHERE email=$1 OR COALESCE(emails,'[]'::jsonb) ? $1",[email]);
  return {checks:c.rowCount||0,hire_requests:h.rowCount||0};
 }
 
@@ -193,10 +195,10 @@ async function setPublication(pool,{checkId,publishedOn,dueAt,base=null}){
     reminder_sent_at=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_sent_at ELSE NULL END,
     reminder_attempts=CASE WHEN published_on IS NOT DISTINCT FROM $2::date AND reminder_due_at IS NOT DISTINCT FROM $3::timestamptz THEN reminder_attempts ELSE 0 END,
     published_on=$2::date,reminder_due_at=$3::timestamptz,reminder_token=COALESCE(reminder_token,$4),reminder_opt_out_at=CASE WHEN $3::timestamptz IS NULL THEN reminder_opt_out_at ELSE NULL END,reminder_base=COALESCE($5,reminder_base)
-   WHERE id=$1 RETURNING published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base])).rows[0]||null;
+   WHERE id=$1 RETURNING emails,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base])).rows[0]||null;
 }
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
- return (await pool.query(`SELECT id,public_id,access_key,email,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token,reminder_base FROM growth_free_checks
+ return (await pool.query(`SELECT id,public_id,access_key,email,emails,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token,reminder_base FROM growth_free_checks
    WHERE reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 AND status='DONE' ORDER BY reminder_due_at LIMIT $2`,[now,limit])).rows;
 }
 async function markReminder(pool,{id,sent}){

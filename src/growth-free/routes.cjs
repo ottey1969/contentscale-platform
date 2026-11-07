@@ -74,6 +74,13 @@ const js=x=>JSON.stringify(x).replace(/</g,'\\u003c');
 const safeToken=x=>/^[A-Za-z0-9_-]{1,60}$/.test(String(x||''))?String(x):'';
 const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const EMAIL=/^[^\s@<>()[\]\\,;:"]{1,64}@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i;
+// One to five addresses, separated by commas, semicolons or spaces; the first counts for the daily limits.
+function readEmails(raw){
+ const list=[...new Set(String(raw==null?'':raw).toLowerCase().split(/[\s,;]+/).map(x=>x.trim()).filter(Boolean))];
+ if(!list.length||list.some(x=>x.length>200||!EMAIL.test(x)))return {error:'Enter a valid email address (up to 5, separated by commas)'};
+ if(list.length>5)return {error:'Enter at most 5 email addresses'};
+ return {email:list[0],emails:list};
+}
 const clean=(x,n)=>String(x==null?'':x).replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,n);
 
 function page(title,body,cfg){
@@ -130,7 +137,7 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
 ${aiStartBlock()}
  <label for="gscFile">Search Console export (optional)</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
  <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
- <label for="email">Your email</label><input id="email" name="email" type="email" required maxlength="200" placeholder="you@company.com">
+ <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The reminder after publication goes to all of them.</small>
  <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day.`}`}</span></label>
  <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
  <p><button type="submit">${owner.signedIn?'Run the check (owner)':'Run the free check'}</button> <small id="s" role="status"></small></p>
@@ -150,9 +157,15 @@ var OWNER=${js(!!owner.signedIn)};
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
+// This browser remembers what was entered (page, search term, market, language, addresses), so the next check starts
+// filled in. Only in this browser; a link with values wins; works without storage too.
+var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm';
+(function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}})();
+function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}}
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
+rememberForm();
 b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent='Starting…';
 try{var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var r=await fetch(${js(api)}+'/checks',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
@@ -182,7 +195,7 @@ document.addEventListener('click',function(e){var s=e.target.closest('details.jo
 function showStep(id,targetId){openJourney(id);requestAnimationFrame(function(){var el=document.getElementById(targetId||id);if(el)el.scrollIntoView({block:'start'})})}
 
 function aiHtml(a){var x=a.summary,h='<h3 id="ai">1B · AI answers <small>('+esc(x.checked)+' of 5 checked'+(x.checked===5?' · complete':'')+')</small></h3><p class="muted"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
- h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?(e.invalid?'INVALID, not counted':'not checked'):e.topic_warning?'check the topic (no shared word with the search term) — counted':!e.verifiable?'no RESOURCES section — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
+ h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?(e.invalid?'INVALID, not counted':'not checked'):e.topic_warning?'check the topic (no shared word with the search term) — counted':!e.verifiable?'no source list pasted — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
   return '<div class="eng '+(e.checked&&e.verifiable?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked&&e.verifiable?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = links in the RESOURCES list of that AI answer. Links that appear only in the answer text do not count as sources.</p>';
  if(x.top_cited_sites.length)h+='<details class="research-details"><summary>Sources mentioned in the AI answers ('+esc(x.top_cited_sites.length)+')</summary><h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul></details>';
  h+='<p class="muted">These source mentions are AI visibility observations, not verified content gaps. Growth compares the readable ranking pages automatically and labels missing evidence separately.</p>';
@@ -239,7 +252,7 @@ function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.grou
  h+='<p><button type="button" id="gapDownload" class="action-muted">Download editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p></details></div></details><details id="stepPrepare" class="journey-section"><summary><span class="journey-num">3</span><span><strong>Prepare content</strong><small>Draft, review and export for your CMS</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="prepare">Prepare the text</h2><p class="muted">'+(g.writing_allowed===false?'Research did not establish enough evidence to safely draft new text. Your H2 selections are observations, not verified recommendations. Export the research brief in Step 2.':!w||!w.allowed?'Automatic writing is disabled for this Free Growth access link. This is an access restriction, not a request to manually write every H2. Export the research brief in Step 2; the CMS editor is optional.':w.remaining<=0?'The automatic writing limit for this check has been reached. Previously prepared copy remains available for review.':'Generate draft text for evidence-supported selected topics using AI, then review it before creating the CMS package.')+'</p>';
  if(w&&!w.allowed&&w.owner_login_available&&w.remaining>0&&g.writing_allowed!==false)h+='<div class="card" id="ownerUnlock"><strong>Owner access · Write with AI</strong><p class="muted">Sign in with your existing Free Growth admin key. No new password or check is required. Your selected H2s are kept.</p><form id="ownerUnlockForm" autocomplete="off"><label for="ownerUnlockKey">Admin key (stored in Railway)</label><input id="ownerUnlockKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit" id="ownerUnlockButton" class="action-blue">Unlock Write with AI</button> <small id="ownerUnlockStatus" role="status"></small></p></form></div>';
  if(w&&w.allowed&&w.owner_unlocked)h+='<p class="note"><strong>Owner mode enabled.</strong> Write with AI is unlocked for this check. No visitor permissions were changed.</p>';
- if(w&&w.allowed&&w.remaining>0&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite" class="action-blue" disabled>Automatically prepare selected H2s with AI ('+esc(w.remaining)+' run(s) available)</button> <small class="muted">One click prepares up to four H2s per run, using available runs automatically. You review everything before download. Nothing is published.</small></p>';
+ if(w&&w.allowed&&w.remaining>0&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite" class="action-blue" disabled>Write the chosen H2s with AI (up to '+esc(w.remaining*4)+' more H2s for this check)</button> <small class="muted">AI writes 4 H2s per round; this check has '+esc(w.remaining)+' round(s) left, so up to '+esc(w.remaining*4)+' H2s. One click uses as many rounds as needed. You check everything before download. Nothing is published.</small></p>';
  h+='<div id="gapWritten"></div><div id="pkgBox"></div></div></details>';
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
@@ -367,7 +380,7 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Your selection is saved. Check AI answers or choose to continue without them.';return}
   var capacity=Math.min(available*4,eligible.length),chosen=eligible.slice(0,capacity);
   wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');
-  st.textContent='Preparing '+chosen.length+' eligible H2(s) automatically using '+Math.ceil(chosen.length/4)+' writing run(s)…';
+  st.textContent='Preparing '+chosen.length+' eligible H2(s) automatically using '+Math.ceil(chosen.length/4)+' round(s) of 4 H2s…';
   var latest=null,completed=0;
   try{
    for(var run=0;run<Math.min(available,Math.ceil(chosen.length/4));run++){
@@ -386,7 +399,7 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
    st.textContent=completed+' H2 draft(s) prepared automatically for review.'+(pending.length?' '+pending.length+' could not be completed with the available runs.':'')+(outside?' '+outside+' selected topic(s) were not processed because they are unsupported or exceed the remaining quota.':'')+' Review the prepared sections below; nothing is published.';
    // Nothing left to prepare: say so instead of offering another run.
    var allDone=!pending.length;
-   wb.textContent=allDone?'✓ All selected H2s are prepared':'Prepare remaining selected H2s with AI ('+latest.remaining+' run(s) left)';
+   wb.textContent=allDone?'✓ All selected H2s are prepared':'Write the remaining chosen H2s with AI (up to '+(latest.remaining*4)+' more)';
    wb.disabled=allDone||!latest.remaining;wb.dataset.exhausted=allDone||!latest.remaining?'yes':'';
    if(allDone)showStep('stepPrepare','pkg');
    wb.classList.add('action-green');openJourney('stepPrepare');
@@ -614,8 +627,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const origin=req.get&&req.get('origin');
    if(origin&&entry.origins.length&&origin!==`${req.protocol}://${req.get('host')}`&&!entry.origins.includes(origin))
     return res.status(403).json({success:false,error:'This free check is not activated on this website'});
-   const email=clean(b.email,200).toLowerCase();
-   if(!EMAIL.test(email))return res.status(400).json({success:false,error:'Enter a valid email address'});
+   const em=readEmails(String(b.email||'').slice(0,1100));if(em.error)return res.status(400).json({success:false,error:em.error});
+   const email=em.email;
    if(b.consent!==true)return res.status(400).json({success:false,error:'Please accept the storage notice'});
    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
    const query=clean(b.query,120);
@@ -632,7 +645,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label,market});
+   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label,market});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    if(!cached){queue.push({id:row.id,url:v.url,query,market,gscRows:gscRowsOf(gsc,v.url)});pump()}
@@ -689,14 +702,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    history:list.map(x=>({status:x.status,uploaded_at:x.created_at,period:x.period_start?{start:x.period_start,end:x.period_end}:null,totals:x.totals})),comparison};
  }
  function readInput(b,res){
-  const email=clean(b.email,200).toLowerCase();
-  if(!EMAIL.test(email)){res.status(400).json({success:false,error:'Enter a valid email address'});return null}
+  const em=readEmails(String(b.email||'').slice(0,1100));
+  if(em.error){res.status(400).json({success:false,error:em.error});return null}
+  const email=em.email;
   if(b.consent!==true){res.status(400).json({success:false,error:'Please accept the storage notice'});return null}
   const v=validatePublicUrl(b.url);if(v.error){res.status(400).json({success:false,error:v.error});return null}
   const market=readMarket(b,res);if(market===undefined)return null;
   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
-  return {email,url:v.url,host:v.host,query:clean(b.query,120),market,aiAnswers,gsc};
+  return {email,emails:em.emails,url:v.url,host:v.host,query:clean(b.query,120),market,aiAnswers,gsc};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
@@ -705,7 +719,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const cached=fresh||withGsc?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
-  const row=await storage.createCheck(pool,{email:input.email,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
+  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   if(!cached){queue.push({id:row.id,url:input.url,query:input.query,market:input.market,inviteId:cached?null:inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
@@ -716,7 +730,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   await storage.ensureTables(pool);
   const inv=await storage.getInvite(pool,b.invite),status=store.inviteStatus(inv);
   if(status!=='ACTIVE')return res.status(403).json({success:false,error:INVITE_TEXT[status]});
-  if(inv.email_lock&&inv.email_lock!==input.email)
+  if(inv.email_lock&&!input.emails.includes(inv.email_lock))
    return res.status(403).json({success:false,error:'This invitation only works with the email address it was sent to'});
   await start(res,input,{ipHash:store.hashIp(req.ip,config.ipSalt),marketingConsent:b.marketing_consent===true,
    accessLabel:'invite: '+inv.label,inviteId:inv.id,
@@ -884,7 +898,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const send=sendEmail||reminders.brevo(fetchImpl);
  const emailConfigured=()=>!!sendEmail||!!process.env.BREVO_API_KEY;
  const publicationOf=row=>({published_on:row.published_on||null,reminder_due_at:row.reminder_due_at||null,reminder_sent_at:row.reminder_sent_at||null,
-  stopped:!!row.reminder_opt_out_at,email_hint:maskEmail(row.email),email_configured:emailConfigured(),
+  stopped:!!row.reminder_opt_out_at,email_hint:(Array.isArray(row.emails)&&row.emails.length?row.emails:[row.email]).map(maskEmail).join(', '),email_configured:emailConfigured(),
   windows:row.published_on?reminders.windowsOf(row.published_on):null});
  app.post(apiPath+'/checks/:id/publication',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
@@ -902,7 +916,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(remind&&emailConfigured()){
     const lang=reminders.languageOf(fresh);
     const m=await localizeMail(reminders.confirmationMessage({url:row.url,publishedOn:d.value,stopLink:links.stop(saved.reminder_token,saved),lang:reminders.T[lang]?lang:'en'}),lang);
-    if(await Promise.resolve(send({to:[saved.email],subject:m.subject,html:m.html})).catch(()=>false))confirmation='SENT'}
+    if(await Promise.resolve(send({to:Array.isArray(saved.emails)&&saved.emails.length?saved.emails:[saved.email],subject:m.subject,html:m.html})).catch(()=>false))confirmation='SENT'}
    res.set('Cache-Control','no-store').json({success:true,publication:publicationOf(fresh),confirmation,gsc:await gscFor(fresh)});
   }catch(e){console.error('[free-growth] publication failed',e.message);res.status(503).json({success:false,error:'The date could not be saved. Please try again.'})}
  });
