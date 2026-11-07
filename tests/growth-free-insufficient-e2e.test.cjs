@@ -8,7 +8,7 @@ const local = /^postgres(?:ql)?:\/\/[^@]+@(?:127\.0\.0\.1|localhost)(?::\d+)?\//
 let pg = null, chromium = null; try { pg = require('pg'); } catch (e) {} try { ({ chromium } = require('playwright')); } catch (e) {}
 const skip = !local ? 'set PREWRITE_E2E_DATABASE_URL to a local, disposable PostgreSQL' : !pg ? 'pg not installed' : !chromium && 'Playwright not installed';
 
-const URL_ = 'https://acme-roofing.example/roof-repair-lodi-nj/';
+const URL_ = 'https://acme-roofing.example/roof-repair-lodi-nj-thin/'; // own URL: tests share one database and its 24-hour result cache
 const own = '<html><head><title>Roof Repair in Lodi, NJ | Acme Roofing</title></head><body><h1>Roof Repair in Lodi, NJ</h1><h2>Our roof repair services</h2><p>' + 'TEST: our crew repairs leaking roofs in Lodi and nearby towns, and explains every repair first. '.repeat(3) + '</p></body></html>';
 const one = '<html><body><article><h1>Roof repair in Paterson, NJ</h1><h2>How a repair estimate is built</h2><p>' + 'TEST: a repair estimate lists materials, labour and access, and explains hidden decking damage. '.repeat(3) + '</p></article></body></html>';
 const PAGES = { [URL_]: own, 'https://roofer-a.example/roof-repair-nj/': one };
