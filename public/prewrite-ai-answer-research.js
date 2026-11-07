@@ -69,7 +69,7 @@
     if (CONTEXT_MARKERS.some(function (m) { return low.indexOf(m) >= 0 && (!ql || ql.indexOf(fold(m).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()) < 0); })) return 'context_contaminated';
     return null;
   }
-  var PLACEHOLDERS = [/^paste the (actual|real)\b/i, /^\[?target query\b/i, /^(n\/?a|none|not checked|todo|tbd|-+|\.+|\?+)$/i, /lorem ipsum/i];
+  var PLACEHOLDERS = [/^paste the (actual|real)\b/i, /^\[?\s*(?:paste(?:\s+(?:the|your|complete))?\s+answer(?:\s+here)?|insert\s+answer(?:\s+here)?)\s*\]?$/i, /^\[?target query\b/i, /^(n\/?a|none|not checked|todo|tbd|-+|\.+|\?+)$/i, /lorem ipsum/i];
   var REASONS = {
     prompt_echo: 'This is the research instruction (or a reply to it), not an answer to the search query. Ask the AI system the search query itself and paste its answer.',
     placeholder: 'This is a placeholder, not an AI answer.',
