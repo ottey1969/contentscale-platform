@@ -299,7 +299,7 @@ function pkgStart(g,last){var box=document.getElementById('pkgBox');if(!box)retu
  if(last&&(last.sections||[]).length){showPkg(pkgSections(g,last));return}
  var n=document.querySelectorAll('.gapPick:checked').length;
  box.innerHTML='<h2 id="pkg">CMS package for your editor</h2><p class="lead">One ZIP for whoever edits your website: the text per section, where it goes on your page, SEO title and description, and how to measure the result. The same package as the Tracker. Nothing is published.</p><p><button type="button" id="pkgOpen" class="action-blue"'+(n?'':' disabled')+'>Open the package editor for your selection ('+n+')</button> <small class="muted" id="pkgOpenHelp">'+(n?'You write or paste the text per section, then approve and download.':'Choose at least one item in step 2 first.')+'</small></p>';
- document.getElementById('pkgOpen').onclick=function(){showPkg(pkgSections(g,last));var el=document.getElementById('pkg');if(el){openJourney('stepPublish');el.scrollIntoView()}}}
+ document.getElementById('pkgOpen').onclick=function(){showPkg(pkgSections(g,last));var el=document.getElementById('pkg');if(el){openJourney('stepPrepare');el.scrollIntoView()}}}
 function pkgCount(n){var b=document.getElementById('pkgOpen');if(!b)return;b.disabled=!n;b.textContent='Open the package editor for your selection ('+n+')';var h=document.getElementById('pkgOpenHelp');if(h)h.textContent=n?'You write or paste the text per section, then approve and download.':'Choose at least one item in step 2 first.'}
 function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)return;
   var savedIds=new Set((d.selected_item_ids||[]).map(String)),saveTimer=null,revision=0;
