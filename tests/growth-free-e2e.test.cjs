@@ -98,6 +98,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.click('#pkgOpen');
     assert.match(await p.getAttribute('.pkgText', 'placeholder'), /Write this section yourself/);
     assert.equal(await p.isChecked('.pkgUse'), false);
+    const writeDebug = await p.locator('#gapWrite').evaluate(el => ({visible:!!el.getClientRects().length,openSteps:[...document.querySelectorAll('details.journey-section')].map(x=>[x.id,x.open]),parent:el.parentElement?.outerHTML.slice(0,450),ancestor:el.closest('details.journey-section')?.id}));
+    assert.ok(writeDebug.visible, 'AI write button should be visible inside Prepare: '+JSON.stringify(writeDebug));
     await p.click('#gapWrite');
     await p.waitForFunction(() => /How to read a repair estimate/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1);
