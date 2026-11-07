@@ -353,6 +353,36 @@ test('admin: login session (HttpOnly, SameSite=Strict, 12h), CSRF header, brute-
  const out=await s.post('/api/free-growth/admin/logout',{},w);assert.match(out.headers.get('set-cookie'),/Max-Age=0/);
 });
 
+test('owner login unlocks AI writing on an existing public result, without granting visitors writing rights',async t=>{
+ const s=await server({config:{adminKey:'owner-secret-0123456789',writing:'admin'}});t.after(()=>s.srv.close());
+ await s.post('/api/free-growth/checks',ok);await s.service.idle();
+ const path='/api/free-growth/checks/pub1?k=key1abcdefgh',write='/api/free-growth/checks/pub1/write?k=key1abcdefgh';
+ const before=await s.get(path);
+ assert.equal(before.body.writing.allowed,false);
+ assert.equal(before.body.writing.owner_login_available,true);
+ assert.equal(before.body.writing.owner_unlocked,false);
+ assert.equal((await s.post(write,{item_ids:[]})).status,403,'ordinary visitor cannot write');
+ const login=await s.post('/api/free-growth/admin/login',{key:'owner-secret-0123456789'});
+ assert.equal(login.status,200);
+ const cookie=login.headers.get('set-cookie').split(';')[0];
+ assert.match(cookie,/^gf_admin=/);
+ const auth={cookie};
+ const unlocked=await s.get(path,auth);
+ assert.equal(unlocked.body.writing.allowed,true,'owner can use Write with AI on existing public check');
+ assert.equal(unlocked.body.writing.owner_unlocked,true);
+ assert.equal(unlocked.body.selected_item_ids.length,0,'existing selection is not modified');
+ assert.equal((await s.get(path)).body.writing.allowed,false,'anonymous visitors still cannot write');
+ assert.equal((await s.post(write,{item_ids:[]},auth)).status,403,'cookie alone cannot submit write (CSRF)');
+ const confirmation=await s.post(write,{item_ids:[]},{...auth,'X-Requested-With':'growth-free-admin'});
+ assert.equal(confirmation.status,400,'verified owner request reaches original selection validation');
+ assert.match(confirmation.body.error,/Select at least one topic/);
+ const lost=await s.get(path,{cookie:'gf_admin=bad.cookie'});
+ assert.equal(lost.body.writing.allowed,false,'forged cookie is not an owner session');
+ const page=await s.get('/free-growth/r/pub1?k=key1abcdefgh');
+ assert.match(page.body,/ownerUnlockForm/,'owner unlock form is wired in the result page');
+ assert.doesNotMatch(page.body,/owner-secret-0123456789/,'no admin key is rendered');
+});
+
 test('admin stays off with a missing or short key; the key is never accepted in the URL',async t=>{
  assert.equal(freeGrowthConfig({GROWTH_FREE_ADMIN_KEY:'short'}).adminKey,'');
  const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
