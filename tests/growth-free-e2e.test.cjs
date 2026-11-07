@@ -98,8 +98,6 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.click('#pkgOpen');
     assert.match(await p.getAttribute('.pkgText', 'placeholder'), /Write this section yourself/);
     assert.equal(await p.isChecked('.pkgUse'), false);
-    const writeDebug = await p.locator('#gapWrite').evaluate(el => ({visible:!!el.getClientRects().length,openSteps:[...document.querySelectorAll('details.journey-section')].map(x=>[x.id,x.open]),parent:el.parentElement?.outerHTML.slice(0,450),ancestor:el.closest('details.journey-section')?.id}));
-    assert.ok(writeDebug.visible, 'AI write button should be visible inside Prepare: '+JSON.stringify(writeDebug));
     await p.click('#gapWrite');
     await p.waitForFunction(() => /How to read a repair estimate/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(writes.length, 1);
@@ -114,7 +112,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(report.disclaimer, /A Search Console export verified for this exact page was used/);
     assert.ok((report.report.destination_gsc_queries || []).some(q => q.query === 'roof repair lodi nj'), 'the research used the uploaded terms');
     // 5b. The CMS package (same ZIP as the Tracker): the original page is read, the editor must approve, then the ZIP downloads.
-    await p.locator('#stepPrepare > summary').click();
+    if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
     await p.waitForFunction(() => /Original page read now: “Roof Repair in Lodi, NJ \| Acme Roofing”/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(await p.inputValue('#pkgTitle'), 'Roof Repair in Lodi, NJ | Acme Roofing');
     await p.fill('#pkgMeta', 'Roof repair in Lodi, NJ: leaks, tiles and flashing, with a written estimate before any work starts.');
