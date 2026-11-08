@@ -254,7 +254,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     }
     assert.equal(await p.locator('#aiRecheck').evaluate(el => el.open), false, 'five completed AI answers collapse the entry form');
     assert.equal(await p.locator('#aiText').isVisible(), false);
-    assert.match(await p.textContent('#aiRecheck > summary'), /All five AI systems checked/);
+    assert.match(await p.textContent('#aiRecheck > summary'), /Advanced · Recheck an AI answer/);
     await p.locator('#aiRecheck > summary').click();
     assert.equal(await p.locator('#aiText').isVisible(), true, 'user can deliberately recheck an answer');
     assert.deepEqual(errors, [], 'no browser error on the way');
