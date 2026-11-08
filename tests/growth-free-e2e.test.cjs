@@ -76,6 +76,14 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.fill('#url', URL_);
     await p.fill('#query', 'roof repair lodi nj');
     await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
+    // A pasted AI answer on the form survives a refresh (with the same question), and Reset is not needed to keep it.
+    await p.locator('#aiStart > summary').click();
+    await p.fill('textarea[data-engine="copilot"]', 'ANSWER:\nTEST pasted on the form.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
+    await p.reload();
+    assert.equal(await p.inputValue('#query'), 'roof repair lodi nj');
+    assert.match(await p.inputValue('textarea[data-engine="copilot"]'), /TEST pasted on the form/, 'the AI answer is restored');
+    assert.match(await p.textContent('#aiRestored'), /1 pasted AI answer\(s\) restored/);
+    await p.fill('textarea[data-engine="copilot"]', '');
     await p.fill('#email', email); await p.check('input[name=consent]');
     // Optional Search Console export (TEST data), filtered on exactly this page.
     const { zip } = require('./helpers/zip.cjs');
@@ -106,6 +114,11 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.locator('#aiRecheck summary').click();
     await p.selectOption('#aiEngine', 'perplexity');
     await p.fill('#aiText', 'ANSWER:\nTEST: For roof repair in Lodi NJ, ask for a written estimate and check the licence of the roofer.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
+    // A refresh before "Analyse answer" keeps the pasted answer (per check and AI system).
+    await p.reload(); await p.waitForSelector('#aiText', { state: 'attached', timeout: 30000 });
+    if (!(await p.locator('#aiText').isVisible())) { await p.locator('#stepResearch > summary').click().catch(() => {}); if (!(await p.locator('#aiText').isVisible())) await p.locator('#aiRecheck summary').click(); }
+    await p.selectOption('#aiEngine', 'perplexity');
+    assert.match(await p.inputValue('#aiText'), /TEST: For roof repair in Lodi NJ/, 'the pasted answer is still there after a refresh');
     await p.click('#aiSave');
     await p.waitForFunction(() => /1 of 5/.test(document.body.textContent), null, { timeout: 30000 });
     // 4. Select topics and let AI write concepts.
