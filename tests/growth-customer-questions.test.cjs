@@ -71,6 +71,8 @@ test('Tracker Growth: customer questions for a page in its market; the research 
   assert.match(page.html, /Optional, not connected[^]*Not needed for this research/);
   assert.match(page.html, /Opportunity Finder \(Search Console per country\)[^]*choose another page/);
   assert.match(page.html, /Find customer questions/); assert.match(page.html, /growth-customer-questions\.js/);
+  assert.match(page.html, /id="cqManual"/, 'owner can enter a question without first loading suggestions');
+  assert.match(page.html, /id="cqManualGo"/, 'manual question has its own research action even if Serper or AI fails');
   const chosen = await respond(r['GET /track/:token/growth/auto-research'], req({ query: 'How can I get my business mentioned in AI answers?' }));
   assert.match(chosen.html, /Customer question researched:<\/strong> “How can I get my business mentioned in AI answers\?”/);
   assert.match(chosen.html, /You chose this page/);
