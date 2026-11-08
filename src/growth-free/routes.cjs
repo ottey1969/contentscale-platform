@@ -51,6 +51,9 @@ function freeGrowthConfig(env=process.env){
 function freeGrowthDefaults(env){
  return {
   enabled:env.GROWTH_FREE_ENABLED!=='false',
+  // Enable only after the WordPress application form is live and mail tested.
+  // Existing result links continue to work; new check creation needs owner access or an invite.
+  approvalRequired:env.GROWTH_FREE_APPROVAL_REQUIRED==='true',
   brand:env.GROWTH_FREE_BRAND||'ContentScale',
   perEmail:int(env.GROWTH_FREE_PER_EMAIL_PER_DAY,3),
   perIp:int(env.GROWTH_FREE_PER_IP_PER_DAY,3),
@@ -689,6 +692,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     await storage.ensureTables(pool);
     return await start(res,input,{accessLabel:'admin',marketingConsent:b.marketing_consent===true});
    }
+   if(config.approvalRequired)return res.status(403).json({success:false,error:'Personal approval is required. Request access at https://contentscale.site/.'});
    const entry=findKey(config,b.key,req);
    if(!entry)return res.status(403).json({success:false,error:'This free check is not activated here'});
    const origin=req.get&&req.get('origin');
