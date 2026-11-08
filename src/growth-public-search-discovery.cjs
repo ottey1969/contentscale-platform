@@ -16,6 +16,9 @@ const clean=x=>decode(x).replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim();
 const wrongProductIntent=(title,snippet,query)=>navDiffersFromQuery(title,query).length>0||
  (/\b(reviews?|alternatives?|vs\.?|versus)\b/i.test(title)&&!/\b(reviews?|alternatives?|vs\.?|versus)\b/i.test(query));
 const infrastructure=/^(?:www\.)?(?:bing\.com|microsoft\.com|google\.com|youtube\.com|facebook\.com|instagram\.com|pinterest\.com|linkedin\.com)$/i;
+// A search term as a person types it, also a full customer question ("How do I …?"): letters, digits, spaces and the
+// punctuation of a normal question. Anything else (markup, quotes, search operators such as site:) is not searched.
+const SAFE_QUERY=/^[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/?!()-]*$/u;
 function parseBingRss(xml,{query='',ownUrl='',limit=7,market=null}={}){
  const marketStates=market?.states||[];
  const raw=String(xml||'');
@@ -44,7 +47,7 @@ function parseBingRss(xml,{query='',ownUrl='',limit=7,market=null}={}){
 }
 async function discoverGrowthCompetitors({query,ownUrl,market=null,locale=null,fetchFeed=fetchPublicGrowthHtml,now=new Date()}={}){
  const term=String(query||'').trim();
- if(!term||term.length>100||!/^[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/-]*$/u.test(term))
+ if(!term||term.length>150||!SAFE_QUERY.test(term))
   return {status:'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH',query:term,leads:[],checked_at:null,source:'BING_PUBLIC_RSS'};
  let feed;
  try{
@@ -155,7 +158,7 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLo
 // Paid calls per run: one, plus at most one retry when fewer than three usable results remain (market query or page 2).
 async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=null,fetchImpl=global.fetch,key=process.env.SERPER_API_KEY,now=new Date()}={}){
  const term=String(query||'').trim(),available=String(key||'').trim();
- if(!term||term.length>100||!/^[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/-]*$/u.test(term))
+ if(!term||term.length>150||!SAFE_QUERY.test(term))
   return {status:'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  if(!available)return {status:'OPTIONAL_PROVIDER_NOT_CONFIGURED',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  if(typeof fetchImpl!=='function')return {status:'OPTIONAL_PROVIDER_UNAVAILABLE',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};

@@ -124,7 +124,13 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     // 4. Select topics and let AI write concepts.
     await p.locator('#stepReview > summary').click();
     const picks = await p.$$('.gapPick'); assert.ok(picks.length >= 1, 'at least one topic to select');
-    await picks[0].check();
+    // Side by side (as in Tracker Growth): the competitor's words next to this page, and one click adds the topic.
+    await p.locator('#stepResearch > summary').click();
+    assert.match(await p.textContent('#sideBySide + p + .card'), /How a repair estimate is built[^]*A repair estimate lists materials[^]*Your page:[^]*Our roof repair services/);
+    await p.click('.sbsAdd');
+    assert.match(await p.textContent('.sbsStatus'), /Added to your choice in step 2/);
+    if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
+    if (!(await picks[0].isChecked())) await picks[0].check();
     await p.waitForFunction(() => /selected · saved/.test(document.getElementById('gapStatus').textContent));
     const chosenId = await picks[0].getAttribute('value');
     await p.reload();

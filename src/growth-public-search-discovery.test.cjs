@@ -41,3 +41,14 @@ assert(found.every(x=>x.status==='FRESH_BING_RSS_LEAD_NOT_GOOGLE_RANKING'));
  assert.equal(partial.status,'PARTIAL_PUBLIC_SEARCH_LEADS');
  console.log('PASS: bounded no-key public search, query scoping, no private IP, off-intent suppression, no Google rank claim, provider failure');
 })().catch(e=>{console.error(e);process.exitCode=1});
+
+// Owner report 2026-11-08: a customer question ending in "?" was never searched (QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH), so the
+// check had no competitor at all. A normal question is searched; operators and markup still are not.
+(async()=>{
+ const assert=require('node:assert/strict');const {optionalGoogleOrganicDiscovery}=require('./growth-public-search-discovery.cjs');
+ const seen=[];const fetchImpl=async(u,init)=>{seen.push(JSON.parse(init.body).q);return {ok:true,json:async()=>({organic:[]})}};
+ const q=await optionalGoogleOrganicDiscovery({query:'How do I optimize content to rank in AI search results?',ownUrl:'https://contentscale.site/',key:'TEST',fetchImpl});
+ assert.notEqual(q.status,'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH');assert.equal(seen[0],'How do I optimize content to rank in AI search results?');
+ for(const bad of ['seo site:evil.example','<b>seo</b>','"seo" inurl:x'])assert.equal((await optionalGoogleOrganicDiscovery({query:bad,ownUrl:'https://a.example/',key:'TEST',fetchImpl})).status,'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH',bad);
+ console.log('PASS a customer question with "?" is searched; operators and markup are not');
+})().catch(e=>{console.error(e);process.exit(1)});
