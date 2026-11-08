@@ -277,6 +277,23 @@ test('no key needed on your own domain (hosts); other domains still need the key
 });
 
 const ADMIN={'x-admin-key':'admin-secret-0123456789'};
+test('approval gate rejects public checks and gives invited users full question selection',async t=>{
+ const s=await server({config:{approvalRequired:true,adminKey:'admin-secret-0123456789'},engine:async()=>({statusCode:200,report:{success:true,editorial_decision_gate:{decision:'NO_CHANGE'}}})});
+ t.after(()=>s.srv.close());
+ const blocked=await s.post('/api/free-growth/checks',ok);
+ assert.equal(blocked.status,403);assert.match(blocked.body.error,/Personal approval/);
+ const made=await s.post('/api/free-growth/admin/invites',{label:'Approved applicant',email_lock:'approved@example.com',max_checks:2,days:7},ADMIN);
+ assert.equal(made.status,200);
+ const token=new URL(made.body.link).searchParams.get('invite');
+ const page=await s.get('/free-growth?invite='+token);
+ assert.equal(page.status,200);assert.match(page.body,/Find customer questions/);
+ assert.match(page.body,/var OWNER=false,APPROVED=true/);
+ const allowed=await s.post('/api/free-growth/checks',{invite:token,url:URL_,query:'roof repair lodi nj',email:'approved@example.com',consent:true});
+ assert.equal(allowed.status,202,JSON.stringify(allowed.body));await s.service.idle();
+ assert.equal(s.storage.checks[0].access_label,'invite: Approved applicant');
+ const noDiscovery=await s.post('/api/free-growth/customer-questions',{key:'open-key-12345',url:URL_});
+ assert.equal(noDiscovery.status,403);
+});
 test('personal invitations: own quota, expiry, email lock, revoke; cache and failures do not cost a check',async t=>{
  let fail=false;
  const s=await server({config:{adminKey:'admin-secret-0123456789'},engine:async(input,deps)=>fail?{statusCode:503,report:{success:false,code:'AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE'}}:runFreeGrowthResearch(input,deps)});
@@ -473,8 +490,8 @@ test('the AI check comes first: with an entered search term it is available whil
  let release2;const gate2=new Promise(r=>release2=r);
  const s2=await server({engine:async(input,deps)=>{await gate2;return runFreeGrowthResearch(input,deps)}});t.after(()=>s2.srv.close());
  const started=await s2.post('/api/free-growth/checks',{...ok,query:''});
- const r2=await s2.post('/api/free-growth/checks/'+started.body.id+'/ai?k='+started.body.key,{engine:'copilot',text:'x'});
- assert.equal(r2.status,409);assert.match(r2.body.error,/derived from your page/);
+ assert.equal(started.status,400,'public visitors must enter their customer question');
+ assert.match(started.body.error,/customer question or search phrase/);
  release2();await s2.service.idle();
 });
 
