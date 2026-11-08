@@ -845,3 +845,15 @@ test('admin: one form — the admin page links to the visitor form in owner mode
  await s.post('/api/free-growth/checks',{...body,fresh:true},H);await s.service.idle();
  assert.equal(s.calls.length,n+1,'Research again runs the research');
 });
+
+test('writer returns no text: 502 with the real reason, and no writing round is used up',async t=>{
+ const s=await server({config:{writing:'all',writeLimit:3},engineDeps:{generateDraft:async()=>{throw Object.assign(Error('TEST writer down'),{code:'TEST'})}}});t.after(()=>s.srv.close());
+ const a=await s.post('/api/free-growth/checks',ok);await s.service.idle();
+ const r=await s.get('/api/free-growth/checks/'+a.body.id+'?k='+a.body.key);
+ const ids=r.body.summary.gaps.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
+ const w=await s.post('/api/free-growth/checks/'+a.body.id+'/write?k='+a.body.key,{item_ids:ids,ai_check_choice:'WITHOUT_AI'});
+ assert.equal(w.status,502);assert.equal(w.body.code,'WRITER_NO_TEXT');assert.match(w.body.error,/AI could not write text right now \(writer unavailable\)\. No writing round was used/);
+ const after=await s.get('/api/free-growth/checks/'+a.body.id+'?k='+a.body.key);
+ assert.equal(after.body.writing.remaining,3,'the failed attempt did not count');
+ const page=await s.get('/free-growth/r/'+a.body.id+'?k='+a.body.key);assert.match(page.body,/id="gapWriteStatus"/,'the status line sits under the write button');
+});

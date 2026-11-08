@@ -323,7 +323,7 @@ function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.grou
  h+='<p><button type="button" id="gapDownload" class="action-muted">Download editor brief</button> <button type="button" id="gapCopy" class="ghost">Copy</button> <span id="gapStatus" class="muted"></span></p></details></div></details><details id="stepPrepare" class="journey-section"><summary><span class="journey-num">3</span><span><strong>Prepare content</strong><small>Draft, review and export for your CMS</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="prepare">Prepare the text</h2><p class="muted">'+(g.writing_allowed===false?'Research did not establish enough evidence to safely draft new text. Your H2 selections are observations, not verified recommendations. Export the research brief in Step 2.':!w||!w.allowed?'Automatic writing is disabled for this Free Growth access link. This is an access restriction, not a request to manually write every H2. Export the research brief in Step 2; the CMS editor is optional.':w.remaining<=0?'The automatic writing limit for this check has been reached. Previously prepared copy remains available for review.':'Generate draft text for evidence-supported selected topics using AI, then review it before creating the CMS package.')+'</p>';
  if(w&&!w.allowed&&w.owner_login_available&&w.remaining>0&&g.writing_allowed!==false)h+='<div class="card" id="ownerUnlock"><strong>Owner access · Write with AI</strong><p class="muted">Sign in with your existing Free Growth admin key. No new password or check is required. Your selected H2s are kept.</p><form id="ownerUnlockForm" autocomplete="off"><label for="ownerUnlockKey">Admin key (stored in Railway)</label><input id="ownerUnlockKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit" id="ownerUnlockButton" class="action-blue">Unlock Write with AI</button> <small id="ownerUnlockStatus" role="status"></small></p></form></div>';
  if(w&&w.allowed&&w.owner_unlocked)h+='<p class="note"><strong>Owner mode enabled.</strong> Write with AI is unlocked for this check. No visitor permissions were changed.</p>';
- if(w&&w.allowed&&w.remaining>0&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite" class="action-blue" disabled>Write the chosen H2s with AI (up to '+esc(w.remaining*4)+' more H2s for this check)</button> <small class="muted">AI writes 4 H2s per round; this check has '+esc(w.remaining)+' round(s) left, so up to '+esc(w.remaining*4)+' H2s. One click uses as many rounds as needed. You check everything before download. Nothing is published.</small></p>';
+ if(w&&w.allowed&&w.remaining>0&&g.writing_allowed!==false)h+='<p><button type="button" id="gapWrite" class="action-blue" disabled>Write the chosen H2s with AI (up to '+esc(w.remaining*4)+' more H2s for this check)</button> <small class="muted">AI writes 4 H2s per round; this check has '+esc(w.remaining)+' round(s) left, so up to '+esc(w.remaining*4)+' H2s. One click uses as many rounds as needed. You check everything before download. Nothing is published.</small><br><strong role="status" id="gapWriteStatus" aria-live="polite"></strong></p>';
  h+='<div id="gapWritten"></div><div id="pkgBox"></div></div></details>';
  return h}
 function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</h3><p class="note">'+esc(r.note||'')+'</p>';
@@ -461,7 +461,9 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
  var wb=document.getElementById('gapWrite');
  if(wb)wb.onclick=async function(){
   var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});
-  var st=document.getElementById('gapStatus'),available=Number(d.writing&&d.writing.remaining||0);
+  var st0=document.getElementById('gapStatus'),stW=document.getElementById('gapWriteStatus'),available=Number(d.writing&&d.writing.remaining||0);
+  // Progress and errors of writing are shown right under the write button (the brief's status line is inside a collapsed box).
+  var st={set textContent(v){if(stW){stW.textContent=v;stW.className=/stopped|not |could not|error|limit|used up|changed/i.test(v)?'error':''}if(st0)st0.textContent=v},get textContent(){return stW?stW.textContent:''}};
   if(!ids.length){st.textContent='Select at least one topic or question in Step 2.';return}
   var doneIds=new Set(((d.writing&&d.writing.last&&d.writing.last.sections)||[]).map(function(x){return String(x.item_id)}));
   var eligible=ids.filter(function(id){var it=(g.items||[]).find(function(x){return String(x.id)===id});return !!(it&&it.writable&&!doneIds.has(id))});
@@ -1097,6 +1099,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const gaps=row.summary&&row.summary.gaps||{};
    const written=await writeForSelection({items:plan.batch,targetUrl:row.url,focusQuery,research:gaps.research||null,sourceFingerprint:gaps.source_fingerprint||null,
     generate:async ctx=>({...(await write({sourceHtml:html,pageUrl:row.url,focusQuery,readerTask:ctx.reader_task,researchObservations:ctx.observations,fallbackFlagged:true})),source_text:sourceFacts(html).text})});
+   // The writer returned no text at all (unavailable, timeout, nothing usable): this is not a used round. Nothing is stored
+   // or counted, and the visitor sees the real reason instead of "could not be completed with the available runs".
+   if(!(written.sections||[]).length&&written.status==='NOT_WRITTEN'){
+    if(token&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});token=null;
+    console.warn('[free-growth] writer returned no text',String(written.writer_status||'').slice(0,60));
+    return res.status(502).json({success:false,code:'WRITER_NO_TEXT',writer_status:written.writer_status||null,
+     error:'AI could not write text right now ('+String(written.writer_status||'unavailable').toLowerCase().replace(/_/g,' ')+'). No writing round was used. Try again in a moment, or download the editor brief'});
+   }
    const done=(written.sections||[]).map(s=>s.item_id);
    const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));
    written.pending=pending;
