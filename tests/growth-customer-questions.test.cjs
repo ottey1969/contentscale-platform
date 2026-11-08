@@ -27,13 +27,11 @@ test("Google's own questions (People also ask, related searches) and labelled AI
   assert.deepEqual(out.questions.map(q => [q.text, q.source]), [
     ['What is generative engine optimization?', 'GOOGLE_PEOPLE_ALSO_ASK'],
     ['geo vs seo', 'GOOGLE_RELATED_SEARCH'],
-    ['How do I appear in ChatGPT answers for my service?', 'AI_SUGGESTION'],
-    ['How can I get my business mentioned in AI answers?', 'GOOGLE_PEOPLE_ALSO_ASK']], 'observed topical matches first, AI fallback before unrelated Google results');
-  assert.match(out.questions[2].label, /not verified search demand/);
-  assert.equal(out.questions[3].priority, 'OBSERVED_GOOGLE_LOW_RELEVANCE');
+    ['How can I get my business mentioned in AI answers?', 'GOOGLE_PEOPLE_ALSO_ASK']], 'best topical Google questions first, unrelated observations last');
+  assert.equal(out.questions[2].priority, 'OBSERVED_GOOGLE_LOW_RELEVANCE');
+  assert.equal(out.ai.status, 'AI_NOT_NEEDED_GOOGLE_MATCH', 'no AI suggestion credits used when Google has a relevant question');
+  assert.equal(prompts.length, 0);
   assert.equal(out.tracked_keyword, 'generative engine optimization geo');
-  assert.doesNotMatch(prompts[0], /must never be sent as an answer/, 'the page body is not given to the AI');
-  assert.match(prompts[0], /Do not answer them/);
   assert.match(out.note, /Search Console is optional/);
 });
 
@@ -43,6 +41,7 @@ test('without relevant Google questions, AI is used only as explicitly labelled 
   model:{call:async()=>JSON.stringify({questions:['How does generative engine optimization work?']})}});
  assert.equal(out.best_question,'How does generative engine optimization work?');
  assert.equal(out.selection_source,'AI_SUGGESTION');
+ assert.equal(out.ai.status,'AI_SUGGESTIONS');
  assert.equal(out.questions[0].source,'AI_SUGGESTION');
  assert.equal(out.questions[1].priority,'OBSERVED_GOOGLE_LOW_RELEVANCE');
 });
