@@ -5,6 +5,7 @@
 const crypto=require('node:crypto');
 const store=require('./store.cjs');
 const {runFreeGrowthResearch,validatePublicUrl,engineVersion}=require('./engine.cjs');
+const {groundedGeminiAnswer}=require('./auto-ai-answers.cjs');
 const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
 const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
@@ -108,13 +109,15 @@ select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;fo
 .growth-cockpit{position:relative;overflow:hidden;background:linear-gradient(135deg,#0b2252 0%,#153d7d 55%,#2054ac 100%);color:white;border-radius:18px;padding:24px;margin:18px 0 22px;box-shadow:0 12px 32px rgba(14,44,100,.18);animation:cockpitEnter .5s ease-out}.growth-cockpit::before{content:'';position:absolute;width:260px;height:260px;border:1px solid rgba(255,255,255,.16);border-radius:50%;right:-100px;top:-140px;pointer-events:none}.growth-cockpit .kicker{color:#bfdbfe}.growth-cockpit h2{font-size:24px;line-height:1.22;color:#fff;margin:8px 0}.growth-cockpit p{color:#e0edff}.growth-cockpit .growth-eyebrow{display:inline-block;color:#dbeafe;background:rgba(255,255,255,.13);padding:5px 11px;border-radius:999px;font-size:12px;font-weight:750}.growth-cockpit .growth-next-btn{display:inline-flex;align-items:center;gap:10px;justify-content:center;min-height:46px;background:white;color:#153d7d;text-decoration:none;border-radius:10px;font-weight:800;padding:12px 18px;margin-top:6px;transition:transform .18s ease,box-shadow .18s ease;box-shadow:0 3px 8px rgba(0,0,0,.1)}.growth-next-btn:hover{transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.2)}.growth-next-btn:active{transform:scale(.97)}.growth-cockpit .growth-next-btn:focus-visible{outline:3px solid #fbbf24;outline-offset:3px}.growth-cockpit .growth-subline{font-size:13px;color:#c7d8f6;margin-top:12px}.growth-flow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:15px 0 4px}.growth-flow a{color:inherit;text-decoration:none;display:block}.growth-flow span{border:1px solid rgba(255,255,255,.26);padding:8px 5px;text-align:center;border-radius:8px;color:#dbeafe;font-size:12px;font-weight:650}.growth-flow span.complete{background:rgba(74,222,128,.2);border-color:#86efac;color:#e6ffef}.growth-flow span.active{background:rgba(255,255,255,.22);border-color:white;color:white;animation:flowPulse 1.8s ease-in-out infinite}.growth-decision-tag{display:inline-block;background:rgba(255,255,255,.17);font-size:13px;color:white;padding:4px 10px;border-radius:6px}.growth-cockpit.needs-evidence{background:linear-gradient(135deg,#26334b,#475569)}.growth-cockpit.no-change{background:linear-gradient(135deg,#134e4a,#115e59)}@keyframes cockpitEnter{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}@keyframes flowPulse{50%{box-shadow:inset 0 0 0 1px rgba(255,255,255,.6)}}@media(max-width:540px){.growth-flow{grid-template-columns:repeat(2,minmax(0,1fr))}.growth-cockpit{padding:18px}.growth-cockpit h2{font-size:21px}}@media(prefers-reduced-motion:reduce){.growth-cockpit,.growth-flow span.active{animation:none!important}.growth-cockpit .growth-next-btn{transition:none!important}} .journey-section{border:1px solid var(--line);border-radius:14px;margin:12px 0;background:var(--card);overflow:hidden}.journey-section>summary{display:flex;align-items:center;gap:12px;cursor:pointer;padding:18px 16px;list-style:none;user-select:none}.journey-section>summary::-webkit-details-marker{display:none}.journey-section>summary:focus-visible,.research-details>summary:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}.journey-section>summary strong{display:block;font-size:17px}.journey-section>summary small{display:block;color:var(--muted);font-weight:400}.journey-num{display:grid;place-items:center;flex:0 0 36px;height:36px;background:var(--bg);border-radius:9px;font-weight:800}.journey-arrow{margin-left:auto;color:var(--accent);font-size:20px;transition:transform .18s}.journey-section[open]>.journey-arrow,.journey-section[open]>summary .journey-arrow{transform:rotate(180deg)}.journey-section[open]>summary{border-bottom:1px solid var(--line);background:var(--bg)}.journey-body{padding:18px;animation:journeyEnter .24s ease-out}.journey-body>h2:first-child{margin-top:0}.research-details{border:1px solid var(--line);border-radius:10px;margin:12px 0;padding:10px 14px}.research-details>summary{cursor:pointer;font-weight:650}.research-details[open]>summary{margin-bottom:12px}.journey-status{font-size:12px;font-weight:650;color:var(--done)}.journey-warning{color:var(--blocked)}@keyframes journeyEnter{from{opacity:.7;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.journey-body{animation:none!important}.journey-arrow{transition:none!important}}.growth-result-intro{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;padding:12px 16px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:14px}.growth-result-intro strong{color:var(--accent)}.growth-result-intro span{color:var(--muted);font-size:12px}</style></head><body><main>${body}<p class="muted" style="margin-top:40px">${esc(cfg.brand)} · Free Growth check${cfg.privacyUrl?` · <a href="${esc(cfg.privacyUrl)}">Privacy</a>`:''}</p></main></body></html>`;
 }
 
+// Manual answer collection remains an optional fallback. Approved users get Gemini grounding automatically.
 // The AI check is offered before the start: the prompt is built from the search term as it is typed, and the answers
 // pasted here are stored with the check (same validation as pasting them on the result page).
-function aiStartBlock(){
- return `<div class="card" id="aiStart"><h2 style="margin-top:0">AI answers first (optional)</h2>
+function aiStartBlock(automatic=false){
+ return `<div class="card" id="aiStart"><h2 style="margin-top:0">${automatic?'AI answers — automatic research':'AI answers first (optional)'}</h2>
+ ${automatic?'<p>Growth automatically requests a Gemini answer grounded in live Google Search when the provider is configured. This is not a Google AI Overview. Other AI services are not marked as checked unless their actual answers are supplied.</p><details><summary>Advanced · Add independent AI answers manually (optional)</summary>':''}
  <ol><li>Enter the customer question or search phrase above.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong> (ChatGPT, Perplexity, Gemini, Claude or Copilot).</li><li>Paste the complete answer, including RESOURCES, at the AI system you used. You can also do this later on the result page.</li></ol>
  <label for="aiStartPrompt">Prompt (the same for every AI system)</label><textarea id="aiStartPrompt" rows="6" readonly></textarea><p><button type="button" class="ghost" id="aiStartCopy">Copy prompt</button></p>
- ${ai.ENGINES.map(e=>`<label>${esc(e.label)} — answer (optional)<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="Paste the complete answer here"></textarea></label>`).join('')}</div>`;
+ ${ai.ENGINES.map(e=>`<label>${esc(e.label)} — answer (optional)<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="Paste the complete answer here"></textarea></label>`).join('')}${automatic?'</details>':''}</div>`;
 }
 function aiStartScript(){
  return `(function(){var LINES=${js(ai.DIRECT_PROMPT_LINES)},SLOT=${js(ai.QUERY_SLOT)},q=document.querySelector('[name=query]'),p=document.getElementById('aiStartPrompt');if(!q||!p)return;
@@ -139,7 +142,7 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
  <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
  <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
-${aiStartBlock()}
+${aiStartBlock(!!owner.signedIn||!!invite)}
  <label for="gscFile">Search Console export (optional)</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
  <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
  <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The reminder after publication goes to all of them.</small>
@@ -561,7 +564,7 @@ function adminPage(cfg,api,base,loggedIn){
   <form id="rf"><label>Page address<input name="url" type="url" required maxlength="500" placeholder="https://..."></label><label>Search term (optional)<input name="query" maxlength="120"></label>
   <label>Target market (optional)<input name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands"></label><label>Language (optional)<input name="language" list="marketLanguages" maxlength="40" placeholder="Dutch"></label>
   <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
-  ${aiStartBlock()}
+  ${aiStartBlock(true)}
   <label class="check"><input type="checkbox" name="fresh"> <span>Fresh research: ignore a stored result (uses 1–2 Serper searches)</span></label><p><button>Run check</button> <small role="status" id="rs"></small></p></form></div>
  <div class="card"><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
   <form id="if"><label>For whom? (name or company)<input name="label" required maxlength="80"></label>
@@ -623,6 +626,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
+      if(job.approved){
+       const provider=engineDeps.groundedAnswer||groundedGeminiAnswer;
+       const auto=await provider({query:job.query||out.report?.editorial_decision_gate?.focus_query,pageUrl:job.url,fetchImpl:engineDeps.answerFetch||global.fetch});
+       if(auto.status==='SUCCESS'&&auto.parsed?.validation_status!=='invalid'){
+        await storage.saveAiAnswer(pool,{checkId:job.id,engine:auto.engine,rawText:auto.raw,parsed:auto.parsed});
+       }
+       out.report.automatic_ai_answers={gemini:{status:auto.status,source:auto.source||null,model:auto.model||null},note:'Only connected providers count as checked. Gemini Google Search grounding is not a Google AI Overview. Other engines are unchecked until their own answers are provided.'};
+      }
       await storage.setStatus(pool,job.id,{status:'DONE',decision:summary.decision,summary,report:out.report});
      }
     }catch(e){
@@ -796,7 +807,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,market:input.market,inviteId:cached?null:inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  async function startInviteCheck(req,res,b){
