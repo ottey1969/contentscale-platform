@@ -266,7 +266,7 @@ test('no key needed on your own domain (hosts); other domains still need the key
  assert.doesNotMatch(own.body,/own-site-key-001/,'the key is not even in the page source');
  assert.equal((await call('GET','/free-growth','other-site.example')).status,403);
  assert.equal((await call('GET','/free-growth?key=own-site-key-001','other-site.example')).status,200,'with the key it still works elsewhere');
- const started=await call('POST','/api/free-growth/checks','free.contentscale.site',{url:URL_,email:'a@b.example',consent:true});
+ const started=await call('POST','/api/free-growth/checks','free.contentscale.site',{url:URL_,query:'roof repair lodi nj',email:'a@b.example',consent:true});
  assert.equal(started.status,202);
  assert.equal((await call('POST','/api/free-growth/checks','other-site.example',{url:URL_,email:'a@b.example',consent:true})).status,403);
  await service.idle();
@@ -505,7 +505,7 @@ test('AI answers before the start: the prompt is on the form, up to 5 answers (o
  const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
  assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[{engine:'claude',text:quick}]})).body.error,/Claude: this is an answer to the company quick-scan prompt/);
  assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[five[0],five[0]]})).body.error,/one answer per system/);
- assert.match((await s.post('/api/free-growth/checks',{...ok,query:'',ai_answers:[five[1]]})).body.error,/Enter the search term first/);
+ assert.match((await s.post('/api/free-growth/checks',{...ok,query:'',ai_answers:[five[1]]})).body.error,/customer question or search phrase/);
  assert.equal(s.storage.checks.length,0,'a refused start creates no check');
  const started=await s.post('/api/free-growth/checks',{...ok,ai_answers:five});
  assert.equal(started.status,202);await s.service.idle();
