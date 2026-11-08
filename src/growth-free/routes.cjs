@@ -241,13 +241,16 @@ document.addEventListener('click',function(e){var s=e.target.closest('details.jo
 // Every jump to a step keeps the step header in view.
 function showStep(id,targetId){openJourney(id);requestAnimationFrame(function(){var el=document.getElementById(targetId||id);if(el)el.scrollIntoView({block:'start'})})}
 
-function aiHtml(a){var x=a.summary,h='<h3 id="ai">1B · AI answers <small>('+esc(x.checked)+' of 5 checked'+(x.checked===5?' · complete':'')+')</small></h3><p class="muted"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
+function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">1B · AI answers <small>('+esc(x.checked)+' of 5 checked'+(x.checked===5?' · complete':'')+')</small></h3>';
+ if(auto&&auto.gemini){var g=auto.gemini,status=g.status||'UNKNOWN';h+='<p class="note"><strong>Automatic AI research · Gemini with Google Search:</strong> '+(status==='SUCCESS'?'Completed and saved. See Gemini results below.':status==='NOT_CONFIGURED'?'Not configured on this server.':status==='NO_GROUNDED_ANSWER'?'No verifiable source-backed answer was returned.':status==='PROVIDER_UNAVAILABLE'?'The provider was unavailable.':status==='INCOMPLETE'?'The provider returned an incomplete answer.':'No verified automatic answer ('+esc(status)+').')+' This is not a Google AI Overview. ChatGPT, Claude, Perplexity and Copilot are only marked checked when their actual responses are supplied.</p>'}
+ h+='<p class="muted"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
  h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?(e.invalid?'INVALID, not counted':'not checked'):e.topic_warning?'check the topic (no shared word with the search term) — counted':!e.verifiable?'no source list pasted — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
   return '<div class="eng '+(e.checked&&e.verifiable?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked&&e.verifiable?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = links in the RESOURCES list of that AI answer. Links that appear only in the answer text do not count as sources.</p>';
  if(x.top_cited_sites.length)h+='<details class="research-details"><summary>Sources mentioned in the AI answers ('+esc(x.top_cited_sites.length)+')</summary><h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul></details>';
  h+='<p class="muted">These source mentions are AI visibility observations, not verified content gaps. Growth compares the readable ranking pages automatically and labels missing evidence separately.</p>';
  var next=x.engines.filter(function(e){return !e.checked})[0]||x.engines[0];
- h+='<details id="aiRecheck" class="research-details"'+(x.checked===0?' open':'')+'><summary>'+(x.checked===5?'All five AI systems checked · Recheck an answer (optional)':'Check remaining AI answers ('+(5-x.checked)+' left) · optional')+'</summary><div class="card"><p class="muted">Only check another AI answer if you want to; this never blocks the Google research.</p><ol><li>Choose the AI system.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong>.</li><li>Paste the complete answer below, including the source links.</li></ol>'+
+  // Manual copying must not appear as the main action of the automatic Free Growth report.
+ h+='<details id="aiRecheck" class="research-details"><summary>'+(x.checked===5?'Advanced · Recheck an AI answer (optional)':'Advanced · Add independent AI answers manually ('+(5-x.checked)+' unchecked)')+'</summary><div class="card"><p class="muted">Only check another AI answer if you want to; this never blocks the Google research.</p><ol><li>Choose the AI system.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong>.</li><li>Paste the complete answer below, including the source links.</li></ol>'+
   '<label>AI system<select id="aiEngine">'+x.engines.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===next.id?' selected':'')+'>'+esc(e.label)+(e.checked?' ✓':'')+'</option>'}).join('')+'</select></label>'+
   '<label>Prompt (the same for every AI system)<textarea id="aiPrompt" rows="6" readonly>'+esc(a.prompt)+'</textarea></label><p><button type="button" class="ghost" id="aiCopy">Copy prompt</button></p>'+
   '<label>Answer from the AI system<textarea id="aiText" rows="7" maxlength="'+esc(a.max_paste)+'" placeholder="Paste the complete answer here"></textarea></label><p><button type="button" id="aiSave">Analyse answer</button> <small role="status" id="aiStatus"></small></p></div></details>';
@@ -538,7 +541,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribu
 // answer is not wiped by the next poll.
 function showAiFirst(d,again){if(!d.ai)return;var box=document.getElementById('aiFirst');
  if(!box){box=document.createElement('div');box.id='aiFirst';document.getElementById('out').appendChild(box)}else if(!again)return;
- box.innerHTML='<p class="note"><strong>Research (optional) — while Google is being researched:</strong> check the AI answers now. Your answers are kept with this check.</p>'+aiHtml(d.ai);wireAi()}
+ box.innerHTML='<p class="note"><strong>Research (optional) — while Google is being researched:</strong> check the AI answers now. Your answers are kept with this check.</p>'+aiHtml(d.ai,d.automatic_ai_answers);wireAi()}
 async function poll(n){try{var r=await fetch(API+Q,{cache:'no-store'});var d=await r.json();if(!d.success)throw Error(d.error||'Not found');
  if(d.status==='DONE'||d.status==='FAILED'){var t=document.getElementById('aiText'),e=document.getElementById('aiEngine'),keep=t&&t.value,eng=e&&e.value;render(d);
   if(keep){var t2=document.getElementById('aiText'),e2=document.getElementById('aiEngine');if(t2)t2.value=keep;if(e2&&eng)e2.value=eng}return}
@@ -910,6 +913,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const aiPart=await aiFor(row),gscPart=await gscFor(row);
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
+    automatic_ai_answers:row.report?.automatic_ai_answers||null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(row.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
