@@ -8,14 +8,15 @@
  // One browser-only draft per Tracker page and market. Explicit URL choices take precedence.
  var params=new URL(location.href).searchParams;
  var key='growthTrackerQuestionDraft:'+location.pathname+':'+(params.get('page_id')||'')+':'+(params.get('market')||'');
- var saved='';try{saved=localStorage.getItem(key)||''}catch(e){}
+ var savedRaw=null;try{savedRaw=localStorage.getItem(key)}catch(e){}
+ var saved=savedRaw==='__RESET__'?'':savedRaw||'';
  var explicit=params.get('query');
  if(manual&&explicit===null&&saved)manual.value=saved.slice(0,120);
  function saveDraft(v){try{localStorage.setItem(key,String(v||'').slice(0,120))}catch(e){}}
  if(manual){manual.addEventListener('input',function(){saveDraft(manual.value)});if(explicit!==null)saveDraft(manual.value)}
  var reset=document.createElement('button');reset.type='button';reset.id='cqReset';reset.textContent='Reset';reset.className='ghost';reset.style.marginLeft='8px';
  if(manualGo&&manual){manualGo.insertAdjacentElement('afterend',reset);reset.addEventListener('click',function(){
-  try{localStorage.removeItem(key)}catch(e){}
+  try{localStorage.setItem(key,'__RESET__')}catch(e){}
   manual.value='';var own=document.getElementById('cqOwn');if(own)own.value='';
   // Clear the URL override as well, without losing the selected page. Do not trigger automatic discovery on reset.
   var u=new URL(location.href);u.searchParams.delete('query');history.replaceState(null,'',u.pathname+u.search+u.hash);
@@ -29,7 +30,7 @@
  if(manual)manual.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go(manual.value)}});
  // On first opening an existing page, discover a question automatically. Never overwrite an explicit URL query.
  // This one-time redirect gives the research and saved-result endpoints the same selected question.
- if(!explicit&&!saved){
+ if(!explicit&&savedRaw===null){
   st.textContent='Finding a customer question automatically… You can always replace it.';
   fetch(box.getAttribute('data-api'),{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
    var found=d&&d.success&&Array.isArray(d.questions)?d.questions:[];
