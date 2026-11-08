@@ -525,6 +525,17 @@ function wirePub(){var save=document.getElementById('pubSave');if(!save)return;
  save.onclick=async function(){var st=document.getElementById('pubSaveStatus'),v=document.getElementById('pubDate').value;if(!v){st.textContent='Choose the date first.';return}save.disabled=true;save.classList.add('is-working');save.setAttribute('aria-busy','true');st.textContent='Saving…';
   try{var r=await fetch(API+'/publication'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({published_on:v,remind:document.getElementById('pubRemind').checked})});var x=await r.json();if(!x.success)throw Error(x.error||'Not saved');await reload()}
   catch(err){st.textContent=err.message;save.disabled=false;save.classList.remove('is-working');save.removeAttribute('aria-busy');save.classList.add('action-failed')}}}
+// What the competitor pages have and your page does not: every Google result, read or not, with the headings of the
+// pages that were read. Shown also when no advice is given (then as observations only).
+function competitorsHtml(c,s){if(!c||!(c.pages||[]).length)return '';var blocked=s&&s.decision==='DATA_BLOCKED';
+ var h='<h3 id="competitors">What the competitor pages have'+(c.missing?' that your page does not ('+c.missing+')':'')+'</h3>';
+ h+='<p class="muted">'+(blocked?'Observations only: there was not enough evidence for advice, but this is what Google showed and what the pages that could be read contain.':'What Google showed for this search, and the headings of the pages that could be read, compared with your page.')+'</p>';
+ c.pages.forEach(function(p){var miss=(p.headings||[]).filter(function(x){return x.status==='MISSING'||x.status==='PARTLY'}).length;
+  h+='<div class="card"><strong>'+(p.position?'#'+esc(p.position)+' ':'')+esc(p.site)+'</strong> <small class="muted">· '+esc(p.status)+(p.read&&p.headings.length?' · '+miss+' of '+p.headings.length+' heading(s) not on your page':'')+'</small>'+
+   (p.title?'<br><small>'+esc(p.title)+'</small>':'')+'<br><small><a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(p.url)+'</a></small>'+
+   ((p.headings||[]).length?'<ul>'+p.headings.map(function(x){return '<li>'+(x.status==='MISSING'?'<strong>'+esc(x.text)+'</strong> <small class="error">· '+esc(x.label)+'</small>':x.status==='PARTLY'?esc(x.text)+' <small>· '+esc(x.label)+'</small>':esc(x.text)+' <small class="muted">· '+esc(x.label)+'</small>')+'</li>'}).join('')+'</ul>':'')+'</div>'});
+ if((c.your_headings||[]).length)h+='<details class="research-details"><summary>Your page’s headings ('+c.your_headings.length+')</summary><ul>'+c.your_headings.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul></details>';
+ return h}
 function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
@@ -544,11 +555,12 @@ function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribu
  var next=published?{label:'Review publication measurements',target:'stepPublish'}:hasConcepts?{label:'Review your concepts and CMS package',target:'stepPrepare'}:!hasGaps?{label:'Review research limitations',target:'stepReview'}:!chosen?{label:'Review observed differences',target:'stepReview'}:canWrite?{label:'Prepare selected content',target:'stepPrepare'}:{label:'Review selections before preparing text',target:'stepReview'};
  var stage=published?4:hasConcepts?3:chosen?(canWrite?3:2):2;
  var decisionText=s.headline||'Research completed',blocker=s.decision==='DATA_BLOCKED',noChange=s.decision==='NO_CHANGE';
- var actionTarget=next.target;
- var displayAction=blocker?'Review why no content change is approved':next.label;
+ var hasCompetitors=!!(d.competitors&&(d.competitors.pages||[]).some(function(x){return (x.headings||[]).length}));var actionTarget=blocker&&hasCompetitors?'competitors':next.target;
+ var displayAction=blocker?(hasCompetitors?'See what the competitor pages have that you do not':'Review why no content change is approved'):next.label;
  h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle"><span class="growth-eyebrow">FREE GROWTH · ACTION PLAN</span><h2 id="freeActionTitle">'+esc(decisionText)+'</h2><p><span class="growth-decision-tag">'+esc((s.decision||'RESEARCH').replaceAll('_',' '))+'</span></p><p><strong>Your next action:</strong> '+esc(displayAction)+'</p><a class="growth-next-btn" href="#'+esc(actionTarget)+'">'+esc(displayAction)+' <span aria-hidden="true">→</span></a><div class="growth-flow" aria-label="Workflow progress">'+[['Research','stepResearch'],['Review','stepReview'],['Prepare','stepPrepare'],['Measure','stepPublish']].map(function(st,i){var cls=(blocker||noChange)?(i===0?'complete':''):(i+1<stage?'complete':i+1===stage?'active':'');return '<span class="'+cls+'"><a href="#'+st[1]+'">'+(i+1<stage||(i===0&&cls==='complete')?'✓ ':(i+1)+'. ')+esc(st[0])+'</a></span>'}).join('')+'</div><p class="growth-subline">'+(blocker?'No writing or publication is recommended without reliable evidence.':noChange?'Existing content is preserved. No unnecessary change is required.':'Your original page is preserved until you approve and publish the package.')+'</p></section>';
  h+='<div class="grid two"><div><small>Google evidence</small><strong>'+esc(s.headline)+'</strong><a href="#google">View Google research</a></div><div><small>AI Answer Research · '+(as?as.checked:0)+'/5 checked</small><strong>'+esc(as?as.headline:'Not checked')+'</strong><a href="#ai">View AI results</a></div></div>';
  h+='<details id="stepResearch" class="journey-section"><summary><span class="journey-num">1</span><span><strong>Research</strong><small>Google · AI answers '+(as?as.checked:0)+'/5 · optional Search Console</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="google">Google search</h2><p class="muted"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
+ h+=competitorsHtml(d.competitors,s);
  h+='<details class="research-details"><summary>Research limitations and next research options</summary><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol></details>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
  h+=(a?aiHtml(a,d.automatic_ai_answers):'')+gscHtml(d.gsc)+'</div></details>';
@@ -931,6 +943,29 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const line=L.used_in_research?'Your Search Console export, filtered on exactly this page'+period+', was used in the research.':L.status==='VERIFIED_FOR_PAGE'?'The latest Search Console export is verified for this page'+period+' but was not used in the original research; start a new check with this export to research its queries.':'A Search Console export was uploaded'+period+', but it is not filtered on exactly this page, so it was shown and not used as evidence.';
   return {...summary,limitations:[...(summary.limitations||[]).filter(x=>!/^Google Search Console was not used/.test(x)),line]};
  }
+ // What the competitor pages have (owner 2026-11-08: "the point of Growth is seeing what others have that I don't"):
+ // every Google result, whether it could be read, and the headings of the pages that were read, each marked as on your
+ // page or not. Shown on every result, also when the research is blocked: an observation, not advice.
+ function competitorsOf(report,gaps){
+  if(!report)return null;
+  const sd=report.search_discovery||{},ov=report.competitor_overview||{};
+  const leads=(sd.leads||[]).slice(0,10),log=new Map((sd.competitor_fetch_log||[]).map(x=>[x.url,x])),read=new Map((ov.ranking_pages||[]).map(x=>[x.url,x]));
+  const own=report.page_content&&report.page_content.headings||{},ownHeadings=[...(own.h1||[]),...(own.h2||[]),...(own.h3||[])].map(String);
+  const words=t=>new Set((String(t).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]).filter(w=>!/^(the|and|for|with|your|you|how|what|why|are|our|van|het|een|voor|met|wat|hoe|die|dat)$/.test(w)).map(w=>w.slice(0,5)));
+  const ownSets=ownHeadings.map(words);
+  // The gap list decided per heading (better than words alone); otherwise compare heading words with your headings.
+  const byHeading=new Map();for(const it of (gaps&&gaps.items)||[])for(const e of it.examples||[])if(e.heading)byHeading.set(String(e.heading).toLowerCase(),it.status);
+  // "Not compared" (a blocked research skips the comparison) falls back to comparing the heading words with your headings.
+  const mark=h=>{const st=byHeading.get(String(h).toLowerCase());if(st&&!/not compared|not matched/i.test(st))return {status:/not on your page|not found/i.test(st)?'MISSING':/partly/i.test(st)?'PARTLY':'ON_YOUR_PAGE',label:st};
+   const w=words(h);if(!w.size)return {status:'NOT_COMPARED',label:'Not compared'};const best=Math.max(0,...ownSets.map(o=>[...w].filter(x=>o.has(x)).length/w.size));
+   return best>=0.6?{status:'ON_YOUR_PAGE',label:'Similar heading on your page'}:{status:'MISSING',label:'Not on your page (heading words)'}};
+  const host=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return u}};
+  const pages=leads.map(l=>{const f=log.get(l.url),r=read.get(l.url);
+   return {position:l.serp_position||null,url:l.url,site:host(l.url),title:l.title||null,
+    read:!!r,status:r?'Read':f&&f.outcome==='NOT_READABLE'?'Opened, but too little readable text':f&&f.outcome==='FETCH_FAILED'?'Could not be opened'+(f.explanation?' ('+String(f.explanation).slice(0,80)+')':''):'Not read',
+    headings:r?(r.content_headings||[]).slice(0,15).map(h=>({text:String(h).slice(0,160),...mark(h)})):[]}});
+  return {pages,missing:pages.reduce((n,p)=>n+p.headings.filter(h=>h.status==='MISSING').length,0),your_headings:ownHeadings.slice(0,20)};
+ }
  // Why AI cannot write, in plain words (also for checks stored before this text existed): the research blocker of the
  // report, as the visitor reads it elsewhere on the result, instead of the internal code.
  function withPlainEvidence(summary,row){
@@ -958,7 +993,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
-   customer_question:row.report&&row.report.customer_question||null,
+   customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
    summary:withPlainEvidence(withGscLimits(withAiLimits(row.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),

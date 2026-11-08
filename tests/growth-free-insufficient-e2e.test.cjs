@@ -47,6 +47,15 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     assert.match(box, /at least 2 pages that Google ranks[^]*\(here: 1\)/);
     assert.match(box, /more specific search term/); assert.match(box, /editor brief/);
     assert.equal(await p.locator('#nextWriteBtn').count(), 0, 'no write button without evidence');
+    // Even without advice, what the competitor pages have that this page does not stays visible (the point of Growth).
+    assert.match(await p.textContent('#freeNextAction .growth-next-btn'), /See what the competitor pages have that you do not/);
+    await p.click('#freeNextAction .growth-next-btn');
+    assert.equal(await p.isVisible('#competitors'), true);
+    const comp = await p.evaluate(() => { const h = document.getElementById('competitors'); let t = h.textContent, n = h.nextElementSibling; for (let i = 0; i < 3 && n; i++, n = n.nextElementSibling) t += ' ' + n.textContent; return t.replace(/\s+/g, ' '); });
+    assert.match(comp, /What the competitor pages have that your page does not \(1\)/);
+    assert.match(comp, /Observations only: there was not enough evidence for advice/);
+    assert.match(comp, /#1 roofer-a\.example · Read · 1 of 1 heading\(s\) not on your page/);
+    assert.match(comp, /How a repair estimate is built · Not on your page/);
     // The new check opens with this page and search term already filled in.
     const href = await p.getAttribute('#nextWriteNewCheck', 'href');
     await p.goto(new URL(href, base).href);
