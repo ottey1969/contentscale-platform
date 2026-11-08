@@ -108,7 +108,7 @@ async function server(opts={}){
  const engine=opts.engine||(async(input,deps)=>{calls.push(input);return runFreeGrowthResearch(input,deps)});
  const KEYS=JSON.stringify([{key:'partner-site-key-1',label:'partner',origins:['https://partner.example'],daily:3,per_email:2,brand:'Partner SEO',contact_url:'https://partner.example/book',service_text:'Partner does it for you.'},
   {key:'open-key-12345',label:'anywhere',per_email:2}]);
- const service=registerFreeGrowth(app,null,{config:{...freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:KEYS}),perIp:50,daily:10,...opts.config},engine,engineDeps,storage,
+ const service=registerFreeGrowth(app,null,{config:{...freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:KEYS}),perIp:50,daily:10,...opts.config},engine,engineDeps:{...engineDeps,...opts.engineDeps},storage,
   fetchImpl:async(url,init)=>{hooks.push({url,body:JSON.parse(init.body)});return {ok:true}}});
  const srv=app.listen(0);const base='http://127.0.0.1:'+srv.address().port;
  const post=async(p,b,h={})=>{const r=await fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json',...h},body:JSON.stringify(b)});return {status:r.status,headers:r.headers,body:await r.json()}};
@@ -266,7 +266,7 @@ test('no key needed on your own domain (hosts); other domains still need the key
  assert.doesNotMatch(own.body,/own-site-key-001/,'the key is not even in the page source');
  assert.equal((await call('GET','/free-growth','other-site.example')).status,403);
  assert.equal((await call('GET','/free-growth?key=own-site-key-001','other-site.example')).status,200,'with the key it still works elsewhere');
- const started=await call('POST','/api/free-growth/checks','free.contentscale.site',{url:URL_,email:'a@b.example',consent:true});
+ const started=await call('POST','/api/free-growth/checks','free.contentscale.site',{url:URL_,query:'roof repair lodi nj',email:'a@b.example',consent:true});
  assert.equal(started.status,202);
  assert.equal((await call('POST','/api/free-growth/checks','other-site.example',{url:URL_,email:'a@b.example',consent:true})).status,403);
  await service.idle();
@@ -277,6 +277,35 @@ test('no key needed on your own domain (hosts); other domains still need the key
 });
 
 const ADMIN={'x-admin-key':'admin-secret-0123456789'};
+test('approval gate rejects public checks and gives invited users full question selection',async t=>{
+ const s=await server({engineDeps:{questionFetch:async()=>({ok:true,json:async()=>({peopleAlsoAsk:[{question:'How much does roof repair cost in Lodi NJ?'}]})}),questionModel:null},config:{approvalRequired:true,adminKey:'admin-secret-0123456789',writing:'admin'},engine:async()=>({statusCode:200,report:{success:true,editorial_decision_gate:{decision:'NO_CHANGE'}}})});
+ t.after(()=>s.srv.close());
+ const blocked=await s.post('/api/free-growth/checks',ok);
+ assert.equal(blocked.status,403);assert.match(blocked.body.error,/Personal approval/);
+ const made=await s.post('/api/free-growth/admin/invites',{label:'Approved applicant',email_lock:'approved@example.com',max_checks:2,days:7},ADMIN);
+ assert.equal(made.status,200);
+ const token=new URL(made.body.link).searchParams.get('invite');
+ const page=await s.get('/free-growth?invite='+token);
+ assert.equal(page.status,200);assert.match(page.body,/Find customer questions/);
+ assert.match(page.body,/var OWNER=false,APPROVED=true/);
+ const allowed=await s.post('/api/free-growth/checks',{invite:token,url:URL_,query:'roof repair lodi nj',email:'approved@example.com',consent:true});
+ assert.equal(allowed.status,202,JSON.stringify(allowed.body));await s.service.idle();
+ assert.equal(s.storage.checks[0].access_label,'invite: Approved applicant');
+ const inviteResult=await s.get('/api/free-growth/checks/'+allowed.body.id+'?k='+allowed.body.key);
+ assert.equal(inviteResult.body.writing.allowed,true,'approved invite must retain AI writing even in admin-only public writing mode');
+ const noDiscovery=await s.post('/api/free-growth/customer-questions',{key:'open-key-12345',url:URL_});
+ assert.equal(noDiscovery.status,403);
+ const noEmail=await s.post('/api/free-growth/customer-questions',{invite:'not-an-invitation',url:URL_});
+ assert.equal(noEmail.status,403);
+ const before=process.env.SERPER_API_KEY;process.env.SERPER_API_KEY='TEST-KEY';
+ try{
+  const question=await s.post('/api/free-growth/customer-questions',{invite:token,url:URL_,market:'us',language:'English'});
+  assert.equal(question.status,200,JSON.stringify(question.body));
+  assert.equal(question.body.questions[0].text,'How much does roof repair cost in Lodi NJ?');
+  assert.equal(question.body.questions[0].source,'GOOGLE_PEOPLE_ALSO_ASK');
+ }finally{if(before===undefined)delete process.env.SERPER_API_KEY;else process.env.SERPER_API_KEY=before}
+
+});
 test('personal invitations: own quota, expiry, email lock, revoke; cache and failures do not cost a check',async t=>{
  let fail=false;
  const s=await server({config:{adminKey:'admin-secret-0123456789'},engine:async(input,deps)=>fail?{statusCode:503,report:{success:false,code:'AUTOMATIC_RESEARCH_TEMPORARILY_UNAVAILABLE'}}:runFreeGrowthResearch(input,deps)});
@@ -473,8 +502,8 @@ test('the AI check comes first: with an entered search term it is available whil
  let release2;const gate2=new Promise(r=>release2=r);
  const s2=await server({engine:async(input,deps)=>{await gate2;return runFreeGrowthResearch(input,deps)}});t.after(()=>s2.srv.close());
  const started=await s2.post('/api/free-growth/checks',{...ok,query:''});
- const r2=await s2.post('/api/free-growth/checks/'+started.body.id+'/ai?k='+started.body.key,{engine:'copilot',text:'x'});
- assert.equal(r2.status,409);assert.match(r2.body.error,/derived from your page/);
+ assert.equal(started.status,400,'public visitors must enter their customer question');
+ assert.match(started.body.error,/customer question or search phrase/);
  release2();await s2.service.idle();
 });
 
@@ -488,7 +517,7 @@ test('AI answers before the start: the prompt is on the form, up to 5 answers (o
  const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
  assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[{engine:'claude',text:quick}]})).body.error,/Claude: this is an answer to the company quick-scan prompt/);
  assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[five[0],five[0]]})).body.error,/one answer per system/);
- assert.match((await s.post('/api/free-growth/checks',{...ok,query:'',ai_answers:[five[1]]})).body.error,/Enter the search term first/);
+ assert.match((await s.post('/api/free-growth/checks',{...ok,query:'',ai_answers:[five[1]]})).body.error,/customer question or search phrase/);
  assert.equal(s.storage.checks.length,0,'a refused start creates no check');
  const started=await s.post('/api/free-growth/checks',{...ok,ai_answers:five});
  assert.equal(started.status,202);await s.service.idle();

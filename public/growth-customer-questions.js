@@ -4,9 +4,23 @@
 (function(){
  var box=document.getElementById('customerQuestion');if(!box)return;
  var btn=document.getElementById('cqFind'),st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
+ var manual=document.getElementById('cqManual'),manualGo=document.getElementById('cqManualGo');
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
  function go(q){q=String(q||'').replace(/\s+/g,' ').trim().slice(0,120);if(!q){st.textContent='Choose or type a question first.';return}
   var u=new URL(location.href);u.searchParams.set('query',q);location.href=u.pathname+u.search}
+ if(manualGo&&manual)manualGo.addEventListener('click',function(){go(manual.value)});
+ if(manual)manual.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go(manual.value)}});
+ // On first opening an existing page, discover a question automatically. Never overwrite an explicit URL query.
+ // This one-time redirect gives the research and saved-result endpoints the same selected question.
+ if(!new URL(location.href).searchParams.get('query')){
+  st.textContent='Finding a customer question automatically… You can always replace it.';
+  fetch(box.getAttribute('data-api'),{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+   var found=d&&d.success&&Array.isArray(d.questions)?d.questions:[];
+   var preferred=found.filter(function(q){return q.source==='GOOGLE_PEOPLE_ALSO_ASK'})[0]||found.filter(function(q){return q.source==='GOOGLE_RELATED_SEARCH'})[0]||found[0];
+   if(preferred&&preferred.text){st.textContent='Automatically selected: '+preferred.text+' · '+preferred.label+'. You can change it.';go(preferred.text)}
+   else st.textContent='No verified customer question was found automatically. Type your own question or use the optional suggestions.';
+  }).catch(function(){st.textContent='Automatic question discovery unavailable. You can type your own question.'});
+ }
  btn.addEventListener('click',async function(){btn.disabled=true;st.textContent='Looking up how customers search (Google, and AI suggestions)…';list.innerHTML='';
   try{var r=await fetch(box.getAttribute('data-api'),{credentials:'same-origin',cache:'no-store'});var d=await r.json();if(!d.success)throw Error('Customer questions are not available right now.');
    var g=d.google&&d.google.status,why=g==='GOOGLE_NOT_CONFIGURED'?' Google questions need Serper on the server.':g==='GOOGLE_UNAVAILABLE'?' Google could not be reached.':'';

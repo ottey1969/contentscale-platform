@@ -51,6 +51,9 @@ function freeGrowthConfig(env=process.env){
 function freeGrowthDefaults(env){
  return {
   enabled:env.GROWTH_FREE_ENABLED!=='false',
+  // Enable only after the WordPress application form is live and mail tested.
+  // Existing result links continue to work; new check creation needs owner access or an invite.
+  approvalRequired:env.GROWTH_FREE_APPROVAL_REQUIRED==='true',
   brand:env.GROWTH_FREE_BRAND||'ContentScale',
   perEmail:int(env.GROWTH_FREE_PER_EMAIL_PER_DAY,3),
   perIp:int(env.GROWTH_FREE_PER_IP_PER_DAY,3),
@@ -109,7 +112,7 @@ select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;fo
 // pasted here are stored with the check (same validation as pasting them on the result page).
 function aiStartBlock(){
  return `<div class="card" id="aiStart"><h2 style="margin-top:0">AI answers first (optional)</h2>
- <ol><li>Enter the search term above.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong> (ChatGPT, Perplexity, Gemini, Claude or Copilot).</li><li>Paste the complete answer, including RESOURCES, at the AI system you used. You can also do this later on the result page.</li></ol>
+ <ol><li>Enter the customer question or search phrase above.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong> (ChatGPT, Perplexity, Gemini, Claude or Copilot).</li><li>Paste the complete answer, including RESOURCES, at the AI system you used. You can also do this later on the result page.</li></ol>
  <label for="aiStartPrompt">Prompt (the same for every AI system)</label><textarea id="aiStartPrompt" rows="6" readonly></textarea><p><button type="button" class="ghost" id="aiStartCopy">Copy prompt</button></p>
  ${ai.ENGINES.map(e=>`<label>${esc(e.label)} — answer (optional)<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="Paste the complete answer here"></textarea></label>`).join('')}</div>`;
 }
@@ -129,9 +132,9 @@ function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,sign
 ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
 <form id="f" class="card" novalidate>
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
- <label for="query">Search term (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. roof repair lodi nj">
- <p><button type="button" id="cqFind" class="ghost">Suggest customer questions</button> <small role="status" id="cqStatus">How do customers search for what this page offers? Google's own questions and AI ideas; pick one, or edit it.</small></p><div id="cqList"></div>
- <small>The words your customers type into Google. Leave empty to let the check derive it from your page.</small>
+ <label for="query">Customer question or search phrase${owner.signedIn||invite?' (optional)':' (required)'}</label><input id="query" name="query" ${owner.signedIn||invite?'':'required'} maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
+ ${owner.signedIn||invite?`<p><button type="button" id="cqFind" class="ghost">Find customer questions</button> <small role="status" id="cqStatus">Automatic customer question discovery is available with approved access.</small></p><div id="cqList"></div>`:`<p class="muted">Enter your customer's question yourself. Automatic question suggestions are reserved for the administrator to control research costs.</p>`}
+ <small>${owner.signedIn||invite?'You may enter your own question or let Growth choose automatically.':'Enter a customer question yourself; automatic suggestions require approval.'} No Search Console is required. A blank owner question falls back to a working page phrase, not verified customer demand.</small>
  <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
  <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
  <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
@@ -155,7 +158,7 @@ ${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p 
 ${aiStartScript()}
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
 (function(){try{var q=new URLSearchParams(location.search);['url','query','market','language'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,300)})}catch(e){}})();
-var OWNER=${js(!!owner.signedIn)};
+var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
@@ -169,7 +172,7 @@ function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=documen
 (function(){var b=document.getElementById('cqFind');if(!b)return;var st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
  b.addEventListener('click',async function(){var url=document.getElementById('url').value.trim();if(!url){st.textContent='Enter the page address first.';return}
   b.disabled=true;b.classList.add('is-working');st.textContent='Looking up how customers search…';list.innerHTML='';
-  try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value})});
+  try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value})});
    var d=await r.json();if(!d.success)throw Error(d.error||'Not available right now.');
    st.textContent=d.questions.length?'Click a question to use it as the search term (you can still edit it).':'No questions found; enter the search term yourself.';
    list.innerHTML=d.questions.map(function(q){return '<button type="button" class="ghost cqPick" style="margin:4px 6px 4px 0;text-align:left">'+q.text.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+' <small style="display:inline">· '+q.label+'</small></button>'}).join('')+(d.questions.length?'<p class="muted">'+d.note+'</p>':'');
@@ -178,9 +181,24 @@ function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=documen
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
+if(!APPROVED&&!f.query.value.trim()){s.textContent='Enter a customer question or search phrase to run the free check.';document.getElementById('query').focus();return}
 rememberForm();
 b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent='Starting…';
-try{var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
+try{
+ // If no customer question was supplied, discover one automatically for this URL before starting the check.
+ // An explicitly entered question is authoritative and is never replaced.
+ if(APPROVED&&!f.query.value.trim()){
+  s.textContent='Finding a customer question for this page…';
+  try{
+   var qr=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value})});
+   var qd=await qr.json();
+   var qs=qd&&qd.success&&Array.isArray(qd.questions)?qd.questions:[];
+   var chosen=qs.filter(function(q){return q.source==='GOOGLE_PEOPLE_ALSO_ASK'})[0]||qs.filter(function(q){return q.source==='GOOGLE_RELATED_SEARCH'})[0]||qs[0];
+   if(chosen&&chosen.text){f.query.value=chosen.text;rememberForm();s.textContent='Customer question: '+chosen.text+' · '+chosen.label+'. Starting check…'}
+   else s.textContent='No customer question verified automatically; using the page topic as a working phrase…';
+  }catch(e){s.textContent='Question suggestions unavailable; continuing with the page topic…'}
+ }
+ var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var r=await fetch(${js(api)}+'/checks',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
@@ -631,6 +649,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  app.get(basePath,(req,res)=>{
+  // An unapproved public key must not look like a usable check when approval-only mode is enabled.
+  if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
@@ -647,7 +667,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.post(apiPath+'/customer-questions',async(req,res)=>{
   const b=req.body||{};
   const owner=sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin';
-  if(!owner&&!findKey(config,b.key,req))return res.status(403).json({success:false,error:'This free check is not activated here'});
+  if(!owner){
+    await storage.ensureTables(pool);
+    const invitation=b.invite?await storage.getInvite(pool,b.invite):null;
+    if(store.inviteStatus(invitation)!=='ACTIVE')return res.status(403).json({success:false,error:'An approved invitation is required for customer question discovery.'});
+   }
   const ip=store.hashIp(req.ip,config.ipSalt),now=Date.now(),h=(cqHits.get(ip)||[]).filter(t=>now-t<3600000);
   if(!owner&&h.length>=10)return res.status(429).json({success:false,error:'Enough suggestions for now; try again in an hour or enter the search term yourself.'});
   h.push(now);cqHits.set(ip,h);if(cqHits.size>5000)cqHits.clear();
@@ -670,6 +694,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     await storage.ensureTables(pool);
     return await start(res,input,{accessLabel:'admin',marketingConsent:b.marketing_consent===true});
    }
+   if(config.approvalRequired)return res.status(403).json({success:false,error:'Personal approval is required. Request access at https://contentscale.site/.'});
    const entry=findKey(config,b.key,req);
    if(!entry)return res.status(403).json({success:false,error:'This free check is not activated here'});
    const origin=req.get&&req.get('origin');
@@ -680,6 +705,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(b.consent!==true)return res.status(400).json({success:false,error:'Please accept the storage notice'});
    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
    const query=clean(b.query,120);
+   if(!query)return res.status(400).json({success:false,error:'Enter a customer question or search phrase to run the free check.'});
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
@@ -826,7 +852,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return {...summary,limitations:[...summary.limitations.filter(x=>!/AI answers .* were not checked/.test(x)),aiPart.summary.caveat]};
  }
  // A valid owner session unlocks old visitor results without modifying their ownership or public permissions.
- const ordinaryWritingAllowed=row=>config.writing==='all'||(config.writing!=='off'&&row.access_label==='admin')||(config.writing==='invited'&&!!row.invite_id);
+ // Approved invitations receive the complete Free Growth writing workflow, even when ordinary public writing is admin-only.
+  // 'off' remains an emergency provider-disable switch; it cannot be bypassed with an invite.
+  const ordinaryWritingAllowed=row=>config.writing==='all'||(config.writing!=='off'&&(row.access_label==='admin'||!!row.invite_id));
  const writingAllowed=(row,req)=>ordinaryWritingAllowed(row)||(config.writing!=='off'&&sessionValid(req));
  const writingInfo=(row,req)=>({allowed:writingAllowed(row,req),owner_unlocked:!!config.adminKey&&sessionValid(req),
   owner_login_available:!!config.adminKey&&config.writing!=='off',
