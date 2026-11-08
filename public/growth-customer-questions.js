@@ -5,19 +5,37 @@
  var box=document.getElementById('customerQuestion');if(!box)return;
  var btn=document.getElementById('cqFind'),st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
  var manual=document.getElementById('cqManual'),manualGo=document.getElementById('cqManualGo');
+ // One browser-only draft per Tracker page and market. Explicit URL choices take precedence.
+ var params=new URL(location.href).searchParams;
+ var key='growthTrackerQuestionDraft:'+location.pathname+':'+(params.get('page_id')||'')+':'+(params.get('market')||'');
+ var savedRaw=null;try{savedRaw=localStorage.getItem(key)}catch(e){}
+ var saved=savedRaw==='__RESET__'?'':savedRaw||'';
+ var explicit=params.get('query');
+ if(manual&&explicit===null&&saved)manual.value=saved.slice(0,120);
+ function saveDraft(v){try{localStorage.setItem(key,String(v||'').slice(0,120))}catch(e){}}
+ if(manual){manual.addEventListener('input',function(){saveDraft(manual.value)});if(explicit!==null)saveDraft(manual.value)}
+ var reset=document.createElement('button');reset.type='button';reset.id='cqReset';reset.textContent='Reset';reset.className='ghost';reset.style.marginLeft='8px';
+ if(manualGo&&manual){manualGo.insertAdjacentElement('afterend',reset);reset.addEventListener('click',function(){
+  try{localStorage.setItem(key,'__RESET__')}catch(e){}
+  manual.value='';var own=document.getElementById('cqOwn');if(own)own.value='';
+  // Clear the URL override as well, without losing the selected page. Do not trigger automatic discovery on reset.
+  var u=new URL(location.href);u.searchParams.delete('query');history.replaceState(null,'',u.pathname+u.search+u.hash);
+  if(st)st.textContent='Question cleared. You can type a new one or choose a suggestion.';
+ })}
+
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
- function go(q){q=String(q||'').replace(/\s+/g,' ').trim().slice(0,120);if(!q){st.textContent='Choose or type a question first.';return}
+ function go(q){q=String(q||'').replace(/\s+/g,' ').trim().slice(0,120);if(!q){st.textContent='Choose or type a question first.';return}saveDraft(q);
   var u=new URL(location.href);u.searchParams.set('query',q);location.href=u.pathname+u.search}
  if(manualGo&&manual)manualGo.addEventListener('click',function(){go(manual.value)});
  if(manual)manual.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go(manual.value)}});
  // On first opening an existing page, discover a question automatically. Never overwrite an explicit URL query.
  // This one-time redirect gives the research and saved-result endpoints the same selected question.
- if(!new URL(location.href).searchParams.get('query')){
+ if(!explicit&&savedRaw===null){
   st.textContent='Finding a customer question automatically… You can always replace it.';
   fetch(box.getAttribute('data-api'),{credentials:'same-origin',cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
    var found=d&&d.success&&Array.isArray(d.questions)?d.questions:[];
    var preferred=found.filter(function(q){return q.source==='GOOGLE_PEOPLE_ALSO_ASK'})[0]||found.filter(function(q){return q.source==='GOOGLE_RELATED_SEARCH'})[0]||found[0];
-   if(preferred&&preferred.text){st.textContent='Automatically selected: '+preferred.text+' · '+preferred.label+'. You can change it.';go(preferred.text)}
+   if(preferred&&preferred.text){if(manual&&manual.value.trim())return;st.textContent='Automatically selected: '+preferred.text+' · '+preferred.label+'. You can change it.';go(preferred.text)}
    else st.textContent='No verified customer question was found automatically. Type your own question or use the optional suggestions.';
   }).catch(function(){st.textContent='Automatic question discovery unavailable. You can type your own question.'});
  }
@@ -29,7 +47,9 @@
     '<label style="display:block;margin:10px 0 4px">Or type or edit the question</label><input id="cqOwn" type="text" maxlength="120" style="width:min(100%,560px);font:inherit;padding:6px 8px" value="'+esc(d.questions[0]?d.questions[0].text:'')+'"></fieldset>'+
     '<p><button type="button" id="cqGo">Research this question →</button></p><p class="info">'+esc(d.note)+'</p>';
    list.innerHTML=h;var own=document.getElementById('cqOwn');
-   list.querySelectorAll('input[name=cq]').forEach(function(r){r.addEventListener('change',function(){own.value=r.value})});
+   if(saved&&own)own.value=manual&&manual.value||saved;
+   if(own)own.addEventListener('input',function(){saveDraft(own.value)});
+   list.querySelectorAll('input[name=cq]').forEach(function(r){r.addEventListener('change',function(){own.value=r.value;saveDraft(own.value)})});
    document.getElementById('cqGo').addEventListener('click',function(){go(own.value)});
   }catch(e){st.textContent=e.message}btn.disabled=false});
 })();

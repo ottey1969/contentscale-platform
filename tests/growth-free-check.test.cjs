@@ -117,6 +117,18 @@ async function server(opts={}){
 }
 const ok={key:'open-key-12345',url:URL_,query:'roof repair lodi nj',email:'Owner@Acme-Roofing.example',consent:true};
 
+test('Free Growth forms remember drafts while typing and provide reset without changing research',async t=>{
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
+ const publicForm=await s.get('/free-growth?key=open-key-12345');
+ assert.match(publicForm.body,/MEM='growthFreeForm'/);
+ assert.match(publicForm.body,/addEventListener\('input',function\(e\)/);
+ assert.match(publicForm.body,/id='growthFreeReset'/);
+ assert.match(publicForm.body,/rememberForm\(\)/);
+ const adminForm=await s.get('/free-growth/admin');
+ assert.match(adminForm.body,/growthFreeAdminDraft:/);
+ assert.match(adminForm.body,/id='growthFreeAdminReset'/);
+ assert.match(adminForm.body,/form.addEventListener\('input',save\)/);
+});
 test('public flow: start, poll, result, JSON download, cache, limits',async t=>{
  const s=await server();t.after(()=>s.srv.close());
  const form=await s.get('/free-growth?key=open-key-12345');assert.equal(form.status,200);assert.match(form.body,/Run the free check/);

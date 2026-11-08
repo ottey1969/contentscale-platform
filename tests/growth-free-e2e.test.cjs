@@ -60,6 +60,22 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.fill('#query', 'roof repair lodi nj');
     await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
     const email = 'TEST-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example';
+    await p.fill('#email', email);
+    // Typed draft survives refresh without submitting a check or consuming provider credits.
+    await p.reload();
+    assert.equal(await p.inputValue('#url'), URL_);
+    assert.equal(await p.inputValue('#query'), 'roof repair lodi nj');
+    assert.equal(await p.inputValue('#market'), 'us — United States');
+    assert.equal(await p.inputValue('#language'), 'English');
+    assert.equal(await p.inputValue('#email'), email);
+    // Reset clears the saved draft, then the user can enter another question immediately.
+    await p.click('#growthFreeReset');
+    assert.equal(await p.inputValue('#query'), '');
+    await p.reload();
+    assert.equal(await p.inputValue('#query'), '', 'reset query remains blank after refresh');
+    await p.fill('#url', URL_);
+    await p.fill('#query', 'roof repair lodi nj');
+    await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
     await p.fill('#email', email); await p.check('input[name=consent]');
     // Optional Search Console export (TEST data), filtered on exactly this page.
     const { zip } = require('./helpers/zip.cjs');
