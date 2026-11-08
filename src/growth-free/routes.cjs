@@ -534,8 +534,19 @@ function competitorsHtml(c,s){if(!c||!(c.pages||[]).length)return '';var blocked
   h+='<div class="card"><strong>'+(p.position?'#'+esc(p.position)+' ':'')+esc(p.site)+'</strong> <small class="muted">· '+esc(p.status)+(p.read&&p.headings.length?' · '+miss+' of '+p.headings.length+' heading(s) not on your page':'')+'</small>'+
    (p.title?'<br><small>'+esc(p.title)+'</small>':'')+'<br><small><a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(p.url)+'</a></small>'+
    ((p.headings||[]).length?'<ul>'+p.headings.map(function(x){return '<li>'+(x.status==='MISSING'?'<strong>'+esc(x.text)+'</strong> <small class="error">· '+esc(x.label)+'</small>':x.status==='PARTLY'?esc(x.text)+' <small>· '+esc(x.label)+'</small>':esc(x.text)+' <small class="muted">· '+esc(x.label)+'</small>')+'</li>'}).join('')+'</ul>':'')+'</div>'});
+ if((c.side_by_side||[]).length){h+='<h3 id="sideBySide">Side by side: what the competitor says, and your page</h3><p class="muted">The competitor’s own words, for comparison only: write your own text with facts you can stand behind, never copy theirs.</p>';
+  c.side_by_side.forEach(function(x,i){h+='<div class="card"><strong>'+esc(x.competitor_section)+'</strong> <small class="muted">· '+esc(x.site||'')+'</small><blockquote>'+esc(x.competitor_excerpt)+'</blockquote>'+
+   '<p><small>Your page:</small> '+(x.your_section?'<strong>'+esc(x.your_section)+'</strong>'+(x.your_excerpt?'<br><small>'+esc(x.your_excerpt)+'</small>':''):'<em>no matching section</em>')+'</p>'+
+   (x.action?'<p><small>What to do:</small> '+esc(x.action)+'</p>':'')+
+   '<p>'+(x.item_id?'<button type="button" class="ghost sbsAdd" data-item="'+esc(x.item_id)+'">Add this topic to my choice</button> ':'')+'<button type="button" class="ghost sbsCopy" data-i="'+i+'">Copy for the editor</button> <small role="status" class="sbsStatus"></small></p></div>'})}
  if((c.your_headings||[]).length)h+='<details class="research-details"><summary>Your page’s headings ('+c.your_headings.length+')</summary><ul>'+c.your_headings.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul></details>';
  return h}
+function wireSideBySide(c){if(!c||!(c.side_by_side||[]).length)return;
+ document.querySelectorAll('.sbsAdd').forEach(function(b){b.onclick=function(){var box=document.querySelector('.gapPick[value="'+b.getAttribute('data-item').replace(/"/g,'')+'"]'),st=b.parentNode.querySelector('.sbsStatus');
+  if(!box){st.textContent='This topic is not in the list of step 2.';return}if(!box.checked){box.checked=true;box.dispatchEvent(new Event('change',{bubbles:true}))}st.textContent='Added to your choice in step 2.';b.disabled=true}});
+ document.querySelectorAll('.sbsCopy').forEach(function(b){b.onclick=function(){var x=c.side_by_side[Number(b.getAttribute('data-i'))],st=b.parentNode.querySelector('.sbsStatus');
+  var t=['Topic: '+x.competitor_section,'What '+(x.site||'the competitor')+' says (do not copy; write your own): '+x.competitor_excerpt,'Your page: '+(x.your_section?x.your_section+(x.your_excerpt?' — '+x.your_excerpt:''):'no matching section'),x.action?'What to do: '+x.action:'',x.competitor_url?'Source: '+x.competitor_url:''].filter(Boolean).join(String.fromCharCode(10));
+  if(navigator.clipboard)navigator.clipboard.writeText(t);st.textContent='Copied.'}})}
 function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
@@ -572,7 +583,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribu
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':'stepReview';document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireAi();wireGsc();wireGaps(s.gaps,s,d);wirePub();
+ o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':'stepReview';document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireAi();wireGsc();wireGaps(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
@@ -964,7 +975,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    return {position:l.serp_position||null,url:l.url,site:host(l.url),title:l.title||null,
     read:!!r,status:r?'Read':f&&f.outcome==='NOT_READABLE'?'Opened, but too little readable text':f&&f.outcome==='FETCH_FAILED'?'Could not be opened'+(f.explanation?' ('+String(f.explanation).slice(0,80)+')':''):'Not read',
     headings:r?(r.content_headings||[]).slice(0,15).map(h=>({text:String(h).slice(0,160),...mark(h)})):[]}});
-  return {pages,missing:pages.reduce((n,p)=>n+p.headings.filter(h=>h.status==='MISSING').length,0),your_headings:ownHeadings.slice(0,20)};
+  // Side by side, as in Tracker Growth: what a competitor section says next to your closest section, and what to do. A pair
+  // whose heading is one of the topics in step 2 can be added to the visitor's choice from here.
+  const itemOf=new Map();for(const it of (gaps&&gaps.items)||[])for(const e of it.examples||[])if(e.heading)itemOf.set(String(e.heading).toLowerCase(),String(it.id));
+  const pairs=((report.practical_growth_plan&&report.practical_growth_plan.competitors&&report.practical_growth_plan.competitors.side_by_side)||[]).slice(0,8).map(x=>({
+   competitor_section:String(x.competitor_section||'').slice(0,200),competitor_excerpt:String(x.competitor_excerpt||'').slice(0,700),competitor_url:x.competitor_url||null,site:x.competitor_url?host(x.competitor_url):null,
+   your_section:x.tracked_page_section?String(x.tracked_page_section).slice(0,200):null,your_excerpt:x.tracked_page_excerpt?String(x.tracked_page_excerpt).slice(0,500):null,
+   interpretation:x.interpretation?String(x.interpretation).slice(0,300):null,action:x.editorial_action?String(x.editorial_action).slice(0,300):null,
+   item_id:itemOf.get(String(x.competitor_section||'').toLowerCase())||null})).filter(x=>x.competitor_section&&x.competitor_excerpt);
+  return {pages,side_by_side:pairs,missing:pages.reduce((n,p)=>n+p.headings.filter(h=>h.status==='MISSING').length,0),your_headings:ownHeadings.slice(0,20)};
  }
  // Why AI cannot write, in plain words (also for checks stored before this text existed): the research blocker of the
  // report, as the visitor reads it elsewhere on the result, instead of the internal code.
