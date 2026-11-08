@@ -74,7 +74,7 @@ test('Tracker Growth: customer questions for a page in its market; the research 
   assert.match(page.html, /id="cqManual"/, 'owner can enter a question without first loading suggestions');
   assert.match(page.html, /id="cqManualGo"/, 'manual question has its own research action even if Serper or AI fails');
   const pickerScript = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-customer-questions.js'), 'utf8');
-  assert.match(pickerScript, /if\(!new URL\(location.href\).searchParams.get\('query'\)\)/, 'auto discovery only without an explicit user question');
+  assert.match(pickerScript, /if\(!explicit&&savedRaw===null\)/, 'automatic discovery does not overwrite an explicit query or saved draft');
   assert.match(pickerScript, /GOOGLE_PEOPLE_ALSO_ASK/, 'observed Google questions are preferred over unverified AI ideas');
   assert.match(pickerScript, /growthTrackerQuestionDraft:/, 'typed customer question is remembered per Tracker page');
   assert.match(pickerScript, /localStorage\.setItem\(key/, 'draft is saved on every input');
