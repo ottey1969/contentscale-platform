@@ -26,6 +26,7 @@ const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
 const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageTypeScope,blocks:pageBlocks,groupSections}=require('./growth-reader-task-coverage.cjs');
 const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-task-meaning.cjs');
+const {discoverCustomerQuestions}=require('./growth-customer-questions.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
 const {buildGapList}=require('./growth-gap-list.cjs');
 const {writeForSelection,planBatch,remapSelection,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('./growth-selected-writing.cjs');
@@ -65,7 +66,7 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,questionModel=undefined,questionFetch=undefined,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
@@ -968,6 +969,22 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   q.set('from',b.ref);
   return res.redirect(302,'/track/'+encodeURIComponent(req.params.token)+'/growth/auto-research?'+q.toString());
  });
+ // Customer search questions for this page (owner): Google's own questions for the market plus labelled AI suggestions.
+ // Costs one Serper search (and one AI call when configured); owner only. Search Console is not needed.
+ app.get('/api/tracker-client/:token/growth/customer-questions',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY'});
+  try{
+   const row=(await pool.query('SELECT url,keyword,LEFT(html_content,120000) AS html FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id])).rows[0]||{};
+   let html=row.html||'';if(!html){try{html=String((await fetchLive(v.page.url))?.html||'')}catch(e){html=''}}
+   let set=null;if(typeof loadPageMarkets==='function')set=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
+   if(!(set?.countries?.length||set?.language)&&typeof loadSiteMarkets==='function')set=await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null);
+   const country=v.marketOverride||set?.countries?.[0]||null,lang=set?.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
+   const out=await discoverCustomerQuestions({url:v.page.url,html,keyword:row.keyword||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
+    ...(questionFetch?{fetchImpl:questionFetch}:{}),model:questionModel!==undefined?questionModel:require('./growth-task-meaning.cjs').geminiModel()});
+   res.set('Cache-Control','no-store').json({success:true,page:{id:v.id,url:v.page.url},market:country?{country,name:countryName(country)}:null,language:lang,...out});
+  }catch(e){console.warn('[growth-customer-questions]',String(e.code||e.message).slice(0,80));res.status(503).json({success:false,code:'QUESTIONS_UNAVAILABLE'})}
+ });
  app.get('/track/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   // Target market(s) and language at the top, before the research runs (owner only). Same lists as the Pre-Write brief;
@@ -1002,6 +1019,21 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     '<button id="marketSave" type="button">Save and run the research again</button></p>'+opts('marketRegions',PREWRITE_REGIONS)+opts('marketLanguages',PREWRITE_LANGUAGES)+
     '<small id="marketSaid">'+marketLine+'<br>'+languageLine+'</small>'+alternatives+'</section>';
   }
+  // The selected page and the customer search question (owner): why this page, the keyword as context only, Search Console
+  // optional, and the question the research looks at first. Choosing a question reloads the research with it.
+  let questionBox='';
+  if(req.growth?.can_edit===true){
+   const kw=await pool.query('SELECT keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id]).then(r=>r.rows[0]?.keyword||'').catch(()=>'');
+   const gsc=await pool.query("SELECT 1 FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified' LIMIT 1",[v.clientId,v.id]).then(r=>r.rows.length>0).catch(()=>false);
+   const why=req.query?.why==='opportunity'?'Opportunity Finder (Search Console per country)':req.query?.why==='system'?'The Growth Cockpit\'s suggestion':'You chose this page';
+   const apiQ='/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/customer-questions?page_id='+encodeURIComponent(v.id)+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):'');
+   questionBox='<section id="customerQuestion" data-api="'+sHtml(apiQ)+'"><h2>Selected page and customer question</h2>'+
+    '<div class="grid"><div><small>Selected page</small><strong>'+sHtml(v.page.url)+'</strong></div><div><small>Source</small><strong>Existing Tracker page</strong><small>'+sHtml(why)+' · <a href="/track/'+encodeURIComponent(req.params.token)+'/growth#choosePage">choose another page</a></small></div>'+
+    '<div><small>Tracked keyword (context, not the customer question)</small><strong>'+sHtml(kw||'none')+'</strong></div><div><small>Search Console</small><strong>'+(gsc?'Connected for this page':'Optional, not connected')+'</strong><small>Not needed for this research; only for verified ranking and traffic comparisons.</small></div></div>'+
+    (v.queryOverride?'<p><strong>Customer question researched:</strong> “'+sHtml(v.queryOverride)+'”</p>':'<p class="info">No customer question chosen yet: the research below uses '+(kw?'the tracked keyword “'+sHtml(kw)+'”':'a phrase from the page title')+'. Find how customers search and choose a question to research that instead.</p>')+
+    '<p><button type="button" id="cqFind">'+(v.queryOverride?'Choose another customer question':'Find customer questions')+'</button> <small role="status" id="cqStatus"></small></p><div id="cqList"></div>'+
+    '<p class="info">The research looks at the chosen question first (Google, ranking pages, AI answers) and only then compares it with your page. Your page is not used to answer it.</p></section>';
+  }
   // Findings from the Pre-Write Brief this research was opened from (owner only): reference for what the page still misses.
   let briefBox='';
   const fromRef=String(req.query?.from||'');
@@ -1033,11 +1065,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    'pre{white-space:pre-wrap;overflow-wrap:anywhere}li{margin:8px 0}@media(max-width:600px){body{padding:12px}section{padding:12px}}',
    '#researchStatus.working{position:relative;padding-left:30px}#researchStatus.working::before{content:"";position:absolute;left:4px;top:50%;width:14px;height:14px;margin-top:-9px;border:2px solid #c7d2fe;border-top-color:#1d4ed8;border-radius:50%;animation:growthSpin .8s linear infinite}@media(prefers-reduced-motion:reduce){#researchStatus.working::before{animation:none;border-color:#1d4ed8}}#marketSave[data-state=working],#marketSave[data-state=saved]{background:#1d4ed8;position:relative;padding-right:42px}#marketSave[data-state=working]::after{content:\"\";position:absolute;right:15px;top:50%;width:13px;height:13px;margin-top:-8px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;animation:growthSpin .7s linear infinite}#marketSave[data-state=saved]{background:#15803d}#marketSaid[data-state=saved]{color:#166534}#marketSaid[data-state=error]{color:#b42318}@keyframes growthSpin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){#marketSave[data-state=working]::after{animation:none}}',
    'a.growth-primary-finish{display:inline-block;background:#1d4ed8;color:white;padding:11px 16px;border-radius:8px;font-weight:700;text-decoration:none}#marketSetting input{font:inherit;padding:6px 8px;border:1px solid #c8d2e0;border-radius:6px;margin:4px 0;box-sizing:border-box}#marketInput{width:min(100%,560px)}#marketLanguage{width:min(100%,200px)}',
-   '</style><script defer src="/tracker-growth-ui.js?v='+assetVersion()+'"></script><script defer src="/growth-competitor-overview.js?v='+assetVersion()+'"></script><script defer src="/growth-gap-checklist.js?v='+assetVersion()+'"></script><script defer src="/growth-market-controls.js?v='+assetVersion()+'"></script><script defer src="/growth-edit-copy.js?v='+assetVersion()+'"></script><script defer src="/growth-automatic-report-ui.js?v='+assetVersion()+'"></script></head>',
+   '</style><script defer src="/tracker-growth-ui.js?v='+assetVersion()+'"></script><script defer src="/growth-competitor-overview.js?v='+assetVersion()+'"></script><script defer src="/growth-gap-checklist.js?v='+assetVersion()+'"></script><script defer src="/growth-market-controls.js?v='+assetVersion()+'"></script><script defer src="/growth-customer-questions.js?v='+assetVersion()+'"></script><script defer src="/growth-edit-copy.js?v='+assetVersion()+'"></script><script defer src="/growth-automatic-report-ui.js?v='+assetVersion()+'"></script></head>',
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
-   marketBox,briefBox,
+   questionBox,marketBox,briefBox,
    '<section><div role="status" id="researchStatus">Loading saved research…</div></section>',
    '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',
    '<section id="growthFinalActions"><h2>Finish · Your next action</h2><p class="info growth-finish-note">Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.</p>',

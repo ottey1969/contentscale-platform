@@ -15,6 +15,7 @@ const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
 const cmsPackage=require('./cms-package.cjs');
 const reminders=require('./reminders.cjs');
+const {discoverCustomerQuestions}=require('../growth-customer-questions.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -129,6 +130,7 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
 <form id="f" class="card" novalidate>
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
  <label for="query">Search term (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. roof repair lodi nj">
+ <p><button type="button" id="cqFind" class="ghost">Suggest customer questions</button> <small role="status" id="cqStatus">How do customers search for what this page offers? Google's own questions and AI ideas; pick one, or edit it.</small></p><div id="cqList"></div>
  <small>The words your customers type into Google. Leave empty to let the check derive it from your page.</small>
  <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
  <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
@@ -162,6 +164,17 @@ var OWNER=${js(!!owner.signedIn)};
 var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}})();
 function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}}
+// Customer questions for the page entered above: Google's questions (People also ask, related searches) and labelled AI
+// ideas. Clicking one puts it in the search term; the check then researches that question.
+(function(){var b=document.getElementById('cqFind');if(!b)return;var st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
+ b.addEventListener('click',async function(){var url=document.getElementById('url').value.trim();if(!url){st.textContent='Enter the page address first.';return}
+  b.disabled=true;b.classList.add('is-working');st.textContent='Looking up how customers search…';list.innerHTML='';
+  try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value})});
+   var d=await r.json();if(!d.success)throw Error(d.error||'Not available right now.');
+   st.textContent=d.questions.length?'Click a question to use it as the search term (you can still edit it).':'No questions found; enter the search term yourself.';
+   list.innerHTML=d.questions.map(function(q){return '<button type="button" class="ghost cqPick" style="margin:4px 6px 4px 0;text-align:left">'+q.text.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+' <small style="display:inline">· '+q.label+'</small></button>'}).join('')+(d.questions.length?'<p class="muted">'+d.note+'</p>':'');
+   Array.prototype.forEach.call(list.querySelectorAll('.cqPick'),function(x,i){x.onclick=function(){document.getElementById('query').value=d.questions[i].text;st.textContent='Search term set: “'+d.questions[i].text+'”.'}});
+  }catch(err){st.textContent=err.message}b.disabled=false;b.classList.remove('is-working')})})();
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
@@ -628,6 +641,24 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())
   .send(resultPage(config,apiPath,basePath,safeToken(req.params.id),safeToken(req.query.k))));
 
+ // Customer questions for a page (form helper): one Google search through Serper and one AI call. Only with an active
+ // access key (or the owner), and at most 10 per hour per visitor, so the free form cannot be used as a search API.
+ const cqHits=new Map();
+ app.post(apiPath+'/customer-questions',async(req,res)=>{
+  const b=req.body||{};
+  const owner=sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin';
+  if(!owner&&!findKey(config,b.key,req))return res.status(403).json({success:false,error:'This free check is not activated here'});
+  const ip=store.hashIp(req.ip,config.ipSalt),now=Date.now(),h=(cqHits.get(ip)||[]).filter(t=>now-t<3600000);
+  if(!owner&&h.length>=10)return res.status(429).json({success:false,error:'Enough suggestions for now; try again in an hour or enter the search term yourself.'});
+  h.push(now);cqHits.set(ip,h);if(cqHits.size>5000)cqHits.clear();
+  const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
+  const entries=String(b.market||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean),country=validCountries(entries)[0]||null,lang=String(b.language||'').trim()?validLanguage(b.language):null;
+  let html='';try{html=String((await (engineDeps.fetchLive||fetchPublicGrowthHtml)(v.url))?.html||'')}catch(e){return res.status(503).json({success:false,error:'Your page could not be read publicly. Enter the search term yourself.'})}
+  const pageLang=((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'').toLowerCase();
+  const out=await discoverCustomerQuestions({url:v.url,html,keyword:clean(b.query,120),gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',
+   ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()});
+  res.set('Cache-Control','no-store').json({success:true,...out});
+ });
  app.post(apiPath+'/checks',async(req,res)=>{
   try{
    const b=req.body||{};

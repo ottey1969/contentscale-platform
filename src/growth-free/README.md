@@ -11,6 +11,10 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
   or this exact page is cited, which sites AI cites instead, and which of those also rank in Google.
   No AI API is called (no cost); answers are stored per check (`growth_free_ai_answers`) and included in the JSON.
   A test keeps the prompt identical to the Quick Scan prompt in `src/index.js`;
+* **Customer questions (form helper)**: "Suggest customer questions" reads what the page offers (title, H1, H2 only) and shows
+  Google's own questions for the search in the market (People also ask, related searches, through Serper) plus labelled AI
+  ideas (`src/growth-customer-questions.cjs`, shared with Tracker Growth). One click puts a question in the search term.
+  An access key is required, at most 10 per hour per visitor;
 * **Search Console (optional, no Google sign-in)**: the visitor uploads the Search Console export (Performance →
   filter Page → "Exact URL" → this page → Export → Download CSV, a ZIP) or one queries CSV, in the form or later on the
   result. Read by `gsc-export.cjs` (any language, any number format). It counts as evidence only when filtered on exactly

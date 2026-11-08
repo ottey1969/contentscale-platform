@@ -172,7 +172,7 @@ registerGrowthCockpit({get(path,...h){routes[path]=h},post(path,...h){routes['PO
  const html=res.html;
  assert.match(html,/Start here — the system's choice/);
  assert.match(html,/<h2>“open best topic”<\/h2>/);
- assert.match(html,/class="go start-rec" href="\/track\/owner\/growth\/auto-research\?page_id=6" data-page="6" data-query="open best topic"/);
+ assert.match(html,/class="go start-rec" href="\/track\/owner\/growth\/auto-research\?page_id=6&why=system" data-page="6" data-query="open best topic"/);
  assert.match(html,/Not relevant for my business\? Skip it/);
  assert.match(html,/What the system remembers/);
  // Every inline script must compile (a syntax error would silently disable the buttons).

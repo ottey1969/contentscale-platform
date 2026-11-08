@@ -314,7 +314,7 @@ function registerGrowthCockpit(app,pool,deps={}){
   const measureNote=m=>m?`<small class="measure">📏 ${escapeHtml(m.label)}</small>`:'';
   const b=g.best_candidate,ms=g.measurement_summary,tr=g.track_record||{};
   // Owner links record the start server-side first (see script); without JS they still open the research.
-  const startLink=(id,query,text,cls)=>`<a class="${cls||''}${g.can_edit?' start-rec':''}" href="${research(id)}" data-page="${escapeHtml(id)}" data-query="${escapeHtml(query||'')}">${text}</a>`;
+  const startLink=(id,query,text,cls)=>`<a class="${cls||''}${g.can_edit?' start-rec':''}" href="${research(id)}&why=system" data-page="${escapeHtml(id)}" data-query="${escapeHtml(query||'')}">${text}</a>`;
   const skipForm=(id,query)=>g.can_edit?`<details class="skip"><summary>Not relevant for my business? Skip it</summary><form class="rec-form" data-action="skip" data-page="${escapeHtml(id)}" data-query="${escapeHtml(query||'')}"><label>Why (optional) <input name="reason" maxlength="300" placeholder="e.g. we do not offer this service"></label><button type="submit">Skip — suggest something else</button><small role="status"></small></form></details>`:'';
   const restoreForm=(id,query)=>g.can_edit?`<form class="rec-form" data-action="restore" data-page="${escapeHtml(id)}" data-query="${escapeHtml(query||'')}"><button type="submit">Restore this suggestion</button><small role="status"></small></form>`:'';
   const rowControls=(e,id,query)=>e.status==='SKIPPED_BY_OWNER'?restoreForm(id,query):e.status==='CANDIDATE'?skipForm(id,query):'';
@@ -339,7 +339,7 @@ function registerGrowthCockpit(app,pool,deps={}){
   // The Opportunity Finder is the central choice: one best opportunity (search term, country, page), with the reason,
   // the action and the measurement plan; or, without enough data, it says so.
   const op=g.can_edit?g.opportunities:null;
-  const oppLink=o=>o.research.type==='NEW_PAGE'?'/track/'+tok+'/growth/new-page':research(o.page_id)+'&market='+encodeURIComponent(o.country)+'&query='+encodeURIComponent(o.query);
+  const oppLink=o=>o.research.type==='NEW_PAGE'?'/track/'+tok+'/growth/new-page':research(o.page_id)+'&market='+encodeURIComponent(o.country)+'&query='+encodeURIComponent(o.query)+'&why=opportunity';
   const oppBox=!op?'':'<section class="growth-guide growth-opportunity" id="opportunity" aria-label="Best research opportunity"><p class="growth-step-guide">STEP 1 OF 3 · Choose the research opportunity</p><p class="kicker">Best opportunity for potential customers — Opportunity Finder (an order, not a prediction)</p>'+
    (op.status==='OPPORTUNITY_FOUND'?
     '<h2>“'+escapeHtml(op.best.query)+'” in '+escapeHtml(op.best.country_name)+' → '+escapeHtml(op.best.page_url)+'</h2>'+
@@ -376,7 +376,9 @@ function registerGrowthCockpit(app,pool,deps={}){
    (guidedNext?'<p>'+guidedNext+'</p>':'<p>No existing page needs work first right now. Open the page list in Details or start from a Pre-Write brief.</p>')+
    // An existing page is chosen here directly (any tracked page, protected ones included: research never changes them);
    // a page that does not exist yet starts from a Pre-Write brief.
-   '<details'+(b?'':' open')+'><summary>Start a different project</summary>'+
+   // Another page is always one click away (open by default): the suggestion above is a suggestion, not a requirement.
+   '<p class="info">Search Console is optional here: a page can be researched without it. Before the research, Growth helps you choose the question customers actually search.</p>'+
+   '<details id="choosePage" open><summary><strong>Choose another page</strong> or start a different project</summary>'+
    // Many pages: a search field filters the list on address and keyword; spaces, hyphens and case do not matter
    // ("contentscaling" finds /content-scaling/).
    '<form class="pick-page" method="get" action="/track/'+tok+'/growth/auto-research"><label for="pickSearch"><strong>An existing page</strong></label> '+
