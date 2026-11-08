@@ -806,3 +806,25 @@ test('review 2026-11-08: AI limits — 5 title/description rewrites per check; a
  const w=await s.post('/api/free-growth/checks/'+a.body.id+'/write?k='+a.body.key,{item_ids:ids});
  assert.equal(w.status,429);assert.match(w.body.error,/Today's AI writing for free checks is used up/);
 });
+
+test('a start never hangs: the form gives up after a minute with a clear message; existing columns are not altered again',()=>{
+ const src=require('fs').readFileSync(require('path').join(__dirname,'../src/growth-free/routes.cjs'),'utf8');
+ assert.match(src,/fetch\(\$\{js\(api\)\}\+'\/checks',\{signal:timeoutSignal\(60000\)/);
+ assert.match(src,/err\.name==='AbortError'\|\|err\.name==='TimeoutError'\)\?'The server did not answer within a minute/);
+ const store=require('fs').readFileSync(require('path').join(__dirname,'../src/growth-free/store.cjs'),'utf8');
+ assert.doesNotMatch(store,/pool\.query\(["'`]ALTER TABLE/,'every ALTER goes through addColumn');
+ assert.match(store,/if\(have\.has\(name\)\)return;await pool\.query\("SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS "/);
+});
+
+test('ensureTables: an existing column is not altered again; a missing one is added with a lock timeout',async()=>{
+ delete require.cache[require.resolve('../src/growth-free/store.cjs')];
+ const store=require('../src/growth-free/store.cjs'),seen=[];
+ const pool={query:async sql=>{seen.push(String(sql));
+  if(/to_regclass/.test(sql))return {rows:[{t:'growth_free_checks'}]};
+  if(/information_schema\.columns/.test(sql))return {rows:['access_label','invite_id','written','selected_item_ids','write_count','writing_since','writing_token','market','published_on','reminder_due_at','reminder_sent_at','reminder_attempts','reminder_token','reminder_opt_out_at','reminder_base'].map(c=>({column_name:c}))};
+  return {rows:[]}}};
+ await store.ensureTables(pool);
+ const alters=seen.filter(x=>/ALTER TABLE/.test(x));
+ assert.deepEqual(alters,["SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB"],'only the missing column');
+ delete require.cache[require.resolve('../src/growth-free/store.cjs')];
+});

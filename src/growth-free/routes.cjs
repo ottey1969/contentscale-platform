@@ -197,6 +197,8 @@ if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER
    Array.prototype.forEach.call(list.querySelectorAll('.cqPick'),function(x,i){x.onclick=function(){document.getElementById('query').value=d.questions[i].text;rememberForm();document.getElementById('query').dispatchEvent(new Event('input',{bubbles:true}));st.textContent='Search term set: “'+d.questions[i].text+'”.'}});
   }catch(err){st.textContent=err.message}b.disabled=false;b.classList.remove('is-working')})})();
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
+// A request never waits forever: after the time limit the button comes back with a clear message.
+function timeoutSignal(ms){try{if(AbortSignal.timeout)return AbortSignal.timeout(ms)}catch(e){}var c=new AbortController();setTimeout(function(){c.abort()},ms);return c.signal}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
 rememberForm();
@@ -207,7 +209,7 @@ try{
  if(APPROVED&&!f.query.value.trim()){
   s.textContent='Finding a customer question for this page…';
   try{
-   var qr=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value})});
+   var qr=await fetch(${js(api)}+'/customer-questions',{signal:timeoutSignal(45000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value})});
    var qd=await qr.json();
    var qs=qd&&qd.success&&Array.isArray(qd.questions)?qd.questions:[];
    var chosen=qs.filter(function(q){return q.text===qd.best_question})[0]||qs.filter(function(q){return q.priority==='OBSERVED_GOOGLE'})[0]||qs.filter(function(q){return q.source==='AI_SUGGESTION'})[0];
@@ -216,9 +218,9 @@ try{
   }catch(e){s.textContent='Question suggestions unavailable; continuing with the page topic…'}
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
-catch(err){s.textContent=err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
+catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?'The server did not answer within a minute. Please try again in a moment.':err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
 }
 
