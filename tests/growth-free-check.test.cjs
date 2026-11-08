@@ -281,7 +281,7 @@ test('approved check automatically stores one real grounded AI answer; public ch
  let calls=0;
  const s=await server({config:{adminKey:'admin-secret-0123456789'},engineDeps:{groundedAnswer:async({query,pageUrl})=>{
   calls++;
-  const raw='ANSWER:\\nA good content workflow audits existing articles, verifies sources and reviews improvements.\\n\\nRESOURCES:\\nhttps://example.net/editorial-workflow';
+  const raw=['ANSWER:','A good content workflow audits existing articles, verifies sources and reviews improvements.','','RESOURCES:','https://example.net/editorial-workflow'].join(String.fromCharCode(10));
   return {status:'SUCCESS',engine:'google_aio',source:'GEMINI_GOOGLE_SEARCH_GROUNDING_NOT_AIO',model:'test-grounded',
    raw,parsed:require('../src/growth-free/ai-answers.cjs').parseAiAnswer(raw,{pageUrl,query})};
  }}});
