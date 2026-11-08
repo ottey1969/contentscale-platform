@@ -129,9 +129,9 @@ function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,sign
 ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
 <form id="f" class="card" novalidate>
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
- <label for="query">Customer question or search phrase (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
- <p><button type="button" id="cqFind" class="ghost">Suggest customer questions</button> <small role="status" id="cqStatus">How do customers search for what this page offers? Google's own questions and AI ideas; pick one, or edit it.</small></p><div id="cqList"></div>
- <small>Type a real customer question or search phrase yourself, or use the optional suggestions above. No Search Console or question suggestions are required. If left empty, Growth derives a working search phrase from the page; it is not verified customer demand.</small>
+ <label for="query">Customer question or search phrase (optional for owner)</label><input id="query" name="query" maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
+ ${owner.signedIn?`<p><button type="button" id="cqFind" class="ghost">Suggest customer questions (owner)</button> <small role="status" id="cqStatus">Automatic customer question discovery is available in owner mode.</small></p><div id="cqList"></div>`:`<p class="muted">Enter your customer's question yourself. Automatic question suggestions are reserved for the administrator to control research costs.</p>`}
+ <small>${owner.signedIn?'You may enter your own question or let Growth choose automatically.':'Enter a customer question yourself; automatic suggestions are administrator-only.'} No Search Console is required. A blank owner question falls back to a working page phrase, not verified customer demand.</small>
  <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
  <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
  <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
@@ -183,7 +183,7 @@ b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true')
 try{
  // If no customer question was supplied, discover one automatically for this URL before starting the check.
  // An explicitly entered question is authoritative and is never replaced.
- if(!f.query.value.trim()){
+ if(OWNER&&!f.query.value.trim()){
   s.textContent='Finding a customer question for this page…';
   try{
    var qr=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},url:f.url.value,query:'',market:f.market.value,language:f.language.value})});
@@ -661,7 +661,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.post(apiPath+'/customer-questions',async(req,res)=>{
   const b=req.body||{};
   const owner=sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin';
-  if(!owner&&!findKey(config,b.key,req))return res.status(403).json({success:false,error:'This free check is not activated here'});
+  if(!owner)return res.status(403).json({success:false,error:'Customer question suggestions are available to the administrator only. Enter your question manually.'});
   const ip=store.hashIp(req.ip,config.ipSalt),now=Date.now(),h=(cqHits.get(ip)||[]).filter(t=>now-t<3600000);
   if(!owner&&h.length>=10)return res.status(429).json({success:false,error:'Enough suggestions for now; try again in an hour or enter the search term yourself.'});
   h.push(now);cqHits.set(ip,h);if(cqHits.size>5000)cqHits.clear();
