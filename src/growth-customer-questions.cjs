@@ -94,7 +94,12 @@ async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl
   const ownHost = (() => { try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch (e) { return ''; } })();
   // Google is asked with the tracked keyword, or the page's own topic when there is none (context, not the question).
   const seed = clean(keyword) || (offer.h1[0] || offer.title.split(/\s[|–—-]\s/)[0] || '');
-  const [g, a] = await Promise.all([fromGoogle({ query: seed, gl, hl, key, fetchImpl, ownHost }), fromAi({ offer, keyword, language: hl || offer.language || 'en', model })]);
+  const g = await fromGoogle({ query: seed, gl, hl, key, fetchImpl, ownHost });
+  const observed = rankQuestions(g.questions,{offer,seed});
+  // Never spend AI credits generating suggestions if relevant Google-observed questions exist.
+  const a = observed.observed_count
+    ? {status:'AI_NOT_NEEDED_GOOGLE_MATCH',questions:[]}
+    : await fromAi({ offer, keyword, language: hl || offer.language || 'en', model });
   const seen = new Set(), questions = [];
   for (const q of [...g.questions, ...a.questions]) { const k = q.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); if (k && !seen.has(k)) { seen.add(k); questions.push(q); } }
   const ranked=rankQuestions(questions,{offer,seed});
