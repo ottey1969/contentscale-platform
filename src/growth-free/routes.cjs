@@ -167,7 +167,7 @@ var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
 // This browser remembers what was entered (page, search term, market, language, addresses), so the next check starts
 // filled in. Only in this browser; a link with values wins; works without storage too.
-var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm:'+location.pathname;
+var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
 function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}}
 var freeForm=document.getElementById('f');
