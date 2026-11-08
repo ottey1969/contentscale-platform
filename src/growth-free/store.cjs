@@ -163,6 +163,10 @@ async function releaseWriting(pool,{checkId,token}){
  await pool.query('UPDATE growth_free_checks SET writing_since=NULL,writing_token=NULL WHERE id=$1 AND writing_token=$2',[checkId,String(token||'')]);
 }
 // Returns {write_count}, or {superseded:true} when this run no longer holds the lock, or null when the limit is reached.
+// AI writing runs of visitors' checks in the last 24 hours (the owner's checks do not count): for the daily cap.
+async function writesToday(pool){
+ return Number((await pool.query("SELECT COALESCE(SUM(write_count),0)::int AS n FROM growth_free_checks WHERE created_at>NOW()-INTERVAL '24 hours' AND COALESCE(access_label,'')<>'admin'")).rows[0]?.n||0);
+}
 async function recordWriting(pool,{checkId,written,limit,token=null}){
  const row=(await pool.query(`UPDATE growth_free_checks SET written=$2::jsonb,write_count=write_count+1,writing_since=NULL,writing_token=NULL
    WHERE id=$1 AND write_count<$3 AND ($4::text IS NULL OR writing_token=$4) RETURNING write_count`,[checkId,JSON.stringify(written),limit,token])).rows[0];
@@ -198,7 +202,7 @@ async function setPublication(pool,{checkId,publishedOn,dueAt,base=null}){
    WHERE id=$1 RETURNING emails,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base])).rows[0]||null;
 }
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
- return (await pool.query(`SELECT id,public_id,access_key,email,emails,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token,reminder_base FROM growth_free_checks
+ return (await pool.query(`SELECT id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token,reminder_base FROM growth_free_checks
    WHERE reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 AND status='DONE' ORDER BY reminder_due_at LIMIT $2`,[now,limit])).rows;
 }
 async function markReminder(pool,{id,sent}){
@@ -259,4 +263,4 @@ async function revokeInvite(pool,id){
  return (await pool.query('UPDATE growth_free_invites SET revoked_at=NOW() WHERE id=$1 AND revoked_at IS NULL RETURNING id',[id])).rows[0]||null;
 }
 
-module.exports={saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};
+module.exports={writesToday,saveSelection,setPublication,dueReminders,markReminder,optOutReminder,saveGscUpload,listGscUploads,claimWriting,releaseWriting,recordWriting,saveAiAnswer,listAiAnswers,createInvite,getInvite,consumeInvite,refundInvite,listInvites,revokeInvite,inviteStatus,ensureTables,usage,recentResult,createCheck,setStatus,getCheck,createHireRequest,listLeads,forgetEmail,hashIp,sameKey};

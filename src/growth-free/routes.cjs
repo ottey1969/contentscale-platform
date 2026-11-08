@@ -70,6 +70,7 @@ function freeGrowthDefaults(env){
   // Default all (owner 2026-11-07: "in Free Growth AI must fill in what is needed"); limited per check by writeLimit.
   writing:['off','admin','invited','all'].includes(String(env.GROWTH_FREE_WRITING||'').toLowerCase())?String(env.GROWTH_FREE_WRITING).toLowerCase():'all',
   writeLimit:Math.max(1,int(env.GROWTH_FREE_WRITES_PER_CHECK,3)),
+  writesPerDay:Math.max(0,int(env.GROWTH_FREE_WRITES_PER_DAY,40)),
   serviceText:env.GROWTH_FREE_SERVICE_TEXT||'I write the missing sections in your voice, check every fact with you, publish nothing without your approval and measure the result in Search Console after 28 days.'
  };
 }
@@ -113,15 +114,16 @@ select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;fo
 // The AI check is offered before the start: the prompt is built from the search term as it is typed, and the answers
 // pasted here are stored with the check (same validation as pasting them on the result page).
 function aiStartBlock(automatic=false){
- return `<div class="card" id="aiStart"><h2 style="margin-top:0">${automatic?'AI answers — automatic research':'AI answers first (optional)'}</h2>
- ${automatic?'<p>Growth automatically requests a Gemini answer grounded in live Google Search when the provider is configured. This is not a Google AI Overview. Other AI services are not marked as checked unless their actual answers are supplied.</p><details><summary>Advanced · Add independent AI answers manually (optional)</summary>':''}
+ // Collapsed for everyone: a first-time visitor sees one form, not a prompt and five empty answer boxes.
+ return `<details class="card" id="aiStart"><summary><strong>${automatic?'AI answers — automatic, plus your own (optional)':'Advanced: add AI answers yourself (optional)'}</strong> <small class="muted">${automatic?'Gemini with Google Search is checked automatically.':'You can also do this later on the result page.'}</small></summary>
+ ${automatic?'<p>Growth automatically requests a Gemini answer grounded in live Google Search when the provider is configured. This is not a Google AI Overview. Other AI services are not marked as checked unless their actual answers are supplied.</p>':''}
  <ol><li>Enter the customer question or search phrase above.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong> (ChatGPT, Perplexity, Gemini, Claude or Copilot).</li><li>Paste the complete answer, including RESOURCES, at the AI system you used. You can also do this later on the result page.</li></ol>
  <label for="aiStartPrompt">Prompt (the same for every AI system)</label><textarea id="aiStartPrompt" rows="6" readonly></textarea><p><button type="button" class="ghost" id="aiStartCopy">Copy prompt</button></p>
- ${ai.ENGINES.map(e=>`<label>${esc(e.label)} — answer (optional)<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="Paste the complete answer here"></textarea></label>`).join('')}${automatic?'</details>':''}</div>`;
+ ${ai.ENGINES.map(e=>`<label>${esc(e.label)} — answer (optional)<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="Paste the complete answer here"></textarea></label>`).join('')}</details>`;
 }
 function aiStartScript(){
  return `(function(){var LINES=${js(ai.DIRECT_PROMPT_LINES)},SLOT=${js(ai.QUERY_SLOT)},q=document.querySelector('[name=query]'),p=document.getElementById('aiStartPrompt');if(!q||!p)return;
- var upd=function(){var t=q.value.trim();p.value=t?LINES.map(function(l){return l===SLOT?t:l}).join(String.fromCharCode(10,10)):'Enter the search term above first: the prompt uses it exactly.';document.getElementById('aiStartCopy').disabled=!t};
+ var upd=function(){var t=q.value.trim();p.value=t?LINES.map(function(l){return l===SLOT?t:l}).join(String.fromCharCode(10,10)):'Enter the customer question above first: the prompt uses it exactly.';document.getElementById('aiStartCopy').disabled=!t};
  q.addEventListener('input',upd);upd();
  document.getElementById('aiStartCopy').onclick=function(){p.select();if(navigator.clipboard)navigator.clipboard.writeText(p.value);this.textContent='Copied ✓'}})();
 function aiStartAnswers(){return Array.prototype.slice.call(document.querySelectorAll('textarea[data-engine]')).filter(function(t){return t.value.trim()}).map(function(t){return {engine:t.getAttribute('data-engine'),text:t.value}})}`;
@@ -131,13 +133,13 @@ function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,sign
  return page('Free Growth check — what is your page missing?',`
 <p class="kicker">Free · no account needed</p>
 <h1>Is your page found in Google — and in AI answers?</h1>
-<p class="lead">Enter one page of your website. The check compares it with the pages Google ranks for your search and tells you in plain language whether to change something — or not. Then check in two minutes whether ChatGPT, Perplexity, Google AI Overviews, Claude and Copilot cite your page. You also get the full research data (JSON) to work with yourself.</p>
+<p class="lead">Enter one page of your website. The check compares it with the pages Google ranks for your search and tells you in plain language whether to change something — or not. You can also see whether AI answers (ChatGPT, Perplexity, Gemini, Claude, Copilot) cite your page, by pasting their answers on the result.</p>
 ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
 <form id="f" class="card" novalidate>
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
- <label for="query">Customer question or search phrase${owner.signedIn||invite?' (optional)':' (required)'}</label><input id="query" name="query" ${owner.signedIn||invite?'':'required'} maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
- ${owner.signedIn||invite?`<p><button type="button" id="cqFind" class="ghost">Find customer questions</button> <small role="status" id="cqStatus">Automatic customer question discovery is available with approved access.</small></p><div id="cqList"></div>`:`<p class="muted">Enter your customer's question yourself. Automatic question suggestions are reserved for the administrator to control research costs.</p>`}
- <small>${owner.signedIn||invite?'You may enter your own question or let Growth choose automatically.':'Enter a customer question yourself; automatic suggestions require approval.'} No Search Console is required. A blank owner question falls back to a working page phrase, not verified customer demand.</small>
+ <label for="query">Customer question (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
+ ${owner.signedIn||invite?`<p><button type="button" id="cqFind" class="ghost">Find customer questions</button> <small role="status" id="cqStatus">Automatic customer question discovery is available with approved access.</small></p><div id="cqList"></div>`:''}
+ <small>Leave it empty and the check finds the question customers ask in Google for what your page offers. Or type the question yourself — it then wins.</small>
  <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
  <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
  <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
@@ -145,8 +147,8 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
 ${aiStartBlock(!!owner.signedIn||!!invite)}
  <label for="gscFile">Search Console export (optional)</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
  <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
- <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The reminder after publication goes to all of them.</small>
- <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day.`}`}</span></label>
+ <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The first address gets the e-mails; the others are kept with the check.</small>
+ <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day for the first address.`}`}</span></label>
  <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
  <p><button type="submit">${owner.signedIn?'Run the check (owner)':'Run the free check'}</button> <small id="s" role="status"></small></p>
 </form>
@@ -197,7 +199,6 @@ if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
-if(!APPROVED&&!f.query.value.trim()){s.textContent='Enter a customer question or search phrase to run the free check.';document.getElementById('query').focus();return}
 rememberForm();
 b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent='Starting…';
 try{
@@ -241,11 +242,11 @@ document.addEventListener('click',function(e){var s=e.target.closest('details.jo
 // Every jump to a step keeps the step header in view.
 function showStep(id,targetId){openJourney(id);requestAnimationFrame(function(){var el=document.getElementById(targetId||id);if(el)el.scrollIntoView({block:'start'})})}
 
-function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">1B · AI answers <small>('+esc(x.checked)+' of 5 checked'+(x.checked===5?' · complete':'')+')</small></h3>';
+function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI answers <small>('+esc(x.checked)+' of 5 checked'+(x.checked===5?' · complete':'')+')</small></h3>';
  if(auto&&auto.gemini){var g=auto.gemini,status=g.status||'UNKNOWN';h+='<p class="note"><strong>Automatic AI research · Gemini with Google Search:</strong> '+(status==='SUCCESS'?'Completed and saved. See Gemini results below.':status==='NOT_CONFIGURED'?'Not configured on this server.':status==='NO_GROUNDED_ANSWER'?'No verifiable source-backed answer was returned.':status==='PROVIDER_UNAVAILABLE'?'The provider was unavailable.':status==='INCOMPLETE'?'The provider returned an incomplete answer.':'No verified automatic answer ('+esc(status)+').')+' This is not a Google AI Overview. ChatGPT, Claude, Perplexity and Copilot are only marked checked when their actual responses are supplied.</p>'}
  h+='<p class="muted"><strong>'+esc(x.headline)+'.</strong> '+esc(x.explanation)+'</p>';
  h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?(e.invalid?'INVALID, not counted':'not checked'):e.topic_warning?'check the topic (no shared word with the search term) — counted':!e.verifiable?'no source list pasted — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
-  return '<div class="eng '+(e.checked&&e.verifiable?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked&&e.verifiable?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = links in the RESOURCES list of that AI answer. Links that appear only in the answer text do not count as sources.</p>';
+  return '<div class="eng '+(e.checked&&e.verifiable?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked&&e.verifiable?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = sources the AI answer listed. Links inside its text are not counted.</p>';
  if(x.top_cited_sites.length)h+='<details class="research-details"><summary>Sources mentioned in the AI answers ('+esc(x.top_cited_sites.length)+')</summary><h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul></details>';
  h+='<p class="muted">These source mentions are AI visibility observations, not verified content gaps. Growth compares the readable ranking pages automatically and labels missing evidence separately.</p>';
  var next=x.engines.filter(function(e){return !e.checked})[0]||x.engines[0];
@@ -260,7 +261,7 @@ function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
  b.onclick=async function(){var st=document.getElementById('aiStatus'),eng=document.getElementById('aiEngine').value,txt=document.getElementById('aiText').value;if(!txt.trim()){st.textContent='Paste the answer first.';return}b.disabled=true;st.textContent='Analysing…';
   try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE')render(d);else showAiFirst(d,true);showStep('stepResearch','ai')}catch(err){st.textContent=err.message;b.disabled=false}}}
-function gscHtml(g){var h='<h3 id="gsc">1C · Search Console <small>(optional)</small></h3>';
+function gscHtml(g){var h='<h3 id="gsc">Search Console <small>(optional)</small></h3>';
  if(g&&g.latest){var L=g.latest,T=L.totals||{};
   h+='<p class="lead"><strong>'+(L.status==='VERIFIED_FOR_PAGE'?'Verified for this page':L.status==='PAGE_TOTALS_ONLY'?'Totals of this page; search terms not page-filtered':'Not verified for this page')+'.</strong> '+esc(L.message)+(L.status==='VERIFIED_FOR_PAGE'&&!L.used_in_research?' This export was uploaded after the research (or belongs to a reused result), so it was not used to decide the page improvements. Start a new check and upload it before research to include its search queries.':'')+'</p>';
   h+='<div class="grid"><div><small>Period</small><strong>'+(L.period?esc(L.period.start)+' – '+esc(L.period.end):'not in the export')+'</strong></div><div><small>Clicks</small><strong>'+esc(T.clicks)+'</strong></div><div><small>Impressions</small><strong>'+esc(T.impressions)+'</strong></div><div><small>Average position</small><strong>'+(T.position==null?'–':esc(T.position))+'</strong></div></div>';
@@ -282,7 +283,7 @@ var GAPS=null;
 var GAP_GROUPS=[];
 function exampleText(x){return function(e){return (e.position?'#'+esc(e.position)+' ':'')+esc(e.site)+(e.heading&&e.heading!==x.title?': “'+esc(e.heading)+'”':'')}}
 function gapsHtml(g,w){if(!g||g.status!=='OBSERVED')return '';GAP_GROUPS=(g.groups||[]).map(function(x){return [x.id,x.label]});
- var h='<details id="stepReview" class="journey-section" open><summary><span class="journey-num">2</span><span><strong>Review improvements</strong><small>Choose changes supported by evidence</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="gaps">Choose what goes on your site</h2><p class="muted">'+esc(g.note)+'</p><p class="muted">Compared with '+esc(g.ranking_pages_read)+' readable ranking page(s). '+(g.items.length?g.items.length+' difference(s) observed. Observed does not mean verified or recommended.':'No difference found.')+'</p>';
+ var h='<details id="stepReview" class="journey-section" open><summary><span class="journey-num">2</span><span><strong>Review improvements</strong><small>Choose changes supported by evidence</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="gaps">Choose what goes on your site</h2><p class="muted">'+esc(g.note)+'</p><p class="muted">Compared with '+esc(g.ranking_pages_read)+' readable ranking page(s). '+(g.items.length?g.items.length+' difference(s) observed.':'No difference found.')+'</p>';
  if(g.writing_allowed===false&&g.evidence)h+='<p class="note"><strong>No section is proposed or written:</strong> '+esc(g.evidence.plain_reason||g.evidence.reason)+'</p>';
  var rec=(g.items||[]).filter(function(x){return x.recommended});
  if(rec.length)h+='<p class="note">Recommended first ('+rec.length+'): '+rec.map(function(x){return esc(x.title)}).join(' · ')+'. A research priority (supported by at least two ranking pages, missing or partly on your page, not contradicted by the AI), not a growth forecast. You decide; you can select more.</p>';
@@ -416,6 +417,7 @@ function pkgStart(g,last,canWrite){var box=document.getElementById('pkgBox');if(
  box.innerHTML='<h2 id="pkg">CMS package for your editor</h2><p class="muted">A CMS package needs approved factual text, not H2 headings alone. Your research brief is in Step 2.</p>'+(canWrite?'':'<details class="research-details" id="pkgManual"><summary>Advanced: prepare a CMS package with your own verified text (optional)</summary>')+'<p><button type="button" id="pkgOpen" class="'+(canWrite?'action-blue':'ghost')+'"'+(n?'':' disabled')+'>Open the package editor for your selection ('+n+')</button> <small class="muted" id="pkgOpenHelp">'+(n?'Your selections are kept. No content is fabricated or published automatically.':'Choose at least one item in Step 2 first.')+'</small></p>'+(canWrite?'':'</details>');
  document.getElementById('pkgOpen').onclick=function(){showPkg(pkgSections(g,last,true));showStep('stepPrepare','pkg')}}
 function pkgCount(n){var b=document.getElementById('pkgOpen');if(!b)return;b.disabled=!n;b.textContent='Open the package editor for your selection ('+n+')';var h=document.getElementById('pkgOpenHelp');if(h)h.textContent=n?'You write or paste the text per section, then approve and download.':'Choose at least one item in step 2 first.'}
+function questionLink(d,s,q){var b=(d&&d.new_check_url)||${js(base)};if(b.slice(-6)==='/admin')b=${js(base)};return b+(b.indexOf('?')>=0?'&':'?')+'url='+encodeURIComponent(s&&s.url||'')+'&query='+encodeURIComponent(q||'')}
 function newCheckLink(d,s){var b=(d&&d.new_check_url)||${js(base)};if(b.slice(-6)==='/admin')b=${js(base)};var c=s&&s.checked||{};
  return b+(b.indexOf('?')>=0?'&':'?')+'url='+encodeURIComponent(s&&s.url||'')+'&query='+encodeURIComponent(c.search_term||'')}
 function nextWrite(g,w,n,d){var box=document.getElementById('nextWrite');if(!box)return;var r=null;
@@ -427,7 +429,7 @@ function nextWrite(g,w,n,d){var box=document.getElementById('nextWrite');if(!box
  else if(!w||!w.allowed)r='AI writing is switched off for this link'+(w&&w.owner_login_available?'. Owner: unlock it in step 3 (Prepare content) with your admin key.':' (Railway setting GROWTH_FREE_WRITING). Use the editor brief instead (Export your selection, below).');
  else if(w.remaining<=0)r='All AI writing runs for this check are used. Your prepared text is in step 3; a new check gives new runs.';
  if(r){box.innerHTML='<strong>Write with AI</strong><p class="muted">'+esc(r)+'</p>';return}
- box.innerHTML='<strong>Next: let AI write your chosen H2s</strong><p class="muted">'+(n?'AI writes the text for the '+n+' chosen H2(s); you check it before anything is downloaded. Nothing is published.':'Tick the H2s you want above. Then AI writes the text for you here.')+'</p><p><button type="button" id="nextWriteBtn" class="action-blue"'+(n?'':' disabled')+'>✍ Write the '+n+' chosen H2(s) with AI</button></p>';
+ box.innerHTML='<strong>Next: let AI write your chosen H2s</strong><p class="muted">'+(n?'AI writes the text for the '+n+' chosen H2(s); you check it before anything is downloaded. Nothing is published.':'Tick the H2s you want above. Then AI writes the text for you here.')+'</p><p><button type="button" id="nextWriteBtn" class="action-blue"'+(n?'':' disabled')+'>'+(n?'✍ Write the '+n+' chosen H2(s) with AI':'Choose a topic above first')+'</button></p>';
  var b=document.getElementById('nextWriteBtn');if(b)b.onclick=function(){showStep('stepPrepare','prepare');var wb=document.getElementById('gapWrite');if(wb&&!wb.disabled)wb.click()}}
 function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)return;
  var unlock=document.getElementById('ownerUnlockForm');if(unlock)unlock.onsubmit=async function(e){e.preventDefault();var key=document.getElementById('ownerUnlockKey'),btn=document.getElementById('ownerUnlockButton'),st=document.getElementById('ownerUnlockStatus');btn.disabled=true;btn.classList.add('is-working');btn.setAttribute('aria-busy','true');st.textContent='Verifying owner access…';try{var res=await fetch('/api/free-growth/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:key.value})});key.value='';var answer=await res.json();if(!answer.success)throw Error(answer.error||'Owner authentication failed');st.textContent='Owner access confirmed.';var state=await fetch(API+Q,{cache:'no-store',credentials:'same-origin'});var next=await state.json();if(!next.success||!next.writing||!next.writing.allowed)throw Error('Could not activate writing on this check');render(next);openJourney('stepPrepare')}catch(err){key.value='';st.textContent=err.message;st.className='error';btn.classList.add('action-failed')}finally{btn.disabled=false;btn.classList.remove('is-working');btn.removeAttribute('aria-busy')}};
@@ -508,8 +510,14 @@ function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribu
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
- if(d.cached)h+='<p class="note"><strong>Stored result.</strong> The Google research was not run again: this is the result of a check of the same page, search term and market'+(s.checked&&s.checked.checked_at?' on '+esc(new Date(s.checked.checked_at).toLocaleString())+' (UTC '+esc(String(s.checked.checked_at).slice(0,16).replace('T',' '))+')':' in the last 24 hours')+', made by the same version of the research. A new check of this page is possible after 24 hours or after an update of the research.</p>';
+ if(d.cached)h+='<p class="note"><strong>Result from earlier today.</strong> This page was checked for the same question and market'+(s.checked&&s.checked.checked_at?' on '+esc(new Date(s.checked.checked_at).toLocaleString()):' in the last 24 hours')+', so that result is shown. A new check of this page is possible tomorrow.</p>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
+ // The customer question the check used: chosen automatically from Google, or typed. Other questions start a new check.
+ var cq=d.customer_question,term=s.checked&&s.checked.search_term;
+ if(cq&&cq.text)h+='<div class="card" id="customerQuestion"><strong>Customer question researched:</strong> “'+esc(cq.text)+'” <small class="muted">· chosen automatically · '+esc(cq.label||'')+'</small>'+
+  ((cq.others||[]).length?'<details><summary>Other questions customers ask ('+cq.others.length+') — run the check with one of them</summary><ul>'+cq.others.map(function(o){return '<li><a href="'+esc(questionLink(d,s,o.text))+'">'+esc(o.text)+'</a> <small class="muted">· '+esc(o.label)+'</small></li>'}).join('')+'</ul></details>':'')+
+  '<p><a href="'+esc(questionLink(d,s,''))+'">Not the right question? Run the check with your own question →</a></p></div>';
+ else if(cq&&!cq.text)h+='<div class="card" id="customerQuestion"><strong>Search term researched:</strong> “'+esc(term||'')+'” <small class="muted">· no customer question found in Google for this page, so a phrase from the page was used</small><p><a href="'+esc(questionLink(d,s,''))+'">Run the check with your own customer question →</a></p></div>';
  var canWrite=!!(s.gaps&&s.gaps.status==='OBSERVED'&&s.gaps.writing_allowed!==false&&d.writing&&d.writing.allowed);
  // One step bar (the action plan below); the earlier second strip said the same in other words.
  var chosen=(d.selected_item_ids||[]).length,hasConcepts=!!(d.writing&&d.writing.last&&(d.writing.last.sections||[]).length),hasGaps=!!(s.gaps&&s.gaps.status==='OBSERVED'&&(s.gaps.items||[]).length);
@@ -521,7 +529,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribu
  var displayAction=blocker?'Review why no content change is approved':next.label;
  h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle"><span class="growth-eyebrow">FREE GROWTH · ACTION PLAN</span><h2 id="freeActionTitle">'+esc(decisionText)+'</h2><p><span class="growth-decision-tag">'+esc((s.decision||'RESEARCH').replaceAll('_',' '))+'</span></p><p><strong>Your next action:</strong> '+esc(displayAction)+'</p><a class="growth-next-btn" href="#'+esc(actionTarget)+'">'+esc(displayAction)+' <span aria-hidden="true">→</span></a><div class="growth-flow" aria-label="Workflow progress">'+[['Research','stepResearch'],['Review','stepReview'],['Prepare','stepPrepare'],['Measure','stepPublish']].map(function(st,i){var cls=(blocker||noChange)?(i===0?'complete':''):(i+1<stage?'complete':i+1===stage?'active':'');return '<span class="'+cls+'"><a href="#'+st[1]+'">'+(i+1<stage||(i===0&&cls==='complete')?'✓ ':(i+1)+'. ')+esc(st[0])+'</a></span>'}).join('')+'</div><p class="growth-subline">'+(blocker?'No writing or publication is recommended without reliable evidence.':noChange?'Existing content is preserved. No unnecessary change is required.':'Your original page is preserved until you approve and publish the package.')+'</p></section>';
  h+='<div class="grid two"><div><small>Google evidence</small><strong>'+esc(s.headline)+'</strong><a href="#google">View Google research</a></div><div><small>AI Answer Research · '+(as?as.checked:0)+'/5 checked</small><strong>'+esc(as?as.headline:'Not checked')+'</strong><a href="#ai">View AI results</a></div></div>';
- h+='<details id="stepResearch" class="journey-section"><summary><span class="journey-num">1</span><span><strong>Research</strong><small>Google · AI answers '+(as?as.checked:0)+'/5 · optional Search Console</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="google">1A · Google search</h2><p class="muted"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
+ h+='<details id="stepResearch" class="journey-section"><summary><span class="journey-num">1</span><span><strong>Research</strong><small>Google · AI answers '+(as?as.checked:0)+'/5 · optional Search Console</small></span><span class="journey-arrow">⌄</span></summary><div class="journey-body"><h2 id="google">Google search</h2><p class="muted"><strong>'+esc(s.headline)+'.</strong> '+esc(s.explanation)+'</p>';
  h+='<details class="research-details"><summary>Research limitations and next research options</summary><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol></details>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
  h+=(a?aiHtml(a,d.automatic_ai_answers):'')+gscHtml(d.gsc)+'</div></details>';
@@ -646,12 +654,28 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  if(!config.enabled)return null;
  const queue=[];let running=0;
  const jobs=new Set();
+ // No question typed: the customer question customers ask in Google for what the page offers (People also ask, related
+ // searches; one Serper search). AI ideas only for approved access (cost). Nothing found: the research derives a working
+ // phrase from the page, as before. The visitor sees which question was used and can run the check with another one.
+ async function autoQuestion(job){
+  try{
+   const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(job.url);const html=String(live&&live.html||'');
+   const country=job.market&&job.market.countries&&job.market.countries[0]||null,lang=job.market&&job.market.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
+   const out=await discoverCustomerQuestions({url:job.url,html,keyword:'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
+    ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:job.approved?(engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()):null});
+   const best=(out.questions||[]).find(q=>q.text===out.best_question)||null;
+   return {text:best?best.text:null,source:best?best.source:'NONE',label:best?best.label:null,searched_with:out.searched_with||null,
+    others:(out.questions||[]).filter(q=>!best||q.text!==best.text).slice(0,6).map(q=>({text:q.text,label:q.label})),chosen_automatically:true};
+  }catch(e){return {text:null,source:'UNAVAILABLE',label:null,others:[],chosen_automatically:true}}
+ }
  function pump(){
   while(running<config.concurrency&&queue.length){
    const job=queue.shift();running++;
    const p=(async()=>{
     try{
      await storage.setStatus(pool,job.id,{status:'RUNNING'});
+     const chosenQuestion=job.query?null:await autoQuestion(job);
+     if(chosenQuestion&&chosenQuestion.text)job.query=chosenQuestion.text;
      const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[]},engineDeps);
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
@@ -659,6 +683,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      }else{
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
+      if(chosenQuestion)out.report.customer_question=chosenQuestion;
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
       if(job.approved){
        const provider=engineDeps.groundedAnswer||groundedGeminiAnswer;
@@ -753,8 +778,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const email=em.email;
    if(b.consent!==true)return res.status(400).json({success:false,error:'Please accept the storage notice'});
    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
+   // Empty: the check finds the customer question itself in Google (see autoQuestion); a typed question wins.
    const query=clean(b.query,120);
-   if(!query)return res.status(400).json({success:false,error:'Enter a customer question or search phrase to run the free check.'});
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
@@ -797,7 +822,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    {const v=ai.validateGrowthAnswer(ai.parseAiAnswer(text,{}).answer,clean(b.query,120));if(v.status==='invalid'){res.status(400).json({success:false,error:label+': '+v.message});return undefined}}
    if(ai.otherPrompt(text)){res.status(400).json({success:false,error:label+': this is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here and paste that answer.'});return undefined}
   }
-  if(list.length&&!clean(b.query,120)){res.status(400).json({success:false,error:'Enter the search term first: the AI prompt uses it exactly.'});return undefined}
+  if(list.length&&!clean(b.query,120)){res.status(400).json({success:false,error:'Enter the customer question first: your pasted AI answers are checked against it.'});return undefined}
   return list.map(x=>({engine:String(x.engine),text:String(x.text)}));
  }
  async function saveStartAnswers(row,url,answers){
@@ -914,6 +939,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
+   customer_question:row.report&&row.report.customer_question||null,
    summary:withPlainEvidence(withGscLimits(withAiLimits(row.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
@@ -969,6 +995,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(!ordinaryWritingAllowed(row)&&sessionValid(req)&&req.get('x-requested-with')!=='growth-free-admin')
    return res.status(403).json({success:false,error:'Owner request confirmation required.'});
   if(Number(row.write_count||0)>=(config.writeLimit||3))return res.status(429).json({success:false,error:'The writing limit for this check is reached. Download the editor brief instead.'});
+  // A daily cap on AI writing for visitors (GROWTH_FREE_WRITES_PER_DAY): the owner's checks do not count and are not capped.
+  if(row.access_label!=='admin'&&typeof storage.writesToday==='function'){const today=await storage.writesToday(pool).catch(()=>0);
+   if(today>=(config.writesPerDay||40))return res.status(429).json({success:false,error:'Today\'s AI writing for free checks is used up. Download the editor brief, or try again tomorrow.'})}
   const ids=Array.isArray(req.body&&req.body.item_ids)?[...new Set(req.body.item_ids.map(String))].slice(0,200):[];
   const items=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>ids.includes(String(x.id)));
   if(!items.length)return res.status(400).json({success:false,error:'Select at least one topic or question first.'});
@@ -1042,7 +1071,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(remind&&emailConfigured()){
     const lang=reminders.languageOf(fresh);
     const m=await localizeMail(reminders.confirmationMessage({url:row.url,publishedOn:d.value,stopLink:links.stop(saved.reminder_token,saved),lang:reminders.T[lang]?lang:'en'}),lang);
-    if(await Promise.resolve(send({to:Array.isArray(saved.emails)&&saved.emails.length?saved.emails:[saved.email],subject:m.subject,html:m.html})).catch(()=>false))confirmation='SENT'}
+    if(await Promise.resolve(send({to:reminders.recipientsOf({...saved,access_label:row.access_label,invite_id:row.invite_id}),subject:m.subject,html:m.html})).catch(()=>false))confirmation='SENT'}
    res.set('Cache-Control','no-store').json({success:true,publication:publicationOf(fresh),confirmation,gsc:await gscFor(fresh)});
   }catch(e){console.error('[free-growth] publication failed',e.message);res.status(503).json({success:false,error:'The date could not be saved. Please try again.'})}
  });
@@ -1065,10 +1094,13 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return String(live&&live.html||'');
  }
  // Title and description in the first person: AI rewrites them as the service (checked; see suggestServiceMeta).
+ const metaUses=new Map();
  app.post(apiPath+'/checks/:id/meta-suggest',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
   const b=req.body||{};
+  // At most 5 AI rewrites per check (each is an AI call); the check without AI stays free.
+  if(b.check_only!==true){const n=(metaUses.get(row.id)||0)+1;if(n>5)return res.status(429).json({success:false,status:'LIMIT',error:'The AI rewrite limit for this check is reached; change the title and description yourself.'});metaUses.set(row.id,n);if(metaUses.size>20000)metaUses.clear()}
   // check_only: which field says "I"/"my", without AI (nothing is rewritten unless the visitor asks).
   if(b.check_only===true)return res.set('Cache-Control','no-store').json({success:true,status:'CHECKED',voice:cmsPackage.voiceOf({title:clean(b.seo_title,200),meta:clean(b.meta_description,400)})});
   const model=engineDeps.metaModel!==undefined?engineDeps.metaModel:require('../growth-task-meaning.cjs').geminiModel();

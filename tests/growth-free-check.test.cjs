@@ -534,10 +534,12 @@ test('the AI check comes first: with an entered search term it is available whil
  // Without an entered search term the prompt needs the derived term, so the AI check waits for the Google part.
  let release2;const gate2=new Promise(r=>release2=r);
  const s2=await server({engine:async(input,deps)=>{await gate2;return runFreeGrowthResearch(input,deps)}});t.after(()=>s2.srv.close());
+ // Without a question the check finds one itself (owner 2026-11-08: automatic, typing is the fallback).
  const started=await s2.post('/api/free-growth/checks',{...ok,query:''});
- assert.equal(started.status,400,'public visitors must enter their customer question');
- assert.match(started.body.error,/customer question or search phrase/);
+ assert.equal(started.status,202,'an empty customer question is allowed');
  release2();await s2.service.idle();
+ const auto=await s2.get('/api/free-growth/checks/'+started.body.id+'?k='+started.body.key);
+ assert.equal(auto.body.status,'DONE');assert.equal(auto.body.customer_question.chosen_automatically,true);
 });
 
 test('AI answers before the start: the prompt is on the form, up to 5 answers (one per AI system) are stored with the check',async t=>{
@@ -550,7 +552,7 @@ test('AI answers before the start: the prompt is on the form, up to 5 answers (o
  const quick=require('./fixtures/growth-free-5M0tfxjeQawH/check.json').ai_paste_claude;
  assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[{engine:'claude',text:quick}]})).body.error,/Claude: this is an answer to the company quick-scan prompt/);
  assert.match((await s.post('/api/free-growth/checks',{...ok,ai_answers:[five[0],five[0]]})).body.error,/one answer per system/);
- assert.match((await s.post('/api/free-growth/checks',{...ok,query:'',ai_answers:[five[1]]})).body.error,/customer question or search phrase/);
+ assert.match((await s.post('/api/free-growth/checks',{...ok,query:'',ai_answers:[five[1]]})).body.error,/Enter the customer question first/);
  assert.equal(s.storage.checks.length,0,'a refused start creates no check');
  const started=await s.post('/api/free-growth/checks',{...ok,ai_answers:five});
  assert.equal(started.status,202);await s.service.idle();
@@ -726,7 +728,7 @@ test('admin: market and language like the public form; fresh research ignores a 
  const stored=await run({market:'nl — Netherlands',language:'Dutch'});await s.service.idle();
  assert.equal(s.calls.length,n,'stored result reused');assert.equal(stored.body.status,'DONE');
  const view=await s.get('/api/free-growth/checks/'+stored.body.id+'?k='+stored.body.key);assert.equal(view.body.cached,true);
- assert.match((await s.get('/free-growth/r/'+stored.body.id+'?k='+stored.body.key)).body,/Stored result\.<\/strong> The Google research was not run again/);
+ assert.match((await s.get('/free-growth/r/'+stored.body.id+'?k='+stored.body.key)).body,/Result from earlier today\.<\/strong> This page was checked for the same question and market/);
  await run({market:'nl — Netherlands',language:'Dutch',fresh:true});await s.service.idle();
  assert.equal(s.calls.length,n+1,'fresh research runs again');
  // Fresh is admin only: the public form ignores it.
@@ -764,4 +766,43 @@ test('up to five e-mail addresses: the first counts for the limits, all are stor
  assert.equal(six.status,400);assert.match(six.body.error,/at most 5/);
  const bad=await s.post('/api/free-growth/checks',{...ok,email:'test-a@acme-roofing.example, not-an-address'});
  assert.equal(bad.status,400);assert.match(bad.body.error,/up to 5, separated by commas/);
+});
+
+test('review 2026-11-08: no question typed — the check uses the best Google question and says so; typed questions win',async t=>{
+ const prev=process.env.SERPER_API_KEY;process.env.SERPER_API_KEY='TEST-KEY';t.after(()=>{if(prev===undefined)delete process.env.SERPER_API_KEY;else process.env.SERPER_API_KEY=prev});
+ const s=await server({engineDeps:{questionModel:null,questionFetch:async()=>({ok:true,json:async()=>({peopleAlsoAsk:[{question:'How much does roof repair cost in Lodi NJ?'}],relatedSearches:[{query:'roof leak repair lodi'}]})})}});t.after(()=>s.srv.close());
+ const a=await s.post('/api/free-growth/checks',{...ok,query:''});assert.equal(a.status,202);await s.service.idle();
+ assert.equal(s.calls[s.calls.length-1].query,'How much does roof repair cost in Lodi NJ?','the research ran on the customer question');
+ const r=await s.get('/api/free-growth/checks/'+a.body.id+'?k='+a.body.key);
+ assert.deepEqual([r.body.customer_question.text,r.body.customer_question.source],['How much does roof repair cost in Lodi NJ?','GOOGLE_PEOPLE_ALSO_ASK']);
+ assert.deepEqual(r.body.customer_question.others.map(x=>x.text),['roof leak repair lodi']);
+ const page=await s.get('/free-growth/r/'+a.body.id+'?k='+a.body.key);
+ assert.match(page.body,/Customer question researched:/);assert.match(page.body,/Run the check with your own question/);
+ const typed=await s.post('/api/free-growth/checks',{...ok,query:'roof repair lodi nj'});await s.service.idle();
+ assert.equal(s.calls[s.calls.length-1].query,'roof repair lodi nj','a typed question is never replaced');
+ const tr=await s.get('/api/free-growth/checks/'+typed.body.id+'?k='+typed.body.key);assert.equal(tr.body.customer_question,null);
+});
+
+test('review 2026-11-08: e-mails go to the first address only, unless the owner or an approved invitation made the check',()=>{
+ const {recipientsOf}=require('../src/growth-free/reminders.cjs');
+ const emails=['test-a@acme-roofing.example','test-b@other.example'];
+ assert.deepEqual(recipientsOf({email:emails[0],emails}),[emails[0]]);
+ assert.deepEqual(recipientsOf({email:emails[0],emails,invite_id:4}),emails);
+ assert.deepEqual(recipientsOf({email:emails[0],emails,access_label:'admin'}),emails);
+ assert.deepEqual(recipientsOf({email:emails[0],emails:null}),[emails[0]]);
+});
+
+test('review 2026-11-08: AI limits — 5 title/description rewrites per check; a daily cap on AI writing for visitors',async t=>{
+ const s=await server({config:{writing:'all',writesPerDay:2},engineDeps:{metaModel:{call:async()=>'{"title":"Roof repair in Lodi | Acme","description":"x"}'}}});t.after(()=>s.srv.close());
+ const a=await s.post('/api/free-growth/checks',ok);await s.service.idle();
+ const path='/api/free-growth/checks/'+a.body.id+'/meta-suggest?k='+a.body.key;
+ for(let i=0;i<5;i++)assert.notEqual((await s.post(path,{seo_title:'My roof repair',meta_description:''})).status,429);
+ const sixth=await s.post(path,{seo_title:'My roof repair',meta_description:''});
+ assert.equal(sixth.status,429);assert.match(sixth.body.error,/rewrite limit for this check/);
+ assert.equal((await s.post(path,{seo_title:'My roof repair',check_only:true})).status,200,'checking without AI is not limited');
+ s.storage.writesToday=async()=>2;
+ const r=await s.get('/api/free-growth/checks/'+a.body.id+'?k='+a.body.key);
+ const ids=r.body.summary.gaps.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
+ const w=await s.post('/api/free-growth/checks/'+a.body.id+'/write?k='+a.body.key,{item_ids:ids});
+ assert.equal(w.status,429);assert.match(w.body.error,/Today's AI writing for free checks is used up/);
 });
