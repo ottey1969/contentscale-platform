@@ -278,7 +278,7 @@ test('no key needed on your own domain (hosts); other domains still need the key
 
 const ADMIN={'x-admin-key':'admin-secret-0123456789'};
 test('approval gate rejects public checks and gives invited users full question selection',async t=>{
- const s=await server({engineDeps:{questionFetch:async()=>({ok:true,json:async()=>({peopleAlsoAsk:[{question:'How much does roof repair cost in Lodi NJ?'}]})}),questionModel:null},config:{approvalRequired:true,adminKey:'admin-secret-0123456789'},engine:async()=>({statusCode:200,report:{success:true,editorial_decision_gate:{decision:'NO_CHANGE'}}})});
+ const s=await server({engineDeps:{questionFetch:async()=>({ok:true,json:async()=>({peopleAlsoAsk:[{question:'How much does roof repair cost in Lodi NJ?'}]})}),questionModel:null},config:{approvalRequired:true,adminKey:'admin-secret-0123456789',writing:'admin'},engine:async()=>({statusCode:200,report:{success:true,editorial_decision_gate:{decision:'NO_CHANGE'}}})});
  t.after(()=>s.srv.close());
  const blocked=await s.post('/api/free-growth/checks',ok);
  assert.equal(blocked.status,403);assert.match(blocked.body.error,/Personal approval/);
@@ -291,6 +291,8 @@ test('approval gate rejects public checks and gives invited users full question 
  const allowed=await s.post('/api/free-growth/checks',{invite:token,url:URL_,query:'roof repair lodi nj',email:'approved@example.com',consent:true});
  assert.equal(allowed.status,202,JSON.stringify(allowed.body));await s.service.idle();
  assert.equal(s.storage.checks[0].access_label,'invite: Approved applicant');
+ const inviteResult=await s.get('/api/free-growth/checks/'+allowed.body.id+'?k='+allowed.body.key);
+ assert.equal(inviteResult.body.writing.allowed,true,'approved invite must retain AI writing even in admin-only public writing mode');
  const noDiscovery=await s.post('/api/free-growth/customer-questions',{key:'open-key-12345',url:URL_});
  assert.equal(noDiscovery.status,403);
  const noEmail=await s.post('/api/free-growth/customer-questions',{invite:'not-an-invitation',url:URL_});
