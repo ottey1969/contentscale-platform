@@ -6,6 +6,7 @@ const {publicationReadiness}=require('./growth-publication-readiness.cjs');
 const {reconcileOutcome}=require('./growth-outcome.cjs');
 const {annotateAiVisibility,MAX_AGE_DAYS:AI_MAX_AGE_DAYS}=require('./growth-ai-relevance.cjs');
 const aiAnswers=require('./growth-free/ai-answers.cjs');
+const {groundedGeminiAnswer}=require('./growth-free/auto-ai-answers.cjs');
 const storedResearch=require('./growth-research-report-store.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
 const {snapshotCompetitorLeads}=require('./growth-snapshot-competitors.cjs');
@@ -66,10 +67,11 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
-function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,questionModel=undefined,questionFetch=undefined,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
+function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,autoGroundedAnswer=groundedGeminiAnswer,questionModel=undefined,questionFetch=undefined,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null}={}){
  if(typeof app?.get!=='function'||typeof pool?.query!=='function'||typeof data!=='function')
   throw Error('GROWTH_AUTO_RESEARCH_DEPENDENCIES_REQUIRED');
  const cache=new Map(),LIMIT=24,TTL=5*60*1000;
+ const automaticAiInFlight=new Map(),automaticAiRetryAfter=new Map();
  const check=(req,res)=>{
   const raw=String(req.query?.page_id||'');
   if(!/^[1-9][0-9]{0,12}$/.test(raw)){res.status(400).json({success:false,code:'VALID_TRACKER_PAGE_ID_REQUIRED'});return null}
@@ -802,6 +804,39 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   try{await saveClaimReview({clientId:req.growthTrackerClientId,targetPageId:pid,statement,decision})}catch{return no(503,'NOT_SAVED')}
   // The next report of this page shows the decision; cached research is unaffected (the review is read on every complete run).
   res.set('Cache-Control','private, no-store').json({success:true,statement,decision});
+ });
+ // Owner-only automatic AI check. This queries the same genuinely grounded Gemini provider as Free Growth.
+ // Do not pretend this provides ChatGPT, Claude, Perplexity, Copilot or Google AI Overview measurements.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/ai-answer/automatic',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
+  if(req.growth?.can_edit!==true||typeof saveAiAnswer!=='function'||typeof loadAiAnswers!=='function')return no(403,'OWNER_ONLY_AUTOMATIC_AI');
+  const term=String(v.queryOverride||v.page.keyword||'').trim().slice(0,120);
+  if(!term)return no(400,'SEARCH_TERM_REQUIRED');
+  let current;
+  try{current=await loadAiAnswers({clientId:v.clientId,pageId:v.id,query:term})}catch{return no(503,'AI_ANSWERS_UNAVAILABLE')}
+  const recent=current.find(a=>a.engine==='google_aio'&&Date.now()-Date.parse(a.created_at||0)<=AI_MAX_AGE_DAYS*86400000);
+  if(recent)return res.set('Cache-Control','private, no-store').json({success:true,status:'ALREADY_CHECKED',ai_check:await aiCheckFor({v,term,target:v.page.url})});
+  const lock=v.clientId+':'+v.id+':'+term.toLowerCase();
+  let promise=automaticAiInFlight.get(lock);
+  if(!promise&&Date.now()<(automaticAiRetryAfter.get(lock)||0))
+   return res.set('Cache-Control','private, no-store').json({success:true,status:'RETRY_LATER',ai_check:await aiCheckFor({v,term,target:v.page.url})});
+  if(!promise){
+   promise=(async()=>{
+    try{
+     const answer=await autoGroundedAnswer({query:term,pageUrl:v.page.url});
+     if(answer.status==='SUCCESS'&&answer.parsed?.validation_status!=='invalid'){
+      await saveAiAnswer({clientId:v.clientId,pageId:v.id,query:term,engine:answer.engine,rawText:answer.raw,parsed:answer.parsed});
+     }else automaticAiRetryAfter.set(lock,Date.now()+15*60*1000);
+     return {status:answer.status};
+    }catch(e){automaticAiRetryAfter.set(lock,Date.now()+15*60*1000);return {status:'PROVIDER_UNAVAILABLE'}}
+   })();
+   automaticAiInFlight.set(lock,promise);
+   promise.finally(()=>automaticAiInFlight.delete(lock));
+  }
+  const result=await promise;
+  const ai_check=await aiCheckFor({v,term,target:v.page.url}).catch(()=>null);
+  return res.set('Cache-Control','private, no-store').json({success:true,status:result.status,ai_check});
  });
  // An AI answer for the research's search term, pasted by the owner (same prompt, checks and parser as the Free check).
  if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/ai-answer',data,async(req,res)=>{

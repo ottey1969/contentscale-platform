@@ -70,6 +70,7 @@
   var recent=(x.engines||[]).filter(function(e){return e.checked}).length;
   var total=x.total||(x.engines||[]).length,complete=total>0&&recent===total&&(x.engines||[]).every(function(e){return e.verifiable});
   node('p',complete?'AI research complete — '+recent+'/'+total+' checked. No additional AI answers required.':'AI-system checks for this exact search: '+recent+' of '+total+' current (within '+(c.max_age_days||14)+' days). This is saved check evidence, not a new live AI scan.',box);
+  if(d.automatic_ai_status)node('p','Automatic Gemini / Google Search: '+(d.automatic_ai_status==='SUCCESS'?'completed and saved':d.automatic_ai_status==='ALREADY_CHECKED'?'existing verified answer reused':d.automatic_ai_status==='RUNNING'?'checking now…':d.automatic_ai_status==='RETRY_LATER'?'retry deferred':d.automatic_ai_status.replace(/_/g,' ').toLowerCase())+'. Gemini grounding is not a Google AI Overview; other providers are not marked checked without their actual answers.',box);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
   var history=new Map((c.prior_checks||[]).map(function(e){return [e.id,e.checked_at]}));
   var ul=node('ul',null,box);(x.engines||[]).forEach(function(e){
@@ -83,8 +84,8 @@
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
   if(complete){var goStep=node('p',null,box),continueLink=node('a','Continue to Step 3 · Write selected improvements',goStep);continueLink.href='#growthGapChoice';}
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
-  var form=complete?node('details',null,box):node('div',null,box);
-  if(complete)node('summary','Optional · Recheck or replace an AI answer',form);
+  var form=node('details',null,box);
+  node('summary','Advanced · Add or recheck an independent AI answer manually (optional)',form);
   node('p','Copy the prompt, paste it into a new chat with web search on, then paste the complete answer (including RESOURCES) at the AI system you used.',form);
   var pr=node('textarea',null,form);pr.rows=5;pr.readOnly=true;pr.value=c.prompt;pr.style.width='100%';
   var cp=node('button','Copy prompt',form);cp.type='button';cp.addEventListener('click',function(){pr.select();if(navigator.clipboard)navigator.clipboard.writeText(pr.value);cp.textContent='Copied ✓'});
@@ -843,6 +844,22 @@
   if(!a||!h||typeof h.url!=='string'||h.url.indexOf('/track/')!==0)return;
   a.href=h.url;a.textContent='Prepare the CMS package with the checked Growth text';
  }
+ // Share Free Growth's genuinely grounded Gemini check; never misattribute other AI providers.
+ var autoAiPending=false;
+ async function triggerAutomaticAi(d){
+  if(!d||!d.ai_check||autoAiPending)return;
+  var c=d.ai_check,already=(c.summary&&c.summary.engines||[]).some(function(e){return e.id==='google_aio'&&e.checked&&e.verifiable});
+  if(already){d.automatic_ai_status='ALREADY_CHECKED';var ready=document.getElementById('growthAiCheck');if(ready)renderAiCheck(ready,d);return}
+  autoAiPending=true;d.automatic_ai_status='RUNNING';
+  var box=document.getElementById('growthAiCheck');if(box)renderAiCheck(box,d);
+  try{
+   var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-answer/automatic?page_id='+encodeURIComponent(id)+runParams,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:'{}'});
+   var j=await r.json();if(!r.ok||!j.success)throw Error(j.code||'Automatic provider unavailable');
+   d.automatic_ai_status=j.status;
+   if(j.ai_check){d.ai_check=j.ai_check;if(last&&last===d)last.ai_check=j.ai_check}
+  }catch(e){d.automatic_ai_status='PROVIDER_UNAVAILABLE'}
+  finally{autoAiPending=false;var current=document.getElementById('growthAiCheck');if(current)renderAiCheck(current,d)}
+ }
  // While the research runs, the optional AI check for the page's keyword (no research is started for it).
  async function showAiEarly(){
   var early=document.getElementById('growthAiEarly');if(!early||early.childNodes.length)return;
@@ -855,7 +872,7 @@
  async function run(){
   var status=document.getElementById('researchStatus');
   // Visible activity while the research runs (a spinner; a still mark with reduced motion).
-  status.className='working';if(status.setAttribute)status.setAttribute('aria-busy','true');status.textContent=(runMarket||runQuery?'This run, chosen by the Opportunity Finder: '+(runQuery?'“'+runQuery+'”':'')+(runMarket?' in '+runMarket.toUpperCase():'')+' (your page setting is not changed). ':'')+'Analyzing the page, Search Console queries and the ranking pages… AI answers are optional: you can paste them below while this runs.';
+  status.className='working';if(status.setAttribute)status.setAttribute('aria-busy','true');status.textContent=(runMarket||runQuery?'This run, chosen by the Opportunity Finder: '+(runQuery?'“'+runQuery+'”':'')+(runMarket?' in '+runMarket.toUpperCase():'')+' (your page setting is not changed). ':'')+'Analyzing the page, Search Console queries and the ranking pages… An automatic grounded Gemini check follows. Manual answers are optional under Advanced.';
   showAiEarly();
   document.getElementById('retryResearch').disabled=true;
   try{
@@ -868,7 +885,7 @@
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
-   last=result;render(result);pointHandoff(result);
+   last=result;render(result);pointHandoff(result);if(owner)triggerAutomaticAi(result);
   }catch(e){status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false
   }finally{document.getElementById('retryResearch').disabled=false;if(status.className==='working')status.className='';if(status.removeAttribute)status.removeAttribute('aria-busy')}
@@ -883,7 +900,7 @@
    var saved=await response.json();
    if(!response.ok||saved.success!==true)throw Error(saved.code||'SAVED_REPORT_UNAVAILABLE');
    if(saved.found&&saved.report&&saved.report.success===true){
-    last=saved.report;render(saved.report);pointHandoff(saved.report);
+    last=saved.report;render(saved.report);pointHandoff(saved.report);if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
     status.textContent='Saved research restored ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new scan was run.';
     document.getElementById('retryResearch').hidden=false;
     return;
