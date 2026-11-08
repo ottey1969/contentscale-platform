@@ -167,9 +167,22 @@ var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
  var o=document.getElementById('ownerOut');if(o)o.onclick=async function(){await fetch(${js(api)}+'/admin/logout',{method:'POST',credentials:'same-origin'});location.reload()}})();
 // This browser remembers what was entered (page, search term, market, language, addresses), so the next check starts
 // filled in. Only in this browser; a link with values wins; works without storage too.
-var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm';
+var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm:'+location.pathname;
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}})();
 function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}}
+var freeForm=document.getElementById('f');
+if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER.includes(e.target.name))rememberForm()});
+ freeForm.addEventListener('change',function(e){if(e.target&&REMEMBER.includes(e.target.name))rememberForm()});
+ var resetFree=document.createElement('button');resetFree.type='button';resetFree.id='growthFreeReset';resetFree.className='ghost';resetFree.textContent='Reset saved fields';resetFree.style.marginLeft='8px';
+ var submitFree=freeForm.querySelector('button[type=submit]');if(submitFree){submitFree.insertAdjacentElement('afterend',resetFree);resetFree.addEventListener('click',function(){
+  REMEMBER.forEach(function(k){var el=freeForm.elements[k];if(el)el.value=''});
+  try{localStorage.removeItem(MEM)}catch(e){}
+  var start=document.getElementById('aiStartPrompt');if(start)start.value='';
+  var list=document.getElementById('cqList');if(list)list.innerHTML='';
+  var status=document.getElementById('cqStatus');if(status)status.textContent='Saved fields cleared.';
+  document.getElementById('s').textContent='Saved fields cleared. You can enter new details.';
+ })}}
+
 // Customer questions for the page entered above: Google's questions (People also ask, related searches) and labelled AI
 // ideas. Clicking one puts it in the search term; the check then researches that question.
 (function(){var b=document.getElementById('cqFind');if(!b)return;var st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
@@ -179,7 +192,7 @@ function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=documen
    var d=await r.json();if(!d.success)throw Error(d.error||'Not available right now.');
    st.textContent=d.questions.length?'Click a question to use it as the search term (you can still edit it).':'No questions found; enter the search term yourself.';
    list.innerHTML=d.questions.map(function(q){return '<button type="button" class="ghost cqPick" style="margin:4px 6px 4px 0;text-align:left">'+q.text.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+' <small style="display:inline">· '+q.label+'</small></button>'}).join('')+(d.questions.length?'<p class="muted">'+d.note+'</p>':'');
-   Array.prototype.forEach.call(list.querySelectorAll('.cqPick'),function(x,i){x.onclick=function(){document.getElementById('query').value=d.questions[i].text;st.textContent='Search term set: “'+d.questions[i].text+'”.'}});
+   Array.prototype.forEach.call(list.querySelectorAll('.cqPick'),function(x,i){x.onclick=function(){document.getElementById('query').value=d.questions[i].text;rememberForm();document.getElementById('query').dispatchEvent(new Event('input',{bubbles:true}));st.textContent='Search term set: “'+d.questions[i].text+'”.'}});
   }catch(err){st.textContent=err.message}b.disabled=false;b.classList.remove('is-working')})})();
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
