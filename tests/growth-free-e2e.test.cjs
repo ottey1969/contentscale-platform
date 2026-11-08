@@ -53,14 +53,12 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     // 1. The form: page, search term, market, language, email.
     await p.goto(base + '/free-growth?key=e2e-open-key-1');
-    // Customer questions: Google's questions for the page, one click puts it in the search term.
-    process.env.SERPER_API_KEY = process.env.SERPER_API_KEY || 'TEST-KEY';
-    await p.fill('#url', URL_); await p.click('#cqFind');
-    await p.waitForSelector('.cqPick', { timeout: 30000 });
-    assert.match(await p.textContent('#cqList'), /How much does roof repair cost in Lodi NJ\?[^]*Google · People also ask[^]*emergency roof repair lodi[^]*Google · Related search/);
-    await p.click('.cqPick');
-    assert.equal(await p.inputValue('#query'), 'How much does roof repair cost in Lodi NJ?');
-    await p.fill('#query', 'roof repair lodi nj'); await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
+    // Legacy access-key form: no question-discovery credits without approval.
+    // Visitors type their question; approved invitations use the same full research engine with discovery enabled.
+    assert.equal(await p.locator('#cqFind').count(), 0, 'no paid question-discovery button for an unapproved visitor');
+    await p.fill('#url', URL_);
+    await p.fill('#query', 'roof repair lodi nj');
+    await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
     const email = 'TEST-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example';
     await p.fill('#email', email); await p.check('input[name=consent]');
     // Optional Search Console export (TEST data), filtered on exactly this page.
