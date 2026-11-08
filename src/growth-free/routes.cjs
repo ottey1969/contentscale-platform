@@ -168,7 +168,7 @@ var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 // This browser remembers what was entered (page, search term, market, language, addresses), so the next check starts
 // filled in. Only in this browser; a link with values wins; works without storage too.
 var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm:'+location.pathname;
-(function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}})();
+(function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
 function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}}
 var freeForm=document.getElementById('f');
 if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER.includes(e.target.name))rememberForm()});
@@ -592,6 +592,23 @@ function adminPage(cfg,api,base,loggedIn){
 <script>
 ${aiStartScript()}
 var API=${js(api)},H={'Content-Type':'application/json','X-Requested-With':'growth-free-admin'};
+(function(){
+ var form=document.getElementById('rf'),key='growthFreeAdminDraft:'+location.pathname;
+ if(!form)return;
+ var fields=['url','query','market','language'],saved={};
+ try{saved=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}
+ fields.forEach(function(k){var el=form.elements[k];if(el&&saved[k]&&!el.value)el.value=String(saved[k]).slice(0,k==='url'?500:200)});
+ function save(){var next={};fields.forEach(function(k){var el=form.elements[k];if(el)next[k]=el.value});try{localStorage.setItem(key,JSON.stringify(next))}catch(e){}}
+ form.addEventListener('input',save);form.addEventListener('change',save);
+ var submit=form.querySelector('button[type=submit],button:not([type])');
+ if(submit){var reset=document.createElement('button');reset.type='button';reset.id='growthFreeAdminReset';reset.className='ghost';reset.textContent='Reset saved fields';reset.style.marginLeft='8px';
+ submit.insertAdjacentElement('afterend',reset);reset.addEventListener('click',function(){
+  fields.forEach(function(k){var el=form.elements[k];if(el)el.value=''});
+  try{localStorage.removeItem(key)}catch(e){}
+  var p=document.getElementById('aiStartPrompt');if(p)p.value='';
+  var status=document.getElementById('rs');if(status)status.textContent='Saved fields cleared.';
+ });}
+})();
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function day(x){return String(x||'').slice(0,10)}
 async function post(p,b){var r=await fetch(API+p,{method:'POST',credentials:'same-origin',headers:H,body:JSON.stringify(b||{})});var d=await r.json().catch(function(){return {success:false,error:'Unavailable'}});if(r.status===404&&!d.error)d.error='Not logged in';return d}
