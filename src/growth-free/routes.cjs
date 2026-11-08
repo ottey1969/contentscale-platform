@@ -171,13 +171,23 @@ var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 // filled in. Only in this browser; a link with values wins; works without storage too.
 var REMEMBER=['url','query','market','language','email'],MEM='growthFreeForm';
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM)||'{}');REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el&&!el.value&&m[k])el.value=String(m[k]).slice(0,1100)})}catch(e){}var q=document.getElementById('query');if(q&&q.value)q.dispatchEvent(new Event('input',{bubbles:true}))})();
-function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}}
+function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=document.getElementById(k);if(el)m[k]=el.value});localStorage.setItem(MEM,JSON.stringify(m))}catch(e){}rememberAi()}
+// Pasted AI answers are kept in this browser too, with the customer question they answer: after a refresh or a failed start
+// they come back as long as the question is the same (an answer to another question would not count). Reset clears them.
+var MEM_AI='growthFreeFormAi';
+function rememberAi(){try{var q=(document.getElementById('query')||{}).value||'',a={};document.querySelectorAll('textarea[data-engine]').forEach(function(t){if(t.value.trim())a[t.getAttribute('data-engine')]=t.value});
+ if(Object.keys(a).length)localStorage.setItem(MEM_AI,JSON.stringify({query:q.trim(),answers:a}));else localStorage.removeItem(MEM_AI)}catch(e){}}
+(function(){try{var m=JSON.parse(localStorage.getItem(MEM_AI)||'null'),q=(document.getElementById('query')||{}).value||'';if(!m||!m.answers||String(m.query||'')!==q.trim())return;var n=0;
+ document.querySelectorAll('textarea[data-engine]').forEach(function(t){var v=m.answers[t.getAttribute('data-engine')];if(v&&!t.value){t.value=String(v).slice(0,40000);n++}});
+ var box=document.getElementById('aiStart');if(n&&box){box.open=true;var note=document.createElement('p');note.className='muted';note.id='aiRestored';note.textContent=n+' pasted AI answer(s) restored from this browser.';box.insertBefore(note,box.children[1]||null)}}catch(e){}})();
+document.querySelectorAll('textarea[data-engine]').forEach(function(t){t.addEventListener('input',rememberAi)});
 var freeForm=document.getElementById('f');
 if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER.includes(e.target.name))rememberForm()});
  freeForm.addEventListener('change',function(e){if(e.target&&REMEMBER.includes(e.target.name))rememberForm()});
  var resetFree=document.createElement('button');resetFree.type='button';resetFree.id='growthFreeReset';resetFree.className='ghost';resetFree.textContent='Reset saved fields';resetFree.style.marginLeft='8px';
  var submitFree=freeForm.querySelector('button[type=submit]');if(submitFree){submitFree.insertAdjacentElement('afterend',resetFree);resetFree.addEventListener('click',function(){
   REMEMBER.forEach(function(k){var el=freeForm.elements[k];if(el)el.value=''});
+  document.querySelectorAll('textarea[data-engine]').forEach(function(t){t.value=''});try{localStorage.removeItem(MEM_AI)}catch(e){}
   try{localStorage.removeItem(MEM)}catch(e){}
   var start=document.getElementById('aiStartPrompt');if(start)start.value='';
   var list=document.getElementById('cqList');if(list)list.innerHTML='';
@@ -258,10 +268,17 @@ function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI answers <small>('+esc(
   '<label>Prompt (the same for every AI system)<textarea id="aiPrompt" rows="6" readonly>'+esc(a.prompt)+'</textarea></label><p><button type="button" class="ghost" id="aiCopy">Copy prompt</button></p>'+
   '<label>Answer from the AI system<textarea id="aiText" rows="7" maxlength="'+esc(a.max_paste)+'" placeholder="Paste the complete answer here"></textarea></label><p><button type="button" id="aiSave">Analyse answer</button> <small role="status" id="aiStatus"></small></p></div></details>';
  h+='<p class="muted">'+esc(x.caveat)+'</p>';return h}
+function aiDraftKey(eng){return 'growthFreeAiDraft:'+API+':'+eng}
 function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
+ // The answer being pasted is kept in this browser per check and AI system until it is analysed (a refresh loses nothing).
+ var ta=document.getElementById('aiText'),sel=document.getElementById('aiEngine');
+ var load=function(){try{var v=localStorage.getItem(aiDraftKey(sel.value));if(v&&!ta.value)ta.value=v}catch(e){}};load();
+ sel.addEventListener('change',function(){ta.value='';load()});
+ ta.addEventListener('input',function(){try{if(ta.value.trim())localStorage.setItem(aiDraftKey(sel.value),ta.value);else localStorage.removeItem(aiDraftKey(sel.value))}catch(e){}});
  document.getElementById('aiCopy').onclick=function(){var t=document.getElementById('aiPrompt');t.select();if(navigator.clipboard)navigator.clipboard.writeText(t.value);this.textContent='Copied ✓'};
  b.onclick=async function(){var st=document.getElementById('aiStatus'),eng=document.getElementById('aiEngine').value,txt=document.getElementById('aiText').value;if(!txt.trim()){st.textContent='Paste the answer first.';return}b.disabled=true;st.textContent='Analysing…';
   try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
+   try{localStorage.removeItem(aiDraftKey(eng))}catch(e){}
    var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE')render(d);else showAiFirst(d,true);showStep('stepResearch','ai')}catch(err){st.textContent=err.message;b.disabled=false}}}
 function gscHtml(g){var h='<h3 id="gsc">Search Console <small>(optional)</small></h3>';
  if(g&&g.latest){var L=g.latest,T=L.totals||{};
