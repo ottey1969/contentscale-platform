@@ -5,6 +5,12 @@ const crypto=require('node:crypto');
 let ensured=null;
 function ensureTables(pool){
  if(!ensured)ensured=(async()=>{
+  // Adding a column takes the strongest table lock, even with IF NOT EXISTS, and it waits behind every open use of the
+  // table (for example the previous app version during a deploy); every request then waits behind it. So: only missing
+  // columns are added, and an ALTER waits at most 5 seconds for its lock (it is tried again on the next request).
+  const tableExists=(await pool.query("SELECT to_regclass('growth_free_checks') AS t")).rows[0]?.t;
+  const have=new Set(tableExists?(await pool.query("SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='growth_free_checks'")).rows.map(r=>r.column_name):[]);
+  const addColumn=async(name,type)=>{if(have.has(name))return;await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS "+name+' '+type);have.add(name)};
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_checks(
     id BIGSERIAL PRIMARY KEY,
     public_id TEXT NOT NULL UNIQUE,
@@ -23,28 +29,28 @@ function ensureTables(pool){
     marketing_consent BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     finished_at TIMESTAMPTZ)`);
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS access_label TEXT');
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS invite_id BIGINT');
+  await addColumn('access_label','TEXT');
+  await addColumn('invite_id','BIGINT');
   // Optional writing for the visitor's selection: the last result and how many times it was used for this check.
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS written JSONB');
+  await addColumn('written','JSONB');
   // Persist the visitor's editorial choices across refreshes and device changes.
-  await pool.query("ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS selected_item_ids JSONB NOT NULL DEFAULT '[]'::jsonb");
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS write_count INTEGER NOT NULL DEFAULT 0');
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_since TIMESTAMPTZ');
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS writing_token TEXT');
+  await addColumn('selected_item_ids',"JSONB NOT NULL DEFAULT '[]'::jsonb");
+  await addColumn('write_count','INTEGER NOT NULL DEFAULT 0');
+  await addColumn('writing_since','TIMESTAMPTZ');
+  await addColumn('writing_token','TEXT');
   // Target market and language chosen by the visitor (as in the Tracker); null = derived from the page.
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS market JSONB');
+  await addColumn('market','JSONB');
   // Measurement after publication (visitor's choice): the date the change went live and one e-mail about 4 weeks later.
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS published_on DATE');
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_due_at TIMESTAMPTZ');
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_sent_at TIMESTAMPTZ');
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_attempts INTEGER NOT NULL DEFAULT 0');
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_token TEXT');
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_opt_out_at TIMESTAMPTZ');
+  await addColumn('published_on','DATE');
+  await addColumn('reminder_due_at','TIMESTAMPTZ');
+  await addColumn('reminder_sent_at','TIMESTAMPTZ');
+  await addColumn('reminder_attempts','INTEGER NOT NULL DEFAULT 0');
+  await addColumn('reminder_token','TEXT');
+  await addColumn('reminder_opt_out_at','TIMESTAMPTZ');
   // The domain the visitor used (one of this app's domains), so the e-mail links open on the same domain.
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS reminder_base TEXT');
+  await addColumn('reminder_base','TEXT');
   // Up to five addresses entered for the check (the first is `email`, which the daily limits count).
-  await pool.query('ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB');
+  await addColumn('emails','JSONB');
   // Personal invitations: only a SHA-256 hash of the link token is stored.
   await pool.query(`CREATE TABLE IF NOT EXISTS growth_free_invites(
     id BIGSERIAL PRIMARY KEY,
