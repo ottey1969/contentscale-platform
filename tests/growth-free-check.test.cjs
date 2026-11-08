@@ -108,7 +108,7 @@ async function server(opts={}){
  const engine=opts.engine||(async(input,deps)=>{calls.push(input);return runFreeGrowthResearch(input,deps)});
  const KEYS=JSON.stringify([{key:'partner-site-key-1',label:'partner',origins:['https://partner.example'],daily:3,per_email:2,brand:'Partner SEO',contact_url:'https://partner.example/book',service_text:'Partner does it for you.'},
   {key:'open-key-12345',label:'anywhere',per_email:2}]);
- const service=registerFreeGrowth(app,null,{config:{...freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:KEYS}),perIp:50,daily:10,...opts.config},engine,engineDeps,storage,
+ const service=registerFreeGrowth(app,null,{config:{...freeGrowthConfig({GROWTH_FREE_ACCESS_KEYS:KEYS}),perIp:50,daily:10,...opts.config},engine,engineDeps:{...engineDeps,...opts.engineDeps},storage,
   fetchImpl:async(url,init)=>{hooks.push({url,body:JSON.parse(init.body)});return {ok:true}}});
  const srv=app.listen(0);const base='http://127.0.0.1:'+srv.address().port;
  const post=async(p,b,h={})=>{const r=await fetch(base+p,{method:'POST',headers:{'Content-Type':'application/json',...h},body:JSON.stringify(b)});return {status:r.status,headers:r.headers,body:await r.json()}};
@@ -278,7 +278,7 @@ test('no key needed on your own domain (hosts); other domains still need the key
 
 const ADMIN={'x-admin-key':'admin-secret-0123456789'};
 test('approval gate rejects public checks and gives invited users full question selection',async t=>{
- const s=await server({config:{approvalRequired:true,adminKey:'admin-secret-0123456789'},engine:async()=>({statusCode:200,report:{success:true,editorial_decision_gate:{decision:'NO_CHANGE'}}})});
+ const s=await server({engineDeps:{questionFetch:async()=>({ok:true,json:async()=>({peopleAlsoAsk:[{question:'How much does roof repair cost in Lodi NJ?'}]})}),questionModel:null},config:{approvalRequired:true,adminKey:'admin-secret-0123456789'},engine:async()=>({statusCode:200,report:{success:true,editorial_decision_gate:{decision:'NO_CHANGE'}}})});
  t.after(()=>s.srv.close());
  const blocked=await s.post('/api/free-growth/checks',ok);
  assert.equal(blocked.status,403);assert.match(blocked.body.error,/Personal approval/);
@@ -293,6 +293,16 @@ test('approval gate rejects public checks and gives invited users full question 
  assert.equal(s.storage.checks[0].access_label,'invite: Approved applicant');
  const noDiscovery=await s.post('/api/free-growth/customer-questions',{key:'open-key-12345',url:URL_});
  assert.equal(noDiscovery.status,403);
+ const noEmail=await s.post('/api/free-growth/customer-questions',{invite:'not-an-invitation',url:URL_});
+ assert.equal(noEmail.status,403);
+ const before=process.env.SERPER_API_KEY;process.env.SERPER_API_KEY='TEST-KEY';
+ try{
+  const question=await s.post('/api/free-growth/customer-questions',{invite:token,url:URL_,market:'us',language:'English'});
+  assert.equal(question.status,200,JSON.stringify(question.body));
+  assert.equal(question.body.questions[0].text,'How much does roof repair cost in Lodi NJ?');
+  assert.equal(question.body.questions[0].source,'GOOGLE_PEOPLE_ALSO_ASK');
+ }finally{if(before===undefined)delete process.env.SERPER_API_KEY;else process.env.SERPER_API_KEY=before}
+
 });
 test('personal invitations: own quota, expiry, email lock, revoke; cache and failures do not cost a check',async t=>{
  let fail=false;
