@@ -150,6 +150,7 @@ ${aiStartBlock(!!owner.signedIn||!!invite)}
  <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The first address gets the e-mails; the others are kept with the check.</small>
  <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day for the first address.`}`}</span></label>
  <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
+ ${owner.signedIn?'<label class="check"><input type="checkbox" name="fresh"> <span><strong>Research again</strong>: ignore a stored result of today for the same page and question (uses 1–2 Serper searches)</span></label>':''}
  <p><button type="submit">${owner.signedIn?'Run the check (owner)':'Run the free check'}</button> <small id="s" role="status"></small></p>
 </form>
 ${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p class="muted">Signed in with your admin key: no daily limit, and AI writes the chosen H2s in your checks${cfg.writing==='off'?' (AI writing is switched off on the server: GROWTH_FREE_WRITING=off)':''}. Visitors keep their normal limits.</p><p><button type="button" class="ghost" id="ownerOut">Sign out</button></p></div>`:owner.available?`<details class="card" id="ownerBox"><summary class="owner-sum"><span class="owner-btn">🔑 Owner? Sign in</span> <small class="muted">no daily limit, AI writing on</small></summary><form id="ownerIn" autocomplete="off"><label for="ownerKey">Admin key (GROWTH_FREE_ADMIN_KEY in Railway)</label><input id="ownerKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit">Sign in as owner</button> <small id="ownerSt" role="status"></small></p></form></details>`:''}
@@ -228,7 +229,7 @@ try{
   }catch(e){s.textContent='Question suggestions unavailable; continuing with the page topic…'}
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?'The server did not answer within a minute. Please try again in a moment.':err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -626,12 +627,8 @@ function adminPage(cfg,api,base,loggedIn){
 <div id="login" class="card"${loggedIn?' hidden':''}><form id="lf"><label>Admin key<input name="key" type="password" autocomplete="current-password" required></label><p><button>Log in</button> <small id="ls" role="status"></small></p></form><p class="muted">The session lasts 12 hours on this browser only.</p></div>
 <div id="app"${loggedIn?'':' hidden'}>
  <p><button class="ghost" id="logout" type="button">Log out</button></p>
- <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">No limits for you. The same page, search term and market within 24 hours comes from the stored result, unless you choose fresh research.</p>
-  <form id="rf"><label>Page address<input name="url" type="url" required maxlength="500" placeholder="https://..."></label><label>Search term (optional)<input name="query" maxlength="120"></label>
-  <label>Target market (optional)<input name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands"></label><label>Language (optional)<input name="language" list="marketLanguages" maxlength="40" placeholder="Dutch"></label>
-  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
-  ${aiStartBlock(true)}
-  <label class="check"><input type="checkbox" name="fresh"> <span>Fresh research: ignore a stored result (uses 1–2 Serper searches)</span></label><p><button>Run check</button> <small role="status" id="rs"></small></p></form></div>
+ <div class="card"><h2 style="margin-top:0">Run a check yourself</h2><p class="muted">The same form your visitors use, in owner mode: no limits, AI writing, customer questions, Search Console upload, pasted AI answers kept, and the option to research again. One form, so what you test is what visitors get.</p>
+  <p><a class="btn" href="${esc(base)}">Open the check form (owner mode) →</a></p></div>
  <div class="card"><h2 style="margin-top:0">Invite someone</h2><p class="muted">A personal link with its own number of checks and expiry. Withdraw it any time.</p>
   <form id="if"><label>For whom? (name or company)<input name="label" required maxlength="80"></label>
   <label>Only for this email address (recommended)<input name="email_lock" type="email" maxlength="200" placeholder="name@company.com"></label>
@@ -676,7 +673,7 @@ async function load(){
  '<h3>Checks ('+d.checks.length+')</h3>'+d.checks.map(function(c){return '<div class="card"><strong>'+esc(c.email)+'</strong>'+(c.marketing_consent?' · may be emailed':'')+'<br><small>'+esc(c.access_label||'')+' · '+esc(c.created_at)+' · '+esc(c.status)+' · '+esc(c.decision||c.error_code||'')+(c.cached?' · cached':'')+'</small><br><a href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">'+esc(c.url)+'</a> '+esc(c.query||'')+'</div>'}).join('')}
 document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load()});
 document.getElementById('logout').addEventListener('click',async function(){await post('/admin/logout');location.reload()});
-document.getElementById('rf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked,ai_answers:aiStartAnswers()});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
+var rfForm=document.getElementById('rf');if(rfForm)rfForm.addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked,ai_answers:aiStartAnswers()});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
 document.getElementById('if').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('is');var d=await post('/admin/invites',{label:f.label.value,email_lock:f.email_lock.value,max_checks:Number(f.max_checks.value),days:Number(f.days.value)});if(!d.success){st.textContent=d.error;return}st.textContent='';f.reset();f.max_checks.value=3;f.days.value=7;
  document.getElementById('newlink').innerHTML='<p class="note"><strong>Copy this link now</strong> — it cannot be shown again.<br><input readonly id="lnk" value="'+esc(d.link)+'"> <button type="button" id="cp">Copy</button></p>';document.getElementById('cp').onclick=function(){var x=document.getElementById('lnk');x.select();navigator.clipboard&&navigator.clipboard.writeText(x.value);this.textContent='Copied'};load()});
 document.addEventListener('click',async function(e){var b=e.target.closest('button.revoke');if(!b)return;if(!confirm('Withdraw this invitation? The link stops working immediately.'))return;var d=await post('/admin/invites/'+b.dataset.id+'/revoke');if(!d.success)alert(d.error);load()});
@@ -768,6 +765,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   // An unapproved public key must not look like a usable check when approval-only mode is enabled.
   if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
+  // The owner (signed in) always gets the form, also on a domain without an access key (the admin page links here).
+  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage(config,apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true}));
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
   res.set('Content-Security-Policy','frame-ancestors '+(entry.origins.length?"'self' "+entry.origins.join(' '):'*'));
@@ -808,7 +807,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin'){
     const input=readInput(b,res);if(!input)return;
     await storage.ensureTables(pool);
-    return await start(res,input,{accessLabel:'admin',marketingConsent:b.marketing_consent===true});
+    return await start(res,input,{accessLabel:'admin',marketingConsent:b.marketing_consent===true,fresh:b.fresh===true});
    }
    if(config.approvalRequired)return res.status(403).json({success:false,error:'Personal approval is required. Request access at https://contentscale.site/.'});
    const entry=findKey(config,b.key,req);

@@ -562,7 +562,7 @@ test('AI answers before the start: the prompt is on the form, up to 5 answers (o
  // Admin start takes them too.
  const adm=await s.post('/api/free-growth/admin/run',{url:'https://acme-roofing.example/b/',query:'roof repair lodi nj',ai_answers:[five[2]]},{'x-admin-key':'admin-secret-0123456789'});
  assert.equal(adm.status,202);await s.service.idle();assert.equal(s.storage.aiRows.length,6);
- assert.match((await s.get('/free-growth/admin')).body,/id="aiStartPrompt"[\s\S]*name="fresh"/);
+ assert.match((await s.get('/free-growth/admin')).body,/Open the check form \(owner mode\)/,'the admin page uses the one check form (owner mode)');
 });
 
 test('review: only an explicit RESOURCES section counts as AI sources',()=>{
@@ -720,7 +720,7 @@ test('free check: a cached result made by older research code is not reused (a f
 test('admin: market and language like the public form; fresh research ignores a stored result; a stored result says so',async t=>{
  const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
  const A={'x-admin-key':'admin-secret-0123456789'},run=b=>s.post('/api/free-growth/admin/run',{url:'https://acme-roofing.example/roof-repair-lodi-nj/',query:'roof repair lodi nj',...b},A);
- assert.match((await s.get('/free-growth/admin')).body,/name="market" list="marketRegions"[\s\S]*name="fresh"/);
+ assert.match((await s.get('/free-growth/admin')).body,/Open the check form \(owner mode\)/,'the admin page uses the one check form (owner mode)');
  assert.match((await run({market:'Narnia'})).body.error,/Choose the market from the list/);
  assert.equal((await run({market:'nl — Netherlands',language:'Dutch'})).status,202);await s.service.idle();
  assert.deepEqual(s.calls.at(-1).market,{countries:['NL'],language:'nl'});
@@ -827,4 +827,21 @@ test('ensureTables: an existing column is not altered again; a missing one is ad
  const alters=seen.filter(x=>/ALTER TABLE/.test(x));
  assert.deepEqual(alters,["SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS emails JSONB"],'only the missing column');
  delete require.cache[require.resolve('../src/growth-free/store.cjs')];
+});
+
+test('admin: one form — the admin page links to the visitor form in owner mode; owner gets it without a key, with "Research again"',async t=>{
+ const s=await server({config:{adminKey:'admin-secret-0123456789'}});t.after(()=>s.srv.close());
+ const login=await fetch(s.base+'/api/free-growth/admin/login',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:'admin-secret-0123456789'})});
+ const cookie=(login.headers.get('set-cookie')||'').split(';')[0];assert.ok(cookie,'signed in');
+ const admin=await s.get('/free-growth/admin',{cookie});
+ assert.match(admin.body,/Open the check form \(owner mode\)/);assert.doesNotMatch(admin.body,/<form id="rf">/,'no second, different form');
+ const visitor=await s.get('/free-growth');assert.equal(visitor.status,403,'no key, not signed in: not activated');
+ const form=await s.get('/free-growth',{cookie});assert.equal(form.status,200);
+ assert.match(form.body,/Run the check \(owner\)/);assert.match(form.body,/name="fresh"/);assert.match(form.body,/id="gscFile"/);
+ const H={cookie,'x-requested-with':'growth-free-admin'},body={url:URL_,query:'roof repair lodi nj',email:'test-owner@acme-roofing.example',consent:true};
+ await s.post('/api/free-growth/checks',body,H);await s.service.idle();const n=s.calls.length;
+ await s.post('/api/free-growth/checks',body,H);await s.service.idle();
+ assert.equal(s.calls.length,n,'the same check today comes from the stored result');
+ await s.post('/api/free-growth/checks',{...body,fresh:true},H);await s.service.idle();
+ assert.equal(s.calls.length,n+1,'Research again runs the research');
 });
