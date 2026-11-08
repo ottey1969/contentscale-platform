@@ -4,9 +4,12 @@
 (function(){
  var box=document.getElementById('customerQuestion');if(!box)return;
  var btn=document.getElementById('cqFind'),st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
+ var manual=document.getElementById('cqManual'),manualGo=document.getElementById('cqManualGo');
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
  function go(q){q=String(q||'').replace(/\s+/g,' ').trim().slice(0,120);if(!q){st.textContent='Choose or type a question first.';return}
   var u=new URL(location.href);u.searchParams.set('query',q);location.href=u.pathname+u.search}
+ if(manualGo&&manual)manualGo.addEventListener('click',function(){go(manual.value)});
+ if(manual)manual.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go(manual.value)}});
  btn.addEventListener('click',async function(){btn.disabled=true;st.textContent='Looking up how customers search (Google, and AI suggestions)…';list.innerHTML='';
   try{var r=await fetch(box.getAttribute('data-api'),{credentials:'same-origin',cache:'no-store'});var d=await r.json();if(!d.success)throw Error('Customer questions are not available right now.');
    var g=d.google&&d.google.status,why=g==='GOOGLE_NOT_CONFIGURED'?' Google questions need Serper on the server.':g==='GOOGLE_UNAVAILABLE'?' Google could not be reached.':'';
