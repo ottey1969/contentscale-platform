@@ -852,7 +852,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   return {...summary,limitations:[...summary.limitations.filter(x=>!/AI answers .* were not checked/.test(x)),aiPart.summary.caveat]};
  }
  // A valid owner session unlocks old visitor results without modifying their ownership or public permissions.
- const ordinaryWritingAllowed=row=>config.writing==='all'||(config.writing!=='off'&&row.access_label==='admin')||(config.writing==='invited'&&!!row.invite_id);
+ // Approved invitations receive the complete Free Growth writing workflow, even when ordinary public writing is admin-only.
+  // 'off' remains an emergency provider-disable switch; it cannot be bypassed with an invite.
+  const ordinaryWritingAllowed=row=>config.writing==='all'||(config.writing!=='off'&&(row.access_label==='admin'||!!row.invite_id));
  const writingAllowed=(row,req)=>ordinaryWritingAllowed(row)||(config.writing!=='off'&&sessionValid(req));
  const writingInfo=(row,req)=>({allowed:writingAllowed(row,req),owner_unlocked:!!config.adminKey&&sessionValid(req),
   owner_login_available:!!config.adminKey&&config.writing!=='off',
