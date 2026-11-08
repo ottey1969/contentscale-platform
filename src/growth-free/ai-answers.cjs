@@ -5,7 +5,7 @@
 // No AI API is called: nothing here costs money, and only what was pasted is used.
 
 const ENGINES=[
- {id:'google_aio',label:'Google AIO / Gemini'},
+ {id:'google_aio',label:'Gemini / Google AI Overview (identify exact source)'},
  {id:'chatgpt',label:'ChatGPT Search'},
  {id:'perplexity',label:'Perplexity'},
  {id:'claude',label:'Claude'},

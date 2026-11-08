@@ -277,6 +277,27 @@ test('no key needed on your own domain (hosts); other domains still need the key
 });
 
 const ADMIN={'x-admin-key':'admin-secret-0123456789'};
+test('approved check automatically stores one real grounded AI answer; public check does not',async t=>{
+ let calls=0;
+ const s=await server({config:{adminKey:'admin-secret-0123456789'},engineDeps:{groundedAnswer:async({query,pageUrl})=>{
+  calls++;
+  const raw=['ANSWER:','A good content workflow audits existing articles, verifies sources and reviews improvements.','','RESOURCES:','https://example.net/editorial-workflow'].join(String.fromCharCode(10));
+  return {status:'SUCCESS',engine:'google_aio',source:'GEMINI_GOOGLE_SEARCH_GROUNDING_NOT_AIO',model:'test-grounded',
+   raw,parsed:require('../src/growth-free/ai-answers.cjs').parseAiAnswer(raw,{pageUrl,query})};
+ }}});
+ t.after(()=>s.srv.close());
+ const made=await s.post('/api/free-growth/admin/invites',{label:'Approved',email_lock:'approved@example.com',max_checks:1,days:7},ADMIN);
+ const token=new URL(made.body.link).searchParams.get('invite');
+ const check=await s.post('/api/free-growth/checks',{invite:token,url:URL_,query:'roof repair lodi nj',email:'approved@example.com',consent:true});
+ assert.equal(check.status,202,JSON.stringify(check.body));await s.service.idle();
+ assert.equal(calls,1,'grounding is automatic for approved check');
+ const result=await s.get('/api/free-growth/checks/'+check.body.id+'?k='+check.body.key);
+ assert.equal(result.body.ai.summary.checked,1,'actual returned answer is recorded');
+ assert.equal(result.body.report?.automatic_ai_answers?.gemini?.status||s.storage.checks[0].report?.automatic_ai_answers?.gemini?.status,'SUCCESS');
+ const publicCheck=await s.post('/api/free-growth/checks',{...ok,url:'https://acme-roofing.example/another/',email:'public@example.com'});
+ assert.equal(publicCheck.status,202);await s.service.idle();
+ assert.equal(calls,1,'unapproved access-key checks must not auto-bill Gemini');
+});
 test('approval gate rejects public checks and gives invited users full question selection',async t=>{
  const s=await server({engineDeps:{questionFetch:async()=>({ok:true,json:async()=>({peopleAlsoAsk:[{question:'How much does roof repair cost in Lodi NJ?'}]})}),questionModel:null},config:{approvalRequired:true,adminKey:'admin-secret-0123456789',writing:'admin'},engine:async()=>({statusCode:200,report:{success:true,editorial_decision_gate:{decision:'NO_CHANGE'}}})});
  t.after(()=>s.srv.close());
