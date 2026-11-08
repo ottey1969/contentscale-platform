@@ -88,10 +88,10 @@ test('Cockpit: the best opportunity is the first thing the owner sees, with a li
  // The Cockpit orders for qualified leads: the consultant term (wants to hire) comes first; the topic term with more
  // impressions is named and stays listed.
  assert.match(html,/“generative engine optimization consultant” in United States → https:\/\/contentscale\.site\/generative-engine-optimization-consultant\//);
- assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2582&amp;market=US&amp;query=generative%20engine%20optimization%20consultant"/);
+ assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2582&amp;market=US&amp;query=generative%20engine%20optimization%20consultant&amp;why=opportunity"/);
  assert.match(html,/Next action:<\/strong> Improve this page for a commercial search/);assert.match(html,/Why it matters commercially:<\/strong> “generative engine optimization consultant”: wants to hire or buy/);
  assert.match(html,/Most search traffic:<\/strong> “content scaling” in GB \(300 impressions\)/);
- assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2295&amp;market=GB&amp;query=content%20scaling"/);
+ assert.match(html,/href="\/track\/owner-tok\/growth\/auto-research\?page_id=2295&amp;market=GB&amp;query=content%20scaling&amp;why=opportunity"/);
  assert.match(html,/Not yet known:/);assert.match(html,/Not all Search Console data was read:<\/strong> the import reached the maximum of 125,000 rows/);assert.match(html,/Next opportunities \(1\)/);
  // Without Search Console access on the server: a clear message, nothing changed.
  const noAccess={};registerGrowthCockpit({get(){},post(p,...h){noAccess[p]=h}},{query:async sql=>sql.includes('FROM tracker_clients')?{rows:[{id:10,domain:'contentscale.site',token:'owner-tok'}]}:{rows:[]}},{gscCountry:{tokenProvider:async()=>null}});

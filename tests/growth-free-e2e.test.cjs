@@ -36,6 +36,9 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     // TEST writer stand-in: one section per selected task.
     // TEST stand-in for the AI that rewrites a first-person title/description as the service.
     metaModel: { call: async () => JSON.stringify({ title: 'Roof Repair in Lodi, NJ | Acme Roofing', description: 'Acme Roofing repairs leaking roofs in Lodi, NJ, with a written estimate before any work starts.' }) },
+    // TEST stand-in for Google (Serper) in the "Suggest customer questions" helper.
+    questionFetch: async () => ({ ok: true, json: async () => ({ peopleAlsoAsk: [{ question: 'How much does roof repair cost in Lodi NJ?' }], relatedSearches: [{ query: 'emergency roof repair lodi' }] }) }),
+    questionModel: null,
     generateDraft: async args => { writes.push(args); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: (args.readerTask?.tasks || []).map(x => ({ task_code: x.code, h2: 'How to read a repair estimate',
       paragraphs: ['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.'] })) } }; } };
   const app = express(); app.use(express.json({ limit: '1mb' }));
@@ -50,7 +53,14 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     // 1. The form: page, search term, market, language, email.
     await p.goto(base + '/free-growth?key=e2e-open-key-1');
-    await p.fill('#url', URL_); await p.fill('#query', 'roof repair lodi nj'); await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
+    // Customer questions: Google's questions for the page, one click puts it in the search term.
+    process.env.SERPER_API_KEY = process.env.SERPER_API_KEY || 'TEST-KEY';
+    await p.fill('#url', URL_); await p.click('#cqFind');
+    await p.waitForSelector('.cqPick', { timeout: 30000 });
+    assert.match(await p.textContent('#cqList'), /How much does roof repair cost in Lodi NJ\?[^]*Google · People also ask[^]*emergency roof repair lodi[^]*Google · Related search/);
+    await p.click('.cqPick');
+    assert.equal(await p.inputValue('#query'), 'How much does roof repair cost in Lodi NJ?');
+    await p.fill('#query', 'roof repair lodi nj'); await p.fill('#market', 'us — United States'); await p.fill('#language', 'English');
     const email = 'TEST-' + crypto.randomBytes(3).toString('hex') + '@acme-roofing.example';
     await p.fill('#email', email); await p.check('input[name=consent]');
     // Optional Search Console export (TEST data), filtered on exactly this page.
