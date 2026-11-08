@@ -628,10 +628,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
       if(job.approved){
        const provider=engineDeps.groundedAnswer||groundedGeminiAnswer;
-       const auto=await provider({query:job.query||out.report?.editorial_decision_gate?.focus_query,pageUrl:job.url,fetchImpl:engineDeps.answerFetch||global.fetch});
-       if(auto.status==='SUCCESS'&&auto.parsed?.validation_status!=='invalid'){
-        await storage.saveAiAnswer(pool,{checkId:job.id,engine:auto.engine,rawText:auto.raw,parsed:auto.parsed});
-       }
+       // A provider timeout or unavailable key must never turn a successful page check into FAILED.
+       let auto;
+       try{
+        auto=await provider({query:job.query||out.report?.editorial_decision_gate?.focus_query,pageUrl:job.url,fetchImpl:engineDeps.answerFetch||global.fetch});
+        if(auto.status==='SUCCESS'&&auto.parsed?.validation_status!=='invalid'){
+         await storage.saveAiAnswer(pool,{checkId:job.id,engine:auto.engine,rawText:auto.raw,parsed:auto.parsed});
+        }
+       }catch(e){auto={status:'PROVIDER_UNAVAILABLE'};}
        out.report.automatic_ai_answers={gemini:{status:auto.status,source:auto.source||null,model:auto.model||null},note:'Only connected providers count as checked. Gemini Google Search grounding is not a Google AI Overview. Other engines are unchecked until their own answers are provided.'};
       }
       await storage.setStatus(pool,job.id,{status:'DONE',decision:summary.decision,summary,report:out.report});
