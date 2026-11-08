@@ -598,6 +598,7 @@ var API=${js(api)},H={'Content-Type':'application/json','X-Requested-With':'grow
  var fields=['url','query','market','language'],saved={};
  try{saved=JSON.parse(localStorage.getItem(key)||'{}')}catch(e){}
  fields.forEach(function(k){var el=form.elements[k];if(el&&saved[k]&&!el.value)el.value=String(saved[k]).slice(0,k==='url'?500:200)});
+ var queryInput=form.elements.query;if(queryInput&&queryInput.value)queryInput.dispatchEvent(new Event('input',{bubbles:true}));
  function save(){var next={};fields.forEach(function(k){var el=form.elements[k];if(el)next[k]=el.value});try{localStorage.setItem(key,JSON.stringify(next))}catch(e){}}
  form.addEventListener('input',save);form.addEventListener('change',save);
  var submit=form.querySelector('button[type=submit],button:not([type])');
