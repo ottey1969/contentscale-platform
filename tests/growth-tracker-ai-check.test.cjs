@@ -12,11 +12,11 @@ const comp=h=>'<html><body><article><h1>'+h+'</h1><h2>How a repair estimate is b
 const pages={[URL_]:own,'https://roofer-a.example/roof-repair-nj/':comp('Roof repair in Paterson, NJ'),'https://roofer-b.example/services/roof-repair/':comp('Roof repairs in Bergen County, NJ')};
 const leads=Object.keys(pages).slice(1).map((url,i)=>({url,title:'Roof Repair NJ '+i,snippet:'Local roof repair',source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}));
 
-function setup({owner=true}={}){
+function setup({owner=true,autoGroundedAnswer}={}){
  const route={},post={},stored=[];let searches=0;
  const pool={query:async q=>{if(q.includes('LEFT(html_content')&&/FROM tracker_pages\b/.test(q))return {rows:[{id:7,tracker_client_id:3,url:URL_,keyword:QUERY,brief_content:null,saved_html:null}]};return {rows:[]}}};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){post[p]=h}},pool,(req,res,next)=>{req.growthTrackerClientId=3;req.growth={can_edit:owner,pages:[{id:7,url:URL_,keyword:QUERY,case_study_active:false}]};next()},{
-  retryDelayMs:0,judgeTasks:require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
+  autoGroundedAnswer,retryDelayMs:0,judgeTasks:require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
   fetchLive:async url=>{const html=pages[url];if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});return {html,final_url:url,retrieved_at:'2026-10-31T10:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
   searchLive:async({query})=>{searches++;return {status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query,leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-31T10:00:00Z'}},
   saveAiAnswer:async a=>{const i=stored.findIndex(x=>x.engine===a.engine&&x.query===a.query);const row={...a,raw_text:a.rawText,created_at:new Date().toISOString()};if(i>=0)stored[i]=row;else stored.push(row)},
@@ -26,7 +26,8 @@ function setup({owner=true}={}){
  const get=()=>call(route['/api/tracker-client/:token/growth/auto-research'],{params:{token:'t'},query:{page_id:'7'}});
  const paste=body=>call(post['/api/tracker-client/:token/growth/ai-answer'],{params:{token:'t'},query:{page_id:'7'},body});
  const early=()=>call(route['/api/tracker-client/:token/growth/ai-check'],{params:{token:'t'},query:{page_id:'7'}});
- return {get,paste,early,stored,searches:()=>searches};
+ const automatic=()=>call(post['/api/tracker-client/:token/growth/ai-answer/automatic'],{params:{token:'t'},query:{page_id:'7'},body:{}});
+ return {get,paste,early,automatic,stored,searches:()=>searches};
 }
 
 test('the research offers the AI prompt for its own search term; a pasted answer counts at once without a new Google research',async()=>{
@@ -61,4 +62,30 @@ test('the AI check is optional and available before the research has finished (t
  assert.equal(s.searches(),0,'no Google research for the AI check');
  await s.paste({engine:'chatgpt',query:QUERY,text:'ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://roofer-b.example/services/roof-repair/'});
  const r=await s.get();assert.equal(r.body.ai_check.summary.checked,1,'the early answer counts in the finished research');
+});
+
+test('Tracker automatic AI uses the same grounded provider as Free and reuses saved answers',async()=>{
+ let calls=0;
+ const raw=['ANSWER:','Roof repair estimates should compare scope, materials and warranty terms.','','RESOURCES:','https://roofer-a.example/roof-repair-nj/'].join('\n');
+ const s=setup({autoGroundedAnswer:async({query,pageUrl})=>{
+  calls++;assert.equal(query,QUERY);assert.equal(pageUrl,URL_);
+  return {status:'SUCCESS',engine:'google_aio',raw,parsed:require('../src/growth-free/ai-answers.cjs').parseAiAnswer(raw,{query,pageUrl})};
+ }});
+ const first=await s.automatic();assert.equal(first.statusCode,200);
+ assert.equal(first.body.status,'SUCCESS');
+ assert.equal(first.body.ai_check.summary.checked,1);
+ const second=await s.automatic();assert.equal(second.body.status,'ALREADY_CHECKED');
+ assert.equal(calls,1,'refresh must not make a second paid provider call');
+ assert.equal(s.searches(),0,'automatic AI checking must not restart Google ranking research');
+ const viewer=setup({owner:false,autoGroundedAnswer:async()=>{throw Error('must not call')}});
+ assert.equal((await viewer.automatic()).statusCode,403,'non-owner cannot trigger provider charges');
+});
+
+test('Tracker auto AI provider errors do not invent checked engines',async()=>{
+ let calls=0;
+ const s=setup({autoGroundedAnswer:async()=>{calls++;return {status:'NO_GROUNDED_ANSWER'}}});
+ const first=await s.automatic();assert.equal(first.statusCode,200);assert.equal(first.body.status,'NO_GROUNDED_ANSWER');
+ assert.equal(first.body.ai_check.summary.checked,0);
+ const retry=await s.automatic();assert.equal(retry.body.status,'RETRY_LATER');
+ assert.equal(calls,1,'failed AI calls are cooled down to prevent runaway credits');
 });
