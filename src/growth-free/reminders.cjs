@@ -101,6 +101,10 @@ function brevo(fetchImpl) {
   };
 }
 // The language of the page: the one chosen for the check, else the one the research used (the page's html lang).
+// Who gets the e-mails: the first address, which the visitor entered for themselves. The other addresses only for the
+// owner's own checks and approved invitations: otherwise anyone could make this sender e-mail strangers.
+const recipientsOf = row => { const all = Array.isArray(row.emails) && row.emails.length ? row.emails : [row.email];
+  return row.access_label === 'admin' || row.invite_id ? all.filter(Boolean) : [all[0] || row.email].filter(Boolean); };
 const languageOf = row => String((row.market && row.market.language) || row.hl || (row.report && row.report.search_discovery && row.report.search_discovery.search_locale && row.report.search_discovery.search_locale.hl) || 'en').toLowerCase().slice(0, 3);
 const modelFor = model => model === undefined ? (() => { try { return require('../growth-task-meaning.cjs').geminiModel(); } catch (e) { return null; } })() : model;
 
@@ -111,11 +115,11 @@ async function sendDueFreeReminders(pool, storage, { send, links, now = new Date
     const lang = languageOf(row);
     const m = await localize(reminderMessage({ url: row.url, query: String(row.query || (row.summary && row.summary.checked && row.summary.checked.search_term) || ''), publishedOn: row.published_on,
       resultLink: links.result(row), stopLink: links.stop(row.reminder_token, row), lang: T[lang] ? lang : 'en' }), lang, { model: modelFor(model) });
-    const ok = await Promise.resolve(send({ to: Array.isArray(row.emails) && row.emails.length ? row.emails : [row.email], subject: m.subject, html: m.html })).catch(() => false);
+    const ok = await Promise.resolve(send({ to: recipientsOf(row), subject: m.subject, html: m.html })).catch(() => false);
     await storage.markReminder(pool, { id: row.id, sent: ok });
     if (ok) sent++; else failed++;
   }
   return { sent, failed };
 }
 
-module.exports = { readPublishedOn, reminderMessage, confirmationMessage, compareUploads, sendDueFreeReminders, brevo, languageOf, modelFor, dueAt, windowsOf, T };
+module.exports = { recipientsOf, readPublishedOn, reminderMessage, confirmationMessage, compareUploads, sendDueFreeReminders, brevo, languageOf, modelFor, dueAt, windowsOf, T };

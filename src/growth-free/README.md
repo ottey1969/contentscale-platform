@@ -167,4 +167,6 @@ Each item names the ranking pages and their Google positions. Tick what should g
 - `invited` (you and invited people);
 - `all` (default: every visitor; AI prepares the selected sections, at most `GROWTH_FREE_WRITES_PER_CHECK` runs of four).
 
-`GROWTH_FREE_WRITES_PER_CHECK` is the limit per check (default 3). The page is read again publicly, the text is checked against it, and failing sentences are marked for the editor. The last result stays on the result page. Nothing is published.
+`GROWTH_FREE_WRITES_PER_CHECK` is the limit per check (default 3); `GROWTH_FREE_WRITES_PER_DAY` caps AI writing runs of visitors' checks per 24 hours (default 40; the owner's checks do not count). The AI rewrite of a first-person title/description is limited to 5 per check. E-mails (confirmation, reminder) go to the first address only, unless the owner or an approved invitation made the check.
+
+No customer question typed: the check asks Google (Serper, one search) for what the page offers and researches the best matching question; AI ideas only with approved access. The result shows the question used and the other questions, each as a new check. A typed question always wins. The page is read again publicly, the text is checked against it, and failing sentences are marked for the editor. The last result stays on the result page. Nothing is published.
