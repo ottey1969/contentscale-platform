@@ -59,18 +59,55 @@ async function fromAi({ offer, keyword, language = 'en', model }) {
   } catch (e) { return { status: 'AI_FAILED', questions: [] }; }
 }
 
+// Ranking uses question-to-page topical relevance, not invented search volume or popularity.
+// Prefer verified Google surface observations. AI-generated ideas are only fallback choices.
+const STOPWORDS = new Set(('the a an and or for to of in on at with by from as is are was were can could how what why when where which who do does did will should my your our i we you it this that these those get make use using best more most very about near vs versus de het een en of van voor met op in bij hoe wat waarom welke waar kan ik mijn jouw uw is zijn als om te die dat dit een naar der des und die das ein eine wie was warum welche wo kann ich mein la el los las un una y o de del para con en por como qué que cuál dónde puedo mi mis seu sus e da do dos das para como qual quais onde meu minha o uma').split(/\s+/));
+function tokens(v){
+ return [...new Set(clean(v).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').match(/[\p{L}\p{N}]+/gu)||[])].filter(w=>w.length>2&&!STOPWORDS.has(w));
+}
+function rankQuestions(items,{offer,seed}){
+ const focus=tokens([seed,...offer.h1,offer.title.split(/\s[|–—-]\s/)[0]].join(' '));
+ const extras=tokens(offer.h2.join(' '));
+ const focusSet=new Set(focus),extraSet=new Set(extras);
+ const scored=items.map((q,index)=>{
+  const words=tokens(q.text);
+  const matches=words.filter(w=>focusSet.has(w)).length;
+  const detail=words.filter(w=>extraSet.has(w)).length;
+  const topical=matches*3+Math.min(detail,2)+(matches>=2?2:0);
+  const google=q.source==='GOOGLE_PEOPLE_ALSO_ASK'||q.source==='GOOGLE_RELATED_SEARCH';
+  // All observed, on-topic Google candidates outrank AI ideas. No search-volume inference.
+  const relevant=google&&(topical>0||focusSet.size===0);
+  const sourceBoost=q.source==='GOOGLE_PEOPLE_ALSO_ASK'?2:0;
+  return {q,index,topical,score:topical+sourceBoost,relevant,google};
+ });
+ const observed=scored.filter(x=>x.google&&x.relevant).sort((a,b)=>b.score-a.score||a.index-b.index);
+ const ideas=scored.filter(x=>!x.google).sort((a,b)=>b.topical-a.topical||a.index-b.index);
+ // Observed but off-topic Google suggestions may still be visible as alternatives; do not auto-select them.
+ const unrelated=scored.filter(x=>x.google&&!x.relevant).sort((a,b)=>b.score-a.score||a.index-b.index);
+ const sorted=[...observed,...ideas,...unrelated].map(x=>({...x.q,priority:x.relevant?'OBSERVED_GOOGLE':x.google?'OBSERVED_GOOGLE_LOW_RELEVANCE':'AI_FALLBACK',
+  relevance_score:x.topical}));
+ return {questions:sorted,best:observed[0]?.q||ideas[0]?.q||null,observed_count:observed.length};
+}
+
 async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl = 'us', hl = 'en', key, fetchImpl, model } = {}) {
   const offer = pageOffer(html);
   const ownHost = (() => { try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch (e) { return ''; } })();
   // Google is asked with the tracked keyword, or the page's own topic when there is none (context, not the question).
   const seed = clean(keyword) || (offer.h1[0] || offer.title.split(/\s[|–—-]\s/)[0] || '');
-  const [g, a] = await Promise.all([fromGoogle({ query: seed, gl, hl, key, fetchImpl, ownHost }), fromAi({ offer, keyword, language: hl || offer.language || 'en', model })]);
+  const g = await fromGoogle({ query: seed, gl, hl, key, fetchImpl, ownHost });
+  const observed = rankQuestions(g.questions,{offer,seed});
+  // Never spend AI credits generating suggestions if relevant Google-observed questions exist.
+  const a = observed.observed_count
+    ? {status:'AI_NOT_NEEDED_GOOGLE_MATCH',questions:[]}
+    : await fromAi({ offer, keyword, language: hl || offer.language || 'en', model });
   const seen = new Set(), questions = [];
   for (const q of [...g.questions, ...a.questions]) { const k = q.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); if (k && !seen.has(k)) { seen.add(k); questions.push(q); } }
+  const ranked=rankQuestions(questions,{offer,seed});
   return { status: questions.length ? 'QUESTIONS_FOUND' : 'NO_QUESTIONS', tracked_keyword: clean(keyword) || null, searched_with: seed || null,
     offer: { title: offer.title, h1: offer.h1, h2_count: offer.h2.length }, google: { status: g.status, ...(g.searched ? { searched: g.searched } : {}) }, ai: { status: a.status },
-    questions: questions.slice(0, MAX),
-    note: 'Google questions are what Google shows for this search in this market (observed, not a search-volume figure). AI suggestions are ideas, not proven searches. Choose or edit one: the research looks at that question first, and only then compares the answers with your page. Search Console is not needed.' };
+    questions: ranked.questions.slice(0, MAX), best_question: ranked.best?.text||null,
+    selection_source: ranked.observed_count?'OBSERVED_GOOGLE':ranked.best?'AI_SUGGESTION':'NONE',
+    note: 'Best matching Google-observed question first (People Also Ask or Related Searches). If none matches this page, AI suggestions are labelled fallback ideas; unrelated Google observations are shown last. Relevance is based on the page topic, not measured search volume. You can always edit the question. Search Console is optional.' };
 }
 
-module.exports = { discoverCustomerQuestions, pageOffer, fromGoogle, fromAi, searchable };
+module.exports = { discoverCustomerQuestions, pageOffer, fromGoogle, fromAi, searchable, rankQuestions };
