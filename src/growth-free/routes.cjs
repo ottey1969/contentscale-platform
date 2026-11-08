@@ -649,6 +649,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
  app.get(basePath,(req,res)=>{
+  // An unapproved public key must not look like a usable check when approval-only mode is enabled.
+  if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
