@@ -109,7 +109,7 @@ select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;fo
 // pasted here are stored with the check (same validation as pasting them on the result page).
 function aiStartBlock(){
  return `<div class="card" id="aiStart"><h2 style="margin-top:0">AI answers first (optional)</h2>
- <ol><li>Enter the search term above.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong> (ChatGPT, Perplexity, Gemini, Claude or Copilot).</li><li>Paste the complete answer, including RESOURCES, at the AI system you used. You can also do this later on the result page.</li></ol>
+ <ol><li>Enter the customer question or search phrase above.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong> (ChatGPT, Perplexity, Gemini, Claude or Copilot).</li><li>Paste the complete answer, including RESOURCES, at the AI system you used. You can also do this later on the result page.</li></ol>
  <label for="aiStartPrompt">Prompt (the same for every AI system)</label><textarea id="aiStartPrompt" rows="6" readonly></textarea><p><button type="button" class="ghost" id="aiStartCopy">Copy prompt</button></p>
  ${ai.ENGINES.map(e=>`<label>${esc(e.label)} — answer (optional)<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="Paste the complete answer here"></textarea></label>`).join('')}</div>`;
 }
@@ -129,9 +129,9 @@ function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,sign
 ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
 <form id="f" class="card" novalidate>
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
- <label for="query">Search term (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. roof repair lodi nj">
+ <label for="query">Customer question or search phrase (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
  <p><button type="button" id="cqFind" class="ghost">Suggest customer questions</button> <small role="status" id="cqStatus">How do customers search for what this page offers? Google's own questions and AI ideas; pick one, or edit it.</small></p><div id="cqList"></div>
- <small>The words your customers type into Google. Leave empty to let the check derive it from your page.</small>
+ <small>Type a real customer question or search phrase yourself, or use the optional suggestions above. No Search Console or question suggestions are required. If left empty, Growth derives a working search phrase from the page; it is not verified customer demand.</small>
  <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
  <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
  <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
