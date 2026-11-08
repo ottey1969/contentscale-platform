@@ -190,8 +190,8 @@ if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER
   b.disabled=true;b.classList.add('is-working');st.textContent='Looking up how customers search…';list.innerHTML='';
   try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value})});
    var d=await r.json();if(!d.success)throw Error(d.error||'Not available right now.');
-   st.textContent=d.questions.length?'Click a question to use it as the search term (you can still edit it).':'No questions found; enter the search term yourself.';
-   list.innerHTML=d.questions.map(function(q){return '<button type="button" class="ghost cqPick" style="margin:4px 6px 4px 0;text-align:left">'+q.text.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+' <small style="display:inline">· '+q.label+'</small></button>'}).join('')+(d.questions.length?'<p class="muted">'+d.note+'</p>':'');
+   st.textContent=d.questions.length?'Best observed Google match first; AI ideas only if no suitable Google question. Choose or edit any question.':'No suitable questions found; enter your own.';
+   list.innerHTML=d.questions.map(function(q){return '<button type="button" class="ghost cqPick" style="margin:4px 6px 4px 0;text-align:left">'+q.text.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+' <small style="display:inline">· '+q.label+(q.text===d.best_question?' · Best match':'')+'</small></button>'}).join('')+(d.questions.length?'<p class="muted">'+d.note+'</p>':'');
    Array.prototype.forEach.call(list.querySelectorAll('.cqPick'),function(x,i){x.onclick=function(){document.getElementById('query').value=d.questions[i].text;rememberForm();document.getElementById('query').dispatchEvent(new Event('input',{bubbles:true}));st.textContent='Search term set: “'+d.questions[i].text+'”.'}});
   }catch(err){st.textContent=err.message}b.disabled=false;b.classList.remove('is-working')})})();
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
@@ -209,7 +209,7 @@ try{
    var qr=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value})});
    var qd=await qr.json();
    var qs=qd&&qd.success&&Array.isArray(qd.questions)?qd.questions:[];
-   var chosen=qs.filter(function(q){return q.source==='GOOGLE_PEOPLE_ALSO_ASK'})[0]||qs.filter(function(q){return q.source==='GOOGLE_RELATED_SEARCH'})[0]||qs[0];
+   var chosen=qs.filter(function(q){return q.text===qd.best_question})[0]||qs.filter(function(q){return q.priority==='OBSERVED_GOOGLE'})[0]||qs.filter(function(q){return q.source==='AI_SUGGESTION'})[0];
    if(chosen&&chosen.text){f.query.value=chosen.text;rememberForm();s.textContent='Customer question: '+chosen.text+' · '+chosen.label+'. Starting check…'}
    else s.textContent='No customer question verified automatically; using the page topic as a working phrase…';
   }catch(e){s.textContent='Question suggestions unavailable; continuing with the page topic…'}
