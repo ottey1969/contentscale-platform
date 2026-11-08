@@ -129,7 +129,7 @@ function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,sign
 ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
 <form id="f" class="card" novalidate>
  <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
- <label for="query">Customer question or search phrase (optional for owner)</label><input id="query" name="query" maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
+ <label for="query">Customer question or search phrase${owner.signedIn?' (optional)':' (required)'}</label><input id="query" name="query" ${owner.signedIn?'':'required'} maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
  ${owner.signedIn?`<p><button type="button" id="cqFind" class="ghost">Suggest customer questions (owner)</button> <small role="status" id="cqStatus">Automatic customer question discovery is available in owner mode.</small></p><div id="cqList"></div>`:`<p class="muted">Enter your customer's question yourself. Automatic question suggestions are reserved for the administrator to control research costs.</p>`}
  <small>${owner.signedIn?'You may enter your own question or let Growth choose automatically.':'Enter a customer question yourself; automatic suggestions are administrator-only.'} No Search Console is required. A blank owner question falls back to a working page phrase, not verified customer demand.</small>
  <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
@@ -178,6 +178,7 @@ function rememberForm(){try{var m={};REMEMBER.forEach(function(k){var el=documen
 function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
 if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
+if(!OWNER&&!f.query.value.trim()){s.textContent='Enter a customer question or search phrase to run the free check.';document.getElementById('query').focus();return}
 rememberForm();
 b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent='Starting…';
 try{
@@ -694,6 +695,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(b.consent!==true)return res.status(400).json({success:false,error:'Please accept the storage notice'});
    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
    const query=clean(b.query,120);
+   if(!query)return res.status(400).json({success:false,error:'Enter a customer question or search phrase to run the free check.'});
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
@@ -769,6 +771,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const email=em.email;
   if(b.consent!==true){res.status(400).json({success:false,error:'Please accept the storage notice'});return null}
   const v=validatePublicUrl(b.url);if(v.error){res.status(400).json({success:false,error:v.error});return null}
+  if(!clean(b.query,120)){res.status(400).json({success:false,error:'Enter a customer question or search phrase to run the free check.'});return null}
   const market=readMarket(b,res);if(market===undefined)return null;
   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
