@@ -73,6 +73,9 @@ test('Tracker Growth: customer questions for a page in its market; the research 
   assert.match(page.html, /Find customer questions/); assert.match(page.html, /growth-customer-questions\.js/);
   assert.match(page.html, /id="cqManual"/, 'owner can enter a question without first loading suggestions');
   assert.match(page.html, /id="cqManualGo"/, 'manual question has its own research action even if Serper or AI fails');
+  const pickerScript = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-customer-questions.js'), 'utf8');
+  assert.match(pickerScript, /if\(!new URL\(location.href\).searchParams.get\('query'\)\)/, 'auto discovery only without an explicit user question');
+  assert.match(pickerScript, /GOOGLE_PEOPLE_ALSO_ASK/, 'observed Google questions are preferred over unverified AI ideas');
   const chosen = await respond(r['GET /track/:token/growth/auto-research'], req({ query: 'How can I get my business mentioned in AI answers?' }));
   assert.match(chosen.html, /Customer question researched:<\/strong> “How can I get my business mentioned in AI answers\?”/);
   assert.match(chosen.html, /You chose this page/);
