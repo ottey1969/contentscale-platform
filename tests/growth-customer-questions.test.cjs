@@ -21,16 +21,30 @@ test("Google's own questions (People also ask, related searches) and labelled AI
       relatedSearches: [{ query: 'geo vs seo' }, { query: 'contentscale geo' }, { query: 'https://example.com/x y' }] }, seen),
     model: { call: async p => { prompts.push(p); return JSON.stringify({ questions: ['What is generative engine optimization?', 'How do I appear in ChatGPT answers for my service?', 'x'] }); } } });
   assert.deepEqual(seen[0].body, { q: 'generative engine optimization geo', gl: 'uk', hl: 'en', num: 10 }, 'Google is asked with the keyword, in the market');
+  assert.equal(out.questions[0].text, 'What is generative engine optimization?', 'best topic match observed on Google is first');
+  assert.equal(out.best_question, 'What is generative engine optimization?');
+  assert.equal(out.selection_source, 'OBSERVED_GOOGLE');
   assert.deepEqual(out.questions.map(q => [q.text, q.source]), [
-    ['How can I get my business mentioned in AI answers?', 'GOOGLE_PEOPLE_ALSO_ASK'],
     ['What is generative engine optimization?', 'GOOGLE_PEOPLE_ALSO_ASK'],
     ['geo vs seo', 'GOOGLE_RELATED_SEARCH'],
-    ['How do I appear in ChatGPT answers for my service?', 'AI_SUGGESTION']], 'own brand, URLs, one-word and duplicate items are left out');
-  assert.match(out.questions[3].label, /not verified search demand/);
+    ['How do I appear in ChatGPT answers for my service?', 'AI_SUGGESTION'],
+    ['How can I get my business mentioned in AI answers?', 'GOOGLE_PEOPLE_ALSO_ASK']], 'observed topical matches first, AI fallback before unrelated Google results');
+  assert.match(out.questions[2].label, /not verified search demand/);
+  assert.equal(out.questions[3].priority, 'OBSERVED_GOOGLE_LOW_RELEVANCE');
   assert.equal(out.tracked_keyword, 'generative engine optimization geo');
   assert.doesNotMatch(prompts[0], /must never be sent as an answer/, 'the page body is not given to the AI');
   assert.match(prompts[0], /Do not answer them/);
-  assert.match(out.note, /Search Console is not needed/);
+  assert.match(out.note, /Search Console is optional/);
+});
+
+test('without relevant Google questions, AI is used only as explicitly labelled fallback', async () => {
+ const out=await discoverCustomerQuestions({url:'https://contentscale.site/geo/',html,keyword:'generative engine optimization',key:'TEST-KEY',
+  fetchImpl:serper({peopleAlsoAsk:[{question:'How to bake a chocolate cake?'}]}),
+  model:{call:async()=>JSON.stringify({questions:['How does generative engine optimization work?']})}});
+ assert.equal(out.best_question,'How does generative engine optimization work?');
+ assert.equal(out.selection_source,'AI_SUGGESTION');
+ assert.equal(out.questions[0].source,'AI_SUGGESTION');
+ assert.equal(out.questions[1].priority,'OBSERVED_GOOGLE_LOW_RELEVANCE');
 });
 
 test('without Serper or AI it says so; without a keyword Google is asked with the page topic', async () => {
@@ -75,7 +89,7 @@ test('Tracker Growth: customer questions for a page in its market; the research 
   assert.match(page.html, /id="cqManualGo"/, 'manual question has its own research action even if Serper or AI fails');
   const pickerScript = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-customer-questions.js'), 'utf8');
   assert.match(pickerScript, /if\(!explicit&&savedRaw===null\)/, 'automatic discovery does not overwrite an explicit query or saved draft');
-  assert.match(pickerScript, /GOOGLE_PEOPLE_ALSO_ASK/, 'observed Google questions are preferred over unverified AI ideas');
+  assert.match(pickerScript, /d\.best_question/, 'shared ranked best question drives Tracker selection');
   assert.match(pickerScript, /growthTrackerQuestionDraft:/, 'typed customer question is remembered per Tracker page');
   assert.match(pickerScript, /localStorage\.setItem\(key/, 'draft is saved on every input');
   assert.match(pickerScript, /cqReset/, 'explicit reset action is present');
