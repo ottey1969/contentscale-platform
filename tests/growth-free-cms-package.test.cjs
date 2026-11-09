@@ -171,3 +171,23 @@ test('removed old AI flags do not return during CMS download; real remaining fla
  assert.ok(actual.flagged.some(x=>x.sentence==='We are the best roofer in New Jersey.'));
  assert.ok(!actual.flagged.some(x=>x.sentence===question||x.sentence===joined),'removed legacy heading flags must not recur');
 });
+
+test('text pasted from an AI answer: source links are taken out and listed to verify, "##" and "- a - b" become real HTML', () => {
+  const { buildFreePackage } = require('../src/growth-free/cms-package.cjs');
+  const orig = '<html><head><title>ContentScale</title></head><body><h1>ContentScale</h1><h2>How it works</h2><p>ContentScale scores content quality for search.</p></body></html>';
+  const sha = require('node:crypto').createHash('sha256').update(orig).digest('hex');
+  const text = 'Each AI assistant draws on its own changing set of references. [arxiv](https://arxiv.org/html/2610.11932)\n\n## What this means\n\n- A single query can become several searches. [ipullrank](https://ipullrank.com/x) - Results are not the same in every tool. [overflow](https://overflow.agency/y)\n\n**One test** is only a snapshot of one moment.';
+  const r = buildFreePackage({ url: 'https://contentscale.site/', originalHtml: orig, sourceSha256: sha,
+    written: { sections: [{ item_id: 'a', h2: 'Why answers differ', paragraphs: ['Something else.'] }] },
+    input: { cms: 'generic', seo_title: 'ContentScale', meta_description: 'ContentScale scores content quality for search engines and AI answers.', editor_approved: true,
+      sections: [{ item_id: 'a', h2: 'Why answers differ', text }] } });
+  assert.equal(r.ready, true, JSON.stringify(r.blocked_details || r.issues));
+  const html = r.files.find(f => f.name === '03-content-fragments.html').content;
+  assert.doesNotMatch(html, /\]\(https?:|##|\*\*/);
+  assert.match(html, /<h3>What this means<\/h3>\s*<ul><li>A single query can become several searches\.<\/li><li>Results are not the same in every tool\.<\/li><\/ul>/);
+  assert.match(html, /<p>One test is only a snapshot of one moment\.<\/p>/);
+  const fc = r.files.find(f => f.name === '06-fact-check-before-publishing.md').content;
+  assert.match(fc, /Sources pasted with your text — not linked, verify each/);
+  assert.match(fc, /arxiv — https:\/\/arxiv\.org\/html\/2610\.11932/); assert.match(fc, /ipullrank — https:\/\/ipullrank\.com\/x/);
+  assert.match(fc, /## Text changed by you[^]*Why answers differ/);
+});

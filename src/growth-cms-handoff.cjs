@@ -176,7 +176,11 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  review.basis=(reviewNotes&&Array.isArray(reviewNotes.basis)?reviewNotes.basis:[]).filter(b=>b&&b.h2&&approvedText.includes(norm(b.h2))).slice(0,10)
   .map(b=>'**'+clean(b.h2).slice(0,200)+'** answers “'+clean(b.answers).slice(0,200)+'”. Sources: '+((b.sources||[]).map(x=>clean(x).slice(0,220)).join('; ')||'none')+'.'+(b.warning?' ⚠ '+clean(b.warning).slice(0,300):''));
  const editorText=proposal&&proposal.editor_changed_text;
- const hasReview=editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length+review.basis.length>0;
+ const arr=k=>reviewNotes&&Array.isArray(reviewNotes[k])?reviewNotes[k]:[];
+ const pasted=arr('pasted_sources').filter(x=>x&&/^https?:\/\//.test(String(x.url||''))).slice(0,30).map(x=>'- [ ] '+clean(x.label||'source').slice(0,120)+' — '+String(x.url).slice(0,500)+(x.h2?' (in “'+clean(x.h2).slice(0,140)+'”)':''));
+ const changedSections=arr('editor_changed_sections').map(h=>clean(h).slice(0,200)).filter(Boolean).slice(0,12);
+ const toImprove=arr('still_to_improve').filter(x=>x&&x.sentence).slice(0,20).map(x=>'- “'+clean(x.sentence).slice(0,300)+'” ('+(x.problem==='OPENING_FILLER'?'weak opening: start with the answer':'advice for a team: write one step for the site owner')+', in “'+clean(x.h2).slice(0,140)+'”)');
+ const hasReview=pasted.length||changedSections.length||toImprove.length||editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length+review.basis.length>0;
  const delivery='CMS-independent handoff for existing page '+canonicalUrl+'\n'+
  'No autopublishing. Implement in your normal website editor using native, indexable text components.\n'+
  'Platform: '+cms+'. Keep original URL, navigation, design, existing text and images unless explicitly reviewed.\n'+
@@ -222,6 +226,9 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
    (review.fact_check.length?'\n## Fact-check\n\n'+review.fact_check.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.owner_confirmation.length?'\n## Confirm with the business\n\n'+review.owner_confirmation.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
    (review.safety_review.length?'\n## Safety review by a qualified professional\n\n'+review.safety_review.map(x=>'- [ ] '+x).join('\n')+'\n':'')+
+   (pasted.length?'\n## Sources pasted with your text — not linked, verify each\n\nThese links came with text that was pasted (for example from an AI answer). They are taken out of the page text: an AI answer\'s source is not proof. Open each one; link or name a source only when it really says what the sentence says.\n\n'+pasted.join('\n')+'\n':'')+
+   (changedSections.length?'\n## Text changed by you\n\nThe text of these sections differs from what Growth wrote. Growth checked it for claims the page cannot support, not whether it is true: check every factual statement.\n\n'+changedSections.map(h=>'- '+h).join('\n')+'\n':'')+
+   (toImprove.length?'\n## Still to improve\n\n'+toImprove.join('\n')+'\n':'')+
    (editorText?'\n## Text written or changed by the editor\n\nGrowth did not check the sentences the editor wrote or changed. Check every factual statement in them yourself before publishing.\n':'')}]:[])
  ];
  return {status:'HANDOFF_READY_FOR_EDITOR',issues:[],warnings:[...new Set(warnings)],files,manifest,publication_allowed:false,
