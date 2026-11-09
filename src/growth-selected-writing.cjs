@@ -111,7 +111,7 @@ function explainWriterFailure(w){
  if(st==='OPTIONAL_AI_NOT_CONFIGURED')return 'there is no AI key on the server (GEMINI_API_KEY is not set in Railway).';
  if(st==='INVALID_MODEL')return 'the AI model name in GEMINI_MODEL_BRIEF is not valid.';
  if(st==='INSUFFICIENT_PAGE_SOURCE')return 'your page has too little readable text to write from.';
- if(/INVALID_AI_JSON|INVALID_AI_STRUCTURE|AI_DRAFT_TOO_THIN/.test(st))return 'the AI answered, but its answer was not usable ('+st.toLowerCase().replace(/_/g,' ')+'). Try again.';
+ if(/INVALID_AI_JSON|INVALID_AI_STRUCTURE|AI_DRAFT_TOO_THIN/.test(st))return 'the AI answered, but its answer was not usable ('+st.toLowerCase().replace(/_/g,' ')+(e.finish_reason==='MAX_TOKENS'?'; it was cut off because it was too long':e.finish_reason&&e.finish_reason!=='STOP'?'; Google stopped it: '+String(e.finish_reason).toLowerCase():'')+'), also after one automatic retry. Try again; with fewer ticked H2s the answer is shorter.';
  if(e.kind==='HTTP'){const h=e.http;
   if(h===429)return 'Google’s AI limit is reached: too many requests, or the quota of the API key is used up'+model+'.'+m+' Try again later, or raise the quota in Google AI Studio / Cloud.';
   if(h===400||h===403)return 'Google refused the request (HTTP '+h+'): usually an invalid or restricted API key, or a model this key may not use'+model+'.'+m;

@@ -16,11 +16,19 @@ function sourceFacts(html){
 const RETRY_STATUSES=['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE','AI_DRAFT_UNPROVEN_AI_MECHANISM','AI_DRAFT_UNSOURCED_ATTRIBUTION','AI_DRAFT_HEADING_MISMATCH'];
 // flagOnly (writing for an owner's selection, after the one repair attempt): the same checks mark the failing sentences
 // instead of rejecting the draft, so the editor gets a marked concept rather than nothing. Never used as "checked".
+// The AI's JSON, read tolerantly (live 2026-11-09: INVALID_AI_JSON stopped a writing round): code fences, text before or
+// after the object, trailing commas and raw line breaks inside strings are accepted. Anything else stays invalid.
+function parseAiJson(raw){
+ const t=String(raw||'').replace(/^\uFEFF/,'').replace(/^\s*\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}\s*$/,'').trim();
+ const tries=[t];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)tries.push(t.slice(a,b+1));
+ for(const x of [...tries]){tries.push(x.replace(/,\s*([}\]])/g,'$1'));tries.push(x.replace(/,\s*([}\]])/g,'$1').replace(/"(?:[^"\\]|\\.)*"/g,m=>m.replace(/\r?\n/g,' ')))}
+ for(const x of tries){try{return JSON.parse(x)}catch{}}
+ return undefined;
+}
 function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTerms=[],flagOnly=false}={}){
  let obj=value;
  if(typeof obj==='string'){
-  try{obj=JSON.parse(obj.replace(/^\x60{3}(?:json)?\s*/i,'').replace(/\s*\x60{3}$/,'').trim())}
-  catch{return {status:'INVALID_AI_JSON',draft:null}}
+  obj=parseAiJson(obj);if(obj===undefined)return {status:'INVALID_AI_JSON',draft:null};
  }
  if(!obj||typeof obj!=='object'||!Array.isArray(obj.sections))return {status:'INVALID_AI_STRUCTURE',draft:null};
  const text=v=>plain(typeof v==='string'?v:'').slice(0,900);
@@ -167,15 +175,16 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
  const clean=t=>String(t||'').replace(/key=[^&\s]+/gi,'key=…').replace(/AIza[0-9A-Za-z_-]{10,}/g,'…').replace(/\s+/g,' ').trim().slice(0,240);
  try{
   const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(apiKey);
+  let lastFinish=null;
   const request=async message=>{
    const res=await fetchImpl(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{role:'user',parts:[{text:message}]}],
-     generationConfig:{temperature:0.2,maxOutputTokens:5000,responseMimeType:'application/json'}}),
+     generationConfig:{temperature:0.2,maxOutputTokens:8192,responseMimeType:'application/json'}}),
     signal:AbortSignal.timeout(35000)});
    if(!res.ok){let msg='';try{const j=await res.json();msg=j?.error?.message||j?.error?.status||''}catch{}
     providerError={kind:'HTTP',http:res.status,message:clean(msg),model};return null}
    const json=await res.json();
-   const text=json.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'';
+   const text=json.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'';lastFinish=json.candidates?.[0]?.finishReason||null;
    if(!text){providerError={kind:'EMPTY_ANSWER',finish_reason:json.candidates?.[0]?.finishReason||null,block_reason:json.promptFeedback?.blockReason||null,model};return null}
    return text;
   };
@@ -185,6 +194,11 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
   const taskTerms=taskMode?(readerTask.tasks||[]).flatMap(t=>t.core_words||[]):[];
   const normOpts={requireTitle:!taskMode,taskTerms};
   let result=normalizeDraft(raw,source.text,focusQuery,normOpts),repaired=false,lastRaw=raw;
+  // An answer that is no usable JSON (cut off, or text around it) is asked once more, shorter and as JSON only.
+  if(result.status==='INVALID_AI_JSON'||result.status==='INVALID_AI_STRUCTURE'){
+   const again=await request(prompt+'\nFORMAT RETRY: your previous answer was not one valid JSON object'+(lastFinish==='MAX_TOKENS'?' (it was cut off: too long)':'')+'. Return ONLY the JSON object described above, no text before or after it, no code fences. Keep every section to 2-3 short paragraphs.');
+   if(again!==null){const checked=normalizeDraft(again,source.text,focusQuery,normOpts);if(!['INVALID_AI_JSON','INVALID_AI_STRUCTURE'].includes(checked.status)){result=checked;lastRaw=again}}
+  }
   // A factual rejection remains a rejection. Give the model one bounded
   // opportunity to rewrite without numbers; never silently delete claims.
   if(RETRY_STATUSES.includes(result.status)){
@@ -221,7 +235,8 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    draft_quality_retry_attempted:RETRY_STATUSES.includes(result.status)||repaired,
    numeric_claim_retry_attempted:result.status==='AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED'||repaired,
    numeric_claim_retry_succeeded:repaired,
-   provenance:'AI_PROPOSAL_UNVERIFIED_EDITOR_REVIEW',publication_allowed:false};
+   provenance:'AI_PROPOSAL_UNVERIFIED_EDITOR_REVIEW',publication_allowed:false,
+   ...(result.draft?{}:{provider_error:providerError||{kind:'UNUSABLE_ANSWER',finish_reason:lastFinish,model}})};
  }catch(e){return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null,provider_error:e&&(e.name==='TimeoutError'||e.name==='AbortError')?{kind:'TIMEOUT',seconds:35,model}:{kind:'NETWORK',message:clean(e&&(e.code||e.message)),model}}}
 }
-module.exports={sourceFacts,normalizeDraft,generateGrowthEditorDraft,styleIssues};
+module.exports={sourceFacts,normalizeDraft,generateGrowthEditorDraft,styleIssues,parseAiJson};
