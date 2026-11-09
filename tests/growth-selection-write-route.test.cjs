@@ -17,9 +17,9 @@ const items=r55.reader_task_coverage.task_derivation.hosts.flatMap(h=>h.headings
  .map((x,i)=>({id:'s-'+i,group:'COMPETITOR_SECTION',writable:true,title:x.heading,status:'Not compared with your page',
   examples:[{site:x.host,url:'https://'+x.host+'/',heading:x.heading,excerpt:''}],placement:null}));
 
-function harness({live=researched,draft=null,fail=false}={}){
+function harness({live=researched,draft=null,fail=false,headings=null}={}){
  const route={},calls={generate:0,proposals:[]};
- const list={id:7,target_page_id:2294,target_url:URL_,focus_query:'ai citation tracker',items,source_fingerprint:pageFingerprint(researched)};
+ const list={id:7,target_page_id:2294,target_url:URL_,focus_query:'ai citation tracker',items,source_fingerprint:pageFingerprint(researched),...(headings?{research:{source_headings:headings}}:{})};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){route[p]=h}},{query:async()=>({rows:[]})},(req,res,next)=>{
   req.growthTrackerClientId=4;req.growth={can_edit:true,pages:[{id:2294,url:URL_,case_study_active:false}]};next()},{
   fetchLive:async()=>({html:live,final_url:URL_}),
@@ -129,4 +129,22 @@ test('the editor\'s choice in the AI pop-up is kept with the concepts (continue 
  assert.equal(r.statusCode,200);assert.deepEqual(r.body.ai_check,{choice:'WITHOUT_AI',answers_counted:0});
  assert.deepEqual(h.calls.proposals[0].written.ai_check,{choice:'WITHOUT_AI',answers_counted:0},'stored with the proposal');
  const odd=await harness().post([items[0].id],{ai_check_choice:'<script>'});assert.equal(odd.body.ai_check.choice,'NOT_ASKED');
+});
+
+
+test('2b. a page with live text (counters, dates): same researched headings, writing goes on; a heading gone is named',async()=>{
+ const headings={h1:['What Is an AI Citation Tracker?'],h2:r55.reader_task_coverage.destination_sections.map(s=>s.heading)};
+ const live=harness({headings,live:researched.replace('</main>','<p>TEST: 1,234 pages checked today, updated every hour.</p></main>')});
+ const ok=await live.post([items[0].id]);
+ assert.equal(ok.statusCode,200,JSON.stringify(ok.body));assert.equal(live.calls.generate,1);
+ const gone=harness({headings,live:researched.replace(/<h2>[^<]*<\/h2>/,'<h2>TEST renamed</h2>')});
+ const r=await gone.post([items[0].id]);
+ assert.equal(r.statusCode,409);assert.equal(r.body.code,'PAGE_HEADINGS_CHANGED');assert.match(r.body.error,/headings changed since the research \(no longer found: “/);assert.equal(gone.calls.generate,0);
+});
+
+test('1c. AI wrote no text: the reason is Google’s own (status and message), in plain words',async()=>{
+ const {explainWriterFailure}=require('../src/growth-selected-writing.cjs');
+ assert.match(explainWriterFailure({writer_status:'OPTIONAL_AI_UNAVAILABLE',provider_error:{kind:'HTTP',http:429,message:'Quota exceeded',model:'gemini-2.5-flash-lite'}}),/Google’s AI limit is reached[^]*Google says: “Quota exceeded”/);
+ const h=harness({fail:true});const r=await h.post([items[0].id]);
+ assert.match(r.body.reason,/^AI wrote no text: the AI writer is not available \(writer down\)\./);
 });

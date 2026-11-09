@@ -70,7 +70,7 @@ test('doubt gives a marked concept, not nothing: report 54\'s invented statistic
 test('a writer failure keeps the selection and says what to do; nothing to write when only elements are chosen',async()=>{
  const item={id:'q-task_manual',title:'How do I check AI citations manually?',writable:true,examples:[]};
  const down=await writeForSelection({items:[item],targetUrl:r55.url,focusQuery:'q',generate:async()=>{throw Error('down')}});
- assert.equal(down.status,'NOT_WRITTEN');assert.match(down.reason,/Write these items yourself/);
+ assert.equal(down.status,'NOT_WRITTEN');assert.match(down.reason,/^AI wrote no text: the AI could not be reached \(down\)\. Try again in a moment\. The research and your selection are kept\./);
  assert.deepEqual(down.not_written,[{item_id:'q-task_manual',title:'How do I check AI citations manually?'}]);
  assert.equal((await writeForSelection({items:[{id:'e-tables',writable:false,title:'A table'}],generate:async()=>({})})).status,'NOTHING_TO_WRITE');
 });

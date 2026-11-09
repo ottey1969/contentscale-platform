@@ -9,7 +9,7 @@ const {groundedGeminiAnswer}=require('./auto-ai-answers.cjs');
 const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
 const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
-const {writeForSelection,planBatch,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
+const {writeForSelection,planBatch,pageFingerprint,headingsStillPresent,headingsMessage,explainWriterFailure,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded-editor.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
@@ -955,25 +955,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const line=L.used_in_research?'Your Search Console export, filtered on exactly this page'+period+', was used in the research.':L.status==='VERIFIED_FOR_PAGE'?'The latest Search Console export is verified for this page'+period+' but was not used in the original research; start a new check with this export to research its queries.':'A Search Console export was uploaded'+period+', but it is not filtered on exactly this page, so it was shown and not used as evidence.';
   return {...summary,limitations:[...(summary.limitations||[]).filter(x=>!/^Google Search Console was not used/.test(x)),line]};
  }
- // Why the AI writer gave no text, in plain words (owner 2026-11-09: "I want to know why"). From the writer's status and
- // Google's own error (HTTP status and message; the key is never included).
- function writerReason(w){
-  const st=String(w&&w.writer_status||''),e=w&&w.provider_error||{},m=e.message?' Google says: “'+e.message+'”.':'',model=e.model?' (model '+e.model+')':'';
-  if(st==='OPTIONAL_AI_NOT_CONFIGURED')return 'there is no AI key on the server (GEMINI_API_KEY is not set in Railway).';
-  if(st==='INVALID_MODEL')return 'the AI model name in GEMINI_MODEL_BRIEF is not valid.';
-  if(st==='INSUFFICIENT_PAGE_SOURCE')return 'your page has too little readable text to write from.';
-  if(/INVALID_AI_JSON|INVALID_AI_STRUCTURE|AI_DRAFT_TOO_THIN/.test(st))return 'the AI answered, but its answer was not usable ('+st.toLowerCase().replace(/_/g,' ')+'). Try again.';
-  if(e.kind==='HTTP'){const h=e.http;
-   if(h===429)return 'Google’s AI limit is reached: too many requests, or the quota of the API key is used up'+model+'.'+m+' Try again later, or raise the quota in Google AI Studio / Cloud.';
-   if(h===400||h===403)return 'Google refused the request (HTTP '+h+'): usually an invalid or restricted API key, or a model this key may not use'+model+'.'+m;
-   if(h===404)return 'Google does not know this AI model (HTTP 404)'+model+'. Check GEMINI_MODEL_BRIEF in Railway.'+m;
-   if(h>=500)return 'Google’s AI service had an error (HTTP '+h+')'+model+'.'+m+' Try again in a moment.';
-   return 'Google answered with HTTP '+h+model+'.'+m}
-  if(e.kind==='TIMEOUT')return 'the AI did not answer within '+(e.seconds||35)+' seconds'+model+'. Try again in a moment.';
-  if(e.kind==='EMPTY_ANSWER')return 'the AI returned an empty answer'+model+(e.block_reason?' (blocked: '+String(e.block_reason).toLowerCase()+')':e.finish_reason?' (stopped: '+String(e.finish_reason).toLowerCase()+')':'')+'. Try again.';
-  if(e.kind==='NETWORK'||e.kind==='ERROR')return 'the AI could not be reached'+(e.message?' ('+e.message+')':'')+model+'. Try again in a moment.';
-  return 'the AI writer is not available ('+(st||'unknown').toLowerCase().replace(/_/g,' ')+').';
- }
+ const writerReason=explainWriterFailure;
  // What the competitor pages have (owner 2026-11-08: "the point of Growth is seeing what others have that I don't"):
  // every Google result, whether it could be read, and the headings of the pages that were read, each marked as on your
  // page or not. Shown on every result, also when the research is blocked: an observation, not advice.
@@ -1106,13 +1088,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // every time. For writing what matters is the structure the sections are placed in: the H1 and H2 headings researched.
    // Same headings: writing goes on (the concepts are checked against the live page anyway). Changed headings: say which.
    if(researched&&pageFingerprint(html)!==researched){
-    const was=row.report&&row.report.page_content&&row.report.page_content.headings;
-    const norm=x=>String(x||'').toLowerCase().replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim();
-    const live={h1:[...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map(m=>norm(m[1].replace(/<[^>]+>/g,' '))).filter(Boolean),
-     h2:[...html.replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1>/gi,' ').matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)].map(m=>norm(m[1].replace(/<[^>]+>/g,' '))).filter(Boolean)};
-    const missing=was?[...(was.h1||[]),...(was.h2||[])].map(norm).filter(h=>h&&!live.h1.includes(h)&&!live.h2.includes(h)):null;
-    if(!was||missing.length)return res.status(409).json({success:false,code:'PAGE_HEADINGS_CHANGED',error:missing&&missing.length?'Your page’s headings changed since this check (no longer found: “'+missing.slice(0,3).join('”, “')+'”'+(missing.length>3?' and '+(missing.length-3)+' more':'')+'). Run a new check so the advice matches the page':'Your page changed since this check. Run a new check so the advice matches the page'});
+    const g0=row.summary&&row.summary.gaps||{},hs=headingsStillPresent((g0.research&&g0.research.source_headings)||(row.report&&row.report.page_content&&row.report.page_content.headings),html);
+    if(!hs.ok)return res.status(409).json({success:false,code:hs.known?'PAGE_HEADINGS_CHANGED':'PAGE_CHANGED',error:hs.known?headingsMessage(hs.missing).replace('the research','this check').replace('Run the research again','Run a new check'):'Your page changed since this check. Run a new check so the advice matches the page'});
    }
+
    // One run at a time per check: a parallel or repeated click gets "in progress", never a second AI call.
    if(typeof storage.claimWriting==='function'){token=await storage.claimWriting(pool,{checkId:row.id});
     if(!token)return res.status(409).json({success:false,error:'Concepts for this check are being written right now. Wait a moment and reload.'})}

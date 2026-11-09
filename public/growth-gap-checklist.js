@@ -97,7 +97,7 @@
     try{var r=await options.write(p.map(function(x){return x.id}));
      if(r&&r.code==='WRITING_IN_PROGRESS'){status.textContent='Concepts for this list are being written right now (started '+(r.run&&r.run.started_at||'')+'). Wait a moment and reload; nothing is written twice.';return}
      if(r&&r.code==='SELECTION_ALREADY_WRITTEN'){w.textContent='Already written';w.disabled=true;ready(r.last_run&&r.last_run.cms_url);status.textContent='Everything you selected has been written already.'+(r.last_run&&r.last_run.cms_url?' The latest concepts are in the CMS package.':'');return}
-     if(!r||r.success===false)throw Error((r&&(r.code||r.reason))||'Writing not available');
+     if(!r||r.success===false)throw Error((r&&(r.error||r.reason||r.code))||'Writing not available');
      if(r.stored===true&&!r.storage_error){dl.hidden=false;
       (r.sections||[]).forEach(function(s){if(s.item_id){written.ids.add(String(s.item_id));(written.sections[String(s.item_id)]=written.sections[String(s.item_id)]||[]).push(s)}});mark()}
      if(r.storage_error)el('p','These concepts could not be stored, so nothing is marked as written and the items stay selected. Copy what you need and try again.',out,'error');
