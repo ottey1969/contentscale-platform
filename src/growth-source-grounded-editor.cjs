@@ -86,6 +86,22 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
   editor_approved:false,needs_human_fact_check:true,source_scope:'OBSERVED_ORIGINAL_PAGE_ONLY',
   publication_allowed:false}};
 }
+// Sentences a reader does not need: an opening about who observes or wonders about the topic, and advice for teams and
+// editorial processes on a page that itself never addresses teams (the page of one person or a small business).
+const FILLER_OPENING=/^(?:(?:many|most|some)\s+)?(?:[a-z-]+\s+){0,2}(?:teams?|marketers|publishers|editors|writers|businesses|companies|brands|professionals|specialists|owners|creators|people|users|readers|website owners|site owners)\s+(?:often|frequently|commonly|regularly|typically|usually|increasingly|sometimes)?\s*(?:observe|notice|see|wonder|ask|find|struggle|face|discover|report)\b/i;
+const TEAM_PROCESS=/\b(?:your|the|an?|our)\s+(?:editorial|research|content|marketing|seo|writing|web)\s+teams?\b|\bbrief templates?\b|\b(?:central\s+)?audit (?:files?|logs?)\b|\beditorial (?:guidelines|workflows?|process(?:es)?|calendars?|teams?)\b|\bstandardi[sz]ed (?:brief|template)/i;
+function styleIssues(draft,sourceText=''){
+ const pageHasTeams=/\bteams?\b|\bredactie\b/i.test(String(sourceText||''));
+ const out=[];
+ for(const sec of (draft&&draft.sections)||[]){
+  const paras=(sec.paragraphs||[]).map(String);
+  const first=(paras[0]||'').match(/[^.!?]+[.!?]?/)?.[0]?.trim()||'';
+  if(first&&FILLER_OPENING.test(first))out.push({h2:sec.h2,sentence:first,problem:'OPENING_FILLER'});
+  if(!pageHasTeams)for(const p of paras)for(const t of p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[])if(TEAM_PROCESS.test(t))out.push({h2:sec.h2,sentence:t.trim(),problem:'TEAM_PROCESS_ADVICE'});
+ }
+ return out;
+}
+
 async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[],gscContext=null,readerTask=null,fallbackFlagged=false}={},
  {apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite',fetchImpl=global.fetch}={}){
  let canonical;try{canonical=new URL(pageUrl)}catch{return {status:'INVALID_PAGE_URL',draft:null}}
@@ -117,6 +133,8 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    'Never explain why or how AI assistants, AI search or search engines select, verify, retrieve or cite content, and never present page features (schema or entity markup, structure, tables, author information) as a reason they do. Describe only what the reader can do and observe.',
    'Use no statistic, percentage, date or named source (publication, study, survey, company report) unless the original page states it in the same context.',
    'Be concise and concrete: short sentences, no introductory filler ("Understanding why … requires …"). The H2 must name what the section delivers: steps need a "How to" heading, a "Why" heading needs actual reasons.',
+   'Open every section with the answer itself: the first sentence defines, explains or answers (for example "Embeddings turn a search query into numbers that capture its meaning, so …"). Never open with who observes, notices or wonders about it ("Content teams frequently observe …", "Marketers often notice …", "Many people wonder …").',
+   'Write for the reader of THIS page, one person working on their own website. Unless the original page itself addresses teams, never address an editorial, research, content or marketing team, and never mention brief templates, audit files or logs, approval workflows or editorial guidelines.',
    'Do not repeat anything the original page already teaches. Existing H2 headings (do not duplicate): '+JSON.stringify(readerTask.existing_headings||[]),
    'Procedural how-to guidance is allowed; every statistic, date, named study, price or claim about the site owner must come from the original text. Do not output a title or meta description.'
   ]:readerTask?.mode==='NEW_DISTINCT_PAGE'?[
@@ -181,6 +199,19 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
     else if(fallbackFlagged)lastRaw=retry;
    }
   }
+  // Style (owner 2026-11-09): no opening filler about who observes the topic, and no team or editorial-process advice on a
+  // page that does not address teams. The AI rewrites the sections concerned once, automatically; the rewrite is used only
+  // when it passes the same validation and has fewer such sentences. Nothing is deleted silently.
+  if(taskMode&&result.status==='AI_DRAFT_REVIEW_REQUIRED'&&result.draft){
+   const found=styleIssues(result.draft,source.text);
+   if(found.length){
+    const styleText='\nSTYLE REWRITE: keep every task_code, H2 and fact of your previous answer, but fix these sentences: '+JSON.stringify(found.slice(0,8).map(x=>({h2:x.h2,sentence:x.sentence,problem:x.problem})))+
+     '. An opening sentence about who observes or wonders must become a sentence that directly answers or explains the H2. Team or editorial-process advice must become one concrete step a single site owner takes on their own page. Return the complete JSON again.\nYOUR PREVIOUS ANSWER: '+JSON.stringify(result.draft).slice(0,12000);
+    const again=await request(prompt+styleText);
+    if(again!==null){const checked=normalizeDraft(again,source.text,focusQuery,normOpts);
+     if(checked.status==='AI_DRAFT_REVIEW_REQUIRED'&&checked.draft&&styleIssues(checked.draft,source.text).length<found.length)result={...checked,style_rewrite:true};}
+   }
+  }
   // Writing for an owner's selection: after the one repair attempt, a marked concept instead of nothing.
   if(fallbackFlagged&&result.status!=='AI_DRAFT_REVIEW_REQUIRED'&&!['INVALID_AI_JSON','INVALID_AI_STRUCTURE','AI_DRAFT_TOO_THIN'].includes(result.status)){
    const marked=normalizeDraft(lastRaw,source.text,focusQuery,{...normOpts,flagOnly:true});
@@ -193,4 +224,4 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    provenance:'AI_PROPOSAL_UNVERIFIED_EDITOR_REVIEW',publication_allowed:false};
  }catch(e){return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null,provider_error:e&&(e.name==='TimeoutError'||e.name==='AbortError')?{kind:'TIMEOUT',seconds:35,model}:{kind:'NETWORK',message:clean(e&&(e.code||e.message)),model}}}
 }
-module.exports={sourceFacts,normalizeDraft,generateGrowthEditorDraft};
+module.exports={sourceFacts,normalizeDraft,generateGrowthEditorDraft,styleIssues};

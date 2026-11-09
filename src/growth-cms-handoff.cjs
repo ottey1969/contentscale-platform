@@ -28,10 +28,27 @@ function renderChangeMarkdown(html){
  .replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/\n{3,}/g,'\n\n').trim();
 }
 const PLACEMENT_MODES={EXTEND_SECTION:'Extend the existing section',ADD_AFTER_SECTION:'Add as a new section directly after'};
-const placementText=p=>p?PLACEMENT_MODES[p.mode]+' “'+p.section_heading+'”':'Choose a suitable position on the page';
+const placementText=p=>p?PLACEMENT_MODES[p.mode]+' “'+p.section_heading+'”'+(p.auto?' (chosen automatically: in the first 30% of the page, where readers and search engines see it early)':''):'Choose a suitable position on the page';
+// A section without a placement is placed automatically in the first 30% of the page (owner 2026-11-09: "important sections
+// belong in the first 30%"): directly after the early H2 section whose heading and text share the most words with it; on
+// a tie, the earliest one. Without H2 headings on the page the editor chooses the position (nothing is guessed).
+const PLACE_STOP=new Set('the and for with your you are this that what how why when which from into can will does have has about more than their them they its our not but all any use using also de het een en van voor met op in bij hoe wat waarom welke je jouw uw is zijn dat die dit niet ook'.split(' '));
+const placeWords=t=>new Set((asText(t).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').match(/[\p{L}\p{N}]{3,}/gu)||[]).filter(w=>!PLACE_STOP.has(w)).map(w=>w.slice(0,6)));
+function pageSectionsOf(html){
+ const body=String(html||'').replace(/<(script|style|nav|header|footer|aside)\b[\s\S]*?<\/\1>/gi,' ');
+ const parts=body.split(/(?=<h2\b)/i).slice(1);
+ return parts.map(p=>{const m=/<h2\b[^>]*>([\s\S]*?)<\/h2>/i.exec(p);return m?{heading:asText(m[1]).replace(/\s+/g,' ').trim(),text:p.slice(m.index+m[0].length)}:null}).filter(x=>x&&x.heading);
+}
+function autoPlacement(sectionHtml,originalHtml){
+ const sections=pageSectionsOf(originalHtml);if(!sections.length)return null;
+ const early=sections.slice(0,Math.max(1,Math.ceil(sections.length*0.3))),mine=placeWords(sectionHtml);
+ let best=0,score=-1;
+ early.forEach((s,i)=>{const hw=placeWords(s.heading),tw=placeWords(s.text);let n=0;for(const w of mine){if(hw.has(w))n+=3;else if(tw.has(w))n+=1}if(n>score){score=n;best=i}});
+ return {mode:'ADD_AFTER_SECTION',section_heading:early[best].heading.slice(0,200),auto:true};
+}
 // growthProposal: {id, sections:[{h2,text}]} — the checked Growth proposal this handoff came from (for the audit trail).
 // reviewNotes: {needs_fact_check, needs_owner_confirmation, needs_safety_review} — sentences the owner must check before publishing.
-function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApproved=false,
+function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApproved=false,autoPlace=true,
  cms='generic',pageTitle,metaDescription,focusQuery='',evidenceScope='needs_access',
  caseStudyLocked=false,sourceExpectedSha256,language='en',growthProposal=null,reviewNotes=null,addedProposalIds=[],personalVoiceAllowed=false}={}){
  // personalVoiceAllowed: the page presents a person (a personal brand, owner choice per package in Free Growth); then
@@ -50,7 +67,8 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  if(!Array.isArray(changes)||changes.length<1||changes.length>12)issues.push('APPROVED_SECTION_COUNT_REQUIRED');
  // A section that extends an existing section is a sub-section of it: its heading becomes H3 (an H2 would start a new
  // section on the page). Owner 2026-11-01 package: "Extend the existing section" with an H2.
- const approved=(Array.isArray(changes)?changes:[]).map(x=>x&&x.placement&&x.placement.mode==='EXTEND_SECTION'&&typeof x.html==='string'?{...x,html:x.html.replace(/<(\/?)h2\b/gi,'<$1h3')}:x);
+ const approved=(Array.isArray(changes)?changes:[]).map(x=>x&&x.placement&&x.placement.mode==='EXTEND_SECTION'&&typeof x.html==='string'?{...x,html:x.html.replace(/<(\/?)h2\b/gi,'<$1h3')}:x)
+  .map(x=>x&&x.placement==null&&typeof x.html==='string'&&autoPlace!==false?{...x,placement:autoPlacement(x.html,originalHtml)}:x);
  // Local business (address, phone, opening hours or a LocalBusiness type on the page): only then the package speaks of
  // calls, Google Business Profile, jobs and project photos. Read from the original page, never assumed.
  const localBusiness=isLocalBusiness(originalHtml);

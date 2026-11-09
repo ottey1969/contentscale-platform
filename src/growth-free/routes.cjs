@@ -372,7 +372,7 @@ function pkgHtml(r){var list=(r&&r.sections)||[];PKG_FLAGS={};list.forEach(funct
  h+='<label for="pkgTitle">SEO title</label><input id="pkgTitle" maxlength="100">';
  h+='<label for="pkgMeta">Meta description</label><textarea id="pkgMeta" rows="2" maxlength="220"></textarea>';
  h+='<label for="pkgCms">Website system (CMS)</label><select id="pkgCms"><option value="generic">Other / not sure</option><option value="wordpress">WordPress</option><option value="wix">Wix</option><option value="webflow">Webflow</option><option value="squarespace">Squarespace</option><option value="custom">Custom built</option></select>';
- h+='<details><summary>Internal link (optional)</summary><label for="pkgLinkUrl">Page of this website to link to</label><input id="pkgLinkUrl" type="url" placeholder="https://" list="pkgLinkChoices"><datalist id="pkgLinkChoices"></datalist><small id="pkgLinkHelp" class="muted"></small><label for="pkgLinkLabel">Link words (what the reader clicks)</label><input id="pkgLinkLabel" maxlength="120"></details>';
+ h+='<details><summary>Internal link</summary><label for="pkgLinkUrl">Page of this website to link to</label><input id="pkgLinkUrl" type="url" placeholder="https://" list="pkgLinkChoices"><datalist id="pkgLinkChoices"></datalist><small id="pkgLinkHelp" class="muted"></small><label for="pkgLinkLabel">Link words (what the reader clicks)</label><input id="pkgLinkLabel" maxlength="120"></details>';
  h+='<label class="check"><input type="checkbox" id="pkgApprove"><span>I reviewed the page, the sections and the link. Every statement is true for this business.</span></label>';
  h+='<p><button type="button" id="pkgDownload" class="action-blue">Download CMS package (ZIP)</button> <span id="pkgStatus" class="muted"></span></p><div id="pkgIssues"></div>';
  return h}
@@ -401,6 +401,10 @@ async function pkgReadSource(){var el=document.getElementById('pkgSource');if(!e
   var links=x.source.internal_links||[],dl=document.getElementById('pkgLinkChoices'),lu=document.getElementById('pkgLinkUrl'),ll=document.getElementById('pkgLinkLabel'),lh=document.getElementById('pkgLinkHelp');
   if(dl){dl.innerHTML=links.map(function(l){return '<option value="'+esc(l.url)+'">'+esc(l.label)+'</option>'}).join('')}
   if(lh)lh.textContent=links.length?'Click the field to choose one of the '+links.length+' page(s) of your site this page already links to; the link words fill in by themselves. Or type another page of your site.':'This page links to no other page of your site; type one yourself (optional).';
+  // Chosen automatically: the page of this site that fits the written sections best (a service or contact page counts a
+  // little more). Shown in the fields, so the visitor sees it and can change or empty it.
+  var sl=x.source.suggested_link;if(sl&&lu&&ll&&!lu.value.trim()&&!ll.value.trim()){lu.value=sl.url;ll.value=sl.label;var dt=lu.closest('details');if(dt)dt.open=true;
+   if(lh)lh.textContent='Chosen automatically: '+(sl.reason==='OFFER_PAGE'?'the page where you offer this help':'the page that fits these sections best')+'. The package puts the link in the section that fits it. Change or empty the field if another page is better.'}
   if(lu&&ll&&!lu.dataset.wired){lu.dataset.wired='1';lu.addEventListener('change',function(){var hit=links.filter(function(l){return l.url===lu.value.trim()})[0];if(hit&&!ll.value.trim())ll.value=hit.label})}if(m&&!m.value){m.value=x.source.meta_description||'';if(x.source.meta_description_source==='FIRST_PARAGRAPH'&&m.value){var mh=document.getElementById('pkgMetaHelp');if(!mh){mh=document.createElement('small');mh.id='pkgMetaHelp';mh.className='muted';m.insertAdjacentElement('afterend',mh)}mh.textContent='Your page has no meta description; this one is taken from its first paragraph. Check it.'}}
   el.textContent='Original page read now: “'+(x.source.title||x.source.url)+'”, '+x.source.headings.length+' heading(s). The package is refused if the page changes before the download.';(function(){var pc=document.getElementById('pkgPersonal');if(pc&&x.source.speaks_as_person&&!pc.dataset.touched){pc.checked=true;var n=document.getElementById('pkgPersonalNote');if(!n){n=document.createElement('small');n.id='pkgPersonalNote';n.className='muted';pc.parentNode.insertAdjacentElement('afterend',n)}n.textContent='Ticked for you: your page already speaks as a person (“I”, “my”), so that voice is kept. Untick it if this page should speak as a company.'}})();pkgFixVoice(x.voice)}
  catch(err){el.innerHTML=esc(err.message)+' <button type="button" class="ghost" id="pkgReread">Read again</button>';var b=document.getElementById('pkgReread');if(b)b.onclick=pkgReadSource}}
@@ -1242,7 +1246,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
   try{const html=await readOwnPage(row);if(!html)throw Error('empty');
-   const src=cmsPackage.pageSource(html,{url:row.url});res.set('Cache-Control','no-store').json({success:true,source:src,voice:cmsPackage.voiceOf({title:src.title,meta:src.meta_description}),cms:cmsPackage.CMS})}
+   const wv=viewOf(row.written),sectionsText=((wv&&wv.sections)||[]).map(x=>(x.h2||'')+' '+(x.paragraphs||[]).join(' ')).join(' ').slice(0,20000);
+   const src=cmsPackage.pageSource(html,{url:row.url,sectionsText,focus:searchTermOf(row)||''});res.set('Cache-Control','no-store').json({success:true,source:src,voice:cmsPackage.voiceOf({title:src.title,meta:src.meta_description}),cms:cmsPackage.CMS})}
   catch(e){res.status(503).json({success:false,error:'Your page could not be read right now. Try again in a moment.'})}
  });
  app.post(apiPath+'/checks/:id/package',async(req,res)=>{
