@@ -111,3 +111,14 @@ test('a stored flag is checked again with the current rules: a corrected rule no
   const blocked = run(claim);
   assert.equal(blocked.ready, false); assert.deepEqual(blocked.flagged.map(f => f.sentence), [claim]);
 });
+
+test('a page that already speaks as a person keeps that voice without a tick; unticking explicitly restores the service rule', () => {
+  const own = '<html lang="en"><head><title>Content At Scale Done Right | SEO &amp; AI Search Specialist</title><meta name="description" content="TEST: I help improve Google visibility through technical SEO and content strategy."></head><body><h1>Beyond Content at Scale</h1><h2>Our roof repair services</h2><p>' + 'TEST text about the service, long enough to be read as a section of the page. '.repeat(3) + '</p></body></html>';
+  const s2 = pageSource(own, { url: URL_ });
+  assert.equal(s2.speaks_as_person, true);
+  const meta = 'I help improve Google visibility through technical SEO, GEO and content strategy. WhatsApp me today.';
+  const base = { url: URL_, originalHtml: own, sourceSha256: s2.source_sha256, written, input: input({ meta_description: meta }) };
+  assert.equal(buildFreePackage(base).ready, true, 'no tick needed: the page itself speaks as a person');
+  const unticked = buildFreePackage({ ...base, input: input({ meta_description: meta, personal_voice: false }) });
+  assert.ok(unticked.issues.includes('META_PERSONAL_OR_FOUNDER_VOICE'), 'explicitly unticked: the service rule applies');
+});

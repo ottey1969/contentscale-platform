@@ -39,6 +39,11 @@ function firstParagraphMeta(h) {
   }
   return '';
 }
+function pageSpeaksAsPerson(html) {
+  const h = String(html || ''), meta = (/<meta\b[^>]*name=["']description["'][^>]*>/i.exec(h) || [''])[0];
+  const parts = [text((/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(h) || [])[1]), text((/content=["']([^"']*)["']/i.exec(meta) || [])[1]), ...[...h.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map(m => text(m[1]))];
+  return parts.some(t => t && personalVoice(t));
+}
 function pageSource(html, { url } = {}) {
   const h = String(html || '');
   const meta = (/<meta\b[^>]*name=["']description["'][^>]*>/i.exec(h) || [''])[0];
@@ -47,7 +52,7 @@ function pageSource(html, { url } = {}) {
     meta_description: own || suggested, meta_description_source: own ? 'PAGE' : suggested ? 'FIRST_PARAGRAPH' : 'NONE',
     language: ((/<html\b[^>]*\blang=["']([a-z]{2})/i.exec(h) || [])[1] || '').toLowerCase() || null,
     headings: [...h.matchAll(/<h([1-3])\b[^>]*>([\s\S]*?)<\/h\1>/gi)].map(m => ({ level: Number(m[1]), text: text(m[2]).slice(0, 200) })).filter(x => x.text).slice(0, 40),
-    internal_links: internalLinks(h, url) };
+    internal_links: internalLinks(h, url), speaks_as_person: pageSpeaksAsPerson(h) };
 }
 // Pages of the same website that this page already links to, with the page's own link words: choices for the internal
 // link of the package (Free Growth knows no other pages of the site). Navigation and footer links are skipped.
@@ -127,7 +132,10 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   const stored = new Map(((written && written.sections) || []).map(s => [String(s.item_id), s]));
   const issues = [], flagged = [];
   // The page presents a person (owner choice per package): "I"/"my" flags are the page's own voice, not errors.
-  const personal = input.personal_voice === true, isVoice = f => f && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')));
+  // The page itself speaks as a person (its own title, description or H1 says "I"/"my"): that is the owner's voice, so the
+  // package keeps it, unless the editor explicitly unticked it (personal_voice === false).
+  const ownVoice = pageSpeaksAsPerson(originalHtml);
+  const personal = input.personal_voice === true || (input.personal_voice !== false && ownVoice), isVoice = f => f && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')));
   const supplied = Array.isArray(input.sections) ? input.sections : [];
   if (supplied.length > 12) issues.push('TOO_MANY_SECTIONS');
   const given = supplied.slice(0, 12).map(s => ({ item_id: String(s && s.item_id || ''), h2: String(s && s.h2 || '').trim().slice(0, 200), text: String(s && s.text || '').trim().slice(0, 20000) }));
@@ -177,4 +185,4 @@ async function suggestServiceMeta({ title = '', meta = '', language = 'en', url 
   return ok ? { status: 'SUGGESTED', voice, title: t, meta_description: d } : { status: 'REJECTED', voice };
 }
 
-module.exports = { suggestServiceMeta, voiceOf, pageSource, buildFreePackage, placeLink, PLAIN, CMS };
+module.exports = { pageSpeaksAsPerson, suggestServiceMeta, voiceOf, pageSource, buildFreePackage, placeLink, PLAIN, CMS };

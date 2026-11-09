@@ -402,7 +402,7 @@ async function pkgReadSource(){var el=document.getElementById('pkgSource');if(!e
   if(dl){dl.innerHTML=links.map(function(l){return '<option value="'+esc(l.url)+'">'+esc(l.label)+'</option>'}).join('')}
   if(lh)lh.textContent=links.length?'Click the field to choose one of the '+links.length+' page(s) of your site this page already links to; the link words fill in by themselves. Or type another page of your site.':'This page links to no other page of your site; type one yourself (optional).';
   if(lu&&ll&&!lu.dataset.wired){lu.dataset.wired='1';lu.addEventListener('change',function(){var hit=links.filter(function(l){return l.url===lu.value.trim()})[0];if(hit&&!ll.value.trim())ll.value=hit.label})}if(m&&!m.value){m.value=x.source.meta_description||'';if(x.source.meta_description_source==='FIRST_PARAGRAPH'&&m.value){var mh=document.getElementById('pkgMetaHelp');if(!mh){mh=document.createElement('small');mh.id='pkgMetaHelp';mh.className='muted';m.insertAdjacentElement('afterend',mh)}mh.textContent='Your page has no meta description; this one is taken from its first paragraph. Check it.'}}
-  el.textContent='Original page read now: “'+(x.source.title||x.source.url)+'”, '+x.source.headings.length+' heading(s). The package is refused if the page changes before the download.';pkgFixVoice(x.voice)}
+  el.textContent='Original page read now: “'+(x.source.title||x.source.url)+'”, '+x.source.headings.length+' heading(s). The package is refused if the page changes before the download.';(function(){var pc=document.getElementById('pkgPersonal');if(pc&&x.source.speaks_as_person&&!pc.dataset.touched){pc.checked=true;var n=document.getElementById('pkgPersonalNote');if(!n){n=document.createElement('small');n.id='pkgPersonalNote';n.className='muted';pc.parentNode.insertAdjacentElement('afterend',n)}n.textContent='Ticked for you: your page already speaks as a person (“I”, “my”), so that voice is kept. Untick it if this page should speak as a company.'}})();pkgFixVoice(x.voice)}
  catch(err){el.innerHTML=esc(err.message)+' <button type="button" class="ghost" id="pkgReread">Read again</button>';var b=document.getElementById('pkgReread');if(b)b.onclick=pkgReadSource}}
 // Flagged sentences: one click removes the exact sentence from the section text (nothing else); "Remove all" does that for
 // every flagged sentence still in an included section. A section that is not included shows its warnings as not applicable.
@@ -421,7 +421,7 @@ function pkgWireFlags(){var first=document.querySelector('.pkgFlags');
  document.querySelectorAll('.pkgUse,.pkgText').forEach(function(el){el.addEventListener(el.classList.contains('pkgText')?'input':'change',pkgFlagState)});pkgFlagState()}
 function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box.innerHTML=pkgHtml(r);var b=document.getElementById('pkgDownload');if(!b)return;pkgReadSource();
  pkgWireFlags();
- var pc=document.getElementById('pkgPersonal');if(pc)pc.onchange=function(){if(pc.checked)clearVoice();else pkgFixVoice(null)};
+ var pc=document.getElementById('pkgPersonal');if(pc)pc.onchange=function(){pc.dataset.touched='1';if(pc.checked)clearVoice();else pkgFixVoice(null)};
  var bulk=document.getElementById('pkgIncludeAll'),exclude=document.getElementById('pkgExcludeAll'),bulkSt=document.getElementById('pkgBulkStatus');
  function cmsChoices(){return [...document.querySelectorAll('.pkgUse')]}
  function cmsReady(cb){var t=document.querySelector('.pkgText[data-id="'+cb.dataset.id+'"]');return !!(t&&t.value.trim().length>=30)}
