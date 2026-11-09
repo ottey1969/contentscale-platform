@@ -20,12 +20,18 @@ globalThis.fetch = async function (url, init) {
   const u = String(url && url.url || url || '');
   if (/generativelanguage\.googleapis\.com\/v1beta\/models\/[^/]+:generateContent/.test(u)) {
     if (capture) fs.appendFileSync(capture, JSON.stringify({ url: u.replace(/key=[^&]+/, 'key=TEST'), body: init && init.body ? String(init.body) : '' }) + '\n');
-    const text = JSON.stringify(TEST_BRIEF);
+    // The small "answer the People Also Ask questions" call: answer exactly the questions it was given (TEST text).
+    const prompt = (() => { try { return JSON.parse(String(init && init.body || '{}')).contents[0].parts[0].text; } catch (e) { return ''; } })();
+    const paa = /Answer each People Also Ask question/.test(prompt) ? (() => { try { return JSON.parse(prompt.split('QUESTIONS:\n')[1].split('\n\nBRIEF CONTEXT')[0]); } catch (e) { return []; } })() : null;
+    const text = paa ? JSON.stringify({ paa_questions: paa.map(q => ({ q, a: 'TEST answer from the Brief for: ' + q })) }) : JSON.stringify(TEST_BRIEF);
     return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1, totalTokenCount: 2 } }), { status: 200, headers: { 'content-type': 'application/json' } });
   }
   if (/^https:\/\/google\.serper\.dev\/search/.test(u)) {
     const organic = [1, 2, 3, 4, 5].map(i => ({ position: i, link: 'https://example.org/test-result-' + i, title: 'TEST result ' + i, snippet: 'TEST snippet ' + i + ' from the e2e Serper stub.' }));
-    return new Response(JSON.stringify({ organic, peopleAlsoAsk: [] }), { status: 200, headers: { 'content-type': 'application/json' } });
+    // A query with "TEST paa" gets two People Also Ask questions (the Brief stub has no answers for them).
+    const q = (() => { try { return String(JSON.parse(String(init && init.body || '{}')).q || ''); } catch (e) { return ''; } })();
+    const peopleAlsoAsk = /TEST paa/i.test(q) ? [{ question: 'TEST what is a paa question?' }, { question: 'TEST how is it answered?' }] : [];
+    return new Response(JSON.stringify({ organic, peopleAlsoAsk }), { status: 200, headers: { 'content-type': 'application/json' } });
   }
   return denied(url, init);
 };
