@@ -59,3 +59,19 @@ test('a section without a placement goes after the best matching H2 in the first
   assert.deepEqual(p, { mode: 'ADD_AFTER_SECTION', section_heading: 'How AI search finds pages', auto: true });
   assert.match(out.files.find(f => f.name === '01-implementation.md').content, /directly after “How AI search finds pages” \(chosen automatically: in the first 30% of the page/);
 });
+
+test('an answer that is no valid JSON is asked once more; JSON with text or a trailing comma around it is read as is', async () => {
+  const prompts = [], answers = ['Sure! Here is the draft: {"sections": [', JSON.stringify(good)];
+  const fetchImpl = async (url, opts) => { prompts.push(JSON.parse(opts.body).contents[0].parts[0].text); const t = answers.shift();
+    return { ok: true, json: async () => ({ candidates: [{ finishReason: prompts.length === 1 ? 'MAX_TOKENS' : 'STOP', content: { parts: [{ text: t }] } }] }) }; };
+  const out = await generateGrowthEditorDraft({ sourceHtml: SOURCE, pageUrl: 'https://contentscale.site/', focusQuery: 'embeddings vector search', readerTask: task, fallbackFlagged: true },
+    { apiKey: 'k', model: 'gemini-test-model', fetchImpl });
+  assert.equal(prompts.length, 2); assert.match(prompts[1], /FORMAT RETRY: .*cut off/);
+  assert.equal(out.status, 'AI_DRAFT_REVIEW_REQUIRED'); assert.match(out.draft.sections[0].paragraphs[0], /^Embeddings turn/);
+  const { parseAiJson } = require('../src/growth-source-grounded-editor.cjs');
+  assert.deepEqual(parseAiJson('Here it is:\n```json\n{"sections":[{"h2":"a",}],}\n```'), { sections: [{ h2: 'a' }] });
+  // Still unusable after the retry: the reason says so, with Google's finish reason for the log.
+  const bad = async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{"sections":[' }] } }] }) });
+  const out2 = await generateGrowthEditorDraft({ sourceHtml: SOURCE, pageUrl: 'https://contentscale.site/', focusQuery: 'x', readerTask: task, fallbackFlagged: true }, { apiKey: 'k', model: 'gemini-test-model', fetchImpl: bad });
+  assert.equal(out2.status, 'INVALID_AI_JSON'); assert.equal(out2.provider_error.finish_reason, 'MAX_TOKENS');
+});
