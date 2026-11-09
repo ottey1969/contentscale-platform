@@ -150,6 +150,19 @@ test('Pre-Write research through the real server routes', { skip, timeout: 18000
     assert.equal(shownR.contract, 'prewrite_ai_answer_research_v2');
     assert.match(R.buildPrewriteResearchPrompt(shownR), /AI answers researched: 2\/5 valid/);
     assert.match(R.buildPrewriteResearchPrompt(shownR), /researched: Google AI Overview or Gemini \(source not recorded\) \[manual paste · origin not verified\]/);
+    // 6. People Also Ask without answers (live 2026-11-09: NOT PASSED only for "paa_answers"): the answers are written from
+    // the Brief with one small call before the gate decides, so paa_answers is no longer a reason for NOT PASSED.
+    const token3 = 'TEST-prewrite-paa-' + crypto.randomBytes(4).toString('hex');
+    await db.query("INSERT INTO tracker_clients(token,domain) VALUES ($1,'test-prewrite-paa.example')", [token3]);
+    const before3 = fs.readFileSync(capture, 'utf8').trim().split('\n').length;
+    const gp = await (await fetch(base + '/api/tracker-client/' + token3 + '/prewrite-brief', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ keyword: 'TEST paa topic', language: 'English', region: 'us', manualAiEvidence: { google_source: 'no_ai_overview' } }) })).json();
+    const pq = (gp.brief && gp.brief.paa_questions) || [];
+    assert.deepEqual(pq.map(x => x.q), ['TEST what is a paa question?', 'TEST how is it answered?'], JSON.stringify(gp).slice(0, 300));
+    assert.match(pq[0].a, /^TEST answer from the Brief for/);
+    assert.ok(!((gp.brief.ai_quality_check || {}).missing || []).includes('paa_answers'), 'paa_answers is filled');
+    const sent3 = fs.readFileSync(capture, 'utf8').trim().split('\n').slice(before3).map(l => JSON.parse(JSON.parse(l).body).contents[0].parts[0].text);
+    assert.equal(sent3.filter(t => /Answer each People Also Ask question/.test(t)).length, 1, 'one small call for the answers');
   } finally {
     app.kill(); try { await db.end(); } catch (e) {} fs.rmSync(built, { force: true }); fs.rmSync(capture, { force: true });
   }
