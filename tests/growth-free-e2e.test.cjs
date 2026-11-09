@@ -41,7 +41,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     questionModel: null,
     generateDraft: async args => { writes.push(args); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: (args.readerTask?.tasks || []).map(x => ({ task_code: x.code, h2: 'How to read a repair estimate',
       // The second sentence is a product claim the page does not make: it is flagged and must go before the download.
-      paragraphs: ['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.', 'Our platform tracks every roof repair citation in ChatGPT every day.'] })) } }; } };
+      paragraphs: writes.length > 1 ? ['Many people wonder how to read a repair estimate before they approve it.', 'Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.']
+        : ['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.', 'Our platform tracks every roof repair citation in ChatGPT every day.'] })) } }; } };
   const app = express(); app.use(express.json({ limit: '1mb' }));
   // The key's site domain (here 127.0.0.1): e-mail links open on the domain the visitor used, without extra settings.
   const baseCfg = freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-1' });
@@ -283,6 +284,24 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await p.textContent('#aiRecheck > summary'), /Advanced · Recheck an AI answer/);
     await p.locator('#aiRecheck > summary').click();
     assert.equal(await p.locator('#aiText').isVisible(), true, 'user can deliberately recheck an answer');
+    // Write a concept again (owner 2026-11-09 "schrijft niet"): every selected H2 has a concept, so the button would do
+    // nothing; ticking "Write this H2 again" uses the remaining round and the new concept replaces the old one.
+    await p.reload();
+    if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
+    await p.waitForSelector('.gapRewrite', { state: 'attached', timeout: 30000 });
+    assert.equal(await p.locator('.gapRewrite').isChecked(), false, 'a concept without a weak opening is not ticked');
+    await p.locator('.gapRewrite').check();
+    await p.waitForFunction(() => /Write the 1 ticked concept\(s\) again with AI/.test(document.getElementById('gapWrite').textContent));
+    await p.click('#gapWrite');
+    await p.waitForFunction(() => /written again by AI/.test(document.getElementById('gapWriteStatus').textContent), null, { timeout: 30000 });
+    assert.equal(writes.length, 2, 'one more AI round');
+    assert.match(await p.textContent('#gapWritten'), /Many people wonder how to read a repair estimate/);
+    // The new concept opens with "Many people wonder": after a reload it is ticked for another round by itself.
+    await p.reload();
+    if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
+    await p.waitForSelector('.gapRewrite', { state: 'attached', timeout: 30000 });
+    assert.equal(await p.locator('.gapRewrite').isChecked(), true, 'a weak opening is ticked automatically');
+    assert.match(await p.textContent('#gapWritten'), /ticked for you: weak opening/);
     assert.deepEqual(errors, [], 'no browser error on the way');
     // Database: the check and the AI answer are in the Free tables; no Tracker table was created or written.
     const row = (await pool.query('SELECT id,status,email FROM growth_free_checks WHERE lower(email)=lower($1)', [email])).rows[0];
