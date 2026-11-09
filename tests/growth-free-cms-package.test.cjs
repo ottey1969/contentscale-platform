@@ -146,3 +146,27 @@ test('a question heading is no claim, and a subheading line above a paragraph be
   assert.equal(r.ready, true, JSON.stringify(r.blocked_details || r.issues));
   assert.match(JSON.stringify(r.files), /<h3>Why the Same Keyword Shows Different AI Answers<\/h3>/);
 });
+
+
+test('removed old AI flags do not return during CMS download; real remaining flagged body sentences still block', () => {
+ const question='What is the Difference Between Ranking and Being Cited in AI Search?';
+ const joined='Why the Same Keyword Shows Different AI Answers Marketers often observe that identical keywords yield different answers.';
+ const old={sections:[
+  {item_id:'q',h2:question,paragraphs:['Readers compare page ranking with citations in AI answers.'],
+   flags:[{sentence:question,reason:'Old flag without a code'}]},
+  {item_id:'b',h2:'Why the Same Keyword Shows Different AI Answers',paragraphs:['Marketers often observe that identical keywords yield different answers.'],
+   flags:[{sentence:joined,reason:'Old heading and paragraph glued together'}]},
+  {item_id:'f',h2:'How to check a claim',paragraphs:['We are the best roofer in New Jersey.'],
+   flags:[{sentence:'We are the best roofer in New Jersey.',reason:'Unverified claim'}]}
+ ]};
+ const base={url:URL_,originalHtml:html,sourceSha256:src.source_sha256,written:old,focusQuery:'roof repair lodi nj'};
+ const body=[{item_id:'q',h2:question,text:'Readers compare page ranking with citations in AI answers.'},
+  {item_id:'b',h2:'Why the Same Keyword Shows Different AI Answers',text:'Marketers often observe that identical keywords yield different answers.'},
+  {item_id:'f',h2:'How to check a claim',text:'Check the documented repair work and request a written estimate before approval.'}];
+ const ready=buildFreePackage({...base,input:input({sections:body})});
+ assert.equal(ready.ready,true,JSON.stringify(ready.messages||ready.blocked_details));
+ const actual=buildFreePackage({...base,input:input({sections:body.map(x=>x.item_id==='f'?{...x,text:'We are the best roofer in New Jersey. Check our written estimate for roof repair.'}:x)})});
+ assert.equal(actual.ready,false,'a genuinely present flagged body claim must remain blocked');
+ assert.ok(actual.flagged.some(x=>x.sentence==='We are the best roofer in New Jersey.'));
+ assert.ok(!actual.flagged.some(x=>x.sentence===question||x.sentence===joined),'removed legacy heading flags must not recur');
+});
