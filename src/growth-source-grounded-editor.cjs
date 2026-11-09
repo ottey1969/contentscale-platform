@@ -99,7 +99,12 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
 const FILLER_OPENING=/^(?:(?:many|most|some)\s+)?(?:[a-z-]+\s+){0,2}(?:teams?|marketers|publishers|editors|writers|businesses|companies|brands|professionals|specialists|owners|creators|people|users|readers|website owners|site owners)\s+(?:often|frequently|commonly|regularly|typically|usually|increasingly|sometimes)?\s*(?:observe|notice|see|wonder|ask|find|struggle|face|discover|report|examine|explore|consider|compare|look\s+at|discuss|debate|want\s+to\s+know)\b/i;
 const TEAM_PROCESS=/\b(?:your|the|an?|our)\s+(?:editorial|research|content|marketing|seo|writing|web)\s+teams?\b|\bbrief templates?\b|\b(?:central\s+)?audit (?:files?|logs?)\b|\beditorial (?:guidelines|workflows?|process(?:es)?|calendars?|teams?)\b|\bstandardi[sz]ed (?:brief|template)/i;
 function styleIssues(draft,sourceText=''){
- const pageHasTeams=/\bteams?\b|\bredactie\b/i.test(String(sourceText||''));
+ // Team advice fits only a page that addresses teams ("your team", "for marketing teams"). The word "team" elsewhere on the
+ // page is not enough (live 2026-11-09: a one-person page kept "Have your editorial team …"), and a page that speaks as one
+ // person ("I help …") never gets team advice.
+ const src=String(sourceText||'');
+ const speaksAsPerson=/(?:^|[.!?]\s+|\s)I\s+(?:help|am|work|write|build|offer|create|have|run|do|make|show|research)\b|\bI['’]m\b|\bI['’]ve\b|(?:^|\s)(?:ik\s+(?:help|ben|werk|schrijf|bouw)|mijn\s+(?:werk|dienst|aanpak))\b/.test(src);
+ const pageHasTeams=!speaksAsPerson&&/\b(?:your|our)\s+(?:[a-z-]+\s+)?teams?\b|\bteams?\s+like\s+yours\b|\b(?:train|trains|training|help|helps|support|supports|coach|coaches|serve|serves|work\s+with|works\s+with)\s+(?:[a-z-]+\s+){0,2}teams\b|\bfor\s+(?:[a-z-]+\s+){0,2}teams\b|\b(?:je|jouw|jullie|ons)\s+team\b|\bredactie\b/i.test(src);
  const out=[];
  for(const sec of (draft&&draft.sections)||[]){
   const paras=(sec.paragraphs||[]).map(String);
