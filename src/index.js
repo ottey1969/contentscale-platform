@@ -61171,12 +61171,15 @@ ${claimsBlock.slice(0,2400)}`;
         console.warn('[prewrite-brief] network 3-part synthesis blocked | p1='+(_part1.ok?'ok':'failed')+' p2='+(_part2.ok?'ok':'failed')+' p3='+(_part3.ok?'ok':'failed'));
       }
     } else {
+      // Live 2026-11-09: one full Brief (up to 16k output tokens) did not fit in 32s, and a timeout stopped after one
+      // attempt. Each attempt now gets 75s, and a timeout, network error, 429 or 5xx gets a second attempt.
       const _pwbGeminiModelLadder=Array.from(new Set([_pwbBriefPrimary,_pwbBriefFallback]));
-      for(let _gi=0;_gi<_pwbGeminiModelLadder.length && !d2;_gi++){
-        const _model=_pwbGeminiModelLadder[_gi];
+      const _pwbGeminiTries=Math.max(2,_pwbGeminiModelLadder.length);
+      for(let _gi=0;_gi<_pwbGeminiTries && !d2;_gi++){
+        const _model=_pwbGeminiModelLadder[Math.min(_gi,_pwbGeminiModelLadder.length-1)];
         _pwbGeminiAttempts=_gi+1; _pwbGeminiModelUsed=_model;
         try{
-          const ctrl2=new AbortController(); const _t2=setTimeout(()=>ctrl2.abort(),32000);
+          const ctrl2=new AbortController(); const _t2=setTimeout(()=>ctrl2.abort(),75000);
           const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
           clearTimeout(_t2); _pwbGeminiStatus=r2.status; const _txt=await r2.text(); let _json={}; try{_json=_txt?JSON.parse(_txt):{}}catch(_je){}
           if(r2.ok){_pwbRecordUsage('full_brief',_model,_json,{prompt_chars:(_langPrefix(language)+finalPrompt).length,max_output_tokens:16384,elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt});d2=_json;break}
@@ -61185,10 +61188,10 @@ ${claimsBlock.slice(0,2400)}`;
           if(!(r2.status===429||r2.status>=500))break;
         }catch(_ge){
           _pwbGeminiNetworkFailure=true; _pwbGeminiStatus=0; _pwbGeminiTimedOut=!!(_ge&&_ge.name==='AbortError');
-          _pwbGeminiError=String(_pwbGeminiTimedOut?'Gemini request timed out after 32s':(_ge&&_ge.message||_ge)).slice(0,700);
-          console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'network failure:',_pwbGeminiError); break;
+          _pwbGeminiError=String(_pwbGeminiTimedOut?'Gemini request timed out after 75s':(_ge&&_ge.message||_ge)).slice(0,700);
+          console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'network failure:',_pwbGeminiError);
         }
-        if(_gi===0)await new Promise(r=>setTimeout(r,350));
+        if(!d2&&_gi<_pwbGeminiTries-1)await new Promise(r=>setTimeout(r,_pwbGeminiTimedOut?1200:350));
       }
     }
     if(!d2){
