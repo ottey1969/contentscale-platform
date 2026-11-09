@@ -28,7 +28,8 @@ test('an approved concept becomes the same package as the Tracker, with placemen
   const impl = r.files.find(f => f.name === '01-implementation.md').content;
   assert.match(impl, /Our roof repair services/); assert.match(impl, /No autopublishing/);
   assert.match(r.files.find(f => f.name === '05-measurement-plan.md').content, /Evidence: observed/);
-  assert.match(r.files.find(f => f.name === '06-fact-check-before-publishing.md').content, /best roofer in New Jersey[^]*How to read a repair estimate/);
+  assert.doesNotMatch(r.files.find(f => f.name === '06-fact-check-before-publishing.md').content, /best roofer in New Jersey/, 'a removed AI claim must not return in the final package');
+  assert.match(r.files.find(f => f.name === '06-fact-check-before-publishing.md').content, /How to read a repair estimate/, 'source basis is still documented');
   assert.equal(r.zip().readUInt32LE(0), 0x04034b50);
 });
 
