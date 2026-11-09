@@ -11,7 +11,7 @@ const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const {writeForSelection,planBatch,pageFingerprint,headingsStillPresent,headingsMessage,explainWriterFailure,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {mergeWritten,viewOf}=require('./written.cjs');
-const {generateGrowthEditorDraft,sourceFacts}=require('../growth-source-grounded-editor.cjs');
+const {generateGrowthEditorDraft,sourceFacts,styleIssues}=require('../growth-source-grounded-editor.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
 const cmsPackage=require('./cms-package.cjs');
@@ -332,6 +332,8 @@ function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</
   if(x.basis)h+='<br><small>Answers: “'+esc(x.basis.answers)+'” · basis: '+esc(String(x.basis.evidence_level||'').toLowerCase().split('_').join(' '))+((x.basis.competitor_evidence||[]).length?' · sources: '+x.basis.competitor_evidence.map(function(e){return esc(e.site)}).join(', '):'')+'</small>'+(x.basis.warning?'<p class="note">'+esc(x.basis.warning)+'</p>':'');
   (x.paragraphs||[]).forEach(function(p){var out=esc(p);fl.forEach(function(f){out=out.split(esc(f)).join('<mark title="Flagged: rewrite or remove">'+esc(f)+'</mark>')});h+='<p>'+out+'</p>'});
   if((x.flags||[]).length)h+='<ul>'+x.flags.map(function(f){return '<li>'+(f.sentence?'“'+esc(f.sentence)+'” — ':'Whole section — ')+esc(f.reason)+'</li>'}).join('')+'</ul>';
+  var si=x.style_issues||[];
+  h+='<label class="check"><input type="checkbox" class="gapRewrite" value="'+esc(x.item_id)+'"'+(si.length?' checked':'')+'><span>Write this H2 again with AI'+(si.length?' — ticked for you: '+si.map(function(i){return (i.problem==='OPENING_FILLER'?'weak opening':'advice for a team')+' “'+esc(i.sentence)+'”'}).join('; '):'')+'</span></label>';
   h+='</div>'});
  (r.not_written||[]).forEach(function(x){h+='<p class="muted">Not written: '+esc(x.title)+' — kept for the next run, or write it yourself.</p>'});
  if((r.pending||[]).length)h+='<p class="note">Still to write from your selection ('+r.pending.length+'): '+r.pending.map(function(x){return esc(x.title)}).join(' · ')+'. Click write again for the next ones.</p>';
@@ -503,6 +505,12 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   function queueSelectionSave(){var ids=Array.from(document.querySelectorAll('.gapPick:checked')).map(function(x){return x.value});var generation=++revision;clearTimeout(saveTimer);saveTimer=setTimeout(async function(){var st=document.getElementById('gapStatus');try{var r=await fetch(API+'/selection'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({item_ids:ids})});var v=await r.json();if(!v.success)throw Error(v.error||'Selection not saved');if(generation===revision&&st)st.textContent=ids.length+' selected · saved';}catch(e){if(generation===revision&&st){st.textContent='Selection not saved: '+e.message;st.className='error'}}},350)}
   document.querySelectorAll('.gapPick').forEach(function(el){el.checked=savedIds.has(el.value)});
  var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last){wr.innerHTML=writtenHtml(d.writing.last)}
+// "Write this H2 again": ticking a concept (or the automatic tick on a weak opening / team advice) makes the write button
+// write those concepts again, as long as the check has a round left.
+function syncRewrite(){var b=document.getElementById('gapWrite');if(!b)return;var n=document.querySelectorAll('.gapRewrite:checked').length,left=Number(d.writing&&d.writing.remaining||0);
+ if(n&&left>0){if(!b.dataset.rewriteLabel)b.dataset.rewriteLabel=b.textContent;b.disabled=false;b.dataset.exhausted='';b.textContent='Write the '+n+' ticked concept(s) again with AI (uses '+Math.ceil(n/4)+' of '+left+' round(s))'}
+ else if(b.dataset.rewriteLabel){b.textContent=b.dataset.rewriteLabel}}
+ if(wr&&!wr.dataset.rewriteWired){wr.dataset.rewriteWired='1';wr.addEventListener('change',function(e){if(e.target&&e.target.classList&&e.target.classList.contains('gapRewrite'))syncRewrite()})}
  var wb=document.getElementById('gapWrite');
  if(wb)wb.onclick=async function(){
   var ids=[];document.querySelectorAll('.gapPick:checked').forEach(function(c){ids.push(c.value)});
@@ -512,7 +520,10 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   if(!ids.length){st.textContent='Select at least one topic or question in Step 2.';return}
   var doneIds=new Set(((d.writing&&d.writing.last&&d.writing.last.sections)||[]).map(function(x){return String(x.item_id)}));
   var eligible=ids.filter(function(id){var it=(g.items||[]).find(function(x){return String(x.id)===id});return !!(it&&it.writable&&!doneIds.has(id))});
-  if(!eligible.length){st.textContent=doneIds.size?'Selected supported H2s already have saved drafts. Review the prepared copy below; headings without research evidence are excluded.':'None of the selected headings is eligible for evidence-supported AI writing.';return}
+  // Concepts ticked "Write this H2 again": written again (the new concept replaces the old one; it uses a round).
+  var again=[];document.querySelectorAll('.gapRewrite:checked').forEach(function(c){again.push(c.value)});
+  var rewrite=!eligible.length&&again.length>0;if(rewrite)eligible=again;
+  if(!eligible.length){st.textContent=doneIds.size?'Every selected H2 already has a concept. To have AI write one again, tick “Write this H2 again with AI” at that concept below, then click this button.':'None of the selected headings is eligible for evidence-supported AI writing.';return}
   var aiChoice=await freeAiGate(d);if(!aiChoice){st.textContent='Your selection is saved. Check AI answers or choose to continue without them.';return}
   var capacity=Math.min(available*4,eligible.length),chosen=eligible.slice(0,capacity);
   wb.disabled=true;wb.classList.add('is-working');wb.setAttribute('aria-busy','true');
@@ -521,14 +532,14 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
   try{
    for(var run=0;run<Math.min(available,Math.ceil(chosen.length/4));run++){
     st.textContent='Writing H2 batch '+(run+1)+' of '+Math.ceil(chosen.length/4)+'…';
-    var response=await fetch(API+'/write'+Q,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...(d&&d.writing&&d.writing.owner_unlocked?{'X-Requested-With':'growth-free-admin'}:{})},body:JSON.stringify({item_ids:chosen,ai_check_choice:aiChoice})});
+    var response=await fetch(API+'/write'+Q,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json',...(d&&d.writing&&d.writing.owner_unlocked?{'X-Requested-With':'growth-free-admin'}:{})},body:JSON.stringify({item_ids:rewrite?chosen.slice(run*4,run*4+4):chosen,ai_check_choice:aiChoice,rewrite:rewrite})});
     var result=await response.json();
     if(result.stored===false&&(result.sections||[]).length){wr.innerHTML=writtenHtml(result);throw Error(result.error||'The draft was not saved; reload to verify the status')}
     if(!response.ok||!result.success)throw Error(result.error||'Writing could not finish');
     latest=result;completed+=result.sections?.length||0;
     wr.innerHTML=writtenHtml(result.all_written||result);
     showPkg(pkgSections(g,result.all_written||result,false));
-    if(!(result.pending||[]).length||!result.remaining)break;
+    if(rewrite?((run+1)*4>=chosen.length||!result.remaining):(!(result.pending||[]).length||!result.remaining))break;
    }
    if(!latest)throw Error('No verified draft was generated');
    var pending=latest.pending||[],outside=ids.length-chosen.length-[...doneIds].filter(function(id){return ids.includes(id)}).length;
@@ -536,7 +547,8 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
    // Nothing left to prepare: say so instead of offering another run.
    var allDone=!pending.length;
    wb.textContent=allDone?'✓ All selected H2s are prepared':'Write the remaining chosen H2s with AI (up to '+(latest.remaining*4)+' more)';
-   wb.disabled=allDone||!latest.remaining;wb.dataset.exhausted=allDone||!latest.remaining?'yes':'';
+   wb.disabled=allDone||!latest.remaining;wb.dataset.exhausted=allDone||!latest.remaining?'yes':'';if(d.writing)d.writing.remaining=latest.remaining;
+   if(rewrite)st.textContent=completed+' H2(s) written again by AI. The new concepts replace the old ones below and in the package; nothing is published.';syncRewrite();
    if(allDone)showStep('stepPrepare','pkg');
    wb.classList.add('action-green');openJourney('stepPrepare');
   }catch(err){st.textContent='Automatic preparation stopped after '+completed+' draft(s): '+String(err.message).replace(/[.]+$/,'')+'. Saved drafts remain available below.';wb.disabled=false;wb.classList.add('action-red')}
@@ -549,7 +561,7 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
  var st=document.getElementById('gapStatus');
  box.onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}
   var url=URL.createObjectURL(new Blob([b.text],{type:'text/markdown'})),a=document.createElement('a');a.href=url;a.download='editor-brief.md';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);st.textContent=b.count+' item(s) in the brief.';box.classList.add('action-done');var next=document.getElementById('freeStepExport');if(next){next.className='step-chip done';next.querySelector('.symbol').textContent='✓'}};
- document.getElementById('gapCopy').onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}if(navigator.clipboard)navigator.clipboard.writeText(b.text);st.textContent='Copied ('+b.count+' item(s)).'};count();count.initialized=true;pkgStart(g,d&&d.writing&&d.writing.last,!!(d&&d.writing&&d.writing.allowed&&d.writing.remaining>0&&g&&g.writing_allowed!==false))}
+ document.getElementById('gapCopy').onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}if(navigator.clipboard)navigator.clipboard.writeText(b.text);st.textContent='Copied ('+b.count+' item(s)).'};count();count.initialized=true;syncRewrite();pkgStart(g,d&&d.writing&&d.writing.last,!!(d&&d.writing&&d.writing.allowed&&d.writing.remaining>0&&g&&g.writing_allowed!==false))}
 // After publication: the date, one e-mail about four weeks later, and the before/after comparison from two exports.
 function fmtD(x){try{return new Date(String(x).slice(0,10)+'T12:00:00Z').toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})}catch(e){return String(x)}}
 function sideHtml(label,w,x){if(!x)return '<div><small>'+label+'</small><strong>No export yet</strong><small>Upload an export for '+esc(fmtD(w.start))+' – '+esc(fmtD(w.end))+', filtered on exactly this page.</small></div>';
@@ -1052,7 +1064,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  const writingAllowed=(row,req)=>ordinaryWritingAllowed(row)||(config.writing!=='off'&&sessionValid(req));
  const writingInfo=(row,req)=>({allowed:writingAllowed(row,req),owner_unlocked:!!config.adminKey&&sessionValid(req),
   owner_login_available:!!config.adminKey&&config.writing!=='off',
-  remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:viewOf(row.written)});
+  remaining:Math.max(0,(config.writeLimit||3)-Number(row.write_count||0)),last:withStyle(viewOf(row.written))});
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   const aiPart=await aiFor(row),gscPart=await gscFor(row);
@@ -1107,6 +1119,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  });
  // Optional: concepts only for the items the visitor selected (never automatic). The page is read again, publicly; the
  // text is checked against it and failing sentences are flagged. Nothing is published or stored on the visitor's site.
+ // Concepts with an opening about who observes the topic, or team/editorial-process advice: marked, so the result page
+ // ticks them for a new AI round by itself (owner 2026-11-09: the AI must fix these, not the visitor).
+ const withStyle=v=>v&&{...v,sections:(v.sections||[]).map(x=>({...x,style_issues:styleIssues({sections:[{h2:x.h2,paragraphs:x.paragraphs||[]}]},'').map(i=>({sentence:i.sentence,problem:i.problem}))}))};
  app.post(apiPath+'/checks/:id/write',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
@@ -1171,7 +1186,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     error:'This writing run took too long and another run took over, so this text was not stored. It is shown here so it is not lost.'});
    if(!counted){if(mine&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token:mine}).catch(()=>{});
     return res.status(429).json({success:false,error:'The writing limit for this check is reached.'})}
-   res.set('Cache-Control','no-store').json({success:true,...written,done_item_ids:doc.done_item_ids,all_written:viewOf(doc),stored:true,
+   res.set('Cache-Control','no-store').json({success:true,...written,done_item_ids:doc.done_item_ids,all_written:withStyle(viewOf(doc)),stored:true,
     remaining:Math.max(0,(config.writeLimit||3)-counted.write_count),published:false});
   }catch(e){console.error('[free-growth] writing failed',String(e.code||e.message).slice(0,80));
    if(token&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});
