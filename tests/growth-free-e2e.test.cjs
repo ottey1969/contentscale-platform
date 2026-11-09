@@ -39,6 +39,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     // TEST stand-in for Google (Serper) in the "Suggest customer questions" helper.
     questionFetch: async () => ({ ok: true, json: async () => ({ peopleAlsoAsk: [{ question: 'How much does roof repair cost in Lodi NJ?' }], relatedSearches: [{ query: 'emergency roof repair lodi' }] }) }),
     questionModel: null,
+    // TEST stand-in for the sentence repair (weak openings, team advice): replaces only the sentence it is given.
+    styleModel: { call: async () => JSON.stringify({ fixes: [{ n: 0, sentence: 'A repair estimate shows what each part of the roof work costs before you approve it.' }] }) },
     generateDraft: async args => { writes.push(args); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: (args.readerTask?.tasks || []).map(x => ({ task_code: x.code, h2: 'How to read a repair estimate',
       // The second sentence is a product claim the page does not make: it is flagged and must go before the download.
       paragraphs: writes.length > 1 ? ['Many people wonder how to read a repair estimate before they approve it.', 'Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.']
@@ -302,6 +304,12 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.waitForSelector('.gapRewrite', { state: 'attached', timeout: 30000 });
     assert.equal(await p.locator('.gapRewrite').isChecked(), true, 'a weak opening is ticked automatically');
     assert.match(await p.textContent('#gapWritten'), /ticked for you: weak opening/);
+    // In the CMS package the weak opening is already repaired by AI (only that sentence), and the change is shown.
+    await p.waitForSelector('.pkgStyleNote', { state: 'attached', timeout: 30000 });
+    const repaired = await p.inputValue('.pkgText');
+    assert.match(repaired, /^A repair estimate shows what each part of the roof work costs before you approve it\./);
+    assert.doesNotMatch(repaired, /Many people wonder/); assert.match(repaired, /Ask for a written estimate that lists materials/);
+    assert.match(await p.textContent('.pkgStyleNote'), /Weak opening: Many people wonder how to read a repair estimate/);
     assert.deepEqual(errors, [], 'no browser error on the way');
     // Database: the check and the AI answer are in the Free tables; no Tracker table was created or written.
     const row = (await pool.query('SELECT id,status,email FROM growth_free_checks WHERE lower(email)=lower($1)', [email])).rows[0];

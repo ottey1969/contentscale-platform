@@ -12,6 +12,7 @@ const ai=require('./ai-answers.cjs');
 const {writeForSelection,planBatch,pageFingerprint,headingsStillPresent,headingsMessage,explainWriterFailure,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts,styleIssues}=require('../growth-source-grounded-editor.cjs');
+const styleFix=require('../growth-style-fix.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
 const cmsPackage=require('./cms-package.cjs');
@@ -435,8 +436,22 @@ function pkgWireFlags(){var first=document.querySelector('.pkgFlags');
   b.onclick=function(){Object.keys(PKG_FLAGS).forEach(function(id){var use=document.querySelector('.pkgUse[data-id="'+id+'"]');if(use&&!use.checked)return;PKG_FLAGS[id].forEach(function(s){pkgDropSentence(id,s)})});pkgFlagState()}}
  document.querySelectorAll('.pkgDropFlag').forEach(function(b){b.onclick=function(){var id=b.getAttribute('data-id'),s=(PKG_FLAGS[id]||[])[Number(b.getAttribute('data-fi'))];pkgDropSentence(id,s);pkgFlagState()}});
  document.querySelectorAll('.pkgUse,.pkgText').forEach(function(el){el.addEventListener(el.classList.contains('pkgText')?'input':'change',pkgFlagState)});pkgFlagState()}
+// Weak openings and team advice: AI replaces only those sentences in the section texts, automatically, once per page
+// load. Each change is shown under its section with the original sentence; nothing else in the text changes.
+var PKG_STYLE_FIXES=[];
+async function pkgFixStyle(){var list=[];pkgApplyStyle(PKG_STYLE_FIXES,true);document.querySelectorAll('.pkgText').forEach(function(t){var id=t.getAttribute('data-id'),h=document.querySelector('.pkgH2[data-id="'+id+'"]');if(t.value.trim())list.push({id:id,h2:h?h.value:'',text:t.value})});
+ if(!list.length)return;var x=null;try{x=await (await fetch(API+'/fix-style'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sections:list})})).json()}catch(e){}
+ if(!x)return;PKG_STYLE_FIXES=PKG_STYLE_FIXES.concat(x.fixes||[]);pkgApplyStyle(x.fixes||[],false);
+ var left=(x.problems||[]).filter(function(p){return !(x.fixes||[]).some(function(f){return f.id===p.id&&f.before===p.sentence})});
+ left.forEach(function(p){var t=document.querySelector('.pkgText[data-id="'+p.id+'"]'),card=t&&t.closest('.card');if(!card)return;var n=document.createElement('p');n.className='note pkgStyleNote';n.textContent=(p.problem==='OPENING_FILLER'?'Weak opening':'Advice for a team')+' still in the text'+(x.status==='AI_UNAVAILABLE'||x.status==='AI_FAILED'||x.status==='LIMIT'?' (AI could not repair it now)':' (the AI repair did not pass the checks)')+': “'+p.sentence+'”. Rewrite it yourself.';card.appendChild(n)})}
+// Applies repaired sentences (also again after the editor is redrawn, without a new AI call) and shows each change.
+function pkgApplyStyle(fixes,again){var by={};(fixes||[]).forEach(function(f){(by[f.id]=by[f.id]||[]).push(f)});
+ Object.keys(by).forEach(function(id){var t=document.querySelector('.pkgText[data-id="'+id+'"]');if(!t)return;var v=t.value,done=[];
+  by[id].forEach(function(f){var i=v.indexOf(f.before);if(i<0)return;v=v.slice(0,i)+f.after+v.slice(i+f.before.length);done.push(f)});
+  v=v.split('  ').join(' ');t.value=v;t.dispatchEvent(new Event('input',{bubbles:true}));
+  var card=t.closest('.card');if(card&&done.length&&!card.querySelector('.pkgStyleNote')){var n=document.createElement('div');n.className='note pkgStyleNote';n.innerHTML='<strong>AI repaired '+done.length+' sentence(s) automatically. Check them:</strong><ul>'+done.map(function(f){return '<li>'+(f.problem==='OPENING_FILLER'?'Weak opening':'Advice for a team')+': <s>'+esc(f.before)+'</s> → '+(f.after?'<mark>'+esc(f.after)+'</mark>':'removed')+'</li>'}).join('')+'</ul>';card.appendChild(n)}})}
 function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box.innerHTML=pkgHtml(r);var b=document.getElementById('pkgDownload');if(!b)return;pkgReadSource();
- pkgWireFlags();
+ pkgWireFlags();pkgFixStyle();
  var pc=document.getElementById('pkgPersonal');if(pc)pc.onchange=function(){pc.dataset.touched='1';if(pc.checked)clearVoice();else pkgFixVoice(null)};
  var bulk=document.getElementById('pkgIncludeAll'),exclude=document.getElementById('pkgExcludeAll'),bulkSt=document.getElementById('pkgBulkStatus');
  function cmsChoices(){return [...document.querySelectorAll('.pkgUse')]}
@@ -1256,6 +1271,23 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const model=engineDeps.metaModel!==undefined?engineDeps.metaModel:require('../growth-task-meaning.cjs').geminiModel();
   const out=await cmsPackage.suggestServiceMeta({title:clean(b.seo_title,200),meta:clean(b.meta_description,400),language:(row.market&&row.market.language)||'en',url:row.url,model});
   res.set('Cache-Control','no-store').json({success:out.status==='SUGGESTED'||out.status==='NOT_NEEDED',...out});
+ });
+ // Weak openings and team/editorial-process advice in the package text: AI replaces only those sentences (checked; see
+ // src/growth-style-fix.cjs). No writing round is used; at most 5 calls per check.
+ const styleUses=new Map();
+ app.post(apiPath+'/checks/:id/fix-style',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
+  const b=req.body||{},sections=(Array.isArray(b.sections)?b.sections:[]).slice(0,12).map(x=>({id:clean(x&&x.id,80),h2:clean(x&&x.h2,200),text:String(x&&x.text||'').slice(0,20000)})).filter(x=>x.id&&x.text);
+  let html='';try{html=await readOwnPage(row)}catch(e){}
+  const pageText=html?sourceFacts(html).text:'';
+  const problems=styleFix.styleProblems(sections,pageText);
+  if(!problems.length)return res.set('Cache-Control','no-store').json({success:true,status:'NOT_NEEDED',fixes:[],problems:[]});
+  const n=(styleUses.get(row.id)||0)+1;if(n>5)return res.status(429).json({success:false,status:'LIMIT',problems,error:'The automatic sentence repair limit for this check is reached; change the marked sentences yourself.'});
+  styleUses.set(row.id,n);if(styleUses.size>20000)styleUses.clear();
+  const model=engineDeps.styleModel!==undefined?engineDeps.styleModel:require('../growth-task-meaning.cjs').geminiModel();
+  const out=await styleFix.fixStyleSentences({sections,pageText,language:(row.market&&row.market.language)||'en',model});
+  res.set('Cache-Control','no-store').json({success:true,...out});
  });
  app.get(apiPath+'/checks/:id/package-source',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
