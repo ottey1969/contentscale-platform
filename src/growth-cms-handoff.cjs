@@ -108,7 +108,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  const flaggedNotes=reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged.filter(Boolean).filter(f=>!(personalVoiceAllowed&&isVoice(f))):[];
  const blockedDetails=[];
  if(flaggedNotes.length&&approved.length){
-  const finalText=norm(approved.map(x=>String(x.html||'')).join(' '));
+  const finalText=norm(approved.map(x=>String(x.html||'').replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>/gi,' ')).join(' '));
   for(const f of flaggedNotes)if(f.sentence&&finalText.includes(norm(f.sentence)))blockedDetails.push({code:'FLAGGED_SENTENCE_STILL_IN_TEXT',sentence:clean(f.sentence).slice(0,300),reason:clean(f.reason).slice(0,200)});
   // The claim recheck reads the body text only: a heading is not a sentence (a question heading is no claim, and gluing
   // it to the first paragraph made "Why … AI Answers Marketers often observe…" one false sentence). Every block ends as

@@ -103,7 +103,9 @@ function reviewNotesOf(given, stored, personal = false, originalHtml = '') {
   const flagged = [], basis = [];
   for (const s of given) {
     const orig = stored.get(s.item_id); if (!orig) continue;
-    for (const f of orig.flags || []) if (f && !(personal && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')))) && stillFlagged(f, originalHtml)) flagged.push({ sentence: f.sentence || null, h2: orig.h2 || s.h2, reason: f.reason || '' });
+    // An old concept flag is only relevant if its exact sentence remains in the CURRENT editor-approved body.
+    // Do not compare against H2s: a question heading is not a flagged paragraph, nor is a previously glued H2+paragraph.
+    for (const f of orig.flags || []) if (f && f.sentence && s.text.includes(f.sentence) && !(personal && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')))) && stillFlagged(f, originalHtml)) flagged.push({ sentence: f.sentence, h2: s.h2, reason: f.reason || '' });
     const b = orig.basis;
     if (b) basis.push({ h2: s.h2, answers: b.answers || '', sources: (b.competitor_evidence || []).map(e => [e.site, e.heading].filter(Boolean).join(': ')), warning: b.warning || '' });
   }
