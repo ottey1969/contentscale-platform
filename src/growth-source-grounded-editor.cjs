@@ -96,7 +96,7 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
 }
 // Sentences a reader does not need: an opening about who observes or wonders about the topic, and advice for teams and
 // editorial processes on a page that itself never addresses teams (the page of one person or a small business).
-const FILLER_OPENING=/^(?:(?:many|most|some)\s+)?(?:[a-z-]+\s+){0,2}(?:teams?|marketers|publishers|editors|writers|businesses|companies|brands|professionals|specialists|owners|creators|people|users|readers|website owners|site owners)\s+(?:often|frequently|commonly|regularly|typically|usually|increasingly|sometimes)?\s*(?:observe|notice|see|wonder|ask|find|struggle|face|discover|report)\b/i;
+const FILLER_OPENING=/^(?:(?:many|most|some)\s+)?(?:[a-z-]+\s+){0,2}(?:teams?|marketers|publishers|editors|writers|businesses|companies|brands|professionals|specialists|owners|creators|people|users|readers|website owners|site owners)\s+(?:often|frequently|commonly|regularly|typically|usually|increasingly|sometimes)?\s*(?:observe|notice|see|wonder|ask|find|struggle|face|discover|report|examine|explore|consider|compare|look\s+at|discuss|debate|want\s+to\s+know)\b/i;
 const TEAM_PROCESS=/\b(?:your|the|an?|our)\s+(?:editorial|research|content|marketing|seo|writing|web)\s+teams?\b|\bbrief templates?\b|\b(?:central\s+)?audit (?:files?|logs?)\b|\beditorial (?:guidelines|workflows?|process(?:es)?|calendars?|teams?)\b|\bstandardi[sz]ed (?:brief|template)/i;
 function styleIssues(draft,sourceText=''){
  const pageHasTeams=/\bteams?\b|\bredactie\b/i.test(String(sourceText||''));
