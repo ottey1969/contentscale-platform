@@ -955,6 +955,25 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const line=L.used_in_research?'Your Search Console export, filtered on exactly this page'+period+', was used in the research.':L.status==='VERIFIED_FOR_PAGE'?'The latest Search Console export is verified for this page'+period+' but was not used in the original research; start a new check with this export to research its queries.':'A Search Console export was uploaded'+period+', but it is not filtered on exactly this page, so it was shown and not used as evidence.';
   return {...summary,limitations:[...(summary.limitations||[]).filter(x=>!/^Google Search Console was not used/.test(x)),line]};
  }
+ // Why the AI writer gave no text, in plain words (owner 2026-11-09: "I want to know why"). From the writer's status and
+ // Google's own error (HTTP status and message; the key is never included).
+ function writerReason(w){
+  const st=String(w&&w.writer_status||''),e=w&&w.provider_error||{},m=e.message?' Google says: “'+e.message+'”.':'',model=e.model?' (model '+e.model+')':'';
+  if(st==='OPTIONAL_AI_NOT_CONFIGURED')return 'there is no AI key on the server (GEMINI_API_KEY is not set in Railway).';
+  if(st==='INVALID_MODEL')return 'the AI model name in GEMINI_MODEL_BRIEF is not valid.';
+  if(st==='INSUFFICIENT_PAGE_SOURCE')return 'your page has too little readable text to write from.';
+  if(/INVALID_AI_JSON|INVALID_AI_STRUCTURE|AI_DRAFT_TOO_THIN/.test(st))return 'the AI answered, but its answer was not usable ('+st.toLowerCase().replace(/_/g,' ')+'). Try again.';
+  if(e.kind==='HTTP'){const h=e.http;
+   if(h===429)return 'Google’s AI limit is reached: too many requests, or the quota of the API key is used up'+model+'.'+m+' Try again later, or raise the quota in Google AI Studio / Cloud.';
+   if(h===400||h===403)return 'Google refused the request (HTTP '+h+'): usually an invalid or restricted API key, or a model this key may not use'+model+'.'+m;
+   if(h===404)return 'Google does not know this AI model (HTTP 404)'+model+'. Check GEMINI_MODEL_BRIEF in Railway.'+m;
+   if(h>=500)return 'Google’s AI service had an error (HTTP '+h+')'+model+'.'+m+' Try again in a moment.';
+   return 'Google answered with HTTP '+h+model+'.'+m}
+  if(e.kind==='TIMEOUT')return 'the AI did not answer within '+(e.seconds||35)+' seconds'+model+'. Try again in a moment.';
+  if(e.kind==='EMPTY_ANSWER')return 'the AI returned an empty answer'+model+(e.block_reason?' (blocked: '+String(e.block_reason).toLowerCase()+')':e.finish_reason?' (stopped: '+String(e.finish_reason).toLowerCase()+')':'')+'. Try again.';
+  if(e.kind==='NETWORK'||e.kind==='ERROR')return 'the AI could not be reached'+(e.message?' ('+e.message+')':'')+model+'. Try again in a moment.';
+  return 'the AI writer is not available ('+(st||'unknown').toLowerCase().replace(/_/g,' ')+').';
+ }
  // What the competitor pages have (owner 2026-11-08: "the point of Growth is seeing what others have that I don't"):
  // every Google result, whether it could be read, and the headings of the pages that were read, each marked as on your
  // page or not. Shown on every result, also when the research is blocked: an observation, not advice.
@@ -1103,9 +1122,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    // or counted, and the visitor sees the real reason instead of "could not be completed with the available runs".
    if(!(written.sections||[]).length&&written.status==='NOT_WRITTEN'){
     if(token&&typeof storage.releaseWriting==='function')await storage.releaseWriting(pool,{checkId:row.id,token}).catch(()=>{});token=null;
-    console.warn('[free-growth] writer returned no text',String(written.writer_status||'').slice(0,60));
+    console.warn('[free-growth] writer returned no text',String(written.writer_status||'').slice(0,60),JSON.stringify(written.provider_error||null).slice(0,300));
     return res.status(502).json({success:false,code:'WRITER_NO_TEXT',writer_status:written.writer_status||null,
-     error:'AI could not write text right now ('+String(written.writer_status||'unavailable').toLowerCase().replace(/_/g,' ')+'). No writing round was used. Try again in a moment, or download the editor brief'});
+     reason:writerReason(written),error:'AI could not write the text: '+writerReason(written)+' No writing round was used.'});
    }
    const done=(written.sections||[]).map(s=>s.item_id);
    const pending=[...plan.batch.filter(x=>!done.includes(x.id)),...plan.pending].map(x=>({item_id:x.id,title:x.title}));

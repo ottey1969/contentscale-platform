@@ -852,8 +852,32 @@ test('writer returns no text: 502 with the real reason, and no writing round is 
  const r=await s.get('/api/free-growth/checks/'+a.body.id+'?k='+a.body.key);
  const ids=r.body.summary.gaps.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
  const w=await s.post('/api/free-growth/checks/'+a.body.id+'/write?k='+a.body.key,{item_ids:ids,ai_check_choice:'WITHOUT_AI'});
- assert.equal(w.status,502);assert.equal(w.body.code,'WRITER_NO_TEXT');assert.match(w.body.error,/AI could not write text right now \(writer unavailable\)\. No writing round was used/);
+ assert.equal(w.status,502);assert.equal(w.body.code,'WRITER_NO_TEXT');assert.match(w.body.error,/AI could not write the text: the AI could not be reached \(TEST\)\. Try again in a moment\. No writing round was used\./);
  const after=await s.get('/api/free-growth/checks/'+a.body.id+'?k='+a.body.key);
  assert.equal(after.body.writing.remaining,3,'the failed attempt did not count');
  const page=await s.get('/free-growth/r/'+a.body.id+'?k='+a.body.key);assert.match(page.body,/id="gapWriteStatus"/,'the status line sits under the write button');
+});
+
+
+test('why the AI writer gave no text: Google’s status and message in plain words (never the key)',async()=>{
+ const {generateGrowthEditorDraft}=require('../src/growth-source-grounded-editor.cjs');
+ const html='<html><body><h1>TEST roof repair</h1><p>'+'TEST: our crew repairs leaking roofs in Lodi and explains every repair before work starts. '.repeat(4)+'</p></body></html>';
+ const run=fetchImpl=>generateGrowthEditorDraft({sourceHtml:html,pageUrl:'https://acme-roofing.example/',focusQuery:'roof repair'},{apiKey:'AIzaTESTKEY1234567890',model:'gemini-2.5-flash-lite',fetchImpl});
+ const quota=await run(async()=>({ok:false,status:429,json:async()=>({error:{message:'Resource has been exhausted (e.g. check quota). key=AIzaTESTKEY1234567890'}})}));
+ assert.equal(quota.status,'OPTIONAL_AI_UNAVAILABLE');assert.deepEqual([quota.provider_error.kind,quota.provider_error.http],['HTTP',429]);
+ assert.doesNotMatch(JSON.stringify(quota),/AIzaTESTKEY/,'the key never appears');
+ const timeout=await run(async()=>{throw Object.assign(Error('t'),{name:'TimeoutError'})});assert.equal(timeout.provider_error.kind,'TIMEOUT');
+ const empty=await run(async()=>({ok:true,json:async()=>({candidates:[{finishReason:'SAFETY',content:{parts:[]}}]})}));assert.deepEqual([empty.provider_error.kind,empty.provider_error.finish_reason],['EMPTY_ANSWER','SAFETY']);
+ // The Free route turns these into the visible reason.
+ for(const [gen,re] of [
+  [async()=>quota,/Google’s AI limit is reached[^]*model gemini-2\.5-flash-lite[^]*Google says: “Resource has been exhausted \(e\.g\. check quota\)\. key=…”/],
+  [async()=>({status:'OPTIONAL_AI_UNAVAILABLE',draft:null,provider_error:{kind:'HTTP',http:403,message:'API key not valid. Please pass a valid API key.',model:'gemini-2.5-flash-lite'}}),/Google refused the request \(HTTP 403\)[^]*API key not valid/],
+  [async()=>timeout,/did not answer within 35 seconds/],
+  [async()=>({status:'OPTIONAL_AI_NOT_CONFIGURED',draft:null}),/no AI key on the server \(GEMINI_API_KEY is not set in Railway\)/]]){
+  const s=await server({config:{writing:'all'},engineDeps:{generateDraft:gen}});
+  try{const a=await s.post('/api/free-growth/checks',ok);await s.service.idle();
+   const r=await s.get('/api/free-growth/checks/'+a.body.id+'?k='+a.body.key);const ids=r.body.summary.gaps.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
+   const w=await s.post('/api/free-growth/checks/'+a.body.id+'/write?k='+a.body.key,{item_ids:ids,ai_check_choice:'WITHOUT_AI'});
+   assert.equal(w.status,502);assert.match(w.body.error,re);assert.doesNotMatch(w.body.error,/AIzaTESTKEY/);}
+  finally{s.srv.close()}}
 });

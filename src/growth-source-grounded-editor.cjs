@@ -143,6 +143,10 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    }))),
   'Page URL: '+canonical.href,'ORIGINAL SOURCE TEXT:',source.text
  ].join('\n');
+ // Why the AI gave no text, kept for the owner (HTTP status and Google's own message, never the key): the status stays
+ // OPTIONAL_AI_UNAVAILABLE for every caller; provider_error says what happened.
+ let providerError=null;
+ const clean=t=>String(t||'').replace(/key=[^&\s]+/gi,'key=…').replace(/AIza[0-9A-Za-z_-]{10,}/g,'…').replace(/\s+/g,' ').trim().slice(0,240);
  try{
   const endpoint='https://generativelanguage.googleapis.com/v1beta/models/'+model+':generateContent?key='+encodeURIComponent(apiKey);
   const request=async message=>{
@@ -150,12 +154,15 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
     body:JSON.stringify({contents:[{role:'user',parts:[{text:message}]}],
      generationConfig:{temperature:0.2,maxOutputTokens:5000,responseMimeType:'application/json'}}),
     signal:AbortSignal.timeout(35000)});
-   if(!res.ok)return null;
+   if(!res.ok){let msg='';try{const j=await res.json();msg=j?.error?.message||j?.error?.status||''}catch{}
+    providerError={kind:'HTTP',http:res.status,message:clean(msg),model};return null}
    const json=await res.json();
-   return json.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'';
+   const text=json.candidates?.[0]?.content?.parts?.map(x=>x.text||'').join('')||'';
+   if(!text){providerError={kind:'EMPTY_ANSWER',finish_reason:json.candidates?.[0]?.finishReason||null,block_reason:json.promptFeedback?.blockReason||null,model};return null}
+   return text;
   };
   const raw=await request(prompt);
-  if(raw===null)return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null};
+  if(raw===null)return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null,provider_error:providerError};
   const taskMode=readerTask?.mode==='SECTION_IMPROVEMENT';
   const taskTerms=taskMode?(readerTask.tasks||[]).flatMap(t=>t.core_words||[]):[];
   const normOpts={requireTitle:!taskMode,taskTerms};
@@ -184,6 +191,6 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    numeric_claim_retry_attempted:result.status==='AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED'||repaired,
    numeric_claim_retry_succeeded:repaired,
    provenance:'AI_PROPOSAL_UNVERIFIED_EDITOR_REVIEW',publication_allowed:false};
- }catch{return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null}}
+ }catch(e){return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null,provider_error:e&&(e.name==='TimeoutError'||e.name==='AbortError')?{kind:'TIMEOUT',seconds:35,model}:{kind:'NETWORK',message:clean(e&&(e.code||e.message)),model}}}
 }
 module.exports={sourceFacts,normalizeDraft,generateGrowthEditorDraft};
