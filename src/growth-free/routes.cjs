@@ -406,6 +406,16 @@ async function pkgReadSource(){var el=document.getElementById('pkgSource');if(!e
  catch(err){el.innerHTML=esc(err.message)+' <button type="button" class="ghost" id="pkgReread">Read again</button>';var b=document.getElementById('pkgReread');if(b)b.onclick=pkgReadSource}}
 // Flagged sentences: one click removes the exact sentence from the section text (nothing else); "Remove all" does that for
 // every flagged sentence still in an included section. A section that is not included shows its warnings as not applicable.
+// Find a sentence in the package editor (section text first, then the heading fields) and select it there. A sentence the
+// check glued from several parts is found by its longest part.
+function pkgJumpTo(sentence){var s=String(sentence||'').replace(/\\s+/g,' ').trim();if(!s)return;
+ var fields=[].slice.call(document.querySelectorAll('.pkgText')).concat([].slice.call(document.querySelectorAll('.pkgH2')));
+ var tries=[s].concat(s.split(/(?<=[.!?])\\s+|(?<=[a-z])\\s+(?=[A-Z][a-z]+\\s)/).map(function(x){return x.trim()}).filter(function(x){return x.length>=12}).sort(function(a,b){return b.length-a.length}));
+ for(var i=0;i<tries.length;i++){for(var j=0;j<fields.length;j++){var f=fields[j],v=f.value.replace(/\\s+/g,' '),at=v.indexOf(tries[i]);if(at<0)continue;
+  var d=f.closest('details');if(d)d.open=true;f.scrollIntoView({block:'center'});f.focus();
+  var raw=f.value,start=raw.indexOf(tries[i]);if(start<0)start=at;try{f.setSelectionRange(start,start+tries[i].length)}catch(e){}
+  f.style.outline='3px solid #f59e0b';setTimeout(function(x){return function(){x.style.outline=''}}(f),2500);return}}
+ alert('This sentence is not in the text as one piece anymore; it may have been changed already.')}
 function pkgDropSentence(id,sentence){var t=document.querySelector('.pkgText[data-id="'+id+'"]');if(!t||!sentence)return false;var before=t.value;
  t.value=before.split(sentence).join('').replace(/[ ]{2,}/g,' ').replace(/ +([.,;:])/g,'$1').replace(new RegExp(String.fromCharCode(10)+'{3,}','g'),String.fromCharCode(10,10)).trim();return t.value!==before}
 function pkgFlagState(){document.querySelectorAll('.pkgFlags').forEach(function(box){var id=box.getAttribute('data-id'),use=document.querySelector('.pkgUse[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');
@@ -449,8 +459,10 @@ function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box
     // (for example a heading that promises reasons but gives steps) are listed as such.
     var still=[],seenS={};(x.flagged||[]).map(function(f){return {sentence:f.sentence,reason:f.reason||''}}).concat((x.details||[]).filter(function(dd){return /^(FLAGGED_SENTENCE_STILL_IN_TEXT|UNRESOLVED_)/.test(dd.code||'')}).map(function(dd){return {sentence:dd.text,reason:dd.reason||''}})).forEach(function(f){var k=f.sentence||('#'+f.reason);if(seenS[k]){if(f.reason&&seenS[k].reason.indexOf(f.reason)<0)seenS[k].reason+=' · '+f.reason;return}seenS[k]={sentence:f.sentence,reason:f.reason};still.push(seenS[k])});
     var withSentence=still.filter(function(f){return f.sentence});
-    iss.innerHTML='<ul>'+(x.messages||[x.error||'Not ready.']).map(function(m){return '<li>'+esc(m)+'</li>'}).join('')+'</ul>'+(still.length?'<div class="note"><strong>Still in the text:</strong><ul>'+still.map(function(f){return '<li>'+(f.sentence?'“'+esc(f.sentence)+'”':'<em>Section heading</em>')+(f.reason?' <small>— '+esc(f.reason)+'</small>':'')+'</li>'}).join('')+'</ul>'+(withSentence.length?'<button type="button" class="ghost" id="pkgDropListed">Remove these sentences ('+withSentence.length+')</button>':'')+'</div>':'');
+    iss.innerHTML='<ul>'+(x.messages||[x.error||'Not ready.']).map(function(m){return '<li>'+esc(m)+'</li>'}).join('')+'</ul>'+(still.length?'<div class="note"><strong>Still in the text:</strong><ul>'+still.map(function(f,si){return '<li>'+(f.sentence?'<a href="#" class="pkgJump" data-si="'+si+'" title="Show this sentence in the text">“'+esc(f.sentence)+'”</a>':'<em>Section heading</em>')+(f.reason?' <small>— '+esc(f.reason)+'</small>':'')+'</li>'}).join('')+'</ul>'+(withSentence.length?'<button type="button" class="ghost" id="pkgDropListed">Remove these sentences ('+withSentence.length+')</button>':'')+'</div>':'');
     // One click removes exactly the sentences the package refused on (in the included sections), then the button says so.
+    // Clicking a sentence opens its section and selects it in the text (or in the heading field), so it can be changed there.
+    iss.querySelectorAll('.pkgJump').forEach(function(a){a.onclick=function(ev){ev.preventDefault();pkgJumpTo(still[Number(a.getAttribute('data-si'))].sentence)}});
     var dropListed=document.getElementById('pkgDropListed');if(dropListed)dropListed.onclick=function(){var n=0;withSentence.forEach(function(f){document.querySelectorAll('.pkgText').forEach(function(t){var id=t.getAttribute('data-id'),use=document.querySelector('.pkgUse[data-id="'+id+'"]');if(use&&!use.checked)return;if(pkgDropSentence(id,f.sentence))n++})});pkgFlagState();dropListed.disabled=true;dropListed.textContent=n?'Removed '+n+' — download again':'Not found as one piece: change it in the text above'};
     if((x.issues||[]).indexOf('SOURCE_REVISION_CHANGED')>=0)pkgReadSource()}}
   catch(err){st.textContent=err.message;b.classList.add('action-failed')}b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy')}}
