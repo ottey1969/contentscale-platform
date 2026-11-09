@@ -136,7 +136,9 @@ function buildGapList(report={}){
   source_fingerprint:ov?.this_page_fingerprint||null,
   focus_query:focus,
   // What this research rested on, kept with the list so a later concept can show it (evidence dossier).
+  // The H1/H2 headings of the page as researched: writing later checks that they are still there (live text may change).
   research:{evidence_status:insufficient?'INSUFFICIENT_EVIDENCE':'ENOUGH_EVIDENCE',focus_query:focus,researched_at:report.generated_at||null,page_url:report.url||null,
+   source_headings:report.page_content?.headings?{h1:(report.page_content.headings.h1||[]).slice(0,5),h2:(report.page_content.headings.h2||[]).slice(0,40)}:null,
    market:report.search_discovery?.search_locale?{country:report.search_discovery.search_locale.country,language:report.search_discovery.search_locale.hl,
     source:report.search_discovery.search_locale.source,confirmed:report.search_discovery.search_locale.confirmed===true}:null,
    market_coverage:report.search_discovery?.market_coverage||null,search_source:report.search_discovery?.source||null,

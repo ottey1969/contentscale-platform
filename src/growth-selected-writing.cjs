@@ -93,13 +93,42 @@ function evidenceDossier({items=[],research=null,sourceFingerprint=null,writerSt
 
 // generate(researchContext) -> {status, draft, flags, source_text}: the Tracker passes the owner draft handler (live page,
 // identity checks), the standalone passes the generator with the public page it already read.
+// A page with live parts (counters, latest items, dates) changes its text fingerprint on every load. For writing what
+// matters is the structure the sections are placed in: the H1/H2 headings as researched. Missing ones are named.
+const normHeading=x=>String(x||'').replace(/<[^>]+>/g,' ').toLowerCase().replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim();
+function headingsStillPresent(researched,html){
+ if(!researched||!(Array.isArray(researched.h1)||Array.isArray(researched.h2)))return {known:false,ok:false,missing:[]};
+ const body=String(html||'').replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1\s*>/gi,' ');
+ const live=new Set([...body.matchAll(/<h[12]\b[^>]*>([\s\S]*?)<\/h[12]\s*>/gi)].map(m=>normHeading(m[1])).filter(Boolean));
+ const missing=[...(researched.h1||[]),...(researched.h2||[])].map(normHeading).filter(h=>h&&!live.has(h));
+ return {known:true,ok:!missing.length,missing};
+}
+const headingsMessage=m=>'Your page’s headings changed since the research (no longer found: “'+m.slice(0,3).join('”, “')+'”'+(m.length>3?' and '+(m.length-3)+' more':'')+'). Run the research again so the advice matches the page';
+// Why the AI writer gave no text, in plain words, from the writer's status and Google's own error (never the key).
+function explainWriterFailure(w){
+ const st=String(w&&w.writer_status||''),e=w&&w.provider_error||{},m=e.message?' Google says: “'+e.message+'”.':'',model=e.model?' (model '+e.model+')':'';
+ if(st==='OPTIONAL_AI_NOT_CONFIGURED')return 'there is no AI key on the server (GEMINI_API_KEY is not set in Railway).';
+ if(st==='INVALID_MODEL')return 'the AI model name in GEMINI_MODEL_BRIEF is not valid.';
+ if(st==='INSUFFICIENT_PAGE_SOURCE')return 'your page has too little readable text to write from.';
+ if(/INVALID_AI_JSON|INVALID_AI_STRUCTURE|AI_DRAFT_TOO_THIN/.test(st))return 'the AI answered, but its answer was not usable ('+st.toLowerCase().replace(/_/g,' ')+'). Try again.';
+ if(e.kind==='HTTP'){const h=e.http;
+  if(h===429)return 'Google’s AI limit is reached: too many requests, or the quota of the API key is used up'+model+'.'+m+' Try again later, or raise the quota in Google AI Studio / Cloud.';
+  if(h===400||h===403)return 'Google refused the request (HTTP '+h+'): usually an invalid or restricted API key, or a model this key may not use'+model+'.'+m;
+  if(h===404)return 'Google does not know this AI model (HTTP 404)'+model+'. Check GEMINI_MODEL_BRIEF in Railway.'+m;
+  if(h>=500)return 'Google’s AI service had an error (HTTP '+h+')'+model+'.'+m+' Try again in a moment.';
+  return 'Google answered with HTTP '+h+model+'.'+m}
+ if(e.kind==='TIMEOUT')return 'the AI did not answer within '+(e.seconds||35)+' seconds'+model+'. Try again in a moment.';
+ if(e.kind==='EMPTY_ANSWER')return 'the AI returned an empty answer'+model+(e.block_reason?' (blocked: '+String(e.block_reason).toLowerCase()+')':e.finish_reason?' (stopped: '+String(e.finish_reason).toLowerCase()+')':'')+'. Try again.';
+ if(e.kind==='NETWORK'||e.kind==='ERROR')return 'the AI could not be reached'+(e.message?' ('+e.message+')':'')+model+'. Try again in a moment.';
+ return 'the AI writer is not available ('+(st||'unknown').toLowerCase().replace(/_/g,' ')+').';
+}
 async function writeForSelection({items,targetUrl,focusQuery,existingHeadings,generate,research=null,sourceFingerprint=null,mode}){
  const request=writingRequest(items||[],{targetUrl,focusQuery,existingHeadings,mode});
  if(!request.items.length)return {status:'NOTHING_TO_WRITE',sections:[],not_written:[],reason:'Select at least one topic or question (page elements are added by the editor, not written).'};
  let out;
  try{out=await generate(request.research_context)}catch(e){out={status:'WRITER_UNAVAILABLE',provider_error:{kind:'ERROR',message:String(e&&(e.code||e.message)||'').slice(0,200)}}}
  if(!out||!out.draft)return {status:'NOT_WRITTEN',writer_status:out?.status||'WRITER_UNAVAILABLE',provider_error:out?.provider_error||null,sections:[],
-  not_written:request.items.map(x=>({item_id:x.id,title:x.title})),reason:'The writer returned no usable text ('+(out?.status||'unavailable')+'). Write these items yourself; the research and your selection are kept.',
+  not_written:request.items.map(x=>({item_id:x.id,title:x.title})),reason:'AI wrote no text: '+explainWriterFailure({writer_status:out?.status||'WRITER_UNAVAILABLE',provider_error:out?.provider_error||null})+' The research and your selection are kept.',
   dossier:evidenceDossier({items:request.items,research,sourceFingerprint,writerStatus:out?.status||'WRITER_UNAVAILABLE'})};
  return {...reviewWritten(out,request,{sourceText:out.source_text||'',focusQuery}),writer_status:out.status,
   dossier:evidenceDossier({items:request.items,research,sourceFingerprint,writerStatus:out.status})};
@@ -136,4 +165,4 @@ function remapSelection(pendingItems=[],newItems=[]){
  return out;
 }
 
-module.exports={remapSelection,planBatch,evidenceDossier,writeForSelection,writingRequest,reviewWritten,pageFingerprint,basisOf,MAX_ITEMS};
+module.exports={headingsStillPresent,headingsMessage,explainWriterFailure,remapSelection,planBatch,evidenceDossier,writeForSelection,writingRequest,reviewWritten,pageFingerprint,basisOf,MAX_ITEMS};

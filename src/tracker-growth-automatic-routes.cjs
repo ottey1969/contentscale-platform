@@ -30,7 +30,7 @@ const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-ta
 const {discoverCustomerQuestions}=require('./growth-customer-questions.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
 const {buildGapList}=require('./growth-gap-list.cjs');
-const {writeForSelection,planBatch,remapSelection,pageFingerprint,MAX_ITEMS:MAX_WRITE_ITEMS}=require('./growth-selected-writing.cjs');
+const {writeForSelection,planBatch,remapSelection,pageFingerprint,headingsStillPresent,headingsMessage,MAX_ITEMS:MAX_WRITE_ITEMS}=require('./growth-selected-writing.cjs');
 const {checkQueryMeaning}=require('./growth-serp-meaning.cjs');
 const {buildOwnerHandoffPackage,planInternalLinks}=require('./growth-owner-handoff-package.cjs');
 const {produceVerifiedEditorialOpportunity}=require('./growth-verified-opportunity.cjs');
@@ -900,7 +900,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(list.source_fingerprint){
    let live=null;try{live=await fetchLive(list.target_url)}catch{}
    if(!live||typeof live.html!=='string')return no(409,'PAGE_NOT_READABLE_NOW_RERUN_RESEARCH');
-   if(pageFingerprint(live.html)!==list.source_fingerprint)return no(409,'PAGE_CHANGED_SINCE_RESEARCH_RERUN_RESEARCH');
+   // Live parts of a page (counters, latest items, dates) change the text fingerprint on every load: then the researched
+   // H1/H2 headings decide. Same headings: writing goes on (it is checked against the live page); missing ones are named.
+   if(pageFingerprint(live.html)!==list.source_fingerprint){
+    const hs=headingsStillPresent(list.research?.source_headings,live.html);
+    if(!hs.ok)return res.status(409).set('Cache-Control','private, no-store').json({success:false,code:hs.known?'PAGE_HEADINGS_CHANGED':'PAGE_CHANGED_SINCE_RESEARCH_RERUN_RESEARCH',
+     error:hs.known?headingsMessage(hs.missing):'Your page changed since the research. Run the research again so the advice matches the page',missing_headings:hs.missing});
+   }
   }
   // Writing never removes anything from the owner's selection: items it names are added (a deliberate change of the
   // selection goes through the selection endpoint). The stored selection is what is written, in list order.
@@ -929,8 +935,8 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     growth_source_page_id:v.id,research_context,flag_fallback:true}});
    const d=outcome?.body||{};
    if(outcome.statusCode!==200||d.success!==true||d.canonical_url!==list.target_url||Number(d.page_id)!==Number(list.target_page_id))
-    return {status:d.code||'WRITER_UNAVAILABLE'};
-   return {status:d.status,draft:d.draft||null,flags:d.flags||[],source_text:d.source_text||''};
+    return {status:d.code||'WRITER_UNAVAILABLE',provider_error:d.provider_error||null};
+   return {status:d.status,draft:d.draft||null,flags:d.flags||[],source_text:d.source_text||'',provider_error:d.provider_error||null};
   };
   let written;
   try{written=await writeForSelection({items:plan.batch,targetUrl:list.target_url,focusQuery:list.focus_query||'',generate,
