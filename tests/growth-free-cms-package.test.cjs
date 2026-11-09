@@ -132,3 +132,17 @@ test('final-text check: a heading is not glued to the first sentence, and a ques
     focusQuery: 'roof repair lodi nj', evidenceScope: 'observed', language: 'en', reviewNotes: { flagged: [{ sentence: 'TEST sentence that was removed.', reason: 'TEST' }] } });
   assert.equal(r.status, 'HANDOFF_READY_FOR_EDITOR', JSON.stringify(r.blocked_details));
 });
+
+test('a question heading is no claim, and a subheading line above a paragraph becomes an h3 (not one glued sentence)', () => {
+  const { buildFreePackage } = require('../src/growth-free/cms-package.cjs');
+  const orig = '<html><head><title>ContentScale</title></head><body><h1>ContentScale</h1><p>ContentScale scores content quality for search.</p></body></html>';
+  const sha = require('node:crypto').createHash('sha256').update(orig).digest('hex');
+  const q = 'What is the Difference Between Ranking and Being Cited in AI Search?';
+  const text = q + '\n\nRanking means a page appears in the results list for a search.\n\nWhy the Same Keyword Shows Different AI Answers\nMarketers often observe that using the exact same keyword shows different AI answers across various search platforms and testing sessions.';
+  const r = buildFreePackage({ url: 'https://contentscale.site/', originalHtml: orig, sourceSha256: sha,
+    written: { sections: [{ item_id: 'a', h2: 'Ranking vs citation', flags: [{ sentence: q, code: 'UNPROVEN_AI_CITATION_CLAIM', reason: 'x' }] }] },
+    input: { cms: 'generic', seo_title: 'ContentScale', meta_description: 'ContentScale scores content quality for search engines and AI answers.', editor_approved: true,
+      sections: [{ item_id: 'a', h2: 'Ranking vs citation', text }] } });
+  assert.equal(r.ready, true, JSON.stringify(r.blocked_details || r.issues));
+  assert.match(JSON.stringify(r.files), /<h3>Why the Same Keyword Shows Different AI Answers<\/h3>/);
+});

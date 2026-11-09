@@ -156,6 +156,8 @@ function assessDraftClaims({text='',destinationText='',query='',brandLabel=''}={
  for(let sentence of sentencesOf(text)){
   const original=sentence,local=[];
   if(EDITOR_NOTE.test(sentence)){rewrites.push({before:original,after:'',changes:[{from:'internal note addressed to an editor',to:'(sentence removed from reader-facing copy)'}]});continue}
+  // A question asserts nothing (a question heading or the reader's own question): no claim rule applies to it.
+  if(/\?["')\]’”]*$/.test(sentence.trim())){kept.push(sentence);continue}
   const flag=(code,reason)=>local.push({code,reason});
   // Absolute words that can be weakened safely are weakened first; whatever remains is judged.
   let softened=sentence;const applied=[];

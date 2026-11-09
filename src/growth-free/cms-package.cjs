@@ -71,7 +71,12 @@ function internalLinks(h, url) {
   return out;
 }
 
-const sectionHtml = (h2, body) => '<section><h2>' + esc(h2) + '</h2>' + String(body).split(/\n\s*\n/).map(t => t.trim()).filter(Boolean).map(t => '<p>' + esc(t).replace(/\n/g, ' ') + '</p>').join('\n') + '</section>';
+// A block of text: a short first line without end punctuation, directly above more text, is a subheading (h3), not the
+// start of the paragraph (otherwise "Why … AI Answers" and "Marketers often observe …" became one sentence).
+const blockHtml = t => { const lines = t.split('\n').map(x => x.trim()).filter(Boolean);
+  if (lines.length > 1 && lines[0].length <= 120 && !/[.!:;,]$/.test(lines[0]) && lines[0].split(' ').length <= 16) return '<h3>' + esc(lines[0]) + '</h3>' + blockHtml(lines.slice(1).join('\n'));
+  return lines.length ? '<p>' + esc(lines.join(' ')) + '</p>' : ''; };
+const sectionHtml = (h2, body) => '<section><h2>' + esc(h2) + '</h2>' + String(body).split(/\n\s*\n/).map(t => t.trim()).filter(Boolean).map(blockHtml).join('\n') + '</section>';
 
 // The internal link goes into the section that talks most about where it leads (same rule as the Tracker page).
 function placeLink(sections, link, pageUrl) {
