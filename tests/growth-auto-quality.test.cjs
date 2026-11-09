@@ -50,7 +50,7 @@ test('the internal link is chosen automatically: a page of this site that fits t
 
 test('a section without a placement goes after the best matching H2 in the first 30% of the page', () => {
   const h2s = ['Why content at scale matters', 'How AI search finds pages', 'Pricing', 'Case study', 'Team', 'FAQ', 'Contact', 'Blog', 'Tools', 'About'];
-  const originalHtml = '<html><head><title>Content at scale</title></head><body><h1>Content at scale</h1>' + h2s.map(h => '<h2>' + h + '</h2><p>' + h + ' explained for website owners who want more visitors from search.</p>').join('') + '</body></html>';
+  const originalHtml = '<html><head><title>How AI search finds pages: embeddings and content at scale</title></head><body><h1>Content at scale for AI search</h1>' + h2s.map(h => '<h2>' + h + '</h2><p>' + h + ' explained for website owners who want more visitors from search.</p>').join('') + '</body></html>';
   const out = prepareGrowthCmsHandoff({ canonicalUrl: 'https://contentscale.site/', originalHtml, sourceExpectedSha256: crypto.createHash('sha256').update(originalHtml).digest('hex'),
     caseStudyLocked: false, editorApproved: true, cms: 'generic', pageTitle: 'Content at scale', metaDescription: 'Content at scale for website owners who want more visitors from Google and AI search.',
     evidenceScope: 'observed', changes: [{ approved: true, evidence_ref: 'free_growth_concept:a', placement: null,
@@ -74,4 +74,21 @@ test('an answer that is no valid JSON is asked once more; JSON with text or a tr
   const bad = async () => ({ ok: true, json: async () => ({ candidates: [{ finishReason: 'MAX_TOKENS', content: { parts: [{ text: '{"sections":[' }] } }] }) });
   const out2 = await generateGrowthEditorDraft({ sourceHtml: SOURCE, pageUrl: 'https://contentscale.site/', focusQuery: 'x', readerTask: task, fallbackFlagged: true }, { apiKey: 'k', model: 'gemini-test-model', fetchImpl: bad });
   assert.equal(out2.status, 'INVALID_AI_JSON'); assert.equal(out2.provider_error.finish_reason, 'MAX_TOKENS');
+});
+
+test('a section about another subject than the page is not placed in the first 30%; it gets the advice to become its own page', () => {
+  const h2s = ['How do you scale content without losing quality?', 'What can you do with a content scaling strategy?', 'Pricing', 'Case study', 'AI-era strategy for AI search', 'Team', 'FAQ', 'Contact', 'Blog', 'About'];
+  const originalHtml = '<html><head><title>Content At Scale Done Right | AI Search Specialist</title></head><body><h1>Beyond Content at Scale: Track Your AI Citations &amp; Rankings</h1>' +
+    h2s.map(h => '<h2>' + h + '</h2><p>' + h + ' explained for website owners.</p>').join('') + '</body></html>';
+  const base = { canonicalUrl: 'https://contentscale.site/', originalHtml, sourceExpectedSha256: require('node:crypto').createHash('sha256').update(originalHtml).digest('hex'),
+    editorApproved: true, cms: 'generic', pageTitle: 'Content at scale', metaDescription: 'Content at scale for website owners who want more visitors from Google and AI search.', evidenceScope: 'observed', focusQuery: 'rank in AI search results' };
+  const section = h => ({ approved: true, evidence_ref: 'x', placement: null, html: '<section><h2>' + h + '</h2><p>Embeddings turn a query into numbers so a search can match pages by meaning in AI search.</p></section>' });
+  const on = prepareGrowthCmsHandoff({ ...base, changes: [section('What is the Difference Between Ranking and Being Cited in AI Search?')] });
+  assert.equal(on.manifest.change_placements[0].off_topic, undefined);
+  assert.ok(['How do you scale content without losing quality?', 'What can you do with a content scaling strategy?', 'Pricing'].includes(on.manifest.change_placements[0].section_heading), 'on topic: first 30%');
+  const off = prepareGrowthCmsHandoff({ ...base, changes: [section('How Search Engines Process Queries Using Embeddings and Vector Search')] });
+  assert.equal(off.manifest.change_placements[0].off_topic, true);
+  assert.equal(off.manifest.change_placements[0].section_heading, 'AI-era strategy for AI search', 'off topic: best match anywhere on the page');
+  assert.ok(off.warnings.includes('SECTION_OFF_PAGE_TOPIC'));
+  assert.match(off.files.find(f => f.name === '01-implementation.md').content, /different subject than the page's main topic[^)]*give it its own page/);
 });
