@@ -49,3 +49,9 @@ test('flagged sentences (a claim the page does not support) are repaired too; "R
   assert.match(fixed, /^Ranking and being cited are two different results/); assert.doesNotMatch(fixed, /complete view/); assert.match(fixed, /A webpage can rank without being cited\.$/);
   assert.equal(styleProblems([{ id: 'x', h2: 'h', text: 'Readers often examine how to compare two offers before they decide.' }], PAGE)[0].problem, 'OPENING_FILLER');
 });
+
+test('team advice on a page that speaks as one person is repaired, even when the page uses the word "team" elsewhere', () => {
+  const rag = { id: 'r', h2: 'How to manage document selection', text: 'Start with one section. Have your editorial team review existing page files to ensure each heading addresses one query.' };
+  assert.equal(styleProblems([rag], 'Content at scale done right. I help website owners improve Google visibility. Content teams often publish too fast.').length, 1);
+  assert.equal(styleProblems([rag], 'We train marketing teams. Your team learns to plan and review content.').length, 0, 'a page that addresses teams may keep it');
+});
