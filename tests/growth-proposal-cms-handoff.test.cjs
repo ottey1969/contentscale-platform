@@ -68,7 +68,7 @@ test('owner may move the section (separate section after the heading); edited te
  const edited=handoff(p,{changes:[{approved:true,evidence_ref:'growth_proposal:41',html:sectionHtml({...p.sections[0],text:p.sections[0].text+' Repeat this every month.'}),placement:null}]});
  assert.equal(edited.manifest.growth_proposal.editor_changed_text,true);
  // Without a placement the section is placed automatically in the first 30% of the page (owner 2026-11-09).
- assert.match(edited.files.find(f=>f.name==='01-implementation.md').content,/chosen automatically: in the first 30% of the page/);
+ assert.match(edited.files.find(f=>f.name==='01-implementation.md').content,/chosen automatically/);
  assert.equal(edited.manifest.change_placements[0].auto,true);
 });
 

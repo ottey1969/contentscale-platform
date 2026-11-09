@@ -28,7 +28,7 @@ function renderChangeMarkdown(html){
  .replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/\n{3,}/g,'\n\n').trim();
 }
 const PLACEMENT_MODES={EXTEND_SECTION:'Extend the existing section',ADD_AFTER_SECTION:'Add as a new section directly after'};
-const placementText=p=>p?PLACEMENT_MODES[p.mode]+' “'+p.section_heading+'”'+(p.auto?' (chosen automatically: in the first 30% of the page, where readers and search engines see it early)':''):'Choose a suitable position on the page';
+const placementText=p=>p?PLACEMENT_MODES[p.mode]+' “'+p.section_heading+'”'+(p.auto?(p.off_topic?' (chosen automatically: this section is about a different subject than the page\'s main topic, so it is not placed near the top; better: give it its own page and link to it from here)':' (chosen automatically: in the first 30% of the page, where readers and search engines see it early)'):''):'Choose a suitable position on the page';
 // A section without a placement is placed automatically in the first 30% of the page (owner 2026-11-09: "important sections
 // belong in the first 30%"): directly after the early H2 section whose heading and text share the most words with it; on
 // a tie, the earliest one. Without H2 headings on the page the editor chooses the position (nothing is guessed).
@@ -39,12 +39,27 @@ function pageSectionsOf(html){
  const parts=body.split(/(?=<h2\b)/i).slice(1);
  return parts.map(p=>{const m=/<h2\b[^>]*>([\s\S]*?)<\/h2>/i.exec(p);return m?{heading:asText(m[1]).replace(/\s+/g,' ').trim(),text:p.slice(m.index+m[0].length)}:null}).filter(x=>x&&x.heading);
 }
-function autoPlacement(sectionHtml,originalHtml){
+// The page's own subject: its title, H1 and the search term. A section whose heading shares less than a third of its words
+// with that subject is about something else (owner 2026-11-09: embeddings, RAG and chunk sections at the top of a
+// "content at scale" homepage). It is not put in the first 30%: it goes after the best matching H2 anywhere on the page,
+// marked as a different subject, with the advice to give it its own page and link to it.
+function pageSubjectWords(html,focusQuery){
+ const h=String(html||''),t=(/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(h)||[])[1]||'',h1=(/<h1\b[^>]*>([\s\S]*?)<\/h1>/i.exec(h)||[])[1]||'';
+ return placeWords(t+' '+h1+' '+(focusQuery||''));
+}
+function offPageTopic(sectionHtml,originalHtml,focusQuery){
+ const head=(/<h[23]\b[^>]*>([\s\S]*?)<\/h[23]>/i.exec(String(sectionHtml||''))||[])[1];if(!head)return false;
+ const hw=[...placeWords(head)],subject=pageSubjectWords(originalHtml,focusQuery);
+ if(hw.length<2||!subject.size)return false;
+ return hw.filter(w=>subject.has(w)).length/hw.length<1/3;
+}
+function autoPlacement(sectionHtml,originalHtml,focusQuery=''){
  const sections=pageSectionsOf(originalHtml);if(!sections.length)return null;
- const early=sections.slice(0,Math.max(1,Math.ceil(sections.length*0.3))),mine=placeWords(sectionHtml);
+ const off=offPageTopic(sectionHtml,originalHtml,focusQuery);
+ const pool=off?sections:sections.slice(0,Math.max(1,Math.ceil(sections.length*0.3))),mine=placeWords(sectionHtml);
  let best=0,score=-1;
- early.forEach((s,i)=>{const hw=placeWords(s.heading),tw=placeWords(s.text);let n=0;for(const w of mine){if(hw.has(w))n+=3;else if(tw.has(w))n+=1}if(n>score){score=n;best=i}});
- return {mode:'ADD_AFTER_SECTION',section_heading:early[best].heading.slice(0,200),auto:true};
+ pool.forEach((s,i)=>{const hw=placeWords(s.heading),tw=placeWords(s.text);let n=0;for(const w of mine){if(hw.has(w))n+=3;else if(tw.has(w))n+=1}if(n>score){score=n;best=i}});
+ return {mode:'ADD_AFTER_SECTION',section_heading:pool[best].heading.slice(0,200),auto:true,...(off?{off_topic:true}:{})};
 }
 // growthProposal: {id, sections:[{h2,text}]} — the checked Growth proposal this handoff came from (for the audit trail).
 // reviewNotes: {needs_fact_check, needs_owner_confirmation, needs_safety_review} — sentences the owner must check before publishing.
@@ -68,7 +83,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  // A section that extends an existing section is a sub-section of it: its heading becomes H3 (an H2 would start a new
  // section on the page). Owner 2026-11-01 package: "Extend the existing section" with an H2.
  const approved=(Array.isArray(changes)?changes:[]).map(x=>x&&x.placement&&x.placement.mode==='EXTEND_SECTION'&&typeof x.html==='string'?{...x,html:x.html.replace(/<(\/?)h2\b/gi,'<$1h3')}:x)
-  .map(x=>x&&x.placement==null&&typeof x.html==='string'&&autoPlace!==false?{...x,placement:autoPlacement(x.html,originalHtml)}:x);
+  .map(x=>x&&x.placement==null&&typeof x.html==='string'&&autoPlace!==false?{...x,placement:autoPlacement(x.html,originalHtml,focusQuery)}:x);
  // Local business (address, phone, opening hours or a LocalBusiness type on the page): only then the package speaks of
  // calls, Google Business Profile, jobs and project photos. Read from the original page, never assumed.
  const localBusiness=isLocalBusiness(originalHtml);
@@ -117,6 +132,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  }
  if(approved.some(x=>/<h1\b/i.test(x?.html||'')))issues.push('EXISTING_H1_MUST_REMAIN');
  if(evidenceScope!=='verified')warnings.push('NO_VERIFIED_PAGE_GSC_BASELINE');
+ if(approved.some(x=>x&&x.placement&&x.placement.off_topic))warnings.push('SECTION_OFF_PAGE_TOPIC');
  if(!links.some(x=>x.type==='same_domain'))warnings.push('CONTEXTUAL_INTERNAL_LINK_REVIEW');
  if(captions.length===0)warnings.push('IMAGES_OPTIONAL_REAL_IMAGE_EVIDENCE_IF_AVAILABLE');
  const norm=t=>asText(t).toLowerCase().replace(/\s+/g,' ').trim();
@@ -258,4 +274,4 @@ function packageGrowthZip(files){
  end.writeUInt32LE(table.length,12);end.writeUInt32LE(offset,16);
  return Buffer.concat([...chunks,table,end]);
 }
-module.exports={prepareGrowthCmsHandoff,packageGrowthZip,renderChangeMarkdown,isLocalBusiness};
+module.exports={offPageTopic,autoPlacement,prepareGrowthCmsHandoff,packageGrowthZip,renderChangeMarkdown,isLocalBusiness};
