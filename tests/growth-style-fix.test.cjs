@@ -34,3 +34,18 @@ test('no AI: nothing changes, the sentences are reported', async () => {
   assert.equal(out.status, 'AI_UNAVAILABLE'); assert.equal(out.fixes.length, 0); assert.equal(out.problems.length, 3);
   assert.equal((await fixStyleSentences({ sections: [sections[2]], pageText: PAGE, model: { call: async () => { throw Error('not called'); } } })).status, 'NOT_NEEDED');
 });
+
+test('flagged sentences (a claim the page does not support) are repaired too; "Readers often examine" is a weak opening', async () => {
+  const text = 'Readers often examine the key difference between conventional page ranking and being cited in AI search responses. Traditional ranking refers to a page URL occupying a position on a results page.\n\nA webpage can rank without being cited. Monitoring both traditional positions and citation occurrences gives content managers a complete view of search visibility.';
+  const flags = [{ sentence: 'Readers often examine the key difference between conventional page ranking and being cited in AI search responses.', reason: 'Claims how AI assistants or AI search treat the content.' },
+    { sentence: 'Monitoring both traditional positions and citation occurrences gives content managers a complete view of search visibility.', reason: 'Contains the unqualified claim "a complete view".' }];
+  const sec = [{ id: 'q1', h2: 'What is the Difference Between Ranking and Being Cited in AI Search?', text, flags }];
+  const p = styleProblems(sec, PAGE);
+  assert.deepEqual(p.map(x => x.problem), ['FLAGGED_CLAIM', 'FLAGGED_CLAIM'], 'one entry per sentence');
+  const model = { call: async () => JSON.stringify({ fixes: [{ n: 0, sentence: 'Ranking and being cited are two different results of the same search.' }, { n: 1, sentence: '' }] }) };
+  const out = await fixStyleSentences({ sections: sec, pageText: PAGE, model });
+  assert.equal(out.fixes.length, 2, JSON.stringify(out.refused));
+  const fixed = applyFixes(text, out.fixes);
+  assert.match(fixed, /^Ranking and being cited are two different results/); assert.doesNotMatch(fixed, /complete view/); assert.match(fixed, /A webpage can rank without being cited\.$/);
+  assert.equal(styleProblems([{ id: 'x', h2: 'h', text: 'Readers often examine how to compare two offers before they decide.' }], PAGE)[0].problem, 'OPENING_FILLER');
+});

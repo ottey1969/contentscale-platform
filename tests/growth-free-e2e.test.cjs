@@ -40,7 +40,9 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     questionFetch: async () => ({ ok: true, json: async () => ({ peopleAlsoAsk: [{ question: 'How much does roof repair cost in Lodi NJ?' }], relatedSearches: [{ query: 'emergency roof repair lodi' }] }) }),
     questionModel: null,
     // TEST stand-in for the sentence repair (weak openings, team advice): replaces only the sentence it is given.
-    styleModel: { call: async () => JSON.stringify({ fixes: [{ n: 0, sentence: 'A repair estimate shows what each part of the roof work costs before you approve it.' }] }) },
+    // (Flagged sentences are left alone here, so the one-click removal below stays testable.)
+    styleModel: { call: async prompt => { const items = JSON.parse(prompt.split('\n').pop());
+      return JSON.stringify({ fixes: items.filter(x => x.problem === 'OPENING_FILLER').map(x => ({ n: x.n, sentence: 'A repair estimate shows what each part of the roof work costs before you approve it.' })) }); } },
     generateDraft: async args => { writes.push(args); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: (args.readerTask?.tasks || []).map(x => ({ task_code: x.code, h2: 'How to read a repair estimate',
       // The second sentence is a product claim the page does not make: it is flagged and must go before the download.
       paragraphs: writes.length > 1 ? ['Many people wonder how to read a repair estimate before they approve it.', 'Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.']

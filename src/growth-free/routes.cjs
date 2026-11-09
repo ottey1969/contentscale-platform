@@ -331,8 +331,9 @@ function writtenHtml(r){if(!r)return '';var h='<h3>Concepts for your selection</
  (r.sections||[]).forEach(function(x){var fl=(x.flags||[]).filter(function(f){return f.sentence}).map(function(f){return f.sentence});
   h+='<div class="card"><strong>'+esc(x.h2)+'</strong><br><small>'+(x.status==='FLAGGED_FOR_EDITOR'?'Flagged: '+x.flags.length+' item(s) to rewrite or remove':x.status==='MARKED_NO_SOURCE_TEXT'?'Marked: no competitor text behind it':'Concept for review')+(x.item_title?' · for “'+esc(x.item_title)+'”':'')+(x.run?' · run '+esc(x.run):'')+(x.placement&&x.placement.section_heading?' · place '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':' · you choose the place')+'</small>';
   if(x.basis)h+='<br><small>Answers: “'+esc(x.basis.answers)+'” · basis: '+esc(String(x.basis.evidence_level||'').toLowerCase().split('_').join(' '))+((x.basis.competitor_evidence||[]).length?' · sources: '+x.basis.competitor_evidence.map(function(e){return esc(e.site)}).join(', '):'')+'</small>'+(x.basis.warning?'<p class="note">'+esc(x.basis.warning)+'</p>':'');
-  (x.paragraphs||[]).forEach(function(p){var out=esc(p);fl.forEach(function(f){out=out.split(esc(f)).join('<mark title="Flagged: rewrite or remove">'+esc(f)+'</mark>')});h+='<p>'+out+'</p>'});
+  (x.paragraphs||[]).forEach(function(p){var out=esc(p);fl.forEach(function(f){out=out.split(esc(f)).join('<mark class="conceptJump" role="link" tabindex="0" style="cursor:pointer" title="Change it in the CMS package below" data-sentence="'+esc(f)+'">'+esc(f)+'</mark>')});h+='<p>'+out+'</p>'});
   if((x.flags||[]).length)h+='<ul>'+x.flags.map(function(f){return '<li>'+(f.sentence?'“'+esc(f.sentence)+'” — ':'Whole section — ')+esc(f.reason)+'</li>'}).join('')+'</ul>';
+  if(fl.length)h+='<p class="note">These sentences are changed in the <strong>CMS package below</strong>, not here: AI replaces them there automatically (checked), or click a yellow sentence to change it yourself.</p>';
   var si=x.style_issues||[];
   h+='<label class="check"><input type="checkbox" class="gapRewrite" value="'+esc(x.item_id)+'"'+(si.length?' checked':'')+'><span>Write this H2 again with AI'+(si.length?' — ticked for you: '+si.map(function(i){return (i.problem==='OPENING_FILLER'?'weak opening':'advice for a team')+' “'+esc(i.sentence)+'”'}).join('; '):'')+'</span></label>';
   h+='</div>'});
@@ -361,8 +362,8 @@ function freeAiGate(d){var a=d&&d.ai;if(!a||(a.summary&&a.summary.checked>0))ret
   document.body.appendChild(dlg);if(typeof dlg.showModal==='function')dlg.showModal();else dlg.setAttribute('open','');dlg.querySelector('button').focus()})}
 // Step 4: the same CMS package (ZIP) as the Tracker, from the concepts. The editor edits, approves and downloads; nothing is published.
 var PKG_SHA='';
-var PKG_FLAGS={};
-function pkgHtml(r){var list=(r&&r.sections)||[];PKG_FLAGS={};list.forEach(function(x){var seen={};PKG_FLAGS[String(x.item_id)]=(x.flags||[]).filter(function(f){return f.sentence&&!seen[f.sentence]&&(seen[f.sentence]=1)}).map(function(f){return f.sentence})});if(!list.length)return '';
+var PKG_FLAGS={},PKG_FLAG_REASONS={};
+function pkgHtml(r){var list=(r&&r.sections)||[];PKG_FLAGS={};PKG_FLAG_REASONS={};list.forEach(function(x){var seen={};PKG_FLAG_REASONS[String(x.item_id)]=(x.flags||[]).filter(function(f){return f.sentence}).map(function(f){return {sentence:f.sentence,reason:f.reason||''}});PKG_FLAGS[String(x.item_id)]=(x.flags||[]).filter(function(f){return f.sentence&&!seen[f.sentence]&&(seen[f.sentence]=1)}).map(function(f){return f.sentence})});if(!list.length)return '';
  var h='<h2 id="pkg">CMS package for your editor</h2><p class="lead">The same package as the Tracker: approved text, exact placement on your page, SEO title and description, and a measurement plan. Edit the text, remove what you do not want, approve and download. Nothing is published.</p>';
  h+='<p class="muted" id="pkgSource">Reading your page as it is live now…</p><div class="cms-button-row"><button type="button" id="pkgIncludeAll" class="cms-action-unavailable" disabled>Include all prepared H2s</button> <button type="button" id="pkgExcludeAll" class="cms-action-unavailable" disabled>Exclude all</button></div><small id="pkgBulkStatus" role="status" class="cms-status">Checking prepared content…</small>';
  list.forEach(function(x){var id=esc(x.item_id),fl=(x.flags||[]).filter(function(f){return f.sentence});
@@ -438,18 +439,22 @@ function pkgWireFlags(){var first=document.querySelector('.pkgFlags');
  document.querySelectorAll('.pkgUse,.pkgText').forEach(function(el){el.addEventListener(el.classList.contains('pkgText')?'input':'change',pkgFlagState)});pkgFlagState()}
 // Weak openings and team advice: AI replaces only those sentences in the section texts, automatically, once per page
 // load. Each change is shown under its section with the original sentence; nothing else in the text changes.
-var PKG_STYLE_FIXES=[];
-async function pkgFixStyle(){var list=[];pkgApplyStyle(PKG_STYLE_FIXES,true);document.querySelectorAll('.pkgText').forEach(function(t){var id=t.getAttribute('data-id'),h=document.querySelector('.pkgH2[data-id="'+id+'"]');if(t.value.trim())list.push({id:id,h2:h?h.value:'',text:t.value})});
- if(!list.length)return;var x=null;try{x=await (await fetch(API+'/fix-style'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sections:list})})).json()}catch(e){}
+var PKG_STYLE_FIXES=[],PKG_STYLE_TRIED={},PKG_STYLE_LEFT=[];
+async function pkgFixStyle(){var list=[];pkgApplyStyle(PKG_STYLE_FIXES,true);pkgStyleLeft(PKG_STYLE_LEFT,'');document.querySelectorAll('.pkgText').forEach(function(t){var id=t.getAttribute('data-id'),h=document.querySelector('.pkgH2[data-id="'+id+'"]');var fl=(PKG_FLAG_REASONS[id]||[]).filter(function(f){return t.value.indexOf(f.sentence)>=0});if(t.value.trim())list.push({id:id,h2:h?h.value:'',text:t.value,flags:fl})});
+ if(!list.length)return;var x=null;try{x=await (await fetch(API+'/fix-style'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sections:list,skip:Object.keys(PKG_STYLE_TRIED)})})).json()}catch(e){}
  if(!x)return;PKG_STYLE_FIXES=PKG_STYLE_FIXES.concat(x.fixes||[]);pkgApplyStyle(x.fixes||[],false);
  var left=(x.problems||[]).filter(function(p){return !(x.fixes||[]).some(function(f){return f.id===p.id&&f.before===p.sentence})});
- left.forEach(function(p){var t=document.querySelector('.pkgText[data-id="'+p.id+'"]'),card=t&&t.closest('.card');if(!card)return;var n=document.createElement('p');n.className='note pkgStyleNote';n.textContent=(p.problem==='OPENING_FILLER'?'Weak opening':'Advice for a team')+' still in the text'+(x.status==='AI_UNAVAILABLE'||x.status==='AI_FAILED'||x.status==='LIMIT'?' (AI could not repair it now)':' (the AI repair did not pass the checks)')+': “'+p.sentence+'”. Rewrite it yourself.';card.appendChild(n)})}
+ (x.problems||[]).forEach(function(p){PKG_STYLE_TRIED[p.id+'|'+p.sentence]=1});
+ var why=x.status==='AI_UNAVAILABLE'||x.status==='AI_FAILED'||x.status==='LIMIT'?' (AI could not repair it now)':' (the AI repair did not pass the checks)';
+ PKG_STYLE_LEFT=PKG_STYLE_LEFT.concat(left.map(function(p){return {id:p.id,sentence:p.sentence,problem:p.problem,why:why}}));pkgStyleLeft(left,why)}
+// Sentences AI could not repair: named under their section (only while they are still in the text).
+function pkgStyleLeft(left,why0){left.forEach(function(p){var why=p.why||why0;var t=document.querySelector('.pkgText[data-id="'+p.id+'"]'),card=t&&t.closest('.card');if(!card||t.value.indexOf(p.sentence)<0)return;var n=document.createElement('p');n.className='note pkgStyleNote pkgStyleLeft';n.textContent=(p.problem==='OPENING_FILLER'?'Weak opening':p.problem==='FLAGGED_CLAIM'?'Flagged sentence':'Advice for a team')+' still in the text'+why+': “'+p.sentence+'”. Rewrite it yourself.';card.appendChild(n)})}
 // Applies repaired sentences (also again after the editor is redrawn, without a new AI call) and shows each change.
 function pkgApplyStyle(fixes,again){var by={};(fixes||[]).forEach(function(f){(by[f.id]=by[f.id]||[]).push(f)});
  Object.keys(by).forEach(function(id){var t=document.querySelector('.pkgText[data-id="'+id+'"]');if(!t)return;var v=t.value,done=[];
   by[id].forEach(function(f){var i=v.indexOf(f.before);if(i<0)return;v=v.slice(0,i)+f.after+v.slice(i+f.before.length);done.push(f)});
   v=v.split('  ').join(' ');t.value=v;t.dispatchEvent(new Event('input',{bubbles:true}));
-  var card=t.closest('.card');if(card&&done.length&&!card.querySelector('.pkgStyleNote')){var n=document.createElement('div');n.className='note pkgStyleNote';n.innerHTML='<strong>AI repaired '+done.length+' sentence(s) automatically. Check them:</strong><ul>'+done.map(function(f){return '<li>'+(f.problem==='OPENING_FILLER'?'Weak opening':'Advice for a team')+': <s>'+esc(f.before)+'</s> → '+(f.after?'<mark>'+esc(f.after)+'</mark>':'removed')+'</li>'}).join('')+'</ul>';card.appendChild(n)}})}
+  var card=t.closest('.card');if(card&&done.length&&!card.querySelector('.pkgStyleNote')){var n=document.createElement('div');n.className='note pkgStyleNote';n.innerHTML='<strong>AI repaired '+done.length+' sentence(s) automatically. Check them:</strong><ul>'+done.map(function(f){return '<li>'+(f.problem==='OPENING_FILLER'?'Weak opening':f.problem==='FLAGGED_CLAIM'?'Flagged claim':'Advice for a team')+': <s>'+esc(f.before)+'</s> → '+(f.after?'<mark>'+esc(f.after)+'</mark>':'removed')+'</li>'}).join('')+'</ul>';card.appendChild(n)}})}
 function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box.innerHTML=pkgHtml(r);var b=document.getElementById('pkgDownload');if(!b)return;pkgReadSource();
  pkgWireFlags();pkgFixStyle();
  var pc=document.getElementById('pkgPersonal');if(pc)pc.onchange=function(){pc.dataset.touched='1';if(pc.checked)clearVoice();else pkgFixVoice(null)};
@@ -522,9 +527,12 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
  var wr=document.getElementById('gapWritten');if(wr&&d&&d.writing&&d.writing.last){wr.innerHTML=writtenHtml(d.writing.last)}
 // "Write this H2 again": ticking a concept (or the automatic tick on a weak opening / team advice) makes the write button
 // write those concepts again, as long as the check has a round left.
-function syncRewrite(){var b=document.getElementById('gapWrite');if(!b)return;var n=document.querySelectorAll('.gapRewrite:checked').length,left=Number(d.writing&&d.writing.remaining||0);
+function syncRewrite(){var left=Number(d.writing&&d.writing.remaining||0);
+ document.querySelectorAll('.gapRewrite').forEach(function(c){var l=c.closest('label');if(l)l.style.display=left>0?'':'none'});
+ var b=document.getElementById('gapWrite');if(!b)return;var n=document.querySelectorAll('.gapRewrite:checked').length;
  if(n&&left>0){if(!b.dataset.rewriteLabel)b.dataset.rewriteLabel=b.textContent;b.disabled=false;b.dataset.exhausted='';b.textContent='Write the '+n+' ticked concept(s) again with AI (uses '+Math.ceil(n/4)+' of '+left+' round(s))'}
  else if(b.dataset.rewriteLabel){b.textContent=b.dataset.rewriteLabel}}
+ if(wr&&!wr.dataset.jumpWired){wr.dataset.jumpWired='1';wr.addEventListener('click',function(e){var m=e.target&&e.target.closest&&e.target.closest('.conceptJump');if(m)pkgJumpTo(m.getAttribute('data-sentence'))});wr.addEventListener('keydown',function(e){var m=e.target&&e.target.closest&&e.target.closest('.conceptJump');if(m&&e.key==='Enter')pkgJumpTo(m.getAttribute('data-sentence'))})}
  if(wr&&!wr.dataset.rewriteWired){wr.dataset.rewriteWired='1';wr.addEventListener('change',function(e){if(e.target&&e.target.classList&&e.target.classList.contains('gapRewrite'))syncRewrite()})}
  var wb=document.getElementById('gapWrite');
  if(wb)wb.onclick=async function(){
@@ -1274,20 +1282,28 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  });
  // Weak openings and team/editorial-process advice in the package text: AI replaces only those sentences (checked; see
  // src/growth-style-fix.cjs). No writing round is used; at most 5 calls per check.
- const styleUses=new Map();
+ const styleUses=new Map(),styleCache=new Map();
  app.post(apiPath+'/checks/:id/fix-style',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   if(row.status!=='DONE')return res.status(409).json({success:false,error:'The check has not finished'});
-  const b=req.body||{},sections=(Array.isArray(b.sections)?b.sections:[]).slice(0,12).map(x=>({id:clean(x&&x.id,80),h2:clean(x&&x.h2,200),text:String(x&&x.text||'').slice(0,20000)})).filter(x=>x.id&&x.text);
+  const b=req.body||{},sections=(Array.isArray(b.sections)?b.sections:[]).slice(0,12).map(x=>({id:clean(x&&x.id,80),h2:clean(x&&x.h2,200),text:String(x&&x.text||'').slice(0,20000),flags:(Array.isArray(x&&x.flags)?x.flags:[]).slice(0,8).map(f=>({sentence:clean(f&&f.sentence,400),reason:clean(f&&f.reason,240)}))})).filter(x=>x.id&&x.text);
   let html='';try{html=await readOwnPage(row)}catch(e){}
   const pageText=html?sourceFacts(html).text:'';
-  const problems=styleFix.styleProblems(sections,pageText);
-  if(!problems.length)return res.set('Cache-Control','no-store').json({success:true,status:'NOT_NEEDED',fixes:[],problems:[]});
+  // Sentences this page already sent to AI (repaired or not) are not sent again: a redraw of the editor costs no call.
+  const skip=new Set((Array.isArray(b.skip)?b.skip:[]).slice(0,100).map(x=>clean(x,500)));
+  const problems=styleFix.styleProblems(sections,pageText).filter(p=>!skip.has(p.id+'|'+p.sentence));
+  // Repairs already made for this check (also after a reload) come from memory: no new AI call, no use counted.
+  const key=p=>row.id+'|'+p.id+'|'+p.sentence,known=problems.filter(p=>styleCache.has(key(p))),fresh=problems.filter(p=>!styleCache.has(key(p)));
+  const cachedFixes=known.map(p=>styleCache.get(key(p))).filter(Boolean);
+  if(!fresh.length)return res.set('Cache-Control','no-store').json({success:true,status:problems.length?(cachedFixes.length?'FIXED':'NOT_FIXED'):'NOT_NEEDED',fixes:cachedFixes,problems});
   const n=(styleUses.get(row.id)||0)+1;if(n>5)return res.status(429).json({success:false,status:'LIMIT',problems,error:'The automatic sentence repair limit for this check is reached; change the marked sentences yourself.'});
   styleUses.set(row.id,n);if(styleUses.size>20000)styleUses.clear();
   const model=engineDeps.styleModel!==undefined?engineDeps.styleModel:require('../growth-task-meaning.cjs').geminiModel();
-  const out=await styleFix.fixStyleSentences({sections,pageText,language:(row.market&&row.market.language)||'en',model});
-  res.set('Cache-Control','no-store').json({success:true,...out});
+  const freshKeys=new Set(fresh.map(p=>p.id+'|'+p.sentence));
+  const out=await styleFix.fixStyleSentences({sections,pageText,language:(row.market&&row.market.language)||'en',model,skip:new Set([...skip,...known.map(p=>p.id+'|'+p.sentence)])});
+  // Only a real answer is remembered (an unavailable AI may answer next time).
+  if(out.status==='FIXED'||out.status==='NOT_FIXED'){for(const p of out.problems||[])if(freshKeys.has(p.id+'|'+p.sentence))styleCache.set(key(p),(out.fixes||[]).find(f=>f.id===p.id&&f.before===p.sentence)||null);if(styleCache.size>50000)styleCache.clear()}
+  res.set('Cache-Control','no-store').json({success:true,...out,fixes:[...cachedFixes,...(out.fixes||[])],problems});
  });
  app.get(apiPath+'/checks/:id/package-source',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
