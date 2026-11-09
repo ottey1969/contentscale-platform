@@ -40,7 +40,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     questionFetch: async () => ({ ok: true, json: async () => ({ peopleAlsoAsk: [{ question: 'How much does roof repair cost in Lodi NJ?' }], relatedSearches: [{ query: 'emergency roof repair lodi' }] }) }),
     questionModel: null,
     generateDraft: async args => { writes.push(args); return { status: 'AI_DRAFT_REVIEW_REQUIRED', draft: { sections: (args.readerTask?.tasks || []).map(x => ({ task_code: x.code, h2: 'How to read a repair estimate',
-      paragraphs: ['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.'] })) } }; } };
+      // The second sentence is a product claim the page does not make: it is flagged and must go before the download.
+      paragraphs: ['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.', 'Our platform tracks every roof repair citation in ChatGPT every day.'] })) } }; } };
   const app = express(); app.use(express.json({ limit: '1mb' }));
   // The key's site domain (here 127.0.0.1): e-mail links open on the domain the visitor used, without extra settings.
   const baseCfg = freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'e2e-open-key-1' });
@@ -194,6 +195,12 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     if (!(await p.locator('#stepPrepare').evaluate(el => el.open))) await p.locator('#stepPrepare > summary').click();
     await p.waitForFunction(() => /Original page read now: “Roof Repair in Lodi, NJ \| Acme Roofing”/.test(document.body.textContent), null, { timeout: 30000 });
     assert.equal(await p.inputValue('#pkgTitle'), 'Roof Repair in Lodi, NJ | Acme Roofing');
+    // A flagged sentence: one click removes exactly that sentence; the rest of the text stays.
+    assert.match(await p.textContent('.pkgFlags'), /Our platform tracks every roof repair citation in ChatGPT every day\./);
+    await p.click('#pkgDropAll');
+    assert.doesNotMatch(await p.inputValue('.pkgText'), /Our platform tracks/);
+    assert.match(await p.inputValue('.pkgText'), /Ask for a written estimate/);
+    assert.equal(await p.textContent('.pkgDropFlag'), 'Removed');
     // A description in the first person: the visitor chooses. First, AI rewrites it as the service on request...
     const firstPerson = 'I repair leaking roofs in Lodi, NJ, and my crew gives a written estimate before any work starts.';
     await p.fill('#pkgMeta', firstPerson);
