@@ -97,12 +97,25 @@ function suggestLink(html, url, { sectionsText = '', focus = '' } = {}) {
   return { url: best.url, label: best.label, reason: OFFER.test(best.url + ' ' + best.label) ? 'OFFER_PAGE' : 'TOPIC_MATCH' };
 }
 
+// Text pasted from an AI answer or a Markdown editor (live 2026-11-09: "[hginsights](https://….pdf)", "## What this means",
+// "- item - item"): source links are taken out of the reader text and listed for the fact-check (an AI's source is not a
+// verified source and is never linked automatically); "**" is removed; "#" headings and "-" lists become real HTML.
+const MD_LINK = /\s*\[([^\]\n]{1,120})\]\((https?:\/\/[^)\s]{4,500})\)/g;
+function pastedSources(t) { const out = []; for (const m of String(t || '').matchAll(MD_LINK)) if (!out.some(x => x.url === m[2])) out.push({ label: m[1].trim(), url: m[2] }); return out; }
+const unMarkdown = t => String(t || '').replace(MD_LINK, '').replace(/\*\*([^*\n]+)\*\*/g, '$1').replace(/(^|\s)\*([^*\n]+)\*(?=\s|[.,;:!?]|$)/g, '$1$2');
+const BULLET = /^\s*(?:[-*•]|\d+[.)])\s+/;
 // A block of text: a short first line without end punctuation, directly above more text, is a subheading (h3), not the
 // start of the paragraph (otherwise "Why … AI Answers" and "Marketers often observe …" became one sentence).
 const blockHtml = t => { const lines = t.split('\n').map(x => x.trim()).filter(Boolean);
+  if (lines.length && /^#{1,6}\s+\S/.test(lines[0])) return '<h3>' + esc(lines[0].replace(/^#{1,6}\s+/, '').replace(/\s*#+$/, '')) + '</h3>' + blockHtml(lines.slice(1).join('\n'));
+  if (lines.length && BULLET.test(lines[0])) {
+    // One item per line, or items pasted on one line ("- a. - b. - c.").
+    const items = (lines.length > 1 ? lines : lines[0].split(/\s+-\s+(?=\S)/)).map(x => x.replace(BULLET, '').trim()).filter(Boolean);
+    return '<ul>' + items.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+  }
   if (lines.length > 1 && lines[0].length <= 120 && !/[.!:;,]$/.test(lines[0]) && lines[0].split(' ').length <= 16) return '<h3>' + esc(lines[0]) + '</h3>' + blockHtml(lines.slice(1).join('\n'));
   return lines.length ? '<p>' + esc(lines.join(' ')) + '</p>' : ''; };
-const sectionHtml = (h2, body) => '<section><h2>' + esc(h2) + '</h2>' + String(body).split(/\n\s*\n/).map(t => t.trim()).filter(Boolean).map(blockHtml).join('\n') + '</section>';
+const sectionHtml = (h2, body) => '<section><h2>' + esc(h2) + '</h2>' + unMarkdown(body).split(/\n\s*\n/).map(t => t.trim()).filter(Boolean).map(blockHtml).join('\n') + '</section>';
 
 // The internal link goes into the section that talks most about where it leads (same rule as the Tracker page).
 function placeLink(sections, link, pageUrl) {
@@ -136,6 +149,16 @@ function reviewNotesOf(given, stored, personal = false, originalHtml = '') {
     if (b) basis.push({ h2: s.h2, answers: b.answers || '', sources: (b.competitor_evidence || []).map(e => [e.site, e.heading].filter(Boolean).join(': ')), warning: b.warning || '' });
   }
   return flagged.length || basis.length ? { flagged: flagged.filter(f => f.sentence), basis } : null;
+}
+
+// What the fact-check file adds for text the editor changed: sources pasted with it (never linked), the sections whose
+// text differs from Growth's concept, and weak openings or team advice still in the text.
+function extraNotes(given, stored, originalHtml) {
+  const flat = t => String(t || '').replace(/\s+/g, ' ').trim();
+  const pasted = []; for (const g of given) for (const x of pastedSources(g.text)) if (!pasted.some(y => y.url === x.url)) pasted.push({ ...x, h2: g.h2 });
+  const changed = given.filter(g => { const o = stored.get(g.item_id); return o && flat((o.paragraphs || []).join(' ')) !== flat(g.text); }).map(g => g.h2);
+  let left = []; try { left = require('../growth-style-fix.cjs').styleProblems(given.map(g => ({ id: g.item_id, h2: g.h2, text: unMarkdown(g.text) })), text(originalHtml)); } catch (e) {}
+  return { pasted_sources: pasted.slice(0, 30), editor_changed_sections: changed.slice(0, 12), still_to_improve: left.slice(0, 20).map(x => ({ h2: x.h2, sentence: x.sentence, problem: x.problem })) };
 }
 
 const PLAIN = {
@@ -191,7 +214,7 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   const cms = CMS.includes(input.cms) ? input.cms : 'generic';
   const result = prepareGrowthCmsHandoff({ canonicalUrl: url, originalHtml, sourceExpectedSha256: sourceSha256, caseStudyLocked: false,
     editorApproved: input.editor_approved === true, cms, pageTitle: String(input.seo_title || '').trim(), metaDescription: String(input.meta_description || '').trim(),
-    changes: sections, focusQuery, evidenceScope: gscVerifiedTerm ? 'verified' : 'observed', language: language || 'en', reviewNotes: reviewNotesOf(given, stored, personal, originalHtml), personalVoiceAllowed: personal });
+    changes: sections, focusQuery, evidenceScope: gscVerifiedTerm ? 'verified' : 'observed', language: language || 'en', reviewNotes: { ...(reviewNotesOf(given, stored, personal, originalHtml) || {}), ...extraNotes(given, stored, originalHtml) }, personalVoiceAllowed: personal });
   const all = [...new Set([...issues, ...(result.issues || [])])];
   if (all.length || result.status !== 'HANDOFF_READY_FOR_EDITOR')
     return { ready: false, issues: all, flagged, blocked_details: result.blocked_details || null, messages: [...new Set(all.map(c => PLAIN[c] || ('Not ready: ' + c.toLowerCase().replace(/_/g, ' ') + '.')))] };
@@ -218,4 +241,4 @@ async function suggestServiceMeta({ title = '', meta = '', language = 'en', url 
   return ok ? { status: 'SUGGESTED', voice, title: t, meta_description: d } : { status: 'REJECTED', voice };
 }
 
-module.exports = { suggestLink, pageSpeaksAsPerson, suggestServiceMeta, voiceOf, pageSource, buildFreePackage, placeLink, PLAIN, CMS };
+module.exports = { suggestLink, pastedSources, unMarkdown, pageSpeaksAsPerson, suggestServiceMeta, voiceOf, pageSource, buildFreePackage, placeLink, PLAIN, CMS };

@@ -476,6 +476,8 @@ function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box
  box.addEventListener('input',function(e){if(e.target.matches('.pkgText'))cmsButtonState()});
  cmsButtonState();
  b.onclick=async function(){var st=document.getElementById('pkgStatus'),iss=document.getElementById('pkgIssues');iss.innerHTML='';st.textContent='Checking the package…';b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');
+  // Text pasted or changed after the editor opened: weak openings, team advice and flagged sentences are repaired first.
+  try{st.textContent='Checking the sentences…';await pkgFixStyle()}catch(e){}st.textContent='Checking the package…';
   try{var body=pkgInput();body.format='zip';var r=await fetch(API+'/package'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
    if(r.ok&&/zip/.test(r.headers.get('content-type')||'')){var blob=await r.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='cms-package.zip';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);st.textContent='Downloaded. Give the ZIP to whoever edits your website.';b.classList.add('action-done');var next=document.getElementById('freeStepExport');if(next){next.className='step-chip done';next.querySelector('.symbol').textContent='✓'}}
    else{var x=await r.json().catch(function(){return {messages:['Not ready.']}});st.textContent='Not ready yet:';
@@ -1303,6 +1305,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const out=await styleFix.fixStyleSentences({sections,pageText,language:(row.market&&row.market.language)||'en',model,skip:new Set([...skip,...known.map(p=>p.id+'|'+p.sentence)])});
   // Only a real answer is remembered (an unavailable AI may answer next time).
   if(out.status==='FIXED'||out.status==='NOT_FIXED'){for(const p of out.problems||[])if(freshKeys.has(p.id+'|'+p.sentence))styleCache.set(key(p),(out.fixes||[]).find(f=>f.id===p.id&&f.before===p.sentence)||null);if(styleCache.size>50000)styleCache.clear()}
+  // One line per repair call, so a repair that did not happen can be traced (never the text itself).
+  console.log('[free-growth] fix-style',out.status,'problems',(out.problems||[]).length,'fixed',(out.fixes||[]).length,'refused',(out.refused||[]).map(r=>r.problem+':'+(r.why||'')).join(',').slice(0,300),out.ai_error||'');
   res.set('Cache-Control','no-store').json({success:true,...out,fixes:[...cachedFixes,...(out.fixes||[])],problems});
  });
  app.get(apiPath+'/checks/:id/package-source',async(req,res)=>{
