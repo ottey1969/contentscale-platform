@@ -44,7 +44,7 @@ function pageSpeaksAsPerson(html) {
   const parts = [text((/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(h) || [])[1]), text((/content=["']([^"']*)["']/i.exec(meta) || [])[1]), ...[...h.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map(m => text(m[1]))];
   return parts.some(t => t && personalVoice(t));
 }
-function pageSource(html, { url } = {}) {
+function pageSource(html, { url, sectionsText = '', focus = '' } = {}) {
   const h = String(html || '');
   const meta = (/<meta\b[^>]*name=["']description["'][^>]*>/i.exec(h) || [''])[0];
   const own = text((/content=["']([^"']*)["']/i.exec(meta) || [])[1]).slice(0, 300), suggested = own ? '' : firstParagraphMeta(h);
@@ -52,13 +52,14 @@ function pageSource(html, { url } = {}) {
     meta_description: own || suggested, meta_description_source: own ? 'PAGE' : suggested ? 'FIRST_PARAGRAPH' : 'NONE',
     language: ((/<html\b[^>]*\blang=["']([a-z]{2})/i.exec(h) || [])[1] || '').toLowerCase() || null,
     headings: [...h.matchAll(/<h([1-3])\b[^>]*>([\s\S]*?)<\/h\1>/gi)].map(m => ({ level: Number(m[1]), text: text(m[2]).slice(0, 200) })).filter(x => x.text).slice(0, 40),
-    internal_links: internalLinks(h, url), speaks_as_person: pageSpeaksAsPerson(h) };
+    internal_links: [...internalLinks(h, url), ...internalLinks(h, url, { menus: true }).filter(l => !SKIP.test(l.url.replace(/[-_/.]+/g, ' ') + ' ' + l.label))].filter((l, i, a) => a.findIndex(x => x.url === l.url) === i).slice(0, 30),
+    suggested_link: suggestLink(h, url, { sectionsText, focus }), speaks_as_person: pageSpeaksAsPerson(h) };
 }
 // Pages of the same website that this page already links to, with the page's own link words: choices for the internal
 // link of the package (Free Growth knows no other pages of the site). Navigation and footer links are skipped.
-function internalLinks(h, url) {
+function internalLinks(h, url, { menus = false } = {}) {
   let own; try { own = new URL(url); } catch (e) { return []; }
-  const host = x => x.hostname.replace(/^www\./, ''), body = String(h).replace(/<(nav|header|footer|script|style)\b[\s\S]*?<\/\1>/gi, ' ');
+  const host = x => x.hostname.replace(/^www\./, ''), body = String(h).replace(menus ? /<(script|style)\b[\s\S]*?<\/\1>/gi : /<(nav|header|footer|script|style)\b[\s\S]*?<\/\1>/gi, ' ');
   const seen = new Set(), out = [];
   for (const m of body.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
     let u; try { u = new URL(m[1], own); } catch (e) { continue; }
@@ -69,6 +70,31 @@ function internalLinks(h, url) {
     if (out.length >= 30) break;
   }
   return out;
+}
+
+// The internal link chosen automatically (owner 2026-11-09: "if you know a service page fits, link it automatically"):
+// among the pages of this site that the page links to (its text first, then its menus), the one whose link words and
+// address share the most words with the written sections and the search term. A page that offers something (service,
+// pricing, contact, a way to work together) counts a little more: it is where a reader who wants help goes next. The
+// visitor sees the choice in the link fields and can change or empty it. No page of the site is invented.
+const OFFER = /\b(services?|diensten|dienst|aanbod|pricing|prices|prijzen|tarieven|packages?|pakketten|contact|hire|work-with|samenwerken|offerte|quote|book|boeken|consult|plans?)\b/i;
+const SKIP = /\b(privacy|cookie|terms|voorwaarden|disclaimer|login|log-in|signin|sign-in|register|cart|account|sitemap|feed|wp-admin|tag|category)\b/i;
+function suggestLink(html, url, { sectionsText = '', focus = '' } = {}) {
+  const pool = [...internalLinks(html, url), ...internalLinks(html, url, { menus: true })].filter((l, i, a) => a.findIndex(x => x.url === l.url) === i)
+    .filter(l => !SKIP.test(l.url.replace(/[-_/.]+/g, ' ') + ' ' + l.label));
+  if (!pool.length) return null;
+  const STOP = new Set('the and for with your you are this that what how why can will about more our not all any use de het een en van voor met op in bij hoe wat je jouw uw is zijn dat die dit niet ook'.split(' '));
+  const words = t => new Set((String(t).toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').match(/[\p{L}\p{N}]{3,}/gu) || []).filter(w => !STOP.has(w)).map(w => w.slice(0, 5)));
+  const want = words(sectionsText + ' ' + focus + ' ' + focus);
+  let best = null, score = 0;
+  pool.forEach((l, i) => {
+    let path = ''; try { path = new URL(l.url).pathname.replace(/[-_/.]+/g, ' '); } catch (e) {}
+    const lw = words(l.label + ' ' + path); let n = 0; for (const w of lw) if (want.has(w)) n += 2;
+    if (OFFER.test(path + ' ' + l.label)) n += 3;
+    if (n > score || (n === score && best && i < best.i && n > 0)) { score = n; best = { ...l, i }; }
+  });
+  if (!best || score < 3) return null;
+  return { url: best.url, label: best.label, reason: OFFER.test(best.url + ' ' + best.label) ? 'OFFER_PAGE' : 'TOPIC_MATCH' };
 }
 
 // A block of text: a short first line without end punctuation, directly above more text, is a subheading (h3), not the
@@ -192,4 +218,4 @@ async function suggestServiceMeta({ title = '', meta = '', language = 'en', url 
   return ok ? { status: 'SUGGESTED', voice, title: t, meta_description: d } : { status: 'REJECTED', voice };
 }
 
-module.exports = { pageSpeaksAsPerson, suggestServiceMeta, voiceOf, pageSource, buildFreePackage, placeLink, PLAIN, CMS };
+module.exports = { suggestLink, pageSpeaksAsPerson, suggestServiceMeta, voiceOf, pageSource, buildFreePackage, placeLink, PLAIN, CMS };

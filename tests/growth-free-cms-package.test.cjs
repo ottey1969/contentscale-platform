@@ -98,9 +98,9 @@ test('"This page presents me as a person": I/my is allowed in title, description
   assert.match(personal.files.find(f => f.name === '04-seo-metadata.json').content, /Ik help bedrijven/);
 });
 
-test('internal link choices: pages of this site the page already links to, with its own link words (no nav, no other sites, no duplicates)', () => {
+test('internal link choices: pages of this site the page links to, text links first, then menu pages (no legal pages, no other sites, no duplicates)', () => {
   const r = pageSource('<html><body><nav><a href="/menu/">Menu item</a></nav><h1>TEST</h1><p>Read <a href="/content-scaling/">our content scaling guide</a>, <a href="https://other.example/x/">another site</a>, <a href="/content-scaling/#top">again</a> and <a href="/files/a.pdf">a PDF</a>.</p><footer><a href="/privacy/">Privacy</a></footer></body></html>', { url: 'https://contentscale.site/' });
-  assert.deepEqual(r.internal_links, [{ url: 'https://contentscale.site/content-scaling/', label: 'our content scaling guide' }]);
+  assert.deepEqual(r.internal_links, [{ url: 'https://contentscale.site/content-scaling/', label: 'our content scaling guide' }, { url: 'https://contentscale.site/menu/', label: 'Menu item' }]);
 });
 
 test('a stored flag is checked again with the current rules: a corrected rule no longer blocks; a real claim still does', () => {
