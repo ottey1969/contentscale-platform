@@ -122,3 +122,27 @@ test('a page that already speaks as a person keeps that voice without a tick; un
   const unticked = buildFreePackage({ ...base, input: input({ meta_description: meta, personal_voice: false }) });
   assert.ok(unticked.issues.includes('META_PERSONAL_OR_FOUNDER_VOICE'), 'explicitly unticked: the service rule applies');
 });
+
+test('final-text check: a heading is not glued to the first sentence, and a question heading is not a claim (owner report 2026-11-09)', () => {
+  const { prepareGrowthCmsHandoff } = require('../src/growth-cms-handoff.cjs');
+  const r = prepareGrowthCmsHandoff({ canonicalUrl: URL_, originalHtml: html, sourceExpectedSha256: src.source_sha256, editorApproved: true, cms: 'generic',
+    pageTitle: 'Roof Repair in Lodi, NJ | Acme Roofing', metaDescription: 'Roof repair in Lodi, NJ: leaks, tiles and flashing, with a written estimate before work starts.',
+    changes: [{ approved: true, evidence_ref: 'free_growth_concept:a', html: '<section><h2>What is the Difference Between Ranking and Being Cited in AI Search?</h2><p>Ranking means a position in the list of results, while a citation means a source link inside an answer.</p></section>' },
+      { approved: true, evidence_ref: 'free_growth_concept:b', html: '<section><h2>Why the Same Keyword Shows Different AI Answers</h2><p>Marketers often observe that the same keyword gives different answers across sessions</p></section>' }],
+    focusQuery: 'roof repair lodi nj', evidenceScope: 'observed', language: 'en', reviewNotes: { flagged: [{ sentence: 'TEST sentence that was removed.', reason: 'TEST' }] } });
+  assert.equal(r.status, 'HANDOFF_READY_FOR_EDITOR', JSON.stringify(r.blocked_details));
+});
+
+test('a question heading is no claim, and a subheading line above a paragraph becomes an h3 (not one glued sentence)', () => {
+  const { buildFreePackage } = require('../src/growth-free/cms-package.cjs');
+  const orig = '<html><head><title>ContentScale</title></head><body><h1>ContentScale</h1><p>ContentScale scores content quality for search.</p></body></html>';
+  const sha = require('node:crypto').createHash('sha256').update(orig).digest('hex');
+  const q = 'What is the Difference Between Ranking and Being Cited in AI Search?';
+  const text = q + '\n\nRanking means a page appears in the results list for a search.\n\nWhy the Same Keyword Shows Different AI Answers\nMarketers often observe that using the exact same keyword shows different AI answers across various search platforms and testing sessions.';
+  const r = buildFreePackage({ url: 'https://contentscale.site/', originalHtml: orig, sourceSha256: sha,
+    written: { sections: [{ item_id: 'a', h2: 'Ranking vs citation', flags: [{ sentence: q, code: 'UNPROVEN_AI_CITATION_CLAIM', reason: 'x' }] }] },
+    input: { cms: 'generic', seo_title: 'ContentScale', meta_description: 'ContentScale scores content quality for search engines and AI answers.', editor_approved: true,
+      sections: [{ item_id: 'a', h2: 'Ranking vs citation', text }] } });
+  assert.equal(r.ready, true, JSON.stringify(r.blocked_details || r.issues));
+  assert.match(JSON.stringify(r.files), /<h3>Why the Same Keyword Shows Different AI Answers<\/h3>/);
+});

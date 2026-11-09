@@ -110,7 +110,11 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  if(flaggedNotes.length&&approved.length){
   const finalText=norm(approved.map(x=>String(x.html||'')).join(' '));
   for(const f of flaggedNotes)if(f.sentence&&finalText.includes(norm(f.sentence)))blockedDetails.push({code:'FLAGGED_SENTENCE_STILL_IN_TEXT',sentence:clean(f.sentence).slice(0,300),reason:clean(f.reason).slice(0,200)});
-  const recheck=assessDraftClaims({text:approved.map(x=>asText(x.html)).join(' '),destinationText:asText(String(originalHtml||''))});
+  // The claim recheck reads the body text only: a heading is not a sentence (a question heading is no claim, and gluing
+  // it to the first paragraph made "Why … AI Answers Marketers often observe…" one false sentence). Every block ends as
+  // a sentence, so text of two blocks never runs together. Headings have their own check (headingMismatch) below.
+  const bodyText=h=>asText(String(h||'').replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>/gi,' ').replace(/([^.!?\s>])\s*<\/(p|li|blockquote|td)>/gi,'$1. </$2>'));
+  const recheck=assessDraftClaims({text:approved.map(x=>bodyText(x.html)).join(' '),destinationText:asText(String(originalHtml||''))});
   for(const v of recheck.violations)if(!(personalVoiceAllowed&&isVoice(v))&&!blockedDetails.some(b=>b.sentence&&norm(b.sentence)===norm(v.sentence)))
    blockedDetails.push({code:'UNRESOLVED_'+v.code,sentence:clean(v.sentence).slice(0,300),reason:clean(v.reason).slice(0,200)});
   for(const x of approved){const h=(String(x.html||'').match(/<h([23])\b[^>]*>([\s\S]*?)<\/h\1>/i)||[])[2];
