@@ -95,7 +95,8 @@ function evidenceDossier({items=[],research=null,sourceFingerprint=null,writerSt
 // identity checks), the standalone passes the generator with the public page it already read.
 // A page with live parts (counters, latest items, dates) changes its text fingerprint on every load. For writing what
 // matters is the structure the sections are placed in: the H1/H2 headings as researched. Missing ones are named.
-const normHeading=x=>String(x||'').replace(/<[^>]+>/g,' ').toLowerCase().replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim();
+// Compared on letters and digits only: "&" vs "&amp;", punctuation, <br>/<span> markup and spacing never make a heading "gone".
+const normHeading=x=>String(x||'').replace(/<[^>]+>/g,' ').replace(/&(?:#\d+|#x[0-9a-f]+|[a-z]+);/gi,' ').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 function headingsStillPresent(researched,html){
  if(!researched||!(Array.isArray(researched.h1)||Array.isArray(researched.h2)))return {known:false,ok:false,missing:[]};
  const body=String(html||'').replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1\s*>/gi,' ');

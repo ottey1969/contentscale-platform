@@ -148,3 +148,11 @@ test('1c. AI wrote no text: the reason is Google’s own (status and message), i
  const h=harness({fail:true});const r=await h.post([items[0].id]);
  assert.match(r.body.reason,/^AI wrote no text: the AI writer is not available \(writer down\)\./);
 });
+
+test('2c. a heading with "&" (stored as &, served as &amp;, split by <br>/<span>) is the same heading (owner report 2026-11-09)',()=>{
+ const {headingsStillPresent}=require('../src/growth-selected-writing.cjs');
+ const researched={h1:['Beyond Content at Scale Track Your AI Citations & Rankings in 2026'],h2:['What is content at scale?']};
+ const live='<h1 class="hero">Beyond Content at Scale<br><span>Track Your AI Citations &amp; Rankings in 2026</span></h1><h2>What is content at scale?</h2><p>TEST 1,234 checked today</p>';
+ assert.deepEqual(headingsStillPresent(researched,live),{known:true,ok:true,missing:[]});
+ assert.equal(headingsStillPresent(researched,'<h1>Another title</h1><h2>What is content at scale?</h2>').ok,false,'a really different heading is still caught');
+});
