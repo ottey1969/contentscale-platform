@@ -150,10 +150,20 @@
   return score>=0.6?{text:best,share:score}:null;
  }
  function inDraft(sentence){var t=String(sentence).replace(/\s+/g,' ').trim().toLowerCase();return draftSentences().some(function(x){return x.toLowerCase()===t})}
+ // One button per flagged sentence, also when it was flagged for several reasons; plus one "Remove all" for the page.
+ function flaggedRemoveAll(anchor){
+  var old=document.getElementById('growthFlaggedRemoveAll');if(old){old.disabled=false;old.textContent='Remove all flagged sentences from draft';return}
+  var all=document.createElement('button');all.type='button';all.id='growthFlaggedRemoveAll';all.textContent='Remove all flagged sentences from draft';
+  all.onclick=function(){var n=0;document.querySelectorAll('.growth-flagged-remove > button:first-child').forEach(function(b){if(!b.disabled&&/Remove this flagged sentence/.test(b.textContent)){b.click();n++}});
+   all.textContent=n?'Removed '+n+' flagged sentence(s)':'Nothing left to remove';all.disabled=true};
+  anchor.parentNode.insertBefore(all,anchor);
+ }
  function flaggedReviewAction(box,flag){
   var sentence=String(flag&&flag.sentence||'').trim();
   if(!sentence)return;
-  var row=document.createElement('div');row.className='growth-flagged-remove';
+  // Already a button for this sentence in this box (it was flagged for another reason too): one is enough.
+  if(box&&Array.prototype.some.call(box.querySelectorAll('.growth-flagged-remove'),function(x){return x.getAttribute('data-sentence')===sentence}))return;
+  var row=document.createElement('div');row.className='growth-flagged-remove';row.setAttribute('data-sentence',sentence);
   var action=document.createElement('button');action.type='button';
   action.textContent='Remove this flagged sentence from draft';row.appendChild(action);
   var result=document.createElement('small');result.setAttribute('role','status');row.appendChild(result);
@@ -181,6 +191,8 @@
   });
   flagRows.push({refresh:refresh});
   box.appendChild(row);
+  // The first flagged sentence brings the page-wide "Remove all" button with it (placed above that box).
+  if(box.parentNode)flaggedRemoveAll(box);
   setTimeout(refresh,0);
  }
  // One tickable line per sentence to check, in the proposal box (the download waits until each is ticked).
