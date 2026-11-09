@@ -39,7 +39,24 @@ function pageSource(html, { url } = {}) {
   return { url, source_sha256: sha(h), title: text((/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(h) || [])[1]).slice(0, 200),
     meta_description: own || suggested, meta_description_source: own ? 'PAGE' : suggested ? 'FIRST_PARAGRAPH' : 'NONE',
     language: ((/<html\b[^>]*\blang=["']([a-z]{2})/i.exec(h) || [])[1] || '').toLowerCase() || null,
-    headings: [...h.matchAll(/<h([1-3])\b[^>]*>([\s\S]*?)<\/h\1>/gi)].map(m => ({ level: Number(m[1]), text: text(m[2]).slice(0, 200) })).filter(x => x.text).slice(0, 40) };
+    headings: [...h.matchAll(/<h([1-3])\b[^>]*>([\s\S]*?)<\/h\1>/gi)].map(m => ({ level: Number(m[1]), text: text(m[2]).slice(0, 200) })).filter(x => x.text).slice(0, 40),
+    internal_links: internalLinks(h, url) };
+}
+// Pages of the same website that this page already links to, with the page's own link words: choices for the internal
+// link of the package (Free Growth knows no other pages of the site). Navigation and footer links are skipped.
+function internalLinks(h, url) {
+  let own; try { own = new URL(url); } catch (e) { return []; }
+  const host = x => x.hostname.replace(/^www\./, ''), body = String(h).replace(/<(nav|header|footer|script|style)\b[\s\S]*?<\/\1>/gi, ' ');
+  const seen = new Set(), out = [];
+  for (const m of body.matchAll(/<a\b[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi)) {
+    let u; try { u = new URL(m[1], own); } catch (e) { continue; }
+    const label = text(m[2]).slice(0, 120);
+    if (u.protocol !== 'https:' || host(u) !== host(own) || u.pathname === own.pathname || label.length < 3) continue;
+    u.hash = ''; if (/\.(pdf|jpe?g|png|gif|webp|svg|zip)$/i.test(u.pathname)) continue;
+    if (seen.has(u.href)) continue; seen.add(u.href); out.push({ url: u.href, label });
+    if (out.length >= 30) break;
+  }
+  return out;
 }
 
 const sectionHtml = (h2, body) => '<section><h2>' + esc(h2) + '</h2>' + String(body).split(/\n\s*\n/).map(t => t.trim()).filter(Boolean).map(t => '<p>' + esc(t).replace(/\n/g, ' ') + '</p>').join('\n') + '</section>';
