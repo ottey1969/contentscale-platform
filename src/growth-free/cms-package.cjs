@@ -6,7 +6,14 @@
 // contains the search term. Nothing is published; the ZIP is for a human editor.
 const crypto = require('node:crypto');
 const { prepareGrowthCmsHandoff, packageGrowthZip } = require('../growth-cms-handoff.cjs');
-const { personalVoice } = require('../growth-draft-claim-guard.cjs');
+const { personalVoice, assessDraftClaims } = require('../growth-draft-claim-guard.cjs');
+// A flag stored with a concept is checked again with the current rules when the package is made: when the rule that
+// flagged the sentence no longer flags it (a rule was corrected), the stored flag does not block the package. Flags of
+// other kinds (the writer's own, without a rule code) always count.
+function stillFlagged(f, originalHtml) {
+  if (!f || !f.sentence || !f.code || !/^(UNSUPPORTED_|UNPROVEN_|ABSOLUTE_CLAIM|PERSONAL_OR_FOUNDER_VOICE|SAFETY_)/.test(String(f.code))) return true;
+  try { return assessDraftClaims({ text: f.sentence, destinationText: text(originalHtml) }).violations.some(v => v.code === f.code); } catch (e) { return true; }
+}
 
 const sha = x => crypto.createHash('sha256').update(String(x)).digest('hex');
 const esc = x => String(x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -82,11 +89,11 @@ function placeLink(sections, link, pageUrl) {
 }
 
 // The same review notes as the Tracker: the flagged sentences (proved resolved by the builder) and what each section rests on.
-function reviewNotesOf(given, stored, personal = false) {
+function reviewNotesOf(given, stored, personal = false, originalHtml = '') {
   const flagged = [], basis = [];
   for (const s of given) {
     const orig = stored.get(s.item_id); if (!orig) continue;
-    for (const f of orig.flags || []) if (f && !(personal && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || ''))))) flagged.push({ sentence: f.sentence || null, h2: orig.h2 || s.h2, reason: f.reason || '' });
+    for (const f of orig.flags || []) if (f && !(personal && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')))) && stillFlagged(f, originalHtml)) flagged.push({ sentence: f.sentence || null, h2: orig.h2 || s.h2, reason: f.reason || '' });
     const b = orig.basis;
     if (b) basis.push({ h2: s.h2, answers: b.answers || '', sources: (b.competitor_evidence || []).map(e => [e.site, e.heading].filter(Boolean).join(': ')), warning: b.warning || '' });
   }
@@ -128,8 +135,11 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   // A flagged sentence of the written concept may not stay in the text (rewrite or remove it).
   for (const s of given) {
     const orig = stored.get(s.item_id);
-    for (const f of (orig && orig.flags) || []) if (f && f.sentence && !(personal && isVoice(f)) && s.text.includes(f.sentence)) flagged.push({ section: s.h2, sentence: f.sentence, reason: f.reason || '' });
+    for (const f of (orig && orig.flags) || []) if (f && f.sentence && !(personal && isVoice(f)) && s.text.includes(f.sentence) && stillFlagged(f, originalHtml)) flagged.push({ section: s.h2, sentence: f.sentence, reason: f.reason || '' });
   }
+  // One entry per sentence (a sentence can be flagged for several reasons; the reasons are joined).
+  const bySentence = new Map(); for (const f of flagged) { const k = f.section + '|' + f.sentence, e = bySentence.get(k); if (e) { if (f.reason && !e.reason.includes(f.reason)) e.reason += ' · ' + f.reason; } else bySentence.set(k, { ...f }); }
+  flagged.splice(0, flagged.length, ...bySentence.values());
   if (flagged.length) issues.push('FLAGGED_TEXT_STILL_PRESENT');
   let sections = given.map(s => {
     const orig = stored.get(s.item_id), p = orig && orig.placement;
@@ -140,7 +150,7 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   const cms = CMS.includes(input.cms) ? input.cms : 'generic';
   const result = prepareGrowthCmsHandoff({ canonicalUrl: url, originalHtml, sourceExpectedSha256: sourceSha256, caseStudyLocked: false,
     editorApproved: input.editor_approved === true, cms, pageTitle: String(input.seo_title || '').trim(), metaDescription: String(input.meta_description || '').trim(),
-    changes: sections, focusQuery, evidenceScope: gscVerifiedTerm ? 'verified' : 'observed', language: language || 'en', reviewNotes: reviewNotesOf(given, stored, personal), personalVoiceAllowed: personal });
+    changes: sections, focusQuery, evidenceScope: gscVerifiedTerm ? 'verified' : 'observed', language: language || 'en', reviewNotes: reviewNotesOf(given, stored, personal, originalHtml), personalVoiceAllowed: personal });
   const all = [...new Set([...issues, ...(result.issues || [])])];
   if (all.length || result.status !== 'HANDOFF_READY_FOR_EDITOR')
     return { ready: false, issues: all, flagged, blocked_details: result.blocked_details || null, messages: [...new Set(all.map(c => PLAIN[c] || ('Not ready: ' + c.toLowerCase().replace(/_/g, ' ') + '.')))] };

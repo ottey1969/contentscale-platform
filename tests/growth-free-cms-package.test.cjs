@@ -101,3 +101,13 @@ test('internal link choices: pages of this site the page already links to, with 
   const r = pageSource('<html><body><nav><a href="/menu/">Menu item</a></nav><h1>TEST</h1><p>Read <a href="/content-scaling/">our content scaling guide</a>, <a href="https://other.example/x/">another site</a>, <a href="/content-scaling/#top">again</a> and <a href="/files/a.pdf">a PDF</a>.</p><footer><a href="/privacy/">Privacy</a></footer></body></html>', { url: 'https://contentscale.site/' });
   assert.deepEqual(r.internal_links, [{ url: 'https://contentscale.site/content-scaling/', label: 'our content scaling guide' }]);
 });
+
+test('a stored flag is checked again with the current rules: a corrected rule no longer blocks; a real claim still does', () => {
+  const gen = 'In this model, text passages and search queries are represented as mathematical vectors, allowing systems to identify conceptual relationships between different phrases.';
+  const claim = 'Our platform tracks every roof repair citation in ChatGPT every day.';
+  const w = { sections: [{ item_id: 'g1', h2: 'How a repair estimate is built', paragraphs: [text], flags: [{ sentence: gen, code: 'UNSUPPORTED_CAPABILITY_CLAIM', reason: 'TEST old rule' }, { sentence: claim, code: 'UNSUPPORTED_CAPABILITY_CLAIM', reason: 'TEST product claim' }] }] };
+  const run = extra => buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: w, input: input({ sections: [{ item_id: 'g1', h2: 'How to read a repair estimate', text: text + ' ' + extra }] }) });
+  assert.equal(run(gen).ready, true, 'the general explanation no longer blocks');
+  const blocked = run(claim);
+  assert.equal(blocked.ready, false); assert.deepEqual(blocked.flagged.map(f => f.sentence), [claim]);
+});
