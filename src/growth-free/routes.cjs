@@ -494,7 +494,7 @@ function wireGaps(g,s,d){var box=document.getElementById('gapDownload');if(!box)
    wb.disabled=allDone||!latest.remaining;wb.dataset.exhausted=allDone||!latest.remaining?'yes':'';
    if(allDone)showStep('stepPrepare','pkg');
    wb.classList.add('action-green');openJourney('stepPrepare');
-  }catch(err){st.textContent='Automatic preparation stopped after '+completed+' draft(s): '+err.message+'. Saved drafts remain available below.';wb.disabled=false;wb.classList.add('action-red')}
+  }catch(err){st.textContent='Automatic preparation stopped after '+completed+' draft(s): '+String(err.message).replace(/[.]+$/,'')+'. Saved drafts remain available below.';wb.disabled=false;wb.classList.add('action-red')}
   finally{wb.classList.remove('is-working');wb.removeAttribute('aria-busy')}
  };
  var count=function(){var n=document.querySelectorAll('.gapPick:checked').length;document.getElementById('gapCount').textContent=n+' selected';nextWrite(g,d&&d.writing,n,d);pkgCount(n);if(wb&&!wb.dataset.exhausted){wb.disabled=n===0}if(count.initialized)queueSelectionSave();var step=document.getElementById('freeStepSelect');if(step&&!step.classList.contains('blocked')){step.className='step-chip '+(n?'done':'current');step.querySelector('.symbol').textContent=n?'✓':'→'}var writeStep=document.getElementById('freeStepWrite');if(writeStep&&!writeStep.classList.contains('done')&&!writeStep.classList.contains('blocked')){writeStep.className='step-chip '+(n&&wb?'current':'');writeStep.querySelector('.symbol').textContent=n&&wb?'→':'○'}};
@@ -1102,7 +1102,17 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
    const html=String(live&&live.html||'');
    const researched=row.summary&&row.summary.gaps&&row.summary.gaps.source_fingerprint;
-   if(researched&&pageFingerprint(html)!==researched)return res.status(409).json({success:false,error:'Your page changed since this check. Run a new check so the advice matches the page.'});
+   // The text fingerprint changes on pages with live parts (counters, latest items, dates), so on a homepage it said "changed"
+   // every time. For writing what matters is the structure the sections are placed in: the H1 and H2 headings researched.
+   // Same headings: writing goes on (the concepts are checked against the live page anyway). Changed headings: say which.
+   if(researched&&pageFingerprint(html)!==researched){
+    const was=row.report&&row.report.page_content&&row.report.page_content.headings;
+    const norm=x=>String(x||'').toLowerCase().replace(/&[a-z#0-9]+;/gi,' ').replace(/\s+/g,' ').trim();
+    const live={h1:[...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map(m=>norm(m[1].replace(/<[^>]+>/g,' '))).filter(Boolean),
+     h2:[...html.replace(/<(script|style|noscript|template)\b[\s\S]*?<\/\1>/gi,' ').matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>/gi)].map(m=>norm(m[1].replace(/<[^>]+>/g,' '))).filter(Boolean)};
+    const missing=was?[...(was.h1||[]),...(was.h2||[])].map(norm).filter(h=>h&&!live.h1.includes(h)&&!live.h2.includes(h)):null;
+    if(!was||missing.length)return res.status(409).json({success:false,code:'PAGE_HEADINGS_CHANGED',error:missing&&missing.length?'Your page’s headings changed since this check (no longer found: “'+missing.slice(0,3).join('”, “')+'”'+(missing.length>3?' and '+(missing.length-3)+' more':'')+'). Run a new check so the advice matches the page':'Your page changed since this check. Run a new check so the advice matches the page'});
+   }
    // One run at a time per check: a parallel or repeated click gets "in progress", never a second AI call.
    if(typeof storage.claimWriting==='function'){token=await storage.claimWriting(pool,{checkId:row.id});
     if(!token)return res.status(409).json({success:false,error:'Concepts for this check are being written right now. Wait a moment and reload.'})}

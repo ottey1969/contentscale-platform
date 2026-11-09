@@ -630,9 +630,10 @@ test('writing for a selection is optional: only where allowed, only the selected
  const after=await all.get('/api/free-growth/checks/'+B.id+'?k='+B.k);
  assert.equal(after.body.writing.last.sections.length,1,'the last concepts stay on the result page');
  // The visitor's page changed after the check: refused before any AI call, with the advice to run a new check.
- const original=pages[URL_];pages[URL_]=original.replace('</body>','<p>A paragraph the owner added after the check ran, long enough to count as text.</p></body>');
+ // A researched heading renamed after the check: refused (a changed paragraph alone is not: see the test on live text).
+ const original=pages[URL_];pages[URL_]=original.replace(/<h2>[^<]*<\/h2>/,'<h2>A heading the owner renamed after the check ran</h2>');
  const stale=await all.post(p2,{item_ids:pick});pages[URL_]=original;
- assert.equal(stale.status,409);assert.match(stale.body.error,/changed since this check/);assert.equal(calls.length,1);
+ assert.equal(stale.status,409);assert.match(stale.body.error,/headings changed since this check/);assert.equal(calls.length,1);
  // A run in progress (another click): the second request is told so, with no AI call; afterwards it works again.
  const rowB=await all.storage.getCheck(null,B.id,B.k);const held=await all.storage.claimWriting(null,{checkId:rowB.id});assert(held);
  const busy=await all.post(p2,{item_ids:pick,rewrite:true});
@@ -880,4 +881,21 @@ test('why the AI writer gave no text: Google’s status and message in plain wor
    const w=await s.post('/api/free-growth/checks/'+a.body.id+'/write?k='+a.body.key,{item_ids:ids,ai_check_choice:'WITHOUT_AI'});
    assert.equal(w.status,502);assert.match(w.body.error,re);assert.doesNotMatch(w.body.error,/AIzaTESTKEY/);}
   finally{s.srv.close()}}
+});
+
+test('writing after the page changed: live text (counters, dates) is fine when the headings are the same; changed headings are named',async t=>{
+ const writes=[];
+ const s=await server({config:{writing:'all'},engineDeps:{generateDraft:async a=>{writes.push(a);return {status:'AI_DRAFT_REVIEW_REQUIRED',draft:{sections:(a.readerTask?.tasks||[]).map(x=>({task_code:x.code,h2:'How to read a repair estimate',paragraphs:['Ask for a written estimate that lists materials, labour and access separately before you approve any work on the roof.']}))}}}}});t.after(()=>s.srv.close());
+ const a=await s.post('/api/free-growth/checks',ok);await s.service.idle();
+ const r=await s.get('/api/free-growth/checks/'+a.body.id+'?k='+a.body.key);const ids=r.body.summary.gaps.items.filter(x=>x.writable).slice(0,1).map(x=>x.id);
+ const original=pages[URL_];t.after(()=>{pages[URL_]=original});
+ const path='/api/free-growth/checks/'+a.body.id+'/write?k='+a.body.key;
+ // Only a paragraph changed (like a live counter on a homepage): same headings, writing goes on.
+ pages[URL_]=original.replace('</body>','<p>TEST: 1,234 pages checked today.</p></body>');
+ const ok1=await s.post(path,{item_ids:ids,ai_check_choice:'WITHOUT_AI'});
+ assert.equal(ok1.status,200,JSON.stringify(ok1.body));assert.equal(writes.length,1);
+ // A researched heading is gone: refused, and the heading is named.
+ pages[URL_]=original.replace(/<h2>[^<]*<\/h2>/,'<h2>TEST renamed heading</h2>');
+ const bad=await s.post(path,{item_ids:ids,ai_check_choice:'WITHOUT_AI',rewrite:true});
+ assert.equal(bad.status,409);assert.equal(bad.body.code,'PAGE_HEADINGS_CHANGED');assert.match(bad.body.error,/headings changed since this check \(no longer found: “/);
 });
