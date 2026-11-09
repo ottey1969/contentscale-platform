@@ -60,3 +60,11 @@ test('a credential or figure is allowed exactly when the destination page itself
 test('procedural advice that mentions third-party tools or credentials generically is not a claim',()=>{
  assert.equal(assessDraftClaims({text:'Open Google Search Console and check which queries already bring visitors to the page. Ask any contractor whether they are licensed and insured.',destinationText:'The page lists repair services.',query:'roof repair'}).ok,true);
 });
+
+test('a purpose clause about systems in general ("allowing systems to identify…") is not a product capability claim (owner report 2026-11-09)',()=>{
+ const {assessDraftClaims}=require('../src/growth-draft-claim-guard.cjs');
+ const codes=t=>assessDraftClaims({text:t,destinationText:'TEST page about content at scale.'}).violations.map(v=>v.code);
+ assert.deepEqual(codes('In this model, text passages and search queries are represented as mathematical vectors, allowing systems to identify conceptual relationships between different phrases.'),[]);
+ assert.ok(codes('Our tracking tools identify every AI citation of your brand within minutes.').includes('UNSUPPORTED_CAPABILITY_CLAIM'),'a claim about a product is still flagged');
+ assert.ok(codes('The platform tracks citations in ChatGPT and Perplexity every day.').includes('UNSUPPORTED_CAPABILITY_CLAIM'));
+});

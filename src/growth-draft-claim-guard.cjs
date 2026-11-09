@@ -51,6 +51,9 @@ function capabilityClaim(sentence){
  if(IMPERATIVE_VERB.test(withoutLead(sentence))&&!FIRST_PERSON.test(sentence))return null;
  const m=sentence.match(CAP_S)||sentence.match(CAP_AMB);if(m)return m[0];
  const p=sentence.match(CAP_PLURAL);
+ // "allowing systems to identify…", "helps platforms to rank…": a purpose (infinitive), how such systems work in general,
+ // not a statement about what a particular product does (owner report 2026-11-09, generic vector-search explanation).
+ if(p&&/\bto\s+\w+$/i.test(p[0]))return null;
  if(p&&!CAP_ADVICE_LEAD.test(sentence)&&!/\bto\s+(?:\w+\s+){0,1}$/i.test(sentence.slice(0,sentence.indexOf(p[0]))))return p[0];
  return null;
 }

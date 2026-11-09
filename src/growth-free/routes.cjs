@@ -358,7 +358,8 @@ function freeAiGate(d){var a=d&&d.ai;if(!a||(a.summary&&a.summary.checked>0))ret
   document.body.appendChild(dlg);if(typeof dlg.showModal==='function')dlg.showModal();else dlg.setAttribute('open','');dlg.querySelector('button').focus()})}
 // Step 4: the same CMS package (ZIP) as the Tracker, from the concepts. The editor edits, approves and downloads; nothing is published.
 var PKG_SHA='';
-function pkgHtml(r){var list=(r&&r.sections)||[];if(!list.length)return '';
+var PKG_FLAGS={};
+function pkgHtml(r){var list=(r&&r.sections)||[];PKG_FLAGS={};list.forEach(function(x){var seen={};PKG_FLAGS[String(x.item_id)]=(x.flags||[]).filter(function(f){return f.sentence&&!seen[f.sentence]&&(seen[f.sentence]=1)}).map(function(f){return f.sentence})});if(!list.length)return '';
  var h='<h2 id="pkg">CMS package for your editor</h2><p class="lead">The same package as the Tracker: approved text, exact placement on your page, SEO title and description, and a measurement plan. Edit the text, remove what you do not want, approve and download. Nothing is published.</p>';
  h+='<p class="muted" id="pkgSource">Reading your page as it is live now…</p><div class="cms-button-row"><button type="button" id="pkgIncludeAll" class="cms-action-unavailable" disabled>Include all prepared H2s</button> <button type="button" id="pkgExcludeAll" class="cms-action-unavailable" disabled>Exclude all</button></div><small id="pkgBulkStatus" role="status" class="cms-status">Checking prepared content…</small>';
  list.forEach(function(x){var id=esc(x.item_id),fl=(x.flags||[]).filter(function(f){return f.sentence});
@@ -366,7 +367,7 @@ function pkgHtml(r){var list=(r&&r.sections)||[];if(!list.length)return '';
    '<label>Heading (H2)<input class="pkgH2" data-id="'+id+'" maxlength="200" value="'+esc(x.h2)+'"></label>'+
    '<details class="research-details pkg-edit"><summary>'+(x.empty?'No researched draft · Optional: add verified text yourself':'Review or edit prepared text')+'</summary><label>Section text (blank line separates paragraphs)<textarea class="pkgText" data-id="'+id+'" rows="7"'+(x.empty?' placeholder="Only enter facts you can verify; no draft was produced."':'')+'>'+esc((x.paragraphs||[]).join('\\n\\n'))+'</textarea></label></details>'+
    '<small class="muted">'+(x.placement&&x.placement.section_heading?'Placement: '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':'Placement: the editor chooses')+'</small>'+
-   (fl.length?'<p class="note"><strong>Rewrite or remove before downloading:</strong></p><ul>'+fl.map(function(f){return '<li><mark>'+esc(f.sentence)+'</mark> — '+esc(f.reason)+'</li>'}).join('')+'</ul>':'')+'</div>'});
+   (fl.length?'<div class="pkgFlags" data-id="'+id+'"><p class="note"><strong>Rewrite or remove before downloading:</strong> edit the sentence in the text above, or remove it with one click.</p><ul>'+(PKG_FLAGS[String(x.item_id)]||[]).map(function(sent,fi){var why=fl.filter(function(f){return f.sentence===sent}).map(function(f){return f.reason}).filter(function(v,k,a){return a.indexOf(v)===k});return '<li><mark>'+esc(sent)+'</mark> — '+esc(why.join(' · '))+' <button type="button" class="ghost pkgDropFlag" data-id="'+id+'" data-fi="'+fi+'">Remove this sentence</button></li>'}).join('')+'</ul></div>':'')+'</div>'});
  h+='<label class="check"><input type="checkbox" id="pkgPersonal"><span><strong>This page presents me as a person</strong> (a personal brand, for example you as a specialist): “I” and “my” are allowed in the title, description and text.</span></label>';
  h+='<label for="pkgTitle">SEO title</label><input id="pkgTitle" maxlength="100">';
  h+='<label for="pkgMeta">Meta description</label><textarea id="pkgMeta" rows="2" maxlength="220"></textarea>';
@@ -398,7 +399,23 @@ async function pkgReadSource(){var el=document.getElementById('pkgSource');if(!e
   var t=document.getElementById('pkgTitle'),m=document.getElementById('pkgMeta');if(t&&!t.value)t.value=x.source.title||'';if(m&&!m.value){m.value=x.source.meta_description||'';if(x.source.meta_description_source==='FIRST_PARAGRAPH'&&m.value){var mh=document.getElementById('pkgMetaHelp');if(!mh){mh=document.createElement('small');mh.id='pkgMetaHelp';mh.className='muted';m.insertAdjacentElement('afterend',mh)}mh.textContent='Your page has no meta description; this one is taken from its first paragraph. Check it.'}}
   el.textContent='Original page read now: “'+(x.source.title||x.source.url)+'”, '+x.source.headings.length+' heading(s). The package is refused if the page changes before the download.';pkgFixVoice(x.voice)}
  catch(err){el.innerHTML=esc(err.message)+' <button type="button" class="ghost" id="pkgReread">Read again</button>';var b=document.getElementById('pkgReread');if(b)b.onclick=pkgReadSource}}
+// Flagged sentences: one click removes the exact sentence from the section text (nothing else); "Remove all" does that for
+// every flagged sentence still in an included section. A section that is not included shows its warnings as not applicable.
+function pkgDropSentence(id,sentence){var t=document.querySelector('.pkgText[data-id="'+id+'"]');if(!t||!sentence)return false;var before=t.value;
+ t.value=before.split(sentence).join('').replace(/[ ]{2,}/g,' ').replace(/ +([.,;:])/g,'$1').replace(new RegExp(String.fromCharCode(10)+'{3,}','g'),String.fromCharCode(10,10)).trim();return t.value!==before}
+function pkgFlagState(){document.querySelectorAll('.pkgFlags').forEach(function(box){var id=box.getAttribute('data-id'),use=document.querySelector('.pkgUse[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');
+ var on=!use||use.checked;box.style.opacity=on?'':'0.5';var note=box.querySelector('.note strong');if(note)note.textContent=on?'Rewrite or remove before downloading:':'Not in the package (section not included):';
+ box.querySelectorAll('li').forEach(function(li,i){var s=(PKG_FLAGS[id]||[])[i],gone=t&&s&&t.value.indexOf(s)<0;li.style.textDecoration=gone?'line-through':'';var b=li.querySelector('button');if(b){b.disabled=!!gone;b.textContent=gone?'Removed':'Remove this sentence'}})});
+ var any=0;Object.keys(PKG_FLAGS).forEach(function(id){var use=document.querySelector('.pkgUse[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');if((!use||use.checked)&&t)PKG_FLAGS[id].forEach(function(s){if(t.value.indexOf(s)>=0)any++})});
+ var all=document.getElementById('pkgDropAll');if(all){all.style.display=any?'':'none';all.textContent='Remove all flagged sentences ('+any+')'}}
+function pkgWireFlags(){var first=document.querySelector('.pkgFlags');
+ if(first&&!document.getElementById('pkgDropAll')){var b=document.createElement('button');b.type='button';b.id='pkgDropAll';b.className='ghost';b.style.margin='8px 0';
+  var box=document.getElementById('pkgSource');if(box)box.insertAdjacentElement('afterend',b);
+  b.onclick=function(){Object.keys(PKG_FLAGS).forEach(function(id){var use=document.querySelector('.pkgUse[data-id="'+id+'"]');if(use&&!use.checked)return;PKG_FLAGS[id].forEach(function(s){pkgDropSentence(id,s)})});pkgFlagState()}}
+ document.querySelectorAll('.pkgDropFlag').forEach(function(b){b.onclick=function(){var id=b.getAttribute('data-id'),s=(PKG_FLAGS[id]||[])[Number(b.getAttribute('data-fi'))];pkgDropSentence(id,s);pkgFlagState()}});
+ document.querySelectorAll('.pkgUse,.pkgText').forEach(function(el){el.addEventListener(el.classList.contains('pkgText')?'input':'change',pkgFlagState)});pkgFlagState()}
 function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box.innerHTML=pkgHtml(r);var b=document.getElementById('pkgDownload');if(!b)return;pkgReadSource();
+ pkgWireFlags();
  var pc=document.getElementById('pkgPersonal');if(pc)pc.onchange=function(){if(pc.checked)clearVoice();else pkgFixVoice(null)};
  var bulk=document.getElementById('pkgIncludeAll'),exclude=document.getElementById('pkgExcludeAll'),bulkSt=document.getElementById('pkgBulkStatus');
  function cmsChoices(){return [...document.querySelectorAll('.pkgUse')]}
