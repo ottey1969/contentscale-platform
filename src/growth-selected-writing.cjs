@@ -97,8 +97,8 @@ async function writeForSelection({items,targetUrl,focusQuery,existingHeadings,ge
  const request=writingRequest(items||[],{targetUrl,focusQuery,existingHeadings,mode});
  if(!request.items.length)return {status:'NOTHING_TO_WRITE',sections:[],not_written:[],reason:'Select at least one topic or question (page elements are added by the editor, not written).'};
  let out;
- try{out=await generate(request.research_context)}catch(e){out={status:'WRITER_UNAVAILABLE'}}
- if(!out||!out.draft)return {status:'NOT_WRITTEN',writer_status:out?.status||'WRITER_UNAVAILABLE',sections:[],
+ try{out=await generate(request.research_context)}catch(e){out={status:'WRITER_UNAVAILABLE',provider_error:{kind:'ERROR',message:String(e&&(e.code||e.message)||'').slice(0,200)}}}
+ if(!out||!out.draft)return {status:'NOT_WRITTEN',writer_status:out?.status||'WRITER_UNAVAILABLE',provider_error:out?.provider_error||null,sections:[],
   not_written:request.items.map(x=>({item_id:x.id,title:x.title})),reason:'The writer returned no usable text ('+(out?.status||'unavailable')+'). Write these items yourself; the research and your selection are kept.',
   dossier:evidenceDossier({items:request.items,research,sourceFingerprint,writerStatus:out?.status||'WRITER_UNAVAILABLE'})};
  return {...reviewWritten(out,request,{sourceText:out.source_text||'',focusQuery}),writer_status:out.status,
