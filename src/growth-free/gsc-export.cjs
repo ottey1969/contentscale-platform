@@ -61,7 +61,8 @@ function classify(files) {
   const pick = re => names.find(n => re.test(n));
   by.queries = pick(/quer|zoekopdracht|suchanfrage|consulta|requête|requete|sorgu/i);
   by.pages = pick(/^pages?\.csv$|pagina|seiten|páginas|pagine/i);
-  by.dates = pick(/date|datum|fecha|tarih|data\b/i);
+  // The daily rows: "Dates.csv" in older exports, "Chart.csv" in current ones (live export 2026-11-10), localized too.
+  by.dates = pick(/date|datum|fecha|tarih|data\b/i) || pick(/chart|grafiek|diagram|grafik|gr[aá]fico|graphique/i);
   by.filters = pick(/filter|filtr/i);
   return Object.fromEntries(Object.entries(by).filter(([, v]) => v).map(([k, v]) => [k, files[v]]));
 }
