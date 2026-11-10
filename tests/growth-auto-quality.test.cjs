@@ -92,3 +92,20 @@ test('a section about another subject than the page is not placed in the first 3
   assert.ok(off.warnings.includes('SECTION_OFF_PAGE_TOPIC'));
   assert.match(off.files.find(f => f.name === '01-implementation.md').content, /different subject than the page's main topic[^)]*give it its own page/);
 });
+
+test('a Dutch page with an English search term: Dutch text is not rejected for missing English words, and mixed sentences are found', async () => {
+  const { normalizeDraft, textLanguage } = require('../src/growth-source-grounded-editor.cjs');
+  const nlSource = 'Ik help bedrijven met SEO-contentoptimalisatie. Ik onderzoek de zoekintentie en verbeter bestaande pagina’s op basis van gegevens uit Google Search Console. '.repeat(3);
+  assert.equal(textLanguage(nlSource), 'nl');
+  const dutch = JSON.stringify({ sections: [{ task_code: 'task_sel0', h2: 'Kan AI SEO volledig automatiseren?', paragraphs: ['Nee. AI-tools helpen bij onderzoek en een eerste tekstversie, maar de afweging welke pagina wat beantwoordt blijft mensenwerk.'] }] });
+  const r = normalizeDraft(dutch, nlSource, 'How does AI search affect SEO content optimization?', { requireTitle: false, taskTerms: ['whether', 'automate', 'replace', 'human'] });
+  assert.notEqual(r.status, 'AI_DRAFT_OFF_TOPIC_SECTION', 'translated Dutch text is not off topic');
+  const prompts = [];
+  const fetchImpl = async (url, opts) => { prompts.push(JSON.parse(opts.body).contents[0].parts[0].text); return { ok: true, json: async () => ({ candidates: [{ content: { parts: [{ text: dutch }] } }] }) }; };
+  await generateGrowthEditorDraft({ sourceHtml: '<h1>SEO-contentoptimalisatie</h1><p>' + nlSource + '</p>', pageUrl: 'https://nl.contentscale.site/seo-content-optimalisatie/', focusQuery: 'How does AI search affect SEO content optimization?', readerTask: task, fallbackFlagged: true },
+    { apiKey: 'k', model: 'gemini-test-model', fetchImpl });
+  assert.match(prompts[0], /never mix languages in one sentence/);
+  const mixed = styleIssues({ sections: [{ h2: 'Kan AI SEO automatiseren?', paragraphs: ['AI-tools ondersteunen bij gegevensverwerking, maar kunnen niet fully automate. Dit is een goede zin voor de lezer van je pagina.'] }] }, nlSource);
+  assert.deepEqual(mixed.map(x => x.problem), ['MIXED_LANGUAGE']);
+  assert.equal(styleIssues({ sections: [{ h2: 'x', paragraphs: ['Dit is een gewone Nederlandse zin over de pagina en je bezoekers.'] }] }, nlSource).length, 0);
+});

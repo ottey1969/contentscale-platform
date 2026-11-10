@@ -195,7 +195,7 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
  const arr=k=>reviewNotes&&Array.isArray(reviewNotes[k])?reviewNotes[k]:[];
  const pasted=arr('pasted_sources').filter(x=>x&&/^https?:\/\//.test(String(x.url||''))).slice(0,30).map(x=>'- [ ] '+clean(x.label||'source').slice(0,120)+' — '+String(x.url).slice(0,500)+(x.h2?' (in “'+clean(x.h2).slice(0,140)+'”)':''));
  const changedSections=arr('editor_changed_sections').map(h=>clean(h).slice(0,200)).filter(Boolean).slice(0,12);
- const toImprove=arr('still_to_improve').filter(x=>x&&x.sentence).slice(0,20).map(x=>'- “'+clean(x.sentence).slice(0,300)+'” ('+(x.problem==='OPENING_FILLER'?'weak opening: start with the answer':'advice for a team: write one step for the site owner')+', in “'+clean(x.h2).slice(0,140)+'”)');
+ const toImprove=arr('still_to_improve').filter(x=>x&&x.sentence).slice(0,20).map(x=>'- “'+clean(x.sentence).slice(0,300)+'” ('+(x.problem==='OPENING_FILLER'?'weak opening: start with the answer':x.problem==='MIXED_LANGUAGE'?'mixed language: write it entirely in the language of the page':'advice for a team: write one step for the site owner')+', in “'+clean(x.h2).slice(0,140)+'”)');
  const hasReview=pasted.length||changedSections.length||toImprove.length||editorText||review.fact_check.length+review.owner_confirmation.length+review.safety_review.length+review.flagged.length+review.basis.length>0;
  const delivery='CMS-independent handoff for existing page '+canonicalUrl+'\n'+
  'No autopublishing. Implement in your normal website editor using native, indexable text components.\n'+
