@@ -85,10 +85,19 @@ function compareUploads(uploads, publishedOn, term) {
     search_term_row: gscExport.termInExport({ queries: u.queries || [] }, term),
     matches_window: null };
   const before = view(pick('before')), after = view(pick('after'));
-  if (before) before.matches_window = before.period.start === w.before.start && before.period.end === w.before.end;
-  if (after) after.matches_window = after.period.start === w.after.start && after.period.end === w.after.end;
+  // Search Console's "Last 28 days" ends one to three days before the export, so an export of 28 days that ends at most
+  // two days before the window's end counts as these 4 weeks; the exact dates stay visible next to it.
+  const shift = (a, b) => Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / DAY);
+  const fits = (p, win) => { const days = shift(p.start, p.end) + 1, lag = shift(p.end, win.end); return days >= 27 && days <= 29 && lag >= 0 && lag <= 2; };
+  if (before) before.matches_window = fits(before.period, w.before);
+  if (after) after.matches_window = fits(after.period, w.after);
+  if (before && before.totals && before.totals.period_inferred) before.period.inferred = String(before.totals.period_inferred);
+  if (after && after.totals && after.totals.period_inferred) after.period.inferred = String(after.totals.period_inferred);
   const missing = [!before && 'before', !after && 'after'].filter(Boolean);
+  // A verified export whose file does not say which dates it covers: shown, never placed on a side by guessing.
+  const undated = (uploads || []).filter(u => u.status === 'VERIFIED_FOR_PAGE' && !(u.period_start && u.period_end)).slice(-1)[0] || null;
   return { published_on: publishedOn, windows: w, before, after, missing, ready: !missing.length,
+    undated: undated && { file_name: undated.file_name, totals: undated.totals || null, uploaded_at: undated.created_at || null },
     note: 'Search Console numbers for this exact page, 4 weeks before and after the update. A change is not proof that the update caused it.' };
 }
 

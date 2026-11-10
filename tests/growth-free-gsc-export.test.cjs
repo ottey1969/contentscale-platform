@@ -57,3 +57,27 @@ test('the research engine receives verified rows as page-verified Search Console
   assert.equal(out.statusCode, 200);
   assert.ok((out.report.destination_gsc_queries || []).some(q => q.query === 'seo content optimalisatie'), 'the uploaded search term reaches the research');
 });
+
+test('an export without a dates file gets its period from the date filter (owner 2026-11-10: "No export yet" after an upload)', () => {
+  const pagesOnly = 'Top pages,Clicks,Impressions,CTR,Position\n' + PAGE + ',2450,20547,11.92%,8.92\n';
+  const read = (date, name) => g.readGscExport({ fileName: name, content: zip({ 'Queries.csv': QUERIES_NL, 'Pages.csv': pagesOnly, 'Filters.csv': 'Filter,Value\nSearch type,Web\nDate,' + date + '\nPage,' + PAGE + '\n' }), pageUrl: PAGE });
+  const last28 = read('Last 28 days', 'https___contentscale.site_-Performance-on-Search-2026-11-10.zip');
+  assert.equal(last28.status, 'VERIFIED_FOR_PAGE');
+  assert.deepEqual({ start: last28.period.start, end: last28.period.end, days: last28.period.days, inferred: last28.period.inferred }, { start: '2026-10-12', end: '2026-11-08', days: 28, inferred: true });
+  assert.equal(last28.totals.period_inferred, 'Last 28 days', 'kept with the totals, so the comparison can say so');
+  assert.deepEqual(read('Afgelopen 3 maanden', 'Prestaties-2026-11-10.zip').period.start, '2026-08-09');
+  assert.deepEqual(read('"Oct 12, 2026 - Nov 8, 2026"', 'x.zip').period, { start: '2026-10-12', end: '2026-11-08', days: 28 }, 'a custom range is read as is');
+  assert.equal(read('Last 28 days', 'no-date-in-name.zip').period, null, 'no export date: no guessed period');
+});
+
+test('current Search Console exports put the daily rows in Chart.csv: the real dates are read from it (live export 2026-11-10)', () => {
+  const days = []; for (let d = new Date('2026-10-11T00:00:00Z'); d <= new Date('2026-11-07T00:00:00Z'); d.setUTCDate(d.getUTCDate() + 1)) days.push(d.toISOString().slice(0, 10) + ',25,196,12.76%,8.5');
+  const r = g.readGscExport({ fileName: 'https___contentscale.site_-Performance-on-Search-2026-11-10.zip', pageUrl: 'https://contentscale.site/',
+    content: zip({ 'Chart.csv': 'Date,Clicks,Impressions,CTR,Position\n' + days.join('\n'), 'Queries.csv': 'Top queries,Clicks,Impressions,CTR,Position\ncontent at scale,297,1238,23.99%,1.25\n',
+      'Pages.csv': 'Top pages,Clicks,Impressions,CTR,Position\nhttps://contentscale.site/,700,5488,12.76%,8.5', 'Filters.csv': 'Filter,Value\nSearch type,Web (text-based)\nDate,Last 28 days\nPage,https://contentscale.site/' }) });
+  assert.equal(r.status, 'VERIFIED_FOR_PAGE');
+  assert.deepEqual(r.period, { start: '2026-10-11', end: '2026-11-07', days: 28 }, 'the real days, not derived from the file name');
+  assert.equal(r.totals.source, 'DATES');
+  const c = require('../src/growth-free/reminders.cjs').compareUploads([{ status: r.status, period_start: r.period.start, period_end: r.period.end, totals: r.totals, queries: r.queries }], '2026-11-09', '');
+  assert.equal(c.before.matches_window, true, 'Search Console’s last 28 days, ending a day before the window, are these 4 weeks');
+});
