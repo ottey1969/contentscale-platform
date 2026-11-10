@@ -4222,7 +4222,11 @@ function _trackerNormalScanGate(page){
   if(_personalSafetyStale)return {allowed:true,reason:'This saved Brief predates the current VERIFIED personal-profile safety contract; rebuild it once'};
   const factsAt=page.claims_facts_updated_at?new Date(page.claims_facts_updated_at).getTime():0;
   const briefAt=page.brief_evaluated_at?new Date(page.brief_evaluated_at).getTime():0;
-  if(factsAt&&(!briefAt||factsAt>briefAt))return {allowed:false,reason:'VERIFIED Claims & Facts are newer than the historical Brief. Do not run a normal/manual scan just because facts changed; wait for the next real scan opportunity.'};
+  // Facts newer than a saved Brief never trigger a re-scan by themselves. A page that has no
+  // Brief yet (never scanned) has nothing to protect: its first scan builds the Brief with the
+  // current facts, so client-wide Claims & Facts may never block it.
+  const hasBrief=!!(briefAt||(_briefSafetyText&&_briefSafetyText!=='{}'&&_briefSafetyText!=='null'&&_briefSafetyText!=='""'));
+  if(factsAt&&hasBrief&&(!briefAt||factsAt>briefAt))return {allowed:false,reason:'VERIFIED Claims & Facts are newer than the historical Brief. Do not run a normal/manual scan just because facts changed; wait for the next real scan opportunity.'};
   const impl=String(page.implementation_status||'').toLowerCase();
   if(['verifying','live_changed_delta_remaining','live_same_checkpoint_delta_remaining','live_same_checkpoint_actions_verified'].includes(impl)){
     return {allowed:false,reason:'Use the current live verification/correction action instead of a new scan'};
