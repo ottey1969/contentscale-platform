@@ -57,3 +57,15 @@ test('the research engine receives verified rows as page-verified Search Console
   assert.equal(out.statusCode, 200);
   assert.ok((out.report.destination_gsc_queries || []).some(q => q.query === 'seo content optimalisatie'), 'the uploaded search term reaches the research');
 });
+
+test('an export without a dates file gets its period from the date filter (owner 2026-11-10: "No export yet" after an upload)', () => {
+  const pagesOnly = 'Top pages,Clicks,Impressions,CTR,Position\n' + PAGE + ',2450,20547,11.92%,8.92\n';
+  const read = (date, name) => g.readGscExport({ fileName: name, content: zip({ 'Queries.csv': QUERIES_NL, 'Pages.csv': pagesOnly, 'Filters.csv': 'Filter,Value\nSearch type,Web\nDate,' + date + '\nPage,' + PAGE + '\n' }), pageUrl: PAGE });
+  const last28 = read('Last 28 days', 'https___contentscale.site_-Performance-on-Search-2026-11-10.zip');
+  assert.equal(last28.status, 'VERIFIED_FOR_PAGE');
+  assert.deepEqual({ start: last28.period.start, end: last28.period.end, days: last28.period.days, inferred: last28.period.inferred }, { start: '2026-10-12', end: '2026-11-08', days: 28, inferred: true });
+  assert.equal(last28.totals.period_inferred, 'Last 28 days', 'kept with the totals, so the comparison can say so');
+  assert.deepEqual(read('Afgelopen 3 maanden', 'Prestaties-2026-11-10.zip').period.start, '2026-08-09');
+  assert.deepEqual(read('"Oct 12, 2026 - Nov 8, 2026"', 'x.zip').period, { start: '2026-10-12', end: '2026-11-08', days: 28 }, 'a custom range is read as is');
+  assert.equal(read('Last 28 days', 'no-date-in-name.zip').period, null, 'no export date: no guessed period');
+});

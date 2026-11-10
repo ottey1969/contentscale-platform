@@ -92,6 +92,38 @@ const MESSAGES = {
   NOT_VERIFIED_FOR_PAGE: 'Not verified for this page: in Search Console, add the filter Page → "Exact URL" → this page, then export again. The numbers are shown but not used as evidence.'
 };
 
+// The period of an export without a usable dates file (owner 2026-11-10: a verified export showed "No export yet"). Search
+// Console writes the chosen date range in Filters.csv: explicit dates for a custom range, or "Last 28 days" / "Last 3
+// months" (in the interface language). A relative range is turned into dates with the export date in the file name
+// ("…-2026-11-10.zip"): Search Console's ranges end two days before the export day. Such a period is marked inferred.
+const MONTHS = { jan: 0, feb: 1, mar: 2, mrt: 2, maa: 2, apr: 3, may: 4, mei: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, okt: 9, nov: 10, dec: 11 };
+const iso = d => d.toISOString().slice(0, 10);
+function dateIn(t) {
+  let m = /(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.exec(t); if (m) return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+  m = /([a-z]{3})[a-z]*\.?\s+(\d{1,2}),?\s+(\d{4})/i.exec(t); if (m && MONTHS[m[1].toLowerCase()] != null) return new Date(Date.UTC(+m[3], MONTHS[m[1].toLowerCase()], +m[2]));
+  m = /(\d{1,2})\s+([a-z]{3})[a-z]*\.?\s+(\d{4})/i.exec(t); if (m && MONTHS[m[2].toLowerCase()] != null) return new Date(Date.UTC(+m[3], MONTHS[m[2].toLowerCase()], +m[1]));
+  return null;
+}
+function periodFromFilters(filters, fileName) {
+  if (!filters) return null;
+  for (const r of parseCsv(filters)) {
+    const k = String(r[0] || ''), v = r.slice(1).join(' ').trim();
+    if (!/^(date|datum|fecha|data|tarih)/i.test(k.trim()) || !v) continue;
+    // Explicit range: two dates in the value.
+    const parts = v.split(/\s+[-–—]\s+|\s+(?:to|tot|bis|a|hasta)\s+/i).map(dateIn).filter(Boolean);
+    if (parts.length >= 2) { const [a, b] = parts.slice(0, 2).sort((x, y) => x - y); return { start: iso(a), end: iso(b), days: Math.round((b - a) / 864e5) + 1 }; }
+    // Relative range plus the export date from the file name.
+    const exp = /(\d{4}-\d{2}-\d{2})(?!.*\d{4}-\d{2}-\d{2})/.exec(String(fileName || ''));
+    const rel = /(\d+)\s*(day|dag|tag|día|dia|gün|month|maand|monat|mes|ay)/i.exec(v);
+    if (!exp || !rel) return null;
+    const end = new Date(exp[1] + 'T00:00:00Z'); end.setUTCDate(end.getUTCDate() - 2);
+    const start = new Date(end); const n = +rel[1];
+    if (/^(day|dag|tag|día|dia|gün)/i.test(rel[2])) start.setUTCDate(start.getUTCDate() - (n - 1)); else { start.setUTCMonth(start.getUTCMonth() - n); start.setUTCDate(start.getUTCDate() + 1); }
+    return { start: iso(start), end: iso(end), days: Math.round((end - start) / 864e5) + 1, inferred: true, basis: v.slice(0, 60) };
+  }
+  return null;
+}
+
 // Read an upload. fileName decides ZIP or CSV; content is a Buffer.
 function readGscExport({ fileName, content, pageUrl }) {
   const buf = Buffer.isBuffer(content) ? content : Buffer.from(String(content || ''), 'base64');
@@ -117,6 +149,9 @@ function readGscExport({ fileName, content, pageUrl }) {
       totals = { clicks, impressions, ctr: impressions ? Math.round(clicks / impressions * 10000) / 10000 : null, position: wimp ? Math.round(wpos / wimp * 10) / 10 : null, source: 'DATES' };
     }
   }
+  if (!period) period = periodFromFilters(parts.filters, fileName);
+  // Stored with the totals (the upload table keeps only the dates): the comparison says the dates were derived.
+  if (period && period.inferred && totals) totals = { ...totals, period_inferred: period.basis || true };
   const v = verify(parts, pageUrl);
   if (!totals && parts.pages) {
     const row = parseCsv(parts.pages).filter(isNumberRow).find(r => norm(r[0]) === norm(pageUrl));
@@ -124,6 +159,7 @@ function readGscExport({ fileName, content, pageUrl }) {
   }
   if (!totals) { const clicks = queries.reduce((a, x) => a + x.clicks, 0), impressions = queries.reduce((a, x) => a + x.impressions, 0);
     totals = { clicks, impressions, ctr: impressions ? Math.round(clicks / impressions * 10000) / 10000 : null, position: null, source: 'QUERIES_SUM_UNDERCOUNTS' }; }
+  if (period && period.inferred && totals && !totals.period_inferred) totals = { ...totals, period_inferred: period.basis || true };
   return { status: v.status, basis: v.basis, message: MESSAGES[v.status], period, totals, queries: queries.sort((a, b) => b.impressions - a.impressions).slice(0, 200), files: Object.keys(files) };
 }
 
@@ -142,4 +178,4 @@ function termInExport(upload, term) {
   return exact || null;
 }
 
-module.exports = { readGscExport, engineRows, termInExport, parseCsv, unzip, MESSAGES, MAX_BYTES };
+module.exports = { periodFromFilters, readGscExport, engineRows, termInExport, parseCsv, unzip, MESSAGES, MAX_BYTES };

@@ -54,3 +54,13 @@ test('due reminders are sent once to the address of the check; a failed send is 
   const de = await r.sendDueFreeReminders(null, { ...storage, dueReminders: async () => [{ ...rows[0], market: { language: 'de' } }] }, { now: NOW, model: null, send: async m => { sent.push(m); return true; }, links: { result: () => 'x', stop: () => 'y' } });
   assert.equal(de.sent, 1); assert.match(sent[sent.length - 1].subject, /Four weeks/);
 });
+
+test('an export whose dates are unknown is shown, not placed; a derived period says so', () => {
+  const undated = { status: 'VERIFIED_FOR_PAGE', period_start: null, period_end: null, file_name: 'TEST.zip', created_at: '2026-11-10T00:16:33Z', totals: { clicks: 2450, impressions: 20547 }, queries: [] };
+  const c = r.compareUploads([undated], '2026-11-09', '');
+  assert.equal(c.before, null); assert.equal(c.after, null);
+  assert.deepEqual(c.undated, { file_name: 'TEST.zip', totals: { clicks: 2450, impressions: 20547 }, uploaded_at: '2026-11-10T00:16:33Z' });
+  const derived = { ...undated, period_start: '2026-10-12', period_end: '2026-11-08', totals: { clicks: 900, impressions: 9004, period_inferred: 'Last 28 days' } };
+  const d = r.compareUploads([undated, derived], '2026-11-09', '');
+  assert.equal(d.before.matches_window, true); assert.equal(d.before.period.inferred, 'Last 28 days');
+});
