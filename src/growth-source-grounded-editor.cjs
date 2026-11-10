@@ -25,6 +25,11 @@ function parseAiJson(raw){
  for(const x of tries){try{return JSON.parse(x)}catch{}}
  return undefined;
 }
+// Which language a text is mostly in (English or Dutch, by common function words); '' when it cannot be told.
+const EN_WORDS=new Set('the and of to in is for with that this are on as by be or from at an it can your you how what why when which whether across without between fully their more than not into'.split(' '));
+const NL_WORDS=new Set('de het een en van in is voor met dat dit zijn op als door te of bij aan je jouw hoe wat waarom wanneer welke niet ook maar om naar over uit dan meer wordt kan'.split(' '));
+function textLanguage(t){const w=(String(t||'').toLowerCase().match(/[a-zà-ÿ]+/g)||[]);let en=0,nl=0;for(const x of w){if(EN_WORDS.has(x))en++;if(NL_WORDS.has(x))nl++}
+ if(en+nl<4)return '';return nl>en*1.3?'nl':en>nl*1.3?'en':''}
 function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTerms=[],flagOnly=false}={}){
  let obj=value;
  if(typeof obj==='string'){
@@ -54,7 +59,11 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
   const focusHit=queryTerms.some(term=>body.includes(term.replace(/(?:ing|ed|es|s)$/,'').slice(0,Math.max(4,term.length-3))));
   return focusHit||taskStems.some(t=>body.includes(t.slice(0,Math.max(4,t.length-1))));
  };
- const offTopic=queryTerms.length?sections.filter(section=>!onTopic(section)):[];
+ // Search term and topics in another language than the page (an English query for a Dutch page): their words cannot be
+ // required in the text, or the writer mixes languages ("future outlook en longevity", owner 2026-11-10).
+ const pageLang=textLanguage(sourceText),termLang=textLanguage(String(focusQuery||'')+' '+(Array.isArray(taskTerms)?taskTerms.join(' '):''))||(/^[\x00-\x7f\s]*$/.test(String(focusQuery||''))&&String(focusQuery||'').trim()?'en':'');
+ const crossLanguage=!!(pageLang&&termLang&&pageLang!==termLang);
+ const offTopic=queryTerms.length&&!crossLanguage?sections.filter(section=>!onTopic(section)):[];
  if(offTopic.length&&(failed=fail('AI_DRAFT_OFF_TOPIC_SECTION',{rejected_sections:offTopic.map(x=>({h2:x.h2,reason:taskStems.length?'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD':'NO_FOCUS_QUERY_TERM'}))},
   offTopic.map(x=>({h2:x.h2,sentence:null,code:'OFF_TOPIC',reason:'The section does not mention the search term or the chosen topic.'})))))return failed;
  const title=text(obj.seo_title).slice(0,100),description=text(obj.meta_description).slice(0,220);
@@ -98,6 +107,8 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
 // editorial processes on a page that itself never addresses teams (the page of one person or a small business).
 const FILLER_OPENING=/^(?:(?:many|most|some)\s+)?(?:[a-z-]+\s+){0,2}(?:teams?|marketers|publishers|editors|writers|businesses|companies|brands|professionals|specialists|owners|creators|people|users|readers|website owners|site owners)\s+(?:often|frequently|commonly|regularly|typically|usually|increasingly|sometimes)?\s*(?:observe|notice|see|wonder|ask|find|struggle|face|discover|report|examine|explore|consider|compare|look\s+at|discuss|debate|want\s+to\s+know)\b/i;
 const TEAM_PROCESS=/\b(?:your|the|an?|our)\s+(?:editorial|research|content|marketing|seo|writing|web)\s+teams?\b|\bbrief templates?\b|\b(?:central\s+)?audit (?:files?|logs?)\b|\beditorial (?:guidelines|workflows?|process(?:es)?|calendars?|teams?)\b|\bstandardi[sz]ed (?:brief|template)/i;
+// A sentence in a non-English text that carries English function words ("Whether AI … fully kan automate") is mixed.
+const EN_ONLY=/\b(whether|across|without|fully|between|replace|automate|creating|editing|benefits|outlook|longevity|stance|penalties)\b/i;
 function styleIssues(draft,sourceText=''){
  // Team advice fits only a page that addresses teams ("your team", "for marketing teams"). The word "team" elsewhere on the
  // page is not enough (live 2026-11-09: a one-person page kept "Have your editorial team …"), and a page that speaks as one
@@ -108,6 +119,7 @@ function styleIssues(draft,sourceText=''){
  const out=[];
  for(const sec of (draft&&draft.sections)||[]){
   const paras=(sec.paragraphs||[]).map(String);
+  if(textLanguage(paras.join(' '))==='nl')for(const t of [sec.h2,...paras.flatMap(p=>p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[])])if(t&&EN_ONLY.test(t))out.push({h2:sec.h2,sentence:String(t).trim(),problem:'MIXED_LANGUAGE'});
   const first=(paras[0]||'').match(/[^.!?]+[.!?]?/)?.[0]?.trim()||'';
   if(first&&FILLER_OPENING.test(first))out.push({h2:sec.h2,sentence:first,problem:'OPENING_FILLER'});
   if(!pageHasTeams)for(const p of paras)for(const t of p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[])if(TEAM_PROCESS.test(t))out.push({h2:sec.h2,sentence:t.trim(),problem:'TEAM_PROCESS_ADVICE'});
@@ -140,6 +152,7 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    'TASK MODE: SECTION_IMPROVEMENT. Write ONLY the missing reader task(s) listed here: exactly ONE H2 section per task (never combine tasks), 2-4 paragraphs each that a reader can act on. Tasks: '+JSON.stringify(readerTask.tasks),
    'When a task has a "reader_question", the section must answer exactly that question for that reader, nothing broader or neighbouring, and its H2 must say what it answers.',
    'Every section must carry the "task_code" of the task it teaches. Put the task\'s core_words in the H2 and in the first sentence, and explain the task itself, not a neighbouring topic.',
+   'Write every word in the language of the ORIGINAL SOURCE TEXT. When the working topic, the tasks or their core_words are in another language, translate them; never mix languages in one sentence (no English words in a Dutch text). Only proper names and established terms such as SEO or AI stay as they are.',
    'Make each step concrete (who does what, in which order, what to check) without inventing figures, names, response times, service areas or results.',
    'Voice: the page speaks as the service, never as a person. Never write "I", "me", "my", "ik", "mijn" or about a founder; when the business is meant, name the service as the original page names it, in the third person, or address the reader ("you").',
    'Write reader advice, not product claims: never state what any tool, tracker or software does or detects; avoid absolute verbs (eliminates, prevents, ensures, guarantees, proves) and promises about rankings, traffic, AI citations or ROI; use no figures that are not in the original text.',
@@ -244,4 +257,4 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    ...(result.draft?{}:{provider_error:providerError||{kind:'UNUSABLE_ANSWER',finish_reason:lastFinish,model}})};
  }catch(e){return {status:'OPTIONAL_AI_UNAVAILABLE',draft:null,provider_error:e&&(e.name==='TimeoutError'||e.name==='AbortError')?{kind:'TIMEOUT',seconds:35,model}:{kind:'NETWORK',message:clean(e&&(e.code||e.message)),model}}}
 }
-module.exports={sourceFacts,normalizeDraft,generateGrowthEditorDraft,styleIssues,parseAiJson};
+module.exports={sourceFacts,normalizeDraft,generateGrowthEditorDraft,styleIssues,parseAiJson,textLanguage};
