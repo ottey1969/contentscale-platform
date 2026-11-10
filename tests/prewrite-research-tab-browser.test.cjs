@@ -64,6 +64,12 @@ test('Pre-Write AI collection is one visible action, prompt stays behind the sce
       assert.match(await page.textContent('#cs-research-ask .cs-rp-status'), /0 of 5 AI answers ready/);
       await page.click('#cs-research-ask-copy');
       assert.equal(await page.evaluate(() => navigator.clipboard.readText()), 'seo content optimalisatie');
+      // Visible confirmation on each click (owner 2026-11-10): green "Copied ✓" with a short animation, then back.
+      assert.equal(await page.textContent('#cs-research-ask-copy'), 'Copied ✓');
+      assert.equal(await page.evaluate(() => document.getElementById('cs-research-ask-copy').classList.contains('cs-copied')), true);
+      await page.waitForFunction(() => document.getElementById('cs-research-ask-copy').textContent === 'Copy search question', null, { timeout: 4000 });
+      await page.click('#cs-research-ask-copy');
+      await page.waitForFunction(() => document.getElementById('cs-research-ask-copy').textContent === 'Copied ✓', null, { timeout: 4000 });
       await page.selectOption('#pwbGoogleSource', 'gemini');
       await page.fill('#pwbAioText', 'SEO-contentoptimalisatie begint bij het beantwoorden van de vraag van een bezoeker en duidelijke uitleg.');
       assert.match(await page.textContent('#cs-research-ask .cs-rp-status'), /1 of 5 AI answers ready/);
