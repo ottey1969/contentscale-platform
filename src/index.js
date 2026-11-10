@@ -47793,6 +47793,7 @@ function renderPrewriteBrief(b) {
     lines.push('Statistics: '+(_ers.status||'unknown')+' · verified '+Number(_ers.verified||0)+' · primary '+Number(_ers.primary_verified||0)+' · provenance resolved '+Number(_ers.provenance_resolved||0)+' · checked '+Number(_ers.source_pages_checked||0)+'/'+Number(_ers.candidates||0));
     lines.push('Expert quotes: '+(_erq.status||'unknown')+' · exact '+Number(_erq.verified||0)+' · attributed insights '+Number(_erq.attributed_insights||0)+' · checked '+Number(_erq.source_pages_checked||0)+'/'+Number(_erq.candidates||0)+( _erq.second_pass?' · second pass used':''));
     if(_erTxt.quality_ladder) lines.push('Evidence ladder: '+(_erTxt.quality_ladder.stages||[]).join(' -> ')+' · approved '+Number(_erTxt.quality_ladder.approved_items||0)+' · primary '+Number(_erTxt.quality_ladder.primary_verified||0));
+    if(_erTxt.off_topic_rejected&&Number(_erTxt.off_topic_rejected.count||0)>0) lines.push('Not about the search query (not used): '+Number(_erTxt.off_topic_rejected.count)+' · '+(_erTxt.off_topic_rejected.items||[]).slice(0,5).map(function(x){return (x.source_title||x.source_url||'').slice(0,80);}).join(' | '));
     if(_erTxt.rule) lines.push(_erTxt.rule);
     lines.push('');
   }
@@ -61565,6 +61566,7 @@ STATISTICS: 0-5 useful items. {"evidence_text":"EXACT 5-35 word excerpt containi
 EXPERT QUOTES: 0-4 exact direct quotes. {"quote":"EXACT 6-25 words","person":"named person visible near quote","role":"only if visibly supported, otherwise empty","source_url":"exact supplied URL","supports":"point supported"}. Never paraphrase inside quotation marks.
 EXPERT INSIGHTS: when a named expert/source contains a useful idea but no safe exact quote, return {"insight":"concise PARAPHRASE, no quotation marks","evidence_excerpt":"EXACT 8-40 word source excerpt that supports the paraphrase","person":"named person visible near excerpt","role":"only if visible, else empty","source_url":"exact supplied URL","supports":"point supported"}. These are paraphrases, never quotes.
 Do not attribute generic page prose to a person. Do not return anonymous claims. Do not return URLs not supplied.
+ONLY return evidence that is directly about the TOPIC. A true number about another subject (another industry, a general AI survey, job interviews, voice search when the topic is not voice search) is not evidence for this page: leave it out. Zero items is a valid answer.
 
 ${sourceText}`;
       if(typeof _pwbCompactCall==='function'){
@@ -61584,7 +61586,15 @@ ${sourceText}`;
         return obj&&Array.isArray(obj.statistics)&&Array.isArray(obj.expert_quotes)&&Array.isArray(obj.expert_insights)?{ok:true,obj:obj,error:''}:{ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:'invalid evidence JSON'};
       }catch(e){return {ok:false,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:String(e&&e.message||e)};}
     };
-    const _pwbVerifiedStats=[],_pwbVerifiedQuotes=[],_pwbVerifiedInsights=[];
+    const _pwbVerifiedStats=[],_pwbVerifiedQuotes=[],_pwbVerifiedInsights=[],_pwbOffTopic=[];
+    // A source that exists is not yet evidence for THIS query: the source title plus the text around
+    // the excerpt must name the topic, otherwise the item is not approved for writing.
+    const _pwbTopicRel=require('./prewrite-evidence-relevance.cjs').topicRelevance;
+    const _pwbOnTopic=function(src,excerpt,kind){
+      const r=_pwbTopicRel({keyword:keyword,title:src&&src.title||'',text:src&&src.text||'',excerpt:excerpt});
+      if(!r.relevant)_pwbOffTopic.push({kind:kind,source_url:src&&src.url||'',source_title:String(src&&src.title||'').slice(0,200),excerpt:String(excerpt||'').slice(0,240),missing_topic_terms:r.missing});
+      return r.relevant;
+    };
     const _pwbVerifyExtraction=function(extraction){
       const obj=extraction&&extraction.obj||{};
       (Array.isArray(obj.statistics)?obj.statistics:[]).forEach(function(st){
@@ -61592,6 +61602,7 @@ ${sourceText}`;
         const evidence=String(st.evidence_text||'').trim(),en=_pwbEvidenceNorm(evidence),body=_pwbEvidenceNorm(src.text),wc=evidence.split(/\s+/).filter(Boolean).length;
         if(wc<4||wc>38||!/\d/.test(evidence)||!en||body.indexOf(en)<0)return;
         if(_pwbVerifiedStats.some(function(x){return _pwbEvidenceNorm(x.evidence_text)===en;}))return;
+        if(!_pwbOnTopic(src,evidence,'statistic'))return;
         _pwbVerifiedStats.push({evidence_text:evidence,source_url:u,source_title:src.title||src.authority.host,supports:String(st.supports||'').trim().slice(0,500),source_verified:true,quality_stage:'source_verified',authority_class:src.authority.authority_class,authority_score:src.authority.authority_score,authority_reason:src.authority.reason,primary_verified:false,provenance_resolved:false,approved_for_writing:true});
       });
       (Array.isArray(obj.expert_quotes)?obj.expert_quotes:[]).forEach(function(q){
@@ -61600,6 +61611,7 @@ ${sourceText}`;
         if(wc<6||wc>28||!qn||qi<0||!pn||/^(expert|author|editor|researcher|team|staff)$/i.test(person))return;
         const near=body.slice(Math.max(0,qi-800),Math.min(body.length,qi+qn.length+800));if(near.indexOf(pn)<0&&title.indexOf(pn)<0)return;
         const verifiedRole=(rn&&(near.indexOf(rn)>=0||title.indexOf(rn)>=0))?roleRaw:'';if(_pwbVerifiedQuotes.some(function(x){return _pwbEvidenceNorm(x.quote)===qn;}))return;
+        if(!_pwbOnTopic(src,quote,'expert_quote'))return;
         let cls=src.authority.authority_class,score=src.authority.authority_score;if(src.authority.interview_signals){cls='direct_expert_source';score=Math.max(score,90);}
         _pwbVerifiedQuotes.push({quote:quote,person:person,role:verifiedRole,source_url:u,source_title:src.title||src.authority.host,supports:String(q.supports||'').trim().slice(0,500),source_verified:true,quality_stage:score>=88?'primary_verified':'source_verified',authority_class:cls,authority_score:score,authority_reason:src.authority.reason,primary_verified:score>=88,provenance_resolved:score>=88,approved_for_writing:true,verification:'exact_source_text_named_person_proximate'});
       });
@@ -61611,6 +61623,7 @@ ${sourceText}`;
         const numsInsight=Array.from(insight.matchAll(/\b\d[\d,.]*(?:%|x|×)?\b/gi)).map(function(m){return m[0].replace(/,/g,'');}),numsExcerpt=new Set(Array.from(excerpt.matchAll(/\b\d[\d,.]*(?:%|x|×)?\b/gi)).map(function(m){return m[0].replace(/,/g,'');}));
         if(semanticOverlap<0.34||numsInsight.some(function(n){return !numsExcerpt.has(n);}))return;
         const verifiedRole=(rn&&(near.indexOf(rn)>=0||title.indexOf(rn)>=0))?roleRaw:'';if(_pwbVerifiedInsights.some(function(x){return _pwbEvidenceNorm(x.insight)===_pwbEvidenceNorm(insight);}))return;
+        if(!_pwbOnTopic(src,excerpt,'expert_insight'))return;
         _pwbVerifiedInsights.push({insight:insight,evidence_excerpt:excerpt,person:person,role:verifiedRole,source_url:u,source_title:src.title||src.authority.host,supports:String(q.supports||'').trim().slice(0,500),source_verified:true,quality_stage:'source_verified',authority_class:src.authority.authority_class,authority_score:src.authority.authority_score,approved_for_writing:true,attribution_mode:'paraphrase_only',verification:'exact_supporting_excerpt_named_person_proximate'});
       });
     };
@@ -61674,6 +61687,7 @@ ${sourceText}`;
       statistics:{searched:!!_pwbEvidenceSearch.statistics.attempted,search_success:!!_pwbEvidenceSearch.statistics.successful,queries:_pwbEvidenceSearch.statistics.queries,candidates:_pwbStatsCandidateCount,source_pages_checked:_pwbStatsPagesChecked,verified:_pwbResolvedStats.length,primary_verified:_pwbPrimaryStats,provenance_resolved:_pwbProvenanceStats,status:_pwbStatStatus,error:_pwbEvidenceSearch.statistics.error||''},
       expert_quotes:{searched:!!_pwbEvidenceSearch.expert_quotes.attempted,search_success:!!_pwbEvidenceSearch.expert_quotes.successful,queries:_pwbEvidenceSearch.expert_quotes.queries,candidates:_pwbQuoteCandidateCount,source_pages_checked:_pwbQuotePagesChecked,verified:_pwbVerifiedQuotes.length,attributed_insights:_pwbVerifiedInsights.length,second_pass:_pwbExpertSecondPass,status:_pwbQuoteStatus,error:_pwbEvidenceSearch.expert_quotes.error||''},
       quality_ladder:{completed:!!(_pwbEvidenceExtraction.ok&&_pwbStatCoverageOk&&_pwbExpertCoverageOk),stages:['candidate','fetched','source_verified','provenance_resolved','authority_graded','approved_for_writing'],approved_items:_pwbResolvedStats.length+_pwbVerifiedQuotes.length+_pwbVerifiedInsights.length,primary_verified:_pwbPrimaryStats+_pwbVerifiedQuotes.filter(function(x){return x.primary_verified;}).length,source_verified:_pwbResolvedStats.filter(function(x){return !x.primary_verified;}).length+_pwbVerifiedQuotes.filter(function(x){return !x.primary_verified;}).length+_pwbVerifiedInsights.length,rule:'Prefer the best available source. Secondary pages can verify that a claim exists, but primary/academic/government/original-research provenance is preferred for final writing.'},
+      off_topic_rejected:{count:_pwbOffTopic.length,items:_pwbOffTopic.slice(0,10),rule:'Verified on the page but not about the search query; not approved for writing.'},
       extraction:{ran:_pwbCorpusMap.size>0,ok:!!_pwbEvidenceExtraction.ok,source_pages_checked:_pwbCorpusMap.size,error:String(_pwbEvidenceExtraction.error||'').slice(0,300)},
       rule:'Do not fabricate. Search, fetch, verify, resolve provenance, grade authority, then write. Zero is valid only after sufficient source verification; named expert insights may be paraphrased only when backed by an exact verified excerpt.'
     };
@@ -62312,6 +62326,7 @@ function _pwbRenderReadonlyShare(row){
     '</dl></div>'+
     '<div class="researchbox"><h3>Evidence research depth</h3><dl><dt>Statistics</dt><dd>'+esc(statR.status||'not recorded')+' · verified '+esc(statR.verified||0)+' · primary '+esc(statR.primary_verified||0)+' · provenance '+esc(statR.provenance_resolved||0)+'</dd><dt>Statistic pages checked</dt><dd>'+esc(statR.source_pages_checked||0)+' / '+esc(statR.candidates||0)+'</dd><dt>Expert quotes</dt><dd>'+esc(quoteR.status||'not recorded')+' · exact '+esc(quoteR.verified||0)+' · attributed '+esc(quoteR.attributed_insights||0)+'</dd><dt>Quote pages checked</dt><dd>'+esc(quoteR.source_pages_checked||0)+' / '+esc(quoteR.candidates||0)+'</dd></dl></div></div>';
   if(er.quality_ladder){const ql=er.quality_ladder;research+='<div class="ladder"><b>Evidence ladder</b><div>'+esc((ql.stages||[]).join(' → '))+'</div><span>Approved '+esc(ql.approved_items||0)+' · primary '+esc(ql.primary_verified||0)+' · source verified '+esc(ql.source_verified||0)+'</span></div>';}
+  if(er.off_topic_rejected&&Number(er.off_topic_rejected.count||0)>0){research+='<div class="ladder"><b>Not about the search query — not used</b><span>'+esc(er.off_topic_rejected.count)+' verified item(s) left out: '+esc((er.off_topic_rejected.items||[]).slice(0,5).map(function(x){return x.source_title||x.source_url||'';}).join(' · '))+'</span></div>';}
   body+=section('Research overview',research,'The live research, evidence checks and comparison work behind this exact Brief.','researchSection');
 
   // 2. Five-system evidence — show what was actually supplied/checked, without implying unchecked engines were researched.
