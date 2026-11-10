@@ -30,6 +30,10 @@ test('only public web addresses are accepted',()=>{
  assert.equal(validatePublicUrl('https://www.example.com/page/#top').url,'https://www.example.com/page/');
  for(const bad of ['','not a url','ftp://example.com/','http://localhost/','https://10.0.0.1/','http://192.168.1.1/x','https://[::1]/','https://user:pw@example.com/','https://example.com:8080/','https://printer.local/','https://intranet/'])
   assert.ok(validatePublicUrl(bad).error,bad);
+ // Without "https://" the address is completed; a question in the address field is named as such.
+ assert.equal(validatePublicUrl('contentscale.site/how-ai-search-works/').url,'https://contentscale.site/how-ai-search-works/');
+ assert.equal(validatePublicUrl('www.example.com').url,'https://www.example.com/');
+ assert.match(validatePublicUrl('How do I optimize my content to rank in AI search results?').error,/question or text, not a web address/);
 });
 
 test('the engine only sees this one page and can never write',async()=>{
@@ -336,6 +340,13 @@ test('approval gate rejects public checks and gives invited users full question 
   assert.equal(question.status,200,JSON.stringify(question.body));
   assert.equal(question.body.questions[0].text,'How much does roof repair cost in Lodi NJ?');
   assert.equal(question.body.questions[0].source,'GOOGLE_PEOPLE_ALSO_ASK');
+  // From the keyword alone (no page address): Google's questions for the keyword (owner 2026-11-10).
+  const kwOnly=await s.post('/api/free-growth/customer-questions',{invite:token,url:'',query:'roof repair lodi nj',market:'us',language:'English'});
+  assert.equal(kwOnly.status,200,JSON.stringify(kwOnly.body));
+  assert.equal(kwOnly.body.searched_with,'roof repair lodi nj');
+  assert.ok(kwOnly.body.questions.length>0);
+  const nothing=await s.post('/api/free-growth/customer-questions',{invite:token,url:'',query:'',market:'us'});
+  assert.equal(nothing.status,400);assert.match(nothing.body.error,/keyword/);
  }finally{if(before===undefined)delete process.env.SERPER_API_KEY;else process.env.SERPER_API_KEY=before}
 
 });

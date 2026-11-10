@@ -21,8 +21,12 @@ function engineVersion(){
 }
 
 function validatePublicUrl(raw){
- let u;
- try{u=new URL(String(raw||'').trim())}catch{return {error:'Enter a full web address, e.g. https://example.com/page/'}}
+ let u,t=String(raw||'').trim();
+ // Owner 2026-11-10: an address typed without "https://" ("contentscale.site/how-ai-search-works/") is completed; a
+ // question in the address field gets a message that says so (the question belongs in the search term).
+ if(t&&!/^[a-z][a-z0-9+.-]*:/i.test(t)&&/^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?([/?#][^\s]*)?$/i.test(t))t='https://'+t;
+ if(/\s/.test(t)&&!/^https?:\/\/\S+$/i.test(t))return {error:'This looks like a question or text, not a web address. Enter the page address here (e.g. https://example.com/page/) and the question under Search term.'};
+ try{u=new URL(t)}catch{return {error:'Enter a full web address, e.g. https://example.com/page/'}}
  if(!['https:','http:'].includes(u.protocol))return {error:'Only http(s) web pages can be checked'};
  if(u.username||u.password)return {error:'Web addresses with a login are not supported'};
  const host=u.hostname.toLowerCase();

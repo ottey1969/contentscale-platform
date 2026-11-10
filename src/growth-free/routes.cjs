@@ -137,7 +137,7 @@ function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,sign
 <p class="lead">Enter one page of your website. The check compares it with the pages Google ranks for your search and tells you in plain language whether to change something — or not. You can also see whether AI answers (ChatGPT, Perplexity, Gemini, Claude, Copilot) cite your page, by pasting their answers on the result.</p>
 ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
 <form id="f" class="card" novalidate>
- <label for="url">Page address</label><input id="url" name="url" type="url" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
+ <label for="url">Page address</label><input id="url" name="url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
  <label for="query">Customer question (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
  ${owner.signedIn||invite?`<p><button type="button" id="cqFind" class="ghost">Find customer questions</button> <small role="status" id="cqStatus">Automatic customer question discovery is available with approved access.</small></p><div id="cqList"></div>`:''}
  <small>Leave it empty and the check finds the question customers ask in Google for what your page offers. Or type the question yourself — it then wins.</small>
@@ -199,8 +199,10 @@ if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER
 
 // Customer questions for the page entered above: Google's questions (People also ask, related searches) and labelled AI
 // ideas. Clicking one puts it in the search term; the check then researches that question.
+// An address typed without "https://" is completed when the field is left (the server does the same).
+(function(){var u=document.getElementById('url');if(!u)return;u.addEventListener('blur',function(){var v=u.value.trim();if(v&&!/^[a-z][a-z0-9+.-]*:/i.test(v)&&/^[^\s/]+\.[^\s/]+/.test(v))u.value='https://'+v})})();
 (function(){var b=document.getElementById('cqFind');if(!b)return;var st=document.getElementById('cqStatus'),list=document.getElementById('cqList');
- b.addEventListener('click',async function(){var url=document.getElementById('url').value.trim();if(!url){st.textContent='Enter the page address first.';return}
+ b.addEventListener('click',async function(){var url=document.getElementById('url').value.trim(),kw=document.getElementById('query').value.trim();if(!url&&!kw){st.textContent='Enter a keyword (search term) first.';return}
   b.disabled=true;b.classList.add('is-working');st.textContent='Looking up how customers search…';list.innerHTML='';
   try{var r=await fetch(${js(api)}+'/customer-questions',{method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:url,query:document.getElementById('query').value,market:document.getElementById('market').value,language:document.getElementById('language').value})});
    var d=await r.json();if(!d.success)throw Error(d.error||'Not available right now.');
@@ -874,11 +876,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const ip=store.hashIp(req.ip,config.ipSalt),now=Date.now(),h=(cqHits.get(ip)||[]).filter(t=>now-t<3600000);
   if(!owner&&h.length>=10)return res.status(429).json({success:false,error:'Enough suggestions for now; try again in an hour or enter the search term yourself.'});
   h.push(now);cqHits.set(ip,h);if(cqHits.size>5000)cqHits.clear();
-  const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
+  // Customer questions come from Google for the keyword (owner 2026-11-10: "het moet de keyword zijn"). The page only
+  // helps to understand what it offers: with a keyword and no (readable) page the questions are still found.
+  const kw=clean(b.query,120),hasUrl=!!String(b.url||'').trim(),v=hasUrl?validatePublicUrl(b.url):{error:'NO_URL'};
+  if(v.error&&!kw)return res.status(400).json({success:false,error:hasUrl?v.error:'Enter a keyword (search term) or the page address first.'});
   const entries=String(b.market||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean),country=validCountries(entries)[0]||null,lang=String(b.language||'').trim()?validLanguage(b.language):null;
-  let html='';try{html=String((await (engineDeps.fetchLive||fetchPublicGrowthHtml)(v.url))?.html||'')}catch(e){return res.status(503).json({success:false,error:'Your page could not be read publicly. Enter the search term yourself.'})}
+  let html='';if(!v.error){try{html=String((await (engineDeps.fetchLive||fetchPublicGrowthHtml)(v.url))?.html||'')}catch(e){if(!kw)return res.status(503).json({success:false,error:'Your page could not be read publicly. Enter the search term yourself.'})}}
   const pageLang=((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'').toLowerCase();
-  const out=await discoverCustomerQuestions({url:v.url,html,keyword:clean(b.query,120),gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',
+  const out=await discoverCustomerQuestions({url:v.error?'':v.url,html,keyword:kw,gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang||pageLang||'en',
    ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()});
   res.set('Cache-Control','no-store').json({success:true,...out});
  });
