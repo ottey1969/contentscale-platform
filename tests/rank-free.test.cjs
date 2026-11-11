@@ -264,8 +264,55 @@ test('Search Console export (optional, by hand): checked against the website, co
   assert.match(d.text, /Search Console: 12 clics · 1340 impresiones · posición media 7,4/);
   assert.match(d.text, /Filtro de país: España/); assert.match(d.text, /Periodo 2026-10-01 – 2026-10-28/);
   assert.match(d.text, /Oportunidades de Search Console[\s\S]*data-k="seo para ia"/);
-  assert.doesNotMatch(d.text, /data-k="consultor geo"/);
+  assert.doesNotMatch(d.text, /class="chip" data-k="consultor geo"/);
   // Removed on request, and with "delete my data".
   assert.equal((await request(a).post('/api/rank-free/d/' + tok + '/gsc/delete')).body.success, true);
   assert.equal(store.db.projects[0].gsc, null);
+});
+
+test('"I have changed this page": the keyword stays the best opportunity with a follow-up (waiting, growing, no growth after 6 weeks), also in the weekly e-mail', async () => {
+  const { followUp } = require('../src/rank-free/gsc.cjs');
+  let clock = new Date('2026-11-11T12:00:00Z');
+  const store = memoryStore(), sent = [];
+  await confirmedAccount(store, { keywords: ['consultor geo'] });
+  const kid = store.db.keywords[0].id;
+  const found = (p, d) => ({ status: 'FOUND', position: p, url: 'https://acme.example/geo/', checked_at: d });
+  await store.saveResult(kid, found(8, '2026-11-11T10:00:00.000Z'), new Date('2026-11-18T10:00:00Z'));
+  const a = express(); a.use(express.json());
+  registerRankFree(a, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false }, store, sendEmail: async m => { sent.push(m); return true; }, now: () => clock });
+  const tok = links.linkToken(store.db.accounts[0].dashboard_nonce);
+  let d = await request(a).get('/rank-tracker/d/' + tok);
+  assert.match(d.text, /id="cm" data-k="consultor geo">He modificado esta página/);
+  const m = await request(a).post('/api/rank-free/d/' + tok + '/changed').send({ keyword: 'consultor geo' });
+  assert.equal(m.body.success, true);
+  assert.equal(store.db.keywords[0].changed_position, 8);
+  // Waiting: no check since the change; still the best opportunity, with the explanation instead of the same advice.
+  d = await request(a).get('/rank-tracker/d/' + tok);
+  assert.match(d.text, /«consultor geo» está en la posición 8/);
+  assert.match(d.text, /Modificaste esta página el 2026-11-11 \(posición 8 ese día\)\. Google suele necesitar de 2 a 6 semanas[\s\S]*Aún no hay una nueva comprobación\. Mientras no suba, sigue siendo tu mejor oportunidad/);
+  assert.doesNotMatch(d.text, /id="cm"/); assert.match(d.text, /modificada el 2026-11-11 \(entonces posición 8\)/);
+  // A week later still 8: still waiting.
+  await store.saveResult(kid, found(8, '2026-11-18T10:00:00.000Z'), new Date('2026-11-25T10:00:00Z'));
+  clock = new Date('2026-11-18T12:00:00Z');
+  d = await request(a).get('/rank-tracker/d/' + tok);
+  assert.match(d.text, /Última comprobación: posición 8\. Mientras no suba/);
+  // Growing.
+  await store.saveResult(kid, found(5, '2026-11-25T10:00:00.000Z'), new Date('2026-12-02T10:00:00Z'));
+  clock = new Date('2026-11-25T12:00:00Z');
+  d = await request(a).get('/rank-tracker/d/' + tok);
+  assert.match(d.text, /Ha subido de la posición 8 a la 5 desde tu cambio del 2026-11-11/);
+  // The weekly e-mail carries the same best opportunity and follow-up.
+  await sendDigests({ store, send: async x => { sent.push(x); return true; }, baseUrl: 'https://app.example', growthUrl: 'https://app.example/free-growth', now: clock });
+  assert.match(sent.at(-1).html, /Tu mejor oportunidad ahora[\s\S]*Ha subido de la posición 8 a la 5[\s\S]*free-growth\?url=https%3A%2F%2Facme\.example%2Fgeo%2F/);
+  // Six weeks without growth (back to 9): the Growth check comes back as the main action, and it can be marked again.
+  assert.equal(followUp({ changed_at: '2026-11-11T12:00:00Z', changed_position: 8, history: [{ result: found(9, '2026-12-23T10:00:00.000Z') }] }, new Date('2026-12-23T12:00:00Z')).status, 'NO_GROWTH');
+  await store.saveResult(kid, found(9, '2026-12-23T10:00:00.000Z'), new Date('2026-12-30T10:00:00Z'));
+  clock = new Date('2026-12-23T12:00:00Z');
+  d = await request(a).get('/rank-tracker/d/' + tok);
+  assert.match(d.text, /6 semanas después de tu cambio del 2026-11-11 aún no hay crecimiento \(posición 8 → 9\)/);
+  assert.match(d.text, /<a class="cta" href="[^"]+">Vuelve a hacer el análisis Growth gratuito/); assert.match(d.text, /id="cm"/);
+  // Undo.
+  await request(a).post('/api/rank-free/d/' + tok + '/changed').send({ keyword: 'consultor geo', undo: true });
+  assert.equal(store.db.keywords[0].changed_at, null);
+  assert.equal((await request(a).post('/api/rank-free/d/' + tok + '/changed').send({ keyword: 'not tracked' })).status, 404);
 });

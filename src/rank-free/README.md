@@ -36,6 +36,11 @@ one e-mail per week shows the positions and what changed.
 * **Best opportunity** (top of the dashboard, automatic): the tracked keyword at Google position 4–20 in the last check;
   with Search Console the one with the most impressions, else the one closest to the top. Its button opens the free
   Growth check filled in with the ranking page, keyword, market and language.
+* **"I have changed this page"** on the best opportunity: the date and that day's position are kept. The keyword stays the
+  best opportunity while it does not grow, with what the checks since then show instead of the same advice each week:
+  waiting (under 6 weeks, Google often needs 2–6), growing (higher than on the day of the change), or no growth after
+  6 weeks (the Growth check comes back as the main action and it can be marked again). Undo is possible.
+* The weekly e-mail carries the same best opportunity, follow-up and filled-in Growth check link.
 
 ## Free plan and limits
 

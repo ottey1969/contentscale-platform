@@ -5,6 +5,11 @@ const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&a
 
 const T = {
   en: {
+    cMark: 'I have changed this page', cUndo: 'undo', cSaved: 'Noted. We follow this keyword from today’s position.',
+    cWaiting: (d, p, n, c) => 'You changed this page on ' + d + ' (position ' + p + ' that day). Google often needs 2–6 weeks to process a change. ' + (c ? 'Last check: position ' + (n == null ? 'not found' : n) + '. ' : 'No new check yet. ') + 'As long as it does not rise, this stays your best opportunity.',
+    cGrowing: (d, p, n) => 'Up from position ' + p + ' to ' + n + ' since your change on ' + d + '. It is still your best opportunity: a few more places put it in the top 3.',
+    cNoGrowth: (d, p, n, w) => w + ' weeks after your change on ' + d + ' there is no growth yet (position ' + p + ' → ' + (n == null ? 'not found' : n) + '). Run the Growth check again: the pages above you may have changed too.',
+    cRow: (d, p) => 'changed on ' + d + ' (position ' + p + ' then)', cAgain: 'Run the free Growth check again',
     gChip: (p, i) => 'pos. ' + p + ' · ' + i + ' impr.',
     gTitle: 'Search Console (optional)', gLead: 'Add your real clicks, impressions and average position from Google Search Console. No Google sign-in: you upload the export.',
     gHow: 'In Search Console: Performance → optionally a filter Country = the country you track → Export → Download CSV. Upload the ZIP here.',
@@ -46,6 +51,11 @@ const T = {
     ch: { FIRST: 'first check', ENTERED_PAGE_ONE: 'now on page 1', LEFT_PAGE_ONE: 'dropped off page 1', ENTERED_RESULTS: 'now in the top 30', LEFT_RESULTS: 'no longer in the top 30', UP: 'up', DOWN: 'down', OTHER_PAGE: 'another page of yours now ranks' },
   },
   nl: {
+    cMark: 'Ik heb deze pagina aangepast', cUndo: 'ongedaan maken', cSaved: 'Genoteerd. We volgen dit zoekwoord vanaf de positie van vandaag.',
+    cWaiting: (d, p, n, c) => 'Je hebt deze pagina op ' + d + ' aangepast (positie ' + p + ' op die dag). Google heeft vaak 2–6 weken nodig om een aanpassing te verwerken. ' + (c ? 'Laatste meting: positie ' + (n == null ? 'niet gevonden' : n) + '. ' : 'Nog geen nieuwe meting. ') + 'Zolang hij niet stijgt, blijft dit je beste kans.',
+    cGrowing: (d, p, n) => 'Gestegen van positie ' + p + ' naar ' + n + ' sinds je aanpassing op ' + d + '. Het blijft je beste kans: nog een paar plekken en je staat in de top 3.',
+    cNoGrowth: (d, p, n, w) => w + ' weken na je aanpassing op ' + d + ' nog geen groei (positie ' + p + ' → ' + (n == null ? 'niet gevonden' : n) + '). Doe de Growth-check opnieuw: ook de pagina’s boven je kunnen veranderd zijn.',
+    cRow: (d, p) => 'aangepast op ' + d + ' (toen positie ' + p + ')', cAgain: 'Doe de gratis Growth-check opnieuw',
     gChip: (p, i) => 'pos. ' + p + ' · ' + i + ' vert.',
     gTitle: 'Search Console (optioneel)', gLead: 'Voeg je echte klikken, vertoningen en gemiddelde positie uit Google Search Console toe. Zonder Google-login: je uploadt de export.',
     gHow: 'In Search Console: Prestaties → eventueel filter Land = het land dat je volgt → Exporteren → CSV downloaden. Upload de ZIP hier.',
@@ -87,6 +97,11 @@ const T = {
     ch: { FIRST: 'eerste meting', ENTERED_PAGE_ONE: 'nu op pagina 1', LEFT_PAGE_ONE: 'van pagina 1 af', ENTERED_RESULTS: 'nu in de top 30', LEFT_RESULTS: 'niet meer in de top 30', UP: 'gestegen', DOWN: 'gedaald', OTHER_PAGE: 'er rankt nu een andere pagina van je' },
   },
   es: {
+    cMark: 'He modificado esta página', cUndo: 'deshacer', cSaved: 'Anotado. Seguimos esta palabra clave desde la posición de hoy.',
+    cWaiting: (d, p, n, c) => 'Modificaste esta página el ' + d + ' (posición ' + p + ' ese día). Google suele necesitar de 2 a 6 semanas para procesar un cambio. ' + (c ? 'Última comprobación: posición ' + (n == null ? 'no encontrada' : n) + '. ' : 'Aún no hay una nueva comprobación. ') + 'Mientras no suba, sigue siendo tu mejor oportunidad.',
+    cGrowing: (d, p, n) => 'Ha subido de la posición ' + p + ' a la ' + n + ' desde tu cambio del ' + d + '. Sigue siendo tu mejor oportunidad: unos puestos más y estás en el top 3.',
+    cNoGrowth: (d, p, n, w) => w + ' semanas después de tu cambio del ' + d + ' aún no hay crecimiento (posición ' + p + ' → ' + (n == null ? 'no encontrada' : n) + '). Vuelve a hacer el análisis Growth: las páginas que están por encima también pueden haber cambiado.',
+    cRow: (d, p) => 'modificada el ' + d + ' (entonces posición ' + p + ')', cAgain: 'Vuelve a hacer el análisis Growth gratuito',
     gChip: (p, i) => 'pos. ' + p + ' · ' + i + ' impr.',
     gTitle: 'Search Console (opcional)', gLead: 'Añade tus clics, impresiones y posición media reales de Google Search Console. Sin iniciar sesión en Google: subes la exportación.',
     gHow: 'En Search Console: Rendimiento → si quieres, filtro País = el país que sigues → Exportar → Descargar CSV. Sube aquí el ZIP.',
@@ -154,12 +169,23 @@ function accessEmail(lang, { host, link }) {
   return { subject: L.aSubject, html: '<p>' + L.aIntro(host) + '</p><p><a href="' + esc(link) + '" style="display:inline-block;background:#6d28d9;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700">' + esc(L.aButton) + '</a></p><p style="color:#666;font-size:13px">' + esc(L.vIgnore) + '</p>' };
 }
 
-function digestEmail(lang, { host, countryLabel, rows, dashboard, stop, suggestions = [] }) {
+function digestEmail(lang, { host, countryLabel, rows, dashboard, stop, suggestions = [], best = null }) {
   const L = t(lang);
   const tr = rows.map(r => '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(r.keyword) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">' + esc(positionText(r.curr, L)) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(changeText(r.change, L)) + '</td></tr>').join('');
   return { subject: L.dSubject(host), html: '<p>' + L.dIntro(host, countryLabel) + '</p><table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px"><tr><th align="left" style="padding:6px 10px">' + esc(L.kw) + '</th><th align="left" style="padding:6px 10px">' + esc(L.pos) + '</th><th align="left" style="padding:6px 10px">' + esc(L.change) + '</th></tr>' + tr + '</table>'
+    + (best ? '<div style="border:2px solid #6d28d9;border-radius:10px;padding:12px 16px;margin:16px 0"><p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;color:#6d28d9;font-weight:700;text-transform:uppercase">' + esc(L.bTitle) + '</p><p style="margin:0 0 8px"><strong>' + esc(L.bText(best.keyword, best.position)) + '</strong></p>'
+      + (best.follow ? '<p style="margin:0 0 8px">' + esc(best.follow) + '</p>' : '')
+      + (best.show_cta ? '<p style="margin:0"><a href="' + esc(best.link) + '" style="display:inline-block;background:#6d28d9;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700">' + esc(best.cta) + ' →</a></p>' : '<p style="margin:0"><a href="' + esc(best.link) + '">' + esc(best.cta) + ' →</a></p>') + '</div>' : '')
     + (suggestions.length ? '<p>' + esc(L.dSuggest) + ' ' + suggestions.map(esc).join(', ') + '</p>' : '')
     + '<p style="color:#666;font-size:13px">' + esc(L.note) + '</p><p><a href="' + esc(dashboard) + '">' + esc(L.dOpen) + '</a> · <a href="' + esc(stop) + '">' + esc(L.dStop) + '</a></p>' };
 }
 
-module.exports = { T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
+// The follow-up line after "I changed this page" (dashboard and e-mail), from gsc.followUp().
+function followText(f, L) {
+  if (!f) return '';
+  if (f.status === 'GROWING') return L.cGrowing(f.since, f.from, f.to);
+  if (f.status === 'NO_GROWTH') return L.cNoGrowth(f.since, f.from, f.to, Math.floor(f.days / 7));
+  return L.cWaiting(f.since, f.from, f.to, f.checks_since);
+}
+
+module.exports = { followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };

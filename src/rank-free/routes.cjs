@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const engine = require('./engine.cjs');
 const { pgStore, hash, token: randomToken } = require('./store.cjs');
 const { runDue, sendDigests } = require('./runner.cjs');
-const { t, langOf, esc, positionText, changeText, verifyEmail, accessEmail } = require('./texts.cjs');
+const { t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, followText } = require('./texts.cjs');
 const links = require('./links.cjs');
 const gscMod = require('./gsc.cjs');
 const { brevo } = require('../growth-free/reminders.cjs');
@@ -88,12 +88,7 @@ function sparkline(history, L) {
 }
 
 // The free Growth check, filled in for this keyword, market and (if it ranks) the page that ranks.
-function growthLink(cfg, data, keyword, last) {
-  const region = PREWRITE_REGIONS.find(x => x.split(' — ')[0].trim() === (data.gl));
-  const q = new URLSearchParams({ url: last && last.status === 'FOUND' && last.url ? last.url : 'https://' + data.host + '/', query: keyword,
-    ...(region ? { market: region } : {}), ...(languageName(data.hl) ? { language: languageName(data.hl) } : {}) });
-  return cfg.growthUrl + (cfg.growthUrl.includes('?') ? '&' : '?') + q.toString();
-}
+const growthLink = (cfg, data, keyword, last) => engine.growthLink(cfg.growthUrl, data, keyword, last);
 
 // Google's own related searches and questions from the latest checks, minus what is already tracked.
 function suggestionsOf(data, max = 10) {
@@ -108,7 +103,7 @@ function suggestionsOf(data, max = 10) {
   return out;
 }
 
-function dashboardPage(lang, data, tok, cfg) {
+function dashboardPage(lang, data, tok, cfg, now = new Date()) {
   const L = t(lang);
   const num = n => Number(n).toLocaleString(lang, { maximumFractionDigits: 1 });
   const gscBy = new Map((data.gsc && data.gsc.queries || []).map(q => [q.query, q]));
@@ -121,7 +116,8 @@ function dashboardPage(lang, data, tok, cfg) {
     const topLine = top.length ? `<span class="sub">${esc(L.top3)}: ${top.map(x => x.url ? `<a href="${esc(x.url)}" rel="nofollow noopener" target="_blank">${esc(x.host)}</a>` : esc(x.host)).join(', ')}</span>` : '';
     const improve = last && (last.status !== 'FOUND' || last.position > 3) ? `<span class="sub"><a href="${esc(growthLink(cfg, data, k.keyword, last))}">${esc(L.growthFor)} →</a></span>` : '';
     const g = gscBy.get(k.keyword);
-    const gLine = g ? `<span class="sub">${esc(L.gRow(num(g.clicks), num(g.impressions), g.position != null ? num(g.position) : null))}</span>` : '';
+    const cLine = k.changed_at && k.changed_position != null ? `<span class="sub">✎ ${esc(L.cRow(new Date(k.changed_at).toISOString().slice(0, 10), k.changed_position))}</span>` : '';
+    const gLine = (g ? `<span class="sub">${esc(L.gRow(num(g.clicks), num(g.impressions), g.position != null ? num(g.position) : null))}</span>` : '') + cLine;
     return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}${gLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
   }).join('');
   const pending = data.keywords.some(k => !k.history[0] && !k.last_error);
@@ -130,9 +126,17 @@ function dashboardPage(lang, data, tok, cfg) {
   const sugg = suggestionsOf(data), full = data.keywords.length >= cfg.maxKeywords;
   const suggestCard = sugg.length ? `<div class="card" id="sg"><strong>${esc(L.sTitle)}</strong><p class="muted">${esc(full ? L.sFull(data.keywords.length) : L.sLead)}</p><div class="chips">${sugg.map(x => `<button type="button" class="chip" data-k="${esc(x)}"${full ? ' disabled' : ''}>+ ${esc(x)}</button>`).join('')}</div><div id="sm"></div></div>` : '';
   const best = gscMod.bestOpportunity(data.keywords, data.gsc);
-  const bestCard = best ? `<div class="card best" id="best"><p class="eyebrow">${esc(L.bTitle)}</p><p style="font-size:1.1rem;margin:4px 0 8px"><strong>${esc(L.bText(best.keyword, best.result.position))}</strong></p>`
+  // After "I changed this page" the keyword stays the best opportunity while it does not grow, with what the checks
+  // since then show instead of the same advice every week; after six weeks without growth the Growth check comes back.
+  const fu = best ? gscMod.followUp(best.row, now) : null;
+  const gl = best ? esc(growthLink(cfg, data, best.keyword, best.result)) : '';
+  const markBtn = `<button type="button" class="ghost" id="cm" data-k="${best ? esc(best.keyword) : ''}">${esc(L.cMark)}</button>`;
+  const bestCard = !best ? '' : `<div class="card best" id="best"><p class="eyebrow">${esc(L.bTitle)}</p><p style="font-size:1.1rem;margin:4px 0 8px"><strong>${esc(L.bText(best.keyword, best.result.position))}</strong></p>`
     + (best.gsc ? `<p class="muted">${esc(L.bGsc(num(best.gsc.impressions), num(best.gsc.clicks)))}</p>` : '')
-    + `<p><a class="cta" href="${esc(growthLink(cfg, data, best.keyword, best.result))}">${esc(L.bCta)} →</a></p><p class="muted">${esc(L.bTip)}</p></div>` : '';
+    + (!fu ? `<p><a class="cta" href="${gl}">${esc(L.bCta)} →</a></p><p class="muted">${esc(L.bTip)}</p>${markBtn}`
+      : fu.status === 'NO_GROWTH' ? `<div class="msg err" id="fu">${esc(followText(fu, L))}</div><p><a class="cta" href="${gl}">${esc(L.cAgain)} →</a></p>${markBtn}`
+      : `<div class="msg ok" id="fu">${esc(followText(fu, L))}</div><p class="muted"><a href="${gl}">${esc(L.cAgain)} →</a> · <a href="#" id="cu" data-k="${esc(best.keyword)}">${esc(L.cUndo)}</a></p>`)
+    + `<div id="cmm"></div></div>`;
   const G = data.gsc, opps = gscMod.opportunities(G, data.keywords.map(k => k.keyword));
   const gInfo = G ? `<p class="muted">${[G.period ? esc(L.gPeriod(G.period.start, G.period.end)) : '', G.totals ? esc(L.gTotals(num(G.totals.clicks), num(G.totals.impressions))) : ''].filter(Boolean).join(' · ')}</p>`
     + `<p class="muted">${esc(G.country_filter ? L.gCountry(G.country_filter) : L.gAllCountries)}${G.page_filter ? ' ' + esc(L.gPage(G.page_filter)) : ''}</p>` : `<p class="muted">${esc(L.gNone)}</p>`;
@@ -158,6 +162,9 @@ const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(S
 const r=await fetch('/api/rank-free/d/${esc(tok)}/gsc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,content_base64:b64})});const j=await r.json().catch(()=>({}));
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),700);else $('gu').disabled=false};
 if($('gd'))$('gd').onclick=async()=>{await fetch('/api/rank-free/d/${esc(tok)}/gsc/delete',{method:'POST'});location.reload()};
+const mark=async(k,undo)=>{const r=await fetch('/api/rank-free/d/${esc(tok)}/changed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:k,undo:!!undo})});const j=await r.json().catch(()=>({}));
+const m=$('cmm');m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),700)};
+if($('cm'))$('cm').onclick=()=>{$('cm').disabled=true;mark($('cm').dataset.k)};if($('cu'))$('cu').onclick=e=>{e.preventDefault();mark($('cu').dataset.k,true)};
 $('fg').onclick=async e=>{e.preventDefault();if(!confirm(${JSON.stringify(L.forgetConfirm)}))return;await fetch('/api/rank-free/d/${esc(tok)}/forget',{method:'POST'});location.href='/rank-tracker'}})();</script>${refresh}`);
 }
 
@@ -171,7 +178,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const p = await store.projectOf(account.id);
     const ks = p ? await store.keywords(p.id) : [];
     const keywords = [];
-    for (const k of ks) keywords.push({ keyword: k.keyword, next_check_at: k.next_check_at, last_error: k.last_error || null, last_error_at: k.last_error_at || null, history: await store.history(k.id, 12) });
+    for (const k of ks) keywords.push({ keyword: k.keyword, changed_at: k.changed_at || null, changed_position: k.changed_position == null ? null : Number(k.changed_position), next_check_at: k.next_check_at, last_error: k.last_error || null, last_error_at: k.last_error_at || null, history: await store.history(k.id, 12) });
     const m = p ? engine.readMarket(p.gl, p.hl) : {};
     // Country and language in the account's own language ("Spanje · Spaans" on a Dutch dashboard).
     const shown = (type, code) => { try { return new Intl.DisplayNames([langOf(account.lang)], { type }).of(code); } catch { return null; } };
@@ -183,7 +190,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   let kick = null; // one background round right after a confirmation, so the first positions appear within a minute
   const runRound = () => kick || (kick = (async () => {
     try { await runDue({ store, key: config.serperKey, fetchImpl, now: now(), monthlyCap: config.monthlyCap });
-      await sendDigests({ store, send, baseUrl: config.baseUrl, now: now() }); } catch (e) { console.warn('[rank-free] round failed', e && e.message); }
+      await sendDigests({ store, send, baseUrl: config.baseUrl, growthUrl: config.growthUrl, now: now() }); } catch (e) { console.warn('[rank-free] round failed', e && e.message); }
     finally { kick = null; }
   })());
 
@@ -231,7 +238,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   app.get('/rank-tracker/d/:token', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
     if (!a) return html(res, page('en', 'Not found', '<h1>Not found</h1><p><a href="/rank-tracker">Free rank tracker</a></p>'), 404);
-    return html(res, dashboardPage(langOf(a.lang), await dashboardData(a), req.params.token, config));
+    return html(res, dashboardPage(langOf(a.lang), await dashboardData(a), req.params.token, config, now()));
   });
   app.get('/api/rank-free/d/:token', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
@@ -272,6 +279,19 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     if (out.error) return res.status(400).json({ success: false, error: out.message || L.gHow });
     await store.setGsc(p.id, out, now());
     res.json({ success: true, message: L.gSaved, queries: out.queries.length, period: out.period, country_filter: out.country_filter });
+  });
+  // "I have changed this page" for a tracked keyword (or undo). Its position today is kept to compare later checks with.
+  app.post('/api/rank-free/d/:token/changed', async (req, res) => {
+    const a = await accountFor(req.params.token).catch(() => null);
+    if (!a) return res.status(404).json({ success: false, error: 'Not found' });
+    const L = t(a.lang), b = req.body || {}, p = await store.projectOf(a.id), k = engine.readKeyword(b.keyword);
+    if (!p || !k || k.error) return res.status(400).json({ success: false, error: L.errKeywords });
+    const row = (await store.keywords(p.id)).find(x => x.keyword === k.keyword);
+    if (!row) return res.status(404).json({ success: false, error: L.errKeywords });
+    if (b.undo === true) { await store.markChanged(p.id, k.keyword, null, null); return res.json({ success: true, message: '✓' }); }
+    const [last] = await store.history(row.id, 1), r = last && last.result;
+    await store.markChanged(p.id, k.keyword, now(), r && r.status === 'FOUND' ? r.position : null);
+    res.json({ success: true, message: L.cSaved });
   });
   app.post('/api/rank-free/d/:token/gsc/delete', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
