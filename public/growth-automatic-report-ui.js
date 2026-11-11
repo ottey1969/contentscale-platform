@@ -69,7 +69,13 @@
  function renderAiGap(box,g){
   if(!g||g.status==='NO_CITED_PAGES')return;
   var w=node('div',null,box);w.className='ai-gap';node('h4','What the pages AI cites have that your page does not',w);
-  if(g.status==='RUNNING'){node('p','The pages AI cites are being read now. Reload this page in a minute to see the comparison.',w);return}
+  if(g.status==='RUNNING'){node('p','The pages AI cites are being read now (your saved AI answers are used, nothing to paste again). The comparison appears here by itself in a moment.',w);
+   // Only this block is refreshed, from the saved answers, every 5 s for at most 2 minutes.
+   var tries=0,tick=function(){tries++;fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-check?page_id='+encodeURIComponent(id),{credentials:'same-origin',cache:'no-store'})
+    .then(function(r){return r.json()}).then(function(j){var ng=j&&j.ai_check&&j.ai_check.gap;
+     if(ng&&ng.status!=='RUNNING'&&w.isConnected){var parent=w.parentNode,mark=w.nextSibling;parent.removeChild(w);var tmp=document.createElement('div');renderAiGap(tmp,ng);while(tmp.firstChild)parent.insertBefore(tmp.firstChild,mark);return}
+     if(tries<24&&w.isConnected)setTimeout(tick,5000)}).catch(function(){if(tries<24&&w.isConnected)setTimeout(tick,5000)})};
+   setTimeout(tick,5000);return}
   if(g.status==='FAILED'){node('p','The pages AI cites could not be compared this time. Paste an answer again to retry.',w);return}
   if(g.status==='OWN_PAGE_UNREADABLE'){node('p','Your page could not be read just now, so the pages AI cites were not compared with it.',w);return}
   node('p','For the AI systems that do not cite you: the pages they cite, read and compared with your page. Observations only; add only what is true for your business, in your own words.',w);

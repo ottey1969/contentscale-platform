@@ -917,3 +917,18 @@ test('writing after the page changed: live text (counters, dates) is fine when t
  const bad=await s.post(path,{item_ids:ids,ai_check_choice:'WITHOUT_AI',rewrite:true});
  assert.equal(bad.status,409);assert.equal(bad.body.code,'PAGE_HEADINGS_CHANGED');assert.match(bad.body.error,/headings changed since this check \(no longer found: “/);
 });
+
+test('AI gap from answers already saved: opening the check is enough, nothing is pasted again',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ await s.post('/api/free-growth/checks',ok);await s.service.idle();
+ // Answers pasted earlier (before this feature existed), stored with the check.
+ const row=s.storage.aiRows||[];const text='ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://roofer-b.example/services/roof-repair/';
+ const first=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
+ await s.storage.saveAiAnswer(null,{checkId:first.body.id||(s.storage.rows&&s.storage.rows[0]&&s.storage.rows[0].id)||1,engine:'chatgpt',rawText:text,parsed:ai.parseAiAnswer(text,{pageUrl:URL_})});
+ let r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
+ assert.ok(['RUNNING','READ'].includes(r.body.ai.gap.status),'reading starts when the check is opened');
+ for(let i=0;i<50&&r.body.ai.gap.status==='RUNNING';i++){await new Promise(x=>setTimeout(x,20));r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh')}
+ assert.equal(r.body.ai.gap.status,'READ');assert.ok(r.body.ai.gap.missing_topics.some(x=>/estimate/i.test(x.topic)));
+ assert.equal(s.storage.aiRows.length,row.length,'no answer was pasted again');
+ const page=await s.get('/free-growth/r/pub1?k=key1abcdefgh');assert.match(page.body,/appears here by itself/);assert.doesNotMatch(page.body,/aiGapRefresh/);
+});
