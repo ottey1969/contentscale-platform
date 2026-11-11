@@ -141,7 +141,7 @@ test('sign-up → confirm → dashboard; a confirmed address cannot be changed f
   assert.equal(r2.body.success, true);
   assert.equal(store.db.projects[0].host, 'acme.example');
   assert.deepEqual(store.db.keywords.filter(k => k.active).map(k => k.keyword), ['consultor geo', 'que es geo']);
-  assert.match(sent[1].subject, /El enlace a tu rank tracker/);
+  assert.match(sent[1].subject, /El enlace a tu rastreador de posiciones/);
   // The owner changes keywords on the dashboard (limit 10).
   const tok = dash.split('/').pop();
   const k = await request(a).post('/api/rank-free/d/' + tok + '/keywords').send({ keywords: 'consultor geo\nconsultoría geo' });
