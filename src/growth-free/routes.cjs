@@ -857,8 +857,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)}));
   }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
- app.get(basePath,(req,res)=>{
+ app.get(basePath,async(req,res)=>{
   // An unapproved public key must not look like a usable check when approval-only mode is enabled.
+  // A valid handoff from the free rank tracker opens the form, also when approval is required or the domain has no key.
+  if(rankHandoff&&req.query&&req.query.rt&&!sessionValid(req)){
+   const rk=await rankHandoff.read(String(req.query.rt)).catch(()=>null);
+   if(rk){const e=require('../rank-free/handoff.cjs').handoffEntry(config);res.set('Content-Security-Policy',"frame-ancestors 'none'");
+    return res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').type('html').send(formPage({...config,...e},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:false}))}
+  }
   if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
   // The owner (signed in) always gets the form, also on a domain without an access key (the admin page links here).
@@ -908,6 +914,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     await storage.ensureTables(pool);
     return await start(res,input,{accessLabel:'admin',marketingConsent:b.marketing_consent===true,fresh:b.fresh===true});
    }
+   // From the free rank tracker with a valid handoff: access of its own (also when approval is required), own weekly limit.
+   if(rankHandoff&&b.rank_ref){const rk=await rankHandoff.read(b.rank_ref).catch(()=>null);if(rk)return await startRankCheck(req,res,b,rk)}
    if(config.approvalRequired)return res.status(403).json({success:false,error:'Personal approval is required. Request access at https://contentscale.site/.'});
    const entry=findKey(config,b.key,req);
    if(!entry)return res.status(403).json({success:false,error:'This free check is not activated here'});
@@ -1016,6 +1024,18 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   await attachRank(row,input.rankRef);
   if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
+ }
+ // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
+ // account must be among the addresses (the result and the reminder go to it); its own weekly limit and the daily total.
+ async function startRankCheck(req,res,b,rk){
+  const input=readInput(b,res);if(!input)return;
+  if(!input.emails.includes(String(rk.account.email).toLowerCase()))return res.status(403).json({success:false,error:'Use the e-mail address of your rank tracker ('+maskEmail(rk.account.email)+').'});
+  await storage.ensureTables(pool);
+  const a=await rankHandoff.allowance(rk);
+  if(!a.ok)return res.status(429).json({success:false,error:'You used the '+a.limit+' free Growth checks from your rank tracker for this week. Try again in a few days.'});
+  const ipHash=store.hashIp(req.ip,config.ipSalt),u=await storage.usage(pool,{email:input.email,ipHash,accessLabel:'rank-tracker'});
+  if(u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
+  return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:b.marketing_consent===true,accessLabel:'rank-tracker'});
  }
  async function startInviteCheck(req,res,b){
   const input=readInput(b,res);if(!input)return;

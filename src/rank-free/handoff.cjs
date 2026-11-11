@@ -6,7 +6,11 @@
 const links = require('./links.cjs');
 const { pgStore } = require('./store.cjs');
 
-function rankHandoff({ store }) {
+// A valid handoff is also access to the free Growth check (owner 2026-11-11), also when the Growth check asks for personal
+// approval: the tracker account's e-mail address is confirmed and only its owner gets the link. Its own limit per
+// account (RANK_FREE_GROWTH_PER_WEEK, default 3 checks in 7 days) keeps the cost bounded.
+const perWeekOf = env => { const v = String(env.RANK_FREE_GROWTH_PER_WEEK ?? '').trim(); return v !== '' && Number.isFinite(Number(v)) ? Math.max(0, Math.floor(Number(v))) : 3; };
+function rankHandoff({ store, perWeek = perWeekOf(process.env), now = () => new Date() }) {
   async function read(token) {
     const h = links.readHandoff(token); if (!h) return null;
     const account = await store.accountByDashboard(h.nonce); if (!account) return null;
@@ -15,7 +19,9 @@ function rankHandoff({ store }) {
     return { account, project, keyword: h.keyword, row };
   }
   return {
-    read,
+    read, perWeek,
+    // Checks started from the tracker by this account in the last 7 days, and whether another one fits.
+    async allowance(r) { const used = await store.handoffsSince(r.account.id, new Date(now().getTime() - 7 * 864e5)); return { used, limit: perWeek, ok: used < perWeek }; },
     async attach(checkId, token) {
       const r = await read(token); if (!r || !checkId) return false;
       await store.saveHandoff(String(checkId), r.account.id, r.keyword); return true;
@@ -35,5 +41,8 @@ function rankHandoff({ store }) {
   };
 }
 const pgRankHandoff = pool => rankHandoff({ store: pgStore(pool) });
+// Defaults of a check started with a handoff (the Free Growth form needs a brand, contact and limits like an access key).
+const handoffEntry = config => ({ key: '', label: 'rank-tracker', origins: [], hosts: [], daily: config.daily, perEmail: config.perEmail,
+  brand: config.brand, contactUrl: config.contactUrl, serviceText: config.serviceText });
 
-module.exports = { rankHandoff, pgRankHandoff };
+module.exports = { rankHandoff, pgRankHandoff, handoffEntry, perWeekOf };

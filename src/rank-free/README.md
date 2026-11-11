@@ -54,6 +54,10 @@ one e-mail per week shows the positions and what changed.
 4. The check is linked to the keyword (`rank_free_handoffs`). Recording the publication date in the Growth check marks
    the keyword "changed" in the tracker, with the position of its last check on or before that day; removing the date
    removes it. Without a check before that day nothing is marked. Deleted with "Delete my data".
+5. **A valid handoff is access of its own**, also when `GROWTH_FREE_APPROVAL_REQUIRED=true` or the domain has no access key:
+   the tracker account's e-mail address is confirmed and only its owner gets the link. The tracker address must be
+   among the e-mail addresses of the check. Own limit: `RANK_FREE_GROWTH_PER_WEEK` checks per account in 7 days
+   (default 3; `0` turns it off), plus the Growth check's daily total. Without a valid handoff nothing changes.
 
 ## Free plan and limits
 
@@ -86,7 +90,8 @@ When the monthly budget is used up, checks are postponed one day (never dropped,
 | `BREVO_API_KEY`, `FROM_EMAIL` | E-mail (required for sign-up) |
 | `RANK_FREE_SECRET` | Signs dashboard links (falls back to `GROWTH_FREE_ADMIN_KEY`) |
 | `RANK_FREE_PUBLIC_URL` | Base URL in e-mails (else `PUBLIC_APP_URL`, else https://app.contentscale.site) |
-| `RANK_FREE_GROWTH_URL` | Link to the free Growth check shown when a keyword is not on page 1 |
+| `RANK_FREE_GROWTH_URL` | The free Growth check the tracker links to |
+| `RANK_FREE_GROWTH_PER_WEEK` | Growth checks per tracker account in 7 days through the handoff (default 3) |
 | `RANK_FREE_ADMIN_KEY` | `GET /api/rank-free/admin/stats` with header `x-admin-key` (falls back to `GROWTH_FREE_ADMIN_KEY`) |
 | `RANK_FREE_SCHEDULER=0` | Stops the 15-minute background round (checks + weekly e-mails) |
 

@@ -102,3 +102,42 @@ test('rank tracker → free Growth check: topic, e-mail, best customer question,
     await pool.end();
   }
 });
+
+test('a valid handoff is access of its own: also with personal approval required, the tracker address, its own weekly limit', { skip, timeout: 60000 }, async () => {
+  const express = require('express'), request = require('supertest');
+  const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
+  const { memoryStore } = require('../src/rank-free/store.cjs');
+  const { rankHandoff, perWeekOf } = require('../src/rank-free/handoff.cjs');
+  const links = require('../src/rank-free/links.cjs');
+  assert.deepEqual([perWeekOf({}), perWeekOf({ RANK_FREE_GROWTH_PER_WEEK: '5' }), perWeekOf({ RANK_FREE_GROWTH_PER_WEEK: '0' }), perWeekOf({ RANK_FREE_GROWTH_PER_WEEK: 'x' })], [3, 5, 0, 3]);
+  const pool = new pg.Pool({ connectionString: DB });
+  const store = memoryStore();
+  const email = 'test-' + crypto.randomBytes(3).toString('hex') + '@acme-geo.example';
+  await store.upsertSignup({ email, lang: 'es', ipHash: 'ip', consent: false, verifyHash: 'v2', host: 'acme-geo.example', gl: 'es', hl: 'es', keywords: ['consultor geo'] });
+  await store.verify('v2', links.newNonce(), new Date());
+  const rt = links.handoffToken(store.db.accounts[0].dashboard_nonce, 'consultor geo');
+  const app = express(); app.use(express.json({ limit: '1mb' }));
+  // Approval required and no access key for this domain: only the owner, invitations and the rank tracker handoff get in.
+  const growth = registerFreeGrowth(app, pool, { config: { ...freeGrowthConfig({}), approvalRequired: true, perIp: 50, daily: 20, perEmail: 10 },
+    engineDeps: { fetchLive: async () => { throw Object.assign(Error('TEST: no page'), { code: 'PUBLIC_HTML_UNAVAILABLE' }); } }, fetchImpl: async () => ({ ok: true }), sendEmail: async () => true,
+    rankHandoff: rankHandoff({ store, perWeek: 1 }) });
+  try {
+    assert.equal((await request(app).get('/free-growth')).status, 302, 'without a handoff: to the approval page, as before');
+    assert.equal((await request(app).get('/free-growth?rt=' + encodeURIComponent(rt.slice(0, -2) + 'AA'))).status, 302, 'a forged handoff opens nothing');
+    const form = await request(app).get('/free-growth?rt=' + encodeURIComponent(rt) + '&topic=consultor+geo');
+    assert.equal(form.status, 200); assert.match(form.text, /Run the free check/);
+    const body = x => ({ url: 'https://acme-geo.example/consultor-geo/', topic: 'consultor geo', rank_ref: rt, email, consent: true, ...x });
+    assert.equal((await request(app).post('/api/free-growth/checks').send(body({ rank_ref: '' }))).status, 403, 'no handoff: approval still required');
+    const other = await request(app).post('/api/free-growth/checks').send(body({ email: 'someone-else@other.example' }));
+    assert.equal(other.status, 403); assert.match(other.body.error, /e-mail address of your rank tracker \(t\*\*\*@acme-geo\.example\)/);
+    const ok = await request(app).post('/api/free-growth/checks').send(body({}));
+    assert.equal(ok.status, 202); assert.equal(store.db.handoffs.length, 1);
+    const again = await request(app).post('/api/free-growth/checks').send(body({}));
+    assert.equal(again.status, 429); assert.match(again.body.error, /used the 1 free Growth checks from your rank tracker for this week/);
+  } finally {
+    if (growth && growth.stop) growth.stop();
+    await new Promise(x => setTimeout(x, 300));
+    await pool.query("DELETE FROM growth_free_checks WHERE email LIKE 'test-%@acme-geo.example'").catch(() => {});
+    await pool.end();
+  }
+});
