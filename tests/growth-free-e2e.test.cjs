@@ -29,7 +29,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
   const { registerFreeGrowth, freeGrowthConfig } = require('../src/growth-free/routes.cjs');
   const pool = new pg.Pool({ connectionString: DB });
   const writes = [], mails = [];
-  const engineDeps = { retryDelayMs: 0, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
+  const engineDeps = { retryDelayMs: 0, aiGapModel: null, judgeTasks: require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
     fetchLive: async url => { const html = PAGES[url]; if (!html) throw Object.assign(Error('TEST page not available'), { code: 'PUBLIC_HTML_UNAVAILABLE' });
       return { html, final_url: url, retrieved_at: new Date().toISOString(), truncated: false, source: 'LIVE_PUBLIC_HTTPS' }; },
     searchLive: async ({ query }) => ({ status: 'FRESH_GOOGLE_ORGANIC_LEADS', source: 'SERPER_GOOGLE_ORGANIC', query, leads: LEADS, provider_attempts: ['SERPER_GOOGLE_ORGANIC'], checked_at: new Date().toISOString() }),
@@ -127,6 +127,9 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await p.inputValue('#aiText'), /TEST: For roof repair in Lodi NJ/, 'the pasted answer is still there after a refresh');
     await p.click('#aiSave');
     await p.waitForFunction(() => /1 of 5/.test(document.body.textContent), null, { timeout: 30000 });
+    // AI gap: the page Perplexity cites instead of yours is read and compared, like the Google gap.
+    await p.waitForSelector('#aiGap', { state: 'attached', timeout: 30000 });
+    assert.match(await p.locator('#aiGap ~ .card').first().textContent(), /How a repair estimate is built[^]*roofer-a\.example/);
     // 4. Select topics and let AI write concepts.
     await p.locator('#stepReview > summary').click();
     const picks = await p.$$('.gapPick'); assert.ok(picks.length >= 1, 'at least one topic to select');
