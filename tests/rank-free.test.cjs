@@ -85,6 +85,7 @@ test('the runner checks due keywords weekly, respects the monthly budget and nev
   const store2 = memoryStore(); await confirmedAccount(store2);
   const r4 = await runDue({ store: store2, key: 'k', fetchImpl: async () => ({ ok: false, status: 500 }), now, monthlyCap: 100 });
   assert.equal(r4.errors, 2); assert.equal(store2.db.results.length, 0);
+  assert.equal(store2.db.keywords[0].last_error, 'HTTP_500', 'the reason is kept for the dashboard');
   // Without a provider key nothing runs.
   assert.equal((await runDue({ store: store2, key: '', now })).skipped, 'PROVIDER_NOT_CONFIGURED');
 });

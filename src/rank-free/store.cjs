@@ -26,6 +26,9 @@ function pgStore(pool) {
     await pool.query(`CREATE TABLE IF NOT EXISTS rank_free_results(
       id BIGSERIAL PRIMARY KEY, keyword_id BIGINT NOT NULL REFERENCES rank_free_keywords(id) ON DELETE CASCADE,
       checked_at TIMESTAMPTZ NOT NULL, status TEXT NOT NULL, position INTEGER, url TEXT, result JSONB)`);
+    // Why the last attempt failed (provider error), so the dashboard can say it instead of "first check is running".
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_keywords ADD COLUMN IF NOT EXISTS last_error TEXT");
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_keywords ADD COLUMN IF NOT EXISTS last_error_at TIMESTAMPTZ");
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_results_kw_idx ON rank_free_results(keyword_id, checked_at DESC)');
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_keywords_due_idx ON rank_free_keywords(next_check_at) WHERE active');
     await pool.query(`CREATE TABLE IF NOT EXISTS rank_free_usage(month TEXT PRIMARY KEY, calls INTEGER NOT NULL DEFAULT 0)`);
@@ -66,9 +69,9 @@ function pgStore(pool) {
     async saveResult(keywordId, r, next) {
       await q('INSERT INTO rank_free_results(keyword_id,checked_at,status,position,url,result) VALUES($1,$2,$3,$4,$5,$6)',
         [keywordId, r.checked_at, r.status, r.position || null, r.url || null, r]);
-      await q('UPDATE rank_free_keywords SET last_checked_at=$2, next_check_at=$3 WHERE id=$1', [keywordId, r.checked_at, next]);
+      await q('UPDATE rank_free_keywords SET last_checked_at=$2, next_check_at=$3, last_error=NULL, last_error_at=NULL WHERE id=$1', [keywordId, r.checked_at, next]);
     },
-    async postpone(keywordId, next) { await q('UPDATE rank_free_keywords SET next_check_at=$2 WHERE id=$1', [keywordId, next]); },
+    async postpone(keywordId, next, error = null, at = null) { await q('UPDATE rank_free_keywords SET next_check_at=$2, last_error=COALESCE($3,last_error), last_error_at=COALESCE($4,last_error_at) WHERE id=$1', [keywordId, next, error, at]); },
     async usage(now) { return Number(((await q('SELECT calls FROM rank_free_usage WHERE month=$1', [month(now)]))[0] || { calls: 0 }).calls); },
     async addUsage(now, n) { await q('INSERT INTO rank_free_usage(month,calls) VALUES($1,$2) ON CONFLICT(month) DO UPDATE SET calls=rank_free_usage.calls+EXCLUDED.calls', [month(now), n]); },
     async digestReady(now) {
@@ -135,9 +138,9 @@ function memoryStore() {
     },
     async saveResult(keywordId, r, next) {
       db.results.push({ keyword_id: keywordId, checked_at: r.checked_at, status: r.status, position: r.position || null, url: r.url || null, result: r });
-      Object.assign(db.keywords.find(k => k.id === keywordId), { last_checked_at: new Date(r.checked_at), next_check_at: next });
+      Object.assign(db.keywords.find(k => k.id === keywordId), { last_checked_at: new Date(r.checked_at), next_check_at: next, last_error: null, last_error_at: null });
     },
-    async postpone(keywordId, next) { db.keywords.find(k => k.id === keywordId).next_check_at = next; },
+    async postpone(keywordId, next, error = null, at = null) { const k = db.keywords.find(x => x.id === keywordId); k.next_check_at = next; if (error) { k.last_error = error; k.last_error_at = at; } },
     async usage(now) { return db.usage[month(now)] || 0; },
     async addUsage(now, n) { db.usage[month(now)] = (db.usage[month(now)] || 0) + n; },
     async digestReady() {

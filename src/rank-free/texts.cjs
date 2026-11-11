@@ -5,6 +5,7 @@ const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&a
 
 const T = {
   en: {
+    failed: (why, when) => 'last attempt failed (' + why + '); next try ' + when,
     noProvider: 'Checks are not running yet: the Google search connection is not set up on the server. Your keywords are saved and will be checked as soon as it is.',
     aSubject: 'Your free rank tracker link', aIntro: host => 'You already track ' + esc(host) + '. Open your dashboard to see your positions or change your keywords.', aButton: 'Open your dashboard',
     title: 'Free rank tracker', lead: 'Track where your website ranks in Google for up to 10 keywords, in the country you choose. Checked automatically every week; you get an e-mail when something changes.',
@@ -30,6 +31,7 @@ const T = {
     ch: { FIRST: 'first check', ENTERED_PAGE_ONE: 'now on page 1', LEFT_PAGE_ONE: 'dropped off page 1', ENTERED_RESULTS: 'now in the top 30', LEFT_RESULTS: 'no longer in the top 30', UP: 'up', DOWN: 'down', OTHER_PAGE: 'another page of yours now ranks' },
   },
   nl: {
+    failed: (why, when) => 'laatste poging mislukt (' + why + '); nieuwe poging ' + when,
     noProvider: 'De metingen draaien nog niet: de koppeling met Google is op de server nog niet ingesteld. Je zoekwoorden zijn opgeslagen en worden gemeten zodra die er is.',
     aSubject: 'De link naar je gratis rank tracker', aIntro: host => 'Je volgt ' + esc(host) + ' al. Open je overzicht om je posities te zien of je zoekwoorden aan te passen.', aButton: 'Open je overzicht',
     title: 'Gratis rank tracker', lead: 'Volg waar je website in Google staat voor maximaal 10 zoekwoorden, in het land dat je kiest. Elke week automatisch gecontroleerd; je krijgt een e-mail als er iets verandert.',
@@ -55,6 +57,7 @@ const T = {
     ch: { FIRST: 'eerste meting', ENTERED_PAGE_ONE: 'nu op pagina 1', LEFT_PAGE_ONE: 'van pagina 1 af', ENTERED_RESULTS: 'nu in de top 30', LEFT_RESULTS: 'niet meer in de top 30', UP: 'gestegen', DOWN: 'gedaald', OTHER_PAGE: 'er rankt nu een andere pagina van je' },
   },
   es: {
+    failed: (why, when) => 'el último intento falló (' + why + '); nuevo intento ' + when,
     noProvider: 'Las comprobaciones aún no funcionan: la conexión con Google no está configurada en el servidor. Tus palabras clave están guardadas y se comprobarán en cuanto lo esté.',
     aSubject: 'El enlace a tu rank tracker gratuito', aIntro: host => 'Ya sigues ' + esc(host) + '. Abre tu panel para ver tus posiciones o cambiar tus palabras clave.', aButton: 'Abrir tu panel',
     title: 'Rank tracker gratuito', lead: 'Sigue en qué posición aparece tu web en Google para hasta 10 palabras clave, en el país que elijas. Se comprueba automáticamente cada semana y recibes un e-mail cuando algo cambia.',

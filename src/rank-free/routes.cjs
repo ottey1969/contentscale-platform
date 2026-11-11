@@ -72,9 +72,9 @@ function dashboardPage(lang, data, tok, cfg) {
     const ch = last ? changeText(engine.changeOf(prev, last), L) : '';
     const pageUrl = last && last.status === 'FOUND' ? `<a href="${esc(last.url)}" rel="nofollow noopener" target="_blank">${esc(last.url.replace(/^https?:\/\/[^/]+/, '') || '/')}</a>` : '';
     const when = last ? new Date(last.checked_at).toISOString().slice(0, 10) : '';
-    return `<tr><td>${esc(k.keyword)}</td><td class="pos">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(L.pending)}</span>`}</td><td>${esc(ch)}</td><td>${pageUrl}</td><td class="muted">${esc(when)}</td></tr>`;
+    return `<tr><td>${esc(k.keyword)}</td><td class="pos">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td>${esc(ch)}</td><td>${pageUrl}</td><td class="muted">${esc(when)}</td></tr>`;
   }).join('');
-  const pending = data.keywords.some(k => !k.history[0]);
+  const pending = data.keywords.some(k => !k.history[0] && !k.last_error);
   const providerNote = pending && !data.provider_ready ? `<div class="msg err">${esc(L.noProvider)}</div>` : '';
   const refresh = pending && data.provider_ready ? '<script>setTimeout(()=>location.reload(),15000)</script>' : '';
   const notOnOne = data.keywords.some(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
@@ -101,7 +101,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const p = await store.projectOf(account.id);
     const ks = p ? await store.keywords(p.id) : [];
     const keywords = [];
-    for (const k of ks) keywords.push({ keyword: k.keyword, next_check_at: k.next_check_at, history: await store.history(k.id, 12) });
+    for (const k of ks) keywords.push({ keyword: k.keyword, next_check_at: k.next_check_at, last_error: k.last_error || null, last_error_at: k.last_error_at || null, history: await store.history(k.id, 12) });
     const m = p ? engine.readMarket(p.gl, p.hl) : {};
     // Country and language in the account's own language ("Spanje · Spaans" on a Dutch dashboard).
     const shown = (type, code) => { try { return new Intl.DisplayNames([langOf(account.lang)], { type }).of(code); } catch { return null; } };
