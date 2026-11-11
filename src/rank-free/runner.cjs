@@ -46,7 +46,10 @@ async function sendDigests({ store, send, baseUrl, now = new Date() } = {}) {
       const [curr, prev] = await store.history(k.id, 2);
       rows.push({ keyword: k.keyword, curr: curr && curr.result, change: changeOf(prev && prev.result, curr && curr.result) });
     }
-    const mail = digestEmail(p.lang, { host: p.host, countryLabel: countryName(String(p.gl).toUpperCase()), rows,
+    // Google's own related searches from this round that are not tracked yet (at most five).
+    const tracked = new Set(rows.map(r => r.keyword)), suggestions = [];
+    for (const r of rows) for (const x of (r.curr && Array.isArray(r.curr.suggestions) ? r.curr.suggestions : [])) if (!tracked.has(x) && !suggestions.includes(x) && suggestions.length < 5) suggestions.push(x);
+    const mail = digestEmail(p.lang, { host: p.host, countryLabel: countryName(String(p.gl).toUpperCase()), rows, suggestions,
       dashboard: baseUrl + '/rank-tracker/d/' + token, stop: baseUrl + '/rank-tracker/stop/' + token });
     const ok = await send({ to: [p.email], subject: mail.subject, html: mail.html }).catch(() => false);
     // Marked either way: a failed e-mail is not retried every hour; the next weekly round sends a new one.

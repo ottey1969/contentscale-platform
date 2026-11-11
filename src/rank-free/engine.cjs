@@ -56,12 +56,26 @@ function readMarket(country, language) {
   return { gl, hl, country_name: countryName(gl.toUpperCase()), language_name: languageName(hl), other_engine: GOOGLE_NOT_MAIN[gl] || null };
 }
 
+// What Google itself offers next to the results on page 1: "related searches" and "People also ask". These are real
+// searches, not invented keywords; they cost no extra call. Only keywords the tracker accepts are kept.
+function suggestionsOf(payload, keyword, max = 8) {
+  const raw = [...(Array.isArray(payload.relatedSearches) ? payload.relatedSearches.map(x => x && x.query) : []),
+    ...(Array.isArray(payload.peopleAlsoAsk) ? payload.peopleAlsoAsk.map(x => x && x.question) : [])];
+  const out = [];
+  for (const r of raw) {
+    const k = readKeyword(String(r || '').replace(/[?¿!¡]/g, ' '));
+    if (k && k.keyword && k.keyword !== keyword && !out.includes(k.keyword)) out.push(k.keyword);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
 // The site's best organic position for one keyword. `calls` is what the check cost (one per result page asked).
 async function checkRank({ keyword, host, gl, hl, key, fetchImpl = global.fetch, maxPages = MAX_PAGES, now = () => new Date() }) {
   if (!key) return { status: 'PROVIDER_NOT_CONFIGURED', calls: 0 };
   if (typeof fetchImpl !== 'function') return { status: 'PROVIDER_UNAVAILABLE', calls: 0 };
-  let calls = 0, answerBox = false, aiOverview = null;
-  const seenHosts = [];
+  let calls = 0, answerBox = false, aiOverview = null, suggestions = [];
+  const seenHosts = [], top = [];
   for (let page = 1; page <= maxPages; page++) {
     let payload;
     try {
@@ -77,6 +91,7 @@ async function checkRank({ keyword, host, gl, hl, key, fetchImpl = global.fetch,
       answerBox = !!payload.answerBox;
       // Serper does not always report Google's AI Overview; when it does not, the tool says "not reported", never "none".
       aiOverview = payload.aiOverview ? true : null;
+      suggestions = suggestionsOf(payload, keyword);
     }
     // Google redirect links are resolved where possible, so a result is not missed because of its link form.
     await unwrapGoogleLinks(payload, { fetchImpl, max: 10 }).catch(() => null);
@@ -84,16 +99,16 @@ async function checkRank({ keyword, host, gl, hl, key, fetchImpl = global.fetch,
       const item = payload.organic[i]; if (!item || typeof item.link !== 'string') continue;
       const h = hostOf(item.link);
       const position = Number(item.position) > 0 ? (page - 1) * PAGE_SIZE + ((Number(item.position) - 1) % PAGE_SIZE) + 1 : (page - 1) * PAGE_SIZE + i + 1;
-      if (page === 1 && h && seenHosts.length < 3) seenHosts.push(h);
+      if (page === 1 && h && seenHosts.length < 3) { seenHosts.push(h); top.push({ position, host: h, url: item.link.slice(0, 500), title: String(item.title || '').slice(0, 160) }); }
       if (h && (h === host || h.endsWith('.' + host))) {
         return { status: 'FOUND', position, url: item.link, title: String(item.title || '').slice(0, 200), pages_checked: page, calls,
-          top_hosts: seenHosts, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
+          top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
       }
     }
     // Google ended its results before the checked depth: the site is not among all results Google showed.
-    if (payload.organic.length < PAGE_SIZE) return { status: 'NOT_IN_RESULTS', all_results_shown: true, depth: (page - 1) * PAGE_SIZE + payload.organic.length, pages_checked: page, calls, top_hosts: seenHosts, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
+    if (payload.organic.length < PAGE_SIZE) return { status: 'NOT_IN_RESULTS', all_results_shown: true, depth: (page - 1) * PAGE_SIZE + payload.organic.length, pages_checked: page, calls, top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
   }
-  return { status: 'NOT_IN_RESULTS', depth: maxPages * PAGE_SIZE, pages_checked: maxPages, calls, top_hosts: seenHosts, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
+  return { status: 'NOT_IN_RESULTS', depth: maxPages * PAGE_SIZE, pages_checked: maxPages, calls, top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
 }
 
 // What changed between two checks of the same keyword, for the e-mail. Small daily moves are not news.

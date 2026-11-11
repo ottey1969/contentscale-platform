@@ -15,6 +15,16 @@ one e-mail per week shows the positions and what changed.
   never counts as "not ranking".
 * Markets where Google is not the main search engine (China, Russia, South Korea) are named on the form and dashboard.
 
+## What the dashboard shows
+
+* Per keyword: the position, the **trend** of the last checks (a small line, oldest left; "not found" on the bottom line,
+  with the best position measured), what changed, the page that ranks, and the **top 3 in Google** for that search.
+* Below page position 3: a link to the free Growth check, **filled in** with that page (or the home page), the keyword,
+  the market and the language.
+* **Keywords Google suggests**: Google's own related searches and "People also ask" questions from page 1 of the last
+  checks (no extra provider call, nothing invented), minus what is already tracked. One click adds it (up to the limit;
+  at the limit the tool says so instead of dropping a keyword). The weekly e-mail names up to five of them.
+
 ## Free plan and limits
 
 | Setting | Default | Env |
