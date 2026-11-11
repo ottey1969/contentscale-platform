@@ -16,7 +16,7 @@ function setup({owner=true,autoGroundedAnswer}={}){
  const route={},post={},stored=[];let searches=0;
  const pool={query:async q=>{if(q.includes('LEFT(html_content')&&/FROM tracker_pages\b/.test(q))return {rows:[{id:7,tracker_client_id:3,url:URL_,keyword:QUERY,brief_content:null,saved_html:null}]};return {rows:[]}}};
  registerGrowthAutomaticResearch({get(p,...h){route[p]=h},post(p,...h){post[p]=h}},pool,(req,res,next)=>{req.growthTrackerClientId=3;req.growth={can_edit:owner,pages:[{id:7,url:URL_,keyword:QUERY,case_study_active:false}]};next()},{
-  autoGroundedAnswer,retryDelayMs:0,judgeTasks:require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
+  autoGroundedAnswer,retryDelayMs:0,aiGapModel:null,judgeTasks:require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
   fetchLive:async url=>{const html=pages[url];if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});return {html,final_url:url,retrieved_at:'2026-10-31T10:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
   searchLive:async({query})=>{searches++;return {status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query,leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-31T10:00:00Z'}},
   saveAiAnswer:async a=>{const i=stored.findIndex(x=>x.engine===a.engine&&x.query===a.query);const row={...a,raw_text:a.rawText,created_at:new Date().toISOString()};if(i>=0)stored[i]=row;else stored.push(row)},
@@ -88,4 +88,16 @@ test('Tracker auto AI provider errors do not invent checked engines',async()=>{
  assert.equal(first.body.ai_check.summary.checked,0);
  const retry=await s.automatic();assert.equal(retry.body.status,'RETRY_LATER');
  assert.equal(calls,1,'failed AI calls are cooled down to prevent runaway credits');
+});
+
+test('AI gap in Tracker Growth: the pages cited instead of this page are read and compared, as in Free Growth',async()=>{
+ const s=setup();await s.get();
+ const r=await s.paste({engine:'chatgpt',query:QUERY,page_url:URL_,google_urls:leads.map(l=>l.url),text:'ANSWER: Get a written estimate.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://roofer-b.example/services/roof-repair/'});
+ const g=r.body.ai_check.gap;assert.equal(g.status,'READ');
+ assert.deepEqual(g.pages.map(p=>p.site),['roofer-a.example','roofer-b.example']);
+ assert.ok(g.missing_topics.some(t=>/estimate/i.test(t.topic)&&t.sites.length===2));
+ assert.ok(r.body.ai_check.summary.visibility_actions.some(a=>a.id==='bing_webmaster_tools'));
+ // Once an AI system cites the page too, only the others count; when all cite it, there is no gap.
+ const all=await s.paste({engine:'chatgpt',query:QUERY,page_url:URL_,text:'ANSWER: Get a written estimate for roof repair in Lodi NJ.\nRESOURCES:\nhttps://acme-roofing.example/roof-repair-lodi-nj/'});
+ assert.equal(all.statusCode,200,JSON.stringify(all.body));assert.equal(all.body.ai_check.gap,null);
 });

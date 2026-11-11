@@ -9,6 +9,7 @@ const {groundedGeminiAnswer}=require('./auto-ai-answers.cjs');
 const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require('../growth-search-locale.cjs');
 const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
+const aiGap=require('./ai-gap.cjs');
 const {writeForSelection,planBatch,pageFingerprint,headingsStillPresent,headingsMessage,explainWriterFailure,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts,styleIssues}=require('../growth-source-grounded-editor.cjs');
@@ -270,6 +271,8 @@ function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI answers <small>('+esc(
  h+='<div class="grid five">'+x.engines.map(function(e){var st=!e.checked?(e.invalid?'INVALID, not counted':'not checked'):e.topic_warning?'check the topic (no shared word with the search term) — counted':!e.verifiable?'no source list pasted — not verified':!e.sources?'no sources given':e.exact_page_cited?'cites this page':e.own_site_cited?'cites your site':'does not cite you';
   return '<div class="eng '+(e.checked&&e.verifiable?(e.own_site_cited?'yes':'no'):'')+'"><strong>'+(e.checked&&e.verifiable?esc(e.sources):'–')+'</strong><small>'+esc(e.label)+'</small><small>'+esc(st)+'</small></div>'}).join('')+'</div><p class="muted">Number = sources the AI answer listed. Links inside its text are not counted.</p>';
  if(x.top_cited_sites.length)h+='<details class="research-details"><summary>Sources mentioned in the AI answers ('+esc(x.top_cited_sites.length)+')</summary><h3>Sites AI cites for “'+esc(a.search_term)+'”</h3><ul>'+x.top_cited_sites.map(function(t){return '<li>'+esc(t.site)+' <small>— in '+esc(t.ai_systems)+' of '+esc(x.checked)+' AI answers'+(x.also_in_google.indexOf(t.site)>=0?' · also ranks in Google':'')+'</small></li>'}).join('')+'</ul></details>';
+ h+=aiGapHtml(a.gap);
+ if(x.visibility_actions&&x.visibility_actions.length)h+='<div class="card" id="aiNextSteps"><h3>Next steps to be cited by AI</h3>'+x.visibility_actions.map(function(v){return '<h4>'+esc(v.title)+'</h4><p class="muted">'+esc(v.why)+'</p><ol>'+v.steps.map(function(t){return '<li>'+esc(t)+'</li>'}).join('')+'</ol>'}).join('')+'</div>';
  h+='<p class="muted">These source mentions are AI visibility observations, not verified content gaps. Growth compares the readable ranking pages automatically and labels missing evidence separately.</p>';
  var next=x.engines.filter(function(e){return !e.checked})[0]||x.engines[0];
   // Manual copying must not appear as the main action of the automatic Free Growth report.
@@ -278,8 +281,28 @@ function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI answers <small>('+esc(
   '<label>Prompt (the same for every AI system)<textarea id="aiPrompt" rows="6" readonly>'+esc(a.prompt)+'</textarea></label><p><button type="button" class="ghost" id="aiCopy">Copy prompt</button></p>'+
   '<label>Answer from the AI system<textarea id="aiText" rows="7" maxlength="'+esc(a.max_paste)+'" placeholder="Paste the complete answer here"></textarea></label><p><button type="button" id="aiSave">Analyse answer</button> <small role="status" id="aiStatus"></small></p></div></details>';
  h+='<p class="muted">'+esc(x.caveat)+'</p>';return h}
+// AI gap: what the pages AI cites (where it does not cite you) have and your page does not.
+function aiGapHtml(g){if(!g)return '';
+ var h='<h3 id="aiGap">What the pages AI cites have that your page does not</h3>';
+ if(g.status==='RUNNING')return h+'<p class="muted">The pages AI cites are being read now. <button type="button" class="ghost" id="aiGapRefresh">Show the result</button></p>';
+ if(g.status==='FAILED')return h+'<p class="muted">The pages AI cites could not be compared this time. Paste an answer again to retry.</p>';
+ if(g.status==='NO_CITED_PAGES')return '';
+ if(g.status==='OWN_PAGE_UNREADABLE')return h+'<p class="muted">Your page could not be read just now, so the pages AI cites were not compared with it. Paste an answer again to retry.</p>';
+ h+='<p class="muted">For the AI systems that do not cite you: the pages they cite, read and compared with your page. Observations only; add only what is true for your business, in your own words.</p>';
+ if(g.status==='NOTHING_READABLE')h+='<p class="muted">None of the cited pages could be read automatically. Open them yourself (links below).</p>';
+ if((g.missing_facts||[]).length)h+='<div class="card"><strong>Facts they state and your page does not</strong><ul>'+g.missing_facts.map(function(f){return '<li><strong>'+esc(f.label)+'</strong> <small>— on '+esc(f.sites.join(', '))+'</small>'+(f.example?'<br><small class="muted">'+esc(f.example.site)+': “'+esc(f.example.excerpt)+'”</small>':'')+'</li>'}).join('')+'</ul></div>';
+ if((g.missing_topics||[]).length)h+='<div class="card"><strong>Topics they cover and your page does not ('+g.missing_topics.length+')</strong><br><small class="muted">'+(g.topics_basis==='TOPICS_COMPARED'?'Compared by topic: a section on your page that answers the same question counts, also when worded differently.':'Compared by heading words only: check each one, your page may answer it in other words.')+'</small><ul>'+g.missing_topics.map(function(t){return '<li><strong>'+esc(t.topic)+'</strong>'+(t.coverage==='PARTLY'?' <small>(partly on your page)</small>':t.coverage==='UNSURE'?' <small>(not sure: check whether your page answers this)</small>':'')+' <small>— '+esc(t.sites.join(', '))+'</small>'+(t.examples[0]&&t.examples[0].excerpt?'<br><small class="muted">“'+esc(t.examples[0].excerpt)+'”</small>':'')+(t.item_id?'<br><button type="button" class="ghost aiGapAdd" data-item="'+esc(t.item_id)+'">Add this topic to my choice in step 2</button> <small role="status" class="aiGapStatus"></small>':'')+'</li>'}).join('')+'</ul></div>';
+ var el=g.elements||{},miss=(el.elements_they_have_and_this_page_lacks||[]).map(function(e){return e.label+' ('+e.ranking_pages_with_it+' of '+e.of+')'}).concat((el.structured_data_they_have_and_this_page_lacks||[]).map(function(e){return 'Structured data: '+e.type+' ('+e.ranking_pages_with_it+' of '+e.of+')'}));
+ if(miss.length)h+='<div class="card"><strong>Page elements they have and your page does not</strong><ul>'+miss.map(function(m){return '<li>'+esc(m)+'</li>'}).join('')+'</ul></div>';
+ h+='<details class="research-details"><summary>Pages AI cites ('+esc((g.pages||[]).length)+')</summary>'+(g.pages||[]).map(function(p){var m=(p.headings||[]).filter(function(x){return x.status==='MISSING'}).length;
+  return '<div class="card"><strong>'+esc(p.site)+'</strong> <small class="muted">· cited by '+esc(p.cited_by.join(', '))+' · '+esc(p.status)+(p.read&&(p.headings||[]).length?' · '+m+' of '+p.headings.length+' heading(s) not on your page':'')+'</small><br><small><a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(p.url)+'</a></small>'+
+   ((p.headings||[]).length?'<ul>'+p.headings.map(function(x){return '<li>'+(x.status==='MISSING'?'<strong>'+esc(x.text)+'</strong> <small class="error">· not on your page</small>':x.status==='PARTLY'?esc(x.text)+' <small>· partly on your page</small>':esc(x.text)+' <small class="muted">· on your page</small>')+'</li>'}).join('')+'</ul>':'')+'</div>'}).join('')+'</details>';
+ return h}
+function wireAiGap(){var r=document.getElementById('aiGapRefresh');if(r)r.onclick=async function(){r.disabled=true;var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE')render(d);else showAiFirst(d,true);showStep('stepResearch','aiGap')};
+ document.querySelectorAll('.aiGapAdd').forEach(function(b){b.onclick=function(){var box=document.querySelector('.gapPick[value="'+b.getAttribute('data-item').replace(/"/g,'')+'"]'),st=b.parentNode.querySelector('.aiGapStatus');
+  if(!box){st.textContent='This topic is not in the list of step 2.';return}if(!box.checked){box.checked=true;box.dispatchEvent(new Event('change',{bubbles:true}))}st.textContent='Added to your choice in step 2.';b.disabled=true}})}
 function aiDraftKey(eng){return 'growthFreeAiDraft:'+API+':'+eng}
-function wireAi(){var b=document.getElementById('aiSave');if(!b)return;
+function wireAi(){wireAiGap();var b=document.getElementById('aiSave');if(!b)return;
  // The answer being pasted is kept in this browser per check and AI system until it is analysed (a refresh loses nothing).
  var ta=document.getElementById('aiText'),sel=document.getElementById('aiEngine');
  var load=function(){try{var v=localStorage.getItem(aiDraftKey(sel.value));if(v&&!ta.value)ta.value=v}catch(e){}};load();
@@ -1060,14 +1083,27 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  // Search term the AI prompt must use: the one entered, or the one the research derived.
  const searchTermOf=row=>String(row.query||row.summary&&row.summary.checked&&row.summary.checked.search_term||'').trim();
  const googleUrlsOf=row=>((row.report&&row.report.search_discovery&&row.report.search_discovery.leads)||[]).map(l=>l&&l.url).filter(Boolean);
- async function aiFor(row){
+ // AI gap per check: the cited pages are read once per set of cited URLs.
+ const aiGapFor0=aiGap.createAiGapCache({engines:ai.ENGINES,fetchHtml:engineDeps.fetchAiCited||engineDeps.fetchLive||fetchPublicGrowthHtml,
+  model:()=>engineDeps.aiGapModel!==undefined?engineDeps.aiGapModel:require('../growth-task-meaning.cjs').geminiModel()});
+ const aiGapFor=(row,answers,{wait=false}={})=>aiGapFor0({key:'free:'+row.id,answers,pageUrl:row.url,query:searchTermOf(row),wait});
+ // Step 2 topics an AI-gap topic matches, so it can be added to the visitor's choice.
+ function withStepTwo(gap,gaps){
+  if(!gap||!(gap.missing_topics||[]).length)return gap;
+  const w=t=>new Set((String(t).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu)||[]).map(x=>x.slice(0,5)));
+  const items=((gaps&&gaps.items)||[]).map(it=>({id:String(it.id),sets:[it.title,...(it.examples||[]).map(e=>e.heading)].filter(Boolean).map(w)}));
+  return {...gap,missing_topics:gap.missing_topics.map(t=>{const tw=w(t.topic);if(!tw.size)return t;
+   const hit=items.find(it=>it.sets.some(s=>[...tw].filter(x=>s.has(x)).length/tw.size>=0.6));return hit?{...t,item_id:hit.id}:t})};
+ }
+ async function aiFor(row,{waitGap=false}={}){
   // The AI check needs only the search term: with an entered term it is available at once, before the Google part.
   const term=searchTermOf(row);
   if(row.status==='FAILED'||!term)return null;
   let answers=[];
   try{answers=await storage.listAiAnswers(pool,row.id)}catch(e){console.warn('[free-growth] AI answers unavailable',String(e&&e.code||'unknown'))}
-  return {search_term:term,prompt:ai.directPrompt(term),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,
-   summary:ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row),query:term})};
+  const summary=ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row),query:term});
+  const gap=summary.verifiable>summary.cited_by?withStepTwo(await aiGapFor(row,answers,{wait:waitGap}),row.summary&&row.summary.gaps):null;
+  return {search_term:term,prompt:ai.directPrompt(term),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,summary,gap};
  }
  // With an uploaded Search Console export, the "not used" limitation says what was actually used.
  function withGscLimits(summary,gscPart){
@@ -1133,7 +1169,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const row=await load(req,res);if(!row)return;
   const aiPart=await aiFor(row),gscPart=await gscFor(row);
   res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
-   ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary}:null,
+   ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:aiPart.gap}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
    summary:withPlainEvidence(withGscLimits(withAiLimits(row.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
@@ -1390,9 +1426,9 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const parsed=ai.parseAiAnswer(text,{pageUrl:row.url,query:searchTermOf(row)});
    if(parsed.validation_status==='invalid')return res.status(400).json({success:false,error:parsed.error_message||'This is not an answer to the search term.'});
    await storage.saveAiAnswer(pool,{checkId:row.id,engine,rawText:text,parsed});
-   const aiPart=await aiFor(row);
+   const aiPart=await aiFor(row,{waitGap:true});
    res.json({success:true,engine,parsed:{sources:parsed.sources.length,resources_status:parsed.resources_status,verifiable:parsed.sources_verifiable,own_site_cited:parsed.own_site_cited,exact_page_cited:parsed.exact_page_cited,own_url_mentioned_not_cited:parsed.own_url_mentioned_not_cited},
-    ai:{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary},
+    ai:{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:aiPart.gap},
     summary:withAiLimits(row.summary,aiPart)});
   }catch(e){console.error('[free-growth] AI answer failed',e.message);res.status(503).json({success:false,error:'Could not analyse the answer. Please try again.'})}
  });

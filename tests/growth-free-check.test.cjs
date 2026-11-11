@@ -21,7 +21,7 @@ const pages={[URL_]:ownHtml,
  'https://roofer-b.example/services/roof-repair/':comp('Roof repairs in Bergen County, NJ',[['What goes into an estimate',estimateB]])};
 const leads=[['https://roofer-a.example/roof-repair-nj/','Roof Repair in Paterson, NJ | Roofer A'],['https://roofer-b.example/services/roof-repair/','Roof Repairs in Bergen County NJ - Roofer B'],
  ['https://roofer-c.example/near-me/','Emergency Roof Repair Near Me | Roofer C']].map(([url,title],i)=>({url,title,snippet:'Local roof repair',source:'SERPER_GOOGLE_ORGANIC',serp_position:i+1}));
-const engineDeps={retryDelayMs:0,judgeTasks:require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
+const engineDeps={retryDelayMs:0,aiGapModel:null,judgeTasks:require('./helpers/meaning-check-stand-in.cjs').judgeTasks,
  fetchLive:async url=>{const html=pages[url];if(!html)throw Object.assign(Error('x'),{code:'PUBLIC_HTML_UNAVAILABLE'});
   return {html,final_url:url,retrieved_at:'2026-10-24T10:00:00Z',truncated:false,source:'LIVE_PUBLIC_HTTPS'}},
  searchLive:async({query})=>({status:'FRESH_GOOGLE_ORGANIC_LEADS',source:'SERPER_GOOGLE_ORGANIC',query,leads,provider_attempts:['SERPER_GOOGLE_ORGANIC'],checked_at:'2026-10-24T10:00:00Z'})};
@@ -516,11 +516,18 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  assert.equal(s.storage.aiRows.filter(r=>r.engine==='claude').length,0,'not stored as a checked AI system');
  const saved=await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: Roofer A explains estimates.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://roofer-b.example/services/roof-repair/'});
  assert.equal(saved.status,200);assert.equal(saved.body.parsed.sources,2);assert.equal(saved.body.parsed.own_site_cited,false);
+ // AI gap: the pages Perplexity cites instead of you are read and compared with your page, like the Google gap.
+ const g=saved.body.ai.gap;assert.equal(g.status,'READ');
+ assert.deepEqual(g.pages.map(p=>[p.site,p.read,p.cited_by]),[['roofer-a.example',true,['Perplexity']],['roofer-b.example',true,['Perplexity']]]);
+ assert.ok(g.missing_topics.some(x=>/estimate/i.test(x.topic)),'the estimate topic they cover is not on your page');
+ assert.deepEqual((await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh')).body.ai.gap.status,'READ','kept for the result page');
+ const withGap=await s.get('/free-growth/r/pub1?k=key1abcdefgh');assert.match(withGap.body,/function aiGapHtml/);
  // Pasting again for the same AI system replaces the earlier answer.
  await s.post('/api/free-growth/checks/pub1/ai?k=key1abcdefgh',{engine:'perplexity',text:'ANSWER: TEST roof repair answer.\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/\nhttps://acme-roofing.example/roof-repair-lodi-nj/'});
  assert.equal(s.storage.aiRows.length,1);
  r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
  assert.equal(r.body.ai.summary.headline,'Cited by 1 of 1 AI system with a source list');
+ assert.equal(r.body.ai.gap,null,'no AI gap when every AI system cites you');
  assert.deepEqual(r.body.ai.summary.also_in_google,['roofer-a.example'],'compared with the Google results of this check');
  assert.ok(!r.body.summary.limitations.some(x=>/were not checked/.test(x)));assert.ok(r.body.summary.limitations.some(x=>/differ per user/.test(x)));
  const dl=await s.get('/api/free-growth/checks/pub1/report.json?k=key1abcdefgh');

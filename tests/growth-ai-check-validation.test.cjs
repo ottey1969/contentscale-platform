@@ -71,3 +71,19 @@ test('Tracker Growth: an invalid paste is refused with its reason and not stored
   const ok = await call(h, req({ engine: 'chatgpt', text: GOOD, query: Q, page_url: PAGE }));
   assert.equal(ok.status, 200); assert.equal(saved.length, 1); assert.equal(ok.json.ai_check.summary.checked, 1);
 });
+
+test('AI visibility next steps appear automatically when AI systems with a source list do not cite the site',()=>{
+ const ai=require('../src/growth-free/ai-answers.cjs');
+ const page='https://acme-roofing.example/emergency-roof-repair-nj/';
+ const src=u=>({sources:[u],source_sites:[new URL(u).hostname],own_site_cited:u.includes('acme-roofing'),exact_page_cited:u===page,sources_verifiable:true});
+ const sum=ai.summarizeAiAnswers([{engine:'chatgpt',parsed:src('https://roofer-a.example/x')},{engine:'perplexity',parsed:src('https://roofer-b.example/y')},{engine:'copilot',parsed:src(page)}],{pageUrl:page});
+ const ids=sum.visibility_actions.map(a=>a.id);
+ assert.deepEqual(ids,['bing_webmaster_tools','consistent_listings','compare_cited_pages','choose_ai_topics']);
+ const bing=sum.visibility_actions[0];assert.match(bing.why,/ChatGPT Search does not cite you/);assert.ok(bing.steps.some(s=>/sitemap/.test(s)));
+ assert.match(sum.visibility_actions[2].why,/roofer-a\.example/);
+ // Bing step only when a Bing-based system misses; nothing when every checked system cites; nothing without a source list.
+ assert.ok(!ai.summarizeAiAnswers([{engine:'perplexity',parsed:src('https://roofer-b.example/y')}],{pageUrl:page}).visibility_actions.some(a=>a.id==='bing_webmaster_tools'));
+ assert.deepEqual(ai.summarizeAiAnswers([{engine:'chatgpt',parsed:src(page)}],{pageUrl:page}).visibility_actions,[]);
+ assert.deepEqual(ai.summarizeAiAnswers([{engine:'chatgpt',raw_text:'no list https://roofer-a.example/x'}],{pageUrl:page}).visibility_actions,[]);
+ assert.deepEqual(ai.summarizeAiAnswers([],{pageUrl:page}).visibility_actions,[]);
+});

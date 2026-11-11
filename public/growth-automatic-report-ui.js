@@ -65,6 +65,27 @@
   var req=ready.blockers.some(function(b){return b.required});
   ready.status=req?'NOT_READY_FOR_PUBLICATION':ready.blockers.length?'READY_FOR_OWNER_APPROVAL_WITH_NOTES':'READY_FOR_OWNER_APPROVAL';
  }
+ // AI gap: what the pages AI cites (where it does not cite this page) have and this page does not, as the Google gap.
+ function renderAiGap(box,g){
+  if(!g||g.status==='NO_CITED_PAGES')return;
+  var w=node('div',null,box);w.className='ai-gap';node('h4','What the pages AI cites have that your page does not',w);
+  if(g.status==='RUNNING'){node('p','The pages AI cites are being read now. Reload this page in a minute to see the comparison.',w);return}
+  if(g.status==='FAILED'){node('p','The pages AI cites could not be compared this time. Paste an answer again to retry.',w);return}
+  if(g.status==='OWN_PAGE_UNREADABLE'){node('p','Your page could not be read just now, so the pages AI cites were not compared with it.',w);return}
+  node('p','For the AI systems that do not cite you: the pages they cite, read and compared with your page. Observations only; add only what is true for your business, in your own words.',w);
+  if(g.status==='NOTHING_READABLE')node('p','None of the cited pages could be read automatically. Open them yourself (links below).',w);
+  if((g.missing_facts||[]).length){node('strong','Facts they state and your page does not',w);var fl=node('ul',null,w);
+   g.missing_facts.forEach(function(f){var li=node('li',f.label+' — on '+f.sites.join(', '),fl);if(f.example)node('small',' '+f.example.site+': “'+f.example.excerpt+'”',li)})}
+  if((g.missing_topics||[]).length){node('strong','Topics they cover and your page does not ('+g.missing_topics.length+')',w);
+   node('small',g.topics_basis==='TOPICS_COMPARED'?' Compared by topic: a section on your page that answers the same question counts, also when worded differently.':' Compared by heading words only: check each one, your page may answer it in other words.',w);
+   var tl=node('ul',null,w);g.missing_topics.forEach(function(t){var li=node('li',t.topic+(t.coverage==='PARTLY'?' (partly on your page)':t.coverage==='UNSURE'?' (not sure: check whether your page answers this)':'')+' — '+t.sites.join(', '),tl);
+    if(t.examples&&t.examples[0]&&t.examples[0].excerpt)node('small',' “'+t.examples[0].excerpt+'”',li)})}
+  var el=g.elements||{},miss=(el.elements_they_have_and_this_page_lacks||[]).map(function(e){return e.label+' ('+e.ranking_pages_with_it+' of '+e.of+')'}).concat((el.structured_data_they_have_and_this_page_lacks||[]).map(function(e){return 'Structured data: '+e.type+' ('+e.ranking_pages_with_it+' of '+e.of+')'}));
+  if(miss.length){node('strong','Page elements they have and your page does not',w);var ml=node('ul',null,w);miss.forEach(function(m){node('li',m,ml)})}
+  var det=node('details',null,w);node('summary','Pages AI cites ('+(g.pages||[]).length+')',det);var pl=node('ul',null,det);
+  (g.pages||[]).forEach(function(p){var li=node('li',null,pl),a=node('a',p.site,li);a.href=p.url;a.target='_blank';a.rel='noopener noreferrer nofollow';
+   node('small',' · cited by '+p.cited_by.join(', ')+' · '+p.status+(p.read&&(p.headings||[]).length?' · '+p.headings.filter(function(h){return h.status==='MISSING'}).length+' of '+p.headings.length+' heading(s) not on your page':''),li)});
+ }
  function renderAiCheck(box,d){
   var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
   var recent=(x.engines||[]).filter(function(e){return e.checked}).length;
@@ -81,6 +102,9 @@
    var li=node('li',e.label+': '+label+(when?' · '+String(when).slice(0,10):'')+(e.checked&&e.verifiable?' · '+e.sources+' cited sources':'')+(e.topic_warning?' · Check the topic: this answer shares no word with “'+String(c.search_term||'')+'”. It counts (synonyms are fine); replace it if it answers another question.':''),ul);
    if(bad||e.topic_warning)li.style.color=bad?'#b42318':'#92400e';
   });
+  renderAiGap(box,c.gap);
+  if(x.visibility_actions&&x.visibility_actions.length){var nx=node('div',null,box);nx.className='ai-next-steps';node('h4','Next steps to be cited by AI',nx);
+   x.visibility_actions.forEach(function(v){node('strong',v.title,nx);node('p',v.why,nx);var ol=node('ol',null,nx);v.steps.forEach(function(t){node('li',t,ol)})})}
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
   if(complete){var goStep=node('p',null,box),continueLink=node('a','Continue to Step 3 · Write selected improvements',goStep);continueLink.href='#growthGapChoice';}
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
