@@ -59,7 +59,9 @@ test('Pre-Write AI collection is one visible action, prompt stays behind the sce
       assert.equal(await page.isVisible('#cs-research-tabs'), false, 'No two-tab choice');
       assert.equal(await page.isVisible('#cs-research-prompt-panel'), false, 'Internal prompt not exposed');
       assert.equal(await page.isVisible('#pwbAioText'), true, 'Answer fields remain available');
-      assert.match(await page.textContent('#cs-research-ask .cs-ask-note'), /Copy the keyword.*Paste that system/);
+      assert.match(await page.textContent('#cs-research-ask .cs-ask-note'), /Copy the question.*Paste that system/);
+      // Outside a Tracker (no token) no customer question can be looked up: the keyword itself is the question to copy.
+      await page.waitForFunction(() => document.getElementById('cs-ai-question').value === 'seo content optimalisatie', null, { timeout: 4000 });
       await page.fill('#pwbKeyword', 'seo content optimalisatie');
       assert.match(await page.textContent('#cs-research-ask .cs-rp-status'), /0 of 5 AI answers ready/);
       await page.click('#cs-research-ask-copy');
