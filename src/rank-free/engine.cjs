@@ -90,7 +90,8 @@ async function checkRank({ keyword, host, gl, hl, key, fetchImpl = global.fetch,
           top_hosts: seenHosts, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
       }
     }
-    if (payload.organic.length < PAGE_SIZE) return { status: 'NOT_IN_RESULTS', depth: (page - 1) * PAGE_SIZE + payload.organic.length, pages_checked: page, calls, top_hosts: seenHosts, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
+    // Google ended its results before the checked depth: the site is not among all results Google showed.
+    if (payload.organic.length < PAGE_SIZE) return { status: 'NOT_IN_RESULTS', all_results_shown: true, depth: (page - 1) * PAGE_SIZE + payload.organic.length, pages_checked: page, calls, top_hosts: seenHosts, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
   }
   return { status: 'NOT_IN_RESULTS', depth: maxPages * PAGE_SIZE, pages_checked: maxPages, calls, top_hosts: seenHosts, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
 }

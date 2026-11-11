@@ -51,6 +51,15 @@ test('position is found across result pages, also for a subdomain; not found is 
   assert.equal(e.status, 'PROVIDER_ERROR');
 });
 
+test('not found: "not in top 30" after the full depth, "not found in the N results Google showed" when Google showed fewer', () => {
+  const { positionText, t } = require('../src/rank-free/texts.cjs');
+  assert.equal(positionText({ status: 'NOT_IN_RESULTS', depth: 30 }, t('nl')), 'niet in top 30');
+  assert.equal(positionText({ status: 'NOT_IN_RESULTS', depth: 19, all_results_shown: true }, t('nl')), 'niet gevonden in de 19 resultaten die Google toonde');
+  assert.equal(positionText({ status: 'NOT_IN_RESULTS', depth: 19 }, t('es')), 'no aparece en los 19 resultados que mostró Google', 'older results without the flag');
+  assert.equal(positionText({ status: 'NOT_IN_RESULTS', depth: 7, all_results_shown: true }, t('en')), 'not found in the 7 results Google showed');
+  assert.equal(positionText({ status: 'NOT_IN_RESULTS', depth: 0, all_results_shown: true }, t('nl')), 'Google toonde geen resultaten');
+});
+
 test('changes: page one gained and lost, big moves, small moves are not news', () => {
   const f = p => ({ status: 'FOUND', position: p, url: 'https://a.example/x' });
   assert.equal(engine.changeOf(f(14), f(8)).kind, 'ENTERED_PAGE_ONE');
@@ -97,7 +106,7 @@ test('one weekly e-mail per project, in the account language, with a working das
   const sent = [];
   const out = await sendDigests({ store, send: async m => { sent.push(m); return true; }, baseUrl: 'https://app.example', now });
   assert.equal(out.sent, 1); assert.match(sent[0].subject, /Tus posiciones en Google para acme\.example/);
-  assert.match(sent[0].html, /fuera del top 30/); assert.match(sent[0].html, /primera comprobación/);
+  assert.match(sent[0].html, /Google no mostró resultados/); assert.match(sent[0].html, /primera comprobación/);
   const tok = /\/rank-tracker\/d\/([^"]+)"/.exec(sent[0].html)[1];
   assert.ok(links.readToken(tok));
   assert.equal((await sendDigests({ store, send: async m => { sent.push(m); return true; }, baseUrl: 'https://app.example', now })).sent, 0, 'not twice for the same round');
