@@ -25,6 +25,18 @@ one e-mail per week shows the positions and what changed.
   checks (no extra provider call, nothing invented), minus what is already tracked. One click adds it (up to the limit;
   at the limit the tool says so instead of dropping a keyword). The weekly e-mail names up to five of them.
 
+## Search Console (optional, by hand) and the best opportunity
+
+* The visitor can upload the Search Console export of the website (Performance → Export → Download CSV; ZIP or CSV,
+  at most 3 MB). No Google sign-in. It is refused when its pages are of another website. The country filter in the
+  export is shown as written ("all countries" when there is none); nothing is assumed. The latest upload replaces the
+  previous one; it can be removed on its own and goes with "Delete my data".
+* With it, each tracked keyword shows its clicks, impressions and average position, and "Opportunities from Search
+  Console" lists search terms with impressions at average position 4–20 that are not tracked yet (one click tracks).
+* **Best opportunity** (top of the dashboard, automatic): the tracked keyword at Google position 4–20 in the last check;
+  with Search Console the one with the most impressions, else the one closest to the top. Its button opens the free
+  Growth check filled in with the ranking page, keyword, market and language.
+
 ## Free plan and limits
 
 | Setting | Default | Env |

@@ -223,3 +223,49 @@ test('dashboard: trend line, top 3, Growth link filled in, and Google suggestion
   assert.equal((await request(a).post('/api/rank-free/d/' + tok + '/keywords/add').send({ keyword: 'https://x.example' })).status, 400);
   void project;
 });
+
+test('Search Console export (optional, by hand): checked against the website, country filter shown as written, opportunities and the best opportunity lead to the filled-in Growth check', async () => {
+  const { zip } = require('./helpers/zip.cjs');
+  const gscMod = require('../src/rank-free/gsc.cjs');
+  const Q = 'Consultas principales,Clics,Impresiones,CTR,Posición\nconsultor geo,12,"1.340","0,9%","7,4"\nqué es geo,3,800,0.4%,11.2\nseo para ia,0,500,0%,9.8\ngeo,1,5,20%,3\nposicionamiento ia,0,40,0%,35\n';
+  const P = 'Páginas principales,Clics,Impresiones,CTR,Posición\nhttps://es.acme.example/consultor-geo/,12,1340,0.9%,7.4\nhttps://acme.example/,3,800,0.4%,11\n';
+  const F = 'Filtro,Valor\nPaís,España\nTipo de búsqueda,Web\nFecha,2026-10-01 - 2026-10-28\n';
+  const ok = gscMod.readSiteExport({ fileName: 'acme-Performance-2026-11-11.zip', content: zip({ 'Consultas.csv': Q, 'Páginas.csv': P, 'Filtros.csv': F }), host: 'acme.example' });
+  assert.equal(ok.error, undefined); assert.equal(ok.country_filter, 'España'); assert.deepEqual([ok.period.start, ok.period.end], ['2026-10-01', '2026-10-28']);
+  assert.deepEqual(ok.queries[0], { query: 'consultor geo', clicks: 12, impressions: 1340, ctr: 0.009, position: 7.4 });
+  const other = gscMod.readSiteExport({ fileName: 'x.zip', content: zip({ 'Consultas.csv': Q, 'Páginas.csv': 'Páginas,Clics,Impresiones,CTR,Posición\nhttps://other.example/a,1,10,1%,3\nhttps://other.example/b,1,10,1%,3\n' }), host: 'acme.example' });
+  assert.equal(other.error, 'OTHER_SITE', 'an export of another website is refused');
+  assert.equal(gscMod.readSiteExport({ fileName: 'x.csv', content: Buffer.from('nada'), host: 'acme.example' }).error, 'NO_QUERIES');
+  // Opportunities: impressions, average position 4-20, not tracked yet; position 3 and 35 are left out, as are tracked terms.
+  assert.deepEqual(gscMod.opportunities(ok, ['consultor geo']).map(q => q.query), ['qué es geo', 'seo para ia']);
+
+  // Through the dashboard.
+  const store = memoryStore(), sent = [];
+  await confirmedAccount(store, { keywords: ['consultor geo', 'que es geo'] });
+  const [k1, k2] = store.db.keywords;
+  await store.saveResult(k1.id, { status: 'FOUND', position: 7, url: 'https://es.acme.example/consultor-geo/', checked_at: '2026-11-11T10:00:00.000Z' }, new Date('2026-11-18T10:00:00Z'));
+  await store.saveResult(k2.id, { status: 'FOUND', position: 5, url: 'https://acme.example/que-es-geo/', checked_at: '2026-11-11T10:00:00.000Z' }, new Date('2026-11-18T10:00:00Z'));
+  const a = app(store, sent);
+  const tok = links.linkToken(store.db.accounts[0].dashboard_nonce);
+  // Without Search Console the best opportunity is the tracked keyword closest to the top (position 5).
+  const before = await request(a).get('/rank-tracker/d/' + tok);
+  assert.match(before.text, /Tu mejor oportunidad ahora[\s\S]*«que es geo» está en la posición 5/);
+  assert.match(before.text, /Aún no has subido ninguna exportación/);
+  const bad = await request(a).post('/api/rank-free/d/' + tok + '/gsc').send({ name: 'x.zip', content_base64: zip({ 'Consultas.csv': Q, 'Páginas.csv': 'P,C,I,CTR,Pos\nhttps://other.example/a,1,10,1%,3\n' }).toString('base64') });
+  assert.equal(bad.status, 400); assert.match(bad.body.error, /otra web[\s\S]*acme\.example/);
+  const up = await request(a).post('/api/rank-free/d/' + tok + '/gsc').send({ name: 'acme-2026-11-11.zip', content_base64: zip({ 'Consultas.csv': Q, 'Páginas.csv': P, 'Filtros.csv': F }).toString('base64') });
+  assert.equal(up.body.success, true); assert.equal(up.body.country_filter, 'España');
+  const d = await request(a).get('/rank-tracker/d/' + tok);
+  // With Search Console the keyword most people see wins (1.340 impressions at position 7), with a filled-in Growth link to its page.
+  assert.match(d.text, /«consultor geo» está en la posición 7/); assert.match(d.text, /Search Console: 1340 impresiones y 12 clics en el periodo/);
+  const g = /<a class="cta" href="([^"]+)"/.exec(d.text)[1].replace(/&amp;/g, '&');
+  assert.equal(new URL(g).searchParams.get('url'), 'https://es.acme.example/consultor-geo/');
+  assert.equal(new URL(g).searchParams.get('query'), 'consultor geo');
+  assert.match(d.text, /Search Console: 12 clics · 1340 impresiones · posición media 7,4/);
+  assert.match(d.text, /Filtro de país: España/); assert.match(d.text, /Periodo 2026-10-01 – 2026-10-28/);
+  assert.match(d.text, /Oportunidades de Search Console[\s\S]*data-k="seo para ia"/);
+  assert.doesNotMatch(d.text, /data-k="consultor geo"/);
+  // Removed on request, and with "delete my data".
+  assert.equal((await request(a).post('/api/rank-free/d/' + tok + '/gsc/delete')).body.success, true);
+  assert.equal(store.db.projects[0].gsc, null);
+});

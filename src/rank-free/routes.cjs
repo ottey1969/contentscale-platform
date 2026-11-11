@@ -9,6 +9,7 @@ const { pgStore, hash, token: randomToken } = require('./store.cjs');
 const { runDue, sendDigests } = require('./runner.cjs');
 const { t, langOf, esc, positionText, changeText, verifyEmail, accessEmail } = require('./texts.cjs');
 const links = require('./links.cjs');
+const gscMod = require('./gsc.cjs');
 const { brevo } = require('../growth-free/reminders.cjs');
 const { countryName, languageName, PREWRITE_REGIONS } = require('../growth-search-locale.cjs');
 
@@ -42,7 +43,8 @@ button.ghost{background:#fff;color:#6d28d9;border:1px solid #6d28d9}.muted{color
 th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #eee;vertical-align:top}th{background:#f5f3ff}.pos{font-weight:800;font-size:1.1rem}
 .consent{display:flex;gap:8px;align-items:flex-start;font-weight:400}.consent input{width:auto;margin-top:5px}a{color:#6d28d9}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.chip{background:#f5f3ff;color:#1a1a1a;border:1px solid #c4b5fd;border-radius:999px;padding:6px 12px;margin:0;font-weight:400;font-size:14px}
-.chip:disabled{opacity:.5;cursor:default}.sub{display:block;color:#555;font-size:13px;margin-top:4px}.spark{vertical-align:middle}
+.chip:disabled{opacity:.5;cursor:default}.sub{display:block;color:#555;font-size:13px;margin-top:4px}.spark{vertical-align:middle}.best{border:2px solid #6d28d9}.cta{display:inline-block;background:#6d28d9;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700}
+input[type=file]{border:1px dashed #a78bfa;background:#faf7ff;margin-top:6px}
 @media(max-width:640px){.rk thead{display:none}.rk tr{display:block;border-bottom:1px solid #eee;padding:10px 0}.rk td{display:block;border:0;padding:3px 0}
 .rk td[data-l]:not(:empty)::before{content:attr(data-l) ': ';color:#555;font-size:13px;font-weight:400}.rk td.pos{font-size:1.3rem}}
 .eyebrow{font-size:12px;letter-spacing:.09em;color:#6d28d9;font-weight:700;text-transform:uppercase}`;
@@ -108,6 +110,8 @@ function suggestionsOf(data, max = 10) {
 
 function dashboardPage(lang, data, tok, cfg) {
   const L = t(lang);
+  const num = n => Number(n).toLocaleString(lang, { maximumFractionDigits: 1 });
+  const gscBy = new Map((data.gsc && data.gsc.queries || []).map(q => [q.query, q]));
   const rows = data.keywords.map(k => {
     const last = k.history[0] && k.history[0].result, prev = k.history[1] && k.history[1].result;
     const ch = last ? changeText(engine.changeOf(prev, last), L) : '';
@@ -116,27 +120,44 @@ function dashboardPage(lang, data, tok, cfg) {
     const top = last && Array.isArray(last.top) && last.top.length ? last.top : (last && Array.isArray(last.top_hosts) ? last.top_hosts.map(h => ({ host: h })) : []);
     const topLine = top.length ? `<span class="sub">${esc(L.top3)}: ${top.map(x => x.url ? `<a href="${esc(x.url)}" rel="nofollow noopener" target="_blank">${esc(x.host)}</a>` : esc(x.host)).join(', ')}</span>` : '';
     const improve = last && (last.status !== 'FOUND' || last.position > 3) ? `<span class="sub"><a href="${esc(growthLink(cfg, data, k.keyword, last))}">${esc(L.growthFor)} →</a></span>` : '';
-    return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
+    const g = gscBy.get(k.keyword);
+    const gLine = g ? `<span class="sub">${esc(L.gRow(num(g.clicks), num(g.impressions), g.position != null ? num(g.position) : null))}</span>` : '';
+    return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}${gLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
   }).join('');
   const pending = data.keywords.some(k => !k.history[0] && !k.last_error);
   const providerNote = pending && !data.provider_ready ? `<div class="msg err">${esc(L.noProvider)}</div>` : '';
   const refresh = pending && data.provider_ready ? '<script>setTimeout(()=>location.reload(),15000)</script>' : '';
   const sugg = suggestionsOf(data), full = data.keywords.length >= cfg.maxKeywords;
   const suggestCard = sugg.length ? `<div class="card" id="sg"><strong>${esc(L.sTitle)}</strong><p class="muted">${esc(full ? L.sFull(data.keywords.length) : L.sLead)}</p><div class="chips">${sugg.map(x => `<button type="button" class="chip" data-k="${esc(x)}"${full ? ' disabled' : ''}>+ ${esc(x)}</button>`).join('')}</div><div id="sm"></div></div>` : '';
+  const best = gscMod.bestOpportunity(data.keywords, data.gsc);
+  const bestCard = best ? `<div class="card best" id="best"><p class="eyebrow">${esc(L.bTitle)}</p><p style="font-size:1.1rem;margin:4px 0 8px"><strong>${esc(L.bText(best.keyword, best.result.position))}</strong></p>`
+    + (best.gsc ? `<p class="muted">${esc(L.bGsc(num(best.gsc.impressions), num(best.gsc.clicks)))}</p>` : '')
+    + `<p><a class="cta" href="${esc(growthLink(cfg, data, best.keyword, best.result))}">${esc(L.bCta)} →</a></p><p class="muted">${esc(L.bTip)}</p></div>` : '';
+  const G = data.gsc, opps = gscMod.opportunities(G, data.keywords.map(k => k.keyword));
+  const gInfo = G ? `<p class="muted">${[G.period ? esc(L.gPeriod(G.period.start, G.period.end)) : '', G.totals ? esc(L.gTotals(num(G.totals.clicks), num(G.totals.impressions))) : ''].filter(Boolean).join(' · ')}</p>`
+    + `<p class="muted">${esc(G.country_filter ? L.gCountry(G.country_filter) : L.gAllCountries)}${G.page_filter ? ' ' + esc(L.gPage(G.page_filter)) : ''}</p>` : `<p class="muted">${esc(L.gNone)}</p>`;
+  const gOpps = opps.length ? `<p style="margin-top:14px"><strong>${esc(L.gOppTitle)}</strong></p><p class="muted">${esc(full ? L.sFull(data.keywords.length) : L.gOppLead)}</p><div class="chips">${opps.map(q => `<button type="button" class="chip" data-k="${esc(q.query)}"${full ? ' disabled' : ''}>+ ${esc(q.query)} <span class="muted">· ${esc(L.gChip(num(q.position), num(q.impressions)))}</span></button>`).join('')}</div>` : '';
+  const gscCard = `<div class="card" id="gsc"><strong>${esc(L.gTitle)}</strong><p class="muted">${esc(L.gLead)}</p>${gInfo}${gOpps}
+<p class="muted" style="margin-top:14px">${esc(L.gHow)}</p><input type="file" id="gf" accept=".zip,.csv,text/csv,application/zip"><button type="button" id="gu">${esc(L.gUpload)}</button>${G ? ` <button type="button" class="ghost" id="gd">${esc(L.gDelete)}</button>` : ''}<div id="gm"></div></div>`;
   const notOnOne = data.keywords.some(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
   return page(lang, L.dash, `<p class="eyebrow">ContentScale · ${esc(L.title)}</p><h1>${esc(L.dash)}</h1>
 <p><strong>${esc(data.host)}</strong> · ${esc(data.country)} · ${esc(data.language)}</p>${data.other_engine ? `<p class="muted">${esc(L.otherEngine(data.other_engine))}</p>` : ''}
-${providerNote}<div class="card" style="overflow-x:auto"><table class="rk"><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.trend)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
+${providerNote}${bestCard}<div class="card" style="overflow-x:auto"><table class="rk"><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.trend)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="muted">${esc(L.note)}</p></div>
-${notOnOne ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(cfg.growthUrl)}">${esc(L.upsellLink)} →</a></p></div>` : ''}
-${suggestCard}<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
+${notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(cfg.growthUrl)}">${esc(L.upsellLink)} →</a></p></div>` : ''}
+${suggestCard}${gscCard}<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
 <p class="muted"><a href="/rank-tracker/stop/${esc(tok)}">${esc(L.stop)}</a> · <a href="#" id="fg">${esc(L.forget)}</a></p>
 <script>(()=>{const $=i=>document.getElementById(i);$('k').onsubmit=async ev=>{ev.preventDefault();const m=$('m');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:$('kw').value})});const j=await r.json();
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),800)};
-document.querySelectorAll('#sg .chip').forEach(b=>b.onclick=async()=>{b.disabled=true;const m=$('sm');
+document.querySelectorAll('#sg .chip,#gsc .chip').forEach(b=>b.onclick=async()=>{b.disabled=true;const m=$(b.closest('#gsc')?'gm':'sm');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:b.dataset.k})});const j=await r.json();
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),900);else b.disabled=false});
+$('gu').onclick=async()=>{const f=$('gf').files[0],m=$('gm');if(!f)return;$('gu').disabled=true;
+const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=no;r.readAsDataURL(f)});
+const r=await fetch('/api/rank-free/d/${esc(tok)}/gsc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name,content_base64:b64})});const j=await r.json().catch(()=>({}));
+m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),700);else $('gu').disabled=false};
+if($('gd'))$('gd').onclick=async()=>{await fetch('/api/rank-free/d/${esc(tok)}/gsc/delete',{method:'POST'});location.reload()};
 $('fg').onclick=async e=>{e.preventDefault();if(!confirm(${JSON.stringify(L.forgetConfirm)}))return;await fetch('/api/rank-free/d/${esc(tok)}/forget',{method:'POST'});location.href='/rank-tracker'}})();</script>${refresh}`);
 }
 
@@ -155,7 +176,8 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     // Country and language in the account's own language ("Spanje · Spaans" on a Dutch dashboard).
     const shown = (type, code) => { try { return new Intl.DisplayNames([langOf(account.lang)], { type }).of(code); } catch { return null; } };
     return { host: p && p.host, gl: p && p.gl, hl: p && p.hl, country: (p && shown('region', p.gl.toUpperCase())) || m.country_name,
-      language: (p && shown('language', p.hl)) || m.language_name, other_engine: m.other_engine || null, keywords, provider_ready: !!config.serperKey };
+      language: (p && shown('language', p.hl)) || m.language_name, other_engine: m.other_engine || null, keywords, provider_ready: !!config.serperKey,
+      gsc: p && p.gsc ? (typeof p.gsc === 'string' ? JSON.parse(p.gsc) : p.gsc) : null, gsc_at: p ? p.gsc_at || null : null };
   }
   const accountFor = async tok => { const nonce = links.readToken(tok); return nonce ? store.accountByDashboard(nonce) : null; };
   let kick = null; // one background round right after a confirmation, so the first positions appear within a minute
@@ -238,6 +260,24 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     await store.setKeywords(p.id, [...list, k.keyword], now());
     runRound();
     res.json({ success: true, message: L.sAdded, keywords: [...list, k.keyword] });
+  });
+  // Optional Search Console export of the website (ZIP or CSV, at most 3 MB). The latest upload replaces the previous.
+  app.post('/api/rank-free/d/:token/gsc', async (req, res) => {
+    const a = await accountFor(req.params.token).catch(() => null);
+    if (!a) return res.status(404).json({ success: false, error: 'Not found' });
+    const L = t(a.lang), b = req.body || {}, p = await store.projectOf(a.id);
+    if (!p || typeof b.content_base64 !== 'string' || !b.content_base64) return res.status(400).json({ success: false, error: L.gHow });
+    const out = gscMod.readSiteExport({ fileName: String(b.name || '').slice(0, 200), content: Buffer.from(b.content_base64, 'base64'), host: p.host });
+    if (out.error === 'OTHER_SITE') return res.status(400).json({ success: false, error: L.gOther(p.host) });
+    if (out.error) return res.status(400).json({ success: false, error: out.message || L.gHow });
+    await store.setGsc(p.id, out, now());
+    res.json({ success: true, message: L.gSaved, queries: out.queries.length, period: out.period, country_filter: out.country_filter });
+  });
+  app.post('/api/rank-free/d/:token/gsc/delete', async (req, res) => {
+    const a = await accountFor(req.params.token).catch(() => null);
+    if (!a) return res.status(404).json({ success: false, error: 'Not found' });
+    const p = await store.projectOf(a.id); if (p) await store.setGsc(p.id, null, null);
+    res.json({ success: true });
   });
   app.post('/api/rank-free/d/:token/forget', async (req, res) => {
     const nonce = links.readToken(req.params.token);
