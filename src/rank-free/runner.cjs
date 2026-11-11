@@ -5,7 +5,7 @@
 const { checkRank, changeOf, growthLink } = require('./engine.cjs');
 const { digestEmail, followText, t } = require('./texts.cjs');
 const { bestOpportunity, followUp } = require('./gsc.cjs');
-const { linkToken } = require('./links.cjs');
+const { linkToken, handoffToken } = require('./links.cjs');
 const { countryName } = require('../growth-search-locale.cjs');
 
 const DAY = 86400000;
@@ -52,7 +52,7 @@ async function sendDigests({ store, send, baseUrl, growthUrl = 'https://app.cont
     const gsc = p.gsc ? (typeof p.gsc === 'string' ? JSON.parse(p.gsc) : p.gsc) : null;
     const b = bestOpportunity(full, gsc), L = t(p.lang), fu = b ? followUp(b.row, now) : null;
     const best = b ? { keyword: b.keyword, position: b.result.position, follow: followText(fu, L), cta: fu ? L.cAgain : L.bCta,
-      link: growthLink(growthUrl, p, b.keyword, b.result), show_cta: !fu || fu.status === 'NO_GROWTH' } : null;
+      link: growthLink(growthUrl, p, b.keyword, b.result, handoffToken(p.dashboard_nonce, b.keyword)), show_cta: !fu || fu.status === 'NO_GROWTH' } : null;
     // Google's own related searches from this round that are not tracked yet (at most five).
     const tracked = new Set(rows.map(r => r.keyword)), suggestions = [];
     for (const r of rows) for (const x of (r.curr && Array.isArray(r.curr.suggestions) ? r.curr.suggestions : [])) if (!tracked.has(x) && !suggestions.includes(x) && suggestions.length < 5) suggestions.push(x);

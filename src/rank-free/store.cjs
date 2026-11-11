@@ -32,6 +32,9 @@ function pgStore(pool) {
     // "I changed this page" for a keyword: when, and its position that day (follow-up on the dashboard and in the e-mail).
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_keywords ADD COLUMN IF NOT EXISTS changed_at TIMESTAMPTZ");
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_keywords ADD COLUMN IF NOT EXISTS changed_position INTEGER");
+    // A free Growth check started from the tracker for one keyword (so its publication date follows the keyword).
+    await pool.query(`CREATE TABLE IF NOT EXISTS rank_free_handoffs(check_id TEXT PRIMARY KEY,
+      account_id BIGINT NOT NULL REFERENCES rank_free_accounts(id) ON DELETE CASCADE, keyword TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
     // The optional Search Console export of the website (latest upload only); removed with the project.
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS gsc JSONB");
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS gsc_at TIMESTAMPTZ");
@@ -59,6 +62,10 @@ function pgStore(pool) {
     },
     async accountByDashboard(dashboardNonce) { return (await q('SELECT * FROM rank_free_accounts WHERE dashboard_nonce=$1 AND verified_at IS NOT NULL', [dashboardNonce]))[0] || null; },
     async projectOf(accountId) { return (await q('SELECT * FROM rank_free_projects WHERE account_id=$1', [accountId]))[0] || null; },
+    async saveHandoff(checkId, accountId, keyword) { await q('INSERT INTO rank_free_handoffs(check_id,account_id,keyword) VALUES($1,$2,$3) ON CONFLICT(check_id) DO NOTHING', [checkId, accountId, keyword]); },
+    async handoffsSince(accountId, since) { return Number((await q('SELECT COUNT(*)::int n FROM rank_free_handoffs WHERE account_id=$1 AND created_at>=$2', [accountId, since]))[0].n); },
+    async handoffOf(checkId) { return (await q('SELECT * FROM rank_free_handoffs WHERE check_id=$1', [checkId]))[0] || null; },
+    async accountById(id) { return (await q('SELECT * FROM rank_free_accounts WHERE id=$1', [id]))[0] || null; },
     async markChanged(projectId, keyword, at, position) { return (await q('UPDATE rank_free_keywords SET changed_at=$3, changed_position=$4 WHERE project_id=$1 AND keyword=$2 AND active RETURNING id', [projectId, keyword, at, at ? position : null])).length > 0; },
     async setGsc(projectId, data, at) { await q('UPDATE rank_free_projects SET gsc=$2, gsc_at=$3 WHERE id=$1', [projectId, data ? JSON.stringify(data) : null, data ? at : null]); },
     async keywords(projectId) { return q('SELECT * FROM rank_free_keywords WHERE project_id=$1 AND active ORDER BY created_at, id', [projectId]); },
@@ -128,6 +135,10 @@ function memoryStore() {
     },
     async accountByDashboard(h) { return db.accounts.find(a => a.dashboard_nonce === h && a.verified_at) || null; },
     async projectOf(accountId) { return db.projects.find(p => p.account_id === accountId) || null; },
+    async saveHandoff(checkId, accountId, keyword) { db.handoffs = db.handoffs || []; if (!db.handoffs.some(h => h.check_id === checkId)) db.handoffs.push({ check_id: checkId, account_id: accountId, keyword, created_at: new Date() }); },
+    async handoffsSince(accountId, since) { return (db.handoffs || []).filter(h => h.account_id === accountId && h.created_at >= since).length; },
+    async handoffOf(checkId) { return (db.handoffs || []).find(h => h.check_id === checkId && db.accounts.some(a => a.id === h.account_id)) || null; },
+    async accountById(id) { return db.accounts.find(a => a.id === id) || null; },
     async markChanged(projectId, keyword, at, position) { const k = db.keywords.find(x => x.project_id === projectId && x.keyword === keyword && x.active); if (!k) return false; Object.assign(k, { changed_at: at, changed_position: at ? position : null }); return true; },
     async setGsc(projectId, data, at) { Object.assign(db.projects.find(p => p.id === projectId), { gsc: data || null, gsc_at: data ? at : null }); },
     async keywords(projectId) { return db.keywords.filter(k => k.project_id === projectId && k.active); },

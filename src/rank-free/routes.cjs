@@ -88,7 +88,7 @@ function sparkline(history, L) {
 }
 
 // The free Growth check, filled in for this keyword, market and (if it ranks) the page that ranks.
-const growthLink = (cfg, data, keyword, last) => engine.growthLink(cfg.growthUrl, data, keyword, last);
+const growthLink = (cfg, data, keyword, last) => engine.growthLink(cfg.growthUrl, data, keyword, last, links.handoffToken(data.nonce, keyword));
 
 // Google's own related searches and questions from the latest checks, minus what is already tracked.
 function suggestionsOf(data, max = 10) {
@@ -143,12 +143,13 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
   const gOpps = opps.length ? `<p style="margin-top:14px"><strong>${esc(L.gOppTitle)}</strong></p><p class="muted">${esc(full ? L.sFull(data.keywords.length) : L.gOppLead)}</p><div class="chips">${opps.map(q => `<button type="button" class="chip" data-k="${esc(q.query)}"${full ? ' disabled' : ''}>+ ${esc(q.query)} <span class="muted">· ${esc(L.gChip(num(q.position), num(q.impressions)))}</span></button>`).join('')}</div>` : '';
   const gscCard = `<div class="card" id="gsc"><strong>${esc(L.gTitle)}</strong><p class="muted">${esc(L.gLead)}</p>${gInfo}${gOpps}
 <p class="muted" style="margin-top:14px">${esc(L.gHow)}</p><input type="file" id="gf" accept=".zip,.csv,text/csv,application/zip"><button type="button" id="gu">${esc(L.gUpload)}</button>${G ? ` <button type="button" class="ghost" id="gd">${esc(L.gDelete)}</button>` : ''}<div id="gm"></div></div>`;
-  const notOnOne = data.keywords.some(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
+  // The first keyword not on page 1: the general Growth link opens the check for it (with the handoff, like every link).
+  const notOnOne = data.keywords.find(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
   return page(lang, L.dash, `<p class="eyebrow">ContentScale · ${esc(L.title)}</p><h1>${esc(L.dash)}</h1>
 <p><strong>${esc(data.host)}</strong> · ${esc(data.country)} · ${esc(data.language)}</p>${data.other_engine ? `<p class="muted">${esc(L.otherEngine(data.other_engine))}</p>` : ''}
 ${providerNote}${bestCard}<div class="card" style="overflow-x:auto"><table class="rk"><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.trend)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="muted">${esc(L.note)}</p></div>
-${notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(cfg.growthUrl)}">${esc(L.upsellLink)} →</a></p></div>` : ''}
+${notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(growthLink(cfg, data, notOnOne.keyword, notOnOne.history[0].result))}">${esc(L.upsellLink)} →</a></p></div>` : ''}
 ${suggestCard}${gscCard}<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
 <p class="muted"><a href="/rank-tracker/stop/${esc(tok)}">${esc(L.stop)}</a> · <a href="#" id="fg">${esc(L.forget)}</a></p>
 <script>(()=>{const $=i=>document.getElementById(i);$('k').onsubmit=async ev=>{ev.preventDefault();const m=$('m');
@@ -171,6 +172,7 @@ $('fg').onclick=async e=>{e.preventDefault();if(!confirm(${JSON.stringify(L.forg
 function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStore(pool), fetchImpl = global.fetch, sendEmail = null, now = () => new Date() } = {}) {
   if (!config.enabled) return null;
   const send = sendEmail || brevo(fetchImpl);
+  const handoff = require('./handoff.cjs').rankHandoff({ store });
   const emailReady = () => !!sendEmail || !!process.env.BREVO_API_KEY;
   const html = (res, body, code = 200) => res.status(code).set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').set('Content-Security-Policy', "frame-ancestors 'none'").type('html').send(body);
 
@@ -238,7 +240,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   app.get('/rank-tracker/d/:token', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
     if (!a) return html(res, page('en', 'Not found', '<h1>Not found</h1><p><a href="/rank-tracker">Free rank tracker</a></p>'), 404);
-    return html(res, dashboardPage(langOf(a.lang), await dashboardData(a), req.params.token, config, now()));
+    return html(res, dashboardPage(langOf(a.lang), { ...(await dashboardData(a)), nonce: a.dashboard_nonce }, req.params.token, config, now()));
   });
   app.get('/api/rank-free/d/:token', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
@@ -292,6 +294,14 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const [last] = await store.history(row.id, 1), r = last && last.result;
     await store.markChanged(p.id, k.keyword, now(), r && r.status === 'FOUND' ? r.position : null);
     res.json({ success: true, message: L.cSaved });
+  });
+  // For the free Growth check opened from the tracker: the owner's e-mail address to fill in. Only with a valid signed
+  // handoff, which only the owner gets (dashboard and weekly e-mail).
+  app.get('/api/rank-free/handoff', async (req, res) => {
+    res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer');
+    const r = await handoff.read(String(req.query.rt || '')).catch(() => null);
+    if (!r) return res.status(404).json({ success: false });
+    res.json({ success: true, email: r.account.email, keyword: r.keyword, host: r.project.host });
   });
   app.post('/api/rank-free/d/:token/gsc/delete', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
