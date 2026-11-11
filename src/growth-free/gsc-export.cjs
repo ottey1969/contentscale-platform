@@ -179,4 +179,4 @@ function termInExport(upload, term) {
   return exact || null;
 }
 
-module.exports = { periodFromFilters, readGscExport, engineRows, termInExport, parseCsv, unzip, MESSAGES, MAX_BYTES };
+module.exports = { periodFromFilters, readGscExport, engineRows, termInExport, parseCsv, unzip, classify, MESSAGES, MAX_BYTES };

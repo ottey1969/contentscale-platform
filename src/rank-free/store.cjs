@@ -29,6 +29,9 @@ function pgStore(pool) {
     // Why the last attempt failed (provider error), so the dashboard can say it instead of "first check is running".
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_keywords ADD COLUMN IF NOT EXISTS last_error TEXT");
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_keywords ADD COLUMN IF NOT EXISTS last_error_at TIMESTAMPTZ");
+    // The optional Search Console export of the website (latest upload only); removed with the project.
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS gsc JSONB");
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS gsc_at TIMESTAMPTZ");
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_results_kw_idx ON rank_free_results(keyword_id, checked_at DESC)');
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_keywords_due_idx ON rank_free_keywords(next_check_at) WHERE active');
     await pool.query(`CREATE TABLE IF NOT EXISTS rank_free_usage(month TEXT PRIMARY KEY, calls INTEGER NOT NULL DEFAULT 0)`);
@@ -53,6 +56,7 @@ function pgStore(pool) {
     },
     async accountByDashboard(dashboardNonce) { return (await q('SELECT * FROM rank_free_accounts WHERE dashboard_nonce=$1 AND verified_at IS NOT NULL', [dashboardNonce]))[0] || null; },
     async projectOf(accountId) { return (await q('SELECT * FROM rank_free_projects WHERE account_id=$1', [accountId]))[0] || null; },
+    async setGsc(projectId, data, at) { await q('UPDATE rank_free_projects SET gsc=$2, gsc_at=$3 WHERE id=$1', [projectId, data ? JSON.stringify(data) : null, data ? at : null]); },
     async keywords(projectId) { return q('SELECT * FROM rank_free_keywords WHERE project_id=$1 AND active ORDER BY created_at, id', [projectId]); },
     async setKeywords(projectId, list, now = null) {
       await q('UPDATE rank_free_keywords SET active=FALSE WHERE project_id=$1 AND NOT (keyword = ANY($2::text[]))', [projectId, list]);
@@ -120,6 +124,7 @@ function memoryStore() {
     },
     async accountByDashboard(h) { return db.accounts.find(a => a.dashboard_nonce === h && a.verified_at) || null; },
     async projectOf(accountId) { return db.projects.find(p => p.account_id === accountId) || null; },
+    async setGsc(projectId, data, at) { Object.assign(db.projects.find(p => p.id === projectId), { gsc: data || null, gsc_at: data ? at : null }); },
     async keywords(projectId) { return db.keywords.filter(k => k.project_id === projectId && k.active); },
     async setKeywords(projectId, list, now = null) {
       for (const k of db.keywords) if (k.project_id === projectId && !list.includes(k.keyword)) k.active = false;
