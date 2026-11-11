@@ -177,3 +177,49 @@ test('the sign-up page offers the Pre-Write countries and names markets where Go
   assert.equal(r.status, 200); assert.match(r.text, /Gratis rank tracker/); assert.match(r.text, /<option value="es">Spain<\/option>/);
   assert.match(r.text, /noindex/);
 });
+
+test('page 1 gives the top 3 and Google\'s own related searches and questions, at no extra call', async () => {
+  const fetchImpl = async (url, opts) => ({ ok: true, status: 200, json: async () => ({
+    organic: ['https://a.example/x', 'https://b.example/y', 'https://c.example/z', 'https://acme.example/geo/'].map((link, i) => ({ link, title: 'T' + i, position: i + 1 })),
+    relatedSearches: [{ query: 'Consultor GEO precio' }, { query: 'consultor geo' }, { query: 'https://spam.example' }],
+    peopleAlsoAsk: [{ question: '¿Qué hace un consultor GEO?' }] }) });
+  const r = await engine.checkRank({ keyword: 'consultor geo', host: 'acme.example', gl: 'es', hl: 'es', key: 'k', fetchImpl });
+  assert.equal(r.position, 4); assert.equal(r.calls, 1);
+  assert.deepEqual(r.top.map(x => [x.position, x.host]), [[1, 'a.example'], [2, 'b.example'], [3, 'c.example']]);
+  // The tracked keyword itself and anything that is not a keyword are left out; question marks are dropped.
+  assert.deepEqual(r.suggestions, ['consultor geo precio', 'qué hace un consultor geo']);
+});
+
+test('dashboard: trend line, top 3, Growth link filled in, and Google suggestions that add with one click up to the limit', async () => {
+  const store = memoryStore(), sent = [];
+  const { project } = await confirmedAccount(store, { keywords: ['consultor geo'] });
+  const res = (p, d) => ({ status: 'FOUND', position: p, url: 'https://acme.example/geo/', top: [{ position: 1, host: 'a.example', url: 'https://a.example/x' }], suggestions: ['consultor geo precio', 'qué hace un consultor geo'], checked_at: d });
+  const kid = store.db.keywords[0].id;
+  await store.saveResult(kid, { status: 'NOT_IN_RESULTS', depth: 30, checked_at: '2026-10-28T10:00:00.000Z' }, new Date('2026-11-04T10:00:00Z'));
+  await store.saveResult(kid, res(18, '2026-11-04T10:00:00.000Z'), new Date('2026-11-11T10:00:00Z'));
+  await store.saveResult(kid, res(9, '2026-11-11T10:00:00.000Z'), new Date('2026-11-18T10:00:00Z'));
+  const a = app(store, sent, { maxKeywords: 2 });
+  const tok = links.linkToken(store.db.accounts[0].dashboard_nonce);
+  const d = await request(a).get('/rank-tracker/d/' + tok);
+  assert.match(d.text, /aria-label="Evolución: – → 18 → 9"/); assert.match(d.text, /mejor 9/);
+  assert.match(d.text, /Top 3 en Google: <a href="https:\/\/a\.example\/x"/);
+  const g = /href="([^"]*free-growth[^"]*)">Mejora esta página/.exec(d.text);
+  const q = new URL(g[1].replace(/&amp;/g, '&')).searchParams;
+  assert.deepEqual([q.get('url'), q.get('query'), q.get('market'), q.get('language')], ['https://acme.example/geo/', 'consultor geo', 'es — Spain', 'Spanish']);
+  assert.match(d.text, /Palabras clave que sugiere Google/); assert.match(d.text, /data-k="consultor geo precio"/);
+  // The weekly e-mail names the suggestions that are not tracked yet.
+  const mails = [];
+  await sendDigests({ store, send: async m => { mails.push(m); return true; }, baseUrl: 'https://app.example', now: new Date('2026-11-11T10:05:00Z') });
+  assert.match(mails[0].html, /Google también sugiere estas búsquedas; añádelas con un clic en tu panel: consultor geo precio, qué hace un consultor geo/);
+  // Add one suggestion: tracked, due now; then the limit (2 here) is reached and the next is refused, not dropped silently.
+  const add = await request(a).post('/api/rank-free/d/' + tok + '/keywords/add').send({ keyword: 'consultor geo precio' });
+  assert.equal(add.body.success, true);
+  assert.deepEqual(store.db.keywords.filter(k => k.active).map(k => k.keyword), ['consultor geo', 'consultor geo precio']);
+  const over = await request(a).post('/api/rank-free/d/' + tok + '/keywords/add').send({ keyword: 'qué hace un consultor geo' });
+  assert.equal(over.status, 409); assert.match(over.body.error, /el máximo/);
+  const d2 = await request(a).get('/rank-tracker/d/' + tok);
+  assert.doesNotMatch(d2.text, /data-k="consultor geo precio"/, 'a tracked keyword is no longer suggested');
+  assert.match(d2.text, /data-k="qué hace un consultor geo" disabled/);
+  assert.equal((await request(a).post('/api/rank-free/d/' + tok + '/keywords/add').send({ keyword: 'https://x.example' })).status, 400);
+  void project;
+});

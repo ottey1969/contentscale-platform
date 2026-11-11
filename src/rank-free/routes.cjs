@@ -10,7 +10,7 @@ const { runDue, sendDigests } = require('./runner.cjs');
 const { t, langOf, esc, positionText, changeText, verifyEmail, accessEmail } = require('./texts.cjs');
 const links = require('./links.cjs');
 const { brevo } = require('../growth-free/reminders.cjs');
-const { countryName, languageName } = require('../growth-search-locale.cjs');
+const { countryName, languageName, PREWRITE_REGIONS } = require('../growth-search-locale.cjs');
 
 const EMAIL = /^[^\s@<>()[\]\\,;:"]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24}$/;
 
@@ -41,6 +41,10 @@ button.ghost{background:#fff;color:#6d28d9;border:1px solid #6d28d9}.muted{color
 .ok{background:#ecfdf5;border:1px solid #86efac}.err{background:#fef2f2;border:1px solid #fca5a5}table{width:100%;border-collapse:collapse;font-size:15px}
 th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #eee;vertical-align:top}th{background:#f5f3ff}.pos{font-weight:800;font-size:1.1rem}
 .consent{display:flex;gap:8px;align-items:flex-start;font-weight:400}.consent input{width:auto;margin-top:5px}a{color:#6d28d9}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.chip{background:#f5f3ff;color:#1a1a1a;border:1px solid #c4b5fd;border-radius:999px;padding:6px 12px;margin:0;font-weight:400;font-size:14px}
+.chip:disabled{opacity:.5;cursor:default}.sub{display:block;color:#555;font-size:13px;margin-top:4px}.spark{vertical-align:middle}
+@media(max-width:640px){.rk thead{display:none}.rk tr{display:block;border-bottom:1px solid #eee;padding:10px 0}.rk td{display:block;border:0;padding:3px 0}
+.rk td[data-l]:not(:empty)::before{content:attr(data-l) ': ';color:#555;font-size:13px;font-weight:400}.rk td.pos{font-size:1.3rem}}
 .eyebrow{font-size:12px;letter-spacing:.09em;color:#6d28d9;font-weight:700;text-transform:uppercase}`;
 const page = (lang, title, body) => `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><style>${css}</style></head><body><main>${body}</main></body></html>`;
 
@@ -66,6 +70,42 @@ try{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content
 const j=await r.json();m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)$('f').reset()}catch(e){m.className='msg err';m.textContent='Error'}b.disabled=false}})();</script>`);
 }
 
+// The last checks of one keyword as a small line (oldest left): higher is better; "not found" sits on the bottom line.
+// Only real checks are drawn; with fewer than two there is no line yet.
+function sparkline(history, L) {
+  const pts = history.slice(0, 8).reverse().map(h => h.result).filter(Boolean);
+  if (pts.length < 2) return '';
+  const depth = 31, w = 92, hgt = 28, step = w / (pts.length - 1);
+  const y = r => r.status === 'FOUND' ? 2 + (Math.min(r.position, depth) - 1) / (depth - 1) * (hgt - 4) : hgt - 2;
+  const label = pts.map(r => r.status === 'FOUND' ? r.position : '–').join(' → ');
+  const d = pts.map((r, i) => (i ? 'L' : 'M') + (i * step).toFixed(1) + ' ' + y(r).toFixed(1)).join(' ');
+  const found = history.map(h => h.result).filter(r => r && r.status === 'FOUND').map(r => r.position);
+  return `<svg class="spark" width="${w}" height="${hgt}" viewBox="0 0 ${w} ${hgt}" role="img" aria-label="${esc(L.trend + ': ' + label)}"><title>${esc(label)}</title>`
+    + `<path d="${d}" fill="none" stroke="#6d28d9" stroke-width="2" stroke-linejoin="round"/>${pts.map((r, i) => `<circle cx="${(i * step).toFixed(1)}" cy="${y(r).toFixed(1)}" r="2.5" fill="${r.status === 'FOUND' ? '#6d28d9' : '#cbd5e1'}"/>`).join('')}</svg>`
+    + (found.length ? `<span class="sub">${esc(L.best(Math.min(...found)))}</span>` : '');
+}
+
+// The free Growth check, filled in for this keyword, market and (if it ranks) the page that ranks.
+function growthLink(cfg, data, keyword, last) {
+  const region = PREWRITE_REGIONS.find(x => x.split(' — ')[0].trim() === (data.gl));
+  const q = new URLSearchParams({ url: last && last.status === 'FOUND' && last.url ? last.url : 'https://' + data.host + '/', query: keyword,
+    ...(region ? { market: region } : {}), ...(languageName(data.hl) ? { language: languageName(data.hl) } : {}) });
+  return cfg.growthUrl + (cfg.growthUrl.includes('?') ? '&' : '?') + q.toString();
+}
+
+// Google's own related searches and questions from the latest checks, minus what is already tracked.
+function suggestionsOf(data, max = 10) {
+  const have = new Set(data.keywords.map(k => k.keyword)), out = [];
+  for (const k of data.keywords) {
+    const r = k.history[0] && k.history[0].result;
+    for (const s of (r && Array.isArray(r.suggestions) ? r.suggestions : [])) {
+      if (!have.has(s) && !out.includes(s)) out.push(s);
+      if (out.length >= max) return out;
+    }
+  }
+  return out;
+}
+
 function dashboardPage(lang, data, tok, cfg) {
   const L = t(lang);
   const rows = data.keywords.map(k => {
@@ -73,22 +113,30 @@ function dashboardPage(lang, data, tok, cfg) {
     const ch = last ? changeText(engine.changeOf(prev, last), L) : '';
     const pageUrl = last && last.status === 'FOUND' ? `<a href="${esc(last.url)}" rel="nofollow noopener" target="_blank">${esc(last.url.replace(/^https?:\/\/[^/]+/, '') || '/')}</a>` : '';
     const when = last ? new Date(last.checked_at).toISOString().slice(0, 10) : '';
-    return `<tr><td>${esc(k.keyword)}</td><td class="pos">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td>${esc(ch)}</td><td>${pageUrl}</td><td class="muted">${esc(when)}</td></tr>`;
+    const top = last && Array.isArray(last.top) && last.top.length ? last.top : (last && Array.isArray(last.top_hosts) ? last.top_hosts.map(h => ({ host: h })) : []);
+    const topLine = top.length ? `<span class="sub">${esc(L.top3)}: ${top.map(x => x.url ? `<a href="${esc(x.url)}" rel="nofollow noopener" target="_blank">${esc(x.host)}</a>` : esc(x.host)).join(', ')}</span>` : '';
+    const improve = last && (last.status !== 'FOUND' || last.position > 3) ? `<span class="sub"><a href="${esc(growthLink(cfg, data, k.keyword, last))}">${esc(L.growthFor)} →</a></span>` : '';
+    return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
   }).join('');
   const pending = data.keywords.some(k => !k.history[0] && !k.last_error);
   const providerNote = pending && !data.provider_ready ? `<div class="msg err">${esc(L.noProvider)}</div>` : '';
   const refresh = pending && data.provider_ready ? '<script>setTimeout(()=>location.reload(),15000)</script>' : '';
+  const sugg = suggestionsOf(data), full = data.keywords.length >= cfg.maxKeywords;
+  const suggestCard = sugg.length ? `<div class="card" id="sg"><strong>${esc(L.sTitle)}</strong><p class="muted">${esc(full ? L.sFull(data.keywords.length) : L.sLead)}</p><div class="chips">${sugg.map(x => `<button type="button" class="chip" data-k="${esc(x)}"${full ? ' disabled' : ''}>+ ${esc(x)}</button>`).join('')}</div><div id="sm"></div></div>` : '';
   const notOnOne = data.keywords.some(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
   return page(lang, L.dash, `<p class="eyebrow">ContentScale · ${esc(L.title)}</p><h1>${esc(L.dash)}</h1>
 <p><strong>${esc(data.host)}</strong> · ${esc(data.country)} · ${esc(data.language)}</p>${data.other_engine ? `<p class="muted">${esc(L.otherEngine(data.other_engine))}</p>` : ''}
-${providerNote}<div class="card" style="overflow-x:auto"><table><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
+${providerNote}<div class="card" style="overflow-x:auto"><table class="rk"><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.trend)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="muted">${esc(L.note)}</p></div>
 ${notOnOne ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(cfg.growthUrl)}">${esc(L.upsellLink)} →</a></p></div>` : ''}
-<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
+${suggestCard}<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
 <p class="muted"><a href="/rank-tracker/stop/${esc(tok)}">${esc(L.stop)}</a> · <a href="#" id="fg">${esc(L.forget)}</a></p>
 <script>(()=>{const $=i=>document.getElementById(i);$('k').onsubmit=async ev=>{ev.preventDefault();const m=$('m');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:$('kw').value})});const j=await r.json();
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),800)};
+document.querySelectorAll('#sg .chip').forEach(b=>b.onclick=async()=>{b.disabled=true;const m=$('sm');
+const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:b.dataset.k})});const j=await r.json();
+m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),900);else b.disabled=false});
 $('fg').onclick=async e=>{e.preventDefault();if(!confirm(${JSON.stringify(L.forgetConfirm)}))return;await fetch('/api/rank-free/d/${esc(tok)}/forget',{method:'POST'});location.href='/rank-tracker'}})();</script>${refresh}`);
 }
 
@@ -177,6 +225,19 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     await store.setKeywords(p.id, kw.keywords, now());
     runRound();
     res.json({ success: true, message: '✓', keywords: kw.keywords, skipped: kw.invalid, over_limit: kw.over_limit });
+  });
+  // One keyword at a time (a suggestion chip). Never silently drops a keyword: at the maximum it says so.
+  app.post('/api/rank-free/d/:token/keywords/add', async (req, res) => {
+    const a = await accountFor(req.params.token).catch(() => null);
+    if (!a) return res.status(404).json({ success: false, error: 'Not found' });
+    const L = t(a.lang), k = engine.readKeyword((req.body || {}).keyword);
+    if (!k || k.error) return res.status(400).json({ success: false, error: L.errKeywords });
+    const p = await store.projectOf(a.id), list = (await store.keywords(p.id)).map(x => x.keyword);
+    if (list.includes(k.keyword)) return res.json({ success: true, message: L.sAdded, keywords: list });
+    if (list.length >= config.maxKeywords) return res.status(409).json({ success: false, error: L.sFull(list.length) });
+    await store.setKeywords(p.id, [...list, k.keyword], now());
+    runRound();
+    res.json({ success: true, message: L.sAdded, keywords: [...list, k.keyword] });
   });
   app.post('/api/rank-free/d/:token/forget', async (req, res) => {
     const nonce = links.readToken(req.params.token);

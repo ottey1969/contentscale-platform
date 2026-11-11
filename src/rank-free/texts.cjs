@@ -5,6 +5,10 @@ const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&a
 
 const T = {
   en: {
+    dSuggest: 'Google also suggests these searches; add them on your dashboard with one click:',
+    trend: 'Trend', best: n => 'best ' + n, top3: 'Top 3 in Google', growthFor: 'Improve this page with the free Growth check',
+    sTitle: 'Keywords Google suggests', sLead: 'Google shows these related searches and questions next to your results. Add one with a click; it is checked in the next round.',
+    sAdd: 'Add', sFull: n => 'You track ' + n + ' keywords, the maximum. Remove one above to add a suggestion.', sAdded: 'Added; the first check runs now.',
     failed: (why, when) => 'last attempt failed (' + why + '); next try ' + when,
     noProvider: 'Checks are not running yet: the Google search connection is not set up on the server. Your keywords are saved and will be checked as soon as it is.',
     aSubject: 'Your free rank tracker link', aIntro: host => 'You already track ' + esc(host) + '. Open your dashboard to see your positions or change your keywords.', aButton: 'Open your dashboard',
@@ -31,6 +35,10 @@ const T = {
     ch: { FIRST: 'first check', ENTERED_PAGE_ONE: 'now on page 1', LEFT_PAGE_ONE: 'dropped off page 1', ENTERED_RESULTS: 'now in the top 30', LEFT_RESULTS: 'no longer in the top 30', UP: 'up', DOWN: 'down', OTHER_PAGE: 'another page of yours now ranks' },
   },
   nl: {
+    dSuggest: 'Google stelt ook deze zoekopdrachten voor; voeg ze met één klik toe op je overzicht:',
+    trend: 'Verloop', best: n => 'beste ' + n, top3: 'Top 3 in Google', growthFor: 'Verbeter deze pagina met de gratis Growth-check',
+    sTitle: 'Zoekwoorden die Google voorstelt', sLead: 'Google toont deze verwante zoekopdrachten en vragen naast je resultaten. Voeg er een toe met één klik; die wordt in de volgende ronde gemeten.',
+    sAdd: 'Toevoegen', sFull: n => 'Je volgt ' + n + ' zoekwoorden, het maximum. Haal er hierboven een weg om een voorstel toe te voegen.', sAdded: 'Toegevoegd; de eerste meting start nu.',
     failed: (why, when) => 'laatste poging mislukt (' + why + '); nieuwe poging ' + when,
     noProvider: 'De metingen draaien nog niet: de koppeling met Google is op de server nog niet ingesteld. Je zoekwoorden zijn opgeslagen en worden gemeten zodra die er is.',
     aSubject: 'De link naar je gratis rank tracker', aIntro: host => 'Je volgt ' + esc(host) + ' al. Open je overzicht om je posities te zien of je zoekwoorden aan te passen.', aButton: 'Open je overzicht',
@@ -57,6 +65,10 @@ const T = {
     ch: { FIRST: 'eerste meting', ENTERED_PAGE_ONE: 'nu op pagina 1', LEFT_PAGE_ONE: 'van pagina 1 af', ENTERED_RESULTS: 'nu in de top 30', LEFT_RESULTS: 'niet meer in de top 30', UP: 'gestegen', DOWN: 'gedaald', OTHER_PAGE: 'er rankt nu een andere pagina van je' },
   },
   es: {
+    dSuggest: 'Google también sugiere estas búsquedas; añádelas con un clic en tu panel:',
+    trend: 'Evolución', best: n => 'mejor ' + n, top3: 'Top 3 en Google', growthFor: 'Mejora esta página con el análisis Growth gratuito',
+    sTitle: 'Palabras clave que sugiere Google', sLead: 'Google muestra estas búsquedas relacionadas y preguntas junto a tus resultados. Añade una con un clic; se comprueba en la siguiente ronda.',
+    sAdd: 'Añadir', sFull: n => 'Sigues ' + n + ' palabras clave, el máximo. Quita una arriba para añadir una sugerencia.', sAdded: 'Añadida; la primera comprobación empieza ahora.',
     failed: (why, when) => 'el último intento falló (' + why + '); nuevo intento ' + when,
     noProvider: 'Las comprobaciones aún no funcionan: la conexión con Google no está configurada en el servidor. Tus palabras clave están guardadas y se comprobarán en cuanto lo esté.',
     aSubject: 'El enlace a tu rastreador de posiciones gratuito', aIntro: host => 'Ya sigues ' + esc(host) + '. Abre tu panel para ver tus posiciones o cambiar tus palabras clave.', aButton: 'Abrir tu panel',
@@ -109,10 +121,11 @@ function accessEmail(lang, { host, link }) {
   return { subject: L.aSubject, html: '<p>' + L.aIntro(host) + '</p><p><a href="' + esc(link) + '" style="display:inline-block;background:#6d28d9;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700">' + esc(L.aButton) + '</a></p><p style="color:#666;font-size:13px">' + esc(L.vIgnore) + '</p>' };
 }
 
-function digestEmail(lang, { host, countryLabel, rows, dashboard, stop }) {
+function digestEmail(lang, { host, countryLabel, rows, dashboard, stop, suggestions = [] }) {
   const L = t(lang);
   const tr = rows.map(r => '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(r.keyword) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">' + esc(positionText(r.curr, L)) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(changeText(r.change, L)) + '</td></tr>').join('');
   return { subject: L.dSubject(host), html: '<p>' + L.dIntro(host, countryLabel) + '</p><table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px"><tr><th align="left" style="padding:6px 10px">' + esc(L.kw) + '</th><th align="left" style="padding:6px 10px">' + esc(L.pos) + '</th><th align="left" style="padding:6px 10px">' + esc(L.change) + '</th></tr>' + tr + '</table>'
+    + (suggestions.length ? '<p>' + esc(L.dSuggest) + ' ' + suggestions.map(esc).join(', ') + '</p>' : '')
     + '<p style="color:#666;font-size:13px">' + esc(L.note) + '</p><p><a href="' + esc(dashboard) + '">' + esc(L.dOpen) + '</a> · <a href="' + esc(stop) + '">' + esc(L.dStop) + '</a></p>' };
 }
 
