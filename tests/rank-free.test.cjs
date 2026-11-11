@@ -85,6 +85,7 @@ test('the runner checks due keywords weekly, respects the monthly budget and nev
   const store2 = memoryStore(); await confirmedAccount(store2);
   const r4 = await runDue({ store: store2, key: 'k', fetchImpl: async () => ({ ok: false, status: 500 }), now, monthlyCap: 100 });
   assert.equal(r4.errors, 2); assert.equal(store2.db.results.length, 0);
+  assert.equal(store2.db.keywords[0].last_error, 'HTTP_500', 'the reason is kept for the dashboard');
   // Without a provider key nothing runs.
   assert.equal((await runDue({ store: store2, key: '', now })).skipped, 'PROVIDER_NOT_CONFIGURED');
 });
@@ -120,6 +121,11 @@ test('sign-up → confirm → dashboard; a confirmed address cannot be changed f
   assert.equal(v.status, 302);
   const dash = v.headers.location; assert.match(dash, /^\/rank-tracker\/d\//);
   const d = await request(a).get(dash); assert.equal(d.status, 200); assert.match(d.text, /consultor geo/); assert.match(d.text, /primera comprobación en curso/);
+  // Without a provider key the dashboard says so instead of waiting forever; names are in the account's language.
+  assert.match(d.text, /no está configurada en el servidor/); assert.match(d.text, /España · español/);
+  const withKey = express(); withKey.use(express.json());
+  registerRankFree(withKey, null, { config: { ...rankFreeConfig({}), serperKey: 'k', scheduler: false }, store, fetchImpl: async () => ({ ok: false, status: 500 }), sendEmail: async () => true });
+  const d2 = await request(withKey).get(dash); assert.match(d2.text, /location\.reload\(\),15000/); assert.doesNotMatch(d2.text, /no está configurada/);
   assert.equal((await request(a).get('/rank-tracker/v/' + verifyLink)).status, 404, 'a confirmation link works once');
   // Someone else types the same address with other keywords: nothing changes, the owner gets the link by e-mail.
   const r2 = await request(a).post('/api/rank-free/signup').send({ email: 'owner@acme.example', site: 'evil.example', country: 'us', keywords: 'spam' });

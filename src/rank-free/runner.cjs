@@ -24,7 +24,9 @@ async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), 
     if (r.calls) { await store.addUsage(now, r.calls); out.calls += r.calls; }
     if (r.status !== 'FOUND' && r.status !== 'NOT_IN_RESULTS') {
       // A failed provider call is retried in six hours; it never counts as "not ranking".
-      out.errors++; await store.postpone(k.keyword_id, new Date(now.getTime() + DAY / 4)); continue;
+      out.errors++; await store.postpone(k.keyword_id, new Date(now.getTime() + DAY / 4), String(r.reason || r.status).slice(0, 60), now);
+      console.warn('[rank-free] check failed', k.keyword_id, r.status, r.reason || '');
+      continue;
     }
     await store.saveResult(k.keyword_id, r, new Date(now.getTime() + WEEK));
     out.checked++;

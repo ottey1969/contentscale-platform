@@ -21,7 +21,8 @@ function rankFreeConfig(env = process.env) {
     monthlyCap: Math.max(0, Number(env.RANK_FREE_MONTHLY_CALLS) || 3000),
     signupsPerIpPerDay: Math.max(1, Number(env.RANK_FREE_SIGNUPS_PER_IP) || 5),
     baseUrl: String(env.RANK_FREE_PUBLIC_URL || env.PUBLIC_APP_URL || 'https://app.contentscale.site').replace(/\/+$/, ''),
-    serperKey: env.SERPER_API_KEY || env.SERPAPI_KEY || '',
+    // Serper.dev only (same key as Growth); SERPAPI_KEY belongs to another provider with another API.
+    serperKey: env.SERPER_API_KEY || '',
     adminKey: env.RANK_FREE_ADMIN_KEY || env.GROWTH_FREE_ADMIN_KEY || '',
     growthUrl: env.RANK_FREE_GROWTH_URL || 'https://app.contentscale.site/free-growth',
     scheduler: env.RANK_FREE_SCHEDULER !== '0' && env.NODE_ENV !== 'test',
@@ -72,12 +73,15 @@ function dashboardPage(lang, data, tok, cfg) {
     const ch = last ? changeText(engine.changeOf(prev, last), L) : '';
     const pageUrl = last && last.status === 'FOUND' ? `<a href="${esc(last.url)}" rel="nofollow noopener" target="_blank">${esc(last.url.replace(/^https?:\/\/[^/]+/, '') || '/')}</a>` : '';
     const when = last ? new Date(last.checked_at).toISOString().slice(0, 10) : '';
-    return `<tr><td>${esc(k.keyword)}</td><td class="pos">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(L.pending)}</span>`}</td><td>${esc(ch)}</td><td>${pageUrl}</td><td class="muted">${esc(when)}</td></tr>`;
+    return `<tr><td>${esc(k.keyword)}</td><td class="pos">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td>${esc(ch)}</td><td>${pageUrl}</td><td class="muted">${esc(when)}</td></tr>`;
   }).join('');
+  const pending = data.keywords.some(k => !k.history[0] && !k.last_error);
+  const providerNote = pending && !data.provider_ready ? `<div class="msg err">${esc(L.noProvider)}</div>` : '';
+  const refresh = pending && data.provider_ready ? '<script>setTimeout(()=>location.reload(),15000)</script>' : '';
   const notOnOne = data.keywords.some(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
   return page(lang, L.dash, `<p class="eyebrow">ContentScale · ${esc(L.title)}</p><h1>${esc(L.dash)}</h1>
 <p><strong>${esc(data.host)}</strong> · ${esc(data.country)} · ${esc(data.language)}</p>${data.other_engine ? `<p class="muted">${esc(L.otherEngine(data.other_engine))}</p>` : ''}
-<div class="card" style="overflow-x:auto"><table><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
+${providerNote}<div class="card" style="overflow-x:auto"><table><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="muted">${esc(L.note)}</p></div>
 ${notOnOne ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(cfg.growthUrl)}">${esc(L.upsellLink)} →</a></p></div>` : ''}
 <form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
@@ -85,7 +89,7 @@ ${notOnOne ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(cfg.gro
 <script>(()=>{const $=i=>document.getElementById(i);$('k').onsubmit=async ev=>{ev.preventDefault();const m=$('m');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:$('kw').value})});const j=await r.json();
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),800)};
-$('fg').onclick=async e=>{e.preventDefault();if(!confirm(${JSON.stringify(L.forgetConfirm)}))return;await fetch('/api/rank-free/d/${esc(tok)}/forget',{method:'POST'});location.href='/rank-tracker'}})();</script>`);
+$('fg').onclick=async e=>{e.preventDefault();if(!confirm(${JSON.stringify(L.forgetConfirm)}))return;await fetch('/api/rank-free/d/${esc(tok)}/forget',{method:'POST'});location.href='/rank-tracker'}})();</script>${refresh}`);
 }
 
 function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStore(pool), fetchImpl = global.fetch, sendEmail = null, now = () => new Date() } = {}) {
@@ -98,9 +102,12 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const p = await store.projectOf(account.id);
     const ks = p ? await store.keywords(p.id) : [];
     const keywords = [];
-    for (const k of ks) keywords.push({ keyword: k.keyword, next_check_at: k.next_check_at, history: await store.history(k.id, 12) });
+    for (const k of ks) keywords.push({ keyword: k.keyword, next_check_at: k.next_check_at, last_error: k.last_error || null, last_error_at: k.last_error_at || null, history: await store.history(k.id, 12) });
     const m = p ? engine.readMarket(p.gl, p.hl) : {};
-    return { host: p && p.host, gl: p && p.gl, hl: p && p.hl, country: m.country_name, language: m.language_name, other_engine: m.other_engine || null, keywords };
+    // Country and language in the account's own language ("Spanje · Spaans" on a Dutch dashboard).
+    const shown = (type, code) => { try { return new Intl.DisplayNames([langOf(account.lang)], { type }).of(code); } catch { return null; } };
+    return { host: p && p.host, gl: p && p.gl, hl: p && p.hl, country: (p && shown('region', p.gl.toUpperCase())) || m.country_name,
+      language: (p && shown('language', p.hl)) || m.language_name, other_engine: m.other_engine || null, keywords, provider_ready: !!config.serperKey };
   }
   const accountFor = async tok => { const nonce = links.readToken(tok); return nonce ? store.accountByDashboard(nonce) : null; };
   let kick = null; // one background round right after a confirmation, so the first positions appear within a minute
