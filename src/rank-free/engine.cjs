@@ -126,4 +126,13 @@ function changeOf(prev, curr) {
   return null;
 }
 
-module.exports = { readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
+// The free Growth check, filled in for this keyword, market and (if it ranks) the page that ranks. Used on the
+// dashboard and in the weekly e-mail.
+function growthLink(growthUrl, { host, gl, hl }, keyword, last) {
+  const region = PREWRITE_REGIONS.find(x => x.split(' — ')[0].trim() === gl);
+  const q = new URLSearchParams({ url: last && last.status === 'FOUND' && last.url ? last.url : 'https://' + host + '/', query: keyword,
+    ...(region ? { market: region } : {}), ...(languageName(hl) ? { language: languageName(hl) } : {}) });
+  return growthUrl + (growthUrl.includes('?') ? '&' : '?') + q.toString();
+}
+
+module.exports = { growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
