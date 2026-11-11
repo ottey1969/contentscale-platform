@@ -155,6 +155,30 @@ function parseAiAnswer(raw,{pageUrl,query}={}){
  };
 }
 
+// Next steps when AI systems with a verifiable source list do not cite the site. Shown automatically, so the owner
+// does not have to ask what to do next. Only answers with a source list count; nothing is shown without one.
+const BING_ENGINES=new Set(['chatgpt','copilot']);
+function aiVisibilityActions({verifiable=[],topSites=[]}={}){
+ const missing=verifiable.filter(e=>!e.own_site_cited);
+ if(!missing.length)return [];
+ const out=[];
+ const bing=missing.filter(e=>BING_ENGINES.has(e.id));
+ if(bing.length)out.push({id:'bing_webmaster_tools',title:'Get the page into Bing',
+  why:`${bing.map(e=>e.label).join(' and ')} ${bing.length===1?'does':'do'} not cite you. ChatGPT Search and Microsoft Copilot find pages through the Bing index.`,
+  steps:['Open Bing Webmaster Tools (bing.com/webmasters) and import your site from Google Search Console.','Submit your XML sitemap.','Submit this page URL with URL Submission, and again after every important change.']});
+ out.push({id:'consistent_listings',title:'Make your business listings consistent',
+  why:`${missing.map(e=>e.label).join(', ')} ${missing.length===1?'does':'do'} not cite you. AI systems often rely on directories and review sites to confirm a business.`,
+  steps:['Check the directories that matter in your market (for local services, for example Yelp, BBB, Angi, Houzz, Nextdoor and your local chamber of commerce).','Use exactly the same business name, address, phone number and website URL everywhere, matching your website.','Link to this page where a listing allows a service URL.']});
+ if(topSites.length){const names=topSites.slice(0,3).map(t=>t.site);
+  out.push({id:'compare_cited_pages',title:'Compare the pages AI does cite',
+   why:`AI cites ${names.join(', ')} for this search instead of your page.`,
+   steps:[`Open the cited pages of ${names.join(', ')}.`,'Note what they state directly: price or price range, arrival or response time, service area (counties or cities), insurance and licence, and the process steps.','Add each point that is true for your business and missing from your page. Never copy claims you cannot back up.']});}
+ out.push({id:'choose_ai_topics',title:'Choose the AI topics in Step 2',
+  why:'The topics and questions in Step 2 include what the cited pages answer.',
+  steps:['In Step 2, select the topics and questions AI answers with other sites and your page does not cover yet.','Write or update those sections, publish, then check the AI answers again after the page is re-crawled.']});
+ return out;
+}
+
 function summarizeAiAnswers(rows,{pageUrl,googleUrls=[],query}={}){
  // Stored answers are re-read with the current rules, so a parser fix also corrects older pastes. An answer that fails
  // the validation contract is reported as INVALID with its reason and is not counted anywhere.
@@ -205,9 +229,10 @@ function summarizeAiAnswers(rows,{pageUrl,googleUrls=[],query}={}){
   if(cited.length&&!exact.length)steps.push('AI prefers another page of your site for this search. Check whether that page or this one should answer it, so they do not compete.');
   if(checked.length<ENGINES.length)steps.push(`Check the remaining AI systems too (${engines.filter(e=>!e.checked).map(e=>e.label).join(', ')}): answers differ per system.`);
  }
+ const visibility_actions=aiVisibilityActions({verifiable,topSites});
  return {checked:checked.length,verifiable:n,unverified:unverified.length,total:ENGINES.length,invalid:invalid.length,invalid_engines:invalid,topic_warnings:warned.map(e=>e.label),engines,cited_by:cited.length,exact_page_by:exact.length,
-  top_cited_sites:topSites,also_in_google:both,headline,explanation,steps,
+  top_cited_sites:topSites,also_in_google:both,headline,explanation,steps,visibility_actions,
   caveat:'AI answers differ per user, location, account and time. This shows only the answers you pasted, at the moment you ran them.'};
 }
 
-module.exports={validateGrowthAnswer,noiseUrl,withoutTracking,otherPrompt,ENGINES,ENGINE_IDS,MAX_PASTE,DIRECT_PROMPT_LINES,QUERY_SLOT,directPrompt,cleanAiPaste,parseAiAnswer,summarizeAiAnswers,rootOf};
+module.exports={validateGrowthAnswer,noiseUrl,withoutTracking,otherPrompt,ENGINES,ENGINE_IDS,MAX_PASTE,DIRECT_PROMPT_LINES,QUERY_SLOT,directPrompt,cleanAiPaste,parseAiAnswer,summarizeAiAnswers,aiVisibilityActions,rootOf};

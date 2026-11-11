@@ -81,6 +81,8 @@
    var li=node('li',e.label+': '+label+(when?' · '+String(when).slice(0,10):'')+(e.checked&&e.verifiable?' · '+e.sources+' cited sources':'')+(e.topic_warning?' · Check the topic: this answer shares no word with “'+String(c.search_term||'')+'”. It counts (synonyms are fine); replace it if it answers another question.':''),ul);
    if(bad||e.topic_warning)li.style.color=bad?'#b42318':'#92400e';
   });
+  if(x.visibility_actions&&x.visibility_actions.length){var nx=node('div',null,box);nx.className='ai-next-steps';node('h4','Next steps to be cited by AI',nx);
+   x.visibility_actions.forEach(function(v){node('strong',v.title,nx);node('p',v.why,nx);var ol=node('ol',null,nx);v.steps.forEach(function(t){node('li',t,ol)})})}
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
   if(complete){var goStep=node('p',null,box),continueLink=node('a','Continue to Step 3 · Write selected improvements',goStep);continueLink.href='#growthGapChoice';}
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
