@@ -79,8 +79,48 @@
     var ask = document.createElement('button'); ask.type = 'button'; ask.className = 'cs-rp-ask'; ask.id = 'cs-research-ask-copy';
     ask.textContent = 'Copy search question';
     var askNote = document.createElement('p'); askNote.className = 'cs-ask-note'; askNote.setAttribute('role', 'status');
-    askNote.textContent = '1. Copy the keyword and search for it in an AI system. 2. Paste that system\'s actual answer in its field below. 3. Use Analyse & create when your answers are ready.';
-    var askBox = document.createElement('div'); askBox.id = 'cs-research-ask'; askBox.append(ask, askNote);
+    askNote.textContent = '1. Copy the question and ask it in each AI system. 2. Paste that system\'s actual answer in its field below. 3. Use Analyse & create when your answers are ready.';
+    // The question to ask (owner 2026-11-11): the best real customer question for the keyword, chosen automatically from
+    // Google's own questions for the market (as in the free Growth check). Editable; one click picks another or the keyword.
+    var qWrap = document.createElement('div'); qWrap.id = 'cs-ai-question-box';
+    var qLabel = document.createElement('label'); qLabel.htmlFor = 'cs-ai-question'; qLabel.textContent = 'Question to ask the AI systems';
+    var qInput = document.createElement('input'); qInput.type = 'text'; qInput.id = 'cs-ai-question'; qInput.maxLength = 160; qInput.className = 'cs-input';
+    qInput.style.width = '100%'; qInput.placeholder = 'Chosen automatically from the questions customers ask in Google';
+    var qSrc = document.createElement('small'); qSrc.id = 'cs-ai-question-source'; qSrc.style.display = 'block';
+    var qChips = document.createElement('div'); qChips.id = 'cs-ai-question-options';
+    qWrap.append(qLabel, qInput, qSrc, qChips);
+    var askBox = document.createElement('div'); askBox.id = 'cs-research-ask'; askBox.append(qWrap, ask, askNote);
+    var qState = { kw: '', manual: false, timer: null, seq: 0 };
+    function tokenOf() { return window.TOKEN || ((location.pathname.match(/\/track\/([^/?#]+)/) || [])[1]) || ''; }
+    function chip(text, label, isKeyword) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'cs-q-chip';
+      b.style.cssText = 'margin:4px 6px 0 0;padding:4px 10px;border-radius:14px;border:1px solid #475569;background:transparent;color:inherit;cursor:pointer;font-size:12px';
+      b.textContent = (isKeyword ? 'Keyword: ' : '') + text; b.title = label || '';
+      b.addEventListener('click', function () { qInput.value = text; qState.manual = true; qSrc.textContent = isKeyword ? 'You chose the keyword itself.' : 'You chose: ' + (label || 'customer question'); syncAsk(); });
+      return b;
+    }
+    function loadQuestion() {
+      var kw = val('pwbKeyword'), tok = tokenOf();
+      if (!kw) { qInput.value = ''; qSrc.textContent = ''; qChips.innerHTML = ''; qState.kw = ''; return; }
+      if (qState.manual && qState.kw === kw) return;
+      qState.kw = kw; qState.manual = false; var seq = ++qState.seq;
+      if (!tok) { qInput.value = kw; qSrc.textContent = 'The keyword is used.'; return; }
+      qSrc.textContent = 'Finding the question customers ask in Google…';
+      var u = '/api/tracker-client/' + encodeURIComponent(tok) + '/prewrite-customer-question?keyword=' + encodeURIComponent(kw) + '&region=' + encodeURIComponent(val('pwbRegion')) + '&language=' + encodeURIComponent(val('pwbLanguage'));
+      fetch(u).then(function (r) { return r.json(); }).then(function (d) {
+        if (seq !== qState.seq || qState.manual) return;
+        qChips.innerHTML = '';
+        if (d && d.success && d.best_question) {
+          qInput.value = d.best_question;
+          qSrc.textContent = 'Chosen automatically: ' + (d.best_label || 'customer question') + '. Change it or pick another below.';
+          (d.questions || []).filter(function (q) { return q.text !== d.best_question; }).slice(0, 5).forEach(function (q) { qChips.appendChild(chip(q.text, q.label, false)); });
+        } else { qInput.value = kw; qSrc.textContent = (d && d.error) || 'No customer question found for this keyword; the keyword is used.'; }
+        qChips.appendChild(chip(kw, 'The keyword itself', true)); syncAsk();
+      }).catch(function () { if (seq === qState.seq && !qState.manual) { qInput.value = kw; qSrc.textContent = 'Questions unavailable; the keyword is used.'; syncAsk(); } });
+    }
+    function scheduleQuestion() { clearTimeout(qState.timer); qState.timer = setTimeout(loadQuestion, 700); }
+    qInput.addEventListener('input', function () { qState.manual = true; qSrc.textContent = 'Your own question.'; syncAsk(); });
+    ['pwbKeyword', 'pwbRegion', 'pwbLanguage'].forEach(function (id) { var el = $(id); if (el) { el.addEventListener('change', function () { qState.manual = false; scheduleQuestion(); }); if (id === 'pwbKeyword') el.addEventListener('input', scheduleQuestion); } });
     var status = document.createElement('p'); status.className = 'cs-rp-status'; status.setAttribute('role', 'status');
     var note = document.createElement('p');
     note.textContent = 'This is the prompt the Pre-Write Brief generator uses for the AI answer research: writing research for a clearer, better-sourced answer, not citation tracking. The fields under "AI Answer Inputs" stay the saved source of truth.';
@@ -103,9 +143,10 @@
       if (noteEl) { noteEl.classList.remove('cs-copied-note'); void noteEl.offsetWidth; noteEl.classList.add('cs-copied-note'); }
       btn._csCopyT = setTimeout(function () { btn.classList.remove('cs-copied'); btn.textContent = off; if (noteEl) noteEl.classList.remove('cs-copied-note'); }, 1800);
     }
-    function syncAsk() { var q = val('pwbKeyword'); ask.disabled = !q; ask.title = q ? 'Copies: ' + q : 'Enter the target keyword first.'; }
+    function askText() { return String(qInput.value || '').trim() || val('pwbKeyword'); }
+    function syncAsk() { var q = askText(); ask.disabled = !q; ask.title = q ? 'Copies: ' + q : 'Enter the target keyword first.'; }
     ask.addEventListener('click', function () {
-      var q = val('pwbKeyword'); if (!q) return;
+      var q = askText(); if (!q) return;
       var done = function (ok) { askNote.textContent = ok ? 'Copied: "' + q + '". Paste it into Google, ChatGPT, Perplexity, Claude and Copilot, then paste each full answer back here.' : 'Copy this search question by hand: ' + q; if (ok) flash(ask, 'Copied ✓', 'Copy search question', askNote); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(q).then(function () { done(true); }, function () { done(false); });
       else done(false);
@@ -197,6 +238,8 @@
       if (state === lastFormState) return;
       lastFormState = state;
       checkFields(); syncAsk(); render();
+      // Keyword or market set by the Tracker (no input event): choose the question for it as well.
+      if (val('pwbKeyword') !== qState.kw && !(qState.manual && qState.kw === val('pwbKeyword'))) scheduleQuestion();
     }
     refreshFromForm();
     var formSync = setInterval(refreshFromForm, 400);

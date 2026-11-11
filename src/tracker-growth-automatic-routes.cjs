@@ -1012,22 +1012,49 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  });
  // Customer search questions for this page (owner): Google's own questions for the market plus labelled AI suggestions.
  // Costs one Serper search (and one AI call when configured); owner only. Search Console is not needed.
+ // The best customer question for a page (Google's own questions for the market, AI ideas only when Google has none), cached
+ // per page and market for a day, so opening the research does not cost a search every time (owner 2026-11-11).
+ const bestQuestionCache=new Map();
+ async function customerQuestionsFor(v){
+  const row=(await pool.query('SELECT url,keyword,LEFT(html_content,120000) AS html FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id])).rows[0]||{};
+  let html=row.html||'';if(!html){try{html=String((await fetchLive(v.page.url))?.html||'')}catch(e){html=''}}
+  let set=null;if(typeof loadPageMarkets==='function')set=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
+  if(!(set?.countries?.length||set?.language)&&typeof loadSiteMarkets==='function')set=await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null);
+  const country=v.marketOverride||set?.countries?.[0]||null,lang=set?.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
+  const out=await discoverCustomerQuestions({url:v.page.url,html,keyword:row.keyword||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
+   ...(questionFetch?{fetchImpl:questionFetch}:{}),model:questionModel!==undefined?questionModel:require('./growth-task-meaning.cjs').geminiModel()});
+  return {out,country,lang};
+ }
+ async function bestQuestionFor(v){
+  const key=v.clientId+':'+v.id+':'+(v.marketOverride||''),hit=bestQuestionCache.get(key);
+  if(hit&&Date.now()-hit.at<86400000)return hit.value;
+  let value=null;
+  try{const {out}=await customerQuestionsFor(v);const best=(out.questions||[]).find(q=>q.text===out.best_question)||null;
+   value=best?{text:best.text,label:best.label||null,source:best.source||null}:null}catch(e){value=null}
+  bestQuestionCache.set(key,{at:Date.now(),value});
+  if(bestQuestionCache.size>2000)bestQuestionCache.delete(bestQuestionCache.keys().next().value);
+  return value;
+ }
  app.get('/api/tracker-client/:token/growth/customer-questions',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY'});
   try{
-   const row=(await pool.query('SELECT url,keyword,LEFT(html_content,120000) AS html FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id])).rows[0]||{};
-   let html=row.html||'';if(!html){try{html=String((await fetchLive(v.page.url))?.html||'')}catch(e){html=''}}
-   let set=null;if(typeof loadPageMarkets==='function')set=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
-   if(!(set?.countries?.length||set?.language)&&typeof loadSiteMarkets==='function')set=await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null);
-   const country=v.marketOverride||set?.countries?.[0]||null,lang=set?.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
-   const out=await discoverCustomerQuestions({url:v.page.url,html,keyword:row.keyword||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
-    ...(questionFetch?{fetchImpl:questionFetch}:{}),model:questionModel!==undefined?questionModel:require('./growth-task-meaning.cjs').geminiModel()});
+   const {out,country,lang}=await customerQuestionsFor(v);
    res.set('Cache-Control','no-store').json({success:true,page:{id:v.id,url:v.page.url},market:country?{country,name:countryName(country)}:null,language:lang,...out});
   }catch(e){console.warn('[growth-customer-questions]',String(e.code||e.message).slice(0,80));res.status(503).json({success:false,code:'QUESTIONS_UNAVAILABLE'})}
  });
  app.get('/track/:token/growth/auto-research',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
+  // No question chosen: the best real customer question is chosen automatically (as in the free Growth check), so the
+  // research and the AI answers start from what customers ask, not from the bare keyword. ?keyword_only=1 keeps the keyword.
+  if(req.growth?.can_edit===true&&!v.queryOverride&&req.query?.keyword_only!=='1'){
+   const best=await bestQuestionFor(v).catch(()=>null);
+   if(best&&best.text){
+    const q=new URLSearchParams(Object.entries(req.query||{}).filter(([,x])=>typeof x==='string'));
+    q.set('query',best.text);q.set('auto_q','1');
+    return res.redirect(302,'/track/'+encodeURIComponent(req.params.token)+'/growth/auto-research?'+q.toString());
+   }
+  }
   // Target market(s) and language at the top, before the research runs (owner only). Same lists as the Pre-Write brief;
   // without a Growth setting, the Pre-Write brief of the same keyword is shown and used.
   let marketBox='';
@@ -1071,7 +1098,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    questionBox='<section id="customerQuestion" data-api="'+sHtml(apiQ)+'"><h2>Selected page and customer question</h2>'+
     '<div class="grid"><div><small>Selected page</small><strong>'+sHtml(v.page.url)+'</strong></div><div><small>Source</small><strong>Existing Tracker page</strong><small>'+sHtml(why)+' · <a href="/track/'+encodeURIComponent(req.params.token)+'/growth#choosePage">choose another page</a></small></div>'+
     '<div><small>Tracked keyword (context, not the customer question)</small><strong>'+sHtml(kw||'none')+'</strong></div><div><small>Search Console</small><strong>'+(gsc?'Connected for this page':'Optional, not connected')+'</strong><small>Not needed for this research; only for verified ranking and traffic comparisons.</small></div></div>'+
-    (v.queryOverride?'<p><strong>Customer question researched:</strong> “'+sHtml(v.queryOverride)+'”</p>':'<p class="info">No customer question chosen yet: the research below uses '+(kw?'the tracked keyword “'+sHtml(kw)+'”':'a phrase from the page title')+'. Find how customers search and choose a question to research that instead.</p>')+
+    (v.queryOverride?'<p><strong>Customer question researched:</strong> “'+sHtml(v.queryOverride)+'”'+(req.query?.auto_q==='1'?' <small>Chosen automatically: the best matching question customers ask in Google for this market. Choose another below, or <a href="/track/'+encodeURIComponent(req.params.token)+'/growth/auto-research?page_id='+encodeURIComponent(v.id)+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):'')+'&keyword_only=1">use the tracked keyword instead</a>.</small>':'')+'</p>':'<p class="info">No customer question chosen yet: the research below uses '+(kw?'the tracked keyword “'+sHtml(kw)+'”':'a phrase from the page title')+'. Find how customers search and choose a question to research that instead.</p>')+
     '<div><label for="cqManual">Customer search question — type or paste your own</label><input id="cqManual" type="text" maxlength="120" style="width:min(100%,680px);font:inherit;padding:9px" value="'+sHtml(v.queryOverride||'')+'" placeholder="e.g. How can customers find my business in AI search?"> <button type="button" id="cqManualGo">Research this question →</button></div>'+
     '<p class="info">Or discover questions from Google and AI. Suggestions are optional; you can research your own question even when these services are unavailable.</p>'+
     '<p><button type="button" id="cqFind">'+(v.queryOverride?'Choose another customer question':'Find customer questions')+'</button> <small role="status" id="cqStatus"></small></p><div id="cqList"></div>'

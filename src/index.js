@@ -3914,6 +3914,8 @@ require('./tracker-growth-cockpit.cjs').registerGrowthCockpit(app,pool);
 require('./growth-free/routes.cjs').registerFreeGrowth(app,pool);
 // Free public rank tracker: own module and tables, weekly Google positions per keyword (off with RANK_FREE_ENABLED=false).
 require('./rank-free/routes.cjs').registerRankFree(app,pool);
+// Pre-Write: the best real customer question to ask the AI systems for a keyword (Google's own questions first).
+require('./prewrite-customer-question.cjs').registerPrewriteCustomerQuestion(app,pool);
 require('./tracker-growth-execution.cjs').registerGrowthExecution(app,pool);
 require('./tracker-growth-measurement.cjs').registerGrowthMeasurement(app,pool);
 require('./tracker-growth-gsc-direct.cjs').registerGrowthGscDirect(app,pool);
