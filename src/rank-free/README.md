@@ -42,6 +42,19 @@ one e-mail per week shows the positions and what changed.
   6 weeks (the Growth check comes back as the main action and it can be marked again). Undo is possible.
 * The weekly e-mail carries the same best opportunity, follow-up and filled-in Growth check link.
 
+## Into the free Growth check (`handoff.cjs`)
+
+1. Every Growth link (best opportunity, keyword rows, weekly e-mail) opens `/free-growth` with the ranking page (else the
+   home page), the keyword as **`topic`** (not as the question), the market, the language and **`rt`**: a signed handoff
+   (dashboard nonce + keyword, HMAC with the server secret).
+2. The form shows "From your rank tracker: …" and fills in the owner's e-mail address (`GET /api/rank-free/handoff?rt=`,
+   only with a valid signature). The customer question stays empty.
+3. The check asks Google about the topic and picks the best real customer question (People also ask / related
+   searches); without one, the keyword itself is researched. A topic never reuses a stored result for the page.
+4. The check is linked to the keyword (`rank_free_handoffs`). Recording the publication date in the Growth check marks
+   the keyword "changed" in the tracker, with the position of its last check on or before that day; removing the date
+   removes it. Without a check before that day nothing is marked. Deleted with "Delete my data".
+
 ## Free plan and limits
 
 | Setting | Default | Env |

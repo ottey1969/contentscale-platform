@@ -205,7 +205,9 @@ test('dashboard: trend line, top 3, Growth link filled in, and Google suggestion
   assert.match(d.text, /Top 3 en Google: <a href="https:\/\/a\.example\/x"/);
   const g = /href="([^"]*free-growth[^"]*)">Mejora esta página/.exec(d.text);
   const q = new URL(g[1].replace(/&amp;/g, '&')).searchParams;
-  assert.deepEqual([q.get('url'), q.get('query'), q.get('market'), q.get('language')], ['https://acme.example/geo/', 'consultor geo', 'es — Spain', 'Spanish']);
+  // The keyword goes as the topic (the Growth check picks the best real customer question about it), with a signed handoff.
+  assert.deepEqual([q.get('url'), q.get('topic'), q.get('query'), q.get('market'), q.get('language')], ['https://acme.example/geo/', 'consultor geo', null, 'es — Spain', 'Spanish']);
+  assert.deepEqual(links.readHandoff(q.get('rt')), { nonce: store.db.accounts[0].dashboard_nonce, keyword: 'consultor geo' });
   assert.match(d.text, /Palabras clave que sugiere Google/); assert.match(d.text, /data-k="consultor geo precio"/);
   // The weekly e-mail names the suggestions that are not tracked yet.
   const mails = [];
@@ -260,7 +262,7 @@ test('Search Console export (optional, by hand): checked against the website, co
   assert.match(d.text, /«consultor geo» está en la posición 7/); assert.match(d.text, /Search Console: 1340 impresiones y 12 clics en el periodo/);
   const g = /<a class="cta" href="([^"]+)"/.exec(d.text)[1].replace(/&amp;/g, '&');
   assert.equal(new URL(g).searchParams.get('url'), 'https://es.acme.example/consultor-geo/');
-  assert.equal(new URL(g).searchParams.get('query'), 'consultor geo');
+  assert.equal(new URL(g).searchParams.get('topic'), 'consultor geo');
   assert.match(d.text, /Search Console: 12 clics · 1340 impresiones · posición media 7,4/);
   assert.match(d.text, /Filtro de país: España/); assert.match(d.text, /Periodo 2026-10-01 – 2026-10-28/);
   assert.match(d.text, /Oportunidades de Search Console[\s\S]*data-k="seo para ia"/);

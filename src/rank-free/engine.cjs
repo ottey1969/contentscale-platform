@@ -127,11 +127,12 @@ function changeOf(prev, curr) {
 }
 
 // The free Growth check, filled in for this keyword, market and (if it ranks) the page that ranks. Used on the
-// dashboard and in the weekly e-mail.
-function growthLink(growthUrl, { host, gl, hl }, keyword, last) {
+// dashboard and in the weekly e-mail. The keyword goes as the topic, not as the question: the Growth check then picks the
+// best real question customers ask in Google about it (owner 2026-11-11). `rt` is the signed handoff (handoff.cjs).
+function growthLink(growthUrl, { host, gl, hl }, keyword, last, rt = null) {
   const region = PREWRITE_REGIONS.find(x => x.split(' — ')[0].trim() === gl);
-  const q = new URLSearchParams({ url: last && last.status === 'FOUND' && last.url ? last.url : 'https://' + host + '/', query: keyword,
-    ...(region ? { market: region } : {}), ...(languageName(hl) ? { language: languageName(hl) } : {}) });
+  const q = new URLSearchParams({ url: last && last.status === 'FOUND' && last.url ? last.url : 'https://' + host + '/', topic: keyword,
+    ...(region ? { market: region } : {}), ...(languageName(hl) ? { language: languageName(hl) } : {}), ...(rt ? { rt } : {}) });
   return growthUrl + (growthUrl.includes('?') ? '&' : '?') + q.toString();
 }
 

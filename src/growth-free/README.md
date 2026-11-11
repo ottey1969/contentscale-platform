@@ -21,6 +21,9 @@ A public lead tool, **separate from the Tracker**. A visitor enters one page
   this page (`Filters.csv`, or a `Pages.csv` with only this page): then the research uses the search terms like the
   Tracker's page-verified Search Console data. Otherwise it is shown as "not verified for this page". Stored per check
   (`growth_free_gsc_uploads`), deleted with the check, never in the Tracker;
+* **From the free rank tracker** (`src/rank-free/handoff.cjs`): a link with `topic` (the tracked keyword) and `rt` (a
+  signed handoff) fills in the owner's e-mail address and lets the check pick the best customer question about the topic;
+  the publication date recorded here marks the keyword as changed in the tracker. Without `rt` nothing changes;
 * **Result page order**: one step bar — 1 Research (AI answers, Search Console, Google), 2 Choose, 3 Text (AI concepts
   when writing is on — the default — otherwise the editor writes), 4 CMS package, 5 Publish & measure (opens once the change is live).
   The JSON is optional research data at the end, not a step.

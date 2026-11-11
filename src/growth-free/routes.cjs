@@ -141,6 +141,7 @@ ${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(
  <label for="query">Customer question (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
  ${owner.signedIn||invite?`<p><button type="button" id="cqFind" class="ghost">Find customer questions</button> <small role="status" id="cqStatus">Automatic customer question discovery is available with approved access.</small></p><div id="cqList"></div>`:''}
  <small>Leave it empty and the check finds the question customers ask in Google for what your page offers. Or type the question yourself — it then wins.</small>
+ <input type="hidden" id="topic" name="topic"><input type="hidden" id="rt" name="rt"><p class="note" id="topicNote" hidden></p>
  <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
  <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
  <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
@@ -164,7 +165,12 @@ ${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p 
 <script>
 ${aiStartScript()}
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
-(function(){try{var q=new URLSearchParams(location.search);['url','query','market','language'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,300)})}catch(e){}})();
+(function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
+// From the free rank tracker: the tracked keyword is the topic (the check picks the best real customer question about it),
+// and a signed handoff fills in the owner's e-mail address and links the publication date back to the tracker.
+(function(){try{var t=document.getElementById('topic'),n=document.getElementById('topicNote'),rt=document.getElementById('rt');
+ if(t&&t.value&&n){n.hidden=false;n.textContent='From your rank tracker: “'+t.value+'”. Leave the customer question empty and the check picks the best real question customers ask in Google about it.'}
+ if(rt&&rt.value)fetch('/api/rank-free/handoff?rt='+encodeURIComponent(rt.value),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){var e=document.getElementById('email');if(d&&d.success&&e&&!e.value)e.value=d.email;if(!(d&&d.success))rt.value=''}).catch(function(){})}catch(e){}})();
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
@@ -232,7 +238,7 @@ try{
   }catch(e){s.textContent='Question suggestions unavailable; continuing with the page topic…'}
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?'The server did not answer within a minute. Please try again in a moment.':err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -775,7 +781,9 @@ const FAIL_TEXT={
  PAGE_IDENTITY_CHANGED:'The page changed while it was being checked. Please try again.'
 };
 
-function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGrowthResearch,engineDeps={},basePath='/free-growth',apiPath='/api/free-growth',fetchImpl=global.fetch,storage=store,sendEmail=null}={}){
+function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGrowthResearch,engineDeps={},basePath='/free-growth',apiPath='/api/free-growth',fetchImpl=global.fetch,storage=store,sendEmail=null,rankHandoff=null}={}){
+ // A check opened from the free rank tracker carries a signed handoff for one tracked keyword (src/rank-free/handoff.cjs).
+ const attachRank=async(row,ref)=>{if(rankHandoff&&ref&&row&&row.public_id)await rankHandoff.attach(row.public_id,ref).catch(()=>{})};
  if(!config.enabled)return null;
  const queue=[];let running=0;
  const jobs=new Set();
@@ -786,11 +794,11 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   try{
    const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(job.url);const html=String(live&&live.html||'');
    const country=job.market&&job.market.countries&&job.market.countries[0]||null,lang=job.market&&job.market.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
-   const out=await discoverCustomerQuestions({url:job.url,html,keyword:'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
+   const out=await discoverCustomerQuestions({url:job.url,html,keyword:job.topic||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
     ...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{}),model:job.approved?(engineDeps.questionModel!==undefined?engineDeps.questionModel:require('../growth-task-meaning.cjs').geminiModel()):null});
    const best=(out.questions||[]).find(q=>q.text===out.best_question)||null;
    return {text:best?best.text:null,source:best?best.source:'NONE',label:best?best.label:null,searched_with:out.searched_with||null,
-    others:(out.questions||[]).filter(q=>!best||q.text!==best.text).slice(0,6).map(q=>({text:q.text,label:q.label})),chosen_automatically:true};
+    others:(out.questions||[]).filter(q=>!best||q.text!==best.text).slice(0,6).map(q=>({text:q.text,label:q.label})),chosen_automatically:true,...(job.topic?{topic:job.topic}:{})};
   }catch(e){return {text:null,source:'UNAVAILABLE',label:null,others:[],chosen_automatically:true}}
  }
  function pump(){
@@ -801,6 +809,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      await storage.setStatus(pool,job.id,{status:'RUNNING'});
      const chosenQuestion=job.query?null:await autoQuestion(job);
      if(chosenQuestion&&chosenQuestion.text)job.query=chosenQuestion.text;
+     // No customer question found for a rank tracker topic: the tracked keyword itself is researched.
+     else if(job.topic){job.query=job.topic;if(chosenQuestion)chosenQuestion.text_fallback='TOPIC'}
      const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[]},engineDeps);
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
@@ -909,14 +919,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(b.consent!==true)return res.status(400).json({success:false,error:'Please accept the storage notice'});
    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
    // Empty: the check finds the customer question itself in Google (see autoQuestion); a typed question wins.
-   const query=clean(b.query,120);
+   const query=clean(b.query,120),topic=query?'':clean(b.topic,120);
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
    // A verified Search Console export changes the research, so a stored result without it is not reused.
-   const cached=gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE'?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
+   // A topic from the rank tracker leads to its own customer question, so a stored result for the page is not reused.
+   const cached=(gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE')||topic?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
@@ -926,7 +937,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label,market});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
-   if(!cached){queue.push({id:row.id,url:v.url,query,market,gscRows:gscRowsOf(gsc,v.url)});pump()}
+   await attachRank(row,b.rank_ref);
+   if(!cached){queue.push({id:row.id,url:v.url,query,topic,market,gscRows:gscRowsOf(gsc,v.url)});pump()}
    res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
   }catch(e){console.error('[free-growth] start failed',e.message);res.status(503).json({success:false,error:'The free check is temporarily unavailable'})}
  });
@@ -988,19 +1000,21 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const market=readMarket(b,res);if(market===undefined)return null;
   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
-  return {email,emails:em.emails,url:v.url,host:v.host,query:clean(b.query,120),market,aiAnswers,gsc};
+  const query=clean(b.query,120);
+  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
   // A verified Search Console export changes the research, so a stored result without it is not reused.
   const withGsc=!!(input.gsc&&input.gsc.upload.status==='VERIFIED_FOR_PAGE');
-  const cached=fresh||withGsc?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
+  const cached=fresh||withGsc||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
+  await attachRank(row,input.rankRef);
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  async function startInviteCheck(req,res,b){
@@ -1241,11 +1255,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(typeof storage.setPublication!=='function')return res.status(503).json({success:false,error:'Temporarily unavailable'});
   const b=req.body||{};
   if(b.clear===true){await storage.setPublication(pool,{checkId:row.id,publishedOn:null,dueAt:null});
+   if(rankHandoff)await rankHandoff.published(row.public_id,null).catch(()=>{});
    const fresh=await storage.getCheck(pool,req.params.id,req.query.k);return res.json({success:true,publication:publicationOf(fresh||row)})}
   const d=reminders.readPublishedOn(b.published_on);if(d.error)return res.status(400).json({success:false,error:d.error});
   const remind=b.remind!==false;
   try{
    const saved=await storage.setPublication(pool,{checkId:row.id,publishedOn:d.value,dueAt:remind?reminders.dueAt(d.value):null,base:baseFor(req)});
+   // Started from the rank tracker: the tracked keyword is marked "changed" there with its position on this day.
+   if(rankHandoff)await rankHandoff.published(row.public_id,d.value).catch(e=>console.warn('[free-growth] rank tracker link failed',e&&e.message));
    let confirmation=remind?(emailConfigured()?'NOT_ACCEPTED':'EMAIL_NOT_CONFIGURED'):'NO_REMINDER';
    const fresh=await storage.getCheck(pool,req.params.id,req.query.k)||row;
    if(remind&&emailConfigured()){

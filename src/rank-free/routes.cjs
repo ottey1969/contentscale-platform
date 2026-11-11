@@ -88,7 +88,7 @@ function sparkline(history, L) {
 }
 
 // The free Growth check, filled in for this keyword, market and (if it ranks) the page that ranks.
-const growthLink = (cfg, data, keyword, last) => engine.growthLink(cfg.growthUrl, data, keyword, last);
+const growthLink = (cfg, data, keyword, last) => engine.growthLink(cfg.growthUrl, data, keyword, last, links.handoffToken(data.nonce, keyword));
 
 // Google's own related searches and questions from the latest checks, minus what is already tracked.
 function suggestionsOf(data, max = 10) {
@@ -171,6 +171,7 @@ $('fg').onclick=async e=>{e.preventDefault();if(!confirm(${JSON.stringify(L.forg
 function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStore(pool), fetchImpl = global.fetch, sendEmail = null, now = () => new Date() } = {}) {
   if (!config.enabled) return null;
   const send = sendEmail || brevo(fetchImpl);
+  const handoff = require('./handoff.cjs').rankHandoff({ store });
   const emailReady = () => !!sendEmail || !!process.env.BREVO_API_KEY;
   const html = (res, body, code = 200) => res.status(code).set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').set('Content-Security-Policy', "frame-ancestors 'none'").type('html').send(body);
 
@@ -238,7 +239,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   app.get('/rank-tracker/d/:token', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
     if (!a) return html(res, page('en', 'Not found', '<h1>Not found</h1><p><a href="/rank-tracker">Free rank tracker</a></p>'), 404);
-    return html(res, dashboardPage(langOf(a.lang), await dashboardData(a), req.params.token, config, now()));
+    return html(res, dashboardPage(langOf(a.lang), { ...(await dashboardData(a)), nonce: a.dashboard_nonce }, req.params.token, config, now()));
   });
   app.get('/api/rank-free/d/:token', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
@@ -292,6 +293,14 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const [last] = await store.history(row.id, 1), r = last && last.result;
     await store.markChanged(p.id, k.keyword, now(), r && r.status === 'FOUND' ? r.position : null);
     res.json({ success: true, message: L.cSaved });
+  });
+  // For the free Growth check opened from the tracker: the owner's e-mail address to fill in. Only with a valid signed
+  // handoff, which only the owner gets (dashboard and weekly e-mail).
+  app.get('/api/rank-free/handoff', async (req, res) => {
+    res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer');
+    const r = await handoff.read(String(req.query.rt || '')).catch(() => null);
+    if (!r) return res.status(404).json({ success: false });
+    res.json({ success: true, email: r.account.email, keyword: r.keyword, host: r.project.host });
   });
   app.post('/api/rank-free/d/:token/gsc/delete', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
