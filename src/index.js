@@ -3912,6 +3912,8 @@ async function _trackerCaseStudyReadonlySchema(spec={}) {
 require('./tracker-growth-cockpit.cjs').registerGrowthCockpit(app,pool);
 // Free public Growth check: separate module, own tables and GROWTH_FREE_* settings (off with GROWTH_FREE_ENABLED=false).
 require('./growth-free/routes.cjs').registerFreeGrowth(app,pool);
+// Free public rank tracker: own module and tables, weekly Google positions per keyword (off with RANK_FREE_ENABLED=false).
+require('./rank-free/routes.cjs').registerRankFree(app,pool);
 require('./tracker-growth-execution.cjs').registerGrowthExecution(app,pool);
 require('./tracker-growth-measurement.cjs').registerGrowthMeasurement(app,pool);
 require('./tracker-growth-gsc-direct.cjs').registerGrowthGscDirect(app,pool);
