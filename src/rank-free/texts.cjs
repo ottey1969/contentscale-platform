@@ -19,7 +19,7 @@ const T = {
     errEmail: 'Enter a valid e-mail address.', errKeywords: 'Enter at least one keyword.', errLimit: 'Too many sign-ups from this connection today. Try again tomorrow.',
     errEmailOff: 'E-mail is not available right now, so we cannot send the confirmation link. Try again later.',
     otherEngine: e => 'In this country many people search with ' + e + ' instead of Google; a Google position says less here.',
-    dash: 'Your rankings', kw: 'Keyword', pos: 'Position', change: 'Change', page: 'Your page', checked: 'Checked', notTop: n => 'not in top ' + n,
+    dash: 'Your rankings', kw: 'Keyword', pos: 'Position', change: 'Change', page: 'Your page', checked: 'Checked', notTop: n => 'not in top ' + n, noResults: 'Google showed no results', notShown: n => 'not found in the ' + n + ' results Google showed',
     pending: 'first check is running', next: 'Next check', addKw: 'Keywords (up to 10, one per line)', save: 'Save keywords',
     stop: 'Stop e-mails', forget: 'Delete my data', forgetConfirm: 'Delete your account and all positions? This cannot be undone.',
     upsell: 'Not on page 1 yet? The free Growth check compares your page with the pages that do rank and says what is missing.',
@@ -45,7 +45,7 @@ const T = {
     errEmail: 'Vul een geldig e-mailadres in.', errKeywords: 'Vul minstens één zoekwoord in.', errLimit: 'Vandaag te veel aanmeldingen vanaf deze verbinding. Probeer het morgen opnieuw.',
     errEmailOff: 'E-mail is nu niet beschikbaar, dus we kunnen de bevestigingslink niet sturen. Probeer het later opnieuw.',
     otherEngine: e => 'In dit land zoeken veel mensen met ' + e + ' in plaats van Google; een Google-positie zegt hier minder.',
-    dash: 'Je posities', kw: 'Zoekwoord', pos: 'Positie', change: 'Verandering', page: 'Je pagina', checked: 'Gemeten', notTop: n => 'niet in top ' + n,
+    dash: 'Je posities', kw: 'Zoekwoord', pos: 'Positie', change: 'Verandering', page: 'Je pagina', checked: 'Gemeten', notTop: n => 'niet in top ' + n, noResults: 'Google toonde geen resultaten', notShown: n => 'niet gevonden in de ' + n + ' resultaten die Google toonde',
     pending: 'eerste meting loopt', next: 'Volgende meting', addKw: 'Zoekwoorden (maximaal 10, één per regel)', save: 'Zoekwoorden opslaan',
     stop: 'Stop e-mails', forget: 'Verwijder mijn gegevens', forgetConfirm: 'Je account en alle posities verwijderen? Dit kan niet ongedaan worden gemaakt.',
     upsell: 'Nog niet op pagina 1? De gratis Growth-check vergelijkt je pagina met de pagina’s die wel ranken en zegt wat er ontbreekt.',
@@ -59,8 +59,8 @@ const T = {
   es: {
     failed: (why, when) => 'el último intento falló (' + why + '); nuevo intento ' + when,
     noProvider: 'Las comprobaciones aún no funcionan: la conexión con Google no está configurada en el servidor. Tus palabras clave están guardadas y se comprobarán en cuanto lo esté.',
-    aSubject: 'El enlace a tu rank tracker gratuito', aIntro: host => 'Ya sigues ' + esc(host) + '. Abre tu panel para ver tus posiciones o cambiar tus palabras clave.', aButton: 'Abrir tu panel',
-    title: 'Rank tracker gratuito', lead: 'Sigue en qué posición aparece tu web en Google para hasta 10 palabras clave, en el país que elijas. Se comprueba automáticamente cada semana y recibes un e-mail cuando algo cambia.',
+    aSubject: 'El enlace a tu rastreador de posiciones gratuito', aIntro: host => 'Ya sigues ' + esc(host) + '. Abre tu panel para ver tus posiciones o cambiar tus palabras clave.', aButton: 'Abrir tu panel',
+    title: 'Rastreador de posiciones gratuito', lead: 'Sigue en qué posición aparece tu web en Google para hasta 10 palabras clave, en el país que elijas. Se comprueba automáticamente cada semana y recibes un e-mail cuando algo cambia.',
     email: 'Tu e-mail', site: 'Tu web', country: 'País', language: 'Idioma de búsqueda', keywords: 'Palabras clave (una por línea, hasta 10)',
     consent: 'Envíame de vez en cuando consejos sobre posicionamiento y búsqueda con IA (opcional).', submit: 'Empezar a seguir',
     how: 'Cómo funciona', how1: 'Comprobamos los resultados de Google para cada palabra clave en el país y el idioma que elijas, sin ajustes personales.',
@@ -71,12 +71,12 @@ const T = {
     errEmail: 'Introduce un e-mail válido.', errKeywords: 'Introduce al menos una palabra clave.', errLimit: 'Demasiados registros desde esta conexión hoy. Inténtalo mañana.',
     errEmailOff: 'El e-mail no está disponible ahora, así que no podemos enviar el enlace de confirmación. Inténtalo más tarde.',
     otherEngine: e => 'En este país mucha gente busca con ' + e + ' en lugar de Google; una posición en Google dice menos aquí.',
-    dash: 'Tus posiciones', kw: 'Palabra clave', pos: 'Posición', change: 'Cambio', page: 'Tu página', checked: 'Comprobado', notTop: n => 'fuera del top ' + n,
+    dash: 'Tus posiciones', kw: 'Palabra clave', pos: 'Posición', change: 'Cambio', page: 'Tu página', checked: 'Comprobado', notTop: n => 'fuera del top ' + n, noResults: 'Google no mostró resultados', notShown: n => 'no aparece en los ' + n + ' resultados que mostró Google',
     pending: 'primera comprobación en curso', next: 'Próxima comprobación', addKw: 'Palabras clave (hasta 10, una por línea)', save: 'Guardar palabras clave',
     stop: 'Dejar de recibir e-mails', forget: 'Borrar mis datos', forgetConfirm: '¿Borrar tu cuenta y todas las posiciones? No se puede deshacer.',
     upsell: '¿Aún no estás en la página 1? El análisis Growth gratuito compara tu página con las que sí posicionan y te dice qué falta.',
     upsellLink: 'Haz el análisis Growth gratuito',
-    vSubject: 'Confirma tu rank tracker gratuito', vIntro: host => 'Haz clic en el botón para empezar a seguir ' + esc(host) + ' en Google. La primera comprobación empieza enseguida.', vButton: 'Confirmar y empezar',
+    vSubject: 'Confirma tu rastreador de posiciones gratuito', vIntro: host => 'Haz clic en el botón para empezar a seguir ' + esc(host) + ' en Google. La primera comprobación empieza enseguida.', vButton: 'Confirmar y empezar',
     vIgnore: '¿No te has registrado? Ignora este e-mail; sin un clic no pasa nada.',
     dSubject: host => 'Tus posiciones en Google para ' + host, dIntro: (host, c) => 'Tu comprobación semanal de ' + esc(host) + ' en Google (' + esc(c) + '):',
     dOpen: 'Abrir tu panel', dStop: 'Dejar de recibir estos e-mails',
@@ -89,7 +89,8 @@ const t = l => T[langOf(l)];
 function positionText(r, L) {
   if (!r) return '—';
   if (r.status === 'FOUND') return String(r.position);
-  if (r.status === 'NOT_IN_RESULTS') return L.notTop(r.depth || 30);
+  if (r.status === 'NOT_IN_RESULTS' && r.depth === 0) return L.noResults;
+  if (r.status === 'NOT_IN_RESULTS') return r.all_results_shown || (r.depth && r.depth < 30) ? L.notShown(r.depth) : L.notTop(r.depth || 30);
   return '—';
 }
 function changeText(c, L) {
