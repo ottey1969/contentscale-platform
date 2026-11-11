@@ -282,9 +282,10 @@ function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI answers <small>('+esc(
   '<label>Answer from the AI system<textarea id="aiText" rows="7" maxlength="'+esc(a.max_paste)+'" placeholder="Paste the complete answer here"></textarea></label><p><button type="button" id="aiSave">Analyse answer</button> <small role="status" id="aiStatus"></small></p></div></details>';
  h+='<p class="muted">'+esc(x.caveat)+'</p>';return h}
 // AI gap: what the pages AI cites (where it does not cite you) have and your page does not.
-function aiGapHtml(g){if(!g)return '';
+function aiGapHtml(g){var inner=aiGapInner(g);return inner?'<div id="aiGapBox">'+inner+'</div>':''}
+function aiGapInner(g){if(!g)return '';
  var h='<h3 id="aiGap">What the pages AI cites have that your page does not</h3>';
- if(g.status==='RUNNING')return h+'<p class="muted">The pages AI cites are being read now. <button type="button" class="ghost" id="aiGapRefresh">Show the result</button></p>';
+ if(g.status==='RUNNING')return h+'<p class="muted">The pages AI cites are being read now (your saved AI answers are used, nothing to paste again). The comparison appears here by itself in a moment.</p><span id="aiGapRunning" hidden></span>';
  if(g.status==='FAILED')return h+'<p class="muted">The pages AI cites could not be compared this time. Paste an answer again to retry.</p>';
  if(g.status==='NO_CITED_PAGES')return '';
  if(g.status==='OWN_PAGE_UNREADABLE')return h+'<p class="muted">Your page could not be read just now, so the pages AI cites were not compared with it. Paste an answer again to retry.</p>';
@@ -298,7 +299,14 @@ function aiGapHtml(g){if(!g)return '';
   return '<div class="card"><strong>'+esc(p.site)+'</strong> <small class="muted">· cited by '+esc(p.cited_by.join(', '))+' · '+esc(p.status)+(p.read&&(p.headings||[]).length?' · '+m+' of '+p.headings.length+' heading(s) not on your page':'')+'</small><br><small><a href="'+esc(p.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(p.url)+'</a></small>'+
    ((p.headings||[]).length?'<ul>'+p.headings.map(function(x){return '<li>'+(x.status==='MISSING'?'<strong>'+esc(x.text)+'</strong> <small class="error">· not on your page</small>':x.status==='PARTLY'?esc(x.text)+' <small>· partly on your page</small>':esc(x.text)+' <small class="muted">· on your page</small>')+'</li>'}).join('')+'</ul>':'')+'</div>'}).join('')+'</details>';
  return h}
-function wireAiGap(){var r=document.getElementById('aiGapRefresh');if(r)r.onclick=async function(){r.disabled=true;var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE')render(d);else showAiFirst(d,true);showStep('stepResearch','aiGap')};
+// While the cited pages are read, only the AI-gap block is refreshed (every 5 s, at most 2 minutes): the rest of the
+// page, an open step and a half-pasted answer stay as they are.
+var aiGapPoll=null;
+function wireAiGap(){if(aiGapPoll){clearTimeout(aiGapPoll);aiGapPoll=null}
+ if(document.getElementById('aiGapRunning')){var tries=0;var tick=async function(){tries++;
+   try{var d=await (await fetch(API+Q,{cache:'no-store'})).json();var g=d&&d.ai&&d.ai.gap,box=document.getElementById('aiGapBox');
+    if(box&&g&&g.status!=='RUNNING'){box.outerHTML=aiGapHtml(g);wireAiGap();return}}catch(e){}
+   if(tries<24)aiGapPoll=setTimeout(tick,5000)};aiGapPoll=setTimeout(tick,5000)}
  document.querySelectorAll('.aiGapAdd').forEach(function(b){b.onclick=function(){var box=document.querySelector('.gapPick[value="'+b.getAttribute('data-item').replace(/"/g,'')+'"]'),st=b.parentNode.querySelector('.aiGapStatus');
   if(!box){st.textContent='This topic is not in the list of step 2.';return}if(!box.checked){box.checked=true;box.dispatchEvent(new Event('change',{bubbles:true}))}st.textContent='Added to your choice in step 2.';b.disabled=true}})}
 function aiDraftKey(eng){return 'growthFreeAiDraft:'+API+':'+eng}
