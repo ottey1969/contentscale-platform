@@ -21,7 +21,8 @@ function rankFreeConfig(env = process.env) {
     monthlyCap: Math.max(0, Number(env.RANK_FREE_MONTHLY_CALLS) || 3000),
     signupsPerIpPerDay: Math.max(1, Number(env.RANK_FREE_SIGNUPS_PER_IP) || 5),
     baseUrl: String(env.RANK_FREE_PUBLIC_URL || env.PUBLIC_APP_URL || 'https://app.contentscale.site').replace(/\/+$/, ''),
-    serperKey: env.SERPER_API_KEY || env.SERPAPI_KEY || '',
+    // Serper.dev only (same key as Growth); SERPAPI_KEY belongs to another provider with another API.
+    serperKey: env.SERPER_API_KEY || '',
     adminKey: env.RANK_FREE_ADMIN_KEY || env.GROWTH_FREE_ADMIN_KEY || '',
     growthUrl: env.RANK_FREE_GROWTH_URL || 'https://app.contentscale.site/free-growth',
     scheduler: env.RANK_FREE_SCHEDULER !== '0' && env.NODE_ENV !== 'test',
