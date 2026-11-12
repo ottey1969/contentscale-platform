@@ -83,3 +83,15 @@ test('owner 2026-11-12 Growth package: a Spanish question is searchable; two que
   const ui = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
   assert.match(ui, /Google searched with “'\+sdx\.search_term_used/);
 });
+
+test('Free Growth keeps up: 300-character question, searched-with shown and translated', () => {
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '../src/growth-free/routes.cjs'), 'utf8');
+  assert.match(src, /<textarea id="query" name="query" maxlength="300"/);
+  assert.ok(!/clean\(b\.query,120\)/.test(src), 'no 120-character cut on the server');
+  assert.match(src, /Google searched with “'\+esc\(c\.google_searched_with\)/);
+  const { summarizeFreeGrowth } = require('../src/growth-free/summary.cjs');
+  const s = summarizeFreeGrowth({ success: true, search_discovery: { search_term_used: '¿Cuánto cobra un consultor GEO?', leads: [] } }, { url: 'https://es.example/x', query: 'a? y b?' });
+  assert.equal(s.checked.google_searched_with, '¿Cuánto cobra un consultor GEO?');
+  const { ROWS } = require('../src/growth-free/ui-texts.cjs');
+  assert.ok(ROWS.some(r => /^Google searched with/.test(r[0]) && /^Se buscó en Google/.test(r[2])));
+});

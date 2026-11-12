@@ -157,7 +157,7 @@ function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,sign
 ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(t.inviteLeft.replace('§1',invite.left).replace('§2',invite.max).replace('§3',invite.expires))}${invite.email_hint?' '+esc(t.inviteEmail.replace('§',invite.email_hint)):''}</p>`:''}
 <form id="f" class="card" novalidate>
  <label for="url">${esc(t.url)}</label><input id="url" name="url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="${esc(t.urlPh)}" maxlength="500">
- <label for="query">${esc(t.query)}</label><input id="query" name="query" maxlength="120" placeholder="${esc(t.queryPh)}">
+ <label for="query">${esc(t.query)}</label><textarea id="query" name="query" maxlength="300" rows="2" style="width:100%;resize:vertical" placeholder="${esc(t.queryPh)}"></textarea>
  ${owner.signedIn||invite?`<p><button type="button" id="cqFind" class="ghost">Find customer questions</button> <small role="status" id="cqStatus">Automatic customer question discovery is available with approved access.</small></p><div id="cqList"></div>`:''}
  <small>${esc(t.queryHelp)}</small>
  <input type="hidden" id="topic" name="topic"><input type="hidden" id="rt" name="rt"><p class="note" id="topicNote" hidden></p>
@@ -855,7 +855,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  h+='<details class="research-details"><summary>Research limitations and next research options</summary><ol>'+s.steps.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ol></details>';
  if(s.tasks.length){h+='<h2>Why — what the ranking pages explain</h2>'+s.tasks.map(function(t){return '<div class="card"><strong>'+esc(t.title)+'</strong> <small>'+esc(t.status)+'</small>'+t.evidence.map(function(e){return '<blockquote>'+(e.heading?'<strong>'+esc(e.heading)+'</strong><br>':'')+esc(e.excerpt)+'<br><small><a href="'+esc(e.url)+'" target="_blank" rel="noopener noreferrer nofollow">'+esc(e.site)+'</a></small></blockquote>'}).join('')+'</div>'}).join('')}
  h+='</div><div class="rtab-pane" data-tab="ai" hidden>'+'<p>AI systems research is now visible before the topic list. <a href="#freeAiResearch">Open AI research →</a></p>'+'</div><div class="rtab-pane" data-tab="gsc" hidden>'+gscHtml(d.gsc)+'</div></details>';
- var c=s.checked;h+='<details class="research-details" id="checkedScope"><summary>Search details (term, market, pages read)</summary><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small></div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong>'+(c.google_results_received!=null?'<small>of '+esc(c.google_results_received)+' Google results received</small>':'')+(c.results_not_used&&c.results_not_used.length?'<small>not used: '+esc(c.results_not_used.map(function(x){return x.count+' × '+x.text}).join(', '))+'</small>':'')+'</div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div>'+(c.search_market?'<div><small>Searched in</small><strong>'+esc(c.search_market.join(' + '))+'</strong>'+(c.markets_not_searched&&c.markets_not_searched.length?'<small>not researched: '+esc(c.markets_not_searched.join(', '))+' (partial market research)</small>':'')+(c.market_derived_not_confirmed?'<small>market derived from your page, not confirmed</small>':'')+'</div>':'')+'</div></details>';
+ var c=s.checked;h+='<details class="research-details" id="checkedScope"><summary>Search details (term, market, pages read)</summary><div class="grid"><div><small>Search term</small><strong>'+esc(c.search_term||'—')+'</strong><small>'+(c.search_term_source==='YOU_ENTERED_IT'?'entered by you':'derived from your page')+'</small>'+(c.google_searched_with?'<small>Google searched with “'+esc(c.google_searched_with)+'”: the full question is too long for one Google search.</small>':'')+'</div><div><small>Google shows mostly</small><strong>'+esc(c.what_google_shows||'unclear')+'</strong></div><div><small>Ranking results considered</small><strong>'+esc(c.ranking_results_considered)+'</strong>'+(c.google_results_received!=null?'<small>of '+esc(c.google_results_received)+' Google results received</small>':'')+(c.results_not_used&&c.results_not_used.length?'<small>not used: '+esc(c.results_not_used.map(function(x){return x.count+' × '+x.text}).join(', '))+'</small>':'')+'</div><div><small>Ranking pages read in full</small><strong>'+esc(c.ranking_pages_read)+'</strong></div>'+(c.search_market?'<div><small>Searched in</small><strong>'+esc(c.search_market.join(' + '))+'</strong>'+(c.markets_not_searched&&c.markets_not_searched.length?'<small>not researched: '+esc(c.markets_not_searched.join(', '))+' (partial market research)</small>':'')+(c.market_derived_not_confirmed?'<small>market derived from your page, not confirmed</small>':'')+'</div>':'')+'</div></details>';
  h+='<details class="research-details" id="limits"><summary>Research scope and limitations</summary><ul>'+s.limitations.map(function(x){return '<li>'+esc(x)+'</li>'}).join('')+'</ul><p class="note">'+esc(s.promises)+'</p></details>';
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
@@ -1111,7 +1111,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   h.push(now);cqHits.set(ip,h);if(cqHits.size>5000)cqHits.clear();
   // Customer questions come from Google for the keyword (owner 2026-11-10: "het moet de keyword zijn"). The page only
   // helps to understand what it offers: with a keyword and no (readable) page the questions are still found.
-  const kw=clean(b.query,120),hasUrl=!!String(b.url||'').trim(),v=hasUrl?validatePublicUrl(b.url):{error:'NO_URL'};
+  const kw=clean(b.query,300),hasUrl=!!String(b.url||'').trim(),v=hasUrl?validatePublicUrl(b.url):{error:'NO_URL'};
   if(v.error&&!kw)return res.status(400).json({success:false,error:hasUrl?v.error:'Enter a keyword (search term) or the page address first.'});
   const entries=String(b.market||'').split(/[,;]+/).map(x=>x.trim()).filter(Boolean),country=validCountries(entries)[0]||null,lang=String(b.language||'').trim()?validLanguage(b.language):null;
   let html='';if(!v.error){try{html=String((await (engineDeps.fetchLive||fetchPublicGrowthHtml)(v.url))?.html||'')}catch(e){if(!kw)return res.status(503).json({success:false,error:'Your page could not be read publicly. Enter the search term yourself.'})}}
@@ -1144,7 +1144,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(b.consent!==true)return res.status(400).json({success:false,error:'Please accept the storage notice'});
    const v=validatePublicUrl(b.url);if(v.error)return res.status(400).json({success:false,error:v.error});
    // Empty: the check finds the customer question itself in Google (see autoQuestion); a typed question wins.
-   const query=clean(b.query,120),topic=query?'':clean(b.topic,120);
+   const query=clean(b.query,300),topic=query?'':clean(b.topic,120);
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
@@ -1186,10 +1186,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    seen.add(engine);
    const label=(ai.ENGINES.find(e=>e.id===engine)||{}).label;
    if(text.length>ai.MAX_PASTE){res.status(413).json({success:false,error:label+': this answer is too long; paste only the answer and its sources'});return undefined}
-   {const v=ai.validateGrowthAnswer(ai.parseAiAnswer(text,{}).answer,clean(b.query,120));if(v.status==='invalid'){res.status(400).json({success:false,error:label+': '+v.message});return undefined}}
+   {const v=ai.validateGrowthAnswer(ai.parseAiAnswer(text,{}).answer,clean(b.query,300));if(v.status==='invalid'){res.status(400).json({success:false,error:label+': '+v.message});return undefined}}
    if(ai.otherPrompt(text)){res.status(400).json({success:false,error:label+': this is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here and paste that answer.'});return undefined}
   }
-  if(list.length&&!clean(b.query,120)){res.status(400).json({success:false,error:'Enter the customer question first: your pasted AI answers are checked against it.'});return undefined}
+  if(list.length&&!clean(b.query,300)){res.status(400).json({success:false,error:'Enter the customer question first: your pasted AI answers are checked against it.'});return undefined}
   return list.map(x=>({engine:String(x.engine),text:String(x.text)}));
  }
  async function saveStartAnswers(row,url,answers){
@@ -1225,7 +1225,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const market=readMarket(b,res);if(market===undefined)return null;
   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
-  const query=clean(b.query,120);
+  const query=clean(b.query,300);
   return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
@@ -1710,7 +1710,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     await storage.ensureTables(pool);
     const market=readMarket(b,res);if(market===undefined)return;
     const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
-    await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,120),market,aiAnswers},{accessLabel:'admin',fresh:b.fresh===true});
+    await start(res,{email:'owner',url:v.url,host:v.host,query:clean(b.query,300),market,aiAnswers},{accessLabel:'admin',fresh:b.fresh===true});
    }catch(e){console.error('[free-growth] admin run failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'})}
   });
   app.post(apiPath+'/admin/invites',async(req,res)=>{

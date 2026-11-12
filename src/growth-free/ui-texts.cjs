@@ -95,6 +95,7 @@ const ROWS = [
   ['Extend your section “{q}”.', 'Breid je sectie “{q}” uit.', 'Amplía tu sección “{q}”.'],
   // The question asked to the AI systems (owner 2026-11-12: a real Google question, the best match for the search term).
   ['Question asked:', 'Gestelde vraag:', 'Pregunta realizada:'],
+  ['Google searched with “{q}”: the full question is too long for one Google search.', 'Google is gezocht met “{q}”: de volledige vraag is te lang voor één Google-zoekopdracht.', 'Se buscó en Google con “{q}”: la pregunta completa es demasiado larga para una sola búsqueda en Google.'],
   ['the best real Google question for “{q}”', 'de best passende echte Google-vraag voor “{q}”', 'la pregunta real de Google que mejor encaja con “{q}”'],
   ['People also ask', 'Mensen vragen ook', 'Otras preguntas de los usuarios'], ['Related search', 'Gerelateerde zoekopdracht', 'Búsqueda relacionada'],
   ['Check your page first: this section was not compared with it.', 'Controleer eerst je pagina: deze sectie is er niet mee vergeleken.', 'Revisa primero tu página: esta sección no se comparó con ella.'],

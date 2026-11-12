@@ -71,6 +71,8 @@ function summarizeFreeGrowth(report,{url,query}={}){
  const checked={
   search_term:searched,
   search_term_source:query?'YOU_ENTERED_IT':'DERIVED_FROM_THE_PAGE',
+  // A question too long for one Google search is searched as its first question (owner 2026-11-12); said, not hidden.
+  google_searched_with:discovery.search_term_used||null,
   what_google_shows:serp.intent?(INTENT_TEXT[serp.intent]||String(serp.intent).toLowerCase().replace(/_/g,' ')):null,
   // By title, over all results incl. those that could not be opened (explanation only, never evidence for a gap).
   google_titles:report?.serp_titles?.status==='OBSERVED_FROM_TITLES'?{seen:report.serp_titles.titles_seen,not_read:report.serp_titles.pages_not_read,
