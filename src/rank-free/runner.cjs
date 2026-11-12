@@ -3,7 +3,7 @@
 // out when all its keywords have a fresh result. A monthly provider budget caps the cost for all free users together;
 // when it is used up, checks are postponed one day (never dropped, never estimated).
 const { checkRank, changeOf, growthLink } = require('./engine.cjs');
-const { digestEmail, followText, t } = require('./texts.cjs');
+const { digestEmail, followText, plainFollow, t } = require('./texts.cjs');
 const { bestOpportunity, followUp } = require('./gsc.cjs');
 const { linkToken, handoffToken } = require('./links.cjs');
 const { countryName } = require('../growth-search-locale.cjs');
@@ -36,7 +36,7 @@ async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), 
 }
 
 // One e-mail per project after a full round: every keyword with its position and what changed since the round before.
-async function sendDigests({ store, send, baseUrl, growthUrl = 'https://app.contentscale.site/free-growth', now = new Date() } = {}) {
+async function sendDigests({ store, send, baseUrl, growthUrl = 'https://app.contentscale.site/free-growth', growthLinks = false, callUrl = null, now = new Date() } = {}) {
   const out = { sent: 0, failed: 0 };
   if (typeof send !== 'function') return out;
   for (const p of await store.digestReady(now)) {
@@ -51,8 +51,10 @@ async function sendDigests({ store, send, baseUrl, growthUrl = 'https://app.cont
     // The same best opportunity as on the dashboard, with its follow-up after a change and the filled-in Growth check.
     const gsc = p.gsc ? (typeof p.gsc === 'string' ? JSON.parse(p.gsc) : p.gsc) : null;
     const b = bestOpportunity(full, gsc), L = t(p.lang), fu = b ? followUp(b.row, now) : null;
-    const best = b ? { keyword: b.keyword, position: b.result.position, follow: followText(fu, L), cta: fu ? L.cAgain : L.bCta,
-      link: growthLink(growthUrl, p, b.keyword, b.result, handoffToken(p.dashboard_nonce, b.keyword)), show_cta: !fu || fu.status === 'NO_GROWTH' } : null;
+    // Without Growth links: the invitation to discuss SEO and GEO live in a call, on the contact page in the account's language.
+    const call = (callUrl && (callUrl[p.lang] || callUrl.en)) || 'https://contentscale.site/contact/';
+    const best = b ? { keyword: b.keyword, position: b.result.position, follow: growthLinks ? followText(fu, L) : plainFollow(followText(fu, L)), cta: growthLinks ? (fu ? L.cAgain : L.bCta) : L.callCta,
+      link: growthLinks ? growthLink(growthUrl, p, b.keyword, b.result, handoffToken(p.dashboard_nonce, b.keyword)) : call, show_cta: !fu || fu.status === 'NO_GROWTH' } : null;
     // Google's own related searches from this round that are not tracked yet (at most five).
     const tracked = new Set(rows.map(r => r.keyword)), suggestions = [];
     for (const r of rows) for (const x of (r.curr && Array.isArray(r.curr.suggestions) ? r.curr.suggestions : [])) if (!tracked.has(x) && !suggestions.includes(x) && suggestions.length < 5) suggestions.push(x);

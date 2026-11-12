@@ -114,7 +114,7 @@ test('one weekly e-mail per project, in the account language, with a working das
 
 function app(store, sent, extra = {}) {
   const a = express(); a.use(express.json());
-  registerRankFree(a, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false, adminKey: 'admin-key-1234567890', ...extra }, store, sendEmail: async m => { sent.push(m); return true; } });
+  registerRankFree(a, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false, adminKey: 'admin-key-1234567890', growthLinks: true, ...extra }, store, sendEmail: async m => { sent.push(m); return true; } });
   return a;
 }
 
@@ -211,7 +211,7 @@ test('dashboard: trend line, top 3, Growth link filled in, and Google suggestion
   assert.match(d.text, /Palabras clave que sugiere Google/); assert.match(d.text, /data-k="consultor geo precio"/);
   // The weekly e-mail names the suggestions that are not tracked yet.
   const mails = [];
-  await sendDigests({ store, send: async m => { mails.push(m); return true; }, baseUrl: 'https://app.example', now: new Date('2026-11-11T10:05:00Z') });
+  await sendDigests({ store, send: async m => { mails.push(m); return true; }, baseUrl: 'https://app.example', growthLinks: true, now: new Date('2026-11-11T10:05:00Z') });
   assert.match(mails[0].html, /Google también sugiere estas búsquedas; añádelas con un clic en tu panel: consultor geo precio, qué hace un consultor geo/);
   // Add one suggestion: tracked, due now; then the limit (2 here) is reached and the next is refused, not dropped silently.
   const add = await request(a).post('/api/rank-free/d/' + tok + '/keywords/add').send({ keyword: 'consultor geo precio' });
@@ -281,7 +281,7 @@ test('"I have changed this page": the keyword stays the best opportunity with a 
   const found = (p, d) => ({ status: 'FOUND', position: p, url: 'https://acme.example/geo/', checked_at: d });
   await store.saveResult(kid, found(8, '2026-11-11T10:00:00.000Z'), new Date('2026-11-18T10:00:00Z'));
   const a = express(); a.use(express.json());
-  registerRankFree(a, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false }, store, sendEmail: async m => { sent.push(m); return true; }, now: () => clock });
+  registerRankFree(a, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false, growthLinks: true }, store, sendEmail: async m => { sent.push(m); return true; }, now: () => clock });
   const tok = links.linkToken(store.db.accounts[0].dashboard_nonce);
   let d = await request(a).get('/rank-tracker/d/' + tok);
   assert.match(d.text, /id="cm" data-k="consultor geo">He modificado esta página/);
@@ -304,7 +304,7 @@ test('"I have changed this page": the keyword stays the best opportunity with a 
   d = await request(a).get('/rank-tracker/d/' + tok);
   assert.match(d.text, /Ha subido de la posición 8 a la 5 desde tu cambio del 2026-11-11/);
   // The weekly e-mail carries the same best opportunity and follow-up.
-  await sendDigests({ store, send: async x => { sent.push(x); return true; }, baseUrl: 'https://app.example', growthUrl: 'https://app.example/free-growth', now: clock });
+  await sendDigests({ store, send: async x => { sent.push(x); return true; }, baseUrl: 'https://app.example', growthUrl: 'https://app.example/free-growth', growthLinks: true, now: clock });
   assert.match(sent.at(-1).html, /Tu mejor oportunidad ahora[\s\S]*Ha subido de la posición 8 a la 5[\s\S]*free-growth\?url=https%3A%2F%2Facme\.example%2Fgeo%2F/);
   // Six weeks without growth (back to 9): the Growth check comes back as the main action, and it can be marked again.
   assert.equal(followUp({ changed_at: '2026-11-11T12:00:00Z', changed_position: 8, history: [{ result: found(9, '2026-12-23T10:00:00.000Z') }] }, new Date('2026-12-23T12:00:00Z')).status, 'NO_GROWTH');
@@ -334,4 +334,25 @@ test('tips by e-mail: on by default with "Don\'t send me tips" to opt out; the l
   assert.equal(tips('old@acme.example'), true); assert.equal(tips('oldno@acme.example'), false, 'an older form without the box: no tips');
   await sign({ email: 'yes@acme.example', no_tips: true });
   assert.equal(tips('yes@acme.example'), false, 'opting out later is respected');
+});
+
+test('owner 2026-11-12: by default the rank tracker has no Growth links; it invites to discuss SEO and GEO live in a call', async () => {
+  assert.equal(rankFreeConfig({}).growthLinks, false, 'off unless RANK_FREE_GROWTH_LINKS=on');
+  assert.equal(rankFreeConfig({ RANK_FREE_GROWTH_LINKS: 'on' }).growthLinks, true);
+  const store = memoryStore(), sent = [];
+  await confirmedAccount(store, { keywords: ['consultor geo'] });
+  const kid = store.db.keywords[0].id;
+  await store.saveResult(kid, { status: 'FOUND', position: 9, url: 'https://acme.example/geo/', top: [], suggestions: [], checked_at: '2026-11-11T10:00:00.000Z' }, new Date('2026-11-18T10:00:00Z'));
+  const a = express(); a.use(express.json());
+  registerRankFree(a, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false }, store, sendEmail: async m => { sent.push(m); return true; } });
+  const d = await request(a).get('/rank-tracker/d/' + links.linkToken(store.db.accounts[0].dashboard_nonce));
+  assert.equal(d.status, 200);
+  assert.doesNotMatch(d.text, /free-growth|análisis Growth|Growth-check|Growth check/i);
+  assert.match(d.text, /href="https:\/\/es\.contentscale\.site\/contacto\/">Habla de tu SEO y GEO en directo en una llamada →/);
+  const mails = [];
+  await sendDigests({ store, send: async m => { mails.push(m); return true; }, baseUrl: 'https://app.example', callUrl: rankFreeConfig({}).callUrl, now: new Date('2026-11-11T10:05:00Z') });
+  assert.doesNotMatch(mails[0].html, /free-growth|análisis Growth/i);
+  assert.match(mails[0].html, /es\.contentscale\.site\/contacto\//);
+  const t = require('../src/rank-free/texts.cjs');
+  assert.equal(t.plainFollow(t.t('nl').cNoGrowth('2026-10-01', 5, 7, 4)), '4 weken na je aanpassing op 2026-10-01 nog geen groei (positie 5 → 7).');
 });
