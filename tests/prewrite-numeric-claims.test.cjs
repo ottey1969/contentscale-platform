@@ -73,3 +73,18 @@ test('src/index.js: verification runs before the final pass, from the Brief\'s o
   assert.match(src, /PRICE FACTS — VERIFIED ON THE SOURCE PAGE/); assert.match(src, /REMOVED — AMOUNTS NO SOURCE PAGE CONFIRMED/);
   assert.match(src, /penalize\(2,'unverified_numbers_removed'/);
 });
+
+test('owner 2026-11-12: amounts in a citation hook are checked too; "create a new page" is not in the plan of an expansion', () => {
+  const b = { definitive_outline: [{ h2: '¿Cuánto cobra un consultor GEO?', citation_hook: 'Un consultor GEO puede cobrar desde 500 € por una auditoría hasta 15.000 € al mes. Depende del alcance.' }, { h2: 'Medición', citation_hook: 'La medición se basa en prompts de intención.' }],
+    content_decision: { recommended_treatment: 'EXPAND_EXISTING_PAGE', closest_existing_url: 'https://es.contentscale.site/consultor-geo/' },
+    action_plan: [{ action: "Crear el contenido de la nueva página 'consultor-geo-precios-medicion-ia' siguiendo el blueprint." }, { action: 'Integrar los enlaces internos.' }] };
+  const un = M.unverifiedNumbers(b);
+  assert.deepEqual(un.map(x => x.number), ['500', '15000']); assert.deepEqual(un[0].fields, ['citation_hook']);
+  M.removeUnverified(b, un);
+  assert.equal(b.definitive_outline[0].citation_hook, 'Depende del alcance.');
+  assert.equal(b.definitive_outline[1].citation_hook, 'La medición se basa en prompts de intención.');
+  assert.equal(M.alignActionPlan(b, 'Spanish'), 1);
+  assert.deepEqual(b.action_plan.map(a => a.action), ['Amplía la página existente https://es.contentscale.site/consultor-geo/ con las secciones del blueprint; no crees una URL nueva.', 'Integrar los enlaces internos.']);
+  const create = { content_decision: { recommended_treatment: 'CREATE_NEW_PAGE' }, action_plan: [{ action: 'Create the new page.' }] };
+  assert.equal(M.alignActionPlan(create, 'English'), 0, 'a new page stays a new page');
+});

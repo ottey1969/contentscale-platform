@@ -62062,6 +62062,7 @@ ${sourceText}`;
       brief.numeric_claims_check={checked_at:new Date().toISOString(),pages_checked:_pages.map(x=>x.url),verified:brief.price_facts.length,removed:_removed,
        rule:'Money amounts and percentages in the opening, AI answer and quick facts need a verified source. Found on a source page: kept as a price fact with its excerpt. Not found: removed from the copy.'};
      }
+     _nc.alignActionPlan(brief,language);
     }catch(_numErr){console.warn('[prewrite-brief] number verification failed:',String(_numErr&&_numErr.message||_numErr).slice(0,160));}
 
     // v499 — free deterministic final publication pass. No extra Gemini call.
