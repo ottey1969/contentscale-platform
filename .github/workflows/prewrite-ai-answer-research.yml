@@ -18,6 +18,9 @@ on:
       - 'tests/tracker-growth-personal-voice.test.cjs'
       - 'tests/tracker-growth-flagged-remove-all.test.cjs'
       - 'tests/tracker-growth-clear-flow.test.cjs'
+      - 'tests/tracker-growth-flagged-keep.test.cjs'
+      - 'src/growth-sentence-removal-store.cjs'
+      - 'src/tracker-growth-cms-export.cjs'
       - 'public/growth-automatic-report-ui.js'
       - 'public/growth-gap-checklist.js'
       - 'tests/growth-free-e2e.test.cjs'
@@ -49,6 +52,9 @@ on:
       - 'tests/tracker-growth-personal-voice.test.cjs'
       - 'tests/tracker-growth-flagged-remove-all.test.cjs'
       - 'tests/tracker-growth-clear-flow.test.cjs'
+      - 'tests/tracker-growth-flagged-keep.test.cjs'
+      - 'src/growth-sentence-removal-store.cjs'
+      - 'src/tracker-growth-cms-export.cjs'
       - 'public/growth-automatic-report-ui.js'
       - 'public/growth-gap-checklist.js'
       - 'tests/growth-free-e2e.test.cjs'
@@ -72,7 +78,7 @@ jobs:
       - name: Validate 5-system writing research, canonical integration and the migration reference
         run: node --test tests/prewrite-ai-answer-research.test.cjs tests/prewrite-ai-answer-integration.test.cjs tests/prewrite-research-prompt-contract.test.cjs tests/prewrite-brief-research-migration.test.cjs tests/prewrite-ai-answer-validation.test.cjs tests/prewrite-production-findings.test.cjs tests/prewrite-expand-existing.test.cjs
       - name: Research Prompt tab in a real browser (real Pre-Write markup from the canonical build)
-        run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/prewrite-research-tab-browser.test.cjs tests/growth-cms-handoff-zero-statements.test.cjs tests/tracker-growth-personal-voice.test.cjs tests/tracker-growth-flagged-remove-all.test.cjs tests/tracker-growth-clear-flow.test.cjs
+        run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/prewrite-research-tab-browser.test.cjs tests/growth-cms-handoff-zero-statements.test.cjs tests/tracker-growth-personal-voice.test.cjs tests/tracker-growth-flagged-remove-all.test.cjs tests/tracker-growth-clear-flow.test.cjs tests/tracker-growth-flagged-keep.test.cjs
       - name: Verify idempotent canonical build
         run: node scripts/prepare-canonical-production.cjs --verify-only
       - name: Execute Railway Railpack build step and syntax-check built server

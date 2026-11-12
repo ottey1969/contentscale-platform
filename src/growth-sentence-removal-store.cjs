@@ -28,4 +28,24 @@ async function loadRemovals(pool,{clientId,pageId}){
  try{return (await pool.query('SELECT sentence,how,removed_at FROM tracker_growth_sentence_removals WHERE tracker_client_id=$1 AND page_id=$2 ORDER BY removed_at',[clientId,Number(pageId)])).rows}
  catch(e){if(e.code==='42P01')return [];throw e}
 }
-module.exports={saveRemoval,loadRemovals,hashOf,norm,ensureTable};
+// Undo the owner's decision about a sentence (a removal or a "keep"): the sentence is flagged again.
+async function deleteDecision(pool,{clientId,pageId,sentence}){
+ const s=norm(sentence).slice(0,600);if(s.length<10)return null;
+ await ensureTable(pool);
+ await pool.query('DELETE FROM tracker_growth_sentence_removals WHERE tracker_client_id=$1 AND page_id=$2 AND sentence_hash=$3',[clientId,Number(pageId),hashOf(s)]);
+ return {sentence:s};
+}
+// Flagged sentences the owner confirmed as true for the business (decision KEPT_BY_OWNER), as review notes for the
+// package: they no longer block it and are recorded as confirmed. A safety assurance ("safe to wait") is never released.
+const isSafety=f=>f&&(f.code==='UNSUPPORTED_SAFETY_ASSURANCE'||/safe to wait|safety assurance/i.test(String(f.reason||'')));
+function applyKept(reviewNotes,rows){
+ if(!reviewNotes||typeof reviewNotes!=='object')return reviewNotes;
+ const kept=new Set((rows||[]).filter(r=>r.how==='KEPT_BY_OWNER').map(r=>norm(r.sentence).toLowerCase()));
+ const flagged=Array.isArray(reviewNotes.flagged)?reviewNotes.flagged:[];
+ const isKept=f=>f&&f.sentence&&!isSafety(f)&&kept.has(norm(f.sentence).toLowerCase());
+ // Only the server's record counts: a confirmation sent by the browser is ignored.
+ const {confirmed_by_editor,...rest}=reviewNotes;
+ const confirmed=flagged.filter(isKept).map(f=>({sentence:f.sentence,h2:f.h2||'',reason:f.reason||''}));
+ return {...rest,flagged:flagged.filter(f=>!isKept(f)),...(confirmed.length?{confirmed_by_editor:confirmed}:{})};
+}
+module.exports={saveRemoval,loadRemovals,deleteDecision,applyKept,hashOf,norm,ensureTable};
