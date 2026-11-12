@@ -20,6 +20,9 @@ test('contacts per country: list, filter, CSV, delete one, delete selection — 
     await add('ann@contacts-test.example', 'nl', true, 'ann.example', ['dakreparatie amsterdam', 'lekkage dak']);
     await add('bob@contacts-test.example', 'us', false, 'bob.example', ['roof repair nj']);
     await add('cas@contacts-test.example', 'nl', false, 'cas.example', ['schilder utrecht']);
+    await add('dan@contacts-test.example', 'nl', true, 'dan.example', ['dakgoot']);
+    // Confirmed e-mail addresses (ann, bob, cas); dan never confirmed: wanted tips, but is not counted as "tips".
+    for (const e of ['ann', 'bob', 'cas']) await pool.query('UPDATE rank_free_accounts SET verified_at=NOW() WHERE email=$1', [e + '@contacts-test.example']);
     const check = (email, countries, consent, url, query) => pool.query(`INSERT INTO growth_free_checks(public_id,access_key,email,ip_hash,url,host,query,status,marketing_consent,market)
       VALUES($1,'k',$2,'h',$3,'h.example',$4,'DONE',$5,$6)`, ['c' + Math.random().toString(36).slice(2, 12), email, url, query, consent, countries ? JSON.stringify({ countries, language: 'en' }) : null]);
     await check('dee@contacts-test.example', ['es'], true, 'https://dee.example/a/', 'reparacion tejado');
@@ -37,7 +40,8 @@ test('contacts per country: list, filter, CSV, delete one, delete selection — 
       const mine = rows => rows.filter(r => /@contacts-test\.example$/.test(r.email));
       // Rank tracker: per country, tips, website and keywords.
       let r = (await req('GET', '/api/free-growth/admin/contacts?source=rank&country=NL', null, jar)).body;
-      assert.deepEqual(mine(r.rows).map(x => x.email).sort(), ['ann@contacts-test.example', 'cas@contacts-test.example']);
+      assert.deepEqual(mine(r.rows).map(x => x.email).sort(), ['ann@contacts-test.example', 'cas@contacts-test.example', 'dan@contacts-test.example']);
+      assert.equal(mine(r.rows).find(x => x.email.startsWith('dan')).tips, false, 'unconfirmed address: no tips');
       const ann = mine(r.rows).find(x => x.email.startsWith('ann'));
       assert.equal(ann.country, 'NL'); assert.equal(ann.tips, true); assert.equal(ann.host, 'ann.example'); assert.deepEqual(ann.keywords, ['dakreparatie amsterdam', 'lekkage dak']);
       assert.ok(r.countries.some(c => c.country === 'NL' && c.contacts >= 2 && c.tips >= 1));

@@ -161,8 +161,8 @@ ${aiStartBlock(!!owner.signedIn||!!invite)}
  <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
  <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The first address gets the e-mails; the others are kept with the check.</small>
  <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day for the first address.`}`}</span></label>
- <p class="muted" style="font-size:14px;margin:10px 0 2px">You'll also get occasional tips about ranking and AI search from ContentScale. Unsubscribe anytime with the link in every email.</p>
- <label class="check"><input type="checkbox" name="notips"> <span>Don't send me tips</span></label>
+ <div id="tipsBox"><p class="muted" style="font-size:14px;margin:10px 0 2px">You'll also get occasional tips about ranking and AI search from ContentScale. Unsubscribe anytime with the link in every email.</p>
+ <label class="check"><input type="checkbox" name="notips"> <span>Don't send me tips</span></label></div>
  ${owner.signedIn?'<label class="check"><input type="checkbox" name="fresh"> <span><strong>Research again</strong>: ignore a stored result of today for the same page and question (uses 1–2 Serper searches)</span></label>':''}
  <p><button type="submit">${owner.signedIn?'Run the check (owner)':'Run the free check'}</button> <small id="s" role="status"></small></p>
 </form>
@@ -181,7 +181,26 @@ ${aiStartScript()}
 // and a signed handoff fills in the owner's e-mail address and links the publication date back to the tracker.
 (function(){try{var t=document.getElementById('topic'),n=document.getElementById('topicNote'),rt=document.getElementById('rt');
  if(t&&t.value&&n){n.hidden=false;n.textContent='From your rank tracker: “'+t.value+'”. Leave the customer question empty and the check picks the best real question customers ask in Google about it.'}
- if(rt&&rt.value)fetch('/api/rank-free/handoff?rt='+encodeURIComponent(rt.value),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){var e=document.getElementById('email');if(d&&d.success&&e&&!e.value)e.value=d.email;if(!(d&&d.success))rt.value=''}).catch(function(){})}catch(e){}})();
+ if(rt&&rt.value)fetch('/api/rank-free/handoff?rt='+encodeURIComponent(rt.value),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){var e=document.getElementById('email');if(d&&d.success&&e&&!e.value)e.value=d.email;if(!(d&&d.success))rt.value='';else simpleFromTracker(d)}).catch(function(){})}catch(e){}})();
+// From the rank tracker (owner 2026-11-12: "clear and simple from the tracker"): everything is filled in already, so the
+// form shows one summary and one button; the fields stay available under "Change details". The tips choice was made
+// at the tracker sign-up and is not asked again.
+function simpleFromTracker(d){try{
+ var f=document.getElementById('f'),url=document.getElementById('url'),consent=f&&f.querySelector('input[name=consent]');if(!f||!url||!consent)return;
+ var tb=document.getElementById('tipsBox');if(tb)tb.hidden=true;
+ var stop=consent.closest('label'),move=[],n=f.firstElementChild;
+ while(n&&n!==stop){var next=n.nextElementSibling;if(!(n.tagName==='INPUT'&&n.type==='hidden'))move.push(n);n=next}
+ var det=document.createElement('details');det.id='moreFields';det.className='research-details';var sm=document.createElement('summary');sm.textContent='Change details (optional)';det.appendChild(sm);
+ move.forEach(function(x){det.appendChild(x)});f.insertBefore(det,stop);
+ var card=document.createElement('div');card.id='trackerSummary';card.className='note';
+ var v=function(id){var el=document.getElementById(id);return el?el.value:''};
+ var line=function(label,value){if(!value)return '';var d0=document.createElement('div');var b=document.createElement('strong');b.textContent=label+': ';d0.appendChild(b);d0.appendChild(document.createTextNode(value));return d0.outerHTML};
+ card.innerHTML='<strong style="display:block;margin-bottom:6px">From your rank tracker — everything is filled in</strong>'+line('Page',v('url'))+line('Keyword',d.keyword||v('topic'))+line('Market',[v('market'),v('language')].filter(Boolean).join(' · '))+line('Result to',v('email'))+
+  '<small style="display:block;margin-top:6px">Tick the box below and run the check. It finds the real question customers ask in Google about this keyword.</small>';
+ f.insertBefore(card,det);
+ var st=document.createElement('style');st.textContent='#growthFreeReset{display:none!important}';document.head.appendChild(st);
+ var lead=document.querySelector('.lead');if(lead)lead.textContent='Your page from the rank tracker is filled in. The check compares it with the pages above you in Google and says in plain language what to add — or that nothing needs to change. Takes about one minute.';
+}catch(e){}}
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
@@ -1185,7 +1204,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(!a.ok)return res.status(429).json({success:false,error:'You used the '+a.limit+' free Growth checks from your rank tracker for this week. Try again in a few days.'});
   const ipHash=store.hashIp(req.ip,config.ipSalt),u=await storage.usage(pool,{email:input.email,ipHash,accessLabel:'rank-tracker'});
   if(u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
-  return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:tipsOf(b),accessLabel:'rank-tracker'});
+  // Tips: the choice made at the rank tracker sign-up (the form does not ask again).
+  return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:!!(rk.account&&rk.account.marketing_consent),accessLabel:'rank-tracker'});
  }
  async function startInviteCheck(req,res,b){
   const input=readInput(b,res);if(!input)return;

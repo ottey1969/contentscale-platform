@@ -70,9 +70,14 @@ test('rank tracker → free Growth check: topic, e-mail, best customer question,
     assert.equal(await p.inputValue('#query'), '', 'the question stays empty: the check picks it');
     assert.match(await p.textContent('#topicNote'), /From your rank tracker: “consultor geo”/);
     await p.waitForFunction(e => document.getElementById('email').value === e, email, { timeout: 5000 });
+    // Clear and simple from the tracker: one summary, the fields under "Change details", no second tips question.
+    assert.match(await p.textContent('#trackerSummary'), /From your rank tracker — everything is filled in[^]*Keyword: consultor geo[^]*Result to: /);
+    assert.equal(await p.locator('#moreFields').evaluate(el => el.open), false);assert.equal(await p.locator('#tipsBox').isHidden(), true);
     await p.check('input[name=consent]');
     await p.click('#f button[type=submit]');
     await p.waitForURL(/\/free-growth\/r\//, { timeout: 30000 }).catch(async e => { throw Error('no result page; status: ' + await p.textContent('#s') + ' ' + errors.join(' ')); });
+    // Tips: the choice made at the tracker sign-up (here: no tips), not a default of the Growth form.
+    assert.equal((await pool.query('SELECT marketing_consent FROM growth_free_checks WHERE email=$1 ORDER BY id DESC LIMIT 1', [email])).rows[0].marketing_consent, false);
     const r = new URL(p.url()), id = r.pathname.split('/').pop(), k = r.searchParams.get('k');
 
     // 3. The best real customer question about the topic.

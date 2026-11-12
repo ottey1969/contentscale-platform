@@ -9,8 +9,9 @@ const SOURCES = ['rank', 'growth'];
 const countryOf = x => { const c = String(x || '').trim().toUpperCase(); return /^[A-Z]{2}$/.test(c) ? c : ''; };
 const missingTable = e => e && e.code === '42P01';
 
-// Rank tracker: one row per account (its project and active keywords).
-const RANK_SQL = `SELECT a.id::text AS id, a.email, a.lang, a.marketing_consent AS tips, a.verified_at, a.opted_out_at, a.created_at,
+// Rank tracker: one row per account (its project and active keywords). "Tips" only for a confirmed e-mail address that
+// did not stop the tracker: an unconfirmed address may belong to someone else.
+const RANK_SQL = `SELECT a.id::text AS id, a.email, a.lang, (a.marketing_consent AND a.verified_at IS NOT NULL AND a.opted_out_at IS NULL) AS tips, a.verified_at, a.opted_out_at, a.created_at,
    p.host, UPPER(COALESCE(p.gl,'')) AS country, p.hl,
    COALESCE(ARRAY_AGG(k.keyword ORDER BY k.id) FILTER (WHERE k.active), '{}') AS keywords
   FROM rank_free_accounts a LEFT JOIN rank_free_projects p ON p.account_id=a.id LEFT JOIN rank_free_keywords k ON k.project_id=p.id
