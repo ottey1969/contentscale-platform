@@ -87,14 +87,14 @@ function tokens(v){
 // Not a customer (owner 2026-11-12, "consultor geo: not a question of a customer"): Google often shows questions of people
 // who want to DO the job (salary, how to become, course, vacancies) or of students. They hold the keyword but nobody who
 // asks them hires or buys anything, so they are never chosen automatically; they stay visible as alternatives.
-const NOT_CUSTOMER=new RegExp(['salar','salario','sueldo','cu[aá]nto gana','cu[aá]nto ganan','cu[aá]nto cobra un','cu[aá]nto cobran los','earn','income','verdien','salaris','gehalt','verdient','pay scale',
+const NOT_CUSTOMER=new RegExp(['salar','salario','sueldo','cu[aá]nto gana','cu[aá]nto ganan','earn','income','verdien','salaris','gehalt','verdient','pay scale',
  'c[oó]mo ser','c[oó]mo convertirse','c[oó]mo llegar a ser','convertirme','how to become','become an?','becoming','hoe word je','hoe wordt je','word ik','wie wird man','devenir',
  'curso','cursos','m[aá]ster','formaci[oó]n','certificaci[oó]n','estudiar','carrera','course','courses','training','certification','certificate','degree','studie','opleiding','cursus','ausbildung','studium','formation',
  'empleo','trabajo de','ofertas de','vacante','job','jobs','vacancy','career','careers','internship','vacature','vacatures','baan','stellenangebot','stellenangebote','emploi',
  'requisitos para ser','skills needed','qualifications','pdf','wikipedia','definici[oó]n de geo','significado'].map(w=>'\\b'+w+'\\b').join('|'),'i');
 const notCustomer=t=>NOT_CUSTOMER.test(clean(t).normalize('NFC'));
 // A buyer's question: price, hiring, choosing, whether it is worth it, what it does for a business.
-const BUYER=/\b(?:cost|costs|price|prices|pricing|fee|fees|hire|hiring an?|worth|best|top|near me|compare|vs|agency|company|services?|need|should i|for my business|cu[aá]nto cuesta|precio|precios|tarifa|tarifas|contratar|merece la pena|vale la pena|mejor|mejores|agencia|empresa|servicios?|necesito|para mi negocio|mi empresa|kosten|kost|prijs|prijzen|tarief|inhuren|inschakelen|loont|beste|bureau|bedrijf|diensten|nodig|preis|kosten|beauftragen|lohnt|agentur|co[uû]t|prix|tarif|engager|meilleur)\b/i;
+const BUYER=/\b(?:cost|costs|price|prices|pricing|fee|fees|hire|hiring an?|worth|best|top|near me|compare|vs|agency|company|services?|need|should i|for my business|cu[aá]nto cuesta|cu[aá]nto cobra|cu[aá]nto cobran|cobra|cobran|precio|precios|tarifa|tarifas|contratar|merece la pena|vale la pena|mejor|mejores|agencia|empresa|servicios?|necesito|para mi negocio|mi empresa|kosten|kost|prijs|prijzen|tarief|inhuren|inschakelen|loont|beste|bureau|bedrijf|diensten|nodig|preis|kosten|beauftragen|lohnt|agentur|co[uû]t|prix|tarif|engager|meilleur)\b/i;
 const PROVIDER=/\b(?:consultor(?:a|es)?|consultor[ií]a|consultant|consultancy|consulting|agencia|agency|agencies|bureau|specialist|especialista|experto|expert|freelancer?|asesor(?:[ií]a)?|adviseur|advisor|abogado|lawyer|advocaat|aannemer|contratista|contractor)\b/i;
 const PRODUCT=/\b(?:tool|tools|herramienta|herramientas|software|app|apps|plugin|plugins|platform|platforms|plataforma|plataformas|extension|extensión|tooling)\b/i;
 function rankQuestions(items,{offer,seed}){
@@ -142,7 +142,7 @@ async function aiQuestionForTerm({term,gl='us',hl='en',key,fetchImpl,now=Date.no
  if(hit&&now-hit.at<86400000)return hit.value;
  let value=null;
  try{
-  const g=await fromGoogle({query:t,gl,hl,key,fetchImpl});
+  const g=await googleWithFallback({query:t,gl,hl,key,fetchImpl});
   const real=(g.questions||[]).filter(q=>isQuestion(q.text));
   const ranked=rankQuestions(real.length?real:g.questions||[],{offer:{h1:[],h2:[],title:''},seed:t});
   const best=(ranked.questions||[]).find(q=>q.priority==='OBSERVED_GOOGLE')||null;
@@ -154,12 +154,27 @@ async function aiQuestionForTerm({term,gl='us',hl='en',key,fetchImpl,now=Date.no
  return value;
 }
 
+// The target market comes first, always (owner 2026-11-12: "we want to be the best in NL and Spain"). Only when Google
+// shows nothing there, one market with the same language is asked, and every question says where it was seen.
+const MARKET_FALLBACK = { es: 'mx', nl: 'be', uk: 'us', gb: 'us', us: 'uk', de: 'at', fr: 'be', it: 'ch', pt: 'br' };
+const MARKET_NAME = { es: 'Spain', mx: 'México', nl: 'Netherlands', be: 'Belgium', uk: 'United Kingdom', gb: 'United Kingdom', us: 'United States', de: 'Germany', at: 'Austria', fr: 'France', it: 'Italy', ch: 'Switzerland', pt: 'Portugal', br: 'Brasil' };
+async function googleWithFallback({ query, gl, hl, key, fetchImpl, ownHost }) {
+  const g = await fromGoogle({ query, gl, hl, key, fetchImpl, ownHost });
+  const alt = MARKET_FALLBACK[String(gl || '').toLowerCase()];
+  if (g.questions.length || !alt || /UNAVAILABLE|NOT_CONFIGURED|NO_SEARCH_TERM/.test(g.status || '')) return g;
+  const f = await fromGoogle({ query, gl: alt, hl, key, fetchImpl, ownHost });
+  if (!f.questions.length) return g;
+  const name = MARKET_NAME[alt] || alt.toUpperCase(), home = MARKET_NAME[String(gl).toLowerCase()] || String(gl).toUpperCase();
+  return { ...f, status: 'GOOGLE_QUESTIONS_FROM_FALLBACK_MARKET', fallback_market: { from: gl, to: alt, reason: home + ' showed no question for this keyword' },
+    questions: f.questions.map(q => ({ ...q, market: alt, label: q.label.replace(/^Google/, 'Google ' + name) + ' · ' + home + ' showed none' })) };
+}
+
 async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl = 'us', hl = 'en', key, fetchImpl, model } = {}) {
   const offer = pageOffer(html);
   const ownHost = (() => { try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch (e) { return ''; } })();
   // Google is asked with the tracked keyword, or the page's own topic when there is none (context, not the question).
   const seed = clean(keyword) || (offer.h1[0] || offer.title.split(/\s[|–—-]\s/)[0] || '');
-  const g = await fromGoogle({ query: seed, gl, hl, key, fetchImpl, ownHost });
+  const g = await googleWithFallback({ query: seed, gl, hl, key, fetchImpl, ownHost });
   const observed = rankQuestions(g.questions,{offer,seed});
   // Never spend AI credits generating suggestions if relevant Google-observed questions exist.
   const a = observed.observed_count
@@ -169,7 +184,7 @@ async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl
   for (const q of [...g.questions, ...a.questions]) { const k = q.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); if (k && !seen.has(k)) { seen.add(k); questions.push(q); } }
   const ranked=rankQuestions(questions,{offer,seed});
   return { status: questions.length ? 'QUESTIONS_FOUND' : 'NO_QUESTIONS', tracked_keyword: clean(keyword) || null, searched_with: seed || null,
-    offer: { title: offer.title, h1: offer.h1, h2_count: offer.h2.length }, google: { status: g.status, ...(g.searched ? { searched: g.searched } : {}) }, ai: { status: a.status, ...(a.error ? { error: a.error } : {}) },
+    offer: { title: offer.title, h1: offer.h1, h2_count: offer.h2.length }, google: { status: g.status, ...(g.searched ? { searched: g.searched } : {}), ...(g.fallback_market ? { fallback_market: g.fallback_market } : {}) }, ai: { status: a.status, ...(a.error ? { error: a.error } : {}) },
     questions: ranked.questions.slice(0, MAX), best_question: ranked.best?.text||null,
     selection_source: ranked.observed_count?'OBSERVED_GOOGLE':ranked.best?'AI_SUGGESTION':'NONE',
     note: 'Best matching Google-observed question first (People Also Ask or Related Searches). If none matches this page, AI suggestions are labelled fallback ideas; unrelated Google observations are shown last. Relevance is based on the page topic, not measured search volume. You can always edit the question. Search Console is optional.' };

@@ -142,3 +142,20 @@ test('a failed AI suggestion says why, and an empty lookup is not cached for a d
   await request(app).get('/api/tracker-client/tok/prewrite-customer-question').query({ keyword: 'consultor geo', region: 'es — Spain', language: 'Spanish' });
   assert.equal(n, 2, 'tried again, not served from the cache');
 });
+
+test('owner 2026-11-12 "best in NL and Spain": Spain first; only when Google shows nothing there, México, labelled as such', async () => {
+  const { discoverCustomerQuestions } = require('../src/growth-customer-questions.cjs');
+  const seen = [];
+  const fetchImpl = async (url, init) => { const b = JSON.parse(init.body); seen.push([url.replace('https://google.serper.dev/', ''), b.gl]);
+    return { ok: true, json: async () => b.gl === 'mx' && /search$/.test(url) ? { peopleAlsoAsk: [{ question: '¿Cuánto cobra un consultor GEO?' }] } : {} }; };
+  const out = await discoverCustomerQuestions({ keyword: 'consultor geo', gl: 'es', hl: 'es', key: 'TEST', fetchImpl, model: null });
+  assert.deepEqual(seen, [['search', 'es'], ['autocomplete', 'es'], ['search', 'mx']], 'Spain (search + autocomplete) before México');
+  assert.equal(out.best_question, '¿Cuánto cobra un consultor GEO?');
+  assert.match(out.questions[0].label, /^Google México · People also ask · Spain showed none$/);
+  assert.equal(out.google.fallback_market.to, 'mx');
+  // Spain has a question: México is never asked.
+  const seen2 = [];
+  await discoverCustomerQuestions({ keyword: 'consultor geo', gl: 'es', hl: 'es', key: 'TEST', model: null,
+    fetchImpl: async (url, init) => { seen2.push(JSON.parse(init.body).gl); return { ok: true, json: async () => ({ peopleAlsoAsk: [{ question: '¿Cuánto cuesta un consultor GEO?' }] }) }; } });
+  assert.deepEqual(seen2, ['es']);
+});
