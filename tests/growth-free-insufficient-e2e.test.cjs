@@ -48,7 +48,7 @@ test('Free Growth: too little evidence to write — the reason, what to do, and 
     assert.match(box, /more specific search term/); assert.match(box, /editor brief/);
     assert.equal(await p.locator('#nextWriteBtn').count(), 0, 'no write button without evidence');
     // Even without advice, what the competitor pages have that this page does not stays visible (the point of Growth).
-    assert.match(await p.textContent('#freeNextAction .growth-next-btn'), /See what the competitor pages have that you do not/);
+    assert.match(await p.textContent('#freeNextAction'), /Look at what the competitor pages have[^]*See the comparison/);
     await p.click('#freeNextAction .growth-next-btn');
     assert.equal(await p.isVisible('#competitors'), true);
     const comp = await p.evaluate(() => { const h = document.getElementById('competitors'); let t = h.textContent, n = h.nextElementSibling; for (let i = 0; i < 3 && n; i++, n = n.nextElementSibling) t += ' ' + n.textContent; return t.replace(/\s+/g, ' '); });
