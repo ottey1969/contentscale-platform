@@ -44,6 +44,7 @@ const T = {
     stop: 'Stop e-mails', forget: 'Delete my data', forgetConfirm: 'Delete your account and all positions? This cannot be undone.',
     upsell: 'Not on page 1 yet? The free Growth check compares your page with the pages that do rank and says what is missing.',
     upsellLink: 'Run the free Growth check',
+    callCta: 'Discuss your SEO and GEO live in a call', callTip: 'A short call in which we go through your positions live: what Google and the AI systems reward now, and what to change first.', callUpsell: 'Not on page 1 yet? Let us look at it together in a call.',
     vSubject: 'Confirm your free rank tracker', vIntro: host => 'Click the button to start tracking ' + esc(host) + ' in Google. The first check runs right away.', vButton: 'Confirm and start',
     vIgnore: 'Did not sign up? Ignore this e-mail; nothing happens without a click.',
     dSubject: host => 'Your Google positions for ' + host, dIntro: (host, c) => 'Your weekly check of ' + esc(host) + ' in Google (' + esc(c) + '):',
@@ -90,6 +91,7 @@ const T = {
     stop: 'Stop e-mails', forget: 'Verwijder mijn gegevens', forgetConfirm: 'Je account en alle posities verwijderen? Dit kan niet ongedaan worden gemaakt.',
     upsell: 'Nog niet op pagina 1? De gratis Growth-check vergelijkt je pagina met de pagina’s die wel ranken en zegt wat er ontbreekt.',
     upsellLink: 'Doe de gratis Growth-check',
+    callCta: 'Bespreek je SEO en GEO live in een call', callTip: 'Een korte call waarin we je posities live doornemen: wat Google en de AI-systemen nu belonen, en wat je als eerste aanpast.', callUpsell: 'Nog niet op pagina 1? Laten we er samen naar kijken in een call.',
     vSubject: 'Bevestig je gratis rank tracker', vIntro: host => 'Klik op de knop om ' + esc(host) + ' in Google te gaan volgen. De eerste meting start meteen.', vButton: 'Bevestigen en starten',
     vIgnore: 'Niet aangemeld? Negeer deze e-mail; zonder klik gebeurt er niets.',
     dSubject: host => 'Je Google-posities voor ' + host, dIntro: (host, c) => 'Je wekelijkse meting van ' + esc(host) + ' in Google (' + esc(c) + '):',
@@ -136,6 +138,7 @@ const T = {
     stop: 'Dejar de recibir e-mails', forget: 'Borrar mis datos', forgetConfirm: '¿Borrar tu cuenta y todas las posiciones? No se puede deshacer.',
     upsell: '¿Aún no estás en la página 1? El análisis Growth gratuito compara tu página con las que sí posicionan y te dice qué falta.',
     upsellLink: 'Haz el análisis Growth gratuito',
+    callCta: 'Habla de tu SEO y GEO en directo en una llamada', callTip: 'Una llamada breve en la que revisamos tus posiciones en directo: qué premian ahora Google y los sistemas de IA, y qué cambiar primero.', callUpsell: '¿Aún no estás en la página 1? Veámoslo juntos en una llamada.',
     vSubject: 'Confirma tu rastreador de posiciones gratuito', vIntro: host => 'Haz clic en el botón para empezar a seguir ' + esc(host) + ' en Google. La primera comprobación empieza enseguida.', vButton: 'Confirmar y empezar',
     vIgnore: '¿No te has registrado? Ignora este e-mail; sin un clic no pasa nada.',
     dSubject: host => 'Tus posiciones en Google para ' + host, dIntro: (host, c) => 'Tu comprobación semanal de ' + esc(host) + ' en Google (' + esc(c) + '):',
@@ -181,6 +184,9 @@ function digestEmail(lang, { host, countryLabel, rows, dashboard, stop, suggesti
 }
 
 // The follow-up line after "I changed this page" (dashboard and e-mail), from gsc.followUp().
+// Without Growth links (RANK_FREE_GROWTH_LINKS off) the follow-up never asks for a Growth check (owner 2026-11-12).
+const NO_GROWTH_TAIL = /\s+(?:Run the Growth check again|Doe de Growth-check opnieuw|Vuelve a hacer el análisis Growth)[\s\S]*$/;
+function plainFollow(text) { return String(text || '').replace(NO_GROWTH_TAIL, '').trim(); }
 function followText(f, L) {
   if (!f) return '';
   if (f.status === 'GROWING') return L.cGrowing(f.since, f.from, f.to);
@@ -188,4 +194,4 @@ function followText(f, L) {
   return L.cWaiting(f.since, f.from, f.to, f.checks_since);
 }
 
-module.exports = { followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
+module.exports = { plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };

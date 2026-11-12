@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const engine = require('./engine.cjs');
 const { pgStore, hash, token: randomToken } = require('./store.cjs');
 const { runDue, sendDigests } = require('./runner.cjs');
-const { t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, followText } = require('./texts.cjs');
+const { t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, followText, plainFollow } = require('./texts.cjs');
 const links = require('./links.cjs');
 const gscMod = require('./gsc.cjs');
 const { brevo } = require('../growth-free/reminders.cjs');
@@ -26,6 +26,11 @@ function rankFreeConfig(env = process.env) {
     serperKey: env.SERPER_API_KEY || '',
     adminKey: env.RANK_FREE_ADMIN_KEY || env.GROWTH_FREE_ADMIN_KEY || '',
     growthUrl: env.RANK_FREE_GROWTH_URL || 'https://app.contentscale.site/free-growth',
+    // Owner 2026-11-12: "decouple Growth from the rank tracker; for now people only use the rank tracker". Growth links in
+    // the dashboard and the weekly e-mail only when RANK_FREE_GROWTH_LINKS=on.
+    growthLinks: String(env.RANK_FREE_GROWTH_LINKS || '').toLowerCase() === 'on',
+    // Without Growth: an invitation to discuss SEO and GEO live in a call (owner 2026-11-12), on the site's own contact page.
+    callUrl: { en: env.RANK_FREE_CALL_URL_EN || 'https://contentscale.site/contact/', nl: env.RANK_FREE_CALL_URL_NL || 'https://nl.contentscale.site/contact/', es: env.RANK_FREE_CALL_URL_ES || 'https://es.contentscale.site/contacto/' },
     scheduler: env.RANK_FREE_SCHEDULER !== '0' && env.NODE_ENV !== 'test',
   };
 }
@@ -88,6 +93,7 @@ function sparkline(history, L) {
 }
 
 // The free Growth check, filled in for this keyword, market and (if it ranks) the page that ranks.
+const callOf = (cfg, lang) => (cfg.callUrl && (cfg.callUrl[lang] || cfg.callUrl.en)) || 'https://contentscale.site/contact/';
 const growthLink = (cfg, data, keyword, last) => engine.growthLink(cfg.growthUrl, data, keyword, last, links.handoffToken(data.nonce, keyword));
 
 // Google's own related searches and questions from the latest checks, minus what is already tracked.
@@ -114,7 +120,7 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
     const when = last ? new Date(last.checked_at).toISOString().slice(0, 10) : '';
     const top = last && Array.isArray(last.top) && last.top.length ? last.top : (last && Array.isArray(last.top_hosts) ? last.top_hosts.map(h => ({ host: h })) : []);
     const topLine = top.length ? `<span class="sub">${esc(L.top3)}: ${top.map(x => x.url ? `<a href="${esc(x.url)}" rel="nofollow noopener" target="_blank">${esc(x.host)}</a>` : esc(x.host)).join(', ')}</span>` : '';
-    const improve = last && (last.status !== 'FOUND' || last.position > 3) ? `<span class="sub"><a href="${esc(growthLink(cfg, data, k.keyword, last))}">${esc(L.growthFor)} →</a></span>` : '';
+    const improve = cfg.growthLinks && last && (last.status !== 'FOUND' || last.position > 3) ? `<span class="sub"><a href="${esc(growthLink(cfg, data, k.keyword, last))}">${esc(L.growthFor)} →</a></span>` : '';
     const g = gscBy.get(k.keyword);
     const cLine = k.changed_at && k.changed_position != null ? `<span class="sub">✎ ${esc(L.cRow(new Date(k.changed_at).toISOString().slice(0, 10), k.changed_position))}</span>` : '';
     const gLine = (g ? `<span class="sub">${esc(L.gRow(num(g.clicks), num(g.impressions), g.position != null ? num(g.position) : null))}</span>` : '') + cLine;
@@ -133,7 +139,9 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
   const markBtn = `<button type="button" class="ghost" id="cm" data-k="${best ? esc(best.keyword) : ''}">${esc(L.cMark)}</button>`;
   const bestCard = !best ? '' : `<div class="card best" id="best"><p class="eyebrow">${esc(L.bTitle)}</p><p style="font-size:1.1rem;margin:4px 0 8px"><strong>${esc(L.bText(best.keyword, best.result.position))}</strong></p>`
     + (best.gsc ? `<p class="muted">${esc(L.bGsc(num(best.gsc.impressions), num(best.gsc.clicks)))}</p>` : '')
-    + (!fu ? `<p><a class="cta" href="${gl}">${esc(L.bCta)} →</a></p><p class="muted">${esc(L.bTip)}</p>${markBtn}`
+    + (!cfg.growthLinks ? (!fu ? `<p><a class="cta" href="${esc(callOf(cfg, lang))}">${esc(L.callCta)} →</a></p><p class="muted">${esc(L.callTip)}</p>${markBtn}` : fu.status === 'NO_GROWTH' ? `<div class="msg err" id="fu">${esc(plainFollow(followText(fu, L)))}</div><p><a class="cta" href="${esc(callOf(cfg, lang))}">${esc(L.callCta)} →</a></p>${markBtn}`
+        : `<div class="msg ok" id="fu">${esc(plainFollow(followText(fu, L)))}</div><p class="muted"><a href="#" id="cu" data-k="${esc(best.keyword)}">${esc(L.cUndo)}</a></p>`)
+      : !fu ? `<p><a class="cta" href="${gl}">${esc(L.bCta)} →</a></p><p class="muted">${esc(L.bTip)}</p>${markBtn}`
       : fu.status === 'NO_GROWTH' ? `<div class="msg err" id="fu">${esc(followText(fu, L))}</div><p><a class="cta" href="${gl}">${esc(L.cAgain)} →</a></p>${markBtn}`
       : `<div class="msg ok" id="fu">${esc(followText(fu, L))}</div><p class="muted"><a href="${gl}">${esc(L.cAgain)} →</a> · <a href="#" id="cu" data-k="${esc(best.keyword)}">${esc(L.cUndo)}</a></p>`)
     + `<div id="cmm"></div></div>`;
@@ -149,7 +157,8 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
 <p><strong>${esc(data.host)}</strong> · ${esc(data.country)} · ${esc(data.language)}</p>${data.other_engine ? `<p class="muted">${esc(L.otherEngine(data.other_engine))}</p>` : ''}
 ${providerNote}${bestCard}<div class="card" style="overflow-x:auto"><table class="rk"><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.trend)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="muted">${esc(L.note)}</p></div>
-${notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(growthLink(cfg, data, notOnOne.keyword, notOnOne.history[0].result))}">${esc(L.upsellLink)} →</a></p></div>` : ''}
+${!cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.callUpsell)}</p><p><a href="${esc(callOf(cfg, lang))}">${esc(L.callCta)} →</a></p></div>` : ''}
+${cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(growthLink(cfg, data, notOnOne.keyword, notOnOne.history[0].result))}">${esc(L.upsellLink)} →</a></p></div>` : ''}
 ${suggestCard}${gscCard}<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
 <p class="muted"><a href="/rank-tracker/stop/${esc(tok)}">${esc(L.stop)}</a> · <a href="#" id="fg">${esc(L.forget)}</a></p>
 <script>(()=>{const $=i=>document.getElementById(i);$('k').onsubmit=async ev=>{ev.preventDefault();const m=$('m');
@@ -192,7 +201,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   let kick = null; // one background round right after a confirmation, so the first positions appear within a minute
   const runRound = () => kick || (kick = (async () => {
     try { await runDue({ store, key: config.serperKey, fetchImpl, now: now(), monthlyCap: config.monthlyCap });
-      await sendDigests({ store, send, baseUrl: config.baseUrl, growthUrl: config.growthUrl, now: now() }); } catch (e) { console.warn('[rank-free] round failed', e && e.message); }
+      await sendDigests({ store, send, baseUrl: config.baseUrl, growthUrl: config.growthUrl, growthLinks: config.growthLinks, callUrl: config.callUrl, now: now() }); } catch (e) { console.warn('[rank-free] round failed', e && e.message); }
     finally { kick = null; }
   })());
 
