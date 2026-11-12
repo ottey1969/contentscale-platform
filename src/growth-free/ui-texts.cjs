@@ -52,7 +52,7 @@ const ROWS = [
   // What the check found
   ['What the check found', 'Wat de check vond', 'Qué encontró el análisis'],
   ['Google:', 'Google:', 'Google:'], ['AI answers:', 'AI-antwoorden:', 'Respuestas de IA:'], ['Search Console:', 'Search Console:', 'Search Console:'],
-  ['{n} topic(s) the ranking pages have and your page does not ({n} recommended)', '{n} onderwerp(en) die de pagina\'s in Google hebben en jouw pagina niet ({n} aanbevolen)', '{n} tema(s) que tienen las páginas de Google y tu página no ({n} recomendado(s))'],
+  ['{n} topic(s) the ranking pages have and your page does not ({n} recommended)', '{n} onderwerp(en) die de pagina\'s in Google hebben en jouw pagina niet ({n} aanbevolen)', '{n} tema(s) que tienen las páginas de Google y tu página no ({n} recomendados)'],
   ['{n} topic(s) the ranking pages have and your page does not', '{n} onderwerp(en) die de pagina\'s in Google hebben en jouw pagina niet', '{n} tema(s) que tienen las páginas de Google y tu página no'],
   ['{n} topic(s) on the pages AI cites that your page does not cover', '{n} onderwerp(en) op de pagina\'s die AI noemt en die jouw pagina niet behandelt', '{n} tema(s) en las páginas que cita la IA y que tu página no trata'],
   ['the pages AI cites are being compared', 'de pagina\'s die AI noemt worden vergeleken', 'se están comparando las páginas que cita la IA'],
@@ -335,6 +335,12 @@ const ROWS = [
   ['I write the missing sections in your voice, check every fact with you, publish nothing without your approval and measure the result in Search Console after {n} days.', 'Ik schrijf de ontbrekende secties in jouw stem, controleer elk feit met je, publiceer niets zonder jouw akkoord en meet het resultaat na {n} dagen in Search Console.', 'Escribo las secciones que faltan con tu voz, compruebo cada dato contigo, no publico nada sin tu aprobación y mido el resultado en Search Console a los {n} días.'],
   ['No section proposed: the AI judged that this topic does not serve someone searching this term', 'Geen sectie voorgesteld: AI oordeelde dat dit onderwerp iemand die deze zoekterm gebruikt niet helpt', 'No se propone sección: la IA consideró que este tema no sirve a quien hace esta búsqueda'],
   ['Add it yourself only if you know it belongs on this page.', 'Voeg het alleen zelf toe als je weet dat het op deze pagina hoort.', 'Añádelo tú solo si sabes que pertenece a esta página.'],
+  ['On the pages AI cites ({d}), not on your page. Not in the Google list, so Growth does not write it: add it yourself if it fits. “{q}”', 'Op de pagina\'s die AI noemt ({d}), niet op je pagina. Niet in de Google-lijst, dus Growth schrijft het niet: voeg het zelf toe als het past. “{q}”', 'En las páginas que cita la IA ({d}), no en tu página. No está en la lista de Google, así que Growth no lo escribe: añádelo tú si encaja. “{q}”'],
+  ['The pages AI cites state it ({d}); your page does not. Only add it when it is true for your business. Example from {d}: “{q}”', 'De pagina\'s die AI noemt vermelden het ({d}); jouw pagina niet. Voeg het alleen toe als het klopt voor je bedrijf. Voorbeeld van {d}: “{q}”', 'Las páginas que cita la IA lo indican ({d}); tu página no. Añádelo solo si es cierto para tu negocio. Ejemplo de {d}: “{q}”'],
+  ['— on {d}', '— op {d}', '— en {d}'], ['— {d}', '— {d}', '— {d}'],
+  ['Open Bing Webmaster Tools ({d}/webmasters) and import your site from Google Search Console.', 'Open Bing Webmaster Tools ({d}/webmasters) en importeer je site vanuit Google Search Console.', 'Abre Bing Webmaster Tools ({d}/webmasters) e importa tu web desde Google Search Console.'],
+  ['competitor supported', 'onderbouwd door concurrenten', 'respaldado por la competencia'], ['page supported', 'onderbouwd door je pagina', 'respaldado por tu página'],
+  ['owner supplied', 'door jou aangeleverd', 'aportado por ti'], ['insufficient evidence', 'onvoldoende bewijs', 'pruebas insuficientes'],
 ];
 // Prefixes: the part after them is translated on its own (it is often data that stays as it is).
 const PREFIXES = [
@@ -344,6 +350,7 @@ const PREFIXES = [
   ['Structured data: ', 'Gestructureerde gegevens: ', 'Datos estructurados: '], ['May overlap with ', 'Overlapt misschien met ', 'Puede solaparse con '],
   ['· cited by ', '· genoemd door ', '· citada por '], ['Example from ', 'Voorbeeld van ', 'Ejemplo de '],
   ['No section proposed: the AI judged that this topic does not serve someone searching this term ', 'Geen sectie voorgesteld: AI oordeelde dat dit onderwerp iemand die deze zoekterm gebruikt niet helpt ', 'No se propone sección: la IA consideró que este tema no sirve a quien hace esta búsqueda '],
+  ['basis: ', 'basis: ', 'base: '], ['sources: ', 'bronnen: ', 'fuentes: '],
   ['· ', '· ', '· '], ['— ', '— ', '— '],
 ];
 // Endings translated on their own, after the text before them.
@@ -358,11 +365,11 @@ function table() {
 }
 // The translation layer for the browser: translates every text node (and placeholders, titles, labels) it knows, now and
 // whenever the page changes. Never inside a text field, a quote of another site, or code. Runs in the browser.
-function uiTranslator(T, P, E, S) {
+function uiTranslator(T, P, E, S, AND) {
   S = (S || []).map(function (x) { return [new RegExp(x[0], 'g'.replace('g', '')), x[1]]; });
   var esc = function (x) { return x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); };
   var EN = '(?:' + E.map(esc).join('|') + ')', ERE = new RegExp(EN + '(?:(?:, | and )' + EN + ')*', 'g');
-  var DOM = /(?:[a-z0-9][a-z0-9-]*\.)+(?:com|net|org|nl|es|be|de|fr|uk|eu|io|co|dev|site|app|info|biz|us|ca|au|example)(?:, (?:[a-z0-9][a-z0-9-]*\.)+(?:com|net|org|nl|es|be|de|fr|uk|eu|io|co|dev|site|app|info|biz|us|ca|au|example))*/gi;
+  var DOM = /(?:[a-z0-9][a-z0-9-]*\.)+(?:com|net|org|nl|es|be|de|fr|uk|eu|io|co|dev|site|app|info|biz|us|ca|au|example)(?![a-z0-9-])(?:, (?:[a-z0-9][a-z0-9-]*\.)+(?:com|net|org|nl|es|be|de|fr|uk|eu|io|co|dev|site|app|info|biz|us|ca|au|example)(?![a-z0-9-]))*/gi;
   function norm(s) {
     var v = { u: [], m: [], t: [], e: [], q: [], d: [], n: [] };
     s = s.replace(/https?:\/\/\S+/g, function (m) { v.u.push(m); return '{u}'; });
@@ -374,7 +381,7 @@ function uiTranslator(T, P, E, S) {
     s = s.replace(/\d+(?:[.,]\d+)?/g, function (m) { v.n.push(m); return '{n}'; });
     return { k: s, v: v };
   }
-  function fill(t, v) { var i = { u: 0, m: 0, t: 0, e: 0, q: 0, d: 0, n: 0 }; return t.replace(/\{(u|m|t|e|q|d|n)\}/g, function (m, k) { var x = v[k][i[k]++]; return x == null ? m : x; }); }
+  function fill(t, v) { var i = { u: 0, m: 0, t: 0, e: 0, q: 0, d: 0, n: 0 }; return t.replace(/\{(u|m|t|e|q|d|n)\}/g, function (m, k) { var x = v[k][i[k]++]; if (x != null && k === 'e' && AND) x = x.replace(/ and /g, ' ' + AND + ' '); return x == null ? m : x; }); }
   function tr(s) {
     if (!s || !/[A-Za-z]{2}/.test(s)) return null;
     var r = norm(s); if (Object.prototype.hasOwnProperty.call(T, r.k)) return fill(T[r.k], r.v);
@@ -414,6 +421,6 @@ function clientScript(lang) {
   const t = table()[lang], p = PREFIXES.map(r => [r[0], r[LANGS.indexOf(lang) + 1]]);
   const json = x => JSON.stringify(x).replace(/</g, '\\u003c').replace(/\u2028|\u2029/g, '');
   const sfx = SUFFIXES.map(r => [r[0].source, r[LANGS.indexOf(lang) + 1]]);
-  return '(' + uiTranslator.toString() + ')(' + json(t) + ',' + json(p) + ',' + json(ENGINE_NAMES) + ',' + json(sfx) + ');';
+  return '(' + uiTranslator.toString() + ')(' + json(t) + ',' + json(p) + ',' + json(ENGINE_NAMES) + ',' + json(sfx) + ',' + json(lang === 'nl' ? 'en' : 'y') + ');';
 }
 module.exports = { ROWS, PREFIXES, SUFFIXES, ENGINE_NAMES, LANGS, table, clientScript };

@@ -13,6 +13,7 @@ on:
       - 'tests/growth-customer-questions.test.cjs'
       - 'tests/growth-free-measurement.test.cjs'
       - 'tests/growth-free-contacts.test.cjs'
+      - 'tests/growth-free-ui-translate.test.cjs'
       - 'src/rank-free/**'
       - 'src/growth-measurement-reminders.cjs'
       - 'tests/helpers/zip.cjs'
@@ -58,7 +59,7 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci --ignore-scripts
       - name: Access keys, limits, read-only engine, summary, public flow, admin, standalone server
-        run: node --test tests/growth-free-check.test.cjs tests/growth-free-ai-gap.test.cjs tests/growth-ai-check-validation.test.cjs tests/growth-free-gsc-export.test.cjs tests/growth-free-cms-package.test.cjs tests/growth-customer-questions.test.cjs tests/growth-free-measurement.test.cjs
+        run: node --test tests/growth-free-check.test.cjs tests/growth-free-ui-translate.test.cjs tests/growth-free-ai-gap.test.cjs tests/growth-ai-check-validation.test.cjs tests/growth-free-gsc-export.test.cjs tests/growth-free-cms-package.test.cjs tests/growth-customer-questions.test.cjs tests/growth-free-measurement.test.cjs
 
   free-growth-browser-e2e:
     runs-on: ubuntu-latest
