@@ -149,7 +149,9 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   // a sentence, so text of two blocks never runs together. Headings have their own check (headingMismatch) below.
   const bodyText=h=>asText(String(h||'').replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]>/gi,' ').replace(/([^.!?\s>])\s*<\/(p|li|blockquote|td)>/gi,'$1. </$2>'));
   const recheck=assessDraftClaims({text:approved.map(x=>bodyText(x.html)).join(' '),destinationText:asText(String(originalHtml||''))});
-  for(const v of recheck.violations)if(!(personalVoiceAllowed&&isVoice(v))&&!blockedDetails.some(b=>b.sentence&&norm(b.sentence)===norm(v.sentence)))
+  // A sentence the editor confirmed as true for the business is not blocked again (a safety assurance always is).
+  const keptByEditor=(reviewNotes&&Array.isArray(reviewNotes.confirmed_by_editor)?reviewNotes.confirmed_by_editor:[]).filter(k=>k&&k.sentence).map(k=>norm(k.sentence));
+  for(const v of recheck.violations)if(!(personalVoiceAllowed&&isVoice(v))&&!(v.code!=='UNSUPPORTED_SAFETY_ASSURANCE'&&keptByEditor.some(k=>k&&(norm(v.sentence).includes(k)||k.includes(norm(v.sentence)))))&&!blockedDetails.some(b=>b.sentence&&norm(b.sentence)===norm(v.sentence)))
    blockedDetails.push({code:'UNRESOLVED_'+v.code,sentence:clean(v.sentence).slice(0,300),reason:clean(v.reason).slice(0,200)});
   for(const x of approved){const h=(String(x.html||'').match(/<h([23])\b[^>]*>([\s\S]*?)<\/h\1>/i)||[])[2];
    const mm=h&&headingMismatch(asText(h),asText(String(x.html).replace(/<h([23])\b[^>]*>[\s\S]*?<\/h\1>/i,' ')));
@@ -187,7 +189,9 @@ function prepareGrowthCmsHandoff({canonicalUrl,originalHtml,changes=[],editorApp
   // Sentences Growth flagged in a selection concept: the package exists only when they are resolved (checked above), so
   // they are listed as a record of what was removed or rewritten, not as open items.
   flagged:(reviewNotes&&Array.isArray(reviewNotes.flagged)?reviewNotes.flagged:[]).filter(Boolean)
-   .slice(0,30).map(f=>(f.sentence?'“'+clean(f.sentence).slice(0,300)+'” — ':'“'+clean(f.h2).slice(0,140)+'” (whole section) — ')+clean(f.reason).slice(0,200))};
+   .slice(0,30).map(f=>(f.sentence?'“'+clean(f.sentence).slice(0,300)+'” — ':'“'+clean(f.h2).slice(0,140)+'” (whole section) — ')+clean(f.reason).slice(0,200))
+   .concat((reviewNotes&&Array.isArray(reviewNotes.confirmed_by_editor)?reviewNotes.confirmed_by_editor:[]).filter(k=>k&&k.sentence&&approvedText.includes(norm(k.sentence))).slice(0,30)
+    .map(k=>'“'+clean(k.sentence).slice(0,300)+'” — '+clean(k.reason).slice(0,160)+' · kept: confirmed as true by the editor'))};
  // What each approved Growth section rests on; a section the editor removed is no longer listed.
  review.basis=(reviewNotes&&Array.isArray(reviewNotes.basis)?reviewNotes.basis:[]).filter(b=>b&&b.h2&&approvedText.includes(norm(b.h2))).slice(0,10)
   .map(b=>'**'+clean(b.h2).slice(0,200)+'** answers “'+clean(b.answers).slice(0,200)+'”. Sources: '+((b.sources||[]).map(x=>clean(x).slice(0,220)).join('; ')||'none')+'.'+(b.warning?' ⚠ '+clean(b.warning).slice(0,300):''));

@@ -449,7 +449,7 @@ function pkgHtml(r){var list=(r&&r.sections)||[];PKG_FLAGS={};PKG_FLAG_REASONS={
    '<label>Heading (H2)<input class="pkgH2" data-id="'+id+'" maxlength="200" value="'+esc(x.h2)+'"></label>'+
    '<details class="research-details pkg-edit"><summary>'+(x.empty?'No researched draft · Optional: add verified text yourself':'Review or edit prepared text')+'</summary><label>Section text (blank line separates paragraphs)<textarea class="pkgText" data-id="'+id+'" rows="7"'+(x.empty?' placeholder="Only enter facts you can verify; no draft was produced."':'')+'>'+esc((x.paragraphs||[]).join('\\n\\n'))+'</textarea></label></details>'+
    '<small class="muted">'+(x.placement&&x.placement.section_heading?'Placement: '+(x.placement.mode==='EXTEND_SECTION'?'inside':'after')+' “'+esc(x.placement.section_heading)+'”':'Placement: the editor chooses')+'</small>'+
-   (fl.length?'<div class="pkgFlags" data-id="'+id+'"><p class="note"><strong>Rewrite or remove before downloading:</strong> edit the sentence in the text above, or remove it with one click.</p><ul>'+(PKG_FLAGS[String(x.item_id)]||[]).map(function(sent,fi){var why=fl.filter(function(f){return f.sentence===sent}).map(function(f){return f.reason}).filter(function(v,k,a){return a.indexOf(v)===k});return '<li><mark>'+esc(sent)+'</mark> — '+esc(why.join(' · '))+' <button type="button" class="ghost pkgDropFlag" data-id="'+id+'" data-fi="'+fi+'">Remove this sentence</button></li>'}).join('')+'</ul></div>':'')+'</div>'});
+   (fl.length?'<div class="pkgFlags" data-id="'+id+'"><p class="note"><strong>Check before downloading:</strong> for each sentence, rewrite it in the text, keep it when it is true for your business, or remove it.</p><ul>'+(PKG_FLAGS[String(x.item_id)]||[]).map(function(sent,fi){var why=fl.filter(function(f){return f.sentence===sent}).map(function(f){return f.reason}).filter(function(v,k,a){return a.indexOf(v)===k});return '<li data-fi="'+fi+'"><mark class="pkgFlagText">'+esc(sent)+'</mark> <small>— '+esc(why.join(' · '))+'</small><div class="pkgFlagState"></div></li>'}).join('')+'</ul></div>':'')+'</div>'});
  h+='<label class="check"><input type="checkbox" id="pkgPersonal"><span><strong>This page presents me as a person</strong> (a personal brand, for example you as a specialist): “I” and “my” are allowed in the title, description and text.</span></label>';
  h+='<label for="pkgTitle">SEO title</label><input id="pkgTitle" maxlength="100">';
  h+='<label for="pkgMeta">Meta description</label><textarea id="pkgMeta" rows="2" maxlength="220"></textarea>';
@@ -461,7 +461,7 @@ function pkgHtml(r){var list=(r&&r.sections)||[];PKG_FLAGS={};PKG_FLAG_REASONS={
 function pkgInput(){var out=[];document.querySelectorAll('.pkgUse').forEach(function(c){if(!c.checked)return;var id=c.getAttribute('data-id');
   var h2=document.querySelector('.pkgH2[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');out.push({item_id:id,h2:h2?h2.value:'',text:t?t.value:''})});
  return {cms:document.getElementById('pkgCms').value,seo_title:document.getElementById('pkgTitle').value,meta_description:document.getElementById('pkgMeta').value,
-  sections:out,link:{url:document.getElementById('pkgLinkUrl').value,label:document.getElementById('pkgLinkLabel').value},editor_approved:document.getElementById('pkgApprove').checked,personal_voice:!!(document.getElementById('pkgPersonal')||{}).checked,source_sha256:PKG_SHA}}
+  sections:out,link:{url:document.getElementById('pkgLinkUrl').value,label:document.getElementById('pkgLinkLabel').value},editor_approved:document.getElementById('pkgApprove').checked,confirmed_sentences:Object.keys(PKG_KEPT).reduce(function(a,id){Object.keys(PKG_KEPT[id]||{}).forEach(function(s){a.push({item_id:id,sentence:s})});return a},[]),personal_voice:!!(document.getElementById('pkgPersonal')||{}).checked,source_sha256:PKG_SHA}}
 // Title or description in the first person ("my", "I"): AI rewrites them as the service and says so; without AI the
 // field is marked with the exact word to change.
 function metaNote(id,text,bad){var f=document.getElementById(id);if(!f)return;var n=document.getElementById(id+'Voice');if(!n){n=document.createElement('small');n.id=id+'Voice';f.insertAdjacentElement('afterend',n)}n.textContent=text;n.className=bad?'error':'muted';f.style.borderColor=bad?'#ef4444':''}
@@ -504,21 +504,45 @@ function pkgJumpTo(sentence){var s=String(sentence||'').replace(/\\s+/g,' ').tri
  alert('This sentence is not in the text as one piece anymore; it may have been changed already.')}
 function pkgDropSentence(id,sentence){var t=document.querySelector('.pkgText[data-id="'+id+'"]');if(!t||!sentence)return false;var before=t.value;
  t.value=before.split(sentence).join('').replace(/[ ]{2,}/g,' ').replace(/ +([.,;:])/g,'$1').replace(new RegExp(String.fromCharCode(10)+'{3,}','g'),String.fromCharCode(10,10)).trim();return t.value!==before}
+// Per flagged sentence: still in the text (rewrite · keep · remove), kept by the editor, rewritten by AI (restore), or
+// removed (undo). Kept sentences are sent with the package as confirmed by the editor (a safety assurance never is).
+var PKG_KEPT={},PKG_UNDO={};
+function pkgKeptKey(){return 'growthFreeKept:'+API}
+try{PKG_KEPT=JSON.parse(localStorage.getItem(pkgKeptKey())||'{}')||{}}catch(e){PKG_KEPT={}}
+function pkgSaveKept(){try{localStorage.setItem(pkgKeptKey(),JSON.stringify(PKG_KEPT))}catch(e){}}
+function pkgIsKept(id,s){return !!(PKG_KEPT[id]&&PKG_KEPT[id][s])}
+function pkgSafety(id,s){return (PKG_FLAG_REASONS[id]||[]).some(function(f){return f.sentence===s&&/safe to wait|safety/i.test(f.reason)})}
+function pkgFixOf(id,s){return PKG_STYLE_FIXES.filter(function(f){return f.id===id&&f.before===s})[0]}
 function pkgFlagState(){document.querySelectorAll('.pkgFlags').forEach(function(box){var id=box.getAttribute('data-id'),use=document.querySelector('.pkgUse[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');
- var on=!use||use.checked;box.style.opacity=on?'':'0.5';var note=box.querySelector('.note strong');if(note)note.textContent=on?'Rewrite or remove before downloading:':'Not in the package (section not included):';
- box.querySelectorAll('li').forEach(function(li,i){var s=(PKG_FLAGS[id]||[])[i],gone=t&&s&&t.value.indexOf(s)<0;li.style.textDecoration=gone?'line-through':'';var b=li.querySelector('button');if(b){b.disabled=!!gone;b.textContent=gone?'Removed':'Remove this sentence'}})});
- var any=0;Object.keys(PKG_FLAGS).forEach(function(id){var use=document.querySelector('.pkgUse[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');if((!use||use.checked)&&t)PKG_FLAGS[id].forEach(function(s){if(t.value.indexOf(s)>=0)any++})});
- var all=document.getElementById('pkgDropAll');if(all){all.style.display=any?'':'none';all.textContent='Remove all flagged sentences ('+any+')'}}
+ var on=!use||use.checked;box.style.opacity=on?'':'0.5';var note=box.querySelector('.note strong');if(note)note.textContent=on?'Check before downloading:':'Not in the package (section not included):';
+ box.querySelectorAll('li').forEach(function(li){var i=Number(li.getAttribute('data-fi')),s=(PKG_FLAGS[id]||[])[i],inText=!!(t&&s&&t.value.indexOf(s)>=0),fix=pkgFixOf(id,s),kept=inText&&pkgIsKept(id,s),st=li.querySelector('.pkgFlagState'),mk=li.querySelector('.pkgFlagText');if(!st)return;
+  var b=function(cls,label){return '<button type="button" class="ghost '+cls+'" data-id="'+esc(id)+'" data-fi="'+i+'">'+label+'</button> '};
+  if(mk)mk.style.textDecoration=!inText&&!fix?'line-through':'';
+  st.innerHTML=kept?'<small class="step-done">✓ Kept — you confirmed it is true for your business.</small> '+b('pkgFlagUnkeep','Undo')
+   :inText?b('pkgFlagShow','Show in the text')+(pkgSafety(id,s)?'':b('pkgFlagKeep','It is true — keep it'))+b('pkgDropFlag','Remove this sentence')
+   :fix?'<small>Rewritten by AI'+(fix.after?': “'+esc(fix.after)+'”':' (removed)')+'.</small> '+b('pkgFlagRestore','Restore the original — it is true')
+   :'<small>Removed or rewritten by you.</small> '+(PKG_UNDO[id+'|'+i]!=null?b('pkgFlagUndo','Undo'):'')});
+ box.querySelectorAll('button').forEach(function(btn){var id2=btn.getAttribute('data-id'),i2=Number(btn.getAttribute('data-fi')),s2=(PKG_FLAGS[id2]||[])[i2],t2=document.querySelector('.pkgText[data-id="'+id2+'"]');
+  btn.onclick=function(){
+   if(btn.classList.contains('pkgFlagShow'))pkgJumpTo(s2);
+   else if(btn.classList.contains('pkgFlagKeep')){(PKG_KEPT[id2]=PKG_KEPT[id2]||{})[s2]=1;pkgSaveKept()}
+   else if(btn.classList.contains('pkgFlagUnkeep')){if(PKG_KEPT[id2])delete PKG_KEPT[id2][s2];pkgSaveKept()}
+   else if(btn.classList.contains('pkgDropFlag')){PKG_UNDO[id2+'|'+i2]=t2?t2.value:null;pkgDropSentence(id2,s2)}
+   else if(btn.classList.contains('pkgFlagUndo')){var prev=PKG_UNDO[id2+'|'+i2];if(t2&&prev!=null)t2.value=prev;delete PKG_UNDO[id2+'|'+i2]}
+   else if(btn.classList.contains('pkgFlagRestore')){var f=pkgFixOf(id2,s2);if(t2&&f){var at=f.after?t2.value.indexOf(f.after):-1;t2.value=at>=0?t2.value.slice(0,at)+f.before+t2.value.slice(at+f.after.length):(t2.value+' '+f.before).trim()}
+    PKG_STYLE_FIXES=PKG_STYLE_FIXES.filter(function(x){return x!==f});(PKG_KEPT[id2]=PKG_KEPT[id2]||{})[s2]=1;pkgSaveKept()}
+   pkgFlagState()}})});
+ var any=0;Object.keys(PKG_FLAGS).forEach(function(id){var use=document.querySelector('.pkgUse[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');if((!use||use.checked)&&t)PKG_FLAGS[id].forEach(function(s){if(t.value.indexOf(s)>=0&&!pkgIsKept(id,s))any++})});
+ var all=document.getElementById('pkgDropAll');if(all){all.style.display=any?'':'none';all.textContent='Remove all flagged sentences you did not keep ('+any+')'}}
 function pkgWireFlags(){var first=document.querySelector('.pkgFlags');
  if(first&&!document.getElementById('pkgDropAll')){var b=document.createElement('button');b.type='button';b.id='pkgDropAll';b.className='ghost';b.style.margin='8px 0';
   var box=document.getElementById('pkgSource');if(box)box.insertAdjacentElement('afterend',b);
-  b.onclick=function(){Object.keys(PKG_FLAGS).forEach(function(id){var use=document.querySelector('.pkgUse[data-id="'+id+'"]');if(use&&!use.checked)return;PKG_FLAGS[id].forEach(function(s){pkgDropSentence(id,s)})});pkgFlagState()}}
- document.querySelectorAll('.pkgDropFlag').forEach(function(b){b.onclick=function(){var id=b.getAttribute('data-id'),s=(PKG_FLAGS[id]||[])[Number(b.getAttribute('data-fi'))];pkgDropSentence(id,s);pkgFlagState()}});
+  b.onclick=function(){Object.keys(PKG_FLAGS).forEach(function(id){var use=document.querySelector('.pkgUse[data-id="'+id+'"]');if(use&&!use.checked)return;PKG_FLAGS[id].forEach(function(s){if(!pkgIsKept(id,s))pkgDropSentence(id,s)})});pkgFlagState()}}
  document.querySelectorAll('.pkgUse,.pkgText').forEach(function(el){el.addEventListener(el.classList.contains('pkgText')?'input':'change',pkgFlagState)});pkgFlagState()}
 // Weak openings and team advice: AI replaces only those sentences in the section texts, automatically, once per page
 // load. Each change is shown under its section with the original sentence; nothing else in the text changes.
 var PKG_STYLE_FIXES=[],PKG_STYLE_TRIED={},PKG_STYLE_LEFT=[];
-async function pkgFixStyle(){var list=[];pkgApplyStyle(PKG_STYLE_FIXES,true);pkgStyleLeft(PKG_STYLE_LEFT,'');document.querySelectorAll('.pkgText').forEach(function(t){var id=t.getAttribute('data-id'),h=document.querySelector('.pkgH2[data-id="'+id+'"]');var fl=(PKG_FLAG_REASONS[id]||[]).filter(function(f){return t.value.indexOf(f.sentence)>=0});if(t.value.trim())list.push({id:id,h2:h?h.value:'',text:t.value,flags:fl})});
+async function pkgFixStyle(){var list=[];pkgApplyStyle(PKG_STYLE_FIXES,true);pkgStyleLeft(PKG_STYLE_LEFT,'');document.querySelectorAll('.pkgText').forEach(function(t){var id=t.getAttribute('data-id'),h=document.querySelector('.pkgH2[data-id="'+id+'"]');var fl=(PKG_FLAG_REASONS[id]||[]).filter(function(f){return t.value.indexOf(f.sentence)>=0&&!pkgIsKept(id,f.sentence)});if(t.value.trim())list.push({id:id,h2:h?h.value:'',text:t.value,flags:fl})});
  if(!list.length)return;var x=null;try{x=await (await fetch(API+'/fix-style'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sections:list,skip:Object.keys(PKG_STYLE_TRIED)})})).json()}catch(e){}
  if(!x)return;PKG_STYLE_FIXES=PKG_STYLE_FIXES.concat(x.fixes||[]);pkgApplyStyle(x.fixes||[],false);
  var left=(x.problems||[]).filter(function(p){return !(x.fixes||[]).some(function(f){return f.id===p.id&&f.before===p.sentence})});
@@ -531,7 +555,7 @@ function pkgStyleLeft(left,why0){left.forEach(function(p){var why=p.why||why0;va
 function pkgApplyStyle(fixes,again){var by={};(fixes||[]).forEach(function(f){(by[f.id]=by[f.id]||[]).push(f)});
  Object.keys(by).forEach(function(id){var t=document.querySelector('.pkgText[data-id="'+id+'"]');if(!t)return;var v=t.value,done=[];
   by[id].forEach(function(f){var i=v.indexOf(f.before);if(i<0)return;v=v.slice(0,i)+f.after+v.slice(i+f.before.length);done.push(f)});
-  v=v.split('  ').join(' ');t.value=v;t.dispatchEvent(new Event('input',{bubbles:true}));
+  v=v.split('  ').join(' ');t.value=v;t.dispatchEvent(new Event('input',{bubbles:true}));if(typeof pkgFlagState==='function')pkgFlagState();
   var card=t.closest('.card');if(card&&done.length&&!card.querySelector('.pkgStyleNote')){var n=document.createElement('div');n.className='note pkgStyleNote';n.innerHTML='<strong>AI repaired '+done.length+' sentence(s) automatically. Check them:</strong><ul>'+done.map(function(f){return '<li>'+(f.problem==='OPENING_FILLER'?'Weak opening':f.problem==='FLAGGED_CLAIM'?'Flagged claim':f.problem==='MIXED_LANGUAGE'?'Mixed language':'Advice for a team')+': <s>'+esc(f.before)+'</s> → '+(f.after?'<mark>'+esc(f.after)+'</mark>':'removed')+'</li>'}).join('')+'</ul>';card.appendChild(n)}})}
 function showPkg(r){var box=document.getElementById('pkgBox');if(!box)return;box.innerHTML=pkgHtml(r);var b=document.getElementById('pkgDownload');if(!b)return;pkgReadSource();
  pkgWireFlags();pkgFixStyle();
