@@ -67,6 +67,8 @@ function classifyTitle(title,snippet='',url=''){
 }
 function classifyTitleText(title,snippet=''){
  const raw=String(title||'')+' '+String(snippet||''),t=raw.toLowerCase();
+ // A career guide (salary, how to become) explains the job; a word like "plan" in it does not make it a comparison.
+ if(/\b(?:sueldo|salario|salary|salaris|gehalt|how to become|hoe word je)\b|c[oó]mo ser\b|c[oó]mo convertirse/i.test(String(title||'')))return 'INFORMATIONAL_GUIDE';
  // Local service: an explicit local marker (near me, 'City, ST', ZIP), a company/provider listing, or a US state named in
  // the TITLE (a snippet names places in passing). Never a list of trades.
  const cityState=/\b[A-Z][a-z]+(?: [A-Z][a-z]+)?,? (?:[A-Z]{2})\b(?! [a-z])/.test(raw)&&!/\b(?:AI|SEO|PDF|USA|FAQ|CEO|ROI|KPI|CMS|API)\b/.test(raw.match(/\b[A-Z][a-z]+(?: [A-Z][a-z]+)?,? [A-Z]{2}\b/)?.[0]||'');
@@ -95,8 +97,11 @@ function classifyTitleText(title,snippet=''){
 // intent family (the destination check treats a guide as compatible with a local SERP for the same reason).
 // Someone looking for a tool reads tool pages and "best tools" comparisons alike; both serve choosing a product.
 // Someone choosing a provider reads providers' own pages and lists of providers alike.
+// Someone asking what a provider costs reads price comparisons and providers' own pages alike: choosing whom to hire
+// (owner 2026-11-12, "¿Cuánto cobra un consultor GEO?": 4 price pages, 3 providers, 1 provider list was "mixed").
 const COMPATIBLE_FAMILY={LOCAL_SERVICE:['INFORMATIONAL_GUIDE'],PRODUCT_TOOL:['COMMERCIAL_COMPARISON'],
- SERVICE_PROVIDER:['PROVIDER_LIST','LOCAL_SERVICE'],PROVIDER_LIST:['SERVICE_PROVIDER','LOCAL_SERVICE']};
+ SERVICE_PROVIDER:['PROVIDER_LIST','LOCAL_SERVICE','COMMERCIAL_COMPARISON'],PROVIDER_LIST:['SERVICE_PROVIDER','LOCAL_SERVICE','COMMERCIAL_COMPARISON'],
+ COMMERCIAL_COMPARISON:['SERVICE_PROVIDER','PROVIDER_LIST','PRODUCT_TOOL']};
 const MIN_LEADS=3,MIN_AGREEMENT=0.6;
 // pages: competitor pages actually read [{url,html}]. A result whose title/snippet is unclassifiable is classified a second
 // time from the H1 of its own page, so a terse title does not make an otherwise clear SERP "mixed".
