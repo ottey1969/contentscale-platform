@@ -794,6 +794,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   try{saved=await savePageMarkets({clientId:v.clientId,pageId:v.id,countries,language:req.body?.language})}catch{return no(503,'MARKET_SETTING_NOT_SAVED')}
   // The next research run uses the new markets.
   for(const k of [...cache.keys()])if(k.startsWith(v.clientId+':'+v.id+':'))cache.delete(k);
+  for(const k of [...bestQuestionCache.keys()])if(k.startsWith(v.clientId+':'+v.id+':'))bestQuestionCache.delete(k);
   res.set('Cache-Control','private, no-store').json({success:true,markets:saved,research_rerun_required:true});
  });
  // The site's default target market(s) and language (owner): every page without its own setting or Pre-Write brief.
@@ -1035,8 +1036,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  async function customerQuestionsFor(v){
   const row=(await pool.query('SELECT url,keyword,LEFT(html_content,120000) AS html FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id])).rows[0]||{};
   let html=row.html||'';if(!html){try{html=String((await fetchLive(v.page.url))?.html||'')}catch(e){html=''}}
-  let set=null;if(typeof loadPageMarkets==='function')set=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
-  if(!(set?.countries?.length||set?.language)&&typeof loadSiteMarkets==='function')set=await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null);
+  // Same locale inheritance as Growth research: page → Pre-Write Brief → site → page HTML.
+  const pageSet=typeof loadPageMarkets==='function'?await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null):null;
+  const briefSet=typeof loadPrewriteMarket==='function'?await Promise.resolve(loadPrewriteMarket({clientId:v.clientId,keywords:[row.keyword]})).catch(()=>null):null;
+  const siteSet=typeof loadSiteMarkets==='function'?await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null):null;
+  const set=resolveMarketSetting(pageSet,briefSet,siteSet);
   const country=v.marketOverride||set?.countries?.[0]||null,lang=set?.language||((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(html)||[])[1]||'en').toLowerCase();
   const out=await discoverCustomerQuestions({url:v.page.url,html,keyword:row.keyword||'',gl:country?(country==='GB'?'uk':country.toLowerCase()):'us',hl:lang,
    ...(questionFetch?{fetchImpl:questionFetch}:{}),model:questionModel!==undefined?questionModel:require('./growth-task-meaning.cjs').geminiModel()});
@@ -1116,10 +1120,10 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     '<div class="grid"><div><small>Selected page</small><strong>'+sHtml(v.page.url)+'</strong></div><div><small>Source</small><strong>Existing Tracker page</strong><small>'+sHtml(why)+' · <a href="/track/'+encodeURIComponent(req.params.token)+'/growth#choosePage">choose another page</a></small></div>'+
     '<div><small>Tracked keyword (context, not the customer question)</small><strong>'+sHtml(kw||'none')+'</strong></div><div><small>Search Console</small><strong>'+(gsc?'Connected for this page':'Optional, not connected')+'</strong><small>Not needed for this research; only for verified ranking and traffic comparisons.</small></div></div>'+
     (v.queryOverride?'<p><strong>Customer question researched:</strong> “'+sHtml(v.queryOverride)+'”'+(req.query?.auto_q==='1'?' <small>Chosen automatically: the best matching question customers ask in Google for this market. Choose another below, or <a href="/track/'+encodeURIComponent(req.params.token)+'/growth/auto-research?page_id='+encodeURIComponent(v.id)+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):'')+'&keyword_only=1">use the tracked keyword instead</a>.</small>':'')+'</p>':'<p class="info">No customer question chosen yet: the research below uses '+(kw?'the tracked keyword “'+sHtml(kw)+'”':'a phrase from the page title')+'. Find how customers search and choose a question to research that instead.</p>')+
-    '<div><label for="cqManual">Customer search question — type or paste your own</label><input id="cqManual" type="text" maxlength="120" style="width:min(100%,680px);font:inherit;padding:9px" value="'+sHtml(v.queryOverride||'')+'" placeholder="e.g. How can customers find my business in AI search?"> <button type="button" id="cqManualGo">Research this question →</button></div>'+
+    '<div><label for="cqManual">Customer search question — type or paste your own</label><input id="cqManual" type="text" maxlength="120" style="width:min(100%,680px);font:inherit;padding:9px" value="'+sHtml(v.queryOverride||'')+'" placeholder="e.g. How can customers find my business in AI search?"> <button type="button" id="cqManualGo">Use this question for research →</button></div>'+
     '<p class="info">Or discover questions from Google and AI. Suggestions are optional; you can research your own question even when these services are unavailable.</p>'+
     '<p><button type="button" id="cqFind">'+(v.queryOverride?'Choose another customer question':'Find customer questions')+'</button> <small role="status" id="cqStatus"></small></p><div id="cqList"></div>'
-    '<p class="info">The research looks at the chosen question first (Google, ranking pages, AI answers) and only then compares it with your page. Your page is not used to answer it.</p></section>';
+    '<p class="info">The selected question determines which Google and AI evidence is researched and then compared with the live page. Choosing another question opens its own saved report; your earlier research is not deleted.</p></section>';
   }
   // Findings from the Pre-Write Brief this research was opened from (owner only): reference for what the page still misses.
   let briefBox='';
