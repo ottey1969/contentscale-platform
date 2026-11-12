@@ -739,12 +739,16 @@
    }
    if(sc){
     node('h3','Possible new pages (research first)',beyond);
-    if((sc.candidates||[]).length){
-     sc.candidates.forEach(function(c){
+    // An already tracked keyword isn't a separate page opportunity (owner: "Research: consultor geo" on the consultor geo page).
+    var normTopic=function(v){return String(v||'').normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()};
+    var topic=normTopic(d.original_tracked_keyword),sameUrl=function(v){return String(v||'').replace(/\/+$/,'')===String(d.url||'').replace(/\/+$/,'')};
+    var candidates=(sc.candidates||[]).filter(function(c){return !(topic&&normTopic(c.query)===topic)&&!(c.url&&sameUrl(c.url))});
+    if(candidates.length){
+     candidates.forEach(function(c){
       addAction('Research: '+c.query, String(c.impressions)+' impressions · '+String(c.clicks)+' clicks · position '+String(c.best_position),
        ['Next step: '+String(c.next||'Start a Pre-Write brief and verify live SERP intent and overlap.'),'Related terms: '+String((c.variants||[]).join(', ')||c.query),'This is a candidate, not approval to publish.']);
      });
-    }else node('p',String(sc.note||'No candidates.'),beyond);
+    }else node('p',(sc.candidates||[]).length?'No separate page to research: the suggested keyword already belongs to this page. Continue with the improvements above.':String(sc.note||'No candidates.'),beyond);
     if((sc.belongs_elsewhere||[]).length){
      var other=node('details',null,beyond);node('summary','Queries already served by tracked pages',other);
      (sc.belongs_elsewhere||[]).forEach(function(x){var item=node('p',x.query+' → ',other);link(x.url,x.url,item)});
