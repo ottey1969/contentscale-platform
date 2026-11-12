@@ -111,3 +111,13 @@ test('owner 2026-11-12: "Before the research · optional" at the top with Search
   assert.equal((await call({ can_edit: true, pages: [{ id: 5, url: 'https://x.example/' }] }))[1].success, true);
   assert.equal((await call({ can_edit: false, pages: [{ id: 5, url: 'https://x.example/' }] }))[0], 403, 'owner only');
 });
+
+test('owner 2026-11-12 "¿Cuánto cobra un consultor GEO?": price pages and provider pages are one buyer intent; a career guide is a guide', () => {
+  const cov = require('../src/growth-reader-task-coverage.cjs');
+  const t = ['Consultor GEO: visibilidad en ChatGPT y Gemini', 'Cómo ser consultor SEO y GEO: habilidades, sueldo y plan', '¿Cuánto cobra un SEO en España? [Actualizado a 2026]',
+    'El Mejor Experto en GEO en España 2026: Consultor ...', 'Cuánto cobra un consultor SEO freelance en España - Wajari', 'Cuánto cuesta una agencia GEO en España (2026)',
+    'Consultor GEO o agencia GEO: cuál conviene - loco22', 'Consultor SEO y GEO - Agencia de SEO'];
+  assert.equal(cov.classifyTitle(t[1]), 'INFORMATIONAL_GUIDE', 'salary / how to become');
+  const r = cov.inferSerpIntent({ query: '¿Cuánto cobra un consultor GEO?', leads: t.map((title, i) => ({ url: 'https://s' + i + '.example/', title })) });
+  assert.equal(r.status, 'SERP_INTENT_OBSERVED');
+});
