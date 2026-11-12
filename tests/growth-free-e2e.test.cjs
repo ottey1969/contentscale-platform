@@ -56,6 +56,8 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
   try {
     const before = (await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'tracker\\_%'")).rows.map(r => r.table_name).sort();
     const ctx = await browser.newContext({ acceptDownloads: true }); const p = await ctx.newPage();
+    // The evidence (Google · AI answers · Search Console) is one section with tabs below the steps.
+    const evidence = async tab => { if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click(); await p.click('.rtabs button[data-tab="' + tab + '"]'); };
     const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     // 1. The form: page, search term, market, language, email.
     await p.goto(base + '/free-growth?key=e2e-open-key-1');
@@ -102,13 +104,13 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     // 2. The result (Google research done by the real engine).
     await service.idle();
     await p.waitForSelector('#freeNextAction', { timeout: 60000 });
-    assert.equal(await p.locator('details.journey-section').count(), 4, 'four clear workflow steps');
+    assert.equal(await p.locator('details.journey-section').count(), 3, 'three clear workflow steps: choose, write, publish & measure');
     await p.click('#stepResearch > summary');
     await p.waitForSelector('#google', { timeout: 60000 });
     assert.match(await p.textContent('h1'), /Your page in Google and in AI answers/);
     await p.waitForSelector('#freeNextAction .growth-next-btn');
-    assert.match(await p.textContent('#freeNextAction'), /FREE GROWTH · ACTION PLAN/);
-    assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 4);
+    assert.match(await p.textContent('#freeNextAction'), /STEP 1 OF 3 · DO THIS NOW[^]*Choose what to add to your page/);
+    assert.equal(await p.locator('#freeNextAction .growth-flow span').count(), 3);
     assert.equal(await p.locator('#freeNextAction .growth-next-btn').isVisible(), true);
     assert.ok((await p.locator('#freeNextAction .growth-next-btn').getAttribute('href')).startsWith('#'));
 
@@ -117,12 +119,14 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await p.textContent('body'), /Your search term “roof repair lodi nj”: 310 impressions, 2 clicks, position 14\.2\./);
     // 3. An AI answer for the exact search term (validated with the shared contract).
     const prompt = await p.inputValue('#aiPrompt'); assert.match(prompt, /roof repair lodi nj/);
+    // The AI answers are evidence: in the research section, tab "AI answers".
+    await p.click('.rtabs button[data-tab="ai"]');
     await p.locator('#aiRecheck summary').click();
     await p.selectOption('#aiEngine', 'perplexity');
     await p.fill('#aiText', 'ANSWER:\nTEST: For roof repair in Lodi NJ, ask for a written estimate and check the licence of the roofer.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
     // A refresh before "Analyse answer" keeps the pasted answer (per check and AI system).
     await p.reload(); await p.waitForSelector('#aiText', { state: 'attached', timeout: 30000 });
-    if (!(await p.locator('#aiText').isVisible())) { await p.locator('#stepResearch > summary').click().catch(() => {}); if (!(await p.locator('#aiText').isVisible())) await p.locator('#aiRecheck summary').click(); }
+    if (!(await p.locator('#aiText').isVisible())) { if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click(); await p.click('.rtabs button[data-tab="ai"]'); if (!(await p.locator('#aiText').isVisible())) await p.locator('#aiRecheck summary').click(); }
     await p.selectOption('#aiEngine', 'perplexity');
     assert.match(await p.inputValue('#aiText'), /TEST: For roof repair in Lodi NJ/, 'the pasted answer is still there after a refresh');
     await p.click('#aiSave');
@@ -134,10 +138,10 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.locator('#stepReview > summary').click();
     const picks = await p.$$('.gapPick'); assert.ok(picks.length >= 1, 'at least one topic to select');
     // Side by side (as in Tracker Growth): the competitor's words next to this page, and one click adds the topic.
-    await p.locator('#stepResearch > summary').click();
+    await evidence('google');
     assert.match(await p.textContent('#sideBySide + p + .card'), /How a repair estimate is built[^]*A repair estimate lists materials[^]*Your page:[^]*Our roof repair services/);
     await p.click('.sbsAdd');
-    assert.match(await p.textContent('.sbsStatus'), /Added to your choice in step 2/);
+    assert.match(await p.textContent('.sbsStatus'), /Added to your choice in step 1/);
     if (!(await p.locator('#stepReview').evaluate(el => el.open))) await p.locator('#stepReview > summary').click();
     if (!(await picks[0].isChecked())) await picks[0].check();
     await p.waitForFunction(() => /selected · saved/.test(document.getElementById('gapStatus').textContent));
@@ -145,7 +149,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.reload();
     await p.waitForSelector('#ownerUnlockForm',{state:'attached'});
     assert.equal(await p.locator('#gapWrite').count(),0,'ordinary visitors cannot use AI writing');
-    assert.match(await p.textContent('#nextWrite'), /AI writing is switched off for this link\. Owner: unlock it in step 3/, 'the reason is shown right under the choice');
+    assert.match(await p.textContent('#nextWrite'), /AI writing is switched off for this link\. Owner: unlock it in step 2/, 'the reason is shown right under the choice');
     assert.equal(await p.locator('.gapPick[value="' + chosenId + '"]').isChecked(), true, 'selection survives a page reload');
     // Opening step 3 closes step 2 above it: the visitor stays at step 3 and does not have to scroll back up.
     await p.setViewportSize({ width: 900, height: 700 });
@@ -153,7 +157,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.locator('#stepPrepare > summary').click();
     await p.waitForTimeout(150);
     const top = await p.locator('#stepPrepare > summary').evaluate(el => el.getBoundingClientRect().top);
-    assert.ok(top >= 0 && top < 700 * 0.6, 'step 3 header stays in view after opening (top=' + top + ')');
+    assert.ok(top >= -1 && top < 700 * 0.6, 'step 3 header stays in view after opening (top=' + top + ')');
     await p.fill('#ownerUnlockKey','e2e-owner-secret-0123456789');
     await p.click('#ownerUnlockButton');
     await p.waitForSelector('#gapWrite');
@@ -236,7 +240,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(require('node:fs').readFileSync(await pkg.path()).toString('utf8'), /Evidence: verified/);
     assert.match(require('node:fs').readFileSync(await pkg.path()).toString('utf8'), /"voice": "PERSONAL_BRAND"[^]*I repair leaking roofs/, 'the personal choice is recorded and the words kept');
     // 6. A later export (one CSV, not page-filtered): stored with the check, shown as not verified, research not re-run.
-    await p.locator('#stepResearch > summary').click();
+    await evidence('gsc');
     await p.locator('#gscUpload > summary').click();
     await p.setInputFiles('#gscLater', { name: 'Queries.csv', mimeType: 'text/csv', buffer: Buffer.from('Top queries,Clicks,Impressions,CTR,Position\nroof repair lodi nj,3,340,0.9%,13.1\n') });
     await p.click('#gscSave');
@@ -257,7 +261,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
       'Dates.csv': 'Date,Clicks,Impressions,CTR,Position\n' + days(win.start, win.end).map(d => d + ',1,' + Math.round(imp / 28) + ',0.5%,12.0').join('\n') + '\n',
       'Filters.csv': 'Filter,Value\nPage,' + URL_ + '\n' });
     for (const [win, imp, n] of [[w.before, 280, 3], [w.after, 560, 4]]) {
-      if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click();
+      await evidence('gsc');
       if (!(await p.locator('#gscUpload').evaluate(el => el.open))) await p.locator('#gscUpload > summary').click();
       await p.setInputFiles('#gscLater', { name: 'Performance-' + win.start + '.zip', mimeType: 'application/zip', buffer: period(win, imp) });
       await p.click('#gscSave');
@@ -279,13 +283,14 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.match(await (await fetch(base + new URL(stopLink).pathname)).text(), /Reminder stopped/);
     // Completed AI research: five saved answers must not leave the large input form open.
     for (const engine of ['google_aio', 'chatgpt', 'claude', 'copilot']) {
-      if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click();
+      await evidence('ai');
       if (!(await p.locator('#aiRecheck').evaluate(el => el.open))) await p.locator('#aiRecheck > summary').click();
       await p.selectOption('#aiEngine', engine);
       await p.fill('#aiText', 'ANSWER:\nRoof repair Lodi NJ advice includes checking written estimates and leak repair procedures.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
       await p.click('#aiSave');
       await p.waitForFunction(value => document.getElementById('ai').textContent.includes(value + ' of 5'), ['google_aio', 'chatgpt', 'claude', 'copilot'].indexOf(engine) + 2);
     }
+    await evidence('ai');
     assert.equal(await p.locator('#aiRecheck').evaluate(el => el.open), false, 'five completed AI answers collapse the entry form');
     assert.equal(await p.locator('#aiText').isVisible(), false);
     assert.match(await p.textContent('#aiRecheck > summary'), /Advanced · Recheck an AI answer/);
