@@ -47769,6 +47769,16 @@ function renderPrewriteBrief(b) {
     b.entity_strategy.relationships.forEach(function(r){ if (r && r.subject) lines.push('- ' + r.subject + ' \\u2192 ' + (r.relation||'') + ' \\u2192 ' + (r.object||'')); });
     lines.push('');
   }
+  if (Array.isArray(b.price_facts) && b.price_facts.length) {
+    lines.push('PRICE FACTS — VERIFIED ON THE SOURCE PAGE (attribute each to its source; not a market standard)');
+    b.price_facts.forEach(function(x){ if (x) lines.push('- ' + (x.amount||'') + ' — “' + (x.evidence_text||'') + '” | ' + (x.source_title ? x.source_title + ' ' : '') + (x.source_url||'')); });
+    lines.push('');
+  }
+  if (b.numeric_claims_check && Array.isArray(b.numeric_claims_check.removed) && b.numeric_claims_check.removed.length) {
+    lines.push('REMOVED — AMOUNTS NO SOURCE PAGE CONFIRMED (do not put them back without a source)');
+    b.numeric_claims_check.removed.forEach(function(x){ if (x) lines.push('- [' + (x.field||'') + '] ' + (x.text||'')); });
+    lines.push('');
+  }
   if (b.evidence) {
     if (Array.isArray(b.evidence.official_sources) && b.evidence.official_sources.length) {
       lines.push(_PLX.srcH.toUpperCase());
@@ -59759,6 +59769,8 @@ function _pwbPublicationQa(b){
   if(Number(quotes.verified||0)===0&&Number(quotes.attributed_insights||0)===0)penalize(3,'no_expert_evidence','No verified expert quote or attributed expert insight was found.');
   // Money amounts and percentages the reader takes as fact need a verified source (src/prewrite-numeric-claims.cjs).
   try{const _un=require('./prewrite-numeric-claims.cjs').unverifiedNumbers(b);if(b)b.verify_first_numbers=_un;
+   const _rm=b&&b.numeric_claims_check&&Array.isArray(b.numeric_claims_check.removed)?b.numeric_claims_check.removed:[];
+   if(_rm.length)penalize(2,'unverified_numbers_removed','Removed '+_rm.length+' sentence(s) or fact(s) with an amount that no source page confirmed: '+_rm.map(x=>'“'+String(x.text).slice(0,90)+'”').join(' · ')+'. Add a price only with its source.');
    if(_un.length)block(10,'unverified_numbers','VERIFY FIRST — numbers without a verified source in the opening passage, AI answer, quick facts or meta description: '+_un.map(x=>x.text).join(', ')+'. They come from unverified AI answers or the model, not from verified evidence. Do not state them as fact: verify each on its source page (then add it as evidence) or remove it before writing.');}catch(_e){}
   return {score:Math.max(0,score),ready_to_write:blockers.length===0,blockers:blockers,warnings:warnings,checked_at:new Date().toISOString(),rule:'Structural readiness decides whether generation is allowed. Publication QA exposes non-blocking quality warnings separately; blockers are reserved for broken/internal/unsafe writer-facing copy.'};
 }
@@ -62022,6 +62034,27 @@ ${sourceText}`;
     brief.ai_system_evidence.checked_count=['google_aio','chatgpt','perplexity','claude','copilot'].filter(k=>brief.ai_system_evidence[k]&&brief.ai_system_evidence[k].checked).length;
     if(_pwbNetworkAuthorized)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain});
     _pwbCanonicalizeAiAnalysisV506(brief);
+
+    // Numbers verified on their source page, or taken out (owner 2026-11-12: "NOT PASSED but still a brief"). Amounts in the
+    // opening, AI answer and quick facts without verified evidence are looked up, as written, on the pages this Brief already
+    // names (AI-answer source leads, research candidates). Found next to a currency sign on a page about the query: a price
+    // fact with its excerpt and URL. Not found: the sentence, takeaway or quick fact is removed and listed. No model call.
+    try{
+     const _nc=require('./prewrite-numeric-claims.cjs'),_un0=_nc.unverifiedNumbers(brief);
+     if(_un0.length){
+      const _rel=require('./prewrite-evidence-relevance.cjs').topicRelevance;
+      const _urls=Array.from(new Set([].concat((brief.ai_source_leads||[]).map(x=>x&&x.url),(_pwbExternalCandidates||[]).map(x=>x&&x.exact_url)).filter(Boolean)))
+       .filter(u=>/^https:\/\//i.test(u)&&!/linkedin\.|facebook\.|youtube\.|instagram\.|tiktok\.|x\.com|twitter\./i.test(u)).slice(0,10);
+      const _pages=(await Promise.all(_urls.map(async u=>{let sc=null;try{sc=await scrapeBodyText(u,12500)}catch(_e){}const text=String(sc&&sc.text||'').trim();
+       const _t=((String(sc&&sc.fullHtml||'').match(/<title[^>]*>([^<]{1,200})<\/title>/i)||[])[1]||((_pwbExternalCandidates||[]).find(x=>x&&x.exact_url===u)||{}).title||'').trim();
+       return text.length<220?null:{url:u,title:_t,text:text};}))).filter(Boolean);
+      const _res=_nc.verifyOnPages(_un0,_pages,{onTopic:p=>_rel({keyword:keyword,title:p.title||'',text:p.text||'',excerpt:''}).relevant});
+      brief.price_facts=_res.verified.map(x=>({number:x.number,amount:x.text,evidence_text:x.excerpt,source_url:x.source_url,source_title:x.source_title,verification:'source_verified_on_page',note:'Found as written on this page. A published price of one provider or one market review, not a market standard: attribute it to the source.'}));
+      const _removed=_nc.removeUnverified(brief,_res.left);
+      brief.numeric_claims_check={checked_at:new Date().toISOString(),pages_checked:_pages.map(x=>x.url),verified:brief.price_facts.length,removed:_removed,
+       rule:'Money amounts and percentages in the opening, AI answer and quick facts need a verified source. Found on a source page: kept as a price fact with its excerpt. Not found: removed from the copy.'};
+     }
+    }catch(_numErr){console.warn('[prewrite-brief] number verification failed:',String(_numErr&&_numErr.message||_numErr).slice(0,160));}
 
     // v499 — free deterministic final publication pass. No extra Gemini call.
     _pwbFinalPublicationPass(brief);
