@@ -58,15 +58,18 @@
    items.forEach(function(x){var row=el('label',null,box,'check');var c=el('input',null,row);c.type='checkbox';c.value=x.id;if(carried.indexOf(x.id)>=0)c.checked=true;boxes.push({c:c,x:x});
     var t=el('span',null,row);if(x.recommended)el('mark','Recommended ',t);el('strong',x.title,t);
     var wb=el('small',written.ids.has(String(x.id))?' ✓ Written':'',t,'written-badge');b0[String(x.id)]=wb;
-    el('small',' — '+x.status+(x.ranking_pages?' · '+x.ranking_pages+(x.of?' of '+x.of:'')+' ranking page(s)':'')+(x.your_section?' · closest here: “'+x.your_section+'”':'')+(x.ai?' · '+x.ai:'')+(x.writable?'':' · added by the editor, not written'),t);
+    // One line to act on; the reasons and sources fold out under "Why?" (owner 2026-11-12: cards were walls of text).
+    el('small',x.status+(x.ranking_pages?' · '+x.ranking_pages+(x.of?' of '+x.of:'')+' ranking page(s)':'')+(x.writable?'':' · added by the editor, not written'),el('div',null,t));
     if(x.priority&&x.priority.suggested_action)el('small','Action: '+x.priority.suggested_action,el('div',null,t));
-    if(x.priority&&x.priority.why)el('small','Why: '+x.priority.why.join(' · '),el('div',null,t));
-    if(demand(x.growth_potential))el('small',demand(x.growth_potential)+' · business fit: your decision',el('div',null,t));
-    (x.possible_overlap||[]).forEach(function(o){el('small','May overlap with “'+o.title+'”: '+o.reason,el('div',null,t))});
-    // Every source is kept; three are shown, the rest folds out.
-    var ex=x.examples||[],show=function(e,into){el('small',(e.position?'#'+e.position+' ':'')+e.site+(e.heading&&e.heading!==x.title?': “'+e.heading+'”':''),el('div',null,into))};
-    ex.slice(0,3).forEach(function(e){show(e,t)});
-    if(ex.length>3){var more=el('details',null,t);el('summary',ex.length-3+' more source(s)',more);ex.slice(3).forEach(function(e){show(e,more)})}})});
+    var why=el('details',null,t);why.className='why';el('summary','Why?',why);
+    if(x.your_section)el('small','Closest on your page: “'+x.your_section+'”',el('div',null,why));
+    if(x.ai)el('small',x.ai,el('div',null,why));
+    if(x.priority&&x.priority.why)el('small','Why: '+x.priority.why.join(' · '),el('div',null,why));
+    if(demand(x.growth_potential))el('small',demand(x.growth_potential)+' · business fit: your decision',el('div',null,why));
+    (x.possible_overlap||[]).forEach(function(o){el('small','May overlap with “'+o.title+'”: '+o.reason,el('div',null,why))});
+    // Every source is kept.
+    var ex=x.examples||[];ex.forEach(function(e){el('small',(e.position?'#'+e.position+' ':'')+e.site+(e.heading&&e.heading!==x.title?': “'+e.heading+'”':''),el('div',null,why))});
+    if(!why.querySelector('small'))why.remove()})});
   if((list.unique_content||[]).length){el('h3','Unique content worth reviewing and preserving ('+list.unique_content.length+')',box);
    var ks=el('ul',null,box);list.unique_content.forEach(function(s){el('li',s.heading,ks)});
    el('p','Only on your page among the ranking pages read (compared by heading words). Unique is not proof that it is correct, current or strong: value not assessed, strength not measured. It is not rewritten.',box,'small')}
