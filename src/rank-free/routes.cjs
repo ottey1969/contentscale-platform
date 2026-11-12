@@ -327,6 +327,8 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const ok = !!(nonce && await store.optOut(nonce, now()).catch(() => false));
     html(res, page('en', 'Stopped', ok ? '<h1>Stopped</h1><p>You will not get e-mails and your keywords are no longer checked. Your positions stay visible on your dashboard.</p>' : '<h1>Not found</h1>'), ok ? 200 : 404);
   });
+  // Owner admin page: contacts per country, CSV, delete (src/rank-free/admin.cjs).
+  require('./admin.cjs').registerRankAdmin(app, pool, { config, store, now });
   app.get('/api/rank-free/admin/stats', async (req, res) => {
     const k = String(req.headers['x-admin-key'] || '');
     if (!config.adminKey || k.length !== config.adminKey.length || !crypto.timingSafeEqual(Buffer.from(k), Buffer.from(config.adminKey))) return res.status(401).json({ success: false });
