@@ -323,7 +323,7 @@ function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI systems <small>('+esc(
  h+=aiGapHtml(a.gap);
  h+='<p class="muted">These source mentions are AI visibility observations, not verified content gaps. Growth compares the readable ranking pages automatically and labels missing evidence separately.</p>';
  var next=x.engines.filter(function(e){return !e.checked})[0]||x.engines[0];
-  // Manual copying must not appear as the main action of the automatic Free Growth report.
+  // Manual research is available directly below the visible five-system status, not under the technical evidence tabs.
  h+='<details id="aiRecheck" class="research-details growth-ai-manual"><summary>'+(x.checked===5?'Research another AI system · Recheck a real answer (optional)':'Research another AI system · Add a real answer ('+(5-x.checked)+' unchecked)')+'</summary><div class="card"><p class="muted">Only check another AI answer if you want to; this never blocks the Google research.</p><ol><li>Choose the AI system.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong>.</li><li>Paste the complete answer below, including the source links.</li></ol>'+
   '<label>AI system<select id="aiEngine">'+x.engines.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===next.id?' selected':'')+'>'+esc(e.label)+(e.checked?' ✓':'')+'</option>'}).join('')+'</select></label>'+
   (a.ai_question&&a.ai_question.text?'<p id="aiQuestionAsked"><strong>Question asked:</strong> “'+esc(a.ai_question.text)+'” <small class="muted">· '+esc(a.ai_question.label||'Google')+' · the best real Google question for “'+esc(a.search_term)+'”</small></p>':'')+
@@ -369,7 +369,7 @@ function wireAi(){wireAiGap();var b=document.getElementById('aiSave');if(!b)retu
  b.onclick=async function(){var st=document.getElementById('aiStatus'),eng=document.getElementById('aiEngine').value,txt=document.getElementById('aiText').value;if(!txt.trim()){st.textContent='Paste the answer first.';return}b.disabled=true;st.textContent='Analysing…';
   try{var r=await fetch(API+'/ai'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({engine:eng,text:txt})});var x=await r.json();if(!x.success)throw Error(x.error||'Not analysed');
    try{localStorage.removeItem(aiDraftKey(eng))}catch(e){}
-   var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE')render(d);else showAiFirst(d,true);showStep('stepResearch','ai')}catch(err){st.textContent=err.message;b.disabled=false}}}
+   var d=await (await fetch(API+Q,{cache:'no-store'})).json();if(d.status==='DONE'){render(d);showStep('freeAiResearch','freeAiResearch')}else{showAiFirst(d,true);showStep('aiFirst','aiFirst')}}catch(err){st.textContent=err.message;b.disabled=false}}}
 function gscHtml(g){var h='<h3 id="gsc">Search Console <small>(optional)</small></h3>';
  if(g&&g.latest){var L=g.latest,T=L.totals||{};
   h+='<p class="lead"><strong>'+(L.status==='VERIFIED_FOR_PAGE'?'Verified for this page':L.status==='PAGE_TOTALS_ONLY'?'Totals of this page; search terms not page-filtered':'Not verified for this page')+'.</strong> '+esc(L.message)+(L.status==='VERIFIED_FOR_PAGE'&&!L.used_in_research?' This export was uploaded after the research (or belongs to a reused result), so it was not used to decide the page improvements. Start a new check and upload it before research to include its search queries.':'')+'</p>';
