@@ -81,6 +81,8 @@ const NOT_CUSTOMER=new RegExp(['salar','salario','sueldo','cu[aá]nto gana','cu[
 const notCustomer=t=>NOT_CUSTOMER.test(clean(t).normalize('NFC'));
 // A buyer's question: price, hiring, choosing, whether it is worth it, what it does for a business.
 const BUYER=/\b(?:cost|costs|price|prices|pricing|fee|fees|hire|hiring an?|worth|best|top|near me|compare|vs|agency|company|services?|need|should i|for my business|cu[aá]nto cuesta|precio|precios|tarifa|tarifas|contratar|merece la pena|vale la pena|mejor|mejores|agencia|empresa|servicios?|necesito|para mi negocio|mi empresa|kosten|kost|prijs|prijzen|tarief|inhuren|inschakelen|loont|beste|bureau|bedrijf|diensten|nodig|preis|kosten|beauftragen|lohnt|agentur|co[uû]t|prix|tarif|engager|meilleur)\b/i;
+const PROVIDER=/\b(?:consultor(?:a|es)?|consultor[ií]a|consultant|consultancy|consulting|agencia|agency|agencies|bureau|specialist|especialista|experto|expert|freelancer?|asesor(?:[ií]a)?|adviseur|advisor|abogado|lawyer|advocaat|aannemer|contratista|contractor)\b/i;
+const PRODUCT=/\b(?:tool|tools|herramienta|herramientas|software|app|apps|plugin|plugins|platform|platforms|plataforma|plataformas|extension|extensión|tooling)\b/i;
 function rankQuestions(items,{offer,seed}){
  const focus=tokens([seed,...offer.h1,offer.title.split(/\s[|–—-]\s/)[0]].join(' '));
  const extras=tokens(offer.h2.join(' '));
@@ -94,7 +96,9 @@ function rankQuestions(items,{offer,seed}){
   const topical=matches*3+Math.min(detail,2)+(matches>=2?2:0)+Math.round(seedHit*4)+(matches&&isQuestion(q.text)?1:0);
   const google=q.source==='GOOGLE_PEOPLE_ALSO_ASK'||q.source==='GOOGLE_RELATED_SEARCH';
   // All observed, on-topic Google candidates outrank AI ideas. No search-volume inference.
-  const customer=!notCustomer(q.text);
+  // Someone who looks for a provider does not look for a tool (owner 2026-11-12: "consultor geo" got "What is the best GEO
+  // tool?"). A question about software/tools for a keyword that names a provider is another customer.
+  const customer=!notCustomer(q.text)&&!(PROVIDER.test(seed)&&PRODUCT.test(q.text)&&!PROVIDER.test(q.text));
   const relevant=google&&customer&&(topical>0||focusSet.size===0);
   const sourceBoost=q.source==='GOOGLE_PEOPLE_ALSO_ASK'?2:0,buyer=customer&&BUYER.test(q.text)?3:0;
   return {q,index,topical:customer?topical+buyer:-1,score:topical+sourceBoost+buyer,relevant,google,customer};

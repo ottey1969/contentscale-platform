@@ -742,7 +742,10 @@
     // An already tracked keyword isn't a separate page opportunity (owner: "Research: consultor geo" on the consultor geo page).
     var normTopic=function(v){return String(v||'').normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()};
     var topic=normTopic(d.original_tracked_keyword),sameUrl=function(v){return String(v||'').replace(/\/+$/,'')===String(d.url||'').replace(/\/+$/,'')};
-    var candidates=(sc.candidates||[]).filter(function(c){return !(topic&&normTopic(c.query)===topic)&&!(c.url&&sameUrl(c.url))});
+    var tw=topic?topic.split(' ').filter(function(w){return w.length>2}):[];
+    // A variant that holds every word of this page's tracked keyword ("consultor geo españa") belongs to this page too.
+    var variantOfThis=function(q){var w=normTopic(q).split(' ');return tw.length>0&&tw.every(function(x){return w.indexOf(x)>=0})};
+    var candidates=(sc.candidates||[]).filter(function(c){return !(topic&&normTopic(c.query)===topic)&&!variantOfThis(c.query)&&!(c.url&&sameUrl(c.url))});
     if(candidates.length){
      candidates.forEach(function(c){
       addAction('Research: '+c.query, String(c.impressions)+' impressions · '+String(c.clicks)+' clicks · position '+String(c.best_position),

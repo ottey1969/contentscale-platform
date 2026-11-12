@@ -388,7 +388,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Shared words only propose candidate tasks: the meaning check confirms the reader question and the page verdict.
   if(selectedSource&&(coverage.tasks||[]).some(t=>t.supported_by_competitors)){
    let judgement;
-   try{judgement=await judgeTasks({query:targetQuery,coverage,pageSections:groupSections(pageBlocks(selectedSource.html))})}
+   try{judgement=await judgeTasks({query:targetQuery,coverage,pageSections:groupSections(pageBlocks(selectedSource.html)),language:((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(String(selectedSource.html||''))||[])[1]||'').toLowerCase()||null})}
    catch(e){judgement={status:'JUDGE_UNAVAILABLE',error:String(e?.code||'JUDGE_FAILED').slice(0,40),verdicts:{}}}
    applyTaskMeaning(coverage,judgement||{status:'JUDGE_UNAVAILABLE',verdicts:{}});
   }
@@ -1015,7 +1015,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     '<style>body{font:15px/1.55 system-ui;color:#172337;background:#f6f8fc;margin:0;padding:24px}main{max-width:760px;margin:auto;background:white;border:1px solid #d9e1ec;border-radius:12px;padding:20px}a{color:#1d4ed8}</style></head><body><main>'+body+'</main></body></html>');
   const back='/track/'+encodeURIComponent(req.params.token)+'/growth';
   if(req.growth?.can_edit!==true)return page(403,'<h1>Owner access needed</h1><p>Only the Tracker owner can open a Pre-Write Brief in Growth.</p><p><a href="'+back+'">← Growth</a></p>');
-  const b=await loadBriefForGrowth(req.growthTrackerClientId,{briefId:req.query?.brief_id,jobId:req.query?.job_id});
+  // Without a saved Brief (a NOT PASSED result that was not kept): the page, keyword and market from the Pre-Write form.
+  const direct=!req.query?.brief_id&&!req.query?.job_id&&/^https?:\/\//i.test(String(req.query?.url||''));
+  const b=direct?{keyword:String(req.query.keyword||'').slice(0,120),region:String(req.query.region||''),ref:'prewrite-unsaved',
+    brief:{content_decision:{closest_existing_url:String(req.query.url).slice(0,500)}}}
+   :await loadBriefForGrowth(req.growthTrackerClientId,{briefId:req.query?.brief_id,jobId:req.query?.job_id});
   if(!b)return page(404,'<h1>Brief not found</h1><p>This Pre-Write Brief does not exist for this Tracker.</p><p><a href="'+back+'">← Growth</a></p>');
   const target=String(b.brief.content_decision&&b.brief.content_decision.closest_existing_url||'');
   const tracked=(req.growth?.pages||[]).find(x=>x&&x.url&&sameUrl(x.url,target));
@@ -1023,7 +1027,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(!tracked)return page(409,'<h1>This page is not in the Tracker yet</h1><p><strong>'+sHtml(target)+'</strong> is not one of the pages this Tracker follows. Add it as a page in the Tracker; then open the Brief again and choose <em>Expand this page in Growth</em>. Nothing was changed.</p><p><a href="'+back+'">← Growth</a></p>');
   const market=String(b.region||'').trim().slice(0,2).toLowerCase();
   const q=new URLSearchParams({page_id:String(tracked.id)});
-  if(b.keyword)q.set('query',String(b.keyword).slice(0,120));
+  // The customer question the Brief was built on (owner 2026-11-12), else its keyword.
+  const cq=String(b.brief&&b.brief.customer_question&&b.brief.customer_question.text||'').trim();
+  if(cq||b.keyword)q.set('query',String(cq||b.keyword).slice(0,120));
   if(/^[a-z]{2}$/.test(market))q.set('market',market);
   q.set('from',b.ref);
   return res.redirect(302,'/track/'+encodeURIComponent(req.params.token)+'/growth/auto-research?'+q.toString());
