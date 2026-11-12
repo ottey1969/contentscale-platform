@@ -291,12 +291,12 @@
   // One clear next step: AI answers only when needed, otherwise continue with selection.
   var aiSummary=d.ai_check&&d.ai_check.summary;
   var aiDone=!!(aiSummary&&aiSummary.total>0&&aiSummary.checked===aiSummary.total&&aiSummary.verifiable===aiSummary.total);
-  var nav=node('p',null,primary);nav.id='growthDecisionNav';var next=node('a',aiDone?'Continue to Step 3 · Write selected improvements':'Go to Step 2 · Check AI answers',nav);
+  var nav=node('p',null,primary);nav.id='growthDecisionNav';var next=node('a',aiDone?'Choose the improvements to write':'Review AI systems research (optional)',nav);
   next.href=aiDone?'#growthGapChoice':'#growthAiCheck';
   if(aiDone)node('small','AI answers have been saved for this query. You can continue with the selected improvements.',nav);
   // AI answers for this search term: offered right after the decision, read fresh on every load, never re-running research.
-  if(d.ai_check){var aiBox=section('Step 2 · AI answers for “'+d.ai_check.search_term+'” — optional');aiBox.id='growthAiCheck';
-   if(!d.ai_check.summary||!d.ai_check.summary.checked)node('p','No current AI-system answers available. When you choose Write selected with AI in step 1, a pop-up will let you check AI systems first or continue using Google research only.',aiBox);
+  if(d.ai_check){var aiBox=section('AI systems research · “'+d.ai_check.search_term+'”');aiBox.id='growthAiCheck';
+   if(!d.ai_check.summary||!d.ai_check.summary.checked)node('p','No current independently verified AI answers. Gemini may check automatically; you may research other engines or continue using Google evidence. Writing will ask for your choice if required.',aiBox);
    renderAiCheck(aiBox,d);
    if(keepText){var t2=aiBox.querySelector('textarea:not([readonly])'),s2=aiBox.querySelector('select');if(t2)t2.value=keepText;if(s2&&keepEngine)s2.value=keepEngine}}
   // What the ranking pages have and this page does not: the editor chooses what goes on the page (Growth's own proposal
