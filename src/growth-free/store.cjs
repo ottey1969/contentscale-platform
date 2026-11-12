@@ -42,6 +42,8 @@ function ensureTables(pool){
   await addColumn('market','JSONB');
   // The language the visitor used the check in (en/nl/es): result page, messages and e-mails follow it.
   await addColumn('ui_lang','TEXT');
+  // AI-written topic names in the language of the check, per language: { lang: { fp, map } } (src/growth-free/topic-lang.cjs).
+  await addColumn('topic_texts','JSONB');
   // Measurement after publication (visitor's choice): the date the change went live and one e-mail about 4 weeks later.
   await addColumn('published_on','DATE');
   await addColumn('reminder_due_at','TIMESTAMPTZ');
@@ -145,7 +147,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang,topic_texts FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){
@@ -212,7 +214,7 @@ async function setPublication(pool,{checkId,publishedOn,dueAt,base=null}){
    WHERE id=$1 RETURNING emails,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_token,reminder_base,email`,[checkId,publishedOn||null,dueAt||null,token(18),base])).rows[0]||null;
 }
 async function dueReminders(pool,{now=new Date(),limit=50}={}){
- return (await pool.query(`SELECT id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token,reminder_base FROM growth_free_checks
+ return (await pool.query(`SELECT id,public_id,access_key,email,emails,access_label,invite_id,url,query,summary,market,report->'search_discovery'->'search_locale'->>'hl' AS hl,published_on::text AS published_on,reminder_token,reminder_base,ui_lang FROM growth_free_checks
    WHERE reminder_due_at<=$1 AND reminder_sent_at IS NULL AND reminder_opt_out_at IS NULL AND reminder_attempts<3 AND status='DONE' ORDER BY reminder_due_at LIMIT $2`,[now,limit])).rows;
 }
 async function markReminder(pool,{id,sent}){
