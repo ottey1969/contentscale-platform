@@ -31,10 +31,11 @@ function registerPrewriteCustomerQuestion(app, pool, { discover = discoverCustom
       if (bucket.length >= perHour) return res.status(429).json({ success: false, error: 'Too many lookups this hour; the keyword is used for now.' });
       bucket.push(now()); used.set(cr.rows[0].id, bucket);
       const out = await discover({ keyword, gl, hl, model: model !== undefined ? model : require('./growth-task-meaning.cjs').geminiModel() });
-      const questions = (out.questions || []).slice(0, 8).map(q => ({ text: q.text, label: q.label || null, source: q.source || null }));
+      // Questions of people who want to do the job (salary, course, how to become) are never offered as the customer question.
+      const questions = (out.questions || []).filter(q => q.priority !== 'NOT_A_CUSTOMER_QUESTION').slice(0, 8).map(q => ({ text: q.text, label: q.label || null, source: q.source || null }));
       const best = questions.find(q => q.text === out.best_question) || null;
       const value = { keyword, market: { gl, hl }, best_question: best ? best.text : null, best_label: best ? best.label : null, questions,
-        selection_source: out.selection_source || 'NONE' };
+        selection_source: out.selection_source || 'NONE', google_status: (out.google && out.google.status) || null, ai_status: (out.ai && out.ai.status) || null };
       cache.set(key, { at: now(), value }); if (cache.size > 2000) cache.delete(cache.keys().next().value);
       res.set('Cache-Control', 'no-store').json({ success: true, ...value });
     } catch (e) { console.warn('[prewrite-customer-question]', String(e && (e.code || e.message)).slice(0, 80)); res.status(503).json({ success: false, error: 'Questions unavailable; the keyword is used.' }); }

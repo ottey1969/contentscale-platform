@@ -117,7 +117,14 @@
           qInput.value = d.best_question; qInput.dataset.source = d.best_label || '';
           qSrc.textContent = 'Chosen automatically: ' + (d.best_label || 'customer question') + '. Change it or pick another below.';
           (d.questions || []).filter(function (q) { return q.text !== d.best_question; }).slice(0, 5).forEach(function (q) { qChips.appendChild(chip(q.text, q.label, false)); });
-        } else { qInput.value = kw; qInput.dataset.source = ''; qSrc.textContent = (d && d.error) || 'No customer question found for this keyword; the keyword is used.'; }
+        } else {
+          qInput.value = kw; qInput.dataset.source = '';
+          // Say why, so a missing key or an empty Google result is visible instead of a silent fallback.
+          var why = d && d.google_status === 'GOOGLE_NOT_CONFIGURED' ? 'Google search is not configured on the server'
+            : d && d.google_status === 'GOOGLE_UNAVAILABLE' ? 'Google search did not answer'
+            : d && d.success ? 'Google shows no customer question for this keyword in this market' : '';
+          qSrc.textContent = (d && d.error) || ((why ? why + '; ' : '') + 'the keyword is used. Type a customer question yourself if you have one.');
+        }
         qChips.appendChild(chip(kw, 'The keyword itself', true)); syncAsk();
       }).catch(function () { if (seq === qState.seq && !qState.manual) { qInput.value = kw; qSrc.textContent = 'Questions unavailable; the keyword is used.'; syncAsk(); } });
     }
