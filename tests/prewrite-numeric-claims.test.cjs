@@ -41,3 +41,35 @@ test('src/index.js: QA blocks unverified numbers, statistics filter self-promoti
   assert.equal(r.ready_to_write, false);
   assert.ok(r.blockers.some(x => x.code === 'unverified_numbers' && /300 €/.test(x.message)));
 });
+
+test('owner 2026-11-12 "NOT PASSED but still a brief": an amount is verified on its source page, or taken out of the copy', () => {
+  const b = { opening_passage: { direct_answer: 'Un consultor GEO optimiza tu marca para la IA. Los costes van de 800 € a 5.000 € al mes. Depende del alcance.' },
+    ai_answer: { answer: 'Optimiza tu marca. Auditorías desde 1.000 €.', key_takeaways: ['GEO da visibilidad en IA.', 'Los costes varían: auditorías (1.000-6.000 €).'] },
+    quick_facts: [{ label: 'Plataformas', value: 'ChatGPT, Gemini' }, { label: 'Rango Precio Auditoría', value: '500 € - 2.500 €' }] };
+  const pages = [{ url: 'https://www.upliora.es/blog/x', title: 'Mejor experto GEO', text: 'Auditorías GEO desde 1.500 €, proyectos de implementación 6.000–18.000 €, retainers desde 800 €/mes.' },
+    { url: 'https://example.com/visitas', title: 'Tráfico', text: 'Tenemos 5.000 visitas al mes.' }];
+  const un = M.unverifiedNumbers(b);
+  const r = M.verifyOnPages(un, pages);
+  assert.deepEqual(r.verified.map(x => x.number).sort(), ['6000', '800']);
+  assert.match(r.verified.find(x => x.number === '800').excerpt, /retainers desde 800 €\/mes/);
+  assert.ok(!r.verified.some(x => x.number === '5000'), '5.000 without a currency sign is not a price');
+  const removed = M.removeUnverified(b, r.left);
+  assert.equal(b.opening_passage.direct_answer, 'Un consultor GEO optimiza tu marca para la IA. Depende del alcance.');
+  assert.equal(b.ai_answer.answer, 'Optimiza tu marca.');
+  assert.deepEqual(b.ai_answer.key_takeaways, ['GEO da visibilidad en IA.']);
+  assert.deepEqual(b.quick_facts.map(x => x.label), ['Plataformas']);
+  assert.equal(removed.length, 4);
+  assert.deepEqual(M.unverifiedNumbers({ ...b, price_facts: r.verified }), [], 'nothing left to block');
+  assert.equal(M.findOnPage('Desde 4.500 euros al mes', '4500'), 'Desde 4.500 euros al mes');
+  assert.equal(M.findOnPage('We had 1500 visitors', '1500'), null);
+});
+
+test('src/index.js: verification runs before the final pass, from the Brief\'s own source pages, without a model call; the text shows both lists', () => {
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '../src/index.js'), 'utf8');
+  const at = src.indexOf("const _nc=require('./prewrite-numeric-claims.cjs'),_un0=_nc.unverifiedNumbers(brief);");
+  assert.ok(at > 0 && at < src.indexOf('_pwbFinalPublicationPass(brief);', at));
+  assert.match(src, /brief\.ai_source_leads\|\|\[\]\)\.map\(x=>x&&x\.url\),\(_pwbExternalCandidates/);
+  assert.match(src, /const _removed=_nc\.removeUnverified\(brief,_res\.left\);/);
+  assert.match(src, /PRICE FACTS — VERIFIED ON THE SOURCE PAGE/); assert.match(src, /REMOVED — AMOUNTS NO SOURCE PAGE CONFIRMED/);
+  assert.match(src, /penalize\(2,'unverified_numbers_removed'/);
+});
