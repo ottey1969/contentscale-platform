@@ -42,3 +42,27 @@ test('"Expand this page in Growth" always opens Growth; variants of the tracked 
   const ui = fs.readFileSync(path.join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
   assert.match(ui, /!variantOfThis\(c\.query\)/);
 });
+
+test('owner 2026-11-12 "consultor geo" (Spain): Spanish provider titles establish the SERP intent; the AI question follows the research market', async () => {
+  const cov = require('../src/growth-reader-task-coverage.cjs');
+  const titles = ['Consultor GEO: visibilidad en ChatGPT y Gemini', 'Consultor GEO en Valencia | Rafa Villaplana', 'Ranking de consultores GEO en España 2026',
+    'Cómo ser consultor SEO y GEO: habilidades, herramientas y sueldos', 'Mejor consultor GEO en España (2026): guía y criterios',
+    'El Mejor Experto en GEO en España 2026: Consultor Generative Engine Optimization', 'Consultor GEO | Raúl Veneri', 'Consultor GEO: SEO para Inteligencia Artificial'];
+  assert.deepEqual(titles.map(t => cov.classifyTitle(t)), ['SERVICE_PROVIDER', 'SERVICE_PROVIDER', 'PROVIDER_LIST', 'INFORMATIONAL_GUIDE', 'PROVIDER_LIST', 'PROVIDER_LIST', 'SERVICE_PROVIDER', 'SERVICE_PROVIDER']);
+  const r = cov.inferSerpIntent({ query: 'consultor geo', leads: titles.map((title, i) => ({ url: 'https://s' + i + '.example/x', title })) });
+  assert.notEqual(r.status, 'SERP_INTENT_NOT_ESTABLISHED', JSON.stringify(r).slice(0, 300));
+  assert.equal(cov.classifyTitle('Wat is GEO? Uitleg'), 'INFORMATIONAL_GUIDE');
+  // The AI question: page → Pre-Write Brief → site, as the research does.
+  const seen = [], routes = {};
+  const app = { get: (p, mw, h) => { routes['GET ' + p] = h; }, post: (p, mw, h) => { routes['POST ' + p] = h; } };
+  process.env.SERPER_API_KEY = process.env.SERPER_API_KEY || 'TEST-KEY';
+  require('../src/tracker-growth-automatic-routes.cjs').registerGrowthAutomaticResearch(app, { query: async () => ({ rows: [] }) }, (q, s, n) => n && n(), {
+    questionFetch: async (u, init) => { seen.push(JSON.parse(init.body)); return { ok: true, json: async () => ({ peopleAlsoAsk: [{ question: '¿Cuánto cuesta un consultor GEO?' }] }) }; },
+    loadPageMarkets: async () => null, loadSiteMarkets: async () => ({ countries: ['US'], language: 'en' }),
+    loadPrewriteMarket: async () => ({ countries: ['ES'], language: 'es', brief: { id: 44 } }), loadAiAnswers: async () => [] });
+  const res = await new Promise(resolve => routes['GET /api/tracker-client/:token/growth/ai-check']({ params: { token: 'T' }, query: { page_id: '2538', query: 'consultor geo' },
+    growth: { can_edit: true, pages: [{ id: 2538, url: 'https://es.example/consultor-geo/', keyword: 'consultor geo' }] }, growthTrackerClientId: 7 },
+    { statusCode: 200, status(c) { this.statusCode = c; return this; }, set() { return this; }, json(b) { resolve(b); } }));
+  assert.deepEqual([seen[0].gl, seen[0].hl], ['es', 'es'], 'Spain from the Pre-Write Brief, not the US site default');
+  assert.equal(res.ai_check.ai_question.text, '¿Cuánto cuesta un consultor GEO?');
+});

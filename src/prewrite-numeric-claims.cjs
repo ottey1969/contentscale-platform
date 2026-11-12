@@ -26,7 +26,9 @@ function claimsOf(brief) {
   const fields = [['opening_passage', op.direct_answer || (typeof op === 'string' ? op : '')],
     ['ai_answer', [aa.answer, aa.direct_answer, aa.short_answer].concat(Array.isArray(aa.key_takeaways) ? aa.key_takeaways : []).filter(Boolean).join(' ')],
     ['quick_facts', (Array.isArray(b.quick_facts) ? b.quick_facts : []).map(f => f && (f.label + ': ' + f.value)).join(' · ')],
-    ['meta_description', (b.meta_package || {}).meta_description || '']];
+    ['meta_description', (b.meta_package || {}).meta_description || ''],
+    // The blueprint's citation hooks are lifted by AI systems too (owner 2026-11-12: "500 € … 15.000 €" stayed in a hook).
+    ['citation_hook', [].concat(b.definitive_outline || [], b.page_blueprint || []).map(x => x && x.citation_hook).filter(Boolean).join(' ')]];
   const out = [];
   for (const [field, text] of fields) {
     const t = String(text || ''), seen = new Set();
@@ -102,8 +104,24 @@ function removeUnverified(brief, left) {
     for (const k of ['answer', 'direct_answer', 'short_answer']) if (typeof aa[k] === 'string') aa[k] = clean(aa[k], 'ai_answer');
     if (Array.isArray(aa.key_takeaways)) aa.key_takeaways = aa.key_takeaways.filter(x => { if (hasBad(x)) { removed.push({ field: 'ai_answer', text: String(x) }); return false; } return true; });
   }
+  for (const list of [brief.definitive_outline, brief.page_blueprint]) if (Array.isArray(list)) for (const sec of list)
+    if (sec && typeof sec.citation_hook === 'string' && hasBad(sec.citation_hook)) sec.citation_hook = clean(sec.citation_hook, 'citation_hook');
   if (Array.isArray(brief.quick_facts)) brief.quick_facts = brief.quick_facts.filter(f => { const t = f && (f.label + ': ' + f.value); if (f && hasBad(t)) { removed.push({ field: 'quick_facts', text: t }); return false; } return true; });
   return removed;
 }
 
-module.exports = { claimsOf, numbersIn, supportCorpus, unverifiedNumbers, isSelfPromo, findOnPage, verifyOnPages, removeUnverified };
+// Expanding an existing page: an action that says to create a new page contradicts the decision (same brief: "Crear el
+// contenido de la nueva página 'consultor-geo-precios-medicion-ia'" while the slug was /consultor-geo/).
+const NEW_PAGE_ACTION = /\b(?:new page|nueva p[aá]gina|nieuwe pagina|neue seite|nouvelle page|crear (?:una |la )?(?:nueva )?p[aá]gina|create (?:a |the )?(?:new )?page|maak (?:een )?nieuwe pagina)\b/i;
+const EXPAND_TEXT = { es: url => 'Amplía la página existente ' + url + ' con las secciones del blueprint; no crees una URL nueva.', nl: url => 'Breid de bestaande pagina ' + url + ' uit met de secties uit de blueprint; maak geen nieuwe URL.', en: url => 'Expand the existing page ' + url + ' with the blueprint sections; do not create a new URL.' };
+function alignActionPlan(brief, language) {
+  const cd = brief && brief.content_decision || {}, url = String(cd.closest_existing_url || '');
+  if (!/EXPAND|OPTIMIZE/i.test(String(cd.recommended_treatment || '')) || !/^https?:\/\//.test(url) || !Array.isArray(brief.action_plan)) return 0;
+  const before = brief.action_plan.length;
+  const kept = brief.action_plan.filter(a => !NEW_PAGE_ACTION.test(String(a && (a.action || a) || '')));
+  if (kept.length === before) return 0;
+  const lang = /^(es|spa|spanish|espa)/i.test(String(language || '')) ? 'es' : /^(nl|dut|neder)/i.test(String(language || '')) ? 'nl' : 'en';
+  brief.action_plan = [{ action: EXPAND_TEXT[lang](url) }].concat(kept);
+  return before - kept.length;
+}
+module.exports = { alignActionPlan, claimsOf, numbersIn, supportCorpus, unverifiedNumbers, isSelfPromo, findOnPage, verifyOnPages, removeUnverified };

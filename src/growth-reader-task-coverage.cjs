@@ -49,6 +49,10 @@ const TOOL_PAGE=/\b(?:tool|software|platform|app|checker|tracker|generator|analy
 // Who provides a service (English and Dutch; no sector words). Plural nouns name a list of providers.
 const PROVIDER_NOUNS=/\b(agencies|companies|firms|experts|specialists|consultants|consultancies|providers|freelancers|bureaus|specialisten|adviseurs|bedrijven)\b/;
 const PROVIDER_PAGE=/\b(services?|agency|consult(?:ing|ant|ants|ancy)|specialists?|experts?|hire|freelancers?|bureau|firm|diensten|specialisten|adviesbureau)\b/;
+const PROVIDER_NOUNS_ES=/\b(?:agencias|empresas|expertos|especialistas|consultores|consultoras|profesionales|asesores|bureaus|adviesbureaus|consultants)\b/;
+const PROVIDER_PAGE_ES=/\b(?:consultor(?:a|es)?|consultor[ií]a|agencia|servicios?|experto|especialista|asesor(?:[ií]a)?|contratar|freelance|profesional|adviseur|adviesbureau|consultant|consultancy)\b/;
+const COMMERCIAL_ES=/\b(?:mejor(?:es)?|ranking|precios?|tarifas?|comparativa|opiniones|alternativas|beste|prijzen|vergelijking|kosten)\b|rese[nñ]as|cu[aá]nto cuesta|cu[aá]nto cobra/;
+const INFO_ES=/\s(?:qu[eé] es|qu[eé] hace|c[oó]mo|por qu[eé]|gu[ií]a|consejos|pasos|wat is|hoe|waarom|handleiding)\s/;
 const NON_COMMERCIAL_BEST=/\bbest\s+(?:practices?|ways?|time|approach|method)\b/gi;
 // A title phrased as a question ("WTF is AI citation tracking?") is an explainer; a page under a product path
 // (/features/, /solutions/, /tools/, /pricing) is the product's own page. Both only decide titles nothing else classifies.
@@ -77,6 +81,12 @@ function classifyTitleText(title,snippet=''){
  if(/\b(what is|what are|what to do|how to|how do|how much|how long|how many|why|when to|guide|tips|ways|steps|strateg(?:y|ies)|explained|everything you need|need to know|what you need|what [a-z ]{0,30}need to|best practices?|checklist|examples|getting started|quick reference|introduction to|beginner'?s?|basics|overview|tutorial|faqs?|signs of|causes of)\b|\b\d+ (?:tips|ways|steps|strategies|best practices)\b/.test(tt))return 'INFORMATIONAL_GUIDE';
  // A provider's own page for a service, without a place ("Expert-Led GEO Services", "GEO-optimalisatie bureau").
  if(PROVIDER_PAGE.test(tt))return 'SERVICE_PROVIDER';
+ // Spanish and Dutch titles (owner 2026-11-12: "consultor geo" in Spain gave 7 of 8 results UNCLASSIFIED, so Growth blocked
+ // with SERP_INTENT_NOT_ESTABLISHED). Accented words are matched without \b, which does not work next to é or ó.
+ if((PROVIDER_NOUNS_ES.test(tt)||PROVIDER_PAGE_ES.test(tt))&&(/\b(?:mejor(?:es)?|top|ranking|beste)\b/.test(tt)||/^\s*(?:los\s+|las\s+|de\s+)?\d+\s/.test(tt)))return 'PROVIDER_LIST';
+ if(COMMERCIAL_ES.test(tt))return 'COMMERCIAL_COMPARISON';
+ if(INFO_ES.test(' '+tt.replace(/[¿¡:|–—-]/g,' ')+' '))return 'INFORMATIONAL_GUIDE';
+ if(PROVIDER_PAGE_ES.test(tt))return 'SERVICE_PROVIDER';
  // A software product's own page: the title names the tool itself, not a guide about it or a list of tools.
  if(TOOL_PAGE.test(tt))return 'PRODUCT_TOOL';
  return 'UNCLASSIFIED';
