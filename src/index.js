@@ -666,6 +666,14 @@ function detectSearchIntent(kw, org, paaArr, aiOv, comps) {
   const geoHit = geoW.some(w => kwl.includes(w)) || /\b[a-z]{2}\s+20\d{2}\b/.test(kwl);
   if (serviceHit && geoHit) { score.transactional += 5; evidence.push('Local service + geography/year signal'); }
 
+  // Someone who searches for a provider wants to hire one (owner 2026-11-12: "consultor geo" came out informational because
+  // the SERP pages also explain "qué es GEO"). A keyword that names a provider, or a SERP where most top results are
+  // providers offering the service, is commercial: choosing whom to hire.
+  const providerRe = /\b(?:consultor(?:a|es)?|consultor[ií]a|consultant|consultancy|consulting|agencia|agency|agencies|bureau|specialist|especialista|experto|expert|freelancer?|asesor(?:[ií]a)?|adviseur|advisor|advocaat|abogado|lawyer|attorney|dentista|dentist|tandarts|fot[oó]grafo|photographer|fotograaf|arquitecto|architect|aannemer|contratista)\b/i;
+  if (providerRe.test(kwl)) { score.commercial += 4; evidence.push('Keyword names a service provider'); }
+  const providerRows = orgRows.slice(0, 8).filter(o => providerRe.test(String(o.title || '')) || /\b(?:servicios|services|diensten|contratar|hire|presupuesto|offerte|quote)\b/i.test(String(o.title || ''))).length;
+  if (providerRows >= 3) { score.commercial += providerRows * 2; evidence.push(providerRows + ' of the top results are providers offering the service'); }
+
   const fw = orgRows.slice(0,8).map(o => (o.title||'').toLowerCase().split(/[\s|\u2014-]/)[0]).filter(Boolean);
   const bc = {}; fw.forEach(w => { bc[w] = (bc[w]||0)+1; });
   const tb = Object.entries(bc).sort((a,b)=>b[1]-a[1])[0];
@@ -47573,6 +47581,9 @@ function _renderIntentBar(si) {
 }
 // Regenerate the brief for a chosen intent (only reachable from the low-confidence bar).
 async function _pwbRegenWithIntent(intent) {
+  // The same flow as "Analyse & create": the persisted job is followed to the end and a NOT PASSED result is shown as a
+  // diagnostic preview with "Complete missing only", instead of only an error line (owner 2026-11-12).
+  if (typeof generatePrewriteBrief === 'function' && document.getElementById('pwbKeyword')) { return generatePrewriteBrief({ intentOverride: intent }); }
   if (!_lastPwbInput) return;
   var stat = document.getElementById('pwbStatus');
   var result = document.getElementById('pwbResult');
