@@ -12,6 +12,8 @@ on:
       - 'tests/growth-free-cms-package.test.cjs'
       - 'tests/growth-customer-questions.test.cjs'
       - 'tests/growth-free-measurement.test.cjs'
+      - 'tests/growth-free-contacts.test.cjs'
+      - 'src/rank-free/**'
       - 'src/growth-measurement-reminders.cjs'
       - 'tests/helpers/zip.cjs'
       - 'public/prewrite-ai-answer-research.js'
@@ -33,6 +35,8 @@ on:
       - 'tests/growth-free-cms-package.test.cjs'
       - 'tests/growth-customer-questions.test.cjs'
       - 'tests/growth-free-measurement.test.cjs'
+      - 'tests/growth-free-contacts.test.cjs'
+      - 'src/rank-free/**'
       - 'src/growth-measurement-reminders.cjs'
       - 'tests/helpers/zip.cjs'
       - 'public/prewrite-ai-answer-research.js'
@@ -88,4 +92,4 @@ jobs:
           npm install --no-save --ignore-scripts playwright
           npx playwright install --with-deps chromium
       - name: End-to-end Free Growth browser and isolated PostgreSQL test
-        run: node --test --test-concurrency=1 tests/growth-free-e2e.test.cjs tests/growth-free-insufficient-e2e.test.cjs tests/growth-free-owner-e2e.test.cjs
+        run: node --test --test-concurrency=1 tests/growth-free-e2e.test.cjs tests/growth-free-insufficient-e2e.test.cjs tests/growth-free-owner-e2e.test.cjs tests/growth-free-contacts.test.cjs

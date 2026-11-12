@@ -10,6 +10,7 @@ const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require
 const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const aiGap=require('./ai-gap.cjs');
+const contacts=require('./contacts.cjs');
 const {writeForSelection,planBatch,pageFingerprint,headingsStillPresent,headingsMessage,explainWriterFailure,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts,styleIssues}=require('../growth-source-grounded-editor.cjs');
@@ -852,6 +853,11 @@ function adminPage(cfg,api,base,loggedIn){
   <p><button>Create invitation link</button> <small role="status" id="is"></small></p></form><div id="newlink"></div></div>
  <h2>Invitations</h2><div id="invites"></div>
  <h2>Leads</h2><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div>
+ <div class="card" id="contactsCard"><h2 style="margin-top:0">Contacts per country</h2><p class="muted">Only the free rank tracker and Free Growth (never the paid Tracker). “Tips” = ticked “send me occasional tips”.</p>
+  <div class="rtabs" role="tablist"><button type="button" class="ctab" data-src="rank" aria-selected="true">Rank tracker</button><button type="button" class="ctab" data-src="growth" aria-selected="false">Free Growth</button></div>
+  <label>Country<select id="cCountry"></select></label><label class="check"><input type="checkbox" id="cTips"><span>Only people who want tips</span></label>
+  <p><a id="cCsv" class="btn ghost" href="#">Download CSV of this selection</a> <button type="button" id="cDelAll" class="ghost">Delete everyone in this selection</button> <small role="status" id="cStatus"></small></p>
+  <div id="cRows"></div></div>
  <div class="card"><h2 style="margin-top:0">Delete someone's data</h2><form id="ff"><label>Email address<input name="email" type="email" required></label><p><button>Delete everything for this email</button> <small role="status" id="fs"></small></p></form></div>
 </div>
 <script>
@@ -886,7 +892,7 @@ async function load(){
  var d=await get('/admin/leads');
  document.getElementById('leads').innerHTML='<h3>Hire requests ('+d.hires.length+')</h3>'+d.hires.map(function(h){return '<div class="card"><strong>'+esc(h.name)+'</strong> &lt;'+esc(h.email)+'&gt; '+esc(h.company||'')+' '+esc(h.phone||'')+'<br><small>'+esc(h.created_at)+' · '+esc(h.url)+' · '+esc(h.decision||'')+' · '+esc(h.access_label||'')+'</small><p>'+esc(h.message||'')+'</p></div>'}).join('')+
  '<h3>Checks ('+d.checks.length+')</h3>'+d.checks.map(function(c){return '<div class="card"><strong>'+esc(c.email)+'</strong>'+(c.marketing_consent?' · may be emailed':'')+'<br><small>'+esc(c.access_label||'')+' · '+esc(c.created_at)+' · '+esc(c.status)+' · '+esc(c.decision||c.error_code||'')+(c.cached?' · cached':'')+'</small><br><a href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">'+esc(c.url)+'</a> '+esc(c.query||'')+'</div>'}).join('')}
-document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load()});
+document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load();loadContacts()});
 document.getElementById('logout').addEventListener('click',async function(){await post('/admin/logout');location.reload()});
 var rfForm=document.getElementById('rf');if(rfForm)rfForm.addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked,ai_answers:aiStartAnswers()});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
 document.getElementById('if').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('is');var d=await post('/admin/invites',{label:f.label.value,email_lock:f.email_lock.value,max_checks:Number(f.max_checks.value),days:Number(f.days.value)});if(!d.success){st.textContent=d.error;return}st.textContent='';f.reset();f.max_checks.value=3;f.days.value=7;
@@ -894,7 +900,24 @@ document.getElementById('if').addEventListener('submit',async function(e){e.prev
 document.addEventListener('click',async function(e){var b=e.target.closest('button.revoke');if(!b)return;if(!confirm('Withdraw this invitation? The link stops working immediately.'))return;var d=await post('/admin/invites/'+b.dataset.id+'/revoke');if(!d.success)alert(d.error);load()});
 document.getElementById('csv').addEventListener('click',async function(e){e.preventDefault();var r=await fetch(API+'/admin/leads.csv',{credentials:'same-origin'});if(!r.ok){alert('Not logged in');return}var b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='growth-free-leads.csv';a.click()});
 document.getElementById('ff').addEventListener('submit',async function(e){e.preventDefault();if(!confirm('Delete all checks and requests of this email address?'))return;var d=await post('/admin/forget',{email:e.target.email.value});document.getElementById('fs').textContent=d.success?('Deleted '+d.deleted.checks+' checks, '+d.deleted.hire_requests+' requests'):(d.error||'Failed');load()});
-if(${js(!!loggedIn)})load();
+// Contacts per country: rank tracker or Free Growth, one country or all, tips only; delete one or the whole selection.
+var CSRC='rank',CNAMES={};
+function cParams(){var c=document.getElementById('cCountry').value,t=document.getElementById('cTips').checked;return 'source='+CSRC+(c?'&country='+encodeURIComponent(c):'')+(t?'&tips=1':'')}
+async function loadContacts(){var st=document.getElementById('cStatus');st.textContent='Loading…';var d=await get('/admin/contacts?'+cParams());if(!d.success){st.textContent=d.error||'Not available';return}
+ var sel=document.getElementById('cCountry'),cur=sel.value;sel.innerHTML='<option value="">All countries ('+d.total+')</option>'+d.countries.map(function(c){return '<option value="'+esc(c.country)+'">'+(c.country==='NONE'?'Unknown country':esc(c.country))+' — '+c.contacts+' ('+c.tips+' want tips)</option>'}).join('');sel.value=cur;
+ document.getElementById('cDelAll').textContent='Delete everyone in this selection ('+d.rows.length+')';document.getElementById('cDelAll').disabled=!d.rows.length;
+ document.getElementById('cRows').innerHTML=d.rows.length?'<style>#cRows td,#cRows th{padding:7px 8px;vertical-align:top}#cRows td:nth-child(2){word-break:break-all}</style><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><th align="left">Country</th><th align="left">Email</th><th align="left">Tips</th><th align="left">'+(CSRC==='rank'?'Website · keywords':'Last page · search term')+'</th><th align="left">Since</th><th></th></tr>'+d.rows.map(function(r){
+   return '<tr style="border-top:1px solid var(--line)"><td>'+esc(r.country||'—')+'</td><td>'+esc(r.email)+'</td><td>'+(r.tips?'yes':'no')+'</td><td><small>'+(CSRC==='rank'?esc(r.host||'')+(r.keywords&&r.keywords.length?' · '+esc(r.keywords.join(', ')):'')+(r.verified_at?'':' · not confirmed')+(r.opted_out_at?' · stopped':''):esc(r.url||'')+(r.query?' · “'+esc(r.query)+'”':'')+' · '+esc(r.checks)+' check(s)')+'</small></td><td><small>'+esc(day(r.created_at))+'</small></td><td><button type="button" class="ghost cDel" data-id="'+esc(r.id)+'" data-email="'+esc(r.email)+'">Delete</button></td></tr>'}).join('')+'</table>':'<p class="muted">No contacts in this selection.</p>';
+ st.textContent=''}
+document.addEventListener('click',async function(e){var t=e.target.closest('.ctab');if(t){CSRC=t.getAttribute('data-src');document.querySelectorAll('.ctab').forEach(function(b){b.setAttribute('aria-selected',String(b===t))});document.getElementById('cCountry').value='';loadContacts();return}
+ var d=e.target.closest('.cDel');if(d){if(!confirm('Delete all data of '+d.getAttribute('data-email')+' in '+(CSRC==='rank'?'the rank tracker':'Free Growth')+'? This cannot be undone.'))return;var r=await post('/admin/contacts/delete',{source:CSRC,id:d.getAttribute('data-id')});document.getElementById('cStatus').textContent=r.success?'Deleted.':(r.error||'Not deleted');loadContacts()}});
+document.getElementById('cCountry').addEventListener('change',loadContacts);document.getElementById('cTips').addEventListener('change',loadContacts);
+document.getElementById('cDelAll').addEventListener('click',async function(){var c=document.getElementById('cCountry').value,t=document.getElementById('cTips').checked;
+ var what=(CSRC==='rank'?'rank tracker':'Free Growth')+' · '+(c?(c==='NONE'?'unknown country':c):'ALL countries')+(t?' · only tips':'');
+ var typed=prompt('This deletes everyone in this selection ('+what+') with all their data. It cannot be undone. Type DELETE to confirm.');if(typed!=='DELETE')return;
+ var r=await post('/admin/contacts/delete-all',{source:CSRC,country:c,tips:t,confirm:'DELETE'});document.getElementById('cStatus').textContent=r.success?r.deleted+' deleted.':(r.error||'Not deleted');loadContacts()});
+document.getElementById('cCsv').addEventListener('click',async function(e){e.preventDefault();var r=await fetch(API+'/admin/contacts.csv?'+cParams(),{credentials:'same-origin'});if(!r.ok){alert('Not logged in');return}var b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='contacts.csv';document.body.appendChild(a);a.click();a.remove()});
+if(${js(!!loggedIn)}){load();loadContacts()}
 </script>`,cfg);
 }
 
@@ -1651,6 +1674,33 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   try{await storage.ensureTables(pool);res.json({success:true,deleted:await storage.forgetEmail(pool,email)})}
   catch(e){res.status(503).json({success:false,error:e.message})}
  });
+ // Contacts per country (rank tracker and Free Growth only): list, CSV, delete one, delete the whole selection.
+ const contactQuery=q=>({source:contacts.SOURCES.includes(String(q.source))?String(q.source):'rank',country:String(q.country||'').toUpperCase()==='NONE'?'NONE':contacts.countryOf(q.country),tipsOnly:q.tips==='1'||q.tips===true});
+ app.get(apiPath+'/admin/contacts',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{res.set('Cache-Control','no-store').json({success:true,...await contacts.listContacts(pool,contactQuery(req.query||{}))})}
+  catch(e){res.status(503).json({success:false,error:e.message})}
+ });
+ app.get(apiPath+'/admin/contacts.csv',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{const q=contactQuery(req.query||{}),list=await contacts.listContacts(pool,q);
+   res.set('Cache-Control','no-store').set('Content-Disposition','attachment; filename="contacts-'+q.source+'-'+(q.country||'all').toLowerCase()+(q.tipsOnly?'-tips':'')+'.csv"').type('text/csv').send(contacts.toCsv(q.source,list.rows))}
+  catch(e){res.status(503).json({success:false,error:e.message})}
+ });
+ if(typeof app.post==='function'){
+  app.post(apiPath+'/admin/contacts/delete',async(req,res)=>{
+   if(!admin(req,res))return;
+   const b=req.body||{},source=String(b.source||'');if(!contacts.SOURCES.includes(source))return res.status(400).json({success:false,error:'Unknown source'});
+   try{res.json({success:true,deleted:await contacts.deleteContact(pool,{source,id:b.id})})}catch(e){res.status(503).json({success:false,error:e.message})}
+  });
+  app.post(apiPath+'/admin/contacts/delete-all',async(req,res)=>{
+   if(!admin(req,res))return;
+   const b=req.body||{};if(!contacts.SOURCES.includes(String(b.source||'')))return res.status(400).json({success:false,error:'Unknown source'});
+   // Irreversible: the owner types DELETE.
+   if(b.confirm!=='DELETE')return res.status(400).json({success:false,error:'Type DELETE to confirm'});
+   try{res.json({success:true,deleted:await contacts.deleteSelection(pool,contactQuery(b))})}catch(e){res.status(503).json({success:false,error:e.message})}
+  });
+ }
  return {config,idle:()=>Promise.all([...jobs]),queueLength:()=>queue.length,sendDueReminders:sendDue};
 }
 
