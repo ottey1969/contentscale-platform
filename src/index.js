@@ -59746,6 +59746,9 @@ function _pwbPublicationQa(b){
   const er=b&&b.evidence_research||{},stats=er.statistics||{},quotes=er.expert_quotes||{};
   if(Number(stats.verified||0)>0&&Number(stats.primary_verified||0)===0)penalize(3,'no_primary_stat','Statistics are source-verified but no statistic has primary-source verification.');
   if(Number(quotes.verified||0)===0&&Number(quotes.attributed_insights||0)===0)penalize(3,'no_expert_evidence','No verified expert quote or attributed expert insight was found.');
+  // Money amounts and percentages the reader takes as fact need a verified source (src/prewrite-numeric-claims.cjs).
+  try{const _un=require('./prewrite-numeric-claims.cjs').unverifiedNumbers(b);if(b)b.verify_first_numbers=_un;
+   if(_un.length)block(10,'unverified_numbers','VERIFY FIRST — numbers without a verified source in the opening passage, AI answer, quick facts or meta description: '+_un.map(x=>x.text).join(', ')+'. They come from unverified AI answers or the model, not from verified evidence. Do not state them as fact: verify each on its source page (then add it as evidence) or remove it before writing.');}catch(_e){}
   return {score:Math.max(0,score),ready_to_write:blockers.length===0,blockers:blockers,warnings:warnings,checked_at:new Date().toISOString(),rule:'Structural readiness decides whether generation is allowed. Publication QA exposes non-blocking quality warnings separately; blockers are reserved for broken/internal/unsafe writer-facing copy.'};
 }
 
@@ -61241,6 +61244,11 @@ ${claimsBlock.slice(0,2400)}`;
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
     _prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);
+    // Expanding an existing page: the slug is that page's own path, never a new URL next to it (owner 2026-11-12: a brief
+    // proposed /consultor-geo-coste while its action plan said to expand /consultor-geo/).
+    try{const _cd=brief&&brief.content_decision||{},_ex=String(_cd.closest_existing_url||'');
+     if(/EXPAND|OPTIMIZE/i.test(String(_cd.recommended_treatment||''))&&/^https?:\/\//i.test(_ex)){const _p=new URL(_ex).pathname;brief.meta_package=brief.meta_package&&typeof brief.meta_package==='object'?brief.meta_package:{};
+      if(brief.meta_package.url_slug&&brief.meta_package.url_slug!==_p)brief.meta_package.proposed_new_slug_not_used=brief.meta_package.url_slug;brief.meta_package.url_slug=_p;}}catch(_e){}
     // The customer question is saved with the Brief and is always the first question it answers.
     if(brief&&typeof brief==='object'&&_pwbAiQuestion){brief.customer_question=_pwbAiQuestion;const _paa=Array.isArray(brief.paa_questions)?brief.paa_questions:[],_qn=x=>String(typeof x==='string'?x:(x&&x.question)||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
      if(!_paa.some(x=>_qn(x)===_qn(_pwbAiQuestion.text)))brief.paa_questions=[_pwbAiQuestion.text].concat(_paa);}
@@ -61610,6 +61618,7 @@ ${sourceText}`;
       let r=_pwbTopicRel({keyword:keyword,title:src&&src.title||'',text:src&&src.text||'',excerpt:excerpt});
       const _drift=r.relevant&&_pwbSerpText.length>200?_pwbSenseDrift({keyword:keyword,title:src&&src.title||'',serpText:_pwbSerpText}):null;
       if(_drift)r={relevant:false,missing:['other meaning: '+_drift]};
+      else if(kind==='statistic'&&require('./prewrite-numeric-claims.cjs').isSelfPromo(excerpt))r={relevant:false,missing:['marketing self-description, not a statistic about the topic']};
       // Titles are shown as text: HTML entities (&#039; &amp; …) become their characters.
       const _pwbPlain=v=>String(v||'').replace(/&(#x[0-9a-f]{1,6}|#\d{1,7}|amp|quot|apos|lt|gt|nbsp);/gi,(m,e)=>{const l=e.toLowerCase();if(l[0]==='#'){const n=l[1]==='x'?parseInt(l.slice(2),16):parseInt(l.slice(1),10);return n>0&&n<0x110000?String.fromCodePoint(n):m;}return {amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',nbsp:' '}[l]||m;});
       if(!r.relevant)_pwbOffTopic.push({kind:kind,source_url:src&&src.url||'',source_title:_pwbPlain(src&&src.title).slice(0,200),excerpt:String(excerpt||'').slice(0,240),missing_topic_terms:r.missing});
