@@ -64,3 +64,17 @@ test('an export whose dates are unknown is shown, not placed; a derived period s
   const d = r.compareUploads([undated, derived], '2026-11-09', '');
   assert.equal(d.before.matches_window, true); assert.equal(d.before.period.inferred, 'Last 28 days');
 });
+
+test('Spanish is Spanish: the reminder follows the language of the check, Spanish is written, not machine-translated', async () => {
+  const r = require('../src/growth-free/reminders.cjs');
+  const es = r.reminderMessage({ url: 'https://acme-roofing.example/', query: 'TEST', publishedOn: '2026-10-01', resultLink: 'https://x.example/r', stopLink: 'https://x.example/s', lang: 'es' });
+  assert.match(es.subject, /Cuatro semanas/); assert.match(es.html, /1 de octubre de 2026/); assert.doesNotMatch(es.html, /What to do|Open Google/);
+  assert.match(r.confirmationMessage({ url: 'https://acme-roofing.example/', publishedOn: '2026-10-01', stopLink: 'y', lang: 'es' }).subject, /Recordatorio activado/);
+  // The check was made in Spanish for an English-language market: Spanish e-mail, and no model call.
+  assert.equal(r.languageOf({ ui_lang: 'es', market: { language: 'en' } }), 'es');
+  assert.equal(r.languageOf({ market: { language: 'nl' } }), 'nl', 'older checks: market language');
+  const sent = [], model = { call: async () => { throw Error('must not be called'); } };
+  await r.sendDueFreeReminders(null, { dueReminders: async () => [{ id: 1, email: 'test-owner@acme-roofing.example', url: 'https://acme-roofing.example/', query: 'TEST', ui_lang: 'es', market: { language: 'en' }, published_on: '2026-10-01', reminder_token: 'TESTTOKEN0123456789' }], markReminder: async () => {} },
+    { now: new Date('2026-11-12T10:00:00Z'), model, send: async m => { sent.push(m); return true; }, links: { result: () => 'x', stop: () => 'y' } });
+  assert.equal(sent.length, 1); assert.match(sent[0].subject, /Cuatro semanas/);
+});

@@ -846,7 +846,7 @@ test('ensureTables: an existing column is not altered again; a missing one is ad
  const store=require('../src/growth-free/store.cjs'),seen=[];
  const pool={query:async sql=>{seen.push(String(sql));
   if(/to_regclass/.test(sql))return {rows:[{t:'growth_free_checks'}]};
-  if(/information_schema\.columns/.test(sql))return {rows:['ui_lang','access_label','invite_id','written','selected_item_ids','write_count','writing_since','writing_token','market','published_on','reminder_due_at','reminder_sent_at','reminder_attempts','reminder_token','reminder_opt_out_at','reminder_base'].map(c=>({column_name:c}))};
+  if(/information_schema\.columns/.test(sql))return {rows:['ui_lang','topic_texts','access_label','invite_id','written','selected_item_ids','write_count','writing_since','writing_token','market','published_on','reminder_due_at','reminder_sent_at','reminder_attempts','reminder_token','reminder_opt_out_at','reminder_base'].map(c=>({column_name:c}))};
   return {rows:[]}}};
  await store.ensureTables(pool);
  const alters=seen.filter(x=>/ALTER TABLE/.test(x));
