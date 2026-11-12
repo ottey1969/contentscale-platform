@@ -14,6 +14,19 @@ r=normalizeDraft({...content,sections:[{h2:'Guaranteed cost',paragraphs:['The pr
 assert.equal(r.draft,null);
 r=normalizeDraft({...content,sections:[{h2:'Warranty',paragraphs:['Our guaranteed and award-winning team always finishes the job quickly without exceptions.']}]},facts.text);
 assert.equal(r.draft,null);
+// Spanish page / English customer question: preserve the page language, not the English SERP titles.
+const {textLanguage}=require('../src/growth-source-grounded-editor.cjs');
+const spanishSource='El contenido de esta página explica cómo una empresa puede comparar las herramientas de SEO y GEO para su sitio web. La información del servicio presenta criterios para revisar la documentación y las condiciones de cada producto. Los usuarios pueden consultar los datos que están disponibles y decidir qué herramientas son adecuadas para sus necesidades.';
+assert.equal(textLanguage(spanishSource),'es','Spanish source must be detected independently of the English query');
+const spanishSection={sections:[{h2:'Cómo comparar herramientas GEO',paragraphs:[
+ 'Para comparar herramientas GEO, revisa la información del producto, su alcance y la claridad de los datos disponibles para una empresa.',
+ 'Cada empresa puede consultar la documentación, revisar las condiciones del servicio y decidir qué criterios son importantes para su sitio web.']}]};
+assert.equal(normalizeDraft(spanishSection,spanishSource,'What is the best GEO tool?',{requireTitle:false}).status,'AI_DRAFT_REVIEW_REQUIRED');
+const englishSection={sections:[{h2:'How to compare GEO tools',paragraphs:[
+ 'When comparing GEO tools, website owners should review the product documentation and the available data about the service before choosing a tool.',
+ 'Readers can examine how information is presented and ask for confirmation before making changes to their existing website.']}]};
+assert.equal(normalizeDraft(englishSection,spanishSource,'What is the best GEO tool?',{requireTitle:false}).status,'AI_DRAFT_WRONG_LANGUAGE','English generated sections on a Spanish page must be retried instead of accepted');
+
 (async()=>{
  let calls=0;
  const none=await generateGrowthEditorDraft({sourceHtml:html,pageUrl:'https://roof.example/roof-repair/'},{apiKey:''});
