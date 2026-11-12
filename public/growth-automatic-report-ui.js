@@ -933,6 +933,8 @@
   node('strong','What the check found',found);var fl=node('ul',null,found);
   var head=ocx?ocx.headline:String(outcome.decision||'').replace(/_/g,' ');if(head)node('li','Growth: '+head,fl);
   ((ocx&&ocx.open_checks)||[]).forEach(function(c){node('li','Still open: '+c.detail+' — '+c.action,fl)});
+  // A working question too long for one Google search: say which term Google was searched with (owner 2026-11-12).
+  var sdx=d.search_discovery||{};if(sdx.search_term_used)node('li','Google searched with “'+sdx.search_term_used+'”: the full question is too long for one Google search. Your full question stays the question for the AI systems.',fl);
   if(gl)node('li','Google: '+(gl.items||[]).length+' difference(s) between the ranking pages and your page, to choose from in step 1.',fl);
   var as=d.ai_check&&d.ai_check.summary,ag=d.ai_check&&d.ai_check.gap;
   var aiFound=node('li',null,fl);aiFound.appendChild(document.createTextNode('AI systems: '+(as&&as.checked?as.headline+(ag&&ag.missing_topics&&ag.missing_topics.length?' · '+ag.missing_topics.length+' topic(s) on cited pages missing from yours':''):'not checked yet')+' · '));var aiJump=node('a','Open AI research',aiFound);aiJump.href='#growthAiCheck';

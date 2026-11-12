@@ -66,3 +66,20 @@ test('owner 2026-11-12 "consultor geo" (Spain): Spanish provider titles establis
   assert.deepEqual([seen[0].gl, seen[0].hl], ['es', 'es'], 'Spain from the Pre-Write Brief, not the US site default');
   assert.equal(res.ai_check.ai_question.text, '¿Cuánto cuesta un consultor GEO?');
 });
+
+test('owner 2026-11-12 Growth package: a Spanish question is searchable; two questions together are searched as the first one', async () => {
+  const d = require('../src/growth-public-search-discovery.cjs');
+  const two = 'Cuánto cobra un consultor GEO? y ¿Cómo vas a medir si mi marca aparece, se cita y se recomienda en ChatGPT, Gemini, Perplexity y Google AI Overviews para las preguntas que realmente hacen mis clientes antes de comprar?';
+  assert.deepEqual(d.searchableTerm('¿Cuánto cobra un consultor GEO?'), { term: '¿Cuánto cobra un consultor GEO?' });
+  assert.equal(d.searchableTerm(two).term, 'Cuánto cobra un consultor GEO?');
+  assert.equal(d.searchableTerm('consultor geo').term, 'consultor geo');
+  const sent = [];
+  const g = await d.optionalGoogleOrganicDiscovery({ query: '¿Cuánto cobra un consultor GEO?', ownUrl: 'https://es.example/consultor-geo/', key: 'TEST',
+    locale: { country: 'ES', gl: 'es', hl: 'es' }, fetchImpl: async (u, init) => { sent.push(JSON.parse(init.body).q); return { ok: true, json: async () => ({ organic: [] }) }; } });
+  assert.notEqual(g.status, 'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH'); assert.equal(sent[0], '¿Cuánto cobra un consultor GEO?');
+  const r = await d.discoverGrowthCompetitorsWithFallback({ query: two, ownUrl: 'https://es.example/x', fetchFree: async () => ({ status: 'NO_RELEVANT_PUBLIC_SEARCH_LEADS', leads: [] }),
+    fetchGoogle: async o => ({ status: 'OK', source: 'SERPER_GOOGLE_ORGANIC', leads: [{ url: 'https://a.example/', title: 't' }], query: o.query }) });
+  assert.equal(r.search_term_used, 'Cuánto cobra un consultor GEO?');
+  const ui = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
+  assert.match(ui, /Google searched with “'\+sdx\.search_term_used/);
+});

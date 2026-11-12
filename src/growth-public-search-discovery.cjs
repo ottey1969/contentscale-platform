@@ -18,7 +18,18 @@ const wrongProductIntent=(title,snippet,query)=>navDiffersFromQuery(title,query)
 const infrastructure=/^(?:www\.)?(?:bing\.com|microsoft\.com|google\.com|youtube\.com|facebook\.com|instagram\.com|pinterest\.com|linkedin\.com)$/i;
 // A search term as a person types it, also a full customer question ("How do I …?"): letters, digits, spaces and the
 // punctuation of a normal question. Anything else (markup, quotes, search operators such as site:) is not searched.
-const SAFE_QUERY=/^[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/?!()-]*$/u;
+// Spanish questions start with ¿ or ¡ (owner 2026-11-12: "¿Cuánto cobra un consultor GEO?" was refused as unsafe).
+const SAFE_QUERY=/^[¿¡]?[\p{L}\p{N}][\p{L}\p{N}\s&'’.,/?!¿¡()"“”«»-]*$/u;
+// The search term Google gets: the working query when it is a searchable length, else its first searchable question
+// ("¿Cuánto cobra un consultor GEO? y ¿Cómo vas a medir…?" → "¿Cuánto cobra un consultor GEO?"). The full question stays
+// the working query for everything else; the report says which term was searched.
+function searchableTerm(query){
+ const term=String(query||'').replace(/\s+/g,' ').trim();
+ if(term&&term.length<=150&&SAFE_QUERY.test(term))return {term};
+ const parts=term.split(/(?<=\?)\s*(?:(?:y|and|en|und|et)\s+)?/i).map(x=>x.replace(/^[\s,;]+|[\s,;]+$/g,'')).filter(Boolean);
+ const pick=parts.find(x=>x.length<=150&&SAFE_QUERY.test(x));
+ return pick?{term:pick,shortened_from:term.slice(0,300)}:{term};
+}
 function parseBingRss(xml,{query='',ownUrl='',limit=7,market=null}={}){
  const marketStates=market?.states||[];
  const raw=String(xml||'');
@@ -46,7 +57,7 @@ function parseBingRss(xml,{query='',ownUrl='',limit=7,market=null}={}){
  return rows;
 }
 async function discoverGrowthCompetitors({query,ownUrl,market=null,locale=null,fetchFeed=fetchPublicGrowthHtml,now=new Date()}={}){
- const term=String(query||'').trim();
+ const term=searchableTerm(query).term;
  if(!term||term.length>150||!SAFE_QUERY.test(term))
   return {status:'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH',query:term,leads:[],checked_at:null,source:'BING_PUBLIC_RSS'};
  let feed;
@@ -157,7 +168,7 @@ function parseSerperGoogleOrganic(payload,{query='',ownUrl='',limit=7,rejectedLo
 // SERPAPI_KEY is never used as a fallback, even though other tracker code paths still accept it.
 // Paid calls per run: one, plus at most one retry when fewer than three usable results remain (market query or page 2).
 async function optionalGoogleOrganicDiscovery({query,ownUrl,market=null,locale=null,fetchImpl=global.fetch,key=process.env.SERPER_API_KEY,now=new Date()}={}){
- const term=String(query||'').trim(),available=String(key||'').trim();
+ const term=searchableTerm(query).term,available=String(key||'').trim();
  if(!term||term.length>150||!SAFE_QUERY.test(term))
   return {status:'QUERY_NOT_SAFE_FOR_PUBLIC_SEARCH',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
  if(!available)return {status:'OPTIONAL_PROVIDER_NOT_CONFIGURED',source:'SERPER_GOOGLE_ORGANIC',leads:[],query:term};
@@ -274,7 +285,12 @@ function marketCoverage({market,locale,result}){
   note:(lost?lost+' result(s) came as Google redirect links that could not be opened; they are missing from this research. ':'')+(done<markets.length?'Researched: '+markets.filter(m=>m.researched).map(m=>m.name).join(', ')+'. Not researched: '+markets.filter(m=>!m.researched).map(m=>m.name).join(', ')+'. This is partial market research.':
    'Every target market was researched once; this is an observation of search results, not a ranking.')};
 }
-async function discoverGrowthCompetitorsWithFallback(args={}){
+// The report says which term Google was searched with when the working query was too long for a search.
+async function discoverGrowthCompetitorsWithFallback(o={}){
+ const st=searchableTerm(o&&o.query),r=await discoverWithCoverage(o);
+ return st.shortened_from&&r&&typeof r==='object'?{...r,search_term_used:st.term,query_shortened_from:st.shortened_from}:r;
+}
+async function discoverWithCoverage(args={}){
  const out=await discoverWithFallback(args);
  return {...out,market_coverage:marketCoverage({market:args.market,locale:args.locale,result:out})};
 }
@@ -312,6 +328,6 @@ async function discoverWithFallback({query,ownUrl,market=null,locale=null,
   warning:(publicResult.warning||'Free public search may be unavailable.')+
    ' Optional Google organic lookup: '+google.status+'. No competitor ranking or content gap is inferred from a missing response.'};
 }
-module.exports={discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,marketCoverage,unwrapGoogleLinks,
+module.exports={searchableTerm,discoverGrowthCompetitors,discoverGrowthCompetitorsWithFallback,marketCoverage,unwrapGoogleLinks,
  optionalGoogleOrganicDiscovery,parseSerperGoogleOrganic,parseBingRss,clean};
 
