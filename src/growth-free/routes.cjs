@@ -11,6 +11,9 @@ const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const aiGap=require('./ai-gap.cjs');
 const contacts=require('./contacts.cjs');
+// Tips by e-mail (owner 2026-11-12): on by default, announced at sign-up, with "Don't send me tips" to opt out
+// (soft opt-in). Older forms still send marketing_consent (ticked = yes).
+const tipsOf=b=>b&&b.no_tips!==undefined?b.no_tips!==true:!!(b&&b.marketing_consent===true);
 const {writeForSelection,planBatch,pageFingerprint,headingsStillPresent,headingsMessage,explainWriterFailure,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts,styleIssues}=require('../growth-source-grounded-editor.cjs');
@@ -158,7 +161,8 @@ ${aiStartBlock(!!owner.signedIn||!!invite)}
  <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
  <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The first address gets the e-mails; the others are kept with the check.</small>
  <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day for the first address.`}`}</span></label>
- <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
+ <p class="muted" style="font-size:14px;margin:10px 0 2px">You'll also get occasional tips about ranking and AI search from ContentScale. Unsubscribe anytime with the link in every email.</p>
+ <label class="check"><input type="checkbox" name="notips"> <span>Don't send me tips</span></label>
  ${owner.signedIn?'<label class="check"><input type="checkbox" name="fresh"> <span><strong>Research again</strong>: ignore a stored result of today for the same page and question (uses 1–2 Serper searches)</span></label>':''}
  <p><button type="submit">${owner.signedIn?'Run the check (owner)':'Run the free check'}</button> <small id="s" role="status"></small></p>
 </form>
@@ -245,7 +249,7 @@ try{
   }catch(e){s.textContent='Question suggestions unavailable; continuing with the page topic…'}
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?'The server did not answer within a minute. Please try again in a moment.':err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -853,7 +857,7 @@ function adminPage(cfg,api,base,loggedIn){
   <p><button>Create invitation link</button> <small role="status" id="is"></small></p></form><div id="newlink"></div></div>
  <h2>Invitations</h2><div id="invites"></div>
  <h2>Leads</h2><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div>
- <div class="card" id="contactsCard"><h2 style="margin-top:0">Contacts per country</h2><p class="muted">Only the free rank tracker and Free Growth (never the paid Tracker). “Tips” = ticked “send me occasional tips”.</p>
+ <div class="card" id="contactsCard"><h2 style="margin-top:0">Contacts per country</h2><p class="muted">Only the free rank tracker and Free Growth (never the paid Tracker). “Tips” = did not tick “Don't send me tips” (or ticked the older “send me tips”).</p>
   <div class="rtabs" role="tablist"><button type="button" class="ctab" data-src="rank" aria-selected="true">Rank tracker</button><button type="button" class="ctab" data-src="growth" aria-selected="false">Free Growth</button></div>
   <label>Country<select id="cCountry"></select></label><label class="check"><input type="checkbox" id="cTips"><span>Only people who want tips</span></label>
   <p><a id="cCsv" class="btn ghost" href="#">Download CSV of this selection</a> <button type="button" id="cDelAll" class="ghost">Delete everyone in this selection</button> <small role="status" id="cStatus"></small></p>
@@ -1058,7 +1062,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin'){
     const input=readInput(b,res);if(!input)return;
     await storage.ensureTables(pool);
-    return await start(res,input,{accessLabel:'admin',marketingConsent:b.marketing_consent===true,fresh:b.fresh===true});
+    return await start(res,input,{accessLabel:'admin',marketingConsent:tipsOf(b),fresh:b.fresh===true});
    }
    // From the free rank tracker with a valid handoff: access of its own (also when approval is required), own weekly limit.
    if(rankHandoff&&b.rank_ref){const rk=await rankHandoff.read(b.rank_ref).catch(()=>null);if(rk)return await startRankCheck(req,res,b,rk)}
@@ -1088,7 +1092,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label,market});
+   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,accessLabel:entry.label,market});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
@@ -1181,7 +1185,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(!a.ok)return res.status(429).json({success:false,error:'You used the '+a.limit+' free Growth checks from your rank tracker for this week. Try again in a few days.'});
   const ipHash=store.hashIp(req.ip,config.ipSalt),u=await storage.usage(pool,{email:input.email,ipHash,accessLabel:'rank-tracker'});
   if(u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
-  return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:b.marketing_consent===true,accessLabel:'rank-tracker'});
+  return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:tipsOf(b),accessLabel:'rank-tracker'});
  }
  async function startInviteCheck(req,res,b){
   const input=readInput(b,res);if(!input)return;
@@ -1190,7 +1194,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(status!=='ACTIVE')return res.status(403).json({success:false,error:INVITE_TEXT[status]});
   if(inv.email_lock&&!input.emails.includes(inv.email_lock))
    return res.status(403).json({success:false,error:'This invitation only works with the email address it was sent to'});
-  await start(res,input,{ipHash:store.hashIp(req.ip,config.ipSalt),marketingConsent:b.marketing_consent===true,
+  await start(res,input,{ipHash:store.hashIp(req.ip,config.ipSalt),marketingConsent:tipsOf(b),
    accessLabel:'invite: '+inv.label,inviteId:inv.id,
    beforeRun:async()=>{if(await storage.consumeInvite(pool,inv.id))return true;res.status(403).json({success:false,error:INVITE_TEXT.USED_UP});return false}});
  }

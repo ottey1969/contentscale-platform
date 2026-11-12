@@ -318,3 +318,20 @@ test('"I have changed this page": the keyword stays the best opportunity with a 
   assert.equal(store.db.keywords[0].changed_at, null);
   assert.equal((await request(a).post('/api/rank-free/d/' + tok + '/changed').send({ keyword: 'not tracked' })).status, 404);
 });
+
+test('tips by e-mail: on by default with "Don\'t send me tips" to opt out; the latest choice counts; older forms still work', async () => {
+  const store = memoryStore(), sent = [], a = app(store, sent);
+  const form = await request(a).get('/rank-tracker?lang=nl');
+  assert.match(form.text, /Je krijgt ook af en toe tips over ranken en AI-zoeken van ContentScale\. Afmelden kan altijd via de link in elke e-mail\./);
+  assert.match(form.text, /<input type="checkbox" id="notips"> Stuur me geen tips/); assert.doesNotMatch(form.text, /id="notips" checked/);
+  const sign = b => request(a).post('/api/rank-free/signup').send({ site: 'acme.example', country: 'nl', keywords: 'dakreparatie', lang: 'nl', ...b });
+  await sign({ email: 'yes@acme.example', no_tips: false });
+  await sign({ email: 'no@acme.example', no_tips: true });
+  await sign({ email: 'old@acme.example', marketing_consent: true });
+  await sign({ email: 'oldno@acme.example' });
+  const tips = e => store.db.accounts.find(x => x.email === e).marketing_consent;
+  assert.equal(tips('yes@acme.example'), true, 'default: tips'); assert.equal(tips('no@acme.example'), false, 'opted out');
+  assert.equal(tips('old@acme.example'), true); assert.equal(tips('oldno@acme.example'), false, 'an older form without the box: no tips');
+  await sign({ email: 'yes@acme.example', no_tips: true });
+  assert.equal(tips('yes@acme.example'), false, 'opting out later is respected');
+});

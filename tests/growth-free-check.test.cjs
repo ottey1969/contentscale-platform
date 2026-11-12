@@ -932,3 +932,16 @@ test('AI gap from answers already saved: opening the check is enough, nothing is
  assert.equal(s.storage.aiRows.length,row.length,'no answer was pasted again');
  const page=await s.get('/free-growth/r/pub1?k=key1abcdefgh');assert.match(page.body,/appears here by itself/);assert.doesNotMatch(page.body,/aiGapRefresh/);
 });
+
+test('tips by e-mail: on by default, "Don\'t send me tips" opts out, older forms still work',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ const form=(await s.get('/free-growth?key=open-key-12345')).body;
+ assert.match(form,/You'll also get occasional tips about ranking and AI search from ContentScale\. Unsubscribe anytime with the link in every email\./);
+ assert.match(form,/<input type="checkbox" name="notips"> <span>Don't send me tips<\/span>/);assert.doesNotMatch(form,/name="marketing"/);
+ for(const [i,extra] of [[0,{no_tips:false}],[1,{no_tips:true}],[2,{marketing_consent:true}],[3,{}]])
+  assert.equal((await s.post('/api/free-growth/checks',{...ok,url:URL_+'?v='+i,email:'tips'+i+'@acme-roofing.example',...extra})).status,202);
+ await s.service.idle();
+ const tips=e=>s.storage.checks.find(c=>c.email===e).marketing_consent;
+ assert.equal(tips('tips0@acme-roofing.example'),true,'default: tips');assert.equal(tips('tips1@acme-roofing.example'),false,'opted out');
+ assert.equal(tips('tips2@acme-roofing.example'),true);assert.equal(tips('tips3@acme-roofing.example'),false,'an older form without the box: no tips');
+});
