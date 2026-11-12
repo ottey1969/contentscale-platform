@@ -29,7 +29,7 @@ function screenManualAnswers(manualAi, query, googleSource, question) {
 // The customer question sent with the request (Research Prompt tab, #cs-ai-question): the text the owner asked the AI
 // systems and where it came from. Not a question: null (the keyword is used).
 function questionFromRequest(raw) {
-  const t = String(raw && raw.ai_question || '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+  const t = String(raw && raw.ai_question || '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
   if (!t) return null;
   return { text: t, source: String(raw.ai_question_source || '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 80) || null };
 }

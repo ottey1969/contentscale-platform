@@ -87,11 +87,16 @@
     // Google's own questions for the market (as in the free Growth check). Editable; one click picks another or the keyword.
     var qWrap = document.createElement('div'); qWrap.id = 'cs-ai-question-box';
     var qLabel = document.createElement('label'); qLabel.htmlFor = 'cs-ai-question'; qLabel.textContent = 'Question to ask the AI systems';
-    var qInput = document.createElement('input'); qInput.type = 'text'; qInput.id = 'cs-ai-question'; qInput.maxLength = 160; qInput.className = 'cs-input';
-    qInput.style.width = '100%'; qInput.placeholder = 'Chosen automatically from the questions customers ask in Google';
+    // A real customer question can be long (owner 2026-11-12: a 190-character question was cut off): a growing text box.
+    var qInput = document.createElement('textarea'); qInput.id = 'cs-ai-question'; qInput.maxLength = 300; qInput.rows = 2; qInput.className = 'cs-input';
+    qInput.style.cssText = 'width:100%;box-sizing:border-box;resize:vertical;min-height:44px;font:inherit;line-height:1.45';
+    var grow = function () { qInput.style.height = 'auto'; qInput.style.height = Math.min(qInput.scrollHeight + 2, 160) + 'px'; };
+    qInput.addEventListener('input', grow); qInput.placeholder = 'Chosen automatically from the questions customers ask in Google';
     var qSrc = document.createElement('small'); qSrc.id = 'cs-ai-question-source'; qSrc.style.display = 'block';
     var qChips = document.createElement('div'); qChips.id = 'cs-ai-question-options';
-    qWrap.append(qLabel, qInput, qSrc, qChips);
+    // Questions the AI systems themselves raise in the pasted answers (Perplexity's related questions, for example).
+    var qFromAnswers = document.createElement('div'); qFromAnswers.id = 'cs-ai-question-from-answers';
+    qWrap.append(qLabel, qInput, qSrc, qChips, qFromAnswers);
     var askBox = document.createElement('div'); askBox.id = 'cs-research-ask'; askBox.append(qWrap, ask, askNote);
     var qState = { kw: '', manual: false, timer: null, seq: 0 };
     function tokenOf() { return window.TOKEN || ((location.pathname.match(/\/track\/([^/?#]+)/) || [])[1]) || ''; }
@@ -154,9 +159,29 @@
       btn._csCopyT = setTimeout(function () { btn.classList.remove('cs-copied'); btn.textContent = off; if (noteEl) noteEl.classList.remove('cs-copied-note'); }, 1800);
     }
     function askText() { return String(qInput.value || '').trim() || val('pwbKeyword'); }
+    var ENGINE_LABEL = { pwbAioText: 'Google AI / Gemini', pwbChatgptText: 'ChatGPT', pwbPerplexityText: 'Perplexity', pwbClaudeText: 'Claude', pwbCopilotText: 'Copilot' };
+    function answerQuestions() {
+      var seen = {}, out = [], cur = String(qInput.value || '').trim().toLowerCase();
+      FIELDS.forEach(function (f) {
+        var v = String(val(f[1]) || ''); if (!v) return;
+        (v.match(/[^\n.!?¿¡]*[¿]?[^\n.!?¿¡]{12,280}\?/g) || []).forEach(function (raw) {
+          var t = raw.replace(/^[\s\-*•\d.)#>]+/, '').replace(/\s+/g, ' ').trim(); var w = t.split(' ').length;
+          if (w < 4 || w > 45 || /https?:|www\./i.test(t)) return;
+          if (/^[a-záéíóúñ]/.test(t) && !/^¿/.test(t)) t = t.charAt(0).toUpperCase() + t.slice(1);
+          var k = t.toLowerCase(); if (seen[k] || k === cur) return; seen[k] = 1; out.push({ text: t, label: (ENGINE_LABEL[f[1]] || f[0]) + ' · question in its answer' });
+        });
+      });
+      return out.slice(0, 6);
+    }
+    function renderAnswerQuestions() {
+      var list = answerQuestions(); qFromAnswers.innerHTML = '';
+      if (!list.length) return;
+      var h = document.createElement('small'); h.style.display = 'block'; h.style.marginTop = '6px'; h.textContent = 'Questions the AI systems raise in your pasted answers:'; qFromAnswers.appendChild(h);
+      list.forEach(function (q) { qFromAnswers.appendChild(chip(q.text, q.label, false)); });
+    }
     function syncAsk() { var q = askText(); ask.disabled = !q; ask.title = q ? 'Copies: ' + q : 'Enter the target keyword first.';
       // A new question changes the answer check and the research prompt: refresh both (once, after the current event).
-      clearTimeout(qState.refresh); qState.refresh = setTimeout(function () { try { checkFields(); render(); } catch (e) {} }, 0); }
+      clearTimeout(qState.refresh); qState.refresh = setTimeout(function () { try { grow(); renderAnswerQuestions(); checkFields(); render(); } catch (e) {} }, 0); }
     ask.addEventListener('click', function () {
       var q = askText(); if (!q) return;
       var done = function (ok) { askNote.textContent = ok ? 'Copied: "' + q + '". Paste it into Google, ChatGPT, Perplexity, Claude and Copilot, then paste each full answer back here.' : 'Copy this search question by hand: ' + q; if (ok) flash(ask, 'Copied ✓', 'Copy search question', askNote); };

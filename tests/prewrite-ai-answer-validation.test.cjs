@@ -211,7 +211,7 @@ test('server: Google source through screening, research, evidence and the 5/5 ga
   const r = M.researchForRequest({ keyword: Q, language: 'Dutch', region: 'nl', manualAi, perplexityEvidenceText: '', rejected, googleSource: 'no_ai_overview' }).research;
   assert.equal(r.google_no_ai_overview, true); assert.equal(r.answers_valid, 1);
   // The browser sends the choice with the answers; draft and reopen keep it.
-  assert.match(src, /manualAiEvidence:\{ai_question:String\(\(document\.getElementById\('cs-ai-question'\)\|\|\{\}\)\.value\|\|''\)\.trim\(\)\.slice\(0,200\),ai_question_source:[^,]+,google_source:String\(\(document\.getElementById\('pwbGoogleSource'\)\|\|\{\}\)\.value\|\|''\),google_aio:aioText,/);
+  assert.match(src, /manualAiEvidence:\{ai_question:String\(\(document\.getElementById\('cs-ai-question'\)\|\|\{\}\)\.value\|\|''\)\.trim\(\)\.slice\(0,300\),ai_question_source:[^,]+,google_source:String\(\(document\.getElementById\('pwbGoogleSource'\)\|\|\{\}\)\.value\|\|''\),google_aio:aioText,/);
   assert.match(src, /google_source:g\('pwbGoogleSource'\),/); assert.match(src, /set\('pwbGoogleSource',d\.google_source\|\|''\);/);
   assert.match(src, /_gsEl\.value=\(_gs==='ai_overview'\|\|_gs==='gemini'\|\|_gs==='no_ai_overview'\)\?_gs:'';/);
 });

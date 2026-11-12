@@ -102,3 +102,29 @@ test('the Serper.dev key is read from SERPER_API_KEY or SERPAPI_KEY (production 
     if (b === undefined) delete process.env.SERPAPI_KEY; else process.env.SERPAPI_KEY = b;
   }
 });
+
+test('owner 2026-11-12: Google shows no question → autocomplete; AI fallback tolerant; long questions are not cut off', async () => {
+  const { fromGoogle, fromAi } = require('../src/growth-customer-questions.cjs');
+  const calls = [];
+  const fetchImpl = async (url, init) => { calls.push(url); return { ok: true, json: async () => /autocomplete/.test(url)
+    ? { suggestions: [{ value: 'consultor geo precio' }, { value: 'consultor geo madrid' }, { value: 'consultor geo' }] } : { organic: [] } }; };
+  const g = await fromGoogle({ query: 'consultor geo', gl: 'es', hl: 'es', key: 'TEST', fetchImpl });
+  assert.deepEqual(calls, ['https://google.serper.dev/search', 'https://google.serper.dev/autocomplete']);
+  assert.deepEqual(g.questions.map(q => [q.text, q.source]), [['consultor geo precio', 'GOOGLE_AUTOCOMPLETE'], ['consultor geo madrid', 'GOOGLE_AUTOCOMPLETE']]);
+  const offer = { title: '', h1: [], h2: [] };
+  for (const raw of ['["¿Cuánto cuesta un consultor GEO?","¿Qué hace un consultor GEO por mi empresa?"]', '{"questions":[{"question":"¿Cuánto cuesta un consultor GEO?"}]}', 'Aquí: {"questions":["¿Merece la pena contratar un consultor GEO?"]}']) {
+    const a = await fromAi({ offer, keyword: 'consultor geo', language: 'es', model: { call: async () => raw } });
+    assert.equal(a.status, 'AI_SUGGESTIONS', raw);
+  }
+  const prompts = []; await fromAi({ offer, keyword: 'consultor geo', language: 'es', model: { call: async p => { prompts.push(p); return '[]'; } } });
+  assert.match(prompts[0], /There is no page yet: only the keyword/);
+  const long = '¿Cómo vas a medir si mi marca aparece, se cita y se recomienda en ChatGPT, Gemini, Perplexity y Google AI Overviews para las preguntas que realmente hacen mis clientes antes de comprar?';
+  assert.ok(long.length > 160 && long.length <= 300);
+  const M = require('../src/prewrite-brief-research.cjs');
+  assert.equal(M.questionFromRequest({ ai_question: long }).text, long);
+  const r = require('../src/prewrite-ai-answer-research.cjs').makePrewriteAiAnswerResearch({ query: 'consultor geo', ai_question: { text: long }, answers: [] });
+  assert.equal(r.ai_question.text, long);
+  const tab = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/prewrite-research-tab.js'), 'utf8');
+  assert.match(tab, /qInput = document\.createElement\('textarea'\); qInput\.id = 'cs-ai-question'; qInput\.maxLength = 300;/);
+  assert.match(tab, /question in its answer/);
+});
