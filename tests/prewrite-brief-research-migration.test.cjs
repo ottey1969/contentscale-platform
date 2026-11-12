@@ -114,10 +114,10 @@ test('a missing public script never stops the server from starting: logged, tab 
 test('src/index.js calls the module directly and holds the final Pre-Write text; no Pre-Write code is inserted at build time', () => {
   const once = (s, needle, what) => assert.equal(s.split(needle).length - 1, 1, what + ' appears exactly once');
   once(SRC, "const _prewriteBriefResearch = require('./prewrite-brief-research.cjs');", 'module require');
-  once(SRC, 'const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected,googleSource:_manualAiGoogleSource});', 'request research');
-  once(SRC, 'const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword,_manualAiGoogleSource);', 'answers screened before anything uses them');
+  once(SRC, 'const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected,googleSource:_manualAiGoogleSource,aiQuestion:_pwbAiQuestion});', 'request research');
+  once(SRC, 'const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword,_manualAiGoogleSource,_pwbAiQuestion&&_pwbAiQuestion.text);', 'answers screened before anything uses them');
   once(SRC, '_prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);', 'saved with the Brief');
-  once(SRC, "_prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected});", 'missing-only refresh');
+  once(SRC, "_prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected,aiQuestion:_prewriteBriefResearch.questionFromRequest(opts.manualAiEvidence||srcReq.manualAiEvidence||{})});", 'missing-only refresh');
   once(SRC, '${_prewriteBriefResearch.scriptTags()}</head>', 'script tags');
   assert.doesNotMatch(SRC, /require\('\.\/prewrite-ai-answer-research\.cjs'\)/, 'no inline copy of the research code');
   // Order: the module is required before the Tracker page template is evaluated; the tags are in the page that holds the modal.

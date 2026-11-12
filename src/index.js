@@ -47333,7 +47333,7 @@ async function generatePrewriteBrief() {
   try {
     var _pwbBody = { keyword: kw, workingTitle: title, language: lang, region: region, manualAioText: aioText, recommendationContext:_pwbRecommendationContext,
       existingSiteHtml:String((document.getElementById('pwbExistingHtml')||{}).value||'').slice(0,180000),
-      manualAiEvidence:{google_source:String((document.getElementById('pwbGoogleSource')||{}).value||''),google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()},
+      manualAiEvidence:{ai_question:String((document.getElementById('cs-ai-question')||{}).value||'').trim().slice(0,200),ai_question_source:String(((document.getElementById('cs-ai-question')||{}).dataset||{}).source||''),google_source:String((document.getElementById('pwbGoogleSource')||{}).value||''),google_aio:aioText,chatgpt:String((document.getElementById('pwbChatgptText')||{}).value||'').trim(),perplexity:String((document.getElementById('pwbPerplexityText')||{}).value||'').trim(),claude:String((document.getElementById('pwbClaudeText')||{}).value||'').trim(),copilot:String((document.getElementById('pwbCopilotText')||{}).value||'').trim()},
       aiEvidenceExpectedCount:_NETWORK_PREWRITE_AUTHORIZED?5:0 };
     if(_pwbCompletionMode){_pwbBody.completionFromJobId=_pwbCompletionSource;_pwbBody.completionMode='missing_only';}
     if (arguments.length && arguments[0] && arguments[0].intentOverride) _pwbBody.intentOverride = arguments[0].intentOverride;
@@ -59808,7 +59808,7 @@ function _pwbMergeManualAiEvidenceV506(b,raw,query){
   // never replaces an answer that is already there.
   const _gs=_prewriteBriefResearch.googleSourceOf(raw.google_source);
   if(!String(raw.google_aio||'').trim()&&_gs==='no_ai_overview'){const cur=b.ai_system_evidence.google_aio;if(!(cur&&cur.checked===true))b.ai_system_evidence.google_aio=Object.assign({},cur||{},{checked:false,source:'no_ai_overview',manual:true,text:'',google_source:'no_ai_overview',checked_at:now});}
-  _PWB_AI_ENGINES_V506.forEach(function(k){const v=String(raw[k]||'').trim();if(!v)return;const _q=query||_pwbBriefQueryV506(b),_chk=k==='google_aio'?_prewriteBriefResearch.validateGoogle(v,_gs,_q,true):_prewriteBriefResearch.validateAnswer(v,_q);if(!_chk.valid){rejected[k]={answer:v,reason:_chk.reason,message:_chk.message};return;}const cur=b.ai_system_evidence[k]&&typeof b.ai_system_evidence[k]==='object'?b.ai_system_evidence[k]:{};if(String(cur.text||'').trim()!==v||cur.checked!==true)added.push(k);b.ai_system_evidence[k]=Object.assign({},cur,{checked:true,source:'manual',manual:true,text:v,provenance:'manual_paste_unverified'},k==='google_aio'?{google_source:_gs}:{});});
+  _PWB_AI_ENGINES_V506.forEach(function(k){const v=String(raw[k]||'').trim();if(!v)return;const _q=query||_pwbBriefQueryV506(b),_aq=(_prewriteBriefResearch.questionFromRequest(raw)||(b.prewrite_ai_answer_research&&b.prewrite_ai_answer_research.ai_question)||{}).text||'',_chk=k==='google_aio'?_prewriteBriefResearch.validateGoogle(v,_gs,_q,true,_aq):_prewriteBriefResearch.validateAnswer(v,_q,_aq);if(!_chk.valid){rejected[k]={answer:v,reason:_chk.reason,message:_chk.message};return;}const cur=b.ai_system_evidence[k]&&typeof b.ai_system_evidence[k]==='object'?b.ai_system_evidence[k]:{};if(String(cur.text||'').trim()!==v||cur.checked!==true)added.push(k);b.ai_system_evidence[k]=Object.assign({},cur,{checked:true,source:'manual',manual:true,text:v,provenance:'manual_paste_unverified'},k==='google_aio'?{google_source:_gs}:{});});
   b.ai_system_evidence.checked_at=now;b.ai_system_evidence.checked_count=_PWB_AI_ENGINES_V506.filter(k=>b.ai_system_evidence[k]&&b.ai_system_evidence[k].checked===true).length;
   _pwbCanonicalizeAiAnalysisV506(b);const st=_pwbAiEvidenceStateV506(b);return {added,rejected,checked_count:st.checked_count,missing:st.missing};
 }
@@ -60146,7 +60146,7 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
   const _beforeMerge=_pwbReadiness(brief);
   if(placementId>0)_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:opts.publisherDomain||''});
   const _aiMerge=_pwbMergeManualAiEvidenceV506(brief,opts.manualAiEvidence||srcReq.manualAiEvidence||{},srcKeyword||requestedKeyword);
-  _prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected});
+  _prewriteBriefResearch.refreshAfterMissingOnly(brief,{query:srcKeyword||requestedKeyword,language:srcReq.language||opts.language||'',region:srcReq.region||opts.region||'',rejected:_aiMerge.rejected,aiQuestion:_prewriteBriefResearch.questionFromRequest(opts.manualAiEvidence||srcReq.manualAiEvidence||{})});
   if(placementId>0)_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:opts.publisherDomain||'',checked_url:opts.publisherCheckedUrl||''});
   _pwbEvidenceBackedGapV506(brief);
   const before=_pwbReadiness(brief),missingBefore=Array.isArray(before.missing)?before.missing.slice():[];
@@ -60497,7 +60497,9 @@ async function _handlePrewriteBriefGeneration(req, res) {
     // Validation contract: only an actual answer to this keyword is AI answer research. A prompt echo, placeholder or
     // unrelated text is removed here, before anything counts or uses it, and reported in the saved research.
     const _manualAiGoogleSource=_prewriteBriefResearch.googleSourceOf(_manualAiRaw.google_source);
-    const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword,_manualAiGoogleSource);
+    // The customer question the owner asked the AI systems (owner 2026-11-12: a real search question, not the bare keyword).
+    const _pwbAiQuestion=_prewriteBriefResearch.questionFromRequest(_manualAiRaw);
+    const _manualAiRejected=_prewriteBriefResearch.screenManualAnswers(_manualAi,keyword,_manualAiGoogleSource,_pwbAiQuestion&&_pwbAiQuestion.text);
     if (aioManualText) {
       aioDetected = true;
       console.log('[prewrite-brief] Using manual AIO text for:', keyword, '(' + aioManualText.length + ' chars)');
@@ -60766,10 +60768,11 @@ Every citation/source item should be represented as:
 `;
     // AI answer research for writing: the same prompt the Research Prompt tab shows (src/prewrite-brief-research.cjs).
     // Observed AI answers inform the writing; they never prove that this website is cited.
-    const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected,googleSource:_manualAiGoogleSource});
+    const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected,googleSource:_manualAiGoogleSource,aiQuestion:_pwbAiQuestion});
     const prompt = `You are an elite SEO and AEO strategist. A strategist requested a possible NEW page for this keyword. FIRST decide whether a new URL should actually be created or whether an existing client URL should be expanded instead. Do not create a new page when the sitemap shows a materially overlapping existing URL and doing so would create cannibalization. If CREATE is justified, specify what the brand-new page must contain to outrank and out-cite current results from the first draft. Every claim must be traceable to the inputs below; never invent a domain, URL, snippet, statistic, schema type or business fact.
 
 KEYWORD: "${keyword}"
+${_pwbAiQuestion ? 'CUSTOMER QUESTION (the real search question for this keyword' + (_pwbAiQuestion.source ? ', ' + _pwbAiQuestion.source : '') + '; the AI answers below answer it): "' + _pwbAiQuestion.text + '"\nThe page must answer this question directly and early (in the direct answer / first section), in the customer\'s words. Put it first in paa_questions. The KEYWORD stays the page\'s target keyword.' : ''}
 ${workingTitle ? 'WORKING TITLE / ANGLE SUPPLIED: "' + workingTitle + '"' : 'No working title supplied — infer the strongest angle from search intent and the competitor gap.'}
 
 LIVE SERP — CURRENT TOP RESULTS:
@@ -61232,6 +61235,9 @@ ${claimsBlock.slice(0,2400)}`;
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
     _prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);
+    // The customer question is saved with the Brief and is always the first question it answers.
+    if(brief&&typeof brief==='object'&&_pwbAiQuestion){brief.customer_question=_pwbAiQuestion;const _paa=Array.isArray(brief.paa_questions)?brief.paa_questions:[],_qn=x=>String(typeof x==='string'?x:(x&&x.question)||'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+     if(!_paa.some(x=>_qn(x)===_qn(_pwbAiQuestion.text)))brief.paa_questions=[_pwbAiQuestion.text].concat(_paa);}
     if(!brief || typeof brief!=='object') return res.status(502).json({success:false,stage:'gemini_parse',retryable:true,error:'Generated Prewrite Brief was not a valid object.'});
     const _pwbText=function(v){if(typeof v==='string')return v.trim();if(v&&typeof v==='object'&&!Array.isArray(v)){for(const k of ['title','text','value','summary','answer','recommendation','reason','gap','name']){if(typeof v[k]==='string'&&v[k].trim())return v[k].trim();}}return '';};
     ['recommended_title_h1','top10_gap','ai_overview_status'].forEach(function(k){brief[k]=_pwbText(brief[k]);});

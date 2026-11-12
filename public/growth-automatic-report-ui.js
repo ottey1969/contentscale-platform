@@ -121,6 +121,9 @@
   var form=node('details',null,box);
   node('summary','Advanced · Add or recheck an independent AI answer manually (optional)',form);
   node('p','Copy the prompt, paste it into a new chat with web search on, then paste the complete answer (including RESOURCES) at the AI system you used.',form);
+  // The question the prompt asks: Google's own question for this search term, the best match (owner 2026-11-12).
+  if(c.ai_question&&c.ai_question.text){var qa=node('p',null,form);qa.id='growthAiQuestionAsked';node('strong','Question asked: ',qa);qa.appendChild(document.createTextNode('“'+c.ai_question.text+'” '));
+   node('small','· '+(c.ai_question.label||'Google')+' · the best real Google question for “'+c.search_term+'”',qa)}
   var pr=node('textarea',null,form);pr.rows=5;pr.readOnly=true;pr.value=c.prompt;pr.style.width='100%';
   var cp=node('button','Copy prompt',form);cp.type='button';cp.addEventListener('click',function(){pr.select();if(navigator.clipboard)navigator.clipboard.writeText(pr.value);cp.textContent='Copied ✓'});
   var sel=node('select',null,form);(c.engines||[]).forEach(function(e){var o=node('option',e.label,sel);o.value=e.id});

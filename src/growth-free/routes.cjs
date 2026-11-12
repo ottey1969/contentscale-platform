@@ -26,7 +26,7 @@ const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
 const cmsPackage=require('./cms-package.cjs');
 const reminders=require('./reminders.cjs');
-const {discoverCustomerQuestions}=require('../growth-customer-questions.cjs');
+const {discoverCustomerQuestions,aiQuestionForTerm}=require('../growth-customer-questions.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
 // Access keys decide where the free check may be used. GROWTH_FREE_ACCESS_KEYS is
@@ -324,6 +324,7 @@ function aiHtml(a,auto){var x=a.summary,h='<h3 id="ai">AI answers <small>('+esc(
   // Manual copying must not appear as the main action of the automatic Free Growth report.
  h+='<details id="aiRecheck" class="research-details"><summary>'+(x.checked===5?'Advanced · Recheck an AI answer (optional)':'Advanced · Add independent AI answers manually ('+(5-x.checked)+' unchecked)')+'</summary><div class="card"><p class="muted">Only check another AI answer if you want to; this never blocks the Google research.</p><ol><li>Choose the AI system.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong>.</li><li>Paste the complete answer below, including the source links.</li></ol>'+
   '<label>AI system<select id="aiEngine">'+x.engines.map(function(e){return '<option value="'+esc(e.id)+'"'+(e.id===next.id?' selected':'')+'>'+esc(e.label)+(e.checked?' ✓':'')+'</option>'}).join('')+'</select></label>'+
+  (a.ai_question&&a.ai_question.text?'<p id="aiQuestionAsked"><strong>Question asked:</strong> “'+esc(a.ai_question.text)+'” <small class="muted">· '+esc(a.ai_question.label||'Google')+' · the best real Google question for “'+esc(a.search_term)+'”</small></p>':'')+
   '<label>Prompt (the same for every AI system)<textarea id="aiPrompt" rows="6" readonly>'+esc(a.prompt)+'</textarea></label><p><button type="button" class="ghost" id="aiCopy">Copy prompt</button></p>'+
   '<label>Answer from the AI system<textarea id="aiText" rows="7" maxlength="'+esc(a.max_paste)+'" placeholder="Paste the complete answer here"></textarea></label><p><button type="button" id="aiSave">Analyse answer</button> <small role="status" id="aiStatus"></small></p></div></details>';
  h+='<p class="muted">'+esc(x.caveat)+'</p>';return h}
@@ -1022,12 +1023,16 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
       out.report.engine_version=engineVersion();
       if(chosenQuestion)out.report.customer_question=chosenQuestion;
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
+      // The AI systems are asked the best real Google question for the search term, not the bare keyword (owner 2026-11-12).
+      try{const loc=out.report.search_discovery&&out.report.search_discovery.search_locale||{};
+       const aq=await aiQuestionForTerm({term:job.query,gl:loc.gl||'us',hl:loc.hl||'en',...(engineDeps.questionFetch?{fetchImpl:engineDeps.questionFetch}:{})});
+       if(aq)out.report.ai_question=aq}catch(e){}
       if(job.approved){
        const provider=engineDeps.groundedAnswer||groundedGeminiAnswer;
        // A provider timeout or unavailable key must never turn a successful page check into FAILED.
        let auto;
        try{
-        auto=await provider({query:job.query||out.report?.editorial_decision_gate?.focus_query,pageUrl:job.url,fetchImpl:engineDeps.answerFetch||global.fetch});
+        auto=await provider({query:out.report.ai_question?.text||job.query||out.report?.editorial_decision_gate?.focus_query,pageUrl:job.url,fetchImpl:engineDeps.answerFetch||global.fetch});
         if(auto.status==='SUCCESS'&&auto.parsed?.validation_status!=='invalid'){
          await storage.saveAiAnswer(pool,{checkId:job.id,engine:auto.engine,rawText:auto.raw,parsed:auto.parsed});
         }
@@ -1265,6 +1270,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  }
  // Search term the AI prompt must use: the one entered, or the one the research derived.
  const searchTermOf=row=>String(row.query||row.summary&&row.summary.checked&&row.summary.checked.search_term||'').trim();
+ // The question asked to the AI systems for that search term (Google's own question), or null: the term itself is asked.
+ const aiQuestionOf=row=>row.report&&row.report.ai_question&&row.report.ai_question.text?row.report.ai_question:null;
  const googleUrlsOf=row=>((row.report&&row.report.search_discovery&&row.report.search_discovery.leads)||[]).map(l=>l&&l.url).filter(Boolean);
  // AI gap per check: the cited pages are read once per set of cited URLs.
  const aiGapFor0=aiGap.createAiGapCache({engines:ai.ENGINES,fetchHtml:engineDeps.fetchAiCited||engineDeps.fetchLive||fetchPublicGrowthHtml,
@@ -1284,9 +1291,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(row.status==='FAILED'||!term)return null;
   let answers=[];
   try{answers=await storage.listAiAnswers(pool,row.id)}catch(e){console.warn('[free-growth] AI answers unavailable',String(e&&e.code||'unknown'))}
-  const summary=ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row),query:term});
+  const aq=aiQuestionOf(row);
+  const summary=ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row),query:term,question:aq&&aq.text});
   const gap=summary.verifiable>summary.cited_by?withStepTwo(await aiGapFor(row,answers,{wait:waitGap}),row.summary&&row.summary.gaps):null;
-  return {search_term:term,prompt:ai.directPrompt(term),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,summary,gap};
+  return {search_term:term,ai_question:aq,prompt:ai.directPrompt(term,aq&&aq.text),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,summary,gap};
  }
  // With an uploaded Search Console export, the "not used" limitation says what was actually used.
  function withGscLimits(summary,gscPart){
@@ -1352,7 +1360,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const row=await load(req,res);if(!row)return;
   const aiPart=await aiFor(row),gscPart=await gscFor(row);
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
-   ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:aiPart.gap}:null,
+   ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:aiPart.gap}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
    summary:withPlainEvidence(withGscLimits(withAiLimits(row.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
@@ -1385,7 +1393,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
     disclaimer:'Research data only. No ranking or traffic increase is promised. '+(gscPart.latest?(gscPart.latest.used_in_research?'A Search Console export verified for this exact page was used.':gscPart.latest.status==='VERIFIED_FOR_PAGE'?'The latest page-verified Search Console export was not used in the original research.':'A Search Console export was uploaded but is not verified for this exact page; it was not used as evidence.'):'Google Search Console data was not used.'),
     search_console:gscPart,
     selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],summary:withGscLimits(withAiLimits(row.summary,aiPart),gscPart),
-    ai_answers:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,summary:aiPart.summary,
+    ai_answers:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,summary:aiPart.summary,
      answers:aiPart.answers.map(a=>({engine:a.engine,pasted_at:a.created_at,parsed:a.parsed,raw_text:a.raw_text}))}:null,
     report:row.report});
  });
@@ -1619,12 +1627,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(!text.trim())return res.status(400).json({success:false,error:'Paste the complete answer first'});
    if(text.length>ai.MAX_PASTE)return res.status(413).json({success:false,error:'This answer is too long; paste only the answer and its sources'});
    if(ai.otherPrompt(text))return res.status(400).json({success:false,error:'This is an answer to the company quick-scan prompt (company profile or QUESTION 1–4), not to the prompt for this search term. Copy the prompt shown here, paste it into a new chat with web search on, and paste that answer.'});
-   const parsed=ai.parseAiAnswer(text,{pageUrl:row.url,query:searchTermOf(row)});
+   const parsed=ai.parseAiAnswer(text,{pageUrl:row.url,query:searchTermOf(row),question:(aiQuestionOf(row)||{}).text});
    if(parsed.validation_status==='invalid')return res.status(400).json({success:false,error:parsed.error_message||'This is not an answer to the search term.'});
    await storage.saveAiAnswer(pool,{checkId:row.id,engine,rawText:text,parsed});
    const aiPart=await aiFor(row,{waitGap:true});
    res.json({success:true,engine,parsed:{sources:parsed.sources.length,resources_status:parsed.resources_status,verifiable:parsed.sources_verifiable,own_site_cited:parsed.own_site_cited,exact_page_cited:parsed.exact_page_cited,own_url_mentioned_not_cited:parsed.own_url_mentioned_not_cited},
-    ai:{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:aiPart.gap},
+    ai:{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:aiPart.gap},
     summary:withAiLimits(row.summary,aiPart)});
   }catch(e){console.error('[free-growth] AI answer failed',e.message);res.status(503).json({success:false,error:'Could not analyse the answer. Please try again.'})}
  });

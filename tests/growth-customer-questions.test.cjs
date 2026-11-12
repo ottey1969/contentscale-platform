@@ -97,3 +97,20 @@ test('Tracker Growth: customer questions for a page in its market; the research 
   assert.match(chosen.html, /Customer question researched:<\/strong> “How can I get my business mentioned in AI answers\?”/);
   assert.match(chosen.html, /You chose this page/);
 });
+
+test('Tracker Growth AI check (owner 2026-11-12): the prompt asks the best real Google question for the keyword, in the page market', async () => {
+  const seen = [], routes = {};
+  const app = { get: (p, mw, h) => { routes['GET ' + p] = h; }, post: (p, mw, h) => { routes['POST ' + p] = h; } };
+  process.env.SERPER_API_KEY = process.env.SERPER_API_KEY || 'TEST-KEY';
+  require('../src/tracker-growth-automatic-routes.cjs').registerGrowthAutomaticResearch(app, { query: async sql => ({ rows: rows(sql) }) }, (q, s, n) => n && n(), {
+    questionFetch: serper({ peopleAlsoAsk: [{ question: 'What is generative engine optimization geo used for?' }, { question: 'How much does SEO cost?' }] }, seen),
+    loadPageMarkets: async () => ({ countries: ['GB'], language: 'en' }), loadAiAnswers: async () => [] });
+  const r = await respond(routes['GET /api/tracker-client/:token/growth/ai-check'], req());
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  assert.equal(r.json.ai_check.search_term, 'generative engine optimization geo', 'answers stay stored under the keyword');
+  assert.equal(r.json.ai_check.ai_question.text, 'What is generative engine optimization geo used for?');
+  assert.match(r.json.ai_check.prompt, /QUERY:\n\nWhat is generative engine optimization geo used for\?/);
+  assert.deepEqual([seen[0].body.q, seen[0].body.gl], ['generative engine optimization geo', 'uk']);
+  const ui = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
+  assert.match(ui, /Question asked: /);
+});
