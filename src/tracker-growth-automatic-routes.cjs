@@ -501,8 +501,11 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  // stored under the search term, so earlier answers keep counting.
  async function aiQuestionFor(v,term){
   try{
-   let set=null;if(typeof loadPageMarkets==='function')set=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
-   if(!(set?.countries?.length||set?.language)&&typeof loadSiteMarkets==='function')set=await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null);
+   // The same market as the research: page → Pre-Write Brief → site (owner 2026-11-12: Spanish research, English AI question).
+   const pageSet=typeof loadPageMarkets==='function'?await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null):null;
+   const briefSet=typeof loadPrewriteMarket==='function'?await Promise.resolve(loadPrewriteMarket({clientId:v.clientId,keywords:[v.page.keyword,term].filter(Boolean)})).catch(()=>null):null;
+   const siteSet=typeof loadSiteMarkets==='function'?await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null):null;
+   const set=resolveMarketSetting(pageSet,briefSet,siteSet);
    const country=v.marketOverride||set?.countries?.[0]||null;
    return await aiQuestionForTerm({term,gl:country?(String(country).toUpperCase()==='GB'?'uk':String(country).toLowerCase()):'us',hl:String(set?.language||'en').toLowerCase(),...(questionFetch?{fetchImpl:questionFetch}:{})});
   }catch(e){return null}
