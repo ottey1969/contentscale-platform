@@ -66,3 +66,39 @@ test('Pre-Write request: the question is read from the request and screens answe
   const { research: r } = M.researchForRequest({ keyword: 'dakreparatie amsterdam', language: 'Dutch', region: 'nl', manualAi: {}, aiQuestion: { text: 'Wat kost dakreparatie in Amsterdam?', source: null } });
   assert.equal(r.ai_question.text, 'Wat kost dakreparatie in Amsterdam?');
 });
+
+test('owner 2026-11-12 "consultor geo": a question of someone who wants to do the job is never the customer question', async () => {
+  const google = { peopleAlsoAsk: [{ question: '¿Cuánto gana un consultor GEO?' }, { question: '¿Cómo ser consultor GEO?' }, { question: '¿Qué hace un consultor GEO?' }, { question: '¿Cuánto cuesta un consultor GEO?' }],
+    relatedSearches: [{ query: 'consultor geo sueldo' }, { query: 'consultor geo curso' }] };
+  const q = await aiQuestionForTerm({ term: 'consultor geo', gl: 'es', hl: 'es', key: 'TEST', now: 10, fetchImpl: serper(google) });
+  assert.equal(q.text, '¿Cuánto cuesta un consultor GEO?', 'a buyer question (price) wins');
+  // Only job questions: no question (the keyword is asked), never "¿Cuánto gana…".
+  const none = await aiQuestionForTerm({ term: 'consultor seo', gl: 'es', hl: 'es', key: 'TEST', now: 10, fetchImpl: serper({ peopleAlsoAsk: [{ question: '¿Cuánto gana un consultor SEO?' }, { question: '¿Cómo ser consultor SEO?' }] }) });
+  assert.equal(none, null);
+  // Pre-Write: the same helper; job questions are not offered, AI ideas only from the buyer's side.
+  const { discoverCustomerQuestions } = require('../src/growth-customer-questions.cjs');
+  const prompts = [];
+  const out = await discoverCustomerQuestions({ keyword: 'consultor seo', gl: 'es', hl: 'es', key: 'TEST', fetchImpl: serper({ peopleAlsoAsk: [{ question: '¿Cuánto gana un consultor SEO?' }] }),
+    model: { call: async p => { prompts.push(p); return JSON.stringify({ questions: ['¿Cuánto cuesta contratar un consultor SEO?', '¿Cómo ser consultor SEO freelance?'] }); } } });
+  assert.equal(out.best_question, '¿Cuánto cuesta contratar un consultor SEO?');
+  assert.ok(!out.questions.some(x => /Cómo ser/.test(x.text)), 'an AI idea about the job is dropped');
+  assert.equal(out.questions.find(x => /gana/.test(x.text)).priority, 'NOT_A_CUSTOMER_QUESTION');
+  assert.match(prompts[0], /never someone who wants to work in this field/);
+});
+
+test('the Serper.dev key is read from SERPER_API_KEY or SERPAPI_KEY (production keeps it in SERPAPI_KEY)', async () => {
+  const { serperKey, fromGoogle } = require('../src/growth-customer-questions.cjs');
+  const a = process.env.SERPER_API_KEY, b = process.env.SERPAPI_KEY;
+  try {
+    delete process.env.SERPER_API_KEY; process.env.SERPAPI_KEY = 'TEST-SERPAPI';
+    assert.equal(serperKey(), 'TEST-SERPAPI');
+    const seen = [];
+    const g = await fromGoogle({ query: 'consultor geo', gl: 'es', hl: 'es', fetchImpl: async (u, init) => { seen.push(init.headers['X-API-KEY']); return { ok: true, json: async () => ({ peopleAlsoAsk: [{ question: '¿Cuánto cuesta un consultor GEO?' }] }) }; } });
+    assert.equal(g.status, 'GOOGLE_QUESTIONS_FOUND'); assert.deepEqual(seen, ['TEST-SERPAPI']);
+    delete process.env.SERPAPI_KEY;
+    assert.equal((await fromGoogle({ query: 'consultor geo' })).status, 'GOOGLE_NOT_CONFIGURED');
+  } finally {
+    if (a === undefined) delete process.env.SERPER_API_KEY; else process.env.SERPER_API_KEY = a;
+    if (b === undefined) delete process.env.SERPAPI_KEY; else process.env.SERPAPI_KEY = b;
+  }
+});
