@@ -10,7 +10,7 @@
  var endpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(id)+runParams;
  var last=null;
  var savedEndpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/saved?page_id='+encodeURIComponent(id)+runParams;
- var trackerGrowthStyle=document.createElement('style');trackerGrowthStyle.textContent="\n.tg-cockpit{background:linear-gradient(135deg,#0f3d3e,#1b5e5a);color:#fff;border:0}.tg-cockpit h2{color:#fff;margin:.3em 0}.tg-cockpit p{color:#e2f1ef}.tg-eyebrow{font-size:12px;font-weight:700;letter-spacing:.04em;background:rgba(255,255,255,.14);padding:3px 9px;border-radius:999px}.tg-cockpit a.tg-go{background:#fff;color:#0b2252}.tg-sub a{color:#fff}.tg-flow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.tg-flow a{color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none}.tg-flow a.active{background:rgba(255,255,255,.22)}.tg-flow a.done{border-color:#4ade80}\n.tg-found ul{margin:6px 0 0}.tg-evidence{background:white;border:1px solid #d9e1ec;border-radius:12px;padding:14px 18px;margin:14px 0}.tg-evidence>summary{font-weight:700;cursor:pointer}.tg-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.tg-tabs button{background:#f1f5f9;color:#172337;border:1px solid #d9e1ec;font-weight:600}.tg-tabs button[aria-selected=true]{background:#1d4ed8;color:#fff}.tg-pane>section{border:0;padding:0}\n.tg-self{margin-top:16px;border-top:1px solid #e5eaf2;padding-top:8px}.tg-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:12px 16px;background:#0f3d3e;color:#fff;box-shadow:0 -6px 20px rgba(0,0,0,.18)}.tg-bar[hidden]{display:none}.tg-bar small{display:block;color:#cde7e4}.tg-bar a.tg-go{background:#fff;color:#0b2252;padding:9px 14px;border-radius:8px;font-weight:700;text-decoration:none}.tg-bar a.tg-top{color:#cde7e4}\n/* Tracker Growth guided actions */\n.cs-growth-guidance{padding:12px 14px;border-left:4px solid #2563eb;background:rgba(37,99,235,.06);border-radius:6px}\n.cs-growth-action-list{display:grid;gap:12px;margin:12px 0 18px}.cs-growth-action{border:1px solid #cbd5e1;border-radius:12px;padding:16px;transition:border-color .2s ease,box-shadow .2s ease,opacity .2s ease}.cs-growth-action-head{display:flex;gap:12px;align-items:flex-start}.cs-growth-state{font-size:22px;font-weight:700;line-height:1.2}.cs-growth-action-copy{flex:1}.cs-growth-action-copy p{margin:4px 0 12px}.cs-growth-action-button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;transition:transform .15s ease,background .2s ease}.cs-growth-action-button:focus-visible{outline:3px solid #1d4ed8;outline-offset:3px}.cs-growth-action-button:active{transform:scale(.98)}.cs-growth-current{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb}.cs-growth-current .cs-growth-state{color:#2563eb}.cs-growth-current .cs-growth-action-button{background:#2563eb;color:white}.cs-growth-done{border-color:#15803d}.cs-growth-done .cs-growth-state{color:#15803d}.cs-growth-done .cs-growth-action-button{background:#15803d;color:white}.cs-growth-future{opacity:.73}.cs-growth-future .cs-growth-action-button{background:#e2e8f0;color:#475569;cursor:not-allowed}.cs-growth-action-detail{border-top:1px solid #cbd5e1;padding-top:10px;margin-top:12px;animation:csGrowthReveal .24s ease-out}.cs-growth-action-detail[hidden]{display:none}@keyframes csGrowthReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.cs-growth-action,.cs-growth-action-button,.cs-growth-action-detail{animation:none;transition:none}}\n";(document.head||main).appendChild(trackerGrowthStyle);
+ var trackerGrowthStyle=document.createElement('style');trackerGrowthStyle.textContent="\n.tg-cockpit{background:linear-gradient(135deg,#0f3d3e,#1b5e5a);color:#fff;border:0}.tg-cockpit h2{color:#fff;margin:.3em 0}.tg-cockpit p{color:#e2f1ef}.tg-eyebrow{font-size:12px;font-weight:700;letter-spacing:.04em;background:rgba(255,255,255,.14);padding:3px 9px;border-radius:999px}.tg-cockpit a.tg-go{background:#fff;color:#0b2252}.tg-sub a{color:#fff}.tg-flow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.tg-flow a{color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none}.tg-flow a.active{background:rgba(255,255,255,.22)}.tg-flow a.done{border-color:#4ade80}\n.tg-found ul{margin:6px 0 0}.tg-evidence{background:white;border:1px solid #d9e1ec;border-radius:12px;padding:14px 18px;margin:14px 0}.tg-evidence>summary{font-weight:700;cursor:pointer}.tg-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.tg-tabs button{background:#f1f5f9;color:#172337;border:1px solid #d9e1ec;font-weight:600}.tg-tabs button[aria-selected=true]{background:#1d4ed8;color:#fff}.tg-pane>section{border:0;padding:0}\n.tg-self{margin-top:16px;border-top:1px solid #e5eaf2;padding-top:8px}.tg-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:12px 16px;background:#0f3d3e;color:#fff;box-shadow:0 -6px 20px rgba(0,0,0,.18)}.tg-bar[hidden]{display:none}.tg-bar small{display:block;color:#cde7e4}.tg-bar a.tg-go{background:#fff;color:#0b2252;padding:9px 14px;border-radius:8px;font-weight:700;text-decoration:none}.tg-bar a.tg-top{color:#cde7e4}\n/* Tracker Growth guided actions */\n.cs-growth-guidance{padding:12px 14px;border-left:4px solid #2563eb;background:rgba(37,99,235,.06);border-radius:6px}\n.cs-growth-action-list{display:grid;gap:12px;margin:12px 0 18px}.cs-growth-action{border:1px solid #cbd5e1;border-radius:12px;padding:16px;transition:border-color .2s ease,box-shadow .2s ease,opacity .2s ease}.cs-growth-action-head{display:flex;gap:12px;align-items:flex-start}.cs-growth-state{font-size:22px;font-weight:700;line-height:1.2}.cs-growth-action-copy{flex:1}.cs-growth-action-copy p{margin:4px 0 12px}.cs-growth-action-button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;transition:transform .15s ease,background .2s ease}.cs-growth-action-button:focus-visible{outline:3px solid #1d4ed8;outline-offset:3px}.cs-growth-action-button:active{transform:scale(.98)}.cs-growth-current{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb}.cs-growth-current .cs-growth-state{color:#2563eb}.cs-growth-current .cs-growth-action-button{background:#2563eb;color:white}.cs-growth-done{border-color:#15803d}.cs-growth-done .cs-growth-state{color:#15803d}.cs-growth-done .cs-growth-action-button{background:#15803d;color:white}.cs-growth-future{opacity:.73}.cs-growth-future .cs-growth-action-button{background:#e2e8f0;color:#475569;cursor:not-allowed}.cs-growth-action-detail{border-top:1px solid #cbd5e1;padding-top:10px;margin-top:12px;animation:csGrowthReveal .24s ease-out}.cs-growth-action-detail[hidden]{display:none}@keyframes csGrowthReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.cs-growth-action,.cs-growth-action-button,.cs-growth-action-detail{animation:none;transition:none}}\n";trackerGrowthStyle.textContent+="\n.growth-ai-prominent{border:2px solid #bfdbfe!important;background:linear-gradient(145deg,#eff6ff,#fff 55%)!important;box-shadow:0 9px 28px rgba(29,78,216,.09);animation:growthAiArrive .3s ease-out;scroll-margin-top:22px}\n.growth-ai-prominent h2{color:#1e40af}.growth-ai-state{font-weight:700;color:#1e3a8a}.growth-ai-progress{height:9px;background:#dbeafe;border-radius:99px;overflow:hidden;margin:8px 0 14px}.growth-ai-progress>span{height:100%;display:block;background:#2563eb;border-radius:99px;transition:width .4s ease}.growth-ai-manual{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:14px;margin-top:12px}.growth-ai-manual>summary{cursor:pointer;font-weight:700}.growth-ai-prominent a[href=\"#growthGapChoice\"]{display:inline-block;padding:8px 13px;border-radius:8px;background:#1d4ed8;color:white;font-weight:700;text-decoration:none}.growth-ai-prominent a:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}\n@keyframes growthAiArrive{from{opacity:.45;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.growth-ai-prominent{animation:none}.growth-ai-progress>span{transition:none}}\n";(document.head||main).appendChild(trackerGrowthStyle);
  function node(tag,text,parent){
   var n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);
   if(parent)parent.appendChild(n);return n;
@@ -98,7 +98,11 @@
   var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
   var recent=(x.engines||[]).filter(function(e){return e.checked}).length;
   var total=x.total||(x.engines||[]).length,complete=total>0&&recent===total&&(x.engines||[]).every(function(e){return e.verifiable});
-  node('p',complete?'AI research complete — '+recent+'/'+total+' checked. No additional AI answers required.':'AI-system checks for this exact search: '+recent+' of '+total+' current (within '+(c.max_age_days||14)+' days). This is saved check evidence, not a new live AI scan.',box);
+  var line=node('p',complete?'All '+recent+' AI systems checked with verifiable sources.':'AI systems researched: '+recent+' of '+total+' · '+(total-recent)+' not checked.',box);
+   line.className='growth-ai-state';line.setAttribute('role','status');
+   var progress=node('div',null,box);progress.className='growth-ai-progress';progress.setAttribute('role','progressbar');progress.setAttribute('aria-label','Verified AI systems research');progress.setAttribute('aria-valuemin','0');progress.setAttribute('aria-valuemax',String(total||5));progress.setAttribute('aria-valuenow',String(recent));
+   var fill=node('span',null,progress);fill.style.width=(total?Math.round(recent*100/total):0)+'%';
+   node('p','Gemini with Google Search is checked automatically when configured. ChatGPT, Claude, Perplexity and Copilot require their own real source-backed answers. AI research is optional; Google topic research remains available.',box).className='info';
   if(d.automatic_ai_status)node('p','Automatic Gemini / Google Search: '+(d.automatic_ai_status==='SUCCESS'?'completed and saved':d.automatic_ai_status==='ALREADY_CHECKED'?'existing verified answer reused':d.automatic_ai_status==='RUNNING'?'checking now…':d.automatic_ai_status==='RETRY_LATER'?'retry deferred':d.automatic_ai_status.replace(/_/g,' ').toLowerCase())+'. Gemini grounding is not a Google AI Overview; other providers are not marked checked without their actual answers.',box);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
   var history=new Map((c.prior_checks||[]).map(function(e){return [e.id,e.checked_at]}));
@@ -116,10 +120,10 @@
   if(!d.gap_list&&x.visibility_actions&&x.visibility_actions.length){var nx=node('div',null,box);nx.className='ai-next-steps';node('h4','Next steps to be cited by AI',nx);
    x.visibility_actions.forEach(function(v){node('strong',v.title,nx);node('p',v.why,nx);var ol=node('ol',null,nx);v.steps.forEach(function(t){node('li',t,ol)})})}
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
-  if(complete){var goStep=node('p',null,box),continueLink=node('a','Continue to step 1 · Choose what to add',goStep);continueLink.href='#growthGapChoice';}
+  var goStep=node('p',null,box),continueLink=node('a','Continue to choose page improvements →',goStep);continueLink.href='#growthGapChoice';
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
-  var form=node('details',null,box);
-  node('summary','Advanced · Add or recheck an independent AI answer manually (optional)',form);
+  var form=node('details',null,box);form.className='growth-ai-manual';
+  node('summary','Research another AI system · Copy prompt and add a real answer (optional)',form);
   node('p','Copy the prompt, paste it into a new chat with web search on, then paste the complete answer (including RESOURCES) at the AI system you used.',form);
   // The question the prompt asks: Google's own question for this search term, the best match (owner 2026-11-12).
   if(c.ai_question&&c.ai_question.text){var qa=node('p',null,form);qa.id='growthAiQuestionAsked';node('strong','Question asked: ',qa);qa.appendChild(document.createTextNode('“'+c.ai_question.text+'” '));
@@ -287,12 +291,12 @@
   // One clear next step: AI answers only when needed, otherwise continue with selection.
   var aiSummary=d.ai_check&&d.ai_check.summary;
   var aiDone=!!(aiSummary&&aiSummary.total>0&&aiSummary.checked===aiSummary.total&&aiSummary.verifiable===aiSummary.total);
-  var nav=node('p',null,primary);nav.id='growthDecisionNav';var next=node('a',aiDone?'Continue to Step 3 · Write selected improvements':'Go to Step 2 · Check AI answers',nav);
+  var nav=node('p',null,primary);nav.id='growthDecisionNav';var next=node('a',aiDone?'Choose the improvements to write':'Review AI systems research (optional)',nav);
   next.href=aiDone?'#growthGapChoice':'#growthAiCheck';
   if(aiDone)node('small','AI answers have been saved for this query. You can continue with the selected improvements.',nav);
   // AI answers for this search term: offered right after the decision, read fresh on every load, never re-running research.
-  if(d.ai_check){var aiBox=section('Step 2 · AI answers for “'+d.ai_check.search_term+'” — optional');aiBox.id='growthAiCheck';
-   if(!d.ai_check.summary||!d.ai_check.summary.checked)node('p','No current AI-system answers available. When you choose Write selected with AI in step 1, a pop-up will let you check AI systems first or continue using Google research only.',aiBox);
+  if(d.ai_check){var aiBox=section('AI systems research · “'+d.ai_check.search_term+'”');aiBox.id='growthAiCheck';
+   if(!d.ai_check.summary||!d.ai_check.summary.checked)node('p','No current independently verified AI answers. Gemini may check automatically; you may research other engines or continue using Google evidence. Writing will ask for your choice if required.',aiBox);
    renderAiCheck(aiBox,d);
    if(keepText){var t2=aiBox.querySelector('textarea:not([readonly])'),s2=aiBox.querySelector('select');if(t2)t2.value=keepText;if(s2&&keepEngine)s2.value=keepEngine}}
   // What the ranking pages have and this page does not: the editor chooses what goes on the page (Growth's own proposal
@@ -735,12 +739,16 @@
    }
    if(sc){
     node('h3','Possible new pages (research first)',beyond);
-    if((sc.candidates||[]).length){
-     sc.candidates.forEach(function(c){
+    // An already tracked keyword isn't a separate page opportunity (owner: "Research: consultor geo" on the consultor geo page).
+    var normTopic=function(v){return String(v||'').normalize('NFKD').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim()};
+    var topic=normTopic(d.original_tracked_keyword),sameUrl=function(v){return String(v||'').replace(/\/+$/,'')===String(d.url||'').replace(/\/+$/,'')};
+    var candidates=(sc.candidates||[]).filter(function(c){return !(topic&&normTopic(c.query)===topic)&&!(c.url&&sameUrl(c.url))});
+    if(candidates.length){
+     candidates.forEach(function(c){
       addAction('Research: '+c.query, String(c.impressions)+' impressions · '+String(c.clicks)+' clicks · position '+String(c.best_position),
        ['Next step: '+String(c.next||'Start a Pre-Write brief and verify live SERP intent and overlap.'),'Related terms: '+String((c.variants||[]).join(', ')||c.query),'This is a candidate, not approval to publish.']);
      });
-    }else node('p',String(sc.note||'No candidates.'),beyond);
+    }else node('p',(sc.candidates||[]).length?'No separate page to research: the suggested keyword already belongs to this page. Continue with the improvements above.':String(sc.note||'No candidates.'),beyond);
     if((sc.belongs_elsewhere||[]).length){
      var other=node('details',null,beyond);node('summary','Queries already served by tracked pages',other);
      (sc.belongs_elsewhere||[]).forEach(function(x){var item=node('p',x.query+' → ',other);link(x.url,x.url,item)});
@@ -924,13 +932,16 @@
   ((ocx&&ocx.open_checks)||[]).forEach(function(c){node('li','Still open: '+c.detail+' — '+c.action,fl)});
   if(gl)node('li','Google: '+(gl.items||[]).length+' difference(s) between the ranking pages and your page, to choose from in step 1.',fl);
   var as=d.ai_check&&d.ai_check.summary,ag=d.ai_check&&d.ai_check.gap;
-  node('li','AI answers: '+(as&&as.checked?as.headline+(ag&&ag.missing_topics&&ag.missing_topics.length?' · '+ag.missing_topics.length+' topic(s) on the pages AI cites that your page does not cover':''):'not checked yet'),fl);
+  var aiFound=node('li',null,fl);aiFound.appendChild(document.createTextNode('AI systems: '+(as&&as.checked?as.headline+(ag&&ag.missing_topics&&ag.missing_topics.length?' · '+ag.missing_topics.length+' topic(s) on cited pages missing from yours':''):'not checked yet')+' · '));var aiJump=node('a','Open AI research',aiFound);aiJump.href='#growthAiCheck';
   var evl=node('li',null,fl),eva=node('a','See the evidence',evl);eva.href='#growthEvidenceAll';
+  // The AI systems research is visible BEFORE topics, not buried under evidence tabs.
+  // This matches the Free Growth flow; AI answers remain optional.
+  if(aiBox){aiBox.classList.add('growth-ai-prominent');container.insertBefore(aiBox,found.nextSibling);}
   // 2. Step 1: Growth's own concrete edit (when there is one), then the list, then "Do it yourself".
   if(choice){var wb=[].slice.call(choice.querySelectorAll('button')).filter(function(b){return /Write selected with AI/.test(b.textContent)})[0];if(wb)wb.id='growthWriteButton';
    var selfBox=document.createElement('div');selfBox.id='growthSelfDo';selfBox.className='tg-self';choice.appendChild(selfBox);selfRender(selfBox,selfItems(d))}
   if(decision&&!keepDecision){var dh=decision.querySelector('h2');if(dh)dh.textContent='Growth’s analysis of this search'}
-  if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI answers for “'+d.ai_check.search_term+'”'}
+  if(aiBox){var ah=aiBox.querySelector('h2');if(ah&&d.ai_check)ah.textContent='AI systems research · '+d.ai_check.search_term}
   if(keepDecision&&choice){var h2=decision.querySelector('h2');if(h2)h2.textContent='Growth’s own suggestion — review before publishing';container.insertBefore(decision,choice)}
   // 3. Step 2 and step 3 (static parts of the page).
   var fin=document.getElementById('growthFinalActions');if(fin){fin.hidden=false;var fh=fin.querySelector('h2');if(fh)fh.textContent='Step 2 · Write and prepare the CMS package';
@@ -940,9 +951,9 @@
   var meas=document.querySelector('#growthNextAction > summary');if(meas)meas.textContent='Step 3 · Publish & measure (after the change is live)';
   // 4. Evidence: one closed section with tabs.
   var all=document.createElement('details');all.id='growthEvidenceAll';all.className='tg-evidence';container.appendChild(all);
-  node('summary','What was checked — evidence (Growth’s analysis · AI answers · research details)',all);
+  node('summary','What was checked — technical evidence (Growth analysis · Google research details)',all);
   var tabs=node('div',null,all);tabs.className='tg-tabs';var panes=[];
-  [['decision','Growth’s analysis',keepDecision?null:decision],['ai','AI answers',aiBox],['research','Research details',ev]].forEach(function(t){if(!t[2])return;
+  [['decision','Growth’s analysis',keepDecision?null:decision],['research','Research details',ev]].forEach(function(t){if(!t[2])return;
    var b=node('button',t[1],tabs);b.type='button';b.setAttribute('data-tab',t[0]);var pane=node('div',null,all);pane.className='tg-pane';pane.setAttribute('data-tab',t[0]);pane.appendChild(t[2]);panes.push(pane);
    if(t[0]==='research'&&t[2].tagName==='DETAILS')t[2].open=true;
    b.addEventListener('click',function(){trTab(t[0])})});

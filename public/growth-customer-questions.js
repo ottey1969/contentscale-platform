@@ -14,7 +14,7 @@
  if(manual&&explicit===null&&saved)manual.value=saved.slice(0,120);
  function saveDraft(v){try{localStorage.setItem(key,String(v||'').slice(0,120))}catch(e){}}
  if(manual){manual.addEventListener('input',function(){saveDraft(manual.value)});if(explicit!==null)saveDraft(manual.value)}
- var reset=document.createElement('button');reset.type='button';reset.id='cqReset';reset.textContent='Reset';reset.className='ghost';reset.style.marginLeft='8px';
+ var reset=document.createElement('button');reset.type='button';reset.id='cqReset';reset.textContent='Clear question';reset.className='ghost';reset.style.marginLeft='8px';
  if(manualGo&&manual){manualGo.insertAdjacentElement('afterend',reset);reset.addEventListener('click',function(){
   try{localStorage.setItem(key,'__RESET__')}catch(e){}
   manual.value='';var own=document.getElementById('cqOwn');if(own)own.value='';
@@ -24,8 +24,16 @@
  })}
 
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
- function go(q){q=String(q||'').replace(/\s+/g,' ').trim().slice(0,120);if(!q){st.textContent='Choose or type a question first.';return}saveDraft(q);
-  var u=new URL(location.href);u.searchParams.set('query',q);location.href=u.pathname+u.search}
+ function go(q){q=String(q||'').replace(/\s+/g,' ').trim().slice(0,120);if(!q){st.textContent='Choose or type a question first.';return}
+  saveDraft(q);
+  var u=new URL(location.href),current=(u.searchParams.get('query')||'').trim();
+  // Choosing the same question must NOT reset the entire page (owner report 2026-11-12).
+  if(q===current){st.textContent='This question is already selected. Its research is shown below; no restart is needed.';
+   var target=document.getElementById('growthAiCheck')||document.getElementById('growthGapChoice');
+   if(target)target.scrollIntoView({behavior:window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});return}
+  u.searchParams.set('query',q);u.searchParams.delete('auto_q');u.searchParams.delete('keyword_only');
+  st.textContent='Opening research for the newly selected question. Your earlier research stays saved under its original question; no content is deleted.';
+  location.assign(u.pathname+u.search+u.hash)}
  if(manualGo&&manual)manualGo.addEventListener('click',function(){go(manual.value)});
  if(manual)manual.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();go(manual.value)}});
  // On first opening an existing page, discover a question automatically. Never overwrite an explicit URL query.
@@ -45,11 +53,12 @@
    st.textContent=(d.questions.length?d.questions.length+' question(s)'+(d.searched_with?' for “'+d.searched_with+'”':'')+(d.market?' in '+d.market.name:'')+'.':'No questions found.')+why;
    var h='<fieldset><legend>Customer questions · strongest relevant observation first</legend>'+d.questions.map(function(q,i){return '<label style="display:block;margin:6px 0"><input type="radio" name="cq" value="'+esc(q.text)+'"'+(q.text===d.best_question?' checked':'')+'> '+esc(q.text)+' <small style="display:inline">· '+esc(q.label)+(q.text===d.best_question?' · Best match':'')+'</small></label>'}).join('')+
     '<label style="display:block;margin:10px 0 4px">Or type or edit the question</label><input id="cqOwn" type="text" maxlength="120" style="width:min(100%,560px);font:inherit;padding:6px 8px" value="'+esc(d.best_question||'')+'"></fieldset>'+
-    '<p><button type="button" id="cqGo">Research this question →</button></p><p class="info">'+esc(d.note)+'</p>';
+    '<p><button type="button" id="cqGo">Use this question for research →</button></p><p class="info">Choosing a different question opens its own saved research; it does not delete your previous report or publish anything.</p><p class="info">'+esc(d.note)+'</p>';
    list.innerHTML=h;var own=document.getElementById('cqOwn');
    if(saved&&own)own.value=manual&&manual.value||saved;
    if(own)own.addEventListener('input',function(){saveDraft(own.value)});
    list.querySelectorAll('input[name=cq]').forEach(function(r){r.addEventListener('change',function(){own.value=r.value;saveDraft(own.value)})});
+   document.getElementById('cqGo').textContent='Use this question for research →';
    document.getElementById('cqGo').addEventListener('click',function(){go(own.value)});
   }catch(e){st.textContent=e.message}btn.disabled=false});
 })();

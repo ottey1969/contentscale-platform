@@ -13,7 +13,7 @@ function sourceFacts(html){
  }
  return {text:blocks.join('\n').slice(0,11000),count:blocks.length};
 }
-const RETRY_STATUSES=['AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE','AI_DRAFT_UNPROVEN_AI_MECHANISM','AI_DRAFT_UNSOURCED_ATTRIBUTION','AI_DRAFT_HEADING_MISMATCH'];
+const RETRY_STATUSES=['AI_DRAFT_WRONG_LANGUAGE','AI_DRAFT_NUMERIC_CLAIM_NOT_OBSERVED','AI_DRAFT_OFF_TOPIC_SECTION','AI_DRAFT_FOCUS_QUERY_MISSING_TITLE','AI_DRAFT_UNPROVEN_AI_MECHANISM','AI_DRAFT_UNSOURCED_ATTRIBUTION','AI_DRAFT_HEADING_MISMATCH'];
 // flagOnly (writing for an owner's selection, after the one repair attempt): the same checks mark the failing sentences
 // instead of rejecting the draft, so the editor gets a marked concept rather than nothing. Never used as "checked".
 // The AI's JSON, read tolerantly (live 2026-11-09: INVALID_AI_JSON stopped a writing round): code fences, text before or
@@ -25,11 +25,17 @@ function parseAiJson(raw){
  for(const x of tries){try{return JSON.parse(x)}catch{}}
  return undefined;
 }
-// Which language a text is mostly in (English or Dutch, by common function words); '' when it cannot be told.
+// Detect original source language, not the language of an English-language research question.
+// Spanish pages previously fell through to English/Dutch; their generated H2s were then left in English.
 const EN_WORDS=new Set('the and of to in is for with that this are on as by be or from at an it can your you how what why when which whether across without between fully their more than not into'.split(' '));
 const NL_WORDS=new Set('de het een en van in is voor met dat dit zijn op als door te of bij aan je jouw hoe wat waarom wanneer welke niet ook maar om naar over uit dan meer wordt kan'.split(' '));
-function textLanguage(t){const w=(String(t||'').toLowerCase().match(/[a-zà-ÿ]+/g)||[]);let en=0,nl=0;for(const x of w){if(EN_WORDS.has(x))en++;if(NL_WORDS.has(x))nl++}
- if(en+nl<4)return '';return nl>en*1.3?'nl':en>nl*1.3?'en':''}
+const ES_WORDS=new Set('el la los las un una unos unas de del al y en es son está están que qué se su sus para por con como cómo pero más muy cuando cuándo donde dónde desde hasta sobre entre también esta este estos estas esto al mismo además puede pueden debe deben sitio página páginas búsqueda búsquedas herramientas herramienta empresa contenido información persona negocio si sin todo todos todas cada cual cuáles quién quienes'.split(' '));
+function textLanguage(t){const w=(String(t||'').toLowerCase().match(/[a-zà-ÿ]+/g)||[]);let en=0,nl=0,es=0;
+ for(const x of w){if(EN_WORDS.has(x))en++;if(NL_WORDS.has(x))nl++;if(ES_WORDS.has(x))es++}
+ if(en+nl+es<4)return '';
+ if(es>=4&&es>Math.max(en,nl)*1.3)return 'es';
+ if(nl>=4&&nl>Math.max(en,es)*1.3)return 'nl';
+ return en>=4&&en>Math.max(nl,es)*1.3?'en':''}
 function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTerms=[],flagOnly=false}={}){
  let obj=value;
  if(typeof obj==='string'){
@@ -63,6 +69,10 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
  // required in the text, or the writer mixes languages ("future outlook en longevity", owner 2026-11-10).
  const pageLang=textLanguage(sourceText),termLang=textLanguage(String(focusQuery||'')+' '+(Array.isArray(taskTerms)?taskTerms.join(' '):''))||(/^[\x00-\x7f\s]*$/.test(String(focusQuery||''))&&String(focusQuery||'').trim()?'en':'');
  const crossLanguage=!!(pageLang&&termLang&&pageLang!==termLang);
+ // A translated output must follow the original page, not English competitor headings or an English search question.
+ const wrongLanguage=pageLang==='es'?sections.filter(section=>textLanguage(section.h2+' '+section.paragraphs.join(' '))==='en'):[];
+ if(wrongLanguage.length&&(failed=fail('AI_DRAFT_WRONG_LANGUAGE',{rejected_sections:wrongLanguage.map(x=>({h2:x.h2,reason:'ENGLISH_COPY_FOR_SPANISH_PAGE'}))},
+   wrongLanguage.map(x=>({h2:x.h2,sentence:null,code:'WRONG_LANGUAGE',reason:'Write this section in Spanish, retaining original brand and tool names.'})))))return failed;
  const offTopic=queryTerms.length&&!crossLanguage?sections.filter(section=>!onTopic(section)):[];
  if(offTopic.length&&(failed=fail('AI_DRAFT_OFF_TOPIC_SECTION',{rejected_sections:offTopic.map(x=>({h2:x.h2,reason:taskStems.length?'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD':'NO_FOCUS_QUERY_TERM'}))},
   offTopic.map(x=>({h2:x.h2,sentence:null,code:'OFF_TOPIC',reason:'The section does not mention the search term or the chosen topic.'})))))return failed;
@@ -120,6 +130,7 @@ function styleIssues(draft,sourceText=''){
  for(const sec of (draft&&draft.sections)||[]){
   const paras=(sec.paragraphs||[]).map(String);
   if(textLanguage(paras.join(' '))==='nl')for(const t of [sec.h2,...paras.flatMap(p=>p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[])])if(t&&EN_ONLY.test(t))out.push({h2:sec.h2,sentence:String(t).trim(),problem:'MIXED_LANGUAGE'});
+   if(textLanguage(src)==='es'&&textLanguage(sec.h2+' '+paras.join(' '))==='en')out.push({h2:sec.h2,sentence:sec.h2,problem:'WRONG_LANGUAGE_ENGLISH_FOR_SPANISH_PAGE'});
   const first=(paras[0]||'').match(/[^.!?]+[.!?]?/)?.[0]?.trim()||'';
   if(first&&FILLER_OPENING.test(first))out.push({h2:sec.h2,sentence:first,problem:'OPENING_FILLER'});
   if(!pageHasTeams)for(const p of paras)for(const t of p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[])if(TEAM_PROCESS.test(t))out.push({h2:sec.h2,sentence:t.trim(),problem:'TEAM_PROCESS_ADVICE'});
@@ -152,7 +163,7 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    'TASK MODE: SECTION_IMPROVEMENT. Write ONLY the missing reader task(s) listed here: exactly ONE H2 section per task (never combine tasks), 2-4 paragraphs each that a reader can act on. Tasks: '+JSON.stringify(readerTask.tasks),
    'When a task has a "reader_question", the section must answer exactly that question for that reader, nothing broader or neighbouring, and its H2 must say what it answers.',
    'Every section must carry the "task_code" of the task it teaches. Put the task\'s core_words in the H2 and in the first sentence, and explain the task itself, not a neighbouring topic.',
-   'Write every word in the language of the ORIGINAL SOURCE TEXT. When the working topic, the tasks or their core_words are in another language, translate them; never mix languages in one sentence (no English words in a Dutch text). Only proper names and established terms such as SEO or AI stay as they are.',
+   'Write the H2 and every paragraph in the language of the ORIGINAL SOURCE TEXT (Spanish for a Spanish page, Dutch for a Dutch page). An English customer question or competitor heading is research context ONLY: translate the question and its key concepts, never publish English headings or English body copy on a Spanish page. Preserve real product names, official brand names and established abbreviations such as SEO, GEO or AI.',
    'Make each step concrete (who does what, in which order, what to check) without inventing figures, names, response times, service areas or results.',
    'Voice: the page speaks as the service, never as a person. Never write "I", "me", "my", "ik", "mijn" or about a founder; when the business is meant, name the service as the original page names it, in the third person, or address the reader ("you").',
    'Write reader advice, not product claims: never state what any tool, tracker or software does or detects; avoid absolute verbs (eliminates, prevents, ensures, guarantees, proves) and promises about rankings, traffic, AI citations or ROI; use no figures that are not in the original text.',

@@ -57,7 +57,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     const before = (await pool.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'tracker\\_%'")).rows.map(r => r.table_name).sort();
     const ctx = await browser.newContext({ acceptDownloads: true }); const p = await ctx.newPage();
     // The evidence (Google · AI answers · Search Console) is one section with tabs below the steps.
-    const evidence = async tab => { if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click(); await p.click('.rtabs button[data-tab="' + tab + '"]'); };
+    const evidence = async tab => { if(tab==='ai'){await p.locator('#freeAiResearch').scrollIntoViewIfNeeded();return;} if (!(await p.locator('#stepResearch').evaluate(el => el.open))) await p.locator('#stepResearch > summary').click(); await p.click('.rtabs button[data-tab="' + tab + '"]'); };
     const errors = []; p.on('pageerror', e => errors.push(e.message)); p.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
     // 1. The form: page, search term, market, language, email.
     await p.goto(base + '/free-growth?key=e2e-open-key-1');
@@ -300,7 +300,7 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await evidence('ai');
     assert.equal(await p.locator('#aiRecheck').evaluate(el => el.open), false, 'five completed AI answers collapse the entry form');
     assert.equal(await p.locator('#aiText').isVisible(), false);
-    assert.match(await p.textContent('#aiRecheck > summary'), /Advanced · Recheck an AI answer/);
+    assert.match(await p.textContent('#aiRecheck > summary'), /Research another AI system · Recheck a real answer/);
     await p.locator('#aiRecheck > summary').click();
     assert.equal(await p.locator('#aiText').isVisible(), true, 'user can deliberately recheck an answer');
     // Write a concept again (owner 2026-11-09 "schrijft niet"): every selected H2 has a concept, so the button would do
