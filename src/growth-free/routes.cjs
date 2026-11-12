@@ -11,6 +11,7 @@ const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const aiGap=require('./ai-gap.cjs');
 const contacts=require('./contacts.cjs');
+const {FORM_TEXTS,FORM_LANGS,formLang}=require('./form-texts.cjs');
 // Tips by e-mail (owner 2026-11-12): on by default, announced at sign-up, with "Don't send me tips" to opt out
 // (soft opt-in). Older forms still send marketing_consent (ticked = yes).
 const tipsOf=b=>b&&b.no_tips!==undefined?b.no_tips!==true:!!(b&&b.marketing_consent===true);
@@ -96,7 +97,7 @@ function readEmails(raw){
 const clean=(x,n)=>String(x==null?'':x).replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,n);
 
 function page(title,body,cfg){
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')?'index,follow':'noindex'}"><style>
+ return `<!doctype html><html lang="${esc(cfg&&cfg.htmlLang||'en')}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="${title.startsWith('Free')||FORM_LANGS.some(l=>FORM_TEXTS[l].title===title)?'index,follow':'noindex'}"><style>
 :root{--bg:#f6f8fc;--card:#fff;--ink:#172337;--muted:#5b6b82;--line:#d9e0eb;--accent:#2563eb;--accent-ink:#fff;--done:#15803d;--blocked:#b42318;--pending:#64748b;--warn:#fff7ed;--warn-line:#fed7aa}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1622;--card:#172131;--ink:#e6edf7;--muted:#9fb0c7;--line:#2a374b;--accent:#60a5fa;--accent-ink:#0b1220;--done:#4ade80;--blocked:#fb7185;--pending:#9fb0c7;--warn:#2a2116;--warn-line:#6b4a1f}}
 *{box-sizing:border-box}body{font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);margin:0}
@@ -124,63 +125,65 @@ select{width:100%;padding:11px;border:1px solid var(--line);border-radius:8px;fo
 // Manual answer collection remains an optional fallback. Approved users get Gemini grounding automatically.
 // The AI check is offered before the start: the prompt is built from the search term as it is typed, and the answers
 // pasted here are stored with the check (same validation as pasting them on the result page).
-function aiStartBlock(automatic=false){
+function aiStartBlock(automatic=false,t=FORM_TEXTS.en){
  // Collapsed for everyone: a first-time visitor sees one form, not a prompt and five empty answer boxes.
- return `<details class="card" id="aiStart"><summary><strong>${automatic?'AI answers — automatic, plus your own (optional)':'Advanced: add AI answers yourself (optional)'}</strong> <small class="muted">${automatic?'Gemini with Google Search is checked automatically.':'You can also do this later on the result page.'}</small></summary>
+ return `<details class="card" id="aiStart"><summary><strong>${automatic?'AI answers — automatic, plus your own (optional)':t.aiSummary}</strong> <small class="muted">${automatic?'Gemini with Google Search is checked automatically.':t.aiLater}</small></summary>
  ${automatic?'<p>Growth automatically requests a Gemini answer grounded in live Google Search when the provider is configured. This is not a Google AI Overview. Other AI services are not marked as checked unless their actual answers are supplied.</p>':''}
- <ol><li>Enter the customer question or search phrase above.</li><li>Copy the prompt and paste it into a <strong>new chat with web search on</strong> (ChatGPT, Perplexity, Gemini, Claude or Copilot).</li><li>Paste the complete answer, including RESOURCES, at the AI system you used. You can also do this later on the result page.</li></ol>
- <label for="aiStartPrompt">Prompt (the same for every AI system)</label><textarea id="aiStartPrompt" rows="6" readonly></textarea><p><button type="button" class="ghost" id="aiStartCopy">Copy prompt</button></p>
- ${ai.ENGINES.map(e=>`<label>${esc(e.label)} — answer (optional)<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="Paste the complete answer here"></textarea></label>`).join('')}</details>`;
+ <ol><li>${t.aiStep1}</li><li>${t.aiStep2}</li><li>${t.aiStep3}</li></ol>
+ <label for="aiStartPrompt">${esc(t.aiPrompt)}</label><textarea id="aiStartPrompt" rows="6" readonly></textarea><p><button type="button" class="ghost" id="aiStartCopy">${esc(t.aiCopy)}</button></p>
+ ${ai.ENGINES.map(e=>`<label>${esc(t.aiAnswer.replace('§',e.label))}<textarea data-engine="${esc(e.id)}" rows="3" maxlength="${ai.MAX_PASTE}" placeholder="${esc(t.aiPh)}"></textarea></label>`).join('')}</details>`;
 }
-function aiStartScript(){
+function aiStartScript(t=FORM_TEXTS.en){
  return `(function(){var LINES=${js(ai.DIRECT_PROMPT_LINES)},SLOT=${js(ai.QUERY_SLOT)},q=document.querySelector('[name=query]'),p=document.getElementById('aiStartPrompt');if(!q||!p)return;
- var upd=function(){var t=q.value.trim();p.value=t?LINES.map(function(l){return l===SLOT?t:l}).join(String.fromCharCode(10,10)):'Enter the customer question above first: the prompt uses it exactly.';document.getElementById('aiStartCopy').disabled=!t};
+ var upd=function(){var t=q.value.trim();p.value=t?LINES.map(function(l){return l===SLOT?t:l}).join(String.fromCharCode(10,10)):${js(t.aiPromptEmpty)};document.getElementById('aiStartCopy').disabled=!t};
  q.addEventListener('input',upd);upd();
- document.getElementById('aiStartCopy').onclick=function(){p.select();if(navigator.clipboard)navigator.clipboard.writeText(p.value);this.textContent='Copied ✓'}})();
+ document.getElementById('aiStartCopy').onclick=function(){p.select();if(navigator.clipboard)navigator.clipboard.writeText(p.value);this.textContent=${js(t.aiCopied)}}})();
 function aiStartAnswers(){return Array.prototype.slice.call(document.querySelectorAll('textarea[data-engine]')).filter(function(t){return t.value.trim()}).map(function(t){return {engine:t.getAttribute('data-engine'),text:t.value}})}`;
 }
 
-function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,signedIn:false}){
- return page('Free Growth check — what is your page missing?',`
-<p class="kicker">Free · no account needed</p>
-<h1>Is your page found in Google — and in AI answers?</h1>
-<p class="lead">Enter one page of your website. The check compares it with the pages Google ranks for your search and tells you in plain language whether to change something — or not. You can also see whether AI answers (ChatGPT, Perplexity, Gemini, Claude, Copilot) cite your page, by pasting their answers on the result.</p>
-${invite?`<p class="note"><strong>Personal invitation${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(invite.left)} of ${esc(invite.max)} checks left, valid until ${esc(invite.expires)}.${invite.email_hint?' Only works with the email address '+esc(invite.email_hint)+'.':''}</p>`:''}
+function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,signedIn:false},lang='en'){
+ const t=FORM_TEXTS[lang]||FORM_TEXTS.en;
+ return page(t.title,`
+<p class="kicker">${esc(t.kicker)}</p>
+<h1>${esc(t.h1)}</h1>
+<p class="lead">${esc(t.lead)}</p>
+${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(invite.label):''}.</strong> ${esc(t.inviteLeft.replace('§1',invite.left).replace('§2',invite.max).replace('§3',invite.expires))}${invite.email_hint?' '+esc(t.inviteEmail.replace('§',invite.email_hint)):''}</p>`:''}
 <form id="f" class="card" novalidate>
- <label for="url">Page address</label><input id="url" name="url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="https://www.yoursite.com/service-page/" maxlength="500">
- <label for="query">Customer question (optional)</label><input id="query" name="query" maxlength="120" placeholder="e.g. How much does roof repair cost in Lodi NJ?">
+ <label for="url">${esc(t.url)}</label><input id="url" name="url" type="text" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="${esc(t.urlPh)}" maxlength="500">
+ <label for="query">${esc(t.query)}</label><input id="query" name="query" maxlength="120" placeholder="${esc(t.queryPh)}">
  ${owner.signedIn||invite?`<p><button type="button" id="cqFind" class="ghost">Find customer questions</button> <small role="status" id="cqStatus">Automatic customer question discovery is available with approved access.</small></p><div id="cqList"></div>`:''}
- <small>Leave it empty and the check finds the question customers ask in Google for what your page offers. Or type the question yourself — it then wins.</small>
+ <small>${esc(t.queryHelp)}</small>
  <input type="hidden" id="topic" name="topic"><input type="hidden" id="rt" name="rt"><p class="note" id="topicNote" hidden></p>
- <label for="market">Target market (optional)</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="nl — Netherlands">
- <label for="language">Language (optional)</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="Dutch">
- <small>Where your customers search, as in the Pre-Write brief. Several markets separated by commas, main market first. Leave empty to let the check derive it from your page.</small>
+ <label for="market">${esc(t.market)}</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="${esc(t.marketPh)}">
+ <label for="language">${esc(t.language)}</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="${esc(t.languagePh)}">
+ <small>${esc(t.marketHelp)}</small>
  <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
-${aiStartBlock(!!owner.signedIn||!!invite)}
- <label for="gscFile">Search Console export (optional)</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
- <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
- <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The first address gets the e-mails; the others are kept with the check.</small>
- <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day for the first address.`}`}</span></label>
- <div id="tipsBox"><p class="muted" style="font-size:14px;margin:10px 0 2px">You'll also get occasional tips about ranking and AI search from ContentScale. Unsubscribe anytime with the link in every email.</p>
- <label class="check"><input type="checkbox" name="notips"> <span>Don't send me tips</span></label></div>
+${aiStartBlock(!!owner.signedIn||!!invite,t)}
+ <label for="gscFile">${esc(t.gsc)}</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
+ <small>${esc(t.gscHelp)}</small>
+ <label for="email">${esc(t.email)}</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="${esc(t.emailPh)}"><small>${esc(t.emailHelp)}</small>
+ <label class="check"><input type="checkbox" name="consent" required> <span>${esc(t.consent)}${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':' '+esc(t.perDay.replace('§',cfg.perEmail))}`}</span></label>
+ <div id="tipsBox"><p class="muted" style="font-size:14px;margin:10px 0 2px">${esc(t.tips)}</p>
+ <label class="check"><input type="checkbox" name="notips"> <span>${esc(t.noTips)}</span></label></div>
  ${owner.signedIn?'<label class="check"><input type="checkbox" name="fresh"> <span><strong>Research again</strong>: ignore a stored result of today for the same page and question (uses 1–2 Serper searches)</span></label>':''}
- <p><button type="submit">${owner.signedIn?'Run the check (owner)':'Run the free check'}</button> <small id="s" role="status"></small></p>
+ <input type="hidden" name="lang" value="${esc(lang)}"><p><button type="submit">${owner.signedIn?'Run the check (owner)':esc(t.submit)}</button> <small id="s" role="status"></small></p>
 </form>
 ${owner.signedIn?`<div class="card" id="ownerBox"><strong>Owner mode</strong><p class="muted">Signed in with your admin key: no daily limit, and AI writes the chosen H2s in your checks${cfg.writing==='off'?' (AI writing is switched off on the server: GROWTH_FREE_WRITING=off)':''}. Visitors keep their normal limits.</p><p><button type="button" class="ghost" id="ownerOut">Sign out</button></p></div>`:owner.available?`<details class="card" id="ownerBox"><summary class="owner-sum"><span class="owner-btn">🔑 Owner? Sign in</span> <small class="muted">no daily limit, AI writing on</small></summary><form id="ownerIn" autocomplete="off"><label for="ownerKey">Admin key (GROWTH_FREE_ADMIN_KEY in Railway)</label><input id="ownerKey" type="password" autocomplete="current-password" required minlength="16"><p><button type="submit">Sign in as owner</button> <small id="ownerSt" role="status"></small></p></form></details>`:''}
-<div class="card"><h2 style="margin-top:0">What you get</h2><ul>
-<li>One clear decision: <strong>leave it</strong>, <strong>add a missing answer</strong>, <strong>make a separate page</strong>, or <strong>not enough evidence</strong>.</li>
-<li>Where to add it on your page, with the ranking pages that support it.</li>
-<li>Whether AI answers cite your site or this page — and which sites they cite instead.</li>
-<li>The full research as JSON, to process yourself or with your own tools.</li></ul>
-<p class="muted">No ranking promises. Nothing is changed on your website. Takes about one minute.</p></div>
+<div class="card"><h2 style="margin-top:0">${esc(t.getTitle)}</h2><ul>
+<li>${t.get1}</li>
+<li>${esc(t.get2)}</li>
+<li>${esc(t.get3)}</li>
+<li>${esc(t.get4)}</li></ul>
+<p class="muted">${esc(t.getNote)}</p></div>
 <script>
-${aiStartScript()}
+var FT=${js(t)};
+${aiStartScript(t)}
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
 (function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
 // From the free rank tracker: the tracked keyword is the topic (the check picks the best real customer question about it),
 // and a signed handoff fills in the owner's e-mail address and links the publication date back to the tracker.
 (function(){try{var t=document.getElementById('topic'),n=document.getElementById('topicNote'),rt=document.getElementById('rt');
- if(t&&t.value&&n){n.hidden=false;n.textContent='From your rank tracker: “'+t.value+'”. Leave the customer question empty and the check picks the best real question customers ask in Google about it.'}
+ if(t&&t.value&&n){n.hidden=false;n.textContent=FT.topicNote.replace('§',t.value)}
  if(rt&&rt.value)fetch('/api/rank-free/handoff?rt='+encodeURIComponent(rt.value),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){var e=document.getElementById('email');if(d&&d.success&&e&&!e.value)e.value=d.email;if(!(d&&d.success))rt.value='';else simpleFromTracker(d)}).catch(function(){})}catch(e){}})();
 // From the rank tracker (owner 2026-11-12: "clear and simple from the tracker"): everything is filled in already, so the
 // form shows one summary and one button; the fields stay available under "Change details". The tips choice was made
@@ -190,16 +193,16 @@ function simpleFromTracker(d){try{
  var tb=document.getElementById('tipsBox');if(tb)tb.hidden=true;
  var stop=consent.closest('label'),move=[],n=f.firstElementChild;
  while(n&&n!==stop){var next=n.nextElementSibling;if(!(n.tagName==='INPUT'&&n.type==='hidden'))move.push(n);n=next}
- var det=document.createElement('details');det.id='moreFields';det.className='research-details';var sm=document.createElement('summary');sm.textContent='Change details (optional)';det.appendChild(sm);
+ var det=document.createElement('details');det.id='moreFields';det.className='research-details';var sm=document.createElement('summary');sm.textContent=FT.trMore;det.appendChild(sm);
  move.forEach(function(x){det.appendChild(x)});f.insertBefore(det,stop);
  var card=document.createElement('div');card.id='trackerSummary';card.className='note';
  var v=function(id){var el=document.getElementById(id);return el?el.value:''};
  var line=function(label,value){if(!value)return '';var d0=document.createElement('div');var b=document.createElement('strong');b.textContent=label+': ';d0.appendChild(b);d0.appendChild(document.createTextNode(value));return d0.outerHTML};
- card.innerHTML='<strong style="display:block;margin-bottom:6px">From your rank tracker — everything is filled in</strong>'+line('Page',v('url'))+line('Keyword',d.keyword||v('topic'))+line('Market',[v('market'),v('language')].filter(Boolean).join(' · '))+line('Result to',v('email'))+
-  '<small style="display:block;margin-top:6px">Tick the box below and run the check. It finds the real question customers ask in Google about this keyword.</small>';
+ var head=document.createElement('strong');head.style.cssText='display:block;margin-bottom:6px';head.textContent=FT.trTitle;var help=document.createElement('small');help.style.cssText='display:block;margin-top:6px';help.textContent=FT.trHelp;
+ card.innerHTML=head.outerHTML+line(FT.trPage,v('url'))+line(FT.trKeyword,d.keyword||v('topic'))+line(FT.trMarket,[v('market'),v('language')].filter(Boolean).join(' · '))+line(FT.trTo,v('email'))+help.outerHTML;
  f.insertBefore(card,det);
  var st=document.createElement('style');st.textContent='#growthFreeReset{display:none!important}';document.head.appendChild(st);
- var lead=document.querySelector('.lead');if(lead)lead.textContent='Your page from the rank tracker is filled in. The check compares it with the pages above you in Google and says in plain language what to add — or that nothing needs to change. Takes about one minute.';
+ var lead=document.querySelector('.lead');if(lead)lead.textContent=FT.trLead;
 }catch(e){}}
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
@@ -217,20 +220,20 @@ function rememberAi(){try{var q=(document.getElementById('query')||{}).value||''
  if(Object.keys(a).length)localStorage.setItem(MEM_AI,JSON.stringify({query:q.trim(),answers:a}));else localStorage.removeItem(MEM_AI)}catch(e){}}
 (function(){try{var m=JSON.parse(localStorage.getItem(MEM_AI)||'null'),q=(document.getElementById('query')||{}).value||'';if(!m||!m.answers||String(m.query||'')!==q.trim())return;var n=0;
  document.querySelectorAll('textarea[data-engine]').forEach(function(t){var v=m.answers[t.getAttribute('data-engine')];if(v&&!t.value){t.value=String(v).slice(0,40000);n++}});
- var box=document.getElementById('aiStart');if(n&&box){box.open=true;var note=document.createElement('p');note.className='muted';note.id='aiRestored';note.textContent=n+' pasted AI answer(s) restored from this browser.';box.insertBefore(note,box.children[1]||null)}}catch(e){}})();
+ var box=document.getElementById('aiStart');if(n&&box){box.open=true;var note=document.createElement('p');note.className='muted';note.id='aiRestored';note.textContent=FT.aiRestored.replace('§',n);box.insertBefore(note,box.children[1]||null)}}catch(e){}})();
 document.querySelectorAll('textarea[data-engine]').forEach(function(t){t.addEventListener('input',rememberAi)});
 var freeForm=document.getElementById('f');
 if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER.includes(e.target.name))rememberForm()});
  freeForm.addEventListener('change',function(e){if(e.target&&REMEMBER.includes(e.target.name))rememberForm()});
- var resetFree=document.createElement('button');resetFree.type='button';resetFree.id='growthFreeReset';resetFree.className='ghost';resetFree.textContent='Reset saved fields';resetFree.style.marginLeft='8px';
+ var resetFree=document.createElement('button');resetFree.type='button';resetFree.id='growthFreeReset';resetFree.className='ghost';resetFree.textContent=FT.reset;resetFree.style.marginLeft='8px';
  var submitFree=freeForm.querySelector('button[type=submit]');if(submitFree){submitFree.insertAdjacentElement('afterend',resetFree);resetFree.addEventListener('click',function(){
   REMEMBER.forEach(function(k){var el=freeForm.elements[k];if(el)el.value=''});
   document.querySelectorAll('textarea[data-engine]').forEach(function(t){t.value=''});try{localStorage.removeItem(MEM_AI)}catch(e){}
   try{localStorage.removeItem(MEM)}catch(e){}
   var start=document.getElementById('aiStartPrompt');if(start)start.value='';
   var list=document.getElementById('cqList');if(list)list.innerHTML='';
-  var status=document.getElementById('cqStatus');if(status)status.textContent='Saved fields cleared.';
-  document.getElementById('s').textContent='Saved fields cleared. You can enter new details.';
+  var status=document.getElementById('cqStatus');if(status)status.textContent=FT.resetShort;
+  document.getElementById('s').textContent=FT.resetDone;
  })}}
 
 // Customer questions for the page entered above: Google's questions (People also ask, related searches) and labelled AI
@@ -246,31 +249,31 @@ if(freeForm){freeForm.addEventListener('input',function(e){if(e.target&&REMEMBER
    list.innerHTML=d.questions.map(function(q){return '<button type="button" class="ghost cqPick" style="margin:4px 6px 4px 0;text-align:left">'+q.text.replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})+' <small style="display:inline">· '+q.label+(q.text===d.best_question?' · Best match':'')+'</small></button>'}).join('')+(d.questions.length?'<p class="muted">'+d.note+'</p>':'');
    Array.prototype.forEach.call(list.querySelectorAll('.cqPick'),function(x,i){x.onclick=function(){document.getElementById('query').value=d.questions[i].text;rememberForm();document.getElementById('query').dispatchEvent(new Event('input',{bubbles:true}));st.textContent='Search term set: “'+d.questions[i].text+'”.'}});
   }catch(err){st.textContent=err.message}b.disabled=false;b.classList.remove('is-working')})})();
-function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error('The file could not be read.'))};r.readAsDataURL(file)})}
+function gscBase64(file){return new Promise(function(ok,bad){var r=new FileReader();r.onload=function(){ok(String(r.result).split(',')[1]||'')};r.onerror=function(){bad(Error(FT.sGscRead))};r.readAsDataURL(file)})}
 // A request never waits forever: after the time limit the button comes back with a clear message.
 function timeoutSignal(ms){try{if(AbortSignal.timeout)return AbortSignal.timeout(ms)}catch(e){}var c=new AbortController();setTimeout(function(){c.abort()},ms);return c.signal}
 document.getElementById('f').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,s=document.getElementById('s'),b=f.querySelector('button[type=submit]');
-if(!f.consent.checked){s.textContent='Please accept the storage notice.';return}
+if(!f.consent.checked){s.textContent=FT.sConsent;return}
 rememberForm();
-b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent='Starting…';
+b.disabled=true;b.classList.add('is-working');b.setAttribute('aria-busy','true');s.textContent=FT.sStarting;
 try{
  // If no customer question was supplied, discover one automatically for this URL before starting the check.
  // An explicitly entered question is authoritative and is never replaced.
  if(APPROVED&&!f.query.value.trim()){
-  s.textContent='Finding a customer question for this page…';
+  s.textContent=FT.sFinding;
   try{
    var qr=await fetch(${js(api)}+'/customer-questions',{signal:timeoutSignal(45000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:'',market:f.market.value,language:f.language.value})});
    var qd=await qr.json();
    var qs=qd&&qd.success&&Array.isArray(qd.questions)?qd.questions:[];
    var chosen=qs.filter(function(q){return q.text===qd.best_question})[0]||qs.filter(function(q){return q.priority==='OBSERVED_GOOGLE'})[0]||qs.filter(function(q){return q.source==='AI_SUGGESTION'})[0];
-   if(chosen&&chosen.text){f.query.value=chosen.text;rememberForm();s.textContent='Customer question: '+chosen.text+' · '+chosen.label+'. Starting check…'}
-   else s.textContent='No customer question verified automatically; using the page topic as a working phrase…';
-  }catch(e){s.textContent='Question suggestions unavailable; continuing with the page topic…'}
+   if(chosen&&chosen.text){f.query.value=chosen.text;rememberForm();s.textContent=FT.sQuestion.replace('§',chosen.text+' · '+chosen.label)}
+   else s.textContent=FT.sNoQuestion;
+  }catch(e){s.textContent=FT.sNoSuggest}
  }
- var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
+ var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
 var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
-var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
-catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?'The server did not answer within a minute. Please try again in a moment.':err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
+var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
+catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
 }
 
@@ -1022,26 +1025,28 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const inv=await storage.getInvite(pool,req.query.invite),status=store.inviteStatus(inv);
    res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').set('Content-Security-Policy',"frame-ancestors 'none'");
    if(status!=='ACTIVE')return res.status(403).type('html').send(inviteClosed(config,status));
-   res.type('html').send(formPage(config,apiPath,basePath,'',{token:String(req.query.invite),label:'',
-    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)}));
+   res.type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',{token:String(req.query.invite),label:'',
+    left:inv.max_checks-inv.used_checks,max:inv.max_checks,expires:fmtDay(inv.expires_at),email_hint:maskEmail(inv.email_lock)},undefined,langFor(req)));
   }catch(e){console.error('[free-growth] invite page failed',e.message);res.status(503).type('text').send('Temporarily unavailable')}
  });
+ // The form's language: ?lang=, the rank tracker account's language, the browser's, else English.
+ const langFor=(req,account=null)=>formLang({query:req.query&&req.query.lang,account,acceptLanguage:req.get&&req.get('accept-language')});
  app.get(basePath,async(req,res)=>{
   // An unapproved public key must not look like a usable check when approval-only mode is enabled.
   // A valid handoff from the free rank tracker opens the form, also when approval is required or the domain has no key.
   if(rankHandoff&&req.query&&req.query.rt&&!sessionValid(req)){
    const rk=await rankHandoff.read(String(req.query.rt)).catch(()=>null);
    if(rk){const e=require('../rank-free/handoff.cjs').handoffEntry(config);res.set('Content-Security-Policy',"frame-ancestors 'none'");
-    return res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').type('html').send(formPage({...config,...e},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:false}))}
+    return res.set('Cache-Control','private, no-store').set('Referrer-Policy','no-referrer').type('html').send(formPage({...config,...e,htmlLang:langFor(req,rk.account)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:false},langFor(req,rk.account)))}
   }
   if(config.approvalRequired&&!sessionValid(req))return res.redirect(302,'https://contentscale.site/');
   const entry=findKey(config,req.query&&req.query.key,req);
   // The owner (signed in) always gets the form, also on a domain without an access key (the admin page links here).
-  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage(config,apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true}));
+  if(!entry&&sessionValid(req))return res.set('Cache-Control','private, no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(formPage({...config,htmlLang:langFor(req)},apiPath,basePath,'',null,{available:!!config.adminKey,signedIn:true},langFor(req)));
   if(!entry)return res.status(403).set('Cache-Control','no-store').set('Content-Security-Policy',"frame-ancestors 'none'").type('html').send(notActivated(config));
   // Where it may be embedded is decided by the key: only its listed sites (or anywhere if none are listed).
   res.set('Content-Security-Policy','frame-ancestors '+(entry.origins.length?"'self' "+entry.origins.join(' '):'*'));
-  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)}));
+  res.set('Cache-Control','private, no-store').type('html').send(formPage({...config,...entry,htmlLang:langFor(req)},apiPath,basePath,req.query&&req.query.key?entry.key:'',null,{available:!!config.adminKey,signedIn:sessionValid(req)},langFor(req)));
  });
  app.get(basePath+'/r/:id',(req,res)=>res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html')
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())

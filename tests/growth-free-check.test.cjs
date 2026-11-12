@@ -829,7 +829,8 @@ test('review 2026-11-08: AI limits — 5 title/description rewrites per check; a
 test('a start never hangs: the form gives up after a minute with a clear message; existing columns are not altered again',()=>{
  const src=require('fs').readFileSync(require('path').join(__dirname,'../src/growth-free/routes.cjs'),'utf8');
  assert.match(src,/fetch\(\$\{js\(api\)\}\+'\/checks',\{signal:timeoutSignal\(60000\)/);
- assert.match(src,/err\.name==='AbortError'\|\|err\.name==='TimeoutError'\)\?'The server did not answer within a minute/);
+ assert.match(src,/err\.name==='AbortError'\|\|err\.name==='TimeoutError'\)\?FT\.sTimeout/);
+ assert.match(require('../src/growth-free/form-texts.cjs').FORM_TEXTS.en.sTimeout,/The server did not answer within a minute/);
  const store=require('fs').readFileSync(require('path').join(__dirname,'../src/growth-free/store.cjs'),'utf8');
  assert.doesNotMatch(store,/pool\.query\(["'`]ALTER TABLE/,'every ALTER goes through addColumn');
  assert.match(store,/if\(have\.has\(name\)\)return;await pool\.query\("SET LOCAL lock_timeout='5s'; ALTER TABLE growth_free_checks ADD COLUMN IF NOT EXISTS "/);
@@ -937,11 +938,24 @@ test('tips by e-mail: on by default, "Don\'t send me tips" opts out, older forms
  const s=await server();t.after(()=>s.srv.close());
  const form=(await s.get('/free-growth?key=open-key-12345')).body;
  assert.match(form,/You'll also get occasional tips about ranking and AI search from ContentScale\. Unsubscribe anytime with the link in every email\./);
- assert.match(form,/<input type="checkbox" name="notips"> <span>Don't send me tips<\/span>/);assert.doesNotMatch(form,/name="marketing"/);
+ assert.match(form,/<input type="checkbox" name="notips"> <span>Don(?:'|&#39;)t send me tips<\/span>/);assert.doesNotMatch(form,/name="marketing"/);
  for(const [i,extra] of [[0,{no_tips:false}],[1,{no_tips:true}],[2,{marketing_consent:true}],[3,{}]])
   assert.equal((await s.post('/api/free-growth/checks',{...ok,url:URL_+'?v='+i,email:'tips'+i+'@acme-roofing.example',...extra})).status,202);
  await s.service.idle();
  const tips=e=>s.storage.checks.find(c=>c.email===e).marketing_consent;
  assert.equal(tips('tips0@acme-roofing.example'),true,'default: tips');assert.equal(tips('tips1@acme-roofing.example'),false,'opted out');
  assert.equal(tips('tips2@acme-roofing.example'),true);assert.equal(tips('tips3@acme-roofing.example'),false,'an older form without the box: no tips');
+});
+
+test('the form in English, Dutch and Spanish: ?lang=, the browser language, else English',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ const nl=(await s.get('/free-growth?key=open-key-12345&lang=nl')).body;
+ assert.match(nl,/<html lang="nl">/);assert.match(nl,/Wordt je pagina gevonden in Google/);assert.match(nl,/Start de gratis check/);assert.match(nl,/Stuur me geen tips/);assert.match(nl,/name="index,follow"|content="index,follow"/);
+ const es=(await s.get('/free-growth?key=open-key-12345',{'accept-language':'es-ES,es;q=0.9'})).body;
+ assert.match(es,/<html lang="es">/);assert.match(es,/Iniciar el análisis gratuito/);
+ const en=(await s.get('/free-growth?key=open-key-12345',{'accept-language':'de-DE'})).body;
+ assert.match(en,/<html lang="en">/);assert.match(en,/Run the free check/);
+ for(const page of [nl,es,en])for(const m of page.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
+ const {FORM_TEXTS}=require('../src/growth-free/form-texts.cjs');
+ assert.deepEqual(Object.keys(FORM_TEXTS.nl).sort(),Object.keys(FORM_TEXTS.en).sort(),'every text exists in Dutch');assert.deepEqual(Object.keys(FORM_TEXTS.es).sort(),Object.keys(FORM_TEXTS.en).sort(),'and in Spanish');
 });
