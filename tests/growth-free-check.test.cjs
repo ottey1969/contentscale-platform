@@ -92,7 +92,7 @@ function memoryStore(){
   async recentResult(_p,{url,query,market=null,engineVersion=null}){return engineVersion&&[...checks].reverse().find(c=>c.url===url&&c.query===query&&JSON.stringify(c.market||null)===JSON.stringify(market||null)&&c.status==='DONE'&&c.report?.engine_version===engineVersion)||null},
   async createCheck(_p,o){const c={id:++id,public_id:'pub'+id,access_key:'key'+id+'abcdefgh',email:o.email,ip_hash:o.ipHash,url:o.url,query:o.query,market:o.market||null,
    status:o.cached?'DONE':'QUEUED',decision:o.cached?o.cached.decision:null,summary:o.cached?o.cached.summary:null,report:o.cached?o.cached.report:null,
-   cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null};checks.push(c);return c},
+   cached_from:o.cached?o.cached.id:null,marketing_consent:o.marketingConsent,access_label:o.accessLabel,invite_id:o.inviteId,finished_at:null,ui_lang:o.uiLang||null};checks.push(c);return c},
   async setStatus(_p,cid,f){Object.assign(checks.find(c=>c.id===cid),{status:f.status,decision:f.decision??null,summary:f.summary??null,report:f.report??null,error_code:f.error_code??null})},
   async getCheck(_p,pid,key){const c=checks.find(c=>c.public_id===pid);return c&&c.access_key===key?c:null},
   // Same fencing as store.cjs: a token per run; only the active token may store or release (lease expiry via expire()).
@@ -841,7 +841,7 @@ test('ensureTables: an existing column is not altered again; a missing one is ad
  const store=require('../src/growth-free/store.cjs'),seen=[];
  const pool={query:async sql=>{seen.push(String(sql));
   if(/to_regclass/.test(sql))return {rows:[{t:'growth_free_checks'}]};
-  if(/information_schema\.columns/.test(sql))return {rows:['access_label','invite_id','written','selected_item_ids','write_count','writing_since','writing_token','market','published_on','reminder_due_at','reminder_sent_at','reminder_attempts','reminder_token','reminder_opt_out_at','reminder_base'].map(c=>({column_name:c}))};
+  if(/information_schema\.columns/.test(sql))return {rows:['ui_lang','access_label','invite_id','written','selected_item_ids','write_count','writing_since','writing_token','market','published_on','reminder_due_at','reminder_sent_at','reminder_attempts','reminder_token','reminder_opt_out_at','reminder_base'].map(c=>({column_name:c}))};
   return {rows:[]}}};
  await store.ensureTables(pool);
  const alters=seen.filter(x=>/ALTER TABLE/.test(x));
@@ -958,4 +958,21 @@ test('the form in English, Dutch and Spanish: ?lang=, the browser language, else
  for(const page of [nl,es,en])for(const m of page.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
  const {FORM_TEXTS}=require('../src/growth-free/form-texts.cjs');
  assert.deepEqual(Object.keys(FORM_TEXTS.nl).sort(),Object.keys(FORM_TEXTS.en).sort(),'every text exists in Dutch');assert.deepEqual(Object.keys(FORM_TEXTS.es).sort(),Object.keys(FORM_TEXTS.en).sort(),'and in Spanish');
+});
+
+test('Spanish is Spanish: the check keeps its language for the result page and every message',async t=>{
+ const s=await server();t.after(()=>s.srv.close());
+ const bad=await s.post('/api/free-growth/checks',{...ok,email:'nope',lang:'nl'});
+ assert.equal(bad.status,400);assert.match(bad.body.error,/^Vul een geldig e-mailadres in/);
+ const bad2=await s.post('/api/free-growth/checks',{...ok,url:'not a url at all please',lang:'es'});
+ assert.equal(bad2.status,400);assert.doesNotMatch(bad2.body.error,/^Enter|^This/,'the web address message in Spanish');
+ const r=await s.post('/api/free-growth/checks',{...ok,lang:'es'});
+ assert.equal(r.status,202);assert.match(r.body.result_url,/[?&]lang=es$/);assert.equal(s.storage.checks[0].ui_lang,'es');
+ await s.service.idle();
+ const page=await s.get(r.body.result_url);
+ assert.match(page.body,/<html lang="es">/);assert.match(page.body,/uiTranslator/);assert.match(page.body,/Elige qué añadir a tu página/);
+ for(const m of page.body.matchAll(/<script>([\s\S]*?)<\/script>/g))new (require('node:vm').Script)(m[1]);
+ const en=await s.get(r.body.result_url.replace(/&lang=es$/,''));assert.match(en.body,/<html lang="en">/);assert.doesNotMatch(en.body,/uiTranslator/);
+ const api=await s.get('/api/free-growth/checks/'+r.body.id+'?k='+r.body.key);assert.equal(api.body.ui_lang,'es','so an older link opens in Spanish too');
+ const missing=await s.get('/api/free-growth/checks/'+r.body.id+'?k=wrong');assert.equal(missing.status,404);
 });

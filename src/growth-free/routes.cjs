@@ -12,6 +12,8 @@ const ai=require('./ai-answers.cjs');
 const aiGap=require('./ai-gap.cjs');
 const contacts=require('./contacts.cjs');
 const {FORM_TEXTS,FORM_LANGS,formLang}=require('./form-texts.cjs');
+const {translateError}=require('./error-texts.cjs');
+const uiTexts=require('./ui-texts.cjs');
 // Tips by e-mail (owner 2026-11-12): on by default, announced at sign-up, with "Don't send me tips" to opt out
 // (soft opt-in). Older forms still send marketing_consent (ticked = yes).
 const tipsOf=b=>b&&b.no_tips!==undefined?b.no_tips!==true:!!(b&&b.marketing_consent===true);
@@ -141,6 +143,9 @@ function aiStartScript(t=FORM_TEXTS.en){
 function aiStartAnswers(){return Array.prototype.slice.call(document.querySelectorAll('textarea[data-engine]')).filter(function(t){return t.value.trim()}).map(function(t){return {engine:t.getAttribute('data-engine'),text:t.value}})}`;
 }
 
+// Market and language names in the visitor's language ("es — España", "español"); the server reads all three languages.
+function regionLabel(entry,lang){const code=String(entry).slice(0,2);if(lang==='en')return entry;try{const n=new Intl.DisplayNames([lang],{type:'region'}).of(code.toUpperCase());return n&&n!==code.toUpperCase()?code+' — '+n:entry}catch(e){return entry}}
+function languageLabel(name,lang){if(lang==='en')return name;const code=validLanguage(name);if(!code||/[(—]/.test(name))return name;try{const n=new Intl.DisplayNames([lang],{type:'language'}).of(code);return n&&n!==code?n:name}catch(e){return name}}
 function formPage(cfg,api,base,accessKey,invite=null,owner={available:false,signedIn:false},lang='en'){
  const t=FORM_TEXTS[lang]||FORM_TEXTS.en;
  return page(t.title,`
@@ -157,7 +162,7 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  <label for="market">${esc(t.market)}</label><input id="market" name="market" list="marketRegions" maxlength="200" placeholder="${esc(t.marketPh)}">
  <label for="language">${esc(t.language)}</label><input id="language" name="language" list="marketLanguages" maxlength="40" placeholder="${esc(t.languagePh)}">
  <small>${esc(t.marketHelp)}</small>
- <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(x)+'">').join('')}</datalist>
+ <datalist id="marketRegions">${PREWRITE_REGIONS.map(x=>'<option value="'+esc(regionLabel(x,lang))+'">').join('')}</datalist><datalist id="marketLanguages">${PREWRITE_LANGUAGES.map(x=>'<option value="'+esc(languageLabel(x,lang))+'">').join('')}</datalist>
 ${aiStartBlock(!!owner.signedIn||!!invite,t)}
  <label for="gscFile">${esc(t.gsc)}</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
  <small>${esc(t.gscHelp)}</small>
@@ -180,6 +185,10 @@ var FT=${js(t)};
 ${aiStartScript(t)}
 // A "new check for this page" link fills in the page, search term, market and language; the visitor can change them.
 (function(){try{var q=new URLSearchParams(location.search);['url','query','market','language','topic','rt'].forEach(function(k){var v=q.get(k),el=document.getElementById(k);if(v&&el&&!el.value)el.value=v.slice(0,k==='rt'?420:300)})}catch(e){}})();
+// A market or language filled in from a link ("es — Spain", "Spanish") is shown in the visitor's language.
+(function(){var L=${js(lang)};if(L==='en'||!window.Intl||!Intl.DisplayNames)return;try{var R=new Intl.DisplayNames([L],{type:'region'}),N=new Intl.DisplayNames([L],{type:'language'}),E=new Intl.DisplayNames(['en'],{type:'language'});
+ var m=document.getElementById('market');if(m&&m.value)m.value=m.value.split(/\s*,\s*/).map(function(x){var c=(x.match(/^([a-z]{2})\s*[—–-]/i)||[])[1];return c?c.toLowerCase()+' — '+R.of(c.toUpperCase()):x}).join(', ');
+ var l=document.getElementById('language');if(l&&l.value){for(var a=97;a<=122;a++)for(var b=97;b<=122;b++){var code=String.fromCharCode(a,b);try{if(E.of(code)===l.value){l.value=N.of(code);a=b=200}}catch(e){}}}}catch(e){}})();
 // From the free rank tracker: the tracked keyword is the topic (the check picks the best real customer question about it),
 // and a signed handoff fills in the owner's e-mail address and links the publication date back to the tracker.
 (function(){try{var t=document.getElementById('topic'),n=document.getElementById('topicNote'),rt=document.getElementById('rt');
@@ -271,20 +280,23 @@ try{
   }catch(e){s.textContent=FT.sNoSuggest}
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
 }
 
-function resultPage(cfg,api,base,id,key){
+function resultPage(cfg,api,base,id,key,lang='en'){
  // Brand, contact link and service text come from the access key of the check (API: offer).
  const q=`?k=${encodeURIComponent(key)}`;
  return page('Your Growth check result',`
 <p><a id="back" href="${esc(base)}">← New check</a></p>
+${lang!=='en'?'<script>'+uiTexts.clientScript(lang)+'</script>':''}
 <div id="out" class="card" aria-live="polite" aria-busy="true"><p class="kicker">Working</p><h1>Checking your page…</h1><div class="research-progress" role="progressbar" aria-label="Research in progress" aria-valuetext="Research in progress"></div><p class="muted">Reading your page and the pages that rank for your search. This usually takes under a minute. You can keep this page open; the link also works later.</p></div>
 <script>
-var API=${js(api+'/checks/'+id)},Q=${js(q)},CONTACT=${js(cfg.contactUrl)},SERVICE=${js(cfg.serviceText)},BRAND=${js(cfg.brand)};
+var API=${js(api+'/checks/'+id)},Q=${js(q)},CONTACT=${js(cfg.contactUrl)},SERVICE=${js(cfg.serviceText)},BRAND=${js(cfg.brand)},PAGE_LANG=${js(lang)};
+// The check remembers its language: a link without it (an older link, an e-mail) opens in that language.
+function langRedirect(d){try{if(d&&d.ui_lang&&d.ui_lang!==PAGE_LANG){var u=new URL(location.href);u.searchParams.set('lang',d.ui_lang);location.replace(u.toString());return true}}catch(e){}return false}
 function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var ENG_STATE={};
 function openJourney(id){var el=document.getElementById(id);if(!el)return;var root=el.closest('details.journey-section')||(el.matches('details.journey-section')?el:null);if(root){document.querySelectorAll('details.journey-section').forEach(function(x){if(x!==root)x.open=false});root.open=true}var rt=el.id==='stepResearch'?el:el.closest('#stepResearch');if(rt){rt.open=true;var pane=el.closest('.rtab-pane');if(pane)rtab(pane.getAttribute('data-tab'))}var inner=el.closest('details.research-details');if(inner)inner.open=true}
@@ -717,7 +729,7 @@ function syncRewrite(){var left=Number(d.writing&&d.writing.remaining||0);
   var url=URL.createObjectURL(new Blob([b.text],{type:'text/markdown'})),a=document.createElement('a');a.href=url;a.download='editor-brief.md';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},2000);st.textContent=b.count+' item(s) in the brief.';box.classList.add('action-done');var next=document.getElementById('freeStepExport');if(next){next.className='step-chip done';next.querySelector('.symbol').textContent='✓'}};
  document.getElementById('gapCopy').onclick=function(){var b=gapBrief(g,s);if(!b.count){st.textContent='Select at least one item.';return}if(navigator.clipboard)navigator.clipboard.writeText(b.text);st.textContent='Copied ('+b.count+' item(s)).'};count();count.initialized=true;syncRewrite();pkgStart(g,d&&d.writing&&d.writing.last,!!(d&&d.writing&&d.writing.allowed&&d.writing.remaining>0&&g&&g.writing_allowed!==false))}
 // After publication: the date, one e-mail about four weeks later, and the before/after comparison from two exports.
-function fmtD(x){try{return new Date(String(x).slice(0,10)+'T12:00:00Z').toLocaleDateString(undefined,{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})}catch(e){return String(x)}}
+function fmtD(x){try{return new Date(String(x).slice(0,10)+'T12:00:00Z').toLocaleDateString(PAGE_LANG==='en'?'en-US':PAGE_LANG,{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'})}catch(e){return String(x)}}
 function sideHtml(label,w,x,undated){if(!x)return '<div><small>'+label+'</small><strong>'+(undated?'Export uploaded, dates unknown':'No export yet')+'</strong><small>'+(undated?'Your export ('+esc(undated.totals&&undated.totals.impressions)+' shown · '+esc(undated.totals&&undated.totals.clicks)+' clicks) does not say which dates it covers, so it is not placed here. Upload the same ZIP again (the dates are now read from its date filter), or export ':'Upload an export for ')+esc(fmtD(w.start))+' – '+esc(fmtD(w.end))+', filtered on exactly this page.</small></div>';
  var T=x.totals||{};return '<div><small>'+label+' · '+esc(x.period.start)+' – '+esc(x.period.end)+(x.period.inferred?' (dates from “'+esc(x.period.inferred)+'” and the export date)':'')+'</small><strong>'+esc(T.impressions)+' shown · '+esc(T.clicks)+' clicks</strong><small>'+(T.position==null?'':'average position '+esc(T.position)+' · ')+(x.search_term_row?'your search term: '+esc(x.search_term_row.impressions)+' shown, '+esc(x.search_term_row.clicks)+' clicks':'your search term is not in this export')+(x.matches_window?'':' · not exactly the 4 weeks '+(label==='Before'?'before':'after')+' the update')+'</small></div>'}
 function pubHtml(p,g){if(!p)return '';var h='<h2 id="published">Record publication and compare results</h2>';
@@ -783,7 +795,7 @@ var nowObs=null;
 function wireNowBar(){var card=document.getElementById('freeNextAction'),bar=document.getElementById('nowBar');if(!bar){bar=document.createElement('div');bar.id='nowBar';bar.className='now-bar';bar.hidden=true;bar.setAttribute('role','region');bar.setAttribute('aria-label','Next action');document.body.appendChild(bar)}
  if(!card||!window.IntersectionObserver)return;if(nowObs)nowObs.disconnect();
  nowObs=new IntersectionObserver(function(es){var off=!es[0].isIntersecting&&es[0].boundingClientRect.top<0;bar.hidden=!off;document.body.style.paddingBottom=off?'84px':''},{threshold:0});nowObs.observe(card)}
-function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
+function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getElementById('out');o.setAttribute('aria-busy','false');if(d.new_check_url)document.getElementById('back').href=d.new_check_url;if(d.offer){BRAND=d.offer.brand||BRAND;SERVICE=d.offer.service_text||SERVICE;CONTACT=d.offer.contact_url||''}
  if(d.status==='FAILED'){o.innerHTML='<p class="kicker">Not finished</p><h1>The check could not finish</h1><p>'+esc(d.error_text)+'</p><p><a class="btn" href="'+esc(d.new_check_url||${js(base)})+'">Try again</a></p>';return}
  var a=d.ai,as=a&&a.summary;
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
@@ -832,7 +844,7 @@ function render(d){var s=d.summary,o=document.getElementById('out');o.setAttribu
 }
 // While Google is researched, the AI check is offered first (it needs only the search term). Shown once, so a pasted
 // answer is not wiped by the next poll.
-function showAiFirst(d,again){if(!d.ai)return;var box=document.getElementById('aiFirst');
+function showAiFirst(d,again){if(langRedirect(d))return;if(!d.ai)return;var box=document.getElementById('aiFirst');
  if(!box){box=document.createElement('div');box.id='aiFirst';document.getElementById('out').appendChild(box)}else if(!again)return;
  box.innerHTML='<p class="note"><strong>Research (optional) — while Google is being researched:</strong> check the AI answers now. Your answers are kept with this check.</p>'+aiHtml(d.ai,d.automatic_ai_answers);wireAi()}
 async function poll(n){try{var r=await fetch(API+Q,{cache:'no-store'});var d=await r.json();if(!d.success)throw Error(d.error||'Not found');
@@ -841,7 +853,7 @@ async function poll(n){try{var r=await fetch(API+Q,{cache:'no-store'});var d=awa
  showAiFirst(d);}catch(e){document.getElementById('out').innerHTML='<h1>Result not available</h1><p>'+esc(e.message)+'</p>';return}
  setTimeout(function(){poll(n+1)},n<20?3000:8000)}
 poll(0);
-</script>`,cfg);
+</script>`,{...cfg,htmlLang:lang});
 }
 
 const INVITE_TEXT={REVOKED:'This invitation was withdrawn.',EXPIRED:'This invitation has expired.',USED_UP:'All checks of this invitation have been used.',NOT_FOUND:'This invitation link is not valid.'};
@@ -954,6 +966,11 @@ const FAIL_TEXT={
 };
 
 function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGrowthResearch,engineDeps={},basePath='/free-growth',apiPath='/api/free-growth',fetchImpl=global.fetch,storage=store,sendEmail=null,rankHandoff=null}={}){
+ // Every message to a visitor in the visitor's language (owner 2026-11-12: "Spanish is Spanish"): the check's language,
+ // else the language the request names, else the browser's.
+ const uiLangOf=req=>formLang({query:(req.body&&req.body.lang)||(req.query&&req.query.lang),acceptLanguage:req.get&&req.get('accept-language')});
+ if(typeof app.use==='function')app.use(apiPath,(req,res,next)=>{const json=res.json.bind(res);
+  res.json=b=>{if(b&&b.success===false&&typeof b.error==='string')b={...b,error:translateError(b.error,res.locals.uiLang||uiLangOf(req))};return json(b)};next()});
  // A check opened from the free rank tracker carries a signed handoff for one tracked keyword (src/rank-free/handoff.cjs).
  const attachRank=async(row,ref)=>{if(rankHandoff&&ref&&row&&row.public_id)await rankHandoff.attach(row.public_id,ref).catch(()=>{})};
  if(!config.enabled)return null;
@@ -1015,7 +1032,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    jobs.add(p);p.finally(()=>jobs.delete(p));
   }
  }
- const resultUrl=row=>`${basePath}/r/${encodeURIComponent(row.public_id)}?k=${encodeURIComponent(row.access_key)}`;
+ const resultUrl=row=>`${basePath}/r/${encodeURIComponent(row.public_id)}?k=${encodeURIComponent(row.access_key)}${row.ui_lang&&row.ui_lang!=='en'?'&lang='+row.ui_lang:''}`;
 
  app.get(basePath,async(req,res,next)=>{
   if(!(req.query&&req.query.invite))return next();
@@ -1050,7 +1067,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  });
  app.get(basePath+'/r/:id',(req,res)=>res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html')
   .set('Content-Security-Policy','frame-ancestors '+(()=>{const o=[...new Set((config.accessKeys||[]).flatMap(k=>k.origins))];return (config.accessKeys||[]).some(k=>!k.origins.length)?'*':"'self' "+o.join(' ')})())
-  .send(resultPage(config,apiPath,basePath,safeToken(req.params.id),safeToken(req.query.k))));
+  .send(resultPage(config,apiPath,basePath,safeToken(req.params.id),safeToken(req.query.k),formLang({query:req.query&&req.query.lang}))));
 
  // Customer questions for a page (form helper): one Google search through Serper and one AI call. Only with an active
  // access key (or the owner), and at most 10 per hour per visitor, so the free form cannot be used as a search API.
@@ -1116,7 +1133,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,accessLabel:entry.label,market});
+   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,accessLabel:entry.label,market,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
@@ -1183,7 +1200,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
   const query=clean(b.query,120);
-  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc};
+  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
@@ -1192,7 +1209,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const cached=fresh||withGsc||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
-  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market});
+  const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
@@ -1229,6 +1246,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    await storage.ensureTables(pool);
    const row=await storage.getCheck(pool,req.params.id,req.query.k);
    if(!row){res.status(404).json({success:false,error:'Result not found'});return null}
+   if(row.ui_lang)res.locals.uiLang=row.ui_lang;
    return row;
   }catch(e){console.error('[free-growth] load failed',e.message);res.status(503).json({success:false,error:'Temporarily unavailable'});return null}
  }
@@ -1320,7 +1338,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   const aiPart=await aiFor(row),gscPart=await gscFor(row);
-  res.set('Cache-Control','no-store').json({success:true,status:row.status,url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
+  res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:aiPart.gap}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),

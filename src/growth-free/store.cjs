@@ -40,6 +40,8 @@ function ensureTables(pool){
   await addColumn('writing_token','TEXT');
   // Target market and language chosen by the visitor (as in the Tracker); null = derived from the page.
   await addColumn('market','JSONB');
+  // The language the visitor used the check in (en/nl/es): result page, messages and e-mails follow it.
+  await addColumn('ui_lang','TEXT');
   // Measurement after publication (visitor's choice): the date the change went live and one e-mail about 4 weeks later.
   await addColumn('published_on','DATE');
   await addColumn('reminder_due_at','TIMESTAMPTZ');
@@ -122,13 +124,15 @@ async function recentResult(pool,{url,query,market=null,engineVersion=null}){
    WHERE url=$1 AND query=$2 AND COALESCE(market,'null'::jsonb)=$3::jsonb AND report->>'engine_version'=$4 AND status='DONE' AND created_at>NOW()-INTERVAL '24 hours' ORDER BY id DESC LIMIT 1`,[url,query,JSON.stringify(market||null),engineVersion])).rows[0]||null;
 }
 
-async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null}){
+async function createCheck(pool,{email,emails=null,ipHash,url,host,query,marketingConsent,cached,accessLabel=null,inviteId=null,market=null,uiLang=null}){
  const row=(await pool.query(`INSERT INTO growth_free_checks
    (public_id,access_key,email,ip_hash,url,host,query,status,decision,summary,report,cached_from,marketing_consent,finished_at,access_label,invite_id,market,emails)
    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb,$11::jsonb,$12,$13,$14,$15,$16,$17::jsonb,$18::jsonb)
    RETURNING id,public_id,access_key,status`,
   [token(9),token(18),email,ipHash,url,host,query,cached?'DONE':'QUEUED',cached?cached.decision:null,
    cached?JSON.stringify(cached.summary):null,cached?JSON.stringify(cached.report):null,cached?cached.id:null,!!marketingConsent,cached?new Date():null,accessLabel,inviteId,JSON.stringify(market||null),JSON.stringify(emails&&emails.length>1?emails:null)])).rows[0];
+ if(row&&uiLang)await pool.query('UPDATE growth_free_checks SET ui_lang=$2 WHERE id=$1',[row.id,uiLang]);
+ if(row&&uiLang)row.ui_lang=uiLang;
  return row;
 }
 
@@ -141,7 +145,7 @@ async function setStatus(pool,id,fields){
 
 async function getCheck(pool,publicId,key){
  const row=(await pool.query(`SELECT id,public_id,access_key,url,query,status,decision,summary,report,error_code,cached_from,created_at,finished_at,access_label
-   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
+   ,invite_id,written,selected_item_ids,write_count,market,email,emails,published_on::text AS published_on,reminder_due_at,reminder_sent_at,reminder_opt_out_at,ui_lang FROM growth_free_checks WHERE public_id=$1 LIMIT 1`,[String(publicId||'').slice(0,40)])).rows[0];
  if(!row||!sameKey(row.access_key,key))return null;
  // A check interrupted by a restart never stays "running" forever.
  if(['QUEUED','RUNNING'].includes(row.status)&&Date.now()-new Date(row.created_at).getTime()>15*60000){

@@ -77,7 +77,9 @@ function validCountries(list){
 }
 // A language as the Pre-Write brief names it ("Dutch", "Chinese (Simplified)", "Arabic — Gulf") or as a code ("nl").
 const LANG=new Intl.DisplayNames(['en'],{type:'language',fallback:'none'});
-const LANGUAGE_BY_NAME=(()=>{const m=new Map();for(let a=97;a<=122;a++)for(let b=97;b<=122;b++){const c=String.fromCharCode(a,b);let n=null;try{n=LANG.of(c)}catch{}if(n&&n!==c&&!m.has(n.toLowerCase()))m.set(n.toLowerCase(),c)}return m})();
+// Language names in English, and also in Dutch and Spanish ("Nederlands", "español"): the Free Growth form speaks those too.
+const LANGUAGE_BY_NAME=(()=>{const m=new Map();for(const ui of ['en','nl','es']){let names;try{names=new Intl.DisplayNames([ui],{type:'language',fallback:'none'})}catch{continue}
+ for(let a=97;a<=122;a++)for(let b=97;b<=122;b++){const c=String.fromCharCode(a,b);let n=null;try{n=names.of(c)}catch{}if(n&&n!==c&&!m.has(n.toLowerCase()))m.set(n.toLowerCase(),c)}}return m})();
 const validLanguage=l=>{const x=String(l||'').trim().toLowerCase();if(!x)return null;
  try{if(/^[a-z]{2,3}$/.test(x)&&LANG.of(x)&&LANG.of(x)!==x)return x}catch{}
  return LANGUAGE_BY_NAME.get(x.replace(/\s*[—–-].*$/,'').replace(/\s*\(.*\)\s*$/,'').trim())||null};
