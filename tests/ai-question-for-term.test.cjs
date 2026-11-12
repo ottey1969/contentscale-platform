@@ -128,3 +128,17 @@ test('owner 2026-11-12: Google shows no question → autocomplete; AI fallback t
   assert.match(tab, /qInput = document\.createElement\('textarea'\); qInput\.id = 'cs-ai-question'; qInput\.maxLength = 300;/);
   assert.match(tab, /question in its answer/);
 });
+
+test('a failed AI suggestion says why, and an empty lookup is not cached for a day', async () => {
+  const { fromAi } = require('../src/growth-customer-questions.cjs');
+  const a = await fromAi({ offer: { title: '', h1: [], h2: [] }, keyword: 'consultor geo', language: 'es', model: { call: async () => { throw Object.assign(Error('x'), { code: 'JUDGE_HTTP_429' }); } } });
+  assert.deepEqual([a.status, a.error], ['AI_FAILED', 'JUDGE_HTTP_429']);
+  const express = require('express'), request = require('supertest');
+  const app = express(); let n = 0;
+  require('../src/prewrite-customer-question.cjs').registerPrewriteCustomerQuestion(app, { query: async () => ({ rows: [{ id: 1 }] }) }, {
+    model: null, discover: async () => { n++; return { questions: [], best_question: null, google: { status: 'GOOGLE_NO_QUESTIONS' }, ai: { status: 'AI_FAILED', error: 'JUDGE_HTTP_429' } }; } });
+  const r1 = await request(app).get('/api/tracker-client/tok/prewrite-customer-question').query({ keyword: 'consultor geo', region: 'es — Spain', language: 'Spanish' });
+  assert.equal(r1.body.ai_error, 'JUDGE_HTTP_429');
+  await request(app).get('/api/tracker-client/tok/prewrite-customer-question').query({ keyword: 'consultor geo', region: 'es — Spain', language: 'Spanish' });
+  assert.equal(n, 2, 'tried again, not served from the cache');
+});

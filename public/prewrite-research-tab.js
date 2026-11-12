@@ -128,6 +128,8 @@
           var why = d && d.google_status === 'GOOGLE_NOT_CONFIGURED' ? 'Google search is not configured on the server'
             : d && d.google_status === 'GOOGLE_UNAVAILABLE' ? 'Google search did not answer'
             : d && d.success ? 'Google shows no customer question for this keyword in this market' : '';
+          if (d && d.success && d.ai_status === 'AI_FAILED') why += (why ? ', and ' : '') + 'the AI suggestion failed' + (d.ai_error ? ' (' + d.ai_error + ')' : '');
+          else if (d && d.success && d.ai_status === 'AI_NOT_CONFIGURED') why += (why ? ', and ' : '') + 'no AI model is configured';
           qSrc.textContent = (d && d.error) || ((why ? why + '; ' : '') + 'the keyword is used. Type a customer question yourself if you have one.');
         }
         qChips.appendChild(chip(kw, 'The keyword itself', true)); syncAsk();

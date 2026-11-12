@@ -75,7 +75,7 @@ async function fromAi({ offer, keyword, language = 'en', model }) {
     const arr = Array.isArray(obj) ? obj : obj && Array.isArray(obj.questions) ? obj.questions : [];
     const list = arr.map(q => searchable(typeof q === 'string' ? q : q && (q.question || q.text || q.q))).filter(q => q && !notCustomer(q)).slice(0, 6);
     return { status: list.length ? 'AI_SUGGESTIONS' : 'AI_NO_SUGGESTIONS', questions: list.map(q => ({ text: q, source: 'AI_SUGGESTION', label: 'AI suggestion · not verified search demand' })) };
-  } catch (e) { return { status: 'AI_FAILED', questions: [] }; }
+  } catch (e) { return { status: 'AI_FAILED', error: String(e && (e.code || e.message) || 'AI_FAILED').replace(/[^\w .:-]/g, '').slice(0, 60), questions: [] }; }
 }
 
 // Ranking uses question-to-page topical relevance, not invented search volume or popularity.
@@ -169,7 +169,7 @@ async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl
   for (const q of [...g.questions, ...a.questions]) { const k = q.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); if (k && !seen.has(k)) { seen.add(k); questions.push(q); } }
   const ranked=rankQuestions(questions,{offer,seed});
   return { status: questions.length ? 'QUESTIONS_FOUND' : 'NO_QUESTIONS', tracked_keyword: clean(keyword) || null, searched_with: seed || null,
-    offer: { title: offer.title, h1: offer.h1, h2_count: offer.h2.length }, google: { status: g.status, ...(g.searched ? { searched: g.searched } : {}) }, ai: { status: a.status },
+    offer: { title: offer.title, h1: offer.h1, h2_count: offer.h2.length }, google: { status: g.status, ...(g.searched ? { searched: g.searched } : {}) }, ai: { status: a.status, ...(a.error ? { error: a.error } : {}) },
     questions: ranked.questions.slice(0, MAX), best_question: ranked.best?.text||null,
     selection_source: ranked.observed_count?'OBSERVED_GOOGLE':ranked.best?'AI_SUGGESTION':'NONE',
     note: 'Best matching Google-observed question first (People Also Ask or Related Searches). If none matches this page, AI suggestions are labelled fallback ideas; unrelated Google observations are shown last. Relevance is based on the page topic, not measured search volume. You can always edit the question. Search Console is optional.' };
