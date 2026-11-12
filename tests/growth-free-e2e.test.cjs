@@ -117,10 +117,13 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     // Search Console: verified for this page, used in the research, the search term found in it.
     assert.match(await p.textContent('#gsc + p'), /^Verified for this page\./);
     assert.match(await p.textContent('body'), /Your search term “roof repair lodi nj”: 310 impressions, 2 clicks, position 14\.2\./);
-    // 3. An AI answer for the exact search term (validated with the shared contract).
+    await p.click('#stepResearch > summary'); // Close technical evidence before testing the post-save destination.
+    // 3. AI research is visibly above the topic list, without opening an evidence tab.
+    assert.equal(await p.locator('#freeAiResearch').isVisible(), true);
+    assert.equal(await p.locator('#freeAiResearch').evaluate(el => !!el.closest('#stepResearch')), false);
+    assert.equal(await p.locator('#freeAiResearch [role="progressbar"]').count(), 1);
+    assert.ok(await p.evaluate(() => document.querySelector('#freeAiResearch').compareDocumentPosition(document.querySelector('#stepReview')) & Node.DOCUMENT_POSITION_FOLLOWING));
     const prompt = await p.inputValue('#aiPrompt'); assert.match(prompt, /roof repair lodi nj/);
-    // The AI answers are evidence: in the research section, tab "AI answers".
-    await p.click('.rtabs button[data-tab="ai"]');
     await p.locator('#aiRecheck summary').click();
     await p.selectOption('#aiEngine', 'perplexity');
     await p.fill('#aiText', 'ANSWER:\nTEST: For roof repair in Lodi NJ, ask for a written estimate and check the licence of the roofer.\n\nRESOURCES:\nhttps://roofer-a.example/roof-repair-nj/');
@@ -130,7 +133,10 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     await p.selectOption('#aiEngine', 'perplexity');
     assert.match(await p.inputValue('#aiText'), /TEST: For roof repair in Lodi NJ/, 'the pasted answer is still there after a refresh');
     await p.click('#aiSave');
-    await p.waitForFunction(() => /1 of 5/.test(document.body.textContent), null, { timeout: 30000 });
+    await p.waitForFunction(() => /1 of 5/.test(document.getElementById('freeAiResearch')?.textContent || ''), null, { timeout: 30000 });
+    assert.equal(await p.locator('#freeAiResearch').isVisible(), true, 'the saved AI answer returns to the visible research card');
+    assert.equal(await p.locator('#stepResearch').evaluate(el => el.open), false, 'saving an AI answer must not force-open technical evidence');
+    assert.equal(await p.locator('#freeAiResearch [role="progressbar"]').getAttribute('aria-valuenow'), '1');
     // AI gap: the page Perplexity cites instead of yours is read and compared, like the Google gap.
     await p.waitForSelector('#aiGap', { state: 'attached', timeout: 30000 });
     assert.match(await p.locator('#aiGap ~ .card').first().textContent(), /How a repair estimate is built[^]*roofer-a\.example/);
