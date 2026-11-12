@@ -55,10 +55,13 @@ test('Tracker Growth: do this now, three steps, do it yourself, evidence in tabs
   assert.ok(await p.evaluate(t=>!!document.getElementById(t),target),'the next action never points at a missing element ('+target+')');
   await p.click('#trNowBar .tg-go');await p.waitForTimeout(300);
   assert.ok(Math.abs(await p.evaluate(t=>document.getElementById(t).getBoundingClientRect().top,target))<5,'the bar button scrolls to its target');
-  // "See the evidence" opens the closed section; the AI tab shows the AI answers.
+  // AI research is visible BEFORE the topic list; no closed evidence tab is needed.
+  assert.equal(await p.locator('#growthAiCheck').isVisible(),true);
+  assert.ok(await p.locator('#growthAiCheck').evaluate(e=>!e.closest('#growthEvidenceAll')));
+  assert.equal(await p.locator('#growthAiCheck [role=progressbar]').count(),1);
   await p.evaluate(()=>window.scrollTo(0,0));await p.click('.tg-found a[href="#growthEvidenceAll"]');
   assert.equal(await p.locator('#growthEvidenceAll').evaluate(e=>e.open),true);
-  await p.click('.tg-tabs button[data-tab=ai]');assert.equal(await p.locator('#growthAiCheck').isVisible(),true);
+  assert.ok(await p.locator('.tg-tabs button[data-tab=research]').count());
   assert.deepEqual(errs,[]);
  }finally{await b.close();srv.close()}
 });
