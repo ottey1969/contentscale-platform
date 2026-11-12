@@ -48,7 +48,7 @@ function pgStore(pool) {
     async findAccountByEmail(email) { return (await q('SELECT * FROM rank_free_accounts WHERE email=$1', [email]))[0] || null; },
     async upsertSignup({ email, lang, ipHash, consent, verifyHash, host, gl, hl, keywords }) {
       const a = (await q(`INSERT INTO rank_free_accounts(email,lang,ip_hash,marketing_consent,verify_hash) VALUES($1,$2,$3,$4,$5)
-        ON CONFLICT(email) DO UPDATE SET lang=EXCLUDED.lang, verify_hash=EXCLUDED.verify_hash, marketing_consent=rank_free_accounts.marketing_consent OR EXCLUDED.marketing_consent, opted_out_at=NULL
+        ON CONFLICT(email) DO UPDATE SET lang=EXCLUDED.lang, verify_hash=EXCLUDED.verify_hash, marketing_consent=EXCLUDED.marketing_consent, opted_out_at=NULL
         RETURNING *`, [email, lang, ipHash, consent, verifyHash]))[0];
       const p = (await q(`INSERT INTO rank_free_projects(account_id,host,gl,hl) VALUES($1,$2,$3,$4)
         ON CONFLICT(account_id) DO UPDATE SET host=EXCLUDED.host, gl=EXCLUDED.gl, hl=EXCLUDED.hl RETURNING *`, [a.id, host, gl, hl]))[0];
@@ -119,7 +119,7 @@ function memoryStore() {
     async upsertSignup({ email, lang, ipHash, consent, verifyHash, host, gl, hl, keywords }) {
       let a = db.accounts.find(x => x.email === email);
       if (!a) { a = { id: id++, email, created_at: new Date(), verified_at: null, dashboard_nonce: null, ip_hash: ipHash, marketing_consent: false }; db.accounts.push(a); }
-      Object.assign(a, { lang, verify_hash: verifyHash, marketing_consent: a.marketing_consent || consent, opted_out_at: null });
+      Object.assign(a, { lang, verify_hash: verifyHash, marketing_consent: !!consent, opted_out_at: null });
       let p = db.projects.find(x => x.account_id === a.id);
       if (!p) { p = { id: id++, account_id: a.id, last_digest_at: null }; db.projects.push(p); }
       Object.assign(p, { host, gl, hl });

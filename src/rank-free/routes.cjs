@@ -41,7 +41,7 @@ button{background:#6d28d9;color:#fff;border:0;border-radius:8px;padding:12px 20p
 button.ghost{background:#fff;color:#6d28d9;border:1px solid #6d28d9}.muted{color:#555;font-size:14px}.msg{padding:12px;border-radius:8px;margin-top:12px}
 .ok{background:#ecfdf5;border:1px solid #86efac}.err{background:#fef2f2;border:1px solid #fca5a5}table{width:100%;border-collapse:collapse;font-size:15px}
 th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #eee;vertical-align:top}th{background:#f5f3ff}.pos{font-weight:800;font-size:1.1rem}
-.consent{display:flex;gap:8px;align-items:flex-start;font-weight:400}.consent input{width:auto;margin-top:5px}a{color:#6d28d9}
+.consent-note{font-size:14px;color:#5b6475;margin:12px 0 2px}.consent{display:flex;gap:8px;align-items:flex-start;font-weight:400}.consent input{width:auto;margin-top:5px}a{color:#6d28d9}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.chip{background:#f5f3ff;color:#1a1a1a;border:1px solid #c4b5fd;border-radius:999px;padding:6px 12px;margin:0;font-weight:400;font-size:14px}
 .chip:disabled{opacity:.5;cursor:default}.sub{display:block;color:#555;font-size:13px;margin-top:4px}.spark{vertical-align:middle}.best{border:2px solid #6d28d9}.cta{display:inline-block;background:#6d28d9;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700}
 input[type=file]{border:1px dashed #a78bfa;background:#faf7ff;margin-top:6px}
@@ -61,14 +61,14 @@ function signupPage(lang, cfg) {
 <label for="gl">${esc(L.country)}</label><select id="gl">${opts}</select><p class="muted" id="other" hidden></p>
 <label for="hl">${esc(L.language)}</label><select id="hl">${langs}</select>
 <label for="kw">${esc(L.keywords)}</label><textarea id="kw" required></textarea>
-<label class="consent"><input type="checkbox" id="consent"> ${esc(L.consent)}</label>
+<p class="consent-note">${esc(L.consent)}</p><label class="consent"><input type="checkbox" id="notips"> ${esc(L.noTips)}</label>
 <button type="submit">${esc(L.submit)}</button><div id="m"></div></form>
 <div class="card"><strong>${esc(L.how)}</strong><ol><li>${esc(L.how1)}</li><li>${esc(L.how2)}</li><li>${esc(L.how3)}</li></ol><p class="muted">${esc(L.note)}</p></div>
 <script>(()=>{const D=${defaults},O=${other},$=i=>document.getElementById(i),T=${JSON.stringify({otherEngine: L.otherEngine('§')})};
-const pre=(navigator.language||'').split('-')[1];if(pre&&[...$('gl').options].some(o=>o.value===pre.toLowerCase()))$('gl').value=pre.toLowerCase();else $('gl').value='${lang === 'nl' ? 'nl' : lang === 'es' ? 'es' : 'us'}';
+const pre=(navigator.language||'').split('-')[1],page='${lang === 'nl' ? 'nl' : lang === 'es' ? 'es' : ''}';if(page)$('gl').value=page;else if(pre&&[...$('gl').options].some(o=>o.value===pre.toLowerCase()))$('gl').value=pre.toLowerCase();else $('gl').value='us';
 const sync=()=>{const g=$('gl').value;if(D[g])$('hl').value=D[g];const e=O[g];$('other').hidden=!e;if(e)$('other').textContent=T.otherEngine.replace('§',e)};$('gl').onchange=sync;sync();
 $('f').onsubmit=async ev=>{ev.preventDefault();const m=$('m');m.className='';m.textContent='';const b=ev.submitter;b.disabled=true;
-try{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,site:$('site').value,country:$('gl').value,language:$('hl').value,keywords:$('kw').value,marketing_consent:$('consent').checked,lang:'${lang}'})});
+try{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,site:$('site').value,country:$('gl').value,language:$('hl').value,keywords:$('kw').value,no_tips:$('notips').checked,lang:'${lang}'})});
 const j=await r.json();m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)$('f').reset()}catch(e){m.className='msg err';m.textContent='Error'}b.disabled=false}})();</script>`);
 }
 
@@ -220,7 +220,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
         return res.json({ success: true, message: L.sent });
       }
       const verify = randomToken();
-      await store.upsertSignup({ email, lang, ipHash: ip, consent: b.marketing_consent === true, verifyHash: hash(verify), host: site.host, gl: market.gl, hl: market.hl, keywords: kw.keywords });
+      await store.upsertSignup({ email, lang, ipHash: ip, consent: b.no_tips !== undefined ? b.no_tips !== true : b.marketing_consent === true, verifyHash: hash(verify), host: site.host, gl: market.gl, hl: market.hl, keywords: kw.keywords });
       const mail = verifyEmail(lang, { host: site.host, link: config.baseUrl + '/rank-tracker/v/' + verify });
       const ok = await send({ to: [email], subject: mail.subject, html: mail.html });
       if (!ok) return res.status(503).json({ success: false, error: L.errEmailOff });

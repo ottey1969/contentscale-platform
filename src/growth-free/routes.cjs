@@ -10,6 +10,10 @@ const {validCountries,validLanguage,PREWRITE_REGIONS,PREWRITE_LANGUAGES}=require
 const {summarizeFreeGrowth,BLOCKER_TEXT}=require('./summary.cjs');
 const ai=require('./ai-answers.cjs');
 const aiGap=require('./ai-gap.cjs');
+const contacts=require('./contacts.cjs');
+// Tips by e-mail (owner 2026-11-12): on by default, announced at sign-up, with "Don't send me tips" to opt out
+// (soft opt-in). Older forms still send marketing_consent (ticked = yes).
+const tipsOf=b=>b&&b.no_tips!==undefined?b.no_tips!==true:!!(b&&b.marketing_consent===true);
 const {writeForSelection,planBatch,pageFingerprint,headingsStillPresent,headingsMessage,explainWriterFailure,MAX_ITEMS:MAX_WRITE_ITEMS}=require('../growth-selected-writing.cjs');
 const {mergeWritten,viewOf}=require('./written.cjs');
 const {generateGrowthEditorDraft,sourceFacts,styleIssues}=require('../growth-source-grounded-editor.cjs');
@@ -157,7 +161,8 @@ ${aiStartBlock(!!owner.signedIn||!!invite)}
  <small>No Google sign-in needed. In Search Console: Performance → filter Page → "Exact URL" → this page → Export → Download CSV (a ZIP). Only an export filtered on exactly this page counts as evidence; it is used only for this check, never shared.</small>
  <label for="email">Your email address(es)</label><input id="email" name="email" type="email" multiple required maxlength="1100" placeholder="you@company.com, colleague@company.com"><small>Up to 5 addresses, separated by commas. The first address gets the e-mails; the others are kept with the check.</small>
  <label class="check"><input type="checkbox" name="consent" required> <span>I agree that my email and the checked page are stored to run this check and show the result.${invite?'':` ${owner.signedIn?' Owner mode: no daily limit.':` Max ${cfg.perEmail} free checks per day for the first address.`}`}</span></label>
- <label class="check"><input type="checkbox" name="marketing"> <span>You may email me about this result (optional).</span></label>
+ <div id="tipsBox"><p class="muted" style="font-size:14px;margin:10px 0 2px">You'll also get occasional tips about ranking and AI search from ContentScale. Unsubscribe anytime with the link in every email.</p>
+ <label class="check"><input type="checkbox" name="notips"> <span>Don't send me tips</span></label></div>
  ${owner.signedIn?'<label class="check"><input type="checkbox" name="fresh"> <span><strong>Research again</strong>: ignore a stored result of today for the same page and question (uses 1–2 Serper searches)</span></label>':''}
  <p><button type="submit">${owner.signedIn?'Run the check (owner)':'Run the free check'}</button> <small id="s" role="status"></small></p>
 </form>
@@ -176,7 +181,26 @@ ${aiStartScript()}
 // and a signed handoff fills in the owner's e-mail address and links the publication date back to the tracker.
 (function(){try{var t=document.getElementById('topic'),n=document.getElementById('topicNote'),rt=document.getElementById('rt');
  if(t&&t.value&&n){n.hidden=false;n.textContent='From your rank tracker: “'+t.value+'”. Leave the customer question empty and the check picks the best real question customers ask in Google about it.'}
- if(rt&&rt.value)fetch('/api/rank-free/handoff?rt='+encodeURIComponent(rt.value),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){var e=document.getElementById('email');if(d&&d.success&&e&&!e.value)e.value=d.email;if(!(d&&d.success))rt.value=''}).catch(function(){})}catch(e){}})();
+ if(rt&&rt.value)fetch('/api/rank-free/handoff?rt='+encodeURIComponent(rt.value),{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){var e=document.getElementById('email');if(d&&d.success&&e&&!e.value)e.value=d.email;if(!(d&&d.success))rt.value='';else simpleFromTracker(d)}).catch(function(){})}catch(e){}})();
+// From the rank tracker (owner 2026-11-12: "clear and simple from the tracker"): everything is filled in already, so the
+// form shows one summary and one button; the fields stay available under "Change details". The tips choice was made
+// at the tracker sign-up and is not asked again.
+function simpleFromTracker(d){try{
+ var f=document.getElementById('f'),url=document.getElementById('url'),consent=f&&f.querySelector('input[name=consent]');if(!f||!url||!consent)return;
+ var tb=document.getElementById('tipsBox');if(tb)tb.hidden=true;
+ var stop=consent.closest('label'),move=[],n=f.firstElementChild;
+ while(n&&n!==stop){var next=n.nextElementSibling;if(!(n.tagName==='INPUT'&&n.type==='hidden'))move.push(n);n=next}
+ var det=document.createElement('details');det.id='moreFields';det.className='research-details';var sm=document.createElement('summary');sm.textContent='Change details (optional)';det.appendChild(sm);
+ move.forEach(function(x){det.appendChild(x)});f.insertBefore(det,stop);
+ var card=document.createElement('div');card.id='trackerSummary';card.className='note';
+ var v=function(id){var el=document.getElementById(id);return el?el.value:''};
+ var line=function(label,value){if(!value)return '';var d0=document.createElement('div');var b=document.createElement('strong');b.textContent=label+': ';d0.appendChild(b);d0.appendChild(document.createTextNode(value));return d0.outerHTML};
+ card.innerHTML='<strong style="display:block;margin-bottom:6px">From your rank tracker — everything is filled in</strong>'+line('Page',v('url'))+line('Keyword',d.keyword||v('topic'))+line('Market',[v('market'),v('language')].filter(Boolean).join(' · '))+line('Result to',v('email'))+
+  '<small style="display:block;margin-top:6px">Tick the box below and run the check. It finds the real question customers ask in Google about this keyword.</small>';
+ f.insertBefore(card,det);
+ var st=document.createElement('style');st.textContent='#growthFreeReset{display:none!important}';document.head.appendChild(st);
+ var lead=document.querySelector('.lead');if(lead)lead.textContent='Your page from the rank tracker is filled in. The check compares it with the pages above you in Google and says in plain language what to add — or that nothing needs to change. Takes about one minute.';
+}catch(e){}}
 var OWNER=${js(!!owner.signedIn)},APPROVED=${js(!!owner.signedIn||!!invite)};
 (function(){var f=document.getElementById('ownerIn');if(f)f.addEventListener('submit',async function(e){e.preventDefault();var st=document.getElementById('ownerSt'),k=document.getElementById('ownerKey');st.textContent='Checking…';
   try{var r=await fetch(${js(api)}+'/admin/login',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:k.value})});k.value='';var x=await r.json();if(!x.success)throw Error(x.error||'Not signed in');location.reload()}catch(err){st.textContent=err.message}});
@@ -244,7 +268,7 @@ try{
   }catch(e){s.textContent='Question suggestions unavailable; continuing with the page topic…'}
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error('The Search Console file is larger than 3 MB. Export only this page.');gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,marketing_consent:f.marketing.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||'Could not start the check');location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?'The server did not answer within a minute. Please try again in a moment.':err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -852,6 +876,11 @@ function adminPage(cfg,api,base,loggedIn){
   <p><button>Create invitation link</button> <small role="status" id="is"></small></p></form><div id="newlink"></div></div>
  <h2>Invitations</h2><div id="invites"></div>
  <h2>Leads</h2><p><a id="csv" class="btn ghost" href="#">Download CSV</a></p><div id="leads"></div>
+ <div class="card" id="contactsCard"><h2 style="margin-top:0">Contacts per country</h2><p class="muted">Only the free rank tracker and Free Growth (never the paid Tracker). “Tips” = did not tick “Don't send me tips” (or ticked the older “send me tips”).</p>
+  <div class="rtabs" role="tablist"><button type="button" class="ctab" data-src="rank" aria-selected="true">Rank tracker</button><button type="button" class="ctab" data-src="growth" aria-selected="false">Free Growth</button></div>
+  <label>Country<select id="cCountry"></select></label><label class="check"><input type="checkbox" id="cTips"><span>Only people who want tips</span></label>
+  <p><a id="cCsv" class="btn ghost" href="#">Download CSV of this selection</a> <button type="button" id="cDelAll" class="ghost">Delete everyone in this selection</button> <small role="status" id="cStatus"></small></p>
+  <div id="cRows"></div></div>
  <div class="card"><h2 style="margin-top:0">Delete someone's data</h2><form id="ff"><label>Email address<input name="email" type="email" required></label><p><button>Delete everything for this email</button> <small role="status" id="fs"></small></p></form></div>
 </div>
 <script>
@@ -886,7 +915,7 @@ async function load(){
  var d=await get('/admin/leads');
  document.getElementById('leads').innerHTML='<h3>Hire requests ('+d.hires.length+')</h3>'+d.hires.map(function(h){return '<div class="card"><strong>'+esc(h.name)+'</strong> &lt;'+esc(h.email)+'&gt; '+esc(h.company||'')+' '+esc(h.phone||'')+'<br><small>'+esc(h.created_at)+' · '+esc(h.url)+' · '+esc(h.decision||'')+' · '+esc(h.access_label||'')+'</small><p>'+esc(h.message||'')+'</p></div>'}).join('')+
  '<h3>Checks ('+d.checks.length+')</h3>'+d.checks.map(function(c){return '<div class="card"><strong>'+esc(c.email)+'</strong>'+(c.marketing_consent?' · may be emailed':'')+'<br><small>'+esc(c.access_label||'')+' · '+esc(c.created_at)+' · '+esc(c.status)+' · '+esc(c.decision||c.error_code||'')+(c.cached?' · cached':'')+'</small><br><a href="'+esc(c.url)+'" target="_blank" rel="noopener noreferrer">'+esc(c.url)+'</a> '+esc(c.query||'')+'</div>'}).join('')}
-document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load()});
+document.getElementById('lf').addEventListener('submit',async function(e){e.preventDefault();var d=await post('/admin/login',{key:e.target.key.value});if(!d.success){document.getElementById('ls').textContent=d.error||'Not logged in';return}e.target.reset();document.getElementById('login').hidden=true;document.getElementById('app').hidden=false;load();loadContacts()});
 document.getElementById('logout').addEventListener('click',async function(){await post('/admin/logout');location.reload()});
 var rfForm=document.getElementById('rf');if(rfForm)rfForm.addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('rs');st.textContent='Starting…';var d=await post('/admin/run',{url:f.url.value,query:f.query.value,market:f.market.value,language:f.language.value,fresh:f.fresh.checked,ai_answers:aiStartAnswers()});if(!d.success){st.textContent=d.error;return}location.href=d.result_url});
 document.getElementById('if').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('is');var d=await post('/admin/invites',{label:f.label.value,email_lock:f.email_lock.value,max_checks:Number(f.max_checks.value),days:Number(f.days.value)});if(!d.success){st.textContent=d.error;return}st.textContent='';f.reset();f.max_checks.value=3;f.days.value=7;
@@ -894,7 +923,24 @@ document.getElementById('if').addEventListener('submit',async function(e){e.prev
 document.addEventListener('click',async function(e){var b=e.target.closest('button.revoke');if(!b)return;if(!confirm('Withdraw this invitation? The link stops working immediately.'))return;var d=await post('/admin/invites/'+b.dataset.id+'/revoke');if(!d.success)alert(d.error);load()});
 document.getElementById('csv').addEventListener('click',async function(e){e.preventDefault();var r=await fetch(API+'/admin/leads.csv',{credentials:'same-origin'});if(!r.ok){alert('Not logged in');return}var b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='growth-free-leads.csv';a.click()});
 document.getElementById('ff').addEventListener('submit',async function(e){e.preventDefault();if(!confirm('Delete all checks and requests of this email address?'))return;var d=await post('/admin/forget',{email:e.target.email.value});document.getElementById('fs').textContent=d.success?('Deleted '+d.deleted.checks+' checks, '+d.deleted.hire_requests+' requests'):(d.error||'Failed');load()});
-if(${js(!!loggedIn)})load();
+// Contacts per country: rank tracker or Free Growth, one country or all, tips only; delete one or the whole selection.
+var CSRC='rank',CNAMES={};
+function cParams(){var c=document.getElementById('cCountry').value,t=document.getElementById('cTips').checked;return 'source='+CSRC+(c?'&country='+encodeURIComponent(c):'')+(t?'&tips=1':'')}
+async function loadContacts(){var st=document.getElementById('cStatus');st.textContent='Loading…';var d=await get('/admin/contacts?'+cParams());if(!d.success){st.textContent=d.error||'Not available';return}
+ var sel=document.getElementById('cCountry'),cur=sel.value;sel.innerHTML='<option value="">All countries ('+d.total+')</option>'+d.countries.map(function(c){return '<option value="'+esc(c.country)+'">'+(c.country==='NONE'?'Unknown country':esc(c.country))+' — '+c.contacts+' ('+c.tips+' want tips)</option>'}).join('');sel.value=cur;
+ document.getElementById('cDelAll').textContent='Delete everyone in this selection ('+d.rows.length+')';document.getElementById('cDelAll').disabled=!d.rows.length;
+ document.getElementById('cRows').innerHTML=d.rows.length?'<style>#cRows td,#cRows th{padding:7px 8px;vertical-align:top}#cRows td:nth-child(2){word-break:break-all}</style><table style="width:100%;border-collapse:collapse;font-size:14px"><tr><th align="left">Country</th><th align="left">Email</th><th align="left">Tips</th><th align="left">'+(CSRC==='rank'?'Website · keywords':'Last page · search term')+'</th><th align="left">Since</th><th></th></tr>'+d.rows.map(function(r){
+   return '<tr style="border-top:1px solid var(--line)"><td>'+esc(r.country||'—')+'</td><td>'+esc(r.email)+'</td><td>'+(r.tips?'yes':'no')+'</td><td><small>'+(CSRC==='rank'?esc(r.host||'')+(r.keywords&&r.keywords.length?' · '+esc(r.keywords.join(', ')):'')+(r.verified_at?'':' · not confirmed')+(r.opted_out_at?' · stopped':''):esc(r.url||'')+(r.query?' · “'+esc(r.query)+'”':'')+' · '+esc(r.checks)+' check(s)')+'</small></td><td><small>'+esc(day(r.created_at))+'</small></td><td><button type="button" class="ghost cDel" data-id="'+esc(r.id)+'" data-email="'+esc(r.email)+'">Delete</button></td></tr>'}).join('')+'</table>':'<p class="muted">No contacts in this selection.</p>';
+ st.textContent=''}
+document.addEventListener('click',async function(e){var t=e.target.closest('.ctab');if(t){CSRC=t.getAttribute('data-src');document.querySelectorAll('.ctab').forEach(function(b){b.setAttribute('aria-selected',String(b===t))});document.getElementById('cCountry').value='';loadContacts();return}
+ var d=e.target.closest('.cDel');if(d){if(!confirm('Delete all data of '+d.getAttribute('data-email')+' in '+(CSRC==='rank'?'the rank tracker':'Free Growth')+'? This cannot be undone.'))return;var r=await post('/admin/contacts/delete',{source:CSRC,id:d.getAttribute('data-id')});document.getElementById('cStatus').textContent=r.success?'Deleted.':(r.error||'Not deleted');loadContacts()}});
+document.getElementById('cCountry').addEventListener('change',loadContacts);document.getElementById('cTips').addEventListener('change',loadContacts);
+document.getElementById('cDelAll').addEventListener('click',async function(){var c=document.getElementById('cCountry').value,t=document.getElementById('cTips').checked;
+ var what=(CSRC==='rank'?'rank tracker':'Free Growth')+' · '+(c?(c==='NONE'?'unknown country':c):'ALL countries')+(t?' · only tips':'');
+ var typed=prompt('This deletes everyone in this selection ('+what+') with all their data. It cannot be undone. Type DELETE to confirm.');if(typed!=='DELETE')return;
+ var r=await post('/admin/contacts/delete-all',{source:CSRC,country:c,tips:t,confirm:'DELETE'});document.getElementById('cStatus').textContent=r.success?r.deleted+' deleted.':(r.error||'Not deleted');loadContacts()});
+document.getElementById('cCsv').addEventListener('click',async function(e){e.preventDefault();var r=await fetch(API+'/admin/contacts.csv?'+cParams(),{credentials:'same-origin'});if(!r.ok){alert('Not logged in');return}var b=await r.blob(),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='contacts.csv';document.body.appendChild(a);a.click();a.remove()});
+if(${js(!!loggedIn)}){load();loadContacts()}
 </script>`,cfg);
 }
 
@@ -1035,7 +1081,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    if(sessionValid(req)&&req.get&&req.get('x-requested-with')==='growth-free-admin'){
     const input=readInput(b,res);if(!input)return;
     await storage.ensureTables(pool);
-    return await start(res,input,{accessLabel:'admin',marketingConsent:b.marketing_consent===true,fresh:b.fresh===true});
+    return await start(res,input,{accessLabel:'admin',marketingConsent:tipsOf(b),fresh:b.fresh===true});
    }
    // From the free rank tracker with a valid handoff: access of its own (also when approval is required), own weekly limit.
    if(rankHandoff&&b.rank_ref){const rk=await rankHandoff.read(b.rank_ref).catch(()=>null);if(rk)return await startRankCheck(req,res,b,rk)}
@@ -1065,7 +1111,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      return res.status(429).json({success:false,error:`The free limit is ${entry.perEmail} checks per day. Try again tomorrow, or ask for the paid service.`});
     if(u.by_key>=entry.daily||u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
    }
-   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:b.marketing_consent===true,cached,accessLabel:entry.label,market});
+   const row=await storage.createCheck(pool,{email,emails:em.emails,ipHash,url:v.url,host:v.host,query,marketingConsent:tipsOf(b),cached,accessLabel:entry.label,market});
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
@@ -1158,7 +1204,8 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(!a.ok)return res.status(429).json({success:false,error:'You used the '+a.limit+' free Growth checks from your rank tracker for this week. Try again in a few days.'});
   const ipHash=store.hashIp(req.ip,config.ipSalt),u=await storage.usage(pool,{email:input.email,ipHash,accessLabel:'rank-tracker'});
   if(u.total>=config.daily)return res.status(429).json({success:false,error:'Today\'s free checks are used up. Please try again tomorrow.'});
-  return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:b.marketing_consent===true,accessLabel:'rank-tracker'});
+  // Tips: the choice made at the rank tracker sign-up (the form does not ask again).
+  return start(res,{...input,rankRef:String(b.rank_ref)},{ipHash,marketingConsent:!!(rk.account&&rk.account.marketing_consent),accessLabel:'rank-tracker'});
  }
  async function startInviteCheck(req,res,b){
   const input=readInput(b,res);if(!input)return;
@@ -1167,7 +1214,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(status!=='ACTIVE')return res.status(403).json({success:false,error:INVITE_TEXT[status]});
   if(inv.email_lock&&!input.emails.includes(inv.email_lock))
    return res.status(403).json({success:false,error:'This invitation only works with the email address it was sent to'});
-  await start(res,input,{ipHash:store.hashIp(req.ip,config.ipSalt),marketingConsent:b.marketing_consent===true,
+  await start(res,input,{ipHash:store.hashIp(req.ip,config.ipSalt),marketingConsent:tipsOf(b),
    accessLabel:'invite: '+inv.label,inviteId:inv.id,
    beforeRun:async()=>{if(await storage.consumeInvite(pool,inv.id))return true;res.status(403).json({success:false,error:INVITE_TEXT.USED_UP});return false}});
  }
@@ -1651,6 +1698,33 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   try{await storage.ensureTables(pool);res.json({success:true,deleted:await storage.forgetEmail(pool,email)})}
   catch(e){res.status(503).json({success:false,error:e.message})}
  });
+ // Contacts per country (rank tracker and Free Growth only): list, CSV, delete one, delete the whole selection.
+ const contactQuery=q=>({source:contacts.SOURCES.includes(String(q.source))?String(q.source):'rank',country:String(q.country||'').toUpperCase()==='NONE'?'NONE':contacts.countryOf(q.country),tipsOnly:q.tips==='1'||q.tips===true});
+ app.get(apiPath+'/admin/contacts',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{res.set('Cache-Control','no-store').json({success:true,...await contacts.listContacts(pool,contactQuery(req.query||{}))})}
+  catch(e){res.status(503).json({success:false,error:e.message})}
+ });
+ app.get(apiPath+'/admin/contacts.csv',async(req,res)=>{
+  if(!admin(req,res))return;
+  try{const q=contactQuery(req.query||{}),list=await contacts.listContacts(pool,q);
+   res.set('Cache-Control','no-store').set('Content-Disposition','attachment; filename="contacts-'+q.source+'-'+(q.country||'all').toLowerCase()+(q.tipsOnly?'-tips':'')+'.csv"').type('text/csv').send(contacts.toCsv(q.source,list.rows))}
+  catch(e){res.status(503).json({success:false,error:e.message})}
+ });
+ if(typeof app.post==='function'){
+  app.post(apiPath+'/admin/contacts/delete',async(req,res)=>{
+   if(!admin(req,res))return;
+   const b=req.body||{},source=String(b.source||'');if(!contacts.SOURCES.includes(source))return res.status(400).json({success:false,error:'Unknown source'});
+   try{res.json({success:true,deleted:await contacts.deleteContact(pool,{source,id:b.id})})}catch(e){res.status(503).json({success:false,error:e.message})}
+  });
+  app.post(apiPath+'/admin/contacts/delete-all',async(req,res)=>{
+   if(!admin(req,res))return;
+   const b=req.body||{};if(!contacts.SOURCES.includes(String(b.source||'')))return res.status(400).json({success:false,error:'Unknown source'});
+   // Irreversible: the owner types DELETE.
+   if(b.confirm!=='DELETE')return res.status(400).json({success:false,error:'Type DELETE to confirm'});
+   try{res.json({success:true,deleted:await contacts.deleteSelection(pool,contactQuery(b))})}catch(e){res.status(503).json({success:false,error:e.message})}
+  });
+ }
  return {config,idle:()=>Promise.all([...jobs]),queueLength:()=>queue.length,sendDueReminders:sendDue};
 }
 
