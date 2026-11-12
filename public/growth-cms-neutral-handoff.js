@@ -8,7 +8,22 @@
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
  // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
- var serverRemoved=[];
+ var serverRemoved=[],serverKept=[];
+ // "It is true — keep it": remembered on the server for this page; the package then no longer blocks that sentence.
+ var normS=function(x){return String(x||'').replace(/[\u2018\u2019]/g,"'").replace(/[\u201c\u201d]/g,'"').replace(/\s+/g,' ').trim().toLowerCase()};
+ function isKept(sentence){var n=normS(sentence);return serverKept.some(function(x){return normS(x)===n})}
+ function saveDecision(sentence,how){
+  if(how==='KEPT_BY_OWNER'){if(!isKept(sentence))serverKept.push(sentence)}else if(how==='UNDONE')serverKept=serverKept.filter(function(x){return normS(x)!==normS(sentence)});
+  return fetch(base+'/removals',{method:'POST',cache:'no-store',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({page_id:pageId,sentence:sentence,how:how})}).then(function(r){return r.ok}).catch(function(){return false});
+ }
+ // Opens the draft field that holds the sentence and selects it, so the owner can rewrite it there.
+ function showSentence(sentence){var n=normS(sentence),fields=[$('copy')].concat([...document.querySelectorAll('.draft-copy')]);
+  for(var i=0;i<fields.length;i++){var f=fields[i];if(!f||!f.value)continue;var v=f.value,lower=normS(v),at=lower.indexOf(n);if(at<0)continue;
+   var d=f.closest('details');while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details')}
+   f.scrollIntoView({block:'center'});f.focus();var raw=v.toLowerCase().indexOf(String(sentence).toLowerCase());try{if(raw>=0)f.setSelectionRange(raw,raw+String(sentence).length)}catch(e){}
+   f.style.outline='3px solid #f59e0b';setTimeout(function(){f.style.outline=''},2500);return true}
+  return false}
  function removedSentences(){var local=[];try{var v=JSON.parse(localStorage.getItem(removalKey)||'[]');local=Array.isArray(v)?v:[]}catch(e){}
   return local.concat(serverRemoved.filter(function(x){return local.indexOf(x)<0}))}
  function saveRemoval(sentence,how){
@@ -19,10 +34,11 @@
  }
  function loadServerRemovals(){
   return fetch(base+'/removals?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'}).then(function(r){return r.json()})
-   .then(function(d){if(d&&d.success)serverRemoved=(d.removed||[]).map(function(x){return x.sentence});reapplyRemovals()}).catch(function(){});
+   .then(function(d){if(d&&d.success){serverRemoved=(d.removed||[]).filter(function(x){return x.how!=='KEPT_BY_OWNER'}).map(function(x){return x.sentence});
+    serverKept=(d.removed||[]).filter(function(x){return x.how==='KEPT_BY_OWNER'}).map(function(x){return x.sentence})}reapplyRemovals()}).catch(function(){});
  }
  var flagRows=[];
- function reapplyRemovals(){removedSentences().forEach(removeFlaggedSentence);flagRows.forEach(function(f){f.refresh()})}
+ function reapplyRemovals(){removedSentences().filter(function(x){return !isKept(x)}).forEach(removeFlaggedSentence);flagRows.forEach(function(f){f.refresh()})}
  var sourceButtonStates=[];
  function lockWhileLoading(on){
   safe.loadingSource=on;
@@ -154,7 +170,7 @@
  function flaggedRemoveAll(anchor){
   var old=document.getElementById('growthFlaggedRemoveAll');if(old){old.disabled=false;old.textContent='Remove all flagged sentences from draft';return}
   var all=document.createElement('button');all.type='button';all.id='growthFlaggedRemoveAll';all.textContent='Remove all flagged sentences from draft';
-  all.onclick=function(){var n=0;document.querySelectorAll('.growth-flagged-remove > button:first-child').forEach(function(b){if(!b.disabled&&/Remove this flagged sentence/.test(b.textContent)){b.click();n++}});
+  all.onclick=function(){var n=0;document.querySelectorAll('.growth-flagged-remove > .growth-flag-remove-btn').forEach(function(b){if(!b.disabled&&/Remove this flagged sentence/.test(b.textContent)&&!isKept(b.parentNode.getAttribute('data-sentence'))){b.click();n++}});
    all.textContent=n?'Removed '+n+' flagged sentence(s)':'Nothing left to remove';all.disabled=true};
   anchor.parentNode.insertBefore(all,anchor);
  }
@@ -164,15 +180,24 @@
   // Already a button for this sentence in this box (it was flagged for another reason too): one is enough.
   if(box&&Array.prototype.some.call(box.querySelectorAll('.growth-flagged-remove'),function(x){return x.getAttribute('data-sentence')===sentence}))return;
   var row=document.createElement('div');row.className='growth-flagged-remove';row.setAttribute('data-sentence',sentence);
-  var action=document.createElement('button');action.type='button';
+  var action=document.createElement('button');action.type='button';action.className='growth-flag-remove-btn';
   action.textContent='Remove this flagged sentence from draft';row.appendChild(action);
   var result=document.createElement('small');result.setAttribute('role','status');row.appendChild(result);
   var alt=document.createElement('button');alt.type='button';alt.hidden=true;row.appendChild(alt);
-  var done=function(text,label){action.disabled=true;action.textContent=label||'Removed — saved';result.textContent=text;alt.hidden=true;ready()};
+  var safety=flag&&(flag.code==='UNSUPPORTED_SAFETY_ASSURANCE'||/safe to wait|safety assurance/i.test(String(flag.reason||'')));
+  var show=document.createElement('button');show.type='button';show.className='growth-flag-show';show.textContent='Show in the text';row.insertBefore(show,action);
+  show.addEventListener('click',function(){if(!showSentence(sentence))result.textContent='This exact sentence is not in your text anymore.'});
+  var keep=document.createElement('button');keep.type='button';keep.className='growth-flag-keep';keep.textContent='It is true — keep it';if(!safety)row.insertBefore(keep,action);
+  keep.addEventListener('click',async function(){keep.disabled=true;await saveDecision(sentence,'KEPT_BY_OWNER');refresh()});
+  var undoKeep=document.createElement('button');undoKeep.type='button';undoKeep.className='growth-flag-unkeep';undoKeep.textContent='Undo';undoKeep.hidden=true;row.appendChild(undoKeep);
+  undoKeep.addEventListener('click',async function(){undoKeep.disabled=true;await saveDecision(sentence,'UNDONE');undoKeep.disabled=false;refresh()});
+  var done=function(text,label){action.disabled=true;action.textContent=label||'Removed — saved';result.textContent=text;alt.hidden=true;keep.hidden=true;show.hidden=true;undoKeep.hidden=true;ready()};
   // State of this sentence in the draft right now: removed earlier, gone from the text, changed, or still there.
   var refresh=function(){
+   if(inDraft(sentence)&&isKept(sentence)){action.hidden=true;keep.hidden=true;show.hidden=false;alt.hidden=true;undoKeep.hidden=false;undoKeep.disabled=false;result.textContent='✓ Kept — you confirmed it is true for your business; the package records it as confirmed by you.';row.classList.add('growth-flag-kept');ready();return}
+   row.classList.remove('growth-flag-kept');action.hidden=false;undoKeep.hidden=true;
    if(removedSentences().includes(sentence)&&!inDraft(sentence))return done('Removed earlier — remembered for this page.');
-   if(inDraft(sentence)){action.disabled=false;action.textContent='Remove this flagged sentence from draft';alt.hidden=true;result.textContent='';return}
+   if(inDraft(sentence)){action.disabled=false;action.textContent='Remove this flagged sentence from draft';alt.hidden=true;show.hidden=false;keep.hidden=safety;keep.disabled=false;result.textContent='';return}
    var near=closestSentence(sentence);
    if(near){action.disabled=true;action.textContent='Not removed automatically';
     result.textContent='Why not: your text no longer has this exact sentence, but a changed version of it ('+Math.round(near.share*100)+'% the same words): “'+near.text+'”. It can still carry the same problem.';
@@ -222,7 +247,7 @@
     p.sections.forEach(function(x){var g=addSection(x.h2,x.text,'Concept #'+p.id+': '+x.h2,x.placement);g.dataset.proposalId=String(p.id)});
     reapplyRemovals();
     var seen=new Set();
-    (r.flagged||[]).forEach(function(f){checkItem(r0,'Rewrite or remove: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason);flaggedReviewAction(r0,f)});
+    (r.flagged||[]).forEach(function(f){checkItem(r0,'Rewrite, remove, or keep it if it is true: '+(f.sentence?'“'+f.sentence+'”':'section “'+f.h2+'”')+' — '+f.reason);flaggedReviewAction(r0,f)});
     ['needs_fact_check','needs_owner_confirmation','needs_safety_review'].forEach(function(k){(r[k]||[]).forEach(function(item){if(seen.has(item))return;seen.add(item);checkItem(r0,'Check: '+item)})});
     b.disabled=true;b.textContent='Added — review the sections above';
     $('approved').checked=false;ready();
@@ -272,7 +297,7 @@
    box.appendChild(intro);box.appendChild(scope);
    if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent='Evidence: '+p.evidence_label;box.appendChild(ev)}
    if(p.intent_note){var inote=document.createElement('p');inote.className='small';inote.textContent=p.intent_note;box.appendChild(inote)}
-   var r=p.review||{},groups=[['flagged_text','Flagged by Growth: rewrite or remove these sentences (the package is refused while one is still in your text)'],['needs_fact_check','Check that these sentences are true'],['needs_owner_confirmation','Confirm with the business'],['needs_safety_review','Safety review by a qualified professional']];
+   var r=p.review||{},groups=[['flagged_text','Flagged by Growth: rewrite or remove these sentences, or keep one you confirm is true for your business (the package is refused while an unconfirmed one is still in your text)'],['needs_fact_check','Check that these sentences are true'],['needs_owner_confirmation','Confirm with the business'],['needs_safety_review','Safety review by a qualified professional']];
    r.flagged_text=(r.flagged||[]).map(function(f){return (f.sentence?'“'+f.sentence+'”':'Section “'+f.h2+'”')+' — '+f.reason});
    var seen=new Set();
    groups.forEach(function(g){

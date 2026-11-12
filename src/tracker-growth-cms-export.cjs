@@ -206,8 +206,9 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
  app.post('/api/tracker-client/:token/growth/cms-export/removals',async(req,res)=>{
   try{const v=await loadEditablePage(pool,req.params.token,req.body?.page_id,{allowMissingHtml:true});
    if(v.status!==200)return res.status(v.status).json({success:false,code:v.code});
-   const how=['REMOVED_BY_BUTTON','NOT_IN_TEXT_ANYMORE'].includes(req.body?.how)?req.body.how:'REMOVED_BY_BUTTON';
-   const saved=await removals.saveRemoval(pool,{clientId:v.client.id,pageId:v.page.id,sentence:req.body?.sentence,how});
+   const how=['REMOVED_BY_BUTTON','NOT_IN_TEXT_ANYMORE','KEPT_BY_OWNER','UNDONE'].includes(req.body?.how)?req.body.how:'REMOVED_BY_BUTTON';
+   const saved=how==='UNDONE'?await removals.deleteDecision(pool,{clientId:v.client.id,pageId:v.page.id,sentence:req.body?.sentence})
+    :await removals.saveRemoval(pool,{clientId:v.client.id,pageId:v.page.id,sentence:req.body?.sentence,how});
    if(!saved)return res.status(400).json({success:false,code:'SENTENCE_REQUIRED'});
    res.set('Cache-Control','private, no-store').json({success:true,...saved,how,live_page_changed:false});
   }catch(e){res.status(503).json({success:false,code:'REMOVAL_NOT_SAVED'})}
@@ -260,7 +261,9 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
      return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
    }
-   const result=prepareGrowthCmsHandoff({growthProposal,reviewNotes:req.body?.review_notes||null,addedProposalIds:added,
+   // Sentences the owner kept ("it is true") come from the stored decisions for this page, never from the request.
+   let decisions=[];try{decisions=await removals.loadRemovals(pool,{clientId:v.client.id,pageId:v.page.id})}catch(e){}
+   const result=prepareGrowthCmsHandoff({growthProposal,reviewNotes:removals.applyKept(req.body?.review_notes||null,decisions),addedProposalIds:added,
     canonicalUrl:v.page.url,originalHtml,sourceExpectedSha256:originalHash,
     caseStudyLocked:v.page.case_study_active,editorApproved:req.body?.editor_approved===true,
     cms:req.body?.cms||'generic',pageTitle:req.body?.seo_title,
