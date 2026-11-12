@@ -17,9 +17,12 @@ function stillFlagged(f, originalHtml) {
 
 // The editor may confirm a flagged sentence as true for the business (owner 2026-11-12: "where do I approve?"), as in
 // the Tracker claim review. A safety assurance ("safe to wait") is never released by a confirmation.
-const confirmable = f => String(f && f.code || '') !== 'UNSUPPORTED_SAFETY_ASSURANCE';
+const confirmable = f => String(f && f.code || '') !== 'UNSUPPORTED_SAFETY_ASSURANCE' && !EDITOR_NOTE.test(String(f && f.sentence || ''));
+// A note of the writer for the editor ("[Editor verification note: …]") is an instruction, never text for the page.
+const EDITOR_NOTE = /\[\s*(?:editor|verification|verify|note|check|todo|fact[- ]check)[^\]]{0,400}\]/i;
 const confirmedSet = input => new Set((Array.isArray(input && input.confirmed_sentences) ? input.confirmed_sentences : []).slice(0, 100)
   .map(x => String(x && x.item_id || '') + '\u0000' + String(x && x.sentence || '')).filter(k => !k.endsWith('\u0000')));
+const { plainText } = require('./written.cjs');
 const sha = x => crypto.createHash('sha256').update(String(x)).digest('hex');
 const esc = x => String(x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Page text as a person reads it: tags removed, every HTML entity decoded (named, decimal like &#039;, hex like &#x27;).
@@ -178,6 +181,7 @@ const PLAIN = {
   META_PERSONAL_OR_FOUNDER_VOICE: 'The title or description says "I" or "my". Does this page present you as a person? Tick "This page presents me as a person". Otherwise write it as the service.',
   SOURCE_REVISION_CHANGED: 'Your page changed since step 1. Read the original page again, then download.',
   ORIGINAL_PAGE_SNAPSHOT_REQUIRED: 'The original page could not be read. Read it again in step 1.',
+  EDITOR_NOTE_IN_TEXT: 'A note for you is still in the text (for example “[Editor verification note: …]”): remove it before downloading; it is not text for the page.',
   FLAGGED_CONTENT_NOT_RESOLVED: 'A flagged sentence is still in the text: rewrite or remove it.',
   FLAGGED_TEXT_STILL_PRESENT: 'A flagged sentence is still in the text: rewrite or remove it.',
   LINK_TARGET_INVALID: 'The link address is not valid.',
@@ -200,7 +204,9 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   const personal = input.personal_voice === true || (input.personal_voice !== false && ownVoice), isVoice = f => f && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')));
   const supplied = Array.isArray(input.sections) ? input.sections : [];
   if (supplied.length > 12) issues.push('TOO_MANY_SECTIONS');
-  const given = supplied.slice(0, 12).map(s => ({ item_id: String(s && s.item_id || ''), h2: String(s && s.h2 || '').trim().slice(0, 200), text: String(s && s.text || '').trim().slice(0, 20000) }));
+  const given = supplied.slice(0, 12).map(s => ({ item_id: String(s && s.item_id || ''), h2: plainText(String(s && s.h2 || '')).trim().slice(0, 200), text: plainText(String(s && s.text || '')).trim().slice(0, 20000) }));
+  const notes = given.filter(s => EDITOR_NOTE.test(s.text)).map(s => ({ section: s.h2, sentence: (s.text.match(EDITOR_NOTE) || [''])[0], reason: 'A note for you, not text for the page: remove it.' }));
+  if (notes.length) { issues.push('EDITOR_NOTE_IN_TEXT'); flagged.push(...notes); }
   if (!given.length) issues.push('APPROVED_SECTION_COUNT_REQUIRED');
   // A flagged sentence of the written concept may not stay in the text (rewrite or remove it).
   for (const s of given) {

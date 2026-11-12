@@ -16,14 +16,17 @@ function mergeWritten(prev,result,{at=new Date()}={}){
  return {version:2,runs:all,done_item_ids:[...new Set(all.flatMap(r=>(r.sections||[]).map(s=>s.item_id)).filter(Boolean))],pending:result.pending||[]};
 }
 // What the result page shows: the latest concept of every item ever written, plus what the last run left open.
+// Concept text is plain text: an HTML entity from a heading or the writer ("nor&#39;easter") becomes its character.
+const NAMED={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' ',ndash:'–',mdash:'—',rsquo:'’',lsquo:'‘',rdquo:'”',ldquo:'“',hellip:'…'};
+const plainText=t=>String(t==null?'':t).replace(/&(#x[0-9a-f]{1,6}|#\d{1,7}|[a-z]{2,8});/gi,(m,e)=>{if(e[0]==='#'){const n=e[1].toLowerCase()==='x'?parseInt(e.slice(2),16):parseInt(e.slice(1),10);return n>0&&n<0x110000?String.fromCodePoint(n):m}return NAMED[e.toLowerCase()]??m});
 function viewOf(doc){
  if(!doc)return null;
  const runs=runsOf(doc);if(!runs.length)return null;
  const latest=new Map();
- for(const r of runs)for(const s of r.sections||[])latest.set(s.item_id,{...s,run:r.run,written_at:r.at});
+ for(const r of runs)for(const s of r.sections||[])latest.set(s.item_id,{...s,h2:plainText(s.h2),paragraphs:(s.paragraphs||[]).map(plainText),run:r.run,written_at:r.at});
  const last=runs[runs.length-1];
  return {sections:[...latest.values()],runs:runs.map(r=>({run:r.run,at:r.at,item_ids:r.item_ids,writer_status:r.writer_status})),
   not_written:last.not_written||[],unlinked_sections:last.unlinked_sections||[],pending:doc.pending||[],
   note:last.note||'Concepts for the selected items. Every statement still needs your check; flagged sentences must be rewritten or removed. Nothing is published.'};
 }
-module.exports={mergeWritten,viewOf};
+module.exports={mergeWritten,viewOf,plainText};

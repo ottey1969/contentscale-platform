@@ -10,7 +10,7 @@ const sha=x=>createHash('sha256').update(x).digest('hex');
 const clean=x=>String(x==null?'':x).trim();
 const asText=html=>String(html).replace(/<!--[\s\S]*?-->/g,'').replace(/<[^>]*>/g,' ')
  .replace(/&nbsp;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>')
- .replace(/&quot;/gi,'"').replace(/&#39;/gi,"'").replace(/\s+/g,' ').trim();
+ .replace(/&quot;/gi,'"').replace(/&#0*39;|&#x0*27;|&apos;/gi,"'").replace(/\s+/g,' ').trim();
 const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function isLocalBusiness(html){
  const h=String(html||'');
@@ -24,8 +24,10 @@ function renderChangeMarkdown(html){
  return String(html).replace(/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi,(_,n,x)=>'\n'+'#'.repeat(Number(n))+' '+asText(x)+'\n\n')
  .replace(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,(_,url,text)=>'['+asText(text)+']('+url+')')
  .replace(/<li\b[^>]*>/gi,'\n- ').replace(/<\/(?:li|p|ul|ol|section|div)>/gi,'\n\n')
- .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&amp;/gi,'&').replace(/&nbsp;/gi,' ')
- .replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/\n{3,}/g,'\n\n').trim();
+ .replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]*>/g,'').replace(/&nbsp;/gi,' ')
+ // Copy text is plain text: every entity becomes its character (owner package 2026-11-12 showed "nor&#39;easter").
+ .replace(/&(#x[0-9a-f]{1,6}|#\d{1,7}|quot|apos|lt|gt);/gi,(m,e)=>{const l=e.toLowerCase();if(l==='quot')return '"';if(l==='apos')return "'";if(l==='lt')return '<';if(l==='gt')return '>';const n=l[1]==='x'?parseInt(l.slice(2),16):parseInt(l.slice(1),10);return n>0&&n<0x110000?String.fromCodePoint(n):m})
+ .replace(/&amp;/gi,'&').replace(/\n{3,}/g,'\n\n').trim();
 }
 const PLACEMENT_MODES={EXTEND_SECTION:'Extend the existing section',ADD_AFTER_SECTION:'Add as a new section directly after'};
 const placementText=p=>p?PLACEMENT_MODES[p.mode]+' “'+p.section_heading+'”'+(p.auto?(p.off_topic?' (chosen automatically: this section is about a different subject than the page\'s main topic, so it is not placed near the top; better: give it its own page and link to it from here)':' (chosen automatically: in the first 30% of the page, where readers and search engines see it early)'):''):'Choose a suitable position on the page';

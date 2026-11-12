@@ -15,6 +15,7 @@
 const {createHash}=require('node:crypto');
 const {terms}=require('./growth-one-action-decision.cjs');
 const {matchedTerms}=require('./growth-word-match.cjs');
+const {isFurnitureHeading}=require('./growth-derived-reader-tasks.cjs');
 const clip=(x,n)=>String(x==null?'':x).replace(/\s+/g,' ').trim().slice(0,n);
 const hostOf=u=>{try{return new URL(u).hostname.replace(/^www\./,'')}catch{return ''}};
 const PAGE={NOT_OBSERVED:'Not on your page',PARTIAL:'Partly on your page'};
@@ -76,7 +77,7 @@ function buildGapList(report={}){
      title:clip(t.topic,200),reader_question:null,status:TOPIC[t.this_page]||TOPIC.UNKNOWN,
      coverage:t.this_page==='NO'?'MISSING':t.this_page==='PARTLY'?'PARTIAL':'NOT_COMPARED',confidence:'AI_GROUPED',ai:'AI-grouped topic',
      your_section:t.this_page_heading||null,...(t.fits_search?{fits_search:t.fits_search}:{}),...(t.fits_reason?{fits_reason:t.fits_reason}:{}),
-     placement:t.this_page==='PARTLY'&&t.this_page_heading?{mode:'EXTEND_SECTION',section_heading:t.this_page_heading}:null,examples:[],merged:[]};
+     placement:t.this_page==='PARTLY'&&t.this_page_heading&&!isFurnitureHeading(t.this_page_heading)?{mode:'EXTEND_SECTION',section_heading:t.this_page_heading}:null,examples:[],merged:[]};
     if(addEvidence(it,secs))items.push(it);
    });
   }

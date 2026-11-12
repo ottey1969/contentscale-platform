@@ -550,7 +550,7 @@ function pkgKeptKey(){return 'growthFreeKept:'+API}
 try{PKG_KEPT=JSON.parse(localStorage.getItem(pkgKeptKey())||'{}')||{}}catch(e){PKG_KEPT={}}
 function pkgSaveKept(){try{localStorage.setItem(pkgKeptKey(),JSON.stringify(PKG_KEPT))}catch(e){}}
 function pkgIsKept(id,s){return !!(PKG_KEPT[id]&&PKG_KEPT[id][s])}
-function pkgSafety(id,s){return (PKG_FLAG_REASONS[id]||[]).some(function(f){return f.sentence===s&&/safe to wait|safety/i.test(f.reason)})}
+function pkgSafety(id,s){return String(s||'').trim().charAt(0)==='['||(PKG_FLAG_REASONS[id]||[]).some(function(f){return f.sentence===s&&/safe to wait|safety/i.test(f.reason)})}
 function pkgFixOf(id,s){return PKG_STYLE_FIXES.filter(function(f){return f.id===id&&f.before===s})[0]}
 function pkgFlagState(){document.querySelectorAll('.pkgFlags').forEach(function(box){var id=box.getAttribute('data-id'),use=document.querySelector('.pkgUse[data-id="'+id+'"]'),t=document.querySelector('.pkgText[data-id="'+id+'"]');
  var on=!use||use.checked;box.style.opacity=on?'':'0.5';var note=box.querySelector('.note strong');if(note)note.textContent=on?'Check before downloading:':'Not in the package (section not included):';
