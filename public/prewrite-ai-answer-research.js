@@ -88,7 +88,7 @@
   function validateAnswer(answer, query, question) {
     var a = cleanText(answer);
     if (!a) return { valid: false, status: 'not_checked', reason: null, message: null, warnings: [] };
-    question = cleanText(question, 200);
+    question = cleanText(question, 300);
     var both = question ? query + ' ' + question : query;
     var low = a.toLowerCase(), reason = markerReason(low, both), warnings = [];
     if (reason) { /* prompt echo or context contamination */ }
@@ -133,7 +133,7 @@
   // The customer question: its text and where it came from (Google People also ask / related search, AI idea, or the owner).
   function questionOf(v) {
     var o = v && typeof v === 'object' ? v : { text: v };
-    var t = cleanText(String(o.text || ''), 200).replace(/\s+/g, ' ');
+    var t = cleanText(String(o.text || ''), 300).replace(/\s+/g, ' ');
     return t ? { text: t, source: cleanText(String(o.source || ''), 80) || null } : null;
   }
   // query: the target keyword; language and market (region) are the Pre-Write Brief settings for that keyword.

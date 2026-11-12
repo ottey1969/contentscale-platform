@@ -138,6 +138,17 @@ test('Pre-Write: the best real Google question is chosen, carried into the resea
       await page.dispatchEvent('#pwbChatgptText', 'input');
       await page.waitForSelector('#pwbChatgptText-cs-invalid.cs-ai-invalid');
       assert.match(await page.textContent('#pwbChatgptText-cs-invalid'), /INVALID/);
+      // Owner 2026-11-12: questions the AI systems raise in their answers become choices; a long question is not cut off.
+      await page.fill('#pwbPerplexityText', 'Un consultor GEO revisa cómo aparece tu marca en las respuestas de IA.\n\nPreguntas relacionadas:\n- ¿Cómo vas a medir si mi marca aparece, se cita y se recomienda en ChatGPT, Gemini, Perplexity y Google AI Overviews para las preguntas que realmente hacen mis clientes antes de comprar?\n- ¿Cuánto tarda en notarse una consultoría GEO?');
+      await page.dispatchEvent('#pwbPerplexityText', 'input');
+      await page.waitForSelector('#cs-ai-question-from-answers button');
+      const fromAnswers = await page.$$eval('#cs-ai-question-from-answers button', b => b.map(x => [x.textContent, x.title]));
+      assert.equal(fromAnswers.length, 2);
+      assert.match(fromAnswers[0][1], /Perplexity · question in its answer/);
+      await page.click('#cs-ai-question-from-answers button');
+      const long = await page.inputValue('#cs-ai-question');
+      assert.ok(long.length > 160 && /antes de comprar\?$/.test(long), 'the whole question: ' + long);
+      assert.match(await page.getAttribute('#cs-ai-question', 'data-source'), /Perplexity/);
       // Picking the keyword itself: no customer question in the prompt.
       await page.click('#cs-ai-question-options button:last-child');
       await page.waitForFunction(() => !/Customer question asked/.test(document.querySelector('#cs-research-prompt-panel textarea').value), null, { timeout: 5000 });

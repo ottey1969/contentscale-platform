@@ -84,7 +84,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const lockedPages=(req.growth?.pages||[]).filter(x=>x&&x.case_study_active===true&&x.url).map(x=>({id:Number(x.id),url:String(x.url)}));
   // One run in another market or for another term, chosen by the Opportunity Finder: the page's own setting is not changed.
   const marketOverride=validCountries([String(req.query?.market||'')])[0]||null;
-  const queryOverride=String(req.query?.query||'').replace(/[\u0000-\u001f<>]/g,' ').replace(/\s+/g,' ').trim().slice(0,120)||null;
+  const queryOverride=String(req.query?.query||'').replace(/[\u0000-\u001f<>]/g,' ').replace(/\s+/g,' ').trim().slice(0,300)||null;
   return {id:Number(raw),page,clientId:req.growthTrackerClientId,lockedPages,canEdit:req.growth?.can_edit===true,marketOverride,queryOverride};
  };
  async function analyze(v){
@@ -829,7 +829,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const v=check(req,res);if(!v)return;
   const no=(status,code)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code});
   if(req.growth?.can_edit!==true||typeof saveAiAnswer!=='function'||typeof loadAiAnswers!=='function')return no(403,'OWNER_ONLY_AUTOMATIC_AI');
-  const term=String(v.queryOverride||v.page.keyword||'').trim().slice(0,120);
+  const term=String(v.queryOverride||v.page.keyword||'').trim().slice(0,300);
   if(!term)return no(400,'SEARCH_TERM_REQUIRED');
   let current;
   try{current=await loadAiAnswers({clientId:v.clientId,pageId:v.id,query:term})}catch{return no(503,'AI_ANSWERS_UNAVAILABLE')}
@@ -862,7 +862,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const no=(status,code,error)=>res.status(status).set('Cache-Control','private, no-store').json({success:false,code,error});
   if(req.growth?.can_edit!==true||typeof saveAiAnswer!=='function')return no(403,'OWNER_ONLY_AI_ANSWER','Only the Tracker owner can add AI answers.');
   const b=req.body||{},engine=String(b.engine||''),text=String(b.text||''),query=String(b.query||'').trim();
-  if(!query||query.length>120)return no(400,'SEARCH_TERM_REQUIRED','The search term of the research is missing.');
+  if(!query||query.length>300)return no(400,'SEARCH_TERM_REQUIRED','The search term of the research is missing.');
   if(!aiAnswers.ENGINE_IDS.has(engine))return no(400,'UNKNOWN_AI_SYSTEM','Choose the AI system you used.');
   if(!text.trim())return no(400,'ANSWER_REQUIRED','Paste the complete answer first.');
   if(text.length>aiAnswers.MAX_PASTE)return no(413,'ANSWER_TOO_LONG','This answer is too long; paste only the answer and its sources.');
@@ -1029,7 +1029,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const q=new URLSearchParams({page_id:String(tracked.id)});
   // The customer question the Brief was built on (owner 2026-11-12), else its keyword.
   const cq=String(b.brief&&b.brief.customer_question&&b.brief.customer_question.text||'').trim();
-  if(cq||b.keyword)q.set('query',String(cq||b.keyword).slice(0,120));
+  if(cq||b.keyword)q.set('query',String(cq||b.keyword).slice(0,300));
   if(/^[a-z]{2}$/.test(market))q.set('market',market);
   q.set('from',b.ref);
   return res.redirect(302,'/track/'+encodeURIComponent(req.params.token)+'/growth/auto-research?'+q.toString());
@@ -1126,7 +1126,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     '<div class="grid"><div><small>Selected page</small><strong>'+sHtml(v.page.url)+'</strong></div><div><small>Source</small><strong>Existing Tracker page</strong><small>'+sHtml(why)+' · <a href="/track/'+encodeURIComponent(req.params.token)+'/growth#choosePage">choose another page</a></small></div>'+
     '<div><small>Tracked keyword (context, not the customer question)</small><strong>'+sHtml(kw||'none')+'</strong></div><div><small>Search Console</small><strong>'+(gsc?'Connected for this page':'Optional, not connected')+'</strong><small>Not needed for this research; only for verified ranking and traffic comparisons.</small></div></div>'+
     (v.queryOverride?'<p><strong>Customer question researched:</strong> “'+sHtml(v.queryOverride)+'”'+(req.query?.auto_q==='1'?' <small>Chosen automatically: the best matching question customers ask in Google for this market. Choose another below, or <a href="/track/'+encodeURIComponent(req.params.token)+'/growth/auto-research?page_id='+encodeURIComponent(v.id)+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):'')+'&keyword_only=1">use the tracked keyword instead</a>.</small>':'')+'</p>':'<p class="info">No customer question chosen yet: the research below uses '+(kw?'the tracked keyword “'+sHtml(kw)+'”':'a phrase from the page title')+'. Find how customers search and choose a question to research that instead.</p>')+
-    '<div><label for="cqManual">Customer search question — type or paste your own</label><input id="cqManual" type="text" maxlength="120" style="width:min(100%,680px);font:inherit;padding:9px" value="'+sHtml(v.queryOverride||'')+'" placeholder="e.g. How can customers find my business in AI search?"> <button type="button" id="cqManualGo">Use this question for research →</button></div>'+
+    '<div><label for="cqManual">Customer search question — type or paste your own</label><input id="cqManual" type="text" maxlength="300" style="width:min(100%,860px);font:inherit;padding:9px" value="'+sHtml(v.queryOverride||'')+'" placeholder="e.g. How can customers find my business in AI search?"> <button type="button" id="cqManualGo">Use this question for research →</button></div>'+
     '<p class="info">Or discover questions from Google and AI. Suggestions are optional; you can research your own question even when these services are unavailable.</p>'+
     '<p><button type="button" id="cqFind">'+(v.queryOverride?'Choose another customer question':'Find customer questions')+'</button> <small role="status" id="cqStatus"></small></p><div id="cqList"></div>'
     '<p class="info">The selected question determines which Google and AI evidence is researched and then compared with the live page. Choosing another question opens its own saved report; your earlier research is not deleted.</p></section>';

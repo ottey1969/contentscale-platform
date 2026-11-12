@@ -11,8 +11,8 @@
  var savedRaw=null;try{savedRaw=localStorage.getItem(key)}catch(e){}
  var saved=savedRaw==='__RESET__'?'':savedRaw||'';
  var explicit=params.get('query');
- if(manual&&explicit===null&&saved)manual.value=saved.slice(0,120);
- function saveDraft(v){try{localStorage.setItem(key,String(v||'').slice(0,120))}catch(e){}}
+ if(manual&&explicit===null&&saved)manual.value=saved.slice(0,300);
+ function saveDraft(v){try{localStorage.setItem(key,String(v||'').slice(0,300))}catch(e){}}
  if(manual){manual.addEventListener('input',function(){saveDraft(manual.value)});if(explicit!==null)saveDraft(manual.value)}
  var reset=document.createElement('button');reset.type='button';reset.id='cqReset';reset.textContent='Clear question';reset.className='ghost';reset.style.marginLeft='8px';
  if(manualGo&&manual){manualGo.insertAdjacentElement('afterend',reset);reset.addEventListener('click',function(){
@@ -24,7 +24,7 @@
  })}
 
  function esc(x){return String(x==null?'':x).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
- function go(q){q=String(q||'').replace(/\s+/g,' ').trim().slice(0,120);if(!q){st.textContent='Choose or type a question first.';return}
+ function go(q){q=String(q||'').replace(/\s+/g,' ').trim().slice(0,300);if(!q){st.textContent='Choose or type a question first.';return}
   saveDraft(q);
   var u=new URL(location.href),current=(u.searchParams.get('query')||'').trim();
   // Choosing the same question must NOT reset the entire page (owner report 2026-11-12).
@@ -52,7 +52,7 @@
    var g=d.google&&d.google.status,why=g==='GOOGLE_NOT_CONFIGURED'?' Google questions need Serper on the server.':g==='GOOGLE_UNAVAILABLE'?' Google could not be reached.':'';
    st.textContent=(d.questions.length?d.questions.length+' question(s)'+(d.searched_with?' for “'+d.searched_with+'”':'')+(d.market?' in '+d.market.name:'')+'.':'No questions found.')+why;
    var h='<fieldset><legend>Customer questions · strongest relevant observation first</legend>'+d.questions.map(function(q,i){return '<label style="display:block;margin:6px 0"><input type="radio" name="cq" value="'+esc(q.text)+'"'+(q.text===d.best_question?' checked':'')+'> '+esc(q.text)+' <small style="display:inline">· '+esc(q.label)+(q.text===d.best_question?' · Best match':'')+'</small></label>'}).join('')+
-    '<label style="display:block;margin:10px 0 4px">Or type or edit the question</label><input id="cqOwn" type="text" maxlength="120" style="width:min(100%,560px);font:inherit;padding:6px 8px" value="'+esc(d.best_question||'')+'"></fieldset>'+
+    '<label style="display:block;margin:10px 0 4px">Or type or edit the question</label><input id="cqOwn" type="text" maxlength="300" style="width:min(100%,560px);font:inherit;padding:6px 8px" value="'+esc(d.best_question||'')+'"></fieldset>'+
     '<p><button type="button" id="cqGo">Use this question for research →</button></p><p class="info">Choosing a different question opens its own saved research; it does not delete your previous report or publish anything.</p><p class="info">'+esc(d.note)+'</p>';
    list.innerHTML=h;var own=document.getElementById('cqOwn');
    if(saved&&own)own.value=manual&&manual.value||saved;
