@@ -37,7 +37,7 @@ async function deleteDecision(pool,{clientId,pageId,sentence}){
 }
 // Flagged sentences the owner confirmed as true for the business (decision KEPT_BY_OWNER), as review notes for the
 // package: they no longer block it and are recorded as confirmed. A safety assurance ("safe to wait") is never released.
-const isSafety=f=>f&&(f.code==='UNSUPPORTED_SAFETY_ASSURANCE'||/safe to wait|safety assurance/i.test(String(f.reason||'')));
+const isSafety=f=>f&&(f.code==='UNSUPPORTED_SAFETY_ASSURANCE'||/safe to wait|safety assurance/i.test(String(f.reason||''))||/^\s*\[/.test(String(f.sentence||'')));
 function applyKept(reviewNotes,rows){
  if(!reviewNotes||typeof reviewNotes!=='object')return reviewNotes;
  const kept=new Set((rows||[]).filter(r=>r.how==='KEPT_BY_OWNER').map(r=>norm(r.sentence).toLowerCase()));

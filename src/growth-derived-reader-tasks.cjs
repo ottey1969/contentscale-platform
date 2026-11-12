@@ -38,7 +38,7 @@ function sectionProfile(sec,skip){
 // ("dentist-one.example" talking about dentists) is the topic, not a brand.
 // Page furniture: contact/quote blocks, FAQ containers and navigation headings frame a page; they are not something the reader
 // must learn. Industry-neutral, heading-level only (an individual question heading such as "Is wind damage covered?" stays).
-const FURNITURE_HEADING=/^(?:contact(?: us| information)?(?: today| now)?|get in touch|reach us|call us(?: today| now)?|request (?:a |your )?(?:free )?(?:quote|estimate|inspection|consultation|demo)|get (?:a |your )?(?:free )?(?:quote|estimate)|book (?:a|an|your)\b.*|schedule (?:a|an|your)\b.*|faqs?|frequently asked(?: questions)?|common questions|questions(?: and answers)?|q ?& ?a|related (?:posts|articles|services|pages)|our (?:team|services|locations)|service areas?|areas we serve|about us|share this|follow us)\s*[?:.!]*$/i;
+const FURNITURE_HEADING=/^(?:contact(?: us| information)?(?: today| now)?|get in touch|reach us|call us(?: today| now)?|request (?:a |your )?(?:free )?(?:quote|estimate|inspection|consultation|demo)|get (?:a |your )?(?:free )?(?:quote|estimate)|book (?:a|an|your)\b.*|schedule (?:a|an|your)\b.*|faqs?|frequently asked(?: questions)?|common questions|questions(?: and answers)?|q ?& ?a|related(?: [a-z-]+){0,3} (?:posts|articles|services|pages|links|guides|reading)|our (?:team|services|locations)|service areas?|areas we serve|about us|share this|follow us)\s*[?:.!]*$/i;
 const isFurnitureHeading=h=>FURNITURE_HEADING.test(String(h||'').replace(/^[^\p{L}\p{N}]+/u,'').trim());
 function isPromotionalSection(sec,host,otherHostsText=''){
  if(isFurnitureHeading(sec.heading))return true;

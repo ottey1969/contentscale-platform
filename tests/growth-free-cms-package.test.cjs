@@ -211,3 +211,22 @@ test('the editor can keep a flagged sentence that is true for the business; a sa
   const s2 = buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: ws, input: input({ sections: [{ item_id: 'g1', h2: 'How to read a repair estimate', text: text + ' ' + safe }], confirmed_sentences: [{ item_id: 'g1', sentence: safe }] }), focusQuery: 'roof repair lodi nj' });
   assert.equal(s2.ready, false);
 });
+
+test('owner package review 2026-11-12: an editor note is never page text, entities become characters, link lists are never extended', () => {
+  const note = '[Editor verification note: Verify if specific third-party financing lenders are supported.]';
+  const w = { sections: [{ ...written.sections[0], flags: [{ sentence: note, reason: 'TEST' }] }] };
+  const make = (t, o = {}) => buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: w, input: input({ sections: [{ item_id: 'g1', h2: 'How to read a repair estimate', text: t }], ...o }), focusQuery: 'roof repair lodi nj' });
+  const r = make(text + '\n\n' + note, { confirmed_sentences: [{ item_id: 'g1', sentence: note }] });
+  assert.equal(r.ready, false, 'a note in the text blocks the package, also when the editor "kept" it');
+  assert.ok(r.issues.includes('EDITOR_NOTE_IN_TEXT')); assert.match(r.messages.join(' '), /A note for you is still in the text/);
+  const ok = make(text + ' New Jersey nor&#39;easter season brings storms.');
+  assert.equal(ok.ready, true, JSON.stringify(ok.messages));
+  const copy = ok.files.find(f => f.name === '02-approved-copy.md').content, frag = ok.files.find(f => f.name === '03-content-fragments.html').content;
+  assert.match(copy, /nor'easter season/); assert.doesNotMatch(copy, /&#39;/); assert.doesNotMatch(frag, /&amp;(?:#39|amp|quot);/);
+  const { viewOf } = require('../src/growth-free/written.cjs');
+  const v = viewOf({ runs: [{ run: 1, at: '2026-11-12', sections: [{ item_id: 'x', h2: 'New Jersey Nor&#39;easter Season', paragraphs: ['Nor&#x27;easter &amp; ice'] }] }] });
+  if (v) { assert.equal(v.sections[0].h2, "New Jersey Nor'easter Season"); assert.equal(v.sections[0].paragraphs[0], "Nor'easter & ice"); }
+  const { isFurnitureHeading } = require('../src/growth-derived-reader-tasks.cjs');
+  for (const h of ['📚 Related Roofing Services', 'Related services', 'Related reading']) assert.equal(isFurnitureHeading(h), true, h);
+  assert.equal(isFurnitureHeading('What You Receive Before Work Starts'), false);
+});

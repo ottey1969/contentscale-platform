@@ -184,7 +184,7 @@
   action.textContent='Remove this flagged sentence from draft';row.appendChild(action);
   var result=document.createElement('small');result.setAttribute('role','status');row.appendChild(result);
   var alt=document.createElement('button');alt.type='button';alt.hidden=true;row.appendChild(alt);
-  var safety=flag&&(flag.code==='UNSUPPORTED_SAFETY_ASSURANCE'||/safe to wait|safety assurance/i.test(String(flag.reason||'')));
+  var safety=flag&&(flag.code==='UNSUPPORTED_SAFETY_ASSURANCE'||/safe to wait|safety assurance/i.test(String(flag.reason||''))||/^\s*\[/.test(sentence));
   var show=document.createElement('button');show.type='button';show.className='growth-flag-show';show.textContent='Show in the text';row.insertBefore(show,action);
   show.addEventListener('click',function(){if(!showSentence(sentence))result.textContent='This exact sentence is not in your text anymore.'});
   var keep=document.createElement('button');keep.type='button';keep.className='growth-flag-keep';keep.textContent='It is true — keep it';if(!safety)row.insertBefore(keep,action);
