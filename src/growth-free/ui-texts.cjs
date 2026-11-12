@@ -93,6 +93,10 @@ const ROWS = [
   ['Probably not relevant to this search (no section proposed, not written) ({n})', 'Waarschijnlijk niet relevant voor deze zoekopdracht (geen sectie voorgesteld, niet geschreven) ({n})', 'Probablemente no relevante para esta búsqueda (sin sección propuesta, no se escribe) ({n})'],
   ['Add a new section; you choose where.', 'Voeg een nieuwe sectie toe; jij kiest waar.', 'Añade una sección nueva; tú eliges dónde.'],
   ['Extend your section “{q}”.', 'Breid je sectie “{q}” uit.', 'Amplía tu sección “{q}”.'],
+  // The question asked to the AI systems (owner 2026-11-12: a real Google question, the best match for the search term).
+  ['Question asked:', 'Gestelde vraag:', 'Pregunta realizada:'],
+  ['the best real Google question for “{q}”', 'de best passende echte Google-vraag voor “{q}”', 'la pregunta real de Google que mejor encaja con “{q}”'],
+  ['People also ask', 'Mensen vragen ook', 'Otras preguntas de los usuarios'], ['Related search', 'Gerelateerde zoekopdracht', 'Búsqueda relacionada'],
   ['Check your page first: this section was not compared with it.', 'Controleer eerst je pagina: deze sectie is er niet mee vergeleken.', 'Revisa primero tu página: esta sección no se comparó con ella.'],
   ['Add this element yourself (it is not written by Growth).', 'Voeg dit element zelf toe (Growth schrijft het niet).', 'Añade tú este elemento (Growth no lo escribe).'],
   ['Not on your page', 'Niet op je pagina', 'No está en tu página'], ['Partly on your page', 'Deels op je pagina', 'En parte en tu página'],

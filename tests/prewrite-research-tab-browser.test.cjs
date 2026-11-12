@@ -95,3 +95,52 @@ test('Pre-Write AI collection is one visible action, prompt stays behind the sce
       assert.deepEqual(errors, []);
     } finally { await browser.close(); await new Promise(ok => server.close(ok)); }
   });
+
+// Owner 2026-11-12: "the keyword must be a real search question, the best match". The tab picks Google's question for the
+// keyword, keeps where it came from, checks pasted answers against it and puts it in the research prompt the Brief uses.
+test('Pre-Write: the best real Google question is chosen, carried into the research prompt and the answer check',
+  { skip: !chromium && 'Playwright not installed' }, async () => {
+    const modal = realModalMarkup();
+    const html = '<!doctype html><html><head><meta charset="utf-8">' +
+      '<script>window.csComboOpen=window.csComboFilter=window.csComboToggle=function(){};</script>' +
+      '<script defer src="/prewrite-ai-answer-research.js"></script>' +
+      '<script defer src="/prewrite-research-tab.js"></script></head><body>' +
+      modal.replace('class="cs-modal"', 'class="cs-modal" style="display:block;padding:16px"') + '</body></html>';
+    const asked = [];
+    const server = http.createServer((req, res) => {
+      const u = req.url.split('?')[0];
+      if (u === '/track/TESTTOKEN/') { res.setHeader('Content-Type', 'text/html'); return res.end(html); }
+      if (u === '/api/tracker-client/TESTTOKEN/prewrite-customer-question') {
+        asked.push(new URL(req.url, 'http://x').searchParams.get('keyword'));
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ success: true, keyword: 'dakreparatie amsterdam', best_question: 'Wat kost dakreparatie in Amsterdam?', best_label: 'Google · People also ask',
+          questions: [{ text: 'Wat kost dakreparatie in Amsterdam?', label: 'Google · People also ask' }, { text: 'dakdekker amsterdam spoed', label: 'Google · Related search' }] }));
+      }
+      const file = path.join(__dirname, '../public', path.basename(u));
+      if (fs.existsSync(file)) { res.setHeader('Content-Type', 'text/javascript'); return res.end(fs.readFileSync(file)); }
+      res.statusCode = 404; res.end();
+    });
+    await new Promise(ok => server.listen(0, '127.0.0.1', ok));
+    const browser = await chromium.launch();
+    try {
+      const page = await browser.newPage(), errors = [];
+      page.on('pageerror', e => errors.push(e.message));
+      await page.goto('http://127.0.0.1:' + server.address().port + '/track/TESTTOKEN/');
+      await page.waitForSelector('#cs-ai-question');
+      await page.fill('#pwbKeyword', 'dakreparatie amsterdam');
+      await page.dispatchEvent('#pwbKeyword', 'change');
+      await page.waitForFunction(() => document.getElementById('cs-ai-question').value === 'Wat kost dakreparatie in Amsterdam?', null, { timeout: 5000 });
+      assert.deepEqual(asked, ['dakreparatie amsterdam']);
+      assert.equal(await page.getAttribute('#cs-ai-question', 'data-source'), 'Google · People also ask');
+      await page.waitForFunction(() => /Customer question asked to the AI systems: "Wat kost dakreparatie in Amsterdam\?" \(Google · People also ask\)/.test(document.querySelector('#cs-research-prompt-panel textarea').value), null, { timeout: 5000 });
+      // The question pasted back is not an answer; a real answer to it counts.
+      await page.fill('#pwbChatgptText', 'Wat kost dakreparatie in Amsterdam?');
+      await page.dispatchEvent('#pwbChatgptText', 'input');
+      await page.waitForSelector('#pwbChatgptText-cs-invalid.cs-ai-invalid');
+      assert.match(await page.textContent('#pwbChatgptText-cs-invalid'), /INVALID/);
+      // Picking the keyword itself: no customer question in the prompt.
+      await page.click('#cs-ai-question-options button:last-child');
+      await page.waitForFunction(() => !/Customer question asked/.test(document.querySelector('#cs-research-prompt-panel textarea').value), null, { timeout: 5000 });
+      assert.deepEqual(errors, []);
+    } finally { await browser.close(); server.close(); }
+  });

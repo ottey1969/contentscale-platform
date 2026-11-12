@@ -800,6 +800,11 @@ test('review 2026-11-08: no question typed — the check uses the best Google qu
  const typed=await s.post('/api/free-growth/checks',{...ok,query:'roof repair lodi nj'});await s.service.idle();
  assert.equal(s.calls[s.calls.length-1].query,'roof repair lodi nj','a typed question is never replaced');
  const tr=await s.get('/api/free-growth/checks/'+typed.body.id+'?k='+typed.body.key);assert.equal(tr.body.customer_question,null);
+ // Owner 2026-11-12: the AI systems are asked the best real Google question for the typed term, not the bare keyword.
+ assert.equal(tr.body.ai.search_term,'roof repair lodi nj');
+ assert.deepEqual([tr.body.ai.ai_question.text,tr.body.ai.ai_question.source],['How much does roof repair cost in Lodi NJ?','GOOGLE_PEOPLE_ALSO_ASK']);
+ assert.match(tr.body.ai.prompt,/QUERY:\n\nHow much does roof repair cost in Lodi NJ\?/);
+ const tpage=await s.get('/free-growth/r/'+typed.body.id+'?k='+typed.body.key);assert.equal(tpage.status,200);
 });
 
 test('review 2026-11-08: e-mails go to the first address only, unless the owner or an approved invitation made the check',()=>{

@@ -83,16 +83,20 @@
   var NO_OVERVIEW_NOTE = 'Google showed no AI Overview for this query. That is recorded as checked, not as an AI answer and not as a failed Gemini answer. Paste the Gemini answer to research Google\'s AI.';
   function fold(s) { return String(s || '').normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase(); }
   function words(s) { return fold(s).split(/[^\p{L}\p{N}]+/u).filter(Boolean); }
-  function validateAnswer(answer, query) {
+  // question: the real customer question the owner asked the AI systems for this keyword (owner 2026-11-12: "the keyword
+  // must be a real search question"). An answer to that question is an answer to the keyword's search.
+  function validateAnswer(answer, query, question) {
     var a = cleanText(answer);
     if (!a) return { valid: false, status: 'not_checked', reason: null, message: null, warnings: [] };
-    var low = a.toLowerCase(), reason = markerReason(low, query), warnings = [];
+    question = cleanText(question, 200);
+    var both = question ? query + ' ' + question : query;
+    var low = a.toLowerCase(), reason = markerReason(low, both), warnings = [];
     if (reason) { /* prompt echo or context contamination */ }
     else if (PLACEHOLDERS.some(function (re) { return re.test(a); })) reason = 'placeholder';
-    else if (query && words(a).join(' ') === words(query).join(' ')) reason = 'query_only';
+    else if ((query && words(a).join(' ') === words(query).join(' ')) || (question && words(a).join(' ') === words(question).join(' '))) reason = 'query_only';
     else if (words(a).length < 3) reason = 'too_short';
-    else if (query) {
-      var qt = words(query).filter(function (w) { return w.length >= 3; }), text = words(a).join(' ');
+    else if (both) {
+      var qt = words(both).filter(function (w) { return w.length >= 3; }), text = words(a).join(' ');
       // A shared word or word stem (first six letters: "optimalisatie" matches "optimaliseren").
       if (qt.length && !qt.some(function (w) { return text.indexOf(w.slice(0, 6)) >= 0; })) warnings.push('topic_unconfirmed');
     }
@@ -100,11 +104,11 @@
       : { valid: true, status: 'valid', reason: null, message: warnings.length ? TOPIC_WARNING : null, warnings: warnings };
   }
   // One Google field with its source choice. requireSource: new input must name the source (saved research may not).
-  function validateGoogle(answer, source, query, requireSource) {
+  function validateGoogle(answer, source, query, requireSource, question) {
     var s = googleSource(source), a = cleanText(answer);
     if (s === 'no_ai_overview') return a ? { valid: false, status: 'invalid', reason: 'source_conflict', message: REASONS.source_conflict, warnings: [] }
       : { valid: false, status: 'no_ai_overview', reason: null, message: NO_OVERVIEW_NOTE, warnings: [] };
-    var v = validateAnswer(a, query);
+    var v = validateAnswer(a, query, question);
     if (v.valid && !s && requireSource) return { valid: false, status: 'invalid', reason: 'source_not_chosen', message: REASONS.source_not_chosen, warnings: [] };
     return v;
   }
@@ -126,6 +130,12 @@
         : check.status === 'no_ai_overview' ? 'No AI Overview was shown for this query; there is no Google AI answer to use. Never infer one.'
         : 'Not checked: never infer an answer, citation, or gap.' };
   }
+  // The customer question: its text and where it came from (Google People also ask / related search, AI idea, or the owner).
+  function questionOf(v) {
+    var o = v && typeof v === 'object' ? v : { text: v };
+    var t = cleanText(String(o.text || ''), 200).replace(/\s+/g, ' ');
+    return t ? { text: t, source: cleanText(String(o.source || ''), 80) || null } : null;
+  }
   // query: the target keyword; language and market (region) are the Pre-Write Brief settings for that keyword.
   // require_google_source: true for new input (the Tracker form and new requests), false for rebuilding saved research.
   function makePrewriteAiAnswerResearch(input) {
@@ -134,15 +144,17 @@
     var inputs = Array.isArray(input.answers) ? input.answers : [];
     var byEngine = {};
     inputs.forEach(function (raw) { var n = normalizeAnswer(raw); if (n && (n.answer || n.google_source === 'no_ai_overview')) byEngine[n.engine] = n; });
+    var aq = questionOf(input.ai_question);
     var ctx = { q: q, language: language, market: market };
     var observations = ENGINES.map(function (e) {
       var found = byEngine[e.id];
       var check = !found ? { status: 'not_checked', reason: null, message: null, warnings: [] }
-        : e.id === 'google' ? validateGoogle(found.answer, found.google_source, q, !!input.require_google_source) : validateAnswer(found.answer, q);
+        : e.id === 'google' ? validateGoogle(found.answer, found.google_source, q, !!input.require_google_source, aq && aq.text) : validateAnswer(found.answer, q, aq && aq.text);
       return observationFor(e, found, check, ctx);
     });
     var instructions = [
       'This research is PRE-PUBLICATION editorial input, not a check whether this website is cited.',
+      aq ? 'The AI systems were asked the customer question "' + aq.text + '" (the real search question for the target query). The brief\'s direct answer must answer that question first, in plain words; the target query stays the page\'s keyword.' : null,
       'Compare the actual answers to the same target query; identify differing explanations, factual gaps, unanswered questions and unsupported assertions.',
       'Recognise the important entities (organisations, standards, products, places, people) the answers rely on, and which of them the brief must explain.',
       'Use source URLs as leads only. Fetch and verify original material before citing, quoting or presenting a statement as fact.',
@@ -152,9 +164,9 @@
       'Write in ' + (language || 'the language of the brief') + ' for readers in ' + (market || 'the brief\'s target market') + '; use facts, units and examples that hold there.',
       'Never promise fast AI citation, ranking, traffic or revenue. Publishing does not guarantee that any AI system cites the page.',
       'Keep the brief aligned with the page intent and avoid creating duplicate pages or cannibalizing existing URLs.'
-    ];
+    ].filter(Boolean);
     return recount({
-      contract: 'prewrite_ai_answer_research_v3', query: q, language: language || null, market: market || null,
+      contract: 'prewrite_ai_answer_research_v3', query: q, ai_question: aq, language: language || null, market: market || null,
       mode: 'pre_publication_answer_research', objective: OBJECTIVE, purpose: MISSION,
       systems_total: ENGINES.length, observations: observations,
       verified_sources: [], // Only independent provenance verification may populate this.
@@ -196,12 +208,12 @@
       var c = Object.assign({}, o);
       // A v3 answer was validated in full when it was made; the marker checks (echo, contamination) are re-applied to its
       // excerpt, because answers saved before a marker existed may contain one.
-      var mr = c.checked && c.validation_status === 'valid' ? markerReason(String(c.answer_excerpt || '').toLowerCase(), r.query) : null;
+      var mr = c.checked && c.validation_status === 'valid' ? markerReason(String(c.answer_excerpt || '').toLowerCase(), r.query + (r.ai_question && r.ai_question.text ? ' ' + r.ai_question.text : '')) : null;
       if (mr) c = Object.assign(c, { checked: false, validation_status: 'invalid', error_reason: mr, error_message: REASONS[mr],
         rejected_preview: String(c.answer_excerpt || '').slice(0, 160), answer_excerpt: null, answer_truncated: false, source_urls: [], warnings: [], topic_match: null,
         editorial_use: 'Invalid: not an answer to the target query. Never use it as evidence; ask the AI system the query itself.' });
       if (c.checked && c.validation_status !== 'valid') {
-        var v = validateAnswer(c.answer_excerpt || '', r.query);
+        var v = validateAnswer(c.answer_excerpt || '', r.query, r.ai_question && r.ai_question.text);
         if (!v.valid) c = Object.assign(c, { checked: false, validation_status: 'invalid', error_reason: v.reason, error_message: v.message,
           rejected_preview: String(c.answer_excerpt || '').slice(0, 160), answer_excerpt: null, answer_truncated: false, source_urls: [],
           editorial_use: 'Invalid: not an answer to the target query. Never use it as evidence; ask the AI system the query itself.' });
@@ -268,6 +280,7 @@
       (research.objective || OBJECTIVE).toUpperCase() + '. This is NOT citation tracking.',
       research.purpose && research.contract !== 'prewrite_ai_answer_research_v1' ? research.purpose : null,
       'Target query: ' + (research.query || 'MISSING — enter the target keyword before writing'),
+      research.ai_question && research.ai_question.text ? 'Customer question asked to the AI systems: "' + research.ai_question.text + '"' + (research.ai_question.source ? ' (' + research.ai_question.source + ')' : '') : null,
       research.contract !== 'prewrite_ai_answer_research_v1' ? 'Language: ' + (research.language || 'not set') + ' · Market: ' + (research.market || 'not set') : null,
       counts + (detail ? '\n' + detail : ''),
       obs.map(systemLine).join('\n\n'),

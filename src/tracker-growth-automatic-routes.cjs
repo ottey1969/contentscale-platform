@@ -27,7 +27,7 @@ const {resolveGrowthPageIntent}=require('./growth-page-intent-resolver.cjs');
 const {renderPublicGrowthPage,needsGrowthRender}=require('./growth-safe-browser-renderer.cjs');
 const {analyzeReaderTaskCoverage,inferSerpIntent,classifyDestinationIntent,pageTypeScope,blocks:pageBlocks,groupSections}=require('./growth-reader-task-coverage.cjs');
 const {judgeTaskMeaning,applyTaskMeaning,judgeDraftAnswers}=require('./growth-task-meaning.cjs');
-const {discoverCustomerQuestions}=require('./growth-customer-questions.cjs');
+const {discoverCustomerQuestions,aiQuestionForTerm}=require('./growth-customer-questions.cjs');
 const {buildCompetitorOverview}=require('./growth-competitor-overview.cjs');
 const {buildGapList}=require('./growth-gap-list.cjs');
 const {writeForSelection,planBatch,remapSelection,pageFingerprint,headingsStillPresent,headingsMessage,MAX_ITEMS:MAX_WRITE_ITEMS}=require('./growth-selected-writing.cjs');
@@ -496,14 +496,26 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    pasted_for_this_search:check.summary.checked}:result.ai_visibility;
   return {...result,ai_visibility:ai,ai_check:check};
  }
+ // The question asked to the AI systems for a search term (owner 2026-11-12: "the keyword must be a real search question,
+ // the best match"): Google's own question for the page's market, else null and the term itself is asked. The answers stay
+ // stored under the search term, so earlier answers keep counting.
+ async function aiQuestionFor(v,term){
+  try{
+   let set=null;if(typeof loadPageMarkets==='function')set=await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null);
+   if(!(set?.countries?.length||set?.language)&&typeof loadSiteMarkets==='function')set=await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null);
+   const country=v.marketOverride||set?.countries?.[0]||null;
+   return await aiQuestionForTerm({term,gl:country?(String(country).toUpperCase()==='GB'?'uk':String(country).toLowerCase()):'us',hl:String(set?.language||'en').toLowerCase(),...(questionFetch?{fetchImpl:questionFetch}:{})});
+  }catch(e){return null}
+ }
  async function aiCheckFor({v,term,target,googleUrls=[],waitGap=false}){
   const answers=await loadAiAnswers({clientId:v.clientId,pageId:v.id,query:term});
   const fresh=answers.filter(a=>Date.now()-Date.parse(a.created_at)<=AI_MAX_AGE_DAYS*86400000);
-  const summary=aiAnswers.summarizeAiAnswers(fresh,{pageUrl:target,googleUrls,query:term});
+  const aq=await aiQuestionFor(v,term),question=aq&&aq.text;
+  const summary=aiAnswers.summarizeAiAnswers(fresh,{pageUrl:target,googleUrls,query:term,question});
   const gap=summary.verifiable>summary.cited_by?await aiGapFor({key:'tracker:'+v.clientId+':'+v.id,answers:fresh,pageUrl:target,query:term,wait:waitGap}).catch(()=>null):null;
-  return {gap,search_term:term,page_url:target,prompt:aiAnswers.directPrompt(term),engines:aiAnswers.ENGINES,max_paste:aiAnswers.MAX_PASTE,
+  return {gap,search_term:term,ai_question:aq,page_url:target,prompt:aiAnswers.directPrompt(term,question),engines:aiAnswers.ENGINES,max_paste:aiAnswers.MAX_PASTE,
    can_paste:v.canEdit===true,older_answers_not_counted:answers.length-fresh.length,max_age_days:AI_MAX_AGE_DAYS,
-   prior_checks:aiAnswers.summarizeAiAnswers(answers,{pageUrl:target,googleUrls,query:term}).engines.map(e=>({id:e.id,checked_at:e.checked_at||null})),
+   prior_checks:aiAnswers.summarizeAiAnswers(answers,{pageUrl:target,googleUrls,query:term,question}).engines.map(e=>({id:e.id,checked_at:e.checked_at||null})),
    summary};
  }
  // The AI check before the research has finished: for the page's tracked keyword, optional, never running research.
@@ -829,7 +841,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(!promise){
    promise=(async()=>{
     try{
-     const answer=await autoGroundedAnswer({query:term,pageUrl:v.page.url});
+     const answer=await autoGroundedAnswer({query:((await aiQuestionFor(v,term))||{}).text||term,pageUrl:v.page.url});
      if(answer.status==='SUCCESS'&&answer.parsed?.validation_status!=='invalid'){
       await saveAiAnswer({clientId:v.clientId,pageId:v.id,query:term,engine:answer.engine,rawText:answer.raw,parsed:answer.parsed});
      }else automaticAiRetryAfter.set(lock,Date.now()+15*60*1000);
@@ -857,7 +869,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // The page the research targets (a destination on the same site), else the tracked page itself.
   const sameSite=u=>{try{return new URL(u).hostname===new URL(v.page.url).hostname}catch{return false}};
   b.page_url=sameSite(b.page_url)?String(b.page_url):v.page.url;
-  const parsed=aiAnswers.parseAiAnswer(text,{pageUrl:b.page_url,query});
+  const parsed=aiAnswers.parseAiAnswer(text,{pageUrl:b.page_url,query,question:((await aiQuestionFor(v,query))||{}).text});
   // Validation contract: an answer that is not an answer (the prompt itself, a conversation that knew the task, a
   // placeholder) is not stored; the owner sees why. A topic warning does not block saving.
   if(parsed.validation_status==='invalid')return no(400,'AI_ANSWER_INVALID_'+String(parsed.error_reason||'').toUpperCase(),parsed.error_message||'This is not an answer to the search term.');

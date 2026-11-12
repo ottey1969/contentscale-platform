@@ -14,20 +14,27 @@ const PUBLIC_SCRIPTS = ['prewrite-ai-answer-research.js', 'prewrite-research-tab
 // blanked in the handler's answer map, so nothing downstream (the generation prompt, ai_system_evidence, the 5/5 gate)
 // can count or use them; they are returned so the research reports them as INVALID with the reason. The Google answer
 // needs its source (Google AI Overview or Gemini); "No AI Overview shown" is recorded, never counted.
-function screenManualAnswers(manualAi, query, googleSource) {
+function screenManualAnswers(manualAi, query, googleSource, question) {
   const rejected = {};
   if (!manualAi || typeof manualAi !== 'object') return rejected;
   for (const k of ENGINE_KEYS) {
     const v = String(manualAi[k] || '').trim();
     if (!v) continue;
-    const check = k === 'google_aio' ? research.validateGoogle(v, googleSource, query, true) : research.validateAnswer(v, query);
+    const check = k === 'google_aio' ? research.validateGoogle(v, googleSource, query, true, question) : research.validateAnswer(v, query, question);
     if (!check.valid) { rejected[k] = { answer: v, reason: check.reason, message: check.message }; manualAi[k] = ''; }
   }
   if (Object.keys(rejected).length) console.warn('[prewrite] AI answers rejected for "' + String(query || '').slice(0, 80) + '":', Object.entries(rejected).map(([k, x]) => k + '=' + x.reason).join(', '));
   return rejected;
 }
-function validateAnswer(answer, query) { return research.validateAnswer(answer, query); }
-function validateGoogle(answer, source, query, requireSource) { return research.validateGoogle(answer, source, query, requireSource); }
+// The customer question sent with the request (Research Prompt tab, #cs-ai-question): the text the owner asked the AI
+// systems and where it came from. Not a question: null (the keyword is used).
+function questionFromRequest(raw) {
+  const t = String(raw && raw.ai_question || '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
+  if (!t) return null;
+  return { text: t, source: String(raw.ai_question_source || '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 80) || null };
+}
+function validateAnswer(answer, query, question) { return research.validateAnswer(answer, query, question); }
+function validateGoogle(answer, source, query, requireSource, question) { return research.validateGoogle(answer, source, query, requireSource, question); }
 function isValidAnswer(answer, query) { return research.validateAnswer(answer, query).valid; }
 function googleSourceOf(v) { const s = String(v || '').trim().toLowerCase(); return research.GOOGLE_SOURCES[s] ? s : ''; }
 // The Google entry of ai_system_evidence for a new request: the answer with its source, or the recorded absence.
@@ -41,11 +48,11 @@ function googleEvidence(answer, source) {
 // Research for a new Brief request: keyword, language, region code and the five answers as the handler received them
 // (after screening). An empty manual Perplexity answer may have been replaced by the automatic Perplexity answer; that
 // is labelled. A rejected answer is passed on as submitted, so the research records it as INVALID with the reason.
-function researchForRequest({ keyword, language, region, manualAi, perplexityEvidenceText, rejected, googleSource }) {
+function researchForRequest({ keyword, language, region, manualAi, perplexityEvidenceText, rejected, googleSource, aiQuestion }) {
   const m = manualAi && typeof manualAi === 'object' ? manualAi : {}, bad = rejected && typeof rejected === 'object' ? rejected : {};
   const pick = k => m[k] || (bad[k] && bad[k].answer) || '';
   const px = perplexityEvidenceText || (bad.perplexity && bad.perplexity.answer) || '';
-  const r = research.makePrewriteAiAnswerResearch({ query: keyword, language: language, market: region, require_google_source: true, answers: [
+  const r = research.makePrewriteAiAnswerResearch({ query: keyword, ai_question: aiQuestion || null, language: language, market: region, require_google_source: true, answers: [
     { engine: 'google_aio', answer: pick('google_aio'), google_source: googleSourceOf(googleSource) }, { engine: 'chatgpt', answer: pick('chatgpt') },
     { engine: 'perplexity', answer: px, source: m.perplexity || (!perplexityEvidenceText && bad.perplexity) ? 'manual' : 'automatic fallback' },
     { engine: 'claude', answer: pick('claude') }, { engine: 'copilot', answer: pick('copilot') }] });
@@ -62,13 +69,13 @@ function attachToBrief(brief, r) {
 // evidence so the Brief and the tab do not show a stale prompt. Language and market of the earlier research win; an
 // earlier answer that the merge did not replace is kept with its full text, source label and source leads.
 const ENGINE_OF = { google_aio: 'google' };
-function refreshAfterMissingOnly(brief, { query, language, region, rejected } = {}) {
+function refreshAfterMissingOnly(brief, { query, language, region, rejected, aiQuestion } = {}) {
   if (!brief || typeof brief !== 'object') return brief;
   try {
     const ae = brief.ai_system_evidence || {}, prev = brief.prewrite_ai_answer_research || {};
     const text = k => String(ae[k] && (ae[k].text || ae[k].answer) || '').trim();
     const prevObs = Array.isArray(prev.observations) ? prev.observations : [];
-    const next = research.makePrewriteAiAnswerResearch({ query: query, language: prev.language || language || '', market: prev.market || region || '',
+    const next = research.makePrewriteAiAnswerResearch({ query: query, ai_question: aiQuestion || prev.ai_question || null, language: prev.language || language || '', market: prev.market || region || '',
       answers: ENGINE_KEYS.map(k => {
         const old = prevObs.find(x => x && x.engine === (ENGINE_OF[k] || k) && x.checked) || null, a = text(k);
         const gs = k === 'google_aio' ? (ae[k] && ae[k].google_source || old && old.google_source || '') : undefined;
@@ -143,4 +150,4 @@ function scriptTags() {
   return _tags;
 }
 
-module.exports = { ENGINE_KEYS, stripTracking, aiSourceLeads, officialSourcesWithoutAiLeads, validateAnswer, validateGoogle, googleSourceOf, googleEvidence, screenManualAnswers, isValidAnswer, researchForRequest, attachToBrief, refreshAfterMissingOnly, scriptVersion, scriptTags };
+module.exports = { questionFromRequest, ENGINE_KEYS, stripTracking, aiSourceLeads, officialSourcesWithoutAiLeads, validateAnswer, validateGoogle, googleSourceOf, googleEvidence, screenManualAnswers, isValidAnswer, researchForRequest, attachToBrief, refreshAfterMissingOnly, scriptVersion, scriptTags };

@@ -68,12 +68,14 @@ function tokens(v){
 function rankQuestions(items,{offer,seed}){
  const focus=tokens([seed,...offer.h1,offer.title.split(/\s[|–—-]\s/)[0]].join(' '));
  const extras=tokens(offer.h2.join(' '));
- const focusSet=new Set(focus),extraSet=new Set(extras);
+ const focusSet=new Set(focus),extraSet=new Set(extras),seedSet=new Set(tokens(seed));
  const scored=items.map((q,index)=>{
   const words=tokens(q.text);
   const matches=words.filter(w=>focusSet.has(w)).length;
   const detail=words.filter(w=>extraSet.has(w)).length;
-  const topical=matches*3+Math.min(detail,2)+(matches>=2?2:0);
+  // Best match for the keyword (owner 2026-11-12): a question that holds every word of the keyword, asked as a question.
+  const seedHit=seedSet.size?words.filter(w=>seedSet.has(w)).length/seedSet.size:0;
+  const topical=matches*3+Math.min(detail,2)+(matches>=2?2:0)+Math.round(seedHit*4)+(matches&&isQuestion(q.text)?1:0);
   const google=q.source==='GOOGLE_PEOPLE_ALSO_ASK'||q.source==='GOOGLE_RELATED_SEARCH';
   // All observed, on-topic Google candidates outrank AI ideas. No search-volume inference.
   const relevant=google&&(topical>0||focusSet.size===0);
@@ -87,6 +89,34 @@ function rankQuestions(items,{offer,seed}){
  const sorted=[...observed,...ideas,...unrelated].map(x=>({...x.q,priority:x.relevant?'OBSERVED_GOOGLE':x.google?'OBSERVED_GOOGLE_LOW_RELEVANCE':'AI_FALLBACK',
   relevance_score:x.topical}));
  return {questions:sorted,best:observed[0]?.q||ideas[0]?.q||null,observed_count:observed.length};
+}
+
+// A real question as people type it: ends with "?" or starts with a question word (en, nl, es, de, fr).
+const QUESTION_START=/^(?:how|what|why|when|where|which|who|whose|can|could|does|do|did|is|are|should|will|would|hoe|wat|waarom|wanneer|waar|welke|wie|kan|kun|moet|mag|is|zijn|heb|c[oó]mo|qu[eé]|por qu[eé]|cu[aá]ndo|d[oó]nde|cu[aá]l|cu[aá]les|cu[aá]nto|cu[aá]nta|qui[eé]n|wie|was|warum|wann|wo|welche|kann|comment|pourquoi|quand|o[uù]|quel|quelle|combien|est-ce)\b/i;
+function isQuestion(t){const x=clean(t).replace(/^[¿¡]+/,'');return /\?$/.test(x)||QUESTION_START.test(x)}
+
+// The question to ask the AI systems for a search term (owner 2026-11-12: "the keyword must be a real search question,
+// the best match; also for the AI systems in Growth"). Only what Google itself shows (People also ask first, then related
+// searches) and only when it shares a word with the term; a term that already is a question stays as it is. One Google
+// lookup per term and market per day. null: ask the term itself.
+const termQuestionCache=new Map();
+async function aiQuestionForTerm({term,gl='us',hl='en',key,fetchImpl,now=Date.now()}={}){
+ const t=clean(term).slice(0,100);
+ if(!t||isQuestion(t)||t.split(' ').length>12)return null;
+ const ck=gl+'|'+hl+'|'+t.toLowerCase(),hit=termQuestionCache.get(ck);
+ if(hit&&now-hit.at<86400000)return hit.value;
+ let value=null;
+ try{
+  const g=await fromGoogle({query:t,gl,hl,key,fetchImpl});
+  const real=(g.questions||[]).filter(q=>isQuestion(q.text));
+  const ranked=rankQuestions(real.length?real:g.questions||[],{offer:{h1:[],h2:[],title:''},seed:t});
+  const best=(ranked.questions||[]).find(q=>q.priority==='OBSERVED_GOOGLE')||null;
+  if(best)value={text:best.text,source:best.source,label:best.label,term:t};
+  // Google unreachable or not configured: not cached, so the next view tries again.
+  if(!/UNAVAILABLE|NOT_CONFIGURED/.test(g.status||''))termQuestionCache.set(ck,{at:now,value});
+  if(termQuestionCache.size>5000)termQuestionCache.delete(termQuestionCache.keys().next().value);
+ }catch(e){value=null}
+ return value;
 }
 
 async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl = 'us', hl = 'en', key, fetchImpl, model } = {}) {
@@ -110,4 +140,4 @@ async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl
     note: 'Best matching Google-observed question first (People Also Ask or Related Searches). If none matches this page, AI suggestions are labelled fallback ideas; unrelated Google observations are shown last. Relevance is based on the page topic, not measured search volume. You can always edit the question. Search Console is optional.' };
 }
 
-module.exports = { discoverCustomerQuestions, pageOffer, fromGoogle, fromAi, searchable, rankQuestions };
+module.exports = { aiQuestionForTerm, isQuestion, discoverCustomerQuestions, pageOffer, fromGoogle, fromAi, searchable, rankQuestions };

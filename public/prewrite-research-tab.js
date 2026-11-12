@@ -18,7 +18,10 @@
     var regionRaw = val('pwbRegion');
     var region = (regionRaw.match(/^([a-z]{2})\s*[—-]/i) || [null, regionRaw])[1] || regionRaw;
     // Same as the server for a new request: the Google answer needs its source (#pwbGoogleSource).
-    return { query: val('pwbKeyword'), language: val('pwbLanguage'), market: region, require_google_source: true,
+    // The customer question asked to the AI systems (#cs-ai-question, chosen automatically from Google's own questions).
+    var qEl = $('cs-ai-question'), aq = qEl && String(qEl.value || '').trim();
+    return { query: val('pwbKeyword'), ai_question: aq && aq.toLowerCase() !== val('pwbKeyword').toLowerCase() ? { text: aq, source: qEl.dataset.source || null } : null,
+      language: val('pwbLanguage'), market: region, require_google_source: true,
       answers: FIELDS.map(function (f) { var a = { engine: f[0], answer: val(f[1]).slice(0, CLIP) }; if (f[0] === 'google_aio') a.google_source = val('pwbGoogleSource'); return a; }) };
   }
   function lib() { return window.PrewriteAiAnswerResearch || null; }
@@ -96,7 +99,7 @@
       var b = document.createElement('button'); b.type = 'button'; b.className = 'cs-q-chip';
       b.style.cssText = 'margin:4px 6px 0 0;padding:4px 10px;border-radius:14px;border:1px solid #475569;background:transparent;color:inherit;cursor:pointer;font-size:12px';
       b.textContent = (isKeyword ? 'Keyword: ' : '') + text; b.title = label || '';
-      b.addEventListener('click', function () { qInput.value = text; qState.manual = true; qSrc.textContent = isKeyword ? 'You chose the keyword itself.' : 'You chose: ' + (label || 'customer question'); syncAsk(); });
+      b.addEventListener('click', function () { qInput.value = text; qInput.dataset.source = isKeyword ? '' : (label || ''); qState.manual = true; qSrc.textContent = isKeyword ? 'You chose the keyword itself.' : 'You chose: ' + (label || 'customer question'); syncAsk(); });
       return b;
     }
     function loadQuestion() {
@@ -111,15 +114,15 @@
         if (seq !== qState.seq || qState.manual) return;
         qChips.innerHTML = '';
         if (d && d.success && d.best_question) {
-          qInput.value = d.best_question;
+          qInput.value = d.best_question; qInput.dataset.source = d.best_label || '';
           qSrc.textContent = 'Chosen automatically: ' + (d.best_label || 'customer question') + '. Change it or pick another below.';
           (d.questions || []).filter(function (q) { return q.text !== d.best_question; }).slice(0, 5).forEach(function (q) { qChips.appendChild(chip(q.text, q.label, false)); });
-        } else { qInput.value = kw; qSrc.textContent = (d && d.error) || 'No customer question found for this keyword; the keyword is used.'; }
+        } else { qInput.value = kw; qInput.dataset.source = ''; qSrc.textContent = (d && d.error) || 'No customer question found for this keyword; the keyword is used.'; }
         qChips.appendChild(chip(kw, 'The keyword itself', true)); syncAsk();
       }).catch(function () { if (seq === qState.seq && !qState.manual) { qInput.value = kw; qSrc.textContent = 'Questions unavailable; the keyword is used.'; syncAsk(); } });
     }
     function scheduleQuestion() { clearTimeout(qState.timer); qState.timer = setTimeout(loadQuestion, 700); }
-    qInput.addEventListener('input', function () { qState.manual = true; qSrc.textContent = 'Your own question.'; syncAsk(); });
+    qInput.addEventListener('input', function () { qState.manual = true; qInput.dataset.source = 'Your own question'; qSrc.textContent = 'Your own question.'; syncAsk(); });
     ['pwbKeyword', 'pwbRegion', 'pwbLanguage'].forEach(function (id) { var el = $(id); if (el) { el.addEventListener('change', function () { qState.manual = false; scheduleQuestion(); }); if (id === 'pwbKeyword') el.addEventListener('input', scheduleQuestion); } });
     var status = document.createElement('p'); status.className = 'cs-rp-status'; status.setAttribute('role', 'status');
     var note = document.createElement('p');
@@ -144,7 +147,9 @@
       btn._csCopyT = setTimeout(function () { btn.classList.remove('cs-copied'); btn.textContent = off; if (noteEl) noteEl.classList.remove('cs-copied-note'); }, 1800);
     }
     function askText() { return String(qInput.value || '').trim() || val('pwbKeyword'); }
-    function syncAsk() { var q = askText(); ask.disabled = !q; ask.title = q ? 'Copies: ' + q : 'Enter the target keyword first.'; }
+    function syncAsk() { var q = askText(); ask.disabled = !q; ask.title = q ? 'Copies: ' + q : 'Enter the target keyword first.';
+      // A new question changes the answer check and the research prompt: refresh both (once, after the current event).
+      clearTimeout(qState.refresh); qState.refresh = setTimeout(function () { try { checkFields(); render(); } catch (e) {} }, 0); }
     ask.addEventListener('click', function () {
       var q = askText(); if (!q) return;
       var done = function (ok) { askNote.textContent = ok ? 'Copied: "' + q + '". Paste it into Google, ChatGPT, Perplexity, Claude and Copilot, then paste each full answer back here.' : 'Copy this search question by hand: ' + q; if (ok) flash(ask, 'Copied ✓', 'Copy search question', askNote); };
@@ -153,12 +158,12 @@
     });
     // Each answer field says at once when its text is not an answer to the keyword (same check the server applies).
     function checkFields() {
-      var L = lib(), q = val('pwbKeyword');
+      var L = lib(), q = val('pwbKeyword'), aq = (currentInputs().ai_question || {}).text || '';
       FIELDS.forEach(function (f) {
         var el = $(f[1]); if (!el) return;
         var note = document.getElementById(f[1] + '-cs-invalid'), v = String(el.value || '').trim();
-        var chk = !L || !L.validateAnswer ? { valid: true } : f[0] === 'google_aio' ? L.validateGoogle(v, val('pwbGoogleSource'), q, true)
-          : v ? L.validateAnswer(v, q) : { valid: false, status: 'not_checked' };
+        var chk = !L || !L.validateAnswer ? { valid: true } : f[0] === 'google_aio' ? L.validateGoogle(v, val('pwbGoogleSource'), q, true, aq)
+          : v ? L.validateAnswer(v, q, aq) : { valid: false, status: 'not_checked' };
         var kind = chk.status === 'invalid' ? 'invalid' : chk.status === 'no_ai_overview' ? 'info' : chk.valid && chk.message ? 'warn' : '';
         if (!kind) { if (note) note.remove(); el.removeAttribute('aria-invalid'); el.removeAttribute('aria-describedby'); el.style.borderColor = ''; return; }
         if (!note) { note = document.createElement('div'); note.id = f[1] + '-cs-invalid'; el.insertAdjacentElement('afterend', note); }

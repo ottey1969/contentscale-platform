@@ -41,7 +41,7 @@ const DIRECT_PROMPT_LINES=[
  'Do NOT add MENTIONED, RECOMMENDED, company lists, brand lists, summaries, classifications or any other section.',
  'Final validation: answer the query, preserve exact https:// source URLs, include no invented URLs, and return only ANSWER and RESOURCES.'
 ];
-const directPrompt=query=>DIRECT_PROMPT_LINES.map(l=>l===QUERY_SLOT?(String(query||'').trim()||QUERY_SLOT):l).join('\n\n');
+const directPrompt=(query,question)=>{query=question||query;return DIRECT_PROMPT_LINES.map(l=>l===QUERY_SLOT?(String(query||'').trim()||QUERY_SLOT):l).join('\n\n')};
 
 // Same clean-up as the Quick Scan: AI apps / clipboards escape Markdown punctuation.
 function cleanAiPaste(v){
@@ -103,10 +103,11 @@ function otherPrompt(raw){
 const contract=require('../prewrite-ai-answer-research.cjs');
 const GROWTH_ECHO=['answer this exact user query as a real user would receive the answer','use the query exactly as written',
  'return only these two sections','do not add mentioned, recommended','final validation: answer the query','actually answer the query. do not explain these instructions'];
-function validateGrowthAnswer(answerText,query){
+// question: the customer question asked to the AI systems for this search term (an answer to it answers the search).
+function validateGrowthAnswer(answerText,query,question){
  const low=String(answerText||'').toLowerCase();
  if(GROWTH_ECHO.filter(m=>low.includes(m)).length>=2)return {valid:false,status:'invalid',reason:'prompt_echo',message:'This is the prompt itself, not the answer of the AI system. Paste the prompt into the AI system and paste its answer here.',warnings:[]};
- return contract.validateAnswer(answerText,query);
+ return contract.validateAnswer(answerText,query,question);
 }
 // A URL mentioned in the answer text is never a citation.
 // Copilot (and others when asked in another language) list their sources in their own way: a heading "Sources",
@@ -124,7 +125,7 @@ function sourceListStart(text){
  const n=NUMBERED_LINK.exec(text);
  return n?{index:n.index,end:n.index,form:'NUMBERED_LINKS'}:null;
 }
-function parseAiAnswer(raw,{pageUrl,query}={}){
+function parseAiAnswer(raw,{pageUrl,query,question}={}){
  const text=cleanAiPaste(String(raw||'').slice(0,MAX_PASTE));
  const last=sourceListStart(text);
  const answerPart=last?text.slice(0,last.index):text;
@@ -151,7 +152,7 @@ function parseAiAnswer(raw,{pageUrl,query}={}){
   own_url_mentioned_not_cited:mentioned.some(isOwn),
   site_name_mentioned:name.length>=4&&new RegExp('\\b'+name.replace(/[^a-z0-9]/g,'.?')+'\\b','i').test(answer),
   no_sources:sources.length===0,
-  ...(()=>{const v=validateGrowthAnswer(answer,query);return {validation_status:v.status,error_reason:v.reason||null,error_message:v.message||null,warnings:v.warnings||[]}})()
+  ...(()=>{const v=validateGrowthAnswer(answer,query,question);return {validation_status:v.status,error_reason:v.reason||null,error_message:v.message||null,warnings:v.warnings||[]}})()
  };
 }
 
@@ -179,10 +180,10 @@ function aiVisibilityActions({verifiable=[],topSites=[]}={}){
  return out;
 }
 
-function summarizeAiAnswers(rows,{pageUrl,googleUrls=[],query}={}){
+function summarizeAiAnswers(rows,{pageUrl,googleUrls=[],query,question}={}){
  // Stored answers are re-read with the current rules, so a parser fix also corrects older pastes. An answer that fails
  // the validation contract is reported as INVALID with its reason and is not counted anywhere.
- rows=rows.map(r=>r&&typeof r.raw_text==='string'?{...r,parsed:parseAiAnswer(r.raw_text,{pageUrl,query:query||r.query})}:r);
+ rows=rows.map(r=>r&&typeof r.raw_text==='string'?{...r,parsed:parseAiAnswer(r.raw_text,{pageUrl,query:query||r.query,question})}:r);
  const invalidRows=rows.filter(r=>r&&r.parsed&&r.parsed.validation_status==='invalid');
  const invalid=ENGINES.filter(e=>invalidRows.some(r=>r.engine===e.id)).map(e=>{const r=invalidRows.find(x=>x.engine===e.id);return {id:e.id,label:e.label,reason:r.parsed.error_reason,message:r.parsed.error_message,checked_at:r.created_at||null}});
  rows=rows.filter(r=>!(r&&r.parsed&&r.parsed.validation_status==='invalid'));
