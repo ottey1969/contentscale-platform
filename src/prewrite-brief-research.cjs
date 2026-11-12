@@ -103,14 +103,17 @@ function refreshAfterMissingOnly(brief, { query, language, region, rejected, aiQ
 // fbclid and similar) are removed so the same page is recognised and no tracking reaches the writer.
 const TRACKING = /^(utm_[a-z]+|gclid|fbclid|msclkid|mc_[a-z]+|igshid|ref_src|srsltid)$/i;
 function stripTracking(u) {
-  try { const x = new URL(String(u || '').trim().replace(/[)\]>,.;]+$/, '')); if (!/^https?:$/.test(x.protocol)) return null;
+  try { const x = new URL(String(u || '').trim().replace(/\\(?=[&_*#()\[\]])/g, '').replace(/[)\]>,.;]+$/, '')); if (!/^https?:$/.test(x.protocol)) return null;
     [...x.searchParams.keys()].forEach(k => { if (TRACKING.test(k)) x.searchParams.delete(k); }); x.hash = ''; return x.toString(); } catch (e) { return null; }
 }
+// Not a source page: favicons and other images, Google's own search/redirect/static hosts (owner 2026-11-12: a brief listed
+// "google.com/s2/favicons?domain=…" as a source lead).
+const NOT_A_SOURCE = /\/s2\/favicons|favicon|\.(?:png|jpe?g|gif|svg|webp|ico|avif)(?:[?#]|$)|^https?:\/\/(?:www\.)?google\.[a-z.]+\/(?:search|url|imgres)\b|gstatic\.com|googleusercontent\.com|^https?:\/\/(?:[a-z0-9-]+\.)?(?:bing\.com\/(?:search|ck)|duckduckgo\.com\/\?)/i;
 function aiSourceLeads(manualAi) {
   const out = [], seen = new Set();
   for (const k of ENGINE_KEYS) {
     const urls = String(manualAi && manualAi[k] || '').match(/https?:\/\/[^\s<>\]\[()"'`]+/gi) || [];
-    for (const u of urls) { const c = stripTracking(u); if (c && !seen.has(c)) { seen.add(c); out.push({ url: c, system: k, status: 'not_verified', note: 'Mentioned in a pasted AI answer. Verify the page before citing it.' }); } }
+    for (const u of urls) { const c = stripTracking(u); if (c && !NOT_A_SOURCE.test(c) && !seen.has(c)) { seen.add(c); out.push({ url: c, system: k, status: 'not_verified', note: 'Mentioned in a pasted AI answer. Verify the page before citing it.' }); } }
   }
   return out.slice(0, 30);
 }
@@ -150,4 +153,4 @@ function scriptTags() {
   return _tags;
 }
 
-module.exports = { questionFromRequest, ENGINE_KEYS, stripTracking, aiSourceLeads, officialSourcesWithoutAiLeads, validateAnswer, validateGoogle, googleSourceOf, googleEvidence, screenManualAnswers, isValidAnswer, researchForRequest, attachToBrief, refreshAfterMissingOnly, scriptVersion, scriptTags };
+module.exports = { NOT_A_SOURCE, questionFromRequest, ENGINE_KEYS, stripTracking, aiSourceLeads, officialSourcesWithoutAiLeads, validateAnswer, validateGoogle, googleSourceOf, googleEvidence, screenManualAnswers, isValidAnswer, researchForRequest, attachToBrief, refreshAfterMissingOnly, scriptVersion, scriptTags };

@@ -37,4 +37,19 @@ function topicRelevance({ keyword, title = '', text = '', excerpt = '', radius =
   return { relevant: matched.length >= required, matched, missing, required };
 }
 
-module.exports = { topicTerms, topicRelevance };
+// Another meaning of the same word (owner 2026-11-12: a brief for "consultor geo" — Generative Engine Optimization — cited a
+// paper on a geospatial framework). A source title word that starts with a short keyword word ("geo" → "geospatial",
+// "geographic", "geology") but never occurs in what Google shows for the query is another field: the source is not used.
+function senseDrift({ keyword, title = '', serpText = '' } = {}) {
+  const short = words(keyword).filter(w => w.length >= 3 && w.length <= 4 && !STOP.has(w) && !/^\d+$/.test(w));
+  if (!short.length) return null;
+  const serp = new Set(words(serpText)), kw = new Set(words(keyword));
+  for (const w of words(title)) {
+    if (kw.has(w) || w.length < 7) continue;
+    const base = short.find(k => w.startsWith(k));
+    if (base && !serp.has(w) && ![...serp].some(x => x.length >= 7 && x.slice(0, 7) === w.slice(0, 7))) return w;
+  }
+  return null;
+}
+
+module.exports = { topicTerms, topicRelevance, senseDrift };

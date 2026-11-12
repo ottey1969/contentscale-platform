@@ -60627,6 +60627,12 @@ async function _handlePrewriteBriefGeneration(req, res) {
     _pwbEvidenceSearch.statistics.candidate_urls=_pwbStatCandidateUrls.size;
     _pwbEvidenceSearch.expert_quotes.candidate_urls=_pwbQuoteCandidateUrls.size;
     _pwbExternalCandidates=_pwbExternalCandidates.filter(x=>!/(reddit\.com|facebook\.com|instagram\.com|linkedin\.com|twitter\.com|x\.com|tiktok\.com|pinterest\.|quora\.com|google\.com\/search)/i.test(x.exact_url)).slice(0,40);
+    // Another meaning of the keyword (owner 2026-11-12: "consultor geo" brief cited a geospatial paper): a source whose title
+    // carries a word of another field that Google never shows for this query is not offered. Only with real Google results.
+    const _pwbSenseDrift=require('./prewrite-evidence-relevance.cjs').senseDrift;
+    const _pwbSerpText=(serpUrls||[]).map(r=>(r.title||'')+' '+(r.snippet||'')).join(' ');
+    const _pwbSenseDropped=[];
+    if(_pwbSerpText.length>200)_pwbExternalCandidates=_pwbExternalCandidates.filter(x=>{const w=_pwbSenseDrift({keyword:keyword,title:x.title,serpText:_pwbSerpText});if(w){_pwbSenseDropped.push({url:x.exact_url,title:String(x.title||'').slice(0,200),word:w});return false;}return true;});
     const _externalSourceBlock = _pwbExternalCandidates.length
       ? 'AUTO EXTERNAL SOURCE RESEARCH — VERIFIED EXACT HTTPS PAGES. Choose 2-6 external_link_targets ONLY from this whitelist. Prefer primary/official, government, academic, standards, recognized industry or directly evidentiary pages. Do not add a URL not listed here.\n' + _pwbExternalCandidates.map((x,i)=>(i+1)+'. '+x.exact_url+' | '+(x.title||x.domain)+' | '+x.source_type+(x.snippet?' | '+x.snippet:'')).join('\n')
       : 'AUTO EXTERNAL SOURCE RESEARCH: no verified exact external pages were found. Return external_link_targets as [] rather than inventing URLs.';
@@ -61601,8 +61607,12 @@ ${sourceText}`;
     // the excerpt must name the topic, otherwise the item is not approved for writing.
     const _pwbTopicRel=require('./prewrite-evidence-relevance.cjs').topicRelevance;
     const _pwbOnTopic=function(src,excerpt,kind){
-      const r=_pwbTopicRel({keyword:keyword,title:src&&src.title||'',text:src&&src.text||'',excerpt:excerpt});
-      if(!r.relevant)_pwbOffTopic.push({kind:kind,source_url:src&&src.url||'',source_title:String(src&&src.title||'').slice(0,200),excerpt:String(excerpt||'').slice(0,240),missing_topic_terms:r.missing});
+      let r=_pwbTopicRel({keyword:keyword,title:src&&src.title||'',text:src&&src.text||'',excerpt:excerpt});
+      const _drift=r.relevant&&_pwbSerpText.length>200?_pwbSenseDrift({keyword:keyword,title:src&&src.title||'',serpText:_pwbSerpText}):null;
+      if(_drift)r={relevant:false,missing:['other meaning: '+_drift]};
+      // Titles are shown as text: HTML entities (&#039; &amp; …) become their characters.
+      const _pwbPlain=v=>String(v||'').replace(/&(#x[0-9a-f]{1,6}|#\d{1,7}|amp|quot|apos|lt|gt|nbsp);/gi,(m,e)=>{const l=e.toLowerCase();if(l[0]==='#'){const n=l[1]==='x'?parseInt(l.slice(2),16):parseInt(l.slice(1),10);return n>0&&n<0x110000?String.fromCodePoint(n):m;}return {amp:'&',quot:'"',apos:"'",lt:'<',gt:'>',nbsp:' '}[l]||m;});
+      if(!r.relevant)_pwbOffTopic.push({kind:kind,source_url:src&&src.url||'',source_title:_pwbPlain(src&&src.title).slice(0,200),excerpt:String(excerpt||'').slice(0,240),missing_topic_terms:r.missing});
       return r.relevant;
     };
     const _pwbVerifyExtraction=function(extraction){
@@ -61765,6 +61775,7 @@ ${sourceText}`;
     }
 
     brief.link_research = {
+      external_other_meaning:_pwbSenseDropped.slice(0,10),
       internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),owner_domain:(_pwbNetworkOwnerDomain||String(client.domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'')),publisher_domain:(_pwbNetworkPublisherDomain||''),candidate_urls:clientSitemapUrls.slice(0,50),manual_same_domain_allowed:true,rule:'Internal targets are reader-facing same-domain pages. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only.'},
       external:{automatic:true,searched:true,candidates_found:_pwbExternalCandidates.length,targets_selected:brief.external_link_targets.length,rule:'Every external exact_url is server-validated against URLs discovered during current Prewrite research.'}
     };
