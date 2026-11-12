@@ -209,10 +209,17 @@ test('Free Growth: a visitor goes through every step in a browser, against Postg
     assert.equal(await p.inputValue('#pkgTitle'), 'Roof Repair in Lodi, NJ | Acme Roofing');
     // A flagged sentence: one click removes exactly that sentence; the rest of the text stays.
     assert.match(await p.textContent('.pkgFlags'), /Our platform tracks every roof repair citation in ChatGPT every day\./);
+    // Each flagged sentence: show it in the text, keep it when it is true (undo possible), or remove it.
+    await p.click('.pkgFlagShow');assert.equal(await p.locator('.pkgText').first().isVisible(), true, 'the text opens at the sentence');
+    if (await p.locator('.pkgFlagKeep').count()) {
+      await p.click('.pkgFlagKeep');assert.match(await p.textContent('.pkgFlagState'), /Kept — you confirmed it is true/);
+      assert.equal(await p.locator('#pkgDropAll').isVisible(), false, 'a kept sentence is not offered for removal');
+      await p.click('.pkgFlagUnkeep');
+    }
     await p.click('#pkgDropAll');
     assert.doesNotMatch(await p.inputValue('.pkgText'), /Our platform tracks/);
     assert.match(await p.inputValue('.pkgText'), /Ask for a written estimate/);
-    assert.equal(await p.textContent('.pkgDropFlag'), 'Removed');
+    assert.match(await p.textContent('.pkgFlagState'), /Removed or rewritten by you|Rewritten by AI/);
     // A description in the first person: the visitor chooses. First, AI rewrites it as the service on request...
     const firstPerson = 'I repair leaking roofs in Lodi, NJ, and my crew gives a written estimate before any work starts.';
     await p.fill('#pkgMeta', firstPerson);

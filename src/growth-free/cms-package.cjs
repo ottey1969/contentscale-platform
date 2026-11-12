@@ -15,6 +15,11 @@ function stillFlagged(f, originalHtml) {
   try { return assessDraftClaims({ text: f.sentence, destinationText: text(originalHtml) }).violations.some(v => v.code === f.code); } catch (e) { return true; }
 }
 
+// The editor may confirm a flagged sentence as true for the business (owner 2026-11-12: "where do I approve?"), as in
+// the Tracker claim review. A safety assurance ("safe to wait") is never released by a confirmation.
+const confirmable = f => String(f && f.code || '') !== 'UNSUPPORTED_SAFETY_ASSURANCE';
+const confirmedSet = input => new Set((Array.isArray(input && input.confirmed_sentences) ? input.confirmed_sentences : []).slice(0, 100)
+  .map(x => String(x && x.item_id || '') + '\u0000' + String(x && x.sentence || '')).filter(k => !k.endsWith('\u0000')));
 const sha = x => crypto.createHash('sha256').update(String(x)).digest('hex');
 const esc = x => String(x).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 // Page text as a person reads it: tags removed, every HTML entity decoded (named, decimal like &#039;, hex like &#x27;).
@@ -138,17 +143,18 @@ function placeLink(sections, link, pageUrl) {
 }
 
 // The same review notes as the Tracker: the flagged sentences (proved resolved by the builder) and what each section rests on.
-function reviewNotesOf(given, stored, personal = false, originalHtml = '') {
-  const flagged = [], basis = [];
+function reviewNotesOf(given, stored, personal = false, originalHtml = '', confirmed = new Set()) {
+  const flagged = [], basis = [], kept = [];
   for (const s of given) {
     const orig = stored.get(s.item_id); if (!orig) continue;
     // An old concept flag is only relevant if its exact sentence remains in the CURRENT editor-approved body.
     // Do not compare against H2s: a question heading is not a flagged paragraph, nor is a previously glued H2+paragraph.
-    for (const f of orig.flags || []) if (f && f.sentence && s.text.includes(f.sentence) && !(personal && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')))) && stillFlagged(f, originalHtml)) flagged.push({ sentence: f.sentence, h2: s.h2, reason: f.reason || '' });
+    for (const f of orig.flags || []) if (f && f.sentence && s.text.includes(f.sentence) && confirmed.has(s.item_id + '\u0000' + f.sentence) && confirmable(f) && !kept.some(k => k.sentence === f.sentence)) kept.push({ sentence: f.sentence, h2: s.h2, reason: f.reason || '', note: 'Confirmed as true by the editor' });
+    for (const f of orig.flags || []) if (f && f.sentence && s.text.includes(f.sentence) && !(confirmed.has(s.item_id + '\u0000' + f.sentence) && confirmable(f)) && !(personal && (f.code === 'PERSONAL_OR_FOUNDER_VOICE' || /^Written as a person/.test(String(f.reason || '')))) && stillFlagged(f, originalHtml)) flagged.push({ sentence: f.sentence, h2: s.h2, reason: f.reason || '' });
     const b = orig.basis;
     if (b) basis.push({ h2: s.h2, answers: b.answers || '', sources: (b.competitor_evidence || []).map(e => [e.site, e.heading].filter(Boolean).join(': ')), warning: b.warning || '' });
   }
-  return flagged.length || basis.length ? { flagged: flagged.filter(f => f.sentence), basis } : null;
+  return flagged.length || basis.length || kept.length ? { flagged: flagged.filter(f => f.sentence), basis, ...(kept.length ? { confirmed_by_editor: kept } : {}) } : null;
 }
 
 // What the fact-check file adds for text the editor changed: sources pasted with it (never linked), the sections whose
@@ -186,7 +192,7 @@ const PLAIN = {
 // written: the result-page view of the written concepts (src/growth-free/written.cjs viewOf).
 function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}, focusQuery = '', gscVerifiedTerm = false, language = 'en' }) {
   const stored = new Map(((written && written.sections) || []).map(s => [String(s.item_id), s]));
-  const issues = [], flagged = [];
+  const issues = [], flagged = [], confirmed = confirmedSet(input);
   // The page presents a person (owner choice per package): "I"/"my" flags are the page's own voice, not errors.
   // The page itself speaks as a person (its own title, description or H1 says "I"/"my"): that is the owner's voice, so the
   // package keeps it, unless the editor explicitly unticked it (personal_voice === false).
@@ -199,7 +205,7 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   // A flagged sentence of the written concept may not stay in the text (rewrite or remove it).
   for (const s of given) {
     const orig = stored.get(s.item_id);
-    for (const f of (orig && orig.flags) || []) if (f && f.sentence && !(personal && isVoice(f)) && s.text.includes(f.sentence) && stillFlagged(f, originalHtml)) flagged.push({ section: s.h2, sentence: f.sentence, reason: f.reason || '' });
+    for (const f of (orig && orig.flags) || []) if (f && f.sentence && !(personal && isVoice(f)) && !(confirmed.has(s.item_id + '\u0000' + f.sentence) && confirmable(f)) && s.text.includes(f.sentence) && stillFlagged(f, originalHtml)) flagged.push({ section: s.h2, sentence: f.sentence, reason: f.reason || '' });
   }
   // One entry per sentence (a sentence can be flagged for several reasons; the reasons are joined).
   const bySentence = new Map(); for (const f of flagged) { const k = f.section + '|' + f.sentence, e = bySentence.get(k); if (e) { if (f.reason && !e.reason.includes(f.reason)) e.reason += ' · ' + f.reason; } else bySentence.set(k, { ...f }); }
@@ -214,7 +220,7 @@ function buildFreePackage({ url, originalHtml, sourceSha256, written, input = {}
   const cms = CMS.includes(input.cms) ? input.cms : 'generic';
   const result = prepareGrowthCmsHandoff({ canonicalUrl: url, originalHtml, sourceExpectedSha256: sourceSha256, caseStudyLocked: false,
     editorApproved: input.editor_approved === true, cms, pageTitle: String(input.seo_title || '').trim(), metaDescription: String(input.meta_description || '').trim(),
-    changes: sections, focusQuery, evidenceScope: gscVerifiedTerm ? 'verified' : 'observed', language: language || 'en', reviewNotes: { ...(reviewNotesOf(given, stored, personal, originalHtml) || {}), ...extraNotes(given, stored, originalHtml) }, personalVoiceAllowed: personal });
+    changes: sections, focusQuery, evidenceScope: gscVerifiedTerm ? 'verified' : 'observed', language: language || 'en', reviewNotes: { ...(reviewNotesOf(given, stored, personal, originalHtml, confirmed) || {}), ...extraNotes(given, stored, originalHtml) }, personalVoiceAllowed: personal });
   const all = [...new Set([...issues, ...(result.issues || [])])];
   if (all.length || result.status !== 'HANDOFF_READY_FOR_EDITOR')
     return { ready: false, issues: all, flagged, blocked_details: result.blocked_details || null, messages: [...new Set(all.map(c => PLAIN[c] || ('Not ready: ' + c.toLowerCase().replace(/_/g, ' ') + '.')))] };

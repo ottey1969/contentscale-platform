@@ -191,3 +191,23 @@ test('text pasted from an AI answer: source links are taken out and listed to ve
   assert.match(fc, /arxiv — https:\/\/arxiv\.org\/html\/2610\.11932/); assert.match(fc, /ipullrank — https:\/\/ipullrank\.com\/x/);
   assert.match(fc, /## Text changed by you[^]*Why answers differ/);
 });
+
+test('the editor can keep a flagged sentence that is true for the business; a safety assurance stays blocked', () => {
+  const kept = 'Indicative pricing ranges from $250 to $5,800+ depending on the final on-site assessment.';
+  const w = { sections: [{ ...written.sections[0], flags: [{ sentence: kept, reason: 'TEST figure only in another context' }] }] };
+  const body = text + ' ' + kept, sec = [{ item_id: 'g1', h2: 'How to read a repair estimate', text: body }];
+  const make = o => buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: w, input: input({ sections: sec, ...o }), focusQuery: 'roof repair lodi nj' });
+  const blocked = make();
+  assert.equal(blocked.ready, false, 'not confirmed: still blocked');assert.ok(blocked.issues.includes('FLAGGED_TEXT_STILL_PRESENT'));
+  const ok = make({ confirmed_sentences: [{ item_id: 'g1', sentence: kept }] });
+  assert.equal(ok.ready, true, JSON.stringify(ok.messages) + JSON.stringify(ok.blocked_details));
+  assert.match(ok.files.find(f => f.name === '02-approved-copy.md').content, /\$250 to \$5,800\+/, 'the kept sentence stays in the copy');
+  assert.match(ok.files.find(f => f.name === '06-fact-check-before-publishing.md').content, /confirmed as true by the editor/, 'recorded as confirmed by the editor');
+  // A confirmation for another section, or of another sentence, releases nothing.
+  assert.equal(make({ confirmed_sentences: [{ item_id: 'other', sentence: kept }] }).ready, false);
+  // "Safe to wait" is a safety assurance: a confirmation never releases it.
+  const safe = 'A sagging ceiling is safe to wait until next week.';
+  const ws = { sections: [{ ...written.sections[0], flags: [{ sentence: safe, code: 'UNSUPPORTED_SAFETY_ASSURANCE', reason: 'TEST safety' }] }] };
+  const s2 = buildFreePackage({ url: URL_, originalHtml: html, sourceSha256: src.source_sha256, written: ws, input: input({ sections: [{ item_id: 'g1', h2: 'How to read a repair estimate', text: text + ' ' + safe }], confirmed_sentences: [{ item_id: 'g1', sentence: safe }] }), focusQuery: 'roof repair lodi nj' });
+  assert.equal(s2.ready, false);
+});
