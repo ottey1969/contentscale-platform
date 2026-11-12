@@ -51,7 +51,12 @@ async function fromGoogle({ query, gl = 'us', hl = 'en', key = serperKey(), fetc
         const a = await fetchImpl('https://google.serper.dev/autocomplete', { method: 'POST', headers: { 'X-API-KEY': String(key).trim(), 'Content-Type': 'application/json' },
           body: JSON.stringify({ q: term, gl, hl }), signal: AbortSignal.timeout(8000) });
         if (a && a.ok) { const j = await a.json();
-          for (const x of (j && j.suggestions) || []) { const q = searchable(x && (x.value || x)); if (q && q.toLowerCase() !== term.toLowerCase() && !(ownHost && q.toLowerCase().includes(ownHost.split('.')[0]))) out.push({ text: q, source: 'GOOGLE_AUTOCOMPLETE', label: 'Google · Autocomplete' }); } }
+          // Every keyword word as a whole word (owner 2026-11-12: "consultor geo" → "consultor geologia", "consultor político").
+          const fold = v => String(v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+          const need = fold(term).split(/[^a-z0-9]+/).filter(Boolean);
+          for (const x of (j && j.suggestions) || []) { const q = searchable(x && (x.value || x)); if (!q || q.toLowerCase() === term.toLowerCase() || (ownHost && q.toLowerCase().includes(ownHost.split('.')[0]))) continue;
+            const have = new Set(fold(q).split(/[^a-z0-9]+/).filter(Boolean)); if (!need.every(w => have.has(w))) continue;
+            out.push({ text: q, source: 'GOOGLE_AUTOCOMPLETE', label: 'Google · Autocomplete (search phrase, not a question)' }); } }
       } catch (e) { /* autocomplete is optional */ }
     }
     return { status: out.length ? 'GOOGLE_QUESTIONS_FOUND' : 'GOOGLE_NO_QUESTIONS', questions: out, searched: { query: term, gl, hl } };
@@ -123,7 +128,10 @@ function rankQuestions(items,{offer,seed}){
  const unrelated=scored.filter(x=>x.google&&!x.relevant).sort((a,b)=>b.score-a.score||a.index-b.index);
  const sorted=[...observed,...ideas,...unrelated].map(x=>({...x.q,priority:x.relevant?'OBSERVED_GOOGLE':!x.customer?'NOT_A_CUSTOMER_QUESTION':x.google?'OBSERVED_GOOGLE_LOW_RELEVANCE':'AI_FALLBACK',
   relevance_score:x.topical}));
- return {questions:sorted,best:observed[0]?.q||ideas[0]?.q||null,observed_count:observed.length};
+ // A customer question is a question (owner 2026-11-12: autocomplete phrases were offered as "Best match"): an observed
+ // question first, then a labelled AI buyer question, and only then an observed search phrase.
+ const observedQ=observed.filter(x=>isQuestion(x.q.text));
+ return {questions:sorted,best:observedQ[0]?.q||ideas[0]?.q||observed[0]?.q||null,observed_count:observed.length,observed_question_count:observedQ.length};
 }
 
 // A real question as people type it: ends with "?" or starts with a question word (en, nl, es, de, fr).
@@ -177,7 +185,7 @@ async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl
   const g = await googleWithFallback({ query: seed, gl, hl, key, fetchImpl, ownHost });
   const observed = rankQuestions(g.questions,{offer,seed});
   // Never spend AI credits generating suggestions if relevant Google-observed questions exist.
-  const a = observed.observed_count
+  const a = observed.observed_question_count
     ? {status:'AI_NOT_NEEDED_GOOGLE_MATCH',questions:[]}
     : await fromAi({ offer, keyword, language: hl || offer.language || 'en', model });
   const seen = new Set(), questions = [];
@@ -186,7 +194,7 @@ async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl
   return { status: questions.length ? 'QUESTIONS_FOUND' : 'NO_QUESTIONS', tracked_keyword: clean(keyword) || null, searched_with: seed || null,
     offer: { title: offer.title, h1: offer.h1, h2_count: offer.h2.length }, google: { status: g.status, ...(g.searched ? { searched: g.searched } : {}), ...(g.fallback_market ? { fallback_market: g.fallback_market } : {}) }, ai: { status: a.status, ...(a.error ? { error: a.error } : {}) },
     questions: ranked.questions.slice(0, MAX), best_question: ranked.best?.text||null,
-    selection_source: ranked.observed_count?'OBSERVED_GOOGLE':ranked.best?'AI_SUGGESTION':'NONE',
+    selection_source: ranked.best&&ranked.best.source&&/^GOOGLE_/.test(ranked.best.source)?'OBSERVED_GOOGLE':ranked.best?'AI_SUGGESTION':'NONE',
     note: 'Best matching Google-observed question first (People Also Ask or Related Searches). If none matches this page, AI suggestions are labelled fallback ideas; unrelated Google observations are shown last. Relevance is based on the page topic, not measured search volume. You can always edit the question. Search Console is optional.' };
 }
 
