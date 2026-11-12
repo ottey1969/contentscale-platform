@@ -77,8 +77,12 @@ function contentSections(url,html){
  return groupSections(blocks(html)).filter(s=>s.heading&&s.heading!=='(introduction)'&&s.words>=25&&!isFurnitureHeading(s.heading)&&!isPromotionalSection(s,host))
   .slice(0,30).map(s=>({heading:clip(s.heading,160),excerpt:clip(s.text,220),words:s.words}));
 }
-function topicPrompt({query,competitors,page}){
+// The language topic names are written in: the page's own language (owner 2026-11-12: a Spanish page got English topics).
+const LANG_NAMES={en:'English',nl:'Dutch',es:'Spanish',de:'German',fr:'French',it:'Italian',pt:'Portuguese',pl:'Polish',sv:'Swedish',da:'Danish'};
+const pageLanguage=html=>((/<html\b[^>]*\blang=["']?([a-z]{2})/i.exec(String(html||''))||[])[1]||'').toLowerCase()||null;
+function topicPrompt({query,competitors,page,language}){
  return ['You compare web pages that rank on Google with one page that should rank. Return JSON only.',
+  ...(LANG_NAMES[language]?['Write every "topic" in '+LANG_NAMES[language]+', the language of the page, even when the ranking pages are in another language. Keep product and brand names as they are.']:[]),
   'Group the ranking pages\' section headings into topics: one topic = one thing a reader wants to know or do. Headings worded differently that serve the same information need belong to ONE topic; sections that only share a word are different topics.',
   'Every ranking-page section has an id (c1, c2, …) and every page section an id (p1, p2, …). Refer to sections ONLY by these ids; do not copy headings.',
   'For every topic list the ids of the sections in it, and decide whether the page already covers it: YES (a section covers it), PARTLY (touches it, leaves it open), NO.',
@@ -134,7 +138,8 @@ function subjectCheck(list,competitors){
 
 // newPage: there is no page yet (research for a new page from a Pre-Write brief). Everything the ranking pages have is
 // then "not on the page yet"; the comparison logic is the same.
-async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitors=[],model=geminiModel(),newPage=false}={}){
+async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitors=[],model=geminiModel(),newPage=false,language=null}={}){
+ language=String(language||pageLanguage(ownHtml)||'').toLowerCase().slice(0,2)||null;
  const readable=(competitors||[]).filter(c=>c&&c.url&&c.html);
  if((!ownHtml&&!newPage)||readable.length<1)return {status:'NOT_ENOUGH_PAGES',ranking_pages_read:readable.length};
  ownHtml=ownHtml||'';
@@ -153,7 +158,7 @@ async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitor
    const input=withIds(pages.map(p=>({host:p.host,serp_position:p.serp_position,sections:p.sections.map(s=>({heading:s.heading,excerpt:s.excerpt}))}))
     ,page.map(s=>({heading:s.heading,excerpt:s.excerpt})));
    // Many sections (three ranking pages can hold 60): the answer gets room, and lists ids only.
-   grouped=validateTopics(await model.call(topicPrompt({query,competitors:input.competitors,page:input.page}),{maxOutputTokens:8192}),pages,page);
+   grouped=validateTopics(await model.call(topicPrompt({query,competitors:input.competitors,page:input.page,language}),{maxOutputTokens:8192}),pages,page);
    topicStatus=grouped?'GROUPED':'NOT_GROUPED_INVALID_ANSWER';
   }catch(e){topicStatus=e?.code==='ANSWER_TRUNCATED'?'NOT_GROUPED_ANSWER_TOO_LONG':'NOT_GROUPED_MODEL_UNAVAILABLE'}
  }
@@ -165,4 +170,4 @@ async function buildCompetitorOverview({query='',ownUrl='',ownHtml='',competitor
   ungrouped_sections:grouped?grouped.ungrouped_sections:pages.flatMap(p=>p.sections.map(s=>({host:p.host,url:p.url,position:p.serp_position,heading:s.heading,excerpt:s.excerpt})))};
 }
 
-module.exports={buildCompetitorOverview,pageElements,compareElements,validateTopics,contentSections};
+module.exports={topicPrompt,pageLanguage,buildCompetitorOverview,pageElements,compareElements,validateTopics,contentSections};

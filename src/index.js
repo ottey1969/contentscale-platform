@@ -47602,7 +47602,15 @@ async function _pwbRegenWithIntent(intent) {
 function pwbOpenGrowthFromBrief(){
   var kw=String((document.getElementById('pwbKeyword')||{}).value||'').trim(),id=Number(_pwbCurrentBriefId||0),job=id?'':_pwbRestoreDiagnosticJob(kw);
   var st=document.getElementById('pwbStatus');
-  if(!id&&!job){if(st)st.textContent='⚠ Save or re-open this Brief first; Growth needs the saved Brief to take its findings along.';return;}
+  // Without a saved Brief or diagnostic (a NOT PASSED result that was not kept) Growth still opens: the page, keyword and
+  // market of this Brief go along, only its findings do not (owner 2026-11-12: "the button did nothing").
+  if(!id&&!job){
+    var cb=_pwbCurrentBrief||{},cd=cb.content_decision||{},url=String(cd.closest_existing_url||'');
+    if(!/^https?:/i.test(url)){if(st)st.textContent='⚠ This Brief names no existing page to expand.';return;}
+    var reg=String((document.getElementById('pwbRegion')||{}).value||'').trim().slice(0,2).toLowerCase();
+    window.location.href='/track/'+encodeURIComponent(TOKEN)+'/growth/from-brief?url='+encodeURIComponent(url)+'&keyword='+encodeURIComponent(kw)+(/^[a-z]{2}$/.test(reg)?'&region='+reg:'');
+    return;
+  }
   window.location.href='/track/'+encodeURIComponent(TOKEN)+'/growth/from-brief?'+(id?'brief_id='+encodeURIComponent(id):'job_id='+encodeURIComponent(job));
 }
 function renderPrewriteBrief(b) {

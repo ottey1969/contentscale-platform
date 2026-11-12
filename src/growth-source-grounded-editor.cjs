@@ -70,9 +70,9 @@ function normalizeDraft(value,sourceText,focusQuery='',{requireTitle=true,taskTe
  const pageLang=textLanguage(sourceText),termLang=textLanguage(String(focusQuery||'')+' '+(Array.isArray(taskTerms)?taskTerms.join(' '):''))||(/^[\x00-\x7f\s]*$/.test(String(focusQuery||''))&&String(focusQuery||'').trim()?'en':'');
  const crossLanguage=!!(pageLang&&termLang&&pageLang!==termLang);
  // A translated output must follow the original page, not English competitor headings or an English search question.
- const wrongLanguage=pageLang==='es'?sections.filter(section=>textLanguage(section.h2+' '+section.paragraphs.join(' '))==='en'):[];
- if(wrongLanguage.length&&(failed=fail('AI_DRAFT_WRONG_LANGUAGE',{rejected_sections:wrongLanguage.map(x=>({h2:x.h2,reason:'ENGLISH_COPY_FOR_SPANISH_PAGE'}))},
-   wrongLanguage.map(x=>({h2:x.h2,sentence:null,code:'WRONG_LANGUAGE',reason:'Write this section in Spanish, retaining original brand and tool names.'})))))return failed;
+ const wrongLanguage=pageLang&&pageLang!=='en'?sections.filter(section=>textLanguage(section.h2+' '+section.paragraphs.join(' '))==='en'):[];
+ if(wrongLanguage.length&&(failed=fail('AI_DRAFT_WRONG_LANGUAGE',{rejected_sections:wrongLanguage.map(x=>({h2:x.h2,reason:pageLang==='nl'?'ENGLISH_COPY_FOR_DUTCH_PAGE':'ENGLISH_COPY_FOR_SPANISH_PAGE'}))},
+   wrongLanguage.map(x=>({h2:x.h2,sentence:null,code:'WRONG_LANGUAGE',reason:'Write this section in '+(pageLang==='nl'?'Dutch':'Spanish')+', retaining original brand and tool names.'})))))return failed;
  const offTopic=queryTerms.length&&!crossLanguage?sections.filter(section=>!onTopic(section)):[];
  if(offTopic.length&&(failed=fail('AI_DRAFT_OFF_TOPIC_SECTION',{rejected_sections:offTopic.map(x=>({h2:x.h2,reason:taskStems.length?'NO_FOCUS_QUERY_TERM_AND_NO_TASK_CORE_WORD':'NO_FOCUS_QUERY_TERM'}))},
   offTopic.map(x=>({h2:x.h2,sentence:null,code:'OFF_TOPIC',reason:'The section does not mention the search term or the chosen topic.'})))))return failed;
@@ -130,7 +130,7 @@ function styleIssues(draft,sourceText=''){
  for(const sec of (draft&&draft.sections)||[]){
   const paras=(sec.paragraphs||[]).map(String);
   if(textLanguage(paras.join(' '))==='nl')for(const t of [sec.h2,...paras.flatMap(p=>p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[])])if(t&&EN_ONLY.test(t))out.push({h2:sec.h2,sentence:String(t).trim(),problem:'MIXED_LANGUAGE'});
-   if(textLanguage(src)==='es'&&textLanguage(sec.h2+' '+paras.join(' '))==='en')out.push({h2:sec.h2,sentence:sec.h2,problem:'WRONG_LANGUAGE_ENGLISH_FOR_SPANISH_PAGE'});
+   {const sl=textLanguage(src);if(sl&&sl!=='en'&&textLanguage(sec.h2+' '+paras.join(' '))==='en')out.push({h2:sec.h2,sentence:sec.h2,problem:sl==='es'?'WRONG_LANGUAGE_ENGLISH_FOR_SPANISH_PAGE':'WRONG_LANGUAGE_ENGLISH_FOR_DUTCH_PAGE'});}
   const first=(paras[0]||'').match(/[^.!?]+[.!?]?/)?.[0]?.trim()||'';
   if(first&&FILLER_OPENING.test(first))out.push({h2:sec.h2,sentence:first,problem:'OPENING_FILLER'});
   if(!pageHasTeams)for(const p of paras)for(const t of p.match(/[^.!?]+[.!?]+|[^.!?]+$/g)||[])if(TEAM_PROCESS.test(t))out.push({h2:sec.h2,sentence:t.trim(),problem:'TEAM_PROCESS_ADVICE'});
@@ -163,7 +163,7 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    'TASK MODE: SECTION_IMPROVEMENT. Write ONLY the missing reader task(s) listed here: exactly ONE H2 section per task (never combine tasks), 2-4 paragraphs each that a reader can act on. Tasks: '+JSON.stringify(readerTask.tasks),
    'When a task has a "reader_question", the section must answer exactly that question for that reader, nothing broader or neighbouring, and its H2 must say what it answers.',
    'Every section must carry the "task_code" of the task it teaches. Put the task\'s core_words in the H2 and in the first sentence, and explain the task itself, not a neighbouring topic.',
-   'Write the H2 and every paragraph in the language of the ORIGINAL SOURCE TEXT (Spanish for a Spanish page, Dutch for a Dutch page). An English customer question or competitor heading is research context ONLY: translate the question and its key concepts, never publish English headings or English body copy on a Spanish page. Preserve real product names, official brand names and established abbreviations such as SEO, GEO or AI.',
+   'Write the H2 and every paragraph in the language of the ORIGINAL SOURCE TEXT (Spanish for a Spanish page, Dutch for a Dutch page). An English customer question or competitor heading is research context ONLY: translate the question and its key concepts, never publish English headings or English body copy on a Spanish page; never mix languages in one sentence (no English words in a Dutch or Spanish text). Preserve real product names, official brand names and established abbreviations such as SEO, GEO or AI.',
    'Make each step concrete (who does what, in which order, what to check) without inventing figures, names, response times, service areas or results.',
    'Voice: the page speaks as the service, never as a person. Never write "I", "me", "my", "ik", "mijn" or about a founder; when the business is meant, name the service as the original page names it, in the third person, or address the reader ("you").',
    'Write reader advice, not product claims: never state what any tool, tracker or software does or detects; avoid absolute verbs (eliminates, prevents, ensures, guarantees, proves) and promises about rankings, traffic, AI citations or ROI; use no figures that are not in the original text.',

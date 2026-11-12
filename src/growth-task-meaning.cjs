@@ -29,8 +29,11 @@ function geminiModel({apiKey=process.env.GEMINI_API_KEY,model=process.env.GROWTH
 const parse=raw=>{try{return JSON.parse(String(raw||'').replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'').trim())}catch{return null}};
 
 // ---------- 1. Do the competitor sections answer the same reader question, and does the page answer it? ----------
-function taskJudgePrompt({query,tasks,pageSections}){
+const JUDGE_LANGS={en:'English',nl:'Dutch',es:'Spanish',de:'German',fr:'French',it:'Italian',pt:'Portuguese',pl:'Polish',sv:'Swedish',da:'Danish'};
+function taskJudgePrompt({query,tasks,pageSections,language}){
  return ['You check SEO research for one web page. Return JSON only.',
+  // The reader question is shown to the owner and written for the page: in the page's language (owner 2026-11-12).
+  ...(JUDGE_LANGS[language]?['Write every reader_question in '+JUDGE_LANGS[language]+', the language of the page, as a reader of that page would ask it.']:[]),
   'For every candidate task, two or more competitor pages have a section that shares a word. Decide whether those sections answer THE SAME reader question.',
   'Sharing a word, a verb or a topic is NOT enough: they must answer the same question for the same reader, so that one good section could replace both.',
   'If they answer the same question, state that question as a reader would ask it (max 20 words) and list only the hosts whose section answers it.',
@@ -71,12 +74,12 @@ function validateTaskVerdicts(raw,input){
  }
  return {status:'JUDGED',verdicts,invalid};
 }
-async function judgeTaskMeaning({query,coverage,pageSections,model=geminiModel()}={}){
+async function judgeTaskMeaning({query,coverage,pageSections,model=geminiModel(),language=null}={}){
  const input=taskJudgeInput(coverage||{},pageSections);
  if(!input.tasks.length)return {status:'NO_CANDIDATE_TASKS',verdicts:{}};
  if(!model)return {status:'JUDGE_NOT_CONFIGURED',verdicts:{}};
  try{
-  const raw=await model.call(taskJudgePrompt({query,tasks:input.tasks,pageSections:input.page}));
+  const raw=await model.call(taskJudgePrompt({query,tasks:input.tasks,pageSections:input.page,language:String(language||'').toLowerCase().slice(0,2)||null}));
   return {...validateTaskVerdicts(raw,input),model:model.model||null};
  }catch(e){return {status:'JUDGE_UNAVAILABLE',error:String(e?.code||'JUDGE_FAILED').slice(0,40),verdicts:{}}}
 }
