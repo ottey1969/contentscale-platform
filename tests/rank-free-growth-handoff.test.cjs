@@ -68,10 +68,11 @@ test('rank tracker → free Growth check: topic, e-mail, best customer question,
     await p.goto(base + href);
     assert.equal(await p.inputValue('#url'), PAGE);
     assert.equal(await p.inputValue('#query'), '', 'the question stays empty: the check picks it');
-    assert.match(await p.textContent('#topicNote'), /From your rank tracker: “consultor geo”/);
+    assert.match(await p.textContent('#topicNote'), /Desde tu rastreador: «consultor geo»/, 'the form speaks the tracker account\'s language (es)');
     await p.waitForFunction(e => document.getElementById('email').value === e, email, { timeout: 5000 });
     // Clear and simple from the tracker: one summary, the fields under "Change details", no second tips question.
-    assert.match(await p.textContent('#trackerSummary'), /From your rank tracker — everything is filled in[^]*Keyword: consultor geo[^]*Result to: /);
+    assert.match(await p.textContent('#trackerSummary'), /Desde tu rastreador — todo está rellenado[^]*Palabra clave: consultor geo[^]*Resultado a: /);
+    assert.equal(await p.getAttribute('html', 'lang'), 'es');
     assert.equal(await p.locator('#moreFields').evaluate(el => el.open), false);assert.equal(await p.locator('#tipsBox').isHidden(), true);
     await p.check('input[name=consent]');
     await p.click('#f button[type=submit]');
@@ -130,7 +131,7 @@ test('a valid handoff is access of its own: also with personal approval required
     assert.equal((await request(app).get('/free-growth')).status, 302, 'without a handoff: to the approval page, as before');
     assert.equal((await request(app).get('/free-growth?rt=' + encodeURIComponent(rt.slice(0, -2) + 'AA'))).status, 302, 'a forged handoff opens nothing');
     const form = await request(app).get('/free-growth?rt=' + encodeURIComponent(rt) + '&topic=consultor+geo');
-    assert.equal(form.status, 200); assert.match(form.text, /Run the free check/);
+    assert.equal(form.status, 200); assert.match(form.text, /Iniciar el análisis gratuito/, 'the form in the tracker account\'s language (es)');
     const body = x => ({ url: 'https://acme-geo.example/consultor-geo/', topic: 'consultor geo', rank_ref: rt, email, consent: true, ...x });
     assert.equal((await request(app).post('/api/free-growth/checks').send(body({ rank_ref: '' }))).status, 403, 'no handoff: approval still required');
     const other = await request(app).post('/api/free-growth/checks').send(body({ email: 'someone-else@other.example' }));
