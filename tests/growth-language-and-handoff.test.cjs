@@ -83,3 +83,31 @@ test('owner 2026-11-12 Growth package: a Spanish question is searchable; two que
   const ui = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
   assert.match(ui, /Google searched with “'\+sdx\.search_term_used/);
 });
+
+test('Free Growth keeps up: 300-character question, searched-with shown and translated', () => {
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '../src/growth-free/routes.cjs'), 'utf8');
+  assert.match(src, /<textarea id="query" name="query" maxlength="300"/);
+  assert.ok(!/clean\(b\.query,120\)/.test(src), 'no 120-character cut on the server');
+  assert.match(src, /Google searched with “'\+esc\(c\.google_searched_with\)/);
+  const { summarizeFreeGrowth } = require('../src/growth-free/summary.cjs');
+  const s = summarizeFreeGrowth({ success: true, search_discovery: { search_term_used: '¿Cuánto cobra un consultor GEO?', leads: [] } }, { url: 'https://es.example/x', query: 'a? y b?' });
+  assert.equal(s.checked.google_searched_with, '¿Cuánto cobra un consultor GEO?');
+  const { ROWS } = require('../src/growth-free/ui-texts.cjs');
+  assert.ok(ROWS.some(r => /^Google searched with/.test(r[0]) && /^Se buscó en Google/.test(r[2])));
+});
+
+test('owner 2026-11-12: "Before the research · optional" at the top with Search Console update and the AI systems', async () => {
+  const src = require('node:fs').readFileSync(require('node:path').join(__dirname, '../src/tracker-growth-automatic-routes.cjs'), 'utf8');
+  assert.match(src, /<section id="growthBeforeResearch"><h2>Before the research · optional<\/h2>/);
+  assert.match(src, /questionBox,prepBox,marketBox,briefBox,/);
+  assert.match(src, /'Update Search Console data':'Fetch from Search Console'/);
+  assert.match(src, /<\/div><div id="growthAiEarly"><\/div><\/section>/, 'the AI systems box sits in the section before the research');
+  const ui = require('node:fs').readFileSync(require('node:path').join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
+  assert.match(ui, /\/gsc-autofetch-page'/); assert.match(ui, /\/growth\/research-cache\/clear\?page_id=/);
+  const routes = {}, app = { get: (p, mw, h) => { routes['GET ' + p] = h; }, post: (p, mw, h) => { routes['POST ' + p] = h; } };
+  require('../src/tracker-growth-automatic-routes.cjs').registerGrowthAutomaticResearch(app, { query: async () => ({ rows: [] }) }, (q, s, n) => n && n(), {});
+  const call = growth => new Promise(resolve => routes['POST /api/tracker-client/:token/growth/research-cache/clear']({ params: { token: 'T' }, query: { page_id: '5' }, growth, growthTrackerClientId: 1 },
+    { statusCode: 200, status(c) { this.statusCode = c; return this; }, set() { return this; }, json(b) { resolve([this.statusCode, b]); } }));
+  assert.equal((await call({ can_edit: true, pages: [{ id: 5, url: 'https://x.example/' }] }))[1].success, true);
+  assert.equal((await call({ can_edit: false, pages: [{ id: 5, url: 'https://x.example/' }] }))[0], 403, 'owner only');
+});

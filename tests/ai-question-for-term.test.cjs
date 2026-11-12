@@ -159,3 +159,18 @@ test('owner 2026-11-12 "best in NL and Spain": Spain first; only when Google sho
     fetchImpl: async (url, init) => { seen2.push(JSON.parse(init.body).gl); return { ok: true, json: async () => ({ peopleAlsoAsk: [{ question: '¿Cuánto cuesta un consultor GEO?' }] }) }; } });
   assert.deepEqual(seen2, ['es']);
 });
+
+test('owner 2026-11-12: autocomplete keeps whole keyword words only, and a search phrase is never the "best match" over a question', async () => {
+  const { discoverCustomerQuestions } = require('../src/growth-customer-questions.cjs');
+  const sugg = ['consultor geo.barcelona', 'consultor geo valencia', 'consultor político', 'consultor geologia', 'consultor geofisico', 'consultor geotecnia', 'consultor geografia'].map(value => ({ value }));
+  const fetchImpl = async (url) => ({ ok: true, json: async () => /autocomplete/.test(url) ? { suggestions: sugg } : {} });
+  const prompts = [];
+  const out = await discoverCustomerQuestions({ keyword: 'consultor geo', gl: 'es', hl: 'es', key: 'TEST', fetchImpl,
+    model: { call: async p => { prompts.push(p); return '{"questions":["¿Cuánto cuesta contratar un consultor GEO?"]}'; } } });
+  const google = out.questions.filter(q => q.source === 'GOOGLE_AUTOCOMPLETE').map(q => q.text);
+  assert.deepEqual(google.sort(), ['consultor geo valencia', 'consultor geo.barcelona'].sort(), 'other meanings (geología, político …) are left out');
+  assert.equal(prompts.length, 1, 'Google had phrases but no question: the AI is asked for buyer questions');
+  assert.equal(out.best_question, '¿Cuánto cuesta contratar un consultor GEO?');
+  assert.equal(out.selection_source, 'AI_SUGGESTION');
+  assert.match(out.questions.find(q => q.source === 'GOOGLE_AUTOCOMPLETE').label, /search phrase, not a question/);
+});

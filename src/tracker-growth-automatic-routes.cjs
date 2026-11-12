@@ -1065,6 +1065,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   if(bestQuestionCache.size>2000)bestQuestionCache.delete(bestQuestionCache.keys().next().value);
   return value;
  }
+ // After the owner updated this page's Search Console data: the next research run reads it instead of a cached run.
+ if(typeof app.post==='function')app.post('/api/tracker-client/:token/growth/research-cache/clear',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY'});
+  let n=0;for(const k of [...cache.keys()])if(k.startsWith(v.clientId+':'+v.id+':')){cache.delete(k);n++}
+  res.set('Cache-Control','private, no-store').json({success:true,cleared:n});
+ });
  app.get('/api/tracker-client/:token/growth/customer-questions',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY'});
@@ -1119,10 +1126,19 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   }
   // The selected page and the customer search question (owner): why this page, the keyword as context only, Search Console
   // optional, and the question the research looks at first. Choosing a question reloads the research with it.
-  let questionBox='';
+  let questionBox='',prepBox='';
   if(req.growth?.can_edit===true){
    const kw=await pool.query('SELECT keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',[v.clientId,v.id]).then(r=>r.rows[0]?.keyword||'').catch(()=>'');
-   const gsc=await pool.query("SELECT 1 FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified' LIMIT 1",[v.clientId,v.id]).then(r=>r.rows.length>0).catch(()=>false);
+   const gscRow=await pool.query("SELECT COUNT(*)::int AS n,MAX(imported_at) AS newest FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND evidence_scope='page_verified'",[v.clientId,v.id]).then(r=>r.rows[0]||{}).catch(()=>({}));
+   const gsc=Number(gscRow.n||0)>0,gscNewest=gscRow.newest?new Date(gscRow.newest).toISOString().slice(0,10):null;
+   // Before the research, optional (owner 2026-11-12: "at the top: AI systems and GSC, preferably before the research,
+   // optional"; "GSC connected, but where is the option to update it?").
+   prepBox='<section id="growthBeforeResearch"><h2>Before the research · optional</h2><div class="grid">'+
+    '<div><small>Google Search Console</small><strong>'+(gsc?'Connected · data from '+sHtml(gscNewest||'unknown date'):'Not connected for this page')+'</strong>'+
+    '<small>Optional: verified clicks, impressions and positions for this page. The research runs without it.</small>'+
+    '<p><button type="button" id="gscUpdate" data-page="'+sHtml(String(v.id))+'">'+(gsc?'Update Search Console data':'Fetch from Search Console')+'</button></p><small role="status" id="gscUpdateStatus"></small></div>'+
+    '<div><small>AI systems (Gemini, ChatGPT, Perplexity, Claude, Copilot)</small><strong>Optional</strong><small>What they answer and which pages they cite for this question. Gemini is checked automatically when available; the others when you add their real answers below.</small></div>'+
+    '</div><div id="growthAiEarly"></div></section>';
    const why=req.query?.why==='opportunity'?'Opportunity Finder (Search Console per country)':req.query?.why==='system'?'The Growth Cockpit\'s suggestion':'You chose this page';
    const apiQ='/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/customer-questions?page_id='+encodeURIComponent(v.id)+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):'');
    questionBox='<section id="customerQuestion" data-api="'+sHtml(apiQ)+'"><h2>Selected page and customer question</h2>'+
@@ -1169,9 +1185,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    '<body><main data-page-id="'+v.id+'" data-owner-draft="'+(req.growth?.can_edit===true?'true':'false')+'"><p><a href="'+back+'">← Growth</a></p>',
    '<h1>Automatic Growth research</h1><p><strong>'+sHtml(v.page.url)+'</strong></p>',
    '<p class="info">Automatic public-page and existing Search/AI intelligence research. GSC, a new scanner, paid API and WordPress are not required. This is a reviewable report, not an automatic publication.</p>',
-   questionBox,marketBox,briefBox,
+   questionBox,prepBox,marketBox,briefBox,
    '<section><div role="status" id="researchStatus">Loading saved research…</div></section>',
-   '<div id="growthAiEarly"></div><div id="growthAutomaticReport"></div>',
+   (prepBox?'':'<div id="growthAiEarly"></div>')+'<div id="growthAutomaticReport"></div>',
    '<section id="growthFinalActions"><h2>Finish · Your next action</h2><p class="info growth-finish-note">Your written concepts are saved. Open the CMS package to review the complete draft and approve it before downloading. Nothing is published automatically.</p>',
    allowHandoff?'<p><a id="growthEditorHandoff" class="growth-primary-finish" href="'+handoff+'">Prepare CMS package</a></p>':
     // Say which of the two applies; a locked Case Study can be ended by the owner in the Tracker (nothing is deleted).
