@@ -14,6 +14,7 @@ const contacts=require('./contacts.cjs');
 const {FORM_TEXTS,FORM_LANGS,formLang}=require('./form-texts.cjs');
 const {translateError}=require('./error-texts.cjs');
 const uiTexts=require('./ui-texts.cjs');
+const schemaHelp=require('./schema-help.cjs');
 // Tips by e-mail (owner 2026-11-12): on by default, announced at sign-up, with "Don't send me tips" to opt out
 // (soft opt-in). Older forms still send marketing_consent (ticked = yes).
 const tipsOf=b=>b&&b.no_tips!==undefined?b.no_tips!==true:!!(b&&b.marketing_consent===true);
@@ -392,18 +393,30 @@ function stepSum(n,title,line,done){return '<summary><span class="journey-num">'
 // "Do it yourself": what Growth does not write (page elements, structured data, facts only you know, AI visibility work).
 // Ticked items are remembered in this browser and move to "Done".
 function selfItems(g,d){var out=[],ag=d&&d.ai&&d.ai.gap,acts=(d&&d.ai&&d.ai.summary&&d.ai.summary.visibility_actions)||[];
- ((g&&g.items)||[]).filter(function(x){return x.group==='PAGE_ELEMENT'}).forEach(function(x){out.push({id:'el:'+x.id,title:x.title.indexOf('Structured data: ')===0?'Add structured data (schema): '+x.title.slice(17):'Add: '+x.title,why:x.status+(x.ranking_pages?' · on '+x.ranking_pages+(x.of?' of '+x.of:'')+' ranking page(s)':''),src:'g'})});
- ((ag&&ag.missing_facts)||[]).forEach(function(f){out.push({id:'fact:'+f.key,title:'State on your page: '+f.label.toLowerCase(),why:'The pages AI cites state it ('+f.sites.join(', ')+'); your page does not. Only add it when it is true for your business.'+(f.example?' Example from '+f.example.site+': “'+f.example.excerpt+'”':''),src:'ai'})});
+ ((g&&g.items)||[]).filter(function(x){return x.group==='PAGE_ELEMENT'}).forEach(function(x){var st=x.title.indexOf('Structured data: ')===0?x.title.slice(17):null;
+  out.push({id:'el:'+x.id,title:st?'Add structured data (schema): '+st:'Add: '+x.title,why:x.status+(x.ranking_pages?' · on '+x.ranking_pages+(x.of?' of '+x.of:'')+' ranking page(s)':''),src:'g',
+   auto:!!(st&&LIVE&&LIVE.schema_types.indexOf(st)>=0),
+   steps:st?['Copy the code below. Values marked FILL IN are not on your page: fill them in or remove that line. Never add a value that is not true.','WordPress: paste it in a Custom HTML block on this page, or in WPCode as an HTML snippet that runs only on this page. Rank Math and Yoast can set the same in their Schema settings.','Test it with the Schema Markup Validator (validator.schema.org) and Google’s Rich Results Test (search.google.com/test/rich-results).','Reopen this result afterwards: the item is ticked off by itself as soon as your page has it.']:null,
+   code:st&&LIVE&&LIVE.snippets?LIVE.snippets[st]||null:null})});
+ ((ag&&ag.missing_facts)||[]).forEach(function(f){out.push({auto:!!(LIVE&&LIVE.facts.indexOf(f.key)>=0),id:'fact:'+f.key,title:'State on your page: '+f.label.toLowerCase(),why:'The pages AI cites state it ('+f.sites.join(', ')+'); your page does not. Only add it when it is true for your business.'+(f.example?' Example from '+f.example.site+': “'+f.example.excerpt+'”':''),src:'ai'})});
  ((ag&&ag.missing_topics)||[]).filter(function(t){return !t.item_id}).forEach(function(t){out.push({id:'aitopic:'+t.topic,title:'Cover on your page: '+t.topic,why:'On the pages AI cites ('+t.sites.join(', ')+'), not on your page. Not in the Google list, so Growth does not write it: add it yourself if it fits.'+(t.examples&&t.examples[0]&&t.examples[0].excerpt?' “'+t.examples[0].excerpt+'”':''),src:'ai'})});
  acts.filter(function(a){return a.id!=='choose_ai_topics'&&a.id!=='compare_cited_pages'}).forEach(function(a){out.push({id:'act:'+a.id,title:a.title,why:a.why,steps:a.steps,src:'ai'})});
  return out}
 function selfKey(){return 'growthFreeSelfDone:'+API}
 function selfDone(){try{return JSON.parse(localStorage.getItem(selfKey())||'{}')}catch(e){return {}}}
-function selfHtml(list){if(!list.length)return '';var done=selfDone(),open=list.filter(function(x){return !done[x.id]}),fin=list.filter(function(x){return done[x.id]});
- var li=function(x){return '<li><label class="check"><input type="checkbox" class="selfDone" data-id="'+esc(x.id)+'"'+(done[x.id]?' checked':'')+'><span><span class="chip '+(x.src==='ai'?'ai">AI':'g">Google')+'</span><strong>'+esc(x.title)+'</strong><details class="why"><summary>Why and how</summary><small>'+esc(x.why)+'</small>'+((x.steps||[]).length?'<ol>'+x.steps.map(function(t){return '<li><small>'+esc(t)+'</small></li>'}).join('')+'</ol>':'')+'</details></span></label></li>'};
+function selfHtml(list){if(!list.length)return '';var done0=selfDone(),isDone=function(x){return !!(done0[x.id]||x.auto)},open=list.filter(function(x){return !isDone(x)}),fin=list.filter(isDone);
+ var li=function(x){return '<li><label class="check"><input type="checkbox" class="selfDone" data-id="'+esc(x.id)+'"'+(isDone(x)?' checked':'')+(x.auto?' disabled':'')+'><span><span class="chip '+(x.src==='ai'?'ai">AI':'g">Google')+'</span><strong>'+esc(x.title)+'</strong>'+(x.auto?' <small class="step-done">✓ Found on your page now</small>':'')+'<details class="why"><summary>Why and how</summary><small>'+esc(x.why)+'</small>'+((x.steps||[]).length?'<ol>'+x.steps.map(function(t){return '<li><small>'+esc(t)+'</small></li>'}).join('')+'</ol>':'')+
+  (x.code?'<pre class="selfCode" data-no-translate style="white-space:pre-wrap;font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;max-height:320px;overflow:auto">'+esc(x.code)+'</pre><button type="button" class="ghost selfCopy" data-id="'+esc(x.id)+'">Copy the code</button> <small class="selfCopySt" role="status"></small>':'')+'</details></span></label></li>'};
  return '<div class="card self" id="selfDo"><h3 style="margin-top:0">Do it yourself ('+open.length+' open)</h3><p class="muted">Growth does not write these: they are settings, data or facts only you can confirm. Tick one when it is done.</p><ul style="padding:0">'+open.map(li).join('')+'</ul>'+
   (fin.length?'<details><summary>Done ('+fin.length+')</summary><ul style="padding:0">'+fin.map(li).join('')+'</ul></details>':'')+'</div>'}
-function wireSelf(){document.querySelectorAll('.selfDone').forEach(function(c){c.onchange=function(){var d=selfDone();if(c.checked)d[c.getAttribute('data-id')]=1;else delete d[c.getAttribute('data-id')];try{localStorage.setItem(selfKey(),JSON.stringify(d))}catch(e){}
+// What the live page has now (schema types, facts) and ready code for missing schema: read once per page load.
+var LIVE=null,LIVE_D=null;
+function loadLive(d){LIVE_D=d;if(LIVE||!d||d.status!=='DONE')return;fetch(API+'/live-page'+Q,{cache:'no-store'}).then(function(r){return r.json()}).then(function(x){if(!x||!x.success)return;LIVE=x;
+ var card=document.getElementById('selfDo');if(card&&LAST_SELF){LAST_SELF=selfItems(LIVE_D.summary&&LIVE_D.summary.gaps,LIVE_D);card.outerHTML=selfHtml(LAST_SELF);wireSelf()}
+ if(NOW_CTX){var dn=selfDone();NOW_CTX.selfOpen=(LAST_SELF||[]).filter(function(y){return !(dn[y.id]||y.auto)}).length;updateNow(document.querySelectorAll('.gapPick:checked').length)}}).catch(function(){})}
+function wireSelf(){document.querySelectorAll('.selfCopy').forEach(function(b){b.onclick=function(e){e.preventDefault();var it=(LAST_SELF||[]).filter(function(x){return x.id===b.getAttribute('data-id')})[0];if(!it||!it.code)return;
+  if(navigator.clipboard)navigator.clipboard.writeText(it.code);var st=b.parentNode.querySelector('.selfCopySt');if(st)st.textContent='Copied ✓'}});
+ document.querySelectorAll('.selfDone').forEach(function(c){c.onchange=function(){var d=selfDone();if(c.checked)d[c.getAttribute('data-id')]=1;else delete d[c.getAttribute('data-id')];try{localStorage.setItem(selfKey(),JSON.stringify(d))}catch(e){}
  var card=document.getElementById('selfDo');if(card&&LAST_SELF){card.outerHTML=selfHtml(LAST_SELF);wireSelf()}}})}
 var LAST_SELF=null;
 // One topic card: title and labels, one line of action; everything else behind "Why?".
@@ -813,7 +826,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  var blocker=s.decision==='DATA_BLOCKED',noChange=s.decision==='NO_CHANGE';
  var hasCompetitors=!!(d.competitors&&(d.competitors.pages||[]).some(function(x){return (x.headings||[]).length}));
  // One next action at a time: what to do now, why, and one button. Done steps close; their result stays one click away.
- var selfOpen=(function(){var dn=selfDone();return selfItems(s.gaps,d).filter(function(x){return !dn[x.id]}).length})();
+ var selfOpen=(function(){var dn=selfDone();return selfItems(s.gaps,d).filter(function(x){return !(dn[x.id]||x.auto)}).length})();
  NOW_CTX={d:d,canWrite:canWrite,hasConcepts:hasConcepts,hasGaps:hasGaps,published:published,blocker:blocker,selfOpen:selfOpen};
  h+='<section class="growth-cockpit '+(blocker?'needs-evidence':noChange?'no-change':'')+'" id="freeNextAction" aria-labelledby="freeActionTitle">'+cockpitInner(NOW_CTX,chosen)+'</section>';
  // What the check found, in three lines; the evidence is in the tabs below.
@@ -838,7 +851,7 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  h+='<details class="research-details" id="data"><summary>Download complete research data (optional)</summary><p>The JSON contains the full research for independent analysis.</p><p><a class="btn ghost" href="'+esc(API+'/report.json'+Q)+'" download>Download JSON</a></p></details>';
  h+='<div class="card" id="hire"><p class="kicker">Paid · done for you</p><h2 style="margin-top:4px">Want this done for you?</h2><p>'+esc(SERVICE)+'</p>'+(CONTACT?'<p><a class="btn" href="'+esc(CONTACT)+'" target="_blank" rel="noopener noreferrer">Book a call</a></p><p class="muted">Or leave your details:</p>':'')+
  '<form id="hf"><label>Name<input name="name" required maxlength="120"></label><label>Email<input name="email" type="email" required maxlength="200"></label><label>Company / website (optional)<input name="company" maxlength="200"></label><label>Phone (optional)<input name="phone" maxlength="40"></label><label>What would you like help with? (optional)<textarea name="message" rows="3" maxlength="2000"></textarea></label><label class="check"><input type="checkbox" name="consent" required> <span>Contact me about this request.</span></label><p><button type="submit">Ask '+esc(BRAND)+' to do it</button> <small role="status" id="hs"></small></p></form></div>';
- o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':'stepReview';document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();
+ o.innerHTML=h;var activeStage=published?'stepPublish':hasConcepts?'stepPrepare':chosen&&!blocker&&canWrite?'stepPrepare':'stepReview';document.querySelectorAll('details.journey-section').forEach(function(el){el.open=el.id===activeStage});wireNowBar();updateNow(chosen);loadLive(d);wireAi();wireGsc();wireGaps(s.gaps,s,d);wireSideBySide(d.competitors);wirePub();wireSelf();
  document.getElementById('hf').addEventListener('submit',async function(e){e.preventDefault();var f=e.target,st=document.getElementById('hs'),b=f.querySelector('button');if(!f.consent.checked){st.textContent='Please tick the contact box.';return}b.disabled=true;
   try{var r=await fetch(API+'/hire'+Q,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f.name.value,email:f.email.value,company:f.company.value,phone:f.phone.value,message:f.message.value,consent:true})});var x=await r.json();if(!x.success)throw Error(x.error||'Not sent');f.outerHTML='<p><strong>Thank you — your request was received.</strong> You will get a reply by email.</p>'}catch(err){st.textContent=err.message;st.className='error';b.disabled=false}});
 }
@@ -1512,6 +1525,19 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  }
  // CMS package (the same ZIP as the Tracker): step 1 reads the original page publicly; the download refuses the package
  // when the page changed in between, when a flagged sentence is still in the text, or when the editor did not approve.
+ // The live page now: schema types and facts it has, and ready JSON-LD for the schema types the research found missing.
+ const livePageCache=new Map();
+ app.get(apiPath+'/checks/:id/live-page',async(req,res)=>{
+  const row=await load(req,res);if(!row)return;
+  const key=row.id+'|'+row.url,hit=livePageCache.get(key);
+  if(hit&&Date.now()-hit.at<10*60e3)return res.set('Cache-Control','no-store').json({success:true,...hit.data});
+  try{const html=await readOwnPage(row);if(!html)return res.status(503).json({success:false,error:'Your page could not be read right now. Try again in a moment.'});
+   const missing=((row.summary&&row.summary.gaps&&row.summary.gaps.items)||[]).filter(x=>x.group==='PAGE_ELEMENT'&&String(x.title).startsWith('Structured data: ')).map(x=>String(x.title).slice(17));
+   const data=schemaHelp.liveHelp(html,row.url,missing);
+   if(livePageCache.size>500)livePageCache.delete(livePageCache.keys().next().value);livePageCache.set(key,{at:Date.now(),data});
+   res.set('Cache-Control','no-store').json({success:true,...data});
+  }catch(e){res.status(503).json({success:false,error:'Your page could not be read right now. Try again in a moment.'})}
+ });
  async function readOwnPage(row){
   const live=await (engineDeps.fetchLive||fetchPublicGrowthHtml)(row.url);
   return String(live&&live.html||'');
