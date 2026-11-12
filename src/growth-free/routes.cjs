@@ -26,6 +26,7 @@ const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
 const cmsPackage=require('./cms-package.cjs');
 const reminders=require('./reminders.cjs');
+const topicLang=require('./topic-lang.cjs');
 const {discoverCustomerQuestions}=require('../growth-customer-questions.cjs');
 
 const int=(v,d)=>{const n=Number.parseInt(v,10);return Number.isFinite(n)&&n>=0?n:d};
@@ -1351,11 +1352,15 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  app.get(apiPath+'/checks/:id',async(req,res)=>{
   const row=await load(req,res);if(!row)return;
   const aiPart=await aiFor(row),gscPart=await gscFor(row);
+  // AI-written topic names in the language of the check (phase 2 of "Spanish is Spanish"); quotes stay as written.
+  let shown={summary:row.summary,aiGap:aiPart&&aiPart.gap};
+  if(row.status==='DONE'){try{const map=await topicLang.topicTextsFor({pool,row,lang:row.ui_lang||'en',summary:row.summary,aiGap:aiPart&&aiPart.gap,model:reminders.modelFor(config.textModel!==undefined?config.textModel:config.mailModel)});
+   shown=topicLang.applyTexts(row.summary,aiPart&&aiPart.gap,map)}catch(e){}}
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
-   ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:aiPart.gap}:null,
+   ai:aiPart?{search_term:aiPart.search_term,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
-   summary:withPlainEvidence(withGscLimits(withAiLimits(row.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
+   summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
    offer:offerOf((config.accessKeys||[]).find(k=>k.label===row.access_label)||config),
    new_check_url:(()=>{if(row.access_label==='admin')return basePath+'/admin';
@@ -1511,7 +1516,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    res.set('Cache-Control','no-store').json({success:true,publication:publicationOf(fresh),confirmation,gsc:await gscFor(fresh)});
   }catch(e){console.error('[free-growth] publication failed',e.message);res.status(503).json({success:false,error:'The date could not be saved. Please try again.'})}
  });
- const localizeMail=(mail,lang)=>require('../growth-measurement-reminders.cjs').localize(mail,lang,{model:reminders.modelFor(config.mailModel)});
+ const localizeMail=(mail,lang)=>reminders.T[lang]?Promise.resolve(mail):require('../growth-measurement-reminders.cjs').localize(mail,lang,{model:reminders.modelFor(config.mailModel)});
  app.get(basePath+'/stop/:token',async(req,res)=>{
   let n=0;try{await storage.ensureTables(pool);n=typeof storage.optOutReminder==='function'?await storage.optOutReminder(pool,req.params.token):0}catch(e){}
   res.set('Cache-Control','no-store').set('Referrer-Policy','no-referrer').type('html').send(page(n?'Reminder stopped':'Link not valid',

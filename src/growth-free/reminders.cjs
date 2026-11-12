@@ -23,7 +23,7 @@ function readPublishedOn(v, now = new Date()) {
   return { value: s };
 }
 
-const LOCALE = { en: 'en-GB', nl: 'nl-NL' };
+const LOCALE = { en: 'en-GB', nl: 'nl-NL', es: 'es-ES' };
 const ymd = d => d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10);
 const longDate = (d, lang) => new Date(ymd(d) + 'T12:00:00Z').toLocaleDateString(LOCALE[lang] || 'en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 
@@ -61,6 +61,23 @@ const T = {
     stop: link => 'Wil je zulke e-mails niet? <a href="' + esc(link) + '">Stop deze herinnering</a>.',
     cSubject: 'Herinnering ingesteld: we mailen je vier weken na je aanpassing',
     cIntro: (url, d, due) => 'Je hebt ' + d + ' ingevuld als de datum waarop je aanpassing van <a href="' + esc(url) + '">' + esc(url) + '</a> live ging. Op ' + due + ' krijg je één e-mail met uitleg hoe je de 4 weken vóór en na vergelijkt in Google Search Console.',
+  },
+  es: {
+    subject: 'Cuatro semanas después de tu cambio: ¿cómo va tu página en Google?',
+    hello: 'Hola:',
+    intro: (url, q, d) => 'El ' + d + ' actualizaste <a href="' + esc(url) + '">' + esc(url) + '</a>' + (q ? ' para la búsqueda “' + esc(q) + '”' : '') + ', después del análisis gratuito de Growth. Han pasado cuatro semanas, así que ya puedes ver si más personas encuentran la página en Google.',
+    steps: 'Qué hacer (unos dos minutos)',
+    s1: 'Abre Google Search Console → Rendimiento → Resultados de búsqueda.',
+    s2: url => 'Añade el filtro Página → “URL exacta” → <strong>' + esc(url) + '</strong>.',
+    s3: (a, b) => 'Fecha → Personalizado: <strong>' + a + ' – ' + b + '</strong> (las 4 semanas antes del cambio). Haz clic en Exportar → Descargar CSV. Recibes un ZIP.',
+    s4: (a, b) => 'Haz lo mismo para <strong>' + a + ' – ' + b + '</strong> (las 4 semanas después del cambio).',
+    s5: link => 'Sube los dos archivos ZIP en <a href="' + esc(link) + '">tu página de resultados</a>. Allí ves, uno al lado del otro, cuántas veces se mostró la página en Google y cuántos clics recibió, antes y después.',
+    noGsc: '¿No tienes Search Console? En la misma página de resultados puedes empezar un análisis nuevo: vuelve a comparar tu página con las páginas que Google muestra ahora.',
+    honest: 'Un cambio en Google no demuestra que lo causara tu actualización: la temporada, otras webs y el propio Google también influyen.',
+    once: 'Este es el único recordatorio para este análisis.',
+    stop: link => '¿No quieres correos como este? <a href="' + esc(link) + '">Detén este recordatorio</a>.',
+    cSubject: 'Recordatorio activado: te escribiremos cuatro semanas después de tu cambio',
+    cIntro: (url, d, due) => 'Indicaste el ' + d + ' como la fecha en que tu cambio de <a href="' + esc(url) + '">' + esc(url) + '</a> se publicó. El ' + due + ' recibirás un correo que explica cómo comparar en Google Search Console las 4 semanas antes y después.',
   }
 };
 const wrap = body => '<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.5;color:#111;max-width:620px">' + body + '</div>';
@@ -109,12 +126,13 @@ function brevo(fetchImpl) {
       .then(r => !!(r && r.ok)).catch(() => false);
   };
 }
-// The language of the page: the one chosen for the check, else the one the research used (the page's html lang).
+// The language of the e-mail: the language the visitor used the check in (owner 2026-11-12: "Spanish is Spanish, English
+// is English"); for older checks the language chosen for the market, else the one the research used (the page's html lang).
 // Who gets the e-mails: the first address, which the visitor entered for themselves. The other addresses only for the
 // owner's own checks and approved invitations: otherwise anyone could make this sender e-mail strangers.
 const recipientsOf = row => { const all = Array.isArray(row.emails) && row.emails.length ? row.emails : [row.email];
   return row.access_label === 'admin' || row.invite_id ? all.filter(Boolean) : [all[0] || row.email].filter(Boolean); };
-const languageOf = row => String((row.market && row.market.language) || row.hl || (row.report && row.report.search_discovery && row.report.search_discovery.search_locale && row.report.search_discovery.search_locale.hl) || 'en').toLowerCase().slice(0, 3);
+const languageOf = row => String(row.ui_lang || (row.market && row.market.language) || row.hl || (row.report && row.report.search_discovery && row.report.search_discovery.search_locale && row.report.search_discovery.search_locale.hl) || 'en').toLowerCase().slice(0, 3);
 const modelFor = model => model === undefined ? (() => { try { return require('../growth-task-meaning.cjs').geminiModel(); } catch (e) { return null; } })() : model;
 
 // Sends every due reminder once (at most 3 attempts). links: { result(row), stop(token) }.
@@ -122,8 +140,10 @@ async function sendDueFreeReminders(pool, storage, { send, links, now = new Date
   let sent = 0, failed = 0;
   for (const row of await storage.dueReminders(pool, { now })) {
     const lang = languageOf(row);
-    const m = await localize(reminderMessage({ url: row.url, query: String(row.query || (row.summary && row.summary.checked && row.summary.checked.search_term) || ''), publishedOn: row.published_on,
-      resultLink: links.result(row), stopLink: links.stop(row.reminder_token, row), lang: T[lang] ? lang : 'en' }), lang, { model: modelFor(model) });
+    // Written languages (en/nl/es) go as written; any other language is translated and checked, else English.
+    const own = T[lang] ? lang : null, write = msg => own ? msg : localize(msg, lang, { model: modelFor(model) });
+    const m = await write(reminderMessage({ url: row.url, query: String(row.query || (row.summary && row.summary.checked && row.summary.checked.search_term) || ''), publishedOn: row.published_on,
+      resultLink: links.result(row), stopLink: links.stop(row.reminder_token, row), lang: own || 'en' }));
     const ok = await Promise.resolve(send({ to: recipientsOf(row), subject: m.subject, html: m.html })).catch(() => false);
     await storage.markReminder(pool, { id: row.id, sent: ok });
     if (ok) sent++; else failed++;
