@@ -5,6 +5,7 @@
 // the research subject; the question is what the owner pastes into Google, ChatGPT, Perplexity, Claude and Copilot.
 const { discoverCustomerQuestions } = require('./growth-customer-questions.cjs');
 const { validLanguage } = require('./growth-search-locale.cjs');
+const { translateTexts, LANG_NAME } = require('./growth-free/topic-lang.cjs');
 
 const DAY = 86400000;
 
@@ -13,6 +14,14 @@ function readMarket(regionRaw, languageRaw) {
   const gl = code ? (code.toLowerCase() === 'gb' ? 'uk' : code.toLowerCase()) : 'us';
   const hl = validLanguage(languageRaw) || 'en';
   return { gl, hl };
+}
+
+// Optional translation for the owner (owner 2026-11-13: "Spanish with a Dutch translation would really help"). The
+// questions stay in the market language: they are what customers type. The translation is only shown next to them.
+async function translationsFor(texts, to, hl, model) {
+  if (!to || to === hl || !LANG_NAME[to] || !texts.length || !model) return null;
+  const map = await translateTexts(texts, to, { model, subject: 'search questions that customers type into Google' });
+  return map && Object.keys(map).length ? map : null;
 }
 
 function registerPrewriteCustomerQuestion(app, pool, { discover = discoverCustomerQuestions, model, now = () => Date.now(), perHour = 40 } = {}) {
@@ -24,21 +33,28 @@ function registerPrewriteCustomerQuestion(app, pool, { discover = discoverCustom
       const keyword = String(req.query.keyword || '').replace(/[\u0000-\u001f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100);
       if (!keyword) return res.status(400).json({ success: false, error: 'Enter the keyword first.' });
       const { gl, hl } = readMarket(req.query.region, req.query.language);
+      const to = validLanguage(req.query.translate) || null;
+      const getModel = () => (model !== undefined ? model : require('./growth-task-meaning.cjs').geminiModel());
       const key = gl + '|' + hl + '|' + keyword.toLowerCase(), hit = cache.get(key);
-      if (hit && now() - hit.at < DAY) return res.set('Cache-Control', 'no-store').json({ success: true, cached: true, ...hit.value });
+      if (hit && now() - hit.at < DAY) {
+        // A cached lookup only adds the translation (one model call, kept with the lookup per language).
+        if (to && to !== hl && !(hit.tr && hit.tr[to])) { const m = await translationsFor(hit.value.questions.map(q => q.text), to, hl, getModel()).catch(() => null); if (m) { hit.tr = hit.tr || {}; hit.tr[to] = m; } }
+        return res.set('Cache-Control', 'no-store').json({ success: true, cached: true, ...hit.value, translations: (to && hit.tr && hit.tr[to]) || null, translation_language: to });
+      }
       // A fresh lookup costs one Google search (and one AI call when Google has nothing): bounded per tracker per hour.
       const bucket = (used.get(cr.rows[0].id) || []).filter(t => now() - t < 3600000);
       if (bucket.length >= perHour) return res.status(429).json({ success: false, error: 'Too many lookups this hour; the keyword is used for now.' });
       bucket.push(now()); used.set(cr.rows[0].id, bucket);
-      const out = await discover({ keyword, gl, hl, model: model !== undefined ? model : require('./growth-task-meaning.cjs').geminiModel() });
+      const out = await discover({ keyword, gl, hl, model: getModel() });
       // Questions of people who want to do the job (salary, course, how to become) are never offered as the customer question.
       const questions = (out.questions || []).filter(q => q.priority !== 'NOT_A_CUSTOMER_QUESTION').slice(0, 8).map(q => ({ text: q.text, label: q.label || null, source: q.source || null }));
       const best = questions.find(q => q.text === out.best_question) || null;
       const value = { keyword, market: { gl, hl }, best_question: best ? best.text : null, best_label: best ? best.label : null, questions,
         selection_source: out.selection_source || 'NONE', google_status: (out.google && out.google.status) || null, ai_status: (out.ai && out.ai.status) || null, ai_error: (out.ai && out.ai.error) || null };
       // Only a found question is kept for a day: an empty or failed lookup is tried again next time (owner 2026-11-12).
-      if (value.best_question) cache.set(key, { at: now(), value }); if (cache.size > 2000) cache.delete(cache.keys().next().value);
-      res.set('Cache-Control', 'no-store').json({ success: true, ...value });
+      const tr = to && to !== hl ? await translationsFor(questions.map(q => q.text), to, hl, getModel()).catch(() => null) : null;
+      if (value.best_question) cache.set(key, { at: now(), value, tr: tr ? { [to]: tr } : {} }); if (cache.size > 2000) cache.delete(cache.keys().next().value);
+      res.set('Cache-Control', 'no-store').json({ success: true, ...value, translations: tr, translation_language: to });
     } catch (e) { console.warn('[prewrite-customer-question]', String(e && (e.code || e.message)).slice(0, 80)); res.status(503).json({ success: false, error: 'Questions unavailable; the keyword is used.' }); }
   });
 }

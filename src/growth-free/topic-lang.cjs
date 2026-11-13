@@ -20,9 +20,9 @@ function collectTexts(summary, aiGap) {
 const fingerprint = (texts, lang) => crypto.createHash('sha256').update(lang + '\n' + texts.join('\n')).digest('hex').slice(0, 16);
 
 // One call: the names in, the same number of names out, in the same order. Anything else: no translation.
-async function translateTexts(texts, lang, { model } = {}) {
+async function translateTexts(texts, lang, { model, subject = 'short topic names from a website comparison' } = {}) {
   if (!texts.length || !LANG_NAME[lang] || !model) return null;
-  const prompt = ['You get short topic names from a website comparison. Write each name in ' + LANG_NAME[lang] + ' (language code "' + lang + '").',
+  const prompt = ['You get ' + subject + '. Write each name in ' + LANG_NAME[lang] + ' (language code "' + lang + '").',
     'Keep the meaning exactly; short, plain words. If a name is already in ' + LANG_NAME[lang] + ', return it unchanged.',
     'Keep brand names, place names, abbreviations and numbers unchanged. Add nothing, explain nothing.',
     'Return JSON only: {"texts":["...", ...]} with exactly ' + texts.length + ' strings in the same order.',
