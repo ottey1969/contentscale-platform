@@ -60662,12 +60662,8 @@ async function _handlePrewriteBriefGeneration(req, res) {
         _pwbEvidenceSearchOne('statistics',keyword+' survey research data findings original study','statistics_search',_pwbStatCandidateUrls),
         _pwbEvidenceSearchOne('statistics',keyword+' benchmark report percentage trends methodology','statistics_search',_pwbStatCandidateUrls),
         _pwbEvidenceSearchOne('statistics',keyword+' academic paper dataset empirical findings','statistics_search',_pwbStatCandidateUrls),
-        _pwbEvidenceSearchOne('expert_quotes','"'+keyword+'" expert interview quote','expert_quote_search',_pwbQuoteCandidateUrls),
-        _pwbEvidenceSearchOne('expert_quotes',keyword+' expert interview named researcher commentary','expert_quote_search',_pwbQuoteCandidateUrls),
-        _pwbEvidenceSearchOne('expert_quotes',keyword+' conference talk transcript expert','expert_quote_search',_pwbQuoteCandidateUrls),
-        _pwbEvidenceSearchOne('expert_quotes',keyword+' university researcher interview','expert_quote_search',_pwbQuoteCandidateUrls),
-        _pwbEvidenceSearchOne('expert_quotes',keyword+' named expert perspective article','expert_quote_search',_pwbQuoteCandidateUrls),
-        _pwbEvidenceSearchOne('expert_quotes',keyword+' practitioner interview direct quote','expert_quote_search',_pwbQuoteCandidateUrls)
+        // Topic in the Brief's language plus official sources, not the full question with English words (owner 2026-11-13).
+        ...require('./prewrite-expert-queries.cjs').expertQueries(keyword,language).map(q=>_pwbEvidenceSearchOne('expert_quotes',q,'expert_quote_search',_pwbQuoteCandidateUrls))
       ]);
     } else {
       _pwbEvidenceSearch.statistics.error='SERPAPI_KEY not set';
