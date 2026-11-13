@@ -61254,23 +61254,34 @@ ${claimsBlock.slice(0,2400)}`;
     _pwbStage='gemini_parse';
     const rawText = (d2.candidates && d2.candidates[0] && d2.candidates[0].content && d2.candidates[0].content.parts && d2.candidates[0].content.parts[0] && d2.candidates[0].content.parts[0].text) || '';
     let brief = null;
-    const m2 = rawText.match(/\{[\s\S]*\}/);
-    if (m2) {
-      try { brief = JSON.parse(m2[0]); }
-      catch (e) {
-        // The AI-first blocks make the JSON longer, so a truncated or slightly malformed
-        // response is more likely than before. Repair before giving up — same helper the
-        // brief-merge path already uses — instead of burning the client's brief allowance.
-        try { brief = JSON.parse(_repairJsonG(m2[0])); console.log('[prewrite-brief] JSON repaired'); } catch (e2) {}
-      }
+    // Live 2026-11-13: a long (Spanish) Brief was cut off or had one bad string, the light repair failed and all paid
+    // research was lost. Now: parse, light repair, close a cut-off answer (gates decide what is missing), and only then
+    // one fresh generation. src/prewrite-json-repair.cjs
+    const _pwbJsonRepair=require('./prewrite-json-repair.cjs');
+    let _pwbParsed=_pwbJsonRepair.parseBriefJson(rawText,_repairJsonG);
+    let _pwbFinish=d2&&d2.candidates&&d2.candidates[0]&&d2.candidates[0].finishReason||null,_pwbRawChars=rawText.length,_pwbParseRetry=false;
+    if(!_pwbParsed.obj && !_pwbNetworkFastLane){
+      _pwbParseRetry=true;
+      const _model=_pwbGeminiModelUsed||_pwbBriefPrimary;
+      try{
+        const ctrl3=new AbortController(); const _t3=setTimeout(()=>ctrl3.abort(),75000);
+        const r3=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl3.signal});
+        clearTimeout(_t3); const _txt3=await r3.text(); let _j3={}; try{_j3=_txt3?JSON.parse(_txt3):{}}catch(_je){}
+        if(r3.ok){_pwbRecordUsage('full_brief_parse_retry',_model,_j3,{prompt_chars:(_langPrefix(language)+finalPrompt).length,max_output_tokens:16384,elapsed_ms:Date.now()-_pwbStartedAt});
+          const _raw3=(_j3.candidates&&_j3.candidates[0]&&_j3.candidates[0].content&&_j3.candidates[0].content.parts&&_j3.candidates[0].content.parts[0]&&_j3.candidates[0].content.parts[0].text)||'';
+          const _p3=_pwbJsonRepair.parseBriefJson(_raw3,_repairJsonG); if(_p3.obj){_pwbParsed=_p3;_pwbParsed.how='retry_'+_p3.how;}
+          _pwbFinish=(_j3.candidates&&_j3.candidates[0]&&_j3.candidates[0].finishReason)||_pwbFinish;_pwbRawChars=_raw3.length||_pwbRawChars;}
+      }catch(_re){console.warn('[prewrite-brief] parse retry failed:',String(_re&&_re.message||_re).slice(0,160));}
     }
+    brief=_pwbParsed.obj;
+    if(brief&&_pwbParsed.how&&_pwbParsed.how!=='as_is')console.log('[prewrite-brief] JSON recovered: '+_pwbParsed.how+' | finish='+_pwbFinish);
     if (!brief) return res.status(502).json({
       success:false,
       stage:'gemini_parse',
       retryable:true,
-      error:'Gemini answered, but the Prewrite JSON could not be parsed safely.',
+      error:'Gemini answered, but the Prewrite JSON could not be parsed safely'+(_pwbFinish==='MAX_TOKENS'?' (the answer was cut off at the length limit)':(_pwbFinish?' (finish: '+_pwbFinish+')':''))+(_pwbParseRetry?'; a second generation did not help either.':'.'),
       generation_usage:_pwbUsageSnapshot(),
-      diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,response_chars:rawText.length,finish_reason:d2&&d2.candidates&&d2.candidates[0]&&d2.candidates[0].finishReason||null,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,generation_usage:_pwbUsageSnapshot()}
+      diagnostic:{model:_pwbGeminiModelUsed||GEMINI_MODEL,response_chars:_pwbRawChars,finish_reason:_pwbFinish,parse_retry:_pwbParseRetry,elapsed_ms:Date.now()-_pwbStartedAt,network_fast_lane:!!_pwbNetworkFastLane,generation_usage:_pwbUsageSnapshot()}
     });
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
