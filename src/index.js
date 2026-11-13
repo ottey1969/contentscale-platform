@@ -59999,6 +59999,10 @@ const _pwbBootstrapJobs = new Map();
 // A normal Tracker request runs synchronously. Keep its NOT PASSED diagnostic as a job row, exactly like a Network job,
 // so "Complete missing only" can reuse the research instead of leaving the owner without a next step. A background job
 // run already writes its own row. The request is stored without the optional HTML fallback.
+// Full Brief output limit. Live 2026-11-13 an English Brief used 16,373 of 16,384 output tokens and was cut off: only the
+// start of the JSON survived (no SEO package, no blueprint). gemini-2.5-flash-lite allows up to 65,536 output tokens; a
+// Brief is usually 11-16k, so 32k gives room without changing a normal Brief's cost (output is billed per token used).
+const _PWB_BRIEF_MAX_OUTPUT=Math.min(65536,Math.max(16384,Number(process.env.PREWRITE_BRIEF_MAX_OUTPUT_TOKENS||32768)));
 async function _pwbRetainSyncDiagnostic(req,client,payload){
   if(String(req&&req.query&&req.query._pwbBackground||'')==='1'||!client||!client.id)return null;
   try{
@@ -60932,7 +60936,7 @@ Return ONLY valid JSON, no markdown, no preamble.
     const _pwbBudget={
       max_calls:Math.max(5,Number(process.env.PREWRITE_GEMINI_MAX_CALLS||10)),
       max_input_tokens:Math.max(30000,Number(process.env.PREWRITE_GEMINI_MAX_INPUT_TOKENS||120000)),
-      max_billable_output_tokens:Math.max(8000,Number(process.env.PREWRITE_GEMINI_MAX_BILLABLE_OUTPUT_TOKENS||30000)),
+      max_billable_output_tokens:Math.max(8000,Number(process.env.PREWRITE_GEMINI_MAX_BILLABLE_OUTPUT_TOKENS||45000)),
       skipped_calls:[]
     };
     const _pwbUsage={calls:[],input_tokens:0,output_tokens:0,thinking_tokens:0,billable_output_tokens:0,total_tokens:0,cached_input_tokens:0,attempted_calls:0};
@@ -61246,9 +61250,9 @@ ${claimsBlock.slice(0,2400)}`;
         _pwbGeminiAttempts=_gi+1; _pwbGeminiModelUsed=_model;
         try{
           const ctrl2=new AbortController(); const _t2=setTimeout(()=>ctrl2.abort(),75000);
-          const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
+          const r2=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.4,maxOutputTokens:_PWB_BRIEF_MAX_OUTPUT,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl2.signal});
           clearTimeout(_t2); _pwbGeminiStatus=r2.status; const _txt=await r2.text(); let _json={}; try{_json=_txt?JSON.parse(_txt):{}}catch(_je){}
-          if(r2.ok){_pwbRecordUsage('full_brief',_model,_json,{prompt_chars:(_langPrefix(language)+finalPrompt).length,max_output_tokens:16384,elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt});d2=_json;break}
+          if(r2.ok){_pwbRecordUsage('full_brief',_model,_json,{prompt_chars:(_langPrefix(language)+finalPrompt).length,max_output_tokens:_PWB_BRIEF_MAX_OUTPUT,elapsed_ms:Date.now()-_pwbGeminiNetworkStartedAt});d2=_json;break}
           _pwbGeminiError=((_json.error&&_json.error.message)||_txt||('Gemini '+r2.status)).slice(0,700);
           console.warn('[prewrite-brief] Gemini model',_model,'attempt',_pwbGeminiAttempts,'failed:',r2.status,_pwbGeminiError.slice(0,220));
           if(!(r2.status===429||r2.status>=500))break;
@@ -61279,9 +61283,9 @@ ${claimsBlock.slice(0,2400)}`;
       const _model=_pwbGeminiModelUsed||_pwbBriefPrimary;
       try{
         const ctrl3=new AbortController(); const _t3=setTimeout(()=>ctrl3.abort(),75000);
-        const r3=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:16384,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl3.signal});
+        const r3=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${_model}:generateContent?key=${geminiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{text:_langPrefix(language)+finalPrompt}]}],generationConfig:{temperature:0.2,maxOutputTokens:_PWB_BRIEF_MAX_OUTPUT,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}}),signal:ctrl3.signal});
         clearTimeout(_t3); const _txt3=await r3.text(); let _j3={}; try{_j3=_txt3?JSON.parse(_txt3):{}}catch(_je){}
-        if(r3.ok){_pwbRecordUsage('full_brief_parse_retry',_model,_j3,{prompt_chars:(_langPrefix(language)+finalPrompt).length,max_output_tokens:16384,elapsed_ms:Date.now()-_pwbStartedAt});
+        if(r3.ok){_pwbRecordUsage('full_brief_parse_retry',_model,_j3,{prompt_chars:(_langPrefix(language)+finalPrompt).length,max_output_tokens:_PWB_BRIEF_MAX_OUTPUT,elapsed_ms:Date.now()-_pwbStartedAt});
           const _raw3=(_j3.candidates&&_j3.candidates[0]&&_j3.candidates[0].content&&_j3.candidates[0].content.parts&&_j3.candidates[0].content.parts[0]&&_j3.candidates[0].content.parts[0].text)||'';
           const _p3=_pwbJsonRepair.parseBriefJson(_raw3,_repairJsonG); if(_p3.obj){_pwbParsed=_p3;_pwbParsed.how='retry_'+_p3.how;}
           _pwbFinish=(_j3.candidates&&_j3.candidates[0]&&_j3.candidates[0].finishReason)||_pwbFinish;_pwbRawChars=_raw3.length||_pwbRawChars;}
