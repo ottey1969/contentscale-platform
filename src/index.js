@@ -61605,6 +61605,13 @@ ${claimsBlock.slice(0,2400)}`;
     ).filter(Boolean))).slice(0,18);
     const _pwbInitialPages=await Promise.all(_pwbInitialUrls.map(function(u){return _pwbFetchEvidencePage(u,_pwbMetaForUrl(u));}));
     _pwbInitialPages.forEach(function(x){if(x)_pwbCorpusMap.set(x.url,x);});
+    // Coverage backfill: a blocked or empty candidate page no longer fails the gate while other candidates remain.
+    try{
+      const _pwbBf=require('./prewrite-evidence-backfill.cjs'),_pwbFetchFor=function(u){return _pwbFetchEvidencePage(u,_pwbMetaForUrl(u));};
+      const _pwbStatBf=await _pwbBf.backfillEvidencePages({candidates:_pwbStatCandidateUrls,corpus:_pwbCorpusMap,required:8,maxAttempts:8,fetchPage:_pwbFetchFor,attempted:_pwbInitialUrls});
+      const _pwbQuoteBf=await _pwbBf.backfillEvidencePages({candidates:_pwbQuoteCandidateUrls,corpus:_pwbCorpusMap,required:10,maxAttempts:10,fetchPage:_pwbFetchFor,attempted:_pwbInitialUrls});
+      _pwbEvidenceSearch.coverage_backfill={statistics:_pwbStatBf,expert_quotes:_pwbQuoteBf};
+    }catch(_e){}
 
     const _pwbParseJson=function(raw){
       raw=String(raw||'').trim();const tries=[raw,raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'')];const a=raw.indexOf('{'),b=raw.lastIndexOf('}');if(a>=0&&b>a)tries.push(raw.slice(a,b+1));
@@ -61612,7 +61619,7 @@ ${claimsBlock.slice(0,2400)}`;
     };
     const _pwbExtractEvidence=async function(corpus,label){
       if(!corpus.length)return {ok:true,obj:{statistics:[],expert_quotes:[],expert_insights:[]},error:''};
-      const sourceText=corpus.slice(0,14).map(function(x,i){return 'SOURCE '+(i+1)+'\nURL: '+x.url+'\nTITLE: '+(x.title||'')+'\nAUTHORITY CLASS: '+x.authority.authority_class+'\nTEXT:\n'+x.text.slice(0,3000);}).join('\n\n');
+      const _pwbPer=require('./prewrite-evidence-backfill.cjs').perSourceChars(corpus.length);const sourceText=corpus.map(function(x,i){return 'SOURCE '+(i+1)+'\nURL: '+x.url+'\nTITLE: '+(x.title||'')+'\nAUTHORITY CLASS: '+x.authority.authority_class+'\nTEXT:\n'+x.text.slice(0,_pwbPer);}).join('\n\n');
       const prompt=`EVIDENCE QUALITY EXTRACTION (${label}). Return JSON only with exactly {"statistics":[],"expert_quotes":[],"expert_insights":[]}.
 TOPIC: ${keyword}
 
