@@ -17,6 +17,18 @@ function normUrl(u) {
 }
 function sameUrl(a, b) { const x = normUrl(a); return !!x && x === normUrl(b); }
 
+// Modifier words: question words, articles and price words in nl/es/en. "cuánto cuesta un consultor geo" asks about the
+// page /consultor-geo/ (owner 2026-11-13: the Brief proposed a new /cuanto-cuesta-consultor-geo next to the existing service
+// page that already has a price section). The core words ("consultor geo") decide the match when the full keyword does not.
+const MODIFIERS = new Set(('wat kost kosten kostte prijs prijzen tarief tarieven hoeveel hoe waarom welke beste goedkoop een de het van voor bij in op met per je mijn ik is zijn ' +
+  'cuanto cuanta cuesta cuestan coste costes costo costos precio precios tarifa tarifas cobra cobran como que cual mejor mejores barato un una el la los las de del en para por mi es son ' +
+  'how much does do cost costs price prices pricing rate rates fee fees what which best cheap a an the of for in to my is are ' +
+  'hacer hago saber conseguir lograr zorg zorgen laten weet weten krijg krijgen get make check know find your').split(/\s+/));
+const coreWords = kw => kw.filter(w => !MODIFIERS.has(w));
+// Abbreviations written out in addresses: /generative-engine-optimization-consultant/ is the GEO consultant page.
+const SPELLED = { geo: 'generative engine optimization', aeo: 'answer engine optimization', seo: 'search engine optimization' };
+const inPath = (w, pw, joined) => pw.includes(w) || joined.indexOf(stem(w)) >= 0 || (SPELLED[w] && joined.indexOf(SPELLED[w]) >= 0);
+
 // Same-intent candidates among the site's verified URLs (sitemap or homepage links).
 // region: the Brief's market code ("nl"); a URL on that market's subdomain or path is preferred when several match.
 function findSameIntentPages(keyword, urls, { region } = {}) {
@@ -29,11 +41,14 @@ function findSameIntentPages(keyword, urls, { region } = {}) {
     if (!pw.length) continue;
     const joined = pw.join(' ');
     const matched = kw.filter(w => pw.includes(w) || joined.indexOf(stem(w)) >= 0);
-    const score = matched.length / kw.length;
+    let score = matched.length / kw.length, coreFull = false;
+    // Core-word match: at least two core words, all of them in the address (modifiers such as price words ignored).
+    const core = coreWords(kw);
+    if (core.length >= 2 && core.length < kw.length && core.every(w => inPath(w, pw, joined))) { coreFull = true; score = Math.max(score, 1); }
     if (score < 0.5) continue;
     let host = ''; try { host = new URL(url).hostname.toLowerCase(); } catch (e) {}
     const marketMatch = !!market && (host.split('.')[0] === market || pw[0] === market);
-    out.push({ url, score: Math.round(score * 100) / 100, full: matched.length === kw.length, matched, extra_words: Math.max(0, pw.length - matched.length - (marketMatch && pw[0] === market ? 1 : 0)), market_match: marketMatch });
+    out.push({ url, score: Math.round(score * 100) / 100, full: matched.length === kw.length || coreFull, core_match: coreFull, matched, extra_words: Math.max(0, pw.length - matched.length - (marketMatch && pw[0] === market ? 1 : 0)), market_match: marketMatch });
   }
   return out.sort((a, b) => (b.full - a.full) || (b.score - a.score) || (b.market_match - a.market_match) || (a.extra_words - b.extra_words) || a.url.length - b.url.length).slice(0, 5);
 }
@@ -84,4 +99,4 @@ function briefFindingsForGrowth(brief) {
     note: 'Reference from the Pre-Write Brief. Growth reads the live page and the ranking pages itself; use these points to check what the page still misses. Nothing here is verified evidence.' };
 }
 
-module.exports = { findSameIntentPages, applyExistingPageDecision, briefFindingsForGrowth, sameUrl, normUrl };
+module.exports = { coreWords, findSameIntentPages, applyExistingPageDecision, briefFindingsForGrowth, sameUrl, normUrl };

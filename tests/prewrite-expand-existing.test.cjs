@@ -114,3 +114,19 @@ test('Growth: "Expand this page in Growth" opens the tracked page with keyword, 
   assert.doesNotMatch((await call(routes['GET /track/:token/growth/auto-research'], req({ page_id: '12' }))).body, /briefFindings/);
   assert.doesNotMatch((await call(routes['GET /track/:token/growth/auto-research'], { ...req({ page_id: '12', from: 'brief_id=41' }), growth: { can_edit: false, pages } })).body, /briefFindings/);
 });
+
+// Owner 2026-11-13: "cuánto cuesta un consultor geo" proposed a new page next to /consultor-geo/ (which has a price section).
+test('core words decide when price or question words make the keyword longer than the address', () => {
+  const { findSameIntentPages } = require('../src/prewrite-existing-page.cjs');
+  const full = (k, u) => findSameIntentPages(k, u, {}).filter(x => x.full).map(x => x.url);
+  const es = ['https://es.contentscale.site/consultor-geo/', 'https://es.contentscale.site/que-es-geo/', 'https://es.contentscale.site/chatgpt-recomiende-mi-empresa/'];
+  assert.deepEqual(full('cuánto cuesta un consultor geo', es), ['https://es.contentscale.site/consultor-geo/']);
+  assert.deepEqual(full('cómo hacer que chatgpt recomiende mi empresa', es), ['https://es.contentscale.site/chatgpt-recomiende-mi-empresa/']);
+  assert.deepEqual(full('how much does a geo consultant cost', ['https://contentscale.site/generative-engine-optimization-consultant/']), ['https://contentscale.site/generative-engine-optimization-consultant/']);
+  // Not over-matching: a different topic, one core word only, or a comparison with an extra core word stays a new page.
+  assert.deepEqual(full('wat kost een geo consultant', ['https://nl.contentscale.site/wat-is-geo/', 'https://nl.contentscale.site/diensten/']), []);
+  assert.deepEqual(full('wat kost geo', ['https://nl.contentscale.site/wat-is-geo/']), []);
+  assert.deepEqual(full('agencia geo o consultor geo', es), []);
+  const hit = findSameIntentPages('cuánto cuesta un consultor geo', es, {})[0];
+  assert.equal(hit.core_match, true);
+});
