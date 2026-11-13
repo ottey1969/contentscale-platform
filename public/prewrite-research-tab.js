@@ -96,7 +96,20 @@
     var qChips = document.createElement('div'); qChips.id = 'cs-ai-question-options';
     // Questions the AI systems themselves raise in the pasted answers (Perplexity's related questions, for example).
     var qFromAnswers = document.createElement('div'); qFromAnswers.id = 'cs-ai-question-from-answers';
-    qWrap.append(qLabel, qInput, qSrc, qChips, qFromAnswers);
+    // Optional translation next to the questions (owner 2026-11-13). The questions stay in the market language; the
+    // translation is only a reading aid, remembered per browser.
+    var TR_KEY = 'cs_pwb_question_translate';
+    var trSel = document.createElement('select'); trSel.id = 'cs-ai-question-translate'; trSel.setAttribute('aria-label', 'Show a translation of the questions');
+    trSel.style.cssText = 'margin-left:8px;font-size:12px;padding:2px 6px;background:transparent;color:inherit;border:1px solid #475569;border-radius:6px';
+    [['', 'No translation'], ['nl', 'Translate: Nederlands'], ['en', 'Translate: English'], ['es', 'Translate: Español']].forEach(function (o) { var op = document.createElement('option'); op.value = o[0]; op.textContent = o[1]; trSel.appendChild(op); });
+    try { trSel.value = localStorage.getItem(TR_KEY) || ''; } catch (e) {}
+    var qTr = document.createElement('small'); qTr.id = 'cs-ai-question-translation'; qTr.style.cssText = 'display:block;color:#94a3b8;font-style:italic';
+    var trMap = {};
+    function trOf(text) { return trSel.value && trMap[text] ? trMap[text] : ''; }
+    function showMainTr() { var t = trOf(String(qInput.value || '').trim()); qTr.textContent = t ? '↳ ' + t : ''; }
+    trSel.addEventListener('change', function () { try { localStorage.setItem(TR_KEY, trSel.value); } catch (e) {} qState.manual = false; qState.kw = ''; loadQuestion(); });
+    qLabel.appendChild(trSel);
+    qWrap.append(qLabel, qInput, qTr, qSrc, qChips, qFromAnswers);
     var askBox = document.createElement('div'); askBox.id = 'cs-research-ask'; askBox.append(qWrap, ask, askNote);
     var qState = { kw: '', manual: false, timer: null, seq: 0 };
     function tokenOf() { return window.TOKEN || ((location.pathname.match(/\/track\/([^/?#]+)/) || [])[1]) || ''; }
@@ -104,7 +117,9 @@
       var b = document.createElement('button'); b.type = 'button'; b.className = 'cs-q-chip';
       b.style.cssText = 'margin:4px 6px 0 0;padding:4px 10px;border-radius:14px;border:1px solid #475569;background:transparent;color:inherit;cursor:pointer;font-size:12px';
       b.textContent = (isKeyword ? 'Keyword: ' : '') + text; b.title = label || '';
-      b.addEventListener('click', function () { qInput.value = text; qInput.dataset.source = isKeyword ? '' : (label || ''); qState.manual = true; qSrc.textContent = isKeyword ? 'You chose the keyword itself.' : 'You chose: ' + (label || 'customer question'); syncAsk(); });
+      var tr = isKeyword ? '' : trOf(text);
+      if (tr) { var sm = document.createElement('small'); sm.style.cssText = 'display:block;color:#94a3b8;font-style:italic;font-size:11px'; sm.textContent = tr; b.appendChild(sm); }
+      b.addEventListener('click', function () { qInput.value = text; qInput.dataset.source = isKeyword ? '' : (label || ''); qState.manual = true; qSrc.textContent = isKeyword ? 'You chose the keyword itself.' : 'You chose: ' + (label || 'customer question'); showMainTr(); syncAsk(); });
       return b;
     }
     function loadQuestion() {
@@ -114,13 +129,13 @@
       qState.kw = kw; qState.manual = false; var seq = ++qState.seq;
       if (!tok) { qInput.value = kw; qSrc.textContent = 'The keyword is used.'; return; }
       qSrc.textContent = 'Finding the question customers ask in Google…';
-      var u = '/api/tracker-client/' + encodeURIComponent(tok) + '/prewrite-customer-question?keyword=' + encodeURIComponent(kw) + '&region=' + encodeURIComponent(val('pwbRegion')) + '&language=' + encodeURIComponent(val('pwbLanguage'));
+      var u = '/api/tracker-client/' + encodeURIComponent(tok) + '/prewrite-customer-question?keyword=' + encodeURIComponent(kw) + '&region=' + encodeURIComponent(val('pwbRegion')) + '&language=' + encodeURIComponent(val('pwbLanguage')) + (trSel.value ? '&translate=' + encodeURIComponent(trSel.value) : '');
       fetch(u).then(function (r) { return r.json(); }).then(function (d) {
         if (seq !== qState.seq || qState.manual) return;
-        qChips.innerHTML = '';
+        qChips.innerHTML = ''; trMap = (d && d.translations) || {};
         if (d && d.success && d.best_question) {
           qInput.value = d.best_question; qInput.dataset.source = d.best_label || '';
-          qSrc.textContent = 'Chosen automatically: ' + (d.best_label || 'customer question') + '. Change it or pick another below.';
+          qSrc.textContent = 'Chosen automatically: ' + (d.best_label || 'customer question') + '. Change it or pick another below.'; showMainTr();
           (d.questions || []).filter(function (q) { return q.text !== d.best_question; }).slice(0, 5).forEach(function (q) { qChips.appendChild(chip(q.text, q.label, false)); });
         } else {
           qInput.value = kw; qInput.dataset.source = '';
@@ -136,7 +151,7 @@
       }).catch(function () { if (seq === qState.seq && !qState.manual) { qInput.value = kw; qSrc.textContent = 'Questions unavailable; the keyword is used.'; syncAsk(); } });
     }
     function scheduleQuestion() { clearTimeout(qState.timer); qState.timer = setTimeout(loadQuestion, 700); }
-    qInput.addEventListener('input', function () { qState.manual = true; qInput.dataset.source = 'Your own question'; qSrc.textContent = 'Your own question.'; syncAsk(); });
+    qInput.addEventListener('input', function () { qTr.textContent = ''; qState.manual = true; qInput.dataset.source = 'Your own question'; qSrc.textContent = 'Your own question.'; syncAsk(); });
     ['pwbKeyword', 'pwbRegion', 'pwbLanguage'].forEach(function (id) { var el = $(id); if (el) { el.addEventListener('change', function () { qState.manual = false; scheduleQuestion(); }); if (id === 'pwbKeyword') el.addEventListener('input', scheduleQuestion); } });
     var status = document.createElement('p'); status.className = 'cs-rp-status'; status.setAttribute('role', 'status');
     var note = document.createElement('p');

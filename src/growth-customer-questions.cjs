@@ -177,6 +177,17 @@ async function googleWithFallback({ query, gl, hl, key, fetchImpl, ownHost }) {
     questions: f.questions.map(q => ({ ...q, market: alt, label: q.label.replace(/^Google/, 'Google ' + name) + ' · ' + home + ' showed none' })) };
 }
 
+// A question in another language than the market's is not a customer question there (owner 2026-11-13: Google Spain
+// showed English People-also-ask questions for a Spanish keyword). Only English is detected, by words that do not exist in
+// Dutch, Spanish, German, French, Italian or Portuguese; a question in the market language, or with too few clues, stays.
+const EN_ONLY=new Set(['the','for','how','what','does','your','which','much','with','and','should','why','when','who','services','businesses','business','choose','agency','agencies','cost','costs','get','my','can','do','is','are','to','of','best']);
+const EN_STRONG=new Set(['the','for','how','what','does','your','which','much','with','and','should','why','when','who','choose']);
+function otherLanguage(text,hl){
+  if(!hl||String(hl).toLowerCase()==='en')return false;
+  const w=String(text||'').toLowerCase().match(/[\p{L}']+/gu)||[];if(w.length<4)return false;
+  const strong=w.filter(x=>EN_STRONG.has(x)).length,all=w.filter(x=>EN_ONLY.has(x)).length;
+  return strong>=2&&all/w.length>=0.3;
+}
 async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl = 'us', hl = 'en', key, fetchImpl, model } = {}) {
   const offer = pageOffer(html);
   const ownHost = (() => { try { return new URL(url).hostname.replace(/^www\./, '').toLowerCase(); } catch (e) { return ''; } })();
@@ -189,7 +200,7 @@ async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl
     ? {status:'AI_NOT_NEEDED_GOOGLE_MATCH',questions:[]}
     : await fromAi({ offer, keyword, language: hl || offer.language || 'en', model });
   const seen = new Set(), questions = [];
-  for (const q of [...g.questions, ...a.questions]) { const k = q.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); if (k && !seen.has(k)) { seen.add(k); questions.push(q); } }
+  for (const q of [...g.questions, ...a.questions]) { if (otherLanguage(q.text, hl)) continue; const k = q.text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); if (k && !seen.has(k)) { seen.add(k); questions.push(q); } }
   const ranked=rankQuestions(questions,{offer,seed});
   return { status: questions.length ? 'QUESTIONS_FOUND' : 'NO_QUESTIONS', tracked_keyword: clean(keyword) || null, searched_with: seed || null,
     offer: { title: offer.title, h1: offer.h1, h2_count: offer.h2.length }, google: { status: g.status, ...(g.searched ? { searched: g.searched } : {}), ...(g.fallback_market ? { fallback_market: g.fallback_market } : {}) }, ai: { status: a.status, ...(a.error ? { error: a.error } : {}) },
@@ -198,4 +209,4 @@ async function discoverCustomerQuestions({ url = '', html = '', keyword = '', gl
     note: 'Best matching Google-observed question first (People Also Ask or Related Searches). If none matches this page, AI suggestions are labelled fallback ideas; unrelated Google observations are shown last. Relevance is based on the page topic, not measured search volume. You can always edit the question. Search Console is optional.' };
 }
 
-module.exports = { serperKey, aiQuestionForTerm, isQuestion, notCustomer, discoverCustomerQuestions, pageOffer, fromGoogle, fromAi, searchable, rankQuestions };
+module.exports = { otherLanguage, serperKey, aiQuestionForTerm, isQuestion, notCustomer, discoverCustomerQuestions, pageOffer, fromGoogle, fromAi, searchable, rankQuestions };
