@@ -47054,6 +47054,15 @@ var _pwbCurrentShareUrl='';
 function _pwbNetworkPlacement(){
   try{var q=new URLSearchParams(window.location.search||'');var n=Number(q.get('networkPlacement')||0);return Number.isSafeInteger(n)&&n>0?n:0;}catch(_e){return 0;}
 }
+// The NOT PASSED diagnostic is stored on the server; after a reload or deploy only the browser lost its job id.
+// Ask the server once per keyword for the newest reusable diagnostic, then refresh the buttons.
+var _pwbDiagLookupDone={};
+function _pwbLookupSavedDiagnostic(kw){
+  kw=String(kw||'').trim();var key=kw.toLowerCase()+'|'+_pwbNetworkPlacement();if(!kw||_pwbDiagLookupDone[key])return;_pwbDiagLookupDone[key]=1;
+  api('/prewrite-diagnostic-latest?keyword='+encodeURIComponent(kw),'GET').then(function(d){
+    if(d&&d.job_id&&_pwbActionKeyword()===kw){_pwbRememberDiagnosticJob(d.job_id,kw);try{_pwbApplyActionState();}catch(_e){}}
+  }).catch(function(){});
+}
 function _pwbActionKeyword(){var e=document.getElementById('pwbKeyword');return String(e&&e.value||'').trim();}
 function _pwbApplyActionState(){
   var b=_pwbCurrentBrief||{},qc=b.ai_quality_check||{},pq=b.publication_quality_check||{};
@@ -47066,6 +47075,7 @@ function _pwbApplyActionState(){
   var placement=_pwbNetworkPlacement();
   var aiUi=_pwbAiFiveUiState(),aiInputReady=!_NETWORK_PREWRITE_AUTHORIZED||aiUi.manual_ready;
   var diag=_pwbRestoreDiagnosticJob(_pwbActionKeyword());
+  if(!diag&&hasBrief&&_pwbCurrentNotPassed)_pwbLookupSavedDiagnostic(_pwbActionKeyword());
   var approve=document.getElementById('pwbApproveGenerate'),complete=document.getElementById('pwbRegenerateMissing'),finalQa=document.getElementById('pwbRunFinalQa'),copy=document.getElementById('pwbCopyExternalAi'),share=document.getElementById('pwbShareBrief'),state=document.getElementById('pwbActionState'),shareStatus=document.getElementById('pwbShareStatus'),fresh=document.getElementById('pwbGenerateBtn');
   [fresh,complete,finalQa,approve].forEach(function(x){if(x){x.classList.remove('primary','pwbNextAction','pwbDoneAction');}});
 
@@ -60129,6 +60139,7 @@ app.post('/api/tracker-client/:token/prewrite-brief', (req,res,next)=>{
   setImmediate(()=>_bootstrapAndRunPwbJob(jobId).catch(e=>console.error('[prewrite-async] unhandled bootstrap job='+jobId,e&&e.message||e)));
 });
 
+require('./prewrite-diagnostic-lookup.cjs').registerPrewriteDiagnosticLookup(app,pool,{ensureTable:()=>_ensurePwbAsyncJobsTable()});
 app.get('/api/tracker-client/:token/prewrite-brief-job/:jobId', async (req,res)=>{
   const boot=_pwbBootstrapJobs.get(req.params.jobId);
   if(boot && String(boot.token)===String(req.params.token)){
