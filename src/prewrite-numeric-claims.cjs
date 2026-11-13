@@ -9,6 +9,15 @@ const MONEY = /(?:[€$£]\s?\d[\d.,]*(?:\s?(?:k|mil|million|millones))?|\d[\d.,
 const PERCENT = /\d[\d.,]*\s?%/g;
 const RANGE = /(\d[\d.,]*)\s?(?:€|eur|euros?|%)?\s?(?:-|–|—|a|to|tot|y)\s?([€$£]?\s?\d[\d.,]*)(?:\s?(?:€|eur\b|euros?\b|%))?/gi;
 
+// Currency of an amount (owner 2026-11-13: a Dutch-language Brief wrote "€175" and counted "$175" on an American page as
+// its source). The number alone is not enough: an amount is supported only in the same currency.
+function currencyOf(text) {
+  const t = String(text || '');
+  if (/€|\beur(?:os?)?\b/i.test(t)) return 'EUR';
+  if (/£|\bgbp\b/i.test(t)) return 'GBP';
+  if (/\$|\busd\b|d[oó]lares|\bdollars?\b/i.test(t)) return 'USD';
+  return null;
+}
 // "3.000", "3,000", "3000", "1.5" → canonical number strings, so the same amount in another notation matches.
 function numbersIn(text) {
   const out = new Set();
@@ -32,9 +41,9 @@ function claimsOf(brief) {
   const out = [];
   for (const [field, text] of fields) {
     const t = String(text || ''), seen = new Set();
-    const found = [...(t.match(MONEY) || []), ...(t.match(PERCENT) || [])];
-    for (const r of t.matchAll(RANGE)) if (/[€$£%]|eur/i.test(r[0])) found.push(r[1], r[2]);
-    for (const f of found) for (const n of numbersIn(f)) { const k = field + ':' + n; if (!seen.has(k) && Number(n) > 0) { seen.add(k); out.push({ field, number: n, text: f.trim() }); } }
+    const found = [...(t.match(MONEY) || []).map(x => [x, currencyOf(x)]), ...(t.match(PERCENT) || []).map(x => [x, null])];
+    for (const r of t.matchAll(RANGE)) if (/[€$£%]|eur/i.test(r[0])) { const c = /%/.test(r[0]) ? null : currencyOf(r[0]); found.push([r[1], c], [r[2], c]); }
+    for (const [f, currency] of found) for (const n of numbersIn(f)) { const k = field + ':' + n; if (!seen.has(k) && Number(n) > 0) { seen.add(k); out.push({ field, number: n, text: String(f).trim(), currency }); } }
   }
   return out;
 }
@@ -44,12 +53,22 @@ function supportCorpus(brief) {
   return [b.evidence, b.price_facts, b.evidence_research && b.evidence_research.approved, fs.verified_business_facts_used, b.competitor_table, b.brand_facts]
     .map(x => x == null ? '' : typeof x === 'string' ? x : JSON.stringify(x)).join(' ');
 }
+// Amounts in the support corpus with their currency: "number|EUR". A claim in euros is not supported by the same number in
+// dollars; a number that occurs only without any currency still supports it (as before).
+function moneyKeys(text) {
+  const keys = new Set(), any = new Set(), t = String(text || '');
+  const add = (f, c) => { for (const n of numbersIn(f)) { any.add(n); if (c) keys.add(n + '|' + c); } };
+  for (const m of t.match(MONEY) || []) add(m, currencyOf(m));
+  for (const r of t.matchAll(RANGE)) if (/[€$£]|eur/i.test(r[0])) { const c = currencyOf(r[0]); add(r[1], c); add(r[2], c); }
+  return { keys, any };
+}
 function unverifiedNumbers(brief) {
-  const ok = numbersIn(supportCorpus(brief));
-  const bad = claimsOf(brief).filter(c => !ok.has(c.number));
+  const corpus = supportCorpus(brief), ok = numbersIn(corpus), money = moneyKeys(corpus);
+  const supported = c => !c.currency ? ok.has(c.number) : (money.keys.has(c.number + '|' + c.currency) || (ok.has(c.number) && !money.any.has(c.number)));
+  const bad = claimsOf(brief).filter(c => !supported(c));
   // One entry per number, with every field it appears in.
   const by = new Map();
-  for (const c of bad) { const e = by.get(c.number) || { number: c.number, text: c.text, fields: [] }; if (!e.fields.includes(c.field)) e.fields.push(c.field); by.set(c.number, e); }
+  for (const c of bad) { const e = by.get(c.number) || { number: c.number, text: c.text, fields: [], currency: c.currency || null }; if (!e.fields.includes(c.field)) e.fields.push(c.field); by.set(c.number, e); }
   return [...by.values()];
 }
 // A "statistic" that is a marketing self-description (years of experience, "helps you", client counts of an agency list) is
@@ -66,13 +85,14 @@ const variants = n => { const v = Number(n); if (!Number.isFinite(v)) return [];
   if (!Number.isInteger(v)) out.add(String(n).replace('.', ','));
   return [...out]; };
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-function findOnPage(text, number) {
+function findOnPage(text, number, currency) {
   const t = String(text || '').replace(/\s+/g, ' ');
   for (const form of variants(number)) {
     const re = new RegExp('(?<![\\d.,])' + esc(form) + '(?![\\d]|[.,]\\d)', 'g'); let m;
     while ((m = re.exec(t))) {
       const around = t.slice(Math.max(0, m.index - 14), m.index + form.length + 14);
       if (!/[€$£]|\beur(?:os?)?\b|\busd\b/i.test(around)) continue;
+      if (currency && currencyOf(around) !== currency) continue; // $175 on the page is no source for €175
       let a = Math.max(0, m.index - 170), b = Math.min(t.length, m.index + form.length + 170);
       while (a > 0 && t[a - 1] !== ' ') a--; while (b < t.length && t[b] !== ' ') b++;
       return t.slice(a, b).trim();
@@ -84,7 +104,7 @@ function verifyOnPages(unverified, pages, { onTopic = () => true } = {}) {
   const verified = [], left = [];
   for (const u of unverified || []) {
     let hit = null;
-    for (const p of pages || []) { if (!p || !onTopic(p)) continue; const ex = findOnPage(p.text, u.number); if (ex) { hit = { number: u.number, text: u.text, excerpt: ex, source_url: p.url, source_title: p.title || '' }; break; } }
+    for (const p of pages || []) { if (!p || !onTopic(p)) continue; const ex = findOnPage(p.text, u.number, u.currency); if (ex) { hit = { number: u.number, text: u.text, excerpt: ex, source_url: p.url, source_title: p.title || '' }; break; } }
     if (hit) verified.push(hit); else left.push(u);
   }
   return { verified, left };
@@ -124,4 +144,4 @@ function alignActionPlan(brief, language) {
   brief.action_plan = [{ action: EXPAND_TEXT[lang](url) }].concat(kept);
   return before - kept.length;
 }
-module.exports = { alignActionPlan, claimsOf, numbersIn, supportCorpus, unverifiedNumbers, isSelfPromo, findOnPage, verifyOnPages, removeUnverified };
+module.exports = { currencyOf, alignActionPlan, claimsOf, numbersIn, supportCorpus, unverifiedNumbers, isSelfPromo, findOnPage, verifyOnPages, removeUnverified };

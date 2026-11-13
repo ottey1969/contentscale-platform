@@ -46625,6 +46625,25 @@ function _pwbDraftScope(){
 function _pwbDraftNorm(v){
   return String(v||'').trim().toLowerCase().split(' ').filter(function(x){return x}).join(' ').slice(0,240);
 }
+// Owner 2026-11-13: "Dutch data must stay in NL, Spanish in ES". A draft belongs to keyword + output language + market, so
+// the same keyword in another language or country never shows (or overwrites) the other market's AI answers.
+function _pwbDraftKeyFor(keyword,language,region){
+  var k=_pwbDraftNorm(keyword);if(!k)return '';
+  var l=_pwbDraftNorm(language),r=_pwbDraftNorm(String(region||'').split(/\s+[\u2014\u2013-]\s+/)[0]);
+  return k+'||'+l+'||'+r;
+}
+function _pwbDraftCurrentKey(){
+  var g=function(id){var e=document.getElementById(id);return e?String(e.value||''):''};
+  return _pwbDraftKeyFor(g('pwbKeyword'),g('pwbLanguage'),g('pwbRegion'));
+}
+// Older drafts were stored per keyword only: reuse one only when its language and market match.
+function _pwbDraftFind(st,key){
+  if(!key)return null;
+  if(st.drafts[key])return st.drafts[key];
+  var parts=key.split('||'),legacy=st.drafts[parts[0]];
+  if(legacy&&_pwbDraftKeyFor(legacy.keyword,legacy.language,legacy.region)===key)return legacy;
+  return null;
+}
 function _pwbDraftReadStore(){
   try{
     var x=JSON.parse(localStorage.getItem(_pwbDraftScope())||'null');
@@ -46653,7 +46672,7 @@ function _pwbDraftSnapshot(){
 }
 function _pwbDraftSave(keyOverride){
   if(_pwbDraftSwitching)return;
-  var snap=_pwbDraftSnapshot(),key=_pwbDraftNorm(keyOverride||_pwbDraftActiveKey||snap.keyword);
+  var snap=_pwbDraftSnapshot(),key=keyOverride||_pwbDraftCurrentKey()||_pwbDraftActiveKey;
   if(!key)return;
   var st=_pwbDraftReadStore();
   st.drafts[key]=snap;
@@ -46693,14 +46712,14 @@ function _pwbDraftRestoreActive(){
   return false;
 }
 function _pwbDraftSwitchKeyword(nextKeyword){
-  var next=_pwbDraftNorm(nextKeyword);
+  var g=function(id){var e=document.getElementById(id);return e?String(e.value||''):''};
+  var next=_pwbDraftKeyFor(nextKeyword,g('pwbLanguage'),g('pwbRegion'));
   if(!next)return;
-  // Save the old draft BEFORE switching to the new keyword bucket.
-  if(_pwbDraftActiveKey&&_pwbDraftActiveKey!==next)_pwbDraftSave(_pwbDraftActiveKey);
-  var st=_pwbDraftReadStore();
+  // The fields still show the previous draft: it was saved on every input, so nothing is written here before switching.
+  var st=_pwbDraftReadStore(),found=_pwbDraftFind(st,next);
   _pwbDraftActiveKey=next;
-  if(st.drafts[next]){
-    _pwbDraftApply(st.drafts[next]);
+  if(found){
+    _pwbDraftApply(Object.assign({},found,{keyword:nextKeyword,language:g('pwbLanguage'),region:g('pwbRegion')}));
   }else{
     _pwbDraftSwitching=true;
     try{
@@ -46714,8 +46733,8 @@ function _pwbDraftSwitchKeyword(nextKeyword){
 }
 function _pwbDraftRemoveKeyword(keyword){
   var k=_pwbDraftNorm(keyword),st=_pwbDraftReadStore();
-  if(k&&st.drafts[k])delete st.drafts[k];
-  if(st.active_key===k)st.active_key='';
+  if(k)Object.keys(st.drafts).forEach(function(x){if(x===k||x.indexOf(k+'||')===0)delete st.drafts[x];});
+  if(st.active_key===k||String(st.active_key||'').indexOf(k+'||')===0)st.active_key='';
   _pwbDraftWriteStore(st);
 }
 
@@ -46767,11 +46786,19 @@ window.addEventListener('message',function(e){
 document.addEventListener('input',function(e){
   if(!e.target)return;
   if(e.target.id==='pwbKeyword'){_networkPrewriteEmitState();return}
-  if(['pwbTitle','pwbLanguage','pwbRegion','pwbGoogleSource','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0)_pwbDraftSave();
+  // Language and market are part of the draft key: typing in them must not copy this market's answers to another key.
+  if(['pwbTitle','pwbGoogleSource','pwbAioText','pwbChatgptText','pwbPerplexityText','pwbClaudeText','pwbCopilotText'].indexOf(e.target.id)>=0)_pwbDraftSave();
 });
 document.addEventListener('change',function(e){
-  if(e.target&&e.target.id==='pwbKeyword')_pwbDraftSwitchKeyword(e.target.value);
+  if(e.target&&(e.target.id==='pwbKeyword'||e.target.id==='pwbLanguage'||e.target.id==='pwbRegion'))_pwbDraftMarketChanged();
 });
+// Keyword, language or market changed: load that market's own draft, or start it empty (never carry another market's answers).
+function _pwbDraftMarketChanged(){
+  var key=_pwbDraftCurrentKey();
+  if(!key||key===_pwbDraftActiveKey)return;
+  var kw=document.getElementById('pwbKeyword');
+  _pwbDraftSwitchKeyword(kw?kw.value:'');
+}
 
 function _pwbAiFiveUiState(){
   var defs=[['google_aio','Google AIO / Gemini','pwbAioText'],['chatgpt','ChatGPT Search','pwbChatgptText'],['perplexity','Perplexity','pwbPerplexityText'],['claude','Claude','pwbClaudeText'],['copilot','Microsoft Copilot','pwbCopilotText']];
@@ -46802,7 +46829,7 @@ function showPrewriteBriefModal() {
   document.getElementById('prewriteBriefModal').classList.add('show');
   var _nab=document.getElementById('pwbNetworkAuthBadge');if(_nab)_nab.style.display=_NETWORK_PREWRITE_AUTHORIZED?'block':'none';
   var _kw=document.getElementById('pwbKeyword');
-  if(!_kw||!String(_kw.value||'').trim())_pwbDraftRestoreActive();else{_pwbDraftActiveKey=_pwbDraftNorm(_kw.value);_pwbDraftSave()}
+  if(!_kw||!String(_kw.value||'').trim())_pwbDraftRestoreActive();else{var _ck=_pwbDraftCurrentKey(),_cst=_pwbDraftReadStore(),_cd=_pwbDraftFind(_cst,_ck);if(_cd&&_ck!==_pwbDraftActiveKey){_pwbDraftActiveKey=_ck;_pwbDraftApply(_cd);}else{_pwbDraftActiveKey=_ck;_pwbDraftSave();}}
   _pwbUpdateAiFiveCount();
   loadRecentPrewriteBriefs();
   setTimeout(_networkPrewriteEmitState,0);
@@ -46901,7 +46928,7 @@ async function reopenPrewriteBrief(id) {
     }
     document.getElementById('pwbKeyword').value = data.keyword || '';
     document.getElementById('pwbTitle').value = data.working_title || '';
-    try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';var _gsEl=document.getElementById('pwbGoogleSource');if(_gsEl){var _gs=ae.google_aio&&ae.google_aio.google_source;_gsEl.value=(_gs==='ai_overview'||_gs==='gemini'||_gs==='no_ai_overview')?_gs:'';}document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbDraftActiveKey=_pwbDraftNorm(data.keyword||'');_pwbUpdateAiFiveCount();_pwbDraftSave()}catch(e){}
+    try{var ae=(data.brief&&data.brief.ai_system_evidence)||{};document.getElementById('pwbAioText').value=(ae.google_aio&&ae.google_aio.text)||'';var _gsEl=document.getElementById('pwbGoogleSource');if(_gsEl){var _gs=ae.google_aio&&ae.google_aio.google_source;_gsEl.value=(_gs==='ai_overview'||_gs==='gemini'||_gs==='no_ai_overview')?_gs:'';}document.getElementById('pwbChatgptText').value=(ae.chatgpt&&ae.chatgpt.text)||'';document.getElementById('pwbPerplexityText').value=(ae.perplexity&&ae.perplexity.text)||'';document.getElementById('pwbClaudeText').value=(ae.claude&&ae.claude.text)||'';document.getElementById('pwbCopilotText').value=(ae.copilot&&ae.copilot.text)||'';_pwbDraftActiveKey=_pwbDraftCurrentKey();_pwbUpdateAiFiveCount();_pwbDraftSave()}catch(e){}
     var d = new Date(data.created_at);
     stat.textContent = '\u2713 Reopened \u00b7 originally generated ' + d.toLocaleString() + ' · deterministic QA refreshed';
     _pwbSetCurrentBrief(id,data.brief,!(data.brief.ai_quality_check&&data.brief.ai_quality_check.ready_for_generation),data.final_qa_persisted===true,data.share&&data.share.active?data.share.url:'');
@@ -46994,6 +47021,7 @@ function csComboPick(id, val) {
   var inp = document.getElementById(id);
   if (inp) inp.value = val;
   csComboClose(id);
+  if (id === 'pwbLanguage' || id === 'pwbRegion') { try { _pwbDraftMarketChanged(); } catch (e) {} }
 }
 // Delegated pick: mousedown (fires before the input blurs) on any option.
 document.addEventListener('mousedown', function(e) {
