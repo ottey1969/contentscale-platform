@@ -60678,8 +60678,11 @@ async function _handlePrewriteBriefGeneration(req, res) {
     const _pwbSerpText=(serpUrls||[]).map(r=>(r.title||'')+' '+(r.snippet||'')).join(' ');
     const _pwbSenseDropped=[];
     if(_pwbSerpText.length>200)_pwbExternalCandidates=_pwbExternalCandidates.filter(x=>{const w=_pwbSenseDrift({keyword:keyword,title:x.title,serpText:_pwbSerpText});if(w){_pwbSenseDropped.push({url:x.exact_url,title:String(x.title||'').slice(0,200),word:w});return false;}return true;});
-    const _externalSourceBlock = _pwbExternalCandidates.length
-      ? 'AUTO EXTERNAL SOURCE RESEARCH — VERIFIED EXACT HTTPS PAGES. Choose 2-6 external_link_targets ONLY from this whitelist. Prefer primary/official, government, academic, standards, recognized industry or directly evidentiary pages. Do not add a URL not listed here.\n' + _pwbExternalCandidates.map((x,i)=>(i+1)+'. '+x.exact_url+' | '+(x.title||x.domain)+' | '+x.source_type+(x.snippet?' | '+x.snippet:'')).join('\n')
+    // Competitors (sites ranking for this keyword) are research, never a link target (owner 2026-11-13).
+    const _pwbCompLinks=require('./prewrite-competitor-links.cjs');
+    const _pwbLinkableCandidates=_pwbExternalCandidates.filter(x=>!_pwbCompLinks.isCompetitorLink(x.exact_url,_pwbCompLinks.competitorSites({serpUrls})));
+    const _externalSourceBlock = _pwbLinkableCandidates.length
+      ? 'AUTO EXTERNAL SOURCE RESEARCH — VERIFIED EXACT HTTPS PAGES. Choose 2-6 external_link_targets ONLY from this whitelist. Prefer primary/official, government, academic, standards, recognized industry or directly evidentiary pages. Do not add a URL not listed here. Never link to a competitor: sites that rank for this keyword are left out of this list on purpose.\n' + _pwbLinkableCandidates.map((x,i)=>(i+1)+'. '+x.exact_url+' | '+(x.title||x.domain)+' | '+x.source_type+(x.snippet?' | '+x.snippet:'')).join('\n')
       : 'AUTO EXTERNAL SOURCE RESEARCH: no verified exact external pages were found. Return external_link_targets as [] rather than inventing URLs.';
 
     if (!serpUrls.length) return res.status(502).json({
@@ -61837,16 +61840,20 @@ ${sourceText}`;
         const u=_pwbNormExactUrl(x.exact_url),src=_externalByUrl.get(u);
         if(!src)return null;
         return {anchor_text:String(x.anchor_text||src.title||src.domain).trim().slice(0,180),source_name:String(x.source_name||src.title||src.domain).trim().slice(0,220),exact_url:u,why:String(x.why||'').trim().slice(0,500),supports_claim:String(x.supports_claim||'').trim().slice(0,500),source_type:src.source_type};
-      }).filter(Boolean).slice(0,6);
+      }).filter(Boolean);
+    const _pwbCompSites=_pwbCompLinks.competitorSites({serpUrls,competitorTable:Array.isArray(brief.competitor_table)?brief.competitor_table:[]});
+    const _pwbCompRemoved=brief.external_link_targets.filter(x=>_pwbCompLinks.isCompetitorLink(x.exact_url,_pwbCompSites)).map(x=>x.exact_url);
+    brief.external_link_targets=brief.external_link_targets.filter(x=>!_pwbCompLinks.isCompetitorLink(x.exact_url,_pwbCompSites)).slice(0,6);
+    const _pwbNonCompetitorCandidates=_pwbExternalCandidates.filter(x=>!_pwbCompLinks.isCompetitorLink(x.exact_url,_pwbCompSites));
 
-    if(!brief.external_link_targets.length && _pwbExternalCandidates.length){
-      brief.external_link_targets=_pwbExternalCandidates.slice(0,3).map(src=>({anchor_text:src.title||src.domain,source_name:src.title||src.domain,exact_url:_pwbNormExactUrl(src.exact_url),why:'Verified exact source page discovered automatically during Prewrite research.',supports_claim:'Use only where the source actually supports the statement being cited.',source_type:src.source_type})).filter(x=>x.exact_url);
+    if(!brief.external_link_targets.length && _pwbNonCompetitorCandidates.length){
+      brief.external_link_targets=_pwbNonCompetitorCandidates.slice(0,3).map(src=>({anchor_text:src.title||src.domain,source_name:src.title||src.domain,exact_url:_pwbNormExactUrl(src.exact_url),why:'Verified exact source page discovered automatically during Prewrite research.',supports_claim:'Use only where the source actually supports the statement being cited.',source_type:src.source_type})).filter(x=>x.exact_url);
     }
 
     brief.link_research = {
       external_other_meaning:_pwbSenseDropped.slice(0,10),
       internal:{automatic:true,searched:true,sitemap_status:_pwbSitemapStatus,sitemap_url:_pwbSitemapUrl||'',discovered_by:_pwbSitemapDiscoveredBy||'',urls_found:clientSitemapUrls.length,targets_selected:brief.internal_link_targets.length,status:brief.internal_link_targets.length?'verified_targets':(clientSitemapUrls.length?'searched_no_relevant_target':'no_site_urls_verified'),owner_domain:(_pwbNetworkOwnerDomain||String(client.domain||'').replace(/^https?:\/\//i,'').replace(/\/.*$/,'')),publisher_domain:(_pwbNetworkPublisherDomain||''),candidate_urls:clientSitemapUrls.slice(0,50),manual_same_domain_allowed:true,rule:'Internal targets are reader-facing same-domain pages. Sitemap/XML/robots/feed/wp-json URLs are discovery inputs only.'},
-      external:{automatic:true,searched:true,candidates_found:_pwbExternalCandidates.length,targets_selected:brief.external_link_targets.length,rule:'Every external exact_url is server-validated against URLs discovered during current Prewrite research.'}
+      external:{automatic:true,searched:true,candidates_found:_pwbExternalCandidates.length,targets_selected:brief.external_link_targets.length,competitor_links_removed:_pwbCompRemoved,rule:'Every external exact_url is server-validated against URLs discovered during current Prewrite research.'}
     };
     if(_pwbNetworkAuthorized){_pwbEnsureResearchContractV506(brief,{network:true,publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain});_pwbEnsureNetworkInternalDestinationV506(brief,{publisher_domain:_pwbNetworkPublisherDomain||_pwbNetworkOwnerDomain,owner_domain:_pwbNetworkOwnerDomain,checked_url:_pwbNetworkPublisherCheckedUrl});}
     _pwbEvidenceBackedGapV506(brief);
