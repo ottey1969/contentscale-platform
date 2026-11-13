@@ -52,6 +52,8 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     // The read-only link is refused (the Tracker's read-only guard answers 403 before the route).
     assert.ok([403, 404].includes((await end(ro, { confirm: 'END_CASE_STUDY' })).status));
     assert.equal((await db.query('SELECT status FROM tracker_case_studies WHERE id=$1', [csId])).rows[0].status, 'active');
+    // The page is waiting on the day-14 Case Study checkpoint (scanner locked, page in Tracker action pages).
+    await db.query("UPDATE tracker_pages SET monitoring_waiting_input=TRUE,monitoring_gate_label='case_day_14',monitoring_request_at=NOW() WHERE id=$1", [pageId]);
     // The owner ends it.
     const ok = await end(token, { confirm: 'END_CASE_STUDY', reason: 'TEST: the page needs an update' });
     assert.equal(ok.status, 200, JSON.stringify(ok.json)); assert.equal(ok.json.ended, 1);
@@ -61,6 +63,26 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     assert.deepEqual([after.baseline_at.toISOString(), after.baseline_data, after.baseline_locked], [before.baseline_at.toISOString(), before.baseline_data, true], 'baseline unchanged');
     const ev = (await db.query("SELECT event_data FROM tracker_case_study_events WHERE case_study_id=$1 AND event_type='case_study_ended'", [csId])).rows;
     assert.equal(ev.length, 1); assert.equal(ev[0].event_data.baseline_preserved, true); assert.equal(ev[0].event_data.new_case_study_needs_new_baseline, true);
+    // Ending the Case Study ends its evidence checkpoint: the scanner is no longer locked on it.
+    const gate = (await db.query('SELECT monitoring_waiting_input,monitoring_gate_label,monitoring_request_at FROM tracker_pages WHERE id=$1', [pageId])).rows[0];
+    assert.deepEqual([gate.monitoring_waiting_input, gate.monitoring_gate_label, gate.monitoring_request_at], [false, null, null], 'case-study checkpoint cleared');
+    // Pages ended earlier (before this fix) still carry a case_day_* wait: the Tracker page list releases it once.
+    // A regular guided-monitoring wait is real and stays.
+    const stale = (await db.query("INSERT INTO tracker_pages(tracker_client_id,url,keyword,monitoring_waiting_input,monitoring_gate_label,monitoring_request_at) VALUES ($1,'https://test-cs.example/test-old-case/','TEST old',TRUE,'case_day_7',NOW()) RETURNING id", [clientId])).rows[0].id;
+    const regular = (await db.query("INSERT INTO tracker_pages(tracker_client_id,url,keyword,monitoring_waiting_input,monitoring_gate_label,monitoring_request_at) VALUES ($1,'https://test-cs.example/test-monitored/','TEST mon',TRUE,'monitoring_cycle',NOW()) RETURNING id", [clientId])).rows[0].id;
+    // The Tracker page list (dashboard GET) runs the same clear for these pages; it needs the full production schema,
+    // so here the exact SQL it uses and its page selection are run directly.
+    const clearSql = SRC.match(/const _CASE_STUDY_GATE_CLEAR_SQL=`([^`]+)`/)[1];
+    const staleIds = new Function('return ' + SRC.match(/function _caseStudyStaleGateIds[^\n]+/)[0])();
+    const rowsNow = (await db.query('SELECT id,url,monitoring_gate_label FROM tracker_pages WHERE id=ANY($1::int[])', [[stale, regular]])).rows;
+    const picked = staleIds(rowsNow, () => false);
+    assert.deepEqual(picked, [stale], 'only the case_day_* wait is picked');
+    assert.deepEqual(staleIds(rowsNow, p => Number(p.id) === Number(stale)), [], 'an active Case Study keeps its checkpoint');
+    await db.query(clearSql, [[stale, regular]]);
+    assert.match(SRC, /const _staleGate=_caseStudyStaleGateIds\(pagesR\.rows,p=>_csPageIds\.has\(Number\(p\.id\)\)\|\|_csByUrl\.has\(_caseStudyNormUrl\(p\.url\)\)\);\s*if\(_staleGate\.length\)\{\s*await pool\.query\(_CASE_STUDY_GATE_CLEAR_SQL,\[_staleGate\]\);/);
+    const g2 = (await db.query('SELECT id,monitoring_waiting_input,monitoring_gate_label FROM tracker_pages WHERE id=ANY($1::int[]) ORDER BY id', [[stale, regular]])).rows;
+    assert.deepEqual(g2.map(r => [r.monitoring_waiting_input, r.monitoring_gate_label]), [[false, null], [true, 'monitoring_cycle']]);
+    await db.query('DELETE FROM tracker_pages WHERE id=ANY($1::int[])', [[stale, regular]]);
     // Growth (and its CMS export) read the lock as an active row for the page: there is none now.
     assert.equal((await db.query("SELECT EXISTS(SELECT 1 FROM tracker_case_studies WHERE tracker_client_id=$1 AND tracker_page_id=$2 AND status='active') AS locked", [clientId, pageId])).rows[0].locked, false);
     // Ending again: nothing active.
