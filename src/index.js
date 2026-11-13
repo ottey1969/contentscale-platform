@@ -2806,6 +2806,10 @@ async function _ensureCaseStudySchema(){
     FOR EACH ROW EXECUTE FUNCTION contentscale_protect_case_study_content_version()`);
   _caseStudySchemaReady=true;
 }
+// Clears a day-7/day-14 Case Study evidence checkpoint; leaves a regular monitoring gate as it is.
+const _CASE_STUDY_GATE_CLEAR_SQL=`UPDATE tracker_pages SET monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,monitoring_request_at=NULL,monitoring_reminder_sent_at=NULL
+  WHERE id=ANY($1::int[]) AND monitoring_gate_label LIKE 'case_day_%'`;
+function _caseStudyStaleGateIds(pages,isActive){return (pages||[]).filter(p=>String(p&&p.monitoring_gate_label||'').indexOf('case_day_')===0&&!isActive(p)).map(p=>p.id);}
 function _caseStudyNormUrl(raw){try{const u=new URL(String(raw||''));return 'https://'+u.hostname.toLowerCase().replace(/^www\./,'')+(u.pathname.replace(/\/+$/,'')||'/');}catch(e){return String(raw||'').trim().toLowerCase().replace(/^http:\/\//,'https://').replace(/^https:\/\/www\./,'https://').replace(/\/+$/,'');}}
 function _caseStudyStableContentHash(raw){
   const crypto=require('crypto');
@@ -3354,6 +3358,14 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     });
 
     const _csByUrl=new Map(_csr.rows.map(x=>[_caseStudyNormUrl(x.canonical_url),x]));
+    // A Case Study ended before the end route cleared its checkpoint left the page waiting for good. No active Case
+    // Study (by page id or URL) means its day-7/day-14 checkpoint no longer exists: release that wait once.
+    const _csPageIds=new Set(_csr.rows.map(x=>Number(x.tracker_page_id)));
+    const _staleGate=_caseStudyStaleGateIds(pagesR.rows,p=>_csPageIds.has(Number(p.id))||_csByUrl.has(_caseStudyNormUrl(p.url)));
+    if(_staleGate.length){
+      await pool.query(_CASE_STUDY_GATE_CLEAR_SQL,[_staleGate]);
+      pagesR.rows.forEach(p=>{if(_staleGate.includes(p.id)){p.monitoring_waiting_input=false;p.monitoring_gate_label=null;p.monitoring_request_at=null;}});
+    }
     pagesR.rows.forEach(function(_p){
       const _cs=_csByUrl.get(_caseStudyNormUrl(_p.url));
       _p.case_study_active=!!_cs;
@@ -3836,6 +3848,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/end',async(req,res
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
   await _ensureCaseStudySchema();
+  await _ensureMonitoringGateSchema();
   await pool.query('ALTER TABLE tracker_case_studies ADD COLUMN IF NOT EXISTS ended_at TIMESTAMPTZ').catch(()=>{});
   await pool.query('ALTER TABLE tracker_case_studies ADD COLUMN IF NOT EXISTS ended_reason TEXT').catch(()=>{});
   const pr=await pool.query('SELECT id,url FROM tracker_pages WHERE id=$1 AND tracker_client_id=$2',[req.params.pageId,cr.rows[0].id]);
@@ -3852,6 +3865,10 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/end',async(req,res
   try{
     await conn.query('BEGIN');
     await conn.query("UPDATE tracker_case_studies SET status='completed',ended_at=NOW(),ended_reason=$2 WHERE id=ANY($1::int[]) AND status='active'",[ids,reason]);
+    // The day-7/day-14 evidence checkpoint belongs to the Case Study: when it ends, that wait ends too. Otherwise the
+    // scanner stays locked on 'Waiting for fresh evidence' and the page stays in Tracker action pages for good.
+    // A regular guided-monitoring gate (not case_day_*) is not touched.
+    await conn.query(_CASE_STUDY_GATE_CLEAR_SQL,[[page.id]]);
     for(const id of ids)await conn.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data) VALUES($1,$2,'case_study_ended','tracker_owner',$3::jsonb)`,
       [id,page.id,JSON.stringify({url:page.url,reason,ended_by:'tracker_owner',baseline_preserved:true,history_preserved:true,new_case_study_needs_new_baseline:true})]);
     await conn.query('COMMIT');
