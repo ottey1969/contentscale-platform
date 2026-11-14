@@ -123,6 +123,16 @@ function readMapsLocation(raw) {
   if (v.length > MAX_LOCATION_LENGTH || !SAFE_LOCATION.test(v) || /https?:|www\./i.test(v)) return { error: 'Enter a place such as "Lodi, NJ" (letters, numbers, commas).' };
   return { location: v };
 }
+// Up to MAX_MAPS_LOCATIONS places, one per line (owner 2026-11-14: "what if I have more locations?"). Stored newline-joined.
+const MAX_MAPS_LOCATIONS = 3;
+function readMapsLocations(raw) {
+  const parts = String(raw == null ? '' : raw).split(/\r?\n|;/).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const out = [];
+  for (const p of parts) { const r = readMapsLocation(p); if (r.error) return { error: 'INVALID' }; if (!out.some(x => x.toLowerCase() === r.location.toLowerCase())) out.push(r.location); }
+  if (out.length > MAX_MAPS_LOCATIONS) return { error: 'TOO_MANY' };
+  return { locations: out };
+}
+const locationsOf = stored => String(stored || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, MAX_MAPS_LOCATIONS);
 function mapsQuery(keyword, location) {
   const k = String(keyword || '').trim(), first = String(location || '').split(',')[0].trim().toLowerCase();
   return location && !(first && k.toLowerCase().includes(first)) ? k + ' ' + location : k;
@@ -223,4 +233,4 @@ function growthLink(growthUrl, { host, gl, hl }, keyword, last, rt = null) {
   return growthUrl + (growthUrl.includes('?') ? '&' : '?') + q.toString();
 }
 
-module.exports = { gridPoints, checkMapsGrid, GRID_SIZE, GRID_SPACING_KM, MAX_GRID_KEYWORDS, coordOf, readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
+module.exports = { readMapsLocations, locationsOf, MAX_MAPS_LOCATIONS, gridPoints, checkMapsGrid, GRID_SIZE, GRID_SPACING_KM, MAX_GRID_KEYWORDS, coordOf, readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };

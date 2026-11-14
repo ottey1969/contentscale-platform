@@ -82,15 +82,37 @@ test('dashboard and e-mail show the Maps position; the place can be set and clea
   const tok = links.linkToken(store.db.accounts[0].dashboard_nonce);
   const dash = await request(a).get('/rank-tracker/d/' + tok);
   assert.equal(dash.status, 200);
-  assert.match(dash.text, /📍 Google Maps: 4 for “roofer Lodi, NJ”/);
+  // Two clearly separated sections (owner 2026-11-14); the Maps position sits in its own table, not in the organic rows.
+  const organic = dash.text.slice(dash.text.indexOf('id="sec-organic"'), dash.text.indexOf('id="sec-maps"')), mapsSec = dash.text.slice(dash.text.indexOf('id="sec-maps"'));
+  assert.ok(organic.length > 100 && mapsSec.length > 100);
+  assert.doesNotMatch(organic, /Google Maps: 4/); assert.match(mapsSec, /<th>📍 Lodi, NJ<\/th>/); assert.match(mapsSec, /<td class="pos"><span[^>]*>4<\/span><\/td>/);
   assert.match(dash.text, /Checked in Google Maps for: Lodi, NJ/);
-  assert.equal((await request(a).post('/api/rank-free/d/' + tok + '/maps').send({ maps_location: 'https://x' })).status, 400);
-  const off = await request(a).post('/api/rank-free/d/' + tok + '/maps').send({ maps_location: '' });
+  assert.match(mapsSec, /Working only online\? Skip this part/);
+  assert.match(mapsSec, /Click Performance, then “Searches used to find your Business Profile”/);
+  const post = b => request(a).post('/api/rank-free/d/' + tok + '/maps').send(b);
+  assert.equal((await post({ maps_location: 'https://x', maps_confirm: true })).status, 400);
+  assert.equal((await post({ maps_location: 'Hackensack, NJ' })).body.error, 'Tick the box to confirm that your Google Business Profile links to your website.', 'no place without the confirmation');
+  assert.equal((await post({ maps_location: 'A\nB\nC\nD', maps_confirm: true })).body.error, 'Enter at most 3 places.');
+  const off = await post({ maps_location: '' });
   assert.equal(off.body.message, 'Google Maps check switched off.'); assert.equal(store.db.projects[0].maps_location, null);
-  const on = await request(a).post('/api/rank-free/d/' + tok + '/maps').send({ maps_location: 'Hackensack, NJ' });
-  assert.equal(on.body.maps_location, 'Hackensack, NJ'); assert.equal(store.db.projects[0].maps_location, 'Hackensack, NJ');
+  const on = await post({ maps_location: 'Hackensack, NJ\nLodi, NJ', maps_confirm: true });
+  assert.deepEqual(on.body.maps_locations, ['Hackensack, NJ', 'Lodi, NJ']); assert.equal(store.db.projects[0].maps_location, 'Hackensack, NJ\nLodi, NJ');
   const mails = []; await sendDigests({ store, send: async m => { mails.push(m); return true; }, baseUrl: 'https://app.example', now });
   assert.match(mails[0].html, /Google Maps: 4 for “roofer Lodi, NJ”/);
   const signup = await request(a).get('/rank-tracker');
-  assert.match(signup.text, /id="maps"/); assert.match(signup.text, /maps_location:\$\('maps'\)\.value/);
+  assert.match(signup.text, /id="maps"/); assert.match(signup.text, /maps_location:\$\('maps'\)\.value,maps_confirm:\$\('mapsok'\)\.checked/);
+});
+
+test('more places: each keyword is searched in Google Maps for every place (up to 3), one call per place', async () => {
+  const store = memoryStore();
+  await store.upsertSignup({ email: 'o@acme.example', lang: 'en', ipHash: 'ip', consent: false, verifyHash: 'v1', host: 'acme.example', gl: 'us', hl: 'en', keywords: ['roofer'], mapsLocation: 'Lodi, NJ\nHackensack, NJ' });
+  await store.verify('v1', links.newNonce(), new Date('2026-11-11T10:00:00Z'));
+  const log = [], now = new Date('2026-11-11T10:05:00Z');
+  await runDue({ store, key: 'k', now, monthlyCap: 100, fetchImpl: fakeSerper({ organic: { roofer: ['https://acme.example/'] },
+    places: { 'roofer Lodi, NJ': [place('Acme', 'https://acme.example/', 1)], 'roofer Hackensack, NJ': [place('Other', 'https://other.example/', 1)] } }, log) });
+  const r = store.db.results[0].result;
+  assert.deepEqual(r.maps_places.map(m => [m.location, m.status, m.position]), [['Lodi, NJ', 'FOUND', 1], ['Hackensack, NJ', 'NOT_IN_RESULTS', undefined]]);
+  assert.equal(log.filter(x => x.url.endsWith('/maps')).length, 2);
+  assert.equal(mapsText(r, t('en')), 'Google Maps: 1 for “roofer Lodi, NJ” · Google Maps: not found for “roofer Hackensack, NJ”');
+  assert.deepEqual(engine.readMapsLocations('Lodi, NJ\nlodi, nj\n\nHackensack, NJ'), { locations: ['Lodi, NJ', 'Hackensack, NJ'] });
 });
