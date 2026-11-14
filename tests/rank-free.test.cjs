@@ -134,6 +134,16 @@ function app(store, sent, extra = {}) {
   return a;
 }
 
+test('Rank Tracker: optional Growth links off means a contact CTA, never a silent Growth handoff', async () => {
+  const store=memoryStore(),sent=[];await confirmedAccount(store,{keywords:['consultor geo']});
+  const now=new Date('2026-11-11T10:00:00Z'),k=store.db.keywords[0];
+  await store.saveResult(k.id,{status:'FOUND',position:9,url:'https://acme.example/geo/',checked_at:now.toISOString()},new Date(now.getTime()+7*864e5));
+  const noGrowth=app(store,sent,{growthLinks:false});
+  const dash=await request(noGrowth).get('/rank-tracker/d/'+links.linkToken(store.db.accounts[0].dashboard_nonce));
+  assert.equal(dash.status,200);assert.match(dash.text,/href="https:\/\/contentscale\.site\/contacto\/"/);
+  assert.doesNotMatch(dash.text,/href="[^"]*free-growth/);
+});
+
 test('sign-up → confirm → dashboard; a confirmed address cannot be changed from the public form', async () => {
   const store = memoryStore(), sent = [], a = app(store, sent);
   const bad = await request(a).post('/api/rank-free/signup').send({ email: 'x', site: 'acme.example', country: 'es', keywords: 'a' });
