@@ -136,6 +136,14 @@ test('a valid handoff is access of its own: also with personal approval required
     assert.equal((await request(app).post('/api/free-growth/checks').send(body({ rank_ref: '' }))).status, 403, 'no handoff: approval still required');
     const other = await request(app).post('/api/free-growth/checks').send(body({ email: 'someone-else@other.example' }));
     assert.equal(other.status, 403); assert.match(other.body.error, /e-mail address of your rank tracker \(t\*\*\*@acme-geo\.example\)/);
+    const crossSite = await request(app).post('/api/free-growth/checks').send(body({url:'https://unrelated.example/consultor-geo/'}));
+    assert.equal(crossSite.status,403,'a signed link must not fund another website or mark that keyword changed');
+    assert.match(crossSite.body.error,/belongs to acme-geo\.example/);
+    const similarHost = await request(app).post('/api/free-growth/checks').send(body({url:'https://acme-geo.example.attacker.example/consultor-geo/'}));
+    assert.equal(similarHost.status,403,'lookalike host suffix cannot borrow a Rank Tracker identity');
+    const otherTopic = await request(app).post('/api/free-growth/checks').send(body({topic:'unrelated service'}));
+    assert.equal(otherTopic.status,409,'the handoff keyword is not editable into another keyword');
+    assert.equal((store.db.handoffs||[]).length,0,'all invalid attempts must leave the database without a handoff');
     const ok = await request(app).post('/api/free-growth/checks').send(body({}));
     assert.equal(ok.status, 202); assert.equal(store.db.handoffs.length, 1);
     const again = await request(app).post('/api/free-growth/checks').send(body({}));
