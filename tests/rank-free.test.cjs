@@ -140,7 +140,7 @@ test('Rank Tracker: optional Growth links off means a contact CTA, never a silen
   await store.saveResult(k.id,{status:'FOUND',position:9,url:'https://acme.example/geo/',checked_at:now.toISOString()},new Date(now.getTime()+7*864e5));
   const noGrowth=app(store,sent,{growthLinks:false});
   const dash=await request(noGrowth).get('/rank-tracker/d/'+links.linkToken(store.db.accounts[0].dashboard_nonce));
-  assert.equal(dash.status,200);assert.match(dash.text,/href="https:\/\/contentscale\.site\/contacto\/"/);
+  assert.equal(dash.status,200);assert.match(dash.text,/href="https:\/\/es\.contentscale\.site\/contacto\/"/,'Spanish account gets the Spanish contact destination');
   assert.doesNotMatch(dash.text,/href="[^"]*free-growth/);
 });
 
