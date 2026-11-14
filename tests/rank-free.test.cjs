@@ -175,7 +175,11 @@ test('sign-up → confirm → dashboard; a confirmed address cannot be changed f
   const withKey = express(); withKey.use(express.json());
   registerRankFree(withKey, null, { config: { ...rankFreeConfig({}), serperKey: 'k', scheduler: false }, store, fetchImpl: async () => ({ ok: false, status: 500 }), sendEmail: async () => true });
   const d2 = await request(withKey).get(dash); assert.match(d2.text, /location\.reload\(\),15000/); assert.doesNotMatch(d2.text, /no está configurada/);
-  assert.equal((await request(a).get('/rank-tracker/v/' + verifyLink)).status, 404, 'a confirmation link works once');
+  // Owner 2026-11-14: an opened link keeps working for 7 days (mail scanners open links first), then it expires.
+  assert.equal((await request(a).get('/rank-tracker/v/' + verifyLink)).status, 302, 'opened again within 7 days: the dashboard');
+  store.db.accounts[0].verified_at = new Date(Date.now() - 8 * 86400000);
+  assert.equal((await request(a).get('/rank-tracker/v/' + verifyLink)).status, 404, 'after 7 days the confirmation link no longer works');
+  store.db.accounts[0].verified_at = new Date();
   // Someone else types the same address with other keywords: nothing changes, the owner gets the link by e-mail.
   const r2 = await request(a).post('/api/rank-free/signup').send({ email: 'owner@acme.example', site: 'evil.example', country: 'us', keywords: 'spam' });
   assert.equal(r2.body.success, true);
