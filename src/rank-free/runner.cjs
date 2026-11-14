@@ -2,7 +2,7 @@
 // The automatic part of the free rank tracker: due keywords are checked, results saved, and one e-mail per project goes
 // out when all its keywords have a fresh result. A monthly provider budget caps the cost for all free users together;
 // when it is used up, checks are postponed one day (never dropped, never estimated).
-const { checkRank, checkMaps, checkMapsGrid, GRID_SIZE, locationsOf, changeOf, growthLink, searchLocationOf } = require('./engine.cjs');
+const { checkRank, checkMaps, checkMapsGrid, GRID_SIZE, locationsOf, changeOf, growthLink, searchLocationOf, placesForKeyword } = require('./engine.cjs');
 const { digestEmail, followText, plainFollow, t } = require('./texts.cjs');
 const { bestOpportunity, followUp } = require('./gsc.cjs');
 const { linkToken, handoffToken } = require('./links.cjs');
@@ -37,7 +37,7 @@ async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), 
     const places = locationsOf(k.maps_location);
     if (places.length) {
       const all = [];
-      for (const location of places) {
+      for (const location of placesForKeyword(k.keyword, places)) {
         if ((await store.usage(now)) + 1 > monthlyCap) { all.push({ status: 'BUDGET_REACHED', location }); out.budget_reached = true; continue; }
         const m = await maps({ keyword: k.keyword, host: k.host, location, gl: k.gl, hl: k.hl, key, fetchImpl, now: () => now });
         if (m.calls) { await store.addUsage(now, m.calls); out.calls += m.calls; }

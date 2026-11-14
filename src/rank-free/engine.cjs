@@ -152,6 +152,13 @@ function readMapsLocations(raw) {
   if (out.length > MAX_MAPS_LOCATIONS) return { error: 'TOO_MANY' };
   return { locations: out };
 }
+// A keyword that names one of the project's places ("roofer hackensack nj") is only checked in Google Maps for that
+// place: "roofer hackensack nj Lodi, NJ" would be a nonsense search (owner 2026-11-14). Other keywords: every place.
+function placesForKeyword(keyword, places) {
+  const k = ' ' + String(keyword || '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ') + ' ';
+  const named = places.filter(pl => { const town = String(pl).split(',')[0].toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim(); return town && k.includes(' ' + town + ' '); });
+  return named.length ? named : places;
+}
 const locationsOf = stored => String(stored || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, MAX_MAPS_LOCATIONS);
 function mapsQuery(keyword, location) {
   const k = String(keyword || '').trim(), first = String(location || '').split(',')[0].trim().toLowerCase();
@@ -255,4 +262,4 @@ function growthLink(growthUrl, { host, gl, hl }, keyword, last, rt = null) {
   return growthUrl + (growthUrl.includes('?') ? '&' : '?') + q.toString();
 }
 
-module.exports = { readRegion, searchLocationOf, US_STATES, readMapsLocations, locationsOf, MAX_MAPS_LOCATIONS, gridPoints, checkMapsGrid, GRID_SIZE, GRID_SPACING_KM, MAX_GRID_KEYWORDS, coordOf, readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
+module.exports = { placesForKeyword, readRegion, searchLocationOf, US_STATES, readMapsLocations, locationsOf, MAX_MAPS_LOCATIONS, gridPoints, checkMapsGrid, GRID_SIZE, GRID_SPACING_KM, MAX_GRID_KEYWORDS, coordOf, readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
