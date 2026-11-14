@@ -112,11 +112,37 @@ test('one weekly e-mail per project, in the account language, with a working das
   assert.equal((await sendDigests({ store, send: async m => { sent.push(m); return true; }, baseUrl: 'https://app.example', now })).sent, 0, 'not twice for the same round');
 });
 
+test('Rank Tracker: failed weekly digest stays pending and is retried without another Google scan', async () => {
+  const store = memoryStore(); await confirmedAccount(store);
+  const now = new Date('2026-11-11T10:05:00Z');
+  await runDue({ store, key:'k', fetchImpl:fakeSerper({ 'consultor geo':[['https://acme.example/a/']], 'que es geo':[[]] }), now, monthlyCap:100 });
+  const beforeCalls = await store.usage(now);
+  const first = await sendDigests({ store, send:async()=>false, baseUrl:'https://app.example', now });
+  assert.deepEqual(first, {sent:0,failed:1});
+  assert.equal(store.db.projects[0].last_digest_at, null, 'a failed email must not masquerade as delivered');
+  const retried = [];
+  const second = await sendDigests({ store, send:async mail=>{retried.push(mail);return true;}, baseUrl:'https://app.example', now });
+  assert.deepEqual(second, {sent:1,failed:0});
+  assert.equal(retried.length,1);
+  assert.equal(await store.usage(now),beforeCalls, 'retrying email must not spend Google API credits');
+  assert.deepEqual(await sendDigests({ store, send:async()=>true, baseUrl:'https://app.example', now }),{sent:0,failed:0});
+});
+
 function app(store, sent, extra = {}) {
   const a = express(); a.use(express.json());
   registerRankFree(a, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false, adminKey: 'admin-key-1234567890', growthLinks: true, ...extra }, store, sendEmail: async m => { sent.push(m); return true; } });
   return a;
 }
+
+test('Rank Tracker: optional Growth links off means a contact CTA, never a silent Growth handoff', async () => {
+  const store=memoryStore(),sent=[];await confirmedAccount(store,{keywords:['consultor geo']});
+  const now=new Date('2026-11-11T10:00:00Z'),k=store.db.keywords[0];
+  await store.saveResult(k.id,{status:'FOUND',position:9,url:'https://acme.example/geo/',checked_at:now.toISOString()},new Date(now.getTime()+7*864e5));
+  const noGrowth=app(store,sent,{growthLinks:false});
+  const dash=await request(noGrowth).get('/rank-tracker/d/'+links.linkToken(store.db.accounts[0].dashboard_nonce));
+  assert.equal(dash.status,200);assert.match(dash.text,/href="https:\/\/es\.contentscale\.site\/contacto\/"/,'Spanish account gets the Spanish contact destination');
+  assert.doesNotMatch(dash.text,/href="[^"]*free-growth/);
+});
 
 test('sign-up → confirm → dashboard; a confirmed address cannot be changed from the public form', async () => {
   const store = memoryStore(), sent = [], a = app(store, sent);

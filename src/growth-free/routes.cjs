@@ -1247,6 +1247,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
  async function startRankCheck(req,res,b,rk){
   const input=readInput(b,res);if(!input)return;
   if(!input.emails.includes(String(rk.account.email).toLowerCase()))return res.status(403).json({success:false,error:'Use the e-mail address of your rank tracker ('+maskEmail(rk.account.email)+').'});
+  // A signed handoff belongs to the confirmed site's host and tracked keyword, not just the email.
+  // Reject other websites before creating an expensive check or linking publication to this keyword.
+  if(!require('../rank-free/handoff.cjs').sameTrackedSite(input.host,rk.project.host))
+   return res.status(403).json({success:false,error:'This Rank Tracker link belongs to '+String(rk.project.host)+'. Choose a page on that website to continue.'});
+  if(String(b.topic||'').trim()&&String(b.topic||'').trim().toLowerCase()!==String(rk.keyword||'').trim().toLowerCase())
+   return res.status(409).json({success:false,error:'This Rank Tracker link belongs to the keyword “'+String(rk.keyword)+'”. Open the matching keyword in your tracker.'});
   await storage.ensureTables(pool);
   const a=await rankHandoff.allowance(rk);
   if(!a.ok)return res.status(429).json({success:false,error:'You used the '+a.limit+' free Growth checks from your rank tracker for this week. Try again in a few days.'});

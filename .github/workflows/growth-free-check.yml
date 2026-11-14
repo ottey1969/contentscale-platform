@@ -15,6 +15,7 @@ on:
       - 'tests/growth-free-contacts.test.cjs'
       - 'tests/growth-free-ui-translate.test.cjs'
       - 'src/rank-free/**'
+      - 'tests/rank-free*.test.cjs'
       - 'src/growth-measurement-reminders.cjs'
       - 'tests/helpers/zip.cjs'
       - 'public/prewrite-ai-answer-research.js'
@@ -38,6 +39,7 @@ on:
       - 'tests/growth-free-measurement.test.cjs'
       - 'tests/growth-free-contacts.test.cjs'
       - 'src/rank-free/**'
+      - 'tests/rank-free*.test.cjs'
       - 'src/growth-measurement-reminders.cjs'
       - 'tests/helpers/zip.cjs'
       - 'public/prewrite-ai-answer-research.js'
@@ -59,7 +61,7 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci --ignore-scripts
       - name: Access keys, limits, read-only engine, summary, public flow, admin, standalone server
-        run: node --test tests/growth-free-check.test.cjs tests/growth-free-ui-translate.test.cjs tests/growth-free-schema-help.test.cjs tests/growth-free-ai-gap.test.cjs tests/growth-ai-check-validation.test.cjs tests/growth-free-gsc-export.test.cjs tests/growth-free-cms-package.test.cjs tests/growth-customer-questions.test.cjs tests/growth-free-measurement.test.cjs
+        run: node --test tests/growth-free-check.test.cjs tests/growth-free-ui-translate.test.cjs tests/growth-free-schema-help.test.cjs tests/growth-free-ai-gap.test.cjs tests/growth-ai-check-validation.test.cjs tests/growth-free-gsc-export.test.cjs tests/growth-free-cms-package.test.cjs tests/growth-customer-questions.test.cjs tests/growth-free-measurement.test.cjs tests/rank-free.test.cjs
 
   free-growth-browser-e2e:
     runs-on: ubuntu-latest
@@ -93,4 +95,4 @@ jobs:
           npm install --no-save --ignore-scripts playwright
           npx playwright install --with-deps chromium
       - name: End-to-end Free Growth browser and isolated PostgreSQL test
-        run: node --test --test-concurrency=1 tests/growth-free-e2e.test.cjs tests/growth-free-insufficient-e2e.test.cjs tests/growth-free-owner-e2e.test.cjs tests/growth-free-contacts.test.cjs
+        run: node --test --test-concurrency=1 tests/growth-free-e2e.test.cjs tests/growth-free-insufficient-e2e.test.cjs tests/growth-free-owner-e2e.test.cjs tests/growth-free-contacts.test.cjs tests/rank-free-growth-handoff.test.cjs

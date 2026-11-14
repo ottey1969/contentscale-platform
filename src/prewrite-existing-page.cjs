@@ -56,7 +56,7 @@ function findSameIntentPages(keyword, urls, { region } = {}) {
     if (score < 0.5) continue;
     let host = ''; try { host = new URL(url).hostname.toLowerCase(); } catch (e) {}
     const marketMatch = !!market && (host.split('.')[0] === market || pw[0] === market);
-    out.push({ url, score: Math.round(score * 100) / 100, full: matched.length === kw.length || coreFull, core_match: coreFull, matched, extra_words: Math.max(0, pw.length - matched.length - (marketMatch && pw[0] === market ? 1 : 0)), market_match: marketMatch });
+    out.push({ url, score: Math.round(score * 100) / 100, full: matched.length === kw.length || coreFull, core_match: coreFull, matched, extra_words: Math.max(0, pw.length - matched.length - (marketMatch && pw[0] === market ? 1 : 0)), market_match: marketMatch, market_requested: !!market });
   }
   return out.sort((a, b) => (b.full - a.full) || (b.score - a.score) || (b.market_match - a.market_match) || (a.extra_words - b.extra_words) || a.url.length - b.url.length).slice(0, 5);
 }
@@ -66,9 +66,18 @@ function findSameIntentPages(keyword, urls, { region } = {}) {
 function applyExistingPageDecision(brief, candidates) {
   if (!brief || typeof brief !== 'object') return brief;
   const list = Array.isArray(candidates) ? candidates : [];
-  brief.same_intent_candidates = list.map(x => ({ url: x.url, score: x.score, full_match: x.full, market_match: x.market_match }));
-  const best = list.find(x => x.full);
-  if (!best) return brief;
+  brief.same_intent_candidates = list.map(x => ({ url: x.url, score: x.score, full_match: x.full, market_match: x.market_match, url_only_match: true }));
+  // Keyword words in a URL are *not* verified same intent. In particular, an English page cannot
+  // veto a Spanish new page merely because their slugs share the same words.
+  const best = list.find(x => x.full && (!x.market_requested || x.market_match));
+  if (!best) {
+    const crossMarket = list.filter(x => x.full && x.market_requested && !x.market_match);
+    if (crossMarket.length) brief.content_decision = Object.assign({}, brief.content_decision || {}, {
+      cross_market_url_overlap: crossMarket.map(x => x.url),
+      cross_market_overlap_requires_review: true
+    });
+    return brief;
+  }
   const cd = brief.content_decision && typeof brief.content_decision === 'object' ? brief.content_decision : {};
   const treatment = String(cd.recommended_treatment || '').toUpperCase();
   const check = { method: 'url_matches_every_keyword_word', url: best.url, matched_words: best.matched, other_candidates: list.filter(x => x !== best).map(x => x.url) };
