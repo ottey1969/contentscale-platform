@@ -47092,6 +47092,9 @@ function _pwbRestoreDiagnosticJob(keyword){
 var _pwbCurrentBriefId=0;
 var _pwbCurrentBrief=null;
 var _pwbCurrentNotPassed=false;
+// Readable names of the parts AI readiness found missing.
+var _PWB_MISSING_NAMES={opening_passage:'opening passage',definitive_outline:'page blueprint',ai_answer:'AI answer',quick_facts:'quick facts',entity_strategy:'entity plan',entity_relationships:'entity relationships',evidence:'evidence',official_sources:'sources',balance:'limitations',use_cases:'use cases',conclusion:'conclusion',paa_answers:'People Also Ask answers',action_plan:'action plan',meta_package:'SEO package',ai_evidence_5of5:'AI evidence 5/5'};
+function _pwbMissingLabel(qc){var m=qc&&Array.isArray(qc.missing)?qc.missing:[];return m.map(function(k){return _PWB_MISSING_NAMES[k]||String(k).replace(/_/g,' ');}).slice(0,4).join(', ');}
 var _pwbInputsDirty=false;
 var _pwbFinalQaPersisted=false;
 var _pwbPublisherEditionReady=false;
@@ -47151,7 +47154,7 @@ function _pwbApplyActionState(){
     if(stale)complete.textContent='Complete missing only · create updated Brief first';
     else if(!aiInputReady)complete.textContent='Complete missing only · add missing AI evidence';
     else if(_pwbCurrentNotPassed&&!diag)complete.textContent='Complete missing only · diagnostic unavailable';
-    else if(_pwbCurrentNotPassed)complete.textContent='Complete missing only · reuse research';
+    else if(_pwbCurrentNotPassed)complete.textContent='Complete missing'+(_pwbMissingLabel(qc)?': '+_pwbMissingLabel(qc):' only')+' · reuse research';
     else complete.textContent='Complete missing only · not needed';
     complete.onclick=canComplete?function(){generatePrewriteBrief({completeMissing:true,sourceJobId:_pwbRestoreDiagnosticJob(_pwbActionKeyword())});}:null;
     complete.title=complete.disabled?(stale?'Inputs changed; the saved research snapshot no longer matches these inputs.':'Only used when the current Brief is NOT PASSED.'):'Reuse the existing research and complete only the missing fields.';
@@ -47242,6 +47245,9 @@ function _pwbApplyActionState(){
     var pubScore=typeof pq.score==='number'?Number(pq.score):null;
     var warns=Array.isArray(pq.warnings)?pq.warnings:[];
     var blockers=Array.isArray(pq.blockers)?pq.blockers:[];
+    // NOT PASSED is a blocker too, even when Publication QA has none (owner 2026-11-14: "no blocker, yet Complete missing
+    // only appears"): name the missing parts, so the reason is never hidden.
+    if(_pwbCurrentNotPassed&&hasBrief&&!stale)blockers=[{code:'not_passed',message:'NOT PASSED — missing in this Brief: '+(_pwbMissingLabel(qc)||'required parts')+'. Use "Complete missing" (reuses the research).'}].concat(blockers);
     var quality='<div style="margin-top:4px;color:#cbd5e1;">'+(aiScore==null?'':'AI readiness: <strong>'+aiScore+'/100</strong> · ')+(pubScore==null?'':'Publication QA: <strong>'+pubScore+'/100</strong> · ')+(blockers.length?'<span style="color:#fca5a5;">'+blockers.length+' blocker'+(blockers.length===1?'':'s')+'</span>':(warns.length?'<span style="color:#fbbf24;">'+warns.length+' warning'+(warns.length===1?'':'s')+'</span>':'<span style="color:#86efac;">no publication warnings</span>'))+'</div>';
     var blockerLines=blockers.slice(0,3).map(function(w){return '<div style="color:#fca5a5;margin-top:2px;">✕ '+String(w&&w.message||w&&w.code||'Publication blocker').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';}).join('');
     var warningLines=warns.slice(0,3).map(function(w){return '<div style="color:#fbbf24;margin-top:2px;">⚠ '+String(w&&w.message||w&&w.code||'Publication warning').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';}).join('');
@@ -60320,7 +60326,11 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
       meta_package:'Return meta_package using the existing topic/title/intent; no new factual claims.'
     };
     const context={keyword:srcKeyword||requestedKeyword,search_intent:brief.search_intent||{},recommended_title_h1:brief.recommended_title_h1||'',must_cover_entities:brief.must_cover_entities||[],ai_answer:brief.ai_answer||{},ai_system_evidence:brief.ai_system_evidence||{},ai_systems_analysis:brief.ai_systems_analysis||{},quick_facts:brief.quick_facts||[],definitive_outline:brief.definitive_outline||[],people_also_ask:brief.people_also_ask||[],evidence:{official_sources:brief.evidence&&brief.evidence.official_sources||[],statistics:brief.evidence&&brief.evidence.statistics||[],authority_sources:brief.evidence&&brief.evidence.authority_sources||[]},balance:brief.balance||{},conclusion:brief.conclusion||{},entity_strategy:brief.entity_strategy||{},use_cases:brief.use_cases||[],exact_source_whitelist:exactUrls};
-    const prompt='MISSING-ONLY PREWRITE COMPLETION. REUSE EXISTING RESEARCH. DO NOT RESEARCH AGAIN. Return ONE valid JSON object and ONLY the requested missing keys. Do not rewrite or return fields that already passed.\n\nMISSING KEYS:\n'+ask.map(function(k){return '- '+k+': '+(rules[k]||'Complete safely from the supplied Brief only.');}).join('\n')+'\n\nSTRICT RULES:\n- Use ONLY the supplied existing Brief snapshot.\n- No web search, no new URLs, no invented facts, stats, quotes, credentials, prices, rankings, results or experience.\n- Any source URL must be copied exactly from exact_source_whitelist.\n- Preserve all already-passed content unchanged.\n- Return JSON only.\n\nEXISTING BRIEF SNAPSHOT:\n'+JSON.stringify(context).slice(0,18000);
+    // Completion may not bring back amounts that the number check removed (owner 2026-11-14: after "Complete missing only"
+    // the Brief came back with a VERIFY FIRST blocker). Only amounts with a verified source are allowed.
+    const _verifiedAmounts=Array.from(new Set((Array.isArray(brief.price_facts)?brief.price_facts:[]).map(function(x){return String(x&&x.amount||'').trim();}).filter(Boolean))).slice(0,20);
+    const _amountRule='\n- Money amounts and percentages: use ONLY these verified amounts, each exactly as written: '+(_verifiedAmounts.length?_verifiedAmounts.join(' | '):'(none)')+'. Any other price or percentage is not allowed; write the sentence without a number instead.';
+    const prompt='MISSING-ONLY PREWRITE COMPLETION. REUSE EXISTING RESEARCH. DO NOT RESEARCH AGAIN. Return ONE valid JSON object and ONLY the requested missing keys. Do not rewrite or return fields that already passed.\n\nMISSING KEYS:\n'+ask.map(function(k){return '- '+k+': '+(rules[k]||'Complete safely from the supplied Brief only.');}).join('\n')+'\n\nSTRICT RULES:\n- Use ONLY the supplied existing Brief snapshot.\n- No web search, no new URLs, no invented facts, stats, quotes, credentials, prices, rankings, results or experience.\n- Any source URL must be copied exactly from exact_source_whitelist.\n- Preserve all already-passed content unchanged.'+_amountRule+'\n- Return JSON only.\n\nEXISTING BRIEF SNAPSHOT:\n'+JSON.stringify(context).slice(0,18000);
     const model='gemini-2.5-flash-lite',body={contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.08,maxOutputTokens:3000,responseMimeType:'application/json',thinkingConfig:{thinkingBudget:0}}};
     const t0=Date.now();
     const rr=await callGeminiWithFallback(process.env.GEMINI_API_KEY,body,model,model,1,false);
@@ -60355,6 +60365,15 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
       }
     }else completionError=String(rr&&rr.errorMessage||rr&&rr.status||'Gemini completion call failed').slice(0,500);
   }
+  // Safety net: an amount the completion still wrote without a verified source is taken out again, as in a fresh Brief.
+  try{
+    const _nc=require('./prewrite-numeric-claims.cjs'),_left=_nc.unverifiedNumbers(brief);
+    if(_left.length){
+      const _removed=_nc.removeUnverified(brief,_left);
+      const _prev=brief.numeric_claims_check&&typeof brief.numeric_claims_check==='object'?brief.numeric_claims_check:{};
+      brief.numeric_claims_check=Object.assign({},_prev,{removed:[].concat(Array.isArray(_prev.removed)?_prev.removed:[],_removed.map(function(x){return Object.assign({},x,{stage:'completion'});}))});
+    }
+  }catch(_ncErr){console.warn('[prewrite-complete] number check failed:',String(_ncErr&&_ncErr.message||_ncErr).slice(0,160));}
 
   const prevUsage=brief.generation_usage&&typeof brief.generation_usage==='object'?brief.generation_usage:{provider:'gemini',calls:[],input_tokens:0,output_tokens:0,thinking_tokens:0,billable_output_tokens:0,total_tokens:0,cached_input_tokens:0,attempted_calls:0,models:[]};
   if(!Array.isArray(prevUsage.calls))prevUsage.calls=[];
