@@ -9,6 +9,13 @@ const { pgStore } = require('./store.cjs');
 // A valid handoff is also access to the free Growth check (owner 2026-11-11), also when the Growth check asks for personal
 // approval: the tracker account's e-mail address is confirmed and only its owner gets the link. Its own limit per
 // account (RANK_FREE_GROWTH_PER_WEEK, default 3 checks in 7 days) keeps the cost bounded.
+// A handoff is scoped to the verified Rank Tracker site, not merely its confirmed e-mail.
+ // Subdomains are allowed, lookalike suffixes (otherexample.com) are never allowed.
+const sameTrackedSite = (pageHost, trackedHost) => {
+  const norm = h => String(h || '').trim().toLowerCase().replace(/\.$/, '').replace(/^www\./, '');
+  const page = norm(pageHost), base = norm(trackedHost);
+  return !!(page && base && (page === base || page.endsWith('.' + base)));
+};
 const perWeekOf = env => { const v = String(env.RANK_FREE_GROWTH_PER_WEEK ?? '').trim(); return v !== '' && Number.isFinite(Number(v)) ? Math.max(0, Math.floor(Number(v))) : 3; };
 function rankHandoff({ store, perWeek = perWeekOf(process.env), now = () => new Date() }) {
   async function read(token) {
@@ -45,4 +52,4 @@ const pgRankHandoff = pool => rankHandoff({ store: pgStore(pool) });
 const handoffEntry = config => ({ key: '', label: 'rank-tracker', origins: [], hosts: [], daily: config.daily, perEmail: config.perEmail,
   brand: config.brand, contactUrl: config.contactUrl, serviceText: config.serviceText });
 
-module.exports = { rankHandoff, pgRankHandoff, handoffEntry, perWeekOf };
+module.exports = { rankHandoff, pgRankHandoff, handoffEntry, perWeekOf, sameTrackedSite };
