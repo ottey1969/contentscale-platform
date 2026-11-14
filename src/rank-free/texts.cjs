@@ -5,20 +5,24 @@ const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&a
 
 const T = {
   en: {
-    mapsOnlineOnly: 'Optional. Only for businesses with a Google Business Profile that serve customers at a place or in an area. Working online only? Leave this empty: for you the normal results above are what count, and this costs nothing.',
+    mapsOnlineOnly: 'Only for businesses with a Google Business Profile and customers in a town or area. Working only online? Skip this part.',
     secOrganic: '1 · Google Search: your positions in the normal results', secMaps: '2 · Google Maps: your position in the map results',
-    secMapsLead: 'Google Maps is a separate ranking. The same keyword can rank differently in the map than in the normal results, and it depends on where the searcher is.',
+    secMapsLead: 'The map with businesses at the top of Google. It is a separate list: you can be number 1 in the normal results and number 8 on the map.',
     mapsPlaces: 'Places for Google Maps (one per line, up to 3, for example Lodi, NJ)', mapsConfirm: h => 'Yes, my Google Business Profile shows ' + h + ' as its website.',
     mapsConfirmHelp: 'Without that link we cannot recognise your business in Google Maps, and every result would say “not found”.',
     mapsConfirmNeeded: 'Tick the box to confirm that your Google Business Profile links to your website.', mapsTooMany: 'Enter at most 3 places.',
-    mapsKwTitle: 'Where do I find good Google Maps keywords?', mapsKwHelp: 'Open your Google Business Profile → Performance → “Searches used to find your Business Profile”. Those are the real searches people typed to find you in Google Maps and Search. Add the ones that describe your service to your keywords; Google Maps uses the same keywords as the normal results.',
-    mapsNoResults: 'No Google Maps results yet. They appear after the next weekly check.', mapsCellNot: d => 'not in top ' + d,
-    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'For up to 3 keywords we also search Google Maps from 9 points around your business (about 1.6 km / 1 mile apart) and show your position at each point. Each grid uses 9 searches per week.',
+    mapsKwTitle: 'Where do I find good Google Maps keywords?', mapsKwHelp: 'Use the words for your service, without the town: we add the place ourselves (“roofer” is searched as “roofer Lodi, NJ”).',
+    mapsKwSteps: ['Open your Google Business Profile (search your business name in Google).', 'Click Performance, then “Searches used to find your Business Profile”.', 'Take the searches that name your service and add them to your keywords in part 1.'],
+    mapsIdeas: 'Ideas from your own data (click to add):', mapsIdeasNone: 'Upload a Search Console export in part 1 and we show ideas here.',
+    mapsLegendTitle: 'What do the colours mean?', mapsLegend: [['#16a34a', 'Green 1–3', 'you are in the map block at the top of Google: the 3 businesses everyone sees.'], ['#d97706', 'Orange 4–10', 'only seen after clicking “More businesses”.'], ['#dc2626', 'Red 11 or lower', 'hardly anyone sees you there.'], ['#94a3b8', 'Grey ×', 'not found on the map.']],
+    mapsNoResults: 'No Google Maps results yet. They appear after the next weekly check.', mapsCellNot: () => 'not found',
+    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Shows your position when someone searches from 9 spots around your business. Choose up to 3 keywords (each costs 9 searches a week).',
+    gridWhere: (p, km) => 'Around your business in ' + p + ': north is at the top, the middle is your business, each step is about ' + km + ' km (1 mile).', gridNorth: 'north', gridSouth: 'south', gridYou: 'your business',
     gridSave: 'Save geo-grid keywords', gridSaved: 'Saved. The next weekly check includes the geo-grid.', gridMax: 'Choose at most 3 keywords.', gridNeedsPlace: 'Set a place for Google Maps first.',
     gridNoCenter: 'Geo-grid: your business was not found in Google Maps for this place, so the grid has no centre yet.', gridBudget: 'Geo-grid: skipped this week (monthly limit reached)',
-    gridErr: 'Geo-grid: the last check failed; it runs again next week', gridSummary: (f, t, top3, avg) => 'Geo-grid: found at ' + f + ' of ' + t + ' points · top 3 at ' + top3 + (avg != null ? ' · average position ' + avg : ''),
-    mapsField: 'Place for Google Maps (optional, for example Lodi, NJ)', mapsHelp: 'We also check where your business appears in Google Maps for each keyword in this place. Your Google Business Profile must link to your website.',
-    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' for “' + q + '”', mapsNot: (d, q) => 'Google Maps: not in the top ' + d + ' for “' + q + '”',
+    gridErr: 'Geo-grid: the last check failed; it runs again next week', gridSummary: (f, t, top3, avg, p) => 'Geo-grid' + (p ? ' around ' + p : '') + ': found at ' + f + ' of ' + t + ' points · top 3 at ' + top3 + (avg != null ? ' · average position ' + avg : ''),
+    mapsField: 'Place for Google Maps (optional, for example Lodi, NJ)', mapsHelp: 'We search every keyword together with the place, for example “roofer Lodi, NJ”.',
+    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' for “' + q + '”', mapsNot: (d, q) => 'Google Maps: not found for “' + q + '”',
     mapsErr: 'Google Maps: the last check failed; it runs again next week', mapsBudget: 'Google Maps: skipped this week (monthly limit reached)',
     mapsSave: 'Save place', mapsSaved: 'Saved. The next weekly check includes Google Maps.', mapsCleared: 'Google Maps check switched off.', mapsBad: 'Enter a place such as “Lodi, NJ”.',
     mapsNone: 'No place set: Google Maps is not checked.', mapsOn: p => 'Checked in Google Maps for: ' + p,
@@ -69,20 +73,24 @@ const T = {
     ch: { FIRST: 'first check', ENTERED_PAGE_ONE: 'now on page 1', LEFT_PAGE_ONE: 'dropped off page 1', ENTERED_RESULTS: 'now in the top 30', LEFT_RESULTS: 'no longer in the top 30', UP: 'up', DOWN: 'down', OTHER_PAGE: 'another page of yours now ranks' },
   },
   nl: {
-    mapsOnlineOnly: 'Optioneel. Alleen voor bedrijven met een Google Bedrijfsprofiel die klanten op een locatie of in een gebied bedienen. Werk je alleen online? Laat dit leeg: voor jou tellen de gewone resultaten hierboven, en dit kost niets.',
+    mapsOnlineOnly: 'Alleen voor bedrijven met een Google Bedrijfsprofiel en klanten in een plaats of regio. Werk je alleen online? Sla dit deel over.',
     secOrganic: '1 · Google zoekresultaten: je posities in de gewone resultaten', secMaps: '2 · Google Maps: je positie in de kaartresultaten',
-    secMapsLead: 'Google Maps is een aparte ranglijst. Hetzelfde zoekwoord kan op de kaart anders scoren dan in de gewone resultaten, en het hangt af van waar de zoeker is.',
+    secMapsLead: 'De kaart met bedrijven bovenaan Google. Dat is een aparte lijst: je kunt nummer 1 zijn in de gewone resultaten en nummer 8 op de kaart.',
     mapsPlaces: 'Plaatsen voor Google Maps (één per regel, maximaal 3, bijvoorbeeld Lodi, NJ)', mapsConfirm: h => 'Ja, mijn Google Bedrijfsprofiel toont ' + h + ' als website.',
     mapsConfirmHelp: 'Zonder die link kunnen we je bedrijf in Google Maps niet herkennen en staat bij elke meting “niet gevonden”.',
     mapsConfirmNeeded: 'Vink het vakje aan om te bevestigen dat je Google Bedrijfsprofiel naar je website linkt.', mapsTooMany: 'Vul maximaal 3 plaatsen in.',
-    mapsKwTitle: 'Waar vind ik goede Google Maps-zoekwoorden?', mapsKwHelp: 'Open je Google Bedrijfsprofiel → Prestaties → “Zoekopdrachten waarmee je bedrijfsprofiel is gevonden”. Dat zijn de echte zoekopdrachten waarmee mensen je in Google Maps en Zoeken vonden. Voeg de zoekopdrachten die je dienst beschrijven toe aan je zoekwoorden; Google Maps gebruikt dezelfde zoekwoorden als de gewone resultaten.',
-    mapsNoResults: 'Nog geen Google Maps-resultaten. Ze verschijnen na de volgende wekelijkse meting.', mapsCellNot: d => 'niet in top ' + d,
-    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Voor maximaal 3 zoekwoorden zoeken we ook in Google Maps vanaf 9 punten rond je bedrijf (ongeveer 1,6 km uit elkaar) en tonen we je positie op elk punt. Elk grid gebruikt 9 zoekopdrachten per week.',
+    mapsKwTitle: 'Waar vind ik goede Google Maps-zoekwoorden?', mapsKwHelp: 'Gebruik de woorden voor je dienst, zonder plaatsnaam: de plaats voegen wij zelf toe (“roofer” zoeken we als “roofer Lodi, NJ”).',
+    mapsKwSteps: ['Open je Google Bedrijfsprofiel (zoek je bedrijfsnaam in Google).', 'Klik op Prestaties en dan op “Zoekopdrachten waarmee je bedrijfsprofiel is gevonden”.', 'Neem de zoekopdrachten die je dienst noemen over bij je zoekwoorden in deel 1.'],
+    mapsIdeas: 'Ideeën uit je eigen gegevens (klik om toe te voegen):', mapsIdeasNone: 'Upload in deel 1 een Search Console-export, dan tonen we hier ideeën.',
+    mapsLegendTitle: 'Wat betekenen de kleuren?', mapsLegend: [['#16a34a', 'Groen 1–3', 'je staat in het kaartblok bovenaan Google: de 3 bedrijven die iedereen ziet.'], ['#d97706', 'Oranje 4–10', 'alleen te zien na een klik op “Meer bedrijven”.'], ['#dc2626', 'Rood 11 of lager', 'daar ziet bijna niemand je.'], ['#94a3b8', 'Grijs ×', 'niet gevonden op de kaart.']],
+    mapsNoResults: 'Nog geen Google Maps-resultaten. Ze verschijnen na de volgende wekelijkse meting.', mapsCellNot: () => 'niet gevonden',
+    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Toont je positie als iemand zoekt vanaf 9 plekken rond je bedrijf. Kies maximaal 3 zoekwoorden (elk kost 9 zoekopdrachten per week).',
+    gridWhere: (p, km) => 'Rond je bedrijf in ' + p + ': noord is boven, het midden is je bedrijf, elke stap is ongeveer ' + String(km).replace('.', ',') + ' km.', gridNorth: 'noord', gridSouth: 'zuid', gridYou: 'jouw bedrijf',
     gridSave: 'Geo-grid-zoekwoorden opslaan', gridSaved: 'Opgeslagen. De volgende wekelijkse meting neemt het geo-grid mee.', gridMax: 'Kies maximaal 3 zoekwoorden.', gridNeedsPlace: 'Stel eerst een plaats voor Google Maps in.',
     gridNoCenter: 'Geo-grid: je bedrijf is in Google Maps niet gevonden voor deze plaats, dus het grid heeft nog geen middelpunt.', gridBudget: 'Geo-grid: deze week overgeslagen (maandlimiet bereikt)',
-    gridErr: 'Geo-grid: de laatste meting mislukte; volgende week opnieuw', gridSummary: (f, t, top3, avg) => 'Geo-grid: gevonden op ' + f + ' van ' + t + ' punten · top 3 op ' + top3 + (avg != null ? ' · gemiddelde positie ' + avg : ''),
-    mapsField: 'Plaats voor Google Maps (optioneel, bijvoorbeeld Lodi, NJ)', mapsHelp: 'We meten ook waar je bedrijf in Google Maps staat voor elk zoekwoord in deze plaats. Je Google Bedrijfsprofiel moet naar je website linken.',
-    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' voor “' + q + '”', mapsNot: (d, q) => 'Google Maps: niet in de top ' + d + ' voor “' + q + '”',
+    gridErr: 'Geo-grid: de laatste meting mislukte; volgende week opnieuw', gridSummary: (f, t, top3, avg, p) => 'Geo-grid' + (p ? ' rond ' + p : '') + ': gevonden op ' + f + ' van ' + t + ' punten · top 3 op ' + top3 + (avg != null ? ' · gemiddelde positie ' + avg : ''),
+    mapsField: 'Plaats voor Google Maps (optioneel, bijvoorbeeld Lodi, NJ)', mapsHelp: 'We zoeken elk zoekwoord samen met de plaats, bijvoorbeeld “roofer Lodi, NJ”.',
+    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' voor “' + q + '”', mapsNot: (d, q) => 'Google Maps: niet gevonden voor “' + q + '”',
     mapsErr: 'Google Maps: de laatste meting mislukte; volgende week opnieuw', mapsBudget: 'Google Maps: deze week overgeslagen (maandlimiet bereikt)',
     mapsSave: 'Plaats opslaan', mapsSaved: 'Opgeslagen. De volgende wekelijkse meting neemt Google Maps mee.', mapsCleared: 'Google Maps-meting uitgezet.', mapsBad: 'Vul een plaats in zoals “Lodi, NJ”.',
     mapsNone: 'Geen plaats ingesteld: Google Maps wordt niet gemeten.', mapsOn: p => 'Gemeten in Google Maps voor: ' + p,
@@ -133,20 +141,24 @@ const T = {
     ch: { FIRST: 'eerste meting', ENTERED_PAGE_ONE: 'nu op pagina 1', LEFT_PAGE_ONE: 'van pagina 1 af', ENTERED_RESULTS: 'nu in de top 30', LEFT_RESULTS: 'niet meer in de top 30', UP: 'gestegen', DOWN: 'gedaald', OTHER_PAGE: 'er rankt nu een andere pagina van je' },
   },
   es: {
-    mapsOnlineOnly: 'Opcional. Solo para negocios con Perfil de Empresa de Google que atienden a clientes en un lugar o una zona. ¿Trabajas solo online? Déjalo vacío: para ti cuentan los resultados normales de arriba, y esto no cuesta nada.',
+    mapsOnlineOnly: 'Solo para negocios con Perfil de Empresa de Google y clientes en una ciudad o zona. ¿Trabajas solo online? Sáltate esta parte.',
     secOrganic: '1 · Búsqueda de Google: tus posiciones en los resultados normales', secMaps: '2 · Google Maps: tu posición en los resultados del mapa',
-    secMapsLead: 'Google Maps es una clasificación aparte. La misma palabra clave puede posicionar distinto en el mapa que en los resultados normales, y depende de dónde esté quien busca.',
+    secMapsLead: 'El mapa con negocios en la parte superior de Google. Es una lista aparte: puedes ser el número 1 en los resultados normales y el 8 en el mapa.',
     mapsPlaces: 'Lugares para Google Maps (uno por línea, hasta 3, por ejemplo Lodi, NJ)', mapsConfirm: h => 'Sí, mi Perfil de Empresa de Google muestra ' + h + ' como sitio web.',
     mapsConfirmHelp: 'Sin ese enlace no podemos reconocer tu negocio en Google Maps y cada resultado diría «no encontrado».',
     mapsConfirmNeeded: 'Marca la casilla para confirmar que tu Perfil de Empresa de Google enlaza a tu web.', mapsTooMany: 'Indica como máximo 3 lugares.',
-    mapsKwTitle: '¿Dónde encuentro buenas palabras clave para Google Maps?', mapsKwHelp: 'Abre tu Perfil de Empresa de Google → Rendimiento → «Búsquedas utilizadas para encontrar tu Perfil de Empresa». Son las búsquedas reales con las que la gente te encontró en Google Maps y en la Búsqueda. Añade las que describen tu servicio a tus palabras clave; Google Maps usa las mismas palabras clave que los resultados normales.',
-    mapsNoResults: 'Aún no hay resultados de Google Maps. Aparecen tras la próxima comprobación semanal.', mapsCellNot: d => 'fuera del top ' + d,
-    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Para hasta 3 palabras clave también buscamos en Google Maps desde 9 puntos alrededor de tu negocio (a unos 1,6 km entre sí) y mostramos tu posición en cada punto. Cada grid usa 9 búsquedas por semana.',
+    mapsKwTitle: '¿Dónde encuentro buenas palabras clave para Google Maps?', mapsKwHelp: 'Usa las palabras de tu servicio, sin la ciudad: el lugar lo añadimos nosotros («roofer» se busca como «roofer Lodi, NJ»).',
+    mapsKwSteps: ['Abre tu Perfil de Empresa de Google (busca el nombre de tu negocio en Google).', 'Haz clic en Rendimiento y luego en «Búsquedas utilizadas para encontrar tu Perfil de Empresa».', 'Añade las búsquedas que nombran tu servicio a tus palabras clave en la parte 1.'],
+    mapsIdeas: 'Ideas de tus propios datos (haz clic para añadir):', mapsIdeasNone: 'Sube una exportación de Search Console en la parte 1 y aquí verás ideas.',
+    mapsLegendTitle: '¿Qué significan los colores?', mapsLegend: [['#16a34a', 'Verde 1–3', 'estás en el bloque del mapa arriba en Google: los 3 negocios que todos ven.'], ['#d97706', 'Naranja 4–10', 'solo se ve tras pulsar «Más negocios».'], ['#dc2626', 'Rojo 11 o más', 'ahí casi nadie te ve.'], ['#94a3b8', 'Gris ×', 'no encontrado en el mapa.']],
+    mapsNoResults: 'Aún no hay resultados de Google Maps. Aparecen tras la próxima comprobación semanal.', mapsCellNot: () => 'no encontrado',
+    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Muestra tu posición cuando alguien busca desde 9 puntos alrededor de tu negocio. Elige hasta 3 palabras clave (cada una cuesta 9 búsquedas por semana).',
+    gridWhere: (p, km) => 'Alrededor de tu negocio en ' + p + ': el norte está arriba, el centro es tu negocio, cada paso son unos ' + String(km).replace('.', ',') + ' km.', gridNorth: 'norte', gridSouth: 'sur', gridYou: 'tu negocio',
     gridSave: 'Guardar palabras del geo-grid', gridSaved: 'Guardado. La próxima comprobación semanal incluye el geo-grid.', gridMax: 'Elige como máximo 3 palabras clave.', gridNeedsPlace: 'Primero indica un lugar para Google Maps.',
     gridNoCenter: 'Geo-grid: tu negocio no aparece en Google Maps para este lugar, así que el grid aún no tiene centro.', gridBudget: 'Geo-grid: omitido esta semana (límite mensual alcanzado)',
-    gridErr: 'Geo-grid: la última comprobación falló; se repite la próxima semana', gridSummary: (f, t, top3, avg) => 'Geo-grid: encontrado en ' + f + ' de ' + t + ' puntos · top 3 en ' + top3 + (avg != null ? ' · posición media ' + avg : ''),
-    mapsField: 'Lugar para Google Maps (opcional, por ejemplo Lodi, NJ)', mapsHelp: 'También comprobamos dónde aparece tu negocio en Google Maps para cada palabra clave en este lugar. Tu Perfil de Empresa de Google debe enlazar a tu web.',
-    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' para «' + q + '»', mapsNot: (d, q) => 'Google Maps: fuera del top ' + d + ' para «' + q + '»',
+    gridErr: 'Geo-grid: la última comprobación falló; se repite la próxima semana', gridSummary: (f, t, top3, avg, p) => 'Geo-grid' + (p ? ' alrededor de ' + p : '') + ': encontrado en ' + f + ' de ' + t + ' puntos · top 3 en ' + top3 + (avg != null ? ' · posición media ' + avg : ''),
+    mapsField: 'Lugar para Google Maps (opcional, por ejemplo Lodi, NJ)', mapsHelp: 'Buscamos cada palabra clave junto con el lugar, por ejemplo «roofer Lodi, NJ».',
+    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' para «' + q + '»', mapsNot: (d, q) => 'Google Maps: no encontrado para «' + q + '»',
     mapsErr: 'Google Maps: la última comprobación falló; se repite la próxima semana', mapsBudget: 'Google Maps: omitido esta semana (límite mensual alcanzado)',
     mapsSave: 'Guardar lugar', mapsSaved: 'Guardado. La próxima comprobación semanal incluye Google Maps.', mapsCleared: 'Comprobación de Google Maps desactivada.', mapsBad: 'Escribe un lugar como «Lodi, NJ».',
     mapsNone: 'Sin lugar: Google Maps no se comprueba.', mapsOn: p => 'Comprobado en Google Maps para: ' + p,
@@ -218,7 +230,7 @@ function oneMaps(m, L) {
 // All places of a check (maps_places), or the single place of older results (maps).
 function mapsList(r) { return r && Array.isArray(r.maps_places) && r.maps_places.length ? r.maps_places : (r && r.maps ? [r.maps] : []); }
 function mapsText(r, L) { return mapsList(r).map(m => oneMaps(m, L)).filter(Boolean).join(' · '); }
-// Short cell for the Maps table: the position, or "not in top N", or the reason.
+// Short cell for the Maps table: the position, or "not found", or the reason.
 function mapsCell(m, L) {
   if (!m) return '—';
   if (m.status === 'FOUND') return String(m.position);
@@ -229,18 +241,28 @@ function mapsCell(m, L) {
 // Geo-grid summary line and a small square table (dashboard and e-mail): green top 3, amber 4–10, red 11+, grey × not shown.
 function gridText(r, L) {
   const g = r && r.grid; if (!g) return '';
-  if (g.status === 'OK') return L.gridSummary(g.found, g.measured, g.top3, g.average);
+  if (g.status === 'OK') return L.gridSummary(g.found, g.measured, g.top3, g.average, g.place);
   if (g.status === 'NO_CENTER') return L.gridNoCenter;
   if (g.status === 'BUDGET_REACHED') return L.gridBudget;
   return L.gridErr;
 }
-function gridTable(r) {
+// One colour scale for the Maps table and the grid (legend: L.mapsLegend).
+function posColor(pos) { return pos == null ? '#94a3b8' : pos <= 3 ? '#16a34a' : pos <= 10 ? '#d97706' : '#dc2626'; }
+function gridTable(r, L) {
   const g = r && r.grid; if (!g || g.status !== 'OK' || !Array.isArray(g.points)) return '';
-  const color = p => p.error ? '#cbd5e1' : p.position == null ? '#94a3b8' : p.position <= 3 ? '#16a34a' : p.position <= 10 ? '#d97706' : '#dc2626';
-  const cell = p => '<td style="width:30px;height:30px;text-align:center;padding:2px"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;text-align:center;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center;background:' + color(p) + ';color:#fff;font:700 12px Arial,sans-serif">' + (p.error ? '?' : p.position == null ? '×' : p.position) + '</span></td>';
-  let rows = '';
+  const mid = Math.floor(g.size / 2);
+  const color = p => p.error ? '#cbd5e1' : posColor(p.position);
+  const cell = p => { const you = p.row === mid && p.col === mid; return '<td style="width:30px;height:30px;text-align:center;padding:2px"' + (you && L ? ' title="' + esc(L.gridYou) + '"' : '') + '><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;text-align:center;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center;background:' + color(p) + ';color:#fff;font:700 12px Arial,sans-serif' + (you ? ';box-shadow:0 0 0 3px #1e293b' : '') + '">' + (p.error ? '?' : p.position == null ? '×' : p.position) + '</span></td>'; };
+  const lbl = txt => '<tr><td colspan="' + g.size + '" style="text-align:center;font:11px Arial,sans-serif;color:#64748b;padding:0">' + esc(txt) + '</td></tr>';
+  let rows = L ? lbl('▲ ' + L.gridNorth) : '';
   for (let i = 0; i < g.size; i++) rows += '<tr>' + g.points.filter(p => p.row === i).sort((a, b) => a.col - b.col).map(cell).join('') + '</tr>';
-  return '<table style="border-collapse:collapse;margin:6px 0" aria-label="geo-grid">' + rows + '</table>';
+  if (L) rows += lbl('▼ ' + L.gridSouth);
+  const where = L && g.place ? '<div style="font-size:12px;color:#475569;max-width:420px">' + esc(L.gridWhere(g.place, g.spacing_km || 1.6)) + '</div>' : '';
+  return '<table style="border-collapse:collapse;margin:6px 0" aria-label="geo-grid">' + rows + '</table>' + where;
+}
+// The colour legend in plain words, under the Maps table and in the e-mail when it shows a grid.
+function mapsLegendHtml(L) {
+  return '<div style="font-size:13px;color:#334155;margin:8px 0"><strong>' + esc(L.mapsLegendTitle) + '</strong>' + L.mapsLegend.map(([c, k, v]) => '<div style="margin-top:4px"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + c + ';vertical-align:middle;margin-right:6px"></span><strong>' + esc(k) + '</strong>: ' + esc(v) + '</div>').join('') + '</div>';
 }
 function changeText(c, L) {
   if (!c) return '';
@@ -260,8 +282,8 @@ function accessEmail(lang, { host, link }) {
 
 function digestEmail(lang, { host, countryLabel, rows, dashboard, stop, suggestions = [], best = null }) {
   const L = t(lang);
-  const tr = rows.map(r => '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(r.keyword) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">' + esc(positionText(r.curr, L)) + (mapsText(r.curr, L) ? '<br><span style="font-weight:400;font-size:12px;color:#475569">' + esc(mapsText(r.curr, L)) + '</span>' : '') + (gridText(r.curr, L) ? '<br><span style="font-weight:400;font-size:12px;color:#475569">' + esc(gridText(r.curr, L)) + '</span>' + gridTable(r.curr) : '') + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(changeText(r.change, L)) + '</td></tr>').join('');
-  return { subject: L.dSubject(host), html: '<p>' + L.dIntro(host, countryLabel) + '</p><table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px"><tr><th align="left" style="padding:6px 10px">' + esc(L.kw) + '</th><th align="left" style="padding:6px 10px">' + esc(L.pos) + '</th><th align="left" style="padding:6px 10px">' + esc(L.change) + '</th></tr>' + tr + '</table>'
+  const tr = rows.map(r => '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(r.keyword) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">' + esc(positionText(r.curr, L)) + (mapsText(r.curr, L) ? '<br><span style="font-weight:400;font-size:12px;color:#475569">' + esc(mapsText(r.curr, L)) + '</span>' : '') + (gridText(r.curr, L) ? '<br><span style="font-weight:400;font-size:12px;color:#475569">' + esc(gridText(r.curr, L)) + '</span>' + gridTable(r.curr, L) : '') + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(changeText(r.change, L)) + '</td></tr>').join('');
+  return { subject: L.dSubject(host), html: '<p>' + L.dIntro(host, countryLabel) + '</p><table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px"><tr><th align="left" style="padding:6px 10px">' + esc(L.kw) + '</th><th align="left" style="padding:6px 10px">' + esc(L.pos) + '</th><th align="left" style="padding:6px 10px">' + esc(L.change) + '</th></tr>' + tr + '</table>' + (rows.some(r => r.curr && r.curr.grid && r.curr.grid.status === 'OK') ? mapsLegendHtml(L) : '')
     + (best ? '<div style="border:2px solid #6d28d9;border-radius:10px;padding:12px 16px;margin:16px 0"><p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;color:#6d28d9;font-weight:700;text-transform:uppercase">' + esc(L.bTitle) + '</p><p style="margin:0 0 8px"><strong>' + esc(L.bText(best.keyword, best.position)) + '</strong></p>'
       + (best.follow ? '<p style="margin:0 0 8px">' + esc(best.follow) + '</p>' : '')
       + (best.show_cta ? '<p style="margin:0"><a href="' + esc(best.link) + '" style="display:inline-block;background:#6d28d9;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:700">' + esc(best.cta) + ' →</a></p>' : '<p style="margin:0"><a href="' + esc(best.link) + '">' + esc(best.cta) + ' →</a></p>') + '</div>' : '')
@@ -280,4 +302,4 @@ function followText(f, L) {
   return L.cWaiting(f.since, f.from, f.to, f.checks_since);
 }
 
-module.exports = { mapsList, mapsCell, gridText, gridTable, mapsText, plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
+module.exports = { mapsLegendHtml, posColor, mapsList, mapsCell, gridText, gridTable, mapsText, plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };

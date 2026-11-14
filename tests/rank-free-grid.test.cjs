@@ -81,6 +81,7 @@ test('weekly round: the grid runs only for chosen keywords, centred on the listi
   await runDue({ store, key: 'k', fetchImpl, now, monthlyCap: 1000 });
   const res = kw => store.db.results.find(r => r.keyword_id === store.db.keywords.find(k => k.keyword === kw).id).result;
   assert.equal(res('roofer').grid.status, 'OK'); assert.equal(res('roofer').grid.found, 9);
+  assert.equal(res('roofer').grid.place, 'Lodi, NJ', 'the grid remembers the place it is centred on');
   assert.equal(res('gutter repair').grid, undefined, 'not chosen for the grid');
   const gridCalls = log.filter(x => x.body.ll);
   assert.equal(gridCalls.length, 9); assert.ok(gridCalls.every(x => x.body.q === 'roofer'));
@@ -112,9 +113,9 @@ test('dashboard: choose up to 3 grid keywords (only tracked ones, only with a pl
   const now = new Date('2026-11-11T10:05:00Z');
   await runDue({ store, key: 'k', now, monthlyCap: 1000, fetchImpl: fakeSerper({ organic: { roofer: ['https://acme.example/'] }, places: { 'roofer Lodi, NJ': [place('Acme', 'https://acme.example/', 1)] }, gridFor: () => [place('Acme', 'https://acme.example/', 2)] }) });
   const dash = await request(a).get('/rank-tracker/d/' + tok);
-  assert.match(dash.text, /🗺️ Geo-grid: found at 9 of 9 points · top 3 at 9 · average position 2/);
+  assert.match(dash.text, /🗺️ Geo-grid around Lodi, NJ: found at 9 of 9 points · top 3 at 9 · average position 2/);
   assert.match(dash.text, /aria-label="geo-grid"/);
   assert.match(dash.text, /name="g" value="roofer" checked/);
   const mails = []; await sendDigests({ store, send: async m => { mails.push(m); return true; }, baseUrl: 'https://app.example', now });
-  assert.match(mails[0].html, /Geo-grid: found at 9 of 9 points/); assert.match(mails[0].html, /aria-label="geo-grid"/);
+  assert.match(mails[0].html, /Geo-grid around Lodi, NJ: found at 9 of 9 points/); assert.match(mails[0].html, /What do the colours mean/); assert.match(mails[0].html, /aria-label="geo-grid"/);
 });

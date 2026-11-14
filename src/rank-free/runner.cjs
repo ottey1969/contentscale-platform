@@ -53,7 +53,7 @@ async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), 
       else {
         const g = await grid({ keyword: k.keyword, host: k.host, center, gl: k.gl, hl: k.hl, key, fetchImpl, now: () => now });
         if (g.calls) { await store.addUsage(now, g.calls); out.calls += g.calls; }
-        r.grid = g;
+        r.grid = g.status === 'OK' ? { ...g, place: m.location || null } : g;
       }
     }
     await store.saveResult(k.keyword_id, r, new Date(now.getTime() + WEEK));

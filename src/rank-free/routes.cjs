@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const engine = require('./engine.cjs');
 const { pgStore, hash, token: randomToken } = require('./store.cjs');
 const { runDue, sendDigests } = require('./runner.cjs');
-const { t, langOf, esc, positionText, mapsText, mapsList, mapsCell, gridText, gridTable, changeText, verifyEmail, accessEmail, followText, plainFollow } = require('./texts.cjs');
+const { t, langOf, esc, positionText, mapsText, mapsList, mapsCell, gridText, gridTable, posColor, mapsLegendHtml, changeText, verifyEmail, accessEmail, followText, plainFollow } = require('./texts.cjs');
 const links = require('./links.cjs');
 const gscMod = require('./gsc.cjs');
 const { brevo } = require('../growth-free/reminders.cjs');
@@ -110,6 +110,36 @@ function suggestionsOf(data, max = 10) {
   return out;
 }
 
+// Keyword ideas for Google Maps from the site's own data (Search Console searches, then Google's related searches):
+// only searches that name one of the places or say "near me", with that part removed, because the tracker adds the
+// place itself ("roofer" is searched as "roofer Lodi, NJ"). Nothing is invented: every idea is a real search, shortened.
+const NEAR = /\b(near me|nearby|in de buurt|bij mij in de buurt|cerca de m[ií]|cerca)\b/gi;
+function mapsKeywordIdeas(data, places, max = 6) {
+  const parts = [];
+  for (const pl of places) {
+    const [town, region] = String(pl).toLowerCase().split(',').map(x => x.trim());
+    if (town) parts.push({ town, region: region || '' });
+  }
+  const escRe = x => x.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const have = new Set(data.keywords.map(k => k.keyword.toLowerCase())), out = [];
+  const take = q => {
+    let s = String(q || '').toLowerCase(), hit = false;
+    for (const { town, region } of parts) {
+      const re = new RegExp('\\b' + escRe(town) + '\\b' + (region ? '(\\s*,?\\s*' + escRe(region) + '\\b)?' : ''), 'g');
+      if (re.test(s)) { hit = true; s = s.replace(re, ' '); }
+    }
+    if (NEAR.test(s)) { hit = true; s = s.replace(NEAR, ' '); }
+    NEAR.lastIndex = 0;
+    if (!hit) return;
+    s = s.replace(/\s+/g, ' ').trim().replace(/\b(in|en|near|bij|de)$/, '').trim();
+    if (s.length >= 3 && s.length <= 60 && !have.has(s) && !out.includes(s)) out.push(s);
+  };
+  const gq = (data.gsc && Array.isArray(data.gsc.queries) ? data.gsc.queries : []).slice().sort((a, b) => (b.impressions || 0) - (a.impressions || 0));
+  for (const q of gq) { take(q.query); if (out.length >= max) return out; }
+  for (const k of data.keywords) for (const h of (k.history || []).slice(0, 1)) for (const x of (h.result && Array.isArray(h.result.suggestions) ? h.result.suggestions : [])) { take(x); if (out.length >= max) return out; }
+  return out;
+}
+
 function dashboardPage(lang, data, tok, cfg, now = new Date()) {
   const L = t(lang);
   const num = n => Number(n).toLocaleString(lang, { maximumFractionDigits: 1 });
@@ -125,8 +155,6 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
     const g = gscBy.get(k.keyword);
     const cLine = k.changed_at && k.changed_position != null ? `<span class="sub">✎ ${esc(L.cRow(new Date(k.changed_at).toISOString().slice(0, 10), k.changed_position))}</span>` : '';
     const gLine = (g ? `<span class="sub">${esc(L.gRow(num(g.clicks), num(g.impressions), g.position != null ? num(g.position) : null))}</span>` : '') + cLine;
-    const mLine = last && mapsText(last, L) ? `<span class="sub">📍 ${esc(mapsText(last, L))}</span>` : '';
-    const gridLine = last && gridText(last, L) ? `<span class="sub">🗺️ ${esc(gridText(last, L))}</span>${gridTable(last)}` : '';
     return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}${gLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
   }).join('');
   const pending = data.keywords.some(k => !k.history[0] && !k.last_error);
@@ -157,16 +185,17 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
   // The first keyword not on page 1: the general Growth link opens the check for it (with the handoff, like every link).
   // Google Maps table: one row per keyword, one column per place, plus the geo-grid for chosen keywords.
   const places = engine.locationsOf(data.maps_location);
+  const ideas = places.length ? mapsKeywordIdeas(data, places) : [];
   const mapsTable = !places.length ? '' : (() => {
     const anyResult = data.keywords.some(k => { const r = k.history[0] && k.history[0].result; return mapsList(r).length; });
     if (!anyResult) return `<p class="muted">${esc(L.mapsNoResults)}</p>`;
     const rowsM = data.keywords.map(k => {
       const r = k.history[0] && k.history[0].result, list = mapsList(r);
-      const cells = places.map(pl => { const m = list.find(x => x && x.location === pl) || null; return `<td class="pos">${esc(mapsCell(m, L))}</td>`; }).join('');
-      const g = r && gridText(r, L) ? `<span class="sub">🗺️ ${esc(gridText(r, L))}</span>${gridTable(r)}` : '';
+      const cells = places.map(pl => { const m = list.find(x => x && x.location === pl) || null; const pos = m && m.status === 'FOUND' ? m.position : null, shown = m && (m.status === 'FOUND' || m.status === 'NOT_IN_RESULTS'); return `<td class="pos">${shown ? `<span style="display:inline-block;min-width:22px;padding:2px 8px;border-radius:999px;background:${posColor(pos)};color:#fff;font-weight:700;white-space:nowrap;font-size:${pos == null ? '13px' : 'inherit'}">${esc(pos == null ? '× ' + mapsCell(m, L) : mapsCell(m, L))}</span>` : esc(mapsCell(m, L))}</td>`; }).join('');
+      const g = r && gridText(r, L) ? `<span class="sub">🗺️ ${esc(gridText(r, L))}</span>${gridTable(r, L)}` : '';
       return `<tr><td><strong>${esc(k.keyword)}</strong>${g}</td>${cells}</tr>`;
     }).join('');
-    return `<div class="card" style="overflow-x:auto"><table class="mt" style="width:100%;border-collapse:collapse"><thead><tr><th>${esc(L.kw)}</th>${places.map(pl => `<th>📍 ${esc(pl)}</th>`).join('')}</tr></thead><tbody>${rowsM}</tbody></table></div>`;
+    return `<div class="card" style="overflow-x:auto"><table class="mt" style="width:100%;border-collapse:collapse"><thead><tr><th>${esc(L.kw)}</th>${places.map(pl => `<th>📍 ${esc(pl)}</th>`).join('')}</tr></thead><tbody>${rowsM}</tbody></table>${mapsLegendHtml(L)}</div>`;
   })();
   const notOnOne = data.keywords.find(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
   return page(lang, L.dash, `<p class="eyebrow">ContentScale · ${esc(L.title)}</p><h1>${esc(L.dash)}</h1>
@@ -178,13 +207,13 @@ ${!cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.callUpse
 ${cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(growthLink(cfg, data, notOnOne.keyword, notOnOne.history[0].result))}">${esc(L.upsellLink)} →</a></p></div>` : ''}
 ${suggestCard}${gscCard}<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form></section>
 <section class="blk" id="sec-maps"><h2>${esc(L.secMaps)}</h2><p class="muted">${esc(L.secMapsLead)}</p><p><strong>${esc(L.mapsOnlineOnly)}</strong></p>${mapsTable}
-<form class="card" id="mp"><strong>${esc(L.mapsTitle)}</strong><p class="muted">${esc(places.length ? L.mapsOn(places.join(' · ')) : L.mapsNone)} ${esc(L.mapsHelp)}</p><label for="mpl">${esc(L.mapsPlaces)}</label><textarea id="mpl" rows="3" placeholder="Lodi, NJ">${esc(places.join('\n'))}</textarea><label class="consent"><input type="checkbox" id="mpok"${places.length ? ' checked' : ''}> ${esc(L.mapsConfirm(data.host))}</label><p class="muted">${esc(L.mapsConfirmHelp)}</p><button type="submit">${esc(L.mapsSave)}</button><div id="mpm"></div></form>
-<div class="card"><strong>${esc(L.mapsKwTitle)}</strong><p class="muted">${esc(L.mapsKwHelp)}</p></div><form class="card" id="gr"><strong>${esc(L.gridTitle)}</strong><p class="muted">${esc(L.gridHelp)}</p>${places.length ? data.keywords.map(k => `<label class="consent"><input type="checkbox" name="g" value="${esc(k.keyword)}"${(data.maps_grid || []).includes(k.keyword) ? ' checked' : ''}> ${esc(k.keyword)}</label>`).join('') + `<button type="submit">${esc(L.gridSave)}</button>` : `<p class="muted">${esc(L.gridNeedsPlace)}</p>`}<div id="grm"></div></form></section>
+<form class="card" id="mp"><strong>${esc(L.mapsTitle)}</strong><p class="muted">${esc(places.length ? L.mapsOn(places.join(' · ')) + '.' : L.mapsNone)} ${esc(L.mapsHelp)}</p><label for="mpl">${esc(L.mapsPlaces)}</label><textarea id="mpl" rows="3" placeholder="Lodi, NJ">${esc(places.join('\n'))}</textarea><label class="consent"><input type="checkbox" id="mpok"${places.length ? ' checked' : ''}> ${esc(L.mapsConfirm(data.host))}</label><p class="muted">${esc(L.mapsConfirmHelp)}</p><button type="submit">${esc(L.mapsSave)}</button><div id="mpm"></div></form>
+<div class="card" id="mk"><strong>${esc(L.mapsKwTitle)}</strong><p class="muted">${esc(L.mapsKwHelp)}</p><ol class="muted" style="padding-left:20px">${L.mapsKwSteps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>${places.length ? (ideas.length ? `<p><strong>${esc(L.mapsIdeas)}</strong></p><div class="chips">${ideas.map(x => `<button type="button" class="chip" data-k="${esc(x)}"${full ? ' disabled' : ''}>+ ${esc(x)}</button>`).join('')}</div>` : `<p class="muted">${esc(L.mapsIdeasNone)}</p>`) : ''}<div id="mkm"></div></div><form class="card" id="gr"><strong>${esc(L.gridTitle)}</strong><p class="muted">${esc(L.gridHelp)}</p>${places.length ? data.keywords.map(k => `<label class="consent"><input type="checkbox" name="g" value="${esc(k.keyword)}"${(data.maps_grid || []).includes(k.keyword) ? ' checked' : ''}> ${esc(k.keyword)}</label>`).join('') + `<button type="submit">${esc(L.gridSave)}</button>` : `<p class="muted">${esc(L.gridNeedsPlace)}</p>`}<div id="grm"></div></form></section>
 <p class="muted"><a href="/rank-tracker/stop/${esc(tok)}">${esc(L.stop)}</a> · <a href="#" id="fg">${esc(L.forget)}</a></p>
 <script>(()=>{const $=i=>document.getElementById(i);$('k').onsubmit=async ev=>{ev.preventDefault();const m=$('m');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:$('kw').value})});const j=await r.json();
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),800)};
-document.querySelectorAll('#sg .chip,#gsc .chip').forEach(b=>b.onclick=async()=>{b.disabled=true;const m=$(b.closest('#gsc')?'gm':'sm');
+document.querySelectorAll('#sg .chip,#gsc .chip,#mk .chip').forEach(b=>b.onclick=async()=>{b.disabled=true;const m=$(b.closest('#gsc')?'gm':b.closest('#mk')?'mkm':'sm');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:b.dataset.k})});const j=await r.json();
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),900);else b.disabled=false});
 if($('gr'))$('gr').onsubmit=async ev=>{ev.preventDefault();const m=$('grm');const ks=[...document.querySelectorAll('#gr input[name=g]:checked')].map(x=>x.value);
@@ -396,4 +425,4 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   return { runRound, stop: () => timer && clearInterval(timer) };
 }
 
-module.exports = { registerRankFree, rankFreeConfig };
+module.exports = { registerRankFree, rankFreeConfig, mapsKeywordIdeas, dashboardPage };

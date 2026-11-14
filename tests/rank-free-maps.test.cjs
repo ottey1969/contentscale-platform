@@ -85,10 +85,10 @@ test('dashboard and e-mail show the Maps position; the place can be set and clea
   // Two clearly separated sections (owner 2026-11-14); the Maps position sits in its own table, not in the organic rows.
   const organic = dash.text.slice(dash.text.indexOf('id="sec-organic"'), dash.text.indexOf('id="sec-maps"')), mapsSec = dash.text.slice(dash.text.indexOf('id="sec-maps"'));
   assert.ok(organic.length > 100 && mapsSec.length > 100);
-  assert.doesNotMatch(organic, /Google Maps: 4/); assert.match(mapsSec, /<th>📍 Lodi, NJ<\/th>/); assert.match(mapsSec, /<td class="pos">4<\/td>/);
+  assert.doesNotMatch(organic, /Google Maps: 4/); assert.match(mapsSec, /<th>📍 Lodi, NJ<\/th>/); assert.match(mapsSec, /<td class="pos"><span[^>]*>4<\/span><\/td>/);
   assert.match(dash.text, /Checked in Google Maps for: Lodi, NJ/);
-  assert.match(mapsSec, /Working online only\? Leave this empty/);
-  assert.match(mapsSec, /Performance → “Searches used to find your Business Profile”/);
+  assert.match(mapsSec, /Working only online\? Skip this part/);
+  assert.match(mapsSec, /Click Performance, then “Searches used to find your Business Profile”/);
   const post = b => request(a).post('/api/rank-free/d/' + tok + '/maps').send(b);
   assert.equal((await post({ maps_location: 'https://x', maps_confirm: true })).status, 400);
   assert.equal((await post({ maps_location: 'Hackensack, NJ' })).body.error, 'Tick the box to confirm that your Google Business Profile links to your website.', 'no place without the confirmation');
@@ -113,6 +113,6 @@ test('more places: each keyword is searched in Google Maps for every place (up t
   const r = store.db.results[0].result;
   assert.deepEqual(r.maps_places.map(m => [m.location, m.status, m.position]), [['Lodi, NJ', 'FOUND', 1], ['Hackensack, NJ', 'NOT_IN_RESULTS', undefined]]);
   assert.equal(log.filter(x => x.url.endsWith('/maps')).length, 2);
-  assert.equal(mapsText(r, t('en')), 'Google Maps: 1 for “roofer Lodi, NJ” · Google Maps: not in the top 1 for “roofer Hackensack, NJ”');
+  assert.equal(mapsText(r, t('en')), 'Google Maps: 1 for “roofer Lodi, NJ” · Google Maps: not found for “roofer Hackensack, NJ”');
   assert.deepEqual(engine.readMapsLocations('Lodi, NJ\nlodi, nj\n\nHackensack, NJ'), { locations: ['Lodi, NJ', 'Hackensack, NJ'] });
 });
