@@ -105,3 +105,10 @@ When the monthly budget is used up, checks are postponed one day (never dropped,
 | `texts.cjs` | Page and e-mail texts in English, Dutch and Spanish |
 | `links.cjs` | Signed dashboard links |
 | `routes.cjs` | Pages, API, limits, admin stats, scheduler |
+
+## Google Maps (optional, per project)
+A project can set a place, for example `Lodi, NJ`, at sign-up or on the dashboard. Each weekly round then searches every keyword
+in Google Maps for that place (`<keyword> <place>`, through Serper `/maps`, one call per keyword). The business counts when the
+website on its Maps listing is the tracked site; otherwise the result is "not in the top N". The call counts against the
+monthly budget; when it does not fit, the organic result is still saved and Maps says "skipped this week". The dashboard row and
+the weekly e-mail show the Maps position under the Google position. An empty place switches Maps off.

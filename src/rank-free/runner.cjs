@@ -2,7 +2,7 @@
 // The automatic part of the free rank tracker: due keywords are checked, results saved, and one e-mail per project goes
 // out when all its keywords have a fresh result. A monthly provider budget caps the cost for all free users together;
 // when it is used up, checks are postponed one day (never dropped, never estimated).
-const { checkRank, changeOf, growthLink } = require('./engine.cjs');
+const { checkRank, checkMaps, changeOf, growthLink } = require('./engine.cjs');
 const { digestEmail, followText, plainFollow, t } = require('./texts.cjs');
 const { bestOpportunity, followUp } = require('./gsc.cjs');
 const { linkToken, handoffToken } = require('./links.cjs');
@@ -11,7 +11,7 @@ const { countryName } = require('../growth-search-locale.cjs');
 const DAY = 86400000;
 const WEEK = 7 * DAY;
 
-async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), monthlyCap = 3000, batch = 40, maxPages, check = checkRank } = {}) {
+async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), monthlyCap = 3000, batch = 40, maxPages, check = checkRank, maps = checkMaps } = {}) {
   const out = { checked: 0, postponed: 0, errors: 0, calls: 0, budget_reached: false };
   if (!key) return { ...out, skipped: 'PROVIDER_NOT_CONFIGURED' };
   const due = await store.due(now, batch);
@@ -28,6 +28,16 @@ async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), 
       out.errors++; await store.postpone(k.keyword_id, new Date(now.getTime() + DAY / 4), String(r.reason || r.status).slice(0, 60), now);
       console.warn('[rank-free] check failed', k.keyword_id, r.status, r.reason || '');
       continue;
+    }
+    // Google Maps for the project's place, when one is set: one more call, only if it still fits in this month's budget.
+    // A Maps failure never blocks the organic result; it is saved as what it is (PROVIDER_ERROR), never as "not found".
+    if (k.maps_location) {
+      if ((await store.usage(now)) + 1 > monthlyCap) { r.maps = { status: 'BUDGET_REACHED', location: k.maps_location }; out.budget_reached = true; }
+      else {
+        const m = await maps({ keyword: k.keyword, host: k.host, location: k.maps_location, gl: k.gl, hl: k.hl, key, fetchImpl, now: () => now });
+        if (m.calls) { await store.addUsage(now, m.calls); out.calls += m.calls; }
+        r.maps = m;
+      }
     }
     await store.saveResult(k.keyword_id, r, new Date(now.getTime() + WEEK));
     out.checked++;

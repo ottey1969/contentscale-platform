@@ -111,6 +111,48 @@ async function checkRank({ keyword, host, gl, hl, key, fetchImpl = global.fetch,
   return { status: 'NOT_IN_RESULTS', depth: maxPages * PAGE_SIZE, pages_checked: maxPages, calls, top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
 }
 
+// Google Maps (owner 2026-11-14: "rank and Maps; more people can use it"). Optional per project: a place such as
+// "Lodi, NJ". The keyword is searched in Google Maps for that place, one call per keyword per round; the business counts
+// when the website on its Maps listing is the tracked site. Nothing is estimated: a business that is not among the places
+// Google Maps shows is "not in the top N".
+const MAX_LOCATION_LENGTH = 80;
+const SAFE_LOCATION = /^[\p{L}\p{N}][\p{L}\p{N}\p{M}\s'’&.,-]*$/u;
+function readMapsLocation(raw) {
+  const v = String(raw == null ? '' : raw).replace(/\s+/g, ' ').trim();
+  if (!v) return { location: null };
+  if (v.length > MAX_LOCATION_LENGTH || !SAFE_LOCATION.test(v) || /https?:|www\./i.test(v)) return { error: 'Enter a place such as "Lodi, NJ" (letters, numbers, commas).' };
+  return { location: v };
+}
+function mapsQuery(keyword, location) {
+  const k = String(keyword || '').trim(), first = String(location || '').split(',')[0].trim().toLowerCase();
+  return location && !(first && k.toLowerCase().includes(first)) ? k + ' ' + location : k;
+}
+async function checkMaps({ keyword, host, location, gl, hl, key, fetchImpl = global.fetch, now = () => new Date() }) {
+  if (!key) return { status: 'PROVIDER_NOT_CONFIGURED', calls: 0 };
+  if (typeof fetchImpl !== 'function') return { status: 'PROVIDER_UNAVAILABLE', calls: 0 };
+  const q = mapsQuery(keyword, location);
+  let payload;
+  try {
+    const r = await fetchImpl('https://google.serper.dev/maps', { method: 'POST',
+      headers: { 'X-API-KEY': String(key).trim(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q, gl, hl }), signal: AbortSignal.timeout(12000) });
+    if (!r.ok) return { status: 'PROVIDER_ERROR', reason: 'HTTP_' + r.status, calls: 1, query: q, location, checked_at: now().toISOString() };
+    payload = await r.json();
+  } catch (e) { return { status: 'PROVIDER_ERROR', reason: e && e.name === 'TimeoutError' ? 'TIMEOUT' : 'REQUEST_FAILED', calls: 1, query: q, location, checked_at: now().toISOString() }; }
+  const places = payload && Array.isArray(payload.places) ? payload.places : null;
+  if (!places) return { status: 'PROVIDER_ERROR', reason: 'NO_PLACES', calls: 1, query: q, location, checked_at: now().toISOString() };
+  const top = places.slice(0, 3).map((x, i) => ({ position: Number(x && x.position) || i + 1, title: String(x && x.title || '').slice(0, 120) }));
+  for (let i = 0; i < places.length; i++) {
+    const x = places[i] || {}, h = hostOf(String(x.website || ''));
+    if (h && (h === host || h.endsWith('.' + host))) {
+      return { status: 'FOUND', position: Number(x.position) || i + 1, title: String(x.title || '').slice(0, 160), address: String(x.address || '').slice(0, 200),
+        rating: Number.isFinite(Number(x.rating)) ? Number(x.rating) : null, rating_count: Number.isFinite(Number(x.ratingCount)) ? Number(x.ratingCount) : null,
+        depth: places.length, top, calls: 1, query: q, location, checked_at: now().toISOString() };
+    }
+  }
+  return { status: 'NOT_IN_RESULTS', depth: places.length, top, calls: 1, query: q, location, checked_at: now().toISOString() };
+}
+
 // What changed between two checks of the same keyword, for the e-mail. Small daily moves are not news.
 function changeOf(prev, curr) {
   const p = prev && prev.status === 'FOUND' ? prev.position : null, c = curr && curr.status === 'FOUND' ? curr.position : null;
@@ -136,4 +178,4 @@ function growthLink(growthUrl, { host, gl, hl }, keyword, last, rt = null) {
   return growthUrl + (growthUrl.includes('?') ? '&' : '?') + q.toString();
 }
 
-module.exports = { growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
+module.exports = { readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
