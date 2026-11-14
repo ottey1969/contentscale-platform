@@ -70,14 +70,19 @@ function signupPage(lang, cfg) {
 <label for="maps">${esc(L.mapsPlaces)}</label><textarea id="maps" rows="3" placeholder="Lodi, NJ"></textarea><p class="muted">${esc(L.mapsOnlineOnly)}</p><label class="consent"><input type="checkbox" id="mapsok"> ${esc(L.mapsConfirmSignup)}</label><p class="muted">${esc(L.mapsConfirmHelp)}</p>
 <p class="consent-note">${esc(L.consent)}</p><label class="consent"><input type="checkbox" id="notips"> ${esc(L.noTips)}</label>
 <button type="submit">${esc(L.submit)}</button><div id="m"></div></form>
+<div class="card best" id="done" hidden><p class="eyebrow">✉️</p><h2 style="margin:4px 0 8px">${esc(L.doneTitle)}</h2><p id="doneTo"></p><ol>${L.doneSteps.map(x => `<li>${esc(x)}</li>`).join('')}</ol><p class="muted">${esc(L.doneSpam)}</p><button type="button" id="again">${esc(L.doneAgain)}</button> <button type="button" class="ghost" id="other">${esc(L.doneOther)}</button><div id="dm"></div></div>
 <div class="card"><strong>${esc(L.how)}</strong><ol><li>${esc(L.how1)}</li><li>${esc(L.how2)}</li><li>${esc(L.how3)}</li></ol><p class="muted">${esc(L.note)}</p></div>
 <script>(()=>{const D=${defaults},O=${other},$=i=>document.getElementById(i),T=${JSON.stringify({otherEngine: L.otherEngine('§')})};
 const pre=(navigator.language||'').split('-')[1],page='${lang === 'nl' ? 'nl' : lang === 'es' ? 'es' : ''}';if(page)$('gl').value=page;else if(pre&&[...$('gl').options].some(o=>o.value===pre.toLowerCase()))$('gl').value=pre.toLowerCase();else $('gl').value='us';
 const sync=()=>{const g=$('gl').value;if(D[g])$('hl').value=D[g];const e=O[g];$('other').hidden=!e;if(e)$('other').textContent=T.otherEngine.replace('§',e)};$('gl').onchange=sync;sync();
 let rs='';$('region').oninput=()=>{const v=$('region').value.trim(),mp=$('maps');if(!mp.value.trim()||mp.value.trim()===rs){mp.value=v;rs=v}};
+let last=null;const send=async body=>{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return r.json()};
+const DT=${JSON.stringify(L.doneTo('§')).replace(/</g, '\\u003c')};
+$('again').onclick=async()=>{const m=$('dm');$('again').disabled=true;try{const j=await send(last);m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||''}catch(e){m.className='msg err';m.textContent='Error'}$('again').disabled=false};
+$('other').onclick=()=>{$('done').hidden=true;$('f').hidden=false;$('email').value='';$('email').focus()};
 $('f').onsubmit=async ev=>{ev.preventDefault();const m=$('m');m.className='';m.textContent='';const b=ev.submitter;b.disabled=true;
-try{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,site:$('site').value,country:$('gl').value,language:$('hl').value,keywords:$('kw').value,region:$('region').value,maps_location:$('maps').value,maps_confirm:$('mapsok').checked,no_tips:$('notips').checked,lang:'${lang}'})});
-const j=await r.json();m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)$('f').reset()}catch(e){m.className='msg err';m.textContent='Error'}b.disabled=false}})();</script>`);
+try{const r={json:async()=>send(last)};last={email:$('email').value,site:$('site').value,country:$('gl').value,language:$('hl').value,keywords:$('kw').value,region:$('region').value,maps_location:$('maps').value,maps_confirm:$('mapsok').checked,no_tips:$('notips').checked,lang:'${lang}'};
+const j=await r.json();if(j.success){$('f').hidden=true;$('doneTo').textContent=DT.replace('§',last.email);$('done').hidden=false;$('done').scrollIntoView({behavior:'smooth'})}else{m.className='msg err';m.textContent=j.error||''}}catch(e){m.className='msg err';m.textContent='Error'}b.disabled=false}})();</script>`);
 }
 
 // The last checks of one keyword as a small line (oldest left): higher is better; "not found" sits on the bottom line.
@@ -306,7 +311,8 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const lang = pickLang(req);
     const nonce = links.newNonce();
     const a = await store.verify(hash(String(req.params.token || '')), nonce, now()).catch(() => null);
-    if (!a) return html(res, page(lang, t(lang).title, `<h1>${esc(t(lang).title)}</h1><p>This link is no longer valid. <a href="/rank-tracker">Start again</a>.</p>`), 404);
+    // A link that was replaced by a newer one (the form was filled in again). An opened link keeps working (store.verify).
+    if (!a) { const L = t(lang); return html(res, page(lang, L.vBadTitle, `<p class="eyebrow">ContentScale · ${esc(L.title)}</p><h1>${esc(L.vBadTitle)}</h1><p>${esc(L.vBadText)}</p><p><a class="cta" href="/rank-tracker?lang=${esc(lang)}">${esc(L.vBadCta)} →</a></p>`), 404); }
     runRound();
     return res.redirect(302, '/rank-tracker/d/' + links.linkToken(a.dashboard_nonce || nonce));
   });

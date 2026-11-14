@@ -65,7 +65,7 @@ function pgStore(pool) {
       return { account: a, project: p };
     },
     async verify(verifyHash, dashboardNonce, now) {
-      const a = (await q('UPDATE rank_free_accounts SET verified_at=COALESCE(verified_at,$3), verify_hash=NULL, dashboard_nonce=COALESCE(dashboard_nonce,$2) WHERE verify_hash=$1 RETURNING *', [verifyHash, dashboardNonce, now]))[0];
+      const a = (await q("UPDATE rank_free_accounts SET verified_at=COALESCE(verified_at,$3), dashboard_nonce=COALESCE(dashboard_nonce,$2) WHERE verify_hash=$1 AND (verified_at IS NULL OR verified_at > $3::timestamptz - INTERVAL '7 days') RETURNING *", [verifyHash, dashboardNonce, now]))[0];
       if (a) await q('UPDATE rank_free_keywords SET next_check_at=$2 WHERE project_id IN (SELECT id FROM rank_free_projects WHERE account_id=$1) AND active AND last_checked_at IS NULL', [a.id, now]);
       return a || null;
     },
@@ -123,6 +123,9 @@ function pgStore(pool) {
 }
 
 // The same behaviour in memory, for tests and for running without a database.
+// An opened confirmation link keeps working for 7 days after the confirmation (mail scanners open links first), then
+// it expires. The same window is in the SQL of pgStore.verify.
+const CONFIRM_REUSE_MS = 7 * 86400000;
 function memoryStore() {
   const db = { accounts: [], projects: [], keywords: [], results: [], usage: {} };
   let id = 1;
@@ -141,8 +144,8 @@ function memoryStore() {
       return { account: a, project: p };
     },
     async verify(verifyHash, dashboardNonce, now) {
-      const a = db.accounts.find(x => x.verify_hash && x.verify_hash === verifyHash); if (!a) return null;
-      Object.assign(a, { verified_at: a.verified_at || now, verify_hash: null, dashboard_nonce: a.dashboard_nonce || dashboardNonce });
+      const a = db.accounts.find(x => x.verify_hash && x.verify_hash === verifyHash && (!x.verified_at || new Date(x.verified_at) > new Date(new Date(now).getTime() - CONFIRM_REUSE_MS))); if (!a) return null;
+      Object.assign(a, { verified_at: a.verified_at || now, dashboard_nonce: a.dashboard_nonce || dashboardNonce });
       const p = db.projects.find(x => x.account_id === a.id);
       for (const k of db.keywords) if (p && k.project_id === p.id && k.active && !k.last_checked_at) k.next_check_at = now;
       return a;
