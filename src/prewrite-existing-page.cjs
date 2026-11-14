@@ -31,8 +31,15 @@ const inPath = (w, pw, joined) => pw.includes(w) || joined.indexOf(stem(w)) >= 0
 
 // Same-intent candidates among the site's verified URLs (sitemap or homepage links).
 // region: the Brief's market code ("nl"); a URL on that market's subdomain or path is preferred when several match.
+// A price question about a single subject ("tarifas generative engine optimization", "wat kost geo") is a buying question:
+// it belongs on the site's service page for that subject (owner 2026-11-13: the Brief proposed a new
+// /tarifas-generative-engine-optimization next to /consultor-geo/, which already has a price section).
+const PRICE_WORDS = new Set('kost kosten kostte prijs prijzen tarief tarieven hoeveel cuanto cuanta cuesta cuestan coste costes costo costos precio precios tarifa tarifas cobra cobran cost costs price prices pricing rate rates fee fees'.split(' '));
+const PROVIDER_WORDS = new Set('consultant consultants consultancy consulting consultor consultores consultoria consulent adviseur specialist especialista expert experto agency agencia agencias bureau services service servicios servicio diensten dienst'.split(' '));
+// The written-out name counts as the abbreviation in the keyword too.
+const abbreviate = s => { let t = ' ' + fold(s).replace(/[^\p{L}\p{N}]+/gu, ' ') + ' '; for (const [a, full] of Object.entries(SPELLED)) t = t.split(' ' + full + ' ').join(' ' + a + ' '); return t.trim(); };
 function findSameIntentPages(keyword, urls, { region } = {}) {
-  const kw = Array.from(new Set(words(keyword)));
+  const kw = Array.from(new Set(words(abbreviate(keyword))));
   if (!kw.length) return [];
   const market = fold(region || '').slice(0, 2);
   const out = [];
@@ -45,6 +52,7 @@ function findSameIntentPages(keyword, urls, { region } = {}) {
     // Core-word match: at least two core words, all of them in the address (modifiers such as price words ignored).
     const core = coreWords(kw);
     if (core.length >= 2 && core.length < kw.length && core.every(w => inPath(w, pw, joined))) { coreFull = true; score = Math.max(score, 1); }
+    else if (core.length === 1 && kw.some(w => PRICE_WORDS.has(w)) && inPath(core[0], pw, joined) && pw.some(w => PROVIDER_WORDS.has(w))) { coreFull = true; score = Math.max(score, 1); }
     if (score < 0.5) continue;
     let host = ''; try { host = new URL(url).hostname.toLowerCase(); } catch (e) {}
     const marketMatch = !!market && (host.split('.')[0] === market || pw[0] === market);
