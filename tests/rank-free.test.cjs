@@ -121,11 +121,25 @@ test('Rank Tracker: failed weekly digest stays pending and is retried without an
   assert.deepEqual(first, {sent:0,failed:1});
   assert.equal(store.db.projects[0].last_digest_at, null, 'a failed email must not masquerade as delivered');
   const retried = [];
-  const second = await sendDigests({ store, send:async mail=>{retried.push(mail);return true;}, baseUrl:'https://app.example', now });
+  assert.deepEqual(await sendDigests({ store, send:async mail=>{retried.push(mail);return true;}, baseUrl:'https://app.example', now }), {sent:0,failed:0}, 'not again within the hour (scheduler runs every 15 minutes)');
+  const later = new Date(now.getTime() + 61 * 60e3);
+  const second = await sendDigests({ store, send:async mail=>{retried.push(mail);return true;}, baseUrl:'https://app.example', now: later });
   assert.deepEqual(second, {sent:1,failed:0});
   assert.equal(retried.length,1);
   assert.equal(await store.usage(now),beforeCalls, 'retrying email must not spend Google API credits');
   assert.deepEqual(await sendDigests({ store, send:async()=>true, baseUrl:'https://app.example', now }),{sent:0,failed:0});
+});
+
+test('Rank Tracker: an address that keeps failing gets at most DIGEST_TRIES attempts per round (owner 2026-11-14)', async () => {
+  const { DIGEST_TRIES } = require('../src/rank-free/runner.cjs');
+  const store = memoryStore(); await confirmedAccount(store);
+  const start = new Date('2026-11-11T10:05:00Z');
+  await runDue({ store, key:'k', fetchImpl:fakeSerper({ 'consultor geo':[['https://acme.example/a/']], 'que es geo':[[]] }), now:start, monthlyCap:100 });
+  let attempts = 0;
+  for (let i = 0; i < 40; i++) await sendDigests({ store, send:async()=>{ attempts++; return false; }, baseUrl:'https://app.example', now:new Date(start.getTime() + i * 15 * 60e3) });
+  assert.equal(attempts, DIGEST_TRIES, '10 hours of 15-minute scheduler runs');
+  assert.ok(store.db.projects[0].last_digest_at, 'the round is closed; the next weekly round sends a new e-mail');
+  assert.equal(store.db.projects[0].digest_fail_count, 0);
 });
 
 function app(store, sent, extra = {}) {

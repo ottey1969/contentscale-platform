@@ -159,3 +159,18 @@ test('a price question about one subject goes to the service page (owner 2026-11
   assert.equal(best('qué es geo', es), 'https://es.contentscale.site/que-es-geo/', 'not a price question: the address must hold every word');
   assert.equal(best('tarifas geo', ['https://es.contentscale.site/que-es-geo/']), null, 'a price question never lands on a definition page');
 });
+
+test('the default market (no locale subdomain or path) still counts: EN root pages and single-market sites (owner 2026-11-14)', () => {
+  const site = ['https://contentscale.site/generative-engine-optimization-consultant/', 'https://nl.contentscale.site/seo-content-optimalisatie/',
+    'https://es.contentscale.site/consultor-geo/', 'https://contentscale.site/seo-content-optimization/'];
+  const decide = (k, urls, region) => E.applyExistingPageDecision({ content_decision: { recommended_treatment: 'CREATE_NEW_PAGE' } }, E.findSameIntentPages(k, urls, { region })).content_decision;
+  assert.equal(decide('generative engine optimization consultant cost', site, 'us').closest_existing_url, 'https://contentscale.site/generative-engine-optimization-consultant/');
+  assert.equal(decide('seo content optimization', site, 'gb').recommended_treatment, 'EXPAND_EXISTING_PAGE');
+  assert.equal(decide('roof repair houston', ['https://perfectroofingteam.com/roof-repair-houston/'], 'us').recommended_treatment, 'EXPAND_EXISTING_PAGE', 'a single-market client site');
+  // The site has its own Spanish market: the English root page is another market for a Spanish Brief.
+  const es = decide('seo content optimization', site, 'es');
+  assert.equal(es.recommended_treatment, 'CREATE_NEW_PAGE');
+  assert.deepEqual(es.cross_market_url_overlap, ['https://contentscale.site/seo-content-optimization/']);
+  assert.equal(E.marketOf('https://example.com/ai/tools/'), '', '"ai" is not a market');
+  assert.equal(E.marketOf('https://example.com/es/consultor/'), 'es');
+});
