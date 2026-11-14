@@ -5,6 +5,11 @@ const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&a
 
 const T = {
   en: {
+    mapsField: 'Place for Google Maps (optional, for example Lodi, NJ)', mapsHelp: 'We also check where your business appears in Google Maps for each keyword in this place. Your Google Business Profile must link to your website.',
+    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' for “' + q + '”', mapsNot: (d, q) => 'Google Maps: not in the top ' + d + ' for “' + q + '”',
+    mapsErr: 'Google Maps: the last check failed; it runs again next week', mapsBudget: 'Google Maps: skipped this week (monthly limit reached)',
+    mapsSave: 'Save place', mapsSaved: 'Saved. The next weekly check includes Google Maps.', mapsCleared: 'Google Maps check switched off.', mapsBad: 'Enter a place such as “Lodi, NJ”.',
+    mapsNone: 'No place set: Google Maps is not checked.', mapsOn: p => 'Checked in Google Maps for: ' + p,
     cMark: 'I have changed this page', cUndo: 'undo', cSaved: 'Noted. We follow this keyword from today’s position.',
     cWaiting: (d, p, n, c) => 'You changed this page on ' + d + ' (position ' + p + ' that day). Google often needs 2–6 weeks to process a change. ' + (c ? 'Last check: position ' + (n == null ? 'not found' : n) + '. ' : 'No new check yet. ') + 'As long as it does not rise, this stays your best opportunity.',
     cGrowing: (d, p, n) => 'Up from position ' + p + ' to ' + n + ' since your change on ' + d + '. It is still your best opportunity: a few more places put it in the top 3.',
@@ -52,6 +57,11 @@ const T = {
     ch: { FIRST: 'first check', ENTERED_PAGE_ONE: 'now on page 1', LEFT_PAGE_ONE: 'dropped off page 1', ENTERED_RESULTS: 'now in the top 30', LEFT_RESULTS: 'no longer in the top 30', UP: 'up', DOWN: 'down', OTHER_PAGE: 'another page of yours now ranks' },
   },
   nl: {
+    mapsField: 'Plaats voor Google Maps (optioneel, bijvoorbeeld Lodi, NJ)', mapsHelp: 'We meten ook waar je bedrijf in Google Maps staat voor elk zoekwoord in deze plaats. Je Google Bedrijfsprofiel moet naar je website linken.',
+    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' voor “' + q + '”', mapsNot: (d, q) => 'Google Maps: niet in de top ' + d + ' voor “' + q + '”',
+    mapsErr: 'Google Maps: de laatste meting mislukte; volgende week opnieuw', mapsBudget: 'Google Maps: deze week overgeslagen (maandlimiet bereikt)',
+    mapsSave: 'Plaats opslaan', mapsSaved: 'Opgeslagen. De volgende wekelijkse meting neemt Google Maps mee.', mapsCleared: 'Google Maps-meting uitgezet.', mapsBad: 'Vul een plaats in zoals “Lodi, NJ”.',
+    mapsNone: 'Geen plaats ingesteld: Google Maps wordt niet gemeten.', mapsOn: p => 'Gemeten in Google Maps voor: ' + p,
     cMark: 'Ik heb deze pagina aangepast', cUndo: 'ongedaan maken', cSaved: 'Genoteerd. We volgen dit zoekwoord vanaf de positie van vandaag.',
     cWaiting: (d, p, n, c) => 'Je hebt deze pagina op ' + d + ' aangepast (positie ' + p + ' op die dag). Google heeft vaak 2–6 weken nodig om een aanpassing te verwerken. ' + (c ? 'Laatste meting: positie ' + (n == null ? 'niet gevonden' : n) + '. ' : 'Nog geen nieuwe meting. ') + 'Zolang hij niet stijgt, blijft dit je beste kans.',
     cGrowing: (d, p, n) => 'Gestegen van positie ' + p + ' naar ' + n + ' sinds je aanpassing op ' + d + '. Het blijft je beste kans: nog een paar plekken en je staat in de top 3.',
@@ -99,6 +109,11 @@ const T = {
     ch: { FIRST: 'eerste meting', ENTERED_PAGE_ONE: 'nu op pagina 1', LEFT_PAGE_ONE: 'van pagina 1 af', ENTERED_RESULTS: 'nu in de top 30', LEFT_RESULTS: 'niet meer in de top 30', UP: 'gestegen', DOWN: 'gedaald', OTHER_PAGE: 'er rankt nu een andere pagina van je' },
   },
   es: {
+    mapsField: 'Lugar para Google Maps (opcional, por ejemplo Lodi, NJ)', mapsHelp: 'También comprobamos dónde aparece tu negocio en Google Maps para cada palabra clave en este lugar. Tu Perfil de Empresa de Google debe enlazar a tu web.',
+    mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' para «' + q + '»', mapsNot: (d, q) => 'Google Maps: fuera del top ' + d + ' para «' + q + '»',
+    mapsErr: 'Google Maps: la última comprobación falló; se repite la próxima semana', mapsBudget: 'Google Maps: omitido esta semana (límite mensual alcanzado)',
+    mapsSave: 'Guardar lugar', mapsSaved: 'Guardado. La próxima comprobación semanal incluye Google Maps.', mapsCleared: 'Comprobación de Google Maps desactivada.', mapsBad: 'Escribe un lugar como «Lodi, NJ».',
+    mapsNone: 'Sin lugar: Google Maps no se comprueba.', mapsOn: p => 'Comprobado en Google Maps para: ' + p,
     cMark: 'He modificado esta página', cUndo: 'deshacer', cSaved: 'Anotado. Seguimos esta palabra clave desde la posición de hoy.',
     cWaiting: (d, p, n, c) => 'Modificaste esta página el ' + d + ' (posición ' + p + ' ese día). Google suele necesitar de 2 a 6 semanas para procesar un cambio. ' + (c ? 'Última comprobación: posición ' + (n == null ? 'no encontrada' : n) + '. ' : 'Aún no hay una nueva comprobación. ') + 'Mientras no suba, sigue siendo tu mejor oportunidad.',
     cGrowing: (d, p, n) => 'Ha subido de la posición ' + p + ' a la ' + n + ' desde tu cambio del ' + d + '. Sigue siendo tu mejor oportunidad: unos puestos más y estás en el top 3.',
@@ -156,6 +171,14 @@ function positionText(r, L) {
   if (r.status === 'NOT_IN_RESULTS') return r.all_results_shown || (r.depth && r.depth < 30) ? L.notShown(r.depth) : L.notTop(r.depth || 30);
   return '—';
 }
+// The Google Maps result of a check (engine.checkMaps), or '' when the project has no place set.
+function mapsText(r, L) {
+  const m = r && r.maps; if (!m) return '';
+  if (m.status === 'FOUND') return L.mapsPos(m.position, m.query || '');
+  if (m.status === 'NOT_IN_RESULTS') return L.mapsNot(m.depth || 20, m.query || '');
+  if (m.status === 'BUDGET_REACHED') return L.mapsBudget;
+  return L.mapsErr;
+}
 function changeText(c, L) {
   if (!c) return '';
   const word = L.ch[c.kind] || '';
@@ -174,7 +197,7 @@ function accessEmail(lang, { host, link }) {
 
 function digestEmail(lang, { host, countryLabel, rows, dashboard, stop, suggestions = [], best = null }) {
   const L = t(lang);
-  const tr = rows.map(r => '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(r.keyword) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">' + esc(positionText(r.curr, L)) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(changeText(r.change, L)) + '</td></tr>').join('');
+  const tr = rows.map(r => '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(r.keyword) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">' + esc(positionText(r.curr, L)) + (mapsText(r.curr, L) ? '<br><span style="font-weight:400;font-size:12px;color:#475569">' + esc(mapsText(r.curr, L)) + '</span>' : '') + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(changeText(r.change, L)) + '</td></tr>').join('');
   return { subject: L.dSubject(host), html: '<p>' + L.dIntro(host, countryLabel) + '</p><table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px"><tr><th align="left" style="padding:6px 10px">' + esc(L.kw) + '</th><th align="left" style="padding:6px 10px">' + esc(L.pos) + '</th><th align="left" style="padding:6px 10px">' + esc(L.change) + '</th></tr>' + tr + '</table>'
     + (best ? '<div style="border:2px solid #6d28d9;border-radius:10px;padding:12px 16px;margin:16px 0"><p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;color:#6d28d9;font-weight:700;text-transform:uppercase">' + esc(L.bTitle) + '</p><p style="margin:0 0 8px"><strong>' + esc(L.bText(best.keyword, best.position)) + '</strong></p>'
       + (best.follow ? '<p style="margin:0 0 8px">' + esc(best.follow) + '</p>' : '')
@@ -194,4 +217,4 @@ function followText(f, L) {
   return L.cWaiting(f.since, f.from, f.to, f.checks_since);
 }
 
-module.exports = { plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
+module.exports = { mapsText, plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
