@@ -41,6 +41,23 @@ test('a CREATE_NEW_PAGE decision becomes EXPAND_EXISTING_PAGE for a full match; 
   assert.equal(expand.content_decision.closest_existing_url, 'https://nl.contentscale.site/seo-content-optimalisatie/');
 });
 
+test('Pre-Write: a full URL slug in another market never forces a new Spanish page into English Growth', () => {
+  const onlyEnglish = ['https://en.example.site/consultor-geo/', 'https://example.site/seo/'];
+  const b = { content_decision:{ recommended_treatment:'CREATE_NEW_PAGE', closest_existing_url:'none' } };
+  const c = E.findSameIntentPages('consultor geo', onlyEnglish, {region:'es'});
+  assert.equal(c[0].full,true,'the words really do match the English slug');
+  assert.equal(c[0].market_match,false);
+  E.applyExistingPageDecision(b,c);
+  assert.equal(b.content_decision.recommended_treatment,'CREATE_NEW_PAGE');
+  assert.equal(b.content_decision.cross_market_overlap_requires_review,true);
+  assert.deepEqual(b.content_decision.cross_market_url_overlap,['https://en.example.site/consultor-geo/']);
+  const local = { content_decision:{ recommended_treatment:'CREATE_NEW_PAGE' } };
+  E.applyExistingPageDecision(local,E.findSameIntentPages('consultor geo',
+    ['https://en.example.site/consultor-geo/', 'https://es.example.site/consultor-geo/'],{region:'es'}));
+  assert.equal(local.content_decision.recommended_treatment,'EXPAND_EXISTING_PAGE');
+  assert.equal(local.content_decision.closest_existing_url,'https://es.example.site/consultor-geo/');
+});
+
 test('findings for Growth: competitor gaps, sections and questions; never statistics, quotes or AI-answer links', () => {
   const f = E.briefFindingsForGrowth({ keyword: 'seo content optimalisatie',
     definitive_outline: [{ h2: 'TEST Wat is het', cover: ['TEST definitie'] }, { h2: 'TEST Meten', cover: [] }],
