@@ -20,9 +20,10 @@ These rules come from the owner. They apply to every agent and every change: Cla
 - **Perplexity is a fallback.** It is fetched automatically only when the manual Perplexity answer is empty.
 - Do not circumvent bot blocks or paywalls on source sites.
 
-## WordPress (contentscale.site, nl., es.)
+## WordPress
 - Back up a page before editing it. Publish only after the owner says "publiceer".
-- The WordPress page title stays **empty**, because the theme would print a second H1. The SEO title and meta description go into Rank Math.
+- **contentscale.site (nl., es.)**: the WordPress page title stays **empty**, because the theme would print a second H1. The SEO title and meta description go into Rank Math.
+- **perfectroofingteam.com (Elementor)**: the WordPress title **must exist**, because the menu items use the page titles. Prevent a double H1 with the Elementor page setting "hide title", never by emptying the title. Author: "Written & reviewed by Perfect Roofing Team" (never Ottmar Francisca). Prices are always indicative: $250–$5,800+ across services; larger projects about $12,000 or more, quoted individually after an on-site assessment.
 - Every page gets a meta title, a meta description, a focus keyword (the literal customer phrase), an author box and hreflang (NL/ES/EN, with x-default pointing to EN).
 - No duplicate Article schema next to the theme's own.
 
