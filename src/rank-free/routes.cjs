@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const engine = require('./engine.cjs');
 const { pgStore, hash, token: randomToken } = require('./store.cjs');
 const { runDue, sendDigests } = require('./runner.cjs');
-const { t, langOf, esc, positionText, mapsText, gridText, gridTable, changeText, verifyEmail, accessEmail, followText, plainFollow } = require('./texts.cjs');
+const { t, langOf, esc, positionText, mapsText, mapsList, mapsCell, gridText, gridTable, changeText, verifyEmail, accessEmail, followText, plainFollow } = require('./texts.cjs');
 const links = require('./links.cjs');
 const gscMod = require('./gsc.cjs');
 const { brevo } = require('../growth-free/reminders.cjs');
@@ -52,7 +52,7 @@ th,td{text-align:left;padding:9px 8px;border-bottom:1px solid #eee;vertical-alig
 input[type=file]{border:1px dashed #a78bfa;background:#faf7ff;margin-top:6px}
 @media(max-width:640px){.rk thead{display:none}.rk tr{display:block;border-bottom:1px solid #eee;padding:10px 0}.rk td{display:block;border:0;padding:3px 0}
 .rk td[data-l]:not(:empty)::before{content:attr(data-l) ': ';color:#555;font-size:13px;font-weight:400}.rk td.pos{font-size:1.3rem}}
-.eyebrow{font-size:12px;letter-spacing:.09em;color:#6d28d9;font-weight:700;text-transform:uppercase}`;
+.eyebrow{font-size:12px;letter-spacing:.09em;color:#6d28d9;font-weight:700;text-transform:uppercase}.blk{border:3px solid #f97316;border-radius:16px;padding:14px 16px;margin:24px 0;background:#fffaf5}.blk>h2{margin:2px 0 6px;font-size:1.15rem;color:#9a3412}.blk .card{margin:12px 0}.mt td,.mt th{padding:6px 8px;border-bottom:1px solid #eee;text-align:left;vertical-align:top}.mt table{width:auto!important}.mt td td{border:0;padding:2px;width:30px}`;
 const page = (lang, title, body) => `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><meta name="robots" content="noindex"><style>${css}</style></head><body><main>${body}</main></body></html>`;
 
 function signupPage(lang, cfg) {
@@ -66,7 +66,7 @@ function signupPage(lang, cfg) {
 <label for="gl">${esc(L.country)}</label><select id="gl">${opts}</select><p class="muted" id="other" hidden></p>
 <label for="hl">${esc(L.language)}</label><select id="hl">${langs}</select>
 <label for="kw">${esc(L.keywords)}</label><textarea id="kw" required></textarea>
-<label for="maps">${esc(L.mapsField)}</label><input id="maps" maxlength="80" placeholder="Lodi, NJ"><p class="muted">${esc(L.mapsHelp)}</p>
+<label for="maps">${esc(L.mapsPlaces)}</label><textarea id="maps" rows="3" placeholder="Lodi, NJ"></textarea><p class="muted">${esc(L.mapsOnlineOnly)}</p><label class="consent"><input type="checkbox" id="mapsok"> ${esc(L.mapsConfirm(L.site.toLowerCase()))}</label><p class="muted">${esc(L.mapsConfirmHelp)}</p>
 <p class="consent-note">${esc(L.consent)}</p><label class="consent"><input type="checkbox" id="notips"> ${esc(L.noTips)}</label>
 <button type="submit">${esc(L.submit)}</button><div id="m"></div></form>
 <div class="card"><strong>${esc(L.how)}</strong><ol><li>${esc(L.how1)}</li><li>${esc(L.how2)}</li><li>${esc(L.how3)}</li></ol><p class="muted">${esc(L.note)}</p></div>
@@ -74,7 +74,7 @@ function signupPage(lang, cfg) {
 const pre=(navigator.language||'').split('-')[1],page='${lang === 'nl' ? 'nl' : lang === 'es' ? 'es' : ''}';if(page)$('gl').value=page;else if(pre&&[...$('gl').options].some(o=>o.value===pre.toLowerCase()))$('gl').value=pre.toLowerCase();else $('gl').value='us';
 const sync=()=>{const g=$('gl').value;if(D[g])$('hl').value=D[g];const e=O[g];$('other').hidden=!e;if(e)$('other').textContent=T.otherEngine.replace('§',e)};$('gl').onchange=sync;sync();
 $('f').onsubmit=async ev=>{ev.preventDefault();const m=$('m');m.className='';m.textContent='';const b=ev.submitter;b.disabled=true;
-try{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,site:$('site').value,country:$('gl').value,language:$('hl').value,keywords:$('kw').value,maps_location:$('maps').value,no_tips:$('notips').checked,lang:'${lang}'})});
+try{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,site:$('site').value,country:$('gl').value,language:$('hl').value,keywords:$('kw').value,maps_location:$('maps').value,maps_confirm:$('mapsok').checked,no_tips:$('notips').checked,lang:'${lang}'})});
 const j=await r.json();m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)$('f').reset()}catch(e){m.className='msg err';m.textContent='Error'}b.disabled=false}})();</script>`);
 }
 
@@ -127,7 +127,7 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
     const gLine = (g ? `<span class="sub">${esc(L.gRow(num(g.clicks), num(g.impressions), g.position != null ? num(g.position) : null))}</span>` : '') + cLine;
     const mLine = last && mapsText(last, L) ? `<span class="sub">📍 ${esc(mapsText(last, L))}</span>` : '';
     const gridLine = last && gridText(last, L) ? `<span class="sub">🗺️ ${esc(gridText(last, L))}</span>${gridTable(last)}` : '';
-    return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}${gLine}${mLine}${gridLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
+    return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}${gLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
   }).join('');
   const pending = data.keywords.some(k => !k.history[0] && !k.last_error);
   const providerNote = pending && !data.provider_ready ? `<div class="msg err">${esc(L.noProvider)}</div>` : '';
@@ -155,14 +155,31 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
   const gscCard = `<div class="card" id="gsc"><strong>${esc(L.gTitle)}</strong><p class="muted">${esc(L.gLead)}</p>${gInfo}${gOpps}
 <p class="muted" style="margin-top:14px">${esc(L.gHow)}</p><input type="file" id="gf" accept=".zip,.csv,text/csv,application/zip"><button type="button" id="gu">${esc(L.gUpload)}</button>${G ? ` <button type="button" class="ghost" id="gd">${esc(L.gDelete)}</button>` : ''}<div id="gm"></div></div>`;
   // The first keyword not on page 1: the general Growth link opens the check for it (with the handoff, like every link).
+  // Google Maps table: one row per keyword, one column per place, plus the geo-grid for chosen keywords.
+  const places = engine.locationsOf(data.maps_location);
+  const mapsTable = !places.length ? '' : (() => {
+    const anyResult = data.keywords.some(k => { const r = k.history[0] && k.history[0].result; return mapsList(r).length; });
+    if (!anyResult) return `<p class="muted">${esc(L.mapsNoResults)}</p>`;
+    const rowsM = data.keywords.map(k => {
+      const r = k.history[0] && k.history[0].result, list = mapsList(r);
+      const cells = places.map(pl => { const m = list.find(x => x && x.location === pl) || null; return `<td class="pos">${esc(mapsCell(m, L))}</td>`; }).join('');
+      const g = r && gridText(r, L) ? `<span class="sub">🗺️ ${esc(gridText(r, L))}</span>${gridTable(r)}` : '';
+      return `<tr><td><strong>${esc(k.keyword)}</strong>${g}</td>${cells}</tr>`;
+    }).join('');
+    return `<div class="card" style="overflow-x:auto"><table class="mt" style="width:100%;border-collapse:collapse"><thead><tr><th>${esc(L.kw)}</th>${places.map(pl => `<th>📍 ${esc(pl)}</th>`).join('')}</tr></thead><tbody>${rowsM}</tbody></table></div>`;
+  })();
   const notOnOne = data.keywords.find(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
   return page(lang, L.dash, `<p class="eyebrow">ContentScale · ${esc(L.title)}</p><h1>${esc(L.dash)}</h1>
 <p><strong>${esc(data.host)}</strong> · ${esc(data.country)} · ${esc(data.language)}</p>${data.other_engine ? `<p class="muted">${esc(L.otherEngine(data.other_engine))}</p>` : ''}
+<section class="blk" id="sec-organic"><h2>${esc(L.secOrganic)}</h2>
 ${providerNote}${bestCard}<div class="card" style="overflow-x:auto"><table class="rk"><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.trend)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="muted">${esc(L.note)}</p></div>
 ${!cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.callUpsell)}</p><p><a href="${esc(callOf(cfg, lang))}">${esc(L.callCta)} →</a></p></div>` : ''}
 ${cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(growthLink(cfg, data, notOnOne.keyword, notOnOne.history[0].result))}">${esc(L.upsellLink)} →</a></p></div>` : ''}
-${suggestCard}${gscCard}<form class="card" id="mp"><strong>${esc(L.mapsTitle)}</strong><p class="muted">${esc(data.maps_location ? L.mapsOn(data.maps_location) : L.mapsNone)} ${esc(L.mapsHelp)}</p><label for="mpl">${esc(L.mapsField)}</label><input id="mpl" maxlength="80" placeholder="Lodi, NJ" value="${esc(data.maps_location || '')}"><button type="submit">${esc(L.mapsSave)}</button><div id="mpm"></div></form><form class="card" id="gr"><strong>${esc(L.gridTitle)}</strong><p class="muted">${esc(L.gridHelp)}</p>${data.maps_location ? data.keywords.map(k => `<label class="consent"><input type="checkbox" name="g" value="${esc(k.keyword)}"${(data.maps_grid || []).includes(k.keyword) ? ' checked' : ''}> ${esc(k.keyword)}</label>`).join('') + `<button type="submit">${esc(L.gridSave)}</button>` : `<p class="muted">${esc(L.gridNeedsPlace)}</p>`}<div id="grm"></div></form><form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
+${suggestCard}${gscCard}<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form></section>
+<section class="blk" id="sec-maps"><h2>${esc(L.secMaps)}</h2><p class="muted">${esc(L.secMapsLead)}</p><p><strong>${esc(L.mapsOnlineOnly)}</strong></p>${mapsTable}
+<form class="card" id="mp"><strong>${esc(L.mapsTitle)}</strong><p class="muted">${esc(places.length ? L.mapsOn(places.join(' · ')) : L.mapsNone)} ${esc(L.mapsHelp)}</p><label for="mpl">${esc(L.mapsPlaces)}</label><textarea id="mpl" rows="3" placeholder="Lodi, NJ">${esc(places.join('\n'))}</textarea><label class="consent"><input type="checkbox" id="mpok"${places.length ? ' checked' : ''}> ${esc(L.mapsConfirm(data.host))}</label><p class="muted">${esc(L.mapsConfirmHelp)}</p><button type="submit">${esc(L.mapsSave)}</button><div id="mpm"></div></form>
+<div class="card"><strong>${esc(L.mapsKwTitle)}</strong><p class="muted">${esc(L.mapsKwHelp)}</p></div><form class="card" id="gr"><strong>${esc(L.gridTitle)}</strong><p class="muted">${esc(L.gridHelp)}</p>${places.length ? data.keywords.map(k => `<label class="consent"><input type="checkbox" name="g" value="${esc(k.keyword)}"${(data.maps_grid || []).includes(k.keyword) ? ' checked' : ''}> ${esc(k.keyword)}</label>`).join('') + `<button type="submit">${esc(L.gridSave)}</button>` : `<p class="muted">${esc(L.gridNeedsPlace)}</p>`}<div id="grm"></div></form></section>
 <p class="muted"><a href="/rank-tracker/stop/${esc(tok)}">${esc(L.stop)}</a> · <a href="#" id="fg">${esc(L.forget)}</a></p>
 <script>(()=>{const $=i=>document.getElementById(i);$('k').onsubmit=async ev=>{ev.preventDefault();const m=$('m');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:$('kw').value})});const j=await r.json();
@@ -174,7 +191,7 @@ if($('gr'))$('gr').onsubmit=async ev=>{ev.preventDefault();const m=$('grm');cons
 const r=await fetch('/api/rank-free/d/${esc(tok)}/grid',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:ks})});const j=await r.json().catch(()=>({}));
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),900)};
 $('mp').onsubmit=async ev=>{ev.preventDefault();const m=$('mpm');
-const r=await fetch('/api/rank-free/d/${esc(tok)}/maps',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({maps_location:$('mpl').value})});const j=await r.json().catch(()=>({}));
+const r=await fetch('/api/rank-free/d/${esc(tok)}/maps',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({maps_location:$('mpl').value,maps_confirm:$('mpok').checked})});const j=await r.json().catch(()=>({}));
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),900)};
 $('gu').onclick=async()=>{const f=$('gf').files[0],m=$('gm');if(!f)return;$('gu').disabled=true;
 const b64=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=no;r.readAsDataURL(f)});
@@ -223,7 +240,9 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
       if (!EMAIL.test(email)) return res.status(400).json({ success: false, error: L.errEmail });
       const site = engine.readSite(b.site); if (site.error) return res.status(400).json({ success: false, error: site.error });
       const market = engine.readMarket(b.country, b.language); if (market.error) return res.status(400).json({ success: false, error: market.error });
-      const mapsLoc = engine.readMapsLocation(b.maps_location); if (mapsLoc.error) return res.status(400).json({ success: false, error: L.mapsBad });
+      const mapsLoc = engine.readMapsLocations(b.maps_location);
+      if (mapsLoc.error) return res.status(400).json({ success: false, error: mapsLoc.error === 'TOO_MANY' ? L.mapsTooMany : L.mapsBad });
+      if (mapsLoc.locations.length && b.maps_confirm !== true) return res.status(400).json({ success: false, error: L.mapsConfirmNeeded });
       const kw = engine.readKeywords(b.keywords, config.maxKeywords);
       if (!kw.keywords.length) return res.status(400).json({ success: false, error: L.errKeywords });
       if (!emailReady() || !links.configured()) return res.status(503).json({ success: false, error: L.errEmailOff });
@@ -239,7 +258,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
         return res.json({ success: true, message: L.sent });
       }
       const verify = randomToken();
-      await store.upsertSignup({ email, lang, ipHash: ip, consent: b.no_tips !== undefined ? b.no_tips !== true : b.marketing_consent === true, verifyHash: hash(verify), host: site.host, gl: market.gl, hl: market.hl, keywords: kw.keywords, mapsLocation: mapsLoc.location });
+      await store.upsertSignup({ email, lang, ipHash: ip, consent: b.no_tips !== undefined ? b.no_tips !== true : b.marketing_consent === true, verifyHash: hash(verify), host: site.host, gl: market.gl, hl: market.hl, keywords: kw.keywords, mapsLocation: mapsLoc.locations.join('\n') || null });
       const mail = verifyEmail(lang, { host: site.host, link: config.baseUrl + '/rank-tracker/v/' + verify });
       const ok = await send({ to: [email], subject: mail.subject, html: mail.html });
       if (!ok) return res.status(503).json({ success: false, error: L.errEmailOff });
@@ -305,11 +324,15 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
   app.post('/api/rank-free/d/:token/maps', async (req, res) => {
     const a = await accountFor(req.params.token).catch(() => null);
     if (!a) return res.status(404).json({ success: false, error: 'Not found' });
-    const L = t(a.lang), p = await store.projectOf(a.id), m = engine.readMapsLocation((req.body || {}).maps_location);
+    const b = req.body || {}, L = t(a.lang), p = await store.projectOf(a.id), m = engine.readMapsLocations(b.maps_location);
     if (!p) return res.status(404).json({ success: false, error: 'Not found' });
-    if (m.error) return res.status(400).json({ success: false, error: L.mapsBad });
-    await store.setMapsLocation(p.id, m.location);
-    res.json({ success: true, message: m.location ? L.mapsSaved : L.mapsCleared, maps_location: m.location });
+    if (m.error) return res.status(400).json({ success: false, error: m.error === 'TOO_MANY' ? L.mapsTooMany : L.mapsBad });
+    // Owner 2026-11-14: a place is only saved after the owner confirms that their Google Business Profile links to the site.
+    if (m.locations.length && b.maps_confirm !== true) return res.status(400).json({ success: false, error: L.mapsConfirmNeeded });
+    const joined = m.locations.join('\n') || null;
+    await store.setMapsLocation(p.id, joined);
+    if (!joined) await store.setMapsGrid(p.id, []);
+    res.json({ success: true, message: joined ? L.mapsSaved : L.mapsCleared, maps_locations: m.locations });
   });
   // Keywords for the geo-grid: at most engine.MAX_GRID_KEYWORDS of the tracked keywords, and only with a place set.
   app.post('/api/rank-free/d/:token/grid', async (req, res) => {

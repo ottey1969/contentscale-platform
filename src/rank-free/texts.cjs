@@ -5,6 +5,14 @@ const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&a
 
 const T = {
   en: {
+    mapsOnlineOnly: 'Optional. Only for businesses with a Google Business Profile that serve customers at a place or in an area. Working online only? Leave this empty: for you the normal results above are what count, and this costs nothing.',
+    secOrganic: '1 · Google Search: your positions in the normal results', secMaps: '2 · Google Maps: your position in the map results',
+    secMapsLead: 'Google Maps is a separate ranking. The same keyword can rank differently in the map than in the normal results, and it depends on where the searcher is.',
+    mapsPlaces: 'Places for Google Maps (one per line, up to 3, for example Lodi, NJ)', mapsConfirm: h => 'Yes, my Google Business Profile shows ' + h + ' as its website.',
+    mapsConfirmHelp: 'Without that link we cannot recognise your business in Google Maps, and every result would say “not found”.',
+    mapsConfirmNeeded: 'Tick the box to confirm that your Google Business Profile links to your website.', mapsTooMany: 'Enter at most 3 places.',
+    mapsKwTitle: 'Where do I find good Google Maps keywords?', mapsKwHelp: 'Open your Google Business Profile → Performance → “Searches used to find your Business Profile”. Those are the real searches people typed to find you in Google Maps and Search. Add the ones that describe your service to your keywords; Google Maps uses the same keywords as the normal results.',
+    mapsNoResults: 'No Google Maps results yet. They appear after the next weekly check.', mapsCellNot: d => 'not in top ' + d,
     gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'For up to 3 keywords we also search Google Maps from 9 points around your business (about 1.6 km / 1 mile apart) and show your position at each point. Each grid uses 9 searches per week.',
     gridSave: 'Save geo-grid keywords', gridSaved: 'Saved. The next weekly check includes the geo-grid.', gridMax: 'Choose at most 3 keywords.', gridNeedsPlace: 'Set a place for Google Maps first.',
     gridNoCenter: 'Geo-grid: your business was not found in Google Maps for this place, so the grid has no centre yet.', gridBudget: 'Geo-grid: skipped this week (monthly limit reached)',
@@ -61,6 +69,14 @@ const T = {
     ch: { FIRST: 'first check', ENTERED_PAGE_ONE: 'now on page 1', LEFT_PAGE_ONE: 'dropped off page 1', ENTERED_RESULTS: 'now in the top 30', LEFT_RESULTS: 'no longer in the top 30', UP: 'up', DOWN: 'down', OTHER_PAGE: 'another page of yours now ranks' },
   },
   nl: {
+    mapsOnlineOnly: 'Optioneel. Alleen voor bedrijven met een Google Bedrijfsprofiel die klanten op een locatie of in een gebied bedienen. Werk je alleen online? Laat dit leeg: voor jou tellen de gewone resultaten hierboven, en dit kost niets.',
+    secOrganic: '1 · Google zoekresultaten: je posities in de gewone resultaten', secMaps: '2 · Google Maps: je positie in de kaartresultaten',
+    secMapsLead: 'Google Maps is een aparte ranglijst. Hetzelfde zoekwoord kan op de kaart anders scoren dan in de gewone resultaten, en het hangt af van waar de zoeker is.',
+    mapsPlaces: 'Plaatsen voor Google Maps (één per regel, maximaal 3, bijvoorbeeld Lodi, NJ)', mapsConfirm: h => 'Ja, mijn Google Bedrijfsprofiel toont ' + h + ' als website.',
+    mapsConfirmHelp: 'Zonder die link kunnen we je bedrijf in Google Maps niet herkennen en staat bij elke meting “niet gevonden”.',
+    mapsConfirmNeeded: 'Vink het vakje aan om te bevestigen dat je Google Bedrijfsprofiel naar je website linkt.', mapsTooMany: 'Vul maximaal 3 plaatsen in.',
+    mapsKwTitle: 'Waar vind ik goede Google Maps-zoekwoorden?', mapsKwHelp: 'Open je Google Bedrijfsprofiel → Prestaties → “Zoekopdrachten waarmee je bedrijfsprofiel is gevonden”. Dat zijn de echte zoekopdrachten waarmee mensen je in Google Maps en Zoeken vonden. Voeg de zoekopdrachten die je dienst beschrijven toe aan je zoekwoorden; Google Maps gebruikt dezelfde zoekwoorden als de gewone resultaten.',
+    mapsNoResults: 'Nog geen Google Maps-resultaten. Ze verschijnen na de volgende wekelijkse meting.', mapsCellNot: d => 'niet in top ' + d,
     gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Voor maximaal 3 zoekwoorden zoeken we ook in Google Maps vanaf 9 punten rond je bedrijf (ongeveer 1,6 km uit elkaar) en tonen we je positie op elk punt. Elk grid gebruikt 9 zoekopdrachten per week.',
     gridSave: 'Geo-grid-zoekwoorden opslaan', gridSaved: 'Opgeslagen. De volgende wekelijkse meting neemt het geo-grid mee.', gridMax: 'Kies maximaal 3 zoekwoorden.', gridNeedsPlace: 'Stel eerst een plaats voor Google Maps in.',
     gridNoCenter: 'Geo-grid: je bedrijf is in Google Maps niet gevonden voor deze plaats, dus het grid heeft nog geen middelpunt.', gridBudget: 'Geo-grid: deze week overgeslagen (maandlimiet bereikt)',
@@ -117,6 +133,14 @@ const T = {
     ch: { FIRST: 'eerste meting', ENTERED_PAGE_ONE: 'nu op pagina 1', LEFT_PAGE_ONE: 'van pagina 1 af', ENTERED_RESULTS: 'nu in de top 30', LEFT_RESULTS: 'niet meer in de top 30', UP: 'gestegen', DOWN: 'gedaald', OTHER_PAGE: 'er rankt nu een andere pagina van je' },
   },
   es: {
+    mapsOnlineOnly: 'Opcional. Solo para negocios con Perfil de Empresa de Google que atienden a clientes en un lugar o una zona. ¿Trabajas solo online? Déjalo vacío: para ti cuentan los resultados normales de arriba, y esto no cuesta nada.',
+    secOrganic: '1 · Búsqueda de Google: tus posiciones en los resultados normales', secMaps: '2 · Google Maps: tu posición en los resultados del mapa',
+    secMapsLead: 'Google Maps es una clasificación aparte. La misma palabra clave puede posicionar distinto en el mapa que en los resultados normales, y depende de dónde esté quien busca.',
+    mapsPlaces: 'Lugares para Google Maps (uno por línea, hasta 3, por ejemplo Lodi, NJ)', mapsConfirm: h => 'Sí, mi Perfil de Empresa de Google muestra ' + h + ' como sitio web.',
+    mapsConfirmHelp: 'Sin ese enlace no podemos reconocer tu negocio en Google Maps y cada resultado diría «no encontrado».',
+    mapsConfirmNeeded: 'Marca la casilla para confirmar que tu Perfil de Empresa de Google enlaza a tu web.', mapsTooMany: 'Indica como máximo 3 lugares.',
+    mapsKwTitle: '¿Dónde encuentro buenas palabras clave para Google Maps?', mapsKwHelp: 'Abre tu Perfil de Empresa de Google → Rendimiento → «Búsquedas utilizadas para encontrar tu Perfil de Empresa». Son las búsquedas reales con las que la gente te encontró en Google Maps y en la Búsqueda. Añade las que describen tu servicio a tus palabras clave; Google Maps usa las mismas palabras clave que los resultados normales.',
+    mapsNoResults: 'Aún no hay resultados de Google Maps. Aparecen tras la próxima comprobación semanal.', mapsCellNot: d => 'fuera del top ' + d,
     gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Para hasta 3 palabras clave también buscamos en Google Maps desde 9 puntos alrededor de tu negocio (a unos 1,6 km entre sí) y mostramos tu posición en cada punto. Cada grid usa 9 búsquedas por semana.',
     gridSave: 'Guardar palabras del geo-grid', gridSaved: 'Guardado. La próxima comprobación semanal incluye el geo-grid.', gridMax: 'Elige como máximo 3 palabras clave.', gridNeedsPlace: 'Primero indica un lugar para Google Maps.',
     gridNoCenter: 'Geo-grid: tu negocio no aparece en Google Maps para este lugar, así que el grid aún no tiene centro.', gridBudget: 'Geo-grid: omitido esta semana (límite mensual alcanzado)',
@@ -184,10 +208,21 @@ function positionText(r, L) {
   return '—';
 }
 // The Google Maps result of a check (engine.checkMaps), or '' when the project has no place set.
-function mapsText(r, L) {
-  const m = r && r.maps; if (!m) return '';
+function oneMaps(m, L) {
+  if (!m) return '';
   if (m.status === 'FOUND') return L.mapsPos(m.position, m.query || '');
   if (m.status === 'NOT_IN_RESULTS') return L.mapsNot(m.depth || 20, m.query || '');
+  if (m.status === 'BUDGET_REACHED') return L.mapsBudget;
+  return L.mapsErr;
+}
+// All places of a check (maps_places), or the single place of older results (maps).
+function mapsList(r) { return r && Array.isArray(r.maps_places) && r.maps_places.length ? r.maps_places : (r && r.maps ? [r.maps] : []); }
+function mapsText(r, L) { return mapsList(r).map(m => oneMaps(m, L)).filter(Boolean).join(' · '); }
+// Short cell for the Maps table: the position, or "not in top N", or the reason.
+function mapsCell(m, L) {
+  if (!m) return '—';
+  if (m.status === 'FOUND') return String(m.position);
+  if (m.status === 'NOT_IN_RESULTS') return L.mapsCellNot(m.depth || 20);
   if (m.status === 'BUDGET_REACHED') return L.mapsBudget;
   return L.mapsErr;
 }
@@ -202,7 +237,7 @@ function gridText(r, L) {
 function gridTable(r) {
   const g = r && r.grid; if (!g || g.status !== 'OK' || !Array.isArray(g.points)) return '';
   const color = p => p.error ? '#cbd5e1' : p.position == null ? '#94a3b8' : p.position <= 3 ? '#16a34a' : p.position <= 10 ? '#d97706' : '#dc2626';
-  const cell = p => '<td style="width:30px;height:30px;text-align:center;padding:2px"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:' + color(p) + ';color:#fff;font:700 12px Arial,sans-serif">' + (p.error ? '?' : p.position == null ? '×' : p.position) + '</span></td>';
+  const cell = p => '<td style="width:30px;height:30px;text-align:center;padding:2px"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;text-align:center;vertical-align:middle;display:inline-flex;align-items:center;justify-content:center;background:' + color(p) + ';color:#fff;font:700 12px Arial,sans-serif">' + (p.error ? '?' : p.position == null ? '×' : p.position) + '</span></td>';
   let rows = '';
   for (let i = 0; i < g.size; i++) rows += '<tr>' + g.points.filter(p => p.row === i).sort((a, b) => a.col - b.col).map(cell).join('') + '</tr>';
   return '<table style="border-collapse:collapse;margin:6px 0" aria-label="geo-grid">' + rows + '</table>';
@@ -245,4 +280,4 @@ function followText(f, L) {
   return L.cWaiting(f.since, f.from, f.to, f.checks_since);
 }
 
-module.exports = { gridText, gridTable, mapsText, plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
+module.exports = { mapsList, mapsCell, gridText, gridTable, mapsText, plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
