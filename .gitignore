@@ -81,3 +81,6 @@ build/
 
 # test output written by mistake to an unset path
 undefined/
+
+# Server builds written by the end-to-end tests (src/_<name>_e2e_<pid>.js); never commit them
+src/_*_e2e_*.js
