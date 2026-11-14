@@ -60,10 +60,10 @@
     inputs.type = prompt.type = 'button';
     inputs.textContent = 'AI Answer Inputs';
     prompt.textContent = 'Research Prompt';
-    // The research prompt is internal to Brief generation. Do not expose expert tooling to ordinary users.
-    tabs.hidden = true;
-    tabs.style.display = 'none';
-    tabs.setAttribute('aria-hidden', 'true');
+    // The owner can inspect the EXACT prompt used by the generator. Keep AI answer inputs as the default tab.
+    tabs.hidden = false;
+    tabs.style.display = 'flex';
+    tabs.removeAttribute('aria-hidden');
     inputs.id = 'cs-research-inputs-tab';
     prompt.id = 'cs-research-prompt-tab';
     if (!grid.id) grid.id = 'cs-research-inputs-panel';
@@ -257,7 +257,7 @@
       prompt.tabIndex = showPrompt ? 0 : -1;
       // The grid has an inline display:grid that overrides [hidden]; hide it through its own style.
       grid.hidden = showPrompt; grid.style.display = showPrompt ? 'none' : 'grid';
-      panel.hidden = !showPrompt;
+      panel.hidden = !showPrompt; panel.style.display = showPrompt ? 'block' : 'none';
       if (showPrompt) render();
       if (focus) (showPrompt ? prompt : inputs).focus();
     }
