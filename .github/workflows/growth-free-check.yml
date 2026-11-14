@@ -61,7 +61,7 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: 'true'
         run: npm ci --ignore-scripts
       - name: Access keys, limits, read-only engine, summary, public flow, admin, standalone server
-        run: node --test tests/growth-free-check.test.cjs tests/growth-free-ui-translate.test.cjs tests/growth-free-schema-help.test.cjs tests/growth-free-ai-gap.test.cjs tests/growth-ai-check-validation.test.cjs tests/growth-free-gsc-export.test.cjs tests/growth-free-cms-package.test.cjs tests/growth-customer-questions.test.cjs tests/growth-free-measurement.test.cjs tests/rank-free.test.cjs tests/rank-free-maps.test.cjs tests/rank-free-maps-clarity.test.cjs tests/rank-free-region.test.cjs tests/rank-free-grid.test.cjs
+        run: node --test tests/growth-free-check.test.cjs tests/growth-free-ui-translate.test.cjs tests/growth-free-schema-help.test.cjs tests/growth-free-ai-gap.test.cjs tests/growth-ai-check-validation.test.cjs tests/growth-free-gsc-export.test.cjs tests/growth-free-cms-package.test.cjs tests/growth-customer-questions.test.cjs tests/growth-free-measurement.test.cjs tests/rank-free.test.cjs tests/rank-free-maps.test.cjs tests/rank-free-maps-clarity.test.cjs tests/rank-free-region.test.cjs tests/rank-free-maps-town-keyword.test.cjs tests/rank-free-grid.test.cjs
 
   free-growth-browser-e2e:
     runs-on: ubuntu-latest
