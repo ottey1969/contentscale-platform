@@ -61,12 +61,18 @@ async function sendDigests({ store, send, baseUrl, growthUrl = 'https://app.cont
     const mail = digestEmail(p.lang, { host: p.host, countryLabel: countryName(String(p.gl).toUpperCase()), rows, suggestions, best,
       dashboard: baseUrl + '/rank-tracker/d/' + token, stop: baseUrl + '/rank-tracker/stop/' + token });
     const ok = await send({ to: [p.email], subject: mail.subject, html: mail.html }).catch(() => false);
-    // Do not acknowledge an unsent digest as delivered. The stored result remains due for e-mail;
-    // the next scheduler run retries, without rerunning paid Google checks.
-    if (ok) { await store.markDigest(p.id, now); out.sent++; }
-    else { out.failed++; console.warn('[rank-free] digest delivery failed; keeping this round pending', p.id); }
+    // Do not acknowledge an unsent digest as delivered: it is tried again after at least an hour, without rerunning paid
+    // Google checks. Bounded (owner 2026-11-14): the scheduler runs every 15 minutes, so an address that keeps failing would
+    // otherwise get hundreds of attempts a week. After DIGEST_TRIES failures this round is closed; the next weekly round
+    // sends a new e-mail.
+    if (ok) { await store.markDigest(p.id, now); out.sent++; continue; }
+    out.failed++;
+    const tries = typeof store.markDigestFailed === 'function' ? await store.markDigestFailed(p.id, now) : DIGEST_TRIES;
+    if (tries >= DIGEST_TRIES) { await store.markDigest(p.id, now); console.warn('[rank-free] digest not delivered after', tries, 'attempts; round closed', p.id); }
+    else console.warn('[rank-free] digest delivery failed; retry in at least an hour', p.id, 'attempt', tries);
   }
   return out;
 }
 
-module.exports = { runDue, sendDigests, WEEK, DAY };
+const DIGEST_TRIES = 3;
+module.exports = { runDue, sendDigests, WEEK, DAY, DIGEST_TRIES };

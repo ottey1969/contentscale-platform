@@ -38,10 +38,23 @@ const PRICE_WORDS = new Set('kost kosten kostte prijs prijzen tarief tarieven ho
 const PROVIDER_WORDS = new Set('consultant consultants consultancy consulting consultor consultores consultoria consulent adviseur specialist especialista expert experto agency agencia agencias bureau services service servicios servicio diensten dienst'.split(' '));
 // The written-out name counts as the abbreviation in the keyword too.
 const abbreviate = s => { let t = ' ' + fold(s).replace(/[^\p{L}\p{N}]+/gu, ' ') + ' '; for (const [a, full] of Object.entries(SPELLED)) t = t.split(' ' + full + ' ').join(' ' + a + ' '); return t.trim(); };
+// Market marker of a URL: a locale subdomain (es.example.com) or first path segment (/es/). An address without a marker is
+// the site's default market. That default market is the requested one when no URL of the site carries the requested
+// market's own marker (owner 2026-11-14: after the cross-market guard, contentscale.site/... (EN, region "us") and every
+// single-market client site were never matched any more, so every keyword got a new page).
+const LOCALES = new Set('en es nl de fr it pt pl sv da no fi cs sk hu ro bg el tr ru uk ja zh ko ar he us gb ie au ca nz mx co cl pe be at ch br in sg za'.split(' '));
+function marketOf(url) {
+  try { const u = new URL(url); const label = u.hostname.toLowerCase().replace(/^www\./, '').split('.');
+    if (label.length > 2 && LOCALES.has(label[0])) return label[0];
+    const seg = (u.pathname.split('/').filter(Boolean)[0] || '').toLowerCase(); if (LOCALES.has(seg)) return seg;
+  } catch (e) {}
+  return '';
+}
 function findSameIntentPages(keyword, urls, { region } = {}) {
   const kw = Array.from(new Set(words(abbreviate(keyword))));
   if (!kw.length) return [];
   const market = fold(region || '').slice(0, 2);
+  const siteMarkets = new Set((Array.isArray(urls) ? urls : []).map(marketOf).filter(Boolean));
   const out = [];
   for (const url of Array.isArray(urls) ? urls : []) {
     const pw = pathWords(url);
@@ -56,7 +69,8 @@ function findSameIntentPages(keyword, urls, { region } = {}) {
     if (score < 0.5) continue;
     let host = ''; try { host = new URL(url).hostname.toLowerCase(); } catch (e) {}
     const marketMatch = !!market && (host.split('.')[0] === market || pw[0] === market);
-    out.push({ url, score: Math.round(score * 100) / 100, full: matched.length === kw.length || coreFull, core_match: coreFull, matched, extra_words: Math.max(0, pw.length - matched.length - (marketMatch && pw[0] === market ? 1 : 0)), market_match: marketMatch, market_requested: !!market });
+    out.push({ url, score: Math.round(score * 100) / 100, full: matched.length === kw.length || coreFull, core_match: coreFull, matched, extra_words: Math.max(0, pw.length - matched.length - (marketMatch && pw[0] === market ? 1 : 0)), market_match: marketMatch, market_requested: !!market,
+      default_market: !!market && !marketOf(url) && !siteMarkets.has(market) });
   }
   return out.sort((a, b) => (b.full - a.full) || (b.score - a.score) || (b.market_match - a.market_match) || (a.extra_words - b.extra_words) || a.url.length - b.url.length).slice(0, 5);
 }
@@ -69,9 +83,9 @@ function applyExistingPageDecision(brief, candidates) {
   brief.same_intent_candidates = list.map(x => ({ url: x.url, score: x.score, full_match: x.full, market_match: x.market_match, url_only_match: true }));
   // Keyword words in a URL are *not* verified same intent. In particular, an English page cannot
   // veto a Spanish new page merely because their slugs share the same words.
-  const best = list.find(x => x.full && (!x.market_requested || x.market_match));
+  const best = list.find(x => x.full && (!x.market_requested || x.market_match)) || list.find(x => x.full && x.default_market);
   if (!best) {
-    const crossMarket = list.filter(x => x.full && x.market_requested && !x.market_match);
+    const crossMarket = list.filter(x => x.full && x.market_requested && !x.market_match && !x.default_market);
     if (crossMarket.length) brief.content_decision = Object.assign({}, brief.content_decision || {}, {
       cross_market_url_overlap: crossMarket.map(x => x.url),
       cross_market_overlap_requires_review: true
@@ -116,4 +130,4 @@ function briefFindingsForGrowth(brief) {
     note: 'Reference from the Pre-Write Brief. Growth reads the live page and the ranking pages itself; use these points to check what the page still misses. Nothing here is verified evidence.' };
 }
 
-module.exports = { coreWords, findSameIntentPages, applyExistingPageDecision, briefFindingsForGrowth, sameUrl, normUrl };
+module.exports = { marketOf, coreWords, findSameIntentPages, applyExistingPageDecision, briefFindingsForGrowth, sameUrl, normUrl };

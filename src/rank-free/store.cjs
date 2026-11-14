@@ -38,6 +38,9 @@ function pgStore(pool) {
     // The optional Search Console export of the website (latest upload only); removed with the project.
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS gsc JSONB");
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS gsc_at TIMESTAMPTZ");
+    // A digest that could not be sent is tried again a limited number of times (see runner.cjs).
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS digest_fail_count INTEGER NOT NULL DEFAULT 0");
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS digest_fail_at TIMESTAMPTZ");
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_results_kw_idx ON rank_free_results(keyword_id, checked_at DESC)');
     await pool.query('CREATE INDEX IF NOT EXISTS rank_free_keywords_due_idx ON rank_free_keywords(next_check_at) WHERE active');
     await pool.query(`CREATE TABLE IF NOT EXISTS rank_free_usage(month TEXT PRIMARY KEY, calls INTEGER NOT NULL DEFAULT 0)`);
@@ -94,9 +97,11 @@ function pgStore(pool) {
       return q(`SELECT p.*, a.email, a.lang, a.dashboard_nonce FROM rank_free_projects p JOIN rank_free_accounts a ON a.id=p.account_id
         WHERE a.verified_at IS NOT NULL AND a.opted_out_at IS NULL
           AND EXISTS(SELECT 1 FROM rank_free_keywords k WHERE k.project_id=p.id AND k.active)
-          AND NOT EXISTS(SELECT 1 FROM rank_free_keywords k WHERE k.project_id=p.id AND k.active AND (k.last_checked_at IS NULL OR k.last_checked_at<=COALESCE(p.last_digest_at,'epoch')))`, []);
+          AND NOT EXISTS(SELECT 1 FROM rank_free_keywords k WHERE k.project_id=p.id AND k.active AND (k.last_checked_at IS NULL OR k.last_checked_at<=COALESCE(p.last_digest_at,'epoch')))
+          AND (p.digest_fail_at IS NULL OR p.digest_fail_at<=$1::timestamptz-INTERVAL '1 hour')`, [now]);
     },
-    async markDigest(projectId, now) { await q('UPDATE rank_free_projects SET last_digest_at=$2 WHERE id=$1', [projectId, now]); },
+    async markDigest(projectId, now) { await q('UPDATE rank_free_projects SET last_digest_at=$2, digest_fail_count=0, digest_fail_at=NULL WHERE id=$1', [projectId, now]); },
+    async markDigestFailed(projectId, now) { return Number(((await q('UPDATE rank_free_projects SET digest_fail_count=COALESCE(digest_fail_count,0)+1, digest_fail_at=$2 WHERE id=$1 RETURNING digest_fail_count', [projectId, now]))[0] || {}).digest_fail_count || 0); },
     async optOut(dashboardNonce, now) { return (await q('UPDATE rank_free_accounts SET opted_out_at=$2 WHERE dashboard_nonce=$1 RETURNING id', [dashboardNonce, now])).length > 0; },
     async forget(dashboardNonce) { return (await q('DELETE FROM rank_free_accounts WHERE dashboard_nonce=$1 RETURNING id', [dashboardNonce])).length > 0; },
     async stats(now) {
@@ -164,14 +169,16 @@ function memoryStore() {
     async postpone(keywordId, next, error = null, at = null) { const k = db.keywords.find(x => x.id === keywordId); k.next_check_at = next; if (error) { k.last_error = error; k.last_error_at = at; } },
     async usage(now) { return db.usage[month(now)] || 0; },
     async addUsage(now, n) { db.usage[month(now)] = (db.usage[month(now)] || 0) + n; },
-    async digestReady() {
+    async digestReady(now = new Date()) {
       return db.projects.filter(p => {
+        if (p.digest_fail_at && p.digest_fail_at > new Date(now.getTime() - 3600e3)) return false;
         const a = db.accounts.find(x => x.id === p.account_id); if (!a.verified_at || a.opted_out_at) return false;
         const ks = db.keywords.filter(k => k.project_id === p.id && k.active);
         return ks.length && ks.every(k => k.last_checked_at && (!p.last_digest_at || k.last_checked_at > p.last_digest_at));
       }).map(p => { const a = db.accounts.find(x => x.id === p.account_id); return { ...p, email: a.email, lang: a.lang, dashboard_nonce: a.dashboard_nonce }; });
     },
-    async markDigest(projectId, now) { db.projects.find(p => p.id === projectId).last_digest_at = now; },
+    async markDigest(projectId, now) { Object.assign(db.projects.find(p => p.id === projectId), { last_digest_at: now, digest_fail_count: 0, digest_fail_at: null }); },
+    async markDigestFailed(projectId, now) { const p = db.projects.find(x => x.id === projectId); p.digest_fail_count = (p.digest_fail_count || 0) + 1; p.digest_fail_at = now; return p.digest_fail_count; },
     async optOut(h, now) { const a = db.accounts.find(x => x.dashboard_nonce === h); if (a) a.opted_out_at = now; return !!a; },
     async forget(h) { const a = db.accounts.find(x => x.dashboard_nonce === h); if (!a) return false;
       const p = db.projects.find(x => x.account_id === a.id);
