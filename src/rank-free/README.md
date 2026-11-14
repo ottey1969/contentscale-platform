@@ -106,6 +106,15 @@ When the monthly budget is used up, checks are postponed one day (never dropped,
 | `links.cjs` | Signed dashboard links |
 | `routes.cjs` | Pages, API, limits, admin stats, scheduler |
 
+## Region for the normal results (optional, per project)
+
+Under the country the owner can give a state, region or city (`search_location`, for example "New Jersey" or
+"Lodi, NJ"). The normal Google search is then sent with Serper's `location` parameter, written the way Google names
+places: a US state abbreviation is written out and the country is added (`engine.searchLocationOf`: "Lodi, NJ" →
+"Lodi, New Jersey, United States"). Empty means the whole country, as before. Each result stores where it was measured
+(`location`); after a change of region the first result is a new starting point (`NEW_REGION`), never "up" or "down"
+against another place. The region also pre-fills the Maps place on the sign-up form while that field is empty.
+
 ## Google Maps (optional, per project)
 A project can set a place, for example `Lodi, NJ`, at sign-up or on the dashboard. Each weekly round then searches every keyword
 in Google Maps for that place (`<keyword> <place>`, through Serper `/maps`, one call per keyword). The business counts when the

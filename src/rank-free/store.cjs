@@ -40,6 +40,8 @@ function pgStore(pool) {
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS gsc_at TIMESTAMPTZ");
     // Optional place for the Google Maps check (engine.checkMaps), e.g. "Lodi, NJ".
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS maps_location TEXT");
+    // Optional state, region or city for the normal results (engine.searchLocationOf); empty = the whole country.
+    await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS search_location TEXT");
     // Keywords (at most engine.MAX_GRID_KEYWORDS) that also get the Google Maps geo-grid every round.
     await pool.query("SET LOCAL lock_timeout='5s'; ALTER TABLE rank_free_projects ADD COLUMN IF NOT EXISTS maps_grid JSONB");
     // A digest that could not be sent is tried again a limited number of times (see runner.cjs).
@@ -53,12 +55,12 @@ function pgStore(pool) {
   return {
     async signupsSince(ipHash, since) { return Number((await q('SELECT COUNT(*)::int n FROM rank_free_accounts WHERE ip_hash=$1 AND created_at>=$2', [ipHash, since]))[0].n); },
     async findAccountByEmail(email) { return (await q('SELECT * FROM rank_free_accounts WHERE email=$1', [email]))[0] || null; },
-    async upsertSignup({ email, lang, ipHash, consent, verifyHash, host, gl, hl, keywords, mapsLocation = null }) {
+    async upsertSignup({ email, lang, ipHash, consent, verifyHash, host, gl, hl, keywords, mapsLocation = null, searchLocation = null }) {
       const a = (await q(`INSERT INTO rank_free_accounts(email,lang,ip_hash,marketing_consent,verify_hash) VALUES($1,$2,$3,$4,$5)
         ON CONFLICT(email) DO UPDATE SET lang=EXCLUDED.lang, verify_hash=EXCLUDED.verify_hash, marketing_consent=EXCLUDED.marketing_consent, opted_out_at=NULL
         RETURNING *`, [email, lang, ipHash, consent, verifyHash]))[0];
-      const p = (await q(`INSERT INTO rank_free_projects(account_id,host,gl,hl,maps_location) VALUES($1,$2,$3,$4,$5)
-        ON CONFLICT(account_id) DO UPDATE SET host=EXCLUDED.host, gl=EXCLUDED.gl, hl=EXCLUDED.hl, maps_location=EXCLUDED.maps_location RETURNING *`, [a.id, host, gl, hl, mapsLocation]))[0];
+      const p = (await q(`INSERT INTO rank_free_projects(account_id,host,gl,hl,maps_location,search_location) VALUES($1,$2,$3,$4,$5,$6)
+        ON CONFLICT(account_id) DO UPDATE SET host=EXCLUDED.host, gl=EXCLUDED.gl, hl=EXCLUDED.hl, maps_location=EXCLUDED.maps_location, search_location=EXCLUDED.search_location RETURNING *`, [a.id, host, gl, hl, mapsLocation, searchLocation]))[0];
       await this.setKeywords(p.id, keywords);
       return { account: a, project: p };
     },
@@ -70,6 +72,7 @@ function pgStore(pool) {
     async accountByDashboard(dashboardNonce) { return (await q('SELECT * FROM rank_free_accounts WHERE dashboard_nonce=$1 AND verified_at IS NOT NULL', [dashboardNonce]))[0] || null; },
     async projectOf(accountId) { return (await q('SELECT * FROM rank_free_projects WHERE account_id=$1', [accountId]))[0] || null; },
     async setMapsLocation(projectId, location) { await q('UPDATE rank_free_projects SET maps_location=$2 WHERE id=$1', [projectId, location || null]); },
+    async setSearchLocation(projectId, region) { await q('UPDATE rank_free_projects SET search_location=$2 WHERE id=$1', [projectId, region || null]); },
     async setMapsGrid(projectId, keywords) { await q('UPDATE rank_free_projects SET maps_grid=$2::jsonb WHERE id=$1', [projectId, JSON.stringify(keywords || [])]); },
     async saveHandoff(checkId, accountId, keyword) { await q('INSERT INTO rank_free_handoffs(check_id,account_id,keyword) VALUES($1,$2,$3) ON CONFLICT(check_id) DO NOTHING', [checkId, accountId, keyword]); },
     async handoffsSince(accountId, since) { return Number((await q('SELECT COUNT(*)::int n FROM rank_free_handoffs WHERE account_id=$1 AND created_at>=$2', [accountId, since]))[0].n); },
@@ -85,7 +88,7 @@ function pgStore(pool) {
     },
     async history(keywordId, limit = 12) { return q('SELECT checked_at,status,position,url,result FROM rank_free_results WHERE keyword_id=$1 ORDER BY checked_at DESC LIMIT $2', [keywordId, limit]); },
     async due(now, limit) {
-      return q(`SELECT k.id keyword_id, k.keyword, p.id project_id, p.host, p.gl, p.hl, p.maps_location, p.maps_grid, a.id account_id FROM rank_free_keywords k
+      return q(`SELECT k.id keyword_id, k.keyword, p.id project_id, p.host, p.gl, p.hl, p.maps_location, p.search_location, p.maps_grid, a.id account_id FROM rank_free_keywords k
         JOIN rank_free_projects p ON p.id=k.project_id JOIN rank_free_accounts a ON a.id=p.account_id
         WHERE k.active AND k.next_check_at IS NOT NULL AND k.next_check_at<=$1 AND a.verified_at IS NOT NULL AND a.opted_out_at IS NULL
         ORDER BY k.next_check_at, k.id LIMIT $2`, [now, limit]);
@@ -127,13 +130,13 @@ function memoryStore() {
     db,
     async signupsSince(ipHash, since) { return db.accounts.filter(a => a.ip_hash === ipHash && a.created_at >= since).length; },
     async findAccountByEmail(email) { return db.accounts.find(a => a.email === email) || null; },
-    async upsertSignup({ email, lang, ipHash, consent, verifyHash, host, gl, hl, keywords, mapsLocation = null }) {
+    async upsertSignup({ email, lang, ipHash, consent, verifyHash, host, gl, hl, keywords, mapsLocation = null, searchLocation = null }) {
       let a = db.accounts.find(x => x.email === email);
       if (!a) { a = { id: id++, email, created_at: new Date(), verified_at: null, dashboard_nonce: null, ip_hash: ipHash, marketing_consent: false }; db.accounts.push(a); }
       Object.assign(a, { lang, verify_hash: verifyHash, marketing_consent: !!consent, opted_out_at: null });
       let p = db.projects.find(x => x.account_id === a.id);
       if (!p) { p = { id: id++, account_id: a.id, last_digest_at: null }; db.projects.push(p); }
-      Object.assign(p, { host, gl, hl, maps_location: mapsLocation || null });
+      Object.assign(p, { host, gl, hl, maps_location: mapsLocation || null, search_location: searchLocation || null });
       await store.setKeywords(p.id, keywords);
       return { account: a, project: p };
     },
@@ -147,6 +150,7 @@ function memoryStore() {
     async accountByDashboard(h) { return db.accounts.find(a => a.dashboard_nonce === h && a.verified_at) || null; },
     async projectOf(accountId) { return db.projects.find(p => p.account_id === accountId) || null; },
     async setMapsLocation(projectId, location) { db.projects.find(p => p.id === projectId).maps_location = location || null; },
+    async setSearchLocation(projectId, region) { db.projects.find(p => p.id === projectId).search_location = region || null; },
     async setMapsGrid(projectId, keywords) { db.projects.find(p => p.id === projectId).maps_grid = (keywords || []).slice(); },
     async saveHandoff(checkId, accountId, keyword) { db.handoffs = db.handoffs || []; if (!db.handoffs.some(h => h.check_id === checkId)) db.handoffs.push({ check_id: checkId, account_id: accountId, keyword, created_at: new Date() }); },
     async handoffsSince(accountId, since) { return (db.handoffs || []).filter(h => h.account_id === accountId && h.created_at >= since).length; },
@@ -167,7 +171,7 @@ function memoryStore() {
     async due(now, limit) {
       return db.keywords.filter(k => k.active && k.next_check_at && k.next_check_at <= now).map(k => {
         const p = db.projects.find(x => x.id === k.project_id), a = db.accounts.find(x => x.id === p.account_id);
-        return a.verified_at && !a.opted_out_at ? { keyword_id: k.id, keyword: k.keyword, project_id: p.id, host: p.host, gl: p.gl, hl: p.hl, maps_location: p.maps_location || null, maps_grid: p.maps_grid || [], account_id: a.id } : null;
+        return a.verified_at && !a.opted_out_at ? { keyword_id: k.id, keyword: k.keyword, project_id: p.id, host: p.host, gl: p.gl, hl: p.hl, maps_location: p.maps_location || null, search_location: p.search_location || null, maps_grid: p.maps_grid || [], account_id: a.id } : null;
       }).filter(Boolean).slice(0, limit);
     },
     async saveResult(keywordId, r, next) {
