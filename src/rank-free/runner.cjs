@@ -2,7 +2,7 @@
 // The automatic part of the free rank tracker: due keywords are checked, results saved, and one e-mail per project goes
 // out when all its keywords have a fresh result. A monthly provider budget caps the cost for all free users together;
 // when it is used up, checks are postponed one day (never dropped, never estimated).
-const { checkRank, checkMaps, changeOf, growthLink } = require('./engine.cjs');
+const { checkRank, checkMaps, checkMapsGrid, GRID_SIZE, changeOf, growthLink } = require('./engine.cjs');
 const { digestEmail, followText, plainFollow, t } = require('./texts.cjs');
 const { bestOpportunity, followUp } = require('./gsc.cjs');
 const { linkToken, handoffToken } = require('./links.cjs');
@@ -11,7 +11,7 @@ const { countryName } = require('../growth-search-locale.cjs');
 const DAY = 86400000;
 const WEEK = 7 * DAY;
 
-async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), monthlyCap = 3000, batch = 40, maxPages, check = checkRank, maps = checkMaps } = {}) {
+async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), monthlyCap = 3000, batch = 40, maxPages, check = checkRank, maps = checkMaps, grid = checkMapsGrid } = {}) {
   const out = { checked: 0, postponed: 0, errors: 0, calls: 0, budget_reached: false };
   if (!key) return { ...out, skipped: 'PROVIDER_NOT_CONFIGURED' };
   const due = await store.due(now, batch);
@@ -37,6 +37,19 @@ async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), 
         const m = await maps({ keyword: k.keyword, host: k.host, location: k.maps_location, gl: k.gl, hl: k.hl, key, fetchImpl, now: () => now });
         if (m.calls) { await store.addUsage(now, m.calls); out.calls += m.calls; }
         r.maps = m;
+      }
+    }
+    // Geo-grid for the keywords the owner chose: centred on the business's own Maps listing from this round. Without that
+    // (not found in Maps, or no coordinates) there is no centre, and nothing is guessed.
+    const gridKeywords = Array.isArray(k.maps_grid) ? k.maps_grid : (typeof k.maps_grid === 'string' ? JSON.parse(k.maps_grid || '[]') : []);
+    if (k.maps_location && gridKeywords.includes(k.keyword)) {
+      const m = r.maps, center = m && m.status === 'FOUND' && m.lat != null && m.lng != null ? { lat: m.lat, lng: m.lng } : null;
+      if (!center) r.grid = { status: 'NO_CENTER' };
+      else if ((await store.usage(now)) + GRID_SIZE * GRID_SIZE > monthlyCap) { r.grid = { status: 'BUDGET_REACHED' }; out.budget_reached = true; }
+      else {
+        const g = await grid({ keyword: k.keyword, host: k.host, center, gl: k.gl, hl: k.hl, key, fetchImpl, now: () => now });
+        if (g.calls) { await store.addUsage(now, g.calls); out.calls += g.calls; }
+        r.grid = g;
       }
     }
     await store.saveResult(k.keyword_id, r, new Date(now.getTime() + WEEK));

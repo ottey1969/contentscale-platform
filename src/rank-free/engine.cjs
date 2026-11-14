@@ -127,6 +127,11 @@ function mapsQuery(keyword, location) {
   const k = String(keyword || '').trim(), first = String(location || '').split(',')[0].trim().toLowerCase();
   return location && !(first && k.toLowerCase().includes(first)) ? k + ' ' + location : k;
 }
+// Coordinates of a Maps listing (Serper: latitude/longitude; other providers: gpsCoordinates). null when absent or invalid.
+function coordOf(x, k) {
+  const v = Number(k === 'lat' ? (x && (x.latitude ?? (x.gpsCoordinates && x.gpsCoordinates.latitude))) : (x && (x.longitude ?? (x.gpsCoordinates && x.gpsCoordinates.longitude))));
+  return Number.isFinite(v) && Math.abs(v) <= (k === 'lat' ? 90 : 180) && v !== 0 ? v : null;
+}
 async function checkMaps({ keyword, host, location, gl, hl, key, fetchImpl = global.fetch, now = () => new Date() }) {
   if (!key) return { status: 'PROVIDER_NOT_CONFIGURED', calls: 0 };
   if (typeof fetchImpl !== 'function') return { status: 'PROVIDER_UNAVAILABLE', calls: 0 };
@@ -147,10 +152,50 @@ async function checkMaps({ keyword, host, location, gl, hl, key, fetchImpl = glo
     if (h && (h === host || h.endsWith('.' + host))) {
       return { status: 'FOUND', position: Number(x.position) || i + 1, title: String(x.title || '').slice(0, 160), address: String(x.address || '').slice(0, 200),
         rating: Number.isFinite(Number(x.rating)) ? Number(x.rating) : null, rating_count: Number.isFinite(Number(x.ratingCount)) ? Number(x.ratingCount) : null,
+        lat: coordOf(x, 'lat'), lng: coordOf(x, 'lng'),
         depth: places.length, top, calls: 1, query: q, location, checked_at: now().toISOString() };
     }
   }
   return { status: 'NOT_IN_RESULTS', depth: places.length, top, calls: 1, query: q, location, checked_at: now().toISOString() };
+}
+
+// Geo-grid (owner 2026-11-14: "is there a grid too? it must work well"). Google Maps ranks a business differently for
+// someone two streets away than for someone across town. The grid searches one keyword from GRID_SIZE x GRID_SIZE points
+// around the business's own Maps location (the centre comes from its listing, never guessed), one Maps call per point,
+// and records the position at every point. A point where the business is not among the places shown is null.
+const GRID_SIZE = 3, GRID_SPACING_KM = 1.6, GRID_ZOOM = 14, MAX_GRID_KEYWORDS = 3;
+function gridPoints(center, size = GRID_SIZE, spacingKm = GRID_SPACING_KM) {
+  const half = (size - 1) / 2, out = [], dLat = spacingKm / 111.32, dLng = spacingKm / (111.32 * Math.cos(center.lat * Math.PI / 180));
+  for (let r = 0; r < size; r++) for (let c = 0; c < size; c++)
+    out.push({ row: r, col: c, lat: +(center.lat + (half - r) * dLat).toFixed(6), lng: +(center.lng + (c - half) * dLng).toFixed(6) });
+  return out;
+}
+async function checkMapsGrid({ keyword, host, center, gl, hl, key, fetchImpl = global.fetch, size = GRID_SIZE, spacingKm = GRID_SPACING_KM, now = () => new Date() }) {
+  if (!key) return { status: 'PROVIDER_NOT_CONFIGURED', calls: 0 };
+  if (!center || !Number.isFinite(center.lat) || !Number.isFinite(center.lng)) return { status: 'NO_CENTER', calls: 0, checked_at: now().toISOString() };
+  const points = gridPoints(center, size, spacingKm);
+  let calls = 0, errors = 0;
+  for (const pt of points) {
+    calls++;
+    try {
+      const r = await fetchImpl('https://google.serper.dev/maps', { method: 'POST',
+        headers: { 'X-API-KEY': String(key).trim(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: keyword, ll: '@' + pt.lat + ',' + pt.lng + ',' + GRID_ZOOM + 'z', gl, hl }), signal: AbortSignal.timeout(12000) });
+      const payload = r.ok ? await r.json() : null, places = payload && Array.isArray(payload.places) ? payload.places : null;
+      if (!places) { pt.error = r.ok ? 'NO_PLACES' : 'HTTP_' + r.status; errors++; continue; }
+      pt.depth = places.length; pt.position = null;
+      for (let i = 0; i < places.length; i++) {
+        const h = hostOf(String(places[i] && places[i].website || ''));
+        if (h && (h === host || h.endsWith('.' + host))) { pt.position = Number(places[i].position) || i + 1; break; }
+      }
+    } catch (e) { pt.error = e && e.name === 'TimeoutError' ? 'TIMEOUT' : 'REQUEST_FAILED'; errors++; }
+  }
+  // Too many failed points: the grid is not shown as a result (a half grid would look like "not found" in those areas).
+  if (errors > Math.floor(points.length / 3)) return { status: 'PROVIDER_ERROR', reason: 'GRID_POINTS_FAILED', failed: errors, calls, checked_at: now().toISOString() };
+  const measured = points.filter(p => !p.error), found = measured.filter(p => p.position != null);
+  return { status: 'OK', size, spacing_km: spacingKm, center, points, calls, measured: measured.length, found: found.length,
+    top3: found.filter(p => p.position <= 3).length, best: found.length ? Math.min(...found.map(p => p.position)) : null,
+    average: found.length ? +(found.reduce((a, p) => a + p.position, 0) / found.length).toFixed(1) : null, checked_at: now().toISOString() };
 }
 
 // What changed between two checks of the same keyword, for the e-mail. Small daily moves are not news.
@@ -178,4 +223,4 @@ function growthLink(growthUrl, { host, gl, hl }, keyword, last, rt = null) {
   return growthUrl + (growthUrl.includes('?') ? '&' : '?') + q.toString();
 }
 
-module.exports = { readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
+module.exports = { gridPoints, checkMapsGrid, GRID_SIZE, GRID_SPACING_KM, MAX_GRID_KEYWORDS, coordOf, readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };

@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 const engine = require('./engine.cjs');
 const { pgStore, hash, token: randomToken } = require('./store.cjs');
 const { runDue, sendDigests } = require('./runner.cjs');
-const { t, langOf, esc, positionText, mapsText, changeText, verifyEmail, accessEmail, followText, plainFollow } = require('./texts.cjs');
+const { t, langOf, esc, positionText, mapsText, gridText, gridTable, changeText, verifyEmail, accessEmail, followText, plainFollow } = require('./texts.cjs');
 const links = require('./links.cjs');
 const gscMod = require('./gsc.cjs');
 const { brevo } = require('../growth-free/reminders.cjs');
@@ -126,7 +126,8 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
     const cLine = k.changed_at && k.changed_position != null ? `<span class="sub">✎ ${esc(L.cRow(new Date(k.changed_at).toISOString().slice(0, 10), k.changed_position))}</span>` : '';
     const gLine = (g ? `<span class="sub">${esc(L.gRow(num(g.clicks), num(g.impressions), g.position != null ? num(g.position) : null))}</span>` : '') + cLine;
     const mLine = last && mapsText(last, L) ? `<span class="sub">📍 ${esc(mapsText(last, L))}</span>` : '';
-    return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}${gLine}${mLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
+    const gridLine = last && gridText(last, L) ? `<span class="sub">🗺️ ${esc(gridText(last, L))}</span>${gridTable(last)}` : '';
+    return `<tr><td><strong>${esc(k.keyword)}</strong>${topLine}${gLine}${mLine}${gridLine}</td><td class="pos" data-l="${esc(L.pos)}">${last ? esc(positionText(last, L)) : `<span class="muted">${esc(k.last_error ? L.failed(k.last_error, new Date(k.next_check_at).toISOString().slice(11, 16) + ' UTC') : L.pending)}</span>`}</td><td data-l="${esc(L.trend)}">${sparkline(k.history, L)}</td><td data-l="${esc(L.change)}">${esc(ch)}</td><td data-l="${esc(L.page)}">${pageUrl}${improve}</td><td class="muted" data-l="${esc(L.checked)}" style="white-space:nowrap">${esc(when)}</td></tr>`;
   }).join('');
   const pending = data.keywords.some(k => !k.history[0] && !k.last_error);
   const providerNote = pending && !data.provider_ready ? `<div class="msg err">${esc(L.noProvider)}</div>` : '';
@@ -161,7 +162,7 @@ ${providerNote}${bestCard}<div class="card" style="overflow-x:auto"><table class
 <p class="muted">${esc(L.note)}</p></div>
 ${!cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.callUpsell)}</p><p><a href="${esc(callOf(cfg, lang))}">${esc(L.callCta)} →</a></p></div>` : ''}
 ${cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(growthLink(cfg, data, notOnOne.keyword, notOnOne.history[0].result))}">${esc(L.upsellLink)} →</a></p></div>` : ''}
-${suggestCard}${gscCard}<form class="card" id="mp"><strong>${esc(L.mapsTitle)}</strong><p class="muted">${esc(data.maps_location ? L.mapsOn(data.maps_location) : L.mapsNone)} ${esc(L.mapsHelp)}</p><label for="mpl">${esc(L.mapsField)}</label><input id="mpl" maxlength="80" placeholder="Lodi, NJ" value="${esc(data.maps_location || '')}"><button type="submit">${esc(L.mapsSave)}</button><div id="mpm"></div></form><form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
+${suggestCard}${gscCard}<form class="card" id="mp"><strong>${esc(L.mapsTitle)}</strong><p class="muted">${esc(data.maps_location ? L.mapsOn(data.maps_location) : L.mapsNone)} ${esc(L.mapsHelp)}</p><label for="mpl">${esc(L.mapsField)}</label><input id="mpl" maxlength="80" placeholder="Lodi, NJ" value="${esc(data.maps_location || '')}"><button type="submit">${esc(L.mapsSave)}</button><div id="mpm"></div></form><form class="card" id="gr"><strong>${esc(L.gridTitle)}</strong><p class="muted">${esc(L.gridHelp)}</p>${data.maps_location ? data.keywords.map(k => `<label class="consent"><input type="checkbox" name="g" value="${esc(k.keyword)}"${(data.maps_grid || []).includes(k.keyword) ? ' checked' : ''}> ${esc(k.keyword)}</label>`).join('') + `<button type="submit">${esc(L.gridSave)}</button>` : `<p class="muted">${esc(L.gridNeedsPlace)}</p>`}<div id="grm"></div></form><form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form>
 <p class="muted"><a href="/rank-tracker/stop/${esc(tok)}">${esc(L.stop)}</a> · <a href="#" id="fg">${esc(L.forget)}</a></p>
 <script>(()=>{const $=i=>document.getElementById(i);$('k').onsubmit=async ev=>{ev.preventDefault();const m=$('m');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:$('kw').value})});const j=await r.json();
@@ -169,6 +170,9 @@ m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';i
 document.querySelectorAll('#sg .chip,#gsc .chip').forEach(b=>b.onclick=async()=>{b.disabled=true;const m=$(b.closest('#gsc')?'gm':'sm');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/keywords/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keyword:b.dataset.k})});const j=await r.json();
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)setTimeout(()=>location.reload(),900);else b.disabled=false});
+if($('gr'))$('gr').onsubmit=async ev=>{ev.preventDefault();const m=$('grm');const ks=[...document.querySelectorAll('#gr input[name=g]:checked')].map(x=>x.value);
+const r=await fetch('/api/rank-free/d/${esc(tok)}/grid',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:ks})});const j=await r.json().catch(()=>({}));
+m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),900)};
 $('mp').onsubmit=async ev=>{ev.preventDefault();const m=$('mpm');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/maps',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({maps_location:$('mpl').value})});const j=await r.json().catch(()=>({}));
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),900)};
@@ -200,7 +204,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const shown = (type, code) => { try { return new Intl.DisplayNames([langOf(account.lang)], { type }).of(code); } catch { return null; } };
     return { host: p && p.host, gl: p && p.gl, hl: p && p.hl, country: (p && shown('region', p.gl.toUpperCase())) || m.country_name,
       language: (p && shown('language', p.hl)) || m.language_name, other_engine: m.other_engine || null, keywords, provider_ready: !!config.serperKey,
-      gsc: p && p.gsc ? (typeof p.gsc === 'string' ? JSON.parse(p.gsc) : p.gsc) : null, gsc_at: p ? p.gsc_at || null : null, maps_location: p ? p.maps_location || null : null };
+      gsc: p && p.gsc ? (typeof p.gsc === 'string' ? JSON.parse(p.gsc) : p.gsc) : null, gsc_at: p ? p.gsc_at || null : null, maps_location: p ? p.maps_location || null : null, maps_grid: p && p.maps_grid ? (typeof p.maps_grid === 'string' ? JSON.parse(p.maps_grid) : p.maps_grid) : [] };
   }
   const accountFor = async tok => { const nonce = links.readToken(tok); return nonce ? store.accountByDashboard(nonce) : null; };
   let kick = null; // one background round right after a confirmation, so the first positions appear within a minute
@@ -306,6 +310,19 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     if (m.error) return res.status(400).json({ success: false, error: L.mapsBad });
     await store.setMapsLocation(p.id, m.location);
     res.json({ success: true, message: m.location ? L.mapsSaved : L.mapsCleared, maps_location: m.location });
+  });
+  // Keywords for the geo-grid: at most engine.MAX_GRID_KEYWORDS of the tracked keywords, and only with a place set.
+  app.post('/api/rank-free/d/:token/grid', async (req, res) => {
+    const a = await accountFor(req.params.token).catch(() => null);
+    if (!a) return res.status(404).json({ success: false, error: 'Not found' });
+    const L = t(a.lang), p = await store.projectOf(a.id), raw = (req.body || {}).keywords;
+    if (!p) return res.status(404).json({ success: false, error: 'Not found' });
+    if (!p.maps_location) return res.status(400).json({ success: false, error: L.gridNeedsPlace });
+    const tracked = new Set((await store.keywords(p.id)).map(k => k.keyword));
+    const list = [...new Set((Array.isArray(raw) ? raw : []).map(x => String(x || '').trim().toLowerCase()))].filter(x => tracked.has(x));
+    if (list.length > engine.MAX_GRID_KEYWORDS) return res.status(400).json({ success: false, error: L.gridMax });
+    await store.setMapsGrid(p.id, list);
+    res.json({ success: true, message: L.gridSaved, keywords: list });
   });
   // "I have changed this page" for a tracked keyword (or undo). Its position today is kept to compare later checks with.
   app.post('/api/rank-free/d/:token/changed', async (req, res) => {
