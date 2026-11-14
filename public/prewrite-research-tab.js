@@ -60,10 +60,11 @@
     inputs.type = prompt.type = 'button';
     inputs.textContent = 'AI Answer Inputs';
     prompt.textContent = 'Research Prompt';
-    // The owner can inspect the EXACT prompt used by the generator. Keep AI answer inputs as the default tab.
-    tabs.hidden = false;
-    tabs.style.display = 'flex';
-    tabs.removeAttribute('aria-hidden');
+    // The research prompt is internal to Brief generation (owner 2026-11-14: "why would we want to see code?"). Users
+    // copy the question and paste the five answers; the generator prompt stays behind the scenes.
+    tabs.hidden = true;
+    tabs.style.display = 'none';
+    tabs.setAttribute('aria-hidden', 'true');
     inputs.id = 'cs-research-inputs-tab';
     prompt.id = 'cs-research-prompt-tab';
     if (!grid.id) grid.id = 'cs-research-inputs-panel';

@@ -1,5 +1,5 @@
 'use strict';
-// Verify the real Tracker Pre-Write modal exposes the exact shared Research Prompt on demand while answers remain the default.
+// Verify the real Tracker Pre-Write modal shows one clear user journey while the research prompt stays internal.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -21,7 +21,7 @@ function realModalMarkup() {
   assert.doesNotMatch(block, /\$\{/);
   return block.replace(/\\\\/g, '\\');
 }
-test('Pre-Write AI collection defaults to answers and exposes the shared Research Prompt on demand',
+test('Pre-Write AI collection is one visible action, prompt stays behind the scenes',
   { skip: !chromium && 'Playwright not installed' }, async () => {
     const modal = realModalMarkup();
     const html = '<!doctype html><html><head><meta charset="utf-8">' +
@@ -56,13 +56,8 @@ test('Pre-Write AI collection defaults to answers and exposes the shared Researc
       }, null, {timeout: 5000});
       assert.equal(await page.isDisabled('#cs-research-ask-copy'), false);
 
-      assert.equal(await page.isVisible('#cs-research-tabs'), true, 'Research Prompt is discoverable, not hidden');
-      assert.equal(await page.isVisible('#cs-research-prompt-panel'), false, 'Answers are the default tab');
-      await page.click('#cs-research-prompt-tab');
-      assert.equal(await page.isVisible('#cs-research-prompt-panel'), true, 'The owner can inspect the actual generator prompt');
-      assert.match(await page.inputValue('#cs-research-prompt-panel textarea'), /seo content optimalisatie/);
-      await page.click('#cs-research-inputs-tab');
-      assert.equal(await page.isVisible('#pwbAioText'), true);
+      assert.equal(await page.isVisible('#cs-research-tabs'), false, 'No two-tab choice');
+      assert.equal(await page.isVisible('#cs-research-prompt-panel'), false, 'Internal prompt not exposed');
       assert.equal(await page.isVisible('#pwbAioText'), true, 'Answer fields remain available');
       assert.match(await page.textContent('#cs-research-ask .cs-ask-note'), /Copy the question.*Paste that system/);
       // Outside a Tracker (no token) no customer question can be looked up: the keyword itself is the question to copy.
@@ -96,7 +91,7 @@ test('Pre-Write AI collection defaults to answers and exposes the shared Researc
       await page.fill('#pwbAioText', 'AI ANSWER RESEARCH — WRITE FOR CITATION POTENTIAL. This is NOT citation tracking. Research the five answers to the target query. EDITORIAL REQUIREMENTS:');
       assert.match(await page.textContent('#cs-research-ask .cs-rp-status'), /1 answer needs correction/);
       assert.equal(await page.isVisible('#pwbAioText-cs-invalid'), true);
-      assert.equal(await page.isVisible('#cs-research-prompt-tab'), true);
+      assert.equal(await page.isVisible('#cs-research-prompt-tab'), false);
       assert.deepEqual(errors, []);
     } finally { await browser.close(); await new Promise(ok => server.close(ok)); }
   });
