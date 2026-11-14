@@ -48,6 +48,7 @@ test('the dashboard explains the colours in plain words and shows the ideas as c
     keywords: [{ keyword: 'roofer', history: [{ result: { status: 'FOUND', position: 1, checked_at: '2026-11-14T00:00:00Z', url: 'https://acme.example/', maps_places: [{ location: 'Lodi, NJ', status: 'FOUND', position: 2 }], grid } }] }] };
   const html = dashboardPage('nl', data, 'tok', { maxKeywords: 10 });
   assert.match(html, /Rood/);
+  assert.match(html, /Het cijfer is je plek in de lijst van Google Maps \(12 = er staan 11 bedrijven boven je\)/, 'the number is a place, not a count');
   assert.match(html, /Groen/);
   assert.match(html, /id="mk"[\s\S]*data-k="flat roof repair"/);
   assert.match(html, /background:#16a34a[^"]*">2</, 'the Maps cell carries the colour of its position');

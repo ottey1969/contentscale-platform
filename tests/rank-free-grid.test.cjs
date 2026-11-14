@@ -117,5 +117,5 @@ test('dashboard: choose up to 3 grid keywords (only tracked ones, only with a pl
   assert.match(dash.text, /aria-label="geo-grid"/);
   assert.match(dash.text, /name="g" value="roofer" checked/);
   const mails = []; await sendDigests({ store, send: async m => { mails.push(m); return true; }, baseUrl: 'https://app.example', now });
-  assert.match(mails[0].html, /Geo-grid around Lodi, NJ: found at 9 of 9 points/); assert.match(mails[0].html, /What do the colours mean/); assert.match(mails[0].html, /aria-label="geo-grid"/);
+  assert.match(mails[0].html, /Geo-grid around Lodi, NJ: found at 9 of 9 points/); assert.match(mails[0].html, /What do the numbers and colours mean/); assert.match(mails[0].html, /aria-label="geo-grid"/);
 });
