@@ -2,7 +2,7 @@
 // The automatic part of the free rank tracker: due keywords are checked, results saved, and one e-mail per project goes
 // out when all its keywords have a fresh result. A monthly provider budget caps the cost for all free users together;
 // when it is used up, checks are postponed one day (never dropped, never estimated).
-const { checkRank, checkMaps, checkMapsGrid, GRID_SIZE, locationsOf, changeOf, growthLink } = require('./engine.cjs');
+const { checkRank, checkMaps, checkMapsGrid, GRID_SIZE, locationsOf, changeOf, growthLink, searchLocationOf } = require('./engine.cjs');
 const { digestEmail, followText, plainFollow, t } = require('./texts.cjs');
 const { bestOpportunity, followUp } = require('./gsc.cjs');
 const { linkToken, handoffToken } = require('./links.cjs');
@@ -21,7 +21,10 @@ async function runDue({ store, key, fetchImpl = global.fetch, now = new Date(), 
       out.budget_reached = true;
       await store.postpone(k.keyword_id, new Date(now.getTime() + DAY)); out.postponed++; continue;
     }
-    const r = await check({ keyword: k.keyword, host: k.host, gl: k.gl, hl: k.hl, key, fetchImpl, ...(maxPages ? { maxPages } : {}), now: () => now });
+    // Normal results for the project's state, region or city when one is set; otherwise the whole country.
+    const location = searchLocationOf(k.search_location, k.gl);
+    const r = await check({ keyword: k.keyword, host: k.host, gl: k.gl, hl: k.hl, key, fetchImpl, ...(location ? { location } : {}), ...(maxPages ? { maxPages } : {}), now: () => now });
+    if (location) r.location = location;
     if (r.calls) { await store.addUsage(now, r.calls); out.calls += r.calls; }
     if (r.status !== 'FOUND' && r.status !== 'NOT_IN_RESULTS') {
       // A failed provider call is retried in six hours; it never counts as "not ranking".
@@ -85,7 +88,7 @@ async function sendDigests({ store, send, baseUrl, growthUrl = 'https://app.cont
     // Google's own related searches from this round that are not tracked yet (at most five).
     const tracked = new Set(rows.map(r => r.keyword)), suggestions = [];
     for (const r of rows) for (const x of (r.curr && Array.isArray(r.curr.suggestions) ? r.curr.suggestions : [])) if (!tracked.has(x) && !suggestions.includes(x) && suggestions.length < 5) suggestions.push(x);
-    const mail = digestEmail(p.lang, { host: p.host, countryLabel: countryName(String(p.gl).toUpperCase()), rows, suggestions, best,
+    const mail = digestEmail(p.lang, { host: p.host, countryLabel: countryName(String(p.gl).toUpperCase()) + (p.search_location ? ' · ' + p.search_location : ''), rows, suggestions, best,
       dashboard: baseUrl + '/rank-tracker/d/' + token, stop: baseUrl + '/rank-tracker/stop/' + token });
     const ok = await send({ to: [p.email], subject: mail.subject, html: mail.html }).catch(() => false);
     // Do not acknowledge an unsent digest as delivered: it is tried again after at least an hour, without rerunning paid

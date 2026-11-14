@@ -71,7 +71,7 @@ function suggestionsOf(payload, keyword, max = 8) {
 }
 
 // The site's best organic position for one keyword. `calls` is what the check cost (one per result page asked).
-async function checkRank({ keyword, host, gl, hl, key, fetchImpl = global.fetch, maxPages = MAX_PAGES, now = () => new Date() }) {
+async function checkRank({ keyword, host, gl, hl, key, location = null, fetchImpl = global.fetch, maxPages = MAX_PAGES, now = () => new Date() }) {
   if (!key) return { status: 'PROVIDER_NOT_CONFIGURED', calls: 0 };
   if (typeof fetchImpl !== 'function') return { status: 'PROVIDER_UNAVAILABLE', calls: 0 };
   let calls = 0, answerBox = false, aiOverview = null, suggestions = [];
@@ -82,7 +82,7 @@ async function checkRank({ keyword, host, gl, hl, key, fetchImpl = global.fetch,
       calls++;
       const r = await fetchImpl('https://google.serper.dev/search', { method: 'POST',
         headers: { 'X-API-KEY': String(key).trim(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ q: keyword, gl, hl, num: PAGE_SIZE, ...(page > 1 ? { page } : {}) }), signal: AbortSignal.timeout(12000) });
+        body: JSON.stringify({ q: keyword, gl, hl, ...(location ? { location } : {}), num: PAGE_SIZE, ...(page > 1 ? { page } : {}) }), signal: AbortSignal.timeout(12000) });
       if (!r.ok) return { status: 'PROVIDER_ERROR', reason: 'HTTP_' + r.status, calls, checked_at: now().toISOString() };
       payload = await r.json();
     } catch (e) { return { status: 'PROVIDER_ERROR', reason: e && e.name === 'TimeoutError' ? 'TIMEOUT' : 'REQUEST_FAILED', calls, checked_at: now().toISOString() }; }
@@ -125,6 +125,26 @@ function readMapsLocation(raw) {
 }
 // Up to MAX_MAPS_LOCATIONS places, one per line (owner 2026-11-14: "what if I have more locations?"). Stored newline-joined.
 const MAX_MAPS_LOCATIONS = 3;
+// Optional state, region or city for the normal results (owner 2026-11-14: the country alone is not enough for a
+// local business). Same text rules as a Maps place. Empty = the whole country, as before.
+function readRegion(raw) { const r = readMapsLocation(raw); return r.error ? { error: 'INVALID' } : { region: r.location }; }
+const US_STATES = { AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware',
+  DC: 'District of Columbia', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas',
+  KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi',
+  MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York',
+  NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina',
+  SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia',
+  WI: 'Wisconsin', WY: 'Wyoming' };
+// The region as Google names places ("City, State, Country"): a US state abbreviation written out, the country added
+// in English when it is not there yet. "Lodi, NJ" → "Lodi, New Jersey, United States".
+function searchLocationOf(region, gl) {
+  const v = String(region || '').replace(/\s+/g, ' ').trim(); if (!v) return null;
+  let country = null; try { country = new Intl.DisplayNames(['en'], { type: 'region' }).of(String(gl || '').toUpperCase()); } catch { country = null; }
+  const parts = v.split(',').map(x => x.trim()).filter(Boolean);
+  const out = String(gl).toLowerCase() === 'us' ? parts.map(x => US_STATES[x.toUpperCase()] || x) : parts;
+  if (country && out[out.length - 1].toLowerCase() !== country.toLowerCase()) out.push(country);
+  return out.join(', ');
+}
 function readMapsLocations(raw) {
   const parts = String(raw == null ? '' : raw).split(/\r?\n|;/).map(x => x.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const out = [];
@@ -213,6 +233,8 @@ function changeOf(prev, curr) {
   const p = prev && prev.status === 'FOUND' ? prev.position : null, c = curr && curr.status === 'FOUND' ? curr.position : null;
   if (!curr || curr.status === 'PROVIDER_ERROR') return null;
   if (!prev) return { kind: 'FIRST', position: c };
+  // Measured somewhere else (the region was changed): a new starting point, never "up" or "down" against another place.
+  if ((prev.location || null) !== (curr.location || null)) return { kind: 'NEW_REGION', position: c };
   if (p == null && c != null) return { kind: c <= 10 ? 'ENTERED_PAGE_ONE' : 'ENTERED_RESULTS', from: null, to: c };
   if (p != null && c == null) return { kind: 'LEFT_RESULTS', from: p, to: null };
   if (p == null && c == null) return null;
@@ -233,4 +255,4 @@ function growthLink(growthUrl, { host, gl, hl }, keyword, last, rt = null) {
   return growthUrl + (growthUrl.includes('?') ? '&' : '?') + q.toString();
 }
 
-module.exports = { readMapsLocations, locationsOf, MAX_MAPS_LOCATIONS, gridPoints, checkMapsGrid, GRID_SIZE, GRID_SPACING_KM, MAX_GRID_KEYWORDS, coordOf, readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };
+module.exports = { readRegion, searchLocationOf, US_STATES, readMapsLocations, locationsOf, MAX_MAPS_LOCATIONS, gridPoints, checkMapsGrid, GRID_SIZE, GRID_SPACING_KM, MAX_GRID_KEYWORDS, coordOf, readMapsLocation, mapsQuery, checkMaps, growthLink, readSite, readKeyword, readKeywords, readMarket, checkRank, changeOf, COUNTRIES, DEFAULT_LANGUAGE, GOOGLE_NOT_MAIN, MAX_PAGES, hostOf };

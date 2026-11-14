@@ -171,7 +171,7 @@ test('sign-up → confirm → dashboard; a confirmed address cannot be changed f
   const dash = v.headers.location; assert.match(dash, /^\/rank-tracker\/d\//);
   const d = await request(a).get(dash); assert.equal(d.status, 200); assert.match(d.text, /consultor geo/); assert.match(d.text, /primera comprobación en curso/);
   // Without a provider key the dashboard says so instead of waiting forever; names are in the account's language.
-  assert.match(d.text, /no está configurada en el servidor/); assert.match(d.text, /España · español/);
+  assert.match(d.text, /no está configurada en el servidor/); assert.match(d.text, /España · todo el país · español/);
   const withKey = express(); withKey.use(express.json());
   registerRankFree(withKey, null, { config: { ...rankFreeConfig({}), serperKey: 'k', scheduler: false }, store, fetchImpl: async () => ({ ok: false, status: 500 }), sendEmail: async () => true });
   const d2 = await request(withKey).get(dash); assert.match(d2.text, /location\.reload\(\),15000/); assert.doesNotMatch(d2.text, /no está configurada/);

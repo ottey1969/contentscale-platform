@@ -64,17 +64,19 @@ function signupPage(lang, cfg) {
 <form class="card" id="f"><label for="email">${esc(L.email)}</label><input id="email" type="email" required autocomplete="email">
 <label for="site">${esc(L.site)}</label><input id="site" required placeholder="example.com">
 <label for="gl">${esc(L.country)}</label><select id="gl">${opts}</select><p class="muted" id="other" hidden></p>
+<label for="region">${esc(L.region)}</label><input id="region" maxlength="80" placeholder="New Jersey"><p class="muted">${esc(L.regionHelp)}</p>
 <label for="hl">${esc(L.language)}</label><select id="hl">${langs}</select>
 <label for="kw">${esc(L.keywords)}</label><textarea id="kw" required></textarea>
-<label for="maps">${esc(L.mapsPlaces)}</label><textarea id="maps" rows="3" placeholder="Lodi, NJ"></textarea><p class="muted">${esc(L.mapsOnlineOnly)}</p><label class="consent"><input type="checkbox" id="mapsok"> ${esc(L.mapsConfirm(L.site.toLowerCase()))}</label><p class="muted">${esc(L.mapsConfirmHelp)}</p>
+<label for="maps">${esc(L.mapsPlaces)}</label><textarea id="maps" rows="3" placeholder="Lodi, NJ"></textarea><p class="muted">${esc(L.mapsOnlineOnly)}</p><label class="consent"><input type="checkbox" id="mapsok"> ${esc(L.mapsConfirmSignup)}</label><p class="muted">${esc(L.mapsConfirmHelp)}</p>
 <p class="consent-note">${esc(L.consent)}</p><label class="consent"><input type="checkbox" id="notips"> ${esc(L.noTips)}</label>
 <button type="submit">${esc(L.submit)}</button><div id="m"></div></form>
 <div class="card"><strong>${esc(L.how)}</strong><ol><li>${esc(L.how1)}</li><li>${esc(L.how2)}</li><li>${esc(L.how3)}</li></ol><p class="muted">${esc(L.note)}</p></div>
 <script>(()=>{const D=${defaults},O=${other},$=i=>document.getElementById(i),T=${JSON.stringify({otherEngine: L.otherEngine('§')})};
 const pre=(navigator.language||'').split('-')[1],page='${lang === 'nl' ? 'nl' : lang === 'es' ? 'es' : ''}';if(page)$('gl').value=page;else if(pre&&[...$('gl').options].some(o=>o.value===pre.toLowerCase()))$('gl').value=pre.toLowerCase();else $('gl').value='us';
 const sync=()=>{const g=$('gl').value;if(D[g])$('hl').value=D[g];const e=O[g];$('other').hidden=!e;if(e)$('other').textContent=T.otherEngine.replace('§',e)};$('gl').onchange=sync;sync();
+let rs='';$('region').oninput=()=>{const v=$('region').value.trim(),mp=$('maps');if(!mp.value.trim()||mp.value.trim()===rs){mp.value=v;rs=v}};
 $('f').onsubmit=async ev=>{ev.preventDefault();const m=$('m');m.className='';m.textContent='';const b=ev.submitter;b.disabled=true;
-try{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,site:$('site').value,country:$('gl').value,language:$('hl').value,keywords:$('kw').value,maps_location:$('maps').value,maps_confirm:$('mapsok').checked,no_tips:$('notips').checked,lang:'${lang}'})});
+try{const r=await fetch('/api/rank-free/signup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value,site:$('site').value,country:$('gl').value,language:$('hl').value,keywords:$('kw').value,region:$('region').value,maps_location:$('maps').value,maps_confirm:$('mapsok').checked,no_tips:$('notips').checked,lang:'${lang}'})});
 const j=await r.json();m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';if(j.success)$('f').reset()}catch(e){m.className='msg err';m.textContent='Error'}b.disabled=false}})();</script>`);
 }
 
@@ -199,13 +201,13 @@ function dashboardPage(lang, data, tok, cfg, now = new Date()) {
   })();
   const notOnOne = data.keywords.find(k => { const r = k.history[0] && k.history[0].result; return r && (r.status !== 'FOUND' || r.position > 10); });
   return page(lang, L.dash, `<p class="eyebrow">ContentScale · ${esc(L.title)}</p><h1>${esc(L.dash)}</h1>
-<p><strong>${esc(data.host)}</strong> · ${esc(data.country)} · ${esc(data.language)}</p>${data.other_engine ? `<p class="muted">${esc(L.otherEngine(data.other_engine))}</p>` : ''}
+<p><strong>${esc(data.host)}</strong> · ${esc(data.country)} · ${esc(data.search_location || L.regionWhole)} · ${esc(data.language)}</p>${data.other_engine ? `<p class="muted">${esc(L.otherEngine(data.other_engine))}</p>` : ''}
 <section class="blk" id="sec-organic"><h2>${esc(L.secOrganic)}</h2>
 ${providerNote}${bestCard}<div class="card" style="overflow-x:auto"><table class="rk"><thead><tr><th>${esc(L.kw)}</th><th>${esc(L.pos)}</th><th>${esc(L.trend)}</th><th>${esc(L.change)}</th><th>${esc(L.page)}</th><th>${esc(L.checked)}</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="muted">${esc(L.note)}</p></div>
 ${!cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.callUpsell)}</p><p><a href="${esc(callOf(cfg, lang))}">${esc(L.callCta)} →</a></p></div>` : ''}
 ${cfg.growthLinks && notOnOne && !best ? `<div class="card"><p>${esc(L.upsell)}</p><p><a href="${esc(growthLink(cfg, data, notOnOne.keyword, notOnOne.history[0].result))}">${esc(L.upsellLink)} →</a></p></div>` : ''}
-${suggestCard}${gscCard}<form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form></section>
+${suggestCard}${gscCard}<form class="card" id="rg"><label for="rgv">${esc(L.regionTitle)}</label><p class="muted">${esc(L.regionNow(data.search_location || L.regionWhole))} ${esc(L.regionHelp)}</p><input id="rgv" maxlength="80" placeholder="New Jersey" value="${esc(data.search_location || '')}"><button type="submit">${esc(L.regionSave)}</button><div id="rgm"></div></form><form class="card" id="k"><label for="kw">${esc(L.addKw)}</label><textarea id="kw">${esc(data.keywords.map(k => k.keyword).join('\n'))}</textarea><button type="submit">${esc(L.save)}</button><div id="m"></div></form></section>
 <section class="blk" id="sec-maps"><h2>${esc(L.secMaps)}</h2><p class="muted">${esc(L.secMapsLead)}</p><p><strong>${esc(L.mapsOnlineOnly)}</strong></p>${mapsTable}
 <form class="card" id="mp"><strong>${esc(L.mapsTitle)}</strong><p class="muted">${esc(places.length ? L.mapsOn(places.join(' · ')) + '.' : L.mapsNone)} ${esc(L.mapsHelp)}</p><label for="mpl">${esc(L.mapsPlaces)}</label><textarea id="mpl" rows="3" placeholder="Lodi, NJ">${esc(places.join('\n'))}</textarea><label class="consent"><input type="checkbox" id="mpok"${places.length ? ' checked' : ''}> ${esc(L.mapsConfirm(data.host))}</label><p class="muted">${esc(L.mapsConfirmHelp)}</p><button type="submit">${esc(L.mapsSave)}</button><div id="mpm"></div></form>
 <div class="card" id="mk"><strong>${esc(L.mapsKwTitle)}</strong><p class="muted">${esc(L.mapsKwHelp)}</p><ol class="muted" style="padding-left:20px">${L.mapsKwSteps.map(x => `<li>${esc(x)}</li>`).join('')}</ol>${places.length ? (ideas.length ? `<p><strong>${esc(L.mapsIdeas)}</strong></p><div class="chips">${ideas.map(x => `<button type="button" class="chip" data-k="${esc(x)}"${full ? ' disabled' : ''}>+ ${esc(x)}</button>`).join('')}</div>` : `<p class="muted">${esc(L.mapsIdeasNone)}</p>`) : ''}<div id="mkm"></div></div><form class="card" id="gr"><strong>${esc(L.gridTitle)}</strong><p class="muted">${esc(L.gridHelp)}</p>${places.length ? data.keywords.map(k => `<label class="consent"><input type="checkbox" name="g" value="${esc(k.keyword)}"${(data.maps_grid || []).includes(k.keyword) ? ' checked' : ''}> ${esc(k.keyword)}</label>`).join('') + `<button type="submit">${esc(L.gridSave)}</button>` : `<p class="muted">${esc(L.gridNeedsPlace)}</p>`}<div id="grm"></div></form></section>
@@ -219,6 +221,9 @@ m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'';i
 if($('gr'))$('gr').onsubmit=async ev=>{ev.preventDefault();const m=$('grm');const ks=[...document.querySelectorAll('#gr input[name=g]:checked')].map(x=>x.value);
 const r=await fetch('/api/rank-free/d/${esc(tok)}/grid',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({keywords:ks})});const j=await r.json().catch(()=>({}));
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),900)};
+$('rg').onsubmit=async ev=>{ev.preventDefault();const m=$('rgm');
+const r=await fetch('/api/rank-free/d/${esc(tok)}/region',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({region:$('rgv').value})});const j=await r.json().catch(()=>({}));
+m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),1500)};
 $('mp').onsubmit=async ev=>{ev.preventDefault();const m=$('mpm');
 const r=await fetch('/api/rank-free/d/${esc(tok)}/maps',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({maps_location:$('mpl').value,maps_confirm:$('mpok').checked})});const j=await r.json().catch(()=>({}));
 m.className='msg '+(j.success?'ok':'err');m.textContent=j.message||j.error||'Error';if(j.success)setTimeout(()=>location.reload(),900)};
@@ -250,7 +255,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     const shown = (type, code) => { try { return new Intl.DisplayNames([langOf(account.lang)], { type }).of(code); } catch { return null; } };
     return { host: p && p.host, gl: p && p.gl, hl: p && p.hl, country: (p && shown('region', p.gl.toUpperCase())) || m.country_name,
       language: (p && shown('language', p.hl)) || m.language_name, other_engine: m.other_engine || null, keywords, provider_ready: !!config.serperKey,
-      gsc: p && p.gsc ? (typeof p.gsc === 'string' ? JSON.parse(p.gsc) : p.gsc) : null, gsc_at: p ? p.gsc_at || null : null, maps_location: p ? p.maps_location || null : null, maps_grid: p && p.maps_grid ? (typeof p.maps_grid === 'string' ? JSON.parse(p.maps_grid) : p.maps_grid) : [] };
+      gsc: p && p.gsc ? (typeof p.gsc === 'string' ? JSON.parse(p.gsc) : p.gsc) : null, gsc_at: p ? p.gsc_at || null : null, maps_location: p ? p.maps_location || null : null, search_location: p ? p.search_location || null : null, maps_grid: p && p.maps_grid ? (typeof p.maps_grid === 'string' ? JSON.parse(p.maps_grid) : p.maps_grid) : [] };
   }
   const accountFor = async tok => { const nonce = links.readToken(tok); return nonce ? store.accountByDashboard(nonce) : null; };
   let kick = null; // one background round right after a confirmation, so the first positions appear within a minute
@@ -269,6 +274,8 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
       if (!EMAIL.test(email)) return res.status(400).json({ success: false, error: L.errEmail });
       const site = engine.readSite(b.site); if (site.error) return res.status(400).json({ success: false, error: site.error });
       const market = engine.readMarket(b.country, b.language); if (market.error) return res.status(400).json({ success: false, error: market.error });
+      const region = engine.readRegion(b.region);
+      if (region.error) return res.status(400).json({ success: false, error: L.regionBad });
       const mapsLoc = engine.readMapsLocations(b.maps_location);
       if (mapsLoc.error) return res.status(400).json({ success: false, error: mapsLoc.error === 'TOO_MANY' ? L.mapsTooMany : L.mapsBad });
       if (mapsLoc.locations.length && b.maps_confirm !== true) return res.status(400).json({ success: false, error: L.mapsConfirmNeeded });
@@ -287,7 +294,7 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
         return res.json({ success: true, message: L.sent });
       }
       const verify = randomToken();
-      await store.upsertSignup({ email, lang, ipHash: ip, consent: b.no_tips !== undefined ? b.no_tips !== true : b.marketing_consent === true, verifyHash: hash(verify), host: site.host, gl: market.gl, hl: market.hl, keywords: kw.keywords, mapsLocation: mapsLoc.locations.join('\n') || null });
+      await store.upsertSignup({ email, lang, ipHash: ip, consent: b.no_tips !== undefined ? b.no_tips !== true : b.marketing_consent === true, verifyHash: hash(verify), host: site.host, gl: market.gl, hl: market.hl, keywords: kw.keywords, mapsLocation: mapsLoc.locations.join('\n') || null, searchLocation: region.region || null });
       const mail = verifyEmail(lang, { host: site.host, link: config.baseUrl + '/rank-tracker/v/' + verify });
       const ok = await send({ to: [email], subject: mail.subject, html: mail.html });
       if (!ok) return res.status(503).json({ success: false, error: L.errEmailOff });
@@ -348,6 +355,16 @@ function registerRankFree(app, pool, { config = rankFreeConfig(), store = pgStor
     if (out.error) return res.status(400).json({ success: false, error: out.message || L.gHow });
     await store.setGsc(p.id, out, now());
     res.json({ success: true, message: L.gSaved, queries: out.queries.length, period: out.period, country_filter: out.country_filter });
+  });
+  // The state, region or city for the normal results (empty = the whole country). Takes effect in the next weekly round.
+  app.post('/api/rank-free/d/:token/region', async (req, res) => {
+    const a = await accountFor(req.params.token).catch(() => null);
+    if (!a) return res.status(404).json({ success: false, error: 'Not found' });
+    const L = t(a.lang), p = await store.projectOf(a.id), r = engine.readRegion((req.body || {}).region);
+    if (!p) return res.status(404).json({ success: false, error: 'Not found' });
+    if (r.error) return res.status(400).json({ success: false, error: L.regionBad });
+    await store.setSearchLocation(p.id, r.region);
+    res.json({ success: true, message: r.region ? L.regionSaved(r.region) : L.regionCleared, region: r.region });
   });
   // The place for the Google Maps check (empty switches it off). Takes effect in the next weekly round; no extra call now.
   app.post('/api/rank-free/d/:token/maps', async (req, res) => {
