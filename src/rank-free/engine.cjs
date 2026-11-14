@@ -9,6 +9,7 @@ const { unwrapGoogleLinks } = require('../growth-public-search-discovery.cjs');
 const { PREWRITE_REGIONS, languageName, countryName } = require('../growth-search-locale.cjs');
 
 const PAGE_SIZE = 10;
+const SHORT_PAGE = 5;            // fewer normal results than this on a page: Google has no more results
 const MAX_PAGES = 3;            // top 30: deep enough to show progress, at most three paid calls per keyword
 const MAX_KEYWORD_LENGTH = 80;
 const SAFE_KEYWORD = /^[\p{L}\p{N}][\p{L}\p{N}\p{M}\s'’&+.,:/-]*$/u;
@@ -76,6 +77,9 @@ async function checkRank({ keyword, host, gl, hl, key, location = null, fetchImp
   if (typeof fetchImpl !== 'function') return { status: 'PROVIDER_UNAVAILABLE', calls: 0 };
   let calls = 0, answerBox = false, aiOverview = null, suggestions = [];
   const seenHosts = [], top = [];
+  // Results seen on earlier pages: Google often shows 8 or 9 results on a page (the map block takes space), so a
+  // place on page 2 is counted after what page 1 really showed, not after a fixed 10.
+  let seen = 0;
   for (let page = 1; page <= maxPages; page++) {
     let payload;
     try {
@@ -98,17 +102,20 @@ async function checkRank({ keyword, host, gl, hl, key, location = null, fetchImp
     for (let i = 0; i < payload.organic.length; i++) {
       const item = payload.organic[i]; if (!item || typeof item.link !== 'string') continue;
       const h = hostOf(item.link);
-      const position = Number(item.position) > 0 ? (page - 1) * PAGE_SIZE + ((Number(item.position) - 1) % PAGE_SIZE) + 1 : (page - 1) * PAGE_SIZE + i + 1;
+      const position = seen + (Number(item.position) > 0 ? ((Number(item.position) - 1) % PAGE_SIZE) + 1 : i + 1);
       if (page === 1 && h && seenHosts.length < 3) { seenHosts.push(h); top.push({ position, host: h, url: item.link.slice(0, 500), title: String(item.title || '').slice(0, 160) }); }
       if (h && (h === host || h.endsWith('.' + host))) {
         return { status: 'FOUND', position, url: item.link, title: String(item.title || '').slice(0, 200), pages_checked: page, calls,
           top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
       }
     }
-    // Google ended its results before the checked depth: the site is not among all results Google showed.
-    if (payload.organic.length < PAGE_SIZE) return { status: 'NOT_IN_RESULTS', all_results_shown: true, depth: (page - 1) * PAGE_SIZE + payload.organic.length, pages_checked: page, calls, top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
+    seen += payload.organic.length;
+    // Google ended its results before the checked depth: the site is not among all results Google showed. A page with
+    // 8 or 9 results is not the end (owner 2026-11-14: "not found in the 9 results" on almost every keyword); a clearly
+    // short page (fewer than SHORT_PAGE results) is.
+    if (payload.organic.length < SHORT_PAGE) return { status: 'NOT_IN_RESULTS', all_results_shown: true, depth: seen, pages_checked: page, calls, top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
   }
-  return { status: 'NOT_IN_RESULTS', depth: maxPages * PAGE_SIZE, pages_checked: maxPages, calls, top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
+  return { status: 'NOT_IN_RESULTS', depth: seen, pages_checked: maxPages, calls, top_hosts: seenHosts, top, suggestions, answer_box: answerBox, ai_overview: aiOverview, checked_at: now().toISOString() };
 }
 
 // Google Maps (owner 2026-11-14: "rank and Maps; more people can use it"). Optional per project: a place such as
