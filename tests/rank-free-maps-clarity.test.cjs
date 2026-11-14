@@ -50,6 +50,7 @@ test('the dashboard explains the colours in plain words and shows the ideas as c
   assert.match(html, /Rood/);
   assert.match(html, /Het cijfer is je plek in de lijst van Google Maps \(12 = er staan 11 bedrijven boven je\)/, 'the number is a place, not a count');
   assert.match(html, /Groen/);
+  assert.match(html, /Grijs \?<\/strong>: dit punt kon deze week niet gemeten worden/, 'not measured is explained apart from not found');
   assert.match(html, /id="mk"[\s\S]*data-k="flat roof repair"/);
   assert.match(html, /background:#16a34a[^"]*">2</, 'the Maps cell carries the colour of its position');
 });
