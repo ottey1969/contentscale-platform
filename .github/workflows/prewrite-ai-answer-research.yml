@@ -111,6 +111,6 @@ jobs:
       - name: Install dependencies without scripts
         run: npm install --ignore-scripts --no-package-lock --no-audit --no-fund
       - name: Pre-Write research through the real server routes (Tracker page, Complete missing only, reopen)
-        run: node --test tests/prewrite-brief-research-e2e.test.cjs tests/tracker-case-study-end-e2e.test.cjs
+        run: node --test tests/prewrite-brief-research-e2e.test.cjs tests/internal-usage-not-for-clients-e2e.test.cjs tests/tracker-case-study-end-e2e.test.cjs
       - name: Free Growth end to end in a real browser against PostgreSQL (no Tracker writes)
         run: npm install --no-save --no-package-lock playwright@1.47.2 && npx playwright install --with-deps chromium && node --test tests/growth-free-e2e.test.cjs

@@ -2597,6 +2597,38 @@ app.use(async (req, res, next) => {
   next();
 });
 
+// Internal Gemini telemetry (calls, tokens, models, cost guard, prompt sizes) is operational data for the owner, not for
+// clients (owner 2026-11-14: "where we do not need it, do not show it; repair it, but keep the system safe"). It is removed
+// on the SERVER from every Pre-Write response to a Tracker whose domain is not an owner domain, so it never reaches a
+// client browser; hiding it in the UI alone would still ship it. Stored Briefs keep it for the owner. Owner domains:
+// INTERNAL_USAGE_DOMAINS (comma-separated), default contentscale.site (and its subdomains nl., es.).
+const _INTERNAL_USAGE_DOMAINS=String(process.env.INTERNAL_USAGE_DOMAINS||'contentscale.site').split(',').map(function(x){return x.trim().toLowerCase().replace(/^www\./,'');}).filter(Boolean);
+function _domainSeesInternalUsage(domain){
+  let h=String(domain||'').trim().toLowerCase();
+  try{if(/^https?:\/\//.test(h))h=new URL(h).hostname;}catch(_e){return false;}
+  h=h.replace(/\/.*$/,'').replace(/:\d+$/,'').replace(/\.$/,'').replace(/^www\./,'');
+  return !!h&&_INTERNAL_USAGE_DOMAINS.some(function(d){return h===d||h.endsWith('.'+d);});
+}
+const _INTERNAL_USAGE_KEYS=new Set(['generation_usage']);
+function _stripInternalUsage(v,depth){
+  if(!v||typeof v!=='object'||depth>16)return v;
+  if(Array.isArray(v)){for(const x of v)_stripInternalUsage(x,depth+1);return v;}
+  for(const k of Object.keys(v)){if(_INTERNAL_USAGE_KEYS.has(k))delete v[k];else _stripInternalUsage(v[k],depth+1);}
+  return v;
+}
+app.use('/api/tracker-client/:token',function(req,res,next){
+  if(!/prewrite/i.test(req.path))return next();
+  const send=res.json.bind(res);
+  res.json=function(body){
+    // A copy is stripped: the handler's objects (job results, a Brief about to be saved) stay untouched.
+    const out=function(keep){let b=body;if(!keep){try{b=_stripInternalUsage(JSON.parse(JSON.stringify(body)),0);}catch(_e){b={success:false,error:'Response could not be prepared.'};}}return send(b);};
+    pool.query("SELECT domain FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted') LIMIT 1",[String(req.params.token||'')])
+      .then(function(r){out(!!(r.rows[0]&&_domainSeesInternalUsage(r.rows[0].domain)));},function(){out(false);});
+    return res;
+  };
+  next();
+});
+
 app.post('/api/tracker-client/register', async (req, res) => {
   try {
     const { domain, name, email, whatsapp, dealify_code } = req.body;
@@ -62487,7 +62519,8 @@ function _pwbRenderReadonlyShare(row){
   const aiEvidence=b.ai_system_evidence&&typeof b.ai_system_evidence==='object'?b.ai_system_evidence:{};
   const evidence=b.evidence&&typeof b.evidence==='object'?b.evidence:{};
   const er=b.evidence_research&&typeof b.evidence_research==='object'?b.evidence_research:{};
-  const usage=wc.generation_usage&&typeof wc.generation_usage==='object'?wc.generation_usage:(b.generation_usage||{});
+  // A share link is public: internal Gemini telemetry is never shown there (owner 2026-11-14).
+  const usage={};
   const comp=Array.isArray(b.competitor_table)?b.competitor_table:[];
   const cov=b.competitor_coverage&&typeof b.competitor_coverage==='object'?b.competitor_coverage:{};
   const paa=Array.isArray(b.paa_questions)&&b.paa_questions.length?b.paa_questions:(Array.isArray(b.people_also_ask)?b.people_also_ask:[]);
