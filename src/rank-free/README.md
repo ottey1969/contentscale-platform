@@ -112,3 +112,11 @@ in Google Maps for that place (`<keyword> <place>`, through Serper `/maps`, one 
 website on its Maps listing is the tracked site; otherwise the result is "not in the top N". The call counts against the
 monthly budget; when it does not fit, the organic result is still saved and Maps says "skipped this week". The dashboard row and
 the weekly e-mail show the Maps position under the Google position. An empty place switches Maps off.
+
+## Geo-grid (optional, up to 3 keywords)
+With a place set, the owner can choose up to `MAX_GRID_KEYWORDS` (3) tracked keywords for a 3 × 3 geo-grid. The centre is the
+business's own Google Maps listing found in that round's Maps check (its latitude/longitude); without it the grid says "no centre
+yet" and makes no calls. From each of the 9 points (about 1.6 km apart, zoom 14) the keyword is searched in Google Maps
+(Serper `/maps` with `ll`), and the position of the tracked site's listing is recorded per point. 9 calls per keyword per round,
+counted against the monthly budget. More than a third of failed points makes the whole grid an error, never "not found". The
+dashboard and weekly e-mail show a summary and a small 3 × 3 table (green top 3, amber 4–10, red 11+, grey × not shown).

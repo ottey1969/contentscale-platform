@@ -5,6 +5,10 @@ const esc = x => String(x == null ? '' : x).replace(/[&<>"']/g, c => ({ '&': '&a
 
 const T = {
   en: {
+    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'For up to 3 keywords we also search Google Maps from 9 points around your business (about 1.6 km / 1 mile apart) and show your position at each point. Each grid uses 9 searches per week.',
+    gridSave: 'Save geo-grid keywords', gridSaved: 'Saved. The next weekly check includes the geo-grid.', gridMax: 'Choose at most 3 keywords.', gridNeedsPlace: 'Set a place for Google Maps first.',
+    gridNoCenter: 'Geo-grid: your business was not found in Google Maps for this place, so the grid has no centre yet.', gridBudget: 'Geo-grid: skipped this week (monthly limit reached)',
+    gridErr: 'Geo-grid: the last check failed; it runs again next week', gridSummary: (f, t, top3, avg) => 'Geo-grid: found at ' + f + ' of ' + t + ' points · top 3 at ' + top3 + (avg != null ? ' · average position ' + avg : ''),
     mapsField: 'Place for Google Maps (optional, for example Lodi, NJ)', mapsHelp: 'We also check where your business appears in Google Maps for each keyword in this place. Your Google Business Profile must link to your website.',
     mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' for “' + q + '”', mapsNot: (d, q) => 'Google Maps: not in the top ' + d + ' for “' + q + '”',
     mapsErr: 'Google Maps: the last check failed; it runs again next week', mapsBudget: 'Google Maps: skipped this week (monthly limit reached)',
@@ -57,6 +61,10 @@ const T = {
     ch: { FIRST: 'first check', ENTERED_PAGE_ONE: 'now on page 1', LEFT_PAGE_ONE: 'dropped off page 1', ENTERED_RESULTS: 'now in the top 30', LEFT_RESULTS: 'no longer in the top 30', UP: 'up', DOWN: 'down', OTHER_PAGE: 'another page of yours now ranks' },
   },
   nl: {
+    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Voor maximaal 3 zoekwoorden zoeken we ook in Google Maps vanaf 9 punten rond je bedrijf (ongeveer 1,6 km uit elkaar) en tonen we je positie op elk punt. Elk grid gebruikt 9 zoekopdrachten per week.',
+    gridSave: 'Geo-grid-zoekwoorden opslaan', gridSaved: 'Opgeslagen. De volgende wekelijkse meting neemt het geo-grid mee.', gridMax: 'Kies maximaal 3 zoekwoorden.', gridNeedsPlace: 'Stel eerst een plaats voor Google Maps in.',
+    gridNoCenter: 'Geo-grid: je bedrijf is in Google Maps niet gevonden voor deze plaats, dus het grid heeft nog geen middelpunt.', gridBudget: 'Geo-grid: deze week overgeslagen (maandlimiet bereikt)',
+    gridErr: 'Geo-grid: de laatste meting mislukte; volgende week opnieuw', gridSummary: (f, t, top3, avg) => 'Geo-grid: gevonden op ' + f + ' van ' + t + ' punten · top 3 op ' + top3 + (avg != null ? ' · gemiddelde positie ' + avg : ''),
     mapsField: 'Plaats voor Google Maps (optioneel, bijvoorbeeld Lodi, NJ)', mapsHelp: 'We meten ook waar je bedrijf in Google Maps staat voor elk zoekwoord in deze plaats. Je Google Bedrijfsprofiel moet naar je website linken.',
     mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' voor “' + q + '”', mapsNot: (d, q) => 'Google Maps: niet in de top ' + d + ' voor “' + q + '”',
     mapsErr: 'Google Maps: de laatste meting mislukte; volgende week opnieuw', mapsBudget: 'Google Maps: deze week overgeslagen (maandlimiet bereikt)',
@@ -109,6 +117,10 @@ const T = {
     ch: { FIRST: 'eerste meting', ENTERED_PAGE_ONE: 'nu op pagina 1', LEFT_PAGE_ONE: 'van pagina 1 af', ENTERED_RESULTS: 'nu in de top 30', LEFT_RESULTS: 'niet meer in de top 30', UP: 'gestegen', DOWN: 'gedaald', OTHER_PAGE: 'er rankt nu een andere pagina van je' },
   },
   es: {
+    gridTitle: 'Geo-grid (3 × 3)', gridHelp: 'Para hasta 3 palabras clave también buscamos en Google Maps desde 9 puntos alrededor de tu negocio (a unos 1,6 km entre sí) y mostramos tu posición en cada punto. Cada grid usa 9 búsquedas por semana.',
+    gridSave: 'Guardar palabras del geo-grid', gridSaved: 'Guardado. La próxima comprobación semanal incluye el geo-grid.', gridMax: 'Elige como máximo 3 palabras clave.', gridNeedsPlace: 'Primero indica un lugar para Google Maps.',
+    gridNoCenter: 'Geo-grid: tu negocio no aparece en Google Maps para este lugar, así que el grid aún no tiene centro.', gridBudget: 'Geo-grid: omitido esta semana (límite mensual alcanzado)',
+    gridErr: 'Geo-grid: la última comprobación falló; se repite la próxima semana', gridSummary: (f, t, top3, avg) => 'Geo-grid: encontrado en ' + f + ' de ' + t + ' puntos · top 3 en ' + top3 + (avg != null ? ' · posición media ' + avg : ''),
     mapsField: 'Lugar para Google Maps (opcional, por ejemplo Lodi, NJ)', mapsHelp: 'También comprobamos dónde aparece tu negocio en Google Maps para cada palabra clave en este lugar. Tu Perfil de Empresa de Google debe enlazar a tu web.',
     mapsTitle: 'Google Maps', mapsPos: (n, q) => 'Google Maps: ' + n + ' para «' + q + '»', mapsNot: (d, q) => 'Google Maps: fuera del top ' + d + ' para «' + q + '»',
     mapsErr: 'Google Maps: la última comprobación falló; se repite la próxima semana', mapsBudget: 'Google Maps: omitido esta semana (límite mensual alcanzado)',
@@ -179,6 +191,22 @@ function mapsText(r, L) {
   if (m.status === 'BUDGET_REACHED') return L.mapsBudget;
   return L.mapsErr;
 }
+// Geo-grid summary line and a small square table (dashboard and e-mail): green top 3, amber 4–10, red 11+, grey × not shown.
+function gridText(r, L) {
+  const g = r && r.grid; if (!g) return '';
+  if (g.status === 'OK') return L.gridSummary(g.found, g.measured, g.top3, g.average);
+  if (g.status === 'NO_CENTER') return L.gridNoCenter;
+  if (g.status === 'BUDGET_REACHED') return L.gridBudget;
+  return L.gridErr;
+}
+function gridTable(r) {
+  const g = r && r.grid; if (!g || g.status !== 'OK' || !Array.isArray(g.points)) return '';
+  const color = p => p.error ? '#cbd5e1' : p.position == null ? '#94a3b8' : p.position <= 3 ? '#16a34a' : p.position <= 10 ? '#d97706' : '#dc2626';
+  const cell = p => '<td style="width:30px;height:30px;text-align:center;padding:2px"><span style="display:inline-block;width:26px;height:26px;line-height:26px;border-radius:50%;background:' + color(p) + ';color:#fff;font:700 12px Arial,sans-serif">' + (p.error ? '?' : p.position == null ? '×' : p.position) + '</span></td>';
+  let rows = '';
+  for (let i = 0; i < g.size; i++) rows += '<tr>' + g.points.filter(p => p.row === i).sort((a, b) => a.col - b.col).map(cell).join('') + '</tr>';
+  return '<table style="border-collapse:collapse;margin:6px 0" aria-label="geo-grid">' + rows + '</table>';
+}
 function changeText(c, L) {
   if (!c) return '';
   const word = L.ch[c.kind] || '';
@@ -197,7 +225,7 @@ function accessEmail(lang, { host, link }) {
 
 function digestEmail(lang, { host, countryLabel, rows, dashboard, stop, suggestions = [], best = null }) {
   const L = t(lang);
-  const tr = rows.map(r => '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(r.keyword) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">' + esc(positionText(r.curr, L)) + (mapsText(r.curr, L) ? '<br><span style="font-weight:400;font-size:12px;color:#475569">' + esc(mapsText(r.curr, L)) + '</span>' : '') + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(changeText(r.change, L)) + '</td></tr>').join('');
+  const tr = rows.map(r => '<tr><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(r.keyword) + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee;font-weight:700">' + esc(positionText(r.curr, L)) + (mapsText(r.curr, L) ? '<br><span style="font-weight:400;font-size:12px;color:#475569">' + esc(mapsText(r.curr, L)) + '</span>' : '') + (gridText(r.curr, L) ? '<br><span style="font-weight:400;font-size:12px;color:#475569">' + esc(gridText(r.curr, L)) + '</span>' + gridTable(r.curr) : '') + '</td><td style="padding:6px 10px;border-bottom:1px solid #eee">' + esc(changeText(r.change, L)) + '</td></tr>').join('');
   return { subject: L.dSubject(host), html: '<p>' + L.dIntro(host, countryLabel) + '</p><table style="border-collapse:collapse;font-family:Arial,sans-serif;font-size:14px"><tr><th align="left" style="padding:6px 10px">' + esc(L.kw) + '</th><th align="left" style="padding:6px 10px">' + esc(L.pos) + '</th><th align="left" style="padding:6px 10px">' + esc(L.change) + '</th></tr>' + tr + '</table>'
     + (best ? '<div style="border:2px solid #6d28d9;border-radius:10px;padding:12px 16px;margin:16px 0"><p style="margin:0 0 6px;font-size:12px;letter-spacing:.08em;color:#6d28d9;font-weight:700;text-transform:uppercase">' + esc(L.bTitle) + '</p><p style="margin:0 0 8px"><strong>' + esc(L.bText(best.keyword, best.position)) + '</strong></p>'
       + (best.follow ? '<p style="margin:0 0 8px">' + esc(best.follow) + '</p>' : '')
@@ -217,4 +245,4 @@ function followText(f, L) {
   return L.cWaiting(f.since, f.from, f.to, f.checks_since);
 }
 
-module.exports = { mapsText, plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
+module.exports = { gridText, gridTable, mapsText, plainFollow, followText, T, t, langOf, esc, positionText, changeText, verifyEmail, accessEmail, digestEmail };
