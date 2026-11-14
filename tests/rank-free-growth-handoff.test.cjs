@@ -48,7 +48,7 @@ test('rank tracker → free Growth check: topic, e-mail, best customer question,
   const baseCfg = freeGrowthConfig({ GROWTH_FREE_ACCESS_KEYS: 'handoff-test-key-1' });
   const growth = registerFreeGrowth(app, pool, { config: { ...baseCfg, accessKeys: baseCfg.accessKeys.map(k => ({ ...k, hosts: ['127.0.0.1'] })), perIp: 50, daily: 20, perEmail: 10 },
     engineDeps, fetchImpl: async () => ({ ok: true }), sendEmail: async () => true, rankHandoff: rankHandoff({ store }) });
-  registerRankFree(app, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false, growthUrl: '/free-growth' }, store, sendEmail: async () => true });
+  registerRankFree(app, null, { config: { ...rankFreeConfig({}), serperKey: '', scheduler: false, growthLinks: true, growthUrl: '/free-growth' }, store, sendEmail: async () => true });
   const srv = app.listen(0); const base = 'http://127.0.0.1:' + srv.address().port;
   const browser = await chromium.launch();
   try {
