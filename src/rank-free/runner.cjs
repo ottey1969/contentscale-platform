@@ -61,9 +61,10 @@ async function sendDigests({ store, send, baseUrl, growthUrl = 'https://app.cont
     const mail = digestEmail(p.lang, { host: p.host, countryLabel: countryName(String(p.gl).toUpperCase()), rows, suggestions, best,
       dashboard: baseUrl + '/rank-tracker/d/' + token, stop: baseUrl + '/rank-tracker/stop/' + token });
     const ok = await send({ to: [p.email], subject: mail.subject, html: mail.html }).catch(() => false);
-    // Marked either way: a failed e-mail is not retried every hour; the next weekly round sends a new one.
-    await store.markDigest(p.id, now);
-    if (ok) out.sent++; else out.failed++;
+    // Do not acknowledge an unsent digest as delivered. The stored result remains due for e-mail;
+    // the next scheduler run retries, without rerunning paid Google checks.
+    if (ok) { await store.markDigest(p.id, now); out.sent++; }
+    else { out.failed++; console.warn('[rank-free] digest delivery failed; keeping this round pending', p.id); }
   }
   return out;
 }
