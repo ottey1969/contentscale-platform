@@ -2429,18 +2429,31 @@ async function notifyClient(clientId, subject, htmlBody, telegramText, hideViewB
 // in the Brief's language; no keyword research, scores or internal data in the e-mail. One e-mail per keyword per 12 hours
 // (a regenerated Brief for the same keyword does not send a second one). Unsubscribe/pause rules of sendTrackerEmail apply.
 const _PWB_CLIENT_MAIL={
-  en:{s:'We are updating your website',h:'We are updating your website',p:'We are working on your website with our Pre-Write Brief, Search Gap Intelligence and AI System Intelligence.',t:'Topic',n:'You do not need to do anything. We will let you know when the update is live.'},
-  nl:{s:'We werken je website bij',h:'We werken je website bij',p:'We zijn bezig met het bijwerken van je website met onze Pre-Write Brief, Search Gap Intelligence en AI System Intelligence.',t:'Onderwerp',n:'Je hoeft niets te doen. We laten je weten wanneer de update live staat.'},
-  es:{s:'Estamos actualizando tu sitio web',h:'Estamos actualizando tu sitio web',p:'Estamos trabajando en tu sitio web con nuestro Pre-Write Brief, Search Gap Intelligence y AI System Intelligence.',t:'Tema',n:'No tienes que hacer nada. Te avisaremos cuando la actualización esté publicada.'}
+  en:{s:'We are updating your website',h:'We are updating your website',p:'We are working on your website with our Pre-Write Brief, Search Gap Intelligence and AI System Intelligence.',t:'Topic',u:'Page',nu:'New page (planned)',n:'You do not need to do anything. We will let you know when the update is live.'},
+  nl:{s:'We werken je website bij',h:'We werken je website bij',p:'We zijn bezig met het bijwerken van je website met onze Pre-Write Brief, Search Gap Intelligence en AI System Intelligence.',t:'Onderwerp',u:'Pagina',nu:'Nieuwe pagina (gepland)',n:'Je hoeft niets te doen. We laten je weten wanneer de update live staat.'},
+  es:{s:'Estamos actualizando tu sitio web',h:'Estamos actualizando tu sitio web',p:'Estamos trabajando en tu sitio web con nuestro Pre-Write Brief, Search Gap Intelligence y AI System Intelligence.',t:'Tema',u:'Página',nu:'Página nueva (prevista)',n:'No tienes que hacer nada. Te avisaremos cuando la actualización esté publicada.'}
 };
+// The page the Brief is for (owner 2026-11-14: "the e-mail must show the URL"): the existing page to expand or optimise,
+// or the planned address of a new page on the client's own domain. Only http(s) URLs on the client's domain are shown.
+function _pwbBriefPageUrl(brief,domain){
+  const b=brief&&typeof brief==='object'?brief:{},cd=b.content_decision||{},tr=String(cd.recommended_treatment||'').toUpperCase();
+  let host='';try{host=new URL(/^https?:\/\//.test(String(domain||''))?String(domain):'https://'+String(domain||'')).hostname.replace(/^www\./,'');}catch(e){}
+  const own=u=>{try{const h=new URL(u).hostname.replace(/^www\./,'');return !!host&&(h===host||h.endsWith('.'+host)||host.endsWith('.'+h));}catch(e){return false;}};
+  const ex=String(cd.closest_existing_url||'');
+  if(/EXPAND|OPTIMIZE/.test(tr)&&/^https?:\/\//.test(ex)&&own(ex))return {url:ex,isNew:false};
+  const slug=String(b.meta_package&&b.meta_package.url_slug||'').trim();
+  if(host&&slug&&!/^https?:/i.test(slug))return {url:'https://'+host+'/'+slug.replace(/^\/+/,'').replace(/\/?$/,'/'),isNew:true};
+  return null;
+}
 function _pwbClientMailText(language){const l=String(language||'').toLowerCase();return _PWB_CLIENT_MAIL[/^(nl|dut|neder)/.test(l)?'nl':/^(es|spa|espa)/.test(l)?'es':'en'];}
-async function _pwbNotifyClientBriefCreated(clientId,keyword,language,briefId){
+async function _pwbNotifyClientBriefCreated(clientId,keyword,language,briefId,page){
   try{
     const recent=await pool.query("SELECT COUNT(*)::int AS n FROM prewrite_briefs WHERE client_id=$1 AND lower(keyword)=lower($2) AND id<>$3 AND created_at>NOW()-INTERVAL '12 hours'",[clientId,String(keyword||''),Number(briefId)||0]);
     if(recent.rows[0]&&recent.rows[0].n>0)return false;
     const L=_pwbClientMailText(language),esc=v=>String(v==null?'':v).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
     const body='<h2 style="margin:0 0 12px;font-size:20px;color:#0f172a;">'+esc(L.h)+'</h2><p style="font-size:14px;color:#334155;line-height:1.7;">'+esc(L.p)+'</p>'
       +(keyword?'<p style="font-size:14px;color:#334155;"><strong>'+esc(L.t)+':</strong> '+esc(String(keyword).slice(0,160))+'</p>':'')
+      +(page&&page.url?'<p style="font-size:14px;color:#334155;word-break:break-all;"><strong>'+esc(page.isNew?L.nu:L.u)+':</strong> <a href="'+esc(page.url)+'" style="color:#7c3aed;">'+esc(page.url)+'</a></p>':'')
       +'<p style="font-size:13px;color:#64748b;line-height:1.6;">'+esc(L.n)+'</p>';
     await sendTrackerEmail(clientId,L.s,body,false);
     return true;
@@ -60451,7 +60464,7 @@ async function _pwbCompleteMissingFromDiagnostic(opts,res){
 
   const saveKeyword=srcKeyword||requestedKeyword,saveTitle=String(srcReq.workingTitle||opts.workingTitle||''),saveLanguage=String(srcReq.language||opts.language||''),saveRegion=(String(srcReq.region||opts.region||'us').toLowerCase().match(/[a-z]{2}/)||['us'])[0],competitors=Number(payload.competitors_scraped||0);
   let savedBriefId=null,committedBriefsUsed=briefsUsed;const conn=await pool.connect();
-  try{await conn.query('BEGIN');const quota=await conn.query('UPDATE tracker_clients SET prewrite_briefs_used=COALESCE(prewrite_briefs_used,0)+1 WHERE id=$1 AND COALESCE(prewrite_briefs_used,0) < (1+COALESCE(prewrite_briefs_paid,0)) RETURNING prewrite_briefs_used',[client.id]);if(!quota.rows.length){const e=new Error('Pre-Write Brief allowance was consumed before this completed Brief could be saved. Nothing was counted for this request.');e.status=409;throw e;}committedBriefsUsed=Number(quota.rows[0].prewrite_briefs_used||0);const saved=await conn.query('INSERT INTO prewrite_briefs (client_id, keyword, working_title, language, region, brief_json, competitors_scraped) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',[client.id,saveKeyword,saveTitle,saveLanguage,saveRegion,JSON.stringify(brief),competitors]);savedBriefId=saved.rows[0]&&saved.rows[0].id;if(!savedBriefId)throw new Error('Pre-Write Brief persistence returned no id.');await conn.query('COMMIT');if(!placementId)_pwbNotifyClientBriefCreated(client.id,saveKeyword,saveLanguage,savedBriefId);}catch(e){try{await conn.query('ROLLBACK')}catch(_e){}return res.status(e&&e.status===409?409:503).json({success:false,stage:e&&e.status===409?'quota_commit':'persistence',retryable:true,error:e&&e.status===409?e.message:'The completed Brief passed quality checks but could not be saved safely. Nothing was counted.',brief:brief,diagnostic:{message:String(e&&e.message||e),saved:false,counted:false,research_reused:true}});}finally{conn.release();}
+  try{await conn.query('BEGIN');const quota=await conn.query('UPDATE tracker_clients SET prewrite_briefs_used=COALESCE(prewrite_briefs_used,0)+1 WHERE id=$1 AND COALESCE(prewrite_briefs_used,0) < (1+COALESCE(prewrite_briefs_paid,0)) RETURNING prewrite_briefs_used',[client.id]);if(!quota.rows.length){const e=new Error('Pre-Write Brief allowance was consumed before this completed Brief could be saved. Nothing was counted for this request.');e.status=409;throw e;}committedBriefsUsed=Number(quota.rows[0].prewrite_briefs_used||0);const saved=await conn.query('INSERT INTO prewrite_briefs (client_id, keyword, working_title, language, region, brief_json, competitors_scraped) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id',[client.id,saveKeyword,saveTitle,saveLanguage,saveRegion,JSON.stringify(brief),competitors]);savedBriefId=saved.rows[0]&&saved.rows[0].id;if(!savedBriefId)throw new Error('Pre-Write Brief persistence returned no id.');await conn.query('COMMIT');if(!placementId)_pwbNotifyClientBriefCreated(client.id,saveKeyword,saveLanguage,savedBriefId,_pwbBriefPageUrl(brief,client.domain));}catch(e){try{await conn.query('ROLLBACK')}catch(_e){}return res.status(e&&e.status===409?409:503).json({success:false,stage:e&&e.status===409?'quota_commit':'persistence',retryable:true,error:e&&e.status===409?e.message:'The completed Brief passed quality checks but could not be saved safely. Nothing was counted.',brief:brief,diagnostic:{message:String(e&&e.message||e),saved:false,counted:false,research_reused:true}});}finally{conn.release();}
   return res.json({success:true,brief:brief,brief_id:savedBriefId,competitors_scraped:competitors,region:saveRegion,briefs_used:committedBriefsUsed,briefs_allowed:briefsAllowed,search_intent:brief.search_intent||null,completion_mode:'missing_only',research_reused:true,research_rerun:false,source_job_id:jobId});
 }
 
@@ -62302,7 +62315,7 @@ ${sourceText}`;
       savedBriefId = saved.rows[0]?.id || null;
       if(!savedBriefId)throw new Error('Pre-Write Brief persistence returned no id.');
       await _saveConn.query('COMMIT');
-      if(!_pwbNetworkPlacementId)_pwbNotifyClientBriefCreated(client.id,keyword,language,savedBriefId);
+      if(!_pwbNetworkPlacementId)_pwbNotifyClientBriefCreated(client.id,keyword,language,savedBriefId,_pwbBriefPageUrl(brief,client.domain));
     } catch (e) {
       try{await _saveConn.query('ROLLBACK');}catch(_rb){}
       console.warn('[prewrite-brief] save/count transaction failed:', e.message);
