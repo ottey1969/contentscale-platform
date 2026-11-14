@@ -47712,8 +47712,18 @@ function renderPrewriteBrief(b) {
   };
   var _PLX = _PLX_ALL[(b && b.language ? String(b.language).slice(0,2).toLowerCase() : 'en')] || _PLX_ALL.en;
 
+  // What to do with this Brief, in one sentence, at the very top (owner 2026-11-14: "I nowhere see what to do, expand or new
+  // page"). The decision was only in the visual box and, inconsistently, in the action plan at the bottom.
+  var _dcd=b.content_decision||{},_dtr=String(_dcd.recommended_treatment||'').toUpperCase();
+  var _durl=(_dcd.closest_existing_url&&_dcd.closest_existing_url!=='none')?String(_dcd.closest_existing_url):'';
+  var _dslug=b.meta_package&&b.meta_package.url_slug?'/'+String(b.meta_package.url_slug).replace(/^[/]+/,''):'';
+  var _dtxt=(_dtr==='EXPAND_EXISTING_PAGE'&&_durl)?'EXPAND THE EXISTING PAGE '+_durl+' - add the missing sections there; do not create a new URL.'
+    :(_dtr==='OPTIMIZE_EXISTING_PAGE'&&_durl)?'OPTIMIZE THE EXISTING PAGE '+_durl+' - focused edits, same URL.'
+    :_dtr==='CREATE_NEW_PAGE'?'CREATE A NEW PAGE'+(_dslug?' at '+_dslug:'')+'.':'';
   // Plain-text version for the Copy button — mirrors the HTML sections below.
   var lines = [];
+  if (_dtxt) { lines.push('WHAT TO DO: '+_dtxt); if (_dcd.reason) lines.push('Why: '+String(_dcd.reason)); lines.push(''); }
+  var _decisionLen = lines.length;
   if (b.what_we_checked) {
     var wc = b.what_we_checked;
     lines.push(_PL.checked, _PL.qtested + ': "' + (wc.query_tested||'') + '"', _PL.checkedAt + ': ' + (wc.checked_at||''));
@@ -47935,12 +47945,31 @@ function renderPrewriteBrief(b) {
     if(_ugc.cost_guard){var _gg=_ugc.cost_guard;_usageCopy.push('Cost guard: '+Number(_gg.calls_used||0)+'/'+Number(_gg.max_calls||0)+' calls · '+Number(_gg.input_tokens_used||0)+'/'+Number(_gg.max_input_tokens||0)+' input · '+Number(_gg.billable_output_tokens_used||0)+'/'+Number(_gg.max_billable_output_tokens||0)+' billable output'+(Array.isArray(_gg.skipped_calls)&&_gg.skipped_calls.length?' · skipped '+_gg.skipped_calls.length:'')+'.');}
     _usageCopy.push('');
   }
-  _lastPrewriteBriefText = (_usageCopy.length?_usageCopy.join('\\n')+'\\n':'') + _lastPrewriteBriefExternalText;
+  // The decision stays first, also above the usage telemetry in the owner's copy.
+  _lastPrewriteBriefText = lines.slice(0,_decisionLen).concat(_usageCopy).concat(lines.slice(_decisionLen)).join('\\n');
 
   var html = '<div style="display:flex;justify-content:flex-end;margin-bottom:8px;">'
     + '<button onclick="copyPrewriteBrief(this)" style="background:#1f2937;border:1px solid #374151;border-radius:6px;color:#e5e7eb;font-size:11px;padding:5px 12px;cursor:pointer;">\\uD83D\\uDCCB Copy Brief</button>'
     + '</div>';
 
+  // CREATE vs EXPAND is the strategic treatment for a Pre-Write opportunity.
+  if (b.content_decision) {
+    var _cd=b.content_decision||{}, _tr=String(_cd.recommended_treatment||'').toUpperCase();
+    var _tc=_tr==='EXPAND_EXISTING_PAGE'?'#fbbf24':(_tr==='OPTIMIZE_EXISTING_PAGE'?'#60a5fa':'#4ade80');
+    html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid '+_tc+'55;border-radius:10px;padding:12px 14px;">'
+      + '<div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:#9ca3af;margin-bottom:6px;">WHAT TO DO · CONTENT DECISION</div>'
+      + '<div style="font-size:16px;font-weight:900;color:'+_tc+';margin-bottom:5px;">'+esc(_tr.replace(/_/g,' '))+'</div>'
+      + (_dtxt ? '<div id="pwbWhatToDo" style="font-size:13px;font-weight:800;color:#f8fafc;margin-bottom:6px;word-break:break-word;">'+esc(_dtxt)+'</div>' : '')
+      + '<div style="font-size:11px;color:#cbd5e1;"><strong>Cannibalization risk:</strong> '+esc(_cd.cannibalization_risk||'insufficient_data')+'</div>'
+      + (_cd.closest_existing_url && _cd.closest_existing_url!=='none' ? '<div style="font-size:11px;color:#93c5fd;word-break:break-all;"><strong>Closest existing URL:</strong> '+esc(_cd.closest_existing_url)+'</div>' : '')
+      + (_cd.reason ? '<div style="font-size:11px;color:#9ca3af;margin-top:5px;line-height:1.55;">'+esc(_cd.reason)+'</div>' : '')
+      // Expanding an existing page happens in Growth: it reads the live page and the ranking pages and proposes only what
+      // is missing. The Brief's findings go along as reference (not as evidence).
+      + ((_tr==='EXPAND_EXISTING_PAGE'||_tr==='OPTIMIZE_EXISTING_PAGE')&&_cd.closest_existing_url&&_cd.closest_existing_url!=='none'
+        ? '<div style="margin-top:9px;"><button type="button" class="cs-btn" id="pwbExpandInGrowth" onclick="pwbOpenGrowthFromBrief()" style="border-color:#2563eb;color:#bfdbfe;background:#0b244d;font-weight:800;">Expand this page in Growth →</button>'
+          + '<div style="font-size:10.5px;color:#94a3b8;margin-top:4px;">Opens the Growth research for '+esc(_cd.closest_existing_url)+' with this keyword and market. The competitor gaps, sections and questions of this Brief go along as reference; statistics, quotes and AI-answer links do not.</div></div>' : '')
+      +'</div>';
+  }
   if (b.what_we_checked) {
     var wc2 = b.what_we_checked;
     html += '<div style="background:#0b1220;border:1px solid #1e3a5f;border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:11.5px;color:#9ca3af;line-height:1.7;">';
@@ -47967,23 +47996,6 @@ function renderPrewriteBrief(b) {
   }
 
   html += '<div style="background:#0d1117;border:1px solid #1f2937;border-radius:8px;padding:14px 16px;font-size:12px;color:#e5e7eb;line-height:1.6;">';
-  // CREATE vs EXPAND is the strategic treatment for a Pre-Write opportunity.
-  if (b.content_decision) {
-    var _cd=b.content_decision||{}, _tr=String(_cd.recommended_treatment||'').toUpperCase();
-    var _tc=_tr==='EXPAND_EXISTING_PAGE'?'#fbbf24':(_tr==='OPTIMIZE_EXISTING_PAGE'?'#60a5fa':'#4ade80');
-    html += '<div style="margin-bottom:12px;background:#0b1220;border:1px solid '+_tc+'55;border-radius:10px;padding:12px 14px;">'
-      + '<div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:#9ca3af;margin-bottom:6px;">CONTENT DECISION / TREATMENT</div>'
-      + '<div style="font-size:16px;font-weight:900;color:'+_tc+';margin-bottom:5px;">'+esc(_tr.replace(/_/g,' '))+'</div>'
-      + '<div style="font-size:11px;color:#cbd5e1;"><strong>Cannibalization risk:</strong> '+esc(_cd.cannibalization_risk||'insufficient_data')+'</div>'
-      + (_cd.closest_existing_url && _cd.closest_existing_url!=='none' ? '<div style="font-size:11px;color:#93c5fd;word-break:break-all;"><strong>Closest existing URL:</strong> '+esc(_cd.closest_existing_url)+'</div>' : '')
-      + (_cd.reason ? '<div style="font-size:11px;color:#9ca3af;margin-top:5px;line-height:1.55;">'+esc(_cd.reason)+'</div>' : '')
-      // Expanding an existing page happens in Growth: it reads the live page and the ranking pages and proposes only what
-      // is missing. The Brief's findings go along as reference (not as evidence).
-      + ((_tr==='EXPAND_EXISTING_PAGE'||_tr==='OPTIMIZE_EXISTING_PAGE')&&_cd.closest_existing_url&&_cd.closest_existing_url!=='none'
-        ? '<div style="margin-top:9px;"><button type="button" class="cs-btn" id="pwbExpandInGrowth" onclick="pwbOpenGrowthFromBrief()" style="border-color:#2563eb;color:#bfdbfe;background:#0b244d;font-weight:800;">Expand this page in Growth →</button>'
-          + '<div style="font-size:10.5px;color:#94a3b8;margin-top:4px;">Opens the Growth research for '+esc(_cd.closest_existing_url)+' with this keyword and market. The competitor gaps, sections and questions of this Brief go along as reference; statistics, quotes and AI-answer links do not.</div></div>' : '')
-      +'</div>';
-  }
   if(b.hub_spoke_plan){
     var _hp=b.hub_spoke_plan;
     html+='<div style="margin-bottom:12px;background:#071521;border:1px solid #0e7490;border-radius:10px;padding:12px 14px;"><div style="font-size:10px;font-weight:800;letter-spacing:.08em;color:#67e8f9;margin-bottom:7px;">HUB / SPOKE IMPLEMENTATION</div>'

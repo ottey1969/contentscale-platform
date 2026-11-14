@@ -130,3 +130,15 @@ test('core words decide when price or question words make the keyword longer tha
   const hit = findSameIntentPages('cuánto cuesta un consultor geo', es, {})[0];
   assert.equal(hit.core_match, true);
 });
+
+test('a price question about one subject goes to the service page (owner 2026-11-13: tarifas generative engine optimization)', () => {
+  const { findSameIntentPages: find } = require('../src/prewrite-existing-page.cjs');
+  const es = ['https://es.contentscale.site/consultor-geo/', 'https://es.contentscale.site/que-es-geo/', 'https://es.contentscale.site/visibilidad-en-ia/'];
+  const en = ['https://contentscale.site/generative-engine-optimization-consultant/', 'https://contentscale.site/what-is-geo/'];
+  const best = (k, u) => (find(k, u, { region: '' }).find(x => x.full) || {}).url || null;
+  assert.equal(best('tarifas generative engine optimization', es), 'https://es.contentscale.site/consultor-geo/');
+  assert.equal(best('geo pricing', en), 'https://contentscale.site/generative-engine-optimization-consultant/');
+  assert.equal(best('generative engine optimization consultant cost', en), 'https://contentscale.site/generative-engine-optimization-consultant/');
+  assert.equal(best('qué es geo', es), 'https://es.contentscale.site/que-es-geo/', 'not a price question: the address must hold every word');
+  assert.equal(best('tarifas geo', ['https://es.contentscale.site/que-es-geo/']), null, 'a price question never lands on a definition page');
+});
