@@ -25,5 +25,7 @@ jobs:
         run: node --test tests/golden-owner-cases.test.cjs
       - name: Cookie banner follows the page language (nl/es)
         run: node --test tests/consent-widget-language.test.cjs
+      - name: Tracker sign-up works from nl. and es. (CORS)
+        run: node --test tests/cors-language-subdomains.test.cjs
       - name: Done
         run: echo "OK — CEO domain boundary and startup syntax verified"

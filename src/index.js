@@ -1997,18 +1997,11 @@ await new Promise(resolve => setTimeout(resolve, delay));
 }
 return false;
 }
+const { isAllowedOrigin } = require('./cors-origins.cjs');
 app.set('trust proxy', 1);
 app.use(function(req, res, next) {
-  const allowedOrigins = [
-    'https://app.contentscale.site',
-    'https://contentscale.site',
-    'https://www.contentscale.site',
-    'http://localhost:3000',
-    'http://localhost:5173',
-    process.env.BASE_URL
-  ].filter(Boolean);
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
+  if (isAllowedOrigin(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
