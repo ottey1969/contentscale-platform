@@ -17,6 +17,42 @@
   var STORAGE_KEY = "cs_cookie_consent_v1";
   var ACCENT = "#7c3aed";
 
+  // ---- texts follow the page language (nl./es. sites must not show English) --
+  var TEXTS = {
+    en: { aria: "Cookie consent", badge: "COOKIE NOTICE", title: "We respect your privacy",
+      intro: "ContentScale uses cookies to improve your experience, analyse usage, and remember your preferences. You can choose which cookies to allow below.",
+      privacy: "Privacy Policy",
+      necessary: ["Necessary", "Session, authentication, security. Always active."],
+      analytics: ["Analytics", "Usage patterns, page views, performance data."],
+      functional: ["Functional", "Preferences, scan history, saved settings."],
+      accept: "ACCEPT ALL", save: "SAVE MY PREFERENCES", reject: "REJECT NON-ESSENTIAL" },
+    nl: { aria: "Cookie-toestemming", badge: "COOKIEMELDING", title: "We respecteren je privacy",
+      intro: "ContentScale gebruikt cookies om je ervaring te verbeteren, het gebruik te analyseren en je voorkeuren te onthouden. Hieronder kies je welke cookies je toestaat.",
+      privacy: "Privacybeleid",
+      necessary: ["Noodzakelijk", "Sessie, inloggen, beveiliging. Altijd actief."],
+      analytics: ["Analyse", "Gebruikspatronen, paginaweergaven, prestatiegegevens."],
+      functional: ["Functioneel", "Voorkeuren, scangeschiedenis, opgeslagen instellingen."],
+      accept: "ALLES ACCEPTEREN", save: "MIJN VOORKEUREN OPSLAAN", reject: "ALLEEN NOODZAKELIJK" },
+    es: { aria: "Consentimiento de cookies", badge: "AVISO DE COOKIES", title: "Respetamos tu privacidad",
+      intro: "ContentScale utiliza cookies para mejorar tu experiencia, analizar el uso y recordar tus preferencias. A continuación puedes elegir qué cookies permites.",
+      privacy: "Política de privacidad",
+      necessary: ["Necesarias", "Sesión, autenticación, seguridad. Siempre activas."],
+      analytics: ["Analíticas", "Patrones de uso, páginas vistas, datos de rendimiento."],
+      functional: ["Funcionales", "Preferencias, historial de análisis, ajustes guardados."],
+      accept: "ACEPTAR TODO", save: "GUARDAR MIS PREFERENCIAS", reject: "RECHAZAR NO ESENCIALES" }
+  };
+  function pageLang() {
+    var l = "";
+    try { l = String((document.documentElement && document.documentElement.lang) || "").toLowerCase().slice(0, 2); } catch (e) {}
+    if (TEXTS[l]) return l;
+    var h = "";
+    try { h = String((window.location && window.location.hostname) || "").toLowerCase(); } catch (e) {}
+    if (h.indexOf("nl.") === 0) return "nl";
+    if (h.indexOf("es.") === 0) return "es";
+    return "en";
+  }
+  var T = TEXTS[pageLang()];
+
   // ---- storage helpers (localStorage with in-memory fallback) --------------
   var mem = null;
   function save(obj) {
@@ -45,7 +81,7 @@
     var wrap = document.createElement("div");
     wrap.id = "cs-consent-root";
     wrap.setAttribute("role", "dialog");
-    wrap.setAttribute("aria-label", "Cookie consent");
+    wrap.setAttribute("aria-label", T.aria);
     wrap.style.cssText =
       "position:fixed;left:16px;bottom:16px;z-index:2147483647;width:340px;max-width:calc(100vw - 32px);" +
       "background:#0f1115;color:#e5e7eb;border:1px solid #2a2f3a;border-radius:14px;" +
@@ -54,19 +90,19 @@
 
     wrap.innerHTML =
       '<div style="padding:16px 18px 8px">' +
-        '<div style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;color:' + ACCENT + ';border:1px solid ' + ACCENT + ';border-radius:20px;padding:2px 10px;margin-bottom:10px">COOKIE NOTICE</div>' +
-        '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px">We respect your privacy</div>' +
-        '<div style="color:#9ca3af;margin-bottom:12px">ContentScale uses cookies to improve your experience, analyse usage, and remember your preferences. You can choose which cookies to allow below. ' +
-          '<a href="https://contentscale.site/privacy-policy/" target="_blank" rel="noopener" style="color:' + ACCENT + ';text-decoration:none">Privacy Policy</a>' +
+        '<div style="display:inline-block;font-size:10px;font-weight:700;letter-spacing:.08em;color:' + ACCENT + ';border:1px solid ' + ACCENT + ';border-radius:20px;padding:2px 10px;margin-bottom:10px">' + T.badge + '</div>' +
+        '<div style="font-size:15px;font-weight:700;color:#fff;margin-bottom:6px">' + T.title + '</div>' +
+        '<div style="color:#9ca3af;margin-bottom:12px">' + T.intro + ' ' +
+          '<a href="https://contentscale.site/privacy-policy/" target="_blank" rel="noopener" style="color:' + ACCENT + ';text-decoration:none">' + T.privacy + '</a>' +
         '</div>' +
-        row("Necessary", "Session, authentication, security. Always active.", "necessary", true, true) +
-        row("Analytics", "Usage patterns, page views, performance data.", "analytics", false, false) +
-        row("Functional", "Preferences, scan history, saved settings.", "functional", false, false) +
+        row(T.necessary[0], T.necessary[1], "necessary", true, true) +
+        row(T.analytics[0], T.analytics[1], "analytics", false, false) +
+        row(T.functional[0], T.functional[1], "functional", false, false) +
       '</div>' +
       '<div style="padding:4px 18px 16px;display:flex;flex-direction:column;gap:8px">' +
-        btn("cs-accept-all", "ACCEPT ALL", "solid") +
-        btn("cs-save", "SAVE MY PREFERENCES", "outline") +
-        btn("cs-reject", "REJECT NON-ESSENTIAL", "ghost") +
+        btn("cs-accept-all", T.accept, "solid") +
+        btn("cs-save", T.save, "outline") +
+        btn("cs-reject", T.reject, "ghost") +
       '</div>';
 
     document.body.appendChild(wrap);
