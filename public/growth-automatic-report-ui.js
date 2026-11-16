@@ -1077,7 +1077,7 @@
  async function showAiEarly(){
   var early=document.getElementById('growthAiEarly');if(!early||early.childNodes.length)return;
   try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-check?page_id='+encodeURIComponent(id)+runParams,{credentials:'same-origin',cache:'no-store'});
-   var j=await r.json();if(!j.success||!j.ai_check)return;
+   var j=await r.json();if(!j.success||!j.ai_check||early.childNodes.length)return;
    var box=node('section',null,early);node('h2','AI answers for “'+j.ai_check.search_term+'” — optional',box);
    renderAiCheck(box,{ai_check:j.ai_check});
   }catch(e){}
