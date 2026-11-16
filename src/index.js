@@ -61034,6 +61034,9 @@ Every citation/source item should be represented as:
     // AI answer research for writing: the same prompt the Research Prompt tab shows (src/prewrite-brief-research.cjs).
     // Observed AI answers inform the writing; they never prove that this website is cited.
     const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest({keyword,language,region,manualAi:_manualAi,perplexityEvidenceText:_perplexityEvidenceText,rejected:_manualAiRejected,googleSource:_manualAiGoogleSource,aiQuestion:_pwbAiQuestion});
+    // Same two research lenses as Free / Tracker Growth, bounded and best-effort.
+    const _pwbVisibilityResearch=await require('./prewrite-visibility-research.cjs').readPrewriteVisibility({googleText:compSummary,aiResearch:_pwbAiResearch}).catch(_e=>null);
+    const _pwbVisibilityPrompt=require('./prewrite-visibility-research.cjs').prewriteVisibilityPrompt(_pwbVisibilityResearch);
     const prompt = `You are an elite SEO and AEO strategist. A strategist requested a possible NEW page for this keyword. FIRST decide whether a new URL should actually be created or whether an existing client URL should be expanded instead. Do not create a new page when the sitemap shows a materially overlapping existing URL and doing so would create cannibalization. If CREATE is justified, specify what the brand-new page must contain to outrank and out-cite current results from the first draft. Every claim must be traceable to the inputs below; never invent a domain, URL, snippet, statistic, schema type or business fact.
 
 KEYWORD: "${keyword}"
@@ -61042,6 +61045,8 @@ ${workingTitle ? 'WORKING TITLE / ANGLE SUPPLIED: "' + workingTitle + '"' : 'No 
 
 LIVE SERP — CURRENT TOP RESULTS:
 ${compSummary}
+
+${_pwbVisibilityPrompt}
 
 ${aiSystemsBlock}
 
@@ -61511,6 +61516,8 @@ ${claimsBlock.slice(0,2400)}`;
 
     brief=_trackerApplyIdentityContract(brief,_pwbIdentityContract);
     _prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);
+     // Keep Google and AI visibility provenance and read status in the saved Brief.
+     if(_pwbVisibilityResearch)brief.visibility_research=_pwbVisibilityResearch;
     // Expanding an existing page: the slug is that page's own path, never a new URL next to it (owner 2026-11-12: a brief
     // proposed /consultor-geo-coste while its action plan said to expand /consultor-geo/).
     try{const _cd=brief&&brief.content_decision||{},_ex=String(_cd.closest_existing_url||'');
