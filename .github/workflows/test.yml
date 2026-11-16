@@ -23,6 +23,8 @@ jobs:
         run: node --test tests/ceo-domain-form.test.cjs
       - name: Golden owner cases (AGENTS.md) — must stay green for every change
         run: node --test tests/golden-owner-cases.test.cjs
+      - name: Case Study closeout stops scans and requires explicit owner consent
+        run: node --test tests/tracker-case-study-scan-consent.test.cjs
       - name: Cookie banner follows the page language (nl/es)
         run: node --test tests/consent-widget-language.test.cjs
       - name: Tracker sign-up works from nl. and es. (CORS)
