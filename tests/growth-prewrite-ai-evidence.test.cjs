@@ -105,11 +105,11 @@ test('AI controls are repopulated after both saved-report restore and a fresh Gr
  assert.match(ui,/if\(!j\.success\|\|!j\.ai_check\|\|early\.childNodes\.length\)return/);
 });
 
-test('compact AI summary shows writing, verifiable citations and saved Growth observations as separate measurements',()=>{
+test('compact AI summary shows writing, verifiable citations and Growth observations independently',()=>{
  const ui=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
- assert.match(ui,/stat\(prePresent\+'\\/5','Writing answers available'\)/);
- assert.match(ui,/stat\(verifiable\+'\\/5','Citation sources verifiable'\)/);
- assert.match(ui,/Growth observations saved/);
- assert.match(ui,/details\.id='growthAiSourceDetails'/);
- assert.doesNotMatch(ui,/growthPrewriteReuse/);
+ assert.ok(ui.includes("stat(prePresent+'/5','Writing answers available')"));
+ assert.ok(ui.includes("stat(verifiable+'/5','Citation sources verifiable')"));
+ assert.ok(ui.includes("Growth observations saved"));
+ assert.ok(ui.includes("details.id='growthAiSourceDetails'"));
+ assert.ok(!ui.includes('growthPrewriteReuse'));
 });
