@@ -87,8 +87,9 @@
     (c.older_answers_not_counted?c.older_answers_not_counted+' older answer(s) no longer count. ':'')+
     'The remaining systems have not been verified for this search. Continue using Google and readable ranking-page evidence only, or collect the missing AI answers first.',dlg);
    var row=node('p',null,dlg);
-   var first=node('button','Check AI answers first',row);first.type='button';
-   var without=node('button','Continue with incomplete AI research',row);without.type='button';without.style.marginLeft='8px';without.style.background='#475569';
+   var hasWritingResearch=!!(c.prewrite_reuse&&c.prewrite_reuse.status==='MATCHED'&&(c.prewrite_reuse.items||[]).filter(function(x){return ['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(x.status)}).length===5);
+   var first=node('button',hasWritingResearch?'Review optional AI citation evidence':'Check AI answers first',row);first.type='button';
+   var without=node('button',hasWritingResearch?'Continue writing with the five saved Pre-Write answers':'Continue with incomplete AI research',row);without.type='button';without.style.marginLeft='8px';without.style.background='#475569';
    var done=function(v){try{dlg.close()}catch(e){}dlg.remove();resolve(v)};
    first.addEventListener('click',function(){done(null);var box=document.getElementById('growthAiCheck');if(box)box.scrollIntoView({behavior:'smooth'})});
    without.addEventListener('click',function(){done('WITHOUT_AI')});
@@ -150,7 +151,7 @@
    line.className='growth-ai-state';line.setAttribute('role','status');
    var progress=node('div',null,box);progress.className='growth-ai-progress';progress.setAttribute('role','progressbar');progress.setAttribute('aria-label','Verified AI systems research');progress.setAttribute('aria-valuemin','0');progress.setAttribute('aria-valuemax',String(total||5));progress.setAttribute('aria-valuenow',String(verifiable));
    var fill=node('span',null,progress);fill.style.width=(total?Math.round(verifiable*100/total):0)+'%';
-   node('p','Gemini with Google Search is checked automatically when configured. ChatGPT, Claude, Perplexity and Copilot require their own real source-backed answers. AI research is optional; Google topic research remains available.',box).className='info';
+   node('p','Your existing Pre-Write answers are retained for writing. Growth citation comparison is a separate optional check: only genuine AI answers with a source section can establish citations. Gemini with Google Search may check automatically; the other systems can be refreshed by choice.',box).className='info';
   if(d.automatic_ai_status)node('p','Automatic Gemini / Google Search: '+(d.automatic_ai_status==='SUCCESS'?'completed and saved':d.automatic_ai_status==='ALREADY_CHECKED'?'existing verified answer reused':d.automatic_ai_status==='RUNNING'?'checking now…':d.automatic_ai_status==='RETRY_LATER'?'retry deferred':d.automatic_ai_status.replace(/_/g,' ').toLowerCase())+'. Gemini grounding is not a Google AI Overview; other providers are not marked checked without their actual answers.',box);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
   // Saved Pre-Write research is visible on this first screen; editorial-only answers
