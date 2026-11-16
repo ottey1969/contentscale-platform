@@ -44,7 +44,7 @@
       'RESOURCES:',
       '(every actual cited page URL, one per line; or NO VERIFIED RESOURCES)',
       'No separate MENTIONED, RECOMMENDED or company-monitoring section. Source pages will be studied independently for better original content.'
-    ].join('\\n\\n');
+    ].join(String.fromCharCode(10,10));
   }
   function cleanText(v, n) { return typeof v === 'string' ? v.trim().slice(0, n == null ? MAX_ANSWER : n) : ''; }
   function cleanUrl(value) {
