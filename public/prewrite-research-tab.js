@@ -344,8 +344,16 @@
           var match = pages.find(function(p) { return normalized(p.url) === target && Number.isSafeInteger(Number(p.id)) && Number(p.id) > 0; });
           if (match) {
             var link = document.createElement('a');
-            var qs = '?page_id=' + encodeURIComponent(match.id) + '&query=' + encodeURIComponent(brief.keyword || '') + '&market=' + encodeURIComponent(brief.region || brief.market || '') + '&language=' + encodeURIComponent(brief.language || '');
-            link.href = '/track/' + encodeURIComponent(token) + '/growth/auto-research' + qs;
+            // Use the server's existing, account-scoped /growth/from-brief contract.
+            // A saved Brief carries its evidence reference; an unsaved Brief carries only page identity.
+            var briefId = window._pwbCurrentBriefId || brief.id || null;
+            var qs = new URLSearchParams();
+            if (briefId && /^[1-9][0-9]*$/.test(String(briefId))) qs.set('brief_id',String(briefId));
+            else {
+              qs.set('url',url); qs.set('keyword',String(brief.keyword||'').slice(0,120));
+              qs.set('region',String(brief.region||brief.market||'').slice(0,2));
+            }
+            link.href = '/track/' + encodeURIComponent(token) + '/growth/from-brief?' + qs.toString();
             link.textContent = 'Open this exact page in Growth';
             link.style.cssText = 'display:inline-block;background:#2563eb;color:white;padding:10px 14px;border-radius:7px;font-weight:700;text-decoration:none';
             old.appendChild(link);
