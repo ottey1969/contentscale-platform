@@ -1,0 +1,56 @@
+name: Fix Case Study scan confirmation JavaScript
+on:
+  push:
+    branches:
+      - fix/case-study-scan-confirm-js-20261116
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Patch generated browser-script string escaping
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'src/index.js';
+          const s = fs.readFileSync(path,'utf8');
+          const a = s.indexOf('function authorizeCaseStudyScan(pageId)');
+          const b = s.indexOf('function endCaseStudy(pageId)',a);
+          if (a<0 || b<0) throw Error('Case Study function boundary missing; refusing to patch');
+          const block=s.slice(a,b);
+          const needle="if(!confirm('The Case Study ended on '+day+'.\\n\\nAllow exactly ONE manual scan of '+(p.url||'this page')+'?\\n\\nMonitoring remains off. This does not restart the Case Study or change the historical baseline.'))return;";
+          const escaped=needle.replaceAll('\\n','\\\\n');
+          if (!block.includes(needle)) {
+            if(block.includes(escaped)){console.log('Already escaped correctly');process.exit(0);}
+            throw Error('Exact confirmation text changed; refusing unsafe substitution');
+          }
+          const fixed=s.slice(0,a)+block.replace(needle,escaped)+s.slice(b);
+          fs.writeFileSync(path,fixed);
+          const check=fixed.slice(a,fixed.indexOf('function endCaseStudy(pageId)',a));
+          if(!check.includes(escaped))throw Error('Escaping verification failed');
+          console.log('Escaped 3 embedded newline sequences for browser-script rendering');
+          NODE
+      - name: Validate syntax and Case Study tests
+        run: |
+          node --check src/index.js
+          node --test tests/tracker-case-study-scan-consent.test.cjs tests/tracker-case-study-end-e2e.test.cjs
+      - name: Commit verified fix back to feature branch
+        run: |
+          if git diff --quiet -- src/index.js; then
+            echo "No patch needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/index.js
+          git commit -m "fix: escape Case Study scan confirm newlines in served JavaScript"
+          git push origin HEAD:fix/case-study-scan-confirm-js-20261116
