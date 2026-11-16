@@ -473,7 +473,7 @@
      '&keyword='+encodeURIComponent(String(runQuery||d.search_discovery?.target_query||d.practical_growth_plan?.focus_query||''));
    var prewrite=node('a','Open this page in Pre-Write',pwSection);
    prewrite.href='/track/'+encodeURIComponent(token)+'?'+params;
-   prewrite.style.cssText='display:inline-block;background:#2563eb;color:#fff;padding:9px 13px;border-radius:7px;text-decoration:none;font-weight:700';
+   prewrite.className='growth-prewrite-handoff';
   }
   var discovery=d.search_discovery||{};
   // Optional shared renderer (growth-competitor-overview.js); the report renders fully without it.
