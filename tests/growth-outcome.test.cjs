@@ -44,10 +44,12 @@ test('report 64 (real): "no content gap" keeps the performance checks open inste
  assert.match(o.distinction,/is not the same as no improvement needed/);
  const codes=o.open_checks.map(c=>c.code);
  assert.deepEqual(codes.slice(0,2),['GOOGLE_SHOWS_ANOTHER_PAGE','MOSTLY_BEYOND_PAGE_ONE']);
- assert(codes.includes('AI_NOT_CHECKED'));
+ assert(codes.includes('AI_SOURCES_NOT_VERIFIED'));
  assert(!codes.includes('SEARCH_CONSOLE_DATA_OLD'),'imported on 2026-10-11: 20 days before the report, within 28 days');
  assert.match(o.open_checks[0].detail,/shows https:\/\/contentscale\.site\/ for “content scaling”: 3943 impressions, 2 clicks, average position 12\.7\. The page meant for this search is https:\/\/contentscale\.site\/content-scaling\/, which has no Search Console rows of its own\./);
- assert.match(o.open_checks[1].action,/a new title alone will not bring these clicks/);
+ assert.match(o.open_checks[1].action,/exact page\/query, date, device and country/);
+ assert.match(o.open_checks[1].detail,/average position of 12\.7/);
+ assert.doesNotMatch(o.open_checks[1].detail,/most impressions are beyond page one/);
 });
 
 test('report 64 (real): the route to action offers only the action page on the topic, not the AI citation tracker pages',()=>{
@@ -65,7 +67,7 @@ test('report 64 (real): the owner package lists the open checks under a NO_CHANG
  const {buildOwnerHandoffPackage}=require('../src/growth-owner-handoff-package.cjs');
  const m=buildOwnerHandoffPackage({report:f.report,decision:{...f.editorial_decision_gate,evidence_status:{}}}).markdown;
  assert.match(m,/## Still open — not a content question\n\nNo content gap was found, but that is not the same as no improvement needed:\n\n1\. Search Console \(imported 2026-10-11\) shows https:\/\/contentscale\.site\/ for “content scaling”/);
- assert.match(m,/2\. The average position is 12\.7: most impressions are beyond page one/);
+ assert.match(m,/2\. Search Console reports an average position of 12\.7/);
 });
 
 test('report 67 (real): a block by the word-based task check after three pages were read does not block the topic list',()=>{
@@ -78,7 +80,7 @@ test('report 67 (real): a block by the word-based task check after three pages w
  const o=reconcileOutcome({decision:r.editorial_decision_gate,gapList:gl,report:r,aiCheck:{max_age_days:14,summary:{checked:0}},now:'2026-10-31T12:47:17Z'});
  assert.equal(o.status,'NO_SHARED_TASK_TOPICS_TO_CONSIDER');
  assert.equal(o.headline,'No reader task shared by two ranking pages — 2 performance checks still open · 2 topics to consider');
- assert.deepEqual(o.open_checks.map(c=>c.code),['TARGET_PAGE_NOT_MEASURED','AI_NOT_CHECKED']);
+ assert.deepEqual(o.open_checks.map(c=>c.code),['TARGET_PAGE_NOT_MEASURED','AI_SOURCES_NOT_VERIFIED']);
  const s=summarizeFreeGrowth(r,{query:'content scaling'});
  assert.equal(s.headline,'No reader task shared by two ranking pages — 2 topics to consider');
  // A block for missing data (no readable pages) still blocks the list.
