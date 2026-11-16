@@ -21,16 +21,16 @@ const parsed=(srcs,own=false)=>({sources:srcs,source_sites:srcs.map(u=>new URL(u
 const answers=[{engine:'chatgpt',parsed:parsed([CITED_A,CITED_B,CITED_C])},{engine:'perplexity',parsed:parsed([CITED_B])},
  {engine:'copilot',parsed:parsed([PAGE,'https://roofer-d.example/'],true)}];
 
-test('only pages cited by AI systems that do not cite you are compared, most-cited first',()=>{
+test('all external AI-visible pages are compared, including sources shown alongside your own citation',()=>{
  const c=gap.citedPages(answers,PAGE);
- assert.deepEqual(c.map(x=>x.url),[CITED_B,CITED_A,CITED_C]);
- assert.ok(!c.some(x=>/roofer-d/.test(x.url)),'pages cited next to your own page are not a gap');
+ assert.deepEqual(c.map(x=>x.url),[CITED_B,CITED_A,CITED_C,'https://roofer-d.example/']);
+ assert.ok(c.some(x=>/roofer-d/.test(x.url)),'sources accompanying your own citation can still teach useful reader intent');
 });
 
 test('without a model: missing facts, topics by heading words, elements, unreadable pages named',async()=>{
  const g=await gap.buildAiGap({answers,pageUrl:PAGE,engines:ai.ENGINES,fetchHtml});
  assert.equal(g.status,'READ');assert.equal(g.topics_basis,'HEADING_WORDS');
- assert.deepEqual(g.pages.map(p=>[p.site,p.read]),[['roofer-b.example',true],['roofer-a.example',true],['roofer-c.example',false]]);
+ assert.deepEqual(g.pages.map(p=>[p.site,p.read]),[['roofer-b.example',true],['roofer-a.example',true],['roofer-c.example',false],['roofer-d.example',false]]);
  assert.equal(g.pages.find(p=>p.site==='roofer-c.example').status,'Could not be opened');
  assert.deepEqual(g.pages[0].cited_by,['ChatGPT Search','Perplexity']);
  const facts=g.missing_facts.map(f=>f.key);
@@ -58,8 +58,8 @@ test('with a model: topics compared by meaning, so a differently worded section 
  assert.equal(a.headings.find(h=>/counts as/i.test(h.text)).status,'ON_YOUR_PAGE');
 });
 
-test('nothing to compare when every AI system cites you, and no gap claims when your page cannot be read',async()=>{
- assert.equal((await gap.buildAiGap({answers:[answers[2]],pageUrl:PAGE,fetchHtml})).status,'NO_CITED_PAGES');
+test('a cited own page does not exclude reading competitors, and an unreadable own page cannot claim gaps',async()=>{
+ assert.equal((await gap.buildAiGap({answers:[answers[2]],pageUrl:PAGE,fetchHtml})).status,'NOTHING_READABLE');
  const g=await gap.buildAiGap({answers,pageUrl:PAGE,fetchHtml:async u=>{if(u===PAGE)throw Error('down');return fetchHtml(u)}});
  assert.equal(g.status,'OWN_PAGE_UNREADABLE');assert.deepEqual(g.missing_facts,[]);
 });

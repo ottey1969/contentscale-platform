@@ -22,6 +22,30 @@
   var MAX_ANSWER = 16000, EXCERPT = 2800;
   var OBJECTIVE = 'AI Answer Research — Write for Citation Potential';
   var MISSION = 'Research the five answers to the target query. Identify factual gaps, useful explanations, unanswered questions, original source leads and opportunities for a clearer, better-supported answer. Use this research to produce original, accurate and useful content with stronger potential for AI citation.';
+  // The same user-intent + cited-page research contract as Growth, before publication.
+  // A business that has not published this page cannot measure citations of that page,
+  // but the existing Search/AI source pages can still be read and compared.
+  function buildCustomerResearchPrompt(question) {
+    var q=cleanText(String(question||''),300);
+    return [
+      'Answer this exact customer question as an independent user would receive it:',
+      'QUERY:',q||'[ENTER EXACT KEYWORD OR QUESTION]',
+      'Instructions:',
+      '- Keep the exact question unchanged. Let its wording determine the intent; do not assume a purchase or local service request if it is informational.',
+      '- Use a new, independent live web search when available; never rely on previous conversation or knowledge of the company being measured.',
+      '- Answer naturally, including relevant companies only when they genuinely help answer this question. Do not add, favor, or recommend any company merely because someone is measuring visibility.',
+      '- Do not invent companies, citations, source URLs or unsupported facts.',
+      '- Verify that each URL listed in RESOURCES actually appeared as a source or citation for this answer. A URL merely mentioned in prose is not automatically a citation.',
+      '- Preserve every exact cited/source page URL in full https:// form; never guess or construct one.',
+      '- When sources cannot be verified, write NO VERIFIED RESOURCES, rather than inventing them.',
+      'Return ONLY two sections:',
+      'ANSWER:',
+      '(the natural answer to the exact customer question)',
+      'RESOURCES:',
+      '(every actual cited page URL, one per line; or NO VERIFIED RESOURCES)',
+      'No separate MENTIONED, RECOMMENDED or company-monitoring section. Source pages will be studied independently for better original content.'
+    ].join(String.fromCharCode(10,10));
+  }
   function cleanText(v, n) { return typeof v === 'string' ? v.trim().slice(0, n == null ? MAX_ANSWER : n) : ''; }
   function cleanUrl(value) {
     if (typeof value !== 'string') return null;
@@ -56,7 +80,9 @@
     'do not invent results', 'observed answer (unverified)', 'candidate source urls (not verified)', 'editorial requirements:',
     'produce: direct_answer', 'source_verification_tasks', 'fact_check_before_publishing', 'distinctive_expert_insights',
     'pre-publication', 'manual input is primary', 'never simulate another ai system', 'return only compact valid json',
-    'do not claim that any answer or source establishes', 'research the five answers to the target query'];
+    'do not claim that any answer or source establishes', 'research the five answers to the target query',
+    'answer this exact customer question as an independent user would receive it',
+    'verify that each url listed in resources actually appeared'];
   // Context contamination: the answer names ContentScale's own workflow, so it was written in a conversation that knew
   // the task (a chat with memory or earlier context), not as a neutral answer to the search query. Product terms only;
   // they appear in that form whatever the language of the answer.
@@ -156,6 +182,8 @@
       'This research is PRE-PUBLICATION editorial input, not a check whether this website is cited.',
       aq ? 'The AI systems were asked the customer question "' + aq.text + '" (the real search question for the target query). The brief\'s direct answer must answer that question first, in plain words; the target query stays the page\'s keyword.' : null,
       'Compare the actual answers to the same target query; identify differing explanations, factual gaps, unanswered questions and unsupported assertions.',
+      'Analyze intent AND visibility for BOTH Google Search and AI systems: identify which external pages are actually visible or cited for the exact customer question, read their original content when accessible, and compare what each explains.',
+      'Keep Google organic results, Google AI Overview observations and citations from other AI systems distinct. A discovered link is not proof it was read or cited; preserve each exact URL, origin and read status.',
       'Recognise the important entities (organisations, standards, products, places, people) the answers rely on, and which of them the brief must explain.',
       'Use source URLs as leads only. Fetch and verify original material before citing, quoting or presenting a statement as fact.',
       'Create a direct accurate answer, supporting context, genuine expert insight if supplied, and reader-focused examples; do not copy AI answers.',
@@ -290,5 +318,5 @@
     ].filter(function (x) { return x != null; }).join('\n\n');
   }
   return { ENGINES: ENGINES, OBJECTIVE: OBJECTIVE, MISSION: MISSION, GOOGLE_SOURCES: GOOGLE_SOURCES, normalizeAnswer: normalizeAnswer, validateAnswer: validateAnswer, validateGoogle: validateGoogle, provenanceOf: provenanceOf, revalidate: revalidate,
-    makePrewriteAiAnswerResearch: makePrewriteAiAnswerResearch, preserveResearchEvidence: preserveResearchEvidence, recount: recount, buildPrewriteResearchPrompt: buildPrewriteResearchPrompt };
+    buildCustomerResearchPrompt: buildCustomerResearchPrompt, makePrewriteAiAnswerResearch: makePrewriteAiAnswerResearch, preserveResearchEvidence: preserveResearchEvidence, recount: recount, buildPrewriteResearchPrompt: buildPrewriteResearchPrompt };
 });

@@ -42,6 +42,33 @@ const DIRECT_PROMPT_LINES=[
  'Final validation: answer the query, preserve exact https:// source URLs, include no invented URLs, and return only ANSWER and RESOURCES.'
 ];
 const directPrompt=(query,question)=>{query=question||query;return DIRECT_PROMPT_LINES.map(l=>l===QUERY_SLOT?(String(query||'').trim()||QUERY_SLOT):l).join('\n\n')};
+// Growth uses a separate verification-oriented prompt. Never disclose the tracked
+// business in the question: doing so would contaminate spontaneous recommendations.
+// Verify sources as part of the original answer, then independently compare the
+// returned text with the tracked company's aliases and canonical URL.
+const growthVerificationPrompt=(query,question)=>{
+ const q=String(question||query||'').trim()||QUERY_SLOT;
+ return [
+  'Answer this exact customer question as an independent user would receive it:',
+  'QUERY:',q,
+  'Instructions:',
+  '- Keep the exact question unchanged. Let its wording determine the intent; do not assume a purchase or local service request if it is informational.',
+  '- Use a new, independent live web search when available; never rely on previous conversation or knowledge of the company being measured.',
+  '- Answer naturally, including relevant companies only when they genuinely help answer this question. Do not add, favor, or recommend any company merely because someone is measuring visibility.',
+  '- Do not invent companies, recommendation language, references, citations, URLs or unverifiable claims.',
+  '- Before returning, verify that each URL listed in RESOURCES actually appeared as a source or citation for this answer. A URL merely mentioned in the prose is not automatically a citation.',
+  '- Preserve the complete exact https:// URL for every cited page. Do not turn an unavailable URL into a guessed replacement or a domain homepage.',
+  '- When source verification cannot be completed, say NO VERIFIED RESOURCES rather than supplying a plausible URL.',
+  '- Do not claim to have checked systems, search engines or citation evidence that you did not actually use.',
+  'Return only the two sections below, without example URLs:',
+  'ANSWER:',
+  '(the natural complete answer to the question)',
+  'RESOURCES:',
+  '(each exact source page URL actually cited, one per line; otherwise NO VERIFIED RESOURCES)',
+  'Do not append self-assessed MENTIONED or RECOMMENDED fields. These will be measured from the original answer without prompting the tracked business by name.'
+ ].join(String.fromCharCode(10,10));
+};
+
 
 // Same clean-up as the Quick Scan: AI apps / clipboards escape Markdown punctuation.
 function cleanAiPaste(v){
@@ -102,7 +129,10 @@ function otherPrompt(raw){
 // fewer than three words. An answer that shares no word with the search term still counts (synonyms), with a warning.
 const contract=require('../prewrite-ai-answer-research.cjs');
 const GROWTH_ECHO=['answer this exact user query as a real user would receive the answer','use the query exactly as written',
- 'return only these two sections','do not add mentioned, recommended','final validation: answer the query','actually answer the query. do not explain these instructions'];
+ 'return only these two sections','do not add mentioned, recommended','final validation: answer the query','actually answer the query. do not explain these instructions',
+ 'answer this exact customer question as an independent user would receive it',
+ 'do not append self-assessed mentioned or recommended fields',
+ 'let its wording determine the intent'];
 // question: the customer question asked to the AI systems for this search term (an answer to it answers the search).
 function validateGrowthAnswer(answerText,query,question){
  const low=String(answerText||'').toLowerCase();
@@ -236,4 +266,4 @@ function summarizeAiAnswers(rows,{pageUrl,googleUrls=[],query,question}={}){
   caveat:'AI answers differ per user, location, account and time. This shows only the answers you pasted, at the moment you ran them.'};
 }
 
-module.exports={validateGrowthAnswer,noiseUrl,withoutTracking,otherPrompt,ENGINES,ENGINE_IDS,MAX_PASTE,DIRECT_PROMPT_LINES,QUERY_SLOT,directPrompt,cleanAiPaste,parseAiAnswer,summarizeAiAnswers,aiVisibilityActions,rootOf};
+module.exports={validateGrowthAnswer,noiseUrl,withoutTracking,otherPrompt,ENGINES,ENGINE_IDS,MAX_PASTE,DIRECT_PROMPT_LINES,QUERY_SLOT,directPrompt,growthVerificationPrompt,cleanAiPaste,parseAiAnswer,summarizeAiAnswers,aiVisibilityActions,rootOf};

@@ -39,7 +39,7 @@ function citedPages(answers,pageUrl,query){
  const byUrl=new Map();
  // Stored answers are re-read with the current rules, as in the AI summary.
  for(const r of answers||[]){const p=r&&typeof r.raw_text==='string'?parseAiAnswer(r.raw_text,{pageUrl,query:query||r.query}):r&&r.parsed;
-  if(!p||p.validation_status==='invalid'||p.sources_verifiable===false||p.own_site_cited)continue;
+  if(!p||p.validation_status==='invalid'||p.sources_verifiable===false)continue;
   for(const u of p.sources||[]){const h=hostOf(u);if(!h||rootOf(h)===own||!/^https:/i.test(u))continue;
    const x=byUrl.get(u)||{url:u,site:h,engines:new Set()};x.engines.add(r.engine);byUrl.set(u,x)}}
  return [...byUrl.values()].sort((a,b)=>b.engines.size-a.engines.size||a.url.localeCompare(b.url));

@@ -79,11 +79,11 @@
     inputs.setAttribute('aria-controls', grid.id);
     prompt.setAttribute('aria-controls', panel.id);
     [inputs, prompt].forEach(function (el) { el.setAttribute('role', 'tab'); tabs.appendChild(el); });
-    // What to type in each AI system: the search query itself, nothing else. The Research Prompt is never pasted there.
+    // Copy an unbiased customer question plus source verification instructions. This is separate from the internal Brief-generation research prompt.
     var ask = document.createElement('button'); ask.type = 'button'; ask.className = 'cs-rp-ask'; ask.id = 'cs-research-ask-copy';
-    ask.textContent = 'Copy search question';
+    ask.textContent = 'Copy AI research question + sources';
     var askNote = document.createElement('p'); askNote.className = 'cs-ask-note'; askNote.setAttribute('role', 'status');
-    askNote.textContent = '1. Copy the question and ask it in each AI system. 2. Paste that system\'s actual answer in its field below. 3. Use Analyse & create when your answers are ready.';
+    askNote.textContent = '1. Copy the exact customer question with source-check instructions. 2. Ask it in each AI system. 3. Paste each complete ANSWER and RESOURCES response here. Google Search and AI page visibility are analyzed separately.';
     // The question to ask (owner 2026-11-11): the best real customer question for the keyword, chosen automatically from
     // Google's own questions for the market (as in the free Growth check). Editable; one click picks another or the keyword.
     var qWrap = document.createElement('div'); qWrap.id = 'cs-ai-question-box';
@@ -202,8 +202,9 @@
       clearTimeout(qState.refresh); qState.refresh = setTimeout(function () { try { grow(); renderAnswerQuestions(); checkFields(); render(); } catch (e) {} }, 0); }
     ask.addEventListener('click', function () {
       var q = askText(); if (!q) return;
-      var done = function (ok) { askNote.textContent = ok ? 'Copied: "' + q + '". Paste it into Google, ChatGPT, Perplexity, Claude and Copilot, then paste each full answer back here.' : 'Copy this search question by hand: ' + q; if (ok) flash(ask, 'Copied ✓', 'Copy search question', askNote); };
-      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(q).then(function () { done(true); }, function () { done(false); });
+      var L=lib(),researchText=L&&L.buildCustomerResearchPrompt?L.buildCustomerResearchPrompt(q):q;
+      var done = function (ok) { askNote.textContent = ok ? 'Copied exact customer question + source verification. Ask it separately in each AI system, then paste the actual answer with source links here.' : 'Could not copy automatically. Select and copy the research question manually.'; if (ok) flash(ask, 'Copied ✓', 'Copy AI research question + sources', askNote); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(researchText).then(function () { done(true); }, function () { done(false); });
       else done(false);
     });
     // Each answer field says at once when its text is not an answer to the keyword (same check the server applies).
