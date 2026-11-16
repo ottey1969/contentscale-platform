@@ -53,6 +53,12 @@ jobs:
           node --test tests/growth-verification-prompt.test.cjs
           node --test tests/growth-free-ai-gap.test.cjs
           node --test tests/growth-tracker-ai-check.test.cjs
+          node --test tests/shared-intent-visibility-research.test.cjs
+          node --test tests/prewrite-research-tab-browser.test.cjs
+          node --test tests/growth-free-check.test.cjs
+          node --test tests/growth-free-e2e.test.cjs
+          node --test tests/growth-prewrite-ai-evidence.test.cjs
+          node --test tests/growth-prewrite-writer-goal.test.cjs
       - name: Commit tested integration
         run: |
           if ! git diff --quiet -- src/index.js; then
