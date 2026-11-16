@@ -49,7 +49,7 @@ async function loadPrewriteGrowthAnswers(pool,{clientId,pageUrl,query,market,lan
  }
  if(!selected)return empty;
  const {record,brief,asked}=selected;
- const items=[],rows=[];
+ const items=[],rows=[],writing_inputs=[];
  for(const [key,alias] of ENGINES){
   const o=answerOf(brief,key,alias);
   const at=time(o.at||record.created_at);
@@ -59,6 +59,14 @@ async function loadPrewriteGrowthAnswers(pool,{clientId,pageUrl,query,market,lan
   if(o.observation_status==='invalid'){item.status='INVALID';items.push(item);continue}
   if(!o.raw.trim()){item.status=o.fallback_excerpt?'EXCERPT_ONLY':'NOT_CHECKED';items.push(item);continue}
   if(!fresh){item.status='OUTDATED';items.push(item);continue}
+  // Valid prose supports editorial comparison even without a RESOURCES section.
+  // It is unverified writing input only, never a claim of brand citation or source truth.
+  const editorial=ai.parseAiAnswer(o.raw,{pageUrl,query});
+  if(editorial.validation_status!=='invalid'){
+   writing_inputs.push({engine:key,answer_excerpt:String(editorial.answer||'').slice(0,1800),
+    observed_at:item.checked_at,provenance:'PREWRITE_MANUAL_UNVERIFIED',
+    editorial_only:true,verified_claims:false});
+  }
   // The Pre-Write writing prompt accepts prose and source leads, unlike Growth's
   // citation-analysis prompt. Never fabricate a RESOURCES block from those leads.
   // Only an actual RESOURCES section from the original answer is eligible.
@@ -70,7 +78,7 @@ async function loadPrewriteGrowthAnswers(pool,{clientId,pageUrl,query,market,lan
   items.push(item);
  }
  return {status:'MATCHED',brief_id:Number(record.id),original_query:asked,
-  items,rows,editorial_count:items.filter(x=>x.status==='EDITORIAL_ONLY').length,
+  items,rows,writing_inputs,editorial_count:items.filter(x=>x.status==='EDITORIAL_ONLY').length,
   reused_count:rows.length,source:'Pre-Write (manual answers: origin not independently verified)',
   note:'Reused answers were re-validated for this exact question. Pre-Write editorial evidence without a genuine RESOURCES section remains writing input only, not an AI citation observation.'};
 }
