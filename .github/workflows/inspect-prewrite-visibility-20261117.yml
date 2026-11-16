@@ -1,0 +1,22 @@
+name: Inspect Pre-Write visibility integration
+on:
+  push:
+    branches: [feat/prewrite-growth-intent-visibility-dual-20261117]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Identify Pre-Write research and brief visibility fields
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('src/index.js').read_text().splitlines()
+          for term in ['attachToBrief(', 'researchForRequest(', 'prewrite_briefs', 'serp_snapshot', 'competitor_table', 'competitor_research', 'search_discovery', 'pwbResearch']:
+            hits=[i for i,l in enumerate(s) if term in l]
+            print('###',term, 'hits',len(hits))
+            for i in hits[:4]:
+              print('\n'.join(f'{j+1}: {s[j][:420]}' for j in range(max(0,i-6),min(len(s),i+9))))
+          PY
