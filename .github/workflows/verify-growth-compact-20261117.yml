@@ -1,0 +1,32 @@
+name: Validate compact Growth AI research and writer context
+on:
+  push:
+    branches: [fix/growth-ai-compact-research-20261117]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Review writer context consumer
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          rows=Path('src/index.js').read_text().splitlines()
+          terms=['research_context','researchContext','reader_task']
+          for term in terms:
+            ix=[i for i,x in enumerate(rows) if term in x]
+            print('TERM',term,'HITS',len(ix))
+            for i in ix[:12]:
+              print('\\n'.join(f'{n+1}: {rows[n][:340]}' for n in range(max(0,i-3),min(len(rows),i+5))))
+          PY
+      - run: |
+          node --check public/growth-automatic-report-ui.js
+          node --check src/growth-prewrite-ai-evidence.cjs
+          node --check src/tracker-growth-automatic-routes.cjs
+          node --test tests/growth-prewrite-ai-evidence.test.cjs
+          node --test tests/growth-first-screen.test.cjs
