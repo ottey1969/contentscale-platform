@@ -8,6 +8,7 @@ function once(before,after){
  if(i<0||s.indexOf(before,i+1)>=0)throw Error('Expected one exact occurrence: '+before.slice(0,95));
  s=s.slice(0,i)+after+s.slice(i+before.length);count++;
 }
+if(!s.includes('case_study_scan_authorized_at TIMESTAMPTZ')){
 once("  _caseStudySchemaReady=true;\n}\n// Clears a day-7/day-14 Case Study evidence checkpoint;",
 `  // Closeout survives reload, scheduled jobs and previously open browser tabs.
   await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_ended_at TIMESTAMPTZ');
@@ -119,6 +120,15 @@ once("function endCaseStudy(pageId){",
   }).catch(function(e){alert(e.message||'Could not authorize the scan');});
 }
 function endCaseStudy(pageId){`);
+}
+// Keep existing audit wording and cover startup configurations with delayed tracker_pages setup.
+once("Baseline, evidence and report are saved. Any new manual scan requires separate owner permission.",
+ "The baseline, evidence and report are kept. Any new manual scan requires separate owner permission.");
+once("  await pool.query(\`UPDATE tracker_pages SET case_study_ended_at=NULL,case_study_scan_authorized_at=NULL,check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,",
+`  // Ensure the closeout columns even on disposable/staging databases assembled after startup.
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_ended_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_scan_authorized_at TIMESTAMPTZ');
+  await pool.query(\`UPDATE tracker_pages SET case_study_ended_at=NULL,case_study_scan_authorized_at=NULL,check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,`);
 fs.writeFileSync(file,s);
 console.log('Applied '+count+' controlled changes to canonical Tracker source');
 
