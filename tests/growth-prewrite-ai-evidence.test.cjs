@@ -74,7 +74,9 @@ test('live Growth ai-check route reuses eligible Pre-Write answer for owner, but
   loadAiAnswers:async()=>[],
   loadPageMarkets:async()=>({countries:['US'],language:'en'}),
   loadPrewriteMarket:async()=>null,
-  loadSiteMarkets:async()=>null
+  loadSiteMarkets:async()=>null,
+  fetchAiCited:async()=>({html:'<html><h1>Emergency roof safety</h1><p>Inspect damage before repairs.</p></html>'}),
+  aiGapModel:null
  });
  const handler=routes['/api/tracker-client/:token/growth/ai-check'];
  async function invoke(owner){
