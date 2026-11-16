@@ -1,0 +1,22 @@
+name: Verify Growth Save & Run guidance
+on:
+  push:
+    branches: [fix/growth-save-run-focus-evidence-20261117]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: node --check public/growth-automatic-report-ui.js
+      - name: UI and Growth regression
+        run: |
+          node --test tests/growth-save-run-scroll-summary.test.cjs
+          node --test tests/growth-first-screen.test.cjs
+          node --test tests/growth-prewrite-ai-evidence.test.cjs
+          node --test tests/growth-ai-explicit-replacement.test.cjs
