@@ -29,3 +29,9 @@ test('first screen exposes Growth research and real AI answers, without fabricat
  assert.match(growth,/AI systems are tracked separately/);
  assert.match(growth,/Growth research failed:/);
 });
+
+test('market settings sit immediately after the first AI research panel without cloning', () => {
+ assert.match(growth,/var marketSettings=document\.getElementById\('marketSetting'\)/);
+ assert.match(growth,/if\(marketSettings\)firstPanel\.insertAdjacentElement\('afterend',marketSettings\)/);
+ assert.doesNotMatch(growth,/cloneNode\(/);
+});

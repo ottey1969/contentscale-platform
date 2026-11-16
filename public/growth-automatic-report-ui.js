@@ -50,6 +50,10 @@
   if(!earlyAi){earlyAi=node('div',null,firstPanel);earlyAi.id='growthAiEarly'}
   else firstPanel.appendChild(earlyAi);
   earlyAi.style.cssText='margin-top:12px;padding:12px;border:1px solid #94a3b8;border-radius:8px;background:white;color:#0f172a';
+  // The owner first reviews/enters the five AI systems; market/language comes directly afterwards.
+  // Move the existing settings form (do not clone it): its isolated save handler remains bound.
+  var marketSettings=document.getElementById('marketSetting');
+  if(marketSettings)firstPanel.insertAdjacentElement('afterend',marketSettings);
   firstBtn.addEventListener('click',function(){run()});
  }
  function firstProgress(message,running){
