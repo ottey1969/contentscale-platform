@@ -1,0 +1,25 @@
+name: Verify Growth AI answer protection
+on:
+  push:
+    branches: [fix/growth-ai-evidence-status-and-explicit-replace-20261117]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Browser and server JavaScript syntax
+        run: |
+          node --check public/growth-automatic-report-ui.js
+          node --check src/tracker-growth-automatic-routes.cjs
+      - name: AI answer workflow and protection
+        run: |
+          node --test tests/growth-ai-explicit-replacement.test.cjs
+          node --test tests/growth-prewrite-ai-evidence.test.cjs
+          node --test tests/growth-first-screen.test.cjs
+          node --test tests/growth-ai-check-validation.test.cjs
+          node --test tests/prewrite-ai-answer-integration.test.cjs
