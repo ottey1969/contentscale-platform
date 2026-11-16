@@ -1099,7 +1099,7 @@
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
-   last=result;render(result);pointHandoff(result);firstProgress('Growth research finished. Review the report below and the five AI system states.',false);if(owner)triggerAutomaticAi(result);
+   last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Growth research finished. Review the report below and the five AI system states.',false);if(owner)triggerAutomaticAi(result);
   }catch(e){firstProgress('Growth research failed: '+String(e.message||e)+'. No completed report was saved.',false);status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false
   }finally{document.getElementById('retryResearch').disabled=false;if(status.className==='working')status.className='';if(status.removeAttribute)status.removeAttribute('aria-busy')}
@@ -1116,7 +1116,7 @@
    var saved=await response.json();
    if(!response.ok||saved.success!==true)throw Error(saved.code||'SAVED_REPORT_UNAVAILABLE');
    if(saved.found&&saved.report&&saved.report.success===true){
-    last=saved.report;render(saved.report);pointHandoff(saved.report);if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
+    last=saved.report;render(saved.report);pointHandoff(saved.report);showAiEarly();if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
     status.textContent='Saved research restored ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new scan was run.';
     firstProgress('Saved report loaded ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new research ran. Press Run Growth above to refresh.',false);
     document.getElementById('retryResearch').hidden=false;
