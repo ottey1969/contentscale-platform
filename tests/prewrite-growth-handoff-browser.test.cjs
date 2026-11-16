@@ -41,9 +41,9 @@ test('Pre-Write links only exact tracked URLs; fallback preserves full URL for F
       content_decision:{recommended_treatment:'EXPAND_EXISTING_PAGE',closest_existing_url:url}};
     document.getElementById('pwbWhatToDo').appendChild(document.createElement('span'));
   },TRACKED);
-  await page.waitForSelector('#cs-prewrite-to-growth a[href*="/growth/auto-research"]');
+  await page.waitForSelector('#cs-prewrite-to-growth a[href*="/growth/from-brief"]');
   const exact=await page.locator('#cs-prewrite-to-growth a').first().getAttribute('href');
-  assert.match(exact,/page_id=42/);assert.match(exact,/24%20Hour%20Emergency/);
+  assert.match(exact,/growth\\/from-brief/);assert.equal(new URL(exact,'http://local').searchParams.get('url'),TRACKED);
   assert.match(await page.locator('#cs-prewrite-to-growth').innerText(),/roof.example\/24-hour-emergency-roof-repair-nj/);
   await page.evaluate(url=>{
     window._pwbCurrentBrief.content_decision.closest_existing_url=url;
@@ -52,7 +52,7 @@ test('Pre-Write links only exact tracked URLs; fallback preserves full URL for F
   await page.waitForSelector('#cs-prewrite-to-growth a[href^="/free-growth"]');
   const fallback=await page.locator('#cs-prewrite-to-growth a').first().getAttribute('href');
   assert.equal(new URL(fallback,'http://local').searchParams.get('url'),OTHER);
-  assert.equal(await page.locator('#cs-prewrite-to-growth a[href*="/growth/auto-research"]').count(),0);
+  assert.equal(await page.locator('#cs-prewrite-to-growth a[href*="/growth/from-brief"]').count(),0);
   assert.ok(hits.length>=2);assert.deepEqual(errors,[]);
  }finally{await browser.close();await new Promise(ok=>server.close(ok));}
 });
