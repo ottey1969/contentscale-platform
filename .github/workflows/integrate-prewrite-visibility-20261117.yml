@@ -43,6 +43,8 @@ jobs:
             print('Added pre-publication Google+AI page-reading analysis to prompt and saved Brief')
           else:print('Already integrated')
           PY
+      - name: Install dependencies for Free Growth and cross-module route tests
+        run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Verify server and research modules
         run: |
           node --check src/index.js
