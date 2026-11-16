@@ -62,7 +62,7 @@ test('Growth integration prefers fresh, explicit Growth answers and never leaks 
  assert.match(src,/const usable=\[\.\.\.fresh,\.\.\.reused\]/);
  assert.match(src,/prewrite_reuse:prewrite\?/);
  const ui=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
- assert.match(ui,/growthPrewriteReuse/);assert.match(ui,/Pre-Write is writing research/);
+ assert.match(ui,/growthPrewriteReuse/);assert.match(ui,/Pre-Write answers stay available as research/);
 });
 
 test('live Growth ai-check route reuses eligible Pre-Write answer for owner, but never for public viewer',async()=>{
