@@ -306,7 +306,7 @@
   function installGrowthHandoff() {
     var token = (location.pathname.match(/^\\/track\\/([^/?#]+)/) || [])[1];
     if (!token) return;
-    var pending = false, last = '', latest = null;
+    var requestId = 0, last = '';
     function normalized(url) {
       try {
         var u = new URL(url);
@@ -331,21 +331,20 @@
         box.appendChild(old);
       }
       var identity = target + '|' + String(brief.keyword || '') + '|' + token;
-      if (identity === last) return;
-      last = identity; old.textContent = 'Finding this exact page in your Tracker…';
-      if (pending) return;
-      pending = true;
+      if (identity === last && old.dataset.csIdentity === identity) return;
+      last = identity; old.dataset.csIdentity = identity;
+      var thisRequest = ++requestId; old.textContent = 'Finding this exact page in your Tracker…';
       fetch('/api/tracker-client/' + encodeURIComponent(token) + '/growth', {credentials:'same-origin', cache:'no-store'})
         .then(function(r) { if (!r.ok) throw Error('Tracker lookup unavailable');return r.json(); })
         .then(function(data) {
-          if (identity !== last) return;
+          if (identity !== last || thisRequest !== requestId || !old.isConnected) return;
           old.textContent = '';
           if (data.can_edit !== true) { old.textContent = 'Open the owner Tracker to continue in Growth.'; return; }
           var pages = Array.isArray(data.pages) ? data.pages : [];
           var match = pages.find(function(p) { return normalized(p.url) === target && Number.isSafeInteger(Number(p.id)) && Number(p.id) > 0; });
           if (match) {
             var link = document.createElement('a');
-            var qs = '?page_id=' + encodeURIComponent(match.id) + '&query=' + encodeURIComponent(brief.keyword || '');
+            var qs = '?page_id=' + encodeURIComponent(match.id) + '&query=' + encodeURIComponent(brief.keyword || '') + '&market=' + encodeURIComponent(brief.region || brief.market || '') + '&language=' + encodeURIComponent(brief.language || '');
             link.href = '/track/' + encodeURIComponent(token) + '/growth/auto-research' + qs;
             link.textContent = 'Open this exact page in Growth';
             link.style.cssText = 'display:inline-block;background:#2563eb;color:white;padding:10px 14px;border-radius:7px;font-weight:700;text-decoration:none';
@@ -355,12 +354,11 @@
           } else {
             old.textContent = 'This exact URL is not in this Tracker. Add it there first, or start a separate Free Growth check.';
             var a = document.createElement('a');
-            var qp = new URLSearchParams({url:url,query:String(brief.keyword||''),topic:String(brief.keyword||'')});
+            var qp = new URLSearchParams({url:url,query:String(brief.keyword||''),topic:String(brief.keyword||''),market:String(brief.region||brief.market||''),language:String(brief.language||'')});
             a.href='/free-growth?'+qp.toString();a.textContent=' Open Free Growth for this URL';
             old.appendChild(a);
           }
-        }).catch(function() { if (identity === last) old.textContent = 'Cannot verify the Tracker page right now. No link was generated.'; })
-        .finally(function(){pending=false;});
+        }).catch(function() { if (identity === last && thisRequest === requestId && old.isConnected) old.textContent = 'Cannot verify the Tracker page right now. No link was generated.'; });
     }
     // The Brief is rendered after research and may be reopened. Observe only its actual decision element.
     var observer = new MutationObserver(function() { render(); });
