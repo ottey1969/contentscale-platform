@@ -304,14 +304,14 @@
   // Pre-Write -> Growth: resolve the EXACT existing page against this account's Tracker pages.
   // No URL-only guesses, account switching, publication, or copying internal research into public links.
   function installGrowthHandoff() {
-    var token = (location.pathname.match(/^\\/track\\/([^/?#]+)/) || [])[1];
+    var token = (location.pathname.match(/^\/track\/([^/?#]+)/) || [])[1];
     if (!token) return;
     var requestId = 0, last = '';
     function normalized(url) {
       try {
         var u = new URL(url);
         if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
-        return u.hostname.toLowerCase().replace(/^www\\./, '') + u.pathname.replace(/\\/+$/, '') + u.search;
+        return u.hostname.toLowerCase().replace(/^www\./, '') + u.pathname.replace(/\/+$/, '') + u.search;
       } catch (_) { return ''; }
     }
     function render() {
