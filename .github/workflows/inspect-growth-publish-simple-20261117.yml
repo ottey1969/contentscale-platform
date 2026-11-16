@@ -1,0 +1,14 @@
+name: Inspect Publish and Measure UI entrypoints
+on:
+  push:
+    branches: [fix/growth-publish-measure-simple-20261117]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate markup and client handlers
+        run: |
+          grep -RIn -C 5 --exclude-dir=.git --exclude='package-lock.json' -E 'id=["\x27]growthNextAction|growthNextAction|growthFinalActions|id=["\x27]gscUpdate|Publish and measure' src public | head -250 || true
