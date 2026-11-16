@@ -1,0 +1,25 @@
+name: Verify Growth AI citation and optional GSC actions
+on:
+  push:
+    branches: [fix/growth-evidence-gsc-inline-actions-20261117]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Browser and backend syntax
+        run: |
+          node --check public/growth-automatic-report-ui.js
+          node --check src/growth-outcome.cjs
+      - name: GSC, AI, existing Growth result regression tests
+        run: |
+          node --test tests/growth-ai-gsc-open-check-actions.test.cjs
+          node --test tests/growth-outcome.test.cjs
+          node --test tests/growth-first-screen.test.cjs
+          node --test tests/growth-save-run-scroll-summary.test.cjs
+          node --test tests/growth-prewrite-ai-evidence.test.cjs
