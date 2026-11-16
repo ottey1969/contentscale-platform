@@ -3139,6 +3139,9 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
     ?await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked,previous_case_study_id) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE,$9) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline),_previousCaseStudyId])
     :await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline)]);
   const cs=ins.rows[0];
+  // Ensure the closeout columns even on disposable/staging databases assembled after startup.
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_ended_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_scan_authorized_at TIMESTAMPTZ');
   await pool.query(`UPDATE tracker_pages SET case_study_ended_at=NULL,case_study_scan_authorized_at=NULL,check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,
     next_check_at=CASE WHEN $4::int>0 THEN NOW()+($4::int * INTERVAL '1 day') ELSE NULL END,
     next_ai_reminder_at=CASE WHEN $2::boolean THEN NOW()+($3::int * INTERVAL '1 day') ELSE NULL END
@@ -3948,7 +3951,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/end',async(req,res
     await conn.query('COMMIT');
   }catch(e){await conn.query('ROLLBACK').catch(()=>{});throw e;}finally{conn.release();}
   res.json({success:true,ended:ids.length,ended_at:closed.case_study_ended_at,scan_permission_required:true,
-    message:'Case Study ended on '+new Date(closed.case_study_ended_at).toISOString()+'. Monitoring and scan schedules are stopped. Baseline, evidence and report are saved. Any new manual scan requires separate owner permission.'});
+    message:'Case Study ended on '+new Date(closed.case_study_ended_at).toISOString()+'. Monitoring and scan schedules are stopped. The baseline, evidence and report are kept. Any new manual scan requires separate owner permission.'});
 }catch(e){console.error('[case-study-end]',e.message);res.status(500).json({success:false,error:'The Case Study could not be ended. Nothing was changed.'});}});
 // Explicit approval for ONE new manual scan after the case is closed. It never schedules scanning.
 app.post('/api/tracker-client/:token/pages/:pageId/case-study/authorize-scan',async(req,res)=>{try{
