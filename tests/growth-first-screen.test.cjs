@@ -25,7 +25,7 @@ test('first screen exposes Growth research and real AI answers, without fabricat
  assert.match(growth,/firstBtn\.addEventListener\('click',function\(\)\{run\(\)\}\)/);
  assert.match(growth,/showAiEarly\(\);/);
  assert.match(growth,/growthAiEarly/);
- assert.match(growth,/if\(box\.parentNode&&box\.parentNode\.id==='growthAiEarly'\)form\.open=true/);
+ assert.match(growth,/if\(missing\.length&&box\.parentNode&&box\.parentNode\.id==='growthAiEarly'\)form\.open=true/);
  assert.match(growth,/AI systems are tracked separately/);
  assert.match(growth,/Growth research failed:/);
 });
