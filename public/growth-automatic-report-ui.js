@@ -140,10 +140,16 @@
   var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
   var recent=(x.engines||[]).filter(function(e){return e.checked}).length;
   var total=x.total||(x.engines||[]).length,complete=total>0&&recent===total&&(x.engines||[]).every(function(e){return e.verifiable});
-  var line=node('p',complete?'All '+recent+' AI systems checked with verifiable sources.':'AI systems researched: '+recent+' of '+total+' · '+(total-recent)+' not checked.',box);
+  var pre=c.prewrite_reuse,preItems=pre&&pre.status==='MATCHED'?(pre.items||[]):[];
+  var prePresent=preItems.filter(function(e){return ['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(e.status)}).length;
+  var verifiable=Number(x.verifiable)||0;
+  var line=node('p',prePresent?'Pre-Write writing research: '+prePresent+' of 5 answers available · Growth citation evidence: '+verifiable+' of 5 with source status.':'Growth citation evidence: '+verifiable+' of 5 source-verifiable systems.',box);
+  if(prePresent)node('p','These are different measurements: your Pre-Write answers are kept for writing. Growth only counts an AI citation when the original answer provides a usable RESOURCES section. You do not need to enter the five writing answers again.',box).className='info';
+  var growthObserved=node('p','Growth observations saved: '+recent+' of '+total+' (including any without verifiable sources).',box);
+  growthObserved.className='growth-ai-state';
    line.className='growth-ai-state';line.setAttribute('role','status');
-   var progress=node('div',null,box);progress.className='growth-ai-progress';progress.setAttribute('role','progressbar');progress.setAttribute('aria-label','Verified AI systems research');progress.setAttribute('aria-valuemin','0');progress.setAttribute('aria-valuemax',String(total||5));progress.setAttribute('aria-valuenow',String(recent));
-   var fill=node('span',null,progress);fill.style.width=(total?Math.round(recent*100/total):0)+'%';
+   var progress=node('div',null,box);progress.className='growth-ai-progress';progress.setAttribute('role','progressbar');progress.setAttribute('aria-label','Verified AI systems research');progress.setAttribute('aria-valuemin','0');progress.setAttribute('aria-valuemax',String(total||5));progress.setAttribute('aria-valuenow',String(verifiable));
+   var fill=node('span',null,progress);fill.style.width=(total?Math.round(verifiable*100/total):0)+'%';
    node('p','Gemini with Google Search is checked automatically when configured. ChatGPT, Claude, Perplexity and Copilot require their own real source-backed answers. AI research is optional; Google topic research remains available.',box).className='info';
   if(d.automatic_ai_status)node('p','Automatic Gemini / Google Search: '+(d.automatic_ai_status==='SUCCESS'?'completed and saved':d.automatic_ai_status==='ALREADY_CHECKED'?'existing verified answer reused':d.automatic_ai_status==='RUNNING'?'checking now…':d.automatic_ai_status==='RETRY_LATER'?'retry deferred':d.automatic_ai_status.replace(/_/g,' ').toLowerCase())+'. Gemini grounding is not a Google AI Overview; other providers are not marked checked without their actual answers.',box);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
@@ -154,18 +160,18 @@
    var pw=node('section',null,box);pw.id='growthPrewriteReuse';
    pw.style.cssText='margin:12px 0;padding:12px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1e3a8a';
    node('strong','Pre-Write Brief #'+reused.brief_id+' · original AI answers',pw);
-   node('p','Used for this exact page and question: '+reused.reused_count+' source-backed answer(s) reused; '+(reused.editorial_count||0)+' editorial-only answer(s). Growth keeps your newer answers when already saved.',pw);
+   node('p',prePresent+' existing writing answer(s) retained; '+reused.reused_count+' also eligible for the Growth citation comparison. No need to paste existing answers again. Source references are optional for writing, but necessary to measure citations.',pw);
    var pwList=node('ul',null,pw);
    (reused.items||[]).forEach(function(item){
     var description=item.status==='REUSED_SOURCE_BACKED'?'Reused in Growth (source list available)':
-     item.status==='EDITORIAL_ONLY'?'Writing research only · source evidence needs a new answer':
-     item.status==='OUTDATED'?'Outdated · run this AI system again':
+     item.status==='EDITORIAL_ONLY'?'Available for writing · citation sources not established (no re-entry required)':
+     item.status==='OUTDATED'?'Saved writing evidence · older than 14 days for citation measurement':
      item.status==='INVALID'?'Invalid · needs a valid answer':
-     item.status==='EXCERPT_ONLY'?'Only a short excerpt saved · original full answer needed':
+     item.status==='EXCERPT_ONLY'?'Saved writing excerpt · not a complete citation observation':
      'Not researched in this Brief';
     node('li',item.label+': '+description+(item.checked_at?' · '+String(item.checked_at).slice(0,10):''),pw);
    });
-   node('small','Pre-Write is writing research, not an API-verified citation measurement. Sources are parsed from the original answer, not invented from source leads. Missing answers can be added below.',pw);
+   node('small','Pre-Write answers stay available as research. To measure AI citations, a separate response with genuine cited sources is needed; any refresh is optional and explicitly initiated.',pw);
   }
 
   var history=new Map((c.prior_checks||[]).map(function(e){return [e.id,e.checked_at]}));
@@ -173,7 +179,8 @@
    var previous=history.get(e.id),when=e.checked_at||previous;
    // Validation contract: an invalid answer is named with its reason and not counted; a topic warning is shown, not hidden.
    var bad=(x.invalid_engines||[]).filter(function(i){return i.id===e.id})[0];
-   var label=e.checked?(!e.verifiable?'Checked, sources not verifiable':e.exact_page_cited?'Checked, cites this exact page':e.own_site_cited?'Checked, cites this website':'Checked, no citation to this website'):bad?'INVALID, not counted — '+String(bad.message||bad.reason||''):previous?'Previously checked, expired':'Not checked for this search';
+   var pwRecord=preItems.find(function(p){return p.engine===e.id}),hasPre=!!(pwRecord&&['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(pwRecord.status));
+   var label=e.checked?(!e.verifiable?'Growth answer saved, but citation sources not verifiable':e.exact_page_cited?'Growth sources cite this exact page':e.own_site_cited?'Growth sources cite this website':'Growth sources checked; no citation to this website'):bad?'Invalid Growth answer — '+String(bad.message||bad.reason||''):hasPre?'Pre-Write answer already available for writing; citation evidence not established':previous?'Previous Growth check expired':'No Pre-Write or Growth answer found';
    var li=node('li',e.label+': '+label+(when?' · '+String(when).slice(0,10):'')+(e.checked&&e.verifiable?' · '+e.sources+' cited sources':'')+(e.topic_warning?' · Check the topic: this answer shares no word with “'+String(c.search_term||'')+'”. It counts (synonyms are fine); replace it if it answers another question.':''),ul);
    if(bad||e.topic_warning)li.style.color=bad?'#b42318':'#92400e';
   });
@@ -185,26 +192,48 @@
   if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
   var goStep=node('p',null,box),continueLink=node('a','Continue to choose page improvements →',goStep);continueLink.href='#growthGapChoice';
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
+  var existing=new Set(preItems.filter(function(item){return ['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(item.status)}).map(function(item){return item.engine}));
+  (x.engines||[]).forEach(function(e){if(e.checked)existing.add(e.id)});
+  var missing=(c.engines||[]).filter(function(e){return !existing.has(e.id)});
   var form=node('details',null,box);form.className='growth-ai-manual';
-  if(box.parentNode&&box.parentNode.id==='growthAiEarly')form.open=true;
-  node('summary','Research another AI system · Copy prompt and add a real answer (optional)',form);
-  node('p','Copy the prompt, paste it into a new chat with web search on, then paste the complete answer (including RESOURCES) at the AI system you used.',form);
-  // The question the prompt asks: Google's own question for this search term, the best match (owner 2026-11-12).
-  if(c.ai_question&&c.ai_question.text){var qa=node('p',null,form);qa.id='growthAiQuestionAsked';node('strong','Question asked: ',qa);qa.appendChild(document.createTextNode('“'+c.ai_question.text+'” '));
-   node('small','· '+(c.ai_question.label||'Google')+' · the best real Google question for “'+c.search_term+'”',qa)}
-  var pr=node('textarea',null,form);pr.rows=5;pr.readOnly=true;pr.value=c.prompt;pr.style.width='100%';
-  var cp=node('button','Copy prompt',form);cp.type='button';cp.addEventListener('click',function(){pr.select();if(navigator.clipboard)navigator.clipboard.writeText(pr.value);cp.textContent='Copied ✓'});
-  var sel=node('select',null,form);(c.engines||[]).forEach(function(e){var o=node('option',e.label,sel);o.value=e.id});
-  var ta=node('textarea',null,form);ta.rows=6;ta.style.width='100%';ta.placeholder='Paste the complete AI answer here';ta.maxLength=c.max_paste||20000;
-  var go=node('button','Analyse answer',form);go.type='button';var st=node('small',null,form);st.setAttribute('role','status');
+  if(missing.length&&box.parentNode&&box.parentNode.id==='growthAiEarly')form.open=true;
+  node('summary',missing.length?'Add a missing AI-system answer (optional)':'All five writing answers are present · no input needed',form);
+  node('p',missing.length?'Already saved answers are protected. Enter only a missing system, or deliberately unlock replacement below.':'All existing Pre-Write answers remain available for writing. You do not need to enter them again. For updated citation evidence, explicitly choose to replace a system.',form);
+  var changeBtn=node('button','Replace or refresh an existing AI answer (optional)',form);changeBtn.type='button';
+  changeBtn.className='ghost';changeBtn.style.cssText='background:#475569;color:white;margin:8px 0';
+  var unlocked=false;
+  var editArea=node('div',null,form);
+  var selector=node('select',null,editArea);
+  var promptArea=node('textarea',null,editArea);promptArea.rows=5;promptArea.readOnly=true;promptArea.value=c.prompt;promptArea.style.width='100%';
+  var cp=node('button','Copy research prompt',editArea);cp.type='button';cp.addEventListener('click',function(){promptArea.select();if(navigator.clipboard)navigator.clipboard.writeText(promptArea.value);cp.textContent='Copied ✓'});
+  var answer=node('textarea',null,editArea);answer.rows=6;answer.style.width='100%';answer.placeholder='Paste a new complete AI answer including RESOURCES';answer.maxLength=c.max_paste||20000;
+  var go=node('button','Analyse and save this answer',editArea);go.type='button';
+  var feedback=node('small',null,editArea);feedback.setAttribute('role','status');
+  function updateChoices(){
+   selector.textContent='';
+   var options=(c.engines||[]).filter(function(e){return unlocked||!existing.has(e.id)});
+   options.forEach(function(e){var op=node('option',e.label,selector);op.value=e.id});
+   editArea.hidden=options.length===0;
+   if(!options.length)feedback.textContent='Nothing missing. Existing answers are protected.';
+  }
+  changeBtn.addEventListener('click',function(){
+   unlocked=!unlocked;
+   changeBtn.textContent=unlocked?'Cancel replacement · protect existing answers':'Replace or refresh an existing AI answer (optional)';
+   updateChoices();
+   if(unlocked)feedback.textContent='Replacement enabled for this action only. Select the exact AI system you want to update; saved evidence changes only after Analyse and save.';
+   else feedback.textContent='Existing answers protected. Only missing systems can be entered.';
+  });
+  updateChoices();
   go.addEventListener('click',async function(){
-   if(!ta.value.trim()){st.textContent='Paste the answer first.';return}
-   go.disabled=true;st.textContent='Analysing…';
-   try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-answer?page_id='+encodeURIComponent(id),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-     body:JSON.stringify({engine:sel.value,text:ta.value,query:c.search_term,page_url:c.page_url,google_urls:((d.search_discovery&&d.search_discovery.leads)||[]).map(function(l){return l.url})})});
-    var j=await r.json();if(!j.success)throw Error(j.error||j.code||'Not analysed');
+   if(!answer.value.trim()){feedback.textContent='Paste the new answer first.';return}
+   if(existing.has(selector.value)&&!unlocked){feedback.textContent='Existing answer protected. Use the explicit replacement control first.';return}
+   go.disabled=true;feedback.textContent='Analysing…';
+   try{
+    var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-answer?page_id='+encodeURIComponent(id),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+     body:JSON.stringify({engine:selector.value,text:answer.value,query:c.search_term,page_url:c.page_url,replace_existing:unlocked&&existing.has(selector.value),google_urls:((d.search_discovery&&d.search_discovery.leads)||[]).map(function(l){return l.url})})});
+    var j=await r.json();if(!r.ok||!j.success)throw Error(j.error||j.code||'Not analysed');
     if(j.ai_check){d.ai_check=j.ai_check;if(last)last.ai_check=j.ai_check;renderAiCheck(box,d)}
-   }catch(e){st.textContent=String(e.message||e);go.disabled=false}
+   }catch(e){feedback.textContent=String(e.message||e);go.disabled=false}
   });
  }
  function render(d){
