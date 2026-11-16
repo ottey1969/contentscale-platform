@@ -129,7 +129,10 @@ function otherPrompt(raw){
 // fewer than three words. An answer that shares no word with the search term still counts (synonyms), with a warning.
 const contract=require('../prewrite-ai-answer-research.cjs');
 const GROWTH_ECHO=['answer this exact user query as a real user would receive the answer','use the query exactly as written',
- 'return only these two sections','do not add mentioned, recommended','final validation: answer the query','actually answer the query. do not explain these instructions'];
+ 'return only these two sections','do not add mentioned, recommended','final validation: answer the query','actually answer the query. do not explain these instructions',
+ 'answer this exact customer question as an independent user would receive it',
+ 'do not append self-assessed mentioned or recommended fields',
+ 'let its wording determine the intent'];
 // question: the customer question asked to the AI systems for this search term (an answer to it answers the search).
 function validateGrowthAnswer(answerText,query,question){
  const low=String(answerText||'').toLowerCase();
