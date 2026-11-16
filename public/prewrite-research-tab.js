@@ -301,7 +301,92 @@
     window.addEventListener('pagehide', function () { clearInterval(formSync); }, { once: true });
     return true;
   }
+  // Pre-Write -> Growth: resolve the EXACT existing page against this account's Tracker pages.
+  // No URL-only guesses, account switching, publication, or copying internal research into public links.
+  function installGrowthHandoff() {
+    var token = (location.pathname.match(/^\\/track\\/([^/?#]+)/) || [])[1];
+    if (!token) return;
+    var pending = false, last = '', latest = null;
+    function normalized(url) {
+      try {
+        var u = new URL(url);
+        if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
+        return u.hostname.toLowerCase().replace(/^www\\./, '') + u.pathname.replace(/\\/+$/, '') + u.search;
+      } catch (_) { return ''; }
+    }
+    function render() {
+      var brief = window._pwbCurrentBrief;
+      var cd = brief && brief.content_decision || {};
+      var url = String(cd.closest_existing_url || '');
+      var treatment = String(cd.recommended_treatment || '').toUpperCase();
+      var box = $('pwbWhatToDo'), target = normalized(url);
+      var old = $('cs-prewrite-to-growth');
+      if (!box || !target || !/^(EXPAND_EXISTING_PAGE|OPTIMIZE_EXISTING_PAGE|IMPROVE_EXISTING_PAGE)$/.test(treatment)) {
+        if (old) old.remove();
+        return;
+      }
+      if (!old) {
+        old = document.createElement('div');old.id = 'cs-prewrite-to-growth';
+        old.style.cssText = 'margin:12px 0;padding:12px;border:1px solid #64748b;border-radius:8px';
+        box.appendChild(old);
+      }
+      var identity = target + '|' + String(brief.keyword || '') + '|' + token;
+      if (identity === last) return;
+      last = identity; old.textContent = 'Finding this exact page in your Tracker…';
+      if (pending) return;
+      pending = true;
+      fetch('/api/tracker-client/' + encodeURIComponent(token) + '/growth', {credentials:'same-origin', cache:'no-store'})
+        .then(function(r) { if (!r.ok) throw Error('Tracker lookup unavailable');return r.json(); })
+        .then(function(data) {
+          if (identity !== last) return;
+          old.textContent = '';
+          if (data.can_edit !== true) { old.textContent = 'Open the owner Tracker to continue in Growth.'; return; }
+          var pages = Array.isArray(data.pages) ? data.pages : [];
+          var match = pages.find(function(p) { return normalized(p.url) === target && Number.isSafeInteger(Number(p.id)) && Number(p.id) > 0; });
+          if (match) {
+            var link = document.createElement('a');
+            var qs = '?page_id=' + encodeURIComponent(match.id) + '&query=' + encodeURIComponent(brief.keyword || '');
+            link.href = '/track/' + encodeURIComponent(token) + '/growth/auto-research' + qs;
+            link.textContent = 'Open this exact page in Growth';
+            link.style.cssText = 'display:inline-block;background:#2563eb;color:white;padding:10px 14px;border-radius:7px;font-weight:700;text-decoration:none';
+            old.appendChild(link);
+            var note = document.createElement('small');note.textContent = ' ' + url + ' · editorial review only; nothing is published.';
+            old.appendChild(note);
+          } else {
+            old.textContent = 'This exact URL is not in this Tracker. Add it there first, or start a separate Free Growth check.';
+            var a = document.createElement('a');
+            var qp = new URLSearchParams({url:url,query:String(brief.keyword||''),topic:String(brief.keyword||'')});
+            a.href='/free-growth?'+qp.toString();a.textContent=' Open Free Growth for this URL';
+            old.appendChild(a);
+          }
+        }).catch(function() { if (identity === last) old.textContent = 'Cannot verify the Tracker page right now. No link was generated.'; })
+        .finally(function(){pending=false;});
+    }
+    // The Brief is rendered after research and may be reopened. Observe only its actual decision element.
+    var observer = new MutationObserver(function() { render(); });
+    observer.observe(document.body || document.documentElement, {childList:true,subtree:true});
+    render();
+    // Growth -> Pre-Write: prefill only after validating that the requested URL belongs to this Tracker.
+    var args = new URLSearchParams(location.search);
+    if (args.get('prewrite') === '1' && args.get('page_id') && args.get('keyword')) {
+      fetch('/api/tracker-client/' + encodeURIComponent(token) + '/growth', {credentials:'same-origin',cache:'no-store'})
+        .then(function(r){return r.ok?r.json():null;}).then(function(d){
+          if (!d || d.can_edit !== true) return;
+          var expected = String(args.get('page_id'));
+          var page = (d.pages||[]).find(function(p){return String(p.id)===expected && normalized(p.url)===normalized(args.get('url'));});
+          if (!page) return;
+          var input = $('pwbKeyword'), modal = $('prewriteBriefModal');
+          if (!input || !modal) return;
+          input.value = args.get('keyword').slice(0,300);
+          input.dispatchEvent(new Event('input', {bubbles:true}));
+          modal.style.display='flex';
+          modal.removeAttribute('hidden');
+        }).catch(function(){});
+    }
+  }
+
   function boot() {
+    installGrowthHandoff();
     if (install()) return;
     // The inputs are part of the page's own HTML; a short, bounded wait covers late rendering only.
     var observer = new MutationObserver(function () { if (install()) observer.disconnect(); });
