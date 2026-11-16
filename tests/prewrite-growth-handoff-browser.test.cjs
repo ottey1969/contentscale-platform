@@ -5,7 +5,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),http=requir
 let chromium=null;try{({chromium}=require('playwright'))}catch(e){}
 const TRACKED='https://roof.example/24-hour-emergency-roof-repair-nj/';
 const OTHER='https://roof.example/different-page/';
-const html='<!doctype html><html><head><script defer src="/prewrite-ai-answer-research.js"></script><script defer src="/prewrite-research-tab.js"></script></head>'+
+const html='<!doctype html><html><head><meta charset="utf-8"><script defer src="/prewrite-ai-answer-research.js"></script><script defer src="/prewrite-research-tab.js"></script></head>'+
   '<body><div id="prewriteBriefModal" style="display:block"><input id="pwbKeyword" value="24 Hour Emergency Roof Repair NJ"><input id="pwbLanguage" value="English"><input id="pwbRegion" value="us">'+
   '<select id="pwbGoogleSource"><option value="gemini">Gemini</option></select>'+
   '<p>AI Answer Research — Write for Citation Potential</p><div class="pwb-ai-five-grid">'+
