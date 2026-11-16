@@ -469,10 +469,10 @@
   if(main.getAttribute('data-owner-draft')==='true' && d.url){
    var pwSection=section('Need deeper content research?');
    node('p','Open this exact page and working question in Pre-Write. Review existing HTML before adding a new section.',pwSection);
-   var params=new URLSearchParams({prewrite:'1',page_id:String(id),url:String(d.url),
-     keyword:String(runQuery||d.search_discovery?.target_query||d.practical_growth_plan?.focus_query||'')});
+   var params='prewrite=1&page_id='+encodeURIComponent(id)+'&url='+encodeURIComponent(d.url)+
+     '&keyword='+encodeURIComponent(String(runQuery||d.search_discovery?.target_query||d.practical_growth_plan?.focus_query||''));
    var prewrite=node('a','Open this page in Pre-Write',pwSection);
-   prewrite.href='/track/'+encodeURIComponent(token)+'?'+params.toString();
+   prewrite.href='/track/'+encodeURIComponent(token)+'?'+params;
    prewrite.style.cssText='display:inline-block;background:#2563eb;color:#fff;padding:9px 13px;border-radius:7px;text-decoration:none;font-weight:700';
   }
   var discovery=d.search_discovery||{};
