@@ -8,7 +8,7 @@ const ai=require('./growth-free/ai-answers.cjs');
 const AGE_DAYS=14;
 const ENGINES=[['google_aio','google'],['chatgpt','chatgpt'],['perplexity','perplexity'],['claude','claude'],['copilot','copilot']];
 const norm=s=>String(s||'').trim().replace(/\s+/g,' ').toLowerCase();
-const locale=s=>String(s||'').trim().toLowerCase().split(/[^a-z]/)[0];
+const locale=s=>{const v=String(s||'').trim().toLowerCase().split(/[^a-z]/)[0];return ({english:'en',dutch:'nl',nederlands:'nl',spanish:'es',espanol:'es',french:'fr',german:'de',united:'us',unitedstates:'us'})[v]||v};
 const time=x=>{const n=Date.parse(x||'');return Number.isFinite(n)?n:null};
 function exactQuestion(brief){
  const r=brief?.prewrite_ai_answer_research||{};
