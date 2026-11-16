@@ -45917,7 +45917,7 @@ function authorizeCaseStudyScan(pageId){
   var p=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
   if(!p.case_study_ended_at)return;
   var day=new Date(p.case_study_ended_at).toLocaleString('en-GB');
-  if(!confirm('The Case Study ended on '+day+'.\n\nAllow exactly ONE manual scan of '+(p.url||'this page')+'?\n\nMonitoring remains off. This does not restart the Case Study or change the historical baseline.'))return;
+  if(!confirm('The Case Study ended on '+day+'.\\n\\nAllow exactly ONE manual scan of '+(p.url||'this page')+'?\\n\\nMonitoring remains off. This does not restart the Case Study or change the historical baseline.'))return;
   api('/pages/'+pageId+'/case-study/authorize-scan','POST',{confirm:'AUTHORIZE_ONE_SCAN'}).then(function(d){
     if(!d||!d.success)throw new Error((d&&d.error)||'Permission not saved');
     if(typeof loadPages==='function')loadPages();
