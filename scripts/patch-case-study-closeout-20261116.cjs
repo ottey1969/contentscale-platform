@@ -121,3 +121,5 @@ once("function endCaseStudy(pageId){",
 function endCaseStudy(pageId){`);
 fs.writeFileSync(file,s);
 console.log('Applied '+count+' controlled changes to canonical Tracker source');
+
+// Feature-branch-only validation and controlled application.
