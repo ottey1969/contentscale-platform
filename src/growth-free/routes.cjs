@@ -1309,7 +1309,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const aq=aiQuestionOf(row);
   const summary=ai.summarizeAiAnswers(answers,{pageUrl:row.url,googleUrls:googleUrlsOf(row),query:term,question:aq&&aq.text});
   const gap=summary.verifiable>summary.cited_by?withStepTwo(await aiGapFor(row,answers,{wait:waitGap}),row.summary&&row.summary.gaps):null;
-  return {search_term:term,ai_question:aq,prompt:ai.directPrompt(term,aq&&aq.text),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,summary,gap};
+  return {search_term:term,ai_question:aq,prompt:ai.growthVerificationPrompt(term,aq&&aq.text),engines:ai.ENGINES,max_paste:ai.MAX_PASTE,answers,summary,gap};
  }
  // With an uploaded Search Console export, the "not used" limitation says what was actually used.
  function withGscLimits(summary,gscPart){
