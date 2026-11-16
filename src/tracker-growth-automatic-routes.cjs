@@ -6,6 +6,7 @@ const {publicationReadiness}=require('./growth-publication-readiness.cjs');
 const {reconcileOutcome}=require('./growth-outcome.cjs');
 const {annotateAiVisibility,MAX_AGE_DAYS:AI_MAX_AGE_DAYS}=require('./growth-ai-relevance.cjs');
 const aiAnswers=require('./growth-free/ai-answers.cjs');
+const {loadPrewriteGrowthAnswers}=require('./growth-prewrite-ai-evidence.cjs');
 const {groundedGeminiAnswer}=require('./growth-free/auto-ai-answers.cjs');
 const storedResearch=require('./growth-research-report-store.cjs');
 const {fetchPublicGrowthHtml,RESEARCH_FETCH}=require('./growth-public-html-reader.cjs');
@@ -513,12 +514,31 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
  async function aiCheckFor({v,term,target,googleUrls=[],waitGap=false}){
   const answers=await loadAiAnswers({clientId:v.clientId,pageId:v.id,query:term});
   const fresh=answers.filter(a=>Date.now()-Date.parse(a.created_at)<=AI_MAX_AGE_DAYS*86400000);
+  let prewrite=null;
+  // Tenant-scoped Pre-Write research is available only to the owner; never to public viewers.
+  if(v.canEdit===true){
+   try{
+    const pageMarket=typeof loadPageMarkets==='function'?await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null):null;
+    const siteMarket=typeof loadSiteMarkets==='function'?await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null):null;
+    const briefMarket=typeof loadPrewriteMarket==='function'?await Promise.resolve(loadPrewriteMarket({clientId:v.clientId,keywords:[v.page.keyword]})).catch(()=>null):null;
+    const market=v.marketOverride||pageMarket?.countries?.[0]||briefMarket?.countries?.[0]||siteMarket?.countries?.[0]||null;
+    const language=pageMarket?.language||briefMarket?.language||siteMarket?.language||'';
+    prewrite=await loadPrewriteGrowthAnswers(pool,{clientId:v.clientId,pageUrl:v.page.url,query:term,market,language});
+   }catch(e){console.warn('[growth-prewrite-ai] Read unavailable:',String(e?.code||e?.message||'').slice(0,90))}
+  }
+  // Pasted Growth answers always take precedence. Saved Pre-Write content is
+  // read only; no implicit writes or claims of API-verified answer provenance.
+  const already=new Set(fresh.map(x=>x.engine));
+  const reused=(prewrite?.rows||[]).filter(x=>!already.has(x.engine));
+  const usable=[...fresh,...reused];
   const aq=await aiQuestionFor(v,term),question=aq&&aq.text;
-  const summary=aiAnswers.summarizeAiAnswers(fresh,{pageUrl:target,googleUrls,query:term,question});
-  const gap=summary.verifiable>summary.cited_by?await aiGapFor({key:'tracker:'+v.clientId+':'+v.id,answers:fresh,pageUrl:target,query:term,wait:waitGap}).catch(()=>null):null;
+  const summary=aiAnswers.summarizeAiAnswers(usable,{pageUrl:target,googleUrls,query:term,question});
+  const gap=summary.verifiable>summary.cited_by?await aiGapFor({key:'tracker:'+v.clientId+':'+v.id,answers:usable,pageUrl:target,query:term,wait:waitGap}).catch(()=>null):null;
   return {gap,search_term:term,ai_question:aq,page_url:target,prompt:aiAnswers.directPrompt(term,question),engines:aiAnswers.ENGINES,max_paste:aiAnswers.MAX_PASTE,
    can_paste:v.canEdit===true,older_answers_not_counted:answers.length-fresh.length,max_age_days:AI_MAX_AGE_DAYS,
    prior_checks:aiAnswers.summarizeAiAnswers(answers,{pageUrl:target,googleUrls,query:term,question}).engines.map(e=>({id:e.id,checked_at:e.checked_at||null})),
+   prewrite_reuse:prewrite?{status:prewrite.status,brief_id:prewrite.brief_id,original_query:prewrite.original_query,
+    items:prewrite.items,reused_count:reused.length,editorial_count:prewrite.editorial_count||0,note:prewrite.note}:null,
    summary};
  }
  // The AI check before the research has finished: for the page's tracked keyword, optional, never running research.

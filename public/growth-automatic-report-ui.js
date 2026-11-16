@@ -147,6 +147,27 @@
    node('p','Gemini with Google Search is checked automatically when configured. ChatGPT, Claude, Perplexity and Copilot require their own real source-backed answers. AI research is optional; Google topic research remains available.',box).className='info';
   if(d.automatic_ai_status)node('p','Automatic Gemini / Google Search: '+(d.automatic_ai_status==='SUCCESS'?'completed and saved':d.automatic_ai_status==='ALREADY_CHECKED'?'existing verified answer reused':d.automatic_ai_status==='RUNNING'?'checking now…':d.automatic_ai_status==='RETRY_LATER'?'retry deferred':d.automatic_ai_status.replace(/_/g,' ').toLowerCase())+'. Gemini grounding is not a Google AI Overview; other providers are not marked checked without their actual answers.',box);
   node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
+  // Saved Pre-Write research is visible on this first screen; editorial-only answers
+  // are explicitly not counted as source-backed citations in the Growth gap.
+  var reused=c.prewrite_reuse;
+  if(reused&&reused.status==='MATCHED'){
+   var pw=node('section',null,box);pw.id='growthPrewriteReuse';
+   pw.style.cssText='margin:12px 0;padding:12px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1e3a8a';
+   node('strong','Pre-Write Brief #'+reused.brief_id+' · original AI answers',pw);
+   node('p','Used for this exact page and question: '+reused.reused_count+' source-backed answer(s) reused; '+(reused.editorial_count||0)+' editorial-only answer(s). Growth keeps your newer answers when already saved.',pw);
+   var pwList=node('ul',null,pw);
+   (reused.items||[]).forEach(function(item){
+    var description=item.status==='REUSED_SOURCE_BACKED'?'Reused in Growth (source list available)':
+     item.status==='EDITORIAL_ONLY'?'Writing research only · source evidence needs a new answer':
+     item.status==='OUTDATED'?'Outdated · run this AI system again':
+     item.status==='INVALID'?'Invalid · needs a valid answer':
+     item.status==='EXCERPT_ONLY'?'Only a short excerpt saved · original full answer needed':
+     'Not researched in this Brief';
+    node('li',item.label+': '+description+(item.checked_at?' · '+String(item.checked_at).slice(0,10):''),pw);
+   });
+   node('small','Pre-Write is writing research, not an API-verified citation measurement. Sources are parsed from the original answer, not invented from source leads. Missing answers can be added below.',pw);
+  }
+
   var history=new Map((c.prior_checks||[]).map(function(e){return [e.id,e.checked_at]}));
   var ul=node('ul',null,box);(x.engines||[]).forEach(function(e){
    var previous=history.get(e.id),when=e.checked_at||previous;
@@ -1056,7 +1077,7 @@
  async function showAiEarly(){
   var early=document.getElementById('growthAiEarly');if(!early||early.childNodes.length)return;
   try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-check?page_id='+encodeURIComponent(id)+runParams,{credentials:'same-origin',cache:'no-store'});
-   var j=await r.json();if(!j.success||!j.ai_check)return;
+   var j=await r.json();if(!j.success||!j.ai_check||early.childNodes.length)return;
    var box=node('section',null,early);node('h2','AI answers for “'+j.ai_check.search_term+'” — optional',box);
    renderAiCheck(box,{ai_check:j.ai_check});
   }catch(e){}
@@ -1078,7 +1099,7 @@
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
-   last=result;render(result);pointHandoff(result);firstProgress('Growth research finished. Review the report below and the five AI system states.',false);if(owner)triggerAutomaticAi(result);
+   last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Growth research finished. Review the report below and the five AI system states.',false);if(owner)triggerAutomaticAi(result);
   }catch(e){firstProgress('Growth research failed: '+String(e.message||e)+'. No completed report was saved.',false);status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false
   }finally{document.getElementById('retryResearch').disabled=false;if(status.className==='working')status.className='';if(status.removeAttribute)status.removeAttribute('aria-busy')}
@@ -1095,7 +1116,7 @@
    var saved=await response.json();
    if(!response.ok||saved.success!==true)throw Error(saved.code||'SAVED_REPORT_UNAVAILABLE');
    if(saved.found&&saved.report&&saved.report.success===true){
-    last=saved.report;render(saved.report);pointHandoff(saved.report);if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
+    last=saved.report;render(saved.report);pointHandoff(saved.report);showAiEarly();if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
     status.textContent='Saved research restored ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new scan was run.';
     firstProgress('Saved report loaded ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new research ran. Press Run Growth above to refresh.',false);
     document.getElementById('retryResearch').hidden=false;
