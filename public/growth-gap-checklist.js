@@ -97,6 +97,32 @@
   var actions=el('p',null,box),status=el('p',null,box,'small'),out=el('div',null,box);
   if(typeof options.write==='function'&&list.writing_allowed!==false){
    var w=el('button','Write selected with AI (concepts for review)',actions);w.type='button';w.style.cssText='background:#2563eb;color:white;font-weight:700';
+   // Fresh research is a required safe next step when headings have changed.
+   var staleBlocked=false,staleButton=null;
+   function showStaleRefresh(message){
+    staleBlocked=true;w.disabled=true;w.textContent='Page changed · refresh research first';w.style.background='#94a3b8';
+    status.textContent='Your page changed since this research. No outdated suggestions were written. Your selection is preserved.';
+    if(staleButton)return;
+    var panel=el('section',null,out,'growth-stale-refresh');
+    panel.style.cssText='margin:12px 0;padding:14px;border:1px solid #2563eb;border-radius:10px;background:#eff6ff';
+    el('strong','Next: refresh research for this updated page',panel);
+    if(message)el('p',message,panel,'small');
+    el('p','Growth will recheck the current page and source pages. Existing choices are saved and matching topics are offered again for your approval.',panel);
+    staleButton=el('button','Refresh research for this page →',panel);staleButton.type='button';
+    staleButton.style.cssText='background:#1d4ed8;color:white;border:0;border-radius:8px;padding:10px 14px;font-weight:700';
+    var progress=el('p',null,panel,'small');progress.setAttribute('role','status');progress.setAttribute('aria-live','polite');
+    staleButton.addEventListener('click',async function(){
+     staleButton.disabled=true;staleButton.textContent='Refreshing research…';progress.textContent='Starting research on the updated page…';
+     try{
+      if(typeof options.rerunResearch!=='function')throw Error('Refresh is unavailable in this view. Open the owner Growth page.');
+      await options.rerunResearch();
+      progress.textContent='Research complete. Review the updated topics and approve the selection.';
+     }catch(e){
+      progress.textContent='Refresh failed: '+String(e&&e.message||e)+'. Your existing selection remains saved.';
+      staleButton.disabled=false;staleButton.textContent='Retry refresh research →';
+     }
+    });
+   }
    if(!document.getElementById('growthWriteAnimation')){var css=el('style',null,document.head);css.id='growthWriteAnimation';css.textContent='@keyframes growthWritePulse{0%,100%{opacity:1}50%{opacity:.55}}button[aria-busy="true"]{animation:growthWritePulse 1s ease-in-out infinite;cursor:progress}@media(prefers-reduced-motion:reduce){button[aria-busy="true"]{animation:none}}'}
    el('small',' Your whole selection is kept; each run writes the next 4 not written yet. Page elements are added by the editor. Nothing is published.',actions);
    var finish=null; // The single primary CMS action lives in the Finish section below.
@@ -108,6 +134,7 @@
     try{var r=await options.write(p.map(function(x){return x.id}));
      if(r&&r.code==='WRITING_IN_PROGRESS'){status.textContent='Concepts for this list are being written right now (started '+(r.run&&r.run.started_at||'')+'). Wait a moment and reload; nothing is written twice.';return}
      if(r&&r.code==='SELECTION_ALREADY_WRITTEN'){w.textContent='Already written';w.disabled=true;ready(r.last_run&&r.last_run.cms_url);status.textContent='Everything you selected has been written already.'+(r.last_run&&r.last_run.cms_url?' The latest concepts are in the CMS package.':'');return}
+     if(r&&['PAGE_HEADINGS_CHANGED','PAGE_CHANGED_SINCE_RESEARCH_RERUN_RESEARCH','PAGE_NOT_READABLE_NOW_RERUN_RESEARCH'].includes(r.code)){showStaleRefresh(r.error||'The original headings no longer match this page.');return}
      if(!r||r.success===false)throw Error((r&&(r.error||r.reason||r.code))||'Writing not available');
      if(r.stored===true&&!r.storage_error){dl.hidden=false;
       (r.sections||[]).forEach(function(s){if(s.item_id){written.ids.add(String(s.item_id));(written.sections[String(s.item_id)]=written.sections[String(s.item_id)]||[]).push(s)}});mark()}
@@ -128,8 +155,8 @@
      (r.unlinked_sections||[]).forEach(function(x){el('p','Not linked to a selected item and not used: “'+x.h2+'” — '+x.reason,out,'small')});
      if(r.new_page_package&&r.new_page_package.url){var np=el('a','Download the new page package (Markdown with the evidence dossier)',el('p',null,out));np.href=r.new_page_package.url}
      if(r.cms_handoff&&r.cms_handoff.url)ready(r.cms_handoff.url)
-    }catch(e){status.textContent='Not written: '+String(e.message||e)+'. Your selection and the research are kept; you can download the brief.'}
-    finally{w.removeAttribute('aria-busy');if(w.textContent!=='Writing complete'&&w.textContent!=='Already written'){w.disabled=false;w.textContent='Write next selected topics';w.style.background='#2563eb'}}
+    }catch(e){var message=String(e&&e.message||e);if(/PAGE_HEADINGS_CHANGED|PAGE_CHANGED_SINCE_RESEARCH|PAGE_NOT_READABLE_NOW_RERUN_RESEARCH|headings changed since the research|page changed since the research/i.test(message))showStaleRefresh(message);else status.textContent='Not written: '+message+'. Your selection and the research are kept; you can download the brief.'}
+    finally{w.removeAttribute('aria-busy');if(!staleBlocked&&w.textContent!=='Writing complete'&&w.textContent!=='Already written'){w.disabled=false;w.textContent='Write next selected topics';w.style.background='#2563eb'}}
    });
   }
   // The editor's first action is writing. The brief is a secondary artifact, available only after
