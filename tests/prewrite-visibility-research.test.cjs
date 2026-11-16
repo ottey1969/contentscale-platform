@@ -13,7 +13,7 @@ test('both Google Search and AI provide distinct discoverable pages',()=>{
 test('both surfaces read original page content, retaining failures and provenance',async()=>{
  const read=await readPrewriteVisibility({googleText:google,aiResearch,fetchHtml:async url=>{
   if(url.includes('contractor'))throw Object.assign(Error('offline'),{code:'TEST_OFFLINE'});
-  return {html:'<html><h1>Emergency Roof Repair</h1><h2>What to do immediately</h2><p>Keep people out of dangerous areas and contact a qualified roofing provider for inspection.</p><p>Document visible water damage before authorizing work.</p></html>',truncated:false};
+  return {html:'<html><h1>Emergency Roof Repair</h1><h2>What to do immediately</h2><p>Keep people out of dangerous areas and contact a qualified roofing provider for inspection. When a leak is active during heavy weather, avoid entering a room with exposed wiring or damaged ceiling materials. Move valuables out of the affected area only when it is safe to do so.</p><p>Document visible water damage before authorizing work. Photograph the conditions without climbing onto a damaged roof. Ask the roofing professional to explain temporary protection, inspection findings and the options for a lasting repair.</p></html>',truncated:false};
  }});
  assert.equal(read.google.discovered,2);
  assert.equal(read.ai.discovered,1);
