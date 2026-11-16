@@ -34,6 +34,28 @@
   }catch{return node('span',label,parent)}
  }
  var researchDetails=null;
+ // First-screen research actions; distinguish choosing a question from running a scan.
+ var questionBox=document.getElementById('customerQuestion'),firstPanel=null,firstBtn=null,firstState=null;
+ if(questionBox){
+  firstPanel=node('section',null);firstPanel.id='growthFirstResearchActions';
+  firstPanel.style.cssText='margin:12px 0;padding:16px;border:1px solid #2563eb;border-radius:10px;background:#eff6ff;color:#172554';
+  node('h2','Growth research · start here',firstPanel);
+  node('p','Selecting a customer question is not a completed research run. Research your page and live competitors, then add real source-backed AI answers.',firstPanel);
+  firstBtn=node('button','Run Growth research now →',firstPanel);firstBtn.type='button';firstBtn.id='growthFirstStart';
+  firstBtn.style.cssText='background:#1d4ed8;color:white;border:0;border-radius:6px;padding:10px 16px;cursor:pointer;font-weight:700';
+  firstState=node('p','No new Growth research started.',firstPanel);firstState.setAttribute('role','status');firstState.id='growthFirstResearchState';
+  firstState.style.cssText='margin:10px 0 0;font-size:13px';
+  questionBox.insertAdjacentElement('afterend',firstPanel);
+  var earlyAi=document.getElementById('growthAiEarly');
+  if(!earlyAi){earlyAi=node('div',null,firstPanel);earlyAi.id='growthAiEarly'}
+  else firstPanel.appendChild(earlyAi);
+  earlyAi.style.cssText='margin-top:12px;padding:12px;border:1px solid #94a3b8;border-radius:8px;background:white;color:#0f172a';
+  firstBtn.addEventListener('click',function(){run()});
+ }
+ function firstProgress(message,running){
+  if(firstState)firstState.textContent=message;
+  if(firstBtn){firstBtn.disabled=!!running;firstBtn.textContent=running?'Research running…':'Run Growth research again →'}
+ }
  function section(title){var s=node('section',null,researchDetails||container);node('h2',title,s);return s}
  function table(headers,rows,parent){
   var t=node('table',null,parent),head=node('thead',null,t),tr=node('tr',null,head);
@@ -139,6 +161,7 @@
   var goStep=node('p',null,box),continueLink=node('a','Continue to choose page improvements →',goStep);continueLink.href='#growthGapChoice';
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
   var form=node('details',null,box);form.className='growth-ai-manual';
+  if(box.parentNode&&box.parentNode.id==='growthAiEarly')form.open=true;
   node('summary','Research another AI system · Copy prompt and add a real answer (optional)',form);
   node('p','Copy the prompt, paste it into a new chat with web search on, then paste the complete answer (including RESOURCES) at the AI system you used.',form);
   // The question the prompt asks: Google's own question for this search term, the best match (owner 2026-11-12).
@@ -1029,7 +1052,7 @@
  async function showAiEarly(){
   var early=document.getElementById('growthAiEarly');if(!early||early.childNodes.length)return;
   try{var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/ai-check?page_id='+encodeURIComponent(id)+runParams,{credentials:'same-origin',cache:'no-store'});
-   var j=await r.json();if(!j.success||!j.ai_check||container.childNodes.length)return;
+   var j=await r.json();if(!j.success||!j.ai_check)return;
    var box=node('section',null,early);node('h2','AI answers for “'+j.ai_check.search_term+'” — optional',box);
    renderAiCheck(box,{ai_check:j.ai_check});
   }catch(e){}
@@ -1037,6 +1060,7 @@
  async function run(){
   var status=document.getElementById('researchStatus');
   // Visible activity while the research runs (a spinner; a still mark with reduced motion).
+  firstProgress('Growth is checking the page and search competitors. AI systems are tracked separately.',true);
   status.className='working';if(status.setAttribute)status.setAttribute('aria-busy','true');status.textContent=(runMarket||runQuery?'This run, chosen by the Opportunity Finder: '+(runQuery?'“'+runQuery+'”':'')+(runMarket?' in '+runMarket.toUpperCase():'')+' (your page setting is not changed). ':'')+'Analyzing the page, Search Console queries and the ranking pages… An automatic grounded Gemini check follows. Manual answers are optional under Advanced.';
   showAiEarly();
   document.getElementById('retryResearch').disabled=true;
@@ -1050,8 +1074,8 @@
    });
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
-   last=result;render(result);pointHandoff(result);if(owner)triggerAutomaticAi(result);
-  }catch(e){status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
+   last=result;render(result);pointHandoff(result);firstProgress('Growth research finished. Review the report below and the five AI system states.',false);if(owner)triggerAutomaticAi(result);
+  }catch(e){firstProgress('Growth research failed: '+String(e.message||e)+'. No completed report was saved.',false);status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
    document.getElementById('retryResearch').hidden=false
   }finally{document.getElementById('retryResearch').disabled=false;if(status.className==='working')status.className='';if(status.removeAttribute)status.removeAttribute('aria-busy')}
  }
@@ -1069,10 +1093,12 @@
    if(saved.found&&saved.report&&saved.report.success===true){
     last=saved.report;render(saved.report);pointHandoff(saved.report);if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
     status.textContent='Saved research restored ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new scan was run.';
+    firstProgress('Saved report loaded ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new research ran. Press Run Growth above to refresh.',false);
     document.getElementById('retryResearch').hidden=false;
     return;
    }
    status.textContent='No saved research report for this page, market and query yet. ';
+   firstProgress('No saved research for this exact page and question. Press Run Growth above.',false);
    var startBtn=document.createElement('button');startBtn.type='button';startBtn.id='growthStartResearch';startBtn.textContent='Run the research now →';startBtn.addEventListener('click',function(){startBtn.remove();run()});status.appendChild(startBtn);
   }catch(e){status.textContent='Saved report could not be loaded: '+String(e.message||e)+'. No new scan was run.'}
   document.getElementById('retryResearch').hidden=false;
@@ -1098,5 +1124,14 @@
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(href),2000);
  });
- restore();
+ // A market save queues exactly one new run. Consume the flag before requesting,
+ // so reload/error cannot cause an unbounded research loop.
+ var afterSaveKey='growthRunAfterMarketSave:'+location.pathname+location.search;
+ var afterSaveStamp=null;
+ try{afterSaveStamp=sessionStorage.getItem(afterSaveKey);if(afterSaveStamp!==null)sessionStorage.removeItem(afterSaveKey)}catch(e){}
+ showAiEarly();
+ if(afterSaveStamp!==null&&Date.now()-Number(afterSaveStamp)<120000){
+  firstProgress('Settings saved. Starting the requested fresh research now…',true);
+  run();
+ }else restore();
 })();
