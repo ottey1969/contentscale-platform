@@ -4,6 +4,13 @@
  'use strict';
  function el(tag,text,parent,cls){var n=document.createElement(tag);if(text!=null)n.textContent=String(text);if(cls)n.className=cls;if(parent)parent.appendChild(n);return n}
  function host(u){try{return new URL(u).hostname.replace(/^www\./,'')}catch(e){return String(u||'')}}
+ // Research-only sources. Always expose the full observed address; never add rival URLs to published copy.
+ function sourceLink(url,parent){
+  var u;try{u=new URL(String(url||''));if(u.protocol!=='https:'&&u.protocol!=='http:')return false}catch(e){return false}
+  el('span',' — source: ',parent);
+  var a=el('a',String(url),parent,'growth-source-url');a.href=String(url);a.target='_blank';a.rel='noopener noreferrer nofollow';
+  return true;
+ }
  window.renderGrowthCompetitorOverview=function(o,parent){
   if(!o||!parent)return false;
   var box=el('div',null,parent,'growth-competitor-overview');
@@ -25,16 +32,16 @@
     if(!g[1].length)return;el('h4',g[0]+' ('+g[1].length+')',box);var list=el('ul',null,box);
     g[1].forEach(function(t){var li=el('li',null,list);el('strong',t.topic,li);
      el('span',' — '+t.ranking_pages+' ranking page(s)'+(t.this_page_heading?'; closest here: “'+t.this_page_heading+'”':''),li);
-     var ex=el('ul',null,li);t.sections.slice(0,4).forEach(function(s){el('li',(s.position?'#'+s.position+' ':'')+s.host+': '+s.heading,ex)})})});
+     var ex=el('ul',null,li);t.sections.slice(0,4).forEach(function(s){var item=el('li',(s.position?'#'+s.position+' ':'')+s.host+': '+s.heading,ex);sourceLink(s.url,item)})})});
    var covered=o.topics.filter(function(t){return t.this_page==='YES'}).length;
    if(covered)el('p',covered+' topic(s) of the ranking pages are already covered on this page.',box,'small');
   }else el('p','Topics are listed per ranking page but not grouped ('+String(o.topics_status||'').replace(/_/g,' ').toLowerCase()+').',box,'small');
   var rest=o.ungrouped_sections||[];
   if(rest.length){var d=el('details',null,box);el('summary',(o.topics_status==='GROUPED'?'Other ranking-page sections':'All ranking-page sections')+' ('+rest.length+')',d);
-   var ul2=el('ul',null,d);rest.forEach(function(s){el('li',(s.position?'#'+s.position+' ':'')+s.host+': '+s.heading,ul2)})}
+   var ul2=el('ul',null,d);rest.forEach(function(s){var item=el('li',(s.position?'#'+s.position+' ':'')+s.host+': '+s.heading,ul2);sourceLink(s.url,item)})}
   var pages=el('details',null,box);el('summary','Ranking pages read ('+(o.ranking_pages||[]).length+')',pages);
   var ul3=el('ul',null,pages);(o.ranking_pages||[]).forEach(function(p){var e=p.elements||{};
-   el('li',(p.serp_position?'#'+p.serp_position+' ':'')+host(p.url)+' — '+e.words+' words, '+e.h2+' H2, '+(e.faq?'FAQ, ':'')+(e.tables?e.tables+' table(s), ':'')+(e.video?'video, ':'')+(e.structured_data||[]).join('/')+(p.partial_capture?' (cut at the read limit)':''),ul3)});
+   var item=el('li',(p.serp_position?'#'+p.serp_position+' ':'')+host(p.url)+' — '+e.words+' words, '+e.h2+' H2, '+(e.faq?'FAQ, ':'')+(e.tables?e.tables+' table(s), ':'')+(e.video?'video, ':'')+(e.structured_data||[]).join('/')+(p.partial_capture?' (cut at the read limit)':''),ul3);sourceLink(p.url,item)});
   return true;
  };
 })();
