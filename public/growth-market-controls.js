@@ -38,7 +38,11 @@
    var summary=countries.length?'Market: '+countries.join(', '):'Market: inherited from Pre-Write or page';
    summary+=' · Language: '+(result.language||'inherited');
    state('saved','✓ Settings saved. '+summary+'. Starting a fresh research run…');
-   busy(true,'Saved ✓ · Reloading…');
+   busy(true,'Saved ✓ · Starting research…');
+   // The Growth renderer consumes this one-shot instruction on the next page load.
+   // Saving settings alone is not research. Never show "research complete" until the endpoint succeeds.
+   try{sessionStorage.setItem('growthRunAfterMarketSave:'+location.pathname+location.search,String(Date.now()))}
+   catch(e){throw Error('RESEARCH_RESTART_UNAVAILABLE')}
    window.location.reload();
   }catch(error){
    var code=String(error&&error.message||'SAVE_FAILED');
