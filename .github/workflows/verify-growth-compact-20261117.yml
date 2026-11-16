@@ -33,3 +33,7 @@ jobs:
           node --check src/tracker-growth-automatic-routes.cjs
           node --test tests/growth-prewrite-ai-evidence.test.cjs
           node --test tests/growth-first-screen.test.cjs
+          node --test tests/growth-prewrite-writer-goal.test.cjs
+          node src/growth-editorial-research-context.test.cjs
+          node tests/growth-source-grounded-editor.test.cjs
+          node --test tests/growth-ai-explicit-replacement.test.cjs
