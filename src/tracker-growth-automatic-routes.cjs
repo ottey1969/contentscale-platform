@@ -533,7 +533,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const usable=[...fresh,...reused];
   const aq=await aiQuestionFor(v,term),question=aq&&aq.text;
   const summary=aiAnswers.summarizeAiAnswers(usable,{pageUrl:target,googleUrls,query:term,question});
-  const gap=summary.verifiable>summary.cited_by?await aiGapFor({key:'tracker:'+v.clientId+':'+v.id,answers:usable,pageUrl:target,query:term,wait:waitGap}).catch(()=>null):null;
+  const gap=summary.verifiable>0?await aiGapFor({key:'tracker:'+v.clientId+':'+v.id,answers:usable,pageUrl:target,query:term,wait:waitGap}).catch(()=>null):null;
   return {gap,search_term:term,ai_question:aq,page_url:target,prompt:aiAnswers.growthVerificationPrompt(term,question),engines:aiAnswers.ENGINES,max_paste:aiAnswers.MAX_PASTE,
    can_paste:v.canEdit===true,older_answers_not_counted:answers.length-fresh.length,max_age_days:AI_MAX_AGE_DAYS,
    prior_checks:aiAnswers.summarizeAiAnswers(answers,{pageUrl:target,googleUrls,query:term,question}).engines.map(e=>({id:e.id,checked_at:e.checked_at||null})),
