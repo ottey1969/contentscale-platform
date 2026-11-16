@@ -1,0 +1,22 @@
+name: Validate Growth first-screen and rerun
+on:
+  push:
+    branches:
+      - fix/growth-first-screen-ai-20261116
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Growth first-screen regression
+        run: node --test tests/growth-first-screen.test.cjs
+      - name: Growth browser syntax and research contract
+        run: |
+          node --check public/growth-automatic-report-ui.js
+          node --check public/growth-market-controls.js
+          node --test tests/growth-live-routes.test.cjs
