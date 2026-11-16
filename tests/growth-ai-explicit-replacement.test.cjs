@@ -59,8 +59,8 @@ test('Genuinely missing AI engine remains addable without replacement',async()=>
 });
 test('UI separates all five Pre-Write writing answers from Growth source-verifiable citations',()=>{
  const ui=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
- assert.match(ui,/Pre-Write writing research:/);
- assert.match(ui,/Growth citation evidence:/);
+ assert.match(ui,/Writing answers available/);
+ assert.match(ui,/Citation sources verifiable/);
  assert.match(ui,/var verifiable=Number\(x\.verifiable\)\|\|0/);
  assert.match(ui,/updateChoices\(\)/);
  assert.match(ui,/existing\.has\(selector\.value\)&&!unlocked/);
