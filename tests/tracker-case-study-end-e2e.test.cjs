@@ -57,6 +57,8 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     // The owner ends it.
     const ok = await end(token, { confirm: 'END_CASE_STUDY', reason: 'TEST: the page needs an update' });
     assert.equal(ok.status, 200, JSON.stringify(ok.json)); assert.equal(ok.json.ended, 1);
+    assert.ok(ok.json.ended_at,'Closeout returns an actual end date');
+    assert.equal(ok.json.scan_permission_required,true,'Ending the Case Study revokes scan permission');
     assert.match(ok.json.message, /baseline, evidence and report are kept/);
     const after = (await db.query('SELECT status,ended_at,ended_reason,baseline_at,baseline_data,baseline_locked FROM tracker_case_studies WHERE id=$1', [csId])).rows[0];
     assert.equal(after.status, 'completed'); assert.ok(after.ended_at); assert.equal(after.ended_reason, 'TEST: the page needs an update');
@@ -66,6 +68,34 @@ test('End case study through the real server route', { skip, timeout: 180000 }, 
     // Ending the Case Study ends its evidence checkpoint: the scanner is no longer locked on it.
     const gate = (await db.query('SELECT monitoring_waiting_input,monitoring_gate_label,monitoring_request_at FROM tracker_pages WHERE id=$1', [pageId])).rows[0];
     assert.deepEqual([gate.monitoring_waiting_input, gate.monitoring_gate_label, gate.monitoring_request_at], [false, null, null], 'case-study checkpoint cleared');
+    // A completed Case Study is a full operational stop: no schedule, old checkpoint or automatic scan permission.
+    const closed=(await db.query(`SELECT case_study_ended_at,case_study_scan_authorized_at,check_frequency,next_check_at,
+      monitoring_waiting_input,monitoring_gate_label,monitoring_request_at,email_reminders
+      FROM tracker_pages WHERE id=$1`,[pageId])).rows[0];
+    assert.ok(closed.case_study_ended_at);
+    assert.equal(closed.case_study_scan_authorized_at,null);
+    assert.equal(closed.check_frequency,'0');
+    assert.equal(closed.next_check_at,null);
+    assert.equal(closed.monitoring_waiting_input,false);
+    assert.equal(closed.monitoring_gate_label,null);
+    assert.equal(closed.monitoring_request_at,null);
+    assert.equal(closed.email_reminders,false);
+    const noPermission=await fetch(base+'/api/tracker-client/'+token+'/check/'+pageId,{method:'POST'});
+    assert.equal(noPermission.status,409,'A direct API scan cannot bypass completed case study');
+    assert.equal((await noPermission.json()).code,'CASE_STUDY_SCAN_REAUTHORIZATION_REQUIRED');
+    const consentUrl=base+'/api/tracker-client/'+token+'/pages/'+pageId+'/case-study/authorize-scan';
+    const consent=(body,tok=token)=>fetch(base+'/api/tracker-client/'+tok+'/pages/'+pageId+'/case-study/authorize-scan',
+      {method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(async r=>({status:r.status,body:await r.json()}));
+    assert.equal((await consent({confirm:'NO'})).status,400);
+    assert.ok([403,404].includes((await consent({confirm:'AUTHORIZE_ONE_SCAN'},ro)).status),'read-only token cannot grant scans');
+    const permitted=await consent({confirm:'AUTHORIZE_ONE_SCAN'});
+    assert.equal(permitted.status,200,JSON.stringify(permitted.body));
+    assert.equal(permitted.body.one_manual_scan_authorized,true);
+    assert.ok((await db.query('SELECT case_study_scan_authorized_at FROM tracker_pages WHERE id=$1',[pageId])).rows[0].case_study_scan_authorized_at);
+    // Permission does not start a scan or silently reenable a recurring schedule.
+    assert.equal((await db.query('SELECT check_frequency FROM tracker_pages WHERE id=$1',[pageId])).rows[0].check_frequency,'0');
+    // Return to permission-required for the historical page (simulation of one-time consumption).
+    await db.query('UPDATE tracker_pages SET case_study_scan_authorized_at=NULL WHERE id=$1',[pageId]);
     // Pages ended earlier (before this fix) still carry a case_day_* wait: the Tracker page list releases it once.
     // A regular guided-monitoring wait is real and stays.
     const stale = (await db.query("INSERT INTO tracker_pages(tracker_client_id,url,keyword,monitoring_waiting_input,monitoring_gate_label,monitoring_request_at) VALUES ($1,'https://test-cs.example/test-old-case/','TEST old',TRUE,'case_day_7',NOW()) RETURNING id", [clientId])).rows[0].id;
