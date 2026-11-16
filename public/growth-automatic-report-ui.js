@@ -1053,7 +1053,7 @@
   var gapCount=gl&&Array.isArray(gl.items)?gl.items.length:0;
   node('li',gl?gapCount+' candidate topics for editorial review (not proven missing content).':'No completed Google topic-comparison list available.',fl);
   var as=d.ai_check&&d.ai_check.summary,ag=d.ai_check&&d.ai_check.gap;
-  node('li','AI source verification: '+(as&&Number.isFinite(Number(as.verifiable))?as.verifiable:0)+'/5 systems with source evidence. This is not a count of PRT citations.',fl);
+  node('li','AI source verification: '+(as&&Number.isFinite(Number(as.verifiable))?as.verifiable:0)+'/5 systems with source evidence. This is not a count of citations to your website.',fl);
   if(ag&&Array.isArray(ag.pages))node('li','AI-visible source pages: '+ag.pages.filter(function(p){return p.read}).length+' readable of '+ag.pages.length+' checked; their facts still require verification.',fl);
   ((ocx&&ocx.open_checks)||[]).slice(0,2).forEach(function(c){if(c&&c.detail)node('li','Still to verify: '+c.detail,fl)});
   if((d.evidence_warnings||[]).length)node('li','Some sources were unavailable or incomplete; review the limitations.',fl);
