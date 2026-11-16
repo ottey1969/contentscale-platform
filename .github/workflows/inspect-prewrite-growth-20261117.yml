@@ -1,28 +1,26 @@
-name: Inspect Pre-Write to Growth evidence boundary
+name: Verify Pre-Write to Growth AI evidence
 on:
   push:
     branches: [feat/prewrite-growth-ai-evidence-20261117]
 permissions:
-  contents: write
+  contents: read
 jobs:
-  inspect:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Print scoped source boundary excerpts
-        shell: bash
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax tests
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          s=Path('src/index.js').read_text().splitlines()
-          terms=['/growth/from-brief','/growth/ai-check','/growth/ai-answer','listGrowthAiAnswers(','saveGrowthAiAnswer(','prewrite_ai_answer_research','CREATE TABLE IF NOT EXISTS tracker_prewrite','CREATE TABLE IF NOT EXISTS prewrite','brief_json','_pwbCurrentBrief']
-          seen=set()
-          for term in terms:
-            hits=[i for i,line in enumerate(s) if term in line]
-            print('\\n###',term,'hits',len(hits))
-            for i in hits[:7]:
-              a=max(0,i-5);b=min(len(s),i+10)
-              if any(abs(i-j)<12 for j in seen):continue
-              seen.add(i)
-              for k in range(a,b): print(f'{k+1}: {s[k][:360]}')
-          PY
+          node --check src/growth-prewrite-ai-evidence.cjs
+          node --check src/tracker-growth-automatic-routes.cjs
+          node --check public/growth-automatic-report-ui.js
+      - name: Integration regression tests
+        run: |
+          node --test tests/growth-prewrite-ai-evidence.test.cjs
+          node --test tests/growth-ai-check-validation.test.cjs
+          node --test tests/growth-ai-relevance.test.cjs
+          node --test tests/prewrite-ai-answer-integration.test.cjs
+          node --test src/growth-live-routes.test.cjs
