@@ -20,3 +20,5 @@ if(s.split(x).length!==2)throw Error('Implementation entry must occur once');
 s=s.replace(x,y);
 fs.writeFileSync(file,s);
 console.log('Added explicit ended state to canonical Tracker UI');
+
+// Trigger validated feature-branch application.
