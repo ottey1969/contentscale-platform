@@ -98,6 +98,6 @@ test('AI gap in Tracker Growth: the pages cited instead of this page are read an
  assert.ok(g.missing_topics.some(t=>/estimate/i.test(t.topic)&&t.sites.length===2));
  assert.ok(r.body.ai_check.summary.visibility_actions.some(a=>a.id==='bing_webmaster_tools'));
  // Once an AI system cites the page too, only the others count; when all cite it, there is no gap.
- const all=await s.paste({engine:'chatgpt',query:QUERY,page_url:URL_,text:'ANSWER: Get a written estimate for roof repair in Lodi NJ.\nRESOURCES:\nhttps://acme-roofing.example/roof-repair-lodi-nj/'});
+ const all=await s.paste({engine:'chatgpt',replace_existing:true,query:QUERY,page_url:URL_,text:'ANSWER: Get a written estimate for roof repair in Lodi NJ.\nRESOURCES:\nhttps://acme-roofing.example/roof-repair-lodi-nj/'});
  assert.equal(all.statusCode,200,JSON.stringify(all.body));assert.equal(all.body.ai_check.gap,null);
 });
