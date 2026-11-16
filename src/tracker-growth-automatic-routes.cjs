@@ -990,8 +990,21 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    run=claim.run;
   }
   const generate=async research_context=>{
+   // Inject saved same-page/same-query Pre-Write answers as editorial context, not facts
+   // or citation proof. A different tracked page, query or market can never reuse them.
+   let prewriteEditorial=[];
+   try{
+    const marketSet=typeof loadPageMarkets==='function'?await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:Number(list.target_page_id)})):null;
+    const prewriteMarket=typeof loadPrewriteMarket==='function'?await Promise.resolve(loadPrewriteMarket({clientId:v.clientId,keywords:[list.focus_query,v.page.keyword]})):null;
+    const siteMarket=typeof loadSiteMarkets==='function'?await Promise.resolve(loadSiteMarkets({clientId:v.clientId})):null;
+    const market=v.marketOverride||marketSet?.countries?.[0]||prewriteMarket?.countries?.[0]||siteMarket?.countries?.[0]||null;
+    const language=marketSet?.language||prewriteMarket?.language||siteMarket?.language||'';
+    const matched=await loadPrewriteGrowthAnswers(pool,{clientId:v.clientId,pageUrl:list.target_url,query:list.focus_query,market,language});
+    if(matched.status==='MATCHED')prewriteEditorial=matched.writing_inputs||[];
+   }catch(e){console.warn('[growth-prewrite-writing] Brief context unavailable; writing remains optional:',String(e?.code||e?.message||'').slice(0,90))}
+   const enrichedContext={...research_context,prewrite_editorial_answers:prewriteEditorial};
    const outcome=await completeOwnerDraft({token:req.params.token,body:{page_id:Number(list.target_page_id),focus_query:list.focus_query||'',
-    growth_source_page_id:v.id,research_context,flag_fallback:true}});
+    growth_source_page_id:v.id,research_context:enrichedContext,flag_fallback:true}});
    const d=outcome?.body||{};
    if(outcome.statusCode!==200||d.success!==true||d.canonical_url!==list.target_url||Number(d.page_id)!==Number(list.target_page_id))
     return {status:d.code||'WRITER_UNAVAILABLE',provider_error:d.provider_error||null};

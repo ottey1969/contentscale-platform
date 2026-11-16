@@ -139,58 +139,53 @@
  }
  function renderAiCheck(box,d){
   var c=d.ai_check,x=c.summary||{};while(box.childNodes.length>1)box.removeChild(box.lastChild);
-  var recent=(x.engines||[]).filter(function(e){return e.checked}).length;
-  var total=x.total||(x.engines||[]).length,complete=total>0&&recent===total&&(x.engines||[]).every(function(e){return e.verifiable});
+  var engines=x.engines||[],recent=engines.filter(function(e){return e.checked}).length;
   var pre=c.prewrite_reuse,preItems=pre&&pre.status==='MATCHED'?(pre.items||[]):[];
-  var prePresent=preItems.filter(function(e){return ['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(e.status)}).length;
-  var verifiable=Number(x.verifiable)||0;
-  var line=node('p',prePresent?'Pre-Write writing research: '+prePresent+' of 5 answers available · Growth citation evidence: '+verifiable+' of 5 with source status.':'Growth citation evidence: '+verifiable+' of 5 source-verifiable systems.',box);
-  if(prePresent)node('p','These are different measurements: your Pre-Write answers are kept for writing. Growth only counts an AI citation when the original answer provides a usable RESOURCES section. You do not need to enter the five writing answers again.',box).className='info';
-  var growthObserved=node('p','Growth observations saved: '+recent+' of '+total+' (including any without verifiable sources).',box);
-  growthObserved.className='growth-ai-state';
-   line.className='growth-ai-state';line.setAttribute('role','status');
-   var progress=node('div',null,box);progress.className='growth-ai-progress';progress.setAttribute('role','progressbar');progress.setAttribute('aria-label','Verified AI systems research');progress.setAttribute('aria-valuemin','0');progress.setAttribute('aria-valuemax',String(total||5));progress.setAttribute('aria-valuenow',String(verifiable));
-   var fill=node('span',null,progress);fill.style.width=(total?Math.round(verifiable*100/total):0)+'%';
-   node('p','Your existing Pre-Write answers are retained for writing. Growth citation comparison is a separate optional check: only genuine AI answers with a source section can establish citations. Gemini with Google Search may check automatically; the other systems can be refreshed by choice.',box).className='info';
-  if(d.automatic_ai_status)node('p','Automatic Gemini / Google Search: '+(d.automatic_ai_status==='SUCCESS'?'completed and saved':d.automatic_ai_status==='ALREADY_CHECKED'?'existing verified answer reused':d.automatic_ai_status==='RUNNING'?'checking now…':d.automatic_ai_status==='RETRY_LATER'?'retry deferred':d.automatic_ai_status.replace(/_/g,' ').toLowerCase())+'. Gemini grounding is not a Google AI Overview; other providers are not marked checked without their actual answers.',box);
-  node('p',String(x.headline||'')+'. '+String(x.explanation||''),box);
-  // Saved Pre-Write research is visible on this first screen; editorial-only answers
-  // are explicitly not counted as source-backed citations in the Growth gap.
-  var reused=c.prewrite_reuse;
-  if(reused&&reused.status==='MATCHED'){
-   var pw=node('section',null,box);pw.id='growthPrewriteReuse';
-   pw.style.cssText='margin:12px 0;padding:12px;border:1px solid #93c5fd;border-radius:8px;background:#eff6ff;color:#1e3a8a';
-   node('strong','Pre-Write Brief #'+reused.brief_id+' · original AI answers',pw);
-   node('p',prePresent+' existing writing answer(s) retained; '+reused.reused_count+' also eligible for the Growth citation comparison. No need to paste existing answers again. Source references are optional for writing, but necessary to measure citations.',pw);
-   var pwList=node('ul',null,pw);
-   (reused.items||[]).forEach(function(item){
-    var description=item.status==='REUSED_SOURCE_BACKED'?'Reused in Growth (source list available)':
-     item.status==='EDITORIAL_ONLY'?'Available for writing · citation sources not established (no re-entry required)':
-     item.status==='OUTDATED'?'Saved writing evidence · older than 14 days for citation measurement':
-     item.status==='INVALID'?'Invalid · needs a valid answer':
-     item.status==='EXCERPT_ONLY'?'Saved writing excerpt · not a complete citation observation':
-     'Not researched in this Brief';
-    node('li',item.label+': '+description+(item.checked_at?' · '+String(item.checked_at).slice(0,10):''),pw);
-   });
-   node('small','Pre-Write answers stay available as research. To measure AI citations, a separate response with genuine cited sources is needed; any refresh is optional and explicitly initiated.',pw);
+  var writingStatuses=['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'];
+  var prePresent=preItems.filter(function(item){return writingStatuses.includes(item.status)}).length;
+  var total=x.total||engines.length||5,verifiable=Number(x.verifiable)||0;
+  var overview=node('section',null,box);overview.id='growthAiResearchOverview';
+  overview.style.cssText='margin:8px 0 12px;padding:14px;border:1px solid #cbd5e1;border-radius:10px;background:#f8fafc;color:#172337';
+  node('strong','AI Research · Pre-Write + Growth',overview);
+  var metrics=node('div',null,overview);metrics.style.cssText='display:flex;flex-wrap:wrap;gap:12px;margin:10px 0';
+  function stat(value,label){
+   var tile=node('div',null,metrics);tile.style.cssText='flex:1 1 150px;border:1px solid #dbe3ee;border-radius:8px;padding:10px;background:white';
+   var num=node('strong',String(value),tile);num.style.cssText='font-size:24px;display:block';
+   node('small',label,tile);
   }
-
+  stat(prePresent+'/5','Writing answers available');
+  stat(verifiable+'/5','Citation sources verifiable');
+  node('p',(pre&&pre.status==='MATCHED'?'Pre-Write Brief #'+pre.brief_id+' · ':'')+recent+' of '+total+' Growth observations saved. Writing answers are kept; citation verification is separate and optional.',overview).className='info';
+  var details=node('details',null,overview);details.id='growthAiSourceDetails';
+  node('summary','Show details per AI system',details);
+  node('p','Existing writing research never needs to be pasted again. Citation checks require a real source list from the original answer; editorial source leads are not assumed to be citations.',details).className='info';
+  if(pre&&pre.status==='MATCHED'){
+   var preList=node('ul',null,details);
+   preItems.forEach(function(item){
+    var description=item.status==='REUSED_SOURCE_BACKED'?'Writing answer available · eligible source list':
+     item.status==='EDITORIAL_ONLY'?'Writing answer available · sources not verified':
+     item.status==='OUTDATED'?'Writing answer saved · citation check outdated':
+     item.status==='EXCERPT_ONLY'?'Writing excerpt saved · full citation answer unavailable':
+     item.status==='INVALID'?'Invalid submission · not used as writing evidence':'No saved Pre-Write answer';
+    node('li',item.label+': '+description+(item.checked_at?' · '+String(item.checked_at).slice(0,10):''),preList);
+   });
+  }
   var history=new Map((c.prior_checks||[]).map(function(e){return [e.id,e.checked_at]}));
-  var ul=node('ul',null,box);(x.engines||[]).forEach(function(e){
+  var obsList=node('ul',null,details);
+  engines.forEach(function(e){
    var previous=history.get(e.id),when=e.checked_at||previous;
-   // Validation contract: an invalid answer is named with its reason and not counted; a topic warning is shown, not hidden.
-   var bad=(x.invalid_engines||[]).filter(function(i){return i.id===e.id})[0];
-   var pwRecord=preItems.find(function(p){return p.engine===e.id}),hasPre=!!(pwRecord&&['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(pwRecord.status));
-   var label=e.checked?(!e.verifiable?'Growth answer saved, but citation sources not verifiable':e.exact_page_cited?'Growth sources cite this exact page':e.own_site_cited?'Growth sources cite this website':'Growth sources checked; no citation to this website'):bad?'Invalid Growth answer — '+String(bad.message||bad.reason||''):hasPre?'Pre-Write answer already available for writing; citation evidence not established':previous?'Previous Growth check expired':'No Pre-Write or Growth answer found';
-   var li=node('li',e.label+': '+label+(when?' · '+String(when).slice(0,10):'')+(e.checked&&e.verifiable?' · '+e.sources+' cited sources':'')+(e.topic_warning?' · Check the topic: this answer shares no word with “'+String(c.search_term||'')+'”. It counts (synonyms are fine); replace it if it answers another question.':''),ul);
-   if(bad||e.topic_warning)li.style.color=bad?'#b42318':'#92400e';
+   var bad=(x.invalid_engines||[]).find(function(i){return i.id===e.id});
+   var status=e.checked?(e.verifiable?(e.exact_page_cited?'Source cites this page':e.own_site_cited?'Source cites this website':'Source checked, no citation to your site'):'Saved observation · sources not verifiable'):
+    bad?'Invalid observation':previous?'Previous observation expired':'No current citation observation';
+   node('li',e.label+': '+status+(when?' · '+String(when).slice(0,10):''),obsList);
   });
+  if(d.automatic_ai_status)node('small','Automatic Gemini check: '+String(d.automatic_ai_status).replace(/_/g,' ').toLowerCase()+'. This is not a Google AI Overview check.',details);
   renderAiGap(box,c.gap);
   // A newer AI check (automatic answer, a paste, the comparison finished) also updates "Do it yourself" in step 1.
   if(d.gap_list){var sbx=document.getElementById('growthSelfDo');if(sbx){selfRender(sbx,selfItems(d));if(NOWC){NOWC.selfOpen=selfItems(d).filter(function(x){return !selfDone()[x.id]}).length;trUpdate(trPicked())}}}
   if(!d.gap_list&&x.visibility_actions&&x.visibility_actions.length){var nx=node('div',null,box);nx.className='ai-next-steps';node('h4','Next steps to be cited by AI',nx);
    x.visibility_actions.forEach(function(v){node('strong',v.title,nx);node('p',v.why,nx);var ol=node('ol',null,nx);v.steps.forEach(function(t){node('li',t,ol)})})}
-  if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' answer(s) older than '+c.max_age_days+' days are not counted. Paste them again to refresh.',box);
+  if(c.older_answers_not_counted)node('small',c.older_answers_not_counted+' older Growth observation(s) are excluded from current citation checks. Writing answers remain preserved.',details);
   var goStep=node('p',null,box),continueLink=node('a','Continue to choose page improvements →',goStep);continueLink.href='#growthGapChoice';
   if(!c.can_paste){node('small','Only the Tracker owner can add AI answers.',box);return}
   var existing=new Set(preItems.filter(function(item){return ['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(item.status)}).map(function(item){return item.engine}));

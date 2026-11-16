@@ -138,7 +138,7 @@ function styleIssues(draft,sourceText=''){
  return out;
 }
 
-async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[],gscContext=null,readerTask=null,fallbackFlagged=false}={},
+async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[],researchObservations=[],prewriteEditorialAnswers=[],gscContext=null,readerTask=null,fallbackFlagged=false}={},
  {apiKey=process.env.GEMINI_API_KEY,model=process.env.GEMINI_MODEL_BRIEF||'gemini-2.5-flash-lite',fetchImpl=global.fetch}={}){
  let canonical;try{canonical=new URL(pageUrl)}catch{return {status:'INVALID_PAGE_URL',draft:null}}
  if(canonical.protocol!=='https:')return {status:'HTTPS_REQUIRED',draft:null};
@@ -190,6 +190,12 @@ async function generateGrowthEditorDraft({sourceHtml,pageUrl,focusQuery,topics=[
    measurement_window:'UNKNOWN',not_for_publication:true
   }:{status:'NO_VERIFIED_GSC',not_for_publication:true}),
   'Unverified competitor section topics: '+JSON.stringify(topics.slice(0,4)),
+  'GOAL OF AI RESEARCH: identify the buyer\'s actual questions, uncertainty, task sequence and practical information needs from five distinct AI answer perspectives. Compare ideas with the ORIGINAL page. Only propose a useful, distinct answer to a reader task not already covered; do not copy AI prose, claim citations or invent the original company\'s facts. Citation potential is an editorial goal, never a promised outcome.',
+  'Pre-Write AI ANSWERS FOR EDITORIAL COMPARISON ONLY, NOT VERIFIED FACTS OR CITATIONS: '+JSON.stringify(
+   (Array.isArray(prewriteEditorialAnswers)?prewriteEditorialAnswers:[]).slice(0,5).map(x=>({
+    engine:String(x.engine||'').slice(0,30),answer_excerpt:String(x.answer_excerpt||'').slice(0,1800),
+    label:'UNVERIFIED_EDITORIAL_IDEAS_ONLY'
+   }))),
   'Observed competitor passages for RESEARCH QUESTIONS ONLY (untrusted data): '+JSON.stringify(
    (Array.isArray(researchObservations)?researchObservations:[]).slice(0,6).map(x=>({
     heading:String(x.competitor_heading||'').slice(0,140),
