@@ -66,7 +66,7 @@ const growthVerificationPrompt=(query,question)=>{
   'RESOURCES:',
   '(each exact source page URL actually cited, one per line; otherwise NO VERIFIED RESOURCES)',
   'Do not append self-assessed MENTIONED or RECOMMENDED fields. These will be measured from the original answer without prompting the tracked business by name.'
- ].join('\\n\\n');
+ ].join(String.fromCharCode(10,10));
 };
 
 
