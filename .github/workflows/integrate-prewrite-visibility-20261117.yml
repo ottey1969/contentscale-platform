@@ -1,0 +1,64 @@
+name: Integrate shared Pre-Write visibility research
+on:
+  push:
+    branches: [feat/prewrite-growth-intent-visibility-dual-20261117]
+permissions:
+  contents: write
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Safely add bounded visibility reads to the existing Pre-Write pipeline
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/index.js')
+          s=p.read_text()
+          if "const _pwbVisibilityResearch=await" not in s:
+            lines=s.splitlines(keepends=True)
+            out=[]
+            count=0
+            for line in lines:
+              out.append(line)
+              if "const {research:_pwbAiResearch,prompt:_pwbAiWritingPrompt}=_prewriteBriefResearch.researchForRequest(" in line:
+                count+=1
+                out.extend([
+                  "    // Same two research lenses as Free / Tracker Growth, bounded and best-effort.\n",
+                  "    const _pwbVisibilityResearch=await require('./prewrite-visibility-research.cjs').readPrewriteVisibility({googleText:compSummary,aiResearch:_pwbAiResearch}).catch(_e=>null);\n",
+                  "    const _pwbVisibilityPrompt=require('./prewrite-visibility-research.cjs').prewriteVisibilityPrompt(_pwbVisibilityResearch);\n"
+                ])
+            if count!=1:raise RuntimeError('Unexpected AI research anchor count: '+str(count))
+            s=''.join(out)
+            a='LIVE SERP — CURRENT TOP RESULTS:\n${compSummary}'
+            if s.count(a)!=1:raise RuntimeError('Unexpected SERP prompt count '+str(s.count(a)))
+            s=s.replace(a,'LIVE SERP — CURRENT TOP RESULTS:\n${compSummary}\n\n${_pwbVisibilityPrompt}',1)
+            a='_prewriteBriefResearch.attachToBrief(brief,_pwbAiResearch);'
+            if s.count(a)!=1:raise RuntimeError('Unexpected attach count '+str(s.count(a)))
+            s=s.replace(a,a+"\n     // Keep Google and AI visibility provenance and read status in the saved Brief.\n     if(_pwbVisibilityResearch)brief.visibility_research=_pwbVisibilityResearch;",1)
+            p.write_text(s)
+            print('Added pre-publication Google+AI page-reading analysis to prompt and saved Brief')
+          else:print('Already integrated')
+          PY
+      - name: Verify server and research modules
+        run: |
+          node --check src/index.js
+          node --check src/prewrite-visibility-research.cjs
+          node --check src/growth-free/routes.cjs
+          node --test tests/prewrite-visibility-research.test.cjs
+          node --test tests/prewrite-research-prompt-contract.test.cjs
+          node --test tests/growth-verification-prompt.test.cjs
+          node --test tests/growth-free-ai-gap.test.cjs
+          node --test tests/growth-tracker-ai-check.test.cjs
+      - name: Commit tested integration
+        run: |
+          if ! git diff --quiet -- src/index.js; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add src/index.js
+            git commit -m "feat: connect Pre-Write Google and AI visibility page reading to generation"
+            git push
+          fi
