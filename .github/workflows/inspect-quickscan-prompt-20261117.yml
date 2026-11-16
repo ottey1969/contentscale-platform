@@ -1,0 +1,24 @@
+name: Inspect Quick Scan verification prompt
+on:
+  push:
+    branches: [fix/growth-ai-mention-citation-recommendation-prompt-20261117]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Locate prompts and related checks
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('src/index.js').read_text().splitlines()
+          terms=['const directPrompt','function directPrompt','RECOMMENDED:','MENTIONED:','NO VERIFIED RESOURCES','citation verification','verification prompt','brand_recommended']
+          for term in terms:
+            ix=[i for i,line in enumerate(s) if term.lower() in line.lower()]
+            print('TERM',term,'HITS',len(ix))
+            for i in ix[:5]:
+              for n in range(max(0,i-5),min(len(s),i+15)):print(str(n+1)+': '+s[n][:400])
+          PY
+          grep -RIn "Quick Scan.*prompt\|mention.*recommend.*cit\|verify.*citation" src public --include='*.cjs' --include='*.js' | head -30 || true
