@@ -527,7 +527,7 @@ test('result: Google and AI together; AI answers are stored, summarised and in t
  assert.equal(s.storage.aiRows.length,1);
  r=await s.get('/api/free-growth/checks/pub1?k=key1abcdefgh');
  assert.equal(r.body.ai.summary.headline,'Cited by 1 of 1 AI system with a source list');
- assert.equal(r.body.ai.gap,null,'no AI gap when every AI system cites you');
+ assert.equal(r.body.ai.gap.status,'READ','AI-visible competitor pages remain useful research even when your own page is cited');
  assert.deepEqual(r.body.ai.summary.also_in_google,['roofer-a.example'],'compared with the Google results of this check');
  assert.ok(!r.body.summary.limitations.some(x=>/were not checked/.test(x)));assert.ok(r.body.summary.limitations.some(x=>/differ per user/.test(x)));
  const dl=await s.get('/api/free-growth/checks/pub1/report.json?k=key1abcdefgh');
