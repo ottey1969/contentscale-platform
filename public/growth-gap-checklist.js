@@ -20,7 +20,7 @@
      (isDone?' — concept written by Growth':x.writable?' — not written yet':' — add it yourself'));
     if(x.priority&&x.priority.suggested_action)L.push('  - Action: '+x.priority.suggested_action);
     if(x.priority&&x.priority.why)L.push('  - Why: '+x.priority.why.join('; '));
-    (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':''))});
+    (x.examples||[]).forEach(function(e){L.push('  - '+(e.position?'#'+e.position+' ':'')+e.site+(e.heading?': “'+e.heading+'”':'')+(e.url?' · exact source: '+e.url:''))});
     // The concept text written in this session (after a reload the text is in the CMS package, not repeated here).
     (written.sections[String(x.id)]||[]).forEach(function(sec){L.push('','  ### Concept: '+sec.h2,'');
      (sec.paragraphs||[]).forEach(function(p){L.push('  '+p,'')});
@@ -68,7 +68,15 @@
     if(demand(x.growth_potential))el('small',demand(x.growth_potential)+' · business fit: your decision',el('div',null,why));
     (x.possible_overlap||[]).forEach(function(o){el('small','May overlap with “'+o.title+'”: '+o.reason,el('div',null,why))});
     // Every source is kept.
-    var ex=x.examples||[];ex.forEach(function(e){el('small',(e.position?'#'+e.position+' ':'')+e.site+(e.heading&&e.heading!==x.title?': “'+e.heading+'”':''),el('div',null,why))});
+    var ex=x.examples||[];ex.forEach(function(e){
+     var source=el('div',null,why);
+     el('small',(e.position?'#'+e.position+' ':'')+e.site+(e.heading&&e.heading!==x.title?': “'+e.heading+'”':''),source);
+     // Research only: show precise source URL; never insert rival links into the CMS copy.
+     if(e.url){try{var u=new URL(e.url);if(u.protocol==='https:'||u.protocol==='http:'){
+       var a=el('a',e.url,source);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer nofollow';
+       a.style.cssText='display:block;overflow-wrap:anywhere;font-size:12px';
+      }}catch(_){el('small','Source URL invalid',source)}}
+    });
     if(!why.querySelector('small'))why.remove()})});
   if((list.unique_content||[]).length){el('h3','Unique content worth reviewing and preserving ('+list.unique_content.length+')',box);
    var ks=el('ul',null,box);list.unique_content.forEach(function(s){el('li',s.heading,ks)});

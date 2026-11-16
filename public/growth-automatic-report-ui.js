@@ -50,16 +50,19 @@
  // Pop-up before writing when no AI answer for this search term is at most 14 days old: the editor chooses.
  // Resolves 'WITH_AI' (answers present), 'WITHOUT_AI' (editor continues) or null (editor checks AI first).
  function aiGate(d){
-  var c=d.ai_check;if(c&&c.summary&&c.summary.checked>0)return Promise.resolve('WITH_AI');
+  var c=d.ai_check, summary=c&&c.summary;
+  // One saved answer is NOT equivalent to the five-engine Pre-Write research contract.
+  if(summary&&summary.total===5&&summary.checked===5&&summary.verifiable===5)return Promise.resolve('WITH_AI');
   if(!c)c={search_term:runQuery||'this search',older_answers_not_counted:0,max_age_days:14};
   return new Promise(function(resolve){
    var dlg=document.createElement('dialog');dlg.className='growth-ai-gate';dlg.setAttribute('aria-labelledby','aiGateTitle');
-   node('h2','No current AI answers for “'+c.search_term+'”',dlg).id='aiGateTitle';
-   node('p',(c.older_answers_not_counted?c.older_answers_not_counted+' AI answer(s) are older than '+c.max_age_days+' days and no longer count. ':'No AI answer was pasted for this search term. ')+
-    'Without them, the concepts are based on Google and the ranking pages only; whether AI systems cite your page for this search is unknown.',dlg);
+   node('h2','AI research incomplete for “'+c.search_term+'”',dlg).id='aiGateTitle';
+   node('p','Verified AI systems: '+(summary?summary.verifiable:0)+' of 5; answers collected: '+(summary?summary.checked:0)+' of 5. '+
+    (c.older_answers_not_counted?c.older_answers_not_counted+' older answer(s) no longer count. ':'')+
+    'The remaining systems have not been verified for this search. Continue using Google and readable ranking-page evidence only, or collect the missing AI answers first.',dlg);
    var row=node('p',null,dlg);
    var first=node('button','Check AI answers first',row);first.type='button';
-   var without=node('button','Continue without AI check',row);without.type='button';without.style.marginLeft='8px';without.style.background='#475569';
+   var without=node('button','Continue with incomplete AI research',row);without.type='button';without.style.marginLeft='8px';without.style.background='#475569';
    var done=function(v){try{dlg.close()}catch(e){}dlg.remove();resolve(v)};
    first.addEventListener('click',function(){done(null);var box=document.getElementById('growthAiCheck');if(box)box.scrollIntoView({behavior:'smooth'})});
    without.addEventListener('click',function(){done('WITHOUT_AI')});
@@ -461,6 +464,17 @@
     catch(_){copyExample.textContent='Clipboard unavailable — use report JSON'}
    });
   }
+  // Owner-only Growth -> Pre-Write handoff. The Tracker validates page id and exact URL
+  // before filling the Brief, preventing cross-account and cross-page contamination.
+  if(main.getAttribute('data-owner-draft')==='true' && d.url){
+   var pwSection=section('Need deeper content research?');
+   node('p','Open this exact page and working question in Pre-Write. Review existing HTML before adding a new section.',pwSection);
+   var params='prewrite=1&page_id='+encodeURIComponent(id)+'&url='+encodeURIComponent(d.url)+
+     '&keyword='+encodeURIComponent(String(runQuery||d.search_discovery?.target_query||d.practical_growth_plan?.focus_query||''));
+   var prewrite=node('a','Open this page in Pre-Write',pwSection);
+   prewrite.href='/track/'+encodeURIComponent(token)+'?'+params;
+   prewrite.className='growth-prewrite-handoff';
+  }
   var discovery=d.search_discovery||{};
   // Optional shared renderer (growth-competitor-overview.js); the report renders fully without it.
   var renderOverview=typeof window!=='undefined'&&window.renderGrowthCompetitorOverview;
@@ -512,7 +526,7 @@
     if(pair.tracked_page_excerpt)node('p','Your observed excerpt: '+pair.tracked_page_excerpt,block);
     node('small',pair.interpretation,block);
     node('small','What to do: '+pair.editorial_action,block);
-    link(pair.competitor_url,'Competitor source',block);
+    link(pair.competitor_url,pair.competitor_url||'Competitor source unavailable',block);
    });
   }
   var questions=plan.competitors?.comparison_questions||[];
@@ -523,7 +537,7 @@
     var block=node('div',null,s);
     node('strong',q.observed_heading,block);
     node('small',q.editorial_check,block);
-    link(q.competitor_url,'Observed source',block);
+    link(q.competitor_url,q.competitor_url||'Observed source unavailable',block);
    });
   }
   s=section('Prepared improvement · review before publishing');
