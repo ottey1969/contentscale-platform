@@ -1,0 +1,16 @@
+name: Verify Growth AI-first market ordering
+on:
+  push:
+    branches: [fix/growth-market-after-ai-20261116]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check public/growth-automatic-report-ui.js
+      - run: node --test tests/growth-first-screen.test.cjs
