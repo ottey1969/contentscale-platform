@@ -897,6 +897,24 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   // Validation contract: an answer that is not an answer (the prompt itself, a conversation that knew the task, a
   // placeholder) is not stored; the owner sees why. A topic warning does not block saving.
   if(parsed.validation_status==='invalid')return no(400,'AI_ANSWER_INVALID_'+String(parsed.error_reason||'').toUpperCase(),parsed.error_message||'This is not an answer to the search term.');
+  // Existing writing or citation evidence is protected. New input is additive unless
+  // the owner explicitly chooses to replace an existing engine's answer.
+  if(b.replace_existing!==true){
+   try{
+    const saved=typeof loadAiAnswers==='function'?await loadAiAnswers({clientId:v.clientId,pageId:v.id,query}):[];
+    let protectedAnswer=(saved||[]).some(x=>x.engine===engine);
+    if(!protectedAnswer){
+     const pageMarket=typeof loadPageMarkets==='function'?await Promise.resolve(loadPageMarkets({clientId:v.clientId,pageId:v.id})).catch(()=>null):null;
+     const siteMarket=typeof loadSiteMarkets==='function'?await Promise.resolve(loadSiteMarkets({clientId:v.clientId})).catch(()=>null):null;
+     const briefMarket=typeof loadPrewriteMarket==='function'?await Promise.resolve(loadPrewriteMarket({clientId:v.clientId,keywords:[v.page.keyword]})).catch(()=>null):null;
+     const market=v.marketOverride||pageMarket?.countries?.[0]||briefMarket?.countries?.[0]||siteMarket?.countries?.[0]||null;
+     const language=pageMarket?.language||briefMarket?.language||siteMarket?.language||'';
+     const pre=await loadPrewriteGrowthAnswers(pool,{clientId:v.clientId,pageUrl:v.page.url,query,market,language});
+     protectedAnswer=(pre.items||[]).some(x=>x.engine===engine&&['EDITORIAL_ONLY','REUSED_SOURCE_BACKED','OUTDATED','EXCERPT_ONLY'].includes(x.status));
+    }
+    if(protectedAnswer)return no(409,'EXISTING_AI_ANSWER_PROTECTED','An answer already exists in Growth or Pre-Write. Use Replace or refresh only if you really want to change it.');
+   }catch(e){return no(503,'AI_ANSWER_PROTECTION_UNAVAILABLE','Existing answers could not be checked, so no replacement occurred.')}
+  }
   try{await saveAiAnswer({clientId:v.clientId,pageId:v.id,query,engine,rawText:text,parsed})}catch{return no(503,'AI_ANSWER_NOT_SAVED','The answer could not be saved. Please try again.')}
   // The updated AI check comes back directly, so the page never re-runs the (paid) Google research for it.
   const urls=(Array.isArray(b.google_urls)?b.google_urls:[]).map(String).filter(u=>/^https?:\/\//.test(u)).slice(0,20);
