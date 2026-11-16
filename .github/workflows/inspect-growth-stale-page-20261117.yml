@@ -1,14 +1,24 @@
-name: Inspect Growth stale-page user-visible alert
+name: Verify inline Growth research refresh for rewritten pages
 on:
   push:
     branches: [fix/growth-stale-page-inline-rerun-20261117]
 permissions:
   contents: read
 jobs:
-  inspect:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Locate stale page message renderer
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Browser scripts syntax
         run: |
-          grep -RIn -C 4 --exclude-dir=.git --exclude='package-lock.json' -E "Not written:|Not written|Your page.s headings changed|PAGE_HEADINGS_CHANGED|no longer found" public src tests | head -240 || true
+          node --check public/growth-gap-checklist.js
+          node --check public/growth-automatic-report-ui.js
+      - name: Stale page and Growth workflow tests
+        run: |
+          node --test tests/growth-stale-page-inline-rerun.test.cjs
+          node --test tests/growth-first-screen.test.cjs
+          node --test tests/growth-save-run-scroll-summary.test.cjs
+          node --test tests/growth-prewrite-ai-evidence.test.cjs
