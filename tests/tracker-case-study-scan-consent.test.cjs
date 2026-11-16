@@ -34,4 +34,6 @@ test('page UI shows ended date and requests permission, never reuses historical 
  assert.match(src,/Case Study ended/);
  assert.match(src,/Scan permission required/);
  assert.match(src,/scan_permission_required/);
+ assert.match(src,/code:'CASE_STUDY_ENDED'/);
+ assert.match(src,/if\(p&&p\.case_study_ended_at&&!p\.case_study_active\)return ''/);
 });
