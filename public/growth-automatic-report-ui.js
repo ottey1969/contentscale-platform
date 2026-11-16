@@ -414,7 +414,8 @@
     var post=function(u,b){return fetch(u,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()})};
     var sel=await post(writeUrl.replace('/auto-research/write','/auto-research/selection'),{gap_list_id:gl.id,item_ids:ids});
     if(!sel||sel.success===false)return sel;
-    return post(writeUrl,{gap_list_id:gl.id,item_ids:ids,ai_check_choice:choice})}:null})}catch(e){}
+    return post(writeUrl,{gap_list_id:gl.id,item_ids:ids,ai_check_choice:choice})}:null,
+    rerunResearch:refreshChangedPageResearch})}catch(e){}
   }
   // Everything below is the evidence behind steps 1–3: collapsed, so the page shows the decisions first.
   researchDetails=node('details',null,container);researchDetails.id='growthEvidence';
@@ -1127,6 +1128,18 @@
    renderAiCheck(box,{ai_check:j.ai_check});
   }catch(e){}
  }
+ // Inline stale-page action runs the same owner research route as the top button,
+ // but first invalidates the cached old page snapshot. The persisted selection
+ // is not deleted: the server maps pending choices onto the new research.
+ async function refreshChangedPageResearch(){
+  var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/research-cache/clear?page_id='+encodeURIComponent(id)+runParams;
+  var r=await fetch(url,{method:'POST',credentials:'same-origin',cache:'no-store'});
+  var data=await r.json().catch(function(){return {}});
+  if(!r.ok||!data.success)throw Error(data.code||'Could not refresh old research cache');
+  var success=await run();
+  if(!success)throw Error('The new research did not complete. Your earlier selection remains saved.');
+  return true;
+ }
  async function run(){
   var status=document.getElementById('researchStatus');
   // Visible activity while the research runs (a spinner; a still mark with reduced motion).
@@ -1145,8 +1158,9 @@
    var result=await response.json();
    if(!response.ok||result.success!==true)throw Error(result.code||'Research unavailable');
    last=result;render(result);pointHandoff(result);showAiEarly();firstProgress('Research complete. Review the evidence and next action below.',false);runProgressText(false);moveToResearch('trackerNextAction');if(owner)triggerAutomaticAi(result);
+   return true;
   }catch(e){firstProgress('Growth research failed: '+String(e.message||e)+'. No completed report was saved.',false);runProgressText(false);moveToResearch('researchStatus');status.textContent='Research could not complete: '+String(e.message||e);status.className='error';
-   document.getElementById('retryResearch').hidden=false
+   document.getElementById('retryResearch').hidden=false;return false
   }finally{document.getElementById('retryResearch').disabled=false;if(status.className==='working')status.className='';if(status.removeAttribute)status.removeAttribute('aria-busy')}
  }
  document.getElementById('retryResearch').addEventListener('click',run);
