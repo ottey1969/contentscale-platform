@@ -49005,6 +49005,13 @@ function _trackerEvidenceGateState(p){
 
 ${require('fs').readFileSync(require('path').join(__dirname,'tracker-page-journey.cjs'),'utf8')}
 function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
+  // Completed Case Studies do not inherit stale next-scan opportunities from historical Briefs.
+  if(p&&p.case_study_ended_at&&!p.case_study_active){
+    var endDate='';try{endDate=new Date(p.case_study_ended_at).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'});}catch(e){}
+    return {code:'CASE_STUDY_ENDED',label:'CASE STUDY ENDED'+(endDate?' · '+endDate:''),
+      detail:'The measurement and its monitoring schedule have ended. The original baseline and report remain in history. No further scans will run without your explicit permission.',
+      color:'#cbd5e1',border:'#475569',bg:'#111827',button:'',buttonAction:''};
+  }
   function bool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
   function parse(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(v)}catch(e){return null}}
   var brief=parse(p.brief_content)||{};
@@ -49299,6 +49306,7 @@ function _trackerImplementationCheckState(p,isDone,nextState){
 }
 
 function _trackerImplementationCheckHtml(p,isDone,nextState){
+  if(p&&p.case_study_ended_at&&!p.case_study_active)return ''; // Historic implementation notes remain in history, not as open actions.
   // NEXT ACTION already explains these hand-off states and owns their button.
   // Rendering a second near-identical purple/amber panel made the card look stuck.
   if(nextState&&(['REVIEW_BRIEF','CASE_PUBLISH_VERIFY','VERIFY_LIVE_PENDING','PREPARE_CASE'].includes(String(nextState.code||''))||(nextState.code==='SCAN'&&p.case_study_active)))return '';
