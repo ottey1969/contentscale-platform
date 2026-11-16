@@ -43,7 +43,7 @@ test('Pre-Write links only exact tracked URLs; fallback preserves full URL for F
   },TRACKED);
   await page.waitForSelector('#cs-prewrite-to-growth a[href*="/growth/from-brief"]');
   const exact=await page.locator('#cs-prewrite-to-growth a').first().getAttribute('href');
-  assert.match(exact,/growth\\/from-brief/);assert.equal(new URL(exact,'http://local').searchParams.get('url'),TRACKED);
+  assert.ok(exact.includes('/growth/from-brief'));assert.equal(new URL(exact,'http://local').searchParams.get('url'),TRACKED);
   assert.match(await page.locator('#cs-prewrite-to-growth').innerText(),/roof.example\/24-hour-emergency-roof-repair-nj/);
   await page.evaluate(url=>{
     window._pwbCurrentBrief.content_decision.closest_existing_url=url;
