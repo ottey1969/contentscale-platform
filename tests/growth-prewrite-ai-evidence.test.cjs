@@ -64,3 +64,34 @@ test('Growth integration prefers fresh, explicit Growth answers and never leaks 
  const ui=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
  assert.match(ui,/growthPrewriteReuse/);assert.match(ui,/Pre-Write is writing research/);
 });
+
+test('live Growth ai-check route reuses eligible Pre-Write answer for owner, but never for public viewer',async()=>{
+ const {registerGrowthAutomaticResearch}=require('../src/tracker-growth-automatic-routes.cjs');
+ const routes={};
+ const app={get:(p,mw,h)=>{routes[p]=h},post:()=>{}};
+ const db={query:async(sql,args)=>({rows:sql.includes('FROM prewrite_briefs')?[makeBrief()]:[]})};
+ registerGrowthAutomaticResearch(app,db,(req,res,next)=>next(),{
+  loadAiAnswers:async()=>[],
+  loadPageMarkets:async()=>({countries:['US'],language:'en'}),
+  loadPrewriteMarket:async()=>null,
+  loadSiteMarkets:async()=>null
+ });
+ const handler=routes['/api/tracker-client/:token/growth/ai-check'];
+ async function invoke(owner){
+  return await new Promise((resolve,reject)=>{
+   const req={query:{page_id:'12',query},growthTrackerClientId:9,
+    growth:{can_edit:owner,pages:[{id:12,url,keyword:'24 Hour Emergency Roof Repair NJ'}]}};
+   const res={statusCode:200,status(x){this.statusCode=x;return this},set(){return this},json(x){resolve({status:this.statusCode,body:x});return this}};
+   Promise.resolve(handler(req,res)).catch(reject);
+  });
+ }
+ const owner=await invoke(true);
+ assert.equal(owner.status,200);
+ assert.equal(owner.body.ai_check.summary.checked,1);
+ assert.equal(owner.body.ai_check.prewrite_reuse.brief_id,11);
+ assert.equal(owner.body.ai_check.prewrite_reuse.reused_count,1);
+ const viewer=await invoke(false);
+ assert.equal(viewer.status,200);
+ assert.equal(viewer.body.ai_check.summary.checked,0);
+ assert.equal(viewer.body.ai_check.prewrite_reuse,null);
+});
