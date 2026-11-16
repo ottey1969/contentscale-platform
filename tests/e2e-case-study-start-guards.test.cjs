@@ -69,6 +69,8 @@ test('Case Study start persists one immutable baseline with verified five-engine
  const state={existing:[]};
  const query=async(sql,args=[])=>{
   const s=String(sql);
+  // The real start route migrates closeout columns on databases assembled after server boot.
+  if(/^ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_(?:ended_at|scan_authorized_at)/.test(s))return {rows:[]};
   if(s.includes('FROM tracker_clients'))return {rows:[client]};
   if(s.includes('FROM tracker_pages'))return {rows:[{...page,gsc_clicks:3,gsc_impressions:40,gsc_position:9,html_content:richHtml}]};
   if(s.includes('FROM tracker_case_studies'))return {rows:state.existing};

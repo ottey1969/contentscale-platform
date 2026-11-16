@@ -2864,6 +2864,9 @@ async function _ensureCaseStudySchema(){
   await pool.query('DROP TRIGGER IF EXISTS tracker_case_study_content_version_lock ON tracker_case_study_content_versions');
   await pool.query(`CREATE TRIGGER tracker_case_study_content_version_lock BEFORE UPDATE OR DELETE ON tracker_case_study_content_versions
     FOR EACH ROW EXECUTE FUNCTION contentscale_protect_case_study_content_version()`);
+  // Closeout survives reload, scheduled jobs and previously open browser tabs.
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_ended_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_scan_authorized_at TIMESTAMPTZ');
   _caseStudySchemaReady=true;
 }
 // Clears a day-7/day-14 Case Study evidence checkpoint; leaves a regular monitoring gate as it is.
@@ -3136,7 +3139,10 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/start',async(req,r
     ?await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked,previous_case_study_id) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE,$9) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline),_previousCaseStudyId])
     :await pool.query(`INSERT INTO tracker_case_studies (tracker_client_id,tracker_page_id,client_name,domain,canonical_url,primary_query,status,baseline_at,baseline_data,baseline_locked) VALUES($1,$2,$3,$4,$5,$6,'active',$7,$8::jsonb,TRUE) RETURNING *`,[client.id,page.id,client.name||client.domain,client.domain,_caseStudyNormUrl(page.url),query,baselineAt,JSON.stringify(baseline)]);
   const cs=ins.rows[0];
-  await pool.query(`UPDATE tracker_pages SET check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,
+  // Ensure the closeout columns even on disposable/staging databases assembled after startup.
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_ended_at TIMESTAMPTZ');
+  await pool.query('ALTER TABLE tracker_pages ADD COLUMN IF NOT EXISTS case_study_scan_authorized_at TIMESTAMPTZ');
+  await pool.query(`UPDATE tracker_pages SET case_study_ended_at=NULL,case_study_scan_authorized_at=NULL,check_frequency=$1,email_reminders=$2,ai_reminder_days=$3,
     next_check_at=CASE WHEN $4::int>0 THEN NOW()+($4::int * INTERVAL '1 day') ELSE NULL END,
     next_ai_reminder_at=CASE WHEN $2::boolean THEN NOW()+($3::int * INTERVAL '1 day') ELSE NULL END
     WHERE id=$5 AND tracker_client_id=$6`,[frequency,emailReminders,aiReminderDays,freqDays,page.id,client.id]);
@@ -3312,6 +3318,8 @@ app.get('/api/tracker-client/:token', async (req, res) => {
       ,['ai_reminder_days','INTEGER NOT NULL DEFAULT 14']
       ,['next_ai_reminder_at','TIMESTAMPTZ']
       ,['last_ai_reminder_sent_at','TIMESTAMPTZ']
+      ,['case_study_ended_at','TIMESTAMPTZ']
+      ,['case_study_scan_authorized_at','TIMESTAMPTZ']
       ,['monitoring_waiting_input','BOOLEAN NOT NULL DEFAULT FALSE']
       ,['monitoring_request_at','TIMESTAMPTZ']
       ,['monitoring_reminder_sent_at','TIMESTAMPTZ']
@@ -3336,7 +3344,7 @@ app.get('/api/tracker-client/:token', async (req, res) => {
     // Ensure tracker_client_id column exists before querying
     const pagesR = await pool.query(
       `SELECT p.id, p.url, p.keyword, p.gsc_keyword, p.created_at, p.next_check_at, p.last_checked_at,
-              p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.email_reminders, p.ai_reminder_days, p.next_ai_reminder_at, p.last_ai_reminder_sent_at, p.monitoring_waiting_input,p.monitoring_request_at,p.monitoring_require_ai,p.monitoring_gate_label,p.monitoring_gsc_pages_at,p.monitoring_gsc_queries_at,p.gsc_clicks, p.gsc_impressions, p.gsc_position,
+              p.is_done, p.manual_done, p.manual_done_at, p.fetch_reliable, p.check_frequency, p.case_study_ended_at,p.case_study_scan_authorized_at,p.email_reminders, p.ai_reminder_days, p.next_ai_reminder_at, p.last_ai_reminder_sent_at, p.monitoring_waiting_input,p.monitoring_request_at,p.monitoring_require_ai,p.monitoring_gate_label,p.monitoring_gsc_pages_at,p.monitoring_gsc_queries_at,p.gsc_clicks, p.gsc_impressions, p.gsc_position,
               p.treatment, p.treatment_target_url, p.treatment_updated_at, p.treatment_source, p.implementation_at, p.implementation_verified_at, p.implementation_verified_brief_cycle_id, p.implementation_status, p.implementation_before_graaf,
               p.ranking_brief, p.needs_html, p.brief_started_at, p.brief_evaluated_at, p.brief_content, p.brief_check_count,
               p.html_pasted_at, p.html_source, p.last_graaf_score, p.brief_mode, p.revision_cycle,
@@ -3922,6 +3930,7 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/end',async(req,res
   const ids=act.map(x=>x.id);
   // One transaction: the status and its history event are written together or not at all.
   const conn=await pool.connect();
+  let closed;
   try{
     await conn.query('BEGIN');
     await conn.query("UPDATE tracker_case_studies SET status='completed',ended_at=NOW(),ended_reason=$2 WHERE id=ANY($1::int[]) AND status='active'",[ids,reason]);
@@ -3929,12 +3938,40 @@ app.post('/api/tracker-client/:token/pages/:pageId/case-study/end',async(req,res
     // scanner stays locked on 'Waiting for fresh evidence' and the page stays in Tracker action pages for good.
     // A regular guided-monitoring gate (not case_day_*) is not touched.
     await conn.query(_CASE_STUDY_GATE_CLEAR_SQL,[[page.id]]);
+    // End every scheduled/checkpoint wait, without altering the immutable baseline, Brief, snapshots or HTML.
+    closed=(await conn.query(`UPDATE tracker_pages SET
+      case_study_ended_at=NOW(),case_study_scan_authorized_at=NULL,
+      check_frequency='0',next_check_at=NULL,email_reminders=FALSE,next_ai_reminder_at=NULL,
+      monitoring_waiting_input=FALSE,monitoring_gate_label=NULL,
+      monitoring_request_at=NULL,monitoring_reminder_sent_at=NULL
+      WHERE id=$1 AND tracker_client_id=$2 RETURNING case_study_ended_at`,
+      [page.id,cr.rows[0].id])).rows[0];
     for(const id of ids)await conn.query(`INSERT INTO tracker_case_study_events(case_study_id,tracker_page_id,event_type,source,event_data) VALUES($1,$2,'case_study_ended','tracker_owner',$3::jsonb)`,
-      [id,page.id,JSON.stringify({url:page.url,reason,ended_by:'tracker_owner',baseline_preserved:true,history_preserved:true,new_case_study_needs_new_baseline:true})]);
+      [id,page.id,JSON.stringify({url:page.url,reason,ended_at:closed.case_study_ended_at,ended_by:'tracker_owner',monitoring_stopped:true,scan_consent_required:true,baseline_preserved:true,history_preserved:true,new_case_study_needs_new_baseline:true})]);
     await conn.query('COMMIT');
   }catch(e){await conn.query('ROLLBACK').catch(()=>{});throw e;}finally{conn.release();}
-  res.json({success:true,ended:ids.length,message:'Case Study ended. The baseline, evidence and report are kept. Growth can now prepare a CMS package for this page; nothing is published automatically. You can start a new Case Study for this page later; it gets a new baseline.'});
+  res.json({success:true,ended:ids.length,ended_at:closed.case_study_ended_at,scan_permission_required:true,
+    message:'Case Study ended on '+new Date(closed.case_study_ended_at).toISOString()+'. Monitoring and scan schedules are stopped. The baseline, evidence and report are kept. Any new manual scan requires separate owner permission.'});
 }catch(e){console.error('[case-study-end]',e.message);res.status(500).json({success:false,error:'The Case Study could not be ended. Nothing was changed.'});}});
+// Explicit approval for ONE new manual scan after the case is closed. It never schedules scanning.
+app.post('/api/tracker-client/:token/pages/:pageId/case-study/authorize-scan',async(req,res)=>{try{
+  if(req.body?.confirm!=='AUTHORIZE_ONE_SCAN')return res.status(400).json({success:false,error:'Explicit approval required'});
+  const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
+  if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
+  await _ensureCaseStudySchema();
+  const page=(await pool.query('SELECT id,url,case_study_ended_at FROM tracker_pages WHERE tracker_client_id=$1 AND id=$2',
+    [cr.rows[0].id,req.params.pageId])).rows[0];
+  if(!page)return res.status(404).json({success:false,error:'Page not found'});
+  if(!page.case_study_ended_at)return res.status(409).json({success:false,error:'No ended Case Study for this page'});
+  const active=(await pool.query("SELECT id,tracker_page_id,canonical_url FROM tracker_case_studies WHERE tracker_client_id=$1 AND status='active'",
+    [cr.rows[0].id])).rows.some(x=>Number(x.tracker_page_id)===Number(page.id)||_caseStudyNormUrl(x.canonical_url)===_caseStudyNormUrl(page.url));
+  if(active)return res.status(409).json({success:false,error:'An active Case Study protects this page'});
+  const authorized=(await pool.query(`UPDATE tracker_pages SET case_study_scan_authorized_at=NOW()
+    WHERE tracker_client_id=$1 AND id=$2 AND case_study_ended_at IS NOT NULL
+    RETURNING case_study_scan_authorized_at`,[cr.rows[0].id,page.id])).rows[0];
+  return res.json({success:true,one_manual_scan_authorized:true,authorized_at:authorized.case_study_scan_authorized_at,
+    message:'One manual scan authorized. Monitoring stays off. No scan has started.'});
+}catch(e){console.error('[case-study-scan-consent]',e.message);return res.status(500).json({success:false,error:'Scan authorization could not be saved'});}});
 app.post('/api/tracker-client/:token/pages/:pageId/case-study/new-revision',async(req,res)=>{try{
   const cr=await pool.query("SELECT id FROM tracker_clients WHERE token=$1 AND (status IS NULL OR status!='deleted')",[req.params.token]);
   if(!cr.rows.length)return res.status(404).json({success:false,error:'Tracker not found'});
@@ -4305,6 +4342,8 @@ app.post('/api/tracker-client/:token/reset-scans', async (req, res) => {
 function _trackerNormalScanGate(page){
   const b=v=>v===true||v===1||v==='1'||v==='true'||v==='t';
   if(!page)return {allowed:false,reason:'Page not found'};
+  // Bulk scanning must never use a one-time manual consent.
+  if(page.case_study_ended_at)return {allowed:false,reason:'Case Study ended; a new scan needs separate, owner-authorized manual consent'};
   if(b(page.monitoring_waiting_input))return {allowed:false,reason:'Waiting for fresh evidence'};
   const _briefSafetyText=typeof page.brief_content==='string'?page.brief_content:JSON.stringify(page.brief_content||{});
   const _personalSafetyStale=/contentscale\.site/i.test(String(page.url||''))&&/(?:verify and add direct-answer block|submit (?:the )?url to bing index|copilot[^.]{0,100}relies entirely on bing|verify and add author bio|3[.,]7\s*[x×]|based on analy[sz]ing (?:over )?200\+? websites|in my experience analy[sz]ing (?:over )?200\+? websites)/i.test(_briefSafetyText);
@@ -9005,6 +9044,11 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     if (!own.rows.length) return res.status(403).json({ success: false, error: 'Not your page' });
     const page = own.rows[0];
     page.claims_facts_updated_at=cr.rows[0].claims_facts_updated_at||null;
+    const _endedCase=!!page.case_study_ended_at;
+    if(_endedCase&&!page.case_study_scan_authorized_at){
+      return res.status(409).json({success:false,code:'CASE_STUDY_SCAN_REAUTHORIZATION_REQUIRED',
+        scan_permission_required:true,error:'Case Study ended on '+new Date(page.case_study_ended_at).toISOString()+'. Authorize one new manual scan first.'});
+    }
     let _caseFirstManualScan=false;
     let _caseIsActive=false;
     if(!page.monitoring_waiting_input){
@@ -9030,7 +9074,7 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
         !(_impl>_base)&&!_publishedAfterBaseline);
     }
     const normalScanGate=_trackerNormalScanGate(page);
-    if(!normalScanGate.allowed&&!page.monitoring_waiting_input&&!_caseFirstManualScan){
+    if(!normalScanGate.allowed&&!page.monitoring_waiting_input&&!_caseFirstManualScan&&!_endedCase){
       return res.status(409).json({success:false,scan_locked:true,error:normalScanGate.reason,next_action_required:true});
     }
     // A completed case-study page follows the protected proof/verification loop.
@@ -9082,7 +9126,13 @@ app.post('/api/tracker-client/:token/check/:pageId', async (req, res) => {
     // Block if already running
     const existing = _trackerCheckStatus.get(pageId);
     if (existing && existing.running) return res.json({ success: true, message: 'Already running', page_id: pageId, already_running: true });
-
+    if(_endedCase){
+      const consumed=await pool.query(`UPDATE tracker_pages SET case_study_scan_authorized_at=NULL
+        WHERE id=$1 AND tracker_client_id=$2 AND case_study_scan_authorized_at=$3
+        RETURNING id`,[page.id,cr.rows[0].id,page.case_study_scan_authorized_at]);
+      if(!consumed.rows.length)return res.status(409).json({success:false,code:'CASE_STUDY_SCAN_REAUTHORIZATION_REQUIRED',
+        scan_permission_required:true,error:'The authorization has already been used; explicitly authorize another scan.'});
+    }
     // Initialize status — same as engine route
     _trackerCheckStatus.set(pageId, { running: true, steps: [], startedAt: new Date().toISOString(), finishedAt: null, failed: false, error_code: null, error: null, url: page.url });
 
@@ -45863,6 +45913,16 @@ function _csTier(p){ return !p?'#6b7280':p<=3?'#4ade80':p<=10?'#a3e635':p<=20?'#
 function _csNum(p){ return (Math.round(p*10)/10); }
 function _csDateH(t){ try{ var d=new Date(t); return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short'}); }catch(e){ return ''; } }
 // End the Case Study of a page: owner decision, two confirmations. Nothing is deleted; the lock and the measurement stop.
+function authorizeCaseStudyScan(pageId){
+  var p=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
+  if(!p.case_study_ended_at)return;
+  var day=new Date(p.case_study_ended_at).toLocaleString('en-GB');
+  if(!confirm('The Case Study ended on '+day+'.\n\nAllow exactly ONE manual scan of '+(p.url||'this page')+'?\n\nMonitoring remains off. This does not restart the Case Study or change the historical baseline.'))return;
+  api('/pages/'+pageId+'/case-study/authorize-scan','POST',{confirm:'AUTHORIZE_ONE_SCAN'}).then(function(d){
+    if(!d||!d.success)throw new Error((d&&d.error)||'Permission not saved');
+    if(typeof loadPages==='function')loadPages();
+  }).catch(function(e){alert(e.message||'Could not authorize the scan');});
+}
 function endCaseStudy(pageId){
   var pg=(_pages||[]).find(function(x){return Number(x.id)===Number(pageId);})||{};
   if(!confirm('End the Case Study for '+(pg.url||'this page')+'?\\n\\n- The measurement and the page lock stop. Growth can then prepare a CMS package for this page.\\n- Nothing is deleted: the baseline, the evidence and the report stay saved and unchangeable.\\n- This cannot be undone. You can start a new Case Study for this page later; it gets a new baseline.'))return;
@@ -48945,6 +49005,13 @@ function _trackerEvidenceGateState(p){
 
 ${require('fs').readFileSync(require('path').join(__dirname,'tracker-page-journey.cjs'),'utf8')}
 function _trackerNextActionState(p,isDone,lastCheckedRaw,nextEvidence){
+  // Completed Case Studies do not inherit stale next-scan opportunities from historical Briefs.
+  if(p&&p.case_study_ended_at&&!p.case_study_active){
+    var endDate='';try{endDate=new Date(p.case_study_ended_at).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'});}catch(e){}
+    return {code:'CASE_STUDY_ENDED',label:'CASE STUDY ENDED'+(endDate?' · '+endDate:''),
+      detail:'The measurement and its monitoring schedule have ended. The original baseline and report remain in history. No further scans will run without your explicit permission.',
+      color:'#cbd5e1',border:'#475569',bg:'#111827',button:'',buttonAction:''};
+  }
   function bool(v){return v===true||v===1||v==='1'||v==='true'||v==='t';}
   function parse(v){if(!v)return null;if(typeof v==='object')return v;try{return JSON.parse(v)}catch(e){return null}}
   var brief=parse(p.brief_content)||{};
@@ -49239,6 +49306,7 @@ function _trackerImplementationCheckState(p,isDone,nextState){
 }
 
 function _trackerImplementationCheckHtml(p,isDone,nextState){
+  if(p&&p.case_study_ended_at&&!p.case_study_active)return ''; // Historic implementation notes remain in history, not as open actions.
   // NEXT ACTION already explains these hand-off states and owns their button.
   // Rendering a second near-identical purple/amber panel made the card look stuck.
   if(nextState&&(['REVIEW_BRIEF','CASE_PUBLISH_VERIFY','VERIFY_LIVE_PENDING','PREPARE_CASE'].includes(String(nextState.code||''))||(nextState.code==='SCAN'&&p.case_study_active)))return '';
@@ -49508,7 +49576,11 @@ function renderPages() {
     var isDone = p.is_done === true || p.is_done === 't' || p.is_done === 'true' || p.is_done === 1;
     var isCaseStudy = p.case_study_active === true || p.case_study_active === 't' || p.case_study_active === 'true' || p.case_study_active === 1;
     var _csr=p.case_study_readiness||{},_csReady=!!_csr.ready,_csMissing=Array.isArray(_csr.missing)?_csr.missing:[];
-    var _caseReadyHtml=!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+(_csr.gsc_queries_zero_verified?' GSC Queries checked · 0 shown':' GSC Queries for URL')+'</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div>'+(_csReady?'':'<button onclick="setBaselineGsc('+p.id+',event)" style="margin-top:8px;font-size:10px;font-weight:800;padding:5px 11px;border-radius:6px;background:#0a2540;border:1px solid #2563eb;color:#93c5fd;cursor:pointer;">&#x2b07; Fetch baseline GSC for this URL</button><span style="font-size:9px;color:#64748b;margin-left:8px;">fetches verified per-page GSC evidence &mdash; never copies site-wide queries</span>')+'</div>':'';
+    var _caseEnded=!isCaseStudy&&!!p.case_study_ended_at;
+    var _caseEndedAt=_caseEnded?new Date(p.case_study_ended_at).toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'}):'';
+    var _newCaseBaselineReady=_caseEnded&&_csReady&&!!p.last_checked_at&&new Date(p.last_checked_at)>new Date(p.case_study_ended_at);
+    p.scan_permission_required=_caseEnded&&!p.case_study_scan_authorized_at;
+    var _caseReadyHtml=_caseEnded?'<div style="margin:8px 0;padding:10px;border:1px solid #64748b;border-radius:7px;background:#111827;color:#e2e8f0;font-size:11px;"><b>Case Study ended</b> · '+_caseEndedAt+'<div>Measurement, scheduling and evidence checkpoints stopped. Historical baseline and reports are preserved.</div><div style="color:#93c5fd;">'+(p.scan_permission_required?'Scan permission required before any new manual scan.':'One manual scan authorized; monitoring remains off.')+'</div></div>':!isCaseStudy?'<div style="margin:8px 0 0;padding:9px 11px;border:1px solid '+(_csReady?'#16a34a':'#92400e')+';background:'+(_csReady?'#052e16':'#1c1407')+';border-radius:7px;font-size:10px;line-height:1.6;"><b style="color:'+(_csReady?'#86efac':'#fbbf24')+';">'+(_csReady?'READY — Start case study':'CASE STUDY WAITING FOR BASELINE')+'</b><div style="color:#cbd5e1;margin-top:3px;">'+(_csReady?'All required baseline evidence is present. Start before changing the live page.':('Complete first: '+_csMissing.join(' · ')))+'</div><div style="display:flex;gap:8px;flex-wrap:wrap;color:#94a3b8;margin-top:4px;"><span>'+(_csr.gsc_pages?'✓':'✕')+' GSC Pages</span><span>'+(_csr.gsc_queries?'✓':'✕')+(_csr.gsc_queries_zero_verified?' GSC Queries checked · 0 shown':' GSC Queries for URL')+'</span><span>'+((Number(_csr.ai_checked)||0)===5?'✓':'✕')+' AI '+(Number(_csr.ai_checked)||0)+'/5</span><span>'+(_csr.scan?'✓':'✕')+' Page scan</span><span>'+(_csr.html?'✓':'✕')+' HTML</span><span>'+(_csr.email?'✓':'✕')+' Client email</span></div>'+(_csReady?'':'<button onclick="setBaselineGsc('+p.id+',event)" style="margin-top:8px;font-size:10px;font-weight:800;padding:5px 11px;border-radius:6px;background:#0a2540;border:1px solid #2563eb;color:#93c5fd;cursor:pointer;">&#x2b07; Fetch baseline GSC for this URL</button><span style="font-size:9px;color:#64748b;margin-left:8px;">fetches verified per-page GSC evidence &mdash; never copies site-wide queries</span>')+'</div>':'';
     var muteCompletedCard = isDone && !isCaseStudy;
     function _trackerUtc(v){try{return new Date(v).toISOString().replace('T',' ').replace(/\.\d{3}Z$/,' UTC');}catch(e){return '';}}
     var implementationAt = p.implementation_at ? _trackerUtc(p.implementation_at) : '';
@@ -49606,7 +49678,7 @@ function renderPages() {
     var _correctionLoop = (_nextActionCode==='REMAINING'||_nextActionCode==='VERIFYING');
     var _awaitingLiveVerification = (_nextActionCode==='VERIFY_LIVE_PENDING'||_nextActionCode==='VERIFY_LIVE');
     var _hideFullBrief = _correctionLoop;
-    var _hideManualScan = _correctionLoop;
+    var _hideManualScan = _correctionLoop || _caseEnded;
     var _disableFullBrief = _awaitingLiveVerification;
     var _disableManualScan = _awaitingLiveVerification;
 
@@ -49768,6 +49840,9 @@ function renderPages() {
       + '<button data-tour="ai-evidence" onclick="event.stopPropagation();openAiEvidence(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Open the five-engine manual evidence panel. Count means manually checked, not cited.">&#129504; AI Checked ' + (function(){var a=p.ai_manual_evidence;if(typeof a==="string"){try{a=JSON.parse(a);}catch(x){a={};}}var req=waitingForData?(Date.parse(p.monitoring_request_at||0)||0):0;return ["google_aio","chatgpt","perplexity","claude","copilot"].filter(function(k){var ev=a&&a[k];return ev&&_aiEvidenceIsVerified(ev)&&(!req||(Date.parse(ev.updated_at||ev.verified_at||0)||0)>=req);}).length;})() + '/5</button>'
       + '<button data-tour="intelligence" onclick="event.stopPropagation();openCompetitiveIntelligence(' + p.id + ')" style="background:#0d1117;border:1px solid #0891b2;border-radius:7px;color:#67e8f9;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Cross-engine competitors, sources, content opportunities and claims to verify">&#128269; Intelligence</button>'
       + ((explicitlyNeeds || p.fetch_reliable === false) && !_evidenceCheckpointLock ? '<button class="cs-html-btn cs-blink" onclick="openHtmlUpload(' + p.id + ')" style="background:#0d1117;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:700;" title="Automatic live fetch was not reliable. Paste the published HTML manually to continue verification.">&#9888; Manual HTML required</button>' : '')
+      + (_caseEnded ? (p.scan_permission_required
+        ? '<button type="button" onclick="event.stopPropagation();authorizeCaseStudyScan('+p.id+')" style="background:#172554;border:1px solid #3b82f6;border-radius:7px;color:#bfdbfe;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;">Authorize one scan</button>'
+        : '<button type="button" onclick="event.stopPropagation();checkPage('+p.id+')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:11px;padding:5px 10px;font-weight:800;">Scan once (authorized)</button>') : '')
       + (_hideManualScan ? '' : (_disableManualScan
         ? '<button disabled data-tour="scan" style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:11px;padding:5px 10px;font-weight:700;opacity:.8;" title="Scan is temporarily disabled. The next step is Check current live; no normal scan should run before live verification.">\u21bb Scan</button>'
         : (((_evidenceCheckpointLock||_nextNoAction||_nextWaitScanOpportunity||_nextActionCode==='WAITING'||(_nextWorkflowGuard&&!_nextScanRequired))
@@ -49783,7 +49858,7 @@ function renderPages() {
         : '<button data-tour="view-brief" onclick="viewLastBrief(' + p.id + ')" style="background:#0d1117;border:1px solid #8b5cf6;border-radius:7px;color:#c4b5fd;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:600;" title="View Citation Brief">\ud83d\udcc4 View Brief</button>') : '')
       + ((function(){var _d=_lastBriefData[p.id]||_buildBriefData(p);return _d&&_d.prewrite_handoff&&_d.prewrite_handoff.needed&&(!_nextWorkflowGuard||_nextAllowsContentChange);})() ? '<button onclick="event.stopPropagation();openPrewriteHandoff(' + p.id + ')" style="background:#1c1405;border:1px solid #f59e0b;border-radius:7px;color:#fbbf24;cursor:pointer;font-size:11px;padding:5px 12px;font-weight:800;" title="NEXT ACTION found work that needs a coordinated content update.">\ud83c\udfaf Continue in Pre-Write</button>' : '')
       + '<button data-tour="history" onclick="csPosHist(' + p.id + ')" style="background:#0d1117;border:1px solid #64748b;border-radius:7px;color:#cbd5e1;cursor:pointer;font-size:13px;padding:5px 10px;font-weight:600;" title="Ranking history">\\ud83d\\udcc8</button>'
-      + (!p.case_study_active ? (_csReady?'<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="All baseline evidence is complete. Lock it before changing the live page.">READY — Start case study</button>':'<button disabled style="background:#1c1407;border:1px solid #92400e;border-radius:7px;color:#fbbf24;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Complete: '+String(_csMissing.join(' · ')).replace(/"/g,'&quot;')+'">Case study waiting for baseline</button>') : '')
+      + (!p.case_study_active && (!_caseEnded||_newCaseBaselineReady) ? (_csReady?'<button onclick="event.stopPropagation();startCaseStudy(' + p.id + ')" style="background:#052e16;border:1px solid #22c55e;border-radius:7px;color:#86efac;cursor:pointer;font-size:10px;padding:5px 10px;font-weight:900;" title="All baseline evidence is complete. Lock it before changing the live page.">READY — Start case study</button>':'<button disabled style="background:#1c1407;border:1px solid #92400e;border-radius:7px;color:#fbbf24;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="Complete: '+String(_csMissing.join(' · ')).replace(/"/g,'&quot;')+'">Case study waiting for baseline</button>') : '')
       + (p.case_study_active && isDone
         ? ((_evidenceCheckpointLock||_nextLockContentChanges)
           ? '<button disabled style="background:#111827;border:1px solid #374151;border-radius:7px;color:#6b7280;cursor:not-allowed;font-size:10px;padding:5px 10px;font-weight:900;" title="'+(_nextNoAction?'No new action was found. A new HTML revision is not needed.':(_nextScanRequired?'Run the required scan first.':'Content changes are locked until NEXT ACTION finds work.'))+'">+ New HTML revision locked</button>'
