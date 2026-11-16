@@ -2,7 +2,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
 const src=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
 test('Save and run navigates immediately to visible progress and after completion to primary action',()=>{
- assert.match(src,/runProgressText\(true\);moveToResearch\('researchStatus'\)/);
+ assert.match(src,/status\.className='working';runProgressText\(true\);moveToResearch\('researchStatus'\)/);
  assert.match(src,/runProgressText\(false\);moveToResearch\('trackerNextAction'\)/);
  assert.match(src,/afterSaveStamp!==null&&Date\.now\(\)-Number\(afterSaveStamp\)<120000/);
  assert.match(src,/runProgressText\(false\);moveToResearch\('researchStatus'\)/);
