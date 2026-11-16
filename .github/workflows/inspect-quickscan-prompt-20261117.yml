@@ -1,24 +1,24 @@
-name: Inspect Quick Scan verification prompt
+name: Verify unbiased Growth AI prompt
 on:
   push:
     branches: [fix/growth-ai-mention-citation-recommendation-prompt-20261117]
 permissions:
   contents: read
 jobs:
-  inspect:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Locate prompts and related checks
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          s=Path('src/index.js').read_text().splitlines()
-          terms=['const directPrompt','function directPrompt','RECOMMENDED:','MENTIONED:','NO VERIFIED RESOURCES','citation verification','verification prompt','brand_recommended']
-          for term in terms:
-            ix=[i for i,line in enumerate(s) if term.lower() in line.lower()]
-            print('TERM',term,'HITS',len(ix))
-            for i in ix[:5]:
-              for n in range(max(0,i-5),min(len(s),i+15)):print(str(n+1)+': '+s[n][:400])
-          PY
-          grep -RIn "Quick Scan.*prompt\|mention.*recommend.*cit\|verify.*citation" src public --include='*.cjs' --include='*.js' | head -30 || true
+          node --check src/growth-free/ai-answers.cjs
+          node --check src/tracker-growth-automatic-routes.cjs
+      - name: Verified prompt and parser regression tests
+        run: |
+          node --test tests/growth-verification-prompt.test.cjs
+          node --test tests/growth-ai-check-validation.test.cjs
+          node --test tests/growth-tracker-ai-check.test.cjs
+          node --test tests/growth-prewrite-ai-evidence.test.cjs
