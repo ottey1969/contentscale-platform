@@ -461,6 +461,17 @@
     catch(_){copyExample.textContent='Clipboard unavailable — use report JSON'}
    });
   }
+  // Owner-only Growth -> Pre-Write handoff. The Tracker validates page id and exact URL
+  // before filling the Brief, preventing cross-account and cross-page contamination.
+  if(main.getAttribute('data-owner-draft')==='true' && d.url){
+   var pwSection=section('Need deeper content research?');
+   node('p','Open this exact page and working question in Pre-Write. Review existing HTML before adding a new section.',pwSection);
+   var params=new URLSearchParams({prewrite:'1',page_id:String(id),url:String(d.url),
+     keyword:String(runQuery||d.search_discovery?.target_query||d.practical_growth_plan?.focus_query||'')});
+   var prewrite=node('a','Open this page in Pre-Write',pwSection);
+   prewrite.href='/track/'+encodeURIComponent(token)+'?'+params.toString();
+   prewrite.style.cssText='display:inline-block;background:#2563eb;color:#fff;padding:9px 13px;border-radius:7px;text-decoration:none;font-weight:700';
+  }
   var discovery=d.search_discovery||{};
   // Optional shared renderer (growth-competitor-overview.js); the report renders fully without it.
   var renderOverview=typeof window!=='undefined'&&window.renderGrowthCompetitorOverview;
