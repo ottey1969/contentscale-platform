@@ -512,7 +512,7 @@
     if(pair.tracked_page_excerpt)node('p','Your observed excerpt: '+pair.tracked_page_excerpt,block);
     node('small',pair.interpretation,block);
     node('small','What to do: '+pair.editorial_action,block);
-    link(pair.competitor_url,'Competitor source',block);
+    link(pair.competitor_url,pair.competitor_url||'Competitor source unavailable',block);
    });
   }
   var questions=plan.competitors?.comparison_questions||[];
@@ -523,7 +523,7 @@
     var block=node('div',null,s);
     node('strong',q.observed_heading,block);
     node('small',q.editorial_check,block);
-    link(q.competitor_url,'Observed source',block);
+    link(q.competitor_url,q.competitor_url||'Observed source unavailable',block);
    });
   }
   s=section('Prepared improvement · review before publishing');
