@@ -2,7 +2,7 @@
 // Browser-supplied live research is always untrusted editorial context, NOT
 // verified content gaps, factual sources, measured positions, or publication rights.
 function normalizeGrowthResearchContext(payload,{targetUrl='',focusQuery=''}={}){
- const blank={status:'NO_ALIGNED_RESEARCH_CONTEXT',observations:[],scope:'UNTRUSTED_RESEARCH_QUESTIONS_ONLY'};
+ const blank={status:'NO_ALIGNED_RESEARCH_CONTEXT',observations:[],prewrite_editorial_answers:[],scope:'UNTRUSTED_RESEARCH_QUESTIONS_ONLY'};
  if(!payload||typeof payload!=='object'||Array.isArray(payload))return blank;
  if(String(payload.target_url||'')!==String(targetUrl||'')||
     String(payload.focus_query||'').trim().toLowerCase()!==String(focusQuery||'').trim().toLowerCase())return blank;
@@ -37,7 +37,15 @@ function normalizeGrowthResearchContext(payload,{targetUrl='',focusQuery=''}={})
    existing_headings:list(rt.existing_headings).slice(0,30).map(x=>clean(x).slice(0,140)).filter(Boolean)};
   if(!reader_task.tasks.length)reader_task=null;
  }
- return {status:observations.length?'ALIGNED_UNTRUSTED_RESEARCH_CONTEXT':'NO_ALIGNED_RESEARCH_CONTEXT',
-  observations,reader_task,scope:'UNTRUSTED_RESEARCH_QUESTIONS_ONLY'};
+ // These are owner-scoped Pre-Write editorial ideas, not verified sources or claims.
+ // Untrusted strings must never be promoted to facts, citations or public copy.
+ const allowed=new Set(['google_aio','chatgpt','perplexity','claude','copilot']);
+ const prewrite_editorial_answers=(Array.isArray(payload.prewrite_editorial_answers)?payload.prewrite_editorial_answers:[])
+  .filter(x=>x&&typeof x==='object'&&allowed.has(x.engine)&&x.editorial_only===true)
+  .slice(0,5).map(x=>({engine:x.engine,answer_excerpt:clean(x.answer_excerpt).slice(0,1800),
+   status:'UNVERIFIED_PREWRITE_WRITING_INPUT_NOT_CITATION_EVIDENCE'}))
+  .filter(x=>x.answer_excerpt.length>=20);
+ return {status:observations.length||prewrite_editorial_answers.length?'ALIGNED_UNTRUSTED_RESEARCH_CONTEXT':'NO_ALIGNED_RESEARCH_CONTEXT',
+  observations,reader_task,prewrite_editorial_answers,scope:'UNTRUSTED_RESEARCH_QUESTIONS_ONLY'};
 }
 module.exports={normalizeGrowthResearchContext};
