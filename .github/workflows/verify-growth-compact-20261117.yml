@@ -24,6 +24,9 @@ jobs:
             for i in ix[:12]:
               print('\\n'.join(f'{n+1}: {rows[n][:340]}' for n in range(max(0,i-3),min(len(rows),i+5))))
           PY
+      - name: Locate editorial writer context consumers
+        run: |
+          grep -RIn "normalizeGrowthResearchContext\|UNTRUSTED_RESEARCH_QUESTIONS_ONLY" src --include='*.cjs' | head -35
       - run: |
           node --check public/growth-automatic-report-ui.js
           node --check src/growth-prewrite-ai-evidence.cjs
