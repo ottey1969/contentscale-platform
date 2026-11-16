@@ -10,17 +10,44 @@
  var endpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(id)+runParams;
  // Update this page's Search Console data (owner), then let the next research run use it instead of a cached run.
  var gscBtn=document.getElementById('gscUpdate'),gscSt=document.getElementById('gscUpdateStatus');
- if(gscBtn)gscBtn.addEventListener('click',async function(){
-  gscBtn.disabled=true;gscSt.textContent='Fetching Search Console data for this page…';
+ async function refreshGscForPage(display,trigger){
+  var msg=display||gscSt;
+  if(trigger)trigger.disabled=true;
+  if(msg)msg.textContent='Checking optional Google Search Console access for this page…';
   try{
-   var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/gsc-autofetch-page',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(id)})});
+   var r=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/gsc-autofetch-page',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({page_id:Number(id)})});
    var j=await r.json().catch(function(){return {}});
-   if(!r.ok||!j.success){gscSt.textContent='Not updated: '+(j.error||('HTTP '+r.status));gscBtn.disabled=false;return}
-   await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/research-cache/clear?page_id='+encodeURIComponent(id)+runParams,{method:'POST',credentials:'same-origin'}).catch(function(){});
-   gscSt.textContent='Updated: '+(j.saved||0)+' search term(s) from Search Console. Run the research again to use them.';
+   if(!r.ok||!j.success){
+    if(msg)msg.textContent='Search Console could not be imported: '+String(j.error||j.code||'HTTP '+r.status)+'. This optional source is separate from Google Search grounding.';
+    if(trigger)trigger.disabled=false;
+    return false;
+   }
+   var cleared=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/research-cache/clear?page_id='+encodeURIComponent(id)+runParams,{method:'POST',credentials:'same-origin',cache:'no-store'});
+   if(!cleared.ok)throw Error('GSC import finished, but the old research cache could not be cleared');
+   if(msg)msg.textContent='Imported '+Number(j.saved||0)+' Search Console term(s). Exact-page and exact-query coverage must be checked in a new Growth run; no metrics are assumed.';
    var again=document.getElementById('retryResearch');if(again){again.hidden=false;again.classList.add('tg-attention')}
-  }catch(e){gscSt.textContent='Not updated: '+String(e.message||e);gscBtn.disabled=false}
- });
+   if(display&&display!==gscSt){
+    var go=node('button','Run Growth using imported GSC data →',display.parentNode);go.type='button';go.className='growth-primary-finish';
+    go.addEventListener('click',function(){run()});
+   }
+   if(trigger)trigger.disabled=false;
+   return true;
+  }catch(e){
+   if(msg)msg.textContent='Search Console update failed: '+String(e&&e.message||e)+'. Grounding does not provide private Search Console data.';
+   if(trigger)trigger.disabled=false;
+   return false;
+  }
+ }
+ if(gscBtn)gscBtn.addEventListener('click',function(){refreshGscForPage(gscSt,gscBtn)});
+ function addOptionalGscAction(parent){
+  var group=node('div',null,parent);group.className='growth-inline-gsc';group.style.cssText='margin:10px 0;display:flex;flex-direction:column;align-items:flex-start;gap:6px';
+  var btn=node('button','Import Google Search Console (optional)',group);btn.type='button';
+  btn.style.cssText='background:#1d4ed8;color:white;padding:9px 14px;border:0;border-radius:8px;font-weight:600';
+  var st=node('small','Google grounding examines public Search results; Search Console requires authorized access and may have no row for this exact query.',group);
+  st.setAttribute('role','status');st.setAttribute('aria-live','polite');
+  btn.addEventListener('click',function(){refreshGscForPage(st,btn)});
+  return group;
+ }
  var last=null;
  var savedEndpoint='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/saved?page_id='+encodeURIComponent(id)+runParams;
  var trackerGrowthStyle=document.createElement('style');trackerGrowthStyle.textContent="\n.tg-cockpit{background:linear-gradient(135deg,#0f3d3e,#1b5e5a);color:#fff;border:0}.tg-cockpit h2{color:#fff;margin:.3em 0}.tg-cockpit p{color:#e2f1ef}.tg-eyebrow{font-size:12px;font-weight:700;letter-spacing:.04em;background:rgba(255,255,255,.14);padding:3px 9px;border-radius:999px}.tg-cockpit a.tg-go{background:#fff;color:#0b2252}.tg-sub a{color:#fff}.tg-flow{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.tg-flow a{color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;text-decoration:none}.tg-flow a.active{background:rgba(255,255,255,.22)}.tg-flow a.done{border-color:#4ade80}\n.tg-found ul{margin:6px 0 0}.tg-evidence{background:white;border:1px solid #d9e1ec;border-radius:12px;padding:14px 18px;margin:14px 0}.tg-evidence>summary{font-weight:700;cursor:pointer}.tg-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.tg-tabs button{background:#f1f5f9;color:#172337;border:1px solid #d9e1ec;font-weight:600}.tg-tabs button[aria-selected=true]{background:#1d4ed8;color:#fff}.tg-pane>section{border:0;padding:0}\n.tg-self{margin-top:16px;border-top:1px solid #e5eaf2;padding-top:8px}.tg-bar{position:fixed;left:0;right:0;bottom:0;z-index:50;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;padding:12px 16px;background:#0f3d3e;color:#fff;box-shadow:0 -6px 20px rgba(0,0,0,.18)}.tg-bar[hidden]{display:none}.tg-bar small{display:block;color:#cde7e4}.tg-bar a.tg-go{background:#fff;color:#0b2252;padding:9px 14px;border-radius:8px;font-weight:700;text-decoration:none}.tg-bar a.tg-top{color:#cde7e4}\n/* Tracker Growth guided actions */\n.cs-growth-guidance{padding:12px 14px;border-left:4px solid #2563eb;background:rgba(37,99,235,.06);border-radius:6px}\n.cs-growth-action-list{display:grid;gap:12px;margin:12px 0 18px}.cs-growth-action{border:1px solid #cbd5e1;border-radius:12px;padding:16px;transition:border-color .2s ease,box-shadow .2s ease,opacity .2s ease}.cs-growth-action-head{display:flex;gap:12px;align-items:flex-start}.cs-growth-state{font-size:22px;font-weight:700;line-height:1.2}.cs-growth-action-copy{flex:1}.cs-growth-action-copy p{margin:4px 0 12px}.cs-growth-action-button{border:0;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;transition:transform .15s ease,background .2s ease}.cs-growth-action-button:focus-visible{outline:3px solid #1d4ed8;outline-offset:3px}.cs-growth-action-button:active{transform:scale(.98)}.cs-growth-current{border-color:#2563eb;box-shadow:0 0 0 1px #2563eb}.cs-growth-current .cs-growth-state{color:#2563eb}.cs-growth-current .cs-growth-action-button{background:#2563eb;color:white}.cs-growth-done{border-color:#15803d}.cs-growth-done .cs-growth-state{color:#15803d}.cs-growth-done .cs-growth-action-button{background:#15803d;color:white}.cs-growth-future{opacity:.73}.cs-growth-future .cs-growth-action-button{background:#e2e8f0;color:#475569;cursor:not-allowed}.cs-growth-action-detail{border-top:1px solid #cbd5e1;padding-top:10px;margin-top:12px;animation:csGrowthReveal .24s ease-out}.cs-growth-action-detail[hidden]{display:none}@keyframes csGrowthReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.cs-growth-action,.cs-growth-action-button,.cs-growth-action-detail{animation:none;transition:none}}\n";trackerGrowthStyle.textContent+="\n.growth-ai-prominent{border:2px solid #bfdbfe!important;background:linear-gradient(145deg,#eff6ff,#fff 55%)!important;box-shadow:0 9px 28px rgba(29,78,216,.09);animation:growthAiArrive .3s ease-out;scroll-margin-top:22px}\n.growth-ai-prominent h2{color:#1e40af}.growth-ai-state{font-weight:700;color:#1e3a8a}.growth-ai-progress{height:9px;background:#dbeafe;border-radius:99px;overflow:hidden;margin:8px 0 14px}.growth-ai-progress>span{height:100%;display:block;background:#2563eb;border-radius:99px;transition:width .4s ease}.growth-ai-manual{background:white;border:1px solid #cbd5e1;border-radius:10px;padding:14px;margin-top:12px}.growth-ai-manual>summary{cursor:pointer;font-weight:700}.growth-ai-prominent a[href=\"#growthGapChoice\"]{display:inline-block;padding:8px 13px;border-radius:8px;background:#1d4ed8;color:white;font-weight:700;text-decoration:none}.growth-ai-prominent a:focus-visible{outline:3px solid #f59e0b;outline-offset:2px}\n@keyframes growthAiArrive{from{opacity:.45;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.growth-ai-prominent{animation:none}.growth-ai-progress>span{transition:none}}\n";trackerGrowthStyle.textContent+="\n.tg-run-live{outline:2px solid #2563eb;outline-offset:6px;border-radius:8px;animation:tgRunPulse 1.6s ease-in-out infinite}@keyframes tgRunPulse{0%,100%{outline-color:#93c5fd}50%{outline-color:#2563eb}}@media(prefers-reduced-motion:reduce){.tg-run-live{animation:none}}.tg-found{background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:14px 16px;margin:12px 0;scroll-margin-top:96px}\n";(document.head||main).appendChild(trackerGrowthStyle);
@@ -256,8 +283,8 @@
   node('h3',d.outcome_context?d.outcome_context.headline:String(outcome.decision||'DATA_BLOCKED').replace(/_/g,' '),primary);
   if(d.outcome_context){var ocx=d.outcome_context;
    if(ocx.distinction)node('p',ocx.distinction,primary);
-   if((ocx.open_checks||[]).length){node('strong','Still open — not a content question',primary);var olist=node('ol',null,primary);
-    ocx.open_checks.forEach(function(c){var li=node('li',c.detail,olist);node('div','What to do: '+c.action,li)})}
+   if((ocx.open_checks||[]).length){node('strong','Open checks — measured, unknown or optional',primary);var olist=node('ol',null,primary);
+    ocx.open_checks.forEach(function(c){var li=node('li',c.detail,olist);node('div','What to do: '+c.action,li);if(['TARGET_PAGE_NOT_MEASURED','GOOGLE_SHOWS_ANOTHER_PAGE','SEARCH_CONSOLE_DATA_OLD'].includes(c.code))addOptionalGscAction(li)})}
    var oc=node('p',ocx.note+' ',primary);if((ocx.topics||[]).length){var go=node('a','Go to the list ↓',oc);go.href='#growthGapChoice'}}
   node('p',String(outcome.reason||outcome.next_action||'A verified editorial decision was not available.'),primary);
   if(outcome.target_url){var chosen=node('p','Target page: ',primary);link(outcome.target_url,outcome.target_url,chosen)}
@@ -1054,9 +1081,23 @@
   var gapCount=gl&&Array.isArray(gl.items)?gl.items.length:0;
   node('li',gl?gapCount+' candidate topics for editorial review (not proven missing content).':'No completed Google topic-comparison list available.',fl);
   var as=d.ai_check&&d.ai_check.summary,ag=d.ai_check&&d.ai_check.gap;
-  node('li','AI source verification: '+(as&&Number.isFinite(Number(as.verifiable))?as.verifiable:0)+'/5 systems with source evidence. This is not a count of citations to your website.',fl);
+  var verifiedAi=as&&Array.isArray(as.engines)?as.engines.filter(function(e){return e.verifiable}):[];
+  var citedAi=verifiedAi.filter(function(e){return e.own_site_cited});
+  var exactAi=verifiedAi.filter(function(e){return e.exact_page_cited});
+  node('li',verifiedAi.length?
+   'AI citation evidence: your website is cited in '+citedAi.length+' of '+verifiedAi.length+' source-verifiable AI answer(s); exact page cited in '+exactAi.length+'. The remaining '+Math.max(0,5-verifiedAi.length)+' system(s) have unknown citation status.':
+   'AI citation evidence: NOT VERIFIED. 0/5 AI systems have usable source evidence, so whether your website is cited is UNKNOWN — this does not mean 0 citations.',fl);
   if(ag&&Array.isArray(ag.pages))node('li','AI-visible source pages: '+ag.pages.filter(function(p){return p.read}).length+' readable of '+ag.pages.length+' checked; their facts still require verification.',fl);
-  ((ocx&&ocx.open_checks)||[]).slice(0,2).forEach(function(c){if(c&&c.detail)node('li','Still to verify: '+c.detail,fl)});
+  var checks=(ocx&&ocx.open_checks)||[];
+  checks.slice(0,4).forEach(function(c){
+   if(!c||!c.detail)return;
+   var item=node('li',null,fl);node('span','Still to verify: '+c.detail,item);
+   if(['TARGET_PAGE_NOT_MEASURED','GOOGLE_SHOWS_ANOTHER_PAGE','SEARCH_CONSOLE_DATA_OLD'].includes(c.code))addOptionalGscAction(item);
+   else if(c.code==='AI_SOURCES_NOT_VERIFIED'){var a=node('a','Review AI sources (optional)',item);a.href='#growthAiCheck'}
+   else if(c.code==='MOSTLY_BEYOND_PAGE_ONE'||c.code==='LOW_CLICK_RATE_ON_PAGE_ONE'){
+    node('small',' Next: '+c.action,item);
+   }
+  });
   if((d.evidence_warnings||[]).length)node('li','Some sources were unavailable or incomplete; review the limitations.',fl);
   var aiFound=node('li',null,fl),aiJump=node('a','Review AI research',aiFound);aiJump.href='#growthAiCheck';
   var evl=node('li',null,fl),eva=node('a','Open source evidence',evl);eva.href='#growthEvidenceAll';

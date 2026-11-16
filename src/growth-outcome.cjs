@@ -10,17 +10,18 @@ function openChecks({decision={},report=null,aiCheck=null,now=Date.now()}={}){
  const out=[],focus=String(decision.focus_query||'').trim().toLowerCase(),target=decision.target_url||null,source=report.url||null;
  const next=report.growth_decision?.primary_next_action||{},m=String(next.query||'').trim().toLowerCase()===focus?next.metrics:null;
  const dest=report.destination_gsc_evidence||{},destMeasured=dest.status==='EXACT_QUERY_VERIFIED'||!!dest.metrics;
- const pos=m?Math.round(Number(m.average_position)*10)/10:null,imported=m&&m.imported_at?String(m.imported_at).slice(0,10):null;
+ const positionValue=m&&m.average_position!==null&&m.average_position!==undefined?Number(m.average_position):NaN;
+ const pos=Number.isFinite(positionValue)?Math.round(positionValue*10)/10:null,imported=m&&m.imported_at?String(m.imported_at).slice(0,10):null;
  if(m&&target&&source&&target!==source)out.push({code:'GOOGLE_SHOWS_ANOTHER_PAGE',
   detail:'Search Console (imported '+imported+') shows '+source+' for “'+decision.focus_query+'”: '+m.impressions+' impressions, '+m.clicks+' clicks, average position '+pos+'. The page meant for this search is '+target+(destMeasured?'.':', which has no Search Console rows of its own.'),
   action:'Check in Search Console that '+target+' is indexed and shown for this term; give '+source+' one descriptive link to '+target+' (see the internal links); keep the title and main heading of '+target+' on the term.'});
- else if(target&&!destMeasured)out.push({code:'TARGET_PAGE_NOT_MEASURED',detail:'There are no Search Console rows for '+target+' and this term.',action:'Import Search Console for '+target+' (28 days).'});
- if(m&&pos>10)out.push({code:'MOSTLY_BEYOND_PAGE_ONE',detail:'The average position is '+pos+': most impressions are beyond page one, so clicks are limited by the position, not by the title or description.',
-  action:'Work on what moves the position (the page Google should show, internal links, the completeness of the answer); a new title alone will not bring these clicks.'});
- else if(m&&pos<=10&&Number(m.impressions)>0&&100*Number(m.clicks)/Number(m.impressions)<2)out.push({code:'LOW_CLICK_RATE_ON_PAGE_ONE',detail:'On page one (position '+pos+') only '+m.clicks+' of '+m.impressions+' impressions became clicks.',
-  action:'Compare your title and description with the results around you for this term.'});
+ else if(target&&!destMeasured)out.push({code:'TARGET_PAGE_NOT_MEASURED',detail:'No verified Search Console record for this exact page and query is available in this Tracker report: '+target+'. This does not mean zero impressions or no Google visibility.',action:'Optional: import the latest Search Console data for this page, then check whether this exact query appears.'});
+ if(m&&pos!==null&&pos>10)out.push({code:'MOSTLY_BEYOND_PAGE_ONE',detail:'Search Console reports an average position of '+pos+' for “'+decision.focus_query+'” on '+(source||'the source page')+' (not automatically on the target '+(target||'page')+'). An average does not establish the position of most impressions or prove why clicks are limited; title, description, intent and appearance may also contribute.',
+  action:'Optional: inspect the exact page/query, date, device and country in Search Console. Then compare the live search result and its title/description before choosing which content or internal links to improve.'});
+ else if(m&&pos!==null&&pos<=10&&Number(m.impressions)>0&&100*Number(m.clicks)/Number(m.impressions)<2)out.push({code:'LOW_CLICK_RATE_ON_PAGE_ONE',detail:'Search Console shows average position '+pos+' for “'+decision.focus_query+'” on '+(source||'the measured page')+' with '+m.clicks+' clicks from '+m.impressions+' impressions. That average does not mean every impression appeared on page one, or establish the cause of the click rate.',
+  action:'Optional: inspect the exact page/query and device breakdown; compare the title, description, search intent and SERP features before attributing the click rate to one cause.'});
  if(m&&imported&&new Date(now).getTime()-Date.parse(imported)>28*86400000)out.push({code:'SEARCH_CONSOLE_DATA_OLD',detail:'These Search Console rows were imported on '+imported+'.',action:'Import the last 28 days before deciding.'});
- if(aiCheck&&aiCheck.summary&&!aiCheck.summary.checked)out.push({code:'AI_NOT_CHECKED',detail:'No AI answer for “'+decision.focus_query+'” from the last '+(aiCheck.max_age_days||14)+' days.',action:'Paste AI answers in “AI answers for …” above.'});
+ if(aiCheck&&aiCheck.summary&&!aiCheck.summary.verifiable)out.push({code:'AI_SOURCES_NOT_VERIFIED',detail:'AI citation status is unknown for “'+decision.focus_query+'”: no current AI answer contains a usable verified source list. This does not establish that your website is not cited.',action:'Optional: review existing AI answers and obtain their original source lists; writing research can still be used without this citation check.'});
  return out;
 }
 // The word-based task check closed the research (NO_CHANGE) or found no task two pages share (a task-check block after the
