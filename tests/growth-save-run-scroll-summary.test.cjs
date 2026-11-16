@@ -14,7 +14,7 @@ test('research summary distinguishes measured evidence from provisional proposal
  assert.match(src,/Research results · verified scope and next action/);
  assert.match(src,/not a measured Google ranking result/);
  assert.match(src,/not proven missing content/);
- assert.match(src,/not a count of PRT citations/);
+ assert.match(src,/not a count of citations to your website/);
  assert.match(src,/Some sources were unavailable or incomplete/);
  assert.doesNotMatch(src,/What the check found/);
 });
