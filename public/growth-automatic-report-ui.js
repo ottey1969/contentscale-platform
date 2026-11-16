@@ -1132,7 +1132,7 @@
   // Visible activity while the research runs (a spinner; a still mark with reduced motion).
   firstProgress('Growth is checking the page and search competitors. AI systems are tracked separately.',true);
   runProgressText(true);moveToResearch('researchStatus');
-  status.className='working';if(status.setAttribute)status.setAttribute('aria-busy','true');status.textContent=(runMarket||runQuery?'This run, chosen by the Opportunity Finder: '+(runQuery?'“'+runQuery+'”':'')+(runMarket?' in '+runMarket.toUpperCase():'')+' (your page setting is not changed). ':'')+'Analyzing the page, Search Console queries and the ranking pages… An automatic grounded Gemini check follows. Manual answers are optional under Advanced.';
+  status.className='working';if(status.setAttribute)status.setAttribute('aria-busy','true');status.textContent=(runMarket||runQuery?'This run, chosen by the Opportunity Finder: '+(runQuery?'“'+runQuery+'”':'')+(runMarket?' in '+runMarket.toUpperCase():'')+' (your page setting is not changed). ':'')+'Researching the existing page, available Google Search evidence and publicly accessible competitor pages… AI-source checks are separate and only count when verifiable. This run does not publish changes.';
   showAiEarly();
   document.getElementById('retryResearch').disabled=true;
   try{
