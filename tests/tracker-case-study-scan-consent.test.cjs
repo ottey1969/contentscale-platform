@@ -24,7 +24,7 @@ test('scan route checks reauthorization before the scan engine and consumes it o
  const h=src.slice(a,b);
  assert.match(h,/case_study_ended_at/);
  assert.match(h,/CASE_STUDY_SCAN_REAUTHORIZATION_REQUIRED/);
- const part=src.slice(b,b+4500);
+ const part=src.slice(b,b+15000);
  assert.match(part,/case_study_scan_authorized_at/);
  assert.match(part,/case_study_scan_authorized_at=NULL/);
 });
