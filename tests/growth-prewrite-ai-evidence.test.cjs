@@ -97,3 +97,10 @@ test('live Growth ai-check route reuses eligible Pre-Write answer for owner, but
  assert.equal(viewer.body.ai_check.summary.checked,0);
  assert.equal(viewer.body.ai_check.prewrite_reuse,null);
 });
+
+test('AI controls are repopulated after both saved-report restore and a fresh Growth research run',()=>{
+ const ui=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
+ assert.match(ui,/last=result;render\(result\);pointHandoff\(result\);showAiEarly\(\)/);
+ assert.match(ui,/last=saved\.report;render\(saved\.report\);pointHandoff\(saved\.report\);showAiEarly\(\)/);
+ assert.match(ui,/if\(!j\.success\|\|!j\.ai_check\|\|early\.childNodes\.length\)return/);
+});
