@@ -62,7 +62,7 @@ test('Growth integration prefers fresh, explicit Growth answers and never leaks 
  assert.match(src,/const usable=\[\.\.\.fresh,\.\.\.reused\]/);
  assert.match(src,/prewrite_reuse:prewrite\?/);
  const ui=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
- assert.match(ui,/growthPrewriteReuse/);assert.match(ui,/Pre-Write answers stay available as research/);
+ assert.match(ui,/growthAiResearchOverview/);assert.match(ui,/Show details per AI system/);
 });
 
 test('live Growth ai-check route reuses eligible Pre-Write answer for owner, but never for public viewer',async()=>{
@@ -103,4 +103,13 @@ test('AI controls are repopulated after both saved-report restore and a fresh Gr
  assert.match(ui,/last=result;render\(result\);pointHandoff\(result\);showAiEarly\(\)/);
  assert.match(ui,/last=saved\.report;render\(saved\.report\);pointHandoff\(saved\.report\);showAiEarly\(\)/);
  assert.match(ui,/if\(!j\.success\|\|!j\.ai_check\|\|early\.childNodes\.length\)return/);
+});
+
+test('compact AI summary shows writing, verifiable citations and saved Growth observations as separate measurements',()=>{
+ const ui=fs.readFileSync('public/growth-automatic-report-ui.js','utf8');
+ assert.match(ui,/stat\(prePresent\+'\\/5','Writing answers available'\)/);
+ assert.match(ui,/stat\(verifiable\+'\\/5','Citation sources verifiable'\)/);
+ assert.match(ui,/Growth observations saved/);
+ assert.match(ui,/details\.id='growthAiSourceDetails'/);
+ assert.doesNotMatch(ui,/growthPrewriteReuse/);
 });
