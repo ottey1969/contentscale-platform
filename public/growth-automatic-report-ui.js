@@ -1136,6 +1136,42 @@
   node('h3','Complete Growth AI Research & Writing Brief · '+topics.length+' AI-source topics',box);
   if(!topics.length)node('p','No AI-cited content gaps were identified or verified in this run. The complete research brief is still available, including Google research, current-page evidence, missing information, and the NO CHANGE option.',box).className='info';
   node('p','Pre-Write-grade work package: exact customer question and URL, current-page structure, ranked competitors, AI answer evidence, observed gaps, FAQ/PAA leads, entities, sources, statistics and quote verification, internal links, SEO metadata, CMS HTML output, editorial QA and measurement instructions. Missing research is clearly marked — it is never invented.',box).className='info';
+  // The complete editorial inventory is displayed in the brief itself, not only in its download.
+  var builder=window.GrowthCompleteAiBrief;
+  var inventory=builder&&typeof builder.contentInventory==='function'?builder.contentInventory(d):[];
+  var priorities=node('section',null,box);priorities.id='growthBriefPriorities';
+  node('h3','Priorities and research coverage',priorities);
+  var blocked=(d.evidence_warnings||[]).length||d.page_content?.signals?.available!==true;
+  if(blocked)node('p','Research limitations need review; unknown coverage must not be treated as missing content.',priorities);
+  var counts=['PARTIAL','MISSING','COMPLETE','UNKNOWN','REVIEW_CONFLICT'].map(function(kind){return kind+': '+inventory.filter(function(x){return x.coverage===kind}).length});
+  node('p',counts.join(' · '),priorities);
+  var high=inventory.filter(function(x){return x.coverage==='PARTIAL'||x.coverage==='MISSING'||x.coverage==='REVIEW_CONFLICT'});
+  if(high.length){
+   var shortlist=node('ol',null,priorities);
+   high.forEach(function(x){node('li',x.coverage+' — '+x.topic,shortlist)});
+  }else node('p','No confirmed addition priorities from this report. Complete and unknown topics remain available below for editorial review.',priorities);
+  var inventoryBox=node('details',null,box);inventoryBox.id='growthCompleteContentInventory';inventoryBox.open=true;
+  node('summary','Full useful content inventory ('+inventory.length+' topics) — nothing silently filtered',inventoryBox);
+  var itemList=node('ol',null,inventoryBox);
+  inventory.forEach(function(x){
+   var item=node('li',null,itemList);
+   node('strong',x.topic+' — '+x.coverage,item);
+   var observations=node('details',null,item);node('summary','Research observations ('+x.observations.length+')',observations);
+   x.observations.forEach(function(o){
+    var entry=node('div',null,observations);entry.style.cssText='padding:8px 0;border-bottom:1px solid #e2e8f0';
+    node('small',o.source+' · reported coverage '+o.reported_coverage,entry);
+    var data=o.details||{};
+    if(data.reader_question)node('p','Reader question: '+data.reader_question,entry);
+    if(data.competitor_excerpt)node('p','Observed excerpt: '+data.competitor_excerpt,entry);
+    (Array.isArray(data.examples)?data.examples:[]).forEach(function(ex){
+     if(ex.excerpt)node('p','Source excerpt: '+ex.excerpt,entry);
+     if(ex.url)link(ex.url,ex.url,entry);
+    });
+    if(data.url)link(data.url,data.url,entry);
+    if(data.competitor_url)link(data.competitor_url,data.competitor_url,entry);
+   });
+  });
+  node('small','COMPLETE means already covered according to saved research, not an independently verified claim. PARTIAL means improve without duplicating. MISSING means consider an intent-relevant addition. UNKNOWN means inspect the original source before deciding.',inventoryBox);
   var ul=node('ul',null,box);
   topics.forEach(t=>{var li=node('li',null,ul);node('strong',t.topic,li);
    node('small','Reported coverage: '+t.coverage+' · source domains: '+(t.sites.join(', ')||'unknown'),li)});
