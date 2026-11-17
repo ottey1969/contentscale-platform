@@ -1,0 +1,26 @@
+name: Verify no Growth internal redirect links
+on:
+  push:
+    branches: [fix/growth-no-internal-301-links-20261117]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: |
+          node --check src/growth-internal-link-resolver.cjs
+          node --check src/tracker-growth-automatic-routes.cjs
+          node --check src/tracker-growth-cms-export.cjs
+          node --check public/growth-cms-neutral-handoff.js
+      - run: |
+          node --test tests/growth-no-internal-redirect-links.test.cjs
+          node --test tests/growth-handoff-link-suggestion.test.cjs
+          node --test tests/growth-proposal-cms-handoff.test.cjs
+          node --test tests/growth-cms-query-intent.test.cjs
+          node --test tests/growth-cms-no-legacy-concepts.test.cjs
+          node --test tests/growth-cms-overview-no-auto-add.test.cjs
