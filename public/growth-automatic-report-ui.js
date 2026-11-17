@@ -66,9 +66,9 @@
  if(questionBox){
   firstPanel=node('section',null);firstPanel.id='growthFirstResearchActions';
   firstPanel.style.cssText='margin:12px 0;padding:16px;border:1px solid #2563eb;border-radius:10px;background:#eff6ff;color:#172554';
-  node('h2','Growth research · start here',firstPanel);
-  node('p','Selecting a customer question is not a completed research run. Research your page and live competitors, then add real source-backed AI answers.',firstPanel);
-  firstBtn=node('button','Run Growth research now →',firstPanel);firstBtn.type='button';firstBtn.id='growthFirstStart';
+  node('h2','Research setup · review all inputs first',firstPanel);
+  node('p','Complete the customer question, target market, optional AI answers and Search Console inputs. Then start one complete Growth research run.',firstPanel);
+  firstBtn=node('button','Run Growth Research →',firstPanel);firstBtn.type='button';firstBtn.id='growthFirstStart';
   firstBtn.style.cssText='background:#1d4ed8;color:white;border:0;border-radius:6px;padding:10px 16px;cursor:pointer;font-weight:700';
   firstState=node('p','No new Growth research started.',firstPanel);firstState.setAttribute('role','status');firstState.id='growthFirstResearchState';
   firstState.style.cssText='margin:10px 0 0;font-size:13px';
@@ -80,7 +80,9 @@
   // The owner first reviews/enters the five AI systems; market/language comes directly afterwards.
   // Move the existing settings form (do not clone it): its isolated save handler remains bound.
   var marketSettings=document.getElementById('marketSetting');
-  if(marketSettings)firstPanel.insertAdjacentElement('afterend',marketSettings);
+  if(marketSettings)questionBox.insertAdjacentElement('afterend',marketSettings);
+  if(marketSettings)marketSettings.insertAdjacentElement('afterend',firstPanel);
+  if(earlyAi)firstPanel.insertBefore(earlyAi,firstBtn);
   firstBtn.addEventListener('click',function(){run()});
  }
  function moveToResearch(id){
@@ -96,7 +98,7 @@
  }
  function firstProgress(message,running){
   if(firstState)firstState.textContent=message;
-  if(firstBtn){firstBtn.disabled=!!running;firstBtn.textContent=running?'Research running…':'Run Growth research again →'}
+  if(firstBtn){firstBtn.disabled=!!running;firstBtn.textContent=running?'Research running…':'Run Growth Research →'}
  }
  function section(title){var s=node('section',null,researchDetails||container);node('h2',title,s);return s}
  function table(headers,rows,parent){
@@ -432,8 +434,8 @@
   var renderChecklist=typeof window!=='undefined'&&window.renderGrowthGapChecklist;
   if(d.gap_list&&typeof renderChecklist==='function'){
    var gl=d.gap_list,writeUrl=gl.id&&gl.write_url;
-   var choiceBox=node('section',null,container);choiceBox.id='growthGapChoice';
-   node('h2','Step 1 · Choose what to add',choiceBox);
+   var choiceBox=node('details',null,container);choiceBox.id='growthGapChoice';
+   node('summary','Optional editorial writing controls — the full content inventory is in the brief',choiceBox);
    try{renderChecklist({...gl,target_url:d.url},choiceBox,{write:writeUrl?async function(ids){
     // Without AI answers of the last 14 days the editor decides first: check AI, or continue without it.
     var choice=await aiGate(d);if(!choice)return {success:false,code:'Check the AI answers first (see “AI answers for …” above); your selection is kept.'};
@@ -1336,13 +1338,13 @@
    if(saved.found&&saved.report&&saved.report.success===true){
     last=saved.report;render(saved.report);pointHandoff(saved.report);showAiEarly();if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
     status.textContent='Saved research restored ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new scan was run.';
-    firstProgress('Saved report loaded ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new research ran. Press Run Growth above to refresh.',false);
+    firstProgress('Previous research available ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). This is not a new scan of your current inputs. Choose Run Growth Research when ready.',false);
     document.getElementById('retryResearch').hidden=false;
     return;
    }
    status.textContent='No saved research report for this page, market and query yet. ';
-   firstProgress('No saved research for this exact page and question. Press Run Growth above.',false);
-   var startBtn=document.createElement('button');startBtn.type='button';startBtn.id='growthStartResearch';startBtn.textContent='Run the research now →';startBtn.addEventListener('click',function(){startBtn.remove();run()});status.appendChild(startBtn);
+   firstProgress('Ready for the first Growth research run after all inputs are reviewed.',false);
+   // The only primary research action stays in the setup panel.
   }catch(e){status.textContent='Saved report could not be loaded: '+String(e.message||e)+'. No new scan was run.'}
   document.getElementById('retryResearch').hidden=false;
  }
@@ -1367,14 +1369,7 @@
   document.body.appendChild(a);a.click();a.remove();
   setTimeout(()=>URL.revokeObjectURL(href),2000);
  });
- // A market save queues exactly one new run. Consume the flag before requesting,
- // so reload/error cannot cause an unbounded research loop.
- var afterSaveKey='growthRunAfterMarketSave:'+location.pathname+location.search;
- var afterSaveStamp=null;
- try{afterSaveStamp=sessionStorage.getItem(afterSaveKey);if(afterSaveStamp!==null)sessionStorage.removeItem(afterSaveKey)}catch(e){}
+ // Input changes do not start an implicit research run.
  showAiEarly();
- if(afterSaveStamp!==null&&Date.now()-Number(afterSaveStamp)<120000){
-  firstProgress('Settings saved. Starting the requested fresh research now…',true);
-  run();
- }else restore();
+ restore();
 })();
