@@ -51,15 +51,15 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <label for="query">Customer question for this Growth draft (exact research intent)</label>
 <p class="small">This must match the customer question from the original Growth research. A tracked seed is not a substitute.</p><input id="query" maxlength="300" autocomplete="off"><div id="savedQuestionChooser" class="note" hidden aria-live="polite"><strong>Select the saved Growth research question</strong><p class="small">This CMS link did not contain a question, or the exact saved report was not found. Choose the correct previous research below. No new scan or credits are used.</p><div id="savedQuestionChoices"></div></div>
 <div id="existingMetadata" class="note" hidden><strong>Existing page metadata — reference only, not approved for this research question</strong><p id="existingTitle" class="small"></p><p id="existingMeta" class="small"></p></div>
-<label for="title">SEO title draft for this customer question · review required</label><input id="title" maxlength="100" required>
+<div id="growthSeoFields" hidden><label for="title">SEO title draft from saved Growth content · review required</label><input id="title" maxlength="100" required>
 <label for="meta">Meta description draft for this customer question · review required</label>
 <p id="seoDraftNotice" class="small" hidden></p><p class="small">Do not reuse unconfirmed promises about availability, response time, licensing, service area or phone numbers.</p><textarea id="meta" maxlength="220" rows="2" required></textarea>
-<label class="check"><input id="personalVoice" type="checkbox"><span><strong>This page presents me as a person</strong> (a personal brand, for example you as a specialist): “I” and “my” are allowed in the title, description and text.</span></label>
+<label class="check"><input id="personalVoice" type="checkbox"><span><strong>This page presents me as a person</strong> (a personal brand, for example you as a specialist): “I” and “my” are allowed in the title, description and text.</span></label></div>
 </fieldset>
 <fieldset><legend>3. Review saved Growth content for the original page</legend>
-<p class="note"><strong>Normal Growth handoff:</strong> the existing Growth proposal is loaded automatically for the same customer question. Review the suggested copy and claims, approve, then download the CMS package. The saved Growth proposal is the only content proposal used here.</p>
+<p class="note"><strong>Growth content handoff:</strong> only a saved content proposal for the exact selected customer question can be reviewed and exported. If only research has been saved, Growth must first create the writing proposal. No duplicate AI draft is generated here.</p>
 <div id="growthProposal" class="note" hidden aria-live="polite"></div>
-<div id="mainPlacement"></div>
+<div id="growthReviewContent" hidden><div id="mainPlacement"></div>
 <label for="heading">Review the proposed H2 heading · approve before publication</label><input id="heading" required>
 <label for="copy">Reviewed copy (at least 30 characters; verify all factual and safety claims)</label><textarea id="copy" rows="7" required placeholder="Use real customer-approved facts and documented evidence. No invented reviews, rankings or projects."></textarea>
 <div id="growthAdditionalSections" aria-label="Additional optional drafted sections"></div>
@@ -67,7 +67,7 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <div class="form-grid" id="growthVerifiedLinkFields" hidden><div><label for="linkUrl">Optional contextual internal link URL</label><input id="linkUrl" type="url"></div><div><label for="linkText">Internal link label</label><input id="linkText"></div></div>
 <label class="check" id="confirmAllWrap" hidden><input id="confirmAll" type="checkbox"><span id="confirmAllText">I checked every statement listed above.</span></label>
 <p id="noStatementsNote" class="small" hidden>No individual verification notes were generated. This does not prove that the text is correct or publication-ready. Review every factual and safety claim before approving.</p>
-<label class="check"><input id="approved" type="checkbox" required><span>I reviewed the actual page, the proposed facts, source evidence and link. I approve a package for a human editor, not automatic publication.</span></label>
+<label class="check"><input id="approved" type="checkbox" required><span>I reviewed the actual page, the proposed facts, source evidence and link. I approve a package for a human editor, not automatic publication.</span></label></div>
 </fieldset>
 <p id="cmsUnlockHint" data-stage="locked" role="status" aria-live="polite">Review the saved Growth proposal, verify claims, then approve to unlock the CMS package.</p>
 <div class="actions"><button id="download" type="submit" disabled>4. Download reviewed CMS handoff ZIP</button><span id="downloadStatus" role="status"></span></div>
