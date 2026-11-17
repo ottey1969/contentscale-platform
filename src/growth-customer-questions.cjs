@@ -79,7 +79,7 @@ async function fromAi({ offer, keyword, language = 'en', model }) {
     // Tolerant: {"questions":[...]}, a bare array, or objects {question}/{text} (live 2026-11-12: AI_FAILED for "consultor geo").
     let obj; try { obj = JSON.parse(raw); } catch (e) { const a = raw.indexOf('['), b = raw.lastIndexOf(']'); obj = a >= 0 && b > a ? JSON.parse(raw.slice(a, b + 1)) : null; }
     const arr = Array.isArray(obj) ? obj : obj && Array.isArray(obj.questions) ? obj.questions : [];
-    const list = arr.map(q => searchable(typeof q === 'string' ? q : q && (q.question || q.text || q.q))).filter(q => q && !notCustomer(q) && (!emergencyServiceIntent(keyword)||matchesEmergencyService(q))).slice(0, 6);
+    const list = arr.map(q => searchable(typeof q === 'string' ? q : q && (q.question || q.text || q.q))).filter(q => q && !notCustomer(q) && (!emergencyServiceIntent(keyword)||matchesEmergencyService(q,keyword))).slice(0, 6);
     return { status: list.length ? 'AI_SUGGESTIONS' : 'AI_NO_SUGGESTIONS', questions: list.map(q => ({ text: q, source: 'AI_SUGGESTION', label: 'AI suggestion · not verified search demand' })) };
   } catch (e) { return { status: 'AI_FAILED', error: String(e && (e.code || e.message) || 'AI_FAILED').replace(/[^\w .:-]/g, '').slice(0, 60), questions: [] }; }
 }
@@ -111,13 +111,18 @@ function emergencyServiceIntent(seed){
  return /\b(?:emergency|urgent|24\s*(?:hours?|hrs?|\/\s*7)|24[- ]?hour|same[- ]?day|after[- ]?hours?|spoed|noodreparatie|notdienst)\b/.test(t) &&
    /\b(?:repair|repairs|roof|roofing|leak|service|services|reparatie|reparacion|reparación|reparatur)\b/.test(t);
 }
-function matchesEmergencyService(question){
- const t=clean(question).toLowerCase();
+function matchesEmergencyService(question,seed=''){
+ const t=clean(question).toLowerCase(),s=clean(seed).toLowerCase();
  const emergency=/\b(?:emergency|urgent|24\s*(?:hours?|hrs?|\/\s*7)|24[- ]?hour|same[- ]?day|after[- ]?hours?|immediate|spoed|noodreparatie|notdienst)\b/.test(t);
  const service=/\b(?:roof|roofing|roofer|roofers|repair|repairs|leak|leaks|dak|techo|toit|dach)\b/.test(t);
  const commercial=/\b(?:who|where|which|find|hire|call|near|available|respond|response|cost|price|offer|offers|provide|provides|need|need a|can i get|how fast|how quickly|24|emergency roof repair|emergency roofing service|servicio|contratar|bedrijf|dienst)\b/.test(t);
  const definition=/^(?:what is|what are|what does|define|meaning of)\b/.test(t);
- return emergency&&service&&commercial&&!definition;
+ // For a 24-hour local service, preserve the seed's defining qualifiers in the best-match question.
+ const needs24=/\b24\s*(?:hours?|hrs?|\/\s*7)|\b24[- ]?hour\b/.test(s);
+ const has24=/\b24\s*(?:hours?|hrs?|\/\s*7)|\b24[- ]?hour\b|\baround.the.clock\b|\b24\/7\b/.test(t);
+ const needsNJ=/\bnj\b|\bnew jersey\b/.test(s);
+ const hasNJ=/\bnj\b|\bnew jersey\b/.test(t);
+ return emergency&&service&&commercial&&!definition&&(!needs24||has24)&&(!needsNJ||hasNJ);
 }
 function rankQuestions(items,{offer,seed}){
  const focus=tokens([seed,...offer.h1,offer.title.split(/\s[|–—-]\s/)[0]].join(' '));
@@ -136,13 +141,13 @@ function rankQuestions(items,{offer,seed}){
   // Someone who looks for a provider does not look for a tool (owner 2026-11-12: "consultor geo" got "What is the best GEO
   // tool?"). A question about software/tools for a keyword that names a provider is another customer.
   const customer=!notCustomer(q.text)&&!(PROVIDER.test(seed)&&PRODUCT.test(q.text)&&!PROVIDER.test(q.text));
-  const intentMatch=!specificEmergency||matchesEmergencyService(q.text);
+  const intentMatch=!specificEmergency||matchesEmergencyService(q.text,seed);
   const relevant=google&&customer&&intentMatch&&(topical>0||focusSet.size===0);
   const sourceBoost=q.source==='GOOGLE_PEOPLE_ALSO_ASK'?2:0,buyer=customer&&BUYER.test(q.text)?3:0;
   return {q,index,topical:customer?topical+buyer:-1,score:topical+sourceBoost+buyer,relevant,google,customer};
  });
  const observed=scored.filter(x=>x.google&&x.relevant).sort((a,b)=>b.score-a.score||a.index-b.index);
- const ideas=scored.filter(x=>!x.google&&x.customer&&(!specificEmergency||matchesEmergencyService(x.q.text))).sort((a,b)=>b.topical-a.topical||a.index-b.index);
+ const ideas=scored.filter(x=>!x.google&&x.customer&&(!specificEmergency||matchesEmergencyService(x.q.text,seed))).sort((a,b)=>b.topical-a.topical||a.index-b.index);
  // Observed but off-topic Google suggestions may still be visible as alternatives; do not auto-select them.
  const unrelated=scored.filter(x=>x.google&&!x.relevant).sort((a,b)=>b.score-a.score||a.index-b.index);
  // In a focused emergency-service flow, unrelated PAA results remain observed source data,
