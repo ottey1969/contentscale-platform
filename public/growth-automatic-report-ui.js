@@ -1091,6 +1091,10 @@
   return intersection>=2&&intersection/Math.max(a.size,b.size)>=.65;
  }
  function aiWritingSuggestions(d){
+  // An AI answer to another keyword/question cannot add topics to this writer's plan.
+  var aiTerm=String(d.ai_check?.search_term||'').trim().toLowerCase().replace(/\s+/g,' ');
+  var focus=String(d.gap_list?.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ');
+  if(!focus||!aiTerm||focus!==aiTerm)return [];
   var topics=d.ai_check?.gap?.missing_topics||[],items=d.gap_list?.items||[];
   var seen=new Set(),results=[];
   topics.forEach(function(t){
@@ -1107,17 +1111,22 @@
   if(!box){box=node('section',null);box.id='growthAiWritingSuggestions';box.style.cssText='border:1px solid #93c5fd;border-radius:12px;padding:15px;background:#eff6ff;margin:16px 0';
    if(choice.parentNode)choice.parentNode.insertBefore(box,choice.nextSibling)}
   box.textContent='';var rows=aiWritingSuggestions(d);box.hidden=!rows.length;if(!rows.length)return;
+  var autoSeen=new Set(JSON.parse(choice.dataset.aiAutoReviewedIds||'[]'));
   node('h3','Growth handles AI content topics ('+rows.length+')',box);
   node('p','AI content topics are routed to Growth automatically, not Do it yourself. A topic is preselected only when the current competitor comparison independently supports it. You still approve the writing; nothing publishes automatically.',box).className='info';
   var ul=node('ul',null,box),matched=0;
   rows.forEach(function(r){
    var li=node('li',null,ul),checkbox=null;
-   if(r.match){checkbox=Array.from(choice.querySelectorAll('input[type=checkbox]')).find(x=>String(x.value)===String(r.match.id));
-    if(checkbox){matched++;if(!checkbox.checked){checkbox.checked=true;checkbox.dispatchEvent(new Event('change',{bubbles:true}))}}}
+   if(r.match&&d.gap_list?.writing_allowed!==false){checkbox=Array.from(choice.querySelectorAll('input[type=checkbox]')).find(x=>String(x.value)===String(r.match.id));
+    if(checkbox){matched++;
+     if(!autoSeen.has(String(r.match.id))){autoSeen.add(String(r.match.id));if(!checkbox.checked){checkbox.checked=true;checkbox.dispatchEvent(new Event('change',{bubbles:true}))}}
+    }
+   }
    node('strong',r.topic+' — '+(checkbox?'Preselected for Growth writing':'More research required'),li);
    node('small',checkbox?' Current competitor research supports this page gap. Check the suggested edit before requesting a draft.':' This AI topic is not independently supported by at least two readable ranking pages for the selected question, or it is not a distinct missing topic on this page.',li);
   });
-  node('p',matched+' added to the Growth writing selection · '+(rows.length-matched)+' retained as evidence leads. No unverified claim was added to the draft.',box).className='info';
+  choice.dataset.aiAutoReviewedIds=JSON.stringify([...autoSeen]);
+  node('p',matched+' matched to the Growth writing list · '+(rows.length-matched)+' retained as evidence leads. You can deselect any suggested topic; Growth will respect that decision. No unverified claim was added to the draft.',box).className='info';
  }
 
  function selfRender(box,list){
