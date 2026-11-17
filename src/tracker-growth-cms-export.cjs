@@ -6,6 +6,7 @@ const {generateGrowthEditorDraft,sourceFacts}=require('./growth-source-grounded-
 const {normalizeGrowthResearchContext}=require('./growth-editorial-research-context.cjs');
 const {loadGrowthOptionalGsc}=require('./growth-optional-gsc-draft-evidence.cjs');
 const {recentProposals,combineProposals,proposalById}=require('./growth-proposal-store.cjs');
+const {sameIntent}=require('./growth-cms-query-intent.cjs');
 const sha=x=>createHash('sha256').update(x).digest('hex');
 async function loadEditablePage(pool,token,pageId,{allowMissingHtml=false,allowLockedResearchDraft=false}={}){
  const id=Number(pageId);
@@ -179,8 +180,8 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
    // CMS proposal. Never silently relabel emergency repair as roof leak.
    const wanted=String(req.query?.query||v.page.keyword||'').trim().toLowerCase().replace(/\s+/g,' ');
    const all=await recentProposals(pool,{clientId:v.client.id,targetPageId:v.page.id,targetUrl:v.page.url});
-   const aligned=all.filter(x=>String(x.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ')===wanted);
-   const other=all.filter(x=>String(x.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ')!==wanted);
+   const aligned=all.filter(x=>sameIntent(x.focus_query,wanted));
+   const other=all.filter(x=>!sameIntent(x.focus_query,wanted));
    const {latest:p,earlier}=combineProposals(aligned);
    const mismatched=other.map(x=>({id:Number(x.id),focus_query:x.focus_query,created_at:x.created_at}));
    const shape=x=>({id:Number(x.id),created_at:x.created_at,focus_query:x.focus_query,kind:x.kind||null,sections:x.sections,review:x.review,evidence_label:x.evidence_label,intent_note:x.intent_note});
@@ -258,10 +259,9 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     const p=await proposalById(pool,{clientId:v.client.id,id:req.body.growth_proposal_id});
     if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
      return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
-    if(String(p.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ')!==String(req.body?.focus_query||'').trim().toLowerCase().replace(/\s+/g,' '))
-     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'The stored concept was written for a different customer question. Rerun research for this exact question before packaging.'});
-    if(String(p.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ')!==String(req.body?.focus_query||'').trim().toLowerCase().replace(/\s+/g,' '))
-     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'The stored concept was written for a different customer question. Rerun research for this exact question before packaging.'});
+    if(!sameIntent(p.focus_query,req.body?.focus_query))
+     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'The saved concept is for a different reader task. It cannot be put into this package without review for the selected customer question.'});
+
     growthProposal={id:Number(p.id),sections:p.sections};
    }
    // Earlier concepts the editor added to this package: each must belong to this page and URL.
@@ -271,6 +271,8 @@ function registerTrackerGrowthCmsExport(app,pool,{fetchLive=fetchPublicGrowthHtm
     const p=await proposalById(pool,{clientId:v.client.id,id});
     if(!p||Number(p.target_page_id)!==Number(v.page.id)||p.target_url!==v.page.url)
      return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_NOT_FOR_THIS_PAGE'});
+    if(!sameIntent(p.focus_query,req.body?.focus_query))
+     return res.status(409).json({success:false,code:'GROWTH_PROPOSAL_FOR_ANOTHER_QUERY',message:'This optional previous concept addresses a different customer task; it must not be merged into the selected package.'});
    }
    // Sentences the owner kept ("it is true") come from the stored decisions for this page, never from the request.
    let decisions=[];try{decisions=await removals.loadRemovals(pool,{clientId:v.client.id,pageId:v.page.id})}catch(e){}
