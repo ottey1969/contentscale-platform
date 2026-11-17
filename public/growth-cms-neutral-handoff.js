@@ -423,11 +423,15 @@
  async function loadResearchSuggestions(src){
   var target=$('growthResearchHints');
   try{
-   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId);
+   // Read only the stored report for this exact question; opening CMS must never trigger paid research.
+   var exactQuery=String($('query').value||requestedQuestion||src.working_keyword||'').trim();
+   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/saved?page_id='+encodeURIComponent(pageId)+(exactQuery?'&query='+encodeURIComponent(exactQuery):'');
    var res=await fetch(url,{cache:'no-store',credentials:'same-origin'});
-   if(!res.ok)throw Error('Research unavailable');
-   var d=await res.json(),x=d.handoff_suggestions||{};
-   if(d.success!==true||Number(d.page_id)!==pageId||d.url!==src.canonical_url||x.safe!==true)throw Error('Source identity changed');
+   if(!res.ok)throw Error('Saved research unavailable');
+   var saved=await res.json();
+   if(saved.success!==true||saved.found!==true||!saved.report)throw Error('No saved research for this exact customer question');
+   var d=saved.report,x=d.handoff_suggestions||{};
+   if(d.url!==src.canonical_url||x.safe!==true)throw Error('Saved report source identity did not match');
    if(d.competitor_overview&&typeof window.renderGrowthCompetitorOverview==='function'){var ov=$('growthCompetitorOverview');ov.textContent='';try{ov.hidden=!window.renderGrowthCompetitorOverview(d.competitor_overview,ov)}catch(e){ov.hidden=true}}
    showVerifiedLink(); // No fake link or inputs when no verified internal destination exists.
    if(!$('query').value&&x.query)$('query').value=x.query;
@@ -461,14 +465,14 @@
     var sug=document.createElement('p');sug.textContent='Internal link filled in by Growth: '+x.internal_url+(x.internal_reason?'. '+x.internal_reason:'')+' Check it, change it or clear both fields.';target.appendChild(sug);
    }
    else{showVerifiedLink()}
-   void loadSeoProposal(target,x.internal_url||'');
+   // No automatic AI SEO request: opening the form should be free of AI-generation calls.
    if(!x.meta||!x.title){
     var missing=document.createElement('p');
     missing.textContent='Missing SEO metadata requires an editor-written, source-checked proposal.';
     target.appendChild(missing);
    }
    ready();
-  }catch(e){target.hidden=false;target.textContent='Research could not be loaded. Manual review stays available without GSC.';}
+  }catch(e){target.hidden=false;target.textContent='No saved research for this exact customer question. Open Growth research explicitly to run or review it. Opening the CMS form did not trigger paid research.';}
  }
  if(!Number.isSafeInteger(pageId)||pageId<1){
   status('sourceStatus','A valid tracked page ID is required. Return to Growth and select a page.',true);
