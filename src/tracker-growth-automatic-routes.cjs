@@ -69,6 +69,27 @@ function resolveDestinationIdentity({url,source,sourceUrl,sourceSource,sourcePro
  return {url,resolves_to_source:!!basis,basis,source_url:sourceUrl,source_protected:!!basis&&sourceProtected===true,
   final_url:source.final_url||null,canonical};
 }
+// Tracker sitemap is fallback discovery only. Never invent Tracker page IDs or claim that sitemap URLs were read.
+function trackerSitemapFallback(rows,pageUrl,trackedPages=[]){
+ const row=Array.isArray(rows)?rows[0]:null;
+ let parsed=[];try{const x=JSON.parse(String(row?.sitemap_urls||'[]'));if(Array.isArray(x))parsed=x}catch(_){}
+ let host='';try{host=new URL(pageUrl).hostname.toLowerCase()}catch(_){}
+ const known=new Set((trackedPages||[]).map(x=>normUrl(x.url))),out=[],seen=new Set();
+ for(const entry of parsed){
+  if(typeof entry!=='string')continue;
+  try{
+   const u=new URL(entry.trim());u.hash='';
+   if(!['https:','http:'].includes(u.protocol)||u.username||u.password||u.hostname.toLowerCase()!==host||u.port&&!['80','443'].includes(u.port)||u.href.length>500)continue;
+   if(known.has(normUrl(u.href))||seen.has(normUrl(u.href)))continue;
+   seen.add(normUrl(u.href));out.push(u.href);
+  }catch(_){}
+  if(out.length>=300)break;
+ }
+ let sitemapUrl=null;
+ try{const u=new URL(String(row?.sitemap_url||''));if(u.protocol==='https:'&&u.hostname.toLowerCase()===host&&!u.username&&!u.password)sitemapUrl=u.href}catch(_){}
+ return {status:out.length?'SAVED_URL_FALLBACK':'NO_SAVED_URL_LIST',sitemap_url:sitemapUrl,urls:out,count:out.length,
+  evidence:'UNVERIFIED_URL_INVENTORY',note:'Saved sitemap URLs are research leads only, not fetched pages, verified canonicals or approved internal links.'};
+}
 function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGrowthHtml,searchLive=discoverGrowthCompetitorsWithFallback,completeOwnerDraft=null,renderOwn=renderPublicGrowthPage,retryDelayMs=1500,recordResearchOutcome=null,recordProposal=null,saveAiAnswer=null,loadAiAnswers=null,loadSiteMarkets=null,saveSiteMarkets=null,loadCountryRows=null,loadClaimReviews=null,saveClaimReview=null,judgeTasks=judgeTaskMeaning,judgeAnswers=judgeDraftAnswers,buildOverview=buildCompetitorOverview,recordGapList=null,loadGapList=null,recordSelection=null,recordSelectionProposal=null,loadPageMarkets=null,savePageMarkets=null,loadPrewriteMarket=null,recordWritten=null,autoGroundedAnswer=groundedGeminiAnswer,questionModel=undefined,questionFetch=undefined,loadOpenSelection=null,addToSelection=null,saveCompletedReport=null,loadCompletedReport=null,claimWritingRun=null,storeWritingRun=null,failWritingRun=null,lastStoredRun=null,aiGapModel=undefined,fetchAiCited=null}={}){
  // AI gap: what the pages AI cites (where it does not cite this page) have and the page does not, as in Free Growth.
  const aiGapFor=require('./growth-free/ai-gap.cjs').createAiGapCache({engines:aiAnswers.ENGINES,fetchHtml:fetchAiCited||fetchLive,
@@ -101,11 +122,13 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    pool.query("SELECT page_id,tracker_client_id,source_page_url,evidence_scope,query,clicks,impressions,position,imported_at FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id=$2 AND source_page_url=$3 AND evidence_scope='page_verified' ORDER BY imported_at DESC LIMIT 150",[cid,pid,page.url]),
    pool.query("SELECT id,tracker_client_id,url,keyword FROM tracker_pages WHERE tracker_client_id=$1 AND id<>$2 ORDER BY id LIMIT 500",[cid,pid]),
    // Search Console rows of the other tracked pages: a term another page already answers is not a new page.
-   pool.query("SELECT page_id,query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id<>$2 AND evidence_scope='page_verified' ORDER BY imported_at DESC LIMIT 3000",[cid,pid])
+   pool.query("SELECT page_id,query,clicks,impressions,position FROM tracker_gsc_queries WHERE tracker_client_id=$1 AND page_id<>$2 AND evidence_scope='page_verified' ORDER BY imported_at DESC LIMIT 3000",[cid,pid]),
+   pool.query('SELECT sitemap_url,sitemap_urls FROM tracker_clients WHERE id=$1 LIMIT 1',[cid])
   ]);
   const rows=i=>optional[i].status==='fulfilled'?optional[i].value.rows||[]:[];
   const unavailable=optional.map((x,i)=>x.status==='rejected'?['competitor_snapshots','ai_evidence','gsc_queries','site_inventory','site_gsc_queries'][i]:null).filter(Boolean);
   const snapshot=rows(0)[0]||null,historical=snapshotCompetitorLeads({page,snapshot}).leads;
+  const sitemapFallback=trackerSitemapFallback(rows(5),page.url,rows(3));
   const own=await fetchLive(page.url,RESEARCH_FETCH).then(x=>({live:x})).catch(e=>({live:null,code:String(e?.code||'LIVE_FETCH_UNAVAILABLE').slice(0,80)}));
   // Only use the browser if the static public source is too thin to assess.
   // Prevent mock-network tests from launching real Chromium unintentionally.
@@ -170,6 +193,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   let fetchSummary=reader.fetchSummary;
   const report=analyzeGrowthEvidence({page:targetQuery?{...page,keyword:targetQuery}:page,savedHtml:page.saved_html,live:own.live,
    snapshot,aiRows:rows(1),gscRows:rows(2),competitorPages:comparisons,sitePages:rows(3),previousBrief:page.brief_content});
+  report.tracker_sitemap_fallback=sitemapFallback;
   report.intent_resolution=intentResolution;
   report.page_content.render_status=renderStatus;
   report.summary.render_status=renderStatus;
