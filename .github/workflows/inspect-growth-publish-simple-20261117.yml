@@ -11,4 +11,4 @@ jobs:
       - uses: actions/checkout@v4
       - name: Locate markup and client handlers
         run: |
-          grep -RIn -C 5 --exclude-dir=.git --exclude='package-lock.json' -E 'id=["\x27]growthNextAction|growthNextAction|growthFinalActions|id=["\x27]gscUpdate|Publish and measure' src public | head -250 || true
+          grep -RIn -C 4 --exclude-dir=.git --exclude='package-lock.json' -E 'Record actual publication|Save publication checkpoint|published_at.*name=|growthPublication' src public | head -240 || true
