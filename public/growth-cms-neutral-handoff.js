@@ -6,7 +6,7 @@
  const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
  const requestedMarket=String(new URLSearchParams(location.search).get('market')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
- const safe={source:null,proposal:null,aiDraftReadyForQuery:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
+ const safe={savedQuestionConfirmed:false,source:null,proposal:null,aiDraftReadyForQuery:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
  const removalKey='growth-removed:'+encodeURIComponent(token)+':'+pageId;
  // Removals are remembered on the server per page (any browser or device) and, as a fallback, in this browser.
@@ -90,6 +90,7 @@
   setTimeout(function(){button.classList.remove('growth-pressed')},350);
  },true);
  function ready(){
+   if($('checkSource')&&!safe.savedQuestionConfirmed&&!safe.loadingSource)$('checkSource').disabled=true;
   if(safe.loadingSource){
    document.querySelectorAll('button').forEach(function(b){b.disabled=true});
    return;
@@ -114,7 +115,9 @@
    }
   // Owner 2026-11-01: a grey button without a reason. Say exactly what is still missing.
   var missing=[];
-  if(!safe.source)missing.push('check the original page first (step 1)');
+  if(!safe.savedQuestionConfirmed)missing.push('select a matching saved Growth research question first');
+   if(!safe.source)missing.push('check the original page first (step 1)');
+   if(!$('title').value.trim()||!$('meta').value.trim())missing.push('review and enter the new SEO title and description for this exact question');
   if(safe.source&&safe.aiDraftReadyForQuery!==$('query').value.trim())missing.push('generate the required Advanced AI draft for this question in step 3');
   if(hasManual&&!manualReady)missing.push('paste the original page HTML and tick that it is not live-verified');
   if(open.length)missing.push('confirm the '+facts.length+' statement'+(facts.length===1?'':'s')+' (one tick “I checked all …” above, or each one; '+open.length+' open, marked in yellow)');
@@ -309,7 +312,7 @@
  // The checked Growth proposal for this page is used as-is: same H2s, text, placement and fact-check list.
  async function loadProposal(src){
   try{
-   var exactQuestion=String($('query').value||requestedQuestion||src.working_keyword||'').trim();
+   var exactQuestion=String($('query').value||'').trim();
    var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(exactQuestion),{cache:'no-store',credentials:'same-origin'});
    var d=await res.json();
    if(!res.ok||d.success!==true||safe.source!==src)return;
@@ -425,7 +428,7 @@
   var target=$('growthResearchHints');
   try{
    // Read only the stored report for this exact question; opening CMS must never trigger paid research.
-   var exactQuery=String($('query').value||requestedQuestion||src.working_keyword||'').trim();
+   var exactQuery=String($('query').value||'').trim();
    var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/saved?page_id='+encodeURIComponent(pageId)+(exactQuery?'&query='+encodeURIComponent(exactQuery):'')+(new URLSearchParams(location.search).get('market')?'&market='+encodeURIComponent(new URLSearchParams(location.search).get('market')):'');
    var res=await fetch(url,{cache:'no-store',credentials:'same-origin'});
    if(!res.ok)throw Error('Saved research unavailable');
@@ -435,9 +438,8 @@
    if(d.url!==src.canonical_url||x.safe!==true)throw Error('Saved report source identity did not match');
    if(d.competitor_overview&&typeof window.renderGrowthCompetitorOverview==='function'){var ov=$('growthCompetitorOverview');ov.textContent='';try{ov.hidden=!window.renderGrowthCompetitorOverview(d.competitor_overview,ov)}catch(e){ov.hidden=true}}
    showVerifiedLink(); // No fake link or inputs when no verified internal destination exists.
-   if(!$('query').value&&x.query)$('query').value=x.query;
-   if(!$('title').value&&x.title)$('title').value=x.title;
-   if(!$('meta').value&&x.meta)$('meta').value=x.meta;
+   // No arbitrary research hint can relabel a customer question or mark SEO metadata reviewed.
+   // SEO fields are filled only by a deliberate new draft or by the editor.
    // "Verified" only when Search Console has a verified row for the working query in the field (not for any query).
    var wq=$('query').value.trim().toLowerCase();
    if((x.verified_queries?x.verified_queries.indexOf(wq)>=0:x.verified_query)&&$('evidence').value==='needs_access')$('evidence').value='verified';
@@ -482,13 +484,13 @@
  if(requestedQuestion)$('query').value=requestedQuestion;
  if(!requestedQuestion)$('query').placeholder='Select the saved research question below — do not use the tracked seed';
  showVerifiedLink();
- $('query').addEventListener('input',function(){safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';ready()});
+ $('query').addEventListener('input',function(){safe.savedQuestionConfirmed=false;safe.source=null;safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';ready()});
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
  $('manualAcknowledged').addEventListener('change',ready);
  $('manualOriginalHtml').addEventListener('input',ready);
  $('checkSource').addEventListener('click',async function(){
-  if(!$('query').value.trim()){
+  if(!safe.savedQuestionConfirmed||!$('query').value.trim()){
     status('sourceStatus','Choose the exact saved customer question first. The tracked seed is not a substitute.',true);$('savedQuestionChooser').hidden=false;return;
    }
    this.disabled=true;buttonProgress(this,true);safe.source=null;safe.aiDraftReadyForQuery=null;lockWhileLoading(true);
@@ -515,10 +517,10 @@
      if(!liveResponse.ok||liveData.success!==true)throw Error(liveData.code||'Public HTML unavailable');
      $('manualOriginalHtml').value=liveData.html;
      const title=/<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(liveData.html);
-     if(title&&!$('title').value)$('title').value=title[1].replace(/<[^>]*>/g,' ').trim().slice(0,100);
+     if(title){$('existingTitle').textContent='Current page title: '+title[1].replace(/<[^>]*>/g,' ').trim().slice(0,100);$('existingMetadata').hidden=false}
      const desc=(liveData.html.match(/<meta\b[^>]*>/gi)||[]).find(x=>/\bname\s*=\s*["']description["']/i.test(x));
      const meta=desc&&/\bcontent\s*=\s*["']([^"']+)["']/i.exec(desc);
-     if(meta&&!$('meta').value)$('meta').value=meta[1].slice(0,220);
+     if(meta){$('existingMeta').textContent='Current page description (not checked): '+meta[1].slice(0,220);$('existingMetadata').hidden=false}
      $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
       ' · public HTML retrieved '+(liveData.retrieved_at||'')+
       ' · not browser-rendered, not saved, publication still needs editor approval.';
@@ -811,7 +813,7 @@
    var current=String($('query').value||'').trim();
    var market=String(new URLSearchParams(location.search).get('market')||'').trim().toUpperCase();
    var matched=questions.some(function(q){return String(q.question).trim().toLowerCase()===current.toLowerCase()&&String(q.market||'').toUpperCase()===market});
-   if(current&&matched){wrap.hidden=true;return}
+   if(current&&matched){safe.savedQuestionConfirmed=true;wrap.hidden=true;ready();if(!$('checkSource').disabled)$('checkSource').click();return}
    // An explicit user-supplied question is never silently replaced, even when an older report exists.
    // Even one historical report must be chosen deliberately: it may be a different intent.
    if(!current||questions.length){
@@ -827,7 +829,10 @@
   }catch(e){wrap.hidden=false;choices.textContent='Could not look up previous Growth questions. Open the exact Growth research URL and use its CMS link.'}
   function choose(q){
    var question=String(q.question||'').trim(),market=String(q.market||'').trim();if(!question)return;
-   $('query').value=question;safe.aiDraftReadyForQuery=null;safe.proposal=null;$('approved').checked=false;
+   $('query').value=question;safe.savedQuestionConfirmed=true;safe.source=null;safe.aiDraftReadyForQuery=null;safe.proposal=null;$('approved').checked=false;
+   $('title').value='';$('meta').value='';$('existingTitle').textContent='';$('existingMeta').textContent='';$('existingMetadata').hidden=true;
+   $('linkUrl').value='';$('linkText').value='';showVerifiedLink();
+   $('evidence').value='needs_access';$('checkSource').disabled=false;$('checkSource').textContent='1. Check original Tracker page';
    var url=new URL(location.href);url.searchParams.set('query',question);
    if(market)url.searchParams.set('market',market);else url.searchParams.delete('market');
    history.replaceState(null,'',url.pathname+url.search);
@@ -840,7 +845,6 @@
  }
  // Direct from Growth: verify owner, source and research automatically; never approve or publish.
  if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(async()=>{
-  if(requestedQuestion){if(!$('checkSource').disabled)$('checkSource').click();}
   await recoverSavedQuestions();
  });
 })();
