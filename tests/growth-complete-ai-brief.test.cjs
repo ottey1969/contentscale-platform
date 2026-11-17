@@ -50,7 +50,7 @@ test('complete Growth brief covers full Pre-Write-grade work package with exact 
  assert.match(output,/Emergency storm damage assessment/);
  assert.match(output,/https:\/\/competitor-one.example\/roof-emergencies/);
  assert.match(output,/Existing page URL: https:\/\/example.com/);
- assert.match(output,/Read the current page/);
+ assert.match(output,/Existing page sections must be re-opened/);
  assert.match(output,/Original insurance terms require verification/);
  assert.match(output,/NOT VERIFIED/);
 });
@@ -60,7 +60,7 @@ test('missing evidence is labelled, never invented or claimed measured',()=>{
  assert.match(output,/NOT AVAILABLE IN SAVED RESEARCH/);
  assert.match(output,/source leads/i);
  assert.match(output,/Documentation after tarping/);
- assert.match(output,/Do not invent company services/i);
+ assert.match(output,/Do not infer cities, counties, licensing, service capability or business credentials/);
  assert.match(output,/UNVERIFIED/);
  assert.doesNotMatch(output,/our licensed crews are dispatched within 30 minutes/i);
 });
