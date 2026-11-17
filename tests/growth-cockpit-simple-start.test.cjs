@@ -93,3 +93,13 @@ test('page selection enables the blue action and opens the exact selected resear
  assert.equal(posts,0,'No market API call when nothing was changed');
  assert.match(opened,/\/growth\/auto-research\?page_id=2290&query=Who%20offers%2024-hour%20emergency%20roof%20repair%20in%20New%20Jersey%3F/);
 });
+
+test('all five AI engines are visible in Cockpit without pretending a check happened',()=>{
+ const html=renderSimpleGrowthStart(opts);
+ assert.match(html,/id="growthSimpleAiSystems"/);
+ assert.match(html,/ChatGPT · Gemini · Perplexity · Claude · Copilot/);
+ assert.match(html,/AI answers are optional/);
+ assert.match(html,/no system has been checked by this start form/);
+ assert.match(html,/Choose a page and run Growth to see saved AI answers/);
+ assert.match(html,/id="growthSimpleContinue" disabled/);
+});
