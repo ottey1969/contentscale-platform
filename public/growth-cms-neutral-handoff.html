@@ -22,7 +22,7 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 #cmsUnlockHint[data-stage="ready"]{background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd}
 .small{font-size:13px;color:#64748b}.note{border-left:3px solid #2563eb;padding:12px;background:#eff6ff;border-radius:5px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}fieldset{margin:20px 0;padding:14px;border:1px solid #d7e0ee;border-radius:8px}
-.check{display:flex;gap:10px;align-items:flex-start}.check[hidden]{display:none}.check input{width:auto;margin-top:7px}
+.check{display:flex;gap:10px;align-items:flex-start}.check[hidden],.form-grid[hidden]{display:none}.check input{width:auto;margin-top:7px}
 [role=status]{white-space:pre-wrap;font-weight:650;overflow-wrap:anywhere}a{color:#1d4ed8}@media(max-width:650px){.form-grid{grid-template-columns:1fr}main{padding:16px}}
 </style>
 <script defer src="/growth-competitor-overview.js"></script>
@@ -51,21 +51,22 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <div><label for="cms">Website editor</label><select id="cms"><option value="generic">Other / custom CMS</option><option value="wix">Wix</option><option value="wordpress">WordPress</option><option value="webflow">Webflow</option><option value="squarespace">Squarespace</option><option value="custom">Custom</option></select></div>
 <div><label for="evidence">Research evidence</label><select id="evidence"><option value="needs_access">Needs access — no verified GSC</option><option value="observed">Observed — editor-reviewed source</option><option value="verified">Verified — exact GSC page/query data</option></select></div>
 </div>
-<label for="query">Working query (never claim an unverified ranking)</label><input id="query" maxlength="300">
+<label for="query">Customer question for this Growth draft (exact research intent)</label>
+<p class="small">This is the question you chose in Growth. It is different from the tracked seed keyword and does not claim a ranking.</p><input id="query" maxlength="300">
 <label for="title">Reviewed SEO title</label><input id="title" maxlength="100" required>
 <label for="meta">Reviewed meta description</label><textarea id="meta" maxlength="220" rows="2" required></textarea>
 <label class="check"><input id="personalVoice" type="checkbox"><span><strong>This page presents me as a person</strong> (a personal brand, for example you as a specialist): “I” and “my” are allowed in the title, description and text.</span></label>
 </fieldset>
 <fieldset><legend>3. Generate, review and approve content for the original page</legend>
 <p class="note"><strong>Required before CMS download:</strong> Generate an AI draft for this customer question. Then review the wording, facts and safety claims, and approve. Previously saved proposals are reference material, not approved new research.</p>
-<div class="actions"><button type="button" id="generateEditorialDraft" disabled>3A. FIRST · Advanced: Generate a different draft →</button><small id="aiDraftStatus" role="status">First generate a draft. Then review and approve it to unlock the CMS download.</small></div>
+<div class="actions"><button type="button" id="generateEditorialDraft" disabled>3A. FIRST · Advanced: Generate a different draft →</button><small id="aiDraftStatus" role="status">FIRST: generate the draft for the exact customer question above. Then review and approve it to unlock the CMS download.</small></div>
 <div id="growthProposal" class="note" hidden aria-live="polite"></div>
 <div id="mainPlacement"></div>
 <label for="heading">3B. Review the proposed H2 heading · approve before publication</label><input id="heading" required>
 <label for="copy">Reviewed copy (at least 30 characters; verify all factual and safety claims)</label><textarea id="copy" rows="7" required placeholder="Use real customer-approved facts and documented evidence. No invented reviews, rankings or projects."></textarea>
 <div id="growthAdditionalSections" aria-label="Additional optional drafted sections"></div>
 
-<div class="form-grid"><div><label for="linkUrl">Optional contextual internal link URL</label><input id="linkUrl" type="url" placeholder="https://example.com/service/"></div><div><label for="linkText">Internal link label</label><input id="linkText" placeholder="Related service"></div></div>
+<div class="form-grid" id="growthVerifiedLinkFields" hidden><div><label for="linkUrl">Optional contextual internal link URL</label><input id="linkUrl" type="url"></div><div><label for="linkText">Internal link label</label><input id="linkText"></div></div>
 <label class="check" id="confirmAllWrap" hidden><input id="confirmAll" type="checkbox"><span id="confirmAllText">I checked every statement listed above.</span></label>
 <p id="noStatementsNote" class="small" hidden>No individual verification notes were generated. This does not prove that the text is correct or publication-ready. Review every factual and safety claim before approving.</p>
 <label class="check"><input id="approved" type="checkbox" required><span>3C. I reviewed the actual page, the proposed facts, source evidence and link. I approve a package for a human editor, not automatic publication.</span></label>
