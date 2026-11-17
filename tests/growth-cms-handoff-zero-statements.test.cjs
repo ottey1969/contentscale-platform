@@ -9,13 +9,13 @@ const JS = fs.readFileSync(path.join(__dirname, '../public/growth-cms-neutral-ha
 const REPORT_UI = fs.readFileSync(path.join(__dirname, '../public/growth-automatic-report-ui.js'), 'utf8');
 
 test('the page wiring: a hidden tick stays hidden, and a note says why there is nothing to confirm', () => {
-  assert.match(HTML, /\.check\[hidden\]\{display:none\}/);
+  assert.match(HTML, /\.check\[hidden\],\.form-grid\[hidden\]\{display:none\}/);
   assert.match(HTML, /<p id="noStatementsNote" class="small" hidden>No individual verification notes were generated/);
   assert.match(JS, /var none=\$\('noStatementsNote'\);if\(none\)none\.hidden=!!facts\.length\|\|!safe\.source;/);
   // The download still needs the review tick; facts only block when there are open ones.
   assert.doesNotMatch(JS, /if\(safe\.aiDraftReadyForQuery!==\$\('query'\)\.value\.trim\(\)\)throw Error/);
   assert.match(JS, /if\(!safe\.savedQuestionConfirmed\)throw Error/);
-  assert.match(HTML, /Normal Growth handoff/);
+  assert.match(HTML, /Growth content handoff/);
   assert.match(REPORT_UI, /target\.searchParams\.get\('query'\)/);
 });
 
