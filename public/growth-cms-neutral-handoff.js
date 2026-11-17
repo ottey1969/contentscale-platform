@@ -313,6 +313,7 @@
    var fact=document.createElement('p');fact.className='small';
    fact.textContent='This is an UNAPPROVED draft for “'+String(p.focus_query||exactQuestion)+'”. It is not a verified content gap or fact-checked article. Review the original research before accepting any text.';
    box.appendChild(fact);
+   var next=document.createElement('p');next.setAttribute('role','status');next.setAttribute('aria-live','polite');next.className='small';next.textContent='Progress: research proposal available → review useful claims → approve → download CMS package.';box.appendChild(next);
    var summaryList=document.createElement('p');summaryList.textContent='Suggested sections: '+(p.sections||[]).map(function(x){return x.h2}).join(' · ');box.appendChild(summaryList);
    var review=document.createElement('button');review.type='button';review.textContent='Review proposed text and claims →';
    review.className='growth-primary-finish';box.appendChild(review);
@@ -326,6 +327,7 @@
    review.addEventListener('click',function(){
     if(review.disabled)return;
     review.disabled=true;skip.hidden=true;summaryList.hidden=true;
+    next.textContent='Progress: reviewing selected claims. Next: approve verified edits and download the CMS package.';
     var first=p.sections[0];
     // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
     safe.proposal=p;
