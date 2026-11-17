@@ -20,6 +20,7 @@ test('Website Growth Check is page-first for existing, unknown URL with genuinel
  assert.match(routes,/id="freeSitemapUrl"/);
  assert.match(routes,/id="freeSitemapFile" name="sitemapFile"/);
  assert.match(routes,/sitemap_file:sf/);
+ assert.match(routes,/sitemap_url:\(document\.getElementById\('freeSitemapUrl'\)/);
  assert.match(routes,/id="freeSitemapOpen" disabled/);
  assert.match(routes,/\$\{aiStartBlock\(!!owner\.signedIn\|\|!!invite,t\)\}/);
  assert.match(routes,/gsc_file:gf/);
@@ -36,7 +37,7 @@ test('Sitemap opener is only a browser link; it never claims import or verificat
    'simpleOptional','simpleOptionalHint','simpleSitemapInfo','simpleSitemap','simpleSitemapOpen',
    'simpleSitemapInvalid','simpleSitemapUnverified'])assert.ok(t[key],lang+' missing '+key);
  }
- assert.match(FORM_TEXTS.en.simpleSitemapInfo,/does not import, verify or submit/);
+ assert.match(FORM_TEXTS.en.simpleSitemapInfo,/import URL candidates when you run the check/);
  const s=inlineStart();
  assert.match(s,/window\.open\(target,'_blank','noopener,noreferrer'\)/);
  assert.doesNotMatch(s,/fetch\(|XMLHttpRequest|navigator\.sendBeacon/);
