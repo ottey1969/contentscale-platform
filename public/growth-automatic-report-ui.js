@@ -1122,8 +1122,9 @@
   if(!box){box=document.createElement('section');box.id='growthAiContentTasks';box.className='tg-self';
    box.style.cssText='border:1px solid #93c5fd;background:#eff6ff;border-radius:12px;padding:16px;margin:16px 0';
    choice.parentNode.insertBefore(box,choice.nextSibling)}
-  box.textContent='';box.hidden=!topics.length;if(!topics.length)return;
+  box.textContent='';box.hidden=!(d&&d.gap_list||d&&d.search_discovery||d&&d.ai_check);if(box.hidden)return;
   node('h3','Complete Growth AI Research & Writing Brief · '+topics.length+' AI-source topics',box);
+  if(!topics.length)node('p','No AI-cited content gaps were identified or verified in this run. The complete research brief is still available, including Google research, current-page evidence, missing information, and the NO CHANGE option.',box).className='info';
   node('p','Pre-Write-grade work package: exact customer question and URL, current-page structure, ranked competitors, AI answer evidence, observed gaps, FAQ/PAA leads, entities, sources, statistics and quote verification, internal links, SEO metadata, CMS HTML output, editorial QA and measurement instructions. Missing research is clearly marked — it is never invented.',box).className='info';
   var ul=node('ul',null,box);
   topics.forEach(t=>{var li=node('li',null,ul);node('strong',t.topic,li);
