@@ -24,6 +24,7 @@ const {generateGrowthEditorDraft,sourceFacts,styleIssues}=require('../growth-sou
 const styleFix=require('../growth-style-fix.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
+const {importSitemap}=require('./sitemap-import.cjs');
 const cmsPackage=require('./cms-package.cjs');
 const reminders=require('./reminders.cjs');
 const topicLang=require('./topic-lang.cjs');
@@ -170,6 +171,7 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  <label for="freeSitemapUrl">${esc(t.simpleSitemap)}</label>
  <input id="freeSitemapUrl" type="url" inputmode="url" maxlength="500" placeholder="https://www.example.com/sitemap.xml">
  <div class="free-sitemap-actions"><button type="button" class="ghost" id="freeSitemapOpen" disabled>${esc(t.simpleSitemapOpen)}</button><small id="freeSitemapStatus" role="status"></small></div>
+ <label for="freeSitemapFile">${esc(t.simpleSitemapImport)}</label><input id="freeSitemapFile" name="sitemapFile" type="file" accept=".xml,text/xml,application/xml"><small>${esc(t.simpleSitemapUploadHelp)}</small>
  <label for="gscFile">${esc(t.gsc)}</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
  <small>${esc(t.gscHelp)}</small>
  ${aiStartBlock(!!owner.signedIn||!!invite,t)}
@@ -317,7 +319,8 @@ try{
   }catch(e){s.textContent=FT.sNoSuggest}
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -1058,13 +1061,14 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      if(chosenQuestion&&chosenQuestion.text)job.query=chosenQuestion.text;
      // No customer question found for a rank tracker topic: the tracked keyword itself is researched.
      else if(job.topic){job.query=job.topic;if(chosenQuestion)chosenQuestion.text_fallback='TOPIC'}
-     const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[]},engineDeps);
+     const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[],sitemapUrls:job.sitemap?.urls||[]},engineDeps);
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
       if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
      }else{
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
+       if(job.sitemap)out.report.sitemap_import={status:'IMPORTED_URL_INVENTORY_ONLY',source:'VISITOR_XML_UPLOAD',file_name:job.sitemap.fileName,urls_found:job.sitemap.totalFound,urls_used:job.sitemap.urls.length,limited:job.sitemap.limited,urls:job.sitemap.urls,note:'Sitemap URLs are site inventory only. No imported page was treated as read, indexed, canonical or verified.'};
       if(chosenQuestion)out.report.customer_question=chosenQuestion;
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
       // The AI systems are asked the best real Google question for the search term, not the bare keyword (owner 2026-11-12).
@@ -1184,11 +1188,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
+   const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
    // A verified Search Console export changes the research, so a stored result without it is not reused.
    // A topic from the rank tracker leads to its own customer question, so a stored result for the page is not reused.
-   const cached=(gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE')||topic?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
+   const cached=(gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE')||sitemap||topic?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
@@ -1199,7 +1204,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
-   if(!cached){queue.push({id:row.id,url:v.url,query,topic,market,gscRows:gscRowsOf(gsc,v.url)});pump()}
+   if(!cached){queue.push({id:row.id,url:v.url,query,topic,market,sitemap,gscRows:gscRowsOf(gsc,v.url)});pump()}
    res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
   }catch(e){console.error('[free-growth] start failed',e.message);res.status(503).json({success:false,error:'The free check is temporarily unavailable'})}
  });
@@ -1240,7 +1245,10 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(upload.status==='INVALID'){res.status(400).json({success:false,error:'Search Console file: '+upload.message});return undefined}
   return {fileName:clean(f.name,200),upload};
  }
- const gscRowsOf=(gsc,url)=>gsc?gscExport.engineRows(gsc.upload,{pageUrl:url}):[];
+ function readSitemapFile(b,url,res){
+   try{return importSitemap(b&&b.sitemap_file,url)}catch(e){res.status(400).json({success:false,error:'Sitemap import: '+String(e.message||'INVALID_SITEMAP')});return undefined}
+  }
+  const gscRowsOf=(gsc,url)=>gsc?gscExport.engineRows(gsc.upload,{pageUrl:url}):[];
  // The visitor's Search Console uploads for this check: the latest one is shown; all are kept for the 28-day comparison.
  async function gscFor(row){
   let list=[];try{list=await storage.listGscUploads(pool,row.id)}catch(e){console.warn('[free-growth] GSC uploads unavailable',String(e&&e.code||'unknown'))}
@@ -1261,21 +1269,22 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const market=readMarket(b,res);if(market===undefined)return null;
   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
+   const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return null;
   const query=clean(b.query,300);
-  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
+  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,sitemap,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
   // A verified Search Console export changes the research, so a stored result without it is not reused.
   const withGsc=!!(input.gsc&&input.gsc.upload.status==='VERIFIED_FOR_PAGE');
-  const cached=fresh||withGsc||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
+  const cached=fresh||withGsc||input.sitemap||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
