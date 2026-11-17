@@ -10,6 +10,16 @@ h1{font-size:26px;margin:.3em 0}h2{font-size:17px;margin-top:20px}label{display:
 input,select,textarea{box-sizing:border-box;width:100%;padding:11px;border:1px solid #bac5d6;border-radius:7px;background:#fff;color:#172337;font:inherit}
 textarea{resize:vertical;min-height:100px}button{border:0;border-radius:8px;background:#1d4ed8;color:#fff;font-weight:750;padding:11px 16px;cursor:pointer}
 button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color .18s ease,transform .15s ease,box-shadow .18s ease}button:not(:disabled):active,button.growth-pressed{transform:scale(.98);filter:brightness(1.08)}button[data-busy="true"]{position:relative;padding-right:42px;cursor:progress;animation:growthButtonPulse 1.2s ease-in-out infinite}button[data-busy="true"]::after{content:"";position:absolute;right:14px;top:50%;width:14px;height:14px;margin-top:-9px;border:2px solid rgba(255,255,255,.55);border-top-color:white;border-radius:50%;animation:growthButtonSpin .7s linear infinite}button[data-done="true"]{background:#15803d;color:white}@keyframes growthButtonSpin{to{transform:rotate(360deg)}}@keyframes growthButtonPulse{50%{filter:brightness(1.1)}}@media(prefers-reduced-motion:reduce){button,button[data-busy="true"],button[data-busy="true"]::after{animation:none;transition:none}}.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:20px}
+/* One unmistakable action: orange draft first, then blue CMS download after approval. */
+#generateEditorialDraft{background:#c65b07;color:#fff;border:2px solid #a84305;box-shadow:0 3px 0 rgba(124,45,18,.16);font-size:15px}
+#generateEditorialDraft:not(:disabled):hover{background:#9a3412}
+#generateEditorialDraft[data-stage="done"]{background:#15803d;border-color:#166534;box-shadow:none}
+#generateEditorialDraft:disabled{opacity:.58}
+#download{background:#1d4ed8;color:#fff}
+#download:disabled{background:#d8dee8!important;color:#526076!important;border:1px solid #b8c3d3;opacity:1;box-shadow:none}
+#download:not(:disabled){background:#1d4ed8!important;color:#fff!important;box-shadow:0 4px 12px rgba(29,78,216,.2)}
+#cmsUnlockHint{font-weight:700;padding:10px 13px;border-radius:8px;background:#f1f5f9;color:#475569}
+#cmsUnlockHint[data-stage="ready"]{background:#eff6ff;color:#1d4ed8;border:1px solid #93c5fd}
 .small{font-size:13px;color:#64748b}.note{border-left:3px solid #2563eb;padding:12px;background:#eff6ff;border-radius:5px}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}fieldset{margin:20px 0;padding:14px;border:1px solid #d7e0ee;border-radius:8px}
 .check{display:flex;gap:10px;align-items:flex-start}.check[hidden]{display:none}.check input{width:auto;margin-top:7px}
@@ -48,7 +58,7 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 </fieldset>
 <fieldset><legend>3. Generate, review and approve content for the original page</legend>
 <p class="note"><strong>Required before CMS download:</strong> Generate an AI draft for this customer question. Then review the wording, facts and safety claims, and approve. Previously saved proposals are reference material, not approved new research.</p>
-<div class="actions"><button type="button" id="generateEditorialDraft" disabled>3A. Required · Advanced: Generate a different draft →</button><small id="aiDraftStatus" role="status">First generate a draft. Then review and approve it to unlock the CMS download.</small></div>
+<div class="actions"><button type="button" id="generateEditorialDraft" disabled>3A. FIRST · Advanced: Generate a different draft →</button><small id="aiDraftStatus" role="status">First generate a draft. Then review and approve it to unlock the CMS download.</small></div>
 <div id="growthProposal" class="note" hidden aria-live="polite"></div>
 <div id="mainPlacement"></div>
 <label for="heading">3B. Review the proposed H2 heading · approve before publication</label><input id="heading" required>
@@ -60,7 +70,7 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <p id="noStatementsNote" class="small" hidden>No individual verification notes were generated. This does not prove that the text is correct or publication-ready. Review every factual and safety claim before approving.</p>
 <label class="check"><input id="approved" type="checkbox" required><span>3C. I reviewed the actual page, the proposed facts, source evidence and link. I approve a package for a human editor, not automatic publication.</span></label>
 </fieldset>
-<p class="small">Step 4 unlocks only after the Advanced AI draft is generated for this question and the content is reviewed and approved. Nothing is published automatically.</p>
+<p id="cmsUnlockHint" data-stage="locked" role="status" aria-live="polite">🔒 First click the orange Advanced button above. Then review and approve the draft; this CMS download button will turn blue and become active.</p>
 <div class="actions"><button id="download" type="submit" disabled>4. Download reviewed CMS handoff ZIP</button><span id="downloadStatus" role="status"></span></div>
 <p id="downloadWhy" class="small" role="status" hidden></p>
 </form>
