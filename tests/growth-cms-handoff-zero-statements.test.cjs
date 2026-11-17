@@ -51,3 +51,17 @@ test('in a browser, the hidden "I checked all" tick is not displayed', { skip: !
     assert.equal(await p.$eval('#confirmAllWrap', e => getComputedStyle(e).display), 'flex', 'shown when there are statements');
   } finally { await b.close(); }
 });
+
+test('a missing CMS query must never be replaced with the Tracker seed or an older saved question', () => {
+ assert.match(HTML, /id="savedQuestionChooser"/);
+ assert.match(HTML, /id="trackedSeedNote"/);
+ assert.match(JS, /function recoverSavedQuestions\(\)/);
+ assert.match(JS, /auto-research\/queries\?page_id=/);
+ assert.match(JS, /Choose the exact saved customer question first/);
+ assert.doesNotMatch(JS, /\$\('query'\)\.value=data\.working_keyword/);
+ assert.match(JS, /Even one historical report must be chosen deliberately/);
+ assert.match(JS, /history\.replaceState\(null/);
+ assert.match(JS, /\$\('researchReviewLink'\)\.href=/);
+ assert.match(REPORT_UI, /r\.gap_list\?\.focus_query/);
+ assert.match(REPORT_UI, /if\(runMarket\)target\.searchParams\.set\('market',runMarket\)/);
+});
