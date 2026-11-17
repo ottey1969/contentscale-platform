@@ -26,10 +26,7 @@
    if(!cleared.ok)throw Error('GSC import finished, but the old research cache could not be cleared');
    if(msg)msg.textContent='Imported '+Number(j.saved||0)+' Search Console term(s). Exact-page and exact-query coverage must be checked in a new Growth run; no metrics are assumed.';
    var again=document.getElementById('retryResearch');if(again){again.hidden=false;again.classList.add('tg-attention')}
-   if(display&&display!==gscSt){
-    var go=node('button','Run Growth using imported GSC data →',display.parentNode);go.type='button';go.className='growth-primary-finish';
-    go.addEventListener('click',function(){run()});
-   }
+   // Imported GSC data will be considered on the next user-started full research run.
    if(trigger)trigger.disabled=false;
    return true;
   }catch(e){
@@ -1345,17 +1342,17 @@
    var saved=await response.json();
    if(!response.ok||saved.success!==true)throw Error(saved.code||'SAVED_REPORT_UNAVAILABLE');
    if(saved.found&&saved.report&&saved.report.success===true){
-    last=saved.report;render(saved.report);pointHandoff(saved.report);showAiEarly();if(main.getAttribute('data-owner-draft')==='true')triggerAutomaticAi(saved.report);
+    last=saved.report;render(saved.report);pointHandoff(saved.report);showAiEarly();// Loading a saved report never starts an optional AI provider check.
     status.textContent='Saved research restored ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). No new scan was run.';
     firstProgress('Previous research available ('+String(saved.report.saved_at||'date unavailable').slice(0,10)+'). This is not a new scan of your current inputs. Choose Run Growth Research when ready.',false);
-    document.getElementById('retryResearch').hidden=false;
+    document.getElementById('retryResearch').hidden=true;
     return;
    }
    status.textContent='No saved research report for this page, market and query yet. ';
    firstProgress('Ready for the first Growth research run after all inputs are reviewed.',false);
    // The only primary research action stays in the setup panel.
   }catch(e){status.textContent='Saved report could not be loaded: '+String(e.message||e)+'. No new scan was run.'}
-  document.getElementById('retryResearch').hidden=false;
+  document.getElementById('retryResearch').hidden=true;
  }
 
  // Market save is isolated in /growth-market-controls.js so a report-rendering failure cannot disable it.
