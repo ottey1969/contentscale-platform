@@ -46,7 +46,7 @@ function compactPublicHtml(html){
 }
 // compact:true (research reads): stream up to rawLimit bytes, compact, then apply `limit` to the readable HTML.
 // compact:false (default, e.g. CMS export): the raw response is capped at `limit` exactly as before.
-async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,limit=120000,timeout=6500,redirects=2,allowFeedXml=false,compact=false,rawLimit=2500000}={}){
+async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,limit=120000,timeout=6500,redirects=2,allowFeedXml=false,allowSitemapXml=false,compact=false,rawLimit=2500000}={}){
  const byteCap=compact?Math.max(limit,rawLimit):limit;
  const finish=(html,cut)=>{
   if(!compact)return {html,truncated:cut};
@@ -72,7 +72,7 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
    let completed=false;
    const done=(e,value)=>{if(completed)return;completed=true;if(e)reject(e);else resolve(value)};
    const req=httpsModule.request(url,{
-    method:'GET',headers:{'User-Agent':'ContentScaleGrowthResearch/1.0 (+https://contentscale.site/)','Accept':'text/html,application/xhtml+xml','Accept-Encoding':'identity'},
+    method:'GET',headers:{'User-Agent':'ContentScaleGrowthResearch/1.0 (+https://contentscale.site/)','Accept':allowSitemapXml?'application/xml,text/xml,application/xhtml+xml':'text/html,application/xhtml+xml','Accept-Encoding':'identity'},
     family:4,autoSelectFamily:false,lookup(_name,_options,cb){cb(null,address,4)},rejectUnauthorized:true,timeout
    },res=>{
     const status=res.statusCode||0;
@@ -83,7 +83,7 @@ async function fetchPublicGrowthHtml(raw,{lookup=dns.lookup,httpsModule=https,li
     }
     if(status!==200){res.resume();return done(Object.assign(Error('HTTP_'+status),{code:'HTTP_'+status}))}
     const mime=String(res.headers['content-type']||'').toLowerCase();
-    if(!/(text\/html|application\/xhtml\+xml)/.test(mime)&&!(allowFeedXml&&url.hostname==='www.bing.com'&&/\b(application\/(?:rss\+xml|xml)|text\/xml)\b/.test(mime))){
+    if(!/(text\/html|application\/xhtml\+xml)/.test(mime)&&!(allowSitemapXml&&/\b(?:application\/(?:[a-z0-9.-]+\+)?xml|text\/xml)\b/.test(mime))&&!(allowFeedXml&&url.hostname==='www.bing.com'&&/\b(application\/(?:rss\+xml|xml)|text\/xml)\b/.test(mime))){
      res.resume();return done(Object.assign(Error('NOT_HTML'),{code:'NOT_HTML'}));
     }
     const chunks=[];let size=0,truncated=false;

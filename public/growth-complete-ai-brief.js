@@ -214,6 +214,19 @@
    'If no verified destination is available: NO LINK; do not print fake placeholders.',
    'Anchor text must describe the destination rather than force an exact-match SEO phrase.'
   ].join('\n'));
+  var importedSitemap=d.sitemap_import||{},trackerSitemap=d.tracker_sitemap_fallback||{};
+  var sitemapCandidates=sourceUrls([...list(importedSitemap.urls),...list(trackerSitemap.urls)]);
+  add('11A. OPTIONAL SITEMAP INVENTORY — UNVERIFIED PAGE CANDIDATES',[
+   'Source: '+(importedSitemap.status?'Free Growth sitemap XML upload':trackerSitemap.status?'Existing Tracker sitemap fallback':'No sitemap provided'),
+   'Imported sitemap URLs are NOT proof of live pages, indexed pages, correct canonicals, relevant internal links or pages actually read.',
+   'Scope: '+((importedSitemap.limited||trackerSitemap.limited)?'PARTIAL SITEMAP INVENTORY; other sub-sitemaps or URLs may not have been checked':'Observed sitemap scope only; not guaranteed exhaustive'),
+   'URLs available: '+sitemapCandidates.length,
+   'Exact saved same-site URLs:',bullet(sitemapCandidates),
+   'Known sitemap address (not necessarily fetched): '+value(trackerSitemap.sitemap_url),
+   'Only suggest a contextual internal link after checking that its final URL resolves to a readable relevant HTTP 200 page.',
+   'Sitemap metadata:',safeJson({imported:{status:importedSitemap.status,file_name:importedSitemap.file_name,urls_found:importedSitemap.urls_found,limited:importedSitemap.limited},
+    tracker:{status:trackerSitemap.status,count:trackerSitemap.count,evidence:trackerSitemap.evidence,index_files_found:trackerSitemap.index_files_found,index_files_read:trackerSitemap.index_files_read,limited:trackerSitemap.limited,fetch_status:trackerSitemap.fetch_status}})
+  ].join('\\n'));
   add('12. REQUIRED ARTICLE STRUCTURE AND EDITORIAL DELIVERABLE',[
    'A. One concise direct answer to the exact customer question, suitable for a reader needing a clear decision.',
    'B. Current-page coverage table: existing heading, observed text, KEEP / IMPROVE / ADD / NO CHANGE, reasons, risk of duplication.',

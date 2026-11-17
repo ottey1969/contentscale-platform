@@ -24,6 +24,8 @@ const {generateGrowthEditorDraft,sourceFacts,styleIssues}=require('../growth-sou
 const styleFix=require('../growth-style-fix.cjs');
 const {fetchPublicGrowthHtml}=require('../growth-public-html-reader.cjs');
 const gscExport=require('./gsc-export.cjs');
+const {importSitemap}=require('./sitemap-import.cjs');
+const {trackerSitemapFallback}=require('../tracker-growth-automatic-routes.cjs');
 const cmsPackage=require('./cms-package.cjs');
 const reminders=require('./reminders.cjs');
 const topicLang=require('./topic-lang.cjs');
@@ -170,6 +172,7 @@ ${invite?`<p class="note"><strong>${esc(t.invite)}${invite.label?' — '+esc(inv
  <label for="freeSitemapUrl">${esc(t.simpleSitemap)}</label>
  <input id="freeSitemapUrl" type="url" inputmode="url" maxlength="500" placeholder="https://www.example.com/sitemap.xml">
  <div class="free-sitemap-actions"><button type="button" class="ghost" id="freeSitemapOpen" disabled>${esc(t.simpleSitemapOpen)}</button><small id="freeSitemapStatus" role="status"></small></div>
+ <label for="freeSitemapFile">${esc(t.simpleSitemapImport)}</label><input id="freeSitemapFile" name="sitemapFile" type="file" accept=".xml,text/xml,application/xml"><small>${esc(t.simpleSitemapUploadHelp)}</small>
  <label for="gscFile">${esc(t.gsc)}</label><input id="gscFile" name="gscFile" type="file" accept=".zip,.csv,text/csv,application/zip">
  <small>${esc(t.gscHelp)}</small>
  ${aiStartBlock(!!owner.signedIn||!!invite,t)}
@@ -317,7 +320,8 @@ try{
   }catch(e){s.textContent=FT.sNoSuggest}
  }
  var gf=null,gi=document.getElementById('gscFile');if(gi&&gi.files&&gi.files[0]){if(gi.files[0].size>3*1024*1024)throw Error(FT.sGscBig);gf={name:gi.files[0].name,content_base64:await gscBase64(gi.files[0])}}
-var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
+var sf=null,si=document.getElementById('freeSitemapFile');if(si&&si.files&&si.files[0]){if(si.files[0].size>1024*1024)throw Error(FT.sSitemapBig);sf={name:si.files[0].name,content_base64:await gscBase64(si.files[0])}}
+var r=await fetch(${js(api)}+'/checks',{signal:timeoutSignal(60000),method:'POST',credentials:'same-origin',headers:OWNER?{'Content-Type':'application/json','X-Requested-With':'growth-free-admin'}:{'Content-Type':'application/json'},body:JSON.stringify({gsc_file:gf,sitemap_file:sf,sitemap_url:(document.getElementById('freeSitemapUrl')||{}).value||'',key:${js(accessKey)},invite:${js(invite?invite.token:'')},url:f.url.value,query:f.query.value,topic:f.topic?f.topic.value:'',rank_ref:f.rt?f.rt.value:'',lang:f.lang?f.lang.value:'',market:f.market.value,language:f.language.value,email:f.email.value,consent:true,no_tips:f.notips.checked,fresh:!!(f.fresh&&f.fresh.checked),ai_answers:aiStartAnswers()})});
 var d=await r.json();if(!d.success)throw Error(d.error||FT.sNoStart);location.href=d.result_url}
 catch(err){s.textContent=err&&(err.name==='AbortError'||err.name==='TimeoutError')?FT.sTimeout:err.message;s.className='error';b.disabled=false;b.classList.remove('is-working');b.removeAttribute('aria-busy');b.classList.add('action-red')}});
 </script>`,cfg);
@@ -853,6 +857,11 @@ function render(d){if(langRedirect(d))return;var s=d.summary,o=document.getEleme
  var h='<p class="kicker">Result · Google + AI'+'</p><h1>Your page in Google and in AI answers</h1>';
  if(d.cached)h+='<p class="note"><strong>Result from earlier today.</strong> This page was checked for the same question and market'+(s.checked&&s.checked.checked_at?' on '+esc(new Date(s.checked.checked_at).toLocaleString()):' in the last 24 hours')+', so that result is shown. A new check of this page is possible tomorrow.</p>';
  h+='<p class="muted">Page: <a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.url)+'</a></p>';
+ if(d.sitemap_import){
+  var sm=d.sitemap_import,used=Number(sm.urls_used||0);
+  h+='<p class="note"><strong>Sitemap inventory:</strong> '+(used?used+' same-site URL candidate(s) imported':'No sitemap URLs imported')+
+   ' <small class="muted">· '+esc(sm.source||'optional sitemap')+' · sitemap URLs are not verified pages or confirmed internal links.</small></p>';
+ }
  // The customer question the check used: chosen automatically from Google, or typed. Other questions start a new check.
  var cq=d.customer_question,term=s.checked&&s.checked.search_term;
  if(cq&&cq.text)h+='<div class="card" id="customerQuestion"><strong>Customer question researched:</strong> “'+esc(cq.text)+'” <small class="muted">· chosen automatically · '+esc(cq.label||'')+'</small>'+
@@ -1058,13 +1067,22 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
      if(chosenQuestion&&chosenQuestion.text)job.query=chosenQuestion.text;
      // No customer question found for a rank tracker topic: the tracked keyword itself is researched.
      else if(job.topic){job.query=job.topic;if(chosenQuestion)chosenQuestion.text_fallback='TOPIC'}
-     const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[]},engineDeps);
+     if(job.sitemap?.sitemapUrl){
+       try{
+        const fallback=await trackerSitemapFallback([{sitemap_url:job.sitemap.sitemapUrl}],job.url,[],
+         u=>fetchPublicGrowthHtml(u,{limit:1024*1024,timeout:4500,redirects:1,allowSitemapXml:true}));
+        job.sitemap={fileName:'Sitemap URL',urls:fallback.urls,totalFound:fallback.count,limited:fallback.limited||fallback.count>=300,
+         source:'PUBLIC_SITEMAP_URL',status:fallback.fetch_status};
+       }catch(e){job.sitemap={fileName:'Sitemap URL',urls:[],totalFound:0,limited:false,source:'PUBLIC_SITEMAP_URL',status:'SITEMAP_UNAVAILABLE'}}
+      }
+      const out=await engine({url:job.url,query:job.query,market:job.market||null,gscRows:job.gscRows||[],sitemapUrls:job.sitemap?.urls||[]},engineDeps);
      if(out.statusCode!==200||!out.report||out.report.success===false){
       await storage.setStatus(pool,job.id,{status:'FAILED',error_code:String(out.report&&out.report.code||'RESEARCH_FAILED').slice(0,80)});
       if(job.inviteId)await storage.refundInvite(pool,job.inviteId);
      }else{
       // Marks which research code made this result; the cache reuses only results of the running code.
       out.report.engine_version=engineVersion();
+       if(job.sitemap)out.report.sitemap_import={status:job.sitemap.urls.length?'IMPORTED_URL_INVENTORY_ONLY':'SITEMAP_UNAVAILABLE',source:job.sitemap.source||'VISITOR_XML_UPLOAD',file_name:job.sitemap.fileName,urls_found:job.sitemap.totalFound,urls_used:job.sitemap.urls.length,limited:job.sitemap.limited,urls:job.sitemap.urls,note:'Sitemap URLs are site inventory only. No imported page was treated as read, indexed, canonical or verified.'};
       if(chosenQuestion)out.report.customer_question=chosenQuestion;
       const summary=summarizeFreeGrowth(out.report,{url:job.url,query:job.query});
       // The AI systems are asked the best real Google question for the search term, not the bare keyword (owner 2026-11-12).
@@ -1184,11 +1202,12 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    const market=readMarket(b,res);if(market===undefined)return;
    const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return;
    const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return;
+   const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return;
    await storage.ensureTables(pool);
    const ipHash=store.hashIp(req.ip,config.ipSalt);
    // A verified Search Console export changes the research, so a stored result without it is not reused.
    // A topic from the rank tracker leads to its own customer question, so a stored result for the page is not reused.
-   const cached=(gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE')||topic?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
+   const cached=(gsc&&gsc.upload.status==='VERIFIED_FOR_PAGE')||sitemap||topic?null:await storage.recentResult(pool,{url:v.url,query,market,engineVersion:engineVersion()});
    if(!cached){
     const u=await storage.usage(pool,{email,ipHash,accessLabel:entry.label});
     if(u.by_email>=entry.perEmail||u.by_ip>=config.perIp)
@@ -1199,7 +1218,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
    await saveStartAnswers(row,v.url,aiAnswers);
    if(gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:gsc.fileName,upload:gsc.upload});
    await attachRank(row,b.rank_ref);
-   if(!cached){queue.push({id:row.id,url:v.url,query,topic,market,gscRows:gscRowsOf(gsc,v.url)});pump()}
+   if(!cached){queue.push({id:row.id,url:v.url,query,topic,market,sitemap,gscRows:gscRowsOf(gsc,v.url)});pump()}
    res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
   }catch(e){console.error('[free-growth] start failed',e.message);res.status(503).json({success:false,error:'The free check is temporarily unavailable'})}
  });
@@ -1240,7 +1259,16 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   if(upload.status==='INVALID'){res.status(400).json({success:false,error:'Search Console file: '+upload.message});return undefined}
   return {fileName:clean(f.name,200),upload};
  }
- const gscRowsOf=(gsc,url)=>gsc?gscExport.engineRows(gsc.upload,{pageUrl:url}):[];
+ function readSitemapFile(b,url,res){
+   try{
+    if(b&&b.sitemap_file&&b.sitemap_file.content_base64)return importSitemap(b.sitemap_file,url);
+    const raw=String(b&&b.sitemap_url||'').trim();if(!raw)return null;
+    const target=new URL(raw),page=new URL(url);
+    if(target.protocol!=='https:'||target.hostname.toLowerCase()!==page.hostname.toLowerCase()||target.username||target.password||target.port&&target.port!=='443'||raw.length>500)throw Error('SITEMAP_URL_MUST_BE_PUBLIC_HTTPS_ON_SAME_HOST');
+    return {fileName:'Sitemap URL',sitemapUrl:target.href,urls:[],totalFound:0,limited:false};
+   }catch(e){res.status(400).json({success:false,error:'Sitemap import: '+String(e.message||'INVALID_SITEMAP')});return undefined}
+  }
+  const gscRowsOf=(gsc,url)=>gsc?gscExport.engineRows(gsc.upload,{pageUrl:url}):[];
  // The visitor's Search Console uploads for this check: the latest one is shown; all are kept for the 28-day comparison.
  async function gscFor(row){
   let list=[];try{list=await storage.listGscUploads(pool,row.id)}catch(e){console.warn('[free-growth] GSC uploads unavailable',String(e&&e.code||'unknown'))}
@@ -1261,21 +1289,22 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   const market=readMarket(b,res);if(market===undefined)return null;
   const aiAnswers=readAiAnswers(b,res);if(aiAnswers===undefined)return null;
   const gsc=readGscFile(b,v.url,res);if(gsc===undefined)return null;
+   const sitemap=readSitemapFile(b,v.url,res);if(sitemap===undefined)return null;
   const query=clean(b.query,300);
-  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
+  return {email,emails:em.emails,url:v.url,host:v.host,query,topic:query?'':clean(b.topic,120),rankRef:String(b.rank_ref||'').slice(0,420),market,aiAnswers,gsc,sitemap,uiLang:FORM_LANGS.includes(String(b.lang||''))?String(b.lang):null};
  }
  async function start(res,input,{ipHash=null,marketingConsent=false,accessLabel,inviteId=null,beforeRun=null,fresh=false}){
   // fresh: admin only, researches again even when a stored result exists.
   // A verified Search Console export changes the research, so a stored result without it is not reused.
   const withGsc=!!(input.gsc&&input.gsc.upload.status==='VERIFIED_FOR_PAGE');
-  const cached=fresh||withGsc||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
+  const cached=fresh||withGsc||input.sitemap||input.topic?null:await storage.recentResult(pool,{url:input.url,query:input.query,market:input.market,engineVersion:engineVersion()});
   // A cached result costs nothing, so it never uses up an invitation.
   if(!cached&&beforeRun&&!(await beforeRun()))return;
   const row=await storage.createCheck(pool,{email:input.email,emails:input.emails,ipHash,url:input.url,host:input.host,query:input.query,marketingConsent,cached,accessLabel,inviteId:cached?null:inviteId,market:input.market,uiLang:input.uiLang||null});
   await saveStartAnswers(row,input.url,input.aiAnswers);
   if(input.gsc)await storage.saveGscUpload(pool,{checkId:row.id,fileName:input.gsc.fileName,upload:input.gsc.upload});
   await attachRank(row,input.rankRef);
-  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url)});pump()}
+  if(!cached){queue.push({id:row.id,url:input.url,query:input.query,topic:input.topic,market:input.market,inviteId:cached?null:inviteId,approved:accessLabel==='admin'||!!inviteId,gscRows:gscRowsOf(input.gsc,input.url),sitemap:input.sitemap});pump()}
   res.status(202).json({success:true,id:row.public_id,key:row.access_key,status:row.status,result_url:resultUrl(row)});
  }
  // A check started from the free rank tracker: the tracker account is the access. The e-mail address of the tracker
@@ -1416,6 +1445,7 @@ function registerFreeGrowth(app,pool,{config=freeGrowthConfig(),engine=runFreeGr
   res.set('Cache-Control','no-store').json({success:true,status:row.status,ui_lang:row.ui_lang||'en',url:row.url,query:row.query,decision:row.decision,gsc:gscPart,
    ai:aiPart?{search_term:aiPart.search_term,ai_question:aiPart.ai_question,prompt:aiPart.prompt,engines:aiPart.engines,max_paste:aiPart.max_paste,summary:aiPart.summary,gap:shown.aiGap}:null,
     automatic_ai_answers:row.report?.automatic_ai_answers||null,
+   sitemap_import:row.report?.sitemap_import||null,
    customer_question:row.report&&row.report.customer_question||null,competitors:competitorsOf(row.report,row.summary&&row.summary.gaps),
    summary:withPlainEvidence(withGscLimits(withAiLimits(shown.summary,aiPart),gscPart),row)||null,cached:!!row.cached_from,error_code:row.error_code||null,
    selected_item_ids:Array.isArray(row.selected_item_ids)?row.selected_item_ids:[],writing:row.status==='DONE'?writingInfo(row,req):null,publication:row.status==='DONE'?publicationOf(row):null,
