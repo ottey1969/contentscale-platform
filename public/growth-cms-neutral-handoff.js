@@ -354,10 +354,13 @@
    r0.appendChild(b);r0.appendChild(removeConcept);r0.appendChild(currentChecks);into.appendChild(r0);
   };
   if(concepts.length){
-   var h=document.createElement('strong');h.textContent='Also written for this page: '+concepts.length+' other concept'+(concepts.length===1?'':'s');box.appendChild(h);
+   // Historical concepts are not missing tasks and are not a checklist of
+   // things the owner must add. Hide the entire legacy drafting workflow.
+   var history=document.createElement('details');history.className='growth-legacy-concepts';
+   var title=document.createElement('summary');title.textContent='Advanced · Older saved concepts ('+concepts.length+') — not required';history.appendChild(title);
    var intro=document.createElement('p');intro.className='small';
-   intro.textContent='Written in the last 30 days for improvements you chose, on topics not already in the text above. Add the ones you want; each still needs your review.';
-   box.appendChild(intro);concepts.forEach(function(p){row(p,box)});
+   intro.textContent='These were written for earlier selections. They do not prove any current content gap. Leave them out unless you intentionally want to inspect an older draft; the current research should decide what is needed.';
+   history.appendChild(intro);concepts.forEach(function(p){row(p,history)});box.appendChild(history);
   }
   // The download is at the end of the CMS form. Keep its route visible even
   // when earlier-concept review and factual checks make the page very long.
@@ -400,36 +403,59 @@
     return;
    }
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
-   var p=d.proposal,first=p.sections[0];
-   // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
-   safe.proposal=p;
-   $('heading').value=first.h2;$('copy').value=first.text;
-   $('mainPlacement').textContent='';if(first.placement)$('mainPlacement').appendChild(placementSelect(first.placement));
-   p.sections.slice(1,5).forEach(function(x,i){addSection(x.h2,x.text,'Growth proposal section '+(i+2),x.placement)});
-   if(!$('query').value&&p.focus_query)$('query').value=p.focus_query;
-   var box=$('growthProposal');box.textContent='';box.hidden=false;
-   var h=document.createElement('strong');h.textContent='Checked Growth proposal #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(h);
-   var intro=document.createElement('p');
-   intro.textContent='This is the text Growth checked against the ranking pages'+(p.focus_query?' for “'+p.focus_query+'”':'')+'. You may still edit it; the package records whether you did. Nothing is published.';
-   var scope=document.createElement('p');scope.className='small';
-   scope.textContent='Editorial concept only. Growth proposed this copy for the stated query, but its facts, competitors, safety instructions and originality are NOT independently verified. Do not publish without reviewing each claim against reliable evidence. Roofing work on wet or damaged roofs must be left to qualified professionals.';
-   box.appendChild(intro);box.appendChild(scope);
-   if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent='Evidence: '+p.evidence_label;box.appendChild(ev)}
-   if(p.intent_note){var inote=document.createElement('p');inote.className='small';inote.textContent=p.intent_note;box.appendChild(inote)}
-   var r=p.review||{},groups=[['flagged_text','Flagged by Growth: rewrite or remove these sentences, or keep one you confirm is true for your business (the package is refused while an unconfirmed one is still in your text)'],['needs_fact_check','Check that these sentences are true'],['needs_owner_confirmation','Confirm with the business'],['needs_safety_review','Safety review by a qualified professional']];
-   r.flagged_text=(r.flagged||[]).map(function(f){return (f.sentence?'“'+f.sentence+'”':'Section “'+f.h2+'”')+' — '+f.reason});
-   var seen=new Set();
-   groups.forEach(function(g){
-    // One tick per sentence, under the first (strictest-listed) check that names it.
-    var items=(r[g[0]]||[]).filter(function(x){if(seen.has(x))return false;seen.add(x);return true});if(!items.length)return;
-    var t=document.createElement('p');t.textContent=g[1]+' (confirm them all at once at the end of step 3, or one by one):';box.appendChild(t);
-    items.forEach(function(item){var match=g[0]==='flagged_text'?(r.flagged||[]).find(function(f){return f.sentence&&item.indexOf('“'+f.sentence+'”')>=0}):null;checkItem(box,item,match&&match.sentence)});
-    if(g[0]==='flagged_text')(r.flagged||[]).forEach(function(f){flaggedReviewAction(box,f)});
+   var p=d.proposal,box=$('growthProposal');box.textContent='';box.hidden=false;
+   var summary=document.createElement('strong');summary.textContent='Growth research proposal #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(summary);
+   var fact=document.createElement('p');fact.className='small';
+   fact.textContent='This is an UNAPPROVED draft for “'+String(p.focus_query||exactQuestion)+'”. It is not a verified content gap or fact-checked article. Review the original research before accepting any text.';
+   box.appendChild(fact);
+   var summaryList=document.createElement('p');summaryList.textContent='Suggested sections: '+(p.sections||[]).map(function(x){return x.h2}).join(' · ');box.appendChild(summaryList);
+   var review=document.createElement('button');review.type='button';review.textContent='Review proposed text and claims →';
+   review.className='growth-primary-finish';box.appendChild(review);
+   var skip=document.createElement('button');skip.type='button';skip.textContent='Skip this draft · write verified content myself';
+   skip.style.cssText='margin-left:8px';box.appendChild(skip);
+   skip.addEventListener('click',function(){
+    safe.proposal=null;box.hidden=true;box.textContent='';
+    $('approved').checked=false;ready();
+    status('downloadStatus','Saved draft #'+p.id+' was skipped. No draft text was added; use your own fact-checked copy or return to Growth research.',false);
    });
-   if((r.competitor_sources||[]).length){
-    var cs=document.createElement('p');cs.className='small';
-    cs.textContent='Compared with: '+r.competitor_sources.map(x=>x.url).join(' · ');box.appendChild(cs);
-   }
+   review.addEventListener('click',function(){
+    if(review.disabled)return;
+    review.disabled=true;skip.hidden=true;summaryList.hidden=true;
+    var first=p.sections[0];
+    // The server has already matched the saved proposal to the selected customer intent. Do not reject valid 24-hour emergency repair variants by exact spelling.
+    safe.proposal=p;
+    $('heading').value=first.h2;$('copy').value=first.text;
+    $('mainPlacement').textContent='';if(first.placement)$('mainPlacement').appendChild(placementSelect(first.placement));
+    p.sections.slice(1,5).forEach(function(x,i){addSection(x.h2,x.text,'Growth proposal section '+(i+2),x.placement)});
+    if(!$('query').value&&p.focus_query)$('query').value=p.focus_query;
+    var reviewBox=document.createElement('div');reviewBox.className='growth-proposal-review';$('growthProposal').appendChild(reviewBox);
+    var box=reviewBox;
+    var h=document.createElement('strong');h.textContent='Unapproved draft #'+p.id+' · '+String(p.created_at||'').slice(0,10);box.appendChild(h);
+    var intro=document.createElement('p');
+    intro.textContent='Draft for '+(p.focus_query?'“'+p.focus_query+'”':'the selected question')+'. Comparing pages is research, not verification that all these additions are missing, accurate or safe. Nothing has been approved or published.';
+    var scope=document.createElement('p');scope.className='small';
+    scope.textContent='Editorial concept only. Growth proposed this copy for the stated query, but its facts, competitors, safety instructions and originality are NOT independently verified. Do not publish without reviewing each claim against reliable evidence. Roofing work on wet or damaged roofs must be left to qualified professionals.';
+    box.appendChild(intro);box.appendChild(scope);
+    if(p.evidence_label){var ev=document.createElement('p');ev.className='small';ev.textContent=/^SELECTION_CONCEPT_FOR_REVIEW/.test(String(p.evidence_label))?'Status: previously selected writing concept — not independently verified':'Research status: '+String(p.evidence_label).toLowerCase().replace(/_/g,' ');box.appendChild(ev)}
+    if(p.intent_note){var inote=document.createElement('p');inote.className='small';inote.textContent=p.intent_note;box.appendChild(inote)}
+    var r=p.review||{},groups=[['flagged_text','Flagged by Growth: rewrite or remove these sentences, or keep one you confirm is true for your business (the package is refused while an unconfirmed one is still in your text)'],['needs_fact_check','Check that these sentences are true'],['needs_owner_confirmation','Confirm with the business'],['needs_safety_review','Safety review by a qualified professional']];
+    r.flagged_text=(r.flagged||[]).map(function(f){return (f.sentence?'“'+f.sentence+'”':'Section “'+f.h2+'”')+' — '+f.reason});
+    var seen=new Set();
+    groups.forEach(function(g){
+     // One tick per sentence, under the first (strictest-listed) check that names it.
+     var items=(r[g[0]]||[]).filter(function(x){if(seen.has(x))return false;seen.add(x);return true});if(!items.length)return;
+     var t=document.createElement('p');t.textContent=g[1]+' (confirm them all at once at the end of step 3, or one by one):';box.appendChild(t);
+     items.forEach(function(item){var match=g[0]==='flagged_text'?(r.flagged||[]).find(function(f){return f.sentence&&item.indexOf('“'+f.sentence+'”')>=0}):null;checkItem(box,item,match&&match.sentence)});
+     if(g[0]==='flagged_text')(r.flagged||[]).forEach(function(f){flaggedReviewAction(box,f)});
+    });
+    if((r.competitor_sources||[]).length){
+     var cs=document.createElement('p');cs.className='small';
+     cs.textContent='Compared with: '+r.competitor_sources.map(x=>x.url).join(' · ');box.appendChild(cs);
+    }
+ 
+    review.hidden=true;
+    reapplyRemovals();$('approved').checked=false;ready();
+   });
    renderEarlier(d.earlier);
    reapplyRemovals();
    $('approved').checked=false;ready();
