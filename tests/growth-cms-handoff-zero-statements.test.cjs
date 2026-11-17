@@ -12,7 +12,9 @@ test('the page wiring: a hidden tick stays hidden, and a note says why there is 
   assert.match(HTML, /<p id="noStatementsNote" class="small" hidden>No statement needs a separate tick:/);
   assert.match(JS, /var none=\$\('noStatementsNote'\);if\(none\)none\.hidden=!!facts\.length\|\|!safe\.source;/);
   // The download still needs the review tick; facts only block when there are open ones.
-  assert.match(JS, /\$\('download'\)\.disabled=!!safe\.exported\|\|!\(safe\.source&&\$\('approved'\)\.checked&&manualReady&&factsChecked\);/);
+  assert.match(JS, /safe\.aiDraftReadyForQuery===\$\('query'\)\.value\.trim\(\)/);
+  assert.match(JS, /Generate the Advanced AI draft for this customer question before the CMS package/);
+  assert.match(HTML, /Required before CMS download/);
 });
 
 test('in a browser, the hidden "I checked all" tick is not displayed', { skip: !chromium && 'Playwright not installed' }, async () => {
