@@ -118,3 +118,16 @@ test('AI observations and Google findings remain together even when no new gaps 
  assert.match(output,/Useful procedures/);
  assert.match(output,/RANKING COMPETITOR SOURCE LEADS/);
 });
+
+test('complete brief is rendered even without a separate topic-picker',()=>{
+ assert.match(ui,/function renderAiContentTasks\(d,choice\)\{/);
+ assert.doesNotMatch(ui,/function renderAiContentTasks\(d,choice\)\{\s*if\(!choice\)return/);
+ assert.match(ui,/renderAiContentTasks\(d,choice\);\s*if\(choice\)/);
+ assert.match(ui,/GROWTH RESEARCH REPORT/);
+ assert.doesNotMatch(ui,/STEP '\+x\.stage\+' OF 3/);
+});
+test('research starts after setup inputs and saved reports do not trigger optional AI research',()=>{
+ assert.match(ui,/optionalInputs\.insertAdjacentElement\('afterend',firstPanel\)/);
+ assert.match(ui,/Run Growth Research/);
+ assert.doesNotMatch(ui,/if\(main\.getAttribute\('data-owner-draft'\)==='true'\)triggerAutomaticAi\(saved\.report\)/);
+});
