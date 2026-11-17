@@ -28,6 +28,11 @@ function renderSimpleGrowthStart({pages=[],token='',siteMarkets=null,pageMarketO
   '</div>'+
   '<datalist id="growthSimpleRegions">'+regions.map(v=>'<option value="'+esc(v)+'">').join('')+'</datalist>'+
   '<datalist id="growthSimpleLanguages">'+languages.map(v=>'<option value="'+esc(v)+'">').join('')+'</datalist>'+
+  '<section id="growthSimpleAiSystems" aria-labelledby="growthSimpleAiTitle" class="growth-simple-ai-systems">'+
+  '<h3 id="growthSimpleAiTitle">AI systems · part of Growth research</h3>'+
+  '<p class="info">ChatGPT · Gemini · Perplexity · Claude · Copilot</p>'+
+  '<small id="growthSimpleAiStatus" role="status">Choose a page and run Growth to see saved AI answers, cited pages and verification for your customer question. AI answers are optional; no system has been checked by this start form.</small>'+
+  '</section>'+
   '<button type="submit" id="growthSimpleContinue" disabled>Choose a page first</button>'+
   '<small id="growthSimpleStatus" role="status">No Search Console connection required. Growth research produces the complete external AI Brief.</small>'+
   '</form>'+
