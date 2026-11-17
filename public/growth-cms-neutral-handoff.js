@@ -813,7 +813,7 @@
    var matched=questions.some(function(q){return String(q.question).trim().toLowerCase()===current.toLowerCase()&&String(q.market||'').toUpperCase()===market});
    if(current&&matched){wrap.hidden=true;return}
    // An explicit user-supplied question is never silently replaced, even when an older report exists.
-   if(!current&&questions.length===1){choose(questions[0]);return}
+   // Even one historical report must be chosen deliberately: it may be a different intent.
    if(!current||questions.length){
     wrap.hidden=false;choices.textContent='';
     if(current){var note=document.createElement('p');note.textContent='The requested question is not saved under this page/market. Choose the correct previous run below, or return to Growth to research it.';choices.appendChild(note)}
