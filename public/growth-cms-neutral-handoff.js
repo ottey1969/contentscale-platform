@@ -3,6 +3,7 @@
  const $=id=>document.getElementById(id);
  const token=String(location.pathname.split('/')[2]||'');
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
+ const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
  const safe={source:null,proposal:null,added:[],exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
@@ -376,11 +377,21 @@
  // The checked Growth proposal for this page is used as-is: same H2s, text, placement and fact-check list.
  async function loadProposal(src){
   try{
-   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
+   var exactQuestion=String($('query').value||requestedQuestion||src.working_keyword||'').trim();
+   var res=await fetch(base+'/proposal?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(exactQuestion),{cache:'no-store',credentials:'same-origin'});
    var d=await res.json();
-   if(!res.ok||d.success!==true||!d.proposal||!(d.proposal.sections||[]).length||safe.source!==src)return;
+   if(!res.ok||d.success!==true||safe.source!==src)return;
+   if(!d.proposal||!(d.proposal.sections||[]).length){
+    var no=$('growthProposal');if((d.other_query_proposals||[]).length&&no){
+     no.hidden=false;no.textContent='';
+     var warn=document.createElement('p');warn.textContent='No reviewed Growth proposal for this exact question: “'+exactQuestion+'”. Older concepts for '+(d.other_query_proposals||[]).map(function(p){return '“'+p.focus_query+'”'}).join(', ')+' are kept as history, but are not safe to reuse automatically. Run Growth for this question first.';
+     no.appendChild(warn);
+    }
+    return;
+   }
    if($('heading').value.trim()||$('copy').value.trim()||document.querySelector('[data-growth-draft-section]'))return;
    var p=d.proposal,first=p.sections[0];
+   if(String(p.focus_query||'').trim().toLowerCase().replace(/\s+/g,' ')!==exactQuestion.toLowerCase().replace(/\s+/g,' '))throw Error('Proposal query mismatch; text not loaded');
    safe.proposal=p;
    $('heading').value=first.h2;$('copy').value=first.text;
    $('mainPlacement').textContent='';if(first.placement)$('mainPlacement').appendChild(placementSelect(first.placement));
@@ -487,6 +498,7 @@
   status('sourceStatus','A valid tracked page ID is required. Return to Growth and select a page.',true);
   $('checkSource').disabled=true;
  }
+ if(requestedQuestion)$('query').value=requestedQuestion;
  $('approved').addEventListener('change',ready);
  if($('confirmAll'))$('confirmAll').addEventListener('change',function(){var on=this.checked;document.querySelectorAll('.fact-item').forEach(function(x){x.checked=on});ready()});
  $('manualAcknowledged').addEventListener('change',ready);
