@@ -441,7 +441,31 @@
     var post=function(u,b){return fetch(u,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(function(r){return r.json()})};
     var sel=await post(writeUrl.replace('/auto-research/write','/auto-research/selection'),{gap_list_id:gl.id,item_ids:ids});
     if(!sel||sel.success===false)return sel;
-    return post(writeUrl,{gap_list_id:gl.id,item_ids:ids,ai_check_choice:choice})}:null,
+    var written=await post(writeUrl,{gap_list_id:gl.id,item_ids:ids,ai_check_choice:choice});
+    // Once the user's explicit writing action finishes, expose the real saved
+    // CMS handoff immediately, using its own query rather than the page seed.
+    if(written&&written.success===true&&written.stored===true&&written.cms_handoff?.url){
+     d.cms_handoff=written.cms_handoff;
+     if(d.gap_list){
+      d.gap_list.cms_url=written.cms_handoff.url;
+      var newlyWritten=(written.sections||[]).map(function(sec){return String(sec.item_id||'')}).filter(Boolean);
+      d.gap_list.written_ids=[...new Set([...(d.gap_list.written_ids||[]).map(String),...newlyWritten])];
+     }
+     pointHandoff(d);
+     var handoff=document.getElementById('growthEditorHandoff');
+     if(handoff){
+      if(handoff.parentNode)handoff.parentNode.hidden=false;
+      handoff.textContent='Review saved Growth copy → Prepare CMS package';
+     }
+     var finish=document.getElementById('growthFinalActions');
+     if(finish){
+      finish.hidden=false;
+      var note=finish.querySelector('.growth-finish-note');
+      if(note)note.textContent='✓ Growth copy saved for this question. Review the sections and claims in the CMS handoff. Nothing was published.';
+     }
+     if(NOWC){NOWC.written=(d.gap_list?.written_ids||[]).length||1;trUpdate(trPicked())}
+    }
+    return written}:null,
     rerunResearch:refreshChangedPageResearch})}catch(e){}
   }
   // Everything below is the evidence behind steps 1–3: collapsed, so the page shows the decisions first.
@@ -1172,14 +1196,18 @@
  function pointHandoff(r){
   var a=document.getElementById('growthEditorHandoff'),h=r&&r.cms_handoff;
   if(!a||!h||typeof h.url!=='string'||h.url.indexOf('/track/')!==0)return;
-  // Always propagate the actual research intent; a tracked seed must not replace it.
-   var selectedQuestion=String(runQuery||r.gap_list?.focus_query||r.editorial_decision_gate?.focus_query||'').trim();
-   var target=new URL(h.url,location.origin);
-   if(target.origin!==location.origin)return;
-   if(selectedQuestion)target.searchParams.set('query',selectedQuestion);
-   if(runMarket)target.searchParams.set('market',runMarket);
-   a.href=target.pathname+target.search;
-   a.textContent='Review the draft and prepare CMS package'+(selectedQuestion?' for this customer question':'');
+  var target=new URL(h.url,location.origin);
+  if(target.origin!==location.origin)return;
+  // The stored writing result is authoritative. Do not overwrite its question
+  // with an old page keyword or an unrelated research page URL.
+  var savedQuestion=String(target.searchParams.get('query')||'').trim();
+  if(!savedQuestion){
+   savedQuestion=String(r.gap_list?.focus_query||r.editorial_decision_gate?.focus_query||runQuery||'').trim();
+   if(savedQuestion)target.searchParams.set('query',savedQuestion);
+  }
+  if(!target.searchParams.get('market')&&runMarket)target.searchParams.set('market',runMarket);
+  a.href=target.pathname+target.search;
+  a.textContent='Review saved Growth copy and prepare CMS package'+(savedQuestion?' for “'+savedQuestion+'”':'');
  }
  // Share Free Growth's genuinely grounded Gemini check; never misattribute other AI providers.
  var autoAiPending=false;
