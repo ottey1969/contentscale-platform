@@ -4,6 +4,7 @@
  const token=String(location.pathname.split('/')[2]||'');
  const pageId=Number(new URLSearchParams(location.search).get('page_id'));
  const requestedQuestion=String(new URLSearchParams(location.search).get('query')||'').trim();
+ const requestedMarket=String(new URLSearchParams(location.search).get('market')||'').trim();
  const base='/api/tracker-client/'+encodeURIComponent(token)+'/growth/cms-export';
  const safe={source:null,proposal:null,aiDraftReadyForQuery:null,exported:false,publicationRecorded:false,loadingSource:false,priorPublication:null,publicationChoice:null,newPublication:false,publicationId:null};
  // Local persistence per client/page; source text and approvals remain server-authoritative.
@@ -69,7 +70,7 @@
   }
  }
  $('backToGrowth').href='/track/'+encodeURIComponent(token)+'/growth';
- $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId)+(requestedQuestion?'&query='+encodeURIComponent(requestedQuestion):'');
+ $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId)+(requestedQuestion?'&query='+encodeURIComponent(requestedQuestion):'')+(requestedMarket?'&market='+encodeURIComponent(requestedMarket):'');
  function status(id,msg,error){
   const el=$(id);el.textContent=msg;el.style.color=error?'#b91c1c':'#166534';
  }
@@ -425,7 +426,7 @@
   try{
    // Read only the stored report for this exact question; opening CMS must never trigger paid research.
    var exactQuery=String($('query').value||requestedQuestion||src.working_keyword||'').trim();
-   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/saved?page_id='+encodeURIComponent(pageId)+(exactQuery?'&query='+encodeURIComponent(exactQuery):'');
+   var url='/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/saved?page_id='+encodeURIComponent(pageId)+(exactQuery?'&query='+encodeURIComponent(exactQuery):'')+(new URLSearchParams(location.search).get('market')?'&market='+encodeURIComponent(new URLSearchParams(location.search).get('market')):'');
    var res=await fetch(url,{cache:'no-store',credentials:'same-origin'});
    if(!res.ok)throw Error('Saved research unavailable');
    var saved=await res.json();
@@ -479,6 +480,7 @@
   $('checkSource').disabled=true;
  }
  if(requestedQuestion)$('query').value=requestedQuestion;
+ if(!requestedQuestion)$('query').placeholder='Select the saved research question below — do not use the tracked seed';
  showVerifiedLink();
  $('query').addEventListener('input',function(){safe.aiDraftReadyForQuery=null;$('approved').checked=false;$('generateEditorialDraft').textContent='3A. FIRST · Advanced: Generate a different draft →';ready()});
  $('approved').addEventListener('change',ready);
@@ -486,7 +488,10 @@
  $('manualAcknowledged').addEventListener('change',ready);
  $('manualOriginalHtml').addEventListener('input',ready);
  $('checkSource').addEventListener('click',async function(){
-  this.disabled=true;buttonProgress(this,true);safe.source=null;safe.aiDraftReadyForQuery=null;lockWhileLoading(true);
+  if(!$('query').value.trim()){
+    status('sourceStatus','Choose the exact saved customer question first. The tracked seed is not a substitute.',true);$('savedQuestionChooser').hidden=false;return;
+   }
+   this.disabled=true;buttonProgress(this,true);safe.source=null;safe.aiDraftReadyForQuery=null;lockWhileLoading(true);
   try{
    const response=await fetch(base+'/source?page_id='+encodeURIComponent(pageId),{cache:'no-store',credentials:'same-origin'});
    const data=await response.json();
@@ -499,7 +504,8 @@
    $('canonicalUrl').textContent='Original URL: '+data.canonical_url+
     (needsManual?' · No saved page HTML — manually supply unverified original source.':
      ' · revision fingerprint saved · nothing was changed.');
-   if(!$('query').value) $('query').value=data.working_keyword||'';
+   // Never replace a lost customer question with the tracked seed keyword.
+    var seedNote=$('trackedSeedNote');if(seedNote)seedNote.textContent='Tracked seed keyword (different from customer question): '+(data.working_keyword||'not set');
    if(needsManual){
     status('sourceStatus','No saved Tracker HTML. Retrieving public original URL automatically…',false);
     try{
@@ -791,6 +797,50 @@
   if(!safe.exported)return;
   if(ev.target&&ev.target.matches('input,textarea,select')){safe.exported=false;ready()}
  });
+ // Recover older links safely: show saved page/question pairs instead of inserting the seed.
+ async function recoverSavedQuestions(){
+  var wrap=$('savedQuestionChooser'),choices=$('savedQuestionChoices');if(!wrap||!choices)return;
+  try{
+   var resp=await fetch('/api/tracker-client/'+encodeURIComponent(token)+'/growth/auto-research/queries?page_id='+encodeURIComponent(pageId),
+    {cache:'no-store',credentials:'same-origin'});
+   var data=await resp.json();if(!resp.ok||data.success!==true)throw Error('Saved question lookup unavailable');
+   var questions=Array.isArray(data.questions)?data.questions:[];
+   // Keep saved variations separate by market, but never repeat identical question/market combinations.
+   var seen=new Set();
+   questions=questions.filter(function(q){var key=String(q.question||'').trim().toLowerCase()+'|'+String(q.market||'').trim().toUpperCase();if(!q.question||seen.has(key))return false;seen.add(key);return true});
+   var current=String($('query').value||'').trim();
+   var market=String(new URLSearchParams(location.search).get('market')||'').trim().toUpperCase();
+   var matched=questions.some(function(q){return String(q.question).trim().toLowerCase()===current.toLowerCase()&&String(q.market||'').toUpperCase()===market});
+   if(current&&matched){wrap.hidden=true;return}
+   // An explicit user-supplied question is never silently replaced, even when an older report exists.
+   // Even one historical report must be chosen deliberately: it may be a different intent.
+   if(!current||questions.length){
+    wrap.hidden=false;choices.textContent='';
+    if(current){var note=document.createElement('p');note.textContent='The requested question is not saved under this page/market. Choose the correct previous run below, or return to Growth to research it.';choices.appendChild(note)}
+    if(!questions.length){var no=document.createElement('p');no.textContent='No previously saved customer question was found for this Tracker page. Open Growth research and save a run first.';choices.appendChild(no);return}
+    questions.forEach(function(q){
+     var btn=document.createElement('button');btn.type='button';btn.textContent=q.question+(q.market?' · '+q.market:'');
+     btn.style.cssText='margin:5px 6px 5px 0;padding:9px 12px;background:#fff;color:#1e40af;border:1px solid #93c5fd;border-radius:8px;text-align:left';
+     btn.addEventListener('click',function(){choose(q)});choices.appendChild(btn);
+    });
+   }
+  }catch(e){wrap.hidden=false;choices.textContent='Could not look up previous Growth questions. Open the exact Growth research URL and use its CMS link.'}
+  function choose(q){
+   var question=String(q.question||'').trim(),market=String(q.market||'').trim();if(!question)return;
+   $('query').value=question;safe.aiDraftReadyForQuery=null;safe.proposal=null;$('approved').checked=false;
+   var url=new URL(location.href);url.searchParams.set('query',question);
+   if(market)url.searchParams.set('market',market);else url.searchParams.delete('market');
+   history.replaceState(null,'',url.pathname+url.search);
+   $('researchReviewLink').href='/track/'+encodeURIComponent(token)+'/growth/auto-research?page_id='+encodeURIComponent(pageId)+'&query='+encodeURIComponent(question)+(market?'&market='+encodeURIComponent(market):'');
+   wrap.hidden=true;choices.textContent='';
+   $('heading').value='';$('copy').value='';$('growthAdditionalSections').textContent='';
+   $('growthProposal').hidden=true;$('growthProposal').textContent='';
+   ready();if(!$('checkSource').disabled)$('checkSource').click();
+  }
+ }
  // Direct from Growth: verify owner, source and research automatically; never approve or publish.
- if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(()=>{if(!$('checkSource').disabled)$('checkSource').click()});
+ if(Number.isSafeInteger(pageId)&&pageId>0)Promise.resolve().then(async()=>{
+  if(requestedQuestion){if(!$('checkSource').disabled)$('checkSource').click();}
+  await recoverSavedQuestions();
+ });
 })();

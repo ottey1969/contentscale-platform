@@ -1172,10 +1172,12 @@
  function pointHandoff(r){
   var a=document.getElementById('growthEditorHandoff'),h=r&&r.cms_handoff;
   if(!a||!h||typeof h.url!=='string'||h.url.indexOf('/track/')!==0)return;
-  var selectedQuestion=runQuery;
+  // Always propagate the actual research intent; a tracked seed must not replace it.
+   var selectedQuestion=String(runQuery||r.gap_list?.focus_query||r.editorial_decision_gate?.focus_query||'').trim();
    var target=new URL(h.url,location.origin);
    if(target.origin!==location.origin)return;
    if(selectedQuestion)target.searchParams.set('query',selectedQuestion);
+   if(runMarket)target.searchParams.set('market',runMarket);
    a.href=target.pathname+target.search;
    a.textContent='Review the draft and prepare CMS package'+(selectedQuestion?' for this customer question':'');
  }

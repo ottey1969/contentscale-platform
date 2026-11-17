@@ -44,6 +44,7 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <form id="handoffForm">
 <fieldset><legend>2. Review the existing page and evidence</legend>
 <p id="canonicalUrl" class="small">Original page not checked yet.</p>
+<p id="trackedSeedNote" class="small" aria-live="polite"></p>
 <div id="growthResearchHints" class="note" hidden aria-live="polite"></div>
 <div id="growthCompetitorOverview" class="note" hidden></div>
 <p class="small"><a id="researchReviewLink" href="#">Open automatic Search / AI / competitor research for this page</a></p>
@@ -52,7 +53,7 @@ button:disabled{opacity:.5;cursor:not-allowed}button{transition:background-color
 <div><label for="evidence">Research evidence</label><select id="evidence"><option value="needs_access">Needs access — no verified GSC</option><option value="observed">Observed — editor-reviewed source</option><option value="verified">Verified — exact GSC page/query data</option></select></div>
 </div>
 <label for="query">Customer question for this Growth draft (exact research intent)</label>
-<p class="small">This is the question you chose in Growth. It is different from the tracked seed keyword and does not claim a ranking.</p><input id="query" maxlength="300">
+<p class="small">This must match the customer question from the original Growth research. A tracked seed is not a substitute.</p><input id="query" maxlength="300" autocomplete="off"><div id="savedQuestionChooser" class="note" hidden aria-live="polite"><strong>Select the saved Growth research question</strong><p class="small">This CMS link did not contain a question, or the exact saved report was not found. Choose the correct previous research below. No new scan or credits are used.</p><div id="savedQuestionChoices"></div></div>
 <label for="title">Reviewed SEO title</label><input id="title" maxlength="100" required>
 <label for="meta">Reviewed meta description</label><textarea id="meta" maxlength="220" rows="2" required></textarea>
 <label class="check"><input id="personalVoice" type="checkbox"><span><strong>This page presents me as a person</strong> (a personal brand, for example you as a specialist): “I” and “my” are allowed in the title, description and text.</span></label>

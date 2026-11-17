@@ -566,6 +566,15 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   catch{res.status(503).json({success:false,code:'AI_CHECK_UNAVAILABLE'})}
  });
  // Read-only resume: no Serper, browser fetch or editor writing; keyed to owner, page, URL, market and query.
+ // List saved questions for this page without running search, AI or a scan.
+ app.get('/api/tracker-client/:token/growth/auto-research/queries',data,async(req,res)=>{
+  const v=check(req,res);if(!v)return;
+  if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY_RESEARCH_QUESTIONS'});
+  try{
+   const questions=await storedResearch.listQuestions(pool,{clientId:v.clientId,pageId:v.id,pageUrl:v.page.url});
+   res.set('Cache-Control','private, no-store').json({success:true,page_id:v.id,questions});
+  }catch(e){res.status(503).json({success:false,code:'SAVED_RESEARCH_QUESTIONS_UNAVAILABLE'})}
+ });
  app.get('/api/tracker-client/:token/growth/auto-research/saved',data,async(req,res)=>{
   const v=check(req,res);if(!v)return;
   if(req.growth?.can_edit!==true)return res.status(403).json({success:false,code:'OWNER_ONLY_SAVED_REPORT'});
@@ -578,7 +587,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
     try{const list=await loadGapList({clientId:v.clientId,id:report.gap_list.id});
      if(list){const last=typeof lastStoredRun==='function'?await Promise.resolve(lastStoredRun({gapListId:list.id})).catch(()=>null):null;
       report.gap_list={...report.gap_list,selected:(list.selected||[]).map(String),written_ids:(list.written_ids||[]).map(String),
-       cms_url:last&&last.proposal_id?'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id):null}}}
+       cms_url:last&&last.proposal_id?'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)+'&query='+encodeURIComponent(String(list.focus_query||v.queryOverride||v.page.keyword||''))+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):''):null}}}
     catch{}
    }
    if(typeof loadAiAnswers==='function'){const term=String(v.queryOverride||v.page.keyword||'').trim();
@@ -793,9 +802,9 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
   const enriched=await withAiCheck(report,v);
   const completedReport={...enriched,
    market_setting_url:typeof savePageMarkets==='function'?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/markets?page_id='+encodeURIComponent(v.id):null,
-   gap_list:{...gapList,carried_over:carried,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id):null},
+   gap_list:{...gapList,carried_over:carried,id:gapRef?Number(gapRef.id):null,target_page_id:targetId,write_url:gapRef?'/api/tracker-client/'+encodeURIComponent(req.params.token)+'/growth/auto-research/write?page_id='+encodeURIComponent(v.id)+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):''):null},
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:targetId,
-    url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(targetId)}:null,
+    url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(targetId)+'&query='+encodeURIComponent(String(gapList.focus_query||v.queryOverride||v.page.keyword||''))+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):'')}:null,
    editorial_decision_gate:completeDecision,
    // One outcome when the task check says NO_CHANGE but the topic comparison has topics on 2+ ranking pages.
    outcome_context:reconcileOutcome({decision:completeDecision,gapList,report,aiCheck:enriched.ai_check||null}),
@@ -995,7 +1004,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    const last=typeof lastStoredRun==='function'?await Promise.resolve(lastStoredRun({gapListId:list.id})).catch(()=>null):null;
    return res.status(409).set('Cache-Control','private, no-store').json({success:false,code:'SELECTION_ALREADY_WRITTEN',
     last_run:last?{run_id:Number(last.id),proposal_id:last.proposal_id?Number(last.proposal_id):null,
-     cms_url:last.proposal_id?'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id):null}:null});
+     cms_url:last.proposal_id?'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)+'&query='+encodeURIComponent(String(list.focus_query||v.queryOverride||v.page.keyword||''))+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):''):null}:null});
   }
   // One active run per list: a repeated or parallel request gets the running one back, no second AI call.
   let run=null;
@@ -1059,7 +1068,7 @@ function registerGrowthAutomaticResearch(app,pool,data,{fetchLive=fetchPublicGro
    batch_note:pending.length?pending.length+' selected item(s) are kept for the next run (at most '+MAX_WRITE_ITEMS+' per run).':null,
    published:false,copy_ready:false,
    cms_handoff:proposalRef?{proposal_id:Number(proposalRef.id),target_page_id:Number(list.target_page_id),
-    url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)}:null});
+    url:'/track/'+encodeURIComponent(req.params.token)+'/growth/cms-export?page_id='+encodeURIComponent(list.target_page_id)+'&query='+encodeURIComponent(String(list.focus_query||v.queryOverride||v.page.keyword||''))+(v.marketOverride?'&market='+encodeURIComponent(v.marketOverride):'')}:null});
  });
  // A Pre-Write Brief (saved, or its NOT PASSED diagnostic) that recommends expanding an existing page: load it for this
  // client only. Owner data; never another client's Brief.
