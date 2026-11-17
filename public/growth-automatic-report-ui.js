@@ -1111,48 +1111,51 @@
   }));
  }
  function externalAiContentBrief(d,topics){
-  var lines=['GROWTH — CONTENT RESEARCH AND WRITING BRIEF','',
-   'Customer question (do not change intent): '+String(d.ai_check?.search_term||d.editorial_decision_gate?.focus_query||runQuery||''),
-   'Existing page: '+String(d.url||''),
-   'Read the existing page and independently verify the following observed topics before writing.',
-   'Observed topics are NOT proven missing just because headings differ. Preserve already good content.',
-   'Draft only relevant sections and answers that serve this customer question.',
-   'Do NOT invent company services, 24/7 availability, response times, licences, insurance, prices, project examples or guarantees.',
-   'Flag all claims needing business-owner confirmation. Cite exact source URLs you actually opened.',
-   'Provide for every supported improvement: coverage assessment, proposed H2, ready-to-review paragraphs, suggested page placement, sources and factual checks.',
-   'Nothing is approved or published automatically.','',
-   'TOPICS REPORTED ON AI-CITED PAGES:'];
-  topics.forEach((t,i)=>{
-   lines.push((i+1)+'. '+t.topic+' (coverage assessment '+t.coverage+')');
-   if(t.sites.length)lines.push('  Observed domains: '+t.sites.join(', '));
-   t.examples.slice(0,3).forEach(ex=>{
-    if(ex.heading||ex.excerpt)lines.push('  Example lead: '+[ex.heading,ex.excerpt].filter(Boolean).join(' — ').slice(0,300))
-   })
-  });
-  return lines.join('\n');
+  if(!window.GrowthCompleteAiBrief||typeof window.GrowthCompleteAiBrief.build!=='function')
+   throw Error('Complete Growth brief builder unavailable. Reload the research page; do not use a partial brief.');
+  return window.GrowthCompleteAiBrief.build(d,{topics:topics,query:runQuery||d.ai_check?.search_term||d.gap_list?.focus_query||''});
  }
+
  function renderAiContentTasks(d,choice){
   if(!choice)return;
   var topics=aiContentTasks(d),box=document.getElementById('growthAiContentTasks');
   if(!box){box=document.createElement('section');box.id='growthAiContentTasks';box.className='tg-self';
    box.style.cssText='border:1px solid #93c5fd;background:#eff6ff;border-radius:12px;padding:16px;margin:16px 0';
    choice.parentNode.insertBefore(box,choice.nextSibling)}
-  box.textContent='';box.hidden=!topics.length;if(!topics.length)return;
-  node('h3','For Growth / external AI · '+topics.length+' content research topics',box);
-  node('p','AI can research and draft these. They are not tasks you must write yourself. Check source relevance and actual page coverage; a missing topic is not a verified business fact.',box).className='info';
+  box.textContent='';box.hidden=!(d&&d.gap_list||d&&d.search_discovery||d&&d.ai_check);if(box.hidden)return;
+  node('h3','Complete Growth AI Research & Writing Brief · '+topics.length+' AI-source topics',box);
+  if(!topics.length)node('p','No AI-cited content gaps were identified or verified in this run. The complete research brief is still available, including Google research, current-page evidence, missing information, and the NO CHANGE option.',box).className='info';
+  node('p','Pre-Write-grade work package: exact customer question and URL, current-page structure, ranked competitors, AI answer evidence, observed gaps, FAQ/PAA leads, entities, sources, statistics and quote verification, internal links, SEO metadata, CMS HTML output, editorial QA and measurement instructions. Missing research is clearly marked — it is never invented.',box).className='info';
   var ul=node('ul',null,box);
   topics.forEach(t=>{var li=node('li',null,ul);node('strong',t.topic,li);
    node('small','Reported coverage: '+t.coverage+' · source domains: '+(t.sites.join(', ')||'unknown'),li)});
-  var btn=node('button','Copy complete brief for external AI',box);btn.type='button';
+  var btn=node('button','Copy FULL AI research + writing brief',box);btn.type='button';
   btn.style.cssText='border:0;border-radius:8px;background:#1d4ed8;color:#fff;padding:10px 14px;cursor:pointer';
+  var save=node('button','Download full AI brief (.md)',box);save.type='button';
+  save.style.cssText='margin-left:8px;border:1px solid #1d4ed8;border-radius:8px;background:white;color:#1d4ed8;padding:10px 14px;cursor:pointer';
   var status=node('small','',box);status.setAttribute('role','status');
-  btn.addEventListener('click',async()=>{
-   try{var draft=externalAiContentBrief(d,topics);
+  function completeBrief(){return externalAiContentBrief(d,topics)}
+  var guide=node('small','',box);guide.textContent='The package contains the entire saved Growth research context and an exact external-AI deliverable contract, not just these '+topics.length+' headings. Review any NOT AVAILABLE / UNVERIFIED evidence limitations.';
+  btn.addEventListener('click',async function(){
+   try{
+    var draft=completeBrief();
     if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(draft);
-    else{var input=document.createElement('textarea');input.value=draft;document.body.appendChild(input);input.select();if(!document.execCommand('copy'))throw Error('copy unavailable');input.remove()}
-    status.textContent='Copied. Give the brief to your external AI; review facts and sources before publishing.'
-   }catch(e){status.textContent='Browser blocked clipboard access. Copy the topics from this panel.'}
-  })
+    else{
+     var input=document.createElement('textarea');input.value=draft;document.body.appendChild(input);input.select();
+     if(!document.execCommand('copy'))throw Error('Copy unavailable');input.remove();
+    }
+    status.textContent='Complete '+draft.length+'-character work brief copied. Send it to your external AI. Missing evidence remains flagged.';
+   }catch(e){status.textContent='Complete brief unavailable; no partial prompt was copied. '+String(e.message||e)}
+  });
+  save.addEventListener('click',function(){
+   try{
+    var draft=completeBrief(),url=URL.createObjectURL(new Blob([draft],{type:'text/markdown;charset=utf-8'}));
+    var a=document.createElement('a');a.href=url;a.download='contentscale-growth-complete-ai-research-brief.md';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(function(){URL.revokeObjectURL(url)},2000);
+    status.textContent='Complete research and writing brief downloaded. External AI should cite real sources and mark unverified facts.';
+   }catch(e){status.textContent='Complete brief unavailable; no partial file was generated. '+String(e.message||e)}
+  });
  }
  function selfRender(box,list){box.textContent='';if(!list.length){box.hidden=true;return}box.hidden=false;var dn=selfDone();
   var open=list.filter(function(x){return !dn[x.id]}),fin=list.filter(function(x){return dn[x.id]});
