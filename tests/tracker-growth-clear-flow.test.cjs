@@ -43,10 +43,13 @@ test('Tracker Growth: do this now, three steps, do it yourself, evidence in tabs
   assert.match(await p.textContent('#growthGapChoice h2'),/Step 1 · Choose what to add/);
   assert.match(await p.textContent('#growthFinalActions h2'),/Step 2 · Write and prepare the CMS package/);
   assert.match(await p.textContent('#growthFinalActions'),/Nothing written yet/);assert.equal(await p.locator('#growthEditorHandoff').isVisible(),false);
-  // The evidence is closed, in tabs; the AI comparison feeds "Do it yourself" (facts, topics, Bing, listings).
+  // The evidence is closed, in tabs; AI content topics go to the complete external-AI brief, while manual tasks need business/account action.
   assert.equal(await p.locator('#growthEvidenceAll').evaluate(e=>e.open),false);
-  await p.waitForFunction(()=>/Do it yourself \((?:[3-9]|\d\d) open\)/.test(document.getElementById('growthSelfDo').textContent),null,{timeout:30000});
+  await p.waitForFunction(()=>/Manual website \/ business actions \(\d+ open\)/.test(document.getElementById('growthSelfDo').textContent),null,{timeout:30000});
   const self=await p.textContent('#growthSelfDo');assert.match(self,/State on your page: a price or price range/);assert.match(self,/Get the page into Bing/);
+  assert.equal(await p.locator('#growthAiContentTasks').isVisible(),true);
+  assert.match(await p.textContent('#growthAiContentTasks'),/Complete Growth AI Research & Writing Brief/);
+  assert.equal(await p.getByRole('button',{name:'Download full AI brief (.md)'}).count(),1);
   // Ticking a topic far down updates the next action, and the bar at the bottom carries it.
   const pick=p.locator('#growthGapChoice input[type=checkbox]').first();await pick.scrollIntoViewIfNeeded();await pick.check();
   assert.match(await p.textContent('#trackerActionTitle'),/1 chosen topic/);
@@ -74,8 +77,9 @@ test('AI content tasks go to external AI briefing, not manual Do it yourself com
  assert.match(manual,/missing_facts/);
  assert.match(ui,/function externalAiContentBrief\(d,topics\)/);
  assert.match(ui,/function renderAiContentTasks\(d,choice\)/);
- assert.match(ui,/Copy complete brief for external AI/);
- assert.match(ui,/Do NOT invent company services/);
+ assert.match(ui,/Copy FULL AI research \+ writing brief/);
+ const builder=fs.readFileSync(path.join(__dirname,'../public/growth-complete-ai-brief.js'),'utf8');
+ assert.match(builder,/Do not infer cities, counties, licensing/);
  assert.match(ui,/Manual website \/ business actions/);
  assert.match(ui,/renderAiContentTasks\(last,document\.getElementById\('growthGapChoice'\)\)/);
 });
